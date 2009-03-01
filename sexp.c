@@ -1361,12 +1361,12 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
   emit_word(bc, i, (unsigned long) make_integer(length(fv2)));
   emit(bc, i, OP_MAKE_VECTOR);
   (*d)++;
-  for (ls=fv, k=0; SEXP_PAIRP(ls); ls=SEXP_CDR(ls), k++) {
+  for (ls=fv2, k=0; SEXP_PAIRP(ls); ls=SEXP_CDR(ls), k++) {
     analyze_var_ref(SEXP_CAR(ls), bc, i, e, params, fv, d);
     emit(bc, i, OP_PUSH);
     emit_word(bc, i, (unsigned long) make_integer(k));
     emit(bc, i, OP_STACK_REF);
-    emit_word(bc, i, 2);
+    emit_word(bc, i, 3);
     emit(bc, i, OP_VECTOR_SET);
     emit(bc, i, OP_DROP);
     (*d)--;
@@ -1416,6 +1416,10 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top++;
     break;
   case OP_CLOSURE_REF:
+    fprintf(stderr, "closure-ref %d => ", ((sexp*)ip)[0]);
+    fflush(stderr);
+    write_sexp(stderr, vector_ref(cp,((sexp*)ip)[0]));
+    fprintf(stderr, "\n");
     stack[top++]=vector_ref(cp,((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
@@ -1427,6 +1431,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top--;
     break;
   case OP_VECTOR_SET:
+    fprintf(stderr, "vector-set! %p %d => ", stack[top-1], unbox_integer(stack[top-2]));
+    write_sexp(stderr, stack[top-3]);
+    fprintf(stderr, "\n");
     vector_set(stack[top-1], stack[top-2], stack[top-3]);
     stack[top-3]=SEXP_UNDEF;
     top-=2;
@@ -1436,7 +1443,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top--;
     break;
   case OP_MAKE_VECTOR:
-    stack[top-2]=make_vector(unbox_integer(stack[top-2]), stack[top-1]);
+    stack[top-2]=make_vector(unbox_integer(stack[top-1]), stack[top-2]);
     top--;
     break;
   case OP_PUSH:
@@ -1467,6 +1474,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top--;
     break;
   case OP_ADD:
+    fprintf(stderr, "OP_ADD %d %d\n", stack[top-1], stack[top-2]);
     stack[top-2]=sexp_add(stack[top-1],stack[top-2]);
     top--;
     break;
@@ -1504,7 +1512,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     print_bytecode(bc);
     ip = bc->data;
     cp = procedure_vars(tmp);
-    fprintf(stderr, "... calling procedure at %p\n", ip);
+    fprintf(stderr, "... calling procedure at %p\ncp: ", ip);
+    write_sexp(stderr, cp);
+    fprintf(stderr, "\n");
     /* print_stack(stack, top); */
     break;
   case OP_JUMP_UNLESS:
