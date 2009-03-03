@@ -19,7 +19,7 @@
 #define errx(code, msg, ...) (fprintf(stderr,msg"\n",__VA_ARGS__), exit(code))
 #endif
 
-#define sexp_debug(msg, obj, ...) (fprintf(stderr,msg,__VA_ARGS__), fflush(stderr), write_sexp(stderr, obj), fprintf(stderr,"\n"))
+#define sexp_debug(msg, obj) (fprintf(stderr,msg), fflush(stderr), write_sexp(stderr, obj), fprintf(stderr,"\n"))
 
 #ifdef USE_BOEHM
 #include "gc/include/gc.h"

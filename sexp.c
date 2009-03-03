@@ -102,8 +102,10 @@ sexp cdr(sexp obj) {
 sexp set_car(sexp obj, sexp val) {
   if (SEXP_PAIRP(obj))
     return SEXP_CAR(obj) = val;
-  else
+  else {
+    sexp_debug("error: set-car! not a pair: ", obj);
     return SEXP_ERROR;
+  }
 }
 
 sexp set_cdr(sexp obj, sexp val) {

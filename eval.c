@@ -4,7 +4,7 @@
 
 #include "eval.h"
 
-/* ******************************************************************** */
+/************************************************************************/
 
 static struct core_form core_forms[] = {
   {SEXP_CORE, "define", CORE_DEFINE},
@@ -19,17 +19,19 @@ static struct core_form core_forms[] = {
 };
 
 static struct opcode opcodes[] = {
-{SEXP_OPCODE, OPC_TYPE_PREDICATE, OP_CAR, 1, 0, SEXP_PAIR, 0, "car", 0, NULL},
-{SEXP_OPCODE, OPC_TYPE_PREDICATE, OP_CDR, 1, 0, SEXP_PAIR, 0, "cdr", 0, NULL},
-{SEXP_OPCODE, OPC_ARITHMETIC,     OP_ADD, 0, 1, SEXP_FIXNUM, 0, "+", 0, NULL},
-{SEXP_OPCODE, OPC_ARITHMETIC_INV, OP_SUB, 0, 1, SEXP_FIXNUM, 0, "-", OP_NEG, NULL},
-{SEXP_OPCODE, OPC_ARITHMETIC,     OP_MUL, 0, 1, SEXP_FIXNUM, 0, "*", 0, NULL},
-{SEXP_OPCODE, OPC_ARITHMETIC_INV, OP_DIV, 0, 1, SEXP_FIXNUM, 0, "/", OP_INV, 0},
-{SEXP_OPCODE, OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, "%", 0, NULL},
-{SEXP_OPCODE, OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, "<", 0, NULL},
-{SEXP_OPCODE, OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, "cons", 0, NULL},
-{SEXP_OPCODE, OPC_CONSTRUCTOR,    OP_MAKE_VECTOR, 2, 0, SEXP_FIXNUM, 0, "make-vector", 0, NULL},
-{SEXP_OPCODE, OPC_CONSTRUCTOR,    OP_MAKE_PROCEDURE, 2, 0, 0, 0, "make-procedure", 0, NULL},
+#define _OP(c,o,n,m,t,u,s,i) {SEXP_OPCODE, c, o, n, m, t, u, s, i, NULL}
+_OP(OPC_TYPE_PREDICATE, OP_CAR, 1, 0, SEXP_PAIR, 0, "car", 0),
+_OP(OPC_TYPE_PREDICATE, OP_CDR, 1, 0, SEXP_PAIR, 0, "cdr", 0),
+_OP(OPC_ARITHMETIC,     OP_ADD, 0, 1, SEXP_FIXNUM, 0, "+", 0),
+_OP(OPC_ARITHMETIC_INV, OP_SUB, 0, 1, SEXP_FIXNUM, 0, "-", OP_NEG),
+_OP(OPC_ARITHMETIC,     OP_MUL, 0, 1, SEXP_FIXNUM, 0, "*", 0),
+_OP(OPC_ARITHMETIC_INV, OP_DIV, 0, 1, SEXP_FIXNUM, 0, "/", OP_INV),
+_OP(OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, "%", 0),
+_OP(OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, "<", 0),
+_OP(OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, "cons", 0),
+_OP(OPC_CONSTRUCTOR,    OP_MAKE_VECTOR, 2, 0, SEXP_FIXNUM, 0, "make-vector", 0),
+_OP(OPC_CONSTRUCTOR,    OP_MAKE_PROCEDURE, 2, 0, 0, 0, "make-procedure", 0),
+#undef _OP
 };
 
 #ifdef USE_DEBUG
@@ -144,6 +146,8 @@ void emit_word(bytecode *bc, unsigned int *i, unsigned long val)  {
   *((unsigned long*)(&((*bc)->data[*i]))) = val;
   *i += sizeof(unsigned long);
 }
+
+#define emit_push(bc,i,obj) (emit(bc,i,OP_PUSH), emit_word(bc,i,(unsigned long)obj))
 
 sexp make_procedure(sexp bc, sexp vars) {
   sexp proc = SEXP_NEW();
@@ -409,8 +413,7 @@ sexp set_vars (env e, sexp formals, sexp obj, sexp sv) {
 void analyze_lambda (sexp name, sexp formals, sexp body,
                      bytecode *bc, unsigned int *i, env e,
                      sexp params, sexp fv, sexp sv, unsigned int *d) {
-  sexp obj;
-  sexp fv2 = free_vars(e, formals, body, SEXP_NULL), ls;
+  sexp obj, ls, fv2 = free_vars(e, formals, body, SEXP_NULL);
   env e2 = extend_env_closure(e, formals);
   int k;
   fprintf(stderr, "%d free-vars\n", length(fv2));
@@ -452,7 +455,7 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
       emit(&bc, &i, OP_PUSH);
       emit_word(&bc, &i, (unsigned long) SEXP_NULL);
       emit(&bc, &i, OP_STACK_REF);
-      emit_word(&bc, &i, j+3);
+      emit_word(&bc, &i, j+4);
       emit(&bc, &i, OP_CONS);
       emit(&bc, &i, OP_STACK_SET);
       emit_word(&bc, &i, j+4);
@@ -466,7 +469,6 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
     if (SEXP_PAIRP(SEXP_CDR(obj))) emit(&bc, &i, OP_DROP);
   }
   emit(&bc, &i, done_p ? OP_DONE : OP_RET);
-  /* fprintf(stderr, "shrinking\n"); */
   shrink_bcode(&bc, i);
   fprintf(stderr, "done compiling:\n");
   print_bytecode(bc);
@@ -482,7 +484,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   int i;
 
  loop:
-  /* fprintf(stderr, "opcode: %d, ip: %d\n", *ip, ip); */
+  /* fprintf(stderr, "opcode: %s (%d), ip: %d\n", reverse_opcode_names[*ip], *ip, ip); */
   /* print_bytecode(bc); */
   switch (*ip++) {
   case OP_NOOP:
@@ -617,17 +619,19 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     if (! SEXP_PROCEDUREP(tmp))
       errx(2, "non-procedure application: %p", tmp);
     stack[top-1] = (sexp) i;
-    stack[top] = (sexp) (ip+4);
+    stack[top] = make_integer(ip+4);
     stack[top+1] = cp;
     top+=2;
     bc = procedure_code(tmp);
     print_bytecode(bc);
+    disasm(bc);
     ip = bc->data;
     cp = procedure_vars(tmp);
     fprintf(stderr, "... calling procedure at %p\ncp: ", ip);
     write_sexp(stderr, cp);
     fprintf(stderr, "\n");
-    /* print_stack(stack, top); */
+    fprintf(stderr, "stack at %d\n", top);
+    print_stack(stack, top);
     break;
   case OP_JUMP_UNLESS:
     fprintf(stderr, "JUMP UNLESS, stack top is %d\n", stack[top-1]);
@@ -652,13 +656,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     /*                      top-1  */
     /* stack: args ... n ip result */
     cp = stack[top-2];
-    fprintf(stderr, "1\n");
-    ip = (unsigned char*) stack[top-3];
-    fprintf(stderr, "2\n");
+    ip = (unsigned char*) unbox_integer(stack[top-3]);
     i = unbox_integer(stack[top-4]);
-    fprintf(stderr, "3 (i=%d)\n", i);
     stack[top-i-4] = stack[top-1];
-    fprintf(stderr, "4\n");
     top = top-i-3;
     fprintf(stderr, "... done returning\n");
     break;
@@ -673,7 +673,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top] = SEXP_ERROR;
     goto end_loop;
   }
-  fprintf(stderr, "looping\n");
+  /* print_stack(stack, top); */
   goto loop;
 
  end_loop:
@@ -683,8 +683,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 /************************** eval interface ****************************/
 
 sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top) {
-  bytecode bc = compile(SEXP_NULL, cons(obj, SEXP_NULL), e, SEXP_NULL, SEXP_NULL, 1);
-  fprintf(stderr, "evaling\n");
+  bytecode bc;
+  bc = compile(SEXP_NULL, cons(obj, SEXP_NULL), e, SEXP_NULL, SEXP_NULL, 1);
   return vm(bc, e, stack, top);
 }
 

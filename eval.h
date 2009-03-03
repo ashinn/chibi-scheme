@@ -107,6 +107,7 @@ enum opcode_names {
 /**************************** prototypes ******************************/
 
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p);
+
 void analyze_app (sexp obj, bytecode *bc, unsigned int *i,
                   env e, sexp params, sexp fv, sexp sv, unsigned int *d);
 void analyze_lambda (sexp name, sexp formals, sexp body,
@@ -114,6 +115,11 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
                      sexp params, sexp fv, sexp sv, unsigned int *d);
 void analyze_var_ref (sexp name, bytecode *bc, unsigned int *i, env e,
                       sexp params, sexp fv, sexp sv, unsigned int *d);
+
+sexp vm(bytecode bc, env e, sexp* stack, unsigned int top);
+
+sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top);
+sexp eval(sexp obj, env e);
 
 #endif /* ! SCM_EVAL_H */
 
