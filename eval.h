@@ -66,42 +66,58 @@ enum opcode_classes {
   OPC_ARITHMETIC_INV,
   OPC_ARITHMETIC_CMP,
   OPC_CONSTRUCTOR,
+  OPC_ACCESSOR,
 };
 
 enum opcode_names {
-  OP_NOOP,                      /* 0 */
-  OP_STACK_REF,                 /* 1 */
-  OP_STACK_SET,                 /* 2 */
-  OP_GLOBAL_REF,                /* 3 */
-  OP_GLOBAL_SET,                /* 4 */
-  OP_CLOSURE_REF,               /* 5 */
-  OP_CLOSURE_SET,               /* 6 */
-  OP_VECTOR_REF,                /* 7 */
-  OP_VECTOR_SET,                /* 8 */
+  OP_NOOP,
+  OP_CALL,
+  OP_JUMP_UNLESS,
+  OP_JUMP,
+  OP_RET,
+  OP_DONE,
+  OP_STACK_REF,
+  OP_STACK_SET,
+  OP_GLOBAL_REF,
+  OP_GLOBAL_SET,
+  OP_CLOSURE_REF,
+  OP_VECTOR_REF,
+  OP_VECTOR_SET,
+  OP_STRING_REF,
+  OP_STRING_SET,
   OP_MAKE_PROCEDURE,
   OP_MAKE_VECTOR,
   OP_PUSH,
-  OP_DUP,                       /* C */
+  OP_DUP,
   OP_DROP,
   OP_SWAP,
+  OP_PAIRP,
+  OP_NULLP,
+  OP_VECTORP,
+  OP_INTEGERP,
+  OP_SYMBOLP,
+  OP_STRINGP,
+  OP_CHARP,
+  OP_EOFP,
+  OP_PROCEDUREP,
   OP_CAR,
-  OP_CDR,                       /* 10 */
-  OP_SET_CAR,                   /* 11 */
-  OP_SET_CDR,                   /* 12 */
+  OP_CDR,
+  OP_SET_CAR,
+  OP_SET_CDR,
   OP_CONS,
-  OP_ADD,                       /* 14 */
+  OP_ADD,
   OP_SUB,
-  OP_MUL,                       /* 16 */
+  OP_MUL,
   OP_DIV,
-  OP_MOD,                       /* 18 */
+  OP_MOD,
   OP_NEG,
-  OP_INV,                       /* 1A */
+  OP_INV,
   OP_LT,
-  OP_CALL,                      /* 1C */
-  OP_JUMP_UNLESS,
-  OP_JUMP,                      /* 1E */
-  OP_RET,
-  OP_DONE,
+  OP_LE,
+  OP_GT,
+  OP_GE,
+  OP_EQN,
+  OP_EQ,
 };
 
 /**************************** prototypes ******************************/

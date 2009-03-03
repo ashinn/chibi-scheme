@@ -23,11 +23,6 @@ static sexp the_quote_symbol;
 static sexp the_quasiquote_symbol;
 static sexp the_unquote_symbol;
 static sexp the_unquote_splicing_symbol;
-static sexp the_lambda_symbol;
-static sexp the_begin_symbol;
-static sexp the_define_symbol;
-static sexp the_set_x_symbol;
-static sexp the_if_symbol;
 
 static char separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
@@ -37,13 +32,11 @@ static char separators[] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, /* x3_ */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* x4_ */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, /* x5_ */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* x6_ */
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* x7_ */
 };
 
 static int is_separator(int c) {
   /* return (!((c-9)&(~3))) | (~(c^4)); */
-  return 0<c && c<128 && separators[c];
+  return 0<c && c<0x60 && separators[c];
 }
 
 static sexp* symbol_table = NULL;
@@ -210,6 +203,14 @@ unsigned long length(sexp ls) {
 
 /********************* strings, symbols, vectors **********************/
 
+sexp make_flonum(double f) {
+  sexp x = SEXP_NEW();
+  if (! x) return SEXP_ERROR;
+  x->tag = SEXP_FLONUM;
+  flonum_value(x) = f;
+  return x;
+}
+
 sexp make_string(char *str) {
   sexp s = SEXP_NEW();
   if (! s) return SEXP_ERROR;
@@ -233,7 +234,7 @@ int string_hash(char *str, int acc) {
 
 sexp intern(char *str) {
   struct huff_entry he;
-  unsigned long len, res=FNV_OFFSET_BASIS, space=3, newbits, i, d, cell;
+  sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, i, d, cell;
   char c, *mystr, *p=str;
   sexp sym, *newtable;
 
@@ -245,7 +246,7 @@ sexp intern(char *str) {
     if ((space+newbits) > (sizeof(sexp)*8)) {
       goto normal_intern;
     }
-    res |= (((unsigned long) he.bits) << space);
+    res |= (((sexp_uint_t) he.bits) << space);
     space += newbits;
   }
   return (sexp) (res + SEXP_ISYMBOL_TAG);
@@ -285,7 +286,7 @@ sexp intern(char *str) {
   sym->tag = SEXP_SYMBOL;
   sym->data1 = (void*) len;
   sym->data2 = (void*) mystr;
-  symbol_table[cell] = (sexp) (((unsigned long)sym) + 3);
+  symbol_table[cell] = (sexp) (((sexp_uint_t)sym) + 3);
   return symbol_table[cell];
 }
 
@@ -367,6 +368,9 @@ void write_sexp (FILE *out, sexp obj) {
         fprintf(out, ")");
       }
       break;
+    case SEXP_FLONUM:
+      fprintf(out, "%g", flonum_value(obj));
+      break;
     case SEXP_PROCEDURE:
       fprintf(out, "#<procedure>");
       break;
@@ -396,8 +400,8 @@ void write_sexp (FILE *out, sexp obj) {
   } else if (SEXP_SYMBOLP(obj)) {
 
 #ifdef USE_HUFF_SYMS
-    if (((unsigned long)obj&7)==7) {
-      c = ((unsigned long)obj)>>3;
+    if (((sexp_uint_t)obj&7)==7) {
+      c = ((sexp_uint_t)obj)>>3;
       while (c) {
 #include "sexp-unhuff.c"
         putc(res, out);
@@ -407,20 +411,20 @@ void write_sexp (FILE *out, sexp obj) {
 
       fprintf(out, "%s", symbol_data(obj));
   } else {
-    switch ((unsigned long) obj) {
-    case (int) SEXP_NULL:
+    switch ((sexp_uint_t) obj) {
+    case (sexp_uint_t) SEXP_NULL:
       fprintf(out, "()");
       break;
-    case (int) SEXP_TRUE:
+    case (sexp_uint_t) SEXP_TRUE:
       fprintf(out, "#t");
       break;
-    case (int) SEXP_FALSE:
+    case (sexp_uint_t) SEXP_FALSE:
       fprintf(out, "#f");
       break;
-    case (int) SEXP_EOF:
+    case (sexp_uint_t) SEXP_EOF:
       fprintf(out, "#<eof>");
       break;
-    case (int) SEXP_UNDEF:
+    case (sexp_uint_t) SEXP_UNDEF:
       fprintf(out, "#<undef>");
       break;
     default:
@@ -488,10 +492,19 @@ char* read_symbol(FILE *in, int init) {
   return res;
 }
 
-int read_number(FILE *in) {
-  int res = 0;
-  int negativep = 0;
-  char c;
+sexp read_float_tail(FILE *in, long whole) {
+  double res = 0.0, scale=0.1;
+  int c;
+  for (c=fgetc(in); isdigit(c); c=fgetc(in), scale*=0.1)
+    res += ((c<='9') ? (c - '0') : ((toupper(c) - 'A') + 10))*scale;
+  ungetc(c, in);
+  return make_flonum(whole + res);
+}
+
+sexp read_number(FILE *in, int base) {
+  sexp tmp;
+  long res = 0, negativep = 0;
+  int c;
 
   c = fgetc(in);
   if (c == '-') {
@@ -500,12 +513,22 @@ int read_number(FILE *in) {
     res = c - '0';
   }
 
-  for (c=fgetc(in); isdigit(c); c=fgetc(in)) {
-    res = res * 10 + (c - '0');
+  for (c=fgetc(in); isxdigit(c); c=fgetc(in))
+    res = res * base + ((c<='9') ? (c - '0') : ((toupper(c) - 'A') + 10));
+  if (c=='.') {
+    if (base != 10) {
+      fprintf(stderr, "decimal found in non-base 10");
+      return SEXP_ERROR;
+    }
+    tmp = read_float_tail(in, res);
+    if (negativep && SEXP_FLONUMP(tmp))
+      flonum_value(tmp) = -1 * flonum_value(tmp);
+    return tmp;
+  } else {
+    ungetc(c, in);
   }
-  ungetc(c, in);
 
-  return negativep ? -res : res;
+  return make_integer(negativep ? -res : res);
 }
 
 sexp read_sexp_raw (FILE *in) {
@@ -581,10 +604,18 @@ sexp read_sexp_raw (FILE *in) {
     break;
   case '#':
     switch (c1=fgetc(in)) {
-/*     case 'b': */
-/*     case 'd': */
-/*     case 'o': */
-/*     case 'x': */
+    case 'b':
+      res = read_number(in, 2);
+      break;
+    case 'o':
+      res = read_number(in, 8);
+      break;
+    case 'd':
+      res = read_number(in, 10);
+      break;
+    case 'x':
+      res = read_number(in, 16);
+      break;
 /*     case 'e': */
 /*     case 'i': */
     case 'f':
@@ -623,8 +654,7 @@ sexp read_sexp_raw (FILE *in) {
       res = SEXP_RAWDOT;
     } else if (isdigit(c1)) {
       ungetc(c1,in );
-      /* res = read_float_tail(in); */
-      res = SEXP_ERROR;
+      res = read_float_tail(in, 0);
     } else {
       ungetc(c1, in);
       str = read_symbol(in, '.');
@@ -637,13 +667,12 @@ sexp read_sexp_raw (FILE *in) {
     break;
   case '+':
   case '-':
-    fprintf(stderr, "plus/minus: %c\n", c1);
     c2 = fgetc(in);
     if (c2 == '.' || isdigit(c2)) {
       ungetc(c2, in);
-      res = make_integer(read_number(in) * ((c1 == '-') ? -1 : 1));
+      res = read_number(in, 10);
+      if (c1 == '-') res = sexp_mul(res, -1);
     } else {
-      fprintf(stderr, "... symbol: %c\n", c2);
       ungetc(c2, in);
       str = read_symbol(in, c1);
       res = intern(str);
@@ -653,7 +682,7 @@ sexp read_sexp_raw (FILE *in) {
   case '0': case '1': case '2': case '3': case '4':
   case '5': case '6': case '7': case '8': case '9':
     ungetc(c1, in);
-    res = make_integer(read_number(in));
+    res = read_number(in, 10);
     break;
   default:
     str = read_symbol(in, c1);
@@ -683,11 +712,6 @@ void sexp_init() {
     the_quasiquote_symbol = intern("quasiquote");
     the_unquote_symbol = intern("unquote");
     the_unquote_splicing_symbol = intern("unquote-splicing");
-    the_lambda_symbol = intern("lambda");
-    the_begin_symbol = intern("begin");
-    the_define_symbol = intern("define");
-    the_set_x_symbol = intern("set!");
-    the_if_symbol = intern("if");
   }
 }
 
