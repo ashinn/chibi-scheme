@@ -5,6 +5,7 @@
 #ifndef SEXP_H
 #define SEXP_H
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,8 @@ enum sexp_types {
   SEXP_SYMBOL,
   SEXP_STRING,
   SEXP_VECTOR,
+  SEXP_FLONUM,
+  SEXP_BIGNUM,
   /* the following are used only by the evaluator */
   SEXP_PROCEDURE,
   SEXP_ENV,
@@ -81,6 +84,9 @@ typedef struct sexp_struct {
   void *data2;
 } *sexp;
 
+typedef unsigned long sexp_uint_t;
+typedef long sexp_sint_t;
+
 #define MAKE_IMMEDIATE(n)  ((sexp) ((n<<4) + 14))
 #define SEXP_NULL   MAKE_IMMEDIATE(0)
 #define SEXP_FALSE  MAKE_IMMEDIATE(1)
@@ -92,16 +98,17 @@ typedef struct sexp_struct {
 #define SEXP_RAWDOT MAKE_IMMEDIATE(7) /* internal use */
 
 #define SEXP_NULLP(x)    ((x) == SEXP_NULL)
-#define SEXP_POINTERP(x) (((unsigned long)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
-#define SEXP_INTEGERP(x) (((unsigned long)(x) & SEXP_FIXNUM_MASK) == SEXP_FIXNUM_TAG)
-#define SEXP_ISYMBOLP(x) (((unsigned long)(x) & SEXP_IMMEDIATE_MASK) == SEXP_ISYMBOL_TAG)
-#define SEXP_CHARP(x)    (((unsigned long)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
+#define SEXP_POINTERP(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
+#define SEXP_INTEGERP(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_FIXNUM_TAG)
+#define SEXP_ISYMBOLP(x) (((sexp_uint_t)(x) & SEXP_IMMEDIATE_MASK) == SEXP_ISYMBOL_TAG)
+#define SEXP_CHARP(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
 #define SEXP_BOOLEANP(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
 #define SEXP_PAIRP(x)     (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_PAIR)
 #define SEXP_STRINGP(x)   (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_STRING)
 #define SEXP_LSYMBOLP(x)  (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_SYMBOL)
 #define SEXP_VECTORP(x)   (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_VECTOR)
+#define SEXP_FLONUMP(x)   (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_FLONUM)
 #define SEXP_PROCEDUREP(x) (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_PROCEDURE)
 #define SEXP_ENVP(x)      (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_ENV)
 #define SEXP_BYTECODEP(x) (SEXP_POINTERP(x) && ((sexp)(x))->tag ==SEXP_BYTECODE)
@@ -111,7 +118,7 @@ typedef struct sexp_struct {
 #define SEXP_SYMBOLP(x)  (SEXP_ISYMBOLP(x) || SEXP_LSYMBOLP(x))
 
 #ifdef USE_HUFF_SYMS
-#define SEXP_DOTP(x)     (((unsigned long)(x))==((0x5D00<<SEXP_IMMEDIATE_BITS)+SEXP_ISYMBOL_TAG))
+#define SEXP_DOTP(x)     (((sexp_uint_t)(x))==((0x5D00<<SEXP_IMMEDIATE_BITS)+SEXP_ISYMBOL_TAG))
 #else
 #define SEXP_DOTP(x)     ((x)==the_dot_symbol)
 #endif
@@ -121,7 +128,9 @@ typedef struct sexp_struct {
 #define make_character(n)  ((sexp) (((long) n<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define unbox_character(n) ((long) n>>SEXP_EXTENDED_BITS)
 
-#define vector_length(x) ((unsigned long) x->data1)
+#define flonum_value(f) (((double*)(((sexp_uint_t)f)+sizeof(char)))[0])
+
+#define vector_length(x) ((sexp_uint_t) x->data1)
 #define vector_data(x)   ((sexp*) x->data2)
 
 #define vector_ref(x, i) (vector_data(x)[unbox_integer(i)])
@@ -130,18 +139,21 @@ typedef struct sexp_struct {
 #define procedure_code(x) ((bytecode) ((sexp)x)->data1)
 #define procedure_vars(x)   ((sexp) ((sexp)x)->data2)
 
-#define string_length(x) ((unsigned long) x->data1)
+#define string_length(x) ((sexp_uint_t) x->data1)
 #define string_data(x)   ((char*) x->data2)
 
-#define symbol_pointer(x) ((sexp) (((unsigned long)x)-SEXP_LSYMBOL_TAG))
-#define symbol_length(x)  ((unsigned long) (symbol_pointer(x)->data1))
+#define string_ref(x, i) (make_character(string_data(x)[unbox_integer(i)]))
+#define string_set(x, i, v) (string_data(x)[unbox_integer(i)] = unbox_character(v))
+
+#define symbol_pointer(x) ((sexp) (((sexp_uint_t)x)-SEXP_LSYMBOL_TAG))
+#define symbol_length(x)  ((sexp_uint_t) (symbol_pointer(x)->data1))
 #define symbol_data(x)    ((char*) (symbol_pointer(x)->data2))
 
-#define sexp_add(a, b) ((sexp)(((unsigned long)a)+((unsigned long)b)-SEXP_FIXNUM_TAG))
-#define sexp_sub(a, b) ((sexp)(((unsigned long)a)-((unsigned long)b)+SEXP_FIXNUM_TAG))
-#define sexp_mul(a, b) ((sexp)((((((unsigned long)a)-SEXP_FIXNUM_TAG)*(((unsigned long)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
-#define sexp_div(a, b) ((sexp)(((((unsigned long)a)>>SEXP_FIXNUM_BITS)/(((unsigned long)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
-#define sexp_mod(a, b) ((sexp)(((((unsigned long)a)>>SEXP_FIXNUM_BITS)%(((unsigned long)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
+#define sexp_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
+#define sexp_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
+#define sexp_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
+#define sexp_div(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)/(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
+#define sexp_mod(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)%(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
 
 #define list2(a, b)       cons(a, cons(b, SEXP_NULL))
 #define list3(a, b, c)    cons(a, cons(b, cons(c, SEXP_NULL)))
@@ -177,6 +189,7 @@ sexp memq(sexp x, sexp ls);
 sexp assq (sexp x, sexp ls);
 unsigned long length(sexp ls);
 sexp make_string(char *str);
+sexp make_flonum(double f);
 int string_hash(char *str, int acc);
 sexp intern(char *str);
 sexp make_vector(unsigned long len, sexp dflt);
@@ -186,7 +199,7 @@ void write_sexp(FILE *out, sexp obj);
 void free_sexp(sexp obj);
 char* read_string(FILE *in);
 char* read_symbol(FILE *in, int init);
-int read_number(FILE *in);
+sexp read_number(FILE *in, int base);
 sexp read_sexp_raw(FILE *in);
 sexp read_sexp(FILE *in);
 void sexp_init();
