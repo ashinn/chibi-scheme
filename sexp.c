@@ -672,6 +672,9 @@ sexp read_sexp (FILE *in) {
 void sexp_init() {
   if (! initialized_p) {
     initialized_p = 1;
+#ifdef USE_BOEHM
+    GC_init();
+#endif
     symbol_table = SEXP_ALLOC(symbol_table_primes[0]*sizeof(sexp));
     the_dot_symbol = intern(".");
     the_quote_symbol = intern("quote");

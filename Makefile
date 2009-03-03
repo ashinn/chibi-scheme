@@ -8,10 +8,10 @@ GC_OBJ=./gc/gc.a
 $GC_OBJ: ./gc/alloc.c
 	cd gc && make test
 
-sexp.o: sexp.c sexp.h
+sexp.o: sexp.c sexp.h config.h
 	gcc -c -g -Os -o $@ $<
 
-eval.o: eval.c eval.h sexp.h
+eval.o: eval.c debug.c eval.h sexp.h config.h
 	gcc -c -g -Os -o $@ $<
 
 chibi-scheme: sexp.o eval.o $(GC_OBJ)
