@@ -79,7 +79,7 @@ void env_define(env e, sexp key, sexp value) {
 
 env extend_env_closure (env e, sexp fv) {
   int i;
-  env e2 = (env) malloc(sizeof(struct env));
+  env e2 = (env) SEXP_ALLOC(sizeof(struct env));
   e2->tag = SEXP_ENV;
   e2->parent = e;
   e2->bindings = SEXP_NULL;
@@ -91,7 +91,7 @@ env extend_env_closure (env e, sexp fv) {
 
 env make_standard_env() {
   int i;
-  env e = (env) malloc(sizeof(struct env));
+  env e = (env) SEXP_ALLOC(sizeof(struct env));
   e->tag = SEXP_ENV;
   e->parent = NULL;
   e->bindings = SEXP_NULL;
@@ -110,7 +110,7 @@ void shrink_bcode(bytecode *bc, unsigned int i) {
   bytecode tmp;
   if ((*bc)->len != i) {
     fprintf(stderr, "shrinking to %d\n", i);
-    tmp = (bytecode) malloc(sizeof(struct bytecode) + i);
+    tmp = (bytecode) SEXP_ALLOC(sizeof(struct bytecode) + i);
     tmp->tag = SEXP_BYTECODE;
     tmp->len = i;
     memcpy(tmp->data, (*bc)->data, i);
@@ -123,7 +123,7 @@ void emit(bytecode *bc, unsigned int *i, char c)  {
   bytecode tmp;
   if ((*bc)->len < (*i)+1) {
     fprintf(stderr, "expanding (%d < %d)\n", (*bc)->len, (*i)+1);
-    tmp = (bytecode) malloc(sizeof(unsigned int) + (*bc)->len*2);
+    tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
     tmp->len = (*bc)->len*2;
     memcpy(tmp->data, (*bc)->data, (*bc)->len);
     SEXP_FREE(*bc);
@@ -135,7 +135,7 @@ void emit(bytecode *bc, unsigned int *i, char c)  {
 void emit_word(bytecode *bc, unsigned int *i, unsigned long val)  {
   bytecode tmp;
   if ((*bc)->len < (*i)+4) {
-    tmp = (bytecode) malloc(sizeof(unsigned int) + (*bc)->len*2);
+    tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
     tmp->len = (*bc)->len*2;
     memcpy(tmp->data, (*bc)->data, (*bc)->len);
     SEXP_FREE(*bc);
@@ -440,7 +440,7 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
 
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
   unsigned int i = 0, j, d = 0;
-  bytecode bc = (bytecode) malloc(sizeof(struct bytecode)+INIT_BCODE_SIZE);
+  bytecode bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+INIT_BCODE_SIZE);
   sexp sv2 = set_vars(e, params, obj, SEXP_NULL), ls;
   fprintf(stderr, "set-vars: "); write_sexp(stderr, sv2); fprintf(stderr, "\n");
   bc->tag = SEXP_BYTECODE;
@@ -689,9 +689,9 @@ sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top) {
 }
 
 sexp eval(sexp obj, env e) {
-  sexp* stack = (sexp*) malloc(sizeof(sexp) * INIT_STACK_SIZE);
+  sexp* stack = (sexp*) SEXP_ALLOC(sizeof(sexp) * INIT_STACK_SIZE);
   sexp res = eval_in_stack(obj, e, stack, 0);
-  free(stack);
+  SEXP_FREE(stack);
   return res;
 }
 
@@ -701,7 +701,7 @@ int main (int argc, char **argv) {
 
   sexp_init();
   e = make_standard_env();
-  stack = (sexp*) malloc(sizeof(sexp) * INIT_STACK_SIZE);
+  stack = (sexp*) SEXP_ALLOC(sizeof(sexp) * INIT_STACK_SIZE);
 
   /* repl */
   fprintf(stdout, "> ");
