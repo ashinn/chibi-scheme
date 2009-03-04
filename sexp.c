@@ -753,6 +753,15 @@ sexp sexp_read (sexp in) {
   return res;
 }
 
+sexp sexp_read_from_string(char *str) {
+  sexp s = sexp_make_string(str);
+  sexp in = sexp_make_input_string_port(s);
+  sexp res = sexp_read(in);
+  sexp_free(s);
+  sexp_free(in);
+  return res;
+}
+
 void sexp_init() {
   if (! sexp_initialized_p) {
     sexp_initialized_p = 1;
