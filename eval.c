@@ -778,7 +778,15 @@ int main (int argc, char **argv) {
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
     switch (argv[i][1]) {
     case 'e':
+    case 'p':
+      obj = sexp_read_from_string(argv[i+1]);
+      res = eval_in_stack(obj, e, stack, 0);
+      if (argv[i][1] == 'p') {
+        sexp_write(res, cur_output_port);
+        sexp_write_char('\n', cur_output_port);
+      }
       quit=1;
+      i++;
       break;
     default:
       errx(1, "unknown option: %s", argv[i]);

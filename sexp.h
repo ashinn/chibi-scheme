@@ -232,6 +232,7 @@ char* sexp_read_symbol(sexp in, int init);
 sexp sexp_read_number(sexp in, int base);
 sexp sexp_read_raw(sexp in);
 sexp sexp_read(sexp in);
+sexp sexp_read_from_string(char *str);
 sexp sexp_make_input_port(FILE* in);
 sexp sexp_make_output_port(FILE* out);
 sexp sexp_make_input_string_port(sexp str);
