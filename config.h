@@ -5,4 +5,5 @@
 #define USE_BOEHM 1
 #define USE_HUFF_SYMS 1
 #define USE_DEBUG 1
+#define USE_STRING_STREAMS 1
 

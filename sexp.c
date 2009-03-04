@@ -1,6 +1,6 @@
-/*  sexp.c -- sexp library implementation */
+/*  sexp.c -- standalone sexp library implementation     */
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #include "sexp.h"
 
@@ -16,7 +16,7 @@ static struct huff_entry huff_table[] = {
 };
 #endif
 
-static int initialized_p = 0;
+static int sexp_initialized_p = 0;
 
 static sexp the_dot_symbol;
 static sexp the_quote_symbol;
@@ -24,7 +24,7 @@ static sexp the_quasiquote_symbol;
 static sexp the_unquote_symbol;
 static sexp the_unquote_splicing_symbol;
 
-static char separators[] = {
+static char sexp_separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, /* x0_ */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* x1_ */
@@ -36,7 +36,7 @@ static char separators[] = {
 
 static int is_separator(int c) {
   /* return (!((c-9)&(~3))) | (~(c^4)); */
-  return 0<c && c<0x60 && separators[c];
+  return 0<c && c<0x60 && sexp_separators[c];
 }
 
 static sexp* symbol_table = NULL;
@@ -47,26 +47,26 @@ static unsigned long symbol_table_primes[] = {
 static int symbol_table_prime_index = 0;
 static int symbol_table_count = 0;
 
-void free_sexp (sexp obj) {
+void sexp_free (sexp obj) {
   int len, i;
   sexp *elts;
   if (SEXP_POINTERP(obj)) {
     switch (obj->tag) {
     case SEXP_PAIR:
-      free_sexp(car(obj));
-      free_sexp(cdr(obj));
+      sexp_free(SEXP_CAR(obj));
+      sexp_free(SEXP_CDR(obj));
       break;
     case SEXP_VECTOR:
-      len = vector_length(obj);
-      elts = vector_data(obj);
+      len = sexp_vector_length(obj);
+      elts = sexp_vector_data(obj);
       for (i=0; i<len; i++) {
-        free_sexp(elts[i]);
+        sexp_free(elts[i]);
       }
       SEXP_FREE(elts);
       break;
     case SEXP_STRING:
     case SEXP_SYMBOL:
-      SEXP_FREE(string_data(obj));
+      SEXP_FREE(sexp_string_data(obj));
       break;
     }
     SEXP_FREE(obj);
@@ -75,7 +75,7 @@ void free_sexp (sexp obj) {
 
 /*************************** list utilities ***************************/
 
-sexp cons(sexp head, sexp tail) {
+sexp sexp_cons(sexp head, sexp tail) {
   sexp pair = SEXP_NEW();
   if (! pair) return SEXP_ERROR;
   pair->tag = SEXP_PAIR;
@@ -84,37 +84,21 @@ sexp cons(sexp head, sexp tail) {
   return pair;
 }
 
-sexp car(sexp obj) {
+sexp sexp_car(sexp obj) {
   return (SEXP_PAIRP(obj)) ? SEXP_CAR(obj) : SEXP_ERROR;
 }
 
-sexp cdr(sexp obj) {
+sexp sexp_cdr(sexp obj) {
   return (SEXP_PAIRP(obj)) ? SEXP_CDR(obj) : SEXP_ERROR;
 }
 
-sexp set_car(sexp obj, sexp val) {
-  if (SEXP_PAIRP(obj))
-    return SEXP_CAR(obj) = val;
-  else {
-    sexp_debug("error: set-car! not a pair: ", obj);
-    return SEXP_ERROR;
-  }
-}
-
-sexp set_cdr(sexp obj, sexp val) {
-  if (SEXP_PAIRP(obj))
-    return SEXP_CDR(obj) = val;
-  else
-    return SEXP_ERROR;
-}
-
-int listp (sexp obj) {
+int sexp_listp (sexp obj) {
   while (SEXP_PAIRP(obj))
     obj = SEXP_CDR(obj);
   return (obj == SEXP_NULL);
 }
 
-int list_index (sexp ls, sexp elt) {
+int sexp_list_index (sexp ls, sexp elt) {
   int i=0;
   while (SEXP_PAIRP(ls)) {
     if (SEXP_CAR(ls) == elt)
@@ -125,7 +109,7 @@ int list_index (sexp ls, sexp elt) {
   return -1;
 }
 
-sexp memq (sexp x, sexp ls) {
+sexp sexp_memq (sexp x, sexp ls) {
   while (SEXP_PAIRP(ls))
     if (x == SEXP_CAR(ls))
       return ls;
@@ -134,7 +118,7 @@ sexp memq (sexp x, sexp ls) {
   return SEXP_FALSE;
 }
 
-sexp assq (sexp x, sexp ls) {
+sexp sexp_assq (sexp x, sexp ls) {
   while (SEXP_PAIRP(ls))
     if (x == SEXP_CAAR(ls))
       return ls;
@@ -143,22 +127,22 @@ sexp assq (sexp x, sexp ls) {
   return SEXP_FALSE;
 }
 
-sexp lset_diff(sexp a, sexp b) {
+sexp sexp_lset_diff(sexp a, sexp b) {
   sexp res = SEXP_NULL;
   for ( ; SEXP_PAIRP(a); a=SEXP_CDR(a))
-    if (! list_index(b, SEXP_CAR(a)) >= 0)
-      res = cons(SEXP_CAR(a), res);
+    if (! sexp_list_index(b, SEXP_CAR(a)) >= 0)
+      res = sexp_cons(SEXP_CAR(a), res);
   return res;
 }
 
-sexp reverse(sexp ls) {
+sexp sexp_reverse(sexp ls) {
   sexp res = SEXP_NULL;
   for ( ; SEXP_PAIRP(ls); ls=SEXP_CDR(ls))
-    res = cons(SEXP_CAR(ls), res);
+    res = sexp_cons(SEXP_CAR(ls), res);
   return res;
 }
 
-sexp nreverse(sexp ls) {
+sexp sexp_nreverse(sexp ls) {
   sexp a, b, tmp;
   if (ls == SEXP_NULL) {
     return ls;
@@ -166,52 +150,52 @@ sexp nreverse(sexp ls) {
     return SEXP_ERROR;
   } else {
     b=ls;
-    a=cdr(ls);
-    set_cdr(b, SEXP_NULL);
+    a=SEXP_CDR(ls);
+    SEXP_CDR(b) = SEXP_NULL;
     for ( ; SEXP_PAIRP(a); b=a, a=tmp) {
-      tmp=cdr(a);
-      set_cdr(a, b);
+      tmp=SEXP_CDR(a);
+      SEXP_CDR(a) = b;
     }
     return b;
   }
 }
 
-sexp append(sexp a, sexp b) {
-  for (a=reverse(a); SEXP_PAIRP(a); a=SEXP_CDR(a))
-    b = cons(SEXP_CAR(a), b);
+sexp sexp_append(sexp a, sexp b) {
+  for (a=sexp_reverse(a); SEXP_PAIRP(a); a=SEXP_CDR(a))
+    b = sexp_cons(SEXP_CAR(a), b);
   return b;
 }
 
-sexp list(int count, ...) {
+sexp sexp_list(int count, ...) {
   sexp res = SEXP_NULL;
   int i;
   va_list ap;
   va_start(ap, count);
   for (i=0; i<count; i++)
-    res = cons(va_arg(ap, sexp), res);
+    res = sexp_cons(va_arg(ap, sexp), res);
   va_end(ap);
-  return nreverse(res);
+  return sexp_nreverse(res);
 }
 
-unsigned long length(sexp ls) {
+unsigned long sexp_length(sexp ls) {
   sexp x;
   unsigned long res;
-  for (res=0, x=ls; SEXP_PAIRP(x); res++, x=cdr(x))
+  for (res=0, x=ls; SEXP_PAIRP(x); res++, x=SEXP_CDR(x))
     ;
   return res;
 }
 
 /********************* strings, symbols, vectors **********************/
 
-sexp make_flonum(double f) {
+sexp sexp_make_flonum(double f) {
   sexp x = SEXP_NEW();
   if (! x) return SEXP_ERROR;
   x->tag = SEXP_FLONUM;
-  flonum_value(x) = f;
+  sexp_flonum_value(x) = f;
   return x;
 }
 
-sexp make_string(char *str) {
+sexp sexp_make_string(char *str) {
   sexp s = SEXP_NEW();
   if (! s) return SEXP_ERROR;
   unsigned long len = strlen(str);
@@ -227,12 +211,12 @@ sexp make_string(char *str) {
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
 
-int string_hash(char *str, int acc) {
+int sexp_string_hash(char *str, int acc) {
   while (*str) {acc *= FNV_PRIME; acc ^= *str++;}
   return acc;
 }
 
-sexp intern(char *str) {
+sexp sexp_intern(char *str) {
   struct huff_entry he;
   sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, i, d, cell;
   char c, *mystr, *p=str;
@@ -253,15 +237,15 @@ sexp intern(char *str) {
 #endif
 
  normal_intern:
-  res = string_hash(p, res);
+  res = sexp_string_hash(p, res);
   d = symbol_table_primes[symbol_table_prime_index];
   cell = res % d;
   for (i=0; i<d; i++) {
     if (! symbol_table[cell]) {
       break;
     } else if (strncmp(str,
-                symbol_data(symbol_table[cell]),
-                symbol_length(symbol_table[cell])) == 0) {
+                       sexp_symbol_data(symbol_table[cell]),
+                       sexp_symbol_length(symbol_table[cell])) == 0) {
       return symbol_table[cell];
     }
     cell = (cell * res + 1) % d;
@@ -290,7 +274,7 @@ sexp intern(char *str) {
   return symbol_table[cell];
 }
 
-sexp make_vector(unsigned long len, sexp dflt) {
+sexp sexp_make_vector(unsigned long len, sexp dflt) {
   int i;
   sexp v = SEXP_NEW();
   if (v == NULL) return SEXP_ERROR;
@@ -305,21 +289,21 @@ sexp make_vector(unsigned long len, sexp dflt) {
   return v;
 }
 
-sexp list_to_vector(sexp ls) {
-  sexp vec = make_vector(length(ls), SEXP_FALSE);
+sexp sexp_list_to_vector(sexp ls) {
+  sexp vec = sexp_make_vector(sexp_length(ls), SEXP_FALSE);
   if (vec == SEXP_ERROR) return vec;
   sexp x;
-  sexp *elts = vector_data(vec);
+  sexp *elts = sexp_vector_data(vec);
   int i;
-  for (i=0, x=ls; SEXP_PAIRP(x); i++, x=cdr(x))
-    elts[i] = car(x);
+  for (i=0, x=ls; SEXP_PAIRP(x); i++, x=SEXP_CDR(x))
+    elts[i] = SEXP_CAR(x);
   return vec;
 }
 
-sexp vector(int count, ...) {
-  sexp vec = make_vector(count, SEXP_FALSE);
+sexp sexp_vector(int count, ...) {
+  sexp vec = sexp_make_vector(count, SEXP_FALSE);
   if (vec == SEXP_ERROR) return vec;
-  sexp *elts = vector_data(vec);
+  sexp *elts = sexp_vector_data(vec);
   va_list ap;
   int i;
 
@@ -332,70 +316,145 @@ sexp vector(int count, ...) {
 
 /************************ reading and writing *************************/
 
-void write_sexp (FILE *out, sexp obj) {
+#ifdef USE_STRING_STREAMS
+
+int sstream_read(void *vec, char *dst, int n) {
+  int len = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(1));
+  int pos = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(2));
+  if (pos >= len) return 0;
+  if (n > (len - pos)) n = (len - pos);
+  memcpy(dst+pos, sexp_vector_ref((sexp) vec, sexp_make_integer(0)), n);
+  sexp_vector_set((sexp) vec, sexp_make_integer(2), (sexp)n);
+  return n;
+}
+
+int sstream_write(void *vec, const char *src, int n) {
+  return n;
+}
+
+off_t sstream_seek(void *vec, off_t offset, int whence) {
+  int pos;
+  if (whence == SEEK_SET) {
+    pos = offset;
+  } else if (whence == SEEK_CUR) {
+    pos = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(2)) + offset;
+  } else {                      /* SEEK_END */
+    pos = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(1)) + offset;
+  }
+  sexp_vector_set((sexp) vec, sexp_make_integer(2), (sexp)pos);
+  return pos;
+}
+
+int sstream_close(void *vec) {
+  sexp_free((sexp)vec);
+}
+
+sexp sexp_make_input_port(FILE* in) {
+  sexp p = SEXP_NEW();
+  if (p == NULL) return SEXP_ERROR;
+  p->tag = SEXP_IPORT;
+  p->data1 = in;
+  return p;
+}
+
+sexp sexp_make_output_port(FILE* out) {
+  sexp p = SEXP_NEW();
+  if (p == NULL) return SEXP_ERROR;
+  p->tag = SEXP_OPORT;
+  p->data1 = out;
+  return p;
+}
+
+sexp sexp_make_input_string_port(sexp str) {
+  FILE *in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
+  return sexp_make_input_port(in);
+}
+
+sexp sexp_make_output_string_port() {
+  return SEXP_ERROR;
+}
+
+sexp sexp_get_output_string(sexp port) {
+  return SEXP_ERROR;
+}
+
+#endif
+
+void sexp_write (sexp obj, sexp out) {
   unsigned long len, i, c, res;
   sexp x, *elts;
+  char *str;
 
   if (! obj) {
-    fprintf(out, "#<null>");
+    sexp_write_string("#<null>", out);
   } else if (SEXP_POINTERP(obj)) {
     switch (obj->tag) {
     case SEXP_PAIR:
-      fprintf(out, "(");
-      write_sexp(out, car(obj));
-      for (x=cdr(obj); SEXP_PAIRP(x); x=cdr(x)) {
-        fprintf(out, " ");
-        write_sexp(out, car(x));
+      sexp_write_char('(', out);
+      sexp_write(SEXP_CAR(obj), out);
+      for (x=SEXP_CDR(obj); SEXP_PAIRP(x); x=SEXP_CDR(x)) {
+        sexp_write_char(' ', out);
+        sexp_write(SEXP_CAR(x), out);
       }
       if (! SEXP_NULLP(x)) {
-        fprintf(out, " . ");
-        write_sexp(out, x);
+        sexp_write_string(" . ", out);
+        sexp_write(x, out);
       }
-      fprintf(out, ")");
+      sexp_write_char(')', out);
       break;
     case SEXP_VECTOR:
-      len = vector_length(obj);
-      elts = vector_data(obj);
+      len = sexp_vector_length(obj);
+      elts = sexp_vector_data(obj);
       if (len == 0) {
-        fprintf(out, "#()");
+        sexp_write_string("#()", out);
       } else {
-        fprintf(out, "#(");
-        write_sexp(out, elts[0]);
+        sexp_write_string("#(", out);
+        sexp_write(out, elts[0]);
         for (i=1; i<len; i++) {
-          fprintf(out, " ");
-          write_sexp(out, elts[i]);
+          sexp_write_char(' ', out);
+          sexp_write(out, elts[i]);
         }
-        fprintf(out, ")");
+        sexp_write_char(')', out);
       }
       break;
     case SEXP_FLONUM:
-      fprintf(out, "%g", flonum_value(obj));
-      break;
+      sexp_printf(out, "%g", sexp_flonum_value(obj)); break;
     case SEXP_PROCEDURE:
-      fprintf(out, "#<procedure>");
-      break;
+      sexp_write_string("#<procedure>", out); break;
+    case SEXP_IPORT:
+      sexp_write_string("#<input-port>", out); break;
+    case SEXP_OPORT:
+      sexp_write_string("#<output-port>", out); break;
     case SEXP_BYTECODE:
-      fprintf(out, "#<bytecode>");
-      break;
+      sexp_write_string("#<bytecode>", out); break;
     case SEXP_ENV:
-      fprintf(out, "#<env>");
-      break;
+      sexp_write_string("#<env>", out); break;
     case SEXP_STRING:
-      fprintf(out, "\"");
+      sexp_write_char('"', out);
+      i = sexp_string_length(obj);
+      str = sexp_string_data(obj);
       /* FALLTHROUGH */
     case SEXP_SYMBOL:
-      fprintf(out, "%s", string_data(obj));
+      if (obj->tag != SEXP_STRING) {
+        i = sexp_symbol_length(obj);
+        str = sexp_symbol_data(obj);
+      }
+      for ( ; i>=0; str++, i--) {
+        if (str[0] == '\\')
+          sexp_write_char('\\', out);
+        sexp_write_char(str[0], out);
+      }
       if (obj->tag == SEXP_STRING)
-        fprintf(out, "\"");
+        sexp_write_char('"', out);
       break;
     }
   } else if (SEXP_INTEGERP(obj)) {
-      fprintf(out, "%d", unbox_integer(obj));
+    sexp_printf(out, "%d", sexp_unbox_integer(obj));
   } else if (SEXP_CHARP(obj)) {
-      if (33 <= unbox_character(obj) < 127) {
-        fprintf(out, "#\\%c", unbox_character(obj));
+      if (33 <= sexp_unbox_character(obj) < 127) {
+        sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
       } else {
-        fprintf(out, "#\\x%02d", unbox_character(obj));
+        sexp_printf(out, "#\\x%02d", sexp_unbox_character(obj));
       }
   } else if (SEXP_SYMBOLP(obj)) {
 
@@ -404,51 +463,45 @@ void write_sexp (FILE *out, sexp obj) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
 #include "sexp-unhuff.c"
-        putc(res, out);
+        sexp_write_char(res, out);
       }
-    } else
+    }
 #endif
 
-      fprintf(out, "%s", symbol_data(obj));
   } else {
     switch ((sexp_uint_t) obj) {
     case (sexp_uint_t) SEXP_NULL:
-      fprintf(out, "()");
-      break;
+      sexp_write_string("()", out); break;
     case (sexp_uint_t) SEXP_TRUE:
-      fprintf(out, "#t");
-      break;
+      sexp_write_string("#t", out); break;
     case (sexp_uint_t) SEXP_FALSE:
-      fprintf(out, "#f");
-      break;
+      sexp_write_string("#f", out); break;
     case (sexp_uint_t) SEXP_EOF:
-      fprintf(out, "#<eof>");
-      break;
+      sexp_write_string("#<eof>", out); break;
     case (sexp_uint_t) SEXP_UNDEF:
-      fprintf(out, "#<undef>");
-      break;
+      sexp_write_string("#<undef>", out); break;
     default:
-      fprintf(out, "#<error>");
+      sexp_write_string("#<error>", out);
     }
   }
 }
 
-char* read_string(FILE *in) {
+char* sexp_read_string(sexp in) {
   char *buf, *tmp, *res;
-  char c;
-  int len;
+  int c, len, size=128;
 
-  buf = SEXP_ALLOC(128);
+  buf = SEXP_ALLOC(size);       /* XXXX grow! */
   tmp = buf;
 
-  for (c=fgetc(in); (c != EOF) && (c != '"'); c=fgetc(in)) {
-    if (c == '\\') {
-      c=fgetc(in);
+  for (c=sexp_read_char(in); c != '"'; c=sexp_read_char(in)) {
+    if (c == EOF) {
+      SEXP_FREE(buf);
+      return NULL;
+    } else if (c == '\\') {
+      c=sexp_read_char(in);
       switch (c) {
-      case 'n':
-        c = '\n';
-      case 't':
-        c = '\t';
+      case 'n': c = '\n'; break;
+      case 't': c = '\t'; break;
       }
       *tmp++ = c;
     } else {
@@ -464,21 +517,20 @@ char* read_string(FILE *in) {
   return res;
 }
 
-char* read_symbol(FILE *in, int init) {
+char* sexp_read_symbol(sexp in, int init) {
   char *buf, *tmp, *res;
-  char c;
-  int len;
+  int c, len, size=128;
 
-  buf = SEXP_ALLOC(128);
+  buf = SEXP_ALLOC(size);
   tmp = buf;
 
   if (init != EOF)
     *tmp++ = init;
 
   while (1) {
-    c=fgetc(in);
+    c=sexp_read_char(in);
     if (c == EOF || is_separator(c)) {
-      ungetc(c, in);
+      sexp_push_char(c, in);
       break;
     }
     *tmp++ = c;
@@ -492,57 +544,56 @@ char* read_symbol(FILE *in, int init) {
   return res;
 }
 
-sexp read_float_tail(FILE *in, long whole) {
+sexp sexp_read_float_tail(sexp in, long whole) {
   double res = 0.0, scale=0.1;
   int c;
-  for (c=fgetc(in); isdigit(c); c=fgetc(in), scale*=0.1)
+  for (c=sexp_read_char(in); isdigit(c); c=sexp_read_char(in), scale*=0.1)
     res += ((c<='9') ? (c - '0') : ((toupper(c) - 'A') + 10))*scale;
-  ungetc(c, in);
-  return make_flonum(whole + res);
+  sexp_push_char(c, in);
+  return sexp_make_flonum(whole + res);
 }
 
-sexp read_number(FILE *in, int base) {
+sexp sexp_read_number(sexp in, int base) {
   sexp tmp;
-  long res = 0, negativep = 0;
-  int c;
+  long res = 0, negativep = 0, c;
 
-  c = fgetc(in);
+  c = sexp_read_char(in);
   if (c == '-') {
     negativep = 1;
   } else if (isdigit(c)) {
     res = c - '0';
   }
 
-  for (c=fgetc(in); isxdigit(c); c=fgetc(in))
+  for (c=sexp_read_char(in); isxdigit(c); c=sexp_read_char(in))
     res = res * base + ((c<='9') ? (c - '0') : ((toupper(c) - 'A') + 10));
   if (c=='.') {
     if (base != 10) {
       fprintf(stderr, "decimal found in non-base 10");
       return SEXP_ERROR;
     }
-    tmp = read_float_tail(in, res);
+    tmp = sexp_read_float_tail(in, res);
     if (negativep && SEXP_FLONUMP(tmp))
-      flonum_value(tmp) = -1 * flonum_value(tmp);
+      sexp_flonum_value(tmp) = -1 * sexp_flonum_value(tmp);
     return tmp;
   } else {
-    ungetc(c, in);
+    sexp_push_char(c, in);
   }
 
-  return make_integer(negativep ? -res : res);
+  return sexp_make_integer(negativep ? -res : res);
 }
 
-sexp read_sexp_raw (FILE *in) {
+sexp sexp_read_raw (sexp in) {
   sexp res, tmp, tmp2;
   char *str;
   int c1, c2;
 
  scan_loop:
-  switch (c1 = fgetc(in)) {
+  switch (c1 = sexp_read_char(in)) {
   case EOF:
     res = SEXP_EOF;
     break;
   case ';':
-    while ((c1 = fgetc(in)) != EOF)
+    while ((c1 = sexp_read_char(in)) != EOF)
       if (c1 == '\n')
         break;
     /* fallthrough */
@@ -550,96 +601,98 @@ sexp read_sexp_raw (FILE *in) {
   case '\t':
   case '\n':
     goto scan_loop;
-    break;
   case '\'':
-    res = read_sexp(in);
-    res = list2(the_quote_symbol, res);
+    res = sexp_read(in);
+    res = sexp_list2(the_quote_symbol, res);
     break;
   case '`':
-    res = read_sexp(in);
-    res = list2(the_quasiquote_symbol, res);
+    res = sexp_read(in);
+    res = sexp_list2(the_quasiquote_symbol, res);
     break;
   case ',':
-    if ((c1 = fgetc(in)) == '@') {
-      res = read_sexp(in);
-      res = list2(the_unquote_splicing_symbol, res);
+    if ((c1 = sexp_read_char(in)) == '@') {
+      res = sexp_read(in);
+      res = sexp_list2(the_unquote_splicing_symbol, res);
     } else {
-      ungetc(c1, in);
-      res = read_sexp(in);
-      res = list2(the_unquote_symbol, res);
+      sexp_push_char(c1, in);
+      res = sexp_read(in);
+      res = sexp_list2(the_unquote_symbol, res);
     }
     break;
   case '"':
-    str = read_string(in);
-    res = make_string(str);
+    str = sexp_read_string(in);
+    res = sexp_make_string(str);
     SEXP_FREE(str);
     break;
   case '(':
     res = SEXP_NULL;
-    tmp = read_sexp_raw(in);
+    tmp = sexp_read_raw(in);
     while ((tmp != SEXP_ERROR) && (tmp != SEXP_EOF) && (tmp != SEXP_CLOSE)) {
       if (tmp == SEXP_RAWDOT) {
-        /* dotted list */
-        free_sexp(tmp);
-        tmp = read_sexp_raw(in);
-        if (read_sexp(in) != SEXP_CLOSE) {
-          fprintf(stderr, "sexp: multiple tokens in dotted tail\n");
-          res = SEXP_ERROR;
+        if (res == SEXP_NULL) {
+          fprintf(stderr, "sexp: dot before any elements in list\n");
+          return SEXP_ERROR;
         } else {
-          tmp2 = res;
-          res = nreverse(res);
-          set_cdr(tmp2, tmp);
-          return res;
+          tmp = sexp_read_raw(in);
+          if (sexp_read(in) != SEXP_CLOSE) {
+            fprintf(stderr, "sexp: multiple tokens in dotted tail\n");
+            sexp_free(res);
+            return SEXP_ERROR;
+          } else {
+            tmp2 = res;
+            res = sexp_nreverse(res);
+            SEXP_CDR(tmp2) = tmp;
+            return res;
+          }
         }
       } else {
-        res = cons(tmp, res);
-        tmp = read_sexp_raw(in);
+        res = sexp_cons(tmp, res);
+        tmp = sexp_read_raw(in);
       }
     }
     if (tmp != SEXP_CLOSE) {
-      free_sexp(res);
+      sexp_free(res);
       res = SEXP_ERROR;
     }
-    res = nreverse(res);
+    res = sexp_nreverse(res);
     break;
   case '#':
-    switch (c1=fgetc(in)) {
+    switch (c1=sexp_read_char(in)) {
     case 'b':
-      res = read_number(in, 2);
-      break;
+      res = sexp_read_number(in, 2); break;
     case 'o':
-      res = read_number(in, 8);
-      break;
+      res = sexp_read_number(in, 8); break;
     case 'd':
-      res = read_number(in, 10);
-      break;
+      res = sexp_read_number(in, 10); break;
     case 'x':
-      res = read_number(in, 16);
-      break;
+      res = sexp_read_number(in, 16); break;
 /*     case 'e': */
 /*     case 'i': */
     case 'f':
     case 't':
-      c2 = fgetc(in);
+      c2 = sexp_read_char(in);
       if (c2 == EOF || is_separator(c2)) {
         res = (c1 == 't' ? SEXP_TRUE : SEXP_FALSE);
       } else {
         fprintf(stderr, "sexp: invalid syntax #%c%c\n", c1, c2);
         res = SEXP_ERROR;
       }
-      ungetc(c2, in);
+      sexp_push_char(c2, in);
       break;
+    case ';':
+      sexp_read_raw(in);
+      goto scan_loop;
     case '(':
-      ungetc(c1, in);
-      res = read_sexp(in);
-      if (! listp(res)) {
+      sexp_push_char(c1, in);
+      res = sexp_read(in);
+      if (! sexp_listp(res)) {
         if (res != SEXP_ERROR) {
           fprintf(stderr, "sexp: dotted list not allowed in vector syntax\n");
-          free_sexp(res);
+          sexp_free(res);
           res = SEXP_ERROR;
         }
       } else {
-        res = list_to_vector(res);
+        res = sexp_list_to_vector(res);
       }
       break;
     default:
@@ -649,16 +702,16 @@ sexp read_sexp_raw (FILE *in) {
     }
     break;
   case '.':
-    c1 = fgetc(in);
+    c1 = sexp_read_char(in);
     if (c1 == EOF || is_separator(c1)) {
       res = SEXP_RAWDOT;
     } else if (isdigit(c1)) {
-      ungetc(c1,in );
-      res = read_float_tail(in, 0);
+      sexp_push_char(c1,in );
+      res = sexp_read_float_tail(in, 0);
     } else {
-      ungetc(c1, in);
-      str = read_symbol(in, '.');
-      res = intern(str);
+      sexp_push_char(c1, in);
+      str = sexp_read_symbol(in, '.');
+      res = sexp_intern(str);
       SEXP_FREE(str);
     }
     break;
@@ -667,51 +720,51 @@ sexp read_sexp_raw (FILE *in) {
     break;
   case '+':
   case '-':
-    c2 = fgetc(in);
+    c2 = sexp_read_char(in);
     if (c2 == '.' || isdigit(c2)) {
-      ungetc(c2, in);
-      res = read_number(in, 10);
+      sexp_push_char(c2, in);
+      res = sexp_read_number(in, 10);
       if (c1 == '-') res = sexp_mul(res, -1);
     } else {
-      ungetc(c2, in);
-      str = read_symbol(in, c1);
-      res = intern(str);
+      sexp_push_char(c2, in);
+      str = sexp_read_symbol(in, c1);
+      res = sexp_intern(str);
       SEXP_FREE(str);
     }
     break;
   case '0': case '1': case '2': case '3': case '4':
   case '5': case '6': case '7': case '8': case '9':
-    ungetc(c1, in);
-    res = read_number(in, 10);
+    sexp_push_char(c1, in);
+    res = sexp_read_number(in, 10);
     break;
   default:
-    str = read_symbol(in, c1);
-    res = intern(str);
+    str = sexp_read_symbol(in, c1);
+    res = sexp_intern(str);
     SEXP_FREE(str);
     break;
   }
   return res;
 }
 
-sexp read_sexp (FILE *in) {
-  sexp res = read_sexp_raw(in);
+sexp sexp_read (sexp in) {
+  sexp res = sexp_read_raw(in);
   if ((res == SEXP_CLOSE) || (res == SEXP_RAWDOT))
     res = SEXP_ERROR;
   return res;
 }
 
 void sexp_init() {
-  if (! initialized_p) {
-    initialized_p = 1;
+  if (! sexp_initialized_p) {
+    sexp_initialized_p = 1;
 #ifdef USE_BOEHM
     GC_init();
 #endif
     symbol_table = SEXP_ALLOC(symbol_table_primes[0]*sizeof(sexp));
-    the_dot_symbol = intern(".");
-    the_quote_symbol = intern("quote");
-    the_quasiquote_symbol = intern("quasiquote");
-    the_unquote_symbol = intern("unquote");
-    the_unquote_splicing_symbol = intern("unquote-splicing");
+    the_dot_symbol = sexp_intern(".");
+    the_quote_symbol = sexp_intern("quote");
+    the_quasiquote_symbol = sexp_intern("quasiquote");
+    the_unquote_symbol = sexp_intern("unquote");
+    the_unquote_splicing_symbol = sexp_intern("unquote-splicing");
   }
 }
 

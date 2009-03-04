@@ -1,6 +1,6 @@
-/*  sexp.h -- header for sexp library */
+/*  sexp.h -- header for sexp library                    */
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #ifndef SEXP_H
 #define SEXP_H
@@ -20,7 +20,9 @@
 #define errx(code, msg, ...) (fprintf(stderr,msg"\n",__VA_ARGS__), exit(code))
 #endif
 
-#define sexp_debug(msg, obj) (fprintf(stderr,msg), fflush(stderr), write_sexp(stderr, obj), fprintf(stderr,"\n"))
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
+#define SEXP_BSD
+#endif
 
 #ifdef USE_BOEHM
 #include "gc/include/gc.h"
@@ -70,6 +72,8 @@ enum sexp_types {
   SEXP_VECTOR,
   SEXP_FLONUM,
   SEXP_BIGNUM,
+  SEXP_IPORT,
+  SEXP_OPORT,
   /* the following are used only by the evaluator */
   SEXP_PROCEDURE,
   SEXP_ENV,
@@ -109,6 +113,8 @@ typedef long sexp_sint_t;
 #define SEXP_LSYMBOLP(x)  (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_SYMBOL)
 #define SEXP_VECTORP(x)   (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_VECTOR)
 #define SEXP_FLONUMP(x)   (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_FLONUM)
+#define SEXP_IPORTP(x)    (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_IPORT)
+#define SEXP_OPORTP(x)    (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_OPORT)
 #define SEXP_PROCEDUREP(x) (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_PROCEDURE)
 #define SEXP_ENVP(x)      (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_ENV)
 #define SEXP_BYTECODEP(x) (SEXP_POINTERP(x) && ((sexp)(x))->tag ==SEXP_BYTECODE)
@@ -120,34 +126,57 @@ typedef long sexp_sint_t;
 #ifdef USE_HUFF_SYMS
 #define SEXP_DOTP(x)     (((sexp_uint_t)(x))==((0x5D00<<SEXP_IMMEDIATE_BITS)+SEXP_ISYMBOL_TAG))
 #else
-#define SEXP_DOTP(x)     ((x)==the_dot_symbol)
+#define SEXP_DOTP(x)     ((x)==sexp_the_dot_symbol)
 #endif
 
-#define make_integer(n)    ((sexp) (((long) n<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
-#define unbox_integer(n)   ((long) n>>SEXP_FIXNUM_BITS)
-#define make_character(n)  ((sexp) (((long) n<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
-#define unbox_character(n) ((long) n>>SEXP_EXTENDED_BITS)
+#define sexp_make_integer(n)    ((sexp) (((long) n<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
+#define sexp_unbox_integer(n)   ((long) n>>SEXP_FIXNUM_BITS)
+#define sexp_make_character(n)  ((sexp) (((long) n<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
+#define sexp_unbox_character(n) ((long) n>>SEXP_EXTENDED_BITS)
 
-#define flonum_value(f) (((double*)(((sexp_uint_t)f)+sizeof(char)))[0])
+#define sexp_flonum_value(f) (((double*)(((sexp_uint_t)f)+sizeof(char)))[0])
 
-#define vector_length(x) ((sexp_uint_t) x->data1)
-#define vector_data(x)   ((sexp*) x->data2)
+#define sexp_vector_length(x) ((sexp_uint_t) x->data1)
+#define sexp_vector_data(x)   ((sexp*) (((sexp)x)->data2))
 
-#define vector_ref(x, i) (vector_data(x)[unbox_integer(i)])
-#define vector_set(x, i, v) (vector_data(x)[unbox_integer(i)] = (v))
+#define sexp_vector_ref(x, i) (sexp_vector_data(x)[sexp_unbox_integer(i)])
+#define sexp_vector_set(x, i, v) (sexp_vector_data(x)[sexp_unbox_integer(i)] = (v))
 
-#define procedure_code(x) ((bytecode) ((sexp)x)->data1)
-#define procedure_vars(x)   ((sexp) ((sexp)x)->data2)
+#define sexp_procedure_code(x) ((bytecode) ((sexp)x)->data1)
+#define sexp_procedure_vars(x)   ((sexp) ((sexp)x)->data2)
 
-#define string_length(x) ((sexp_uint_t) x->data1)
-#define string_data(x)   ((char*) x->data2)
+#define sexp_string_length(x) ((sexp_uint_t) x->data1)
+#define sexp_string_data(x)   ((char*) x->data2)
 
-#define string_ref(x, i) (make_character(string_data(x)[unbox_integer(i)]))
-#define string_set(x, i, v) (string_data(x)[unbox_integer(i)] = unbox_character(v))
+#define sexp_string_ref(x, i) (sexp_make_character(sexp_string_data(x)[sexp_unbox_integer(i)]))
+#define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_integer(i)] = sexp_unbox_character(v))
 
-#define symbol_pointer(x) ((sexp) (((sexp_uint_t)x)-SEXP_LSYMBOL_TAG))
-#define symbol_length(x)  ((sexp_uint_t) (symbol_pointer(x)->data1))
-#define symbol_data(x)    ((char*) (symbol_pointer(x)->data2))
+#define sexp_port_stream(p)  ((FILE*) ((sexp)p)->data1)
+
+#ifdef USE_STRING_STREAMS
+#ifdef SEXP_BSD
+#define fmemopen(str, len, m) funopen(sexp_vector(3, (sexp)str, (sexp)len, (sexp)0), sstream_read, sstream_write, sstream_seek, sstream_close)
+int sstream_read(void *vec, char *dst, int n);
+int sstream_write(void *vec, const char *src, int n);
+off_t sstream_seek(void *vec, off_t offset, int whence);
+int sstream_close(void *vec);
+#endif
+#define sexp_read_char(p) (getc(sexp_port_stream(p)))
+#define sexp_push_char(c, p) (ungetc(c, sexp_port_stream(p)))
+#define sexp_write_char(c, p) (putc(c, sexp_port_stream(p)))
+#define sexp_write_string(s, p) (fputs(s, sexp_port_stream(p)))
+#define sexp_printf(p, s, ...) (fprintf(sexp_port_stream(p), s, __VA_ARGS__))
+#else
+sexp sexp_read_char(sexp port);
+void sexp_push_char(sexp ch, sexp port);
+void sexp_write_char(sexp ch, sexp port);
+void sexp_write_string(sexp str, sexp port);
+void sexp_printf(sexp port, sexp fmt, ...);
+#endif
+
+#define sexp_symbol_pointer(x) ((sexp) (((sexp_uint_t)x)-SEXP_LSYMBOL_TAG))
+#define sexp_symbol_length(x)  ((sexp_uint_t) (sexp_symbol_pointer(x)->data1))
+#define sexp_symbol_data(x)    ((char*) (sexp_symbol_pointer(x)->data2))
 
 #define sexp_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
 #define sexp_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
@@ -155,9 +184,10 @@ typedef long sexp_sint_t;
 #define sexp_div(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)/(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
 #define sexp_mod(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)%(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
 
-#define list2(a, b)       cons(a, cons(b, SEXP_NULL))
-#define list3(a, b, c)    cons(a, cons(b, cons(c, SEXP_NULL)))
-#define list4(a, b, c, d) cons(a, cons(b, cons(c, cons(d, SEXP_NULL))))
+#define sexp_list1(a)          sexp_cons(a, SEXP_NULL)
+#define sexp_list2(a, b)       sexp_cons(a, sexp_cons(b, SEXP_NULL))
+#define sexp_list3(a, b, c)    sexp_cons(a, sexp_cons(b, sexp_cons(c, SEXP_NULL)))
+#define sexp_list4(a, b, c, d) sexp_cons(a, sexp_cons(b, sexp_cons(c, sexp_cons(d, SEXP_NULL))))
 
 #define SEXP_CAR(x)       (((sexp)x)->data1)
 #define SEXP_CDR(x)       (((sexp)x)->data2)
@@ -172,36 +202,41 @@ typedef long sexp_sint_t;
 #define SEXP_CADDDR(x)    (SEXP_CADR(SEXP_CDDR(x)))
 #define SEXP_CDDDDR(x)    (SEXP_CDDR(SEXP_CDDR(x)))
 
-sexp cons(sexp head, sexp tail);
-sexp car(sexp obj);
-sexp cdr(sexp obj);
-sexp set_car(sexp obj, sexp val);
-sexp set_cdr(sexp obj, sexp val);
+sexp sexp_cons(sexp head, sexp tail);
+sexp sexp_car(sexp obj);
+sexp sexp_cdr(sexp obj);
+sexp sexp_set_car(sexp obj, sexp val);
+sexp sexp_set_cdr(sexp obj, sexp val);
 
-int listp(sexp obj);
-int list_index(sexp ls, sexp elt);
-sexp lset_diff(sexp a, sexp b);
-sexp reverse(sexp ls);
-sexp nreverse(sexp ls);
-sexp append(sexp a, sexp b);
-sexp list(int count, ...);
-sexp memq(sexp x, sexp ls);
-sexp assq (sexp x, sexp ls);
-unsigned long length(sexp ls);
-sexp make_string(char *str);
-sexp make_flonum(double f);
-int string_hash(char *str, int acc);
-sexp intern(char *str);
-sexp make_vector(unsigned long len, sexp dflt);
-sexp list_to_vector(sexp ls);
-sexp vector(int count, ...);
-void write_sexp(FILE *out, sexp obj);
-void free_sexp(sexp obj);
-char* read_string(FILE *in);
-char* read_symbol(FILE *in, int init);
-sexp read_number(FILE *in, int base);
-sexp read_sexp_raw(FILE *in);
-sexp read_sexp(FILE *in);
+int sexp_listp(sexp obj);
+int sexp_list_index(sexp ls, sexp elt);
+sexp sexp_lset_diff(sexp a, sexp b);
+sexp sexp_reverse(sexp ls);
+sexp sexp_nreverse(sexp ls);
+sexp sexp_append(sexp a, sexp b);
+sexp sexp_list(int count, ...);
+sexp sexp_memq(sexp x, sexp ls);
+sexp sexp_assq(sexp x, sexp ls);
+unsigned long sexp_length(sexp ls);
+sexp sexp_make_string(char *str);
+sexp sexp_make_flonum(double f);
+int sexp_string_hash(char *str, int acc);
+sexp sexp_intern(char *str);
+sexp sexp_make_vector(unsigned long len, sexp dflt);
+sexp sexp_list_to_vector(sexp ls);
+sexp sexp_vector(int count, ...);
+void sexp_write(sexp obj, sexp out);
+void sexp_free(sexp obj);
+char* sexp_read_string(sexp in);
+char* sexp_read_symbol(sexp in, int init);
+sexp sexp_read_number(sexp in, int base);
+sexp sexp_read_raw(sexp in);
+sexp sexp_read(sexp in);
+sexp sexp_make_input_port(FILE* in);
+sexp sexp_make_output_port(FILE* out);
+sexp sexp_make_input_string_port(sexp str);
+sexp sexp_make_output_string_port();
+sexp sexp_get_output_string(sexp port);
 void sexp_init();
 
 #endif /* ! SEXP_H */
