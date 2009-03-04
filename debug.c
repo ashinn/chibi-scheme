@@ -31,7 +31,7 @@ void disasm (bytecode bc) {
   case OP_GLOBAL_SET:
   case OP_CALL:
   case OP_PUSH:
-    write_sexp(stderr, ((sexp*)ip)[0]);
+    sexp_write(((sexp*)ip)[0], cur_error_port);
     ip += sizeof(sexp);
     break;
   case OP_JUMP:
@@ -75,7 +75,7 @@ void print_stack (sexp *stack, int top) {
   for (i=0; i<top; i++) {
     fprintf(stderr, "  %02d: ", i);
     fflush(stderr);
-    write_sexp(stderr, stack[i]);
+    sexp_write(stack[i], cur_error_port);
     fprintf(stderr, "\n");
   }
 }

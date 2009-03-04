@@ -12,6 +12,8 @@
 #define INIT_BCODE_SIZE 128
 #define INIT_STACK_SIZE 1024
 
+#define sexp_debug(msg, obj) (sexp_write_string(msg,cur_error_port), sexp_write(obj, cur_error_port), sexp_write_char('\n',cur_error_port))
+
 typedef struct bytecode {
   char tag;
   unsigned int len;
