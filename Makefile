@@ -10,13 +10,16 @@ GC_OBJ=./gc/gc.a
 $GC_OBJ: ./gc/alloc.c
 	cd gc && make test
 
-sexp.o: sexp.c sexp.h config.h
+sexp.o: sexp.c sexp.h config.h Makefile
 	gcc -c $(CFLAGS) -o $@ $<
 
-eval.o: eval.c debug.c eval.h sexp.h config.h
+eval.o: eval.c debug.c eval.h sexp.h config.h Makefile
 	gcc -c $(CFLAGS) -o $@ $<
 
-chibi-scheme: sexp.o eval.o $(GC_OBJ)
+# main.o: main.c eval.h sexp.h config.h Makefile
+# 	gcc -c $(CFLAGS) -o $@ $<
+
+chibi-scheme: eval.o sexp.o $(GC_OBJ)
 	gcc $(CFLAGS) -o $@ $^
 
 clean:

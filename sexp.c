@@ -252,25 +252,26 @@ sexp sexp_intern(char *str) {
   }
   symbol_table_count++;
 
- resize:
   if (symbol_table_count*5 > d*4) {
+    fprintf(stderr, "resizing symbol table!!!!!\n");
     newtable = SEXP_ALLOC(symbol_table_primes[symbol_table_prime_index++]
                           * sizeof(sexp));
+    /* XXXX rehash */
     SEXP_FREE(symbol_table);
     symbol_table = newtable;
   }
 
- new_entry:
   sym = SEXP_NEW();
-  if (! sym) return SEXP_ERROR;
+  if (! sym) { return SEXP_ERROR; }
   len = strlen(str);
   mystr = SEXP_ALLOC(len+1);
   if (! mystr) { SEXP_FREE(sym); return SEXP_ERROR; }
   memcpy(mystr, str, len+1);
+  mystr[len]=0;
   sym->tag = SEXP_SYMBOL;
   sym->data1 = (void*) len;
   sym->data2 = (void*) mystr;
-  symbol_table[cell] = (sexp) (((sexp_uint_t)sym) + 3);
+  symbol_table[cell] = sym;
   return symbol_table[cell];
 }
 
@@ -381,7 +382,8 @@ sexp sexp_get_output_string(sexp port) {
 #endif
 
 void sexp_write (sexp obj, sexp out) {
-  unsigned long len, i, c, res;
+  unsigned long len, c, res;
+  long i;
   sexp x, *elts;
   char *str;
 

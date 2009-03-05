@@ -3,13 +3,14 @@
 /*  BSD-style license: http://synthcode.com/license.txt */
 
 static const char* reverse_opcode_names[] =
-  {"NOOP", "CALL", "JUMP_UNLESS", "JUMP", "RET", "DONE", "STACK_REF",
-   "STACK_SET", "GLOBAL_REF", "GLOBAL_SET", "CLOSURE_REF", "VECTOR_REF",
-   "VECTOR_SET", "STRING_REF", "STRING_SET", "MAKE_PROCEDURE", "MAKE_VECTOR",
-   "PUSH", "DUP", "DROP", "SWAP", "PAIRP", "NULLP", "VECTORP", "INTEGERP",
-   "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "CAR", "CDR",
-   "SET_CAR", "SET_CDR", "CONS", "ADD", "SUB", "MUL", "DIV", "MOD", "NEG",
-   "INV", "LT", "LE", "GT", "GE", "EQN", "EQ"};
+  {"NOOP", "CALL", "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "FCALL5",
+   "FCALL6", "FCALL7", "FCALLN", "JUMP_UNLESS", "JUMP", "RET", "DONE",
+   "STACK_REF", "STACK_SET", "GLOBAL_REF", "GLOBAL_SET", "CLOSURE_REF",
+   "VECTOR_REF", "VECTOR_SET", "STRING_REF", "STRING_SET", "MAKE_PROCEDURE",
+   "MAKE_VECTOR", "PUSH", "DUP", "DROP", "SWAP", "PAIRP", "NULLP", "VECTORP",
+   "INTEGERP", "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP",
+   "OPORTP", "CAR", "CDR", "SET_CAR", "SET_CDR", "CONS", "ADD", "SUB", "MUL",
+   "DIV", "MOD", "NEG", "INV", "LT", "LE", "GT", "GE", "EQN", "EQ",};
 
 void disasm (bytecode bc) {
   unsigned char *ip=bc->data, opcode;

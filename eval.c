@@ -9,53 +9,7 @@
 static int scheme_initialized_p = 0;
 
 static sexp cur_input_port, cur_output_port, cur_error_port;
-
-static struct core_form core_forms[] = {
-  {SEXP_CORE, "define", CORE_DEFINE},
-  {SEXP_CORE, "set!", CORE_SET},
-  {SEXP_CORE, "lambda", CORE_LAMBDA},
-  {SEXP_CORE, "if", CORE_IF},
-  {SEXP_CORE, "begin", CORE_BEGIN},
-  {SEXP_CORE, "quote", CORE_QUOTE},
-  {SEXP_CORE, "define-syntax", CORE_DEFINE_SYNTAX},
-  {SEXP_CORE, "let-syntax", CORE_LET_SYNTAX},
-  {SEXP_CORE, "letrec-syntax", CORE_LETREC_SYNTAX},
-};
-
-static struct opcode opcodes[] = {
-#define _OP(c,o,n,m,t,u,s,i) {SEXP_OPCODE, c, o, n, m, t, u, s, i, NULL}
-_OP(OPC_ACCESSOR, OP_CAR, 1, 0, SEXP_PAIR, 0, "car",0),
-_OP(OPC_ACCESSOR, OP_SET_CAR, 2, 0, SEXP_PAIR, 0, "set-car!",0),
-_OP(OPC_ACCESSOR, OP_CDR, 1, 0, SEXP_PAIR, 0, "cdr",0),
-_OP(OPC_ACCESSOR, OP_SET_CDR, 2, 0, SEXP_PAIR, 0, "set-cdr!",0),
-_OP(OPC_ACCESSOR, OP_VECTOR_REF,2,0, SEXP_VECTOR, SEXP_FIXNUM, "vector-ref",0),
-_OP(OPC_ACCESSOR, OP_VECTOR_SET,3,0, SEXP_VECTOR, SEXP_FIXNUM, "vector-set!",0),
-_OP(OPC_ACCESSOR, OP_STRING_REF,2,0, SEXP_STRING, SEXP_FIXNUM, "string-ref",0),
-_OP(OPC_ACCESSOR, OP_STRING_SET,3,0, SEXP_STRING, SEXP_FIXNUM, "string-set!",0),
-_OP(OPC_ARITHMETIC,     OP_ADD, 0, 1, SEXP_FIXNUM, 0, "+", 0),
-_OP(OPC_ARITHMETIC_INV, OP_SUB, 0, 1, SEXP_FIXNUM, 0, "-", OP_NEG),
-_OP(OPC_ARITHMETIC,     OP_MUL, 0, 1, SEXP_FIXNUM, 0, "*", 0),
-_OP(OPC_ARITHMETIC_INV, OP_DIV, 0, 1, SEXP_FIXNUM, 0, "/", OP_INV),
-_OP(OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, "%", 0),
-_OP(OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, "<", 0),
-_OP(OPC_ARITHMETIC_CMP, OP_LE,  0, 1, SEXP_FIXNUM, 0, "<=", 0),
-_OP(OPC_ARITHMETIC_CMP, OP_GT,  0, 1, SEXP_FIXNUM, 0, ">", 0),
-_OP(OPC_ARITHMETIC_CMP, OP_GE,  0, 1, SEXP_FIXNUM, 0, ">=", 0),
-_OP(OPC_ARITHMETIC_CMP, OP_EQN, 0, 1, SEXP_FIXNUM, 0, "=", 0),
-_OP(OPC_PREDICATE,      OP_EQ,  2, 0, 0, 0, "eq?", 0),
-_OP(OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, "cons", 0),
-_OP(OPC_CONSTRUCTOR,    OP_MAKE_VECTOR, 2, 0, SEXP_FIXNUM, 0, "make-vector", 0),
-_OP(OPC_CONSTRUCTOR,    OP_MAKE_PROCEDURE, 2, 0, 0, 0, "make-procedure", 0),
-_OP(OPC_TYPE_PREDICATE, OP_PAIRP,  1, 0, 0, 0, "pair?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_NULLP,  1, 0, 0, 0, "null?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_STRINGP,  1, 0, 0, 0, "string?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_SYMBOLP,  1, 0, 0, 0, "symbol?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_CHARP,  1, 0, 0, 0, "char?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_VECTORP,  1, 0, 0, 0, "vector?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_PROCEDUREP,  1, 0, 0, 0, "procedure?", 0),
-_OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, "eof-object?", 0),
-#undef _OP
-};
+static sexp exception_handler;
 
 #ifdef USE_DEBUG
 #include "debug.c"
@@ -129,21 +83,6 @@ env extend_env_closure (env e, sexp fv) {
                              e2->bindings);
   }
   return e2;
-}
-
-env make_standard_env() {
-  int i;
-  env e = (env) SEXP_ALLOC(sizeof(struct env));
-  e->tag = SEXP_ENV;
-  e->parent = NULL;
-  e->bindings = SEXP_NULL;
-  for (i=0; i<(sizeof(core_forms)/sizeof(struct core_form)); i++) {
-    env_define(e, sexp_intern(core_forms[i].name), (sexp)(&core_forms[i]));
-  }
-  for (i=0; i<(sizeof(opcodes)/sizeof(struct opcode)); i++) {
-    env_define(e, sexp_intern(opcodes[i].name), (sexp)(&opcodes[i]));
-  }
-  return e;
 }
 
 /************************* bytecode utilities ***************************/
@@ -290,6 +229,10 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
               emit(bc, i, ((opcode)o1)->op_inverse);
             } else {
               analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d);
+              if (((opcode)o1)->op_class != OPC_ARITHMETIC) {
+                emit(bc, i, ((opcode)o1)->op_name);
+                (*d)--;
+              }
             }
           } else {
             for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
@@ -301,11 +244,20 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
             (*d) -= sexp_length(SEXP_CDDR(obj));
           }
           break;
+        case OPC_FOREIGN:
+          for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
+               o2 = SEXP_CDR(o2)) {
+            analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d);
+          }
+          emit_push(bc, i, ((opcode)o1)->data);
+          emit(bc, i, ((opcode)o1)->op_name);
+          (*d) -= sexp_length(SEXP_CDR(obj));
+          break;
         default:
           errx(1, "unknown opcode class: %d", ((opcode)o1)->op_class);
         }
       } else {
-        /* function call */
+        /* general procedure call */
         analyze_app(obj, bc, i, e, params, fv, sv, d);
       }
     } else if (SEXP_PAIRP(SEXP_CAR(obj))) {
@@ -585,38 +537,31 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top-1]=tmp;
     break;
   case OP_PAIRP:
-    stack[top-1]=SEXP_PAIRP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_PAIRP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_NULLP:
-    stack[top-1]=SEXP_NULLP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_NULLP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_CHARP:
-    stack[top-1]=SEXP_CHARP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_CHARP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_INTEGERP:
-    stack[top-1]=SEXP_INTEGERP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_INTEGERP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_SYMBOLP:
-    stack[top-1]=SEXP_SYMBOLP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_SYMBOLP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_STRINGP:
-    stack[top-1]=SEXP_STRINGP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_STRINGP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_VECTORP:
-    stack[top-1]=SEXP_VECTORP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_VECTORP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_PROCEDUREP:
-    stack[top-1]=SEXP_PROCEDUREP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=SEXP_PROCEDUREP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
+  case OP_IPORTP:
+    stack[top-1]=SEXP_IPORTP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
+  case OP_OPORTP:
+    stack[top-1]=SEXP_OPORTP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_EOFP:
-    stack[top-1]=(stack[top-1] == SEXP_EOF) ? SEXP_TRUE : SEXP_FALSE;
-    break;
+    stack[top-1]=(stack[top-1] == SEXP_EOF) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_CAR:
-    stack[top-1]=sexp_car(stack[top-1]);
-    break;
+    stack[top-1]=sexp_car(stack[top-1]); break;
   case OP_CDR:
-    stack[top-1]=sexp_cdr(stack[top-1]);
-    break;
+    stack[top-1]=sexp_cdr(stack[top-1]); break;
   case OP_SET_CAR:
     sexp_set_car(stack[top-1], stack[top-2]);
     stack[top-2]=SEXP_UNDEF;
@@ -693,6 +638,21 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     /* fprintf(stderr, "stack at %d\n", top); */
     /* print_stack(stack, top); */
     break;
+  case OP_FCALL0:
+    stack[top-1]=((sexp_proc0)stack[top-1])();
+    break;
+  case OP_FCALL1:
+    stack[top-2]=((sexp_proc1)stack[top-1])(stack[top-2]);
+    top--;
+    break;
+  case OP_FCALL2:
+    stack[top-3]=((sexp_proc2)stack[top-1])(stack[top-2],stack[top-3]);
+    top-=2;
+    break;
+  case OP_FCALL3:
+    stack[top-4]=((sexp_proc3)stack[top-1])(stack[top-2],stack[top-3],stack[top-4]);
+    top-=3;
+    break;
   case OP_JUMP_UNLESS:
     fprintf(stderr, "JUMP UNLESS, stack top is %d\n", stack[top-1]);
     if (stack[--top] == SEXP_FALSE) {
@@ -742,6 +702,85 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 
 /************************** eval interface ****************************/
 
+static const struct core_form core_forms[] = {
+  {SEXP_CORE, CORE_DEFINE, "define"},
+  {SEXP_CORE, CORE_SET, "set!"},
+  {SEXP_CORE, CORE_LAMBDA, "lambda"},
+  {SEXP_CORE, CORE_IF, "if"},
+  {SEXP_CORE, CORE_BEGIN, "begin"},
+  {SEXP_CORE, CORE_QUOTE, "quote"},
+  {SEXP_CORE, CORE_DEFINE_SYNTAX, "define-syntax"},
+  {SEXP_CORE, CORE_LET_SYNTAX, "let-syntax"},
+  {SEXP_CORE, CORE_LETREC_SYNTAX, "letrec-syntax"},
+};
+
+static const struct opcode opcodes[] = {
+#define _OP(c,o,n,m,t,u,i,s) {SEXP_OPCODE, c, o, n, m, t, u, i, s, NULL, NULL}
+#define _FN(o,n,t,u,s,f) {SEXP_OPCODE, OPC_FOREIGN, o, n, 0, t,u, 0, s, (sexp)f, NULL}
+#define _FN0(s, f) _FN(OP_FCALL0, 0, 0, 0, s, f)
+#define _FN1(t, s, f) _FN(OP_FCALL1, 1, t, 0, s, f)
+#define _FN2(t, u, s, f) _FN(OP_FCALL2, 2, t, u, s, f)
+_OP(OPC_ACCESSOR, OP_CAR, 1, 0, SEXP_PAIR, 0, 0, "car"),
+_OP(OPC_ACCESSOR, OP_SET_CAR, 2, 0, SEXP_PAIR, 0, 0, "set-car!"),
+_OP(OPC_ACCESSOR, OP_CDR, 1, 0, SEXP_PAIR, 0, 0, "cdr"),
+_OP(OPC_ACCESSOR, OP_SET_CDR, 2, 0, SEXP_PAIR, 0, 0, "set-cdr!"),
+_OP(OPC_ACCESSOR, OP_VECTOR_REF,2,0, SEXP_VECTOR, SEXP_FIXNUM, 0,"vector-ref"),
+_OP(OPC_ACCESSOR, OP_VECTOR_SET,3,0, SEXP_VECTOR, SEXP_FIXNUM, 0,"vector-set!"),
+_OP(OPC_ACCESSOR, OP_STRING_REF,2,0, SEXP_STRING, SEXP_FIXNUM, 0,"string-ref"),
+_OP(OPC_ACCESSOR, OP_STRING_SET,3,0, SEXP_STRING, SEXP_FIXNUM, 0,"string-set!"),
+_OP(OPC_ARITHMETIC,     OP_ADD, 0, 1, SEXP_FIXNUM, 0, 0, "+"),
+_OP(OPC_ARITHMETIC_INV, OP_SUB, 0, 1, SEXP_FIXNUM, 0, OP_NEG, "-"),
+_OP(OPC_ARITHMETIC,     OP_MUL, 0, 1, SEXP_FIXNUM, 0, 0, "*"),
+_OP(OPC_ARITHMETIC_INV, OP_DIV, 0, 1, SEXP_FIXNUM, 0, OP_INV, "/"),
+_OP(OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, 0, "%"),
+_OP(OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, 0, "<"),
+_OP(OPC_ARITHMETIC_CMP, OP_LE,  0, 1, SEXP_FIXNUM, 0, 0, "<="),
+_OP(OPC_ARITHMETIC_CMP, OP_GT,  0, 1, SEXP_FIXNUM, 0, 0, ">"),
+_OP(OPC_ARITHMETIC_CMP, OP_GE,  0, 1, SEXP_FIXNUM, 0, 0, ">="),
+_OP(OPC_ARITHMETIC_CMP, OP_EQN, 0, 1, SEXP_FIXNUM, 0, 0, "="),
+_OP(OPC_PREDICATE,      OP_EQ,  2, 0, 0, 0, 0, "eq?"),
+_OP(OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, 0, "cons"),
+_OP(OPC_CONSTRUCTOR,    OP_MAKE_VECTOR, 2, 0, SEXP_FIXNUM, 0, 0, "make-vector"),
+_OP(OPC_CONSTRUCTOR,    OP_MAKE_PROCEDURE, 2, 0, 0, 0, 0, "make-procedure"),
+_OP(OPC_TYPE_PREDICATE, OP_PAIRP,  1, 0, 0, 0, 0, "pair?"),
+_OP(OPC_TYPE_PREDICATE, OP_NULLP,  1, 0, 0, 0, 0, "null?"),
+_OP(OPC_TYPE_PREDICATE, OP_STRINGP,  1, 0, 0, 0, 0, "string?"),
+_OP(OPC_TYPE_PREDICATE, OP_SYMBOLP,  1, 0, 0, 0, 0, "symbol?"),
+_OP(OPC_TYPE_PREDICATE, OP_CHARP,  1, 0, 0, 0, 0, "char?"),
+_OP(OPC_TYPE_PREDICATE, OP_VECTORP,  1, 0, 0, 0, 0, "vector?"),
+_OP(OPC_TYPE_PREDICATE, OP_PROCEDUREP,  1, 0, 0, 0, 0, "procedure?"),
+_OP(OPC_TYPE_PREDICATE, OP_IPORTP,  1, 0, 0, 0, 0, "input-port?"),
+_OP(OPC_TYPE_PREDICATE, OP_OPORTP,  1, 0, 0, 0, 0, "output-port?"),
+_OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?"),
+_FN1(SEXP_PAIR, "reverse", sexp_reverse),
+_FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
+_FN2(0, SEXP_PAIR, "memq", sexp_memq),
+_FN2(0, SEXP_PAIR, "assq", sexp_assq),
+_FN2(SEXP_PAIR, SEXP_PAIR, "diffq", sexp_lset_diff),
+#undef _OP
+#undef _FN
+#undef _FN0
+#undef _FN1
+#undef _FN2
+};
+
+env make_standard_env() {
+  int i;
+  env e = (env) SEXP_ALLOC(sizeof(struct env));
+  e->tag = SEXP_ENV;
+  e->parent = NULL;
+  e->bindings = SEXP_NULL;
+  for (i=0; i<(sizeof(core_forms)/sizeof(struct core_form)); i++) {
+    env_define(e, sexp_intern(core_forms[i].name), (sexp)(&core_forms[i]));
+  }
+  for (i=0; i<(sizeof(opcodes)/sizeof(struct opcode)); i++) {
+    env_define(e, sexp_intern(opcodes[i].name), (sexp)(&opcodes[i]));
+  }
+  return e;
+}
+
+/************************** eval interface ****************************/
+
 sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top) {
   bytecode bc;
   bc = compile(SEXP_NULL, sexp_cons(obj, SEXP_NULL), e, SEXP_NULL, SEXP_NULL, 1);
@@ -762,6 +801,22 @@ void scheme_init() {
     cur_input_port = sexp_make_input_port(stdin);
     cur_output_port = sexp_make_output_port(stdout);
     cur_error_port = sexp_make_output_port(stderr);
+  }
+}
+
+void repl (env e, sexp *stack) {
+  sexp obj, res;
+  while (1) {
+    fprintf(stdout, "> ");
+    fflush(stdout);
+    obj = sexp_read(cur_input_port);
+    if (obj == SEXP_EOF)
+      break;
+    res = eval_in_stack(obj, e, stack, 0);
+    if (res != SEXP_UNDEF) {
+      sexp_write(res, cur_output_port);
+      sexp_write_char('\n', cur_output_port);
+    }
   }
 }
 
@@ -793,21 +848,7 @@ int main (int argc, char **argv) {
     }
   }
 
-  /* repl */
-  while (! quit) {
-    fprintf(stdout, "> ");
-    fflush(stdout);
-    obj = sexp_read(cur_input_port);
-    if (obj == SEXP_EOF) {
-      quit = 1;
-    } else {
-      res = eval_in_stack(obj, e, stack, 0);
-      if (res != SEXP_UNDEF) {
-        sexp_write(res, cur_output_port);
-        sexp_write_char('\n', cur_output_port);
-      }
-    }
-  }
+  repl(e, stack);
   return 0;
 }
 

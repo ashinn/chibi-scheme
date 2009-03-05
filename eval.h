@@ -2,8 +2,8 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt */
 
-#ifndef SCM_EVAL_H
-#define SCM_EVAL_H
+#ifndef SEXP_EVAL_H
+#define SEXP_EVAL_H
 
 #include "sexp.h"
 
@@ -13,6 +13,15 @@
 #define INIT_STACK_SIZE 1024
 
 #define sexp_debug(msg, obj) (sexp_write_string(msg,cur_error_port), sexp_write(obj, cur_error_port), sexp_write_char('\n',cur_error_port))
+
+typedef sexp (*sexp_proc0) ();
+typedef sexp (*sexp_proc1) (sexp);
+typedef sexp (*sexp_proc2) (sexp, sexp);
+typedef sexp (*sexp_proc3) (sexp, sexp, sexp);
+typedef sexp (*sexp_proc4) (sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 typedef struct bytecode {
   char tag;
@@ -37,15 +46,16 @@ typedef struct opcode {
   char var_args_p;
   char arg1_type;
   char arg2_type;
-  char* name;
   char op_inverse;
+  char* name;
+  sexp data;
   sexp proc;
 } *opcode;
 
 typedef struct core_form {
   char tag;
-  char* name;
   char code;
+  char* name;
 } *core_form;
 
 enum core_form_names {
@@ -69,11 +79,21 @@ enum opcode_classes {
   OPC_ARITHMETIC_CMP,
   OPC_CONSTRUCTOR,
   OPC_ACCESSOR,
+  OPC_FOREIGN,
 };
 
 enum opcode_names {
   OP_NOOP,
   OP_CALL,
+  OP_FCALL0,
+  OP_FCALL1,
+  OP_FCALL2,
+  OP_FCALL3,
+  OP_FCALL4,
+  OP_FCALL5,
+  OP_FCALL6,
+  OP_FCALL7,
+  OP_FCALLN,
   OP_JUMP_UNLESS,
   OP_JUMP,
   OP_RET,
@@ -102,6 +122,8 @@ enum opcode_names {
   OP_CHARP,
   OP_EOFP,
   OP_PROCEDUREP,
+  OP_IPORTP,
+  OP_OPORTP,
   OP_CAR,
   OP_CDR,
   OP_SET_CAR,
@@ -139,5 +161,5 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top);
 sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top);
 sexp eval(sexp obj, env e);
 
-#endif /* ! SCM_EVAL_H */
+#endif /* ! SEXP_EVAL_H */
 
