@@ -20,23 +20,6 @@ static sexp exception_handler;
 #endif
 
 /********************** environment utilities ***************************/
-
-sexp sexp_set_car(sexp obj, sexp val) {
-  if (SEXP_PAIRP(obj))
-    return SEXP_CAR(obj) = val;
-  else {
-    sexp_debug("error: set-car! not a pair: ", obj);
-    return SEXP_ERROR;
-  }
-}
-
-sexp sexp_set_cdr(sexp obj, sexp val) {
-  if (SEXP_PAIRP(obj))
-    return SEXP_CDR(obj) = val;
-  else
-    return SEXP_ERROR;
-}
-
 sexp env_cell(env e, sexp key) {
   sexp ls, res=NULL;
 
@@ -440,11 +423,29 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
   return bc;
 }
 
+/************************ library functions ***************************/
+
+sexp sexp_set_car(sexp obj, sexp val) {
+  if (SEXP_PAIRP(obj))
+    return SEXP_CAR(obj) = val;
+  else {
+    sexp_debug("error: set-car! not a pair: ", obj);
+    return SEXP_ERROR;
+  }
+}
+
+sexp sexp_set_cdr(sexp obj, sexp val) {
+  if (SEXP_PAIRP(obj))
+    return SEXP_CDR(obj) = val;
+  else
+    return SEXP_ERROR;
+}
+
 /*********************** the virtual machine **************************/
 
 sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   unsigned char *ip=bc->data;
-  sexp cp, tmp;
+  sexp cp, tmp1, tmp2;
   int i;
 
  loop:
@@ -459,8 +460,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 /*     fflush(stderr); */
 /*     sexp_write(stderr, ((sexp*)ip)[0]); */
 /*     fprintf(stderr, "\n"); */
-    tmp = env_cell(e, ((sexp*)ip)[0]);
-    stack[top++]=SEXP_CDR(tmp);
+    tmp1 = env_cell(e, ((sexp*)ip)[0]);
+    stack[top++]=SEXP_CDR(tmp1);
     ip += sizeof(sexp);
     break;
   case OP_GLOBAL_SET:
@@ -532,9 +533,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top--;
     break;
   case OP_SWAP:
-    tmp = stack[top-2];
+    tmp1 = stack[top-2];
     stack[top-2]=stack[top-1];
-    stack[top-1]=tmp;
+    stack[top-1]=tmp1;
     break;
   case OP_PAIRP:
     stack[top-1]=SEXP_PAIRP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
@@ -620,23 +621,40 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   case OP_CALL:
     /* fprintf(stderr, "CALL\n"); */
     i = (sexp_uint_t) ((sexp*)ip)[0];
-    tmp = stack[top-1];
-    if (! SEXP_PROCEDUREP(tmp))
-      errx(2, "non-procedure application: %p", tmp);
+    tmp1 = stack[top-1];
+    if (! SEXP_PROCEDUREP(tmp1))
+      errx(2, "non-procedure application: %p", tmp1);
     stack[top-1] = (sexp) i;
     stack[top] = sexp_make_integer(ip+4);
     stack[top+1] = cp;
     top+=2;
-    bc = sexp_procedure_code(tmp);
+    bc = sexp_procedure_code(tmp1);
     /* print_bytecode(bc); */
     /* disasm(bc); */
     ip = bc->data;
-    cp = sexp_procedure_vars(tmp);
+    cp = sexp_procedure_vars(tmp1);
     fprintf(stderr, "... calling procedure at %p\ncp: ", ip);
     /* sexp_write(cp, stderr); */
     fprintf(stderr, "\n");
-    /* fprintf(stderr, "stack at %d\n", top); */
-    /* print_stack(stack, top); */
+    fprintf(stderr, "stack at %d\n", top);
+    print_stack(stack, top);
+    break;
+  case OP_APPLY1:
+    tmp1 = stack[top-1];
+    if (! SEXP_PROCEDUREP(tmp1))
+      errx(2, "non-procedure application: %p", tmp1);
+    tmp2 = stack[top-2];
+    i = sexp_length(tmp2);
+    top += (i-2);
+    for ( ; SEXP_PAIRP(tmp2); tmp2=SEXP_CDR(tmp2), top--)
+      stack[top-1] = SEXP_CAR(tmp2);
+    top += i+3;
+    stack[top-3] = sexp_make_integer(i);
+    stack[top-2] = sexp_make_integer(ip);
+    stack[top-1] = cp;
+    bc = sexp_procedure_code(tmp1);
+    ip = bc->data;
+    cp = sexp_procedure_vars(tmp1);
     break;
   case OP_FCALL0:
     stack[top-1]=((sexp_proc0)stack[top-1])();
@@ -752,6 +770,7 @@ _OP(OPC_TYPE_PREDICATE, OP_PROCEDUREP,  1, 0, 0, 0, 0, "procedure?"),
 _OP(OPC_TYPE_PREDICATE, OP_IPORTP,  1, 0, 0, 0, 0, "input-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_OPORTP,  1, 0, 0, 0, 0, "output-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?"),
+_OP(OPC_GENERIC, OP_APPLY1, 2, SEXP_PROCEDURE, SEXP_PAIR, 0, 0, "apply1"),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
