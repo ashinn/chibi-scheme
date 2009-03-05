@@ -94,6 +94,7 @@ enum opcode_names {
   OP_FCALL6,
   OP_FCALL7,
   OP_FCALLN,
+  OP_APPLY1,
   OP_JUMP_UNLESS,
   OP_JUMP,
   OP_RET,
