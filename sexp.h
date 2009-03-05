@@ -63,6 +63,7 @@
 #define SEXP_CHAR_TAG 6
 
 enum sexp_types {
+  SEXP_OBJECT,
   SEXP_FIXNUM,
   SEXP_CHAR,
   SEXP_BOOLEAN,
@@ -174,7 +175,7 @@ void sexp_write_string(sexp str, sexp port);
 void sexp_printf(sexp port, sexp fmt, ...);
 #endif
 
-#define sexp_symbol_pointer(x) ((sexp) (((sexp_uint_t)x)-SEXP_LSYMBOL_TAG))
+#define sexp_symbol_pointer(x) (x)
 #define sexp_symbol_length(x)  ((sexp_uint_t) (sexp_symbol_pointer(x)->data1))
 #define sexp_symbol_data(x)    ((char*) (sexp_symbol_pointer(x)->data2))
 
@@ -205,8 +206,6 @@ void sexp_printf(sexp port, sexp fmt, ...);
 sexp sexp_cons(sexp head, sexp tail);
 sexp sexp_car(sexp obj);
 sexp sexp_cdr(sexp obj);
-sexp sexp_set_car(sexp obj, sexp val);
-sexp sexp_set_cdr(sexp obj, sexp val);
 
 int sexp_listp(sexp obj);
 int sexp_list_index(sexp ls, sexp elt);
