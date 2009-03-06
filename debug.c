@@ -1,10 +1,11 @@
-/*  debug.c -- optional debugging utilities */
+/*  debug.c -- optional debugging utilities              */
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 static const char* reverse_opcode_names[] =
-  {"NOOP", "CALL", "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "FCALL5",
-   "FCALL6", "FCALL7", "FCALLN", "APPLY1", "JUMP_UNLESS", "JUMP", "RET", "DONE",
+  {"NOOP", "CALL", "APPLY1", "CALLCC", "RESUMECC", "FCALL0", "FCALL1",
+   "FCALL2", "FCALL3", "FCALL4", "FCALL5", "FCALL6", "FCALL7", "FCALLN",
+   "JUMP_UNLESS", "JUMP", "RET", "DONE",
    "STACK_REF", "STACK_SET", "GLOBAL_REF", "GLOBAL_SET", "CLOSURE_REF",
    "VECTOR_REF", "VECTOR_SET", "STRING_REF", "STRING_SET", "MAKE_PROCEDURE",
    "MAKE_VECTOR", "PUSH", "DUP", "DROP", "SWAP", "PAIRP", "NULLP", "VECTORP",

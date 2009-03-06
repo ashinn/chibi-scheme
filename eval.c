@@ -10,6 +10,7 @@ static int scheme_initialized_p = 0;
 
 static sexp cur_input_port, cur_output_port, cur_error_port;
 static sexp exception_handler;
+static sexp continuation_resumer;
 
 #ifdef USE_DEBUG
 #include "debug.c"
@@ -443,9 +444,27 @@ sexp sexp_set_cdr(sexp obj, sexp val) {
 
 /*********************** the virtual machine **************************/
 
+sexp sexp_save_stack(sexp *stack, unsigned int to) {
+  sexp res, *data;
+  int i;
+  res = sexp_make_vector(to, SEXP_UNDEF);
+  data = sexp_vector_data(res);
+  for (i=0; i<to; i++)
+    data[i] = stack[i];
+  return res;
+}
+
+unsigned int sexp_restore_stack(sexp saved, sexp *current) {
+  int len = sexp_vector_length(saved), i;
+  sexp *from = sexp_vector_data(saved);
+  for (i=0; i<len; i++)
+    current[i] = from[i];
+  return len;
+}
+
 sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   unsigned char *ip=bc->data;
-  sexp cp, tmp1, tmp2;
+  sexp cp=SEXP_UNDEF, tmp1, tmp2;
   int i;
 
  loop:
@@ -636,8 +655,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     fprintf(stderr, "... calling procedure at %p\ncp: ", ip);
     /* sexp_write(cp, stderr); */
     fprintf(stderr, "\n");
-    fprintf(stderr, "stack at %d\n", top);
-    print_stack(stack, top);
+    /* fprintf(stderr, "stack at %d\n", top); */
+    /* print_stack(stack, top); */
     break;
   case OP_APPLY1:
     tmp1 = stack[top-1];
@@ -655,6 +674,39 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     bc = sexp_procedure_code(tmp1);
     ip = bc->data;
     cp = sexp_procedure_vars(tmp1);
+    break;
+  case OP_CALLCC:
+    tmp1 = stack[top-1];
+    if (! SEXP_PROCEDUREP(tmp1))
+      errx(2, "non-procedure application: %p", tmp1);
+    stack[top] = sexp_make_integer(1);
+    stack[top+1] = sexp_make_integer(ip);
+    stack[top+2] = cp;
+    tmp2 = sexp_save_stack(stack, top+3);
+/*     fprintf(stderr, "saved: ", top); */
+/*     sexp_write(tmp2, cur_error_port); */
+/*     fprintf(stderr, "\n", top); */
+    stack[top-1] = sexp_make_procedure(continuation_resumer,
+                                       sexp_vector(1, tmp2));
+    top+=3;
+    bc = sexp_procedure_code(tmp1);
+    ip = bc->data;
+    cp = sexp_procedure_vars(tmp1);
+    break;
+  case OP_RESUMECC:
+/*     fprintf(stderr, "resuming continuation (%d)\n", top); */
+/*     print_stack(stack, top); */
+/*     sexp_write(sexp_vector_ref(cp, 0), cur_error_port); */
+/*     fprintf(stderr, "\n"); */
+    tmp1 = stack[top-4];
+    top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
+/*     fprintf(stderr, "... restored stack (%d):\n", top); */
+/*     print_stack(stack, top); */
+    cp = stack[top-1];
+    ip = (unsigned char*) sexp_unbox_integer(stack[top-2]);
+    i = sexp_unbox_integer(stack[top-3]);
+    top -= 3;
+    stack[top-1] = tmp1;
     break;
   case OP_FCALL0:
     stack[top-1]=((sexp_proc0)stack[top-1])();
@@ -718,7 +770,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   return stack[top-1];
 }
 
-/************************** eval interface ****************************/
+/*********************** standard environment *************************/
 
 static const struct core_form core_forms[] = {
   {SEXP_CORE, CORE_DEFINE, "define"},
@@ -771,6 +823,7 @@ _OP(OPC_TYPE_PREDICATE, OP_IPORTP,  1, 0, 0, 0, 0, "input-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_OPORTP,  1, 0, 0, 0, 0, "output-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?"),
 _OP(OPC_GENERIC, OP_APPLY1, 2, SEXP_PROCEDURE, SEXP_PAIR, 0, 0, "apply1"),
+_OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation"),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
@@ -814,12 +867,19 @@ sexp eval(sexp obj, env e) {
 }
 
 void scheme_init() {
+  bytecode bc;
+  unsigned int i=0;
   if (! scheme_initialized_p) {
     scheme_initialized_p = 1;
     sexp_init();
     cur_input_port = sexp_make_input_port(stdin);
     cur_output_port = sexp_make_output_port(stdout);
     cur_error_port = sexp_make_output_port(stderr);
+    bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+16);
+    bc->tag = SEXP_BYTECODE;
+    bc->len = 16;
+    emit(&bc, &i, OP_RESUMECC);
+    continuation_resumer = (sexp) bc;
   }
 }
 
