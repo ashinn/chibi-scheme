@@ -275,7 +275,7 @@ sexp sexp_intern(char *str) {
   return symbol_table[cell];
 }
 
-sexp sexp_make_vector(unsigned long len, sexp dflt) {
+sexp sexp_make_vector(unsigned int len, sexp dflt) {
   int i;
   sexp v = SEXP_NEW();
   if (v == NULL) return SEXP_ERROR;
@@ -411,10 +411,10 @@ void sexp_write (sexp obj, sexp out) {
         sexp_write_string("#()", out);
       } else {
         sexp_write_string("#(", out);
-        sexp_write(out, elts[0]);
+        sexp_write(elts[0], out);
         for (i=1; i<len; i++) {
           sexp_write_char(' ', out);
-          sexp_write(out, elts[i]);
+          sexp_write(elts[i], out);
         }
         sexp_write_char(')', out);
       }
@@ -483,7 +483,7 @@ void sexp_write (sexp obj, sexp out) {
     case (sexp_uint_t) SEXP_UNDEF:
       sexp_write_string("#<undef>", out); break;
     default:
-      sexp_write_string("#<error>", out);
+      sexp_printf(out, "#<invalid: %p>", obj);
     }
   }
 }

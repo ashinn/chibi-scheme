@@ -29,9 +29,6 @@ typedef struct bytecode {
   unsigned char data[];
 } *bytecode;
 
-/* env binding: #(id chain offset flags) */
-/* chain is the index into the closure parent list (0 for current lambda) */
-/* macros/constants have a value instead of chain */
 typedef struct env {
   char tag;
   struct env *parent;
@@ -85,6 +82,9 @@ enum opcode_classes {
 enum opcode_names {
   OP_NOOP,
   OP_CALL,
+  OP_APPLY1,
+  OP_CALLCC,
+  OP_RESUMECC,
   OP_FCALL0,
   OP_FCALL1,
   OP_FCALL2,
@@ -94,7 +94,6 @@ enum opcode_names {
   OP_FCALL6,
   OP_FCALL7,
   OP_FCALLN,
-  OP_APPLY1,
   OP_JUMP_UNLESS,
   OP_JUMP,
   OP_RET,

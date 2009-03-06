@@ -221,7 +221,7 @@ sexp sexp_make_string(char *str);
 sexp sexp_make_flonum(double f);
 int sexp_string_hash(char *str, int acc);
 sexp sexp_intern(char *str);
-sexp sexp_make_vector(unsigned long len, sexp dflt);
+sexp sexp_make_vector(unsigned int len, sexp dflt);
 sexp sexp_list_to_vector(sexp ls);
 sexp sexp_vector(int count, ...);
 void sexp_write(sexp obj, sexp out);
