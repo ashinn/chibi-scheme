@@ -3,7 +3,7 @@
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
 static const char* reverse_opcode_names[] =
-  {"NOOP", "CALL", "APPLY1", "CALLCC", "RESUMECC", "FCALL0", "FCALL1",
+  {"NOOP", "CALL", "APPLY1", "CALLCC", "RESUMECC", "ERROR", "FCALL0", "FCALL1",
    "FCALL2", "FCALL3", "FCALL4", "FCALL5", "FCALL6", "FCALL7", "FCALLN",
    "JUMP_UNLESS", "JUMP", "RET", "DONE",
    "STACK_REF", "STACK_SET", "GLOBAL_REF", "GLOBAL_SET", "CLOSURE_REF",

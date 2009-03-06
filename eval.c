@@ -9,7 +9,7 @@
 static int scheme_initialized_p = 0;
 
 static sexp cur_input_port, cur_output_port, cur_error_port;
-static sexp exception_handler;
+static sexp exception_handler_cell;
 static sexp continuation_resumer;
 
 #ifdef USE_DEBUG
@@ -206,7 +206,7 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
         case OPC_ACCESSOR:
         case OPC_GENERIC:
           if (SEXP_NULLP(SEXP_CDR(obj))) {
-            errx(1, "unknown opcode class: %d", ((opcode)o1)->op_class);
+            errx(1, "opcode with no arguments: %s", ((opcode)o1)->name);
           } else if (SEXP_NULLP(SEXP_CDDR(obj))) {
             if (((opcode)o1)->op_class == OPC_ARITHMETIC_INV) {
               analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d);
@@ -259,7 +259,7 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
     }
   } else if (SEXP_SYMBOLP(obj)) {
     analyze_var_ref(obj, bc, i, e, params, fv, sv, d);
-  } else {
+  } else {                      /* literal */
     emit_push(bc, i, obj);
     (*d)++;
   }
@@ -708,6 +708,21 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top -= 3;
     stack[top-1] = tmp1;
     break;
+  case OP_ERROR:
+  call_error_handler:
+    sexp_write_string("ERROR: ", cur_error_port);
+    sexp_write(stack[top-1], cur_error_port);
+    sexp_write_string("\n", cur_error_port);
+    tmp1 = SEXP_CDR(exception_handler_cell);
+    stack[top-1] = SEXP_UNDEF;
+    stack[top] = (sexp) 1;
+    stack[top+1] = sexp_make_integer(ip+4);
+    stack[top+2] = cp;
+    top+=3;
+    bc = sexp_procedure_code(tmp1);
+    ip = bc->data;
+    cp = sexp_procedure_vars(tmp1);
+    break;
   case OP_FCALL0:
     stack[top-1]=((sexp_proc0)stack[top-1])();
     break;
@@ -824,6 +839,7 @@ _OP(OPC_TYPE_PREDICATE, OP_OPORTP,  1, 0, 0, 0, 0, "output-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?"),
 _OP(OPC_GENERIC, OP_APPLY1, 2, SEXP_PROCEDURE, SEXP_PAIR, 0, 0, "apply1"),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation"),
+_OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error"),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
@@ -900,13 +916,24 @@ void repl (env e, sexp *stack) {
 }
 
 int main (int argc, char **argv) {
-  sexp obj, res, in, out, *stack;
+  sexp obj, res, in, out, *stack, err_handler, err_handler_sym;
   env e;
-  int i, quit=0;
+  bytecode bc;
+  unsigned int i, quit=0;
 
   scheme_init();
-  e = make_standard_env();
   stack = (sexp*) SEXP_ALLOC(sizeof(sexp) * INIT_STACK_SIZE);
+  e = make_standard_env();
+  bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+16);
+  bc->tag = SEXP_BYTECODE;
+  bc->len = 16;
+  i = 0;
+  emit_push(&bc, &i, (sexp_uint_t) SEXP_UNDEF);
+  emit(&bc, &i, OP_DONE);
+  err_handler = sexp_make_procedure((sexp)bc, sexp_make_vector(0, SEXP_UNDEF));
+  err_handler_sym = sexp_intern("*error-handler*");
+  env_define(e, err_handler_sym, err_handler);
+  exception_handler_cell = env_cell(e, err_handler_sym);
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
@@ -927,7 +954,7 @@ int main (int argc, char **argv) {
     }
   }
 
-  repl(e, stack);
+  if (! quit) repl(e, stack);
   return 0;
 }
 

@@ -23,6 +23,7 @@ static sexp the_quote_symbol;
 static sexp the_quasiquote_symbol;
 static sexp the_unquote_symbol;
 static sexp the_unquote_splicing_symbol;
+static sexp the_empty_vector;
 
 static char sexp_separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
@@ -277,9 +278,11 @@ sexp sexp_intern(char *str) {
 
 sexp sexp_make_vector(unsigned int len, sexp dflt) {
   int i;
-  sexp v = SEXP_NEW();
+  sexp v, *x;
+  if (! len) return the_empty_vector;
+  v = SEXP_NEW();
   if (v == NULL) return SEXP_ERROR;
-  sexp *x = (void*) SEXP_ALLOC(len*sizeof(sexp));
+  x = (void*) SEXP_ALLOC(len*sizeof(sexp));
   if (x == NULL) return SEXP_ERROR;
   for (i=0; i<len; i++) {
     x[i] = dflt;
@@ -482,6 +485,8 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#<eof>", out); break;
     case (sexp_uint_t) SEXP_UNDEF:
       sexp_write_string("#<undef>", out); break;
+    case (sexp_uint_t) SEXP_ERROR:
+      sexp_write_string("#<error>", out); break;
     default:
       sexp_printf(out, "#<invalid: %p>", obj);
     }
@@ -776,6 +781,10 @@ void sexp_init() {
     the_quasiquote_symbol = sexp_intern("quasiquote");
     the_unquote_symbol = sexp_intern("unquote");
     the_unquote_splicing_symbol = sexp_intern("unquote-splicing");
+    the_empty_vector = SEXP_NEW();
+    the_empty_vector->tag = SEXP_VECTOR;
+    the_empty_vector->data1 = 0;
+    the_empty_vector->data2 = 0;
   }
 }
 
