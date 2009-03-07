@@ -228,6 +228,19 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
             (*d) -= sexp_length(SEXP_CDDR(obj));
           }
           break;
+        case OPC_IO:
+          tmp1 = sexp_length(SEXP_CDR(obj));
+          if (tmp1 == ((opcode)o1)->num_args && ((opcode)o1)->var_args_p) {
+            emit(bc, i, OP_PARAMETER);
+            emit_word(bc, i, (sexp_uint_t) ((opcode)o1)->data);
+            (*d)++;
+          }
+          for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
+               o2 = SEXP_CDR(o2))
+            analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d);
+          emit(bc, i, ((opcode)o1)->op_name);
+          (*d) -= (tmp1-1);
+          break;
         case OPC_PARAMETER:
           emit(bc, i, ((opcode)o1)->op_name);
           emit_word(bc, i, (sexp_uint_t) ((opcode)o1)->data);
@@ -732,6 +745,35 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     fprintf(stderr, "jumping to + %d => %d\n", ((signed char*)ip)[0], ip + ((signed char*)ip)[0]);
     ip += ((signed char*)ip)[0];
     break;
+  case OP_DISPLAY:
+    if (SEXP_STRINGP(stack[top-1])) {
+      sexp_write_string(sexp_string_data(stack[top-1]), stack[top-2]);
+      break;
+    }
+  case OP_WRITE:
+    sexp_write(stack[top-1], stack[top-2]);
+    stack[top-2] = SEXP_UNDEF;
+    top--;
+    break;
+  case OP_WRITE_CHAR:
+    sexp_write_char(sexp_unbox_character(stack[top-1]), stack[top-2]);
+    break;
+  case OP_NEWLINE:
+    sexp_write_char('\n', stack[top-1]);
+    stack[top-1] = SEXP_UNDEF;
+    break;
+  case OP_FLUSH_OUTPUT:
+    sexp_flush(stack[top-1]);
+    stack[top-1] = SEXP_UNDEF;
+    break;
+  case OP_READ:
+    stack[top-1] = sexp_read(stack[top-1]);
+    if (stack[top-1] == SEXP_ERROR) sexp_raise(sexp_intern("read-error"));
+    break;
+  case OP_READ_CHAR:
+    i = sexp_read_char(stack[top-1]);
+    stack[top-1] = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
+    break;
   case OP_RET:
     fprintf(stderr, "returning @ %d: ", top-1);
     fflush(stderr);
@@ -819,6 +861,13 @@ _OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?"),
 _OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1"),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation"),
 _OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error"),
+{SEXP_OPCODE, OPC_IO, OP_WRITE, 1, 1, 0, SEXP_OPORT, 0, "write", (sexp)&cur_output_port, NULL},
+{SEXP_OPCODE, OPC_IO, OP_DISPLAY, 1, 1, 0, SEXP_OPORT, 0, "display", (sexp)&cur_output_port, NULL},
+{SEXP_OPCODE, OPC_IO, OP_WRITE_CHAR, 1, 1, 0, SEXP_OPORT, 0, "write-char", (sexp)&cur_output_port, NULL},
+{SEXP_OPCODE, OPC_IO, OP_NEWLINE, 0, 1, 0, SEXP_OPORT, 0, "newline", (sexp)&cur_output_port, NULL},
+{SEXP_OPCODE, OPC_IO, OP_FLUSH_OUTPUT, 0, 1, 0, SEXP_OPORT, 0, "flush-output", (sexp)&cur_output_port, NULL},
+{SEXP_OPCODE, OPC_IO, OP_READ, 0, 1, 0, SEXP_IPORT, 0, "read", (sexp)&cur_input_port, NULL},
+{SEXP_OPCODE, OPC_IO, OP_READ_CHAR, 0, 1, 0, SEXP_IPORT, 0, "read-char", (sexp)&cur_input_port, NULL},
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
