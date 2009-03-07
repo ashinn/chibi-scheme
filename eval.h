@@ -76,6 +76,7 @@ enum opcode_classes {
   OPC_ARITHMETIC_CMP,
   OPC_CONSTRUCTOR,
   OPC_ACCESSOR,
+  OPC_PARAMETER,
   OPC_FOREIGN,
 };
 
@@ -99,6 +100,7 @@ enum opcode_names {
   OP_JUMP,
   OP_RET,
   OP_DONE,
+  OP_PARAMETER,
   OP_STACK_REF,
   OP_STACK_SET,
   OP_GLOBAL_REF,

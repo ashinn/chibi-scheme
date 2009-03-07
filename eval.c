@@ -12,7 +12,7 @@ static sexp cur_input_port, cur_output_port, cur_error_port;
 static sexp exception_handler_cell;
 static sexp continuation_resumer;
 
-#ifdef USE_DEBUG
+#if USE_DEBUG
 #include "debug.c"
 #else
 #define print_stack(...)
@@ -227,6 +227,10 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
             emit(bc, i, ((opcode)o1)->op_name);
             (*d) -= sexp_length(SEXP_CDDR(obj));
           }
+          break;
+        case OPC_PARAMETER:
+          emit(bc, i, ((opcode)o1)->op_name);
+          emit_word(bc, i, (sexp_uint_t) ((opcode)o1)->data);
           break;
         case OPC_FOREIGN:
           for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
@@ -454,35 +458,20 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   int i;
 
  loop:
-  /* fprintf(stderr, "opcode: %s (%d), ip: %d\n", reverse_opcode_names[*ip], *ip, ip); */
-  /* print_bytecode(bc); */
   switch (*ip++) {
   case OP_NOOP:
     fprintf(stderr, "noop\n");
     break;
   case OP_GLOBAL_REF:
-/*     fprintf(stderr, "global ref: ip: %p => %p: ", ip, ((sexp*)ip)[0]); */
-/*     fflush(stderr); */
-/*     sexp_write(stderr, ((sexp*)ip)[0]); */
-/*     fprintf(stderr, "\n"); */
     tmp1 = env_cell(e, ((sexp*)ip)[0]);
     stack[top++]=SEXP_CDR(tmp1);
     ip += sizeof(sexp);
     break;
   case OP_GLOBAL_SET:
-/*     fprintf(stderr, "global set: %p: ", ((sexp*)ip)[0]); */
-/*     fflush(stderr); */
-/*     sexp_write(stderr, ((sexp*)ip)[0]); */
-/*     fprintf(stderr, "\n"); */
     env_define(e, ((sexp*)ip)[0], stack[--top]);
     ip += sizeof(sexp);
     break;
   case OP_STACK_REF:
-/*     fprintf(stderr, "stack ref: ip=%p,  %d - %d => ", */
-/*             ip, top, (sexp_uint_t) ((sexp*)ip)[0]); */
-/*     fflush(stderr); */
-/*     sexp_write(stderr, stack[top - (unsigned int) ((sexp*)ip)[0]]); */
-/*     fprintf(stderr, "\n"); */
     stack[top] = stack[top - (unsigned int) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
     top++;
@@ -493,10 +482,6 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     ip += sizeof(sexp);
     break;
   case OP_CLOSURE_REF:
-/*     fprintf(stderr, "closure-ref %d => ", ((sexp*)ip)[0]); */
-/*     fflush(stderr); */
-/*     sexp_write(stderr, vector_ref(cp,((sexp*)ip)[0])); */
-/*     fprintf(stderr, "\n"); */
     stack[top++]=sexp_vector_ref(cp,((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
@@ -541,6 +526,11 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     tmp1 = stack[top-2];
     stack[top-2]=stack[top-1];
     stack[top-1]=tmp1;
+    break;
+  case OP_PARAMETER:
+    stack[top] = *(sexp*)((sexp*)ip)[0];
+    top++;
+    ip += sizeof(sexp);
     break;
   case OP_PAIRP:
     stack[top-1]=SEXP_PAIRP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
@@ -748,8 +738,6 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     sexp_write(stack[top-1], cur_error_port);
     fprintf(stderr, "...\n");
     /* print_stack(stack, top); */
-    /*                      top-1  */
-    /* stack: args ... n ip result */
     cp = stack[top-2];
     ip = (unsigned char*) sexp_unbox_integer(stack[top-3]);
     i = sexp_unbox_integer(stack[top-4]);
@@ -795,6 +783,7 @@ static const struct opcode opcodes[] = {
 #define _FN0(s, f) _FN(OP_FCALL0, 0, 0, 0, s, f)
 #define _FN1(t, s, f) _FN(OP_FCALL1, 1, t, 0, s, f)
 #define _FN2(t, u, s, f) _FN(OP_FCALL2, 2, t, u, s, f)
+#define _PARAM(n,a,t) {SEXP_OPCODE, OPC_PARAMETER, OP_PARAMETER, 0, 1, t, 0, 0, n, a, NULL}
 _OP(OPC_ACCESSOR, OP_CAR, 1, 0, SEXP_PAIR, 0, 0, "car"),
 _OP(OPC_ACCESSOR, OP_SET_CAR, 2, 0, SEXP_PAIR, 0, 0, "set-car!"),
 _OP(OPC_ACCESSOR, OP_CDR, 1, 0, SEXP_PAIR, 0, 0, "cdr"),
@@ -827,7 +816,7 @@ _OP(OPC_TYPE_PREDICATE, OP_PROCEDUREP,  1, 0, 0, 0, 0, "procedure?"),
 _OP(OPC_TYPE_PREDICATE, OP_IPORTP,  1, 0, 0, 0, 0, "input-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_OPORTP,  1, 0, 0, 0, 0, "output-port?"),
 _OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?"),
-_OP(OPC_GENERIC, OP_APPLY1, 2, SEXP_PROCEDURE, SEXP_PAIR, 0, 0, "apply1"),
+_OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1"),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation"),
 _OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error"),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
@@ -835,11 +824,15 @@ _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
 _FN2(0, SEXP_PAIR, "assq", sexp_assq),
 _FN2(SEXP_PAIR, SEXP_PAIR, "diffq", sexp_lset_diff),
+_PARAM("current-input-port", (sexp)&cur_input_port, SEXP_IPORT),
+_PARAM("current-output-port", (sexp)&cur_output_port, SEXP_OPORT),
+_PARAM("current-error-port", (sexp)&cur_error_port, SEXP_OPORT),
 #undef _OP
 #undef _FN
 #undef _FN0
 #undef _FN1
 #undef _FN2
+#undef _PARAM
 };
 
 env make_standard_env() {
@@ -924,6 +917,8 @@ int main (int argc, char **argv) {
   err_handler_sym = sexp_intern("*error-handler*");
   env_define(e, err_handler_sym, err_handler);
   exception_handler_cell = env_cell(e, err_handler_sym);
+
+  fprintf(stderr, "current-input-port: %d => %d\n", &cur_input_port, cur_input_port);
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {

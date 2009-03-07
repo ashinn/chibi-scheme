@@ -215,7 +215,7 @@ sexp sexp_intern(char *str) {
   char c, *mystr, *p=str;
   sexp sym, *newtable;
 
-#ifdef USE_HUFF_SYMS
+#if USE_HUFF_SYMS
   res = 0;
   for (p=str; c=*p; p++) {
     he = huff_table[c];
@@ -312,7 +312,7 @@ sexp sexp_vector(int count, ...) {
 
 /************************ reading and writing *************************/
 
-#ifdef USE_STRING_STREAMS
+#if USE_STRING_STREAMS
 
 int sstream_read(void *vec, char *dst, int n) {
   int len = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(1));
@@ -455,7 +455,7 @@ void sexp_write (sexp obj, sexp out) {
       }
   } else if (SEXP_SYMBOLP(obj)) {
 
-#ifdef USE_HUFF_SYMS
+#if USE_HUFF_SYMS
     if (((sexp_uint_t)obj&7)==7) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
@@ -764,7 +764,7 @@ sexp sexp_read_from_string(char *str) {
 void sexp_init() {
   if (! sexp_initialized_p) {
     sexp_initialized_p = 1;
-#ifdef USE_BOEHM
+#if USE_BOEHM
     GC_init();
 #endif
     symbol_table = SEXP_ALLOC(symbol_table_primes[0]*sizeof(sexp));
