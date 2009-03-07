@@ -21,7 +21,7 @@ static sexp continuation_resumer;
 #endif
 
 /********************** environment utilities ***************************/
-sexp env_cell(env e, sexp key) {
+static sexp env_cell(env e, sexp key) {
   sexp ls, res=NULL;
 
   do {
@@ -37,7 +37,7 @@ sexp env_cell(env e, sexp key) {
   return res;
 }
 
-int env_global_p (env e, sexp id) {
+static int env_global_p (env e, sexp id) {
   while (e->parent) {
     if (sexp_assq(id, e->bindings) != SEXP_FALSE)
       return 0;
@@ -47,7 +47,7 @@ int env_global_p (env e, sexp id) {
   return 1;
 }
 
-void env_define(env e, sexp key, sexp value) {
+static void env_define(env e, sexp key, sexp value) {
   sexp cell = env_cell(e, key);
   if (cell) {
     SEXP_CDR(cell) = value;
@@ -56,7 +56,7 @@ void env_define(env e, sexp key, sexp value) {
   }
 }
 
-env extend_env_closure (env e, sexp fv) {
+static env extend_env_closure (env e, sexp fv) {
   int i;
   env e2 = (env) SEXP_ALLOC(sizeof(struct env));
   e2->tag = SEXP_ENV;
@@ -71,7 +71,7 @@ env extend_env_closure (env e, sexp fv) {
 
 /************************* bytecode utilities ***************************/
 
-void shrink_bcode(bytecode *bc, unsigned int i) {
+static void shrink_bcode(bytecode *bc, unsigned int i) {
   bytecode tmp;
   if ((*bc)->len != i) {
     /* fprintf(stderr, "shrinking to %d\n", i); */
@@ -84,7 +84,7 @@ void shrink_bcode(bytecode *bc, unsigned int i) {
   }
 }
 
-void emit(bytecode *bc, unsigned int *i, char c)  {
+static void emit(bytecode *bc, unsigned int *i, char c)  {
   bytecode tmp;
   if ((*bc)->len < (*i)+1) {
     /* fprintf(stderr, "expanding (%d < %d)\n", (*bc)->len, (*i)+1); */
@@ -97,7 +97,7 @@ void emit(bytecode *bc, unsigned int *i, char c)  {
   (*bc)->data[(*i)++] = c;
 }
 
-void emit_word(bytecode *bc, unsigned int *i, sexp_uint_t val)  {
+static void emit_word(bytecode *bc, unsigned int *i, sexp_uint_t val)  {
   bytecode tmp;
   if ((*bc)->len < (*i)+4) {
     tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
@@ -112,7 +112,7 @@ void emit_word(bytecode *bc, unsigned int *i, sexp_uint_t val)  {
 
 #define emit_push(bc,i,obj) (emit(bc,i,OP_PUSH), emit_word(bc,i,(sexp_uint_t)obj))
 
-sexp sexp_make_procedure(sexp bc, sexp vars) {
+static sexp sexp_make_procedure(sexp bc, sexp vars) {
   sexp proc = SEXP_NEW();
   if (! proc) return SEXP_ERROR;
   proc->tag = SEXP_PROCEDURE;
@@ -426,22 +426,6 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
 
 /************************ library functions ***************************/
 
-sexp sexp_set_car(sexp obj, sexp val) {
-  if (SEXP_PAIRP(obj))
-    return SEXP_CAR(obj) = val;
-  else {
-    sexp_debug("error: set-car! not a pair: ", obj);
-    return SEXP_ERROR;
-  }
-}
-
-sexp sexp_set_cdr(sexp obj, sexp val) {
-  if (SEXP_PAIRP(obj))
-    return SEXP_CDR(obj) = val;
-  else
-    return SEXP_ERROR;
-}
-
 /*********************** the virtual machine **************************/
 
 sexp sexp_save_stack(sexp *stack, unsigned int to) {
@@ -461,6 +445,8 @@ unsigned int sexp_restore_stack(sexp saved, sexp *current) {
     current[i] = from[i];
   return len;
 }
+
+#define sexp_raise(exn) {stack[top-1]=(exn); goto call_error_handler;}
 
 sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   unsigned char *ip=bc->data;
@@ -579,16 +565,20 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   case OP_EOFP:
     stack[top-1]=(stack[top-1] == SEXP_EOF) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_CAR:
-    stack[top-1]=sexp_car(stack[top-1]); break;
+    if (! SEXP_PAIRP(stack[top-1])) sexp_raise(sexp_intern("not-a-pair"));
+    stack[top-1]=SEXP_CAR(stack[top-1]); break;
   case OP_CDR:
-    stack[top-1]=sexp_cdr(stack[top-1]); break;
+    if (! SEXP_PAIRP(stack[top-1])) sexp_raise(sexp_intern("not-a-pair"));
+    stack[top-1]=SEXP_CDR(stack[top-1]); break;
   case OP_SET_CAR:
-    sexp_set_car(stack[top-1], stack[top-2]);
+    if (! SEXP_PAIRP(stack[top-1])) sexp_raise(sexp_intern("not-a-pair"));
+    SEXP_CAR(stack[top-1]) = stack[top-2];
     stack[top-2]=SEXP_UNDEF;
     top--;
     break;
   case OP_SET_CDR:
-    sexp_set_cdr(stack[top-1], stack[top-2]);
+    if (! SEXP_PAIRP(stack[top-1])) sexp_raise(sexp_intern("not-a-pair"));
+    SEXP_CDR(stack[top-1]) = stack[top-2];
     stack[top-2]=SEXP_UNDEF;
     top--;
     break;
@@ -902,8 +892,8 @@ void scheme_init() {
 void repl (env e, sexp *stack) {
   sexp obj, res;
   while (1) {
-    fprintf(stdout, "> ");
-    fflush(stdout);
+    sexp_write_string("> ", cur_output_port);
+    sexp_flush(cur_output_port);
     obj = sexp_read(cur_input_port);
     if (obj == SEXP_EOF)
       break;

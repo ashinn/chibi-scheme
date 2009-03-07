@@ -85,14 +85,6 @@ sexp sexp_cons(sexp head, sexp tail) {
   return pair;
 }
 
-sexp sexp_car(sexp obj) {
-  return (SEXP_PAIRP(obj)) ? SEXP_CAR(obj) : SEXP_ERROR;
-}
-
-sexp sexp_cdr(sexp obj) {
-  return (SEXP_PAIRP(obj)) ? SEXP_CDR(obj) : SEXP_ERROR;
-}
-
 int sexp_listp (sexp obj) {
   while (SEXP_PAIRP(obj))
     obj = SEXP_CDR(obj);
@@ -444,7 +436,7 @@ void sexp_write (sexp obj, sexp out) {
         i = sexp_symbol_length(obj);
         str = sexp_symbol_data(obj);
       }
-      for ( ; i>=0; str++, i--) {
+      for ( ; i>0; str++, i--) {
         if (str[0] == '\\')
           sexp_write_char('\\', out);
         sexp_write_char(str[0], out);

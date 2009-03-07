@@ -76,6 +76,7 @@ enum sexp_types {
   SEXP_IPORT,
   SEXP_OPORT,
   /* the following are used only by the evaluator */
+  SEXP_EXCEPTION,
   SEXP_PROCEDURE,
   SEXP_ENV,
   SEXP_BYTECODE,
@@ -167,6 +168,7 @@ int sstream_close(void *vec);
 #define sexp_write_char(c, p) (putc(c, sexp_port_stream(p)))
 #define sexp_write_string(s, p) (fputs(s, sexp_port_stream(p)))
 #define sexp_printf(p, s, ...) (fprintf(sexp_port_stream(p), s, __VA_ARGS__))
+#define sexp_flush(p) (fflush(sexp_port_stream(p)))
 #else
 sexp sexp_read_char(sexp port);
 void sexp_push_char(sexp ch, sexp port);
@@ -204,9 +206,6 @@ void sexp_printf(sexp port, sexp fmt, ...);
 #define SEXP_CDDDDR(x)    (SEXP_CDDR(SEXP_CDDR(x)))
 
 sexp sexp_cons(sexp head, sexp tail);
-sexp sexp_car(sexp obj);
-sexp sexp_cdr(sexp obj);
-
 int sexp_listp(sexp obj);
 int sexp_list_index(sexp ls, sexp elt);
 sexp sexp_lset_diff(sexp a, sexp b);
