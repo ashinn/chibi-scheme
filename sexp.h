@@ -13,7 +13,7 @@
 
 #include "config.h"
 
-#ifdef HAVE_ERR_H
+#if HAVE_ERR_H
 #include <err.h>
 #else
 /* requires that msg be a string literal */
@@ -21,10 +21,12 @@
 #endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-#define SEXP_BSD
+#define SEXP_BSD 1
+#else
+#define SEXP_BSD 0
 #endif
 
-#ifdef USE_BOEHM
+#if USE_BOEHM
 #include "gc/include/gc.h"
 #define SEXP_ALLOC        GC_malloc
 #define SEXP_ALLOC_ATOMIC GC_malloc_atomic
@@ -125,7 +127,7 @@ typedef long sexp_sint_t;
 
 #define SEXP_SYMBOLP(x)  (SEXP_ISYMBOLP(x) || SEXP_LSYMBOLP(x))
 
-#ifdef USE_HUFF_SYMS
+#if USE_HUFF_SYMS
 #define SEXP_DOTP(x)     (((sexp_uint_t)(x))==((0x5D00<<SEXP_IMMEDIATE_BITS)+SEXP_ISYMBOL_TAG))
 #else
 #define SEXP_DOTP(x)     ((x)==sexp_the_dot_symbol)
@@ -155,8 +157,8 @@ typedef long sexp_sint_t;
 
 #define sexp_port_stream(p)  ((FILE*) ((sexp)p)->data1)
 
-#ifdef USE_STRING_STREAMS
-#ifdef SEXP_BSD
+#if USE_STRING_STREAMS
+#if SEXP_BSD
 #define fmemopen(str, len, m) funopen(sexp_vector(3, (sexp)str, (sexp)len, (sexp)0), sstream_read, sstream_write, sstream_seek, sstream_close)
 int sstream_read(void *vec, char *dst, int n);
 int sstream_write(void *vec, const char *src, int n);
