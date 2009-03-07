@@ -74,6 +74,7 @@ enum opcode_classes {
   OPC_ARITHMETIC,
   OPC_ARITHMETIC_INV,
   OPC_ARITHMETIC_CMP,
+  OPC_IO,
   OPC_CONSTRUCTOR,
   OPC_ACCESSOR,
   OPC_PARAMETER,
@@ -145,6 +146,13 @@ enum opcode_names {
   OP_GE,
   OP_EQN,
   OP_EQ,
+  OP_DISPLAY,
+  OP_WRITE,
+  OP_WRITE_CHAR,
+  OP_NEWLINE,
+  OP_FLUSH_OUTPUT,
+  OP_READ,
+  OP_READ_CHAR,
 };
 
 /**************************** prototypes ******************************/
