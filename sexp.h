@@ -146,8 +146,10 @@ typedef long sexp_sint_t;
 #define sexp_vector_ref(x, i) (sexp_vector_data(x)[sexp_unbox_integer(i)])
 #define sexp_vector_set(x, i, v) (sexp_vector_data(x)[sexp_unbox_integer(i)] = (v))
 
-#define sexp_procedure_code(x) ((bytecode) ((sexp)x)->data1)
-#define sexp_procedure_vars(x)   ((sexp) ((sexp)x)->data2)
+#define sexp_procedure_num_args(x) (((procedure)x)->num_args)
+#define sexp_procedure_variadic_p(x) (sexp_unbox_integer(((procedure)x)->flags) & 1)
+#define sexp_procedure_code(x) ((bytecode) ((procedure)x)->bc)
+#define sexp_procedure_vars(x)   ((sexp) ((procedure)x)->vars)
 
 #define sexp_string_length(x) ((sexp_uint_t) x->data1)
 #define sexp_string_data(x)   ((char*) x->data2)
