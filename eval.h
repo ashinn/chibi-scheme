@@ -29,6 +29,14 @@ typedef struct bytecode {
   unsigned char data[];
 } *bytecode;
 
+typedef struct procedure {
+  char tag;
+  char flags;
+  unsigned short num_args;
+  bytecode bc;
+  sexp vars;
+} *procedure;
+
 typedef struct env {
   char tag;
   struct env *parent;

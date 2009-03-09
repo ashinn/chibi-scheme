@@ -35,6 +35,8 @@ static char sexp_separators[] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, /* x5_ */
 };
 
+#define digit_value(c) (((c)<='9') ? ((c) - '0') : ((toupper(c) - 'A') + 10))
+
 static int is_separator(int c) {
   /* return (!((c-9)&(~3))) | (~(c^4)); */
   return 0<c && c<0x60 && sexp_separators[c];
@@ -78,7 +80,6 @@ void sexp_free (sexp obj) {
 
 sexp sexp_cons(sexp head, sexp tail) {
   sexp pair = SEXP_NEW();
-  if (! pair) return SEXP_ERROR;
   pair->tag = SEXP_PAIR;
   pair->data1 = (void*) head;
   pair->data2 = (void*) tail;
@@ -182,7 +183,6 @@ unsigned long sexp_length(sexp ls) {
 
 sexp sexp_make_flonum(double f) {
   sexp x = SEXP_NEW();
-  if (! x) return SEXP_ERROR;
   x->tag = SEXP_FLONUM;
   sexp_flonum_value(x) = f;
   return x;
@@ -190,10 +190,8 @@ sexp sexp_make_flonum(double f) {
 
 sexp sexp_make_string(char *str) {
   sexp s = SEXP_NEW();
-  if (! s) return SEXP_ERROR;
   unsigned long len = strlen(str);
   char *mystr = SEXP_ALLOC(len+1);
-  if (! mystr) { SEXP_FREE(s); return SEXP_ERROR; }
   memcpy(mystr, str, len+1);
   s->tag = SEXP_STRING;
   s->data1 = (void*) len;
@@ -255,10 +253,8 @@ sexp sexp_intern(char *str) {
   }
 
   sym = SEXP_NEW();
-  if (! sym) { return SEXP_ERROR; }
   len = strlen(str);
   mystr = SEXP_ALLOC(len+1);
-  if (! mystr) { SEXP_FREE(sym); return SEXP_ERROR; }
   memcpy(mystr, str, len+1);
   mystr[len]=0;
   sym->tag = SEXP_SYMBOL;
@@ -273,9 +269,7 @@ sexp sexp_make_vector(unsigned int len, sexp dflt) {
   sexp v, *x;
   if (! len) return the_empty_vector;
   v = SEXP_NEW();
-  if (v == NULL) return SEXP_ERROR;
   x = (void*) SEXP_ALLOC(len*sizeof(sexp));
-  if (x == NULL) return SEXP_ERROR;
   for (i=0; i<len; i++) {
     x[i] = dflt;
   }
@@ -286,9 +280,7 @@ sexp sexp_make_vector(unsigned int len, sexp dflt) {
 }
 
 sexp sexp_list_to_vector(sexp ls) {
-  sexp vec = sexp_make_vector(sexp_length(ls), SEXP_FALSE);
-  if (vec == SEXP_ERROR) return vec;
-  sexp x;
+  sexp x, vec = sexp_make_vector(sexp_length(ls), SEXP_UNDEF);
   sexp *elts = sexp_vector_data(vec);
   int i;
   for (i=0, x=ls; SEXP_PAIRP(x); i++, x=SEXP_CDR(x))
@@ -297,8 +289,7 @@ sexp sexp_list_to_vector(sexp ls) {
 }
 
 sexp sexp_vector(int count, ...) {
-  sexp vec = sexp_make_vector(count, SEXP_FALSE);
-  if (vec == SEXP_ERROR) return vec;
+  sexp vec = sexp_make_vector(count, SEXP_UNDEF);
   sexp *elts = sexp_vector_data(vec);
   va_list ap;
   int i;
@@ -347,7 +338,6 @@ int sstream_close(void *vec) {
 
 sexp sexp_make_input_port(FILE* in) {
   sexp p = SEXP_NEW();
-  if (p == NULL) return SEXP_ERROR;
   p->tag = SEXP_IPORT;
   p->data1 = in;
   return p;
@@ -355,7 +345,6 @@ sexp sexp_make_input_port(FILE* in) {
 
 sexp sexp_make_output_port(FILE* out) {
   sexp p = SEXP_NEW();
-  if (p == NULL) return SEXP_ERROR;
   p->tag = SEXP_OPORT;
   p->data1 = out;
   return p;
@@ -547,7 +536,7 @@ sexp sexp_read_float_tail(sexp in, long whole) {
   double res = 0.0, scale=0.1;
   int c;
   for (c=sexp_read_char(in); isdigit(c); c=sexp_read_char(in), scale*=0.1)
-    res += ((c<='9') ? (c - '0') : ((toupper(c) - 'A') + 10))*scale;
+    res += digit_value(c)*scale;
   sexp_push_char(c, in);
   return sexp_make_flonum(whole + res);
 }
@@ -564,7 +553,7 @@ sexp sexp_read_number(sexp in, int base) {
   }
 
   for (c=sexp_read_char(in); isxdigit(c); c=sexp_read_char(in))
-    res = res * base + ((c<='9') ? (c - '0') : ((toupper(c) - 'A') + 10));
+    res = res * base + digit_value(c);
   if (c=='.') {
     if (base != 10) {
       fprintf(stderr, "decimal found in non-base 10");
@@ -633,7 +622,7 @@ sexp sexp_read_raw (sexp in) {
           return SEXP_ERROR;
         } else {
           tmp = sexp_read_raw(in);
-          if (sexp_read(in) != SEXP_CLOSE) {
+          if (sexp_read_raw(in) != SEXP_CLOSE) {
             fprintf(stderr, "sexp: multiple tokens in dotted tail\n");
             sexp_free(res);
             return SEXP_ERROR;
@@ -681,6 +670,31 @@ sexp sexp_read_raw (sexp in) {
     case ';':
       sexp_read_raw(in);
       goto scan_loop;
+    case '\\':
+      c1 = sexp_read_char(in);
+      c2 = sexp_read_char(in);
+      if (c2 == EOF || is_separator(c2)) {
+        sexp_push_char(c2, in);
+        res = sexp_make_character(c1);
+      } else if ((c1 == 'x' || c1 == 'X') && isxdigit(c2)) {
+        c1 = sexp_read_char(in);
+        res = sexp_make_character(16 * digit_value(c2) + digit_value(c1));
+      } else {
+        str = sexp_read_symbol(in, c1);
+        if (strcasecmp(str, "space") == 0)
+          res = sexp_make_character(' ');
+        else if (strcasecmp(str, "newline") == 0)
+          res = sexp_make_character('\r');
+        else if (strcasecmp(str, "return") == 0)
+          res = sexp_make_character('\r');
+        else if (strcasecmp(str, "tab") == 0)
+          res = sexp_make_character('\t');
+        else {
+          fprintf(stderr, "unknown character name: '%s'\n", str);
+          res = SEXP_ERROR;
+        }
+      }
+      break;
     case '(':
       sexp_push_char(c1, in);
       res = sexp_read(in);
