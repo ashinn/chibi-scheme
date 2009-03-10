@@ -419,7 +419,7 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_char('"', out);
       i = sexp_string_length(obj);
       str = sexp_string_data(obj);
-      /* FALLTHROUGH */
+      /* ... FALLTHROUGH ... */
     case SEXP_SYMBOL:
       if (obj->tag != SEXP_STRING) {
         i = sexp_symbol_length(obj);
@@ -584,7 +584,7 @@ sexp sexp_read_raw (sexp in) {
     while ((c1 = sexp_read_char(in)) != EOF)
       if (c1 == '\n')
         break;
-    /* fallthrough */
+    /* ... FALLTHROUGH ... */
   case ' ':
   case '\t':
   case '\n':

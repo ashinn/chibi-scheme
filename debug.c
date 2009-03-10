@@ -3,7 +3,8 @@
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
 static const char* reverse_opcode_names[] =
-  {"NOOP", "CALL", "APPLY1", "CALLCC", "RESUMECC", "ERROR", "FCALL0", "FCALL1",
+  {"NOOP", "TAIL-CALL", "CALL", "APPLY1", "CALLCC", "RESUMECC", "ERROR",
+   "FCALL0", "FCALL1",
    "FCALL2", "FCALL3", "FCALL4", "FCALL5", "FCALL6", "FCALL7", "FCALLN",
    "JUMP-UNLESS", "JUMP", "RET", "DONE", "PARAMETER",
    "STACK-REF", "STACK-SET", "GLOBAL-REF", "GLOBAL-SET", "CLOSURE-REF",
@@ -35,10 +36,16 @@ void disasm (bytecode bc) {
     break;
   case OP_GLOBAL_REF:
   case OP_GLOBAL_SET:
+  case OP_TAIL_CALL:
   case OP_CALL:
   case OP_PUSH:
     sexp_write(((sexp*)ip)[0], cur_error_port);
     ip += sizeof(sexp);
+    if (opcode==OP_TAIL_CALL) {
+      fprintf(stderr, " ");
+      sexp_write(((sexp*)ip)[0], cur_error_port);
+      ip += sizeof(sexp);
+    }
     break;
   case OP_JUMP:
   case OP_JUMP_UNLESS:

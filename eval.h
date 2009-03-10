@@ -91,6 +91,7 @@ enum opcode_classes {
 
 enum opcode_names {
   OP_NOOP,
+  OP_TAIL_CALL,
   OP_CALL,
   OP_APPLY1,
   OP_CALLCC,

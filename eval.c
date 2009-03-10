@@ -344,12 +344,19 @@ void analyze_app (sexp obj, bytecode *bc, unsigned int *i, env e,
   analyze(SEXP_CAR(obj), bc, i, e, params, fv, sv, d, 0);
 
   /* maybe overwrite the current frame */
-/*   if (tailp) { */
-/*   } */
-
-  /* make the call */
-  emit(bc, i, OP_CALL);
-  emit_word(bc, i, (sexp_uint_t) sexp_make_integer(len));
+  if (tailp) {
+    /* args ... */
+    /* i  */
+    /* ip */
+    /* cp */
+    emit(bc, i, OP_TAIL_CALL);
+    emit_word(bc, i, (sexp_uint_t) sexp_make_integer(sexp_length(params)+(*d)));
+    emit_word(bc, i, (sexp_uint_t) sexp_make_integer(len));
+  } else {
+    /* normal call */
+    emit(bc, i, OP_CALL);
+    emit_word(bc, i, (sexp_uint_t) sexp_make_integer(len));
+  }
 }
 
 sexp free_vars (env e, sexp formals, sexp obj, sexp fv) {
@@ -465,10 +472,10 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
     if (SEXP_PAIRP(SEXP_CDR(obj))) {
       analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d, 0);
       emit(&bc, &i, OP_DROP);
-    } else
-      analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d, 1);
+    } else {
+      analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d, ! done_p);
+    }
   }
-  /* return */
   emit(&bc, &i, done_p ? OP_DONE : OP_RET);
   shrink_bcode(&bc, i);
   print_bytecode(bc);
@@ -670,11 +677,35 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top-2]=((stack[top-1] == stack[top-2]) ? SEXP_TRUE : SEXP_FALSE);
     top--;
     break;
+  case OP_TAIL_CALL:
+    j = sexp_unbox_integer(((sexp*)ip)[0]);    /* current depth */
+    ip += sizeof(sexp);
+    i = sexp_unbox_integer(((sexp*)ip)[0]);    /* number of params */
+    tmp1 = stack[top-1];                       /* procedure to call */
+/*     fprintf(stderr, "tail call: depth=%d, i=%d, top=%d\n", j, i, top); */
+/*     print_stack(stack, top); */
+    /* save frame info */
+    stack[top] = stack[top-i-j];
+    stack[top+1] = stack[top-i-j+1];
+    /* copy new args into place */
+    for (k=top-i-1; k<top-1; k++)
+      stack[k-j-i] = stack[k];
+    /* restore frame info */
+    stack[top-j-i] = stack[top];
+    stack[top-j-i+1] = stack[top+1];
+    top -= (j-i);
+/*     print_stack(stack, top); */
+/*     exit(0); */
+    bc = sexp_procedure_code(tmp1);
+    ip = bc->data;
+    cp = sexp_procedure_vars(tmp1);
+    break;
   case OP_CALL:
+    if (top >= INIT_STACK_SIZE)
+      errx(1, "out of stack space: %d", top);
     /* fprintf(stderr, "CALL\n"); */
     /* print_stack(stack, top); */
-    i = (sexp_uint_t) ((sexp*)ip)[0];
-    i = sexp_unbox_integer(i);
+    i = sexp_unbox_integer(((sexp*)ip)[0]);
     tmp1 = stack[top-1];
     if (! SEXP_PROCEDUREP(tmp1)) {
       fprintf(stderr, "error: non-procedure app\n");
