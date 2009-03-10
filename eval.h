@@ -1,6 +1,6 @@
-/*  eval.h -- headers for eval library */
+/*  eval.h -- headers for eval library                   */
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #ifndef SEXP_EVAL_H
 #define SEXP_EVAL_H
@@ -168,10 +168,11 @@ enum opcode_names {
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p);
 
 void analyze_app (sexp obj, bytecode *bc, unsigned int *i,
-                  env e, sexp params, sexp fv, sexp sv, unsigned int *d);
+                  env e, sexp params, sexp fv, sexp sv,
+                  unsigned int *d, int tailp);
 void analyze_lambda (sexp name, sexp formals, sexp body,
                      bytecode *bc, unsigned int *i, env e,
-                     sexp params, sexp fv, sexp sv, unsigned int *d);
+                     sexp params, sexp fv, sexp sv, unsigned int *d, int tailp);
 void analyze_var_ref (sexp name, bytecode *bc, unsigned int *i, env e,
                       sexp params, sexp fv, sexp sv, unsigned int *d);
 
