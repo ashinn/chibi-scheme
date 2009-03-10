@@ -3,7 +3,7 @@
 
 all: chibi-scheme
 
-CFLAGS=-g -Os
+CFLAGS=-g -fno-inline -Os
 
 GC_OBJ=./gc/gc.a
 
