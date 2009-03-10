@@ -76,7 +76,7 @@ enum core_form_names {
 };
 
 enum opcode_classes {
-  OPC_GENERIC,
+  OPC_GENERIC = 1,
   OPC_TYPE_PREDICATE,
   OPC_PREDICATE,
   OPC_ARITHMETIC,

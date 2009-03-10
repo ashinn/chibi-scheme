@@ -204,8 +204,15 @@ void sexp_printf(sexp port, sexp fmt, ...);
 #define SEXP_CDAR(x)      (SEXP_CDR(SEXP_CAR(x)))
 #define SEXP_CDDR(x)      (SEXP_CDR(SEXP_CDR(x)))
 
+#define SEXP_CAAAR(x)     (SEXP_CAR(SEXP_CAAR(x)))
+#define SEXP_CAADR(x)     (SEXP_CAR(SEXP_CADR(x)))
+#define SEXP_CADAR(x)     (SEXP_CAR(SEXP_CDAR(x)))
 #define SEXP_CADDR(x)     (SEXP_CAR(SEXP_CDDR(x)))
+#define SEXP_CDAAR(x)     (SEXP_CDR(SEXP_CAAR(x)))
+#define SEXP_CDADR(x)     (SEXP_CDR(SEXP_CADR(x)))
+#define SEXP_CDDAR(x)     (SEXP_CDR(SEXP_CDAR(x)))
 #define SEXP_CDDDR(x)     (SEXP_CDR(SEXP_CDDR(x)))
+
 #define SEXP_CADDDR(x)    (SEXP_CADR(SEXP_CDDR(x)))
 #define SEXP_CDDDDR(x)    (SEXP_CDDR(SEXP_CDDR(x)))
 

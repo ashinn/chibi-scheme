@@ -176,6 +176,11 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
             emit_word(bc, i, (sexp_uint_t) o2);
             emit_push(bc, i, SEXP_UNDEF);
           } else {
+            o1 = env_cell(e, o2);
+            if (! o1)
+              errx(1, "define in bad position: %p", o2);
+            emit(bc, i, OP_STACK_SET);
+            emit_word(bc, i, sexp_unbox_integer(SEXP_CDR(o1)));
           }
           (*d)++;
           break;
@@ -347,7 +352,7 @@ void analyze_var_ref (sexp obj, bytecode *bc, unsigned int *i, env e,
   } else if ((tmp = sexp_list_index(fv, obj)) >= 0) {
     /* fprintf(stderr, "compiling closure ref: %p => %d\n", obj, tmp); */
     emit(bc, i, OP_CLOSURE_REF);
-    emit_word(bc, i, tmp);
+    emit_word(bc, i, (sexp_uint_t) sexp_make_integer(tmp));
   } else {
     /* fprintf(stderr, "compiling global ref: %p\n", obj); */
     emit(bc, i, OP_GLOBAL_REF);
@@ -475,7 +480,7 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
 }
 
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
-  unsigned int i = 0, j, d = 0, define_ok=1;
+  unsigned int i = 0, j, d = 0, core, define_ok=1;
   bytecode bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+INIT_BCODE_SIZE);
   sexp sv2 = set_vars(e, params, obj, SEXP_NULL), internals=SEXP_NULL, ls;
   bc->tag = SEXP_BYTECODE;
@@ -494,35 +499,54 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
   }
   sv = sexp_append(sv2, sv);
   /* determine internal defines */
-/*   for (ls=SEXP_NULL; SEXP_PAIRP(obj); obj=SEXP_CDR(obj)) { */
-/*     core = SEXP_PAIRP(SEXP_CAR(obj)) && SEXP_SYMBOLP(SEXP_CAAR(obj)) */
-/*       && core_code(SEXP_CAAR(obj)); */
-/*     if (core == CORE_BEGIN) { */
-/*       obj = sexp_cons(SEXP_CAR(obj), */
-/*                       sexp_append(SEXP_CDAR(obj), SEXP_CDR(obj))); */
-/*     } else { */
-/*       if (core == CORE_DEFINE) { */
-/*         if (! define_ok) */
-/*           errx(1, "definition in non-definition context: %p", obj); */
-/*         internals = sexp_cons(SEXP_CADR(obj), internals); */
-/*       } else { */
-/*         define_ok = 0; */
-/*       } */
-/*       ls = sexp_cons(SEXP_CAR(obj), ls); */
-/*     } */
-/*   } */
-/*   obj = sexp_reverse(ls); */
-/*   if (SEXP_PAIRP(internals)) { */
-/*     e = extend_env_closure(e, internals); */
-/*   } */
+  if (e->parent) {
+    for (ls=SEXP_NULL; SEXP_PAIRP(obj); obj=SEXP_CDR(obj)) {
+      core = SEXP_PAIRP(SEXP_CAR(obj)) && SEXP_SYMBOLP(SEXP_CAAR(obj))
+        && core_code(e, SEXP_CAAR(obj));
+      if (core == CORE_BEGIN) {
+        obj = sexp_cons(SEXP_CAR(obj),
+                        sexp_append(SEXP_CDAR(obj), SEXP_CDR(obj)));
+      } else {
+        if (core == CORE_DEFINE) {
+          if (! define_ok)
+            errx(1, "definition in non-definition context: %p", obj);
+          internals = sexp_cons(SEXP_PAIRP(SEXP_CADAR(obj))
+                                ? SEXP_CAR(SEXP_CADAR(obj)) : SEXP_CADAR(obj),
+                                internals);
+        } else {
+          define_ok = 0;
+        }
+        ls = sexp_cons(SEXP_CAR(obj), ls);
+      }
+    }
+    obj = sexp_reverse(ls);
+/*     sexp_write_string("internals: ", cur_error_port); */
+/*     sexp_write(internals, cur_error_port); */
+/*     sexp_write_string("\n", cur_error_port); */
+    j = sexp_length(internals);
+    if (SEXP_PAIRP(internals)) {
+      e = extend_env_closure(e, internals, 2);
+      params = sexp_append(internals, params);
+      for (ls=internals; SEXP_PAIRP(ls); ls=SEXP_CDR(ls))
+        emit_push(&bc, &i, (sexp_uint_t) SEXP_UNDEF);
+      d+=j;
+    }
+  }
   /* analyze body sequence */
   for ( ; SEXP_PAIRP(obj); obj=SEXP_CDR(obj)) {
     if (SEXP_PAIRP(SEXP_CDR(obj))) {
       analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d, 0);
       emit(&bc, &i, OP_DROP);
     } else {
-      analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d, ! done_p);
+      analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d,
+              ! done_p && ! SEXP_PAIRP(internals));
     }
+  }
+  if (SEXP_PAIRP(internals)) {
+    emit(&bc, &i, OP_STACK_SET);
+    emit_word(&bc, &i, j+1);
+    for (j; j>0; j--)
+      emit(&bc, &i, OP_DROP);
   }
   emit(&bc, &i, done_p ? OP_DONE : OP_RET);
   shrink_bcode(&bc, i);
@@ -559,7 +583,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   int i, j, k;
 
  loop:
-  /* fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip); */
+/*   fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip); */
   switch (*ip++) {
   case OP_NOOP:
     fprintf(stderr, "noop\n");
@@ -582,12 +606,20 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top++;
     break;
   case OP_STACK_SET:
+/*     print_stack(stack, top); */
+/*     fprintf(stderr, "stack-set: %d => ", (sexp_sint_t) ((sexp*)ip)[0]); */
+/*     sexp_write(stack[top-1], cur_error_port); */
+/*     fprintf(stderr, "\n"); */
     stack[top - (sexp_sint_t) ((sexp*)ip)[0]] = stack[top-1];
     stack[top-1] = SEXP_UNDEF;
+/*     print_stack(stack, top); */
     ip += sizeof(sexp);
     break;
   case OP_CLOSURE_REF:
-    stack[top++]=sexp_vector_ref(cp,((sexp*)ip)[0]);
+/*     fprintf(stderr, "closure-ref: %d => ", sexp_unbox_integer(((sexp*)ip)[0])); */
+/*     sexp_write(sexp_vector_ref(cp, ((sexp*)ip)[0]), cur_error_port); */
+/*     fprintf(stderr, "\n"); */
+    stack[top++]=sexp_vector_ref(cp, ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
   case OP_VECTOR_REF:
@@ -597,6 +629,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   case OP_VECTOR_SET:
     sexp_vector_set(stack[top-1], stack[top-2], stack[top-3]);
     stack[top-3]=SEXP_UNDEF;
+/*     fprintf(stderr, "vector-set: %d => ", sexp_unbox_integer(stack[top-2])); */
+/*     sexp_write(stack[top-1], cur_error_port); */
+/*     fprintf(stderr, "\n"); */
     top-=2;
     break;
   case OP_STRING_REF:
@@ -745,6 +780,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top-1] = tmp1;
 /*     print_stack(stack, top); */
 /*     exit(0); */
+/*     sexp_debug("call proc: ", tmp1); */
+/*     sexp_debug("bc: ", sexp_procedure_code(tmp1)); */
+/*     fprintf(stderr, "data: %p\n", sexp_procedure_code(tmp1)->data); */
     bc = sexp_procedure_code(tmp1);
     ip = bc->data;
     cp = sexp_procedure_vars(tmp1);
@@ -788,6 +826,9 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top] = sexp_make_integer(ip+4);
     stack[top+1] = cp;
     top+=2;
+/*     sexp_debug("call proc: ", tmp1); */
+/*     sexp_debug("bc: ", sexp_procedure_code(tmp1)); */
+/*     fprintf(stderr, "data: %p\n", sexp_procedure_code(tmp1)->data); */
     bc = sexp_procedure_code(tmp1);
 /*     print_bytecode(bc); */
 /*     disasm(bc); */
