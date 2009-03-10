@@ -64,7 +64,7 @@ typedef struct core_form {
 } *core_form;
 
 enum core_form_names {
-  CORE_DEFINE,
+  CORE_DEFINE = 1,
   CORE_SET,
   CORE_LAMBDA,
   CORE_IF,
