@@ -1073,6 +1073,21 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   return stack[top-1];
 }
 
+/************************ library procedures **************************/
+
+sexp sexp_open_input_file (sexp path) {
+  return sexp_make_input_port(fopen(sexp_string_data(path), "r"));
+}
+
+sexp sexp_open_output_file (sexp path) {
+  return sexp_make_input_port(fopen(sexp_string_data(path), "w"));
+}
+
+sexp sexp_close_port (sexp port) {
+  fclose(sexp_port_stream(port));
+  return SEXP_UNDEF;
+}
+
 /*********************** standard environment *************************/
 
 static const struct core_form core_forms[] = {
@@ -1138,6 +1153,10 @@ _OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error"),
 {SEXP_OPCODE, OPC_IO, OP_READ_CHAR, 0, 1, 0, SEXP_IPORT, 0, "read-char", (sexp)&cur_input_port, NULL},
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
+_FN1(SEXP_STRING, "open-input-file", sexp_open_input_file),
+_FN1(SEXP_STRING, "open-output-file", sexp_open_output_file),
+_FN1(SEXP_IPORT, "close-input-port", sexp_close_port),
+_FN1(SEXP_OPORT, "close-output-port", sexp_close_port),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
 _FN2(0, SEXP_PAIR, "assq", sexp_assq),
 _FN2(SEXP_PAIR, SEXP_PAIR, "diffq", sexp_lset_diff),
