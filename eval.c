@@ -11,6 +11,7 @@ static int scheme_initialized_p = 0;
 static sexp cur_input_port, cur_output_port, cur_error_port;
 static sexp exception_handler_cell;
 static sexp continuation_resumer;
+static sexp interaction_environment;
 
 #if USE_DEBUG
 #include "debug.c"
@@ -98,33 +99,30 @@ static void shrink_bcode(bytecode *bc, unsigned int i) {
   }
 }
 
-static void emit(bytecode *bc, unsigned int *i, char c)  {
+static void expand_bcode(bytecode *bc, unsigned int *i, unsigned int size) {
   bytecode tmp;
-  if ((*bc)->len < (*i)+1) {
-    /* fprintf(stderr, "expanding (%d < %d)\n", (*bc)->len, (*i)+1); */
+  if ((*bc)->len < (*i)+size) {
     tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
     tmp->len = (*bc)->len*2;
     memcpy(tmp->data, (*bc)->data, (*bc)->len);
     SEXP_FREE(*bc);
     *bc = tmp;
   }
+}
+
+static void emit(bytecode *bc, unsigned int *i, char c)  {
+  expand_bcode(bc, i, 1);
   (*bc)->data[(*i)++] = c;
 }
 
 static void emit_word(bytecode *bc, unsigned int *i, sexp_uint_t val)  {
-  bytecode tmp;
-  if ((*bc)->len < (*i)+4) {
-    tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
-    tmp->len = (*bc)->len*2;
-    memcpy(tmp->data, (*bc)->data, (*bc)->len);
-    SEXP_FREE(*bc);
-    *bc = tmp;
-  }
+  expand_bcode(bc, i, sizeof(sexp));
   *((unsigned long*)(&((*bc)->data[*i]))) = val;
   *i += sizeof(unsigned long);
 }
 
-#define emit_push(bc,i,obj) (emit(bc,i,OP_PUSH), emit_word(bc,i,(sexp_uint_t)obj))
+#define emit_push(bc,i,obj) (emit(bc,i,OP_PUSH), \
+                             emit_word(bc,i,(sexp_uint_t)obj))
 
 static sexp sexp_make_procedure(char flags, unsigned short num_args,
                                 sexp bc, sexp vars) {
@@ -1088,6 +1086,20 @@ sexp sexp_close_port (sexp port) {
   return SEXP_UNDEF;
 }
 
+sexp sexp_load (sexp source) {
+  sexp obj, *stack=SEXP_ALLOC(sizeof(sexp)*INIT_STACK_SIZE);
+  int closep = 0;
+  if (SEXP_STRINGP(source)) {
+    source = sexp_open_input_file(source);
+    closep = 1;
+  }
+  while ((obj=sexp_read(source)) != (sexp) SEXP_EOF)
+    eval_in_stack(obj, (env) interaction_environment, stack, 0);
+  if (closep) sexp_close_port(source);
+  SEXP_FREE(stack);
+  return SEXP_UNDEF;
+}
+
 /*********************** standard environment *************************/
 
 static const struct core_form core_forms[] = {
@@ -1157,6 +1169,7 @@ _FN1(SEXP_STRING, "open-input-file", sexp_open_input_file),
 _FN1(SEXP_STRING, "open-output-file", sexp_open_output_file),
 _FN1(SEXP_IPORT, "close-input-port", sexp_close_port),
 _FN1(SEXP_OPORT, "close-output-port", sexp_close_port),
+_FN1(0, "load", sexp_load),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
 _FN2(0, SEXP_PAIR, "assq", sexp_assq),
 _FN2(SEXP_PAIR, SEXP_PAIR, "diffq", sexp_lset_diff),
@@ -1238,11 +1251,13 @@ int main (int argc, char **argv) {
   sexp obj, res, in, out, *stack, err_handler, err_handler_sym;
   env e;
   bytecode bc;
-  unsigned int i, quit=0;
+  unsigned int i, quit=0, init_loaded=0;
+  FILE *stream;
 
   scheme_init();
   stack = (sexp*) SEXP_ALLOC(sizeof(sexp) * INIT_STACK_SIZE);
   e = make_standard_env();
+  interaction_environment = (sexp) e;
   bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+16);
   bc->tag = SEXP_BYTECODE;
   bc->len = 16;
@@ -1261,6 +1276,13 @@ int main (int argc, char **argv) {
     switch (argv[i][1]) {
     case 'e':
     case 'p':
+      if (! init_loaded) {
+        if (stream = fopen(sexp_init_file, "r")) {
+          sexp_load(sexp_make_input_port(stream));
+          fclose(stream);
+        }
+        init_loaded = 1;
+      }
       obj = sexp_read_from_string(argv[i+1]);
       res = eval_in_stack(obj, e, stack, 0);
       if (argv[i][1] == 'p') {
@@ -1270,12 +1292,24 @@ int main (int argc, char **argv) {
       quit=1;
       i++;
       break;
+    case 'q':
+      init_loaded = 1;
+      break;
     default:
       errx(1, "unknown option: %s", argv[i]);
     }
   }
 
-  if (! quit) repl(e, stack);
+  if (! quit) {
+    if (! init_loaded) {
+      if (stream = fopen(sexp_init_file, "r")) {
+        sexp_load(sexp_make_input_port(stream));
+        fclose(stream);
+      }
+      init_loaded = 1;
+    }
+    repl(e, stack);
+  }
   return 0;
 }
 
