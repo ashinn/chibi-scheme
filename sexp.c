@@ -411,10 +411,16 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#<input-port>", out); break;
     case SEXP_OPORT:
       sexp_write_string("#<output-port>", out); break;
+    case SEXP_CORE:
+      sexp_write_string("#<core-form>", out); break;
+    case SEXP_OPCODE:
+      sexp_write_string("#<opcode>", out); break;
     case SEXP_BYTECODE:
       sexp_write_string("#<bytecode>", out); break;
     case SEXP_ENV:
       sexp_write_string("#<env>", out); break;
+    case SEXP_MACRO:
+      sexp_write_string("#<macro>", out); break;
     case SEXP_STRING:
       sexp_write_char('"', out);
       i = sexp_string_length(obj);

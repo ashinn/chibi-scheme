@@ -80,6 +80,7 @@ enum sexp_types {
   /* the following are used only by the evaluator */
   SEXP_EXCEPTION,
   SEXP_PROCEDURE,
+  SEXP_MACRO,
   SEXP_ENV,
   SEXP_BYTECODE,
   SEXP_CORE,
@@ -124,6 +125,7 @@ typedef long sexp_sint_t;
 #define SEXP_BYTECODEP(x) (SEXP_POINTERP(x) && ((sexp)(x))->tag ==SEXP_BYTECODE)
 #define SEXP_COREP(x)     (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_CORE)
 #define SEXP_OPCODEP(x)   (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_OPCODE)
+#define SEXP_MACROP(x)    (SEXP_POINTERP(x) && ((sexp)(x))->tag == SEXP_MACRO)
 
 #define SEXP_SYMBOLP(x)  (SEXP_ISYMBOLP(x) || SEXP_LSYMBOLP(x))
 

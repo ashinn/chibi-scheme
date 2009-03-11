@@ -43,6 +43,12 @@ typedef struct env {
   sexp bindings;
 } *env;
 
+typedef struct macro {
+  char tag;
+  procedure proc;
+  env e;
+} *macro;
+
 typedef struct opcode {
   char tag;
   char op_class;
