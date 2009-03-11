@@ -264,73 +264,7 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
           errx(1, "unknown core form: %s", ((core_form)o1)->code);
         }
       } else if (SEXP_OPCODEP(o1)) {
-        /* verify arity */
-        switch (((opcode)o1)->op_class) {
-        case OPC_TYPE_PREDICATE:
-        case OPC_PREDICATE:
-        case OPC_ARITHMETIC:
-        case OPC_ARITHMETIC_INV:
-        case OPC_ARITHMETIC_CMP:
-        case OPC_CONSTRUCTOR:
-        case OPC_ACCESSOR:
-        case OPC_GENERIC:
-          tmp1 = sexp_length(SEXP_CDR(obj));
-          if (tmp1 == 0) {
-            errx(1, "opcode with no arguments: %s", ((opcode)o1)->name);
-          } else if (tmp1 == 1) {
-            if (((opcode)o1)->op_class == OPC_ARITHMETIC_INV) {
-              analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
-              emit(bc, i, ((opcode)o1)->op_inverse);
-            } else {
-              analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
-              if (((opcode)o1)->op_class != OPC_ARITHMETIC) {
-                emit(bc, i, ((opcode)o1)->op_name);
-                (*d)--;
-              }
-            }
-          } else {
-            for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
-                 o2 = SEXP_CDR(o2)) {
-              /* fprintf(stderr, ":: arg: %d\n", SEXP_CAR(o2)); */
-              analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0);
-            }
-            emit(bc, i, ((opcode)o1)->op_name);
-            (*d) -= (tmp1-1);
-            if (((opcode)o1)->op_class == OPC_ARITHMETIC) {
-              for (tmp1-=2; tmp1>0; tmp1--)
-                emit(bc, i, ((opcode)o1)->op_name);
-            }
-          }
-          break;
-        case OPC_IO:
-          tmp1 = sexp_length(SEXP_CDR(obj));
-          if (tmp1 == ((opcode)o1)->num_args && ((opcode)o1)->var_args_p) {
-            emit(bc, i, OP_PARAMETER);
-            emit_word(bc, i, (sexp_uint_t) ((opcode)o1)->data);
-            (*d)++;
-          }
-          for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
-               o2 = SEXP_CDR(o2))
-            analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0);
-          emit(bc, i, ((opcode)o1)->op_name);
-          (*d) -= (tmp1-1);
-          break;
-        case OPC_PARAMETER:
-          emit(bc, i, ((opcode)o1)->op_name);
-          emit_word(bc, i, (sexp_uint_t) ((opcode)o1)->data);
-          break;
-        case OPC_FOREIGN:
-          for (o2 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2);
-               o2 = SEXP_CDR(o2)) {
-            analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0);
-          }
-          emit_push(bc, i, ((opcode)o1)->data);
-          emit(bc, i, ((opcode)o1)->op_name);
-          (*d) -= sexp_length(SEXP_CDR(obj));
-          break;
-        default:
-          errx(1, "unknown opcode class: %d", ((opcode)o1)->op_class);
-        }
+        analyze_opcode((opcode)o1, obj, bc, i, e, params, fv, sv, d, tailp);
       } else if (SEXP_MACROP(o1)) {
         obj = sexp_expand_macro((macro) o1, obj, e);
         goto loop;
@@ -375,6 +309,78 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
   } else {                      /* literal */
     emit_push(bc, i, obj);
     (*d)++;
+  }
+}
+
+void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
+                     sexp params, sexp fv, sexp sv, unsigned int *d, int tailp)
+{
+  int tmp1;
+  sexp o1;
+
+  switch (op->op_class) {
+  case OPC_TYPE_PREDICATE:
+  case OPC_PREDICATE:
+  case OPC_ARITHMETIC:
+  case OPC_ARITHMETIC_INV:
+  case OPC_ARITHMETIC_CMP:
+  case OPC_CONSTRUCTOR:
+  case OPC_ACCESSOR:
+  case OPC_GENERIC:
+    tmp1 = sexp_length(SEXP_CDR(obj));
+    if (tmp1 == 0) {
+      errx(1, "opcode with no arguments: %s", op->name);
+    } else if (tmp1 == 1) {
+      if (op->op_class == OPC_ARITHMETIC_INV) {
+        analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
+        emit(bc, i, op->op_inverse);
+      } else {
+        analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
+        if (op->op_class != OPC_ARITHMETIC) {
+          emit(bc, i, op->op_name);
+          (*d)--;
+        }
+      }
+    } else {
+      for (o1 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o1);
+           o1 = SEXP_CDR(o1)) {
+        analyze(SEXP_CAR(o1), bc, i, e, params, fv, sv, d, 0);
+      }
+      emit(bc, i, op->op_name);
+      (*d) -= (tmp1-1);
+      if (op->op_class == OPC_ARITHMETIC) {
+        for (tmp1-=2; tmp1>0; tmp1--)
+          emit(bc, i, op->op_name);
+      }
+    }
+    break;
+  case OPC_IO:
+    tmp1 = sexp_length(SEXP_CDR(obj));
+    if (tmp1 == op->num_args && op->var_args_p) {
+      emit(bc, i, OP_PARAMETER);
+      emit_word(bc, i, (sexp_uint_t) op->data);
+      (*d)++;
+    }
+    for (o1 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o1);
+         o1 = SEXP_CDR(o1))
+      analyze(SEXP_CAR(o1), bc, i, e, params, fv, sv, d, 0);
+    emit(bc, i, op->op_name);
+    (*d) -= (tmp1-1);
+    break;
+  case OPC_PARAMETER:
+    emit(bc, i, op->op_name);
+    emit_word(bc, i, (sexp_uint_t) op->data);
+    break;
+  case OPC_FOREIGN:
+    for (o1=sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o1); o1=SEXP_CDR(o1)) {
+      analyze(SEXP_CAR(o1), bc, i, e, params, fv, sv, d, 0);
+    }
+    emit_push(bc, i, op->data);
+    emit(bc, i, op->op_name);
+    (*d) -= sexp_length(SEXP_CDR(obj));
+    break;
+  default:
+    errx(1, "unknown opcode class: %d", op->op_class);
   }
 }
 
@@ -520,6 +526,32 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
   emit(bc, i, OP_MAKE_PROCEDURE);
 }
 
+sexp make_param_list(sexp_uint_t i) {
+  sexp res = SEXP_NULL;
+  char sym[2]="a";
+  for (sym[0]+=i; i>0; i--) {
+    sym[0] = sym[0]-1;
+    res = sexp_cons(sexp_intern(sym), res);
+  }
+  return res;
+}
+
+sexp make_opcode_procedure(opcode op, sexp_uint_t i, env e) {
+  bytecode bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+INIT_BCODE_SIZE);
+  sexp params = make_param_list(i);
+  unsigned int pos=0, d=0;
+  e = extend_env_closure(e, params, -4);
+  bc->tag = SEXP_BYTECODE;
+  bc->len = INIT_BCODE_SIZE;
+  analyze_opcode(op, sexp_cons((sexp) op, params), &bc, &pos, e, params,
+                 SEXP_NULL, SEXP_NULL, &d, 0);
+  emit(&bc, &pos, OP_RET);
+  shrink_bcode(&bc, pos);
+  /* disasm(bc); */
+  return sexp_make_procedure(0, (int) sexp_make_integer(i),
+                             (sexp) bc, SEXP_UNDEF);
+}
+
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
   unsigned int i = 0, j, d = 0, core, define_ok=1;
   bytecode bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+INIT_BCODE_SIZE);
@@ -644,6 +676,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 /*     fprintf(stderr, "stack-ref: %d => ", (sexp_sint_t) ((sexp*)ip)[0]); */
 /*     sexp_write(stack[top - (sexp_sint_t) ((sexp*)ip)[0]], cur_error_port); */
 /*     fprintf(stderr, "\n"); */
+/*     print_stack(stack, top); */
     stack[top] = stack[top - (sexp_sint_t) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
     top++;
@@ -837,6 +870,11 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     /* print_stack(stack, top); */
     i = sexp_unbox_integer(((sexp*)ip)[0]);
     tmp1 = stack[top-1];
+  make_call:
+    if (SEXP_OPCODEP(tmp1))
+      /* hack, compile an opcode application on the fly */
+      tmp1 = make_opcode_procedure((opcode) tmp1, i, e);
+    print_stack(stack, top);
     if (! SEXP_PROCEDUREP(tmp1)) {
       fprintf(stderr, "error: non-procedure app\n");
       sexp_raise(sexp_intern("non-procedure-application"));
@@ -866,7 +904,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
       i++;
     }
     stack[top-1] = sexp_make_integer(i);
-    stack[top] = sexp_make_integer(ip+4);
+    stack[top] = sexp_make_integer(ip+sizeof(sexp));
     stack[top+1] = cp;
     top+=2;
 /*     sexp_debug("call proc: ", tmp1); */
@@ -884,22 +922,16 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     /* print_stack(stack, top); */
     break;
   case OP_APPLY1:
+    print_stack(stack, top);
     tmp1 = stack[top-1];
-    if (! SEXP_PROCEDUREP(tmp1))
-      errx(2, "non-procedure application: %p", tmp1);
     tmp2 = stack[top-2];
     i = sexp_length(tmp2);
     top += (i-2);
     for ( ; SEXP_PAIRP(tmp2); tmp2=SEXP_CDR(tmp2), top--)
       stack[top-1] = SEXP_CAR(tmp2);
-    top += i+3;
-    stack[top-3] = sexp_make_integer(i);
-    stack[top-2] = sexp_make_integer(ip);
-    stack[top-1] = cp;
-    bc = sexp_procedure_code(tmp1);
-    ip = bc->data;
-    cp = sexp_procedure_vars(tmp1);
-    break;
+    top += i+1;
+    ip -= sizeof(sexp);
+    goto make_call;
   case OP_CALLCC:
     tmp1 = stack[top-1];
     if (! SEXP_PROCEDUREP(tmp1))
