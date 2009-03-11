@@ -137,7 +137,40 @@ static sexp sexp_make_procedure(char flags, unsigned short num_args,
   return (sexp) proc;
 }
 
+static sexp sexp_make_macro (procedure p, env e) {
+  macro mac = SEXP_ALLOC(sizeof(struct macro));
+  mac->tag = SEXP_MACRO;
+  mac->e = e;
+  mac->proc = p;
+  return (sexp) mac;
+}
+
 /************************* the compiler ***************************/
+
+sexp sexp_expand_macro (macro mac, sexp form, env e) {
+  sexp res, *stack = SEXP_ALLOC(sizeof(sexp)*INIT_STACK_SIZE);
+  bytecode bc;
+  unsigned int i;
+  fprintf(stderr, "expanding: ");
+  sexp_write(form, cur_error_port);
+  fprintf(stderr, "\n => ");
+  bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+32);
+  bc->tag = SEXP_BYTECODE;
+  bc->len = 32;
+  emit_push(&bc, &i, mac->e);
+  emit_push(&bc, &i, e);
+  emit_push(&bc, &i, form);
+  emit_push(&bc, &i, mac->proc);
+  emit(&bc, &i, OP_CALL);
+  emit_word(&bc, &i, (sexp_uint_t) sexp_make_integer(3));
+  emit(&bc, &i, OP_DONE);
+  res = vm(bc, e, stack, 0);
+  sexp_write(res, cur_error_port);
+  fprintf(stderr, "\n");
+  SEXP_FREE(bc);
+  SEXP_FREE(stack);
+  return res;
+}
 
 void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
              sexp params, sexp fv, sexp sv, unsigned int *d, int tailp) {
@@ -145,6 +178,7 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
   env e2;
   sexp o1, o2, cell;
 
+ loop:
   if (SEXP_PAIRP(obj)) {
     if (SEXP_SYMBOLP(SEXP_CAR(obj))) {
       o1 = env_cell(e, SEXP_CAR(obj));
@@ -158,6 +192,10 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
         case CORE_LAMBDA:
           analyze_lambda(SEXP_FALSE, SEXP_CADR(obj), SEXP_CDDR(obj),
                          bc, i, e, params, fv, sv, d, tailp);
+          break;
+        case CORE_DEFINE_SYNTAX:
+          env_define(e, SEXP_CADR(obj),
+                     sexp_make_macro((procedure) eval(SEXP_CADDR(obj), e), e));
           break;
         case CORE_DEFINE:
           if ((((core_form)o1)->code == CORE_DEFINE)
@@ -293,6 +331,9 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
         default:
           errx(1, "unknown opcode class: %d", ((opcode)o1)->op_class);
         }
+      } else if (SEXP_MACROP(o1)) {
+        obj = sexp_expand_macro((macro) o1, obj, e);
+        goto loop;
       } else {
         /* general procedure call */
         analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
@@ -575,7 +616,7 @@ unsigned int sexp_restore_stack(sexp saved, sexp *current) {
   return len;
 }
 
-#define sexp_raise(exn) {stack[top-1]=(exn); goto call_error_handler;}
+#define sexp_raise(exn) {stack[top++]=(exn); goto call_error_handler;}
 
 sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   unsigned char *ip=bc->data;
@@ -590,6 +631,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     break;
   case OP_GLOBAL_REF:
     tmp1 = env_cell(e, ((sexp*)ip)[0]);
+    if (! tmp1)
+      sexp_raise(sexp_intern("undefined-variable"));
     stack[top++]=SEXP_CDR(tmp1);
     ip += sizeof(sexp);
     break;
@@ -893,6 +936,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     break;
   case OP_ERROR:
   call_error_handler:
+    fprintf(stderr, "in error handler\n");
     sexp_write_string("ERROR: ", cur_error_port);
     sexp_write(stack[top-1], cur_error_port);
     sexp_write_string("\n", cur_error_port);
@@ -970,6 +1014,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 /*     sexp_write(stack[top-1], cur_error_port); */
 /*     fprintf(stderr, "...\n"); */
     /* print_stack(stack, top); */
+    if (top<4)
+      goto end_loop;
     cp = stack[top-2];
     ip = (unsigned char*) sexp_unbox_integer(stack[top-3]);
     i = sexp_unbox_integer(stack[top-4]);
