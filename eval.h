@@ -107,10 +107,10 @@ enum opcode_names {
   OP_FCALL1,
   OP_FCALL2,
   OP_FCALL3,
-  OP_FCALL4,
-  OP_FCALL5,
-  OP_FCALL6,
-  OP_FCALL7,
+/*   OP_FCALL4, */
+/*   OP_FCALL5, */
+/*   OP_FCALL6, */
+/*   OP_FCALL7, */
   OP_FCALLN,
   OP_JUMP_UNLESS,
   OP_JUMP,
@@ -182,7 +182,8 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
                      sexp params, sexp fv, sexp sv, unsigned int *d, int tailp);
 void analyze_var_ref (sexp name, bytecode *bc, unsigned int *i, env e,
                       sexp params, sexp fv, sexp sv, unsigned int *d);
-
+void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
+                     sexp params, sexp fv, sexp sv, unsigned int *d, int tailp);
 sexp vm(bytecode bc, env e, sexp* stack, unsigned int top);
 
 sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top);
