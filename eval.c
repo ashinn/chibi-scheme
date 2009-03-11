@@ -610,7 +610,7 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
       emit(&bc, &i, OP_DROP);
     } else {
       analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d,
-              ! done_p && ! SEXP_PAIRP(internals));
+              (! done_p) && (! SEXP_PAIRP(internals)));
     }
   }
   if (SEXP_PAIRP(internals)) {
