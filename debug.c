@@ -9,7 +9,7 @@ static const char* reverse_opcode_names[] =
    "JUMP-UNLESS", "JUMP", "RET", "DONE", "PARAMETER",
    "STACK-REF", "STACK-SET", "GLOBAL-REF", "GLOBAL-SET", "CLOSURE-REF",
    "VECTOR-REF", "VECTOR-SET", "STRING-REF", "STRING-SET", "MAKE-PROCEDURE",
-   "MAKE-VECTOR", "PUSH", "DUP", "DROP", "SWAP", "PAIRP", "NULLP", "VECTORP",
+   "MAKE-VECTOR", "PUSH", "DROP", "PAIRP", "NULLP", "VECTORP",
    "INTEGERP", "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP",
    "OPORTP", "CAR", "CDR", "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB", "MUL",
    "DIV", "MOD", "NEG", "INV", "LT", "LE", "GT", "GE", "EQN", "EQ",
