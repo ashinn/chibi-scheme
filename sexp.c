@@ -406,7 +406,7 @@ void sexp_write (sexp obj, sexp out) {
     case SEXP_FLONUM:
       sexp_printf(out, "%g", sexp_flonum_value(obj)); break;
     case SEXP_PROCEDURE:
-      sexp_write_string("#<procedure>", out); break;
+      sexp_printf(out, "#<procedure: %p>", obj); break;
     case SEXP_IPORT:
       sexp_write_string("#<input-port>", out); break;
     case SEXP_OPORT:

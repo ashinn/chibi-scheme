@@ -329,15 +329,12 @@ void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
     if (tmp1 == 0) {
       errx(1, "opcode with no arguments: %s", op->name);
     } else if (tmp1 == 1) {
+      analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
       if (op->op_class == OPC_ARITHMETIC_INV) {
-        analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
         emit(bc, i, op->op_inverse);
-      } else {
-        analyze(SEXP_CADR(obj), bc, i, e, params, fv, sv, d, 0);
-        if (op->op_class != OPC_ARITHMETIC) {
-          emit(bc, i, op->op_name);
-          (*d)--;
-        }
+        (*d)++;
+      } else if (op->op_class != OPC_ARITHMETIC) {
+        emit(bc, i, op->op_name);
       }
     } else {
       for (o1 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o1);
@@ -358,6 +355,7 @@ void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
       emit(bc, i, OP_PARAMETER);
       emit_word(bc, i, (sexp_uint_t) op->data);
       (*d)++;
+      tmp1++;
     }
     for (o1 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o1);
          o1 = SEXP_CDR(o1))
@@ -390,16 +388,18 @@ void analyze_var_ref (sexp obj, bytecode *bc, unsigned int *i, env e,
 /*   sexp_write(sv, stderr); */
 /*   fprintf(stderr, "\n"); */
   if ((tmp = sexp_list_index(params, obj)) >= 0) {
-    /* fprintf(stderr, "compiling local ref: %p => %d (d = %d)\n", obj, tmp, *d); */
     o1 = env_cell(e, obj);
+    fprintf(stderr, "compiling local ref: ");
+    sexp_write(obj, cur_error_port);
+    fprintf(stderr, " => %d\n", *d - sexp_unbox_integer(SEXP_CDR(o1)));
     emit(bc, i, OP_STACK_REF);
     emit_word(bc, i, *d - sexp_unbox_integer(SEXP_CDR(o1)));
   } else if ((tmp = sexp_list_index(fv, obj)) >= 0) {
-    /* fprintf(stderr, "compiling closure ref: %p => %d\n", obj, tmp); */
+    fprintf(stderr, "compiling closure ref: %p => %d\n", obj, tmp);
     emit(bc, i, OP_CLOSURE_REF);
     emit_word(bc, i, (sexp_uint_t) sexp_make_integer(tmp));
   } else {
-    /* fprintf(stderr, "compiling global ref: %p\n", obj); */
+    fprintf(stderr, "compiling global ref: %p\n", obj);
     emit(bc, i, OP_GLOBAL_REF);
     emit_word(bc, i, (sexp_uint_t) obj);
   }
@@ -433,6 +433,8 @@ void analyze_app (sexp obj, bytecode *bc, unsigned int *i, env e,
     emit(bc, i, OP_CALL);
     emit_word(bc, i, (sexp_uint_t) sexp_make_integer(len));
   }
+
+  (*d) -= (len);
 }
 
 sexp free_vars (env e, sexp formals, sexp obj, sexp fv) {
@@ -572,8 +574,8 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
   /* determine internal defines */
   if (e->parent) {
     for (ls=SEXP_NULL; SEXP_PAIRP(obj); obj=SEXP_CDR(obj)) {
-      core = SEXP_PAIRP(SEXP_CAR(obj)) && SEXP_SYMBOLP(SEXP_CAAR(obj))
-        && core_code(e, SEXP_CAAR(obj));
+      core = (SEXP_PAIRP(SEXP_CAR(obj)) && SEXP_SYMBOLP(SEXP_CAAR(obj))
+              ? core_code(e, SEXP_CAAR(obj)) : 0);
       if (core == CORE_BEGIN) {
         obj = sexp_cons(SEXP_CAR(obj),
                         sexp_append(SEXP_CDAR(obj), SEXP_CDR(obj)));
@@ -591,11 +593,11 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
       }
     }
     obj = sexp_reverse(ls);
-/*     sexp_write_string("internals: ", cur_error_port); */
-/*     sexp_write(internals, cur_error_port); */
-/*     sexp_write_string("\n", cur_error_port); */
     j = sexp_length(internals);
     if (SEXP_PAIRP(internals)) {
+/*       sexp_write_string("internals: ", cur_error_port); */
+/*       sexp_write(internals, cur_error_port); */
+/*       sexp_write_string("\n", cur_error_port); */
       e = extend_env_closure(e, internals, 2);
       params = sexp_append(internals, params);
       for (ls=internals; SEXP_PAIRP(ls); ls=SEXP_CDR(ls))
@@ -608,6 +610,7 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
     if (SEXP_PAIRP(SEXP_CDR(obj))) {
       analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d, 0);
       emit(&bc, &i, OP_DROP);
+      d--;
     } else {
       analyze(SEXP_CAR(obj), &bc, &i, e, params, fv, sv, &d,
               (! done_p) && (! SEXP_PAIRP(internals)));
@@ -654,6 +657,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   int i, j, k;
 
  loop:
+/*   print_stack(stack, top); */
 /*   fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip); */
   switch (*ip++) {
   case OP_NOOP:
@@ -732,17 +736,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top++]=((sexp*)ip)[0];
     ip += sizeof(sexp);
     break;
-  case OP_DUP:
-    stack[top]=stack[top-1];
-    top++;
-    break;
   case OP_DROP:
     top--;
-    break;
-  case OP_SWAP:
-    tmp1 = stack[top-2];
-    stack[top-2]=stack[top-1];
-    stack[top-1]=tmp1;
     break;
   case OP_PARAMETER:
     stack[top] = *(sexp*)((sexp*)ip)[0];
@@ -750,6 +745,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     ip += sizeof(sexp);
     break;
   case OP_PAIRP:
+    /* print_stack(stack, top); */
     stack[top-1]=SEXP_PAIRP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_NULLP:
     stack[top-1]=SEXP_NULLP(stack[top-1]) ? SEXP_TRUE : SEXP_FALSE; break;
@@ -772,6 +768,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   case OP_EOFP:
     stack[top-1]=(stack[top-1] == SEXP_EOF) ? SEXP_TRUE : SEXP_FALSE; break;
   case OP_CAR:
+    /* print_stack(stack, top); */
     if (! SEXP_PAIRP(stack[top-1])) sexp_raise(sexp_intern("not-a-pair"));
     stack[top-1]=SEXP_CAR(stack[top-1]); break;
   case OP_CDR:
@@ -842,17 +839,16 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 /*     fprintf(stderr, "tail call: depth=%d, i=%d, top=%d\n", j, i, top); */
 /*     print_stack(stack, top); */
     /* save frame info */
-    stack[top] = stack[top-i-j];
-    stack[top+1] = stack[top-i-j+1];
+    stack[top] = stack[top-j-2];
+    stack[top+1] = stack[top-j-1];
     /* copy new args into place */
     for (k=top-i-1; k<top-1; k++)
-      stack[k-j-i] = stack[k];
+      stack[k-j+1] = stack[k];
     /* restore frame info */
-    stack[top-j-i] = stack[top];
-    stack[top-j-i+1] = stack[top+1];
-    top -= (j-i-1);
+    stack[top-(j-i)] = stack[top];
+    stack[top-(j-i)+1] = stack[top+1];
+    top -= (j-i);
     stack[top-1] = tmp1;
-/*     print_stack(stack, top); */
 /*     exit(0); */
 /*     sexp_debug("call proc: ", tmp1); */
 /*     sexp_debug("bc: ", sexp_procedure_code(tmp1)); */
@@ -872,7 +868,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     if (SEXP_OPCODEP(tmp1))
       /* hack, compile an opcode application on the fly */
       tmp1 = make_opcode_procedure((opcode) tmp1, i, e);
-    print_stack(stack, top);
+    /* print_stack(stack, top); */
     if (! SEXP_PROCEDUREP(tmp1)) {
       fprintf(stderr, "error: non-procedure app\n");
       sexp_raise(sexp_intern("non-procedure-application"));
@@ -920,7 +916,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     /* print_stack(stack, top); */
     break;
   case OP_APPLY1:
-    print_stack(stack, top);
+    /* print_stack(stack, top); */
     tmp1 = stack[top-1];
     tmp2 = stack[top-2];
     i = sexp_length(tmp2);
@@ -1042,7 +1038,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
 /*     fprintf(stderr, "returning @ %d: ", top-1); */
 /*     fflush(stderr); */
 /*     sexp_write(stack[top-1], cur_error_port); */
-/*     fprintf(stderr, "...\n"); */
+/*     fprintf(stderr, " ...\n"); */
     /* print_stack(stack, top); */
     if (top<4)
       goto end_loop;
@@ -1176,6 +1172,7 @@ _FN2(SEXP_PAIR, SEXP_PAIR, "diffq", sexp_lset_diff),
 _PARAM("current-input-port", (sexp)&cur_input_port, SEXP_IPORT),
 _PARAM("current-output-port", (sexp)&cur_output_port, SEXP_OPORT),
 _PARAM("current-error-port", (sexp)&cur_error_port, SEXP_OPORT),
+_PARAM("interaction-environment", (sexp)&interaction_environment, SEXP_ENV),
 #undef _OP
 #undef _FN
 #undef _FN0
@@ -1190,12 +1187,10 @@ env make_standard_env() {
   e->tag = SEXP_ENV;
   e->parent = NULL;
   e->bindings = SEXP_NULL;
-  for (i=0; i<(sizeof(core_forms)/sizeof(struct core_form)); i++) {
+  for (i=0; i<(sizeof(core_forms)/sizeof(struct core_form)); i++)
     env_define(e, sexp_intern(core_forms[i].name), (sexp)(&core_forms[i]));
-  }
-  for (i=0; i<(sizeof(opcodes)/sizeof(struct opcode)); i++) {
+  for (i=0; i<(sizeof(opcodes)/sizeof(struct opcode)); i++)
     env_define(e, sexp_intern(opcodes[i].name), (sexp)(&opcodes[i]));
-  }
   return e;
 }
 

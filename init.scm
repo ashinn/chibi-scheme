@@ -40,6 +40,8 @@
       (mapn proc (cons ls lol) '())))
 
 (define (map1 proc ls res)
+;;   (write ls)
+;;   (newline)
   (if (pair? ls)
       (map1 proc (cdr ls) (cons (proc (car ls)) res))
       (reverse res)))
