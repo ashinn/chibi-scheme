@@ -62,9 +62,11 @@
       (reverse res)))
 
 (define (mapn proc lol res)
-  (if (null? lol)
+  (if (null? (car lol))
       (reverse res)
-      (mapn proc (cdr lol) (cons (apply1 proc (map1 car lol '())) res))))
+      (mapn proc
+            (map1 cdr lol '())
+            (cons (apply1 proc (map1 car lol '())) res))))
 
 ;; syntax
 
@@ -73,13 +75,13 @@
     (cons (cons 'lambda (cons (map car (cadr expr)) (cddr expr)))
           (map cadr (cadr expr)))))
 
-(define-syntax or
-  (lambda (expr use-env mac-env)
-    (if (null? (cdr expr))
-        #f
-        (if (null? (cddr expr))
-            (cadr expr)
-            (list 'let (list (list 'tmp (cadr expr)))
-                  (list 'if 'tmp
-                        'tmp
-                        (cons 'or (cddr expr))))))))
+;; (define-syntax or
+;;   (lambda (expr use-env mac-env)
+;;     (if (null? (cdr expr))
+;;         #f
+;;         (if (null? (cddr expr))
+;;             (cadr expr)
+;;             (list 'let (list (list 'tmp (cadr expr)))
+;;                   (list 'if 'tmp
+;;                         'tmp
+;;                         (cons 'or (cddr expr))))))))

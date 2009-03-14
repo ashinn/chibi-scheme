@@ -102,6 +102,7 @@ static void shrink_bcode(bytecode *bc, unsigned int i) {
 static void expand_bcode(bytecode *bc, unsigned int *i, unsigned int size) {
   bytecode tmp;
   if ((*bc)->len < (*i)+size) {
+    fprintf(stderr, "expanding bytecode %u < %u + %u = %u\n", (*bc)->len, (*i), size, (*i)+size);
     tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
     tmp->len = (*bc)->len*2;
     memcpy(tmp->data, (*bc)->data, (*bc)->len);
@@ -148,11 +149,11 @@ static sexp sexp_make_macro (procedure p, env e) {
 sexp sexp_expand_macro (macro mac, sexp form, env e) {
   sexp res, *stack = SEXP_ALLOC(sizeof(sexp)*INIT_STACK_SIZE);
   bytecode bc;
-  unsigned int i;
+  unsigned int i=0;
   fprintf(stderr, "expanding: ");
   sexp_write(form, cur_error_port);
   fprintf(stderr, "\n => ");
-  bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+32);
+  bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+64);
   bc->tag = SEXP_BYTECODE;
   bc->len = 32;
   emit_push(&bc, &i, mac->e);
@@ -162,6 +163,7 @@ sexp sexp_expand_macro (macro mac, sexp form, env e) {
   emit(&bc, &i, OP_CALL);
   emit_word(&bc, &i, (sexp_uint_t) sexp_make_integer(3));
   emit(&bc, &i, OP_DONE);
+  /* disasm(bc); */
   res = vm(bc, e, stack, 0);
   sexp_write(res, cur_error_port);
   fprintf(stderr, "\n");
@@ -194,6 +196,8 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
         case CORE_DEFINE_SYNTAX:
           env_define(e, SEXP_CADR(obj),
                      sexp_make_macro((procedure) eval(SEXP_CADDR(obj), e), e));
+          emit_push(bc, i, SEXP_UNDEF);
+          (*d)++;
           break;
         case CORE_DEFINE:
           if ((((core_form)o1)->code == CORE_DEFINE)
@@ -271,34 +275,33 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
         analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
       }
     } else if (SEXP_PAIRP(SEXP_CAR(obj))) {
-      o2 = env_cell(e, SEXP_CAAR(obj));
-      if (o2
-          && SEXP_COREP(SEXP_CDR(o2))
-          && (((core_form)SEXP_CDR(o2))->code == CORE_LAMBDA)
-          && sexp_listp(SEXP_CADR(SEXP_CAR(obj)))) {
-        /* let */
-        tmp1 = sexp_length(SEXP_CADR(SEXP_CAR(obj)));
-        e2 = extend_env_closure(e, SEXP_CADR(SEXP_CAR(obj)), (*d));
-        for (o2=sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2))
-          analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0);
-        params = sexp_append(SEXP_CADR(SEXP_CAR(obj)), params);
-        for (o2=SEXP_CDDR(SEXP_CAR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2)) {
-          if (SEXP_PAIRP(SEXP_CDR(o2))) {
-            analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, 0);
-            emit(bc, i, OP_DROP);
-          } else {
-            analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, tailp);
-          }
-        }
-        emit(bc, i, OP_STACK_SET);
-        emit_word(bc, i, tmp1+1);
-        (*d) -= tmp1;
-        for (tmp1; tmp1>0; tmp1--)
-          emit(bc, i, OP_DROP);
-      } else {
+/*       o2 = env_cell(e, SEXP_CAAR(obj)); */
+/*       if (o2 */
+/*           && SEXP_COREP(SEXP_CDR(o2)) */
+/*           && (((core_form)SEXP_CDR(o2))->code == CORE_LAMBDA) */
+/*           && sexp_listp(SEXP_CADR(SEXP_CAR(obj)))) { */
+/*         /\* let *\/ */
+/*         tmp1 = sexp_length(SEXP_CADR(SEXP_CAR(obj))); */
+/*         e2 = extend_env_closure(e, SEXP_CADR(SEXP_CAR(obj)), (*d)); */
+/*         for (o2=sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2)) */
+/*           analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0); */
+/*         params = sexp_append(SEXP_CADR(SEXP_CAR(obj)), params); */
+/*         for (o2=SEXP_CDDR(SEXP_CAR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2)) { */
+/*           if (SEXP_PAIRP(SEXP_CDR(o2))) { */
+/*             analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, 0); */
+/*             emit(bc, i, OP_DROP); */
+/*           } else { */
+/*             analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, tailp); */
+/*           } */
+/*         } */
+/*         emit(bc, i, OP_STACK_SET); */
+/*         emit_word(bc, i, tmp1+1); */
+/*         (*d) -= tmp1; */
+/*         for (tmp1; tmp1>0; tmp1--) */
+/*           emit(bc, i, OP_DROP); */
+/*       } else */
         /* computed application */
-      analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
-      }
+        analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
     } else {
       errx(1, "invalid operator: %s", SEXP_CAR(obj));
     }
