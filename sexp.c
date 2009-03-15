@@ -53,11 +53,11 @@ static int symbol_table_count = 0;
 void sexp_free (sexp obj) {
   int len, i;
   sexp *elts;
-  if (SEXP_POINTERP(obj)) {
+  if (sexp_pointerp(obj)) {
     switch (obj->tag) {
     case SEXP_PAIR:
-      sexp_free(SEXP_CAR(obj));
-      sexp_free(SEXP_CDR(obj));
+      sexp_free(sexp_car(obj));
+      sexp_free(sexp_cdr(obj));
       break;
     case SEXP_VECTOR:
       len = sexp_vector_length(obj);
@@ -81,60 +81,58 @@ void sexp_free (sexp obj) {
 sexp sexp_cons(sexp head, sexp tail) {
   sexp pair = SEXP_ALLOC(sexp_sizeof(pair));
   pair->tag = SEXP_PAIR;
-/*   pair->data1 = (void*) head; */
-/*   pair->data2 = (void*) tail; */
-  SEXP_CAR(pair) = head;
-  SEXP_CDR(pair) = tail;
+  sexp_car(pair) = head;
+  sexp_cdr(pair) = tail;
   return pair;
 }
 
 int sexp_listp (sexp obj) {
-  while (SEXP_PAIRP(obj))
-    obj = SEXP_CDR(obj);
+  while (sexp_pairp(obj))
+    obj = sexp_cdr(obj);
   return (obj == SEXP_NULL);
 }
 
 int sexp_list_index (sexp ls, sexp elt) {
   int i=0;
-  while (SEXP_PAIRP(ls)) {
-    if (SEXP_CAR(ls) == elt)
+  while (sexp_pairp(ls)) {
+    if (sexp_car(ls) == elt)
       return i;
-    ls = SEXP_CDR(ls);
+    ls = sexp_cdr(ls);
     i++;
   }
   return -1;
 }
 
 sexp sexp_memq (sexp x, sexp ls) {
-  while (SEXP_PAIRP(ls))
-    if (x == SEXP_CAR(ls))
+  while (sexp_pairp(ls))
+    if (x == sexp_car(ls))
       return ls;
     else
-      ls = SEXP_CDR(ls);
+      ls = sexp_cdr(ls);
   return SEXP_FALSE;
 }
 
 sexp sexp_assq (sexp x, sexp ls) {
-  while (SEXP_PAIRP(ls))
-    if (x == SEXP_CAAR(ls))
+  while (sexp_pairp(ls))
+    if (x == sexp_caar(ls))
       return ls;
     else
-      ls = SEXP_CDR(ls);
+      ls = sexp_cdr(ls);
   return SEXP_FALSE;
 }
 
 sexp sexp_lset_diff(sexp a, sexp b) {
   sexp res = SEXP_NULL;
-  for ( ; SEXP_PAIRP(a); a=SEXP_CDR(a))
-    if (! sexp_list_index(b, SEXP_CAR(a)) >= 0)
-      res = sexp_cons(SEXP_CAR(a), res);
+  for ( ; sexp_pairp(a); a=sexp_cdr(a))
+    if (! sexp_list_index(b, sexp_car(a)) >= 0)
+      res = sexp_cons(sexp_car(a), res);
   return res;
 }
 
 sexp sexp_reverse(sexp ls) {
   sexp res = SEXP_NULL;
-  for ( ; SEXP_PAIRP(ls); ls=SEXP_CDR(ls))
-    res = sexp_cons(SEXP_CAR(ls), res);
+  for ( ; sexp_pairp(ls); ls=sexp_cdr(ls))
+    res = sexp_cons(sexp_car(ls), res);
   return res;
 }
 
@@ -142,29 +140,29 @@ sexp sexp_nreverse(sexp ls) {
   sexp a, b, tmp;
   if (ls == SEXP_NULL) {
     return ls;
-  } else if (! SEXP_PAIRP(ls)) {
+  } else if (! sexp_pairp(ls)) {
     return SEXP_ERROR;
   } else {
-    b=ls;
-    a=SEXP_CDR(ls);
-    SEXP_CDR(b) = SEXP_NULL;
-    for ( ; SEXP_PAIRP(a); b=a, a=tmp) {
-      tmp=SEXP_CDR(a);
-      SEXP_CDR(a) = b;
+    b = ls;
+    a = sexp_cdr(ls);
+    sexp_cdr(b) = SEXP_NULL;
+    for ( ; sexp_pairp(a); b=a, a=tmp) {
+      tmp = sexp_cdr(a);
+      sexp_cdr(a) = b;
     }
     return b;
   }
 }
 
 sexp sexp_append(sexp a, sexp b) {
-  for (a=sexp_reverse(a); SEXP_PAIRP(a); a=SEXP_CDR(a))
-    b = sexp_cons(SEXP_CAR(a), b);
+  for (a=sexp_reverse(a); sexp_pairp(a); a=sexp_cdr(a))
+    b = sexp_cons(sexp_car(a), b);
   return b;
 }
 
 sexp sexp_length(sexp ls) {
   sexp_uint_t res=0;
-  for ( ; SEXP_PAIRP(ls); res++, ls=SEXP_CDR(ls))
+  for ( ; sexp_pairp(ls); res++, ls=sexp_cdr(ls))
     ;
   return sexp_make_integer(res);
 }
@@ -184,8 +182,6 @@ sexp sexp_make_string(char *str) {
   char *mystr = SEXP_ALLOC(len+1);
   memcpy(mystr, str, len+1);
   s->tag = SEXP_STRING;
-/*   s->data1 = (void*) len; */
-/*   s->data2 = (void*) mystr; */
   sexp_string_length(s) = len;
   sexp_string_data(s) = mystr;
   return s;
@@ -250,8 +246,6 @@ sexp sexp_intern(char *str) {
   memcpy(mystr, str, len+1);
   mystr[len]=0;
   sym->tag = SEXP_SYMBOL;
-/*   sym->data1 = (void*) len; */
-/*   sym->data2 = (void*) mystr; */
   sexp_symbol_length(sym) = len;
   sexp_symbol_data(sym) = mystr;
   symbol_table[cell] = sym;
@@ -268,8 +262,6 @@ sexp sexp_make_vector(sexp len, sexp dflt) {
     x[i] = dflt;
   }
   v->tag = SEXP_VECTOR;
-/*   v->data1 = (void*) clen; */
-/*   v->data2 = (void*) x; */
   sexp_vector_length(v) = clen;
   sexp_vector_data(v) = x;
   return v;
@@ -279,8 +271,8 @@ sexp sexp_list_to_vector(sexp ls) {
   sexp x, vec = sexp_make_vector(sexp_length(ls), SEXP_UNDEF);
   sexp *elts = sexp_vector_data(vec);
   int i;
-  for (i=0, x=ls; SEXP_PAIRP(x); i++, x=SEXP_CDR(x))
-    elts[i] = SEXP_CAR(x);
+  for (i=0, x=ls; sexp_pairp(x); i++, x=sexp_cdr(x))
+    elts[i] = sexp_car(x);
   return vec;
 }
 
@@ -335,7 +327,6 @@ int sstream_close(void *vec) {
 sexp sexp_make_input_port(FILE* in) {
   sexp p = SEXP_ALLOC(sexp_sizeof(port));
   p->tag = SEXP_IPORT;
-  /* p->data1 = in; */
   sexp_port_stream(p) = in;
   return p;
 }
@@ -343,7 +334,6 @@ sexp sexp_make_input_port(FILE* in) {
 sexp sexp_make_output_port(FILE* out) {
   sexp p = SEXP_ALLOC(sexp_sizeof(port));
   p->tag = SEXP_OPORT;
-  /* p->data1 = out; */
   sexp_port_stream(p) = out;
   return p;
 }
@@ -371,16 +361,16 @@ void sexp_write (sexp obj, sexp out) {
 
   if (! obj) {
     sexp_write_string("#<null>", out);
-  } else if (SEXP_POINTERP(obj)) {
+  } else if (sexp_pointerp(obj)) {
     switch (obj->tag) {
     case SEXP_PAIR:
       sexp_write_char('(', out);
-      sexp_write(SEXP_CAR(obj), out);
-      for (x=SEXP_CDR(obj); SEXP_PAIRP(x); x=SEXP_CDR(x)) {
+      sexp_write(sexp_car(obj), out);
+      for (x=sexp_cdr(obj); sexp_pairp(x); x=sexp_cdr(x)) {
         sexp_write_char(' ', out);
-        sexp_write(SEXP_CAR(x), out);
+        sexp_write(sexp_car(x), out);
       }
-      if (! SEXP_NULLP(x)) {
+      if (! sexp_nullp(x)) {
         sexp_write_string(" . ", out);
         sexp_write(x, out);
       }
@@ -438,15 +428,15 @@ void sexp_write (sexp obj, sexp out) {
         sexp_write_char('"', out);
       break;
     }
-  } else if (SEXP_INTEGERP(obj)) {
+  } else if (sexp_integerp(obj)) {
     sexp_printf(out, "%d", sexp_unbox_integer(obj));
-  } else if (SEXP_CHARP(obj)) {
+  } else if (sexp_charp(obj)) {
       if (33 <= sexp_unbox_character(obj) < 127) {
         sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
       } else {
         sexp_printf(out, "#\\x%02d", sexp_unbox_character(obj));
       }
-  } else if (SEXP_SYMBOLP(obj)) {
+  } else if (sexp_symbolp(obj)) {
 
 #if USE_HUFF_SYMS
     if (((sexp_uint_t)obj&7)==7) {
@@ -564,7 +554,7 @@ sexp sexp_read_number(sexp in, int base) {
       return SEXP_ERROR;
     }
     tmp = sexp_read_float_tail(in, res);
-    if (negativep && SEXP_FLONUMP(tmp))
+    if (negativep && sexp_flonump(tmp))
       sexp_flonum_value(tmp) = -1 * sexp_flonum_value(tmp);
     return tmp;
   } else {
@@ -634,7 +624,7 @@ sexp sexp_read_raw (sexp in) {
           } else {
             tmp2 = res;
             res = sexp_nreverse(res);
-            SEXP_CDR(tmp2) = tmp;
+            sexp_cdr(tmp2) = tmp;
             return res;
           }
         }
@@ -794,8 +784,6 @@ void sexp_init() {
     the_unquote_splicing_symbol = sexp_intern("unquote-splicing");
     the_empty_vector = SEXP_ALLOC(sexp_sizeof(vector));
     the_empty_vector->tag = SEXP_VECTOR;
-/*     the_empty_vector->data1 = 0; */
-/*     the_empty_vector->data2 = 0; */
     sexp_vector_length(the_empty_vector) = 0;
     sexp_vector_data(the_empty_vector) = NULL;
   }
