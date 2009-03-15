@@ -31,7 +31,7 @@ void disasm (sexp bc) {
   case OP_STACK_SET:
   case OP_CLOSURE_REF:
   case OP_PARAMETER:
-    fprintf(stderr, "%d", (long) ((sexp*)ip)[0]);
+    fprintf(stderr, "%ld", (long) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
   case OP_GLOBAL_REF:
@@ -62,7 +62,7 @@ void disasm (sexp bc) {
 void print_bytecode (sexp bc) {
   int i;
   unsigned char *data = sexp_bytecode_data(bc);
-  fprintf(stderr, "bytecode @ %p, data @ %p, length = %d\n",
+  fprintf(stderr, "bytecode @ %p, data @ %p, length = %lu\n",
           bc, data, sexp_bytecode_length(bc));
   for (i=0; i+16 < sexp_bytecode_length(bc); i+=8) {
     fprintf(stderr, "%02x: %02x %02x %02x %02x %02x %02x %02x %02x   ", i,

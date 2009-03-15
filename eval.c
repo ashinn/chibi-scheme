@@ -176,8 +176,8 @@ sexp sexp_expand_macro (sexp mac, sexp form, sexp e) {
 
 void analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
              sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp) {
-  int tmp1, tmp2, tmp3;
-  sexp o1, o2, e2, cell;
+  int tmp1, tmp2;
+  sexp o1, o2, e2;
 
  loop:
   if (sexp_pairp(obj)) {
@@ -269,7 +269,7 @@ void analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
           (*d)++;
           break;
         default:
-          errx(1, "unknown core form: %s", sexp_core_code(o1));
+          errx(1, "unknown core form: %d", sexp_core_code(o1));
         }
       } else if (sexp_opcodep(o1)) {
         analyze_opcode(o1, obj, bc, i, e, params, fv, sv, d, tailp);
@@ -305,14 +305,14 @@ void analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
         emit(bc, i, OP_STACK_SET);
         emit_word(bc, i, tmp1+1);
         (*d) -= (tmp1-1);
-        for (tmp1; tmp1>0; tmp1--)
+        for ( ; tmp1>0; tmp1--)
           emit(bc, i, OP_DROP);
       } else
 #endif
         /* computed application */
         analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
     } else {
-      errx(1, "invalid operator: %s", sexp_car(obj));
+      errx(1, "invalid operator: %p", sexp_car(obj));
     }
   } else if (sexp_symbolp(obj)) {
     analyze_var_ref(obj, bc, i, e, params, fv, sv, d);
@@ -398,7 +398,7 @@ void analyze_var_ref (sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
     o1 = env_cell(e, obj);
     fprintf(stderr, "compiling local ref: ");
     sexp_write(obj, cur_error_port);
-    fprintf(stderr, " => %d\n", *d - sexp_unbox_integer(sexp_cdr(o1)));
+    fprintf(stderr, " => %lu\n", *d - sexp_unbox_integer(sexp_cdr(o1)));
     emit(bc, i, OP_STACK_REF);
     emit_word(bc, i, *d - sexp_unbox_integer(sexp_cdr(o1)));
   } else if ((tmp = sexp_list_index(fv, obj)) >= 0) {
@@ -563,7 +563,7 @@ sexp make_opcode_procedure(sexp op, sexp_uint_t i, sexp e) {
 }
 
 sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p) {
-  sexp_uint_t i = 0, j, d = 0, core, define_ok=1;
+  sexp_uint_t i=0, j=0, d=0, define_ok=1, core;
   sexp bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+INIT_BCODE_SIZE);
   sexp sv2 = set_vars(e, params, obj, SEXP_NULL), internals=SEXP_NULL, ls;
   bc->tag = SEXP_BYTECODE;
@@ -631,7 +631,7 @@ sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p) {
   if (sexp_pairp(internals)) {
     emit(&bc, &i, OP_STACK_SET);
     emit_word(&bc, &i, j+1);
-    for (j; j>0; j--)
+    for ( ; j>0; j--)
       emit(&bc, &i, OP_DROP);
   }
   emit(&bc, &i, done_p ? OP_DONE : OP_RET);
@@ -864,7 +864,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     goto make_call;
   case OP_CALL:
     if (top >= INIT_STACK_SIZE)
-      errx(1, "out of stack space: %d", top);
+      errx(1, "out of stack space: %ld", top);
     i = sexp_unbox_integer(((sexp*)ip)[0]);
     tmp1 = stack[top-1];
   make_call:
@@ -880,7 +880,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     }
     j = i - sexp_unbox_integer(sexp_procedure_num_args(tmp1));
     if (j < 0) {
-      fprintf(stderr, "error: expected %d args but got %d\n",
+      fprintf(stderr, "error: expected %ld args but got %ld\n",
               sexp_unbox_integer(sexp_procedure_num_args(tmp1)),
               i);
       sexp_raise(sexp_intern("not-enough-args"));
@@ -895,7 +895,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
         top -= (j-1);
         i-=(j-1);
       } else {
-        fprintf(stderr, "got: %d, expected: %d\n", i, sexp_procedure_num_args(tmp1));
+        fprintf(stderr, "got: %ld, expected: %d\n", i, sexp_procedure_num_args(tmp1));
         sexp_raise(sexp_intern("too-many-args"));
       }
     } else if (sexp_procedure_variadic_p(tmp1)) {
@@ -1058,7 +1058,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
 /*     fprintf(stderr, "... done returning\n"); */
     break;
   case OP_DONE:
-    fprintf(stderr, "finally returning @ %d: ", top-1);
+    fprintf(stderr, "finally returning @ %ld: ", top-1);
     fflush(stderr);
     sexp_write(stack[top-1], cur_error_port);
     fprintf(stderr, "\n");
@@ -1252,7 +1252,7 @@ void repl (sexp e, sexp *stack) {
 }
 
 int main (int argc, char **argv) {
-  sexp bc, e, obj, res, in, out, *stack, err_handler, err_handler_sym;
+  sexp bc, e, obj, res, *stack, err_handler, err_handler_sym;
   sexp_uint_t i, quit=0, init_loaded=0;
 
   scheme_init();

@@ -194,10 +194,10 @@ struct sexp_struct {
 #define SEXP_DOTP(x) ((x)==sexp_the_dot_symbol)
 #endif
 
-#define sexp_make_integer(n)    ((sexp) (((sexp_sint_t) n<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
-#define sexp_unbox_integer(n)   ((sexp_sint_t) n>>SEXP_FIXNUM_BITS)
-#define sexp_make_character(n)  ((sexp) (((sexp_sint_t) n<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
-#define sexp_unbox_character(n) ((sexp_sint_t) n>>SEXP_EXTENDED_BITS)
+#define sexp_make_integer(n)    ((sexp) ((((sexp_sint_t)n)<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
+#define sexp_unbox_integer(n)   (((sexp_sint_t)n)>>SEXP_FIXNUM_BITS)
+#define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)n)<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
+#define sexp_unbox_character(n) ((int) (((sexp_sint_t)n)>>SEXP_EXTENDED_BITS))
 
 #define sexp_flonum_value(f) ((f)->value.flonum)
 
