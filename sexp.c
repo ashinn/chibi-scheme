@@ -203,8 +203,8 @@ sexp sexp_intern(char *str) {
 
 #if USE_HUFF_SYMS
   res = 0;
-  for (p=str; c=*p; p++) {
-    he = huff_table[c];
+  for ( ; (c=*p); p++) {
+    he = huff_table[(unsigned char)c];
     newbits = he.len;
     if ((space+newbits) > (sizeof(sexp)*8)) {
       goto normal_intern;
@@ -322,6 +322,7 @@ off_t sstream_seek(void *vec, off_t offset, int whence) {
 
 int sstream_close(void *vec) {
   sexp_free((sexp)vec);
+  return 0;
 }
 
 sexp sexp_make_input_port(FILE* in) {
@@ -355,9 +356,9 @@ sexp sexp_get_output_string(sexp port) {
 
 void sexp_write (sexp obj, sexp out) {
   unsigned long len, c, res;
-  long i;
+  long i=0;
   sexp x, *elts;
-  char *str;
+  char *str=NULL;
 
   if (! obj) {
     sexp_write_string("#<null>", out);
@@ -429,13 +430,12 @@ void sexp_write (sexp obj, sexp out) {
       break;
     }
   } else if (sexp_integerp(obj)) {
-    sexp_printf(out, "%d", sexp_unbox_integer(obj));
+    sexp_printf(out, "%ld", sexp_unbox_integer(obj));
   } else if (sexp_charp(obj)) {
-      if (33 <= sexp_unbox_character(obj) < 127) {
-        sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
-      } else {
-        sexp_printf(out, "#\\x%02d", sexp_unbox_character(obj));
-      }
+    if ((33 <= sexp_unbox_character(obj)) && (sexp_unbox_character(obj) < 127))
+      sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
+    else
+      sexp_printf(out, "#\\x%02d", sexp_unbox_character(obj));
   } else if (sexp_symbolp(obj)) {
 
 #if USE_HUFF_SYMS
