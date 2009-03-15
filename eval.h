@@ -174,19 +174,19 @@ enum opcode_names {
 
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p);
 
-void analyze_app (sexp obj, bytecode *bc, unsigned int *i,
+void analyze_app (sexp obj, bytecode *bc, sexp_uint_t *i,
                   env e, sexp params, sexp fv, sexp sv,
-                  unsigned int *d, int tailp);
+                  sexp_uint_t *d, int tailp);
 void analyze_lambda (sexp name, sexp formals, sexp body,
-                     bytecode *bc, unsigned int *i, env e,
-                     sexp params, sexp fv, sexp sv, unsigned int *d, int tailp);
-void analyze_var_ref (sexp name, bytecode *bc, unsigned int *i, env e,
-                      sexp params, sexp fv, sexp sv, unsigned int *d);
-void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
-                     sexp params, sexp fv, sexp sv, unsigned int *d, int tailp);
-sexp vm(bytecode bc, env e, sexp* stack, unsigned int top);
+                     bytecode *bc, sexp_uint_t *i, env e,
+                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
+void analyze_var_ref (sexp name, bytecode *bc, sexp_uint_t *i, env e,
+                      sexp params, sexp fv, sexp sv, sexp_uint_t *d);
+void analyze_opcode (opcode op, sexp obj, bytecode *bc, sexp_uint_t *i, env e,
+                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
+sexp vm(bytecode bc, env e, sexp* stack, sexp_sint_t top);
 
-sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top);
+sexp eval_in_stack(sexp obj, env e, sexp* stack, sexp_sint_t top);
 sexp eval(sexp obj, env e);
 
 #endif /* ! SEXP_EVAL_H */
