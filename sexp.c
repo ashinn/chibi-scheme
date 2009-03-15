@@ -93,7 +93,8 @@ sexp sexp_make_exception(sexp kind, sexp message, sexp irritants,
 
 sexp sexp_print_exception(sexp exn, sexp out) {
   sexp_write_string("error", out);
-  if (sexp_exception_line(exn) > sexp_make_integer(0)) {
+  if (sexp_integerp(sexp_exception_line(exn))
+      && sexp_exception_line(exn) > sexp_make_integer(0)) {
     sexp_write_string(" on line ", out);
     sexp_write(sexp_exception_line(exn), out);
   }

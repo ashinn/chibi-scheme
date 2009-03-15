@@ -209,7 +209,8 @@ struct sexp_struct {
 #define sexp_env_flags(x)         ((x)->value.env.flags)
 #define sexp_env_parent(x)        ((x)->value.env.parent)
 #define sexp_env_bindings(x)      ((x)->value.env.bindings)
-#define sexp_env_global_p(x)      (! sexp_env_parent(x))
+#define sexp_env_local_p(x)       (sexp_env_parent(x))
+#define sexp_env_global_p(x)      (! sexp_env_local_p(x))
 
 #define sexp_macro_proc(x)        ((x)->value.macro.proc)
 #define sexp_macro_env(x)         ((x)->value.macro.env)
@@ -228,7 +229,8 @@ struct sexp_struct {
 #define sexp_opcode_data(x)       ((x)->value.opcode.data)
 #define sexp_opcode_proc(x)       ((x)->value.opcode.proc)
 
-#define sexp_opcode_variadic_p(x) (sexp_opcode_flags(x) & 1)
+#define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)
+#define sexp_opcode_opt_param_p(x) (sexp_opcode_flags(x) & 2)
 
 #if USE_STRING_STREAMS
 #if SEXP_BSD
@@ -255,8 +257,8 @@ void sexp_printf(sexp port, sexp fmt, ...);
 #define sexp_fx_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
 #define sexp_fx_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
 #define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
-#define sexp_fx_div(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)/(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
-#define sexp_fx_mod(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)%(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
+#define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
+#define sexp_fx_mod(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
 
 #define sexp_fp_add(a, b) (sexp_make_flonum(sexp_flonum_value(a) + sexp_flonum_value(b)))
 #define sexp_fp_sub(a, b) (sexp_make_flonum(sexp_flonum_value(a) - sexp_flonum_value(b)))

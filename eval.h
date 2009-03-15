@@ -107,6 +107,7 @@ enum opcode_names {
   OP_SUB,
   OP_MUL,
   OP_DIV,
+  OP_QUOT,
   OP_MOD,
   OP_NEG,
   OP_INV,

@@ -348,73 +348,56 @@ sexp analyze_sequence (sexp ls, sexp *bc, sexp_uint_t *i, sexp e,
 sexp analyze_opcode (sexp op, sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
                      sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp)
 {
-  int tmp1;
-  sexp o1, exn;
+  sexp ls, exn;
+  int j, len = sexp_unbox_integer(sexp_length(sexp_cdr(obj)));
 
-  switch (sexp_opcode_class(op)) {
-  case OPC_TYPE_PREDICATE:
-  case OPC_PREDICATE:
-  case OPC_ARITHMETIC:
-  case OPC_ARITHMETIC_INV:
-  case OPC_ARITHMETIC_CMP:
-  case OPC_CONSTRUCTOR:
-  case OPC_ACCESSOR:
-  case OPC_GENERIC:
-    tmp1 = sexp_unbox_integer(sexp_length(sexp_cdr(obj)));
-    if (tmp1 == 0) {
-      return sexp_compile_error("opcode with no arguments", sexp_list1(op));
-    } else if (tmp1 == 1) {
-      exn = analyze(sexp_cadr(obj), bc, i, e, params, fv, sv, d, 0);
-      if (sexp_exceptionp(exn)) return exn;
-      if (sexp_opcode_class(op) == OPC_ARITHMETIC_INV) {
-        emit(bc, i, sexp_opcode_inverse(op));
-        (*d)++;
-      } else if (sexp_opcode_class(op) != OPC_ARITHMETIC) {
-        emit(bc, i, sexp_opcode_code(op));
-      }
-    } else {
-      for (o1=sexp_reverse(sexp_cdr(obj)); sexp_pairp(o1); o1=sexp_cdr(o1)) {
-        exn = analyze(sexp_car(o1), bc, i, e, params, fv, sv, d, 0);
-        if (sexp_exceptionp(exn)) return exn;
-      }
-      emit(bc, i, sexp_opcode_code(op));
-      (*d) -= (tmp1-1);
-      if (sexp_opcode_class(op) == OPC_ARITHMETIC)
-        for (tmp1-=2; tmp1>0; tmp1--)
-          emit(bc, i, sexp_opcode_code(op));
-    }
-    break;
-  case OPC_IO:
-    tmp1 = sexp_unbox_integer(sexp_length(sexp_cdr(obj)));
-    if (tmp1 == sexp_opcode_num_args(op) && sexp_opcode_variadic_p(op)) {
-      emit(bc, i, OP_PARAMETER);
-      emit_word(bc, i, (sexp_uint_t) sexp_opcode_data(op));
-      (*d)++;
-      tmp1++;
-    }
-    for (o1=sexp_reverse(sexp_cdr(obj)); sexp_pairp(o1); o1=sexp_cdr(o1)) {
-      exn = analyze(sexp_car(o1), bc, i, e, params, fv, sv, d, 0);
-      if (sexp_exceptionp(exn)) return exn;
-    }
-    emit(bc, i, sexp_opcode_code(op));
-    (*d) -= (tmp1-1);
-    break;
-  case OPC_PARAMETER:
-    emit(bc, i, sexp_opcode_code(op));
+  /* verify parameters */
+  if (len < sexp_opcode_num_args(op)) {
+    return sexp_compile_error("not enough arguments", sexp_list1(obj));
+  } else if (len > sexp_opcode_num_args(op)) {
+    if (! sexp_opcode_variadic_p(op))
+      return sexp_compile_error("too many arguments", sexp_list1(obj));
+  } else if (sexp_opcode_variadic_p(op) && sexp_opcode_data(op)) {
+    fprintf(stderr, "compiling parameter: %p for op %s\n",
+            sexp_opcode_data(op), sexp_opcode_name(op));
+    emit(bc, i, OP_PARAMETER);
     emit_word(bc, i, (sexp_uint_t) sexp_opcode_data(op));
-    break;
-  case OPC_FOREIGN:
-    for (o1=sexp_reverse(sexp_cdr(obj)); sexp_pairp(o1); o1=sexp_cdr(o1)) {
-      exn = analyze(sexp_car(o1), bc, i, e, params, fv, sv, d, 0);
-      if (sexp_exceptionp(exn)) return exn;
+    if (! sexp_opcode_opt_param_p(op)) {
+      emit(bc, i, OP_CALL);
+      emit_word(bc, i, (sexp_uint_t) sexp_make_integer(0));
     }
-    emit_push(bc, i, sexp_opcode_data(op));
-    emit(bc, i, sexp_opcode_code(op));
-    (*d) -= (sexp_unbox_integer(sexp_length(sexp_cdr(obj)))-1);
-    break;
-  default:
-    return sexp_compile_error("unknown opcode class", sexp_list1(op));
+    (*d)++;
+    len++;
   }
+
+  /* push arguments */
+  for (ls=sexp_reverse(sexp_cdr(obj)); sexp_pairp(ls); ls=sexp_cdr(ls)) {
+    exn = analyze(sexp_car(ls), bc, i, e, params, fv, sv, d, 0);
+    if (sexp_exceptionp(exn)) return exn;
+  }
+
+  /* emit operator */
+  if (sexp_opcode_class(op) == OPC_ARITHMETIC_INV) {
+    emit(bc, i, (len == 1) ? sexp_opcode_inverse(op) : sexp_opcode_code(op));
+  } else {
+    if (sexp_opcode_class(op) == OPC_FOREIGN)
+      emit_push(bc, i, sexp_opcode_data(op));
+    emit(bc, i, sexp_opcode_inverse(op) ? sexp_opcode_inverse(op)
+         : sexp_opcode_code(op));
+  }
+
+  /* emit optional multiple copies of operator */
+  if ((len > 1)
+      && (sexp_opcode_class(op) == OPC_ARITHMETIC
+          || sexp_opcode_class(op) == OPC_ARITHMETIC_INV))
+    for (j=len-2; j>0; j--)
+      emit(bc, i, sexp_opcode_code(op));
+
+  if (sexp_opcode_class(op) == OPC_PARAMETER)
+    emit_word(bc, i, (sexp_uint_t) sexp_opcode_data(op));
+
+  (*d) -= (len-1);
+
   return SEXP_TRUE;
 }
 
@@ -648,8 +631,8 @@ sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p) {
   }
   emit(&bc, &i, done_p ? OP_DONE : OP_RET);
   shrink_bcode(&bc, i);
-/*   print_bytecode(bc); */
-/*   disasm(bc); */
+  /* print_bytecode(bc); */
+  /* disasm(bc); */
   return bc;
 }
 
@@ -680,7 +663,7 @@ sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
 #define _PUSH(x) (stack[top++]=(x))
 #define _POP() (stack[--top])
 
-#define sexp_raise(msg, args) {stack[top]=sexp_compile_error(msg, args); top++; goto call_error_handler;}
+#define sexp_raise(msg, args) do {stack[top]=sexp_compile_error(msg, args); top++; goto call_error_handler;} while (0)
 
 sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
   unsigned char *ip=sexp_bytecode_data(bc);
@@ -842,12 +825,42 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     top--;
     break;
   case OP_DIV:
-    _ARG2 = sexp_fx_div(_ARG1, _ARG2);
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
+      _ARG2 = sexp_fp_div(sexp_integer_to_flonum(_ARG1),
+                          sexp_integer_to_flonum(_ARG2));
+#if USE_FLONUMS
+    else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+      _ARG2 = sexp_fp_div(_ARG1, _ARG2);
+    else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
+      _ARG2 = sexp_fp_div(_ARG1, sexp_integer_to_flonum(_ARG2));
+    else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
+      _ARG2 = sexp_fp_div(sexp_integer_to_flonum(_ARG1), _ARG2);
+#endif
+    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
     top--;
     break;
+  case OP_QUOT:
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
+      _ARG2 = sexp_fx_div(_ARG1, _ARG2);
+      top--;
+    }
+    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    break;
   case OP_MOD:
-    _ARG2 = sexp_fx_mod(_ARG1, _ARG2);
-    top--;
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
+      _ARG2 = sexp_fx_mod(_ARG1, _ARG2);
+      top--;
+    }
+    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    break;
+  case OP_NEG:
+    if (sexp_integerp(_ARG1))
+      _ARG1 = sexp_make_integer(-sexp_unbox_integer(_ARG1));
+#if USE_FLONUMS
+    else if (sexp_flonump(_ARG1))
+      _ARG1 = sexp_make_flonum(-sexp_flonum_value(_ARG1));
+#endif
+    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
     break;
   case OP_LT:
     _ARG2 = sexp_make_boolean(_ARG1 < _ARG2);
@@ -967,8 +980,8 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_ERROR:
   call_error_handler:
+    sexp_print_exception(_ARG1, cur_error_port);
     tmp1 = sexp_cdr(exception_handler_cell);
-    _ARG1 = SEXP_UNDEF;
     stack[top] = (sexp) 1;
     stack[top+1] = sexp_make_integer(ip+4);
     stack[top+2] = cp;
@@ -1121,7 +1134,8 @@ _OP(OPC_ARITHMETIC,     OP_ADD, 0, 1, SEXP_FIXNUM, 0, 0, "+", NULL, NULL),
 _OP(OPC_ARITHMETIC,     OP_MUL, 0, 1, SEXP_FIXNUM, 0, 0, "*", NULL, NULL),
 _OP(OPC_ARITHMETIC_INV, OP_SUB, 0, 1, SEXP_FIXNUM, 0, OP_NEG, "-", NULL, NULL),
 _OP(OPC_ARITHMETIC_INV, OP_DIV, 0, 1, SEXP_FIXNUM, 0, OP_INV, "/", NULL, NULL),
-_OP(OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, 0, "%", NULL, NULL),
+_OP(OPC_ARITHMETIC,     OP_QUOT, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, 0, "quotient", NULL, NULL),
+_OP(OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, 0, "modulo", NULL, NULL),
 _OP(OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, 0, "<", NULL, NULL),
 _OP(OPC_ARITHMETIC_CMP, OP_LE,  0, 1, SEXP_FIXNUM, 0, 0, "<=", NULL, NULL),
 _OP(OPC_ARITHMETIC_CMP, OP_GT,  0, 1, SEXP_FIXNUM, 0, 0, ">", NULL, NULL),
@@ -1144,13 +1158,13 @@ _OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?", NULL, NULL),
 _OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1", NULL, NULL),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation", NULL, NULL),
 _OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error", NULL, NULL),
-_OP(OPC_IO, OP_WRITE, 1, 1, 0, SEXP_OPORT, 0, "write", (sexp)&cur_output_port, NULL),
-_OP(OPC_IO, OP_DISPLAY, 1, 1, 0, SEXP_OPORT, 0, "display", (sexp)&cur_output_port, NULL),
-_OP(OPC_IO, OP_WRITE_CHAR, 1, 1, 0, SEXP_OPORT, 0, "write-char", (sexp)&cur_output_port, NULL),
-_OP(OPC_IO, OP_NEWLINE, 0, 1, 0, SEXP_OPORT, 0, "newline", (sexp)&cur_output_port, NULL),
-_OP(OPC_IO, OP_FLUSH_OUTPUT, 0, 1, 0, SEXP_OPORT, 0, "flush-output", (sexp)&cur_output_port, NULL),
-_OP(OPC_IO, OP_READ, 0, 1, 0, SEXP_IPORT, 0, "read", (sexp)&cur_input_port, NULL),
-_OP(OPC_IO, OP_READ_CHAR, 0, 1, 0, SEXP_IPORT, 0, "read-char", (sexp)&cur_input_port, NULL),
+_OP(OPC_IO, OP_WRITE, 1, 3, 0, SEXP_OPORT, 0, "write", (sexp)&cur_output_port, NULL),
+_OP(OPC_IO, OP_DISPLAY, 1, 3, 0, SEXP_OPORT, 0, "display", (sexp)&cur_output_port, NULL),
+_OP(OPC_IO, OP_WRITE_CHAR, 1, 3, 0, SEXP_OPORT, 0, "write-char", (sexp)&cur_output_port, NULL),
+_OP(OPC_IO, OP_NEWLINE, 0, 3, 0, SEXP_OPORT, 0, "newline", (sexp)&cur_output_port, NULL),
+_OP(OPC_IO, OP_FLUSH_OUTPUT, 0, 3, 0, SEXP_OPORT, 0, "flush-output", (sexp)&cur_output_port, NULL),
+_OP(OPC_IO, OP_READ, 0, 3, 0, SEXP_IPORT, 0, "read", (sexp)&cur_input_port, NULL),
+_OP(OPC_IO, OP_READ_CHAR, 0, 3, 0, SEXP_IPORT, 0, "read-char", (sexp)&cur_input_port, NULL),
 _FN1(SEXP_PAIR, "length", sexp_length),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
