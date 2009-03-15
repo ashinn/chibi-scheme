@@ -12,7 +12,7 @@ static const char* reverse_opcode_names[] =
    "MAKE-VECTOR", "PUSH", "DROP", "PAIRP", "NULLP", "VECTORP",
    "INTEGERP", "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP",
    "OPORTP", "CAR", "CDR", "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB", "MUL",
-   "DIV", "MOD", "NEG", "INV", "LT", "LE", "GT", "GE", "EQN", "EQ",
+   "DIV", "QUOT", "MOD", "NEG", "INV", "LT", "LE", "GT", "GE", "EQN", "EQ",
    "DISPLAY", "WRITE", "WRITE-CHAR", "NEWLINE", "FLUSH-OUTPUT", "READ",
    "READ-CHAR",
   };

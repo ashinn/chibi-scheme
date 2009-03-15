@@ -1,6 +1,6 @@
 
 (define (fact-helper x res)
-  (if (zero? x)
+  (if (= x 0)
       res
       (fact-helper (- x 1) (* res x))))
 
