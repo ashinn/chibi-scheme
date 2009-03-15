@@ -29,3 +29,13 @@ cleaner: clean
 	rm -f chibi-scheme
 	rm -rf *.dSYM
 
+test: chibi-scheme
+	for f in tests/*.scm; do \
+	    ./chibi-scheme $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
+	    if diff -q $${f%.scm}.out $${f%.scm}.res; then \
+	        echo "[PASS] $${f%.scm}"; \
+	    else \
+	        echo "[FAIL] $${f%.scm}"; \
+	    fi; \
+	done
+

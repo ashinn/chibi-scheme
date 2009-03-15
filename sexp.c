@@ -160,23 +160,11 @@ sexp sexp_append(sexp a, sexp b) {
   return b;
 }
 
-sexp sexp_list(int count, ...) {
-  sexp res = SEXP_NULL;
-  int i;
-  va_list ap;
-  va_start(ap, count);
-  for (i=0; i<count; i++)
-    res = sexp_cons(va_arg(ap, sexp), res);
-  va_end(ap);
-  return sexp_nreverse(res);
-}
-
-unsigned long sexp_length(sexp ls) {
-  sexp x;
-  unsigned long res;
-  for (res=0, x=ls; SEXP_PAIRP(x); res++, x=SEXP_CDR(x))
+sexp sexp_length(sexp ls) {
+  sexp_uint_t res=0;
+  for ( ; SEXP_PAIRP(ls); res++, ls=SEXP_CDR(ls))
     ;
-  return res;
+  return sexp_make_integer(res);
 }
 
 /********************* strings, symbols, vectors **********************/
@@ -264,17 +252,17 @@ sexp sexp_intern(char *str) {
   return symbol_table[cell];
 }
 
-sexp sexp_make_vector(unsigned int len, sexp dflt) {
-  int i;
+sexp sexp_make_vector(sexp len, sexp dflt) {
   sexp v, *x;
-  if (! len) return the_empty_vector;
+  int i, clen = sexp_unbox_integer(len);
+  if (! clen) return the_empty_vector;
   v = SEXP_NEW();
-  x = (void*) SEXP_ALLOC(len*sizeof(sexp));
-  for (i=0; i<len; i++) {
+  x = (void*) SEXP_ALLOC(clen*sizeof(sexp));
+  for (i=0; i<clen; i++) {
     x[i] = dflt;
   }
   v->tag = SEXP_VECTOR;
-  v->data1 = (void*) len;
+  v->data1 = (void*) clen;
   v->data2 = (void*) x;
   return v;
 }
@@ -289,7 +277,7 @@ sexp sexp_list_to_vector(sexp ls) {
 }
 
 sexp sexp_vector(int count, ...) {
-  sexp vec = sexp_make_vector(count, SEXP_UNDEF);
+  sexp vec = sexp_make_vector(sexp_make_integer(count), SEXP_UNDEF);
   sexp *elts = sexp_vector_data(vec);
   va_list ap;
   int i;
@@ -593,6 +581,7 @@ sexp sexp_read_raw (sexp in) {
     /* ... FALLTHROUGH ... */
   case ' ':
   case '\t':
+  case '\r':
   case '\n':
     goto scan_loop;
   case '\'':
