@@ -86,7 +86,7 @@ static sexp sexp_flatten_dot (sexp ls) {
 
 /************************* bytecode utilities ***************************/
 
-static void shrink_bcode(bytecode *bc, unsigned int i) {
+static void shrink_bcode(bytecode *bc, sexp_uint_t i) {
   bytecode tmp;
   if ((*bc)->len != i) {
     /* fprintf(stderr, "shrinking to %d\n", i); */
@@ -99,11 +99,11 @@ static void shrink_bcode(bytecode *bc, unsigned int i) {
   }
 }
 
-static void expand_bcode(bytecode *bc, unsigned int *i, unsigned int size) {
+static void expand_bcode(bytecode *bc, sexp_uint_t *i, sexp_uint_t size) {
   bytecode tmp;
   if ((*bc)->len < (*i)+size) {
     fprintf(stderr, "expanding bytecode %u < %u + %u = %u\n", (*bc)->len, (*i), size, (*i)+size);
-    tmp = (bytecode) SEXP_ALLOC(sizeof(unsigned int) + (*bc)->len*2);
+    tmp = (bytecode) SEXP_ALLOC(sizeof(struct bytecode) + (*bc)->len*2);
     tmp->len = (*bc)->len*2;
     memcpy(tmp->data, (*bc)->data, (*bc)->len);
     SEXP_FREE(*bc);
@@ -111,15 +111,15 @@ static void expand_bcode(bytecode *bc, unsigned int *i, unsigned int size) {
   }
 }
 
-static void emit(bytecode *bc, unsigned int *i, char c)  {
+static void emit(bytecode *bc, sexp_uint_t *i, char c)  {
   expand_bcode(bc, i, 1);
   (*bc)->data[(*i)++] = c;
 }
 
-static void emit_word(bytecode *bc, unsigned int *i, sexp_uint_t val)  {
+static void emit_word(bytecode *bc, sexp_uint_t *i, sexp_uint_t val)  {
   expand_bcode(bc, i, sizeof(sexp));
-  *((unsigned long*)(&((*bc)->data[*i]))) = val;
-  *i += sizeof(unsigned long);
+  *((sexp_uint_t*)(&((*bc)->data[*i]))) = val;
+  *i += sizeof(sexp_uint_t);
 }
 
 #define emit_push(bc,i,obj) (emit(bc,i,OP_PUSH), \
@@ -149,7 +149,7 @@ static sexp sexp_make_macro (procedure p, env e) {
 sexp sexp_expand_macro (macro mac, sexp form, env e) {
   sexp res, *stack = SEXP_ALLOC(sizeof(sexp)*INIT_STACK_SIZE);
   bytecode bc;
-  unsigned int i=0;
+  sexp_uint_t i=0;
   fprintf(stderr, "expanding: ");
   sexp_write(form, cur_error_port);
   fprintf(stderr, "\n => ");
@@ -172,8 +172,8 @@ sexp sexp_expand_macro (macro mac, sexp form, env e) {
   return res;
 }
 
-void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
-             sexp params, sexp fv, sexp sv, unsigned int *d, int tailp) {
+void analyze(sexp obj, bytecode *bc, sexp_uint_t *i, env e,
+             sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp) {
   int tmp1, tmp2, tmp3;
   env e2;
   sexp o1, o2, cell;
@@ -315,8 +315,8 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
   }
 }
 
-void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
-                     sexp params, sexp fv, sexp sv, unsigned int *d, int tailp)
+void analyze_opcode (opcode op, sexp obj, bytecode *bc, sexp_uint_t *i, env e,
+                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp)
 {
   int tmp1;
   sexp o1;
@@ -385,8 +385,8 @@ void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
   }
 }
 
-void analyze_var_ref (sexp obj, bytecode *bc, unsigned int *i, env e,
-                      sexp params, sexp fv, sexp sv, unsigned int *d) {
+void analyze_var_ref (sexp obj, bytecode *bc, sexp_uint_t *i, env e,
+                      sexp params, sexp fv, sexp sv, sexp_uint_t *d) {
   int tmp;
   sexp o1;
 /*   fprintf(stderr, "symbol lookup, param length: %d sv: ", length(params)); */
@@ -415,8 +415,8 @@ void analyze_var_ref (sexp obj, bytecode *bc, unsigned int *i, env e,
   }
 }
 
-void analyze_app (sexp obj, bytecode *bc, unsigned int *i, env e,
-                  sexp params, sexp fv, sexp sv, unsigned int *d, int tailp) {
+void analyze_app (sexp obj, bytecode *bc, sexp_uint_t *i, env e,
+                  sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp) {
   sexp o1;
   sexp_uint_t len = sexp_unbox_integer(sexp_length(SEXP_CDR(obj)));
 
@@ -496,8 +496,8 @@ sexp set_vars (env e, sexp formals, sexp obj, sexp sv) {
 }
 
 void analyze_lambda (sexp name, sexp formals, sexp body,
-                     bytecode *bc, unsigned int *i, env e,
-                     sexp params, sexp fv, sexp sv, unsigned int *d,
+                     bytecode *bc, sexp_uint_t *i, env e,
+                     sexp params, sexp fv, sexp sv, sexp_uint_t *d,
                      int tailp) {
   sexp obj, ls, flat_formals, fv2;
   env e2;
@@ -544,7 +544,7 @@ sexp make_param_list(sexp_uint_t i) {
 sexp make_opcode_procedure(opcode op, sexp_uint_t i, env e) {
   bytecode bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+INIT_BCODE_SIZE);
   sexp params = make_param_list(i);
-  unsigned int pos=0, d=0;
+  sexp_uint_t pos=0, d=0;
   e = extend_env_closure(e, params, -4);
   bc->tag = SEXP_BYTECODE;
   bc->len = INIT_BCODE_SIZE;
@@ -558,7 +558,7 @@ sexp make_opcode_procedure(opcode op, sexp_uint_t i, env e) {
 }
 
 bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
-  unsigned int i = 0, j, d = 0, core, define_ok=1;
+  sexp_uint_t i = 0, j, d = 0, core, define_ok=1;
   bytecode bc = (bytecode) SEXP_ALLOC(sizeof(struct bytecode)+INIT_BCODE_SIZE);
   sexp sv2 = set_vars(e, params, obj, SEXP_NULL), internals=SEXP_NULL, ls;
   bc->tag = SEXP_BYTECODE;
@@ -637,9 +637,9 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
 
 /*********************** the virtual machine **************************/
 
-sexp sexp_save_stack(sexp *stack, unsigned int to) {
+sexp sexp_save_stack(sexp *stack, sexp_uint_t to) {
   sexp res, *data;
-  int i;
+  sexp_uint_t i;
   res = sexp_make_vector(sexp_make_integer(to), SEXP_UNDEF);
   data = sexp_vector_data(res);
   for (i=0; i<to; i++)
@@ -647,8 +647,8 @@ sexp sexp_save_stack(sexp *stack, unsigned int to) {
   return res;
 }
 
-unsigned int sexp_restore_stack(sexp saved, sexp *current) {
-  int len = sexp_vector_length(saved), i;
+sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
+  sexp_uint_t len = sexp_vector_length(saved), i;
   sexp *from = sexp_vector_data(saved);
   for (i=0; i<len; i++)
     current[i] = from[i];
@@ -657,10 +657,10 @@ unsigned int sexp_restore_stack(sexp saved, sexp *current) {
 
 #define sexp_raise(exn) {stack[top++]=(exn); goto call_error_handler;}
 
-sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
+sexp vm(bytecode bc, env e, sexp* stack, sexp_sint_t top) {
   unsigned char *ip=bc->data;
   sexp cp=SEXP_UNDEF, tmp1, tmp2;
-  int i, j, k;
+  sexp_sint_t i, j, k;
 
  loop:
   print_stack(stack, top);
@@ -1187,7 +1187,7 @@ _PARAM("interaction-environment", (sexp)&interaction_environment, SEXP_ENV),
 };
 
 env make_standard_env() {
-  int i;
+  sexp_uint_t i;
   env e = (env) SEXP_ALLOC(sizeof(struct env));
   e->tag = SEXP_ENV;
   e->parent = NULL;
@@ -1201,7 +1201,7 @@ env make_standard_env() {
 
 /************************** eval interface ****************************/
 
-sexp eval_in_stack(sexp obj, env e, sexp* stack, unsigned int top) {
+sexp eval_in_stack(sexp obj, env e, sexp* stack, sexp_sint_t top) {
   bytecode bc;
   bc = compile(SEXP_NULL, sexp_cons(obj, SEXP_NULL), e, SEXP_NULL, SEXP_NULL, 1);
   return vm(bc, e, stack, top);
@@ -1216,7 +1216,7 @@ sexp eval(sexp obj, env e) {
 
 void scheme_init() {
   bytecode bc;
-  unsigned int i=0;
+  sexp_uint_t i=0;
   if (! scheme_initialized_p) {
     scheme_initialized_p = 1;
     sexp_init();
@@ -1251,7 +1251,7 @@ int main (int argc, char **argv) {
   sexp obj, res, in, out, *stack, err_handler, err_handler_sym;
   env e;
   bytecode bc;
-  unsigned int i, quit=0, init_loaded=0;
+  sexp_uint_t i, quit=0, init_loaded=0;
   FILE *stream;
 
   scheme_init();
