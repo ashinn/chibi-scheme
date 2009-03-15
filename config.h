@@ -18,3 +18,6 @@
 #define USE_STRING_STREAMS 1
 #endif
 
+#ifndef USE_FAST_LET
+#define USE_FAST_LET 1
+#endif

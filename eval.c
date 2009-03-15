@@ -275,31 +275,33 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
         analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
       }
     } else if (SEXP_PAIRP(SEXP_CAR(obj))) {
-/*       o2 = env_cell(e, SEXP_CAAR(obj)); */
-/*       if (o2 */
-/*           && SEXP_COREP(SEXP_CDR(o2)) */
-/*           && (((core_form)SEXP_CDR(o2))->code == CORE_LAMBDA) */
-/*           && sexp_listp(SEXP_CADR(SEXP_CAR(obj)))) { */
-/*         /\* let *\/ */
-/*         tmp1 = sexp_length(SEXP_CADR(SEXP_CAR(obj))); */
-/*         e2 = extend_env_closure(e, SEXP_CADR(SEXP_CAR(obj)), (*d)); */
-/*         for (o2=sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2)) */
-/*           analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0); */
-/*         params = sexp_append(SEXP_CADR(SEXP_CAR(obj)), params); */
-/*         for (o2=SEXP_CDDR(SEXP_CAR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2)) { */
-/*           if (SEXP_PAIRP(SEXP_CDR(o2))) { */
-/*             analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, 0); */
-/*             emit(bc, i, OP_DROP); */
-/*           } else { */
-/*             analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, tailp); */
-/*           } */
-/*         } */
-/*         emit(bc, i, OP_STACK_SET); */
-/*         emit_word(bc, i, tmp1+1); */
-/*         (*d) -= tmp1; */
-/*         for (tmp1; tmp1>0; tmp1--) */
-/*           emit(bc, i, OP_DROP); */
-/*       } else */
+#if USE_FAST_LET
+      o2 = env_cell(e, SEXP_CAAR(obj));
+      if (o2
+          && SEXP_COREP(SEXP_CDR(o2))
+          && (((core_form)SEXP_CDR(o2))->code == CORE_LAMBDA)
+          && sexp_listp(SEXP_CADR(SEXP_CAR(obj)))) {
+        /* let */
+        tmp1 = sexp_length(SEXP_CADR(SEXP_CAR(obj)));
+        e2 = extend_env_closure(e, SEXP_CADR(SEXP_CAR(obj)), (*d)+(tmp1-1));
+        for (o2=sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2))
+          analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0);
+        params = sexp_append(SEXP_CADR(SEXP_CAR(obj)), params);
+        for (o2=SEXP_CDDR(SEXP_CAR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2)) {
+          if (SEXP_PAIRP(SEXP_CDR(o2))) {
+            analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, 0);
+            emit(bc, i, OP_DROP);
+          } else {
+            analyze(SEXP_CAR(o2), bc, i, e2, params, fv, sv, d, tailp);
+          }
+        }
+        emit(bc, i, OP_STACK_SET);
+        emit_word(bc, i, tmp1+1);
+        (*d) -= (tmp1-1);
+        for (tmp1; tmp1>0; tmp1--)
+          emit(bc, i, OP_DROP);
+      } else
+#endif
         /* computed application */
         analyze_app(obj, bc, i, e, params, fv, sv, d, tailp);
     } else {
@@ -663,8 +665,8 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
   int i, j, k;
 
  loop:
-/*   print_stack(stack, top); */
-/*   fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip); */
+  print_stack(stack, top);
+  fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip);
   switch (*ip++) {
   case OP_NOOP:
     fprintf(stderr, "noop\n");
