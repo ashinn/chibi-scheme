@@ -75,13 +75,13 @@
     (cons (cons 'lambda (cons (map car (cadr expr)) (cddr expr)))
           (map cadr (cadr expr)))))
 
-;; (define-syntax or
-;;   (lambda (expr use-env mac-env)
-;;     (if (null? (cdr expr))
-;;         #f
-;;         (if (null? (cddr expr))
-;;             (cadr expr)
-;;             (list 'let (list (list 'tmp (cadr expr)))
-;;                   (list 'if 'tmp
-;;                         'tmp
-;;                         (cons 'or (cddr expr))))))))
+(define-syntax or
+  (lambda (expr use-env mac-env)
+    (if (null? (cdr expr))
+        #f
+        (if (null? (cddr expr))
+            (cadr expr)
+            (list 'let (list (list 'tmp (cadr expr)))
+                  (list 'if 'tmp
+                        'tmp
+                        (cons 'or (cddr expr))))))))
