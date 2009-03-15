@@ -16,6 +16,7 @@
 
 #define sexp_debug(msg, obj) (sexp_write_string(msg,cur_error_port), sexp_write(obj, cur_error_port), sexp_write_char('\n',cur_error_port))
 
+/* procedure types */
 typedef sexp (*sexp_proc0) ();
 typedef sexp (*sexp_proc1) (sexp);
 typedef sexp (*sexp_proc2) (sexp, sexp);
@@ -24,52 +25,6 @@ typedef sexp (*sexp_proc4) (sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
-
-typedef struct bytecode {
-  char tag;
-  unsigned int len;
-  unsigned char data[];
-} *bytecode;
-
-typedef struct procedure {
-  char tag;
-  char flags;
-  unsigned short num_args;
-  bytecode bc;
-  sexp vars;
-} *procedure;
-
-typedef struct env {
-  char tag;
-  struct env *parent;
-  sexp bindings;
-} *env;
-
-typedef struct macro {
-  char tag;
-  procedure proc;
-  env e;
-} *macro;
-
-typedef struct opcode {
-  char tag;
-  char op_class;
-  char op_name;
-  char num_args;
-  char var_args_p;
-  char arg1_type;
-  char arg2_type;
-  char op_inverse;
-  char* name;
-  sexp data;
-  sexp proc;
-} *opcode;
-
-typedef struct core_form {
-  char tag;
-  char code;
-  char* name;
-} *core_form;
 
 enum core_form_names {
   CORE_DEFINE = 1,
@@ -172,22 +127,22 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p);
+sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p);
 
-void analyze_app (sexp obj, bytecode *bc, sexp_uint_t *i,
-                  env e, sexp params, sexp fv, sexp sv,
+void analyze_app (sexp obj, sexp *bc, sexp_uint_t *i,
+                  sexp e, sexp params, sexp fv, sexp sv,
                   sexp_uint_t *d, int tailp);
 void analyze_lambda (sexp name, sexp formals, sexp body,
-                     bytecode *bc, sexp_uint_t *i, env e,
+                     sexp *bc, sexp_uint_t *i, sexp e,
                      sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
-void analyze_var_ref (sexp name, bytecode *bc, sexp_uint_t *i, env e,
+void analyze_var_ref (sexp name, sexp *bc, sexp_uint_t *i, sexp e,
                       sexp params, sexp fv, sexp sv, sexp_uint_t *d);
-void analyze_opcode (opcode op, sexp obj, bytecode *bc, sexp_uint_t *i, env e,
+void analyze_opcode (sexp op, sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
                      sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
-sexp vm(bytecode bc, env e, sexp* stack, sexp_sint_t top);
+sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top);
 
-sexp eval_in_stack(sexp obj, env e, sexp* stack, sexp_sint_t top);
-sexp eval(sexp obj, env e);
+sexp eval_in_stack(sexp expr, sexp e, sexp* stack, sexp_sint_t top);
+sexp eval(sexp expr, sexp e);
 
 #endif /* ! SEXP_EVAL_H */
 
