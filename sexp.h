@@ -12,34 +12,7 @@
 #include <stdarg.h>
 
 #include "config.h"
-
-#if HAVE_ERR_H
-#include <err.h>
-#else
-/* requires msg be a string literal, and at least one argument */
-#define errx(code, msg, ...) (fprintf(stderr,msg"\n",__VA_ARGS__), exit(code))
-#endif
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
-#define SEXP_BSD 1
-#else
-#define SEXP_BSD 0
-#endif
-
-#if USE_BOEHM
-#include "gc/include/gc.h"
-#define SEXP_ALLOC        GC_malloc
-#define SEXP_ALLOC_ATOMIC GC_malloc_atomic
-#define SEXP_REALLOC      GC_realloc
-#define SEXP_FREE         GC_free
-#else
-#define SEXP_ALLOC        malloc
-#define SEXP_ALLOC_ATOMIC SEXP_ALLOC
-#define SEXP_REALLOC      realloc
-#define SEXP_FREE         free
-#endif
-
-#define SEXP_NEW()       ((sexp) SEXP_ALLOC(sizeof(struct sexp_struct)))
+#include "defaults.h"
 
 /* tagging system
  *   bits end in  00:  pointer
@@ -60,7 +33,6 @@
 
 #define SEXP_POINTER_TAG 0
 #define SEXP_FIXNUM_TAG 1
-#define SEXP_LSYMBOL_TAG 3
 #define SEXP_ISYMBOL_TAG 7
 #define SEXP_CHAR_TAG 6
 #define SEXP_EXTENDED_TAG 14
@@ -78,8 +50,8 @@ enum sexp_types {
   SEXP_BIGNUM,
   SEXP_IPORT,
   SEXP_OPORT,
-  /* the following are used only by the evaluator */
   SEXP_EXCEPTION,
+  /* the following are used only by the evaluator */
   SEXP_PROCEDURE,
   SEXP_MACRO,
   SEXP_ENV,
@@ -158,7 +130,7 @@ struct sexp_struct {
 #define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
 #define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(4)
-#define SEXP_ERROR  SEXP_MAKE_IMMEDIATE(5)
+#define SEXP_ERROR  SEXP_MAKE_IMMEDIATE(5) /* exceptions are preferred */
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
 
@@ -171,35 +143,34 @@ struct sexp_struct {
 
 #define SEXP_CHECK_TAG(x,t) (sexp_pointerp(x) && (x)->tag == (t))
 
-#define sexp_pairp(x)      (SEXP_CHECK_TAG(x, SEXP_PAIR))
-#define sexp_stringp(x)    (SEXP_CHECK_TAG(x, SEXP_STRING))
-#define sexp_lsymbolp(x)   (SEXP_CHECK_TAG(x, SEXP_SYMBOL))
-#define sexp_vectorp(x)    (SEXP_CHECK_TAG(x, SEXP_VECTOR))
-#define sexp_flonump(x)    (SEXP_CHECK_TAG(x, SEXP_FLONUM))
-#define sexp_iportp(x)     (SEXP_CHECK_TAG(x, SEXP_IPORT))
-#define sexp_oportp(x)     (SEXP_CHECK_TAG(x, SEXP_OPORT))
-#define sexp_exceptionp(x) (SEXP_CHECK_TAG(x, SEXP_EXCEPTION))
-#define sexp_procedurep(x) (SEXP_CHECK_TAG(x, SEXP_PROCEDURE))
-#define sexp_envp(x)       (SEXP_CHECK_TAG(x, SEXP_ENV))
-#define sexp_bytecodep(x)  (SEXP_CHECK_TAG(x, SEXP_BYTECODE))
-#define sexp_corep(x)      (SEXP_CHECK_TAG(x, SEXP_CORE))
-#define sexp_opcodep(x)    (SEXP_CHECK_TAG(x, SEXP_OPCODE))
-#define sexp_macrop(x)     (SEXP_CHECK_TAG(x, SEXP_MACRO))
+#define sexp_pairp(x)       (SEXP_CHECK_TAG(x, SEXP_PAIR))
+#define sexp_stringp(x)     (SEXP_CHECK_TAG(x, SEXP_STRING))
+#define sexp_lsymbolp(x)    (SEXP_CHECK_TAG(x, SEXP_SYMBOL))
+#define sexp_vectorp(x)     (SEXP_CHECK_TAG(x, SEXP_VECTOR))
+#define sexp_flonump(x)     (SEXP_CHECK_TAG(x, SEXP_FLONUM))
+#define sexp_iportp(x)      (SEXP_CHECK_TAG(x, SEXP_IPORT))
+#define sexp_oportp(x)      (SEXP_CHECK_TAG(x, SEXP_OPORT))
+#define sexp_exceptionp(x)  (SEXP_CHECK_TAG(x, SEXP_EXCEPTION))
+#define sexp_procedurep(x)  (SEXP_CHECK_TAG(x, SEXP_PROCEDURE))
+#define sexp_envp(x)        (SEXP_CHECK_TAG(x, SEXP_ENV))
+#define sexp_bytecodep(x)   (SEXP_CHECK_TAG(x, SEXP_BYTECODE))
+#define sexp_corep(x)       (SEXP_CHECK_TAG(x, SEXP_CORE))
+#define sexp_opcodep(x)     (SEXP_CHECK_TAG(x, SEXP_OPCODE))
+#define sexp_macrop(x)      (SEXP_CHECK_TAG(x, SEXP_MACRO))
+#define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
 
-#define sexp_symbolp(x)  (sexp_isymbolp(x) || sexp_lsymbolp(x))
-
-#if USE_HUFF_SYMS
-#define SEXP_DOTP(x) (((sexp_uint_t)(x))==((0x5D00<<SEXP_IMMEDIATE_BITS)+SEXP_ISYMBOL_TAG))
-#else
-#define SEXP_DOTP(x) ((x)==sexp_the_dot_symbol)
-#endif
+#define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
+#define sexp_unbox_boolean(x) (((x) == SEXP_FALSE) ? 0 : 1)
 
 #define sexp_make_integer(n)    ((sexp) ((((sexp_sint_t)n)<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
 #define sexp_unbox_integer(n)   (((sexp_sint_t)n)>>SEXP_FIXNUM_BITS)
+
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)n)<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)n)>>SEXP_EXTENDED_BITS))
 
 #define sexp_flonum_value(f) ((f)->value.flonum)
+
+#define sexp_integer_to_flonum(x) (sexp_make_flonum(sexp_unbox_integer(x)))
 
 #define sexp_vector_length(x) ((x)->value.vector.length)
 #define sexp_vector_data(x)   ((x)->value.vector.data)
@@ -281,11 +252,16 @@ void sexp_write_string(sexp str, sexp port);
 void sexp_printf(sexp port, sexp fmt, ...);
 #endif
 
-#define sexp_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
-#define sexp_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
-#define sexp_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
-#define sexp_div(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)/(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
-#define sexp_mod(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)%(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
+#define sexp_fx_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
+#define sexp_fx_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
+#define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
+#define sexp_fx_div(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)/(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
+#define sexp_fx_mod(a, b) ((sexp)(((((sexp_sint_t)a)>>SEXP_FIXNUM_BITS)%(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))<<SEXP_FIXNUM_BITS)+SEXP_FIXNUM_TAG)
+
+#define sexp_fp_add(a, b) (sexp_make_flonum(sexp_flonum_value(a) + sexp_flonum_value(b)))
+#define sexp_fp_sub(a, b) (sexp_make_flonum(sexp_flonum_value(a) - sexp_flonum_value(b)))
+#define sexp_fp_mul(a, b) (sexp_make_flonum(sexp_flonum_value(a) * sexp_flonum_value(b)))
+#define sexp_fp_div(a, b) (sexp_make_flonum(sexp_flonum_value(a) / sexp_flonum_value(b)))
 
 #define sexp_list1(a)          sexp_cons(a, SEXP_NULL)
 #define sexp_list2(a, b)       sexp_cons(a, sexp_cons(b, SEXP_NULL))
@@ -342,6 +318,8 @@ sexp sexp_make_output_port(FILE* out);
 sexp sexp_make_input_string_port(sexp str);
 sexp sexp_make_output_string_port();
 sexp sexp_get_output_string(sexp port);
+sexp sexp_make_exception(sexp kind, sexp message, sexp irritants, sexp file, sexp line);
+sexp sexp_print_exception(sexp exn, sexp out);
 void sexp_init();
 
 #endif /* ! SEXP_H */

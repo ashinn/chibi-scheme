@@ -23,7 +23,7 @@ chibi-scheme: eval.o sexp.o $(GC_OBJ)
 	gcc $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f *.o
+	rm -f *.o *.i *.s
 
 cleaner: clean
 	rm -f chibi-scheme
