@@ -17,8 +17,8 @@ static const char* reverse_opcode_names[] =
    "READ-CHAR",
   };
 
-void disasm (bytecode bc) {
-  unsigned char *ip=bc->data, opcode;
+void disasm (sexp bc) {
+  unsigned char *ip=sexp_bytecode_data(bc), opcode;
  loop:
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
@@ -55,29 +55,30 @@ void disasm (bytecode bc) {
   }
   fprintf(stderr, "\n");
   if ((! (opcode == OP_RET) || (opcode == OP_DONE))
-      && (ip - bc->data < bc->len))
+      && (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc)))
     goto loop;
 }
 
-void print_bytecode (bytecode bc) {
+void print_bytecode (sexp bc) {
   int i;
+  unsigned char *data = sexp_bytecode_data(bc);
   fprintf(stderr, "bytecode @ %p, data @ %p, length = %d\n",
-          bc, bc->data, bc->len);
-  for (i=0; i+16 < bc->len; i+=8) {
+          bc, data, sexp_bytecode_length(bc));
+  for (i=0; i+16 < sexp_bytecode_length(bc); i+=8) {
     fprintf(stderr, "%02x: %02x %02x %02x %02x %02x %02x %02x %02x   ", i,
-            bc->data[i], bc->data[i+1], bc->data[i+2], bc->data[i+3],
-            bc->data[i+4], bc->data[i+5], bc->data[i+6], bc->data[i+7]);
+            data[i], data[i+1], data[i+2], data[i+3],
+            data[i+4], data[i+5], data[i+6], data[i+7]);
     i += 8;
     fprintf(stderr, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
-            bc->data[i], bc->data[i+1], bc->data[i+2], bc->data[i+3],
-            bc->data[i+4], bc->data[i+5], bc->data[i+6], bc->data[i+7]);
+            data[i], data[i+1], data[i+2], data[i+3],
+            data[i+4], data[i+5], data[i+6], data[i+7]);
   }
-  if (i != bc->len) {
+  if (i != sexp_bytecode_length(bc)) {
     fprintf(stderr, "%02x:", i);
-    for ( ; i < bc->len; i++) {
+    for ( ; i < sexp_bytecode_length(bc); i++) {
       if ((i % 8) == 0 && (i % 16) != 0)
         fprintf(stderr, "  ");
-      fprintf(stderr, " %02x", bc->data[i]);
+      fprintf(stderr, " %02x", data[i]);
     }
     fprintf(stderr, "\n");
   }

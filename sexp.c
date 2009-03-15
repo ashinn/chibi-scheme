@@ -79,10 +79,12 @@ void sexp_free (sexp obj) {
 /*************************** list utilities ***************************/
 
 sexp sexp_cons(sexp head, sexp tail) {
-  sexp pair = SEXP_NEW();
+  sexp pair = SEXP_ALLOC(sexp_sizeof(pair));
   pair->tag = SEXP_PAIR;
-  pair->data1 = (void*) head;
-  pair->data2 = (void*) tail;
+/*   pair->data1 = (void*) head; */
+/*   pair->data2 = (void*) tail; */
+  SEXP_CAR(pair) = head;
+  SEXP_CDR(pair) = tail;
   return pair;
 }
 
@@ -170,20 +172,22 @@ sexp sexp_length(sexp ls) {
 /********************* strings, symbols, vectors **********************/
 
 sexp sexp_make_flonum(double f) {
-  sexp x = SEXP_NEW();
+  sexp x = SEXP_ALLOC(sexp_sizeof(flonum));
   x->tag = SEXP_FLONUM;
   sexp_flonum_value(x) = f;
   return x;
 }
 
 sexp sexp_make_string(char *str) {
-  sexp s = SEXP_NEW();
-  unsigned long len = strlen(str);
+  sexp s = SEXP_ALLOC(sexp_sizeof(string));
+  sexp_uint_t len = strlen(str);
   char *mystr = SEXP_ALLOC(len+1);
   memcpy(mystr, str, len+1);
   s->tag = SEXP_STRING;
-  s->data1 = (void*) len;
-  s->data2 = (void*) mystr;
+/*   s->data1 = (void*) len; */
+/*   s->data2 = (void*) mystr; */
+  sexp_string_length(s) = len;
+  sexp_string_data(s) = mystr;
   return s;
 }
 
@@ -240,14 +244,16 @@ sexp sexp_intern(char *str) {
     symbol_table = newtable;
   }
 
-  sym = SEXP_NEW();
+  sym = SEXP_ALLOC(sexp_sizeof(symbol));
   len = strlen(str);
   mystr = SEXP_ALLOC(len+1);
   memcpy(mystr, str, len+1);
   mystr[len]=0;
   sym->tag = SEXP_SYMBOL;
-  sym->data1 = (void*) len;
-  sym->data2 = (void*) mystr;
+/*   sym->data1 = (void*) len; */
+/*   sym->data2 = (void*) mystr; */
+  sexp_symbol_length(sym) = len;
+  sexp_symbol_data(sym) = mystr;
   symbol_table[cell] = sym;
   return symbol_table[cell];
 }
@@ -256,14 +262,16 @@ sexp sexp_make_vector(sexp len, sexp dflt) {
   sexp v, *x;
   int i, clen = sexp_unbox_integer(len);
   if (! clen) return the_empty_vector;
-  v = SEXP_NEW();
-  x = (void*) SEXP_ALLOC(clen*sizeof(sexp));
+  v = SEXP_ALLOC(sexp_sizeof(vector));
+  x = (sexp*) SEXP_ALLOC(clen*sizeof(sexp));
   for (i=0; i<clen; i++) {
     x[i] = dflt;
   }
   v->tag = SEXP_VECTOR;
-  v->data1 = (void*) clen;
-  v->data2 = (void*) x;
+/*   v->data1 = (void*) clen; */
+/*   v->data2 = (void*) x; */
+  sexp_vector_length(v) = clen;
+  sexp_vector_data(v) = x;
   return v;
 }
 
@@ -325,16 +333,18 @@ int sstream_close(void *vec) {
 }
 
 sexp sexp_make_input_port(FILE* in) {
-  sexp p = SEXP_NEW();
+  sexp p = SEXP_ALLOC(sexp_sizeof(port));
   p->tag = SEXP_IPORT;
-  p->data1 = in;
+  /* p->data1 = in; */
+  sexp_port_stream(p) = in;
   return p;
 }
 
 sexp sexp_make_output_port(FILE* out) {
-  sexp p = SEXP_NEW();
+  sexp p = SEXP_ALLOC(sexp_sizeof(port));
   p->tag = SEXP_OPORT;
-  p->data1 = out;
+  /* p->data1 = out; */
+  sexp_port_stream(p) = out;
   return p;
 }
 
@@ -782,10 +792,12 @@ void sexp_init() {
     the_quasiquote_symbol = sexp_intern("quasiquote");
     the_unquote_symbol = sexp_intern("unquote");
     the_unquote_splicing_symbol = sexp_intern("unquote-splicing");
-    the_empty_vector = SEXP_NEW();
+    the_empty_vector = SEXP_ALLOC(sexp_sizeof(vector));
     the_empty_vector->tag = SEXP_VECTOR;
-    the_empty_vector->data1 = 0;
-    the_empty_vector->data2 = 0;
+/*     the_empty_vector->data1 = 0; */
+/*     the_empty_vector->data2 = 0; */
+    sexp_vector_length(the_empty_vector) = 0;
+    sexp_vector_data(the_empty_vector) = NULL;
   }
 }
 
