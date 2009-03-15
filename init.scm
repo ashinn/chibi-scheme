@@ -68,6 +68,12 @@
             (map1 cdr lol '())
             (cons (apply1 proc (map1 car lol '())) res))))
 
+;; math utilities
+
+(define (zero? x) (= x 0))
+(define (positive? x) (> x 0))
+(define (negative? x) (< x 0))
+
 ;; syntax
 
 (define-syntax let

@@ -282,7 +282,7 @@ void analyze(sexp obj, bytecode *bc, unsigned int *i, env e,
           && (((core_form)SEXP_CDR(o2))->code == CORE_LAMBDA)
           && sexp_listp(SEXP_CADR(SEXP_CAR(obj)))) {
         /* let */
-        tmp1 = sexp_length(SEXP_CADR(SEXP_CAR(obj)));
+        tmp1 = sexp_unbox_integer(sexp_length(SEXP_CADR(SEXP_CAR(obj))));
         e2 = extend_env_closure(e, SEXP_CADR(SEXP_CAR(obj)), (*d)+(tmp1-1));
         for (o2=sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o2); o2=SEXP_CDR(o2))
           analyze(SEXP_CAR(o2), bc, i, e, params, fv, sv, d, 0);
@@ -330,7 +330,7 @@ void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
   case OPC_CONSTRUCTOR:
   case OPC_ACCESSOR:
   case OPC_GENERIC:
-    tmp1 = sexp_length(SEXP_CDR(obj));
+    tmp1 = sexp_unbox_integer(sexp_length(SEXP_CDR(obj)));
     if (tmp1 == 0) {
       errx(1, "opcode with no arguments: %s", op->name);
     } else if (tmp1 == 1) {
@@ -355,7 +355,7 @@ void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
     }
     break;
   case OPC_IO:
-    tmp1 = sexp_length(SEXP_CDR(obj));
+    tmp1 = sexp_unbox_integer(sexp_length(SEXP_CDR(obj)));
     if (tmp1 == op->num_args && op->var_args_p) {
       emit(bc, i, OP_PARAMETER);
       emit_word(bc, i, (sexp_uint_t) op->data);
@@ -378,7 +378,7 @@ void analyze_opcode (opcode op, sexp obj, bytecode *bc, unsigned int *i, env e,
     }
     emit_push(bc, i, op->data);
     emit(bc, i, op->op_name);
-    (*d) -= (sexp_length(SEXP_CDR(obj))-1);
+    (*d) -= (sexp_unbox_integer(sexp_length(SEXP_CDR(obj)))-1);
     break;
   default:
     errx(1, "unknown opcode class: %d", op->op_class);
@@ -418,7 +418,7 @@ void analyze_var_ref (sexp obj, bytecode *bc, unsigned int *i, env e,
 void analyze_app (sexp obj, bytecode *bc, unsigned int *i, env e,
                   sexp params, sexp fv, sexp sv, unsigned int *d, int tailp) {
   sexp o1;
-  unsigned long len = sexp_length(SEXP_CDR(obj));
+  sexp_uint_t len = sexp_unbox_integer(sexp_length(SEXP_CDR(obj)));
 
   /* push the arguments onto the stack */
   for (o1 = sexp_reverse(SEXP_CDR(obj)); SEXP_PAIRP(o1); o1 = SEXP_CDR(o1)) {
@@ -430,10 +430,8 @@ void analyze_app (sexp obj, bytecode *bc, unsigned int *i, env e,
 
   /* maybe overwrite the current frame */
   if (tailp) {
-    fprintf(stderr, "compiling tail call: %d + %d + 3 = %d\n",
-            sexp_length(params), (*d), sexp_length(params)+(*d)+3);
     emit(bc, i, OP_TAIL_CALL);
-    emit_word(bc, i, (sexp_uint_t) sexp_make_integer(sexp_length(params)+(*d)+3));
+    emit_word(bc, i, (sexp_uint_t) sexp_make_integer(sexp_unbox_integer(sexp_length(params))+(*d)+3));
     emit_word(bc, i, (sexp_uint_t) sexp_make_integer(len));
   } else {
     /* normal call */
@@ -514,7 +512,7 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
   obj = (sexp) compile(flat_formals, body, e2, fv2, sv, 0);
   /* push the closed vars */
   emit_push(bc, i, SEXP_UNDEF);
-  emit_push(bc, i, sexp_make_integer(sexp_length(fv2)));
+  emit_push(bc, i, sexp_length(fv2));
   emit(bc, i, OP_MAKE_VECTOR);
   (*d)++;
   for (ls=fv2, k=0; SEXP_PAIRP(ls); ls=SEXP_CDR(ls), k++) {
@@ -528,7 +526,7 @@ void analyze_lambda (sexp name, sexp formals, sexp body,
   }
   /* push the additional procedure info and make the closure */
   emit_push(bc, i, obj);
-  emit_push(bc, i, sexp_make_integer(sexp_length(formals)));
+  emit_push(bc, i, sexp_length(formals));
   emit_push(bc, i, sexp_make_integer(sexp_listp(formals) ? 0 : 1));
   emit(bc, i, OP_MAKE_PROCEDURE);
 }
@@ -600,7 +598,7 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
       }
     }
     obj = sexp_reverse(ls);
-    j = sexp_length(internals);
+    j = sexp_unbox_integer(sexp_length(internals));
     if (SEXP_PAIRP(internals)) {
 /*       sexp_write_string("internals: ", cur_error_port); */
 /*       sexp_write(internals, cur_error_port); */
@@ -642,7 +640,7 @@ bytecode compile(sexp params, sexp obj, env e, sexp fv, sexp sv, int done_p) {
 sexp sexp_save_stack(sexp *stack, unsigned int to) {
   sexp res, *data;
   int i;
-  res = sexp_make_vector(to, SEXP_UNDEF);
+  res = sexp_make_vector(sexp_make_integer(to), SEXP_UNDEF);
   data = sexp_vector_data(res);
   for (i=0; i<to; i++)
     data[i] = stack[i];
@@ -739,7 +737,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     top-=3;
     break;
   case OP_MAKE_VECTOR:
-    stack[top-2]=sexp_make_vector(sexp_unbox_integer(stack[top-1]), stack[top-2]);
+    stack[top-2]=sexp_make_vector(stack[top-1], stack[top-2]);
     top--;
     break;
   case OP_PUSH:
@@ -924,7 +922,7 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     /* print_stack(stack, top); */
     tmp1 = stack[top-1];
     tmp2 = stack[top-2];
-    i = sexp_length(tmp2);
+    i = sexp_unbox_integer(sexp_length(tmp2));
     top += (i-2);
     for ( ; SEXP_PAIRP(tmp2); tmp2=SEXP_CDR(tmp2), top--)
       stack[top-1] = SEXP_CAR(tmp2);
@@ -938,13 +936,14 @@ sexp vm(bytecode bc, env e, sexp* stack, unsigned int top) {
     stack[top] = sexp_make_integer(1);
     stack[top+1] = sexp_make_integer(ip);
     stack[top+2] = cp;
-    tmp2 = sexp_save_stack(stack, top+3);
 /*     fprintf(stderr, "saved: ", top); */
 /*     sexp_write(tmp2, cur_error_port); */
 /*     fprintf(stderr, "\n", top); */
+    tmp2 = sexp_make_vector(sexp_make_integer(1), SEXP_UNDEF);
+    sexp_vector_set(tmp2, sexp_make_integer(1), sexp_save_stack(stack, top+3));
     stack[top-1] = sexp_make_procedure(0, (int) sexp_make_integer(1),
                                        continuation_resumer,
-                                       sexp_vector(1, tmp2));
+                                       tmp2);
     top+=3;
     bc = sexp_procedure_code(tmp1);
     ip = bc->data;
@@ -1164,6 +1163,7 @@ _OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error"),
 {SEXP_OPCODE, OPC_IO, OP_FLUSH_OUTPUT, 0, 1, 0, SEXP_OPORT, 0, "flush-output", (sexp)&cur_output_port, NULL},
 {SEXP_OPCODE, OPC_IO, OP_READ, 0, 1, 0, SEXP_IPORT, 0, "read", (sexp)&cur_input_port, NULL},
 {SEXP_OPCODE, OPC_IO, OP_READ_CHAR, 0, 1, 0, SEXP_IPORT, 0, "read-char", (sexp)&cur_input_port, NULL},
+_FN1(SEXP_PAIR, "length", sexp_length),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
 _FN1(SEXP_STRING, "open-input-file", sexp_open_input_file),
@@ -1269,18 +1269,13 @@ int main (int argc, char **argv) {
   env_define(e, err_handler_sym, err_handler);
   exception_handler_cell = env_cell(e, err_handler_sym);
 
-  fprintf(stderr, "current-input-port: %d => %d\n", &cur_input_port, cur_input_port);
-
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
     switch (argv[i][1]) {
     case 'e':
     case 'p':
       if (! init_loaded) {
-        if (stream = fopen(sexp_init_file, "r")) {
-          sexp_load(sexp_make_input_port(stream));
-          fclose(stream);
-        }
+        sexp_load(sexp_make_string(sexp_init_file));
         init_loaded = 1;
       }
       obj = sexp_read_from_string(argv[i+1]);
@@ -1301,14 +1296,13 @@ int main (int argc, char **argv) {
   }
 
   if (! quit) {
-    if (! init_loaded) {
-      if (stream = fopen(sexp_init_file, "r")) {
-        sexp_load(sexp_make_input_port(stream));
-        fclose(stream);
-      }
-      init_loaded = 1;
-    }
-    repl(e, stack);
+    if (! init_loaded)
+      sexp_load(sexp_make_string(sexp_init_file));
+    if (i < argc)
+      for ( ; i < argc; i++)
+        sexp_load(sexp_make_string(argv[i]));
+    else
+      repl(e, stack);
   }
   return 0;
 }
