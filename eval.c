@@ -608,15 +608,14 @@ sexp make_opcode_procedure(sexp op, sexp_uint_t i, sexp e) {
 }
 
 sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p) {
-  sexp_uint_t i=0, d=0, define_ok=1, core;
-  sexp_sint_t j=0;
+  sexp_uint_t i=0, j=0, d=0, define_ok=1, core;
   sexp bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+INIT_BCODE_SIZE);
   sexp sv2 = set_vars(e, params, obj, SEXP_NULL), internals=SEXP_NULL, ls;
   bc->tag = SEXP_BYTECODE;
   sexp_bytecode_length(bc) = INIT_BCODE_SIZE;
   /* box mutable vars */
-  for (ls=params; sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    if ((j = sexp_list_index(sv2, sexp_car(ls))) >= 0) {
+  for (ls=params, j=0; sexp_pairp(ls); ls=sexp_cdr(ls), j++) {
+    if (sexp_list_index(sv2, sexp_car(ls)) >= 0) {
       emit_push(&bc, &i, SEXP_NULL);
       emit(&bc, &i, OP_STACK_REF);
       emit_word(&bc, &i, j+5);
@@ -795,19 +794,21 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
   case OP_EOFP:
     _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
   case OP_CAR:
-    if (! sexp_pairp(_ARG1)) sexp_raise("not a pair", sexp_list1(_ARG1));
+    if (! sexp_pairp(_ARG1)) sexp_raise("car: not a pair", sexp_list1(_ARG1));
     _ARG1 = sexp_car(_ARG1); break;
   case OP_CDR:
-    if (! sexp_pairp(_ARG1)) sexp_raise("not a pair", sexp_list1(_ARG1));
+    if (! sexp_pairp(_ARG1)) sexp_raise("cdr: not a pair", sexp_list1(_ARG1));
     _ARG1 = sexp_cdr(_ARG1); break;
   case OP_SET_CAR:
-    if (! sexp_pairp(_ARG1)) sexp_raise("not a pair", sexp_list1(_ARG1));
+    if (! sexp_pairp(_ARG1))
+      sexp_raise("set-car!: not a pair", sexp_list1(_ARG1));
     sexp_car(_ARG1) = _ARG2;
     _ARG2 = SEXP_UNDEF;
     top--;
     break;
   case OP_SET_CDR:
-    if (! sexp_pairp(_ARG1)) sexp_raise("not a pair", sexp_list1(_ARG1));
+    if (! sexp_pairp(_ARG1))
+      sexp_raise("set-cdr!: not a pair", sexp_list1(_ARG1));
     sexp_cdr(_ARG1) = _ARG2;
     _ARG2 = SEXP_UNDEF;
     top--;
@@ -827,7 +828,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_add(sexp_integer_to_flonum(_ARG1), _ARG2);
 #endif
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("+: not a number", sexp_list2(_ARG1, _ARG2));
     top--;
     break;
   case OP_SUB:
@@ -841,7 +842,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_sub(sexp_integer_to_flonum(_ARG1), _ARG2);
 #endif
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("-: not a number", sexp_list2(_ARG1, _ARG2));
     top--;
     break;
   case OP_MUL:
@@ -855,7 +856,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_mul(sexp_integer_to_flonum(_ARG1), _ARG2);
 #endif
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("*: not a number", sexp_list2(_ARG1, _ARG2));
     top--;
     break;
   case OP_DIV:
@@ -870,7 +871,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_div(sexp_integer_to_flonum(_ARG1), _ARG2);
 #endif
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("/: not a number", sexp_list2(_ARG1, _ARG2));
     top--;
     break;
   case OP_QUOT:
@@ -878,14 +879,14 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
       top--;
     }
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("quotient: not a number", sexp_list2(_ARG1, _ARG2));
     break;
   case OP_MOD:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
       _ARG2 = sexp_fx_mod(_ARG1, _ARG2);
       top--;
     }
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("modulo: not a number", sexp_list2(_ARG1, _ARG2));
     break;
   case OP_NEG:
     if (sexp_integerp(_ARG1))
@@ -894,7 +895,7 @@ sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top) {
     else if (sexp_flonump(_ARG1))
       _ARG1 = sexp_make_flonum(-sexp_flonum_value(_ARG1));
 #endif
-    else sexp_raise("not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("-: not a number", sexp_list1(_ARG1));
     break;
   case OP_LT:
     _ARG2 = sexp_make_boolean(_ARG1 < _ARG2);

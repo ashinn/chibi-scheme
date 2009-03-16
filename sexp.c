@@ -92,7 +92,8 @@ sexp sexp_make_exception(sexp kind, sexp message, sexp irritants,
 }
 
 sexp sexp_print_exception(sexp exn, sexp out) {
-  sexp_write_string("error", out);
+  sexp ls;
+  sexp_write_string("ERROR", out);
   if (sexp_integerp(sexp_exception_line(exn))
       && sexp_exception_line(exn) > sexp_make_integer(0)) {
     sexp_write_string(" on line ", out);
@@ -104,11 +105,20 @@ sexp sexp_print_exception(sexp exn, sexp out) {
   }
   sexp_write_string(": ", out);
   sexp_write_string(sexp_string_data(sexp_exception_message(exn)), out);
-  sexp_write_string("\n", out);
   if (sexp_pairp(sexp_exception_irritants(exn))) {
-    sexp_write_string("  irritants: ", out);
-    sexp_write(sexp_exception_irritants(exn), out);
-    sexp_write_string("\n", out);
+    if (sexp_nullp(sexp_cdr(sexp_exception_irritants(exn)))) {
+      sexp_write_string(": ", out);
+      sexp_write(sexp_car(sexp_exception_irritants(exn)), out);
+      sexp_write_string("\n", out);
+    } else {
+      sexp_write_string("\n", out);
+      for (ls=sexp_exception_irritants(exn);
+           sexp_pairp(ls); ls=sexp_cdr(ls)) {
+        sexp_write_string("    ", out);
+        sexp_write(sexp_car(ls), out);
+        sexp_write_string("\n", out);
+      }
+    }
   }
   return SEXP_UNDEF;
 }
