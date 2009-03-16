@@ -109,6 +109,9 @@ struct sexp_struct {
       sexp proc, env;
     } macro;
     struct {
+      sexp env, free_vars, expr;
+    } sc;
+    struct {
       unsigned char op_class, code, num_args, flags,
         arg1_type, arg2_type, inverse;
       char *name;

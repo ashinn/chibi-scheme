@@ -64,10 +64,6 @@ enum opcode_names {
   OP_FCALL1,
   OP_FCALL2,
   OP_FCALL3,
-/*   OP_FCALL4, */
-/*   OP_FCALL5, */
-/*   OP_FCALL6, */
-/*   OP_FCALL7, */
   OP_FCALLN,
   OP_JUMP_UNLESS,
   OP_JUMP,
@@ -76,8 +72,6 @@ enum opcode_names {
   OP_PARAMETER,
   OP_STACK_REF,
   OP_STACK_SET,
-  OP_GLOBAL_REF,
-  OP_GLOBAL_SET,
   OP_CLOSURE_REF,
   OP_VECTOR_REF,
   OP_VECTOR_SET,
