@@ -10,10 +10,10 @@ GC_OBJ=./gc/gc.a
 $GC_OBJ: ./gc/alloc.c
 	cd gc && make test
 
-sexp.o: sexp.c sexp.h config.h Makefile
+sexp.o: sexp.c sexp.h config.h defaults.h Makefile
 	gcc -c $(CFLAGS) -o $@ $<
 
-eval.o: eval.c debug.c eval.h sexp.h config.h Makefile
+eval.o: eval.c debug.c eval.h sexp.h config.h defaults.h Makefile
 	gcc -c $(CFLAGS) -o $@ $<
 
 # main.o: main.c eval.h sexp.h config.h Makefile

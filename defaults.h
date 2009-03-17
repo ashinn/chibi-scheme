@@ -41,14 +41,16 @@
 
 #if USE_BOEHM
 #include "gc/include/gc.h"
-#define SEXP_ALLOC        GC_malloc
-#define SEXP_ALLOC_ATOMIC GC_malloc_atomic
-#define SEXP_REALLOC      GC_realloc
-#define SEXP_FREE         GC_free
+#define sexp_alloc        GC_malloc
+#define sexp_alloc_atomic GC_malloc_atomic
+#define sexp_realloc      GC_realloc
+#define sexp_free(x)
+#define sexp_deep_free(x)
 #else
-#define SEXP_ALLOC        malloc
-#define SEXP_ALLOC_ATOMIC SEXP_ALLOC
-#define SEXP_REALLOC      realloc
-#define SEXP_FREE         free
+#define sexp_alloc        malloc
+#define sexp_alloc_atomic sexp_alloc
+#define sexp_realloc      realloc
+#define sexp_free         free
+void sexp_deep_free(sexp obj);
 #endif
 

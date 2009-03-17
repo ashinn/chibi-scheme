@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sysexits.h>
 
 #include "config.h"
 #include "defaults.h"
@@ -17,7 +18,7 @@
 /* tagging system
  *   bits end in  00:  pointer
  *                01:  fixnum
- *               011:  symbol
+ *               011:  <unused>
  *               111:  immediate symbol
  *              0110:  char
  *              1110:  other immediate object (NULL, TRUE, FALSE)
@@ -54,10 +55,17 @@ enum sexp_types {
   /* the following are used only by the evaluator */
   SEXP_PROCEDURE,
   SEXP_MACRO,
+  SEXP_SYNCLO,
   SEXP_ENV,
   SEXP_BYTECODE,
   SEXP_CORE,
   SEXP_OPCODE,
+  SEXP_LAMBDA,
+  SEXP_CND,
+  SEXP_REF,
+  SEXP_SET,
+  SEXP_SEQ,
+  SEXP_LIT,
 };
 
 typedef unsigned long sexp_uint_t;
@@ -68,6 +76,7 @@ typedef struct sexp_struct *sexp;
 struct sexp_struct {
   sexp_tag_t tag;
   union {
+    /* basic types */
     double flonum;
     struct {
       sexp car, cdr;
@@ -92,6 +101,7 @@ struct sexp_struct {
     struct {
       sexp kind, message, irritants, file, line;
     } exception;
+    /* runtime types */
     struct {
       char flags;
       sexp parent, bindings;
@@ -110,7 +120,7 @@ struct sexp_struct {
     } macro;
     struct {
       sexp env, free_vars, expr;
-    } sc;
+    } synclo;
     struct {
       unsigned char op_class, code, num_args, flags,
         arg1_type, arg2_type, inverse;
@@ -121,13 +131,37 @@ struct sexp_struct {
       char code;
       char *name;
     } core;
+    /* ast types */
+    struct {
+      sexp name, params, flags, body, fv, sv;
+    } lambda;
+    struct {
+      sexp test, pass, fail;
+    } cnd;
+    struct {
+      sexp var, value;
+    } set;
+    struct {
+      sexp var, value;
+    } ref;
+    struct {
+      sexp ls;
+    } seq;
+    struct {
+      sexp x;
+    } lit;
   } value;
 };
 
-#define sexp_sizeof_field(field) (sizeof((sexp)NULL)->value.field)
-#define sexp_sizeof(field) (sizeof(struct sexp_struct)-sexp_sizeof_field(exception)+sexp_sizeof_field(field))
+/* #define offsetof(st, m) ((size_t) ((char*)&((st*)(0))->m - (char*)0)) */
 
-#define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) + SEXP_EXTENDED_TAG))
+#define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
+                         + sizeof(((sexp)0)->value.x))
+
+#define sexp_alloc_type(type, tag) sexp_alloc_tagged(sexp_sizeof(type), tag)
+
+#define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) \
+                                          + SEXP_EXTENDED_TAG))
 #define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0)
 #define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
 #define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
@@ -144,22 +178,24 @@ struct sexp_struct {
 #define sexp_charp(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
-#define SEXP_CHECK_TAG(x,t) (sexp_pointerp(x) && (x)->tag == (t))
+#define sexp_tag(x) ((x)->tag)
 
-#define sexp_pairp(x)       (SEXP_CHECK_TAG(x, SEXP_PAIR))
-#define sexp_stringp(x)     (SEXP_CHECK_TAG(x, SEXP_STRING))
-#define sexp_lsymbolp(x)    (SEXP_CHECK_TAG(x, SEXP_SYMBOL))
-#define sexp_vectorp(x)     (SEXP_CHECK_TAG(x, SEXP_VECTOR))
-#define sexp_flonump(x)     (SEXP_CHECK_TAG(x, SEXP_FLONUM))
-#define sexp_iportp(x)      (SEXP_CHECK_TAG(x, SEXP_IPORT))
-#define sexp_oportp(x)      (SEXP_CHECK_TAG(x, SEXP_OPORT))
-#define sexp_exceptionp(x)  (SEXP_CHECK_TAG(x, SEXP_EXCEPTION))
-#define sexp_procedurep(x)  (SEXP_CHECK_TAG(x, SEXP_PROCEDURE))
-#define sexp_envp(x)        (SEXP_CHECK_TAG(x, SEXP_ENV))
-#define sexp_bytecodep(x)   (SEXP_CHECK_TAG(x, SEXP_BYTECODE))
-#define sexp_corep(x)       (SEXP_CHECK_TAG(x, SEXP_CORE))
-#define sexp_opcodep(x)     (SEXP_CHECK_TAG(x, SEXP_OPCODE))
-#define sexp_macrop(x)      (SEXP_CHECK_TAG(x, SEXP_MACRO))
+#define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_tag(x) == (t)))
+
+#define sexp_pairp(x)       (sexp_check_tag(x, SEXP_PAIR))
+#define sexp_stringp(x)     (sexp_check_tag(x, SEXP_STRING))
+#define sexp_lsymbolp(x)    (sexp_check_tag(x, SEXP_SYMBOL))
+#define sexp_vectorp(x)     (sexp_check_tag(x, SEXP_VECTOR))
+#define sexp_flonump(x)     (sexp_check_tag(x, SEXP_FLONUM))
+#define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
+#define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
+#define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
+#define sexp_procedurep(x)  (sexp_check_tag(x, SEXP_PROCEDURE))
+#define sexp_envp(x)        (sexp_check_tag(x, SEXP_ENV))
+#define sexp_bytecodep(x)   (sexp_check_tag(x, SEXP_BYTECODE))
+#define sexp_corep(x)       (sexp_check_tag(x, SEXP_CORE))
+#define sexp_opcodep(x)     (sexp_check_tag(x, SEXP_OPCODE))
+#define sexp_macrop(x)      (sexp_check_tag(x, SEXP_MACRO))
 #define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
 
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
@@ -293,6 +329,7 @@ void sexp_printf(sexp port, sexp fmt, ...);
 #define sexp_cadddr(x)    (sexp_cadr(sexp_cddr(x)))
 #define sexp_cddddr(x)    (sexp_cddr(sexp_cddr(x)))
 
+sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp head, sexp tail);
 int sexp_listp(sexp obj);
 int sexp_list_index(sexp ls, sexp elt);
@@ -311,7 +348,6 @@ sexp sexp_make_vector(sexp len, sexp dflt);
 sexp sexp_list_to_vector(sexp ls);
 sexp sexp_vector(int count, ...);
 void sexp_write(sexp obj, sexp out);
-void sexp_free(sexp obj);
 char* sexp_read_string(sexp in);
 char* sexp_read_symbol(sexp in, int init);
 sexp sexp_read_number(sexp in, int base);
