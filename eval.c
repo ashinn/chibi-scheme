@@ -65,8 +65,7 @@ static void env_define(sexp e, sexp key, sexp value) {
 
 static sexp extend_env (sexp e, sexp fv, int offset) {
   int i;
-  sexp e2 = (sexp) SEXP_ALLOC(sexp_sizeof(env));
-  e2->tag = SEXP_ENV;
+  sexp e2 = sexp_alloc_type(env, SEXP_ENV);
   sexp_env_parent(e2) = e;
   sexp_env_bindings(e2) = SEXP_NULL;
   for (i=offset; sexp_pairp(fv); fv = sexp_cdr(fv), i--)
@@ -98,11 +97,10 @@ static sexp sexp_flatten_dot (sexp ls) {
 static void shrink_bcode(sexp *bc, sexp_uint_t i) {
   sexp tmp;
   if (sexp_bytecode_length(*bc) != i) {
-    tmp = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode) + i);
-    tmp->tag = SEXP_BYTECODE;
+    tmp = sexp_alloc_tagged(sexp_sizeof(bytecode) + i, SEXP_BYTECODE);
     sexp_bytecode_length(tmp) = i;
     memcpy(sexp_bytecode_data(tmp), sexp_bytecode_data(*bc), i);
-    SEXP_FREE(*bc);
+    sexp_free(*bc);
     *bc = tmp;
   }
 }
@@ -110,14 +108,14 @@ static void shrink_bcode(sexp *bc, sexp_uint_t i) {
 static void expand_bcode(sexp *bc, sexp_uint_t *i, sexp_uint_t size) {
   sexp tmp;
   if (sexp_bytecode_length(*bc) < (*i)+size) {
-    tmp = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)
-                            + sexp_bytecode_length(*bc)*2);
-    tmp->tag = SEXP_BYTECODE;
+    tmp = sexp_alloc_tagged(sexp_sizeof(bytecode)
+                            + sexp_bytecode_length(*bc)*2,
+                            SEXP_BYTECODE);
     sexp_bytecode_length(tmp) = sexp_bytecode_length(*bc)*2;
     memcpy(sexp_bytecode_data(tmp),
            sexp_bytecode_data(*bc),
            sexp_bytecode_length(*bc));
-    SEXP_FREE(*bc);
+    sexp_free(*bc);
     *bc = tmp;
   }
 }
@@ -140,8 +138,7 @@ static void emit_push(sexp *bc, sexp_uint_t *i, sexp obj) {
 
 static sexp sexp_make_procedure(sexp flags, sexp num_args,
                                 sexp bc, sexp vars) {
-  sexp proc = (sexp) SEXP_ALLOC(sexp_sizeof(procedure));
-  proc->tag = SEXP_PROCEDURE;
+  sexp proc = sexp_alloc_type(procedure, SEXP_PROCEDURE);
   sexp_procedure_flags(proc) = (char) (sexp_uint_t) flags;
   sexp_procedure_num_args(proc) = (unsigned short) (sexp_uint_t) num_args;
   sexp_procedure_code(proc) = bc;
@@ -150,8 +147,7 @@ static sexp sexp_make_procedure(sexp flags, sexp num_args,
 }
 
 static sexp sexp_make_macro (sexp p, sexp e) {
-  sexp mac = (sexp) SEXP_ALLOC(sexp_sizeof(macro));
-  mac->tag = SEXP_MACRO;
+  sexp mac = sexp_alloc_type(macro, SEXP_MACRO);
   sexp_macro_env(mac) = e;
   sexp_macro_proc(mac) = p;
   return mac;
@@ -166,13 +162,12 @@ sexp sexp_compile_error(char *message, sexp irritants) {
 }
 
 sexp sexp_expand_macro (sexp mac, sexp form, sexp e) {
-  sexp bc, res, *stack = SEXP_ALLOC(sizeof(sexp)*INIT_STACK_SIZE);
+  sexp bc, res, *stack = (sexp*) sexp_alloc(sizeof(sexp)*INIT_STACK_SIZE);
   sexp_uint_t i=0;
 /*   fprintf(stderr, "expanding: "); */
 /*   sexp_write(form, cur_error_port); */
 /*   fprintf(stderr, "\n => "); */
-  bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+64);
-  bc->tag = SEXP_BYTECODE;
+  bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+64, SEXP_BYTECODE);
   sexp_bytecode_length(bc) = 32;
   emit_push(&bc, &i, sexp_macro_env(mac));
   emit_push(&bc, &i, e);
@@ -184,10 +179,84 @@ sexp sexp_expand_macro (sexp mac, sexp form, sexp e) {
   res = vm(bc, e, stack, 0);
   sexp_write(res, cur_error_port);
 /*   fprintf(stderr, "\n"); */
-  SEXP_FREE(bc);
-  SEXP_FREE(stack);
+  sexp_free(bc);
+  sexp_free(stack);
   return res;
 }
+
+/* sexp analyze(sexp x, sexp env) { */
+/*   sexp op, cell; */
+/*  loop: */
+/*   if (sexp_pairp(x)) { */
+/*     if (sexp_idp(sexp_car(x))) { */
+/*       cell = env_cell(sexp_car(x), env); */
+/*       if (! cell) return analyze_app(x, env); */
+/*       op = sexp_cdr(cell); */
+/*       if (sexp_corep(op)) { */
+/*         switch (sexp_core_code(op)) { */
+/*         case CORE_DEFINE: */
+/*           if (sexp_env_global_p(env)) */
+/*             return sexp_make_set(sexp_make_global_ref(sexp_cadr(x), env), */
+/*                                  analyze(sexp_caddr(x), env)); */
+/*           else */
+/*             return sexp_compile_error("bad define location", sexp_list1(x)); */
+/*         case CORE_SET: */
+/*             return sexp_make_set(sexp_make_ref(sexp_cadr(x), env), */
+/*                                  analyze(sexp_caddr(x), env)); */
+/*         case CORE_LAMBDA: */
+/*           return analyze_lambda(x, env); */
+/*         case CORE_IF: */
+/*           return sexp_make_cnd(analyze(sexp_car(x), env), */
+/*                                analyze(sexp_cadr(x), env), */
+/*                                (sexp_pairp(sexp_cddr(x)) */
+/*                                 ? analyze(sexp_caddr(x), env) : SEXP_UNDEF)); */
+/*         case CORE_BEGIN: */
+/*           return sexp_make_seq(analyze_app(x, env)); */
+/*         case CORE_QUOTE: */
+/*           return sexp_make_lit(x); */
+/*         default: */
+/*           return sexp_compile_error("unknown core form", sexp_list1(op)); */
+/*         } */
+/*       } else if (sexp_macrop(op)) { */
+/*         x = sexp_expand_macro(op, x, env); */
+/*         goto loop; */
+/*       } else { */
+/*         return analyze_app(x, env); */
+/*       } */
+/*     } else { */
+/*       return analyze_app(x, env); */
+/*     } */
+/*   } else if (sexp_symbolp(x)) { */
+/*     return analyze_var_ref(x, env); */
+/*   } else if (sexp_synclop(x)) { */
+/*     env = sexp_synclo_env(x); */
+/*     x = sexp_synclo_expr(x); */
+/*     goto loop; */
+/*   } else { */
+/*     return x; */
+/*   } */
+/* } */
+
+/* sexp analyze_lambda(sexp x, sexp env) { */
+/* } */
+
+/* sexp analyze_app(sexp x, sexp env) { */
+/*   sexp res=SEXP_NULL; */
+/*   for ( ; sexp_pairp(x); x=sexp_cdr(x)) */
+/*     res = sexp_cons(analyze(sexp_car(x), env), res); */
+/*   return sexp_nreverse(res); */
+/* } */
+
+/* sexp compile(sexp x, sexp res) { */
+/*   if (sexp_pairp(x)) */
+/*   else if (sexp_lambdap(x)) */
+/*   else if (sexp_seqp(x)) */
+/*   else if (sexp_cndp(x)) */
+/*   else if (sexp_refp(x)) */
+/*   else if (sexp_setp(x)) */
+/*   else if (sexp_litp(x)) */
+/*   else */
+/* } */
 
 sexp analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
              sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp) {
@@ -591,10 +660,9 @@ sexp make_opcode_procedure(sexp op, sexp_uint_t i, sexp e) {
   sexp_uint_t pos=0, d=0;
   if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
     return sexp_opcode_proc(op);
-  bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+INIT_BCODE_SIZE);
+  bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+INIT_BCODE_SIZE, SEXP_BYTECODE);
   params = make_param_list(i);
   e = extend_env(e, params, -4);
-  bc->tag = SEXP_BYTECODE;
   sexp_bytecode_length(bc) = INIT_BCODE_SIZE;
   analyze_opcode(op, sexp_cons(op, params), &bc, &pos, e, params,
                  SEXP_NULL, SEXP_NULL, &d, 0);
@@ -609,9 +677,9 @@ sexp make_opcode_procedure(sexp op, sexp_uint_t i, sexp e) {
 
 sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p) {
   sexp_uint_t i=0, j=0, d=0, define_ok=1, core;
-  sexp bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+INIT_BCODE_SIZE);
+  sexp bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+INIT_BCODE_SIZE,
+                              SEXP_BYTECODE);
   sexp sv2 = set_vars(e, params, obj, SEXP_NULL), internals=SEXP_NULL, ls;
-  bc->tag = SEXP_BYTECODE;
   sexp_bytecode_length(bc) = INIT_BCODE_SIZE;
   /* box mutable vars */
   for (ls=params, j=0; sexp_pairp(ls); ls=sexp_cdr(ls), j++) {
@@ -1119,7 +1187,7 @@ sexp sexp_close_port (sexp port) {
 }
 
 sexp sexp_load (sexp source) {
-  sexp obj, res, *stack=SEXP_ALLOC(sizeof(sexp)*INIT_STACK_SIZE);
+  sexp obj, res, *stack = (sexp*) sexp_alloc(sizeof(sexp)*INIT_STACK_SIZE);
   int closep = 0;
   if (sexp_stringp(source)) {
     source = sexp_open_input_file(source);
@@ -1132,7 +1200,7 @@ sexp sexp_load (sexp source) {
   res = SEXP_UNDEF;
  done:
   if (closep) sexp_close_port(source);
-  SEXP_FREE(stack);
+  sexp_free(stack);
   return res;
 }
 
@@ -1225,8 +1293,7 @@ _PARAM("interaction-environment", (sexp)&interaction_environment, SEXP_ENV),
 
 sexp make_standard_env() {
   sexp_uint_t i;
-  sexp e = (sexp) SEXP_ALLOC(sexp_sizeof(env));
-  e->tag = SEXP_ENV;
+  sexp e = sexp_alloc_type(env, SEXP_ENV);
   sexp_env_parent(e) = NULL;
   sexp_env_bindings(e) = SEXP_NULL;
   for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++)
@@ -1245,9 +1312,9 @@ sexp eval_in_stack(sexp obj, sexp e, sexp* stack, sexp_sint_t top) {
 }
 
 sexp eval(sexp obj, sexp e) {
-  sexp* stack = (sexp*) SEXP_ALLOC(sizeof(sexp) * INIT_STACK_SIZE);
+  sexp* stack = (sexp*) sexp_alloc(sizeof(sexp) * INIT_STACK_SIZE);
   sexp res = eval_in_stack(obj, e, stack, 0);
-  SEXP_FREE(stack);
+  sexp_free(stack);
   return res;
 }
 
@@ -1261,8 +1328,7 @@ void scheme_init() {
     cur_output_port = sexp_make_output_port(stdout);
     cur_error_port = sexp_make_output_port(stderr);
     the_compile_error_symbol = sexp_intern("compile-error");
-    bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+16);
-    bc->tag = SEXP_BYTECODE;
+    bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+16, SEXP_BYTECODE);
     sexp_bytecode_length(bc) = 16;
     emit(&bc, &i, OP_RESUMECC);
     continuation_resumer = (sexp) bc;
@@ -1290,11 +1356,10 @@ int main (int argc, char **argv) {
   sexp_uint_t i, quit=0, init_loaded=0;
 
   scheme_init();
-  stack = (sexp*) SEXP_ALLOC(sizeof(sexp) * INIT_STACK_SIZE);
+  stack = (sexp*) sexp_alloc(sizeof(sexp) * INIT_STACK_SIZE);
   e = make_standard_env();
   interaction_environment = e;
-  bc = (sexp) SEXP_ALLOC(sexp_sizeof(bytecode)+16);
-  bc->tag = SEXP_BYTECODE;
+  bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+16, SEXP_BYTECODE);
   sexp_bytecode_length(bc) = 16;
   i = 0;
   emit_push(&bc, &i, SEXP_UNDEF);

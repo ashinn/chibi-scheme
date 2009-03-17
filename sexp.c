@@ -51,38 +51,47 @@ static unsigned long symbol_table_primes[] = {
 static int symbol_table_prime_index = 0;
 static int symbol_table_count = 0;
 
-void sexp_free (sexp obj) {
+sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag) {
+  sexp res = (sexp) sexp_alloc(size);
+  if (! res)
+    errx(EX_OSERR, "out of memory: couldn't allocate %d bytes for %d",
+         size ,tag);
+  res->tag = tag;
+  return res;
+}
+
+#if ! USE_BOEHM
+void sexp_deep_free (sexp obj) {
   int len, i;
   sexp *elts;
   if (sexp_pointerp(obj)) {
     switch (obj->tag) {
     case SEXP_PAIR:
-      sexp_free(sexp_car(obj));
-      sexp_free(sexp_cdr(obj));
+      sexp_deep_free(sexp_car(obj));
+      sexp_deep_free(sexp_cdr(obj));
       break;
     case SEXP_VECTOR:
       len = sexp_vector_length(obj);
       elts = sexp_vector_data(obj);
-      for (i=0; i<len; i++) {
-        sexp_free(elts[i]);
-      }
-      SEXP_FREE(elts);
+      for (i=0; i<len; i++)
+        sexp_deep_free(elts[i]);
+      sexp_free(elts);
       break;
     case SEXP_STRING:
     case SEXP_SYMBOL:
-      SEXP_FREE(sexp_string_data(obj));
+      sexp_free(sexp_string_data(obj));
       break;
     }
-    SEXP_FREE(obj);
+    sexp_free(obj);
   }
 }
+#endif
 
 /***************************** exceptions *****************************/
 
 sexp sexp_make_exception(sexp kind, sexp message, sexp irritants,
                          sexp file, sexp line) {
-  sexp exn = SEXP_ALLOC(sexp_sizeof(exception));
-  exn->tag = SEXP_EXCEPTION;
+  sexp exn = sexp_alloc_type(exception, SEXP_EXCEPTION);
   sexp_exception_kind(exn) = kind;
   sexp_exception_message(exn) = message;
   sexp_exception_irritants(exn) = irritants;
@@ -133,8 +142,7 @@ static sexp sexp_read_error(char *message, sexp irritants, sexp port) {
 /*************************** list utilities ***************************/
 
 sexp sexp_cons(sexp head, sexp tail) {
-  sexp pair = SEXP_ALLOC(sexp_sizeof(pair));
-  pair->tag = SEXP_PAIR;
+  sexp pair = sexp_alloc_type(pair, SEXP_PAIR);
   sexp_car(pair) = head;
   sexp_cdr(pair) = tail;
   return pair;
@@ -224,18 +232,16 @@ sexp sexp_length(sexp ls) {
 /********************* strings, symbols, vectors **********************/
 
 sexp sexp_make_flonum(double f) {
-  sexp x = SEXP_ALLOC(sexp_sizeof(flonum));
-  x->tag = SEXP_FLONUM;
+  sexp x = sexp_alloc_type(flonum, SEXP_FLONUM);
   sexp_flonum_value(x) = f;
   return x;
 }
 
 sexp sexp_make_string(char *str) {
-  sexp s = SEXP_ALLOC(sexp_sizeof(string));
+  sexp s = sexp_alloc_type(string, SEXP_STRING);
   sexp_uint_t len = strlen(str);
-  char *mystr = SEXP_ALLOC(len+1);
+  char *mystr = sexp_alloc(len+1);
   memcpy(mystr, str, len+1);
-  s->tag = SEXP_STRING;
   sexp_string_length(s) = len;
   sexp_string_data(s) = mystr;
   return s;
@@ -287,19 +293,18 @@ sexp sexp_intern(char *str) {
 
   if (symbol_table_count*5 > d*4) {
     fprintf(stderr, "resizing symbol table!!!!!\n");
-    newtable = SEXP_ALLOC(symbol_table_primes[symbol_table_prime_index++]
+    newtable = sexp_alloc(symbol_table_primes[symbol_table_prime_index++]
                           * sizeof(sexp));
     /* XXXX rehash */
-    SEXP_FREE(symbol_table);
+    sexp_free(symbol_table);
     symbol_table = newtable;
   }
 
-  sym = SEXP_ALLOC(sexp_sizeof(symbol));
+  sym = sexp_alloc_type(symbol, SEXP_SYMBOL);
   len = strlen(str);
-  mystr = SEXP_ALLOC(len+1);
+  mystr = sexp_alloc(len+1);
   memcpy(mystr, str, len+1);
   mystr[len]=0;
-  sym->tag = SEXP_SYMBOL;
   sexp_symbol_length(sym) = len;
   sexp_symbol_data(sym) = mystr;
   symbol_table[cell] = sym;
@@ -310,12 +315,11 @@ sexp sexp_make_vector(sexp len, sexp dflt) {
   sexp v, *x;
   int i, clen = sexp_unbox_integer(len);
   if (! clen) return the_empty_vector;
-  v = SEXP_ALLOC(sexp_sizeof(vector));
-  x = (sexp*) SEXP_ALLOC(clen*sizeof(sexp));
+  v = sexp_alloc_type(vector, SEXP_VECTOR);
+  x = (sexp*) sexp_alloc(clen*sizeof(sexp));
   for (i=0; i<clen; i++) {
     x[i] = dflt;
   }
-  v->tag = SEXP_VECTOR;
   sexp_vector_length(v) = clen;
   sexp_vector_data(v) = x;
   return v;
@@ -375,7 +379,7 @@ off_t sstream_seek(void *vec, off_t offset, int whence) {
 }
 
 int sstream_close(void *vec) {
-  sexp_free((sexp)vec);
+  sexp_deep_free((sexp)vec);
   return 0;
 }
 
@@ -395,16 +399,14 @@ sexp sexp_get_output_string(sexp port) {
 #endif
 
 sexp sexp_make_input_port(FILE* in) {
-  sexp p = SEXP_ALLOC(sexp_sizeof(port));
-  p->tag = SEXP_IPORT;
+  sexp p = sexp_alloc_type(port, SEXP_IPORT);
   sexp_port_stream(p) = in;
   sexp_port_line(p) = 0;
   return p;
 }
 
 sexp sexp_make_output_port(FILE* out) {
-  sexp p = SEXP_ALLOC(sexp_sizeof(port));
-  p->tag = SEXP_OPORT;
+  sexp p = sexp_alloc_type(port, SEXP_OPORT);
   sexp_port_stream(p) = out;
   sexp_port_line(p) = 0;
   return p;
@@ -419,7 +421,7 @@ void sexp_write (sexp obj, sexp out) {
   if (! obj) {
     sexp_write_string("#<null>", out);
   } else if (sexp_pointerp(obj)) {
-    switch (obj->tag) {
+    switch (sexp_tag(obj)) {
     case SEXP_PAIR:
       sexp_write_char('(', out);
       sexp_write(sexp_car(obj), out);
@@ -474,7 +476,7 @@ void sexp_write (sexp obj, sexp out) {
       str = sexp_string_data(obj);
       /* ... FALLTHROUGH ... */
     case SEXP_SYMBOL:
-      if (obj->tag != SEXP_STRING) {
+      if (! sexp_stringp(obj)) {
         i = sexp_symbol_length(obj);
         str = sexp_symbol_data(obj);
       }
@@ -483,7 +485,7 @@ void sexp_write (sexp obj, sexp out) {
           sexp_write_char('\\', out);
         sexp_write_char(str[0], out);
       }
-      if (obj->tag == SEXP_STRING)
+      if (sexp_stringp(obj))
         sexp_write_char('"', out);
       break;
     }
@@ -530,12 +532,12 @@ char* sexp_read_string(sexp in) {
   char *buf, *tmp, *res;
   int c, len, size=128;
 
-  buf = SEXP_ALLOC(size);       /* XXXX grow! */
+  buf = sexp_alloc(size);       /* XXXX grow! */
   tmp = buf;
 
   for (c=sexp_read_char(in); c != '"'; c=sexp_read_char(in)) {
     if (c == EOF) {
-      SEXP_FREE(buf);
+      sexp_free(buf);
       return NULL;
     } else if (c == '\\') {
       c=sexp_read_char(in);
@@ -551,9 +553,9 @@ char* sexp_read_string(sexp in) {
 
   *tmp++ = '\0';
   len = tmp - buf;
-  res = SEXP_ALLOC(len);
+  res = sexp_alloc(len);
   memcpy(res, buf, len);
-  SEXP_FREE(buf);
+  sexp_free(buf);
   return res;
 }
 
@@ -561,7 +563,7 @@ char* sexp_read_symbol(sexp in, int init) {
   char *buf, *tmp, *res;
   int c, len, size=128;
 
-  buf = SEXP_ALLOC(size);
+  buf = sexp_alloc(size);
   tmp = buf;
 
   if (init != EOF)
@@ -578,9 +580,9 @@ char* sexp_read_symbol(sexp in, int init) {
 
   *tmp++ = '\0';
   len = tmp - buf;
-  res = SEXP_ALLOC(len);
+  res = sexp_alloc(len);
   memcpy(res, buf, len);
-  SEXP_FREE(buf);
+  sexp_free(buf);
   return res;
 }
 
@@ -666,7 +668,7 @@ sexp sexp_read_raw (sexp in) {
   case '"':
     str = sexp_read_string(in);
     res = sexp_make_string(str);
-    SEXP_FREE(str);
+    sexp_free(str);
     break;
   case '(':
     res = SEXP_NULL;
@@ -679,7 +681,7 @@ sexp sexp_read_raw (sexp in) {
         } else {
           tmp = sexp_read_raw(in);
           if (sexp_read_raw(in) != SEXP_CLOSE) {
-            sexp_free(res);
+            sexp_deep_free(res);
             return sexp_read_error("multiple tokens in dotted tail",
                                    SEXP_NULL, in);
           } else {
@@ -695,7 +697,7 @@ sexp sexp_read_raw (sexp in) {
       }
     }
     if (tmp != SEXP_CLOSE) {
-      sexp_free(res);
+      sexp_deep_free(res);
       return sexp_read_error("missing trailing ')'", SEXP_NULL, in);
     }
     res = (sexp_pairp(res) ? sexp_nreverse(res) : res);
@@ -759,7 +761,7 @@ sexp sexp_read_raw (sexp in) {
       res = sexp_read(in);
       if (! sexp_listp(res)) {
         if (! sexp_exceptionp(res)) {
-          sexp_free(res);
+          sexp_deep_free(res);
           return sexp_read_error("dotted list not allowed in vector syntax",
                                  SEXP_NULL,
                                  in);
@@ -784,7 +786,7 @@ sexp sexp_read_raw (sexp in) {
       sexp_push_char(c1, in);
       str = sexp_read_symbol(in, '.');
       res = sexp_intern(str);
-      SEXP_FREE(str);
+      sexp_free(str);
     }
     break;
   case ')':
@@ -802,7 +804,7 @@ sexp sexp_read_raw (sexp in) {
       sexp_push_char(c2, in);
       str = sexp_read_symbol(in, c1);
       res = sexp_intern(str);
-      SEXP_FREE(str);
+      sexp_free(str);
     }
     break;
   case '0': case '1': case '2': case '3': case '4':
@@ -813,7 +815,7 @@ sexp sexp_read_raw (sexp in) {
   default:
     str = sexp_read_symbol(in, c1);
     res = sexp_intern(str);
-    SEXP_FREE(str);
+    sexp_free(str);
     break;
   }
   return res;
@@ -832,8 +834,8 @@ sexp sexp_read_from_string(char *str) {
   sexp s = sexp_make_string(str);
   sexp in = sexp_make_input_string_port(s);
   sexp res = sexp_read(in);
-  sexp_free(s);
-  sexp_free(in);
+  sexp_deep_free(s);
+  sexp_deep_free(in);
   return res;
 }
 
@@ -843,15 +845,14 @@ void sexp_init() {
 #if USE_BOEHM
     GC_init();
 #endif
-    symbol_table = SEXP_ALLOC(symbol_table_primes[0]*sizeof(sexp));
+    symbol_table = sexp_alloc(symbol_table_primes[0]*sizeof(sexp));
     the_dot_symbol = sexp_intern(".");
     the_quote_symbol = sexp_intern("quote");
     the_quasiquote_symbol = sexp_intern("quasiquote");
     the_unquote_symbol = sexp_intern("unquote");
     the_unquote_splicing_symbol = sexp_intern("unquote-splicing");
     the_read_error_symbol = sexp_intern("read-error");
-    the_empty_vector = SEXP_ALLOC(sexp_sizeof(vector));
-    the_empty_vector->tag = SEXP_VECTOR;
+    the_empty_vector = sexp_alloc_type(vector, SEXP_VECTOR);
     sexp_vector_length(the_empty_vector) = 0;
     sexp_vector_data(the_empty_vector) = NULL;
   }
