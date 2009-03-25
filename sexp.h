@@ -66,6 +66,7 @@ enum sexp_types {
   SEXP_SET,
   SEXP_SEQ,
   SEXP_LIT,
+  SEXP_CONTEXT,
 };
 
 typedef unsigned long sexp_uint_t;
@@ -104,7 +105,7 @@ struct sexp_struct {
     /* runtime types */
     struct {
       char flags;
-      sexp parent, bindings;
+      sexp parent, lambda, bindings;
     } env;
     struct {
       sexp_uint_t length;
@@ -133,7 +134,7 @@ struct sexp_struct {
     } core;
     /* ast types */
     struct {
-      sexp name, params, flags, body, fv, sv;
+      sexp name, params, locals, flags, body, fv, sv;
     } lambda;
     struct {
       sexp test, pass, fail;
@@ -142,14 +143,19 @@ struct sexp_struct {
       sexp var, value;
     } set;
     struct {
-      sexp var, value;
+      sexp name, loc;
     } ref;
     struct {
       sexp ls;
     } seq;
     struct {
-      sexp x;
+      sexp value;
     } lit;
+    /* compiler state */
+    struct {
+      sexp bc, lambda, offsets, *stack;
+      sexp_uint_t pos, depth, tailp;
+    } context;
   } value;
 };
 
@@ -162,14 +168,18 @@ struct sexp_struct {
 
 #define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) \
                                           + SEXP_EXTENDED_TAG))
+
 #define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0)
 #define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
 #define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
 #define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(4)
 #define SEXP_ERROR  SEXP_MAKE_IMMEDIATE(5) /* exceptions are preferred */
-#define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
-#define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
+#define SEXP_DEF    SEXP_MAKE_IMMEDIATE(6) /* internal use */
+#define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(7) /* internal use */
+#define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(8) /* internal use */
+
+/***************************** predicates *****************************/
 
 #define sexp_nullp(x)    ((x) == SEXP_NULL)
 #define sexp_pointerp(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
@@ -178,9 +188,9 @@ struct sexp_struct {
 #define sexp_charp(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
-#define sexp_tag(x) ((x)->tag)
+#define sexp_pointer_tag(x) ((x)->tag)
 
-#define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_tag(x) == (t)))
+#define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
 #define sexp_pairp(x)       (sexp_check_tag(x, SEXP_PAIR))
 #define sexp_stringp(x)     (sexp_check_tag(x, SEXP_STRING))
@@ -196,7 +206,16 @@ struct sexp_struct {
 #define sexp_corep(x)       (sexp_check_tag(x, SEXP_CORE))
 #define sexp_opcodep(x)     (sexp_check_tag(x, SEXP_OPCODE))
 #define sexp_macrop(x)      (sexp_check_tag(x, SEXP_MACRO))
+#define sexp_synclop(x)     (sexp_check_tag(x, SEXP_SYNCLO))
+#define sexp_lambdap(x)     (sexp_check_tag(x, SEXP_LAMBDA))
+#define sexp_cndp(x)        (sexp_check_tag(x, SEXP_CND))
+#define sexp_refp(x)        (sexp_check_tag(x, SEXP_REF))
+#define sexp_setp(x)        (sexp_check_tag(x, SEXP_SET))
+#define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
+#define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
+
+/***************************** constructors ****************************/
 
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
 #define sexp_unbox_boolean(x) (((x) == SEXP_FALSE) ? 0 : 1)
@@ -211,11 +230,13 @@ struct sexp_struct {
 
 #define sexp_integer_to_flonum(x) (sexp_make_flonum(sexp_unbox_integer(x)))
 
+/*************************** field accessors **************************/
+
 #define sexp_vector_length(x) ((x)->value.vector.length)
 #define sexp_vector_data(x)   ((x)->value.vector.data)
 
-#define sexp_vector_ref(x, i) (sexp_vector_data(x)[sexp_unbox_integer(i)])
-#define sexp_vector_set(x, i, v) (sexp_vector_data(x)[sexp_unbox_integer(i)] = (v))
+#define sexp_vector_ref(x,i)   (sexp_vector_data(x)[sexp_unbox_integer(i)])
+#define sexp_vector_set(x,i,v) (sexp_vector_data(x)[sexp_unbox_integer(i)]=(v))
 
 #define sexp_procedure_num_args(x) ((x)->value.procedure.num_args)
 #define sexp_procedure_flags(x) ((x)->value.procedure.flags)
@@ -250,9 +271,14 @@ struct sexp_struct {
 #define sexp_env_bindings(x)      ((x)->value.env.bindings)
 #define sexp_env_local_p(x)       (sexp_env_parent(x))
 #define sexp_env_global_p(x)      (! sexp_env_local_p(x))
+#define sexp_env_lambda(x)        ((x)->value.env.lambda)
 
 #define sexp_macro_proc(x)        ((x)->value.macro.proc)
 #define sexp_macro_env(x)         ((x)->value.macro.env)
+
+#define sexp_synclo_env(x)        ((x)->value.synclo.env)
+#define sexp_synclo_free_vars(x)  ((x)->value.synclo.free_vars)
+#define sexp_synclo_expr(x)       ((x)->value.synclo.expr)
 
 #define sexp_core_code(x)         ((x)->value.core.code)
 #define sexp_core_name(x)         ((x)->value.core.name)
@@ -270,6 +296,81 @@ struct sexp_struct {
 
 #define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)
 #define sexp_opcode_opt_param_p(x) (sexp_opcode_flags(x) & 2)
+
+#define sexp_lambda_name(x)   ((x)->value.lambda.name)
+#define sexp_lambda_params(x) ((x)->value.lambda.params)
+#define sexp_lambda_locals(x) ((x)->value.lambda.locals)
+#define sexp_lambda_flags(x)  ((x)->value.lambda.flags)
+#define sexp_lambda_body(x)   ((x)->value.lambda.body)
+#define sexp_lambda_fv(x)     ((x)->value.lambda.fv)
+#define sexp_lambda_sv(x)     ((x)->value.lambda.sv)
+
+#define sexp_cnd_test(x)      ((x)->value.cnd.test)
+#define sexp_cnd_pass(x)      ((x)->value.cnd.pass)
+#define sexp_cnd_fail(x)      ((x)->value.cnd.fail)
+
+#define sexp_set_var(x)       ((x)->value.set.var)
+#define sexp_set_value(x)     ((x)->value.set.value)
+
+#define sexp_ref_name(x)      ((x)->value.ref.name)
+#define sexp_ref_loc(x)       ((x)->value.ref.loc)
+
+#define sexp_seq_ls(x)        ((x)->value.seq.ls)
+
+#define sexp_lit_value(x)     ((x)->value.lit.value)
+
+#define sexp_context_stack(x)   ((x)->value.context.stack)
+#define sexp_context_depth(x)   ((x)->value.context.depth)
+#define sexp_context_bc(x)      ((x)->value.context.bc)
+#define sexp_context_pos(x)     ((x)->value.context.pos)
+#define sexp_context_lambda(x)  ((x)->value.context.lambda)
+#define sexp_context_offsets(x) ((x)->value.context.offsets)
+#define sexp_context_tailp(x)   ((x)->value.context.tailp)
+
+/****************************** arithmetic ****************************/
+
+#define sexp_fx_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
+#define sexp_fx_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
+#define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
+#define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
+#define sexp_fx_mod(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
+
+#define sexp_fp_add(a, b) (sexp_make_flonum(sexp_flonum_value(a) + sexp_flonum_value(b)))
+#define sexp_fp_sub(a, b) (sexp_make_flonum(sexp_flonum_value(a) - sexp_flonum_value(b)))
+#define sexp_fp_mul(a, b) (sexp_make_flonum(sexp_flonum_value(a) * sexp_flonum_value(b)))
+#define sexp_fp_div(a, b) (sexp_make_flonum(sexp_flonum_value(a) / sexp_flonum_value(b)))
+
+/****************************** utilities *****************************/
+
+#define sexp_list1(a)          sexp_cons(a, SEXP_NULL)
+#define sexp_list2(a, b)       sexp_cons(a, sexp_cons(b, SEXP_NULL))
+#define sexp_list3(a, b, c)    sexp_cons(a, sexp_cons(b, sexp_cons(c, SEXP_NULL)))
+#define sexp_list4(a, b, c, d) sexp_cons(a, sexp_cons(b, sexp_cons(c, sexp_cons(d, SEXP_NULL))))
+
+#define sexp_push(ls, x)    ((ls) = sexp_cons((x), (ls)))
+#define sexp_insert(ls, x)  ((sexp_list_index((ls), (x)) >= 0) ? (ls) : sexp_push((ls), (x)))
+
+#define sexp_car(x)       ((x)->value.pair.car)
+#define sexp_cdr(x)       ((x)->value.pair.cdr)
+
+#define sexp_caar(x)      (sexp_car(sexp_car(x)))
+#define sexp_cadr(x)      (sexp_car(sexp_cdr(x)))
+#define sexp_cdar(x)      (sexp_cdr(sexp_car(x)))
+#define sexp_cddr(x)      (sexp_cdr(sexp_cdr(x)))
+
+#define sexp_caaar(x)     (sexp_car(sexp_caar(x)))
+#define sexp_caadr(x)     (sexp_car(sexp_cadr(x)))
+#define sexp_cadar(x)     (sexp_car(sexp_cdar(x)))
+#define sexp_caddr(x)     (sexp_car(sexp_cddr(x)))
+#define sexp_cdaar(x)     (sexp_cdr(sexp_caar(x)))
+#define sexp_cdadr(x)     (sexp_cdr(sexp_cadr(x)))
+#define sexp_cddar(x)     (sexp_cdr(sexp_cdar(x)))
+#define sexp_cdddr(x)     (sexp_cdr(sexp_cddr(x)))
+
+#define sexp_cadddr(x)    (sexp_cadr(sexp_cddr(x)))
+#define sexp_cddddr(x)    (sexp_cddr(sexp_cddr(x)))
+
+/***************************** general API ****************************/
 
 #if USE_STRING_STREAMS
 #if SEXP_BSD
@@ -293,47 +394,14 @@ void sexp_write_string(sexp str, sexp port);
 void sexp_printf(sexp port, sexp fmt, ...);
 #endif
 
-#define sexp_fx_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
-#define sexp_fx_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
-#define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
-#define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
-#define sexp_fx_mod(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
-
-#define sexp_fp_add(a, b) (sexp_make_flonum(sexp_flonum_value(a) + sexp_flonum_value(b)))
-#define sexp_fp_sub(a, b) (sexp_make_flonum(sexp_flonum_value(a) - sexp_flonum_value(b)))
-#define sexp_fp_mul(a, b) (sexp_make_flonum(sexp_flonum_value(a) * sexp_flonum_value(b)))
-#define sexp_fp_div(a, b) (sexp_make_flonum(sexp_flonum_value(a) / sexp_flonum_value(b)))
-
-#define sexp_list1(a)          sexp_cons(a, SEXP_NULL)
-#define sexp_list2(a, b)       sexp_cons(a, sexp_cons(b, SEXP_NULL))
-#define sexp_list3(a, b, c)    sexp_cons(a, sexp_cons(b, sexp_cons(c, SEXP_NULL)))
-#define sexp_list4(a, b, c, d) sexp_cons(a, sexp_cons(b, sexp_cons(c, sexp_cons(d, SEXP_NULL))))
-
-#define sexp_car(x)       ((x)->value.pair.car)
-#define sexp_cdr(x)       ((x)->value.pair.cdr)
-
-#define sexp_caar(x)      (sexp_car(sexp_car(x)))
-#define sexp_cadr(x)      (sexp_car(sexp_cdr(x)))
-#define sexp_cdar(x)      (sexp_cdr(sexp_car(x)))
-#define sexp_cddr(x)      (sexp_cdr(sexp_cdr(x)))
-
-#define sexp_caaar(x)     (sexp_car(sexp_caar(x)))
-#define sexp_caadr(x)     (sexp_car(sexp_cadr(x)))
-#define sexp_cadar(x)     (sexp_car(sexp_cdar(x)))
-#define sexp_caddr(x)     (sexp_car(sexp_cddr(x)))
-#define sexp_cdaar(x)     (sexp_cdr(sexp_caar(x)))
-#define sexp_cdadr(x)     (sexp_cdr(sexp_cadr(x)))
-#define sexp_cddar(x)     (sexp_cdr(sexp_cdar(x)))
-#define sexp_cdddr(x)     (sexp_cdr(sexp_cddr(x)))
-
-#define sexp_cadddr(x)    (sexp_cadr(sexp_cddr(x)))
-#define sexp_cddddr(x)    (sexp_cddr(sexp_cddr(x)))
+/***************************** general API ****************************/
 
 sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp head, sexp tail);
 int sexp_listp(sexp obj);
 int sexp_list_index(sexp ls, sexp elt);
 sexp sexp_lset_diff(sexp a, sexp b);
+/* sexp sexp_lset_union(sexp a, sexp b); */
 sexp sexp_reverse(sexp ls);
 sexp sexp_nreverse(sexp ls);
 sexp sexp_append(sexp a, sexp b);

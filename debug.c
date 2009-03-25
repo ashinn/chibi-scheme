@@ -7,7 +7,7 @@ static const char* reverse_opcode_names[] =
    "FCALL0", "FCALL1",
    "FCALL2", "FCALL3", "FCALLN",
    "JUMP-UNLESS", "JUMP", "RET", "DONE", "PARAMETER",
-   "STACK-REF", "STACK-SET", "CLOSURE-REF",
+   "LOCAL-REF", "LOCAL-SET", "CLOSURE-REF",
    "VECTOR-REF", "VECTOR-SET", "STRING-REF", "STRING-SET", "MAKE-PROCEDURE",
    "MAKE-VECTOR", "PUSH", "DROP", "PAIRP", "NULLP", "VECTORP",
    "INTEGERP", "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP",
@@ -27,8 +27,8 @@ void disasm (sexp bc) {
     fprintf(stderr, "  <unknown> %d ", opcode);
   }
   switch (opcode) {
-  case OP_STACK_REF:
-  case OP_STACK_SET:
+  case OP_LOCAL_REF:
+  case OP_LOCAL_SET:
   case OP_CLOSURE_REF:
   case OP_PARAMETER:
     fprintf(stderr, "%ld", (long) ((sexp*)ip)[0]);
