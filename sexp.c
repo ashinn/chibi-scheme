@@ -54,7 +54,7 @@ static int symbol_table_count = 0;
 sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag) {
   sexp res = (sexp) sexp_alloc(size);
   if (! res)
-    errx(EX_OSERR, "out of memory: couldn't allocate %d bytes for %d",
+    errx(EX_OSERR, "out of memory: couldn't allocate %ld bytes for %ld",
          size ,tag);
   res->tag = tag;
   return res;
@@ -65,7 +65,7 @@ void sexp_deep_free (sexp obj) {
   int len, i;
   sexp *elts;
   if (sexp_pointerp(obj)) {
-    switch (obj->tag) {
+    switch (sexp_pointer_tag(obj)) {
     case SEXP_PAIR:
       sexp_deep_free(sexp_car(obj));
       sexp_deep_free(sexp_cdr(obj));
@@ -190,6 +190,14 @@ sexp sexp_lset_diff(sexp a, sexp b) {
       res = sexp_cons(sexp_car(a), res);
   return res;
 }
+
+/* sexp sexp_lset_union(sexp a, sexp b) { */
+/*   if (! sexp_pairp(b)) */
+/*     return a; */
+/*   for ( ; sexp_pairp(a); a=sexp_cdr(a)) */
+/*     sexp_insert(sexp_car(a), b); */
+/*   return b; */
+/* } */
 
 sexp sexp_reverse(sexp ls) {
   sexp res = SEXP_NULL;
@@ -421,7 +429,7 @@ void sexp_write (sexp obj, sexp out) {
   if (! obj) {
     sexp_write_string("#<null>", out);
   } else if (sexp_pointerp(obj)) {
-    switch (sexp_tag(obj)) {
+    switch (sexp_pointer_tag(obj)) {
     case SEXP_PAIR:
       sexp_write_char('(', out);
       sexp_write(sexp_car(obj), out);

@@ -70,8 +70,10 @@ enum opcode_names {
   OP_RET,
   OP_DONE,
   OP_PARAMETER,
-  OP_STACK_REF,
-  OP_STACK_SET,
+/*   OP_STACK_REF, */
+/*   OP_STACK_SET, */
+  OP_LOCAL_REF,
+  OP_LOCAL_SET,
   OP_CLOSURE_REF,
   OP_VECTOR_REF,
   OP_VECTOR_SET,
@@ -122,26 +124,26 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p);
+/* sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p); */
 
-sexp analyze_app(sexp obj, sexp *bc, sexp_uint_t *i,
-                 sexp e, sexp params, sexp fv, sexp sv,
-                 sexp_uint_t *d, int tailp);
-sexp analyze_lambda(sexp name, sexp formals, sexp body,
-                    sexp *bc, sexp_uint_t *i, sexp e,
-                    sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
-void analyze_var_ref(sexp name, sexp *bc, sexp_uint_t *i, sexp e,
-                     sexp params, sexp fv, sexp sv, sexp_uint_t *d);
-sexp analyze_opcode(sexp op, sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
-                    sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
-sexp analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e,
-             sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
-sexp analyze_sequence(sexp ls, sexp *bc, sexp_uint_t *i, sexp e,
-                      sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp);
-sexp vm(sexp bc, sexp e, sexp* stack, sexp_sint_t top);
+/* sexp analyze_app(sexp obj, sexp *bc, sexp_uint_t *i, */
+/*                  sexp e, sexp params, sexp fv, sexp sv, */
+/*                  sexp_uint_t *d, int tailp); */
+/* sexp analyze_lambda(sexp name, sexp formals, sexp body, */
+/*                     sexp *bc, sexp_uint_t *i, sexp e, */
+/*                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
+/* void analyze_var_ref(sexp name, sexp *bc, sexp_uint_t *i, sexp e, */
+/*                      sexp params, sexp fv, sexp sv, sexp_uint_t *d); */
+/* sexp analyze_opcode(sexp op, sexp obj, sexp *bc, sexp_uint_t *i, sexp e, */
+/*                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
+/* sexp analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e, */
+/*              sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
+/* sexp analyze_sequence(sexp ls, sexp *bc, sexp_uint_t *i, sexp e, */
+/*                       sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
+/* sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top); */
 
-sexp eval_in_stack(sexp expr, sexp e, sexp* stack, sexp_sint_t top);
-sexp eval(sexp expr, sexp e);
+sexp eval_in_context(sexp expr, sexp env, sexp context);
+sexp eval(sexp expr, sexp env);
 
 #endif /* ! SEXP_EVAL_H */
 
