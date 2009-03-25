@@ -56,7 +56,7 @@ sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag) {
   if (! res)
     errx(EX_OSERR, "out of memory: couldn't allocate %ld bytes for %ld",
          size ,tag);
-  res->tag = tag;
+  sexp_pointer_tag(res) = tag;
   return res;
 }
 
