@@ -7,7 +7,7 @@ CFLAGS=-Wall -g -fno-inline -save-temps -Os
 
 GC_OBJ=./gc/gc.a
 
-$GC_OBJ: ./gc/alloc.c
+./gc/gc.a: ./gc/alloc.c
 	cd gc && make test
 
 sexp.o: sexp.c sexp.h config.h defaults.h Makefile
