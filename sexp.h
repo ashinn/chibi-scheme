@@ -143,7 +143,7 @@ struct sexp_struct {
       sexp var, value;
     } set;
     struct {
-      sexp name, loc;
+      sexp name, cell;
     } ref;
     struct {
       sexp ls;
@@ -313,7 +313,8 @@ struct sexp_struct {
 #define sexp_set_value(x)     ((x)->value.set.value)
 
 #define sexp_ref_name(x)      ((x)->value.ref.name)
-#define sexp_ref_loc(x)       ((x)->value.ref.loc)
+#define sexp_ref_cell(x)      ((x)->value.ref.cell)
+#define sexp_ref_loc(x)       (sexp_cdr(sexp_ref_cell(x)))
 
 #define sexp_seq_ls(x)        ((x)->value.seq.ls)
 
