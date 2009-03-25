@@ -186,10 +186,10 @@ static sexp sexp_make_set(sexp var, sexp value) {
   return res;
 }
 
-static sexp sexp_make_ref(sexp name, sexp loc) {
+static sexp sexp_make_ref(sexp name, sexp cell) {
   sexp res = sexp_alloc_type(ref, SEXP_REF);
   sexp_ref_name(res) = name;
-  sexp_ref_loc(res) = loc;
+  sexp_ref_cell(res) = cell;
   return res;
 }
 
@@ -378,7 +378,7 @@ sexp analyze_app (sexp x, sexp env) {
 sexp analyze_define (sexp x, sexp env) {
   sexp ref, name, value;
   name = (sexp_pairp(sexp_cadr(x)) ? sexp_caadr(x) : sexp_cadr(x));
-  if (sexp_lambdap(sexp_env_lambda(env)))
+  if (sexp_env_lambda(env) && sexp_lambdap(sexp_env_lambda(env)))
     sexp_push(sexp_lambda_locals(sexp_env_lambda(env)), name);
   if (sexp_pairp(sexp_cadr(x)))
     value = analyze_lambda(sexp_cons(SEXP_UNDEF,
@@ -395,7 +395,7 @@ sexp analyze_define (sexp x, sexp env) {
 
 sexp analyze_var_ref (sexp x, sexp env) {
   sexp cell = env_cell_create(env, x, SEXP_UNDEF);
-  return sexp_make_ref(x, sexp_cdr(cell));
+  return sexp_make_ref(x, cell);
 }
 
 sexp analyze_set (sexp x, sexp env) {
@@ -492,7 +492,7 @@ void compile_ref (sexp ref, sexp context, int unboxp) {
   sexp lam;
   if (! sexp_lambdap(sexp_ref_loc(ref))) {
     /* global ref */
-    emit_push(ref, context);
+    emit_push(sexp_ref_cell(ref), context);
     emit(OP_CDR, context);
   } else {
     lam = sexp_context_lambda(context);
@@ -501,10 +501,10 @@ void compile_ref (sexp ref, sexp context, int unboxp) {
   }
 }
 
-void compile_non_global_ref (sexp name, sexp loc, sexp lambda, sexp fv,
+void compile_non_global_ref (sexp name, sexp cell, sexp lambda, sexp fv,
                              sexp context, int unboxp) {
-  sexp ls;
   sexp_uint_t i;
+  sexp ls, loc = sexp_cdr(cell);
   if (loc == lambda) {
     /* local ref */
     emit(OP_LOCAL_REF, context);
@@ -528,7 +528,7 @@ void compile_set (sexp set, sexp context) {
   compile_one(sexp_set_value(set), context);
   if (! sexp_lambdap(sexp_ref_loc(ref))) {
     /* global vars are set directly */
-    emit_push(ref, context);
+    emit_push(sexp_ref_cell(ref), context);
   } else {
     /* stack or closure mutable vars are boxed */
     compile_ref(ref, context, 0);
