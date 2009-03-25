@@ -82,10 +82,10 @@ void print_bytecode (sexp bc) {
   }
 }
 
-void print_stack (sexp *stack, int top) {
+void print_stack (sexp *stack, int top, int fp) {
   int i;
   for (i=0; i<top; i++) {
-    fprintf(stderr, "  %02d: ", i);
+    fprintf(stderr, "%s %02d: ", ((i==fp) ? "*" : " "), i);
     fflush(stderr);
     sexp_write(stack[i], cur_error_port);
     fprintf(stderr, "\n");

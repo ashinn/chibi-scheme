@@ -186,7 +186,7 @@ sexp sexp_assq (sexp x, sexp ls) {
 sexp sexp_lset_diff(sexp a, sexp b) {
   sexp res = SEXP_NULL;
   for ( ; sexp_pairp(a); a=sexp_cdr(a))
-    if (! sexp_list_index(b, sexp_car(a)) >= 0)
+    if (sexp_list_index(b, sexp_car(a)) < 0)
       res = sexp_cons(sexp_car(a), res);
   return res;
 }
@@ -478,6 +478,13 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#<exception>", out); break;
     case SEXP_MACRO:
       sexp_write_string("#<macro>", out); break;
+    case SEXP_LAMBDA:
+      sexp_write_string("#<lambda>", out); break;
+    case SEXP_REF:
+      sexp_write_string("#<ref: ", out);
+      sexp_write(sexp_ref_name(obj), out);
+      sexp_write_string(">", out);
+      break;
     case SEXP_STRING:
       sexp_write_char('"', out);
       i = sexp_string_length(obj);
