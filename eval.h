@@ -70,8 +70,7 @@ enum opcode_names {
   OP_RET,
   OP_DONE,
   OP_PARAMETER,
-/*   OP_STACK_REF, */
-/*   OP_STACK_SET, */
+  OP_STACK_REF,
   OP_LOCAL_REF,
   OP_LOCAL_SET,
   OP_CLOSURE_REF,
