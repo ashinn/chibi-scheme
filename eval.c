@@ -530,7 +530,7 @@ void compile_opcode_app (sexp app, sexp context) {
   sexp_sint_t i, num_args = sexp_unbox_integer(sexp_length(sexp_cdr(app)));
 
   /* maybe push the default for an optional argument */
-  if ((num_args < sexp_opcode_num_args(op))
+  if ((num_args == sexp_opcode_num_args(op))
       && sexp_opcode_variadic_p(op) && sexp_opcode_data(op)) {
     emit(OP_PARAMETER, context);
     emit_word((sexp_uint_t)sexp_opcode_data(op), context);
@@ -1044,7 +1044,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG1 = sexp_make_integer(i);
     stack[top] = sexp_make_integer(ip+sizeof(sexp));
     stack[top+1] = cp;
-    stack[top+2] = (sexp) fp;
+    stack[top+2] = sexp_make_integer(fp);
     top+=3;
     bc = sexp_procedure_code(tmp1);
     ip = sexp_bytecode_data(bc);
@@ -1067,7 +1067,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     stack[top] = sexp_make_integer(1);
     stack[top+1] = sexp_make_integer(ip);
     stack[top+2] = cp;
-    stack[top+3] = (sexp) fp;
+    stack[top+3] = sexp_make_integer(fp);
     _ARG1
       = sexp_make_procedure(sexp_make_integer(0), sexp_make_integer(1),
                             continuation_resumer,
@@ -1079,7 +1079,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   case OP_RESUMECC:
     tmp1 = _ARG5;
     top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
-    fp = (sexp_sint_t) _ARG1;
+    fp = sexp_unbox_integer(_ARG1);
     cp = _ARG2;
     ip = (unsigned char*) sexp_unbox_integer(_ARG3);
     i = sexp_unbox_integer(_ARG4);
@@ -1130,6 +1130,8 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   case OP_DISPLAY:
     if (sexp_stringp(_ARG1)) {
       sexp_write_string(sexp_string_data(_ARG1), _ARG2);
+      _ARG2 = SEXP_UNDEF;
+      top--;
       break;
     }
   case OP_WRITE:
@@ -1139,6 +1141,8 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_WRITE_CHAR:
     sexp_write_char(sexp_unbox_character(_ARG1), _ARG2);
+    _ARG2 = SEXP_UNDEF;
+    top--;
     break;
   case OP_NEWLINE:
     sexp_write_char('\n', _ARG1);
@@ -1157,7 +1161,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case OP_RET:
-    fp = (sexp_sint_t) _ARG2;
+    fp = sexp_unbox_integer(_ARG2);
     cp = _ARG3;
     ip = (unsigned char*) sexp_unbox_integer(_ARG4);
     i = sexp_unbox_integer(_ARG5);
