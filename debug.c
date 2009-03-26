@@ -31,6 +31,8 @@ void disasm (sexp bc) {
   case OP_LOCAL_SET:
   case OP_CLOSURE_REF:
   case OP_PARAMETER:
+  case OP_JUMP:
+  case OP_JUMP_UNLESS:
     fprintf(stderr, "%ld", (long) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
@@ -44,11 +46,6 @@ void disasm (sexp bc) {
       sexp_write(((sexp*)ip)[0], cur_error_port);
       ip += sizeof(sexp);
     }
-    break;
-  case OP_JUMP:
-  case OP_JUMP_UNLESS:
-    fprintf(stderr, "%d", ip[0]);
-    ip++;
     break;
   }
   fprintf(stderr, "\n");
