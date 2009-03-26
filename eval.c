@@ -605,33 +605,47 @@ void compile_general_app (sexp app, sexp context) {
 }
 
 void compile_lambda (sexp lambda, sexp context) {
-  sexp fv, ctx, flags, bc, len, ref, vec, prev_lambda, prev_fv;
+  sexp fv, ls, ctx, flags, bc, len, ref, vec, prev_lambda, prev_fv;
   sexp_uint_t k;
   prev_lambda = sexp_context_lambda(context);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
   ctx = sexp_new_context(sexp_context_stack(context));
   sexp_context_lambda(ctx) = lambda;
+  /* box mutable vars */
+  for (ls=sexp_lambda_sv(lambda); sexp_pairp(ls); ls=sexp_cdr(ls)) {
+    k = sexp_list_index(sexp_lambda_params(lambda), sexp_car(ls));
+    if (k >= 0) {
+      emit(OP_LOCAL_REF, ctx);
+      emit_word(k, ctx);
+      emit_push(sexp_car(ls), ctx);
+      emit(OP_CONS, ctx);
+      emit(OP_LOCAL_SET, ctx);
+      emit_word(k, ctx);
+      emit(OP_DROP, ctx);
+    }
+  }
   compile_one(sexp_lambda_body(lambda), ctx);
   flags = sexp_make_integer(sexp_listp(sexp_lambda_params(lambda)) ? 0 : 1);
   len = sexp_length(sexp_lambda_params(lambda));
   bc = finalize_bytecode(ctx);
   if (sexp_nullp(fv)) {
+    /* shortcut, no free vars */
     vec = sexp_make_vector(sexp_make_integer(0), SEXP_UNDEF);
     compile_lit(sexp_make_procedure(flags, len, bc, vec), context);
   } else {
     /* push the closed vars */
     emit_push(SEXP_UNDEF, context);
-    emit_push(len, context);
+    emit_push(sexp_length(fv), context);
     emit(OP_MAKE_VECTOR, context);
     sexp_context_depth(context)--;
     for (k=0; sexp_pairp(fv); fv=sexp_cdr(fv), k++) {
       ref = sexp_car(fv);
       compile_non_global_ref(sexp_ref_name(ref), sexp_ref_cell(ref),
-                             prev_lambda, prev_fv, context, 1);
+                             prev_lambda, prev_fv, context, 0);
       emit_push(sexp_make_integer(k), context);
       emit(OP_LOCAL_REF, context);
-      emit_word(3, context);
+      emit_word(-5, context);
       emit(OP_VECTOR_SET, context);
       emit(OP_DROP, context);
       sexp_context_depth(context)--;
@@ -647,7 +661,8 @@ void compile_lambda (sexp lambda, sexp context) {
 sexp insert_free_var (sexp x, sexp fv) {
   sexp name=sexp_ref_name(x), loc=sexp_ref_loc(x), ls;
   for (ls=fv; sexp_pairp(ls); ls=sexp_cdr(ls))
-    if (name == sexp_caar(ls) && loc == sexp_cdar(ls))
+    if ((name == sexp_ref_name(sexp_car(ls)))
+        && (loc == sexp_ref_loc(sexp_car(ls))))
       return fv;
   return sexp_cons(x, fv);
 }
@@ -662,12 +677,12 @@ sexp union_free_vars (sexp fv1, sexp fv2) {
 
 sexp diff_free_vars (sexp fv, sexp params) {
   sexp res = SEXP_NULL;
-  /* sexp_debug("diff-free-vars: ", fv); */
-  /* sexp_debug("params: ", params); */
+/*   sexp_debug("diff-free-vars: ", fv); */
+/*   sexp_debug("params: ", params); */
   for ( ; sexp_pairp(fv); fv=sexp_cdr(fv))
     if (sexp_list_index(params, sexp_ref_name(sexp_car(fv))) < 0)
       sexp_push(res, sexp_car(fv));
-  /* sexp_debug(" => ", res); */
+/*   sexp_debug(" => ", res); */
   return res;
 }
 
@@ -785,10 +800,14 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     ip += sizeof(sexp);
     break;
   case OP_VECTOR_REF:
+    if (! sexp_vectorp(_ARG1))
+      sexp_raise("vector-ref: not a vector", sexp_list1(_ARG1));
     _ARG2 = sexp_vector_ref(_ARG1, _ARG2);
     top--;
     break;
   case OP_VECTOR_SET:
+    if (! sexp_vectorp(_ARG1))
+      sexp_raise("vector-set!: not a vector", sexp_list1(_ARG1));
     sexp_vector_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_UNDEF;
     top-=2;
@@ -1136,18 +1155,14 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case OP_RET:
-/*     if (top<4) */
-/*       goto end_loop; */
     fp = (sexp_sint_t) _ARG2;
     cp = _ARG3;
     ip = (unsigned char*) sexp_unbox_integer(_ARG4);
     i = sexp_unbox_integer(_ARG5);
     stack[top-i-5] = _ARG1;
     top = top-i-4;
-    fprintf(stderr, "returning to %p (i=%ld)\n", ip, i);
     break;
   case OP_DONE:
-    fprintf(stderr, "done!\n");
     goto end_loop;
   default:
     sexp_raise("unknown opcode", sexp_list1(sexp_make_integer(*(ip-1))));
@@ -1369,12 +1384,8 @@ int main (int argc, char **argv) {
   sexp_uint_t i, quit=0, init_loaded=0;
 
   scheme_init();
-/*   stack = (sexp*) sexp_alloc(sizeof(sexp) * INIT_STACK_SIZE); */
   env = make_standard_env();
   interaction_environment = env;
-/*   bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+16, SEXP_BYTECODE); */
-/*   sexp_bytecode_length(bc) = 16; */
-/*   i = 0; */
   context = sexp_new_context(NULL);
   emit_push(SEXP_UNDEF, context);
   emit(OP_DONE, context);
