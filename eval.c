@@ -33,8 +33,8 @@ sexp analyze_define (sexp x, sexp env);
 sexp analyze_var_ref (sexp x, sexp env);
 sexp analyze_set (sexp x, sexp env);
 
-sexp_uint_t sexp_context_make_label (sexp context);
-void sexp_context_patch_label (sexp context, sexp_uint_t label);
+sexp_sint_t sexp_context_make_label (sexp context);
+void sexp_context_patch_label (sexp context, sexp_sint_t label);
 void compile_one (sexp x, sexp context);
 void compile_lit (sexp value, sexp context);
 void compile_seq (sexp app, sexp context);
@@ -336,9 +336,9 @@ sexp analyze_seq (sexp ls, sexp env) {
 
 sexp analyze_if (sexp x, sexp env) {
   sexp test, pass, fail;
-  analyze_bind(test, sexp_car(x), env);
-  analyze_bind(pass, sexp_cadr(x), env);
-  analyze_bind(fail, sexp_pairp(sexp_cddr(x))?sexp_caddr(x):SEXP_UNDEF, env);
+  analyze_bind(test, sexp_cadr(x), env);
+  analyze_bind(pass, sexp_caddr(x), env);
+  analyze_bind(fail, sexp_pairp(sexp_cdddr(x))?sexp_cadddr(x):SEXP_UNDEF, env);
   return sexp_make_cnd(test, pass, fail);
 }
 
@@ -386,16 +386,16 @@ sexp analyze_set (sexp x, sexp env) {
   return sexp_make_set(ref, value);
 }
 
-sexp_uint_t sexp_context_make_label (sexp context) {
-  sexp_uint_t label = sexp_context_pos(context);
+sexp_sint_t sexp_context_make_label (sexp context) {
+  sexp_sint_t label = sexp_context_pos(context);
   sexp_context_pos(context) += sizeof(sexp_uint_t);
   return label;
 }
 
-void sexp_context_patch_label (sexp context, sexp_uint_t label) {
+void sexp_context_patch_label (sexp context, sexp_sint_t label) {
   sexp bc = sexp_context_bc(context);
-  ((sexp_uint_t*) sexp_bytecode_data(bc))[label]
-    = sexp_context_pos(context)-label;
+  unsigned char *data = sexp_bytecode_data(bc)+label;
+  *((sexp_sint_t*)data) = sexp_context_pos(context)-label;
 }
 
 static sexp finalize_bytecode (sexp context) {
@@ -452,7 +452,7 @@ void compile_seq (sexp app, sexp context) {
 }
 
 void compile_cnd (sexp cnd, sexp context) {
-  sexp_uint_t label1, label2;
+  sexp_sint_t label1, label2;
   compile_one(sexp_cnd_test(cnd), context);
   emit(OP_JUMP_UNLESS, context);
   sexp_context_depth(context)--;
@@ -1067,21 +1067,23 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     stack[top] = sexp_make_integer(1);
     stack[top+1] = sexp_make_integer(ip);
     stack[top+2] = cp;
+    stack[top+3] = (sexp) fp;
     _ARG1
       = sexp_make_procedure(sexp_make_integer(0), sexp_make_integer(1),
                             continuation_resumer,
-                            sexp_vector(1, sexp_save_stack(stack, top+3)));
+                            sexp_vector(1, sexp_save_stack(stack, top+4)));
     top++;
     ip -= sizeof(sexp);
     goto make_call;
     break;
   case OP_RESUMECC:
-    tmp1 = _ARG4;
+    tmp1 = _ARG5;
     top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
-    cp = _ARG1;
-    ip = (unsigned char*) sexp_unbox_integer(_ARG2);
-    i = sexp_unbox_integer(_ARG3);
-    top -= 3;
+    fp = (sexp_sint_t) _ARG1;
+    cp = _ARG2;
+    ip = (unsigned char*) sexp_unbox_integer(_ARG3);
+    i = sexp_unbox_integer(_ARG4);
+    top -= 4;
     _ARG1 = tmp1;
     break;
   case OP_ERROR:
@@ -1117,13 +1119,13 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_JUMP_UNLESS:
     if (stack[--top] == SEXP_FALSE) {
-      ip += ((sexp_uint_t*)ip)[0];
+      ip += ((sexp_sint_t*)ip)[0];
     } else {
-      ip++;
+      ip += sizeof(sexp_sint_t);
     }
     break;
   case OP_JUMP:
-    ip += ((sexp_uint_t*)ip)[0];
+    ip += ((sexp_sint_t*)ip)[0];
     break;
   case OP_DISPLAY:
     if (sexp_stringp(_ARG1)) {
