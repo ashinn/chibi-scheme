@@ -771,16 +771,11 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     fprintf(stderr, "noop\n");
     break;
   case OP_LOCAL_REF:
-/*     fprintf(stderr, "STACK-REF[%ld - %ld = %ld]\n", top, */
-/*             (sexp_sint_t) ((sexp*)ip)[0], top - (sexp_sint_t) ((sexp*)ip)[0]); */
-    /* stack[top] = stack[top - (sexp_sint_t) ((sexp*)ip)[0]]; */
     stack[top] = stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
     top++;
     break;
   case OP_LOCAL_SET:
-/*     fprintf(stderr, "STACK-SET[%ld - %ld = %ld]\n", top, */
-/*             (sexp_sint_t) ((sexp*)ip)[0], top - (sexp_sint_t) ((sexp*)ip)[0]); */
     stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]] = _ARG1;
     _ARG1 = SEXP_UNDEF;
     ip += sizeof(sexp);
