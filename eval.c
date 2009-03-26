@@ -285,7 +285,7 @@ sexp analyze (sexp x, sexp env) {
           res = analyze_seq(x, env);
           break;
         case CORE_QUOTE:
-          res = sexp_make_lit(x);
+          res = sexp_make_lit(sexp_cadr(x));
           break;
         default:
           res = sexp_compile_error("unknown core form", sexp_list1(op));
