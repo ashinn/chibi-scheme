@@ -112,6 +112,19 @@ static sexp sexp_flatten_dot (sexp ls) {
   return sexp_nreverse(sexp_reverse_flatten_dot(ls));
 }
 
+static int sexp_param_index (sexp params, sexp name) {
+  int i=0;
+  while (sexp_pairp(params)) {
+    if (sexp_car(params) == name)
+      return i;
+    params = sexp_cdr(params);
+    i++;
+  }
+  if (params == name)
+    return i;
+  return -1;
+}
+
 /************************* bytecode utilities ***************************/
 
 static void shrink_bcode(sexp context, sexp_uint_t i) {
@@ -489,7 +502,7 @@ void compile_non_global_ref (sexp name, sexp cell, sexp lambda, sexp fv,
     /* local ref */
     sexp_debug("params: ", sexp_lambda_params(lambda));
     emit(OP_LOCAL_REF, context);
-    emit_word(sexp_list_index(sexp_lambda_params(lambda), name), context);
+    emit_word(sexp_param_index(sexp_lambda_params(lambda), name), context);
   } else {
     /* closure ref */
     for (i=0; sexp_pairp(fv); fv=sexp_cdr(fv), i++)
@@ -614,7 +627,7 @@ void compile_lambda (sexp lambda, sexp context) {
   sexp_context_lambda(ctx) = lambda;
   /* box mutable vars */
   for (ls=sexp_lambda_sv(lambda); sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    k = sexp_list_index(sexp_lambda_params(lambda), sexp_car(ls));
+    k = sexp_param_index(sexp_lambda_params(lambda), sexp_car(ls));
     if (k >= 0) {
       emit(OP_LOCAL_REF, ctx);
       emit_word(k, ctx);
@@ -680,7 +693,7 @@ sexp diff_free_vars (sexp fv, sexp params) {
 /*   sexp_debug("diff-free-vars: ", fv); */
 /*   sexp_debug("params: ", params); */
   for ( ; sexp_pairp(fv); fv=sexp_cdr(fv))
-    if (sexp_list_index(params, sexp_ref_name(sexp_car(fv))) < 0)
+    if (sexp_param_index(params, sexp_ref_name(sexp_car(fv))) < 0)
       sexp_push(res, sexp_car(fv));
 /*   sexp_debug(" => ", res); */
   return res;
@@ -690,7 +703,7 @@ sexp free_vars (sexp x, sexp fv) {
   sexp fv1, fv2;
   if (sexp_lambdap(x)) {
     fv1 = free_vars(sexp_lambda_body(x), SEXP_NULL);
-    fv2 = diff_free_vars(fv1, sexp_flatten_dot(sexp_lambda_params(x)));
+    fv2 = diff_free_vars(fv1, sexp_lambda_params(x));
     sexp_lambda_fv(x) = fv2;
     fv = union_free_vars(fv2, fv);
   } else if (sexp_pairp(x)) {
@@ -1019,17 +1032,19 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     if (! sexp_procedurep(tmp1))
       sexp_raise("non procedure application", sexp_list1(tmp1));
     j = i - sexp_unbox_integer(sexp_procedure_num_args(tmp1));
+    fprintf(stderr, "arg difference: %ld-%ld = %ld\n", i, sexp_unbox_integer(sexp_procedure_num_args(tmp1)), j);
     if (j < 0)
       sexp_raise("not enough args", sexp_list2(tmp1, sexp_make_integer(i)));
     if (j > 0) {
       if (sexp_procedure_variadic_p(tmp1)) {
+        fprintf(stderr, "unrolling args\n");
         stack[top-i-1] = sexp_cons(stack[top-i-1], SEXP_NULL);
         for (k=top-i; k<top-(i-j)-1; k++)
           stack[top-i-1] = sexp_cons(stack[k], stack[top-i-1]);
         for ( ; k<top; k++)
           stack[k-j+1] = stack[k];
         top -= (j-1);
-        i-=(j-1);
+        i -= (j-1);
       } else {
         sexp_raise("too many args", sexp_list2(tmp1, sexp_make_integer(i)));
       }
