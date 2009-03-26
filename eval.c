@@ -657,8 +657,8 @@ void compile_lambda (sexp lambda, sexp context) {
       compile_non_global_ref(sexp_ref_name(ref), sexp_ref_cell(ref),
                              prev_lambda, prev_fv, context, 0);
       emit_push(sexp_make_integer(k), context);
-      emit(OP_LOCAL_REF, context);
-      emit_word(-5, context);
+      emit(OP_STACK_REF, context);
+      emit_word(3, context);
       emit(OP_VECTOR_SET, context);
       emit(OP_DROP, context);
       sexp_context_depth(context)--;
@@ -792,23 +792,34 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   sexp_sint_t i, j, k, fp=top-4;
 
  loop:
+  fprintf(stderr, "\n");
   print_stack(stack, top, fp);
-  fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip);
+  /* fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip); */
+  fprintf(stderr, "%s ", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>");
   switch (*ip++) {
   case OP_NOOP:
-    fprintf(stderr, "noop\n");
+    fprintf(stderr, "<<<NOOP>>>\n");
+    break;
+  case OP_STACK_REF:
+    fprintf(stderr, "%ld - %ld => %ld", top, (sexp_sint_t) ((sexp*)ip)[0], top - (sexp_sint_t) ((sexp*)ip)[0]);
+    stack[top] = stack[top - (sexp_sint_t) ((sexp*)ip)[0]];
+    ip += sizeof(sexp);
+    top++;
     break;
   case OP_LOCAL_REF:
+    fprintf(stderr, "%ld - 1 - %ld => %ld", fp, (sexp_sint_t) ((sexp*)ip)[0], fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]);
     stack[top] = stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
     top++;
     break;
   case OP_LOCAL_SET:
+    fprintf(stderr, "%ld - 1 - %ld => %ld", fp, (sexp_sint_t) ((sexp*)ip)[0], fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]);
     stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]] = _ARG1;
     _ARG1 = SEXP_UNDEF;
     ip += sizeof(sexp);
     break;
   case OP_CLOSURE_REF:
+    fprintf(stderr, "%ld", sexp_unbox_integer(((sexp*)ip)[0]));
     _PUSH(sexp_vector_ref(cp, ((sexp*)ip)[0]));
     ip += sizeof(sexp);
     break;
@@ -1016,6 +1027,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     top -= (j-i-1);
     goto make_call;
   case OP_CALL:
+    fprintf(stderr, " %ld", sexp_unbox_integer(((sexp*)ip)[0]));
     if (top >= INIT_STACK_SIZE)
       sexp_raise("out of stack space", SEXP_NULL);
     i = sexp_unbox_integer(((sexp*)ip)[0]);
@@ -1103,6 +1115,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_ERROR:
   call_error_handler:
+    fprintf(stderr, "\n");
     sexp_print_exception(_ARG1, cur_error_port);
     tmp1 = sexp_cdr(exception_handler_cell);
     stack[top] = (sexp) 1;
@@ -1184,6 +1197,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     top = top-i-4;
     break;
   case OP_DONE:
+    fprintf(stderr, "\n");
     goto end_loop;
   default:
     sexp_raise("unknown opcode", sexp_list1(sexp_make_integer(*(ip-1))));
