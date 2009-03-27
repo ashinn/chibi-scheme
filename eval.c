@@ -32,6 +32,7 @@ static sexp analyze_app (sexp x, sexp context);
 static sexp analyze_define (sexp x, sexp context);
 static sexp analyze_var_ref (sexp x, sexp context);
 static sexp analyze_set (sexp x, sexp context);
+static sexp analyze_define_syntax (sexp x, sexp context);
 
 static sexp_sint_t sexp_context_make_label (sexp context);
 static void sexp_context_patch_label (sexp context, sexp_sint_t label);
@@ -280,14 +281,18 @@ static sexp analyze (sexp x, sexp context) {
         case CORE_QUOTE:
           res = sexp_make_lit(sexp_cadr(x));
           break;
+        case CORE_DEFINE_SYNTAX:
+          res = analyze_define_syntax(x, context);
+          break;
         default:
           res = sexp_compile_error("unknown core form", sexp_list1(op));
           break;
         }
       } else if (sexp_macrop(op)) {
-        /* x = expand_macro(op, x, context); */
-        /* goto loop; */
-        res = sexp_compile_error("macros not yet supported", sexp_list1(x));
+        x = apply(sexp_macro_proc(op),
+                  sexp_list3(x, sexp_context_env(context), sexp_macro_env(op)),
+                  context);
+        goto loop;
       } else if (sexp_opcodep(op)) {
         res = analyze_app(sexp_cdr(x), context);
         analyze_check_exception(res);
@@ -394,6 +399,15 @@ static sexp analyze_set (sexp x, sexp context) {
   analyze_check_exception(ref);
   analyze_bind(value, sexp_caddr(x), context);
   return sexp_make_set(ref, value);
+}
+
+static sexp analyze_define_syntax (sexp x, sexp context) {
+  sexp name = sexp_cadr(x), cell, proc;
+  proc = eval_in_context(sexp_caddr(x), context);
+  analyze_check_exception(proc);
+  cell = env_cell_create(sexp_context_env(context), name, SEXP_UNDEF);
+  sexp_cdr(cell) = sexp_make_macro(proc, sexp_context_env(context));
+  return SEXP_UNDEF;
 }
 
 static sexp_sint_t sexp_context_make_label (sexp context) {
@@ -732,25 +746,24 @@ static sexp make_param_list(sexp_uint_t i) {
   return res;
 }
 
-static sexp make_opcode_procedure(sexp op, sexp_uint_t i, sexp e) {
-/*   sexp bc, params, res; */
-/*   sexp_uint_t pos=0, d=0; */
-/*   if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op)) */
-/*     return sexp_opcode_proc(op); */
-/*   bc = sexp_alloc_tagged(sexp_sizeof(bytecode)+INIT_BCODE_SIZE, SEXP_BYTECODE); */
-/*   params = make_param_list(i); */
-/*   e = extend_env(e, params, SEXP_UNDEF); */
-/*   sexp_bytecode_length(bc) = INIT_BCODE_SIZE; */
-/*   analyze_opcode(op, sexp_cons(op, params), &bc, &pos, e, params, */
-/*                  SEXP_NULL, SEXP_NULL, &d, 0); */
-/*   emit(&bc, &pos, OP_RET); */
-/*   shrink_bcode(&bc, pos); */
-/*   /\* disasm(bc); *\/ */
-/*   res = sexp_make_procedure(sexp_make_integer(0), sexp_make_integer(i), bc, SEXP_UNDEF); */
-/*   if (i == sexp_opcode_num_args(op)) */
-/*     sexp_opcode_proc(op) = res; */
-/*   return res; */
-  return SEXP_UNDEF;
+static sexp make_opcode_procedure (sexp op, sexp_uint_t i, sexp env,
+                                   sexp *stack, sexp_sint_t top) {
+  sexp context, params, bc, res;
+  if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
+    return sexp_opcode_proc(op);
+  params = make_param_list(i);
+  context = sexp_new_context(stack);
+  sexp_context_top(context) = top;
+  sexp_context_env(context) = extend_env(env, params, SEXP_UNDEF);
+  generate_opcode_app(sexp_cons(op, params), context);
+  bc = finalize_bytecode(context);
+  res = sexp_make_procedure(sexp_make_integer(0),
+                            sexp_make_integer(i),
+                            bc,
+                            SEXP_UNDEF);
+  if (i == sexp_opcode_num_args(op))
+    sexp_opcode_proc(op) = res;
+  return res;
 }
 
 /*********************** the virtual machine **************************/
@@ -1032,7 +1045,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   make_call:
     if (sexp_opcodep(tmp1)) {
       /* compile non-inlined opcode applications on the fly */
-      tmp1 = make_opcode_procedure(tmp1, i, e);
+      tmp1 = make_opcode_procedure(tmp1, i, e, stack, top);
       if (sexp_exceptionp(tmp1)) {
         _ARG1 = tmp1;
         goto call_error_handler;
@@ -1041,7 +1054,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     if (! sexp_procedurep(tmp1))
       sexp_raise("non procedure application", sexp_list1(tmp1));
     j = i - sexp_unbox_integer(sexp_procedure_num_args(tmp1));
-    fprintf(stderr, "arg difference: %ld-%ld = %ld\n", i, sexp_unbox_integer(sexp_procedure_num_args(tmp1)), j);
+    fprintf(stderr, "\narg difference: %ld-%ld = %ld\n", i, sexp_unbox_integer(sexp_procedure_num_args(tmp1)), j);
     if (j < 0)
       sexp_raise("not enough args", sexp_list2(tmp1, sexp_make_integer(i)));
     if (j > 0) {
@@ -1338,9 +1351,10 @@ sexp make_standard_env () {
 /* args ... n ret-ip ret-cp ret-fp */
 sexp apply(sexp proc, sexp args, sexp context) {
   sexp *stack = sexp_context_stack(context), ls;
-  sexp_sint_t top = sexp_context_top(context);
-  for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls))
-    stack[top++] = sexp_car(ls);
+  sexp_sint_t top = sexp_context_top(context), offset;
+  offset = top + sexp_unbox_integer(sexp_length(args));
+  for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
+    stack[--offset] = sexp_car(ls);
   stack[top] = sexp_make_integer(top);
   top++;
   stack[top++] = sexp_make_integer(sexp_bytecode_data(final_resumer));
