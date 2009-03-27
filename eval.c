@@ -217,6 +217,7 @@ static sexp sexp_new_context(sexp *stack) {
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
+  sexp_context_tailp(res) = 1;
   return res;
 }
 
@@ -467,11 +468,14 @@ static void generate_lit (sexp value, sexp context) {
 
 static void generate_seq (sexp app, sexp context) {
   sexp head=app, tail=sexp_cdr(app);
+  sexp_uint_t tailp = sexp_context_tailp(context);
+  sexp_context_tailp(context) = 0;
   for ( ; sexp_pairp(tail); head=tail, tail=sexp_cdr(tail)) {
     generate(sexp_car(head), context);
     emit(OP_DROP, context);
     sexp_context_depth(context)--;
   }
+  sexp_context_tailp(context) = tailp;
   generate(sexp_car(head), context);
 }
 
@@ -617,7 +621,6 @@ static void generate_general_app (sexp app, sexp context) {
   /* maybe overwrite the current frame */
   if (sexp_context_tailp(context)) {
     emit(OP_TAIL_CALL, context);
-    emit_word(sexp_context_depth(context), context);
     emit_word((sexp_uint_t)sexp_make_integer(len), context);
   } else {
     /* normal call */
@@ -1033,12 +1036,12 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     /* old-args ... n ret-ip ret-cp new-args ...   proc  */
     /* [================= j ===========================] */
     /*                              [==== i =====]       */
-    j = sexp_unbox_integer(((sexp*)ip)[0]);    /* current depth */
     i = sexp_unbox_integer(((sexp*)ip)[1]);    /* number of params */
     tmp1 = _ARG1;                       /* procedure to call */
     /* save frame info */
     ip = ((unsigned char*) sexp_unbox_integer(stack[top-i-3])) - sizeof(sexp);
     cp = stack[top-i-2];
+    fp = stack[top-i-2];
     /* copy new args into place */
     for (k=0; k<i; k++)
       stack[top-j+k] = stack[top-i-1+k];

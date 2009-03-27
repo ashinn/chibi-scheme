@@ -42,11 +42,6 @@ void disasm (sexp bc) {
   case OP_PUSH:
     sexp_write(((sexp*)ip)[0], cur_error_port);
     ip += sizeof(sexp);
-    if (opcode==OP_TAIL_CALL) {
-      fprintf(stderr, " ");
-      sexp_write(((sexp*)ip)[0], cur_error_port);
-      ip += sizeof(sexp);
-    }
     break;
   }
   fprintf(stderr, "\n");
