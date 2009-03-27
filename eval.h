@@ -124,24 +124,7 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-/* sexp compile(sexp params, sexp obj, sexp e, sexp fv, sexp sv, int done_p); */
-
-/* sexp analyze_app(sexp obj, sexp *bc, sexp_uint_t *i, */
-/*                  sexp e, sexp params, sexp fv, sexp sv, */
-/*                  sexp_uint_t *d, int tailp); */
-/* sexp analyze_lambda(sexp name, sexp formals, sexp body, */
-/*                     sexp *bc, sexp_uint_t *i, sexp e, */
-/*                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
-/* void analyze_var_ref(sexp name, sexp *bc, sexp_uint_t *i, sexp e, */
-/*                      sexp params, sexp fv, sexp sv, sexp_uint_t *d); */
-/* sexp analyze_opcode(sexp op, sexp obj, sexp *bc, sexp_uint_t *i, sexp e, */
-/*                     sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
-/* sexp analyze(sexp obj, sexp *bc, sexp_uint_t *i, sexp e, */
-/*              sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
-/* sexp analyze_sequence(sexp ls, sexp *bc, sexp_uint_t *i, sexp e, */
-/*                       sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
-/* sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top); */
-
+sexp apply(sexp proc, sexp args, sexp context);
 sexp eval_in_context(sexp expr, sexp context);
 sexp eval(sexp expr, sexp env);
 
