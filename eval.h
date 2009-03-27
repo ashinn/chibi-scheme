@@ -59,6 +59,7 @@ enum opcode_names {
   OP_APPLY1,
   OP_CALLCC,
   OP_RESUMECC,
+  OP_EVAL,
   OP_ERROR,
   OP_FCALL0,
   OP_FCALL1,

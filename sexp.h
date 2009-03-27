@@ -349,7 +349,7 @@ struct sexp_struct {
 #define sexp_list4(a, b, c, d) sexp_cons(a, sexp_cons(b, sexp_cons(c, sexp_cons(d, SEXP_NULL))))
 
 #define sexp_push(ls, x)    ((ls) = sexp_cons((x), (ls)))
-#define sexp_insert(ls, x)  ((sexp_list_index((ls), (x)) >= 0) ? (ls) : sexp_push((ls), (x)))
+#define sexp_insert(ls, x)  ((sexp_memq((x), (ls)) != SEXP_FALSE) ? (ls) : sexp_push((ls), (x)))
 
 #define sexp_car(x)       ((x)->value.pair.car)
 #define sexp_cdr(x)       ((x)->value.pair.cdr)
@@ -400,9 +400,6 @@ void sexp_printf(sexp port, sexp fmt, ...);
 sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp head, sexp tail);
 int sexp_listp(sexp obj);
-int sexp_list_index(sexp ls, sexp elt);
-sexp sexp_lset_diff(sexp a, sexp b);
-/* sexp sexp_lset_union(sexp a, sexp b); */
 sexp sexp_reverse(sexp ls);
 sexp sexp_nreverse(sexp ls);
 sexp sexp_append(sexp a, sexp b);

@@ -154,17 +154,6 @@ int sexp_listp (sexp obj) {
   return (obj == SEXP_NULL);
 }
 
-int sexp_list_index (sexp ls, sexp elt) {
-  int i=0;
-  while (sexp_pairp(ls)) {
-    if (sexp_car(ls) == elt)
-      return i;
-    ls = sexp_cdr(ls);
-    i++;
-  }
-  return -1;
-}
-
 sexp sexp_memq (sexp x, sexp ls) {
   while (sexp_pairp(ls))
     if (x == sexp_car(ls))
@@ -182,22 +171,6 @@ sexp sexp_assq (sexp x, sexp ls) {
       ls = sexp_cdr(ls);
   return SEXP_FALSE;
 }
-
-sexp sexp_lset_diff(sexp a, sexp b) {
-  sexp res = SEXP_NULL;
-  for ( ; sexp_pairp(a); a=sexp_cdr(a))
-    if (sexp_list_index(b, sexp_car(a)) < 0)
-      res = sexp_cons(sexp_car(a), res);
-  return res;
-}
-
-/* sexp sexp_lset_union(sexp a, sexp b) { */
-/*   if (! sexp_pairp(b)) */
-/*     return a; */
-/*   for ( ; sexp_pairp(a); a=sexp_cdr(a)) */
-/*     sexp_insert(sexp_car(a), b); */
-/*   return b; */
-/* } */
 
 sexp sexp_reverse(sexp ls) {
   sexp res = SEXP_NULL;
