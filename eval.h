@@ -142,7 +142,7 @@ enum opcode_names {
 /*                       sexp params, sexp fv, sexp sv, sexp_uint_t *d, int tailp); */
 /* sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top); */
 
-sexp eval_in_context(sexp expr, sexp env, sexp context);
+sexp eval_in_context(sexp expr, sexp context);
 sexp eval(sexp expr, sexp env);
 
 #endif /* ! SEXP_EVAL_H */
