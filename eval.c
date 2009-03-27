@@ -748,14 +748,22 @@ static sexp make_param_list(sexp_uint_t i) {
 
 static sexp make_opcode_procedure (sexp op, sexp_uint_t i, sexp env,
                                    sexp *stack, sexp_sint_t top) {
-  sexp context, params, bc, res;
+  sexp context, lambda, params, refs, ls, bc, res;
   if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
     return sexp_opcode_proc(op);
   params = make_param_list(i);
   context = sexp_new_context(stack);
+  lambda = sexp_alloc_type(lambda, SEXP_LAMBDA);
+  sexp_lambda_params(lambda) = params;
+  sexp_lambda_fv(lambda) = SEXP_NULL;
+  sexp_lambda_sv(lambda) = SEXP_NULL;
+  sexp_context_lambda(context) = lambda;
   sexp_context_top(context) = top;
-  sexp_context_env(context) = extend_env(env, params, SEXP_UNDEF);
-  generate_opcode_app(sexp_cons(op, params), context);
+  env = extend_env(env, params, lambda);
+  sexp_context_env(context) = env;
+  for (ls=params, refs=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls))
+    sexp_push(refs, sexp_make_ref(sexp_car(ls), env_cell(env, sexp_car(ls))));
+  generate_opcode_app(sexp_cons(op, sexp_reverse(refs)), context);
   bc = finalize_bytecode(context);
   res = sexp_make_procedure(sexp_make_integer(0),
                             sexp_make_integer(i),
