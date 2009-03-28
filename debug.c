@@ -45,8 +45,7 @@ void disasm (sexp bc) {
     break;
   }
   fprintf(stderr, "\n");
-  if ((! (opcode == OP_RET) || (opcode == OP_DONE))
-      && (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc)))
+  if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
 }
 
