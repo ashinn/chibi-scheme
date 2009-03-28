@@ -217,7 +217,7 @@ static sexp sexp_new_context(sexp *stack) {
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
-  sexp_context_tailp(res) = 1;
+  sexp_context_tailp(res) = 0;
   return res;
 }
 
@@ -480,8 +480,10 @@ static void generate_seq (sexp app, sexp context) {
 }
 
 static void generate_cnd (sexp cnd, sexp context) {
-  sexp_sint_t label1, label2;
+  sexp_sint_t label1, label2, tailp=sexp_context_tailp(context);
+  sexp_context_tailp(context) = 0;
   generate(sexp_cnd_test(cnd), context);
+  sexp_context_tailp(context) = tailp;
   emit(OP_JUMP_UNLESS, context);
   sexp_context_depth(context)--;
   label1 = sexp_context_make_label(context);
@@ -504,7 +506,7 @@ static void generate_ref (sexp ref, sexp context, int unboxp) {
   } else {
     lam = sexp_context_lambda(context);
     generate_non_global_ref(sexp_ref_name(ref), sexp_ref_cell(ref), lam,
-                           sexp_lambda_fv(lam), context, unboxp);
+                            sexp_lambda_fv(lam), context, unboxp);
   }
 }
 
@@ -521,7 +523,8 @@ static void generate_non_global_ref (sexp name, sexp cell, sexp lambda,
   } else {
     /* closure ref */
     for (i=0; sexp_pairp(fv); fv=sexp_cdr(fv), i++)
-      if (name == sexp_car(fv) && loc == sexp_cdr(fv))
+      if ((name == sexp_ref_name(sexp_car(fv)))
+          && (loc == sexp_ref_loc(sexp_car(fv))))
         break;
     emit(OP_CLOSURE_REF, context);
     emit_word(i, context);
@@ -669,7 +672,7 @@ static void generate_lambda (sexp lambda, sexp context) {
     for (k=0; sexp_pairp(fv); fv=sexp_cdr(fv), k++) {
       ref = sexp_car(fv);
       generate_non_global_ref(sexp_ref_name(ref), sexp_ref_cell(ref),
-                             prev_lambda, prev_fv, context, 0);
+                              prev_lambda, prev_fv, context, 0);
       emit_push(sexp_make_integer(k), context);
       emit(OP_STACK_REF, context);
       emit_word(3, context);
@@ -821,7 +824,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   case OP_NOOP:
     fprintf(stderr, "<<<NOOP>>>\n");
     break;
-  case OP_STACK_REF:
+  case OP_STACK_REF:            /* pick in forth */
     fprintf(stderr, "%ld - %ld => %ld", top, (sexp_sint_t) ((sexp*)ip)[0], top - (sexp_sint_t) ((sexp*)ip)[0]);
     stack[top] = stack[top - (sexp_sint_t) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
@@ -840,8 +843,8 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     ip += sizeof(sexp);
     break;
   case OP_CLOSURE_REF:
-    fprintf(stderr, "%ld", sexp_unbox_integer(((sexp*)ip)[0]));
-    _PUSH(sexp_vector_ref(cp, ((sexp*)ip)[0]));
+    fprintf(stderr, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
+    _PUSH(sexp_vector_ref(cp, sexp_make_integer(((sexp*)ip)[0])));
     ip += sizeof(sexp);
     break;
   case OP_VECTOR_REF:
@@ -1041,7 +1044,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     /* save frame info */
     ip = ((unsigned char*) sexp_unbox_integer(stack[top-i-3])) - sizeof(sexp);
     cp = stack[top-i-2];
-    fp = stack[top-i-2];
+    fp = (sexp_sint_t) stack[top-i-2];
     /* copy new args into place */
     for (k=0; k<i; k++)
       stack[top-j+k] = stack[top-i-1+k];
@@ -1116,16 +1119,17 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     stack[top+1] = sexp_make_integer(ip);
     stack[top+2] = cp;
     stack[top+3] = sexp_make_integer(fp);
-    _ARG1
-      = sexp_make_procedure(sexp_make_integer(0), sexp_make_integer(1),
-                            continuation_resumer,
-                            sexp_vector(1, sexp_save_stack(stack, top+4)));
+    tmp2 = sexp_vector(1, sexp_save_stack(stack, top+4));
+    _ARG1 = sexp_make_procedure(sexp_make_integer(0),
+                                sexp_make_integer(1),
+                                continuation_resumer,
+                                tmp2);
     top++;
     ip -= sizeof(sexp);
     goto make_call;
     break;
   case OP_RESUMECC:
-    tmp1 = _ARG5;
+    tmp1 = stack[fp-1];
     top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
     fp = sexp_unbox_integer(_ARG1);
     cp = _ARG2;
@@ -1210,12 +1214,12 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case OP_RET:
-    fp = sexp_unbox_integer(_ARG2);
-    cp = _ARG3;
-    ip = (unsigned char*) sexp_unbox_integer(_ARG4);
-    i = sexp_unbox_integer(_ARG5);
-    stack[top-i-5] = _ARG1;
-    top = top-i-4;
+    i = sexp_unbox_integer(stack[fp]);
+    stack[fp-i] = _ARG1;
+    top = fp-i+1;
+    ip = (unsigned char*) sexp_unbox_integer(stack[fp+1]);
+    cp = stack[fp+2];
+    fp = sexp_unbox_integer(stack[fp+3]);
     break;
   case OP_DONE:
     fprintf(stderr, "\n");
