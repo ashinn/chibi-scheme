@@ -36,7 +36,9 @@ static char sexp_separators[] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, /* x5_ */
 };
 
-#define digit_value(c) (((c)<='9') ? ((c) - '0') : ((toupper(c) - 'A') + 10))
+static int digit_value (c) {
+  return (((c)<='9') ? ((c) - '0') : ((toupper(c) - 'A') + 10));
+}
 
 static int is_separator(int c) {
   /* return (!((c-9)&(~3))) | (~(c^4)); */
@@ -133,9 +135,12 @@ sexp sexp_print_exception(sexp exn, sexp out) {
 }
 
 static sexp sexp_read_error(char *message, sexp irritants, sexp port) {
-  return sexp_make_exception(the_read_error_symbol, sexp_make_string(message),
+  sexp name = (sexp_port_name(port)
+               ? sexp_make_string(sexp_port_name(port)) : SEXP_FALSE);
+  return sexp_make_exception(the_read_error_symbol,
+                             sexp_make_string(message),
                              irritants,
-                             sexp_make_string(sexp_port_name(port)),
+                             name,
                              sexp_make_integer(sexp_port_line(port)));
 }
 
@@ -382,6 +387,7 @@ sexp sexp_get_output_string(sexp port) {
 sexp sexp_make_input_port(FILE* in) {
   sexp p = sexp_alloc_type(port, SEXP_IPORT);
   sexp_port_stream(p) = in;
+  sexp_port_name(p) = NULL;
   sexp_port_line(p) = 0;
   return p;
 }
@@ -389,6 +395,7 @@ sexp sexp_make_input_port(FILE* in) {
 sexp sexp_make_output_port(FILE* out) {
   sexp p = sexp_alloc_type(port, SEXP_OPORT);
   sexp_port_stream(p) = out;
+  sexp_port_name(p) = NULL;
   sexp_port_line(p) = 0;
   return p;
 }
@@ -480,7 +487,12 @@ void sexp_write (sexp obj, sexp out) {
   } else if (sexp_integerp(obj)) {
     sexp_printf(out, "%ld", sexp_unbox_integer(obj));
   } else if (sexp_charp(obj)) {
-    if ((33 <= sexp_unbox_character(obj)) && (sexp_unbox_character(obj) < 127))
+    if (obj == sexp_make_character(' '))
+      sexp_write_string("#\\space", out);
+    else if (obj == sexp_make_character('\n'))
+      sexp_write_string("#\\newline", out);
+    else if ((33 <= sexp_unbox_character(obj))
+             && (sexp_unbox_character(obj) < 127))
       sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
     else
       sexp_printf(out, "#\\x%02d", sexp_unbox_character(obj));
@@ -700,49 +712,59 @@ sexp sexp_read_raw (sexp in) {
       res = sexp_read_number(in, 10); break;
     case 'x':
       res = sexp_read_number(in, 16); break;
-/*     case 'e': */
-/*     case 'i': */
+    case 'e':
+      res = sexp_read(in);
+      if (sexp_flonump(res))
+        res = sexp_make_integer((sexp_sint_t)sexp_flonum_value(res));
+      break;
+    case 'i':
+      res = sexp_read(in);
+      if (sexp_integerp(res))
+        res = sexp_make_flonum(sexp_unbox_integer(res));
+      break;
     case 'f':
     case 't':
       c2 = sexp_read_char(in);
       if (c2 == EOF || is_separator(c2)) {
         res = (c1 == 't' ? SEXP_TRUE : SEXP_FALSE);
+        sexp_push_char(c2, in);
       } else {
-        return sexp_read_error("invalid syntax #%c%c",
-                               sexp_list2(sexp_make_character(c1),
-                                          sexp_make_character(c2)),
-                               in);
+        res = sexp_read_error("invalid syntax #%c%c",
+                              sexp_list2(sexp_make_character(c1),
+                                         sexp_make_character(c2)),
+                              in);
       }
-      sexp_push_char(c2, in);
       break;
     case ';':
       sexp_read_raw(in);
       goto scan_loop;
     case '\\':
       c1 = sexp_read_char(in);
-      c2 = sexp_read_char(in);
-      if (c2 == EOF || is_separator(c2)) {
-        sexp_push_char(c2, in);
+      str = sexp_read_symbol(in, c1);
+      if (str[0] == '\0')
+        res =
+          sexp_read_error("unexpected end of character literal", SEXP_NULL, in);
+      if (str[1] == '\0') {
         res = sexp_make_character(c1);
-      } else if ((c1 == 'x' || c1 == 'X') && isxdigit(c2)) {
-        c1 = sexp_read_char(in);
-        res = sexp_make_character(16 * digit_value(c2) + digit_value(c1));
+      } else if ((c1 == 'x' || c1 == 'X') &&
+                 isxdigit(str[0]) && isxdigit(str[1]) && str[2] == '\0') {
+        res = sexp_make_character(16 * digit_value(c1) + digit_value(str[1]));
       } else {
-        str = sexp_read_symbol(in, c1);
         if (strcasecmp(str, "space") == 0)
           res = sexp_make_character(' ');
         else if (strcasecmp(str, "newline") == 0)
-          res = sexp_make_character('\r');
+          res = sexp_make_character('\n');
         else if (strcasecmp(str, "return") == 0)
           res = sexp_make_character('\r');
         else if (strcasecmp(str, "tab") == 0)
           res = sexp_make_character('\t');
         else {
-          return sexp_read_error("unknown character name",
-                                 sexp_list1(sexp_make_string(str)),
-                                 in);
+          res = sexp_read_error("unknown character name",
+                                sexp_list1(sexp_make_string(str)),
+                                in);
         }
       }
+      sexp_free(str);
       break;
     case '(':
       sexp_push_char(c1, in);
@@ -750,17 +772,17 @@ sexp sexp_read_raw (sexp in) {
       if (! sexp_listp(res)) {
         if (! sexp_exceptionp(res)) {
           sexp_deep_free(res);
-          return sexp_read_error("dotted list not allowed in vector syntax",
-                                 SEXP_NULL,
-                                 in);
+          res = sexp_read_error("dotted list not allowed in vector syntax",
+                                SEXP_NULL,
+                                in);
         }
       } else {
         res = sexp_list_to_vector(res);
       }
       break;
     default:
-      return sexp_read_error("invalid # syntax",
-                             sexp_list1(sexp_make_character(c1)), in);
+      res = sexp_read_error("invalid # syntax",
+                            sexp_list1(sexp_make_character(c1)), in);
     }
     break;
   case '.':
