@@ -12,7 +12,6 @@ junk*
 *.tar.bz2
 *.log
 *.err
-*.res
 *.out
 gc
 gc6.8
