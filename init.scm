@@ -76,6 +76,16 @@
 
 ;; syntax
 
+(define sc-macro-transformer
+  (lambda (f)
+    (lambda (expr use-env mac-env)
+      (make-syntactic-closure mac-env '() (f expr use-env)))))
+
+(define rsc-macro-transformer
+  (lambda (f)
+    (lambda (expr use-env mac-env)
+      (make-syntactic-closure use-env '() (f expr mac-env)))))
+
 (define-syntax let
   (lambda (expr use-env mac-env)
     (cons (cons 'lambda (cons (map car (cadr expr)) (cddr expr)))
@@ -90,12 +100,13 @@
                          (cddr expr)))))))
 
 (define-syntax or
-  (lambda (expr use-env mac-env)
-    (if (null? (cdr expr))
-        #f
-        (if (null? (cddr expr))
-            (cadr expr)
-            (list 'let (list (list 'tmp (cadr expr)))
-                  (list 'if 'tmp
-                        'tmp
-                        (cons 'or (cddr expr))))))))
+  (sc-macro-transformer
+   (lambda (expr use-env)
+     (if (null? (cdr expr))
+         #f
+         (if (null? (cddr expr))
+             (make-syntactic-closure use-env '() (cadr expr))
+             (list 'let (list (list 'tmp (make-syntactic-closure use-env '() (cadr expr))))
+                   (list 'if 'tmp
+                         'tmp
+                         (make-syntactic-closure use-env '() (cons 'or (cddr expr))))))))))

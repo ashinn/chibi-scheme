@@ -458,13 +458,46 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#<exception>", out); break;
     case SEXP_MACRO:
       sexp_write_string("#<macro>", out); break;
+#if USE_DEBUG
     case SEXP_LAMBDA:
-      sexp_write_string("#<lambda>", out); break;
+      sexp_write_string("#<lambda ", out);
+      sexp_write(sexp_lambda_params(obj), out);
+      sexp_write_char(' ', out);
+      sexp_write(sexp_lambda_body(obj), out);
+      sexp_write_char('>', out);
+      break;
+    case SEXP_SEQ:
+      sexp_write_string("#<seq ", out);
+      sexp_write(sexp_seq_ls(obj), out);
+      sexp_write_char('>', out);
+      break;
+    case SEXP_CND:
+      sexp_write_string("#<if ", out);
+      sexp_write(sexp_cnd_test(obj), out);
+      sexp_write_char(' ', out);
+      sexp_write(sexp_cnd_pass(obj), out);
+      sexp_write_char(' ', out);
+      sexp_write(sexp_cnd_fail(obj), out);
+      sexp_write_char('>', out);
+      break;
     case SEXP_REF:
       sexp_write_string("#<ref: ", out);
       sexp_write(sexp_ref_name(obj), out);
+      sexp_printf(out, " %p>", sexp_ref_loc(obj));
+      break;
+    case SEXP_SET:
+      sexp_write_string("#<set! ", out);
+      sexp_write(sexp_set_var(obj), out);
+      sexp_write_char(' ', out);
+      sexp_write(sexp_set_value(obj), out);
       sexp_write_string(">", out);
       break;
+    case SEXP_SYNCLO:
+      sexp_write_string("#<sc ", out);
+      sexp_write(sexp_synclo_expr(obj), out);
+      sexp_write_string(">", out);
+      break;
+#endif
     case SEXP_STRING:
       sexp_write_char('"', out);
       i = sexp_string_length(obj);
