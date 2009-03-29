@@ -8,6 +8,9 @@
 /* uncomment this if you only want fixnum support */
 /* #define USE_FLONUMS 0 */
 
+/* uncomment this if you don't need extended math operations */
+/* #define USE_MATH 0 */
+
 /* uncomment this to disable huffman-coded immediate symbols */
 /* #define USE_HUFF_SYMS 0 */
 
