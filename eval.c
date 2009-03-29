@@ -221,7 +221,7 @@ static sexp sexp_new_context(sexp *stack) {
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
-  sexp_context_tailp(res) = 0;
+  sexp_context_tailp(res) = 1;
   return res;
 }
 
@@ -540,6 +540,7 @@ static void generate_non_global_ref (sexp name, sexp cell, sexp lambda,
 static void generate_set (sexp set, sexp context) {
   sexp ref = sexp_set_var(set);
   /* compile the value */
+  sexp_context_tailp(context) = 0;
   generate(sexp_set_value(set), context);
   if (! sexp_lambdap(sexp_ref_loc(ref))) {
     /* global vars are set directly */
@@ -562,6 +563,7 @@ static void generate_app (sexp app, sexp context) {
 static void generate_opcode_app (sexp app, sexp context) {
   sexp ls, op = sexp_car(app);
   sexp_sint_t i, num_args = sexp_unbox_integer(sexp_length(sexp_cdr(app)));
+  sexp_context_tailp(context) = 0;
 
   /* maybe push the default for an optional argument */
   if ((num_args == sexp_opcode_num_args(op))
@@ -615,9 +617,11 @@ static void generate_opcode_app (sexp app, sexp context) {
 
 static void generate_general_app (sexp app, sexp context) {
   sexp ls;
-  sexp_uint_t len = sexp_unbox_integer(sexp_length(sexp_cdr(app)));
+  sexp_uint_t len = sexp_unbox_integer(sexp_length(sexp_cdr(app))),
+    tailp = sexp_context_tailp(context);
 
   /* push the arguments onto the stack */
+  sexp_context_tailp(context) = 0;
   for (ls = sexp_reverse(sexp_cdr(app)); sexp_pairp(ls); ls = sexp_cdr(ls))
     generate(sexp_car(ls), context);
 
@@ -625,14 +629,8 @@ static void generate_general_app (sexp app, sexp context) {
   generate(sexp_car(app), context);
 
   /* maybe overwrite the current frame */
-  if (sexp_context_tailp(context)) {
-    emit(OP_TAIL_CALL, context);
-    emit_word((sexp_uint_t)sexp_make_integer(len), context);
-  } else {
-    /* normal call */
-    emit(OP_CALL, context);
-    emit_word((sexp_uint_t)sexp_make_integer(len), context);
-  }
+  emit((tailp ? OP_TAIL_CALL : OP_CALL), context);
+  emit_word((sexp_uint_t)sexp_make_integer(len), context);
 
   sexp_context_depth(context) -= len;
 }
@@ -1044,18 +1042,18 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_TAIL_CALL:
     /* old-args ... n ret-ip ret-cp new-args ...   proc  */
-    /* [================= j ===========================] */
     /*                              [==== i =====]       */
-    i = sexp_unbox_integer(((sexp*)ip)[1]);    /* number of params */
-    tmp1 = _ARG1;                       /* procedure to call */
+    i = sexp_unbox_integer(((sexp*)ip)[0]);    /* number of params */
+    tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
-    ip = ((unsigned char*) sexp_unbox_integer(stack[top-i-3])) - sizeof(sexp);
-    cp = stack[top-i-2];
-    fp = (sexp_sint_t) stack[top-i-2];
+    j = sexp_unbox_integer(stack[fp]);
+    ip = ((unsigned char*) sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
+    cp = stack[fp+2];
     /* copy new args into place */
     for (k=0; k<i; k++)
-      stack[top-j+k] = stack[top-i-1+k];
-    top -= (j-i-1);
+      stack[fp-j+k] = stack[top-1-i+k];
+    top = fp+i-j+1;
+    fp = sexp_unbox_integer(stack[fp+3]);
     goto make_call;
   case OP_CALL:
     fprintf(stderr, " %ld", sexp_unbox_integer(((sexp*)ip)[0]));
@@ -1463,6 +1461,7 @@ int main (int argc, char **argv) {
   interaction_environment = env;
   context = sexp_new_context(NULL);
   sexp_context_env(context) = env;
+  sexp_context_tailp(context) = 0;
   emit_push(SEXP_UNDEF, context);
   emit(OP_DONE, context);
   err_handler = sexp_make_procedure(sexp_make_integer(0),
