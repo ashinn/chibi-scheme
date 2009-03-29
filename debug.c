@@ -3,18 +3,15 @@
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
 static const char* reverse_opcode_names[] =
-  {"NOOP", "TAIL-CALL", "CALL", "APPLY1", "CALLCC", "RESUMECC", "EVAL",
-   "ERROR", "FCALL0", "FCALL1",
-   "FCALL2", "FCALL3", "FCALLN",
-   "JUMP-UNLESS", "JUMP", "RET", "DONE", "PARAMETER", "STACK-REF",
-   "LOCAL-REF", "LOCAL-SET", "CLOSURE-REF",
-   "VECTOR-REF", "VECTOR-SET", "STRING-REF", "STRING-SET", "MAKE-PROCEDURE",
-   "MAKE-VECTOR", "PUSH", "DROP", "PAIRP", "NULLP", "VECTORP",
-   "INTEGERP", "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP",
-   "OPORTP", "CAR", "CDR", "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB", "MUL",
-   "DIV", "QUOT", "MOD", "NEG", "INV", "LT", "LE", "GT", "GE", "EQN", "EQ",
-   "DISPLAY", "WRITE", "WRITE-CHAR", "NEWLINE", "FLUSH-OUTPUT", "READ",
-   "READ-CHAR",
+  {"NOOP", "ERROR", "RESUMECC", "CALLCC", "APPLY1", "TAIL_CALL", "CALL",
+   "FCALL0", "FCALL1", "FCALL2", "FCALL3", "EVAL", "JUMP_UNLESS", "JUMP",
+   "PARAMETER", "PUSH", "DROP", "STACK_REF", "LOCAL_REF", "LOCAL_SET",
+   "CLOSURE_REF", "VECTOR_REF", "VECTOR_SET", "STRING_REF", "STRING_SET",
+   "MAKE_PROCEDURE", "MAKE_VECTOR", "PAIRP", "NULLP", "VECTORP", "INTEGERP",
+   "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP", "OPORTP",
+   "CAR", "CDR", "SET_CAR", "SET_CDR", "CONS", "ADD", "SUB", "MUL", "DIV",
+   "QUOT", "MOD", "NEG", "INV", "LT", "LE", "EQV", "EQ", "DISPLAY", "WRITE",
+   "WRITE_CHAR", "NEWLINE", "FLUSH_OUTPUT", "READ", "READ_CHAR", "RET", "DONE",
   };
 
 void disasm (sexp bc) {

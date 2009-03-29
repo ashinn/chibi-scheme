@@ -76,6 +76,11 @@
 
 ;; syntax
 
+(define-syntax let
+  (lambda (expr use-env mac-env)
+    (cons (cons 'lambda (cons (map car (cadr expr)) (cddr expr)))
+          (map cadr (cadr expr)))))
+
 (define-syntax letrec
   (lambda (expr use-env mac-env)
     (list
@@ -83,11 +88,6 @@
            (cons '()
                  (append (map (lambda (x) (cons 'define x)) (cadr expr))
                          (cddr expr)))))))
-
-(define-syntax let
-  (lambda (expr use-env mac-env)
-    (cons (cons 'lambda (cons (map car (cadr expr)) (cddr expr)))
-          (map cadr (cadr expr)))))
 
 (define-syntax or
   (lambda (expr use-env mac-env)

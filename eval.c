@@ -821,34 +821,177 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   sexp_sint_t i, j, k, fp=top-4;
 
  loop:
-  fprintf(stderr, "\n");
-  print_stack(stack, top, fp);
-  /* fprintf(stderr, "OP: %s (%d)\n", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>", *ip); */
-  fprintf(stderr, "%s ", (*ip<=71) ? reverse_opcode_names[*ip] : "<unknown>");
+  /* fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN"); */
   switch (*ip++) {
   case OP_NOOP:
     fprintf(stderr, "<<<NOOP>>>\n");
     break;
-  case OP_STACK_REF:            /* pick in forth */
-    fprintf(stderr, "%ld - %ld => %ld", top, (sexp_sint_t) ((sexp*)ip)[0], top - (sexp_sint_t) ((sexp*)ip)[0]);
+  case OP_ERROR:
+  call_error_handler:
+    fprintf(stderr, "\n");
+    sexp_print_exception(_ARG1, cur_error_port);
+    tmp1 = sexp_cdr(exception_handler_cell);
+    stack[top] = (sexp) 1;
+    stack[top+1] = sexp_make_integer(ip+4);
+    stack[top+2] = cp;
+    top+=3;
+    bc = sexp_procedure_code(tmp1);
+    ip = sexp_bytecode_data(bc);
+    cp = sexp_procedure_vars(tmp1);
+    break;
+  case OP_RESUMECC:
+    tmp1 = stack[fp-1];
+    top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
+    fp = sexp_unbox_integer(_ARG1);
+    cp = _ARG2;
+    ip = (unsigned char*) sexp_unbox_integer(_ARG3);
+    i = sexp_unbox_integer(_ARG4);
+    top -= 4;
+    _ARG1 = tmp1;
+    break;
+  case OP_CALLCC:
+    tmp1 = _ARG1;
+    i = 1;
+    stack[top] = sexp_make_integer(1);
+    stack[top+1] = sexp_make_integer(ip);
+    stack[top+2] = cp;
+    stack[top+3] = sexp_make_integer(fp);
+    tmp2 = sexp_vector(1, sexp_save_stack(stack, top+4));
+    _ARG1 = sexp_make_procedure(sexp_make_integer(0),
+                                sexp_make_integer(1),
+                                continuation_resumer,
+                                tmp2);
+    top++;
+    ip -= sizeof(sexp);
+    goto make_call;
+    break;
+  case OP_APPLY1:
+    tmp1 = _ARG1;
+    tmp2 = _ARG2;
+    i = sexp_unbox_integer(sexp_length(tmp2));
+    top += (i-2);
+    for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
+      _ARG1 = sexp_car(tmp2);
+    top += i+1;
+    ip -= sizeof(sexp);
+    goto make_call;
+  case OP_TAIL_CALL:
+    i = sexp_unbox_integer(((sexp*)ip)[0]);    /* number of params */
+    tmp1 = _ARG1;                              /* procedure to call */
+    /* save frame info */
+    j = sexp_unbox_integer(stack[fp]);
+    ip = ((unsigned char*) sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
+    cp = stack[fp+2];
+    /* copy new args into place */
+    for (k=0; k<i; k++)
+      stack[fp-j+k] = stack[top-1-i+k];
+    top = fp+i-j+1;
+    fp = sexp_unbox_integer(stack[fp+3]);
+    goto make_call;
+  case OP_CALL:
+    if (top >= INIT_STACK_SIZE)
+      sexp_raise("out of stack space", SEXP_NULL);
+    i = sexp_unbox_integer(((sexp*)ip)[0]);
+    tmp1 = _ARG1;
+  make_call:
+    if (sexp_opcodep(tmp1)) {
+      /* compile non-inlined opcode applications on the fly */
+      tmp1 = make_opcode_procedure(tmp1, i, e, stack, top);
+      if (sexp_exceptionp(tmp1)) {
+        _ARG1 = tmp1;
+        goto call_error_handler;
+      }
+    }
+    if (! sexp_procedurep(tmp1))
+      sexp_raise("non procedure application", sexp_list1(tmp1));
+    j = i - sexp_unbox_integer(sexp_procedure_num_args(tmp1));
+    if (j < 0)
+      sexp_raise("not enough args", sexp_list2(tmp1, sexp_make_integer(i)));
+    if (j > 0) {
+      if (sexp_procedure_variadic_p(tmp1)) {
+        stack[top-i-1] = sexp_cons(stack[top-i-1], SEXP_NULL);
+        for (k=top-i; k<top-(i-j)-1; k++)
+          stack[top-i-1] = sexp_cons(stack[k], stack[top-i-1]);
+        for ( ; k<top; k++)
+          stack[k-j+1] = stack[k];
+        top -= (j-1);
+        i -= (j-1);
+      } else {
+        sexp_raise("too many args", sexp_list2(tmp1, sexp_make_integer(i)));
+      }
+    } else if (sexp_procedure_variadic_p(tmp1)) {
+      /* shift stack, set extra arg to null */
+      for (k=top; k>=top-i; k--)
+        stack[k] = stack[k-1];
+      stack[top-i-1] = SEXP_NULL;
+      top++;
+      i++;
+    }
+    _ARG1 = sexp_make_integer(i);
+    stack[top] = sexp_make_integer(ip+sizeof(sexp));
+    stack[top+1] = cp;
+    stack[top+2] = sexp_make_integer(fp);
+    top+=3;
+    bc = sexp_procedure_code(tmp1);
+    ip = sexp_bytecode_data(bc);
+    cp = sexp_procedure_vars(tmp1);
+    fp = top-4;
+    break;
+  case OP_FCALL0:
+    _ARG1 = ((sexp_proc0)_ARG1)();
+    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    break;
+  case OP_FCALL1:
+    _ARG2 = ((sexp_proc1)_ARG1)(_ARG2);
+    top--;
+    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    break;
+  case OP_FCALL2:
+    _ARG3 = ((sexp_proc2)_ARG1)(_ARG2, _ARG3);
+    top-=2;
+    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    break;
+  case OP_FCALL3:
+    _ARG4 =((sexp_proc3)_ARG1)(_ARG2, _ARG3, _ARG4);
+    top-=3;
+    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    break;
+  case OP_JUMP_UNLESS:
+    if (stack[--top] == SEXP_FALSE)
+      ip += ((sexp_sint_t*)ip)[0];
+    else
+      ip += sizeof(sexp_sint_t);
+    break;
+  case OP_JUMP:
+    ip += ((sexp_sint_t*)ip)[0];
+    break;
+  case OP_PARAMETER:
+    _PUSH(*(sexp*)((sexp*)ip)[0]);
+    ip += sizeof(sexp);
+    break;
+  case OP_PUSH:
+    _PUSH(((sexp*)ip)[0]);
+    ip += sizeof(sexp);
+    break;
+  case OP_DROP:
+    top--;
+    break;
+  case OP_STACK_REF:            /* `pick' in forth */
     stack[top] = stack[top - (sexp_sint_t) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
     top++;
     break;
   case OP_LOCAL_REF:
-    fprintf(stderr, "%ld - 1 - %ld => %ld", fp, (sexp_sint_t) ((sexp*)ip)[0], fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]);
     stack[top] = stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]];
     ip += sizeof(sexp);
     top++;
     break;
   case OP_LOCAL_SET:
-    fprintf(stderr, "%ld - 1 - %ld => %ld", fp, (sexp_sint_t) ((sexp*)ip)[0], fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]);
     stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]] = _ARG1;
     _ARG1 = SEXP_UNDEF;
     ip += sizeof(sexp);
     break;
   case OP_CLOSURE_REF:
-    fprintf(stderr, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     _PUSH(sexp_vector_ref(cp, sexp_make_integer(((sexp*)ip)[0])));
     ip += sizeof(sexp);
     break;
@@ -882,39 +1025,28 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG2 = sexp_make_vector(_ARG1, _ARG2);
     top--;
     break;
-  case OP_PUSH:
-    _PUSH(((sexp*)ip)[0]);
-    ip += sizeof(sexp);
-    break;
-  case OP_DROP:
-    top--;
-    break;
-  case OP_PARAMETER:
-    _PUSH(*(sexp*)((sexp*)ip)[0]);
-    ip += sizeof(sexp);
-    break;
   case OP_PAIRP:
     _ARG1 = sexp_make_boolean(sexp_pairp(_ARG1)); break;
   case OP_NULLP:
     _ARG1 = sexp_make_boolean(sexp_nullp(_ARG1)); break;
-  case OP_CHARP:
-    _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
+  case OP_VECTORP:
+    _ARG1 = sexp_make_boolean(sexp_vectorp(_ARG1)); break;
   case OP_INTEGERP:
     _ARG1 = sexp_make_boolean(sexp_integerp(_ARG1)); break;
   case OP_SYMBOLP:
     _ARG1 = sexp_make_boolean(sexp_symbolp(_ARG1)); break;
   case OP_STRINGP:
     _ARG1 = sexp_make_boolean(sexp_stringp(_ARG1)); break;
-  case OP_VECTORP:
-    _ARG1 = sexp_make_boolean(sexp_vectorp(_ARG1)); break;
+  case OP_CHARP:
+    _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
+  case OP_EOFP:
+    _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
   case OP_PROCEDUREP:
     _ARG1 = sexp_make_boolean(sexp_procedurep(_ARG1)); break;
   case OP_IPORTP:
     _ARG1 = sexp_make_boolean(sexp_iportp(_ARG1)); break;
   case OP_OPORTP:
     _ARG1 = sexp_make_boolean(sexp_oportp(_ARG1)); break;
-  case OP_EOFP:
-    _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
   case OP_CAR:
     if (! sexp_pairp(_ARG1)) sexp_raise("car: not a pair", sexp_list1(_ARG1));
     _ARG1 = sexp_car(_ARG1); break;
@@ -1019,6 +1151,15 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
 #endif
     else sexp_raise("-: not a number", sexp_list1(_ARG1));
     break;
+  case OP_INV:
+    if (sexp_integerp(_ARG1))
+      _ARG1 = sexp_make_flonum(1/(double)sexp_unbox_integer(_ARG1));
+#if USE_FLONUMS
+    else if (sexp_flonump(_ARG1))
+      _ARG1 = sexp_make_flonum(1/sexp_flonum_value(_ARG1));
+#endif
+    else sexp_raise("/: not a number", sexp_list1(_ARG1));
+    break;
   case OP_LT:
     _ARG2 = sexp_make_boolean(_ARG1 < _ARG2);
     top--;
@@ -1027,163 +1168,10 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG2 = sexp_make_boolean(_ARG1 <= _ARG2);
     top--;
     break;
-  case OP_GT:
-    _ARG2 = sexp_make_boolean(_ARG1 > _ARG2);
-    top--;
-    break;
-  case OP_GE:
-    _ARG2 = sexp_make_boolean(_ARG1 >= _ARG2);
-    top--;
-    break;
   case OP_EQ:
-  case OP_EQN:
+  case OP_EQV:
     _ARG2 = sexp_make_boolean(_ARG1 == _ARG2);
     top--;
-    break;
-  case OP_TAIL_CALL:
-    /* old-args ... n ret-ip ret-cp new-args ...   proc  */
-    /*                              [==== i =====]       */
-    i = sexp_unbox_integer(((sexp*)ip)[0]);    /* number of params */
-    tmp1 = _ARG1;                              /* procedure to call */
-    /* save frame info */
-    j = sexp_unbox_integer(stack[fp]);
-    ip = ((unsigned char*) sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
-    cp = stack[fp+2];
-    /* copy new args into place */
-    for (k=0; k<i; k++)
-      stack[fp-j+k] = stack[top-1-i+k];
-    top = fp+i-j+1;
-    fp = sexp_unbox_integer(stack[fp+3]);
-    goto make_call;
-  case OP_CALL:
-    fprintf(stderr, " %ld", sexp_unbox_integer(((sexp*)ip)[0]));
-    if (top >= INIT_STACK_SIZE)
-      sexp_raise("out of stack space", SEXP_NULL);
-    i = sexp_unbox_integer(((sexp*)ip)[0]);
-    tmp1 = _ARG1;
-  make_call:
-    if (sexp_opcodep(tmp1)) {
-      /* compile non-inlined opcode applications on the fly */
-      tmp1 = make_opcode_procedure(tmp1, i, e, stack, top);
-      if (sexp_exceptionp(tmp1)) {
-        _ARG1 = tmp1;
-        goto call_error_handler;
-      }
-    }
-    if (! sexp_procedurep(tmp1))
-      sexp_raise("non procedure application", sexp_list1(tmp1));
-    j = i - sexp_unbox_integer(sexp_procedure_num_args(tmp1));
-    fprintf(stderr, "\narg difference: %ld-%ld = %ld\n", i, sexp_unbox_integer(sexp_procedure_num_args(tmp1)), j);
-    if (j < 0)
-      sexp_raise("not enough args", sexp_list2(tmp1, sexp_make_integer(i)));
-    if (j > 0) {
-      if (sexp_procedure_variadic_p(tmp1)) {
-        fprintf(stderr, "unrolling args\n");
-        stack[top-i-1] = sexp_cons(stack[top-i-1], SEXP_NULL);
-        for (k=top-i; k<top-(i-j)-1; k++)
-          stack[top-i-1] = sexp_cons(stack[k], stack[top-i-1]);
-        for ( ; k<top; k++)
-          stack[k-j+1] = stack[k];
-        top -= (j-1);
-        i -= (j-1);
-      } else {
-        sexp_raise("too many args", sexp_list2(tmp1, sexp_make_integer(i)));
-      }
-    } else if (sexp_procedure_variadic_p(tmp1)) {
-      /* shift stack, set extra arg to null */
-      for (k=top; k>=top-i; k--)
-        stack[k] = stack[k-1];
-      stack[top-i-1] = SEXP_NULL;
-      top++;
-      i++;
-    }
-    _ARG1 = sexp_make_integer(i);
-    stack[top] = sexp_make_integer(ip+sizeof(sexp));
-    stack[top+1] = cp;
-    stack[top+2] = sexp_make_integer(fp);
-    top+=3;
-    bc = sexp_procedure_code(tmp1);
-    ip = sexp_bytecode_data(bc);
-    cp = sexp_procedure_vars(tmp1);
-    fp = top-4;
-    break;
-  case OP_APPLY1:
-    tmp1 = _ARG1;
-    tmp2 = _ARG2;
-    i = sexp_unbox_integer(sexp_length(tmp2));
-    top += (i-2);
-    for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
-      _ARG1 = sexp_car(tmp2);
-    top += i+1;
-    ip -= sizeof(sexp);
-    goto make_call;
-  case OP_CALLCC:
-    tmp1 = _ARG1;
-    i = 1;
-    stack[top] = sexp_make_integer(1);
-    stack[top+1] = sexp_make_integer(ip);
-    stack[top+2] = cp;
-    stack[top+3] = sexp_make_integer(fp);
-    tmp2 = sexp_vector(1, sexp_save_stack(stack, top+4));
-    _ARG1 = sexp_make_procedure(sexp_make_integer(0),
-                                sexp_make_integer(1),
-                                continuation_resumer,
-                                tmp2);
-    top++;
-    ip -= sizeof(sexp);
-    goto make_call;
-    break;
-  case OP_RESUMECC:
-    tmp1 = stack[fp-1];
-    top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
-    fp = sexp_unbox_integer(_ARG1);
-    cp = _ARG2;
-    ip = (unsigned char*) sexp_unbox_integer(_ARG3);
-    i = sexp_unbox_integer(_ARG4);
-    top -= 4;
-    _ARG1 = tmp1;
-    break;
-  case OP_ERROR:
-  call_error_handler:
-    fprintf(stderr, "\n");
-    sexp_print_exception(_ARG1, cur_error_port);
-    tmp1 = sexp_cdr(exception_handler_cell);
-    stack[top] = (sexp) 1;
-    stack[top+1] = sexp_make_integer(ip+4);
-    stack[top+2] = cp;
-    top+=3;
-    bc = sexp_procedure_code(tmp1);
-    ip = sexp_bytecode_data(bc);
-    cp = sexp_procedure_vars(tmp1);
-    break;
-  case OP_FCALL0:
-    _ARG1 = ((sexp_proc0)_ARG1)();
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
-    break;
-  case OP_FCALL1:
-    _ARG2 = ((sexp_proc1)_ARG1)(_ARG2);
-    top--;
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
-    break;
-  case OP_FCALL2:
-    _ARG3 = ((sexp_proc2)_ARG1)(_ARG2, _ARG3);
-    top-=2;
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
-    break;
-  case OP_FCALL3:
-    _ARG4 =((sexp_proc3)_ARG1)(_ARG2, _ARG3, _ARG4);
-    top-=3;
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
-    break;
-  case OP_JUMP_UNLESS:
-    if (stack[--top] == SEXP_FALSE) {
-      ip += ((sexp_sint_t*)ip)[0];
-    } else {
-      ip += sizeof(sexp_sint_t);
-    }
-    break;
-  case OP_JUMP:
-    ip += ((sexp_sint_t*)ip)[0];
     break;
   case OP_DISPLAY:
     if (sexp_stringp(_ARG1)) {
@@ -1192,6 +1180,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
       top--;
       break;
     }
+    /* ... FALLTHROUGH ... */
   case OP_WRITE:
     sexp_write(_ARG1, _ARG2);
     _ARG2 = SEXP_UNDEF;
@@ -1227,7 +1216,6 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     fp = sexp_unbox_integer(stack[fp+3]);
     break;
   case OP_DONE:
-    fprintf(stderr, "\n");
     goto end_loop;
   default:
     sexp_raise("unknown opcode", sexp_list1(sexp_make_integer(*(ip-1))));
@@ -1305,8 +1293,8 @@ _OP(OPC_ARITHMETIC,     OP_QUOT, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, 0, "quotient", 
 _OP(OPC_ARITHMETIC,     OP_MOD, 2, 0, SEXP_FIXNUM, SEXP_FIXNUM, 0, "modulo", NULL, NULL),
 _OP(OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, 0, "<", NULL, NULL),
 _OP(OPC_ARITHMETIC_CMP, OP_LE,  0, 1, SEXP_FIXNUM, 0, 0, "<=", NULL, NULL),
-_OP(OPC_ARITHMETIC_CMP, OP_GT,  0, 1, SEXP_FIXNUM, 0, OP_LE, ">", NULL, NULL),
-_OP(OPC_ARITHMETIC_CMP, OP_GE,  0, 1, SEXP_FIXNUM, 0, OP_LT, ">=", NULL, NULL),
+_OP(OPC_ARITHMETIC_CMP, OP_LT,  0, 1, SEXP_FIXNUM, 0, 1, ">", NULL, NULL),
+_OP(OPC_ARITHMETIC_CMP, OP_LE,  0, 1, SEXP_FIXNUM, 0, 1, ">=", NULL, NULL),
 _OP(OPC_ARITHMETIC_CMP, OP_EQ,  0, 1, SEXP_FIXNUM, 0, 0, "=", NULL, NULL),
 _OP(OPC_PREDICATE,      OP_EQ,  2, 0, 0, 0, 0, "eq?", NULL, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, 0, "cons", NULL, NULL),
