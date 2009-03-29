@@ -23,6 +23,10 @@
 #define USE_FLONUMS 1
 #endif
 
+#ifndef USE_MATH
+#define USE_MATH 1
+#endif
+
 #ifndef USE_HUFF_SYMS
 #define USE_HUFF_SYMS 1
 #endif
