@@ -159,8 +159,6 @@ struct sexp_struct {
   } value;
 };
 
-/* #define offsetof(st, m) ((size_t) ((char*)&((st*)(0))->m - (char*)0)) */
-
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
 
