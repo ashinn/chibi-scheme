@@ -125,7 +125,9 @@ static void shrink_bcode(sexp context, sexp_uint_t i) {
   if (sexp_bytecode_length(sexp_context_bc(context)) != i) {
     tmp = sexp_alloc_tagged(sexp_sizeof(bytecode) + i, SEXP_BYTECODE);
     sexp_bytecode_length(tmp) = i;
-    memcpy(sexp_bytecode_data(tmp), sexp_bytecode_data(sexp_context_bc(context)), i);
+    memcpy(sexp_bytecode_data(tmp),
+           sexp_bytecode_data(sexp_context_bc(context)),
+           i);
     sexp_context_bc(context) = tmp;
   }
 }
@@ -181,6 +183,28 @@ static sexp sexp_make_macro (sexp p, sexp e) {
   return mac;
 }
 
+static sexp sexp_make_synclo (sexp env, sexp fv, sexp expr) {
+  sexp res;
+  if (sexp_synclop(expr))
+    return expr;
+  res = sexp_alloc_type(synclo, SEXP_SYNCLO);
+  sexp_synclo_env(res) = env;
+  sexp_synclo_free_vars(res) = fv;
+  sexp_synclo_expr(res) = expr;
+  return res;
+}
+
+/* internal AST */
+
+static sexp sexp_make_lambda(sexp params) {
+  sexp res = sexp_alloc_type(lambda, SEXP_LAMBDA);
+  sexp_lambda_params(res) = params;
+  sexp_lambda_fv(res) = SEXP_NULL;
+  sexp_lambda_sv(res) = SEXP_NULL;
+  sexp_lambda_locals(res) = SEXP_NULL;
+  return res;
+}
+
 static sexp sexp_make_set(sexp var, sexp value) {
   sexp res = sexp_alloc_type(set, SEXP_SET);
   sexp_set_var(res) = var;
@@ -233,10 +257,10 @@ static sexp sexp_child_context(sexp context, sexp lambda) {
   return ctx;
 }
 
-static int sexp_idp (sexp x) {
-  while (sexp_synclop(x))
-    x = sexp_synclo_expr(x);
-  return sexp_symbolp(x);
+#define sexp_idp(x) (sexp_symbolp(x) || (sexp_synclop(x) && sexp_symbolp(sexp_synclo_expr(x))))
+
+static sexp sexp_identifierp (sexp x) {
+  return sexp_make_boolean(sexp_idp(x));
 }
 
 /************************* the compiler ***************************/
@@ -258,9 +282,6 @@ static sexp sexp_compile_error(char *message, sexp irritants) {
 static sexp analyze (sexp x, sexp context) {
   sexp op, cell, res;
  loop:
-  fprintf(stderr, "analyze: ");
-  sexp_write(x, cur_error_port);
-  fprintf(stderr, "\n");
   if (sexp_pairp(x)) {
     if (sexp_idp(sexp_car(x))) {
       cell = env_cell(sexp_context_env(context), sexp_car(x));
@@ -308,7 +329,7 @@ static sexp analyze (sexp x, sexp context) {
     } else {
       res = analyze_app(x, context);
     }
-  } else if (sexp_symbolp(x)) {
+  } else if (sexp_idp(x)) {
     res = analyze_var_ref(x, context);
   } else if (sexp_synclop(x)) {
     context = sexp_child_context(context, sexp_context_lambda(context));
@@ -324,11 +345,7 @@ static sexp analyze (sexp x, sexp context) {
 static sexp analyze_lambda (sexp x, sexp context) {
   sexp res, body;
   /* XXXX verify syntax */
-  res = sexp_alloc_type(lambda, SEXP_LAMBDA);
-  sexp_lambda_params(res) = sexp_cadr(x);
-  sexp_lambda_fv(res) = SEXP_NULL;
-  sexp_lambda_sv(res) = SEXP_NULL;
-  sexp_lambda_locals(res) = SEXP_NULL;
+  res = sexp_make_lambda(sexp_cadr(x));
   context = sexp_child_context(context, res);
   sexp_context_env(context)
     = extend_env(sexp_context_env(context),
@@ -393,7 +410,17 @@ static sexp analyze_define (sexp x, sexp context) {
 }
 
 static sexp analyze_var_ref (sexp x, sexp context) {
-  sexp cell = env_cell_create(sexp_context_env(context), x, SEXP_UNDEF);
+  sexp cell = env_cell(sexp_context_env(context), x);
+  if (! cell) {
+    if (sexp_synclop(x)) {
+      cell = env_cell_create(sexp_synclo_env(x),
+                             sexp_synclo_expr(x),
+                             SEXP_UNDEF);
+      x = sexp_synclo_expr(x);
+    } else {
+      cell = env_cell_create(sexp_context_env(context), x, SEXP_UNDEF);
+    }
+  }
   return sexp_make_ref(x, cell);
 }
 
@@ -579,9 +606,9 @@ static void generate_opcode_app (sexp app, sexp context) {
   }
 
   /* push the arguments onto the stack */
-  ls = (sexp_opcode_inverse(op)
-        && ! sexp_opcode_class(op) == OPC_ARITHMETIC_INV)
-    ? sexp_cdr(app) : sexp_reverse(sexp_cdr(app));
+  ls = ((sexp_opcode_inverse(op)
+         && (sexp_opcode_class(op) != OPC_ARITHMETIC_INV))
+        ? sexp_cdr(app) : sexp_reverse(sexp_cdr(app)));
   for ( ; sexp_pairp(ls); ls = sexp_cdr(ls))
     generate(sexp_car(ls), context);
 
@@ -593,9 +620,7 @@ static void generate_opcode_app (sexp app, sexp context) {
     if (sexp_opcode_class(op) == OPC_FOREIGN)
       /* push the funtion pointer for foreign calls */
       emit_push(sexp_opcode_data(op), context);
-    emit(sexp_opcode_inverse(op) ? sexp_opcode_inverse(op)
-         : sexp_opcode_code(op),
-         context);
+    emit(sexp_opcode_code(op), context);
   }
 
   /* emit optional folding of operator */
@@ -709,14 +734,12 @@ static sexp union_free_vars (sexp fv1, sexp fv2) {
   return fv2;
 }
 
-static sexp diff_free_vars (sexp fv, sexp params) {
+static sexp diff_free_vars (sexp lambda, sexp fv, sexp params) {
   sexp res = SEXP_NULL;
-/*   sexp_debug("diff-free-vars: ", fv); */
-/*   sexp_debug("params: ", params); */
   for ( ; sexp_pairp(fv); fv=sexp_cdr(fv))
-    if (sexp_memq(sexp_ref_name(sexp_car(fv)), params) == SEXP_FALSE)
+    if ((sexp_ref_loc(sexp_car(fv)) != lambda)
+        || (sexp_memq(sexp_ref_name(sexp_car(fv)), params) == SEXP_FALSE))
       sexp_push(res, sexp_car(fv));
-/*   sexp_debug(" => ", res); */
   return res;
 }
 
@@ -724,7 +747,10 @@ static sexp free_vars (sexp x, sexp fv) {
   sexp fv1, fv2;
   if (sexp_lambdap(x)) {
     fv1 = free_vars(sexp_lambda_body(x), SEXP_NULL);
-    fv2 = diff_free_vars(fv1, sexp_flatten_dot(sexp_lambda_params(x)));
+    fv2 = diff_free_vars(x,
+                         fv1,
+                         sexp_append(sexp_lambda_locals(x),
+                                     sexp_flatten_dot(sexp_lambda_params(x))));
     sexp_lambda_fv(x) = fv2;
     fv = union_free_vars(fv2, fv);
   } else if (sexp_pairp(x)) {
@@ -742,6 +768,8 @@ static sexp free_vars (sexp x, sexp fv) {
     fv = free_vars(sexp_set_var(x), fv);
   } else if (sexp_refp(x) && sexp_lambdap(sexp_ref_loc(x))) {
     fv = insert_free_var(x, fv);
+  } else if (sexp_synclop(x)) {
+    fv = free_vars(sexp_synclo_expr(x), fv);
   }
   return fv;
 }
@@ -763,11 +791,7 @@ static sexp make_opcode_procedure (sexp op, sexp_uint_t i, sexp env,
     return sexp_opcode_proc(op);
   params = make_param_list(i);
   context = sexp_new_context(stack);
-  lambda = sexp_alloc_type(lambda, SEXP_LAMBDA);
-  sexp_lambda_params(lambda) = params;
-  sexp_lambda_fv(lambda) = SEXP_NULL;
-  sexp_lambda_sv(lambda) = SEXP_NULL;
-  sexp_lambda_locals(lambda) = SEXP_NULL;
+  lambda = sexp_make_lambda(params);
   sexp_context_lambda(context) = lambda;
   sexp_context_top(context) = top;
   env = extend_env(env, params, lambda);
@@ -828,7 +852,6 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_ERROR:
   call_error_handler:
-    fprintf(stderr, "\n");
     sexp_print_exception(_ARG1, cur_error_port);
     tmp1 = sexp_cdr(exception_handler_cell);
     stack[top] = (sexp) 1;
@@ -1276,6 +1299,7 @@ static struct sexp_struct opcodes[] = {
 #define _FN0(s, f) _FN(OP_FCALL0, 0, 0, 0, s, f)
 #define _FN1(t, s, f) _FN(OP_FCALL1, 1, t, 0, s, f)
 #define _FN2(t, u, s, f) _FN(OP_FCALL2, 2, t, u, s, f)
+#define _FN3(t, u, s, f) _FN(OP_FCALL3, 3, t, u, s, f)
 #define _PARAM(n,a,t) _OP(OPC_PARAMETER, OP_PARAMETER, 0, 1, t, 0, 0, n, a, NULL)
 _OP(OPC_ACCESSOR, OP_CAR, 1, 0, SEXP_PAIR, 0, 0, "car", NULL, NULL),
 _OP(OPC_ACCESSOR, OP_SET_CAR, 2, 0, SEXP_PAIR, 0, 0, "set-car!", NULL, NULL),
@@ -1320,6 +1344,7 @@ _OP(OPC_IO, OP_NEWLINE, 0, 3, 0, SEXP_OPORT, 0, "newline", (sexp)&cur_output_por
 _OP(OPC_IO, OP_FLUSH_OUTPUT, 0, 3, 0, SEXP_OPORT, 0, "flush-output", (sexp)&cur_output_port, NULL),
 _OP(OPC_IO, OP_READ, 0, 3, 0, SEXP_IPORT, 0, "read", (sexp)&cur_input_port, NULL),
 _OP(OPC_IO, OP_READ_CHAR, 0, 3, 0, SEXP_IPORT, 0, "read-char", (sexp)&cur_input_port, NULL),
+_FN1(0, "identifier?", sexp_identifierp),
 _FN1(SEXP_PAIR, "length", sexp_length),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
 _FN1(SEXP_PAIR, "list->vector", sexp_list_to_vector),
@@ -1330,16 +1355,11 @@ _FN1(SEXP_OPORT, "close-output-port", sexp_close_port),
 _FN1(0, "load", sexp_load),
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
 _FN2(0, SEXP_PAIR, "assq", sexp_assq),
+_FN3(SEXP_ENV, SEXP_PAIR, "make-syntactic-closure", sexp_make_synclo),
 _PARAM("current-input-port", (sexp)&cur_input_port, SEXP_IPORT),
 _PARAM("current-output-port", (sexp)&cur_output_port, SEXP_OPORT),
 _PARAM("current-error-port", (sexp)&cur_error_port, SEXP_OPORT),
 _PARAM("interaction-environment", (sexp)&interaction_environment, SEXP_ENV),
-#undef _OP
-#undef _FN
-#undef _FN0
-#undef _FN1
-#undef _FN2
-#undef _PARAM
 };
 
 sexp make_standard_env () {
