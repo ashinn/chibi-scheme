@@ -8,11 +8,10 @@
 
 static int scheme_initialized_p = 0;
 
-static sexp cur_input_port, cur_output_port, cur_error_port;
-static sexp exception_handler_cell;
 static sexp continuation_resumer, final_resumer;
-static sexp interaction_environment;
-static sexp the_compile_error_symbol;
+static sexp the_interaction_env_symbol;
+static sexp the_err_handler_symbol, the_compile_error_symbol;
+static sexp the_cur_in_symbol, the_cur_out_symbol, the_cur_err_symbol;
 
 #if USE_DEBUG
 #include "debug.c"
@@ -49,6 +48,9 @@ static void generate_opcode_app (sexp app, sexp context);
 static void generate_general_app (sexp app, sexp context);
 static void generate_lambda (sexp lambda, sexp context);
 
+static sexp sexp_make_null_env (sexp version);
+static sexp sexp_make_standard_env (sexp version);
+
 /********************** environment utilities ***************************/
 
 static sexp env_cell(sexp e, sexp key) {
@@ -73,6 +75,14 @@ static sexp env_cell_create(sexp e, sexp key, sexp value) {
     sexp_env_bindings(e) = sexp_cons(cell, sexp_env_bindings(e));
   }
   return cell;
+}
+
+static sexp env_global_ref(sexp e, sexp key, sexp dflt) {
+  sexp cell;
+  while (sexp_env_parent(e))
+    e = sexp_env_parent(e);
+  cell = env_cell(e, key);
+  return (cell ? sexp_cdr(cell) : dflt);
 }
 
 static void env_define(sexp e, sexp key, sexp value) {
@@ -234,15 +244,18 @@ static sexp sexp_make_lit(sexp value) {
   return res;
 }
 
-static sexp sexp_new_context(sexp *stack) {
+static sexp sexp_make_context(sexp *stack, sexp env) {
   sexp res = sexp_alloc_type(context, SEXP_CONTEXT);
   if (! stack)
     stack = (sexp*) sexp_alloc(sizeof(sexp)*INIT_STACK_SIZE);
+  if (! env)
+    env = sexp_make_standard_env(sexp_make_integer(5));
   sexp_context_bc(res)
     = sexp_alloc_tagged(sexp_sizeof(bytecode)+INIT_BCODE_SIZE, SEXP_BYTECODE);
   sexp_bytecode_length(sexp_context_bc(res)) = INIT_BCODE_SIZE;
   sexp_context_lambda(res) = SEXP_FALSE;
   sexp_context_stack(res) = stack;
+  sexp_context_env(res) = env;
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
@@ -251,7 +264,8 @@ static sexp sexp_new_context(sexp *stack) {
 }
 
 static sexp sexp_child_context(sexp context, sexp lambda) {
-  sexp ctx = sexp_new_context(sexp_context_stack(context));
+  sexp ctx = sexp_make_context(sexp_context_stack(context),
+                               sexp_context_env(context));
   sexp_context_lambda(ctx) = lambda;
   sexp_context_env(ctx) = sexp_context_env(context);
   sexp_context_top(ctx) = sexp_context_top(context);
@@ -321,7 +335,6 @@ static sexp analyze (sexp x, sexp context) {
         x = apply(sexp_macro_proc(op),
                   sexp_list3(x, sexp_context_env(context), sexp_macro_env(op)),
                   context);
-        sexp_debug("expanded => ", x);
         goto loop;
       } else if (sexp_opcodep(op)) {
         res = analyze_app(sexp_cdr(x), context);
@@ -500,7 +513,10 @@ static void sexp_context_patch_label (sexp context, sexp_sint_t label) {
 static sexp finalize_bytecode (sexp context) {
   emit(OP_RET, context);
   shrink_bcode(context, sexp_context_pos(context));
-  disasm(sexp_context_bc(context));
+  disasm(sexp_context_bc(context),
+         env_global_ref(sexp_context_env(context),
+                        the_cur_err_symbol,
+                        SEXP_FALSE));
   return sexp_context_bc(context);
 }
 
@@ -721,7 +737,8 @@ static void generate_lambda (sexp lambda, sexp context) {
   prev_lambda = sexp_context_lambda(context);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
-  ctx = sexp_new_context(sexp_context_stack(context));
+  ctx = sexp_make_context(sexp_context_stack(context),
+                          sexp_context_env(context));
   sexp_context_lambda(ctx) = lambda;
   /* allocate space for local vars */
   for (ls=sexp_lambda_locals(lambda); sexp_pairp(ls); ls=sexp_cdr(ls))
@@ -845,12 +862,11 @@ static sexp make_opcode_procedure (sexp op, sexp_uint_t i, sexp env,
   if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
     return sexp_opcode_proc(op);
   params = make_param_list(i);
-  context = sexp_new_context(stack);
   lambda = sexp_make_lambda(params);
+  env = extend_env(env, params, lambda);
+  context = sexp_make_context(stack, env);
   sexp_context_lambda(context) = lambda;
   sexp_context_top(context) = top;
-  env = extend_env(env, params, lambda);
-  sexp_context_env(context) = env;
   for (ls=params, refs=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls))
     sexp_push(refs, sexp_make_ref(sexp_car(ls), env_cell(env, sexp_car(ls))));
   generate_opcode_app(sexp_cons(op, sexp_reverse(refs)), context);
@@ -899,9 +915,13 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
                                   goto call_error_handler;}                 \
                                while (0)
 
-sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
+#define sexp_check_exception() do {if (sexp_exceptionp(_ARG1)) \
+                                     goto call_error_handler;} \
+                                while (0)
+
+sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
   unsigned char *ip=sexp_bytecode_data(bc);
-  sexp tmp1, tmp2;
+  sexp tmp1, tmp2, env=sexp_context_env(context);
   sexp_sint_t i, j, k, fp=top-4;
 
  loop:
@@ -913,12 +933,13 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_ERROR:
   call_error_handler:
-    sexp_print_exception(_ARG1, cur_error_port);
-    tmp1 = sexp_cdr(exception_handler_cell);
+    tmp1 = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
+    sexp_print_exception(_ARG1, tmp1);
+    tmp1 = env_global_ref(env, the_err_handler_symbol, SEXP_FALSE);
     stack[top] = (sexp) 1;
     stack[top+1] = sexp_make_integer(ip+4);
     stack[top+2] = cp;
-    top+=3;
+    top += 3;
     bc = sexp_procedure_code(tmp1);
     ip = sexp_bytecode_data(bc);
     cp = sexp_procedure_vars(tmp1);
@@ -980,7 +1001,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   make_call:
     if (sexp_opcodep(tmp1)) {
       /* compile non-inlined opcode applications on the fly */
-      tmp1 = make_opcode_procedure(tmp1, i, e, stack, top);
+      tmp1 = make_opcode_procedure(tmp1, i, env, stack, top);
       if (sexp_exceptionp(tmp1)) {
         _ARG1 = tmp1;
         goto call_error_handler;
@@ -1015,7 +1036,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     stack[top] = sexp_make_integer(ip+sizeof(sexp));
     stack[top+1] = cp;
     stack[top+2] = sexp_make_integer(fp);
-    top+=3;
+    top += 3;
     bc = sexp_procedure_code(tmp1);
     ip = sexp_bytecode_data(bc);
     cp = sexp_procedure_vars(tmp1);
@@ -1024,24 +1045,29 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   case OP_FCALL0:
     _PUSH(((sexp_proc0)_UWORD0)());
     ip += sizeof(sexp);
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    sexp_check_exception();
     break;
   case OP_FCALL1:
     _ARG1 = ((sexp_proc1)_UWORD0)(_ARG1);
     ip += sizeof(sexp);
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    sexp_check_exception();
     break;
   case OP_FCALL2:
     _ARG2 = ((sexp_proc2)_UWORD0)(_ARG1, _ARG2);
     top--;
     ip += sizeof(sexp);
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    sexp_check_exception();
     break;
   case OP_FCALL3:
     _ARG3 =((sexp_proc3)_UWORD0)(_ARG1, _ARG2, _ARG3);
-    top-=2;
+    top -= 2;
     ip += sizeof(sexp);
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    sexp_check_exception();
+    break;
+  case OP_EVAL:
+    sexp_context_top(context) = top;
+    _ARG1 = eval_in_context(_ARG1, context);
+    sexp_check_exception();
     break;
   case OP_JUMP_UNLESS:
     if (stack[--top] == SEXP_FALSE)
@@ -1278,7 +1304,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     break;
   case OP_READ:
     _ARG1 = sexp_read(_ARG1);
-    if (sexp_exceptionp(_ARG1)) goto call_error_handler;
+    sexp_check_exception();
     break;
   case OP_READ_CHAR:
     i = sexp_read_char(_ARG1);
@@ -1318,9 +1344,8 @@ sexp sexp_close_port (sexp port) {
   return SEXP_UNDEF;
 }
 
-sexp sexp_load (sexp source) {
-  sexp obj, res, in, context = sexp_new_context(NULL);
-  sexp_context_env(context) = interaction_environment;
+sexp sexp_load (sexp source, sexp env) {
+  sexp obj, res, in, context = sexp_make_context(NULL, env);
   in = sexp_open_input_file(source);
   while ((obj=sexp_read(in)) != (sexp) SEXP_EOF) {
     res = eval_in_context(obj, context);
@@ -1361,6 +1386,7 @@ define_math_op(sexp_tan, tan)
 define_math_op(sexp_asin, asin)
 define_math_op(sexp_acos, acos)
 define_math_op(sexp_atan, atan)
+define_math_op(sexp_sqrt, sqrt)
 
 #endif
 
@@ -1429,6 +1455,7 @@ _OP(OPC_IO, OP_NEWLINE, 0, 3, 0, SEXP_OPORT, 0, "newline", (sexp)"*current-outpu
 _OP(OPC_IO, OP_FLUSH_OUTPUT, 0, 3, 0, SEXP_OPORT, 0, "flush-output", (sexp)"*current-output-port*", NULL),
 _OP(OPC_IO, OP_READ, 0, 3, 0, SEXP_IPORT, 0, "read", (sexp)"*current-input-port*", NULL),
 _OP(OPC_IO, OP_READ_CHAR, 0, 3, 0, SEXP_IPORT, 0, "read-char", (sexp)"*current-input-port*", NULL),
+_OP(OPC_GENERIC, OP_EVAL, 1, 3, 0, 0, 0, "eval", (sexp)"*interaction-environment*", NULL),
 _FN1(0, "identifier?", sexp_identifierp),
 _FN1(SEXP_PAIR, "length", sexp_length),
 _FN1(SEXP_PAIR, "reverse", sexp_reverse),
@@ -1437,7 +1464,9 @@ _FN1(SEXP_STRING, "open-input-file", sexp_open_input_file),
 _FN1(SEXP_STRING, "open-output-file", sexp_open_output_file),
 _FN1(SEXP_IPORT, "close-input-port", sexp_close_port),
 _FN1(SEXP_OPORT, "close-output-port", sexp_close_port),
-_FN1(0, "load", sexp_load),
+_FN1(SEXP_FIXNUM, "null-environment", sexp_make_null_env),
+_FN1(SEXP_FIXNUM, "scheme-report-environment", sexp_make_standard_env),
+_FN2(0, SEXP_ENV, "%load", sexp_load),
 #if USE_MATH
 _FN1(0, "exp", sexp_exp),
 _FN1(0, "log", sexp_log),
@@ -1447,6 +1476,7 @@ _FN1(0, "tan", sexp_tan),
 _FN1(0, "asin", sexp_asin),
 _FN1(0, "acos", sexp_acos),
 _FN1(0, "atan", sexp_atan),
+_FN1(0, "sqrt", sexp_sqrt),
 #endif
 _FN2(0, SEXP_PAIR, "memq", sexp_memq),
 _FN2(0, SEXP_PAIR, "assq", sexp_assq),
@@ -1458,22 +1488,36 @@ _PARAM("current-error-handler", (sexp)"*current-error-handler*", SEXP_PROCEDURE)
 _PARAM("interaction-environment", (sexp)"*interaction-environment*", SEXP_ENV),
 };
 
-sexp make_standard_env () {
+static sexp standard_env_syms_interned_p = 0;
+
+static sexp sexp_make_null_env (sexp version) {
   sexp_uint_t i;
   sexp e = sexp_alloc_type(env, SEXP_ENV);
   sexp_env_parent(e) = NULL;
   sexp_env_bindings(e) = SEXP_NULL;
   for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++)
     env_define(e, sexp_intern(sexp_core_name(&core_forms[i])), &core_forms[i]);
+  return e;
+}
+
+static sexp sexp_make_standard_env (sexp version) {
+  sexp_uint_t i;
+  sexp e = sexp_make_null_env(version), cell, sym;
   for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
-    if (sexp_opcode_opt_param_p(&opcodes[i])
-        && sexp_opcode_data(&opcodes[i]))
-      sexp_opcode_data(&opcodes[i])
-        = env_cell_create(e,
-                          sexp_intern((char*)sexp_opcode_data(&opcodes[i])),
-                          SEXP_UNDEF);
+    if ((! standard_env_syms_interned_p)
+        && sexp_opcode_opt_param_p(&opcodes[i])
+        && sexp_opcode_data(&opcodes[i])) {
+      sym = sexp_intern((char*)sexp_opcode_data(&opcodes[i]));
+      cell = env_cell_create(e, sym, SEXP_UNDEF);
+      sexp_opcode_data(&opcodes[i]) = cell;
+    }
     env_define(e, sexp_intern(sexp_opcode_name(&opcodes[i])), &opcodes[i]);
   }
+  env_define(e, the_cur_in_symbol, sexp_make_input_port(stdin));
+  env_define(e, the_cur_out_symbol, sexp_make_output_port(stdout));
+  env_define(e, the_cur_err_symbol, sexp_make_output_port(stderr));
+  env_define(e, the_interaction_env_symbol, e);
+  standard_env_syms_interned_p = 1;
   return e;
 }
 
@@ -1493,7 +1537,7 @@ sexp apply(sexp proc, sexp args, sexp context) {
   stack[top++] = sexp_make_integer(0);
   return vm(sexp_procedure_code(proc),
             sexp_procedure_vars(proc),
-            sexp_context_env(context),
+            context,
             stack,
             top);
 }
@@ -1502,7 +1546,8 @@ sexp compile (sexp x, sexp context) {
   sexp ast, ctx;
   analyze_bind(ast, x, context);
   free_vars(ast, SEXP_NULL);    /* should return SEXP_NULL */
-  ctx = sexp_new_context(sexp_context_stack(context));
+  ctx = sexp_make_context(sexp_context_stack(context),
+                          sexp_context_env(context));
   generate(ast, ctx);
   return sexp_make_procedure(sexp_make_integer(0),
                              sexp_make_integer(0),
@@ -1513,14 +1558,16 @@ sexp compile (sexp x, sexp context) {
 sexp eval_in_context (sexp obj, sexp context) {
   sexp thunk = compile(obj, context);
   if (sexp_exceptionp(thunk)) {
-    sexp_print_exception(obj, cur_error_port);
+    sexp_print_exception(obj, env_global_ref(sexp_context_env(context),
+                                             the_cur_err_symbol,
+                                             SEXP_FALSE));
     return SEXP_UNDEF;
   }
   return apply(thunk, SEXP_NULL, context);
 }
 
 sexp eval (sexp obj, sexp env) {
-  sexp context = sexp_new_context(NULL);
+  sexp context = sexp_make_context(NULL, NULL);
   sexp_context_env(context) = env;
   return eval_in_context(obj, context);
 }
@@ -1530,11 +1577,13 @@ void scheme_init () {
   if (! scheme_initialized_p) {
     scheme_initialized_p = 1;
     sexp_init();
-    cur_input_port = sexp_make_input_port(stdin);
-    cur_output_port = sexp_make_output_port(stdout);
-    cur_error_port = sexp_make_output_port(stderr);
     the_compile_error_symbol = sexp_intern("compile-error");
-    context = sexp_new_context(NULL);
+    the_err_handler_symbol = sexp_intern("*current-error-handler*");
+    the_cur_in_symbol = sexp_intern("*current-input-port*");
+    the_cur_out_symbol = sexp_intern("*current-output-port*");
+    the_cur_err_symbol = sexp_intern("*current-error-port*");
+    the_interaction_env_symbol = sexp_intern("*interaction-environment*");
+    context = sexp_make_context(NULL, NULL);
     emit(OP_RESUMECC, context);
     continuation_resumer = finalize_bytecode(context);
     context = sexp_child_context(context, NULL);
@@ -1544,33 +1593,35 @@ void scheme_init () {
 }
 
 void repl (sexp context) {
-  sexp obj, res;
+  sexp obj, res, env, in, out, err;
+  env = sexp_context_env(context);
+  in = env_global_ref(env, the_cur_in_symbol, SEXP_FALSE);
+  out = env_global_ref(env, the_cur_out_symbol, SEXP_FALSE);
+  err = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
   while (1) {
-    sexp_write_string("> ", cur_output_port);
-    sexp_flush(cur_output_port);
-    obj = sexp_read(cur_input_port);
+    sexp_write_string("> ", out);
+    sexp_flush(out);
+    obj = sexp_read(in);
     if (obj == SEXP_EOF)
       break;
     if (sexp_exceptionp(obj)) {
-      sexp_print_exception(obj, cur_error_port);
+      sexp_print_exception(obj, err);
     } else {
       res = eval_in_context(obj, context);
       if (res != SEXP_UNDEF) {
-        sexp_write(res, cur_output_port);
-        sexp_write_char('\n', cur_output_port);
+        sexp_write(res, out);
+        sexp_write_char('\n', out);
       }
     }
   }
 }
 
 void run_main (int argc, char **argv) {
-  sexp env, obj, res, context, err_handler, err_handler_sym;
+  sexp env, obj, out=NULL, res, context, err_handler;
   sexp_uint_t i, quit=0, init_loaded=0;
 
-  env = make_standard_env();
-  interaction_environment = env;
-  context = sexp_new_context(NULL);
-  sexp_context_env(context) = env;
+  env = sexp_make_standard_env(sexp_make_integer(5));
+  context = sexp_make_context(NULL, env);
   sexp_context_tailp(context) = 0;
   emit_push(SEXP_UNDEF, context);
   emit(OP_DONE, context);
@@ -1578,12 +1629,7 @@ void run_main (int argc, char **argv) {
                                     sexp_make_integer(0),
                                     finalize_bytecode(context),
                                     sexp_make_vector(0, SEXP_UNDEF));
-  err_handler_sym = sexp_intern("*current-error-handler*");
-  env_define(env, err_handler_sym, err_handler);
-  env_define(env, sexp_intern("*current-input-port*"), cur_input_port);
-  env_define(env, sexp_intern("*current-output-port*"), cur_output_port);
-  env_define(env, sexp_intern("*current-error-port*"), cur_error_port);
-  exception_handler_cell = env_cell(env, err_handler_sym);
+  env_define(env, the_err_handler_symbol, err_handler);
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
@@ -1591,14 +1637,16 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded) {
-        sexp_load(sexp_make_string(sexp_init_file));
+        sexp_load(sexp_make_string(sexp_init_file), env);
         init_loaded = 1;
       }
       obj = sexp_read_from_string(argv[i+1]);
       res = eval_in_context(obj, context);
       if (argv[i][1] == 'p') {
-        sexp_write(res, cur_output_port);
-        sexp_write_char('\n', cur_output_port);
+        if (! out)
+          out = env_global_ref(env, the_cur_out_symbol, SEXP_FALSE);
+        sexp_write(res, out);
+        sexp_write_char('\n', out);
       }
       quit=1;
       i++;
@@ -1613,10 +1661,10 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      sexp_load(sexp_make_string(sexp_init_file));
+      sexp_load(sexp_make_string(sexp_init_file), env);
     if (i < argc)
       for ( ; i < argc; i++)
-        sexp_load(sexp_make_string(argv[i]));
+        sexp_load(sexp_make_string(argv[i]), env);
     else
       repl(context);
   }

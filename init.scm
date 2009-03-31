@@ -170,3 +170,5 @@
 ;; (define (lcm a b)
 ;;   (quotient (* a b) (gcd a b)))
 
+(define (load file) (%load file (interaction-environment)))
+
