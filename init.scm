@@ -1,22 +1,21 @@
 
-;; let* cond case delay and do
+;; cond case delay do
 ;; quasiquote let-syntax
-;; letrec-syntax syntax-rules eqv? equal? not boolean? number?
+;; letrec-syntax syntax-rules not boolean? number?
 ;; complex? real? rational? integer? exact? inexact?
 ;; positive? negative? odd? even? max min quotient remainder
 ;; modulo numerator denominator floor ceiling truncate round
-;; rationalize sqrt expt
+;; rationalize expt
 ;; make-rectangular make-polar real-part imag-part magnitude angle
 ;; exact->inexact inexact->exact number->string string->number
-;; list? list-tail list-ref memv
-;; member assv assoc symbol->string string->symbol
+;; symbol->string string->symbol
 ;; char-alphabetic? char-numeric? char-whitespace?
 ;; char-upper-case? char-lower-case? char->integer integer->char
 ;; char-upcase char-downcase make-string string string-length
 ;; string=? string-ci=? string<? string>?
 ;; string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
 ;; substring string-append string->list list->string string-copy
-;; string-fill! make-vector vector vector-length
+;; string-fill! vector vector-length
 ;; vector->list list->vector vector-fill! procedure? apply
 ;; map for-each force call-with-current-continuation values
 ;; call-with-values dynamic-wind scheme-report-environment
@@ -24,8 +23,7 @@
 ;; current-input-port current-output-port
 ;; with-input-from-file with-output-to-file open-input-file
 ;; open-output-file close-input-port close-output-port
-;; peek-char eof-object? char-ready?
-;; eval
+;; peek-char char-ready?
 
 ;; provide c[ad]{2,4}r
 
@@ -34,14 +32,14 @@
 (define (cdar x) (cdr (car x)))
 (define (cddr x) (cdr (cdr x)))
 
-;; (define (caaar x) (car (car (car x))))
-;; (define (caadr x) (car (car (cdr x))))
-;; (define (cadar x) (car (cdr (car x))))
-;; (define (caddr x) (car (cdr (cdr x))))
-;; (define (cdaar x) (cdr (car (car x))))
-;; (define (cdadr x) (cdr (car (cdr x))))
-;; (define (cddar x) (cdr (cdr (car x))))
-;; (define (cdddr x) (cdr (cdr (cdr x))))
+(define (caaar x) (car (car (car x))))
+(define (caadr x) (car (car (cdr x))))
+(define (cadar x) (car (cdr (car x))))
+(define (caddr x) (car (cdr (cdr x))))
+(define (cdaar x) (cdr (car (car x))))
+(define (cdadr x) (cdr (car (cdr x))))
+(define (cddar x) (cdr (cdr (car x))))
+(define (cdddr x) (cdr (cdr (cdr x))))
 
 ;; (define (caaaar x) (car (car (car (car x)))))
 ;; (define (caaadr x) (car (car (car (cdr x)))))
@@ -61,6 +59,33 @@
 ;; (define (cddddr x) (cdr (cdr (cdr (cdr x)))))
 
 (define (list . args) args)
+
+(define (list-tail ls k)
+  (if (zero? k)
+      ls
+      (list-tail (cdr ls) (- k 1))))
+
+(define (list-ref ls k) (car (list-tail ls k)))
+
+(define eqv? equal?)
+
+(define (member obj ls)
+  (if (null? ls)
+      #f
+      (if (equal? obj (car ls))
+          ls
+          (member obj (cdr ls)))))
+
+(define memv member)
+
+(define (assoc obj ls)
+  (if (null? ls)
+      #f
+      (if (equal? obj (caar ls))
+          ls
+          (member obj (cdr ls)))))
+
+(define assv assoc)
 
 (define (append-reverse a b)
   (if (pair? a)
@@ -114,30 +139,74 @@
     (lambda (expr use-env mac-env)
       (make-syntactic-closure use-env '() (f expr mac-env)))))
 
-(define-syntax let
-  (lambda (expr use-env mac-env)
-    (cons (cons 'lambda (cons (map car (cadr expr)) (cddr expr)))
-          (map cadr (cadr expr)))))
+(define er-macro-transformer
+  (lambda (f)
+    (lambda (expr use-env mac-env)
+      ((lambda (rename compare) (f expr rename compare))
+       ((lambda (renames)
+          (lambda (identifier)
+            ((lambda (cell)
+               (if cell
+                   (cdr cell)
+                   ((lambda (name)
+                      (set! renames (cons (cons identifier name) renames))
+                      name)
+                    (make-syntactic-closure mac-env '() identifier))))
+             (assq identifier renames))))
+        '())
+       (lambda (x y) (identifier=? use-env x use-env y))))))
 
 (define-syntax letrec
-  (lambda (expr use-env mac-env)
-    (list
-     (cons 'lambda
-           (cons '()
-                 (append (map (lambda (x) (cons 'define x)) (cadr expr))
-                         (cddr expr)))))))
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (list
+      (cons (rename 'lambda)
+            (cons '()
+                  (append (map (lambda (x) (cons (rename 'define) x)) (cadr expr))
+                          (cddr expr))))))))
+
+(define-syntax let
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (identifier? (cadr expr))
+         (list (rename 'letrec)
+               (list (list (cadr expr)
+                           (cons (rename 'lambda)
+                                 (cons (map car (caddr expr))
+                                       (cdddr expr)))))
+               (cons (cadr expr) (map cadr (caddr expr))))
+         (cons (cons (rename 'lambda) (cons (map car (cadr expr)) (cddr expr)))
+               (map cadr (cadr expr)))))))
+
+(define-syntax let*
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (null? (cadr expr))
+         (cons (rename 'begin) (cddr expr))
+         (list (rename 'let)
+               (list (caadr expr))
+               (cons (rename 'let*) (cons (cdadr expr) (cddr expr))))))))
 
 (define-syntax or
-  (sc-macro-transformer
-   (lambda (expr use-env)
+  (er-macro-transformer
+   (lambda (expr rename compare)
      (if (null? (cdr expr))
          #f
+         (list (rename 'let) (list (list (rename 'tmp) (cadr expr)))
+               (list (rename 'if) (rename 'tmp)
+                     (rename 'tmp)
+                     (cons (rename 'or) (cddr expr))))))))
+
+(define-syntax and
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (null? (cdr expr))
+         #t
          (if (null? (cddr expr))
-             (make-syntactic-closure use-env '() (cadr expr))
-             (list 'let (list (list 'tmp (make-syntactic-closure use-env '() (cadr expr))))
-                   (list 'if 'tmp
-                         'tmp
-                         (make-syntactic-closure use-env '() (cons 'or (cddr expr))))))))))
+             (cadr expr)
+             (list (rename 'if) (cadr expr)
+                   (cons (rename 'and) (cddr expr))
+                   #f))))))
 
 ;; char utils
 

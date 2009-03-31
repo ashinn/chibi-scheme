@@ -91,8 +91,8 @@ void sexp_deep_free (sexp obj) {
 
 /***************************** exceptions *****************************/
 
-sexp sexp_make_exception(sexp kind, sexp message, sexp irritants,
-                         sexp file, sexp line) {
+sexp sexp_make_exception (sexp kind, sexp message, sexp irritants,
+                          sexp file, sexp line) {
   sexp exn = sexp_alloc_type(exception, SEXP_EXCEPTION);
   sexp_exception_kind(exn) = kind;
   sexp_exception_message(exn) = message;
@@ -102,11 +102,11 @@ sexp sexp_make_exception(sexp kind, sexp message, sexp irritants,
   return exn;
 }
 
-sexp sexp_print_exception(sexp exn, sexp out) {
+sexp sexp_print_exception (sexp exn, sexp out) {
   sexp ls;
   sexp_write_string("ERROR", out);
   if (sexp_integerp(sexp_exception_line(exn))
-      && sexp_exception_line(exn) > sexp_make_integer(0)) {
+      && (sexp_exception_line(exn) > sexp_make_integer(0))) {
     sexp_write_string(" on line ", out);
     sexp_write(sexp_exception_line(exn), out);
   }
@@ -116,7 +116,8 @@ sexp sexp_print_exception(sexp exn, sexp out) {
   }
   sexp_write_string(": ", out);
   sexp_write_string(sexp_string_data(sexp_exception_message(exn)), out);
-  if (sexp_pairp(sexp_exception_irritants(exn))) {
+  if (sexp_exception_irritants(exn)
+      && sexp_pairp(sexp_exception_irritants(exn))) {
     if (sexp_nullp(sexp_cdr(sexp_exception_irritants(exn)))) {
       sexp_write_string(": ", out);
       sexp_write(sexp_car(sexp_exception_irritants(exn)), out);
@@ -136,7 +137,7 @@ sexp sexp_print_exception(sexp exn, sexp out) {
   return SEXP_UNDEF;
 }
 
-static sexp sexp_read_error(char *message, sexp irritants, sexp port) {
+static sexp sexp_read_error (char *message, sexp irritants, sexp port) {
   sexp name = (sexp_port_name(port)
                ? sexp_make_string(sexp_port_name(port)) : SEXP_FALSE);
   return sexp_make_exception(the_read_error_symbol,
@@ -148,17 +149,17 @@ static sexp sexp_read_error(char *message, sexp irritants, sexp port) {
 
 /*************************** list utilities ***************************/
 
-sexp sexp_cons(sexp head, sexp tail) {
+sexp sexp_cons (sexp head, sexp tail) {
   sexp pair = sexp_alloc_type(pair, SEXP_PAIR);
   sexp_car(pair) = head;
   sexp_cdr(pair) = tail;
   return pair;
 }
 
-int sexp_listp (sexp obj) {
+sexp sexp_listp (sexp obj) {
   while (sexp_pairp(obj))
     obj = sexp_cdr(obj);
-  return (obj == SEXP_NULL);
+  return sexp_make_boolean(obj == SEXP_NULL);
 }
 
 sexp sexp_memq (sexp x, sexp ls) {
@@ -172,21 +173,21 @@ sexp sexp_memq (sexp x, sexp ls) {
 
 sexp sexp_assq (sexp x, sexp ls) {
   while (sexp_pairp(ls))
-    if (x == sexp_caar(ls))
-      return ls;
+    if (sexp_pairp(sexp_car(ls)) && (x == sexp_caar(ls)))
+      return sexp_car(ls);
     else
       ls = sexp_cdr(ls);
   return SEXP_FALSE;
 }
 
-sexp sexp_reverse(sexp ls) {
+sexp sexp_reverse (sexp ls) {
   sexp res = SEXP_NULL;
   for ( ; sexp_pairp(ls); ls=sexp_cdr(ls))
     res = sexp_cons(sexp_car(ls), res);
   return res;
 }
 
-sexp sexp_nreverse(sexp ls) {
+sexp sexp_nreverse (sexp ls) {
   sexp a, b, tmp;
   if (ls == SEXP_NULL) {
     return ls;
@@ -204,17 +205,60 @@ sexp sexp_nreverse(sexp ls) {
   }
 }
 
-sexp sexp_append(sexp a, sexp b) {
+sexp sexp_append (sexp a, sexp b) {
   for (a=sexp_reverse(a); sexp_pairp(a); a=sexp_cdr(a))
     b = sexp_cons(sexp_car(a), b);
   return b;
 }
 
-sexp sexp_length(sexp ls) {
+sexp sexp_length (sexp ls) {
   sexp_uint_t res=0;
   for ( ; sexp_pairp(ls); res++, ls=sexp_cdr(ls))
     ;
   return sexp_make_integer(res);
+}
+
+sexp sexp_equalp (sexp a, sexp b) {
+  sexp_uint_t len;
+  sexp *v1, *v2;
+ loop:
+  if (a == b)
+    return SEXP_TRUE;
+  if (! sexp_pointerp(a))
+    return sexp_make_boolean(sexp_integerp(a) && sexp_pointerp(b)
+                             && (sexp_unbox_integer(a)
+                                 == sexp_flonum_value(b)));
+  else if (! sexp_pointerp(b))
+    return sexp_make_boolean(sexp_integerp(b) && sexp_pointerp(a)
+                             && (sexp_unbox_integer(b)
+                                 == sexp_flonum_value(a)));
+  if (sexp_pointer_tag(a) != sexp_pointer_tag(b))
+    return SEXP_FALSE;
+  switch (sexp_pointer_tag(a)) {
+  case SEXP_PAIR:
+    if (sexp_equalp(sexp_car(a), sexp_car(b)) == SEXP_FALSE)
+      return SEXP_FALSE;
+    a = sexp_cdr(a);
+    b = sexp_cdr(b);
+    goto loop;
+  case SEXP_VECTOR:
+    len = sexp_vector_length(a);
+    if (len != sexp_vector_length(b))
+      return SEXP_FALSE;
+    v1 = sexp_vector_data(a);
+    v2 = sexp_vector_data(b);
+    for (len--; len >= 0; len--)
+      if (sexp_equalp(v1[len], v2[len]) == SEXP_FALSE)
+        return SEXP_FALSE;
+    return SEXP_TRUE;
+  case SEXP_STRING:
+    return sexp_make_boolean((sexp_string_length(a) == sexp_string_length(b))
+                             && (! strncmp(sexp_string_data(a),
+                                           sexp_string_data(b),
+                                           sexp_string_length(a))));
+  default:
+    return SEXP_FALSE;
+  }
 }
 
 /********************* strings, symbols, vectors **********************/
@@ -805,7 +849,7 @@ sexp sexp_read_raw (sexp in) {
     case '(':
       sexp_push_char(c1, in);
       res = sexp_read(in);
-      if (! sexp_listp(res)) {
+      if (sexp_listp(res) == SEXP_FALSE) {
         if (! sexp_exceptionp(res)) {
           sexp_deep_free(res);
           res = sexp_read_error("dotted list not allowed in vector syntax",
