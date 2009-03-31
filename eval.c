@@ -662,20 +662,23 @@ static void generate_opcode_app (sexp app, sexp context) {
     generate(sexp_car(ls), context);
 
   /* emit the actual operator call */
-  if (sexp_opcode_class(op) == OPC_ARITHMETIC_INV) {
+  switch (sexp_opcode_class(op)) {
+  case OPC_ARITHMETIC_INV:
     emit((num_args == 1) ? sexp_opcode_inverse(op)
          : sexp_opcode_code(op), context);
-  } else {
-    if (sexp_opcode_class(op) == OPC_FOREIGN) {
-      /* push the funtion pointer for foreign calls */
-      emit_push(sexp_opcode_data(op), context);
-      emit(sexp_opcode_code(op), context);
-    } else if (sexp_opcode_class(op) == OPC_PARAMETER) {
-      emit_push(sexp_opcode_data(op), context);
-      emit(OP_CDR, context);
-    } else {
-      emit(sexp_opcode_code(op), context);
-    }
+    break;
+  case OPC_FOREIGN:
+  case OPC_TYPE_PREDICATE:
+    /* push the funtion pointer for foreign calls */
+    emit(sexp_opcode_code(op), context);
+    if (sexp_opcode_data(op))
+      emit_word((sexp_uint_t)sexp_opcode_data(op), context);
+    break;
+  case OPC_PARAMETER:
+    emit_push(sexp_opcode_data(op), context);
+    emit(OP_CDR, context);
+  default:
+    emit(sexp_opcode_code(op), context);
   }
 
   /* emit optional folding of operator */
@@ -887,9 +890,14 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
 #define _ARG4 stack[top-4]
 #define _ARG5 stack[top-5]
 #define _PUSH(x) (stack[top++]=(x))
-#define _POP() (stack[--top])
+#define _WORD0 ((sexp*)ip)[0]
+#define _UWORD0 ((sexp_uint_t*)ip)[0]
+#define _SWORD0 ((sexp_sint_t*)ip)[0]
 
-#define sexp_raise(msg, args) do {stack[top]=sexp_compile_error(msg, args); top++; goto call_error_handler;} while (0)
+#define sexp_raise(msg, args) do {stack[top]=sexp_compile_error(msg, args); \
+                                  top++;                                    \
+                                  goto call_error_handler;}                 \
+                               while (0)
 
 sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   unsigned char *ip=sexp_bytecode_data(bc);
@@ -952,7 +960,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     ip -= sizeof(sexp);
     goto make_call;
   case OP_TAIL_CALL:
-    i = sexp_unbox_integer(((sexp*)ip)[0]);    /* number of params */
+    i = sexp_unbox_integer(_WORD0);    /* number of params */
     tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
     j = sexp_unbox_integer(stack[fp]);
@@ -967,7 +975,7 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
   case OP_CALL:
     if (top >= INIT_STACK_SIZE)
       sexp_raise("out of stack space", SEXP_NULL);
-    i = sexp_unbox_integer(((sexp*)ip)[0]);
+    i = sexp_unbox_integer(_WORD0);
     tmp1 = _ARG1;
   make_call:
     if (sexp_opcodep(tmp1)) {
@@ -1014,57 +1022,60 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     fp = top-4;
     break;
   case OP_FCALL0:
-    _ARG1 = ((sexp_proc0)_ARG1)();
+    _PUSH(((sexp_proc0)_UWORD0)());
+    ip += sizeof(sexp);
     if (sexp_exceptionp(_ARG1)) goto call_error_handler;
     break;
   case OP_FCALL1:
-    _ARG2 = ((sexp_proc1)_ARG1)(_ARG2);
-    top--;
+    _ARG1 = ((sexp_proc1)_UWORD0)(_ARG1);
+    ip += sizeof(sexp);
     if (sexp_exceptionp(_ARG1)) goto call_error_handler;
     break;
   case OP_FCALL2:
-    _ARG3 = ((sexp_proc2)_ARG1)(_ARG2, _ARG3);
-    top-=2;
+    _ARG2 = ((sexp_proc2)_UWORD0)(_ARG1, _ARG2);
+    top--;
+    ip += sizeof(sexp);
     if (sexp_exceptionp(_ARG1)) goto call_error_handler;
     break;
   case OP_FCALL3:
-    _ARG4 =((sexp_proc3)_ARG1)(_ARG2, _ARG3, _ARG4);
-    top-=3;
+    _ARG3 =((sexp_proc3)_UWORD0)(_ARG1, _ARG2, _ARG3);
+    top-=2;
+    ip += sizeof(sexp);
     if (sexp_exceptionp(_ARG1)) goto call_error_handler;
     break;
   case OP_JUMP_UNLESS:
     if (stack[--top] == SEXP_FALSE)
-      ip += ((sexp_sint_t*)ip)[0];
+      ip += _SWORD0;
     else
       ip += sizeof(sexp_sint_t);
     break;
   case OP_JUMP:
-    ip += ((sexp_sint_t*)ip)[0];
+    ip += _SWORD0;
     break;
   case OP_PUSH:
-    _PUSH(((sexp*)ip)[0]);
+    _PUSH(_WORD0);
     ip += sizeof(sexp);
     break;
   case OP_DROP:
     top--;
     break;
   case OP_STACK_REF:            /* `pick' in forth */
-    stack[top] = stack[top - (sexp_sint_t) ((sexp*)ip)[0]];
+    stack[top] = stack[top - _SWORD0];
     ip += sizeof(sexp);
     top++;
     break;
   case OP_LOCAL_REF:
-    stack[top] = stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]];
+    stack[top] = stack[fp - 1 - _SWORD0];
     ip += sizeof(sexp);
     top++;
     break;
   case OP_LOCAL_SET:
-    stack[fp - 1 - (sexp_sint_t) ((sexp*)ip)[0]] = _ARG1;
+    stack[fp - 1 - _SWORD0] = _ARG1;
     _ARG1 = SEXP_UNDEF;
     ip += sizeof(sexp);
     break;
   case OP_CLOSURE_REF:
-    _PUSH(sexp_vector_ref(cp, sexp_make_integer(((sexp*)ip)[0])));
+    _PUSH(sexp_vector_ref(cp, sexp_make_integer(_WORD0)));
     ip += sizeof(sexp);
     break;
   case OP_VECTOR_REF:
@@ -1097,28 +1108,22 @@ sexp vm(sexp bc, sexp cp, sexp e, sexp* stack, sexp_sint_t top) {
     _ARG2 = sexp_make_vector(_ARG1, _ARG2);
     top--;
     break;
-  case OP_PAIRP:
-    _ARG1 = sexp_make_boolean(sexp_pairp(_ARG1)); break;
+  case OP_EOFP:
+    _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
   case OP_NULLP:
     _ARG1 = sexp_make_boolean(sexp_nullp(_ARG1)); break;
-  case OP_VECTORP:
-    _ARG1 = sexp_make_boolean(sexp_vectorp(_ARG1)); break;
   case OP_INTEGERP:
     _ARG1 = sexp_make_boolean(sexp_integerp(_ARG1)); break;
   case OP_SYMBOLP:
     _ARG1 = sexp_make_boolean(sexp_symbolp(_ARG1)); break;
-  case OP_STRINGP:
-    _ARG1 = sexp_make_boolean(sexp_stringp(_ARG1)); break;
   case OP_CHARP:
     _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
-  case OP_EOFP:
-    _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
-  case OP_PROCEDUREP:
-    _ARG1 = sexp_make_boolean(sexp_procedurep(_ARG1)); break;
-  case OP_IPORTP:
-    _ARG1 = sexp_make_boolean(sexp_iportp(_ARG1)); break;
-  case OP_OPORTP:
-    _ARG1 = sexp_make_boolean(sexp_oportp(_ARG1)); break;
+  case OP_TYPEP:
+    _ARG1 = sexp_make_boolean(sexp_pointerp(_ARG1)
+                              && (sexp_pointer_tag(_ARG1)
+                                  == _UWORD0));
+    ip += sizeof(sexp);
+    break;
   case OP_CAR:
     if (! sexp_pairp(_ARG1)) sexp_raise("car: not a pair", sexp_list1(_ARG1));
     _ARG1 = sexp_car(_ARG1); break;
@@ -1404,16 +1409,16 @@ _OP(OPC_PREDICATE,      OP_EQ,  2, 0, 0, 0, 0, "eq?", NULL, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, 0, "cons", NULL, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_MAKE_VECTOR, 2, 0, SEXP_FIXNUM, 0, 0, "make-vector", NULL, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_MAKE_PROCEDURE, 4, 0, 0, 0, 0, "make-procedure", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_PAIRP,  1, 0, 0, 0, 0, "pair?", NULL, NULL),
 _OP(OPC_TYPE_PREDICATE, OP_NULLP,  1, 0, 0, 0, 0, "null?", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_STRINGP,  1, 0, 0, 0, 0, "string?", NULL, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?", NULL, NULL),
 _OP(OPC_TYPE_PREDICATE, OP_SYMBOLP,  1, 0, 0, 0, 0, "symbol?", NULL, NULL),
 _OP(OPC_TYPE_PREDICATE, OP_CHARP,  1, 0, 0, 0, 0, "char?", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_VECTORP,  1, 0, 0, 0, 0, "vector?", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_PROCEDUREP,  1, 0, 0, 0, 0, "procedure?", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_IPORTP,  1, 0, 0, 0, 0, "input-port?", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_OPORTP,  1, 0, 0, 0, 0, "output-port?", NULL, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?", NULL, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "pair?", (sexp)SEXP_PAIR, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "string?", (sexp)SEXP_STRING, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "vector?", (sexp)SEXP_VECTOR, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "procedure?", (sexp)SEXP_PROCEDURE, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "input-port?", (sexp)SEXP_IPORT, NULL),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "output-port?", (sexp)SEXP_OPORT, NULL),
 _OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1", NULL, NULL),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation", NULL, NULL),
 _OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error", NULL, NULL),
