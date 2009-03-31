@@ -553,6 +553,7 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#f", out); break;
     case (sexp_uint_t) SEXP_EOF:
       sexp_write_string("#<eof>", out); break;
+    case (sexp_uint_t) SEXP_DEF:
     case (sexp_uint_t) SEXP_UNDEF:
       sexp_write_string("#<undef>", out); break;
     case (sexp_uint_t) SEXP_ERROR:

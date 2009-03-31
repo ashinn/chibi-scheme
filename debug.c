@@ -14,14 +14,14 @@ static const char* reverse_opcode_names[] =
    "WRITE_CHAR", "NEWLINE", "FLUSH_OUTPUT", "READ", "READ_CHAR", "RET", "DONE",
   };
 
-void disasm (sexp bc) {
+void disasm (sexp bc, sexp out) {
   unsigned char *ip=sexp_bytecode_data(bc), opcode;
  loop:
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
-    fprintf(stderr, "  %s ", reverse_opcode_names[opcode]);
+    sexp_printf(out, "  %s ", reverse_opcode_names[opcode]);
   } else {
-    fprintf(stderr, "  <unknown> %d ", opcode);
+    sexp_printf(out, "  <unknown> %d ", opcode);
   }
   switch (opcode) {
   case OP_STACK_REF:
@@ -35,17 +35,17 @@ void disasm (sexp bc) {
   case OP_FCALL2:
   case OP_FCALL3:
   case OP_TYPEP:
-    fprintf(stderr, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
+    sexp_printf(out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
   case OP_TAIL_CALL:
   case OP_CALL:
   case OP_PUSH:
-    sexp_write(((sexp*)ip)[0], cur_error_port);
+    sexp_write(((sexp*)ip)[0], out);
     ip += sizeof(sexp);
     break;
   }
-  fprintf(stderr, "\n");
+  sexp_write_char('\n', out);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
 }
@@ -75,13 +75,12 @@ void print_bytecode (sexp bc) {
   }
 }
 
-void print_stack (sexp *stack, int top, int fp) {
+void print_stack (sexp *stack, int top, int fp, sexp out) {
   int i;
   for (i=0; i<top; i++) {
-    fprintf(stderr, "%s %02d: ", ((i==fp) ? "*" : " "), i);
-    fflush(stderr);
-    sexp_write(stack[i], cur_error_port);
-    fprintf(stderr, "\n");
+    sexp_printf(out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
+    sexp_write(stack[i], out);
+    sexp_printf(out, "\n");
   }
 }
 
