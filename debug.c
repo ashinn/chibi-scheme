@@ -7,8 +7,8 @@ static const char* reverse_opcode_names[] =
    "FCALL0", "FCALL1", "FCALL2", "FCALL3", "EVAL", "JUMP_UNLESS", "JUMP",
    "PUSH", "DROP", "STACK_REF", "LOCAL_REF", "LOCAL_SET",
    "CLOSURE_REF", "VECTOR_REF", "VECTOR_SET", "STRING_REF", "STRING_SET",
-   "MAKE_PROCEDURE", "MAKE_VECTOR", "PAIRP", "NULLP", "VECTORP", "INTEGERP",
-   "SYMBOLP", "STRINGP", "CHARP", "EOFP", "PROCEDUREP", "IPORTP", "OPORTP",
+   "MAKE_PROCEDURE", "MAKE_VECTOR", "NULLP", "INTEGERP",
+   "SYMBOLP", "CHARP", "EOFP", "TYPEP",
    "CAR", "CDR", "SET_CAR", "SET_CDR", "CONS", "ADD", "SUB", "MUL", "DIV",
    "QUOT", "MOD", "NEG", "INV", "LT", "LE", "EQV", "EQ", "DISPLAY", "WRITE",
    "WRITE_CHAR", "NEWLINE", "FLUSH_OUTPUT", "READ", "READ_CHAR", "RET", "DONE",
@@ -30,6 +30,11 @@ void disasm (sexp bc) {
   case OP_CLOSURE_REF:
   case OP_JUMP:
   case OP_JUMP_UNLESS:
+  case OP_FCALL0:
+  case OP_FCALL1:
+  case OP_FCALL2:
+  case OP_FCALL3:
+  case OP_TYPEP:
     fprintf(stderr, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;

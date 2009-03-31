@@ -1,6 +1,6 @@
 
 ;; let* cond case delay and do
-;; quasiquote unquote unquote-splicing let-syntax
+;; quasiquote let-syntax
 ;; letrec-syntax syntax-rules eqv? equal? not boolean? number?
 ;; complex? real? rational? integer? exact? inexact?
 ;; positive? negative? odd? even? max min quotient remainder
