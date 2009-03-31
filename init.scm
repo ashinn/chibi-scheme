@@ -1,35 +1,31 @@
 
-;; define set! let let* letrec lambda if cond case delay and or begin do
-;; quote quasiquote unquote unquote-splicing define-syntax let-syntax
-;; letrec-syntax syntax-rules eqv? eq? equal? not boolean? number?
-;; complex? real? rational? integer? exact? inexact? = < > <= >= zero?
-;; positive? negative? odd? even? max min + * - / abs quotient remainder
-;; modulo gcd lcm numerator denominator floor ceiling truncate round
-;; rationalize exp log sin cos tan asin acos atan sqrt expt
+;; let* cond case delay and do
+;; quasiquote unquote unquote-splicing let-syntax
+;; letrec-syntax syntax-rules eqv? equal? not boolean? number?
+;; complex? real? rational? integer? exact? inexact?
+;; positive? negative? odd? even? max min quotient remainder
+;; modulo numerator denominator floor ceiling truncate round
+;; rationalize sqrt expt
 ;; make-rectangular make-polar real-part imag-part magnitude angle
-;; exact->inexact inexact->exact number->string string->number pair? cons
-;; car cdr set-car! set-cdr! caar cadr cdar cddr caaar caadr cadar caddr
-;; cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar cadadr
-;; caddar cadddr cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
-;; null? list? list length append reverse list-tail list-ref memq memv
-;; member assq assv assoc symbol? symbol->string string->symbol char?
-;; char=? char<? char>? char<=? char>=? char-ci=? char-ci<? char-ci>?
-;; char-ci<=? char-ci>=? char-alphabetic? char-numeric? char-whitespace?
+;; exact->inexact inexact->exact number->string string->number
+;; list? list-tail list-ref memv
+;; member assv assoc symbol->string string->symbol
+;; char-alphabetic? char-numeric? char-whitespace?
 ;; char-upper-case? char-lower-case? char->integer integer->char
-;; char-upcase char-downcase string? make-string string string-length
-;; string-ref string-set! string=? string-ci=? string<? string>?
+;; char-upcase char-downcase make-string string string-length
+;; string=? string-ci=? string<? string>?
 ;; string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
 ;; substring string-append string->list list->string string-copy
-;; string-fill! vector? make-vector vector vector-length vector-ref
-;; vector-set! vector->list list->vector vector-fill! procedure? apply
+;; string-fill! make-vector vector vector-length
+;; vector->list list->vector vector-fill! procedure? apply
 ;; map for-each force call-with-current-continuation values
 ;; call-with-values dynamic-wind scheme-report-environment
 ;; null-environment call-with-input-file call-with-output-file
-;; input-port? output-port? current-input-port current-output-port
+;; current-input-port current-output-port
 ;; with-input-from-file with-output-to-file open-input-file
-;; open-output-file close-input-port close-output-port read read-char
-;; peek-char eof-object? char-ready? write display newline write-char
-;; load eval
+;; open-output-file close-input-port close-output-port
+;; peek-char eof-object? char-ready?
+;; eval
 
 ;; provide c[ad]{2,4}r
 
@@ -142,6 +138,25 @@
                    (list 'if 'tmp
                          'tmp
                          (make-syntactic-closure use-env '() (cons 'or (cddr expr))))))))))
+
+;; char utils
+
+;; (define (char=? a b) (= (char->integer a) (char->integer b)))
+;; (define (char<? a b) (< (char->integer a) (char->integer b)))
+;; (define (char>? a b) (> (char->integer a) (char->integer b)))
+;; (define (char<=? a b) (<= (char->integer a) (char->integer b)))
+;; (define (char>=? a b) (>= (char->integer a) (char->integer b)))
+
+;; (define (char-ci=? a b)
+;;   (= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+;; (define (char-ci<? a b)
+;;   (< (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+;; (define (char-ci>? a b)
+;;   (> (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+;; (define (char-ci<=? a b)
+;;   (<= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+;; (define (char-ci>=? a b)
+;;   (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
 
 ;; math
 
