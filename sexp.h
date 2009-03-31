@@ -153,7 +153,7 @@ struct sexp_struct {
     } lit;
     /* compiler state */
     struct {
-      sexp bc, lambda, offsets, *stack, env;
+      sexp bc, lambda, *stack, env;
       sexp_uint_t pos, top, depth, tailp;
     } context;
   } value;
@@ -326,7 +326,6 @@ struct sexp_struct {
 #define sexp_context_pos(x)     ((x)->value.context.pos)
 #define sexp_context_top(x)     ((x)->value.context.top)
 #define sexp_context_lambda(x)  ((x)->value.context.lambda)
-#define sexp_context_offsets(x) ((x)->value.context.offsets)
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
 
 /****************************** arithmetic ****************************/
@@ -400,7 +399,8 @@ void sexp_printf(sexp port, sexp fmt, ...);
 
 sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp head, sexp tail);
-int sexp_listp(sexp obj);
+sexp sexp_equalp (sexp a, sexp b);
+sexp sexp_listp(sexp obj);
 sexp sexp_reverse(sexp ls);
 sexp sexp_nreverse(sexp ls);
 sexp sexp_append(sexp a, sexp b);

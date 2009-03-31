@@ -4,14 +4,14 @@
 
 static const char* reverse_opcode_names[] =
   {"NOOP", "ERROR", "RESUMECC", "CALLCC", "APPLY1", "TAIL_CALL", "CALL",
-   "FCALL0", "FCALL1", "FCALL2", "FCALL3", "EVAL", "JUMP_UNLESS", "JUMP",
-   "PUSH", "DROP", "STACK_REF", "LOCAL_REF", "LOCAL_SET",
+   "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "EVAL", "JUMP_UNLESS",
+   "JUMP", "PUSH", "DROP", "STACK_REF", "LOCAL_REF", "LOCAL_SET",
    "CLOSURE_REF", "VECTOR_REF", "VECTOR_SET", "STRING_REF", "STRING_SET",
-   "MAKE_PROCEDURE", "MAKE_VECTOR", "NULLP", "INTEGERP",
-   "SYMBOLP", "CHARP", "EOFP", "TYPEP",
-   "CAR", "CDR", "SET_CAR", "SET_CDR", "CONS", "ADD", "SUB", "MUL", "DIV",
-   "QUOT", "MOD", "NEG", "INV", "LT", "LE", "EQV", "EQ", "DISPLAY", "WRITE",
-   "WRITE_CHAR", "NEWLINE", "FLUSH_OUTPUT", "READ", "READ_CHAR", "RET", "DONE",
+   "MAKE_PROCEDURE", "MAKE_VECTOR", "NULLP", "INTEGERP", "SYMBOLP", "CHARP",
+   "EOFP", "TYPEP", "CAR", "CDR", "SET_CAR", "SET_CDR", "CONS", "ADD", "SUB",
+   "MUL", "DIV", "QUOT", "MOD", "NEG", "INV", "LT", "LE", "EQV", "EQ",
+   "DISPLAY", "WRITE", "WRITE_CHAR", "NEWLINE", "FLUSH_OUTPUT", "READ",
+   "READ_CHAR", "RET", "DONE",
   };
 
 void disasm (sexp bc, sexp out) {
