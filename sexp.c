@@ -130,6 +130,8 @@ sexp sexp_print_exception(sexp exn, sexp out) {
         sexp_write_string("\n", out);
       }
     }
+  } else {
+    sexp_write_string("\n", out);
   }
   return SEXP_UNDEF;
 }

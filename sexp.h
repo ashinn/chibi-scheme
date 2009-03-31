@@ -134,7 +134,7 @@ struct sexp_struct {
     } core;
     /* ast types */
     struct {
-      sexp name, params, locals, flags, body, fv, sv;
+      sexp name, params, locals, defs, flags, body, fv, sv;
     } lambda;
     struct {
       sexp test, pass, fail;
@@ -298,6 +298,7 @@ struct sexp_struct {
 #define sexp_lambda_name(x)   ((x)->value.lambda.name)
 #define sexp_lambda_params(x) ((x)->value.lambda.params)
 #define sexp_lambda_locals(x) ((x)->value.lambda.locals)
+#define sexp_lambda_defs(x)   ((x)->value.lambda.defs)
 #define sexp_lambda_flags(x)  ((x)->value.lambda.flags)
 #define sexp_lambda_body(x)   ((x)->value.lambda.body)
 #define sexp_lambda_fv(x)     ((x)->value.lambda.fv)
