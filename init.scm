@@ -208,6 +208,57 @@
                    (cons (rename 'and) (cddr expr))
                    #f))))))
 
+(define-syntax cond
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (null? (cdr expr))
+         #f
+         (let ((cl (cadr expr)))
+           (if (eq? 'else (car cl))
+               (cons (rename 'begin) (cdr cl))
+               (if (if (null? (cdr cl)) #t (eq? '=> (cadr cl)))
+                   (list (rename 'let)
+                         (list (list (rename 'tmp) (car cl)))
+                         (list (rename 'if) (rename 'tmp)
+                               (if (null? (cdr cl))
+                                   (rename 'tmp)
+                                   (list (caddr cl) (rename 'tmp)))))
+                   (list (rename 'if)
+                         (car cl)
+                         (cons (rename 'begin) (cdr cl))
+                         (cons (rename 'cond) (cddr expr))))))))))
+
+(define-syntax quasiquote
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (define (qq x d)
+       (if (pair? x)
+           (if (eq? 'unquote (car x))
+               (if (<= d 0)
+                   (cadr x)
+                   (list (rename 'unquote) (qq (cadr x) (- d 1))))
+               (if (eq? 'unquote-splicing (car x))
+                   (if (<= d 0)
+                       (list (rename 'cons) (qq (car x) d) (qq (cdr x) d))
+                       (list (rename 'unquote-splicing) (qq (cadr x) (- d 1))))
+                   (if (eq? 'quasiquote (car x))
+                       (list (rename 'quasiquote) (qq (cadr x) (+ d 1)))
+                       (if (and (<= d 0)
+                                (pair? (car x))
+                                (eq? 'unquote-splicing (caar x)))
+                           (list (rename 'append)
+                                 (cadar x)
+                                 (qq (cdr x) d))
+                           (list (rename 'cons)
+                                 (qq (car x) d)
+                                 (qq (cdr x) d))))))
+           (if (vector? x)
+               (list (rename 'list->vector) (qq (vector->list x) d))
+               (if (symbol? x)
+                   (list (rename 'quote) x)
+                   x))))
+     (qq (cadr expr) 0))))
+
 ;; char utils
 
 ;; (define (char=? a b) (= (char->integer a) (char->integer b)))
@@ -226,6 +277,23 @@
 ;;   (<= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
 ;; (define (char-ci>=? a b)
 ;;   (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+
+;; vector utils
+
+(define (list->vector ls)
+  (let ((vec (make-vector (length ls))))
+    (let lp ((ls ls) (i 0))
+      (if (pair? ls)
+          (begin
+            (vector-set! vec i (car ls))
+            (lp (cdr ls) (+ i 1)))))
+    vec))
+
+(define (vector->list vec)
+  (let lp ((i (- (vector-length vec) 1)) (res '()))
+    (if (< i 0)
+        res
+        (lp (- i 1) (cons (vector-ref vec i) res)))))
 
 ;; math
 
