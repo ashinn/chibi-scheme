@@ -135,6 +135,8 @@ static void shrink_bcode(sexp context, sexp_uint_t i) {
   if (sexp_bytecode_length(sexp_context_bc(context)) != i) {
     tmp = sexp_alloc_tagged(sexp_sizeof(bytecode) + i, SEXP_BYTECODE);
     sexp_bytecode_length(tmp) = i;
+    sexp_bytecode_literals(tmp)
+      = sexp_bytecode_literals(sexp_context_bc(context));
     memcpy(sexp_bytecode_data(tmp),
            sexp_bytecode_data(sexp_context_bc(context)),
            i);
@@ -151,6 +153,8 @@ static void expand_bcode(sexp context, sexp_uint_t size) {
                             SEXP_BYTECODE);
     sexp_bytecode_length(tmp)
       = sexp_bytecode_length(sexp_context_bc(context))*2;
+    sexp_bytecode_literals(tmp)
+      = sexp_bytecode_literals(sexp_context_bc(context));
     memcpy(sexp_bytecode_data(tmp),
            sexp_bytecode_data(sexp_context_bc(context)),
            sexp_bytecode_length(sexp_context_bc(context)));
@@ -174,6 +178,8 @@ static void emit_word(sexp_uint_t val, sexp context)  {
 static void emit_push(sexp obj, sexp context) {
   emit(OP_PUSH, context);
   emit_word((sexp_uint_t)obj, context);
+  if (sexp_pointerp(obj))
+    sexp_push(sexp_bytecode_literals(sexp_context_bc(context)), obj);
 }
 
 static sexp sexp_make_procedure(sexp flags, sexp num_args,
@@ -253,6 +259,7 @@ static sexp sexp_make_context(sexp *stack, sexp env) {
   sexp_context_bc(res)
     = sexp_alloc_tagged(sexp_sizeof(bytecode)+INIT_BCODE_SIZE, SEXP_BYTECODE);
   sexp_bytecode_length(sexp_context_bc(res)) = INIT_BCODE_SIZE;
+  sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
   sexp_context_lambda(res) = SEXP_FALSE;
   sexp_context_stack(res) = stack;
   sexp_context_env(res) = env;
@@ -289,10 +296,10 @@ static sexp sexp_identifier_eq (sexp e1, sexp id1, sexp e2, sexp id2) {
     id2 = sexp_synclo_expr(id2);
   }
   cell = env_cell(e1, id1);
-  if (sexp_lambdap(sexp_cdr(cell)))
+  if (cell && sexp_lambdap(sexp_cdr(cell)))
     lam1 = sexp_cdr(cell);
   cell = env_cell(e2, id2);
-  if (sexp_lambdap(sexp_cdr(cell)))
+  if (cell && sexp_lambdap(sexp_cdr(cell)))
     lam2 = sexp_cdr(cell);
   return sexp_make_boolean((id1 == id2) && (lam1 == lam2));
 }
@@ -357,13 +364,21 @@ static sexp analyze (sexp x, sexp context) {
       } else if (sexp_macrop(op)) {
         x = apply(sexp_macro_proc(op),
                   sexp_list3(x, sexp_context_env(context), sexp_macro_env(op)),
-                  context);
+                  sexp_child_context(context, sexp_context_lambda(context)));
         /* sexp_debug("expand => ", x, context); */
         goto loop;
       } else if (sexp_opcodep(op)) {
-        res = analyze_app(sexp_cdr(x), context);
-        analyze_check_exception(res);
-        sexp_push(res, op);
+        res = sexp_length(sexp_cdr(x));
+        if (sexp_unbox_integer(res) < sexp_opcode_num_args(op)) {
+          res = sexp_compile_error("not enough args for opcode", sexp_list1(x));
+        } else if ((sexp_unbox_integer(res) > sexp_opcode_num_args(op))
+                   && (! sexp_opcode_variadic_p(op))) {
+          res = sexp_compile_error("too many args for opcode", sexp_list1(x));
+        } else {
+          res = analyze_app(sexp_cdr(x), context);
+          analyze_check_exception(res);
+          sexp_push(res, op);
+        }
       } else {
         res = analyze_app(x, context);
       }
@@ -537,10 +552,10 @@ static void sexp_context_patch_label (sexp context, sexp_sint_t label) {
 static sexp finalize_bytecode (sexp context) {
   emit(OP_RET, context);
   shrink_bcode(context, sexp_context_pos(context));
-  disasm(sexp_context_bc(context),
-         env_global_ref(sexp_context_env(context),
-                        the_cur_err_symbol,
-                        SEXP_FALSE));
+/*   disasm(sexp_context_bc(context), */
+/*          env_global_ref(sexp_context_env(context), */
+/*                         the_cur_err_symbol, */
+/*                         SEXP_FALSE)); */
   return sexp_context_bc(context);
 }
 
@@ -950,8 +965,8 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
   sexp_sint_t i, j, k, fp=top-4;
 
  loop:
-  /* print_stack(stack, top, fp); */
-  /* fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN"); */
+/*   print_stack(stack, top, fp, env_global_ref(env, the_cur_err_symbol, SEXP_FALSE)); */
+/*   fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN"); */
   switch (*ip++) {
   case OP_NOOP:
     fprintf(stderr, "<<<NOOP>>>\n");
@@ -1089,6 +1104,12 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
+  case OP_FCALL4:
+    _ARG4 =((sexp_proc4)_UWORD0)(_ARG1, _ARG2, _ARG3, _ARG4);
+    top -= 3;
+    ip += sizeof(sexp);
+    sexp_check_exception();
+    break;
   case OP_EVAL:
     sexp_context_top(context) = top;
     _ARG1 = eval_in_context(_ARG1, context);
@@ -1142,6 +1163,9 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     _ARG3 = SEXP_UNDEF;
     top-=2;
     break;
+  case OP_VECTOR_LENGTH:
+    _ARG1 = sexp_make_integer(sexp_vector_length(_ARG1));
+    break;
   case OP_STRING_REF:
     _ARG2 = sexp_string_ref(_ARG1, _ARG2);
     top--;
@@ -1150,6 +1174,9 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     sexp_string_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_UNDEF;
     top-=2;
+    break;
+  case OP_STRING_LENGTH:
+    _ARG1 = sexp_make_integer(sexp_string_length(_ARG1));
     break;
   case OP_MAKE_PROCEDURE:
     _ARG4 = sexp_make_procedure(_ARG1, _ARG2, _ARG3, _ARG4);
@@ -1289,17 +1316,25 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     else sexp_raise("/: not a number", sexp_list1(_ARG1));
     break;
   case OP_LT:
-    _ARG2 = sexp_make_boolean(_ARG1 < _ARG2);
+    _ARG2 = sexp_make_boolean(sexp_unbox_integer(_ARG1)
+                              < sexp_unbox_integer(_ARG2));
     top--;
     break;
   case OP_LE:
-    _ARG2 = sexp_make_boolean(_ARG1 <= _ARG2);
+    _ARG2 = sexp_make_boolean(sexp_unbox_integer(_ARG1)
+                              <= sexp_unbox_integer(_ARG2));
     top--;
     break;
   case OP_EQ:
   case OP_EQV:
     _ARG2 = sexp_make_boolean(_ARG1 == _ARG2);
     top--;
+    break;
+  case OP_CHAR2INT:
+    _ARG1 = sexp_make_integer(sexp_unbox_character(_ARG1));
+    break;
+  case OP_INT2CHAR:
+    _ARG1 = sexp_make_character(sexp_unbox_integer(_ARG1));
     break;
   case OP_DISPLAY:
     if (sexp_stringp(_ARG1)) {
@@ -1412,6 +1447,10 @@ define_math_op(sexp_asin, asin)
 define_math_op(sexp_acos, acos)
 define_math_op(sexp_atan, atan)
 define_math_op(sexp_sqrt, sqrt)
+define_math_op(sexp_round, round)
+define_math_op(sexp_trunc, trunc)
+define_math_op(sexp_floor, floor)
+define_math_op(sexp_ceiling, ceil)
 
 #endif
 
@@ -1526,6 +1565,13 @@ void scheme_init () {
     the_cur_out_symbol = sexp_intern("*current-output-port*");
     the_cur_err_symbol = sexp_intern("*current-error-port*");
     the_interaction_env_symbol = sexp_intern("*interaction-environment*");
+#if USE_BOEHM
+    GC_add_roots((char*)&continuation_resumer,
+                 ((char*)&continuation_resumer)+sizeof(continuation_resumer)+1);
+    GC_add_roots((char*)&final_resumer,
+                 ((char*)&final_resumer)+sizeof(continuation_resumer)+1);
+    GC_add_roots((char*)&opcodes, ((char*)&opcodes)+sizeof(opcodes)+1);
+#endif
     context = sexp_make_context(NULL, NULL);
     emit(OP_RESUMECC, context);
     continuation_resumer = finalize_bytecode(context);
