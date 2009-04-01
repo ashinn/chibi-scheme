@@ -358,6 +358,7 @@ static sexp analyze (sexp x, sexp context) {
         x = apply(sexp_macro_proc(op),
                   sexp_list3(x, sexp_context_env(context), sexp_macro_env(op)),
                   context);
+        /* sexp_debug("expand => ", x, context); */
         goto loop;
       } else if (sexp_opcodep(op)) {
         res = analyze_app(sexp_cdr(x), context);

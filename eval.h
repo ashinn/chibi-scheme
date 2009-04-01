@@ -18,7 +18,7 @@
 
 #define sexp_init_file "init.scm"
 
-#define sexp_debug(msg, obj) (sexp_write_string(msg,cur_error_port), sexp_write(obj, cur_error_port), sexp_write_char('\n',cur_error_port))
+#define sexp_debug(msg, obj, ctx) (sexp_write_string(msg,env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE)), sexp_write(obj, env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE)), sexp_write_char('\n',env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE)))
 
 /* procedure types */
 typedef sexp (*sexp_proc0) ();
