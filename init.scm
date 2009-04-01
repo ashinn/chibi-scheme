@@ -1,29 +1,25 @@
 
-;; cond case delay do
-;; quasiquote let-syntax
-;; letrec-syntax syntax-rules not boolean? number?
-;; complex? real? rational? integer? exact? inexact?
-;; positive? negative? odd? even? max min quotient remainder
-;; modulo numerator denominator floor ceiling truncate round
+;; let-syntax letrec-syntax syntax-rules
+;; number? complex? real? rational? integer? exact? inexact?
+;; positive? negative? max min remainder
+;; modulo numerator denominator
 ;; rationalize expt
 ;; make-rectangular make-polar real-part imag-part magnitude angle
 ;; exact->inexact inexact->exact number->string string->number
 ;; symbol->string string->symbol
 ;; char-alphabetic? char-numeric? char-whitespace?
-;; char-upper-case? char-lower-case? char->integer integer->char
-;; char-upcase char-downcase make-string string string-length
+;; char-upper-case? char-lower-case?
+;; char-upcase char-downcase make-string
 ;; string=? string-ci=? string<? string>?
 ;; string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
-;; substring string-append string->list list->string string-copy
-;; string-fill! vector vector-length
-;; vector->list list->vector vector-fill! procedure? apply
-;; map for-each force call-with-current-continuation values
-;; call-with-values dynamic-wind scheme-report-environment
-;; null-environment call-with-input-file call-with-output-file
-;; current-input-port current-output-port
-;; with-input-from-file with-output-to-file open-input-file
-;; open-output-file close-input-port close-output-port
+;; substring string-append string-copy
+;; values call-with-values dynamic-wind
+;; call-with-input-file call-with-output-file
+;; with-input-from-file with-output-to-file
 ;; peek-char char-ready?
+
+(define (not x) (if x #f #t))
+(define (boolean? x) (if (eq? x #t) #t (eq? x #f)))
 
 ;; provide c[ad]{2,4}r
 
@@ -61,7 +57,7 @@
 (define (list . args) args)
 
 (define (list-tail ls k)
-  (if (zero? k)
+  (if (eq? k 0)
       ls
       (list-tail (cdr ls) (- k 1))))
 
@@ -82,8 +78,8 @@
   (if (null? ls)
       #f
       (if (equal? obj (caar ls))
-          ls
-          (member obj (cdr ls)))))
+          (car ls)
+          (assoc obj (cdr ls)))))
 
 (define assv assoc)
 
@@ -105,27 +101,21 @@
 ;; map with a fast-path for single lists
 
 (define (map proc ls . lol)
+  (define (map1 proc ls res)
+    (if (pair? ls)
+        (map1 proc (cdr ls) (cons (proc (car ls)) res))
+        (reverse res)))
+  (define (mapn proc lol res)
+    (if (null? (car lol))
+        (reverse res)
+        (mapn proc
+              (map1 cdr lol '())
+              (cons (apply1 proc (map1 car lol '())) res))))
   (if (null? lol)
       (map1 proc ls '())
       (mapn proc (cons ls lol) '())))
 
-(define (map1 proc ls res)
-  (if (pair? ls)
-      (map1 proc (cdr ls) (cons (proc (car ls)) res))
-      (reverse res)))
-
-(define (mapn proc lol res)
-  (if (null? (car lol))
-      (reverse res)
-      (mapn proc
-            (map1 cdr lol '())
-            (cons (apply1 proc (map1 car lol '())) res))))
-
-;; math utilities
-
-(define (zero? x) (= x 0))
-(define (positive? x) (> x 0))
-(define (negative? x) (< x 0))
+(define for-each map)
 
 ;; syntax
 
@@ -156,37 +146,6 @@
         '())
        (lambda (x y) (identifier=? use-env x use-env y))))))
 
-(define-syntax letrec
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (list
-      (cons (rename 'lambda)
-            (cons '()
-                  (append (map (lambda (x) (cons (rename 'define) x)) (cadr expr))
-                          (cddr expr))))))))
-
-(define-syntax let
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (if (identifier? (cadr expr))
-         (list (rename 'letrec)
-               (list (list (cadr expr)
-                           (cons (rename 'lambda)
-                                 (cons (map car (caddr expr))
-                                       (cdddr expr)))))
-               (cons (cadr expr) (map cadr (caddr expr))))
-         (cons (cons (rename 'lambda) (cons (map car (cadr expr)) (cddr expr)))
-               (map cadr (cadr expr)))))))
-
-(define-syntax let*
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (if (null? (cadr expr))
-         (cons (rename 'begin) (cddr expr))
-         (list (rename 'let)
-               (list (caadr expr))
-               (cons (rename 'let*) (cons (cdadr expr) (cddr expr))))))))
-
 (define-syntax or
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -213,51 +172,133 @@
    (lambda (expr rename compare)
      (if (null? (cdr expr))
          #f
-         (let ((cl (cadr expr)))
-           (if (eq? 'else (car cl))
-               (cons (rename 'begin) (cdr cl))
-               (if (if (null? (cdr cl)) #t (eq? '=> (cadr cl)))
-                   (list (rename 'let)
-                         (list (list (rename 'tmp) (car cl)))
-                         (list (rename 'if) (rename 'tmp)
-                               (if (null? (cdr cl))
-                                   (rename 'tmp)
-                                   (list (caddr cl) (rename 'tmp)))))
-                   (list (rename 'if)
-                         (car cl)
-                         (cons (rename 'begin) (cdr cl))
-                         (cons (rename 'cond) (cddr expr))))))))))
+         ((lambda (cl)
+            (if (compare 'else (car cl))
+                (cons (rename 'begin) (cdr cl))
+                (if (if (null? (cdr cl)) #t (compare '=> (cadr cl)))
+                    (list (rename 'let)
+                          (list (list (rename 'tmp) (car cl)))
+                          (list (rename 'if) (rename 'tmp)
+                                (if (null? (cdr cl))
+                                    (rename 'tmp)
+                                    (list (caddr cl) (rename 'tmp)))))
+                    (list (rename 'if)
+                          (car cl)
+                          (cons (rename 'begin) (cdr cl))
+                          (cons (rename 'cond) (cddr expr))))))
+          (cadr expr))))))
 
 (define-syntax quasiquote
   (er-macro-transformer
    (lambda (expr rename compare)
      (define (qq x d)
-       (if (pair? x)
-           (if (eq? 'unquote (car x))
-               (if (<= d 0)
-                   (cadr x)
-                   (list (rename 'unquote) (qq (cadr x) (- d 1))))
-               (if (eq? 'unquote-splicing (car x))
-                   (if (<= d 0)
-                       (list (rename 'cons) (qq (car x) d) (qq (cdr x) d))
-                       (list (rename 'unquote-splicing) (qq (cadr x) (- d 1))))
-                   (if (eq? 'quasiquote (car x))
-                       (list (rename 'quasiquote) (qq (cadr x) (+ d 1)))
-                       (if (and (<= d 0)
-                                (pair? (car x))
-                                (eq? 'unquote-splicing (caar x)))
-                           (list (rename 'append)
-                                 (cadar x)
-                                 (qq (cdr x) d))
-                           (list (rename 'cons)
-                                 (qq (car x) d)
-                                 (qq (cdr x) d))))))
-           (if (vector? x)
-               (list (rename 'list->vector) (qq (vector->list x) d))
-               (if (symbol? x)
-                   (list (rename 'quote) x)
-                   x))))
+       (cond
+        ((pair? x)
+         (cond
+          ((eq? 'unquote (car x))
+           (if (<= d 0)
+               (cadr x)
+               (list (rename 'unquote) (qq (cadr x) (- d 1)))))
+          ((eq? 'unquote-splicing (car x))
+           (if (<= d 0)
+               (list (rename 'cons) (qq (car x) d) (qq (cdr x) d))
+               (list (rename 'unquote-splicing) (qq (cadr x) (- d 1)))))
+          ((eq? 'quasiquote (car x))
+           (list (rename 'quasiquote) (qq (cadr x) (+ d 1))))
+          ((and (<= d 0) (pair? (car x)) (eq? 'unquote-splicing (caar x)))
+           (if (null? (cdr x))
+               (cadar x)
+               (list (rename 'append) (cadar x) (qq (cdr x) d))))
+          (else
+           (list (rename 'cons) (qq (car x) d) (qq (cdr x) d)))))
+        ((vector? x) (list (rename 'list->vector) (qq (vector->list x) d)))
+        ((symbol? x) (list (rename 'quote) x))
+        (else x)))
      (qq (cadr expr) 0))))
+
+(define-syntax letrec
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     ((lambda (defs)
+        `((,(rename 'lambda) () ,@defs ,@(cddr expr))))
+      (map (lambda (x) (cons (rename 'define) x)) (cadr expr))))))
+
+(define-syntax let
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (identifier? (cadr expr))
+         `(,(rename 'letrec) ((,(cadr expr)
+                               (,(rename 'lambda) ,(map car (caddr expr))
+                                ,@(cdddr expr))))
+           ,(cons (cadr expr) (map cadr (caddr expr))))
+         `((,(rename 'lambda) ,(map car (cadr expr)) ,@(cddr expr))
+           ,@(map cadr (cadr expr)))))))
+
+(define-syntax let*
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (null? (cadr expr))
+         `(,(rename 'begin) ,@(cddr expr))
+         `(,(rename 'let) (,(caadr expr))
+           (,(rename 'let*) ,(cdadr expr) ,@(cddr expr)))))))
+
+(define-syntax case
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (define (clause ls)
+       (cond
+        ((null? ls) #f)
+        ((compare 'else (caar ls))
+         `(,(rename 'begin) ,@(cdar ls)))
+        (else
+         (if (and (pair? (caar ls)) (null? (cdaar ls)))
+             `(,(rename 'if) (,(rename 'eqv?) ,(rename 'tmp) ',(caaar ls))
+               (,(rename 'begin) ,@(cdar ls))
+               ,(clause (cdr ls)))
+             `(,(rename 'if) (,(rename 'memv) ,(rename 'tmp) ',(caar ls))
+               (,(rename 'begin) ,@(cdar ls))
+               ,(clause (cdr ls)))))))
+     `(let ((,(rename 'tmp) ,(cadr expr)))
+        ,(clause (cddr expr))))))
+
+(define-syntax do
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let* ((body
+             `(,(rename 'begin)
+               ,@(cdddr expr)
+               (,(rename 'lp)
+                ,@(map (lambda (x) (if (pair? (cddr x)) (caddr x) (car x)))
+                       (cadr expr)))))
+            (check (caddr expr))
+            (wrap
+             (if (null? (cdr check))
+                 `(,(rename 'let) ((,(rename 'tmp) ,(car check)))
+                   (,(rename 'if) ,(rename 'tmp)
+                    ,(rename 'tmp)
+                    ,body))
+                 `(,(rename 'if) ,(car check)
+                   (,(rename 'begin) ,@(cdr check))
+                   ,body))))
+       `(,(rename 'let) ,(rename 'lp)
+         ,(map (lambda (x) (list (car x) (cadr x))) (cadr expr))
+         ,wrap)))))
+
+(define-syntax delay
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr epr))))))
+
+(define (make-promise thunk)
+  (lambda ()
+    (let ((computed? #f) (result #f))
+      (if (not computed?)
+          (begin
+            (set! result (thunk))
+            (set! computed? #t)))
+      result)))
+
+(define (force x) (if (procedure? x) (x) x))
 
 ;; char utils
 
@@ -278,24 +319,35 @@
 ;; (define (char-ci>=? a b)
 ;;   (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
 
-;; vector utils
+;; string utils
 
-(define (list->vector ls)
-  (let ((vec (make-vector (length ls))))
+(define (list->string ls)
+  (let ((str (make-string (length ls) #\space)))
     (let lp ((ls ls) (i 0))
       (if (pair? ls)
           (begin
-            (vector-set! vec i (car ls))
+            (string-set! str i (car ls))
             (lp (cdr ls) (+ i 1)))))
-    vec))
+    str))
 
-(define (vector->list vec)
-  (let lp ((i (- (vector-length vec) 1)) (res '()))
-    (if (< i 0)
-        res
-        (lp (- i 1) (cons (vector-ref vec i) res)))))
+(define (string->list str)
+  (let lp ((i (- (string-length str) 1)) (res '()))
+    (if (< i 0) res (lp (- i 1) (cons (string-ref str i) res)))))
 
-;; math
+(define (string-fill! str ch)
+  (let lp ((i (- (string-length str) 1)))
+    (if (>= i 0) (begin (string-set! str i ch) (lp (- i 1))))))
+
+(define (string . args) (list->string args))
+
+;; math utils
+
+(define (zero? x) (= x 0))
+(define (positive? x) (> x 0))
+(define (negative? x) (< x 0))
+
+(define (even? n) (= (remainder n 2) 0))
+(define (odd? n) (= (remainder n 2) 1))
 
 ;; (define (abs x) (if (< x 0) (- x) x))
 
@@ -306,6 +358,29 @@
 
 ;; (define (lcm a b)
 ;;   (quotient (* a b) (gcd a b)))
+
+;; vector utils
+
+(define (list->vector ls)
+  (let ((vec (make-vector (length ls) #f)))
+    (let lp ((ls ls) (i 0))
+      (if (pair? ls)
+          (begin
+            (vector-set! vec i (car ls))
+            (lp (cdr ls) (+ i 1)))))
+    vec))
+
+(define (vector->list vec)
+  (let lp ((i (- (vector-length vec) 1)) (res '()))
+    (if (< i 0) res (lp (- i 1) (cons (vector-ref vec i) res)))))
+
+(define (vector-fill! str ch)
+  (let lp ((i (- (vector-length str) 1)))
+    (if (>= i 0) (begin (vector-set! str i ch) (lp (- i 1))))))
+
+(define (vector . args) (list->vector args))
+
+;; miscellaneous
 
 (define (load file) (%load file (interaction-environment)))
 

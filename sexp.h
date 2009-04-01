@@ -109,6 +109,7 @@ struct sexp_struct {
     } env;
     struct {
       sexp_uint_t length;
+      sexp literals;
       unsigned char data[];
     } bytecode;
     struct {
@@ -263,6 +264,7 @@ struct sexp_struct {
 
 #define sexp_bytecode_length(x)   ((x)->value.bytecode.length)
 #define sexp_bytecode_data(x)     ((x)->value.bytecode.data)
+#define sexp_bytecode_literals(x) ((x)->value.bytecode.literals)
 
 #define sexp_env_flags(x)         ((x)->value.env.flags)
 #define sexp_env_parent(x)        ((x)->value.env.parent)

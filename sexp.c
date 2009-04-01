@@ -47,7 +47,7 @@ static int is_separator(int c) {
 
 static sexp* symbol_table = NULL;
 static unsigned long symbol_table_primes[] = {
-  97, 389, 1543, 6151, 12289, 24593, 49157, 98317, 196613, 393241,
+  /* 97, 389, */ 1543, 6151, 12289, 24593, 49157, 98317, 196613, 393241,
   786433, 1572869, 3145739, 6291469, 12582917, 25165843, 50331653,
   100663319, 201326611, 402653189, 805306457, 1610612741};
 static int symbol_table_prime_index = 0;
@@ -934,6 +934,8 @@ void sexp_init() {
     sexp_initialized_p = 1;
 #if USE_BOEHM
     GC_init();
+    GC_add_roots((char*)&symbol_table,
+                 ((char*)&symbol_table)+sizeof(symbol_table)+1);
 #endif
     symbol_table = sexp_alloc(symbol_table_primes[0]*sizeof(sexp));
     the_dot_symbol = sexp_intern(".");
