@@ -102,6 +102,19 @@ sexp sexp_make_exception (sexp kind, sexp message, sexp irritants,
   return exn;
 }
 
+sexp sexp_type_exception (char *message, sexp obj) {
+  return sexp_make_exception(sexp_intern("type-error"),
+                             sexp_c_string(message),
+                             sexp_list1(obj), SEXP_FALSE, SEXP_FALSE);
+}
+
+sexp sexp_range_exception (sexp obj, sexp start, sexp end) {
+  return sexp_make_exception(sexp_intern("range-error"),
+                             sexp_c_string("bad index range"),
+                             sexp_list3(obj, start, end),
+                             SEXP_FALSE, SEXP_FALSE);
+}
+
 sexp sexp_print_exception (sexp exn, sexp out) {
   sexp ls;
   sexp_write_string("ERROR", out);
@@ -288,6 +301,30 @@ sexp sexp_c_string(char *str) {
   return s;
 }
 
+sexp sexp_substring (sexp str, sexp start, sexp end) {
+  sexp res;
+  if (! sexp_stringp(str))
+    return sexp_type_exception("not a string", str);
+  if (! sexp_integerp(start))
+    return sexp_type_exception("not a number", start);
+  if (end == SEXP_FALSE)
+    end = sexp_make_integer(sexp_string_length(str));
+  if (! sexp_integerp(end))
+    return sexp_type_exception("not a number", end);
+  if ((sexp_unbox_integer(start) < 0)
+      || (sexp_unbox_integer(start) > sexp_string_length(str))
+      || (sexp_unbox_integer(end) < 0)
+      || (sexp_unbox_integer(end) > sexp_string_length(str))
+      || (end < start))
+    return sexp_range_exception(str, start, end);
+  res = sexp_make_string(sexp_fx_sub(end, start),
+                         SEXP_UNDEF);
+  memcpy(sexp_string_data(res),
+         sexp_string_data(str)+sexp_unbox_integer(start),
+         sexp_string_length(res));
+  return res;
+}
+
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
 
@@ -392,50 +429,95 @@ sexp sexp_vector(int count, ...) {
 
 #if USE_STRING_STREAMS
 
+#define SEXP_INIT_STRING_PORT_SIZE 128
+
+#if SEXP_BSD
+
+#define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(0))
+#define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(1))
+#define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(2))
+
 int sstream_read(void *vec, char *dst, int n) {
-  int len = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(1));
-  int pos = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(2));
+  sexp_uint_t len = sexp_unbox_integer(sexp_stream_size(vec));
+  sexp_uint_t pos = sexp_unbox_integer(sexp_stream_pos(vec));
   if (pos >= len) return 0;
   if (n > (len - pos)) n = (len - pos);
-  memcpy(dst+pos, sexp_vector_ref((sexp) vec, sexp_make_integer(0)), n);
-  sexp_vector_set((sexp) vec, sexp_make_integer(2), (sexp)n);
+  memcpy(dst, sexp_string_data(sexp_stream_buf(vec))+pos, n);
+  sexp_vector_set((sexp) vec, sexp_make_integer(2), sexp_make_integer(n));
   return n;
 }
 
 int sstream_write(void *vec, const char *src, int n) {
+  sexp_uint_t len, pos, newpos;
+  sexp newbuf;
+  len = sexp_unbox_integer(sexp_stream_size(vec));
+  pos = sexp_unbox_integer(sexp_stream_pos(vec));
+  newpos = pos+n;
+  if (newpos > len) {
+    newbuf = sexp_make_string(sexp_make_integer(len*2), SEXP_UNDEF);
+    memcpy(sexp_string_data(newbuf),
+           sexp_string_data(sexp_stream_buf(vec)),
+           pos);
+    sexp_vector_set((sexp)vec, sexp_make_integer(0), newbuf);
+    sexp_vector_set((sexp)vec, sexp_make_integer(1), sexp_make_integer(len*2));
+  }
+  memcpy(sexp_string_data(sexp_stream_buf(vec))+pos, src, n);
+  sexp_vector_set((sexp)vec, sexp_make_integer(2), sexp_make_integer(newpos));
   return n;
 }
 
 off_t sstream_seek(void *vec, off_t offset, int whence) {
-  int pos;
+  sexp_sint_t pos;
   if (whence == SEEK_SET) {
     pos = offset;
   } else if (whence == SEEK_CUR) {
-    pos = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(2)) + offset;
+    pos = sexp_unbox_integer(sexp_stream_pos(vec)) + offset;
   } else {                      /* SEEK_END */
-    pos = (int) sexp_vector_ref((sexp) vec, sexp_make_integer(1)) + offset;
+    pos = sexp_unbox_integer(sexp_stream_size(vec)) + offset;
   }
-  sexp_vector_set((sexp) vec, sexp_make_integer(2), (sexp)pos);
+  sexp_vector_set((sexp)vec, sexp_make_integer(2), sexp_make_integer(pos));
   return pos;
 }
 
-int sstream_close(void *vec) {
-  sexp_deep_free((sexp)vec);
-  return 0;
+sexp sexp_make_input_string_port(sexp str) {
+  FILE *in;
+  sexp res, cookie;
+  cookie = sexp_vector(3, str, sexp_make_integer(sexp_string_length(str)),
+                       sexp_make_integer(0));
+  in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
+  res = sexp_make_input_port(in);
+  sexp_port_cookie(res) = cookie;
+  return res;
 }
+
+sexp sexp_make_output_string_port() {
+  FILE *out;
+  sexp res, size, cookie;
+  size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
+  cookie = sexp_vector(3, sexp_make_string(size, SEXP_UNDEF),
+                       size, sexp_make_integer(0));
+  out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
+  res = sexp_make_output_port(out);
+  sexp_port_cookie(res) = cookie;
+  return res;
+}
+
+sexp sexp_get_output_string(sexp port) {
+  sexp cookie = sexp_port_cookie(port);
+  fflush(sexp_port_stream(port));
+  return sexp_substring(sexp_stream_buf(cookie),
+                        sexp_make_integer(0),
+                        sexp_stream_pos(cookie));
+}
+
+#else
 
 sexp sexp_make_input_string_port(sexp str) {
   FILE *in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
   return sexp_make_input_port(in);
 }
 
-sexp sexp_make_output_string_port() {
-  return SEXP_ERROR;
-}
-
-sexp sexp_get_output_string(sexp port) {
-  return SEXP_ERROR;
-}
+#endif
 
 #endif
 
@@ -560,19 +642,26 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_char('"', out);
       i = sexp_string_length(obj);
       str = sexp_string_data(obj);
-      /* ... FALLTHROUGH ... */
-    case SEXP_SYMBOL:
-      if (! sexp_stringp(obj)) {
-        i = sexp_symbol_length(obj);
-        str = sexp_symbol_data(obj);
-      }
       for ( ; i>0; str++, i--) {
-        if (str[0] == '\\')
+        switch (str[0]) {
+        case '\\': sexp_write_string("\\\\", out); break;
+        case '"': sexp_write_string("\\\"", out); break;
+        case '\n': sexp_write_string("\\n", out); break;
+        case '\r': sexp_write_string("\\r", out); break;
+        case '\t': sexp_write_string("\\t", out); break;
+        default: sexp_write_char(str[0], out);
+        }
+      }
+      sexp_write_char('"', out);
+      break;
+    case SEXP_SYMBOL:
+      i = sexp_symbol_length(obj);
+      str = sexp_symbol_data(obj);
+      for ( ; i>0; str++, i--) {
+        if ((str[0] == '\\') || is_separator(str[0]))
           sexp_write_char('\\', out);
         sexp_write_char(str[0], out);
       }
-      if (sexp_stringp(obj))
-        sexp_write_char('"', out);
       break;
     }
   } else if (sexp_integerp(obj)) {

@@ -18,8 +18,11 @@ static const char* reverse_opcode_names[] =
    "NEWLINE", "FLUSH-OUTPUT", "READ", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
   };
 
-void disasm (sexp bc, sexp out) {
-  unsigned char *ip=sexp_bytecode_data(bc), opcode;
+static sexp sexp_disasm (sexp bc, sexp out) {
+  unsigned char *ip, opcode;
+  if (sexp_procedurep(bc))
+    bc = sexp_procedure_code(bc);
+  ip = sexp_bytecode_data(bc);
  loop:
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
@@ -52,9 +55,10 @@ void disasm (sexp bc, sexp out) {
   sexp_write_char('\n', out);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
+  return SEXP_UNDEF;
 }
 
-void print_bytecode (sexp bc) {
+static void print_bytecode (sexp bc) {
   int i;
   unsigned char *data = sexp_bytecode_data(bc);
   fprintf(stderr, "bytecode @ %p, data @ %p, length = %lu\n",
@@ -79,7 +83,7 @@ void print_bytecode (sexp bc) {
   }
 }
 
-void print_stack (sexp *stack, int top, int fp, sexp out) {
+static void print_stack (sexp *stack, int top, int fp, sexp out) {
   int i;
   for (i=0; i<top; i++) {
     sexp_printf(out, "%s %02d: ", ((i==fp) ? "*" : " "), i);

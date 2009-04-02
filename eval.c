@@ -18,12 +18,10 @@ static sexp the_cur_in_symbol, the_cur_out_symbol, the_cur_err_symbol;
 #else
 #define print_stack(...)
 #define print_bytecode(...)
-#define disasm(...)
+#define sexp_disasm(...)
 #endif
 
 static sexp analyze (sexp x, sexp context);
-static sexp_sint_t sexp_context_make_label (sexp context);
-static void sexp_context_patch_label (sexp context, sexp_sint_t label);
 static void generate (sexp x, sexp context);
 static sexp sexp_make_null_env (sexp version);
 static sexp sexp_make_standard_env (sexp version);
@@ -529,10 +527,10 @@ static void sexp_context_patch_label (sexp context, sexp_sint_t label) {
 static sexp finalize_bytecode (sexp context) {
   emit(OP_RET, context);
   shrink_bcode(context, sexp_context_pos(context));
-/*   disasm(sexp_context_bc(context), */
-/*          env_global_ref(sexp_context_env(context), */
-/*                         the_cur_err_symbol, */
-/*                         SEXP_FALSE)); */
+/*   sexp_disasm(sexp_context_bc(context), */
+/*               env_global_ref(sexp_context_env(context), */
+/*                              the_cur_err_symbol, */
+/*                              SEXP_FALSE)); */
   return sexp_context_bc(context);
 }
 
@@ -1488,19 +1486,6 @@ sexp sexp_load (sexp source, sexp env) {
   return res;
 }
 
-static sexp sexp_type_exception (char *message, sexp obj) {
-  return sexp_make_exception(sexp_intern("type-error"),
-                             sexp_c_string(message),
-                             sexp_list1(obj), SEXP_FALSE, SEXP_FALSE);
-}
-
-static sexp sexp_range_exception (sexp obj, sexp start, sexp end) {
-  return sexp_make_exception(sexp_intern("range-error"),
-                             sexp_c_string("bad index range"),
-                             sexp_list3(obj, start, end),
-                             SEXP_FALSE, SEXP_FALSE);
-}
-
 #if USE_MATH
 
 #define define_math_op(name, cname)       \
@@ -1555,30 +1540,6 @@ static sexp sexp_expt (sexp x, sexp e) {
     return sexp_make_flonum(res);
 #endif
   return sexp_make_integer((sexp_sint_t)round(res));
-}
-
-static sexp sexp_substring (sexp str, sexp start, sexp end) {
-  sexp res;
-  if (! sexp_stringp(str))
-    return sexp_type_exception("not a string", str);
-  if (! sexp_integerp(start))
-    return sexp_type_exception("not a number", start);
-  if (end == SEXP_FALSE)
-    end = sexp_make_integer(sexp_string_length(str));
-  if (! sexp_integerp(end))
-    return sexp_type_exception("not a number", end);
-  if ((sexp_unbox_integer(start) < 0)
-      || (sexp_unbox_integer(start) > sexp_string_length(str))
-      || (sexp_unbox_integer(end) < 0)
-      || (sexp_unbox_integer(end) > sexp_string_length(str))
-      || (end < start))
-    return sexp_range_exception(str, start, end);
-  res = sexp_make_string(sexp_fx_sub(end, start),
-                         SEXP_UNDEF);
-  memcpy(sexp_string_data(res),
-         sexp_string_data(str)+sexp_unbox_integer(start),
-         sexp_string_length(res));
-  return res;
 }
 
 static sexp sexp_string_concatenate (sexp str_ls) {
