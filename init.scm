@@ -1,8 +1,7 @@
 
 ;; let-syntax letrec-syntax syntax-rules
-;; number? complex? real? rational? integer? exact? inexact?
 ;; remainder modulo
-;; exact->inexact inexact->exact number->string string->number
+;; number->string string->number
 ;; symbol->string string->symbol
 ;; char-alphabetic? char-numeric? char-whitespace?
 ;; char-upper-case? char-lower-case?
@@ -15,16 +14,12 @@
 ;; with-input-from-file with-output-to-file
 ;; peek-char char-ready?
 
-(define (not x) (if x #f #t))
-(define (boolean? x) (if (eq? x #t) #t (eq? x #f)))
-
 ;; provide c[ad]{2,4}r
 
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
 (define (cdar x) (cdr (car x)))
 (define (cddr x) (cdr (cdr x)))
-
 (define (caaar x) (car (car (car x))))
 (define (caadr x) (car (car (cdr x))))
 (define (cadar x) (car (cdr (car x))))
@@ -33,23 +28,22 @@
 (define (cdadr x) (cdr (car (cdr x))))
 (define (cddar x) (cdr (cdr (car x))))
 (define (cdddr x) (cdr (cdr (cdr x))))
-
-;; (define (caaaar x) (car (car (car (car x)))))
-;; (define (caaadr x) (car (car (car (cdr x)))))
-;; (define (caadar x) (car (car (cdr (car x)))))
-;; (define (caaddr x) (car (car (cdr (cdr x)))))
-;; (define (cadaar x) (car (cdr (car (car x)))))
-;; (define (cadadr x) (car (cdr (car (cdr x)))))
-;; (define (caddar x) (car (cdr (cdr (car x)))))
-;; (define (cadddr x) (car (cdr (cdr (cdr x)))))
-;; (define (cdaaar x) (cdr (car (car (car x)))))
-;; (define (cdaadr x) (cdr (car (car (cdr x)))))
-;; (define (cdadar x) (cdr (car (cdr (car x)))))
-;; (define (cdaddr x) (cdr (car (cdr (cdr x)))))
-;; (define (cddaar x) (cdr (cdr (car (car x)))))
-;; (define (cddadr x) (cdr (cdr (car (cdr x)))))
-;; (define (cdddar x) (cdr (cdr (cdr (car x)))))
-;; (define (cddddr x) (cdr (cdr (cdr (cdr x)))))
+(define (caaaar x) (car (car (car (car x)))))
+(define (caaadr x) (car (car (car (cdr x)))))
+(define (caadar x) (car (car (cdr (car x)))))
+(define (caaddr x) (car (car (cdr (cdr x)))))
+(define (cadaar x) (car (cdr (car (car x)))))
+(define (cadadr x) (car (cdr (car (cdr x)))))
+(define (caddar x) (car (cdr (cdr (car x)))))
+(define (cadddr x) (car (cdr (cdr (cdr x)))))
+(define (cdaaar x) (cdr (car (car (car x)))))
+(define (cdaadr x) (cdr (car (car (cdr x)))))
+(define (cdadar x) (cdr (car (cdr (car x)))))
+(define (cdaddr x) (cdr (car (cdr (cdr x)))))
+(define (cddaar x) (cdr (cdr (car (car x)))))
+(define (cddadr x) (cdr (cdr (car (cdr x)))))
+(define (cdddar x) (cdr (cdr (cdr (car x)))))
+(define (cddddr x) (cdr (cdr (cdr (cdr x)))))
 
 (define (list . args) args)
 
@@ -60,7 +54,7 @@
 
 (define (list-ref ls k) (car (list-tail ls k)))
 
-(define eqv? equal?)
+(define (eqv? a b) (if (eq? a b) #t (and (flonum? a) (flonum? b) (= a b))))
 
 (define (member obj ls)
   (if (null? ls)
@@ -297,24 +291,29 @@
 
 (define (force x) (if (procedure? x) (x) x))
 
+;; booleans
+
+(define (not x) (if x #f #t))
+(define (boolean? x) (if (eq? x #t) #t (eq? x #f)))
+
 ;; char utils
 
-;; (define (char=? a b) (= (char->integer a) (char->integer b)))
-;; (define (char<? a b) (< (char->integer a) (char->integer b)))
-;; (define (char>? a b) (> (char->integer a) (char->integer b)))
-;; (define (char<=? a b) (<= (char->integer a) (char->integer b)))
-;; (define (char>=? a b) (>= (char->integer a) (char->integer b)))
+(define (char=? a b) (= (char->integer a) (char->integer b)))
+(define (char<? a b) (< (char->integer a) (char->integer b)))
+(define (char>? a b) (> (char->integer a) (char->integer b)))
+(define (char<=? a b) (<= (char->integer a) (char->integer b)))
+(define (char>=? a b) (>= (char->integer a) (char->integer b)))
 
-;; (define (char-ci=? a b)
-;;   (= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-;; (define (char-ci<? a b)
-;;   (< (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-;; (define (char-ci>? a b)
-;;   (> (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-;; (define (char-ci<=? a b)
-;;   (<= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-;; (define (char-ci>=? a b)
-;;   (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+(define (char-ci=? a b)
+  (= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+(define (char-ci<? a b)
+  (< (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+(define (char-ci>? a b)
+  (> (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+(define (char-ci<=? a b)
+  (<= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+(define (char-ci>=? a b)
+  (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
 
 ;; string utils
 
@@ -338,6 +337,14 @@
 (define (string . args) (list->string args))
 
 ;; math utils
+
+(define (number? x) (if (fixnum? x) #t (flonum? x)))
+(define complex? number?)
+(define rational? number?)
+(define real? number?)
+(define exact? fixnum?)
+(define inexact? flonum?)
+(define (integer? x) (if (fixnum? x) #t (and (flonum? x) (= x (truncate x)))))
 
 (define (zero? x) (= x 0))
 (define (positive? x) (> x 0))

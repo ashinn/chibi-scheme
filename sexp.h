@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sysexits.h>
+#include <math.h>
 
 #include "config.h"
 #include "defaults.h"
@@ -230,7 +231,11 @@ struct sexp_struct {
 
 #define sexp_flonum_value(f) ((f)->value.flonum)
 
+#if USE_FLONUMS
 #define sexp_integer_to_flonum(x) (sexp_make_flonum(sexp_unbox_integer(x)))
+#else
+#define sexp_integer_to_flonum(x) (x)
+#endif
 
 /*************************** field accessors **************************/
 

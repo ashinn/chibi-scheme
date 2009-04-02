@@ -449,6 +449,7 @@ sexp sexp_make_output_port(FILE* out) {
 void sexp_write (sexp obj, sexp out) {
   unsigned long len, c, res;
   long i=0;
+  double f;
   sexp x, *elts;
   char *str=NULL;
 
@@ -485,7 +486,9 @@ void sexp_write (sexp obj, sexp out) {
       }
       break;
     case SEXP_FLONUM:
-      sexp_printf(out, "%g", sexp_flonum_value(obj)); break;
+      f = sexp_flonum_value(obj);
+      sexp_printf(out, "%.15g%s", f, (f == trunc(f)) ? ".0" : "");
+      break;
     case SEXP_PROCEDURE:
       sexp_printf(out, "#<procedure: %p>", obj); break;
     case SEXP_IPORT:

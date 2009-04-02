@@ -1316,19 +1316,71 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     else sexp_raise("/: not a number", sexp_list1(_ARG1));
     break;
   case OP_LT:
-    _ARG2 = sexp_make_boolean(sexp_unbox_integer(_ARG1)
-                              < sexp_unbox_integer(_ARG2));
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
+      i = _ARG1 < _ARG2;
+#if USE_FLONUMS
+    else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+      i = sexp_flonum_value(_ARG1) < sexp_flonum_value(_ARG2);
+    else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
+      i = sexp_flonum_value(_ARG1) < (double)sexp_unbox_integer(_ARG2);
+    else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
+      i = (double)sexp_unbox_integer(_ARG1) < sexp_flonum_value(_ARG2);
+#endif
+    else sexp_raise("<: not a number", sexp_list2(_ARG1, _ARG2));
+    _ARG2 = sexp_make_boolean(i);
     top--;
     break;
   case OP_LE:
-    _ARG2 = sexp_make_boolean(sexp_unbox_integer(_ARG1)
-                              <= sexp_unbox_integer(_ARG2));
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
+      i = _ARG1 <= _ARG2;
+#if USE_FLONUMS
+    else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+      i = sexp_flonum_value(_ARG1) <= sexp_flonum_value(_ARG2);
+    else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
+      i = sexp_flonum_value(_ARG1) <= (double)sexp_unbox_integer(_ARG2);
+    else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
+      i = (double)sexp_unbox_integer(_ARG1) <= sexp_flonum_value(_ARG2);
+#endif
+    else sexp_raise("<=: not a number", sexp_list2(_ARG1, _ARG2));
+    _ARG2 = sexp_make_boolean(i);
+    top--;
+    break;
+  case OP_EQN:
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
+      i = _ARG1 == _ARG2;
+#if USE_FLONUMS
+    else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+      i = sexp_flonum_value(_ARG1) == sexp_flonum_value(_ARG2);
+    else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
+      i = sexp_flonum_value(_ARG1) == (double)sexp_unbox_integer(_ARG2);
+    else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
+      i = (double)sexp_unbox_integer(_ARG1) == sexp_flonum_value(_ARG2);
+#endif
+    else sexp_raise("=: not a number", sexp_list2(_ARG1, _ARG2));
+    _ARG2 = sexp_make_boolean(i);
     top--;
     break;
   case OP_EQ:
-  case OP_EQV:
     _ARG2 = sexp_make_boolean(_ARG1 == _ARG2);
     top--;
+    break;
+  case OP_FIX2FLO:
+    if (sexp_integerp(_ARG1))
+      _ARG1 = sexp_integer_to_flonum(_ARG1);
+    else
+#if USE_FLONUMS
+      if (! sexp_flonump(_ARG1))
+#endif
+        sexp_raise("exact->inexact: not a number", sexp_list1(_ARG1));
+    break;
+  case OP_FLO2FIX:
+#if USE_FLONUMS
+    if (sexp_flonump(_ARG1))
+      _ARG1 = sexp_make_integer((sexp_sint_t)sexp_flonum_value(_ARG1));
+    else
+#endif
+      if (! sexp_integerp(_ARG1))
+        sexp_raise("inexact->exact: not a number", sexp_list1(_ARG1));
     break;
   case OP_CHAR2INT:
     _ARG1 = sexp_make_integer(sexp_unbox_character(_ARG1));
