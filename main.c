@@ -43,6 +43,7 @@ void run_main (int argc, char **argv) {
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
     switch (argv[i][1]) {
+#if USE_STRING_STREAMS
     case 'e':
     case 'p':
       if (! init_loaded) {
@@ -60,6 +61,7 @@ void run_main (int argc, char **argv) {
       quit=1;
       i++;
       break;
+#endif
     case 'q':
       init_loaded = 1;
       break;
