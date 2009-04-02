@@ -427,11 +427,43 @@ static sexp analyze_define (sexp x, sexp context) {
 
 static sexp analyze_define_syntax (sexp x, sexp context) {
   sexp name = sexp_cadr(x), cell, proc;
+  if (sexp_env_parent(sexp_context_env(context)))
+    return sexp_compile_error("non-top-level define-syntax", sexp_list1(x));
   proc = eval_in_context(sexp_caddr(x), context);
   analyze_check_exception(proc);
   cell = env_cell_create(sexp_context_env(context), name, SEXP_UNDEF);
   sexp_cdr(cell) = sexp_make_macro(proc, sexp_context_env(context));
   return SEXP_UNDEF;
+}
+
+static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
+  sexp proc;
+  for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
+    proc = eval_in_context(sexp_cadar(ls), eval_ctx);
+    analyze_check_exception(proc);
+    sexp_push(sexp_env_bindings(sexp_context_env(bind_ctx)),
+              sexp_cons(sexp_caar(ls),
+                        sexp_make_macro(proc, sexp_context_env(eval_ctx))));
+  }
+  return SEXP_UNDEF;
+}
+
+static sexp analyze_let_syntax (sexp x, sexp context) {
+  sexp env, ctx, tmp;
+  env = sexp_alloc_type(env, SEXP_ENV);
+  sexp_env_parent(env) = sexp_env_parent(sexp_context_env(context));
+  sexp_env_bindings(env) = sexp_env_bindings(sexp_context_env(context));
+  ctx = sexp_child_context(context, sexp_context_lambda(context));
+  sexp_context_env(ctx) = env;
+  tmp = analyze_bind_syntax(sexp_cadr(x), ctx, context);
+  analyze_check_exception(tmp);
+  return analyze_seq(sexp_cddr(x), ctx);
+}
+
+static sexp analyze_letrec_syntax (sexp x, sexp context) {
+  sexp tmp = analyze_bind_syntax(sexp_cadr(x), context, context);
+  analyze_check_exception(tmp);
+  return analyze_seq(sexp_cddr(x), context);
 }
 
 static sexp analyze (sexp x, sexp context) {
@@ -451,29 +483,25 @@ static sexp analyze (sexp x, sexp context) {
       if (sexp_corep(op)) {
         switch (sexp_core_code(op)) {
         case CORE_DEFINE:
-          res = analyze_define(x, context);
-          break;
+          res = analyze_define(x, context); break;
         case CORE_SET:
-          res = analyze_set(x, context);
-          break;
+          res = analyze_set(x, context); break;
         case CORE_LAMBDA:
-          res = analyze_lambda(x, context);
-          break;
+          res = analyze_lambda(x, context); break;
         case CORE_IF:
-          res = analyze_if(x, context);
-          break;
+          res = analyze_if(x, context); break;
         case CORE_BEGIN:
-          res = analyze_seq(x, context);
-          break;
+          res = analyze_seq(x, context); break;
         case CORE_QUOTE:
-          res = sexp_make_lit(sexp_cadr(x));
-          break;
+          res = sexp_make_lit(sexp_cadr(x)); break;
         case CORE_DEFINE_SYNTAX:
-          res = analyze_define_syntax(x, context);
-          break;
+          res = analyze_define_syntax(x, context); break;
+        case CORE_LET_SYNTAX:
+          res = analyze_let_syntax(x, context); break;
+        case CORE_LETREC_SYNTAX:
+          res = analyze_letrec_syntax(x, context); break;
         default:
-          res = sexp_compile_error("unknown core form", sexp_list1(op));
-          break;
+          res = sexp_compile_error("unknown core form", sexp_list1(op)); break;
         }
       } else if (sexp_macrop(op)) {
         x = apply(sexp_macro_proc(op),
