@@ -3,7 +3,14 @@
 
 all: chibi-scheme
 
-CFLAGS=-Wall -g -fno-inline -save-temps #-Os
+PREFIX=/usr/local
+BINDIR=$(PREFIX)/bin
+LIBDIR=$(PREFIX)/lib
+INCDIR=$(PREFIX)/include/chibi-scheme
+MODDIR=$(PREFIX)/share/chibi-scheme
+
+SO=.dylib
+CFLAGS=-Wall -g -fno-inline -save-temps -Os
 
 GC_OBJ=./gc/gc.a
 
@@ -16,10 +23,16 @@ sexp.o: sexp.c sexp.h config.h defaults.h Makefile
 eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
 	gcc -c $(CFLAGS) -o $@ $<
 
-# main.o: main.c eval.h sexp.h config.h Makefile
-# 	gcc -c $(CFLAGS) -o $@ $<
+main.o: main.c eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
+	gcc -c $(CFLAGS) -o $@ $<
 
-chibi-scheme: eval.o sexp.o $(GC_OBJ)
+libchibisexp.$(SO): sexp.o $(GC_OBJ)
+	gcc $(LDFLAGS) -shared -dynamiclib -o $@ $^
+
+libchibischeme.$(SO): eval.o $(GC_OBJ)
+	gcc $(LDFLAGS) -shared -dynamiclib -o $@ $^ -lchibisexp
+
+chibi-scheme: main.o sexp.o $(GC_OBJ)
 	gcc $(CFLAGS) -o $@ $^
 
 clean:
@@ -39,3 +52,17 @@ test: chibi-scheme
 	    fi; \
 	done
 
+install: chibi-scheme
+	cp chibi-scheme $(BINDIR)/
+	mkdir -p $(MODDIR)
+	cp init.scm $(MODDIR)/
+	mkdir -p $(INCDIR)
+	cp *.h $(INCDIR)/
+	cp *.$(SO) $(LIBDIR)/
+
+uninstall:
+	rm -f $(BINDIR)/chibi-scheme
+	rm -f $(LIBDIR)/libchibischeme.$(SO)
+	rm -f $(LIBDIR)/libchibisexp.$(SO)
+	rm -f $(INCDIR)/*.h
+	rm -f $(MODDIR)/*.scm
