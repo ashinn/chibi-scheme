@@ -85,6 +85,7 @@ _FN2OPT(SEXP_FIXNUM, SEXP_CHAR, "make-string", sexp_make_character(' '), sexp_ma
 _FN2(SEXP_STRING, SEXP_STRING, "string-cmp", 0, sexp_string_cmp),
 _FN2(SEXP_STRING, SEXP_STRING, "string-cmp-ci", 0, sexp_string_cmp_ci),
 _FN3(SEXP_STRING, SEXP_FIXNUM, "substring", 0, sexp_substring),
+_FN1(SEXP_STRING, "string->symbol", 0, sexp_string_to_symbol),
 _FN1(SEXP_PAIR, "string-concatenate", 0, sexp_string_concatenate),
 _FN2(0, SEXP_PAIR, "memq", 0, sexp_memq),
 _FN2(0, SEXP_PAIR, "assq", 0, sexp_assq),

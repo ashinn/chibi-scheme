@@ -31,6 +31,10 @@
 #define USE_HUFF_SYMS 1
 #endif
 
+#ifndef USE_HASH_SYMS
+#define USE_HASH_SYMS 1
+#endif
+
 #ifndef USE_DEBUG
 #define USE_DEBUG 1
 #endif

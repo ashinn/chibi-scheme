@@ -1,7 +1,4 @@
 
-;; syntax-rules
-;; symbol->string string->symbol
-
 ;; provide c[ad]{2,4}r
 
 (define (caar x) (car (car x)))
@@ -313,6 +310,9 @@
   (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
 
 ;; string utils
+
+(define (symbol->string sym)
+  (call-with-output-string (lambda (out) (write sym out))))
 
 (define (list->string ls)
   (let ((str (make-string (length ls) #\space)))
