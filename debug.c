@@ -7,14 +7,14 @@ static const char* reverse_opcode_names[] =
    "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "EVAL", "JUMP-UNLESS",
    "JUMP", "PUSH", "DROP", "STACK-REF", "LOCAL-REF", "LOCAL-SET",
    "CLOSURE-REF", "VECTOR-REF", "VECTOR-SET", "VECTOR-LENGTH", "STRING-REF",
-   "STRING-SET", "STRING-LENGTH", "MAKE-PROCEDURE", "MAKE-VECTOR", "NULL?",
-   "FIXNUM?", "SYMBOL?", "CHAR?",
+   "STRING-SET", "STRING-LENGTH", "MAKE-PROCEDURE", "MAKE-VECTOR", "AND",
+   "NULL?", "FIXNUM?", "SYMBOL?", "CHAR?",
    "EOF?", "TYPEP", "CAR", "CDR", "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB",
    "MUL", "DIV", "QUOT", "MOD", "NEG", "INV", "LT", "LE", "EQN", "EQ",
    "EXACT->INEXACT", "INEXACT->EXACT",
    "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
    "DISPLAY", "WRITE", "WRITE-CHAR",
-   "NEWLINE", "FLUSH-OUTPUT", "READ", "READ-CHAR", "RET", "DONE",
+   "NEWLINE", "FLUSH-OUTPUT", "READ", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
   };
 
 void disasm (sexp bc, sexp out) {
