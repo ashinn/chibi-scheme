@@ -285,7 +285,7 @@ static sexp sexp_identifier_eq (sexp e1, sexp id1, sexp e2, sexp id2) {
 
 static sexp sexp_compile_error(char *message, sexp irritants) {
   return sexp_make_exception(the_compile_error_symbol,
-                             sexp_make_string(message),
+                             sexp_c_string(message),
                              irritants, SEXP_FALSE, SEXP_FALSE);
 }
 
@@ -1280,21 +1280,26 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     else sexp_raise("/: not a number", sexp_list2(_ARG1, _ARG2));
     top--;
     break;
-  case OP_QUOT:
+  case OP_QUOTIENT:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
+      if (_ARG1 == sexp_make_integer(0))
+        sexp_raise("divide by zero", SEXP_NULL);
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
       top--;
     }
-    else sexp_raise("quotient: not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("quotient: not an integer", sexp_list2(_ARG1, _ARG2));
     break;
-  case OP_MOD:
+  case OP_REMAINDER:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
-      _ARG2 = sexp_fx_mod(_ARG1, _ARG2);
+      if (_ARG1 == sexp_make_integer(0))
+        sexp_raise("divide by zero", SEXP_NULL);
+      tmp1 = sexp_fx_rem(_ARG1, _ARG2);
       top--;
+      _ARG1 = tmp1;
     }
-    else sexp_raise("modulo: not a number", sexp_list2(_ARG1, _ARG2));
+    else sexp_raise("remainder: not an integer", sexp_list2(_ARG1, _ARG2));
     break;
-  case OP_NEG:
+  case OP_NEGATIVE:
     if (sexp_integerp(_ARG1))
       _ARG1 = sexp_make_integer(-sexp_unbox_integer(_ARG1));
 #if USE_FLONUMS
@@ -1303,7 +1308,7 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
 #endif
     else sexp_raise("-: not a number", sexp_list1(_ARG1));
     break;
-  case OP_INV:
+  case OP_INVERSE:
     if (sexp_integerp(_ARG1))
       _ARG1 = sexp_make_flonum(1/(double)sexp_unbox_integer(_ARG1));
 #if USE_FLONUMS
@@ -1483,13 +1488,20 @@ sexp sexp_load (sexp source, sexp env) {
   return res;
 }
 
-#if USE_MATH
-
-static sexp sexp_math_exception (char *message, sexp obj) {
+static sexp sexp_type_exception (char *message, sexp obj) {
   return sexp_make_exception(sexp_intern("type-error"),
-                             sexp_make_string(message),
+                             sexp_c_string(message),
                              sexp_list1(obj), SEXP_FALSE, SEXP_FALSE);
 }
+
+static sexp sexp_range_exception (sexp obj, sexp start, sexp end) {
+  return sexp_make_exception(sexp_intern("range-error"),
+                             sexp_c_string("bad index range"),
+                             sexp_list3(obj, start, end),
+                             SEXP_FALSE, SEXP_FALSE);
+}
+
+#if USE_MATH
 
 #define define_math_op(name, cname)       \
   static sexp name (sexp z) {             \
@@ -1499,7 +1511,7 @@ static sexp sexp_math_exception (char *message, sexp obj) {
     else if (sexp_integerp(z))            \
       d = (double)sexp_unbox_integer(z);  \
     else                                  \
-      return sexp_math_exception("not a number", z); \
+      return sexp_type_exception("not a number", z); \
     return sexp_make_flonum(cname(d));    \
   }
 
@@ -1528,7 +1540,7 @@ static sexp sexp_expt (sexp x, sexp e) {
     x1 = sexp_flonum_value(x);
 #endif
   else
-    return sexp_math_exception("not a number", x);
+    return sexp_type_exception("not a number", x);
   if (sexp_integerp(e))
     e1 = (double)sexp_unbox_integer(e);
 #if USE_FLONUMS
@@ -1536,13 +1548,86 @@ static sexp sexp_expt (sexp x, sexp e) {
     e1 = sexp_flonum_value(e);
 #endif
   else
-    return sexp_math_exception("not a number", e);
+    return sexp_type_exception("not a number", e);
   res = pow(x1, e1);
 #if USE_FLONUMS
   if ((res > SEXP_MAX_INT) || sexp_flonump(x) || sexp_flonump(e))
     return sexp_make_flonum(res);
 #endif
   return sexp_make_integer((sexp_sint_t)round(res));
+}
+
+static sexp sexp_substring (sexp str, sexp start, sexp end) {
+  sexp res;
+  if (! sexp_stringp(str))
+    return sexp_type_exception("not a string", str);
+  if (! sexp_integerp(start))
+    return sexp_type_exception("not a number", start);
+  if (end == SEXP_FALSE)
+    end = sexp_make_integer(sexp_string_length(str));
+  if (! sexp_integerp(end))
+    return sexp_type_exception("not a number", end);
+  if ((sexp_unbox_integer(start) < 0)
+      || (sexp_unbox_integer(start) > sexp_string_length(str))
+      || (sexp_unbox_integer(end) < 0)
+      || (sexp_unbox_integer(end) > sexp_string_length(str))
+      || (end < start))
+    return sexp_range_exception(str, start, end);
+  res = sexp_make_string(sexp_fx_sub(end, start),
+                         SEXP_UNDEF);
+  memcpy(sexp_string_data(res),
+         sexp_string_data(str)+sexp_unbox_integer(start),
+         sexp_string_length(res));
+  return res;
+}
+
+static sexp sexp_string_concatenate (sexp str_ls) {
+  sexp res, ls;
+  sexp_uint_t len=0;
+  char *p;
+  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls))
+    if (! sexp_stringp(sexp_car(ls)))
+      return sexp_type_exception("not a string", sexp_car(ls));
+    else
+      len += sexp_string_length(sexp_car(ls));
+  res = sexp_make_string(sexp_make_integer(len), SEXP_UNDEF);
+  p = sexp_string_data(res);
+  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls)) {
+    len = sexp_string_length(sexp_car(ls));
+    memcpy(p, sexp_string_data(sexp_car(ls)), len);
+    p += len;
+  }
+  return res;
+}
+
+static sexp sexp_string_cmp (sexp str1, sexp str2) {
+  sexp_sint_t len1, len2, len, diff;
+  if (! sexp_stringp(str1))
+    return sexp_type_exception("not a string", str1);
+  if (! sexp_stringp(str2))
+    return sexp_type_exception("not a string", str2);
+  len1 = sexp_string_length(str1);
+  len2 = sexp_string_length(str2);
+  len = ((len1<len2) ? len1 : len2);
+  diff = strncmp(sexp_string_data(str1), sexp_string_data(str2), len);
+  if (! diff)
+    diff = len1 - len2;
+  return sexp_make_integer(diff);
+}
+
+static sexp sexp_string_cmp_ci (sexp str1, sexp str2) {
+  sexp_sint_t len1, len2, len, diff;
+  if (! sexp_stringp(str1))
+    return sexp_type_exception("not a string", str1);
+  if (! sexp_stringp(str2))
+    return sexp_type_exception("not a string", str2);
+  len1 = sexp_string_length(str1);
+  len2 = sexp_string_length(str2);
+  len = ((len1<len2) ? len1 : len2);
+  diff = strncasecmp(sexp_string_data(str1), sexp_string_data(str2), len);
+  if (! diff)
+    diff = len1 - len2;
+  return sexp_make_integer(diff);
 }
 
 /*********************** standard environment *************************/
@@ -1717,7 +1802,7 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded) {
-        sexp_load(sexp_make_string(sexp_init_file), env);
+        sexp_load(sexp_c_string(sexp_init_file), env);
         init_loaded = 1;
       }
       obj = sexp_read_from_string(argv[i+1]);
@@ -1741,10 +1826,10 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      sexp_load(sexp_make_string(sexp_init_file), env);
+      sexp_load(sexp_c_string(sexp_init_file), env);
     if (i < argc)
       for ( ; i < argc; i++)
-        sexp_load(sexp_make_string(argv[i]), env);
+        sexp_load(sexp_c_string(argv[i]), env);
     else
       repl(context);
   }

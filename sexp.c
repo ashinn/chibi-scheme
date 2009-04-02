@@ -139,9 +139,9 @@ sexp sexp_print_exception (sexp exn, sexp out) {
 
 static sexp sexp_read_error (char *message, sexp irritants, sexp port) {
   sexp name = (sexp_port_name(port)
-               ? sexp_make_string(sexp_port_name(port)) : SEXP_FALSE);
+               ? sexp_c_string(sexp_port_name(port)) : SEXP_FALSE);
   return sexp_make_exception(the_read_error_symbol,
-                             sexp_make_string(message),
+                             sexp_c_string(message),
                              irritants,
                              name,
                              sexp_make_integer(sexp_port_line(port)));
@@ -269,13 +269,22 @@ sexp sexp_make_flonum(double f) {
   return x;
 }
 
-sexp sexp_make_string(char *str) {
+sexp sexp_make_string(sexp len, sexp ch) {
   sexp s = sexp_alloc_type(string, SEXP_STRING);
+  sexp_uint_t clen = sexp_unbox_integer(len);
+  char *cstr = sexp_alloc(clen+1);
+  if (sexp_charp(ch))
+    memset(cstr, sexp_unbox_character(ch), clen);
+  cstr[clen] = '\0';
+  sexp_string_length(s) = clen;
+  sexp_string_data(s) = cstr;
+  return s;
+}
+
+sexp sexp_c_string(char *str) {
   sexp_uint_t len = strlen(str);
-  char *mystr = sexp_alloc(len+1);
-  memcpy(mystr, str, len+1);
-  sexp_string_length(s) = len;
-  sexp_string_data(s) = mystr;
+  sexp s = sexp_make_string(sexp_make_integer(len), SEXP_UNDEF);
+  memcpy(sexp_string_data(s), str, len);
   return s;
 }
 
@@ -754,7 +763,7 @@ sexp sexp_read_raw (sexp in) {
     break;
   case '"':
     str = sexp_read_string(in);
-    res = sexp_make_string(str);
+    res = sexp_c_string(str);
     sexp_free(str);
     break;
   case '(':
@@ -847,7 +856,7 @@ sexp sexp_read_raw (sexp in) {
           res = sexp_make_character('\t');
         else {
           res = sexp_read_error("unknown character name",
-                                sexp_list1(sexp_make_string(str)),
+                                sexp_list1(sexp_c_string(str)),
                                 in);
         }
       }
@@ -928,7 +937,7 @@ sexp sexp_read (sexp in) {
 }
 
 sexp sexp_read_from_string(char *str) {
-  sexp s = sexp_make_string(str);
+  sexp s = sexp_c_string(str);
   sexp in = sexp_make_input_string_port(s);
   sexp res = sexp_read(in);
   sexp_deep_free(s);
