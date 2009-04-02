@@ -42,7 +42,7 @@
                ((ellipse? p)
                 (cond
                  ((not (null? (cddr p)))
-                  (error "non-trailing ellipse" p))
+                  (error "non-trailing ellipse"))
                  ((symbol? (car p))
                   (list _and (list _list? v)
                         (list _let (list (list (car p) v))
@@ -130,7 +130,7 @@
                => (lambda (cell)
                     (if (<= (cdr cell) dim)
                         t
-                        (error "too few ...'s for" t tmpl))))
+                        (error "too few ...'s"))))
               (else
                (list _rename (list _quote t)))))
             ((pair? t)
@@ -139,7 +139,7 @@
                         (ell-dim (+ dim depth))
                         (ell-vars (free-vars (car t) vars ell-dim)))
                    (if (null? ell-vars)
-                       (error "too many ...'s" tmpl t)
+                       (error "too many ...'s")
                        (let* ((once (lp (car t) ell-dim))
                               (nest (if (and (null? (cdr ell-vars))
                                              (symbol? once)
@@ -164,10 +164,11 @@
         (list _lambda (list _expr _rename _compare)
               (cons
                _or
-               (map
-                (lambda (clause) (expand-pattern (car clause) (cadr clause)))
-                forms)
-               (error "no expansion for" _expr))))))))
+               (append
+                (map
+                 (lambda (clause) (expand-pattern (car clause) (cadr clause)))
+                 forms)
+                (list (list 'else) (list 'error "no expansion"))))))))))
 
 ;; Local Variables:
 ;; eval: (put '_lambda 'scheme-indent-function 1)

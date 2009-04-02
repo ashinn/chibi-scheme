@@ -1,5 +1,5 @@
 
-;; let-syntax letrec-syntax syntax-rules
+;; syntax-rules
 ;; number->string string->number
 ;; symbol->string string->symbol
 ;; with-input-from-file with-output-to-file
