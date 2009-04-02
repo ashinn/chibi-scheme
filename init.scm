@@ -2,7 +2,6 @@
 ;; syntax-rules
 ;; number->string string->number
 ;; symbol->string string->symbol
-;; with-input-from-file with-output-to-file
 
 ;; provide c[ad]{2,4}r
 
@@ -445,6 +444,22 @@
          (res (proc in)))
     (close-output-port in)
     res))
+
+(define (with-input-from-file file thunk)
+  (let ((old-in (current-input-port))
+        (tmp-in (open-input-file file)))
+    (current-input-port tmp-in)
+    (let ((res (thunk)))
+      (current-input-port old-in)
+      res)))
+
+(define (with-output-to-file file thunk)
+  (let ((old-out (current-input-port))
+        (tmp-out (open-output-file file)))
+    (current-input-port tmp-out)
+    (let ((res (thunk)))
+      (current-output-port old-out)
+      res)))
 
 ;; values
 
