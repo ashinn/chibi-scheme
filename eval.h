@@ -7,10 +7,6 @@
 
 #include "sexp.h"
 
-#if USE_MATH
-#include <math.h>
-#endif
-
 /************************* additional types ***************************/
 
 #define INIT_BCODE_SIZE 128
@@ -107,8 +103,10 @@ enum opcode_names {
   OP_INV,
   OP_LT,
   OP_LE,
-  OP_EQV,
+  OP_EQN,
   OP_EQ,
+  OP_FIX2FLO,
+  OP_FLO2FIX,
   OP_CHAR2INT,
   OP_INT2CHAR,
   OP_CHAR_UPCASE,
