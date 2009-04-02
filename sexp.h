@@ -38,6 +38,9 @@
 #define SEXP_CHAR_TAG 6
 #define SEXP_EXTENDED_TAG 14
 
+#define SEXP_MAX_INT ((1<<29)-1)
+#define SEXP_MIN_INT (-(1<<29))
+
 enum sexp_types {
   SEXP_OBJECT,
   SEXP_FIXNUM,

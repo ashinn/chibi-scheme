@@ -1336,6 +1336,12 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
   case OP_INT2CHAR:
     _ARG1 = sexp_make_character(sexp_unbox_integer(_ARG1));
     break;
+  case OP_CHAR_UPCASE:
+    _ARG1 = sexp_make_character(toupper(sexp_unbox_character(_ARG1)));
+    break;
+  case OP_CHAR_DOWNCASE:
+    _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
+    break;
   case OP_DISPLAY:
     if (sexp_stringp(_ARG1)) {
       sexp_write_string(sexp_string_data(_ARG1), _ARG2);
@@ -1453,6 +1459,32 @@ define_math_op(sexp_floor, floor)
 define_math_op(sexp_ceiling, ceil)
 
 #endif
+
+static sexp sexp_expt (sexp x, sexp e) {
+  double res, x1, e1;
+  if (sexp_integerp(x))
+    x1 = (double)sexp_unbox_integer(x);
+#if USE_FLONUMS
+  else if (sexp_flonump(x))
+    x1 = sexp_flonum_value(x);
+#endif
+  else
+    return sexp_math_exception("not a number", x);
+  if (sexp_integerp(e))
+    e1 = (double)sexp_unbox_integer(e);
+#if USE_FLONUMS
+  else if (sexp_flonump(e))
+    e1 = sexp_flonum_value(e);
+#endif
+  else
+    return sexp_math_exception("not a number", e);
+  res = pow(x1, e1);
+#if USE_FLONUMS
+  if ((res > SEXP_MAX_INT) || sexp_flonump(x) || sexp_flonump(e))
+    return sexp_make_flonum(res);
+#endif
+  return sexp_make_integer((sexp_sint_t)round(res));
+}
 
 /*********************** standard environment *************************/
 
