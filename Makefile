@@ -10,7 +10,7 @@ INCDIR=$(PREFIX)/include/chibi-scheme
 MODDIR=$(PREFIX)/share/chibi-scheme
 
 SO=.dylib
-CFLAGS=-Wall -g -fno-inline -save-temps -Os
+CFLAGS=-Wall -g -save-temps -Os
 
 GC_OBJ=./gc/gc.a
 

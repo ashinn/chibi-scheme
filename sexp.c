@@ -45,13 +45,13 @@ static int is_separator(int c) {
   return 0<c && c<0x60 && sexp_separators[c];
 }
 
-static sexp* symbol_table = NULL;
-static unsigned long symbol_table_primes[] = {
-  /* 97, 389, */ 1543, 6151, 12289, 24593, 49157, 98317, 196613, 393241,
-  786433, 1572869, 3145739, 6291469, 12582917, 25165843, 50331653,
-  100663319, 201326611, 402653189, 805306457, 1610612741};
-static int symbol_table_prime_index = 0;
-static int symbol_table_count = 0;
+#if USE_HASH_SYMS
+#define SEXP_SYMBOL_TABLE_SIZE 389
+#else
+#define SEXP_SYMBOL_TABLE_SIZE 1
+#endif
+
+static sexp symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 
 sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag) {
   sexp res = (sexp) sexp_alloc(size);
@@ -328,16 +328,16 @@ sexp sexp_substring (sexp str, sexp start, sexp end) {
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
 
-int sexp_string_hash(char *str, int acc) {
+sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc) {
   while (*str) {acc *= FNV_PRIME; acc ^= *str++;}
   return acc;
 }
 
 sexp sexp_intern(char *str) {
   struct huff_entry he;
-  sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, i, d, cell;
+  sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, bucket;
   char c, *mystr, *p=str;
-  sexp sym, *newtable;
+  sexp sym, ls;
 
 #if USE_HUFF_SYMS
   res = 0;
@@ -354,39 +354,29 @@ sexp sexp_intern(char *str) {
 #endif
 
  normal_intern:
-  res = sexp_string_hash(p, res);
-  d = symbol_table_primes[symbol_table_prime_index];
-  cell = res % d;
-  for (i=0; i<d; i++) {
-    if (! symbol_table[cell]) {
-      break;
-    } else if (strncmp(str,
-                       sexp_symbol_data(symbol_table[cell]),
-                       sexp_symbol_length(symbol_table[cell])) == 0) {
-      return symbol_table[cell];
-    }
-    cell = (cell * res + 1) % d;
-  }
-  symbol_table_count++;
-
-  if (symbol_table_count*5 > d*4) {
-    fprintf(stderr, "resizing symbol table!!!!!\n");
-    newtable = sexp_alloc(symbol_table_primes[symbol_table_prime_index++]
-                          * sizeof(sexp));
-    /* XXXX rehash */
-    sexp_free(symbol_table);
-    symbol_table = newtable;
-  }
-
-  sym = sexp_alloc_type(symbol, SEXP_SYMBOL);
+#if USE_HASH_SYMS
+  bucket = (sexp_string_hash(p, res) % SEXP_SYMBOL_TABLE_SIZE);
+#else
+  bucket = 0;
+#endif
   len = strlen(str);
+  for (ls=symbol_table[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
+    if (strncmp(str, sexp_symbol_data(sexp_car(ls)), len) == 0)
+      return sexp_car(ls);
+
+  /* not found, make a new symbol */
+  sym = sexp_alloc_type(symbol, SEXP_SYMBOL);
   mystr = sexp_alloc(len+1);
   memcpy(mystr, str, len+1);
   mystr[len]=0;
   sexp_symbol_length(sym) = len;
   sexp_symbol_data(sym) = mystr;
-  symbol_table[cell] = sym;
-  return symbol_table[cell];
+  sexp_push(symbol_table[bucket], sym);
+  return sym;
+}
+
+sexp sexp_string_to_symbol (sexp str) {
+  return sexp_intern(sexp_string_data(str));
 }
 
 sexp sexp_make_vector(sexp len, sexp dflt) {
@@ -1035,6 +1025,7 @@ sexp sexp_read_from_string(char *str) {
 }
 
 void sexp_init() {
+  int i;
   if (! sexp_initialized_p) {
     sexp_initialized_p = 1;
 #if USE_BOEHM
@@ -1042,7 +1033,8 @@ void sexp_init() {
     GC_add_roots((char*)&symbol_table,
                  ((char*)&symbol_table)+sizeof(symbol_table)+1);
 #endif
-    symbol_table = sexp_alloc(symbol_table_primes[0]*sizeof(sexp));
+    for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
+      symbol_table[i] = SEXP_NULL;
     the_dot_symbol = sexp_intern(".");
     the_quote_symbol = sexp_intern("quote");
     the_quasiquote_symbol = sexp_intern("quasiquote");
