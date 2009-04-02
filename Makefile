@@ -10,6 +10,7 @@ INCDIR=$(PREFIX)/include/chibi-scheme
 MODDIR=$(PREFIX)/share/chibi-scheme
 
 SO=.dylib
+LDFLAGS=-lm
 CFLAGS=-Wall -g -save-temps -Os
 
 GC_OBJ=./gc/gc.a
@@ -33,7 +34,7 @@ libchibischeme.$(SO): eval.o $(GC_OBJ)
 	gcc $(LDFLAGS) -shared -dynamiclib -o $@ $^ -lchibisexp
 
 chibi-scheme: main.o sexp.o $(GC_OBJ)
-	gcc $(CFLAGS) -o $@ $^
+	gcc $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:
 	rm -f *.o *.i *.s

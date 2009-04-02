@@ -509,8 +509,8 @@ sexp sexp_make_input_string_port (sexp str) {
 sexp sexp_make_output_string_port () {
   FILE *out;
   sexp buf = sexp_alloc_type(string, SEXP_STRING), res;
-  out = open_memstream(&sexp_string_data(str), &sexp_string_length(buf));
-  res = sexp_make_input_port(in);
+  out = open_memstream(&sexp_string_data(buf), &sexp_string_length(buf));
+  res = sexp_make_input_port(out);
   sexp_port_cookie(res) = buf;
   return res;
 }
