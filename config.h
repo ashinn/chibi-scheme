@@ -14,6 +14,9 @@
 /* uncomment this to disable huffman-coded immediate symbols */
 /* #define USE_HUFF_SYMS 0 */
 
+/* uncomment this to just use a single list for hash tables */
+/* #define USE_HASH_SYMS 0 */
+
 /* uncomment this to disable string ports */
 /* #define USE_STRING_STREAMS 0 */
 

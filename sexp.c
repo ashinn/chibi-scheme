@@ -385,9 +385,8 @@ sexp sexp_make_vector(sexp len, sexp dflt) {
   if (! clen) return the_empty_vector;
   v = sexp_alloc_type(vector, SEXP_VECTOR);
   x = (sexp*) sexp_alloc(clen*sizeof(sexp));
-  for (i=0; i<clen; i++) {
+  for (i=0; i<clen; i++)
     x[i] = dflt;
-  }
   sexp_vector_length(v) = clen;
   sexp_vector_data(v) = x;
   return v;
@@ -427,7 +426,7 @@ sexp sexp_vector(int count, ...) {
 #define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(1))
 #define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(2))
 
-int sstream_read(void *vec, char *dst, int n) {
+int sstream_read (void *vec, char *dst, int n) {
   sexp_uint_t len = sexp_unbox_integer(sexp_stream_size(vec));
   sexp_uint_t pos = sexp_unbox_integer(sexp_stream_pos(vec));
   if (pos >= len) return 0;
@@ -437,7 +436,7 @@ int sstream_read(void *vec, char *dst, int n) {
   return n;
 }
 
-int sstream_write(void *vec, const char *src, int n) {
+int sstream_write (void *vec, const char *src, int n) {
   sexp_uint_t len, pos, newpos;
   sexp newbuf;
   len = sexp_unbox_integer(sexp_stream_size(vec));
@@ -456,7 +455,7 @@ int sstream_write(void *vec, const char *src, int n) {
   return n;
 }
 
-off_t sstream_seek(void *vec, off_t offset, int whence) {
+off_t sstream_seek (void *vec, off_t offset, int whence) {
   sexp_sint_t pos;
   if (whence == SEEK_SET) {
     pos = offset;
@@ -469,7 +468,7 @@ off_t sstream_seek(void *vec, off_t offset, int whence) {
   return pos;
 }
 
-sexp sexp_make_input_string_port(sexp str) {
+sexp sexp_make_input_string_port (sexp str) {
   FILE *in;
   sexp res, cookie;
   cookie = sexp_vector(3, str, sexp_make_integer(sexp_string_length(str)),
@@ -480,7 +479,7 @@ sexp sexp_make_input_string_port(sexp str) {
   return res;
 }
 
-sexp sexp_make_output_string_port() {
+sexp sexp_make_output_string_port () {
   FILE *out;
   sexp res, size, cookie;
   size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
@@ -492,7 +491,7 @@ sexp sexp_make_output_string_port() {
   return res;
 }
 
-sexp sexp_get_output_string(sexp port) {
+sexp sexp_get_output_string (sexp port) {
   sexp cookie = sexp_port_cookie(port);
   fflush(sexp_port_stream(port));
   return sexp_substring(sexp_stream_buf(cookie),
@@ -502,16 +501,33 @@ sexp sexp_get_output_string(sexp port) {
 
 #else
 
-sexp sexp_make_input_string_port(sexp str) {
+sexp sexp_make_input_string_port (sexp str) {
   FILE *in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
   return sexp_make_input_port(in);
+}
+
+sexp sexp_make_output_string_port () {
+  FILE *out;
+  sexp buf = sexp_alloc_type(string, SEXP_STRING), res;
+  out = open_memstream(&sexp_string_data(str), &sexp_string_length(buf));
+  res = sexp_make_input_port(in);
+  sexp_port_cookie(res) = buf;
+  return res;
+}
+
+sexp sexp_get_output_string (sexp port) {
+  sexp cookie = sexp_port_cookie(port);
+  fflush(sexp_port_stream(port));
+  return sexp_substring(cookie,
+                        sexp_make_integer(0),
+                        sexp_string_length(cookie));
 }
 
 #endif
 
 #endif
 
-sexp sexp_make_input_port(FILE* in) {
+sexp sexp_make_input_port (FILE* in) {
   sexp p = sexp_alloc_type(port, SEXP_IPORT);
   sexp_port_stream(p) = in;
   sexp_port_name(p) = NULL;
@@ -519,7 +535,7 @@ sexp sexp_make_input_port(FILE* in) {
   return p;
 }
 
-sexp sexp_make_output_port(FILE* out) {
+sexp sexp_make_output_port (FILE* out) {
   sexp p = sexp_alloc_type(port, SEXP_OPORT);
   sexp_port_stream(p) = out;
   sexp_port_name(p) = NULL;
@@ -1015,6 +1031,7 @@ sexp sexp_read (sexp in) {
   return res;
 }
 
+#if USE_STRING_STREAMS
 sexp sexp_read_from_string(char *str) {
   sexp s = sexp_c_string(str);
   sexp in = sexp_make_input_string_port(s);
@@ -1023,6 +1040,7 @@ sexp sexp_read_from_string(char *str) {
   sexp_deep_free(in);
   return res;
 }
+#endif
 
 void sexp_init() {
   int i;
