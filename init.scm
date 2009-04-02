@@ -1,6 +1,5 @@
 
 ;; syntax-rules
-;; number->string string->number
 ;; symbol->string string->symbol
 
 ;; provide c[ad]{2,4}r
@@ -396,6 +395,33 @@
 (define (imag-part z) 0.0)
 (define magnitude abs)
 (define (angle z) (if (< z 0) 3.141592653589793 0))
+
+(define (digit-char n) (integer->char (+ n (char->integer #\0))))
+(define (digit-value ch)
+  (if (char-numeric? ch)
+      (- (char->integer ch) (char->integer #\0))
+      (and (<= 65 (char->integer (char-upcase ch)) 70)
+           (- (char->integer (char-upcase ch)) 65))))
+
+(define (number->string n . o)
+  (if (if (null? o) #t (eq? 10 (car o)))
+      (call-with-output-string (lambda (out) (write n out)))
+      (let lp ((n n) (d (car o)) (res '()))
+        (if (> n 0)
+            (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
+            (list->string res)))))
+
+(define (string->number str . o)
+  (let ((res
+         (if (if (null? o) #t (eq? 10 (car o)))
+             (call-with-input-string str (lambda (in) (read in)))
+             (let ((len (string-length str)))
+               (let lp ((i 0) (d (car o)) (acc 0))
+                (if (>= i len)
+                    acc
+                    (let ((v (digit-value (string-ref str i))))
+                      (and v (lp (+ i 1) d (+ (* acc d) v))))))))))
+    (and (number? res) res)))
 
 ;; vector utils
 
