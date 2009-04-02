@@ -1,15 +1,12 @@
 
 ;; let-syntax letrec-syntax syntax-rules
 ;; number? complex? real? rational? integer? exact? inexact?
-;; positive? negative? max min remainder
-;; modulo numerator denominator
-;; rationalize expt
-;; make-rectangular make-polar real-part imag-part magnitude angle
+;; remainder modulo
 ;; exact->inexact inexact->exact number->string string->number
 ;; symbol->string string->symbol
 ;; char-alphabetic? char-numeric? char-whitespace?
 ;; char-upper-case? char-lower-case?
-;; char-upcase char-downcase make-string
+;; make-string
 ;; string=? string-ci=? string<? string>?
 ;; string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
 ;; substring string-append string-copy
@@ -345,19 +342,35 @@
 (define (zero? x) (= x 0))
 (define (positive? x) (> x 0))
 (define (negative? x) (< x 0))
-
 (define (even? n) (= (remainder n 2) 0))
 (define (odd? n) (= (remainder n 2) 1))
 
-;; (define (abs x) (if (< x 0) (- x) x))
+(define (abs x) (if (< x 0) (- x) x))
 
-;; (define (gcd a b)
-;;   (if (= b 0)
-;;       a
-;;       (gcd b (modulo a b))))
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (modulo a b))))
 
-;; (define (lcm a b)
-;;   (quotient (* a b) (gcd a b)))
+(define (lcm a b)
+  (quotient (* a b) (gcd a b)))
+
+(define (max x . rest)
+  (let lp ((hi x) (ls rest))
+    (if (null? ls)
+        hi
+        (lp (if (> (car ls) hi) (car ls) hi) (cdr ls)))))
+
+(define (min x . rest)
+  (let lp ((lo x) (ls rest))
+    (if (null? ls)
+        lo
+        (lp (if (< (car ls) lo) (car ls) lo) (cdr ls)))))
+
+(define (real-part z) z)
+(define (imag-part z) 0.0)
+(define magnitude abs)
+(define (angle z) (if (< z 0) 3.141592653589793 0))
 
 ;; vector utils
 
