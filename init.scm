@@ -1,13 +1,7 @@
 
 ;; let-syntax letrec-syntax syntax-rules
-;; remainder modulo
 ;; number->string string->number
 ;; symbol->string string->symbol
-;; make-string
-;; string=? string-ci=? string<? string>?
-;; string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
-;; substring string-append string-copy
-;; values call-with-values dynamic-wind
 ;; call-with-input-file call-with-output-file
 ;; with-input-from-file with-output-to-file
 
@@ -341,6 +335,20 @@
     (if (>= i 0) (begin (string-set! str i ch) (lp (- i 1))))))
 
 (define (string . args) (list->string args))
+(define (string-append . args) (string-concatenate args))
+(define (string-copy s) (substring s 0 (string-length s)))
+
+(define (string=? s1 s2) (eq? (string-cmp s1 s2) 0))
+(define (string<? s1 s2) (< (string-cmp s1 s2) 0))
+(define (string<=? s1 s2) (<= (string-cmp s1 s2) 0))
+(define (string>? s1 s2) (> (string-cmp s1 s2) 0))
+(define (string>=? s1 s2) (>= (string-cmp s1 s2) 0))
+
+(define (string-ci=? s1 s2) (eq? (string-cmp-ci s1 s2) 0))
+(define (string-ci<? s1 s2) (< (string-cmp-ci s1 s2) 0))
+(define (string-ci<=? s1 s2) (<= (string-cmp-ci s1 s2) 0))
+(define (string-ci>? s1 s2) (> (string-cmp-ci s1 s2) 0))
+(define (string-ci>=? s1 s2) (>= (string-cmp-ci s1 s2) 0))
 
 ;; math utils
 
@@ -359,6 +367,12 @@
 (define (odd? n) (= (remainder n 2) 1))
 
 (define (abs x) (if (< x 0) (- x) x))
+
+(define (modulo a b)
+  (let ((res (remainder a b)))
+    (if (< b 0)
+        (if (< res 0) res (- res b))
+        (if (> res 0) res (+ res b)))))
 
 (define (gcd a b)
   (if (= b 0)
@@ -413,3 +427,17 @@
 
 (define (load file) (%load file (interaction-environment)))
 
+;; values
+
+(define *values-tag* (list 'values))
+
+(define (values . ls)
+  (if (and (pair? ls) (null? (cdr ls)))
+      (car ls)
+      (cons *values-tag* ls)))
+
+(define (call-with-values producer consumer)
+  (let ((res (producer)))
+    (if (and (pair? res) (eq? *values-tag* (car res)))
+        (apply consumer (cdr res))
+        (consumer res))))

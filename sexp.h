@@ -344,7 +344,8 @@ struct sexp_struct {
 #define sexp_fx_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
 #define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
 #define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
-#define sexp_fx_mod(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
+#define sexp_fx_rem(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
+#define sexp_fx_sign(a)   (-((sexp_sint_t)(a) < 0)) /* -1 or 0 */
 
 #define sexp_fp_add(a, b) (sexp_make_flonum(sexp_flonum_value(a) + sexp_flonum_value(b)))
 #define sexp_fp_sub(a, b) (sexp_make_flonum(sexp_flonum_value(a) - sexp_flonum_value(b)))
@@ -368,7 +369,6 @@ struct sexp_struct {
 #define sexp_cadr(x)      (sexp_car(sexp_cdr(x)))
 #define sexp_cdar(x)      (sexp_cdr(sexp_car(x)))
 #define sexp_cddr(x)      (sexp_cdr(sexp_cdr(x)))
-
 #define sexp_caaar(x)     (sexp_car(sexp_caar(x)))
 #define sexp_caadr(x)     (sexp_car(sexp_cadr(x)))
 #define sexp_cadar(x)     (sexp_car(sexp_cdar(x)))
@@ -377,7 +377,6 @@ struct sexp_struct {
 #define sexp_cdadr(x)     (sexp_cdr(sexp_cadr(x)))
 #define sexp_cddar(x)     (sexp_cdr(sexp_cdar(x)))
 #define sexp_cdddr(x)     (sexp_cdr(sexp_cddr(x)))
-
 #define sexp_cadddr(x)    (sexp_cadr(sexp_cddr(x)))
 #define sexp_cddddr(x)    (sexp_cddr(sexp_cddr(x)))
 
@@ -417,7 +416,8 @@ sexp sexp_append(sexp a, sexp b);
 sexp sexp_memq(sexp x, sexp ls);
 sexp sexp_assq(sexp x, sexp ls);
 sexp sexp_length(sexp ls);
-sexp sexp_make_string(char *str);
+sexp sexp_c_string(char *str);
+sexp sexp_make_string(sexp len, sexp ch);
 sexp sexp_make_flonum(double f);
 int sexp_string_hash(char *str, int acc);
 sexp sexp_intern(char *str);
