@@ -82,6 +82,7 @@ enum opcode_names {
   OP_STRING_LENGTH,
   OP_MAKE_PROCEDURE,
   OP_MAKE_VECTOR,
+  OP_AND,
   OP_NULLP,
   OP_INTEGERP,
   OP_SYMBOLP,
@@ -118,6 +119,7 @@ enum opcode_names {
   OP_FLUSH_OUTPUT,
   OP_READ,
   OP_READ_CHAR,
+  OP_PEEK_CHAR,
   OP_RET,
   OP_DONE,
 };

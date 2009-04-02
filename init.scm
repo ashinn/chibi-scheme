@@ -3,8 +3,6 @@
 ;; remainder modulo
 ;; number->string string->number
 ;; symbol->string string->symbol
-;; char-alphabetic? char-numeric? char-whitespace?
-;; char-upper-case? char-lower-case?
 ;; make-string
 ;; string=? string-ci=? string<? string>?
 ;; string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
@@ -12,7 +10,6 @@
 ;; values call-with-values dynamic-wind
 ;; call-with-input-file call-with-output-file
 ;; with-input-from-file with-output-to-file
-;; peek-char char-ready?
 
 ;; provide c[ad]{2,4}r
 
@@ -298,6 +295,15 @@
 
 ;; char utils
 
+(define (char-alphabetic? ch) (<= 65 (char->integer (char-upcase ch)) 90))
+(define (char-numeric? ch) (<= 48 (char->integer ch) 57))
+(define (char-whitespace? ch)
+  (if (eq? ch #\space)
+      #t
+      (if (eq? ch #\tab) #t (if (eq? ch #\newline) #t (eq? ch #\return)))))
+(define (char-upper-case? ch) (<= 65 (char->integer ch) 90))
+(define (char-lower-case? ch) (<= 97 (char->integer ch) 122))
+
 (define (char=? a b) (= (char->integer a) (char->integer b)))
 (define (char<? a b) (< (char->integer a) (char->integer b)))
 (define (char>? a b) (> (char->integer a) (char->integer b)))
@@ -400,7 +406,10 @@
 
 (define (vector . args) (list->vector args))
 
-;; miscellaneous
+;; I/O utilities
+
+(define (char-ready? . o)
+  (not (eof-object? (peek-char (if (pair? o) (car o) (current-input-port))))))
 
 (define (load file) (%load file (interaction-environment)))
 

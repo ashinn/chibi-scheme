@@ -62,6 +62,7 @@ _OP(OPC_IO, OP_NEWLINE, 0, 3, 0, SEXP_OPORT, 0, "newline", (sexp)"*current-outpu
 _OP(OPC_IO, OP_FLUSH_OUTPUT, 0, 3, 0, SEXP_OPORT, 0, "flush-output", (sexp)"*current-output-port*", NULL),
 _OP(OPC_IO, OP_READ, 0, 3, 0, SEXP_IPORT, 0, "read", (sexp)"*current-input-port*", NULL),
 _OP(OPC_IO, OP_READ_CHAR, 0, 3, 0, SEXP_IPORT, 0, "read-char", (sexp)"*current-input-port*", NULL),
+_OP(OPC_IO, OP_PEEK_CHAR, 0, 3, 0, SEXP_IPORT, 0, "peek-char", (sexp)"*current-input-port*", NULL),
 _OP(OPC_GENERIC, OP_EVAL, 1, 3, 0, 0, 0, "eval", (sexp)"*interaction-environment*", NULL),
 _FN2(0, 0, "equal?", sexp_equalp),
 _FN1(0, "list?", sexp_listp),

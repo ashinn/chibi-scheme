@@ -573,6 +573,10 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#\\space", out);
     else if (obj == sexp_make_character('\n'))
       sexp_write_string("#\\newline", out);
+    else if (obj == sexp_make_character('\r'))
+      sexp_write_string("#\\return", out);
+    else if (obj == sexp_make_character('\t'))
+      sexp_write_string("#\\tab", out);
     else if ((33 <= sexp_unbox_character(obj))
              && (sexp_unbox_character(obj) < 127))
       sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
