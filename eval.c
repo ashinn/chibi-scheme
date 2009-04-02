@@ -665,10 +665,11 @@ static void generate_opcode_app (sexp app, sexp context) {
   /* maybe push the default for an optional argument */
   if ((num_args == sexp_opcode_num_args(op))
       && sexp_opcode_variadic_p(op)
-      && sexp_opcode_data(op)
-      && sexp_opcode_opt_param_p(op)) {
-    emit_push(sexp_opcode_data(op), context);
-    emit(OP_CDR, context);
+      && sexp_opcode_default(op)
+      && (sexp_opcode_class(op) != OPC_PARAMETER)) {
+    emit_push(sexp_opcode_default(op), context);
+    if (sexp_opcode_opt_param_p(op))
+      emit(OP_CDR, context);
     sexp_context_depth(context)++;
     num_args++;
   }
@@ -714,8 +715,8 @@ static void generate_opcode_app (sexp app, sexp context) {
       emit_word((sexp_uint_t)sexp_opcode_data(op), context);
     break;
   case OPC_PARAMETER:
-    emit_push(sexp_opcode_data(op), context);
-    emit(OP_CDR, context);
+    emit_push(sexp_opcode_default(op), context);
+    emit((num_args == 0 ? OP_CDR : OP_SET_CDR), context);
   default:
     emit(sexp_opcode_code(op), context);
   }
@@ -1654,10 +1655,10 @@ static sexp sexp_make_standard_env (sexp version) {
     op = &opcodes[i];
     if ((! standard_env_syms_interned_p)
         && sexp_opcode_opt_param_p(op)
-        && sexp_opcode_data(op)) {
-      sym = sexp_intern((char*)sexp_opcode_data(op));
+        && sexp_opcode_default(op)) {
+      sym = sexp_intern((char*)sexp_opcode_default(op));
       cell = env_cell_create(e, sym, SEXP_UNDEF);
-      sexp_opcode_data(op) = cell;
+      sexp_opcode_default(op) = cell;
     }
     env_define(e, sexp_intern(sexp_opcode_name(op)), op);
   }

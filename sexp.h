@@ -132,7 +132,7 @@ struct sexp_struct {
       unsigned char op_class, code, num_args, flags,
         arg1_type, arg2_type, inverse;
       char *name;
-      sexp data, proc;
+      sexp dflt, data, proc;
     } opcode;
     struct {
       char code;
@@ -301,6 +301,7 @@ struct sexp_struct {
 #define sexp_opcode_arg2_type(x)  ((x)->value.opcode.arg2_type)
 #define sexp_opcode_inverse(x)    ((x)->value.opcode.inverse)
 #define sexp_opcode_name(x)       ((x)->value.opcode.name)
+#define sexp_opcode_default(x)    ((x)->value.opcode.dflt)
 #define sexp_opcode_data(x)       ((x)->value.opcode.data)
 #define sexp_opcode_proc(x)       ((x)->value.opcode.proc)
 
