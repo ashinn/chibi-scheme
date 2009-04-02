@@ -83,6 +83,14 @@ _FN2(SEXP_STRING, SEXP_STRING, "string-cmp", sexp_string_cmp),
 _FN2(SEXP_STRING, SEXP_STRING, "string-cmp-ci", sexp_string_cmp_ci),
 _FN3(SEXP_STRING, SEXP_FIXNUM, "substring", sexp_substring),
 _FN1(SEXP_PAIR, "string-concatenate", sexp_string_concatenate),
+_FN2(0, SEXP_PAIR, "memq", sexp_memq),
+_FN2(0, SEXP_PAIR, "assq", sexp_assq),
+_FN3(SEXP_ENV, SEXP_PAIR, "make-syntactic-closure", sexp_make_synclo),
+_PARAM("current-input-port", (sexp)"*current-input-port*", SEXP_IPORT),
+_PARAM("current-output-port", (sexp)"*current-output-port*", SEXP_OPORT),
+_PARAM("current-error-port", (sexp)"*current-error-port*", SEXP_OPORT),
+_PARAM("current-error-handler", (sexp)"*current-error-handler*", SEXP_PROCEDURE),
+_PARAM("interaction-environment", (sexp)"*interaction-environment*", SEXP_ENV),
 #if USE_MATH
 _FN1(0, "exp", sexp_exp),
 _FN1(0, "log", sexp_log),
@@ -99,13 +107,13 @@ _FN1(0, "floor", sexp_floor),
 _FN1(0, "ceiling", sexp_ceiling),
 _FN2(0, 0, "expt", sexp_expt),
 #endif
-_FN2(0, SEXP_PAIR, "memq", sexp_memq),
-_FN2(0, SEXP_PAIR, "assq", sexp_assq),
-_FN3(SEXP_ENV, SEXP_PAIR, "make-syntactic-closure", sexp_make_synclo),
-_PARAM("current-input-port", (sexp)"*current-input-port*", SEXP_IPORT),
-_PARAM("current-output-port", (sexp)"*current-output-port*", SEXP_OPORT),
-_PARAM("current-error-port", (sexp)"*current-error-port*", SEXP_OPORT),
-_PARAM("current-error-handler", (sexp)"*current-error-handler*", SEXP_PROCEDURE),
-_PARAM("interaction-environment", (sexp)"*interaction-environment*", SEXP_ENV),
+#if USE_STRING_STREAMS
+_FN0("open-output-string", sexp_make_output_string_port),
+_FN1(SEXP_STRING, "open-input-string", sexp_make_input_string_port),
+_FN1(SEXP_OPORT, "get-output-string", sexp_get_output_string),
+#endif
+#if USE_DEBUG
+_FN2(SEXP_PROCEDURE, SEXP_OPORT, "disasm", sexp_disasm),
+#endif
 };
 

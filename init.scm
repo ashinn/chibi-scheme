@@ -2,7 +2,6 @@
 ;; let-syntax letrec-syntax syntax-rules
 ;; number->string string->number
 ;; symbol->string string->symbol
-;; call-with-input-file call-with-output-file
 ;; with-input-from-file with-output-to-file
 
 ;; provide c[ad]{2,4}r
@@ -420,12 +419,32 @@
 
 (define (vector . args) (list->vector args))
 
-;; I/O utilities
+;; I/O utils
 
 (define (char-ready? . o)
   (not (eof-object? (peek-char (if (pair? o) (car o) (current-input-port))))))
 
 (define (load file) (%load file (interaction-environment)))
+
+(define (call-with-input-string str proc)
+  (proc (open-input-string str)))
+
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (get-output-string out)))
+
+(define (call-with-input-file file proc)
+  (let* ((in (open-input-file file))
+         (res (proc in)))
+    (close-input-port in)
+    res))
+
+(define (call-with-output-file file proc)
+  (let* ((out (open-output-file file))
+         (res (proc in)))
+    (close-output-port in)
+    res))
 
 ;; values
 

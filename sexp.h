@@ -102,6 +102,7 @@ struct sexp_struct {
       FILE *stream;
       char *name;
       sexp_uint_t line;
+      sexp cookie;
     } port;
     struct {
       sexp kind, message, irritants, file, line;
@@ -263,6 +264,7 @@ struct sexp_struct {
 #define sexp_port_stream(p)    ((p)->value.port.stream)
 #define sexp_port_name(p)      ((p)->value.port.name)
 #define sexp_port_line(p)      ((p)->value.port.line)
+#define sexp_port_cookie(p)    ((p)->value.port.cookie)
 
 #define sexp_exception_kind(p)      ((p)->value.exception.kind)
 #define sexp_exception_message(p)   ((p)->value.exception.message)
@@ -382,29 +384,12 @@ struct sexp_struct {
 
 /***************************** general API ****************************/
 
-#if USE_STRING_STREAMS
-#if SEXP_BSD
-#define fmemopen(str, len, m) funopen(sexp_vector(3, (sexp)str, (sexp)len, (sexp)0), sstream_read, sstream_write, sstream_seek, sstream_close)
-int sstream_read(void *vec, char *dst, int n);
-int sstream_write(void *vec, const char *src, int n);
-off_t sstream_seek(void *vec, off_t offset, int whence);
-int sstream_close(void *vec);
-#endif
 #define sexp_read_char(p) (getc(sexp_port_stream(p)))
 #define sexp_push_char(c, p) (ungetc(c, sexp_port_stream(p)))
 #define sexp_write_char(c, p) (putc(c, sexp_port_stream(p)))
 #define sexp_write_string(s, p) (fputs(s, sexp_port_stream(p)))
 #define sexp_printf(p, ...) (fprintf(sexp_port_stream(p), __VA_ARGS__))
 #define sexp_flush(p) (fflush(sexp_port_stream(p)))
-#else
-sexp sexp_read_char(sexp port);
-void sexp_push_char(sexp ch, sexp port);
-void sexp_write_char(sexp ch, sexp port);
-void sexp_write_string(sexp str, sexp port);
-void sexp_printf(sexp port, sexp fmt, ...);
-#endif
-
-/***************************** general API ****************************/
 
 sexp sexp_alloc_tagged(size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp head, sexp tail);
@@ -418,6 +403,7 @@ sexp sexp_assq(sexp x, sexp ls);
 sexp sexp_length(sexp ls);
 sexp sexp_c_string(char *str);
 sexp sexp_make_string(sexp len, sexp ch);
+sexp sexp_substring (sexp str, sexp start, sexp end);
 sexp sexp_make_flonum(double f);
 int sexp_string_hash(char *str, int acc);
 sexp sexp_intern(char *str);
@@ -437,6 +423,8 @@ sexp sexp_make_input_string_port(sexp str);
 sexp sexp_make_output_string_port();
 sexp sexp_get_output_string(sexp port);
 sexp sexp_make_exception(sexp kind, sexp message, sexp irritants, sexp file, sexp line);
+sexp sexp_type_exception (char *message, sexp obj);
+sexp sexp_range_exception (sexp obj, sexp start, sexp end);
 sexp sexp_print_exception(sexp exn, sexp out);
 void sexp_init();
 
