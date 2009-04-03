@@ -70,6 +70,8 @@ enum opcode_names {
   OP_JUMP,
   OP_PUSH,
   OP_DROP,
+  OP_GLOBAL_REF,
+  OP_GLOBAL_KNOWN_REF,
   OP_STACK_REF,
   OP_LOCAL_REF,
   OP_LOCAL_SET,

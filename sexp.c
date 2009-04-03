@@ -147,7 +147,7 @@ sexp sexp_print_exception (sexp exn, sexp out) {
   } else {
     sexp_write_string("\n", out);
   }
-  return SEXP_UNDEF;
+  return SEXP_VOID;
 }
 
 static sexp sexp_read_error (char *message, sexp irritants, sexp port) {
@@ -296,7 +296,7 @@ sexp sexp_make_string(sexp len, sexp ch) {
 
 sexp sexp_c_string(char *str) {
   sexp_uint_t len = strlen(str);
-  sexp s = sexp_make_string(sexp_make_integer(len), SEXP_UNDEF);
+  sexp s = sexp_make_string(sexp_make_integer(len), SEXP_VOID);
   memcpy(sexp_string_data(s), str, len);
   return s;
 }
@@ -318,7 +318,7 @@ sexp sexp_substring (sexp str, sexp start, sexp end) {
       || (end < start))
     return sexp_range_exception(str, start, end);
   res = sexp_make_string(sexp_fx_sub(end, start),
-                         SEXP_UNDEF);
+                         SEXP_VOID);
   memcpy(sexp_string_data(res),
          sexp_string_data(str)+sexp_unbox_integer(start),
          sexp_string_length(res));
@@ -393,7 +393,7 @@ sexp sexp_make_vector(sexp len, sexp dflt) {
 }
 
 sexp sexp_list_to_vector(sexp ls) {
-  sexp x, vec = sexp_make_vector(sexp_length(ls), SEXP_UNDEF);
+  sexp x, vec = sexp_make_vector(sexp_length(ls), SEXP_VOID);
   sexp *elts = sexp_vector_data(vec);
   int i;
   for (i=0, x=ls; sexp_pairp(x); i++, x=sexp_cdr(x))
@@ -402,7 +402,7 @@ sexp sexp_list_to_vector(sexp ls) {
 }
 
 sexp sexp_vector(int count, ...) {
-  sexp vec = sexp_make_vector(sexp_make_integer(count), SEXP_UNDEF);
+  sexp vec = sexp_make_vector(sexp_make_integer(count), SEXP_VOID);
   sexp *elts = sexp_vector_data(vec);
   va_list ap;
   int i;
@@ -443,7 +443,7 @@ int sstream_write (void *vec, const char *src, int n) {
   pos = sexp_unbox_integer(sexp_stream_pos(vec));
   newpos = pos+n;
   if (newpos > len) {
-    newbuf = sexp_make_string(sexp_make_integer(len*2), SEXP_UNDEF);
+    newbuf = sexp_make_string(sexp_make_integer(len*2), SEXP_VOID);
     memcpy(sexp_string_data(newbuf),
            sexp_string_data(sexp_stream_buf(vec)),
            pos);
@@ -483,7 +483,7 @@ sexp sexp_make_output_string_port () {
   FILE *out;
   sexp res, size, cookie;
   size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
-  cookie = sexp_vector(3, sexp_make_string(size, SEXP_UNDEF),
+  cookie = sexp_vector(3, sexp_make_string(size, SEXP_VOID),
                        size, sexp_make_integer(0));
   out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
   res = sexp_make_output_port(out);
@@ -708,8 +708,8 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string("#f", out); break;
     case (sexp_uint_t) SEXP_EOF:
       sexp_write_string("#<eof>", out); break;
-    case (sexp_uint_t) SEXP_DEF:
     case (sexp_uint_t) SEXP_UNDEF:
+    case (sexp_uint_t) SEXP_VOID:
       sexp_write_string("#<undef>", out); break;
     case (sexp_uint_t) SEXP_ERROR:
       sexp_write_string("#<error>", out); break;
