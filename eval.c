@@ -721,6 +721,7 @@ static void generate_opcode_app (sexp app, sexp context) {
   case OPC_PARAMETER:
     emit_push(sexp_opcode_default(op), context);
     emit((num_args == 0 ? OP_CDR : OP_SET_CDR), context);
+    break;
   default:
     emit(sexp_opcode_code(op), context);
   }
@@ -1515,6 +1516,7 @@ sexp sexp_close_port (sexp port) {
 
 sexp sexp_load (sexp source, sexp env) {
   sexp obj, res, in, context = sexp_make_context(NULL, env);
+  sexp_context_tailp(context) = 0;
   in = sexp_open_input_file(source);
   while ((obj=sexp_read(in)) != (sexp) SEXP_EOF) {
     res = eval_in_context(obj, context);
@@ -1648,8 +1650,6 @@ static struct sexp_struct core_forms[] = {
 
 #include "opcodes.c"
 
-static int standard_env_syms_interned_p = 0;
-
 static sexp sexp_make_null_env (sexp version) {
   sexp_uint_t i;
   sexp e = sexp_alloc_type(env, SEXP_ENV);
@@ -1660,14 +1660,19 @@ static sexp sexp_make_null_env (sexp version) {
   return e;
 }
 
+static sexp sexp_copy_opcode (sexp op) {
+  sexp res = sexp_alloc_type(opcode, SEXP_OPCODE);
+  memcpy(res, op, sexp_sizeof(opcode));
+  return res;
+}
+
 static sexp sexp_make_standard_env (sexp version) {
   sexp_uint_t i;
   sexp e = sexp_make_null_env(version), op, cell, sym;
   for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
     op = &opcodes[i];
-    if ((! standard_env_syms_interned_p)
-        && sexp_opcode_opt_param_p(op)
-        && sexp_opcode_default(op)) {
+    if (sexp_opcode_opt_param_p(op) && sexp_opcode_default(op)) {
+      op = sexp_copy_opcode(op);
       sym = sexp_intern((char*)sexp_opcode_default(op));
       cell = env_cell_create(e, sym, SEXP_VOID);
       sexp_opcode_default(op) = cell;
@@ -1678,7 +1683,6 @@ static sexp sexp_make_standard_env (sexp version) {
   env_define(e, the_cur_out_symbol, sexp_make_output_port(stdout));
   env_define(e, the_cur_err_symbol, sexp_make_output_port(stderr));
   env_define(e, the_interaction_env_symbol, e);
-  standard_env_syms_interned_p = 1;
   return e;
 }
 

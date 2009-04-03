@@ -599,7 +599,7 @@ void sexp_write (sexp obj, sexp out) {
     case SEXP_BYTECODE:
       sexp_write_string("#<bytecode>", out); break;
     case SEXP_ENV:
-      sexp_write_string("#<env>", out); break;
+      sexp_printf(out, "#<env %p>", obj); break;
     case SEXP_EXCEPTION:
       sexp_write_string("#<exception>", out); break;
     case SEXP_MACRO:
