@@ -241,7 +241,7 @@ static sexp sexp_make_context(sexp *stack, sexp env) {
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
-  sexp_context_tailp(res) = 1;
+  sexp_context_tailp(res) = 0;
   return res;
 }
 
@@ -788,6 +788,7 @@ static void generate_lambda (sexp lambda, sexp context) {
       emit(OP_DROP, ctx);
     }
   }
+  sexp_context_tailp(ctx) = 1;
   generate(sexp_lambda_body(lambda), ctx);
   flags = sexp_make_integer((sexp_listp(sexp_lambda_params(lambda))==SEXP_FALSE)
                             ? 1 : 0);
