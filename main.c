@@ -30,6 +30,7 @@ void run_main (int argc, char **argv) {
   sexp_uint_t i, quit=0, init_loaded=0;
 
   env = sexp_make_standard_env(sexp_make_integer(5));
+  env_define(env, the_interaction_env_symbol, env);
   context = sexp_make_context(NULL, env);
   sexp_context_tailp(context) = 0;
   emit_push(SEXP_VOID, context);
@@ -46,10 +47,8 @@ void run_main (int argc, char **argv) {
 #if USE_STRING_STREAMS
     case 'e':
     case 'p':
-      if (! init_loaded) {
+      if (! init_loaded++)
         sexp_load(sexp_c_string(sexp_init_file), env);
-        init_loaded = 1;
-      }
       obj = sexp_read_from_string(argv[i+1]);
       res = eval_in_context(obj, context);
       if (argv[i][1] == 'p') {
@@ -62,6 +61,11 @@ void run_main (int argc, char **argv) {
       i++;
       break;
 #endif
+    case 'l':
+      if (! init_loaded++)
+        sexp_load(sexp_c_string(sexp_init_file), env);
+      sexp_load(sexp_c_string(argv[++i]), env);
+      break;
     case 'q':
       init_loaded = 1;
       break;
