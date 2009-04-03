@@ -118,34 +118,43 @@ sexp sexp_range_exception (sexp obj, sexp start, sexp end) {
 sexp sexp_print_exception (sexp exn, sexp out) {
   sexp ls;
   sexp_write_string("ERROR", out);
-  if (sexp_integerp(sexp_exception_line(exn))
-      && (sexp_exception_line(exn) > sexp_make_integer(0))) {
-    sexp_write_string(" on line ", out);
-    sexp_write(sexp_exception_line(exn), out);
-  }
-  if (sexp_stringp(sexp_exception_file(exn))) {
-    sexp_write_string(" of file ", out);
-    sexp_write_string(sexp_string_data(sexp_exception_file(exn)), out);
-  }
-  sexp_write_string(": ", out);
-  sexp_write_string(sexp_string_data(sexp_exception_message(exn)), out);
-  if (sexp_exception_irritants(exn)
-      && sexp_pairp(sexp_exception_irritants(exn))) {
-    if (sexp_nullp(sexp_cdr(sexp_exception_irritants(exn)))) {
-      sexp_write_string(": ", out);
-      sexp_write(sexp_car(sexp_exception_irritants(exn)), out);
-      sexp_write_string("\n", out);
-    } else {
-      sexp_write_string("\n", out);
-      for (ls=sexp_exception_irritants(exn);
-           sexp_pairp(ls); ls=sexp_cdr(ls)) {
-        sexp_write_string("    ", out);
-        sexp_write(sexp_car(ls), out);
+  if (sexp_exceptionp(exn)) {
+    if (sexp_integerp(sexp_exception_line(exn))
+        && (sexp_exception_line(exn) > sexp_make_integer(0))) {
+      sexp_write_string(" on line ", out);
+      sexp_write(sexp_exception_line(exn), out);
+    }
+    if (sexp_stringp(sexp_exception_file(exn))) {
+      sexp_write_string(" of file ", out);
+      sexp_write_string(sexp_string_data(sexp_exception_file(exn)), out);
+    }
+    sexp_write_string(": ", out);
+    sexp_write_string(sexp_string_data(sexp_exception_message(exn)), out);
+    if (sexp_exception_irritants(exn)
+        && sexp_pairp(sexp_exception_irritants(exn))) {
+      if (sexp_nullp(sexp_cdr(sexp_exception_irritants(exn)))) {
+        sexp_write_string(": ", out);
+        sexp_write(sexp_car(sexp_exception_irritants(exn)), out);
         sexp_write_string("\n", out);
+      } else {
+        sexp_write_string("\n", out);
+        for (ls=sexp_exception_irritants(exn);
+             sexp_pairp(ls); ls=sexp_cdr(ls)) {
+          sexp_write_string("    ", out);
+          sexp_write(sexp_car(ls), out);
+          sexp_write_char('\n', out);
+        }
       }
+    } else {
+      sexp_write_char('\n', out);
     }
   } else {
-    sexp_write_string("\n", out);
+    sexp_write_string(": ", out);
+    if (sexp_stringp(exn))
+      sexp_write_string(sexp_string_data(exn), out);
+    else
+      sexp_write(exn, out);
+    sexp_write_char('\n', out);
   }
   return SEXP_VOID;
 }

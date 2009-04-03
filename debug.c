@@ -61,32 +61,7 @@ static sexp sexp_disasm (sexp bc, sexp out) {
   return SEXP_VOID;
 }
 
-static void print_bytecode (sexp bc) {
-  int i;
-  unsigned char *data = sexp_bytecode_data(bc);
-  fprintf(stderr, "bytecode @ %p, data @ %p, length = %lu\n",
-          bc, data, sexp_bytecode_length(bc));
-  for (i=0; i+16 < sexp_bytecode_length(bc); i+=8) {
-    fprintf(stderr, "%02x: %02x %02x %02x %02x %02x %02x %02x %02x   ", i,
-            data[i], data[i+1], data[i+2], data[i+3],
-            data[i+4], data[i+5], data[i+6], data[i+7]);
-    i += 8;
-    fprintf(stderr, "%02x %02x %02x %02x %02x %02x %02x %02x\n",
-            data[i], data[i+1], data[i+2], data[i+3],
-            data[i+4], data[i+5], data[i+6], data[i+7]);
-  }
-  if (i != sexp_bytecode_length(bc)) {
-    fprintf(stderr, "%02x:", i);
-    for ( ; i < sexp_bytecode_length(bc); i++) {
-      if ((i % 8) == 0 && (i % 16) != 0)
-        fprintf(stderr, "  ");
-      fprintf(stderr, " %02x", data[i]);
-    }
-    fprintf(stderr, "\n");
-  }
-}
-
-static void print_stack (sexp *stack, int top, int fp, sexp out) {
+static void sexp_print_stack (sexp *stack, int top, int fp, sexp out) {
   int i;
   for (i=0; i<top; i++) {
     sexp_printf(out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
