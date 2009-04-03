@@ -5,7 +5,8 @@
 static const char* reverse_opcode_names[] =
   {"NOOP", "ERROR", "RESUMECC", "CALLCC", "APPLY1", "TAIL-CALL", "CALL",
    "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "EVAL", "JUMP-UNLESS",
-   "JUMP", "PUSH", "DROP", "STACK-REF", "LOCAL-REF", "LOCAL-SET",
+   "JUMP", "PUSH", "DROP", "GLOBAL-REF", "GLOBAL-KNOWN-REF", "STACK-REF",
+   "LOCAL-REF", "LOCAL-SET",
    "CLOSURE-REF", "VECTOR-REF", "VECTOR-SET", "VECTOR-LENGTH", "STRING-REF",
    "STRING-SET", "STRING-LENGTH", "MAKE-PROCEDURE", "MAKE-VECTOR", "AND",
    "NULL?", "FIXNUM?", "SYMBOL?", "CHAR?",
@@ -45,6 +46,8 @@ static sexp sexp_disasm (sexp bc, sexp out) {
     sexp_printf(out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
+  case OP_GLOBAL_REF:
+  case OP_GLOBAL_KNOWN_REF:
   case OP_TAIL_CALL:
   case OP_CALL:
   case OP_PUSH:
@@ -55,7 +58,7 @@ static sexp sexp_disasm (sexp bc, sexp out) {
   sexp_write_char('\n', out);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
-  return SEXP_UNDEF;
+  return SEXP_VOID;
 }
 
 static void print_bytecode (sexp bc) {

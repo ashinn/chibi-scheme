@@ -177,9 +177,9 @@ struct sexp_struct {
 #define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
 #define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
 #define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
-#define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(4)
-#define SEXP_ERROR  SEXP_MAKE_IMMEDIATE(5) /* exceptions are preferred */
-#define SEXP_DEF    SEXP_MAKE_IMMEDIATE(6) /* internal use */
+#define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4)
+#define SEXP_ERROR  SEXP_MAKE_IMMEDIATE(5) /* internal use */
+#define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(7) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(8) /* internal use */
 

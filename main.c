@@ -17,7 +17,7 @@ void repl (sexp context) {
       sexp_print_exception(obj, err);
     } else {
       res = eval_in_context(obj, context);
-      if (res != SEXP_UNDEF) {
+      if (res != SEXP_VOID) {
         sexp_write(res, out);
         sexp_write_char('\n', out);
       }
@@ -32,12 +32,12 @@ void run_main (int argc, char **argv) {
   env = sexp_make_standard_env(sexp_make_integer(5));
   context = sexp_make_context(NULL, env);
   sexp_context_tailp(context) = 0;
-  emit_push(SEXP_UNDEF, context);
+  emit_push(SEXP_VOID, context);
   emit(OP_DONE, context);
   err_handler = sexp_make_procedure(sexp_make_integer(0),
                                     sexp_make_integer(0),
                                     finalize_bytecode(context),
-                                    sexp_make_vector(0, SEXP_UNDEF));
+                                    sexp_make_vector(0, SEXP_VOID));
   env_define(env, the_err_handler_symbol, err_handler);
 
   /* parse options */
