@@ -242,6 +242,7 @@ static sexp sexp_make_context(sexp *stack, sexp env) {
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
   sexp_context_tailp(res) = 0;
+  sexp_context_tracep(res) = 0;
   return res;
 }
 
@@ -251,6 +252,7 @@ static sexp sexp_child_context(sexp context, sexp lambda) {
   sexp_context_lambda(ctx) = lambda;
   sexp_context_env(ctx) = sexp_context_env(context);
   sexp_context_top(ctx) = sexp_context_top(context);
+  sexp_context_tracep(ctx) = sexp_context_tracep(context);
   return ctx;
 }
 
@@ -991,8 +993,13 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
   sexp_sint_t i, j, k, fp=top-4;
 
  loop:
-/*   print_stack(stack, top, fp, env_global_ref(env, the_cur_err_symbol, SEXP_FALSE)); */
-/*   fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN"); */
+#ifdef DEBUG_VM
+  if (sexp_context_tracep(context)) {
+    sexp_print_stack(stack, top, fp,
+                     env_global_ref(env, the_cur_err_symbol, SEXP_FALSE));
+    fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN");
+  }
+#endif
   switch (*ip++) {
   case OP_NOOP:
     fprintf(stderr, "<<<NOOP>>>\n");
@@ -1050,6 +1057,7 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     i = sexp_unbox_integer(_WORD0);    /* number of params */
     tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
+    tmp2 = stack[fp+3];
     j = sexp_unbox_integer(stack[fp]);
     ip = ((unsigned char*) sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
     cp = stack[fp+2];
@@ -1057,7 +1065,7 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     for (k=0; k<i; k++)
       stack[fp-j+k] = stack[top-1-i+k];
     top = fp+i-j+1;
-    fp = sexp_unbox_integer(stack[fp+3]);
+    fp = sexp_unbox_integer(tmp2);
     goto make_call;
   case OP_CALL:
     if (top >= INIT_STACK_SIZE)

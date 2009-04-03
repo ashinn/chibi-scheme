@@ -19,13 +19,13 @@ GC_OBJ=./gc/gc.a
 	cd gc && make test
 
 sexp.o: sexp.c sexp.h config.h defaults.h Makefile
-	gcc -c $(CFLAGS) -o $@ $<
+	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
-	gcc -c $(CFLAGS) -o $@ $<
+	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 main.o: main.c eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
-	gcc -c $(CFLAGS) -o $@ $<
+	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 libchibisexp.$(SO): sexp.o $(GC_OBJ)
 	gcc $(LDFLAGS) -shared -dynamiclib -o $@ $^

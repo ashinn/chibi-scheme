@@ -4,6 +4,7 @@
 void repl (sexp context) {
   sexp obj, res, env, in, out, err;
   env = sexp_context_env(context);
+  sexp_context_tracep(context) = 1;
   in = env_global_ref(env, the_cur_in_symbol, SEXP_FALSE);
   out = env_global_ref(env, the_cur_out_symbol, SEXP_FALSE);
   err = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);

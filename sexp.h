@@ -160,7 +160,7 @@ struct sexp_struct {
     /* compiler state */
     struct {
       sexp bc, lambda, *stack, env;
-      sexp_uint_t pos, top, depth, tailp;
+      sexp_uint_t pos, top, depth, tailp, tracep;
     } context;
   } value;
 };
@@ -340,6 +340,7 @@ struct sexp_struct {
 #define sexp_context_top(x)     ((x)->value.context.top)
 #define sexp_context_lambda(x)  ((x)->value.context.lambda)
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
+#define sexp_context_tracep(x)  ((x)->value.context.tailp)
 
 /****************************** arithmetic ****************************/
 

@@ -168,7 +168,7 @@
                 (map
                  (lambda (clause) (expand-pattern (car clause) (cadr clause)))
                  forms)
-                (list (list 'else) (list 'error "no expansion"))))))))))
+                (list (list 'error "no expansion"))))))))))
 
 ;; Local Variables:
 ;; eval: (put '_lambda 'scheme-indent-function 1)
