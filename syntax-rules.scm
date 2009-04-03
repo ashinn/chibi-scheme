@@ -36,7 +36,7 @@
               _let (list (list v x))
               (cond
                ((symbol? p)
-                (if (memq p lits)
+                (if (memq p (list _quote lits))
                     (list _and (list _eq? v p) (k vars))
                     (list _let (list (list p v)) (k (cons (cons p dim) vars)))))
                ((ellipse? p)
@@ -104,7 +104,9 @@
              (cdr x)))
        (define (all-vars x dim)
          (let lp ((x x) (dim dim) (vars '()))
-           (cond ((symbol? x) (if (memq x lits) vars (cons (cons x dim) vars)))
+           (cond ((symbol? x) (if (memq x (list _quote lits))
+                                  vars
+                                  (cons (cons x dim) vars)))
                  ((ellipse? x) (lp (car x) (+ dim 1) vars))
                  ((pair? x) (lp (car x) dim (lp (cdr x) dim vars)))
                  ((vector? x) (lp (vector->list x) dim vars))
