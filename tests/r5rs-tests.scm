@@ -1,32 +1,33 @@
 
+(define *tests-run* 0)
 (define *tests-passed* 0)
-(define *tests-failed* 0)
 
 (define-syntax test
   (syntax-rules ()
     ((test expect expr)
-     (let ((str (call-with-output-string (lambda (out) (display 'expr out))))
-           (res expr))
-       (display str)
-       (write-char #\space)
-       (display (make-string (max 0 (- 72 (string-length str))) #\.))
-       (flush-output)
-       (cond
-        ((equal? res expect)
-         (set! *tests-passed* (+ *tests-passed* 1))
-         (display " [PASS]\n"))
-        (else
-         (set! *tests-failed* (+ *tests-failed* 1))
-         (display " [FAIL]\n")
-         (display "    expected ") (write expect)
-         (display " but got ") (write res) (newline)))))))
+     (begin
+       (set! *tests-run* (+ *tests-run* 1))
+       (let ((str (call-with-output-string (lambda (out) (display 'expr out))))
+             (res expr))
+         (display str)
+         (write-char #\space)
+         (display (make-string (max 0 (- 72 (string-length str))) #\.))
+         (flush-output)
+         (cond
+          ((equal? res expect)
+           (set! *tests-passed* (+ *tests-passed* 1))
+           (display " [PASS]\n"))
+          (else
+           (display " [FAIL]\n")
+           (display "    expected ") (write expect)
+           (display " but got ") (write res) (newline))))))))
 
 (define (test-report)
   (write *tests-passed*)
   (display " out of ")
-  (write (+ *tests-passed* *tests-failed*))
+  (write *tests-run*)
   (display " passed (")
-  (write (* (/ *tests-passed* (+ *tests-passed* *tests-failed*)) 100))
+  (write (* (/ *tests-passed* *tests-run*) 100))
   (display "%)")
   (newline))
 

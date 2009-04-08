@@ -92,41 +92,50 @@ void sexp_deep_free (sexp obj) {
 /***************************** exceptions *****************************/
 
 sexp sexp_make_exception (sexp kind, sexp message, sexp irritants,
-                          sexp file, sexp line) {
+                          sexp procedure, sexp file, sexp line) {
   sexp exn = sexp_alloc_type(exception, SEXP_EXCEPTION);
   sexp_exception_kind(exn) = kind;
   sexp_exception_message(exn) = message;
   sexp_exception_irritants(exn) = irritants;
+  sexp_exception_procedure(exn) = procedure;
   sexp_exception_file(exn) = file;
   sexp_exception_line(exn) = line;
   return exn;
 }
 
-sexp sexp_user_exception (char *message, sexp irritants) {
+sexp sexp_user_exception (sexp self, char *message, sexp irritants) {
   return sexp_make_exception(sexp_intern("user-error"),
                              sexp_c_string(message),
                              ((sexp_pairp(irritants) || sexp_nullp(irritants))
                               ? irritants : sexp_list1(irritants)),
-                             SEXP_FALSE, SEXP_FALSE);
+                             self, SEXP_FALSE, SEXP_FALSE);
 }
 
 sexp sexp_type_exception (char *message, sexp obj) {
   return sexp_make_exception(sexp_intern("type-error"),
-                             sexp_c_string(message),
-                             sexp_list1(obj), SEXP_FALSE, SEXP_FALSE);
+                             sexp_c_string(message), sexp_list1(obj),
+                             SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
 }
 
 sexp sexp_range_exception (sexp obj, sexp start, sexp end) {
   return sexp_make_exception(sexp_intern("range-error"),
                              sexp_c_string("bad index range"),
                              sexp_list3(obj, start, end),
-                             SEXP_FALSE, SEXP_FALSE);
+                             SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
 }
 
 sexp sexp_print_exception (sexp exn, sexp out) {
   sexp ls;
   sexp_write_string("ERROR", out);
   if (sexp_exceptionp(exn)) {
+    if (sexp_procedurep(sexp_exception_procedure(exn))) {
+      ls = sexp_bytecode_name(
+             sexp_procedure_code(sexp_exception_procedure(exn)));
+      if (sexp_symbolp(ls)) {
+        sexp_write_string(" in ", out);
+        sexp_write(ls, out);
+      }
+    }
     if (sexp_integerp(sexp_exception_line(exn))
         && (sexp_exception_line(exn) > sexp_make_integer(0))) {
       sexp_write_string(" on line ", out);
@@ -173,6 +182,7 @@ static sexp sexp_read_error (char *message, sexp irritants, sexp port) {
   return sexp_make_exception(the_read_error_symbol,
                              sexp_c_string(message),
                              irritants,
+                             SEXP_FALSE,
                              name,
                              sexp_make_integer(sexp_port_line(port)));
 }
