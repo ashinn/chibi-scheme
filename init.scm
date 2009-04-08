@@ -264,6 +264,16 @@
 
 (define (force x) (if (procedure? x) (x) x))
 
+(define (error msg . args)
+  (raise (make-exception 'user msg args #f #f #f)))
+
+(define (with-exception-handler handler thunk)
+  (let ((orig-handler (current-exception-handler)))
+    (current-exception-handler handler)
+    (let ((res (thunk)))
+      (current-exception-handler orig-handler)
+      res)))
+
 ;; booleans
 
 (define (not x) (if x #f #t))

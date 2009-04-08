@@ -989,6 +989,7 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
 #define _ARG3 stack[top-3]
 #define _ARG4 stack[top-4]
 #define _ARG5 stack[top-5]
+#define _ARG6 stack[top-6]
 #define _PUSH(x) (stack[top++]=(x))
 #define _WORD0 ((sexp*)ip)[0]
 #define _UWORD0 ((sexp_uint_t*)ip)[0]
@@ -1020,7 +1021,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
   switch (*ip++) {
   case OP_NOOP:
     break;
-  case OP_ERROR:
+  case OP_RAISE:
   call_error_handler:
     stack[top] = (sexp) 1;
     stack[top+1] = sexp_make_integer(ip);
@@ -1087,8 +1088,10 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     fp = sexp_unbox_integer(tmp2);
     goto make_call;
   case OP_CALL:
+#if USE_CHECK_STACK
     if (top >= INIT_STACK_SIZE)
       sexp_raise("out of stack space", SEXP_NULL);
+#endif
     i = sexp_unbox_integer(_WORD0);
     tmp1 = _ARG1;
   make_call:
@@ -1161,6 +1164,18 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
   case OP_FCALL4:
     _ARG4 =((sexp_proc4)_UWORD0)(_ARG1, _ARG2, _ARG3, _ARG4);
     top -= 3;
+    ip += sizeof(sexp);
+    sexp_check_exception();
+    break;
+  case OP_FCALL5:
+    _ARG5 =((sexp_proc5)_UWORD0)(_ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
+    top -= 4;
+    ip += sizeof(sexp);
+    sexp_check_exception();
+    break;
+  case OP_FCALL6:
+    _ARG6 =((sexp_proc6)_UWORD0)(_ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
+    top -= 5;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
@@ -1534,6 +1549,13 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
 
 /************************ library procedures **************************/
 
+static sexp sexp_exception_type_func (sexp exn) {
+  if (sexp_exceptionp(exn))
+    return sexp_exception_kind(exn);
+  else
+    return sexp_type_exception("not an exception", exn);
+}
+
 static sexp sexp_open_input_file (sexp path) {
   FILE *in;
   if (! sexp_stringp(path)) return sexp_type_exception("not a string", path);
@@ -1800,8 +1822,8 @@ void scheme_init () {
   if (! scheme_initialized_p) {
     scheme_initialized_p = 1;
     sexp_init();
-    the_compile_error_symbol = sexp_intern("compile-error");
-    the_err_handler_symbol = sexp_intern("*current-error-handler*");
+    the_compile_error_symbol = sexp_intern("compile");
+    the_err_handler_symbol = sexp_intern("*current-exception-handler*");
     the_cur_in_symbol = sexp_intern("*current-input-port*");
     the_cur_out_symbol = sexp_intern("*current-output-port*");
     the_cur_err_symbol = sexp_intern("*current-error-port*");

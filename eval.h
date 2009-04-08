@@ -24,7 +24,6 @@ typedef sexp (*sexp_proc3) (sexp, sexp, sexp);
 typedef sexp (*sexp_proc4) (sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
-typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 enum core_form_names {
   CORE_DEFINE = 1,
@@ -54,7 +53,7 @@ enum opcode_classes {
 
 enum opcode_names {
   OP_NOOP,
-  OP_ERROR,
+  OP_RAISE,
   OP_RESUMECC,
   OP_CALLCC,
   OP_APPLY1,
@@ -65,6 +64,8 @@ enum opcode_names {
   OP_FCALL2,
   OP_FCALL3,
   OP_FCALL4,
+  OP_FCALL5,
+  OP_FCALL6,
   OP_EVAL,
   OP_JUMP_UNLESS,
   OP_JUMP,

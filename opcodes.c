@@ -9,6 +9,8 @@
 #define _FN2OPT(t, u, s, f, d) _FN(OP_FCALL2, 1, 1, t, u, s, f, d)
 #define _FN3(t, u, s, f, d) _FN(OP_FCALL3, 3, 0, t, u, s, f, d)
 #define _FN4(t, u, s, f, d) _FN(OP_FCALL4, 4, 0, t, u, s, f, d)
+#define _FN5(t, u, s, f, d) _FN(OP_FCALL5, 5, 0, t, u, s, f, d)
+#define _FN6(t, u, s, f, d) _FN(OP_FCALL6, 6, 0, t, u, s, f, d)
 #define _PARAM(n, a, t) _OP(OPC_PARAMETER, OP_NOOP, 0, 3, t, 0, 0, n, a, 0)
 
 static struct sexp_struct opcodes[] = {
@@ -58,7 +60,7 @@ _OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "input-port?", 0, (sexp)SEXP_I
 _OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "output-port?", 0, (sexp)SEXP_OPORT),
 _OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1", 0, NULL),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation", 0, NULL),
-_OP(OPC_GENERIC, OP_ERROR, 1, SEXP_STRING, 0, 0, 0, "error", 0, NULL),
+_OP(OPC_GENERIC, OP_RAISE, 1, SEXP_STRING, 0, 0, 0, "raise", 0, NULL),
 _OP(OPC_IO, OP_WRITE, 1, 3, 0, SEXP_OPORT, 0, "write", (sexp)"*current-output-port*", NULL),
 _OP(OPC_IO, OP_DISPLAY, 1, 3, 0, SEXP_OPORT, 0, "display", (sexp)"*current-output-port*", NULL),
 _OP(OPC_IO, OP_WRITE_CHAR, 1, 3, 0, SEXP_OPORT, 0, "write-char", (sexp)"*current-output-port*", NULL),
@@ -83,6 +85,8 @@ _FN1(SEXP_FIXNUM, "null-environment", 0, sexp_make_null_env),
 _FN1(SEXP_FIXNUM, "scheme-report-environment", 0, sexp_make_standard_env),
 _FN2(SEXP_STRING, SEXP_ENV, "%load", 0, sexp_load),
 _FN2(SEXP_EXCEPTION, SEXP_OPORT, "print-exception", 0, sexp_print_exception),
+_FN1(SEXP_EXCEPTION, "exception-type", 0, sexp_exception_type_func),
+_FN6(SEXP_SYMBOL, SEXP_STRING, "make-exception", 0, sexp_make_exception),
 _FN2OPT(SEXP_FIXNUM, SEXP_CHAR, "make-string", sexp_make_character(' '), sexp_make_string),
 _FN2(SEXP_STRING, SEXP_STRING, "string-cmp", 0, sexp_string_cmp),
 _FN2(SEXP_STRING, SEXP_STRING, "string-cmp-ci", 0, sexp_string_cmp_ci),
@@ -95,7 +99,7 @@ _FN3(SEXP_ENV, SEXP_PAIR, "make-syntactic-closure", 0, sexp_make_synclo),
 _PARAM("current-input-port", (sexp)"*current-input-port*", SEXP_IPORT),
 _PARAM("current-output-port", (sexp)"*current-output-port*", SEXP_OPORT),
 _PARAM("current-error-port", (sexp)"*current-error-port*", SEXP_OPORT),
-_PARAM("current-error-handler", (sexp)"*current-error-handler*", SEXP_PROCEDURE),
+_PARAM("current-exception-handler", (sexp)"*current-exception-handler*", SEXP_PROCEDURE),
 _PARAM("interaction-environment", (sexp)"*interaction-environment*", SEXP_ENV),
 #if USE_MATH
 _FN1(0, "exp", 0, sexp_exp),
