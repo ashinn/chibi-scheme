@@ -30,6 +30,10 @@
 (define (cdddar x) (cdr (cdr (cdr (car x)))))
 (define (cddddr x) (cdr (cdr (cdr (cdr x)))))
 
+;; basic utils
+
+(define (procedure? x) (if (closure? x) #t (opcode? x)))
+
 (define (list . args) args)
 
 (define (list-tail ls k)
@@ -38,26 +42,6 @@
       (list-tail (cdr ls) (- k 1))))
 
 (define (list-ref ls k) (car (list-tail ls k)))
-
-(define (eqv? a b) (if (eq? a b) #t (and (flonum? a) (flonum? b) (= a b))))
-
-(define (member obj ls)
-  (if (null? ls)
-      #f
-      (if (equal? obj (car ls))
-          ls
-          (member obj (cdr ls)))))
-
-(define memv member)
-
-(define (assoc obj ls)
-  (if (null? ls)
-      #f
-      (if (equal? obj (caar ls))
-          (car ls)
-          (assoc obj (cdr ls)))))
-
-(define assv assoc)
 
 (define (append-reverse a b)
   (if (pair? a)
@@ -175,13 +159,16 @@
           ((eq? 'unquote (car x))
            (if (<= d 0)
                (cadr x)
-               (list (rename 'unquote) (qq (cadr x) (- d 1)))))
+               (list (rename 'list) (list (rename 'quote) 'unquote)
+                     (qq (cadr x) (- d 1)))))
           ((eq? 'unquote-splicing (car x))
            (if (<= d 0)
                (list (rename 'cons) (qq (car x) d) (qq (cdr x) d))
-               (list (rename 'unquote-splicing) (qq (cadr x) (- d 1)))))
+               (list (rename 'list) (list (rename 'quote) 'unquote-splicing)
+                     (qq (cadr x) (- d 1)))))
           ((eq? 'quasiquote (car x))
-           (list (rename 'quasiquote) (qq (cadr x) (+ d 1))))
+           (list (rename 'list) (list (rename 'quote) 'quasiquote)
+                 (qq (cadr x) (+ d 1))))
           ((and (<= d 0) (pair? (car x)) (eq? 'unquote-splicing (caar x)))
            (if (null? (cdr x))
                (cadar x)
@@ -264,7 +251,7 @@
 (define-syntax delay
   (er-macro-transformer
    (lambda (expr rename compare)
-     `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr epr))))))
+     `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr expr))))))
 
 (define (make-promise thunk)
   (lambda ()
@@ -348,6 +335,28 @@
 (define (string-ci>? s1 s2) (> (string-cmp-ci s1 s2) 0))
 (define (string-ci>=? s1 s2) (>= (string-cmp-ci s1 s2) 0))
 
+;; list utils
+
+(define (eqv? a b) (if (eq? a b) #t (and (flonum? a) (flonum? b) (= a b))))
+
+(define (member obj ls)
+  (if (null? ls)
+      #f
+      (if (equal? obj (car ls))
+          ls
+          (member obj (cdr ls)))))
+
+(define memv member)
+
+(define (assoc obj ls)
+  (if (null? ls)
+      #f
+      (if (equal? obj (caar ls))
+          (car ls)
+          (assoc obj (cdr ls)))))
+
+(define assv assoc)
+
 ;; math utils
 
 (define (number? x) (if (fixnum? x) #t (flonum? x)))
@@ -369,16 +378,16 @@
 (define (modulo a b)
   (let ((res (remainder a b)))
     (if (< b 0)
-        (if (< res 0) res (- res b))
-        (if (> res 0) res (+ res b)))))
+        (if (<= res 0) res (+ res b))
+        (if (>= res 0) res (+ res b)))))
 
 (define (gcd a b)
   (if (= b 0)
-      a
-      (gcd b (modulo a b))))
+      (abs a)
+      (gcd b (remainder a b))))
 
 (define (lcm a b)
-  (quotient (* a b) (gcd a b)))
+  (abs (quotient (* a b) (gcd a b))))
 
 (define (max x . rest)
   (let lp ((hi x) (ls rest))
@@ -468,8 +477,8 @@
 
 (define (call-with-output-file file proc)
   (let* ((out (open-output-file file))
-         (res (proc in)))
-    (close-output-port in)
+         (res (proc out)))
+    (close-output-port out)
     res))
 
 (define (with-input-from-file file thunk)

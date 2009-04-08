@@ -2,7 +2,7 @@
 #include "eval.c"
 
 void repl (sexp context) {
-  sexp obj, res, env, in, out, err;
+  sexp obj, tmp, res, env, in, out, err;
   env = sexp_context_env(context);
   sexp_context_tracep(context) = 1;
   in = env_global_ref(env, the_cur_in_symbol, SEXP_FALSE);
@@ -17,7 +17,11 @@ void repl (sexp context) {
     if (sexp_exceptionp(obj)) {
       sexp_print_exception(obj, err);
     } else {
+      tmp = sexp_env_bindings(env);
       res = eval_in_context(obj, context);
+#ifdef USE_WARN_UNDEFS
+      sexp_warn_undefs(sexp_env_bindings(env), tmp, err);
+#endif
       if (res != SEXP_VOID) {
         sexp_write(res, out);
         sexp_write_char('\n', out);
