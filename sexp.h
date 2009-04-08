@@ -159,7 +159,7 @@ struct sexp_struct {
     } lit;
     /* compiler state */
     struct {
-      sexp bc, lambda, *stack, env;
+      sexp bc, lambda, *stack, env, fv;
       sexp_uint_t pos, top, depth, tailp, tracep;
     } context;
   } value;
@@ -338,6 +338,7 @@ struct sexp_struct {
 #define sexp_context_stack(x)   ((x)->value.context.stack)
 #define sexp_context_depth(x)   ((x)->value.context.depth)
 #define sexp_context_bc(x)      ((x)->value.context.bc)
+#define sexp_context_fv(x)      ((x)->value.context.fv)
 #define sexp_context_pos(x)     ((x)->value.context.pos)
 #define sexp_context_top(x)     ((x)->value.context.top)
 #define sexp_context_lambda(x)  ((x)->value.context.lambda)
