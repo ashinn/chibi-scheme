@@ -105,7 +105,7 @@ struct sexp_struct {
       sexp cookie;
     } port;
     struct {
-      sexp kind, message, irritants, file, line;
+      sexp kind, message, irritants, procedure, file, line;
     } exception;
     /* runtime types */
     struct {
@@ -114,7 +114,7 @@ struct sexp_struct {
     } env;
     struct {
       sexp_uint_t length;
-      sexp literals;
+      sexp name, literals;
       unsigned char data[];
     } bytecode;
     struct {
@@ -269,12 +269,14 @@ struct sexp_struct {
 #define sexp_exception_kind(p)      ((p)->value.exception.kind)
 #define sexp_exception_message(p)   ((p)->value.exception.message)
 #define sexp_exception_irritants(p) ((p)->value.exception.irritants)
+#define sexp_exception_procedure(p) ((p)->value.exception.procedure)
 #define sexp_exception_file(p)      ((p)->value.exception.file)
 #define sexp_exception_line(p)      ((p)->value.exception.line)
 
 #define sexp_bytecode_length(x)   ((x)->value.bytecode.length)
-#define sexp_bytecode_data(x)     ((x)->value.bytecode.data)
+#define sexp_bytecode_name(x)     ((x)->value.bytecode.name)
 #define sexp_bytecode_literals(x) ((x)->value.bytecode.literals)
+#define sexp_bytecode_data(x)     ((x)->value.bytecode.data)
 
 #define sexp_env_flags(x)         ((x)->value.env.flags)
 #define sexp_env_parent(x)        ((x)->value.env.parent)
@@ -426,8 +428,8 @@ sexp sexp_make_output_port(FILE* out, char *path);
 sexp sexp_make_input_string_port(sexp str);
 sexp sexp_make_output_string_port();
 sexp sexp_get_output_string(sexp port);
-sexp sexp_make_exception(sexp kind, sexp message, sexp irritants, sexp file, sexp line);
-sexp sexp_user_exception (char *message, sexp obj);
+sexp sexp_make_exception(sexp kind, sexp message, sexp irritants, sexp procedure, sexp file, sexp line);
+sexp sexp_user_exception (sexp self, char *message, sexp obj);
 sexp sexp_type_exception (char *message, sexp obj);
 sexp sexp_range_exception (sexp obj, sexp start, sexp end);
 sexp sexp_print_exception(sexp exn, sexp out);

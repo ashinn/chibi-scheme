@@ -109,6 +109,7 @@ static void shrink_bcode(sexp context, sexp_uint_t i) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(context)) != i) {
     tmp = sexp_alloc_tagged(sexp_sizeof(bytecode) + i, SEXP_BYTECODE);
+    sexp_bytecode_name(tmp) = SEXP_FALSE;
     sexp_bytecode_length(tmp) = i;
     sexp_bytecode_literals(tmp)
       = sexp_bytecode_literals(sexp_context_bc(context));
@@ -126,6 +127,7 @@ static void expand_bcode(sexp context, sexp_uint_t size) {
     tmp = sexp_alloc_tagged(sexp_sizeof(bytecode)
                             + sexp_bytecode_length(sexp_context_bc(context))*2,
                             SEXP_BYTECODE);
+    sexp_bytecode_name(tmp) = SEXP_FALSE;
     sexp_bytecode_length(tmp)
       = sexp_bytecode_length(sexp_context_bc(context))*2;
     sexp_bytecode_literals(tmp)
@@ -189,6 +191,7 @@ static sexp sexp_make_synclo (sexp env, sexp fv, sexp expr) {
 
 static sexp sexp_make_lambda(sexp params) {
   sexp res = sexp_alloc_type(lambda, SEXP_LAMBDA);
+  sexp_lambda_name(res) = SEXP_FALSE;
   sexp_lambda_params(res) = params;
   sexp_lambda_fv(res) = SEXP_NULL;
   sexp_lambda_sv(res) = SEXP_NULL;
@@ -233,6 +236,7 @@ static sexp sexp_make_context(sexp *stack, sexp env) {
     env = sexp_make_standard_env(sexp_make_integer(5));
   sexp_context_bc(res)
     = sexp_alloc_tagged(sexp_sizeof(bytecode)+INIT_BCODE_SIZE, SEXP_BYTECODE);
+  sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = INIT_BCODE_SIZE;
   sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
   sexp_context_lambda(res) = SEXP_FALSE;
@@ -286,7 +290,7 @@ static sexp sexp_identifier_eq (sexp e1, sexp id1, sexp e2, sexp id2) {
 static sexp sexp_compile_error(char *message, sexp irritants) {
   return sexp_make_exception(the_compile_error_symbol,
                              sexp_c_string(message),
-                             irritants, SEXP_FALSE, SEXP_FALSE);
+                             irritants, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
 }
 
 #define analyze_check_exception(x) do {if (sexp_exceptionp(x))          \
@@ -557,10 +561,6 @@ static void sexp_context_patch_label (sexp context, sexp_sint_t label) {
 static sexp finalize_bytecode (sexp context) {
   emit(OP_RET, context);
   shrink_bcode(context, sexp_context_pos(context));
-/*   sexp_disasm(sexp_context_bc(context), */
-/*               env_global_ref(sexp_context_env(context), */
-/*                              the_cur_err_symbol, */
-/*                              SEXP_FALSE)); */
   return sexp_context_bc(context);
 }
 
@@ -643,6 +643,8 @@ static void generate_set (sexp set, sexp context) {
   sexp ref = sexp_set_var(set), lambda;
   /* compile the value */
   sexp_context_tailp(context) = 0;
+  if (sexp_lambdap(sexp_set_value(set)))
+    sexp_lambda_name(sexp_set_value(set)) = sexp_ref_name(ref);
   generate(sexp_set_value(set), context);
   if (! sexp_lambdap(sexp_ref_loc(ref))) {
     /* global vars are set directly */
@@ -800,6 +802,7 @@ static void generate_lambda (sexp lambda, sexp context) {
                             ? 1 : 0);
   len = sexp_length(sexp_lambda_params(lambda));
   bc = finalize_bytecode(ctx);
+  sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
   if (sexp_nullp(fv)) {
     /* shortcut, no free vars */
     vec = sexp_make_vector(sexp_make_integer(0), SEXP_VOID);
@@ -943,6 +946,7 @@ static sexp make_opcode_procedure (sexp op, sexp_uint_t i, sexp env,
     sexp_push(refs, sexp_make_ref(sexp_car(ls), env_cell(env, sexp_car(ls))));
   generate_opcode_app(sexp_cons(op, sexp_reverse(refs)), context);
   bc = finalize_bytecode(context);
+  sexp_bytecode_name(bc) = sexp_c_string(sexp_opcode_name(op));
   res = sexp_make_procedure(sexp_make_integer(0),
                             sexp_make_integer(i),
                             bc,
@@ -982,16 +986,17 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
 #define _UWORD0 ((sexp_uint_t*)ip)[0]
 #define _SWORD0 ((sexp_sint_t*)ip)[0]
 
-#define sexp_raise(msg, args) do {stack[top]=sexp_compile_error(msg, args); \
-                                  top++;                                    \
-                                  goto call_error_handler;}                 \
+#define sexp_raise(msg, args) do {stack[top]=sexp_user_exception(self, msg, args); \
+                                  top++;                                     \
+                                  goto call_error_handler;}                  \
                                while (0)
 
 #define sexp_check_exception() do {if (sexp_exceptionp(_ARG1)) \
                                      goto call_error_handler;} \
                                 while (0)
 
-sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
+sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
+  sexp bc = sexp_procedure_code(self), cp = sexp_procedure_vars(self);
   unsigned char *ip=sexp_bytecode_data(bc);
   sexp tmp1, tmp2, env=sexp_context_env(context);
   sexp_sint_t i, j, k, fp=top-4;
@@ -1006,38 +1011,39 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
 #endif
   switch (*ip++) {
   case OP_NOOP:
-    fprintf(stderr, "<<<NOOP>>>\n");
     break;
   case OP_ERROR:
   call_error_handler:
     tmp1 = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
     sexp_print_exception(_ARG1, tmp1);
-    tmp1 = env_global_ref(env, the_err_handler_symbol, SEXP_FALSE);
+    self = env_global_ref(env, the_err_handler_symbol, SEXP_FALSE);
     stack[top] = (sexp) 1;
     stack[top+1] = sexp_make_integer(ip+4);
-    stack[top+2] = cp;
+    stack[top+2] = self;
     top += 3;
-    bc = sexp_procedure_code(tmp1);
+    bc = sexp_procedure_code(self);
     ip = sexp_bytecode_data(bc);
-    cp = sexp_procedure_vars(tmp1);
+    cp = sexp_procedure_vars(self);
     break;
   case OP_RESUMECC:
     tmp1 = stack[fp-1];
     top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
     fp = sexp_unbox_integer(_ARG1);
-    cp = _ARG2;
+    self = _ARG2;
+    bc = sexp_procedure_code(self);
+    cp = sexp_procedure_vars(self);
     ip = (unsigned char*) sexp_unbox_integer(_ARG3);
     i = sexp_unbox_integer(_ARG4);
     top -= 4;
     _ARG1 = tmp1;
     break;
   case OP_CALLCC:
-    tmp1 = _ARG1;
-    i = 1;
     stack[top] = sexp_make_integer(1);
     stack[top+1] = sexp_make_integer(ip);
-    stack[top+2] = cp;
+    stack[top+2] = self;
     stack[top+3] = sexp_make_integer(fp);
+    tmp1 = _ARG1;
+    i = 1;
     tmp2 = sexp_vector(1, sexp_save_stack(stack, top+4));
     _ARG1 = sexp_make_procedure(sexp_make_integer(0),
                                 sexp_make_integer(1),
@@ -1046,7 +1052,6 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     top++;
     ip -= sizeof(sexp);
     goto make_call;
-    break;
   case OP_APPLY1:
     tmp1 = _ARG1;
     tmp2 = _ARG2;
@@ -1064,7 +1069,9 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     tmp2 = stack[fp+3];
     j = sexp_unbox_integer(stack[fp]);
     ip = ((unsigned char*) sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
-    cp = stack[fp+2];
+    self = stack[fp+2];
+    cp = sexp_procedure_vars(self);
+    bc = sexp_procedure_vars(self);
     /* copy new args into place */
     for (k=0; k<i; k++)
       stack[fp-j+k] = stack[top-1-i+k];
@@ -1112,12 +1119,13 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     }
     _ARG1 = sexp_make_integer(i);
     stack[top] = sexp_make_integer(ip+sizeof(sexp));
-    stack[top+1] = cp;
+    stack[top+1] = self;
     stack[top+2] = sexp_make_integer(fp);
     top += 3;
-    bc = sexp_procedure_code(tmp1);
+    self = tmp1;
+    bc = sexp_procedure_code(self);
     ip = sexp_bytecode_data(bc);
-    cp = sexp_procedure_vars(tmp1);
+    cp = sexp_procedure_vars(self);
     fp = top-4;
     break;
   case OP_FCALL0:
@@ -1498,7 +1506,9 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     stack[fp-i] = _ARG1;
     top = fp-i+1;
     ip = (unsigned char*) sexp_unbox_integer(stack[fp+1]);
-    cp = stack[fp+2];
+    self = stack[fp+2];
+    bc = sexp_procedure_code(self);
+    cp = sexp_procedure_vars(self);
     fp = sexp_unbox_integer(stack[fp+3]);
     break;
   case OP_DONE:
@@ -1518,7 +1528,8 @@ static sexp sexp_open_input_file (sexp path) {
   FILE *in;
   if (! sexp_stringp(path)) return sexp_type_exception("not a string", path);
   in = fopen(sexp_string_data(path), "r");
-  if (! in) return sexp_user_exception("couldn't open input file", path);
+  if (! in)
+    return sexp_user_exception(SEXP_FALSE, "couldn't open input file", path);
   return sexp_make_input_port(in, sexp_string_data(path));
 }
 
@@ -1526,7 +1537,8 @@ static sexp sexp_open_output_file (sexp path) {
   FILE *out;
   if (! sexp_stringp(path)) return sexp_type_exception("not a string", path);
   out = fopen(sexp_string_data(path), "w");
-  if (! out) return sexp_user_exception("couldn't open output file", path);
+  if (! out)
+    return sexp_user_exception(SEXP_FALSE, "couldn't open output file", path);
   return sexp_make_input_port(out, sexp_string_data(path));
 }
 
@@ -1736,11 +1748,7 @@ sexp apply(sexp proc, sexp args, sexp context) {
   stack[top++] = sexp_make_integer(sexp_bytecode_data(final_resumer));
   stack[top++] = sexp_make_vector(0, SEXP_VOID);
   stack[top++] = sexp_make_integer(0);
-  return vm(sexp_procedure_code(proc),
-            sexp_procedure_vars(proc),
-            context,
-            stack,
-            top);
+  return vm(proc, context, stack, top);
 }
 
 sexp compile (sexp x, sexp context) {
