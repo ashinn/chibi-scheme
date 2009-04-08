@@ -63,7 +63,9 @@ test: chibi-scheme
 # 	rm -f $(MODDIR)/*.scm
 
 dist: cleaner
+	rm -f chibi-scheme-`cat VERSION`.tgz
 	mkdir chibi-scheme-`cat VERSION`
-	for f in `hg manifest`; do mkdir -p chibi-scheme-`cat VERSION`/`dirname $$f`; ln -s $$f chibi-scheme-`cat VERSION`/$$f; done
-	tar cphzvf chibi-scheme-`cat VERSION`.tar.gz chibi-scheme-`cat VERSION`
+	for f in `hg manifest`; do mkdir -p chibi-scheme-`cat VERSION`/`dirname $$f`; ln -s `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
+	cd chibi-scheme-`cat VERSION`; tar xzvf ../gc.tar.gz; mv gc[0-9].[0-9] gc
+	tar cphzvf chibi-scheme-`cat VERSION`.tgz chibi-scheme-`cat VERSION`
 	rm -rf chibi-scheme-`cat VERSION`
