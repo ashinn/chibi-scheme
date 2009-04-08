@@ -4,7 +4,7 @@
                                    
                Simple and Minimal Scheme Implementation
 
-              http://synthcode.com/scheme/chibi-scheme/
+              http://synthcode.com/scheme/chibi-scheme-0.1.tgz
 
                              version 0.1
                             April 8, 2009
@@ -16,7 +16,8 @@ as much as possible not to trade its small size by cutting corners,
 and provides full continuations, both low and high-level hygienic
 macros based on syntactic-closures, and string ports and exceptions.
 Chibi-Scheme is written in highly portable C and supports multiple
-simultaneous VM instances to run.
+simultaneous VM instances to run.  Currently Chibi-Scheme uses the
+Boehm conservative garbage collector to try to play well with C code.
 
 To build, just run "make".  You can edit the file config.h for a
 number of settings, mostly disabling features to make the executable
