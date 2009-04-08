@@ -1020,7 +1020,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
   case OP_ERROR:
   call_error_handler:
     stack[top] = (sexp) 1;
-    stack[top+1] = sexp_make_integer(ip+4);
+    stack[top+1] = sexp_make_integer(ip);
     stack[top+2] = self;
     stack[top+3] = sexp_make_integer(fp);
     top += 4;
@@ -1029,7 +1029,6 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     ip = sexp_bytecode_data(bc);
     cp = sexp_procedure_vars(self);
     fp = top-4;
-    /* sexp_print_stack(stack, top, fp, tmp1); */
     break;
   case OP_RESUMECC:
     tmp1 = stack[fp-1];
