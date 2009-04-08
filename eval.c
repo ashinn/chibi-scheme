@@ -242,6 +242,7 @@ static sexp sexp_make_context(sexp *stack, sexp env) {
   sexp_context_lambda(res) = SEXP_FALSE;
   sexp_context_stack(res) = stack;
   sexp_context_env(res) = env;
+  sexp_context_fv(res) = SEXP_NULL;
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
@@ -256,6 +257,7 @@ static sexp sexp_child_context(sexp context, sexp lambda) {
   sexp_context_lambda(ctx) = lambda;
   sexp_context_env(ctx) = sexp_context_env(context);
   sexp_context_top(ctx) = sexp_context_top(context);
+  sexp_context_fv(ctx) = sexp_context_fv(context);
   sexp_context_tracep(ctx) = sexp_context_tracep(context);
   return ctx;
 }
@@ -326,16 +328,15 @@ static sexp analyze_seq (sexp ls, sexp context) {
 }
 
 static sexp analyze_var_ref (sexp x, sexp context) {
-  sexp cell = env_cell(sexp_context_env(context), x);
+  sexp env = sexp_context_env(context), cell;
+  cell = env_cell(env, x);
   if (! cell) {
     if (sexp_synclop(x)) {
-      cell = env_cell_create(sexp_synclo_env(x),
-                             sexp_synclo_expr(x),
-                             SEXP_UNDEF);
+      if (sexp_memq(x, sexp_context_fv(context)) != SEXP_FALSE)
+        env = sexp_synclo_env(x);
       x = sexp_synclo_expr(x);
-    } else {
-      cell = env_cell_create(sexp_context_env(context), x, SEXP_UNDEF);
     }
+    cell = env_cell_create(env, x, SEXP_UNDEF);
   }
   if (sexp_macrop(sexp_cdr(cell)) || sexp_corep(sexp_cdr(cell)))
     return sexp_compile_error("invalid use of syntax as value", sexp_list1(x));
@@ -543,6 +544,8 @@ static sexp analyze (sexp x, sexp context) {
   } else if (sexp_synclop(x)) {
     context = sexp_child_context(context, sexp_context_lambda(context));
     sexp_context_env(context) = sexp_synclo_env(x);
+    sexp_context_fv(context) = sexp_append(sexp_synclo_free_vars(x),
+                                           sexp_context_fv(context));
     x = sexp_synclo_expr(x);
     goto loop;
   } else {
