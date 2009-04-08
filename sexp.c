@@ -760,44 +760,48 @@ void sexp_write (sexp obj, sexp out) {
 
 char* sexp_read_string(sexp in) {
   char *buf, *tmp, *res;
-  int c, len, size=128;
+  int c, i=0, size=128;
 
-  buf = sexp_alloc(size);       /* XXXX grow! */
-  tmp = buf;
+  buf = sexp_alloc(size);
 
   for (c=sexp_read_char(in); c != '"'; c=sexp_read_char(in)) {
     if (c == EOF) {
       sexp_free(buf);
       return NULL;
-    } else if (c == '\\') {
+    }
+    if (c == '\\') {
       c=sexp_read_char(in);
       switch (c) {
       case 'n': c = '\n'; break;
       case 't': c = '\t'; break;
       }
-      *tmp++ = c;
+      buf[i++] = c;
     } else {
-      *tmp++ = c;
+      buf[i++] = c;
+    }
+    if (i >= size) {
+      tmp = sexp_alloc(2*size);
+      memcpy(tmp, buf, i);
+      sexp_free(buf);
+      buf = tmp;
     }
   }
 
-  *tmp++ = '\0';
-  len = tmp - buf;
-  res = sexp_alloc(len);
-  memcpy(res, buf, len);
+  buf[i] = '\0';
+  res = sexp_alloc(i);
+  memcpy(res, buf, i);
   sexp_free(buf);
   return res;
 }
 
 char* sexp_read_symbol(sexp in, int init) {
   char *buf, *tmp, *res;
-  int c, len, size=128;
+  int c, i=0, size=128;
 
   buf = sexp_alloc(size);
-  tmp = buf;
 
   if (init != EOF)
-    *tmp++ = init;
+    buf[i++] = init;
 
   while (1) {
     c=sexp_read_char(in);
@@ -805,13 +809,18 @@ char* sexp_read_symbol(sexp in, int init) {
       sexp_push_char(c, in);
       break;
     }
-    *tmp++ = c;
+    buf[i++] = c;
+    if (i >= size) {
+      tmp = sexp_alloc(2*size);
+      memcpy(tmp, buf, i);
+      sexp_free(buf);
+      buf = tmp;
+    }
   }
 
-  *tmp++ = '\0';
-  len = tmp - buf;
-  res = sexp_alloc(len);
-  memcpy(res, buf, len);
+  buf[i] = '\0';
+  res = sexp_alloc(i);
+  memcpy(res, buf, i);
   sexp_free(buf);
   return res;
 }
@@ -916,7 +925,10 @@ sexp sexp_read_raw (sexp in) {
     break;
   case '"':
     str = sexp_read_string(in);
-    res = sexp_c_string(str);
+    if (! str)
+      res = sexp_read_error("premature end of string", SEXP_NULL, in);
+    else
+      res = sexp_c_string(str);
     sexp_free(str);
     break;
   case '(':
