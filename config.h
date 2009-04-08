@@ -11,6 +11,9 @@
 /* uncomment this if you don't need extended math operations */
 /* #define USE_MATH 0 */
 
+/* uncomment this to disable warning about references to undefined variables */
+/* #define USE_WARN_UNDEFS 0 */
+
 /* uncomment this to disable huffman-coded immediate symbols */
 /* #define USE_HUFF_SYMS 0 */
 

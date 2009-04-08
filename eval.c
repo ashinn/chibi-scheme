@@ -689,6 +689,10 @@ static void generate_opcode_app (sexp app, sexp context) {
 
   /* emit the actual operator call */
   switch (sexp_opcode_class(op)) {
+  case OPC_ARITHMETIC:
+    if (num_args > 1)
+      emit(sexp_opcode_code(op), context);
+    break;
   case OPC_ARITHMETIC_INV:
     emit((num_args == 1) ? sexp_opcode_inverse(op)
          : sexp_opcode_code(op), context);
@@ -1368,7 +1372,7 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     break;
   case OP_LT:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
-      i = _ARG1 < _ARG2;
+      i = (sexp_sint_t)_ARG1 < (sexp_sint_t)_ARG2;
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       i = sexp_flonum_value(_ARG1) < sexp_flonum_value(_ARG2);
@@ -1383,7 +1387,7 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
     break;
   case OP_LE:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
-      i = _ARG1 <= _ARG2;
+      i = (sexp_sint_t)_ARG1 <= (sexp_sint_t)_ARG2;
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       i = sexp_flonum_value(_ARG1) <= sexp_flonum_value(_ARG2);
@@ -1510,31 +1514,55 @@ sexp vm(sexp bc, sexp cp, sexp context, sexp* stack, sexp_sint_t top) {
 
 /************************ library procedures **************************/
 
-sexp sexp_open_input_file (sexp path) {
-  return sexp_make_input_port(fopen(sexp_string_data(path), "r"));
+static sexp sexp_open_input_file (sexp path) {
+  FILE *in;
+  if (! sexp_stringp(path)) return sexp_type_exception("not a string", path);
+  in = fopen(sexp_string_data(path), "r");
+  if (! in) return sexp_user_exception("couldn't open input file", path);
+  return sexp_make_input_port(in, sexp_string_data(path));
 }
 
-sexp sexp_open_output_file (sexp path) {
-  return sexp_make_input_port(fopen(sexp_string_data(path), "w"));
+static sexp sexp_open_output_file (sexp path) {
+  FILE *out;
+  if (! sexp_stringp(path)) return sexp_type_exception("not a string", path);
+  out = fopen(sexp_string_data(path), "w");
+  if (! out) return sexp_user_exception("couldn't open output file", path);
+  return sexp_make_input_port(out, sexp_string_data(path));
 }
 
-sexp sexp_close_port (sexp port) {
+static sexp sexp_close_port (sexp port) {
   fclose(sexp_port_stream(port));
   return SEXP_VOID;
 }
 
+static void sexp_warn_undefs (sexp from, sexp to, sexp out) {
+  sexp x;
+  for (x=from; sexp_pairp(x) && x!=to; x=sexp_cdr(x))
+    if (sexp_cdar(x) == SEXP_UNDEF) {
+      sexp_write_string("WARNING: reference to undefined variable: ", out);
+      sexp_write(sexp_caar(x), out);
+      sexp_write_char('\n', out);
+    }
+}
+
 sexp sexp_load (sexp source, sexp env) {
-  sexp obj, res, in, context = sexp_make_context(NULL, env);
+  sexp x, res, in, tmp, out, context = sexp_make_context(NULL, env);
+  tmp = sexp_env_bindings(env);
   sexp_context_tailp(context) = 0;
   in = sexp_open_input_file(source);
-  while ((obj=sexp_read(in)) != (sexp) SEXP_EOF) {
-    res = eval_in_context(obj, context);
+  while ((x=sexp_read(in)) != (sexp) SEXP_EOF) {
+    res = eval_in_context(x, context);
     if (sexp_exceptionp(res))
       break;
   }
-  if (obj == SEXP_EOF)
+  if (x == SEXP_EOF)
     res = SEXP_VOID;
   sexp_close_port(in);
+#ifdef USE_WARN_UNDEFS
+  out = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
+  if (sexp_oportp(out))
+    sexp_warn_undefs(sexp_env_bindings(env), tmp, out);
+#endif
   return res;
 }
 
@@ -1688,9 +1716,9 @@ static sexp sexp_make_standard_env (sexp version) {
     }
     env_define(e, sexp_intern(sexp_opcode_name(op)), op);
   }
-  env_define(e, the_cur_in_symbol, sexp_make_input_port(stdin));
-  env_define(e, the_cur_out_symbol, sexp_make_output_port(stdout));
-  env_define(e, the_cur_err_symbol, sexp_make_output_port(stderr));
+  env_define(e, the_cur_in_symbol, sexp_make_input_port(stdin, NULL));
+  env_define(e, the_cur_out_symbol, sexp_make_output_port(stdout, NULL));
+  env_define(e, the_cur_err_symbol, sexp_make_output_port(stderr, NULL));
   env_define(e, the_interaction_env_symbol, e);
   return e;
 }

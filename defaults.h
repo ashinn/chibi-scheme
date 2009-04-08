@@ -27,6 +27,10 @@
 #define USE_MATH 1
 #endif
 
+#ifndef USE_WARN_UNDEFS
+#define USE_WARN_UNDEFS 1
+#endif
+
 #ifndef USE_HUFF_SYMS
 #define USE_HUFF_SYMS 1
 #endif
