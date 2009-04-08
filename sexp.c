@@ -559,7 +559,7 @@ sexp sexp_get_output_string (sexp port) {
   fflush(sexp_port_stream(port));
   return sexp_substring(cookie,
                         sexp_make_integer(0),
-                        sexp_string_length(cookie));
+                        sexp_make_integer(sexp_string_length(cookie)));
 }
 
 #endif

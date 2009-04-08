@@ -5,6 +5,9 @@
 #ifndef SEXP_H
 #define SEXP_H
 
+#include "config.h"
+#include "defaults.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,9 +15,6 @@
 #include <stdarg.h>
 #include <sysexits.h>
 #include <math.h>
-
-#include "config.h"
-#include "defaults.h"
 
 /* tagging system
  *   bits end in  00:  pointer

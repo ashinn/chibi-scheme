@@ -13,6 +13,7 @@
 #define SEXP_BSD 1
 #else
 #define SEXP_BSD 0
+#define _GNU_SOURCE
 #endif
 
 #ifndef USE_BOEHM
