@@ -104,7 +104,7 @@ sexp sexp_make_exception (sexp kind, sexp message, sexp irritants,
 }
 
 sexp sexp_user_exception (sexp self, char *message, sexp irritants) {
-  return sexp_make_exception(sexp_intern("user-error"),
+  return sexp_make_exception(sexp_intern("user"),
                              sexp_c_string(message),
                              ((sexp_pairp(irritants) || sexp_nullp(irritants))
                               ? irritants : sexp_list1(irritants)),
@@ -112,13 +112,13 @@ sexp sexp_user_exception (sexp self, char *message, sexp irritants) {
 }
 
 sexp sexp_type_exception (char *message, sexp obj) {
-  return sexp_make_exception(sexp_intern("type-error"),
+  return sexp_make_exception(sexp_intern("type"),
                              sexp_c_string(message), sexp_list1(obj),
                              SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
 }
 
 sexp sexp_range_exception (sexp obj, sexp start, sexp end) {
-  return sexp_make_exception(sexp_intern("range-error"),
+  return sexp_make_exception(sexp_intern("range"),
                              sexp_c_string("bad index range"),
                              sexp_list3(obj, start, end),
                              SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
@@ -1135,7 +1135,7 @@ void sexp_init() {
     the_quasiquote_symbol = sexp_intern("quasiquote");
     the_unquote_symbol = sexp_intern("unquote");
     the_unquote_splicing_symbol = sexp_intern("unquote-splicing");
-    the_read_error_symbol = sexp_intern("read-error");
+    the_read_error_symbol = sexp_intern("read");
     the_empty_vector = sexp_alloc_type(vector, SEXP_VECTOR);
     sexp_vector_length(the_empty_vector) = 0;
     sexp_vector_data(the_empty_vector) = NULL;

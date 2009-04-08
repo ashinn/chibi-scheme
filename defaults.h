@@ -52,6 +52,10 @@
 #define USE_FAST_LET 1
 #endif
 
+#ifndef USE_CHECK_STACK
+#define USE_CHECK_STACK 0
+#endif
+
 #if USE_BOEHM
 #include "gc/include/gc.h"
 #define sexp_alloc        GC_malloc
