@@ -15,7 +15,7 @@ CFLAGS=-Wall -g -Os
 GC_OBJ=./gc/gc.a
 
 ./gc/gc.a: ./gc/alloc.c
-	cd gc && make test
+	cd gc && make
 
 sexp.o: sexp.c sexp.h config.h defaults.h Makefile
 	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<

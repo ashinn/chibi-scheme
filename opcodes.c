@@ -73,6 +73,7 @@ _OP(OPC_GENERIC, OP_EVAL, 1, 3, 0, 0, 0, "eval", (sexp)"*interaction-environment
 _FN2(0, 0, "equal?", 0, sexp_equalp),
 _FN1(0, "list?", 0, sexp_listp),
 _FN1(0, "identifier?", 0, sexp_identifierp),
+_FN1(0, "identifier->symbol", 0, sexp_syntactic_closure_expr),
 _FN4(0, SEXP_ENV, "identifier=?", 0, sexp_identifier_eq),
 _FN1(SEXP_PAIR, "length", 0, sexp_length),
 _FN1(SEXP_PAIR, "reverse", 0, sexp_reverse),

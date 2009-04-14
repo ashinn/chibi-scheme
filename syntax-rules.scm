@@ -35,15 +35,15 @@
              (list
               _let (list (list v x))
               (cond
-               ((symbol? p)
-                (if (memq p (list _quote lits))
-                    (list _and (list _eq? v p) (k vars))
+               ((identifier? p)
+                (if (any (lambda (l) (compare p l)) lits)
+                    (list _and (list _compare v (list _quote p)) (k vars))
                     (list _let (list (list p v)) (k (cons (cons p dim) vars)))))
                ((ellipse? p)
                 (cond
                  ((not (null? (cddr p)))
                   (error "non-trailing ellipse"))
-                 ((symbol? (car p))
+                 ((identifier? (car p))
                   (list _and (list _list? v)
                         (list _let (list (list (car p) v))
                               (k (cons (cons (car p) (+ 1 dim)) vars)))))
@@ -51,10 +51,12 @@
                   (let* ((w (next-v))
                          (new-vars (all-vars (car p) (+ dim 1)))
                          (ls-vars (map (lambda (x)
-                                         (rename (string->symbol
-                                                  (string-append
-                                                   (symbol->string (car x))
-                                                   "-ls"))))
+                                         (rename
+                                          (string->symbol
+                                           (string-append
+                                            (symbol->string
+                                             (identifier->symbol (car x)))
+                                            "-ls"))))
                                        new-vars))
                          (once
                           (lp (car p) (list _car w) (+ dim 1) '()
@@ -69,7 +71,7 @@
                                        ls-vars)))))))
                     (list
                      _let
-                     _lp (list (list w v)
+                     _lp (cons (list w v)
                                (map (lambda (x) (list x '())) ls-vars))
                      (list _if (list _null? w)
                            (list _let (map (lambda (x l)
@@ -93,7 +95,7 @@
                ((null? p) (list _and (list _null? v) (k vars)))
                (else (list _and (list _equal? v p) (k vars))))))))
        (define (ellipse? x)
-         (and (pair? x) (pair? (cdr x)) (eq? '... (cadr x))))
+         (and (pair? x) (pair? (cdr x)) (compare '... (cadr x))))
        (define (ellipse-depth x)
          (if (ellipse? x)
              (+ 1 (ellipse-depth (cdr x)))
@@ -104,29 +106,29 @@
              (cdr x)))
        (define (all-vars x dim)
          (let lp ((x x) (dim dim) (vars '()))
-           (cond ((symbol? x) (if (memq x (list _quote lits))
-                                  vars
-                                  (cons (cons x dim) vars)))
+           (cond ((identifier? x) (if (memq x (list _quote lits))
+                                      vars
+                                      (cons (cons x dim) vars)))
                  ((ellipse? x) (lp (car x) (+ dim 1) vars))
                  ((pair? x) (lp (car x) dim (lp (cdr x) dim vars)))
                  ((vector? x) (lp (vector->list x) dim vars))
                  (else vars))))
        (define (free-vars x vars dim)
          (let lp ((x x) (free '()))
-           (cond ((symbol? x)
-                  (if (and (not (memq x free))
-                           (cond ((assq x vars)
-                                  => (lambda (cell) (>= (cdr cell) dim)))
-                                 (else #f)))
-                      (cons x free)
-                      free))
-                 ((pair? x) (free-vars (car x) (free-vars (cdr x) free)))
-                 ((vector? x) (lp (vector->list x) free))
-                 (else free))))
+           (cond
+            ((identifier? x)
+             (if (and (not (memq x free))
+                      (cond ((assq x vars) => (lambda (cell) (>= (cdr cell) dim)))
+                            (else #f)))
+                 (cons x free)
+                 free))
+            ((pair? x) (lp (car x) (lp (cdr x) free)))
+            ((vector? x) (lp (vector->list x) free))
+            (else free))))
        (define (expand-template tmpl vars)
          (let lp ((t tmpl) (dim 0))
            (cond
-            ((symbol? t)
+            ((identifier? t)
              (cond
               ((assq t vars)
                => (lambda (cell)
@@ -144,7 +146,7 @@
                        (error "too many ...'s")
                        (let* ((once (lp (car t) ell-dim))
                               (nest (if (and (null? (cdr ell-vars))
-                                             (symbol? once)
+                                             (identifier? once)
                                              (eq? once (car vars)))
                                         once ;; shortcut
                                         (cons _map

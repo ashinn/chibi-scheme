@@ -77,6 +77,9 @@
 
 (define for-each map)
 
+(define (any pred ls)
+  (if (pair? ls) (if (pred (car ls)) #t (any pred (cdr ls))) #f))
+
 ;; syntax
 
 (define sc-macro-transformer
@@ -106,27 +109,6 @@
         '())
        (lambda (x y) (identifier=? use-env x use-env y))))))
 
-(define-syntax or
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (if (null? (cdr expr))
-         #f
-         (list (rename 'let) (list (list (rename 'tmp) (cadr expr)))
-               (list (rename 'if) (rename 'tmp)
-                     (rename 'tmp)
-                     (cons (rename 'or) (cddr expr))))))))
-
-(define-syntax and
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (if (null? (cdr expr))
-         #t
-         (if (null? (cddr expr))
-             (cadr expr)
-             (list (rename 'if) (cadr expr)
-                   (cons (rename 'and) (cddr expr))
-                   #f))))))
-
 (define-syntax cond
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -136,18 +118,38 @@
             (if (compare 'else (car cl))
                 (cons (rename 'begin) (cdr cl))
                 (if (if (null? (cdr cl)) #t (compare '=> (cadr cl)))
-                    (list (rename 'let)
-                          (list (list (rename 'tmp) (car cl)))
-                          (list (rename 'if) (rename 'tmp)
-                                (if (null? (cdr cl))
-                                    (rename 'tmp)
-                                    (list (caddr cl) (rename 'tmp)))
-                                (cons (rename 'cond) (cddr expr))))
+                    (list (list (rename 'lambda) (list (rename 'tmp))
+                                (list (rename 'if) (rename 'tmp)
+                                      (if (null? (cdr cl))
+                                          (rename 'tmp)
+                                          (list (caddr cl) (rename 'tmp)))
+                                      (cons (rename 'cond) (cddr expr))))
+                          (car cl))
                     (list (rename 'if)
                           (car cl)
                           (cons (rename 'begin) (cdr cl))
                           (cons (rename 'cond) (cddr expr))))))
           (cadr expr))))))
+
+(define-syntax or
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (cond ((null? (cdr expr)) #f)
+           ((null? (cddr expr)) (cadr expr))
+           (else
+            (list (rename 'let) (list (list (rename 'tmp) (cadr expr)))
+                  (list (rename 'if) (rename 'tmp)
+                        (rename 'tmp)
+                        (cons (rename 'or) (cddr expr)))))))))
+
+(define-syntax and
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (cond ((null? (cdr expr)))
+           ((null? (cddr expr)) (cadr expr))
+           (else (list (rename 'if) (cadr expr)
+                       (cons (rename 'and) (cddr expr))
+                       #f))))))
 
 (define-syntax quasiquote
   (er-macro-transformer

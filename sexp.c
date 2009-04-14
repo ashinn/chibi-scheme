@@ -626,7 +626,10 @@ void sexp_write (sexp obj, sexp out) {
       sexp_printf(out, "%.15g%s", f, (f == trunc(f)) ? ".0" : "");
       break;
     case SEXP_PROCEDURE:
-      sexp_printf(out, "#<procedure: %p>", obj); break;
+      sexp_write_string("#<procedure: ", out);
+      sexp_write(sexp_bytecode_name(sexp_procedure_code(obj)), out);
+      sexp_write_string(">", out);
+      break;
     case SEXP_IPORT:
       sexp_write_string("#<input-port>", out); break;
     case SEXP_OPORT:

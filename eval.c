@@ -268,6 +268,23 @@ static sexp sexp_identifierp (sexp x) {
   return sexp_make_boolean(sexp_idp(x));
 }
 
+static sexp sexp_syntactic_closure_expr (sexp x) {
+  return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
+}
+
+static sexp sexp_strip_syntactic_closures (sexp x) {
+ loop:
+  if (sexp_synclop(x)) {
+    x = sexp_synclo_expr(x);
+    goto loop;
+  } else if (sexp_pairp(x)) {
+    return sexp_cons(sexp_strip_syntactic_closures(sexp_car(x)),
+                     sexp_strip_syntactic_closures(sexp_cdr(x)));
+  } else {
+    return x;
+  }
+}
+
 static sexp sexp_identifier_eq (sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell, lam1=SEXP_FALSE, lam2=SEXP_FALSE;
   if (sexp_synclop(id1)) {
@@ -434,19 +451,6 @@ static sexp analyze_define (sexp x, sexp context) {
   return sexp_make_set(ref, value);
 }
 
-static sexp analyze_define_syntax (sexp x, sexp context) {
-  sexp name = sexp_cadr(x), cell, proc;
-  if (sexp_env_parent(sexp_context_env(context)))
-    return sexp_compile_error("non-top-level define-syntax", sexp_list1(x));
-  proc = eval_in_context(sexp_caddr(x), context);
-  analyze_check_exception(proc);
-  if (sexp_procedurep(proc)) {
-    cell = env_cell_create(sexp_context_env(context), name, SEXP_VOID);
-    sexp_cdr(cell) = sexp_make_macro(proc, sexp_context_env(context));
-  }
-  return SEXP_VOID;
-}
-
 static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
   sexp proc;
   for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
@@ -460,6 +464,10 @@ static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
   return SEXP_VOID;
 }
 
+static sexp analyze_define_syntax (sexp x, sexp context) {
+  return analyze_bind_syntax(sexp_list1(sexp_cdr(x)), context, context);
+}
+
 static sexp analyze_let_syntax (sexp x, sexp context) {
   sexp env, ctx, tmp;
   env = sexp_alloc_type(env, SEXP_ENV);
@@ -467,7 +475,7 @@ static sexp analyze_let_syntax (sexp x, sexp context) {
   sexp_env_bindings(env) = sexp_env_bindings(sexp_context_env(context));
   ctx = sexp_child_context(context, sexp_context_lambda(context));
   sexp_context_env(ctx) = env;
-  tmp = analyze_bind_syntax(sexp_cadr(x), ctx, context);
+  tmp = analyze_bind_syntax(sexp_cadr(x), context, ctx);
   analyze_check_exception(tmp);
   return analyze_seq(sexp_cddr(x), ctx);
 }
@@ -485,11 +493,10 @@ static sexp analyze (sexp x, sexp context) {
     if (sexp_listp(x) == SEXP_FALSE) {
       res = sexp_compile_error("dotted list in source", sexp_list1(x));
     } else if (sexp_idp(sexp_car(x))) {
-      if (sexp_synclop(sexp_car(x)))
+      cell = env_cell(sexp_context_env(context), sexp_car(x));
+      if (! cell && sexp_synclop(sexp_car(x)))
         cell = env_cell(sexp_synclo_env(sexp_car(x)),
                         sexp_synclo_expr(sexp_car(x)));
-      else
-        cell = env_cell(sexp_context_env(context), sexp_car(x));
       if (! cell) return analyze_app(x, context);
       op = sexp_cdr(cell);
       if (sexp_corep(op)) {
@@ -505,7 +512,8 @@ static sexp analyze (sexp x, sexp context) {
         case CORE_BEGIN:
           res = analyze_seq(sexp_cdr(x), context); break;
         case CORE_QUOTE:
-          res = sexp_make_lit(sexp_cadr(x)); break;
+          res = sexp_make_lit(sexp_strip_syntactic_closures(sexp_cadr(x)));
+          break;
         case CORE_DEFINE_SYNTAX:
           res = analyze_define_syntax(x, context); break;
         case CORE_LET_SYNTAX:
@@ -516,10 +524,11 @@ static sexp analyze (sexp x, sexp context) {
           res = sexp_compile_error("unknown core form", sexp_list1(op)); break;
         }
       } else if (sexp_macrop(op)) {
+        /* if (in_repl_p) sexp_debug("expand: ", x, context); */
         x = apply(sexp_macro_proc(op),
                   sexp_list3(x, sexp_context_env(context), sexp_macro_env(op)),
                   sexp_child_context(context, sexp_context_lambda(context)));
-        /* sexp_debug("expand => ", x, context); */
+        /* if (in_repl_p) sexp_debug("     => ", x, context); */
         goto loop;
       } else if (sexp_opcodep(op)) {
         res = sexp_length(sexp_cdr(x));

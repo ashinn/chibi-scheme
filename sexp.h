@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sysexits.h>
+#include <sys/types.h>
 #include <math.h>
 
 /* tagging system
