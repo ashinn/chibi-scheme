@@ -1,0 +1,19 @@
+syntax: glob
+*~
+*.i
+*.s
+*.o
+*.so
+*.dSYM
+*.orig
+.hg
+junk*
+*.tar.gz
+*.tar.bz2
+*.log
+*.err
+*.out
+gc
+gc6.8
+chibi-scheme
+
