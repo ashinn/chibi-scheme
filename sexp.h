@@ -81,6 +81,8 @@ typedef struct sexp_struct *sexp;
 
 struct sexp_struct {
   sexp_tag_t tag;
+  char immutablep;
+  char mark;
   union {
     /* basic types */
     double flonum;
