@@ -24,6 +24,7 @@ typedef sexp (*sexp_proc3) (sexp, sexp, sexp);
 typedef sexp (*sexp_proc4) (sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 enum core_form_names {
   CORE_DEFINE = 1,

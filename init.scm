@@ -43,19 +43,23 @@
 
 (define (list-ref ls k) (car (list-tail ls k)))
 
-(define (append-reverse a b)
-  (if (pair? a)
-      (append-reverse (cdr a) (cons (car a) b))
-      b))
+(define (append-helper ls res)
+  (if (null? ls)
+      res
+      (append-helper (cdr ls) (append2 (car ls) res))))
 
-(define (append a b)
-  (append-reverse (reverse a) b))
+(define (append . o)
+  (if (null? o)
+      '()
+      ((lambda (lol)
+         (append-helper (cdr lol) (car lol)))
+       (reverse o))))
 
 (define (apply proc . args)
   (if (null? args)
       (proc)
       ((lambda (lol)
-         (apply1 proc (append (reverse (cdr lol)) (car lol))))
+         (apply1 proc (append2 (reverse (cdr lol)) (car lol))))
        (reverse args))))
 
 ;; map with a fast-path for single lists
@@ -335,17 +339,17 @@
 (define (string-append . args) (string-concatenate args))
 (define (string-copy s) (substring s 0 (string-length s)))
 
-(define (string=? s1 s2) (eq? (string-cmp s1 s2) 0))
-(define (string<? s1 s2) (< (string-cmp s1 s2) 0))
-(define (string<=? s1 s2) (<= (string-cmp s1 s2) 0))
-(define (string>? s1 s2) (> (string-cmp s1 s2) 0))
-(define (string>=? s1 s2) (>= (string-cmp s1 s2) 0))
+(define (string=? s1 s2) (eq? (string-cmp s1 s2 #f) 0))
+(define (string<? s1 s2) (< (string-cmp s1 s2 #f) 0))
+(define (string<=? s1 s2) (<= (string-cmp s1 s2 #f) 0))
+(define (string>? s1 s2) (> (string-cmp s1 s2 #f) 0))
+(define (string>=? s1 s2) (>= (string-cmp s1 s2 #f) 0))
 
-(define (string-ci=? s1 s2) (eq? (string-cmp-ci s1 s2) 0))
-(define (string-ci<? s1 s2) (< (string-cmp-ci s1 s2) 0))
-(define (string-ci<=? s1 s2) (<= (string-cmp-ci s1 s2) 0))
-(define (string-ci>? s1 s2) (> (string-cmp-ci s1 s2) 0))
-(define (string-ci>=? s1 s2) (>= (string-cmp-ci s1 s2) 0))
+(define (string-ci=? s1 s2) (eq? (string-cmp s1 s2 #t) 0))
+(define (string-ci<? s1 s2) (< (string-cmp s1 s2 #t) 0))
+(define (string-ci<=? s1 s2) (<= (string-cmp s1 s2 #t) 0))
+(define (string-ci>? s1 s2) (> (string-cmp s1 s2 #t) 0))
+(define (string-ci>=? s1 s2) (>= (string-cmp s1 s2 #t) 0))
 
 ;; list utils
 
@@ -417,6 +421,8 @@
 (define (imag-part z) 0.0)
 (define magnitude abs)
 (define (angle z) (if (< z 0) 3.141592653589793 0))
+
+(define (atan x . o) (if (null? o) (atan1 x) (atan1 (/ x (car o)))))
 
 (define (digit-char n) (integer->char (+ n (char->integer #\0))))
 (define (digit-value ch)
