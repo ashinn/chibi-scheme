@@ -10,7 +10,9 @@ INCDIR=$(PREFIX)/include/chibi-scheme
 MODDIR=$(PREFIX)/share/chibi-scheme
 
 LDFLAGS=-lm
-CFLAGS=-Wall -g -Os
+
+# -Oz for smaller size on darwin
+CFLAGS=-Wall -g -Os -save-temps
 
 GC_OBJ=./gc/gc.a
 

@@ -20,6 +20,10 @@
 #define USE_BOEHM 1
 #endif
 
+#ifndef USE_MALLOC
+#define USE_MALLOC 0
+#endif
+
 #ifndef USE_FLONUMS
 #define USE_FLONUMS 1
 #endif
@@ -58,16 +62,22 @@
 
 #if USE_BOEHM
 #include "gc/include/gc.h"
-#define sexp_alloc        GC_malloc
-#define sexp_alloc_atomic GC_malloc_atomic
-#define sexp_realloc      GC_realloc
-#define sexp_free(x)
-#define sexp_deep_free(x)
-#else
-#define sexp_alloc        malloc
-#define sexp_alloc_atomic sexp_alloc
-#define sexp_realloc      realloc
-#define sexp_free         free
-void sexp_deep_free(sexp obj);
+#define sexp_alloc(ctx, size)        GC_malloc(size)
+#define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
+#define sexp_realloc(ctx, x, size)   GC_realloc(x, size)
+#define sexp_free(ctx, x)
+#define sexp_deep_free(ctx, x)
+#elif USE_MALLOC
+#define sexp_alloc(ctx, size)        malloc(size)
+#define sexp_alloc_atomic(ctx, size) malloc(size)
+#define sexp_realloc(ctx, x, size)   realloc(x, size)
+#define sexp_free(ctx, x)            free(x)
+void sexp_deep_free(sexp ctx, sexp obj);
+#else  /* native gc */
+void *sexp_alloc(sexp ctx, size_t size);
+#define sexp_alloc_atomic            sexp_alloc
+void *sexp_realloc(sexp ctx, sexp x, size_t size);
+#define sexp_free(ctx, x)
+#define sexp_deep_free(ctx, x)
 #endif
 

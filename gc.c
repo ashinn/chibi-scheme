@@ -11,7 +11,37 @@ static char* sexp_heap;
 static char* sexp_heap_end;
 static sexp sexp_free_list;
 
-void *sexp_alloc (size_t size) {
+sexp_uint_t sexp_allocated_bytes (sexp x) {
+  switch (sexp_tag(x)) {
+  case SEXP_PAIR: return sexp_sizeof(pair);
+  case SEXP_SYMBOL: return sexp_sizeof(symbol);
+  case SEXP_STRING: return sexp_sizeof(string)+sexp_string_length(x);
+  case SEXP_VECTOR:
+    return sexp_sizeof(vector)+(sexp_vector_length(x)*sizeof(sexp));
+  case SEXP_FLONUM: return sexp_sizeof(flonum);
+  case SEXP_BIGNUM: return sexp_sizeof(bignum);
+  case SEXP_IPORT:
+  case SEXP_OPORT: return sexp_sizeof(port);
+  case SEXP_EXCEPTION: return sexp_sizeof(exception);
+  case SEXP_PROCEDURE: return sexp_sizeof(procedure);
+  case SEXP_MACRO: return sexp_sizeof(macro);
+  case SEXP_SYNCLO: return sexp_sizeof(synclo);
+  case SEXP_ENV: return sexp_sizeof(env);
+  case SEXP_BYTECODE: return sexp_sizeof(bytecode)+sexp_bytecode_length(x);
+  case SEXP_CORE: return sexp_sizeof(core);
+  case SEXP_OPCODE: return sexp_sizeof(opcode);
+  case SEXP_LAMBDA: return sexp_sizeof(lambda);
+  case SEXP_CND: return sexp_sizeof(cnd);
+  case SEXP_REF: return sexp_sizeof(ref);
+  case SEXP_SET: return sexp_sizeof(set);
+  case SEXP_SEQ: return sexp_sizeof(seq);
+  case SEXP_LIT: return sexp_sizeof(lit);
+  case SEXP_CONTEXT: return sexp_sizeof(context);
+  default: return 0;
+  }
+}
+
+void *sexp_alloc (sexp ctx, size_t size) {
   sexp ls1, ls2, ls3;
  try_alloc:
   ls1=sexp_free_list;
@@ -27,7 +57,7 @@ void *sexp_alloc (size_t size) {
       }
       return ls2;
     }
-  if (sexp_unbox_integer(sexp_gc()) >= size) {
+  if (sexp_unbox_integer(sexp_gc(ctx)) >= size) {
     goto try_alloc;
   } else {
     fprintf(stderr, "chibi: out of memory trying to allocate %ld bytes, aborting\n", size);
@@ -41,7 +71,7 @@ void sexp_mark (sexp x) {
  loop:
   if ((! sexp_pointerp(x)) || sexp_mark(x))
     return;
-  sexp_mark(x) = 1;
+  sexp_gc_mark(x) = 1;
   switch (sexp_tag(x)) {
   case SEXP_PAIR:
     sexp_mark(sexp_car(x));
@@ -56,9 +86,10 @@ void sexp_mark (sexp x) {
 
 sexp sexp_sweep () {
   sexp_uint_t freed=0, size;
-  sexp p=(sexp)sexp_heap, f=sexp_free_list;
-  /* XXXX make p skip over areas already in the free_list */
+  sexp p=(sexp)sexp_heap, f1=sexp_free_list, f2;
   while (p<sexp_heap_end) {
+    for (f2=sexp_cdr(f1); sexp_pairp(f2) && (f2 < p); f1=f2, f2=sexp_cdr(f2))
+      ;
     size = sexp_allocated_bytes(p);
     if (! sexp_mark(p)) {
       freed += size;
@@ -74,8 +105,16 @@ sexp sexp_sweep () {
   return sexp_make_integer(freed);
 }
 
-sexp sexp_gc () {
-  /* XXXX change FFI to pass context for marking */
+sexp sexp_gc (sexp ctx) {
+  int i;
+  sexp ctx2, stack = sexp_context_stack(ctx);
+  for (i=0; i<sexp_context_top(ctx); i++)
+    sexp_mark(stack[i]);
+  for ( ; ctx; ctx=sexp_context_(ctx)) {
+    sexp_gc_mark(ctx) = 1;
+    sexp_gc_mark(sexp_context_bc(ctx)) = 1;
+    sexp_mark(sexp_context_env(ctx));
+  }
   return sexp_sweep();
 }
 
