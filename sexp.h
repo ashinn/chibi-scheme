@@ -10,6 +10,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
@@ -110,6 +111,11 @@ struct sexp_struct {
     struct {
       sexp kind, message, irritants, procedure, file, line;
     } exception;
+    struct {
+      char sign;
+      sexp_uint_t length;
+      sexp_uint_t *data;
+    } bignum;
     /* runtime types */
     struct {
       char flags;
@@ -168,6 +174,29 @@ struct sexp_struct {
   } value;
 };
 
+#if USE_BOEHM
+#include "gc/include/gc.h"
+#define sexp_alloc(ctx, size)        GC_malloc(size)
+#define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
+#define sexp_realloc(ctx, x, size)   GC_realloc(x, size)
+#define sexp_free(ctx, x)
+#define sexp_deep_free(ctx, x)
+#elif USE_MALLOC
+#define sexp_alloc(ctx, size)        malloc(size)
+#define sexp_alloc_atomic(ctx, size) malloc(size)
+#define sexp_realloc(ctx, x, size)   realloc(x, size)
+#define sexp_free(ctx, x)            free(x)
+void sexp_deep_free(sexp ctx, sexp obj);
+#else  /* native gc */
+void *sexp_alloc(sexp ctx, size_t size);
+#define sexp_alloc_atomic            sexp_alloc
+void *sexp_realloc(sexp ctx, sexp x, size_t size);
+#define sexp_free(ctx, x)
+#define sexp_deep_free(ctx, x)
+#endif
+
+#define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
+
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
 
@@ -196,6 +225,7 @@ struct sexp_struct {
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
 #define sexp_pointer_tag(x) ((x)->tag)
+#define sexp_gc_mark(x)     ((x)->gc_mark)
 
 #define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
