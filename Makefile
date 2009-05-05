@@ -14,7 +14,8 @@ LDFLAGS=-lm
 # -Oz for smaller size on darwin
 CFLAGS=-Wall -g -Os -save-temps
 
-GC_OBJ=./gc/gc.a
+#GC_OBJ=./gc/gc.a
+GC_OBJ=
 
 ./gc/gc.a: ./gc/alloc.c
 	cd gc && make
@@ -38,7 +39,7 @@ cleaner: clean
 	rm -f chibi-scheme
 	rm -rf *.dSYM
 
-test: chibi-scheme
+test-basic: chibi-scheme
 	@for f in tests/basic/*.scm; do \
 	    ./chibi-scheme $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if diff -q $${f%.scm}.out $${f%.scm}.res; then \
@@ -47,6 +48,8 @@ test: chibi-scheme
 	        echo "[FAIL] $${f%.scm}"; \
 	    fi; \
 	done
+
+test: chibi-scheme
 	./chibi-scheme -l syntax-rules.scm tests/r5rs-tests.scm
 
 # install: chibi-scheme

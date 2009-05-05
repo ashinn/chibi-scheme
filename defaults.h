@@ -17,7 +17,7 @@
 #endif
 
 #ifndef USE_BOEHM
-#define USE_BOEHM 1
+#define USE_BOEHM 0
 #endif
 
 #ifndef USE_MALLOC
@@ -58,26 +58,5 @@
 
 #ifndef USE_CHECK_STACK
 #define USE_CHECK_STACK 0
-#endif
-
-#if USE_BOEHM
-#include "gc/include/gc.h"
-#define sexp_alloc(ctx, size)        GC_malloc(size)
-#define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
-#define sexp_realloc(ctx, x, size)   GC_realloc(x, size)
-#define sexp_free(ctx, x)
-#define sexp_deep_free(ctx, x)
-#elif USE_MALLOC
-#define sexp_alloc(ctx, size)        malloc(size)
-#define sexp_alloc_atomic(ctx, size) malloc(size)
-#define sexp_realloc(ctx, x, size)   realloc(x, size)
-#define sexp_free(ctx, x)            free(x)
-void sexp_deep_free(sexp ctx, sexp obj);
-#else  /* native gc */
-void *sexp_alloc(sexp ctx, size_t size);
-#define sexp_alloc_atomic            sexp_alloc
-void *sexp_realloc(sexp ctx, sexp x, size_t size);
-#define sexp_free(ctx, x)
-#define sexp_deep_free(ctx, x)
 #endif
 

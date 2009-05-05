@@ -63,6 +63,7 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
 }
 
 #if ! USE_BOEHM
+#if USE_MALLOC
 void sexp_deep_free (sexp ctx, sexp obj) {
   int len, i;
   sexp *elts;
@@ -87,6 +88,9 @@ void sexp_deep_free (sexp ctx, sexp obj) {
     sexp_free(ctx, obj);
   }
 }
+#else
+#include "gc.c"
+#endif
 #endif
 
 /***************************** exceptions *****************************/
@@ -788,7 +792,7 @@ char* sexp_read_string(sexp ctx, sexp in) {
     }
   }
 
-  buf[i] = '\0';
+  buf[i++] = '\0';
   res = sexp_alloc(ctx, i);
   memcpy(res, buf, i);
   sexp_free(ctx, buf);
@@ -819,7 +823,7 @@ char* sexp_read_symbol(sexp ctx, sexp in, int init) {
     }
   }
 
-  buf[i] = '\0';
+  buf[i++] = '\0';
   res = sexp_alloc(ctx, i);
   memcpy(res, buf, i);
   sexp_free(ctx, buf);
@@ -1130,6 +1134,8 @@ void sexp_init() {
     GC_init();
     GC_add_roots((char*)&symbol_table,
                  ((char*)&symbol_table)+sizeof(symbol_table)+1);
+#elif ! USE_MALLOC
+    sexp_gc_init();
 #endif
     for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
       symbol_table[i] = SEXP_NULL;
