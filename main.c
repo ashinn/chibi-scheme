@@ -66,7 +66,7 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded++)
-        sexp_load(context, sexp_c_string(context, sexp_init_file), env);
+        sexp_load(context, sexp_c_string(context, sexp_init_file, -1), env);
       res = sexp_read_from_string(context, argv[i+1]);
       if (! sexp_exceptionp(res))
         res = eval_in_context(res, context);
@@ -82,8 +82,8 @@ void run_main (int argc, char **argv) {
 #endif
     case 'l':
       if (! init_loaded++)
-        sexp_load(context, sexp_c_string(context, sexp_init_file), env);
-      sexp_load(context, sexp_c_string(context, argv[++i]), env);
+        sexp_load(context, sexp_c_string(context, sexp_init_file, -1), env);
+      sexp_load(context, sexp_c_string(context, argv[++i], -1), env);
       break;
     case 'q':
       init_loaded = 1;
@@ -95,10 +95,10 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      sexp_load(context, sexp_c_string(context, sexp_init_file), env);
+      sexp_load(context, sexp_c_string(context, sexp_init_file, -1), env);
     if (i < argc)
       for ( ; i < argc; i++)
-        sexp_load(context, sexp_c_string(context, argv[i]), env);
+        sexp_load(context, sexp_c_string(context, argv[i], -1), env);
     else
       repl(context);
   }

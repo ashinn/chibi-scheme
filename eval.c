@@ -240,10 +240,13 @@ static sexp sexp_make_context(sexp ctx, sexp *stack, sexp env) {
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = INIT_BCODE_SIZE;
   sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
+  sexp_context_parent(res) = SEXP_FALSE;
   sexp_context_lambda(res) = SEXP_FALSE;
   sexp_context_stack(res) = stack;
   sexp_context_env(res) = env;
   sexp_context_fv(res) = SEXP_NULL;
+  sexp_context_saves(res).var = 0;
+  sexp_context_saves(res).next = 0;
   sexp_context_depth(res) = 0;
   sexp_context_pos(res) = 0;
   sexp_context_top(res) = 0;
@@ -256,6 +259,7 @@ static sexp sexp_child_context(sexp context, sexp lambda) {
   sexp ctx = sexp_make_context(context,
                                sexp_context_stack(context),
                                sexp_context_env(context));
+  sexp_context_parent(ctx) = context;
   sexp_context_lambda(ctx) = lambda;
   sexp_context_env(ctx) = sexp_context_env(context);
   sexp_context_top(ctx) = sexp_context_top(context);
@@ -311,7 +315,8 @@ static sexp sexp_identifier_eq(sexp ctx, sexp e1, sexp id1, sexp e2, sexp id2) {
 
 static sexp sexp_compile_error(sexp ctx, char *message, sexp obj) {
   return sexp_make_exception(ctx, the_compile_error_symbol,
-                             sexp_c_string(ctx, message), sexp_list1(ctx, obj),
+                             sexp_c_string(ctx, message, -1),
+                             sexp_list1(ctx, obj),
                              SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
 }
 
@@ -985,7 +990,7 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i, sexp env,
     sexp_push(context, refs, sexp_make_ref(context, sexp_car(ls), env_cell(env, sexp_car(ls))));
   generate_opcode_app(sexp_cons(context, op, sexp_reverse(context, refs)), context);
   bc = finalize_bytecode(context);
-  sexp_bytecode_name(bc) = sexp_c_string(ctx, sexp_opcode_name(op));
+  sexp_bytecode_name(bc) = sexp_c_string(ctx, sexp_opcode_name(op), -1);
   res = sexp_make_procedure(ctx, sexp_make_integer(0), sexp_make_integer(i),
                             bc, SEXP_VOID);
   if (i == sexp_opcode_num_args(op))

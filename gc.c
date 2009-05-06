@@ -55,12 +55,74 @@ void sexp_mark (sexp x) {
     goto loop;
   case SEXP_VECTOR:
     data = sexp_vector_data(x);
-    for (i=sexp_vector_length(x)-1; i>=0; i--)
+    for (i=sexp_vector_length(x)-1; i>0; i--)
       sexp_mark(data[i]);
+    x = data[i];
+    goto loop;
+  case SEXP_BYTECODE:
+    x = sexp_bytecode_literals(x);
+    goto loop;
+  case SEXP_ENV:
+    sexp_mark(sexp_env_lambda(x));
+    sexp_mark(sexp_env_bindings(x));
+    x = sexp_env_parent(x);
+    if (x) goto loop; else break;
+  case SEXP_PROCEDURE:
+    sexp_mark(sexp_procedure_code(x));
+    x = sexp_procedure_vars(x);
+    goto loop;
+  case SEXP_MACRO:
+    sexp_mark(sexp_macro_proc(x));
+    x = sexp_macro_env(x);
+    goto loop;
+  case SEXP_SYNCLO:
+    sexp_mark(sexp_synclo_free_vars(x));
+    sexp_mark(sexp_synclo_expr(x));
+    x = sexp_synclo_env(x);
+    goto loop;
+  case SEXP_OPCODE:
+    if (sexp_opcode_proc(x)) sexp_mark(sexp_opcode_proc(x));
+    if (sexp_opcode_default(x)) sexp_mark(sexp_opcode_default(x));
+    if (sexp_opcode_data(x)) sexp_mark(sexp_opcode_data(x));
+    break;
+  case SEXP_IPORT:
+  case SEXP_OPORT:
+    x = sexp_port_cookie(x);
+    if (x) goto loop; else break;
+  case SEXP_LAMBDA:
+    sexp_mark(sexp_lambda_name(x));
+    sexp_mark(sexp_lambda_params(x));
+    sexp_mark(sexp_lambda_locals(x));
+    sexp_mark(sexp_lambda_defs(x));
+    sexp_mark(sexp_lambda_flags(x));
+    sexp_mark(sexp_lambda_body(x));
+    sexp_mark(sexp_lambda_fv(x));
+    sexp_mark(sexp_lambda_sv(x));
+    x = sexp_lambda_body(x);
+    goto loop;
+  case SEXP_CND:
+    sexp_mark(sexp_cnd_test(x));
+    sexp_mark(sexp_cnd_fail(x));
+    x = sexp_cnd_pass(x);
+    goto loop;
+  case SEXP_SET:
+    sexp_mark(sexp_set_var(x));
+    x = sexp_set_value(x);
+    goto loop;
+  case SEXP_REF:
+    sexp_mark(sexp_ref_name(x));
+    x = sexp_ref_cell(x);
+    goto loop;
+  case SEXP_SEQ:
+    x = sexp_seq_ls(x);
+    goto loop;
+  case SEXP_LIT:
+    x = sexp_lit_value(x);
+    goto loop;
   }
 }
 
-sexp sexp_sweep () {
+sexp sexp_sweep (sexp ctx) {
   sexp_uint_t freed=0, size;
   sexp p=(sexp)sexp_heap, f1=sexp_free_list, f2;
   while ((char*)p<sexp_heap_end) {
@@ -82,16 +144,21 @@ sexp sexp_sweep () {
 
 sexp sexp_gc (sexp ctx) {
   int i;
+  struct sexp_gc_var_t *saves;
   sexp *stack = sexp_context_stack(ctx);
-  fprintf(stderr, "garbage collecting\n");
+  fprintf(stderr, "************* garbage collecting *************\n");
+  for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
+    sexp_mark(sexp_symbol_table[i]);
   for (i=0; i<sexp_context_top(ctx); i++)
     sexp_mark(stack[i]);
-/*   for ( ; ctx; ctx=sexp_context_(ctx)) { */
-/*     sexp_gc_mark(ctx) = 1; */
-/*     sexp_gc_mark(sexp_context_bc(ctx)) = 1; */
-/*     sexp_mark(sexp_context_env(ctx)); */
-/*   } */
-  return sexp_sweep();
+  for ( ; ctx; ctx=sexp_context_parent(ctx)) {
+    sexp_gc_mark(ctx) = 1;
+    if (sexp_context_bc(ctx)) sexp_mark(sexp_context_bc(ctx));
+    sexp_mark(sexp_context_env(ctx));
+    for (saves=&(sexp_context_saves(ctx)); saves; saves=saves->next)
+      if (saves->var) sexp_mark(*(saves->var));
+  }
+  return sexp_sweep(ctx);
 }
 
 void *sexp_alloc (sexp ctx, size_t size) {

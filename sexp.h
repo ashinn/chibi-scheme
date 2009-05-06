@@ -44,6 +44,12 @@
 #define SEXP_MAX_INT ((1<<29)-1)
 #define SEXP_MIN_INT (-(1<<29))
 
+#if USE_HASH_SYMS
+#define SEXP_SYMBOL_TABLE_SIZE 389
+#else
+#define SEXP_SYMBOL_TABLE_SIZE 1
+#endif
+
 enum sexp_types {
   SEXP_OBJECT,
   SEXP_FIXNUM,
@@ -80,6 +86,11 @@ typedef long sexp_sint_t;
 typedef char sexp_tag_t;
 typedef struct sexp_struct *sexp;
 
+struct sexp_gc_var_t {
+  sexp *var;
+  struct sexp_gc_var_t *next;
+};
+
 struct sexp_struct {
   sexp_tag_t tag;
   char immutablep;
@@ -92,15 +103,14 @@ struct sexp_struct {
     } pair;
     struct {
       sexp_uint_t length;
-      sexp *data;
+      sexp data[];
     } vector;
     struct {
       sexp_uint_t length;
-      char *data;
+      char data[];
     } string;
     struct {
-      sexp_uint_t length;
-      char *data;
+      sexp string;
     } symbol;
     struct {
       FILE *stream;
@@ -168,31 +178,49 @@ struct sexp_struct {
     } lit;
     /* compiler state */
     struct {
-      sexp bc, lambda, *stack, env, fv;
+      sexp bc, lambda, *stack, env, fv, parent;
+      struct sexp_gc_var_t saves;
       sexp_uint_t pos, top, depth, tailp, tracep;
     } context;
   } value;
 };
 
 #if USE_BOEHM
+
+#define sexp_gc_var(ctx, x, y)       sexp x;
+#define sexp_gc_release(ctx, x, y)
+
 #include "gc/include/gc.h"
 #define sexp_alloc(ctx, size)        GC_malloc(size)
 #define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
 #define sexp_realloc(ctx, x, size)   GC_realloc(x, size)
 #define sexp_free(ctx, x)
 #define sexp_deep_free(ctx, x)
-#elif USE_MALLOC
+
+#else
+
+#define sexp_gc_var(ctx, x, y) \
+  sexp x = SEXP_FALSE;                                          \
+  struct sexp_gc_var_t y = {&x, &(sexp_context_saves(cxt))};    \
+  sexp_context_saves(cxt) = &y;
+
+#define sexp_gc_release(ctx, x, y)   (sexp_context_saves(cxt) = y.next)
+
+#if USE_MALLOC
 #define sexp_alloc(ctx, size)        malloc(size)
 #define sexp_alloc_atomic(ctx, size) malloc(size)
 #define sexp_realloc(ctx, x, size)   realloc(x, size)
 #define sexp_free(ctx, x)            free(x)
 void sexp_deep_free(sexp ctx, sexp obj);
+
 #else  /* native gc */
 void *sexp_alloc(sexp ctx, size_t size);
 #define sexp_alloc_atomic            sexp_alloc
 void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_free(ctx, x)
 #define sexp_deep_free(ctx, x)
+
+#endif
 #endif
 
 #define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
@@ -291,8 +319,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_string_ref(x, i) (sexp_make_character(sexp_string_data(x)[sexp_unbox_integer(i)]))
 #define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_integer(i)] = sexp_unbox_character(v))
 
-#define sexp_symbol_length(x)  ((x)->value.symbol.length)
-#define sexp_symbol_data(x)    ((x)->value.symbol.data)
+#define sexp_symbol_string(x)  ((x)->value.symbol.string)
 
 #define sexp_port_stream(p)    ((p)->value.port.stream)
 #define sexp_port_name(p)      ((p)->value.port.name)
@@ -375,6 +402,8 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_context_pos(x)     ((x)->value.context.pos)
 #define sexp_context_top(x)     ((x)->value.context.top)
 #define sexp_context_lambda(x)  ((x)->value.context.lambda)
+#define sexp_context_parent(x)  ((x)->value.context.parent)
+#define sexp_context_saves(x)   ((x)->value.context.saves)
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
 
@@ -440,19 +469,18 @@ sexp sexp_append2(sexp ctx, sexp a, sexp b);
 sexp sexp_memq(sexp ctx, sexp x, sexp ls);
 sexp sexp_assq(sexp ctx, sexp x, sexp ls);
 sexp sexp_length(sexp ctx, sexp ls);
-sexp sexp_c_string(sexp ctx, char *str);
+sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
 sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
 sexp sexp_make_flonum(sexp ctx, double f);
-sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc);
 sexp sexp_intern(sexp ctx, char *str);
 sexp sexp_string_to_symbol(sexp ctx, sexp str);
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 sexp sexp_list_to_vector(sexp ctx, sexp ls);
 sexp sexp_vector(sexp ctx, int count, ...);
 void sexp_write(sexp obj, sexp out);
-char* sexp_read_string(sexp ctx, sexp in);
-char* sexp_read_symbol(sexp ctx, sexp in, int init);
+sexp sexp_read_string(sexp ctx, sexp in);
+sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
 sexp sexp_read_number(sexp ctx, sexp in, int base);
 sexp sexp_read_raw(sexp ctx, sexp in);
 sexp sexp_read(sexp ctx, sexp in);
