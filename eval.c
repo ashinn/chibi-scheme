@@ -944,14 +944,14 @@ static void generate_app (sexp ctx, sexp app) {
 }
 
 static void generate_lambda (sexp ctx, sexp lambda) {
-  sexp fv, ls, ctx2, flags, bc, len, ref, vec, prev_lambda, prev_fv;
+  sexp ctx2, fv, ls, flags, bc, len, ref, prev_lambda, prev_fv;
   sexp_uint_t k;
+  sexp_gc_var(ctx, vec, s_vec);
+  sexp_gc_preserve(ctx, vec, s_vec);
   prev_lambda = sexp_context_lambda(ctx);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
-  ctx2 = sexp_make_context(ctx,
-                          sexp_context_stack(ctx),
-                          sexp_context_env(ctx));
+  ctx2 = sexp_make_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx));
   sexp_context_lambda(ctx2) = lambda;
   /* allocate space for local vars */
   for (ls=sexp_lambda_locals(lambda); sexp_pairp(ls); ls=sexp_cdr(ls))
@@ -978,8 +978,8 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
   if (sexp_nullp(fv)) {
     /* shortcut, no free vars */
-    vec = sexp_make_vector(ctx, sexp_make_integer(0), SEXP_VOID);
-    generate_lit(ctx, sexp_make_procedure(ctx, flags, len, bc, vec));
+    vec = sexp_make_vector(ctx2, sexp_make_integer(0), SEXP_VOID);
+    generate_lit(ctx, sexp_make_procedure(ctx2, flags, len, bc, vec));
   } else {
     /* push the closed vars */
     emit_push(ctx, SEXP_VOID);
@@ -1003,27 +1003,20 @@ static void generate_lambda (sexp ctx, sexp lambda) {
     emit_push(ctx, flags);
     emit(ctx, OP_MAKE_PROCEDURE);
   }
+  sexp_gc_release(ctx, vec, s_vec);
 }
 
 static void generate (sexp ctx, sexp x) {
   if (sexp_pointerp(x)) {
     switch (sexp_pointer_tag(x)) {
-    case SEXP_PAIR:
-      generate_app(ctx, x); break;
-    case SEXP_LAMBDA:
-      generate_lambda(ctx, x); break;
-    case SEXP_CND:
-      generate_cnd(ctx, x); break;
-    case SEXP_REF:
-      generate_ref(ctx, x, 1); break;
-    case SEXP_SET:
-      generate_set(ctx, x); break;
-    case SEXP_SEQ:
-      generate_seq(ctx, sexp_seq_ls(x)); break;
-    case SEXP_LIT:
-      generate_lit(ctx, sexp_lit_value(x)); break;
-    default:
-      generate_lit(ctx, x);
+    case SEXP_PAIR:   generate_app(ctx, x); break;
+    case SEXP_LAMBDA: generate_lambda(ctx, x); break;
+    case SEXP_CND:    generate_cnd(ctx, x); break;
+    case SEXP_REF:    generate_ref(ctx, x, 1); break;
+    case SEXP_SET:    generate_set(ctx, x); break;
+    case SEXP_SEQ:    generate_seq(ctx, sexp_seq_ls(x)); break;
+    case SEXP_LIT:    generate_lit(ctx, sexp_lit_value(x)); break;
+    default:          generate_lit(ctx, x);
     }
   } else {
     generate_lit(ctx, x);
