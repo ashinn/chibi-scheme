@@ -155,7 +155,7 @@ sexp sexp_gc (sexp ctx) {
     sexp_gc_mark(ctx) = 1;
     if (sexp_context_bc(ctx)) sexp_mark(sexp_context_bc(ctx));
     sexp_mark(sexp_context_env(ctx));
-    for (saves=&(sexp_context_saves(ctx)); saves; saves=saves->next)
+    for (saves=sexp_context_saves(ctx); saves; saves=saves->next)
       if (saves->var) sexp_mark(*(saves->var));
   }
   return sexp_sweep(ctx);

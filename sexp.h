@@ -179,7 +179,7 @@ struct sexp_struct {
     /* compiler state */
     struct {
       sexp bc, lambda, *stack, env, fv, parent;
-      struct sexp_gc_var_t saves;
+      struct sexp_gc_var_t *saves;
       sexp_uint_t pos, top, depth, tailp, tracep;
     } context;
   } value;
@@ -188,6 +188,7 @@ struct sexp_struct {
 #if USE_BOEHM
 
 #define sexp_gc_var(ctx, x, y)       sexp x;
+#define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
 
 #include "gc/include/gc.h"
@@ -200,11 +201,28 @@ struct sexp_struct {
 #else
 
 #define sexp_gc_var(ctx, x, y) \
-  sexp x = SEXP_FALSE;                                          \
-  struct sexp_gc_var_t y = {&x, &(sexp_context_saves(cxt))};    \
-  sexp_context_saves(cxt) = &y;
+  sexp x = SEXP_FALSE;         \
+  struct sexp_gc_var_t y;
 
-#define sexp_gc_release(ctx, x, y)   (sexp_context_saves(cxt) = y.next)
+#define sexp_gc_preserve(ctx, x, y)  ((y).var=&(x),                       \
+                                      (y).next = sexp_context_saves(ctx), \
+                                      sexp_context_saves(ctx) = &(y))
+#define sexp_gc_release(ctx, x, y)   (sexp_context_saves(ctx) = y.next)
+
+#define sexp_with_gc_var1(ctx, x, body)    \
+  sexp_gc_var(ctx, x, _sexp_gcv1);         \
+  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
+  do {body} while (0);                     \
+  sexp_gc_release(ctx, x, _sexp_gcv1);
+
+#define sexp_with_gc_var2(ctx, x, y, body) \
+  sexp_gc_var(ctx, x, _sexp_gcv1);         \
+  sexp_gc_var(ctx, y, _sexp_gcv2);         \
+  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
+  sexp_gc_preserve(ctx, y, _sexp_gcv2);    \
+  do {body} while (0);                     \
+  sexp_gc_release(ctx, x, _sexp_gcv1);     \
+  sexp_gc_release(ctx, y, _sexp_gcv2);
 
 #if USE_MALLOC
 #define sexp_alloc(ctx, size)        malloc(size)
@@ -237,11 +255,10 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
 #define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
 #define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
-#define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4)
-#define SEXP_ERROR  SEXP_MAKE_IMMEDIATE(5) /* internal use */
-#define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(6) /* internal use */
-#define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(7) /* internal use */
-#define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(8) /* internal use */
+#define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4) /* the unspecified value */
+#define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
+#define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
+#define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
 
 /***************************** predicates *****************************/
 
@@ -279,6 +296,9 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
+
+#define sexp_idp(x) \
+  (sexp_symbolp(x) || (sexp_synclop(x) && sexp_symbolp(sexp_synclo_expr(x))))
 
 /***************************** constructors ****************************/
 
@@ -446,7 +466,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_cdadr(x)     (sexp_cdr(sexp_cadr(x)))
 #define sexp_cddar(x)     (sexp_cdr(sexp_cdar(x)))
 #define sexp_cdddr(x)     (sexp_cdr(sexp_cddr(x)))
-#define sexp_cadddr(x)    (sexp_cadr(sexp_cddr(x)))
+#define sexp_cadddr(x)    (sexp_cadr(sexp_cddr(x))) /* just these two */
 #define sexp_cddddr(x)    (sexp_cddr(sexp_cddr(x)))
 
 /***************************** general API ****************************/
