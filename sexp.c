@@ -237,7 +237,7 @@ sexp sexp_nreverse (sexp ctx, sexp ls) {
   if (ls == SEXP_NULL) {
     return ls;
   } else if (! sexp_pairp(ls)) {
-    return SEXP_ERROR;
+    return SEXP_NULL;  /* XXXX return an exception */
   } else {
     b = ls;
     a = sexp_cdr(ls);
@@ -748,8 +748,6 @@ void sexp_write (sexp obj, sexp out) {
     case (sexp_uint_t) SEXP_UNDEF:
     case (sexp_uint_t) SEXP_VOID:
       sexp_write_string("#<undef>", out); break;
-    case (sexp_uint_t) SEXP_ERROR:
-      sexp_write_string("#<error>", out); break;
     default:
       sexp_printf(out, "#<invalid: %p>", obj);
     }
@@ -878,9 +876,13 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
 }
 
 sexp sexp_read_raw (sexp ctx, sexp in) {
-  sexp res, tmp, tmp2;
   char *str;
   int c1, c2;
+  sexp tmp2;
+  sexp_gc_var(ctx, res, s_res);
+  sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_preserve(ctx, res, s_res);
+  sexp_gc_preserve(ctx, tmp, s_tmp);
 
  scan_loop:
   switch (c1 = sexp_read_char(in)) {
@@ -924,34 +926,41 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '(':
     res = SEXP_NULL;
     tmp = sexp_read_raw(ctx, in);
-    while ((tmp != SEXP_ERROR) && (tmp != SEXP_EOF) && (tmp != SEXP_CLOSE)) {
-      if (tmp == SEXP_RAWDOT) {
+    while ((tmp != SEXP_EOF) && (tmp != SEXP_CLOSE) && (tmp != SEXP_RAWDOT)) {
+      res = sexp_cons(ctx, tmp, res);
+      tmp = sexp_read_raw(ctx, in);
+      if (sexp_exceptionp(tmp)) {
+        res = tmp;
+        break;
+      }
+    }
+    if (! sexp_exceptionp(res)) {
+      if (tmp == SEXP_RAWDOT) { /* dotted list */
         if (res == SEXP_NULL) {
-          return sexp_read_error(ctx, "dot before any elements in list",
-                                 SEXP_NULL, in);
+          res = sexp_read_error(ctx, "dot before any elements in list",
+                                SEXP_NULL, in);
         } else {
           tmp = sexp_read_raw(ctx, in);
-          if (sexp_read_raw(ctx, in) != SEXP_CLOSE) {
-            sexp_deep_free(ctx, res);
-            return sexp_read_error(ctx, "multiple tokens in dotted tail",
-                                   SEXP_NULL, in);
+          if (sexp_exceptionp(tmp)) {
+            res = tmp;
+          } else if (tmp == SEXP_CLOSE) {
+            res = sexp_read_error(ctx, "no final element in list after dot",
+                                  SEXP_NULL, in);
+          } else if (sexp_read_raw(ctx, in) != SEXP_CLOSE) {
+            res = sexp_read_error(ctx, "multiple tokens in dotted tail",
+                                  SEXP_NULL, in);
           } else {
             tmp2 = res;
             res = sexp_nreverse(ctx, res);
             sexp_cdr(tmp2) = tmp;
-            return res;
           }
         }
+      } else if (tmp == SEXP_CLOSE) {
+        res = (sexp_pairp(res) ? sexp_nreverse(ctx, res) : res);
       } else {
-        res = sexp_cons(ctx, tmp, res);
-        tmp = sexp_read_raw(ctx, in);
+        res = sexp_read_error(ctx, "missing trailing ')'", SEXP_NULL, in);
       }
     }
-    if (tmp != SEXP_CLOSE) {
-      sexp_deep_free(ctx, res);
-      return sexp_read_error(ctx, "missing trailing ')'", SEXP_NULL, in);
-    }
-    res = (sexp_pairp(res) ? sexp_nreverse(ctx, res) : res);
     break;
   case '#':
     switch (c1=sexp_read_char(in)) {
@@ -987,8 +996,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
                               in);
       }
       break;
+/*     case '=': */
+/*     case '0': case '1': case '2': case '3': case '4': */
+/*     case '5': case '6': case '7': case '8': case '9': */
     case ';':
-      sexp_read_raw(ctx, in);
+      sexp_read_raw(ctx, in);   /* discard */
       goto scan_loop;
     case '\\':
       c1 = sexp_read_char(in);
@@ -1061,8 +1073,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     if (c2 == '.' || isdigit(c2)) {
       sexp_push_char(c2, in);
       res = sexp_read_number(ctx, in, 10);
-      if (sexp_exceptionp(res)) return res;
-      if (c1 == '-') {
+      if ((c1 == '-') && ! sexp_exceptionp(res)) {
 #ifdef USE_FLONUMS
         if (sexp_flonump(res))
           sexp_flonum_value(res) = -1 * sexp_flonum_value(res);
@@ -1084,6 +1095,9 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     res = sexp_read_symbol(ctx, in, c1, 1);
     break;
   }
+
+  sexp_gc_release(ctx, res, s_res);
+  sexp_gc_release(ctx, tmp, s_tmp);
   return res;
 }
 
