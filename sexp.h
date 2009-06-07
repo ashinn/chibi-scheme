@@ -78,6 +78,7 @@ enum sexp_types {
   SEXP_SET,
   SEXP_SEQ,
   SEXP_LIT,
+  SEXP_STACK,
   SEXP_CONTEXT,
 };
 
@@ -178,12 +179,28 @@ struct sexp_struct {
     } lit;
     /* compiler state */
     struct {
-      sexp bc, lambda, *stack, env, fv, parent;
+      sexp_uint_t length, top;
+      sexp data[];
+    } stack;
+    struct {
+      sexp bc, lambda, stack, env, fv, parent;
       struct sexp_gc_var_t *saves;
-      sexp_uint_t pos, top, depth, tailp, tracep;
+      sexp_uint_t pos, depth, tailp, tracep;
     } context;
   } value;
 };
+
+#define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) \
+                                          + SEXP_EXTENDED_TAG))
+
+#define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0)
+#define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
+#define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
+#define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
+#define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4) /* the unspecified value */
+#define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
+#define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
+#define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
 
 #if USE_BOEHM
 
@@ -202,7 +219,7 @@ struct sexp_struct {
 
 #define sexp_gc_var(ctx, x, y) \
   sexp x = SEXP_FALSE;         \
-  struct sexp_gc_var_t y;
+  struct sexp_gc_var_t y = {0, 0};
 
 #define sexp_gc_preserve(ctx, x, y)  ((y).var=&(x),                       \
                                       (y).next = sexp_context_saves(ctx), \
@@ -248,18 +265,6 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 
-#define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) \
-                                          + SEXP_EXTENDED_TAG))
-
-#define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0)
-#define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
-#define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
-#define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
-#define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4) /* the unspecified value */
-#define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
-#define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
-#define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
-
 /***************************** predicates *****************************/
 
 #define sexp_nullp(x)    ((x) == SEXP_NULL)
@@ -295,6 +300,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_setp(x)        (sexp_check_tag(x, SEXP_SET))
 #define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
+#define sexp_contextp(x)    (sexp_check_tag(x, SEXP_CONTEXT))
 #define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
 
 #define sexp_idp(x) \
@@ -414,18 +420,23 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_lit_value(x)     ((x)->value.lit.value)
 
+#define sexp_stack_length(x)  ((x)->value.stack.length)
+#define sexp_stack_top(x)     ((x)->value.stack.top)
+#define sexp_stack_data(x)    ((x)->value.stack.data)
+
 #define sexp_context_env(x)     ((x)->value.context.env)
 #define sexp_context_stack(x)   ((x)->value.context.stack)
 #define sexp_context_depth(x)   ((x)->value.context.depth)
 #define sexp_context_bc(x)      ((x)->value.context.bc)
 #define sexp_context_fv(x)      ((x)->value.context.fv)
 #define sexp_context_pos(x)     ((x)->value.context.pos)
-#define sexp_context_top(x)     ((x)->value.context.top)
 #define sexp_context_lambda(x)  ((x)->value.context.lambda)
 #define sexp_context_parent(x)  ((x)->value.context.parent)
 #define sexp_context_saves(x)   ((x)->value.context.saves)
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
+
+#define sexp_context_top(x)     (sexp_stack_top(sexp_context_stack(x)))
 
 /****************************** arithmetic ****************************/
 
@@ -444,9 +455,6 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 /****************************** utilities *****************************/
 
 #define sexp_list1(x,a)        sexp_cons((x), (a), SEXP_NULL)
-#define sexp_list2(x,a,b)      sexp_cons((x), (a), sexp_cons((x), (b), SEXP_NULL))
-#define sexp_list3(x,a,b,c)    sexp_cons((x), (a), sexp_cons((x), (b), sexp_cons((x), (c), SEXP_NULL)))
-#define sexp_list4(x,a,b,c,d)  sexp_cons((x), (a), sexp_cons((x), (b), sexp_cons((x), (c), sexp_cons((x), (d), SEXP_NULL))))
 
 #define sexp_push(ctx, ls, x)    ((ls) = sexp_cons((ctx), (x), (ls)))
 #define sexp_insert(ctx, ls, x)  ((sexp_memq(NULL, (x), (ls)) != SEXP_FALSE) ? (ls) : sexp_push((ctx), (ls), (x)))
@@ -481,6 +489,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp ctx, sexp head, sexp tail);
+sexp sexp_list2(sexp ctx, sexp a, sexp b);
 sexp sexp_equalp (sexp ctx, sexp a, sexp b);
 sexp sexp_listp(sexp ctx, sexp obj);
 sexp sexp_reverse(sexp ctx, sexp ls);
