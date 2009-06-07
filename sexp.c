@@ -117,10 +117,17 @@ sexp sexp_type_exception (sexp ctx, char *message, sexp obj) {
 }
 
 sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
-  return sexp_make_exception(ctx, sexp_intern(ctx, "range"),
-                             sexp_c_string(ctx, "bad index range", -1),
-                             sexp_list3(ctx, obj, start, end),
-                             SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+  sexp_gc_var(ctx, res, s_res);
+  sexp_gc_var(ctx, msg, s_msg);
+  sexp_gc_preserve(ctx, res, s_res);
+  sexp_gc_preserve(ctx, msg, s_msg);
+  msg = sexp_c_string(ctx, "bad index range", -1);
+  res = sexp_list2(ctx, start, end);
+  res = sexp_cons(ctx, obj, res);
+  res = sexp_make_exception(ctx, sexp_intern(ctx, "range"), msg, res,
+                            SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+  sexp_gc_release(ctx, res, s_res);
+  return res;
 }
 
 sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
@@ -191,6 +198,15 @@ sexp sexp_cons (sexp ctx, sexp head, sexp tail) {
   sexp_car(pair) = head;
   sexp_cdr(pair) = tail;
   return pair;
+}
+
+sexp sexp_list2 (sexp ctx, sexp a, sexp b) {
+  sexp_gc_var(ctx, res, s_res);
+  sexp_gc_preserve(ctx, res, s_res);
+  res = sexp_cons(ctx, b, SEXP_NULL);
+  res = sexp_cons(ctx, a, res);
+  sexp_gc_release(ctx, res, s_res);
+  return res;
 }
 
 sexp sexp_listp (sexp ctx, sexp hare) {
@@ -996,7 +1012,6 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
                               in);
       }
       break;
-/*     case '=': */
 /*     case '0': case '1': case '2': case '3': case '4': */
 /*     case '5': case '6': case '7': case '8': case '9': */
     case ';':
@@ -1097,7 +1112,6 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   }
 
   sexp_gc_release(ctx, res, s_res);
-  sexp_gc_release(ctx, tmp, s_tmp);
   return res;
 }
 

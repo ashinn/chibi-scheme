@@ -12,7 +12,7 @@ MODDIR=$(PREFIX)/share/chibi-scheme
 LDFLAGS=-lm
 
 # -Oz for smaller size on darwin
-CFLAGS=-Wall -g -Os -save-temps
+CFLAGS=-Wall -g -save-temps
 
 #GC_OBJ=./gc/gc.a
 GC_OBJ=
@@ -20,7 +20,7 @@ GC_OBJ=
 ./gc/gc.a: ./gc/alloc.c
 	cd gc && make
 
-sexp.o: sexp.c sexp.h config.h defaults.h Makefile
+sexp.o: sexp.c gc.c sexp.h config.h defaults.h Makefile
 	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile

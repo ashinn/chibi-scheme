@@ -8,7 +8,7 @@
 
 static int scheme_initialized_p = 0;
 
-static sexp continuation_resumer, final_resumer;
+sexp continuation_resumer, final_resumer;
 static sexp the_interaction_env_symbol;
 static sexp the_err_handler_symbol, the_compile_error_symbol;
 static sexp the_cur_in_symbol, the_cur_out_symbol, the_cur_err_symbol;
@@ -89,7 +89,6 @@ static sexp extend_env (sexp ctx, sexp env, sexp vars, sexp value) {
     sexp_push(ctx, sexp_env_bindings(e), tmp);
   }
   sexp_gc_release(ctx, e, s_e);
-  sexp_gc_release(ctx, tmp, s_tmp);
   return e;
 }
 
@@ -247,12 +246,16 @@ static sexp sexp_make_lit(sexp ctx, sexp value) {
   return res;
 }
 
-static sexp sexp_make_context(sexp ctx, sexp *stack, sexp env) {
+static sexp sexp_make_context(sexp ctx, sexp stack, sexp env) {
   sexp_gc_var(ctx, res, save_res);
   if (ctx) sexp_gc_preserve(ctx, res, save_res);
   res = sexp_alloc_type(ctx, context, SEXP_CONTEXT);
-  sexp_context_stack(res)
-    = (stack ? stack : (sexp*) sexp_alloc(res, sizeof(sexp)*INIT_STACK_SIZE));
+  if ((! stack) || (stack == SEXP_FALSE)) {
+    stack = sexp_alloc_tagged(ctx, sizeof(sexp)*INIT_STACK_SIZE, SEXP_STACK);
+    sexp_stack_length(stack) = INIT_STACK_SIZE;
+    sexp_stack_top(stack) = 0;
+  }
+  sexp_context_stack(res) = stack;
   sexp_context_env(res)
     = (env ? env : sexp_make_standard_env(res, sexp_make_integer(5)));
   sexp_context_bc(res)
@@ -313,7 +316,6 @@ static sexp sexp_strip_synclos (sexp ctx, sexp x) {
     res = x;
   }
   sexp_gc_release(ctx, kar, s_kar);
-  sexp_gc_release(ctx, kdr, s_kdr);
   return res;
 }
 
@@ -434,7 +436,6 @@ static sexp analyze_set (sexp ctx, sexp x) {
   else
     res = sexp_make_set(ctx, ref, value);
   sexp_gc_release(ctx, ref, s_ref);
-  sexp_gc_release(ctx, value, s_value);
   return res;
 }
 
@@ -497,10 +498,6 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   }
   sexp_lambda_body(res) = body;
   sexp_gc_release(ctx, res, s_res);
-  sexp_gc_release(ctx, body, s_body);
-  sexp_gc_release(ctx, tmp, s_tmp);
-  sexp_gc_release(ctx, value, s_value);
-  sexp_gc_release(ctx, defs, s_defs);
   return res;
 }
 
@@ -518,8 +515,6 @@ static sexp analyze_if (sexp ctx, sexp x) {
   analyze_bind(fail, fail_expr, ctx);
   res = sexp_make_cnd(ctx, test, pass, fail);
   sexp_gc_release(ctx, test, s_test);
-  sexp_gc_release(ctx, pass, s_pass);
-  sexp_gc_release(ctx, fail, s_fail);
   return res;
 }
 
@@ -556,8 +551,6 @@ static sexp analyze_define (sexp ctx, sexp x) {
   else
     res = sexp_make_set(ctx, ref, value);
   sexp_gc_release(ctx, ref, s_ref);
-  sexp_gc_release(ctx, value, s_value);
-  sexp_gc_release(ctx, tmp, s_tmp);
   return res;
 }
 
@@ -578,8 +571,6 @@ static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
     }
   }
   sexp_gc_release(eval_ctx, proc, s_proc);
-  sexp_gc_release(eval_ctx, mac, s_mac);
-  sexp_gc_release(eval_ctx, tmp, s_tmp);
   return SEXP_VOID;
 }
 
@@ -610,8 +601,6 @@ static sexp analyze_let_syntax (sexp ctx, sexp x) {
   analyze_check_exception(tmp);
   res = analyze_seq(ctx2, sexp_cddr(x));
   sexp_gc_release(ctx, env, s_env);
-  sexp_gc_release(ctx, ctx2, s_ctx2);
-  sexp_gc_release(ctx, tmp, s_tmp);
   return res;
 }
 
@@ -711,8 +700,6 @@ static sexp analyze (sexp ctx, sexp object) {
     res = x;
   }
   sexp_gc_release(ctx, res, s_res);
-  sexp_gc_release(ctx, tmp, s_tmp);
-  sexp_gc_release(ctx, x, s_x);
   return res;
 }
 
@@ -1119,8 +1106,6 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   if (i == sexp_opcode_num_args(op))
     sexp_opcode_proc(op) = res;
   sexp_gc_release(ctx, params, s_params);
-  sexp_gc_release(ctx, ref, s_ref);
-  sexp_gc_release(ctx, refs, s_refs);
   return res;
 }
 
@@ -1155,24 +1140,36 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
 #define _UWORD0 ((sexp_uint_t*)ip)[0]
 #define _SWORD0 ((sexp_sint_t*)ip)[0]
 
-#define sexp_raise(msg, args) do {stack[top]=sexp_user_exception(context, self, msg, args); \
-                                  top++;                                     \
-                                  goto call_error_handler;}                  \
-                               while (0)
+#define sexp_raise(msg, args)                                       \
+  do {sexp_context_top(ctx) = top+1;                                \
+      stack[top] = args;                                            \
+      stack[top] = sexp_user_exception(ctx, self, msg, stack[top]); \
+      top++;                                                        \
+      goto call_error_handler;}                                     \
+  while (0)
 
 #define sexp_check_exception() do {if (sexp_exceptionp(_ARG1)) \
                                      goto call_error_handler;} \
                                 while (0)
 
-sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
-  sexp bc = sexp_procedure_code(self), cp = sexp_procedure_vars(self);
-  unsigned char *ip=sexp_bytecode_data(bc);
-  sexp tmp1, tmp2, env=sexp_context_env(context);
-  sexp_sint_t i, j, k, fp=top-4;
+sexp vm (sexp proc, sexp ctx) {
+  sexp bc = sexp_procedure_code(proc), cp = sexp_procedure_vars(proc);
+  sexp env = sexp_context_env(ctx),
+    *stack = sexp_stack_data(sexp_context_stack(ctx));
+  unsigned char *ip = sexp_bytecode_data(bc);
+  sexp_sint_t i, j, k, fp, top = sexp_stack_top(sexp_context_stack(ctx));
+  fp = top - 4;
+  sexp_gc_var(ctx, self, s_self);
+  sexp_gc_var(ctx, tmp1, s_tmp1);
+  sexp_gc_var(ctx, tmp2, s_tmp2);
+  sexp_gc_preserve(ctx, self, s_self);
+  sexp_gc_preserve(ctx, tmp1, s_tmp1);
+  sexp_gc_preserve(ctx, tmp2, s_tmp2);
+  self = proc;
 
  loop:
 #ifdef DEBUG_VM
-  if (sexp_context_tracep(context)) {
+  if (sexp_context_tracep(ctx)) {
     sexp_print_stack(stack, top, fp,
                      env_global_ref(env, the_cur_err_symbol, SEXP_FALSE));
     fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN");
@@ -1213,8 +1210,9 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     stack[top+3] = sexp_make_integer(fp);
     tmp1 = _ARG1;
     i = 1;
-    tmp2 = sexp_vector(context, 1, sexp_save_stack(context, stack, top+4));
-    _ARG1 = sexp_make_procedure(context, sexp_make_integer(0),
+    sexp_context_top(ctx) = top;
+    tmp2 = sexp_vector(ctx, 1, sexp_save_stack(ctx, stack, top+4));
+    _ARG1 = sexp_make_procedure(ctx, sexp_make_integer(0),
                                 sexp_make_integer(1), continuation_resumer,
                                 tmp2);
     top++;
@@ -1223,7 +1221,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
   case OP_APPLY1:
     tmp1 = _ARG1;
     tmp2 = _ARG2;
-    i = sexp_unbox_integer(sexp_length(context, tmp2));
+    i = sexp_unbox_integer(sexp_length(ctx, tmp2));
     top += (i-2);
     for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
       _ARG1 = sexp_car(tmp2);
@@ -1256,29 +1254,31 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
   make_call:
     if (sexp_opcodep(tmp1)) {
       /* compile non-inlined opcode applications on the fly */
-      sexp_context_top(context) = top;
-      tmp1 = make_opcode_procedure(context, tmp1, i);
+      sexp_context_top(ctx) = top;
+      tmp1 = make_opcode_procedure(ctx, tmp1, i);
       if (sexp_exceptionp(tmp1)) {
         _ARG1 = tmp1;
         goto call_error_handler;
       }
     }
     if (! sexp_procedurep(tmp1))
-      sexp_raise("non procedure application", sexp_list1(context, tmp1));
+      sexp_raise("non procedure application", sexp_list1(ctx, tmp1));
     j = i - sexp_unbox_integer(sexp_procedure_num_args(tmp1));
     if (j < 0)
-      sexp_raise("not enough args", sexp_list2(context, tmp1, sexp_make_integer(i)));
+      sexp_raise("not enough args",
+                 sexp_list2(ctx, tmp1, sexp_make_integer(i)));
     if (j > 0) {
       if (sexp_procedure_variadic_p(tmp1)) {
-        stack[top-i-1] = sexp_cons(context, stack[top-i-1], SEXP_NULL);
+        stack[top-i-1] = sexp_cons(ctx, stack[top-i-1], SEXP_NULL);
         for (k=top-i; k<top-(i-j)-1; k++)
-          stack[top-i-1] = sexp_cons(context, stack[k], stack[top-i-1]);
+          stack[top-i-1] = sexp_cons(ctx, stack[k], stack[top-i-1]);
         for ( ; k<top; k++)
           stack[k-j+1] = stack[k];
         top -= (j-1);
         i -= (j-1);
       } else {
-        sexp_raise("too many args", sexp_list2(context, tmp1, sexp_make_integer(i)));
+        sexp_raise("too many args",
+                   sexp_list2(ctx, tmp1, sexp_make_integer(i)));
       }
     } else if (sexp_procedure_variadic_p(tmp1)) {
       /* shift stack, set extra arg to null */
@@ -1300,48 +1300,48 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     fp = top-4;
     break;
   case OP_FCALL0:
-    _PUSH(((sexp_proc1)_UWORD0)(context));
+    _PUSH(((sexp_proc1)_UWORD0)(ctx));
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL1:
-    _ARG1 = ((sexp_proc2)_UWORD0)(context, _ARG1);
+    _ARG1 = ((sexp_proc2)_UWORD0)(ctx, _ARG1);
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL2:
-    _ARG2 = ((sexp_proc3)_UWORD0)(context, _ARG1, _ARG2);
+    _ARG2 = ((sexp_proc3)_UWORD0)(ctx, _ARG1, _ARG2);
     top--;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL3:
-    _ARG3 =((sexp_proc4)_UWORD0)(context, _ARG1, _ARG2, _ARG3);
+    _ARG3 =((sexp_proc4)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3);
     top -= 2;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL4:
-    _ARG4 =((sexp_proc5)_UWORD0)(context, _ARG1, _ARG2, _ARG3, _ARG4);
+    _ARG4 =((sexp_proc5)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top -= 3;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL5:
-    _ARG5 =((sexp_proc6)_UWORD0)(context, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
+    _ARG5 =((sexp_proc6)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
     top -= 4;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL6:
-    _ARG6 =((sexp_proc7)_UWORD0)(context, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
+    _ARG6 =((sexp_proc7)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
     top -= 5;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_EVAL:
-    sexp_context_top(context) = top;
-    _ARG1 = eval_in_context(context, _ARG1);
+    sexp_context_top(ctx) = top;
+    _ARG1 = eval_in_context(ctx, _ARG1);
     sexp_check_exception();
     break;
   case OP_JUMP_UNLESS:
@@ -1362,7 +1362,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     break;
   case OP_GLOBAL_REF:
     if (sexp_cdr(_WORD0) == SEXP_UNDEF)
-      sexp_raise("undefined variable", sexp_list1(context, sexp_car(_WORD0)));
+      sexp_raise("undefined variable", sexp_list1(ctx, sexp_car(_WORD0)));
     /* ... FALLTHROUGH ... */
   case OP_GLOBAL_KNOWN_REF:
     _PUSH(sexp_cdr(_WORD0));
@@ -1389,13 +1389,13 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     break;
   case OP_VECTOR_REF:
     if (! sexp_vectorp(_ARG1))
-      sexp_raise("vector-ref: not a vector", sexp_list1(context, _ARG1));
+      sexp_raise("vector-ref: not a vector", sexp_list1(ctx, _ARG1));
     _ARG2 = sexp_vector_ref(_ARG1, _ARG2);
     top--;
     break;
   case OP_VECTOR_SET:
     if (! sexp_vectorp(_ARG1))
-      sexp_raise("vector-set!: not a vector", sexp_list1(context, _ARG1));
+      sexp_raise("vector-set!: not a vector", sexp_list1(ctx, _ARG1));
     sexp_vector_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_VOID;
     top-=2;
@@ -1416,11 +1416,11 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     _ARG1 = sexp_make_integer(sexp_string_length(_ARG1));
     break;
   case OP_MAKE_PROCEDURE:
-    _ARG4 = sexp_make_procedure(context, _ARG1, _ARG2, _ARG3, _ARG4);
+    _ARG4 = sexp_make_procedure(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top-=3;
     break;
   case OP_MAKE_VECTOR:
-    _ARG2 = sexp_make_vector(context, _ARG1, _ARG2);
+    _ARG2 = sexp_make_vector(ctx, _ARG1, _ARG2);
     top--;
     break;
   case OP_AND:
@@ -1444,27 +1444,30 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     ip += sizeof(sexp);
     break;
   case OP_CAR:
-    if (! sexp_pairp(_ARG1)) sexp_raise("car: not a pair", sexp_list1(context, _ARG1));
+    if (! sexp_pairp(_ARG1))
+      sexp_raise("car: not a pair", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_car(_ARG1); break;
   case OP_CDR:
-    if (! sexp_pairp(_ARG1)) sexp_raise("cdr: not a pair", sexp_list1(context, _ARG1));
+    if (! sexp_pairp(_ARG1))
+      sexp_raise("cdr: not a pair", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_cdr(_ARG1); break;
   case OP_SET_CAR:
     if (! sexp_pairp(_ARG1))
-      sexp_raise("set-car!: not a pair", sexp_list1(context, _ARG1));
+      sexp_raise("set-car!: not a pair", sexp_list1(ctx, _ARG1));
     sexp_car(_ARG1) = _ARG2;
     _ARG2 = SEXP_VOID;
     top--;
     break;
   case OP_SET_CDR:
     if (! sexp_pairp(_ARG1))
-      sexp_raise("set-cdr!: not a pair", sexp_list1(context, _ARG1));
+      sexp_raise("set-cdr!: not a pair", sexp_list1(ctx, _ARG1));
     sexp_cdr(_ARG1) = _ARG2;
     _ARG2 = SEXP_VOID;
     top--;
     break;
   case OP_CONS:
-    _ARG2 = sexp_cons(context, _ARG1, _ARG2);
+    sexp_context_top(ctx) = top;
+    _ARG2 = sexp_cons(ctx, _ARG1, _ARG2);
     top--;
     break;
   case OP_ADD:
@@ -1472,13 +1475,13 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
       _ARG2 = sexp_fx_add(_ARG1, _ARG2);
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_add(context, _ARG1, _ARG2);
+      _ARG2 = sexp_fp_add(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_add(context, _ARG1, sexp_integer_to_flonum(context, _ARG2));
+      _ARG2 = sexp_fp_add(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_add(context, sexp_integer_to_flonum(context, _ARG1), _ARG2);
+      _ARG2 = sexp_fp_add(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
 #endif
-    else sexp_raise("+: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("+: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
     break;
   case OP_SUB:
@@ -1486,13 +1489,13 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
       _ARG2 = sexp_fx_sub(_ARG1, _ARG2);
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_sub(context, _ARG1, _ARG2);
+      _ARG2 = sexp_fp_sub(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_sub(context, _ARG1, sexp_integer_to_flonum(context, _ARG2));
+      _ARG2 = sexp_fp_sub(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_sub(context, sexp_integer_to_flonum(context, _ARG1), _ARG2);
+      _ARG2 = sexp_fp_sub(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
 #endif
-    else sexp_raise("-: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("-: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
     break;
   case OP_MUL:
@@ -1500,31 +1503,31 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
       _ARG2 = sexp_fx_mul(_ARG1, _ARG2);
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_mul(context, _ARG1, _ARG2);
+      _ARG2 = sexp_fp_mul(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_mul(context, _ARG1, sexp_integer_to_flonum(context, _ARG2));
+      _ARG2 = sexp_fp_mul(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_mul(context, sexp_integer_to_flonum(context, _ARG1), _ARG2);
+      _ARG2 = sexp_fp_mul(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
 #endif
-    else sexp_raise("*: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("*: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
     break;
   case OP_DIV:
     if (_ARG2 == sexp_make_integer(0))
       sexp_raise("divide by zero", SEXP_NULL);
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_div(context,
-                          sexp_integer_to_flonum(context, _ARG1),
-                          sexp_integer_to_flonum(context, _ARG2));
+      _ARG2 = sexp_fp_div(ctx,
+                          sexp_integer_to_flonum(ctx, _ARG1),
+                          sexp_integer_to_flonum(ctx, _ARG2));
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_div(context, _ARG1, _ARG2);
+      _ARG2 = sexp_fp_div(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_div(context, _ARG1, sexp_integer_to_flonum(context, _ARG2));
+      _ARG2 = sexp_fp_div(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_div(context, sexp_integer_to_flonum(context, _ARG1), _ARG2);
+      _ARG2 = sexp_fp_div(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
 #endif
-    else sexp_raise("/: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("/: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
     break;
   case OP_QUOTIENT:
@@ -1534,7 +1537,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
       top--;
     }
-    else sexp_raise("quotient: not an integer", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("quotient: not an integer", sexp_list2(ctx, _ARG1, _ARG2));
     break;
   case OP_REMAINDER:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
@@ -1544,25 +1547,25 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
       top--;
       _ARG1 = tmp1;
     }
-    else sexp_raise("remainder: not an integer", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("remainder: not an integer", sexp_list2(ctx, _ARG1, _ARG2));
     break;
   case OP_NEGATIVE:
     if (sexp_integerp(_ARG1))
       _ARG1 = sexp_make_integer(-sexp_unbox_integer(_ARG1));
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1))
-      _ARG1 = sexp_make_flonum(context, -sexp_flonum_value(_ARG1));
+      _ARG1 = sexp_make_flonum(ctx, -sexp_flonum_value(_ARG1));
 #endif
-    else sexp_raise("-: not a number", sexp_list1(context, _ARG1));
+    else sexp_raise("-: not a number", sexp_list1(ctx, _ARG1));
     break;
   case OP_INVERSE:
     if (sexp_integerp(_ARG1))
-      _ARG1 = sexp_make_flonum(context, 1/(double)sexp_unbox_integer(_ARG1));
+      _ARG1 = sexp_make_flonum(ctx, 1/(double)sexp_unbox_integer(_ARG1));
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1))
-      _ARG1 = sexp_make_flonum(context, 1/sexp_flonum_value(_ARG1));
+      _ARG1 = sexp_make_flonum(ctx, 1/sexp_flonum_value(_ARG1));
 #endif
-    else sexp_raise("/: not a number", sexp_list1(context, _ARG1));
+    else sexp_raise("/: not a number", sexp_list1(ctx, _ARG1));
     break;
   case OP_LT:
     if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
@@ -1575,7 +1578,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       i = (double)sexp_unbox_integer(_ARG1) < sexp_flonum_value(_ARG2);
 #endif
-    else sexp_raise("<: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("<: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_make_boolean(i);
     top--;
     break;
@@ -1590,7 +1593,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       i = (double)sexp_unbox_integer(_ARG1) <= sexp_flonum_value(_ARG2);
 #endif
-    else sexp_raise("<=: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("<=: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_make_boolean(i);
     top--;
     break;
@@ -1605,7 +1608,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
       i = (double)sexp_unbox_integer(_ARG1) == sexp_flonum_value(_ARG2);
 #endif
-    else sexp_raise("=: not a number", sexp_list2(context, _ARG1, _ARG2));
+    else sexp_raise("=: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_make_boolean(i);
     top--;
     break;
@@ -1615,12 +1618,12 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     break;
   case OP_FIX2FLO:
     if (sexp_integerp(_ARG1))
-      _ARG1 = sexp_integer_to_flonum(context, _ARG1);
+      _ARG1 = sexp_integer_to_flonum(ctx, _ARG1);
     else
 #if USE_FLONUMS
       if (! sexp_flonump(_ARG1))
 #endif
-        sexp_raise("exact->inexact: not a number", sexp_list1(context, _ARG1));
+        sexp_raise("exact->inexact: not a number", sexp_list1(ctx, _ARG1));
     break;
   case OP_FLO2FIX:
 #if USE_FLONUMS
@@ -1629,7 +1632,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     else
 #endif
       if (! sexp_integerp(_ARG1))
-        sexp_raise("inexact->exact: not a number", sexp_list1(context, _ARG1));
+        sexp_raise("inexact->exact: not a number", sexp_list1(ctx, _ARG1));
     break;
   case OP_CHAR2INT:
     _ARG1 = sexp_make_integer(sexp_unbox_character(_ARG1));
@@ -1675,7 +1678,7 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
     _ARG1 = SEXP_VOID;
     break;
   case OP_READ:
-    _ARG1 = sexp_read(context, _ARG1);
+    _ARG1 = sexp_read(ctx, _ARG1);
     sexp_check_exception();
     break;
   case OP_READ_CHAR:
@@ -1700,11 +1703,12 @@ sexp vm (sexp self, sexp context, sexp* stack, sexp_sint_t top) {
   case OP_DONE:
     goto end_loop;
   default:
-    sexp_raise("unknown opcode", sexp_list1(context, sexp_make_integer(*(ip-1))));
+    sexp_raise("unknown opcode", sexp_list1(ctx, sexp_make_integer(*(ip-1))));
   }
   goto loop;
 
  end_loop:
+  sexp_gc_release(ctx, self, s_self);
   return _ARG1;
 }
 
@@ -1719,10 +1723,12 @@ static sexp sexp_exception_type_func (sexp ctx, sexp exn) {
 
 static sexp sexp_open_input_file (sexp ctx, sexp path) {
   FILE *in;
-  if (! sexp_stringp(path)) return sexp_type_exception(ctx, "not a string", path);
+  if (! sexp_stringp(path))
+    return sexp_type_exception(ctx, "not a string", path);
   in = fopen(sexp_string_data(path), "r");
   if (! in)
-    return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open input file", path);
+    return
+      sexp_user_exception(ctx, SEXP_FALSE, "couldn't open input file", path);
   return sexp_make_input_port(ctx, in, sexp_string_data(path));
 }
 
@@ -1732,7 +1738,8 @@ static sexp sexp_open_output_file (sexp ctx, sexp path) {
     return sexp_type_exception(ctx, "not a string", path);
   out = fopen(sexp_string_data(path), "w");
   if (! out)
-    return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open output file", path);
+    return
+      sexp_user_exception(ctx, SEXP_FALSE, "couldn't open output file", path);
   return sexp_make_input_port(ctx, out, sexp_string_data(path));
 }
 
@@ -1781,8 +1788,6 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     sexp_warn_undefs(sexp_env_bindings(env), tmp, out);
 #endif
   sexp_gc_release(ctx, ctx2, s_ctx2);
-  sexp_gc_release(ctx, x, s_x);
-  sexp_gc_release(ctx, in, s_in);
   return res;
 }
 
@@ -1796,8 +1801,8 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     else if (sexp_integerp(z))            \
       d = (double)sexp_unbox_integer(z);  \
     else                                  \
-      return sexp_type_exception(ctx, "not a number", z);        \
-    return sexp_make_flonum(ctx, cname(d));           \
+      return sexp_type_exception(ctx, "not a number", z); \
+    return sexp_make_flonum(ctx, cname(d));               \
   }
 
 define_math_op(sexp_exp, exp)
@@ -1898,6 +1903,7 @@ static struct sexp_struct core_forms[] = {
 static sexp sexp_make_null_env (sexp ctx, sexp version) {
   sexp_uint_t i;
   sexp e = sexp_alloc_type(ctx, env, SEXP_ENV);
+  sexp_env_lambda(e) = NULL;
   sexp_env_parent(e) = NULL;
   sexp_env_bindings(e) = SEXP_NULL;
   for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++)
@@ -1938,14 +1944,13 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
              sexp_make_output_port(ctx, stderr, NULL));
   env_define(ctx, e, the_interaction_env_symbol, e);
   sexp_gc_release(ctx, e, s_e);
-  sexp_gc_release(ctx, op, s_op);
   return e;
 }
 
 /************************** eval interface ****************************/
 
-sexp apply(sexp ctx, sexp proc, sexp args) {
-  sexp *stack = sexp_context_stack(ctx), ls;
+sexp apply (sexp ctx, sexp proc, sexp args) {
+  sexp ls, *stack = sexp_stack_data(sexp_context_stack(ctx));
   sexp_sint_t top = sexp_context_top(ctx), offset;
   offset = top + sexp_unbox_integer(sexp_length(ctx, args));
   for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
@@ -1955,7 +1960,8 @@ sexp apply(sexp ctx, sexp proc, sexp args) {
   stack[top++] = sexp_make_integer(sexp_bytecode_data(final_resumer));
   stack[top++] = sexp_make_vector(ctx, 0, SEXP_VOID);
   stack[top++] = sexp_make_integer(0);
-  return vm(proc, ctx, stack, top);
+  sexp_context_top(ctx) = top;
+  return vm(proc, ctx);
 }
 
 sexp compile (sexp ctx, sexp x) {
@@ -1973,7 +1979,6 @@ sexp compile (sexp ctx, sexp x) {
                             finalize_bytecode(ctx2),
                             sexp_make_vector(ctx, 0, SEXP_VOID));
   sexp_gc_release(ctx, ast, s_ast);
-  sexp_gc_release(ctx, ctx2, s_ctx2);
   return res;
 }
 
