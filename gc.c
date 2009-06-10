@@ -4,6 +4,7 @@
 
 #include "sexp.h"
 
+/* #define SEXP_INITIAL_HEAP_SIZE (3*1024*1024) */
 #define SEXP_INITIAL_HEAP_SIZE 40000
 #define SEXP_MAXIMUM_HEAP_SIZE 0
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_sizeof(flonum))
@@ -452,10 +453,31 @@ sexp sexp_sweep (sexp ctx) {
 /*       simple_write(p, 1, stderr); */
 /*       fprintf(stderr, "\x1B[0m\n"); */
       freed += size;
-      sexp_pointer_tag(p) = SEXP_PAIR;
-      sexp_car(p) = (sexp)size;
-      sexp_cdr(p) = r;
-      sexp_cdr(q) = p;
+      if (((((char*)q)+(sexp_uint_t)sexp_car(q)) == (char*)p)
+          && (q != sexp_free_list)) {
+        /* merge q with p */
+        if (r && sexp_pairp(r) && ((((char*)p)+size) == (char*)r)) {
+          /* ... and with r */
+          sexp_car(q)
+            = (sexp)(size+(sexp_uint_t)sexp_car(q)+(sexp_uint_t)sexp_car(r));
+          sexp_cdr(q) = sexp_cdr(r);
+          r = sexp_cdr(r);
+        } else {
+          sexp_car(q) = (sexp)(size+(sexp_uint_t)sexp_car(q));
+        }
+      } else {
+        sexp_pointer_tag(p) = SEXP_PAIR;
+        if (r && sexp_pairp(r) && ((((char*)p)+size) == (char*)r)) {
+          /* merge p with r */
+          sexp_car(p) = (sexp)(size+(sexp_uint_t)sexp_car(r));
+          sexp_cdr(p) = sexp_cdr(r);
+          r = p;
+        } else {
+          sexp_car(p) = (sexp)size;
+          sexp_cdr(p) = r;
+        }
+        sexp_cdr(q) = p;
+      }
     } else {
 /*       fprintf(stderr, "\x1B[32msaving  %lu bytes @ %p (%x) ", size, p, sexp_pointer_tag(p)); */
 /*       simple_write(p, 1, stderr); */
