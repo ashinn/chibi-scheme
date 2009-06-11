@@ -18,6 +18,7 @@ void repl (sexp ctx) {
       sexp_print_exception(ctx, obj, err);
     } else {
       tmp = sexp_env_bindings(env);
+      sexp_context_top(ctx) = 0;
       res = eval_in_context(ctx, obj);
 #if USE_WARN_UNDEFS
       sexp_warn_undefs(sexp_env_bindings(env), tmp, err);

@@ -251,7 +251,7 @@ static sexp sexp_make_context(sexp ctx, sexp stack, sexp env) {
   if (ctx) sexp_gc_preserve(ctx, res, save_res);
   res = sexp_alloc_type(ctx, context, SEXP_CONTEXT);
   if ((! stack) || (stack == SEXP_FALSE)) {
-    stack = sexp_alloc_tagged(ctx, sizeof(sexp)*INIT_STACK_SIZE, SEXP_STACK);
+    stack = sexp_alloc_tagged(ctx, sexp_sizeof(stack)+sizeof(sexp)*INIT_STACK_SIZE, SEXP_STACK);
     sexp_stack_length(stack) = INIT_STACK_SIZE;
     sexp_stack_top(stack) = 0;
   }
@@ -451,7 +451,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   sexp_gc_preserve(ctx, tmp, s_tmp);
   sexp_gc_preserve(ctx, value, s_value);
   sexp_gc_preserve(ctx, defs, s_defs);
-  /* verify syntax */
+  /* verify syntax - XXXX release! */
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x))))
     return sexp_compile_error(ctx, "bad lambda syntax", x);
   for (ls=sexp_cadr(x); sexp_pairp(ls); ls=sexp_cdr(ls))
@@ -462,25 +462,19 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   /* build lambda and analyze body */
   res = sexp_make_lambda(ctx, sexp_cadr(x));
   ctx = sexp_make_child_context(ctx, res);
-  sexp_context_env(ctx)
-    = extend_env(ctx,
-                 sexp_context_env(ctx),
-                 sexp_flatten_dot(ctx, sexp_lambda_params(res)),
-                 res);
+  tmp = sexp_flatten_dot(ctx, sexp_lambda_params(res));
+  sexp_context_env(ctx) = extend_env(ctx, sexp_context_env(ctx), tmp, res);
   sexp_env_lambda(sexp_context_env(ctx)) = res;
   body = analyze_seq(ctx, sexp_cddr(x));
   analyze_check_exception(body);
   /* delayed analyze internal defines */
+  defs = SEXP_NULL;
   for (ls=sexp_lambda_defs(res); sexp_pairp(ls); ls=sexp_cdr(ls)) {
     tmp = sexp_car(ls);
     if (sexp_pairp(sexp_cadr(tmp))) {
       name = sexp_caadr(tmp);
-      value = analyze_lambda(ctx,
-                             sexp_cons(ctx,
-                                       SEXP_VOID,
-                                       sexp_cons(ctx,
-                                                 sexp_cdadr(tmp),
-                                                 sexp_cddr(tmp))));
+      tmp = sexp_cons(ctx, sexp_cdadr(tmp), sexp_cddr(tmp));
+      value = analyze_lambda(ctx, sexp_cons(ctx, SEXP_VOID, tmp));
     } else {
       name = sexp_cadr(tmp);
       value = analyze(ctx, sexp_caddr(tmp));
@@ -1709,6 +1703,7 @@ sexp vm (sexp proc, sexp ctx) {
 
  end_loop:
   sexp_gc_release(ctx, self, s_self);
+  sexp_context_top(ctx) = top;
   return _ARG1;
 }
 
@@ -1767,26 +1762,28 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
   sexp_gc_preserve(ctx, x, s_x);
   sexp_gc_preserve(ctx, in, s_in);
   ctx2 = sexp_make_context(ctx, NULL, env);
+  sexp_context_parent(ctx2) = ctx;
   out = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
   tmp = sexp_env_bindings(env);
   sexp_context_tailp(ctx2) = 0;
   in = sexp_open_input_file(ctx, source);
   if (sexp_exceptionp(in)) {
     sexp_print_exception(ctx, in, out);
-    return in;
-  }
-  while ((x=sexp_read(ctx, in)) != (sexp) SEXP_EOF) {
-    res = eval_in_context(ctx2, x);
-    if (sexp_exceptionp(res))
-      break;
-  }
-  if (x == SEXP_EOF)
-    res = SEXP_VOID;
-  sexp_close_port(ctx, in);
+    res = in;
+  } else {
+    while ((x=sexp_read(ctx, in)) != (sexp) SEXP_EOF) {
+      res = eval_in_context(ctx2, x);
+      if (sexp_exceptionp(res))
+        break;
+    }
+    if (x == SEXP_EOF)
+      res = SEXP_VOID;
+    sexp_close_port(ctx, in);
 #if USE_WARN_UNDEFS
-  if (sexp_oportp(out))
-    sexp_warn_undefs(sexp_env_bindings(env), tmp, out);
+    if (sexp_oportp(out))
+      sexp_warn_undefs(sexp_env_bindings(env), tmp, out);
 #endif
+  }
   sexp_gc_release(ctx, ctx2, s_ctx2);
   return res;
 }
@@ -1957,10 +1954,10 @@ sexp apply (sexp ctx, sexp proc, sexp args) {
     stack[--offset] = sexp_car(ls);
   stack[top] = sexp_make_integer(top);
   top++;
+  sexp_context_top(ctx) = top + 3;
   stack[top++] = sexp_make_integer(sexp_bytecode_data(final_resumer));
   stack[top++] = sexp_make_vector(ctx, 0, SEXP_VOID);
   stack[top++] = sexp_make_integer(0);
-  sexp_context_top(ctx) = top;
   return vm(proc, ctx);
 }
 

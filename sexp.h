@@ -52,6 +52,7 @@
 
 enum sexp_types {
   SEXP_OBJECT,
+  SEXP_TYPE,
   SEXP_FIXNUM,
   SEXP_CHAR,
   SEXP_BOOLEAN,
@@ -84,7 +85,7 @@ enum sexp_types {
 
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
-typedef char sexp_tag_t;
+typedef unsigned char sexp_tag_t;
 typedef struct sexp_struct *sexp;
 
 struct sexp_gc_var_t {
@@ -99,6 +100,12 @@ struct sexp_struct {
   union {
     /* basic types */
     double flonum;
+    struct {
+      sexp_tag_t tag;
+      sexp_sint_t field_base, field_len_base, field_len_off, field_len_scale;
+      sexp_sint_t size_base, size_off, size_scale;
+      char *name;
+    } type;
     struct {
       sexp car, cdr;
     } pair;
@@ -183,9 +190,9 @@ struct sexp_struct {
       sexp data[];
     } stack;
     struct {
-      sexp bc, lambda, stack, env, fv, parent;
       struct sexp_gc_var_t *saves;
       sexp_uint_t pos, depth, tailp, tracep;
+      sexp bc, lambda, stack, env, fv, parent;
     } context;
   } value;
 };
@@ -218,28 +225,17 @@ struct sexp_struct {
 #else
 
 #define sexp_gc_var(ctx, x, y) \
-  sexp x = SEXP_FALSE;         \
-  struct sexp_gc_var_t y = {0, 0};
+  sexp x = SEXP_VOID;          \
+  struct sexp_gc_var_t y = {NULL, NULL};
 
-#define sexp_gc_preserve(ctx, x, y)  ((y).var=&(x),                       \
-                                      (y).next = sexp_context_saves(ctx), \
-                                      sexp_context_saves(ctx) = &(y))
+#define sexp_gc_preserve(ctx, x, y)     \
+  do {                                  \
+    (y).var = &(x);                     \
+    (y).next = sexp_context_saves(ctx); \
+    sexp_context_saves(ctx) = &(y);     \
+  } while (0)
+
 #define sexp_gc_release(ctx, x, y)   (sexp_context_saves(ctx) = y.next)
-
-#define sexp_with_gc_var1(ctx, x, body)    \
-  sexp_gc_var(ctx, x, _sexp_gcv1);         \
-  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
-  do {body} while (0);                     \
-  sexp_gc_release(ctx, x, _sexp_gcv1);
-
-#define sexp_with_gc_var2(ctx, x, y, body) \
-  sexp_gc_var(ctx, x, _sexp_gcv1);         \
-  sexp_gc_var(ctx, y, _sexp_gcv2);         \
-  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
-  sexp_gc_preserve(ctx, y, _sexp_gcv2);    \
-  do {body} while (0);                     \
-  sexp_gc_release(ctx, x, _sexp_gcv1);     \
-  sexp_gc_release(ctx, y, _sexp_gcv2);
 
 #if USE_MALLOC
 #define sexp_alloc(ctx, size)        malloc(size)
@@ -257,6 +253,21 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #endif
 #endif
+
+#define sexp_with_gc_var1(ctx, x, body)    \
+  sexp_gc_var(ctx, x, _sexp_gcv1);         \
+  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
+  do {body} while (0);                     \
+  sexp_gc_release(ctx, x, _sexp_gcv1);
+
+#define sexp_with_gc_var2(ctx, x, y, body) \
+  sexp_gc_var(ctx, x, _sexp_gcv1);         \
+  sexp_gc_var(ctx, y, _sexp_gcv2);         \
+  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
+  sexp_gc_preserve(ctx, y, _sexp_gcv2);    \
+  do {body} while (0);                     \
+  sexp_gc_release(ctx, x, _sexp_gcv1);     \
+  sexp_gc_release(ctx, y, _sexp_gcv2);
 
 #define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
 
@@ -279,6 +290,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
+#define sexp_typep(x)       (sexp_check_tag(x, SEXP_TYPE))
 #define sexp_pairp(x)       (sexp_check_tag(x, SEXP_PAIR))
 #define sexp_stringp(x)     (sexp_check_tag(x, SEXP_STRING))
 #define sexp_lsymbolp(x)    (sexp_check_tag(x, SEXP_SYMBOL))
@@ -437,6 +449,16 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
 
 #define sexp_context_top(x)     (sexp_stack_top(sexp_context_stack(x)))
+
+#define sexp_type_tag(x)              ((x)->value.type.tag)
+#define sexp_type_field_base(x)       ((x)->value.type.field_base)
+#define sexp_type_field_len_base(x)   ((x)->value.type.field_len_base)
+#define sexp_type_field_len_off(x)    ((x)->value.type.field_len_off)
+#define sexp_type_field_len_scale(x)  ((x)->value.type.field_len_scale)
+#define sexp_type_size_base(x)        ((x)->value.type.size_base)
+#define sexp_type_size_off(x)         ((x)->value.type.size_off)
+#define sexp_type_size_scale(x)       ((x)->value.type.size_scale)
+#define sexp_type_name(x)             ((x)->value.type.name)
 
 /****************************** arithmetic ****************************/
 

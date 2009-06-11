@@ -20,7 +20,7 @@ static const char* reverse_opcode_names[] =
    "NEWLINE", "FLUSH-OUTPUT", "READ", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
   };
 
-static sexp sexp_disasm (sexp bc, sexp out) {
+static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   unsigned char *ip, opcode;
   if (sexp_procedurep(bc))
     bc = sexp_procedure_code(bc);
