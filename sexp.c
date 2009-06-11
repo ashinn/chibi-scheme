@@ -56,6 +56,38 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
+static struct sexp_struct sexp_types[] = {
+  {.tag=SEXP_TYPE, .value={.type={SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, "char"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, "boolean"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_PAIR, 0, 0, 0, 0, sexp_sizeof(pair), 0, 0, "pair"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_SYMBOL, 0, 0, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_STRING, 0, 0, 0, 0, sexp_sizeof(string)+1, offsetof(struct sexp_struct, value.string.length), 1, "string"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_VECTOR, 0, 0, 0, 0, sexp_sizeof(vector), offsetof(struct sexp_struct, value.vector.length), 4, "vector"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), offsetof(struct sexp_struct, value.bignum.length), 4, "bignum"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_IPORT, 0, 0, 0, 0, sexp_sizeof(port), 0, 0, "input-port"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_OPORT, 0, 0, 0, 0, sexp_sizeof(port), 0, 0, "output-port"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_EXCEPTION, 0, 0, 0, 0, sexp_sizeof(exception), 0, 0, "exception"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_PROCEDURE, 0, 0, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_MACRO, 0, 0, 0, 0, sexp_sizeof(macro), 0, 0, "macro"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_SYNCLO, 0, 0, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_ENV, 0, 0, 0, 0, sexp_sizeof(env), 0, 0, "environment"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_BYTECODE, 0, 0, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_OPCODE, 0, 0, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_LAMBDA, 0, 0, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_CND, 0, 0, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_REF, 0, 0, 0, 0, sexp_sizeof(ref), 0, 0, "reference"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_SET, 0, 0, 0, 0, sexp_sizeof(set), 0, 0, "set!"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_SEQ, 0, 0, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_LIT, 0, 0, 0, 0, sexp_sizeof(lit), 0, 0, "literal"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_STACK, 0, 0, 0, 0, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), 4, "stack"}}},
+  {.tag=SEXP_TYPE, .value={.type={SEXP_CONTEXT, 0, 0, 0, 0, sexp_sizeof(context), 0, 0, "context"}}},
+};
+
 #if ! USE_BOEHM
 #if USE_MALLOC
 void sexp_deep_free (sexp ctx, sexp obj) {
@@ -183,12 +215,19 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
 }
 
 static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
-  sexp name = (sexp_port_name(port)
-               ? sexp_c_string(ctx, sexp_port_name(port), -1) : SEXP_FALSE);
-  return sexp_make_exception(ctx, the_read_error_symbol,
-                             sexp_c_string(ctx, msg, -1),
-                             irritants, SEXP_FALSE, name,
-                             sexp_make_integer(sexp_port_line(port)));
+  sexp res;
+  sexp_gc_var(ctx, name, s_name);
+  sexp_gc_var(ctx, str, s_str);
+  sexp_gc_preserve(ctx, name, s_name);
+  sexp_gc_preserve(ctx, str, s_str);
+  name = (sexp_port_name(port)
+          ? sexp_c_string(ctx, sexp_port_name(port), -1) : SEXP_FALSE);
+  str = sexp_c_string(ctx, msg, -1);
+  res = sexp_make_exception(ctx, the_read_error_symbol,
+                            str, irritants, SEXP_FALSE, name,
+                            sexp_make_integer(sexp_port_line(port)));
+  sexp_gc_release(ctx, name, s_name);
+  return res;
 }
 
 /*************************** list utilities ***************************/
@@ -390,7 +429,8 @@ sexp sexp_intern(sexp ctx, char *str) {
   struct huff_entry he;
   sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, bucket;
   char c, *p=str;
-  sexp sym, ls;
+  sexp ls;
+  sexp_gc_var(ctx, sym, s_sym);
 
 #if USE_HUFF_SYMS
   res = 0;
@@ -418,9 +458,11 @@ sexp sexp_intern(sexp ctx, char *str) {
       return sexp_car(ls);
 
   /* not found, make a new symbol */
+  sexp_gc_preserve(ctx, sym, s_sym);
   sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
   sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
   sexp_push(ctx, sexp_symbol_table[bucket], sym);
+  sexp_gc_release(ctx, sym, s_sym);
   return sym;
 }
 
@@ -519,24 +561,30 @@ off_t sstream_seek (void *vec, off_t offset, int whence) {
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   FILE *in;
-  sexp res, cookie;
+  sexp res;
+  sexp_gc_var(ctx, cookie, s_cookie);
+  sexp_gc_preserve(ctx, cookie, s_cookie);
   cookie = sexp_vector(ctx, 3, str, sexp_make_integer(sexp_string_length(str)),
                        sexp_make_integer(0));
   in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
   res = sexp_make_input_port(ctx, in, NULL);
   sexp_port_cookie(res) = cookie;
+  sexp_gc_release(ctx, cookie, s_cookie);
   return res;
 }
 
 sexp sexp_make_output_string_port (sexp ctx) {
   FILE *out;
-  sexp res, size, cookie;
+  sexp res, size;
+  sexp_gc_var(ctx, cookie, s_cookie);
+  sexp_gc_preserve(ctx, cookie, s_cookie);
   size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
   cookie = sexp_vector(ctx, 3, sexp_make_string(NULL, size, SEXP_VOID),
                        size, sexp_make_integer(0));
   out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
   res = sexp_make_output_port(ctx, out, NULL);
   sexp_port_cookie(res) = cookie;
+  sexp_gc_release(ctx, cookie, s_cookie);
   return res;
 }
 
@@ -697,6 +745,11 @@ void sexp_write (sexp obj, sexp out) {
       sexp_write_string(">", out);
       break;
 #endif
+    case SEXP_TYPE:
+      sexp_write_string("#<type ", out);
+      sexp_write_string(sexp_type_name(obj), out);
+      sexp_write_string(">", out);
+      break;
     case SEXP_STRING:
       sexp_write_char('"', out);
       i = sexp_string_length(obj);
@@ -1015,8 +1068,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 /*     case '0': case '1': case '2': case '3': case '4': */
 /*     case '5': case '6': case '7': case '8': case '9': */
     case ';':
-      sexp_read_raw(ctx, in);   /* discard */
-      goto scan_loop;
+      tmp = sexp_read_raw(ctx, in);   /* discard */
+      if (sexp_exceptionp(tmp))
+        res = tmp;
+      else
+        goto scan_loop;
     case '\\':
       c1 = sexp_read_char(in);
       res = sexp_read_symbol(ctx, in, c1, 0);
