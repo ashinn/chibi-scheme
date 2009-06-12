@@ -446,11 +446,13 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   sexp_gc_var(ctx, tmp, s_tmp);
   sexp_gc_var(ctx, value, s_value);
   sexp_gc_var(ctx, defs, s_defs);
+  sexp_gc_var(ctx, ctx2, s_ctx2);
   sexp_gc_preserve(ctx, res, s_res);
   sexp_gc_preserve(ctx, body, s_body);
   sexp_gc_preserve(ctx, tmp, s_tmp);
   sexp_gc_preserve(ctx, value, s_value);
   sexp_gc_preserve(ctx, defs, s_defs);
+  sexp_gc_preserve(ctx, ctx2, s_ctx2);
   /* verify syntax - XXXX release! */
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x))))
     return sexp_compile_error(ctx, "bad lambda syntax", x);
@@ -461,11 +463,11 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
       return sexp_compile_error(ctx, "duplicate parameter", x);
   /* build lambda and analyze body */
   res = sexp_make_lambda(ctx, sexp_cadr(x));
-  ctx = sexp_make_child_context(ctx, res);
-  tmp = sexp_flatten_dot(ctx, sexp_lambda_params(res));
-  sexp_context_env(ctx) = extend_env(ctx, sexp_context_env(ctx), tmp, res);
-  sexp_env_lambda(sexp_context_env(ctx)) = res;
-  body = analyze_seq(ctx, sexp_cddr(x));
+  ctx2 = sexp_make_child_context(ctx, res);
+  tmp = sexp_flatten_dot(ctx2, sexp_lambda_params(res));
+  sexp_context_env(ctx2) = extend_env(ctx2, sexp_context_env(ctx2), tmp, res);
+  sexp_env_lambda(sexp_context_env(ctx2)) = res;
+  body = analyze_seq(ctx2, sexp_cddr(x));
   analyze_check_exception(body);
   /* delayed analyze internal defines */
   defs = SEXP_NULL;
@@ -473,22 +475,23 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
     tmp = sexp_car(ls);
     if (sexp_pairp(sexp_cadr(tmp))) {
       name = sexp_caadr(tmp);
-      tmp = sexp_cons(ctx, sexp_cdadr(tmp), sexp_cddr(tmp));
-      value = analyze_lambda(ctx, sexp_cons(ctx, SEXP_VOID, tmp));
+      tmp = sexp_cons(ctx2, sexp_cdadr(tmp), sexp_cddr(tmp));
+      value = analyze_lambda(ctx2, sexp_cons(ctx2, SEXP_VOID, tmp));
     } else {
       name = sexp_cadr(tmp);
-      value = analyze(ctx, sexp_caddr(tmp));
+      value = analyze(ctx2, sexp_caddr(tmp));
     }
     analyze_check_exception(value);
-    sexp_push(ctx, defs, sexp_make_set(ctx, analyze_var_ref(ctx, name), value));
+    sexp_push(ctx2, defs,
+              sexp_make_set(ctx2, analyze_var_ref(ctx, name), value));
   }
   if (sexp_pairp(defs)) {
     if (! sexp_seqp(body)) {
-      tmp = sexp_alloc_type(ctx, seq, SEXP_SEQ);
-      sexp_seq_ls(tmp) = sexp_list1(ctx, body);
+      tmp = sexp_alloc_type(ctx2, seq, SEXP_SEQ);
+      sexp_seq_ls(tmp) = sexp_list1(ctx2, body);
       body = tmp;
     }
-    sexp_seq_ls(body) = sexp_append2(ctx, defs, sexp_seq_ls(body));
+    sexp_seq_ls(body) = sexp_append2(ctx2, defs, sexp_seq_ls(body));
   }
   sexp_lambda_body(res) = body;
   sexp_gc_release(ctx, res, s_res);
@@ -527,23 +530,23 @@ static sexp analyze_define (sexp ctx, sexp x) {
     sexp_push(ctx, sexp_lambda_sv(sexp_env_lambda(env)), name);
     sexp_push(ctx, sexp_lambda_locals(sexp_env_lambda(env)), name);
     sexp_push(ctx, sexp_lambda_defs(sexp_env_lambda(env)), x);
-    return SEXP_VOID;
+    res = SEXP_VOID;
   } else {
     env_cell_create(ctx, env, name, SEXP_VOID);
+    if (sexp_pairp(sexp_cadr(x))) {
+      tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
+      tmp = sexp_cons(ctx, SEXP_VOID, tmp);
+      value = analyze_lambda(ctx, tmp);
+    } else
+      value = analyze(ctx, sexp_caddr(x));
+    ref = analyze_var_ref(ctx, name);
+    if (sexp_exceptionp(ref))
+      res = ref;
+    else if (sexp_exceptionp(value))
+      res = value;
+    else
+      res = sexp_make_set(ctx, ref, value);
   }
-  if (sexp_pairp(sexp_cadr(x))) {
-    tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
-    tmp = sexp_cons(ctx, SEXP_VOID, tmp);
-    value = analyze_lambda(ctx, tmp);
-  } else
-    value = analyze(ctx, sexp_caddr(x));
-  ref = analyze_var_ref(ctx, name);
-  if (sexp_exceptionp(ref))
-    res = ref;
-  else if (sexp_exceptionp(value))
-    res = value;
-  else
-    res = sexp_make_set(ctx, ref, value);
   sexp_gc_release(ctx, ref, s_ref);
   return res;
 }
@@ -626,56 +629,59 @@ static sexp analyze (sexp ctx, sexp object) {
       if (! cell && sexp_synclop(sexp_car(x)))
         cell = env_cell(sexp_synclo_env(sexp_car(x)),
                         sexp_synclo_expr(sexp_car(x)));
-      if (! cell) return analyze_app(ctx, x);
-      op = sexp_cdr(cell);
-      if (sexp_corep(op)) {
-        switch (sexp_core_code(op)) {
-        case CORE_DEFINE:
-          res = analyze_define(ctx, x); break;
-        case CORE_SET:
-          res = analyze_set(ctx, x); break;
-        case CORE_LAMBDA:
-          res = analyze_lambda(ctx, x); break;
-        case CORE_IF:
-          res = analyze_if(ctx, x); break;
-        case CORE_BEGIN:
-          res = analyze_seq(ctx, sexp_cdr(x)); break;
-        case CORE_QUOTE:
-          res = sexp_make_lit(ctx, sexp_strip_synclos(ctx, sexp_cadr(x)));
-          break;
-        case CORE_DEFINE_SYNTAX:
-          res = analyze_define_syntax(ctx, x); break;
-        case CORE_LET_SYNTAX:
-          res = analyze_let_syntax(ctx, x); break;
-        case CORE_LETREC_SYNTAX:
-          res = analyze_letrec_syntax(ctx, x); break;
-        default:
-          res = sexp_compile_error(ctx, "unknown core form", op); break;
-        }
-      } else if (sexp_macrop(op)) {
-        /* if (in_repl_p) sexp_debug("expand: ", x, ctx); */
-        tmp = sexp_cons(ctx, sexp_macro_env(op), SEXP_NULL);
-        tmp = sexp_cons(ctx, sexp_context_env(ctx), tmp);
-        tmp = sexp_cons(ctx, x, tmp);
-        x = apply(sexp_make_child_context(ctx, sexp_context_lambda(ctx)),
-                  sexp_macro_proc(op),
-                  tmp);
-        /* if (in_repl_p) sexp_debug("     => ", x, ctx); */
-        goto loop;
-      } else if (sexp_opcodep(op)) {
-        res = sexp_length(ctx, sexp_cdr(x));
-        if (sexp_unbox_integer(res) < sexp_opcode_num_args(op)) {
-          res = sexp_compile_error(ctx, "not enough args for opcode", x);
-        } else if ((sexp_unbox_integer(res) > sexp_opcode_num_args(op))
-                   && (! sexp_opcode_variadic_p(op))) {
-          res = sexp_compile_error(ctx, "too many args for opcode", x);
-        } else {
-          res = analyze_app(ctx, sexp_cdr(x));
-          analyze_check_exception(res);
-          sexp_push(ctx, res, op);
-        }
-      } else {
+      if (! cell) {
         res = analyze_app(ctx, x);
+      } else {
+        op = sexp_cdr(cell);
+        if (sexp_corep(op)) {
+          switch (sexp_core_code(op)) {
+          case CORE_DEFINE:
+            res = analyze_define(ctx, x); break;
+          case CORE_SET:
+            res = analyze_set(ctx, x); break;
+          case CORE_LAMBDA:
+            res = analyze_lambda(ctx, x); break;
+          case CORE_IF:
+            res = analyze_if(ctx, x); break;
+          case CORE_BEGIN:
+            res = analyze_seq(ctx, sexp_cdr(x)); break;
+          case CORE_QUOTE:
+            res = sexp_make_lit(ctx, sexp_strip_synclos(ctx, sexp_cadr(x)));
+            break;
+          case CORE_DEFINE_SYNTAX:
+            res = analyze_define_syntax(ctx, x); break;
+          case CORE_LET_SYNTAX:
+            res = analyze_let_syntax(ctx, x); break;
+          case CORE_LETREC_SYNTAX:
+            res = analyze_letrec_syntax(ctx, x); break;
+          default:
+            res = sexp_compile_error(ctx, "unknown core form", op); break;
+          }
+        } else if (sexp_macrop(op)) {
+          /* if (in_repl_p) sexp_debug("expand: ", x, ctx); */
+          tmp = sexp_cons(ctx, sexp_macro_env(op), SEXP_NULL);
+          tmp = sexp_cons(ctx, sexp_context_env(ctx), tmp);
+          tmp = sexp_cons(ctx, x, tmp);
+          x = apply(sexp_make_child_context(ctx, sexp_context_lambda(ctx)),
+                    sexp_macro_proc(op),
+                    tmp);
+          /* if (in_repl_p) sexp_debug("     => ", x, ctx); */
+          goto loop;
+        } else if (sexp_opcodep(op)) {
+          res = sexp_length(ctx, sexp_cdr(x));
+          if (sexp_unbox_integer(res) < sexp_opcode_num_args(op)) {
+            res = sexp_compile_error(ctx, "not enough args for opcode", x);
+          } else if ((sexp_unbox_integer(res) > sexp_opcode_num_args(op))
+                     && (! sexp_opcode_variadic_p(op))) {
+            res = sexp_compile_error(ctx, "too many args for opcode", x);
+          } else {
+            res = analyze_app(ctx, sexp_cdr(x));
+            analyze_check_exception(res);
+            sexp_push(ctx, res, op);
+          }
+        } else {
+          res = analyze_app(ctx, x);
+        }
       }
     } else {
       res = analyze_app(ctx, x);
