@@ -2,8 +2,8 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
-/* uncomment this to use manual memory management */
-/* #define USE_BOEHM 0 */
+/* uncomment this to use the Boehm conservative GC */
+/* #define USE_BOEHM 1 */
 
 /* uncomment this if you only want fixnum support */
 /* #define USE_FLONUMS 0 */
