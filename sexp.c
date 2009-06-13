@@ -251,7 +251,7 @@ sexp sexp_list2 (sexp ctx, sexp a, sexp b) {
 sexp sexp_listp (sexp ctx, sexp hare) {
   sexp turtle;
   if (! sexp_pairp(hare))
-    return sexp_make_boolean(hare == SEXP_NULL);
+    return sexp_make_boolean(sexp_nullp(hare));
   turtle = hare;
   hare = sexp_cdr(hare);
   for ( ; sexp_pairp(hare); turtle=sexp_cdr(turtle)) {
@@ -259,7 +259,7 @@ sexp sexp_listp (sexp ctx, sexp hare) {
     hare = sexp_cdr(hare);
     if (sexp_pairp(hare)) hare = sexp_cdr(hare);
   }
-  return sexp_make_boolean(hare == SEXP_NULL);
+  return sexp_make_boolean(sexp_nullp(hare));
 }
 
 sexp sexp_memq (sexp ctx, sexp x, sexp ls) {
@@ -281,9 +281,11 @@ sexp sexp_assq (sexp ctx, sexp x, sexp ls) {
 }
 
 sexp sexp_reverse (sexp ctx, sexp ls) {
-  sexp res = SEXP_NULL;
-  for ( ; sexp_pairp(ls); ls=sexp_cdr(ls))
+  sexp_gc_var(ctx, res, s_res);
+  sexp_gc_preserve(ctx, res, s_res);
+  for (res=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls))
     res = sexp_cons(ctx, sexp_car(ls), res);
+  sexp_gc_release(ctx, res, s_res);
   return res;
 }
 
@@ -306,9 +308,15 @@ sexp sexp_nreverse (sexp ctx, sexp ls) {
 }
 
 sexp sexp_append2 (sexp ctx, sexp a, sexp b) {
-  for (a=sexp_reverse(ctx, a); sexp_pairp(a); a=sexp_cdr(a))
-    b = sexp_cons(ctx, sexp_car(a), b);
-  return b;
+  sexp_gc_var(ctx, a1, s_a1);
+  sexp_gc_var(ctx, b1, s_b1);
+  sexp_gc_preserve(ctx, a1, s_a1);
+  sexp_gc_preserve(ctx, b1, s_b1);
+  b1 = b;
+  for (a1=sexp_reverse(ctx, a); sexp_pairp(a1); a1=sexp_cdr(a1))
+    b1 = sexp_cons(ctx, sexp_car(a1), b1);
+  sexp_gc_release(ctx, a1, s_a1);
+  return b1;
 }
 
 sexp sexp_length (sexp ctx, sexp ls) {

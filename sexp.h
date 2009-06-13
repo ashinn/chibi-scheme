@@ -65,7 +65,6 @@ enum sexp_types {
   SEXP_IPORT,
   SEXP_OPORT,
   SEXP_EXCEPTION,
-  /* the following are used only by the evaluator */
   SEXP_PROCEDURE,
   SEXP_MACRO,
   SEXP_SYNCLO,
@@ -201,10 +200,10 @@ struct sexp_struct {
 #define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) \
                                           + SEXP_EXTENDED_TAG))
 
-#define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0)
-#define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1)
-#define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2)
-#define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3)
+#define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0) /* 14 0x0e */
+#define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1) /* 30 0x1e */
+#define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2) /* 46 0x2e */
+#define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3) /* 62 0x3e */
 #define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4) /* the unspecified value */
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
@@ -279,6 +278,8 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 
 /***************************** predicates *****************************/
+
+#define sexp_truep(x)    ((x) != SEXP_FALSE)
 
 #define sexp_nullp(x)    ((x) == SEXP_NULL)
 #define sexp_pointerp(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
