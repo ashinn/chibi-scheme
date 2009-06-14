@@ -264,7 +264,7 @@ static sexp sexp_make_context(sexp ctx, sexp stack, sexp env) {
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = INIT_BCODE_SIZE;
   sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
-  sexp_context_parent(res) = SEXP_FALSE;
+  sexp_context_parent(res) = ctx;
   sexp_context_lambda(res) = SEXP_FALSE;
   sexp_context_fv(res) = SEXP_NULL;
   sexp_context_saves(res) = 0;
@@ -343,11 +343,12 @@ static sexp sexp_identifier_eq(sexp ctx, sexp e1, sexp id1, sexp e2, sexp id2) {
 static sexp sexp_compile_error(sexp ctx, char *message, sexp obj) {
   sexp exn;
   sexp_gc_var(ctx, irritants, s_irr);
+  sexp_gc_var(ctx, msg, s_msg);
   sexp_gc_preserve(ctx, irritants, s_irr);
+  sexp_gc_preserve(ctx, msg, s_msg);
   irritants = sexp_list1(ctx, obj);
-  exn = sexp_make_exception(ctx, the_compile_error_symbol,
-                            sexp_c_string(ctx, message, -1),
-                            irritants,
+  msg = sexp_c_string(ctx, message, -1);
+  exn = sexp_make_exception(ctx, the_compile_error_symbol, msg, irritants,
                             SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
   sexp_gc_release(ctx, irritants, s_irr);
   return exn;
@@ -919,8 +920,7 @@ static void generate_general_app (sexp ctx, sexp app) {
 
   /* push the arguments onto the stack */
   sexp_context_tailp(ctx) = 0;
-  for (ls = sexp_reverse(ctx, sexp_cdr(app)); sexp_pairp(ls);
-       ls = sexp_cdr(ls))
+  for (ls=sexp_reverse(ctx, sexp_cdr(app)); sexp_pairp(ls); ls=sexp_cdr(ls))
     generate(ctx, sexp_car(ls));
 
   /* push the operator onto the stack */
@@ -942,10 +942,12 @@ static void generate_app (sexp ctx, sexp app) {
 }
 
 static void generate_lambda (sexp ctx, sexp lambda) {
-  sexp ctx2, fv, ls, flags, bc, len, ref, prev_lambda, prev_fv;
+  sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
   sexp_uint_t k;
   sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_var(ctx, bc, s_bc);
   sexp_gc_preserve(ctx, tmp, s_tmp);
+  sexp_gc_preserve(ctx, bc, s_bc);
   prev_lambda = sexp_context_lambda(ctx);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
@@ -969,9 +971,9 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   }
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, sexp_lambda_body(lambda));
-  flags = sexp_make_integer((sexp_listp(ctx, sexp_lambda_params(lambda))
+  flags = sexp_make_integer((sexp_listp(ctx2, sexp_lambda_params(lambda))
                              == SEXP_FALSE) ? 1 : 0);
-  len = sexp_length(ctx, sexp_lambda_params(lambda));
+  len = sexp_length(ctx2, sexp_lambda_params(lambda));
   bc = finalize_bytecode(ctx2);
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
   if (sexp_nullp(fv)) {
@@ -1034,9 +1036,9 @@ static sexp insert_free_var (sexp ctx, sexp x, sexp fv) {
 
 static sexp union_free_vars (sexp ctx, sexp fv1, sexp fv2) {
   sexp_gc_var(ctx, res, s_res);
-  sexp_gc_preserve(ctx, res, s_res);
   if (sexp_nullp(fv2))
     return fv1;
+  sexp_gc_preserve(ctx, res, s_res);
   for (res=fv2; sexp_pairp(fv1); fv1=sexp_cdr(fv1))
     res = insert_free_var(ctx, sexp_car(fv1), res);
   sexp_gc_release(ctx, res, s_res);
@@ -1107,7 +1109,7 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   sexp_gc_var(ctx, ref, s_ref);
   sexp_gc_var(ctx, refs, s_refs);
   if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
-    return sexp_opcode_proc(op);
+    return sexp_opcode_proc(op); /* return before preserving */
   sexp_gc_preserve(ctx, params, s_params);
   sexp_gc_preserve(ctx, ref, s_ref);
   sexp_gc_preserve(ctx, refs, s_refs);
@@ -1176,7 +1178,7 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
                                      goto call_error_handler;} \
                                 while (0)
 
-sexp vm (sexp proc, sexp ctx) {
+sexp vm (sexp ctx, sexp proc) {
   sexp bc = sexp_procedure_code(proc), cp = sexp_procedure_vars(proc);
   sexp env = sexp_context_env(ctx),
     *stack = sexp_stack_data(sexp_context_stack(ctx));
@@ -1199,6 +1201,7 @@ sexp vm (sexp proc, sexp ctx) {
     fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN");
   }
 #endif
+  sexp_context_top(ctx) = top;  /* debugging */
   switch (*ip++) {
   case OP_NOOP:
     break;
@@ -1324,40 +1327,47 @@ sexp vm (sexp proc, sexp ctx) {
     fp = top-4;
     break;
   case OP_FCALL0:
+    sexp_context_top(ctx) = top;
     _PUSH(((sexp_proc1)_UWORD0)(ctx));
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL1:
+    sexp_context_top(ctx) = top;
     _ARG1 = ((sexp_proc2)_UWORD0)(ctx, _ARG1);
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL2:
+    sexp_context_top(ctx) = top;
     _ARG2 = ((sexp_proc3)_UWORD0)(ctx, _ARG1, _ARG2);
     top--;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL3:
+    sexp_context_top(ctx) = top;
     _ARG3 =((sexp_proc4)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3);
     top -= 2;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL4:
+    sexp_context_top(ctx) = top;
     _ARG4 =((sexp_proc5)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top -= 3;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL5:
+    sexp_context_top(ctx) = top;
     _ARG5 =((sexp_proc6)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
     top -= 4;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL6:
+    sexp_context_top(ctx) = top;
     _ARG6 =((sexp_proc7)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
     top -= 5;
     ip += sizeof(sexp);
@@ -1440,10 +1450,12 @@ sexp vm (sexp proc, sexp ctx) {
     _ARG1 = sexp_make_integer(sexp_string_length(_ARG1));
     break;
   case OP_MAKE_PROCEDURE:
+    sexp_context_top(ctx) = top;
     _ARG4 = sexp_make_procedure(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top-=3;
     break;
   case OP_MAKE_VECTOR:
+    sexp_context_top(ctx) = top;
     _ARG2 = sexp_make_vector(ctx, _ARG1, _ARG2);
     top--;
     break;
@@ -1702,6 +1714,7 @@ sexp vm (sexp proc, sexp ctx) {
     _ARG1 = SEXP_VOID;
     break;
   case OP_READ:
+    sexp_context_top(ctx) = top;
     _ARG1 = sexp_read(ctx, _ARG1);
     sexp_check_exception();
     break;
@@ -1791,12 +1804,12 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
   sexp_gc_preserve(ctx, ctx2, s_ctx2);
   sexp_gc_preserve(ctx, x, s_x);
   sexp_gc_preserve(ctx, in, s_in);
+  in = sexp_open_input_file(ctx, source);
+  out = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
   ctx2 = sexp_make_context(ctx, NULL, env);
   sexp_context_parent(ctx2) = ctx;
-  out = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
   tmp = sexp_env_bindings(env);
   sexp_context_tailp(ctx2) = 0;
-  in = sexp_open_input_file(ctx, source);
   if (sexp_exceptionp(in)) {
     sexp_print_exception(ctx, in, out);
     res = in;
@@ -1995,37 +2008,47 @@ sexp apply (sexp ctx, sexp proc, sexp args) {
   stack[top++] = sexp_make_integer(sexp_bytecode_data(final_resumer));
   stack[top++] = sexp_make_vector(ctx, 0, SEXP_VOID);
   stack[top++] = sexp_make_integer(0);
-  return vm(proc, ctx);
+  return vm(ctx, proc);
 }
 
 sexp compile (sexp ctx, sexp x) {
-  sexp res;
   sexp_gc_var(ctx, ast, s_ast);
   sexp_gc_var(ctx, ctx2, s_ctx2);
+  sexp_gc_var(ctx, vec, s_vec);
+  sexp_gc_var(ctx, res, s_res);
   sexp_gc_preserve(ctx, ast, s_ast);
   sexp_gc_preserve(ctx, ctx2, s_ctx2);
+  sexp_gc_preserve(ctx, vec, s_vec);
+  sexp_gc_preserve(ctx, res, s_res);
   analyze_bind(ast, x, ctx);
   free_vars(ctx, ast, SEXP_NULL);    /* should return SEXP_NULL */
   ctx2 = sexp_make_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx));
+  sexp_context_parent(ctx2) = ctx;
   generate(ctx2, ast);
-  res = sexp_make_procedure(ctx, sexp_make_integer(0),
-                            sexp_make_integer(0),
-                            finalize_bytecode(ctx2),
-                            sexp_make_vector(ctx, 0, SEXP_VOID));
+  res = finalize_bytecode(ctx2);
+  vec = sexp_make_vector(ctx, 0, SEXP_VOID);
+  res = sexp_make_procedure(ctx, sexp_make_integer(0), sexp_make_integer(0),
+                            res, vec);
   sexp_gc_release(ctx, ast, s_ast);
   return res;
 }
 
 sexp eval_in_context (sexp ctx, sexp obj) {
-  sexp thunk = compile(ctx, obj);
+  sexp res;
+  sexp_gc_var(ctx, thunk, s_thunk);
+  sexp_gc_preserve(ctx, thunk, s_thunk);
+  thunk = compile(ctx, obj);
   if (sexp_exceptionp(thunk)) {
     sexp_print_exception(ctx, thunk,
                          env_global_ref(sexp_context_env(ctx),
                                         the_cur_err_symbol,
                                         SEXP_FALSE));
-    return thunk;
+    res = thunk;
+  } else {
+    res = apply(ctx, thunk, SEXP_NULL);
   }
-  return apply(ctx, thunk, SEXP_NULL);
+  sexp_gc_release(ctx, thunk, s_thunk);
+  return res;
 }
 
 sexp eval (sexp obj, sexp env) {

@@ -49,10 +49,7 @@ sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   sexp res = (sexp) sexp_alloc(ctx, size);
-  if (! res)
-    errx(EX_OSERR, "out of memory: couldn't allocate %ld bytes for %ld",
-         size ,tag);
-  sexp_pointer_tag(res) = tag;
+  if (res) sexp_pointer_tag(res) = tag;
   return res;
 }
 
@@ -482,8 +479,8 @@ sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt) {
   sexp v, *x;
   int i, clen = sexp_unbox_integer(len);
   if (! clen) return the_empty_vector;
-  v = sexp_alloc(ctx, sexp_sizeof(vector) + clen*sizeof(sexp));
-  sexp_pointer_tag(v) = SEXP_VECTOR;
+  v = sexp_alloc_tagged(ctx, sexp_sizeof(vector) + clen*sizeof(sexp),
+                        SEXP_VECTOR);
   x = sexp_vector_data(v);
   for (i=0; i<clen; i++)
     x[i] = dflt;

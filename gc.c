@@ -638,17 +638,42 @@ void validate_gc_vars (sexp ctx) {
   }
 }
 
-int validate_freed_pointer (sexp x) {
+int validate_freed_pointer (sexp ctx, sexp x) {
   int freep = 1;
   sexp *p;
+  struct sexp_gc_var_t *saves, *prev=NULL;
+  char *v1, *v2;
+
   for (p=&x; p<stack_base; p++) {
     if (*p == x) {
-      fprintf(stderr, "reference to freed var %p at %p: ", x, p);
+      v1 = v2 = NULL;
+      for (saves=sexp_context_saves(ctx); saves; saves=saves->next) {
+        if (saves->var && prev && prev->var
+            && (((saves->var <= p) && (prev->var >= p))
+                || ((saves->var >= p) && (prev->var <= p)))) {
+          v1 = saves->name;
+          v2 = prev->name;
+          break;
+        }
+        prev = saves;
+      }
+      if (v1 && v2)
+        fprintf(stderr, "reference to freed var %p at %p between %s and %s: ",
+                x, p, v1, v2);
+      else if (sexp_context_saves(ctx) && (p <= sexp_context_saves(ctx)->var))
+        fprintf(stderr, "reference to freed var %p at %p after %s: ",
+                x, p, sexp_context_saves(ctx)->name);
+      else if (prev && (p >= prev->var))
+        fprintf(stderr, "reference to freed var %p at %p before %s: ",
+                x, p, prev->name);
+      else
+        fprintf(stderr, "reference to freed var %p at %p: ", x, p);
       simple_write(x, 1, stderr);
       putc('\n', stderr);
       freep = 0;
     }
   }
+
   return freep;
 }
 
@@ -669,7 +694,7 @@ sexp sexp_sweep (sexp ctx) {
       fprintf(stderr, "sweep: p: %p <= q: %p\n", p, q);
     }
     size = sexp_align(sexp_allocated_bytes(p), 4);
-    if ((! sexp_gc_mark(p)) && validate_freed_pointer(p)) {
+    if ((! sexp_gc_mark(p))/*  && validate_freed_pointer(ctx, p) */) {
 /*       fprintf(stderr, "\x1B[31mfreeing %lu bytes @ %p (%x) ", size, p, sexp_pointer_tag(p)); */
 /*       simple_write(p, 1, stderr); */
 /*       fprintf(stderr, "\x1B[0m\n"); */
@@ -870,6 +895,7 @@ void sexp_gc_init () {
   sexp_car(next) = (sexp) (size - sexp_align(sexp_sizeof(pair), 4));
   sexp_cdr(next) = SEXP_NULL;
   stack_base = &next + 32;
-  fprintf(stderr, "heap: %p - %p, next: %p\n", sexp_heap, sexp_heap_end, next);
+  fprintf(stderr, "heap: %p - %p, next: %p, stack_base: %p\n",
+          sexp_heap, sexp_heap_end, next, stack_base);
 }
 
