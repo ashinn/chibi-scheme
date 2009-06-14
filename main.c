@@ -2,7 +2,9 @@
 #include "eval.c"
 
 void repl (sexp ctx) {
-  sexp obj, tmp, res, env, in, out, err;
+  sexp tmp, res, env, in, out, err;
+  sexp_gc_var(ctx, obj, s_obj);
+  sexp_gc_preserve(ctx, obj, s_obj);
   env = sexp_context_env(ctx);
   sexp_context_tracep(ctx) = 1;
   in = env_global_ref(env, the_cur_in_symbol, SEXP_FALSE);
@@ -29,6 +31,7 @@ void repl (sexp ctx) {
       }
     }
   }
+  sexp_gc_release(ctx, obj, s_obj);
 }
 
 void run_main (int argc, char **argv) {
@@ -36,12 +39,11 @@ void run_main (int argc, char **argv) {
   sexp_uint_t i, quit=0, init_loaded=0;
 
   ctx = sexp_make_context(NULL, NULL, NULL);
-  env = sexp_make_standard_env(ctx, sexp_make_integer(5));
+  env = sexp_context_env(ctx);
   env_define(ctx, env, the_interaction_env_symbol, env);
   out = env_global_ref(env, the_cur_out_symbol, SEXP_FALSE);
   err_cell = env_cell(env, the_cur_err_symbol);
   perr_cell = env_cell(env, sexp_intern(ctx, "print-exception"));
-  sexp_context_env(ctx) = env;
   sexp_context_tailp(ctx) = 0;
   if (err_cell && perr_cell && sexp_opcodep(sexp_cdr(perr_cell))) {
     emit(ctx, OP_GLOBAL_KNOWN_REF);
