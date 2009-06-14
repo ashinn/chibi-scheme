@@ -37,8 +37,10 @@ void repl (sexp ctx) {
 void run_main (int argc, char **argv) {
   sexp env, out=NULL, res, ctx, perr_cell, err_cell, err_handler;
   sexp_uint_t i, quit=0, init_loaded=0;
+  sexp_gc_var(ctx, str, s_str);
 
   ctx = sexp_make_context(NULL, NULL, NULL);
+  sexp_gc_preserve(ctx, str, s_str);
   env = sexp_context_env(ctx);
   env_define(ctx, env, the_interaction_env_symbol, env);
   out = env_global_ref(env, the_cur_out_symbol, SEXP_FALSE);
@@ -69,7 +71,7 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded++)
-        sexp_load(ctx, sexp_c_string(ctx, sexp_init_file, -1), env);
+        sexp_load(ctx, str=sexp_c_string(ctx, sexp_init_file, -1), env);
       res = sexp_read_from_string(ctx, argv[i+1]);
       if (! sexp_exceptionp(res))
         res = eval_in_context(ctx, res);
@@ -85,8 +87,8 @@ void run_main (int argc, char **argv) {
 #endif
     case 'l':
       if (! init_loaded++)
-        sexp_load(ctx, sexp_c_string(ctx, sexp_init_file, -1), env);
-      sexp_load(ctx, sexp_c_string(ctx, argv[++i], -1), env);
+        sexp_load(ctx, str=sexp_c_string(ctx, sexp_init_file, -1), env);
+      sexp_load(ctx, str=sexp_c_string(ctx, argv[++i], -1), env);
       break;
     case 'q':
       init_loaded = 1;
@@ -98,13 +100,15 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      sexp_load(ctx, sexp_c_string(ctx, sexp_init_file, -1), env);
+      sexp_load(ctx, str=sexp_c_string(ctx, sexp_init_file, -1), env);
     if (i < argc)
       for ( ; i < argc; i++)
-        sexp_load(ctx, sexp_c_string(ctx, argv[i], -1), env);
+        sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
     else
       repl(ctx);
   }
+
+  sexp_gc_release(ctx, str, s_str);
 }
 
 int main (int argc, char **argv) {
