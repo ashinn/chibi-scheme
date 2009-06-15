@@ -5,6 +5,12 @@
 /* uncomment this to use the Boehm conservative GC */
 /* #define USE_BOEHM 1 */
 
+/* uncomment this to just malloc manually instead of any GC */
+/* #define USE_MALLOC 1 */
+
+/* uncomment this to add conservative checks to the native GC */
+/* #define USE_DEBUG_GC 1 */
+
 /* uncomment this if you only want fixnum support */
 /* #define USE_FLONUMS 0 */
 
