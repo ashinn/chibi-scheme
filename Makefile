@@ -14,9 +14,6 @@ LDFLAGS=-lm
 # -Oz for smaller size on darwin
 CFLAGS=-Wall -g -save-temps
 
-#GC_OBJ=./gc/gc.a
-GC_OBJ=
-
 ./gc/gc.a: ./gc/alloc.c
 	cd gc && make
 
@@ -29,7 +26,7 @@ eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
 main.o: main.c eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
 	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-chibi-scheme: main.o sexp.o $(GC_OBJ)
+chibi-scheme: main.o sexp.o
 	gcc $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 clean:

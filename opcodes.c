@@ -1,7 +1,7 @@
 
 #define _OP(c,o,n,m,t,u,i,s,f,d) \
   {.tag=SEXP_OPCODE,             \
-   .value={.opcode={c, o, n, m, t, u, i, s, f, d, NULL}}}
+   .value={.opcode={c, o, n, m, t, u, i, s, d, f, NULL}}}
 #define _FN(o,n,m,t,u,s,f,d) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp)d)
 #define _FN0(s, f, d) _FN(OP_FCALL0, 0, 0, 0, 0, s, f, d)
 #define _FN1(t, s, f, d) _FN(OP_FCALL1, 1, 0, t, 0, s, f, d)
