@@ -53,37 +53,42 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
+#define _TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
+  {.tag=SEXP_TYPE, .value={.type={t,fb,flb,flo,fls,sb,so,sc,n}}}
+
 static struct sexp_struct sexp_types[] = {
-  {.tag=SEXP_TYPE, .value={.type={SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, "char"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, "boolean"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_PAIR, 0, 0, 0, 0, sexp_sizeof(pair), 0, 0, "pair"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_SYMBOL, 0, 0, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_STRING, 0, 0, 0, 0, sexp_sizeof(string)+1, offsetof(struct sexp_struct, value.string.length), 1, "string"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_VECTOR, 0, 0, 0, 0, sexp_sizeof(vector), offsetof(struct sexp_struct, value.vector.length), 4, "vector"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), offsetof(struct sexp_struct, value.bignum.length), 4, "bignum"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_IPORT, 0, 0, 0, 0, sexp_sizeof(port), 0, 0, "input-port"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_OPORT, 0, 0, 0, 0, sexp_sizeof(port), 0, 0, "output-port"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_EXCEPTION, 0, 0, 0, 0, sexp_sizeof(exception), 0, 0, "exception"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_PROCEDURE, 0, 0, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_MACRO, 0, 0, 0, 0, sexp_sizeof(macro), 0, 0, "macro"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_SYNCLO, 0, 0, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_ENV, 0, 0, 0, 0, sexp_sizeof(env), 0, 0, "environment"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_BYTECODE, 0, 0, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_OPCODE, 0, 0, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_LAMBDA, 0, 0, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_CND, 0, 0, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_REF, 0, 0, 0, 0, sexp_sizeof(ref), 0, 0, "reference"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_SET, 0, 0, 0, 0, sexp_sizeof(set), 0, 0, "set!"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_SEQ, 0, 0, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_LIT, 0, 0, 0, 0, sexp_sizeof(lit), 0, 0, "literal"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_STACK, 0, 0, 0, 0, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), 4, "stack"}}},
-  {.tag=SEXP_TYPE, .value={.type={SEXP_CONTEXT, 0, 0, 0, 0, sexp_sizeof(context), 0, 0, "context"}}},
+  _TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"),
+  _TYPE(SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"),
+  _TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
+  _TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, "char"),
+  _TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, "boolean"),
+  _TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 0, 0, sexp_sizeof(pair), 0, 0, "pair"),
+  _TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"),
+  _TYPE(SEXP_STRING, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string"),
+  _TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), 4, "vector"),
+  _TYPE(SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"),
+  _TYPE(SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), 4, "bignum"),
+  _TYPE(SEXP_IPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
+  _TYPE(SEXP_OPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
+  _TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception"),
+  _TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"),
+  _TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro"),
+  _TYPE(SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure"),
+  _TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 0, 0, sexp_sizeof(env), 0, 0, "environment"),
+  _TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"),
+  _TYPE(SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
+  _TYPE(SEXP_OPCODE, sexp_offsetof(opcode, dflt), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
+  _TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
+  _TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"),
+  _TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
+  _TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 0, 0, sexp_sizeof(set), 0, 0, "set!"),
+  _TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"),
+  _TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal"),
+  _TYPE(SEXP_STACK, sexp_offsetof(stack, data), 0, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), 4, "stack"),
+  _TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 6, 0, 0, sexp_sizeof(context), 0, 0, "context"),
 };
+
+#undef _TYPE
 
 #if ! USE_BOEHM
 #if USE_MALLOC

@@ -102,8 +102,8 @@ struct sexp_struct {
     double flonum;
     struct {
       sexp_tag_t tag;
-      sexp_sint_t field_base, field_len_base, field_len_off, field_len_scale;
-      sexp_sint_t size_base, size_off, size_scale;
+      short field_base, field_len_base, field_len_off, field_len_scale;
+      short size_base, size_off, size_scale;
       char *name;
     } type;
     struct {
@@ -159,7 +159,7 @@ struct sexp_struct {
       unsigned char op_class, code, num_args, flags,
         arg1_type, arg2_type, inverse;
       char *name;
-      sexp dflt, data, proc;
+      sexp data, dflt, proc;
     } opcode;
     struct {
       char code;
@@ -167,7 +167,7 @@ struct sexp_struct {
     } core;
     /* ast types */
     struct {
-      sexp name, params, locals, defs, flags, body, fv, sv;
+      sexp name, params, locals, defs, flags, fv, sv, body;
     } lambda;
     struct {
       sexp test, pass, fail;
@@ -274,6 +274,8 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
+
+#define sexp_offsetof(type, f) (offsetof(struct sexp_struct, value.type.f))
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 
