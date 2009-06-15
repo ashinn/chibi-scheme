@@ -51,88 +51,6 @@ void sexp_mark (sexp x) {
   }
 }
 
-#define _adjust(x) if (x && (sexp_pointerp(x)) && (start <= (char*)x) && (((char*)x) <= end)) x = (sexp) (((char*)x)+offset)
-
-void sexp_adjust_pointers (sexp x, char* start, char* end, size_t offset) {
-  sexp *data;
-  sexp_uint_t i;
-  struct sexp_gc_var_t *saves;
-  switch (sexp_pointer_tag(x)) {
-  case SEXP_PAIR:
-    _adjust(sexp_car(x)); _adjust(sexp_cdr(x)); break;
-  case SEXP_STACK:
-    data = sexp_stack_data(x);
-    for (i=sexp_stack_top(x)-1; i>=0; i--)
-      _adjust(data[i]);
-    break;
-  case SEXP_VECTOR:
-    data = sexp_vector_data(x);
-    for (i=sexp_vector_length(x)-1; i>=0; i--)
-      _adjust(data[i]);
-    break;
-  case SEXP_SYMBOL:
-    _adjust(sexp_symbol_string(x)); break;
-  case SEXP_BYTECODE:
-    _adjust(sexp_bytecode_literals(x)); break;
-  case SEXP_ENV:
-    _adjust(sexp_env_lambda(x));
-    _adjust(sexp_env_bindings(x));
-    _adjust(sexp_env_parent(x));
-    break;
-  case SEXP_PROCEDURE:
-    _adjust(sexp_procedure_code(x)); _adjust(sexp_procedure_vars(x)); break;
-  case SEXP_MACRO:
-    _adjust(sexp_macro_proc(x)); _adjust(sexp_macro_env(x)); break;
-  case SEXP_SYNCLO:
-    _adjust(sexp_synclo_free_vars(x));
-    _adjust(sexp_synclo_expr(x));
-    _adjust(sexp_synclo_env(x));
-    break;
-  case SEXP_OPCODE:
-    _adjust(sexp_opcode_proc(x));
-    _adjust(sexp_opcode_default(x));
-    _adjust(sexp_opcode_data(x));
-    break;
-  case SEXP_IPORT:
-  case SEXP_OPORT:
-    _adjust(sexp_port_cookie(x));
-  case SEXP_LAMBDA:
-    _adjust(sexp_lambda_name(x));
-    _adjust(sexp_lambda_params(x));
-    _adjust(sexp_lambda_locals(x));
-    _adjust(sexp_lambda_defs(x));
-    _adjust(sexp_lambda_flags(x));
-    _adjust(sexp_lambda_body(x));
-    _adjust(sexp_lambda_fv(x));
-    _adjust(sexp_lambda_sv(x));
-    _adjust(sexp_lambda_body(x));
-    break;
-  case SEXP_CND:
-    _adjust(sexp_cnd_test(x));
-    _adjust(sexp_cnd_fail(x));
-    _adjust(sexp_cnd_pass(x));
-    break;
-  case SEXP_SET:
-    _adjust(sexp_set_var(x)); _adjust(sexp_set_value(x)); break;
-  case SEXP_REF:
-    _adjust(sexp_ref_name(x)); _adjust(sexp_ref_cell(x)); break;
-  case SEXP_SEQ:
-    _adjust(sexp_seq_ls(x)); break;
-  case SEXP_LIT:
-    _adjust(sexp_lit_value(x)); break;
-  case SEXP_CONTEXT:
-    _adjust(sexp_context_env(x));
-    _adjust(sexp_context_bc(x));
-    _adjust(sexp_context_fv(x));
-    _adjust(sexp_context_lambda(x));
-    _adjust(sexp_context_parent(x));
-    for (saves=sexp_context_saves(x); saves; saves=saves->next)
-      if (saves->var) _adjust(*(saves->var));
-    _adjust(sexp_context_stack(x));
-    break;
-  }
-}
-
 void simple_write (sexp obj, int depth, FILE *out) {
   unsigned long len, c, res;
   long i=0;
@@ -328,7 +246,7 @@ void sexp_show_free_list (sexp ctx) {
   putc('\n', stderr);
 }
 
-void validate_free_list (sexp ctx) {
+void validate_free_list () {
   sexp p=sexp_free_list, prev=NULL;
   while (p && sexp_pairp(p) && ((char*) p < sexp_heap_end)) {
     if (((char*)p < sexp_heap) || ((char*)p >= sexp_heap_end))
@@ -518,15 +436,53 @@ sexp sexp_gc (sexp ctx) {
   res = sexp_sweep(ctx);
   fprintf(stderr, "************* post gc validation *************\n");
   validate_heap(ctx);
-  validate_free_list(ctx);
+  validate_free_list();
   validate_gc_vars(ctx);
   fprintf(stderr, "************* done post gc validation *************\n");
   return res;
 }
 
-void sexp_adjust_heap (char *start, char *end, size_t offset, size_t new_size) {
-  sexp p=(sexp)(start+sexp_align(SEXP_MINIMUM_OBJECT_SIZE, 4));
-  sexp q=(sexp)(((char*)sexp_free_list)+offset), r;
+#define _adjust(x) if ((x) && (sexp_pointerp(x))) (x) = (sexp) (((char*)(x))+offset)
+
+void sexp_adjust_pointers (sexp x, sexp_sint_t offset) {
+  sexp_uint_t *len_ptr;
+  sexp_sint_t i, len;
+  sexp t, *p;
+  struct sexp_gc_var_t *saves;
+
+  if ((! x) || (! sexp_pointerp(x)))
+    return;
+  if (sexp_contextp(x))
+    for (saves=sexp_context_saves(x); saves; saves=saves->next)
+      if (saves->var) _adjust(*(saves->var));
+  t = &(sexp_types[sexp_pointer_tag(x)]);
+  p = (sexp*) (((char*)x) + sexp_type_field_base(t));
+  len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_field_len_off(t));
+  len = sexp_type_field_len_base(t) + len_ptr[0]*sexp_type_field_len_scale(t);
+  for (i=0; i<len; i++)
+    _adjust(p[i]);
+}
+
+void sexp_adjust_heap (char *start, char *end,
+                       sexp_sint_t offset, size_t new_size) {
+  sexp p=(sexp)(start+sexp_align(SEXP_MINIMUM_OBJECT_SIZE, 4)), q, r, *t;
+  /* adjust the free list in the new heap */
+  _adjust(sexp_free_list);
+  fprintf(stderr, "free-list: %p, start: %p, end: %p, offset: %ld\n", sexp_free_list, start, end, offset);
+  q = sexp_free_list;
+  _adjust(sexp_cdr(q));
+  r = sexp_cdr(q);
+  for ( ; r && sexp_pairp(r) && (((char*)r) < end); q=r, r=sexp_cdr(r))
+    _adjust(sexp_cdr(r));
+  r = (sexp) end;
+  sexp_cdr(q) = r;
+  sexp_pointer_tag(r) = SEXP_PAIR;
+  sexp_car(r) = (sexp) (new_size - (end-start));
+  sexp_cdr(r) = NULL;
+  fprintf(stderr, "************* done adjusting free list *************\n");
+  validate_free_list();
+  /* adjust the new heap */
+  q = sexp_free_list;
   while (((char*)p) < end) {
     /* find the preceding and succeeding free list pointers */
     for (r=sexp_cdr(q); r && sexp_pairp(r) && (r<p); q=r, r=sexp_cdr(r))
@@ -535,21 +491,23 @@ void sexp_adjust_heap (char *start, char *end, size_t offset, size_t new_size) {
       p = (sexp) (((char*)p) + (sexp_uint_t)sexp_car(p));
       continue;
     }
-    sexp_adjust_pointers(p, start, end, offset);
+    sexp_adjust_pointers(p, offset);
     p = (sexp) (((char*)p) + sexp_align(sexp_allocated_bytes(p), 4));
   }
-  /* adjust the free list */
-  sexp_free_list += offset;
-  q = sexp_free_list;
-  _adjust(sexp_cdr(q));
-  for (r=sexp_cdr(q); r && (((char*)r) < end); q=r, r=sexp_cdr(r))
-    _adjust(sexp_cdr(r));
-  r = (sexp) end;
-  sexp_cdr(q) = r;
-  sexp_pointer_tag(r) = SEXP_PAIR;
-  sexp_car(r) = (sexp) (new_size - (end-start));
-  sexp_cdr(r) = NULL;
+  fprintf(stderr, "************* done adjusting heap *************\n");
+  for (t=(sexp*)start; t<(sexp*)end; t++)
+    if (*t && sexp_pointerp(*t)
+        && (*t > (sexp)(start-offset)) && (*t < (sexp)(end-offset)))
+      fprintf(stderr, "bad address at %p: %p\n", t, *t);
 }
+
+void* sexp_realloc_heap (char *heap, size_t cur_size, size_t new_size) {
+  char *res = malloc(new_size);
+  memcpy(res, heap, cur_size);
+  return res;
+}
+
+/* #define sexp_realloc_heap(h, cs, ns) realloc(h, ns) */
 
 int sexp_grow_heap (sexp ctx, size_t size) {
   char *tmp1, *tmp2;
@@ -562,13 +520,14 @@ int sexp_grow_heap (sexp ctx, size_t size) {
     fprintf(stderr, "************* heap too large *************\n");
     return 0;
   }
-  if (! (tmp1 = realloc(sexp_heap, new_size))) {
+  if (! (tmp1 = sexp_realloc_heap(sexp_heap, cur_size, new_size))) {
     fprintf(stderr, "************* couldn't realloc *************\n");
     return 0;
   }
   if (tmp1 != sexp_heap) {
-    fprintf(stderr, "************* adjusting heap pointers *************\n");
+    fprintf(stderr, "************* adjusting heap: %p => %p (%d) *************\n", sexp_heap, tmp1, tmp1-sexp_heap);
     sexp_adjust_heap(tmp1, tmp1+cur_size, tmp1-sexp_heap, new_size);
+    fprintf(stderr, "************* done adjusting *************\n");
     tmp2 = sexp_heap;
     sexp_heap = tmp1;
     free(tmp2);
@@ -584,6 +543,7 @@ int sexp_grow_heap (sexp ctx, size_t size) {
     sexp_cdr(q) = SEXP_NULL;
   }
   sexp_heap_end = sexp_heap + new_size;
+  sexp_show_free_list(ctx);
   return 1;
 }
 

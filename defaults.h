@@ -24,6 +24,10 @@
 #define USE_MALLOC 0
 #endif
 
+#ifndef USE_DEBUG_GC
+#define USE_DEBUG_GC 0
+#endif
+
 #ifndef USE_FLONUMS
 #define USE_FLONUMS 1
 #endif
