@@ -224,8 +224,8 @@ struct sexp_struct {
 
 #else
 
-#define sexp_gc_var(ctx, x, y) \
-  sexp x = SEXP_VOID;          \
+#define sexp_gc_var(ctx, x, y)                  \
+  sexp x = SEXP_VOID;                           \
   struct sexp_gc_var_t y = {NULL, NULL};
 
 #define sexp_gc_preserve(ctx, x, y)     \
@@ -254,21 +254,6 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #endif
 #endif
-
-#define sexp_with_gc_var1(ctx, x, body)    \
-  sexp_gc_var(ctx, x, _sexp_gcv1);         \
-  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
-  do {body} while (0);                     \
-  sexp_gc_release(ctx, x, _sexp_gcv1);
-
-#define sexp_with_gc_var2(ctx, x, y, body) \
-  sexp_gc_var(ctx, x, _sexp_gcv1);         \
-  sexp_gc_var(ctx, y, _sexp_gcv2);         \
-  sexp_gc_preserve(ctx, x, _sexp_gcv1);    \
-  sexp_gc_preserve(ctx, y, _sexp_gcv2);    \
-  do {body} while (0);                     \
-  sexp_gc_release(ctx, x, _sexp_gcv1);     \
-  sexp_gc_release(ctx, y, _sexp_gcv2);
 
 #define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
 
