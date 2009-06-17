@@ -10,9 +10,9 @@ struct huff_entry {
   unsigned char len;
   unsigned short bits;
 };
-#include "sexp-hufftabs.c"
+#include "opt/sexp-hufftabs.c"
 static struct huff_entry huff_table[] = {
-#include "sexp-huff.c"
+#include "opt/sexp-huff.c"
 };
 #endif
 
@@ -41,7 +41,6 @@ static int digit_value (c) {
 }
 
 static int is_separator(int c) {
-  /* return (!((c-9)&(~3))) | (~(c^4)); */
   return 0<c && c<0x60 && sexp_separators[c];
 }
 
@@ -53,70 +52,45 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
-#define _TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
+#define _DEF_TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
   {.tag=SEXP_TYPE, .value={.type={t,fb,flb,flo,fls,sb,so,sc,n}}}
 
 static struct sexp_struct sexp_types[] = {
-  _TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"),
-  _TYPE(SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"),
-  _TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
-  _TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, "char"),
-  _TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, "boolean"),
-  _TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 0, 0, sexp_sizeof(pair), 0, 0, "pair"),
-  _TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"),
-  _TYPE(SEXP_STRING, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string"),
-  _TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), 4, "vector"),
-  _TYPE(SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"),
-  _TYPE(SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), 4, "bignum"),
-  _TYPE(SEXP_IPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
-  _TYPE(SEXP_OPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
-  _TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception"),
-  _TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"),
-  _TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro"),
-  _TYPE(SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure"),
-  _TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 0, 0, sexp_sizeof(env), 0, 0, "environment"),
-  _TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"),
-  _TYPE(SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
-  _TYPE(SEXP_OPCODE, sexp_offsetof(opcode, dflt), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
-  _TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
-  _TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"),
-  _TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
-  _TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 0, 0, sexp_sizeof(set), 0, 0, "set!"),
-  _TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"),
-  _TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal"),
-  _TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), 4, "stack"),
-  _TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 6, 0, 0, sexp_sizeof(context), 0, 0, "context"),
+  _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"),
+  _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"),
+  _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
+  _DEF_TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, "char"),
+  _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, "boolean"),
+  _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 0, 0, sexp_sizeof(pair), 0, 0, "pair"),
+  _DEF_TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"),
+  _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string"),
+  _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), 4, "vector"),
+  _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"),
+  _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), 4, "bignum"),
+  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
+  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
+  _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception"),
+  _DEF_TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"),
+  _DEF_TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro"),
+  _DEF_TYPE(SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure"),
+  _DEF_TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 0, 0, sexp_sizeof(env), 0, 0, "environment"),
+  _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"),
+  _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
+  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, dflt), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
+  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
+  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"),
+  _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
+  _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 0, 0, sexp_sizeof(set), 0, 0, "set!"),
+  _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"),
+  _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal"),
+  _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), 4, "stack"),
+  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 6, 0, 0, sexp_sizeof(context), 0, 0, "context"),
 };
 
-#undef _TYPE
+#undef _DEF_TYPE
 
 #if ! USE_BOEHM
-#if USE_MALLOC
-void sexp_deep_free (sexp ctx, sexp obj) {
-  int len, i;
-  sexp *elts;
-  if (sexp_pointerp(obj)) {
-    switch (sexp_pointer_tag(obj)) {
-    case SEXP_PAIR:
-      sexp_deep_free(sexp_car(obj));
-      sexp_deep_free(sexp_cdr(obj));
-      break;
-    case SEXP_VECTOR:
-      len = sexp_vector_length(obj);
-      elts = sexp_vector_data(obj);
-      for (i=0; i<len; i++)
-        sexp_deep_free(elts[i]);
-      sexp_free(ctx, elts);
-      break;
-    case SEXP_STRING:
-    case SEXP_SYMBOL:
-      sexp_free(ctx, sexp_string_data(obj));
-      break;
-    }
-    sexp_free(ctx, obj);
-  }
-}
-#else
+#if ! USE_MALLOC
 #include "gc.c"
 #endif
 #endif
@@ -136,18 +110,36 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
 }
 
 sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp irritants) {
-  return sexp_make_exception(ctx, sexp_intern(ctx, "user"),
-                             sexp_c_string(ctx, message, -1),
-                             ((sexp_pairp(irritants) || sexp_nullp(irritants))
-                              ? irritants : sexp_list1(ctx, irritants)),
-                             self, SEXP_FALSE, SEXP_FALSE);
+  sexp res;
+  sexp_gc_var(ctx, sym, s_sym);
+  sexp_gc_var(ctx, str, s_str);
+  sexp_gc_var(ctx, irr, s_irr);
+  sexp_gc_preserve(ctx, sym, s_sym);
+  sexp_gc_preserve(ctx, str, s_str);
+  sexp_gc_preserve(ctx, irr, s_irr);
+  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "user"),
+                            str = sexp_c_string(ctx, message, -1),
+                            ((sexp_pairp(irritants) || sexp_nullp(irritants))
+                             ? irritants : (irr = sexp_list1(ctx, irritants))),
+                            self, SEXP_FALSE, SEXP_FALSE);
+  sexp_gc_release(ctx, sym, s_sym);
+  return res;
 }
 
 sexp sexp_type_exception (sexp ctx, char *message, sexp obj) {
-  return sexp_make_exception(ctx, sexp_intern(ctx, "type"),
-                             sexp_c_string(ctx, message, -1),
-                             sexp_list1(ctx, obj),
-                             SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+  sexp res;
+  sexp_gc_var(ctx, sym, s_sym);
+  sexp_gc_var(ctx, str, s_str);
+  sexp_gc_var(ctx, irr, s_irr);
+  sexp_gc_preserve(ctx, sym, s_sym);
+  sexp_gc_preserve(ctx, str, s_str);
+  sexp_gc_preserve(ctx, irr, s_irr);
+  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "type"),
+                            str = sexp_c_string(ctx, message, -1),
+                            irr = sexp_list1(ctx, obj),
+                            SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+  sexp_gc_release(ctx, sym, s_sym);
+  return res;
 }
 
 sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
@@ -808,7 +800,7 @@ void sexp_write (sexp obj, sexp out) {
     if (((sexp_uint_t)obj&7)==7) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
-#include "sexp-unhuff.c"
+#include "opt/sexp-unhuff.c"
         sexp_write_char(res, out);
       }
     }
@@ -1119,7 +1111,6 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       res = sexp_read(ctx, in);
       if (sexp_listp(ctx, res) == SEXP_FALSE) {
         if (! sexp_exceptionp(res)) {
-          sexp_deep_free(ctx, res);
           res = sexp_read_error(ctx, "dotted list not allowed in vector syntax",
                                 SEXP_NULL,
                                 in);
@@ -1192,11 +1183,15 @@ sexp sexp_read (sexp ctx, sexp in) {
 
 #if USE_STRING_STREAMS
 sexp sexp_read_from_string(sexp ctx, char *str) {
-  sexp s = sexp_c_string(ctx, str, -1);
-  sexp in = sexp_make_input_string_port(ctx, s);
-  sexp res = sexp_read(ctx, in);
-  sexp_free(ctx, s);
-  sexp_deep_free(ctx, in);
+  sexp res;
+  sexp_gc_var(ctx, s, s_s);
+  sexp_gc_var(ctx, in, s_in);
+  sexp_gc_preserve(ctx, s, s_s);
+  sexp_gc_preserve(ctx, in, s_in);
+  s = sexp_c_string(ctx, str, -1);
+  in = sexp_make_input_string_port(ctx, s);
+  res = sexp_read(ctx, in);
+  sexp_gc_release(ctx, s, s_s);
   return res;
 }
 #endif

@@ -12,7 +12,7 @@ MODDIR=$(PREFIX)/share/chibi-scheme
 LDFLAGS=-lm
 
 # -Oz for smaller size on darwin
-CFLAGS=-Wall -g -save-temps
+CFLAGS=-Wall -O2 -g -save-temps
 
 ./gc/gc.a: ./gc/alloc.c
 	cd gc && make

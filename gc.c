@@ -4,9 +4,11 @@
 
 #include "sexp.h"
 
-#define SEXP_INITIAL_HEAP_SIZE (2*1024*1024)
+/* #define SEXP_INITIAL_HEAP_SIZE (2*1024*1024) */
+#define SEXP_INITIAL_HEAP_SIZE 37000
 #define SEXP_MAXIMUM_HEAP_SIZE 0
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_sizeof(flonum))
+#define SEXP_GROW_HEAP_RATIO 0.8
 
 typedef struct sexp_heap *sexp_heap;
 
@@ -20,6 +22,11 @@ struct sexp_heap {
 static sexp_heap heap;
 static sexp* stack_base;
 extern sexp continuation_resumer, final_resumer;
+
+static sexp_heap sexp_heap_last (sexp_heap h) {
+  while (h->next) h = h->next;
+  return h;
+}
 
 sexp_uint_t sexp_allocated_bytes (sexp x) {
   sexp_uint_t res, *len_ptr;
@@ -57,7 +64,7 @@ void sexp_mark (sexp x) {
   }
 }
 
-#ifdef USE_DEBUG_GC
+#if USE_DEBUG_GC
 int stack_references_pointer_p (sexp ctx, sexp x) {
   sexp *p;
   for (p=&x; p<stack_base; p++)
@@ -162,9 +169,7 @@ sexp_heap sexp_make_heap (size_t size) {
 
 int sexp_grow_heap (sexp ctx, size_t size) {
   size_t cur_size, new_size;
-  sexp_heap h;
-  for (h=heap; h->next; h=h->next)
-    ;
+  sexp_heap h = sexp_heap_last(heap);
   cur_size = h->size;
   new_size = sexp_align(((cur_size > size) ? cur_size : size) * 2, 4);
   h->next = sexp_make_heap(new_size);
@@ -200,17 +205,20 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
 
 void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
+  size_t freed;
+  sexp_heap h;
   size = sexp_align(size, 4);
   res = sexp_try_alloc(ctx, size);
   if (! res) {
-    if (sexp_unbox_integer(sexp_gc(ctx)) >= size)
-      res = sexp_try_alloc(ctx, size);
-    if ((! res) && sexp_grow_heap(ctx, size))
-      res = sexp_try_alloc(ctx, size);
+    freed = sexp_unbox_integer(sexp_gc(ctx));
+    h = sexp_heap_last(heap);
+    if (((freed < size)
+         || ((h->size - freed) < h->size*(1 - SEXP_GROW_HEAP_RATIO)))
+        && ((! SEXP_MAXIMUM_HEAP_SIZE) || (size < SEXP_MAXIMUM_HEAP_SIZE)))
+      sexp_grow_heap(ctx, size);
+    res = sexp_try_alloc(ctx, size);
     if (! res) {
-      fprintf(stderr,
-              "chibi: out of memory trying to allocate %ld bytes, aborting\n",
-              size);
+      fprintf(stderr, "out of memory allocating %ld bytes, aborting\n", size);
       exit(70);
     }
   }
@@ -220,6 +228,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
 void sexp_gc_init () {
   sexp_uint_t size = sexp_align(SEXP_INITIAL_HEAP_SIZE, 4);
   heap = sexp_make_heap(size);
+  /* the +32 is a hack, but this is just for debugging anyway */
   stack_base = ((sexp*)&size) + 32;
 }
 
