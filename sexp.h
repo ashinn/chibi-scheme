@@ -426,6 +426,8 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_stack_top(x)     ((x)->value.stack.top)
 #define sexp_stack_data(x)    ((x)->value.stack.data)
 
+#define sexp_context_heap(x)    ((x)->value.context.heap)
+#define sexp_context_symbols(x) ((x)->value.context.symbols)
 #define sexp_context_env(x)     ((x)->value.context.env)
 #define sexp_context_stack(x)   ((x)->value.context.stack)
 #define sexp_context_depth(x)   ((x)->value.context.depth)
