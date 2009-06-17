@@ -363,26 +363,29 @@ static sexp sexp_compile_error(sexp ctx, char *message, sexp obj) {
                                      } while (0)
 
 static sexp analyze_app (sexp ctx, sexp x) {
-  sexp tmp;
   sexp_gc_var(ctx, res, s_res);
+  sexp_gc_var(ctx, tmp, s_tmp);
   sexp_gc_preserve(ctx, res, s_res);
+  sexp_gc_preserve(ctx, tmp, s_tmp);
   for (res=SEXP_NULL; sexp_pairp(x); x=sexp_cdr(x)) {
     sexp_push(ctx, res, SEXP_FALSE);
     tmp = analyze(ctx, sexp_car(x));
     if (sexp_exceptionp(tmp)) {
       res = tmp;
       break;
-    } else
+    } else {
       sexp_car(res) = tmp;
+    }
   }
   sexp_gc_release(ctx, res, s_res);
   return (sexp_pairp(res) ? sexp_nreverse(ctx, res) : res);
 }
 
 static sexp analyze_seq (sexp ctx, sexp ls) {
-  sexp tmp;
   sexp_gc_var(ctx, res, s_res);
+  sexp_gc_var(ctx, tmp, s_tmp);
   sexp_gc_preserve(ctx, res, s_res);
+  sexp_gc_preserve(ctx, tmp, s_tmp);
   if (sexp_nullp(ls))
     res = SEXP_VOID;
   else if (sexp_nullp(sexp_cdr(ls)))
@@ -517,13 +520,16 @@ static sexp analyze_if (sexp ctx, sexp x) {
 }
 
 static sexp analyze_define (sexp ctx, sexp x) {
-  sexp name, res, env = sexp_context_env(ctx);
+  sexp name, res;
   sexp_gc_var(ctx, ref, s_ref);
   sexp_gc_var(ctx, value, s_value);
   sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_var(ctx, env, s_env);
   sexp_gc_preserve(ctx, ref, s_ref);
   sexp_gc_preserve(ctx, value, s_value);
   sexp_gc_preserve(ctx, tmp, s_tmp);
+  sexp_gc_preserve(ctx, env, s_env);
+  env = sexp_context_env(ctx);
   name = (sexp_pairp(sexp_cadr(x)) ? sexp_caadr(x) : sexp_cadr(x));
   if (sexp_env_lambda(env) && sexp_lambdap(sexp_env_lambda(env))) {
     tmp = sexp_cons(ctx, name, sexp_context_lambda(ctx));
@@ -613,13 +619,15 @@ static sexp analyze_letrec_syntax (sexp ctx, sexp x) {
 }
 
 static sexp analyze (sexp ctx, sexp object) {
-  sexp op, cell;
+  sexp op;
   sexp_gc_var(ctx, res, s_res);
   sexp_gc_var(ctx, tmp, s_tmp);
   sexp_gc_var(ctx, x, s_x);
+  sexp_gc_var(ctx, cell, s_cell);
   sexp_gc_preserve(ctx, res, s_res);
   sexp_gc_preserve(ctx, tmp, s_tmp);
   sexp_gc_preserve(ctx, x, s_x);
+  sexp_gc_preserve(ctx, cell, s_cell);
   x = object;
  loop:
   if (sexp_pairp(x)) {
@@ -1104,15 +1112,19 @@ static sexp make_param_list(sexp ctx, sexp_uint_t i) {
 }
 
 static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
-  sexp ctx2, lambda, ls, bc, res, env;
+  sexp ls, bc, res, env;
   sexp_gc_var(ctx, params, s_params);
   sexp_gc_var(ctx, ref, s_ref);
   sexp_gc_var(ctx, refs, s_refs);
+  sexp_gc_var(ctx, lambda, s_lambda);
+  sexp_gc_var(ctx, ctx2, s_ctx2);
   if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
     return sexp_opcode_proc(op); /* return before preserving */
   sexp_gc_preserve(ctx, params, s_params);
   sexp_gc_preserve(ctx, ref, s_ref);
   sexp_gc_preserve(ctx, refs, s_refs);
+  sexp_gc_preserve(ctx, lambda, s_lambda);
+  sexp_gc_preserve(ctx, ctx2, s_ctx2);
   params = make_param_list(ctx, i);
   lambda = sexp_make_lambda(ctx, params);
   ctx2 = sexp_make_child_context(ctx, lambda);
@@ -1201,7 +1213,6 @@ sexp vm (sexp ctx, sexp proc) {
     fprintf(stderr, "%s\n", (*ip<=71)?reverse_opcode_names[*ip]:"UNKNOWN");
   }
 #endif
-  sexp_context_top(ctx) = top;  /* debugging */
   switch (*ip++) {
   case OP_NOOP:
     break;
