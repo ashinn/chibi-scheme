@@ -1006,7 +1006,7 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, sexp_lambda_body(lambda));
   flags = sexp_make_integer((sexp_listp(ctx2, sexp_lambda_params(lambda))
-                             == SEXP_FALSE) ? 1 : 0);
+                             == SEXP_FALSE) ? 1uL : 0uL);
   len = sexp_length(ctx2, sexp_lambda_params(lambda));
   bc = finalize_bytecode(ctx2);
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);

@@ -32,6 +32,10 @@
 #define USE_FLONUMS 1
 #endif
 
+#ifndef USE_IMMEDIATE_FLONUMS
+#define USE_IMMEDIATE_FLONUMS 0
+#endif
+
 #ifndef USE_MATH
 #define USE_MATH 1
 #endif
