@@ -32,7 +32,7 @@ sexp_uint_t sexp_allocated_bytes (sexp x) {
   sexp_uint_t res, *len_ptr;
   sexp t;
   if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) > SEXP_CONTEXT))
-    return sexp_align(1, 4);
+    return sexp_heap_align(1);
   t = &(sexp_types[sexp_pointer_tag(x)]);
   len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_size_off(t));
   res = sexp_type_size_base(t) + len_ptr[0] * sexp_type_size_scale(t);
@@ -83,7 +83,7 @@ sexp sexp_sweep (sexp ctx) {
   char *end;
   /* scan over the whole heap */
   for ( ; h; h=h->next) {
-    p = (sexp) (h->data + sexp_align(sexp_sizeof(pair), 4));
+    p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
     q = h->free_list;
     end = (char*)h->data + h->size;
     while (((char*)p) < end) {
@@ -94,7 +94,7 @@ sexp sexp_sweep (sexp ctx) {
         p = (sexp) (((char*)p) + (sexp_uint_t)sexp_car(p));
         continue;
       }
-      size = sexp_align(sexp_allocated_bytes(p), 4);
+      size = sexp_heap_align(sexp_allocated_bytes(p));
       if ((! sexp_gc_mark(p)) && (! stack_references_pointer_p(ctx, p))) {
         sum_freed += size;
         if (((((char*)q)+(sexp_uint_t)sexp_car(q)) == (char*)p)
@@ -153,15 +153,15 @@ sexp_heap sexp_make_heap (size_t size) {
   sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
   if (h) {
     h->size = size;
-    h->data = (char*) sexp_align((sexp_uint_t)&(h->data), 4);
+    h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
     free = h->free_list = (sexp) h->data;
     h->next = NULL;
-    next = (sexp) ((char*)free + sexp_align(sexp_sizeof(pair), 4));
+    next = (sexp) ((char*)free + sexp_heap_align(sexp_sizeof(pair)));
     sexp_pointer_tag(free) = SEXP_PAIR;
     sexp_car(free) = 0; /* actually sexp_sizeof(pair) */
     sexp_cdr(free) = next;
     sexp_pointer_tag(next) = SEXP_PAIR;
-    sexp_car(next) = (sexp) (size - sexp_align(sexp_sizeof(pair), 4));
+    sexp_car(next) = (sexp) (size - sexp_heap_align(sexp_sizeof(pair)));
     sexp_cdr(next) = SEXP_NULL;
   }
   return h;
@@ -171,7 +171,7 @@ int sexp_grow_heap (sexp ctx, size_t size) {
   size_t cur_size, new_size;
   sexp_heap h = sexp_heap_last(heap);
   cur_size = h->size;
-  new_size = sexp_align(((cur_size > size) ? cur_size : size) * 2, 4);
+  new_size = sexp_heap_align(((cur_size > size) ? cur_size : size) * 2);
   h->next = sexp_make_heap(new_size);
   return (h->next != NULL);
 }
@@ -207,7 +207,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
   size_t freed;
   sexp_heap h;
-  size = sexp_align(size, 4);
+  size = sexp_heap_align(size);
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     freed = sexp_unbox_integer(sexp_gc(ctx));
@@ -226,7 +226,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
 }
 
 void sexp_gc_init () {
-  sexp_uint_t size = sexp_align(SEXP_INITIAL_HEAP_SIZE, 4);
+  sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
   heap = sexp_make_heap(size);
   /* the +32 is a hack, but this is just for debugging anyway */
   stack_base = ((sexp*)&size) + 32;

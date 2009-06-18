@@ -62,6 +62,7 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   return SEXP_VOID;
 }
 
+#ifdef DEBUG_VM
 static void sexp_print_stack (sexp *stack, int top, int fp, sexp out) {
   int i;
   for (i=0; i<top; i++) {
@@ -70,4 +71,5 @@ static void sexp_print_stack (sexp *stack, int top, int fp, sexp out) {
     sexp_printf(out, "\n");
   }
 }
+#endif
 

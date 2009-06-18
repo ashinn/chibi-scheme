@@ -5,7 +5,7 @@
 #include "sexp.h"
 
 /* optional huffman-compressed immediate symbols */
-#ifdef USE_HUFF_SYMS
+#if USE_HUFF_SYMS
 struct huff_entry {
   unsigned char len;
   unsigned short bits;
@@ -326,6 +326,15 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
  loop:
   if (a == b)
     return SEXP_TRUE;
+#if USE_IMMEDIATE_FLONUMS
+  if ((! sexp_pointerp(a)) || (! sexp_pointerp(b)))
+    return
+      sexp_make_boolean((a == b)
+                        || (sexp_flonump(a)
+                            && sexp_make_integer(sexp_flonum_value(a)) == b)
+                        || (sexp_flonump(b)
+                            && sexp_make_integer(sexp_flonum_value(b)) == a));
+#else
   if (! sexp_pointerp(a))
     return sexp_make_boolean(sexp_integerp(a) && sexp_pointerp(b)
                              && (sexp_unbox_integer(a)
@@ -334,6 +343,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
     return sexp_make_boolean(sexp_integerp(b) && sexp_pointerp(a)
                              && (sexp_unbox_integer(b)
                                  == sexp_flonum_value(a)));
+#endif
   if (sexp_pointer_tag(a) != sexp_pointer_tag(b))
     return SEXP_FALSE;
   switch (sexp_pointer_tag(a)) {
@@ -358,8 +368,10 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
                              && (! strncmp(sexp_string_data(a),
                                            sexp_string_data(b),
                                            sexp_string_length(a))));
+#if ! USE_IMMEDIATE_FLONUMS
   case SEXP_FLONUM:
     return sexp_make_boolean(sexp_flonum_value(a) == sexp_flonum_value(b));
+#endif
   default:
     return SEXP_FALSE;
   }
@@ -367,11 +379,13 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
 
 /********************* strings, symbols, vectors **********************/
 
+#if ! USE_IMMEDIATE_FLONUMS
 sexp sexp_make_flonum(sexp ctx, double f) {
   sexp x = sexp_alloc_type(ctx, flonum, SEXP_FLONUM);
   sexp_flonum_value(x) = f;
   return x;
 }
+#endif
 
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
   sexp_sint_t clen = sexp_unbox_integer(len);
@@ -780,6 +794,11 @@ void sexp_write (sexp obj, sexp out) {
     }
   } else if (sexp_integerp(obj)) {
     sexp_printf(out, "%ld", sexp_unbox_integer(obj));
+#if USE_IMMEDIATE_FLONUMS
+  } else if (sexp_flonump(obj)) {
+    f = sexp_flonum_value(obj);
+    sexp_printf(out, "%.15g%s", f, (f == trunc(f)) ? ".0" : "");
+#endif
   } else if (sexp_charp(obj)) {
     if (obj == sexp_make_character(' '))
       sexp_write_string("#\\space", out);
@@ -933,7 +952,12 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
     if ((c!='.') && (sexp_flonum_value(f) == round(sexp_flonum_value(f)))) {
       res = (sexp_sint_t) sexp_flonum_value(f);
     } else {
-      if (negativep) sexp_flonum_value(f) = -sexp_flonum_value(f);
+      if (negativep)
+#if USE_IMMEDIATE_FLONUMS
+        f = sexp_make_flonum(ctx, -sexp_flonum_value(f));
+#else
+        sexp_flonum_value(f) = -sexp_flonum_value(f);
+#endif
       return f;
     }
   } else {
@@ -1146,9 +1170,13 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       sexp_push_char(c2, in);
       res = sexp_read_number(ctx, in, 10);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
-#ifdef USE_FLONUMS
+#if USE_FLONUMS
         if (sexp_flonump(res))
+#if USE_IMMEDIATE_FLONUMS
+          res = sexp_make_flonum(ctx, -1 * sexp_flonum_value(res));
+#else
           sexp_flonum_value(res) = -1 * sexp_flonum_value(res);
+#endif
         else
 #endif
           res = sexp_fx_mul(res, -1);

@@ -21,8 +21,8 @@
 /* tagging system
  *   bits end in  00:  pointer
  *                01:  fixnum
- *               011:  <unused>
- *               111:  immediate symbol
+ *               011:  immediate flonum (optional)
+ *               111:  immediate symbol (optional)
  *              0110:  char
  *              1110:  other immediate object (NULL, TRUE, FALSE)
  */
@@ -38,6 +38,7 @@
 #define SEXP_POINTER_TAG 0
 #define SEXP_FIXNUM_TAG 1
 #define SEXP_ISYMBOL_TAG 7
+#define SEXP_IFLONUM_TAG 3
 #define SEXP_CHAR_TAG 6
 #define SEXP_EXTENDED_TAG 14
 
@@ -256,6 +257,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #endif
 
 #define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
+#define sexp_heap_align(n) sexp_align(n, 4)
 
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
@@ -280,12 +282,25 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
+#if USE_IMMEDIATE_FLONUMS
+union sexp_flonum_conv {
+  float flonum;
+  sexp_uint_t bits;
+};
+#define sexp_flonump(x)      (((sexp_uint_t)(x) & SEXP_IMMEDIATE_MASK) == SEXP_IFLONUM_TAG)
+#define sexp_make_flonum(ctx, x)  ((sexp) ((((union sexp_flonum_conv)((float)(x))).bits & ~SEXP_IMMEDIATE_MASK) + SEXP_IFLONUM_TAG))
+#define sexp_flonum_value(x) (((union sexp_flonum_conv)(((sexp_uint_t)(x)) & ~SEXP_IMMEDIATE_MASK)).flonum)
+#else
+#define sexp_flonump(x)      (sexp_check_tag(x, SEXP_FLONUM))
+#define sexp_flonum_value(f) ((f)->value.flonum)
+sexp sexp_make_flonum(sexp ctx, double f);
+#endif
+
 #define sexp_typep(x)       (sexp_check_tag(x, SEXP_TYPE))
 #define sexp_pairp(x)       (sexp_check_tag(x, SEXP_PAIR))
 #define sexp_stringp(x)     (sexp_check_tag(x, SEXP_STRING))
 #define sexp_lsymbolp(x)    (sexp_check_tag(x, SEXP_SYMBOL))
 #define sexp_vectorp(x)     (sexp_check_tag(x, SEXP_VECTOR))
-#define sexp_flonump(x)     (sexp_check_tag(x, SEXP_FLONUM))
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
 #define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
@@ -318,8 +333,6 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)n)<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)n)>>SEXP_EXTENDED_BITS))
-
-#define sexp_flonum_value(f) ((f)->value.flonum)
 
 #if USE_FLONUMS
 #define sexp_integer_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_integer(x)))
@@ -515,7 +528,6 @@ sexp sexp_length(sexp ctx, sexp ls);
 sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
 sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
-sexp sexp_make_flonum(sexp ctx, double f);
 sexp sexp_intern(sexp ctx, char *str);
 sexp sexp_string_to_symbol(sexp ctx, sexp str);
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
