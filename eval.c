@@ -1310,8 +1310,10 @@ sexp vm (sexp ctx, sexp proc) {
     goto make_call;
   case OP_CALL:
 #if USE_CHECK_STACK
-    if (top >= INIT_STACK_SIZE)
-      sexp_raise("out of stack space", SEXP_NULL);
+    if (top+16 >= INIT_STACK_SIZE) {
+      fprintf(stderr, "out of stack space\n");
+      exit(70);
+    }
 #endif
     i = sexp_unbox_integer(_WORD0);
     tmp1 = _ARG1;
@@ -1550,9 +1552,9 @@ sexp vm (sexp ctx, sexp proc) {
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_add(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_add(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
+      _ARG2 = sexp_make_flonum(ctx, sexp_flonum_value(_ARG1) + (double)sexp_unbox_integer(_ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_add(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
+      _ARG2 = sexp_make_flonum(ctx, (double)sexp_unbox_integer(_ARG1) + sexp_flonum_value(_ARG2));
 #endif
     else sexp_raise("+: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
@@ -1564,9 +1566,9 @@ sexp vm (sexp ctx, sexp proc) {
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_sub(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_sub(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
+      _ARG2 = sexp_make_flonum(ctx, sexp_flonum_value(_ARG1) - (double)sexp_unbox_integer(_ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_sub(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
+      _ARG2 = sexp_make_flonum(ctx, (double)sexp_unbox_integer(_ARG1) - sexp_flonum_value(_ARG2));
 #endif
     else sexp_raise("-: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
@@ -1578,9 +1580,9 @@ sexp vm (sexp ctx, sexp proc) {
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_mul(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_mul(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
+      _ARG2 = sexp_make_flonum(ctx, sexp_flonum_value(_ARG1) * (double)sexp_unbox_integer(_ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_mul(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
+      _ARG2 = sexp_make_flonum(ctx, (double)sexp_unbox_integer(_ARG1) * sexp_flonum_value(_ARG2));
 #endif
     else sexp_raise("*: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
@@ -1588,17 +1590,22 @@ sexp vm (sexp ctx, sexp proc) {
   case OP_DIV:
     if (_ARG2 == sexp_make_integer(0))
       sexp_raise("divide by zero", SEXP_NULL);
-    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_div(ctx,
-                          sexp_integer_to_flonum(ctx, _ARG1),
-                          sexp_integer_to_flonum(ctx, _ARG2));
+    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
+#if USE_FLONUMS
+      _ARG1 = sexp_integer_to_flonum(ctx, _ARG1);
+      _ARG2 = sexp_integer_to_flonum(ctx, _ARG2);
+      _ARG2 = sexp_fp_div(ctx, _ARG1, _ARG2);
+#else
+      _ARG2 = sexp_fx_div(_ARG1, _ARG2);
+#endif
+    }
 #if USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_div(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_integerp(_ARG2))
-      _ARG2 = sexp_fp_div(ctx, _ARG1, sexp_integer_to_flonum(ctx, _ARG2));
+      _ARG2 = sexp_make_flonum(ctx, sexp_flonum_value(_ARG1) / (double)sexp_unbox_integer(_ARG2));
     else if (sexp_integerp(_ARG1) && sexp_flonump(_ARG2))
-      _ARG2 = sexp_fp_div(ctx, sexp_integer_to_flonum(ctx, _ARG1), _ARG2);
+      _ARG2 = sexp_make_flonum(ctx, (double)sexp_unbox_integer(_ARG1) / sexp_flonum_value(_ARG2));
 #endif
     else sexp_raise("/: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     top--;
@@ -1804,7 +1811,7 @@ static sexp sexp_open_input_file (sexp ctx, sexp path) {
   if (! in)
     return
       sexp_user_exception(ctx, SEXP_FALSE, "couldn't open input file", path);
-  return sexp_make_input_port(ctx, in, sexp_string_data(path));
+  return sexp_make_input_port(ctx, in, path);
 }
 
 static sexp sexp_open_output_file (sexp ctx, sexp path) {
@@ -1815,7 +1822,7 @@ static sexp sexp_open_output_file (sexp ctx, sexp path) {
   if (! out)
     return
       sexp_user_exception(ctx, SEXP_FALSE, "couldn't open output file", path);
-  return sexp_make_input_port(ctx, out, sexp_string_data(path));
+  return sexp_make_input_port(ctx, out, path);
 }
 
 static sexp sexp_close_port (sexp ctx, sexp port) {
@@ -1834,13 +1841,16 @@ static void sexp_warn_undefs (sexp from, sexp to, sexp out) {
 }
 
 sexp sexp_load (sexp ctx, sexp source, sexp env) {
-  sexp tmp, out, res=SEXP_VOID;
+  sexp tmp, out;
   sexp_gc_var(ctx, ctx2, s_ctx2);
   sexp_gc_var(ctx, x, s_x);
   sexp_gc_var(ctx, in, s_in);
+  sexp_gc_var(ctx, res, s_res);
   sexp_gc_preserve(ctx, ctx2, s_ctx2);
   sexp_gc_preserve(ctx, x, s_x);
   sexp_gc_preserve(ctx, in, s_in);
+  sexp_gc_preserve(ctx, res, s_res);
+  res = SEXP_VOID;
   in = sexp_open_input_file(ctx, source);
   out = env_global_ref(env, the_cur_err_symbol, SEXP_FALSE);
   ctx2 = sexp_make_context(ctx, NULL, env);
@@ -2021,11 +2031,11 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
     env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op)), op);
   }
   env_define(ctx, e, the_cur_in_symbol,
-             sexp_make_input_port(ctx, stdin, NULL));
+             sexp_make_input_port(ctx, stdin, SEXP_FALSE));
   env_define(ctx, e, the_cur_out_symbol,
-             sexp_make_output_port(ctx, stdout, NULL));
+             sexp_make_output_port(ctx, stdout, SEXP_FALSE));
   env_define(ctx, e, the_cur_err_symbol,
-             sexp_make_output_port(ctx, stderr, NULL));
+             sexp_make_output_port(ctx, stderr, SEXP_FALSE));
   env_define(ctx, e, the_interaction_env_symbol, e);
   sexp_gc_release(ctx, e, s_e);
   return e;

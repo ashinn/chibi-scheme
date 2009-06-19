@@ -9,21 +9,17 @@ LIBDIR=$(PREFIX)/lib
 INCDIR=$(PREFIX)/include/chibi-scheme
 MODDIR=$(PREFIX)/share/chibi-scheme
 
-LDFLAGS=-lm
+LDFLAGS=-lm #-lgc -L/opt/local/lib
 
-# -Oz for smaller size on darwin
-CFLAGS=-Wall -O2 -g #-save-temps
+CFLAGS=-Wall -O2 -g #-I/opt/local/include #-save-temps
 
-./gc/gc.a: ./gc/alloc.c
-	cd gc && make
-
-sexp.o: sexp.c gc.c sexp.h config.h defaults.h Makefile
+sexp.o: sexp.c gc.c sexp.h config.h Makefile
 	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
+eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h Makefile
 	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-main.o: main.c eval.c debug.c opcodes.c eval.h sexp.h config.h defaults.h Makefile
+main.o: main.c eval.c debug.c opcodes.c eval.h sexp.h config.h Makefile
 	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 chibi-scheme: main.o sexp.o

@@ -6,7 +6,6 @@
 #define SEXP_H
 
 #include "config.h"
-#include "defaults.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -14,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <sysexits.h>
 #include <sys/types.h>
 #include <math.h>
 
@@ -123,8 +121,8 @@ struct sexp_struct {
     } symbol;
     struct {
       FILE *stream;
-      char *name;
       sexp_uint_t line;
+      sexp name;
       sexp cookie;
     } port;
     struct {
@@ -216,7 +214,7 @@ struct sexp_struct {
 #define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
 
-#include "gc/include/gc.h"
+#include "gc.h"
 #define sexp_alloc(ctx, size)        GC_malloc(size)
 #define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
 #define sexp_realloc(ctx, x, size)   GC_realloc(x, size)
@@ -257,7 +255,6 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #endif
 
 #define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
-#define sexp_heap_align(n) sexp_align(n, 4)
 
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
@@ -540,8 +537,8 @@ sexp sexp_read_number(sexp ctx, sexp in, int base);
 sexp sexp_read_raw(sexp ctx, sexp in);
 sexp sexp_read(sexp ctx, sexp in);
 sexp sexp_read_from_string(sexp ctx, char *str);
-sexp sexp_make_input_port(sexp ctx, FILE* in, char *path);
-sexp sexp_make_output_port(sexp ctx, FILE* out, char *path);
+sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
+sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
 sexp sexp_make_input_string_port(sexp ctx, sexp str);
 sexp sexp_make_output_string_port(sexp ctx);
 sexp sexp_get_output_string(sexp ctx, sexp port);
