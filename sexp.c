@@ -6,12 +6,12 @@
 
 /* optional huffman-compressed immediate symbols */
 #if USE_HUFF_SYMS
-struct huff_entry {
+struct sexp_huff_entry {
   unsigned char len;
   unsigned short bits;
 };
 #include "opt/sexp-hufftabs.c"
-static struct huff_entry huff_table[] = {
+static struct sexp_huff_entry huff_table[] = {
 #include "opt/sexp-huff.c"
 };
 #endif
@@ -67,8 +67,8 @@ static struct sexp_struct sexp_types[] = {
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), 4, "vector"),
   _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"),
   _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), 4, "bignum"),
-  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
-  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, cookie), 1, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
+  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
+  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
   _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception"),
   _DEF_TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"),
   _DEF_TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro"),
@@ -214,8 +214,7 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp_gc_var(ctx, str, s_str);
   sexp_gc_preserve(ctx, name, s_name);
   sexp_gc_preserve(ctx, str, s_str);
-  name = (sexp_port_name(port)
-          ? sexp_c_string(ctx, sexp_port_name(port), -1) : SEXP_FALSE);
+  name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   str = sexp_c_string(ctx, msg, -1);
   res = sexp_make_exception(ctx, the_read_error_symbol,
                             str, irritants, SEXP_FALSE, name,
@@ -402,7 +401,8 @@ sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
 sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen) {
   sexp_sint_t len = ((slen >= 0) ? slen : strlen(str));
   sexp s = sexp_make_string(ctx, sexp_make_integer(len), SEXP_VOID);
-  memcpy(sexp_string_data(s), str, len+1);
+  memcpy(sexp_string_data(s), str, len);
+  sexp_string_data(s)[len] = '\0';
   return s;
 }
 
@@ -425,7 +425,8 @@ sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end) {
   res = sexp_make_string(ctx, sexp_fx_sub(end, start), SEXP_VOID);
   memcpy(sexp_string_data(res),
          sexp_string_data(str)+sexp_unbox_integer(start),
-         sexp_string_length(res)+1);
+         sexp_string_length(res));
+  sexp_string_data(res)[sexp_string_length(res)] = '\0';
   return res;
 }
 
@@ -442,7 +443,7 @@ static sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc) {
 #endif
 
 sexp sexp_intern(sexp ctx, char *str) {
-  struct huff_entry he;
+  struct sexp_huff_entry he;
   sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, bucket;
   char c, *p=str;
   sexp ls;
@@ -529,9 +530,10 @@ sexp sexp_vector(sexp ctx, int count, ...) {
 
 #if SEXP_BSD
 
-#define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(0))
-#define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(1))
-#define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(2))
+#define sexp_stream_ctx(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(0))
+#define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(1))
+#define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(2))
+#define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, sexp_make_integer(3))
 
 int sstream_read (void *vec, char *dst, int n) {
   sexp_uint_t len = sexp_unbox_integer(sexp_stream_size(vec));
@@ -550,7 +552,9 @@ int sstream_write (void *vec, const char *src, int n) {
   pos = sexp_unbox_integer(sexp_stream_pos(vec));
   newpos = pos+n;
   if (newpos >= len) {
-    newbuf = sexp_make_string(NULL, sexp_make_integer(newpos*2), SEXP_VOID);
+    newbuf = sexp_make_string(sexp_stream_ctx(vec),
+                              sexp_make_integer(newpos*2),
+                              SEXP_VOID);
     memcpy(sexp_string_data(newbuf),
            sexp_string_data(sexp_stream_buf(vec)),
            pos);
@@ -580,10 +584,11 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   sexp res;
   sexp_gc_var(ctx, cookie, s_cookie);
   sexp_gc_preserve(ctx, cookie, s_cookie);
-  cookie = sexp_vector(ctx, 3, str, sexp_make_integer(sexp_string_length(str)),
+  cookie = sexp_vector(ctx, 4, ctx, str,
+                       sexp_make_integer(sexp_string_length(str)),
                        sexp_make_integer(0));
   in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
-  res = sexp_make_input_port(ctx, in, NULL);
+  res = sexp_make_input_port(ctx, in, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
   sexp_gc_release(ctx, cookie, s_cookie);
   return res;
@@ -595,10 +600,10 @@ sexp sexp_make_output_string_port (sexp ctx) {
   sexp_gc_var(ctx, cookie, s_cookie);
   sexp_gc_preserve(ctx, cookie, s_cookie);
   size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
-  cookie = sexp_vector(ctx, 3, sexp_make_string(NULL, size, SEXP_VOID),
+  cookie = sexp_vector(ctx, 4, ctx, sexp_make_string(ctx, size, SEXP_VOID),
                        size, sexp_make_integer(0));
   out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
-  res = sexp_make_output_port(ctx, out, NULL);
+  res = sexp_make_output_port(ctx, out, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
   sexp_gc_release(ctx, cookie, s_cookie);
   return res;
@@ -617,14 +622,14 @@ sexp sexp_get_output_string (sexp ctx, sexp port) {
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   FILE *in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
-  return sexp_make_input_port(in, NULL);
+  return sexp_make_input_port(ctx, in, SEXP_FALSE);
 }
 
 sexp sexp_make_output_string_port (sexp ctx) {
   FILE *out;
   sexp buf = sexp_alloc_type(ctx, string, SEXP_STRING), res;
   out = open_memstream(&sexp_string_data(buf), &sexp_string_length(buf));
-  res = sexp_make_input_port(out, NULL);
+  res = sexp_make_input_port(ctx, out, SEXP_FALSE);
   sexp_port_cookie(res) = buf;
   return res;
 }
@@ -641,18 +646,18 @@ sexp sexp_get_output_string (sexp ctx, sexp port) {
 
 #endif
 
-sexp sexp_make_input_port (sexp ctx, FILE* in, char *path) {
+sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp p = sexp_alloc_type(ctx, port, SEXP_IPORT);
   sexp_port_stream(p) = in;
-  sexp_port_name(p) = path;
+  sexp_port_name(p) = name;
   sexp_port_line(p) = 0;
   return p;
 }
 
-sexp sexp_make_output_port (sexp ctx, FILE* out, char *path) {
+sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   sexp p = sexp_alloc_type(ctx, port, SEXP_OPORT);
   sexp_port_stream(p) = out;
-  sexp_port_name(p) = path;
+  sexp_port_name(p) = name;
   sexp_port_line(p) = 0;
   return p;
 }
@@ -665,7 +670,7 @@ void sexp_write (sexp obj, sexp out) {
   char *str=NULL;
 
   if (! obj) {
-    sexp_write_string("#<null>", out);
+    sexp_write_string("#<null>", out); /* shouldn't happen */
   } else if (sexp_pointerp(obj)) {
     switch (sexp_pointer_tag(obj)) {
     case SEXP_PAIR:
