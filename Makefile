@@ -1,29 +1,65 @@
+# -*- makefile-gmake -*-
 
 .PHONY: all doc dist clean cleaner test install uninstall
 
 all: chibi-scheme
 
-PREFIX=/usr/local
+CC     ?= cc
+PREFIX ?= /usr/local
 BINDIR=$(PREFIX)/bin
 LIBDIR=$(PREFIX)/lib
-INCDIR=$(PREFIX)/include/chibi-scheme
-MODDIR=$(PREFIX)/share/chibi-scheme
+INCDIR=$(PREFIX)/include/chibi
+MODDIR=$(PREFIX)/share/chibi
 
-LDFLAGS=-lm #-lgc -L/opt/local/lib
+ifndef PLATFORM
+ifeq ($(shell uname),Darwin)
+PLATFORM=macosx
+else
+PLATFORM=unix
+endif
+endif
 
-CFLAGS=-Wall -O2 -g #-I/opt/local/include #-save-temps
+ifeq ($(PLATFORM),macosx)
+SO  = .dylib
+EXE =
+CLIBFLAGS = -dynamiclib
+else ifeq ($(PLATFORM),mingw)
+SO  = .dll
+EXE = .exe
+CLIBFLAGS = -fPIC shared
+else
+SO  = .so
+EXE =
+CLIBFLAGS = -fPIC -shared
+endif
 
-sexp.o: sexp.c gc.c sexp.h config.h Makefile
-	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+ifdef USE_BOEHM
+GCLDFLAGS := -lgc
+else
+GCLDFLAGS :=
+endif
 
-eval.o: eval.c debug.c opcodes.c eval.h sexp.h config.h Makefile
-	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+LDFLAGS  := $(LDFLAGS) -lm
+CPPFLAGS := $(CPPFLAGS) -Iinclude
+CFLAGS   := $(CFLAGS) -Wall -O2 -g
 
-main.o: main.c eval.c debug.c opcodes.c eval.h sexp.h config.h Makefile
-	gcc -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+sexp.o: sexp.c gc.c include/chibi/sexp.h include/chibi/config.h Makefile
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-chibi-scheme: main.o sexp.o
-	gcc $(CFLAGS) $(LDFLAGS) -o $@ $^
+eval.o: eval.c debug.c opcodes.c include/chibi/eval.h include/chibi/sexp.h include/chibi/config.h Makefile
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+main.o: main.c eval.c debug.c opcodes.c include/chibi/eval.h include/chibi/sexp.h include/chibi/config.h Makefile
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+libchibi-scheme$(SO): eval.o sexp.o
+	$(CC) -dynamiclib -o $@ $^
+
+chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(GCLDFLAGS) -L. -lchibi-scheme
+
+chibi-scheme-static$(EXE): main.o eval.o sexp.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
 
 clean:
 	rm -f *.o *.i *.s

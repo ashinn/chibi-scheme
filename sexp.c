@@ -2,7 +2,8 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
-#include "sexp.h"
+#define SEXP_API
+#include "chibi/sexp.h"
 
 /* optional huffman-compressed immediate symbols */
 #if USE_HUFF_SYMS

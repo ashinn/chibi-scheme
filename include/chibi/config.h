@@ -14,7 +14,7 @@
 /* uncomment this if you only want fixnum support */
 /* #define USE_FLONUMS 0 */
 
-/* uncomment this if you want immediate flonums (experimental) */
+/* uncomment this if you want immediate flonums */
 /* #define USE_IMMEDIATE_FLONUMS 1 */
 
 /* uncomment this if you don't need extended math operations */
@@ -32,8 +32,8 @@
 /* uncomment this to disable string ports */
 /* #define USE_STRING_STREAMS 0 */
 
-/* uncomment this to disable stack checks */
-/* #define USE_CHECK_STACK 0 */
+/* uncomment this to enable stack overflow checks */
+/* #define USE_CHECK_STACK 1 */
 
 /* uncomment this to enable debugging utilities */
 /* #define USE_DEBUG 1 */
@@ -101,6 +101,6 @@
 #endif
 
 #ifndef USE_CHECK_STACK
-#define USE_CHECK_STACK 1
+#define USE_CHECK_STACK 0
 #endif
 

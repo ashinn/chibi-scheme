@@ -14,8 +14,6 @@
 
 #define sexp_init_file "init.scm"
 
-#define sexp_debug(msg, obj, ctx) (sexp_write_string(msg,env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE)), sexp_write(obj, env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE)), sexp_write_char('\n',env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE)))
-
 /* procedure types */
 typedef sexp (*sexp_proc0) ();
 typedef sexp (*sexp_proc1) (sexp);
@@ -130,9 +128,13 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-sexp apply(sexp proc, sexp args, sexp context);
-sexp eval_in_context(sexp expr, sexp context);
-sexp eval(sexp expr, sexp env);
+SEXP_API void sexp_scheme_init();
+SEXP_API sexp sexp_apply(sexp context, sexp proc, sexp args);
+SEXP_API sexp sexp_eval(sexp context, sexp obj);
+SEXP_API sexp sexp_eval_string(sexp context, char *str);
+SEXP_API sexp sexp_load(sexp context, sexp expr, sexp env);
+SEXP_API sexp sexp_make_context(sexp context, sexp stack, sexp env);
+SEXP_API void sexp_warn_undefs (sexp from, sexp to, sexp out);
 
 #endif /* ! SEXP_EVAL_H */
 
