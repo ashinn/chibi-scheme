@@ -2,7 +2,7 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
-#include "sexp.h"
+#include "chibi/sexp.h"
 
 #define SEXP_INITIAL_HEAP_SIZE (2*1024*1024)
 #define SEXP_MAXIMUM_HEAP_SIZE 0

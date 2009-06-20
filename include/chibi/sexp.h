@@ -16,6 +16,10 @@
 #include <sys/types.h>
 #include <math.h>
 
+#ifndef SEXP_API
+#define SEXP_API extern
+#endif
+
 /* tagging system
  *   bits end in  00:  pointer
  *                01:  fixnum
@@ -511,43 +515,43 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_scanf(p, ...) (fscanf(sexp_port_stream(p), __VA_ARGS__))
 #define sexp_flush(p) (fflush(sexp_port_stream(p)))
 
-sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
-sexp sexp_cons(sexp ctx, sexp head, sexp tail);
-sexp sexp_list2(sexp ctx, sexp a, sexp b);
-sexp sexp_equalp (sexp ctx, sexp a, sexp b);
-sexp sexp_listp(sexp ctx, sexp obj);
-sexp sexp_reverse(sexp ctx, sexp ls);
-sexp sexp_nreverse(sexp ctx, sexp ls);
-sexp sexp_append2(sexp ctx, sexp a, sexp b);
-sexp sexp_memq(sexp ctx, sexp x, sexp ls);
-sexp sexp_assq(sexp ctx, sexp x, sexp ls);
-sexp sexp_length(sexp ctx, sexp ls);
-sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
-sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
-sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
-sexp sexp_intern(sexp ctx, char *str);
-sexp sexp_string_to_symbol(sexp ctx, sexp str);
-sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
-sexp sexp_list_to_vector(sexp ctx, sexp ls);
-sexp sexp_vector(sexp ctx, int count, ...);
-void sexp_write(sexp obj, sexp out);
-sexp sexp_read_string(sexp ctx, sexp in);
-sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
-sexp sexp_read_number(sexp ctx, sexp in, int base);
-sexp sexp_read_raw(sexp ctx, sexp in);
-sexp sexp_read(sexp ctx, sexp in);
-sexp sexp_read_from_string(sexp ctx, char *str);
-sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
-sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
-sexp sexp_make_input_string_port(sexp ctx, sexp str);
-sexp sexp_make_output_string_port(sexp ctx);
-sexp sexp_get_output_string(sexp ctx, sexp port);
-sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp file, sexp line);
-sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj);
-sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
-sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
-sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
-void sexp_init();
+SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
+SEXP_API sexp sexp_cons(sexp ctx, sexp head, sexp tail);
+SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
+SEXP_API sexp sexp_equalp (sexp ctx, sexp a, sexp b);
+SEXP_API sexp sexp_listp(sexp ctx, sexp obj);
+SEXP_API sexp sexp_reverse(sexp ctx, sexp ls);
+SEXP_API sexp sexp_nreverse(sexp ctx, sexp ls);
+SEXP_API sexp sexp_append2(sexp ctx, sexp a, sexp b);
+SEXP_API sexp sexp_memq(sexp ctx, sexp x, sexp ls);
+SEXP_API sexp sexp_assq(sexp ctx, sexp x, sexp ls);
+SEXP_API sexp sexp_length(sexp ctx, sexp ls);
+SEXP_API sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
+SEXP_API sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
+SEXP_API sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
+SEXP_API sexp sexp_intern(sexp ctx, char *str);
+SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
+SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
+SEXP_API sexp sexp_list_to_vector(sexp ctx, sexp ls);
+SEXP_API sexp sexp_vector(sexp ctx, int count, ...);
+SEXP_API void sexp_write(sexp obj, sexp out);
+SEXP_API sexp sexp_read_string(sexp ctx, sexp in);
+SEXP_API sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
+SEXP_API sexp sexp_read_number(sexp ctx, sexp in, int base);
+SEXP_API sexp sexp_read_raw(sexp ctx, sexp in);
+SEXP_API sexp sexp_read(sexp ctx, sexp in);
+SEXP_API sexp sexp_read_from_string(sexp ctx, char *str);
+SEXP_API sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
+SEXP_API sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
+SEXP_API sexp sexp_make_input_string_port(sexp ctx, sexp str);
+SEXP_API sexp sexp_make_output_string_port(sexp ctx);
+SEXP_API sexp sexp_get_output_string(sexp ctx, sexp port);
+SEXP_API sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp file, sexp line);
+SEXP_API sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj);
+SEXP_API sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
+SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
+SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
+SEXP_API void sexp_init();
 
 #endif /* ! SEXP_H */
 
