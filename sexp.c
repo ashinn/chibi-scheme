@@ -53,6 +53,8 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
+#if ! USE_BOEHM
+
 #define _DEF_TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
   {.tag=SEXP_TYPE, .value={.type={t,fb,flb,flo,fls,sb,so,sc,n}}}
 
@@ -90,11 +92,11 @@ static struct sexp_struct sexp_types[] = {
 
 #undef _DEF_TYPE
 
-#if ! USE_BOEHM
 #if ! USE_MALLOC
 #include "gc.c"
 #endif
-#endif
+
+#endif  /* ! USE_BOEHM */
 
 /***************************** exceptions *****************************/
 

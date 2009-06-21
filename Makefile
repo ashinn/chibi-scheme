@@ -37,14 +37,14 @@ endif
 
 ifdef USE_BOEHM
 GCLDFLAGS := -lgc
-CPPFLAGS := $(CPPFLAGS) -Iinclude -DUSE_BOEHM=1
+XCPPFLAGS := $(CPPFLAGS) -Iinclude -DUSE_BOEHM=1
 else
 GCLDFLAGS :=
-CPPFLAGS := $(CPPFLAGS) -Iinclude
+XCPPFLAGS := $(CPPFLAGS) -Iinclude
 endif
 
-LDFLAGS  := $(LDFLAGS) -lm
-CFLAGS   := $(CFLAGS) -Wall -O2 -g
+XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
+XCFLAGS   := $(CFLAGS) -Wall -O2 -g
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 
@@ -52,22 +52,22 @@ include/chibi/install.h: Makefile
 	echo '#define sexp_module_dir "'$(MODDIR)'"' > $@
 
 sexp.o: sexp.c gc.c $(INCLUDES) Makefile
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
 eval.o: eval.c debug.c opcodes.c include/chibi/eval.h $(INCLUDES) Makefile
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
 main.o: main.c $(INCLUDES) Makefile
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
 libchibi-scheme$(SO): eval.o sexp.o
-	$(CC) $(CLIBFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
+	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< -L. -lchibi-scheme
+	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
-	$(CC) $(CFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
+	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
 clean:
 	rm -f *.o *.i *.s
@@ -87,12 +87,12 @@ test-basic: chibi-scheme
 	done
 
 test: chibi-scheme
-	./chibi-scheme -l syntax-rules.scm tests/r5rs-tests.scm
+	./chibi-scheme tests/r5rs-tests.scm
 
 install: chibi-scheme
 	cp chibi-scheme $(BINDIR)/
 	mkdir -p $(MODDIR)
-	cp init.scm syntax-rules.scm $(MODDIR)/
+	cp init.scm $(MODDIR)/
 	mkdir -p $(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(INCDIR)/
 	mkdir -p $(LIBDIR)

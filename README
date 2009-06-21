@@ -2,7 +2,7 @@
                              Chibi-Scheme
                             --------------
                                    
-               Simple and Minimal Scheme Implementation
+    Minimal Scheme Implementation for use as an Extension Language
 
               http://synthcode.com/wiki/chibi-scheme/
 
@@ -15,9 +15,38 @@ macros based on syntactic-closures, string ports and exceptions.
 Chibi-Scheme is written in highly portable C and supports multiple
 simultaneous VM instances to run.
 
-To build, just run "make".  You can edit the file config.h for a
-number of settings, mostly disabling features to make the executable
-smaller.  Documents and examples for using Chibi-Scheme as a library
-for extension scripting will be provided in an upcoming release.
+To build, just run "make".  This will provide a shared library
+"libchibi-scheme", as well as a sample "chibi-scheme" command-line
+repl.  The "chibi-scheme-static" make target builds an equivalent
+static executable.
 
-syntax-rules must be loaded manually from the file syntax-rules.scm.
+You can edit the file config.h for a number of settings, mostly
+disabling features to make the executable smaller.  You can specify
+standard options directly as arguments to make, for example
+
+  make CFLAGS=-Os
+
+to optimize for size, or
+
+  make LDFLAGS=-L/usr/local/lib CPPFLAGS=-I/usr/local/include
+
+to compile against a library installed in /usr/local.
+
+By default Chibi uses a custom, precise, non-moving GC.  You can link
+against the Boehm conservative GC by editing the config file, or
+directly from make with:
+
+  make USE_BOEHM=1
+
+See the file main.c for an example of using chibi-scheme as a library.
+The essential functions to remember are:
+
+  sexp_make_context(NULL, NULL, NULL)
+    returns a new context
+
+  sexp_eval(context, expr)
+    evaluates an s-expression
+
+  sexp_eval_string(context, str)
+    reads an s-expression from str and evaluates it
+
