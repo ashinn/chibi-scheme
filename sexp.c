@@ -629,7 +629,7 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
 sexp sexp_make_output_string_port (sexp ctx) {
   FILE *out;
   sexp buf = sexp_alloc_type(ctx, string, SEXP_STRING), res;
-  out = open_memstream(&sexp_string_data(buf), &sexp_string_length(buf));
+  out = open_memstream((char**)&sexp_string_data(buf), (size_t*)&sexp_string_length(buf));
   res = sexp_make_input_port(ctx, out, SEXP_FALSE);
   sexp_port_cookie(res) = buf;
   return res;
@@ -638,7 +638,8 @@ sexp sexp_make_output_string_port (sexp ctx) {
 sexp sexp_get_output_string (sexp ctx, sexp port) {
   sexp cookie = sexp_port_cookie(port);
   fflush(sexp_port_stream(port));
-  return sexp_substring(cookie,
+  return sexp_substring(ctx,
+                        cookie,
                         sexp_make_integer(0),
                         sexp_make_integer(sexp_string_length(cookie)));
 }

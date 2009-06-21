@@ -37,12 +37,13 @@ endif
 
 ifdef USE_BOEHM
 GCLDFLAGS := -lgc
+CPPFLAGS := $(CPPFLAGS) -Iinclude -DUSE_BOEHM=1
 else
 GCLDFLAGS :=
+CPPFLAGS := $(CPPFLAGS) -Iinclude
 endif
 
 LDFLAGS  := $(LDFLAGS) -lm
-CPPFLAGS := $(CPPFLAGS) -Iinclude
 CFLAGS   := $(CFLAGS) -Wall -O2 -g
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
@@ -60,10 +61,10 @@ main.o: main.c $(INCLUDES) Makefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 libchibi-scheme$(SO): eval.o sexp.o
-	$(CC) -dynamiclib -o $@ $^
+	$(CC) $(CLIBFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(GCLDFLAGS) -L. -lchibi-scheme
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< -L. -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(CFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
