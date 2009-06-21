@@ -44,7 +44,7 @@ XCPPFLAGS := $(CPPFLAGS) -Iinclude
 endif
 
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := $(CFLAGS) -Wall -g
+XCFLAGS   := $(CFLAGS) -Wall -O2 -g
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 
