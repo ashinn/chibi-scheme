@@ -326,11 +326,11 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
 #define sexp_unbox_boolean(x) (((x) == SEXP_FALSE) ? 0 : 1)
 
-#define sexp_make_integer(n)    ((sexp) ((((sexp_sint_t)n)<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
-#define sexp_unbox_integer(n)   (((sexp_sint_t)n)>>SEXP_FIXNUM_BITS)
+#define sexp_make_integer(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
+#define sexp_unbox_integer(n)   (((sexp_sint_t)(n))>>SEXP_FIXNUM_BITS)
 
-#define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)n)<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
-#define sexp_unbox_character(n) ((int) (((sexp_sint_t)n)>>SEXP_EXTENDED_BITS))
+#define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
+#define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
 
 #if USE_FLONUMS
 #define sexp_integer_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_integer(x)))

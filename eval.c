@@ -1245,7 +1245,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_RAISE:
   call_error_handler:
     stack[top] = (sexp) 1;
-    stack[top+1] = sexp_make_integer(ip);
+    stack[top+1] = sexp_make_integer(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
     stack[top+3] = sexp_make_integer(fp);
     top += 4;
@@ -1269,7 +1269,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case OP_CALLCC:
     stack[top] = sexp_make_integer(1);
-    stack[top+1] = sexp_make_integer(ip);
+    stack[top+1] = sexp_make_integer(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
     stack[top+3] = sexp_make_integer(fp);
     tmp1 = _ARG1;
@@ -1298,10 +1298,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     /* save frame info */
     tmp2 = stack[fp+3];
     j = sexp_unbox_integer(stack[fp]);
-    ip = ((unsigned char*) sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
     self = stack[fp+2];
-    cp = sexp_procedure_vars(self);
     bc = sexp_procedure_vars(self);
+    cp = sexp_procedure_vars(self);
+    ip = (sexp_bytecode_data(bc)
+          + sexp_unbox_integer(stack[fp+1])) - sizeof(sexp);
     /* copy new args into place */
     for (k=0; k<i; k++)
       stack[fp-j+k] = stack[top-1-i+k];
@@ -1355,7 +1356,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       i++;
     }
     _ARG1 = sexp_make_integer(i);
-    stack[top] = sexp_make_integer(ip+sizeof(sexp));
+    stack[top] = sexp_make_integer(ip+sizeof(sexp)-sexp_bytecode_data(bc));
     stack[top+1] = self;
     stack[top+2] = sexp_make_integer(fp);
     top += 3;
@@ -1775,9 +1776,9 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     i = sexp_unbox_integer(stack[fp]);
     stack[fp-i] = _ARG1;
     top = fp-i+1;
-    ip = (unsigned char*) sexp_unbox_integer(stack[fp+1]);
     self = stack[fp+2];
     bc = sexp_procedure_code(self);
+    ip = sexp_bytecode_data(bc) + sexp_unbox_integer(stack[fp+1]);
     cp = sexp_procedure_vars(self);
     fp = sexp_unbox_integer(stack[fp+3]);
     break;
@@ -2077,8 +2078,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   stack[top] = sexp_make_integer(top);
   top++;
   sexp_context_top(ctx) = top + 3;
-  stack[top++] = sexp_make_integer(sexp_bytecode_data(final_resumer));
-  stack[top++] = sexp_make_vector(ctx, 0, SEXP_VOID);
+  stack[top++] = sexp_make_integer(0);
+  stack[top++] = final_resumer;
   stack[top++] = sexp_make_integer(0);
   return sexp_vm(ctx, proc);
 }
@@ -2160,6 +2161,10 @@ void sexp_scheme_init () {
     continuation_resumer = finalize_bytecode(ctx);
     ctx = sexp_make_child_context(ctx, NULL);
     emit(ctx, OP_DONE);
-    final_resumer = finalize_bytecode(ctx);
+    final_resumer = sexp_make_procedure(ctx,
+                                        sexp_make_integer(0),
+                                        sexp_make_integer(0),
+                                        finalize_bytecode(ctx),
+                                        sexp_make_vector(ctx, 0, SEXP_VOID));
   }
 }
