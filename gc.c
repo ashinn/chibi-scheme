@@ -21,7 +21,11 @@ struct sexp_heap {
 };
 
 static sexp_heap heap;
+
+#if USE_DEBUG_GC
 static sexp* stack_base;
+#endif
+
 extern sexp continuation_resumer, final_resumer;
 
 static sexp_heap sexp_heap_last (sexp_heap h) {
@@ -154,7 +158,7 @@ sexp_heap sexp_make_heap (size_t size) {
   sexp free, next;
   sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
   if (! h) {
-    fprintf(stderr, "out of memory allocating %lu byte heap, aborting\n", size);
+    fprintf(stderr, "out of memory allocating %zu byte heap, aborting\n", size);
     exit(70);
   }
   h->size = size;
@@ -222,7 +226,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
     if (! res) {
-      fprintf(stderr, "out of memory allocating %lu bytes, aborting\n", size);
+      fprintf(stderr, "out of memory allocating %zu bytes, aborting\n", size);
       exit(70);
     }
   }
@@ -232,7 +236,9 @@ void* sexp_alloc (sexp ctx, size_t size) {
 void sexp_gc_init () {
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
   heap = sexp_make_heap(size);
+#if USE_DEBUG_GC
   /* the +32 is a hack, but this is just for debugging anyway */
   stack_base = ((sexp*)&size) + 32;
+#endif
 }
 

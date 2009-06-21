@@ -122,7 +122,9 @@ struct sexp_struct {
     } symbol;
     struct {
       FILE *stream;
+      char *buf;
       sexp_uint_t line;
+      size_t size;
       sexp name;
       sexp cookie;
     } port;
@@ -364,6 +366,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_port_name(p)      ((p)->value.port.name)
 #define sexp_port_line(p)      ((p)->value.port.line)
 #define sexp_port_cookie(p)    ((p)->value.port.cookie)
+#define sexp_port_buf(p)       ((p)->value.port.buf)
+#define sexp_port_size(p)      ((p)->value.port.size)
 
 #define sexp_exception_kind(p)      ((p)->value.exception.kind)
 #define sexp_exception_message(p)   ((p)->value.exception.message)
