@@ -215,7 +215,7 @@ struct sexp_struct {
 #define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
 
-#include "gc.h"
+#include "gc/gc.h"
 #define sexp_alloc(ctx, size)        GC_malloc(size)
 #define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
 #define sexp_realloc(ctx, x, size)   GC_realloc(x, size)

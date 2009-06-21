@@ -154,7 +154,7 @@ sexp_heap sexp_make_heap (size_t size) {
   sexp free, next;
   sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
   if (! h) {
-    fprintf(stderr, "out of memory allocating %ld byte heap, aborting\n", size);
+    fprintf(stderr, "out of memory allocating %lu byte heap, aborting\n", size);
     exit(70);
   }
   h->size = size;
@@ -222,7 +222,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
     if (! res) {
-      fprintf(stderr, "out of memory allocating %ld bytes, aborting\n", size);
+      fprintf(stderr, "out of memory allocating %lu bytes, aborting\n", size);
       exit(70);
     }
   }

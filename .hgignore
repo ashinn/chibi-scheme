@@ -16,4 +16,4 @@ junk*
 gc
 gc6.8
 chibi-scheme
-
+include/chibi/install.h
