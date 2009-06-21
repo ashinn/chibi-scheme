@@ -2,7 +2,38 @@
 /* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt  */
 
+#include <sys/stat.h>
 #include "chibi/eval.h"
+
+char *chibi_module_dir = NULL;
+
+sexp find_module_file (sexp ctx, char *file) {
+  sexp res;
+  int mlen, flen;
+  char *path;
+  struct stat buf;
+
+  if (! stat(file, &buf))
+    return sexp_c_string(ctx, file, -1);
+  if (! chibi_module_dir) {
+    chibi_module_dir = getenv("CHIBI_MODULE_DIR");
+    if (! chibi_module_dir)
+      chibi_module_dir = sexp_module_dir;
+  }
+  mlen = strlen(chibi_module_dir);
+  flen = strlen(file);
+  path = (char*) malloc(mlen+flen+2);
+  memcpy(path, chibi_module_dir, mlen);
+  path[mlen+1] = '/';
+  memcpy(path+mlen+1, file, flen);
+  path[mlen+flen] = '\0';
+  if (! stat(path, &buf))
+    res = sexp_c_string(ctx, path, mlen+flen+1);
+  else
+    res = SEXP_FALSE;
+  free(path);
+  return res;
+}
 
 void repl (sexp ctx) {
   sexp tmp, res, env, in, out, err;
@@ -54,7 +85,7 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded++)
-        sexp_load(ctx, str=sexp_c_string(ctx, sexp_init_file, -1), env);
+        sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
       res = sexp_read_from_string(ctx, argv[i+1]);
       if (! sexp_exceptionp(res))
         res = sexp_eval(ctx, res);
@@ -70,11 +101,14 @@ void run_main (int argc, char **argv) {
 #endif
     case 'l':
       if (! init_loaded++)
-        sexp_load(ctx, str=sexp_c_string(ctx, sexp_init_file, -1), env);
-      sexp_load(ctx, str=sexp_c_string(ctx, argv[++i], -1), env);
+        sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
+      sexp_load(ctx, str=find_module_file(ctx, argv[++i]), env);
       break;
     case 'q':
       init_loaded = 1;
+      break;
+    case 'm':
+      chibi_module_dir = argv[++i];
       break;
     default:
       errx(1, "unknown option: %s", argv[i]);
@@ -83,7 +117,7 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      sexp_load(ctx, str=sexp_c_string(ctx, sexp_init_file, -1), env);
+      sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
     if (i < argc)
       for ( ; i < argc; i++)
         sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
