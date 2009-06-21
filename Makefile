@@ -44,7 +44,7 @@ XCPPFLAGS := $(CPPFLAGS) -Iinclude
 endif
 
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := $(CFLAGS) -Wall -O2 -g
+XCFLAGS   := $(CFLAGS) -Wall -g
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 
@@ -100,7 +100,7 @@ install: chibi-scheme
 
 uninstall:
 	rm -f $(BINDIR)/chibi-scheme*
-	rm -f $(LIBDIR)/libchibischeme$(SO)
+	rm -f $(LIBDIR)/libchibi-scheme$(SO)
 	cd $(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
 	rm -f $(MODDIR)/*.scm
 

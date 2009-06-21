@@ -1828,6 +1828,8 @@ static sexp sexp_open_output_file (sexp ctx, sexp path) {
 
 static sexp sexp_close_port (sexp ctx, sexp port) {
   fclose(sexp_port_stream(port));
+  if (sexp_port_buf(port))
+    free(sexp_port_buf(port));
   return SEXP_VOID;
 }
 
