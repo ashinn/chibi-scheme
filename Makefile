@@ -6,10 +6,10 @@ all: chibi-scheme
 
 CC     ?= cc
 PREFIX ?= /usr/local
-BINDIR=$(PREFIX)/bin
-LIBDIR=$(PREFIX)/lib
-INCDIR=$(PREFIX)/include/chibi
-MODDIR=$(PREFIX)/share/chibi
+BINDIR ?= $(PREFIX)/bin
+LIBDIR ?= $(PREFIX)/lib
+INCDIR ?= $(PREFIX)/include/chibi
+MODDIR ?= $(PREFIX)/share/chibi
 
 ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
@@ -23,6 +23,7 @@ ifeq ($(PLATFORM),macosx)
 SO  = .dylib
 EXE =
 CLIBFLAGS = -dynamiclib
+STATICFLAGS = -static-libgcc
 else ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
@@ -31,6 +32,7 @@ else
 SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
+STATICFLAGS = -static
 endif
 
 ifdef USE_BOEHM
@@ -43,13 +45,18 @@ LDFLAGS  := $(LDFLAGS) -lm
 CPPFLAGS := $(CPPFLAGS) -Iinclude
 CFLAGS   := $(CFLAGS) -Wall -O2 -g
 
-sexp.o: sexp.c gc.c include/chibi/sexp.h include/chibi/config.h Makefile
+INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
+
+include/chibi/install.h: Makefile
+	echo '#define sexp_module_dir "'$(MODDIR)'"' > $@
+
+sexp.o: sexp.c gc.c $(INCLUDES) Makefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-eval.o: eval.c debug.c opcodes.c include/chibi/eval.h include/chibi/sexp.h include/chibi/config.h Makefile
+eval.o: eval.c debug.c opcodes.c include/chibi/eval.h $(INCLUDES) Makefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
-main.o: main.c eval.c debug.c opcodes.c include/chibi/eval.h include/chibi/sexp.h include/chibi/config.h Makefile
+main.o: main.c $(INCLUDES) Makefile
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 libchibi-scheme$(SO): eval.o sexp.o
@@ -59,13 +66,13 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS) $(GCLDFLAGS) -L. -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
+	$(CC) $(CFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS)
 
 clean:
 	rm -f *.o *.i *.s
 
 cleaner: clean
-	rm -f chibi-scheme
+	rm -f chibi-scheme chibi-scheme-static *$(SO)
 	rm -rf *.dSYM
 
 test-basic: chibi-scheme
@@ -81,20 +88,20 @@ test-basic: chibi-scheme
 test: chibi-scheme
 	./chibi-scheme -l syntax-rules.scm tests/r5rs-tests.scm
 
-# install: chibi-scheme
-# 	cp chibi-scheme $(BINDIR)/
-# 	mkdir -p $(MODDIR)
-# 	cp init.scm $(MODDIR)/
-# 	mkdir -p $(INCDIR)
-# 	cp *.h $(INCDIR)/
-# 	cp *.$(SO) $(LIBDIR)/
+install: chibi-scheme
+	cp chibi-scheme $(BINDIR)/
+	mkdir -p $(MODDIR)
+	cp init.scm syntax-rules.scm $(MODDIR)/
+	mkdir -p $(INCDIR)
+	cp $(INCLUDES) include/chibi/eval.h $(INCDIR)/
+	mkdir -p $(LIBDIR)
+	cp libchibi-scheme$(SO) $(LIBDIR)/
 
-# uninstall:
-# 	rm -f $(BINDIR)/chibi-scheme
-# 	rm -f $(LIBDIR)/libchibischeme.$(SO)
-# 	rm -f $(LIBDIR)/libchibisexp.$(SO)
-# 	rm -f $(INCDIR)/*.h
-# 	rm -f $(MODDIR)/*.scm
+uninstall:
+	rm -f $(BINDIR)/chibi-scheme*
+	rm -f $(LIBDIR)/libchibischeme$(SO)
+	cd $(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
+	rm -f $(MODDIR)/*.scm
 
 dist: cleaner
 	rm -f chibi-scheme-`cat VERSION`.tgz
