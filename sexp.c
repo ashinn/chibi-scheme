@@ -625,12 +625,15 @@ sexp sexp_get_output_string (sexp ctx, sexp port) {
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   FILE *in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
-  return sexp_make_input_port(ctx, in, SEXP_FALSE);
+  sexp res = sexp_make_input_port(ctx, in, SEXP_FALSE);
+  sexp_port_cookie(res) = str;  /* for gc preservation */
+  return res;
 }
 
 sexp sexp_make_output_string_port (sexp ctx) {
   sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
-  sexp_port_stream(res) = open_memstream(&sexp_port_buf(res), &sexp_port_size(res));
+  sexp_port_stream(res)
+    = open_memstream(&sexp_port_buf(res), &sexp_port_size(res));
   return res;
 }
 
@@ -656,6 +659,7 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   sexp_port_stream(p) = out;
   sexp_port_name(p) = name;
   sexp_port_line(p) = 0;
+  sexp_port_buf(p) = NULL;
   return p;
 }
 

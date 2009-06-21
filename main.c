@@ -1,4 +1,4 @@
-/* main.c -- chibi-scheme command-line app using        */
+/* main.c -- chibi-scheme command-line app              */
 /* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt  */
 
@@ -24,11 +24,11 @@ sexp find_module_file (sexp ctx, char *file) {
   flen = strlen(file);
   path = (char*) malloc(mlen+flen+2);
   memcpy(path, chibi_module_dir, mlen);
-  path[mlen+1] = '/';
+  path[mlen] = '/';
   memcpy(path+mlen+1, file, flen);
-  path[mlen+flen] = '\0';
+  path[mlen+flen+1] = '\0';
   if (! stat(path, &buf))
-    res = sexp_c_string(ctx, path, mlen+flen+1);
+    res = sexp_c_string(ctx, path, mlen+flen+2);
   else
     res = SEXP_FALSE;
   free(path);
