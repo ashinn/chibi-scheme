@@ -35,8 +35,8 @@
 /* uncomment this to enable stack overflow checks */
 /* #define USE_CHECK_STACK 1 */
 
-/* uncomment this to enable debugging utilities */
-/* #define USE_DEBUG 1 */
+/* uncomment this to disable debugging utilities */
+/* #define USE_DEBUG 0 */
 
 /************************************************************************/
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
