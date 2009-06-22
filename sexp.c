@@ -6,11 +6,12 @@
 #include "chibi/sexp.h"
 
 /* optional huffman-compressed immediate symbols */
-#if USE_HUFF_SYMS
 struct sexp_huff_entry {
   unsigned char len;
   unsigned short bits;
 };
+
+#if USE_HUFF_SYMS
 #include "opt/sexp-hufftabs.c"
 static struct sexp_huff_entry huff_table[] = {
 #include "opt/sexp-huff.c"
@@ -433,10 +434,10 @@ sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end) {
   return res;
 }
 
-#if USE_HASH_SYMS
-
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
+
+#if USE_HASH_SYMS
 
 static sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc) {
   while (*str) {acc *= FNV_PRIME; acc ^= *str++;}
