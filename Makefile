@@ -27,7 +27,7 @@ STATICFLAGS = -static-libgcc
 else ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
-CLIBFLAGS = -fPIC shared
+CLIBFLAGS = -fPIC -shared
 else
 SO  = .so
 EXE =
@@ -52,10 +52,10 @@ include/chibi/install.h: Makefile
 	echo '#define sexp_module_dir "'$(MODDIR)'"' > $@
 
 sexp.o: sexp.c gc.c $(INCLUDES) Makefile
-	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
+	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 eval.o: eval.c debug.c opcodes.c include/chibi/eval.h $(INCLUDES) Makefile
-	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
+	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 main.o: main.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
@@ -97,6 +97,7 @@ install: chibi-scheme
 	cp $(INCLUDES) include/chibi/eval.h $(INCDIR)/
 	mkdir -p $(LIBDIR)
 	cp libchibi-scheme$(SO) $(LIBDIR)/
+	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
 	rm -f $(BINDIR)/chibi-scheme*
