@@ -38,7 +38,7 @@ sexp_uint_t sexp_allocated_bytes (sexp x) {
   sexp t;
   if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) > SEXP_CONTEXT))
     return sexp_heap_align(1);
-  t = &(sexp_types[sexp_pointer_tag(x)]);
+  t = &(sexp_type_specs[sexp_pointer_tag(x)]);
   len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_size_off(t));
   res = sexp_type_size_base(t) + len_ptr[0] * sexp_type_size_scale(t);
   return res;
@@ -56,7 +56,7 @@ void sexp_mark (sexp x) {
   if (sexp_contextp(x))
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
       if (saves->var) sexp_mark(*(saves->var));
-  t = &(sexp_types[sexp_pointer_tag(x)]);
+  t = &(sexp_type_specs[sexp_pointer_tag(x)]);
   p = (sexp*) (((char*)x) + sexp_type_field_base(t));
   len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_field_len_off(t));
   len = sexp_type_field_len_base(t)
