@@ -1262,7 +1262,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     self = _ARG2;
     bc = sexp_procedure_code(self);
     cp = sexp_procedure_vars(self);
-    ip = (unsigned char*) sexp_unbox_integer(_ARG3);
+    ip = sexp_bytecode_data(bc) + sexp_unbox_integer(_ARG3);
     i = sexp_unbox_integer(_ARG4);
     top -= 4;
     _ARG1 = tmp1;
