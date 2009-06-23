@@ -368,6 +368,10 @@
 
 (test '(3 3) (let ((p (delay (+ 1 2)))) (list (force p) (force p))))
 
+(test 7 (call-with-current-continuation (lambda (k) (+ 2 5))))
+
+(test 3 (call-with-current-continuation (lambda (k) (+ 2 5 (k 3)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-report)
