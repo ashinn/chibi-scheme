@@ -416,7 +416,7 @@ sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end) {
     return sexp_type_exception(ctx, "not a string", str);
   if (! sexp_integerp(start))
     return sexp_type_exception(ctx, "not a number", start);
-  if (end == SEXP_FALSE)
+  if (sexp_not(end))
     end = sexp_make_integer(sexp_string_length(str));
   if (! sexp_integerp(end))
     return sexp_type_exception(ctx, "not a number", end);
@@ -723,14 +723,36 @@ void sexp_write (sexp obj, sexp out) {
     case SEXP_BYTECODE:
       sexp_write_string("#<bytecode>", out); break;
     case SEXP_ENV:
-      sexp_printf(out, "#<env %p>", obj); break;
+      sexp_printf(out, "#<env %p (%p)", obj, sexp_env_parent(obj));
+      x = sexp_env_bindings(obj);
+      if (sexp_unbox_integer(sexp_length(NULL, x)) > 5) {
+        sexp_write_char(' ', out);
+        sexp_write(sexp_caar(x), out);
+        sexp_write_string(": ", out);
+        if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x)))
+          sexp_printf(out, "%p", sexp_cdar(x));
+        else
+          sexp_write(sexp_cdar(x), out);
+        sexp_write_string(" ...", out);
+      } else for ( ; x && sexp_pairp(x); x=sexp_cdr(x)) {
+        sexp_write_char(' ', out);
+        sexp_write(sexp_caar(x), out);
+        sexp_write_string(": ", out);
+        if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x)))
+          sexp_printf(out, "%p", sexp_cdar(x));
+        else
+          sexp_write(sexp_cdar(x), out);
+      }
+      sexp_write_char('>', out);
+      break;
     case SEXP_EXCEPTION:
       sexp_write_string("#<exception>", out); break;
     case SEXP_MACRO:
       sexp_write_string("#<macro>", out); break;
 #if USE_DEBUG
     case SEXP_LAMBDA:
-      sexp_write_string("#<lambda ", out);
+      /* sexp_write_string("#<lambda ", out); */
+      sexp_printf(out, "#<lambda %p ", obj);
       sexp_write(sexp_lambda_params(obj), out);
       sexp_write_char(' ', out);
       sexp_write(sexp_lambda_body(obj), out);
@@ -1140,7 +1162,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     case '(':
       sexp_push_char(c1, in);
       res = sexp_read(ctx, in);
-      if (sexp_listp(ctx, res) == SEXP_FALSE) {
+      if (sexp_not(sexp_listp(ctx, res))) {
         if (! sexp_exceptionp(res)) {
           res = sexp_read_error(ctx, "dotted list not allowed in vector syntax",
                                 SEXP_NULL,
