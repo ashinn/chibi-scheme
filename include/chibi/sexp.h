@@ -269,6 +269,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 /***************************** predicates *****************************/
 
 #define sexp_truep(x)    ((x) != SEXP_FALSE)
+#define sexp_not(x)      ((x) == SEXP_FALSE)
 
 #define sexp_nullp(x)    ((x) == SEXP_NULL)
 #define sexp_pointerp(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
