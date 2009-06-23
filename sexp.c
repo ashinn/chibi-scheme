@@ -59,7 +59,7 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
 #define _DEF_TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
   {.tag=SEXP_TYPE, .value={.type={t,fb,flb,flo,fls,sb,so,sc,n}}}
 
-static struct sexp_struct sexp_types[] = {
+static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"),
   _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"),
   _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
