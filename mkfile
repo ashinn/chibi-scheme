@@ -4,8 +4,7 @@ BIN=/$objtype/bin
 TARG=chibi-scheme
 MODDIR=/sys/lib/chibi-scheme
 
-#CC=pcc
-CPPFLAGS= -Iinclude -DPLAN9 -DUSE_STRING_STREAMS=0
+CPPFLAGS= -Iinclude -DPLAN9 -DUSE_STRING_STREAMS=0 -DUSE_DEBUG=0
 CFLAGS=	-c -B $CPPFLAGS
 
 OFILES=sexp.$O eval.$O main.$O
@@ -28,7 +27,7 @@ main.$O: main.i
 	$CC $CFLAGS -c -o $target main.i
 
 chibi-scheme: sexp.$O eval.$O main.$O
-	$LD -o $target -l $prereq
+	$LD -o $target $prereq
 
 #</sys/src/cmd/mkone
 
