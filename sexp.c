@@ -392,9 +392,10 @@ sexp sexp_make_flonum(sexp ctx, double f) {
 
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
   sexp_sint_t clen = sexp_unbox_integer(len);
-  sexp s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
-  sexp_pointer_tag(s) = SEXP_STRING;
+  sexp s;
   if (clen < 0) return sexp_type_exception(ctx, "negative length", len);
+  s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
+  sexp_pointer_tag(s) = SEXP_STRING;
   sexp_string_length(s) = clen;
   if (sexp_charp(ch))
     memset(sexp_string_data(s), sexp_unbox_character(ch), clen);
@@ -450,6 +451,7 @@ sexp sexp_string_concatenate (sexp ctx, sexp str_ls) {
     memcpy(p, sexp_string_data(sexp_car(ls)), len);
     p += len;
   }
+  *p = '\0';
   return res;
 }
 
@@ -702,15 +704,14 @@ sexp sexp_buffered_flush (sexp ctx, sexp p) {
   else {
     if (sexp_port_stream(p)) {
       fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
-      sexp_port_offset(p) = 0;
       fflush(sexp_port_stream(p));
     } else if (sexp_port_offset(p) > 0) {
       sexp_gc_preserve(ctx, tmp, s_tmp);
       tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
       sexp_push(ctx, sexp_port_cookie(p), tmp);
-      sexp_port_offset(p) = 0;
       sexp_gc_release(ctx, tmp, s_tmp);
     }
+    sexp_port_offset(p) = 0;
     return SEXP_VOID;
   }
 }
@@ -735,17 +736,18 @@ sexp sexp_make_output_string_port (sexp ctx) {
 
 sexp sexp_get_output_string (sexp ctx, sexp out) {
   sexp res;
+  sexp_gc_var(ctx, ls, s_ls);
   sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_preserve(ctx, ls, s_ls);
   sexp_gc_preserve(ctx, tmp, s_tmp);
-  tmp = ((sexp_port_offset(out) > 0)
-         ? sexp_cons(ctx,
-                     tmp=sexp_c_string(ctx,
-                                       sexp_port_buf(out),
-                                       sexp_port_offset(out)),
-                     sexp_port_cookie(out))
-         : sexp_port_cookie(out));
-  res = sexp_string_concatenate(ctx, tmp);
-  sexp_gc_release(ctx, tmp, s_tmp);
+  if (sexp_port_offset(out) > 0) {
+    tmp = sexp_c_string(ctx, sexp_port_buf(out), sexp_port_offset(out));
+    ls = sexp_cons(ctx, tmp, sexp_port_cookie(out));
+  } else {
+    ls = sexp_port_cookie(out);
+  }
+  res = sexp_string_concatenate(ctx, ls);
+  sexp_gc_release(ctx, ls, s_ls);
   return res;
 }
 
