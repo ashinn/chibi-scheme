@@ -14,7 +14,7 @@ static sexp the_err_handler_symbol, the_compile_error_symbol;
 static sexp the_cur_in_symbol, the_cur_out_symbol, the_cur_err_symbol;
 
 #define sexp_current_error_port(ctx) env_global_ref(sexp_context_env(ctx),the_cur_out_symbol,SEXP_FALSE)
-#define sexp_debug(ctx, msg, obj) (sexp_write_string(msg, sexp_current_error_port(ctx)), sexp_write(obj, sexp_current_error_port(ctx)), sexp_write_char('\n', sexp_current_error_port(ctx)))
+#define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
 
 #if USE_DEBUG
 #include "debug.c"
@@ -1298,7 +1298,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     tmp1 = _ARG1;
     i = 1;
     sexp_context_top(ctx) = top;
-    tmp2 = sexp_vector(ctx, 1, sexp_save_stack(ctx, stack, top+4));
+    tmp2 = sexp_make_vector(ctx, sexp_make_integer(1), SEXP_UNDEF);
+    sexp_vector_set(tmp2,
+                    sexp_make_integer(0),
+                    sexp_save_stack(ctx, stack, top+4));
     _ARG1 = sexp_make_procedure(ctx, sexp_make_integer(0),
                                 sexp_make_integer(1), continuation_resumer,
                                 tmp2);
@@ -1334,10 +1337,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     goto make_call;
   case OP_CALL:
 #if USE_CHECK_STACK
-    if (top+16 >= INIT_STACK_SIZE) {
-      fprintf(stderr, "out of stack space\n");
-      exit(70);
-    }
+    if (top+16 >= INIT_STACK_SIZE)
+      errx(70, "out of stack space\n");
 #endif
     i = sexp_unbox_integer(_WORD0);
     tmp1 = _ARG1;
@@ -1752,19 +1753,19 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case OP_DISPLAY:
     if (sexp_stringp(_ARG1)) {
-      sexp_write_string(sexp_string_data(_ARG1), _ARG2);
+      sexp_write_string(ctx, sexp_string_data(_ARG1), _ARG2);
       _ARG2 = SEXP_VOID;
       top--;
       break;
     } else if (sexp_charp(_ARG1)) {
-      sexp_write_char(sexp_unbox_character(_ARG1), _ARG2);
+      sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
       _ARG2 = SEXP_VOID;
       top--;
       break;
     }
     /* ... FALLTHROUGH ... */
   case OP_WRITE:
-    sexp_write(_ARG1, _ARG2);
+    sexp_write(ctx, _ARG1, _ARG2);
     _ARG2 = SEXP_VOID;
     top--;
     break;
@@ -1774,7 +1775,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case OP_NEWLINE:
-    sexp_write_char('\n', _ARG1);
+    sexp_write_char(ctx, '\n', _ARG1);
     _ARG1 = SEXP_VOID;
     break;
   case OP_FLUSH_OUTPUT:
@@ -1787,12 +1788,12 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_check_exception();
     break;
   case OP_READ_CHAR:
-    i = sexp_read_char(_ARG1);
+    i = sexp_read_char(ctx, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case OP_PEEK_CHAR:
-    i = sexp_read_char(_ARG1);
-    sexp_push_char(i, _ARG1);
+    i = sexp_read_char(ctx, _ARG1);
+    sexp_push_char(ctx, i, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case OP_RET:
@@ -1850,9 +1851,14 @@ static sexp sexp_open_output_file (sexp ctx, sexp path) {
 }
 
 static sexp sexp_close_port (sexp ctx, sexp port) {
-  fclose(sexp_port_stream(port));
+  if (! sexp_portp(port))
+    return sexp_type_exception(ctx, "not a port", port);
+  if (! sexp_port_openp(port))
+    return sexp_user_exception(ctx, SEXP_FALSE, "port already closed", port);
   if (sexp_port_buf(port))
     free(sexp_port_buf(port));
+  if (sexp_port_stream(port))
+    fclose(sexp_port_stream(port));
   return SEXP_VOID;
 }
 
@@ -1860,9 +1866,9 @@ void sexp_warn_undefs (sexp from, sexp to, sexp out) {
   sexp x;
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_cdr(x))
     if (sexp_cdar(x) == SEXP_UNDEF) {
-      sexp_write_string("WARNING: reference to undefined variable: ", out);
-      sexp_write(sexp_caar(x), out);
-      sexp_write_char('\n', out);
+      sexp_write_string(ctx, "WARNING: reference to undefined variable: ", out);
+      sexp_write(ctx, sexp_caar(x), out);
+      sexp_write_char(ctx, '\n', out);
     }
 }
 
@@ -1958,25 +1964,6 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
     return sexp_make_flonum(ctx, res);
 #endif
   return sexp_make_integer((sexp_sint_t)round(res));
-}
-
-static sexp sexp_string_concatenate (sexp ctx, sexp str_ls) {
-  sexp res, ls;
-  sexp_uint_t len=0;
-  char *p;
-  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls))
-    if (! sexp_stringp(sexp_car(ls)))
-      return sexp_type_exception(ctx, "not a string", sexp_car(ls));
-    else
-      len += sexp_string_length(sexp_car(ls));
-  res = sexp_make_string(ctx, sexp_make_integer(len), SEXP_VOID);
-  p = sexp_string_data(res);
-  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    len = sexp_string_length(sexp_car(ls));
-    memcpy(p, sexp_string_data(sexp_car(ls)), len);
-    p += len;
-  }
-  return res;
 }
 
 static sexp sexp_string_cmp (sexp ctx, sexp str1, sexp str2, sexp ci) {
@@ -2153,6 +2140,7 @@ sexp sexp_eval (sexp ctx, sexp obj) {
   return res;
 }
 
+#if USE_STRING_STREAMS
 sexp sexp_eval_string (sexp ctx, char *str) {
   sexp res;
   sexp_gc_var(ctx, obj, s_obj);
@@ -2162,6 +2150,7 @@ sexp sexp_eval_string (sexp ctx, char *str) {
   sexp_gc_release(ctx, obj, s_obj);
   return res;
 }
+#endif
 
 void sexp_scheme_init () {
   sexp ctx;

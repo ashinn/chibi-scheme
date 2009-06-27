@@ -162,52 +162,52 @@ sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
 
 sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
   sexp ls;
-  sexp_write_string("ERROR", out);
+  sexp_write_string(ctx, "ERROR", out);
   if (sexp_exceptionp(exn)) {
     if (sexp_procedurep(sexp_exception_procedure(exn))) {
       ls = sexp_bytecode_name(
              sexp_procedure_code(sexp_exception_procedure(exn)));
       if (sexp_symbolp(ls)) {
-        sexp_write_string(" in ", out);
-        sexp_write(ls, out);
+        sexp_write_string(ctx, " in ", out);
+        sexp_write(ctx, ls, out);
       }
     }
     if (sexp_integerp(sexp_exception_line(exn))
         && (sexp_exception_line(exn) > sexp_make_integer(0))) {
-      sexp_write_string(" on line ", out);
-      sexp_write(sexp_exception_line(exn), out);
+      sexp_write_string(ctx, " on line ", out);
+      sexp_write(ctx, sexp_exception_line(exn), out);
     }
     if (sexp_stringp(sexp_exception_file(exn))) {
-      sexp_write_string(" of file ", out);
-      sexp_write_string(sexp_string_data(sexp_exception_file(exn)), out);
+      sexp_write_string(ctx, " of file ", out);
+      sexp_write_string(ctx, sexp_string_data(sexp_exception_file(exn)), out);
     }
-    sexp_write_string(": ", out);
-    sexp_write_string(sexp_string_data(sexp_exception_message(exn)), out);
+    sexp_write_string(ctx, ": ", out);
+    sexp_write_string(ctx, sexp_string_data(sexp_exception_message(exn)), out);
     if (sexp_exception_irritants(exn)
         && sexp_pairp(sexp_exception_irritants(exn))) {
       if (sexp_nullp(sexp_cdr(sexp_exception_irritants(exn)))) {
-        sexp_write_string(": ", out);
-        sexp_write(sexp_car(sexp_exception_irritants(exn)), out);
-        sexp_write_string("\n", out);
+        sexp_write_string(ctx, ": ", out);
+        sexp_write(ctx, sexp_car(sexp_exception_irritants(exn)), out);
+        sexp_write_string(ctx, "\n", out);
       } else {
-        sexp_write_string("\n", out);
+        sexp_write_string(ctx, "\n", out);
         for (ls=sexp_exception_irritants(exn);
              sexp_pairp(ls); ls=sexp_cdr(ls)) {
-          sexp_write_string("    ", out);
-          sexp_write(sexp_car(ls), out);
-          sexp_write_char('\n', out);
+          sexp_write_string(ctx, "    ", out);
+          sexp_write(ctx, sexp_car(ls), out);
+          sexp_write_char(ctx, '\n', out);
         }
       }
     } else {
-      sexp_write_char('\n', out);
+      sexp_write_char(ctx, '\n', out);
     }
   } else {
-    sexp_write_string(": ", out);
+    sexp_write_string(ctx, ": ", out);
     if (sexp_stringp(exn))
-      sexp_write_string(sexp_string_data(exn), out);
+      sexp_write_string(ctx, sexp_string_data(exn), out);
     else
-      sexp_write(exn, out);
-    sexp_write_char('\n', out);
+      sexp_write(ctx, exn, out);
+    sexp_write_char(ctx, '\n', out);
   }
   return SEXP_VOID;
 }
@@ -434,6 +434,25 @@ sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end) {
   return res;
 }
 
+sexp sexp_string_concatenate (sexp ctx, sexp str_ls) {
+  sexp res, ls;
+  sexp_uint_t len=0;
+  char *p;
+  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls))
+    if (! sexp_stringp(sexp_car(ls)))
+      return sexp_type_exception(ctx, "not a string", sexp_car(ls));
+    else
+      len += sexp_string_length(sexp_car(ls));
+  res = sexp_make_string(ctx, sexp_make_integer(len), SEXP_VOID);
+  p = sexp_string_data(res);
+  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls)) {
+    len = sexp_string_length(sexp_car(ls));
+    memcpy(p, sexp_string_data(sexp_car(ls)), len);
+    p += len;
+  }
+  return res;
+}
+
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
 
@@ -510,19 +529,6 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   int i;
   for (i=0, x=ls; sexp_pairp(x); i++, x=sexp_cdr(x))
     elts[i] = sexp_car(x);
-  return vec;
-}
-
-sexp sexp_vector(sexp ctx, int count, ...) {
-  sexp vec = sexp_make_vector(ctx, sexp_make_integer(count), SEXP_VOID);
-  sexp *elts = sexp_vector_data(vec);
-  va_list ap;
-  int i;
-
-  va_start(ap, count);
-  for (i=0; i<count; i++)
-    elts[i] = va_arg(ap, sexp);
-  va_end(ap);
   return vec;
 }
 
@@ -645,6 +651,99 @@ sexp sexp_get_output_string (sexp ctx, sexp port) {
 
 #endif
 
+#else
+
+#define SEXP_PORT_BUFFER_SIZE 4096
+
+int sexp_buffered_read_char (sexp ctx, sexp p) {
+  if (sexp_port_offset(p) < sexp_port_size(p)) {
+    return sexp_port_buf(p)[sexp_port_offset(p)++];
+  } else if (! sexp_port_stream(p)) {
+    return EOF;
+  } else {
+    sexp_port_size(p)
+      = fread(sexp_port_buf(p), 1, SEXP_PORT_BUFFER_SIZE, sexp_port_stream(p));
+    sexp_port_offset(p) = 0;
+    return ((sexp_port_offset(p) < sexp_port_size(p))
+            ? sexp_port_buf(p)[sexp_port_offset(p)++] : EOF);
+  }
+}
+
+sexp sexp_buffered_write_char (sexp ctx, int c, sexp p) {
+  if (sexp_port_offset(p) >= sexp_port_size(p))
+    sexp_buffered_flush(ctx, p);
+  sexp_port_buf(p)[sexp_port_offset(p)++] = (c);
+  return SEXP_VOID;
+}
+
+sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p) {
+  if (sexp_port_offset(p) >= sexp_port_size(p))
+    sexp_buffered_flush(ctx, p);
+  memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, len);
+  sexp_port_offset(p) += len;
+  return SEXP_VOID;
+}
+
+sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p) {
+  return sexp_buffered_write_string_n(str, strlen(str), p);
+}
+
+sexp sexp_buffered_flush (sexp ctx, sexp p) {
+  sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_preserve(ctx, tmp, s_tmp);
+/*   if (! sexp_oportp(p)) */
+/*     return sexp_type_exception(); */
+/*   else if (! sexp_port_openp(p)) */
+/*     return sexp_make_exception(); */
+/*   else { */
+  if (sexp_port_stream(p)) {
+    fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
+    sexp_port_offset(p) = 0;
+    fflush(sexp_port_stream(p));
+  } else if (sexp_port_offset(p) > 0) {
+    tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
+    sexp_push(ctx, sexp_port_cookie(p), tmp);
+    sexp_port_offset(p) = 0;
+  }
+  sexp_gc_release(ctx, tmp, s_tmp);
+  return SEXP_VOID;
+/*   } */
+}
+
+sexp sexp_make_input_string_port (sexp ctx, sexp str) {
+  sexp res = sexp_make_input_port(ctx, NULL, SEXP_FALSE);
+  sexp_port_cookie(res) = str;
+  sexp_port_buf(res) = sexp_string_data(str);
+  sexp_port_offset(res) = 0;
+  sexp_port_size(res) = sexp_string_length(str);
+  return res;
+}
+
+sexp sexp_make_output_string_port (sexp ctx) {
+  sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
+  sexp_port_buf(res) = (char*) malloc(SEXP_PORT_BUFFER_SIZE);
+  sexp_port_size(res) = SEXP_PORT_BUFFER_SIZE;
+  sexp_port_offset(res) = 0;
+  sexp_port_cookie(res) = SEXP_NULL;
+  return res;
+}
+
+sexp sexp_get_output_string (sexp ctx, sexp out) {
+  sexp res;
+  sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_preserve(ctx, tmp, s_tmp);
+  tmp = ((sexp_port_offset(out) > 0)
+         ? sexp_cons(ctx,
+                     tmp=sexp_c_string(ctx,
+                                       sexp_port_buf(out),
+                                       sexp_port_offset(out)),
+                     sexp_port_cookie(out))
+         : sexp_port_cookie(out));
+  res = sexp_string_concatenate(ctx, tmp);
+  sexp_gc_release(ctx, tmp, s_tmp);
+  return res;
+}
+
 #endif
 
 sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
@@ -652,6 +751,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_stream(p) = in;
   sexp_port_name(p) = name;
   sexp_port_line(p) = 0;
+  sexp_port_openp(p) = 1;
   return p;
 }
 
@@ -661,187 +761,205 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   sexp_port_name(p) = name;
   sexp_port_line(p) = 0;
   sexp_port_buf(p) = NULL;
+  sexp_port_openp(p) = 1;
   return p;
 }
 
-void sexp_write (sexp obj, sexp out) {
+void sexp_write (sexp ctx, sexp obj, sexp out) {
   unsigned long len, c, res;
   long i=0;
   double f;
   sexp x, *elts;
-  char *str=NULL;
+  char *str=NULL, numbuf[20];
 
   if (! obj) {
-    sexp_write_string("#<null>", out); /* shouldn't happen */
+    sexp_write_string(ctx, "#<null>", out); /* shouldn't happen */
   } else if (sexp_pointerp(obj)) {
     switch (sexp_pointer_tag(obj)) {
     case SEXP_PAIR:
-      sexp_write_char('(', out);
-      sexp_write(sexp_car(obj), out);
+      sexp_write_char(ctx, '(', out);
+      sexp_write(ctx, sexp_car(obj), out);
       for (x=sexp_cdr(obj); sexp_pairp(x); x=sexp_cdr(x)) {
-        sexp_write_char(' ', out);
-        sexp_write(sexp_car(x), out);
+        sexp_write_char(ctx, ' ', out);
+        sexp_write(ctx, sexp_car(x), out);
       }
       if (! sexp_nullp(x)) {
-        sexp_write_string(" . ", out);
-        sexp_write(x, out);
+        sexp_write_string(ctx, " . ", out);
+        sexp_write(ctx, x, out);
       }
-      sexp_write_char(')', out);
+      sexp_write_char(ctx, ')', out);
       break;
     case SEXP_VECTOR:
       len = sexp_vector_length(obj);
       elts = sexp_vector_data(obj);
       if (len == 0) {
-        sexp_write_string("#()", out);
+        sexp_write_string(ctx, "#()", out);
       } else {
-        sexp_write_string("#(", out);
-        sexp_write(elts[0], out);
+        sexp_write_string(ctx, "#(", out);
+        sexp_write(ctx, elts[0], out);
         for (i=1; i<len; i++) {
-          sexp_write_char(' ', out);
-          sexp_write(elts[i], out);
+          sexp_write_char(ctx, ' ', out);
+          sexp_write(ctx, elts[i], out);
         }
-        sexp_write_char(')', out);
+        sexp_write_char(ctx, ')', out);
       }
       break;
+#if ! USE_IMMEDIATE_FLONUMS
     case SEXP_FLONUM:
       f = sexp_flonum_value(obj);
-      sexp_printf(out, "%.15g%s", f, (f == trunc(f)) ? ".0" : "");
+      i = sprintf(numbuf, "%.15g", f);
+      if (f == trunc(f)) {
+        numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
+      }
+      sexp_write_string(ctx, numbuf, out);
       break;
+#endif
     case SEXP_PROCEDURE:
-      sexp_write_string("#<procedure: ", out);
-      sexp_write(sexp_bytecode_name(sexp_procedure_code(obj)), out);
-      sexp_write_string(">", out);
+      sexp_write_string(ctx, "#<procedure: ", out);
+      sexp_write(ctx, sexp_bytecode_name(sexp_procedure_code(obj)), out);
+      sexp_write_string(ctx, ">", out);
       break;
     case SEXP_IPORT:
-      sexp_write_string("#<input-port>", out); break;
+      sexp_write_string(ctx, "#<input-port>", out); break;
     case SEXP_OPORT:
-      sexp_write_string("#<output-port>", out); break;
+      sexp_write_string(ctx, "#<output-port>", out); break;
     case SEXP_CORE:
-      sexp_write_string("#<core-form>", out); break;
+      sexp_write_string(ctx, "#<core-form>", out); break;
     case SEXP_OPCODE:
-      sexp_write_string("#<opcode>", out); break;
+      sexp_write_string(ctx, "#<opcode>", out); break;
     case SEXP_BYTECODE:
-      sexp_write_string("#<bytecode>", out); break;
+      sexp_write_string(ctx, "#<bytecode>", out); break;
     case SEXP_ENV:
-      sexp_printf(out, "#<env %p (%p)", obj, sexp_env_parent(obj));
-      x = sexp_env_bindings(obj);
-      if (sexp_unbox_integer(sexp_length(NULL, x)) > 5) {
-        sexp_write_char(' ', out);
-        sexp_write(sexp_caar(x), out);
-        sexp_write_string(": ", out);
-        if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x)))
-          sexp_printf(out, "%p", sexp_cdar(x));
-        else
-          sexp_write(sexp_cdar(x), out);
-        sexp_write_string(" ...", out);
-      } else for ( ; x && sexp_pairp(x); x=sexp_cdr(x)) {
-        sexp_write_char(' ', out);
-        sexp_write(sexp_caar(x), out);
-        sexp_write_string(": ", out);
-        if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x)))
-          sexp_printf(out, "%p", sexp_cdar(x));
-        else
-          sexp_write(sexp_cdar(x), out);
-      }
-      sexp_write_char('>', out);
+      sexp_write_string(ctx, "#<env>", out); break;
+/*       sexp_printf(out, "#<env %p (%p)", obj, sexp_env_parent(obj)); */
+/*       x = sexp_env_bindings(obj); */
+/*       if (sexp_unbox_integer(sexp_length(NULL, x)) > 5) { */
+/*         sexp_write_char(' ', out); */
+/*         sexp_write(sexp_caar(x), out); */
+/*         sexp_write_string(": ", out); */
+/*         if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x))) */
+/*           sexp_printf(out, "%p", sexp_cdar(x)); */
+/*         else */
+/*           sexp_write(sexp_cdar(x), out); */
+/*         sexp_write_string(" ...", out); */
+/*       } else for ( ; x && sexp_pairp(x); x=sexp_cdr(x)) { */
+/*         sexp_write_char(' ', out); */
+/*         sexp_write(sexp_caar(x), out); */
+/*         sexp_write_string(": ", out); */
+/*         if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x))) */
+/*           sexp_printf(out, "%p", sexp_cdar(x)); */
+/*         else */
+/*           sexp_write(sexp_cdar(x), out); */
+/*       } */
+/*       sexp_write_char('>', out); */
       break;
     case SEXP_EXCEPTION:
-      sexp_write_string("#<exception>", out); break;
+      sexp_write_string(ctx, "#<exception>", out); break;
     case SEXP_MACRO:
-      sexp_write_string("#<macro>", out); break;
+      sexp_write_string(ctx, "#<macro>", out); break;
 #if USE_DEBUG
     case SEXP_LAMBDA:
-      /* sexp_write_string("#<lambda ", out); */
-      sexp_printf(out, "#<lambda %p ", obj);
-      sexp_write(sexp_lambda_params(obj), out);
-      sexp_write_char(' ', out);
-      sexp_write(sexp_lambda_body(obj), out);
-      sexp_write_char('>', out);
+      sexp_write_string(ctx, "#<lambda ", out);
+/*       sexp_printf(out, "#<lambda %p ", obj); */
+/*       sexp_write(sexp_lambda_params(obj), out); */
+/*       sexp_write_char(' ', out); */
+/*       sexp_write(sexp_lambda_body(obj), out); */
+/*       sexp_write_char('>', out); */
       break;
     case SEXP_SEQ:
-      sexp_write_string("#<seq ", out);
-      sexp_write(sexp_seq_ls(obj), out);
-      sexp_write_char('>', out);
+      sexp_write_string(ctx, "#<seq ", out);
+      sexp_write(ctx, sexp_seq_ls(obj), out);
+      sexp_write_char(ctx, '>', out);
       break;
     case SEXP_CND:
-      sexp_write_string("#<if ", out);
-      sexp_write(sexp_cnd_test(obj), out);
-      sexp_write_char(' ', out);
-      sexp_write(sexp_cnd_pass(obj), out);
-      sexp_write_char(' ', out);
-      sexp_write(sexp_cnd_fail(obj), out);
-      sexp_write_char('>', out);
+      sexp_write_string(ctx, "#<if ", out);
+      sexp_write(ctx, sexp_cnd_test(obj), out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_cnd_pass(obj), out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_cnd_fail(obj), out);
+      sexp_write_char(ctx, '>', out);
       break;
     case SEXP_REF:
-      sexp_write_string("#<ref: ", out);
-      sexp_write(sexp_ref_name(obj), out);
-      sexp_printf(out, " %p>", sexp_ref_loc(obj));
+      sexp_write_string(ctx, "#<ref>", out);
+/*       sexp_write_string("#<ref: ", out); */
+/*       sexp_write(sexp_ref_name(obj), out); */
+/*       sexp_printf(out, " %p>", sexp_ref_loc(obj)); */
       break;
     case SEXP_SET:
-      sexp_write_string("#<set! ", out);
-      sexp_write(sexp_set_var(obj), out);
-      sexp_write_char(' ', out);
-      sexp_write(sexp_set_value(obj), out);
-      sexp_write_string(">", out);
+      sexp_write_string(ctx, "#<set! ", out);
+      sexp_write(ctx, sexp_set_var(obj), out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_set_value(obj), out);
+      sexp_write_string(ctx, ">", out);
       break;
     case SEXP_SYNCLO:
-      sexp_write_string("#<sc ", out);
-      sexp_write(sexp_synclo_expr(obj), out);
-      sexp_write_string(">", out);
+      sexp_write_string(ctx, "#<sc ", out);
+      sexp_write(ctx, sexp_synclo_expr(obj), out);
+      sexp_write_string(ctx, ">", out);
       break;
 #endif
     case SEXP_TYPE:
-      sexp_write_string("#<type ", out);
-      sexp_write_string(sexp_type_name(obj), out);
-      sexp_write_string(">", out);
+      sexp_write_string(ctx, "#<type ", out);
+      sexp_write_string(ctx, sexp_type_name(obj), out);
+      sexp_write_string(ctx, ">", out);
       break;
     case SEXP_STRING:
-      sexp_write_char('"', out);
+      sexp_write_char(ctx, '"', out);
       i = sexp_string_length(obj);
       str = sexp_string_data(obj);
       for ( ; i>0; str++, i--) {
         switch (str[0]) {
-        case '\\': sexp_write_string("\\\\", out); break;
-        case '"': sexp_write_string("\\\"", out); break;
-        case '\n': sexp_write_string("\\n", out); break;
-        case '\r': sexp_write_string("\\r", out); break;
-        case '\t': sexp_write_string("\\t", out); break;
-        default: sexp_write_char(str[0], out);
+        case '\\': sexp_write_string(ctx, "\\\\", out); break;
+        case '"': sexp_write_string(ctx, "\\\"", out); break;
+        case '\n': sexp_write_string(ctx, "\\n", out); break;
+        case '\r': sexp_write_string(ctx, "\\r", out); break;
+        case '\t': sexp_write_string(ctx, "\\t", out); break;
+        default: sexp_write_char(ctx, str[0], out);
         }
       }
-      sexp_write_char('"', out);
+      sexp_write_char(ctx, '"', out);
       break;
     case SEXP_SYMBOL:
       i = sexp_string_length(sexp_symbol_string(obj));
       str = sexp_string_data(sexp_symbol_string(obj));
       for ( ; i>0; str++, i--) {
         if ((str[0] == '\\') || is_separator(str[0]))
-          sexp_write_char('\\', out);
-        sexp_write_char(str[0], out);
+          sexp_write_char(ctx, '\\', out);
+        sexp_write_char(ctx, str[0], out);
       }
       break;
     }
   } else if (sexp_integerp(obj)) {
-    sexp_printf(out, "%ld", sexp_unbox_integer(obj));
+    sprintf(numbuf, "%ld", sexp_unbox_integer(obj));
+    sexp_write_string(ctx, numbuf, out);
 #if USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
     f = sexp_flonum_value(obj);
-    sexp_printf(out, "%.15g%s", f, (f == trunc(f)) ? ".0" : "");
+    i = sprintf(numbuf, "%.15g", f);
+    if (f == trunc(f)) {
+      numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
+    }
+    sexp_write_string(ctx, numbuf, out);
 #endif
   } else if (sexp_charp(obj)) {
     if (obj == sexp_make_character(' '))
-      sexp_write_string("#\\space", out);
+      sexp_write_string(ctx, "#\\space", out);
     else if (obj == sexp_make_character('\n'))
-      sexp_write_string("#\\newline", out);
+      sexp_write_string(ctx, "#\\newline", out);
     else if (obj == sexp_make_character('\r'))
-      sexp_write_string("#\\return", out);
+      sexp_write_string(ctx, "#\\return", out);
     else if (obj == sexp_make_character('\t'))
-      sexp_write_string("#\\tab", out);
+      sexp_write_string(ctx, "#\\tab", out);
     else if ((33 <= sexp_unbox_character(obj))
              && (sexp_unbox_character(obj) < 127))
-      sexp_printf(out, "#\\%c", sexp_unbox_character(obj));
-    else
-      sexp_printf(out, "#\\x%02d", sexp_unbox_character(obj));
+      sexp_write_char(ctx, sexp_unbox_character(obj), out);
+    else {
+      sexp_write_string(ctx, "#\\x", out);
+      if (sexp_unbox_character(obj) < 16)
+        sexp_write_char(ctx, '0', out);
+      sexp_write(ctx, sexp_make_integer(sexp_unbox_character(obj)), out);
+    }
   } else if (sexp_symbolp(obj)) {
 
 #if USE_HUFF_SYMS
@@ -849,7 +967,7 @@ void sexp_write (sexp obj, sexp out) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
 #include "opt/sexp-unhuff.c"
-        sexp_write_char(res, out);
+        sexp_write_char(ctx, res, out);
       }
     }
 #endif
@@ -857,18 +975,18 @@ void sexp_write (sexp obj, sexp out) {
   } else {
     switch ((sexp_uint_t) obj) {
     case (sexp_uint_t) SEXP_NULL:
-      sexp_write_string("()", out); break;
+      sexp_write_string(ctx, "()", out); break;
     case (sexp_uint_t) SEXP_TRUE:
-      sexp_write_string("#t", out); break;
+      sexp_write_string(ctx, "#t", out); break;
     case (sexp_uint_t) SEXP_FALSE:
-      sexp_write_string("#f", out); break;
+      sexp_write_string(ctx, "#f", out); break;
     case (sexp_uint_t) SEXP_EOF:
-      sexp_write_string("#<eof>", out); break;
+      sexp_write_string(ctx, "#<eof>", out); break;
     case (sexp_uint_t) SEXP_UNDEF:
     case (sexp_uint_t) SEXP_VOID:
-      sexp_write_string("#<undef>", out); break;
+      sexp_write_string(ctx, "#<undef>", out); break;
     default:
-      sexp_printf(out, "#<invalid: %p>", obj);
+      sexp_write_string(ctx, "#<undef>", out);
     }
   }
 }
@@ -881,9 +999,9 @@ sexp sexp_read_string(sexp ctx, sexp in) {
   char *buf=initbuf, *tmp;
   sexp res;
 
-  for (c = sexp_read_char(in); c != '"'; c = sexp_read_char(in)) {
+  for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
     if (c == '\\') {
-      c = sexp_read_char(in);
+      c = sexp_read_char(ctx, in);
       switch (c) {case 'n': c = '\n'; break; case 't': c = '\t'; break;}
     }
     if (c == EOF) {
@@ -892,7 +1010,7 @@ sexp sexp_read_string(sexp ctx, sexp in) {
     }
     buf[i++] = c;
     if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
-      tmp = malloc(size*2);
+      tmp = (char*) malloc(size*2);
       memcpy(tmp, buf, i);
       if (size != INIT_STRING_BUFFER_SIZE) free(buf);
       buf = tmp;
@@ -915,15 +1033,15 @@ sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp) {
   if (init != EOF)
     buf[i++] = init;
 
-  for (c = sexp_read_char(in); c != '"'; c = sexp_read_char(in)) {
-    if (c == '\\') c = sexp_read_char(in);
+  for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
+    if (c == '\\') c = sexp_read_char(ctx, in);
     if (c == EOF || is_separator(c)) {
-      sexp_push_char(c, in);
+      sexp_push_char(ctx, c, in);
       break;
     }
     buf[i++] = c;
     if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
-      tmp = malloc(size*2);
+      tmp = (char*) malloc(size*2);
       memcpy(tmp, buf, i);
       if (size != INIT_STRING_BUFFER_SIZE) free(buf);
       buf = tmp;
@@ -941,9 +1059,11 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_sint_t whole) {
   sexp exponent;
   double res=0.0, scale=0.1, e=0.0;
   int c;
-  for (c=sexp_read_char(in); isdigit(c); c=sexp_read_char(in), scale*=0.1)
+  for (c=sexp_read_char(ctx, in);
+       isdigit(c);
+       c=sexp_read_char(ctx, in), scale*=0.1)
     res += digit_value(c)*scale;
-  sexp_push_char(c, in);
+  sexp_push_char(ctx, c, in);
   if (c=='e' || c=='E') {
     exponent = sexp_read_number(ctx, in, 10);
     if (sexp_exceptionp(exponent)) return exponent;
@@ -959,23 +1079,24 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
   sexp f;
   sexp_sint_t res = 0, negativep = 0, c;
 
-  c = sexp_read_char(in);
+  c = sexp_read_char(ctx, in);
   if (c == '-')
     negativep = 1;
   else if (isdigit(c))
     res = digit_value(c);
 
   if (base == 16)
-    for (c=sexp_read_char(in); isxdigit(c); c=sexp_read_char(in))
+    for (c=sexp_read_char(ctx, in); isxdigit(c); c=sexp_read_char(ctx, in))
       res = res * base + digit_value(c);
-    for (c=sexp_read_char(in); isdigit(c); c=sexp_read_char(in))
+    for (c=sexp_read_char(ctx, in); isdigit(c); c=sexp_read_char(ctx, in))
       res = res * base + digit_value(c);
 
   if (c=='.' || c=='e' || c=='E') {
     if (base != 10)
-      return sexp_read_error(ctx, "decimal found in non-base 10", SEXP_NULL, in);
+      return
+        sexp_read_error(ctx, "decimal found in non-base 10", SEXP_NULL, in);
     if (c!='.')
-      sexp_push_char(c, in);
+      sexp_push_char(ctx, c, in);
     f = sexp_read_float_tail(ctx, in, res);
     if (! sexp_flonump(f)) return f;
     if ((c!='.') && (sexp_flonum_value(f) == round(sexp_flonum_value(f)))) {
@@ -990,7 +1111,7 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
       return f;
     }
   } else {
-    sexp_push_char(c, in);
+    sexp_push_char(ctx, c, in);
     if ((c!=EOF) && ! is_separator(c))
       return sexp_read_error(ctx, "invalid numeric syntax",
                              sexp_list1(ctx, sexp_make_character(c)), in);
@@ -1009,13 +1130,13 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   sexp_gc_preserve(ctx, tmp, s_tmp);
 
  scan_loop:
-  switch (c1 = sexp_read_char(in)) {
+  switch (c1 = sexp_read_char(ctx, in)) {
   case EOF:
     res = SEXP_EOF;
     break;
   case ';':
     sexp_port_line(in)++;
-    while ((c1 = sexp_read_char(in)) != EOF)
+    while ((c1 = sexp_read_char(ctx, in)) != EOF)
       if (c1 == '\n')
         break;
     /* ... FALLTHROUGH ... */
@@ -1035,11 +1156,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     res = sexp_list2(ctx, the_quasiquote_symbol, res);
     break;
   case ',':
-    if ((c1 = sexp_read_char(in)) == '@') {
+    if ((c1 = sexp_read_char(ctx, in)) == '@') {
       res = sexp_read(ctx, in);
       res = sexp_list2(ctx, the_unquote_splicing_symbol, res);
     } else {
-      sexp_push_char(c1, in);
+      sexp_push_char(ctx, c1, in);
       res = sexp_read(ctx, in);
       res = sexp_list2(ctx, the_unquote_symbol, res);
     }
@@ -1087,7 +1208,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     }
     break;
   case '#':
-    switch (c1=sexp_read_char(in)) {
+    switch (c1=sexp_read_char(ctx, in)) {
     case 'b':
       res = sexp_read_number(ctx, in, 2); break;
     case 'o':
@@ -1108,10 +1229,10 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       break;
     case 'f':
     case 't':
-      c2 = sexp_read_char(in);
+      c2 = sexp_read_char(ctx, in);
       if (c2 == EOF || is_separator(c2)) {
         res = (c1 == 't' ? SEXP_TRUE : SEXP_FALSE);
-        sexp_push_char(c2, in);
+        sexp_push_char(ctx, c2, in);
       } else {
         res = sexp_read_error(ctx, "invalid syntax #%c%c",
                               sexp_list2(ctx,
@@ -1129,7 +1250,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       else
         goto scan_loop;
     case '\\':
-      c1 = sexp_read_char(in);
+      c1 = sexp_read_char(ctx, in);
       res = sexp_read_symbol(ctx, in, c1, 0);
       if (sexp_stringp(res)) {
         str = sexp_string_data(res);
@@ -1160,7 +1281,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       }
       break;
     case '(':
-      sexp_push_char(c1, in);
+      sexp_push_char(ctx, c1, in);
       res = sexp_read(ctx, in);
       if (sexp_not(sexp_listp(ctx, res))) {
         if (! sexp_exceptionp(res)) {
@@ -1178,14 +1299,14 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     }
     break;
   case '.':
-    c1 = sexp_read_char(in);
+    c1 = sexp_read_char(ctx, in);
     if (c1 == EOF || is_separator(c1)) {
       res = SEXP_RAWDOT;
     } else if (isdigit(c1)) {
-      sexp_push_char(c1,in );
+      sexp_push_char(ctx, c1, in);
       res = sexp_read_float_tail(ctx, in, 0);
     } else {
-      sexp_push_char(c1, in);
+      sexp_push_char(ctx, c1, in);
       res = sexp_read_symbol(ctx, in, '.', 1);
     }
     break;
@@ -1194,9 +1315,9 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     break;
   case '+':
   case '-':
-    c2 = sexp_read_char(in);
+    c2 = sexp_read_char(ctx, in);
     if (c2 == '.' || isdigit(c2)) {
-      sexp_push_char(c2, in);
+      sexp_push_char(ctx, c2, in);
       res = sexp_read_number(ctx, in, 10);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
 #if USE_FLONUMS
@@ -1211,13 +1332,13 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           res = sexp_fx_mul(res, -1);
       }
     } else {
-      sexp_push_char(c2, in);
+      sexp_push_char(ctx, c2, in);
       res = sexp_read_symbol(ctx, in, c1, 1);
     }
     break;
   case '0': case '1': case '2': case '3': case '4':
   case '5': case '6': case '7': case '8': case '9':
-    sexp_push_char(c1, in);
+    sexp_push_char(ctx, c1, in);
     res = sexp_read_number(ctx, in, 10);
     break;
   default:
@@ -1238,7 +1359,6 @@ sexp sexp_read (sexp ctx, sexp in) {
   return res;
 }
 
-#if USE_STRING_STREAMS
 sexp sexp_read_from_string(sexp ctx, char *str) {
   sexp res;
   sexp_gc_var(ctx, s, s_s);
@@ -1251,7 +1371,6 @@ sexp sexp_read_from_string(sexp ctx, char *str) {
   sexp_gc_release(ctx, s, s_s);
   return res;
 }
-#endif
 
 void sexp_init() {
   int i;

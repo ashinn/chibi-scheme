@@ -42,13 +42,6 @@
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/
 
-#if HAVE_ERR_H
-#include <err.h>
-#else
-/* requires msg be a string literal, and at least one argument */
-#define errx(code, msg, ...) (fprintf(stderr,msg"\n",__VA_ARGS__), exit(code))
-#endif
-
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 #define SEXP_BSD 1
 #else
@@ -104,3 +97,24 @@
 #define USE_CHECK_STACK 0
 #endif
 
+#ifdef PLAN9
+
+#define errx(code, msg, ...) exits(msg)
+#define exit_normally() exits(NULL)
+#define strcasecmp cistrcmp
+#define strncasecmp cistrncmp
+/* XXXX these are wrong */
+#define trunc floor
+#define round(x) floor(x+0.5)
+
+#else
+
+#define exit_normally() exit(0)
+#if HAVE_ERR_H
+#include <err.h>
+#else
+/* requires msg be a string literal, and at least one argument */
+#define errx(code, msg, ...) (fprintf(stderr,msg"\n",__VA_ARGS__), exit(code))
+#endif
+
+#endif

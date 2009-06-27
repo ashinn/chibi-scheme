@@ -5,7 +5,7 @@
 #ifndef SEXP_EVAL_H
 #define SEXP_EVAL_H
 
-#include "sexp.h"
+#include "chibi/sexp.h"
 
 /************************* additional types ***************************/
 
