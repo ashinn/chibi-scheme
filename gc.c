@@ -11,11 +11,16 @@
 
 #define sexp_heap_align(n) sexp_align(n, 4)
 
-typedef struct sexp_heap *sexp_heap;
+typedef struct sexp_free_list *sexp_free_list;
+struct sexp_free_list {
+  sexp_uint_t size;
+  sexp_free_list next;
+};
 
+typedef struct sexp_heap *sexp_heap;
 struct sexp_heap {
   sexp_uint_t size;
-  sexp free_list;
+  sexp_free_list free_list;
   sexp_heap next;
   char *data;
 };
@@ -84,7 +89,8 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
 sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   size_t freed, max_freed=0, sum_freed=0, size;
   sexp_heap h = heap;
-  sexp p, q, r;
+  sexp p;
+  sexp_free_list q, r, s;
   char *end;
   /* scan over the whole heap */
   for ( ; h; h=h->next) {
@@ -93,41 +99,41 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
     end = (char*)h->data + h->size;
     while (((char*)p) < end) {
       /* find the preceding and succeeding free list pointers */
-      for (r=sexp_cdr(q); r && sexp_pairp(r) && (r<p); q=r, r=sexp_cdr(r))
+      for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
-      if (r == p) {
-        p = (sexp) (((char*)p) + (sexp_uint_t)sexp_car(p));
+      if ((char*)r == (char*)p) {
+        p = (sexp) (((char*)p) + r->size);
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(p));
       if ((! sexp_gc_mark(p)) && (! stack_references_pointer_p(ctx, p))) {
         sum_freed += size;
-        if (((((char*)q)+(sexp_uint_t)sexp_car(q)) == (char*)p)
-            && (q != h->free_list)) {
+        if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */
-          if (r && sexp_pairp(r) && ((((char*)p)+size) == (char*)r)) {
+          if (r && ((((char*)p)+size) == (char*)r)) {
             /* ... and with r */
-            sexp_cdr(q) = sexp_cdr(r);
-            freed = (sexp_uint_t)sexp_car(q) + size + (sexp_uint_t)sexp_car(r);
-            p = (sexp) (((char*)p)+size+(sexp_uint_t)sexp_car(r));
+            q->next = r->next;
+            freed = q->size + size + r->size;
+            p = (sexp) (((char*)p) + size + r->size);
           } else {
-            freed = (sexp_uint_t)sexp_car(q) + size;
+            freed = q->size + size;
             p = (sexp) (((char*)p)+size);
           }
-          sexp_car(q) = (sexp)freed;
+          q->size = freed;
         } else {
-          if (r && sexp_pairp(r) && ((((char*)p)+size) == (char*)r)) {
-            sexp_car(p) = (sexp)(size+(sexp_uint_t)sexp_car(r));
-            sexp_cdr(p) = sexp_cdr(r);
-            sexp_cdr(q) = p;
-            freed = size + (sexp_uint_t)sexp_car(r);
+          s = (sexp_free_list)p;
+          if (r && ((((char*)p)+size) == (char*)r)) {
+            /* merge p with r */
+            s->size = size + r->size;
+            s->next = r->next;
+            q->next = s;
+            freed = size + r->size;
           } else {
-            sexp_car(p) = (sexp)size;
-            sexp_cdr(p) = r;
-            sexp_cdr(q) = p;
+            s->size = size;
+            s->next = r;
+            q->next = s;
             freed = size;
           }
-          sexp_pointer_tag(p) = SEXP_PAIR;
           p = (sexp) (((char*)p)+freed);
         }
         if (freed > max_freed)
@@ -155,21 +161,19 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
 }
 
 sexp_heap sexp_make_heap (size_t size) {
-  sexp free, next;
+  sexp_free_list free, next;
   sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
   if (! h)
     errx(70, "out of memory allocating %zu byte heap, aborting\n", size);
   h->size = size;
   h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
-  free = h->free_list = (sexp) h->data;
+  free = h->free_list = (sexp_free_list) h->data;
   h->next = NULL;
-  next = (sexp) ((char*)free + sexp_heap_align(sexp_sizeof(pair)));
-  sexp_pointer_tag(free) = SEXP_PAIR;
-  sexp_car(free) = 0; /* actually sexp_sizeof(pair) */
-  sexp_cdr(free) = next;
-  sexp_pointer_tag(next) = SEXP_PAIR;
-  sexp_car(next) = (sexp) (size - sexp_heap_align(sexp_sizeof(pair)));
-  sexp_cdr(next) = SEXP_NULL;
+  next = (sexp_free_list) ((char*)free + sexp_heap_align(sexp_sizeof(pair)));
+  free->size = 0; /* actually sexp_sizeof(pair) */
+  free->next = next;
+  next->size = size - sexp_heap_align(sexp_sizeof(pair));
+  next->next = NULL;
   return h;
 }
 
@@ -183,29 +187,22 @@ int sexp_grow_heap (sexp ctx, size_t size) {
 }
 
 void* sexp_try_alloc (sexp ctx, size_t size) {
-  sexp ls1, ls2, ls3;
+  sexp_free_list ls1, ls2, ls3;
   sexp_heap h;
-  for (h=heap; h; h=h->next) {
-    ls1 = h->free_list;
-    ls2 = sexp_cdr(ls1);
-    while (sexp_pairp(ls2)) {
-      if ((sexp_uint_t)sexp_car(ls2) >= size) {
-        if ((sexp_uint_t)sexp_car(ls2) >= (size + SEXP_MINIMUM_OBJECT_SIZE)) {
-          ls3 = (sexp) (((char*)ls2)+size); /* the free tail after ls2 */
-          sexp_pointer_tag(ls3) = SEXP_PAIR;
-          sexp_car(ls3) = (sexp) (((sexp_uint_t)sexp_car(ls2)) - size);
-          sexp_cdr(ls3) = sexp_cdr(ls2);
-          sexp_cdr(ls1) = ls3;
+  for (h=heap; h; h=h->next)
+    for (ls1=h->free_list, ls2=ls1->next; ls2; ls1=ls2, ls2=ls2->next)
+      if (ls2->size >= size) {
+        if (ls2->size >= (size + SEXP_MINIMUM_OBJECT_SIZE)) {
+          ls3 = (sexp_free_list) (((char*)ls2)+size); /* the tail after ls2 */
+          ls3->size = ls2->size - size;
+          ls3->next = ls2->next;
+          ls1->next = ls3;
         } else {                  /* take the whole chunk */
-          sexp_cdr(ls1) = sexp_cdr(ls2);
+          ls1->next = ls2->next;
         }
         memset((void*)ls2, 0, size);
         return ls2;
       }
-      ls1 = ls2;
-      ls2 = sexp_cdr(ls2);
-    }
-  }
   return NULL;
 }
 
