@@ -480,12 +480,17 @@
 (define (load file) (%load file (interaction-environment)))
 
 (define (call-with-input-string str proc)
-  (proc (open-input-string str)))
+  (let* ((in (open-input-string str))
+         (res (proc in)))
+    (close-input-port in)
+    res))
 
 (define (call-with-output-string proc)
   (let ((out (open-output-string)))
     (proc out)
-    (get-output-string out)))
+    (let ((res (get-output-string out)))
+      (close-output-port out)
+      res)))
 
 (define (call-with-input-file file proc)
   (let* ((in (open-input-file file))
