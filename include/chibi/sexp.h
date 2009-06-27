@@ -85,6 +85,7 @@ enum sexp_types {
   SEXP_LIT,
   SEXP_STACK,
   SEXP_CONTEXT,
+  SEXP_NUM_TYPES,
 };
 
 typedef unsigned long sexp_uint_t;

@@ -824,91 +824,6 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
       sexp_write(ctx, sexp_bytecode_name(sexp_procedure_code(obj)), out);
       sexp_write_string(ctx, ">", out);
       break;
-    case SEXP_IPORT:
-      sexp_write_string(ctx, "#<input-port>", out); break;
-    case SEXP_OPORT:
-      sexp_write_string(ctx, "#<output-port>", out); break;
-    case SEXP_CORE:
-      sexp_write_string(ctx, "#<core-form>", out); break;
-    case SEXP_OPCODE:
-      sexp_write_string(ctx, "#<opcode>", out); break;
-    case SEXP_BYTECODE:
-      sexp_write_string(ctx, "#<bytecode>", out); break;
-    case SEXP_ENV:
-      sexp_write_string(ctx, "#<env>", out); break;
-/*       sexp_printf(out, "#<env %p (%p)", obj, sexp_env_parent(obj)); */
-/*       x = sexp_env_bindings(obj); */
-/*       if (sexp_unbox_integer(sexp_length(NULL, x)) > 5) { */
-/*         sexp_write_char(' ', out); */
-/*         sexp_write(sexp_caar(x), out); */
-/*         sexp_write_string(": ", out); */
-/*         if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x))) */
-/*           sexp_printf(out, "%p", sexp_cdar(x)); */
-/*         else */
-/*           sexp_write(sexp_cdar(x), out); */
-/*         sexp_write_string(" ...", out); */
-/*       } else for ( ; x && sexp_pairp(x); x=sexp_cdr(x)) { */
-/*         sexp_write_char(' ', out); */
-/*         sexp_write(sexp_caar(x), out); */
-/*         sexp_write_string(": ", out); */
-/*         if ((! sexp_cdar(x)) || sexp_pointerp(sexp_cdar(x))) */
-/*           sexp_printf(out, "%p", sexp_cdar(x)); */
-/*         else */
-/*           sexp_write(sexp_cdar(x), out); */
-/*       } */
-/*       sexp_write_char('>', out); */
-      break;
-    case SEXP_EXCEPTION:
-      sexp_write_string(ctx, "#<exception>", out); break;
-    case SEXP_MACRO:
-      sexp_write_string(ctx, "#<macro>", out); break;
-#if USE_DEBUG
-    case SEXP_LAMBDA:
-      sexp_write_string(ctx, "#<lambda ", out);
-/*       sexp_printf(out, "#<lambda %p ", obj); */
-/*       sexp_write(sexp_lambda_params(obj), out); */
-/*       sexp_write_char(' ', out); */
-/*       sexp_write(sexp_lambda_body(obj), out); */
-/*       sexp_write_char('>', out); */
-      break;
-    case SEXP_SEQ:
-      sexp_write_string(ctx, "#<seq ", out);
-      sexp_write(ctx, sexp_seq_ls(obj), out);
-      sexp_write_char(ctx, '>', out);
-      break;
-    case SEXP_CND:
-      sexp_write_string(ctx, "#<if ", out);
-      sexp_write(ctx, sexp_cnd_test(obj), out);
-      sexp_write_char(ctx, ' ', out);
-      sexp_write(ctx, sexp_cnd_pass(obj), out);
-      sexp_write_char(ctx, ' ', out);
-      sexp_write(ctx, sexp_cnd_fail(obj), out);
-      sexp_write_char(ctx, '>', out);
-      break;
-    case SEXP_REF:
-      sexp_write_string(ctx, "#<ref>", out);
-/*       sexp_write_string("#<ref: ", out); */
-/*       sexp_write(sexp_ref_name(obj), out); */
-/*       sexp_printf(out, " %p>", sexp_ref_loc(obj)); */
-      break;
-    case SEXP_SET:
-      sexp_write_string(ctx, "#<set! ", out);
-      sexp_write(ctx, sexp_set_var(obj), out);
-      sexp_write_char(ctx, ' ', out);
-      sexp_write(ctx, sexp_set_value(obj), out);
-      sexp_write_string(ctx, ">", out);
-      break;
-    case SEXP_SYNCLO:
-      sexp_write_string(ctx, "#<sc ", out);
-      sexp_write(ctx, sexp_synclo_expr(obj), out);
-      sexp_write_string(ctx, ">", out);
-      break;
-#endif
-    case SEXP_TYPE:
-      sexp_write_string(ctx, "#<type ", out);
-      sexp_write_string(ctx, sexp_type_name(obj), out);
-      sexp_write_string(ctx, ">", out);
-      break;
     case SEXP_STRING:
       sexp_write_char(ctx, '"', out);
       i = sexp_string_length(obj);
@@ -933,6 +848,15 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
           sexp_write_char(ctx, '\\', out);
         sexp_write_char(ctx, str[0], out);
       }
+      break;
+    default:
+      i = sexp_pointer_tag(obj);
+      sexp_write_string(ctx, "#<", out);
+      sexp_write_string(ctx,
+                        (i < SEXP_NUM_TYPES)
+                        ? sexp_type_name(&(sexp_type_specs[i])) : "invalid",
+                        out);
+      sexp_write_char(ctx, '>', out);
       break;
     }
   } else if (sexp_integerp(obj)) {
