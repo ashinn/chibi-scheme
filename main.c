@@ -54,7 +54,7 @@ void repl (sexp ctx) {
   err = sexp_eval_string(ctx, "(current-error-port)");
   while (1) {
     sexp_write_string(ctx, "> ", out);
-    sexp_flush(out);
+    sexp_flush(ctx, out);
     obj = sexp_read(ctx, in);
     if (obj == SEXP_EOF)
       break;
@@ -65,7 +65,7 @@ void repl (sexp ctx) {
       sexp_context_top(ctx) = 0;
       res = sexp_eval(ctx, obj);
 #if USE_WARN_UNDEFS
-      sexp_warn_undefs(sexp_env_bindings(env), tmp, err);
+      sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, err);
 #endif
       if (res != SEXP_VOID) {
         sexp_write(ctx, res, out);
@@ -89,7 +89,6 @@ void run_main (int argc, char **argv) {
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
     switch (argv[i][1]) {
-#if USE_STRING_STREAMS
     case 'e':
     case 'p':
       if (! init_loaded++)
@@ -106,7 +105,6 @@ void run_main (int argc, char **argv) {
       quit=1;
       i++;
       break;
-#endif
     case 'l':
       if (! init_loaded++)
         sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);

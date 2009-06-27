@@ -28,9 +28,9 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
  loop:
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
-    sexp_printf(out, "  %s ", reverse_opcode_names[opcode]);
+    sexp_printf(ctx, out, "  %s ", reverse_opcode_names[opcode]);
   } else {
-    sexp_printf(out, "  <unknown> %d ", opcode);
+    sexp_printf(ctx, out, "  <unknown> %d ", opcode);
   }
   switch (opcode) {
   case OP_STACK_REF:
@@ -44,7 +44,7 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   case OP_FCALL2:
   case OP_FCALL3:
   case OP_TYPEP:
-    sexp_printf(out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
+    sexp_printf(ctx, out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
   case OP_GLOBAL_REF:
@@ -52,11 +52,11 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   case OP_TAIL_CALL:
   case OP_CALL:
   case OP_PUSH:
-    sexp_write(((sexp*)ip)[0], out);
+    sexp_write(ctx, ((sexp*)ip)[0], out);
     ip += sizeof(sexp);
     break;
   }
-  sexp_write_char('\n', out);
+  sexp_write_char(ctx, '\n', out);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
   return SEXP_VOID;
@@ -66,9 +66,9 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
 static void sexp_print_stack (sexp *stack, int top, int fp, sexp out) {
   int i;
   for (i=0; i<top; i++) {
-    sexp_printf(out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
-    sexp_write(stack[i], out);
-    sexp_printf(out, "\n");
+    sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
+    sexp_write(ctx, stack[i], out);
+    sexp_printf(ctx, out, "\n");
   }
 }
 #endif

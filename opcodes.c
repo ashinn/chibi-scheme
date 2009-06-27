@@ -119,11 +119,9 @@ _FN1(0, "floor", 0, sexp_floor),
 _FN1(0, "ceiling", 0, sexp_ceiling),
 _FN2(0, 0, "expt", 0, sexp_expt),
 #endif
-#if USE_STRING_STREAMS
 _FN0("open-output-string", 0, sexp_make_output_string_port),
 _FN1(SEXP_STRING, "open-input-string", 0, sexp_make_input_string_port),
 _FN1(SEXP_OPORT, "get-output-string", 0, sexp_get_output_string),
-#endif
 #if USE_DEBUG
 _FN2(SEXP_PROCEDURE, SEXP_OPORT, "disasm", 0, sexp_disasm),
 #endif

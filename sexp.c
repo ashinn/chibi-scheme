@@ -594,9 +594,11 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   sexp res;
   sexp_gc_var(ctx, cookie, s_cookie);
   sexp_gc_preserve(ctx, cookie, s_cookie);
-  cookie = sexp_vector(ctx, 4, ctx, str,
-                       sexp_make_integer(sexp_string_length(str)),
-                       sexp_make_integer(0));
+  cookie = sexp_make_vector(ctx, sexp_make_integer(4), SEXP_VOID);
+  sexp_stream_ctx(cookie) = ctx;
+  sexp_stream_buf(cookie) = str;
+  sexp_stream_size(cookie) = sexp_make_integer(sexp_string_length(str));
+  sexp_stream_pos(cookie) = sexp_make_integer(0);
   in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
   res = sexp_make_input_port(ctx, in, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
@@ -610,8 +612,11 @@ sexp sexp_make_output_string_port (sexp ctx) {
   sexp_gc_var(ctx, cookie, s_cookie);
   sexp_gc_preserve(ctx, cookie, s_cookie);
   size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
-  cookie = sexp_vector(ctx, 4, ctx, sexp_make_string(ctx, size, SEXP_VOID),
-                       size, sexp_make_integer(0));
+  cookie = sexp_make_vector(ctx, sexp_make_integer(4), SEXP_VOID);
+  sexp_stream_ctx(cookie) = ctx;
+  sexp_stream_buf(cookie) = sexp_make_string(ctx, size, SEXP_VOID);
+  sexp_stream_size(cookie) = size;
+  sexp_stream_pos(cookie) = sexp_make_integer(0);
   out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
   res = sexp_make_output_port(ctx, out, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
@@ -672,7 +677,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
 sexp sexp_buffered_write_char (sexp ctx, int c, sexp p) {
   if (sexp_port_offset(p) >= sexp_port_size(p))
     sexp_buffered_flush(ctx, p);
-  sexp_port_buf(p)[sexp_port_offset(p)++] = (c);
+  sexp_port_buf(p)[sexp_port_offset(p)++] = c;
   return SEXP_VOID;
 }
 
@@ -685,29 +690,29 @@ sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p)
 }
 
 sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p) {
-  return sexp_buffered_write_string_n(str, strlen(str), p);
+  return sexp_buffered_write_string_n(ctx, str, strlen(str), p);
 }
 
 sexp sexp_buffered_flush (sexp ctx, sexp p) {
   sexp_gc_var(ctx, tmp, s_tmp);
-  sexp_gc_preserve(ctx, tmp, s_tmp);
-/*   if (! sexp_oportp(p)) */
-/*     return sexp_type_exception(); */
-/*   else if (! sexp_port_openp(p)) */
-/*     return sexp_make_exception(); */
-/*   else { */
-  if (sexp_port_stream(p)) {
-    fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
-    sexp_port_offset(p) = 0;
-    fflush(sexp_port_stream(p));
-  } else if (sexp_port_offset(p) > 0) {
-    tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
-    sexp_push(ctx, sexp_port_cookie(p), tmp);
-    sexp_port_offset(p) = 0;
+  if (! sexp_oportp(p))
+    return sexp_type_exception(ctx, "not an output-port", p);
+  else if (! sexp_port_openp(p))
+    return sexp_user_exception(ctx, SEXP_FALSE, "port is closed", p);
+  else {
+    if (sexp_port_stream(p)) {
+      fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
+      sexp_port_offset(p) = 0;
+      fflush(sexp_port_stream(p));
+    } else if (sexp_port_offset(p) > 0) {
+      sexp_gc_preserve(ctx, tmp, s_tmp);
+      tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
+      sexp_push(ctx, sexp_port_cookie(p), tmp);
+      sexp_port_offset(p) = 0;
+      sexp_gc_release(ctx, tmp, s_tmp);
+    }
+    return SEXP_VOID;
   }
-  sexp_gc_release(ctx, tmp, s_tmp);
-  return SEXP_VOID;
-/*   } */
 }
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
@@ -751,17 +756,15 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_stream(p) = in;
   sexp_port_name(p) = name;
   sexp_port_line(p) = 0;
+  sexp_port_buf(p) = NULL;
   sexp_port_openp(p) = 1;
+  sexp_port_cookie(p) = SEXP_VOID;
   return p;
 }
 
 sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
-  sexp p = sexp_alloc_type(ctx, port, SEXP_OPORT);
-  sexp_port_stream(p) = out;
-  sexp_port_name(p) = name;
-  sexp_port_line(p) = 0;
-  sexp_port_buf(p) = NULL;
-  sexp_port_openp(p) = 1;
+  sexp p = sexp_make_input_port(ctx, out, name);
+  sexp_pointer_tag(p) = SEXP_OPORT;
   return p;
 }
 

@@ -134,7 +134,7 @@ sexp sexp_eval(sexp context, sexp obj);
 sexp sexp_eval_string(sexp context, char *str);
 sexp sexp_load(sexp context, sexp expr, sexp env);
 sexp sexp_make_context(sexp context, sexp stack, sexp env);
-void sexp_warn_undefs (sexp from, sexp to, sexp out);
+void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
 
 #endif /* ! SEXP_EVAL_H */
 

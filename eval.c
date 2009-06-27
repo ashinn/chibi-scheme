@@ -719,12 +719,12 @@ static sexp analyze (sexp ctx, sexp object) {
           x = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
           sexp_context_env(x) = sexp_macro_env(op);
           x = sexp_apply(x, sexp_macro_proc(op), tmp);
-          /* goto loop; */
+          goto loop;
           /* XXXX need to handle free vars, simplify */
-          tmp = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
-          sexp_context_env(tmp)
-            = sexp_chain_env(ctx, sexp_macro_env(op), sexp_context_env(tmp));
-          res = analyze(tmp, x);
+/*           tmp = sexp_make_child_context(ctx, sexp_context_lambda(ctx)); */
+/*           sexp_context_env(tmp) */
+/*             = sexp_chain_env(ctx, sexp_macro_env(op), sexp_context_env(tmp)); */
+/*           res = analyze(tmp, x); */
         } else if (sexp_opcodep(op)) {
           res = sexp_length(ctx, sexp_cdr(x));
           if (sexp_unbox_integer(res) < sexp_opcode_num_args(op)) {
@@ -1770,16 +1770,16 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case OP_WRITE_CHAR:
-    sexp_write_char(sexp_unbox_character(_ARG1), _ARG2);
+    sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     _ARG2 = SEXP_VOID;
     top--;
     break;
   case OP_NEWLINE:
-    sexp_write_char(ctx, '\n', _ARG1);
+    sexp_newline(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
     break;
   case OP_FLUSH_OUTPUT:
-    sexp_flush(_ARG1);
+    sexp_flush(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
     break;
   case OP_READ:
@@ -1859,10 +1859,11 @@ static sexp sexp_close_port (sexp ctx, sexp port) {
     free(sexp_port_buf(port));
   if (sexp_port_stream(port))
     fclose(sexp_port_stream(port));
+  sexp_port_openp(port) = 0;
   return SEXP_VOID;
 }
 
-void sexp_warn_undefs (sexp from, sexp to, sexp out) {
+void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
   sexp x;
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_cdr(x))
     if (sexp_cdar(x) == SEXP_UNDEF) {
@@ -1903,7 +1904,7 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     sexp_close_port(ctx, in);
 #if USE_WARN_UNDEFS
     if (sexp_oportp(out))
-      sexp_warn_undefs(sexp_env_bindings(env), tmp, out);
+      sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, out);
 #endif
   }
   sexp_gc_release(ctx, ctx2, s_ctx2);
@@ -2140,7 +2141,6 @@ sexp sexp_eval (sexp ctx, sexp obj) {
   return res;
 }
 
-#if USE_STRING_STREAMS
 sexp sexp_eval_string (sexp ctx, char *str) {
   sexp res;
   sexp_gc_var(ctx, obj, s_obj);
@@ -2150,7 +2150,6 @@ sexp sexp_eval_string (sexp ctx, char *str) {
   sexp_gc_release(ctx, obj, s_obj);
   return res;
 }
-#endif
 
 void sexp_scheme_init () {
   sexp ctx;

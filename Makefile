@@ -24,7 +24,8 @@ SO  = .dylib
 EXE =
 CLIBFLAGS = -dynamiclib
 STATICFLAGS = -static-libgcc
-else ifeq ($(PLATFORM),mingw)
+else
+ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
 CLIBFLAGS = -fPIC -shared
@@ -33,6 +34,7 @@ SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
 STATICFLAGS = -static
+endif
 endif
 
 ifdef USE_BOEHM
@@ -90,6 +92,7 @@ test: chibi-scheme
 	./chibi-scheme tests/r5rs-tests.scm
 
 install: chibi-scheme
+	mkdir -p $(BINDIR)
 	cp chibi-scheme $(BINDIR)/
 	mkdir -p $(MODDIR)
 	cp init.scm $(MODDIR)/

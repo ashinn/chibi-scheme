@@ -128,8 +128,7 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      sexp_uint_t offset, line, openp;
-      size_t size;
+      sexp_uint_t offset, line, size, openp;
       sexp name;
       sexp cookie;
     } port;
@@ -329,6 +328,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_idp(x) \
   (sexp_symbolp(x) || (sexp_synclop(x) && sexp_symbolp(sexp_synclo_expr(x))))
 
+#define sexp_portp(x) (sexp_iportp(x) || sexp_oportp(x))
+
 /***************************** constructors ****************************/
 
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
@@ -527,21 +528,21 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #else
 
-#define sexp_read_char(x, p) ((sexp_port_offset(p) < sexp_port_size(p)) ? sexp_port_buf(p)[sexp_port_offset(p)++] : sexp_buffered_read_char(x, p))
-#define sexp_push_char(x, c, p) (sexp_port_buf(p)[--sexp_port_offset(p)] = ((char)(c)))
-#define sexp_write_char(x, c, p) ((sexp_port_offset(p) < sexp_port_size(p)) ? (((sexp_port_buf(p))[sexp_port_offset(p)++]) = ((char)(c))) : sexp_buffered_write_char(x, c, p))
-#define sexp_write_string(x, s, p) sexp_buffered_write_string(x, s, p)
-#define sexp_flush(x, p) sexp_buffered_flush(x, p)
+#define sexp_read_char(x, p) (sexp_port_buf(p) ? ((sexp_port_offset(p) < sexp_port_size(p)) ? sexp_port_buf(p)[sexp_port_offset(p)++] : sexp_buffered_read_char(x, p)) : getc(sexp_port_stream(p)))
+#define sexp_push_char(x, c, p) (sexp_port_buf(p) ? (sexp_port_buf(p)[--sexp_port_offset(p)] = ((char)(c))) : ungetc(c, sexp_port_stream(p)))
+#define sexp_write_char(x, c, p) (sexp_port_buf(p) ? ((sexp_port_offset(p) < sexp_port_size(p)) ? ((((sexp_port_buf(p))[sexp_port_offset(p)++]) = (char)(c)), SEXP_VOID) : sexp_buffered_write_char(x, c, p)) : (putc(c, sexp_port_stream(p)), SEXP_VOID))
+#define sexp_write_string(x, s, p) (sexp_port_buf(p) ? sexp_buffered_write_string(x, s, p) : (fputs(s, sexp_port_stream(p)), SEXP_VOID))
+#define sexp_flush(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p) : (fflush(sexp_port_stream(p)), SEXP_VOID))
 
 int sexp_buffered_read_char (sexp ctx, sexp p);
 sexp sexp_buffered_write_char (sexp ctx, int c, sexp p);
-sexp sexp_buffered_write_string_n (sexp ctx, char *str, int len, sexp p);
+sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p);
 sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p);
 sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #endif
 
-#define sexp_newline(p) sexp_write_char('\n', (p))
+#define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp ctx, sexp head, sexp tail);
@@ -562,7 +563,6 @@ sexp sexp_intern(sexp ctx, char *str);
 sexp sexp_string_to_symbol(sexp ctx, sexp str);
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 sexp sexp_list_to_vector(sexp ctx, sexp ls);
-/* sexp sexp_vector(sexp ctx, int count, ...); */
 void sexp_write(sexp ctx, sexp obj, sexp out);
 sexp sexp_read_string(sexp ctx, sexp in);
 sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
