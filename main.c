@@ -2,7 +2,9 @@
 /* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt  */
 
+#ifndef PLAN9
 #include <sys/stat.h>
+#endif
 #include "chibi/eval.h"
 
 char *chibi_module_dir = NULL;
@@ -11,13 +13,18 @@ sexp find_module_file (sexp ctx, char *file) {
   sexp res;
   int mlen, flen;
   char *path;
+#ifndef PLAN9
   struct stat buf;
 
   if (! stat(file, &buf))
+#endif
     return sexp_c_string(ctx, file, -1);
+#ifndef PLAN9
   if (! chibi_module_dir) {
+#ifndef PLAN9
     chibi_module_dir = getenv("CHIBI_MODULE_DIR");
     if (! chibi_module_dir)
+#endif
       chibi_module_dir = sexp_module_dir;
   }
   mlen = strlen(chibi_module_dir);
@@ -33,6 +40,7 @@ sexp find_module_file (sexp ctx, char *file) {
     res = SEXP_FALSE;
   free(path);
   return res;
+#endif
 }
 
 void repl (sexp ctx) {
@@ -45,7 +53,7 @@ void repl (sexp ctx) {
   out = sexp_eval_string(ctx, "(current-output-port)");
   err = sexp_eval_string(ctx, "(current-error-port)");
   while (1) {
-    sexp_write_string("> ", out);
+    sexp_write_string(ctx, "> ", out);
     sexp_flush(out);
     obj = sexp_read(ctx, in);
     if (obj == SEXP_EOF)
@@ -60,8 +68,8 @@ void repl (sexp ctx) {
       sexp_warn_undefs(sexp_env_bindings(env), tmp, err);
 #endif
       if (res != SEXP_VOID) {
-        sexp_write(res, out);
-        sexp_write_char('\n', out);
+        sexp_write(ctx, res, out);
+        sexp_write_char(ctx, '\n', out);
       }
     }
   }
@@ -92,8 +100,8 @@ void run_main (int argc, char **argv) {
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, out);
       } else if (argv[i][1] == 'p') {
-        sexp_write(res, out);
-        sexp_write_char('\n', out);
+        sexp_write(ctx, res, out);
+        sexp_write_char(ctx, '\n', out);
       }
       quit=1;
       i++;

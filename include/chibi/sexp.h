@@ -5,17 +5,22 @@
 #ifndef SEXP_H
 #define SEXP_H
 
-#include "config.h"
-#include "install.h"
+#include "chibi/config.h"
+#include "chibi/install.h"
 
 #include <ctype.h>
 #include <stdio.h>
+#ifdef PLAN9
+typedef unsigned long size_t;
+#define offsetof(st, m) ((size_t) ((char*)&((st*)(0))->m - (char*)0))
+#else
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <math.h>
+#endif
 
 /* tagging system
  *   bits end in  00:  pointer
@@ -123,7 +128,7 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      sexp_uint_t line;
+      sexp_uint_t offset, line, openp;
       size_t size;
       sexp name;
       sexp cookie;
@@ -366,9 +371,11 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_port_stream(p)    ((p)->value.port.stream)
 #define sexp_port_name(p)      ((p)->value.port.name)
 #define sexp_port_line(p)      ((p)->value.port.line)
+#define sexp_port_openp(p)     ((p)->value.port.openp)
 #define sexp_port_cookie(p)    ((p)->value.port.cookie)
 #define sexp_port_buf(p)       ((p)->value.port.buf)
 #define sexp_port_size(p)      ((p)->value.port.size)
+#define sexp_port_offset(p)    ((p)->value.port.offset)
 
 #define sexp_exception_kind(p)      ((p)->value.exception.kind)
 #define sexp_exception_message(p)   ((p)->value.exception.message)
@@ -509,13 +516,32 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 /***************************** general API ****************************/
 
-#define sexp_read_char(p) (getc(sexp_port_stream(p)))
-#define sexp_push_char(c, p) (ungetc(c, sexp_port_stream(p)))
-#define sexp_write_char(c, p) (putc(c, sexp_port_stream(p)))
-#define sexp_write_string(s, p) (fputs(s, sexp_port_stream(p)))
-#define sexp_printf(p, ...) (fprintf(sexp_port_stream(p), __VA_ARGS__))
-#define sexp_scanf(p, ...) (fscanf(sexp_port_stream(p), __VA_ARGS__))
-#define sexp_flush(p) (fflush(sexp_port_stream(p)))
+#if USE_STRING_STREAMS
+
+#define sexp_read_char(x, p) (getc(sexp_port_stream(p)))
+#define sexp_push_char(x, c, p) (ungetc(c, sexp_port_stream(p)))
+#define sexp_write_char(x, c, p) (putc(c, sexp_port_stream(p)))
+#define sexp_write_string(x, s, p) (fputs(s, sexp_port_stream(p)))
+#define sexp_printf(x, p, ...) (fprintf(sexp_port_stream(p), __VA_ARGS__))
+#define sexp_flush(x, p) (fflush(sexp_port_stream(p)))
+
+#else
+
+#define sexp_read_char(x, p) ((sexp_port_offset(p) < sexp_port_size(p)) ? sexp_port_buf(p)[sexp_port_offset(p)++] : sexp_buffered_read_char(x, p))
+#define sexp_push_char(x, c, p) (sexp_port_buf(p)[--sexp_port_offset(p)] = ((char)(c)))
+#define sexp_write_char(x, c, p) ((sexp_port_offset(p) < sexp_port_size(p)) ? (((sexp_port_buf(p))[sexp_port_offset(p)++]) = ((char)(c))) : sexp_buffered_write_char(x, c, p))
+#define sexp_write_string(x, s, p) sexp_buffered_write_string(x, s, p)
+#define sexp_flush(x, p) sexp_buffered_flush(x, p)
+
+int sexp_buffered_read_char (sexp ctx, sexp p);
+sexp sexp_buffered_write_char (sexp ctx, int c, sexp p);
+sexp sexp_buffered_write_string_n (sexp ctx, char *str, int len, sexp p);
+sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p);
+sexp sexp_buffered_flush (sexp ctx, sexp p);
+
+#endif
+
+#define sexp_newline(p) sexp_write_char('\n', (p))
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 sexp sexp_cons(sexp ctx, sexp head, sexp tail);
@@ -531,12 +557,13 @@ sexp sexp_length(sexp ctx, sexp ls);
 sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
 sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
+sexp sexp_string_concatenate (sexp ctx, sexp str_ls);
 sexp sexp_intern(sexp ctx, char *str);
 sexp sexp_string_to_symbol(sexp ctx, sexp str);
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 sexp sexp_list_to_vector(sexp ctx, sexp ls);
-sexp sexp_vector(sexp ctx, int count, ...);
-void sexp_write(sexp obj, sexp out);
+/* sexp sexp_vector(sexp ctx, int count, ...); */
+void sexp_write(sexp ctx, sexp obj, sexp out);
 sexp sexp_read_string(sexp ctx, sexp in);
 sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
 sexp sexp_read_number(sexp ctx, sexp in, int base);

@@ -157,10 +157,8 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
 sexp_heap sexp_make_heap (size_t size) {
   sexp free, next;
   sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
-  if (! h) {
-    fprintf(stderr, "out of memory allocating %zu byte heap, aborting\n", size);
-    exit(70);
-  }
+  if (! h)
+    errx(70, "out of memory allocating %zu byte heap, aborting\n", size);
   h->size = size;
   h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
   free = h->free_list = (sexp) h->data;
@@ -201,7 +199,7 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
         } else {                  /* take the whole chunk */
           sexp_cdr(ls1) = sexp_cdr(ls2);
         }
-        bzero((void*)ls2, size);
+        memset((void*)ls2, 0, size);
         return ls2;
       }
       ls1 = ls2;
@@ -225,10 +223,8 @@ void* sexp_alloc (sexp ctx, size_t size) {
         && ((! SEXP_MAXIMUM_HEAP_SIZE) || (size < SEXP_MAXIMUM_HEAP_SIZE)))
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
-    if (! res) {
-      fprintf(stderr, "out of memory allocating %zu bytes, aborting\n", size);
-      exit(70);
-    }
+    if (! res)
+      errx(80, "out of memory allocating %zu bytes, aborting\n", size);
   }
   return res;
 }
