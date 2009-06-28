@@ -226,7 +226,8 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp_gc_preserve(ctx, irr, s_irr);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   str = sexp_c_string(ctx, msg, -1);
-  irr = (sexp_pairp(irritants) ? irritants : sexp_list1(ctx, irritants));
+  irr = ((sexp_pairp(irritants) || sexp_nullp(irritants))
+         ? irritants : sexp_list1(ctx, irritants));
   res = sexp_make_exception(ctx, the_read_error_symbol,
                             str, irr, SEXP_FALSE, name,
                             sexp_make_integer(sexp_port_line(port)));
@@ -1006,7 +1007,7 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_sint_t whole) {
          : sexp_flonump(exponent) ? sexp_flonum_value(exponent) : 0.0);
   } else if ((c!=EOF) && ! is_separator(c))
     return sexp_read_error(ctx, "invalid numeric syntax",
-                           sexp_list1(ctx, sexp_make_character(c)), in);
+                           sexp_make_character(c), in);
   return sexp_make_flonum(ctx, (whole + res) * pow(10, e));
 }
 
@@ -1177,11 +1178,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = (c1 == 't' ? SEXP_TRUE : SEXP_FALSE);
         sexp_push_char(ctx, c2, in);
       } else {
-        res = sexp_read_error(ctx, "invalid syntax #%c%c",
-                              sexp_list2(ctx,
-                                         sexp_make_character(c1),
-                                         sexp_make_character(c2)),
-                              in);
+        tmp = sexp_list2(ctx, sexp_make_character(c1), sexp_make_character(c2));
+        res = sexp_read_error(ctx, "invalid syntax #%c%c", tmp, in);
       }
       break;
 /*     case '0': case '1': case '2': case '3': case '4': */
@@ -1217,9 +1215,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           else if (strcasecmp(str, "tab") == 0)
             res = sexp_make_character('\t');
           else {
-            res = sexp_read_error(ctx, "unknown character name",
-                                  sexp_list1(ctx, sexp_c_string(ctx, str, -1)),
-                                  in);
+            tmp = sexp_c_string(ctx, str, -1);
+            res = sexp_read_error(ctx, "unknown character name", tmp, in);
           }
         }
       }
@@ -1239,7 +1236,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       break;
     default:
       res = sexp_read_error(ctx, "invalid # syntax",
-                            sexp_list1(ctx, sexp_make_character(c1)), in);
+                            sexp_make_character(c1), in);
     }
     break;
   case '.':
