@@ -52,6 +52,7 @@ void repl (sexp ctx) {
   in = sexp_eval_string(ctx, "(current-input-port)");
   out = sexp_eval_string(ctx, "(current-output-port)");
   err = sexp_eval_string(ctx, "(current-error-port)");
+  sexp_port_sourcep(in) = 1;
   while (1) {
     sexp_write_string(ctx, "> ", out);
     sexp_flush(ctx, out);
@@ -98,6 +99,8 @@ void run_main (int argc, char **argv) {
         res = sexp_eval(ctx, res);
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, out);
+        quit = 1;
+        break;
       } else if (argv[i][1] == 'p') {
         sexp_write(ctx, res, out);
         sexp_write_char(ctx, '\n', out);
@@ -123,12 +126,14 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
-    if (i < argc)
-      for ( ; i < argc; i++)
-        sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
-    else
-      repl(ctx);
+      res = sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
+    if (! sexp_exceptionp(res)) {
+      if (i < argc)
+        for ( ; i < argc; i++)
+          sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
+      else
+        repl(ctx);
+    }
   }
 
   sexp_gc_release(ctx, str, s_str);
