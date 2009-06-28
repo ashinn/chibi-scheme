@@ -69,7 +69,7 @@ static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
   _DEF_TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, "char"),
   _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, "boolean"),
-  _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 0, 0, sexp_sizeof(pair), 0, 0, "pair"),
+  _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 3, 0, 0, sexp_sizeof(pair), 0, 0, "pair"),
   _DEF_TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"),
   _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string"),
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), 4, "vector"),
@@ -106,14 +106,13 @@ static struct sexp_struct sexp_type_specs[] = {
 /***************************** exceptions *****************************/
 
 sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
-                          sexp procedure, sexp file, sexp line) {
+                          sexp procedure, sexp source) {
   sexp exn = sexp_alloc_type(ctx, exception, SEXP_EXCEPTION);
   sexp_exception_kind(exn) = kind;
   sexp_exception_message(exn) = message;
   sexp_exception_irritants(exn) = irritants;
   sexp_exception_procedure(exn) = procedure;
-  sexp_exception_file(exn) = file;
-  sexp_exception_line(exn) = line;
+  sexp_exception_source(exn) = source;
   return exn;
 }
 
@@ -129,7 +128,7 @@ sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp irritants) {
                             str = sexp_c_string(ctx, message, -1),
                             ((sexp_pairp(irritants) || sexp_nullp(irritants))
                              ? irritants : (irr = sexp_list1(ctx, irritants))),
-                            self, SEXP_FALSE, SEXP_FALSE);
+                            self, SEXP_FALSE);
   sexp_gc_release(ctx, sym, s_sym);
   return res;
 }
@@ -145,7 +144,7 @@ sexp sexp_type_exception (sexp ctx, char *message, sexp obj) {
   res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "type"),
                             str = sexp_c_string(ctx, message, -1),
                             irr = sexp_list1(ctx, obj),
-                            SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+                            SEXP_FALSE, SEXP_FALSE);
   sexp_gc_release(ctx, sym, s_sym);
   return res;
 }
@@ -159,7 +158,7 @@ sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
   res = sexp_list2(ctx, start, end);
   res = sexp_cons(ctx, obj, res);
   res = sexp_make_exception(ctx, sexp_intern(ctx, "range"), msg, res,
-                            SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+                            SEXP_FALSE, SEXP_FALSE);
   sexp_gc_release(ctx, res, s_res);
   return res;
 }
@@ -176,14 +175,16 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
         sexp_write(ctx, ls, out);
       }
     }
-    if (sexp_integerp(sexp_exception_line(exn))
-        && (sexp_exception_line(exn) > sexp_make_integer(0))) {
-      sexp_write_string(ctx, " on line ", out);
-      sexp_write(ctx, sexp_exception_line(exn), out);
-    }
-    if (sexp_stringp(sexp_exception_file(exn))) {
-      sexp_write_string(ctx, " of file ", out);
-      sexp_write_string(ctx, sexp_string_data(sexp_exception_file(exn)), out);
+    if (sexp_pairp(sexp_exception_source(exn))) {
+      if (sexp_integerp(sexp_cdr(sexp_exception_source(exn)))
+          && (sexp_cdr(sexp_exception_source(exn)) >= sexp_make_integer(0))) {
+        sexp_write_string(ctx, " on line ", out);
+        sexp_write(ctx, sexp_cdr(sexp_exception_source(exn)), out);
+      }
+      if (sexp_stringp(sexp_car(sexp_exception_source(exn)))) {
+        sexp_write_string(ctx, " of file ", out);
+        sexp_write_string(ctx, sexp_string_data(sexp_car(sexp_exception_source(exn))), out);
+      }
     }
     sexp_write_string(ctx, ": ", out);
     sexp_write_string(ctx, sexp_string_data(sexp_exception_message(exn)), out);
@@ -221,16 +222,18 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp_gc_var(ctx, name, s_name);
   sexp_gc_var(ctx, str, s_str);
   sexp_gc_var(ctx, irr, s_irr);
+  sexp_gc_var(ctx, src, s_src);
   sexp_gc_preserve(ctx, name, s_name);
   sexp_gc_preserve(ctx, str, s_str);
   sexp_gc_preserve(ctx, irr, s_irr);
+  sexp_gc_preserve(ctx, src, s_src);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
+  name = sexp_cons(ctx, name, sexp_make_integer(sexp_port_line(port)));
   str = sexp_c_string(ctx, msg, -1);
   irr = ((sexp_pairp(irritants) || sexp_nullp(irritants))
          ? irritants : sexp_list1(ctx, irritants));
   res = sexp_make_exception(ctx, the_read_error_symbol,
-                            str, irr, SEXP_FALSE, name,
-                            sexp_make_integer(sexp_port_line(port)));
+                            str, irr, SEXP_FALSE, name);
   sexp_gc_release(ctx, name, s_name);
   return res;
 }
@@ -241,6 +244,7 @@ sexp sexp_cons (sexp ctx, sexp head, sexp tail) {
   sexp pair = sexp_alloc_type(ctx, pair, SEXP_PAIR);
   sexp_car(pair) = head;
   sexp_cdr(pair) = tail;
+  sexp_pair_source(pair) = SEXP_FALSE;
   return pair;
 }
 
@@ -765,9 +769,10 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp p = sexp_alloc_type(ctx, port, SEXP_IPORT);
   sexp_port_stream(p) = in;
   sexp_port_name(p) = name;
-  sexp_port_line(p) = 0;
+  sexp_port_line(p) = 1;
   sexp_port_buf(p) = NULL;
   sexp_port_openp(p) = 1;
+  sexp_port_sourcep(p) = 1;
   sexp_port_cookie(p) = SEXP_VOID;
   return p;
 }
@@ -1066,7 +1071,7 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
 
 sexp sexp_read_raw (sexp ctx, sexp in) {
   char *str;
-  int c1, c2;
+  int c1, c2, line;
   sexp tmp2;
   sexp_gc_var(ctx, res, s_res);
   sexp_gc_var(ctx, tmp, s_tmp);
@@ -1113,6 +1118,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     res = sexp_read_string(ctx, in);
     break;
   case '(':
+    line = (sexp_port_sourcep(in) ? sexp_port_line(in) : -1);
     res = SEXP_NULL;
     tmp = sexp_read_raw(ctx, in);
     while ((tmp != SEXP_EOF) && (tmp != SEXP_CLOSE) && (tmp != SEXP_RAWDOT)) {
@@ -1150,6 +1156,9 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = sexp_read_error(ctx, "missing trailing ')'", SEXP_NULL, in);
       }
     }
+    if ((line >= 0) && sexp_pairp(res))
+      sexp_pair_source(res)
+        = sexp_cons(ctx, sexp_port_name(in), sexp_make_integer(line));
     break;
   case '#':
     switch (c1=sexp_read_char(ctx, in)) {

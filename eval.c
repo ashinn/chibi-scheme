@@ -368,7 +368,8 @@ static sexp sexp_compile_error(sexp ctx, char *message, sexp obj) {
   irritants = sexp_list1(ctx, obj);
   msg = sexp_c_string(ctx, message, -1);
   exn = sexp_make_exception(ctx, the_compile_error_symbol, msg, irritants,
-                            SEXP_FALSE, SEXP_FALSE, SEXP_FALSE);
+                            SEXP_FALSE, (sexp_pairp(obj) ?
+                                         sexp_pair_source(obj) : SEXP_FALSE));
   sexp_gc_release(ctx, irritants, s_irr);
   return exn;
 }
@@ -558,7 +559,9 @@ static sexp analyze_define (sexp ctx, sexp x) {
     res = sexp_compile_error(ctx, "bad define syntax", x);
   } else {
     name = (sexp_pairp(sexp_cadr(x)) ? sexp_caadr(x) : sexp_cadr(x));
-    if (sexp_env_lambda(env) && sexp_lambdap(sexp_env_lambda(env))) {
+    if (! sexp_idp(name)) {
+      res = sexp_compile_error(ctx, "can't define a non-symbol", x);
+    } else if (sexp_env_lambda(env) && sexp_lambdap(sexp_env_lambda(env))) {
       tmp = sexp_cons(ctx, name, sexp_context_lambda(ctx));
       sexp_push(ctx, sexp_env_bindings(env), tmp);
       sexp_push(ctx, sexp_lambda_sv(sexp_env_lambda(env)), name);
@@ -1894,6 +1897,7 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     sexp_print_exception(ctx, in, out);
     res = in;
   } else {
+    sexp_port_sourcep(in) = 1;
     while ((x=sexp_read(ctx, in)) != (sexp) SEXP_EOF) {
       res = sexp_eval(ctx2, x);
       if (sexp_exceptionp(res))

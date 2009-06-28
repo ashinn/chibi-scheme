@@ -114,6 +114,7 @@ struct sexp_struct {
     } type;
     struct {
       sexp car, cdr;
+      sexp source;
     } pair;
     struct {
       sexp_uint_t length;
@@ -129,12 +130,12 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      sexp_uint_t offset, line, size, openp;
+      sexp_uint_t offset, line, size, openp, sourcep;
       sexp name;
       sexp cookie;
     } port;
     struct {
-      sexp kind, message, irritants, procedure, file, line;
+      sexp kind, message, irritants, procedure, source;
     } exception;
     struct {
       char sign;
@@ -374,6 +375,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_port_name(p)      ((p)->value.port.name)
 #define sexp_port_line(p)      ((p)->value.port.line)
 #define sexp_port_openp(p)     ((p)->value.port.openp)
+#define sexp_port_sourcep(p)   ((p)->value.port.sourcep)
 #define sexp_port_cookie(p)    ((p)->value.port.cookie)
 #define sexp_port_buf(p)       ((p)->value.port.buf)
 #define sexp_port_size(p)      ((p)->value.port.size)
@@ -383,8 +385,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_exception_message(p)   ((p)->value.exception.message)
 #define sexp_exception_irritants(p) ((p)->value.exception.irritants)
 #define sexp_exception_procedure(p) ((p)->value.exception.procedure)
-#define sexp_exception_file(p)      ((p)->value.exception.file)
-#define sexp_exception_line(p)      ((p)->value.exception.line)
+#define sexp_exception_source(p)    ((p)->value.exception.source)
 
 #define sexp_bytecode_length(x)   ((x)->value.bytecode.length)
 #define sexp_bytecode_name(x)     ((x)->value.bytecode.name)
@@ -498,6 +499,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_push(ctx, ls, x)    ((ls) = sexp_cons((ctx), (x), (ls)))
 #define sexp_insert(ctx, ls, x)  ((sexp_memq(NULL, (x), (ls)) != SEXP_FALSE) ? (ls) : sexp_push((ctx), (ls), (x)))
 
+#define sexp_pair_source(x) ((x)->value.pair.source)
+
 #define sexp_car(x)       ((x)->value.pair.car)
 #define sexp_cdr(x)       ((x)->value.pair.cdr)
 
@@ -576,7 +579,7 @@ sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
 sexp sexp_make_input_string_port(sexp ctx, sexp str);
 sexp sexp_make_output_string_port(sexp ctx);
 sexp sexp_get_output_string(sexp ctx, sexp port);
-sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp file, sexp line);
+sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
 sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj);
 sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
 sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
