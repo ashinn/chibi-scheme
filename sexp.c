@@ -42,6 +42,10 @@ static int digit_value (c) {
   return (((c)<='9') ? ((c) - '0') : ((toupper(c) - 'A') + 10));
 }
 
+static int hex_digit (n) {
+  return ((n<=9) ? ('0' + n) : ('A' + n - 10));
+}
+
 static int is_separator(int c) {
   return 0<c && c<0x60 && sexp_separators[c];
 }
@@ -216,12 +220,15 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp res;
   sexp_gc_var(ctx, name, s_name);
   sexp_gc_var(ctx, str, s_str);
+  sexp_gc_var(ctx, irr, s_irr);
   sexp_gc_preserve(ctx, name, s_name);
   sexp_gc_preserve(ctx, str, s_str);
+  sexp_gc_preserve(ctx, irr, s_irr);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   str = sexp_c_string(ctx, msg, -1);
+  irr = (sexp_pairp(irritants) ? irritants : sexp_list1(ctx, irritants));
   res = sexp_make_exception(ctx, the_read_error_symbol,
-                            str, irritants, SEXP_FALSE, name,
+                            str, irr, SEXP_FALSE, name,
                             sexp_make_integer(sexp_port_line(port)));
   sexp_gc_release(ctx, name, s_name);
   return res;
@@ -885,9 +892,8 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
       sexp_write_char(ctx, sexp_unbox_character(obj), out);
     else {
       sexp_write_string(ctx, "#\\x", out);
-      if (sexp_unbox_character(obj) < 16)
-        sexp_write_char(ctx, '0', out);
-      sexp_write(ctx, sexp_make_integer(sexp_unbox_character(obj)), out);
+      sexp_write_char(ctx, hex_digit(sexp_unbox_character(obj)>>4), out);
+      sexp_write_char(ctx, hex_digit(sexp_unbox_character(obj)&0xF), out);
     }
   } else if (sexp_symbolp(obj)) {
 
@@ -915,7 +921,7 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
     case (sexp_uint_t) SEXP_VOID:
       sexp_write_string(ctx, "#<undef>", out); break;
     default:
-      sexp_write_string(ctx, "#<undef>", out);
+      sexp_write_string(ctx, "#<invalid immediate>", out);
     }
   }
 }
@@ -1005,7 +1011,7 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_sint_t whole) {
 }
 
 sexp sexp_read_number(sexp ctx, sexp in, int base) {
-  sexp f;
+  sexp f, den;
   sexp_sint_t res = 0, negativep = 0, c;
 
   c = sexp_read_char(ctx, in);
@@ -1017,6 +1023,7 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
   if (base == 16)
     for (c=sexp_read_char(ctx, in); isxdigit(c); c=sexp_read_char(ctx, in))
       res = res * base + digit_value(c);
+  else
     for (c=sexp_read_char(ctx, in); isdigit(c); c=sexp_read_char(ctx, in))
       res = res * base + digit_value(c);
 
@@ -1039,11 +1046,18 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
 #endif
       return f;
     }
+  } else if (c=='/') {
+    den = sexp_read_number(ctx, in, base);
+    if (! sexp_integerp(den))
+      return (sexp_exceptionp(den)
+              ? den : sexp_read_error(ctx, "invalid rational syntax", den, in));
+    return sexp_make_flonum(ctx, (double)(negativep ? -res : res)
+                            / (double)sexp_unbox_integer(den));
   } else {
-    sexp_push_char(ctx, c, in);
     if ((c!=EOF) && ! is_separator(c))
       return sexp_read_error(ctx, "invalid numeric syntax",
-                             sexp_list1(ctx, sexp_make_character(c)), in);
+                             sexp_make_character(c), in);
+    sexp_push_char(ctx, c, in);
   }
 
   return sexp_make_integer(negativep ? -res : res);
@@ -1190,8 +1204,9 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         if (sexp_string_length(res) == 1) {
           res = sexp_make_character(c1);
         } else if ((c1 == 'x' || c1 == 'X') &&
-                   isxdigit(str[0]) && isxdigit(str[1]) && str[2] == '\0') {
-          res = sexp_make_character(16 * digit_value(c1) + digit_value(str[1]));
+                   isxdigit(str[1]) && isxdigit(str[2]) && str[3] == '\0') {
+          res = sexp_make_character(16 * digit_value(str[1])
+                                    + digit_value(str[2]));
         } else {
           if (strcasecmp(str, "space") == 0)
             res = sexp_make_character(' ');
