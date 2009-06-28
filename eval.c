@@ -331,6 +331,7 @@ static sexp sexp_strip_synclos (sexp ctx, sexp x) {
     kar = sexp_strip_synclos(ctx, sexp_car(x));
     kdr = sexp_strip_synclos(ctx, sexp_cdr(x));
     res = sexp_cons(ctx, kar, kdr);
+    sexp_immutablep(res) = sexp_immutablep(x);
   } else {
     res = x;
   }
@@ -1497,6 +1498,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_VECTOR_SET:
     if (! sexp_vectorp(_ARG1))
       sexp_raise("vector-set!: not a vector", sexp_list1(ctx, _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("vector-set!: immutable vector", sexp_list1(ctx, _ARG1));
     sexp_vector_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_VOID;
     top-=2;
@@ -1509,6 +1512,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case OP_STRING_SET:
+    if (! sexp_stringp(_ARG1))
+      sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("string-set!: immutable string", sexp_list1(ctx, _ARG1));
+    fprintf(stderr, "string-set! %p (immutable: %d)\n", _ARG1, sexp_immutablep(_ARG1));
     sexp_string_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_VOID;
     top-=2;
@@ -1557,6 +1565,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_SET_CAR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("set-car!: not a pair", sexp_list1(ctx, _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("set-car!: immutable pair", sexp_list1(ctx, _ARG1));
     sexp_car(_ARG1) = _ARG2;
     _ARG2 = SEXP_VOID;
     top--;
@@ -1564,6 +1574,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_SET_CDR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("set-cdr!: not a pair", sexp_list1(ctx, _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("set-cdr!: immutable pair", sexp_list1(ctx, _ARG1));
     sexp_cdr(_ARG1) = _ARG2;
     _ARG2 = SEXP_VOID;
     top--;

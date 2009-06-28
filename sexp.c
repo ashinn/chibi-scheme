@@ -894,9 +894,10 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
     else if (obj == sexp_make_character('\t'))
       sexp_write_string(ctx, "#\\tab", out);
     else if ((33 <= sexp_unbox_character(obj))
-             && (sexp_unbox_character(obj) < 127))
+             && (sexp_unbox_character(obj) < 127)) {
+      sexp_write_string(ctx, "#\\", out);
       sexp_write_char(ctx, sexp_unbox_character(obj), out);
-    else {
+    } else {
       sexp_write_string(ctx, "#\\x", out);
       sexp_write_char(ctx, hex_digit(sexp_unbox_character(obj)>>4), out);
       sexp_write_char(ctx, hex_digit(sexp_unbox_character(obj)&0xF), out);
@@ -1156,9 +1157,13 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = sexp_read_error(ctx, "missing trailing ')'", SEXP_NULL, in);
       }
     }
-    if ((line >= 0) && sexp_pairp(res))
+    if ((line >= 0) && sexp_pairp(res)) {
       sexp_pair_source(res)
         = sexp_cons(ctx, sexp_port_name(in), sexp_make_integer(line));
+    }
+    if (sexp_port_sourcep(in))
+      for (tmp=res; sexp_pairp(tmp); tmp=sexp_cdr(tmp))
+        sexp_immutablep(tmp) = 1;
     break;
   case '#':
     switch (c1=sexp_read_char(ctx, in)) {
@@ -1296,6 +1301,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     break;
   }
 
+  if (sexp_port_sourcep(in) && sexp_pointerp(res))
+    sexp_immutablep(res) = 1;
   sexp_gc_release(ctx, res, s_res);
   return res;
 }

@@ -286,6 +286,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_pointer_tag(x) ((x)->tag)
 #define sexp_gc_mark(x)     ((x)->gc_mark)
+#define sexp_immutablep(x)  ((x)->immutablep)
 
 #define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
