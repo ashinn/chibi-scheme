@@ -2,8 +2,6 @@
 
 .PHONY: all doc dist clean cleaner test install uninstall
 
-all: chibi-scheme
-
 CC     ?= cc
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
@@ -15,7 +13,11 @@ ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
 PLATFORM=macosx
 else
+ifeq ($(shell uname -o),Msys)
+PLATFORM=mingw
+else
 PLATFORM=unix
+endif
 endif
 endif
 
@@ -28,7 +30,10 @@ else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
-CLIBFLAGS = -fPIC -shared
+CC = gcc
+CLIBFLAGS = -shared
+CPPFLAGS += -DUSE_STRING_STREAMS=0 -DBUILDING_DLL -DUSE_DEBUG=0
+LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
@@ -36,6 +41,8 @@ CLIBFLAGS = -fPIC -shared
 STATICFLAGS = -static
 endif
 endif
+
+all: chibi-scheme$(EXE)
 
 ifdef USE_BOEHM
 GCLDFLAGS := -lgc
@@ -75,10 +82,10 @@ clean:
 	rm -f *.o *.i *.s
 
 cleaner: clean
-	rm -f chibi-scheme chibi-scheme-static *$(SO)
+	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) *$(SO) *.a
 	rm -rf *.dSYM
 
-test-basic: chibi-scheme
+test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
 	    ./chibi-scheme $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if diff -q $${f%.scm}.out $${f%.scm}.res; then \
