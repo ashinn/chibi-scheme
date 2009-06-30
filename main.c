@@ -2,9 +2,13 @@
 /* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt  */
 
-#ifndef PLAN9
+#ifdef PLAN9
+#define file_exists_p(path, buf) (stat(path, buf, 128) >= 0)
+#else
 #include <sys/stat.h>
+#define file_exists_p(path, buf) (! stat(path, buf))
 #endif
+
 #include "chibi/eval.h"
 
 char *chibi_module_dir = NULL;
@@ -13,13 +17,15 @@ sexp find_module_file (sexp ctx, char *file) {
   sexp res;
   int mlen, flen;
   char *path;
-#ifndef PLAN9
-  struct stat buf;
-
-  if (! stat(file, &buf))
+#ifdef PLAN9
+  unsigned char buf[128];
+#else
+  struct stat buf_str;
+  struct stat *buf = &buf_str;
 #endif
+
+  if (file_exists_p(file, buf))
     return sexp_c_string(ctx, file, -1);
-#ifndef PLAN9
   if (! chibi_module_dir) {
 #ifndef PLAN9
     chibi_module_dir = getenv("CHIBI_MODULE_DIR");
@@ -34,13 +40,12 @@ sexp find_module_file (sexp ctx, char *file) {
   path[mlen] = '/';
   memcpy(path+mlen+1, file, flen);
   path[mlen+flen+1] = '\0';
-  if (! stat(path, &buf))
+  if (file_exists_p(path, buf))
     res = sexp_c_string(ctx, path, mlen+flen+2);
   else
     res = SEXP_FALSE;
   free(path);
   return res;
-#endif
 }
 
 void repl (sexp ctx) {
