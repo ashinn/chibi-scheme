@@ -1019,7 +1019,8 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_sint_t whole) {
 
 sexp sexp_read_number(sexp ctx, sexp in, int base) {
   sexp f, den;
-  sexp_sint_t res = 0, negativep = 0, c;
+  sexp_uint_t res = 0, negativep = 0;
+  int c;
 
   c = sexp_read_char(ctx, in);
   if (c == '-')
@@ -1085,17 +1086,16 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     res = SEXP_EOF;
     break;
   case ';':
-    sexp_port_line(in)++;
     while ((c1 = sexp_read_char(ctx, in)) != EOF)
       if (c1 == '\n')
         break;
     /* ... FALLTHROUGH ... */
+  case '\n':
+    sexp_port_line(in)++;
+    goto scan_loop;
   case ' ':
   case '\t':
   case '\r':
-    goto scan_loop;
-  case '\n':
-    sexp_port_line(in)++;
     goto scan_loop;
   case '\'':
     res = sexp_read(ctx, in);

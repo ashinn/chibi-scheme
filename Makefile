@@ -11,6 +11,8 @@ LIBDIR ?= $(PREFIX)/lib
 INCDIR ?= $(PREFIX)/include/chibi
 MODDIR ?= $(PREFIX)/share/chibi
 
+DESTDIR ?=
+
 ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
 PLATFORM=macosx
@@ -92,14 +94,14 @@ test: chibi-scheme
 	./chibi-scheme tests/r5rs-tests.scm
 
 install: chibi-scheme
-	mkdir -p $(BINDIR)
-	cp chibi-scheme $(BINDIR)/
-	mkdir -p $(MODDIR)
-	cp init.scm $(MODDIR)/
-	mkdir -p $(INCDIR)
-	cp $(INCLUDES) include/chibi/eval.h $(INCDIR)/
-	mkdir -p $(LIBDIR)
-	cp libchibi-scheme$(SO) $(LIBDIR)/
+	mkdir -p $(DESTDIR)$(BINDIR)
+	cp chibi-scheme $(DESTDIR)$(BINDIR)/
+	mkdir -p $(DESTDIR)$(MODDIR)
+	cp init.scm $(DESTDIR)$(MODDIR)/
+	mkdir -p $(DESTDIR)$(INCDIR)
+	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	cp libchibi-scheme$(SO) $(DESTDIR)$(LIBDIR)/
 	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:

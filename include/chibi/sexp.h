@@ -140,7 +140,7 @@ struct sexp_struct {
     struct {
       char sign;
       sexp_uint_t length;
-      sexp_uint_t *data;
+      sexp_uint_t data[];
     } bignum;
     /* runtime types */
     struct {
@@ -478,6 +478,10 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_type_size_off(x)         ((x)->value.type.size_off)
 #define sexp_type_size_scale(x)       ((x)->value.type.size_scale)
 #define sexp_type_name(x)             ((x)->value.type.name)
+
+#define sexp_bignum_sign(x)           ((x)->value.bignum.sign)
+#define sexp_bignum_length(x)         ((x)->value.bignum.length)
+#define sexp_bignum_data(x)           ((x)->value.bignum.data)
 
 /****************************** arithmetic ****************************/
 
