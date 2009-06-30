@@ -539,53 +539,53 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_write_string(x, s, p) (sexp_port_buf(p) ? sexp_buffered_write_string(x, s, p) : (fputs(s, sexp_port_stream(p)), SEXP_VOID))
 #define sexp_flush(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p) : (fflush(sexp_port_stream(p)), SEXP_VOID))
 
-int sexp_buffered_read_char (sexp ctx, sexp p);
-sexp sexp_buffered_write_char (sexp ctx, int c, sexp p);
-sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p);
-sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p);
-sexp sexp_buffered_flush (sexp ctx, sexp p);
+DLLEXPORT int sexp_buffered_read_char (sexp ctx, sexp p);
+DLLEXPORT sexp sexp_buffered_write_char (sexp ctx, int c, sexp p);
+DLLEXPORT sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p);
+DLLEXPORT sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p);
+DLLEXPORT sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #endif
 
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
-sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
-sexp sexp_cons(sexp ctx, sexp head, sexp tail);
-sexp sexp_list2(sexp ctx, sexp a, sexp b);
-sexp sexp_equalp (sexp ctx, sexp a, sexp b);
-sexp sexp_listp(sexp ctx, sexp obj);
-sexp sexp_reverse(sexp ctx, sexp ls);
-sexp sexp_nreverse(sexp ctx, sexp ls);
-sexp sexp_append2(sexp ctx, sexp a, sexp b);
-sexp sexp_memq(sexp ctx, sexp x, sexp ls);
-sexp sexp_assq(sexp ctx, sexp x, sexp ls);
-sexp sexp_length(sexp ctx, sexp ls);
-sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
-sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
-sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
-sexp sexp_string_concatenate (sexp ctx, sexp str_ls);
-sexp sexp_intern(sexp ctx, char *str);
-sexp sexp_string_to_symbol(sexp ctx, sexp str);
-sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
-sexp sexp_list_to_vector(sexp ctx, sexp ls);
-void sexp_write(sexp ctx, sexp obj, sexp out);
-sexp sexp_read_string(sexp ctx, sexp in);
-sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
-sexp sexp_read_number(sexp ctx, sexp in, int base);
-sexp sexp_read_raw(sexp ctx, sexp in);
-sexp sexp_read(sexp ctx, sexp in);
-sexp sexp_read_from_string(sexp ctx, char *str);
-sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
-sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
-sexp sexp_make_input_string_port(sexp ctx, sexp str);
-sexp sexp_make_output_string_port(sexp ctx);
-sexp sexp_get_output_string(sexp ctx, sexp port);
-sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
-sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj);
-sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
-sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
-sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
-void sexp_init();
+DLLEXPORT sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
+DLLEXPORT sexp sexp_cons(sexp ctx, sexp head, sexp tail);
+DLLEXPORT sexp sexp_list2(sexp ctx, sexp a, sexp b);
+DLLEXPORT sexp sexp_equalp (sexp ctx, sexp a, sexp b);
+DLLEXPORT sexp sexp_listp(sexp ctx, sexp obj);
+DLLEXPORT sexp sexp_reverse(sexp ctx, sexp ls);
+DLLEXPORT sexp sexp_nreverse(sexp ctx, sexp ls);
+DLLEXPORT sexp sexp_append2(sexp ctx, sexp a, sexp b);
+DLLEXPORT sexp sexp_memq(sexp ctx, sexp x, sexp ls);
+DLLEXPORT sexp sexp_assq(sexp ctx, sexp x, sexp ls);
+DLLEXPORT sexp sexp_length(sexp ctx, sexp ls);
+DLLEXPORT sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
+DLLEXPORT sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
+DLLEXPORT sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
+DLLEXPORT sexp sexp_string_concatenate (sexp ctx, sexp str_ls);
+DLLEXPORT sexp sexp_intern(sexp ctx, char *str);
+DLLEXPORT sexp sexp_string_to_symbol(sexp ctx, sexp str);
+DLLEXPORT sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
+DLLEXPORT sexp sexp_list_to_vector(sexp ctx, sexp ls);
+DLLEXPORT void sexp_write(sexp ctx, sexp obj, sexp out);
+DLLEXPORT sexp sexp_read_string(sexp ctx, sexp in);
+DLLEXPORT sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
+DLLEXPORT sexp sexp_read_number(sexp ctx, sexp in, int base);
+DLLEXPORT sexp sexp_read_raw(sexp ctx, sexp in);
+DLLEXPORT sexp sexp_read(sexp ctx, sexp in);
+DLLEXPORT sexp sexp_read_from_string(sexp ctx, char *str);
+DLLEXPORT sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
+DLLEXPORT sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
+DLLEXPORT sexp sexp_make_input_string_port(sexp ctx, sexp str);
+DLLEXPORT sexp sexp_make_output_string_port(sexp ctx);
+DLLEXPORT sexp sexp_get_output_string(sexp ctx, sexp port);
+DLLEXPORT sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
+DLLEXPORT sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj);
+DLLEXPORT sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
+DLLEXPORT sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
+DLLEXPORT sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
+DLLEXPORT void sexp_init();
 
 #endif /* ! SEXP_H */
 
