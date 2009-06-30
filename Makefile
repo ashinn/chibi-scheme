@@ -6,6 +6,7 @@ CC     ?= cc
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib
+SOLIBDIR ?= $(PREFIX)/lib
 INCDIR ?= $(PREFIX)/include/chibi
 MODDIR ?= $(PREFIX)/share/chibi
 
@@ -15,6 +16,7 @@ PLATFORM=macosx
 else
 ifeq ($(shell uname -o),Msys)
 PLATFORM=mingw
+SOLIBDIR = $(BINDIR)
 else
 PLATFORM=unix
 endif
@@ -98,7 +100,7 @@ test-basic: chibi-scheme$(EXE)
 test: chibi-scheme
 	./chibi-scheme tests/r5rs-tests.scm
 
-install: chibi-scheme
+install: chibi-scheme$(EXE)
 	mkdir -p $(BINDIR)
 	cp chibi-scheme $(BINDIR)/
 	mkdir -p $(MODDIR)
@@ -106,12 +108,14 @@ install: chibi-scheme
 	mkdir -p $(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(INCDIR)/
 	mkdir -p $(LIBDIR)
-	cp libchibi-scheme$(SO) $(LIBDIR)/
+	cp libchibi-scheme$(SO) $(SOLIBDIR)/
+	-cp libchibi-scheme$(SO).a $(LIBDIR)/
 	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
 	rm -f $(BINDIR)/chibi-scheme*
-	rm -f $(LIBDIR)/libchibi-scheme$(SO)
+	rm -f $(SOLIBDIR)/libchibi-scheme$(SO)
+	rm -f $(LIBDIR)/libchibi-scheme$(SO).a
 	cd $(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
 	rm -f $(MODDIR)/*.scm
 
