@@ -128,13 +128,13 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-void sexp_scheme_init();
-sexp sexp_apply(sexp context, sexp proc, sexp args);
-sexp sexp_eval(sexp context, sexp obj);
-sexp sexp_eval_string(sexp context, char *str);
-sexp sexp_load(sexp context, sexp expr, sexp env);
-sexp sexp_make_context(sexp context, sexp stack, sexp env);
-void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
+DLLEXPORT void sexp_scheme_init();
+DLLEXPORT sexp sexp_apply(sexp context, sexp proc, sexp args);
+DLLEXPORT sexp sexp_eval(sexp context, sexp obj);
+DLLEXPORT sexp sexp_eval_string(sexp context, char *str);
+DLLEXPORT sexp sexp_load(sexp context, sexp expr, sexp env);
+DLLEXPORT sexp sexp_make_context(sexp context, sexp stack, sexp env);
+DLLEXPORT void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
 
 #endif /* ! SEXP_EVAL_H */
 
