@@ -118,3 +118,11 @@
 #endif
 
 #endif
+
+#ifdef __MINGW32__
+#ifdef BUILDING_DLL
+#define DLLEXPORT    __declspec(dllexport)
+#else
+#define DLLEXPORT    __declspec(dllimport)
+#endif
+#endif
