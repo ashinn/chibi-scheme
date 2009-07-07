@@ -48,6 +48,29 @@ sexp find_module_file (sexp ctx, char *file) {
   return res;
 }
 
+sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
+  sexp res = SEXP_VOID;
+  sexp_gc_var(ctx, path, s_path);
+  sexp_gc_var(ctx, irr, s_irr);
+  sexp_gc_preserve(ctx, path, s_path);
+  sexp_gc_preserve(ctx, irr, s_irr);
+  path = find_module_file(ctx, file);
+  if (! sexp_stringp(path)) {
+    path = sexp_c_string(ctx, chibi_module_dir, -1);
+    irr = sexp_cons(ctx, path, SEXP_NULL);
+    path = sexp_c_string(ctx, file, -1);
+    irr = sexp_cons(ctx, path, irr);
+    res = sexp_user_exception(ctx,
+                              SEXP_FALSE,
+                              "couldn't find file to load in ./ or module dir",
+                              irr);
+  } else {
+    res = sexp_load(ctx, path, env);
+  }
+  sexp_gc_release(ctx, path, s_path);
+  return res;
+}
+
 void repl (sexp ctx) {
   sexp tmp, res, env, in, out, err;
   sexp_gc_var(ctx, obj, s_obj);
@@ -98,7 +121,7 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded++)
-        sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
+        sexp_load_module_file(ctx, sexp_init_file, env);
       res = sexp_read_from_string(ctx, argv[i+1]);
       if (! sexp_exceptionp(res))
         res = sexp_eval(ctx, res);
@@ -115,8 +138,8 @@ void run_main (int argc, char **argv) {
       break;
     case 'l':
       if (! init_loaded++)
-        sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
-      sexp_load(ctx, str=find_module_file(ctx, argv[++i]), env);
+        sexp_load_module_file(ctx, sexp_init_file, env);
+      sexp_load_module_file(ctx, argv[++i], env);
       break;
     case 'q':
       init_loaded = 1;
@@ -131,14 +154,15 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      res = sexp_load(ctx, str=find_module_file(ctx, sexp_init_file), env);
-    if (! sexp_exceptionp(res)) {
-      if (i < argc)
-        for ( ; i < argc; i++)
-          sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
-      else
-        repl(ctx);
-    }
+      res = sexp_load_module_file(ctx, sexp_init_file, env);
+    if (res && sexp_exceptionp(res))
+      sexp_print_exception(ctx, res,
+                           sexp_eval_string(ctx, "(current-error-port)"));
+    if (i < argc)
+      for ( ; i < argc; i++)
+        res = sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
+    else
+      repl(ctx);
   }
 
   sexp_gc_release(ctx, str, s_str);
