@@ -271,7 +271,7 @@
 (define (force x) (if (procedure? x) (x) x))
 
 (define (error msg . args)
-  (raise (make-exception 'user msg args #f #f #f)))
+  (raise (make-exception 'user msg args #f #f)))
 
 (define (with-exception-handler handler thunk)
   (let ((orig-handler (current-exception-handler)))

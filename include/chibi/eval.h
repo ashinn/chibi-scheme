@@ -10,7 +10,7 @@
 /************************* additional types ***************************/
 
 #define INIT_BCODE_SIZE 128
-#define INIT_STACK_SIZE 1024
+#define INIT_STACK_SIZE 8192
 
 #define sexp_init_file "init.scm"
 

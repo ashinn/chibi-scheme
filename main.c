@@ -83,7 +83,7 @@ void repl (sexp ctx) {
 }
 
 void run_main (int argc, char **argv) {
-  sexp env, out=NULL, res, ctx;
+  sexp env, out=NULL, res=SEXP_VOID, ctx;
   sexp_uint_t i, quit=0, init_loaded=0;
   sexp_gc_var(ctx, str, s_str);
 

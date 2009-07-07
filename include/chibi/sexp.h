@@ -46,9 +46,6 @@ typedef unsigned long size_t;
 #define SEXP_CHAR_TAG 6
 #define SEXP_EXTENDED_TAG 14
 
-#define SEXP_MAX_INT ((1<<29)-1)
-#define SEXP_MIN_INT (-(1<<29))
-
 #if USE_HASH_SYMS
 #define SEXP_SYMBOL_TABLE_SIZE 389
 #else
@@ -92,6 +89,18 @@ typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
 typedef unsigned char sexp_tag_t;
 typedef struct sexp_struct *sexp;
+
+#define __HALF_MAX_SIGNED(type) ((type)1 << (sizeof(type)*8-2))
+#define __MAX_SIGNED(type) (__HALF_MAX_SIGNED(type) - 1 + __HALF_MAX_SIGNED(type))
+#define __MIN_SIGNED(type) (-1 - __MAX_SIGNED(type))
+
+#define SEXP_UINT_T_MAX ((sexp_uint_t)-1)
+#define SEXP_UINT_T_MIN (0)
+#define SEXP_SINT_T_MAX __MAX_SIGNED(sexp_sint_t)
+#define SEXP_SINT_T_MIN __MIN_SIGNED(sexp_sint_t)
+
+#define SEXP_MAX_FIXNUM ((((sexp_sint_t)1)<<(sizeof(sexp_sint_t)*8-SEXP_FIXNUM_BITS-1))-1)
+#define SEXP_MIN_FIXNUM (-SEXP_MAX_FIXNUM-1)
 
 struct sexp_gc_var_t {
   sexp *var;
@@ -272,6 +281,10 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 
+#if USE_BIGNUMS
+#include "chibi/bignum.h"
+#endif
+
 /***************************** predicates *****************************/
 
 #define sexp_truep(x)    ((x) != SEXP_FALSE)
@@ -287,6 +300,9 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_pointer_tag(x) ((x)->tag)
 #define sexp_gc_mark(x)     ((x)->gc_mark)
 #define sexp_immutablep(x)  ((x)->immutablep)
+
+#define sexp_object_type(x)      (&(sexp_type_specs[(x)->tag]))
+#define sexp_object_type_name(x) (sexp_type_name(sexp_object_type(x)))
 
 #define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
@@ -311,6 +327,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_vectorp(x)     (sexp_check_tag(x, SEXP_VECTOR))
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
+#define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
 #define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
 #define sexp_procedurep(x)  (sexp_check_tag(x, SEXP_PROCEDURE))
 #define sexp_envp(x)        (sexp_check_tag(x, SEXP_ENV))
@@ -343,6 +360,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
+
+#define sexp_integer_to_double(x) ((double)sexp_unbox_integer(x))
 
 #if USE_FLONUMS
 #define sexp_integer_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_integer(x)))
@@ -490,7 +509,9 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
 #define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
 #define sexp_fx_rem(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
-#define sexp_fx_sign(a)   (-((sexp_sint_t)(a) < 0)) /* -1 or 0 */
+#define sexp_fx_sign(a)   (+1 | (((sexp_sint_t)(a)) >> (sizeof(int)*8 - 1)))
+#define sexp_fx_abs(a)    (((sexp_sint_t)a) < 0 ? -((sexp_sint_t)a) : ((sexp_sint_t)a))
+#define sexp_fx_neg(a)    (sexp_make_integer(-(sexp_unbox_integer(a))))
 
 #define sexp_fp_add(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) + sexp_flonum_value(b)))
 #define sexp_fp_sub(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) - sexp_flonum_value(b)))
@@ -502,7 +523,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_list1(x,a)        sexp_cons((x), (a), SEXP_NULL)
 
 #define sexp_push(ctx, ls, x)    ((ls) = sexp_cons((ctx), (x), (ls)))
-#define sexp_insert(ctx, ls, x)  ((sexp_memq(NULL, (x), (ls)) != SEXP_FALSE) ? (ls) : sexp_push((ctx), (ls), (x)))
+#define sexp_insert(ctx, ls, x)  ((sexp_memq(ctx, (x), (ls)) != SEXP_FALSE) ? (ls) : sexp_push((ctx), (ls), (x)))
 
 #define sexp_pair_source(x) ((x)->value.pair.source)
 
@@ -579,6 +600,7 @@ sexp sexp_read_number(sexp ctx, sexp in, int base);
 sexp sexp_read_raw(sexp ctx, sexp in);
 sexp sexp_read(sexp ctx, sexp in);
 sexp sexp_read_from_string(sexp ctx, char *str);
+sexp sexp_write_to_string(sexp ctx, sexp obj);
 sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
 sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
 sexp sexp_make_input_string_port(sexp ctx, sexp str);

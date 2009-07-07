@@ -28,6 +28,8 @@ static sexp the_unquote_splicing_symbol;
 static sexp the_read_error_symbol;
 static sexp the_empty_vector;
 
+sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp);
+
 static char sexp_separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, /* x0_ */
@@ -57,8 +59,6 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   if (res) sexp_pointer_tag(res) = tag;
   return res;
 }
-
-#if ! USE_BOEHM
 
 #define _DEF_TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
   {.tag=SEXP_TYPE, .value={.type={t,fb,flb,flo,fls,sb,so,sc,n}}}
@@ -96,6 +96,8 @@ static struct sexp_struct sexp_type_specs[] = {
 };
 
 #undef _DEF_TYPE
+
+#if ! USE_BOEHM
 
 #if ! USE_MALLOC
 #include "gc.c"
@@ -176,18 +178,22 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
       }
     }
     if (sexp_pairp(sexp_exception_source(exn))) {
-      if (sexp_integerp(sexp_cdr(sexp_exception_source(exn)))
-          && (sexp_cdr(sexp_exception_source(exn)) >= sexp_make_integer(0))) {
+      ls = sexp_exception_source(exn);
+      if (sexp_integerp(sexp_cdr(ls))
+          && (sexp_cdr(ls) >= sexp_make_integer(0))) {
         sexp_write_string(ctx, " on line ", out);
-        sexp_write(ctx, sexp_cdr(sexp_exception_source(exn)), out);
+        sexp_write(ctx, sexp_cdr(ls), out);
       }
-      if (sexp_stringp(sexp_car(sexp_exception_source(exn)))) {
+      if (sexp_stringp(sexp_car(ls))) {
         sexp_write_string(ctx, " of file ", out);
-        sexp_write_string(ctx, sexp_string_data(sexp_car(sexp_exception_source(exn))), out);
+        sexp_write_string(ctx, sexp_string_data(sexp_car(ls)), out);
       }
     }
     sexp_write_string(ctx, ": ", out);
-    sexp_write_string(ctx, sexp_string_data(sexp_exception_message(exn)), out);
+    if (sexp_stringp(sexp_exception_message(exn)))
+      sexp_write_string(ctx, sexp_string_data(sexp_exception_message(exn)), out);
+    else
+      sexp_write(ctx, sexp_exception_message(exn), out);
     if (sexp_exception_irritants(exn)
         && sexp_pairp(sexp_exception_irritants(exn))) {
       if (sexp_nullp(sexp_cdr(sexp_exception_irritants(exn)))) {
@@ -222,11 +228,9 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp_gc_var(ctx, name, s_name);
   sexp_gc_var(ctx, str, s_str);
   sexp_gc_var(ctx, irr, s_irr);
-  sexp_gc_var(ctx, src, s_src);
   sexp_gc_preserve(ctx, name, s_name);
   sexp_gc_preserve(ctx, str, s_str);
   sexp_gc_preserve(ctx, irr, s_irr);
-  sexp_gc_preserve(ctx, src, s_src);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   name = sexp_cons(ctx, name, sexp_make_integer(sexp_port_line(port)));
   str = sexp_c_string(ctx, msg, -1);
@@ -405,6 +409,7 @@ sexp sexp_make_flonum(sexp ctx, double f) {
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
   sexp_sint_t clen = sexp_unbox_integer(len);
   sexp s;
+  if (! sexp_integerp(len)) return sexp_type_exception(ctx, "bad length", len);
   if (clen < 0) return sexp_type_exception(ctx, "negative length", len);
   s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
   sexp_pointer_tag(s) = SEXP_STRING;
@@ -547,6 +552,10 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
 }
 
 /************************ reading and writing *************************/
+
+#if USE_BIGNUMS
+#include "opt/bignum.c"
+#endif
 
 #if USE_STRING_STREAMS
 
@@ -862,6 +871,11 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, str[0], out);
       }
       break;
+#if USE_BIGNUMS
+    case SEXP_BIGNUM:
+      sexp_write_bignum(ctx, obj, out, 10);
+      break;
+#endif
     default:
       i = sexp_pointer_tag(obj);
       sexp_write_string(ctx, "#<", out);
@@ -997,8 +1011,8 @@ sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp) {
   return res;
 }
 
-sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_sint_t whole) {
-  sexp exponent;
+sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp) {
+  sexp exponent=SEXP_VOID;
   double res=0.0, scale=0.1, e=0.0;
   int c;
   for (c=sexp_read_char(ctx, in);
@@ -1014,13 +1028,18 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_sint_t whole) {
   } else if ((c!=EOF) && ! is_separator(c))
     return sexp_read_error(ctx, "invalid numeric syntax",
                            sexp_make_character(c), in);
-  return sexp_make_flonum(ctx, (whole + res) * pow(10, e));
+  res = ((double)whole + res) * pow(10, e);
+  if (negp) res *= -1;
+  if ((scale == 0.1) && (exponent != SEXP_VOID) && (res == round(res)))
+    return sexp_make_integer(res);
+  else
+    return sexp_make_flonum(ctx, res);
 }
 
 sexp sexp_read_number(sexp ctx, sexp in, int base) {
-  sexp f, den;
-  sexp_uint_t res = 0, negativep = 0;
-  int c;
+  sexp den;
+  sexp_uint_t res = 0, tmp;
+  int c, digit, negativep = 0;
 
   c = sexp_read_char(ctx, in);
   if (c == '-')
@@ -1028,32 +1047,25 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
   else if (isdigit(c))
     res = digit_value(c);
 
-  if (base == 16)
-    for (c=sexp_read_char(ctx, in); isxdigit(c); c=sexp_read_char(ctx, in))
-      res = res * base + digit_value(c);
-  else
-    for (c=sexp_read_char(ctx, in); isdigit(c); c=sexp_read_char(ctx, in))
-      res = res * base + digit_value(c);
+  for (c=sexp_read_char(ctx, in); isxdigit(c); c=sexp_read_char(ctx, in)) {
+    digit = digit_value(c);
+    if ((digit < 0) || (digit >= base))
+      break;
+    tmp = res * base + digit;
+#if USE_BIGNUMS
+    if ((tmp < res) || (tmp > SEXP_MAX_FIXNUM)) {
+      sexp_push_char(ctx, c, in);
+      return sexp_read_bignum(ctx, in, res, (negativep ? -1 : 1), base);
+    }
+#endif
+    res = tmp;
+  }
 
   if (c=='.' || c=='e' || c=='E') {
     if (base != 10)
-      return
-        sexp_read_error(ctx, "decimal found in non-base 10", SEXP_NULL, in);
-    if (c!='.')
-      sexp_push_char(ctx, c, in);
-    f = sexp_read_float_tail(ctx, in, res);
-    if (! sexp_flonump(f)) return f;
-    if ((c!='.') && (sexp_flonum_value(f) == round(sexp_flonum_value(f)))) {
-      res = (sexp_sint_t) sexp_flonum_value(f);
-    } else {
-      if (negativep)
-#if USE_IMMEDIATE_FLONUMS
-        f = sexp_make_flonum(ctx, -sexp_flonum_value(f));
-#else
-        sexp_flonum_value(f) = -sexp_flonum_value(f);
-#endif
-      return f;
-    }
+      return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
+    if (c!='.') sexp_push_char(ctx, c, in);
+    return sexp_read_float_tail(ctx, in, res, negativep);
   } else if (c=='/') {
     den = sexp_read_number(ctx, in, base);
     if (! sexp_integerp(den))
@@ -1259,7 +1271,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       res = SEXP_RAWDOT;
     } else if (isdigit(c1)) {
       sexp_push_char(ctx, c1, in);
-      res = sexp_read_float_tail(ctx, in, 0);
+      res = sexp_read_float_tail(ctx, in, 0, 0);
     } else {
       sexp_push_char(ctx, c1, in);
       res = sexp_read_symbol(ctx, in, '.', 1);
@@ -1284,7 +1296,12 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 #endif
         else
 #endif
-          res = sexp_fx_mul(res, -1);
+#if USE_BIGNUMS
+          if (sexp_bignump(res))
+            sexp_bignum_sign(res) = -sexp_bignum_sign(res);
+          else
+#endif
+            res = sexp_fx_mul(res, sexp_make_integer(-1));
       }
     } else {
       sexp_push_char(ctx, c2, in);
@@ -1327,6 +1344,17 @@ sexp sexp_read_from_string(sexp ctx, char *str) {
   res = sexp_read(ctx, in);
   sexp_gc_release(ctx, s, s_s);
   return res;
+}
+
+sexp sexp_write_to_string(sexp ctx, sexp obj) {
+  sexp str;
+  sexp_gc_var(ctx, out, s_out);
+  sexp_gc_preserve(ctx, out, s_out);
+  out = sexp_make_output_string_port(ctx);
+  sexp_write(ctx, obj, out);
+  str = sexp_get_output_string(ctx, out);
+  sexp_gc_release(ctx, out, s_out);
+  return str;
 }
 
 void sexp_init() {

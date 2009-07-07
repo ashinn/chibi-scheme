@@ -48,14 +48,14 @@ XCPPFLAGS := $(CPPFLAGS) -Iinclude
 endif
 
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -g $(CFLAGS)
+XCFLAGS   := -Wall -g3 $(CFLAGS)
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_module_dir "'$(MODDIR)'"' > $@
 
-sexp.o: sexp.c gc.c $(INCLUDES) Makefile
+sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 eval.o: eval.c debug.c opcodes.c include/chibi/eval.h $(INCLUDES) Makefile

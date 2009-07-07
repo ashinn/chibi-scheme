@@ -17,6 +17,9 @@
 /* uncomment this if you want immediate flonums */
 /* #define USE_IMMEDIATE_FLONUMS 1 */
 
+/* uncomment this if you don't want bignum support */
+/* #define USE_BIGNUMS 0 */
+
 /* uncomment this if you don't need extended math operations */
 /* #define USE_MATH 0 */
 
@@ -69,6 +72,10 @@
 #define USE_IMMEDIATE_FLONUMS 0
 #endif
 
+#ifndef USE_BIGNUMS
+#define USE_BIGNUMS 1
+#endif
+
 #ifndef USE_MATH
 #define USE_MATH 1
 #endif
@@ -94,7 +101,7 @@
 #endif
 
 #ifndef USE_CHECK_STACK
-#define USE_CHECK_STACK 0
+#define USE_CHECK_STACK 1
 #endif
 
 #ifdef PLAN9
