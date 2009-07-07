@@ -2,14 +2,13 @@
 
 .PHONY: all doc dist clean cleaner test install uninstall
 
-all: chibi-scheme
-
-CC     ?= cc
-PREFIX ?= /usr/local
-BINDIR ?= $(PREFIX)/bin
-LIBDIR ?= $(PREFIX)/lib
-INCDIR ?= $(PREFIX)/include/chibi
-MODDIR ?= $(PREFIX)/share/chibi
+CC       ?= cc
+PREFIX   ?= /usr/local
+BINDIR   ?= $(PREFIX)/bin
+LIBDIR   ?= $(PREFIX)/lib
+SOLIBDIR ?= $(PREFIX)/lib
+INCDIR   ?= $(PREFIX)/include/chibi
+MODDIR   ?= $(PREFIX)/share/chibi
 
 DESTDIR ?=
 
@@ -17,7 +16,12 @@ ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
 PLATFORM=macosx
 else
+ifeq ($(shell uname -o),Msys)
+PLATFORM=mingw
+SOLIBDIR = $(BINDIR)
+else
 PLATFORM=unix
+endif
 endif
 endif
 
@@ -30,7 +34,10 @@ else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
-CLIBFLAGS = -fPIC -shared
+CC = gcc
+CLIBFLAGS = -shared
+CPPFLAGS += -DUSE_STRING_STREAMS=0 -DBUILDING_DLL -DUSE_DEBUG=0
+LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
@@ -38,6 +45,8 @@ CLIBFLAGS = -fPIC -shared
 STATICFLAGS = -static
 endif
 endif
+
+all: chibi-scheme$(EXE)
 
 ifdef USE_BOEHM
 GCLDFLAGS := -lgc
@@ -77,12 +86,12 @@ clean:
 	rm -f *.o *.i *.s
 
 cleaner: clean
-	rm -f chibi-scheme chibi-scheme-static *$(SO)
+	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) *$(SO) *.a
 	rm -rf *.dSYM
 
-test-basic: chibi-scheme
+test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
-	    ./chibi-scheme $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
+	    ./chibi-scheme$(EXE) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if diff -q $${f%.scm}.out $${f%.scm}.res; then \
 	        echo "[PASS] $${f%.scm}"; \
 	    else \
@@ -90,10 +99,10 @@ test-basic: chibi-scheme
 	    fi; \
 	done
 
-test: chibi-scheme
-	./chibi-scheme tests/r5rs-tests.scm
+test: chibi-scheme$(EXE)
+	./chibi-scheme$(EXE) tests/r5rs-tests.scm
 
-install: chibi-scheme
+install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp chibi-scheme $(DESTDIR)$(BINDIR)/
 	mkdir -p $(DESTDIR)$(MODDIR)
