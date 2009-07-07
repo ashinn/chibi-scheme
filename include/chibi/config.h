@@ -125,3 +125,13 @@
 #endif
 
 #endif
+
+#ifdef __MINGW32__
+#ifdef BUILDING_DLL
+#define SEXP_API    __declspec(dllexport)
+#else
+#define SEXP_API    __declspec(dllimport)
+#endif
+#else
+#define SEXP_API
+#endif
