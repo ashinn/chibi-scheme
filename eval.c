@@ -1969,10 +1969,10 @@ static sexp sexp_close_port (sexp ctx, sexp port) {
     return sexp_type_exception(ctx, "not a port", port);
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, SEXP_FALSE, "port already closed", port);
+  if (sexp_port_stream(port))
+    fclose(sexp_port_stream(port)); 
   if (sexp_port_buf(port))
     free(sexp_port_buf(port));
-  if (sexp_port_stream(port))
-    fclose(sexp_port_stream(port));
   sexp_port_openp(port) = 0;
   return SEXP_VOID;
 }
