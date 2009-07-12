@@ -304,19 +304,18 @@ sexp sexp_bignum_sub (sexp ctx, sexp dst, sexp a, sexp b) {
 
 sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
   sexp_uint_t alen=sexp_bignum_hi(a), blen=sexp_bignum_hi(b), i,
-    *bdata=sexp_bignum_data(b), *ddata;
+    *bdata=sexp_bignum_data(b);
   sexp_gc_var(ctx, c, s_c);
   sexp_gc_var(ctx, d, s_d);
   if (alen < blen) return sexp_bignum_mul(ctx, dst, b, a);
   sexp_gc_preserve(ctx, c, s_c);
   sexp_gc_preserve(ctx, d, s_d);
   c = (dst ? dst : sexp_make_bignum(ctx, alen+blen+1));
-  d = sexp_make_bignum(ctx, alen+blen);
-  ddata = sexp_bignum_data(d);
+  d = sexp_make_bignum(ctx, alen+blen+1);
   for (i=0; i<blen; i++) {
-    sexp_bignum_fxmul(ctx, d, a, bdata[i], i);
+    d = sexp_bignum_fxmul(ctx, d, a, bdata[i], i);
     c = sexp_bignum_add_digits(ctx, NULL, c, d);
-    ddata[i] = 0;
+    sexp_bignum_data(d)[i] = 0;
   }
   sexp_bignum_sign(c) = sexp_bignum_sign(a) * sexp_bignum_sign(b);
   sexp_gc_release(ctx, c, s_c);
