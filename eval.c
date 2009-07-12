@@ -899,9 +899,9 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   /* maybe push the default for an optional argument */
   if ((num_args == sexp_opcode_num_args(op))
       && sexp_opcode_variadic_p(op)
-      && sexp_opcode_default(op)
+      && sexp_opcode_data(op)
       && (sexp_opcode_class(op) != OPC_PARAMETER)) {
-    emit_push(ctx, sexp_opcode_default(op));
+    emit_push(ctx, sexp_opcode_data(op));
     if (sexp_opcode_opt_param_p(op))
       emit(ctx, OP_CDR);
     sexp_context_depth(ctx)++;
@@ -945,14 +945,16 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       emit(ctx, sexp_opcode_code(op));
     break;
   case OPC_FOREIGN:
+    emit(ctx, sexp_opcode_code(op));
+    emit_word(ctx, (sexp_uint_t)op);
+    break;
   case OPC_TYPE_PREDICATE:
-    /* push the funtion pointer for foreign calls */
     emit(ctx, sexp_opcode_code(op));
     if (sexp_opcode_data(op))
       emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
     break;
   case OPC_PARAMETER:
-    emit_push(ctx, sexp_opcode_default(op));
+    emit_push(ctx, sexp_opcode_data(op));
     emit(ctx, ((num_args == 0) ? OP_CDR : OP_SET_CDR));
     break;
   default:
@@ -1396,47 +1398,47 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case OP_FCALL0:
     sexp_context_top(ctx) = top;
-    _PUSH(((sexp_proc1)_UWORD0)(ctx));
+    _PUSH(((sexp_proc1)sexp_opcode_func(_WORD0))(ctx));
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL1:
     sexp_context_top(ctx) = top;
-    _ARG1 = ((sexp_proc2)_UWORD0)(ctx, _ARG1);
+    _ARG1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _ARG1);
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL2:
     sexp_context_top(ctx) = top;
-    _ARG2 = ((sexp_proc3)_UWORD0)(ctx, _ARG1, _ARG2);
+    _ARG2 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2);
     top--;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL3:
     sexp_context_top(ctx) = top;
-    _ARG3 =((sexp_proc4)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3);
+    _ARG3 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3);
     top -= 2;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL4:
     sexp_context_top(ctx) = top;
-    _ARG4 =((sexp_proc5)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
+    _ARG4 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top -= 3;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL5:
     sexp_context_top(ctx) = top;
-    _ARG5 =((sexp_proc6)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
+    _ARG5 = ((sexp_proc6)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
     top -= 4;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case OP_FCALL6:
     sexp_context_top(ctx) = top;
-    _ARG6 =((sexp_proc7)_UWORD0)(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
+    _ARG6 = ((sexp_proc7)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
     top -= 5;
     ip += sizeof(sexp);
     sexp_check_exception();
@@ -1516,7 +1518,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
       sexp_raise("string-set!: immutable string", sexp_list1(ctx, _ARG1));
-    fprintf(stderr, "string-set! %p (immutable: %d)\n", _ARG1, sexp_immutablep(_ARG1));
     sexp_string_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_VOID;
     top-=2;
@@ -1560,8 +1561,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
   case OP_TYPEP:
     _ARG1 = sexp_make_boolean(sexp_pointerp(_ARG1)
-                              && (sexp_pointer_tag(_ARG1)
-                                  == _UWORD0));
+                              && (sexp_make_integer(sexp_pointer_tag(_ARG1))
+                                  == _WORD0));
     ip += sizeof(sexp);
     break;
   case OP_CAR:
@@ -2185,10 +2186,10 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   e = sexp_make_null_env(ctx, version);
   for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
     op = sexp_copy_opcode(ctx, &opcodes[i]);
-    if (sexp_opcode_opt_param_p(op) && sexp_opcode_default(op)) {
-      sym = sexp_intern(ctx, (char*)sexp_opcode_default(op));
+    if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
+      sym = sexp_intern(ctx, (char*)sexp_opcode_data(op));
       cell = env_cell_create(ctx, e, sym, SEXP_VOID);
-      sexp_opcode_default(op) = cell;
+      sexp_opcode_data(op) = cell;
     }
     env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op)), op);
   }
@@ -2211,7 +2212,7 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
     emit(ctx2, OP_LOCAL_REF);
     emit_word(ctx2, 0);
     emit(ctx2, OP_FCALL2);
-    emit_word(ctx2, (sexp_uint_t)sexp_opcode_data(sexp_cdr(perr_cell)));
+    emit_word(ctx2, (sexp_uint_t)sexp_cdr(perr_cell));
   }
   emit_push(ctx2, SEXP_VOID);
   emit(ctx2, OP_DONE);

@@ -1,8 +1,8 @@
 
-#define _OP(c,o,n,m,t,u,i,s,f,d) \
-  {.tag=SEXP_OPCODE,             \
-   .value={.opcode={c, o, n, m, t, u, i, s, d, f, NULL}}}
-#define _FN(o,n,m,t,u,s,f,d) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp)d)
+#define _OP(c,o,n,m,t,u,i,s,d,f)                                \
+  {.tag=SEXP_OPCODE,                                            \
+      .value={.opcode={c, o, n, m, t, u, i, s, d, NULL, f}}}
+#define _FN(o,n,m,t,u,s,f,p) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp_proc0)p)
 #define _FN0(s, f, d) _FN(OP_FCALL0, 0, 0, 0, 0, s, f, d)
 #define _FN1(t, s, f, d) _FN(OP_FCALL1, 1, 0, t, 0, s, f, d)
 #define _FN2(t, u, s, f, d) _FN(OP_FCALL2, 2, 0, t, u, s, f, d)
@@ -45,19 +45,19 @@ _OP(OPC_PREDICATE,      OP_EQ,  2, 0, 0, 0, 0, "eq?", 0, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_CONS, 2, 0, 0, 0, 0, "cons", 0, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_MAKE_VECTOR, 1, 1, SEXP_FIXNUM, 0, 0, "make-vector", SEXP_VOID, NULL),
 _OP(OPC_CONSTRUCTOR,    OP_MAKE_PROCEDURE, 4, 0, 0, 0, 0, "make-procedure", 0, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_NULLP,  1, 0, 0, 0, 0, "null?", 0, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?", 0, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_SYMBOLP,  1, 0, 0, 0, 0, "symbol?", 0, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_CHARP,  1, 0, 0, 0, 0, "char?", 0, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_INTEGERP,  1, 0, 0, 0, 0, "fixnum?", 0, NULL),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "pair?", 0, (sexp)SEXP_PAIR),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "string?", 0, (sexp)SEXP_STRING),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "vector?", 0, (sexp)SEXP_VECTOR),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "flonum?", 0, (sexp)SEXP_FLONUM),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "closure?", 0, (sexp)SEXP_PROCEDURE),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "opcode?", 0, (sexp)SEXP_OPCODE),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "input-port?", 0, (sexp)SEXP_IPORT),
-_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "output-port?", 0, (sexp)SEXP_OPORT),
+_OP(OPC_TYPE_PREDICATE, OP_NULLP,  1, 0, 0, 0, 0, "null?", NULL, 0),
+_OP(OPC_TYPE_PREDICATE, OP_EOFP,  1, 0, 0, 0, 0, "eof-object?", NULL, 0),
+_OP(OPC_TYPE_PREDICATE, OP_SYMBOLP,  1, 0, 0, 0, 0, "symbol?", NULL, 0),
+_OP(OPC_TYPE_PREDICATE, OP_CHARP,  1, 0, 0, 0, 0, "char?", NULL, 0),
+_OP(OPC_TYPE_PREDICATE, OP_INTEGERP,  1, 0, 0, 0, 0, "fixnum?", NULL, 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "pair?", sexp_make_integer(SEXP_PAIR), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "string?", sexp_make_integer(SEXP_STRING), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "vector?", sexp_make_integer(SEXP_VECTOR), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "flonum?", sexp_make_integer(SEXP_FLONUM), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "closure?", sexp_make_integer(SEXP_PROCEDURE), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "opcode?", sexp_make_integer(SEXP_OPCODE), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "input-port?", sexp_make_integer(SEXP_IPORT), 0),
+_OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "output-port?", sexp_make_integer(SEXP_OPORT), 0),
 _OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1", 0, NULL),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation", 0, NULL),
 _OP(OPC_GENERIC, OP_RAISE, 1, SEXP_STRING, 0, 0, 0, "raise", 0, NULL),

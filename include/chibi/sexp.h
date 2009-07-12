@@ -82,7 +82,7 @@ enum sexp_types {
   SEXP_LIT,
   SEXP_STACK,
   SEXP_CONTEXT,
-  SEXP_NUM_TYPES,
+  SEXP_NUM_TYPES
 };
 
 typedef unsigned long sexp_uint_t;
@@ -101,6 +101,16 @@ typedef struct sexp_struct *sexp;
 
 #define SEXP_MAX_FIXNUM ((((sexp_sint_t)1)<<(sizeof(sexp_sint_t)*8-SEXP_FIXNUM_BITS-1))-1)
 #define SEXP_MIN_FIXNUM (-SEXP_MAX_FIXNUM-1)
+
+/* procedure types */
+typedef sexp (*sexp_proc0) ();
+typedef sexp (*sexp_proc1) (sexp);
+typedef sexp (*sexp_proc2) (sexp, sexp);
+typedef sexp (*sexp_proc3) (sexp, sexp, sexp);
+typedef sexp (*sexp_proc4) (sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 struct sexp_gc_var_t {
   sexp *var;
@@ -176,7 +186,8 @@ struct sexp_struct {
       unsigned char op_class, code, num_args, flags,
         arg1_type, arg2_type, inverse;
       char *name;
-      sexp data, dflt, proc;
+      sexp data, proc;
+      sexp_proc0 func;
     } opcode;
     struct {
       char code;
@@ -437,9 +448,9 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_opcode_arg2_type(x)  ((x)->value.opcode.arg2_type)
 #define sexp_opcode_inverse(x)    ((x)->value.opcode.inverse)
 #define sexp_opcode_name(x)       ((x)->value.opcode.name)
-#define sexp_opcode_default(x)    ((x)->value.opcode.dflt)
 #define sexp_opcode_data(x)       ((x)->value.opcode.data)
 #define sexp_opcode_proc(x)       ((x)->value.opcode.proc)
+#define sexp_opcode_func(x)       ((x)->value.opcode.func)
 
 #define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)
 #define sexp_opcode_opt_param_p(x) (sexp_opcode_flags(x) & 2)

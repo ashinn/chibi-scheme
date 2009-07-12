@@ -84,7 +84,7 @@ static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 0, 0, sexp_sizeof(env), 0, 0, "environment"),
   _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"),
   _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
-  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, dflt), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
+  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
   _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
   _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"),
   _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
