@@ -34,3 +34,6 @@ clean:V:
 install:V: $BIN/$TARG
 	mkdir -p $MODDIR
 	cp init.scm $MODDIR/
+
+test:V:
+	./chibi-scheme tests/r5rs-tests.scm

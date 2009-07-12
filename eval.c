@@ -1543,16 +1543,16 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_NULLP:
     _ARG1 = sexp_make_boolean(sexp_nullp(_ARG1)); break;
   case OP_INTEGERP:
-    _ARG1 = sexp_make_boolean(sexp_integerp(_ARG1)
+    j = sexp_integerp(_ARG1);
 #if USE_BIGNUMS
-                              || sexp_bignump(_ARG1)
+    if (! j) j = sexp_bignump(_ARG1);
 #endif
 #if USE_FLONUMS
-                              || (sexp_flonump(_ARG1)
-                                  && (sexp_flonum_value(_ARG1)
-                                      == trunc(sexp_flonum_value(_ARG1))))
+    if (! j)
+      j = (sexp_flonump(_ARG1)
+           && (sexp_flonum_value(_ARG1) == trunc(sexp_flonum_value(_ARG1))));
 #endif
-                              );
+    _ARG1 = sexp_make_boolean(j);
     break;
   case OP_SYMBOLP:
     _ARG1 = sexp_make_boolean(sexp_symbolp(_ARG1)); break;

@@ -186,6 +186,10 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   return sexp_bignum_normalize(res);
 }
 
+#ifdef PLAN9
+#define log2(n) (log(n)/log(2))
+#endif
+
 sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base) {
   int i, str_len, lg_base = trunc(log2(base));
   char *data;
