@@ -418,7 +418,7 @@ enum sexp_number_types {
   SEXP_NUM_NOT = 0,
   SEXP_NUM_FIX,
   SEXP_NUM_FLO,
-  SEXP_NUM_BIG,
+  SEXP_NUM_BIG
 };
 
 enum sexp_number_combs {
@@ -437,7 +437,7 @@ enum sexp_number_combs {
   SEXP_NUM_BIG_NOT,
   SEXP_NUM_BIG_FIX,
   SEXP_NUM_BIG_FLO,
-  SEXP_NUM_BIG_BIG,
+  SEXP_NUM_BIG_BIG
 };
 
 int sexp_number_type_lookup[SEXP_NUM_TYPES] =
