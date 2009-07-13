@@ -10,9 +10,11 @@
 
 #include <ctype.h>
 #include <stdio.h>
+
 #ifdef PLAN9
+#include <u.h>
+#include <libc.h>
 typedef unsigned long size_t;
-#define offsetof(st, m) ((size_t) ((char*)&((st*)(0))->m - (char*)0))
 #else
 #include <stddef.h>
 #include <stdlib.h>
@@ -103,7 +105,7 @@ typedef struct sexp_struct *sexp;
 #define SEXP_MIN_FIXNUM (-SEXP_MAX_FIXNUM-1)
 
 /* procedure types */
-typedef sexp (*sexp_proc0) ();
+typedef sexp (*sexp_proc0) (void);
 typedef sexp (*sexp_proc1) (sexp);
 typedef sexp (*sexp_proc2) (sexp, sexp);
 typedef sexp (*sexp_proc3) (sexp, sexp, sexp);
@@ -622,7 +624,7 @@ SEXP_API sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj)
 SEXP_API sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
 SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
-SEXP_API void sexp_init();
+SEXP_API void sexp_init(void);
 
 #endif /* ! SEXP_H */
 

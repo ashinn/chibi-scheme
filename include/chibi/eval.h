@@ -118,7 +118,7 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-SEXP_API void sexp_scheme_init();
+SEXP_API void sexp_scheme_init(void);
 SEXP_API sexp sexp_apply(sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_eval(sexp context, sexp obj);
 SEXP_API sexp sexp_eval_string(sexp context, char *str);
