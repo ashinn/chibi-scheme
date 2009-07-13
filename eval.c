@@ -2298,7 +2298,7 @@ sexp sexp_eval_string (sexp ctx, char *str) {
   return res;
 }
 
-void sexp_scheme_init () {
+void sexp_scheme_init (void) {
   sexp ctx;
   if (! scheme_initialized_p) {
     scheme_initialized_p = 1;

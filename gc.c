@@ -227,7 +227,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
   return res;
 }
 
-void sexp_gc_init () {
+void sexp_gc_init (void) {
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
   heap = sexp_make_heap(size);
 #if USE_DEBUG_GC

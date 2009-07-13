@@ -186,12 +186,16 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   return sexp_bignum_normalize(res);
 }
 
-#ifdef PLAN9
-#define log2(n) (log(n)/log(2))
-#endif
+static int log2i(int v) {
+  int i;
+  for (i = 0; i < sizeof(v)*8; i++)
+    if ((1<<(i+1)) > v)
+      break;
+  return i;
+}
 
 sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base) {
-  int i, str_len, lg_base = trunc(log2(base));
+  int i, str_len, lg_base = log2i(base);
   char *data;
   sexp_gc_var(ctx, b, s_b);
   sexp_gc_var(ctx, str, s_str);

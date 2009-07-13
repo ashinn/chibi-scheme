@@ -40,11 +40,11 @@ static char sexp_separators[] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, /* x5_ */
 };
 
-static int digit_value (c) {
+static int digit_value (int c) {
   return (((c)<='9') ? ((c) - '0') : ((toupper(c) - 'A') + 10));
 }
 
-static int hex_digit (n) {
+static int hex_digit (int n) {
   return ((n<=9) ? ('0' + n) : ('A' + n - 10));
 }
 
@@ -86,7 +86,7 @@ static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
   _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
   _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
-  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditoinal"),
+  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional"),
   _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
   _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 0, 0, sexp_sizeof(set), 0, 0, "set!"),
   _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"),
@@ -1357,7 +1357,7 @@ sexp sexp_write_to_string(sexp ctx, sexp obj) {
   return str;
 }
 
-void sexp_init() {
+void sexp_init(void) {
   int i;
   sexp ctx;
   if (! sexp_initialized_p) {
