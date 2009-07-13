@@ -111,7 +111,7 @@
 #define strcasecmp cistrcmp
 #define strncasecmp cistrncmp
 #define round(x) floor((x)+0.5)
-#define trunc(x) ((x)-((x)-round(x)))
+#define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
 
 #else
 
