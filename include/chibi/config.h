@@ -110,9 +110,8 @@
 #define exit_normally() exits(NULL)
 #define strcasecmp cistrcmp
 #define strncasecmp cistrncmp
-/* XXXX these are wrong */
-#define trunc floor
-#define round(x) floor(x+0.5)
+#define round(x) floor((x)+0.5)
+#define trunc(x) ((x)-((x)-round(x)))
 
 #else
 
