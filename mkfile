@@ -20,6 +20,6 @@ install:V: $BIN/$TARG
 	cp init.scm $MODDIR/
 
 test:V:
-	./chibi-scheme tests/r5rs-tests.scm
+	./$O.out tests/r5rs-tests.scm
 
 sexp.c:N:	gc.c opt/bignum.c
