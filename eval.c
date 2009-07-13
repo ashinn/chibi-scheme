@@ -1971,9 +1971,11 @@ static sexp sexp_close_port (sexp ctx, sexp port) {
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, SEXP_FALSE, "port already closed", port);
   if (sexp_port_stream(port))
-    fclose(sexp_port_stream(port)); 
-  if (sexp_port_buf(port))
+    fclose(sexp_port_stream(port));
+#if ! USE_STRING_STREAMS
+  if (sexp_port_buf(port) && sexp_oportp(port))
     free(sexp_port_buf(port));
+#endif
   sexp_port_openp(port) = 0;
   return SEXP_VOID;
 }

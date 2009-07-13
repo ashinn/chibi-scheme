@@ -151,7 +151,6 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp res;
   int i;
-  fprintf(stderr, "*********************** gc **********************\n");
   sexp_mark(continuation_resumer);
   sexp_mark(final_resumer);
   for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
