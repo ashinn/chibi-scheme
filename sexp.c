@@ -307,7 +307,7 @@ sexp sexp_nreverse (sexp ctx, sexp ls) {
   if (ls == SEXP_NULL) {
     return ls;
   } else if (! sexp_pairp(ls)) {
-    return SEXP_NULL;  /* XXXX return an exception */
+    return sexp_type_exception(ctx, "not a list", ls);
   } else {
     b = ls;
     a = sexp_cdr(ls);
@@ -387,6 +387,10 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
                              && (! strncmp(sexp_string_data(a),
                                            sexp_string_data(b),
                                            sexp_string_length(a))));
+#if USE_BIGNUMS
+  case SEXP_BIGNUM:
+    return sexp_make_boolean(!sexp_bignum_compare(a, b));
+#endif
 #if ! USE_IMMEDIATE_FLONUMS
   case SEXP_FLONUM:
     return sexp_make_boolean(sexp_flonum_value(a) == sexp_flonum_value(b));

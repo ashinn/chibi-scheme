@@ -219,7 +219,19 @@
 
 (test 256 (string->number "100" 16))
 
+(test 127 (string->number "177" 8))
+
+(test 5 (string->number "101" 2))
+
 (test 100 (string->number "1e2"))
+
+(test "100" (number->string 100))
+
+(test "100" (number->string 256 16))
+
+(test "177" (number->string 127 8))
+
+(test "101" (number->string 5 2))
 
 (test #f (not 3))
 
@@ -349,6 +361,10 @@
 
 (test #t (call-with-current-continuation procedure?))
 
+(test 7 (call-with-current-continuation (lambda (k) (+ 2 5))))
+
+(test 3 (call-with-current-continuation (lambda (k) (+ 2 5 (k 3)))))
+
 (test 7 (apply + (list 3 4)))
 
 (test '(b e h) (map cadr '((a b) (d e) (g h))))
@@ -367,10 +383,6 @@
 (test 3 (force (delay (+ 1 2))))
 
 (test '(3 3) (let ((p (delay (+ 1 2)))) (list (force p) (force p))))
-
-(test 7 (call-with-current-continuation (lambda (k) (+ 2 5))))
-
-(test 3 (call-with-current-continuation (lambda (k) (+ 2 5 (k 3)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
