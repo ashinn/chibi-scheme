@@ -99,6 +99,9 @@ test-basic: chibi-scheme$(EXE)
 	    fi; \
 	done
 
+test-numbers: chibi-scheme$(EXE)
+	./chibi-scheme$(EXE) tests/numeric-tests.scm
+
 test: chibi-scheme$(EXE)
 	./chibi-scheme$(EXE) tests/r5rs-tests.scm
 

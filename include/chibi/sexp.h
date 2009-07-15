@@ -523,8 +523,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
 #define sexp_fx_rem(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
 #define sexp_fx_sign(a)   (+1 | (((sexp_sint_t)(a)) >> (sizeof(int)*8 - 1)))
-#define sexp_fx_abs(a)    (((sexp_sint_t)a) < 0 ? -((sexp_sint_t)a) : ((sexp_sint_t)a))
 #define sexp_fx_neg(a)    (sexp_make_integer(-(sexp_unbox_integer(a))))
+#define sexp_fx_abs(a)    ((((sexp_sint_t)a) < 0) ? sexp_fx_neg(a) : a)
 
 #define sexp_fp_add(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) + sexp_flonum_value(b)))
 #define sexp_fp_sub(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) - sexp_flonum_value(b)))
