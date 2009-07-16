@@ -2134,6 +2134,10 @@ static sexp sexp_string_cmp (sexp ctx, sexp str1, sexp str2, sexp ci) {
   return sexp_make_integer(diff);
 }
 
+#ifdef PLAN9
+#include "opt/plan9.c"
+#endif
+
 /*********************** standard environment *************************/
 
 static struct sexp_struct core_forms[] = {
