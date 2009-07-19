@@ -107,18 +107,20 @@ test: chibi-scheme$(EXE)
 
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
-	cp chibi-scheme $(DESTDIR)$(BINDIR)/
+	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	mkdir -p $(DESTDIR)$(MODDIR)
 	cp init.scm $(DESTDIR)$(MODDIR)/
 	mkdir -p $(DESTDIR)$(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
 	mkdir -p $(DESTDIR)$(LIBDIR)
-	cp libchibi-scheme$(SO) $(DESTDIR)$(LIBDIR)/
+	cp libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
+	-cp libchibi-scheme$(SO).a $(DESTDIR)$(LIBDIR)/
 	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
 	rm -f $(BINDIR)/chibi-scheme*
-	rm -f $(LIBDIR)/libchibi-scheme$(SO)
+	rm -f $(SOLIBDIR)/libchibi-scheme$(SO)
+	rm -f $(LIBDIR)/libchibi-scheme$(SO).a
 	cd $(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
 	rm -f $(MODDIR)/*.scm
 
