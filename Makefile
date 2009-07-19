@@ -19,6 +19,7 @@ else
 ifeq ($(shell uname -o),Msys)
 PLATFORM=mingw
 SOLIBDIR = $(BINDIR)
+DIFFOPTS = -b
 else
 PLATFORM=unix
 endif
@@ -92,7 +93,7 @@ cleaner: clean
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
 	    ./chibi-scheme$(EXE) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
-	    if diff -q $${f%.scm}.out $${f%.scm}.res; then \
+	    if diff -q $(DIFFOPTS) $${f%.scm}.out $${f%.scm}.res; then \
 	        echo "[PASS] $${f%.scm}"; \
 	    else \
 	        echo "[FAIL] $${f%.scm}"; \
