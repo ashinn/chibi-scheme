@@ -14,6 +14,9 @@
 #ifdef PLAN9
 #include <u.h>
 #include <libc.h>
+#include <fcall.h>
+#include <thread.h>
+#include <9p.h>
 typedef unsigned long size_t;
 #else
 #include <stddef.h>
@@ -66,6 +69,7 @@ enum sexp_types {
   SEXP_VECTOR,
   SEXP_FLONUM,
   SEXP_BIGNUM,
+  SEXP_CPOINTER,
   SEXP_IPORT,
   SEXP_OPORT,
   SEXP_EXCEPTION,
@@ -163,6 +167,9 @@ struct sexp_struct {
       sexp_uint_t length;
       sexp_uint_t data[];
     } bignum;
+    struct {
+      void *value;
+    } cpointer;
     /* runtime types */
     struct {
       char flags;
@@ -341,6 +348,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
 #define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
+#define sexp_cpointerp(x)   (sexp_check_tag(x, SEXP_CPOINTER))
 #define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
 #define sexp_procedurep(x)  (sexp_check_tag(x, SEXP_PROCEDURE))
 #define sexp_envp(x)        (sexp_check_tag(x, SEXP_ENV))
@@ -419,6 +427,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_exception_irritants(p) ((p)->value.exception.irritants)
 #define sexp_exception_procedure(p) ((p)->value.exception.procedure)
 #define sexp_exception_source(p)    ((p)->value.exception.source)
+
+#define sexp_cpointer_value(p)    ((p)->value.cpointer.value)
 
 #define sexp_bytecode_length(x)   ((x)->value.bytecode.length)
 #define sexp_bytecode_name(x)     ((x)->value.bytecode.name)
@@ -606,6 +616,7 @@ SEXP_API sexp sexp_intern(sexp ctx, char *str);
 SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
 SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector(sexp ctx, sexp ls);
+SEXP_API sexp sexp_make_cpointer(sexp ctx, void* value);
 SEXP_API void sexp_write(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_read_string(sexp ctx, sexp in);
 SEXP_API sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
