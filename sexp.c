@@ -74,6 +74,7 @@ static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), 4, "vector"),
   _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"),
   _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), 4, "bignum"),
+  _DEF_TYPE(SEXP_CPOINTER, 0, 0, 0, 0, sexp_sizeof(cpointer), 0, 0, "cpointer"),
   _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
   _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
   _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception"),
@@ -552,6 +553,12 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   for (i=0, x=ls; sexp_pairp(x); i++, x=sexp_cdr(x))
     elts[i] = sexp_car(x);
   return vec;
+}
+
+sexp sexp_make_cpointer (sexp ctx, void *value) {
+  sexp ptr = sexp_alloc_type(ctx, port, SEXP_CPOINTER);
+  sexp_cpointer_value(ptr) = value;
+  return ptr;
 }
 
 /************************ reading and writing *************************/
