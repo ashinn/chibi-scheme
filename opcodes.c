@@ -143,6 +143,7 @@ _FN1(SEXP_STRING, "getenv", 0, sexp_getenv),
 _FN1(SEXP_STRING, "change-directory", 0, sexp_chdir),
 _FN0("wait", 0, sexp_wait),
 _FN2(SEXP_FIXNUM, SEXP_STRING, "post-note", 0, sexp_postnote),
+_FN4(SEXP_PAIR, SEXP_STRING, "%postmountsrv", 0, sexp_postmountsrv),
 #endif
 };
 
