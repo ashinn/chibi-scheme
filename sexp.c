@@ -1328,6 +1328,14 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     } else {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_symbol(ctx, in, c1, 1);
+#if USE_FLONUMS
+      if (res == sexp_intern(ctx, "+inf.0"))
+        res = sexp_make_flonum(ctx, 1.0/0.0);
+      else if (res == sexp_intern(ctx, "-inf.0"))
+        res = sexp_make_flonum(ctx, -1.0/0.0);
+      else if (res == sexp_intern(ctx, "+nan.0"))
+        res = sexp_make_flonum(ctx, 0.0/0.0);
+#endif
     }
     break;
   case '0': case '1': case '2': case '3': case '4':
