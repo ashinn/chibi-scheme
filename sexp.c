@@ -844,9 +844,14 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
 #if ! USE_IMMEDIATE_FLONUMS
     case SEXP_FLONUM:
       f = sexp_flonum_value(obj);
-      i = sprintf(numbuf, "%.15g", f);
-      if (f == trunc(f)) {
-        numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
+      if (isinf(f) || isnan(f)) {
+        numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
+        strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
+      } else {
+        i = sprintf(numbuf, "%.15g", f);
+        if (f == trunc(f) && ! strchr(numbuf, '.')) {
+          numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
+        }
       }
       sexp_write_string(ctx, numbuf, out);
       break;
@@ -902,9 +907,14 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
 #if USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
     f = sexp_flonum_value(obj);
-    i = sprintf(numbuf, "%.15g", f);
-    if (f == trunc(f)) {
-      numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
+    if (isinf(f) || isnan(f)) {
+      numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
+      strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
+    } else {
+      i = sprintf(numbuf, "%.15g", f);
+      if (f == trunc(f) && ! strchr(numbuf, '.')) {
+        numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
+      }
     }
     sexp_write_string(ctx, numbuf, out);
 #endif
@@ -1029,15 +1039,17 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp) {
        isdigit(c);
        c=sexp_read_char(ctx, in), scale*=0.1)
     res += digit_value(c)*scale;
-  sexp_push_char(ctx, c, in);
   if (c=='e' || c=='E') {
     exponent = sexp_read_number(ctx, in, 10);
     if (sexp_exceptionp(exponent)) return exponent;
     e = (sexp_integerp(exponent) ? sexp_unbox_integer(exponent)
          : sexp_flonump(exponent) ? sexp_flonum_value(exponent) : 0.0);
-  } else if ((c!=EOF) && ! is_separator(c))
+  } else if ((c!=EOF) && ! is_separator(c)) {
     return sexp_read_error(ctx, "invalid numeric syntax",
                            sexp_make_character(c), in);
+  } else {
+    sexp_push_char(ctx, c, in);
+  }
   res = ((double)whole + res) * pow(10, e);
   if (negp) res *= -1;
   if ((scale == 0.1) && (exponent != SEXP_VOID) && (res == round(res)))

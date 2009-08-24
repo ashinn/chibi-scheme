@@ -391,6 +391,13 @@
 
 (define (abs x) (if (< x 0) (- x) x))
 
+(define (numerator x)
+  (if (integer? x) x (numerator (* x 10))))
+(define (denominator x)
+  (if (exact? x)
+      1
+      (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10))))))
+
 (define (modulo a b)
   (let ((res (remainder a b)))
     (if (< b 0)
