@@ -277,7 +277,7 @@ sexp sexp_postmountsrv (sexp ctx, sexp ls, sexp name, sexp mtpt, sexp flags) {
   Srv s;
   struct sexp_plan9_srv p9s;
   if (! sexp_listp(ctx, ls))
-    return sexp_type_exception(ctx, "postmountsrv: not an list", ls);
+    return sexp_type_exception(ctx, "postmountsrv: not a list", ls);
   if (! sexp_stringp(name))
     return sexp_type_exception(ctx, "postmountsrv: not a string", name);
   if (! sexp_stringp(mtpt))
@@ -305,5 +305,36 @@ sexp sexp_postmountsrv (sexp ctx, sexp ls, sexp name, sexp mtpt, sexp flags) {
   postmountsrv(&s, sexp_string_data(name), sexp_string_data(mtpt),
                sexp_unbox_integer(flags));
   return SEXP_UNDEF;
+}
+
+sexp sexp_9p_req_offset (sexp ctx, sexp req) {
+  return sexp_make_integer(ctx, (Req*)sexp_cpointer_value(req)->ifcall.offset);
+}
+
+sexp sexp_9p_req_count (sexp ctx, sexp req) {
+  return sexp_make_integer(ctx, (Req*)sexp_cpointer_value(req)->ifcall.count);
+}
+
+sexp sexp_9p_req_path (sexp ctx, sexp req) {
+  return sexp_c_string(ctx, (Req*)sexp_cpointer_value(req)->fid.qid.path, -1);
+}
+
+sexp sexp_9p_req_fid (sexp ctx, sexp req) {
+  return sexp_make_cpointer(ctx, (Req*)sexp_cpointer_value(req)->fid);
+}
+
+sexp sexp_9p_req_newfid (sexp ctx, sexp req) {
+  return sexp_make_cpointer(ctx, (Req*)sexp_cpointer_value(req)->newfid);
+}
+
+sexp sexp_9p_respond (sexp ctx, sexp req, sexp err) {
+  char *cerr = sexp_stringp(err) ? sexp_string_data(err) : nil;
+  respond(sexp_cpointer_value(req), cerr);
+  return SEXP_VOID;
+}
+
+sexp sexp_9p_responderror (sexp ctx, sexp req) {
+  responderror(sexp_cpointer_value(req));
+  return SEXP_VOID;
 }
 
