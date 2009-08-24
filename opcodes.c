@@ -126,24 +126,7 @@ _FN1(SEXP_OPORT, "get-output-string", 0, sexp_get_output_string),
 _FN2(SEXP_PROCEDURE, SEXP_OPORT, "disasm", 0, sexp_disasm),
 #endif
 #if PLAN9
-_FN0("random-integer", 0, sexp_rand),
-_FN1(SEXP_FIXNUM, "random-seed", 0, sexp_srand),
-_FN0("current-directory", 0, sexp_getwd),
-_FN0("current-user", 0, sexp_getuser),
-_FN0("system-name", 0, sexp_sysname),
-_FN1(SEXP_IPORT, "port-fileno", 0, sexp_fileno),
-_FN2(SEXP_FIXNUM, SEXP_STRING, "fileno->port", 0, sexp_fdopen),
-_FN0("fork", 0, sexp_fork),
-_FN2(SEXP_STRING, SEXP_PAIR, "exec", 0, sexp_exec),
-_FN1(SEXP_STRING, "exits", 0, sexp_exits),
-_FN2(SEXP_FIXNUM, SEXP_FIXNUM, "dup", 0, sexp_dup),
-_FN0("pipe", 0, sexp_pipe),
-_FN1(SEXP_FIXNUM, "sleep", 0, sexp_sleep),
-_FN1(SEXP_STRING, "getenv", 0, sexp_getenv),
-_FN1(SEXP_STRING, "change-directory", 0, sexp_chdir),
-_FN0("wait", 0, sexp_wait),
-_FN2(SEXP_FIXNUM, SEXP_STRING, "post-note", 0, sexp_postnote),
-_FN4(SEXP_PAIR, SEXP_STRING, "%postmountsrv", 0, sexp_postmountsrv),
+#include "opt/plan9-opcodes.c"
 #endif
 };
 

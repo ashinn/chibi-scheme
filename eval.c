@@ -1678,13 +1678,20 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case OP_DIV:
-    if (_ARG2 == sexp_make_integer(0))
-      sexp_raise("divide by zero", SEXP_NULL);
-    if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
+    if (_ARG2 == sexp_make_integer(0)) {
+#if USE_FLONUMS
+      if (sexp_flonump(_ARG1) && sexp_flonum_value(_ARG1) == 0.0)
+        _ARG2 = sexp_make_flonum(ctx, 0.0/0.0);
+      else
+#endif
+        sexp_raise("divide by zero", SEXP_NULL);
+    } else if (sexp_integerp(_ARG1) && sexp_integerp(_ARG2)) {
 #if USE_FLONUMS
       _ARG1 = sexp_integer_to_flonum(ctx, _ARG1);
       _ARG2 = sexp_integer_to_flonum(ctx, _ARG2);
       _ARG2 = sexp_fp_div(ctx, _ARG1, _ARG2);
+      if (sexp_flonum_value(_ARG2) == trunc(sexp_flonum_value(_ARG2)))
+        _ARG2 = sexp_make_integer(sexp_flonum_value(_ARG2));
 #else
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
 #endif
@@ -1849,10 +1856,18 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("exact->inexact: not a number", sexp_list1(ctx, _ARG1));
     break;
   case OP_FLO2FIX:
-    if (sexp_flonump(_ARG1))
-      _ARG1 = sexp_make_integer((sexp_sint_t)sexp_flonum_value(_ARG1));
-    else if (! sexp_integerp(_ARG1))
+    if (sexp_flonump(_ARG1)) {
+      if (sexp_flonum_value(_ARG1) != trunc(sexp_flonum_value(_ARG1))) {
+        sexp_raise("inexact->exact: not an integer", sexp_list1(ctx, _ARG1));
+      } else if ((sexp_flonum_value(_ARG1) > SEXP_MAX_FIXNUM)
+                 || sexp_flonum_value(_ARG1) < SEXP_MIN_FIXNUM) {
+        _ARG1 = sexp_double_to_bignum(ctx, sexp_flonum_value(_ARG1));
+      } else {
+        _ARG1 = sexp_make_integer((sexp_sint_t)sexp_flonum_value(_ARG1));
+      }
+    } else if (! sexp_integerp(_ARG1) && ! sexp_bignump(_ARG1)) {
       sexp_raise("inexact->exact: not a number", sexp_list1(ctx, _ARG1));
+    }
     break;
   case OP_CHAR2INT:
     _ARG1 = sexp_make_integer(sexp_unbox_character(_ARG1));
