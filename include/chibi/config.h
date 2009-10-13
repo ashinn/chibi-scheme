@@ -2,6 +2,9 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
+/* uncomment this to disable the module system */
+/* #define USE_MODULES 0 */
+
 /* uncomment this to use the Boehm conservative GC */
 /* #define USE_BOEHM 1 */
 
@@ -50,6 +53,10 @@
 #else
 #define SEXP_BSD 0
 #define _GNU_SOURCE
+#endif
+
+#ifndef USE_MODULES
+#define USE_MODULES 1
 #endif
 
 #ifndef USE_BOEHM

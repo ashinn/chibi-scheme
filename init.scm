@@ -79,7 +79,9 @@
       (map1 proc ls '())
       (mapn proc (cons ls lol) '())))
 
-(define for-each map)
+(define (for-each f ls . lol)
+  (define (for1 f ls) (if (pair? ls) (begin (f (car ls)) (for1 f (cdr ls)))))
+  (if (null? lol) (for1 f ls) (begin (apply map f ls lol) (if #f #f))))
 
 (define (any pred ls)
   (if (pair? ls) (if (pred (car ls)) #t (any pred (cdr ls))) #f))
@@ -355,12 +357,10 @@
 
 (define (eqv? a b) (if (eq? a b) #t (and (flonum? a) (flonum? b) (= a b))))
 
-(define (member obj ls)
-  (if (null? ls)
-      #f
-      (if (equal? obj (car ls))
-          ls
-          (member obj (cdr ls)))))
+(define (member obj ls . o)
+  (let ((eq (if (pair? o) (car o) equal?)))
+    (let lp ((ls ls))
+      (and (pair? ls) (if (eq obj (car ls)) ls (lp (cdr ls)))))))
 
 (define memv member)
 
@@ -542,6 +542,7 @@
         (apply consumer (cdr res))
         (consumer res))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax-rules
 
 (define-syntax syntax-rules
@@ -718,3 +719,17 @@
                  (lambda (clause) (expand-pattern (car clause) (cadr clause)))
                  forms)
                 (list (list 'error "no expansion"))))))))))
+
+(define *config-env* #f)
+
+(define-syntax import
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let ((mod (eval `(load-module ',(cadr expr)) *config-env*)))
+       (if (vector? mod)
+           `(%env-copy! #f
+                        (vector-ref
+                         (eval '(load-module ',(cadr expr)) *config-env*)
+                         1)
+                        ',(vector-ref mod 0))
+           `(error "couldn't find module" ',(cadr expr)))))))

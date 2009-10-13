@@ -14,6 +14,7 @@ sexp sexp_make_bignum (sexp ctx, sexp_uint_t len);
 sexp sexp_copy_bignum (sexp ctx, sexp dst, sexp a, sexp_uint_t len);
 sexp sexp_fixnum_to_bignum (sexp ctx, sexp a);
 double sexp_bignum_to_double (sexp a);
+sexp sexp_double_to_bignum (sexp ctx, double f);
 sexp sexp_bignum_fxadd (sexp ctx, sexp a, sexp_uint_t b);
 sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset);
 sexp_uint_t sexp_bignum_fxdiv (sexp ctx, sexp a, sexp_uint_t b, int offset);

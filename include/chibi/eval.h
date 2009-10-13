@@ -13,6 +13,7 @@
 #define INIT_STACK_SIZE 8192
 
 #define sexp_init_file "init.scm"
+#define sexp_config_file "config.scm"
 
 enum core_form_names {
   CORE_DEFINE = 1,
@@ -113,16 +114,20 @@ enum opcode_names {
   OP_READ_CHAR,
   OP_PEEK_CHAR,
   OP_RET,
-  OP_DONE
+  OP_DONE,
+  OP_NUM_OPCODES
 };
 
 /**************************** prototypes ******************************/
 
 SEXP_API void sexp_scheme_init(void);
 SEXP_API sexp sexp_apply(sexp context, sexp proc, sexp args);
-SEXP_API sexp sexp_eval(sexp context, sexp obj);
-SEXP_API sexp sexp_eval_string(sexp context, char *str);
+SEXP_API sexp sexp_eval(sexp context, sexp obj, sexp env);
+SEXP_API sexp sexp_eval_string(sexp context, char *str, sexp env);
 SEXP_API sexp sexp_load(sexp context, sexp expr, sexp env);
+SEXP_API sexp sexp_make_env(sexp context);
+SEXP_API sexp sexp_env_copy(sexp context, sexp to, sexp from, sexp ls);
+SEXP_API void env_define(sexp context, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_make_context(sexp context, sexp stack, sexp env);
 SEXP_API void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
 
