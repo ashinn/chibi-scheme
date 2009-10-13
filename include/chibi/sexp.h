@@ -24,6 +24,7 @@ typedef unsigned long size_t;
 #include <string.h>
 #include <stdarg.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <math.h>
 #endif
 

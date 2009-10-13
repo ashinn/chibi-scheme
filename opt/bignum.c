@@ -478,18 +478,13 @@ enum sexp_number_combs {
   SEXP_NUM_BIG_BIG
 };
 
-int sexp_number_type_lookup[SEXP_NUM_TYPES] =
+static int sexp_number_types[SEXP_NUM_TYPES] =
   {0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0,
    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, };
 
-int sexp_number_type (sexp a) {
-  if (sexp_integerp(a)) {
-    return 1;
-  } else if (! sexp_pointerp(a)) {
-    return 0;
-  } else {
-    return sexp_number_type_lookup[sexp_pointer_tag(a)];
-  }
+static int sexp_number_type (sexp a) {
+  return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)]
+    : sexp_integerp(a);
 }
 
 sexp sexp_add (sexp ctx, sexp a, sexp b) {

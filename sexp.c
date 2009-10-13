@@ -1133,20 +1133,24 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     goto scan_loop;
   case '\'':
     res = sexp_read(ctx, in);
-    res = sexp_list2(ctx, the_quote_symbol, res);
+    if (! sexp_exceptionp(res))
+      res = sexp_list2(ctx, the_quote_symbol, res);
     break;
   case '`':
     res = sexp_read(ctx, in);
-    res = sexp_list2(ctx, the_quasiquote_symbol, res);
+    if (! sexp_exceptionp(res))
+      res = sexp_list2(ctx, the_quasiquote_symbol, res);
     break;
   case ',':
     if ((c1 = sexp_read_char(ctx, in)) == '@') {
       res = sexp_read(ctx, in);
-      res = sexp_list2(ctx, the_unquote_splicing_symbol, res);
+      if (! sexp_exceptionp(res))
+        res = sexp_list2(ctx, the_unquote_splicing_symbol, res);
     } else {
       sexp_push_char(ctx, c1, in);
       res = sexp_read(ctx, in);
-      res = sexp_list2(ctx, the_unquote_symbol, res);
+      if (! sexp_exceptionp(res))
+        res = sexp_list2(ctx, the_unquote_symbol, res);
     }
     break;
   case '"':
@@ -1157,12 +1161,12 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     res = SEXP_NULL;
     tmp = sexp_read_raw(ctx, in);
     while ((tmp != SEXP_EOF) && (tmp != SEXP_CLOSE) && (tmp != SEXP_RAWDOT)) {
-      res = sexp_cons(ctx, tmp, res);
-      tmp = sexp_read_raw(ctx, in);
       if (sexp_exceptionp(tmp)) {
         res = tmp;
         break;
       }
+      res = sexp_cons(ctx, tmp, res);
+      tmp = sexp_read_raw(ctx, in);
     }
     if (! sexp_exceptionp(res)) {
       if (tmp == SEXP_RAWDOT) { /* dotted list */
@@ -1238,6 +1242,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = tmp;
       else
         goto scan_loop;
+      break;
     case '\\':
       c1 = sexp_read_char(ctx, in);
       res = sexp_read_symbol(ctx, in, c1, 0);

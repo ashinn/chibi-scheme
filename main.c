@@ -71,15 +71,33 @@ sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
   return res;
 }
 
+sexp sexp_init_environments (sexp ctx) {
+  sexp res, env;
+  sexp_gc_var(ctx, confenv, s_confenv);
+  env = sexp_context_env(ctx);
+  res = sexp_load_module_file(ctx, sexp_init_file, env);
+  if (! sexp_exceptionp(res)) {
+    res = SEXP_UNDEF;
+    sexp_gc_preserve(ctx, confenv, s_confenv);
+    confenv = sexp_make_env(ctx);
+    sexp_env_copy(ctx, confenv, env, SEXP_FALSE);
+    sexp_load_module_file(ctx, sexp_config_file, confenv);
+    env_define(ctx, env, sexp_intern(ctx, "*config-env*"), confenv);
+    env_define(ctx, confenv, sexp_intern(ctx, "*config-env*"), confenv);
+    sexp_gc_release(ctx, confenv, s_confenv);
+  }
+  return res;
+}
+
 void repl (sexp ctx) {
   sexp tmp, res, env, in, out, err;
   sexp_gc_var(ctx, obj, s_obj);
   sexp_gc_preserve(ctx, obj, s_obj);
   env = sexp_context_env(ctx);
   sexp_context_tracep(ctx) = 1;
-  in = sexp_eval_string(ctx, "(current-input-port)");
-  out = sexp_eval_string(ctx, "(current-output-port)");
-  err = sexp_eval_string(ctx, "(current-error-port)");
+  in = sexp_eval_string(ctx, "(current-input-port)", env);
+  out = sexp_eval_string(ctx, "(current-output-port)", env);
+  err = sexp_eval_string(ctx, "(current-error-port)", env);
   sexp_port_sourcep(in) = 1;
   while (1) {
     sexp_write_string(ctx, "> ", out);
@@ -92,7 +110,7 @@ void repl (sexp ctx) {
     } else {
       tmp = sexp_env_bindings(env);
       sexp_context_top(ctx) = 0;
-      res = sexp_eval(ctx, obj);
+      res = sexp_eval(ctx, obj, env);
 #if USE_WARN_UNDEFS
       sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, err);
 #endif
@@ -109,11 +127,13 @@ void run_main (int argc, char **argv) {
   sexp env, out=NULL, res=SEXP_VOID, ctx;
   sexp_uint_t i, quit=0, init_loaded=0;
   sexp_gc_var(ctx, str, s_str);
+  sexp_gc_var(ctx, confenv, s_confenv);
 
   ctx = sexp_make_context(NULL, NULL, NULL);
   sexp_gc_preserve(ctx, str, s_str);
+  sexp_gc_preserve(ctx, confenv, s_confenv);
   env = sexp_context_env(ctx);
-  out = sexp_eval_string(ctx, "(current-output-port)");
+  out = sexp_eval_string(ctx, "(current-output-port)", env);
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
@@ -121,10 +141,10 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded++)
-        sexp_load_module_file(ctx, sexp_init_file, env);
+        sexp_init_environments(ctx);
       res = sexp_read_from_string(ctx, argv[i+1]);
       if (! sexp_exceptionp(res))
-        res = sexp_eval(ctx, res);
+        res = sexp_eval(ctx, res, env);
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, out);
         quit = 1;
@@ -138,7 +158,7 @@ void run_main (int argc, char **argv) {
       break;
     case 'l':
       if (! init_loaded++)
-        sexp_load_module_file(ctx, sexp_init_file, env);
+        sexp_init_environments(ctx);
       sexp_load_module_file(ctx, argv[++i], env);
       break;
     case 'q':
@@ -154,10 +174,10 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      res = sexp_load_module_file(ctx, sexp_init_file, env);
+      res = sexp_init_environments(ctx);
     if (res && sexp_exceptionp(res))
       sexp_print_exception(ctx, res,
-                           sexp_eval_string(ctx, "(current-error-port)"));
+                           sexp_eval_string(ctx, "(current-error-port)", env));
     if (i < argc)
       for ( ; i < argc; i++)
         res = sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
