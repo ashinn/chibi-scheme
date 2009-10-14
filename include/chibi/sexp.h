@@ -121,7 +121,7 @@ typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 struct sexp_gc_var_t {
   sexp *var;
-  char *name;
+  /* char *name; */
   struct sexp_gc_var_t *next;
 };
 
@@ -269,7 +269,7 @@ struct sexp_struct {
 #define sexp_gc_preserve(ctx, x, y)     \
   do {                                  \
     (y).var = &(x);                     \
-    (y).name = #x;                      \
+    /* (y).name = #x; */                      \
     (y).next = sexp_context_saves(ctx); \
     sexp_context_saves(ctx) = &(y);     \
   } while (0)
