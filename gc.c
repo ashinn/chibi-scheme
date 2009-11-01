@@ -9,7 +9,11 @@
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_sizeof(pair))
 #define SEXP_GROW_HEAP_RATIO 0.7
 
+#if SEXP_64_BIT
+#define sexp_heap_align(n) sexp_align(n, 5)
+#else
 #define sexp_heap_align(n) sexp_align(n, 4)
+#endif
 
 typedef struct sexp_free_list *sexp_free_list;
 struct sexp_free_list {
