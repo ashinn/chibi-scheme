@@ -120,48 +120,38 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
 
 sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp irritants) {
   sexp res;
-  sexp_gc_var(ctx, sym, s_sym);
-  sexp_gc_var(ctx, str, s_str);
-  sexp_gc_var(ctx, irr, s_irr);
-  sexp_gc_preserve(ctx, sym, s_sym);
-  sexp_gc_preserve(ctx, str, s_str);
-  sexp_gc_preserve(ctx, irr, s_irr);
+  sexp_gc_var3(sym, str, irr);
+  sexp_gc_preserve3(ctx, sym, str, irr);
   res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "user"),
                             str = sexp_c_string(ctx, message, -1),
                             ((sexp_pairp(irritants) || sexp_nullp(irritants))
                              ? irritants : (irr = sexp_list1(ctx, irritants))),
                             self, SEXP_FALSE);
-  sexp_gc_release(ctx, sym, s_sym);
+  sexp_gc_release3(ctx);
   return res;
 }
 
 sexp sexp_type_exception (sexp ctx, char *message, sexp obj) {
   sexp res;
-  sexp_gc_var(ctx, sym, s_sym);
-  sexp_gc_var(ctx, str, s_str);
-  sexp_gc_var(ctx, irr, s_irr);
-  sexp_gc_preserve(ctx, sym, s_sym);
-  sexp_gc_preserve(ctx, str, s_str);
-  sexp_gc_preserve(ctx, irr, s_irr);
+  sexp_gc_var3(sym, str, irr);
+  sexp_gc_preserve3(ctx, sym, str, irr);
   res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "type"),
                             str = sexp_c_string(ctx, message, -1),
                             irr = sexp_list1(ctx, obj),
                             SEXP_FALSE, SEXP_FALSE);
-  sexp_gc_release(ctx, sym, s_sym);
+  sexp_gc_release3(ctx);
   return res;
 }
 
 sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
-  sexp_gc_var(ctx, res, s_res);
-  sexp_gc_var(ctx, msg, s_msg);
-  sexp_gc_preserve(ctx, res, s_res);
-  sexp_gc_preserve(ctx, msg, s_msg);
+  sexp_gc_var2(res, msg);
+  sexp_gc_preserve2(ctx, res, msg);
   msg = sexp_c_string(ctx, "bad index range", -1);
   res = sexp_list2(ctx, start, end);
   res = sexp_cons(ctx, obj, res);
   res = sexp_make_exception(ctx, sexp_intern(ctx, "range"), msg, res,
                             SEXP_FALSE, SEXP_FALSE);
-  sexp_gc_release(ctx, res, s_res);
+  sexp_gc_release2(ctx);
   return res;
 }
 
@@ -225,12 +215,8 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
 
 static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp res;
-  sexp_gc_var(ctx, name, s_name);
-  sexp_gc_var(ctx, str, s_str);
-  sexp_gc_var(ctx, irr, s_irr);
-  sexp_gc_preserve(ctx, name, s_name);
-  sexp_gc_preserve(ctx, str, s_str);
-  sexp_gc_preserve(ctx, irr, s_irr);
+  sexp_gc_var3(name, str, irr);
+  sexp_gc_preserve3(ctx, name, str, irr);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   name = sexp_cons(ctx, name, sexp_make_integer(sexp_port_line(port)));
   str = sexp_c_string(ctx, msg, -1);
@@ -238,7 +224,7 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
          ? irritants : sexp_list1(ctx, irritants));
   res = sexp_make_exception(ctx, the_read_error_symbol,
                             str, irr, SEXP_FALSE, name);
-  sexp_gc_release(ctx, name, s_name);
+  sexp_gc_release3(ctx);
   return res;
 }
 
@@ -253,11 +239,11 @@ sexp sexp_cons (sexp ctx, sexp head, sexp tail) {
 }
 
 sexp sexp_list2 (sexp ctx, sexp a, sexp b) {
-  sexp_gc_var(ctx, res, s_res);
-  sexp_gc_preserve(ctx, res, s_res);
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
   res = sexp_cons(ctx, b, SEXP_NULL);
   res = sexp_cons(ctx, a, res);
-  sexp_gc_release(ctx, res, s_res);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -294,11 +280,11 @@ sexp sexp_assq (sexp ctx, sexp x, sexp ls) {
 }
 
 sexp sexp_reverse (sexp ctx, sexp ls) {
-  sexp_gc_var(ctx, res, s_res);
-  sexp_gc_preserve(ctx, res, s_res);
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
   for (res=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls))
     res = sexp_cons(ctx, sexp_car(ls), res);
-  sexp_gc_release(ctx, res, s_res);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -321,14 +307,12 @@ sexp sexp_nreverse (sexp ctx, sexp ls) {
 }
 
 sexp sexp_append2 (sexp ctx, sexp a, sexp b) {
-  sexp_gc_var(ctx, a1, s_a1);
-  sexp_gc_var(ctx, b1, s_b1);
-  sexp_gc_preserve(ctx, a1, s_a1);
-  sexp_gc_preserve(ctx, b1, s_b1);
+  sexp_gc_var2(a1, b1);
+  sexp_gc_preserve2(ctx, a1, b1);
   b1 = b;
   for (a1=sexp_reverse(ctx, a); sexp_pairp(a1); a1=sexp_cdr(a1))
     b1 = sexp_cons(ctx, sexp_car(a1), b1);
-  sexp_gc_release(ctx, a1, s_a1);
+  sexp_gc_release2(ctx);
   return b1;
 }
 
@@ -493,7 +477,7 @@ sexp sexp_intern(sexp ctx, char *str) {
   sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, bucket;
   char c, *p=str;
   sexp ls;
-  sexp_gc_var(ctx, sym, s_sym);
+  sexp_gc_var1(sym);
 
 #if USE_HUFF_SYMS
   res = 0;
@@ -521,11 +505,11 @@ sexp sexp_intern(sexp ctx, char *str) {
       return sexp_car(ls);
 
   /* not found, make a new symbol */
-  sexp_gc_preserve(ctx, sym, s_sym);
+  sexp_gc_preserve1(ctx, sym);
   sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
   sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
   sexp_push(ctx, sexp_symbol_table[bucket], sym);
-  sexp_gc_release(ctx, sym, s_sym);
+  sexp_gc_release1(ctx);
   return sym;
 }
 
@@ -625,8 +609,8 @@ off_t sstream_seek (void *vec, off_t offset, int whence) {
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   FILE *in;
   sexp res;
-  sexp_gc_var(ctx, cookie, s_cookie);
-  sexp_gc_preserve(ctx, cookie, s_cookie);
+  sexp_gc_var1(cookie);
+  sexp_gc_preserve1(ctx, cookie);
   cookie = sexp_make_vector(ctx, sexp_make_integer(4), SEXP_VOID);
   sexp_stream_ctx(cookie) = ctx;
   sexp_stream_buf(cookie) = str;
@@ -635,15 +619,15 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
   res = sexp_make_input_port(ctx, in, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
-  sexp_gc_release(ctx, cookie, s_cookie);
+  sexp_gc_release1(ctx);
   return res;
 }
 
 sexp sexp_make_output_string_port (sexp ctx) {
   FILE *out;
   sexp res, size;
-  sexp_gc_var(ctx, cookie, s_cookie);
-  sexp_gc_preserve(ctx, cookie, s_cookie);
+  sexp_gc_var1(cookie);
+  sexp_gc_preserve1(ctx, cookie);
   size = sexp_make_integer(SEXP_INIT_STRING_PORT_SIZE);
   cookie = sexp_make_vector(ctx, sexp_make_integer(4), SEXP_VOID);
   sexp_stream_ctx(cookie) = ctx;
@@ -653,7 +637,7 @@ sexp sexp_make_output_string_port (sexp ctx) {
   out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
   res = sexp_make_output_port(ctx, out, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
-  sexp_gc_release(ctx, cookie, s_cookie);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -727,7 +711,7 @@ sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p) {
 }
 
 sexp sexp_buffered_flush (sexp ctx, sexp p) {
-  sexp_gc_var(ctx, tmp, s_tmp);
+  sexp_gc_var1(tmp);
   if (! sexp_oportp(p))
     return sexp_type_exception(ctx, "not an output-port", p);
   else if (! sexp_port_openp(p))
@@ -737,10 +721,10 @@ sexp sexp_buffered_flush (sexp ctx, sexp p) {
       fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
       fflush(sexp_port_stream(p));
     } else if (sexp_port_offset(p) > 0) {
-      sexp_gc_preserve(ctx, tmp, s_tmp);
+      sexp_gc_preserve1(ctx, tmp);
       tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
       sexp_push(ctx, sexp_port_cookie(p), tmp);
-      sexp_gc_release(ctx, tmp, s_tmp);
+      sexp_gc_release1(ctx);
     }
     sexp_port_offset(p) = 0;
     return SEXP_VOID;
@@ -767,10 +751,8 @@ sexp sexp_make_output_string_port (sexp ctx) {
 
 sexp sexp_get_output_string (sexp ctx, sexp out) {
   sexp res;
-  sexp_gc_var(ctx, ls, s_ls);
-  sexp_gc_var(ctx, tmp, s_tmp);
-  sexp_gc_preserve(ctx, ls, s_ls);
-  sexp_gc_preserve(ctx, tmp, s_tmp);
+  sexp_gc_var2(ls, tmp);
+  sexp_gc_preserve2(ctx, ls, tmp);
   if (sexp_port_offset(out) > 0) {
     tmp = sexp_c_string(ctx, sexp_port_buf(out), sexp_port_offset(out));
     ls = sexp_cons(ctx, tmp, sexp_port_cookie(out));
@@ -778,7 +760,7 @@ sexp sexp_get_output_string (sexp ctx, sexp out) {
     ls = sexp_port_cookie(out);
   }
   res = sexp_string_concatenate(ctx, ls);
-  sexp_gc_release(ctx, ls, s_ls);
+  sexp_gc_release2(ctx);
   return res;
 }
 
@@ -1109,10 +1091,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   char *str;
   int c1, c2, line;
   sexp tmp2;
-  sexp_gc_var(ctx, res, s_res);
-  sexp_gc_var(ctx, tmp, s_tmp);
-  sexp_gc_preserve(ctx, res, s_res);
-  sexp_gc_preserve(ctx, tmp, s_tmp);
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
 
  scan_loop:
   switch (c1 = sexp_read_char(ctx, in)) {
@@ -1355,7 +1335,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 
   if (sexp_port_sourcep(in) && sexp_pointerp(res))
     sexp_immutablep(res) = 1;
-  sexp_gc_release(ctx, res, s_res);
+  sexp_gc_release2(ctx);
   return res;
 }
 
@@ -1370,25 +1350,23 @@ sexp sexp_read (sexp ctx, sexp in) {
 
 sexp sexp_read_from_string(sexp ctx, char *str) {
   sexp res;
-  sexp_gc_var(ctx, s, s_s);
-  sexp_gc_var(ctx, in, s_in);
-  sexp_gc_preserve(ctx, s, s_s);
-  sexp_gc_preserve(ctx, in, s_in);
+  sexp_gc_var2(s, in);
+  sexp_gc_preserve2(ctx, s, in);
   s = sexp_c_string(ctx, str, -1);
   in = sexp_make_input_string_port(ctx, s);
   res = sexp_read(ctx, in);
-  sexp_gc_release(ctx, s, s_s);
+  sexp_gc_release2(ctx);
   return res;
 }
 
 sexp sexp_write_to_string(sexp ctx, sexp obj) {
   sexp str;
-  sexp_gc_var(ctx, out, s_out);
-  sexp_gc_preserve(ctx, out, s_out);
+  sexp_gc_var1(out);
+  sexp_gc_preserve1(ctx, out);
   out = sexp_make_output_string_port(ctx);
   sexp_write(ctx, obj, out);
   str = sexp_get_output_string(ctx, out);
-  sexp_gc_release(ctx, out, s_out);
+  sexp_gc_release1(ctx);
   return str;
 }
 
