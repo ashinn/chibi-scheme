@@ -5,8 +5,15 @@
 #ifndef SEXP_BIGNUM_H
 #define SEXP_BIGNUM_H
 
+#if (SEXP_64_BIT)
+typedef unsigned int uint128_t __attribute__((mode(TI)));
+typedef int sint128_t __attribute__((mode(TI)));
+typedef uint128_t sexp_luint_t;
+typedef sint128_t sexp_lsint_t;
+#else
 typedef unsigned long long sexp_luint_t;
 typedef long long sexp_lsint_t;
+#endif
 
 sexp_sint_t sexp_bignum_compare (sexp a, sexp b);
 sexp sexp_compare (sexp ctx, sexp a, sexp b);
