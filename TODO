@@ -1,0 +1,49 @@
+* -*- outline -*-
+
+*+ precise gc rewrite
+**+ fix heap growing
+**- separate gc heaps
+**- finalizers
+**- weak references
+*+ ast rewrite
+*+ full r5rs
+*+ closures
+*+ string-ports
+*+ argument validation
+*+ variadic procedures
+*+ call/cc
+*+ exceptions
+*+ tail-call elimination
+*+ internal defines
+*+ 1st class primitives
+*+ macros
+*+ hygiene
+**- nested 
+**- compiler macros
+*+ bignums
+*= modules
+**+ scheme48-like config language
+**- only/except/rename modifiers
+**- scheme-complete.el support
+*= ffi
+**- libdl interface
+**- opcode generation interface
+**- stub generator
+*= cleanup
+*- user documentation
+*- unicode
+*- condition-case
+*- native x86 compilation
+*+ plan 9 port
+*= 9p support
+*- optimization passes
+**- constant folding
+**- simplification pass, dead-code elimination
+**- lambda lift
+**- inlining
+**- unsafe operations
+**- plugin infrastructure
+*- type inference with warnings
+*- SRFI-0 cond-expand
+*- SRFI-9 define-record-type
+*- code repository with install tools
