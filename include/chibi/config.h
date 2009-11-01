@@ -48,6 +48,14 @@
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/
 
+#ifndef SEXP_64_BIT
+#if defined(__amd64) || defined(__x86_64)
+#define SEXP_64_BIT 1
+#else
+#define SEXP_64_BIT 0
+#endif
+#endif
+
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)
 #define SEXP_BSD 1
 #else
