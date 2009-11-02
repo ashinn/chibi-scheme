@@ -1442,6 +1442,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_VECTOR_REF:
     if (! sexp_vectorp(_ARG1))
       sexp_raise("vector-ref: not a vector", sexp_list1(ctx, _ARG1));
+    else if (! sexp_fixnump(_ARG2))
+      sexp_raise("vector-ref: not an integer", sexp_list1(ctx, _ARG2));
+    i = sexp_unbox_fixnum(_ARG2);
+    if ((i < 0) || (i >= sexp_vector_length(_ARG1)))
+      sexp_raise("vector-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_vector_ref(_ARG1, _ARG2);
     top--;
     break;
@@ -1450,14 +1455,30 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("vector-set!: not a vector", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
       sexp_raise("vector-set!: immutable vector", sexp_list1(ctx, _ARG1));
+    else if (! sexp_fixnump(_ARG2))
+      sexp_raise("vector-set!: not an integer", sexp_list1(ctx, _ARG2));
+    i = sexp_unbox_fixnum(_ARG2);
+    if ((i < 0) || (i >= sexp_vector_length(_ARG1)))
+      sexp_raise("vector-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     sexp_vector_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_VOID;
     top-=2;
     break;
   case OP_VECTOR_LENGTH:
+    if (! sexp_vectorp(_ARG1))
+      sexp_raise("vector-length: not a vector", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_vector_length(_ARG1));
     break;
   case OP_STRING_REF:
+    if (! sexp_stringp(_ARG1))
+      sexp_raise("string-ref: not a string", sexp_list1(ctx, _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("string-ref: immutable string", sexp_list1(ctx, _ARG1));
+    else if (! sexp_fixnump(_ARG2))
+      sexp_raise("string-ref: not an integer", sexp_list1(ctx, _ARG2));
+    i = sexp_unbox_fixnum(_ARG2);
+    if ((i < 0) || (i >= sexp_string_length(_ARG1)))
+      sexp_raise("string-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_string_ref(_ARG1, _ARG2);
     top--;
     break;
@@ -1466,11 +1487,20 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
       sexp_raise("string-set!: immutable string", sexp_list1(ctx, _ARG1));
+    else if (! sexp_fixnump(_ARG2))
+      sexp_raise("string-set!: not an integer", sexp_list1(ctx, _ARG2));
+    else if (! sexp_charp(_ARG3))
+      sexp_raise("string-set!: not a char", sexp_list1(ctx, _ARG3));
+    i = sexp_unbox_fixnum(_ARG2);
+    if ((i < 0) || (i >= sexp_string_length(_ARG1)))
+      sexp_raise("string-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     sexp_string_set(_ARG1, _ARG2, _ARG3);
     _ARG3 = SEXP_VOID;
     top-=2;
     break;
   case OP_STRING_LENGTH:
+    if (! sexp_stringp(_ARG1))
+      sexp_raise("string-length: not a string", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_string_length(_ARG1));
     break;
   case OP_MAKE_PROCEDURE:
@@ -1480,6 +1510,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case OP_MAKE_VECTOR:
     sexp_context_top(ctx) = top;
+    if (! sexp_fixnump(_ARG1))
+      sexp_raise("make-vector: not an integer", sexp_list1(ctx, _ARG1));
     _ARG2 = sexp_make_vector(ctx, _ARG1, _ARG2);
     top--;
     break;
@@ -1815,15 +1847,23 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     }
     break;
   case OP_CHAR2INT:
+    if (! sexp_charp(_ARG1))
+      sexp_raise("char->integer: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_unbox_character(_ARG1));
     break;
   case OP_INT2CHAR:
+    if (! sexp_fixnump(_ARG1))
+      sexp_raise("integer->char: not an integer", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(sexp_unbox_fixnum(_ARG1));
     break;
   case OP_CHAR_UPCASE:
+    if (! sexp_charp(_ARG1))
+      sexp_raise("char-upcase: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(toupper(sexp_unbox_character(_ARG1)));
     break;
   case OP_CHAR_DOWNCASE:
+    if (! sexp_charp(_ARG1))
+      sexp_raise("char-downcase: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
     break;
   case OP_DISPLAY:
@@ -1845,6 +1885,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case OP_WRITE_CHAR:
+    if (! sexp_charp(_ARG1))
+      sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
     sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     _ARG2 = SEXP_VOID;
     top--;
