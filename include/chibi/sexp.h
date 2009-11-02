@@ -334,7 +334,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_nullp(x)    ((x) == SEXP_NULL)
 #define sexp_pointerp(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
-#define sexp_integerp(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_FIXNUM_TAG)
+#define sexp_fixnump(x)  (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_FIXNUM_TAG)
 #define sexp_isymbolp(x) (((sexp_uint_t)(x) & SEXP_IMMEDIATE_MASK) == SEXP_ISYMBOL_TAG)
 #define sexp_charp(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
@@ -398,18 +398,26 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
 #define sexp_unbox_boolean(x) (((x) == SEXP_FALSE) ? 0 : 1)
 
-#define sexp_make_integer(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
-#define sexp_unbox_integer(n)   (((sexp_sint_t)(n))>>SEXP_FIXNUM_BITS)
+#define sexp_make_fixnum(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
+#define sexp_unbox_fixnum(n)   (((sexp_sint_t)(n))>>SEXP_FIXNUM_BITS)
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
 
-#define sexp_integer_to_double(x) ((double)sexp_unbox_integer(x))
+#define sexp_fixnum_to_double(x) ((double)sexp_unbox_fixnum(x))
+
+#if USE_BIGNUMS
+SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
+#define sexp_integerp(x) (sexp_fixnump(x) || sexp_bignump(x))
+#else
+#define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
+#define sexp_integerp sexp_fixnump
+#endif
 
 #if USE_FLONUMS
-#define sexp_integer_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_integer(x)))
+#define sexp_fixnum_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_fixnum(x)))
 #else
-#define sexp_integer_to_flonum(ctx, x) (x)
+#define sexp_fixnum_to_flonum(ctx, x) (x)
 #endif
 
 /*************************** field accessors **************************/
@@ -417,20 +425,20 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_vector_length(x) ((x)->value.vector.length)
 #define sexp_vector_data(x)   ((x)->value.vector.data)
 
-#define sexp_vector_ref(x,i)   (sexp_vector_data(x)[sexp_unbox_integer(i)])
-#define sexp_vector_set(x,i,v) (sexp_vector_data(x)[sexp_unbox_integer(i)]=(v))
+#define sexp_vector_ref(x,i)   (sexp_vector_data(x)[sexp_unbox_fixnum(i)])
+#define sexp_vector_set(x,i,v) (sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v))
 
 #define sexp_procedure_num_args(x) ((x)->value.procedure.num_args)
 #define sexp_procedure_flags(x) ((x)->value.procedure.flags)
-#define sexp_procedure_variadic_p(x) (sexp_unbox_integer(sexp_procedure_flags(x)) & 1)
+#define sexp_procedure_variadic_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & 1)
 #define sexp_procedure_code(x) ((x)->value.procedure.bc)
 #define sexp_procedure_vars(x) ((x)->value.procedure.vars)
 
 #define sexp_string_length(x) ((x)->value.string.length)
 #define sexp_string_data(x)   ((x)->value.string.data)
 
-#define sexp_string_ref(x, i) (sexp_make_character(sexp_string_data(x)[sexp_unbox_integer(i)]))
-#define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_integer(i)] = sexp_unbox_character(v))
+#define sexp_string_ref(x, i) (sexp_make_character(sexp_string_data(x)[sexp_unbox_fixnum(i)]))
+#define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_character(v))
 
 #define sexp_symbol_string(x)  ((x)->value.symbol.string)
 
@@ -552,10 +560,10 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_fx_add(a, b) ((sexp)(((sexp_sint_t)a)+((sexp_sint_t)b)-SEXP_FIXNUM_TAG))
 #define sexp_fx_sub(a, b) ((sexp)(((sexp_sint_t)a)-((sexp_sint_t)b)+SEXP_FIXNUM_TAG))
 #define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
-#define sexp_fx_div(a, b) (sexp_make_integer(sexp_unbox_integer(a) / sexp_unbox_integer(b)))
-#define sexp_fx_rem(a, b) (sexp_make_integer(sexp_unbox_integer(a) % sexp_unbox_integer(b)))
+#define sexp_fx_div(a, b) (sexp_make_fixnum(sexp_unbox_fixnum(a) / sexp_unbox_fixnum(b)))
+#define sexp_fx_rem(a, b) (sexp_make_fixnum(sexp_unbox_fixnum(a) % sexp_unbox_fixnum(b)))
 #define sexp_fx_sign(a)   (+1 | (((sexp_sint_t)(a)) >> (sizeof(int)*8 - 1)))
-#define sexp_fx_neg(a)    (sexp_make_integer(-(sexp_unbox_integer(a))))
+#define sexp_fx_neg(a)    (sexp_make_fixnum(-(sexp_unbox_fixnum(a))))
 #define sexp_fx_abs(a)    ((((sexp_sint_t)a) < 0) ? sexp_fx_neg(a) : a)
 
 #define sexp_fp_add(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) + sexp_flonum_value(b)))

@@ -149,7 +149,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
     }
   }
   sum_freed_ptr[0] = sum_freed;
-  return sexp_make_integer(max_freed);
+  return sexp_make_fixnum(max_freed);
 }
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
@@ -217,7 +217,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
   size = sexp_heap_align(size);
   res = sexp_try_alloc(ctx, size);
   if (! res) {
-    max_freed = sexp_unbox_integer(sexp_gc(ctx, &sum_freed));
+    max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
     h = sexp_heap_last(heap);
     if (((max_freed < size)
          || ((h->size - sum_freed) < (h->size*(1 - SEXP_GROW_HEAP_RATIO))))
