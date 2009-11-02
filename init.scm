@@ -564,6 +564,7 @@
            (_append (rename 'append))      (_map (rename 'map))
            (_vector? (rename 'vector?))    (_list? (rename 'list?))
            (_lp (rename 'lp))              (_reverse (rename 'reverse))
+           (_error (rename 'error))
            (_vector->list (rename 'vector->list))
            (_list->vector (rename 'list->vector)))
        (define (next-v)
@@ -718,7 +719,7 @@
                 (map
                  (lambda (clause) (expand-pattern (car clause) (cadr clause)))
                  forms)
-                (list (list 'error "no expansion"))))))))))
+                (list (list _error "no expansion for" _expr))))))))))
 
 (define *config-env* #f)
 
