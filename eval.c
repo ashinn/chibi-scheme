@@ -110,6 +110,7 @@ static sexp extend_env (sexp ctx, sexp env, sexp vars, sexp value) {
   return e;
 }
 
+#if 0
 static sexp sexp_chain_env (sexp ctx, sexp env1, sexp env2) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
@@ -123,6 +124,7 @@ static sexp sexp_chain_env (sexp ctx, sexp env1, sexp env2) {
   sexp_gc_release1(ctx);
   return res;
 }
+#endif
 
 static sexp sexp_reverse_flatten_dot (sexp ctx, sexp ls) {
   sexp_gc_var1(res);

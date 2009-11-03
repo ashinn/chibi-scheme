@@ -4,7 +4,7 @@
 
 (define *modules* '())
 (define *this-module* '())
-(define *load-path* (list "./lib" *module-directory*))
+(define *load-path* (list "./lib" (string-append *module-directory* "/lib")))
 
 (define (make-module exports env meta) (vector exports env meta))
 (define (module-exports mod) (vector-ref mod 0))
