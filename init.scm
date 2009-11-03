@@ -719,7 +719,8 @@
                 (map
                  (lambda (clause) (expand-pattern (car clause) (cadr clause)))
                  forms)
-                (list (list _error "no expansion for" _expr))))))))))
+                (list (list _error "no expansion for"
+                            (list (rename 'strip-syntactic-closures) _expr)))))))))))
 
 (define *config-env* #f)
 
