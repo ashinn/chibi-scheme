@@ -1474,8 +1474,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_STRING_REF:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-ref: not a string", sexp_list1(ctx, _ARG1));
-    else if (sexp_immutablep(_ARG1))
-      sexp_raise("string-ref: immutable string", sexp_list1(ctx, _ARG1));
     else if (! sexp_fixnump(_ARG2))
       sexp_raise("string-ref: not an integer", sexp_list1(ctx, _ARG2));
     i = sexp_unbox_fixnum(_ARG2);
