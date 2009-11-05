@@ -2264,18 +2264,20 @@ sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls) {
 /************************** eval interface ****************************/
 
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
-  sexp ls, *stack = sexp_stack_data(sexp_context_stack(ctx));
-  sexp_sint_t top = sexp_context_top(ctx), offset;
-  offset = top + sexp_unbox_fixnum(sexp_length(ctx, args));
+  sexp res, ls, *stack = sexp_stack_data(sexp_context_stack(ctx));
+  sexp_sint_t top = sexp_context_top(ctx), len, offset;
+  len = sexp_unbox_fixnum(sexp_length(ctx, args));
+  offset = top + len;
   for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
     stack[--offset] = sexp_car(ls);
-  stack[top] = sexp_make_fixnum(top);
+  stack[top] = sexp_make_fixnum(len);
   top++;
   sexp_context_top(ctx) = top + 3;
   stack[top++] = sexp_make_fixnum(0);
   stack[top++] = final_resumer;
   stack[top++] = sexp_make_fixnum(0);
-  return sexp_vm(ctx, proc);
+  res = sexp_vm(ctx, proc);
+  return res;
 }
 
 sexp sexp_compile (sexp ctx, sexp x) {
