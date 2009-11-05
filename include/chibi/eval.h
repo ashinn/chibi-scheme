@@ -127,7 +127,7 @@ SEXP_API sexp sexp_eval_string(sexp context, char *str, sexp env);
 SEXP_API sexp sexp_load(sexp context, sexp expr, sexp env);
 SEXP_API sexp sexp_make_env(sexp context);
 SEXP_API sexp sexp_env_copy(sexp context, sexp to, sexp from, sexp ls);
-SEXP_API void env_define(sexp context, sexp env, sexp sym, sexp val);
+SEXP_API void sexp_env_define(sexp context, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_make_context(sexp context, sexp stack, sexp env);
 SEXP_API void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
 

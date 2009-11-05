@@ -80,8 +80,8 @@ sexp sexp_init_environments (sexp ctx) {
     confenv = sexp_make_env(ctx);
     sexp_env_copy(ctx, confenv, env, SEXP_FALSE);
     sexp_load_module_file(ctx, sexp_config_file, confenv);
-    env_define(ctx, env, sexp_intern(ctx, "*config-env*"), confenv);
-    env_define(ctx, confenv, sexp_intern(ctx, "*config-env*"), confenv);
+    sexp_env_define(ctx, env, sexp_intern(ctx, "*config-env*"), confenv);
+    sexp_env_define(ctx, confenv, sexp_intern(ctx, "*config-env*"), confenv);
     sexp_gc_release1(ctx);
   }
   return res;
