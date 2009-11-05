@@ -9,6 +9,7 @@ LIBDIR   ?= $(PREFIX)/lib
 SOLIBDIR ?= $(PREFIX)/lib
 INCDIR   ?= $(PREFIX)/include/chibi
 MODDIR   ?= $(PREFIX)/share/chibi
+LIBDIR   ?= $(PREFIX)/lib/chibi
 
 DESTDIR ?=
 
@@ -49,7 +50,7 @@ endif
 
 all: chibi-scheme$(EXE)
 
-ifdef USE_BOEHM
+ifeq ($(USE_BOEHM),1)
 GCLDFLAGS := -lgc
 XCPPFLAGS := $(CPPFLAGS) -Iinclude -DUSE_BOEHM=1
 else
@@ -57,13 +58,19 @@ GCLDFLAGS :=
 XCPPFLAGS := $(CPPFLAGS) -Iinclude
 endif
 
+ifeq ($(USE_DL),0)
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
+XCFLAGS   := -Wall -DUSE_DL=0 -g3 $(CFLAGS)
+else
+XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -ldl -lm
 XCFLAGS   := -Wall -g3 $(CFLAGS)
+endif
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 
 include/chibi/install.h: Makefile
-	echo '#define sexp_module_dir "'$(MODDIR)'"' > $@
+	echo '#define sexp_so_extension "'$(SO)'"' > $@
+	echo '#define sexp_module_dir "'$(MODDIR)'"' >> $@
 
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<

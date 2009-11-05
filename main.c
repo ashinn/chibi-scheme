@@ -50,10 +50,8 @@ sexp find_module_file (sexp ctx, char *file) {
 
 sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
   sexp res = SEXP_VOID;
-  sexp_gc_var(ctx, path, s_path);
-  sexp_gc_var(ctx, irr, s_irr);
-  sexp_gc_preserve(ctx, path, s_path);
-  sexp_gc_preserve(ctx, irr, s_irr);
+  sexp_gc_var2(path, irr);
+  sexp_gc_preserve2(ctx, path, irr);
   path = find_module_file(ctx, file);
   if (! sexp_stringp(path)) {
     path = sexp_c_string(ctx, chibi_module_dir, -1);
@@ -67,32 +65,32 @@ sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
   } else {
     res = sexp_load(ctx, path, env);
   }
-  sexp_gc_release(ctx, path, s_path);
+  sexp_gc_release2(ctx);
   return res;
 }
 
 sexp sexp_init_environments (sexp ctx) {
   sexp res, env;
-  sexp_gc_var(ctx, confenv, s_confenv);
+  sexp_gc_var1(confenv);
   env = sexp_context_env(ctx);
   res = sexp_load_module_file(ctx, sexp_init_file, env);
   if (! sexp_exceptionp(res)) {
     res = SEXP_UNDEF;
-    sexp_gc_preserve(ctx, confenv, s_confenv);
+    sexp_gc_preserve1(ctx, confenv);
     confenv = sexp_make_env(ctx);
     sexp_env_copy(ctx, confenv, env, SEXP_FALSE);
     sexp_load_module_file(ctx, sexp_config_file, confenv);
     env_define(ctx, env, sexp_intern(ctx, "*config-env*"), confenv);
     env_define(ctx, confenv, sexp_intern(ctx, "*config-env*"), confenv);
-    sexp_gc_release(ctx, confenv, s_confenv);
+    sexp_gc_release1(ctx);
   }
   return res;
 }
 
 void repl (sexp ctx) {
   sexp tmp, res, env, in, out, err;
-  sexp_gc_var(ctx, obj, s_obj);
-  sexp_gc_preserve(ctx, obj, s_obj);
+  sexp_gc_var1(obj);
+  sexp_gc_preserve1(ctx, obj);
   env = sexp_context_env(ctx);
   sexp_context_tracep(ctx) = 1;
   in = sexp_eval_string(ctx, "(current-input-port)", env);
@@ -120,18 +118,16 @@ void repl (sexp ctx) {
       }
     }
   }
-  sexp_gc_release(ctx, obj, s_obj);
+  sexp_gc_release1(ctx);
 }
 
 void run_main (int argc, char **argv) {
   sexp env, out=NULL, res=SEXP_VOID, ctx;
   sexp_uint_t i, quit=0, init_loaded=0;
-  sexp_gc_var(ctx, str, s_str);
-  sexp_gc_var(ctx, confenv, s_confenv);
+  sexp_gc_var1(str);
 
   ctx = sexp_make_context(NULL, NULL, NULL);
-  sexp_gc_preserve(ctx, str, s_str);
-  sexp_gc_preserve(ctx, confenv, s_confenv);
+  sexp_gc_preserve1(ctx, str);
   env = sexp_context_env(ctx);
   out = sexp_eval_string(ctx, "(current-output-port)", env);
 
@@ -185,7 +181,7 @@ void run_main (int argc, char **argv) {
       repl(ctx);
   }
 
-  sexp_gc_release(ctx, str, s_str);
+  sexp_gc_release1(ctx);
 }
 
 int main (int argc, char **argv) {

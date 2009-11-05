@@ -1999,9 +1999,31 @@ void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
     }
 }
 
+#if USE_DL
+sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
+  sexp_proc2 init;
+  void *handle = dlopen(sexp_string_data(file), RTLD_LAZY);
+  if (! handle)
+    return sexp_compile_error(ctx, "couldn't load dynamic library", file);
+  init = dlsym(handle, "sexp_init_library");
+  if (! init) {
+    dlclose(handle);
+    return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
+  }
+  return init(ctx, env);
+}
+#endif
+
 sexp sexp_load (sexp ctx, sexp source, sexp env) {
   sexp tmp, out;
   sexp_gc_var4(ctx2, x, in, res);
+#if USE_DL
+  char *suffix = sexp_string_data(source)
+    + sexp_string_length(source) - strlen(sexp_so_extension);
+  if (strcmp(suffix, sexp_so_extension) == 0) {
+    res = sexp_load_dl(ctx, source, env);
+  } else {
+#endif
   sexp_gc_preserve4(ctx, ctx2, x, in, res);
   res = SEXP_VOID;
   in = sexp_open_input_file(ctx, source);
@@ -2027,12 +2049,15 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     if (x == SEXP_EOF)
       res = SEXP_VOID;
     sexp_close_port(ctx, in);
-#if USE_WARN_UNDEFS
-    if (sexp_oportp(out))
-      sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, out);
-#endif
   }
   sexp_gc_release4(ctx);
+#if USE_DL
+  }
+#endif
+#if USE_WARN_UNDEFS
+  if (sexp_oportp(out) && ! sexp_exceptionp(res))
+    sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, out);
+#endif
   return res;
 }
 
@@ -2272,17 +2297,17 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     stack[--offset] = sexp_car(ls);
   stack[top] = sexp_make_fixnum(len);
   top++;
-  sexp_context_top(ctx) = top + 3;
   stack[top++] = sexp_make_fixnum(0);
   stack[top++] = final_resumer;
   stack[top++] = sexp_make_fixnum(0);
+  sexp_context_top(ctx) = top;
   res = sexp_vm(ctx, proc);
   return res;
 }
 
 sexp sexp_compile (sexp ctx, sexp x) {
-  sexp_gc_var4(ast, ctx2, vec, res);
-  sexp_gc_preserve4(ctx, ast, ctx2, vec, res);
+  sexp_gc_var3(ast, vec, res);
+  sexp_gc_preserve3(ctx, ast, vec, res);
   ast = analyze(ctx, x);
   if (sexp_exceptionp(ast)) {
     res = ast;
@@ -2294,7 +2319,7 @@ sexp sexp_compile (sexp ctx, sexp x) {
     res = sexp_make_procedure(ctx, sexp_make_fixnum(0), sexp_make_fixnum(0),
                               res, vec);
   }
-  sexp_gc_release4(ctx);
+  sexp_gc_release3(ctx);
   return res;
 }
 

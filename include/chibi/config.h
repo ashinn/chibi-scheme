@@ -5,6 +5,9 @@
 /* uncomment this to disable the module system */
 /* #define USE_MODULES 0 */
 
+/* uncomment this to disable dynamic loading */
+/* #define USE_DL 0 */
+
 /* uncomment this to use the Boehm conservative GC */
 /* #define USE_BOEHM 1 */
 
@@ -65,6 +68,14 @@
 
 #ifndef USE_MODULES
 #define USE_MODULES 1
+#endif
+
+#ifndef USE_DL
+#ifdef PLAN9
+#define USE_DL 0
+#else
+#define USE_DL 1
+#endif
 #endif
 
 #ifndef USE_BOEHM

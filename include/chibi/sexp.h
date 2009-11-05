@@ -11,6 +11,10 @@
 #include <ctype.h>
 #include <stdio.h>
 
+#if USE_DL
+#include <dlfcn.h>
+#endif
+
 #ifdef PLAN9
 #include <u.h>
 #include <libc.h>
@@ -554,6 +558,9 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_bignum_sign(x)           ((x)->value.bignum.sign)
 #define sexp_bignum_length(x)         ((x)->value.bignum.length)
 #define sexp_bignum_data(x)           ((x)->value.bignum.data)
+
+#define sexp_dllib_file(x)            ((x)->value.dllib.file)
+#define sexp_dllib_handle(x)          ((x)->value.dllib.handle)
 
 /****************************** arithmetic ****************************/
 
