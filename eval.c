@@ -2252,8 +2252,7 @@ sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
     sexp_opcode_data(res) = data;
     sexp_opcode_data2(res) = data2;
     sexp_opcode_func(res) = func;
-    sexp_opcode_name(res)
-      = strndup(sexp_string_data(name), sexp_string_length(name)+1);
+    sexp_opcode_name(res) = strdup(sexp_string_data(name));
   }
   return res;
 }
