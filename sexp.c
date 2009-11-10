@@ -135,7 +135,7 @@ sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp flb, sexp flo, sexp 
     sexp_type_size_base(type) = sexp_unbox_fixnum(sb);
     sexp_type_size_off(type) = sexp_unbox_fixnum(so);
     sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
-    sexp_type_name(type) = strndup(sexp_string_data(name), sexp_string_length(name)+1);
+    sexp_type_name(type) = strdup(sexp_string_data(name));
     res = sexp_make_fixnum(sexp_type_tag(type));
   }
   return res;
