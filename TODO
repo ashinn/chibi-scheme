@@ -26,7 +26,7 @@
 **- only/except/rename modifiers
 **- scheme-complete.el support
 *= ffi
-**- libdl interface
+**+ libdl interface
 **- opcode generation interface
 **- stub generator
 *= cleanup

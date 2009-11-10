@@ -62,7 +62,7 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
 #define _DEF_TYPE(t,fb,flb,flo,fls,sb,so,sc,n) \
   {.tag=SEXP_TYPE, .value={.type={t,fb,flb,flo,fls,sb,so,sc,n}}}
 
-static struct sexp_struct sexp_type_specs[] = {
+static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, "object"),
   _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"),
   _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
@@ -84,7 +84,7 @@ static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 0, 0, sexp_sizeof(env), 0, 0, "environment"),
   _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"),
   _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
-  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 2, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
+  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 3, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
   _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
   _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional"),
   _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
@@ -94,8 +94,66 @@ static struct sexp_struct sexp_type_specs[] = {
   _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack"),
   _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 6, 0, 0, sexp_sizeof(context), 0, 0, "context"),
 };
-
 #undef _DEF_TYPE
+
+struct sexp_struct *sexp_type_specs = _sexp_type_specs;
+
+#if USE_TYPE_DEFS
+
+static sexp_uint_t sexp_num_types = SEXP_NUM_CORE_TYPES;
+static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
+
+sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp flb, sexp flo, sexp fls,
+                         sexp sb, sexp so, sexp sc) {
+  struct sexp_struct *type, *new, *tmp;
+  sexp res;
+  sexp_uint_t i, len;
+  if (sexp_num_types >= SEXP_MAXIMUM_TYPES) {
+    fprintf(stderr, "chibi: exceeded maximum type limit\n");
+    res = SEXP_FALSE;
+  } else if (! sexp_stringp(name)) {
+    res = sexp_type_exception(ctx, "register-type: not a string", name);
+  } else {
+    if (sexp_num_types >= sexp_type_array_size) {
+      len = sexp_type_array_size*2;
+      if (len > SEXP_MAXIMUM_TYPES) len = SEXP_MAXIMUM_TYPES;
+      new = malloc(len * sizeof(_sexp_type_specs[0]));
+      for (i=0; i<sexp_num_types; i++)
+        memcpy(&(new[i]), &(sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
+      tmp = sexp_type_specs;
+      sexp_type_specs = new;
+      if (sexp_type_array_size > sexp_num_types) free(tmp);
+      sexp_type_array_size = len;
+    }
+    type = &(sexp_type_specs[sexp_num_types]);
+    sexp_pointer_tag(type) = SEXP_TYPE;
+    sexp_type_tag(type) = sexp_num_types++;
+    sexp_type_field_base(type) = sexp_unbox_fixnum(fb);
+    sexp_type_field_len_base(type) = sexp_unbox_fixnum(flb);
+    sexp_type_field_len_off(type) = sexp_unbox_fixnum(flo);
+    sexp_type_field_len_scale(type) = sexp_unbox_fixnum(fls);
+    sexp_type_size_base(type) = sexp_unbox_fixnum(sb);
+    sexp_type_size_off(type) = sexp_unbox_fixnum(so);
+    sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
+    sexp_type_name(type) = strndup(sexp_string_data(name), sexp_string_length(name)+1);
+    res = sexp_make_fixnum(sexp_type_tag(type));
+  }
+  return res;
+}
+
+sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots) {
+  short type_size
+    = sexp_sizeof(flonum) - sizeof(double) + sizeof(sexp)*sexp_unbox_fixnum(slots);
+  return sexp_register_type(ctx, name,
+                            sexp_make_fixnum(offsetof(struct sexp_struct, value)),
+                            slots, sexp_make_fixnum(0), sexp_make_fixnum(0),
+                            sexp_make_fixnum(type_size), sexp_make_fixnum(0),
+                            sexp_make_fixnum(0));
+}
+
+#else
+#define sexp_num_types SEXP_NUM_CORE_TYPES
+#endif
 
 #if ! USE_BOEHM
 
@@ -877,8 +935,8 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
       i = sexp_pointer_tag(obj);
       sexp_write_string(ctx, "#<", out);
       sexp_write_string(ctx,
-                        (i < SEXP_NUM_TYPES)
-                        ? sexp_type_name(&(sexp_type_specs[i])) : "invalid",
+                        (i < sexp_num_types)
+                        ? sexp_type_name_by_index(i) : "invalid",
                         out);
       sexp_write_char(ctx, '>', out);
       break;

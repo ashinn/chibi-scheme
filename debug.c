@@ -11,7 +11,8 @@ static const char* reverse_opcode_names[] =
    "CLOSURE-REF", "VECTOR-REF", "VECTOR-SET", "VECTOR-LENGTH", "STRING-REF",
    "STRING-SET", "STRING-LENGTH", "MAKE-PROCEDURE", "MAKE-VECTOR", "AND",
    "NULL?", "FIXNUM?", "SYMBOL?", "CHAR?",
-   "EOF?", "TYPEP", "CAR", "CDR", "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB",
+   "EOF?", "TYPEP", "MAKE", "SLOT-REF", "SLOT-SET", "CAR", "CDR",
+   "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB",
    "MUL", "DIV", "QUOTIENT", "REMAINDER", "NEGATIVE", "INVERSE",
    "LT", "LE", "EQN", "EQ",
    "EXACT->INEXACT", "INEXACT->EXACT",
@@ -46,6 +47,11 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   case OP_TYPEP:
     sexp_printf(ctx, out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
+    break;
+  case OP_SLOT_REF:
+  case OP_SLOT_SET:
+  case OP_MAKE:
+    ip += sizeof(sexp)*2;
     break;
   case OP_GLOBAL_REF:
   case OP_GLOBAL_KNOWN_REF:

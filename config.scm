@@ -131,6 +131,8 @@
          open-input-string open-output-string get-output-string
          sc-macro-transformer rsc-macro-transformer er-macro-transformer
          identifier? identifier=? identifier->symbol make-syntactic-closure
+         register-simple-type make-constructor make-type-predicate
+         make-getter make-setter
          )))
   (set! *modules*
         (list (cons '(scheme) (make-module exports

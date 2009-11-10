@@ -74,6 +74,7 @@ sexp sexp_init_environments (sexp ctx) {
   sexp_gc_var1(confenv);
   env = sexp_context_env(ctx);
   res = sexp_load_module_file(ctx, sexp_init_file, env);
+#if USE_MODULES
   if (! sexp_exceptionp(res)) {
     res = SEXP_UNDEF;
     sexp_gc_preserve1(ctx, confenv);
@@ -84,13 +85,14 @@ sexp sexp_init_environments (sexp ctx) {
     sexp_env_define(ctx, confenv, sexp_intern(ctx, "*config-env*"), confenv);
     sexp_gc_release1(ctx);
   }
+#endif
   return res;
 }
 
 void repl (sexp ctx) {
-  sexp tmp, res, env, in, out, err;
-  sexp_gc_var1(obj);
-  sexp_gc_preserve1(ctx, obj);
+  sexp in, out, err;
+  sexp_gc_var4(obj, tmp, res, env);
+  sexp_gc_preserve4(ctx, obj, tmp, res, env);
   env = sexp_context_env(ctx);
   sexp_context_tracep(ctx) = 1;
   in = sexp_eval_string(ctx, "(current-input-port)", env);
@@ -118,7 +120,7 @@ void repl (sexp ctx) {
       }
     }
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release4(ctx);
 }
 
 void run_main (int argc, char **argv) {

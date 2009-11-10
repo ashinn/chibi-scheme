@@ -1,7 +1,7 @@
 
 #define _OP(c,o,n,m,t,u,i,s,d,f)                                \
   {.tag=SEXP_OPCODE,                                            \
-      .value={.opcode={c, o, n, m, t, u, i, s, d, NULL, f}}}
+      .value={.opcode={c, o, n, m, t, u, i, s, d, NULL, NULL, f}}}
 #define _FN(o,n,m,t,u,s,f,p) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp_proc0)p)
 #define _FN0(s, f, d) _FN(OP_FCALL0, 0, 0, 0, 0, s, f, d)
 #define _FN1(t, s, f, d) _FN(OP_FCALL1, 1, 0, t, 0, s, f, d)
@@ -107,6 +107,9 @@ _PARAM("current-output-port", (sexp)"*current-output-port*", SEXP_OPORT),
 _PARAM("current-error-port", (sexp)"*current-error-port*", SEXP_OPORT),
 _PARAM("current-exception-handler", (sexp)"*current-exception-handler*", SEXP_PROCEDURE),
 _PARAM("interaction-environment", (sexp)"*interaction-environment*", SEXP_ENV),
+_FN0("open-output-string", 0, sexp_make_output_string_port),
+_FN1(SEXP_STRING, "open-input-string", 0, sexp_make_input_string_port),
+_FN1(SEXP_OPORT, "get-output-string", 0, sexp_get_output_string),
 #if USE_MATH
 _FN1(0, "exp", 0, sexp_exp),
 _FN1(0, "log", 0, sexp_log),
@@ -123,9 +126,13 @@ _FN1(0, "floor", 0, sexp_floor),
 _FN1(0, "ceiling", 0, sexp_ceiling),
 _FN2(0, 0, "expt", 0, sexp_expt),
 #endif
-_FN0("open-output-string", 0, sexp_make_output_string_port),
-_FN1(SEXP_STRING, "open-input-string", 0, sexp_make_input_string_port),
-_FN1(SEXP_OPORT, "get-output-string", 0, sexp_get_output_string),
+#if USE_TYPE_DEFS
+_FN2(SEXP_STRING, SEXP_FIXNUM, "register-simple-type", 0, sexp_register_simple_type),
+_FN2(SEXP_STRING, SEXP_FIXNUM, "make-type-predicate", 0, sexp_make_type_predicate),
+_FN2(SEXP_STRING, SEXP_FIXNUM, "make-constructor", 0, sexp_make_constructor),
+_FN3(SEXP_STRING, SEXP_FIXNUM, "make-getter", 0, sexp_make_getter),
+_FN3(SEXP_STRING, SEXP_FIXNUM, "make-setter", 0, sexp_make_setter),
+#endif
 #if USE_DEBUG
 _FN2(SEXP_PROCEDURE, SEXP_OPORT, "disasm", 0, sexp_disasm),
 #endif

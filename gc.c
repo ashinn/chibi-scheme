@@ -45,7 +45,7 @@ static sexp_heap sexp_heap_last (sexp_heap h) {
 sexp_uint_t sexp_allocated_bytes (sexp x) {
   sexp_uint_t res, *len_ptr;
   sexp t;
-  if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) > SEXP_CONTEXT))
+  if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_num_types))
     return sexp_heap_align(1);
   t = &(sexp_type_specs[sexp_pointer_tag(x)]);
   len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_size_off(t));

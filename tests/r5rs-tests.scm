@@ -229,6 +229,8 @@
 
 (test "100" (number->string 256 16))
 
+(test "FF" (number->string 255 16))
+
 (test "177" (number->string 127 8))
 
 (test "101" (number->string 5 2))

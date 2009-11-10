@@ -466,12 +466,11 @@ enum sexp_number_combs {
   SEXP_NUM_BIG_BIG
 };
 
-static int sexp_number_types[SEXP_NUM_TYPES] =
-  {0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0,
-   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, };
+static int sexp_number_types[] =
+  {0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0};
 
 static int sexp_number_type (sexp a) {
-  return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)]
+  return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&1111]
     : sexp_fixnump(a);
 }
 

@@ -286,6 +286,14 @@ sexp sexp_make_context(sexp ctx, sexp stack, sexp env) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
   res = sexp_alloc_type(ctx, context, SEXP_CONTEXT);
+  sexp_context_parent(res) = ctx;
+  sexp_context_lambda(res) = SEXP_FALSE;
+  sexp_context_fv(res) = SEXP_NULL;
+  sexp_context_saves(res) = 0;
+  sexp_context_depth(res) = 0;
+  sexp_context_pos(res) = 0;
+  sexp_context_tailp(res) = 1;
+  sexp_context_tracep(res) = 0;
   if ((! stack) || (stack == SEXP_FALSE)) {
     stack = sexp_alloc_tagged(ctx, SEXP_STACK_SIZE, SEXP_STACK);
     sexp_stack_length(stack) = INIT_STACK_SIZE;
@@ -300,15 +308,6 @@ sexp sexp_make_context(sexp ctx, sexp stack, sexp env) {
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = INIT_BCODE_SIZE;
   sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
-  sexp_context_parent(res) = ctx;
-  sexp_context_lambda(res) = SEXP_FALSE;
-  sexp_context_fv(res) = SEXP_NULL;
-  sexp_context_saves(res) = 0;
-  sexp_context_depth(res) = 0;
-  sexp_context_pos(res) = 0;
-  sexp_context_top(res) = 0;
-  sexp_context_tailp(res) = 1;
-  sexp_context_tracep(res) = 0;
   if (ctx) sexp_gc_release1(ctx);
   return res;
 }
@@ -913,9 +912,16 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     emit_word(ctx, (sexp_uint_t)op);
     break;
   case OPC_TYPE_PREDICATE:
+  case OPC_ACCESSOR:
+  case OPC_CONSTRUCTOR:
     emit(ctx, sexp_opcode_code(op));
-    if (sexp_opcode_data(op))
-      emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
+    if ((sexp_opcode_class(op) != OPC_CONSTRUCTOR)
+        || sexp_opcode_code(op) == OP_MAKE) {
+      if (sexp_opcode_data(op))
+        emit_word(ctx, sexp_unbox_fixnum(sexp_opcode_data(op)));
+      if (sexp_opcode_data2(op))
+        emit_word(ctx, sexp_unbox_fixnum(sexp_opcode_data2(op)));
+    }
     break;
   case OPC_PARAMETER:
     emit_push(ctx, sexp_opcode_data(op));
@@ -1181,6 +1187,9 @@ static sexp_uint_t sexp_restore_stack(sexp saved, sexp *current) {
 #define _WORD0 ((sexp*)ip)[0]
 #define _UWORD0 ((sexp_uint_t*)ip)[0]
 #define _SWORD0 ((sexp_sint_t*)ip)[0]
+#define _WORD1 ((sexp*)ip)[1]
+#define _UWORD1 ((sexp_uint_t*)ip)[1]
+#define _SWORD1 ((sexp_sint_t*)ip)[1]
 
 #define sexp_raise(msg, args)                                       \
   do {sexp_context_top(ctx) = top+1;                                \
@@ -1537,10 +1546,28 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_CHARP:
     _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
   case OP_TYPEP:
-    _ARG1 = sexp_make_boolean(sexp_pointerp(_ARG1)
-                              && (sexp_make_fixnum(sexp_pointer_tag(_ARG1))
-                                  == _WORD0));
+    _ARG1 = sexp_make_boolean(sexp_check_tag(_ARG1, _UWORD0));
     ip += sizeof(sexp);
+    break;
+  case OP_MAKE:
+    _PUSH(sexp_alloc_tagged(ctx, _UWORD1, _UWORD0));
+    ip += sizeof(sexp)*2;
+    break;
+  case OP_SLOT_REF:
+    if (! sexp_check_tag(_ARG1, _UWORD0))
+      sexp_raise("slot-ref: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(_UWORD0), -1), _ARG1));
+    _ARG1 = sexp_slot_ref(_ARG1, _UWORD1);
+    ip += sizeof(sexp)*2;
+    break;
+  case OP_SLOT_SET:
+    if (! sexp_check_tag(_ARG1, _UWORD0))
+      sexp_raise("slot-set!: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(_UWORD0), -1), _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG1));
+    sexp_slot_set(_ARG1, _UWORD1, _ARG2);
+    _ARG2 = SEXP_VOID;
+    ip += sizeof(sexp)*2;
+    top--;
     break;
   case OP_CAR:
     if (! sexp_pairp(_ARG1))
@@ -2196,6 +2223,86 @@ static sexp sexp_copy_opcode (sexp ctx, sexp op) {
   return res;
 }
 
+
+sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
+                       sexp num_args, sexp flags, sexp arg1t, sexp arg2t,
+                       sexp invp, sexp data, sexp data2, sexp_proc0 func) {
+  sexp res;
+  if (! sexp_stringp(name))
+    res = sexp_type_exception(ctx, "make-opcode: not a string", name);
+  else if ((! sexp_fixnump(op_class)) || (sexp_unbox_fixnum(op_class) <= 0)
+      || (sexp_unbox_fixnum(op_class) >= OPC_NUM_OP_CLASSES))
+    res = sexp_type_exception(ctx, "make-opcode: bad opcode class", op_class);
+  else if ((! sexp_fixnump(code)) || (sexp_unbox_fixnum(code) <= 0)
+      || (sexp_unbox_fixnum(code) >= OP_NUM_OPCODES))
+    res = sexp_type_exception(ctx, "make-opcode: bad opcode", code);
+  else if (! sexp_fixnump(num_args))
+    res = sexp_type_exception(ctx, "make-opcode: bad num_args", num_args);
+  else if (! sexp_fixnump(flags))
+    res = sexp_type_exception(ctx, "make-opcode: bad flags", flags);
+  else {
+    res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
+    sexp_opcode_class(res) = sexp_unbox_fixnum(op_class);
+    sexp_opcode_code(res) = sexp_unbox_fixnum(code);
+    sexp_opcode_num_args(res) = sexp_unbox_fixnum(num_args);
+    sexp_opcode_flags(res) = sexp_unbox_fixnum(flags);
+    sexp_opcode_arg1_type(res) = sexp_unbox_fixnum(arg1t);
+    sexp_opcode_arg2_type(res) = sexp_unbox_fixnum(arg2t);
+    sexp_opcode_inverse(res) = sexp_unbox_fixnum(invp);
+    sexp_opcode_data(res) = data;
+    sexp_opcode_data2(res) = data2;
+    sexp_opcode_func(res) = func;
+    sexp_opcode_name(res)
+      = strndup(sexp_string_data(name), sexp_string_length(name)+1);
+  }
+  return res;
+}
+
+#if USE_TYPE_DEFS
+
+sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type) {
+  if ((! sexp_fixnump(type)) || (sexp_unbox_fixnum(type) < SEXP_NUM_CORE_TYPES))
+    return sexp_type_exception(ctx, "make-type-predicate: bad type", type);
+  return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_TYPE_PREDICATE),
+                          sexp_make_fixnum(OP_TYPEP), sexp_make_fixnum(1),
+                          sexp_make_fixnum(0), sexp_make_fixnum(0),
+                          sexp_make_fixnum(0), sexp_make_fixnum(0), type,
+                          NULL, NULL);
+}
+
+sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
+  sexp_uint_t type_size;
+  if ((! sexp_fixnump(type)) || (sexp_unbox_fixnum(type) < SEXP_NUM_CORE_TYPES))
+    return sexp_type_exception(ctx, "make-constructor: bad type", type);
+  type_size = sexp_type_size_base(&(sexp_type_specs[sexp_unbox_fixnum(type)]));
+  return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_CONSTRUCTOR),
+                          sexp_make_fixnum(OP_MAKE), sexp_make_fixnum(0),
+                          sexp_make_fixnum(0), sexp_make_fixnum(0),
+                          sexp_make_fixnum(0), sexp_make_fixnum(0), type,
+                          sexp_make_fixnum(type_size), NULL);
+}
+
+sexp sexp_make_accessor (sexp ctx, sexp name, sexp type, sexp index, sexp code) {
+  if ((! sexp_fixnump(type)) || (sexp_unbox_fixnum(type) < SEXP_NUM_CORE_TYPES))
+    return sexp_type_exception(ctx, "make-accessor: bad type", type);
+  if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
+    return sexp_type_exception(ctx, "make-accessor: bad index", index);
+  return
+    sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_ACCESSOR), code,
+                     sexp_make_fixnum(sexp_unbox_fixnum(code)==OP_SLOT_REF?1:2),
+                     sexp_make_fixnum(0), type, sexp_make_fixnum(0),
+                     sexp_make_fixnum(0), type, index, NULL);
+}
+
+sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index) {
+  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(OP_SLOT_REF));
+}
+sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index) {
+  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(OP_SLOT_SET));
+}
+
+#endif
+
 sexp sexp_make_env (sexp ctx) {
   sexp e = sexp_alloc_type(ctx, env, SEXP_ENV);
   sexp_env_lambda(e) = NULL;
@@ -2326,7 +2433,7 @@ sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
   sexp_gc_var1(thunk);
   sexp_gc_preserve1(ctx, thunk);
   ctx2 = sexp_make_context(ctx, NULL, (env ? env : sexp_context_env(ctx)));
-  sexp_context_parent(ctx2) = ctx;
+  /* sexp_context_parent(ctx2) = ctx; */
   thunk = sexp_compile(ctx2, obj);
   if (sexp_exceptionp(thunk)) {
     sexp_print_exception(ctx2, thunk,

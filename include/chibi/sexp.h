@@ -93,11 +93,16 @@ enum sexp_types {
   SEXP_LIT,
   SEXP_STACK,
   SEXP_CONTEXT,
-  SEXP_NUM_TYPES
+  SEXP_NUM_CORE_TYPES
 };
 
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
+/* #if SEXP_64_BIT */
+/* typedef unsigned int sexp_tag_t; */
+/* #else */
+/* typedef unsigned short sexp_tag_t; */
+/* #endif */
 typedef unsigned char sexp_tag_t;
 typedef struct sexp_struct *sexp;
 
@@ -200,7 +205,7 @@ struct sexp_struct {
       unsigned char op_class, code, num_args, flags,
         arg1_type, arg2_type, inverse;
       char *name;
-      sexp data, proc;
+      sexp data, data2, proc;
       sexp_proc0 func;
     } opcode;
     struct {
@@ -347,10 +352,14 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_gc_mark(x)     ((x)->gc_mark)
 #define sexp_immutablep(x)  ((x)->immutablep)
 
-#define sexp_object_type(x)      (&(sexp_type_specs[(x)->tag]))
-#define sexp_object_type_name(x) (sexp_type_name(sexp_object_type(x)))
+#define sexp_object_type(x)        (&(sexp_type_specs[(x)->tag]))
+#define sexp_object_type_name(x)   (sexp_type_name(sexp_object_type(x)))
+#define sexp_type_name_by_index(x) (sexp_type_name(&(sexp_type_specs[(x)])))
 
-#define sexp_check_tag(x,t) (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
+#define sexp_check_tag(x,t)  (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
+
+#define sexp_slot_ref(x,i)   (((sexp*)&((x)->value))[i])
+#define sexp_slot_set(x,i,v) (((sexp*)&((x)->value))[i] = (v))
 
 #if USE_IMMEDIATE_FLONUMS
 union sexp_flonum_conv {
@@ -495,6 +504,7 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_opcode_inverse(x)    ((x)->value.opcode.inverse)
 #define sexp_opcode_name(x)       ((x)->value.opcode.name)
 #define sexp_opcode_data(x)       ((x)->value.opcode.data)
+#define sexp_opcode_data2(x)      ((x)->value.opcode.data2)
 #define sexp_opcode_proc(x)       ((x)->value.opcode.proc)
 #define sexp_opcode_func(x)       ((x)->value.opcode.func)
 
@@ -634,6 +644,7 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
+SEXP_API struct sexp_struct *sexp_type_specs;
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 SEXP_API sexp sexp_cons(sexp ctx, sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
@@ -673,6 +684,11 @@ SEXP_API sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
 SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
 SEXP_API void sexp_init(void);
+
+#if USE_TYPE_DEFS
+SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
+#endif
 
 #endif /* ! SEXP_H */
 
