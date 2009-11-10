@@ -38,7 +38,8 @@ enum opcode_classes {
   OPC_CONSTRUCTOR,
   OPC_ACCESSOR,
   OPC_PARAMETER,
-  OPC_FOREIGN
+  OPC_FOREIGN,
+  OPC_NUM_OP_CLASSES
 };
 
 enum opcode_names {
@@ -82,6 +83,9 @@ enum opcode_names {
   OP_CHARP,
   OP_EOFP,
   OP_TYPEP,
+  OP_MAKE,
+  OP_SLOT_REF,
+  OP_SLOT_SET,
   OP_CAR,
   OP_CDR,
   OP_SET_CAR,
@@ -130,6 +134,14 @@ SEXP_API sexp sexp_env_copy(sexp context, sexp to, sexp from, sexp ls);
 SEXP_API void sexp_env_define(sexp context, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_make_context(sexp context, sexp stack, sexp env);
 SEXP_API void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
+SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc0);
+
+#if USE_TYPE_DEFS
+SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);
+SEXP_API sexp sexp_make_constructor (sexp ctx, sexp name, sexp type);
+SEXP_API sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index);
+SEXP_API sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index);
+#endif
 
 #endif /* ! SEXP_EVAL_H */
 

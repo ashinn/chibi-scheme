@@ -8,6 +8,9 @@
 /* uncomment this to disable dynamic loading */
 /* #define USE_DL 0 */
 
+/* uncomment this to disable dynamic type definitions */
+/* #define USE_TYPE_DEFS 0 */
+
 /* uncomment this to use the Boehm conservative GC */
 /* #define USE_BOEHM 1 */
 
@@ -68,6 +71,14 @@
 
 #ifndef USE_MODULES
 #define USE_MODULES 1
+#endif
+
+#ifndef USE_TYPE_DEFS
+#define USE_TYPE_DEFS 1
+#endif
+
+#ifndef SEXP_MAXIMUM_TYPES
+#define SEXP_MAXIMUM_TYPES ((sexp_tag_t)-1)
 #endif
 
 #ifndef USE_DL

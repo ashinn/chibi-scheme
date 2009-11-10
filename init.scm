@@ -431,7 +431,10 @@
 
 (define (atan x . o) (if (null? o) (atan1 x) (atan1 (/ x (car o)))))
 
-(define (digit-char n) (integer->char (+ n (char->integer #\0))))
+(define (digit-char n)
+  (if (<= n 9)
+      (integer->char (+ n (char->integer #\0)))
+      (integer->char (+ (- n 10) (char->integer #\A)))))
 (define (digit-value ch)
   (if (char-numeric? ch)
       (- (char->integer ch) (char->integer #\0))
