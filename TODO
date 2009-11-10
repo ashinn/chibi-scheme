@@ -27,7 +27,7 @@
 **- scheme-complete.el support
 *= ffi
 **+ libdl interface
-**- opcode generation interface
+**= opcode generation interface
 **- stub generator
 *= cleanup
 *- user documentation
@@ -45,5 +45,5 @@
 **- plugin infrastructure
 *- type inference with warnings
 *- SRFI-0 cond-expand
-*- SRFI-9 define-record-type
+*+ SRFI-9 define-record-type
 *- code repository with install tools
