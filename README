@@ -41,6 +41,8 @@ directly from make with:
 See the file main.c for an example of using chibi-scheme as a library.
 The essential functions to remember are:
 
+  #include <chibi/eval.h>
+
   sexp_make_context(NULL, NULL, NULL)
     returns a new context
 
@@ -49,4 +51,50 @@ The essential functions to remember are:
 
   sexp_eval_string(context, str)
     reads an s-expression from str and evaluates it
+
+  sexp_env_define(context, env, symbol, value)
+
+A minimal module system is provided by default.  Currently you can
+load the following SRFIs with (import (srfi N)):
+
+  1, 2, 6, 8, 9, 11, 16, 26, 69
+
+LOAD is extended to accept an optional environment argument, like
+EVAL.  You can also LOAD shared libraries in addition to Scheme source
+files - in this case the function sexp_init_library is automatically
+called with the following signature:
+
+  sexp_init_library(sexp context, sexp environment)
+
+To define new primitive functions from C, use sexp_define_foreign,
+which takes a Scheme environment, a name, a number of arguments the C
+function takes (not counting the context argument), and a C function.
+
+  /* sexp_define_foreign(context, env, name, num_args, f) */
+
+  sexp add1 (sexp context, sexp x) {
+    return sexp_fx_add(x, sexp_make_fixnum(1));
+  }
+
+  sexp_define_foreign(context, env, "add1", 1, add1)
+
+See the SRFI-69 implementation for more detailed examples of this.
+
+You can define new data types with SRFI-9.  This is just syntactic
+sugar for the following more primitive type constructors:
+
+(register-simple-type <name-string> <num-fields>)
+ => <type-id> ; a fixnum
+
+(make-type-predicate <opcode-name-string> <type-id>)
+ => <opcode>  ; takes 1 arg, returns #t iff that arg is of the type
+
+(make-constructor <constructor-name-string> <type-id>)
+ => <opcode>  ; takes 0 args, returns a newly allocated instance of type
+
+(make-getter <getter-name-string> <type-id> <field-index>)
+ => <opcode>  ; takes 1 args, retrieves the field located at the index
+
+(make-setter <setter-name-string> <type-id> <field-index>)
+ => <opcode>  ; takes 2 args, sets the field located at the index
 

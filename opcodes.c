@@ -2,7 +2,7 @@
 #define _OP(c,o,n,m,t,u,i,s,d,f)                                \
   {.tag=SEXP_OPCODE,                                            \
       .value={.opcode={c, o, n, m, t, u, i, s, d, NULL, NULL, f}}}
-#define _FN(o,n,m,t,u,s,f,p) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp_proc0)p)
+#define _FN(o,n,m,t,u,s,f,p) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp_proc1)p)
 #define _FN0(s, f, d) _FN(OP_FCALL0, 0, 0, 0, 0, s, f, d)
 #define _FN1(t, s, f, d) _FN(OP_FCALL1, 1, 0, t, 0, s, f, d)
 #define _FN2(t, u, s, f, d) _FN(OP_FCALL2, 2, 0, t, u, s, f, d)

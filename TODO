@@ -46,4 +46,7 @@
 *- type inference with warnings
 *- SRFI-0 cond-expand
 *+ SRFI-9 define-record-type
+*+ SRFI-69 hash-tables
+*- tcp interface
+*- posix interface
 *- code repository with install tools

@@ -2035,7 +2035,7 @@ sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #endif
 
 sexp sexp_load (sexp ctx, sexp source, sexp env) {
-  sexp tmp, out;
+  sexp tmp, out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
 #if USE_DL
   char *suffix = sexp_string_data(source)
@@ -2053,9 +2053,10 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
   tmp = sexp_env_bindings(env);
   sexp_context_tailp(ctx2) = 0;
   if (sexp_exceptionp(in)) {
-    if (! sexp_oportp(out))
+    if (sexp_not(out))
       out = sexp_env_global_ref(sexp_context_env(ctx), the_cur_err_symbol, SEXP_FALSE);
-    sexp_print_exception(ctx, in, out);
+    if (sexp_oportp(out))
+      sexp_print_exception(ctx, in, out);
     res = in;
   } else {
     sexp_port_sourcep(in) = 1;
@@ -2219,7 +2220,7 @@ static sexp sexp_copy_opcode (sexp ctx, sexp op) {
 
 sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
                        sexp num_args, sexp flags, sexp arg1t, sexp arg2t,
-                       sexp invp, sexp data, sexp data2, sexp_proc0 func) {
+                       sexp invp, sexp data, sexp data2, sexp_proc1 func) {
   sexp res;
   if (! sexp_stringp(name))
     res = sexp_type_exception(ctx, "make-opcode: not a string", name);
@@ -2247,6 +2248,36 @@ sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
     sexp_opcode_func(res) = func;
     sexp_opcode_name(res) = strdup(sexp_string_data(name));
   }
+  return res;
+}
+
+sexp sexp_make_foreign (sexp ctx, char *name, int num_args, sexp_proc1 f) {
+  sexp res;
+  if (num_args > 6) {
+    res = sexp_type_exception(ctx, "make-foreign: exceeded foreign arg limit",
+                              sexp_make_fixnum(num_args));
+  } else {
+    res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
+    sexp_opcode_class(res) = OPC_FOREIGN;
+    sexp_opcode_code(res) = OP_FCALL1+num_args-1;
+    sexp_opcode_num_args(res) = num_args;
+    sexp_opcode_name(res) = name;
+    sexp_opcode_func(res) = f;
+  }
+  return res;
+}
+
+sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name,
+                              int num_args, sexp_proc1 f) {
+  sexp_gc_var1(op);
+  sexp_gc_preserve1(ctx, op);
+  sexp res = SEXP_VOID;
+  op = sexp_make_foreign(ctx, name, num_args, (sexp_proc1)f);
+  if (sexp_exceptionp(op))
+    res = op;
+  else
+    sexp_env_define(ctx, env, sexp_intern(ctx, name), op);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -2389,16 +2420,23 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   sexp res, ls, *stack = sexp_stack_data(sexp_context_stack(ctx));
   sexp_sint_t top = sexp_context_top(ctx), len, offset;
   len = sexp_unbox_fixnum(sexp_length(ctx, args));
-  offset = top + len;
-  for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
-    stack[--offset] = sexp_car(ls);
-  stack[top] = sexp_make_fixnum(len);
-  top++;
-  stack[top++] = sexp_make_fixnum(0);
-  stack[top++] = final_resumer;
-  stack[top++] = sexp_make_fixnum(0);
-  sexp_context_top(ctx) = top;
-  res = sexp_vm(ctx, proc);
+  if (sexp_opcodep(proc))
+    proc = make_opcode_procedure(ctx, proc, len);
+  if (! sexp_procedurep(proc)) {
+    res = sexp_exceptionp(proc) ? proc :
+      sexp_type_exception(ctx, "apply: not a procedure", proc);
+  } else {
+    offset = top + len;
+    for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
+      stack[--offset] = sexp_car(ls);
+    stack[top] = sexp_make_fixnum(len);
+    top++;
+    stack[top++] = sexp_make_fixnum(0);
+    stack[top++] = final_resumer;
+    stack[top++] = sexp_make_fixnum(0);
+    sexp_context_top(ctx) = top;
+    res = sexp_vm(ctx, proc);
+  }
   return res;
 }
 
