@@ -1533,14 +1533,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_NULLP:
     _ARG1 = sexp_make_boolean(sexp_nullp(_ARG1)); break;
   case OP_INTEGERP:
-    j = sexp_integerp(_ARG1);
-#if USE_FLONUMS
-    if (! j)
-      j = (sexp_flonump(_ARG1)
-           && (sexp_flonum_value(_ARG1) == trunc(sexp_flonum_value(_ARG1))));
-#endif
-    _ARG1 = sexp_make_boolean(j);
-    break;
+    _ARG1 = sexp_make_boolean(sexp_integerp(_ARG1)); break;
   case OP_SYMBOLP:
     _ARG1 = sexp_make_boolean(sexp_symbolp(_ARG1)); break;
   case OP_CHARP:
@@ -2432,7 +2425,6 @@ sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
   sexp_gc_var1(thunk);
   sexp_gc_preserve1(ctx, thunk);
   ctx2 = sexp_make_context(ctx, NULL, (env ? env : sexp_context_env(ctx)));
-  /* sexp_context_parent(ctx2) = ctx; */
   thunk = sexp_compile(ctx2, obj);
   if (sexp_exceptionp(thunk)) {
     sexp_print_exception(ctx2, thunk,

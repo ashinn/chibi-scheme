@@ -43,18 +43,16 @@ static sexp_heap sexp_heap_last (sexp_heap h) {
 }
 
 sexp_uint_t sexp_allocated_bytes (sexp x) {
-  sexp_uint_t res, *len_ptr;
+  sexp_uint_t res;
   sexp t;
   if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_num_types))
     return sexp_heap_align(1);
   t = &(sexp_type_specs[sexp_pointer_tag(x)]);
-  len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_size_off(t));
-  res = sexp_type_size_base(t) + len_ptr[0] * sexp_type_size_scale(t);
+  res = sexp_type_size_of_object(t, x);
   return res;
 }
 
 void sexp_mark (sexp x) {
-  sexp_uint_t *len_ptr;
   sexp_sint_t i, len;
   sexp t, *p;
   struct sexp_gc_var_t *saves;
@@ -67,9 +65,7 @@ void sexp_mark (sexp x) {
       if (saves->var) sexp_mark(*(saves->var));
   t = &(sexp_type_specs[sexp_pointer_tag(x)]);
   p = (sexp*) (((char*)x) + sexp_type_field_base(t));
-  len_ptr = (sexp_uint_t*) (((char*)x) + sexp_type_field_len_off(t));
-  len = sexp_type_field_len_base(t)
-    + len_ptr[0]*sexp_type_field_len_scale(t) - 1;
+  len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
     for (i=0; i<len; i++)
       sexp_mark(p[i]);
