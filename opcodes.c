@@ -2,15 +2,18 @@
 #define _OP(c,o,n,m,t,u,i,s,d,f)                                \
   {.tag=SEXP_OPCODE,                                            \
       .value={.opcode={c, o, n, m, t, u, i, s, d, NULL, NULL, f}}}
-#define _FN(o,n,m,t,u,s,f,p) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, f, (sexp_proc1)p)
-#define _FN0(s, f, d) _FN(OP_FCALL0, 0, 0, 0, 0, s, f, d)
-#define _FN1(t, s, f, d) _FN(OP_FCALL1, 1, 0, t, 0, s, f, d)
-#define _FN2(t, u, s, f, d) _FN(OP_FCALL2, 2, 0, t, u, s, f, d)
-#define _FN2OPT(t, u, s, f, d) _FN(OP_FCALL2, 1, 1, t, u, s, f, d)
-#define _FN3(t, u, s, f, d) _FN(OP_FCALL3, 3, 0, t, u, s, f, d)
-#define _FN4(t, u, s, f, d) _FN(OP_FCALL4, 4, 0, t, u, s, f, d)
-#define _FN5(t, u, s, f, d) _FN(OP_FCALL5, 5, 0, t, u, s, f, d)
-#define _FN6(t, u, s, f, d) _FN(OP_FCALL6, 6, 0, t, u, s, f, d)
+#define _FN(o,n,m,t,u,s,d,f) _OP(OPC_FOREIGN, o, n, m, t, u, 0, s, d, (sexp_proc1)f)
+#define _FN0(s, d, f) _FN(OP_FCALL0, 0, 0, 0, 0, s, d, f)
+#define _FN1(t, s, d, f) _FN(OP_FCALL1, 1, 0, t, 0, s, d, f)
+#define _FN1OPT(t, s, d, f) _FN(OP_FCALL1, 0, 1, t, u, s, d, f)
+#define _FN1OPTP(t, s, d, f) _FN(OP_FCALL1, 0, 3, t, 0, s, d, f)
+#define _FN2(t, u, s, d, f) _FN(OP_FCALL2, 2, 0, t, u, s, d, f)
+#define _FN2OPT(t, u, s, d, f) _FN(OP_FCALL2, 1, 1, t, u, s, d, f)
+#define _FN2OPTP(t, u, s, d, f) _FN(OP_FCALL2, 1, 3, t, u, s, d, f)
+#define _FN3(t, u, s, d, f) _FN(OP_FCALL3, 3, 0, t, u, s, d, f)
+#define _FN4(t, u, s, d, f) _FN(OP_FCALL4, 4, 0, t, u, s, d, f)
+#define _FN5(t, u, s, d, f) _FN(OP_FCALL5, 5, 0, t, u, s, d, f)
+#define _FN6(t, u, s, d, f) _FN(OP_FCALL6, 6, 0, t, u, s, d, f)
 #define _PARAM(n, a, t) _OP(OPC_PARAMETER, OP_NOOP, 0, 3, t, 0, 0, n, a, 0)
 
 static struct sexp_struct opcodes[] = {
@@ -61,15 +64,14 @@ _OP(OPC_TYPE_PREDICATE, OP_TYPEP,  1, 0, 0, 0, 0, "output-port?", sexp_make_fixn
 _OP(OPC_GENERIC, OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1", 0, NULL),
 _OP(OPC_GENERIC, OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation", 0, NULL),
 _OP(OPC_GENERIC, OP_RAISE, 1, SEXP_STRING, 0, 0, 0, "raise", 0, NULL),
-_OP(OPC_IO, OP_WRITE, 1, 3, 0, SEXP_OPORT, 0, "write", (sexp)"*current-output-port*", NULL),
-_OP(OPC_IO, OP_DISPLAY, 1, 3, 0, SEXP_OPORT, 0, "display", (sexp)"*current-output-port*", NULL),
 _OP(OPC_IO, OP_WRITE_CHAR, 1, 3, 0, SEXP_OPORT, 0, "write-char", (sexp)"*current-output-port*", NULL),
 _OP(OPC_IO, OP_NEWLINE, 0, 3, 0, SEXP_OPORT, 0, "newline", (sexp)"*current-output-port*", NULL),
-_OP(OPC_IO, OP_FLUSH_OUTPUT, 0, 3, 0, SEXP_OPORT, 0, "flush-output", (sexp)"*current-output-port*", NULL),
-_OP(OPC_IO, OP_READ, 0, 3, 0, SEXP_IPORT, 0, "read", (sexp)"*current-input-port*", NULL),
 _OP(OPC_IO, OP_READ_CHAR, 0, 3, 0, SEXP_IPORT, 0, "read-char", (sexp)"*current-input-port*", NULL),
 _OP(OPC_IO, OP_PEEK_CHAR, 0, 3, 0, SEXP_IPORT, 0, "peek-char", (sexp)"*current-input-port*", NULL),
-_OP(OPC_GENERIC, OP_EVAL, 1, 3, 0, 0, 0, "eval", (sexp)"*interaction-environment*", NULL),
+_FN1OPTP(SEXP_IPORT, "read", (sexp)"*current-input-port*", sexp_read),
+_FN2OPTP(0, SEXP_OPORT, "write", (sexp)"*current-output-port*", sexp_write),
+_FN2OPTP(0, SEXP_OPORT, "display", (sexp)"*current-output-port*", sexp_display),
+_FN1OPTP(SEXP_OPORT, "flush-output", (sexp)"*current-output-port*", sexp_flush_output),
 _FN2(0, 0, "equal?", 0, sexp_equalp),
 _FN1(0, "list?", 0, sexp_listp),
 _FN1(0, "identifier?", 0, sexp_identifierp),
@@ -88,7 +90,8 @@ _FN1(SEXP_STRING, "file-exists?", 0, sexp_file_exists_p),
 _FN0("make-environment", 0, sexp_make_env),
 _FN1(SEXP_FIXNUM, "null-environment", 0, sexp_make_null_env),
 _FN1(SEXP_FIXNUM, "scheme-report-environment", 0, sexp_make_standard_env),
-_FN2(SEXP_STRING, SEXP_ENV, "%load", 0, sexp_load),
+_FN2OPTP(0, SEXP_ENV, "eval", (sexp)"*interaction-environment*", sexp_eval),
+_FN2OPTP(SEXP_STRING, SEXP_ENV, "load", (sexp)"*interaction-environment*", sexp_load),
 _FN3(SEXP_ENV, SEXP_ENV, "%env-copy!", 0, sexp_env_copy),
 _FN2(SEXP_EXCEPTION, SEXP_OPORT, "print-exception", 0, sexp_print_exception),
 _FN1(SEXP_EXCEPTION, "exception-type", 0, sexp_exception_type_func),

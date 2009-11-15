@@ -57,7 +57,6 @@ enum opcode_names {
   OP_FCALL4,
   OP_FCALL5,
   OP_FCALL6,
-  OP_EVAL,
   OP_JUMP_UNLESS,
   OP_JUMP,
   OP_PUSH,
@@ -109,12 +108,8 @@ enum opcode_names {
   OP_INT2CHAR,
   OP_CHAR_UPCASE,
   OP_CHAR_DOWNCASE,
-  OP_DISPLAY,
-  OP_WRITE,
   OP_WRITE_CHAR,
   OP_NEWLINE,
-  OP_FLUSH_OUTPUT,
-  OP_READ,
   OP_READ_CHAR,
   OP_PEEK_CHAR,
   OP_RET,
@@ -135,9 +130,11 @@ SEXP_API void sexp_env_define (sexp context, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_make_context (sexp context, sexp stack, sexp env);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
-SEXP_API sexp sexp_make_foreign (sexp ctx, char *name, int num_args, sexp_proc1 f);
-SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args, sexp_proc1 f);
-#define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,(sexp_proc1)f)
+SEXP_API sexp sexp_make_foreign (sexp ctx, char *name, int num_args, int flags, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args, int flags, sexp_proc1 f, sexp data);
+
+#define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(sexp_proc1)f,NULL)
+#define sexp_define_foreign_opt(c,e,s,n,f,d) sexp_define_foreign_aux(c,e,s,n,1,(sexp_proc1)f,d)
 
 #if USE_TYPE_DEFS
 SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);

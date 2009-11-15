@@ -34,7 +34,7 @@
 (define (load-module-definition name)
   (let* ((file (module-name->file name))
          (path (find-module-file name file)))
-    (if path (%load path *config-env*))))
+    (if path (load path *config-env*))))
 
 (define (find-module name)
   (cond
@@ -53,7 +53,7 @@
           (let ((mod2 (load-module (cadr x))))
             (%env-copy! env (module-env mod2) (module-exports mod2))))
          ((include)
-          (for-each (lambda (f) (%load (find-module-file name f) env)) (cdr x)))
+          (for-each (lambda (f) (load (find-module-file name f) env)) (cdr x)))
          ((body)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))

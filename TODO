@@ -27,7 +27,7 @@
 **- scheme-complete.el support
 *= ffi
 **+ libdl interface
-**= opcode generation interface
+**+ opcode generation interface
 **- stub generator
 *= cleanup
 *- user documentation

@@ -92,7 +92,7 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
-lib/srfi/69/hash$(SO): lib/srfi/69/hash.c
+lib/srfi/69/hash$(SO): lib/srfi/69/hash.c $(INCLUDES)
 	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:
@@ -113,10 +113,10 @@ test-basic: chibi-scheme$(EXE)
 	done
 
 test-numbers: chibi-scheme$(EXE)
-	./chibi-scheme$(EXE) tests/numeric-tests.scm
+	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
-test: chibi-scheme$(EXE)
-	./chibi-scheme$(EXE) tests/r5rs-tests.scm
+test: all
+	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/r5rs-tests.scm
 
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)

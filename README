@@ -72,11 +72,15 @@ function takes (not counting the context argument), and a C function.
 
   /* sexp_define_foreign(context, env, name, num_args, f) */
 
-  sexp add1 (sexp context, sexp x) {
-    return sexp_fx_add(x, sexp_make_fixnum(1));
+  sexp add (sexp context, sexp x, sexp y) {
+    return sexp_fx_add(x, y);
   }
 
-  sexp_define_foreign(context, env, "add1", 1, add1)
+  sexp_define_foreign(context, env, "add", 2, add);
+
+You can also define functions with a single optional argument:
+
+  sexp_define_foreign_opt(context, env, "add", 2, add, sexp_make_fixnum(1));
 
 See the SRFI-69 implementation for more detailed examples of this.
 

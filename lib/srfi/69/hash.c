@@ -2,6 +2,7 @@
 #include <chibi/eval.h>
 
 #define HASH_DEPTH 5
+#define HASH_BOUND sexp_make_fixnum(SEXP_MAX_FIXNUM)
 
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
@@ -10,6 +11,8 @@
 #define sexp_hash_table_size(x)     sexp_slot_ref(x, 1)
 #define sexp_hash_table_hash_fn(x)  sexp_slot_ref(x, 2)
 #define sexp_hash_table_eq_fn(x)    sexp_slot_ref(x, 3)
+
+#define sexp_hash_resize_check(n, len) (((n)*3) > ((len)>>2))
 
 static sexp_uint_t string_hash (char *str, sexp_uint_t bound) {
   sexp_uint_t acc = FNV_OFFSET_BASIS;
@@ -147,6 +150,9 @@ static sexp sexp_scan_bucket (sexp ctx, sexp ls, sexp obj, sexp eq_fn) {
   return res;
 }
 
+/* static sexp sexp_regrow_hash_table (sexp ctx, sexp ht) { */
+/* } */
+
 static sexp sexp_hash_table_cell (sexp ctx, sexp ht, sexp obj, sexp createp) {
   sexp_gc_var1(res);
   sexp_uint_t size;
@@ -158,6 +164,11 @@ static sexp sexp_hash_table_cell (sexp ctx, sexp ht, sexp obj, sexp createp) {
   } else if (sexp_truep(createp)) {
     sexp_gc_preserve1(ctx, res);
     size = sexp_unbox_fixnum(sexp_hash_table_size(ht));
+    /* if (sexp_hash_resize_check(size, sexp_vector_length(buckets))) { */
+    /*   sexp_regrow_hash_table(ctx, ht); */
+    /*   buckets = sexp_hash_table_buckets(ht); */
+    /*   i = sexp_get_bucket(ctx, ht, obj); */
+    /* } */
     res = sexp_cons(ctx, obj, createp);
     sexp_vector_set(buckets, i, sexp_cons(ctx, res, sexp_vector_ref(buckets, i)));
     sexp_hash_table_size(ht) = sexp_make_fixnum(size+1);
@@ -171,6 +182,8 @@ static sexp sexp_hash_table_delete (sexp ctx, sexp ht, sexp obj) {
     i=sexp_get_bucket(ctx, ht, obj), p, res;
   res = sexp_scan_bucket(ctx, sexp_vector_ref(buckets, i), obj, eq_fn);
   if (sexp_pairp(res)) {
+    sexp_hash_table_size(ht)
+      = sexp_fx_sub(sexp_hash_table_size(ht), sexp_make_fixnum(1));
     if (res == sexp_vector_ref(buckets, i)) {
       sexp_vector_set(buckets, i, sexp_cdr(res));
     } else {
@@ -184,10 +197,10 @@ static sexp sexp_hash_table_delete (sexp ctx, sexp ht, sexp obj) {
 
 sexp sexp_init_library (sexp ctx, sexp env) {
 
-  sexp_define_foreign(ctx, env, "string-hash", 2, sexp_string_hash);
-  sexp_define_foreign(ctx, env, "string-ci-hash", 2, sexp_string_ci_hash);
-  sexp_define_foreign(ctx, env, "hash", 2, sexp_hash);
-  sexp_define_foreign(ctx, env, "hash-by-identity", 2, sexp_hash_by_identity);
+  sexp_define_foreign_opt(ctx, env, "string-hash", 2, sexp_string_hash, HASH_BOUND);
+  sexp_define_foreign_opt(ctx, env, "string-ci-hash", 2, sexp_string_ci_hash, HASH_BOUND);
+  sexp_define_foreign_opt(ctx, env, "hash", 2, sexp_hash, HASH_BOUND);
+  sexp_define_foreign_opt(ctx, env, "hash-by-identity", 2, sexp_hash_by_identity, HASH_BOUND);
   sexp_define_foreign(ctx, env, "hash-table-cell", 3, sexp_hash_table_cell);
   sexp_define_foreign(ctx, env, "hash-table-delete!", 2, sexp_hash_table_delete);
 
