@@ -98,12 +98,11 @@ enum sexp_types {
 
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
-/* #if SEXP_64_BIT */
-/* typedef unsigned int sexp_tag_t; */
-/* #else */
-/* typedef unsigned short sexp_tag_t; */
-/* #endif */
-typedef unsigned char sexp_tag_t;
+#if SEXP_64_BIT
+typedef unsigned int sexp_tag_t;
+#else
+typedef unsigned short sexp_tag_t;
+#endif
 typedef struct sexp_struct *sexp;
 
 #define __HALF_MAX_SIGNED(type) ((type)1 << (sizeof(type)*8-2))
@@ -143,8 +142,10 @@ struct sexp_struct {
     double flonum;
     struct {
       sexp_tag_t tag;
-      short field_base, field_len_base, field_len_off, field_len_scale;
-      short size_base, size_off, size_scale;
+      short field_base, field_eq_len_base, field_len_base, field_len_off;
+      unsigned short field_len_scale;
+      short size_base, size_off;
+      unsigned short size_scale;
       char *name;
     } type;
     struct {
@@ -165,7 +166,8 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      sexp_uint_t offset, line, size, openp, sourcep;
+      char openp, sourcep;
+      sexp_uint_t offset, line, size;
       sexp name;
       sexp cookie;
     } port;
@@ -352,9 +354,22 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_gc_mark(x)     ((x)->gc_mark)
 #define sexp_immutablep(x)  ((x)->immutablep)
 
-#define sexp_object_type(x)        (&(sexp_type_specs[(x)->tag]))
-#define sexp_object_type_name(x)   (sexp_type_name(sexp_object_type(x)))
-#define sexp_type_name_by_index(x) (sexp_type_name(&(sexp_type_specs[(x)])))
+#define sexp_object_type(x)             (&(sexp_type_specs[(x)->tag]))
+#define sexp_object_type_name(x)        (sexp_type_name(sexp_object_type(x)))
+#define sexp_type_name_by_index(x)      (sexp_type_name(&(sexp_type_specs[(x)])))
+
+#define sexp_type_size_of_object(t, x)                                  \
+  (((sexp_uint_t*)((char*)x + sexp_type_size_off(t)))[0]                \
+   * sexp_type_size_scale(t)                                            \
+   + sexp_type_size_base(t))
+#define sexp_type_num_slots_of_object(t, x)                             \
+  (((sexp_uint_t*)((char*)x + sexp_type_field_len_off(t)))[0]           \
+   * sexp_type_field_len_scale(t)                                       \
+   + sexp_type_field_len_base(t))
+#define sexp_type_num_eq_slots_of_object(t, x)                          \
+  (((sexp_uint_t*)((char*)x + sexp_type_field_len_off(t)))[0]           \
+   * sexp_type_field_len_scale(t)                                       \
+   + sexp_type_field_eq_len_base(t))
 
 #define sexp_check_tag(x,t)  (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
@@ -419,12 +434,19 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #define sexp_fixnum_to_double(x) ((double)sexp_unbox_fixnum(x))
 
+#if USE_FLONUMS
+#define sexp_fp_integerp(x) (sexp_flonum_value(x) == trunc(sexp_flonum_value(x)))
+#define _or_integer_flonump(x) || (sexp_flonump(x) && sexp_fp_integerp(x))
+#else
+#define _or_integer_flonump(x)
+#endif
+
 #if USE_BIGNUMS
 SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
-#define sexp_integerp(x) (sexp_fixnump(x) || sexp_bignump(x))
+#define sexp_integerp(x) (sexp_fixnump(x) || sexp_bignump(x) _or_integer_flonump(x))
 #else
 #define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
-#define sexp_integerp sexp_fixnump
+#define sexp_integerp(x) (sexp_fixnump(x) _or_integer_flonump(x))
 #endif
 
 #if USE_FLONUMS
@@ -555,15 +577,16 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 
 #define sexp_context_top(x)     (sexp_stack_top(sexp_context_stack(x)))
 
-#define sexp_type_tag(x)              ((x)->value.type.tag)
-#define sexp_type_field_base(x)       ((x)->value.type.field_base)
-#define sexp_type_field_len_base(x)   ((x)->value.type.field_len_base)
-#define sexp_type_field_len_off(x)    ((x)->value.type.field_len_off)
-#define sexp_type_field_len_scale(x)  ((x)->value.type.field_len_scale)
-#define sexp_type_size_base(x)        ((x)->value.type.size_base)
-#define sexp_type_size_off(x)         ((x)->value.type.size_off)
-#define sexp_type_size_scale(x)       ((x)->value.type.size_scale)
-#define sexp_type_name(x)             ((x)->value.type.name)
+#define sexp_type_tag(x)               ((x)->value.type.tag)
+#define sexp_type_field_base(x)        ((x)->value.type.field_base)
+#define sexp_type_field_eq_len_base(x) ((x)->value.type.field_eq_len_base)
+#define sexp_type_field_len_base(x)    ((x)->value.type.field_len_base)
+#define sexp_type_field_len_off(x)     ((x)->value.type.field_len_off)
+#define sexp_type_field_len_scale(x)   ((x)->value.type.field_len_scale)
+#define sexp_type_size_base(x)         ((x)->value.type.size_base)
+#define sexp_type_size_off(x)          ((x)->value.type.size_off)
+#define sexp_type_size_scale(x)        ((x)->value.type.size_scale)
+#define sexp_type_name(x)              ((x)->value.type.name)
 
 #define sexp_bignum_sign(x)           ((x)->value.bignum.sign)
 #define sexp_bignum_length(x)         ((x)->value.bignum.length)
@@ -686,7 +709,7 @@ SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
 SEXP_API void sexp_init(void);
 
 #if USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
 #endif
 
