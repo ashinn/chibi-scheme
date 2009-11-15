@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: all doc dist clean cleaner test install uninstall
+.PHONY: all libs doc dist clean cleaner test install uninstall
 
 CC       ?= cc
 PREFIX   ?= /usr/local
@@ -48,7 +48,9 @@ STATICFLAGS = -static
 endif
 endif
 
-all: chibi-scheme$(EXE)
+all: chibi-scheme$(EXE) libs
+
+libs: lib/srfi/69/hash$(SO)
 
 ifeq ($(USE_BOEHM),1)
 GCLDFLAGS := -lgc
@@ -89,6 +91,9 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
+
+lib/srfi/69/hash$(SO): lib/srfi/69/hash.c
+	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:
 	rm -f *.o *.i *.s *.8

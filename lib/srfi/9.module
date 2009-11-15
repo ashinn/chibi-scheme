@@ -20,6 +20,30 @@
             (let lp ((ls ls) (i 0))
               (if (eq? field (caar ls)) i (lp (cdr ls) (+ i 1)))))
           `(,(rename 'begin)
+            (,_define ,pred (,(rename 'make-type-predicate)
+                             ,(symbol->string pred)
+                             ,index))
+            ,@(let lp ((ls fields) (i 0) (res '()))
+                (if (null? ls)
+                    res
+                    (let ((res
+                           (cons `(,_define ,(cadar ls)
+                                    (,(rename 'make-getter)
+                                     ,(symbol->string (cadar ls))
+                                     ,index
+                                     ,i))
+                                 res)))
+                      (lp (cdr ls)
+                          (+ i 1)
+                          (if (pair? (cddar ls))
+                              (cons
+                               `(,_define ,(caddar ls)
+                                  (,(rename 'make-setter)
+                                   ,(symbol->string (caddar ls))
+                                   ,index
+                                   ,i))
+                               res)
+                              res)))))
             (,_define ,make
               ,(let lp ((ls make-fields) (sets '()) (set-defs '()))
                  (cond
@@ -54,29 +78,5 @@
                                                setter-name
                                                index
                                                (index-of (car ls) fields)))
-                                   set-defs))))))))))
-            (,_define ,pred (,(rename 'make-type-predicate)
-                             ,(symbol->string pred)
-                             ,index))
-            ,@(let lp ((ls fields) (i 0) (res '()))
-                (if (null? ls)
-                    res
-                    (let ((res
-                           (cons `(,_define ,(cadar ls)
-                                    (,(rename 'make-getter)
-                                     ,(symbol->string (cadar ls))
-                                     ,index
-                                     ,i))
-                                 res)))
-                      (lp (cdr ls)
-                          (+ i 1)
-                          (if (pair? (cddar ls))
-                              (cons
-                               `(,_define ,(caddar ls)
-                                  (,(rename 'make-setter)
-                                   ,(symbol->string (caddar ls))
-                                   ,index
-                                   ,i))
-                               res)
-                              res))))))))))))
+                                   set-defs)))))))))))))))))
 

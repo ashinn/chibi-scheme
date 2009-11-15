@@ -124,17 +124,20 @@ enum opcode_names {
 
 /**************************** prototypes ******************************/
 
-SEXP_API void sexp_scheme_init(void);
-SEXP_API sexp sexp_apply(sexp context, sexp proc, sexp args);
-SEXP_API sexp sexp_eval(sexp context, sexp obj, sexp env);
-SEXP_API sexp sexp_eval_string(sexp context, char *str, sexp env);
-SEXP_API sexp sexp_load(sexp context, sexp expr, sexp env);
-SEXP_API sexp sexp_make_env(sexp context);
-SEXP_API sexp sexp_env_copy(sexp context, sexp to, sexp from, sexp ls);
-SEXP_API void sexp_env_define(sexp context, sexp env, sexp sym, sexp val);
-SEXP_API sexp sexp_make_context(sexp context, sexp stack, sexp env);
-SEXP_API void sexp_warn_undefs(sexp ctx, sexp from, sexp to, sexp out);
-SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc0);
+SEXP_API void sexp_scheme_init (void);
+SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
+SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
+SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
+SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
+SEXP_API sexp sexp_make_env (sexp context);
+SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls);
+SEXP_API void sexp_env_define (sexp context, sexp env, sexp sym, sexp val);
+SEXP_API sexp sexp_make_context (sexp context, sexp stack, sexp env);
+SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
+SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
+SEXP_API sexp sexp_make_foreign (sexp ctx, char *name, int num_args, sexp_proc1 f);
+SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args, sexp_proc1 f);
+#define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,(sexp_proc1)f)
 
 #if USE_TYPE_DEFS
 SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);

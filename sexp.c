@@ -446,7 +446,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
     q0 = ((char*)q + sexp_type_num_slots_of_object(t,b)*sizeof(sexp));
     if (size != sexp_type_size_of_object(t,b)-offsetof(struct sexp_struct,value))
       return SEXP_FALSE;
-    if (memcmp(p0, q0, size-((char*)p0-(char*)p)))
+    if (memcmp(p0, q0, size))
       return SEXP_FALSE;
   }
   /* check eq-object slots */

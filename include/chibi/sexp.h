@@ -208,7 +208,7 @@ struct sexp_struct {
         arg1_type, arg2_type, inverse;
       char *name;
       sexp data, data2, proc;
-      sexp_proc0 func;
+      sexp_proc1 func;
     } opcode;
     struct {
       char code;
