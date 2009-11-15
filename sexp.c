@@ -863,7 +863,7 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   return p;
 }
 
-void sexp_write (sexp ctx, sexp obj, sexp out) {
+sexp sexp_write (sexp ctx, sexp obj, sexp out) {
   unsigned long len, c, res;
   long i=0;
   double f;
@@ -1026,6 +1026,22 @@ void sexp_write (sexp ctx, sexp obj, sexp out) {
       sexp_write_string(ctx, "#<invalid immediate>", out);
     }
   }
+  return SEXP_VOID;
+}
+
+sexp sexp_display (sexp ctx, sexp obj, sexp out) {
+  if (sexp_stringp(obj))
+    sexp_write_string(ctx, sexp_string_data(obj), out);
+  else if (sexp_charp(obj))
+    sexp_write_char(ctx, sexp_unbox_character(obj), out);
+  else
+    sexp_write(ctx, obj, out);
+  return SEXP_VOID;
+}
+
+sexp sexp_flush_output (sexp ctx, sexp out) {
+  sexp_flush(ctx, out);
+  return SEXP_VOID;
 }
 
 #define INIT_STRING_BUFFER_SIZE 128

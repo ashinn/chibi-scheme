@@ -871,7 +871,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     num_args++;
   }
 
-  /* push the arguments onto the stack */
+  /* push the arguments onto the stack in reverse order */
   ls = ((sexp_opcode_inverse(op)
          && (sexp_opcode_class(op) != OPC_ARITHMETIC_INV))
         ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
@@ -1401,12 +1401,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_EVAL:
-    sexp_context_top(ctx) = top;
-    _ARG2 = sexp_eval(ctx, _ARG1, _ARG2);
-    top--;
-    sexp_check_exception();
-    break;
   case OP_JUMP_UNLESS:
     if (stack[--top] == SEXP_FALSE)
       ip += _SWORD0;
@@ -1886,24 +1880,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("char-downcase: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
     break;
-  case OP_DISPLAY:
-    if (sexp_stringp(_ARG1)) {
-      sexp_write_string(ctx, sexp_string_data(_ARG1), _ARG2);
-      _ARG2 = SEXP_VOID;
-      top--;
-      break;
-    } else if (sexp_charp(_ARG1)) {
-      sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
-      _ARG2 = SEXP_VOID;
-      top--;
-      break;
-    }
-    /* ... FALLTHROUGH ... */
-  case OP_WRITE:
-    sexp_write(ctx, _ARG1, _ARG2);
-    _ARG2 = SEXP_VOID;
-    top--;
-    break;
   case OP_WRITE_CHAR:
     if (! sexp_charp(_ARG1))
       sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
@@ -1914,15 +1890,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case OP_NEWLINE:
     sexp_newline(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
-    break;
-  case OP_FLUSH_OUTPUT:
-    sexp_flush(ctx, _ARG1);
-    _ARG1 = SEXP_VOID;
-    break;
-  case OP_READ:
-    sexp_context_top(ctx) = top;
-    _ARG1 = sexp_read(ctx, _ARG1);
-    sexp_check_exception();
     break;
   case OP_READ_CHAR:
     i = sexp_read_char(ctx, _ARG1);
@@ -2251,7 +2218,8 @@ sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
   return res;
 }
 
-sexp sexp_make_foreign (sexp ctx, char *name, int num_args, sexp_proc1 f) {
+sexp sexp_make_foreign (sexp ctx, char *name, int num_args,
+                        int flags, sexp_proc1 f, sexp data) {
   sexp res;
   if (num_args > 6) {
     res = sexp_type_exception(ctx, "make-foreign: exceeded foreign arg limit",
@@ -2260,19 +2228,22 @@ sexp sexp_make_foreign (sexp ctx, char *name, int num_args, sexp_proc1 f) {
     res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
     sexp_opcode_class(res) = OPC_FOREIGN;
     sexp_opcode_code(res) = OP_FCALL1+num_args-1;
+    if (flags & 1) num_args--;
     sexp_opcode_num_args(res) = num_args;
+    sexp_opcode_flags(res) = flags;
     sexp_opcode_name(res) = name;
+    sexp_opcode_data(res) = data;
     sexp_opcode_func(res) = f;
   }
   return res;
 }
 
-sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name,
-                              int num_args, sexp_proc1 f) {
+sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args,
+                              int flags, sexp_proc1 f, sexp data) {
   sexp_gc_var1(op);
   sexp_gc_preserve1(ctx, op);
   sexp res = SEXP_VOID;
-  op = sexp_make_foreign(ctx, name, num_args, (sexp_proc1)f);
+  op = sexp_make_foreign(ctx, name, num_args, flags, f, data);
   if (sexp_exceptionp(op))
     res = op;
   else
