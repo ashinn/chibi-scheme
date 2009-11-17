@@ -1318,6 +1318,12 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       else
         goto scan_loop;
       break;
+    case '!':
+      while ((c1 = sexp_read_char(ctx, in)) != EOF)
+        if (c1 == '\n')
+          break;
+      sexp_port_line(in)++;
+      goto scan_loop;
     case '\\':
       c1 = sexp_read_char(ctx, in);
       res = sexp_read_symbol(ctx, in, c1, 0);
