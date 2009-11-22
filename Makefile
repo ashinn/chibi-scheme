@@ -62,10 +62,10 @@ endif
 
 ifeq ($(USE_DL),0)
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -DUSE_DL=0 -g3 $(CFLAGS)
+XCFLAGS   := -Wall -DUSE_DL=0 -g3 -O2 $(CFLAGS)
 else
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -ldl -lm
-XCFLAGS   := -Wall -g3 $(CFLAGS)
+XCFLAGS   := -Wall -g3 -O2 $(CFLAGS)
 endif
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
@@ -77,7 +77,7 @@ include/chibi/install.h: Makefile
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
-eval.o: eval.c debug.c opcodes.c $(INCLUDES) include/chibi/eval.h Makefile
+eval.o: eval.c opt/debug.c opcodes.c $(INCLUDES) include/chibi/eval.h Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 main.o: main.c $(INCLUDES) include/chibi/eval.h Makefile
