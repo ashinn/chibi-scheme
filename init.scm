@@ -122,7 +122,9 @@
          #f
          ((lambda (cl)
             (if (compare 'else (car cl))
-                (cons (rename 'begin) (cdr cl))
+                (if (pair? (cddr expr))
+                    (error "non-final else in cond" expr)
+                    (cons (rename 'begin) (cdr cl)))
                 (if (if (null? (cdr cl)) #t (compare '=> (cadr cl)))
                     (list (list (rename 'lambda) (list (rename 'tmp))
                                 (list (rename 'if) (rename 'tmp)

@@ -960,6 +960,7 @@ static void generate_general_app (sexp ctx, sexp app) {
   emit(ctx, (tailp ? OP_TAIL_CALL : OP_CALL));
   emit_word(ctx, (sexp_uint_t)sexp_make_fixnum(len));
 
+  sexp_context_tailp(ctx) = tailp;
   sexp_context_depth(ctx) -= len;
   sexp_gc_release1(ctx);
 }
