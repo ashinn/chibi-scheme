@@ -108,7 +108,8 @@
          car cdr set-car! set-cdr! caar cadr cdar cddr caaar caadr cadar caddr
          cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar cadadr
          caddar cadddr cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
-         null? list? list length append reverse list-tail list-ref memq memv
+         null? list? list length append reverse reverse!
+         list-tail list-ref memq memv
          member assq assv assoc symbol? symbol->string string->symbol char?
          char=? char<? char>? char<=? char>=? char-ci=? char-ci<? char-ci>?
          char-ci<=? char-ci>=? char-alphabetic? char-numeric? char-whitespace?

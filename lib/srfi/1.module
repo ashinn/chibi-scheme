@@ -19,11 +19,11 @@
    lset-intersection! lset-difference lset-difference! lset-xor lset-xor!
    lset-diff+intersection lset-diff+intersection!)
   (import (scheme))
-  (include "srfi/1/constructors.scm"
-           "srfi/1/predicates.scm"
+  (include "srfi/1/predicates.scm"
            "srfi/1/selectors.scm"
-           "srfi/1/misc.scm"
            "srfi/1/search.scm"
+           "srfi/1/misc.scm"
+           "srfi/1/constructors.scm"
            "srfi/1/fold.scm"
            "srfi/1/deletion.scm"
            "srfi/1/alists.scm"

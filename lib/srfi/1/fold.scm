@@ -59,7 +59,7 @@
             (let lp ((ls (cdr rev-ls)) (res (car rev-ls)))
               (if (null? ls) res (lp (cdr ls) (append (f (car ls) res))))
               )))
-      (if (and (pair? ls) (every pair lists))
+      (if (and (pair? ls) (every pair? lists))
           (let lp ((lists (cons ls lists)))
             (let ((vals (apply f (map car lists)))
                   (cdrs (map cdr lists)))

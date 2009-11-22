@@ -86,7 +86,6 @@ _FN1(SEXP_STRING, "open-input-file", 0, sexp_open_input_file),
 _FN1(SEXP_STRING, "open-output-file", 0, sexp_open_output_file),
 _FN1(SEXP_IPORT, "close-input-port", 0, sexp_close_port),
 _FN1(SEXP_OPORT, "close-output-port", 0, sexp_close_port),
-_FN1(SEXP_STRING, "file-exists?", 0, sexp_file_exists_p),
 _FN0("make-environment", 0, sexp_make_env),
 _FN1(SEXP_FIXNUM, "null-environment", 0, sexp_make_null_env),
 _FN1(SEXP_FIXNUM, "scheme-report-environment", 0, sexp_make_standard_env),
@@ -142,5 +141,6 @@ _FN2OPTP(SEXP_PROCEDURE, SEXP_OPORT, "disasm", (sexp)"*current-error-port*", sex
 #if PLAN9
 #include "opt/plan9-opcodes.c"
 #endif
+_FN1(SEXP_STRING, "file-exists?", 0, sexp_file_exists_p),
 };
 

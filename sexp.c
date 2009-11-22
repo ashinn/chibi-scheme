@@ -976,10 +976,13 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
 #if ! USE_IMMEDIATE_FLONUMS
     case SEXP_FLONUM:
       f = sexp_flonum_value(obj);
+#if USE_INFINITIES
       if (isinf(f) || isnan(f)) {
         numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
         strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
-      } else {
+      } else
+#endif
+      {
         i = sprintf(numbuf, "%.15g", f);
         if (f == trunc(f) && ! strchr(numbuf, '.')) {
           numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
@@ -1039,10 +1042,13 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
 #if USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
     f = sexp_flonum_value(obj);
+#if USE_INFINITIES
     if (isinf(f) || isnan(f)) {
       numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
       strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
-    } else {
+    } else
+#endif
+    {
       i = sprintf(numbuf, "%.15g", f);
       if (f == trunc(f) && ! strchr(numbuf, '.')) {
         numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
@@ -1485,7 +1491,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     } else {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_symbol(ctx, in, c1, 1);
-#if USE_FLONUMS
+#if USE_INFINITIES
       if (res == sexp_intern(ctx, "+inf.0"))
         res = sexp_make_flonum(ctx, 1.0/0.0);
       else if (res == sexp_intern(ctx, "-inf.0"))
