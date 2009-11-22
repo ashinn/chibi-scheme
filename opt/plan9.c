@@ -3,12 +3,21 @@
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
 sexp sexp_rand (sexp ctx) {
-  return sexp_make_integer(rand());
+  return sexp_make_fixnum(rand());
 }
 
 sexp sexp_srand (sexp ctx, sexp seed) {
-  srand(sexp_unbox_integer(seed));
+  srand(sexp_unbox_fixnum(seed));
   return SEXP_VOID;
+}
+
+sexp sexp_file_exists_p (sexp ctx, sexp path) {
+  int res;
+  uchar statbuf[STATMAX];
+  if (! sexp_stringp(path))
+    return sexp_type_exception(ctx, "file-exists?: not a string", path);
+  res = stat(sexp_string_data(path), statbuf, sizeof(statbuf));
+  return (res < 0) ? SEXP_FALSE : SEXP_TRUE;
 }
 
 sexp sexp_fdopen (sexp ctx, sexp fd, sexp mode) {
@@ -17,7 +26,7 @@ sexp sexp_fdopen (sexp ctx, sexp fd, sexp mode) {
     return sexp_type_exception(ctx, "fdopen: not an integer", fd);
   if (! sexp_stringp(mode))
     return sexp_type_exception(ctx, "fdopen: not a mode string", mode);
-  f = fdopen(sexp_unbox_integer(fd), sexp_string_data(mode));
+  f = fdopen(sexp_unbox_fixnum(fd), sexp_string_data(mode));
   if (! f)
     return sexp_user_exception(ctx, SEXP_FALSE, "fdopen failed", fd);
   /* maybe use fd2path to get the name of the fd */
@@ -30,15 +39,15 @@ sexp sexp_fdopen (sexp ctx, sexp fd, sexp mode) {
 sexp sexp_fileno (sexp ctx, sexp port) {
   if (! sexp_portp(port))
     return sexp_type_exception(ctx, "fileno: not a port", port);
-  return sexp_make_integer(fileno(sexp_port_stream(port)));
+  return sexp_make_fixnum(fileno(sexp_port_stream(port)));
 }
 
 sexp sexp_fork (sexp ctx) {
-  return sexp_make_integer(fork());
+  return sexp_make_fixnum(fork());
 }
 
 sexp sexp_exec (sexp ctx, sexp name, sexp args) {
-  int i, len = sexp_unbox_integer(sexp_length(ctx, args));
+  int i, len = sexp_unbox_fixnum(sexp_length(ctx, args));
   char **argv = malloc((len+1)*sizeof(char*));
   for (i=0; i<len; i++, args=sexp_cdr(args))
     argv[i] = sexp_string_data(sexp_car(args));
@@ -53,20 +62,20 @@ void sexp_exits (sexp ctx, sexp msg) {
 }
 
 sexp sexp_dup (sexp ctx, sexp oldfd, sexp newfd) {
-  return sexp_make_integer(dup(sexp_unbox_integer(oldfd),
-                               sexp_unbox_integer(newfd)));
+  return sexp_make_fixnum(dup(sexp_unbox_fixnum(oldfd),
+                               sexp_unbox_fixnum(newfd)));
 }
 
 sexp sexp_pipe (sexp ctx) {
   int fds[2];
   pipe(fds);
-  return sexp_list2(ctx, sexp_make_integer(fds[0]), sexp_make_integer(fds[1]));
+  return sexp_list2(ctx, sexp_make_fixnum(fds[0]), sexp_make_fixnum(fds[1]));
 }
 
 sexp sexp_sleep (sexp ctx, sexp msecs) {
   if (! sexp_integerp(msecs))
     return sexp_type_exception(ctx, "sleep: not an integer", msecs);
-  sleep(sexp_unbox_integer(msecs));
+  sleep(sexp_unbox_fixnum(msecs));
   return SEXP_VOID;
 }
 
@@ -106,7 +115,7 @@ sexp sexp_wait (sexp ctx) {     /* just return (pid msg) */
   sexp_gc_preserve(ctx, msg, s_msg);
   wmsg = wait();
   msg = sexp_c_string(ctx, wmsg->msg, -1);
-  res = sexp_list2(ctx, sexp_make_integer(wmsg->pid), msg);
+  res = sexp_list2(ctx, sexp_make_fixnum(wmsg->pid), msg);
   sexp_gc_release(ctx, msg, s_msg);
   return res;
 }
@@ -116,7 +125,7 @@ sexp sexp_postnote (sexp ctx, sexp pid, sexp note) {
     return sexp_type_exception(ctx, "postnote: not an integer", pid);
   if (! sexp_stringp(note))
     return sexp_type_exception(ctx, "postnote: not a string", note);
-  postnote(PNPROC, sexp_unbox_integer(pid), sexp_string_data(note));
+  postnote(PNPROC, sexp_unbox_fixnum(pid), sexp_string_data(note));
   return SEXP_VOID;
 }
 
@@ -303,28 +312,30 @@ sexp sexp_postmountsrv (sexp ctx, sexp ls, sexp name, sexp mtpt, sexp flags) {
   s.destroyreq = &sexp_9p_destroyreq;
   s.end = &sexp_9p_end;
   postmountsrv(&s, sexp_string_data(name), sexp_string_data(mtpt),
-               sexp_unbox_integer(flags));
+               sexp_unbox_fixnum(flags));
   return SEXP_UNDEF;
 }
 
 sexp sexp_9p_req_offset (sexp ctx, sexp req) {
-  return sexp_make_integer(ctx, (Req*)sexp_cpointer_value(req)->ifcall.offset);
+  return sexp_make_integer(ctx, ((Req*)sexp_cpointer_value(req))->ifcall.offset);
 }
 
 sexp sexp_9p_req_count (sexp ctx, sexp req) {
-  return sexp_make_integer(ctx, (Req*)sexp_cpointer_value(req)->ifcall.count);
+  return sexp_make_integer(ctx, ((Req*)sexp_cpointer_value(req))->ifcall.count);
 }
 
+#if 0
 sexp sexp_9p_req_path (sexp ctx, sexp req) {
-  return sexp_c_string(ctx, (Req*)sexp_cpointer_value(req)->fid.qid.path, -1);
+  return sexp_c_string(ctx, ((Req*)sexp_cpointer_value(req))->fid->qid.path, -1);
 }
+#endif
 
 sexp sexp_9p_req_fid (sexp ctx, sexp req) {
-  return sexp_make_cpointer(ctx, (Req*)sexp_cpointer_value(req)->fid);
+  return sexp_make_cpointer(ctx, ((Req*)sexp_cpointer_value(req))->fid);
 }
 
 sexp sexp_9p_req_newfid (sexp ctx, sexp req) {
-  return sexp_make_cpointer(ctx, (Req*)sexp_cpointer_value(req)->newfid);
+  return sexp_make_cpointer(ctx, ((Req*)sexp_cpointer_value(req))->newfid);
 }
 
 sexp sexp_9p_respond (sexp ctx, sexp req, sexp err) {

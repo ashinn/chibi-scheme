@@ -29,3 +29,11 @@
               (and (eq (car ls1) (car ls2))
                    (lp2 (cdr ls1) (cdr ls2))))))))
 
+(define (length+ x)
+  (if (not (pair? x))
+      0
+      (let lp ((hare (cdr x)) (tortoise x) (res 0))
+        (and (not (eq? hare tortoise))
+             (if (pair? hare)
+                 (lp (cddr hare) (cdr tortoise) (+ res 1))
+                 res)))))

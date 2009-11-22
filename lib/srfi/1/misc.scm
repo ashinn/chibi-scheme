@@ -3,18 +3,11 @@
   (let lp ((ls ls) (res init))
     (if (null? ls) res (lp (cdr ls) (cons (proc (car ls)) res)))))
 
-(define (length+ x)
-  (if (not (pair? x))
-      0
-      (let lp ((hare (cdr x)) (tortoise x) (res 0))
-        (and (not (eq? hare tortoise))
-             (if (pair? hare)
-                 (lp (cddr hare) (cdr tortoise) (+ res 1))
-                 res)))))
-
 (define (append! . lists) (concatenate! lists))
 
-(define (concatenate lists) (reduce-right append '() lists))
+(define (concatenate lists)
+  (let lp ((ls (reverse lists)) (res '()))
+    (if (null? ls) res (lp (cdr ls) (append (car ls) res)))))
 
 (define (concatenate! lists)
   (if (null? lists)
@@ -45,7 +38,7 @@
   (values (map car ls) (map cadr ls) (map caddr ls) (map cadddr ls)))
 (define (unzip5 ls)
   (values (map car ls) (map cadr ls) (map caddr ls)
-          (map cadddr ls) (map fifth ls)))
+          (map cadddr ls) (map (lambda (x) (car (cddddr x))) ls)))
 
 (define (count pred ls . lists)
   (if (null? lists)

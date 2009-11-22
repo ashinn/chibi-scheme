@@ -53,6 +53,10 @@
 /*   and write flonums directly through the sexp API. */
 /* #define USE_FLONUMS 0 */
 
+/* uncomment this to disable reading/writing IEEE infinities */
+/*   By default you can read/write +inf.0, -inf.0 and +nan.0 */
+/* #define USE_INFINITIES 0 */
+
 /* uncomment this if you want immediate flonums */
 /*   This is experimental, enablde at your own risk. */
 /* #define USE_IMMEDIATE_FLONUMS 1 */
@@ -175,6 +179,14 @@
 
 #ifndef USE_FLONUMS
 #define USE_FLONUMS 1
+#endif
+
+#ifndef USE_INFINITIES
+#if defined(PLAN9) || ! USE_FLONUMS
+#define USE_INFINITIES 0
+#else
+#define USE_INFINITIES 1
+#endif
 #endif
 
 #ifndef USE_IMMEDIATE_FLONUMS
