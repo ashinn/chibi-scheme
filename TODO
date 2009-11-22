@@ -2,7 +2,7 @@
 
 *+ precise gc rewrite
 **+ fix heap growing
-**- separate gc heaps
+**+ separate gc heaps
 **- finalizers
 **- weak references
 *+ ast rewrite

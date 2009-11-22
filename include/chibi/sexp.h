@@ -161,6 +161,7 @@ struct sexp_struct {
       short size_base, size_off;
       unsigned short size_scale;
       char *name;
+      sexp_proc2 finalize;
     } type;
     struct {
       sexp car, cdr;
@@ -615,6 +616,7 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_type_size_off(x)          ((x)->value.type.size_off)
 #define sexp_type_size_scale(x)        ((x)->value.type.size_scale)
 #define sexp_type_name(x)              ((x)->value.type.name)
+#define sexp_type_finalize(x)          ((x)->value.type.finalize)
 
 #define sexp_bignum_sign(x)           ((x)->value.bignum.sign)
 #define sexp_bignum_length(x)         ((x)->value.bignum.length)
