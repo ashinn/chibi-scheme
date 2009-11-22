@@ -73,6 +73,7 @@ sexp sexp_init_environments (sexp ctx) {
   sexp res, env;
   sexp_gc_var1(confenv);
   env = sexp_context_env(ctx);
+  sexp_env_define(ctx, env, sexp_intern(ctx, "*command-line-arguments*"), SEXP_NULL);
   res = sexp_load_module_file(ctx, sexp_init_file, env);
 #if USE_MODULES
   if (! sexp_exceptionp(res)) {
@@ -125,13 +126,14 @@ void repl (sexp ctx) {
 
 void run_main (int argc, char **argv) {
   sexp env, out=NULL, res=SEXP_VOID, ctx;
-  sexp_uint_t i, quit=0, init_loaded=0;
-  sexp_gc_var1(str);
+  sexp_sint_t i, quit=0, init_loaded=0;
+  sexp_gc_var2(str, args);
 
   ctx = sexp_make_eval_context(NULL, NULL, NULL);
-  sexp_gc_preserve1(ctx, str);
+  sexp_gc_preserve2(ctx, str, args);
   env = sexp_context_env(ctx);
   out = sexp_eval_string(ctx, "(current-output-port)", env);
+  args = SEXP_NULL;
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
@@ -165,6 +167,11 @@ void run_main (int argc, char **argv) {
     case 'm':
       chibi_module_dir = argv[++i];
       break;
+    case 's':
+      for (argc=argc-1; argc>i+1; argc--)
+        args = sexp_cons(ctx, str=sexp_c_string(ctx,argv[argc],-1), args);
+      argc++;
+      break;
     default:
       errx(1, "unknown option: %s", argv[i]);
     }
@@ -173,6 +180,7 @@ void run_main (int argc, char **argv) {
   if (! quit) {
     if (! init_loaded)
       res = sexp_init_environments(ctx);
+    sexp_env_define(ctx, env, sexp_intern(ctx, "*command-line-arguments*"), args);
     if (res && sexp_exceptionp(res))
       sexp_print_exception(ctx, res,
                            sexp_eval_string(ctx, "(current-error-port)", env));
@@ -183,7 +191,7 @@ void run_main (int argc, char **argv) {
       repl(ctx);
   }
 
-  sexp_gc_release1(ctx);
+  sexp_gc_release2(ctx);
 }
 
 int main (int argc, char **argv) {

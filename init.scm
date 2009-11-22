@@ -530,6 +530,8 @@
       (current-output-port old-out)
       res)))
 
+(define (command-line-arguments) *command-line-arguments*)
+
 ;; values
 
 (define *values-tag* (list 'values))
