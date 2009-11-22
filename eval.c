@@ -17,7 +17,7 @@ static sexp the_cur_in_symbol, the_cur_out_symbol, the_cur_err_symbol;
 #define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
 
 #if USE_DEBUG
-#include "debug.c"
+#include "opt/debug.c"
 #else
 #define print_stack(...)
 #define print_bytecode(...)
