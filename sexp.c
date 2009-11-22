@@ -19,14 +19,6 @@ static struct sexp_huff_entry huff_table[] = {
 
 static int sexp_initialized_p = 0;
 
-static sexp the_dot_symbol;
-static sexp the_quote_symbol;
-static sexp the_quasiquote_symbol;
-static sexp the_unquote_symbol;
-static sexp the_unquote_splicing_symbol;
-static sexp the_read_error_symbol;
-static sexp the_empty_vector;
-
 sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp);
 
 static char sexp_separators[] = {
@@ -51,7 +43,9 @@ static int is_separator(int c) {
   return 0<c && c<0x60 && sexp_separators[c];
 }
 
+#if USE_GLOBAL_SYMBOLS
 sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
+#endif
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   sexp res = (sexp) sexp_alloc(ctx, size);
@@ -92,7 +86,7 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"),
   _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal"),
   _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack"),
-  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 6, 6, 0, 0, sexp_sizeof(context), 0, 0, "context"),
+  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 7, 7, 0, 0, sexp_sizeof(context), 0, 0, "context"),
 };
 #undef _DEF_TYPE
 
@@ -164,6 +158,83 @@ sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots) {
 #endif
 
 #endif  /* ! USE_BOEHM */
+
+/****************************** contexts ******************************/
+
+void sexp_init_context_globals (sexp ctx) {
+  sexp_context_globals(ctx)
+    = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
+#if ! USE_GLOBAL_SYMBOLS
+  sexp_global(ctx, SEXP_G_SYMBOLS) = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_SYMBOL_TABLE_SIZE), SEXP_NULL);
+#endif
+  sexp_global(ctx, SEXP_G_QUOTE_SYMBOL) = sexp_intern(ctx, "quote");
+  sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL) = sexp_intern(ctx, "quasiquote");
+  sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL) = sexp_intern(ctx, "unquote");
+  sexp_global(ctx, SEXP_G_UNQUOTE_SPLICING_SYMBOL) = sexp_intern(ctx, "unquote-splicing");
+  sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "*current-input-port*");
+  sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "*current-output-port*");
+  sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "*current-error-port*");
+  sexp_global(ctx, SEXP_G_ERR_HANDLER_SYMBOL) = sexp_intern(ctx, "*current-exception-handler*");
+  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "*interaction-environment*");
+  sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
+  sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
+}
+
+#if ! USE_GLOBAL_HEAP
+sexp sexp_bootstrap_context (void) {
+  sexp dummy_ctx, ctx;
+  sexp_heap heap = sexp_make_heap(sexp_heap_align(SEXP_INITIAL_HEAP_SIZE));
+  dummy_ctx = (sexp) malloc(sexp_sizeof(context));
+  sexp_pointer_tag(dummy_ctx) = SEXP_CONTEXT;
+  sexp_context_saves(dummy_ctx) = NULL;
+  sexp_context_heap(dummy_ctx) = heap;
+  ctx = sexp_alloc_type(dummy_ctx, context, SEXP_CONTEXT);
+  sexp_context_heap(dummy_ctx) = NULL;
+  sexp_context_heap(ctx) = heap;
+  return ctx;
+}
+#endif
+
+sexp sexp_make_context (sexp ctx) {
+  sexp_gc_var1(res);
+  if (ctx) sexp_gc_preserve1(ctx, res);
+#if ! USE_GLOBAL_HEAP
+  if (! ctx) res = sexp_bootstrap_context();
+  else
+#endif
+    {
+      res = sexp_alloc_type(ctx, context, SEXP_CONTEXT);
+#if ! USE_BOEHM && ! USE_MALLOC
+      sexp_context_heap(res) = sexp_context_heap(ctx);
+#endif
+    }
+  sexp_context_parent(res) = ctx;
+  sexp_context_lambda(res) = SEXP_FALSE;
+  sexp_context_fv(res) = SEXP_NULL;
+  sexp_context_saves(res) = 0;
+  sexp_context_depth(res) = 0;
+  sexp_context_pos(res) = 0;
+  sexp_context_tailp(res) = 1;
+  sexp_context_tracep(res) = 0;
+  if (ctx) {
+    sexp_context_globals(res) = sexp_context_globals(ctx);
+    sexp_gc_release1(ctx);
+  } else {
+    sexp_init_context_globals(res);
+  }
+  return res;
+}
+
+#if ! USE_GLOBAL_HEAP
+void sexp_destroy_context (sexp ctx) {
+  sexp_heap heap;
+  if (sexp_context_heap(ctx)) {
+    heap = sexp_context_heap(ctx);
+    sexp_context_heap(ctx) = NULL;
+    free(heap);
+  }
+}
+#endif
 
 /***************************** exceptions *****************************/
 
@@ -275,16 +346,16 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
 
 static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
   sexp res;
-  sexp_gc_var3(name, str, irr);
-  sexp_gc_preserve3(ctx, name, str, irr);
+  sexp_gc_var4(sym, name, str, irr);
+  sexp_gc_preserve4(ctx, sym, name, str, irr);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   name = sexp_cons(ctx, name, sexp_make_fixnum(sexp_port_line(port)));
   str = sexp_c_string(ctx, msg, -1);
   irr = ((sexp_pairp(irritants) || sexp_nullp(irritants))
          ? irritants : sexp_list1(ctx, irritants));
-  res = sexp_make_exception(ctx, the_read_error_symbol,
+  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "read"),
                             str, irr, SEXP_FALSE, name);
-  sexp_gc_release3(ctx);
+  sexp_gc_release4(ctx);
   return res;
 }
 
@@ -386,7 +457,7 @@ sexp sexp_length (sexp ctx, sexp ls) {
 sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
   sexp_uint_t size;
   sexp_sint_t i, len;
-  sexp t, tmp, *p, *q;
+  sexp t, *p, *q;
   char *p0, *q0;
 
  loop:
@@ -411,7 +482,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
 
   if (sexp_pointer_tag(a) != sexp_pointer_tag(b)) {
 #if USE_BIGNUMS && ! USE_IMMEDIATE_FLONUMS
-    if (sexp_pointer_tag(a) == SEXP_FLONUM) {tmp=a; a=b; b=tmp;}
+    if (sexp_pointer_tag(a) == SEXP_FLONUM) {t=a; a=b; b=t;}
     if (sexp_pointer_tag(a) == SEXP_BIGNUM)
       return sexp_make_boolean((sexp_pointer_tag(b) == SEXP_FLONUM)
                                && sexp_fp_integerp(b)
@@ -577,7 +648,7 @@ sexp sexp_intern(sexp ctx, char *str) {
   bucket = 0;
 #endif
   len = strlen(str);
-  for (ls=sexp_symbol_table[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
+  for (ls=sexp_context_symbols(ctx)[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
     if (! strncmp(str, sexp_string_data(sexp_symbol_string(sexp_car(ls))), len))
       return sexp_car(ls);
 
@@ -585,7 +656,7 @@ sexp sexp_intern(sexp ctx, char *str) {
   sexp_gc_preserve1(ctx, sym);
   sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
   sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
-  sexp_push(ctx, sexp_symbol_table[bucket], sym);
+  sexp_push(ctx, sexp_context_symbols(ctx)[bucket], sym);
   sexp_gc_release1(ctx);
   return sym;
 }
@@ -599,7 +670,7 @@ sexp sexp_string_to_symbol (sexp ctx, sexp str) {
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt) {
   sexp v, *x;
   int i, clen = sexp_unbox_fixnum(len);
-  if (! clen) return the_empty_vector;
+  if (! clen) return sexp_global(ctx, SEXP_G_EMPTY_VECTOR);
   v = sexp_alloc_tagged(ctx, sexp_sizeof(vector) + clen*sizeof(sexp),
                         SEXP_VECTOR);
   x = sexp_vector_data(v);
@@ -1209,23 +1280,23 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '\'':
     res = sexp_read(ctx, in);
     if (! sexp_exceptionp(res))
-      res = sexp_list2(ctx, the_quote_symbol, res);
+      res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_QUOTE_SYMBOL), res);
     break;
   case '`':
     res = sexp_read(ctx, in);
     if (! sexp_exceptionp(res))
-      res = sexp_list2(ctx, the_quasiquote_symbol, res);
+      res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL), res);
     break;
   case ',':
     if ((c1 = sexp_read_char(ctx, in)) == '@') {
       res = sexp_read(ctx, in);
       if (! sexp_exceptionp(res))
-        res = sexp_list2(ctx, the_unquote_splicing_symbol, res);
+        res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_UNQUOTE_SPLICING_SYMBOL), res);
     } else {
       sexp_push_char(ctx, c1, in);
       res = sexp_read(ctx, in);
       if (! sexp_exceptionp(res))
-        res = sexp_list2(ctx, the_unquote_symbol, res);
+        res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL), res);
     }
     break;
   case '"':
@@ -1472,28 +1543,24 @@ sexp sexp_write_to_string(sexp ctx, sexp obj) {
 }
 
 void sexp_init(void) {
+#if USE_GLOBAL_SYMBOLS
   int i;
-  sexp ctx;
+#endif
   if (! sexp_initialized_p) {
     sexp_initialized_p = 1;
 #if USE_BOEHM
     GC_init();
+#if USE_GLOBAL_SYMBOLS
     GC_add_roots((char*)&sexp_symbol_table,
                  ((char*)&sexp_symbol_table)+sizeof(sexp_symbol_table)+1);
+#endif
 #elif ! USE_MALLOC
     sexp_gc_init();
 #endif
+#if USE_GLOBAL_SYMBOLS
     for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
       sexp_symbol_table[i] = SEXP_NULL;
-    ctx = sexp_alloc_type(NULL, context, SEXP_CONTEXT);
-    the_dot_symbol = sexp_intern(ctx, ".");
-    the_quote_symbol = sexp_intern(ctx, "quote");
-    the_quasiquote_symbol = sexp_intern(ctx, "quasiquote");
-    the_unquote_symbol = sexp_intern(ctx, "unquote");
-    the_unquote_splicing_symbol = sexp_intern(ctx, "unquote-splicing");
-    the_read_error_symbol = sexp_intern(ctx, "read");
-    the_empty_vector = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
-    sexp_vector_length(the_empty_vector) = 0;
+#endif
   }
 }
 

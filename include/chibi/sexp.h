@@ -127,6 +127,20 @@ typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
+typedef struct sexp_free_list *sexp_free_list;
+struct sexp_free_list {
+  sexp_uint_t size;
+  sexp_free_list next;
+};
+
+typedef struct sexp_heap *sexp_heap;
+struct sexp_heap {
+  sexp_uint_t size;
+  sexp_free_list free_list;
+  sexp_heap next;
+  char *data;
+};
+
 struct sexp_gc_var_t {
   sexp *var;
   /* char *name; */
@@ -239,9 +253,10 @@ struct sexp_struct {
       sexp data[];
     } stack;
     struct {
+      sexp_heap heap;
       struct sexp_gc_var_t *saves;
       sexp_uint_t pos, depth, tailp, tracep;
-      sexp bc, lambda, stack, env, fv, parent;
+      sexp bc, lambda, stack, env, fv, parent, globals;
     } context;
   } value;
 };
@@ -561,8 +576,6 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_stack_top(x)     ((x)->value.stack.top)
 #define sexp_stack_data(x)    ((x)->value.stack.data)
 
-#define sexp_context_heap(x)    ((x)->value.context.heap)
-#define sexp_context_symbols(x) ((x)->value.context.symbols)
 #define sexp_context_env(x)     ((x)->value.context.env)
 #define sexp_context_stack(x)   ((x)->value.context.stack)
 #define sexp_context_depth(x)   ((x)->value.context.depth)
@@ -574,6 +587,21 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_context_saves(x)   ((x)->value.context.saves)
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
+#define sexp_context_globals(x) ((x)->value.context.globals)
+
+#define sexp_global(ctx,x)      (sexp_vector_data(sexp_context_globals(ctx))[x])
+
+#if USE_GLOBAL_HEAP
+#define sexp_context_heap(ctx)  sexp_global_heap
+#else
+#define sexp_context_heap(ctx)  ((ctx)->value.context.heap)
+#endif
+
+#if USE_GLOBAL_SYMBOLS
+#define sexp_context_symbols(ctx) sexp_symbol_table
+#else
+#define sexp_context_symbols(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_SYMBOLS))
+#endif
 
 #define sexp_context_top(x)     (sexp_stack_top(sexp_context_stack(x)))
 
@@ -612,6 +640,25 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_fp_div(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) / sexp_flonum_value(b)))
 
 /****************************** utilities *****************************/
+
+enum sexp_context_globals {
+#if ! USE_GLOBAL_SYMBOLS
+  SEXP_G_SYMBOLS,
+#endif
+  SEXP_G_QUOTE_SYMBOL,
+  SEXP_G_QUASIQUOTE_SYMBOL,
+  SEXP_G_UNQUOTE_SYMBOL,
+  SEXP_G_UNQUOTE_SPLICING_SYMBOL,
+  SEXP_G_EMPTY_VECTOR,
+  SEXP_G_CUR_IN_SYMBOL,
+  SEXP_G_CUR_OUT_SYMBOL,
+  SEXP_G_CUR_ERR_SYMBOL,
+  SEXP_G_ERR_HANDLER_SYMBOL,
+  SEXP_G_INTERACTION_ENV_SYMBOL,
+  SEXP_G_RESUMECC_BYTECODE,
+  SEXP_G_FINAL_RESUMER,
+  SEXP_G_NUM_GLOBALS
+};
 
 #define sexp_list1(x,a)        sexp_cons((x), (a), SEXP_NULL)
 
@@ -668,6 +715,7 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
 SEXP_API struct sexp_struct *sexp_type_specs;
+SEXP_API sexp sexp_make_context(sexp ctx);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 SEXP_API sexp sexp_cons(sexp ctx, sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
@@ -704,16 +752,25 @@ SEXP_API sexp sexp_make_input_string_port(sexp ctx, sexp str);
 SEXP_API sexp sexp_make_output_string_port(sexp ctx);
 SEXP_API sexp sexp_get_output_string(sexp ctx, sexp port);
 SEXP_API sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
-SEXP_API sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp obj);
-SEXP_API sexp sexp_type_exception (sexp ctx, char *message, sexp obj);
-SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
+SEXP_API sexp sexp_user_exception(sexp ctx, sexp self, char *message, sexp obj);
+SEXP_API sexp sexp_type_exception(sexp ctx, char *message, sexp obj);
+SEXP_API sexp sexp_range_exception(sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
 SEXP_API void sexp_init(void);
+
+#if USE_GLOBAL_HEAP
+#define sexp_destroy_context(ctx)
+#else
+SEXP_API void sexp_destroy_context(sexp ctx);
+#endif
 
 #if USE_TYPE_DEFS
 SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
 #endif
+
+#define sexp_current_error_port(ctx) sexp_env_global_ref(sexp_context_env(ctx),sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL),SEXP_FALSE)
+#define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
 
 #endif /* ! SEXP_H */
 

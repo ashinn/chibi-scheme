@@ -128,7 +128,7 @@ void run_main (int argc, char **argv) {
   sexp_uint_t i, quit=0, init_loaded=0;
   sexp_gc_var1(str);
 
-  ctx = sexp_make_context(NULL, NULL, NULL);
+  ctx = sexp_make_eval_context(NULL, NULL, NULL);
   sexp_gc_preserve1(ctx, str);
   env = sexp_context_env(ctx);
   out = sexp_eval_string(ctx, "(current-output-port)", env);

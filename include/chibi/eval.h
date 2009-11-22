@@ -9,13 +9,13 @@
 
 /************************* additional types ***************************/
 
-#define INIT_BCODE_SIZE 128
-#define INIT_STACK_SIZE 8192
+#define SEXP_INIT_BCODE_SIZE 128
+#define SEXP_INIT_STACK_SIZE 8192
 
 #define sexp_init_file "init.scm"
 #define sexp_config_file "config.scm"
 
-enum core_form_names {
+enum sexp_core_form_names {
   CORE_DEFINE = 1,
   CORE_SET,
   CORE_LAMBDA,
@@ -27,7 +27,7 @@ enum core_form_names {
   CORE_LETREC_SYNTAX
 };
 
-enum opcode_classes {
+enum sexp_opcode_classes {
   OPC_GENERIC = 1,
   OPC_TYPE_PREDICATE,
   OPC_PREDICATE,
@@ -42,7 +42,7 @@ enum opcode_classes {
   OPC_NUM_OP_CLASSES
 };
 
-enum opcode_names {
+enum sexp_opcode_names {
   OP_NOOP,
   OP_RAISE,
   OP_RESUMECC,
@@ -120,6 +120,8 @@ enum opcode_names {
 /**************************** prototypes ******************************/
 
 SEXP_API void sexp_scheme_init (void);
+SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env);
+SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
@@ -127,7 +129,6 @@ SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
 SEXP_API sexp sexp_make_env (sexp context);
 SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls);
 SEXP_API void sexp_env_define (sexp context, sexp env, sexp sym, sexp val);
-SEXP_API sexp sexp_make_context (sexp context, sexp stack, sexp env);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
 SEXP_API sexp sexp_make_foreign (sexp ctx, char *name, int num_args, int flags, sexp_proc1 f, sexp data);

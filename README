@@ -43,16 +43,27 @@ The essential functions to remember are:
 
   #include <chibi/eval.h>
 
-  sexp_make_context(NULL, NULL, NULL)
-    returns a new context
+  sexp_make_eval_context(NULL, NULL, NULL)
+    returns a new context with a fresh stack and standard environment
 
-  sexp_eval(context, expr)
-    evaluates an s-expression
+  sexp_destroy_context(context)
+    free a context and all associated memory
+
+  sexp_eval(context, expr, env)
+    evaluates an s-expression in an environment
+    env can be NULL to use the context's default env
 
   sexp_eval_string(context, str)
     reads an s-expression from str and evaluates it
 
+  sexp_load(context, file, env)
+    read and eval all top-level forms from file
+
+  sexp_context_env(context)
+    a macro returning the environment associated with a context
+
   sexp_env_define(context, env, symbol, value)
+    define a variable in an environment
 
 A minimal module system is provided by default.  Currently you can
 load the following SRFIs with (import (srfi N)):

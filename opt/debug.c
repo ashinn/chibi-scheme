@@ -65,9 +65,10 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   return SEXP_VOID;
 }
 
-#ifdef DEBUG_VM
+#if USE_DEBUG_VM
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
   int i;
+  if (! sexp_oport(out)) out = sexp_current_error_port(ctx);
   for (i=0; i<top; i++) {
     sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
     sexp_write(ctx, stack[i], out);

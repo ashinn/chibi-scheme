@@ -15,27 +15,13 @@
 #define sexp_heap_align(n) sexp_align(n, 4)
 #endif
 
-typedef struct sexp_free_list *sexp_free_list;
-struct sexp_free_list {
-  sexp_uint_t size;
-  sexp_free_list next;
-};
-
-typedef struct sexp_heap *sexp_heap;
-struct sexp_heap {
-  sexp_uint_t size;
-  sexp_free_list free_list;
-  sexp_heap next;
-  char *data;
-};
-
-static sexp_heap heap;
+#if USE_GLOBAL_HEAP
+static sexp_heap sexp_global_heap;
+#endif
 
 #if USE_DEBUG_GC
 static sexp* stack_base;
 #endif
-
-extern sexp continuation_resumer, final_resumer;
 
 static sexp_heap sexp_heap_last (sexp_heap h) {
   while (h->next) h = h->next;
@@ -88,7 +74,7 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
 
 sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   size_t freed, max_freed=0, sum_freed=0, size;
-  sexp_heap h = heap;
+  sexp_heap h = sexp_context_heap(ctx);
   sexp p;
   sexp_free_list q, r, s;
   char *end;
@@ -150,11 +136,11 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp res;
+#if USE_GLOBAL_SYMBOLS
   int i;
-  sexp_mark(continuation_resumer);
-  sexp_mark(final_resumer);
   for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
     sexp_mark(sexp_symbol_table[i]);
+#endif
   sexp_mark(ctx);
   res = sexp_sweep(ctx, sum_freed);
   return res;
@@ -179,7 +165,7 @@ sexp_heap sexp_make_heap (size_t size) {
 
 int sexp_grow_heap (sexp ctx, size_t size) {
   size_t cur_size, new_size;
-  sexp_heap h = sexp_heap_last(heap);
+  sexp_heap h = sexp_heap_last(sexp_context_heap(ctx));
   cur_size = h->size;
   new_size = sexp_heap_align(((cur_size > size) ? cur_size : size) * 2);
   h->next = sexp_make_heap(new_size);
@@ -189,7 +175,7 @@ int sexp_grow_heap (sexp ctx, size_t size) {
 void* sexp_try_alloc (sexp ctx, size_t size) {
   sexp_free_list ls1, ls2, ls3;
   sexp_heap h;
-  for (h=heap; h; h=h->next)
+  for (h=sexp_context_heap(ctx); h; h=h->next)
     for (ls1=h->free_list, ls2=ls1->next; ls2; ls1=ls2, ls2=ls2->next)
       if (ls2->size >= size) {
         if (ls2->size >= (size + SEXP_MINIMUM_OBJECT_SIZE)) {
@@ -214,7 +200,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
-    h = sexp_heap_last(heap);
+    h = sexp_heap_last(sexp_context_heap(ctx));
     if (((max_freed < size)
          || ((h->size - sum_freed) < (h->size*(1 - SEXP_GROW_HEAP_RATIO))))
         && ((! SEXP_MAXIMUM_HEAP_SIZE) || (size < SEXP_MAXIMUM_HEAP_SIZE)))
@@ -227,8 +213,12 @@ void* sexp_alloc (sexp ctx, size_t size) {
 }
 
 void sexp_gc_init (void) {
+#if USE_GLOBAL_HEAP || USE_DEBUG_GC
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
-  heap = sexp_make_heap(size);
+#endif
+#if USE_GLOBAL_HEAP
+  sexp_global_heap = sexp_make_heap(size);
+#endif
 #if USE_DEBUG_GC
   /* the +32 is a hack, but this is just for debugging anyway */
   stack_base = ((sexp*)&size) + 32;
