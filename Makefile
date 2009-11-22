@@ -50,7 +50,7 @@ endif
 
 all: chibi-scheme$(EXE) libs
 
-libs: lib/srfi/69/hash$(SO)
+libs: lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO)
 
 ifeq ($(USE_BOEHM),1)
 GCLDFLAGS := -lgc
@@ -92,11 +92,12 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
-lib/srfi/69/hash$(SO): lib/srfi/69/hash.c $(INCLUDES)
+lib/srfi/%$(SO): lib/srfi/%.c $(INCLUDES)
 	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:
 	rm -f *.o *.i *.s *.8
+	find lib -name \*.$(SO) -exec rm -f '{}' \;
 
 cleaner: clean
 	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) *$(SO) *.a
