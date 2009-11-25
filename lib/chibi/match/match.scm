@@ -21,10 +21,14 @@
 ;;   http://groups.google.com/group/comp.lang.scheme/msg/0941234de7112ffd
 ;; and is still available at
 ;;   http://synthcode.com/scheme/match-simple.scm
-;; A variant of this file which uses COND-EXPAND in a few places can
-;; be found at
+;; It's just 80 lines for the core MATCH, and an extra 40 lines for
+;; MATCH-LET, MATCH-LAMBDA and other syntactic sugar.
+;;
+;; A variant of this file which uses COND-EXPAND in a few places for
+;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2009/11/25 - adding `***' tree search patterns
 ;; 2008/03/20 - fixing bug where (a ...) matched non-lists
 ;; 2008/03/15 - removing redundant check in vector patterns
 ;; 2008/03/06 - you can use `...' portably now (thanks to Taylor Campbell)
@@ -121,7 +125,7 @@
 ;; pattern so far.
 
 (define-syntax match-two
-  (syntax-rules (_ ___ quote quasiquote ? $ = and or not set! get!)
+  (syntax-rules (_ ___ *** quote quasiquote ? $ = and or not set! get!)
     ((match-two v () g s (sk ...) fk i)
      (if (null? v) (sk ... i) fk))
     ((match-two v (quote p) g s (sk ...) fk i)
@@ -135,10 +139,7 @@
     ((match-two v (or p) g s sk fk i)
      (match-one v p g s sk fk i))
     ((match-two v (or p ...) g s sk fk i)
-     (match-extract-vars (or p ...)
-                         (match-gen-or v (p ...) g s sk fk i)
-                         i
-                         ()))
+     (match-extract-vars (or p ...) (match-gen-or v (p ...) g s sk fk i) i ()))
     ((match-two v (not p) g s (sk ...) fk i)
      (match-one v p g s (match-drop-ids fk) (sk ... i) i))
     ((match-two v (get! getter) g s (sk ...) fk i)
@@ -154,17 +155,21 @@
      (match-extract-vars p (match-gen-ellipses v p r g s sk fk i) i ()))
     ((match-two v (p) g s sk fk i)
      (if (and (pair? v) (null? (cdr v)))
-       (let ((w (car v)))
-         (match-one w p (car v) (set-car! v) sk fk i))
-       fk))
+         (let ((w (car v)))
+           (match-one w p (car v) (set-car! v) sk fk i))
+         fk))
+    ((match-two v (p *** q) g s sk fk i)
+     (match-extract-vars p (match-gen-search v p q g s sk fk i) i ()))
+    ((match-two v (p *** . q) g s sk fk i)
+     (match-syntax-error "invalid use of ***" (p *** . q)))
     ((match-two v (p . q) g s sk fk i)
      (if (pair? v)
-       (let ((w (car v)) (x (cdr v)))
-         (match-one w p (car v) (set-car! v)
-                    (match-one x q (cdr v) (set-cdr! v) sk fk)
-                    fk
-                    i))
-       fk))
+         (let ((w (car v)) (x (cdr v)))
+           (match-one w p (car v) (set-car! v)
+                      (match-one x q (cdr v) (set-cdr! v) sk fk)
+                      fk
+                      i))
+         fk))
     ((match-two v #(p ...) g s sk fk i)
      (match-vector v 0 () (p ...) sk fk i))
     ((match-two v _ g s (sk ...) fk i) (sk ... i))
@@ -234,10 +239,12 @@
   (syntax-rules ()
     ((_ expr ids ...) expr)))
 
-;; Generating OR clauses just involves binding the success
-;; continuation into a thunk which takes the identifiers common to
-;; each OR clause, and trying each clause, calling the thunk as soon
-;; as we succeed.
+;; To expand an OR group we try each clause in succession, passing the
+;; first that succeeds to the success continuation.  On failure for
+;; any clause, we just try the next clause, finally resorting to the
+;; failure continuation fk if all clauses fail.  The only trick is
+;; that we want to unify the identifiers, so that the success
+;; continuation can refer to a variable from any of the OR clauses.
 
 (define-syntax match-gen-or
   (syntax-rules ()
@@ -262,16 +269,19 @@
 ;; We match a pattern (p ...) by matching the pattern p in a loop on
 ;; each element of the variable, accumulating the bound ids into lists.
 
-;; Look at the body - it's just a named let loop, matching each
-;; element in turn to the same pattern.  This illustrates the
-;; simplicity of this generative-style pattern matching.  It would be
-;; just as easy to implement a tree searching pattern.
+;; Look at the body of the simple case - it's just a named let loop,
+;; matching each element in turn to the same pattern.  The only trick
+;; is that we want to keep track of the lists of each extracted id, so
+;; when the loop recurses we cons the ids onto their respective list
+;; variables, and on success we bind the ids (what the user input and
+;; expects to see in the success body) to the reversed accumulated
+;; list IDs.
 
 (define-syntax match-gen-ellipses
   (syntax-rules ()
     ((_ v p () g s (sk ...) fk i ((id id-ls) ...))
      (match-check-identifier p
-       ;; simplest case equivalent to ( . p), just bind the list
+       ;; simplest case equivalent to (p ...), just bind the list
        (let ((p v))
          (if (list? p)
              (sk ... i)
@@ -288,11 +298,12 @@
                          fk i)))
            (else
             fk)))))
-    ((_ v p (r ...) g s (sk ...) fk i ((id id-ls) ...))
-     ;; general case, trailing patterns to match
+    ((_ v p r g s (sk ...) fk i ((id id-ls) ...))
+     ;; general case, trailing patterns to match, keep track of the
+     ;; remaining list length so we don't need any backtracking
      (match-verify-no-ellipses
-      (r ...)
-      (let* ((tail-len (length '(r ...)))
+      r
+      (let* ((tail-len (length 'r))
              (ls v)
              (len (length ls)))
         (if (< len tail-len)
@@ -301,7 +312,7 @@
               (cond
                 ((= n tail-len)
                  (let ((id (reverse id-ls)) ...)
-                   (match-one ls (r ...) #f #f (sk ... i) fk i)))
+                   (match-one ls r #f #f (sk ... i) fk i)))
                 ((pair? ls)
                  (let ((w (car ls)))
                    (match-one w p (car ls) (set-car! ls)
@@ -310,8 +321,73 @@
                               fk
                               i)))
                 (else
-                 fk)))))))
-    ))
+                 fk)))))))))
+
+;; Matching a tree search pattern is only slightly more complicated.
+;; Here we allow patterns of the form
+;;
+;;     (x *** y)
+;;
+;; to represent the pattern y located somewhere in a tree where the
+;; path from the current object to y can be seen as a list of the form
+;; (X ...).  Y can immediately match the current object in which case
+;; the path is the empty list.  In a sense it's a 2-dimensional
+;; version of the ... pattern.
+;;
+;; As a common case the pattern (_ *** y) can be used to search for Y
+;; anywhere in a tree, regardless of the path used.
+;;
+;; To implement the search, we use two recursive procedures.  TRY
+;; attempts to match Y once, and on success it calls the normal SK on
+;; the accumulated list ids as in MATCH-GEN-ELLIPSES.  On failure, we
+;; call NEXT which first checks if the current value is a list
+;; beginning with X, then calls TRY on each remaining element of the
+;; list.  Since TRY will recursively call NEXT again on failure, this
+;; effects a full depth-first search.
+;;
+;; The failure continuation throughout is a jump to the next step in
+;; the tree search, initialized with the original failure continuation
+;; FK.
+
+(define-syntax match-gen-search
+  (syntax-rules ()
+    ((match-gen-search v p q g s sk fk i ((id id-ls) ...))
+     (letrec ((try (lambda (w fail id-ls ...)
+                     (match-one w q g s
+                                (match-drop-ids
+                                 (let ((id (reverse id-ls)) ...)
+                                   sk))
+                                (next w fail id-ls ...) i)))
+              (next (lambda (w fail id-ls ...)
+                      (if (not (pair? w))
+                          (fail)
+                          (let ((u (car w)))
+                            (match-one
+                             u p (car w) (set-car! w)
+                             (match-drop-ids
+                              ;; accumulate the head variables from
+                              ;; the p pattern, and loop over the tail
+                              (let ((id-ls (cons id id-ls)) ...)
+                                (let lp ((ls (cdr w)))
+                                  (if (pair? ls)
+                                      (try (car ls)
+                                           (lambda () (lp (cdr ls)))
+                                           id-ls ...)
+                                      (fail)))))
+                             (fail) i))))))
+       ;; the initial id-ls binding here is a dummy to get the right
+       ;; number of '()s
+       (let ((id-ls '()) ...)
+         (try v (lambda () fk) id-ls ...))))))
+
+;; This is just a safety check.  Although unlike syntax-rules we allow
+;; trailing patterns after an ellipses, we explicitly disable multiple
+;; ellipses at the same level.  This is because in the general case
+;; such patterns are exponential in the number of ellipses, and we
+;; don't want to make it easy to construct very expensive operations
+;; with simple looking patterns.  For example, it would be O(n^2) for
+;; patterns like (a ... b ...) because we must consider every trailing
+;; element for every possible break for the leading "a ...".
 
 (define-syntax match-verify-no-ellipses
   (syntax-rules ()
@@ -321,7 +397,9 @@
       (match-syntax-error
        "multiple ellipse patterns not allowed at same level")
       (match-verify-no-ellipses y sk)))
-    ((_ x sk) sk)
+    ((_ () sk) sk)
+    ((_ x sk)
+     (match-syntax-error "dotted tail not allowed after ellipse" x))
     ))
 
 ;; Vector patterns are just more of the same, with the slight
@@ -332,10 +410,10 @@
   (syntax-rules (___)
     ((_ v n pats (p q) sk fk i)
      (match-check-ellipse q
-                          (match-vector-ellipses v n pats p sk fk i)
+                          (match-gen-vector-ellipses v n pats p sk fk i)
                           (match-vector-two v n pats (p q) sk fk i)))
     ((_ v n pats (p ___) sk fk i)
-     (match-vector-ellipses v n pats p sk fk i))
+     (match-gen-vector-ellipses v n pats p sk fk i))
     ((_ . x)
      (match-vector-two . x))))
 
@@ -366,7 +444,7 @@
 ;; With a vector ellipse pattern we first check to see if the vector
 ;; length is at least the required length.
 
-(define-syntax match-vector-ellipses
+(define-syntax match-gen-vector-ellipses
   (syntax-rules ()
     ((_ v n ((pat index) ...) p sk fk i)
      (if (vector? v)
@@ -396,13 +474,18 @@
 
 ;; Extract all identifiers in a pattern.  A little more complicated
 ;; than just looking for symbols, we need to ignore special keywords
-;; and not pattern forms (such as the predicate expression in ?
-;; patterns).
+;; and non-pattern forms (such as the predicate expression in ?
+;; patterns), and also ignore previously bound identifiers.
+;;
+;; Calls the continuation with all new vars as a list of the form
+;; ((orig-var tmp-name) ...), where tmp-name can be used to uniquely
+;; pair with the original variable (e.g. it's used in the ellipse
+;; generation for list variables).
 ;;
 ;; (match-extract-vars pattern continuation (ids ...) (new-vars ...))
 
 (define-syntax match-extract-vars
-  (syntax-rules (_ ___ ? $ = quote quasiquote and or not get! set!)
+  (syntax-rules (_ ___ *** ? $ = quote quasiquote and or not get! set!)
     ((match-extract-vars (? pred . p) k i v)
      (match-extract-vars p k i v))
     ((match-extract-vars ($ rec . p) k i v)
@@ -432,6 +515,7 @@
      (match-extract-vars (p ...) k i v))
     ((match-extract-vars _ (k ...) i v)    (k ... v))
     ((match-extract-vars ___ (k ...) i v)  (k ... v))
+    ((match-extract-vars *** (k ...) i v)  (k ... v))
     ;; This is the main part, the only place where we might add a new
     ;; var if it's an unbound symbol.
     ((match-extract-vars p (k ...) (i ...) v)
@@ -518,8 +602,7 @@
      (match-let/helper
       let (v ... (tmp expr)) (p ... (#(a ...) tmp)) rest . body))
     ((_ let (v ...) (p ...) ((a expr) . rest) . body)
-     (match-let/helper let (v ... (a expr)) (p ...) rest . body))
-    ))
+     (match-let/helper let (v ... (a expr)) (p ...) rest . body))))
 
 (define-syntax match-named-let
   (syntax-rules ()
@@ -585,5 +668,4 @@
              ((sym? x sk fk) sk)
              ;; otherwise x is a non-symbol datum
              ((sym? y sk fk) fk))))
-       (sym? abracadabra success-k failure-k)))
-    ))
+       (sym? abracadabra success-k failure-k)))))

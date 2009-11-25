@@ -17,4 +17,5 @@ junk*
 gc
 gc6.8
 chibi-scheme
+chibi-scheme-static
 include/chibi/install.h
