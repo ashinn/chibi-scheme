@@ -31,7 +31,7 @@ ifeq ($(PLATFORM),macosx)
 SO  = .dylib
 EXE =
 CLIBFLAGS = -dynamiclib
-STATICFLAGS = -static-libgcc
+STATICFLAGS = -static-libgcc -DUSE_DL=0
 else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
@@ -44,7 +44,7 @@ else
 SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
-STATICFLAGS = -static
+STATICFLAGS = -static -DUSE_DL=0
 endif
 endif
 
@@ -113,8 +113,11 @@ test-basic: chibi-scheme$(EXE)
 	    fi; \
 	done
 
-test-numbers: chibi-scheme$(EXE)
+test-numbers: all
 	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/numeric-tests.scm
+
+test-match: all
+	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/match-tests.scm
 
 test: all
 	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/r5rs-tests.scm
