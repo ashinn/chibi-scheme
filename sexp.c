@@ -53,40 +53,47 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
-#define _DEF_TYPE(t,fb,felb,flb,flo,fls,sb,so,sc,n)                     \
-  {.tag=SEXP_TYPE, .value={.type={t,fb,felb,flb,flo,fls,sb,so,sc,n}}}
+sexp sexp_finalize_port (sexp ctx, sexp port) {
+  if (sexp_port_openp(port) && sexp_port_stream(port)
+      && sexp_stringp(sexp_port_name(port)))
+    fclose(sexp_port_stream(port));
+  return SEXP_VOID;
+}
+
+#define _DEF_TYPE(t,fb,felb,flb,flo,fls,sb,so,sc,n,f)                   \
+  {.tag=SEXP_TYPE, .value={.type={t,fb,felb,flb,flo,fls,sb,so,sc,n,f}}}
 
 static struct sexp_struct _sexp_type_specs[] = {
-  _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, "object"),
-  _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type"),
-  _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, "fixnum"),
-  _DEF_TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, "char"),
-  _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, "boolean"),
-  _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, "pair"),
-  _DEF_TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol"),
-  _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string"),
-  _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector"),
-  _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum"),
-  _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp), "bignum"),
-  _DEF_TYPE(SEXP_CPOINTER, 0, 0, 0, 0, 0, sexp_sizeof(cpointer), 0, 0, "cpointer"),
-  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port"),
-  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port"),
-  _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception"),
-  _DEF_TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure"),
-  _DEF_TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro"),
-  _DEF_TYPE(SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure"),
-  _DEF_TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 3, 0, 0, sexp_sizeof(env), 0, 0, "environment"),
-  _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode"),
-  _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form"),
-  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 3, 3, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode"),
-  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda"),
-  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional"),
-  _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference"),
-  _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 2, 0, 0, sexp_sizeof(set), 0, 0, "set!"),
-  _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence"),
-  _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal"),
-  _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack"),
-  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 7, 7, 0, 0, sexp_sizeof(context), 0, 0, "context"),
+  _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, "object", NULL),
+  _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type", NULL),
+  _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, "fixnum", NULL),
+  _DEF_TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, "char", NULL),
+  _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, "boolean", NULL),
+  _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, "pair", NULL),
+  _DEF_TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol", NULL),
+  _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string", NULL),
+  _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector", NULL),
+  _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum", NULL),
+  _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp), "bignum", NULL),
+  _DEF_TYPE(SEXP_CPOINTER, 0, 0, 0, 0, 0, sexp_sizeof(cpointer), 0, 0, "cpointer", NULL),
+  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port", sexp_finalize_port),
+  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port", sexp_finalize_port),
+  _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception", NULL),
+  _DEF_TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure", NULL),
+  _DEF_TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro", NULL),
+  _DEF_TYPE(SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure", NULL),
+  _DEF_TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 3, 0, 0, sexp_sizeof(env), 0, 0, "environment", NULL),
+  _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode", NULL),
+  _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form", NULL),
+  _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 3, 3, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode", NULL),
+  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda", NULL),
+  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional", NULL),
+  _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference", NULL),
+  _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 2, 0, 0, sexp_sizeof(set), 0, 0, "set!", NULL),
+  _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence", NULL),
+  _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal", NULL),
+  _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack", NULL),
+  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 7, 7, 0, 0, sexp_sizeof(context), 0, 0, "context", NULL),
 };
 #undef _DEF_TYPE
 

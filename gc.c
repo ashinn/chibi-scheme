@@ -78,6 +78,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   sexp p;
   sexp_free_list q, r, s;
   char *end;
+  sexp_proc2 finalizer;
   /* scan over the whole heap */
   for ( ; h; h=h->next) {
     p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
@@ -93,6 +94,9 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       }
       size = sexp_heap_align(sexp_allocated_bytes(p));
       if ((! sexp_gc_mark(p)) && (! stack_references_pointer_p(ctx, p))) {
+        /* free p */
+        finalizer = sexp_type_finalize(sexp_object_type(p));
+        if (finalizer) finalizer(ctx, p);
         sum_freed += size;
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */
