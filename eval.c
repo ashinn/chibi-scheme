@@ -2356,6 +2356,8 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   sexp_env_define(ctx, e, sexp_intern(ctx, "*module-directory*"),
                   sexp_c_string(ctx, sexp_module_dir, -1));
+  sexp_env_define(ctx, e, sexp_intern(ctx, "*shared-object-extension*"),
+                  sexp_c_string(ctx, sexp_so_extension, -1));
   /* add default exception handler */
   err_cell = sexp_env_cell(e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
   perr_cell = sexp_env_cell(e, sexp_intern(ctx, "print-exception"));

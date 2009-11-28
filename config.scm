@@ -52,12 +52,15 @@
          ((import)
           (let ((mod2 (load-module (cadr x))))
             (%env-copy! env (module-env mod2) (module-exports mod2))))
-         ((include)
+         ((include include-shared)
           (for-each
            (lambda (f)
-             (cond
-              ((find-module-file name f) => (lambda (x) (load x env)))
-              (else (error "couldn't find include" f))))
+             (let ((f (if (eq? (car x) 'include)
+                          f
+                          (string-append f *shared-object-extension*))))
+               (cond
+                ((find-module-file name f) => (lambda (x) (load x env)))
+                (else (error "couldn't find include" f)))))
            (cdr x)))
          ((body)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
@@ -98,6 +101,7 @@
 (define-config-primitive import)
 (define-config-primitive export)
 (define-config-primitive include)
+(define-config-primitive include-shared)
 (define-config-primitive body)
 
 (let ((exports
