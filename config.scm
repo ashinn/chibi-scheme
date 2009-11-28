@@ -31,6 +31,9 @@
   (string-concatenate
    (reverse (cons ".module" (cdr (module-name->strings name '()))))))
 
+(define (module-name-prefix name)
+  (string-concatenate (reverse (cdr (cdr (module-name->strings name '()))))))
+
 (define (load-module-definition name)
   (let* ((file (module-name->file name))
          (path (find-module-file name file)))
@@ -45,7 +48,8 @@
           (else #f)))))
 
 (define (eval-module name mod)
-  (let ((env (make-environment)))
+  (let ((env (make-environment))
+        (prefix (module-name-prefix name)))
     (for-each
      (lambda (x)
        (case (and (pair? x) (car x))
@@ -55,9 +59,9 @@
          ((include include-shared)
           (for-each
            (lambda (f)
-             (let ((f (if (eq? (car x) 'include)
-                          f
-                          (string-append f *shared-object-extension*))))
+             (let ((f (string-append
+                       prefix f
+                       (if (eq? (car x) 'include) "" *shared-object-extension*))))
                (cond
                 ((find-module-file name f) => (lambda (x) (load x env)))
                 (else (error "couldn't find include" f)))))

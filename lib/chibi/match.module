@@ -2,5 +2,5 @@
 (define-module (chibi match)
   (export match match-lambda match-lambda* match-let match-letrec match-let*)
   (import (scheme))
-  (include "chibi/match/match.scm"))
+  (include "match/match.scm"))
 
