@@ -12,6 +12,6 @@
    hash string-hash string-ci-hash hash-by-identity)
   (import (scheme))
   (import (srfi 9))
-  (include-shared "srfi/69/hash")
-  (include "srfi/69/type.scm" "srfi/69/interface.scm"))
+  (include-shared "69/hash")
+  (include "69/type.scm" "69/interface.scm"))
 

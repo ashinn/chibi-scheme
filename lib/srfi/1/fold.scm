@@ -91,14 +91,14 @@
       init
       (take-up-to-reverse (cdr from) to (cons (car from) init))))
 
-(define (filter pred ls)
+(define (remove pred ls)
   (let lp ((ls ls) (rev '()))
     (let ((tail (find-tail pred ls)))
       (if tail
           (lp (cdr tail) (take-up-to-reverse ls tail rev))
           (if (pair? rev) (append-reverse! rev ls) ls)))))
 
-(define (remove pred ls) (filter (lambda (x) (not (pred x))) ls))
+(define (filter pred ls) (remove (lambda (x) (not (pred x))) ls))
 
 (define (partition pred ls)
   (let lp ((ls ls) (good '()) (bad '()))
