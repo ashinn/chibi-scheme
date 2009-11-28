@@ -63,7 +63,7 @@ static sexp sexp_env_cell_create (sexp ctx, sexp e, sexp key, sexp value) {
   return cell;
 }
 
-static sexp sexp_env_global_ref (sexp e, sexp key, sexp dflt) {
+sexp sexp_env_global_ref (sexp e, sexp key, sexp dflt) {
   sexp cell;
   while (sexp_env_parent(e))
     e = sexp_env_parent(e);
@@ -1650,7 +1650,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #if USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
-      prod = sexp_unbox_fixnum(tmp1) * sexp_unbox_fixnum(tmp2);
+      prod = (sexp_lsint_t)sexp_unbox_fixnum(tmp1) * sexp_unbox_fixnum(tmp2);
       if ((prod < SEXP_MIN_FIXNUM) || (prod > SEXP_MAX_FIXNUM))
         _ARG2 = sexp_mul(ctx, tmp1=sexp_fixnum_to_bignum(ctx, tmp1), tmp2);
       else
