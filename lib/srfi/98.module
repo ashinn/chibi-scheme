@@ -1,5 +1,5 @@
 
 (define-module (srfi 98)
   (export get-environment-variable get-environment-variables)
-  (include "srfi/98/env.so"))
+  (include-shared "srfi/98/env"))
 
