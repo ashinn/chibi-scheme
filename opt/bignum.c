@@ -130,17 +130,11 @@ double sexp_bignum_to_double (sexp a) {
 
 sexp sexp_bignum_fxadd (sexp ctx, sexp a, sexp_uint_t b) {
   sexp_uint_t len=sexp_bignum_hi(a), *data=sexp_bignum_data(a),
-    carry=b, i, n;
-  for (i=0; i<len; i++) {
-    n = data[i];
-    data[i] += carry;
-    if (n > (SEXP_UINT_T_MAX - carry)) {
-      carry = 1;
-    } else {
-      carry = 0;
-      break;
-    }
-  }
+    carry=b, i=0, n;
+  do { n = data[i];
+       data[i] += carry;
+       carry = (n > (SEXP_UINT_T_MAX - carry));
+  } while (++i<len && carry);
   if (carry) {
     a = sexp_copy_bignum(ctx, NULL, a, len+1);
     sexp_bignum_data(a)[len] = 1;
@@ -149,11 +143,11 @@ sexp sexp_bignum_fxadd (sexp ctx, sexp a, sexp_uint_t b) {
 }
 
 sexp sexp_bignum_fxsub (sexp ctx, sexp a, sexp_uint_t b) {
-  sexp_uint_t *data=sexp_bignum_data(a), borrow=b, i=0, n;
+  sexp_uint_t *data=sexp_bignum_data(a), borrow, i=0, n;
   for (borrow=b; borrow; i++) {
     n = data[i];
     data[i] -= borrow;
-    borrow = ((n < borrow) ? 1 : 0);
+    borrow = (n < borrow);
   }
   return a;
 }
@@ -179,7 +173,7 @@ sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset) {
 }
 
 sexp_uint_t sexp_bignum_fxdiv (sexp ctx, sexp a, sexp_uint_t b, int offset) {
-  sexp_uint_t len=sexp_bignum_hi(a), *data=sexp_bignum_data(a), q, r;
+  sexp_uint_t len=sexp_bignum_hi(a), *data=sexp_bignum_data(a), q, r=0;
   int i;
   sexp_luint_t n = 0;
   for (i=len-1; i>=offset; i--) {
@@ -470,13 +464,13 @@ static int sexp_number_types[] =
   {0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0};
 
 static int sexp_number_type (sexp a) {
-  return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&1111]
+  return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&15]
     : sexp_fixnump(a);
 }
 
 sexp sexp_add (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b), t;
-  sexp r;
+  sexp r=SEXP_VOID;
   if (at > bt) {r=a; a=b; b=r; t=at; at=bt; bt=t;}
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
@@ -484,7 +478,7 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, "+: not a number", a);
     break;
   case SEXP_NUM_FIX_FIX:
-    r = sexp_fx_add(a, b);      /* XXXX check overflow */
+    r = sexp_fx_add(a, b);      /* VM catches this case */
     break;
   case SEXP_NUM_FIX_FLO:
     r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)+sexp_flonum_value(b));
@@ -507,7 +501,7 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
 
 sexp sexp_sub (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
-  sexp r;
+  sexp r=SEXP_VOID;
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
@@ -517,7 +511,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, "-: not a number", b);
     break;
   case SEXP_NUM_FIX_FIX:
-    r = sexp_fx_sub(a, b);      /* XXXX check overflow */
+    r = sexp_fx_sub(a, b);      /* VM catches this case */
     break;
   case SEXP_NUM_FIX_FLO:
     r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)-sexp_flonum_value(b));
@@ -550,7 +544,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
 
 sexp sexp_mul (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b), t;
-  sexp r;
+  sexp r=SEXP_VOID;
   if (at > bt) {r=a; a=b; b=r; t=at; at=bt; bt=t;}
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
@@ -583,7 +577,7 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
 sexp sexp_div (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
   double f;
-  sexp r, rem;
+  sexp r=SEXP_VOID, rem;
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
@@ -632,7 +626,7 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
 
 sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
-  sexp r;
+  sexp r=SEXP_VOID;
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
@@ -665,7 +659,7 @@ sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
 
 sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
-  sexp r;
+  sexp r=SEXP_VOID;
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
@@ -698,7 +692,7 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
 
 sexp sexp_compare (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
-  sexp r;
+  sexp r=SEXP_VOID;
   double f;
   if (at > bt) {
     r = sexp_compare(ctx, b, a);

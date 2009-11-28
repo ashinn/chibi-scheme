@@ -632,7 +632,7 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_fx_mul(a, b) ((sexp)((((((sexp_sint_t)a)-SEXP_FIXNUM_TAG)*(((sexp_sint_t)b)>>SEXP_FIXNUM_BITS))+SEXP_FIXNUM_TAG)))
 #define sexp_fx_div(a, b) (sexp_make_fixnum(sexp_unbox_fixnum(a) / sexp_unbox_fixnum(b)))
 #define sexp_fx_rem(a, b) (sexp_make_fixnum(sexp_unbox_fixnum(a) % sexp_unbox_fixnum(b)))
-#define sexp_fx_sign(a)   (+1 | (((sexp_sint_t)(a)) >> (sizeof(int)*8 - 1)))
+#define sexp_fx_sign(a)   (+1 | (((sexp_sint_t)(a)) >> (sizeof(sexp_sint_t)*8 - 1)))
 #define sexp_fx_neg(a)    (sexp_make_fixnum(-(sexp_unbox_fixnum(a))))
 #define sexp_fx_abs(a)    ((((sexp_sint_t)a) < 0) ? sexp_fx_neg(a) : a)
 
