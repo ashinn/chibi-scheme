@@ -53,7 +53,12 @@
           (let ((mod2 (load-module (cadr x))))
             (%env-copy! env (module-env mod2) (module-exports mod2))))
          ((include)
-          (for-each (lambda (f) (load (find-module-file name f) env)) (cdr x)))
+          (for-each
+           (lambda (f)
+             (cond
+              ((find-module-file name f) => (lambda (x) (load x env)))
+              (else (error "couldn't find include" f))))
+           (cdr x)))
          ((body)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))

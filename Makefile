@@ -62,10 +62,10 @@ endif
 
 ifeq ($(USE_DL),0)
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -DUSE_DL=0 -g3 -O2 $(CFLAGS)
+XCFLAGS   := -Wall -DUSE_DL=0 -g3 $(CFLAGS)
 else
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -ldl -lm
-XCFLAGS   := -Wall -g3 -O2 $(CFLAGS)
+XCFLAGS   := -Wall -g3 $(CFLAGS)
 endif
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h

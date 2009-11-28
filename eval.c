@@ -2011,10 +2011,17 @@ sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #endif
 
 sexp sexp_load (sexp ctx, sexp source, sexp env) {
+#if USE_DL
+  char *suffix;
+#endif
   sexp tmp, out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
+  if (! sexp_stringp(source))
+    return sexp_type_exception(ctx, "not a string", source);
+  if (! sexp_envp(env))
+    return sexp_type_exception(ctx, "not an environment", env);
 #if USE_DL
-  char *suffix = sexp_string_data(source)
+  suffix = sexp_string_data(source)
     + sexp_string_length(source) - strlen(sexp_so_extension);
   if (strcmp(suffix, sexp_so_extension) == 0) {
     res = sexp_load_dl(ctx, source, env);
