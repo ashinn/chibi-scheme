@@ -1531,8 +1531,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
   case OP_NULLP:
     _ARG1 = sexp_make_boolean(sexp_nullp(_ARG1)); break;
-  case OP_INTEGERP:
-    _ARG1 = sexp_make_boolean(sexp_integerp(_ARG1)); break;
+  case OP_FIXNUMP:
+    _ARG1 = sexp_make_boolean(sexp_fixnump(_ARG1)); break;
   case OP_SYMBOLP:
     _ARG1 = sexp_make_boolean(sexp_symbolp(_ARG1)); break;
   case OP_CHARP:
@@ -2101,24 +2101,24 @@ define_math_op(sexp_ceiling, ceil)
 #endif
 
 static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
-  double f, x1, e1;
+  long double f, x1, e1;
   sexp res;
 #if USE_BIGNUMS
-  if (sexp_bignump(e)) {
+  if (sexp_bignump(e)) {        /* bignum exponent needs special handling */
     if ((x == sexp_make_fixnum(0)) || (x == sexp_make_fixnum(-1)))
-      res = sexp_make_flonum(ctx, pow(0, 0));
+      res = sexp_make_flonum(ctx, pow(0, 0));          /* +nan.0 */
     else if (x == sexp_make_fixnum(1))
-      res = sexp_make_flonum(ctx, sexp_unbox_fixnum(x));
+      res = sexp_make_flonum(ctx, 1);                  /* 1.0    */
     else if (sexp_flonump(x))
       res = sexp_make_flonum(ctx, pow(sexp_flonum_value(x), sexp_bignum_to_double(e)));
     else
-      res = sexp_make_flonum(ctx, pow(10.0, 1e100));
+      res = sexp_make_flonum(ctx, pow(10.0, 1e100));   /* +inf.0 */
   } else if (sexp_bignump(x)) {
     res = sexp_bignum_expt(ctx, x, e);
   } else {
 #endif
   if (sexp_fixnump(x))
-    x1 = (double)sexp_unbox_fixnum(x);
+    x1 = sexp_unbox_fixnum(x);
 #if USE_FLONUMS
   else if (sexp_flonump(x))
     x1 = sexp_flonum_value(x);
@@ -2126,7 +2126,7 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
   else
     return sexp_type_exception(ctx, "not a number", x);
   if (sexp_fixnump(e))
-    e1 = (double)sexp_unbox_fixnum(e);
+    e1 = sexp_unbox_fixnum(e);
 #if USE_FLONUMS
   else if (sexp_flonump(e))
     e1 = sexp_flonum_value(e);
@@ -2135,13 +2135,15 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
     return sexp_type_exception(ctx, "not a number", e);
   f = pow(x1, e1);
 #if USE_FLONUMS
-  if ((f > SEXP_MAX_FIXNUM) || sexp_flonump(x) || sexp_flonump(e)) {
-    if (sexp_flonump(x) || sexp_flonump(e))
-      res = sexp_make_flonum(ctx, f);
-#if USE_BIGNUMS
-    else
-      res = sexp_bignum_expt(ctx, sexp_fixnum_to_bignum(ctx, x), e);
+  if ((f > SEXP_MAX_FIXNUM) || (! sexp_fixnump(x)) || (! sexp_fixnump(e))) {
 #endif
+#if USE_BIGNUMS
+    if (sexp_fixnump(x) && sexp_fixnump(e))
+      res = sexp_bignum_expt(ctx, sexp_fixnum_to_bignum(ctx, x), e);
+    else
+#endif
+#if USE_FLONUMS
+      res = sexp_make_flonum(ctx, f);
   } else
 #endif
     res = sexp_make_fixnum((sexp_sint_t)round(f));

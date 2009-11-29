@@ -383,7 +383,8 @@
 (define real? number?)
 (define exact? fixnum?)
 (define inexact? flonum?)
-(define (integer? x) (if (fixnum? x) #t (and (flonum? x) (= x (truncate x)))))
+(define (integer? x)
+  (if (fixnum? x) #t (if (bignum? x) #t (and (flonum? x) (= x (truncate x))))))
 
 (define (zero? x) (= x 0))
 (define (positive? x) (> x 0))
@@ -523,9 +524,9 @@
       res)))
 
 (define (with-output-to-file file thunk)
-  (let ((old-out (current-input-port))
+  (let ((old-out (current-output-port))
         (tmp-out (open-output-file file)))
-    (current-input-port tmp-out)
+    (current-output-port tmp-out)
     (let ((res (thunk)))
       (current-output-port old-out)
       res)))

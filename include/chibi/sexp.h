@@ -195,7 +195,9 @@ struct sexp_struct {
       sexp_uint_t data[];
     } bignum;
     struct {
+      sexp_uint_t freep, length;
       void *value;
+      char body[];
     } cpointer;
     /* runtime types */
     struct {
@@ -459,16 +461,26 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #if USE_BIGNUMS
 SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
-#define sexp_integerp(x) (sexp_fixnump(x) || sexp_bignump(x) _or_integer_flonump(x))
+#define sexp_exact_integerp(x) (sexp_fixnump(x) || sexp_bignump(x))
 #else
 #define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
-#define sexp_integerp(x) (sexp_fixnump(x) _or_integer_flonump(x))
+#define sexp_exact_integerp(x) sexp_fixnump(x)
 #endif
+
+#define sexp_integerp(x) (sexp_exact_integerp(x) _or_integer_flonump(x))
 
 #if USE_FLONUMS
 #define sexp_fixnum_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_fixnum(x)))
 #else
 #define sexp_fixnum_to_flonum(ctx, x) (x)
+#endif
+
+#if USE_FLONUMS || USE_BIGNUMS
+#define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_data(x)[0]))
+#define sexp_sint_value(x) ((sexp_sint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_sign(x)*sexp_bignum_data(x)[0]))
+#else
+#define sexp_uint_value(x) ((sexp_uint_t)sexp_unbox_fixnum(x))
+#define sexp_sint_value(x) ((sexp_sint_t)sexp_unbox_fixnum(x))
 #endif
 
 /*************************** field accessors **************************/
@@ -509,7 +521,11 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_exception_procedure(p) ((p)->value.exception.procedure)
 #define sexp_exception_source(p)    ((p)->value.exception.source)
 
-#define sexp_cpointer_value(p)    ((p)->value.cpointer.value)
+#define sexp_cpointer_freep(p)      ((p)->value.cpointer.freep)
+#define sexp_cpointer_length(p)     ((p)->value.cpointer.length)
+#define sexp_cpointer_body(p)       ((p)->value.cpointer.body)
+#define sexp_cpointer_value(p)      ((p)->value.cpointer.value)
+#define sexp_cpointer_maybe_null_value(p) (sexp_not(p) ? NULL : sexp_cpointer_value(p))
 
 #define sexp_bytecode_length(x)   ((x)->value.bytecode.length)
 #define sexp_bytecode_name(x)     ((x)->value.bytecode.name)
@@ -734,7 +750,7 @@ SEXP_API sexp sexp_intern(sexp ctx, char *str);
 SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
 SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector(sexp ctx, sexp ls);
-SEXP_API sexp sexp_make_cpointer(sexp ctx, void* value);
+SEXP_API sexp sexp_make_cpointer(sexp ctx, sexp_uint_t typeid, void* value, int freep);
 SEXP_API sexp sexp_write(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_display(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_flush_output(sexp ctx, sexp out);
@@ -764,8 +780,16 @@ SEXP_API void sexp_destroy_context(sexp ctx);
 #endif
 
 #if USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
 SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
+SEXP_API sexp sexp_register_c_type (sexp ctx, sexp name);
+SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp obj);
+#define sexp_register_c_type(ctx, name, finalizer)                      \
+  sexp_register_type(ctx, name, sexp_make_fixnum(0), sexp_make_fixnum(0), \
+                     sexp_make_fixnum(0), sexp_make_fixnum(0),          \
+                     sexp_make_fixnum(0),                               \
+                     sexp_make_fixnum(sexp_sizeof(cpointer)),           \
+                     sexp_make_fixnum(0), sexp_make_fixnum(0), finalizer)
 #endif
 
 #define sexp_current_error_port(ctx) sexp_env_global_ref(sexp_context_env(ctx),sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL),SEXP_FALSE)
