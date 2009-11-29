@@ -77,7 +77,7 @@ enum sexp_opcode_names {
   OP_MAKE_VECTOR,
   OP_AND,
   OP_NULLP,
-  OP_INTEGERP,
+  OP_FIXNUMP,
   OP_SYMBOLP,
   OP_CHARP,
   OP_EOFP,

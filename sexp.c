@@ -53,12 +53,17 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
-sexp sexp_finalize_port (sexp ctx, sexp port) {
+#if USE_AUTOCLOSE_PORTS
+static sexp sexp_finalize_port (sexp ctx, sexp port) {
   if (sexp_port_openp(port) && sexp_port_stream(port)
       && sexp_stringp(sexp_port_name(port)))
     fclose(sexp_port_stream(port));
   return SEXP_VOID;
 }
+#define SEXP_FINALIZE_PORT sexp_finalize_port
+#else
+#define SEXP_FINALIZE_PORT NULL
+#endif
 
 #define _DEF_TYPE(t,fb,felb,flb,flo,fls,sb,so,sc,n,f)                   \
   {.tag=SEXP_TYPE, .value={.type={t,fb,felb,flb,flo,fls,sb,so,sc,n,f}}}
@@ -75,9 +80,9 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector", NULL),
   _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum", NULL),
   _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp), "bignum", NULL),
-  _DEF_TYPE(SEXP_CPOINTER, 0, 0, 0, 0, 0, sexp_sizeof(cpointer), 0, 0, "cpointer", NULL),
-  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port", sexp_finalize_port),
-  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port", sexp_finalize_port),
+  _DEF_TYPE(SEXP_CPOINTER, 0, 0, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, "cpointer", NULL),
+  _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port", SEXP_FINALIZE_PORT),
+  _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port", SEXP_FINALIZE_PORT),
   _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception", NULL),
   _DEF_TYPE(SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, "procedure", NULL),
   _DEF_TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro", NULL),
@@ -105,7 +110,8 @@ static sexp_uint_t sexp_num_types = SEXP_NUM_CORE_TYPES;
 static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
 
 sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp felb, sexp flb,
-                         sexp flo, sexp fls, sexp sb, sexp so, sexp sc) {
+                         sexp flo, sexp fls, sexp sb, sexp so, sexp sc,
+                         sexp_proc2 f) {
   struct sexp_struct *type, *new, *tmp;
   sexp res;
   sexp_uint_t i, len;
@@ -138,6 +144,7 @@ sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp felb, sexp flb,
     sexp_type_size_off(type) = sexp_unbox_fixnum(so);
     sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
     sexp_type_name(type) = strdup(sexp_string_data(name));
+    sexp_type_finalize(type) = f;
     res = sexp_make_fixnum(sexp_type_tag(type));
   }
   return res;
@@ -151,7 +158,13 @@ sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots) {
                        sexp_make_fixnum(offsetof(struct sexp_struct, value)),
                        slots, slots, sexp_make_fixnum(0), sexp_make_fixnum(0),
                        sexp_make_fixnum(type_size), sexp_make_fixnum(0),
-                       sexp_make_fixnum(0));
+                       sexp_make_fixnum(0), NULL);
+}
+
+sexp sexp_finalize_c_type (sexp ctx, sexp obj) {
+  if (sexp_cpointer_freep(obj))
+    free(sexp_cpointer_value(obj));
+  return SEXP_VOID;
 }
 
 #else
@@ -696,9 +709,13 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   return vec;
 }
 
-sexp sexp_make_cpointer (sexp ctx, void *value) {
-  sexp ptr = sexp_alloc_type(ctx, port, SEXP_CPOINTER);
+sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, int freep) {
+  sexp ptr;
+  if (! value) return SEXP_FALSE;
+  ptr = sexp_alloc_type(ctx, cpointer, typeid);
   sexp_cpointer_value(ptr) = value;
+  sexp_cpointer_freep(ptr) = freep;
+  sexp_cpointer_length(ptr) = 0;
   return ptr;
 }
 

@@ -95,6 +95,12 @@
 /*   will not be available by default. */
 /* #define USE_STRING_STREAMS 0 */
 
+/* uncomment this to disable automatic closing of ports */
+/*   If enabled, the underlying FILE* for file ports will be */
+/*   automatically closed when they're garbage collected.  Doesn't */
+/*   apply to stdin/stdout/stderr. */
+/* #define USE_AUTOCLOSE_PORTS 0 */
+
 /* uncomment this to disable stack overflow checks */
 /*   By default stacks are fairly small, so it's good to leave */
 /*   this enabled. */
@@ -223,6 +229,10 @@
 
 #ifndef USE_STRING_STREAMS
 #define USE_STRING_STREAMS 1
+#endif
+
+#ifndef USE_AUTOCLOSE_PORTS
+#define USE_AUTOCLOSE_PORTS 1
 #endif
 
 #ifndef USE_CHECK_STACK
