@@ -1,0 +1,20 @@
+
+(define (with-net-io host service proc)
+  (let lp ((addr (get-address-info host service #f)))
+    (if (not addr)
+        (error "couldn't find address" host service)
+        (let ((sock (socket (address-info-family addr)
+                            (address-info-socket-type addr)
+                            (address-info-protocol addr))))
+          (if (negative? sock)
+              (lp (address-info-next addr))
+              (if (negative?
+                   (connect sock
+                            (address-info-address addr)
+                            (address-info-address-length addr)))
+                  (lp (address-info-next addr))
+                  (let ((in (open-input-fd sock))
+                        (out (open-output-fd sock)))
+                    (let ((res (proc in out)))
+                      (close-input-port in)
+                      res))))))))

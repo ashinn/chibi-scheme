@@ -1,0 +1,18 @@
+
+(c-system-include "sys/types.h")
+(c-system-include "unistd.h")
+
+(define-c input-port (open-input-fd fdopen) (int (value "r")))
+(define-c output-port (open-output-fd fdopen) (int (value "w")))
+
+(define-c errno (delete-file unlink) (string))
+(define-c errno (link-file link) (string string))
+(define-c errno (symbolic-link symlink) (string string))
+(define-c errno (rename-file rename) (string string))
+
+(define-c errno (create-directory mkdir) (string int))
+(define-c errno (delete-directory rmdir) (string))
+
+(define-c int (duplicate-fd dup) (int))
+;;(define-c errno pipe ((array int 2)))
+
