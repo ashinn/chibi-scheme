@@ -1,0 +1,8 @@
+
+(define-module (chibi posix)
+  (export open-input-fd open-output-fd
+          delete-file link-file symbolic-link rename-file
+          create-directory delete-directory)
+  (import (scheme))
+  (include-shared "posix"))
+

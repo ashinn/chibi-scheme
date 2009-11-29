@@ -308,6 +308,8 @@ sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
 
 sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
   sexp ls;
+  if (! sexp_oportp(out))
+    out = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
   sexp_write_string(ctx, "ERROR", out);
   if (sexp_exceptionp(exn)) {
     if (sexp_procedurep(sexp_exception_procedure(exn))) {

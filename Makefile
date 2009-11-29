@@ -11,7 +11,9 @@ INCDIR   ?= $(PREFIX)/include/chibi
 MODDIR   ?= $(PREFIX)/share/chibi
 LIBDIR   ?= $(PREFIX)/lib/chibi
 
-DESTDIR ?=
+DESTDIR  ?=
+
+GENSTUBS ?= ./tools/genstubs.scm
 
 ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
@@ -50,7 +52,8 @@ endif
 
 all: chibi-scheme$(EXE) libs
 
-libs: lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO)
+libs: lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO) \
+	lib/chibi/net$(SO) lib/chibi/posix$(SO)
 
 ifeq ($(USE_BOEHM),1)
 GCLDFLAGS := -lgc
@@ -92,7 +95,10 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
-lib/srfi/%$(SO): lib/srfi/%.c $(INCLUDES)
+%.c: %.stub chibi-scheme$(EXE) $(GENSTUBS)
+	$(GENSTUBS) $<
+
+lib/%$(SO): lib/%.c $(INCLUDES)
 	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:

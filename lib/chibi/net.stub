@@ -1,0 +1,26 @@
+
+(c-system-include "sys/types.h")
+(c-system-include "sys/socket.h")
+(c-system-include "netdb.h")
+
+(define-c-struct sockaddr
+  predicate:   sockaddr?)
+
+(define-c-struct addrinfo
+  finalizer: freeaddrinfo
+  predicate: address-info?
+  (int       ai_family    address-info-family)
+  (int       ai_socktype  address-info-socket-type)
+  (int       ai_protocol  address-info-protocol)
+  (sockaddr  ai_addr      address-info-address)
+  (size_t    ai_addrlen   address-info-address-length)
+  (addrinfo  ai_next      address-info-next))
+
+(define-c errno (get-address-info getaddrinfo)
+  (string string (maybe-null addrinfo) (result free addrinfo)))
+
+(define-c int bind (int sockaddr int))
+(define-c int listen (int int))
+(define-c int socket (int int int))
+(define-c int connect (int sockaddr int))
+
