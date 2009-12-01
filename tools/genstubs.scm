@@ -39,6 +39,44 @@
    (string-replace (string-replace (x->string x) #\- "_") #\? "_p")
    #\! "_x"))
 
+(define (string-scan c str . o)
+  (let ((limit (string-length str)))
+    (let lp ((i (if (pair? o) (car o) 0)))
+      (cond ((>= i limit) #f)
+            ((eqv? c (string-ref str i)) i)
+            (else (lp (+ i 1)))))))
+
+(define (string-downcase str)
+  (list->string (map char-downcase (string->list str))))
+
+(define (with-output-to-string thunk)
+  (call-with-output-string
+    (lambda (out)
+      (let ((old-out (current-output-port)))
+        (current-output-port out)
+        (thunk)
+        (current-output-port old-out)))))
+
+(define (definite-article x)
+  (define (vowel? c)
+    (memv c '(#\a #\e #\i #\o #\u #\A #\E #\I #\O #\U)))
+  (define (vowel-exception? str)
+    (member (string-downcase str)
+            '("european" "ewe" "unicorn" "unicycle" "university" "user")))
+  (define (consonant-exception? str)
+    ;; not "historic" according to elements of style
+    (member (string-downcase str)
+            '("heir" "herb" "herbal" "herbivore" "honest" "honor" "hour")))
+  (let* ((full-str (with-output-to-string (lambda () (cat x))))
+         (i (string-scan #\space full-str))
+         (str (if i (substring full-str 0 i) full-str)))
+    (string-append
+     (cond
+      ((equal? str "") "a ")
+      ((vowel? (string-ref str 0)) (if (vowel-exception? str) "a " "an "))
+      (else (if (consonant-exception? str) "an " "a ")))
+     full-str)))
+
 (define (func-name func)
   (caddr func))
 
@@ -219,14 +257,16 @@
       ((or (int-type? base-type) (float-type? base-type) (eq? 'string base-type))
        (cat
         "  if (! " (lambda () (check-type arg type)) ")\n"
-        "    return sexp_type_exception(ctx, \"not a " (type-name type) "\", "
+        "    return sexp_type_exception(ctx, \"not "
+        (definite-article (type-name type)) "\", "
         arg ");\n"))
       (else
        (cond
         ((assq base-type types)
          (cat
           "  if (! " (lambda () (check-type arg type)) ")\n"
-          "    return sexp_type_exception(ctx, \"not a " type "\", " arg ");\n"))
+          "    return sexp_type_exception(ctx, \"not "
+          (definite-article type) "\", " arg ");\n"))
         (else
          (display "WARNING: don't know how to validate: " (current-error-port))
          (write type (current-error-port))
