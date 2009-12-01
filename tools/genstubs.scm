@@ -96,7 +96,7 @@
   (memq type '(short int long)))
 
 (define (unsigned-int-type? type)
-  (memq type '(unsigned-short unsigned-int unsigned-long size_t)))
+  (memq type '(unsigned-short unsigned-int unsigned-long size_t pid_t)))
 
 (define (int-type? type)
   (or (signed-int-type? type) (unsigned-int-type? type)))

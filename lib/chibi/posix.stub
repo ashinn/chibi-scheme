@@ -2,6 +2,13 @@
 (c-system-include "sys/types.h")
 (c-system-include "time.h")
 (c-system-include "unistd.h")
+(c-system-include "dirent.h")
+
+(define-c-struct DIR
+  finalizer: closedir)
+
+(define-c-struct dirent
+  (string d_name dirent-name))
 
 (define-c input-port (open-input-fd fdopen) (int (value "r")))
 (define-c output-port (open-output-fd fdopen) (int (value "w")))
@@ -11,11 +18,21 @@
 (define-c errno (symbolic-link-file symlink) (string string))
 (define-c errno (rename-file rename) (string string))
 
+;; (define-c string (current-directory getcwd) ())
 (define-c errno (create-directory mkdir) (string int))
 (define-c errno (delete-directory rmdir) (string))
 
+(define-c (free DIR) opendir (string))
+(define-c dirent readdir (DIR))
+
 (define-c int (duplicate-fd dup) (int))
-;;(define-c errno pipe ((array int 2)))
+
+(define-c pid_t fork ())
+;; (define-c pid_t wait ((result pointer int)))
+;; (define-c void exit (int))
+;; (define-c int (execute execvp) (string (array string null)))
+
+;;(define-c errno pipe ((result array int 2)))
 
 (define-c time_t (current-seconds time) ((value NULL)))
 
