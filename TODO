@@ -3,7 +3,7 @@
 *+ precise gc rewrite
 **+ fix heap growing
 **+ separate gc heaps
-**- finalizers
+**+ finalizers
 **- weak references
 *+ ast rewrite
 *+ full r5rs
@@ -28,7 +28,7 @@
 *= ffi
 **+ libdl interface
 **+ opcode generation interface
-**- stub generator
+**= stub generator
 *= cleanup
 *- user documentation
 *- unicode
@@ -47,6 +47,6 @@
 *- SRFI-0 cond-expand
 *+ SRFI-9 define-record-type
 *+ SRFI-69 hash-tables
-*- tcp interface
-*- posix interface
+*= net interface
+*= posix interface
 *- code repository with install tools
