@@ -483,6 +483,9 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_sint_value(x) ((sexp_sint_t)sexp_unbox_fixnum(x))
 #endif
 
+#define sexp_shift_epoch(x) ((x)-SEXP_EPOCH_OFFSET)
+#define sexp_unshift_epoch(x) ((x)+SEXP_EPOCH_OFFSET)
+
 /*************************** field accessors **************************/
 
 #define sexp_vector_length(x) ((x)->value.vector.length)

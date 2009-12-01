@@ -1,5 +1,6 @@
 
 (c-system-include "sys/types.h")
+(c-system-include "time.h")
 (c-system-include "unistd.h")
 
 (define-c input-port (open-input-fd fdopen) (int (value "r")))
@@ -7,7 +8,7 @@
 
 (define-c errno (delete-file unlink) (string))
 (define-c errno (link-file link) (string string))
-(define-c errno (symbolic-link symlink) (string string))
+(define-c errno (symbolic-link-file symlink) (string string))
 (define-c errno (rename-file rename) (string string))
 
 (define-c errno (create-directory mkdir) (string int))
@@ -15,4 +16,6 @@
 
 (define-c int (duplicate-fd dup) (int))
 ;;(define-c errno pipe ((array int 2)))
+
+(define-c time_t (current-seconds time) ((value NULL)))
 

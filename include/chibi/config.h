@@ -101,6 +101,12 @@
 /*   apply to stdin/stdout/stderr. */
 /* #define USE_AUTOCLOSE_PORTS 0 */
 
+/* uncomment this to use the normal 1970 unix epoch */
+/*   By default chibi uses an datetime epoch starting at */
+/*   2010/01/01 00:00:00 in order to be able to represent */
+/*   more common times as fixnums. */
+/* #define USE_2010_EPOCH 0 */
+
 /* uncomment this to disable stack overflow checks */
 /*   By default stacks are fairly small, so it's good to leave */
 /*   this enabled. */
@@ -233,6 +239,18 @@
 
 #ifndef USE_AUTOCLOSE_PORTS
 #define USE_AUTOCLOSE_PORTS 1
+#endif
+
+#ifndef USE_2010_EPOCH
+#define USE_2010_EPOCH 1
+#endif
+
+#ifndef SEXP_EPOCH_OFFSET
+#if USE_2010_EPOCH
+#define SEXP_EPOCH_OFFSET 1262271600
+#else
+#define SEXP_EPOCH_OFFSET 0
+#endif
 #endif
 
 #ifndef USE_CHECK_STACK
