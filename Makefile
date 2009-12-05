@@ -98,17 +98,18 @@ chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
 %.c: %.stub chibi-scheme$(EXE) $(GENSTUBS)
-	$(GENSTUBS) $<
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:
 	rm -f *.o *.i *.s *.8
-	find lib -name \*.$(SO) -exec rm -f '{}' \;
+	find lib -name \*$(SO) -exec rm -f '{}' \;
+	rm -f tests/basic/*.out tests/basic/*.err
 
 cleaner: clean
-	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) $(COMPILED_LIBS) *$(SO) *.a
+	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) $(COMPILED_LIBS) *$(SO) *.a include/chibi/install.h
 	rm -rf *.dSYM
 
 test-basic: chibi-scheme$(EXE)
@@ -122,13 +123,13 @@ test-basic: chibi-scheme$(EXE)
 	done
 
 test-numbers: all
-	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/numeric-tests.scm
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
 test-match: all
-	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/match-tests.scm
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/match-tests.scm
 
 test: all
-	LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH ./chibi-scheme$(EXE) tests/r5rs-tests.scm
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/r5rs-tests.scm
 
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
@@ -139,16 +140,19 @@ install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
 	mkdir -p $(DESTDIR)$(LIBDIR)
+	mkdir -p $(DESTDIR)$(SOLIBDIR)
+	cp libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
 	cp libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
 	-cp libchibi-scheme.a $(DESTDIR)$(LIBDIR)/
 	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
-	rm -f $(BINDIR)/chibi-scheme*
-	rm -f $(SOLIBDIR)/libchibi-scheme$(SO)
-	rm -f $(LIBDIR)/libchibi-scheme$(SO).a
-	cd $(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
-	rm -rf $(MODDIR)
+	rm -f $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
+	rm -f $(DESTDIR)$(BINDIR)/chibi-scheme-static$(EXE)
+	rm -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
+	rm -f $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
+	cd $(DESTDIR)$(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
+	rm -rf $(DESTDIR)$(MODDIR)
 
 dist: cleaner
 	rm -f chibi-scheme-`cat VERSION`.tgz
