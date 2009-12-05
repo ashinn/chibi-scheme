@@ -4,10 +4,26 @@
 
 #include "chibi/sexp.h"
 
+/* These settings are configurable but only recommended for */
+/* experienced users, so they're not in config.h.  */
+
+/* the initial heap size in bytes */
+#ifndef SEXP_INITIAL_HEAP_SIZE
 #define SEXP_INITIAL_HEAP_SIZE (2*1024*1024)
-#define SEXP_MAXIMUM_HEAP_SIZE 0
+#endif
+
+/* the maximum heap size in bytes - if 0 there is no limit */
+#ifndef SEXP_MAXIMUM_HEAP_SIZE
+#define SEXP_MAXIMUM_HEAP_SIZE (4*1024*1024)
+#endif
+
+/* if after GC more than this percentage of memory is still in use, */
+/* and we've not exceeded the maximum size, grow the heap */
+#ifndef SEXP_GROW_HEAP_RATIO
+#define SEXP_GROW_HEAP_RATIO 0.75
+#endif
+
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_sizeof(pair))
-#define SEXP_GROW_HEAP_RATIO 0.7
 
 #if SEXP_64_BIT
 #define sexp_heap_align(n) sexp_align(n, 5)
@@ -206,12 +222,12 @@ void* sexp_alloc (sexp ctx, size_t size) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
     h = sexp_heap_last(sexp_context_heap(ctx));
     if (((max_freed < size)
-         || ((h->size - sum_freed) < (h->size*(1 - SEXP_GROW_HEAP_RATIO))))
+         || ((h->size - sum_freed) > (h->size*SEXP_GROW_HEAP_RATIO)))
         && ((! SEXP_MAXIMUM_HEAP_SIZE) || (size < SEXP_MAXIMUM_HEAP_SIZE)))
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
     if (! res)
-      errx(80, "out of memory allocating %zu bytes, aborting\n", size);
+      res = sexp_global(ctx, SEXP_G_OOM_ERROR);
   }
   return res;
 }
