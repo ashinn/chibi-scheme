@@ -9,12 +9,12 @@
 (define-c-struct addrinfo
   finalizer: freeaddrinfo
   predicate: address-info?
-  (int       ai_family    address-info-family)
-  (int       ai_socktype  address-info-socket-type)
-  (int       ai_protocol  address-info-protocol)
-  (sockaddr  ai_addr      address-info-address)
-  (size_t    ai_addrlen   address-info-address-length)
-  (addrinfo  ai_next      address-info-next))
+  (int              ai_family    address-info-family)
+  (int              ai_socktype  address-info-socket-type)
+  (int              ai_protocol  address-info-protocol)
+  ((link sockaddr)  ai_addr      address-info-address)
+  (size_t           ai_addrlen   address-info-address-length)
+  ((link addrinfo)  ai_next      address-info-next))
 
 (define-c errno (get-address-info getaddrinfo)
   (string string (maybe-null addrinfo) (result free addrinfo)))

@@ -125,34 +125,27 @@
                        funcs))
      #f)))
 
-(define (delq x ls)
-  (cond ((not (pair? ls)) ls)
-        ((eq? x (car ls)) (cdr ls))
-        (else (cons (car ls) (delq x (cdr ls))))))
-
-(define (without-mod x ls)
-  (let ((res (delq x ls)))
-    (if (and (pair? res) (null? (cdr res)))
-        (car res)
-        res)))
-
 (define (with-parsed-type type proc)
-  (let* ((free? (and (pair? type) (memq 'free type)))
-         (type (if free? (without-mod 'free type) type))
-         (const? (and (pair? type) (memq 'const type)))
-         (type (if const? (without-mod 'const type) type))
-         (null-ptr? (and (pair? type) (memq 'maybe-null type)))
-         (type (if null-ptr? (without-mod 'maybe-null type) type))
-         (pointer? (and (pair? type) (memq 'pointer type)))
-         (type (if pointer? (without-mod 'pointer type) type))
-         (result? (and (pair? type) (memq 'result type)))
-         (type (if result? (without-mod 'result type) type)))
-    (proc type free? const? null-ptr? pointer? result?)))
+  (let lp ((type type) (free? #f) (const? #f) (null-ptr? #f)
+           (pointer? #f) (struct? #f) (link? #f) (result? #f))
+    (define (next) (if (null? (cddr type)) (cadr type) (cdr type)))
+    (case (and (pair? type) (car type))
+      ((free) (lp (next) #t const? null-ptr? pointer? struct? link? result?))
+      ((const) (lp (next) free? #t null-ptr? pointer? struct? link? result?))
+      ((maybe-null) (lp (next) free? const? #t pointer? struct? link? result?))
+      ((pointer) (lp (next) free? const? null-ptr? #t struct? link? result?))
+      ((struct) (lp (next) free? const? null-ptr? pointer? #t link? result?))
+      ((link) (lp (next) free? const? null-ptr? pointer? struct? #t result?))
+      ((result) (lp (next) free? const? null-ptr? pointer? struct? link? #t))
+      (else (proc type free? const? null-ptr? pointer? struct? link? result?)))))
 
-(define (c->scheme-converter type val)
+(define (get-base-type type)
+  (with-parsed-type type (lambda (x . args) x)))
+
+(define (c->scheme-converter type val . o)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? result?)
+   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
      (cond
       ((memq type '(sexp errno))
        (cat val))
@@ -171,14 +164,15 @@
          (cond
           (ctype
            (cat "sexp_make_cpointer(ctx, "  (type-id-name type) ", "
-                val ", " (if free? 1 0) ")"))
+                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
+                (if free? 1 0) ")"))
           (else
            (error "unknown type" type)))))))))
 
 (define (scheme->c-converter type val)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? result?)
+   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
      (cond
       ((eq? 'sexp type)
        (cat val))
@@ -204,7 +198,7 @@
 (define (type-predicate type)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? result?)
+   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
      (cond
       ((int-type? type) "sexp_exact_integerp")
       ((float-type? type) "sexp_flonump")
@@ -214,7 +208,7 @@
 (define (type-name type)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? result?)
+   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
      (cond
        ((int-type? type) "integer")
        ((float-type? type) "flonum")
@@ -223,7 +217,7 @@
 (define (type-c-name type)
   (with-parsed-type
    type
-   (lambda (base-type free? const? null-ptr? pointer? result?)
+   (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
      (let ((struct? (assq base-type types)))
        (string-append
         (if const? "const " "")
@@ -235,7 +229,7 @@
 (define (check-type arg type)
   (with-parsed-type
    type
-   (lambda (base-type free? const? null-ptr? pointer? result?)
+   (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
      (cond
       ((or (int-type? base-type) (float-type? base-type) (eq? 'string base-type))
        (cat (type-predicate type) "(" arg ")"))
@@ -256,7 +250,7 @@
 (define (validate-type arg type)
   (with-parsed-type
    type
-   (lambda (base-type free? const? null-ptr? pointer? result?)
+   (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
      (cond
       ((or (int-type? base-type) (float-type? base-type) (eq? 'string base-type))
        (cat
@@ -349,7 +343,7 @@
         (type (cdr type)))
     (with-parsed-type
      type
-     (lambda (base-type free? const? null-ptr? pointer? result?)
+     (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
        (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
             "  " (type-id-name name)
             " = sexp_unbox_fixnum(sexp_register_c_type(ctx, name, "
@@ -368,46 +362,56 @@
 
 (define (type-getter-name type name field)
   (string-append "sexp_" (x->string (type-name name))
-                 "_get_" (x->string (cadr field))))
+                 "_get_" (x->string (get-base-type (cadr field)))))
 
 (define (write-type-getter type name field)
-  (cat "static sexp " (type-getter-name type name field)
-       " (sexp ctx, sexp x) {\n"
-       (lambda () (validate-type "x" name))
-       "  return "
-       (lambda () (c->scheme-converter
-               (car field)
-               (string-append "((struct " (mangle name) "*)"
-                              "sexp_cpointer_value(x))->"
-                              (x->string (cadr field)))))
-       ";\n"
-       "}\n\n"))
+  (with-parsed-type
+   (car field)
+   (lambda (field-type free? const? null-ptr? pointer? struct? link? result?)
+     (cat "static sexp " (type-getter-name type name field)
+          " (sexp ctx, sexp x) {\n"
+          (lambda () (validate-type "x" name))
+          "  return "
+          (lambda ()
+            (c->scheme-converter
+             field-type
+             (string-append "((struct " (mangle name) "*)"
+                            "sexp_cpointer_value(x))"
+                            (if struct? "." "->")
+                            (x->string (cadr field)))
+             (and (or struct? link?) "x")))
+          ";\n"
+          "}\n\n"))))
 
 (define (type-setter-name type name field)
   (string-append "sexp_" (x->string (type-name name))
-                 "_set_" (x->string (car field))))
+                 "_set_" (x->string (get-base-type (car field)))))
 
 (define (write-type-setter type name field)
-  (cat "static sexp " (type-setter-name type name field)
-       " (sexp ctx, sexp x, sexp v) {\n"
-       (lambda () (validate-type "x" name))
-       (lambda () (validate-type "v" (car field)))
-       "  "
-       (lambda () (c->scheme-converter
-               (car field)
-               (string-append "((struct " (mangle name) "*)"
-                              "sexp_cpointer_value(x))->"
-                              (x->string (cadr field)))))
-       " = v;\n"
-       "  return SEXP_VOID;"
-       "}\n\n"))
+  (with-parsed-type
+   (car field)
+   (lambda (field-type free? const? null-ptr? pointer? struct? link? result?)
+     (cat "static sexp " (type-setter-name type name field)
+         " (sexp ctx, sexp x, sexp v) {\n"
+         (lambda () (validate-type "x" name))
+         (lambda () (validate-type "v" (car field)))
+         "  "
+         (lambda () (c->scheme-converter
+                 field-type
+                 (string-append "((struct " (mangle name) "*)"
+                                "sexp_cpointer_value(x))"
+                                (if struct? "." "->")
+                                (x->string (cadr field)))))
+         " = v;\n"
+         "  return SEXP_VOID;"
+         "}\n\n"))))
 
 (define (write-type-funcs type)
   (let ((name (car type))
         (type (cdr type)))
     (with-parsed-type
      type
-     (lambda (base-type free? const? null-ptr? pointer? result?)
+     (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
        (cond
         ((memq 'finalizer: base-type)
          => (lambda (x)
@@ -456,8 +460,7 @@
                     (cons (list (type-setter-name type name field)
                                 (car field) (cadddr field)
                                 (list name (car field)))
-                          funcs))
-              )))))
+                          funcs)))))))
         base-type)))))
 
 (define (write-init)
