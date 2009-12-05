@@ -149,8 +149,9 @@ struct sexp_gc_var_t {
 
 struct sexp_struct {
   sexp_tag_t tag;
-  char immutablep;
   char gc_mark;
+  unsigned int immutablep:1;
+  unsigned int freep:1;
   union {
     /* basic types */
     double flonum;
@@ -195,8 +196,9 @@ struct sexp_struct {
       sexp_uint_t data[];
     } bignum;
     struct {
-      sexp_uint_t freep, length;
+      sexp_uint_t length;
       void *value;
+      sexp parent;
       char body[];
     } cpointer;
     /* runtime types */
@@ -368,9 +370,11 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_charp(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
-#define sexp_pointer_tag(x) ((x)->tag)
-#define sexp_gc_mark(x)     ((x)->gc_mark)
-#define sexp_immutablep(x)  ((x)->immutablep)
+#define sexp_pointer_tag(x)      ((x)->tag)
+#define sexp_gc_mark(x)          ((x)->gc_mark)
+#define sexp_flags(x)            ((x)->flags)
+#define sexp_immutablep(x)       ((x)->immutablep)
+#define sexp_freep(x)            ((x)->freep)
 
 #define sexp_object_type(x)             (&(sexp_type_specs[(x)->tag]))
 #define sexp_object_type_name(x)        (sexp_type_name(sexp_object_type(x)))
@@ -524,9 +528,10 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_exception_procedure(p) ((p)->value.exception.procedure)
 #define sexp_exception_source(p)    ((p)->value.exception.source)
 
-#define sexp_cpointer_freep(p)      ((p)->value.cpointer.freep)
+#define sexp_cpointer_freep(p)      (sexp_freep(p))
 #define sexp_cpointer_length(p)     ((p)->value.cpointer.length)
 #define sexp_cpointer_body(p)       ((p)->value.cpointer.body)
+#define sexp_cpointer_parent(p)     ((p)->value.cpointer.parent)
 #define sexp_cpointer_value(p)      ((p)->value.cpointer.value)
 #define sexp_cpointer_maybe_null_value(p) (sexp_not(p) ? NULL : sexp_cpointer_value(p))
 
@@ -753,7 +758,7 @@ SEXP_API sexp sexp_intern(sexp ctx, char *str);
 SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
 SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector(sexp ctx, sexp ls);
-SEXP_API sexp sexp_make_cpointer(sexp ctx, sexp_uint_t typeid, void* value, int freep);
+SEXP_API sexp sexp_make_cpointer(sexp ctx, sexp_uint_t typeid, void* value, sexp parent, int freep);
 SEXP_API sexp sexp_write(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_display(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_flush_output(sexp ctx, sexp out);

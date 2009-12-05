@@ -80,7 +80,7 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector", NULL),
   _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum", NULL),
   _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp), "bignum", NULL),
-  _DEF_TYPE(SEXP_CPOINTER, 0, 0, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, "cpointer", NULL),
+  _DEF_TYPE(SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, "cpointer", NULL),
   _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port", SEXP_FINALIZE_PORT),
   _DEF_TYPE(SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "output-port", SEXP_FINALIZE_PORT),
   _DEF_TYPE(SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, "exception", NULL),
@@ -711,12 +711,13 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   return vec;
 }
 
-sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, int freep) {
+sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, sexp parent, int freep) {
   sexp ptr;
   if (! value) return SEXP_FALSE;
   ptr = sexp_alloc_type(ctx, cpointer, typeid);
+  sexp_freep(ptr) = freep;
   sexp_cpointer_value(ptr) = value;
-  sexp_cpointer_freep(ptr) = freep;
+  sexp_cpointer_parent(ptr) = parent;
   sexp_cpointer_length(ptr) = 0;
   return ptr;
 }
@@ -1158,7 +1159,11 @@ sexp sexp_read_string(sexp ctx, sexp in) {
   for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
     if (c == '\\') {
       c = sexp_read_char(ctx, in);
-      switch (c) {case 'n': c = '\n'; break; case 't': c = '\t'; break;}
+      switch (c) {
+      case 'n': c = '\n'; break;
+      case 'r': c = '\r'; break; 
+      case 't': c = '\t'; break;
+      }
     }
     if (c == EOF) {
       res = sexp_read_error(ctx, "premature end of string", SEXP_NULL, in);

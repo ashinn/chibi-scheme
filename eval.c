@@ -16,7 +16,6 @@ static int scheme_initialized_p = 0;
 #define sexp_disasm(...)
 #endif
 
-static sexp analyze (sexp ctx, sexp x);
 static void generate (sexp ctx, sexp x);
 static sexp sexp_make_null_env (sexp ctx, sexp version);
 static sexp sexp_make_standard_env (sexp ctx, sexp version);
@@ -354,7 +353,7 @@ static sexp sexp_strip_synclos (sexp ctx, sexp x) {
     kar = sexp_strip_synclos(ctx, sexp_car(x));
     kdr = sexp_strip_synclos(ctx, sexp_cdr(x));
     res = sexp_cons(ctx, kar, kdr);
-    sexp_immutablep(res) = sexp_immutablep(x);
+    sexp_immutablep(res) = 1;
   } else {
     res = x;
   }
@@ -388,7 +387,7 @@ static sexp analyze_app (sexp ctx, sexp x) {
   sexp_gc_preserve2(ctx, res, tmp);
   for (res=SEXP_NULL; sexp_pairp(x); x=sexp_cdr(x)) {
     sexp_push(ctx, res, SEXP_FALSE);
-    tmp = analyze(ctx, sexp_car(x));
+    tmp = sexp_analyze(ctx, sexp_car(x));
     if (sexp_exceptionp(tmp)) {
       res = tmp;
       break;
@@ -406,7 +405,7 @@ static sexp analyze_seq (sexp ctx, sexp ls) {
   if (sexp_nullp(ls))
     res = SEXP_VOID;
   else if (sexp_nullp(sexp_cdr(ls)))
-    res = analyze(ctx, sexp_car(ls));
+    res = sexp_analyze(ctx, sexp_car(ls));
   else {
     res = sexp_alloc_type(ctx, seq, SEXP_SEQ);
     tmp = analyze_app(ctx, ls);
@@ -451,7 +450,7 @@ static sexp analyze_set (sexp ctx, sexp x) {
     ref = analyze_var_ref(ctx, sexp_cadr(x));
     if (sexp_lambdap(sexp_ref_loc(ref)))
       sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
-    value = analyze(ctx, sexp_caddr(x));
+    value = sexp_analyze(ctx, sexp_caddr(x));
     if (sexp_exceptionp(ref))
       res = ref;
     else if (sexp_exceptionp(value))
@@ -495,7 +494,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
       value = analyze_lambda(ctx2, sexp_cons(ctx2, SEXP_VOID, tmp));
     } else {
       name = sexp_cadr(tmp);
-      value = analyze(ctx2, sexp_caddr(tmp));
+      value = sexp_analyze(ctx2, sexp_caddr(tmp));
     }
     if (sexp_exceptionp(value)) sexp_return(res, value);
     sexp_push(ctx2, defs,
@@ -522,10 +521,10 @@ static sexp analyze_if (sexp ctx, sexp x) {
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x)))) {
     res = sexp_compile_error(ctx, "bad if syntax", x);
   } else {
-    test = analyze(ctx, sexp_cadr(x));
-    pass = analyze(ctx, sexp_caddr(x));
+    test = sexp_analyze(ctx, sexp_cadr(x));
+    pass = sexp_analyze(ctx, sexp_caddr(x));
     fail_expr = sexp_pairp(sexp_cdddr(x)) ? sexp_cadddr(x) : SEXP_VOID;
-    fail = analyze(ctx, fail_expr);
+    fail = sexp_analyze(ctx, fail_expr);
     res = (sexp_exceptionp(test) ? test : sexp_exceptionp(pass) ? pass :
            sexp_exceptionp(fail) ? fail : sexp_make_cnd(ctx, test, pass, fail));
   }
@@ -559,7 +558,7 @@ static sexp analyze_define (sexp ctx, sexp x) {
         tmp = sexp_cons(ctx, SEXP_VOID, tmp);
         value = analyze_lambda(ctx, tmp);
       } else
-        value = analyze(ctx, sexp_caddr(x));
+        value = sexp_analyze(ctx, sexp_caddr(x));
       ref = analyze_var_ref(ctx, name);
       if (sexp_exceptionp(ref))
         res = ref;
@@ -644,7 +643,7 @@ static sexp analyze_letrec_syntax (sexp ctx, sexp x) {
   return res;
 }
 
-static sexp analyze (sexp ctx, sexp object) {
+sexp sexp_analyze (sexp ctx, sexp object) {
   sexp op;
   sexp_gc_var4(res, tmp, x, cell);
   sexp_gc_preserve4(ctx, res, tmp, x, cell);
@@ -731,7 +730,7 @@ static sexp analyze (sexp ctx, sexp object) {
                                         sexp_synclo_free_vars(x),
                                         sexp_context_fv(tmp));
     x = sexp_synclo_expr(x);
-    res = analyze(tmp, x);
+    res = sexp_analyze(tmp, x);
   } else {
     res = x;
   }
@@ -2274,7 +2273,7 @@ sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args,
 #if USE_TYPE_DEFS
 
 sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type) {
-  if ((! sexp_fixnump(type)) || (sexp_unbox_fixnum(type) < SEXP_NUM_CORE_TYPES))
+  if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-type-predicate: bad type", type);
   return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_TYPE_PREDICATE),
                           sexp_make_fixnum(OP_TYPEP), sexp_make_fixnum(1),
@@ -2285,7 +2284,7 @@ sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type) {
 
 sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
   sexp_uint_t type_size;
-  if ((! sexp_fixnump(type)) || (sexp_unbox_fixnum(type) < SEXP_NUM_CORE_TYPES))
+  if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-constructor: bad type", type);
   type_size = sexp_type_size_base(&(sexp_type_specs[sexp_unbox_fixnum(type)]));
   return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_CONSTRUCTOR),
@@ -2296,7 +2295,7 @@ sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
 }
 
 sexp sexp_make_accessor (sexp ctx, sexp name, sexp type, sexp index, sexp code) {
-  if ((! sexp_fixnump(type)) || (sexp_unbox_fixnum(type) < SEXP_NUM_CORE_TYPES))
+  if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-accessor: bad type", type);
   if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
     return sexp_type_exception(ctx, "make-accessor: bad index", index);
@@ -2435,7 +2434,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 sexp sexp_compile (sexp ctx, sexp x) {
   sexp_gc_var3(ast, vec, res);
   sexp_gc_preserve3(ctx, ast, vec, res);
-  ast = analyze(ctx, x);
+  ast = sexp_analyze(ctx, x);
   if (sexp_exceptionp(ast)) {
     res = ast;
   } else {
