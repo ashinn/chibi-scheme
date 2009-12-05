@@ -20,8 +20,14 @@ static const char* reverse_opcode_names[] =
 
 static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   unsigned char *ip, opcode;
-  if (sexp_procedurep(bc))
+  if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
+  } else if (sexp_opcodep(bc)) {
+    sexp_printf(ctx, out, "%s is a primitive\n", sexp_opcode_name(bc));
+    return SEXP_VOID;
+  } else if (! sexp_bytecodep(bc)) {
+    return sexp_type_exception(ctx, "not a procedure", bc);
+  }
   ip = sexp_bytecode_data(bc);
  loop:
   opcode = *ip++;
