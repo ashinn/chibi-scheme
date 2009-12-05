@@ -169,8 +169,7 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
 sexp_heap sexp_make_heap (size_t size) {
   sexp_free_list free, next;
   sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
-  if (! h)
-    errx(70, "out of memory allocating %zu byte heap, aborting\n", size);
+  if (! h) return NULL;
   h->size = size;
   h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
   free = h->free_list = (sexp_free_list) h->data;
