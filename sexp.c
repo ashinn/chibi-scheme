@@ -49,7 +49,7 @@ sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   sexp res = (sexp) sexp_alloc(ctx, size);
-  if (res) sexp_pointer_tag(res) = tag;
+  if (res && ! sexp_exceptionp(res)) sexp_pointer_tag(res) = tag;
   return res;
 }
 
@@ -187,6 +187,7 @@ void sexp_init_context_globals (sexp ctx) {
 #if ! USE_GLOBAL_SYMBOLS
   sexp_global(ctx, SEXP_G_SYMBOLS) = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_SYMBOL_TABLE_SIZE), SEXP_NULL);
 #endif
+  sexp_global(ctx, SEXP_G_OOM_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of memory", SEXP_NULL);
   sexp_global(ctx, SEXP_G_QUOTE_SYMBOL) = sexp_intern(ctx, "quote");
   sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL) = sexp_intern(ctx, "quasiquote");
   sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL) = sexp_intern(ctx, "unquote");
@@ -211,6 +212,7 @@ sexp sexp_bootstrap_context (void) {
   ctx = sexp_alloc_type(dummy_ctx, context, SEXP_CONTEXT);
   sexp_context_heap(dummy_ctx) = NULL;
   sexp_context_heap(ctx) = heap;
+  free(dummy_ctx);
   return ctx;
 }
 #endif
@@ -385,6 +387,7 @@ static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
 
 sexp sexp_cons (sexp ctx, sexp head, sexp tail) {
   sexp pair = sexp_alloc_type(ctx, pair, SEXP_PAIR);
+  if (sexp_exceptionp(pair)) return pair;
   sexp_car(pair) = head;
   sexp_cdr(pair) = tail;
   sexp_pair_source(pair) = SEXP_FALSE;
@@ -559,6 +562,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
 #if ! USE_IMMEDIATE_FLONUMS
 sexp sexp_make_flonum(sexp ctx, double f) {
   sexp x = sexp_alloc_type(ctx, flonum, SEXP_FLONUM);
+  if (sexp_exceptionp(x)) return x;
   sexp_flonum_value(x) = f;
   return x;
 }
@@ -570,6 +574,7 @@ sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
   if (! sexp_fixnump(len)) return sexp_type_exception(ctx, "bad length", len);
   if (clen < 0) return sexp_type_exception(ctx, "negative length", len);
   s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
+  if (sexp_exceptionp(s)) return s;
   sexp_pointer_tag(s) = SEXP_STRING;
   sexp_string_length(s) = clen;
   if (sexp_charp(ch))
@@ -677,6 +682,7 @@ sexp sexp_intern(sexp ctx, char *str) {
   /* not found, make a new symbol */
   sexp_gc_preserve1(ctx, sym);
   sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
+  if (sexp_exceptionp(sym)) return sym;
   sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
   sexp_push(ctx, sexp_context_symbols(ctx)[bucket], sym);
   sexp_gc_release1(ctx);
@@ -690,22 +696,25 @@ sexp sexp_string_to_symbol (sexp ctx, sexp str) {
 }
 
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt) {
-  sexp v, *x;
+  sexp vec, *x;
   int i, clen = sexp_unbox_fixnum(len);
   if (! clen) return sexp_global(ctx, SEXP_G_EMPTY_VECTOR);
-  v = sexp_alloc_tagged(ctx, sexp_sizeof(vector) + clen*sizeof(sexp),
-                        SEXP_VECTOR);
-  x = sexp_vector_data(v);
+  vec = sexp_alloc_tagged(ctx, sexp_sizeof(vector) + clen*sizeof(sexp),
+                          SEXP_VECTOR);
+  if (sexp_exceptionp(vec)) return vec;
+  x = sexp_vector_data(vec);
   for (i=0; i<clen; i++)
     x[i] = dflt;
-  sexp_vector_length(v) = clen;
-  return v;
+  sexp_vector_length(vec) = clen;
+  return vec;
 }
 
 sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   sexp x, vec = sexp_make_vector(ctx, sexp_length(ctx, ls), SEXP_VOID);
-  sexp *elts = sexp_vector_data(vec);
+  sexp *elts;
   int i;
+  if (sexp_exceptionp(vec)) return vec;
+  elts = sexp_vector_data(vec);
   for (i=0, x=ls; sexp_pairp(x); i++, x=sexp_cdr(x))
     elts[i] = sexp_car(x);
   return vec;
@@ -715,6 +724,7 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, sexp parent,
   sexp ptr;
   if (! value) return SEXP_FALSE;
   ptr = sexp_alloc_type(ctx, cpointer, typeid);
+  if (sexp_exceptionp(ptr)) return ptr;
   sexp_freep(ptr) = freep;
   sexp_cpointer_value(ptr) = value;
   sexp_cpointer_parent(ptr) = parent;
@@ -910,6 +920,7 @@ sexp sexp_buffered_flush (sexp ctx, sexp p) {
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   sexp res = sexp_make_input_port(ctx, NULL, SEXP_FALSE);
+  if (sexp_exceptionp(res)) return res;
   sexp_port_cookie(res) = str;
   sexp_port_buf(res) = sexp_string_data(str);
   sexp_port_offset(res) = 0;
@@ -919,6 +930,7 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
 
 sexp sexp_make_output_string_port (sexp ctx) {
   sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
+  if (sexp_exceptionp(res)) return res;
   sexp_port_buf(res) = (char*) malloc(SEXP_PORT_BUFFER_SIZE);
   sexp_port_size(res) = SEXP_PORT_BUFFER_SIZE;
   sexp_port_offset(res) = 0;
@@ -945,6 +957,7 @@ sexp sexp_get_output_string (sexp ctx, sexp out) {
 
 sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp p = sexp_alloc_type(ctx, port, SEXP_IPORT);
+  if (sexp_exceptionp(p)) return p;
   sexp_port_stream(p) = in;
   sexp_port_name(p) = name;
   sexp_port_line(p) = 1;
@@ -957,6 +970,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
 
 sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   sexp p = sexp_make_input_port(ctx, out, name);
+  if (sexp_exceptionp(p)) return p;
   sexp_pointer_tag(p) = SEXP_OPORT;
   return p;
 }
