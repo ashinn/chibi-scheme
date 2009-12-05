@@ -29,8 +29,8 @@
 
 /* uncomment this to just malloc manually instead of any GC */
 /*   Mostly for debugging purposes, this is the no GC option. */
-/*   You can use the just with the read/write API and */
-/*   explicitly free sexps though. */
+/*   You can use just the read/write API and */
+/*   explicitly free sexps, though. */
 /* #define USE_MALLOC 1 */
 
 /* uncomment this to add conservative checks to the native GC */
@@ -58,7 +58,7 @@
 /* #define USE_INFINITIES 0 */
 
 /* uncomment this if you want immediate flonums */
-/*   This is experimental, enablde at your own risk. */
+/*   This is experimental, enable at your own risk. */
 /* #define USE_IMMEDIATE_FLONUMS 1 */
 
 /* uncomment this if you don't want bignum support */
