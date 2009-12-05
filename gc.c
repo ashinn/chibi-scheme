@@ -14,7 +14,7 @@
 
 /* the maximum heap size in bytes - if 0 there is no limit */
 #ifndef SEXP_MAXIMUM_HEAP_SIZE
-#define SEXP_MAXIMUM_HEAP_SIZE (4*1024*1024)
+#define SEXP_MAXIMUM_HEAP_SIZE 0
 #endif
 
 /* if after GC more than this percentage of memory is still in use, */
