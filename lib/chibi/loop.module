@@ -6,5 +6,5 @@
           in-vector in-vector-reverse)
   (import (scheme))
   (import (chibi match))
-  (include "loop.scm"))
+  (include "loop/loop.scm"))
 
