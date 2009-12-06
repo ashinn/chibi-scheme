@@ -128,6 +128,9 @@ test-numbers: all
 test-match: all
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/match-tests.scm
 
+test-loop: all
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/loop-tests.scm
+
 test: all
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/r5rs-tests.scm
 

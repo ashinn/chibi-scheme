@@ -22,6 +22,7 @@ enum sexp_core_form_names {
   CORE_IF,
   CORE_BEGIN,
   CORE_QUOTE,
+  CORE_SYNTAX_QUOTE,
   CORE_DEFINE_SYNTAX,
   CORE_LET_SYNTAX,
   CORE_LETREC_SYNTAX
@@ -128,8 +129,11 @@ SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
 SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
 SEXP_API sexp sexp_make_env (sexp context);
+SEXP_API sexp sexp_extend_env (sexp context, sexp env, sexp vars, sexp value);
 SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls);
 SEXP_API void sexp_env_define (sexp context, sexp env, sexp sym, sexp val);
+SEXP_API sexp sexp_env_cell (sexp env, sexp sym);
+SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
 SEXP_API sexp sexp_make_foreign (sexp ctx, char *name, int num_args, int flags, sexp_proc1 f, sexp data);
