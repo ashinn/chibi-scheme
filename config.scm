@@ -134,7 +134,7 @@
          string-fill! vector? make-vector vector vector-length vector-ref
          vector-set! vector->list list->vector vector-fill! procedure? apply
          map for-each force call-with-current-continuation values
-         call-with-values scheme-report-environment
+         call-with-values interaction-environment scheme-report-environment
          null-environment call-with-input-file call-with-output-file
          input-port? output-port? current-input-port current-output-port
          with-input-from-file with-output-to-file open-input-file

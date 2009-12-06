@@ -112,16 +112,30 @@ void repl (sexp ctx) {
       tmp = sexp_env_bindings(env);
       sexp_context_top(ctx) = 0;
       res = sexp_eval(ctx, obj, env);
+      if (sexp_exceptionp(res)) {
+        sexp_print_exception(ctx, res, err);
+      } else {
 #if USE_WARN_UNDEFS
-      sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, err);
+        sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, err);
 #endif
-      if (res != SEXP_VOID) {
-        sexp_write(ctx, res, out);
-        sexp_write_char(ctx, '\n', out);
+        if (res != SEXP_VOID) {
+          sexp_write(ctx, res, out);
+          sexp_write_char(ctx, '\n', out);
+        }
       }
     }
   }
   sexp_gc_release4(ctx);
+}
+
+sexp check_exception (sexp ctx, sexp res) {
+  if (res && sexp_exceptionp(res)) {
+    sexp_print_exception(ctx, res,
+                         sexp_eval_string(ctx, "(current-error-port)",
+                                          sexp_context_env(ctx)));
+    exit(EXIT_FAILURE);
+  }
+  return res;
 }
 
 void run_main (int argc, char **argv) {
@@ -179,14 +193,11 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      res = sexp_init_environments(ctx);
+      res = check_exception(ctx, sexp_init_environments(ctx));
     sexp_env_define(ctx, env, sexp_intern(ctx, "*command-line-arguments*"), args);
-    if (res && sexp_exceptionp(res))
-      sexp_print_exception(ctx, res,
-                           sexp_eval_string(ctx, "(current-error-port)", env));
     if (i < argc)
       for ( ; i < argc; i++)
-        res = sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env);
+        res = check_exception(ctx, sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env));
     else
       repl(ctx);
   }

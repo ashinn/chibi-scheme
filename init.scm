@@ -84,7 +84,10 @@
   (if (null? lol) (for1 f ls) (begin (apply map f ls lol) (if #f #f))))
 
 (define (any pred ls)
-  (if (pair? ls) (if (pred (car ls)) #t (any pred (cdr ls))) #f))
+  (if (pair? ls) (if (pred (car ls)) (car ls) (any pred (cdr ls))) #f))
+
+(define (every pred ls)
+  (if (pair? ls) (if (pred (car ls)) (every pred (cdr ls)) #f) #t))
 
 ;; syntax
 
@@ -200,21 +203,39 @@
 (define-syntax let
   (er-macro-transformer
    (lambda (expr rename compare)
-     (if (identifier? (cadr expr))
-         `(,(rename 'letrec) ((,(cadr expr)
-                               (,(rename 'lambda) ,(map car (caddr expr))
-                                ,@(cdddr expr))))
-           ,(cons (cadr expr) (map cadr (caddr expr))))
-         `((,(rename 'lambda) ,(map car (cadr expr)) ,@(cddr expr))
-           ,@(map cadr (cadr expr)))))))
+     (if (null? (cdr expr)) (error "empty let" expr))
+     (if (null? (cddr expr)) (error "no let body" expr))
+     ((lambda (bindings)
+        (if (list? bindings) #f (error "bad let bindings"))
+        (if (every (lambda (x)
+                     (if (pair? x) (if (pair? (cdr x)) (null? (cddr x)) #f) #f))
+                   bindings)
+            (if (identifier? (cadr expr))
+                `(,(rename 'letrec) ((,(cadr expr)
+                                      (,(rename 'lambda) ,(map car bindings)
+                                       ,@(cdddr expr))))
+                  ,(cons (cadr expr) (map cadr (caddr expr))))
+                `((,(rename 'lambda) ,(map car bindings) ,@(cddr expr))
+                  ,@(map cadr bindings)))
+            (error "bad let syntax" expr)))
+      (if (identifier? (cadr expr)) (caddr expr) (cadr expr))))))
 
 (define-syntax let*
   (er-macro-transformer
    (lambda (expr rename compare)
+     (if (null? (cdr expr)) (error "empty let*" expr))
+     (if (null? (cddr expr)) (error "no let* body" expr))
      (if (null? (cadr expr))
          `(,(rename 'begin) ,@(cddr expr))
-         `(,(rename 'let) (,(caadr expr))
-           (,(rename 'let*) ,(cdadr expr) ,@(cddr expr)))))))
+         (if (if (list? (cadr expr))
+                 (every
+                  (lambda (x)
+                    (if (pair? x) (if (pair? (cdr x)) (null? (cddr x)) #f) #f))
+                  (cadr expr))
+                 #f)
+             `(,(rename 'let) (,(caadr expr))
+               (,(rename 'let*) ,(cdadr expr) ,@(cddr expr)))
+             (error "bad let* syntax"))))))
 
 (define-syntax case
   (er-macro-transformer
@@ -566,7 +587,7 @@
            (_cons (rename 'cons))          (_pair? (rename 'pair?))
            (_null? (rename 'null?))        (_expr (rename 'expr))
            (_rename (rename 'rename))      (_compare (rename 'compare))
-           (_quote (rename 'quote))        (_apply (rename 'apply))
+           (_quote (rename 'syntax-quote)) (_apply (rename 'apply))
            (_append (rename 'append))      (_map (rename 'map))
            (_vector? (rename 'vector?))    (_list? (rename 'list?))
            (_lp (rename 'lp))              (_reverse (rename 'reverse))
@@ -659,9 +680,10 @@
              (cdr x)))
        (define (all-vars x dim)
          (let lp ((x x) (dim dim) (vars '()))
-           (cond ((identifier? x) (if (memq x (list _quote lits))
-                                      vars
-                                      (cons (cons x dim) vars)))
+           (cond ((identifier? x)
+                  (if (any (lambda (lit) (compare x lit)) lits)
+                      vars
+                      (cons (cons x dim) vars)))
                  ((ellipse? x) (lp (car x) (+ dim 1) vars))
                  ((pair? x) (lp (car x) dim (lp (cdr x) dim vars)))
                  ((vector? x) (lp (vector->list x) dim vars))
@@ -683,7 +705,7 @@
            (cond
             ((identifier? t)
              (cond
-              ((assq t vars)
+              ((any (lambda (v) (compare t (car v))) vars)
                => (lambda (cell)
                     (if (<= (cdr cell) dim)
                         t

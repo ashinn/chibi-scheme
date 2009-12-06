@@ -1,12 +1,14 @@
 
 (define-module (chibi ast)
-  (export analyze
-          lambda? cnd? set? ref? seq? lit?
+  (export analyze env-cell opcode-name
+          syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode?
+          syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
           lambda-name lambda-params lambda-body
+          lambda-name-set! lambda-params-set! lambda-body-set!
           cnd-test cnd-pass cnd-fail
-          set-var set-value
-          ref-name ref-cell
-          seq-ls
-          lit-value)
+          cnd-test-set! cnd-pass-set! cnd-fail-set!
+          set-var set-value set-var-set! set-value-set!
+          ref-name ref-cell ref-name-set! ref-cell-set!
+          seq-ls seq-ls-set! lit-value lit-value-set!)
   (include-shared "ast"))
 
