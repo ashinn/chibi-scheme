@@ -386,6 +386,21 @@
 
 (test '(3 3) (let ((p (delay (+ 1 2)))) (list (force p) (force p))))
 
+(test 'ok (let ((else 1)) (cond (else 'ok) (#t 'bad))))
+
+(test 'ok (let ((=> 1)) (cond (#t => 'ok))))
+
+(test '(,foo) (let ((unquote 1)) `(,foo)))
+
+(test '(,@foo) (let ((unquote-splicing 1)) `(,@foo)))
+
+(test 'ok
+      (let ((... 2))
+        (let-syntax ((s (syntax-rules ()
+                          ((_ x ...) 'bad)
+                          ((_ . r) 'ok))))
+          (s a b c))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-report)

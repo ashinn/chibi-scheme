@@ -69,7 +69,7 @@
 ;;            (er-macro-transformer
 ;;             (lambda (expr rename compare)
 ;;               (receive (named posns)
-;;                   (partition (lambda (x) (and (list? x) (compare (car x) '=>)))
+;;                   (partition (lambda (x) (and (list? x) (compare (car x) (rename '=>))))
 ;;                              (cdr expr))
 ;;                 (let lp ((ls '((arg default) ...)) (posns posns) (args '()))
 ;;                   (cond
