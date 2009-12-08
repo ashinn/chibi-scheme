@@ -214,7 +214,7 @@
                 `(,(rename 'letrec) ((,(cadr expr)
                                       (,(rename 'lambda) ,(map car bindings)
                                        ,@(cdddr expr))))
-                  ,(cons (cadr expr) (map cadr (caddr expr))))
+                  ,(cons (cadr expr) (map cadr bindings)))
                 `((,(rename 'lambda) ,(map car bindings) ,@(cddr expr))
                   ,@(map cadr bindings)))
             (error "bad let syntax" expr)))
@@ -226,7 +226,7 @@
      (if (null? (cdr expr)) (error "empty let*" expr))
      (if (null? (cddr expr)) (error "no let* body" expr))
      (if (null? (cadr expr))
-         `(,(rename 'begin) ,@(cddr expr))
+         `(,(rename 'let) () ,@(cddr expr))
          (if (if (list? (cadr expr))
                  (every
                   (lambda (x)
