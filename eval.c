@@ -1313,8 +1313,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     goto make_call;
   case OP_CALL:
 #if USE_CHECK_STACK
-    if (top+16 >= SEXP_INIT_STACK_SIZE)
-      errx(70, "out of stack space at %ld", top);
+    if (top+16 >= SEXP_INIT_STACK_SIZE) {
+      _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);
+      goto end_loop;
+    }
 #endif
     i = sexp_unbox_fixnum(_WORD0);
     tmp1 = _ARG1;
