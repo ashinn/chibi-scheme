@@ -62,7 +62,10 @@
       (cond
        ((lambda? x)
         `(lambda ,(map (lambda (id) (get-rename id x renames)) (lambda-params x))
-           ,(a2s (lambda-body x))))
+           ,@(map (lambda (d) `(define ,(identifier->symbol (cadr d)) #f)) (lambda-defs x))
+           ,@(if (seq? (lambda-body x))
+                 (map a2s (seq-ls (lambda-body x)))
+                 (list (a2s (lambda-body x))))))
        ((cnd? x) `(if ,(a2s (cnd-test x)) ,(a2s (cnd-pass x)) ,(a2s (cnd-fail x))))
        ((set? x) `(set! ,(a2s (set-var x)) ,(a2s (set-value x))))
        ((ref? x) (get-rename (ref-name x) (cdr (ref-cell x)) renames))
@@ -70,7 +73,7 @@
        ((lit? x)
         (let ((v (lit-value x)))
           (if (or (pair? v) (null? v) (symbol? v)) `',v v)))
-       ((pair? x) (map a2s x))
+       ((pair? x) (cons (a2s (car x)) (a2s (cdr x))))
        ((opcode? x) (or (opcode-name x) x))
        (else x)))))
 
