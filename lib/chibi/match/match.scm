@@ -45,8 +45,7 @@
 
 (define-syntax match-syntax-error
   (syntax-rules ()
-    ((_)
-     (match-syntax-error "invalid match-syntax-error usage"))))
+    ((_) (match-syntax-error "invalid match-syntax-error usage"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -61,49 +60,50 @@
     ((match)
      (match-syntax-error "missing match expression"))
     ((match atom)
-     (match-syntax-error "missing match clause"))
+     (match-syntax-error "no match clauses"))
     ((match (app ...) (pat . body) ...)
      (let ((v (app ...)))
-       (match-next v (app ...) (set! (app ...)) (pat . body) ...)))
+       (match-next v ((app ...) (set! (app ...))) (pat . body) ...)))
     ((match #(vec ...) (pat . body) ...)
      (let ((v #(vec ...)))
-       (match-next v v (set! v) (pat . body) ...)))
+       (match-next v (v (set! v)) (pat . body) ...)))
     ((match atom (pat . body) ...)
-     (match-next atom atom (set! atom) (pat . body) ...))
+     (match-next atom (atom (set! atom)) (pat . body) ...))
     ))
 
 ;; MATCH-NEXT passes each clause to MATCH-ONE in turn with its failure
 ;; thunk, which is expanded by recursing MATCH-NEXT on the remaining
-;; clauses.  `g' and `s' are the get! and set! expressions
-;; respectively.
+;; clauses.  `g+s' is a list of two elements, the get! and set!
+;; expressions respectively.
 
 (define-syntax match-next
   (syntax-rules (=>)
     ;; no more clauses, the match failed
-    ((match-next v g s)
+    ((match-next v g+s)
      (error 'match "no matching pattern"))
     ;; named failure continuation
-    ((match-next v g s (pat (=> failure) . body) . rest)
-     (let ((failure (lambda () (match-next v g s . rest))))
+    ((match-next v g+s (pat (=> failure) . body) . rest)
+     (let ((failure (lambda () (match-next v g+s . rest))))
        ;; match-one analyzes the pattern for us
-       (match-one v pat g s (match-drop-ids (begin . body)) (failure) ())))
+       (match-one v pat g+s (match-drop-ids (begin . body)) (failure) ())))
     ;; anonymous failure continuation, give it a dummy name
-    ((match-next v g s (pat . body) . rest)
-     (match-next v g s (pat (=> failure) . body) . rest))))
+    ((match-next v g+s (pat . body) . rest)
+     (match-next v g+s (pat (=> failure) . body) . rest))))
 
 ;; MATCH-ONE first checks for ellipse patterns, otherwise passes on to
 ;; MATCH-TWO.
 
 (define-syntax match-one
   (syntax-rules ()
-    ;; If it's a list of two values, check to see if the second one is
-    ;; an ellipse and handle accordingly, otherwise go to MATCH-TWO.
-    ((match-one v (p q . r) g s sk fk i)
+    ;; If it's a list of two or more values, check to see if the
+    ;; second one is an ellipse and handle accordingly, otherwise go
+    ;; to MATCH-TWO.
+    ((match-one v (p q . r) g+s sk fk i)
      (match-check-ellipse
       q
-      (match-extract-vars p (match-gen-ellipses v p r g s sk fk i) i ())
-      (match-two v (p q . r) g s sk fk i)))
-    ;; Otherwise, go directly to MATCH-TWO.
+      (match-extract-vars p (match-gen-ellipses v p r  g+s sk fk i) i ())
+      (match-two v (p q . r) g+s sk fk i)))
+    ;; Go directly to MATCH-TWO.
     ((match-one . x)
      (match-two . x))))
 
@@ -114,7 +114,7 @@
 ;;
 ;; usually abbreviated
 ;;
-;;   (match-two v p g s sk fk i)
+;;   (match-two v p g+s sk fk i)
 ;;
 ;; where VAR is the symbol name of the current variable we are
 ;; matching, PATTERN is the current pattern, getter and setter are the
@@ -126,58 +126,57 @@
 
 (define-syntax match-two
   (syntax-rules (_ ___ *** quote quasiquote ? $ = and or not set! get!)
-    ((match-two v () g s (sk ...) fk i)
+    ((match-two v () g+s (sk ...) fk i)
      (if (null? v) (sk ... i) fk))
-    ((match-two v (quote p) g s (sk ...) fk i)
+    ((match-two v (quote p) g+s (sk ...) fk i)
      (if (equal? v 'p) (sk ... i) fk))
-    ((match-two v (quasiquote p) g s sk fk i)
-     (match-quasiquote v p g s sk fk i))
-    ((match-two v (and) g s (sk ...) fk i) (sk ... i))
-    ((match-two v (and p q ...) g s sk fk i)
-     (match-one v p g s (match-one v (and q ...) g s sk fk) fk i))
-    ((match-two v (or) g s sk fk i) fk)
-    ((match-two v (or p) g s sk fk i)
-     (match-one v p g s sk fk i))
-    ((match-two v (or p ...) g s sk fk i)
-     (match-extract-vars (or p ...) (match-gen-or v (p ...) g s sk fk i) i ()))
-    ((match-two v (not p) g s (sk ...) fk i)
-     (match-one v p g s (match-drop-ids fk) (sk ... i) i))
-    ((match-two v (get! getter) g s (sk ...) fk i)
+    ((match-two v (quasiquote p) . x)
+     (match-quasiquote v p . x))
+    ((match-two v (and) g+s (sk ...) fk i) (sk ... i))
+    ((match-two v (and p q ...) g+s sk fk i)
+     (match-one v p g+s (match-one v (and q ...) g+s sk fk) fk i))
+    ((match-two v (or) g+s sk fk i) fk)
+    ((match-two v (or p) . x)
+     (match-one v p . x))
+    ((match-two v (or p ...) g+s sk fk i)
+     (match-extract-vars (or p ...) (match-gen-or v (p ...) g+s sk fk i) i ()))
+    ((match-two v (not p) g+s (sk ...) fk i)
+     (match-one v p g+s (match-drop-ids fk) (sk ... i) i))
+    ((match-two v (get! getter) (g s) (sk ...) fk i)
      (let ((getter (lambda () g))) (sk ... i)))
-    ((match-two v (set! setter) g (s ...) (sk ...) fk i)
+    ((match-two v (set! setter) (g (s ...)) (sk ...) fk i)
      (let ((setter (lambda (x) (s ... x)))) (sk ... i)))
-    ((match-two v (? pred p ...) g s sk fk i)
-     (if (pred v) (match-one v (and p ...) g s sk fk i) fk))
-    ((match-two v (= proc p) g s sk fk i)
-     (let ((w (proc v)))
-       (match-one w p g s sk fk i)))
-    ((match-two v (p ___ . r) g s sk fk i)
-     (match-extract-vars p (match-gen-ellipses v p r g s sk fk i) i ()))
-    ((match-two v (p) g s sk fk i)
+    ((match-two v (? pred . p) g+s sk fk i)
+     (if (pred v) (match-one v (and . p) g+s sk fk i) fk))
+    ((match-two v (= proc p) . x)
+     (let ((w (proc v))) (match-one w p . x)))
+    ((match-two v (p ___ . r) g+s sk fk i)
+     (match-extract-vars p (match-gen-ellipses v p r g+s sk fk i) i ()))
+    ((match-two v (p) g+s sk fk i)
      (if (and (pair? v) (null? (cdr v)))
          (let ((w (car v)))
-           (match-one w p (car v) (set-car! v) sk fk i))
+           (match-one w p ((car v) (set-car! v)) sk fk i))
          fk))
-    ((match-two v (p *** q) g s sk fk i)
-     (match-extract-vars p (match-gen-search v p q g s sk fk i) i ()))
-    ((match-two v (p *** . q) g s sk fk i)
+    ((match-two v (p *** q) g+s sk fk i)
+     (match-extract-vars p (match-gen-search v p q g+s sk fk i) i ()))
+    ((match-two v (p *** . q) g+s sk fk i)
      (match-syntax-error "invalid use of ***" (p *** . q)))
-    ((match-two v (p . q) g s sk fk i)
+    ((match-two v (p . q) g+s sk fk i)
      (if (pair? v)
          (let ((w (car v)) (x (cdr v)))
-           (match-one w p (car v) (set-car! v)
-                      (match-one x q (cdr v) (set-cdr! v) sk fk)
+           (match-one w p ((car v) (set-car! v))
+                      (match-one x q ((cdr v) (set-cdr! v)) sk fk)
                       fk
                       i))
          fk))
-    ((match-two v #(p ...) g s sk fk i)
-     (match-vector v 0 () (p ...) sk fk i))
-    ((match-two v _ g s (sk ...) fk i) (sk ... i))
+    ((match-two v #(p ...) g+s . x)
+     (match-vector v 0 () (p ...) . x))
+    ((match-two v _ g+s (sk ...) fk i) (sk ... i))
     ;; Not a pair or vector or special literal, test to see if it's a
     ;; new symbol, in which case we just bind it, or if it's an
     ;; already bound symbol or some other literal, in which case we
     ;; compare it with EQUAL?.
-    ((match-two v x g s (sk ...) fk (id ...))
+    ((match-two v x g+s (sk ...) fk (id ...))
      (let-syntax
          ((new-sym?
            (syntax-rules (id ...)
@@ -192,52 +191,54 @@
 
 (define-syntax match-quasiquote
   (syntax-rules (unquote unquote-splicing quasiquote)
-    ((_ v (unquote p) g s sk fk i)
-     (match-one v p g s sk fk i))
-    ((_ v ((unquote-splicing p) . rest) g s sk fk i)
+    ((_ v (unquote p) g+s sk fk i)
+     (match-one v p g+s sk fk i))
+    ((_ v ((unquote-splicing p) . rest) g+s sk fk i)
      (if (pair? v)
        (match-one v
                   (p . tmp)
-                  (match-quasiquote tmp rest g s sk fk)
+                  (match-quasiquote tmp rest g+s sk fk)
                   fk
                   i)
        fk))
-    ((_ v (quasiquote p) g s sk fk i . depth)
-     (match-quasiquote v p g s sk fk i #f . depth))
-    ((_ v (unquote p) g s sk fk i x . depth)
-     (match-quasiquote v p g s sk fk i . depth))
-    ((_ v (unquote-splicing p) g s sk fk i x . depth)
-     (match-quasiquote v p g s sk fk i . depth))
-    ((_ v (p . q) g s sk fk i . depth)
+    ((_ v (quasiquote p) g+s sk fk i . depth)
+     (match-quasiquote v p g+s sk fk i #f . depth))
+    ((_ v (unquote p) g+s sk fk i x . depth)
+     (match-quasiquote v p g+s sk fk i . depth))
+    ((_ v (unquote-splicing p) g+s sk fk i x . depth)
+     (match-quasiquote v p g+s sk fk i . depth))
+    ((_ v (p . q) g+s sk fk i . depth)
      (if (pair? v)
        (let ((w (car v)) (x (cdr v)))
          (match-quasiquote
-          w p g s
-          (match-quasiquote-step x q g s sk fk depth)
+          w p g+s
+          (match-quasiquote-step x q g+s sk fk depth)
           fk i . depth))
        fk))
-    ((_ v #(elt ...) g s sk fk i . depth)
+    ((_ v #(elt ...) g+s sk fk i . depth)
      (if (vector? v)
        (let ((ls (vector->list v)))
-         (match-quasiquote ls (elt ...) g s sk fk i . depth))
+         (match-quasiquote ls (elt ...) g+s sk fk i . depth))
        fk))
-    ((_ v x g s sk fk i . depth)
-     (match-one v 'x g s sk fk i))))
+    ((_ v x g+s sk fk i . depth)
+     (match-one v 'x g+s sk fk i))))
 
 (define-syntax match-quasiquote-step
   (syntax-rules ()
-    ((match-quasiquote-step x q g s sk fk depth i)
-     (match-quasiquote x q g s sk fk i . depth))
-    ))
+    ((match-quasiquote-step x q g+s sk fk depth i)
+     (match-quasiquote x q g+s sk fk i . depth))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities
 
-;; A CPS utility that takes two values and just expands into the
-;; first.
+;; Takes two values and just expands into the first.
 (define-syntax match-drop-ids
   (syntax-rules ()
     ((_ expr ids ...) expr)))
+
+(define-syntax match-drop-first-arg
+  (syntax-rules ()
+    ((_ arg expr) expr)))
 
 ;; To expand an OR group we try each clause in succession, passing the
 ;; first that succeeds to the success continuation.  On failure for
@@ -248,22 +249,21 @@
 
 (define-syntax match-gen-or
   (syntax-rules ()
-    ((_ v p g s (sk ...) fk (i ...) ((id id-ls) ...))
+    ((_ v p g+s (sk ...) fk (i ...) ((id id-ls) ...))
      (let ((sk2 (lambda (id ...) (sk ... (i ... id ...)))))
-       (match-gen-or-step
-        v p g s (match-drop-ids (sk2 id ...)) fk (i ...))))))
+       (match-gen-or-step v p g+s (match-drop-ids (sk2 id ...)) fk (i ...))))))
 
 (define-syntax match-gen-or-step
   (syntax-rules ()
-    ((_ v () g s sk fk i)
+    ((_ v () g+s sk fk . x)
      ;; no OR clauses, call the failure continuation
      fk)
-    ((_ v (p) g s sk fk i)
+    ((_ v (p) . x)
      ;; last (or only) OR clause, just expand normally
-     (match-one v p g s sk fk i))
-    ((_ v (p . q) g s sk fk i)
+     (match-one v p . x))
+    ((_ v (p . q) g+s sk fk i)
      ;; match one and try the remaining on failure
-     (match-one v p g s sk (match-gen-or-step v q g s sk fk i) i))
+     (match-one v p g+s sk (match-gen-or-step v q g+s sk fk i) i))
     ))
 
 ;; We match a pattern (p ...) by matching the pattern p in a loop on
@@ -279,7 +279,7 @@
 
 (define-syntax match-gen-ellipses
   (syntax-rules ()
-    ((_ v p () g s (sk ...) fk i ((id id-ls) ...))
+    ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
      (match-check-identifier p
        ;; simplest case equivalent to (p ...), just bind the list
        (let ((p v))
@@ -293,12 +293,12 @@
             (let ((id (reverse id-ls)) ...) (sk ... i)))
            ((pair? ls)
             (let ((w (car ls)))
-              (match-one w p (car ls) (set-car! ls)
+              (match-one w p ((car ls) (set-car! ls))
                          (match-drop-ids (loop (cdr ls) (cons id id-ls) ...))
                          fk i)))
            (else
             fk)))))
-    ((_ v p r g s (sk ...) fk i ((id id-ls) ...))
+    ((_ v p r g+s (sk ...) fk i ((id id-ls) ...))
      ;; general case, trailing patterns to match, keep track of the
      ;; remaining list length so we don't need any backtracking
      (match-verify-no-ellipses
@@ -312,16 +312,38 @@
               (cond
                 ((= n tail-len)
                  (let ((id (reverse id-ls)) ...)
-                   (match-one ls r #f #f (sk ... i) fk i)))
+                   (match-one ls r (#f #f) (sk ... i) fk i)))
                 ((pair? ls)
                  (let ((w (car ls)))
-                   (match-one w p (car ls) (set-car! ls)
+                   (match-one w p ((car ls) (set-car! ls))
                               (match-drop-ids
                                (loop (cdr ls) (- n 1) (cons id id-ls) ...))
                               fk
                               i)))
                 (else
                  fk)))))))))
+
+;; This is just a safety check.  Although unlike syntax-rules we allow
+;; trailing patterns after an ellipses, we explicitly disable multiple
+;; ellipses at the same level.  This is because in the general case
+;; such patterns are exponential in the number of ellipses, and we
+;; don't want to make it easy to construct very expensive operations
+;; with simple looking patterns.  For example, it would be O(n^2) for
+;; patterns like (a ... b ...) because we must consider every trailing
+;; element for every possible break for the leading "a ...".
+
+(define-syntax match-verify-no-ellipses
+  (syntax-rules ()
+    ((_ (x . y) sk)
+     (match-check-ellipse
+      x
+      (match-syntax-error
+       "multiple ellipse patterns not allowed at same level")
+      (match-verify-no-ellipses y sk)))
+    ((_ () sk)
+     sk)
+    ((_ x sk)
+     (match-syntax-error "dotted tail not allowed after ellipse" x))))
 
 ;; Matching a tree search pattern is only slightly more complicated.
 ;; Here we allow patterns of the form
@@ -351,9 +373,9 @@
 
 (define-syntax match-gen-search
   (syntax-rules ()
-    ((match-gen-search v p q g s sk fk i ((id id-ls) ...))
+    ((match-gen-search v p q g+s sk fk i ((id id-ls) ...))
      (letrec ((try (lambda (w fail id-ls ...)
-                     (match-one w q g s
+                     (match-one w q g+s
                                 (match-drop-ids
                                  (let ((id (reverse id-ls)) ...)
                                    sk))
@@ -363,7 +385,7 @@
                           (fail)
                           (let ((u (car w)))
                             (match-one
-                             u p (car w) (set-car! w)
+                             u p ((car w) (set-car! w))
                              (match-drop-ids
                               ;; accumulate the head variables from
                               ;; the p pattern, and loop over the tail
@@ -380,38 +402,16 @@
        (let ((id-ls '()) ...)
          (try v (lambda () fk) id-ls ...))))))
 
-;; This is just a safety check.  Although unlike syntax-rules we allow
-;; trailing patterns after an ellipses, we explicitly disable multiple
-;; ellipses at the same level.  This is because in the general case
-;; such patterns are exponential in the number of ellipses, and we
-;; don't want to make it easy to construct very expensive operations
-;; with simple looking patterns.  For example, it would be O(n^2) for
-;; patterns like (a ... b ...) because we must consider every trailing
-;; element for every possible break for the leading "a ...".
-
-(define-syntax match-verify-no-ellipses
-  (syntax-rules ()
-    ((_ (x . y) sk)
-     (match-check-ellipse
-      x
-      (match-syntax-error
-       "multiple ellipse patterns not allowed at same level")
-      (match-verify-no-ellipses y sk)))
-    ((_ () sk) sk)
-    ((_ x sk)
-     (match-syntax-error "dotted tail not allowed after ellipse" x))
-    ))
-
 ;; Vector patterns are just more of the same, with the slight
 ;; exception that we pass around the current vector index being
 ;; matched.
 
 (define-syntax match-vector
   (syntax-rules (___)
-    ((_ v n pats (p q) sk fk i)
+    ((_ v n pats (p q) . x)
      (match-check-ellipse q
-                          (match-gen-vector-ellipses v n pats p sk fk i)
-                          (match-vector-two v n pats (p q) sk fk i)))
+                          (match-gen-vector-ellipses v n pats p . x)
+                          (match-vector-two v n pats (p q) . x)))
     ((_ v n pats (p ___) sk fk i)
      (match-gen-vector-ellipses v n pats p sk fk i))
     ((_ . x)
@@ -423,21 +423,20 @@
   (syntax-rules ()
     ((_ v n ((pat index) ...) () sk fk i)
      (if (vector? v)
-       (let ((len (vector-length v)))
-         (if (= len n)
-           (match-vector-step v ((pat index) ...) sk fk i)
-           fk))
-       fk))
-    ((_ v n (pats ...) (p . q) sk fk i)
-     (match-vector v (+ n 1) (pats ... (p n)) q sk fk i))
-    ))
+         (let ((len (vector-length v)))
+           (if (= len n)
+               (match-vector-step v ((pat index) ...) sk fk i)
+               fk))
+         fk))
+    ((_ v n (pats ...) (p . q) . x)
+     (match-vector v (+ n 1) (pats ... (p n)) q . x))))
 
 (define-syntax match-vector-step
   (syntax-rules ()
     ((_ v () (sk ...) fk i) (sk ... i))
     ((_ v ((pat index) . rest) sk fk i)
      (let ((w (vector-ref v index)))
-       (match-one w pat (vector-ref v index) (vector-set! v index)
+       (match-one w pat ((vector-ref v index) (vector-set! v index))
                   (match-vector-step v rest sk fk)
                   fk i)))))
 
@@ -468,7 +467,7 @@
        (if (>= j len)
          (let ((id (reverse id-ls)) ...) (sk ... i))
          (let ((w (vector-ref v j)))
-           (match-one w p (vector-ref v j) (vetor-set! v j)
+           (match-one w p ((vector-ref v j) (vetor-set! v j))
                       (match-drop-ids (loop (+ j 1) (cons id id-ls) ...))
                       fk i)))))))
 
@@ -486,22 +485,22 @@
 
 (define-syntax match-extract-vars
   (syntax-rules (_ ___ *** ? $ = quote quasiquote and or not get! set!)
-    ((match-extract-vars (? pred . p) k i v)
-     (match-extract-vars p k i v))
-    ((match-extract-vars ($ rec . p) k i v)
-     (match-extract-vars p k i v))
-    ((match-extract-vars (= proc p) k i v)
-     (match-extract-vars p k i v))
+    ((match-extract-vars (? pred . p) . x)
+     (match-extract-vars p . x))
+    ((match-extract-vars ($ rec . p) . x)
+     (match-extract-vars p . x))
+    ((match-extract-vars (= proc p) . x)
+     (match-extract-vars p . x))
     ((match-extract-vars (quote x) (k ...) i v)
      (k ... v))
     ((match-extract-vars (quasiquote x) k i v)
      (match-extract-quasiquote-vars x k i v (#t)))
-    ((match-extract-vars (and . p) k i v)
-     (match-extract-vars p k i v))
-    ((match-extract-vars (or . p) k i v)
-     (match-extract-vars p k i v))
-    ((match-extract-vars (not . p) k i v)
-     (match-extract-vars p k i v))
+    ((match-extract-vars (and . p) . x)
+     (match-extract-vars p . x))
+    ((match-extract-vars (or . p) . x)
+     (match-extract-vars p . x))
+    ((match-extract-vars (not . p) . x)
+     (match-extract-vars p . x))
     ;; A non-keyword pair, expand the CAR with a continuation to
     ;; expand the CDR.
     ((match-extract-vars (p q . r) k i v)
@@ -511,8 +510,8 @@
       (match-extract-vars p (match-extract-vars-step (q . r) k i v) i ())))
     ((match-extract-vars (p . q) k i v)
      (match-extract-vars p (match-extract-vars-step q k i v) i ()))
-    ((match-extract-vars #(p ...) k i v)
-     (match-extract-vars (p ...) k i v))
+    ((match-extract-vars #(p ...) . x)
+     (match-extract-vars (p ...) . x))
     ((match-extract-vars _ (k ...) i v)    (k ... v))
     ((match-extract-vars ___ (k ...) i v)  (k ... v))
     ((match-extract-vars *** (k ...) i v)  (k ... v))
