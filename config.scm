@@ -47,20 +47,66 @@
     (cond ((assoc name *modules*) => cdr)
           (else #f)))))
 
+(define (symbol-append a b)
+  (string->symbol (string-append (symbol->string a) (symbol->string b))))
+
+(define (to-id id) (if (pair? id) (car id) id))
+(define (from-id id) (if (pair? id) (cdr id) id))
+(define (id-filter pred ls)
+  (cond ((null? ls) '())
+        ((pred (to-id (car ls))) (cons (car ls) (id-filter pred (cdr ls))))
+        (else (id-filter pred (cdr ls)))))
+
+(define (resolve-import x)
+  (cond
+   ((not (and (pair? x) (list? x)))
+    (error "invalid module syntax" x))
+   ((and (pair? (cdr x)) (pair? (cadr x)))
+    (if (memq (car x) '(only except renams))
+        (let* ((mod-name+imports (resolve-import (cadr x)))
+               (imp-ids (cdr mod-name+imports)))
+          (cons (car mod-name+imports)
+                (case (car x)
+                  ((only)
+                   (id-filter (lambda (i) (memq i (cddr x))) imp-ids))
+                  ((except)
+                   (id-filter (lambda (i) (not (memq i (cddr x)))) imp-ids))
+                  ((rename)
+                   (map (lambda (i)
+                          (let ((rename (assq (to-id i) (cddr x))))
+                            (if rename (cons (cdr rename) (from-id i)) i)))
+                        imp-ids)))))
+        (error "invalid import modifier" x)))
+   ((and (eq? 'prefix (car x)) (symbol? (cadr x)) (list? (caddr x)))
+    (let ((mod-name+imports (resolve-import (caddr x))))
+      (cons (car mod-name+imports)
+            (map (lambda (i)
+                   (cons (symbol-append (cadr x) (if (pair? i) (car i) i))
+                         (if (pair? i) (cdr i) i)))
+                 (cdr mod-name+imports)))))
+   ((find-module x)
+    => (lambda (mod) (cons x (module-exports mod))))
+   (else
+    (error "couldn't find import" x))))
+
 (define (eval-module name mod)
   (let ((env (make-environment))
-        (prefix (module-name-prefix name)))
+        (dir (module-name-prefix name)))
     (for-each
      (lambda (x)
        (case (and (pair? x) (car x))
          ((import)
-          (let ((mod2 (load-module (cadr x))))
-            (%env-copy! env (module-env mod2) (module-exports mod2))))
+          (for-each
+           (lambda (x)
+             (let* ((mod2-name+imports (resolve-import x))
+                    (mod2 (load-module (car mod2-name+imports))))
+               (%env-copy! env (module-env mod2) (cdr mod2-name+imports))))
+           (cdr x)))
          ((include include-shared)
           (for-each
            (lambda (f)
              (let ((f (string-append
-                       prefix f
+                       dir f
                        (if (eq? (car x) 'include) "" *shared-object-extension*))))
                (cond
                 ((find-module-file name f) => (lambda (x) (load x env)))
@@ -145,6 +191,7 @@
          open-input-string open-output-string get-output-string
          sc-macro-transformer rsc-macro-transformer er-macro-transformer
          identifier? identifier=? identifier->symbol make-syntactic-closure
+         syntax-quote
          register-simple-type make-constructor make-type-predicate
          make-getter make-setter
          )))

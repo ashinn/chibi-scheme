@@ -755,11 +755,19 @@
 (define-syntax import
   (er-macro-transformer
    (lambda (expr rename compare)
-     (let ((mod (eval `(load-module ',(cadr expr)) *config-env*)))
-       (if (vector? mod)
-           `(%env-copy! #f
-                        (vector-ref
-                         (eval '(load-module ',(cadr expr)) *config-env*)
-                         1)
-                        ',(vector-ref mod 0))
-           `(error "couldn't find module" ',(cadr expr)))))))
+     (let lp ((ls (cdr expr)) (res '()))
+       (cond
+        ((null? ls)
+         (cons 'begin (reverse res)))
+        (else
+         (let ((mod+imps (eval `(resolve-import ',(car ls)) *config-env*)))
+           (if (pair? mod+imps)
+               (lp (cdr ls)
+                   (cons `(%env-copy!
+                           #f
+                           (vector-ref
+                            (eval '(load-module ',(car mod+imps)) *config-env*)
+                            1)
+                           ',(cdr mod+imps))
+                         res))
+               (error "couldn't find module" (car ls))))))))))
