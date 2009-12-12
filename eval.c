@@ -183,14 +183,24 @@ static void emit_word (sexp ctx, sexp_uint_t val)  {
 static void emit_push (sexp ctx, sexp obj) {
   emit(ctx, OP_PUSH);
   emit_word(ctx, (sexp_uint_t)obj);
-  if (sexp_pointerp(obj))
+  if (sexp_pointerp(obj) && ! sexp_symbolp(obj))
     sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), obj);
 }
 
 static sexp finalize_bytecode (sexp ctx) {
+  sexp bc;
   emit(ctx, OP_RET);
   shrink_bcode(ctx, sexp_context_pos(ctx));
-  return sexp_context_bc(ctx);
+  bc = sexp_context_bc(ctx);
+  if (sexp_pairp(sexp_bytecode_literals(bc))) { /* compress literals */
+    if (sexp_nullp(sexp_cdr(sexp_bytecode_literals(bc))))
+      sexp_bytecode_literals(bc) = sexp_car(sexp_bytecode_literals(bc));
+    else if (sexp_nullp(sexp_cddr(sexp_bytecode_literals(bc))))
+      sexp_cdr(sexp_bytecode_literals(bc)) = sexp_cadr(sexp_bytecode_literals(bc));
+    else
+      sexp_bytecode_literals(bc) = sexp_list_to_vector(ctx, sexp_bytecode_literals(bc));
+  }
+  return bc;
 }
 
 static sexp sexp_make_procedure (sexp ctx, sexp flags, sexp num_args,
