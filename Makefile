@@ -1,6 +1,7 @@
 # -*- makefile-gmake -*-
 
 .PHONY: all libs doc dist clean cleaner test install uninstall
+.PRECIOUS: %.c
 
 CC       ?= cc
 PREFIX   ?= /usr/local
