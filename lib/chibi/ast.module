@@ -3,8 +3,8 @@
   (export analyze env-cell opcode-name
           syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode?
           syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
-          lambda-name lambda-params lambda-body
-          lambda-name-set! lambda-params-set! lambda-body-set!
+          lambda-name lambda-params lambda-body lambda-defs
+          lambda-name-set! lambda-params-set! lambda-body-set! lambda-defs-set!
           cnd-test cnd-pass cnd-fail
           cnd-test-set! cnd-pass-set! cnd-fail-set!
           set-var set-value set-var-set! set-value-set!

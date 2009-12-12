@@ -59,7 +59,8 @@ sexp sexp_init_library (sexp ctx, sexp env) {
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 2, "syntactic-closure-expr", "syntactic-closure-expr-set!");
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 0, "lambda-name", "lambda-name-set!");
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 1, "lambda-params", "lambda-params-set!");
-  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 7, "lambda-body", "lambda-body-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 2, "lambda-body", "lambda-body-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 3, "lambda-defs", "lambda-defs-set!");
   sexp_define_accessors(ctx, env, SEXP_CND, 0, "cnd-test", "cnd-test-set!");
   sexp_define_accessors(ctx, env, SEXP_CND, 1, "cnd-pass", "cnd-pass-set!");
   sexp_define_accessors(ctx, env, SEXP_CND, 2, "cnd-fail", "cnd-fail-set!");

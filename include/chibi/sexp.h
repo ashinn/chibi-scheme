@@ -235,7 +235,7 @@ struct sexp_struct {
     } core;
     /* ast types */
     struct {
-      sexp name, params, locals, defs, flags, fv, sv, body;
+      sexp name, params, body, defs, locals, flags, fv, sv;
     } lambda;
     struct {
       sexp test, pass, fail;
