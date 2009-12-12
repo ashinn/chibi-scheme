@@ -9,82 +9,43 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (assoc-pred equal elt ls)
+  (and (pair? ls)
+       (if (equal elt (car (car ls)))
+           (car ls)
+           (assoc-pred equal elt (cdr ls)))))
+
 (define-syntax let-keyword-form
   (syntax-rules ()
     ((let-keyword-form
-      ((labeled-arg-macro-name
-        (positional-form-name (arg-name . arg-default) ...)))
+      ((labeled-arg-macro-name (positional-name . params)))
       . body)
-     (letrec-syntax
+     (let-syntax
          ((labeled-arg-macro-name
-           (syntax-rules ()
-             ((labeled-arg-macro-name . keyword-val-pairs)
-              (letrec-syntax
-                  ((find
-                    (syntax-rules (=> arg-name ...)
-                      ((find kvp k-args (arg-name . default) (=> arg-name val)
-                             . others) ; found arg-name among keyword-val-pairs
-                       (next kvp val . k-args)) ...
-                      ((find kvp k-args key (=> arg-no-match-name val) . others)
-                       (find kvp k-args key . others))
-                      ;; default must be here
-                      ((find kvp k-args (arg-name default))
-                       (next kvp default . k-args)) ...
-                      ))
-                   (next               ; pack the continuation to find
-                    (syntax-rules ()
-                      ((next kvp val vals key . keys)
-                       (find kvp ((val . vals) . keys) key . kvp))
-                      ((next kvp val vals) ; processed all arg-descriptors
-                       (rev-apply (val) vals))))
-                   (match-positionals
-                    (syntax-rules (=>)
-                      ((match-positionals () res . rest)
-                       (rev-apply () res))
-                      ((match-positionals args (val . vals) (=> name value)
-                                          . rest)
-                       (next ((=> name value) . rest) val vals . args))
-                      ((match-positionals args (val . vals))
-                       (next () val vals . args))
-                      ((match-positionals (arg1 . args) res pos-arg . rest)
-                       (match-positionals args (pos-arg . res) . rest))))
-                   (rev-apply
-                    (syntax-rules ()
-                      ((rev-apply form (x . xs))
-                       (rev-apply (x . form) xs))
-                      ((rev-apply form ()) form))))
-                (match-positionals ((arg-name . arg-default) ...)
-                                   (positional-form-name)
-                                   . keyword-val-pairs)
-                )))))
+           (er-macro-transformer
+            (lambda (expr rename compare)
+              (let lp ((ls (cdr expr)) (named '()) (posns '()))
+                (cond
+                 ((pair? ls)
+                  (if (and (list? (car ls)) (compare (caar ls) (rename '=>)))
+                      (lp (cdr ls) (cons (cdar ls) named) posns)
+                      (lp (cdr ls) named (cons (car ls) posns))))
+                 (else
+                  (let lp ((ls (syntax-quote params))
+                           (posns (reverse posns))
+                           (args '()))
+                    (cond
+                     ((null? ls)
+                      (if (pair? posns)
+                          (error "let-keyword-form: too many args" expr)
+                          (cons (syntax-quote positional-name) (reverse args))))
+                     ((assoc-pred compare (caar ls) named)
+                      => (lambda (x) (lp (cdr ls) posns (cons (cadr x) args))))
+                     ((pair? posns)
+                      (lp (cdr ls) (cdr posns) (cons (car posns) args)))
+                     (else
+                      (lp (cdr ls) posns (cons (cadar ls) args))))))))))))
        . body))))
-
-;; (define-syntax let-keyword-form
-;;   (syntax-rules ()
-;;     ((let-keyword-form
-;;       ((labeled-arg-macro-name (positional-name (arg default) ...)))
-;;       . body)
-;;      (letrec-syntax
-;;          ((labeled-arg-macro-name
-;;            (er-macro-transformer
-;;             (lambda (expr rename compare)
-;;               (receive (named posns)
-;;                   (partition (lambda (x) (and (list? x) (compare (car x) (rename '=>))))
-;;                              (cdr expr))
-;;                 (let lp ((ls '((arg default) ...)) (posns posns) (args '()))
-;;                   (cond
-;;                    ((null? ls)
-;;                     (if (pair? posns)
-;;                         (error "let-keyword-form: too many args" expr)
-;;                         (cons 'positional-name (reverse args))))
-;;                    ((find (lambda (x) (compare (caar ls) (cadr x))) named)
-;;                     => (lambda (x)
-;;                          (lp (cdr ls) posns (cons (caddr x) args))))
-;;                    ((pair? posns)
-;;                     (lp (cdr ls) (cdr posns) (cons (car posns) args)))
-;;                    (else
-;;                     (lp (cdr ls) posns (cons (cadar ls) args))))))))))
-;;        . body))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -137,8 +98,8 @@
        (letrec ((tmp (lambda (var ...)
                        (if (or checks ...)
                            (let-keyword-form ((name (tmp (var step) ...)))
-                             (match-let (finals ...) result))
-                           (match-let (refs ...)
+                             (let (finals ...) result))
+                           (let (refs ...)
                              (let-keyword-form ((name (tmp (var step) ...)))
                                (if #f #f)
                                . body))))))
@@ -380,8 +341,8 @@
     ((listing-reverse args next . rest)
      (accumulating (cons (lambda (x) x) '()) args next . rest))))
 
-(define (append-reverse ls1 ls2)
-  (append (reverse ls1) ls2))
+(define (append-reverse rev tail)
+  (if (null? rev) tail (append-reverse (cdr rev) (cons (car rev) tail))))
 
 (define-syntax appending
   (syntax-rules ()
