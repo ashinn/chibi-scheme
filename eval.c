@@ -1141,8 +1141,13 @@ static sexp make_param_list (sexp ctx, sexp_uint_t i) {
 static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   sexp ls, bc, res, env;
   sexp_gc_var5(params, ref, refs, lambda, ctx2);
-  if (i == sexp_opcode_num_args(op) && sexp_opcode_proc(op))
-    return sexp_opcode_proc(op); /* return before preserving */
+  if (i == sexp_opcode_num_args(op)) { /* return before preserving */
+    if (sexp_opcode_proc(op)) return sexp_opcode_proc(op);
+  } else if (i < sexp_opcode_num_args(op)) {
+    return sexp_compile_error(ctx, "not enough args for opcode", op);
+  } else if (! sexp_opcode_variadic_p(op)) { /* i > num_args */
+    return sexp_compile_error(ctx, "too many args for opcode", op);
+  }
   sexp_gc_preserve5(ctx, params, ref, refs, lambda, ctx2);
   params = make_param_list(ctx, i);
   lambda = sexp_make_lambda(ctx, params);
