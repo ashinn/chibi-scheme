@@ -2380,7 +2380,7 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
 }
 
 sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls) {
-  sexp oldname, newname;
+  sexp oldname, newname, value, out;
   if (! sexp_envp(to)) to = sexp_context_env(ctx);
   if (! sexp_envp(from)) from = sexp_context_env(ctx);
   if (sexp_not(ls)) {
@@ -2393,7 +2393,16 @@ sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls) {
       } else {
         newname = oldname = sexp_car(ls);
       }
-      sexp_env_define(ctx, to, newname, sexp_env_global_ref(from, oldname, SEXP_FALSE));
+      value = sexp_env_global_ref(from, oldname, SEXP_UNDEF);
+      if (value != SEXP_UNDEF) {
+        sexp_env_define(ctx, to, newname, value);
+#if USE_WARN_UNDEFS
+      } else if (sexp_oportp(out=sexp_current_error_port(ctx))) {
+        sexp_write_string(ctx, "WARNING: importing undefined variable: ", out);
+        sexp_write(ctx, oldname, out);
+        sexp_write_char(ctx, '\n', out);
+#endif
+      }
     }
   }
   return SEXP_VOID;
