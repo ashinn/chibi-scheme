@@ -222,7 +222,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
     h = sexp_heap_last(sexp_context_heap(ctx));
     if (((max_freed < size)
          || ((h->size - sum_freed) > (h->size*SEXP_GROW_HEAP_RATIO)))
-        && ((! SEXP_MAXIMUM_HEAP_SIZE) || (size < SEXP_MAXIMUM_HEAP_SIZE)))
+        && ((! SEXP_MAXIMUM_HEAP_SIZE) || (h->size < SEXP_MAXIMUM_HEAP_SIZE)))
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
     if (! res)
