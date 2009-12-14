@@ -1,0 +1,5 @@
+
+(define-module (chibi heap-stats)
+  (export heap-stats)
+  (include-shared "heap-stats"))
+
