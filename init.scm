@@ -471,7 +471,7 @@
       (let lp ((n n) (d (car o)) (res '()))
         (if (> n 0)
             (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
-            (list->string res)))))
+            (if (null? res) "0" (list->string res))))))
 
 (define (string->number str . o)
   (let ((res

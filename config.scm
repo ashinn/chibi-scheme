@@ -156,13 +156,13 @@
 
 (let ((exports
        '(define set! let let* letrec lambda if cond case delay
-         and or begin do quote quasiquote unquote unquote-splicing
+         and or begin do quote quasiquote
          define-syntax let-syntax letrec-syntax syntax-rules eqv? eq? equal?
          not boolean? number? complex? real? rational? integer? exact? inexact?
          = < > <= >= zero? positive? negative? odd? even? max min + * - / abs
          quotient remainder modulo gcd lcm numerator denominator floor ceiling
          truncate round exp log sin cos tan asin acos atan sqrt
-         expt make-rectangular make-polar real-part imag-part magnitude angle
+         expt real-part imag-part magnitude angle
          exact->inexact inexact->exact number->string string->number pair? cons
          car cdr set-car! set-cdr! caar cadr cdar cddr caaar caadr cadar caddr
          cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar cadadr

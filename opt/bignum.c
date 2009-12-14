@@ -82,7 +82,7 @@ int sexp_bignum_zerop (sexp a) {
   return 1;
 }
 
-static sexp_uint_t sexp_bignum_hi (sexp a) {
+sexp_uint_t sexp_bignum_hi (sexp a) {
   sexp_uint_t i=sexp_bignum_length(a)-1;
   while ((i>0) && ! sexp_bignum_data(a)[i])
     i--;
