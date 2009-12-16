@@ -674,6 +674,7 @@ enum sexp_context_globals {
 #endif
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
+  SEXP_G_OPTIMIZATIONS,
   SEXP_G_QUOTE_SYMBOL,
   SEXP_G_QUASIQUOTE_SYMBOL,
   SEXP_G_UNQUOTE_SYMBOL,
