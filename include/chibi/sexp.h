@@ -352,6 +352,10 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_offsetof(type, f) (offsetof(struct sexp_struct, value.type.f))
 
+#define sexp_offsetof_slot0 (offsetof(struct sexp_struct, value))
+
+#define sexp_sizeof_header (sexp_sizeof(flonum) - sizeof(double))
+
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 
 #if USE_BIGNUMS
