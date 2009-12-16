@@ -203,7 +203,7 @@ struct sexp_struct {
     } cpointer;
     /* runtime types */
     struct {
-      char flags;
+      unsigned int syntacticp:1;
       sexp parent, lambda, bindings;
     } env;
     struct {
@@ -544,7 +544,7 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_bytecode_literals(x) ((x)->value.bytecode.literals)
 #define sexp_bytecode_data(x)     ((x)->value.bytecode.data)
 
-#define sexp_env_flags(x)         ((x)->value.env.flags)
+#define sexp_env_syntactic_p(x)   ((x)->value.env.syntacticp)
 #define sexp_env_parent(x)        ((x)->value.env.parent)
 #define sexp_env_bindings(x)      ((x)->value.env.bindings)
 #define sexp_env_local_p(x)       (sexp_env_parent(x))

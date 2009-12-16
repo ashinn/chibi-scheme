@@ -404,11 +404,21 @@
 (test '(,@foo) (let ((unquote-splicing 1)) `(,@foo)))
 
 (test 'ok
-      (let ((... 2))
-        (let-syntax ((s (syntax-rules ()
-                          ((_ x ...) 'bad)
-                          ((_ . r) 'ok))))
-          (s a b c))))
+    (let ((... 2))
+      (let-syntax ((s (syntax-rules ()
+                        ((_ x ...) 'bad)
+                        ((_ . r) 'ok))))
+        (s a b c))))
+
+(test 'ok (let ()
+            (let-syntax ()
+              (define internal-def 'ok))
+            internal-def))
+
+(test 'ok (let ()
+            (letrec-syntax ()
+              (define internal-def 'ok))
+            internal-def))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
