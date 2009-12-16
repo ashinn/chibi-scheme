@@ -124,7 +124,7 @@
     mod))
 
 (define-syntax define-module
-  (rsc-macro-transformer
+  (er-macro-transformer
    (lambda (expr env)
      (let ((name (cadr expr))
            (body (cddr expr)))
@@ -141,7 +141,7 @@
           (set! *this-module* tmp))))))
 
 (define-syntax define-config-primitive
-  (rsc-macro-transformer
+  (er-macro-transformer
    (lambda (expr env)
      `(define-syntax ,(cadr expr)
         (er-macro-transformer
@@ -198,5 +198,8 @@
   (set! *modules*
         (list (cons '(scheme) (make-module exports
                                            (interaction-environment)
-                                           (list (cons 'export exports)))))))
+                                           (list (cons 'export exports))))
+              (cons '(srfi 0) (make-module (list 'cond-expand)
+                                           (interaction-environment)
+                                           (list (list 'export 'cond-expand)))))))
 

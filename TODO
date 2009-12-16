@@ -79,12 +79,14 @@
    - State "DONE"       [2009-10-13 Tue 14:38]
 ** DONE shared library includes
    - State "DONE"       [2009-12-08 Tue 14:39]
-** TODO only/except/rename/prefix modifiers
+** DONE only/except/rename/prefix modifiers
+   - State "DONE"       [2009-12-16 Wed 18:57]
 ** TODO scheme-complete.el support
 ** TODO access individual modules from repl
 
 * core modules
-** TODO SRFI-0 cond-expand
+** DONE SRFI-0 cond-expand
+   - State "DONE"       [2009-12-16 Wed 20:12]
 ** DONE SRFI-9 define-record-type
    - State "DONE"       [2009-12-08 Tue 14:50]
 ** DONE SRFI-69 hash-tables
@@ -95,8 +97,10 @@
    - State "DONE"       [2009-12-08 Tue 14:54]
 ** TODO network interface
 ** TODO posix interface
-** TODO pathname library
-** TODO uri library
+** DONE pathname library
+   - State "DONE"       [2009-12-16 Wed 18:58]
+** DONE uri library
+   - State "DONE"       [2009-12-16 Wed 18:58]
 ** TODO http library
 ** TODO show (formatting) library
 ** TODO zip library

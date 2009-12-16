@@ -2373,6 +2373,9 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
                   sexp_c_string(ctx, sexp_module_dir, -1));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*shared-object-extension*"),
                   sexp_c_string(ctx, sexp_so_extension, -1));
+  tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform));
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi"));
+  sexp_env_define(ctx, e, sexp_intern(ctx, "*features*"), tmp);
   sexp_gc_release4(ctx);
   return e;
 }
