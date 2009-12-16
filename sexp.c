@@ -151,11 +151,9 @@ sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp felb, sexp flb,
 }
 
 sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots) {
-  short type_size
-    = sexp_sizeof(flonum) - sizeof(double) + sizeof(sexp)*sexp_unbox_fixnum(slots);
+  short type_size = sexp_sizeof_header + sizeof(sexp)*sexp_unbox_fixnum(slots);
   return
-    sexp_register_type(ctx, name,
-                       sexp_make_fixnum(offsetof(struct sexp_struct, value)),
+    sexp_register_type(ctx, name, sexp_make_fixnum(sexp_offsetof_slot0),
                        slots, slots, sexp_make_fixnum(0), sexp_make_fixnum(0),
                        sexp_make_fixnum(type_size), sexp_make_fixnum(0),
                        sexp_make_fixnum(0), NULL);
