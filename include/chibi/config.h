@@ -12,6 +12,9 @@
 /*   sexp_init_library(ctx, env) function provided. */
 /* #define USE_DL 0 */
 
+/* uncomment this to disable a simplifying optimization pass */
+/* #define USE_SIMPLIFY 0 */
+
 /* uncomment this to disable dynamic type definitions */
 /*   This enables register-simple-type and related */
 /*   opcodes for defining types, needed by the default */
@@ -159,6 +162,10 @@
 #else
 #define USE_DL 1
 #endif
+#endif
+
+#ifndef USE_SIMPLIFY
+#define USE_SIMPLIFY 1
 #endif
 
 #ifndef USE_BOEHM

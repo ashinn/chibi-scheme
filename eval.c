@@ -200,6 +200,7 @@ static sexp finalize_bytecode (sexp ctx) {
     else
       sexp_bytecode_literals(bc) = sexp_list_to_vector(ctx, sexp_bytecode_literals(bc));
   }
+  /* sexp_disasm(ctx, bc, sexp_current_error_port(ctx)); */
   return bc;
 }
 
@@ -277,19 +278,20 @@ static sexp sexp_make_lit (sexp ctx, sexp value) {
 #define SEXP_STACK_SIZE (sexp_sizeof(stack)+sizeof(sexp)*SEXP_INIT_STACK_SIZE)
 
 void sexp_init_eval_context_globals (sexp ctx) {
+  sexp_gc_var2(bc, vec);
   ctx = sexp_make_child_context(ctx, NULL);
+  sexp_gc_preserve2(ctx, bc, vec);
   emit(ctx, OP_RESUMECC);
   sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = finalize_bytecode(ctx);
   ctx = sexp_make_child_context(ctx, NULL);
   emit(ctx, OP_DONE);
+  bc = finalize_bytecode(ctx);
+  vec = sexp_make_vector(ctx, 0, SEXP_VOID);
   sexp_global(ctx, SEXP_G_FINAL_RESUMER)
-    = sexp_make_procedure(ctx,
-                          sexp_make_fixnum(0),
-                          sexp_make_fixnum(0),
-                          finalize_bytecode(ctx),
-                          sexp_make_vector(ctx, 0, SEXP_VOID));
+    = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, bc, vec);
   sexp_bytecode_name(sexp_procedure_code(sexp_global(ctx, SEXP_G_FINAL_RESUMER)))
     = sexp_intern(ctx, "final-resumer");
+  sexp_gc_release2(ctx);
 }
 
 sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env) {
@@ -842,8 +844,7 @@ static void generate_set (sexp ctx, sexp set) {
     emit(ctx, OP_SET_CDR);
   } else {
     lambda = sexp_ref_loc(ref);
-    if (sexp_memq(ctx, sexp_ref_name(ref), sexp_lambda_sv(lambda))
-        != SEXP_FALSE) {
+    if (sexp_truep(sexp_memq(ctx, sexp_ref_name(ref), sexp_lambda_sv(lambda)))) {
       /* stack or closure mutable vars are boxed */
       generate_ref(ctx, ref, 0);
       emit(ctx, OP_SET_CDR);
@@ -1013,7 +1014,7 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
   if (sexp_nullp(fv)) {
     /* shortcut, no free vars */
-    tmp = sexp_make_vector(ctx2, sexp_make_fixnum(0), SEXP_VOID);
+    tmp = sexp_make_vector(ctx2, SEXP_ZERO, SEXP_VOID);
     tmp = sexp_make_procedure(ctx2, flags, len, bc, tmp);
     sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), tmp);
     generate_lit(ctx, tmp);
@@ -1161,8 +1162,7 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   generate_opcode_app(ctx2, refs);
   bc = finalize_bytecode(ctx2);
   sexp_bytecode_name(bc) = sexp_c_string(ctx2, sexp_opcode_name(op), -1);
-  res = sexp_make_procedure(ctx2, sexp_make_fixnum(0), sexp_make_fixnum(i),
-                            bc, SEXP_VOID);
+  res=sexp_make_procedure(ctx2, SEXP_ZERO, sexp_make_fixnum(i), bc, SEXP_VOID);
   if (i == sexp_opcode_num_args(op))
     sexp_opcode_proc(op) = res;
   sexp_gc_release5(ctx);
@@ -1268,20 +1268,18 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG1 = tmp1;
     break;
   case OP_CALLCC:
-    stack[top] = sexp_make_fixnum(1);
+    stack[top] = SEXP_ONE;
     stack[top+1] = sexp_make_fixnum(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
     stack[top+3] = sexp_make_fixnum(fp);
     tmp1 = _ARG1;
     i = 1;
     sexp_context_top(ctx) = top;
-    tmp2 = sexp_make_vector(ctx, sexp_make_fixnum(1), SEXP_UNDEF);
-    sexp_vector_set(tmp2,
-                    sexp_make_fixnum(0),
-                    sexp_save_stack(ctx, stack, top+4));
+    tmp2 = sexp_make_vector(ctx, SEXP_ONE, SEXP_UNDEF);
+    sexp_vector_set(tmp2, SEXP_ZERO, sexp_save_stack(ctx, stack, top+4));
     _ARG1 = sexp_make_procedure(ctx,
-                                sexp_make_fixnum(0),
-                                sexp_make_fixnum(1),
+                                SEXP_ZERO,
+                                SEXP_ONE,
                                 sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE),
                                 tmp2);
     top++;
@@ -1686,7 +1684,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case OP_DIV:
-    if (_ARG2 == sexp_make_fixnum(0)) {
+    if (_ARG2 == SEXP_ZERO) {
 #if USE_FLONUMS
       if (sexp_flonump(_ARG1) && sexp_flonum_value(_ARG1) == 0.0)
         _ARG2 = sexp_make_flonum(ctx, 0.0/0.0);
@@ -1722,7 +1720,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case OP_QUOTIENT:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
-      if (_ARG2 == sexp_make_fixnum(0))
+      if (_ARG2 == SEXP_ZERO)
         sexp_raise("divide by zero", SEXP_NULL);
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
       top--;
@@ -1738,7 +1736,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case OP_REMAINDER:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
-      if (_ARG2 == sexp_make_fixnum(0))
+      if (_ARG2 == SEXP_ZERO)
         sexp_raise("divide by zero", SEXP_NULL);
       tmp1 = sexp_fx_rem(_ARG1, _ARG2);
       top--;
@@ -2117,9 +2115,9 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
   sexp res;
 #if USE_BIGNUMS
   if (sexp_bignump(e)) {        /* bignum exponent needs special handling */
-    if ((x == sexp_make_fixnum(0)) || (x == sexp_make_fixnum(-1)))
+    if ((x == SEXP_ZERO) || (x == SEXP_NEG_ONE))
       res = sexp_make_flonum(ctx, pow(0, 0));          /* +nan.0 */
-    else if (x == sexp_make_fixnum(1))
+    else if (x == SEXP_ONE)
       res = sexp_make_flonum(ctx, 1);                  /* 1.0    */
     else if (sexp_flonump(x))
       res = sexp_make_flonum(ctx, pow(sexp_flonum_value(x), sexp_bignum_to_double(e)));
@@ -2186,6 +2184,21 @@ static sexp sexp_string_cmp (sexp ctx, sexp str1, sexp str2, sexp ci) {
 #ifdef PLAN9
 #include "opt/plan9.c"
 #endif
+
+/************************** optimizations *****************************/
+
+static sexp sexp_apply_optimization (sexp ctx, sexp proc, sexp ast) {
+  sexp res;
+  sexp_gc_var1(args);
+  if (sexp_opcodep(proc)) {
+    res = ((sexp_proc2)sexp_opcode_func(proc))(ctx, ast);
+  } else {
+    sexp_gc_preserve1(ctx, args);
+    res = sexp_apply(ctx, proc, args=sexp_list1(ctx, ast));
+    sexp_gc_release1(ctx);
+  }
+  return res;
+}
 
 /*********************** standard environment *************************/
 
@@ -2290,10 +2303,8 @@ sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type) {
   if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-type-predicate: bad type", type);
   return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_TYPE_PREDICATE),
-                          sexp_make_fixnum(OP_TYPEP), sexp_make_fixnum(1),
-                          sexp_make_fixnum(0), sexp_make_fixnum(0),
-                          sexp_make_fixnum(0), sexp_make_fixnum(0), type,
-                          NULL, NULL);
+                          sexp_make_fixnum(OP_TYPEP), SEXP_ONE, SEXP_ZERO,
+                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
 }
 
 sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
@@ -2302,9 +2313,8 @@ sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
     return sexp_type_exception(ctx, "make-constructor: bad type", type);
   type_size = sexp_type_size_base(&(sexp_type_specs[sexp_unbox_fixnum(type)]));
   return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_CONSTRUCTOR),
-                          sexp_make_fixnum(OP_MAKE), sexp_make_fixnum(0),
-                          sexp_make_fixnum(0), sexp_make_fixnum(0),
-                          sexp_make_fixnum(0), sexp_make_fixnum(0), type,
+                          sexp_make_fixnum(OP_MAKE), SEXP_ZERO, SEXP_ZERO,
+                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type,
                           sexp_make_fixnum(type_size), NULL);
 }
 
@@ -2316,8 +2326,7 @@ sexp sexp_make_accessor (sexp ctx, sexp name, sexp type, sexp index, sexp code) 
   return
     sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_ACCESSOR), code,
                      sexp_make_fixnum(sexp_unbox_fixnum(code)==OP_SLOT_REF?1:2),
-                     sexp_make_fixnum(0), type, sexp_make_fixnum(0),
-                     sexp_make_fixnum(0), type, index, NULL);
+                     SEXP_ZERO, type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
 sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index) {
@@ -2376,6 +2385,7 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform));
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi"));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*features*"), tmp);
+  sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
   sexp_gc_release4(ctx);
   return e;
 }
@@ -2426,9 +2436,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       stack[--offset] = sexp_car(ls);
     stack[top] = sexp_make_fixnum(len);
     top++;
-    stack[top++] = sexp_make_fixnum(0);
+    stack[top++] = SEXP_ZERO;
     stack[top++] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
-    stack[top++] = sexp_make_fixnum(0);
+    stack[top++] = SEXP_ZERO;
     sexp_context_top(ctx) = top;
     res = sexp_vm(ctx, proc);
     if (! res) res = SEXP_VOID;
@@ -2443,12 +2453,16 @@ sexp sexp_compile (sexp ctx, sexp x) {
   if (sexp_exceptionp(ast)) {
     res = ast;
   } else {
+#if USE_SIMPLIFY
+    res = sexp_global(ctx, SEXP_G_OPTIMIZATIONS);
+    for ( ; sexp_pairp(res); res=sexp_cdr(res))
+      ast = sexp_apply_optimization(ctx, sexp_cdar(res), ast);
+#endif
     free_vars(ctx, ast, SEXP_NULL);    /* should return SEXP_NULL */
     generate(ctx, ast);
     res = finalize_bytecode(ctx);
     vec = sexp_make_vector(ctx, 0, SEXP_VOID);
-    res = sexp_make_procedure(ctx, sexp_make_fixnum(0), sexp_make_fixnum(0),
-                              res, vec);
+    res = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, res, vec);
   }
   sexp_gc_release3(ctx);
   return res;

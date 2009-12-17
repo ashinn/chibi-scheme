@@ -28,7 +28,13 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   } else if (! sexp_bytecodep(bc)) {
     return sexp_type_exception(ctx, "not a procedure", bc);
   }
+  if (! sexp_oportp(out))
+    return SEXP_VOID;
   ip = sexp_bytecode_data(bc);
+  sexp_write_string(ctx, "-------------- ", out);
+  if (sexp_truep(sexp_bytecode_name(bc)))
+    sexp_write(ctx, sexp_bytecode_name(bc), out);
+  sexp_write_char(ctx, '\n', out);
  loop:
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
@@ -43,12 +49,14 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   case OP_CLOSURE_REF:
   case OP_JUMP:
   case OP_JUMP_UNLESS:
+  case OP_TYPEP:
   case OP_FCALL0:
   case OP_FCALL1:
   case OP_FCALL2:
   case OP_FCALL3:
-  case OP_TYPEP:
     sexp_printf(ctx, out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
+    ip += sizeof(sexp);
+    break;
     ip += sizeof(sexp);
     break;
   case OP_SLOT_REF:
