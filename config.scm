@@ -125,7 +125,7 @@
 
 (define-syntax define-module
   (er-macro-transformer
-   (lambda (expr env)
+   (lambda (expr rename compare)
      (let ((name (cadr expr))
            (body (cddr expr)))
        `(let ((tmp *this-module*))
@@ -142,7 +142,7 @@
 
 (define-syntax define-config-primitive
   (er-macro-transformer
-   (lambda (expr env)
+   (lambda (expr rename compare)
      `(define-syntax ,(cadr expr)
         (er-macro-transformer
          (lambda (expr rename compare)
