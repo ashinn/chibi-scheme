@@ -2200,6 +2200,10 @@ static sexp sexp_apply_optimization (sexp ctx, sexp proc, sexp ast) {
   return res;
 }
 
+#if USE_SIMPLIFY
+#include "opt/simplify.c"
+#endif
+
 /*********************** standard environment *************************/
 
 static struct sexp_struct core_forms[] = {
@@ -2386,6 +2390,12 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi"));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*features*"), tmp);
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
+#if USE_SIMPLIFY
+  op = sexp_make_foreign(ctx, "simplify", 1, 0,
+                         (sexp_proc1)sexp_simplify, SEXP_VOID);
+  tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
+  sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), tmp);
+#endif
   sexp_gc_release4(ctx);
   return e;
 }
