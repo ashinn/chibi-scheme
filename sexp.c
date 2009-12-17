@@ -154,9 +154,8 @@ sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots) {
   short type_size = sexp_sizeof_header + sizeof(sexp)*sexp_unbox_fixnum(slots);
   return
     sexp_register_type(ctx, name, sexp_make_fixnum(sexp_offsetof_slot0),
-                       slots, slots, sexp_make_fixnum(0), sexp_make_fixnum(0),
-                       sexp_make_fixnum(type_size), sexp_make_fixnum(0),
-                       sexp_make_fixnum(0), NULL);
+                       slots, slots, SEXP_ZERO, SEXP_ZERO,
+                       sexp_make_fixnum(type_size), SEXP_ZERO, SEXP_ZERO, NULL);
 }
 
 sexp sexp_finalize_c_type (sexp ctx, sexp obj) {
@@ -323,8 +322,7 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
     }
     if (sexp_pairp(sexp_exception_source(exn))) {
       ls = sexp_exception_source(exn);
-      if (sexp_fixnump(sexp_cdr(ls))
-          && (sexp_cdr(ls) >= sexp_make_fixnum(0))) {
+      if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
         sexp_write_string(ctx, " on line ", out);
         sexp_write(ctx, sexp_cdr(ls), out);
       }
@@ -743,8 +741,8 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, sexp parent,
 
 #if SEXP_BSD
 
-#define sexp_stream_ctx(vec) sexp_vector_ref((sexp)vec, sexp_make_fixnum(0))
-#define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, sexp_make_fixnum(1))
+#define sexp_stream_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
+#define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, SEXP_ONE)
 #define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, sexp_make_fixnum(2))
 #define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, sexp_make_fixnum(3))
 
@@ -801,7 +799,7 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   sexp_stream_ctx(cookie) = ctx;
   sexp_stream_buf(cookie) = str;
   sexp_stream_size(cookie) = sexp_make_fixnum(sexp_string_length(str));
-  sexp_stream_pos(cookie) = sexp_make_fixnum(0);
+  sexp_stream_pos(cookie) = SEXP_ZERO;
   in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
   res = sexp_make_input_port(ctx, in, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
@@ -819,7 +817,7 @@ sexp sexp_make_output_string_port (sexp ctx) {
   sexp_stream_ctx(cookie) = ctx;
   sexp_stream_buf(cookie) = sexp_make_string(ctx, size, SEXP_VOID);
   sexp_stream_size(cookie) = size;
-  sexp_stream_pos(cookie) = sexp_make_fixnum(0);
+  sexp_stream_pos(cookie) = SEXP_ZERO;
   out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
   res = sexp_make_output_port(ctx, out, SEXP_FALSE);
   sexp_port_cookie(res) = cookie;
@@ -832,7 +830,7 @@ sexp sexp_get_output_string (sexp ctx, sexp port) {
   fflush(sexp_port_stream(port));
   return sexp_substring(ctx,
                         sexp_stream_buf(cookie),
-                        sexp_make_fixnum(0),
+                        SEXP_ZERO,
                         sexp_stream_pos(cookie));
 }
 
@@ -1530,7 +1528,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
             sexp_bignum_sign(res) = -sexp_bignum_sign(res);
           else
 #endif
-            res = sexp_fx_mul(res, sexp_make_fixnum(-1));
+            res = sexp_fx_mul(res, SEXP_NEG_ONE);
       }
     } else {
       sexp_push_char(ctx, c2, in);

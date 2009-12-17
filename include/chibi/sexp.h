@@ -455,6 +455,12 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_make_fixnum(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
 #define sexp_unbox_fixnum(n)   (((sexp_sint_t)(n))>>SEXP_FIXNUM_BITS)
 
+#define SEXP_NEG_ONE sexp_make_fixnum(-1)
+#define SEXP_ZERO    sexp_make_fixnum(0)
+#define SEXP_ONE     sexp_make_fixnum(1)
+#define SEXP_TWO     sexp_make_fixnum(2)
+#define SEXP_THREE   sexp_make_fixnum(3)
+
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
 
@@ -576,6 +582,7 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 
 #define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)
 #define sexp_opcode_opt_param_p(x) (sexp_opcode_flags(x) & 2)
+#define sexp_opcode_ref_trans_p(x) (sexp_opcode_flags(x) & 4)
 
 #define sexp_lambda_name(x)   ((x)->value.lambda.name)
 #define sexp_lambda_params(x) ((x)->value.lambda.params)
