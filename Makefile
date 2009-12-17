@@ -86,7 +86,7 @@ include/chibi/install.h: Makefile
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
-eval.o: eval.c opt/debug.c opcodes.c $(INCLUDES) include/chibi/eval.h Makefile
+eval.o: eval.c opcodes.c opt/debug.c $(INCLUDES) include/chibi/eval.h Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 main.o: main.c $(INCLUDES) include/chibi/eval.h Makefile
@@ -105,7 +105,7 @@ chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
-	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
+	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:
 	rm -f *.o *.i *.s *.8
