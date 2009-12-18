@@ -5,6 +5,8 @@
 #ifndef SEXP_H
 #define SEXP_H
 
+#define SEXP_MODULE_PATH_VAR "CHIBI_MODULE_PATH"
+
 #include "chibi/config.h"
 #include "chibi/install.h"
 
@@ -686,6 +688,7 @@ enum sexp_context_globals {
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
   SEXP_G_OPTIMIZATIONS,
   SEXP_G_CONFIG_ENV,
+  SEXP_G_MODULE_PATH,
   SEXP_G_QUOTE_SYMBOL,
   SEXP_G_QUASIQUOTE_SYMBOL,
   SEXP_G_UNQUOTE_SYMBOL,
