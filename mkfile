@@ -18,7 +18,7 @@ include/chibi/install.h: mkfile
 
 install:V: $BIN/$TARG
 	test -d $MODDIR || mkdir -p $MODDIR
-	cp init.scm $MODDIR/
+	cp -r lib/* $MODDIR/
 
 test:V:
 	./$O.out tests/r5rs-tests.scm
