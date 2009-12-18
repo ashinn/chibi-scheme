@@ -42,7 +42,7 @@ static sexp_uint_t hash_one (sexp obj, sexp_uint_t bound, sexp_sint_t depth) {
   sexp t, *p;
   char *p0;
  loop:
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
   if (sexp_flonump(obj))
     acc ^= (sexp_sint_t) sexp_flonum_value(obj);
   else

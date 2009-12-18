@@ -147,6 +147,8 @@
    type
    (lambda (type free? const? null-ptr? pointer? struct? link? result?)
      (cond
+      ((eq? type 'void)
+       (cat "((" val "), SEXP_VOID)"))
       ((memq type '(sexp errno))
        (cat val))
       ((eq? type 'time_t)

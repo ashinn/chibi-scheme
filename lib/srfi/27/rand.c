@@ -42,7 +42,7 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp rs, sexp bound) {
   if (sexp_fixnump(bound)) {
     sexp_call_random(rs, n);
     res = sexp_make_fixnum(n % sexp_unbox_fixnum(bound));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(bound)) {
     hi = sexp_bignum_hi(bound);
     len = hi * sizeof(sexp_uint_t) / sizeof(int32_t);
@@ -100,7 +100,7 @@ static sexp sexp_random_source_state_set (sexp ctx, sexp rs, sexp state) {
     return sexp_type_exception(ctx, "not a random-source", rs);
   else if (sexp_fixnump(state))
     *sexp_random_data(rs) = sexp_unbox_fixnum(state);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   else if (sexp_bignump(state))
     *sexp_random_data(rs)
       = sexp_bignum_data(state)[0]*sexp_bignum_sign(state);

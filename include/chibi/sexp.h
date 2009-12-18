@@ -11,7 +11,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-#if USE_DL
+#if SEXP_USE_DL
 #include <dlfcn.h>
 #endif
 
@@ -56,7 +56,7 @@ typedef unsigned long size_t;
 #define SEXP_CHAR_TAG 6
 #define SEXP_EXTENDED_TAG 14
 
-#if USE_HASH_SYMS
+#if SEXP_USE_HASH_SYMS
 #define SEXP_SYMBOL_TABLE_SIZE 389
 #else
 #define SEXP_SYMBOL_TABLE_SIZE 1
@@ -278,7 +278,7 @@ struct sexp_struct {
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
 
-#if USE_BOEHM
+#if SEXP_USE_BOEHM
 
 #define sexp_gc_var(ctx, x, y)       sexp x;
 #define sexp_gc_preserve(ctx, x, y)
@@ -307,7 +307,7 @@ struct sexp_struct {
 
 #define sexp_gc_release(ctx, x, y)   (sexp_context_saves(ctx) = y.next)
 
-#if USE_MALLOC
+#if SEXP_USE_MALLOC
 #define sexp_alloc(ctx, size)        malloc(size)
 #define sexp_alloc_atomic(ctx, size) malloc(size)
 #define sexp_realloc(ctx, x, size)   realloc(x, size)
@@ -358,7 +358,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
 #include "chibi/bignum.h"
 #endif
 
@@ -402,7 +402,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_slot_ref(x,i)   (((sexp*)&((x)->value))[i])
 #define sexp_slot_set(x,i,v) (((sexp*)&((x)->value))[i] = (v))
 
-#if USE_IMMEDIATE_FLONUMS
+#if SEXP_USE_IMMEDIATE_FLONUMS
 union sexp_flonum_conv {
   float flonum;
   sexp_uint_t bits;
@@ -466,14 +466,14 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #define sexp_fixnum_to_double(x) ((double)sexp_unbox_fixnum(x))
 
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
 #define sexp_fp_integerp(x) (sexp_flonum_value(x) == trunc(sexp_flonum_value(x)))
 #define _or_integer_flonump(x) || (sexp_flonump(x) && sexp_fp_integerp(x))
 #else
 #define _or_integer_flonump(x)
 #endif
 
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
 SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_exact_integerp(x) (sexp_fixnump(x) || sexp_bignump(x))
 #else
@@ -483,13 +483,13 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 
 #define sexp_integerp(x) (sexp_exact_integerp(x) _or_integer_flonump(x))
 
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
 #define sexp_fixnum_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_fixnum(x)))
 #else
 #define sexp_fixnum_to_flonum(ctx, x) (x)
 #endif
 
-#if USE_FLONUMS || USE_BIGNUMS
+#if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
 #define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_data(x)[0]))
 #define sexp_sint_value(x) ((sexp_sint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_sign(x)*sexp_bignum_data(x)[0]))
 #else
@@ -627,13 +627,13 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 
 #define sexp_global(ctx,x)      (sexp_vector_data(sexp_context_globals(ctx))[x])
 
-#if USE_GLOBAL_HEAP
+#if SEXP_USE_GLOBAL_HEAP
 #define sexp_context_heap(ctx)  sexp_global_heap
 #else
 #define sexp_context_heap(ctx)  ((ctx)->value.context.heap)
 #endif
 
-#if USE_GLOBAL_SYMBOLS
+#if SEXP_USE_GLOBAL_SYMBOLS
 #define sexp_context_symbols(ctx) sexp_symbol_table
 #else
 #define sexp_context_symbols(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_SYMBOLS))
@@ -676,7 +676,7 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 /****************************** utilities *****************************/
 
 enum sexp_context_globals {
-#if ! USE_GLOBAL_SYMBOLS
+#if ! SEXP_USE_GLOBAL_SYMBOLS
   SEXP_G_SYMBOLS,
 #endif
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
@@ -724,7 +724,7 @@ enum sexp_context_globals {
 
 /***************************** general API ****************************/
 
-#if USE_STRING_STREAMS
+#if SEXP_USE_STRING_STREAMS
 
 #define sexp_read_char(x, p) (getc(sexp_port_stream(p)))
 #define sexp_push_char(x, c, p) (ungetc(c, sexp_port_stream(p)))
@@ -795,13 +795,13 @@ SEXP_API sexp sexp_range_exception(sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
 SEXP_API void sexp_init(void);
 
-#if USE_GLOBAL_HEAP
+#if SEXP_USE_GLOBAL_HEAP
 #define sexp_destroy_context(ctx)
 #else
 SEXP_API void sexp_destroy_context(sexp ctx);
 #endif
 
-#if USE_TYPE_DEFS
+#if SEXP_USE_TYPE_DEFS
 SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
 SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
 SEXP_API sexp sexp_register_c_type (sexp ctx, sexp name);

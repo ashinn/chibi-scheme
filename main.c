@@ -75,7 +75,7 @@ sexp sexp_init_environments (sexp ctx) {
   env = sexp_context_env(ctx);
   sexp_env_define(ctx, env, sexp_intern(ctx, "*command-line-arguments*"), SEXP_NULL);
   res = sexp_load_module_file(ctx, sexp_init_file, env);
-#if USE_MODULES
+#if SEXP_USE_MODULES
   if (! sexp_exceptionp(res)) {
     res = SEXP_UNDEF;
     sexp_gc_preserve1(ctx, confenv);
@@ -115,7 +115,7 @@ void repl (sexp ctx) {
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, err);
       } else {
-#if USE_WARN_UNDEFS
+#if SEXP_USE_WARN_UNDEFS
         sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, err);
 #endif
         if (res != SEXP_VOID) {
@@ -133,7 +133,7 @@ sexp check_exception (sexp ctx, sexp res) {
     sexp_print_exception(ctx, res,
                          sexp_eval_string(ctx, "(current-error-port)",
                                           sexp_context_env(ctx)));
-    exit(EXIT_FAILURE);
+    exit_failure();
   }
   return res;
 }

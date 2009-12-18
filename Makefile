@@ -3,6 +3,8 @@
 .PHONY: all libs doc dist clean cleaner test install uninstall
 .PRECIOUS: %.c
 
+# install configuration
+
 CC       ?= cc
 PREFIX   ?= /usr/local
 BINDIR   ?= $(PREFIX)/bin
@@ -15,6 +17,9 @@ LIBDIR   ?= $(PREFIX)/lib/chibi
 DESTDIR  ?=
 
 GENSTUBS ?= ./tools/genstubs.scm
+
+# system configuration - if not using GNU make, set PLATFORM and the
+# following flags as necessary.
 
 ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
@@ -34,22 +39,44 @@ ifeq ($(PLATFORM),macosx)
 SO  = .dylib
 EXE =
 CLIBFLAGS = -dynamiclib
-STATICFLAGS = -static-libgcc -DUSE_DL=0
+STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
 else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
 CC = gcc
 CLIBFLAGS = -shared
-CPPFLAGS += -DUSE_STRING_STREAMS=0 -DBUILDING_DLL -DUSE_DEBUG=0
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL -DSEXP_USE_DEBUG=0
 LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
-STATICFLAGS = -static -DUSE_DL=0
+STATICFLAGS = -static -DSEXP_USE_DL=0
 endif
 endif
+
+ifeq ($(USE_BOEHM),1)
+SEXP_USE_BOEHM = 1
+endif
+
+ifeq ($(SEXP_USE_BOEHM),1)
+GCLDFLAGS := -lgc
+XCPPFLAGS := $(CPPFLAGS) -Iinclude -DSEXP_USE_BOEHM=1
+else
+GCLDFLAGS :=
+XCPPFLAGS := $(CPPFLAGS) -Iinclude
+endif
+
+ifeq ($(SEXP_USE_DL),0)
+XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
+XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g3 $(CFLAGS)
+else
+XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -ldl -lm
+XCFLAGS   := -Wall -g3 $(CFLAGS)
+endif
+
+########################################################################
 
 all: chibi-scheme$(EXE) libs
 
@@ -59,22 +86,6 @@ COMPILED_LIBS := lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
 	lib/chibi/posix$(SO) lib/chibi/heap-stats$(SO)
 
 libs: $(COMPILED_LIBS)
-
-ifeq ($(USE_BOEHM),1)
-GCLDFLAGS := -lgc
-XCPPFLAGS := $(CPPFLAGS) -Iinclude -DUSE_BOEHM=1
-else
-GCLDFLAGS :=
-XCPPFLAGS := $(CPPFLAGS) -Iinclude
-endif
-
-ifeq ($(USE_DL),0)
-XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -DUSE_DL=0 -g3 $(CFLAGS)
-else
-XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -ldl -lm
-XCFLAGS   := -Wall -g3 $(CFLAGS)
-endif
 
 INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 

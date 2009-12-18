@@ -2,7 +2,7 @@
 #include <chibi/eval.h>
 #include <limits.h>
 
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
 #include <chibi/bignum.h>
 #endif
 
@@ -12,13 +12,13 @@ static sexp sexp_bit_and (sexp ctx, sexp x, sexp y) {
   if (sexp_fixnump(x)) {
     if (sexp_fixnump(y))
       res = (sexp) ((sexp_uint_t)x & (sexp_uint_t)y);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else if (sexp_bignump(y))
       res = sexp_bit_and(ctx, y, x);
 #endif
     else
       res = sexp_type_exception(ctx, "bitwise-and: not an integer", y);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
       res = sexp_make_fixnum(sexp_unbox_fixnum(y) & sexp_bignum_data(x)[0]);
@@ -46,13 +46,13 @@ static sexp sexp_bit_ior (sexp ctx, sexp x, sexp y) {
   if (sexp_fixnump(x)) {
     if (sexp_fixnump(y))
       res = (sexp) ((sexp_uint_t)x | (sexp_uint_t)y);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else if (sexp_bignump(y))
       res = sexp_bit_ior(ctx, y, x);
 #endif
     else
       res = sexp_type_exception(ctx, "bitwise-ior: not an integer", y);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
       res = sexp_copy_bignum(ctx, NULL, x, 0);
@@ -84,13 +84,13 @@ static sexp sexp_bit_xor (sexp ctx, sexp x, sexp y) {
   if (sexp_fixnump(x)) {
     if (sexp_fixnump(y))
       res = sexp_make_fixnum(sexp_unbox_fixnum(x) ^ sexp_unbox_fixnum(y));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else if (sexp_bignump(y))
       res = sexp_bit_xor(ctx, y, x);
 #endif
     else
       res = sexp_type_exception(ctx, "bitwise-xor: not an integer", y);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
       res = sexp_copy_bignum(ctx, NULL, x, 0);
@@ -131,12 +131,12 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp i, sexp count) {
       res = sexp_make_fixnum(sexp_unbox_fixnum(i) >> -c);
     } else {
       tmp = (sexp_uint_t)sexp_unbox_fixnum(i) << c;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
       if (((tmp >> c) == sexp_unbox_fixnum(i))
           && (tmp < SEXP_MAX_FIXNUM) && (tmp > SEXP_MIN_FIXNUM)) {
 #endif
         res = sexp_make_fixnum(tmp);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
       } else {
         sexp_gc_preserve1(ctx, res);
         res = sexp_fixnum_to_bignum(ctx, i);
@@ -145,7 +145,7 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp i, sexp count) {
       }
 #endif
     }
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(i)) {
     len = sexp_bignum_hi(i);
     if (c < 0) {
@@ -198,7 +198,7 @@ static sexp sexp_bit_count (sexp ctx, sexp x) {
   if (sexp_fixnump(x)) {
     i = sexp_unbox_fixnum(x);
     res = sexp_make_fixnum(bit_count(i<0 ? ~i : i));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     for (i=count=0; i<sexp_bignum_length(x); i++)
       count += bit_count(sexp_bignum_data(x)[i]);
@@ -233,7 +233,7 @@ static sexp sexp_integer_length (sexp ctx, sexp x) {
   if (sexp_fixnump(x)) {
     tmp = sexp_unbox_fixnum(x);
     return sexp_make_fixnum(integer_log2(tmp < 0 ? -tmp-1 : tmp));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     hi = sexp_bignum_hi(x);
     return sexp_make_fixnum(integer_log2(sexp_bignum_data(x)[hi])
@@ -250,7 +250,7 @@ static sexp sexp_bit_set_p (sexp ctx, sexp i, sexp x) {
     return sexp_type_exception(ctx, "bit-set?: not an integer", i);
   if (sexp_fixnump(x)) {
     return sexp_make_boolean(sexp_unbox_fixnum(x) & (1<<sexp_unbox_fixnum(i)));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     pos = sexp_unbox_fixnum(i) / (sizeof(sexp_uint_t)*CHAR_BIT);
     return sexp_make_boolean((pos < sexp_bignum_length(x))

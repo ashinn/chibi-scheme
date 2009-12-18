@@ -10,7 +10,7 @@ struct sexp_huff_entry {
   unsigned short bits;
 };
 
-#if USE_HUFF_SYMS
+#if SEXP_USE_HUFF_SYMS
 #include "opt/sexp-hufftabs.c"
 static struct sexp_huff_entry huff_table[] = {
 #include "opt/sexp-huff.c"
@@ -43,7 +43,7 @@ static int is_separator(int c) {
   return 0<c && c<0x60 && sexp_separators[c];
 }
 
-#if USE_GLOBAL_SYMBOLS
+#if SEXP_USE_GLOBAL_SYMBOLS
 sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 #endif
 
@@ -53,7 +53,7 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
-#if USE_AUTOCLOSE_PORTS
+#if SEXP_USE_AUTOCLOSE_PORTS
 static sexp sexp_finalize_port (sexp ctx, sexp port) {
   if (sexp_port_openp(port) && sexp_port_stream(port)
       && sexp_stringp(sexp_port_name(port)))
@@ -104,7 +104,7 @@ static struct sexp_struct _sexp_type_specs[] = {
 
 struct sexp_struct *sexp_type_specs = _sexp_type_specs;
 
-#if USE_TYPE_DEFS
+#if SEXP_USE_TYPE_DEFS
 
 static sexp_uint_t sexp_num_types = SEXP_NUM_CORE_TYPES;
 static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
@@ -168,20 +168,20 @@ sexp sexp_finalize_c_type (sexp ctx, sexp obj) {
 #define sexp_num_types SEXP_NUM_CORE_TYPES
 #endif
 
-#if ! USE_BOEHM
+#if ! SEXP_USE_BOEHM
 
-#if ! USE_MALLOC
+#if ! SEXP_USE_MALLOC
 #include "gc.c"
 #endif
 
-#endif  /* ! USE_BOEHM */
+#endif  /* ! SEXP_USE_BOEHM */
 
 /****************************** contexts ******************************/
 
 void sexp_init_context_globals (sexp ctx) {
   sexp_context_globals(ctx)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
-#if ! USE_GLOBAL_SYMBOLS
+#if ! SEXP_USE_GLOBAL_SYMBOLS
   sexp_global(ctx, SEXP_G_SYMBOLS) = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_SYMBOL_TABLE_SIZE), SEXP_NULL);
 #endif
   sexp_global(ctx, SEXP_G_OOM_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of memory", SEXP_NULL);
@@ -199,7 +199,7 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
 }
 
-#if ! USE_GLOBAL_HEAP
+#if ! SEXP_USE_GLOBAL_HEAP
 sexp sexp_bootstrap_context (void) {
   sexp dummy_ctx, ctx;
   sexp_heap heap = sexp_make_heap(sexp_heap_align(SEXP_INITIAL_HEAP_SIZE));
@@ -218,13 +218,13 @@ sexp sexp_bootstrap_context (void) {
 sexp sexp_make_context (sexp ctx) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
-#if ! USE_GLOBAL_HEAP
+#if ! SEXP_USE_GLOBAL_HEAP
   if (! ctx) res = sexp_bootstrap_context();
   else
 #endif
     {
       res = sexp_alloc_type(ctx, context, SEXP_CONTEXT);
-#if ! USE_BOEHM && ! USE_MALLOC
+#if ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC
       sexp_context_heap(res) = sexp_context_heap(ctx);
 #endif
     }
@@ -245,7 +245,7 @@ sexp sexp_make_context (sexp ctx) {
   return res;
 }
 
-#if ! USE_GLOBAL_HEAP
+#if ! SEXP_USE_GLOBAL_HEAP
 void sexp_destroy_context (sexp ctx) {
   sexp_heap heap;
   if (sexp_context_heap(ctx)) {
@@ -486,7 +486,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
   if (a == b)
     return SEXP_TRUE;
 
-#if USE_IMMEDIATE_FLONUMS
+#if SEXP_USE_IMMEDIATE_FLONUMS
   if ((! sexp_pointerp(a)) || (! sexp_pointerp(b)))
     return
       sexp_make_boolean((sexp_flonump(a) && sexp_fixnump(b)
@@ -503,7 +503,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
 #endif
 
   if (sexp_pointer_tag(a) != sexp_pointer_tag(b)) {
-#if USE_BIGNUMS && ! USE_IMMEDIATE_FLONUMS
+#if SEXP_USE_BIGNUMS && ! SEXP_USE_IMMEDIATE_FLONUMS
     if (sexp_pointer_tag(a) == SEXP_FLONUM) {t=a; a=b; b=t;}
     if (sexp_pointer_tag(a) == SEXP_BIGNUM)
       return sexp_make_boolean((sexp_pointer_tag(b) == SEXP_FLONUM)
@@ -515,11 +515,11 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
   }
 
   /* a and b are both pointers of the same type */
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   if (sexp_pointer_tag(a) == SEXP_BIGNUM)
     return sexp_make_boolean(!sexp_bignum_compare(a, b));
 #endif
-#if USE_FLONUMS && ! USE_IMMEDIATE_FLONUMS
+#if SEXP_USE_FLONUMS && ! SEXP_USE_IMMEDIATE_FLONUMS
   if (sexp_pointer_tag(a) == SEXP_FLONUM)
     return sexp_make_boolean(sexp_flonum_value(a) == sexp_flonum_value(b));
 #endif
@@ -556,7 +556,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
 
 /********************* strings, symbols, vectors **********************/
 
-#if ! USE_IMMEDIATE_FLONUMS
+#if ! SEXP_USE_IMMEDIATE_FLONUMS
 sexp sexp_make_flonum(sexp ctx, double f) {
   sexp x = sexp_alloc_type(ctx, flonum, SEXP_FLONUM);
   if (sexp_exceptionp(x)) return x;
@@ -635,7 +635,7 @@ sexp sexp_string_concatenate (sexp ctx, sexp str_ls) {
 #define FNV_PRIME 16777619
 #define FNV_OFFSET_BASIS 2166136261uL
 
-#if USE_HASH_SYMS
+#if SEXP_USE_HASH_SYMS
 
 static sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc) {
   while (*str) {acc *= FNV_PRIME; acc ^= *str++;}
@@ -651,7 +651,7 @@ sexp sexp_intern(sexp ctx, char *str) {
   sexp ls;
   sexp_gc_var1(sym);
 
-#if USE_HUFF_SYMS
+#if SEXP_USE_HUFF_SYMS
   res = 0;
   for ( ; (c=*p); p++) {
     he = huff_table[(unsigned char)c];
@@ -666,7 +666,7 @@ sexp sexp_intern(sexp ctx, char *str) {
 #endif
 
  normal_intern:
-#if USE_HASH_SYMS
+#if SEXP_USE_HASH_SYMS
   bucket = (sexp_string_hash(p, res) % SEXP_SYMBOL_TABLE_SIZE);
 #else
   bucket = 0;
@@ -731,11 +731,11 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, sexp parent,
 
 /************************ reading and writing *************************/
 
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
 #include "opt/bignum.c"
 #endif
 
-#if USE_STRING_STREAMS
+#if SEXP_USE_STRING_STREAMS
 
 #define SEXP_INIT_STRING_PORT_SIZE 128
 
@@ -743,8 +743,8 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, sexp parent,
 
 #define sexp_stream_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
 #define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, SEXP_ONE)
-#define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, sexp_make_fixnum(2))
-#define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, sexp_make_fixnum(3))
+#define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, SEXP_TWO)
+#define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, SEXP_THREE)
 
 int sstream_read (void *vec, char *dst, int n) {
   sexp_uint_t len = sexp_unbox_fixnum(sexp_stream_size(vec));
@@ -1011,10 +1011,10 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, ')', out);
       }
       break;
-#if ! USE_IMMEDIATE_FLONUMS
+#if ! SEXP_USE_IMMEDIATE_FLONUMS
     case SEXP_FLONUM:
       f = sexp_flonum_value(obj);
-#if USE_INFINITIES
+#if SEXP_USE_INFINITIES
       if (isinf(f) || isnan(f)) {
         numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
         strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
@@ -1059,7 +1059,7 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, str[0], out);
       }
       break;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     case SEXP_BIGNUM:
       sexp_write_bignum(ctx, obj, out, 10);
       break;
@@ -1077,10 +1077,10 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
   } else if (sexp_fixnump(obj)) {
     sprintf(numbuf, "%ld", sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
-#if USE_IMMEDIATE_FLONUMS
+#if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
     f = sexp_flonum_value(obj);
-#if USE_INFINITIES
+#if SEXP_USE_INFINITIES
     if (isinf(f) || isnan(f)) {
       numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
       strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
@@ -1114,7 +1114,7 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
     }
   } else if (sexp_symbolp(obj)) {
 
-#if USE_HUFF_SYMS
+#if SEXP_USE_HUFF_SYMS
     if (((sexp_uint_t)obj&7)==7) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
@@ -1270,7 +1270,7 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
     if ((digit < 0) || (digit >= base))
       break;
     tmp = res * base + digit;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     if ((tmp < res) || (tmp > SEXP_MAX_FIXNUM)) {
       sexp_push_char(ctx, c, in);
       return sexp_read_bignum(ctx, in, res, (negativep ? -1 : 1), base);
@@ -1514,16 +1514,16 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_number(ctx, in, 10);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
         if (sexp_flonump(res))
-#if USE_IMMEDIATE_FLONUMS
+#if SEXP_USE_IMMEDIATE_FLONUMS
           res = sexp_make_flonum(ctx, -1 * sexp_flonum_value(res));
 #else
           sexp_flonum_value(res) = -1 * sexp_flonum_value(res);
 #endif
         else
 #endif
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
           if (sexp_bignump(res))
             sexp_bignum_sign(res) = -sexp_bignum_sign(res);
           else
@@ -1533,7 +1533,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     } else {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_symbol(ctx, in, c1, 1);
-#if USE_INFINITIES
+#if SEXP_USE_INFINITIES
       if (res == sexp_intern(ctx, "+inf.0"))
         res = sexp_make_flonum(ctx, 1.0/0.0);
       else if (res == sexp_intern(ctx, "-inf.0"))
@@ -1591,21 +1591,21 @@ sexp sexp_write_to_string(sexp ctx, sexp obj) {
 }
 
 void sexp_init(void) {
-#if USE_GLOBAL_SYMBOLS
+#if SEXP_USE_GLOBAL_SYMBOLS
   int i;
 #endif
   if (! sexp_initialized_p) {
     sexp_initialized_p = 1;
-#if USE_BOEHM
+#if SEXP_USE_BOEHM
     GC_init();
-#if USE_GLOBAL_SYMBOLS
+#if SEXP_USE_GLOBAL_SYMBOLS
     GC_add_roots((char*)&sexp_symbol_table,
                  ((char*)&sexp_symbol_table)+sizeof(sexp_symbol_table)+1);
 #endif
-#elif ! USE_MALLOC
+#elif ! SEXP_USE_MALLOC
     sexp_gc_init();
 #endif
-#if USE_GLOBAL_SYMBOLS
+#if SEXP_USE_GLOBAL_SYMBOLS
     for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
       sexp_symbol_table[i] = SEXP_NULL;
 #endif
