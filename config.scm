@@ -187,7 +187,8 @@
          open-output-file close-input-port close-output-port read read-char
          peek-char eof-object? char-ready? write display newline write-char
          load eval
-         error file-exists? string-concatenate
+         *current-input-port* *current-output-port* *current-error-port*
+         error current-error-port file-exists? string-concatenate
          open-input-string open-output-string get-output-string
          sc-macro-transformer rsc-macro-transformer er-macro-transformer
          identifier? identifier=? identifier->symbol make-syntactic-closure

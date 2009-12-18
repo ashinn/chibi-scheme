@@ -2463,11 +2463,9 @@ sexp sexp_compile (sexp ctx, sexp x) {
   if (sexp_exceptionp(ast)) {
     res = ast;
   } else {
-#if USE_SIMPLIFY
     res = sexp_global(ctx, SEXP_G_OPTIMIZATIONS);
     for ( ; sexp_pairp(res); res=sexp_cdr(res))
       ast = sexp_apply_optimization(ctx, sexp_cdar(res), ast);
-#endif
     free_vars(ctx, ast, SEXP_NULL);    /* should return SEXP_NULL */
     generate(ctx, ast);
     res = finalize_bytecode(ctx);
