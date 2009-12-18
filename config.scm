@@ -4,19 +4,12 @@
 
 (define *modules* '())
 (define *this-module* '())
-(define *load-path* (list "./lib" (string-append *module-directory* "/lib")))
 
 (define (make-module exports env meta) (vector exports env meta))
 (define (module-exports mod) (vector-ref mod 0))
 (define (module-env mod) (vector-ref mod 1))
 (define (module-meta-data mod) (vector-ref mod 2))
 (define (module-env-set! mod env) (vector-set! mod 1 env))
-
-(define (find-module-file name file)
-  (let lp ((ls *load-path*))
-    (and (pair? ls)
-         (let ((path (string-append (car ls) "/" file)))
-           (if (file-exists? path) path (lp (cdr ls)))))))
 
 (define (module-name->strings ls res)
   (if (null? ls)
@@ -36,7 +29,7 @@
 
 (define (load-module-definition name)
   (let* ((file (module-name->file name))
-         (path (find-module-file name file)))
+         (path (find-module-file file)))
     (if path (load path *config-env*))))
 
 (define (find-module name)
@@ -109,7 +102,7 @@
                        dir f
                        (if (eq? (car x) 'include) "" *shared-object-extension*))))
                (cond
-                ((find-module-file name f) => (lambda (x) (load x env)))
+                ((find-module-file f) => (lambda (x) (load x env)))
                 (else (error "couldn't find include" f)))))
            (cdr x)))
          ((body)
