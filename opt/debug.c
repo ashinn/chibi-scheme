@@ -2,6 +2,9 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
+#define SEXP_DISASM_MAX_DEPTH 8
+#define SEXP_DISASM_PAD_WIDTH 4
+
 static const char* reverse_opcode_names[] =
   {"NOOP", "RAISE", "RESUMECC", "CALLCC", "APPLY1", "TAIL-CALL", "CALL",
    "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "FCALL5", "FCALL6",
@@ -18,8 +21,10 @@ static const char* reverse_opcode_names[] =
    "WRITE-CHAR", "NEWLINE", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
   };
 
-static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
-  unsigned char *ip, opcode;
+static sexp disasm (sexp ctx, sexp bc, sexp out, int depth) {
+  sexp tmp;
+  unsigned char *ip, opcode, i;
+
   if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
   } else if (sexp_opcodep(bc)) {
@@ -30,12 +35,21 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   }
   if (! sexp_oportp(out))
     return SEXP_VOID;
-  ip = sexp_bytecode_data(bc);
+
+  for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
+    sexp_write_char(ctx, ' ', out);
   sexp_write_string(ctx, "-------------- ", out);
-  if (sexp_truep(sexp_bytecode_name(bc)))
+  if (sexp_truep(sexp_bytecode_name(bc))) {
     sexp_write(ctx, sexp_bytecode_name(bc), out);
-  sexp_write_char(ctx, '\n', out);
+    sexp_write_char(ctx, ' ', out);
+  }
+  sexp_printf(ctx, out, "%p\n", bc);
+
+  ip = sexp_bytecode_data(bc);
+
  loop:
+  for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
+    sexp_write_char(ctx, ' ', out);
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
     sexp_printf(ctx, out, "  %s ", reverse_opcode_names[opcode]);
@@ -54,9 +68,10 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   case OP_FCALL1:
   case OP_FCALL2:
   case OP_FCALL3:
+  case OP_FCALL4:
+  case OP_FCALL5:
+  case OP_FCALL6:
     sexp_printf(ctx, out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
-    ip += sizeof(sexp);
-    break;
     ip += sizeof(sexp);
     break;
   case OP_SLOT_REF:
@@ -69,14 +84,27 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   case OP_TAIL_CALL:
   case OP_CALL:
   case OP_PUSH:
-    sexp_write(ctx, ((sexp*)ip)[0], out);
+    tmp = ((sexp*)ip)[0];
+    if (((opcode == OP_GLOBAL_REF) || (opcode == OP_GLOBAL_KNOWN_REF))
+        && sexp_pairp(tmp))
+      tmp = sexp_car(tmp);
+    else if ((opcode == OP_PUSH) && (sexp_pairp(tmp) || sexp_idp(tmp)))
+      sexp_write_char(ctx, '\'', out);
+    sexp_write(ctx, tmp, out);
     ip += sizeof(sexp);
     break;
   }
   sexp_write_char(ctx, '\n', out);
+  if ((opcode == OP_PUSH) && (depth < SEXP_DISASM_MAX_DEPTH)
+      && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
+    disasm(ctx, tmp, out, depth+1);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
   return SEXP_VOID;
+}
+
+static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
+  return disasm(ctx, bc, out, 0);
 }
 
 #if USE_DEBUG_VM

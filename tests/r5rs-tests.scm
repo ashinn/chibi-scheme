@@ -424,6 +424,18 @@
               (define internal-def 'ok))
             internal-def))
 
+(test '(2 1)
+    ((lambda () (let ((x 1)) (let ((y x)) (set! x 2) (list x y))))))
+
+(test '(2 2)
+    ((lambda () (let ((x 1)) (set! x 2) (let ((y x)) (list x y))))))
+
+(test '(1 2)
+    ((lambda () (let ((x 1)) (let ((y x)) (set! y 2) (list x y))))))
+
+(test '(2 3)
+    ((lambda () (let ((x 1)) (let ((y x)) (set! x 2) (set! y 3) (list x y))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-report)
