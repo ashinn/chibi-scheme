@@ -2,95 +2,12 @@
 /* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt  */
 
-#ifdef PLAN9
-#define file_exists_p(path, buf) (stat(path, buf, 128) >= 0)
-#else
-#include <sys/stat.h>
-#define file_exists_p(path, buf) (! stat(path, buf))
-#endif
-
 #include "chibi/eval.h"
 
-char *chibi_module_dir = NULL;
+#define sexp_argv_symbol "*command-line-arguments*"
+#define sexp_argv_proc   "(define (command-line-arguments) "sexp_argv_symbol")"
 
-sexp find_module_file (sexp ctx, char *file) {
-  sexp res;
-  int mlen, flen;
-  char *path;
-#ifdef PLAN9
-  unsigned char buf[128];
-#else
-  struct stat buf_str;
-  struct stat *buf = &buf_str;
-#endif
-
-  if (file_exists_p(file, buf))
-    return sexp_c_string(ctx, file, -1);
-  if (! chibi_module_dir) {
-#ifndef PLAN9
-    chibi_module_dir = getenv("CHIBI_MODULE_DIR");
-    if (! chibi_module_dir)
-#endif
-      chibi_module_dir = sexp_module_dir;
-  }
-  mlen = strlen(chibi_module_dir);
-  flen = strlen(file);
-  path = (char*) malloc(mlen+flen+2);
-  memcpy(path, chibi_module_dir, mlen);
-  path[mlen] = '/';
-  memcpy(path+mlen+1, file, flen);
-  path[mlen+flen+1] = '\0';
-  if (file_exists_p(path, buf))
-    res = sexp_c_string(ctx, path, mlen+flen+2);
-  else
-    res = SEXP_FALSE;
-  free(path);
-  return res;
-}
-
-sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
-  sexp res = SEXP_VOID;
-  sexp_gc_var2(path, irr);
-  sexp_gc_preserve2(ctx, path, irr);
-  path = find_module_file(ctx, file);
-  if (! sexp_stringp(path)) {
-    path = sexp_c_string(ctx, chibi_module_dir, -1);
-    irr = sexp_cons(ctx, path, SEXP_NULL);
-    path = sexp_c_string(ctx, file, -1);
-    irr = sexp_cons(ctx, path, irr);
-    res = sexp_user_exception(ctx,
-                              SEXP_FALSE,
-                              "couldn't find file to load in ./ or module dir",
-                              irr);
-  } else {
-    res = sexp_load(ctx, path, env);
-  }
-  sexp_gc_release2(ctx);
-  return res;
-}
-
-sexp sexp_init_environments (sexp ctx) {
-  sexp res, env;
-  sexp_gc_var1(confenv);
-  env = sexp_context_env(ctx);
-  sexp_env_define(ctx, env, sexp_intern(ctx, "*command-line-arguments*"), SEXP_NULL);
-  res = sexp_load_module_file(ctx, sexp_init_file, env);
-#if SEXP_USE_MODULES
-  if (! sexp_exceptionp(res)) {
-    res = SEXP_UNDEF;
-    sexp_gc_preserve1(ctx, confenv);
-    confenv = sexp_make_env(ctx);
-    sexp_env_copy(ctx, confenv, env, SEXP_FALSE);
-    sexp_load_module_file(ctx, sexp_config_file, confenv);
-    sexp_env_define(ctx, env, sexp_intern(ctx, "*config-env*"), confenv);
-    sexp_env_define(ctx, confenv, sexp_intern(ctx, "*config-env*"), confenv);
-    sexp_gc_release1(ctx);
-  }
-#endif
-  return res;
-}
-
-void repl (sexp ctx) {
+static void repl (sexp ctx) {
   sexp in, out, err;
   sexp_gc_var4(obj, tmp, res, env);
   sexp_gc_preserve4(ctx, obj, tmp, res, env);
@@ -128,11 +45,11 @@ void repl (sexp ctx) {
   sexp_gc_release4(ctx);
 }
 
-sexp check_exception (sexp ctx, sexp res) {
+static sexp check_exception (sexp ctx, sexp res) {
+  sexp err;
   if (res && sexp_exceptionp(res)) {
-    sexp_print_exception(ctx, res,
-                         sexp_eval_string(ctx, "(current-error-port)",
-                                          sexp_context_env(ctx)));
+    err = sexp_current_error_port(ctx);
+    if (sexp_oportp(err)) sexp_print_exception(ctx, res, err);
     exit_failure();
   }
   return res;
@@ -155,15 +72,10 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       if (! init_loaded++)
-        sexp_init_environments(ctx);
-      res = sexp_read_from_string(ctx, argv[i+1]);
-      if (! sexp_exceptionp(res))
-        res = sexp_eval(ctx, res, env);
-      if (sexp_exceptionp(res)) {
-        sexp_print_exception(ctx, res, out);
-        quit = 1;
-        break;
-      } else if (argv[i][1] == 'p') {
+        check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE));
+      check_exception(ctx, sexp_read_from_string(ctx, argv[i+1]));
+      check_exception(ctx, sexp_eval(ctx, res, env));
+      if (argv[i][1] == 'p') {
         sexp_write(ctx, res, out);
         sexp_write_char(ctx, '\n', out);
       }
@@ -172,14 +84,14 @@ void run_main (int argc, char **argv) {
       break;
     case 'l':
       if (! init_loaded++)
-        sexp_init_environments(ctx);
-      sexp_load_module_file(ctx, argv[++i], env);
+        check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE));
+      check_exception(ctx, sexp_load_module_file(ctx, argv[++i], env));
       break;
     case 'q':
       init_loaded = 1;
       break;
     case 'm':
-      chibi_module_dir = argv[++i];
+      sexp_module_dir = argv[++i];
       break;
     case 's':
       for (argc=argc-1; argc>i+1; argc--)
@@ -193,11 +105,12 @@ void run_main (int argc, char **argv) {
 
   if (! quit) {
     if (! init_loaded)
-      res = check_exception(ctx, sexp_init_environments(ctx));
-    sexp_env_define(ctx, env, sexp_intern(ctx, "*command-line-arguments*"), args);
+      check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE));
+    sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol), args);
+    sexp_eval_string(ctx, sexp_argv_proc, env);
     if (i < argc)
       for ( ; i < argc; i++)
-        res = check_exception(ctx, sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env));
+        check_exception(ctx, sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env));
     else
       repl(ctx);
   }

@@ -7,6 +7,7 @@
 /************************************************************************/
 
 static int scheme_initialized_p = 0;
+char *sexp_module_dir = NULL;
 
 #if SEXP_USE_DEBUG
 #include "opt/debug.c"
@@ -18,8 +19,6 @@ static int scheme_initialized_p = 0;
 
 static sexp analyze (sexp ctx, sexp x);
 static void generate (sexp ctx, sexp x);
-static sexp sexp_make_null_env (sexp ctx, sexp version);
-static sexp sexp_make_standard_env (sexp ctx, sexp version);
 
 static sexp sexp_compile_error (sexp ctx, char *message, sexp obj) {
   sexp exn;
@@ -135,7 +134,7 @@ static int sexp_param_index (sexp lambda, sexp name) {
 static void shrink_bcode (sexp ctx, sexp_uint_t i) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(ctx)) != i) {
-    tmp = sexp_alloc_tagged(ctx, sexp_sizeof(bytecode) + i, SEXP_BYTECODE);
+    tmp = sexp_alloc_bytecode(ctx, i);
     sexp_bytecode_name(tmp) = SEXP_FALSE;
     sexp_bytecode_length(tmp) = i;
     sexp_bytecode_literals(tmp)
@@ -151,10 +150,7 @@ static void expand_bcode (sexp ctx, sexp_uint_t size) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(ctx))
       < (sexp_context_pos(ctx))+size) {
-    tmp = sexp_alloc_tagged(ctx,
-                            sexp_sizeof(bytecode)
-                            + sexp_bytecode_length(sexp_context_bc(ctx))*2,
-                            SEXP_BYTECODE);
+    tmp=sexp_alloc_bytecode(ctx, sexp_bytecode_length(sexp_context_bc(ctx))*2);
     sexp_bytecode_name(tmp) = SEXP_FALSE;
     sexp_bytecode_length(tmp)
       = sexp_bytecode_length(sexp_context_bc(ctx))*2;
@@ -298,9 +294,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
   res = sexp_make_context(ctx);
-  sexp_context_bc(res)
-    = sexp_alloc_tagged(res, sexp_sizeof(bytecode)+SEXP_INIT_BCODE_SIZE,
-                        SEXP_BYTECODE);
+  sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
   sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
@@ -311,8 +305,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env) {
   }
   sexp_context_stack(res) = stack;
   if (! ctx) sexp_init_eval_context_globals(res);
-  sexp_context_env(res)
-    = (env ? env : sexp_make_standard_env(res, sexp_make_fixnum(5)));
+  sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_FIVE));
   if (ctx) sexp_gc_release1(ctx);
   return res;
 }
@@ -2204,20 +2197,7 @@ static sexp sexp_apply_optimization (sexp ctx, sexp proc, sexp ast) {
 #include "opt/simplify.c"
 #endif
 
-/*********************** standard environment *************************/
-
-static struct sexp_struct core_forms[] = {
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE, "define"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SET, "set!"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LAMBDA, "lambda"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_IF, "if"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_BEGIN, "begin"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_QUOTE, "quote"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SYNTAX_QUOTE, "syntax-quote"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE_SYNTAX, "define-syntax"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LET_SYNTAX, "let-syntax"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LETREC_SYNTAX, "letrec-syntax"}}},
-};
+/***************************** opcodes ********************************/
 
 #include "opcodes.c"
 
@@ -2342,6 +2322,21 @@ sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index) {
 
 #endif
 
+/*********************** standard environment *************************/
+
+static struct sexp_struct core_forms[] = {
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE, "define"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SET, "set!"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LAMBDA, "lambda"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_IF, "if"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_BEGIN, "begin"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_QUOTE, "quote"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SYNTAX_QUOTE, "syntax-quote"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE_SYNTAX, "define-syntax"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LET_SYNTAX, "let-syntax"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LETREC_SYNTAX, "letrec-syntax"}}},
+};
+
 sexp sexp_make_env (sexp ctx) {
   sexp e = sexp_alloc_type(ctx, env, SEXP_ENV);
   sexp_env_lambda(e) = NULL;
@@ -2350,7 +2345,7 @@ sexp sexp_make_env (sexp ctx) {
   return e;
 }
 
-static sexp sexp_make_null_env (sexp ctx, sexp version) {
+sexp sexp_make_null_env (sexp ctx, sexp version) {
   sexp_uint_t i;
   sexp e = sexp_make_env(ctx);
   for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++)
@@ -2359,21 +2354,88 @@ static sexp sexp_make_null_env (sexp ctx, sexp version) {
   return e;
 }
 
-static sexp sexp_make_standard_env (sexp ctx, sexp version) {
-  sexp_uint_t i;
-  sexp cell, sym;
-  sexp_gc_var4(e, op, tmp, err_handler);
-  sexp_gc_preserve4(ctx, e, op, tmp, err_handler);
+sexp sexp_make_primitive_env (sexp ctx, sexp version) {
+  int i;
+  sexp_gc_var3(e, op, sym);
+  sexp_gc_preserve3(ctx, e, op, sym);
   e = sexp_make_null_env(ctx, version);
   for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
     op = sexp_copy_opcode(ctx, &opcodes[i]);
     if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
       sym = sexp_intern(ctx, (char*)sexp_opcode_data(op));
-      cell = sexp_env_cell_create(ctx, e, sym, SEXP_VOID);
-      sexp_opcode_data(op) = cell;
+      sexp_opcode_data(op) = sexp_env_cell_create(ctx, e, sym, SEXP_VOID);
     }
     sexp_env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op)), op);
   }
+  sexp_gc_release3(ctx);
+  return e;
+}
+
+#ifdef PLAN9
+#define file_exists_p(path, buf) (stat(path, buf, 128) >= 0)
+#else
+#include <sys/stat.h>
+#define file_exists_p(path, buf) (! stat(path, buf))
+#endif
+
+sexp sexp_find_module_file (sexp ctx, char *file) {
+  sexp res;
+  int mlen, flen;
+  char *path;
+#ifdef PLAN9
+  unsigned char buf[128];
+#else
+  struct stat buf_str;
+  struct stat *buf = &buf_str;
+#endif
+
+  if (file_exists_p(file, buf))
+    return sexp_c_string(ctx, file, -1);
+  if (! sexp_module_dir) {
+#ifndef PLAN9
+    sexp_module_dir = getenv("CHIBI_MODULE_DIR");
+    if (! sexp_module_dir)
+#endif
+      sexp_module_dir = sexp_module_dir;
+  }
+  mlen = strlen(sexp_module_dir);
+  flen = strlen(file);
+  path = (char*) malloc(mlen+flen+2);
+  memcpy(path, sexp_module_dir, mlen);
+  path[mlen] = '/';
+  memcpy(path+mlen+1, file, flen);
+  path[mlen+flen+1] = '\0';
+  if (file_exists_p(path, buf))
+    res = sexp_c_string(ctx, path, mlen+flen+2);
+  else
+    res = SEXP_FALSE;
+  free(path);
+  return res;
+}
+
+#define sexp_file_not_found "couldn't find file to load in ./ or module dir"
+
+sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
+  sexp res = SEXP_VOID;
+  sexp_gc_var2(path, irr);
+  sexp_gc_preserve2(ctx, path, irr);
+  path = sexp_find_module_file(ctx, file);
+  if (! sexp_stringp(path)) {
+    path = sexp_c_string(ctx, sexp_module_dir, -1);
+    irr = sexp_cons(ctx, path, SEXP_NULL);
+    path = sexp_c_string(ctx, file, -1);
+    irr = sexp_cons(ctx, path, irr);
+    res = sexp_user_exception(ctx, SEXP_FALSE, sexp_file_not_found, irr);
+  } else {
+    res = sexp_load(ctx, path, env);
+  }
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
+  sexp_gc_var3(op, tmp, sym);
+  sexp_gc_preserve3(ctx, op, tmp, sym);
   /* add io port and interaction env parameters */
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL),
                   sexp_make_input_port(ctx, stdin, SEXP_FALSE));
@@ -2382,8 +2444,8 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL),
                   sexp_make_output_port(ctx, stderr, SEXP_FALSE));
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
-  sexp_env_define(ctx, e, sexp_intern(ctx, "*module-directory*"),
-                  sexp_c_string(ctx, sexp_module_dir, -1));
+  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*module-directory*"),
+                  sexp_c_string(ctx, sexp_default_module_dir, -1));
 #if SEXP_USE_DL
   sexp_env_define(ctx, e, sexp_intern(ctx, "*shared-object-extension*"),
                   sexp_c_string(ctx, sexp_so_extension, -1));
@@ -2398,8 +2460,34 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), tmp);
 #endif
-  sexp_gc_release4(ctx);
-  return e;
+  /* load init.scm */
+  tmp = sexp_load_module_file(ctx, sexp_init_file, e);
+  /* load and bind config env */
+#if SEXP_USE_MODULES
+  if (! sexp_exceptionp(tmp)) {
+    sym = sexp_intern(ctx, "*config-env*");
+    if (! sexp_envp(tmp=sexp_global(ctx, SEXP_G_CONFIG_ENV))) {
+      tmp = sexp_make_env(ctx);
+      if (! sexp_exceptionp(tmp)) {
+        sexp_env_copy(ctx, tmp, e, SEXP_FALSE);
+        sexp_global(ctx, SEXP_G_CONFIG_ENV) = tmp;
+        sexp_env_define(ctx, tmp, sym, tmp);
+      }
+    }
+    sexp_env_define(ctx, e, sym, tmp);
+  }
+#endif
+  sexp_gc_release3(ctx);
+  return sexp_exceptionp(tmp) ? tmp : e;
+}
+
+sexp sexp_make_standard_env (sexp ctx, sexp version) {
+  sexp_gc_var1(env);
+  sexp_gc_preserve1(ctx, env);
+  env = sexp_make_primitive_env(ctx, version);
+  if (! sexp_exceptionp(env)) sexp_load_standard_env(ctx, env, version);
+  sexp_gc_release1(ctx);
+  return env;
 }
 
 sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls) {

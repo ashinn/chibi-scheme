@@ -44,7 +44,11 @@ The essential functions to remember are:
   #include <chibi/eval.h>
 
   sexp_make_eval_context(NULL, NULL, NULL)
-    returns a new context with a fresh stack and standard environment
+    returns a new context with a fresh stack and primitive environment
+
+  sexp_load_standard_env(context, env, version)
+    loads the init.scm file in primitive environment env
+    (version should be SEXP_FIVE)
 
   sexp_destroy_context(context)
     free a context and all associated memory
