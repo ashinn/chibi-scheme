@@ -99,7 +99,7 @@
 (define rsc-macro-transformer
   (lambda (f)
     (lambda (expr use-env mac-env)
-      (make-syntactic-closure use-env '() (f expr mac-env)))))
+      (f expr mac-env))))
 
 (define er-macro-transformer
   (lambda (f)
