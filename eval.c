@@ -2469,8 +2469,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
     if (! sexp_envp(tmp=sexp_global(ctx, SEXP_G_CONFIG_ENV))) {
       tmp = sexp_make_env(ctx);
       if (! sexp_exceptionp(tmp)) {
-        sexp_env_copy(ctx, tmp, e, SEXP_FALSE);
         sexp_global(ctx, SEXP_G_CONFIG_ENV) = tmp;
+        sexp_env_copy(ctx, tmp, e, SEXP_FALSE);
+        sexp_load_module_file(ctx, sexp_config_file, tmp);
         sexp_env_define(ctx, tmp, sym, tmp);
       }
     }
