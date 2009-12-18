@@ -153,7 +153,7 @@ install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	mkdir -p $(DESTDIR)$(MODDIR)
-	cp init.scm config.scm $(DESTDIR)$(MODDIR)/
+	cp lib/init.scm lib/config.scm $(DESTDIR)$(MODDIR)/
 	cp -r lib/ $(DESTDIR)$(MODDIR)/
 	mkdir -p $(DESTDIR)$(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
