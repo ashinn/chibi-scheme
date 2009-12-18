@@ -8,7 +8,7 @@
 
 static int scheme_initialized_p = 0;
 
-#if USE_DEBUG
+#if SEXP_USE_DEBUG
 #include "opt/debug.c"
 #else
 #define print_stack(...)
@@ -181,7 +181,7 @@ static void emit_word (sexp ctx, sexp_uint_t val)  {
 }
 
 static void emit_push (sexp ctx, sexp obj) {
-  emit(ctx, OP_PUSH);
+  emit(ctx, SEXP_OP_PUSH);
   emit_word(ctx, (sexp_uint_t)obj);
   if (sexp_pointerp(obj) && ! sexp_symbolp(obj))
     sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), obj);
@@ -189,7 +189,7 @@ static void emit_push (sexp ctx, sexp obj) {
 
 static sexp finalize_bytecode (sexp ctx) {
   sexp bc;
-  emit(ctx, OP_RET);
+  emit(ctx, SEXP_OP_RET);
   shrink_bcode(ctx, sexp_context_pos(ctx));
   bc = sexp_context_bc(ctx);
   if (sexp_pairp(sexp_bytecode_literals(bc))) { /* compress literals */
@@ -281,10 +281,10 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_gc_var2(bc, vec);
   ctx = sexp_make_child_context(ctx, NULL);
   sexp_gc_preserve2(ctx, bc, vec);
-  emit(ctx, OP_RESUMECC);
+  emit(ctx, SEXP_OP_RESUMECC);
   sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = finalize_bytecode(ctx);
   ctx = sexp_make_child_context(ctx, NULL);
-  emit(ctx, OP_DONE);
+  emit(ctx, SEXP_OP_DONE);
   bc = finalize_bytecode(ctx);
   vec = sexp_make_vector(ctx, 0, SEXP_VOID);
   sexp_global(ctx, SEXP_G_FINAL_RESUMER)
@@ -658,31 +658,31 @@ static sexp analyze (sexp ctx, sexp object) {
         op = sexp_cdr(cell);
         if (sexp_corep(op)) {
           switch (sexp_core_code(op)) {
-          case CORE_DEFINE:
+          case SEXP_CORE_DEFINE:
             res = analyze_define(ctx, x); break;
-          case CORE_SET:
+          case SEXP_CORE_SET:
             res = analyze_set(ctx, x); break;
-          case CORE_LAMBDA:
+          case SEXP_CORE_LAMBDA:
             res = analyze_lambda(ctx, x); break;
-          case CORE_IF:
+          case SEXP_CORE_IF:
             res = analyze_if(ctx, x); break;
-          case CORE_BEGIN:
+          case SEXP_CORE_BEGIN:
             res = analyze_seq(ctx, sexp_cdr(x)); break;
-          case CORE_QUOTE:
-          case CORE_SYNTAX_QUOTE:
+          case SEXP_CORE_QUOTE:
+          case SEXP_CORE_SYNTAX_QUOTE:
             if (! (sexp_pairp(sexp_cdr(x)) && sexp_nullp(sexp_cddr(x))))
               res = sexp_compile_error(ctx, "bad quote form", x);
             else
               res = sexp_make_lit(ctx,
-                                  (sexp_core_code(op) == CORE_QUOTE) ?
+                                  (sexp_core_code(op) == SEXP_CORE_QUOTE) ?
                                   sexp_strip_synclos(ctx, sexp_cadr(x)) :
                                   sexp_cadr(x));
             break;
-          case CORE_DEFINE_SYNTAX:
+          case SEXP_CORE_DEFINE_SYNTAX:
             res = analyze_define_syntax(ctx, x); break;
-          case CORE_LET_SYNTAX:
+          case SEXP_CORE_LET_SYNTAX:
             res = analyze_let_syntax(ctx, x); break;
-          case CORE_LETREC_SYNTAX:
+          case SEXP_CORE_LETREC_SYNTAX:
             res = analyze_letrec_syntax(ctx, x); break;
           default:
             res = sexp_compile_error(ctx, "unknown core form", op); break;
@@ -767,7 +767,7 @@ static void generate_seq (sexp ctx, sexp app) {
   for ( ; sexp_pairp(tail); head=tail, tail=sexp_cdr(tail))
     if (sexp_pointerp(sexp_car(head)) && (! sexp_litp(sexp_car(head)))) {
       generate(ctx, sexp_car(head));
-      emit(ctx, OP_DROP);
+      emit(ctx, SEXP_OP_DROP);
       sexp_context_depth(ctx)--;
     }
   sexp_context_tailp(ctx) = tailp;
@@ -779,11 +779,11 @@ static void generate_cnd (sexp ctx, sexp cnd) {
   sexp_context_tailp(ctx) = 0;
   generate(ctx, sexp_cnd_test(cnd));
   sexp_context_tailp(ctx) = tailp;
-  emit(ctx, OP_JUMP_UNLESS);
+  emit(ctx, SEXP_OP_JUMP_UNLESS);
   sexp_context_depth(ctx)--;
   label1 = sexp_context_make_label(ctx);
   generate(ctx, sexp_cnd_pass(cnd));
-  emit(ctx, OP_JUMP);
+  emit(ctx, SEXP_OP_JUMP);
   sexp_context_depth(ctx)--;
   label2 = sexp_context_make_label(ctx);
   sexp_context_patch_label(ctx, label1);
@@ -797,7 +797,7 @@ static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
   sexp loc = sexp_cdr(cell);
   if (loc == lambda && sexp_lambdap(lambda)) {
     /* local ref */
-    emit(ctx, OP_LOCAL_REF);
+    emit(ctx, SEXP_OP_LOCAL_REF);
     emit_word(ctx, sexp_param_index(lambda, name));
   } else {
     /* closure ref */
@@ -805,11 +805,11 @@ static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
       if ((name == sexp_ref_name(sexp_car(fv)))
           && (loc == sexp_ref_loc(sexp_car(fv))))
         break;
-    emit(ctx, OP_CLOSURE_REF);
+    emit(ctx, SEXP_OP_CLOSURE_REF);
     emit_word(ctx, i);
   }
   if (unboxp && (sexp_memq(ctx, name, sexp_lambda_sv(loc)) != SEXP_FALSE))
-    emit(ctx, OP_CDR);
+    emit(ctx, SEXP_OP_CDR);
   sexp_context_depth(ctx)++;
 }
 
@@ -820,7 +820,7 @@ static void generate_ref (sexp ctx, sexp ref, int unboxp) {
     if (unboxp) {
       emit(ctx,
            (sexp_cdr(sexp_ref_cell(ref)) == SEXP_UNDEF)
-           ? OP_GLOBAL_REF : OP_GLOBAL_KNOWN_REF);
+           ? SEXP_OP_GLOBAL_REF : SEXP_OP_GLOBAL_KNOWN_REF);
       emit_word(ctx, (sexp_uint_t)sexp_ref_cell(ref));
     } else
       emit_push(ctx, sexp_ref_cell(ref));
@@ -841,16 +841,16 @@ static void generate_set (sexp ctx, sexp set) {
   if (! sexp_lambdap(sexp_ref_loc(ref))) {
     /* global vars are set directly */
     emit_push(ctx, sexp_ref_cell(ref));
-    emit(ctx, OP_SET_CDR);
+    emit(ctx, SEXP_OP_SET_CDR);
   } else {
     lambda = sexp_ref_loc(ref);
     if (sexp_truep(sexp_memq(ctx, sexp_ref_name(ref), sexp_lambda_sv(lambda)))) {
       /* stack or closure mutable vars are boxed */
       generate_ref(ctx, ref, 0);
-      emit(ctx, OP_SET_CDR);
+      emit(ctx, SEXP_OP_SET_CDR);
     } else {
       /* internally defined variable */
-      emit(ctx, OP_LOCAL_SET);
+      emit(ctx, SEXP_OP_LOCAL_SET);
       emit_word(ctx, sexp_param_index(lambda, sexp_ref_name(ref)));
     }
   }
@@ -870,69 +870,69 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   if ((num_args == sexp_opcode_num_args(op))
       && sexp_opcode_variadic_p(op)
       && sexp_opcode_data(op)
-      && (sexp_opcode_class(op) != OPC_PARAMETER)) {
+      && (sexp_opcode_class(op) != SEXP_OPC_PARAMETER)) {
     emit_push(ctx, sexp_opcode_data(op));
     if (sexp_opcode_opt_param_p(op))
-      emit(ctx, OP_CDR);
+      emit(ctx, SEXP_OP_CDR);
     sexp_context_depth(ctx)++;
     num_args++;
   }
 
   /* push the arguments onto the stack in reverse order */
   ls = ((sexp_opcode_inverse(op)
-         && (sexp_opcode_class(op) != OPC_ARITHMETIC_INV))
+         && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC_INV))
         ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
   for ( ; sexp_pairp(ls); ls = sexp_cdr(ls))
     generate(ctx, sexp_car(ls));
 
   /* emit the actual operator call */
   switch (sexp_opcode_class(op)) {
-  case OPC_ARITHMETIC:
+  case SEXP_OPC_ARITHMETIC:
     if (num_args > 1)
       emit(ctx, sexp_opcode_code(op));
     break;
-  case OPC_ARITHMETIC_INV:
+  case SEXP_OPC_ARITHMETIC_INV:
     emit(ctx, (num_args==1) ? sexp_opcode_inverse(op) : sexp_opcode_code(op));
     break;
-  case OPC_ARITHMETIC_CMP:
+  case SEXP_OPC_ARITHMETIC_CMP:
     if (num_args > 2) {
-      emit(ctx, OP_STACK_REF);
+      emit(ctx, SEXP_OP_STACK_REF);
       emit_word(ctx, 2);
-      emit(ctx, OP_STACK_REF);
+      emit(ctx, SEXP_OP_STACK_REF);
       emit_word(ctx, 2);
       emit(ctx, sexp_opcode_code(op));
-      emit(ctx, OP_AND);
+      emit(ctx, SEXP_OP_AND);
       for (i=num_args-2; i>0; i--) {
-        emit(ctx, OP_STACK_REF);
+        emit(ctx, SEXP_OP_STACK_REF);
         emit_word(ctx, 3);
-        emit(ctx, OP_STACK_REF);
+        emit(ctx, SEXP_OP_STACK_REF);
         emit_word(ctx, 3);
         emit(ctx, sexp_opcode_code(op));
-        emit(ctx, OP_AND);
-        emit(ctx, OP_AND);
+        emit(ctx, SEXP_OP_AND);
+        emit(ctx, SEXP_OP_AND);
       }
     } else
       emit(ctx, sexp_opcode_code(op));
     break;
-  case OPC_FOREIGN:
+  case SEXP_OPC_FOREIGN:
     emit(ctx, sexp_opcode_code(op));
     emit_word(ctx, (sexp_uint_t)op);
     break;
-  case OPC_TYPE_PREDICATE:
-  case OPC_ACCESSOR:
-  case OPC_CONSTRUCTOR:
+  case SEXP_OPC_TYPE_PREDICATE:
+  case SEXP_OPC_ACCESSOR:
+  case SEXP_OPC_CONSTRUCTOR:
     emit(ctx, sexp_opcode_code(op));
-    if ((sexp_opcode_class(op) != OPC_CONSTRUCTOR)
-        || sexp_opcode_code(op) == OP_MAKE) {
+    if ((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
+        || sexp_opcode_code(op) == SEXP_OP_MAKE) {
       if (sexp_opcode_data(op))
         emit_word(ctx, sexp_unbox_fixnum(sexp_opcode_data(op)));
       if (sexp_opcode_data2(op))
         emit_word(ctx, sexp_unbox_fixnum(sexp_opcode_data2(op)));
     }
     break;
-  case OPC_PARAMETER:
+  case SEXP_OPC_PARAMETER:
     emit_push(ctx, sexp_opcode_data(op));
-    emit(ctx, ((num_args == 0) ? OP_CDR : OP_SET_CDR));
+    emit(ctx, ((num_args == 0) ? SEXP_OP_CDR : SEXP_OP_SET_CDR));
     break;
   default:
     emit(ctx, sexp_opcode_code(op));
@@ -940,8 +940,8 @@ static void generate_opcode_app (sexp ctx, sexp app) {
 
   /* emit optional folding of operator */
   if ((num_args > 2)
-      && (sexp_opcode_class(op) == OPC_ARITHMETIC
-          || sexp_opcode_class(op) == OPC_ARITHMETIC_INV))
+      && (sexp_opcode_class(op) == SEXP_OPC_ARITHMETIC
+          || sexp_opcode_class(op) == SEXP_OPC_ARITHMETIC_INV))
     for (i=num_args-2; i>0; i--)
       emit(ctx, sexp_opcode_code(op));
 
@@ -964,7 +964,7 @@ static void generate_general_app (sexp ctx, sexp app) {
   generate(ctx, sexp_car(app));
 
   /* maybe overwrite the current frame */
-  emit(ctx, (tailp ? OP_TAIL_CALL : OP_CALL));
+  emit(ctx, (tailp ? SEXP_OP_TAIL_CALL : SEXP_OP_CALL));
   emit_word(ctx, (sexp_uint_t)sexp_make_fixnum(len));
 
   sexp_context_tailp(ctx) = tailp;
@@ -996,13 +996,13 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   for (ls=sexp_lambda_sv(lambda); sexp_pairp(ls); ls=sexp_cdr(ls)) {
     k = sexp_param_index(lambda, sexp_car(ls));
     if (k >= 0) {
-      emit(ctx2, OP_LOCAL_REF);
+      emit(ctx2, SEXP_OP_LOCAL_REF);
       emit_word(ctx2, k);
       emit_push(ctx2, sexp_car(ls));
-      emit(ctx2, OP_CONS);
-      emit(ctx2, OP_LOCAL_SET);
+      emit(ctx2, SEXP_OP_CONS);
+      emit(ctx2, SEXP_OP_LOCAL_SET);
       emit_word(ctx2, k);
-      emit(ctx2, OP_DROP);
+      emit(ctx2, SEXP_OP_DROP);
     }
   }
   sexp_context_tailp(ctx2) = 1;
@@ -1022,24 +1022,24 @@ static void generate_lambda (sexp ctx, sexp lambda) {
     /* push the closed vars */
     emit_push(ctx, SEXP_VOID);
     emit_push(ctx, sexp_length(ctx, fv));
-    emit(ctx, OP_MAKE_VECTOR);
+    emit(ctx, SEXP_OP_MAKE_VECTOR);
     sexp_context_depth(ctx)--;
     for (k=0; sexp_pairp(fv); fv=sexp_cdr(fv), k++) {
       ref = sexp_car(fv);
       generate_non_global_ref(ctx, sexp_ref_name(ref), sexp_ref_cell(ref),
                               prev_lambda, prev_fv, 0);
       emit_push(ctx, sexp_make_fixnum(k));
-      emit(ctx, OP_STACK_REF);
+      emit(ctx, SEXP_OP_STACK_REF);
       emit_word(ctx, 3);
-      emit(ctx, OP_VECTOR_SET);
-      emit(ctx, OP_DROP);
+      emit(ctx, SEXP_OP_VECTOR_SET);
+      emit(ctx, SEXP_OP_DROP);
       sexp_context_depth(ctx)--;
     }
     /* push the additional procedure info and make the closure */
     emit_push(ctx, bc);
     emit_push(ctx, len);
     emit_push(ctx, flags);
-    emit(ctx, OP_MAKE_PROCEDURE);
+    emit(ctx, SEXP_OP_MAKE_PROCEDURE);
   }
   sexp_gc_release2(ctx);
 }
@@ -1221,7 +1221,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     *stack = sexp_stack_data(sexp_context_stack(ctx));
   unsigned char *ip = sexp_bytecode_data(bc);
   sexp_sint_t i, j, k, fp, top = sexp_stack_top(sexp_context_stack(ctx));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   sexp_lsint_t prod;
 #endif
   sexp_gc_var3(self, tmp1, tmp2);
@@ -1230,17 +1230,17 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   self = proc;
 
  loop:
-#if USE_DEBUG_VM
+#if SEXP_USE_DEBUG_VM
   if (sexp_context_tracep(ctx)) {
     sexp_print_stack(ctx, stack, top, fp, SEXP_FALSE);
-    fprintf(stderr, "%s\n", (*ip<=OP_NUM_OPCODES) ?
+    fprintf(stderr, "%s\n", (*ip<=SEXP_OP_NUM_OPCODES) ?
             reverse_opcode_names[*ip] : "UNKNOWN");
   }
 #endif
   switch (*ip++) {
-  case OP_NOOP:
+  case SEXP_OP_NOOP:
     break;
-  case OP_RAISE:
+  case SEXP_OP_RAISE:
   call_error_handler:
     tmp1 = sexp_env_global_ref(env, sexp_global(ctx, SEXP_G_ERR_HANDLER_SYMBOL), SEXP_FALSE);
     if (! sexp_procedurep(tmp1)) goto end_loop;
@@ -1255,7 +1255,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     cp = sexp_procedure_vars(self);
     fp = top-4;
     break;
-  case OP_RESUMECC:
+  case SEXP_OP_RESUMECC:
     tmp1 = stack[fp-1];
     top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
     fp = sexp_unbox_fixnum(_ARG1);
@@ -1267,7 +1267,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top -= 4;
     _ARG1 = tmp1;
     break;
-  case OP_CALLCC:
+  case SEXP_OP_CALLCC:
     stack[top] = SEXP_ONE;
     stack[top+1] = sexp_make_fixnum(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
@@ -1285,7 +1285,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top++;
     ip -= sizeof(sexp);
     goto make_call;
-  case OP_APPLY1:
+  case SEXP_OP_APPLY1:
     tmp1 = _ARG1;
     tmp2 = _ARG2;
     i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
@@ -1295,7 +1295,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top += i+1;
     ip -= sizeof(sexp);
     goto make_call;
-  case OP_TAIL_CALL:
+  case SEXP_OP_TAIL_CALL:
     i = sexp_unbox_fixnum(_WORD0);    /* number of params */
     tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
@@ -1312,8 +1312,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top = fp+i-j+1;
     fp = sexp_unbox_fixnum(tmp2);
     goto make_call;
-  case OP_CALL:
-#if USE_CHECK_STACK
+  case SEXP_OP_CALL:
+#if SEXP_USE_CHECK_STACK
     if (top+16 >= SEXP_INIT_STACK_SIZE) {
       _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);
       goto end_loop;
@@ -1369,97 +1369,97 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     cp = sexp_procedure_vars(self);
     fp = top-4;
     break;
-  case OP_FCALL0:
+  case SEXP_OP_FCALL0:
     sexp_context_top(ctx) = top;
     _PUSH(((sexp_proc1)sexp_opcode_func(_WORD0))(ctx));
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_FCALL1:
+  case SEXP_OP_FCALL1:
     sexp_context_top(ctx) = top;
     _ARG1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _ARG1);
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_FCALL2:
+  case SEXP_OP_FCALL2:
     sexp_context_top(ctx) = top;
     _ARG2 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2);
     top--;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_FCALL3:
+  case SEXP_OP_FCALL3:
     sexp_context_top(ctx) = top;
     _ARG3 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3);
     top -= 2;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_FCALL4:
+  case SEXP_OP_FCALL4:
     sexp_context_top(ctx) = top;
     _ARG4 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top -= 3;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_FCALL5:
+  case SEXP_OP_FCALL5:
     sexp_context_top(ctx) = top;
     _ARG5 = ((sexp_proc6)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
     top -= 4;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_FCALL6:
+  case SEXP_OP_FCALL6:
     sexp_context_top(ctx) = top;
     _ARG6 = ((sexp_proc7)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
     top -= 5;
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case OP_JUMP_UNLESS:
+  case SEXP_OP_JUMP_UNLESS:
     if (stack[--top] == SEXP_FALSE)
       ip += _SWORD0;
     else
       ip += sizeof(sexp_sint_t);
     break;
-  case OP_JUMP:
+  case SEXP_OP_JUMP:
     ip += _SWORD0;
     break;
-  case OP_PUSH:
+  case SEXP_OP_PUSH:
     _PUSH(_WORD0);
     ip += sizeof(sexp);
     break;
-  case OP_DROP:
+  case SEXP_OP_DROP:
     top--;
     break;
-  case OP_GLOBAL_REF:
+  case SEXP_OP_GLOBAL_REF:
     if (sexp_cdr(_WORD0) == SEXP_UNDEF)
       sexp_raise("undefined variable", sexp_list1(ctx, sexp_car(_WORD0)));
     /* ... FALLTHROUGH ... */
-  case OP_GLOBAL_KNOWN_REF:
+  case SEXP_OP_GLOBAL_KNOWN_REF:
     _PUSH(sexp_cdr(_WORD0));
     ip += sizeof(sexp);
     break;
-  case OP_STACK_REF:            /* `pick' in forth */
+  case SEXP_OP_STACK_REF:            /* `pick' in forth */
     stack[top] = stack[top - _SWORD0];
     ip += sizeof(sexp);
     top++;
     break;
-  case OP_LOCAL_REF:
+  case SEXP_OP_LOCAL_REF:
     stack[top] = stack[fp - 1 - _SWORD0];
     ip += sizeof(sexp);
     top++;
     break;
-  case OP_LOCAL_SET:
+  case SEXP_OP_LOCAL_SET:
     stack[fp - 1 - _SWORD0] = _ARG1;
     _ARG1 = SEXP_VOID;
     ip += sizeof(sexp);
     break;
-  case OP_CLOSURE_REF:
+  case SEXP_OP_CLOSURE_REF:
     _PUSH(sexp_vector_ref(cp, sexp_make_fixnum(_WORD0)));
     ip += sizeof(sexp);
     break;
-  case OP_VECTOR_REF:
+  case SEXP_OP_VECTOR_REF:
     if (! sexp_vectorp(_ARG1))
       sexp_raise("vector-ref: not a vector", sexp_list1(ctx, _ARG1));
     else if (! sexp_fixnump(_ARG2))
@@ -1470,7 +1470,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG2 = sexp_vector_ref(_ARG1, _ARG2);
     top--;
     break;
-  case OP_VECTOR_SET:
+  case SEXP_OP_VECTOR_SET:
     if (! sexp_vectorp(_ARG1))
       sexp_raise("vector-set!: not a vector", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
@@ -1484,12 +1484,12 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG3 = SEXP_VOID;
     top-=2;
     break;
-  case OP_VECTOR_LENGTH:
+  case SEXP_OP_VECTOR_LENGTH:
     if (! sexp_vectorp(_ARG1))
       sexp_raise("vector-length: not a vector", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_vector_length(_ARG1));
     break;
-  case OP_STRING_REF:
+  case SEXP_OP_STRING_REF:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-ref: not a string", sexp_list1(ctx, _ARG1));
     else if (! sexp_fixnump(_ARG2))
@@ -1500,7 +1500,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG2 = sexp_string_ref(_ARG1, _ARG2);
     top--;
     break;
-  case OP_STRING_SET:
+  case SEXP_OP_STRING_SET:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
@@ -1516,52 +1516,52 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG3 = SEXP_VOID;
     top-=2;
     break;
-  case OP_STRING_LENGTH:
+  case SEXP_OP_STRING_LENGTH:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-length: not a string", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_string_length(_ARG1));
     break;
-  case OP_MAKE_PROCEDURE:
+  case SEXP_OP_MAKE_PROCEDURE:
     sexp_context_top(ctx) = top;
     _ARG4 = sexp_make_procedure(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top-=3;
     break;
-  case OP_MAKE_VECTOR:
+  case SEXP_OP_MAKE_VECTOR:
     sexp_context_top(ctx) = top;
     if (! sexp_fixnump(_ARG1))
       sexp_raise("make-vector: not an integer", sexp_list1(ctx, _ARG1));
     _ARG2 = sexp_make_vector(ctx, _ARG1, _ARG2);
     top--;
     break;
-  case OP_AND:
+  case SEXP_OP_AND:
     _ARG2 = sexp_make_boolean((_ARG1 != SEXP_FALSE) && (_ARG2 != SEXP_FALSE));
     top--;
     break;
-  case OP_EOFP:
+  case SEXP_OP_EOFP:
     _ARG1 = sexp_make_boolean(_ARG1 == SEXP_EOF); break;
-  case OP_NULLP:
+  case SEXP_OP_NULLP:
     _ARG1 = sexp_make_boolean(sexp_nullp(_ARG1)); break;
-  case OP_FIXNUMP:
+  case SEXP_OP_FIXNUMP:
     _ARG1 = sexp_make_boolean(sexp_fixnump(_ARG1)); break;
-  case OP_SYMBOLP:
+  case SEXP_OP_SYMBOLP:
     _ARG1 = sexp_make_boolean(sexp_symbolp(_ARG1)); break;
-  case OP_CHARP:
+  case SEXP_OP_CHARP:
     _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
-  case OP_TYPEP:
+  case SEXP_OP_TYPEP:
     _ARG1 = sexp_make_boolean(sexp_check_tag(_ARG1, _UWORD0));
     ip += sizeof(sexp);
     break;
-  case OP_MAKE:
+  case SEXP_OP_MAKE:
     _PUSH(sexp_alloc_tagged(ctx, _UWORD1, _UWORD0));
     ip += sizeof(sexp)*2;
     break;
-  case OP_SLOT_REF:
+  case SEXP_OP_SLOT_REF:
     if (! sexp_check_tag(_ARG1, _UWORD0))
       sexp_raise("slot-ref: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(_UWORD0), -1), _ARG1));
     _ARG1 = sexp_slot_ref(_ARG1, _UWORD1);
     ip += sizeof(sexp)*2;
     break;
-  case OP_SLOT_SET:
+  case SEXP_OP_SLOT_SET:
     if (! sexp_check_tag(_ARG1, _UWORD0))
       sexp_raise("slot-set!: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(_UWORD0), -1), _ARG1));
     else if (sexp_immutablep(_ARG1))
@@ -1571,15 +1571,15 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     ip += sizeof(sexp)*2;
     top--;
     break;
-  case OP_CAR:
+  case SEXP_OP_CAR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("car: not a pair", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_car(_ARG1); break;
-  case OP_CDR:
+  case SEXP_OP_CDR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("cdr: not a pair", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_cdr(_ARG1); break;
-  case OP_SET_CAR:
+  case SEXP_OP_SET_CAR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("set-car!: not a pair", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
@@ -1588,7 +1588,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG2 = SEXP_VOID;
     top--;
     break;
-  case OP_SET_CDR:
+  case SEXP_OP_SET_CDR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("set-cdr!: not a pair", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
@@ -1597,13 +1597,13 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG2 = SEXP_VOID;
     top--;
     break;
-  case OP_CONS:
+  case SEXP_OP_CONS:
     sexp_context_top(ctx) = top;
     _ARG2 = sexp_cons(ctx, _ARG1, _ARG2);
     top--;
     break;
-  case OP_ADD:
-#if USE_BIGNUMS
+  case SEXP_OP_ADD:
+#if SEXP_USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       j = sexp_unbox_fixnum(tmp1) + sexp_unbox_fixnum(tmp2);
@@ -1617,7 +1617,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #else
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2))
       _ARG2 = sexp_fx_add(_ARG1, _ARG2);
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_add(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1629,8 +1629,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_SUB:
-#if USE_BIGNUMS
+  case SEXP_OP_SUB:
+#if SEXP_USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       j = sexp_unbox_fixnum(tmp1) - sexp_unbox_fixnum(tmp2);
@@ -1644,7 +1644,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #else
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2))
       _ARG2 = sexp_fx_sub(_ARG1, _ARG2);
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_sub(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1656,8 +1656,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_MUL:
-#if USE_BIGNUMS
+  case SEXP_OP_MUL:
+#if SEXP_USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       prod = (sexp_lsint_t)sexp_unbox_fixnum(tmp1) * sexp_unbox_fixnum(tmp2);
@@ -1671,7 +1671,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #else
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2))
       _ARG2 = sexp_fx_mul(_ARG1, _ARG2);
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_mul(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1683,16 +1683,16 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_DIV:
+  case SEXP_OP_DIV:
     if (_ARG2 == SEXP_ZERO) {
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
       if (sexp_flonump(_ARG1) && sexp_flonum_value(_ARG1) == 0.0)
         _ARG2 = sexp_make_flonum(ctx, 0.0/0.0);
       else
 #endif
         sexp_raise("divide by zero", SEXP_NULL);
     } else if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
       _ARG1 = sexp_fixnum_to_flonum(ctx, _ARG1);
       _ARG2 = sexp_fixnum_to_flonum(ctx, _ARG2);
       _ARG2 = sexp_fp_div(ctx, _ARG1, _ARG2);
@@ -1702,11 +1702,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
 #endif
     }
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else
       _ARG2 = sexp_div(ctx, _ARG1, _ARG2);
 #else
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       _ARG2 = sexp_fp_div(ctx, _ARG1, _ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1718,14 +1718,14 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_QUOTIENT:
+  case SEXP_OP_QUOTIENT:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
       if (_ARG2 == SEXP_ZERO)
         sexp_raise("divide by zero", SEXP_NULL);
       _ARG2 = sexp_fx_div(_ARG1, _ARG2);
       top--;
     }
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else {
       _ARG2 = sexp_quotient(ctx, _ARG1, _ARG2);
       top--;
@@ -1734,7 +1734,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     else sexp_raise("quotient: not an integer", sexp_list2(ctx, _ARG1, _ARG2));
 #endif
     break;
-  case OP_REMAINDER:
+  case SEXP_OP_REMAINDER:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
       if (_ARG2 == SEXP_ZERO)
         sexp_raise("divide by zero", SEXP_NULL);
@@ -1742,7 +1742,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       top--;
       _ARG1 = tmp1;
     }
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else {
       _ARG2 = sexp_remainder(ctx, _ARG1, _ARG2);
       top--;
@@ -1751,34 +1751,34 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     else sexp_raise("remainder: not an integer", sexp_list2(ctx, _ARG1, _ARG2));
 #endif
     break;
-  case OP_NEGATIVE:
+  case SEXP_OP_NEGATIVE:
     if (sexp_fixnump(_ARG1))
       _ARG1 = sexp_make_fixnum(-sexp_unbox_fixnum(_ARG1));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else if (sexp_bignump(_ARG1)) {
       _ARG1 = sexp_copy_bignum(ctx, NULL, _ARG1, 0);
       sexp_bignum_sign(_ARG1) = -sexp_bignum_sign(_ARG1);
     }
 #endif
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     else if (sexp_flonump(_ARG1))
       _ARG1 = sexp_make_flonum(ctx, -sexp_flonum_value(_ARG1));
 #endif
     else sexp_raise("-: not a number", sexp_list1(ctx, _ARG1));
     break;
-  case OP_INVERSE:
+  case SEXP_OP_INVERSE:
     if (sexp_fixnump(_ARG1))
       _ARG1 = sexp_make_flonum(ctx, 1/(double)sexp_unbox_fixnum(_ARG1));
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     else if (sexp_flonump(_ARG1))
       _ARG1 = sexp_make_flonum(ctx, 1/sexp_flonum_value(_ARG1));
 #endif
     else sexp_raise("/: not a number", sexp_list1(ctx, _ARG1));
     break;
-  case OP_LT:
+  case SEXP_OP_LT:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
       i = (sexp_sint_t)_ARG1 < (sexp_sint_t)_ARG2;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
       _ARG2 = sexp_make_boolean(i);
     } else {
       tmp1 = sexp_compare(ctx, _ARG1, _ARG2);
@@ -1786,7 +1786,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
         ? sexp_make_boolean(sexp_unbox_fixnum(tmp1) < 0) : tmp1;
     }
 #else
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       i = sexp_flonum_value(_ARG1) < sexp_flonum_value(_ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1799,10 +1799,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_LE:
+  case SEXP_OP_LE:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
       i = (sexp_sint_t)_ARG1 <= (sexp_sint_t)_ARG2;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
       _ARG2 = sexp_make_boolean(i);
     } else {
       tmp1 = sexp_compare(ctx, _ARG1, _ARG2);
@@ -1810,7 +1810,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
         ? sexp_make_boolean(sexp_unbox_fixnum(tmp1) <= 0) : tmp1;
     }
 #else
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       i = sexp_flonum_value(_ARG1) <= sexp_flonum_value(_ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1823,10 +1823,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_EQN:
+  case SEXP_OP_EQN:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
       i = _ARG1 == _ARG2;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
       _ARG2 = sexp_make_boolean(i);
     } else {
       tmp1 = sexp_compare(ctx, _ARG1, _ARG2);
@@ -1834,7 +1834,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
         ? sexp_make_boolean(sexp_unbox_fixnum(tmp1) == 0) : tmp1;
     }
 #else
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
     } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
       i = sexp_flonum_value(_ARG1) == sexp_flonum_value(_ARG2);
     else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
@@ -1847,25 +1847,25 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #endif
     top--;
     break;
-  case OP_EQ:
+  case SEXP_OP_EQ:
     _ARG2 = sexp_make_boolean(_ARG1 == _ARG2);
     top--;
     break;
-  case OP_FIX2FLO:
+  case SEXP_OP_FIX2FLO:
     if (sexp_fixnump(_ARG1))
       _ARG1 = sexp_fixnum_to_flonum(ctx, _ARG1);
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     else if (sexp_bignump(_ARG1))
       _ARG1 = sexp_make_flonum(ctx, sexp_bignum_to_double(_ARG1));
 #endif
     else if (! sexp_flonump(_ARG1))
       sexp_raise("exact->inexact: not a number", sexp_list1(ctx, _ARG1));
     break;
-  case OP_FLO2FIX:
+  case SEXP_OP_FLO2FIX:
     if (sexp_flonump(_ARG1)) {
       if (sexp_flonum_value(_ARG1) != trunc(sexp_flonum_value(_ARG1))) {
         sexp_raise("inexact->exact: not an integer", sexp_list1(ctx, _ARG1));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
       } else if ((sexp_flonum_value(_ARG1) > SEXP_MAX_FIXNUM)
                  || sexp_flonum_value(_ARG1) < SEXP_MIN_FIXNUM) {
         _ARG1 = sexp_double_to_bignum(ctx, sexp_flonum_value(_ARG1));
@@ -1877,47 +1877,47 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("inexact->exact: not a number", sexp_list1(ctx, _ARG1));
     }
     break;
-  case OP_CHAR2INT:
+  case SEXP_OP_CHAR2INT:
     if (! sexp_charp(_ARG1))
       sexp_raise("char->integer: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_unbox_character(_ARG1));
     break;
-  case OP_INT2CHAR:
+  case SEXP_OP_INT2CHAR:
     if (! sexp_fixnump(_ARG1))
       sexp_raise("integer->char: not an integer", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(sexp_unbox_fixnum(_ARG1));
     break;
-  case OP_CHAR_UPCASE:
+  case SEXP_OP_CHAR_UPCASE:
     if (! sexp_charp(_ARG1))
       sexp_raise("char-upcase: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(toupper(sexp_unbox_character(_ARG1)));
     break;
-  case OP_CHAR_DOWNCASE:
+  case SEXP_OP_CHAR_DOWNCASE:
     if (! sexp_charp(_ARG1))
       sexp_raise("char-downcase: not a character", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
     break;
-  case OP_WRITE_CHAR:
+  case SEXP_OP_WRITE_CHAR:
     if (! sexp_charp(_ARG1))
       sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
     sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     _ARG2 = SEXP_VOID;
     top--;
     break;
-  case OP_NEWLINE:
+  case SEXP_OP_NEWLINE:
     sexp_newline(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
     break;
-  case OP_READ_CHAR:
+  case SEXP_OP_READ_CHAR:
     i = sexp_read_char(ctx, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
-  case OP_PEEK_CHAR:
+  case SEXP_OP_PEEK_CHAR:
     i = sexp_read_char(ctx, _ARG1);
     sexp_push_char(ctx, i, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
-  case OP_RET:
+  case SEXP_OP_RET:
     i = sexp_unbox_fixnum(stack[fp]);
     stack[fp-i] = _ARG1;
     top = fp-i+1;
@@ -1927,7 +1927,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     cp = sexp_procedure_vars(self);
     fp = sexp_unbox_fixnum(stack[fp+3]);
     break;
-  case OP_DONE:
+  case SEXP_OP_DONE:
     goto end_loop;
   default:
     sexp_raise("unknown opcode", sexp_list1(ctx, sexp_make_fixnum(*(ip-1))));
@@ -1978,7 +1978,7 @@ static sexp sexp_close_port (sexp ctx, sexp port) {
     return sexp_user_exception(ctx, SEXP_FALSE, "port already closed", port);
   if (sexp_port_stream(port))
     fclose(sexp_port_stream(port));
-#if ! USE_STRING_STREAMS
+#if ! SEXP_USE_STRING_STREAMS
   if (sexp_port_buf(port) && sexp_oportp(port))
     free(sexp_port_buf(port));
 #endif
@@ -2005,7 +2005,7 @@ void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
     }
 }
 
-#if USE_DL
+#if SEXP_USE_DL
 sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_proc2 init;
   void *handle = dlopen(sexp_string_data(file), RTLD_LAZY);
@@ -2021,7 +2021,7 @@ sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #endif
 
 sexp sexp_load (sexp ctx, sexp source, sexp env) {
-#if USE_DL
+#if SEXP_USE_DL
   char *suffix;
 #endif
   sexp tmp, out=SEXP_FALSE;
@@ -2030,7 +2030,7 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     return sexp_type_exception(ctx, "not a string", source);
   if (! sexp_envp(env))
     return sexp_type_exception(ctx, "not an environment", env);
-#if USE_DL
+#if SEXP_USE_DL
   suffix = sexp_string_data(source)
     + sexp_string_length(source) - strlen(sexp_so_extension);
   if (strcmp(suffix, sexp_so_extension) == 0) {
@@ -2062,19 +2062,19 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
     sexp_close_port(ctx, in);
   }
   sexp_gc_release4(ctx);
-#if USE_DL
+#if SEXP_USE_DL
   }
 #endif
-#if USE_WARN_UNDEFS
+#if SEXP_USE_WARN_UNDEFS
   if (sexp_oportp(out) && ! sexp_exceptionp(res))
     sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, out);
 #endif
   return res;
 }
 
-#if USE_MATH
+#if SEXP_USE_MATH
 
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
 #define maybe_convert_bignum(z) \
   else if (sexp_bignump(z)) d = sexp_bignum_to_double(z);
 #else
@@ -2113,7 +2113,7 @@ define_math_op(sexp_ceiling, ceil)
 static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
   long double f, x1, e1;
   sexp res;
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   if (sexp_bignump(e)) {        /* bignum exponent needs special handling */
     if ((x == SEXP_ZERO) || (x == SEXP_NEG_ONE))
       res = sexp_make_flonum(ctx, pow(0, 0));          /* +nan.0 */
@@ -2129,7 +2129,7 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
 #endif
   if (sexp_fixnump(x))
     x1 = sexp_unbox_fixnum(x);
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
   else if (sexp_flonump(x))
     x1 = sexp_flonum_value(x);
 #endif
@@ -2137,27 +2137,27 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
     return sexp_type_exception(ctx, "not a number", x);
   if (sexp_fixnump(e))
     e1 = sexp_unbox_fixnum(e);
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
   else if (sexp_flonump(e))
     e1 = sexp_flonum_value(e);
 #endif
   else
     return sexp_type_exception(ctx, "not a number", e);
   f = pow(x1, e1);
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
   if ((f > SEXP_MAX_FIXNUM) || (! sexp_fixnump(x)) || (! sexp_fixnump(e))) {
 #endif
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
     if (sexp_fixnump(x) && sexp_fixnump(e))
       res = sexp_bignum_expt(ctx, sexp_fixnum_to_bignum(ctx, x), e);
     else
 #endif
-#if USE_FLONUMS
+#if SEXP_USE_FLONUMS
       res = sexp_make_flonum(ctx, f);
   } else
 #endif
     res = sexp_make_fixnum((sexp_sint_t)round(f));
-#if USE_BIGNUMS
+#if SEXP_USE_BIGNUMS
   }
 #endif
   return res;
@@ -2200,23 +2200,23 @@ static sexp sexp_apply_optimization (sexp ctx, sexp proc, sexp ast) {
   return res;
 }
 
-#if USE_SIMPLIFY
+#if SEXP_USE_SIMPLIFY
 #include "opt/simplify.c"
 #endif
 
 /*********************** standard environment *************************/
 
 static struct sexp_struct core_forms[] = {
-  {.tag=SEXP_CORE, .value={.core={CORE_DEFINE, "define"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_SET, "set!"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_LAMBDA, "lambda"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_IF, "if"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_BEGIN, "begin"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_QUOTE, "quote"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_SYNTAX_QUOTE, "syntax-quote"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_DEFINE_SYNTAX, "define-syntax"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_LET_SYNTAX, "let-syntax"}}},
-  {.tag=SEXP_CORE, .value={.core={CORE_LETREC_SYNTAX, "letrec-syntax"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE, "define"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SET, "set!"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LAMBDA, "lambda"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_IF, "if"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_BEGIN, "begin"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_QUOTE, "quote"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SYNTAX_QUOTE, "syntax-quote"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE_SYNTAX, "define-syntax"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LET_SYNTAX, "let-syntax"}}},
+  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LETREC_SYNTAX, "letrec-syntax"}}},
 };
 
 #include "opcodes.c"
@@ -2241,10 +2241,10 @@ sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
   if (! sexp_stringp(name))
     res = sexp_type_exception(ctx, "make-opcode: not a string", name);
   else if ((! sexp_fixnump(op_class)) || (sexp_unbox_fixnum(op_class) <= 0)
-      || (sexp_unbox_fixnum(op_class) >= OPC_NUM_OP_CLASSES))
+      || (sexp_unbox_fixnum(op_class) >= SEXP_OPC_NUM_OP_CLASSES))
     res = sexp_type_exception(ctx, "make-opcode: bad opcode class", op_class);
   else if ((! sexp_fixnump(code)) || (sexp_unbox_fixnum(code) <= 0)
-      || (sexp_unbox_fixnum(code) >= OP_NUM_OPCODES))
+      || (sexp_unbox_fixnum(code) >= SEXP_OP_NUM_OPCODES))
     res = sexp_type_exception(ctx, "make-opcode: bad opcode", code);
   else if (! sexp_fixnump(num_args))
     res = sexp_type_exception(ctx, "make-opcode: bad num_args", num_args);
@@ -2275,8 +2275,8 @@ sexp sexp_make_foreign (sexp ctx, char *name, int num_args,
                               sexp_make_fixnum(num_args));
   } else {
     res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
-    sexp_opcode_class(res) = OPC_FOREIGN;
-    sexp_opcode_code(res) = OP_FCALL1+num_args-1;
+    sexp_opcode_class(res) = SEXP_OPC_FOREIGN;
+    sexp_opcode_code(res) = SEXP_OP_FCALL1+num_args-1;
     if (flags & 1) num_args--;
     sexp_opcode_num_args(res) = num_args;
     sexp_opcode_flags(res) = flags;
@@ -2301,13 +2301,13 @@ sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args,
   return res;
 }
 
-#if USE_TYPE_DEFS
+#if SEXP_USE_TYPE_DEFS
 
 sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type) {
   if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-type-predicate: bad type", type);
-  return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_TYPE_PREDICATE),
-                          sexp_make_fixnum(OP_TYPEP), SEXP_ONE, SEXP_ZERO,
+  return sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
+                          sexp_make_fixnum(SEXP_OP_TYPEP), SEXP_ONE, SEXP_ZERO,
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
 }
 
@@ -2316,8 +2316,8 @@ sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
   if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-constructor: bad type", type);
   type_size = sexp_type_size_base(&(sexp_type_specs[sexp_unbox_fixnum(type)]));
-  return sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_CONSTRUCTOR),
-                          sexp_make_fixnum(OP_MAKE), SEXP_ZERO, SEXP_ZERO,
+  return sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_CONSTRUCTOR),
+                          sexp_make_fixnum(SEXP_OP_MAKE), SEXP_ZERO, SEXP_ZERO,
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type,
                           sexp_make_fixnum(type_size), NULL);
 }
@@ -2328,16 +2328,16 @@ sexp sexp_make_accessor (sexp ctx, sexp name, sexp type, sexp index, sexp code) 
   if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
     return sexp_type_exception(ctx, "make-accessor: bad index", index);
   return
-    sexp_make_opcode(ctx, name, sexp_make_fixnum(OPC_ACCESSOR), code,
-                     sexp_make_fixnum(sexp_unbox_fixnum(code)==OP_SLOT_REF?1:2),
+    sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_ACCESSOR), code,
+                     sexp_make_fixnum(sexp_unbox_fixnum(code)==SEXP_OP_SLOT_REF?1:2),
                      SEXP_ZERO, type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
 sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index) {
-  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(OP_SLOT_REF));
+  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(SEXP_OP_SLOT_REF));
 }
 sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index) {
-  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(OP_SLOT_SET));
+  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(SEXP_OP_SLOT_SET));
 }
 
 #endif
@@ -2384,13 +2384,15 @@ static sexp sexp_make_standard_env (sexp ctx, sexp version) {
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   sexp_env_define(ctx, e, sexp_intern(ctx, "*module-directory*"),
                   sexp_c_string(ctx, sexp_module_dir, -1));
+#if SEXP_USE_DL
   sexp_env_define(ctx, e, sexp_intern(ctx, "*shared-object-extension*"),
                   sexp_c_string(ctx, sexp_so_extension, -1));
+#endif
   tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform));
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi"));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*features*"), tmp);
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
-#if USE_SIMPLIFY
+#if SEXP_USE_SIMPLIFY
   op = sexp_make_foreign(ctx, "simplify", 1, 0,
                          (sexp_proc1)sexp_simplify, SEXP_VOID);
   tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
@@ -2417,7 +2419,7 @@ sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls) {
       value = sexp_env_global_ref(from, oldname, SEXP_UNDEF);
       if (value != SEXP_UNDEF) {
         sexp_env_define(ctx, to, newname, value);
-#if USE_WARN_UNDEFS
+#if SEXP_USE_WARN_UNDEFS
       } else if (sexp_oportp(out=sexp_current_error_port(ctx))) {
         sexp_write_string(ctx, "WARNING: importing undefined variable: ", out);
         sexp_write(ctx, oldname, out);

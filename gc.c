@@ -31,11 +31,11 @@
 #define sexp_heap_align(n) sexp_align(n, 4)
 #endif
 
-#if USE_GLOBAL_HEAP
+#if SEXP_USE_GLOBAL_HEAP
 static sexp_heap sexp_global_heap;
 #endif
 
-#if USE_DEBUG_GC
+#if SEXP_USE_DEBUG_GC
 static sexp* stack_base;
 #endif
 
@@ -76,7 +76,7 @@ void sexp_mark (sexp x) {
   }
 }
 
-#if USE_DEBUG_GC
+#if SEXP_USE_DEBUG_GC
 int stack_references_pointer_p (sexp ctx, sexp x) {
   sexp *p;
   for (p=(&x)+1; p<stack_base; p++)
@@ -156,7 +156,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp res;
-#if USE_GLOBAL_SYMBOLS
+#if SEXP_USE_GLOBAL_SYMBOLS
   int i;
   for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
     sexp_mark(sexp_symbol_table[i]);
@@ -232,13 +232,13 @@ void* sexp_alloc (sexp ctx, size_t size) {
 }
 
 void sexp_gc_init (void) {
-#if USE_GLOBAL_HEAP || USE_DEBUG_GC
+#if SEXP_USE_GLOBAL_HEAP || SEXP_USE_DEBUG_GC
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
 #endif
-#if USE_GLOBAL_HEAP
+#if SEXP_USE_GLOBAL_HEAP
   sexp_global_heap = sexp_make_heap(size);
 #endif
-#if USE_DEBUG_GC
+#if SEXP_USE_DEBUG_GC
   /* the +32 is a hack, but this is just for debugging anyway */
   stack_base = ((sexp*)&size) + 32;
 #endif

@@ -29,10 +29,10 @@
 
 (define-c pid_t fork ())
 ;; (define-c pid_t wait ((result pointer int)))
-;; (define-c void exit (int))
-;; (define-c int (execute execvp) (string (array string null)))
+(define-c void exit (int))
+;;(define-c int (execute execvp) (string (array string null)))
 
-;;(define-c errno pipe ((result array int 2)))
+;;(define-c errno pipe ((result (array int 2))))
 
 (define-c time_t (current-seconds time) ((value NULL)))
 

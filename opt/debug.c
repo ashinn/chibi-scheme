@@ -57,45 +57,45 @@ static sexp disasm (sexp ctx, sexp bc, sexp out, int depth) {
     sexp_printf(ctx, out, "  <unknown> %d ", opcode);
   }
   switch (opcode) {
-  case OP_STACK_REF:
-  case OP_LOCAL_REF:
-  case OP_LOCAL_SET:
-  case OP_CLOSURE_REF:
-  case OP_JUMP:
-  case OP_JUMP_UNLESS:
-  case OP_TYPEP:
-  case OP_FCALL0:
-  case OP_FCALL1:
-  case OP_FCALL2:
-  case OP_FCALL3:
-  case OP_FCALL4:
-  case OP_FCALL5:
-  case OP_FCALL6:
+  case SEXP_OP_STACK_REF:
+  case SEXP_OP_LOCAL_REF:
+  case SEXP_OP_LOCAL_SET:
+  case SEXP_OP_CLOSURE_REF:
+  case SEXP_OP_JUMP:
+  case SEXP_OP_JUMP_UNLESS:
+  case SEXP_OP_TYPEP:
+  case SEXP_OP_FCALL0:
+  case SEXP_OP_FCALL1:
+  case SEXP_OP_FCALL2:
+  case SEXP_OP_FCALL3:
+  case SEXP_OP_FCALL4:
+  case SEXP_OP_FCALL5:
+  case SEXP_OP_FCALL6:
     sexp_printf(ctx, out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
-  case OP_SLOT_REF:
-  case OP_SLOT_SET:
-  case OP_MAKE:
+  case SEXP_OP_SLOT_REF:
+  case SEXP_OP_SLOT_SET:
+  case SEXP_OP_MAKE:
     ip += sizeof(sexp)*2;
     break;
-  case OP_GLOBAL_REF:
-  case OP_GLOBAL_KNOWN_REF:
-  case OP_TAIL_CALL:
-  case OP_CALL:
-  case OP_PUSH:
+  case SEXP_OP_GLOBAL_REF:
+  case SEXP_OP_GLOBAL_KNOWN_REF:
+  case SEXP_OP_TAIL_CALL:
+  case SEXP_OP_CALL:
+  case SEXP_OP_PUSH:
     tmp = ((sexp*)ip)[0];
-    if (((opcode == OP_GLOBAL_REF) || (opcode == OP_GLOBAL_KNOWN_REF))
+    if (((opcode == SEXP_OP_GLOBAL_REF) || (opcode == SEXP_OP_GLOBAL_KNOWN_REF))
         && sexp_pairp(tmp))
       tmp = sexp_car(tmp);
-    else if ((opcode == OP_PUSH) && (sexp_pairp(tmp) || sexp_idp(tmp)))
+    else if ((opcode == SEXP_OP_PUSH) && (sexp_pairp(tmp) || sexp_idp(tmp)))
       sexp_write_char(ctx, '\'', out);
     sexp_write(ctx, tmp, out);
     ip += sizeof(sexp);
     break;
   }
   sexp_write_char(ctx, '\n', out);
-  if ((opcode == OP_PUSH) && (depth < SEXP_DISASM_MAX_DEPTH)
+  if ((opcode == SEXP_OP_PUSH) && (depth < SEXP_DISASM_MAX_DEPTH)
       && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
     disasm(ctx, tmp, out, depth+1);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
@@ -107,7 +107,7 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   return disasm(ctx, bc, out, 0);
 }
 
-#if USE_DEBUG_VM
+#if SEXP_USE_DEBUG_VM
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
   int i;
   if (! sexp_oport(out)) out = sexp_current_error_port(ctx);

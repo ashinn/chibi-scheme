@@ -4,7 +4,7 @@ BIN=/$objtype/bin
 TARG=chibi-scheme
 MODDIR=/sys/lib/chibi-scheme
 
-CPPFLAGS= -Iinclude -DPLAN9 '-DUSE_STRING_STREAMS=0' '-DUSE_DEBUG=0'
+CPPFLAGS= -Iinclude -DPLAN9 '-DSEXP_USE_STRING_STREAMS=0' '-DSEXP_USE_DEBUG=0' '-DSEXP_USE_MODULES=0'
 CFLAGS= -p $CPPFLAGS
 
 OFILES=sexp.$O eval.$O main.$O
@@ -14,6 +14,7 @@ HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/config.h include/
 
 include/chibi/install.h: mkfile
 	echo '#define sexp_module_dir "'$MODDIR'"' > include/chibi/install.h
+	echo '#define sexp_platform "plan9"' >> include/chibi/install.h
 
 install:V: $BIN/$TARG
 	test -d $MODDIR || mkdir -p $MODDIR

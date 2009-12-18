@@ -22,7 +22,7 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
       sexp_push(ctx, app, tmp=simplify(ctx, sexp_car(ls1), substs, lambda));
     app = sexp_nreverse(ctx, app);
     if (sexp_opcodep(sexp_car(app))) {
-      if (sexp_opcode_class(sexp_car(app)) == OPC_ARITHMETIC) {
+      if (sexp_opcode_class(sexp_car(app)) == SEXP_OPC_ARITHMETIC) {
         for (check=1, ls1=sexp_cdr(app); sexp_pairp(ls1); ls1=sexp_cdr(ls1)) {
           if (sexp_pointerp(sexp_car(ls1)) && ! sexp_litp(sexp_car(ls1))) {
             check = 0;
