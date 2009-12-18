@@ -7,7 +7,11 @@
     ((test expect expr)
      (begin
        (set! *tests-run* (+ *tests-run* 1))
-       (let ((str (call-with-output-string (lambda (out) (display 'expr out))))
+       (let ((str (call-with-output-string
+                    (lambda (out)
+                      (write *tests-run*)
+                      (display ". ")
+                      (display 'expr out))))
              (res expr))
          (display str)
          (write-char #\space)
