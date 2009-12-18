@@ -357,6 +357,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_sizeof_header (sexp_sizeof(flonum) - sizeof(double))
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
+#define sexp_alloc_bytecode(ctx, i) sexp_alloc_tagged(ctx, sexp_sizeof(bytecode) + i, SEXP_BYTECODE)
 
 #if SEXP_USE_BIGNUMS
 #include "chibi/bignum.h"
@@ -460,6 +461,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define SEXP_ONE     sexp_make_fixnum(1)
 #define SEXP_TWO     sexp_make_fixnum(2)
 #define SEXP_THREE   sexp_make_fixnum(3)
+#define SEXP_FOUR    sexp_make_fixnum(4)
+#define SEXP_FIVE    sexp_make_fixnum(5)
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
@@ -682,6 +685,7 @@ enum sexp_context_globals {
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
   SEXP_G_OPTIMIZATIONS,
+  SEXP_G_CONFIG_ENV,
   SEXP_G_QUOTE_SYMBOL,
   SEXP_G_QUASIQUOTE_SYMBOL,
   SEXP_G_UNQUOTE_SYMBOL,

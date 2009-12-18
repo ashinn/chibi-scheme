@@ -15,6 +15,8 @@
 #define sexp_init_file "init.scm"
 #define sexp_config_file "config.scm"
 
+SEXP_API char *sexp_module_dir;
+
 enum sexp_core_form_names {
   SEXP_CORE_DEFINE = 1,
   SEXP_CORE_SET,
@@ -129,6 +131,11 @@ SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
 SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
 SEXP_API sexp sexp_make_env (sexp context);
+SEXP_API sexp sexp_make_null_env (sexp context, sexp version);
+SEXP_API sexp sexp_make_primitive_env (sexp context, sexp version);
+SEXP_API sexp sexp_make_standard_env (sexp context, sexp version);
+SEXP_API sexp sexp_load_standard_env (sexp context, sexp env, sexp version);
+SEXP_API sexp sexp_load_module_file (sexp ctx, char *file, sexp env);
 SEXP_API sexp sexp_extend_env (sexp context, sexp env, sexp vars, sexp value);
 SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls);
 SEXP_API void sexp_env_define (sexp context, sexp env, sexp sym, sexp val);

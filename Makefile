@@ -91,7 +91,7 @@ INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
-	echo '#define sexp_module_dir "'$(MODDIR)'"' >> $@
+	echo '#define sexp_default_module_dir "'$(MODDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
 
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
