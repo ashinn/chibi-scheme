@@ -2,14 +2,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; modules
 
-(define *modules* '())
 (define *this-module* '())
 
 (define (make-module exports env meta) (vector exports env meta))
-(define (module-exports mod) (vector-ref mod 0))
 (define (module-env mod) (vector-ref mod 1))
 (define (module-meta-data mod) (vector-ref mod 2))
 (define (module-env-set! mod env) (vector-set! mod 1 env))
+
+(define (module-exports mod)
+  (or (vector-ref mod 0) (env-exports (module-env mod))))
 
 (define (module-name->strings ls res)
   (if (null? ls)
@@ -55,13 +56,22 @@
    ((not (and (pair? x) (list? x)))
     (error "invalid module syntax" x))
    ((and (pair? (cdr x)) (pair? (cadr x)))
-    (if (memq (car x) '(only except renams))
+    (if (memq (car x) '(only except rename))
         (let* ((mod-name+imports (resolve-import (cadr x)))
-               (imp-ids (cdr mod-name+imports)))
+               (imp-ids (cdr mod-name+imports))
+               (imp-ids (if (and (not imp-ids) (not (eq? 'only (car x))))
+                            (begin
+                              (set-cdr! mod-name+imports
+                                        (module-exports
+                                         (find-module (car mod-name+imports))))
+                              (cdr mod-name+imports))
+                            imp-ids)))
           (cons (car mod-name+imports)
                 (case (car x)
                   ((only)
-                   (id-filter (lambda (i) (memq i (cddr x))) imp-ids))
+                   (if (not imp-ids)
+                       (cddr x)
+                       (id-filter (lambda (i) (memq i (cddr x))) imp-ids)))
                   ((except)
                    (id-filter (lambda (i) (not (memq i (cddr x)))) imp-ids))
                   ((rename)
@@ -78,7 +88,7 @@
                          (if (pair? i) (cdr i) i)))
                  (cdr mod-name+imports)))))
    ((find-module x)
-    => (lambda (mod) (cons x (module-exports mod))))
+    => (lambda (mod) (cons x #f)))
    (else
     (error "couldn't find import" x))))
 
@@ -88,12 +98,13 @@
     (for-each
      (lambda (x)
        (case (and (pair? x) (car x))
-         ((import)
+         ((import import-immutable)
           (for-each
-           (lambda (x)
-             (let* ((mod2-name+imports (resolve-import x))
+           (lambda (m)
+             (let* ((mod2-name+imports (resolve-import m))
                     (mod2 (load-module (car mod2-name+imports))))
-               (%env-copy! env (module-env mod2) (cdr mod2-name+imports))))
+               (%env-copy! env (module-env mod2) (cdr mod2-name+imports)
+                           (eq? (car x) 'import-immutable))))
            (cdr x)))
          ((include include-shared)
           (for-each
@@ -142,58 +153,15 @@
            `(set! *this-module* (cons ',expr *this-module*))))))))
 
 (define-config-primitive import)
+(define-config-primitive import-immutable)
 (define-config-primitive export)
 (define-config-primitive include)
 (define-config-primitive include-shared)
 (define-config-primitive body)
 
-(let ((exports
-       '(define set! let let* letrec lambda if cond case delay
-         and or begin do quote quasiquote
-         define-syntax let-syntax letrec-syntax syntax-rules eqv? eq? equal?
-         not boolean? number? complex? real? rational? integer? exact? inexact?
-         = < > <= >= zero? positive? negative? odd? even? max min + * - / abs
-         quotient remainder modulo gcd lcm numerator denominator floor ceiling
-         truncate round exp log sin cos tan asin acos atan sqrt
-         expt real-part imag-part magnitude angle
-         exact->inexact inexact->exact number->string string->number pair? cons
-         car cdr set-car! set-cdr! caar cadr cdar cddr caaar caadr cadar caddr
-         cdaar cdadr cddar cdddr caaaar caaadr caadar caaddr cadaar cadadr
-         caddar cadddr cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
-         null? list? list length append reverse reverse!
-         list-tail list-ref memq memv
-         member assq assv assoc symbol? symbol->string string->symbol char?
-         char=? char<? char>? char<=? char>=? char-ci=? char-ci<? char-ci>?
-         char-ci<=? char-ci>=? char-alphabetic? char-numeric? char-whitespace?
-         char-upper-case? char-lower-case? char->integer integer->char
-         char-upcase char-downcase string? make-string string string-length
-         string-ref string-set! string=? string-ci=? string<? string>?
-         string<=? string>=? string-ci<? string-ci>? string-ci<=? string-ci>=?
-         substring string-append string->list list->string string-copy
-         string-fill! vector? make-vector vector vector-length vector-ref
-         vector-set! vector->list list->vector vector-fill! procedure? apply
-         map for-each force call-with-current-continuation values
-         call-with-values interaction-environment scheme-report-environment
-         null-environment call-with-input-file call-with-output-file
-         input-port? output-port? current-input-port current-output-port
-         with-input-from-file with-output-to-file open-input-file
-         open-output-file close-input-port close-output-port read read-char
-         peek-char eof-object? char-ready? write display newline write-char
-         load eval
-         *current-input-port* *current-output-port* *current-error-port*
-         error current-error-port file-exists? string-concatenate
-         open-input-string open-output-string get-output-string
-         sc-macro-transformer rsc-macro-transformer er-macro-transformer
-         identifier? identifier=? identifier->symbol make-syntactic-closure
-         syntax-quote
-         register-simple-type make-constructor make-type-predicate
-         make-getter make-setter
-         )))
-  (set! *modules*
-        (list (cons '(scheme) (make-module exports
-                                           (interaction-environment)
-                                           (list (cons 'export exports))))
-              (cons '(srfi 0) (make-module (list 'cond-expand)
-                                           (interaction-environment)
-                                           (list (list 'export 'cond-expand)))))))
+(define *modules*
+  (list (cons '(scheme) (make-module #f (interaction-environment) '()))
+        (cons '(srfi 0) (make-module (list 'cond-expand)
+                                     (interaction-environment)
+                                     (list (list 'export 'cond-expand))))))
 

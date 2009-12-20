@@ -1,9 +1,9 @@
 
 (define-module (chibi net)
-  (export sockaddr? addressinfo? get-address-info socket connect with-net-io
+  (export sockaddr? address-info? get-address-info socket connect with-net-io
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next)
-  (import (scheme))
+  (import-immutable (scheme))
   (import (chibi posix))
   (include-shared "net")
   (include "net.scm"))

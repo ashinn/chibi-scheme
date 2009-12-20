@@ -644,6 +644,12 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_context_symbols(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_SYMBOLS))
 #endif
 
+#if SEXP_USE_GLOBAL_TYPES
+#define sexp_context_types(ctx) sexp_type_specs
+#else
+#define sexp_context_types(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES))
+#endif
+
 #define sexp_context_top(x)     (sexp_stack_top(sexp_context_stack(x)))
 
 #define sexp_type_tag(x)               ((x)->value.type.tag)
@@ -683,6 +689,9 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 enum sexp_context_globals {
 #if ! SEXP_USE_GLOBAL_SYMBOLS
   SEXP_G_SYMBOLS,
+#endif
+#if ! SEXP_USE_GLOBAL_TYPES
+  SEXP_G_TYPES,
 #endif
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */

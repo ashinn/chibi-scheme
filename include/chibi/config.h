@@ -52,6 +52,9 @@
 /*   and are thus thread-safe and independant. */
 /* #define SEXP_USE_GLOBAL_HEAP 1 */
 
+/* uncomment this to make type definitions common to all contexts */
+/* #define SEXP_USE_GLOBAL_TYPES 1 */
+
 /* uncomment this to make the symbol table common to all contexts */
 /*   Will still be restricted to all contexts sharing the same */
 /*   heap, of course. */
@@ -192,6 +195,10 @@
 #else
 #define SEXP_USE_GLOBAL_HEAP 0
 #endif
+#endif
+
+#ifndef SEXP_USE_GLOBAL_TYPES
+#define SEXP_USE_GLOBAL_TYPES (! SEXP_USE_TYPE_DEFS)
 #endif
 
 #ifndef SEXP_USE_GLOBAL_SYMBOLS

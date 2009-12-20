@@ -766,7 +766,8 @@
                            (vector-ref
                             (eval '(load-module ',(car mod+imps)) *config-env*)
                             1)
-                           ',(cdr mod+imps))
+                           ',(cdr mod+imps)
+                           #f)
                          res))
                (error "couldn't find module" (car ls))))))))))
 

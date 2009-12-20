@@ -1,7 +1,180 @@
 #! chibi-scheme -s
 
+;; Simple C FFI.  "genstubs.scm file.stub" will read in the C function
+;; FFI definitions from file.stub and output the appropriate C
+;; wrappers into file.c.  You can then compile that file with:
+;;
+;;   cc -fPIC -shared file.c -lchibi-scheme
+;;
+;; (or using whatever flags are appropriate to generate shared libs on
+;; your platform) and then the generated .so file can be loaded
+;; directly with load, or portably using (include-shared "file") in a
+;; module definition (note that include-shared uses no suffix).
+
+;; The goal of this interface is to make access to C types and
+;; functions easy, without requiring the user to write any C code.
+;; That means the stubber needs to be intelligent about various C
+;; calling conventions and idioms, such as return values passed in
+;; actual parameters.  Writing C by hand is still possible, and
+;; several of the core modules provide C interfaces directly without
+;; using the stubber.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Struct Interface
+;;
+;; (define-c-struct struct-name
+;;   [predicate: predicate-name]
+;;   [constructor: constructor-name]
+;;   [finalizer: c_finalizer_name]
+;;   (type c_field_name getter-name setter-name) ...)
+;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Function Interface
+;;
+;; (define-c return-type name-spec (arg-type ...))
+;;
+;; where name-space is either a symbol name, or a list of
+;; (scheme-name c_name).  If just a symbol, the C name is taken
+;; to be the same with -'s replaced by _'s.
+;;
+;; arg-type is a type suitable for input validation and conversion.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Types
+;;
+;; Types
+;;
+;; Basic Types
+;;   void
+;;   boolean
+;;   char
+;;
+;; Integer Types:
+;;   short int long
+;;   unsigned-short unsigned-int unsigned-long size_t pid_t
+;;   time_t (in seconds, but using the chibi epoch of 2010/01/01)
+;;   errno (as a return type returns #f on error)
+;;
+;; Float Types:
+;;   float double long-double
+;;
+;; String Types:
+;;   string (a null-terminated char*)
+;;
+;; Port Types:
+;;   input-port output-port
+;;
+;; Struct Types:
+;;
+;; Struct types are by default just referred to by the bare
+;; struct-name from define-c-struct, and it is assumed you want a
+;; pointer to that type.  To refer to the full struct, use the struct
+;; modifier, as in (struct struct-name).
+
+;; Type modifiers
+;;
+;; Any type may also be written as a list of modifiers followed by the
+;; type itself.  The supported modifiers are:
+;;
+;; const: prepends the "const" C type modifier
+;;        * as a return or result parameter, makes non-immediates immutable
+;;
+;; free:  it's Scheme's responsibility to "free" this resource
+;;        * as a return or result parameter, registers the freep flag
+;;          this causes the type finalizer to be run when GCed
+;;
+;; maybe-null: this pointer type may be NULL
+;;        * as a result parameter, NULL is translated to #f
+;;          normally this would just return a wrapped NULL pointer
+;;        * as an input parameter, #f is translated to NULL
+;;          normally this would be a type error
+;;
+;; pointer: create a pointer to this type
+;;        * as a return parameter, wraps the result in a vanilla cpointer
+;;        * as a result parameter, boxes then unboxes the value
+;;
+;; struct: treat this struct type as a struct, not a pointer
+;;        * as an input parameter, dereferences the pointer
+;;        * as a type field, indicates a nested struct
+;;
+;; link:  add a gc link
+;;        * as a field getter, link to the parent object, so the
+;;          parent won't be GCed so long as we have a reference
+;;          to the child.  this behavior is automatic for nested
+;;          structs.
+;;
+;; result: return a result in this parameter
+;;        * if there are multiple results (including the return type),
+;;          they are all returned in a list
+;;        * if there are any result parameters, a return type
+;;          of errno returns #f on failure, and as eliminated
+;;          from the list of results otherwise
+;;
+;; (value <expr>): specify a fixed value
+;;        * as an input parameter, this parameter is not provided
+;;          in the Scheme API but always passed as <expr>
+;;
+;; (default <expr>): specify a default value
+;;        * as the final input parameter, makes the Scheme parameter
+;;          optional, defaulting to <expr>
+;;
+;; (array <type> [<length>])  an array type
+;;        * length must be specified for return and result parameters
+;;        * if specified, length can be any of
+;;        ** an integer, for a fixed size
+;;        ** the symbol null, indicating a NULL-terminated array
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define types '())
 (define funcs '())
+
+(define (make-type type free? const? null? ptr? struct? link? result? array value default? i)
+  (vector type free? const? null? ptr? struct? link? result? array value default? i))
+
+(define (with-parsed-type type proc . o)
+  (cond
+   ((vector? type)
+    (apply proc (vector->list type)))
+   (else
+    (let lp ((type type) (free? #f) (const? #f) (null-ptr? #f)
+             (ptr? #f) (struct? #f) (link? #f) (result? #f) (array #f)
+             (value #f) (default? #f))
+      (define (next) (if (null? (cddr type)) (cadr type) (cdr type)))
+      (case (and (pair? type) (car type))
+        ((free) (lp (next) #t const? null-ptr? ptr? struct? link? result? array value default?))
+        ((const) (lp (next) free? #t null-ptr? ptr? struct? link? result? array value default?))
+        ((maybe-null) (lp (next) free? const? #t ptr? struct? link? result? array value default?))
+        ((pointer) (lp (next) free? const? null-ptr? #t struct? link? result? array value default?))
+        ((struct) (lp (next) free? const? null-ptr? ptr? #t link? result? array value default?))
+        ((link) (lp (next) free? const? null-ptr? ptr? struct? #t result? array value default?))
+        ((result) (lp (next) free? const? null-ptr? ptr? struct? link? #t array value default?))
+        ((array) (lp (cadr type) free? const? null-ptr? ptr? struct? link? result? (if (pair? (cddr type)) (caddr type) #t) value default?))
+        ((value) (lp (cddr type) free? const? null-ptr? ptr? struct? link? result? array (cadr type) default?))
+        ((default) (lp (cddr type) free? const? null-ptr? ptr? struct? link? result? array (cadr type) #t))
+        (else (proc type free? const? null-ptr? ptr? struct? link? result? array value default? (and (pair? o) (car o)))))))))
+
+(define (parse-type type . o)
+  (with-parsed-type type make-type (and (pair? o) (car o))))
+(define (maybe-parse-type type)
+  (if (vector? type) type (parse-type type)))
+
+(define (type-base type) (vector-ref (maybe-parse-type type) 0))
+(define (type-free type) (vector-ref (maybe-parse-type type) 1))
+(define (type-const type) (vector-ref (maybe-parse-type type) 2))
+(define (type-null? type) (vector-ref (maybe-parse-type type) 3))
+(define (type-pointer? type) (vector-ref (maybe-parse-type type) 4))
+(define (type-struct? type) (vector-ref (maybe-parse-type type) 5))
+(define (type-link? type) (vector-ref (maybe-parse-type type) 6))
+(define (type-result? type) (vector-ref (maybe-parse-type type) 7))
+(define (type-array type) (vector-ref (maybe-parse-type type) 8))
+(define (type-value type) (vector-ref (maybe-parse-type type) 9))
+(define (type-default? type) (vector-ref (maybe-parse-type type) 10))
+(define (type-index type) (vector-ref (maybe-parse-type type) 11))
 
 (define (cat . args)
   (for-each (lambda (x) (if (procedure? x) (x) (display x))) args))
@@ -125,27 +298,10 @@
                        funcs))
      #f)))
 
-(define (with-parsed-type type proc)
-  (let lp ((type type) (free? #f) (const? #f) (null-ptr? #f)
-           (pointer? #f) (struct? #f) (link? #f) (result? #f))
-    (define (next) (if (null? (cddr type)) (cadr type) (cdr type)))
-    (case (and (pair? type) (car type))
-      ((free) (lp (next) #t const? null-ptr? pointer? struct? link? result?))
-      ((const) (lp (next) free? #t null-ptr? pointer? struct? link? result?))
-      ((maybe-null) (lp (next) free? const? #t pointer? struct? link? result?))
-      ((pointer) (lp (next) free? const? null-ptr? #t struct? link? result?))
-      ((struct) (lp (next) free? const? null-ptr? pointer? #t link? result?))
-      ((link) (lp (next) free? const? null-ptr? pointer? struct? #t result?))
-      ((result) (lp (next) free? const? null-ptr? pointer? struct? link? #t))
-      (else (proc type free? const? null-ptr? pointer? struct? link? result?)))))
-
-(define (get-base-type type)
-  (with-parsed-type type (lambda (x . args) x)))
-
 (define (c->scheme-converter type val . o)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cond
       ((eq? type 'void)
        (cat "((" val "), SEXP_VOID)"))
@@ -174,9 +330,9 @@
 (define (scheme->c-converter type val)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cond
-      ((eq? 'sexp type)
+      ((eq? type 'sexp)
        (cat val))
       ((eq? type 'time_t)
        (cat "sexp_uint_value(sexp_unshift_epoch(" val "))"))
@@ -200,7 +356,7 @@
 (define (type-predicate type)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cond
       ((int-type? type) "sexp_exact_integerp")
       ((float-type? type) "sexp_flonump")
@@ -210,7 +366,7 @@
 (define (type-name type)
   (with-parsed-type
    type
-   (lambda (type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cond
        ((int-type? type) "integer")
        ((float-type? type) "flonum")
@@ -219,19 +375,19 @@
 (define (type-c-name type)
   (with-parsed-type
    type
-   (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (base-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (let ((struct? (assq base-type types)))
        (string-append
         (if const? "const " "")
         (if struct? "struct " "")
         (string-replace (symbol->string base-type) #\- #\space)
         (if struct? "*" "")
-        (if pointer? "*" ""))))))
+        (if ptr? "*" ""))))))
 
 (define (check-type arg type)
   (with-parsed-type
    type
-   (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (base-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cond
       ((or (int-type? base-type) (float-type? base-type) (eq? 'string base-type))
        (cat (type-predicate type) "(" arg ")"))
@@ -252,7 +408,7 @@
 (define (validate-type arg type)
   (with-parsed-type
    type
-   (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (base-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cond
       ((or (int-type? base-type) (float-type? base-type) (eq? 'string base-type))
        (cat
@@ -289,6 +445,109 @@
             (lp (cdr ls) (cons (car ls) res)))
         (reverse res))))
 
+(define (with-parsed-func func proc)
+  (let* ((ret-type (parse-type (cadr func)))
+         (scheme-name (if (pair? (caddr func)) (caaddr func) (caddr func)))
+         (c-name (if (pair? (caddr func))
+                     (cadr (caddr func))
+                     (mangle scheme-name))))
+    (let lp ((ls (cadddr func))
+             (i 0)
+             (results '())
+             (c-args '())
+             (s-args '()))
+      (cond
+       ((null? ls)
+        (proc scheme-name c-name ret-type
+              (reverse results) (reverse c-args) (reverse s-args)))
+       (else
+        (let ((type (parse-type (car ls) i)))
+          (cond
+           ((type-result? type)
+            (lp (cdr ls) (+ i 1) (cons type results) (cons type c-args) s-args))
+           ((type-value type)
+            (lp (cdr ls) (+ i 1) results (cons type c-args) s-args))
+           (else
+            (lp (cdr ls) (+ i 1) results (cons type c-args) (cons type s-args)))
+           )))))))
+
+(define (write-parameters args)
+  (lambda () (for-each (lambda (a) (cat ", sexp arg" (type-index a))) args)))
+
+(define (write-locals func)
+  (with-parsed-func func
+    (lambda (scheme-name c-name ret-type results c-args scheme-args)
+      (cat "  sexp res;\n"))))
+
+(define (write-validators args)
+  (for-each
+   (lambda (a)
+     (validate-type (string-append "arg" (number->string (type-index arg))) a))
+   args))
+
+(define (write-temporaries func)
+  #f)
+
+(define (write-call ret-type c-name c-args)
+  (cat (if (eq? 'errno (type-base ret-type)) "  err = " "  res = "))
+  (c->scheme-converter
+   ret-type
+   (lambda ()
+     (cat c-name "(")
+     (for-each
+      (lambda (arg)
+        (if (> (type-index arg) 0) (cat ", "))
+        (cond
+         ((type-result? arg)
+          (cat (if (or (type-pointer? result) (type-array result)) "" "&")
+               "tmp"))
+         ((type-value arg)
+          => (lambda (x) (write x)))
+         (else
+          (scheme->c-converter arg (string-append "arg" (type-index arg))))))
+      c-args)
+     (cat ");\n"))))
+
+(define (write-result result)
+  (if (type-array (car result))
+      (cat "    sexp_gc_preserve1(ctx, res);\n"
+           "    res = SEXP_NULL;\n"
+           "    for (i=" (type-array (car result)) "-1; i>=0; i--) {\n"
+           "      sexp_push(ctx, res, SEXP_VOID);\n"
+           "      sexp_car(res) = "
+           (lambda () (c->scheme-converter (car result) "tmp[i]")) ";\n"
+           "    }\n"
+           "    sexp_gc_release1(ctx);\n")
+      (c->scheme-converter (car result) "tmp")))
+
+(define (write-results ret-type results)
+  (if (eq? 'errno (type-base ret-type))
+      (cat "  if (err) {\n"
+           "    res = SEXP_FALSE;\n"
+           "  } else {\n"))
+  (if (null? results)
+      (cat "    res = SEXP_TRUE;\n")
+      (for-each write-result results))
+  (if (eq? 'errno (type-base ret-type))
+      (cat "  }\n")))
+
+(define (write-cleanup func)
+  #f)
+
+(define (write-func func)
+  (with-parsed-func func
+    (lambda (scheme-name c-name ret-type results c-args scheme-args)
+      (cat "static sexp " scheme-name
+           "(sexp ctx" (write-parameters scheme-args) ") {\n"
+           (write-locals func)
+           (write-validators scheme-args)
+           (write-temporaries func)
+           (write-call ret-type c-name c-args)
+           (write-result ret-type results)
+           (write-cleanup func)
+           "  return res;\n"
+           "}\n\n"))))
+
 (define (write-func func)
   (let ((ret-type (cadr func))
         (result (get-func-result func))
@@ -298,9 +557,19 @@
       (cond ((pair? ls)
              (cat ", sexp arg" i)
              (lp (cdr ls) (+ i 1)))))
-    (cat ") {\n  sexp res;\n")
+    (cat ") {\n  "
+         (if (and result (type-array result)) "sexp_gc_var1(res)" "sexp res")
+         ";\n")
     (if (eq? 'errno ret-type) (cat "  int err;\n"))
-    (if result (cat "  " (type-c-name result) " tmp;\n"))
+    (if (type-array result) (cat "  int i;\n"))
+    (if result
+        (cat "  " (type-c-name result) (if (type-pointer? result) "*" "")
+             " tmp"
+             (if (type-array result)
+                 (with-output-to-string
+                   (lambda () (cat "[" (type-array result) "]")))
+                 "")
+             ";\n"))
     (let lp ((ls args) (i 0))
       (cond ((pair? ls)
              (validate-type (string-append "arg" (number->string i)) (car ls))
@@ -314,7 +583,11 @@
          (cond ((pair? ls)
                 (cat (cond
                       ((eq? (car ls) result)
-                       "&tmp")
+                       (lambda () (cat (if (or (type-pointer? result)
+                                           (type-array result))
+                                       ""
+                                       "&")
+                                   "tmp")))
                       ((and (pair? (car ls)) (memq 'value (car ls)))
                        => (lambda (x) (write (cadr x)) ""))
                       (else
@@ -328,9 +601,22 @@
     (cat ";\n")
     (if (eq? 'errno ret-type)
         (if result
-            (cat "  res = (err ? SEXP_FALSE : "
-                 (lambda () (c->scheme-converter result "tmp"))
-                 ");\n")
+            (if (type-array result)
+                (cat "  if (err) {\n"
+                     "    res = SEXP_FALSE;\n"
+                     "  } else {\n"
+                     "    sexp_gc_preserve1(ctx, res);\n"
+                     "    res = SEXP_NULL;\n"
+                     "    for (i=" (type-array result) "-1; i>=0; i--) {\n"
+                     "      sexp_push(ctx, res, SEXP_VOID);\n"
+                     "      sexp_car(res) = "
+                     (lambda () (c->scheme-converter result "tmp[i]")) ";\n"
+                     "    }\n"
+                     "    sexp_gc_release1(ctx);\n"
+                     "  }\n")
+                (cat "  res = (err ? SEXP_FALSE : "
+                     (lambda () (c->scheme-converter result "tmp"))
+                     ");\n"))
             (cat "  res = sexp_make_boolean(! err);\n")))
     (cat "  return res;\n"
          "}\n\n")))
@@ -345,7 +631,7 @@
         (type (cdr type)))
     (with-parsed-type
      type
-     (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
+     (lambda (base-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
        (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
             "  " (type-id-name name)
             " = sexp_unbox_fixnum(sexp_register_c_type(ctx, name, "
@@ -364,12 +650,12 @@
 
 (define (type-getter-name type name field)
   (string-append "sexp_" (x->string (type-name name))
-                 "_get_" (x->string (get-base-type (cadr field)))))
+                 "_get_" (x->string (type-base (cadr field)))))
 
 (define (write-type-getter type name field)
   (with-parsed-type
    (car field)
-   (lambda (field-type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (field-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cat "static sexp " (type-getter-name type name field)
           " (sexp ctx, sexp x) {\n"
           (lambda () (validate-type "x" name))
@@ -387,12 +673,12 @@
 
 (define (type-setter-name type name field)
   (string-append "sexp_" (x->string (type-name name))
-                 "_set_" (x->string (get-base-type (car field)))))
+                 "_set_" (x->string (type-base (car field)))))
 
 (define (write-type-setter type name field)
   (with-parsed-type
    (car field)
-   (lambda (field-type free? const? null-ptr? pointer? struct? link? result?)
+   (lambda (field-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
      (cat "static sexp " (type-setter-name type name field)
          " (sexp ctx, sexp x, sexp v) {\n"
          (lambda () (validate-type "x" name))
@@ -413,7 +699,7 @@
         (type (cdr type)))
     (with-parsed-type
      type
-     (lambda (base-type free? const? null-ptr? pointer? struct? link? result?)
+     (lambda (base-type free? const? null-ptr? ptr? struct? link? result? array value default? i)
        (cond
         ((memq 'finalizer: base-type)
          => (lambda (x)

@@ -1,7 +1,7 @@
 
 (define-module (srfi 9)
   (export define-record-type)
-  (import (scheme))
+  (import-immutable (scheme))
   (body
    (define-syntax define-record-type
      (er-macro-transformer
