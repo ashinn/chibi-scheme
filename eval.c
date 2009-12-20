@@ -2512,7 +2512,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
       tmp = sexp_make_env(ctx);
       if (! sexp_exceptionp(tmp)) {
         sexp_global(ctx, SEXP_G_CONFIG_ENV) = tmp;
-        sexp_env_copy(ctx, tmp, e, SEXP_FALSE);
+        sexp_env_parent(tmp) = e;
         op = sexp_load_module_file(ctx, sexp_config_file, tmp);
         if (sexp_exceptionp(op))
           sexp_print_exception(ctx, op, sexp_current_error_port(ctx));
