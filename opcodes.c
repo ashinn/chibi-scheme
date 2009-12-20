@@ -92,7 +92,7 @@ _FN1(SEXP_FIXNUM, "null-environment", 0, sexp_make_null_env),
 _FN1(SEXP_FIXNUM, "scheme-report-environment", 0, sexp_make_standard_env),
 _FN2OPTP(0, SEXP_ENV, "eval", (sexp)"*interaction-environment*", sexp_eval),
 _FN2OPTP(SEXP_STRING, SEXP_ENV, "load", (sexp)"*interaction-environment*", sexp_load),
-_FN3(SEXP_ENV, SEXP_ENV, "%env-copy!", 0, sexp_env_copy),
+_FN4(SEXP_ENV, SEXP_ENV, "%env-copy!", 0, sexp_env_copy),
 _FN2(SEXP_EXCEPTION, SEXP_OPORT, "print-exception", 0, sexp_print_exception),
 _FN1(SEXP_EXCEPTION, "exception-type", 0, sexp_exception_type_func),
 _FN5(SEXP_SYMBOL, SEXP_STRING, "make-exception", 0, sexp_make_exception),
@@ -144,6 +144,7 @@ _FN2OPTP(SEXP_PROCEDURE, SEXP_OPORT, "disasm", (sexp)"*current-error-port*", sex
 #endif
 _FN1(SEXP_STRING, "file-exists?", 0, sexp_file_exists_p),
 #if SEXP_USE_MODULES
+_FN1(SEXP_ENV, "env-exports", 0, sexp_env_exports),
 _FN1(SEXP_STRING, "find-module-file", 0, sexp_find_module_file_op),
 _FN2(SEXP_STRING, SEXP_ENV, "load-module-file", 0, sexp_load_module_file_op),
 _FN2(SEXP_STRING, SEXP_BOOLEAN, "add-module-directory", 0, sexp_add_module_directory),

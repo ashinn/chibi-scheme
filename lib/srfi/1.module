@@ -18,7 +18,7 @@
    lset<= lset= lset-adjoin lset-union lset-union! lset-intersection
    lset-intersection! lset-difference lset-difference! lset-xor lset-xor!
    lset-diff+intersection lset-diff+intersection!)
-  (import (scheme))
+  (import-immutable (scheme))
   (include "1/predicates.scm"
            "1/selectors.scm"
            "1/search.scm"

@@ -112,7 +112,7 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
-%.c: %.stub chibi-scheme$(EXE) $(GENSTUBS)
+%.c: %.stub $(GENSTUBS)
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)

@@ -36,56 +36,83 @@ static sexp sexp_compile_error (sexp ctx, char *message, sexp obj) {
 
 /********************** environment utilities ***************************/
 
-sexp sexp_env_cell (sexp e, sexp key) {
+static sexp sexp_env_cell_loc (sexp env, sexp key, sexp *varenv) {
   sexp ls;
 
   do {
-    for (ls=sexp_env_bindings(e); sexp_pairp(ls); ls=sexp_cdr(ls))
-      if (sexp_caar(ls) == key)
+    for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_cdr(ls))
+      if (sexp_caar(ls) == key) {
+        if (varenv) *varenv = env;
         return sexp_car(ls);
-    e = sexp_env_parent(e);
-  } while (e);
+      }
+    env = sexp_env_parent(env);
+  } while (env);
 
   return NULL;
 }
 
-static sexp sexp_env_cell_create (sexp ctx, sexp e, sexp key, sexp value) {
+sexp sexp_env_cell (sexp env, sexp key) {
+  return sexp_env_cell_loc(env, key, NULL);
+}
+
+static sexp sexp_env_cell_create_loc (sexp ctx, sexp env, sexp key,
+                                      sexp value, sexp *varenv) {
   sexp_gc_var1(cell);
-  cell = sexp_env_cell(e, key);
+  cell = sexp_env_cell_loc(env, key, varenv);
   if (! cell) {
     sexp_gc_preserve1(ctx, cell);
     cell = sexp_cons(ctx, key, value);
-    while (sexp_env_parent(e))
-      e = sexp_env_parent(e);
-    sexp_env_bindings(e) = sexp_cons(ctx, cell, sexp_env_bindings(e));
+    while (sexp_env_lambda(env) || sexp_env_syntactic_p(env))
+      env = sexp_env_parent(env);
+    sexp_env_bindings(env) = sexp_cons(ctx, cell, sexp_env_bindings(env));
+    if (varenv) *varenv = env;
     sexp_gc_release1(ctx);
   }
   return cell;
 }
 
-sexp sexp_env_global_ref (sexp e, sexp key, sexp dflt) {
+static sexp sexp_env_cell_create (sexp ctx, sexp env, sexp key, sexp value) {
+  return sexp_env_cell_create_loc(ctx, env, key, value, NULL);
+}
+
+sexp sexp_env_global_ref (sexp env, sexp key, sexp dflt) {
   sexp cell;
-  while (sexp_env_parent(e))
-    e = sexp_env_parent(e);
-  cell = sexp_env_cell(e, key);
+  while (sexp_env_parent(env))
+    env = sexp_env_parent(env);
+  cell = sexp_env_cell(env, key);
   return (cell ? sexp_cdr(cell) : dflt);
 }
 
-void sexp_env_define (sexp ctx, sexp e, sexp key, sexp value) {
-  sexp cell = sexp_assq(ctx, key, sexp_env_bindings(e));
+sexp sexp_env_define (sexp ctx, sexp env, sexp key, sexp value) {
+  sexp cell = sexp_assq(ctx, key, sexp_env_bindings(env)), res=SEXP_VOID;
   sexp_gc_var1(tmp);
-  if (sexp_immutablep(e)) {
-    fprintf(stderr, "ERROR: immutable environment\n");
+  if (sexp_immutablep(env)) {
+    res = sexp_type_exception(ctx, "immutable binding", key);
   } else {
     sexp_gc_preserve1(ctx, tmp);
-    if (sexp_truep(cell))
-      sexp_cdr(cell) = value;
-    else {
+    if (sexp_truep(cell)) {
+      if (sexp_immutablep(cell))
+        res = sexp_type_exception(ctx, "immutable binding", key);
+      else
+        sexp_cdr(cell) = value;
+    } else {
       tmp = sexp_cons(ctx, key, value);
-      sexp_push(ctx, sexp_env_bindings(e), tmp);
+      sexp_push(ctx, sexp_env_bindings(env), tmp);
     }
     sexp_gc_release1(ctx);
   }
+  return res;
+}
+
+sexp sexp_env_exports (sexp ctx, sexp env) {
+  sexp ls;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = SEXP_NULL;
+  for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_cdr(ls))
+    sexp_push(ctx, res, sexp_caar(ls));
+  sexp_gc_release1(ctx);
+  return res;
 }
 
 sexp sexp_extend_env (sexp ctx, sexp env, sexp vars, sexp value) {
@@ -430,11 +457,11 @@ static sexp analyze_seq (sexp ctx, sexp ls) {
   return res;
 }
 
-static sexp analyze_var_ref (sexp ctx, sexp x) {
+static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
   sexp env = sexp_context_env(ctx), res;
   sexp_gc_var1(cell);
   sexp_gc_preserve1(ctx, cell);
-  cell = sexp_env_cell(env, x);
+  cell = sexp_env_cell_loc(env, x, varenv);
   if (! cell) {
     if (sexp_synclop(x)) {
       if (sexp_not(sexp_memq(ctx, sexp_synclo_expr(x), sexp_context_fv(ctx)))
@@ -442,7 +469,7 @@ static sexp analyze_var_ref (sexp ctx, sexp x) {
         env = sexp_synclo_env(x);
       x = sexp_synclo_expr(x);
     }
-    cell = sexp_env_cell_create(ctx, env, x, SEXP_UNDEF);
+    cell = sexp_env_cell_create_loc(ctx, env, x, SEXP_UNDEF, varenv);
   }
   if (sexp_macrop(sexp_cdr(cell)) || sexp_corep(sexp_cdr(cell)))
     res = sexp_compile_error(ctx, "invalid use of syntax as value", x);
@@ -453,14 +480,14 @@ static sexp analyze_var_ref (sexp ctx, sexp x) {
 }
 
 static sexp analyze_set (sexp ctx, sexp x) {
-  sexp res;
+  sexp res, varenv;
   sexp_gc_var2(ref, value);
   sexp_gc_preserve2(ctx, ref, value);
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x))
          && sexp_nullp(sexp_cdddr(x)) && sexp_idp(sexp_cadr(x)))) {
     res = sexp_compile_error(ctx, "bad set! syntax", x);
   } else {
-    ref = analyze_var_ref(ctx, sexp_cadr(x));
+    ref = analyze_var_ref(ctx, sexp_cadr(x), &varenv);
     if (sexp_lambdap(sexp_ref_loc(ref)))
       sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
     value = analyze(ctx, sexp_caddr(x));
@@ -468,6 +495,9 @@ static sexp analyze_set (sexp ctx, sexp x) {
       res = ref;
     else if (sexp_exceptionp(value))
       res = value;
+    else if (sexp_immutablep(sexp_ref_cell(ref))
+             || (varenv && sexp_immutablep(varenv)))
+      res = sexp_compile_error(ctx, "immutable binding", sexp_cadr(x));
     else
       res = sexp_make_set(ctx, ref, value);
   }
@@ -511,7 +541,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
     }
     if (sexp_exceptionp(value)) sexp_return(res, value);
     sexp_push(ctx2, defs,
-              sexp_make_set(ctx2, analyze_var_ref(ctx2, name), value));
+              sexp_make_set(ctx2, analyze_var_ref(ctx2, name, NULL), value));
   }
   if (sexp_pairp(defs)) {
     if (! sexp_seqp(body)) {
@@ -546,7 +576,7 @@ static sexp analyze_if (sexp ctx, sexp x) {
 }
 
 static sexp analyze_define (sexp ctx, sexp x) {
-  sexp name, res;
+  sexp name, res, varenv;
   sexp_gc_var4(ref, value, tmp, env);
   sexp_gc_preserve4(ctx, ref, value, tmp, env);
   env = sexp_context_env(ctx);
@@ -574,11 +604,13 @@ static sexp analyze_define (sexp ctx, sexp x) {
         value = analyze_lambda(ctx, tmp);
       } else
         value = analyze(ctx, sexp_caddr(x));
-      ref = analyze_var_ref(ctx, name);
+      ref = analyze_var_ref(ctx, name, &varenv);
       if (sexp_exceptionp(ref))
         res = ref;
       else if (sexp_exceptionp(value))
         res = value;
+      else if (varenv && sexp_immutablep(varenv))
+        res = sexp_compile_error(ctx, "immutable binding", name);
       else
         res = sexp_make_set(ctx, ref, value);
     }
@@ -736,15 +768,13 @@ static sexp analyze (sexp ctx, sexp object) {
       res = sexp_compile_error(ctx, "invalid operand in application", x);
     }
   } else if (sexp_idp(x)) {
-    res = analyze_var_ref(ctx, x);
+    res = analyze_var_ref(ctx, x, NULL);
   } else if (sexp_synclop(x)) {
     tmp = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
     sexp_context_env(tmp) = sexp_synclo_env(x);
     sexp_context_fv(tmp) = sexp_append2(tmp,
                                         sexp_synclo_free_vars(x),
                                         sexp_context_fv(tmp));
-    if (sexp_pairp(sexp_synclo_free_vars(x)))
-      sexp_debug(ctx, "free vars: ", sexp_context_fv(tmp));
     x = sexp_synclo_expr(x);
     res = analyze(tmp, x);
   } else {
@@ -2535,13 +2565,21 @@ sexp sexp_make_standard_env (sexp ctx, sexp version) {
   return env;
 }
 
-sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls) {
+sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls, sexp immutp) {
   sexp oldname, newname, value, out;
   if (! sexp_envp(to)) to = sexp_context_env(ctx);
   if (! sexp_envp(from)) from = sexp_context_env(ctx);
   if (sexp_not(ls)) {
-    for (ls=sexp_env_bindings(from); sexp_pairp(ls); ls=sexp_cdr(ls))
-      sexp_env_define(ctx, to, sexp_caar(ls), sexp_cdar(ls));
+    if (sexp_truep(immutp)) {
+      value = sexp_make_env(ctx);
+      sexp_env_parent(value) = sexp_env_parent(to);
+      sexp_env_parent(to) = value;
+      sexp_immutablep(value) = 1;
+      sexp_env_bindings(value) = sexp_env_bindings(from);
+    } else {
+      for (ls=sexp_env_bindings(from); sexp_pairp(ls); ls=sexp_cdr(ls))
+        sexp_env_define(ctx, to, sexp_caar(ls), sexp_cdar(ls));
+    }
   } else {
     for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
       if (sexp_pairp(sexp_car(ls))) {
