@@ -1,6 +1,8 @@
 
 #include <chibi/eval.h>
 
+#define SEXP_HEAP_VECTOR_DEPTH 1
+
 #if SEXP_64_BIT
 #define sexp_heap_align(n) sexp_align(n, 5)
 #else
@@ -10,14 +12,54 @@
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
 extern sexp_uint_t sexp_allocated_bytes (sexp x);
 
-static sexp sexp_heap_stats (sexp ctx) {
+static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
+  int i;
+  if ((!sexp_pointerp(x)) || sexp_symbolp(x) || sexp_stringp(x)
+      || sexp_flonump(x) || sexp_bignump(x)) {
+    sexp_write(ctx, x, out);
+  } else if (depth <= 0) {
+    goto print_name;
+  } else if (sexp_synclop(x)) {
+    sexp_write_string(ctx, "#<sc ", out);
+    sexp_print_simple(ctx, sexp_synclo_expr(x), out, depth);
+    sexp_write_string(ctx, ">", out);
+  } else if (sexp_pairp(x)) {
+    sexp_write_char(ctx, '(', out);
+    sexp_print_simple(ctx, sexp_car(x), out, depth-1);
+    sexp_write_string(ctx, " . ", out);
+    sexp_print_simple(ctx, sexp_cdr(x), out, depth-1);
+    sexp_write_char(ctx, ')', out);
+  } else if (sexp_vectorp(x)) {
+    sexp_write_string(ctx, "#(", out);
+    for (i=0; i<SEXP_HEAP_VECTOR_DEPTH && i<sexp_vector_length(x); i++) {
+      if (i>0)
+        sexp_write_char(ctx, ' ', out);
+      sexp_print_simple(ctx, sexp_vector_ref(x, i), out, depth-1);
+    }
+    if (i<sexp_vector_length(x))
+      sexp_write_string(ctx, " ...", out);
+    sexp_write_char(ctx, ')', out);
+  } else {
+  print_name:
+    sexp_write_string(ctx, "#<", out);
+    sexp_write_string(ctx, sexp_object_type_name(x), out);
+    sexp_write_string(ctx, ">", out);
+  }
+}
+
+static sexp sexp_heap_walk (sexp ctx, int depth, int printp) {
   size_t freed;
   sexp_uint_t stats[256], hi_type=0, i;
   sexp_heap h = sexp_context_heap(ctx);
-  sexp p;
+  sexp p, out=SEXP_FALSE;
   sexp_free_list q, r;
   char *end;
   sexp_gc_var3(res, tmp, name);
+
+  if (printp)
+    out = sexp_env_global_ref(sexp_context_env(ctx),
+                              sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL),
+                              SEXP_FALSE);
 
   /* run gc once to remove unused variables */
   sexp_gc(ctx, &freed);
@@ -38,7 +80,11 @@ static sexp sexp_heap_stats (sexp ctx) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      /* otherwise increment the stat and continue */
+      /* otherwise maybe print, then increment the stat and continue */
+      if (sexp_oportp(out)) {
+        sexp_print_simple(ctx, p, out, depth);
+        sexp_write_char(ctx, '\n', out);
+      }
       stats[sexp_pointer_tag(p)]++;
       if (sexp_pointer_tag(p) > hi_type)
         hi_type = sexp_pointer_tag(p);
@@ -59,8 +105,19 @@ static sexp sexp_heap_stats (sexp ctx) {
   return res;
 }
 
+static sexp sexp_heap_stats (sexp ctx) {
+  return sexp_heap_walk(ctx, 0, 0);
+}
+
+static sexp sexp_heap_dump (sexp ctx, sexp depth) {
+  if (! sexp_fixnump(depth) || (sexp_unbox_fixnum(depth) < 0))
+    return sexp_type_exception(ctx, "bad heap-dump depth", depth);
+  return sexp_heap_walk(ctx, sexp_unbox_fixnum(depth), 1);
+}
+
 sexp sexp_init_library (sexp ctx, sexp env) {
   sexp_define_foreign(ctx, env, "heap-stats", 0, sexp_heap_stats);
+  sexp_define_foreign_opt(ctx, env, "heap-dump", 1, sexp_heap_dump, SEXP_ONE);
   return SEXP_VOID;
 }
 
