@@ -837,8 +837,12 @@ sexp sexp_get_output_string (sexp ctx, sexp port) {
 #else
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
-  FILE *in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
-  sexp res = sexp_make_input_port(ctx, in, SEXP_FALSE);
+  FILE *in;
+  sexp res;
+  if (! sexp_stringp(str))
+    return sexp_type_exception(ctx, "open-input-string: not a string", str);
+  in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
+  res = sexp_make_input_port(ctx, in, SEXP_FALSE);
   sexp_port_cookie(res) = str;  /* for gc preservation */
   return res;
 }
@@ -916,7 +920,10 @@ sexp sexp_buffered_flush (sexp ctx, sexp p) {
 }
 
 sexp sexp_make_input_string_port (sexp ctx, sexp str) {
-  sexp res = sexp_make_input_port(ctx, NULL, SEXP_FALSE);
+  sexp res;
+  if (! sexp_stringp(str))
+    return sexp_type_exception(ctx, "open-input-string: not a string", str);
+  res = sexp_make_input_port(ctx, NULL, SEXP_FALSE);
   if (sexp_exceptionp(res)) return res;
   sexp_port_cookie(res) = str;
   sexp_port_buf(res) = sexp_string_data(str);

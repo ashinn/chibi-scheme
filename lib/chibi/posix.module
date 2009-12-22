@@ -4,7 +4,7 @@
           delete-file link-file symbolic-link-file rename-file
           directory-files create-directory delete-directory
           current-seconds
-          exit
+          waitpid exit
           )
   (import-immutable (scheme))
   (include-shared "posix")
