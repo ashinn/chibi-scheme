@@ -25,7 +25,7 @@
 (define-c errno (delete-directory "rmdir") (string))
 
 (define-c (free DIR) opendir (string))
-(define-c dirent readdir (DIR))
+(define-c dirent readdir ((link DIR)))
 
 (define-c int (duplicate-fd "dup") (int))
 
