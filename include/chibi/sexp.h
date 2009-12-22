@@ -823,11 +823,9 @@ SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
 SEXP_API sexp sexp_register_c_type (sexp ctx, sexp name);
 SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp obj);
 #define sexp_register_c_type(ctx, name, finalizer)                      \
-  sexp_register_type(ctx, name, sexp_make_fixnum(0), sexp_make_fixnum(0), \
-                     sexp_make_fixnum(0), sexp_make_fixnum(0),          \
-                     sexp_make_fixnum(0),                               \
-                     sexp_make_fixnum(sexp_sizeof(cpointer)),           \
-                     sexp_make_fixnum(0), sexp_make_fixnum(0), finalizer)
+  sexp_register_type(ctx, name, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, \
+                     SEXP_ZERO, sexp_make_fixnum(sexp_sizeof(cpointer)), \
+                     SEXP_ZERO, SEXP_ZERO, finalizer)
 #endif
 
 #define sexp_current_error_port(ctx) sexp_env_global_ref(sexp_context_env(ctx),sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL),SEXP_FALSE)

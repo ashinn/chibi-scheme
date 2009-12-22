@@ -1,5 +1,6 @@
 
 (c-system-include "sys/types.h")
+(c-system-include "sys/wait.h")
 (c-system-include "time.h")
 (c-system-include "unistd.h")
 (c-system-include "dirent.h")
@@ -18,7 +19,8 @@
 (define-c errno (symbolic-link-file "symlink") (string string))
 (define-c errno (rename-file "rename") (string string))
 
-;;(define-c string (current-directory "getcwd") ((value (array char)) int))
+(define-c non-null-string (current-directory "getcwd")
+  ((result (array char (auto-expand arg1))) (value 256 int)))
 (define-c errno (create-directory "mkdir") (string int))
 (define-c errno (delete-directory "rmdir") (string))
 
@@ -28,9 +30,9 @@
 (define-c int (duplicate-fd "dup") (int))
 
 (define-c pid_t fork ())
-;; (define-c pid_t wait ((result pointer int)))
+(define-c pid_t waitpid (int (result int) int))
 (define-c void exit (int))
-(define-c int (execute execvp) (string (array string null)))
+(define-c int (execute execvp) (string (array string)))
 
 (define-c errno pipe ((result (array int 2))))
 
