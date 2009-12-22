@@ -683,7 +683,7 @@
                ((type-array ret-type) "  tmp = ")
                (else "  res = ")))
     ((if (type-array ret-type)
-         (lambda (t f) (f))
+         (lambda (t f x) (f))
          c->scheme-converter)
      ret-type
      (lambda ()
@@ -709,7 +709,11 @@
              arg
              (string-append "arg" (type-index-string arg))))))
         c-args)
-       (cat ")")))
+       (cat ")"))
+     (cond
+      ((any type-link? (func-c-args func))
+       => (lambda (a) (string-append "arg" (type-index-string a))))
+      (else #f)))
     (cat ";\n")
     (if (type-array ret-type)
         (write-result ret-type))))
