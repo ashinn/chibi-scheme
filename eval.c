@@ -75,12 +75,15 @@ static sexp sexp_env_cell_create (sexp ctx, sexp env, sexp key, sexp value) {
   return sexp_env_cell_create_loc(ctx, env, key, value, NULL);
 }
 
-sexp sexp_env_global_ref (sexp env, sexp key, sexp dflt) {
-  sexp cell;
-  while (sexp_env_parent(env))
-    env = sexp_env_parent(env);
-  cell = sexp_env_cell(env, key);
+sexp sexp_env_ref (sexp env, sexp key, sexp dflt) {
+  sexp cell = sexp_env_cell(env, key);
   return (cell ? sexp_cdr(cell) : dflt);
+}
+
+sexp sexp_env_global_ref (sexp env, sexp key, sexp dflt) {
+  while (sexp_env_lambda(env) && sexp_env_parent(env))
+    env = sexp_env_parent(env);
+  return sexp_env_ref(env, key, dflt);
 }
 
 sexp sexp_env_define (sexp ctx, sexp env, sexp key, sexp value) {
@@ -2587,7 +2590,7 @@ sexp sexp_env_copy (sexp ctx, sexp to, sexp from, sexp ls, sexp immutp) {
       } else {
         newname = oldname = sexp_car(ls);
       }
-      value = sexp_env_global_ref(from, oldname, SEXP_UNDEF);
+      value = sexp_env_ref(from, oldname, SEXP_UNDEF);
       if (value != SEXP_UNDEF) {
         sexp_env_define(ctx, to, newname, value);
 #if SEXP_USE_WARN_UNDEFS
