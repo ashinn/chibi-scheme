@@ -140,6 +140,7 @@ SEXP_API sexp sexp_extend_env (sexp context, sexp env, sexp vars, sexp value);
 SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls, sexp immutp);
 SEXP_API sexp sexp_env_define (sexp context, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_env_cell (sexp env, sexp sym);
+SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);

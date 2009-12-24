@@ -5,12 +5,13 @@
 (define *this-module* '())
 
 (define (make-module exports env meta) (vector exports env meta))
+(define (%module-exports mod) (vector-ref mod 0))
 (define (module-env mod) (vector-ref mod 1))
 (define (module-meta-data mod) (vector-ref mod 2))
 (define (module-env-set! mod env) (vector-set! mod 1 env))
 
 (define (module-exports mod)
-  (or (vector-ref mod 0) (env-exports (module-env mod))))
+  (or (%module-exports mod) (env-exports (module-env mod))))
 
 (define (module-name->strings ls res)
   (if (null? ls)
@@ -88,7 +89,7 @@
                          (if (pair? i) (cdr i) i)))
                  (cdr mod-name+imports)))))
    ((find-module x)
-    => (lambda (mod) (cons x #f)))
+    => (lambda (mod) (cons x (%module-exports mod))))
    (else
     (error "couldn't find import" x))))
 
