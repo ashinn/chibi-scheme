@@ -9,11 +9,8 @@
    - State "DONE"       [2009-04-09 Thu 14:45]
 ** TODO native x86 backend
 ** TODO fasl/image files
-** TODO shared stack on EVAL
-   Arguably a bug, at the moment we create a new stack on every EVAL
-   (which includes every macro definition, and in particular every
-   call to let-syntax that a macro may expand into - I'm looking at
-   you, (chibi loop)).
+** DONE shared stack on EVAL
+   - State "DONE"       [2009-12-26 Sat 08:22]
 
 * compiler optimizations
 ** DONE constant folding
