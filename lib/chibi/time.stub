@@ -29,7 +29,7 @@
   ((result timeval) (result timezone)))
 
 (define-c errno (set-time-of-day! "settimeofday")
-  ((maybe-null timeval) (maybe-null default NULL timezone)))
+  (timeval (maybe-null default NULL timezone)))
 
 (define-c non-null-pointer (seconds->time "localtime_r")
   ((pointer time_t) (result tm)))
