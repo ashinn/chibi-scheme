@@ -141,6 +141,9 @@ test-basic: chibi-scheme$(EXE)
 test-numbers: all
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
+test-hash: all
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/hash-tests.scm
+
 test-match: all
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/match-tests.scm
 
