@@ -63,7 +63,7 @@ _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "opcode?", sexp_make
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "input-port?", sexp_make_fixnum(SEXP_IPORT), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "output-port?", sexp_make_fixnum(SEXP_OPORT), 0),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_APPLY1, 2, 0, SEXP_PROCEDURE, SEXP_PAIR, 0, "apply1", 0, NULL),
-_OP(SEXP_OPC_GENERIC, SEXP_OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "call-with-current-continuation", 0, NULL),
+_OP(SEXP_OPC_GENERIC, SEXP_OP_CALLCC, 1, SEXP_PROCEDURE, 0, 0, 0, "%call/cc", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_RAISE, 1, SEXP_STRING, 0, 0, 0, "raise", 0, NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_WRITE_CHAR, 1, 3, 0, SEXP_OPORT, 0, "write-char", (sexp)"*current-output-port*", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_NEWLINE, 0, 3, 0, SEXP_OPORT, 0, "newline", (sexp)"*current-output-port*", NULL),
