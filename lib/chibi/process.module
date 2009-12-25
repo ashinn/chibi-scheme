@@ -1,0 +1,17 @@
+
+(define-module (chibi process)
+  (export exit sleep fork kill execute waitpid
+          set-signal-action! make-signal-set signal-set-contains?
+          signal-set-fill! signal-set-add! signal-set-delete!
+          current-signal-mask
+          signal-mask-block! signal-mask-unblock! signal-mask-set!
+          signal/hang-up    signal/interrupt   signal/quit
+          signal/illegal    signal/abort       signal/fpe
+          signal/kill       signal/segv        signal/pipe
+          signal/alarm      signal/term        signal/user1
+          signal/user2      signal/child       signal/continue
+          signal/stop       signal/tty-stop    signal/tty-input
+          signal/tty-output)
+  (import-immutable (scheme))
+  (include-shared "process"))
+

@@ -139,6 +139,7 @@
 
 (define *types* '())
 (define *funcs* '())
+(define *consts* '())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
@@ -202,10 +203,12 @@
 ;; type predicates
 
 (define (signed-int-type? type)
-  (memq type '(signed-char short int long)))
+  (memq type '(signed-char short int long boolean)))
 
 (define (unsigned-int-type? type)
-  (memq type '(unsigned-char unsigned-short unsigned-int unsigned-long size_t pid_t)))
+  (memq type '(unsigned-char unsigned-short unsigned-int unsigned-long
+               size_t off_t time_t clock_t dev_t ino_t mode_t nlink_t
+               uid_t gid_t pid_t blksize_t blkcnt_t sigval_t)))
 
 (define (int-type? type)
   (or (signed-int-type? type) (unsigned-int-type? type)))
@@ -214,13 +217,22 @@
   (memq type '(float double long-double long-long-double)))
 
 (define (string-type? type)
-  (memq type '(char* string env-string non-null-string)))
+  (or (memq type '(char* string env-string non-null-string))
+      (and (vector? type)
+           (type-array type)
+           (not (type-pointer? type))
+           (eq? 'char (type-base type)))))
 
 (define (error-type? type)
-  (memq type '(errno non-null-string)))
+  (memq type '(errno non-null-string non-null-pointer)))
 
 (define (array-type? type)
   (and (type-array type) (not (eq? 'char (type-base type)))))
+
+(define (basic-type? type)
+  (let ((type (parse-type type)))
+    (and (not (type-array type))
+         (not (assq (type-base type) *types*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; function objects
@@ -250,7 +262,7 @@
           (cond
            ((type-result? type)
             (lp (cdr ls) (+ i 1) (cons type results) (cons type c-args) s-args))
-           ((type-value type)
+           ((and (type-value type) (not (type-default? type)))
             (lp (cdr ls) (+ i 1) results (cons type c-args) s-args))
            (else
             (lp (cdr ls) (+ i 1) results (cons type c-args) (cons type s-args)))
@@ -303,10 +315,8 @@
       (define (collect) (if (= i from) res (cons (substring str from i) res)))
       (cond
        ((>= i len) (string-concatenate-reverse (collect)))
-       ((eqv? c (string-ref str i))
-        (lp (+ i 1) (+ i 1) (cons r (collect))))
-       (else
-        (lp from (+ i 1) res))))))
+       ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (cons r (collect))))
+       (else (lp from (+ i 1) res))))))
 
 (define (string-scan c str . o)
   (let ((limit (string-length str)))
@@ -349,9 +359,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; naming
 
+(define (c-char? c)
+  (or (char-alphabetic? c) (char-numeric? c) (memv c '(#\_ #\- #\! #\?))))
+
+(define (c-escape str)
+  (let ((len (string-length str)))
+    (let lp ((from 0) (i 0) (res '()))
+      (define (collect) (if (= i from) res (cons (substring str from i) res)))
+      (cond
+       ((>= i len) (string-concatenate-reverse (collect)))
+       ((not (c-char? (string-ref str i))) (lp (+ i 1) (+ i 1) (cons "_" (cons (number->string (char->integer (string-ref str i)) 16) (collect)))))
+       (else (lp from (+ i 1) res))))))
+
 (define (mangle x)
   (string-replace
-   (string-replace (string-replace (x->string x) #\- "_") #\? "_p")
+   (string-replace (string-replace (c-escape (x->string x)) #\- "_") #\? "_p")
    #\! "_x"))
 
 (define (generate-stub-name sym)
@@ -367,26 +389,50 @@
   (apply cat args)
   (newline))
 
+(define (c-include header)
+  (cat "\n#include \"" header "\"\n"))
+
 (define (c-system-include header)
   (cat "\n#include <" header ">\n"))
+
+(define (parse-struct-like ls)
+  (map (lambda (x) (if (pair? x) (cons (parse-type (car x)) (cdr x)) x)) ls))
+
+(define-syntax define-struct-like
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (set! *types*
+           `((,(cadr expr)
+              ,@(parse-struct-like (cddr expr)))
+             ,@*types*))
+     `(cat "\nstatic sexp_uint_t " ,(type-id-name (cadr expr)) ";\n"))))
 
 (define-syntax define-c-struct
   (er-macro-transformer
    (lambda (expr rename compare)
-     (set! *types*
-           (cons (map (lambda (x)
-                        (if (pair? x)
-                            (cons (parse-type (car x)) (cdr x))
-                            x))
-                      (cdr expr))
-                 *types*))
-     `(cat "\nstatic sexp_uint_t " ,(type-id-name (cadr expr)) ";\n"))))
+     `(define-struct-like ,(cadr expr) type: struct ,@(cddr expr)))))
+
+(define-syntax define-c-class
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(define-struct-like ,(cadr expr) type: class ,@(cddr expr)))))
+
+(define-syntax define-c-type
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(define-struct-like ,(cadr expr) ,@(cddr expr)))))
 
 (define-syntax define-c
   (er-macro-transformer
    (lambda (expr rename compare)
      (set! *funcs* (cons (parse-func (cdr expr)) *funcs*))
      #f)))
+
+(define-syntax define-c-const
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (set! *consts*
+           (cons (cons (parse-type (cadr expr)) (cddr expr)) *consts*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C code generation
@@ -398,6 +444,8 @@
       (cat "((" val "), SEXP_VOID)"))
      ((or (eq? base 'sexp) (error-type? base))
       (cat val))
+     ((eq? base 'boolean)
+      (cat "sexp_make_boolean(" val ")"))
      ((eq? base 'time_t)
       (cat "sexp_make_integer(ctx, sexp_shift_epoch(" val "))"))
      ((int-type? base)
@@ -422,7 +470,11 @@
          (ctype
           (cat "sexp_make_cpointer(ctx, "  (type-id-name base) ", "
                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
-               (if (type-free? type) 1 0) ")"))
+               (if (or (type-free? type)
+                       (and (type-result? type) (not (basic-type? type))))
+                   1
+                   0)
+               ")"))
          (else
           (error "unknown type" base))))))))
 
@@ -432,8 +484,10 @@
     (cond
      ((eq? base 'sexp)
       (cat val))
+     ((eq? base 'boolean)
+      (cat "sexp_truep(" val ")"))
      ((eq? base 'time_t)
-      (cat "sexp_uint_value(sexp_unshift_epoch(" val "))"))
+      (cat "sexp_unshift_epoch(sexp_uint_value(" val "))"))
      ((signed-int-type? base)
       (cat "sexp_sint_value(" val ")"))
      ((unsigned-int-type? base)
@@ -462,6 +516,7 @@
      ((float-type? base) "sexp_flonump")
      ((string-type? base) "sexp_stringp")
      ((eq? base 'char) "sexp_charp")
+     ((eq? base 'boolean) "sexp_booleanp")
      (else #f))))
 
 (define (type-name type)
@@ -469,6 +524,7 @@
    (cond
     ((int-type? base) "integer")
     ((float-type? base) "flonum")
+    ((eq? 'boolean base) "int")
     (else base))))
 
 (define (base-type-c-name base)
@@ -479,12 +535,15 @@
 (define (type-c-name type)
   (let* ((type (parse-type type))
          (base (type-base type))
-         (struct? (assq base *types*)))
+         (type-spec (assq base *types*))
+         (struct-type
+          (cond ((and type-spec (memq 'type: type-spec)) => cadr)
+                (else #f))))
     (string-append
      (if (type-const? type) "const " "")
-     (if struct? "struct " "")
+     (if struct-type (string-append (symbol->string struct-type) " ") "")
      (string-replace (base-type-c-name base) #\- " ")
-     (if struct? "*" "")
+     (if type-spec "*" "")
      (if (type-pointer? type) "*" ""))))
 
 (define (check-type arg type)
@@ -515,7 +574,7 @@
          (array (type-array type))
          (base-type (type-base type)))
     (cond
-     (array
+     ((and array (not (string-type? type)))
       (cond
        ((number? array)
         (cat "  if (!sexp_listp(ctx, " arg ")"
@@ -544,9 +603,11 @@
          "  if (! " (lambda () (check-type arg type)) ")\n"
          "    return sexp_type_exception(ctx, \"not "
          (definite-article (type-name type)) "\", " arg ");\n"))
+       ((eq? 'sexp base-type))
+       ((string-type? type)
+        (write-validator arg 'string))
        (else
-        (if (not (eq? 'sexp (type-base type)))
-            (display "WARNING: don't know how to validate: " (current-error-port)))
+        (display "WARNING: don't know how to validate: " (current-error-port))
         (write type (current-error-port))
         (newline (current-error-port))
         (write type)))))))
@@ -588,7 +649,9 @@
          (gc-vars (if preserve-res? (cons "res" gc-vars) gc-vars))
          (sexps (if preserve-res? '() '("res")))
          (num-gc-vars (length gc-vars))
-         (ints (if (or return-res? (eq? 'non-null-string (type-base ret-type)))
+         (ints (if (or return-res?
+                       (memq (type-base ret-type)
+                             '(non-null-string non-null-pointer)))
                    '()
                    '("err")))
          (ints (if (or (array-type? ret-type)
@@ -596,8 +659,9 @@
                        (any array-type? scheme-args))
                    (cons "i" ints)
                    ints)))
-    (if(eq? 'non-null-string (type-base ret-type))
-        (cat "  char *err;\n"))
+    (case (type-base ret-type)
+      ((non-null-string) (cat "  char *err;\n"))
+      ((non-null-pointer) (cat "  void *err;\n")))
     (cond
      ((pair? ints)
       (cat "  int " (car ints))
@@ -624,6 +688,13 @@
      (append (if (type-array ret-type) (list ret-type) '())
              results
              (remove type-result? (filter type-array scheme-args))))
+    (for-each
+     (lambda (arg)
+       (cond
+        ((and (type-pointer? arg) (basic-type? arg))
+         (cat "  " (type-c-name (type-base arg))
+              " tmp" (type-index arg) ";\n"))))
+     scheme-args)
     (cond
      ((pair? sexps)
       (cat "  sexp " (car sexps))
@@ -657,7 +728,7 @@
               ";\n"
               "  tmp" (type-index a) " = buf" (type-index a) ";\n"))))
      (cond
-      ((and (not (type-result? a)) (type-array a))
+      ((and (not (type-result? a)) (type-array a) (not (string-type? a)))
        (if (not (number? (type-array a)))
            (cat "  tmp" (type-index a)
                 " = (" (type-c-name (type-base a)) "*) malloc("
@@ -670,8 +741,44 @@
             ";\n"
             "  }\n")
        (if (not (number? (type-array a)))
-           (cat "  tmp" (type-index a) "[i] = NULL;\n")))))
+           (cat "  tmp" (type-index a) "[i] = NULL;\n")))
+      ((and (type-result? a) (not (basic-type? a))
+            (not (type-free? a)) (not (type-auto-expand? a))
+            (or (not (type-array a))
+                (not (integer? (get-array-length func a)))))
+       (cat "  tmp" (type-index a) " = malloc(sizeof(tmp" (type-index a)
+            "[0]));\n"))
+      ((and (type-pointer? a) (basic-type? a))
+       (cat "  tmp" (type-index a) " = "
+            (lambda ()
+              (scheme->c-converter
+               a
+               (string-append "arg" (type-index-string a))))
+            ";\n"))))
    (func-c-args func)))
+
+(define (write-actual-parameter func arg)
+  (cond
+   ((and (not (type-default? arg)) (type-value arg))
+    => (lambda (x)
+         (cond
+          ((any (lambda (y)
+                  (and (type-array y)
+                       (eq? x (get-array-length func y))))
+                (func-c-args func))
+           => (lambda (y) (cat "len" (type-index y))))
+          (else (write x)))))
+   ((or (type-result? arg) (type-array arg))
+    (cat (if (or (type-pointer? arg) (type-free? arg) (basic-type? arg))
+             "&"
+             "")
+         "tmp" (type-index arg)))
+   ((and (type-pointer? arg) (basic-type? arg))
+    (cat "&tmp" (type-index arg)))
+   (else
+    (scheme->c-converter
+     arg
+     (string-append "arg" (type-index-string arg))))))
 
 (define (write-call func)
   (let ((ret-type (func-ret-type func))
@@ -691,23 +798,7 @@
        (for-each
         (lambda (arg)
           (if (> (type-index arg) 0) (cat ", "))
-          (cond
-           ((or (type-result? arg) (type-array arg))
-            (cat (if (or (type-pointer? arg) (type-array arg)) "" "&")
-                 "tmp" (type-index arg)))
-           ((type-value arg)
-            => (lambda (x)
-                 (cond
-                  ((any (lambda (y)
-                          (and (type-array y)
-                               (eq? x (get-array-length func y))))
-                        (func-c-args func))
-                   => (lambda (y) (cat "len" (type-index y))))
-                  (else (write x)))))
-           (else
-            (scheme->c-converter
-             arg
-             (string-append "arg" (type-index-string arg))))))
+          (write-actual-parameter func arg))
         c-args)
        (cat ")"))
      (cond
@@ -762,7 +853,10 @@
         (results (func-results func)))
     (if error-res?
         (cat "  if ("
-             (if (eq? 'non-null-string (type-base (func-ret-type func))) "!" "")
+             (if (memq (type-base (func-ret-type func))
+                       '(non-null-string non-null-pointer))
+                 "!"
+                 "")
              "err) {\n"
              (cond
               ((any type-auto-expand? (func-c-args func))
@@ -847,10 +941,21 @@
        "}\n\n"))
 
 (define (write-func-binding func)
-  (cat "  sexp_define_foreign(ctx, env, "
-       (lambda () (write (symbol->string (func-scheme-name func))))
-       ", " (length (func-scheme-args func))  ", "
-       (func-stub-name func) ");\n"))
+  (let ((default (and (pair? (func-scheme-args func))
+                      (type-default? (car (reverse (func-scheme-args func))))
+                      (car (reverse (func-scheme-args func))))))
+    (cat (if default
+             "  sexp_define_foreign_opt(ctx, env, "
+             "  sexp_define_foreign(ctx, env, ")
+         (lambda () (write (symbol->string (func-scheme-name func))))
+         ", " (length (func-scheme-args func))  ", "
+         (func-stub-name func)
+         (if default ", " "")
+         (if default
+             (lambda ()
+               (c->scheme-converter default (type-value default)))
+             "")
+         ");\n")))
 
 (define (write-type type)
   (let ((name (car type))
@@ -975,6 +1080,13 @@
                        *funcs*)))))))
      type)))
 
+(define (write-const const)
+  (let ((scheme-name (if (pair? (cadr const)) (caadr const) (cadr const)))
+        (c-name (if (pair? (cadr const)) (cadadr const) (mangle (cadr const)))))
+    (cat "  name = sexp_intern(ctx, \"" scheme-name "\");\n"
+         "  sexp_env_define(ctx, env, name, tmp="
+         (lambda () (c->scheme-converter (car const) c-name)) ");\n")))
+
 (define (write-utilities)
   (define (input-env-string? x)
     (and (eq? 'env-string (type-base x)) (not (type-result? x))))
@@ -1001,6 +1113,7 @@
   (cat "sexp sexp_init_library (sexp ctx, sexp env) {\n"
        "  sexp_gc_var2(name, tmp);\n"
        "  sexp_gc_preserve2(ctx, name, tmp);\n")
+  (for-each write-const *consts*)
   (for-each write-type *types*)
   (for-each write-func-binding *funcs*)
   (cat "  sexp_gc_release2(ctx);\n"
