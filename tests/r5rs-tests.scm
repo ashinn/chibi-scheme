@@ -465,6 +465,13 @@
                      (args ::: ...)))))
           (foo 3 - 5)))
 
+(test '(5 4 1 2 3)
+    (let-syntax
+        ((foo (syntax-rules ()
+                ((foo args ... penultimate ultimate)
+                 (list ultimate penultimate args ...)))))
+      (foo 1 2 3 4 5)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-report)

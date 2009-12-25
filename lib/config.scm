@@ -164,5 +164,8 @@
   (list (cons '(scheme) (make-module #f (interaction-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (interaction-environment)
-                                     (list (list 'export 'cond-expand))))))
+                                     (list (list 'export 'cond-expand))))
+        (cons '(srfi 46) (make-module (list 'syntax-rules)
+                                      (interaction-environment)
+                                      (list (list 'export 'syntax-rules))))))
 
