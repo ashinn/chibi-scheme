@@ -89,6 +89,12 @@
 (define (every pred ls)
   (if (pair? ls) (if (pred (car ls)) (every pred (cdr ls)) #f) #t))
 
+(define (delq x ls)
+  (if (pair? ls)
+      (if (eq? x (car ls)) (delq x (cdr ls)) (cons (car ls) (delq x (cdr ls))))
+      '()))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax
 
 (define sc-macro-transformer
@@ -284,6 +290,9 @@
    (lambda (expr rename compare)
      `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr expr))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; promises
+
 (define (make-promise thunk)
   (lambda ()
     (let ((computed? #f) (result #f))
@@ -295,6 +304,9 @@
 
 (define (force x) (if (procedure? x) (x) x))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; exceptions
+
 (define (error msg . args)
   (raise (make-exception 'user msg args #f #f)))
 
@@ -304,6 +316,9 @@
     (let ((res (thunk)))
       (current-exception-handler orig-handler)
       res)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; library functions
 
 ;; booleans
 
@@ -552,6 +567,7 @@
       (current-output-port old-out)
       res)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; values
 
 (define *values-tag* (list 'values))
@@ -566,6 +582,32 @@
     (if (and (pair? res) (eq? *values-tag* (car res)))
         (apply consumer (cdr res))
         (consumer res))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; dynamic-wind
+
+(define *dk* (list #f))
+
+(define (dynamic-wind before thunk after)
+  (let ((dk *dk*))
+    (set-dk! (cons (cons before after) dk))
+    (let ((res (thunk))) (set-dk! dk) res)))
+
+(define (set-dk! dk)
+  (if (not (eq? dk *dk*))
+      (begin
+        (set-dk! (cdr dk))
+        (let ((before (car (car dk))) (dk dk))
+          (set-car! *dk* (cons (cdr (car dk)) before))
+          (set-cdr! *dk* dk)
+          (set-car! dk #f)
+          (set-cdr! dk '())
+          (set! *dk* dk)
+          (before)))))
+
+(define (call-with-current-continuation proc)
+  (let ((dk *dk*))
+    (%call/cc (lambda (k) (proc (lambda (x) (set-dk! dk) (k x)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax-rules
@@ -748,6 +790,9 @@
                 (list (list _error "no expansion for"
                             (list (rename 'strip-syntactic-closures) _expr)))))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; modules
+
 (define *config-env* #f)
 
 (define-syntax import
@@ -771,6 +816,7 @@
                          res))
                (error "couldn't find module" (car ls))))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SRFI-0
 
 (define-syntax cond-expand
