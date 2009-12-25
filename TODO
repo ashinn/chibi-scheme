@@ -30,7 +30,7 @@
 ** TODO unsafe operations
    Possibly, don't want to make things too complicated or unstable.
 ** TODO plugin infrastructure
-** TODO type inference with warning
+** TODO type inference with warnings
 
 * macros
 ** DONE hygiene
@@ -39,7 +39,8 @@
    - State "DONE"       [2009-12-08 Tue 14:41]
 ** DONE macroexpand utility
    - State "DONE"       [2009-12-08 Tue 14:41]
-** TODO SRFI-46 basic syntax-rules extensions
+** DONE SRFI-46 basic syntax-rules extensions
+   - State "DONE"       [2009-12-26 Sat 07:59]
 ** DONE (... ...) support
    - State "DONE"       [2009-12-26 Sat 02:06]
 ** TODO compiler macros
