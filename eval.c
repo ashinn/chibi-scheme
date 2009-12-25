@@ -2653,13 +2653,18 @@ sexp sexp_compile (sexp ctx, sexp x) {
 }
 
 sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
+  sexp_sint_t top;
   sexp ctx2;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
-  ctx2 = sexp_make_eval_context(ctx, NULL, (env ? env : sexp_context_env(ctx)));
+  top = sexp_context_top(ctx);
+  ctx2 = sexp_make_eval_context(ctx,
+                                sexp_context_stack(ctx),
+                                (env ? env : sexp_context_env(ctx)));
   res = sexp_compile(ctx2, obj);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
+  sexp_context_top(ctx) = top;
   sexp_gc_release1(ctx);
   return res;
 }
