@@ -459,6 +459,12 @@
             (c 'talk2)
             (reverse path)))))
 
+(test 2 (let-syntax
+            ((foo (syntax-rules ::: ()
+                    ((foo ... args :::)
+                     (args ::: ...)))))
+          (foo 3 - 5)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (test-report)
