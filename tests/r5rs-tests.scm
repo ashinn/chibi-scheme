@@ -168,6 +168,10 @@
 
 (test #t (equal? 2 2))
 
+(test #f (eqv? 2 2.0))
+
+(test #f (equal? 2.0 2))
+
 (test #t (equal? (make-vector 5 'a) (make-vector 5 'a)))
 
 (test 4 (max 3 4))
@@ -212,21 +216,21 @@
 
 (test 288 (lcm 32 -36))
 
-(test -5 (floor -4.3))
+(test #t (= -5 (floor -4.3)))
 
-(test -4 (ceiling -4.3))
+(test #t (= -4 (ceiling -4.3)))
 
-(test -4 (truncate -4.3))
+(test #t (= -4 (truncate -4.3)))
 
-(test -4 (round -4.3))
+(test #t (= -4 (round -4.3)))
 
-(test 3 (floor 3.5))
+(test #t (= 3 (floor 3.5)))
 
-(test 4 (ceiling 3.5))
+(test #t (= 4 (ceiling 3.5)))
 
-(test 3 (truncate 3.5))
+(test #t (= 3 (truncate 3.5)))
 
-(test 4 (round 3.5))
+(test #t (= 4 (round 3.5)))
 
 (test 100 (string->number "100"))
 

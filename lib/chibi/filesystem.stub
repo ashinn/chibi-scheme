@@ -2,6 +2,7 @@
 (c-system-include "sys/types.h")
 (c-system-include "unistd.h")
 (c-system-include "dirent.h")
+(c-system-include "fcntl.h")
 
 (define-c-type DIR
   finalizer: closedir)
@@ -86,3 +87,29 @@
 
 (define-c errno (open-pipe "pipe") ((result (array int 2))))
 (define-c errno (make-fifo "mkfifo") (string (default #o644 int)))
+
+(define-c int (get-file-descriptor-flags "fcntl")
+  (int (value F_GETFD int)))
+(define-c errno (set-file-descriptor-flags! "fcntl")
+  (int (value F_SETFD int) long))
+
+(define-c int (get-file-descriptor-status "fcntl")
+  (int (value F_GETFL int)))
+(define-c errno (set-file-descriptor-status! "fcntl")
+  (int (value F_SETFL int) long))
+
+;; (define-c int (get-file-descriptor-lock "fcntl")
+;;   (int (value F_GETLK int) flock))
+;; (define-c errno (set-file-descriptor-lock! "fcntl")
+;;   (int (value F_SETLK int) flock))
+;; (define-c errno (try-set-file-descriptor-lock! "fcntl")
+;;   (int (value F_SETLKW int) flock))
+
+(define-c-const int (open/read "O_RDONLY"))
+(define-c-const int (open/write "O_WRONLY"))
+(define-c-const int (open/read-write "O_RDWR"))
+(define-c-const int (open/create "O_CREAT"))
+(define-c-const int (open/exclusive "O_EXCL"))
+(define-c-const int (open/truncate "O_TRUNC"))
+(define-c-const int (open/append "O_APPEND"))
+(define-c-const int (open/non-block "O_NONBLOCK"))

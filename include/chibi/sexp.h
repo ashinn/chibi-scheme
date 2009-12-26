@@ -383,23 +383,6 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_immutablep(x)       ((x)->immutablep)
 #define sexp_freep(x)            ((x)->freep)
 
-#define sexp_object_type(x)             (&(sexp_type_specs[(x)->tag]))
-#define sexp_object_type_name(x)        (sexp_type_name(sexp_object_type(x)))
-#define sexp_type_name_by_index(x)      (sexp_type_name(&(sexp_type_specs[(x)])))
-
-#define sexp_type_size_of_object(t, x)                                  \
-  (((sexp_uint_t*)((char*)x + sexp_type_size_off(t)))[0]                \
-   * sexp_type_size_scale(t)                                            \
-   + sexp_type_size_base(t))
-#define sexp_type_num_slots_of_object(t, x)                             \
-  (((sexp_uint_t*)((char*)x + sexp_type_field_len_off(t)))[0]           \
-   * sexp_type_field_len_scale(t)                                       \
-   + sexp_type_field_len_base(t))
-#define sexp_type_num_eq_slots_of_object(t, x)                          \
-  (((sexp_uint_t*)((char*)x + sexp_type_field_len_off(t)))[0]           \
-   * sexp_type_field_len_scale(t)                                       \
-   + sexp_type_field_eq_len_base(t))
-
 #define sexp_check_tag(x,t)  (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
 #define sexp_slot_ref(x,i)   (((sexp*)&((x)->value))[i])
@@ -645,10 +628,36 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #endif
 
 #if SEXP_USE_GLOBAL_TYPES
-#define sexp_context_types(ctx) sexp_type_specs
+SEXP_API struct sexp_struct *sexp_type_specs;
+#define sexp_context_types(ctx)    sexp_type_specs
+#define sexp_type_by_index(ctx,i)  (&(sexp_context_types(ctx)[i]))
+#define sexp_context_num_types(ctx) sexp_num_types
+#define sexp_context_type_array_size(ctx) sexp_type_array_size
 #else
-#define sexp_context_types(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES))
+#define sexp_context_types(ctx)    sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES))
+#define sexp_type_by_index(ctx,i)  (sexp_context_types(ctx)[i])
+#define sexp_context_num_types(ctx)             \
+  sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_TYPES))
+#define sexp_context_type_array_size(ctx)                               \
+  sexp_vector_length(sexp_global(ctx, SEXP_G_TYPES))
 #endif
+
+#define sexp_object_type(ctx,x)        (sexp_type_by_index(ctx, ((x)->tag)))
+#define sexp_object_type_name(ctx,x)   (sexp_type_name(sexp_object_type(ctx, x)))
+#define sexp_type_name_by_index(ctx,i) (sexp_type_name(sexp_type_by_index(ctx,i)))
+
+#define sexp_type_size_of_object(t, x)                                  \
+  (((sexp_uint_t*)((char*)x + sexp_type_size_off(t)))[0]                \
+   * sexp_type_size_scale(t)                                            \
+   + sexp_type_size_base(t))
+#define sexp_type_num_slots_of_object(t, x)                             \
+  (((sexp_uint_t*)((char*)x + sexp_type_field_len_off(t)))[0]           \
+   * sexp_type_field_len_scale(t)                                       \
+   + sexp_type_field_len_base(t))
+#define sexp_type_num_eq_slots_of_object(t, x)                          \
+  (((sexp_uint_t*)((char*)x + sexp_type_field_len_off(t)))[0]           \
+   * sexp_type_field_len_scale(t)                                       \
+   + sexp_type_field_eq_len_base(t))
 
 #define sexp_context_top(x)     (sexp_stack_top(sexp_context_stack(x)))
 
@@ -692,6 +701,7 @@ enum sexp_context_globals {
 #endif
 #if ! SEXP_USE_GLOBAL_TYPES
   SEXP_G_TYPES,
+  SEXP_G_NUM_TYPES,
 #endif
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
@@ -768,7 +778,6 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
-SEXP_API struct sexp_struct *sexp_type_specs;
 SEXP_API sexp sexp_make_context(sexp ctx);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 SEXP_API sexp sexp_cons(sexp ctx, sexp head, sexp tail);

@@ -59,12 +59,14 @@
 (define-c errno (current-signal-mask "sigprocmask")
   ((value SIG_BLOCK int) (value NULL sigset_t) (result sigset_t)))
 
+(define-c unsigned-int alarm (unsigned-int))
+(define-c unsigned-int sleep (unsigned-int))
+
 (define-c pid_t fork ())
 ;;(define-c pid_t wait ((result int)))
 (define-c pid_t waitpid (int (result int) int))
 (define-c errno kill (int int))
 ;;(define-c errno raise (int))
-(define-c unsigned-int sleep (unsigned-int))
 (define-c void exit (int))
 (define-c int (execute execvp) (string (array string)))
 

@@ -60,6 +60,7 @@
    - State "DONE"       [2009-07-07 Tue 14:42]
 ** TODO unicode
 ** TODO threads
+** TODO virtual ports
 ** DONE dynamic-wind
    - State "DONE"       [2009-12-26 Sat 01:51]
    Adapted a version from Scheme48.
@@ -138,6 +139,7 @@
 ** TODO overall cleanup
 ** TODO user documentation
 ** TODO thorough source documentation
+** TODO full test suite for libraries
 
 * distribution
 ** TODO packaging format

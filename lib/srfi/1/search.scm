@@ -30,10 +30,11 @@
 
 (define (any pred ls . lists)
   (if (null? lists)
-      (let lp ((ls ls)) (and (pair? ls) (if (pred (car ls)) #t (lp (cdr ls)))))
+      (let lp ((ls ls)) (and (pair? ls) (if (pred (car ls)) (car ls) (lp (cdr ls)))))
       (let lp ((lists (cons ls lists)))
         (and (every pair? lists)
-             (if (apply pred (map car lists)) #t (lp (map cdr lists)))))))
+             (let ((args (map car lists)))
+               (if (apply pred args) args (lp (map cdr lists))))))))
 
 (define (every pred ls . lists)
   (if (null? lists)

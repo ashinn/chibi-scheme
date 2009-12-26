@@ -1609,13 +1609,13 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_SLOT_REF:
     if (! sexp_check_tag(_ARG1, _UWORD0))
-      sexp_raise("slot-ref: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(_UWORD0), -1), _ARG1));
+      sexp_raise("slot-ref: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(ctx, _UWORD0), -1), _ARG1));
     _ARG1 = sexp_slot_ref(_ARG1, _UWORD1);
     ip += sizeof(sexp)*2;
     break;
   case SEXP_OP_SLOT_SET:
     if (! sexp_check_tag(_ARG1, _UWORD0))
-      sexp_raise("slot-set!: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(_UWORD0), -1), _ARG1));
+      sexp_raise("slot-set!: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(ctx, _UWORD0), -1), _ARG1));
     else if (sexp_immutablep(_ARG1))
       sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG1));
     sexp_slot_set(_ARG1, _UWORD1, _ARG2);
@@ -2154,11 +2154,26 @@ define_math_op(sexp_tan, tan)
 define_math_op(sexp_asin, asin)
 define_math_op(sexp_acos, acos)
 define_math_op(sexp_atan, atan)
-define_math_op(sexp_sqrt, sqrt)
 define_math_op(sexp_round, round)
 define_math_op(sexp_trunc, trunc)
 define_math_op(sexp_floor, floor)
 define_math_op(sexp_ceiling, ceil)
+
+static sexp sexp_sqrt (sexp ctx, sexp z) {
+  double d, r;
+  if (sexp_flonump(z))
+    d = sexp_flonum_value(z);
+  else if (sexp_fixnump(z))
+    d = (double)sexp_unbox_fixnum(z);
+  maybe_convert_bignum(z)       /* XXXX add bignum sqrt */
+  else
+    return sexp_type_exception(ctx, "not a number", z);
+  r = sqrt(d);
+  if (sexp_fixnump(z) && ((r*r) == (double)sexp_unbox_fixnum(z)))
+    return sexp_make_fixnum(round(r));
+  else
+    return sexp_make_flonum(ctx, r);
+}
 
 #endif
 
@@ -2354,7 +2369,7 @@ sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
   sexp_uint_t type_size;
   if (! sexp_fixnump(type))
     return sexp_type_exception(ctx, "make-constructor: bad type", type);
-  type_size = sexp_type_size_base(&(sexp_type_specs[sexp_unbox_fixnum(type)]));
+  type_size = sexp_type_size_base(sexp_type_by_index(ctx, sexp_unbox_fixnum(type)));
   return sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_CONSTRUCTOR),
                           sexp_make_fixnum(SEXP_OP_MAKE), SEXP_ZERO, SEXP_ZERO,
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type,

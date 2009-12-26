@@ -102,39 +102,61 @@ static struct sexp_struct _sexp_type_specs[] = {
 };
 #undef _DEF_TYPE
 
+#if SEXP_USE_GLOBAL_TYPES
 struct sexp_struct *sexp_type_specs = _sexp_type_specs;
+#endif
 
 #if SEXP_USE_TYPE_DEFS
 
+#if SEXP_USE_GLOBAL_TYPES
 static sexp_uint_t sexp_num_types = SEXP_NUM_CORE_TYPES;
 static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
+#else
+#define SEXP_INIT_NUM_TYPES (SEXP_NUM_CORE_TYPES*2)
+#endif
 
 sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp felb, sexp flb,
                          sexp flo, sexp fls, sexp sb, sexp so, sexp sc,
                          sexp_proc2 f) {
-  struct sexp_struct *type, *new, *tmp;
-  sexp res;
-  sexp_uint_t i, len;
-  if (sexp_num_types >= SEXP_MAXIMUM_TYPES) {
-    fprintf(stderr, "chibi: exceeded maximum type limit\n");
-    res = SEXP_FALSE;
+#if SEXP_USE_GLOBAL_TYPES
+  struct sexp_struct *new, *tmp;
+#else
+  sexp *v1, *v2;
+#endif
+  sexp res, type;
+  sexp_uint_t i, len, num_types=sexp_context_num_types(ctx),
+    type_array_size=sexp_context_type_array_size(ctx);
+  if (num_types >= SEXP_MAXIMUM_TYPES) {
+    res = sexp_user_exception(ctx, SEXP_FALSE, "register-type: exceeded maximum type limit", name);
   } else if (! sexp_stringp(name)) {
     res = sexp_type_exception(ctx, "register-type: not a string", name);
   } else {
-    if (sexp_num_types >= sexp_type_array_size) {
-      len = sexp_type_array_size*2;
+    if (num_types >= type_array_size) {
+      len = type_array_size*2;
       if (len > SEXP_MAXIMUM_TYPES) len = SEXP_MAXIMUM_TYPES;
+#if SEXP_USE_GLOBAL_TYPES
       new = malloc(len * sizeof(_sexp_type_specs[0]));
-      for (i=0; i<sexp_num_types; i++)
+      for (i=0; i<num_types; i++)
         memcpy(&(new[i]), &(sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
       tmp = sexp_type_specs;
       sexp_type_specs = new;
-      if (sexp_type_array_size > sexp_num_types) free(tmp);
+      if (type_array_size > num_types) free(tmp);
       sexp_type_array_size = len;
+#else
+      res = sexp_make_vector(ctx, sexp_make_fixnum(len), SEXP_VOID);
+      v1 = sexp_vector_data(res);
+      v2 = sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES));
+      for (i=0; i<num_types; i++)
+        v1[i] = v2[i];
+      sexp_global(ctx, SEXP_G_TYPES) = res;
+#endif
     }
-    type = &(sexp_type_specs[sexp_num_types]);
+#if ! SEXP_USE_GLOBAL_TYPES
+    sexp_type_by_index(ctx, num_types) = sexp_alloc_type(ctx, type, SEXP_TYPE);
+#endif
+    type = sexp_type_by_index(ctx, num_types);
     sexp_pointer_tag(type) = SEXP_TYPE;
-    sexp_type_tag(type) = sexp_num_types++;
+    sexp_type_tag(type) = num_types;
     sexp_type_field_base(type) = sexp_unbox_fixnum(fb);
     sexp_type_field_eq_len_base(type) = sexp_unbox_fixnum(felb);
     sexp_type_field_len_base(type) = sexp_unbox_fixnum(flb);
@@ -145,7 +167,12 @@ sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp felb, sexp flb,
     sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
     sexp_type_name(type) = strdup(sexp_string_data(name));
     sexp_type_finalize(type) = f;
-    res = sexp_make_fixnum(sexp_type_tag(type));
+    res = sexp_make_fixnum(num_types);
+#if SEXP_USE_GLOBAL_TYPES
+    sexp_num_types = num_types + 1;
+#else
+    sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(num_types + 1);
+#endif
   }
   return res;
 }
@@ -179,6 +206,10 @@ sexp sexp_finalize_c_type (sexp ctx, sexp obj) {
 /****************************** contexts ******************************/
 
 void sexp_init_context_globals (sexp ctx) {
+#if ! SEXP_USE_GLOBAL_TYPES
+  sexp type, *vec;
+  int i;
+#endif
   sexp_context_globals(ctx)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
 #if ! SEXP_USE_GLOBAL_SYMBOLS
@@ -197,6 +228,17 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "*interaction-environment*");
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
+#if ! SEXP_USE_GLOBAL_TYPES
+  sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(SEXP_NUM_CORE_TYPES);
+  sexp_global(ctx, SEXP_G_TYPES)
+    = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_INIT_NUM_TYPES), SEXP_VOID);
+  vec = sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES));
+  for (i=0; i<SEXP_NUM_CORE_TYPES; i++) {
+    type = sexp_alloc_type(ctx, type, SEXP_TYPE);
+    memcpy(type, &(_sexp_type_specs[i]), sexp_sizeof(type));
+    vec[i] = type;
+  }
+#endif
 }
 
 #if ! SEXP_USE_GLOBAL_HEAP
@@ -485,34 +527,9 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
  loop:
   if (a == b)
     return SEXP_TRUE;
-
-#if SEXP_USE_IMMEDIATE_FLONUMS
-  if ((! sexp_pointerp(a)) || (! sexp_pointerp(b)))
-    return
-      sexp_make_boolean((sexp_flonump(a) && sexp_fixnump(b)
-                         && sexp_flonum_value(a) == sexp_unbox_fixnum(b))
-                        || (sexp_flonump(b) && sexp_fixnump(a)
-                            && sexp_flonum_value(b) == sexp_unbox_fixnum(a)));
-#else
-  if (! sexp_pointerp(a))
-    return sexp_make_boolean(sexp_fixnump(a) && sexp_flonump(b)
-                             && (sexp_unbox_fixnum(a) == sexp_flonum_value(b)));
-  else if (! sexp_pointerp(b))
-    return sexp_make_boolean(sexp_fixnump(b) && sexp_flonump(a)
-                             && (sexp_unbox_fixnum(b) == sexp_flonum_value(a)));
-#endif
-
-  if (sexp_pointer_tag(a) != sexp_pointer_tag(b)) {
-#if SEXP_USE_BIGNUMS && ! SEXP_USE_IMMEDIATE_FLONUMS
-    if (sexp_pointer_tag(a) == SEXP_FLONUM) {t=a; a=b; b=t;}
-    if (sexp_pointer_tag(a) == SEXP_BIGNUM)
-      return sexp_make_boolean((sexp_pointer_tag(b) == SEXP_FLONUM)
-                               && sexp_fp_integerp(b)
-                               && ! sexp_bignum_compare(a, sexp_double_to_bignum(ctx, sexp_flonum_value(b))));
-    else
-#endif
-      return SEXP_FALSE;
-  }
+  else if ((! sexp_pointerp(a)) || (! sexp_pointerp(b))
+           || (sexp_pointer_tag(a) != sexp_pointer_tag(b)))
+    return SEXP_FALSE;
 
   /* a and b are both pointers of the same type */
 #if SEXP_USE_BIGNUMS
@@ -523,7 +540,7 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
   if (sexp_pointer_tag(a) == SEXP_FLONUM)
     return sexp_make_boolean(sexp_flonum_value(a) == sexp_flonum_value(b));
 #endif
-  t = &(sexp_type_specs[sexp_pointer_tag(a)]);
+  t = sexp_object_type(ctx, a);
   p0 = ((char*)a) + offsetof(struct sexp_struct, value);
   p = (sexp*) (((char*)a) + sexp_type_field_base(t));
   q0 = ((char*)b) + offsetof(struct sexp_struct, value);
@@ -1075,8 +1092,8 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
       i = sexp_pointer_tag(obj);
       sexp_write_string(ctx, "#<", out);
       sexp_write_string(ctx,
-                        (i < sexp_num_types)
-                        ? sexp_type_name_by_index(i) : "invalid",
+                        (i < sexp_context_num_types(ctx))
+                        ? sexp_type_name_by_index(ctx, i) : "invalid",
                         out);
       sexp_write_char(ctx, '>', out);
       break;
