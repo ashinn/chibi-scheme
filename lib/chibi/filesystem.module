@@ -14,7 +14,7 @@
           file-access-time file-modification-time file-change-time
           file-regular?    file-directory?        file-character?
           file-block?      file-fifo?             file-link?
-          file-socket?
+          file-socket?     file-exists?
           get-file-descriptor-flags   set-file-descriptor-flags!
           get-file-descriptor-status  set-file-descriptor-status!
           open/read        open/write             open/read-write
