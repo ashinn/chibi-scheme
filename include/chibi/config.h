@@ -127,12 +127,6 @@
 /*   this enabled. */
 /* #define SEXP_USE_CHECK_STACK 0 */
 
-/* uncomment this to disable debugging utilities */
-/*   By default there's a `disasm' procedure you can use to */
-/*   view the compiled VM instructions of a procedure.  You can */
-/*   disable this if you don't need it. */
-/* #define SEXP_USE_DEBUG 0 */
-
 /* #define SEXP_USE_DEBUG_VM 0 */
 /*   Experts only. */
 /*   For *very* verbose output on every VM operation. */

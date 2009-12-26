@@ -8,12 +8,16 @@
 
 static int scheme_initialized_p = 0;
 
-#if SEXP_USE_DEBUG
-#include "opt/debug.c"
-#else
-#define print_stack(...)
-#define print_bytecode(...)
-#define sexp_disasm(...)
+#if SEXP_USE_DEBUG_VM
+static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
+  int i;
+  if (! sexp_oport(out)) out = sexp_current_error_port(ctx);
+  for (i=0; i<top; i++) {
+    sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
+    sexp_write(ctx, stack[i], out);
+    sexp_printf(ctx, out, "\n");
+  }
+}
 #endif
 
 static sexp analyze (sexp ctx, sexp x);
@@ -227,7 +231,6 @@ static sexp finalize_bytecode (sexp ctx) {
     else
       sexp_bytecode_literals(bc) = sexp_list_to_vector(ctx, sexp_bytecode_literals(bc));
   }
-  /* sexp_disasm(ctx, bc, sexp_current_error_port(ctx)); */
   return bc;
 }
 
@@ -2277,7 +2280,6 @@ static sexp sexp_copy_opcode (sexp ctx, sexp op) {
   memcpy(res, op, sexp_sizeof(opcode));
   return res;
 }
-
 
 sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
                        sexp num_args, sexp flags, sexp arg1t, sexp arg2t,

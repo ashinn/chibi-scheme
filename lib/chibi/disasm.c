@@ -2,6 +2,8 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
+#include "chibi/eval.h"
+
 #define SEXP_DISASM_MAX_DEPTH 8
 #define SEXP_DISASM_PAD_WIDTH 4
 
@@ -33,8 +35,9 @@ static sexp disasm (sexp ctx, sexp bc, sexp out, int depth) {
   } else if (! sexp_bytecodep(bc)) {
     return sexp_type_exception(ctx, "not a procedure", bc);
   }
-  if (! sexp_oportp(out))
-    return SEXP_VOID;
+  if (! sexp_oportp(out)) {
+    return sexp_type_exception(ctx, "not an output-port", out);
+  }
 
   for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
     sexp_write_char(ctx, ' ', out);
@@ -107,15 +110,18 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   return disasm(ctx, bc, out, 0);
 }
 
-#if SEXP_USE_DEBUG_VM
-static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
-  int i;
-  if (! sexp_oport(out)) out = sexp_current_error_port(ctx);
-  for (i=0; i<top; i++) {
-    sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
-    sexp_write(ctx, stack[i], out);
-    sexp_printf(ctx, out, "\n");
-  }
+sexp sexp_init_library (sexp ctx, sexp env) {
+  sexp_gc_var2(op, name);
+  sexp_gc_preserve2(ctx, op, name);
+  name = sexp_c_string(ctx, "disasm", -1);
+  op = sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_FOREIGN),
+                        sexp_make_fixnum(SEXP_OP_FCALL2), SEXP_ONE,
+                        SEXP_THREE, 0, 0, 0, 0, 0, (sexp_proc1)sexp_disasm);
+  name = sexp_intern(ctx, "*current-error-port*");
+  sexp_opcode_data(op) = sexp_env_cell(sexp_context_env(ctx), name);
+  name = sexp_intern(ctx, "disasm");
+  sexp_env_define(ctx, env, name, op);
+  sexp_gc_release2(ctx);
+  return SEXP_VOID;
 }
-#endif
 

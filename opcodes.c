@@ -136,9 +136,6 @@ _FN2(SEXP_STRING, SEXP_FIXNUM, "make-constructor", 0, sexp_make_constructor),
 _FN3(SEXP_STRING, SEXP_FIXNUM, "make-getter", 0, sexp_make_getter),
 _FN3(SEXP_STRING, SEXP_FIXNUM, "make-setter", 0, sexp_make_setter),
 #endif
-#if SEXP_USE_DEBUG
-_FN2OPTP(SEXP_PROCEDURE, SEXP_OPORT, "disasm", (sexp)"*current-error-port*", sexp_disasm),
-#endif
 #if PLAN9
 #include "opt/plan9-opcodes.c"
 #endif
