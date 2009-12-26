@@ -142,7 +142,6 @@ _FN2OPTP(SEXP_PROCEDURE, SEXP_OPORT, "disasm", (sexp)"*current-error-port*", sex
 #if PLAN9
 #include "opt/plan9-opcodes.c"
 #endif
-_FN1(SEXP_STRING, "file-exists?", 0, sexp_file_exists_p),
 #if SEXP_USE_MODULES
 _FN1(SEXP_ENV, "env-exports", 0, sexp_env_exports),
 _FN1(SEXP_STRING, "find-module-file", 0, sexp_find_module_file_op),

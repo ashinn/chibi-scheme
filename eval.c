@@ -2038,15 +2038,6 @@ static sexp sexp_close_port (sexp ctx, sexp port) {
   return SEXP_VOID;
 }
 
-#ifndef PLAN9
-static sexp sexp_file_exists_p (sexp ctx, sexp path) {
-  struct stat buf;
-  if (! sexp_stringp(path))
-    return sexp_type_exception(ctx, "not a string", path);
-  return (stat(sexp_string_data(path), &buf) ?  SEXP_FALSE : SEXP_TRUE);
-}
-#endif
-
 void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
   sexp x;
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_cdr(x))
