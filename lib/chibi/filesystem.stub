@@ -3,7 +3,7 @@
 (c-system-include "unistd.h")
 (c-system-include "dirent.h")
 
-(define-c-struct DIR
+(define-c-type DIR
   finalizer: closedir)
 
 (define-c-struct dirent
