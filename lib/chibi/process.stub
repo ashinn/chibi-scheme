@@ -4,7 +4,7 @@
 (c-system-include "signal.h")
 (c-system-include "unistd.h")
 
-(define-c-struct siginfo
+(define-c-type siginfo_t
   predicate: signal-info?
   (int      si_signo    signal-number)
   (int      si_errno    signal-error-number)
@@ -12,8 +12,9 @@
   (pid_t    si_pid      signal-pid)
   (uid_t    si_uid      signal-uid)
   (int      si_status   signal-status)
-  (clock_t  si_utime    signal-user-time)
-  (clock_t  si_stime    signal-system-time))
+  ;;(clock_t  si_utime    signal-user-time)
+  ;;(clock_t  si_stime    signal-system-time)
+  )
 
 (define-c-type sigset_t
   predicate: signal-set?)

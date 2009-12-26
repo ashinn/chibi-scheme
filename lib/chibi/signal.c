@@ -15,7 +15,7 @@ static void sexp_call_sigaction (int signum, siginfo_t *info, void *uctx) {
       sexp_gc_preserve1(sigctx, args);
       args = sexp_cons(sigctx, SEXP_FALSE, SEXP_NULL);
       sexp_car(args)
-        = sexp_make_cpointer(sigctx, sexp_siginfo_type_id, info, SEXP_FALSE, 0);
+        = sexp_make_cpointer(sigctx, sexp_siginfo_t_type_id, info, SEXP_FALSE, 0);
       args = sexp_cons(sigctx, SEXP_FALSE, args);
       sexp_car(args) = sexp_make_fixnum(signum);
       sexp_apply(sigctx, handler, args);
