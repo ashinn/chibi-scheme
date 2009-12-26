@@ -37,4 +37,4 @@
 (define (file-link? x) (S_ISLNK (file-mode x)))
 (define (file-socket? x) (S_ISSOCK (file-mode x)))
 
-(define (file-exists? x) (and (file-status file) #t))
+(define (file-exists? x) (and (file-status x) #t))

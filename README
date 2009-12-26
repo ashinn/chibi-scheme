@@ -72,7 +72,10 @@ The essential functions to remember are:
 A minimal module system is provided by default.  Currently you can
 load the following SRFIs with (import (srfi N)):
 
-  1, 2, 6, 8, 9, 11, 16, 26, 69
+  0, 1, 2, 6, 8, 9, 11, 16, 26, 27, 33, 46, 62, 69, 98
+
+although 0, 46 and 62 are built into the default environment so
+there's no need to import them.
 
 LOAD is extended to accept an optional environment argument, like
 EVAL.  You can also LOAD shared libraries in addition to Scheme source
