@@ -238,6 +238,10 @@
 ;; function objects
 
 (define (parse-func func)
+  (if (not (and (= 3 (length func))
+                (or (identifier? (cadr func)) (list (cadr func)))
+                (list (caddr func))))
+      (error "bad function definition" func))
   (let* ((ret-type (parse-type (car func)))
          (scheme-name (if (pair? (cadr func)) (caadr func) (cadr func)))
          (c-name (if (pair? (cadr func))
@@ -678,7 +682,7 @@
      (lambda (x)
        (let ((len (get-array-length func x)))
          (cat "  " (type-c-name (type-base x)) " ")
-         (if (or (type-pointer? x) (and (type-array x) (not (number? len))))
+         (if (and (type-array x) (not (number? len)))
              (cat "*"))
          (cat (if (type-auto-expand? x) "buf" "tmp") (type-index-string x))
          (if (number? len)
@@ -747,7 +751,8 @@
        (if (not (number? (type-array a)))
            (cat "  tmp" (type-index a) "[i] = NULL;\n")))
       ((and (type-result? a) (not (basic-type? a))
-            (not (type-free? a)) (not (type-auto-expand? a))
+            (not (type-free? a)) (not (type-pointer? a))
+            (not (type-auto-expand? a))
             (or (not (type-array a))
                 (not (integer? (get-array-length func a)))))
        (cat "  tmp" (type-index a) " = malloc(sizeof(tmp" (type-index a)
@@ -768,6 +773,7 @@
          (cond
           ((any (lambda (y)
                   (and (type-array y)
+                       (type-auto-expand? y)
                        (eq? x (get-array-length func y))))
                 (func-c-args func))
            => (lambda (y) (cat "len" (type-index y))))

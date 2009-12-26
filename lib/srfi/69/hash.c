@@ -44,7 +44,7 @@ static sexp sexp_string_ci_hash (sexp ctx, sexp str, sexp bound) {
                                          sexp_unbox_fixnum(bound)));
 }
 
-static sexp_uint_t hash_one (sexp obj, sexp_uint_t bound, sexp_sint_t depth) {
+static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t depth) {
   sexp_uint_t acc = FNV_OFFSET_BASIS, size;
   sexp_sint_t i, len;
   sexp t, *p;
@@ -57,7 +57,7 @@ static sexp_uint_t hash_one (sexp obj, sexp_uint_t bound, sexp_sint_t depth) {
 #endif
   if (sexp_pointerp(obj)) {
     if (depth) {
-      t = &(sexp_type_specs[sexp_pointer_tag(obj)]);
+      t = sexp_object_type(ctx, obj);
       p = (sexp*) (((char*)obj) + sexp_type_field_base(t));
       p0 = ((char*)obj) + offsetof(struct sexp_struct, value);
       if ((sexp)p == obj) p=(sexp*)p0;
@@ -72,7 +72,7 @@ static sexp_uint_t hash_one (sexp obj, sexp_uint_t bound, sexp_sint_t depth) {
         depth--;
         for (i=0; i<len-1; i++) {
           acc *= FNV_PRIME;
-          acc ^= hash_one(p[i], 0, depth);
+          acc ^= hash_one(ctx, p[i], 0, depth);
         }
         /* tail-recurse on the last value */
         obj = p[len-1]; goto loop;
@@ -86,14 +86,10 @@ static sexp_uint_t hash_one (sexp obj, sexp_uint_t bound, sexp_sint_t depth) {
   return (bound ? acc % bound : acc);
 }
 
-static sexp_uint_t hash (sexp obj, sexp_uint_t bound) {
-  return hash_one(obj, bound, HASH_DEPTH);
-}
-
 static sexp sexp_hash (sexp ctx, sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
     return sexp_type_exception(ctx, "hash: not an integer", bound);
-  return sexp_make_fixnum(hash(obj, sexp_unbox_fixnum(bound)));
+  return sexp_make_fixnum(hash_one(ctx, obj, sexp_unbox_fixnum(bound), HASH_DEPTH));
 }
 
 static sexp sexp_hash_by_identity (sexp ctx, sexp obj, sexp bound) {

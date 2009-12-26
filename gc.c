@@ -44,17 +44,17 @@ static sexp_heap sexp_heap_last (sexp_heap h) {
   return h;
 }
 
-sexp_uint_t sexp_allocated_bytes (sexp x) {
+sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   sexp_uint_t res;
   sexp t;
-  if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_num_types))
+  if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_context_num_types(ctx)))
     return sexp_heap_align(1);
-  t = &(sexp_type_specs[sexp_pointer_tag(x)]);
+  t = sexp_object_type(ctx, x);
   res = sexp_type_size_of_object(t, x);
   return res;
 }
 
-void sexp_mark (sexp x) {
+void sexp_mark (sexp ctx, sexp x) {
   sexp_sint_t i, len;
   sexp t, *p;
   struct sexp_gc_var_t *saves;
@@ -64,13 +64,13 @@ void sexp_mark (sexp x) {
   sexp_gc_mark(x) = 1;
   if (sexp_contextp(x))
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
-      if (saves->var) sexp_mark(*(saves->var));
-  t = &(sexp_type_specs[sexp_pointer_tag(x)]);
+      if (saves->var) sexp_mark(ctx, *(saves->var));
+  t = sexp_object_type(ctx, x);
   p = (sexp*) (((char*)x) + sexp_type_field_base(t));
   len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
     for (i=0; i<len; i++)
-      sexp_mark(p[i]);
+      sexp_mark(ctx, p[i]);
     x = p[len];
     goto loop;
   }
@@ -108,10 +108,10 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      size = sexp_heap_align(sexp_allocated_bytes(p));
+      size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
       if ((! sexp_gc_mark(p)) && (! stack_references_pointer_p(ctx, p))) {
         /* free p */
-        finalizer = sexp_type_finalize(sexp_object_type(p));
+        finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
         if (finalizer) finalizer(ctx, p);
         sum_freed += size;
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
@@ -159,9 +159,9 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
 #if SEXP_USE_GLOBAL_SYMBOLS
   int i;
   for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
-    sexp_mark(sexp_symbol_table[i]);
+    sexp_mark(ctx, sexp_symbol_table[i]);
 #endif
-  sexp_mark(ctx);
+  sexp_mark(ctx, ctx);
   res = sexp_sweep(ctx, sum_freed);
   return res;
 }

@@ -81,10 +81,9 @@ endif
 all: chibi-scheme$(EXE) libs
 
 COMPILED_LIBS := lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
-	lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO) \
-	lib/chibi/ast$(SO) lib/chibi/net$(SO) \
-	lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
-	lib/chibi/time$(SO) lib/chibi/heap-stats$(SO)
+	lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) \
+	lib/chibi/net$(SO) lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
+	lib/chibi/time$(SO) lib/chibi/system$(SO) lib/chibi/heap-stats$(SO)
 
 libs: $(COMPILED_LIBS)
 

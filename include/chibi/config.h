@@ -53,6 +53,9 @@
 /* #define SEXP_USE_GLOBAL_HEAP 1 */
 
 /* uncomment this to make type definitions common to all contexts */
+/*   By default types are only global if you don't allow user type */
+/*   definitions, so new types will be local to a given set of */
+/*   contexts sharing thei heap. */
 /* #define SEXP_USE_GLOBAL_TYPES 1 */
 
 /* uncomment this to make the symbol table common to all contexts */

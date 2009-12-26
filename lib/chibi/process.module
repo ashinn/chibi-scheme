@@ -1,6 +1,6 @@
 
 (define-module (chibi process)
-  (export exit sleep fork kill execute waitpid
+  (export exit sleep alarm fork kill execute waitpid
           set-signal-action! make-signal-set signal-set-contains?
           signal-set-fill! signal-set-add! signal-set-delete!
           current-signal-mask

@@ -15,6 +15,11 @@
           file-regular?    file-directory?        file-character?
           file-block?      file-fifo?             file-link?
           file-socket?
+          get-file-descriptor-flags   set-file-descriptor-flags!
+          get-file-descriptor-status  set-file-descriptor-status!
+          open/read        open/write             open/read-write
+          open/create      open/exclusive         open/truncate
+          open/append      open/non-block
           )
   (import-immutable (scheme))
   (include-shared "filesystem")
