@@ -502,7 +502,8 @@
       (let ((ctype (assq base *types*)))
         (cond
          (ctype
-          (cat (if (type-null? type)
+          (cat "(" (type-c-name type) ")"
+               (if (type-null? type)
                    "sexp_cpointer_maybe_null_value"
                    "sexp_cpointer_value")
                "(" val ")"))
@@ -532,13 +533,16 @@
     ((string env-string non-null-string) "char*")
     (else (symbol->string base))))
 
+(define (type-struct-type type)
+  (let ((type-spec (assq (if (vector? type) (type-base type) type) *types*)))
+    (cond ((and type-spec (memq 'type: type-spec)) => cadr)
+          (else #f))))
+
 (define (type-c-name type)
   (let* ((type (parse-type type))
          (base (type-base type))
          (type-spec (assq base *types*))
-         (struct-type
-          (cond ((and type-spec (memq 'type: type-spec)) => cadr)
-                (else #f))))
+         (struct-type (type-struct-type type)))
     (string-append
      (if (type-const? type) "const " "")
      (if struct-type (string-append (symbol->string struct-type) " ") "")
@@ -988,7 +992,8 @@
        (lambda ()
          (c->scheme-converter
           (car field)
-          (string-append "((struct " (mangle name) "*)"
+          (string-append "((" (x->string (or (type-struct-type name) ""))
+                         " " (mangle name) "*)"
                          "sexp_cpointer_value(x))"
                          (if (type-struct? (car field)) "." "->")
                          (x->string (cadr field)))
@@ -1008,7 +1013,8 @@
        "  "
        (lambda () (c->scheme-converter
                (car field)
-               (string-append "((struct " (mangle name) "*)"
+               (string-append "((" (x->string (or (type-struct-type name) ""))
+                              " " (mangle name) "*)"
                               "sexp_cpointer_value(x))"
                               (if (type-struct? (car field)) "." "->")
                               (x->string (cadr field)))))
