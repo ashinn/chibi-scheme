@@ -311,11 +311,13 @@
   (raise (make-exception 'user msg args #f #f)))
 
 (define (with-exception-handler handler thunk)
-  (let ((orig-handler (current-exception-handler)))
-    (current-exception-handler
-     (lambda (exn)
-       (current-exception-handler orig-handler)
-       (handler exn)))
+  (letrec ((orig-handler (current-exception-handler))
+           (self (lambda (exn)
+                   (current-exception-handler orig-handler)
+                   (let ((res (handler exn)))
+                     (current-exception-handler self)
+                     res))))
+    (current-exception-handler self)
     (let ((res (thunk)))
       (current-exception-handler orig-handler)
       res)))
