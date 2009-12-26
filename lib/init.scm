@@ -312,7 +312,10 @@
 
 (define (with-exception-handler handler thunk)
   (let ((orig-handler (current-exception-handler)))
-    (current-exception-handler handler)
+    (current-exception-handler
+     (lambda (exn)
+       (current-exception-handler orig-handler)
+       (handler exn)))
     (let ((res (thunk)))
       (current-exception-handler orig-handler)
       res)))

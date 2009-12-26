@@ -1581,6 +1581,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG2 = sexp_make_vector(ctx, _ARG1, _ARG2);
     top--;
     break;
+  case SEXP_OP_MAKE_EXCEPTION:
+    _ARG5 = sexp_make_exception(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
+    top -= 4;
+    break;
   case SEXP_OP_AND:
     _ARG2 = sexp_make_boolean((_ARG1 != SEXP_FALSE) && (_ARG2 != SEXP_FALSE));
     top--;
