@@ -2,6 +2,11 @@
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
+/* uncomment this to disable most features */
+/*   Most features are enabled by default, but setting this */
+/*   option will disable any not explicitly enabled. */
+/* #define SEXP_USE_NO_FEATURES 1 */
+
 /* uncomment this to disable the module system */
 /*   Currently this just loads the config.scm from main and */
 /*   sets up an (import (module name)) macro. */
@@ -150,12 +155,16 @@
 #define _GNU_SOURCE
 #endif
 
+#ifndef SEXP_USE_NO_FEATURES
+#define SEXP_USE_NO_FEATURES 0
+#endif
+
 #ifndef SEXP_USE_MODULES
-#define SEXP_USE_MODULES 1
+#define SEXP_USE_MODULES ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_TYPE_DEFS
-#define SEXP_USE_TYPE_DEFS 1
+#define SEXP_USE_TYPE_DEFS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_MAXIMUM_TYPES
@@ -166,12 +175,12 @@
 #ifdef PLAN9
 #define SEXP_USE_DL 0
 #else
-#define SEXP_USE_DL 1
+#define SEXP_USE_DL ! SEXP_USE_NO_FEATURES
 #endif
 #endif
 
 #ifndef SEXP_USE_SIMPLIFY
-#define SEXP_USE_SIMPLIFY 1
+#define SEXP_USE_SIMPLIFY ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_BOEHM
@@ -207,14 +216,14 @@
 #endif
 
 #ifndef SEXP_USE_FLONUMS
-#define SEXP_USE_FLONUMS 1
+#define SEXP_USE_FLONUMS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_INFINITIES
 #if defined(PLAN9) || ! SEXP_USE_FLONUMS
 #define SEXP_USE_INFINITIES 0
 #else
-#define SEXP_USE_INFINITIES 1
+#define SEXP_USE_INFINITIES ! SEXP_USE_NO_FEATURES
 #endif
 #endif
 
@@ -223,27 +232,23 @@
 #endif
 
 #ifndef SEXP_USE_BIGNUMS
-#define SEXP_USE_BIGNUMS 1
+#define SEXP_USE_BIGNUMS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_MATH
-#define SEXP_USE_MATH SEXP_USE_FLONUMS
+#define SEXP_USE_MATH SEXP_USE_FLONUMS && ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_WARN_UNDEFS
-#define SEXP_USE_WARN_UNDEFS 1
+#define SEXP_USE_WARN_UNDEFS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_HUFF_SYMS
-#define SEXP_USE_HUFF_SYMS 1
+#define SEXP_USE_HUFF_SYMS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_HASH_SYMS
-#define SEXP_USE_HASH_SYMS 1
-#endif
-
-#ifndef SEXP_USE_DEBUG
-#define SEXP_USE_DEBUG 1
+#define SEXP_USE_HASH_SYMS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_DEBUG_VM
@@ -251,15 +256,15 @@
 #endif
 
 #ifndef SEXP_USE_STRING_STREAMS
-#define SEXP_USE_STRING_STREAMS 1
+#define SEXP_USE_STRING_STREAMS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_AUTOCLOSE_PORTS
-#define SEXP_USE_AUTOCLOSE_PORTS 1
+#define SEXP_USE_AUTOCLOSE_PORTS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_2010_EPOCH
-#define SEXP_USE_2010_EPOCH 1
+#define SEXP_USE_2010_EPOCH ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_EPOCH_OFFSET
@@ -271,7 +276,7 @@
 #endif
 
 #ifndef SEXP_USE_CHECK_STACK
-#define SEXP_USE_CHECK_STACK 1
+#define SEXP_USE_CHECK_STACK ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifdef PLAN9
