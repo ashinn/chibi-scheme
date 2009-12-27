@@ -465,6 +465,9 @@ static int sexp_number_types[] =
 
 static int sexp_number_type (sexp a) {
   return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&15]
+#if SEXP_USE_IMMEDIATE_FLONUMS
+    : sexp_flonump(a) ? 2
+#endif
     : sexp_fixnump(a);
 }
 
