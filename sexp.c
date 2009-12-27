@@ -1464,11 +1464,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       if (sexp_fixnump(res))
         res = sexp_make_flonum(ctx, sexp_unbox_fixnum(res));
       break;
-    case 'f':
-    case 't':
+    case 'f': case 'F':
+    case 't': case 'T':
       c2 = sexp_read_char(ctx, in);
       if (c2 == EOF || is_separator(c2)) {
-        res = (c1 == 't' ? SEXP_TRUE : SEXP_FALSE);
+        res = (tolower(c1) == 't' ? SEXP_TRUE : SEXP_FALSE);
         sexp_push_char(ctx, c2, in);
       } else {
         tmp = sexp_list2(ctx, sexp_make_character(c1), sexp_make_character(c2));
