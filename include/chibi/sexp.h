@@ -185,7 +185,8 @@ struct sexp_struct {
       FILE *stream;
       char *buf;
       char openp, sourcep;
-      sexp_uint_t offset, line, size;
+      sexp_uint_t offset, line;
+      size_t size;
       sexp name;
       sexp cookie;
     } port;
