@@ -1845,14 +1845,14 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     }
 #else
 #if SEXP_USE_FLONUMS
-    } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+    } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2)) {
       i = sexp_flonum_value(_ARG1) < sexp_flonum_value(_ARG2);
-    else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
-      i = sexp_flonum_value(_ARG1) < (double)sexp_unbox_fixnum(_ARG2);
-    else if (sexp_fixnump(_ARG1) && sexp_flonump(_ARG2))
+    } else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2)) {
+      i = sexp_flonum_value(_ARG1) < (double)sexp_unbox_fixnum(_ARG2); 
+    } else if (sexp_fixnump(_ARG1) && sexp_flonump(_ARG2)) {
       i = (double)sexp_unbox_fixnum(_ARG1) < sexp_flonum_value(_ARG2);
 #endif
-    else sexp_raise("<: not a number", sexp_list2(ctx, _ARG1, _ARG2));
+    } else sexp_raise("<: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_make_boolean(i);
 #endif
     top--;
@@ -1869,14 +1869,14 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     }
 #else
 #if SEXP_USE_FLONUMS
-    } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+    } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2)) {
       i = sexp_flonum_value(_ARG1) <= sexp_flonum_value(_ARG2);
-    else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
+    } else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2)) {
       i = sexp_flonum_value(_ARG1) <= (double)sexp_unbox_fixnum(_ARG2);
-    else if (sexp_fixnump(_ARG1) && sexp_flonump(_ARG2))
+    } else if (sexp_fixnump(_ARG1) && sexp_flonump(_ARG2)) {
       i = (double)sexp_unbox_fixnum(_ARG1) <= sexp_flonum_value(_ARG2);
 #endif
-    else sexp_raise("<=: not a number", sexp_list2(ctx, _ARG1, _ARG2));
+    } else sexp_raise("<=: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_make_boolean(i);
 #endif
     top--;
@@ -1893,14 +1893,14 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     }
 #else
 #if SEXP_USE_FLONUMS
-    } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2))
+    } else if (sexp_flonump(_ARG1) && sexp_flonump(_ARG2)) {
       i = sexp_flonum_value(_ARG1) == sexp_flonum_value(_ARG2);
-    else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2))
+    } else if (sexp_flonump(_ARG1) && sexp_fixnump(_ARG2)) {
       i = sexp_flonum_value(_ARG1) == (double)sexp_unbox_fixnum(_ARG2);
-    else if (sexp_fixnump(_ARG1) && sexp_flonump(_ARG2))
+    } else if (sexp_fixnump(_ARG1) && sexp_flonump(_ARG2)) {
       i = (double)sexp_unbox_fixnum(_ARG1) == sexp_flonum_value(_ARG2);
 #endif
-    else sexp_raise("=: not a number", sexp_list2(ctx, _ARG1, _ARG2));
+    } else sexp_raise("=: not a number", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_make_boolean(i);
 #endif
     top--;
