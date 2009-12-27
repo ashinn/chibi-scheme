@@ -10,7 +10,7 @@
 #endif
 
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
-extern sexp_uint_t sexp_allocated_bytes (sexp x);
+extern sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x);
 
 static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
   int i;
@@ -88,7 +88,7 @@ static sexp sexp_heap_walk (sexp ctx, int depth, int printp) {
       stats[sexp_pointer_tag(p)]++;
       if (sexp_pointer_tag(p) > hi_type)
         hi_type = sexp_pointer_tag(p);
-      p = (sexp) (((char*)p) + sexp_heap_align(sexp_allocated_bytes(p)));
+      p = (sexp) (((char*)p) + sexp_heap_align(sexp_allocated_bytes(ctx, p)));
     }
   }
 
