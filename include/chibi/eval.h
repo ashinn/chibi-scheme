@@ -133,6 +133,7 @@ SEXP_API sexp sexp_make_env (sexp context);
 SEXP_API sexp sexp_make_null_env (sexp context, sexp version);
 SEXP_API sexp sexp_make_primitive_env (sexp context, sexp version);
 SEXP_API sexp sexp_make_standard_env (sexp context, sexp version);
+SEXP_API sexp sexp_load_standard_parameters (sexp context, sexp env);
 SEXP_API sexp sexp_load_standard_env (sexp context, sexp env, sexp version);
 SEXP_API sexp sexp_find_module_file (sexp ctx, char *file);
 SEXP_API sexp sexp_load_module_file (sexp ctx, char *file, sexp env);
