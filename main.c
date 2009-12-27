@@ -113,6 +113,7 @@ void run_main (int argc, char **argv) {
       free(impmod);
       break;
     case 'q':
+      sexp_load_standard_parameters(ctx, env);
       init_loaded = 1;
       break;
     case 'A':

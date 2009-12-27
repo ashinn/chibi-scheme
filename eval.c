@@ -2530,9 +2530,7 @@ sexp sexp_add_module_directory (sexp ctx, sexp dir, sexp appendp) {
   return SEXP_VOID;
 }
 
-sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
-  sexp_gc_var3(op, tmp, sym);
-  sexp_gc_preserve3(ctx, op, tmp, sym);
+sexp sexp_load_standard_parameters (sexp ctx, sexp e) {
   /* add io port and interaction env parameters */
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL),
                   sexp_make_input_port(ctx, stdin, SEXP_FALSE));
@@ -2541,6 +2539,12 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL),
                   sexp_make_output_port(ctx, stderr, SEXP_FALSE));
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
+}
+
+sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
+  sexp_gc_var3(op, tmp, sym);
+  sexp_gc_preserve3(ctx, op, tmp, sym);
+  sexp_load_standard_parameters(ctx, e);
 #if SEXP_USE_DL
   sexp_env_define(ctx, e, sexp_intern(ctx, "*shared-object-extension*"),
                   sexp_c_string(ctx, sexp_so_extension, -1));
