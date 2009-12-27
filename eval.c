@@ -2539,6 +2539,7 @@ sexp sexp_load_standard_parameters (sexp ctx, sexp e) {
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL),
                   sexp_make_output_port(ctx, stderr, SEXP_FALSE));
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
+  return SEXP_VOID;
 }
 
 sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
