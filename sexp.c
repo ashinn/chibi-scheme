@@ -708,7 +708,7 @@ sexp sexp_intern(sexp ctx, char *str) {
 #else
   bucket = 0;
 #endif
-  len = strlen(str);
+  len = strlen(str) + 1; /* include the trailing NULL in the comparison */
   for (ls=sexp_context_symbols(ctx)[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
     if (! strncmp(str, sexp_string_data(sexp_symbol_string(sexp_car(ls))), len))
       return sexp_car(ls);
@@ -717,7 +717,7 @@ sexp sexp_intern(sexp ctx, char *str) {
   sexp_gc_preserve1(ctx, sym);
   sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
   if (sexp_exceptionp(sym)) return sym;
-  sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
+  sexp_symbol_string(sym) = sexp_c_string(ctx, str, len-1);
   sexp_push(ctx, sexp_context_symbols(ctx)[bucket], sym);
   sexp_gc_release1(ctx);
   return sym;
