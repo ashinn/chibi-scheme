@@ -57,7 +57,11 @@ _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_FIXNUMP,  1, 0, 0, 0, 0, "fixnum?", NULL, 0
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "pair?", sexp_make_fixnum(SEXP_PAIR), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "string?", sexp_make_fixnum(SEXP_STRING), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "vector?", sexp_make_fixnum(SEXP_VECTOR), 0),
+#if SEXP_USE_IMMEDIATE_FLONUMS
+_FN1(0, "flonum?", 0, sexp_flonum_predicate),
+#else
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "flonum?", sexp_make_fixnum(SEXP_FLONUM), 0),
+#endif
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "bignum?", sexp_make_fixnum(SEXP_BIGNUM), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "closure?", sexp_make_fixnum(SEXP_PROCEDURE), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, 0, 0, 0, "opcode?", sexp_make_fixnum(SEXP_OPCODE), 0),

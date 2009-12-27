@@ -574,12 +574,28 @@ sexp sexp_equalp (sexp ctx, sexp a, sexp b) {
 /********************* strings, symbols, vectors **********************/
 
 #if ! SEXP_USE_IMMEDIATE_FLONUMS
-sexp sexp_make_flonum(sexp ctx, double f) {
+sexp sexp_make_flonum (sexp ctx, double f) {
   sexp x = sexp_alloc_type(ctx, flonum, SEXP_FLONUM);
   if (sexp_exceptionp(x)) return x;
   sexp_flonum_value(x) = f;
   return x;
 }
+#else
+sexp sexp_flonum_predicate (sexp ctx, sexp x) {
+  return sexp_make_boolean(sexp_flonump(x));
+}
+#if SEXP_64_BIT
+float sexp_flonum_value (sexp x) {
+  union sexp_flonum_conv r;
+  r.bits = (sexp_uint_t)x >> 32;
+  return r.flonum;
+}
+sexp sexp_make_flonum (sexp ctx, float f) {
+  union sexp_flonum_conv x;
+  x.flonum = f;
+  return (sexp)(((sexp_uint_t)(x.bits) << 32) + SEXP_IFLONUM_TAG);
+}
+#endif
 #endif
 
 sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
@@ -1111,7 +1127,7 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
     } else
 #endif
     {
-      i = sprintf(numbuf, "%.15g", f);
+      i = sprintf(numbuf, "%.8g", f);
       if (f == trunc(f) && ! strchr(numbuf, '.')) {
         numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
       }
