@@ -44,8 +44,6 @@ static sexp sexp_get_opcode_name (sexp ctx, sexp op) {
 }
 
 sexp sexp_init_library (sexp ctx, sexp env) {
-  sexp_gc_var2(name, op);
-  sexp_gc_preserve2(ctx, name, op);
   sexp_define_type_predicate(ctx, env, "syntactic-closure?", SEXP_SYNCLO);
   sexp_define_type_predicate(ctx, env, "lambda?", SEXP_LAMBDA);
   sexp_define_type_predicate(ctx, env, "cnd?", SEXP_CND);
@@ -74,7 +72,6 @@ sexp sexp_init_library (sexp ctx, sexp env) {
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
-  sexp_gc_release2(ctx);
   return SEXP_VOID;
 }
 

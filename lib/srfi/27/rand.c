@@ -36,7 +36,10 @@ static sexp default_random_source;
 
 static sexp sexp_rs_random_integer (sexp ctx, sexp rs, sexp bound) {
   sexp res;
-  int32_t n, hi, mod, len, i, *data;
+  int32_t n;
+#if SEXP_USE_BIGNUMS
+  int32_t hi, mod, len, i, *data;
+#endif
   if (! sexp_random_source_p(rs))
     res = sexp_type_exception(ctx, "not a random-source", rs);
   if (sexp_fixnump(bound)) {

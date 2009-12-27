@@ -22,8 +22,11 @@ static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) 
 
 static sexp analyze (sexp ctx, sexp x);
 static void generate (sexp ctx, sexp x);
+
+#if SEXP_USE_MODULES
 static sexp sexp_load_module_file_op (sexp ctx, sexp file, sexp env);
 static sexp sexp_find_module_file_op (sexp ctx, sexp file);
+#endif
 
 static sexp sexp_compile_error (sexp ctx, char *message, sexp obj) {
   sexp exn;
@@ -2179,7 +2182,7 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
     if ((x == SEXP_ZERO) || (x == SEXP_NEG_ONE))
       res = sexp_make_flonum(ctx, pow(0, 0));          /* +nan.0 */
     else if (x == SEXP_ONE)
-      res = sexp_make_flonum(ctx, 1);                  /* 1.0    */
+      res = SEXP_ONE;                                  /* 1.0    */
     else if (sexp_flonump(x))
       res = sexp_make_flonum(ctx, pow(sexp_flonum_value(x), sexp_bignum_to_double(e)));
     else
@@ -2195,7 +2198,7 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
     x1 = sexp_flonum_value(x);
 #endif
   else
-    return sexp_type_exception(ctx, "not a number", x);
+    return sexp_type_exception(ctx, "expt: not a number", x);
   if (sexp_fixnump(e))
     e1 = sexp_unbox_fixnum(e);
 #if SEXP_USE_FLONUMS
@@ -2203,11 +2206,13 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
     e1 = sexp_flonum_value(e);
 #endif
   else
-    return sexp_type_exception(ctx, "not a number", e);
+    return sexp_type_exception(ctx, "expt: not a number", e);
   f = pow(x1, e1);
+  if ((f > SEXP_MAX_FIXNUM) || (f < SEXP_MIN_FIXNUM)
 #if SEXP_USE_FLONUMS
-  if ((f > SEXP_MAX_FIXNUM) || (! sexp_fixnump(x)) || (! sexp_fixnump(e))) {
+      || (! sexp_fixnump(x)) || (! sexp_fixnump(e))
 #endif
+      ) {
 #if SEXP_USE_BIGNUMS
     if (sexp_fixnump(x) && sexp_fixnump(e))
       res = sexp_bignum_expt(ctx, sexp_fixnum_to_bignum(ctx, x), e);
@@ -2215,8 +2220,10 @@ static sexp sexp_expt (sexp ctx, sexp x, sexp e) {
 #endif
 #if SEXP_USE_FLONUMS
       res = sexp_make_flonum(ctx, f);
-  } else
+#else
+      res = sexp_make_fixnum((sexp_sint_t)round(f));
 #endif
+  } else
     res = sexp_make_fixnum((sexp_sint_t)round(f));
 #if SEXP_USE_BIGNUMS
   }
@@ -2472,13 +2479,6 @@ sexp sexp_find_module_file (sexp ctx, char *file) {
   return res;
 }
 
-static sexp sexp_find_module_file_op (sexp ctx, sexp file) {
-  if (! sexp_stringp(file))
-    return sexp_type_exception(ctx, "not a string", file);
-  else
-    return sexp_find_module_file(ctx, sexp_string_data(file));
-}
-
 #define sexp_file_not_found "couldn't find file in module path"
 
 sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
@@ -2496,6 +2496,13 @@ sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
   return res;
 }
 
+#if SEXP_USE_MODULES
+static sexp sexp_find_module_file_op (sexp ctx, sexp file) {
+  if (! sexp_stringp(file))
+    return sexp_type_exception(ctx, "not a string", file);
+  else
+    return sexp_find_module_file(ctx, sexp_string_data(file));
+}
 sexp sexp_load_module_file_op (sexp ctx, sexp file, sexp env) {
   if (! sexp_stringp(file))
     return sexp_type_exception(ctx, "not a string", file);
@@ -2503,6 +2510,7 @@ sexp sexp_load_module_file_op (sexp ctx, sexp file, sexp env) {
     return sexp_type_exception(ctx, "not an environment", env);
   return sexp_load_module_file(ctx, sexp_string_data(file), env);
 }
+#endif
 
 sexp sexp_add_module_directory (sexp ctx, sexp dir, sexp appendp) {
   sexp ls;

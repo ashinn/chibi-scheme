@@ -4,11 +4,15 @@
 
 #if SEXP_USE_BIGNUMS
 #include <chibi/bignum.h>
+#else
+#define sexp_bignum_normalize(x) x
 #endif
 
 static sexp sexp_bit_and (sexp ctx, sexp x, sexp y) {
   sexp res;
+#if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
+#endif
   if (sexp_fixnump(x)) {
     if (sexp_fixnump(y))
       res = (sexp) ((sexp_uint_t)x & (sexp_uint_t)y);
@@ -42,7 +46,9 @@ static sexp sexp_bit_and (sexp ctx, sexp x, sexp y) {
 
 static sexp sexp_bit_ior (sexp ctx, sexp x, sexp y) {
   sexp res;
+#if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
+#endif
   if (sexp_fixnump(x)) {
     if (sexp_fixnump(y))
       res = (sexp) ((sexp_uint_t)x | (sexp_uint_t)y);
@@ -80,7 +86,9 @@ static sexp sexp_bit_ior (sexp ctx, sexp x, sexp y) {
 
 static sexp sexp_bit_xor (sexp ctx, sexp x, sexp y) {
   sexp res;
+#if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
+#endif
   if (sexp_fixnump(x)) {
     if (sexp_fixnump(y))
       res = sexp_make_fixnum(sexp_unbox_fixnum(x) ^ sexp_unbox_fixnum(y));
@@ -119,9 +127,14 @@ static sexp sexp_bit_xor (sexp ctx, sexp x, sexp y) {
 /* should probably split into left and right shifts, that's a better */
 /* interface anyway */
 static sexp sexp_arithmetic_shift (sexp ctx, sexp i, sexp count) {
-  sexp_gc_var1(res);
-  sexp_sint_t c, len, offset, bit_shift, j;
   sexp_uint_t tmp;
+  sexp_sint_t c;
+#if SEXP_USE_BIGNUMS
+  sexp_sint_t len, offset, bit_shift, j;
+  sexp_gc_var1(res);
+#else
+  sexp res;
+#endif
   if (! sexp_fixnump(count))
     return sexp_type_exception(ctx, "arithmetic-shift: not an integer", count);
   c = sexp_unbox_fixnum(count);
@@ -194,7 +207,10 @@ static sexp_uint_t bit_count (sexp_uint_t i) {
 
 static sexp sexp_bit_count (sexp ctx, sexp x) {
   sexp res;
-  sexp_sint_t count, i;
+  sexp_sint_t i;
+#if SEXP_USE_BIGNUMS
+  sexp_uint_t count;
+#endif
   if (sexp_fixnump(x)) {
     i = sexp_unbox_fixnum(x);
     res = sexp_make_fixnum(bit_count(i<0 ? ~i : i));
@@ -229,7 +245,10 @@ static sexp_uint_t integer_log2 (sexp_uint_t x) {
 }
 
 static sexp sexp_integer_length (sexp ctx, sexp x) {
-  sexp_sint_t hi, tmp;
+  sexp_sint_t tmp;
+#if SEXP_USE_BIGNUMS
+  sexp_sint_t hi;
+#endif
   if (sexp_fixnump(x)) {
     tmp = sexp_unbox_fixnum(x);
     return sexp_make_fixnum(integer_log2(tmp < 0 ? -tmp-1 : tmp));
@@ -245,7 +264,9 @@ static sexp sexp_integer_length (sexp ctx, sexp x) {
 }
 
 static sexp sexp_bit_set_p (sexp ctx, sexp i, sexp x) {
+#if SEXP_USE_BIGNUMS
   sexp_uint_t pos;
+#endif
   if (! sexp_fixnump(i))
     return sexp_type_exception(ctx, "bit-set?: not an integer", i);
   if (sexp_fixnump(x)) {

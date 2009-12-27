@@ -678,9 +678,13 @@ static sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc) {
 #endif
 
 sexp sexp_intern(sexp ctx, char *str) {
+#if SEXP_USE_HUFF_SYMS
   struct sexp_huff_entry he;
-  sexp_uint_t len, res=FNV_OFFSET_BASIS, space=3, newbits, bucket;
-  char c, *p=str;
+  sexp_uint_t space=3, newbits;
+  char c;
+#endif
+  sexp_uint_t len, res=FNV_OFFSET_BASIS, bucket;
+  char *p=str;
   sexp ls;
   sexp_gc_var1(sym);
 
@@ -696,9 +700,9 @@ sexp sexp_intern(sexp ctx, char *str) {
     space += newbits;
   }
   return (sexp) (res + SEXP_ISYMBOL_TAG);
-#endif
 
  normal_intern:
+#endif
 #if SEXP_USE_HASH_SYMS
   bucket = (sexp_string_hash(p, res) % SEXP_SYMBOL_TABLE_SIZE);
 #else
@@ -1013,7 +1017,10 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
 }
 
 sexp sexp_write (sexp ctx, sexp obj, sexp out) {
-  unsigned long len, c, res;
+#if SEXP_USE_HUFF_SYMS
+  unsigned long res, c;
+#endif
+  unsigned long len;
   long i=0;
   double f;
   sexp x, *elts;

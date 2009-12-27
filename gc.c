@@ -32,7 +32,7 @@
 #endif
 
 #if SEXP_USE_GLOBAL_HEAP
-static sexp_heap sexp_global_heap;
+sexp_heap sexp_global_heap;
 #endif
 
 #if SEXP_USE_DEBUG_GC

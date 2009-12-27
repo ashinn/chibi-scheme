@@ -138,6 +138,9 @@ test-basic: chibi-scheme$(EXE)
 	    fi; \
 	done
 
+test-build:
+	./tests/build/build-tests.sh
+
 test-numbers: all
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
