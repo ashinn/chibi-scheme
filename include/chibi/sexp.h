@@ -433,7 +433,12 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_contextp(x)    (sexp_check_tag(x, SEXP_CONTEXT))
+
+#if SEXP_USE_HUFF_SYMS
 #define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
+#else
+#define sexp_symbolp(x)     (sexp_lsymbolp(x))
+#endif
 
 #define sexp_idp(x) \
   (sexp_symbolp(x) || (sexp_synclop(x) && sexp_symbolp(sexp_synclo_expr(x))))
