@@ -12,6 +12,9 @@
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
 extern sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x);
 
+#if SEXP_USE_GLOBAL_HEAP
+#endif
+
 static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
   int i;
   if ((!sexp_pointerp(x)) || sexp_symbolp(x) || sexp_stringp(x)

@@ -131,8 +131,8 @@ _FN1(0, "round", 0, sexp_round),
 _FN1(0, "truncate", 0, sexp_trunc),
 _FN1(0, "floor", 0, sexp_floor),
 _FN1(0, "ceiling", 0, sexp_ceiling),
-_FN2(0, 0, "expt", 0, sexp_expt),
 #endif
+_FN2(0, 0, "expt", 0, sexp_expt),
 #if SEXP_USE_TYPE_DEFS
 _FN2(SEXP_STRING, SEXP_FIXNUM, "register-simple-type", 0, sexp_register_simple_type),
 _FN2(SEXP_STRING, SEXP_FIXNUM, "make-type-predicate", 0, sexp_make_type_predicate),

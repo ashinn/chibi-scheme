@@ -622,6 +622,9 @@ SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
 #define sexp_global(ctx,x)      (sexp_vector_data(sexp_context_globals(ctx))[x])
 
 #if SEXP_USE_GLOBAL_HEAP
+#if ! SEXP_USE_BOEHM
+SEXP_API sexp_heap sexp_global_heap;
+#endif
 #define sexp_context_heap(ctx)  sexp_global_heap
 #else
 #define sexp_context_heap(ctx)  ((ctx)->value.context.heap)
