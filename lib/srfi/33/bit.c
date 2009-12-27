@@ -236,9 +236,12 @@ static const char log_table_256[256] =
 
 static sexp_uint_t integer_log2 (sexp_uint_t x) {
   sexp_uint_t t, tt;
+#if SEXP_64_BIT
   if ((tt = x >> 32))
     return integer_log2(tt) + 32;
-  else if ((tt = x >> 16))
+  else
+#endif
+  if ((tt = x >> 16))
     return (t = tt >> 8) ? 24 + log_table_256[t] : 16 + log_table_256[tt];
   else 
     return (t = x >> 8) ? 8 + log_table_256[t] : log_table_256[x];
