@@ -1,3 +1,6 @@
+;; bitwise.scm -- high-level bitwise functions
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (bitwise-not i) (- (+ i 1)))
 

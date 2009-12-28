@@ -1,3 +1,6 @@
+/*  rand.c -- rand_r/random_r interface                  */
+/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #include <time.h>
 #include <chibi/eval.h>

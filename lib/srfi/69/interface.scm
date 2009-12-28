@@ -1,3 +1,8 @@
+;; interface.scm -- hash-table interface
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
+
+;; the non-exported hash-table-cell is the heart of the implemenation
 
 (define (make-hash-table . o)
   (let ((eq-fn (if (pair? o) (car o) equal?))

@@ -1,3 +1,6 @@
+;; predicates.scm -- list prediates
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (proper-list? x)
   (cond ((null? x) #t)

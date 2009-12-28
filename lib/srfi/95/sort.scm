@@ -1,3 +1,6 @@
+;; sort.scm -- SRFI-95 sorting utilities
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (copy seq)
   (if (vector? seq)

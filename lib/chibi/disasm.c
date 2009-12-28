@@ -1,4 +1,4 @@
-/*  debug.c -- optional debugging utilities              */
+/*  disasm.c -- optional debugging utilities             */
 /*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 

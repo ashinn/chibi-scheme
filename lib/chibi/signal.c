@@ -1,3 +1,6 @@
+/*  signal.c -- process signals interface                */
+/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #define SEXP_MAX_SIGNUM 32
 

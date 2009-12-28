@@ -1,3 +1,6 @@
+;; filesystem.scm -- additional filesystem utilities
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (directory-fold dir kons knil)
   (let ((dir (opendir dir)))

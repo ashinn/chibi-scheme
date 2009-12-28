@@ -1,3 +1,6 @@
+;; alist.scm -- association list utilities
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (alist-cons key value ls) (cons (cons key value) ls))
 

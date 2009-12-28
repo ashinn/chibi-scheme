@@ -1,3 +1,6 @@
+/*  simplify.c -- basic simplification pass              */
+/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #define simplify_it(it) ((it) = simplify(ctx, it, substs, lambda))
 

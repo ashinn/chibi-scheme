@@ -1,3 +1,6 @@
+;; init.scm -- R5RS library procedures
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 ;; provide c[ad]{2,4}r
 
