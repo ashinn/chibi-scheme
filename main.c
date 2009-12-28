@@ -153,7 +153,7 @@ void run_main (int argc, char **argv) {
       break;
     case 'V':
       printf("chibi-scheme 0.3\n");
-      exit(0);
+      return;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
       exit_failure();
