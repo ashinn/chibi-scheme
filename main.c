@@ -10,6 +10,12 @@
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
 
+#ifdef PLAN9
+#define exit_failure() exits("ERROR")
+#else
+#define exit_failure() exit(1)
+#endif
+
 static void repl (sexp ctx) {
   sexp in, out, err;
   sexp_gc_var4(obj, tmp, res, env);
@@ -60,17 +66,20 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
-#define sexp_load_init() if (! init_loaded++) check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE))
+#define sexp_load_init() if (! init_loaded++) do {                      \
+      ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size);        \
+      env = sexp_context_env(ctx);                                      \
+      check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE)); \
+      sexp_gc_preserve2(ctx, str, args);                                \
+    } while (0)
 
 void run_main (int argc, char **argv) {
   char *arg, *impmod, *p;
-  sexp env, out=NULL, res=SEXP_VOID, ctx;
+  sexp env, out=NULL, res=SEXP_VOID, ctx=NULL;
   sexp_sint_t i, len, quit=0, print=0, init_loaded=0;
+  sexp_uint_t heap_size=0;
   sexp_gc_var2(str, args);
 
-  ctx = sexp_make_eval_context(NULL, NULL, NULL);
-  sexp_gc_preserve2(ctx, str, args);
-  env = sexp_context_env(ctx);
   out = SEXP_FALSE;
   args = SEXP_NULL;
 
@@ -113,8 +122,13 @@ void run_main (int argc, char **argv) {
       free(impmod);
       break;
     case 'q':
-      sexp_load_standard_parameters(ctx, env);
-      init_loaded = 1;
+      if (! ctx) {
+        ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size);
+        env = sexp_context_env(ctx);
+        sexp_gc_preserve2(ctx, str, args);
+      }
+      if (! init_loaded++)
+        sexp_load_standard_parameters(ctx, env);
       break;
     case 'A':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
@@ -129,8 +143,19 @@ void run_main (int argc, char **argv) {
         args = sexp_cons(ctx, str=sexp_c_string(ctx,argv[argc],-1), args);
       argc++;
       break;
+    case 'h':
+      heap_size = atol(argv[++i]);
+      len = strlen(argv[i]);
+      if (heap_size && isalpha(argv[i][len-1])) {
+        switch (tolower(argv[i][len-1])) {
+        case 'k': heap_size *= 1024; break;
+        case 'm': heap_size *= (1024*1024); break;
+        }
+      }
+      break;
     default:
-      errx(1, "unknown option: %s", argv[i]);
+      fprintf(stderr, "unknown option: %s\n", argv[i]);
+      exit_failure();
     }
   }
 

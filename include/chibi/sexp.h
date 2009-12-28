@@ -793,7 +793,7 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
-SEXP_API sexp sexp_make_context(sexp ctx);
+SEXP_API sexp sexp_make_context(sexp ctx, sexp_uint_t size);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 SEXP_API sexp sexp_cons(sexp ctx, sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
