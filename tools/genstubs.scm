@@ -1,4 +1,4 @@
-#! chibi-scheme -s
+#! /usr/bin/env chibi-scheme
 
 ;; Note: this evolved as a throw-away script to provide certain core
 ;; modules, and so is a mess.  Tread carefully.
@@ -1152,5 +1152,3 @@
          (with-output-to-file (cadr args) (lambda () (generate (car args))))))
     (else
      (error "usage: genstubs <file.stub> [<output.c>]"))))
-
-(main (command-line-arguments))

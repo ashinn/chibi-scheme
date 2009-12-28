@@ -81,10 +81,10 @@ endif
 all: chibi-scheme$(EXE) libs
 
 COMPILED_LIBS := lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
-	lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) \
-	lib/chibi/net$(SO) lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
-	lib/chibi/time$(SO) lib/chibi/system$(SO) lib/chibi/heap-stats$(SO) \
-	lib/chibi/disasm$(SO)
+	lib/srfi/69/hash$(SO) lib/srfi/98/env$(SO) \
+	lib/chibi/ast$(SO) lib/chibi/net$(SO) lib/chibi/filesystem$(SO) \
+	lib/chibi/process$(SO) lib/chibi/time$(SO) lib/chibi/system$(SO) \
+	lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO)
 
 libs: $(COMPILED_LIBS)
 
@@ -114,7 +114,7 @@ chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
 
 %.c: %.stub $(GENSTUBS)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) $(GENSTUBS) $<
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PATH=.:$(PATH) $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
@@ -141,19 +141,19 @@ test-basic: chibi-scheme$(EXE)
 test-build:
 	./tests/build/build-tests.sh
 
-test-numbers: all
+test-numbers: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
-test-hash: all
+test-hash: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/hash-tests.scm
 
-test-match: all
+test-match: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/match-tests.scm
 
-test-loop: all
+test-loop: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/loop-tests.scm
 
-test: all
+test: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/r5rs-tests.scm
 
 install: chibi-scheme$(EXE)
