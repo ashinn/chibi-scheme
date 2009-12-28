@@ -13,7 +13,7 @@
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
 #else
-#define exit_failure() exit(1)
+#define exit_failure() exit(70)
 #endif
 
 static void repl (sexp ctx) {
@@ -66,21 +66,23 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
-#define sexp_load_init() if (! init_loaded++) do {                      \
+#define init_context() if (! ctx) do {                                  \
       ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size);        \
       env = sexp_context_env(ctx);                                      \
+      sexp_gc_preserve2(ctx, tmp, args);                                \
+    } while (0)
+
+#define load_init() if (! init_loaded++) do {                           \
+      init_context();                                                   \
       check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE)); \
-      sexp_gc_preserve2(ctx, str, args);                                \
     } while (0)
 
 void run_main (int argc, char **argv) {
   char *arg, *impmod, *p;
-  sexp env, out=NULL, res=SEXP_VOID, ctx=NULL;
-  sexp_sint_t i, len, quit=0, print=0, init_loaded=0;
+  sexp env, out=SEXP_FALSE, res=SEXP_VOID, ctx=NULL;
+  sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0;
   sexp_uint_t heap_size=0;
-  sexp_gc_var2(str, args);
-
-  out = SEXP_FALSE;
+  sexp_gc_var2(tmp, args);
   args = SEXP_NULL;
 
   /* parse options */
@@ -88,9 +90,9 @@ void run_main (int argc, char **argv) {
     switch (argv[i][1]) {
     case 'e':
     case 'p':
+      load_init();
       print = (argv[i][1] == 'p');
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      sexp_load_init();
       res = check_exception(ctx, sexp_read_from_string(ctx, arg));
       res = check_exception(ctx, sexp_eval(ctx, res, env));
       if (print) {
@@ -103,13 +105,13 @@ void run_main (int argc, char **argv) {
       i++;
       break;
     case 'l':
+      load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      sexp_load_init();
       check_exception(ctx, sexp_load_module_file(ctx, argv[++i], env));
       break;
-    case 'u':
+    case 'm':
+      load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      sexp_load_init();
       len = strlen(arg)+strlen(sexp_import_prefix)+strlen(sexp_import_suffix);
       impmod = (char*) malloc(len+1);
       strcpy(impmod, sexp_import_prefix);
@@ -122,52 +124,63 @@ void run_main (int argc, char **argv) {
       free(impmod);
       break;
     case 'q':
-      if (! ctx) {
-        ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size);
-        env = sexp_context_env(ctx);
-        sexp_gc_preserve2(ctx, str, args);
-      }
-      if (! init_loaded++)
-        sexp_load_standard_parameters(ctx, env);
+      init_context();
+      if (! init_loaded++) sexp_load_standard_parameters(ctx, env);
       break;
     case 'A':
+      init_context();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      sexp_add_module_directory(ctx, str=sexp_c_string(ctx,arg,-1), SEXP_TRUE);
+      sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_TRUE);
       break;
     case 'I':
+      init_context();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      sexp_add_module_directory(ctx, str=sexp_c_string(ctx,arg,-1), SEXP_FALSE);
+      sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_FALSE);
       break;
-    case 's':
-      for (argc=argc-1; argc>i+1; argc--)
-        args = sexp_cons(ctx, str=sexp_c_string(ctx,argv[argc],-1), args);
-      argc++;
-      break;
+    case '-':
+      i++;
+      goto done_options;
     case 'h':
-      heap_size = atol(argv[++i]);
-      len = strlen(argv[i]);
-      if (heap_size && isalpha(argv[i][len-1])) {
-        switch (tolower(argv[i][len-1])) {
+      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      heap_size = atol(arg);
+      len = strlen(arg);
+      if (heap_size && isalpha(arg[len-1])) {
+        switch (tolower(arg[len-1])) {
         case 'k': heap_size *= 1024; break;
         case 'm': heap_size *= (1024*1024); break;
         }
       }
       break;
+    case 'V':
+      printf("chibi-scheme 0.3\n");
+      exit(0);
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
       exit_failure();
     }
   }
 
+ done_options:
   if (! quit) {
-    sexp_load_init();
+    load_init();
+    if (i < argc)
+      for (j=argc-1; j>i; j--)
+        args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
+    else
+      args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol), args);
     sexp_eval_string(ctx, sexp_argv_proc, env);
-    if (i < argc)
-      for ( ; i < argc; i++)
-        check_exception(ctx, sexp_load(ctx, str=sexp_c_string(ctx, argv[i], -1), env));
-    else
+    if (i < argc) {             /* script usage */
+      check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
+      tmp = sexp_intern(ctx, "main");
+      tmp = sexp_env_ref(env, tmp, SEXP_FALSE);
+      if (sexp_procedurep(tmp)) {
+        args = sexp_list1(ctx, args);
+        check_exception(ctx, sexp_apply(ctx, tmp, args));
+      }
+    } else {
       repl(ctx);
+    }
   }
 
   sexp_gc_release2(ctx);
@@ -178,4 +191,3 @@ int main (int argc, char **argv) {
   run_main(argc, argv);
   return 0;
 }
-
