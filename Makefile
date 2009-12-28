@@ -13,11 +13,13 @@ SOLIBDIR ?= $(PREFIX)/lib
 INCDIR   ?= $(PREFIX)/include/chibi
 MODDIR   ?= $(PREFIX)/share/chibi
 LIBDIR   ?= $(PREFIX)/lib/chibi
+MANDIR   ?= $(PREFIX)/share/man/man1
 
 DESTDIR  ?=
 
 GENSTUBS ?= ./tools/genstubs.scm
 
+########################################################################
 # system configuration - if not using GNU make, set PLATFORM and the
 # following flags as necessary.
 
@@ -169,6 +171,8 @@ install: chibi-scheme$(EXE)
 	cp libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
 	cp libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
 	-cp libchibi-scheme.a $(DESTDIR)$(LIBDIR)/
+	mkdir -p $(DESTDIR)$(MANDIR)
+	cp doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
 	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
