@@ -1,3 +1,6 @@
+;; fold.scm -- list fold/reduce utilities
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (fold kons knil ls . lists)
   (if (null? lists)

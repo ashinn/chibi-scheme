@@ -1,3 +1,6 @@
+;; search.scm -- list searching and splitting
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (find pred ls)
   (cond ((find-tail pred ls) => car) (else #f)))

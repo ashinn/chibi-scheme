@@ -1,3 +1,6 @@
+;; constructors.scm -- list construction utilities
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (xcons a b) (cons b a))
 

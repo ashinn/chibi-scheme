@@ -1,3 +1,9 @@
+;; macroexpand.scm -- macro expansion utility
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
+
+;; This actually analyzes the expression then reverse-engineers an
+;; sexp from the result, generating a minimal amount of renames.
 
 (define (macroexpand x)
   (ast->sexp (analyze x)))

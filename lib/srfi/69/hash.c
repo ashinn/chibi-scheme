@@ -1,3 +1,6 @@
+/*  hash.c -- type-general hashing                       */
+/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #include <chibi/eval.h>
 

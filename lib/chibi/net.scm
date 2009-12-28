@@ -1,3 +1,6 @@
+;; net.scm -- the high-level network interface
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (with-net-io host service proc)
   (let lp ((addr (get-address-info host service #f)))

@@ -1,3 +1,6 @@
+/*  env.c -- SRFI-98 environment interface               */
+/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt  */
 
 #ifdef __APPLE__
 #include <crt_externs.h>

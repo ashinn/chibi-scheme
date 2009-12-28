@@ -1,3 +1,6 @@
+;; misc.scm -- miscellaneous list utilities
+;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define (map-onto proc ls init)
   (let lp ((ls ls) (res init))
