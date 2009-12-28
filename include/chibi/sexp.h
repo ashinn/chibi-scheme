@@ -401,7 +401,7 @@ SEXP_API float sexp_flonum_value (sexp x);
 SEXP_API sexp sexp_make_flonum(sexp ctx, float f);
 #else
 #define sexp_make_flonum(ctx, x)  ((sexp) ((((union sexp_flonum_conv)((float)(x))).bits & ~SEXP_IMMEDIATE_MASK) + SEXP_IFLONUM_TAG))
-#define sexp_flonum_value(x) (((union sexp_flonum_conv)(((sexp_uint_t)(x)) & ~SEXP_IMMEDIATE_MASK)).flonum)
+#define sexp_flonum_value(x) (((union sexp_flonum_conv)(((unsigned int)(x)) & ~SEXP_IMMEDIATE_MASK)).flonum)
 #endif
 #else
 #define sexp_flonump(x)      (sexp_check_tag(x, SEXP_FLONUM))
