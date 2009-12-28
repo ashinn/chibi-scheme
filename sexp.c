@@ -224,7 +224,6 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "*current-input-port*");
   sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "*current-output-port*");
   sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "*current-error-port*");
-  sexp_global(ctx, SEXP_G_ERR_HANDLER_SYMBOL) = sexp_intern(ctx, "*current-exception-handler*");
   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "*interaction-environment*");
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
