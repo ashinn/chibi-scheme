@@ -280,26 +280,10 @@
 #endif
 
 #ifdef PLAN9
-
-#define errx(code, msg, ...) exits(msg)
-#define exit_normally() exits(NULL)
-#define exit_failure() exits("ERROR")
 #define strcasecmp cistrcmp
 #define strncasecmp cistrncmp
 #define round(x) floor((x)+0.5)
 #define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
-
-#else
-
-#define exit_normally() exit(0)
-#define exit_failure() exit(EXIT_FAILURE)
-#if HAVE_ERR_H
-#include <err.h>
-#else
-/* requires msg be a string literal, and at least one argument */
-#define errx(code, msg, ...) (fprintf(stderr,msg"\n",__VA_ARGS__), exit(code))
-#endif
-
 #endif
 
 #ifdef __MINGW32__

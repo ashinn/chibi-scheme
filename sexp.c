@@ -242,9 +242,11 @@ void sexp_init_context_globals (sexp ctx) {
 }
 
 #if ! SEXP_USE_GLOBAL_HEAP
-sexp sexp_bootstrap_context (void) {
+sexp sexp_bootstrap_context (sexp_uint_t size) {
   sexp dummy_ctx, ctx;
-  sexp_heap heap = sexp_make_heap(sexp_heap_align(SEXP_INITIAL_HEAP_SIZE));
+  sexp_heap heap;
+  if (size < SEXP_MINIMUM_HEAP_SIZE) size = SEXP_INITIAL_HEAP_SIZE;
+  heap = sexp_make_heap(sexp_heap_align(size));
   dummy_ctx = (sexp) malloc(sexp_sizeof(context));
   sexp_pointer_tag(dummy_ctx) = SEXP_CONTEXT;
   sexp_context_saves(dummy_ctx) = NULL;
@@ -257,11 +259,11 @@ sexp sexp_bootstrap_context (void) {
 }
 #endif
 
-sexp sexp_make_context (sexp ctx) {
+sexp sexp_make_context (sexp ctx, sexp_uint_t size) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
 #if ! SEXP_USE_GLOBAL_HEAP
-  if (! ctx) res = sexp_bootstrap_context();
+  if (! ctx) res = sexp_bootstrap_context(size);
   else
 #endif
     {

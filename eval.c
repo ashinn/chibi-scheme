@@ -62,8 +62,8 @@ sexp sexp_env_cell (sexp env, sexp key) {
   return sexp_env_cell_loc(env, key, NULL);
 }
 
-static sexp sexp_env_cell_create_loc (sexp ctx, sexp env, sexp key,
-                                      sexp value, sexp *varenv) {
+static sexp sexp_env_cell_create (sexp ctx, sexp env, sexp key,
+                                  sexp value, sexp *varenv) {
   sexp_gc_var1(cell);
   cell = sexp_env_cell_loc(env, key, varenv);
   if (! cell) {
@@ -76,10 +76,6 @@ static sexp sexp_env_cell_create_loc (sexp ctx, sexp env, sexp key,
     sexp_gc_release1(ctx);
   }
   return cell;
-}
-
-static sexp sexp_env_cell_create (sexp ctx, sexp env, sexp key, sexp value) {
-  return sexp_env_cell_create_loc(ctx, env, key, value, NULL);
 }
 
 sexp sexp_env_ref (sexp env, sexp key, sexp dflt) {
@@ -348,10 +344,10 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_gc_release2(ctx);
 }
 
-sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env) {
+sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
-  res = sexp_make_context(ctx);
+  res = sexp_make_context(ctx, size);
   sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
@@ -371,7 +367,8 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env) {
 sexp sexp_make_child_context (sexp ctx, sexp lambda) {
   sexp res = sexp_make_eval_context(ctx,
                                     sexp_context_stack(ctx),
-                                    sexp_context_env(ctx));
+                                    sexp_context_env(ctx),
+                                    0);
   sexp_context_lambda(res) = lambda;
   sexp_context_top(res) = sexp_context_top(ctx);
   sexp_context_fv(res) = sexp_context_fv(ctx);
@@ -478,7 +475,7 @@ static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
         env = sexp_synclo_env(x);
       x = sexp_synclo_expr(x);
     }
-    cell = sexp_env_cell_create_loc(ctx, env, x, SEXP_UNDEF, varenv);
+    cell = sexp_env_cell_create(ctx, env, x, SEXP_UNDEF, varenv);
   }
   if (sexp_macrop(sexp_cdr(cell)) || sexp_corep(sexp_cdr(cell)))
     res = sexp_compile_error(ctx, "invalid use of syntax as value", x);
@@ -606,7 +603,7 @@ static sexp analyze_define (sexp ctx, sexp x) {
       res = SEXP_VOID;
     } else {
       if (sexp_synclop(name)) name = sexp_synclo_expr(name);
-      sexp_env_cell_create(ctx, env, name, SEXP_VOID);
+      sexp_env_cell_create(ctx, env, name, SEXP_VOID, NULL);
       if (sexp_pairp(sexp_cadr(x))) {
         tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
         tmp = sexp_cons(ctx, SEXP_VOID, tmp);
@@ -1041,7 +1038,7 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   prev_lambda = sexp_context_lambda(ctx);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
-  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx));
+  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx), 0);
   sexp_context_lambda(ctx2) = lambda;
   /* allocate space for local vars */
   for (ls=sexp_lambda_locals(lambda); sexp_pairp(ls); ls=sexp_cdr(ls))
@@ -2090,7 +2087,7 @@ sexp sexp_load (sexp ctx, sexp source, sexp env) {
   res = SEXP_VOID;
   in = sexp_open_input_file(ctx, source);
   out = sexp_current_error_port(ctx);
-  ctx2 = sexp_make_eval_context(ctx, NULL, env);
+  ctx2 = sexp_make_eval_context(ctx, NULL, env, 0);
   sexp_context_parent(ctx2) = ctx;
   tmp = sexp_env_bindings(env);
   sexp_context_tailp(ctx2) = 0;
@@ -2437,7 +2434,7 @@ sexp sexp_make_primitive_env (sexp ctx, sexp version) {
     op = sexp_copy_opcode(ctx, &opcodes[i]);
     if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
       sym = sexp_intern(ctx, (char*)sexp_opcode_data(op));
-      sexp_opcode_data(op) = sexp_env_cell_create(ctx, e, sym, SEXP_VOID);
+      sexp_opcode_data(op) = sexp_env_cell_create(ctx, e, sym, SEXP_VOID, NULL);
     }
     sexp_env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op)), op);
   }
@@ -2685,7 +2682,8 @@ sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
   top = sexp_context_top(ctx);
   ctx2 = sexp_make_eval_context(ctx,
                                 sexp_context_stack(ctx),
-                                (env ? env : sexp_context_env(ctx)));
+                                (env ? env : sexp_context_env(ctx)),
+                                0);
   res = sexp_compile(ctx2, obj);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);

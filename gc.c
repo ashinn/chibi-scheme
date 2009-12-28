@@ -16,6 +16,9 @@
 #ifndef SEXP_MAXIMUM_HEAP_SIZE
 #define SEXP_MAXIMUM_HEAP_SIZE 0
 #endif
+#ifndef SEXP_MINIMUM_HEAP_SIZE
+#define SEXP_MINIMUM_HEAP_SIZE 512*1024
+#endif
 
 /* if after GC more than this percentage of memory is still in use, */
 /* and we've not exceeded the maximum size, grow the heap */
