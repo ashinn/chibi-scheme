@@ -152,6 +152,8 @@ SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_a
 #define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(sexp_proc1)f,NULL)
 #define sexp_define_foreign_opt(c,e,s,n,f,d) sexp_define_foreign_aux(c,e,s,n,1,(sexp_proc1)f,d)
 
+SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, char *name, int num_args, sexp_proc1 f, char *param);
+
 #if SEXP_USE_TYPE_DEFS
 SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);
 SEXP_API sexp sexp_make_constructor (sexp ctx, sexp name, sexp type);

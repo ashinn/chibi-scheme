@@ -837,6 +837,7 @@ static void generate_cnd (sexp ctx, sexp cnd) {
   sexp_context_depth(ctx)--;
   label1 = sexp_context_make_label(ctx);
   generate(ctx, sexp_cnd_pass(cnd));
+  sexp_context_tailp(ctx) = tailp;
   emit(ctx, SEXP_OP_JUMP);
   sexp_context_depth(ctx)--;
   label2 = sexp_context_make_label(ctx);
@@ -2350,6 +2351,18 @@ sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args,
     res = op;
   else
     sexp_env_define(ctx, env, sexp_intern(ctx, name), op);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_define_foreign_param (sexp ctx, sexp env, char *name, int num_args,
+                                sexp_proc1 f, char *param) {
+  sexp res;
+  sexp_gc_var1(tmp);
+  sexp_gc_preserve1(ctx, tmp);
+  tmp = sexp_intern(ctx, param);
+  tmp = sexp_env_cell(env, tmp);
+  res = sexp_define_foreign_aux(ctx, env, name, num_args, 3, f, tmp);
   sexp_gc_release1(ctx);
   return res;
 }
