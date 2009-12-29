@@ -1017,7 +1017,7 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   return p;
 }
 
-sexp sexp_write (sexp ctx, sexp obj, sexp out) {
+sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_HUFF_SYMS
   unsigned long res, c;
 #endif
@@ -1033,14 +1033,14 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
     switch (sexp_pointer_tag(obj)) {
     case SEXP_PAIR:
       sexp_write_char(ctx, '(', out);
-      sexp_write(ctx, sexp_car(obj), out);
+      sexp_write_one(ctx, sexp_car(obj), out);
       for (x=sexp_cdr(obj); sexp_pairp(x); x=sexp_cdr(x)) {
         sexp_write_char(ctx, ' ', out);
-        sexp_write(ctx, sexp_car(x), out);
+        sexp_write_one(ctx, sexp_car(x), out);
       }
       if (! sexp_nullp(x)) {
         sexp_write_string(ctx, " . ", out);
-        sexp_write(ctx, x, out);
+        sexp_write_one(ctx, x, out);
       }
       sexp_write_char(ctx, ')', out);
       break;
@@ -1051,10 +1051,10 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
         sexp_write_string(ctx, "#()", out);
       } else {
         sexp_write_string(ctx, "#(", out);
-        sexp_write(ctx, elts[0], out);
+        sexp_write_one(ctx, elts[0], out);
         for (i=1; i<len; i++) {
           sexp_write_char(ctx, ' ', out);
-          sexp_write(ctx, elts[i], out);
+          sexp_write_one(ctx, elts[i], out);
         }
         sexp_write_char(ctx, ')', out);
       }
@@ -1079,7 +1079,7 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
 #endif
     case SEXP_PROCEDURE:
       sexp_write_string(ctx, "#<procedure: ", out);
-      sexp_write(ctx, sexp_bytecode_name(sexp_procedure_code(obj)), out);
+      sexp_write_one(ctx, sexp_bytecode_name(sexp_procedure_code(obj)), out);
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_STRING:
@@ -1192,14 +1192,24 @@ sexp sexp_write (sexp ctx, sexp obj, sexp out) {
   return SEXP_VOID;
 }
 
+sexp sexp_write (sexp ctx, sexp obj, sexp out) {
+  if (! sexp_oportp(out))
+    return sexp_type_exception(ctx, "write: not an output-port", out);
+  else
+    return sexp_write_one(ctx, obj, out);
+}
+
 sexp sexp_display (sexp ctx, sexp obj, sexp out) {
-  if (sexp_stringp(obj))
+  sexp res=SEXP_VOID;
+  if (! sexp_oportp(out))
+    res = sexp_type_exception(ctx, "display: not an output-port", out);
+  else if (sexp_stringp(obj))
     sexp_write_string(ctx, sexp_string_data(obj), out);
   else if (sexp_charp(obj))
     sexp_write_char(ctx, sexp_unbox_character(obj), out);
   else
-    sexp_write(ctx, obj, out);
-  return SEXP_VOID;
+    res = sexp_write_one(ctx, obj, out);
+  return res;
 }
 
 sexp sexp_flush_output (sexp ctx, sexp out) {
@@ -1608,11 +1618,15 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 }
 
 sexp sexp_read (sexp ctx, sexp in) {
-  sexp res = sexp_read_raw(ctx, in);
+  sexp res;
+  if (sexp_iportp(in))
+    res = sexp_read_raw(ctx, in);
+  else
+    res = sexp_type_exception(ctx, "read: not an input-port", in);
   if (res == SEXP_CLOSE)
-    return sexp_read_error(ctx, "too many ')'s", SEXP_NULL, in);
+    res = sexp_read_error(ctx, "too many ')'s", SEXP_NULL, in);
   if (res == SEXP_RAWDOT)
-    return sexp_read_error(ctx, "unexpected '.'", SEXP_NULL, in);
+    res = sexp_read_error(ctx, "unexpected '.'", SEXP_NULL, in);
   return res;
 }
 
@@ -1632,8 +1646,9 @@ sexp sexp_write_to_string(sexp ctx, sexp obj) {
   sexp_gc_var1(out);
   sexp_gc_preserve1(ctx, out);
   out = sexp_make_output_string_port(ctx);
-  sexp_write(ctx, obj, out);
-  str = sexp_get_output_string(ctx, out);
+  str = sexp_write(ctx, obj, out);
+  if (! sexp_exceptionp(str))
+    str = sexp_get_output_string(ctx, out);
   sexp_gc_release1(ctx);
   return str;
 }

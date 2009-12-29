@@ -2025,7 +2025,7 @@ static sexp sexp_open_output_file (sexp ctx, sexp path) {
   if (! out)
     return
       sexp_user_exception(ctx, SEXP_FALSE, "couldn't open output file", path);
-  return sexp_make_input_port(ctx, out, path);
+  return sexp_make_output_port(ctx, out, path);
 }
 
 static sexp sexp_close_port (sexp ctx, sexp port) {
