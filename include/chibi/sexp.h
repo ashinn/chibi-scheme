@@ -7,7 +7,7 @@
 
 #define SEXP_MODULE_PATH_VAR "CHIBI_MODULE_PATH"
 
-#include "chibi/config.h"
+#include "chibi/features.h"
 #include "chibi/install.h"
 
 #include <ctype.h>
