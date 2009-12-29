@@ -25,14 +25,31 @@ sexp sexp_fixnum_to_bignum (sexp ctx, sexp a) {
   return res;
 }
 
-sexp sexp_make_integer (sexp ctx, sexp_sint_t x) {
+sexp sexp_make_integer (sexp ctx, sexp_lsint_t x) {
   sexp res;
   if ((SEXP_MIN_FIXNUM < x) && (x < SEXP_MAX_FIXNUM)) {
     res = sexp_make_fixnum(x);
   } else {
     res = sexp_make_bignum(ctx, 1);
-    sexp_bignum_sign(res) = (x < 0 ? -1 : 1);
-    sexp_bignum_data(res)[0] = x * sexp_bignum_sign(res);
+    if (x < 0) {
+      sexp_bignum_sign(res) = -1;
+      sexp_bignum_data(res)[0] = -x;
+    } else {
+      sexp_bignum_sign(res) = 1;
+      sexp_bignum_data(res)[0] = x;
+    }
+  }
+  return res;
+}
+
+sexp sexp_make_unsigned_integer (sexp ctx, sexp_luint_t x) {
+  sexp res;
+  if (x < SEXP_MAX_FIXNUM) {
+    res = sexp_make_fixnum(x);
+  } else {
+    res = sexp_make_bignum(ctx, 1);
+    sexp_bignum_sign(res) = 1;
+    sexp_bignum_data(res)[0] = x;
   }
   return res;
 }
