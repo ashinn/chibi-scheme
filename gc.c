@@ -171,7 +171,8 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
 
 sexp_heap sexp_make_heap (size_t size) {
   sexp_free_list free, next;
-  sexp_heap h = (sexp_heap) malloc(sizeof(struct sexp_heap) + size);
+  sexp_heap h
+    = (sexp_heap) malloc(sizeof(struct sexp_heap) + size + sexp_heap_align(1));
   if (! h) return NULL;
   h->size = size;
   h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
