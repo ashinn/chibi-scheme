@@ -474,10 +474,12 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #endif
 
 #if SEXP_USE_BIGNUMS
-SEXP_API sexp sexp_make_integer(sexp ctx, sexp_sint_t x);
+SEXP_API sexp sexp_make_integer(sexp ctx, sexp_lsint_t x);
+SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_exact_integerp(x) (sexp_fixnump(x) || sexp_bignump(x))
 #else
 #define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
+#define sexp_make_unsigned_integer(ctx, x) sexp_make_fixnum(x)
 #define sexp_exact_integerp(x) sexp_fixnump(x)
 #endif
 
