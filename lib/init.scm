@@ -486,7 +486,7 @@
   (if (char-numeric? ch)
       (- (char->integer ch) (char->integer #\0))
       (and (<= 65 (char->integer (char-upcase ch)) 70)
-           (- (char->integer (char-upcase ch)) 65))))
+           (- (char->integer (char-upcase ch)) 55))))
 
 (define (number->string n . o)
   (if (if (null? o) #t (eq? 10 (car o)))
