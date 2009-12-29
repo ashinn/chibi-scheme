@@ -421,7 +421,7 @@
 
 ;; math utils
 
-(define (number? x) (if (fixnum? x) #t (flonum? x)))
+(define (number? x) (if (fixnum? x) #t (if (bignum? x) #t (flonum? x))))
 (define complex? number?)
 (define rational? number?)
 (define real? number?)
