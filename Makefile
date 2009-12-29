@@ -90,7 +90,7 @@ COMPILED_LIBS := lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
 
 libs: $(COMPILED_LIBS)
 
-INCLUDES = include/chibi/sexp.h include/chibi/config.h include/chibi/install.h
+INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@

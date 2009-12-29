@@ -23,9 +23,9 @@ To build, just run "make".  This will provide a shared library
 repl.  The "chibi-scheme-static" make target builds an equivalent
 static executable.
 
-You can edit the file config.h for a number of settings, mostly
-disabling features to make the executable smaller.  You can specify
-standard options directly as arguments to make, for example
+You can edit the file chibi/features.h for a number of settings,
+mostly disabling features to make the executable smaller.  You can
+specify standard options directly as arguments to make, for example
 
   make CFLAGS=-Os CPPFLAGS=-DSEXP_USE_NO_FEATURES=1
 
@@ -36,7 +36,7 @@ to optimize for size, or
 to compile against a library installed in /usr/local.
 
 By default Chibi uses a custom, precise, non-moving GC.  You can link
-against the Boehm conservative GC by editing the config file, or
+against the Boehm conservative GC by editing the features.h file, or
 directly from make with:
 
   make SEXP_USE_BOEHM=1
@@ -154,7 +154,25 @@ this.
 
 Currently you can load the following SRFIs with (import (srfi N)):
 
-  0, 1, 2, 6, 8, 9, 11, 16, 22, 23, 26, 27, 33, 39, 46, 62, 69, 95, 98
+  (srfi 0)  - cond-expand
+  (srfi 1)  - list library
+  (srfi 2)  - and-let*
+  (srfi 6)  - basic string ports
+  (srfi 8)  - receive
+  (srfi 9)  - define-record-type
+  (srfi 11) - let-values/let*-values
+  (srfi 16) - case-lambda
+  (srfi 22) - running scheme scripts on Unix
+  (srfi 23) - error reporting mechanism
+  (srfi 26) - cut/cute partial application
+  (srfi 27) - sources of random bits
+  (srfi 33) - bitwise operators
+  (srfi 39) - prameter objects
+  (srfi 46) - basic syntax-rules extensions
+  (srfi 62) - s-expression comments
+  (srfi 69) - basic hash tables
+  (srfi 95) - sorting and merging
+  (srfi 98) - environment access
 
 although 0, 22, 23, 46 and 62 are built into the default environment
 so there's no need to import them.
@@ -162,19 +180,19 @@ so there's no need to import them.
 Included non-standard modules are put in the (chibi) module namespace.
 The following additional modules are available:
 
-  (chibi net) - networking interface
-  (chibi filesystem) - local filesystem and file descriptor interface
-  (chibi process) - processes and signals
-  (chibi system) - host system and user information
-  (chibi time) - time and date library
-  (chibi match) - pattern-matching library
-  (chibi loop) - extensible loop syntax
-  (chibi pathname) - pathname manipulation utilities
-  (chibi uri) - URI parsing and construction utilities
+  (chibi net)         - networking interface
+  (chibi filesystem)  - local filesystem and file descriptor interface
+  (chibi process)     - processes and signals
+  (chibi system)      - host system and user information
+  (chibi time)        - time and date library
+  (chibi match)       - pattern-matching library
+  (chibi loop)        - extensible loop syntax
+  (chibi pathname)    - pathname manipulation utilities
+  (chibi uri)         - URI parsing and construction utilities
   (chibi macroexpand) - macro expansion utility
-  (chibi ast) - interface to the internal Abstract Syntax Tree
-  (chibi disasm) - disassembly utility for the chibi VM
-  (chibi heap-stats) - debugging tool to analyze or dump the heap
+  (chibi ast)         - interface to the internal Abstract Syntax Tree
+  (chibi disasm)      - disassembly utility for the chibi VM
+  (chibi heap-stats)  - debugging tool to analyze or dump the heap
 
 ------------------------------------------------------------------------
 C INTERFACE
