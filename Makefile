@@ -97,6 +97,7 @@ include/chibi/install.h: Makefile
 	echo '#define sexp_default_module_dir "'$(MODDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
 	echo '#define sexp_version "'`cat VERSION`'"' >> $@
+	echo '#define sexp_release_name "'`cat RELEASE`'"' >> $@
 
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
