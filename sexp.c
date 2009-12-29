@@ -646,21 +646,29 @@ sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end) {
   return res;
 }
 
-sexp sexp_string_concatenate (sexp ctx, sexp str_ls) {
+sexp sexp_string_concatenate (sexp ctx, sexp str_ls, sexp sep) {
   sexp res, ls;
-  sexp_uint_t len=0;
-  char *p;
-  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls))
+  sexp_uint_t len=0, i=0, sep_len=0;
+  char *p, *csep;
+  for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls), i++)
     if (! sexp_stringp(sexp_car(ls)))
       return sexp_type_exception(ctx, "not a string", sexp_car(ls));
     else
       len += sexp_string_length(sexp_car(ls));
+  if (sexp_stringp(sep) && ((sep_len=sexp_string_length(sep)) > 0)) {
+    csep = sexp_string_data(sep);
+    len += sep_len*(i-1);
+  }
   res = sexp_make_string(ctx, sexp_make_fixnum(len), SEXP_VOID);
   p = sexp_string_data(res);
   for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls)) {
     len = sexp_string_length(sexp_car(ls));
     memcpy(p, sexp_string_data(sexp_car(ls)), len);
     p += len;
+    if (sep_len && sexp_pairp(sexp_cdr(ls))) {
+      memcpy(p, csep, sep_len);
+      p += sep_len;
+    }
   }
   *p = '\0';
   return res;
@@ -990,7 +998,7 @@ sexp sexp_get_output_string (sexp ctx, sexp out) {
   } else {
     ls = sexp_port_cookie(out);
   }
-  res = sexp_string_concatenate(ctx, ls);
+  res = sexp_string_concatenate(ctx, ls, SEXP_FALSE);
   sexp_gc_release2(ctx);
   return res;
 }

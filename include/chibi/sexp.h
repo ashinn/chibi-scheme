@@ -810,7 +810,7 @@ SEXP_API sexp sexp_length(sexp ctx, sexp ls);
 SEXP_API sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
 SEXP_API sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
 SEXP_API sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
-SEXP_API sexp sexp_string_concatenate (sexp ctx, sexp str_ls);
+SEXP_API sexp sexp_string_concatenate (sexp ctx, sexp str_ls, sexp sep);
 SEXP_API sexp sexp_intern(sexp ctx, char *str);
 SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
 SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
