@@ -2546,10 +2546,19 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_gc_preserve3(ctx, op, tmp, sym);
   sexp_load_standard_parameters(ctx, e);
 #if SEXP_USE_DL
-  sexp_env_define(ctx, e, sexp_intern(ctx, "*shared-object-extension*"),
-                  sexp_c_string(ctx, sexp_so_extension, -1));
+  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*"),
+                  tmp=sexp_c_string(ctx, sexp_so_extension, -1));
 #endif
   tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform));
+#if SEXP_USE_DL
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "dynamic-loading"));
+#endif
+#if SEXP_USE_MODULES
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "modules"));
+#endif
+#if SEXP_USE_BOEHM
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc"));
+#endif
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi"));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*features*"), tmp);
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
