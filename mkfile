@@ -8,7 +8,7 @@ CPPFLAGS= -Iinclude -DPLAN9 '-DSEXP_USE_STRING_STREAMS=0' '-DSEXP_USE_DEBUG=0' '
 CFLAGS= -p $CPPFLAGS
 
 OFILES=sexp.$O eval.$O main.$O
-HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/config.h include/chibi/install.h
+HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/features.h include/chibi/install.h
 
 </sys/src/cmd/mkone
 
