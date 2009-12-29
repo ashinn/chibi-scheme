@@ -1663,6 +1663,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_ADD:
 #if SEXP_USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
+    sexp_context_top(ctx) = top;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       j = sexp_unbox_fixnum(tmp1) + sexp_unbox_fixnum(tmp2);
       if ((j < SEXP_MIN_FIXNUM) || (j > SEXP_MAX_FIXNUM))
@@ -1690,6 +1691,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_SUB:
 #if SEXP_USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
+    sexp_context_top(ctx) = top;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       j = sexp_unbox_fixnum(tmp1) - sexp_unbox_fixnum(tmp2);
       if ((j < SEXP_MIN_FIXNUM) || (j > SEXP_MAX_FIXNUM))
@@ -1717,6 +1719,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_MUL:
 #if SEXP_USE_BIGNUMS
     tmp1 = _ARG1, tmp2 = _ARG2;
+    sexp_context_top(ctx) = top;
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       prod = (sexp_lsint_t)sexp_unbox_fixnum(tmp1) * sexp_unbox_fixnum(tmp2);
       if ((prod < SEXP_MIN_FIXNUM) || (prod > SEXP_MAX_FIXNUM))
@@ -1742,6 +1745,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case SEXP_OP_DIV:
+    sexp_context_top(ctx) = top;
     if (_ARG2 == SEXP_ZERO) {
 #if SEXP_USE_FLONUMS
       if (sexp_flonump(_ARG1) && sexp_flonum_value(_ARG1) == 0.0)
@@ -1785,6 +1789,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     }
 #if SEXP_USE_BIGNUMS
     else {
+      sexp_context_top(ctx) = top;
       _ARG2 = sexp_quotient(ctx, _ARG1, _ARG2);
       top--;
     }
@@ -1802,6 +1807,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     }
 #if SEXP_USE_BIGNUMS
     else {
+      sexp_context_top(ctx) = top;
       _ARG2 = sexp_remainder(ctx, _ARG1, _ARG2);
       top--;
     }
