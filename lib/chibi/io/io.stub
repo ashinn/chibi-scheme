@@ -1,0 +1,13 @@
+
+(define-c non-null-string (read-line "fgets")
+  ((result (array char arg1)) int (default (current-input-port) input-port)))
+
+(define-c size_t (read-string "fread")
+  ((result (array char arg1)) size_t (value 1 size_t) (default (current-input-port) input-port)))
+
+(define-c size_t (read-string! "fread")
+  (string size_t (value 1 size_t) (default (current-input-port) input-port)))
+
+(define-c size_t (write-string "fwrite")
+  (string size_t (value 1 size_t) (default (current-output-port) output-port)))
+

@@ -223,6 +223,9 @@
            (not (type-pointer? type))
            (eq? 'char (type-base type)))))
 
+(define (port-type? type)
+  (memq type '(port input-port output-port)))
+
 (define (error-type? type)
   (memq type '(errno non-null-string non-null-pointer)))
 
@@ -504,6 +507,8 @@
       (cat "sexp_concat_env_string(" val ")"))
      ((string-type? base)
       (cat "sexp_string_data(" val ")"))
+     ((memq base '(port input-port output-port))
+      (cat "sexp_port_stream(" val ")"))
      (else
       (let ((ctype (assq base *types*)))
         (cond
@@ -524,6 +529,9 @@
      ((string-type? base) "sexp_stringp")
      ((eq? base 'char) "sexp_charp")
      ((eq? base 'boolean) "sexp_booleanp")
+     ((eq? base 'port) "sexp_portp")
+     ((eq? base 'input-port) "sexp_iportp")
+     ((eq? base 'output-port) "sexp_oportp")
      (else #f))))
 
 (define (type-name type)
@@ -563,7 +571,8 @@
      ((eq? base 'env-string)
       (cat "(sexp_pairp(" arg ") && sexp_stringp(sexp_car(" arg
            ")) && sexp_stringp(sexp_cdr(" arg ")))"))
-     ((or (int-type? base) (float-type? base) (string-type? base))
+     ((or (int-type? base) (float-type? base)
+          (string-type? base) (port-type? base))
       (cat (type-predicate type) "(" arg ")"))
      (else
       (cond
@@ -600,7 +609,8 @@
                (type-name type) "s\", " arg ");\n")))
      ((or (int-type? base-type)
           (float-type? base-type)
-          (string-type? base-type))
+          (string-type? base-type)
+          (port-type? base-type))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"
        "    return sexp_type_exception(ctx, \"not "
@@ -633,13 +643,13 @@
         len
         (and (symbol? len)
              (let* ((str (symbol->string len))
-                    (len (string-length str)))
-               (and (> len 3)
+                    (len2 (string-length str)))
+               (and (> len2 3)
                     (string=? "arg" (substring str 0 3))
-                    (let ((i (string->number (substring str 3 len))))
+                    (let ((i (string->number (substring str 3 len2))))
                       (if i
                           (let ((y (list-ref (func-c-args func) i)))
-                            (or (type-value y) y))))))))))
+                            (or (type-value y) len))))))))))
 
 (define (write-locals func)
   (define (arg-res x)
@@ -736,36 +746,40 @@
               (lambda ()
                 (if (number? len) (cat len) (scheme->c-converter 'int len)))
               ";\n"
-              "  tmp" (type-index a) " = buf" (type-index a) ";\n"))))
-     (cond
-      ((and (not (type-result? a)) (type-array a) (not (string-type? a)))
-       (if (not (number? (type-array a)))
-           (cat "  tmp" (type-index a)
-                " = (" (type-c-name (type-base a)) "*) malloc("
-                "(sexp_unbox_fixnum(sexp_length(ctx, arg" (type-index a)
-                "))+1) * sizeof(tmp" (type-index a) "[0]));\n"))
-       (cat "  for (i=0, res=arg" (type-index a)
-            "; sexp_pairp(res); res=sexp_cdr(res), i++) {\n"
-            "    tmp" (type-index a) "[i] = "
-            (lambda () (scheme->c-converter (type-base a) "sexp_car(res)"))
-            ";\n"
-            "  }\n")
-       (if (not (number? (type-array a)))
-           (cat "  tmp" (type-index a) "[i] = NULL;\n")))
-      ((and (type-result? a) (not (basic-type? a))
-            (not (type-free? a)) (not (type-pointer? a))
-            (not (type-auto-expand? a))
-            (or (not (type-array a))
-                (not (integer? (get-array-length func a)))))
-       (cat "  tmp" (type-index a) " = malloc(sizeof(tmp" (type-index a)
-            "[0]));\n"))
-      ((and (type-pointer? a) (basic-type? a))
-       (cat "  tmp" (type-index a) " = "
-            (lambda ()
-              (scheme->c-converter
-               a
-               (string-append "arg" (type-index-string a))))
-            ";\n"))))
+              "  tmp" (type-index a) " = buf" (type-index a) ";\n")))
+       (cond
+        ((and (not (type-result? a)) (type-array a) (not (string-type? a)))
+         (if (not (number? (type-array a)))
+             (cat "  tmp" (type-index a)
+                  " = (" (type-c-name (type-base a)) "*) malloc("
+                  "(sexp_unbox_fixnum(sexp_length(ctx, arg" (type-index a)
+                  "))+1) * sizeof(tmp" (type-index a) "[0]));\n"))
+         (cat "  for (i=0, res=arg" (type-index a)
+              "; sexp_pairp(res); res=sexp_cdr(res), i++) {\n"
+              "    tmp" (type-index a) "[i] = "
+              (lambda () (scheme->c-converter (type-base a) "sexp_car(res)"))
+              ";\n"
+              "  }\n")
+         (if (not (number? (type-array a)))
+             (cat "  tmp" (type-index a) "[i] = NULL;\n")))
+        ((and (type-result? a) (not (basic-type? a))
+              (not (type-free? a)) (not (type-pointer? a))
+              (not (type-auto-expand? a))
+              (or (not (type-array a))
+                  (not (integer? len))))
+         (cat "  tmp" (type-index a) " = malloc("
+              (if (and (symbol? len) (not (eq? len 'null)))
+                  (lambda () (cat (lambda () (scheme->c-converter 'unsigned-int len))
+                              "*sizeof(tmp" (type-index a) "[0])"))
+                  (lambda () (cat "sizeof(tmp" (type-index a) "[0])")))
+              ");\n"))
+        ((and (type-pointer? a) (basic-type? a))
+         (cat "  tmp" (type-index a) " = "
+              (lambda ()
+                (scheme->c-converter
+                 a
+                 (string-append "arg" (type-index-string a))))
+              ";\n")))))
    (func-c-args func)))
 
 (define (write-actual-parameter func arg)
@@ -913,16 +927,21 @@
 
 (define (write-cleanup func)
   (for-each write-free (func-scheme-args func))
-  (cond
-   ((any type-auto-expand? (func-c-args func))
-    => (lambda (a)
-         (let ((len (get-array-length func a))
-               (i (type-index a)))
-           (if (number? len)
-               (cat "  if (len" i " != " len ")\n"
-                    "    free(tmp" i ");\n")))))
-   (else
-    "  res = SEXP_FALSE;\n"))
+  (for-each
+   (lambda (a)
+     (cond
+      ((type-auto-expand? a)
+       (let ((len (get-array-length func a))
+             (i (type-index a)))
+         (if (number? len)
+             (cat "  if (len" i " != " len ")\n"
+                  "    free(tmp" i ");\n"))))
+      ((and (type-result? a) (not (basic-type? a))
+            (not (type-free? a)) (not (type-pointer? a))
+            (or (not (type-array a))
+                (not (integer? (get-array-length func a)))))
+       (cat "  free(tmp" (type-index a) ");\n"))))
+   (func-c-args func))
   (let* ((results (func-results func))
          (return-res? (not (error-type? (type-base (func-ret-type func)))))
          (preserve-res? (> (+ (length results)) (if return-res? 0 1)))
@@ -952,21 +971,40 @@
   (cat "  return res;\n"
        "}\n\n"))
 
+(define (parameter-default? x)
+  (and (pair? x)
+       (member x '((current-input-port)
+                   (current-output-port)
+                   (current-error-port)))))
+
+(define (write-default x) ;; this is a hack but very convenient
+  (lambda ()
+    (let ((value (type-value x)))
+      (cond
+       ((equal? value '(current-input-port))
+        (cat "\"*current-input-port*\""))
+       ((equal? value '(current-output-port))
+        (cat "\"*current-output-port*\""))
+       ((equal? value '(current-error-port))
+        (cat "\"*current-error-port*\""))
+       (else
+        (c->scheme-converter x value))))))
+
 (define (write-func-binding func)
   (let ((default (and (pair? (func-scheme-args func))
                       (type-default? (car (reverse (func-scheme-args func))))
                       (car (reverse (func-scheme-args func))))))
     (cat (if default
-             "  sexp_define_foreign_opt(ctx, env, "
+             (if (parameter-default? (type-value default))
+                 "  sexp_define_foreign_param(ctx, env, "
+                 "  sexp_define_foreign_opt(ctx, env, ")
              "  sexp_define_foreign(ctx, env, ")
          (lambda () (write (symbol->string (func-scheme-name func))))
          ", " (length (func-scheme-args func))  ", "
+         (if default "(sexp_proc1)" "")
          (func-stub-name func)
          (if default ", " "")
-         (if default
-             (lambda ()
-               (c->scheme-converter default (type-value default)))
-             "")
+         (if default (write-default default) "")
          ");\n")))
 
 (define (write-type type)

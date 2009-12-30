@@ -111,17 +111,6 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
 }
 
 sexp sexp_init_library (sexp ctx, sexp env) {
-  sexp_gc_var2(op, name);
-  sexp_gc_preserve2(ctx, op, name);
-  name = sexp_c_string(ctx, "disasm", -1);
-  op = sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_FOREIGN),
-                        sexp_make_fixnum(SEXP_OP_FCALL2), SEXP_ONE,
-                        SEXP_THREE, 0, 0, 0, 0, 0, (sexp_proc1)sexp_disasm);
-  name = sexp_intern(ctx, "*current-error-port*");
-  sexp_opcode_data(op) = sexp_env_cell(sexp_context_env(ctx), name);
-  name = sexp_intern(ctx, "disasm");
-  sexp_env_define(ctx, env, name, op);
-  sexp_gc_release2(ctx);
+  sexp_define_foreign_param(ctx, env, "disasm", 2, (sexp_proc1)sexp_disasm, "*current-output-port*");
   return SEXP_VOID;
 }
-
