@@ -1,0 +1,6 @@
+
+(define-module (chibi io)
+  (export read-string read-string! write-string read-line write-line)
+  (import-immutable (scheme))
+  (include-shared "io/io")
+  (include "io/io.scm"))

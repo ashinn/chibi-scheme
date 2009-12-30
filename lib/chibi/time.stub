@@ -1,0 +1,45 @@
+
+(c-system-include "time.h")
+(c-system-include "sys/time.h")
+
+(define-c-struct tm
+  (int     tm_sec    time-second)
+  (int     tm_min    time-minute)
+  (int     tm_hour   time-hour)
+  (int     tm_mday   time-day)
+  (int     tm_mon    time-month)
+  (int     tm_year   time-year)
+  (int     tm_wday   time-day-of-week)
+  (int     tm_yday   time-day-of-year)
+  (int     tm_isdst  time-dst?))
+
+(define-c-struct timeval
+  predicate: timeval?
+  (time_t  tv_sec          timeval-seconds)
+  (int     tv_usec         timeval-microseconds))
+
+(define-c-struct timezone
+  predicate: timezone?
+  (int     tz_minuteswest  timezone-offset)
+  (int     tz_dsttime      timezone-dst-time))
+
+(define-c time_t (current-seconds "time") ((value NULL)))
+
+(define-c errno (get-time-of-day "gettimeofday")
+  ((result timeval) (result timezone)))
+
+(define-c errno (set-time-of-day! "settimeofday")
+  (timeval (maybe-null default NULL timezone)))
+
+(define-c non-null-pointer (seconds->time "localtime_r")
+  ((pointer time_t) (result tm)))
+
+(define-c time_t (time->seconds "mktime")
+  (tm))
+
+(define-c non-null-string (seconds->string "ctime_r")
+  ((pointer time_t) (result (array char 64))))
+
+(define-c non-null-string (time->string "asctime_r")
+  (tm (result (array char 64))))
+

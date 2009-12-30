@@ -1,0 +1,34 @@
+
+(c-system-include "unistd.h")
+(c-system-include "pwd.h")
+(c-system-include "sys/types.h")
+
+(define-c-struct passwd
+  predicate: user?
+  (string  pw_name     user-name)
+  (string  pw_passwd   user-password)
+  (uid_t   pw_uid      user-id)
+  (gid_t   pw_gid      user-group-id)
+  (string  pw_gecos    user-gecos)
+  (string  pw_dir      user-home)
+  (string  pw_shell    user-shell))
+
+(define-c uid_t (current-user-id "getuid") ())
+(define-c gid_t (current-group-id "getgid") ())
+(define-c uid_t (current-effective-user-id "geteuid") ())
+(define-c gid_t (current-effective-group-id "getegid") ())
+
+(define-c errno (set-current-user-id! "setuid") (uid_t))
+(define-c errno (set-current-effective-user-id! "seteuid") (uid_t))
+(define-c errno (set-current-group-id! "setgid") (gid_t))
+(define-c errno (set-current-effective-group-id! "setegid") (gid_t))
+
+(define-c pid_t (current-session-id "getsid") ((default 0 pid_t)))
+(define-c pid_t (create-session "setsid") ())
+
+(define-c errno (set-root-directory! "chroot") (string))
+
+;; (define-c errno getpwuid_r
+;;   (uid_t (result passwd) (result (array char arg3))
+;;          (value 256 int) (result pointer passwd)))
+

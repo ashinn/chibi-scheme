@@ -1,0 +1,72 @@
+
+(c-system-include "sys/types.h")
+(c-system-include "sys/wait.h")
+(c-system-include "signal.h")
+(c-system-include "unistd.h")
+
+(define-c-type siginfo_t
+  predicate: signal-info?
+  (int      si_signo    signal-number)
+  (int      si_errno    signal-error-number)
+  (int      si_code     signal-code)
+  (pid_t    si_pid      signal-pid)
+  (uid_t    si_uid      signal-uid)
+  (int      si_status   signal-status)
+  ;;(clock_t  si_utime    signal-user-time)
+  ;;(clock_t  si_stime    signal-system-time)
+  )
+
+(define-c-type sigset_t
+  predicate: signal-set?)
+
+(define-c-const int (signal/hang-up "SIGHUP"))
+(define-c-const int (signal/interrupt "SIGINT"))
+(define-c-const int (signal/quit "SIGQUIT"))
+(define-c-const int (signal/illegal "SIGILL"))
+(define-c-const int (signal/abort "SIGABRT"))
+(define-c-const int (signal/fpe "SIGFPE"))
+(define-c-const int (signal/kill "SIGKILL"))
+(define-c-const int (signal/segv "SIGSEGV"))
+(define-c-const int (signal/pipe "SIGPIPE"))
+(define-c-const int (signal/alarm "SIGALRM"))
+(define-c-const int (signal/term "SIGTERM"))
+(define-c-const int (signal/user1"SIGUSR1"))
+(define-c-const int (signal/user2 "SIGUSR2"))
+(define-c-const int (signal/child "SIGCHLD"))
+(define-c-const int (signal/continue "SIGCONT"))
+(define-c-const int (signal/stop "SIGSTOP"))
+(define-c-const int (signal/tty-stop "SIGTSTP"))
+(define-c-const int (signal/tty-input "SIGTTIN"))
+(define-c-const int (signal/tty-output "SIGTTOU"))
+
+(c-include "signal.c")
+
+(define-c sexp (set-signal-action! "sexp_set_signal_action")
+  ((value ctx sexp) sexp  sexp))
+
+(define-c errno (make-signal-set "sigemptyset") ((result sigset_t)))
+(define-c errno (signal-set-fill! "sigfillset") (sigset_t))
+(define-c errno (signal-set-add! "sigaddset") (sigset_t int))
+(define-c errno (signal-set-delete! "sigaddset") (sigset_t int))
+(define-c boolean (signal-set-contains? "sigismember") (sigset_t int))
+
+(define-c errno (signal-mask-block! "sigprocmask")
+  ((value SIG_BLOCK int) sigset_t (value NULL sigset_t)))
+(define-c errno (signal-mask-unblock! "sigprocmask")
+  ((value SIG_UNBLOCK int) sigset_t (value NULL sigset_t)))
+(define-c errno (signal-mask-set! "sigprocmask")
+  ((value SIG_SETMASK int) sigset_t (value NULL sigset_t)))
+(define-c errno (current-signal-mask "sigprocmask")
+  ((value SIG_BLOCK int) (value NULL sigset_t) (result sigset_t)))
+
+(define-c unsigned-int alarm (unsigned-int))
+(define-c unsigned-int sleep (unsigned-int))
+
+(define-c pid_t fork ())
+;;(define-c pid_t wait ((result int)))
+(define-c pid_t waitpid (int (result int) int))
+(define-c errno kill (int int))
+;;(define-c errno raise (int))
+(define-c void exit (int))
+(define-c int (execute execvp) (string (array string)))
+
