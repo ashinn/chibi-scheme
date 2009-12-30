@@ -1,6 +1,8 @@
 
 (define-module (chibi io)
-  (export read-string read-string! write-string read-line write-line)
+  (export read-string read-string! write-string read-line write-line
+          port-fold port-fold-right port-map
+          port->list port->string-list port->sexp-list port->string)
   (import-immutable (scheme))
   (include-shared "io/io")
   (include "io/io.scm"))
