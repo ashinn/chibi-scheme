@@ -20,7 +20,7 @@
           open/read        open/write             open/read-write
           open/create      open/exclusive         open/truncate
           open/append      open/non-block
-          )
+          is-a-tty?)
   (import-immutable (scheme))
   (include-shared "filesystem")
   (include "filesystem.scm"))
