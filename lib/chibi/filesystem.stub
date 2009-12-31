@@ -113,3 +113,6 @@
 (define-c-const int (open/truncate "O_TRUNC"))
 (define-c-const int (open/append "O_APPEND"))
 (define-c-const int (open/non-block "O_NONBLOCK"))
+
+(define-c boolean (is-a-tty? "isatty") (port-or-fd))
+

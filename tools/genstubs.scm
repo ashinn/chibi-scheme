@@ -507,7 +507,10 @@
       (cat "sexp_concat_env_string(" val ")"))
      ((string-type? base)
       (cat "sexp_string_data(" val ")"))
-     ((memq base '(port input-port output-port))
+     ((eq? base 'port-or-fd)
+      (cat "(sexp_portp(" val ") ? fileno(sexp_port_stream(" val "))"
+           " : sexp_unbox_fixnum(" val "))"))
+     ((port-type? base)
       (cat "sexp_port_stream(" val ")"))
      (else
       (let ((ctype (assq base *types*)))
@@ -607,6 +610,9 @@
           (cat "  if (! sexp_nullp(res))\n"
                "    return sexp_type_exception(ctx, \"not a list of "
                (type-name type) "s\", " arg ");\n")))
+     ((eq? base-type 'port-or-fd)
+      (cat "if (! (sexp_portp(" arg ") || sexp_fixnump(" arg ")))\n"
+           "  return sexp_type_exception(ctx, \"not a port of file descriptor\"," arg ");\n"))
      ((or (int-type? base-type)
           (float-type? base-type)
           (string-type? base-type)
