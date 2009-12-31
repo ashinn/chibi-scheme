@@ -19,3 +19,9 @@ gc6.8
 chibi-scheme
 chibi-scheme-static
 include/chibi/install.h
+lib/chibi/filesystem.c
+lib/chibi/io/io.c
+lib/chibi/net.c
+lib/chibi/process.c
+lib/chibi/system.c
+lib/chibi/time.c
