@@ -107,7 +107,7 @@ void run_main (int argc, char **argv) {
     case 'l':
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      check_exception(ctx, sexp_load_module_file(ctx, argv[++i], env));
+      check_exception(ctx, sexp_load_module_file(ctx, arg, env));
       break;
     case 'm':
       load_init();
