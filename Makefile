@@ -108,6 +108,9 @@ eval.o: eval.c opcodes.c opt/simplify.c $(INCLUDES) include/chibi/eval.h Makefil
 main.o: main.c $(INCLUDES) include/chibi/eval.h Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
+libchibi-sexp$(SO): sexp.o
+	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
+
 libchibi-scheme$(SO): eval.o sexp.o
 	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
 
