@@ -943,9 +943,11 @@
              (cat "  if (len" i " != " len ")\n"
                   "    free(tmp" i ");\n"))))
       ((and (type-result? a) (not (basic-type? a))
+            (not (assq (type-base a) *types*))
             (not (type-free? a)) (not (type-pointer? a))
             (or (not (type-array a))
                 (not (integer? (get-array-length func a)))))
+       ;; the above is hairy - basically this frees temporary strings
        (cat "  free(tmp" (type-index a) ");\n"))))
    (func-c-args func))
   (let* ((results (func-results func))
