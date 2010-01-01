@@ -434,8 +434,10 @@ sexp sexp_bignum_quotient (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_bignum_remainder (sexp ctx, sexp a, sexp b) {
-  sexp rem;
+  sexp_gc_var1(rem);
+  sexp_gc_preserve1(ctx, rem);
   sexp_bignum_quot_rem(ctx, &rem, a, b); /* discard quotient */
+  sexp_gc_release1(ctx);
   return rem;
 }
 
@@ -605,9 +607,9 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
 sexp sexp_div (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
   double f;
-  sexp r=SEXP_VOID, rem;
-  sexp_gc_var1(tmp);
-  sexp_gc_preserve1(ctx, tmp);
+  sexp r=SEXP_VOID;
+  sexp_gc_var2(tmp, rem);
+  sexp_gc_preserve2(ctx, tmp, rem);
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
@@ -651,7 +653,7 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     r = sexp_make_flonum(ctx, sexp_bignum_to_double(a) / sexp_flonum_value(b));
     break;
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release2(ctx);
   return r;
 }
 
