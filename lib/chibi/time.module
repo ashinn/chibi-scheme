@@ -5,7 +5,8 @@
           timeval-seconds timeval-microseconds
           timezone-offset timezone-dst-time
           time-second time-minute time-hour time-day time-month time-year
-          time-day-of-week time-day-of-year time-dst?)
+          time-day-of-week time-day-of-year time-dst?
+          tm? timeval? timezone?)
   (import-immutable (scheme))
   (include-shared "time"))
 
