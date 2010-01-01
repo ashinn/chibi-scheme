@@ -139,8 +139,9 @@ sexp sexp_bignum_normalize (sexp a) {
 
 double sexp_bignum_to_double (sexp a) {
   double res = 0;
-  sexp_uint_t i, *data=sexp_bignum_data(a);
-  for (i=0; i<sexp_bignum_length(a); i++)
+  sexp_sint_t i;
+  sexp_uint_t *data=sexp_bignum_data(a);
+  for (i=sexp_bignum_hi(a); i>=0; i--)
     res = res * ((double)SEXP_UINT_T_MAX+1) + data[i];
   return res;
 }
