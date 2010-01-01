@@ -3,6 +3,7 @@
 (c-system-include "sys/time.h")
 
 (define-c-struct tm
+  predicate: tm?
   (int     tm_sec    time-second)
   (int     tm_min    time-minute)
   (int     tm_hour   time-hour)
