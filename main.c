@@ -10,6 +10,8 @@
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
 
+#define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
+
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
 #else
@@ -152,7 +154,13 @@ void run_main (int argc, char **argv) {
       }
       break;
     case 'V':
-      printf("chibi-scheme 0.3\n");
+      load_init();
+      if (! sexp_oportp(out))
+        out = sexp_eval_string(ctx, "(current-output-port)", env);
+      sexp_write_string(ctx, sexp_version_string, out);
+      tmp = sexp_env_ref(env, sexp_intern(ctx, "*features*"), SEXP_NULL);
+      sexp_write(ctx, tmp, out);
+      sexp_newline(ctx, out);
       return;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
