@@ -60,7 +60,8 @@
    - State "DONE"       [2009-07-07 Tue 14:42]
 ** TODO unicode
 ** TODO threads
-** TODO virtual ports
+** DONE virtual ports
+   - State "DONE"       [2010-01-02 Sat 20:12]
 ** DONE dynamic-wind
    - State "DONE"       [2009-12-26 Sat 01:51]
    Adapted a version from Scheme48.
@@ -114,7 +115,8 @@
     - State "DONE"       [2009-12-26 Sat 01:50]
 *** DONE time interface
     - State "DONE"       [2009-12-26 Sat 01:50]
-*** TODO host system interface
+*** DONE host system interface
+    - State "DONE"       [2010-01-02 Sat 20:12]
 ** DONE pathname library
    - State "DONE"       [2009-12-16 Wed 18:58]
 ** DONE uri library

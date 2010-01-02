@@ -6,8 +6,22 @@
   ((result (array char arg2)) (value 1 size_t) size_t (default (current-input-port) input-port)))
 
 (define-c size_t (read-string! "fread")
-  (string size_t (value 1 size_t) (default (current-input-port) input-port)))
+  (string (value 1 size_t) size_t (default (current-input-port) input-port)))
 
 (define-c size_t (write-string "fwrite")
-  (string size_t (value 1 size_t) (default (current-output-port) output-port)))
+  (string (value 1 size_t) size_t (default (current-output-port) output-port)))
 
+(define-c-const int (seek/set "SEEK_SET"))
+(define-c-const int (seek/cur "SEEK_CUR"))
+(define-c-const int (seek/end "SEEK_END"))
+
+(define-c long (file-position "ftell") (port))
+(define-c long (set-file-position! "fseek") (port long int))
+
+(c-include "port.c")
+
+(define-c sexp (%make-custom-input-port "sexp_make_custom_input_port")
+  ((value ctx sexp) sexp sexp sexp))
+
+(define-c sexp (%make-custom-output-port "sexp_make_custom_output_port")
+  ((value ctx sexp) sexp sexp sexp))
