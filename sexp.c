@@ -291,7 +291,9 @@ sexp sexp_make_context (sexp ctx, sexp_uint_t size) {
 #if ! SEXP_USE_GLOBAL_HEAP
 void sexp_destroy_context (sexp ctx) {
   sexp_heap heap;
+  size_t sum_freed;
   if (sexp_context_heap(ctx)) {
+    sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
     heap = sexp_context_heap(ctx);
     sexp_context_heap(ctx) = NULL;
     free(heap);

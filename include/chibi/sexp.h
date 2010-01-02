@@ -460,6 +460,10 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define SEXP_THREE   sexp_make_fixnum(3)
 #define SEXP_FOUR    sexp_make_fixnum(4)
 #define SEXP_FIVE    sexp_make_fixnum(5)
+#define SEXP_SIX     sexp_make_fixnum(6)
+#define SEXP_SEVEN   sexp_make_fixnum(7)
+#define SEXP_EIGHT   sexp_make_fixnum(8)
+#define SEXP_NINE    sexp_make_fixnum(9)
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
