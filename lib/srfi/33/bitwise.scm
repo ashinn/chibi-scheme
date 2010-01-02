@@ -38,7 +38,7 @@
       -1
       (integer-length (- i (bit-and i (- i 1))))))
 
-(define (mask len) (bitwise-not (arithmetic-shift -1 len)))
+(define (mask len) (- (arithmetic-shift 1 len) 1))
 
 (define (bitwise-merge mask n m)
   (bit-ior (bit-and mask n) (bit-and (bitwise-not mask) m)))
