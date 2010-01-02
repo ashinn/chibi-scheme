@@ -26,7 +26,14 @@
   (let ((in (if (pair? o) (car o) (current-input-port)))
         (n (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) 8192)))
     (let ((res (%read-line n in)))
-      (if (not res) eof res))))
+      (if (not res)
+          eof
+          (let ((len (string-length res)))
+            (if (and (> len 0) (eqv? #\newline (string-ref res (- len 1))))
+                (if (and (> len 1) (eqv? #\return (string-ref res (- len 2))))
+                    (substring res 0 (- len 2))
+                    (substring res 0 (- len 1)))
+                res))))))
 
 (define (read-string n . o)
   (let ((in (if (pair? o) (car o) (current-input-port))))
