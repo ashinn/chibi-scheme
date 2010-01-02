@@ -425,7 +425,7 @@
 (define complex? number?)
 (define rational? number?)
 (define real? number?)
-(define exact? fixnum?)
+(define (exact? x) (if (fixnum? x) #t (bignum? x)))
 (define inexact? flonum?)
 (define (integer? x)
   (if (fixnum? x) #t (if (bignum? x) #t (and (flonum? x) (= x (truncate x))))))
