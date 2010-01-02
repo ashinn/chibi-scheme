@@ -39,7 +39,12 @@ static sexp sexp_last_context (sexp ctx, sexp *cstack) {
   return res;
 }
 
-static ssize_t sexp_cookie_reader (void *cookie, char *buffer, size_t size) {
+#if SEXP_BSD
+static int sexp_cookie_reader (void *cookie, char *buffer, int size)
+#else
+static ssize_t sexp_cookie_reader (void *cookie, char *buffer, size_t size)
+#endif
+{
   sexp vec = (sexp)cookie, ctx, res;
   if (! sexp_procedurep(sexp_cookie_read(vec))) return -1;
   sexp_gc_var2(ctx2, args);
@@ -59,7 +64,12 @@ static ssize_t sexp_cookie_reader (void *cookie, char *buffer, size_t size) {
   }
 }
 
-static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size) {
+#if SEXP_BSD
+static int sexp_cookie_writer (void *cookie, const char *buffer, int size)
+#else
+static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size)
+#endif
+{
   sexp vec = (sexp)cookie, ctx, res;
   if (! sexp_procedurep(sexp_cookie_write(vec))) return -1;
   sexp_gc_var2(ctx2, args);
@@ -75,6 +85,7 @@ static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size
   return (sexp_fixnump(res) ? sexp_unbox_fixnum(res) : -1);
 }
 
+#if ! SEXP_BSD
 static int sexp_cookie_seeker (void *cookie, off64_t *position, int whence) {
   sexp vec = (sexp)cookie, ctx, res;
   if (! sexp_procedurep(sexp_cookie_seek(vec))) return -1;
@@ -90,6 +101,7 @@ static int sexp_cookie_seeker (void *cookie, off64_t *position, int whence) {
   sexp_gc_release2(ctx);
   return sexp_fixnump(res);
 }
+#endif
 
 static int sexp_cookie_cleaner (void *cookie) {
   sexp vec = (sexp)cookie, ctx, res;
