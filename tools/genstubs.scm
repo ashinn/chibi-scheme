@@ -403,7 +403,16 @@
   (cat "\n#include <" header ">\n"))
 
 (define (parse-struct-like ls)
-  (map (lambda (x) (if (pair? x) (cons (parse-type (car x)) (cdr x)) x)) ls))
+  (let lp ((ls ls) (res '()))
+    (cond
+     ((null? ls)
+      (reverse res))
+     ((symbol? (car ls))
+      (lp (cddr ls) (cons (cadr ls) (cons (car ls) res))))
+     ((pair? (car ls))
+      (lp (cdr ls) (cons (cons (parse-type (caar ls)) (cdar ls)) res)))
+     (else
+      (lp (cdr ls) (cons (car ls) res))))))
 
 (define-syntax define-struct-like
   (er-macro-transformer
@@ -1057,7 +1066,7 @@
 
 (define (type-setter-name type name field)
   (string-append "sexp_" (x->string (type-name (parse-type name)))
-                 "_set_" (x->string (type-base (parse-type (car field))))))
+                 "_set_" (x->string (type-base (parse-type (cadr field))))))
 
 (define (write-type-setter type name field)
   (cat "static sexp " (type-setter-name type name field)
@@ -1065,15 +1074,13 @@
        (lambda () (write-validator "x" name))
        (lambda () (write-validator "v" (car field)))
        "  "
-       (lambda () (c->scheme-converter
-               (car field)
-               (string-append "((" (x->string (or (type-struct-type name) ""))
-                              " " (mangle name) "*)"
-                              "sexp_cpointer_value(x))"
-                              (if (type-struct? (car field)) "." "->")
-                              (x->string (cadr field)))))
-       " = v;\n"
-       "  return SEXP_VOID;"
+       (string-append "((" (x->string (or (type-struct-type name) ""))
+                      " " (mangle name) "*)"
+                      "sexp_cpointer_value(x))"
+                      (if (type-struct? (car field)) "." "->")
+                      (x->string (cadr field)))
+       " = " (lambda () (scheme->c-converter (car field) "v")) ";\n"
+       "  return SEXP_VOID;\n"
        "}\n\n"))
 
 (define (write-type-funcs type)
@@ -1097,7 +1104,11 @@
                  (args (cdadr x)))
              (cat "static sexp " (generate-stub-name make)
                   " (sexp ctx"
-                  (lambda () (for-each (lambda (x) (cat ", sexp " x)) args))
+                  (lambda ()
+                    (let lp ((ls args) (i 0))
+                      (cond ((pair? ls)
+                             (cat ", sexp arg" i)
+                             (lp (cdr ls) (+ i 1))))))
                   ") {\n"
                   "  struct " (type-name name) " *r;\n"
                   "  sexp res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
@@ -1105,6 +1116,23 @@
                   ");\n"
                   "  sexp_cpointer_value(res) = sexp_cpointer_body(res);\n"
                   "  r = sexp_cpointer_value(res);\n"
+                  (lambda ()
+                    (let lp ((ls args) (i 0))
+                      (cond
+                       ((pair? ls)
+                        (let* ((a (car ls))
+                               (field
+                                (any (lambda (f) (and (pair? f) (eq? a (cadr f))))
+                                     (cddr x))))
+                          (if field
+                              (cat "  r." (cadr field) " = "
+                                   (lambda ()
+                                     (scheme->c-converter
+                                      (car field)
+                                      (string-append "arg"
+                                                     (number->string i))))
+                                   ";\n"))
+                          (lp (cdr ls) (+ i 1)))))))
                   "  return res;\n"
                   "}\n\n")
              (set! *funcs*
