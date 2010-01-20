@@ -260,7 +260,7 @@
              (s-args '()))
       (cond
        ((null? ls)
-        (if (>= i 6)
+        (if (> i 6)
             (error "FFI currently only supports up to 6 scheme args" func))
         (vector scheme-name c-name stub-name ret-type
                 (reverse results) (reverse c-args) (reverse s-args)))
