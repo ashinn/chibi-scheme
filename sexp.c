@@ -1328,12 +1328,12 @@ sexp sexp_read_number(sexp ctx, sexp in, int base) {
   int c, digit, negativep = 0;
 
   c = sexp_read_char(ctx, in);
-  if (c == '-')
+  if (c == '-') {
     negativep = 1;
-  else if (isdigit(c))
-    res = digit_value(c);
+    c = sexp_read_char(ctx, in);
+  }
 
-  for (c=sexp_read_char(ctx, in); isxdigit(c); c=sexp_read_char(ctx, in)) {
+  for ( ; isxdigit(c); c=sexp_read_char(ctx, in)) {
     digit = digit_value(c);
     if ((digit < 0) || (digit >= base))
       break;
