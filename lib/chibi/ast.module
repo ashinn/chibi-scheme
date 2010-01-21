@@ -10,5 +10,6 @@
           set-var set-value set-var-set! set-value-set!
           ref-name ref-cell ref-name-set! ref-cell-set!
           seq-ls seq-ls-set! lit-value lit-value-set!)
+  (import-immutable (scheme))
   (include-shared "ast"))
 

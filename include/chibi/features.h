@@ -17,6 +17,16 @@
 /*   sexp_init_library(ctx, env) function provided. */
 /* #define SEXP_USE_DL 0 */
 
+/* uncomment this to statically compile all C libs */
+/*   If set, this will statically include the clibs.c file */
+/*   into the standard environment, so that you can have */
+/*   access to a predefined set of C libraries without */
+/*   needing dynamic loading.  The clibs.c file is generated */
+/*   automatically by searching the lib directory for */
+/*   modules with include-shared, but can be hand-tailored */
+/*   to your needs. */
+/* #define SEXP_USE_STATIC_LIBS 1 */
+
 /* uncomment this to disable a simplifying optimization pass */
 /*   This performs some simple optimizations such as dead-code */
 /*   elimination, constant-folding, and directly propagating */
@@ -177,6 +187,10 @@
 #else
 #define SEXP_USE_DL ! SEXP_USE_NO_FEATURES
 #endif
+#endif
+
+#ifndef SEXP_USE_STATIC_LIBS
+#define SEXP_USE_STATIC_LIBS 0
 #endif
 
 #ifndef SEXP_USE_SIMPLIFY
