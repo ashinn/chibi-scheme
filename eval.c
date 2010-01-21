@@ -2414,6 +2414,10 @@ sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index) {
 
 #endif
 
+#if SEXP_USE_STATIC_LIBS
+#include "clibs.c"
+#endif
+
 /*********************** standard environment *************************/
 
 static struct sexp_struct core_forms[] = {
@@ -2606,6 +2610,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
     }
     sexp_env_define(ctx, e, sym, tmp);
   }
+#endif
+#if SEXP_USE_STATIC_LIBS
+  sexp_init_all_libraries(ctx, e);
 #endif
   sexp_gc_release3(ctx);
   return sexp_exceptionp(tmp) ? tmp : e;

@@ -41,6 +41,22 @@ directly from make with:
 
   make SEXP_USE_BOEHM=1
 
+To compile a static executable, use
+
+  make chibi-scheme-static SEXP_USE_DL=0
+
+To compile a static executable with all C libraries statically
+included, first you need to create a clibs.c file, which can be done
+with:
+
+  make clibs.c
+
+or edited manually.  Be sure to run this with a non-static
+chibi-scheme.  Then you can make the static executable with:
+
+  make cleaner
+  make chibi-scheme-static SEXP_USE_DL=0 CPPFLAGS=-DSEXP_USE_STATIC_LIBS
+
 ------------------------------------------------------------------------
 CHIBI-SCHEME LANGUAGE
 

@@ -111,15 +111,17 @@
                            (eq? (car x) 'import-immutable))))
            (cdr x)))
          ((include include-shared)
-          (for-each
-           (lambda (f)
-             (let ((f (string-append
-                       dir f
-                       (if (eq? (car x) 'include) "" *shared-object-extension*))))
-               (cond
-                ((find-module-file f) => (lambda (x) (load x env)))
-                (else (error "couldn't find include" f)))))
-           (cdr x)))
+          (if (cond-expand (dynamic-loading #t)
+                           (else (not (eq? 'include-shared (car x)))))
+              (for-each
+               (lambda (f)
+                 (let ((f (string-append
+                           dir f
+                           (if (eq? (car x) 'include) "" *shared-object-extension*))))
+                   (cond
+                    ((find-module-file f) => (lambda (x) (load x env)))
+                    (else (error "couldn't find include" f)))))
+               (cdr x))))
          ((body)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))

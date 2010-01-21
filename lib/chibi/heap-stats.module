@@ -1,5 +1,6 @@
 
 (define-module (chibi heap-stats)
   (export heap-stats heap-dump)
+  (import-immutable (scheme))
   (include-shared "heap-stats"))
 

@@ -17,7 +17,8 @@ MANDIR   ?= $(PREFIX)/share/man/man1
 
 DESTDIR  ?=
 
-GENSTUBS ?= ./tools/genstubs.scm
+GENSTUBS  ?= ./tools/genstubs.scm
+GENSTATIC ?= ./tools/genstatic.scm
 
 ########################################################################
 # system configuration - if not using GNU make, set PLATFORM and the
@@ -50,6 +51,7 @@ CC = gcc
 CLIBFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL -DSEXP_USE_DEBUG=0
 LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+STATICFLAGS = -DSEXP_USE_DL=0
 else
 SO  = .so
 EXE =
@@ -118,10 +120,16 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
-	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(XLDFLAGS)
+	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
+
+clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi
+	make chibi-scheme$(EXE)
+	make libs
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PATH=.:$(PATH) $(GENSTATIC) $< > $@
 
 %.c: %.stub $(GENSTUBS)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PATH=.:$(PATH) $(GENSTUBS) $<
+	make chibi-scheme$(EXE)
+	-LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PATH=.:$(PATH) $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
@@ -178,7 +186,7 @@ install: chibi-scheme$(EXE)
 	-cp libchibi-scheme.a $(DESTDIR)$(LIBDIR)/
 	mkdir -p $(DESTDIR)$(MANDIR)
 	cp doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
-	if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
+	-if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
