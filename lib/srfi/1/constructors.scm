@@ -27,7 +27,7 @@
     res))
 
 (define (iota count . o)
-  (let ((start (if (pair? o) (car o) count))
+  (let ((start (if (pair? o) (car o) 0))
         (step (if (and (pair? o) (pair? (cdr o))) (cadr o) 1)))
     (let lp ((i count) (n (+ start (* (- count 1) step))) (res '()))
       (if (<= i 0)
