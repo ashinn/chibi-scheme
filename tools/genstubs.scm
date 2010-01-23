@@ -1111,7 +1111,9 @@
                              (lp (cdr ls) (+ i 1))))))
                   ") {\n"
                   "  struct " (type-name name) " *r;\n"
-                  "  sexp res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
+                  "  sexp_gc_var1(res);\n"
+                  "  sexp_gc_preserve1(ctx, res);\n"
+                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
                   (type-id-name name)
                   ");\n"
                   "  sexp_cpointer_value(res) = sexp_cpointer_body(res);\n"
@@ -1133,6 +1135,7 @@
                                                      (number->string i))))
                                    ";\n"))
                           (lp (cdr ls) (+ i 1)))))))
+                  "  sexp_gc_release1(ctx);\n"
                   "  return res;\n"
                   "}\n\n")
              (set! *funcs*
