@@ -1113,11 +1113,16 @@
                   "  struct " (type-name name) " *r;\n"
                   "  sexp_gc_var1(res);\n"
                   "  sexp_gc_preserve1(ctx, res);\n"
-                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
+                  ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
+                  ;; (type-id-name name)
+                  ;; ");\n"
+                  ;; "  r = sexp_cpointer_value(res) = sexp_cpointer_body(res);\n"
+                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), "
                   (type-id-name name)
                   ");\n"
-                  "  sexp_cpointer_value(res) = sexp_cpointer_body(res);\n"
-                  "  r = sexp_cpointer_value(res);\n"
+                  "  r = sexp_cpointer_value(res) = malloc(sizeof(struct "
+                  (type-name name) "));\n"
+                  "  sexp_freep(res) = 1;\n"
                   (lambda ()
                     (let lp ((ls args) (i 0))
                       (cond
@@ -1127,7 +1132,7 @@
                                 (any (lambda (f) (and (pair? f) (eq? a (cadr f))))
                                      (cddr x))))
                           (if field
-                              (cat "  r." (cadr field) " = "
+                              (cat "  r->" (cadr field) " = "
                                    (lambda ()
                                      (scheme->c-converter
                                       (car field)
