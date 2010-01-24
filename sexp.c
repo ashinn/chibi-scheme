@@ -889,9 +889,18 @@ sexp sexp_make_input_string_port (sexp ctx, sexp str) {
   sexp res;
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, "open-input-string: not a string", str);
-  in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
-  res = sexp_make_input_port(ctx, in, SEXP_FALSE);
-  sexp_port_cookie(res) = str;  /* for gc preservation */
+  if (sexp_string_length(str) == 0)
+    in = fopen("/dev/null", "r");
+  else
+    in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
+  if (in) {
+    res = sexp_make_input_port(ctx, in, SEXP_FALSE);
+    if (sexp_string_length(str) == 0)
+      sexp_port_name(res) = sexp_c_string(ctx, "/dev/null", -1);
+    sexp_port_cookie(res) = str;  /* for gc preservation */
+  } else {
+    res = sexp_user_exception(ctx, SEXP_FALSE, "couldn't open string", str);
+  }
   return res;
 }
 
