@@ -488,24 +488,32 @@
       (and (<= 65 (char->integer (char-upcase ch)) 70)
            (- (char->integer (char-upcase ch)) 55))))
 
-(define (number->string n . o)
+(define (number->string num . o)
   (if (if (null? o) #t (eq? 10 (car o)))
-      (call-with-output-string (lambda (out) (write n out)))
-      (let lp ((n n) (d (car o)) (res '()))
+      (call-with-output-string (lambda (out) (write num out)))
+      (let lp ((n (abs num)) (d (car o)) (res '()))
         (if (> n 0)
             (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
-            (if (null? res) "0" (list->string res))))))
+            (if (null? res)
+                "0"
+                (list->string (if (negative? num) (cons #\- res) res)))))))
 
 (define (string->number str . o)
   (let ((res
-         (if (if (null? o) #t (eq? 10 (car o)))
-             (call-with-input-string str (lambda (in) (read in)))
-             (let ((len (string-length str)))
-               (let lp ((i 0) (d (car o)) (acc 0))
-                (if (>= i len)
-                    acc
-                    (let ((v (digit-value (string-ref str i))))
-                      (and v (lp (+ i 1) d (+ (* acc d) v))))))))))
+         (cond
+          ((= 0 (string-length str))
+           #f)
+          ((if (null? o)
+               #t
+               (if (eq? 10 (car o)) #t (eq? #\# (string-ref str 0))))
+           (call-with-input-string str (lambda (in) (read in))))
+          (else
+           (let ((len (string-length str)))
+             (let lp ((i 0) (d (car o)) (acc 0))
+               (if (>= i len)
+                   acc
+                   (let ((v (digit-value (string-ref str i))))
+                     (and v (lp (+ i 1) d (+ (* acc d) v)))))))))))
     (and (number? res) res)))
 
 ;; vector utils
