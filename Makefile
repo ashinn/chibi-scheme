@@ -92,7 +92,7 @@ COMPILED_LIBS := lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
 
 libs: $(COMPILED_LIBS)
 
-INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h
+INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
@@ -174,8 +174,8 @@ test: chibi-scheme$(EXE)
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
+	cp tools/genstubs.scm $(DESTDIR)$(BINDIR)/
 	mkdir -p $(DESTDIR)$(MODDIR)
-	cp lib/init.scm lib/config.scm $(DESTDIR)$(MODDIR)/
 	cp -r lib/ $(DESTDIR)$(MODDIR)/
 	mkdir -p $(DESTDIR)$(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
