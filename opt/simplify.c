@@ -54,7 +54,9 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
         if (sexp_not(sexp_memq(ctx, sexp_car(p2), sv))
             && (! sexp_pointerp(sexp_car(ls2)) || sexp_litp(sexp_car(ls2))
                 || (sexp_refp(sexp_car(ls2))
-                    && sexp_lambdap(sexp_ref_loc(sexp_car(ls2)))))) {
+                    && sexp_lambdap(sexp_ref_loc(sexp_car(ls2)))
+                    && sexp_not(sexp_memq(ctx, sexp_ref_name(sexp_car(ls2)),
+                                          sexp_lambda_sv(sexp_ref_loc(sexp_car(ls2)))))))) {
           tmp = sexp_cons(ctx, sexp_car(app), sexp_car(ls2));
           tmp = sexp_cons(ctx, sexp_car(p2), tmp);
           sexp_push(ctx, substs, tmp);
