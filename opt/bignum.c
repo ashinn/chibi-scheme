@@ -565,6 +565,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_BIG_FLO:
     r = sexp_make_flonum(ctx, sexp_flonum_value(b) - sexp_bignum_to_double(a));
+    break;
   case SEXP_NUM_BIG_BIG:
     r = sexp_bignum_normalize(sexp_bignum_sub(ctx, NULL, a, b));
     break;
@@ -646,7 +647,7 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     r = sexp_bignum_quot_rem(ctx, &rem, a, b);
     if (sexp_bignum_normalize(rem) != SEXP_ZERO)
       r = sexp_make_flonum(ctx, sexp_bignum_to_double(a)
-                           / sexp_fixnum_to_double(b));
+                           / sexp_bignum_to_double(b));
     else
       r = sexp_bignum_normalize(r);
     break;
