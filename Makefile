@@ -176,7 +176,7 @@ install: chibi-scheme$(EXE)
 	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	cp tools/genstubs.scm $(DESTDIR)$(BINDIR)/
 	mkdir -p $(DESTDIR)$(MODDIR)
-	cp -r lib/ $(DESTDIR)$(MODDIR)/
+	cp -r lib/* $(DESTDIR)$(MODDIR)/
 	mkdir -p $(DESTDIR)$(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
 	mkdir -p $(DESTDIR)$(LIBDIR)
