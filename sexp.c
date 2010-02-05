@@ -1325,10 +1325,7 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp) {
   }
   res = (whole + res) * pow(10, e);
   if (negp) res *= -1;
-  if ((scale == 0.1) && (exponent != SEXP_VOID) && (res == round(res)))
-    return sexp_make_fixnum(res);
-  else
-    return sexp_make_flonum(ctx, res);
+  return sexp_make_flonum(ctx, res);
 }
 
 sexp sexp_read_number(sexp ctx, sexp in, int base) {
