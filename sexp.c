@@ -19,7 +19,7 @@ static struct sexp_huff_entry huff_table[] = {
 
 static int sexp_initialized_p = 0;
 
-sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp);
+sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
 
 static char sexp_separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
@@ -1304,7 +1304,7 @@ sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp) {
   return res;
 }
 
-sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp) {
+sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp) {
   sexp exponent=SEXP_VOID;
   double res=0.0, scale=0.1, e=0.0;
   int c;
@@ -1323,7 +1323,7 @@ sexp sexp_read_float_tail(sexp ctx, sexp in, sexp_uint_t whole, int negp) {
   } else {
     sexp_push_char(ctx, c, in);
   }
-  res = ((double)whole + res) * pow(10, e);
+  res = (whole + res) * pow(10, e);
   if (negp) res *= -1;
   if ((scale == 0.1) && (exponent != SEXP_VOID) && (res == round(res)))
     return sexp_make_fixnum(res);
