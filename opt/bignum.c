@@ -564,7 +564,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     r = sexp_bignum_normalize(sexp_bignum_sub(ctx, NULL, a, tmp));
     break;
   case SEXP_NUM_BIG_FLO:
-    r = sexp_make_flonum(ctx, sexp_flonum_value(b) - sexp_bignum_to_double(a));
+    r = sexp_make_flonum(ctx, sexp_bignum_to_double(a) - sexp_flonum_value(b));
     break;
   case SEXP_NUM_BIG_BIG:
     r = sexp_bignum_normalize(sexp_bignum_sub(ctx, NULL, a, b));
