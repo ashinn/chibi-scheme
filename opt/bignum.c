@@ -223,17 +223,18 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
     res = sexp_bignum_fxadd(ctx, res, digit);
   }
   if (c=='.' || c=='e' || c=='E') {
-    if (base != 10)
+    if (base != 10) {
       res = sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
-    else {
+    } else {
       if (c!='.') sexp_push_char(ctx, c, in); /* push the e back */
       res = sexp_read_float_tail(ctx, in, sexp_bignum_to_double(res), (sign==-1));
     }
   } else if ((c!=EOF) && ! is_separator(c)) {
     res = sexp_read_error(ctx, "invalid numeric syntax",
                           sexp_make_character(c), in);
+  } else {
+    sexp_push_char(ctx, c, in);
   }
-  sexp_push_char(ctx, c, in);
   sexp_gc_release1(ctx);
   return sexp_bignum_normalize(res);
 }
