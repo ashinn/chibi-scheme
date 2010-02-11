@@ -99,11 +99,19 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
   } else {
     mid = lo + (hi-lo)/2;
     swap(tmp, vec[mid], vec[hi]);
-    sexp_car(args1) = tmp;
-    b = sexp_apply(ctx, key, args1);
+    if (sexp_truep(key)) {
+      sexp_car(args1) = tmp;
+      b = sexp_apply(ctx, key, args1);
+    } else {
+      b = tmp;
+    }
     for (i=j=lo; i < hi; i++) {
-      sexp_car(args1) = vec[i];
-      a = sexp_apply(ctx, key, args1);
+      if (sexp_truep(key)) {
+        sexp_car(args1) = vec[i];
+        a = sexp_apply(ctx, key, args1);
+      } else {
+        a = vec[i];
+      }
       sexp_car(args2) = a;
       sexp_car(args1) = b;
       res = sexp_apply(ctx, less, args2);
