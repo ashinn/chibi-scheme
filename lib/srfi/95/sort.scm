@@ -27,7 +27,7 @@
            ((less (key (vector-ref seq (+ i 1))) (key (vector-ref seq i))) #f)
            (else (lp (+ i 1)))))))
      ((null? seq)
-      #f)
+      #t)
      (else
       (let lp ((ls1 seq) (ls2 (cdr seq)))
         (cond ((null? ls2) #t)
