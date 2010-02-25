@@ -290,13 +290,20 @@ sexp sexp_make_context (sexp ctx, sexp_uint_t size) {
 
 #if ! SEXP_USE_GLOBAL_HEAP
 void sexp_destroy_context (sexp ctx) {
-  sexp_heap heap;
+  sexp_heap heap, tmp;
   size_t sum_freed;
   if (sexp_context_heap(ctx)) {
     sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
     heap = sexp_context_heap(ctx);
     sexp_context_heap(ctx) = NULL;
-    free(heap);
+    for ( ; heap; heap=tmp) {
+      tmp = heap->next;
+#if SEXP_USE_MMAP_GC
+      munmap(heap, heap->size);
+#else
+      free(heap);
+#endif
+    }
   }
 }
 #endif
@@ -702,11 +709,12 @@ sexp sexp_intern(sexp ctx, char *str) {
 #if SEXP_USE_HUFF_SYMS
   res = 0;
   for ( ; (c=*p); p++) {
+    if ((c < 0) || (c > 127))
+      goto normal_intern;
     he = huff_table[(unsigned char)c];
     newbits = he.len;
-    if ((space+newbits) > (sizeof(sexp)*8)) {
+    if ((space+newbits) > (sizeof(sexp)*8))
       goto normal_intern;
-    }
     res |= (((sexp_uint_t) he.bits) << space);
     space += newbits;
   }
