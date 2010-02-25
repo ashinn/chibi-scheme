@@ -523,7 +523,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_string_length(x) ((x)->value.string.length)
 #define sexp_string_data(x)   ((x)->value.string.data)
 
-#define sexp_string_ref(x, i) (sexp_make_character(sexp_string_data(x)[sexp_unbox_fixnum(i)]))
+#define sexp_string_ref(x, i) (sexp_make_character((unsigned char)sexp_string_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_character(v))
 
 #define sexp_symbol_string(x)  ((x)->value.symbol.string)
