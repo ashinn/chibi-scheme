@@ -7,12 +7,13 @@
      (er-macro-transformer
       (lambda (expr rename compare)
         (let* ((name (cadr expr))
+               (name-str (symbol->string (identifier->symbol name)))
                (make (caaddr expr))
                (make-fields (cdaddr expr))
                (pred (cadddr expr))
                (fields (cddddr expr))
                (num-fields (length fields))
-               (index (register-simple-type (symbol->string name) num-fields))
+               (index (register-simple-type name-str num-fields))
                (_define (rename 'define))
                (_lambda (rename 'lambda))
                (_let (rename 'let)))
@@ -21,7 +22,7 @@
               (if (eq? field (caar ls)) i (lp (cdr ls) (+ i 1)))))
           `(,(rename 'begin)
             (,_define ,pred (,(rename 'make-type-predicate)
-                             ,(symbol->string pred)
+                             ,(symbol->string (identifier->symbol pred))
                              ,index))
             ,@(let lp ((ls fields) (i 0) (res '()))
                 (if (null? ls)
@@ -29,7 +30,8 @@
                     (let ((res
                            (cons `(,_define ,(cadar ls)
                                     (,(rename 'make-getter)
-                                     ,(symbol->string (cadar ls))
+                                     ,(symbol->string
+                                       (identifier->symbol (cadar ls)))
                                      ,index
                                      ,i))
                                  res)))
@@ -39,7 +41,8 @@
                               (cons
                                `(,_define ,(caddar ls)
                                   (,(rename 'make-setter)
-                                   ,(symbol->string (caddar ls))
+                                   ,(symbol->string
+                                     (identifier->symbol (caddar ls)))
                                    ,index
                                    ,i))
                                res)
@@ -49,7 +52,7 @@
                  (cond
                   ((null? ls)
                    `(,_let ((%make (,(rename 'make-constructor)
-                                    ,(symbol->string make)
+                                    ,(symbol->string (identifier->symbol make))
                                     ,index))
                             ,@set-defs)
                       (,_lambda ,make-fields
@@ -67,7 +70,7 @@
                            set-defs))
                       (else
                        (let* ((setter-name
-                               (string-append "%" (symbol->string name) "-"
+                               (string-append "%" name-str "-"
                                               (symbol->string (car ls)) "-set!"))
                               (setter (rename (string->symbol setter-name)))
                               (i (index-of (car ls) fields)))
