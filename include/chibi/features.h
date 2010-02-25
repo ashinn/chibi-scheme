@@ -57,6 +57,9 @@
 /*   explicitly free sexps, though. */
 /* #define SEXP_USE_MALLOC 1 */
 
+/* uncomment this to allocate heaps with mmap instead of malloc */
+/* #define SEXP_USE_MMAP_GC 1 */
+
 /* uncomment this to add conservative checks to the native GC */
 /*   Please mail the author if enabling this makes a bug */
 /*   go away and you're not working on your own C extension. */
@@ -203,6 +206,10 @@
 
 #ifndef SEXP_USE_MALLOC
 #define SEXP_USE_MALLOC 0
+#endif
+
+#ifndef SEXP_USE_MMAP_GC
+#define SEXP_USE_MMAP_GC 0
 #endif
 
 #ifndef SEXP_USE_DEBUG_GC

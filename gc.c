@@ -4,6 +4,10 @@
 
 #include "chibi/sexp.h"
 
+#if SEXP_USE_MMAP_GC
+#include <sys/mman.h>
+#endif
+
 /* These settings are configurable but only recommended for */
 /* experienced users, so they're not in config.h.  */
 
@@ -171,8 +175,14 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
 
 sexp_heap sexp_make_heap (size_t size) {
   sexp_free_list free, next;
-  sexp_heap h
-    = (sexp_heap) malloc(sizeof(struct sexp_heap) + size + sexp_heap_align(1));
+  sexp_heap h;
+#if SEXP_USE_MMAP_GC
+  h =  mmap(NULL, sizeof(struct sexp_heap) + size + sexp_heap_align(1),
+            PROT_READ|PROT_WRITE|PROT_EXEC,
+            MAP_ANON|MAP_PRIVATE, 0, 0);
+#else
+  h =  malloc(sizeof(struct sexp_heap) + size + sexp_heap_align(1));
+#endif
   if (! h) return NULL;
   h->size = size;
   h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
