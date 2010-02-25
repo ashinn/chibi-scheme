@@ -99,6 +99,13 @@
 (define (eval-module name mod)
   (let ((env (make-environment))
         (dir (module-name-prefix name)))
+    (define (load-modules files extension)
+      (for-each
+       (lambda (f)
+         (let ((f (string-append dir f extension)))
+           (cond ((find-module-file f) => (lambda (x) (load x env)))
+                 (else (error "couldn't find include" f)))))
+       files))
     (for-each
      (lambda (x)
        (case (and (pair? x) (car x))
@@ -110,18 +117,12 @@
                (%env-copy! env (module-env mod2) (cdr mod2-name+imports)
                            (eq? (car x) 'import-immutable))))
            (cdr x)))
-         ((include include-shared)
-          (if (cond-expand (dynamic-loading #t)
-                           (else (not (eq? 'include-shared (car x)))))
-              (for-each
-               (lambda (f)
-                 (let ((f (string-append
-                           dir f
-                           (if (eq? (car x) 'include) "" *shared-object-extension*))))
-                   (cond
-                    ((find-module-file f) => (lambda (x) (load x env)))
-                    (else (error "couldn't find include" f)))))
-               (cdr x))))
+         ((include)
+          (load-modules (cdr x) ""))
+         ((include-shared)
+          (cond-expand
+           (dynamic-loading (load-modules (cdr x) *shared-object-extension*))
+           (else #f)))
          ((body)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))
