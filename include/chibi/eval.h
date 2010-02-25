@@ -124,8 +124,11 @@ enum sexp_opcode_names {
 SEXP_API void sexp_scheme_init (void);
 SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env, sexp_uint_t size);
 SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
+SEXP_API sexp sexp_compile_error (sexp ctx, char *message, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
+SEXP_API sexp sexp_apply_optimization (sexp context, sexp proc, sexp ast);
+SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
 SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);

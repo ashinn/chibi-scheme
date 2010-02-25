@@ -28,7 +28,7 @@ static sexp sexp_load_module_file_op (sexp ctx, sexp file, sexp env);
 static sexp sexp_find_module_file_op (sexp ctx, sexp file);
 #endif
 
-static sexp sexp_compile_error (sexp ctx, char *message, sexp obj) {
+sexp sexp_compile_error (sexp ctx, char *message, sexp obj) {
   sexp exn;
   sexp_gc_var3(sym, irritants, msg);
   sexp_gc_preserve3(ctx, sym, irritants, msg);
@@ -1149,12 +1149,12 @@ static sexp diff_free_vars (sexp ctx, sexp lambda, sexp fv, sexp params) {
   return res;
 }
 
-static sexp free_vars (sexp ctx, sexp x, sexp fv) {
+sexp sexp_free_vars (sexp ctx, sexp x, sexp fv) {
   sexp_gc_var2(fv1, fv2);
   sexp_gc_preserve2(ctx, fv1, fv2);
   fv1 = fv;
   if (sexp_lambdap(x)) {
-    fv1 = free_vars(ctx, sexp_lambda_body(x), SEXP_NULL);
+    fv1 = sexp_free_vars(ctx, sexp_lambda_body(x), SEXP_NULL);
     fv2 = sexp_flatten_dot(ctx, sexp_lambda_params(x));
     fv2 = sexp_append2(ctx, sexp_lambda_locals(x), fv2);
     fv2 = diff_free_vars(ctx, x, fv1, fv2);
@@ -1162,21 +1162,21 @@ static sexp free_vars (sexp ctx, sexp x, sexp fv) {
     fv1 = union_free_vars(ctx, fv2, fv);
   } else if (sexp_pairp(x)) {
     for ( ; sexp_pairp(x); x=sexp_cdr(x))
-      fv1 = free_vars(ctx, sexp_car(x), fv1);
+      fv1 = sexp_free_vars(ctx, sexp_car(x), fv1);
   } else if (sexp_cndp(x)) {
-    fv1 = free_vars(ctx, sexp_cnd_test(x), fv);
-    fv1 = free_vars(ctx, sexp_cnd_pass(x), fv1);
-    fv1 = free_vars(ctx, sexp_cnd_fail(x), fv1);
+    fv1 = sexp_free_vars(ctx, sexp_cnd_test(x), fv);
+    fv1 = sexp_free_vars(ctx, sexp_cnd_pass(x), fv1);
+    fv1 = sexp_free_vars(ctx, sexp_cnd_fail(x), fv1);
   } else if (sexp_seqp(x)) {
     for (x=sexp_seq_ls(x); sexp_pairp(x); x=sexp_cdr(x))
-      fv1 = free_vars(ctx, sexp_car(x), fv1);
+      fv1 = sexp_free_vars(ctx, sexp_car(x), fv1);
   } else if (sexp_setp(x)) {
-    fv1 = free_vars(ctx, sexp_set_value(x), fv);
-    fv1 = free_vars(ctx, sexp_set_var(x), fv1);
+    fv1 = sexp_free_vars(ctx, sexp_set_value(x), fv);
+    fv1 = sexp_free_vars(ctx, sexp_set_var(x), fv1);
   } else if (sexp_refp(x) && sexp_lambdap(sexp_ref_loc(x))) {
     fv1 = insert_free_var(ctx, x, fv);
   } else if (sexp_synclop(x)) {
-    fv1 = free_vars(ctx, sexp_synclo_expr(x), fv);
+    fv1 = sexp_free_vars(ctx, sexp_synclo_expr(x), fv);
   }
   sexp_gc_release2(ctx);
   return fv1;
@@ -2261,7 +2261,7 @@ static sexp sexp_string_cmp (sexp ctx, sexp str1, sexp str2, sexp ci) {
 
 /************************** optimizations *****************************/
 
-static sexp sexp_apply_optimization (sexp ctx, sexp proc, sexp ast) {
+sexp sexp_apply_optimization (sexp ctx, sexp proc, sexp ast) {
   sexp res;
   sexp_gc_var1(args);
   if (sexp_opcodep(proc)) {
@@ -2701,7 +2701,7 @@ sexp sexp_compile (sexp ctx, sexp x) {
     res = sexp_global(ctx, SEXP_G_OPTIMIZATIONS);
     for ( ; sexp_pairp(res); res=sexp_cdr(res))
       ast = sexp_apply_optimization(ctx, sexp_cdar(res), ast);
-    free_vars(ctx, ast, SEXP_NULL);    /* should return SEXP_NULL */
+    sexp_free_vars(ctx, ast, SEXP_NULL);    /* should return SEXP_NULL */
     generate(ctx, ast);
     res = finalize_bytecode(ctx);
     vec = sexp_make_vector(ctx, 0, SEXP_VOID);
