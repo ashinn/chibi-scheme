@@ -104,7 +104,6 @@ void run_main (int argc, char **argv) {
         sexp_write_char(ctx, '\n', out);
       }
       quit = 1;
-      i++;
       break;
     case 'l':
       load_init();
