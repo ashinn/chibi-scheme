@@ -623,7 +623,7 @@ sexp sexp_make_string(sexp ctx, sexp len, sexp ch) {
   return s;
 }
 
-sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen) {
+sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen) {
   sexp_sint_t len = ((slen >= 0) ? slen : strlen(str));
   sexp s = sexp_make_string(ctx, sexp_make_fixnum(len), SEXP_VOID);
   memcpy(sexp_string_data(s), str, len);
@@ -709,7 +709,7 @@ sexp sexp_intern(sexp ctx, char *str) {
 #if SEXP_USE_HUFF_SYMS
   res = 0;
   for ( ; (c=*p); p++) {
-    if ((c < 0) || (c > 127))
+    if ((unsigned char)c > 127)
       goto normal_intern;
     he = huff_table[(unsigned char)c];
     newbits = he.len;
@@ -773,10 +773,10 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   return vec;
 }
 
-sexp sexp_make_cpointer (sexp ctx, sexp_uint_t typeid, void *value, sexp parent, int freep) {
+sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value, sexp parent, int freep) {
   sexp ptr;
   if (! value) return SEXP_FALSE;
-  ptr = sexp_alloc_type(ctx, cpointer, typeid);
+  ptr = sexp_alloc_type(ctx, cpointer, type_id);
   if (sexp_exceptionp(ptr)) return ptr;
   sexp_freep(ptr) = freep;
   sexp_cpointer_value(ptr) = value;

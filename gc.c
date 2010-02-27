@@ -177,11 +177,11 @@ sexp_heap sexp_make_heap (size_t size) {
   sexp_free_list free, next;
   sexp_heap h;
 #if SEXP_USE_MMAP_GC
-  h =  mmap(NULL, sizeof(struct sexp_heap) + size + sexp_heap_align(1),
+  h =  mmap(NULL, sizeof(struct sexp_heap_t) + size + sexp_heap_align(1),
             PROT_READ|PROT_WRITE|PROT_EXEC,
             MAP_ANON|MAP_PRIVATE, 0, 0);
 #else
-  h =  malloc(sizeof(struct sexp_heap) + size + sexp_heap_align(1));
+  h =  malloc(sizeof(struct sexp_heap_t) + size + sexp_heap_align(1));
 #endif
   if (! h) return NULL;
   h->size = size;
