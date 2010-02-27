@@ -5,6 +5,10 @@
 #ifndef SEXP_H
 #define SEXP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SEXP_MODULE_PATH_VAR "CHIBI_MODULE_PATH"
 
 #include "chibi/features.h"
@@ -129,14 +133,14 @@ typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
-typedef struct sexp_free_list *sexp_free_list;
-struct sexp_free_list {
+typedef struct sexp_free_list_t *sexp_free_list;
+struct sexp_free_list_t {
   sexp_uint_t size;
   sexp_free_list next;
 };
 
-typedef struct sexp_heap *sexp_heap;
-struct sexp_heap {
+typedef struct sexp_heap_t *sexp_heap;
+struct sexp_heap_t {
   sexp_uint_t size;
   sexp_free_list free_list;
   sexp_heap next;
@@ -811,7 +815,7 @@ SEXP_API sexp sexp_append2(sexp ctx, sexp a, sexp b);
 SEXP_API sexp sexp_memq(sexp ctx, sexp x, sexp ls);
 SEXP_API sexp sexp_assq(sexp ctx, sexp x, sexp ls);
 SEXP_API sexp sexp_length(sexp ctx, sexp ls);
-SEXP_API sexp sexp_c_string(sexp ctx, char *str, sexp_sint_t slen);
+SEXP_API sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen);
 SEXP_API sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
 SEXP_API sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
 SEXP_API sexp sexp_string_concatenate (sexp ctx, sexp str_ls, sexp sep);
@@ -819,7 +823,7 @@ SEXP_API sexp sexp_intern(sexp ctx, char *str);
 SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
 SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector(sexp ctx, sexp ls);
-SEXP_API sexp sexp_make_cpointer(sexp ctx, sexp_uint_t typeid, void* value, sexp parent, int freep);
+SEXP_API sexp sexp_make_cpointer(sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
 SEXP_API sexp sexp_write(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_display(sexp ctx, sexp obj, sexp out);
 SEXP_API sexp sexp_flush_output(sexp ctx, sexp out);
@@ -861,6 +865,10 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp obj);
 
 #define sexp_current_error_port(ctx) sexp_env_global_ref(sexp_context_env(ctx),sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL),SEXP_FALSE)
 #define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* ! SEXP_H */
 

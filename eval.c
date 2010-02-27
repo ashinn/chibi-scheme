@@ -148,7 +148,7 @@ static sexp sexp_flatten_dot (sexp ctx, sexp ls) {
   return sexp_nreverse(ctx, sexp_reverse_flatten_dot(ctx, ls));
 }
 
-static int sexp_param_index (sexp lambda, sexp name) {
+int sexp_param_index (sexp lambda, sexp name) {
   sexp ls = sexp_lambda_params(lambda);
   int i = 0;
   for (i=0; sexp_pairp(ls); ls=sexp_cdr(ls), i++)

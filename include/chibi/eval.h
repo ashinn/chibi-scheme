@@ -5,6 +5,10 @@
 #ifndef SEXP_EVAL_H
 #define SEXP_EVAL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "chibi/sexp.h"
 
 /************************* additional types ***************************/
@@ -129,6 +133,7 @@ SEXP_API sexp sexp_analyze (sexp context, sexp x);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply_optimization (sexp context, sexp proc, sexp ast);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
+SEXP_API int sexp_param_index (sexp lambda, sexp name);
 SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
 SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
@@ -162,6 +167,10 @@ SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);
 SEXP_API sexp sexp_make_constructor (sexp ctx, sexp name, sexp type);
 SEXP_API sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index);
 SEXP_API sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index);
+#endif
+
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
 
 #endif /* ! SEXP_EVAL_H */
