@@ -242,7 +242,7 @@
 
 (test 5 (string->number "101" 2))
 
-(test 100 (string->number "1e2"))
+(test 100.0 (string->number "1e2"))
 
 (test "100" (number->string 100))
 
