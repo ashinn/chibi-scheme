@@ -17,7 +17,7 @@ static const char* reverse_opcode_names[] =
    "MAKE-EXCEPTION", "AND", "NULL?", "FIXNUM?", "SYMBOL?", "CHAR?",
    "EOF?", "TYPEP", "MAKE", "SLOT-REF", "SLOT-SET", "CAR", "CDR",
    "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB",
-   "MUL", "DIV", "QUOTIENT", "REMAINDER", "NEGATIVE", "INVERSE",
+   "MUL", "DIV", "QUOTIENT", "REMAINDER",
    "LT", "LE", "EQN", "EQ", "EXACT->INEXACT", "INEXACT->EXACT",
    "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
    "WRITE-CHAR", "NEWLINE", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
