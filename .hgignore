@@ -16,6 +16,7 @@ junk*
 *.out
 gc
 gc6.8
+clibs.c
 chibi-scheme
 chibi-scheme-static
 include/chibi/install.h
