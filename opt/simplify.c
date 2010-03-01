@@ -1,5 +1,5 @@
 /*  simplify.c -- basic simplification pass              */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2010 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt  */
 
 #define simplify_it(it) ((it) = simplify(ctx, it, substs, lambda))
@@ -24,7 +24,10 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
     for (ls1=sexp_cdr(res); sexp_pairp(ls1); ls1=sexp_cdr(ls1))
       sexp_push(ctx, app, tmp=simplify(ctx, sexp_car(ls1), substs, lambda));
     app = sexp_nreverse(ctx, app);
+    /* app now holds a copy of the list, and is the default result
+       (res = app below) if we don't replace it with a simplification */
     if (sexp_opcodep(sexp_car(app))) {
+      /* opcode app - right now we just constant fold arithmetic */
       if (sexp_opcode_class(sexp_car(app)) == SEXP_OPC_ARITHMETIC) {
         for (check=1, ls1=sexp_cdr(app); sexp_pairp(ls1); ls1=sexp_cdr(ls1)) {
           if (sexp_pointerp(sexp_car(ls1)) && ! sexp_litp(sexp_car(ls1))) {
@@ -35,12 +38,15 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
         if (check) {
           ctx2 = sexp_make_eval_context(ctx, NULL, sexp_context_env(ctx), 0);
           generate(ctx2, app);
-          app = finalize_bytecode(ctx2);
-          if (! sexp_exceptionp(app)) {
+          res = finalize_bytecode(ctx2);
+          if (! sexp_exceptionp(res)) {
             tmp = sexp_make_vector(ctx2, 0, SEXP_VOID);
-            app = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, app, tmp);
-            if (! sexp_exceptionp(app))
-              app = sexp_apply(ctx2, app, SEXP_NULL);
+            tmp = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, tmp);
+            if (! sexp_exceptionp(tmp)) {
+              tmp = sexp_apply(ctx2, tmp, SEXP_NULL);
+              if (! sexp_exceptionp(tmp))
+                app = sexp_make_lit(ctx2, tmp);
+            }
           }
         }
       }
