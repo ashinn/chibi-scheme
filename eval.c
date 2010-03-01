@@ -11,7 +11,7 @@ static int scheme_initialized_p = 0;
 #if SEXP_USE_DEBUG_VM
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
   int i;
-  if (! sexp_oport(out)) out = sexp_current_error_port(ctx);
+  if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
   for (i=0; i<top; i++) {
     sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
     sexp_write(ctx, stack[i], out);
@@ -914,7 +914,7 @@ static void generate_set (sexp ctx, sexp set) {
 
 static void generate_opcode_app (sexp ctx, sexp app) {
   sexp op = sexp_car(app);
-  sexp_sint_t i, num_args;
+  sexp_sint_t i, num_args, inv_default=0;
   sexp_gc_var1(ls);
   sexp_gc_preserve1(ctx, ls);
 
@@ -926,28 +926,37 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       && sexp_opcode_variadic_p(op)
       && sexp_opcode_data(op)
       && (sexp_opcode_class(op) != SEXP_OPC_PARAMETER)) {
-    emit_push(ctx, sexp_opcode_data(op));
-    if (sexp_opcode_opt_param_p(op))
-      emit(ctx, SEXP_OP_CDR);
-    sexp_context_depth(ctx)++;
-    num_args++;
+    if (sexp_opcode_inverse(op)) {
+      inv_default = 1;
+    } else {
+      emit_push(ctx, sexp_opcode_data(op));
+      if (sexp_opcode_opt_param_p(op)) emit(ctx, SEXP_OP_CDR);
+      sexp_context_depth(ctx)++;
+      num_args++;
+    }
   }
 
   /* push the arguments onto the stack in reverse order */
   ls = ((sexp_opcode_inverse(op)
-         && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC_INV))
+         && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC))
         ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
   for ( ; sexp_pairp(ls); ls = sexp_cdr(ls))
     generate(ctx, sexp_car(ls));
 
+  /* push the default for inverse opcodes */
+  if (inv_default) {
+    emit_push(ctx, sexp_opcode_data(op));
+    if (sexp_opcode_opt_param_p(op)) emit(ctx, SEXP_OP_CDR);
+    sexp_context_depth(ctx)++;
+    num_args++;
+  }
+
   /* emit the actual operator call */
   switch (sexp_opcode_class(op)) {
   case SEXP_OPC_ARITHMETIC:
-    if (num_args > 1)
+    /* fold variadic arithmetic operators */
+    for (i=num_args-1; i>0; i--)
       emit(ctx, sexp_opcode_code(op));
-    break;
-  case SEXP_OPC_ARITHMETIC_INV:
-    emit(ctx, (num_args==1) ? sexp_opcode_inverse(op) : sexp_opcode_code(op));
     break;
   case SEXP_OPC_ARITHMETIC_CMP:
     if (num_args > 2) {
@@ -992,13 +1001,6 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   default:
     emit(ctx, sexp_opcode_code(op));
   }
-
-  /* emit optional folding of operator */
-  if ((num_args > 2)
-      && (sexp_opcode_class(op) == SEXP_OPC_ARITHMETIC
-          || sexp_opcode_class(op) == SEXP_OPC_ARITHMETIC_INV))
-    for (i=num_args-2; i>0; i--)
-      emit(ctx, sexp_opcode_code(op));
 
   sexp_context_depth(ctx) -= (num_args-1);
   sexp_gc_release1(ctx);
@@ -1814,30 +1816,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #else
     else sexp_raise("remainder: not an integer", sexp_list2(ctx, _ARG1, _ARG2));
 #endif
-    break;
-  case SEXP_OP_NEGATIVE:
-    if (sexp_fixnump(_ARG1))
-      _ARG1 = sexp_make_fixnum(-sexp_unbox_fixnum(_ARG1));
-#if SEXP_USE_BIGNUMS
-    else if (sexp_bignump(_ARG1)) {
-      _ARG1 = sexp_copy_bignum(ctx, NULL, _ARG1, 0);
-      sexp_bignum_sign(_ARG1) = -sexp_bignum_sign(_ARG1);
-    }
-#endif
-#if SEXP_USE_FLONUMS
-    else if (sexp_flonump(_ARG1))
-      _ARG1 = sexp_make_flonum(ctx, -sexp_flonum_value(_ARG1));
-#endif
-    else sexp_raise("-: not a number", sexp_list1(ctx, _ARG1));
-    break;
-  case SEXP_OP_INVERSE:
-    if (sexp_fixnump(_ARG1))
-      _ARG1 = sexp_make_flonum(ctx, 1/(double)sexp_unbox_fixnum(_ARG1));
-#if SEXP_USE_FLONUMS
-    else if (sexp_flonump(_ARG1))
-      _ARG1 = sexp_make_flonum(ctx, 1/sexp_flonum_value(_ARG1));
-#endif
-    else sexp_raise("/: not a number", sexp_list1(ctx, _ARG1));
     break;
   case SEXP_OP_LT:
     if (sexp_fixnump(_ARG1) && sexp_fixnump(_ARG2)) {
@@ -2686,7 +2664,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     stack[top++] = SEXP_ZERO;
     sexp_context_top(ctx) = top;
     res = sexp_vm(ctx, proc);
-    if (! res) res = SEXP_VOID;
+    if (! res) res = SEXP_VOID; /* shouldn't happen */
   }
   return res;
 }
