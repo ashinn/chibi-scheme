@@ -24,6 +24,9 @@ GENSTATIC ?= ./tools/genstatic.scm
 # system configuration - if not using GNU make, set PLATFORM and the
 # following flags as necessary.
 
+# 
+LIBDL = -ldl
+
 ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
 PLATFORM=macosx
@@ -52,6 +55,7 @@ CLIBFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL -DSEXP_USE_DEBUG=0
 LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 STATICFLAGS = -DSEXP_USE_DL=0
+LIBDL = 
 else
 SO  = .so
 EXE =
@@ -76,7 +80,7 @@ ifeq ($(SEXP_USE_DL),0)
 XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
 XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g3 $(CFLAGS)
 else
-XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -ldl -lm
+XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
 XCFLAGS   := -Wall -g3 $(CFLAGS)
 endif
 

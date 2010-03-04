@@ -18,7 +18,9 @@ extern "C" {
 #include <stdio.h>
 
 #if SEXP_USE_DL
+#ifndef __MINGW32__
 #include <dlfcn.h>
+#endif
 #endif
 
 #ifdef PLAN9
