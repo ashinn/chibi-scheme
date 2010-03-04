@@ -2039,7 +2039,22 @@ void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
 }
 
 #if SEXP_USE_DL
-sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
+#ifdef __MINGW32__
+#include <windows.h>
+static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
+  sexp_proc2 init;
+  HINSTANCE handle = LoadLibraryA(sexp_string_data(file));
+  if(!handle)
+    return sexp_compile_error(ctx, "couldn't load dynamic library", file);
+  init = (sexp_proc2) GetProcAddress(handle, "sexp_init_library");
+  if(!init) {
+    FreeLibrary(handle);
+    return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
+  }
+  return init(ctx, env);
+}
+#else
+static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_proc2 init;
   void *handle = dlopen(sexp_string_data(file), RTLD_LAZY);
   if (! handle)
@@ -2051,6 +2066,7 @@ sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   }
   return init(ctx, env);
 }
+#endif
 #endif
 
 sexp sexp_load (sexp ctx, sexp source, sexp env) {
