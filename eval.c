@@ -1942,19 +1942,27 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_WRITE_CHAR:
     if (! sexp_charp(_ARG1))
       sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
+    if (! sexp_oportp(_ARG2))
+      sexp_raise("write-char: not an output-port", sexp_list1(ctx, _ARG2));
     sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     _ARG2 = SEXP_VOID;
     top--;
     break;
   case SEXP_OP_NEWLINE:
+    if (! sexp_oportp(_ARG1))
+      sexp_raise("newline: not an output-port", sexp_list1(ctx, _ARG1));
     sexp_newline(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
     break;
   case SEXP_OP_READ_CHAR:
+    if (! sexp_iportp(_ARG1))
+      sexp_raise("read-char: not an intput-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case SEXP_OP_PEEK_CHAR:
+    if (! sexp_iportp(_ARG1))
+      sexp_raise("peek-char: not an intput-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
     sexp_push_char(ctx, i, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
