@@ -149,6 +149,10 @@
 /*   Experts only. */
 /*   For *very* verbose output on every VM operation. */
 
+/* uncomment this to make the VM adhere to alignment rules */
+/*   This is required on some platforms, e.g. ARM */
+/* #define SEXP_USE_ALIGNED_BYTECODE */
+     
 /************************************************************************/
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/
@@ -298,6 +302,14 @@
 
 #ifndef SEXP_USE_CHECK_STACK
 #define SEXP_USE_CHECK_STACK ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_ALIGNED_BYTECODE
+#if defined(__arm__)
+#define SEXP_USE_ALIGNED_BYTECODE 1
+#else
+#define SEXP_USE_ALIGNED_BYTECODE 0
+#endif
 #endif
 
 #ifdef PLAN9
