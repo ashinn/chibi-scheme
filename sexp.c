@@ -293,8 +293,8 @@ void sexp_destroy_context (sexp ctx) {
   sexp_heap heap, tmp;
   size_t sum_freed;
   if (sexp_context_heap(ctx)) {
-    sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
     heap = sexp_context_heap(ctx);
+    sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {
       tmp = heap->next;
