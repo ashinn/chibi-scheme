@@ -356,6 +356,12 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_align(n, bits) (((n)+(1<<(bits))-1)&(((sexp_uint_t)-1)-((1<<(bits))-1)))
 
+#if SEXP_64_BIT
+#define sexp_word_align(n) sexp_align((n), 3)
+#else
+#define sexp_word_align(n) sexp_align((n), 2)
+#endif
+
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
 
@@ -636,6 +642,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
 #define sexp_context_globals(x) ((x)->value.context.globals)
+
+#if SEXP_USE_ALIGNED_BYTECODE
+#define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = sexp_word_align(sexp_context_pos(ctx))
+#else
+#define sexp_context_align_pos(ctx)
+#endif
 
 #define sexp_global(ctx,x)      (sexp_vector_data(sexp_context_globals(ctx))[x])
 

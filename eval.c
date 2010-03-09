@@ -206,6 +206,7 @@ static void emit_word (sexp ctx, sexp_uint_t val)  {
   unsigned char *data;
   expand_bcode(ctx, sizeof(sexp));
   data = sexp_bytecode_data(sexp_context_bc(ctx));
+  sexp_context_align_pos(ctx);
   *((sexp_uint_t*)(&(data[sexp_context_pos(ctx)]))) = val;
   sexp_context_pos(ctx) += sizeof(sexp);
 }
@@ -799,7 +800,9 @@ static sexp analyze (sexp ctx, sexp object) {
 sexp sexp_analyze (sexp ctx, sexp x) {return analyze(ctx, x);}
 
 static sexp_sint_t sexp_context_make_label (sexp ctx) {
-  sexp_sint_t label = sexp_context_pos(ctx);
+  sexp_sint_t label;
+  sexp_context_align_pos(ctx);
+  label = sexp_context_pos(ctx);
   sexp_context_pos(ctx) += sizeof(sexp_uint_t);
   return label;
 }
@@ -1253,6 +1256,13 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
 #define _ARG5 stack[top-5]
 #define _ARG6 stack[top-6]
 #define _PUSH(x) (stack[top++]=(x))
+
+#if SEXP_USE_ALIGNED_BYTECODE
+#define _ALIGN_IP() ip = (unsigned char *)sexp_word_align((unsigned long)ip)
+#else
+#define _ALIGN_IP()
+#endif
+
 #define _WORD0 ((sexp*)ip)[0]
 #define _UWORD0 ((sexp_uint_t*)ip)[0]
 #define _SWORD0 ((sexp_sint_t*)ip)[0]
@@ -1352,6 +1362,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     ip -= sizeof(sexp);
     goto make_call;
   case SEXP_OP_TAIL_CALL:
+    _ALIGN_IP();
     i = sexp_unbox_fixnum(_WORD0);    /* number of params */
     tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
@@ -1375,6 +1386,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       goto end_loop;
     }
 #endif
+    _ALIGN_IP();
     i = sexp_unbox_fixnum(_WORD0);
     tmp1 = _ARG1;
   make_call:
@@ -1426,18 +1438,21 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fp = top-4;
     break;
   case SEXP_OP_FCALL0:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _PUSH(((sexp_proc1)sexp_opcode_func(_WORD0))(ctx));
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case SEXP_OP_FCALL1:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _ARG1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _ARG1);
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
   case SEXP_OP_FCALL2:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _ARG2 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2);
     top--;
@@ -1445,6 +1460,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_check_exception();
     break;
   case SEXP_OP_FCALL3:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _ARG3 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3);
     top -= 2;
@@ -1452,6 +1468,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_check_exception();
     break;
   case SEXP_OP_FCALL4:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _ARG4 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
     top -= 3;
@@ -1459,6 +1476,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_check_exception();
     break;
   case SEXP_OP_FCALL5:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _ARG5 = ((sexp_proc6)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
     top -= 4;
@@ -1466,6 +1484,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_check_exception();
     break;
   case SEXP_OP_FCALL6:
+    _ALIGN_IP();
     sexp_context_top(ctx) = top;
     _ARG6 = ((sexp_proc7)sexp_opcode_func(_WORD0))(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
     top -= 5;
@@ -1473,15 +1492,18 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_check_exception();
     break;
   case SEXP_OP_JUMP_UNLESS:
+    _ALIGN_IP();
     if (stack[--top] == SEXP_FALSE)
       ip += _SWORD0;
     else
       ip += sizeof(sexp_sint_t);
     break;
   case SEXP_OP_JUMP:
+    _ALIGN_IP();
     ip += _SWORD0;
     break;
   case SEXP_OP_PUSH:
+    _ALIGN_IP();
     _PUSH(_WORD0);
     ip += sizeof(sexp);
     break;
@@ -1489,29 +1511,35 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case SEXP_OP_GLOBAL_REF:
+    _ALIGN_IP();
     if (sexp_cdr(_WORD0) == SEXP_UNDEF)
       sexp_raise("undefined variable", sexp_list1(ctx, sexp_car(_WORD0)));
     /* ... FALLTHROUGH ... */
   case SEXP_OP_GLOBAL_KNOWN_REF:
+    _ALIGN_IP();
     _PUSH(sexp_cdr(_WORD0));
     ip += sizeof(sexp);
     break;
   case SEXP_OP_STACK_REF:            /* `pick' in forth */
+    _ALIGN_IP();
     stack[top] = stack[top - _SWORD0];
     ip += sizeof(sexp);
     top++;
     break;
   case SEXP_OP_LOCAL_REF:
+    _ALIGN_IP();
     stack[top] = stack[fp - 1 - _SWORD0];
     ip += sizeof(sexp);
     top++;
     break;
   case SEXP_OP_LOCAL_SET:
+    _ALIGN_IP();
     stack[fp - 1 - _SWORD0] = _ARG1;
     _ARG1 = SEXP_VOID;
     ip += sizeof(sexp);
     break;
   case SEXP_OP_CLOSURE_REF:
+    _ALIGN_IP();
     _PUSH(sexp_vector_ref(cp, sexp_make_fixnum(_WORD0)));
     ip += sizeof(sexp);
     break;
@@ -1608,20 +1636,24 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_CHARP:
     _ARG1 = sexp_make_boolean(sexp_charp(_ARG1)); break;
   case SEXP_OP_TYPEP:
+    _ALIGN_IP();
     _ARG1 = sexp_make_boolean(sexp_check_tag(_ARG1, _UWORD0));
     ip += sizeof(sexp);
     break;
   case SEXP_OP_MAKE:
+    _ALIGN_IP();
     _PUSH(sexp_alloc_tagged(ctx, _UWORD1, _UWORD0));
     ip += sizeof(sexp)*2;
     break;
   case SEXP_OP_SLOT_REF:
+    _ALIGN_IP();
     if (! sexp_check_tag(_ARG1, _UWORD0))
       sexp_raise("slot-ref: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(ctx, _UWORD0), -1), _ARG1));
     _ARG1 = sexp_slot_ref(_ARG1, _UWORD1);
     ip += sizeof(sexp)*2;
     break;
   case SEXP_OP_SLOT_SET:
+    _ALIGN_IP();
     if (! sexp_check_tag(_ARG1, _UWORD0))
       sexp_raise("slot-set!: bad type", sexp_list2(ctx, sexp_c_string(ctx, sexp_type_name_by_index(ctx, _UWORD0), -1), _ARG1));
     else if (sexp_immutablep(_ARG1))
