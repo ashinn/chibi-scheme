@@ -53,13 +53,20 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   return res;
 }
 
-#if SEXP_USE_AUTOCLOSE_PORTS
-static sexp sexp_finalize_port (sexp ctx, sexp port) {
-  if (sexp_port_openp(port) && sexp_port_stream(port)
-      && sexp_stringp(sexp_port_name(port)))
-    fclose(sexp_port_stream(port));
+sexp sexp_finalize_port (sexp ctx, sexp port) {
+  if (sexp_port_openp(port)) {
+    sexp_port_openp(port) = 0;
+    if (sexp_port_stream(port) && ! sexp_port_no_closep(port))
+      fclose(sexp_port_stream(port));
+#if ! SEXP_USE_STRING_STREAMS
+    if (sexp_port_buf(port) && sexp_oportp(port))
+      free(sexp_port_buf(port));
+#endif
+  }
   return SEXP_VOID;
 }
+
+#if SEXP_USE_AUTOCLOSE_PORTS
 #define SEXP_FINALIZE_PORT sexp_finalize_port
 #else
 #define SEXP_FINALIZE_PORT NULL
@@ -1032,6 +1039,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_line(p) = 1;
   sexp_port_buf(p) = NULL;
   sexp_port_openp(p) = 1;
+  sexp_port_no_closep(p) = 0;
   sexp_port_sourcep(p) = 1;
   sexp_port_cookie(p) = SEXP_VOID;
   return p;
