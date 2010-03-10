@@ -2058,14 +2058,7 @@ static sexp sexp_close_port (sexp ctx, sexp port) {
     return sexp_type_exception(ctx, "not a port", port);
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, SEXP_FALSE, "port already closed", port);
-  if (sexp_port_stream(port))
-    fclose(sexp_port_stream(port));
-#if ! SEXP_USE_STRING_STREAMS
-  if (sexp_port_buf(port) && sexp_oportp(port))
-    free(sexp_port_buf(port));
-#endif
-  sexp_port_openp(port) = 0;
-  return SEXP_VOID;
+  return sexp_finalize_port(ctx, port);
 }
 
 void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
@@ -2588,12 +2581,15 @@ sexp sexp_add_module_directory (sexp ctx, sexp dir, sexp appendp) {
 
 sexp sexp_load_standard_parameters (sexp ctx, sexp e) {
   /* add io port and interaction env parameters */
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL),
-                  sexp_make_input_port(ctx, stdin, SEXP_FALSE));
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL),
-                  sexp_make_output_port(ctx, stdout, SEXP_FALSE));
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL),
-                  sexp_make_output_port(ctx, stderr, SEXP_FALSE));
+  sexp p = sexp_make_input_port(ctx, stdin, SEXP_FALSE);
+  sexp_port_no_closep(p) = 1;
+  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), p);
+  p = sexp_make_output_port(ctx, stdout, SEXP_FALSE);
+  sexp_port_no_closep(p) = 1;
+  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), p);
+  p = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
+  sexp_port_no_closep(p) = 1;
+  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), p);
   sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   return SEXP_VOID;
 }

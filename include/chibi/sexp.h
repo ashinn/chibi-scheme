@@ -190,7 +190,7 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      char openp, sourcep;
+      char openp, no_closep, sourcep;
       sexp_uint_t offset, line;
       size_t size;
       sexp name;
@@ -544,6 +544,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_name(p)      ((p)->value.port.name)
 #define sexp_port_line(p)      ((p)->value.port.line)
 #define sexp_port_openp(p)     ((p)->value.port.openp)
+#define sexp_port_no_closep(p) ((p)->value.port.no_closep)
 #define sexp_port_sourcep(p)   ((p)->value.port.sourcep)
 #define sexp_port_cookie(p)    ((p)->value.port.cookie)
 #define sexp_port_buf(p)       ((p)->value.port.buf)
@@ -848,6 +849,7 @@ SEXP_API sexp sexp_read_raw(sexp ctx, sexp in);
 SEXP_API sexp sexp_read(sexp ctx, sexp in);
 SEXP_API sexp sexp_read_from_string(sexp ctx, char *str);
 SEXP_API sexp sexp_write_to_string(sexp ctx, sexp obj);
+SEXP_API sexp sexp_finalize_port (sexp ctx, sexp port);
 SEXP_API sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_make_input_string_port(sexp ctx, sexp str);
