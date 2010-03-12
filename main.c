@@ -56,6 +56,13 @@ static void repl (sexp ctx) {
   sexp_gc_release4(ctx);
 }
 
+static void check_nonull_arg (int c, char *arg) {
+  if (! arg) {
+    fprintf(stderr, "chibi-scheme: option '%c' requires an argument\n", c);
+    exit_failure();
+  }
+}
+
 static sexp check_exception (sexp ctx, sexp res) {
   sexp err;
   if (res && sexp_exceptionp(res)) {
@@ -95,6 +102,7 @@ void run_main (int argc, char **argv) {
       load_init();
       print = (argv[i][1] == 'p');
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      check_nonull_arg('e', arg);
       res = check_exception(ctx, sexp_read_from_string(ctx, arg));
       res = check_exception(ctx, sexp_eval(ctx, res, env));
       if (print) {
@@ -108,11 +116,13 @@ void run_main (int argc, char **argv) {
     case 'l':
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      check_nonull_arg('l', arg);
       check_exception(ctx, sexp_load_module_file(ctx, arg, env));
       break;
     case 'm':
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      check_nonull_arg('m', arg);
       len = strlen(arg)+strlen(sexp_import_prefix)+strlen(sexp_import_suffix);
       impmod = (char*) malloc(len+1);
       strcpy(impmod, sexp_import_prefix);
@@ -131,11 +141,13 @@ void run_main (int argc, char **argv) {
     case 'A':
       init_context();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      check_nonull_arg('A', arg);
       sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_TRUE);
       break;
     case 'I':
       init_context();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      check_nonull_arg('I', arg);
       sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_FALSE);
       break;
     case '-':
@@ -143,6 +155,7 @@ void run_main (int argc, char **argv) {
       goto done_options;
     case 'h':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      check_nonull_arg('h', arg);
       heap_size = atol(arg);
       len = strlen(arg);
       if (heap_size && isalpha(arg[len-1])) {
