@@ -2745,14 +2745,15 @@ sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
   sexp_sint_t top;
   sexp ctx2;
   sexp_gc_var2(res, err_handler);
+  if (! env)
+    env = sexp_context_env(ctx);
+  else if (! sexp_envp(env))
+    return sexp_type_exception(ctx, "eval: not an env", env);
   sexp_gc_preserve2(ctx, res, err_handler);
   top = sexp_context_top(ctx);
   err_handler = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
   sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER)) = SEXP_FALSE;
-  ctx2 = sexp_make_eval_context(ctx,
-                                sexp_context_stack(ctx),
-                                (env ? env : sexp_context_env(ctx)),
-                                0);
+  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0);
   res = sexp_compile(ctx2, obj);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
