@@ -8,28 +8,6 @@
 #include <sys/mman.h>
 #endif
 
-/* These settings are configurable but only recommended for */
-/* experienced users, so they're not in config.h.  */
-
-/* the initial heap size in bytes */
-#ifndef SEXP_INITIAL_HEAP_SIZE
-#define SEXP_INITIAL_HEAP_SIZE (2*1024*1024)
-#endif
-
-/* the maximum heap size in bytes - if 0 there is no limit */
-#ifndef SEXP_MAXIMUM_HEAP_SIZE
-#define SEXP_MAXIMUM_HEAP_SIZE 0
-#endif
-#ifndef SEXP_MINIMUM_HEAP_SIZE
-#define SEXP_MINIMUM_HEAP_SIZE 512*1024
-#endif
-
-/* if after GC more than this percentage of memory is still in use, */
-/* and we've not exceeded the maximum size, grow the heap */
-#ifndef SEXP_GROW_HEAP_RATIO
-#define SEXP_GROW_HEAP_RATIO 0.75
-#endif
-
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_sizeof(pair))
 
 #if SEXP_64_BIT
@@ -37,6 +15,8 @@
 #else
 #define sexp_heap_align(n) sexp_align(n, 4)
 #endif
+
+#define sexp_heap_pad_size(s) (sizeof(struct sexp_heap_t) + (s) + sexp_heap_align(1))
 
 #if SEXP_USE_GLOBAL_HEAP
 sexp_heap sexp_global_heap;
@@ -98,20 +78,19 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
 sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   size_t freed, max_freed=0, sum_freed=0, size;
   sexp_heap h = sexp_context_heap(ctx);
-  sexp p;
+  sexp p, end;
   sexp_free_list q, r, s;
-  char *end;
   sexp_proc2 finalizer;
   /* scan over the whole heap */
   for ( ; h; h=h->next) {
     p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
     q = h->free_list;
-    end = (char*)h->data + h->size;
-    while (((char*)p) < end) {
+    end = (sexp) ((char*)h->data + h->size);
+    while (p < end) {
       /* find the preceding and succeeding free list pointers */
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
-      if ((char*)r == (char*)p) {
+      if ((char*)r == (char*)p) { /* this is a free block, skip it */
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
@@ -157,7 +136,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       }
     }
   }
-  sum_freed_ptr[0] = sum_freed;
+  if (sum_freed_ptr) *sum_freed_ptr = sum_freed;
   return sexp_make_fixnum(max_freed);
 }
 
@@ -177,11 +156,10 @@ sexp_heap sexp_make_heap (size_t size) {
   sexp_free_list free, next;
   sexp_heap h;
 #if SEXP_USE_MMAP_GC
-  h =  mmap(NULL, sizeof(struct sexp_heap_t) + size + sexp_heap_align(1),
-            PROT_READ|PROT_WRITE|PROT_EXEC,
+  h =  mmap(NULL, sexp_heap_pad_size(size), PROT_READ|PROT_WRITE|PROT_EXEC,
             MAP_ANON|MAP_PRIVATE, 0, 0);
 #else
-  h =  malloc(sizeof(struct sexp_heap_t) + size + sexp_heap_align(1));
+  h =  malloc(sexp_heap_pad_size(size));
 #endif
   if (! h) return NULL;
   h->size = size;
@@ -244,6 +222,87 @@ void* sexp_alloc (sexp ctx, size_t size) {
   }
   return res;
 }
+
+#if ! SEXP_USE_GLOBAL_HEAP
+
+sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
+  sexp_sint_t i, off, len, freep;
+  sexp_heap to, from = sexp_context_heap(ctx);
+  sexp_free_list q;
+  sexp p, p2, t, end, *v;
+  freep = sexp_unbox_fixnum(flags) & sexp_unbox_fixnum(SEXP_COPY_FREEP);
+
+  /* validate input, creating a new heap if needed */
+  if (from->next) {
+    return sexp_type_exception(ctx, "can't copy a non-contiguous heap", ctx);
+  } else if (! dst || sexp_not(dst)) {
+    to = sexp_make_heap(from->size);
+    dst = (sexp) ((char*)ctx + ((char*)to - (char*)from));
+  } else if (! sexp_contextp(dst)) {
+    return sexp_type_exception(ctx, "destination not a context", dst);
+  } else if (sexp_context_heap(dst)->size < from->size) {
+    return sexp_type_exception(ctx, "destination context too small", dst);
+  } else {
+    to = sexp_context_heap(dst);
+  }
+
+  /* copy the raw data */
+  off = (char*)to - (char*)from;
+  memcpy(to, from, sexp_heap_pad_size(from->size));
+  to->free_list = (sexp_free_list) ((char*)to->free_list + off);
+  to->data += off;
+  end = (sexp) (from->data + from->size);
+
+  /* adjust the free list */
+  for (q=to->free_list; q->next; q=q->next)
+    q->next = (sexp_free_list) ((char*)q->next + off);
+
+  /* adjust if the destination is larger */
+  if (from->size < to->size) {
+    if (((char*)q + q->size - off) >= (char*)end) {
+      q->size += (to->size - from->size);
+    } else {
+      q->next = (sexp_free_list) ((char*)end + off);
+      q->next->next = NULL;
+      q->next->size = (to->size - from->size);
+    }
+  }
+
+  /* adjust data by traversing over the _original_ heap */
+  p = (sexp) (from->data + sexp_heap_align(sexp_sizeof(pair)));
+  q = from->free_list;
+  while (p < end) {
+    /* find the next free list pointer */
+    for ( ; q && ((char*)q < (char*)p); q=q->next)
+      ;
+    if ((char*)q == (char*)p) { /* this is a free block, skip it */
+      p = (sexp) (((char*)p) + q->size);
+    } else {
+      t = sexp_object_type(ctx, p);
+      len = sexp_type_num_slots_of_object(t, p);
+      p2 = (sexp)((char*)p + off);
+      v = (sexp*) ((char*)p2 + sexp_type_field_base(t));
+      /* offset any pointers in the _destination_ heap */
+      for (i=0; i<len; i++)
+        if (v[i] && sexp_pointerp(v[i]))
+          v[i] = (sexp) ((char*)v[i] + off);
+      /* don't free unless specified - only the original cleans up */
+      if (! freep)
+        sexp_freep(p2) = 0;
+      /* adjust context heaps, don't copy saved sexp_gc_vars */
+      if (sexp_contextp(p2)) {
+        sexp_context_saves(p2) = NULL;
+        if (sexp_context_heap(p2) == from)
+          sexp_context_heap(p2) = to;
+      }
+      p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
+    }
+  }
+
+  return dst;
+}
+
+#endif
 
 void sexp_gc_init (void) {
 #if SEXP_USE_GLOBAL_HEAP || SEXP_USE_DEBUG_GC
