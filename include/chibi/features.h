@@ -152,7 +152,31 @@
 /* uncomment this to make the VM adhere to alignment rules */
 /*   This is required on some platforms, e.g. ARM */
 /* #define SEXP_USE_ALIGNED_BYTECODE */
-     
+
+/************************************************************************/
+/* These settings are configurable but only recommended for */
+/* experienced users, and only apply when using the native GC.  */
+/************************************************************************/
+
+/* the initial heap size in bytes */
+#ifndef SEXP_INITIAL_HEAP_SIZE
+#define SEXP_INITIAL_HEAP_SIZE (2*1024*1024)
+#endif
+
+/* the maximum heap size in bytes - if 0 there is no limit */
+#ifndef SEXP_MAXIMUM_HEAP_SIZE
+#define SEXP_MAXIMUM_HEAP_SIZE 0
+#endif
+#ifndef SEXP_MINIMUM_HEAP_SIZE
+#define SEXP_MINIMUM_HEAP_SIZE 512*1024
+#endif
+
+/* if after GC more than this percentage of memory is still in use, */
+/* and we've not exceeded the maximum size, grow the heap */
+#ifndef SEXP_GROW_HEAP_RATIO
+#define SEXP_GROW_HEAP_RATIO 0.75
+#endif
+
 /************************************************************************/
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/

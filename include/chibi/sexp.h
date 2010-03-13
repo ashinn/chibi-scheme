@@ -862,10 +862,14 @@ SEXP_API sexp sexp_range_exception(sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
 SEXP_API void sexp_init(void);
 
+#define SEXP_COPY_DEFAULT SEXP_ZERO
+#define SEXP_COPY_FREEP   SEXP_ONE
+
 #if SEXP_USE_GLOBAL_HEAP
 #define sexp_destroy_context(ctx)
 #else
 SEXP_API void sexp_destroy_context(sexp ctx);
+SEXP_API sexp sexp_copy_context(sexp ctx, sexp dst, sexp flags);
 #endif
 
 #if SEXP_USE_TYPE_DEFS
