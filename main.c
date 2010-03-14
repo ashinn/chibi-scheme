@@ -1,6 +1,6 @@
-/* main.c -- chibi-scheme command-line app              */
-/* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/* BSD-style license: http://synthcode.com/license.txt  */
+/* main.c -- chibi-scheme command-line app                   */
+/* Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/* BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
 
@@ -22,7 +22,10 @@ static void repl (sexp ctx) {
   sexp in, out, err;
   sexp_gc_var4(obj, tmp, res, env);
   sexp_gc_preserve4(ctx, obj, tmp, res, env);
-  env = sexp_context_env(ctx);
+  env = sexp_make_env(ctx);
+  sexp_env_parent(env) = sexp_context_env(ctx);
+  sexp_env_define(ctx, sexp_context_env(ctx),
+                  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
   sexp_context_tracep(ctx) = 1;
   in = sexp_eval_string(ctx, "(current-input-port)", env);
   out = sexp_eval_string(ctx, "(current-output-port)", env);
