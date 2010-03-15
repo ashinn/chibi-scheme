@@ -278,9 +278,9 @@ struct sexp_struct {
 #define SEXP_MAKE_IMMEDIATE(n)  ((sexp) ((n<<SEXP_EXTENDED_BITS) \
                                           + SEXP_EXTENDED_TAG))
 
-#define SEXP_NULL   SEXP_MAKE_IMMEDIATE(0) /* 14 0x0e */
-#define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(1) /* 30 0x1e */
-#define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(2) /* 46 0x2e */
+#define SEXP_FALSE  SEXP_MAKE_IMMEDIATE(0) /* 14 0x0e */
+#define SEXP_TRUE   SEXP_MAKE_IMMEDIATE(1) /* 30 0x1e */
+#define SEXP_NULL   SEXP_MAKE_IMMEDIATE(2) /* 46 0x2e */
 #define SEXP_EOF    SEXP_MAKE_IMMEDIATE(3) /* 62 0x3e */
 #define SEXP_VOID   SEXP_MAKE_IMMEDIATE(4) /* the unspecified value */
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
