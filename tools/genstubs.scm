@@ -235,7 +235,12 @@
 (define (basic-type? type)
   (let ((type (parse-type type)))
     (and (not (type-array type))
+         (not (void-pointer-type? type))
          (not (assq (type-base type) *types*)))))
+
+(define (void-pointer-type? type)
+  (or (and (eq? 'void (type-base type)) (type-pointer? type))
+      (eq? 'void* (type-base type))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; function objects
@@ -456,7 +461,7 @@
 (define (c->scheme-converter type val . o)
   (let ((base (type-base type)))
     (cond
-     ((eq? base 'void)
+     ((and (eq? base 'void) (not (type-pointer? type)))
       (cat "((" val "), SEXP_VOID)"))
      ((or (eq? base 'sexp) (error-type? base))
       (cat val))
@@ -483,10 +488,12 @@
      ((eq? 'output-port base)
       (cat "sexp_make_output_port(ctx, " val ", SEXP_FALSE)"))
      (else
-      (let ((ctype (assq base *types*)))
+      (let ((ctype (assq base *types*))
+            (void*? (void-pointer-type? type)))
         (cond
-         (ctype
-          (cat "sexp_make_cpointer(ctx, "  (type-id-name base) ", "
+         ((or ctype void*?)
+          (cat "sexp_make_cpointer(ctx, "
+               (if void*? "SEXP_CPOINTER" (type-id-name base)) ", "
                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
                (if (or (type-free? type)
                        (and (type-result? type) (not (basic-type? type))))
@@ -522,9 +529,10 @@
      ((port-type? base)
       (cat "sexp_port_stream(" val ")"))
      (else
-      (let ((ctype (assq base *types*)))
+      (let ((ctype (assq base *types*))
+            (void*? (void-pointer-type? type)))
         (cond
-         (ctype
+         ((or ctype void*?)
           (cat "(" (type-c-name type) ")"
                (if (type-null? type)
                    "sexp_cpointer_maybe_null_value"
@@ -586,19 +594,18 @@
      ((or (int-type? base) (float-type? base)
           (string-type? base) (port-type? base))
       (cat (type-predicate type) "(" arg ")"))
+     ((or (assq base *types*) (void-pointer-type? type))
+      (cat
+       (if (type-null? type) "(" "")
+       "(sexp_pointerp(" arg  ")"
+       " && (sexp_pointer_tag(" arg  ") == "
+       (if (void-pointer-type? type) "SEXP_CPOINTER" (type-id-name base)) "))"
+       (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
      (else
-      (cond
-       ((assq base *types*)
-        (cat
-         (if (type-null? type) "(" "")
-         "(sexp_pointerp(" arg  ")"
-         " && (sexp_pointer_tag(" arg  ") == " (type-id-name base) "))"
-         (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
-       (else
-        (display "WARNING: don't know how to check: " (current-error-port))
-        (write type (current-error-port))
-        (newline (current-error-port))
-        (cat "1")))))))
+      (display "WARNING: don't know how to check: " (current-error-port))
+      (write type (current-error-port))
+      (newline (current-error-port))
+      (cat "1")))))
 
 (define (write-validator arg type)
   (let* ((type (parse-type type))
@@ -631,21 +638,18 @@
        "    return sexp_type_exception(ctx, \"not "
        (definite-article (type-name type)) "\", "
        arg ");\n"))
+     ((or (assq base-type *types*) (void-pointer-type? type))
+      (cat
+       "  if (! " (lambda () (check-type arg type)) ")\n"
+       "    return sexp_type_exception(ctx, \"not "
+       (definite-article (type-name type)) "\", " arg ");\n"))
+     ((eq? 'sexp base-type))
+     ((string-type? type)
+      (write-validator arg 'string))
      (else
-      (cond
-       ((assq base-type *types*)
-        (cat
-         "  if (! " (lambda () (check-type arg type)) ")\n"
-         "    return sexp_type_exception(ctx, \"not "
-         (definite-article (type-name type)) "\", " arg ");\n"))
-       ((eq? 'sexp base-type))
-       ((string-type? type)
-        (write-validator arg 'string))
-       (else
-        (display "WARNING: don't know how to validate: " (current-error-port))
-        (write type (current-error-port))
-        (newline (current-error-port))
-        (write type)))))))
+      (display "WARNING: don't know how to validate: " (current-error-port))
+      (write type (current-error-port))
+      (newline (current-error-port))))))
 
 (define (write-parameters args)
   (lambda () (for-each (lambda (a) (cat ", sexp arg" (type-index a))) args)))
