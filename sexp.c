@@ -1584,13 +1584,12 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     break;
   case '.':
     c1 = sexp_read_char(ctx, in);
+    sexp_push_char(ctx, c1, in);
     if (c1 == EOF || is_separator(c1)) {
       res = SEXP_RAWDOT;
     } else if (isdigit(c1)) {
-      sexp_push_char(ctx, c1, in);
       res = sexp_read_float_tail(ctx, in, 0, 0);
     } else {
-      sexp_push_char(ctx, c1, in);
       res = sexp_read_symbol(ctx, in, '.', 1);
     }
     break;
