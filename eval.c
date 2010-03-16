@@ -986,7 +986,8 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     emit_word(ctx, (sexp_uint_t)op);
     break;
   case SEXP_OPC_TYPE_PREDICATE:
-  case SEXP_OPC_ACCESSOR:
+  case SEXP_OPC_GETTER:
+  case SEXP_OPC_SETTER:
   case SEXP_OPC_CONSTRUCTOR:
     emit(ctx, sexp_opcode_code(op));
     if ((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
@@ -2421,22 +2422,26 @@ sexp sexp_make_constructor (sexp ctx, sexp name, sexp type) {
                           sexp_make_fixnum(type_size), NULL);
 }
 
-sexp sexp_make_accessor (sexp ctx, sexp name, sexp type, sexp index, sexp code) {
-  if (! sexp_fixnump(type))
-    return sexp_type_exception(ctx, "make-accessor: bad type", type);
+sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index) {
+  if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
+    return sexp_type_exception(ctx, "make-getter: bad type", type);
   if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
-    return sexp_type_exception(ctx, "make-accessor: bad index", index);
+    return sexp_type_exception(ctx, "make-getter: bad index", index);
   return
-    sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_ACCESSOR), code,
-                     sexp_make_fixnum(sexp_unbox_fixnum(code)==SEXP_OP_SLOT_REF?1:2),
-                     SEXP_ZERO, type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
+    sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_GETTER),
+                     sexp_make_fixnum(SEXP_OP_SLOT_REF), SEXP_ONE, SEXP_ZERO,
+                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
-sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index) {
-  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(SEXP_OP_SLOT_REF));
-}
 sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index) {
-  return sexp_make_accessor(ctx, name, type, index, sexp_make_fixnum(SEXP_OP_SLOT_SET));
+  if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
+    return sexp_type_exception(ctx, "make-setter: bad type", type);
+  if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
+    return sexp_type_exception(ctx, "make-setter: bad index", index);
+  return
+    sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_SETTER),
+                     sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
+                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
 #endif
