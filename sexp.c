@@ -21,7 +21,7 @@ static int sexp_initialized_p = 0;
 
 sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
 
-static char sexp_separators[] = {
+static const char sexp_separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, /* x0_ */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* x1_ */
@@ -328,20 +328,20 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
   return exn;
 }
 
-sexp sexp_user_exception (sexp ctx, sexp self, char *message, sexp irritants) {
+sexp sexp_user_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   sexp res;
   sexp_gc_var3(sym, str, irr);
   sexp_gc_preserve3(ctx, sym, str, irr);
   res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "user"),
-                            str = sexp_c_string(ctx, message, -1),
-                            ((sexp_pairp(irritants) || sexp_nullp(irritants))
-                             ? irritants : (irr = sexp_list1(ctx, irritants))),
+                            str = sexp_c_string(ctx, ms, -1),
+                            ((sexp_pairp(ir) || sexp_nullp(ir))
+                             ? ir : (irr = sexp_list1(ctx, ir))),
                             self, SEXP_FALSE);
   sexp_gc_release3(ctx);
   return res;
 }
 
-sexp sexp_type_exception (sexp ctx, char *message, sexp obj) {
+sexp sexp_type_exception (sexp ctx, const char *message, sexp obj) {
   sexp res;
   sexp_gc_var3(sym, str, irr);
   sexp_gc_preserve3(ctx, sym, str, irr);
@@ -424,15 +424,14 @@ sexp sexp_print_exception (sexp ctx, sexp exn, sexp out) {
   return SEXP_VOID;
 }
 
-static sexp sexp_read_error (sexp ctx, char *msg, sexp irritants, sexp port) {
+static sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port) {
   sexp res;
   sexp_gc_var4(sym, name, str, irr);
   sexp_gc_preserve4(ctx, sym, name, str, irr);
   name = (sexp_port_name(port) ? sexp_port_name(port) : SEXP_FALSE);
   name = sexp_cons(ctx, name, sexp_make_fixnum(sexp_port_line(port)));
   str = sexp_c_string(ctx, msg, -1);
-  irr = ((sexp_pairp(irritants) || sexp_nullp(irritants))
-         ? irritants : sexp_list1(ctx, irritants));
+  irr = ((sexp_pairp(ir) || sexp_nullp(ir)) ? ir : sexp_list1(ctx, ir));
   res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "read"),
                             str, irr, SEXP_FALSE, name);
   sexp_gc_release4(ctx);
@@ -695,21 +694,21 @@ sexp sexp_string_concatenate (sexp ctx, sexp str_ls, sexp sep) {
 
 #if SEXP_USE_HASH_SYMS
 
-static sexp_uint_t sexp_string_hash(char *str, sexp_uint_t acc) {
+static sexp_uint_t sexp_string_hash(const char *str, sexp_uint_t acc) {
   while (*str) {acc *= FNV_PRIME; acc ^= *str++;}
   return acc;
 }
 
 #endif
 
-sexp sexp_intern(sexp ctx, char *str) {
+sexp sexp_intern(sexp ctx, const char *str) {
 #if SEXP_USE_HUFF_SYMS
   struct sexp_huff_entry he;
   sexp_uint_t space=3, newbits;
   char c;
 #endif
   sexp_uint_t len, res=FNV_OFFSET_BASIS, bucket;
-  char *p=str;
+  const char *p=str;
   sexp ls;
   sexp_gc_var1(sym);
 
@@ -780,7 +779,8 @@ sexp sexp_list_to_vector(sexp ctx, sexp ls) {
   return vec;
 }
 
-sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value, sexp parent, int freep) {
+sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value,
+                         sexp parent, int freep) {
   sexp ptr;
   if (! value) return SEXP_FALSE;
   ptr = sexp_alloc_type(ctx, cpointer, type_id);
@@ -958,7 +958,8 @@ sexp sexp_buffered_write_char (sexp ctx, int c, sexp p) {
   return SEXP_VOID;
 }
 
-sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p) {
+sexp sexp_buffered_write_string_n (sexp ctx, const char *str,
+                                   sexp_uint_t len, sexp p) {
   if (sexp_port_offset(p) >= sexp_port_size(p))
     sexp_buffered_flush(ctx, p);
   memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, len);
@@ -966,7 +967,7 @@ sexp sexp_buffered_write_string_n (sexp ctx, char *str, sexp_uint_t len, sexp p)
   return SEXP_VOID;
 }
 
-sexp sexp_buffered_write_string (sexp ctx, char *str, sexp p) {
+sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
   return sexp_buffered_write_string_n(ctx, str, strlen(str), p);
 }
 
@@ -1661,7 +1662,7 @@ sexp sexp_read (sexp ctx, sexp in) {
   return res;
 }
 
-sexp sexp_read_from_string(sexp ctx, char *str) {
+sexp sexp_read_from_string(sexp ctx, const char *str) {
   sexp res;
   sexp_gc_var2(s, in);
   sexp_gc_preserve2(ctx, s, in);

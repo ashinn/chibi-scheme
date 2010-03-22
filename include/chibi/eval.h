@@ -126,14 +126,14 @@ enum sexp_opcode_names {
 SEXP_API void sexp_scheme_init (void);
 SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env, sexp_uint_t size);
 SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
-SEXP_API sexp sexp_compile_error (sexp ctx, char *message, sexp obj);
+SEXP_API sexp sexp_compile_error (sexp ctx, const char *message, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply_optimization (sexp context, sexp proc, sexp ast);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp lambda, sexp name);
 SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
-SEXP_API sexp sexp_eval_string (sexp context, char *str, sexp env);
+SEXP_API sexp sexp_eval_string (sexp context, const char *str, sexp env);
 SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
 SEXP_API sexp sexp_make_env (sexp context);
 SEXP_API sexp sexp_make_null_env (sexp context, sexp version);
@@ -141,8 +141,8 @@ SEXP_API sexp sexp_make_primitive_env (sexp context, sexp version);
 SEXP_API sexp sexp_make_standard_env (sexp context, sexp version);
 SEXP_API sexp sexp_load_standard_parameters (sexp context, sexp env);
 SEXP_API sexp sexp_load_standard_env (sexp context, sexp env, sexp version);
-SEXP_API sexp sexp_find_module_file (sexp ctx, char *file);
-SEXP_API sexp sexp_load_module_file (sexp ctx, char *file, sexp env);
+SEXP_API sexp sexp_find_module_file (sexp ctx, const char *file);
+SEXP_API sexp sexp_load_module_file (sexp ctx, const char *file, sexp env);
 SEXP_API sexp sexp_add_module_directory (sexp ctx, sexp dir, sexp appendp);
 SEXP_API sexp sexp_extend_env (sexp context, sexp env, sexp vars, sexp value);
 SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls, sexp immutp);
@@ -152,13 +152,13 @@ SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
-SEXP_API sexp sexp_make_foreign (sexp ctx, char *name, int num_args, int flags, sexp_proc1 f, sexp data);
-SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args, int flags, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 
 #define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(sexp_proc1)f,NULL)
 #define sexp_define_foreign_opt(c,e,s,n,f,d) sexp_define_foreign_aux(c,e,s,n,1,(sexp_proc1)f,d)
 
-SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, char *name, int num_args, sexp_proc1 f, char *param);
+SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args, sexp_proc1 f, const char *param);
 
 #if SEXP_USE_TYPE_DEFS
 SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);
