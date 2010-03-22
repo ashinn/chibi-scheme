@@ -28,7 +28,7 @@ static sexp sexp_load_module_file_op (sexp ctx, sexp file, sexp env);
 static sexp sexp_find_module_file_op (sexp ctx, sexp file);
 #endif
 
-sexp sexp_compile_error (sexp ctx, char *message, sexp obj) {
+sexp sexp_compile_error (sexp ctx, const char *message, sexp obj) {
   sexp exn;
   sexp_gc_var3(sym, irritants, msg);
   sexp_gc_preserve3(ctx, sym, irritants, msg);
@@ -307,8 +307,8 @@ static sexp sexp_make_lit (sexp ctx, sexp value) {
 
 #define SEXP_STACK_SIZE (sexp_sizeof(stack)+sizeof(sexp)*SEXP_INIT_STACK_SIZE)
 
-static void sexp_add_path (sexp ctx, char *str) {
-  char *colon;
+static void sexp_add_path (sexp ctx, const char *str) {
+  const char *colon;
   if (str && *str) {
     colon = strchr(str, ':');
     if (colon)
@@ -2355,7 +2355,7 @@ sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
   return res;
 }
 
-sexp sexp_make_foreign (sexp ctx, char *name, int num_args,
+sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
                         int flags, sexp_proc1 f, sexp data) {
   sexp res;
   if (num_args > 6) {
@@ -2375,7 +2375,7 @@ sexp sexp_make_foreign (sexp ctx, char *name, int num_args,
   return res;
 }
 
-sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args,
+sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args,
                               int flags, sexp_proc1 f, sexp data) {
   sexp_gc_var1(op);
   sexp_gc_preserve1(ctx, op);
@@ -2389,8 +2389,8 @@ sexp sexp_define_foreign_aux (sexp ctx, sexp env, char *name, int num_args,
   return res;
 }
 
-sexp sexp_define_foreign_param (sexp ctx, sexp env, char *name, int num_args,
-                                sexp_proc1 f, char *param) {
+sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args,
+                                sexp_proc1 f, const char *param) {
   sexp res;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
@@ -2499,7 +2499,7 @@ sexp sexp_make_primitive_env (sexp ctx, sexp version) {
   return e;
 }
 
-sexp sexp_find_module_file (sexp ctx, char *file) {
+sexp sexp_find_module_file (sexp ctx, const char *file) {
   sexp res=SEXP_FALSE, ls;
   char *dir, *path;
   sexp_uint_t slash, dirlen, filelen, len;
@@ -2535,7 +2535,7 @@ sexp sexp_find_module_file (sexp ctx, char *file) {
 
 #define sexp_file_not_found "couldn't find file in module path"
 
-sexp sexp_load_module_file (sexp ctx, char *file, sexp env) {
+sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
   sexp res;
   sexp_gc_var1(path);
   sexp_gc_preserve1(ctx, path);
@@ -2768,7 +2768,7 @@ sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
   return res;
 }
 
-sexp sexp_eval_string (sexp ctx, char *str, sexp env) {
+sexp sexp_eval_string (sexp ctx, const char *str, sexp env) {
   sexp res;
   sexp_gc_var1(obj);
   sexp_gc_preserve1(ctx, obj);
