@@ -240,7 +240,7 @@ struct sexp_struct {
     } opcode;
     struct {
       char code;
-      char *name;
+      const char *name;
     } core;
     /* ast types */
     struct {
