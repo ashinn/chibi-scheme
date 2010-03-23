@@ -103,7 +103,7 @@ static sexp sexp_heap_walk (sexp ctx, int depth, int printp) {
   res = SEXP_NULL;
   for (i=hi_type; i>0; i--)
     if (stats[i]) {
-      name = sexp_intern(ctx, sexp_type_name_by_index(ctx, i));
+      name = sexp_intern(ctx, sexp_type_name_by_index(ctx, i), -1);
       tmp = sexp_cons(ctx, name, sexp_make_fixnum(stats[i]));
       res = sexp_cons(ctx, tmp, res);
     }

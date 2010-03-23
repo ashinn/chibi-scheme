@@ -114,7 +114,7 @@ static sexp sexp_get_bucket (sexp ctx, sexp buckets, sexp hash_fn, sexp obj) {
     args = sexp_list2(ctx, obj, sexp_make_fixnum(len));
     res = sexp_apply(ctx, hash_fn, args);
     if (sexp_exceptionp(res)) {
-      args = sexp_eval_string(ctx, "(current-error-port)", sexp_context_env(ctx));
+      args = sexp_eval_string(ctx, "(current-error-port)", -1, sexp_context_env(ctx));
       sexp_print_exception(ctx, res, args);
       res = sexp_make_fixnum(0);
     }

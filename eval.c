@@ -28,15 +28,15 @@ static sexp sexp_load_module_file_op (sexp ctx, sexp file, sexp env);
 static sexp sexp_find_module_file_op (sexp ctx, sexp file);
 #endif
 
-sexp sexp_compile_error (sexp ctx, const char *message, sexp obj) {
+sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
   sexp exn;
   sexp_gc_var3(sym, irritants, msg);
   sexp_gc_preserve3(ctx, sym, irritants, msg);
-  irritants = sexp_list1(ctx, obj);
+  irritants = sexp_list1(ctx, o);
   msg = sexp_c_string(ctx, message, -1);
-  exn = sexp_make_exception(ctx, sym = sexp_intern(ctx, "compile"), msg, irritants,
-                            SEXP_FALSE, (sexp_pairp(obj) ?
-                                         sexp_pair_source(obj) : SEXP_FALSE));
+  exn = sexp_make_exception(ctx, sym = sexp_intern(ctx, "compile", -1),
+                            msg, irritants, SEXP_FALSE,
+                            (sexp_pairp(o)?sexp_pair_source(o):SEXP_FALSE));
   sexp_gc_release3(ctx);
   return exn;
 }
@@ -325,7 +325,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_gc_var2(tmp, vec);
   ctx = sexp_make_child_context(ctx, NULL);
   sexp_gc_preserve2(ctx, tmp, vec);
-  tmp = sexp_intern(ctx, "*current-exception-handler*");
+  tmp = sexp_intern(ctx, "*current-exception-handler*", -1);
   sexp_global(ctx, SEXP_G_ERR_HANDLER)
     = sexp_env_cell_create(ctx, sexp_context_env(ctx), tmp, SEXP_FALSE, NULL);
   emit(ctx, SEXP_OP_RESUMECC);
@@ -337,7 +337,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_FINAL_RESUMER)
     = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, tmp, vec);
   sexp_bytecode_name(sexp_procedure_code(sexp_global(ctx, SEXP_G_FINAL_RESUMER)))
-    = sexp_intern(ctx, "final-resumer");
+    = sexp_intern(ctx, "final-resumer", -1);
   sexp_global(ctx, SEXP_G_MODULE_PATH) = SEXP_NULL;
   sexp_add_path(ctx, sexp_default_module_dir);
   sexp_add_path(ctx, getenv(SEXP_MODULE_PATH_VAR));
@@ -2384,7 +2384,7 @@ sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args
   if (sexp_exceptionp(op))
     res = op;
   else
-    sexp_env_define(ctx, env, sexp_intern(ctx, name), op);
+    sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), op);
   sexp_gc_release1(ctx);
   return res;
 }
@@ -2394,7 +2394,7 @@ sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_ar
   sexp res;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
-  tmp = sexp_intern(ctx, param);
+  tmp = sexp_intern(ctx, param, -1);
   tmp = sexp_env_cell(env, tmp);
   res = sexp_define_foreign_aux(ctx, env, name, num_args, 3, f, tmp);
   sexp_gc_release1(ctx);
@@ -2477,7 +2477,7 @@ sexp sexp_make_null_env (sexp ctx, sexp version) {
   sexp_uint_t i;
   sexp e = sexp_make_env(ctx);
   for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++)
-    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_core_name(&core_forms[i])),
+    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_core_name(&core_forms[i]), -1),
                     sexp_copy_core(ctx, &core_forms[i]));
   return e;
 }
@@ -2490,10 +2490,10 @@ sexp sexp_make_primitive_env (sexp ctx, sexp version) {
   for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
     op = sexp_copy_opcode(ctx, &opcodes[i]);
     if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
-      sym = sexp_intern(ctx, (char*)sexp_opcode_data(op));
+      sym = sexp_intern(ctx, (char*)sexp_opcode_data(op), -1);
       sexp_opcode_data(op) = sexp_env_cell_create(ctx, e, sym, SEXP_VOID, NULL);
     }
-    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op)), op);
+    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op), -1), op);
   }
   sexp_gc_release3(ctx);
   return e;
@@ -2604,21 +2604,21 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_gc_preserve3(ctx, op, tmp, sym);
   sexp_load_standard_parameters(ctx, e);
 #if SEXP_USE_DL
-  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*"),
+  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*", -1),
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
 #endif
-  tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform));
+  tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform, -1));
 #if SEXP_USE_DL
-  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "dynamic-loading"));
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "dynamic-loading", -1));
 #endif
 #if SEXP_USE_MODULES
-  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "modules"));
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "modules", -1));
 #endif
 #if SEXP_USE_BOEHM
-  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc"));
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc", -1));
 #endif
-  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi"));
-  sexp_env_define(ctx, e, sexp_intern(ctx, "*features*"), tmp);
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi", -1));
+  sexp_env_define(ctx, e, sexp_intern(ctx, "*features*", -1), tmp);
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
 #if SEXP_USE_SIMPLIFY
   op = sexp_make_foreign(ctx, "simplify", 1, 0,
@@ -2631,7 +2631,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   /* load and bind config env */
 #if SEXP_USE_MODULES
   if (! sexp_exceptionp(tmp)) {
-    sym = sexp_intern(ctx, "*config-env*");
+    sym = sexp_intern(ctx, "*config-env*", -1);
     if (! sexp_envp(tmp=sexp_global(ctx, SEXP_G_CONFIG_ENV))) {
       tmp = sexp_make_env(ctx);
       if (! sexp_exceptionp(tmp)) {
@@ -2768,11 +2768,11 @@ sexp sexp_eval (sexp ctx, sexp obj, sexp env) {
   return res;
 }
 
-sexp sexp_eval_string (sexp ctx, const char *str, sexp env) {
+sexp sexp_eval_string (sexp ctx, const char *str, sexp_sint_t len, sexp env) {
   sexp res;
   sexp_gc_var1(obj);
   sexp_gc_preserve1(ctx, obj);
-  obj = sexp_read_from_string(ctx, str);
+  obj = sexp_read_from_string(ctx, str, len);
   res = sexp_eval(ctx, obj, env);
   sexp_gc_release1(ctx);
   return res;
