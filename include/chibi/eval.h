@@ -152,6 +152,7 @@ SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
+SEXP_API sexp sexp_make_procedure (sexp ctx, sexp flags, sexp num_args, sexp bc, sexp vars);
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 

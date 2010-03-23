@@ -234,8 +234,8 @@ static sexp finalize_bytecode (sexp ctx) {
   return bc;
 }
 
-static sexp sexp_make_procedure (sexp ctx, sexp flags, sexp num_args,
-                                 sexp bc, sexp vars) {
+sexp sexp_make_procedure (sexp ctx, sexp flags, sexp num_args,
+                          sexp bc, sexp vars) {
   sexp proc = sexp_alloc_type(ctx, procedure, SEXP_PROCEDURE);
   sexp_procedure_flags(proc) = (char) (sexp_uint_t) flags;
   sexp_procedure_num_args(proc) = (unsigned short) (sexp_uint_t) num_args;
