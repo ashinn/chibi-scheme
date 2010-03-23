@@ -27,9 +27,9 @@ static void repl (sexp ctx) {
   sexp_env_define(ctx, sexp_context_env(ctx),
                   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
   sexp_context_tracep(ctx) = 1;
-  in = sexp_eval_string(ctx, "(current-input-port)", env);
-  out = sexp_eval_string(ctx, "(current-output-port)", env);
-  err = sexp_eval_string(ctx, "(current-error-port)", env);
+  in = sexp_eval_string(ctx, "(current-input-port)", -1, env);
+  out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
+  err = sexp_eval_string(ctx, "(current-error-port)", -1, env);
   sexp_port_sourcep(in) = 1;
   while (1) {
     sexp_write_string(ctx, "> ", out);
@@ -106,11 +106,11 @@ void run_main (int argc, char **argv) {
       print = (argv[i][1] == 'p');
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('e', arg);
-      res = check_exception(ctx, sexp_read_from_string(ctx, arg));
+      res = check_exception(ctx, sexp_read_from_string(ctx, arg, -1));
       res = check_exception(ctx, sexp_eval(ctx, res, env));
       if (print) {
         if (! sexp_oportp(out))
-          out = sexp_eval_string(ctx, "(current-output-port)", env);
+          out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
         sexp_write(ctx, res, out);
         sexp_write_char(ctx, '\n', out);
       }
@@ -134,7 +134,7 @@ void run_main (int argc, char **argv) {
       impmod[len] = '\0';
       for (p=impmod; *p; p++)
         if (*p == '.') *p=' ';
-      check_exception(ctx, sexp_eval_string(ctx, impmod, env));
+      check_exception(ctx, sexp_eval_string(ctx, impmod, -1, env));
       free(impmod);
       break;
     case 'q':
@@ -171,9 +171,9 @@ void run_main (int argc, char **argv) {
     case 'V':
       load_init();
       if (! sexp_oportp(out))
-        out = sexp_eval_string(ctx, "(current-output-port)", env);
+        out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
       sexp_write_string(ctx, sexp_version_string, out);
-      tmp = sexp_env_ref(env, sexp_intern(ctx, "*features*"), SEXP_NULL);
+      tmp = sexp_env_ref(env, sexp_intern(ctx, "*features*", -1), SEXP_NULL);
       sexp_write(ctx, tmp, out);
       sexp_newline(ctx, out);
       return;
@@ -191,11 +191,11 @@ void run_main (int argc, char **argv) {
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
     else
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
-    sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol), args);
-    sexp_eval_string(ctx, sexp_argv_proc, env);
+    sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
+    sexp_eval_string(ctx, sexp_argv_proc, -1, env);
     if (i < argc) {             /* script usage */
       check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
-      tmp = sexp_intern(ctx, "main");
+      tmp = sexp_intern(ctx, "main", -1);
       tmp = sexp_env_ref(env, tmp, SEXP_FALSE);
       if (sexp_procedurep(tmp)) {
         args = sexp_list1(ctx, args);

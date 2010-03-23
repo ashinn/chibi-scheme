@@ -1044,7 +1044,8 @@
            (let ((pred (cadr x)))
              (cat "  tmp = sexp_make_type_predicate(ctx, name, "
                   "sexp_make_fixnum(" (type-id-name name) "));\n"
-                  "  name = sexp_intern(ctx, \"" pred "\");\n"
+                  "  name = sexp_intern(ctx, \"" pred "\", "
+                  (string-length (x->string pred)) ");\n"
                   "  sexp_env_define(ctx, env, name, tmp);\n")))))))
 
 (define (type-getter-name type name field)
@@ -1183,7 +1184,8 @@
 (define (write-const const)
   (let ((scheme-name (if (pair? (cadr const)) (caadr const) (cadr const)))
         (c-name (if (pair? (cadr const)) (cadadr const) (mangle (cadr const)))))
-    (cat "  name = sexp_intern(ctx, \"" scheme-name "\");\n"
+    (cat "  name = sexp_intern(ctx, \"" scheme-name "\", "
+         (string-length (x->string scheme-name)) ");\n"
          "  sexp_env_define(ctx, env, name, tmp="
          (lambda () (c->scheme-converter (car const) c-name)) ");\n")))
 

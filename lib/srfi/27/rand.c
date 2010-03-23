@@ -1,6 +1,6 @@
-/*  rand.c -- rand_r/random_r interface                  */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  rand.c -- rand_r/random_r interface                       */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <time.h>
 #include <chibi/eval.h>
@@ -180,7 +180,7 @@ sexp sexp_init_library (sexp ctx, sexp env) {
 
   name = sexp_c_string(ctx, "random-source?", -1);
   op = sexp_make_type_predicate(ctx, name, sexp_make_fixnum(rs_type_id));
-  name = sexp_intern(ctx, "random-source?");
+  name = sexp_intern(ctx, "random-source?", -1);
   sexp_env_define(ctx, env, name, op);
 
   sexp_define_foreign(ctx, env, "make-random-source", 0, sexp_make_random_source);
@@ -194,7 +194,7 @@ sexp sexp_init_library (sexp ctx, sexp env) {
   sexp_define_foreign(ctx, env, "random-source-pseudo-randomize!", 2, sexp_random_source_pseudo_randomize);
 
   default_random_source = op = sexp_make_random_source(ctx);
-  name = sexp_intern(ctx, "default-random-source");
+  name = sexp_intern(ctx, "default-random-source", -1);
   sexp_env_define(ctx, env, name, default_random_source);
   sexp_random_source_randomize(ctx, default_random_source);
 

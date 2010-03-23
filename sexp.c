@@ -224,14 +224,14 @@ void sexp_init_context_globals (sexp ctx) {
 #endif
   sexp_global(ctx, SEXP_G_OOM_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of memory", SEXP_NULL);
   sexp_global(ctx, SEXP_G_OOS_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of stack space", SEXP_NULL);
-  sexp_global(ctx, SEXP_G_QUOTE_SYMBOL) = sexp_intern(ctx, "quote");
-  sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL) = sexp_intern(ctx, "quasiquote");
-  sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL) = sexp_intern(ctx, "unquote");
-  sexp_global(ctx, SEXP_G_UNQUOTE_SPLICING_SYMBOL) = sexp_intern(ctx, "unquote-splicing");
-  sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "*current-input-port*");
-  sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "*current-output-port*");
-  sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "*current-error-port*");
-  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "*interaction-environment*");
+  sexp_global(ctx, SEXP_G_QUOTE_SYMBOL) = sexp_intern(ctx, "quote", -1);
+  sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL) = sexp_intern(ctx, "quasiquote", -1);
+  sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL) = sexp_intern(ctx, "unquote", -1);
+  sexp_global(ctx, SEXP_G_UNQUOTE_SPLICING_SYMBOL) = sexp_intern(ctx, "unquote-splicing", -1);
+  sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "*current-input-port*", -1);
+  sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "*current-output-port*", -1);
+  sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "*current-error-port*", -1);
+  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "*interaction-environment*", -1);
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
 #if ! SEXP_USE_GLOBAL_TYPES
@@ -332,7 +332,7 @@ sexp sexp_user_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   sexp res;
   sexp_gc_var3(sym, str, irr);
   sexp_gc_preserve3(ctx, sym, str, irr);
-  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "user"),
+  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "user", -1),
                             str = sexp_c_string(ctx, ms, -1),
                             ((sexp_pairp(ir) || sexp_nullp(ir))
                              ? ir : (irr = sexp_list1(ctx, ir))),
@@ -345,7 +345,7 @@ sexp sexp_type_exception (sexp ctx, const char *message, sexp obj) {
   sexp res;
   sexp_gc_var3(sym, str, irr);
   sexp_gc_preserve3(ctx, sym, str, irr);
-  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "type"),
+  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "type", -1),
                             str = sexp_c_string(ctx, message, -1),
                             irr = sexp_list1(ctx, obj),
                             SEXP_FALSE, SEXP_FALSE);
@@ -359,7 +359,7 @@ sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
   msg = sexp_c_string(ctx, "bad index range", -1);
   res = sexp_list2(ctx, start, end);
   res = sexp_cons(ctx, obj, res);
-  res = sexp_make_exception(ctx, sexp_intern(ctx, "range"), msg, res,
+  res = sexp_make_exception(ctx, sexp_intern(ctx, "range", -1), msg, res,
                             SEXP_FALSE, SEXP_FALSE);
   sexp_gc_release2(ctx);
   return res;
@@ -432,7 +432,7 @@ static sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port) {
   name = sexp_cons(ctx, name, sexp_make_fixnum(sexp_port_line(port)));
   str = sexp_c_string(ctx, msg, -1);
   irr = ((sexp_pairp(ir) || sexp_nullp(ir)) ? ir : sexp_list1(ctx, ir));
-  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "read"),
+  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "read", -1),
                             str, irr, SEXP_FALSE, name);
   sexp_gc_release4(ctx);
   return res;
@@ -694,27 +694,31 @@ sexp sexp_string_concatenate (sexp ctx, sexp str_ls, sexp sep) {
 
 #if SEXP_USE_HASH_SYMS
 
-static sexp_uint_t sexp_string_hash(const char *str, sexp_uint_t acc) {
-  while (*str) {acc *= FNV_PRIME; acc ^= *str++;}
+static sexp_uint_t sexp_string_hash(const char *str, sexp_sint_t len,
+                                    sexp_uint_t acc) {
+  for ( ; len; len--) {acc *= FNV_PRIME; acc ^= *str++;}
   return acc;
 }
 
 #endif
 
-sexp sexp_intern(sexp ctx, const char *str) {
+sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 #if SEXP_USE_HUFF_SYMS
   struct sexp_huff_entry he;
   sexp_uint_t space=3, newbits;
   char c;
 #endif
-  sexp_uint_t len, res=FNV_OFFSET_BASIS, bucket;
+  sexp_uint_t res=FNV_OFFSET_BASIS, bucket, i=0;
   const char *p=str;
-  sexp ls;
+  sexp ls, tmp;
   sexp_gc_var1(sym);
+
+  if (len < 0) len = strlen(str);
 
 #if SEXP_USE_HUFF_SYMS
   res = 0;
-  for ( ; (c=*p); p++) {
+  for ( ; i<len; i++, p++) {
+    c = *p;
     if ((unsigned char)c > 127)
       goto normal_intern;
     he = huff_table[(unsigned char)c];
@@ -729,20 +733,20 @@ sexp sexp_intern(sexp ctx, const char *str) {
  normal_intern:
 #endif
 #if SEXP_USE_HASH_SYMS
-  bucket = (sexp_string_hash(p, res) % SEXP_SYMBOL_TABLE_SIZE);
+  bucket = (sexp_string_hash(p, len-i, res) % SEXP_SYMBOL_TABLE_SIZE);
 #else
   bucket = 0;
 #endif
-  len = strlen(str) + 1; /* include the trailing NULL in the comparison */
   for (ls=sexp_context_symbols(ctx)[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
-    if (! strncmp(str, sexp_string_data(sexp_symbol_string(sexp_car(ls))), len))
+    if ((sexp_string_length(tmp=sexp_symbol_string(sexp_car(ls))) == len)
+        && ! strncmp(str, sexp_string_data(tmp), len))
       return sexp_car(ls);
 
   /* not found, make a new symbol */
   sexp_gc_preserve1(ctx, sym);
   sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
   if (sexp_exceptionp(sym)) return sym;
-  sexp_symbol_string(sym) = sexp_c_string(ctx, str, len-1);
+  sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
   sexp_push(ctx, sexp_context_symbols(ctx)[bucket], sym);
   sexp_gc_release1(ctx);
   return sym;
@@ -751,7 +755,7 @@ sexp sexp_intern(sexp ctx, const char *str) {
 sexp sexp_string_to_symbol (sexp ctx, sexp str) {
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, "string->symbol: not a string", str);
-  return sexp_intern(ctx, sexp_string_data(str));
+  return sexp_intern(ctx, sexp_string_data(str), sexp_string_length(str));
 }
 
 sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt) {
@@ -1316,7 +1320,7 @@ sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp) {
   }
 
   buf[i] = '\0';
-  res = (internp ? sexp_intern(ctx, buf) : sexp_c_string(ctx, buf, i));
+  res = (internp ? sexp_intern(ctx, buf, i) : sexp_c_string(ctx, buf, i));
   if (size != INIT_STRING_BUFFER_SIZE) free(buf);
   return res;
 }
@@ -1624,11 +1628,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_symbol(ctx, in, c1, 1);
 #if SEXP_USE_INFINITIES
-      if (res == sexp_intern(ctx, "+inf.0"))
+      if (res == sexp_intern(ctx, "+inf.0", -1))
         res = sexp_make_flonum(ctx, 1.0/0.0);
-      else if (res == sexp_intern(ctx, "-inf.0"))
+      else if (res == sexp_intern(ctx, "-inf.0", -1))
         res = sexp_make_flonum(ctx, -1.0/0.0);
-      else if (res == sexp_intern(ctx, "+nan.0"))
+      else if (res == sexp_intern(ctx, "+nan.0", -1))
         res = sexp_make_flonum(ctx, 0.0/0.0);
 #endif
     }
@@ -1662,11 +1666,11 @@ sexp sexp_read (sexp ctx, sexp in) {
   return res;
 }
 
-sexp sexp_read_from_string(sexp ctx, const char *str) {
+sexp sexp_read_from_string(sexp ctx, const char *str, sexp_sint_t len) {
   sexp res;
   sexp_gc_var2(s, in);
   sexp_gc_preserve2(ctx, s, in);
-  s = sexp_c_string(ctx, str, -1);
+  s = sexp_c_string(ctx, str, len);
   in = sexp_make_input_string_port(ctx, s);
   res = sexp_read(ctx, in);
   sexp_gc_release2(ctx);

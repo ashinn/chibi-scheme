@@ -10,7 +10,7 @@ static void sexp_define_type_predicate (sexp ctx, sexp env,
   sexp_gc_preserve2(ctx, name, op);
   name = sexp_c_string(ctx, cname, -1);
   op = sexp_make_type_predicate(ctx, name, sexp_make_fixnum(type));
-  sexp_env_define(ctx, env, name=sexp_intern(ctx, cname), op);
+  sexp_env_define(ctx, env, name=sexp_intern(ctx, cname, -1), op);
   sexp_gc_release2(ctx);
 }
 
@@ -22,9 +22,9 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
   type = sexp_make_fixnum(ctype);
   index = sexp_make_fixnum(cindex);
   op = sexp_make_getter(ctx, name=sexp_c_string(ctx, get, -1), type, index);
-  sexp_env_define(ctx, env, name=sexp_intern(ctx, get), op);
+  sexp_env_define(ctx, env, name=sexp_intern(ctx, get, -1), op);
   op = sexp_make_setter(ctx, name=sexp_c_string(ctx, set, -1), type, index);
-  sexp_env_define(ctx, env, name=sexp_intern(ctx, set), op);
+  sexp_env_define(ctx, env, name=sexp_intern(ctx, set, -1), op);
   sexp_gc_release2(ctx);
 }
 
@@ -43,7 +43,7 @@ static sexp sexp_get_opcode_name (sexp ctx, sexp op) {
   else if (! sexp_opcode_name(op))
     return SEXP_FALSE;
   else
-    return sexp_intern(ctx, sexp_opcode_name(op));
+    return sexp_intern(ctx, sexp_opcode_name(op), -1);
 }
 
 sexp sexp_init_library (sexp ctx, sexp env) {
