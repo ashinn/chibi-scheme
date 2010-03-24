@@ -11,7 +11,7 @@
 #define sexp_bignum_normalize(x) x
 #endif
 
-static sexp sexp_bit_and (sexp ctx, sexp x, sexp y) {
+static sexp sexp_bit_and (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
   sexp res;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
@@ -21,7 +21,7 @@ static sexp sexp_bit_and (sexp ctx, sexp x, sexp y) {
       res = (sexp) ((sexp_uint_t)x & (sexp_uint_t)y);
 #if SEXP_USE_BIGNUMS
     else if (sexp_bignump(y))
-      res = sexp_bit_and(ctx, y, x);
+      res = sexp_bit_and(ctx sexp_api_pass(self, n), y, x);
 #endif
     else
       res = sexp_type_exception(ctx, "bitwise-and: not an integer", y);
@@ -47,7 +47,7 @@ static sexp sexp_bit_and (sexp ctx, sexp x, sexp y) {
   return sexp_bignum_normalize(res);
 }
 
-static sexp sexp_bit_ior (sexp ctx, sexp x, sexp y) {
+static sexp sexp_bit_ior (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
   sexp res;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
@@ -57,7 +57,7 @@ static sexp sexp_bit_ior (sexp ctx, sexp x, sexp y) {
       res = (sexp) ((sexp_uint_t)x | (sexp_uint_t)y);
 #if SEXP_USE_BIGNUMS
     else if (sexp_bignump(y))
-      res = sexp_bit_ior(ctx, y, x);
+      res = sexp_bit_ior(ctx sexp_api_pass(self, n), y, x);
 #endif
     else
       res = sexp_type_exception(ctx, "bitwise-ior: not an integer", y);
@@ -87,7 +87,7 @@ static sexp sexp_bit_ior (sexp ctx, sexp x, sexp y) {
   return sexp_bignum_normalize(res);
 }
 
-static sexp sexp_bit_xor (sexp ctx, sexp x, sexp y) {
+static sexp sexp_bit_xor (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
   sexp res;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
@@ -97,7 +97,7 @@ static sexp sexp_bit_xor (sexp ctx, sexp x, sexp y) {
       res = sexp_make_fixnum(sexp_unbox_fixnum(x) ^ sexp_unbox_fixnum(y));
 #if SEXP_USE_BIGNUMS
     else if (sexp_bignump(y))
-      res = sexp_bit_xor(ctx, y, x);
+      res = sexp_bit_xor(ctx sexp_api_pass(self, n), y, x);
 #endif
     else
       res = sexp_type_exception(ctx, "bitwise-xor: not an integer", y);
@@ -129,7 +129,7 @@ static sexp sexp_bit_xor (sexp ctx, sexp x, sexp y) {
 
 /* should probably split into left and right shifts, that's a better */
 /* interface anyway */
-static sexp sexp_arithmetic_shift (sexp ctx, sexp i, sexp count) {
+static sexp sexp_arithmetic_shift (sexp ctx sexp_api_params(self, n), sexp i, sexp count) {
   sexp_uint_t tmp;
   sexp_sint_t c;
 #if SEXP_USE_BIGNUMS
@@ -156,7 +156,7 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp i, sexp count) {
       } else {
         sexp_gc_preserve1(ctx, res);
         res = sexp_fixnum_to_bignum(ctx, i);
-        res = sexp_arithmetic_shift(ctx, res, count);
+        res = sexp_arithmetic_shift(ctx sexp_api_pass(self, n), res, count);
         sexp_gc_release1(ctx);
       }
 #endif
@@ -208,7 +208,7 @@ static sexp_uint_t bit_count (sexp_uint_t i) {
           >> (sizeof(i) - 1) * CHAR_BIT);
 }
 
-static sexp sexp_bit_count (sexp ctx, sexp x) {
+static sexp sexp_bit_count (sexp ctx sexp_api_params(self, n), sexp x) {
   sexp res;
   sexp_sint_t i;
 #if SEXP_USE_BIGNUMS
@@ -250,7 +250,7 @@ static sexp_uint_t integer_log2 (sexp_uint_t x) {
     return (t = x >> 8) ? 8 + log_table_256[t] : log_table_256[x];
 }
 
-static sexp sexp_integer_length (sexp ctx, sexp x) {
+static sexp sexp_integer_length (sexp ctx sexp_api_params(self, n), sexp x) {
   sexp_sint_t tmp;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t hi;
@@ -269,7 +269,7 @@ static sexp sexp_integer_length (sexp ctx, sexp x) {
   }
 }
 
-static sexp sexp_bit_set_p (sexp ctx, sexp i, sexp x) {
+static sexp sexp_bit_set_p (sexp ctx sexp_api_params(self, n), sexp i, sexp x) {
 #if SEXP_USE_BIGNUMS
   sexp_uint_t pos;
 #endif
