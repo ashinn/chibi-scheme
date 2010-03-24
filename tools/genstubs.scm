@@ -1212,7 +1212,7 @@
   (write-utilities)
   (for-each write-func *funcs*)
   (for-each write-type-funcs *types*)
-  (cat "sexp sexp_init_library (sexp ctx, sexp env) {\n"
+  (cat "sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {\n"
        "  sexp_gc_var2(name, tmp);\n"
        "  sexp_gc_preserve2(ctx, name, tmp);\n")
   (for-each write-const *consts*)

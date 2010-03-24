@@ -228,7 +228,7 @@ static sexp sexp_hash_table_delete (sexp ctx, sexp ht, sexp obj) {
   return SEXP_VOID;
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
 
   sexp_define_foreign_opt(ctx, env, "string-hash", 2, sexp_string_hash, HASH_BOUND);
   sexp_define_foreign_opt(ctx, env, "string-ci-hash", 2, sexp_string_ci_hash, HASH_BOUND);

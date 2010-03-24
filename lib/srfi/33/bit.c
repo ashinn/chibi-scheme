@@ -290,7 +290,7 @@ static sexp sexp_bit_set_p (sexp ctx, sexp i, sexp x) {
   }
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "bit-and",    2, sexp_bit_and);
   sexp_define_foreign(ctx, env, "bit-ior",    2, sexp_bit_ior);
   sexp_define_foreign(ctx, env, "bit-xor",    2, sexp_bit_xor);

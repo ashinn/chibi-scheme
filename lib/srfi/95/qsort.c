@@ -172,7 +172,7 @@ static sexp sexp_sort_x (sexp ctx, sexp seq, sexp less, sexp key) {
   return res;
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign_opt(ctx, env, "sort!", 3, sexp_sort_x, SEXP_FALSE);
   return SEXP_VOID;
 }
