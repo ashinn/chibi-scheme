@@ -1,6 +1,6 @@
-/*  sexp.h -- header for sexp library                    */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  sexp.h -- header for sexp library                         */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_H
 #define SEXP_H
@@ -125,15 +125,23 @@ typedef struct sexp_struct *sexp;
 #define SEXP_MAX_FIXNUM ((((sexp_sint_t)1)<<(sizeof(sexp_sint_t)*8-SEXP_FIXNUM_BITS-1))-1)
 #define SEXP_MIN_FIXNUM (-SEXP_MAX_FIXNUM-1)
 
+#if SEXP_USE_SELF_PARAMETER
+#define sexp_api_params(self, n) , sexp self, long n
+#define sexp_api_pass(self, n) , self, n
+#else
+#define sexp_api_params(self, n)
+#define sexp_api_pass(self, n)
+#endif
+
 /* procedure types */
 typedef sexp (*sexp_proc0) (void);
-typedef sexp (*sexp_proc1) (sexp);
-typedef sexp (*sexp_proc2) (sexp, sexp);
-typedef sexp (*sexp_proc3) (sexp, sexp, sexp);
-typedef sexp (*sexp_proc4) (sexp, sexp, sexp, sexp);
-typedef sexp (*sexp_proc5) (sexp, sexp, sexp, sexp, sexp);
-typedef sexp (*sexp_proc6) (sexp, sexp, sexp, sexp, sexp, sexp);
-typedef sexp (*sexp_proc7) (sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc1) (sexp sexp_api_params(self, n));
+typedef sexp (*sexp_proc2) (sexp sexp_api_params(self, n), sexp);
+typedef sexp (*sexp_proc3) (sexp sexp_api_params(self, n), sexp, sexp);
+typedef sexp (*sexp_proc4) (sexp sexp_api_params(self, n), sexp, sexp, sexp);
+typedef sexp (*sexp_proc5) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc6) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc7) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp);
 
 typedef struct sexp_free_list_t *sexp_free_list;
 struct sexp_free_list_t {
@@ -820,46 +828,46 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 SEXP_API sexp sexp_make_context(sexp ctx, sexp_uint_t size);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
-SEXP_API sexp sexp_cons(sexp ctx, sexp head, sexp tail);
+SEXP_API sexp sexp_cons_op(sexp ctx sexp_api_params(self, n), sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
-SEXP_API sexp sexp_equalp (sexp ctx, sexp a, sexp b);
-SEXP_API sexp sexp_listp(sexp ctx, sexp obj);
-SEXP_API sexp sexp_reverse(sexp ctx, sexp ls);
-SEXP_API sexp sexp_nreverse(sexp ctx, sexp ls);
-SEXP_API sexp sexp_append2(sexp ctx, sexp a, sexp b);
-SEXP_API sexp sexp_memq(sexp ctx, sexp x, sexp ls);
-SEXP_API sexp sexp_assq(sexp ctx, sexp x, sexp ls);
-SEXP_API sexp sexp_length(sexp ctx, sexp ls);
+SEXP_API sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b);
+SEXP_API sexp sexp_listp_op(sexp ctx sexp_api_params(self, n), sexp obj);
+SEXP_API sexp sexp_reverse_op(sexp ctx sexp_api_params(self, n), sexp ls);
+SEXP_API sexp sexp_nreverse_op(sexp ctx sexp_api_params(self, n), sexp ls);
+SEXP_API sexp sexp_append2_op(sexp ctx sexp_api_params(self, n), sexp a, sexp b);
+SEXP_API sexp sexp_memq_op(sexp ctx sexp_api_params(self, n), sexp x, sexp ls);
+SEXP_API sexp sexp_assq_op(sexp ctx sexp_api_params(self, n), sexp x, sexp ls);
+SEXP_API sexp sexp_length_op(sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen);
-SEXP_API sexp sexp_make_string(sexp ctx, sexp len, sexp ch);
-SEXP_API sexp sexp_substring (sexp ctx, sexp str, sexp start, sexp end);
-SEXP_API sexp sexp_string_concatenate (sexp ctx, sexp str_ls, sexp sep);
-SEXP_API sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len);
-SEXP_API sexp sexp_string_to_symbol(sexp ctx, sexp str);
-SEXP_API sexp sexp_make_vector(sexp ctx, sexp len, sexp dflt);
-SEXP_API sexp sexp_list_to_vector(sexp ctx, sexp ls);
-SEXP_API sexp sexp_make_cpointer(sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
-SEXP_API sexp sexp_write(sexp ctx, sexp obj, sexp out);
-SEXP_API sexp sexp_display(sexp ctx, sexp obj, sexp out);
-SEXP_API sexp sexp_flush_output(sexp ctx, sexp out);
-SEXP_API sexp sexp_read_string(sexp ctx, sexp in);
-SEXP_API sexp sexp_read_symbol(sexp ctx, sexp in, int init, int internp);
-SEXP_API sexp sexp_read_number(sexp ctx, sexp in, int base);
-SEXP_API sexp sexp_read_raw(sexp ctx, sexp in);
-SEXP_API sexp sexp_read(sexp ctx, sexp in);
-SEXP_API sexp sexp_read_from_string(sexp ctx, const char *str, sexp_sint_t len);
-SEXP_API sexp sexp_write_to_string(sexp ctx, sexp obj);
-SEXP_API sexp sexp_finalize_port (sexp ctx, sexp port);
-SEXP_API sexp sexp_make_input_port(sexp ctx, FILE* in, sexp name);
-SEXP_API sexp sexp_make_output_port(sexp ctx, FILE* out, sexp name);
-SEXP_API sexp sexp_make_input_string_port(sexp ctx, sexp str);
-SEXP_API sexp sexp_make_output_string_port(sexp ctx);
-SEXP_API sexp sexp_get_output_string(sexp ctx, sexp port);
-SEXP_API sexp sexp_make_exception(sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
-SEXP_API sexp sexp_user_exception(sexp ctx, sexp self, const char *msg, sexp x);
-SEXP_API sexp sexp_type_exception(sexp ctx, const char *message, sexp x);
-SEXP_API sexp sexp_range_exception(sexp ctx, sexp obj, sexp start, sexp end);
-SEXP_API sexp sexp_print_exception(sexp ctx, sexp exn, sexp out);
+SEXP_API sexp sexp_make_string_op(sexp ctx sexp_api_params(self, n), sexp len, sexp ch);
+SEXP_API sexp sexp_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start, sexp end);
+SEXP_API sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sexp str_ls, sexp sep);
+SEXP_API sexp sexp_intern (sexp ctx, const char *str, sexp_sint_t len);
+SEXP_API sexp sexp_string_to_symbol_op (sexp ctx sexp_api_params(self, n), sexp str);
+SEXP_API sexp sexp_make_vector (sexp ctx, sexp len, sexp dflt);
+SEXP_API sexp sexp_list_to_vector_op (sexp ctx sexp_api_params(self, n), sexp ls);
+SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
+SEXP_API sexp sexp_write_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out);
+SEXP_API sexp sexp_display_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out);
+SEXP_API sexp sexp_flush_output_op (sexp ctx sexp_api_params(self, n), sexp out);
+SEXP_API sexp sexp_read_string (sexp ctx, sexp in);
+SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
+SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base);
+SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);
+SEXP_API sexp sexp_read_op (sexp ctx sexp_api_params(self, n), sexp in);
+SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len);
+SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
+SEXP_API sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port);
+SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
+SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
+SEXP_API sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str);
+SEXP_API sexp sexp_make_output_string_port_op (sexp ctx sexp_api_params(self, n));
+SEXP_API sexp sexp_get_output_string_op (sexp ctx sexp_api_params(self, n), sexp port);
+SEXP_API sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
+SEXP_API sexp sexp_user_exception (sexp ctx, sexp self, const char *msg, sexp x);
+SEXP_API sexp sexp_type_exception (sexp ctx, const char *message, sexp x);
+SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
+SEXP_API sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp out);
 SEXP_API void sexp_init(void);
 
 #define SEXP_COPY_DEFAULT SEXP_ZERO
@@ -868,15 +876,15 @@ SEXP_API void sexp_init(void);
 #if SEXP_USE_GLOBAL_HEAP
 #define sexp_destroy_context(ctx)
 #else
-SEXP_API void sexp_destroy_context(sexp ctx);
-SEXP_API sexp sexp_copy_context(sexp ctx, sexp dst, sexp flags);
+SEXP_API void sexp_destroy_context (sexp ctx);
+SEXP_API sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags);
 #endif
 
 #if SEXP_USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
-SEXP_API sexp sexp_register_simple_type (sexp ctx, sexp name, sexp slots);
+SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
+SEXP_API sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp slots);
 SEXP_API sexp sexp_register_c_type (sexp ctx, sexp name);
-SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp obj);
+SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj);
 #define sexp_register_c_type(ctx, name, finalizer)                      \
   sexp_register_type(ctx, name, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, \
                      SEXP_ZERO, sexp_make_fixnum(sexp_sizeof(cpointer)), \
@@ -885,6 +893,38 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp obj);
 
 #define sexp_current_error_port(ctx) sexp_env_global_ref(sexp_context_env(ctx),sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL),SEXP_FALSE)
 #define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
+
+/* simplify primitive API interface */
+
+#define sexp_read(ctx, in) sexp_read_op(ctx sexp_api_pass(NULL, 1), in)
+#define sexp_write(ctx, obj, out) sexp_write_op(ctx sexp_api_pass(NULL, 2), obj, out)
+#define sexp_display(ctx, obj, out) sexp_display_op(ctx sexp_api_pass(NULL, 2), obj, out)
+#define sexp_print_exception(ctx, e, out) sexp_print_exception_op(ctx sexp_api_pass(NULL, 2), e, out)
+#define sexp_flush_output(ctx, obj, out) sexp_flush_output_op(ctx sexp_api_pass(NULL, 1), out)
+#define sexp_equalp(ctx, a, b) sexp_equalp_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_listp(ctx, x) sexp_listp_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_length(ctx, x) sexp_length_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_reverse(ctx, x) sexp_reverse_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_nreverse(ctx, x) sexp_nreverse_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_cons(ctx, a, b) sexp_cons_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_append2(ctx, a, b) sexp_append2_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_list_to_vector(ctx, x) sexp_list_to_vector_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_exception_type(ctx, x) sexp_exception_type_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), l, c)
+#define sexp_string_cmp(ctx, a, b, c) sexp_string_cmp_op(ctx sexp_api_pass(NULL, 3), a, b, c)
+#define sexp_substring(ctx, a, b, c) sexp_substring_op(ctx sexp_api_pass(NULL, 3), a, b, c)
+#define sexp_string_concatenate(ctx, ls, s) sexp_string_concatenate_op(ctx sexp_api_pass(NULL, 2), ls, s)
+#define sexp_memq(ctx, a, b) sexp_memq_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_assq(ctx, a, b) sexp_assq_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_make_output_string_port(ctx) sexp_make_output_string_port_op(ctx sexp_api_pass(NULL, 0))
+#define sexp_make_input_string_port(ctx, s) sexp_make_input_string_port_op(ctx sexp_api_pass(NULL, 1), s)
+#define sexp_get_output_string(ctx, out) sexp_get_output_string_op(ctx sexp_api_pass(NULL, 1), out)
+#define sexp_expt(ctx, a, b) sexp_expt_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_register_simple_type(ctx, a, b) sexp_register_simple_type_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_make_type_predicate(ctx, a, b) sexp_make_type_predicate_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_make_constructor(ctx, a, b) sexp_make_constructor_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
+#define sexp_make_setter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
 
 #ifdef __cplusplus
 } /* extern "C" */

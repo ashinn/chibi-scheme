@@ -129,11 +129,11 @@ chibi-scheme-static$(EXE): main.o eval.o sexp.o
 clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi
 	make chibi-scheme$(EXE)
 	make libs
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PATH=.:$(PATH) $(GENSTATIC) $< > $@
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" PATH=".:$(PATH)" $(GENSTATIC) $< > $@
 
 %.c: %.stub $(GENSTUBS)
 	make chibi-scheme$(EXE)
-	-LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PATH=.:$(PATH) $(GENSTUBS) $<
+	-LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" PATH=".:$(PATH)" $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
@@ -149,7 +149,7 @@ cleaner: clean
 
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
-	    ./chibi-scheme$(EXE) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
+	    LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if diff -q $(DIFFOPTS) $${f%.scm}.out $${f%.scm}.res; then \
 	        echo "[PASS] $${f%.scm}"; \
 	    else \
@@ -161,22 +161,22 @@ test-build:
 	./tests/build/build-tests.sh
 
 test-numbers: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/numeric-tests.scm
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
 test-hash: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/hash-tests.scm
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/hash-tests.scm
 
 test-match: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/match-tests.scm
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/match-tests.scm
 
 test-loop: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/loop-tests.scm
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/loop-tests.scm
 
 test-sort: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/sort-tests.scm
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/sort-tests.scm
 
 test: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./chibi-scheme$(EXE) tests/r5rs-tests.scm
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/r5rs-tests.scm
 
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)

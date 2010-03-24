@@ -1,6 +1,6 @@
-/*  gc.c -- simple mark&sweep garbage collector          */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  gc.c -- simple mark&sweep garbage collector               */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/sexp.h"
 
@@ -98,7 +98,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       if ((! sexp_gc_mark(p)) && (! stack_references_pointer_p(ctx, p))) {
         /* free p */
         finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
-        if (finalizer) finalizer(ctx, p);
+        if (finalizer) finalizer(ctx sexp_api_pass(NULL, 1), p);
         sum_freed += size;
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */

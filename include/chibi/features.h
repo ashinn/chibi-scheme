@@ -1,6 +1,6 @@
-/*  features.h -- general feature configuration          */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  features.h -- general feature configuration               */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 /* uncomment this to disable most features */
 /*   Most features are enabled by default, but setting this */
@@ -103,6 +103,10 @@
 /*   This includes the trigonometric and expt functions. */
 /*   Automatically disabled if you've disabled flonums. */
 /* #define SEXP_USE_MATH 0 */
+
+/* uncomment this to disable the self and n parameters to primitives */
+/*   This is the old style API. */
+/* #define SEXP_USE_SELF_PARAMETER 0 */
 
 /* uncomment this to disable warning about references to undefined variables */
 /*   This is something of a hack, but can be quite useful. */
@@ -286,6 +290,10 @@
 
 #ifndef SEXP_USE_MATH
 #define SEXP_USE_MATH SEXP_USE_FLONUMS && ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_SELF_PARAMETER
+#define SEXP_USE_SELF_PARAMETER 1
 #endif
 
 #ifndef SEXP_USE_WARN_UNDEFS
