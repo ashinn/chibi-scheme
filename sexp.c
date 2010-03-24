@@ -122,9 +122,9 @@ static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
 #define SEXP_INIT_NUM_TYPES (SEXP_NUM_CORE_TYPES*2)
 #endif
 
-sexp sexp_register_type (sexp ctx, sexp name, sexp fb, sexp felb, sexp flb,
-                         sexp flo, sexp fls, sexp sb, sexp so, sexp sc,
-                         sexp_proc2 f) {
+sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
+                            sexp fb, sexp felb, sexp flb, sexp flo, sexp fls,
+                            sexp sb, sexp so, sexp sc, sexp_proc2 f) {
 #if SEXP_USE_GLOBAL_TYPES
   struct sexp_struct *new, *tmp;
 #else

@@ -23,7 +23,7 @@ static sexp_uint_t string_hash (char *str, sexp_uint_t bound) {
   return acc % bound;
 }
 
-static sexp sexp_string_hash (sexp ctx, sexp str, sexp bound) {
+static sexp sexp_string_hash (sexp ctx sexp_api_params(self, n), sexp str, sexp bound) {
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, "string-hash: not a string", str);
   else if (! sexp_integerp(bound))
@@ -38,7 +38,7 @@ static sexp_uint_t string_ci_hash (char *str, sexp_uint_t bound) {
   return acc % bound;
 }
 
-static sexp sexp_string_ci_hash (sexp ctx, sexp str, sexp bound) {
+static sexp sexp_string_ci_hash (sexp ctx sexp_api_params(self, n), sexp str, sexp bound) {
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, "string-ci-hash: not a string", str);
   else if (! sexp_integerp(bound))
@@ -89,13 +89,13 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
   return (bound ? acc % bound : acc);
 }
 
-static sexp sexp_hash (sexp ctx, sexp obj, sexp bound) {
+static sexp sexp_hash (sexp ctx sexp_api_params(self, n), sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
     return sexp_type_exception(ctx, "hash: not an integer", bound);
   return sexp_make_fixnum(hash_one(ctx, obj, sexp_unbox_fixnum(bound), HASH_DEPTH));
 }
 
-static sexp sexp_hash_by_identity (sexp ctx, sexp obj, sexp bound) {
+static sexp sexp_hash_by_identity (sexp ctx sexp_api_params(self, n), sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
     return sexp_type_exception(ctx, "hash-by-identity: not an integer", bound);
   return sexp_make_fixnum((sexp_uint_t)obj % sexp_unbox_fixnum(bound));
@@ -106,9 +106,9 @@ static sexp sexp_get_bucket (sexp ctx, sexp buckets, sexp hash_fn, sexp obj) {
   sexp res;
   sexp_uint_t len = sexp_vector_length(buckets);
   if (hash_fn == sexp_make_fixnum(1))
-    res = sexp_hash_by_identity(ctx, obj, sexp_make_fixnum(len));
+    res = sexp_hash_by_identity(ctx sexp_api_pass(NULL, 2), obj, sexp_make_fixnum(len));
   else if (hash_fn == sexp_make_fixnum(2))
-    res = sexp_hash(ctx, obj, sexp_make_fixnum(len));
+    res = sexp_hash(ctx sexp_api_pass(NULL, 2), obj, sexp_make_fixnum(len));
   else {
     sexp_gc_preserve1(ctx, args);
     args = sexp_list2(ctx, obj, sexp_make_fixnum(len));
@@ -180,7 +180,7 @@ static void sexp_regrow_hash_table (sexp ctx, sexp ht, sexp oldbuckets, sexp has
   sexp_gc_release1(ctx);
 }
 
-static sexp sexp_hash_table_cell (sexp ctx, sexp ht, sexp obj, sexp createp) {
+static sexp sexp_hash_table_cell (sexp ctx sexp_api_params(self, n), sexp ht, sexp obj, sexp createp) {
   sexp buckets, eq_fn, hash_fn, i;
   sexp_uint_t size;
   sexp_gc_var1(res);
@@ -209,7 +209,7 @@ static sexp sexp_hash_table_cell (sexp ctx, sexp ht, sexp obj, sexp createp) {
   return res;
 }
 
-static sexp sexp_hash_table_delete (sexp ctx, sexp ht, sexp obj) {
+static sexp sexp_hash_table_delete (sexp ctx sexp_api_params(self, n), sexp ht, sexp obj) {
   sexp buckets=sexp_hash_table_buckets(ht), eq_fn=sexp_hash_table_eq_fn(ht),
     hash_fn=sexp_hash_table_hash_fn(ht), i, p, res;
   i = sexp_get_bucket(ctx, buckets, hash_fn, obj);

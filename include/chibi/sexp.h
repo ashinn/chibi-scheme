@@ -134,7 +134,6 @@ typedef struct sexp_struct *sexp;
 #endif
 
 /* procedure types */
-typedef sexp (*sexp_proc0) (void);
 typedef sexp (*sexp_proc1) (sexp sexp_api_params(self, n));
 typedef sexp (*sexp_proc2) (sexp sexp_api_params(self, n), sexp);
 typedef sexp (*sexp_proc3) (sexp sexp_api_params(self, n), sexp, sexp);
@@ -921,6 +920,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_get_output_string(ctx, out) sexp_get_output_string_op(ctx sexp_api_pass(NULL, 1), out)
 #define sexp_expt(ctx, a, b) sexp_expt_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_register_simple_type(ctx, a, b) sexp_register_simple_type_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_register_type(ctx, a, b, c, d, e, f, g, h, i, j) sexp_register_type_op(ctx sexp_api_pass(NULL, 10), a, b, c, d, e, f, g, h, i, j)
 #define sexp_make_type_predicate(ctx, a, b) sexp_make_type_predicate_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_constructor(ctx, a, b) sexp_make_constructor_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)

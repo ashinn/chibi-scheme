@@ -134,7 +134,8 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
   return res;
 }
 
-static sexp sexp_sort_x (sexp ctx, sexp seq, sexp less, sexp key) {
+static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
+                         sexp less, sexp key) {
   sexp_sint_t len;
   sexp res, *data;
   sexp_gc_var1(vec);

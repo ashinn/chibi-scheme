@@ -37,17 +37,17 @@ typedef struct random_data sexp_random_t;
 static sexp_uint_t rs_type_id;
 static sexp default_random_source;
 
-static sexp sexp_rs_random_integer (sexp ctx, sexp rs, sexp bound) {
+static sexp sexp_rs_random_integer (sexp ctx sexp_api_params(self, n), sexp rs, sexp bound) {
   sexp res;
-  int32_t n;
+  int32_t m;
 #if SEXP_USE_BIGNUMS
   int32_t hi, mod, len, i, *data;
 #endif
   if (! sexp_random_source_p(rs))
     res = sexp_type_exception(ctx, "not a random-source", rs);
   if (sexp_fixnump(bound)) {
-    sexp_call_random(rs, n);
-    res = sexp_make_fixnum(n % sexp_unbox_fixnum(bound));
+    sexp_call_random(rs, m);
+    res = sexp_make_fixnum(m % sexp_unbox_fixnum(bound));
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(bound)) {
     hi = sexp_bignum_hi(bound);
@@ -55,13 +55,13 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp rs, sexp bound) {
     res = sexp_make_bignum(ctx, hi);
     data = (int32_t*) sexp_bignum_data(res);
     for (i=0; i<len-1; i++) {
-      sexp_call_random(rs, n);
-      data[i] = n;
+      sexp_call_random(rs, m);
+      data[i] = m;
     }
-    sexp_call_random(rs, n);
+    sexp_call_random(rs, m);
     mod = sexp_bignum_data(bound)[hi-1] * sizeof(int32_t) / sizeof(sexp_uint_t);
     if (mod)
-      data[i] = n % mod;
+      data[i] = m % mod;
 #endif
   } else {
     res = sexp_type_exception(ctx, "random-integer: not an integer", bound);
@@ -69,11 +69,11 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp rs, sexp bound) {
   return res;
 }
 
-static sexp sexp_random_integer (sexp ctx, sexp bound) {
-  return sexp_rs_random_integer(ctx, default_random_source, bound);
+static sexp sexp_random_integer (sexp ctx sexp_api_params(self, n), sexp bound) {
+  return sexp_rs_random_integer(ctx sexp_api_pass(self, n), default_random_source, bound);
 }
 
-static sexp sexp_rs_random_real (sexp ctx, sexp rs) {
+static sexp sexp_rs_random_real (sexp ctx sexp_api_params(self, n), sexp rs) {
   int32_t res;
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
@@ -81,27 +81,27 @@ static sexp sexp_rs_random_real (sexp ctx, sexp rs) {
   return sexp_make_flonum(ctx, (double)res / (double)RAND_MAX);
 }
 
-static sexp sexp_random_real (sexp ctx) {
-  return sexp_rs_random_real(ctx, default_random_source);
+static sexp sexp_random_real (sexp ctx sexp_api_params(self, n)) {
+  return sexp_rs_random_real(ctx sexp_api_pass(self, n), default_random_source);
 }
 
 #if SEXP_BSD
 
-static sexp sexp_make_random_source (sexp ctx) {
+static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
   sexp res;
   res = sexp_alloc_tagged(ctx, sexp_sizeof_random, rs_type_id);
   *sexp_random_data(res) = 1;
   return res;
 }
 
-static sexp sexp_random_source_state_ref (sexp ctx, sexp rs) {
+static sexp sexp_random_source_state_ref (sexp ctx sexp_api_params(self, n), sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
   else
     return sexp_make_integer(ctx, *sexp_random_data(rs));
 }
 
-static sexp sexp_random_source_state_set (sexp ctx, sexp rs, sexp state) {
+static sexp sexp_random_source_state_set (sexp ctx sexp_api_params(self, n), sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
   else if (sexp_fixnump(state))
@@ -118,7 +118,7 @@ static sexp sexp_random_source_state_set (sexp ctx, sexp rs, sexp state) {
 
 #else
 
-static sexp sexp_make_random_source (sexp ctx) {
+static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
   sexp res;
   sexp_gc_var1(state);
   sexp_gc_preserve1(ctx, state);
@@ -130,14 +130,14 @@ static sexp sexp_make_random_source (sexp ctx) {
   return res;
 }
 
-static sexp sexp_random_source_state_ref (sexp ctx, sexp rs) {
+static sexp sexp_random_source_state_ref (sexp ctx sexp_api_params(self, n), sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
   else
     return sexp_substring(ctx, sexp_random_state(rs), ZERO, STATE_SIZE);
 }
 
-static sexp sexp_random_source_state_set (sexp ctx, sexp rs, sexp state) {
+static sexp sexp_random_source_state_set (sexp ctx sexp_api_params(self, n), sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
   else if (! (sexp_stringp(state)
@@ -150,14 +150,14 @@ static sexp sexp_random_source_state_set (sexp ctx, sexp rs, sexp state) {
 
 #endif
 
-static sexp sexp_random_source_randomize (sexp ctx, sexp rs) {
+static sexp sexp_random_source_randomize (sexp ctx sexp_api_params(self, n), sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
   sexp_seed_random(time(NULL), rs);
   return SEXP_VOID;
 }
 
-static sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp rs, sexp seed) {
+static sexp sexp_random_source_pseudo_randomize (sexp ctx sexp_api_params(self, n), sexp rs, sexp seed) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, "not a random-source", rs);
   if (! sexp_fixnump(seed))
@@ -193,10 +193,10 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "random-source-randomize!", 1, sexp_random_source_randomize);
   sexp_define_foreign(ctx, env, "random-source-pseudo-randomize!", 2, sexp_random_source_pseudo_randomize);
 
-  default_random_source = op = sexp_make_random_source(ctx);
+  default_random_source = op = sexp_make_random_source(ctx sexp_api_pass(NULL, 0));
   name = sexp_intern(ctx, "default-random-source", -1);
   sexp_env_define(ctx, env, name, default_random_source);
-  sexp_random_source_randomize(ctx, default_random_source);
+  sexp_random_source_randomize(ctx sexp_api_pass(NULL, 0), default_random_source);
 
   sexp_gc_release2(ctx);
   return SEXP_VOID;
