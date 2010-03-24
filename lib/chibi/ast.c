@@ -46,7 +46,7 @@ static sexp sexp_get_opcode_name (sexp ctx, sexp op) {
     return sexp_intern(ctx, sexp_opcode_name(op), -1);
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type_predicate(ctx, env, "syntactic-closure?", SEXP_SYNCLO);
   sexp_define_type_predicate(ctx, env, "lambda?", SEXP_LAMBDA);
   sexp_define_type_predicate(ctx, env, "cnd?", SEXP_CND);

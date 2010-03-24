@@ -40,7 +40,7 @@ sexp sexp_get_environment_variables (sexp ctx) {
   return res;
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "get-environment-variable", 1, sexp_get_environment_variable);
   sexp_define_foreign(ctx, env, "get-environment-variables", 0, sexp_get_environment_variables);
   return SEXP_VOID;

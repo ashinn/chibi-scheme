@@ -121,7 +121,7 @@ static sexp sexp_heap_dump (sexp ctx, sexp depth) {
   return sexp_heap_walk(ctx, sexp_unbox_fixnum(depth), 1);
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "heap-stats", 0, sexp_heap_stats);
   sexp_define_foreign_opt(ctx, env, "heap-dump", 1, sexp_heap_dump, SEXP_ONE);
   return SEXP_VOID;

@@ -110,7 +110,7 @@ static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
   return disasm(ctx, bc, out, 0);
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign_param(ctx, env, "disasm", 2, (sexp_proc1)sexp_disasm, "*current-output-port*");
   return SEXP_VOID;
 }

@@ -166,7 +166,7 @@ static sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp rs, sexp seed) {
   return SEXP_VOID;
 }
 
-sexp sexp_init_library (sexp ctx, sexp env) {
+sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
 
