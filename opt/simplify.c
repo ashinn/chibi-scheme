@@ -137,7 +137,7 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
   return res;
 }
 
-sexp sexp_simplify (sexp ctx, sexp ast) {
+sexp sexp_simplify (sexp ctx sexp_api_params(self, n), sexp ast) {
   return simplify(ctx, ast, SEXP_NULL, NULL);
 }
 

@@ -1,6 +1,6 @@
-/*  eval.h -- headers for eval library                   */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  eval.h -- headers for eval library                        */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_EVAL_H
 #define SEXP_EVAL_H
@@ -132,20 +132,20 @@ SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply_optimization (sexp context, sexp proc, sexp ast);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp lambda, sexp name);
-SEXP_API sexp sexp_eval (sexp context, sexp obj, sexp env);
+SEXP_API sexp sexp_eval_op (sexp context sexp_api_params(self, n), sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, const char *str, sexp_sint_t len, sexp env);
-SEXP_API sexp sexp_load (sexp context, sexp expr, sexp env);
-SEXP_API sexp sexp_make_env (sexp context);
-SEXP_API sexp sexp_make_null_env (sexp context, sexp version);
+SEXP_API sexp sexp_load_op (sexp context sexp_api_params(self, n), sexp expr, sexp env);
+SEXP_API sexp sexp_make_env_op (sexp context sexp_api_params(self, n));
+SEXP_API sexp sexp_make_null_env_op (sexp context sexp_api_params(self, n), sexp version);
 SEXP_API sexp sexp_make_primitive_env (sexp context, sexp version);
-SEXP_API sexp sexp_make_standard_env (sexp context, sexp version);
+SEXP_API sexp sexp_make_standard_env_op (sexp context sexp_api_params(self, n), sexp version);
 SEXP_API sexp sexp_load_standard_parameters (sexp context, sexp env);
 SEXP_API sexp sexp_load_standard_env (sexp context, sexp env, sexp version);
 SEXP_API sexp sexp_find_module_file (sexp ctx, const char *file);
 SEXP_API sexp sexp_load_module_file (sexp ctx, const char *file, sexp env);
-SEXP_API sexp sexp_add_module_directory (sexp ctx, sexp dir, sexp appendp);
+SEXP_API sexp sexp_add_module_directory_op (sexp ctx sexp_api_params(self, n), sexp dir, sexp appendp);
 SEXP_API sexp sexp_extend_env (sexp context, sexp env, sexp vars, sexp value);
-SEXP_API sexp sexp_env_copy (sexp context, sexp to, sexp from, sexp ls, sexp immutp);
+SEXP_API sexp sexp_env_copy_op (sexp context sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp);
 SEXP_API sexp sexp_env_define (sexp context, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_env_cell (sexp env, sexp sym);
 SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
@@ -162,11 +162,27 @@ SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int
 SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args, sexp_proc1 f, const char *param);
 
 #if SEXP_USE_TYPE_DEFS
-SEXP_API sexp sexp_make_type_predicate (sexp ctx, sexp name, sexp type);
-SEXP_API sexp sexp_make_constructor (sexp ctx, sexp name, sexp type);
-SEXP_API sexp sexp_make_getter (sexp ctx, sexp name, sexp type, sexp index);
-SEXP_API sexp sexp_make_setter (sexp ctx, sexp name, sexp type, sexp index);
+SEXP_API sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type);
+SEXP_API sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type);
+SEXP_API sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index);
+SEXP_API sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index);
 #endif
+
+/* simplify primitive API interface */
+#define sexp_make_synclo(ctx, a, b, c) sexp_make_synclo_op(ctx sexp_api_pass(NULL, 3) a, b, c)
+#define sexp_make_env(ctx) sexp_make_env_op(ctx sexp_api_pass(NULL, 0))
+#define sexp_make_null_env(ctx, v) sexp_make_null_env_op(ctx sexp_api_pass(NULL, 0), v)
+#define sexp_make_standard_env(ctx) sexp_make_standard_env_op(ctx sexp_api_pass(NULL, 0))
+#define sexp_add_module_directory(ctx, d, a) sexp_add_module_directory_op(ctx sexp_api_pass(NULL, 1), d, a)
+#define sexp_eval(ctx, x, e) sexp_eval_op(ctx sexp_api_pass(NULL, 2), x, e)
+#define sexp_load(ctx, f, e) sexp_load_op(ctx sexp_api_pass(NULL, 2), f, e)
+#define sexp_env_copy(ctx, a, b, c, d) sexp_env_copy_op(ctx sexp_api_pass(NULL, 4), a, b, c, d)
+#define sexp_identifierp(ctx, x) sexp_identifier_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_identifier_to_symbol(ctx, x) sexp_syntactic_closure_expr(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_identifier_eq(ctx, a, b, c, d) sexp_identifier_eq_op(ctx sexp_api_pass(NULL, 4), a, b, c, d)
+#define sexp_open_input_file(ctx, x) sexp_open_input_file_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_open_output_file(ctx, x) sexp_open_output_file_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_close_port(ctx, x) sexp_close_port_op(ctx sexp_api_pass(NULL, 1), x)
 
 #ifdef __cplusplus
 } /* extern "C" */
