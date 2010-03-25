@@ -143,37 +143,37 @@ void sexp_build_srv (sexp ctx, sexp_plan9_srv s, sexp ls) {
     = s->create = s->remove = s->read = s->write = s->stat = s->wstat
     = s->flush = s->destroyfid = s->destroyreq = s->end = SEXP_FALSE;
   for ( ; sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls)); ls=sexp_cddr(ls)) {
-    if (sexp_car(ls) == sexp_intern(ctx, "auth:")) {
+    if (sexp_car(ls) == sexp_intern(ctx, "auth:", -1)) {
       s->auth = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "attach:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "attach:", -1)) {
       s->attach = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "walk:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "walk:", -1)) {
       s->walk = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "walk1:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "walk1:", -1)) {
       s->walk1 = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "clone:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "clone:", -1)) {
       s->clone = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "open:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "open:", -1)) {
       s->open = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "create:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "create:", -1)) {
       s->create = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "remove:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "remove:", -1)) {
       s->remove = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "read:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "read:", -1)) {
       s->read = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "write:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "write:", -1)) {
       s->write = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "stat:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "stat:", -1)) {
       s->stat = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "wstat:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "wstat:", -1)) {
       s->wstat = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "flush:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "flush:", -1)) {
       s->flush = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "destroyfid:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "destroyfid:", -1)) {
       s->destroyfid = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "destroyreq:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "destroyreq:", -1)) {
       s->destroyreq = sexp_cadr(ls);
-    } else if (sexp_car(ls) == sexp_intern(ctx, "end:")) {
+    } else if (sexp_car(ls) == sexp_intern(ctx, "end:", -1)) {
       s->end = sexp_cadr(ls);
     }
   }
