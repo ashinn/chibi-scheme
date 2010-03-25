@@ -15,6 +15,8 @@ HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/features.h includ
 include/chibi/install.h: mkfile
 	echo '#define sexp_default_module_dir "'$MODDIR'"' > include/chibi/install.h
 	echo '#define sexp_platform "plan9"' >> include/chibi/install.h
+	echo '#define sexp_version "'`{cat VERSION}'"' >> include/chibi/install.h
+	echo '#define sexp_release_name "'`{cat RELEASE}'"' >> include/chibi/install.h
 
 install:V: $BIN/$TARG
 	test -d $MODDIR || mkdir -p $MODDIR
