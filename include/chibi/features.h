@@ -197,7 +197,9 @@
 #define SEXP_BSD 1
 #else
 #define SEXP_BSD 0
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #endif
 
 #ifndef SEXP_USE_NO_FEATURES
