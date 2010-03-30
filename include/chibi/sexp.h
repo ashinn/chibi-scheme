@@ -14,9 +14,6 @@ extern "C" {
 #include "chibi/features.h"
 #include "chibi/install.h"
 
-#include <ctype.h>
-#include <stdio.h>
-
 #if SEXP_USE_DL
 #ifndef __MINGW32__
 #include <dlfcn.h>
@@ -39,6 +36,9 @@ typedef unsigned long size_t;
 #include <sys/stat.h>
 #include <math.h>
 #endif
+
+#include <ctype.h>
+#include <stdio.h>
 
 /* tagging system
  *   bits end in  00:  pointer
