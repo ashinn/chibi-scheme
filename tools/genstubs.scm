@@ -982,7 +982,8 @@
 
 (define (write-func func)
   (cat "static sexp " (func-stub-name func)
-       " (sexp ctx" (write-parameters (func-scheme-args func)) ") {\n")
+       " (sexp ctx sexp_api_params(self, n)"
+       (write-parameters (func-scheme-args func)) ") {\n")
   (write-locals func)
   (write-validators (func-scheme-args func))
   (write-temporaries func)
