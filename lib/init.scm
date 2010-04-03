@@ -498,24 +498,6 @@
                 "0"
                 (list->string (if (negative? num) (cons #\- res) res)))))))
 
-(define (string->number str . o)
-  (let ((res
-         (cond
-          ((= 0 (string-length str))
-           #f)
-          ((if (null? o)
-               #t
-               (if (eq? 10 (car o)) #t (eq? #\# (string-ref str 0))))
-           (call-with-input-string str (lambda (in) (read in))))
-          (else
-           (let ((len (string-length str)))
-             (let lp ((i 0) (d (car o)) (acc 0))
-               (if (>= i len)
-                   acc
-                   (let ((v (digit-value (string-ref str i))))
-                     (and v (lp (+ i 1) d (+ (* acc d) v)))))))))))
-    (and (number? res) res)))
-
 ;; vector utils
 
 (define (list->vector ls)
