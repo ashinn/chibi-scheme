@@ -483,6 +483,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define SEXP_SEVEN   sexp_make_fixnum(7)
 #define SEXP_EIGHT   sexp_make_fixnum(8)
 #define SEXP_NINE    sexp_make_fixnum(9)
+#define SEXP_TEN     sexp_make_fixnum(10)
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
@@ -510,8 +511,10 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #if SEXP_USE_FLONUMS
 #define sexp_fixnum_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_fixnum(x)))
+#define sexp_numberp(x) (sexp_exact_integerp(x) || sexp_flonump(x))
 #else
 #define sexp_fixnum_to_flonum(ctx, x) (x)
+#define sexp_numberp(x) sexp_exact_integerp(x)
 #endif
 
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
@@ -843,6 +846,7 @@ SEXP_API sexp sexp_substring_op (sexp ctx sexp_api_params(self, n), sexp str, se
 SEXP_API sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sexp str_ls, sexp sep);
 SEXP_API sexp sexp_intern (sexp ctx, const char *str, sexp_sint_t len);
 SEXP_API sexp sexp_string_to_symbol_op (sexp ctx sexp_api_params(self, n), sexp str);
+SEXP_API sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp b);
 SEXP_API sexp sexp_make_vector (sexp ctx, sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector_op (sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
@@ -887,7 +891,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_register_c_type(ctx, name, finalizer)                      \
   sexp_register_type(ctx, name, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, \
                      SEXP_ZERO, sexp_make_fixnum(sexp_sizeof(cpointer)), \
-                     SEXP_ZERO, SEXP_ZERO, finalizer)
+                     SEXP_ZERO, SEXP_ZERO, (sexp_proc2)finalizer)
 #endif
 
 #define sexp_current_error_port(ctx) sexp_env_global_ref(sexp_context_env(ctx),sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL),SEXP_FALSE)
@@ -909,6 +913,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_append2(ctx, a, b) sexp_append2_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_list_to_vector(ctx, x) sexp_list_to_vector_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_exception_type(ctx, x) sexp_exception_type_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_string_to_number(ctx, s, b) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), s, b)
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), l, c)
 #define sexp_string_cmp(ctx, a, b, c) sexp_string_cmp_op(ctx sexp_api_pass(NULL, 3), a, b, c)
 #define sexp_substring(ctx, a, b, c) sexp_substring_op(ctx sexp_api_pass(NULL, 3), a, b, c)

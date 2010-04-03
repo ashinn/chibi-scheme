@@ -1682,6 +1682,23 @@ sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len) {
   return res;
 }
 
+sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp b) {
+  int base;
+  sexp_gc_var1(in);
+  if (! sexp_stringp(str))
+    return sexp_type_exception(ctx, "string->number: not a string", str);
+  else if (! sexp_numberp(b))
+    return sexp_type_exception(ctx, "string->number: not a number", b);
+  if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
+    return sexp_type_exception(ctx, "string->number: bad base", b);
+  sexp_gc_preserve1(ctx, in);
+  in = sexp_make_input_string_port(ctx, str);
+  in = ((sexp_string_data(str)[0] == '#') ?
+        sexp_read(ctx, in) : sexp_read_number(ctx, in, base));
+  sexp_gc_release1(ctx);
+  return sexp_numberp(in) ? in : SEXP_FALSE;
+}
+
 sexp sexp_write_to_string (sexp ctx, sexp obj) {
   sexp str;
   sexp_gc_var1(out);
