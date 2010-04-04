@@ -78,14 +78,15 @@ sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port) {
 static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, "object", NULL),
   _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type", NULL),
-  _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, "fixnum", NULL),
+  _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, "integer", NULL),
+  _DEF_TYPE(SEXP_NUMBER, 0, 0, 0, 0, 0, 0, 0, 0, "number", NULL),
   _DEF_TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, "char", NULL),
   _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, "boolean", NULL),
   _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, "pair", NULL),
   _DEF_TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol", NULL),
   _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string", NULL),
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector", NULL),
-  _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "flonum", NULL),
+  _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "real", NULL),
   _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp_uint_t), "bignum", NULL),
   _DEF_TYPE(SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, "cpointer", NULL),
   _DEF_TYPE(SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, "input-port", SEXP_FINALIZE_PORT),
@@ -136,7 +137,7 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
   if (num_types >= SEXP_MAXIMUM_TYPES) {
     res = sexp_user_exception(ctx, SEXP_FALSE, "register-type: exceeded maximum type limit", name);
   } else if (! sexp_stringp(name)) {
-    res = sexp_type_exception(ctx, "register-type: not a string", name);
+    res = sexp_type_exception(ctx, self, SEXP_STRING, name);
   } else {
     if (num_types >= type_array_size) {
       len = type_array_size*2;
@@ -328,6 +329,17 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
   return exn;
 }
 
+sexp sexp_string_cat3 (sexp ctx, char *pre, char *mid, char* suf) {
+  int plen=strlen(pre), mlen=strlen(mid), slen=strlen(suf);
+  char *s;
+  sexp str;
+  str = sexp_make_string(ctx, sexp_make_fixnum(plen+mlen+slen), SEXP_VOID);
+  memcpy(s=sexp_string_data(str), pre, plen);
+  memcpy(s+plen, mid, mlen);
+  memcpy(s+plen+mlen, suf, slen);
+  return str;
+}
+
 sexp sexp_user_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   sexp res;
   sexp_gc_var3(sym, str, irr);
@@ -341,15 +353,32 @@ sexp sexp_user_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   return res;
 }
 
-sexp sexp_type_exception (sexp ctx, const char *message, sexp obj) {
-  sexp res;
-  sexp_gc_var3(sym, str, irr);
-  sexp_gc_preserve3(ctx, sym, str, irr);
-  res = sexp_make_exception(ctx, sym = sexp_intern(ctx, "type", -1),
-                            str = sexp_c_string(ctx, message, -1),
-                            irr = sexp_list1(ctx, obj),
-                            SEXP_FALSE, SEXP_FALSE);
-  sexp_gc_release3(ctx);
+static sexp type_exception (sexp ctx, sexp self, sexp str, sexp obj, sexp src) {
+  sexp_gc_var2(res, sym);
+  sexp_gc_preserve2(ctx, res, sym);
+  sym = sexp_intern(ctx, "type", -1);
+  res = sexp_make_exception(ctx, sym, str, obj, self, src);
+  sexp_exception_irritants(res)=sexp_list1(ctx, sexp_exception_irritants(res));
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+sexp sexp_xtype_exception (sexp ctx, sexp self, const char *msg, sexp obj) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_c_string(ctx, msg, -1);
+  res = type_exception(ctx, self, res, obj, SEXP_FALSE);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_type_exception (sexp ctx, sexp self, sexp_uint_t type_id, sexp obj) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_string_cat3(ctx, "invalid type, expected ",
+                         sexp_type_name_by_index(ctx, type_id), "");
+  res = type_exception(ctx, self, res, obj, SEXP_FALSE);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -371,12 +400,17 @@ sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp 
     out = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
   sexp_write_string(ctx, "ERROR", out);
   if (sexp_exceptionp(exn)) {
-    if (sexp_procedurep(sexp_exception_procedure(exn))) {
-      ls = sexp_bytecode_name(
-             sexp_procedure_code(sexp_exception_procedure(exn)));
-      if (sexp_symbolp(ls)) {
+    if (sexp_exception_procedure(exn)) {
+      if (sexp_procedurep(sexp_exception_procedure(exn))) {
+        ls = sexp_bytecode_name(
+              sexp_procedure_code(sexp_exception_procedure(exn)));
+        if (sexp_symbolp(ls)) {
+          sexp_write_string(ctx, " in ", out);
+          sexp_write(ctx, ls, out);
+        }
+      } else if (sexp_opcodep(sexp_exception_procedure(exn))) {
         sexp_write_string(ctx, " in ", out);
-        sexp_write(ctx, ls, out);
+        sexp_write_string(ctx, sexp_opcode_name(sexp_exception_procedure(exn)), out);
       }
     }
     if (sexp_pairp(sexp_exception_source(exn))) {
@@ -504,7 +538,7 @@ sexp sexp_nreverse_op (sexp ctx sexp_api_params(self, n), sexp ls) {
   if (ls == SEXP_NULL) {
     return ls;
   } else if (! sexp_pairp(ls)) {
-    return sexp_type_exception(ctx, "not a list", ls);
+    return sexp_type_exception(ctx, self, SEXP_PAIR, ls);
   } else {
     b = ls;
     a = sexp_cdr(ls);
@@ -617,8 +651,8 @@ sexp sexp_make_flonum (sexp ctx, float f) {
 sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch) {
   sexp_sint_t clen = sexp_unbox_fixnum(len);
   sexp s;
-  if (! sexp_fixnump(len)) return sexp_type_exception(ctx, "bad length", len);
-  if (clen < 0) return sexp_type_exception(ctx, "negative length", len);
+  if (! sexp_fixnump(len)) return sexp_type_exception(ctx, self, SEXP_FIXNUM, len);
+  if (clen < 0) return sexp_user_exception(ctx, self, "negative length", len);
   s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
   if (sexp_exceptionp(s)) return s;
   sexp_pointer_tag(s) = SEXP_STRING;
@@ -640,13 +674,13 @@ sexp sexp_c_string (sexp ctx, const char *str, sexp_sint_t slen) {
 sexp sexp_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start, sexp end) {
   sexp res;
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "not a string", str);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
   if (! sexp_fixnump(start))
-    return sexp_type_exception(ctx, "not a number", start);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, start);
   if (sexp_not(end))
     end = sexp_make_fixnum(sexp_string_length(str));
   if (! sexp_fixnump(end))
-    return sexp_type_exception(ctx, "not a number", end);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, end);
   if ((sexp_unbox_fixnum(start) < 0)
       || (sexp_unbox_fixnum(start) > sexp_string_length(str))
       || (sexp_unbox_fixnum(end) < 0)
@@ -667,7 +701,7 @@ sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sexp str_ls,
   char *p, *csep;
   for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls), i++)
     if (! sexp_stringp(sexp_car(ls)))
-      return sexp_type_exception(ctx, "not a string", sexp_car(ls));
+      return sexp_type_exception(ctx, self, SEXP_STRING, sexp_car(ls));
     else
       len += sexp_string_length(sexp_car(ls));
   if (sexp_stringp(sep) && ((sep_len=sexp_string_length(sep)) > 0)) {
@@ -754,7 +788,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 
 sexp sexp_string_to_symbol_op (sexp ctx sexp_api_params(self, n), sexp str) {
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "string->symbol: not a string", str);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
   return sexp_intern(ctx, sexp_string_data(str), sexp_string_length(str));
 }
 
@@ -907,7 +941,7 @@ sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str
   FILE *in;
   sexp res;
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "open-input-string: not a string", str);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
   if (sexp_string_length(str) == 0)
     in = fopen("/dev/null", "r");
   else
@@ -978,7 +1012,7 @@ sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
 sexp sexp_buffered_flush (sexp ctx, sexp p) {
   sexp_gc_var1(tmp);
   if (! sexp_oportp(p))
-    return sexp_type_exception(ctx, "not an output-port", p);
+    return sexp_type_exception(ctx, NULL, SEXP_OPORT, p);
   else if (! sexp_port_openp(p))
     return sexp_user_exception(ctx, SEXP_FALSE, "port is closed", p);
   else {
@@ -999,7 +1033,7 @@ sexp sexp_buffered_flush (sexp ctx, sexp p) {
 sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str) {
   sexp res;
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "open-input-string: not a string", str);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
   res = sexp_make_input_port(ctx, NULL, SEXP_FALSE);
   if (sexp_exceptionp(res)) return res;
   sexp_port_cookie(res) = str;
@@ -1239,7 +1273,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 
 sexp sexp_write_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out) {
   if (! sexp_oportp(out))
-    return sexp_type_exception(ctx, "write: not an output-port", out);
+    return sexp_type_exception(ctx, self, SEXP_OPORT, out);
   else
     return sexp_write_one(ctx, obj, out);
 }
@@ -1247,7 +1281,7 @@ sexp sexp_write_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out) {
 sexp sexp_display_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out) {
   sexp res=SEXP_VOID;
   if (! sexp_oportp(out))
-    res = sexp_type_exception(ctx, "display: not an output-port", out);
+    res = sexp_type_exception(ctx, self, SEXP_OPORT, out);
   else if (sexp_stringp(obj))
     sexp_write_string(ctx, sexp_string_data(obj), out);
   else if (sexp_charp(obj))
@@ -1663,7 +1697,7 @@ sexp sexp_read_op (sexp ctx sexp_api_params(self, n), sexp in) {
   if (sexp_iportp(in))
     res = sexp_read_raw(ctx, in);
   else
-    res = sexp_type_exception(ctx, "read: not an input-port", in);
+    res = sexp_type_exception(ctx, self, SEXP_IPORT, in);
   if (res == SEXP_CLOSE)
     res = sexp_read_error(ctx, "too many ')'s", SEXP_NULL, in);
   if (res == SEXP_RAWDOT)
@@ -1686,11 +1720,11 @@ sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp
   int base;
   sexp_gc_var1(in);
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "string->number: not a string", str);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
   else if (! sexp_numberp(b))
-    return sexp_type_exception(ctx, "string->number: not a number", b);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, b);
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
-    return sexp_type_exception(ctx, "string->number: bad base", b);
+    return sexp_user_exception(ctx, self, "invalid numeric base", b);
   sexp_gc_preserve1(ctx, in);
   in = sexp_make_input_string_port(ctx, str);
   in = ((sexp_string_data(str)[0] == '#') ?

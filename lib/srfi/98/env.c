@@ -1,6 +1,6 @@
-/*  env.c -- SRFI-98 environment interface               */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  env.c -- SRFI-98 environment interface                    */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifdef __APPLE__
 #include <crt_externs.h>
@@ -11,15 +11,15 @@ extern char **environ;
 
 #include <chibi/eval.h>
 
-sexp sexp_get_environment_variable (sexp ctx, sexp str) {
+sexp sexp_get_environment_variable (sexp ctx sexp_api_params(self, n), sexp str) {
   char *cstr;
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "get-environment-variable: not a string", str);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
   cstr = getenv(sexp_string_data(str));
   return cstr ? sexp_c_string(ctx, cstr, -1) : SEXP_FALSE;
 }
 
-sexp sexp_get_environment_variables (sexp ctx) {
+sexp sexp_get_environment_variables (sexp ctx sexp_api_params(self, n)) {
   int i;
   char **env, *cname, *cval;
   sexp_gc_var3(res, name, val);

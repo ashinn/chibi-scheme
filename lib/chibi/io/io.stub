@@ -21,7 +21,7 @@
 (c-include "port.c")
 
 (define-c sexp (%make-custom-input-port "sexp_make_custom_input_port")
-  ((value ctx sexp) sexp sexp sexp))
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))
 
 (define-c sexp (%make-custom-output-port "sexp_make_custom_output_port")
-  ((value ctx sexp) sexp sexp sexp))
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))

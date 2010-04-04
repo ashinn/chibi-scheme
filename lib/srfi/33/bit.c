@@ -1,6 +1,6 @@
-/*  bit.c -- bitwise operators                           */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  bit.c -- bitwise operators                                */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
 #include <limits.h>
@@ -24,7 +24,7 @@ static sexp sexp_bit_and (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
       res = sexp_bit_and(ctx sexp_api_pass(self, n), y, x);
 #endif
     else
-      res = sexp_type_exception(ctx, "bitwise-and: not an integer", y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
@@ -38,11 +38,11 @@ static sexp sexp_bit_and (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
         sexp_bignum_data(res)[i]
           = sexp_bignum_data(x)[i] & sexp_bignum_data(y)[i];
     } else {
-      res = sexp_type_exception(ctx, "bitwise-and: not an integer", y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
     }
 #endif
   } else {
-      res = sexp_type_exception(ctx, "bitwise-and: not an integer", x);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
   return sexp_bignum_normalize(res);
 }
@@ -60,7 +60,7 @@ static sexp sexp_bit_ior (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
       res = sexp_bit_ior(ctx sexp_api_pass(self, n), y, x);
 #endif
     else
-      res = sexp_type_exception(ctx, "bitwise-ior: not an integer", y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
@@ -78,11 +78,11 @@ static sexp sexp_bit_ior (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
         sexp_bignum_data(res)[i]
           = sexp_bignum_data(x)[i] | sexp_bignum_data(y)[i];
     } else {
-      res = sexp_type_exception(ctx, "bitwise-ior: not an integer", y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
     }
 #endif
   } else {
-      res = sexp_type_exception(ctx, "bitwise-ior: not an integer", x);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
   return sexp_bignum_normalize(res);
 }
@@ -100,7 +100,7 @@ static sexp sexp_bit_xor (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
       res = sexp_bit_xor(ctx sexp_api_pass(self, n), y, x);
 #endif
     else
-      res = sexp_type_exception(ctx, "bitwise-xor: not an integer", y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
@@ -118,11 +118,11 @@ static sexp sexp_bit_xor (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
         sexp_bignum_data(res)[i]
           = sexp_bignum_data(x)[i] ^ sexp_bignum_data(y)[i];
     } else {
-      res = sexp_type_exception(ctx, "bitwise-xor: not an integer", y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
     }
 #endif
   } else {
-      res = sexp_type_exception(ctx, "bitwise-xor: not an integer", x);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
   return sexp_bignum_normalize(res);
 }
@@ -139,7 +139,7 @@ static sexp sexp_arithmetic_shift (sexp ctx sexp_api_params(self, n), sexp i, se
   sexp res;
 #endif
   if (! sexp_fixnump(count))
-    return sexp_type_exception(ctx, "arithmetic-shift: not an integer", count);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, count);
   c = sexp_unbox_fixnum(count);
   if (c == 0) return i;
   if (sexp_fixnump(i)) {
@@ -192,7 +192,7 @@ static sexp sexp_arithmetic_shift (sexp ctx sexp_api_params(self, n), sexp i, se
     }
 #endif
   } else {
-    res = sexp_type_exception(ctx, "arithmetic-shift: not an integer", i);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, i);
   }
   return sexp_bignum_normalize(res);
 }
@@ -224,7 +224,7 @@ static sexp sexp_bit_count (sexp ctx sexp_api_params(self, n), sexp x) {
     res = sexp_make_fixnum(count);
 #endif
   } else {
-    res = sexp_type_exception(ctx, "bit-count: not an integer", x);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
   return res;
 }
@@ -265,7 +265,7 @@ static sexp sexp_integer_length (sexp ctx sexp_api_params(self, n), sexp x) {
                             + hi*sizeof(sexp_uint_t));
 #endif
   } else {
-    return sexp_type_exception(ctx, "integer-length: not an integer", x);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
 }
 
@@ -274,7 +274,7 @@ static sexp sexp_bit_set_p (sexp ctx sexp_api_params(self, n), sexp i, sexp x) {
   sexp_uint_t pos;
 #endif
   if (! sexp_fixnump(i))
-    return sexp_type_exception(ctx, "bit-set?: not an integer", i);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, i);
   if (sexp_fixnump(x)) {
     return sexp_make_boolean(sexp_unbox_fixnum(x) & (1<<sexp_unbox_fixnum(i)));
 #if SEXP_USE_BIGNUMS
@@ -286,7 +286,7 @@ static sexp sexp_bit_set_p (sexp ctx sexp_api_params(self, n), sexp i, sexp x) {
                                         - pos*sizeof(sexp_uint_t)*CHAR_BIT))));
 #endif
   } else {
-    return sexp_type_exception(ctx, "bit-set?: not an integer", x);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
 }
 

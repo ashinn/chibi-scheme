@@ -35,15 +35,15 @@ static struct sigaction call_sigaction = {
 static struct sigaction call_sigdefault = {.sa_handler = SIG_DFL};
 static struct sigaction call_sigignore = {.sa_handler = SIG_IGN};
 
-static sexp sexp_set_signal_action (sexp ctx, sexp signum, sexp newaction) {
+static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newaction) {
   int res;
   sexp oldaction;
   if (! (sexp_fixnump(signum) && sexp_unbox_fixnum(signum) > 0
          && sexp_unbox_fixnum(signum) < SEXP_MAX_SIGNUM))
-    return sexp_type_exception(ctx, "not a valid signal number", signum);
+    return sexp_xtype_exception(ctx, self, "not a valid signal number", signum);
   if (! (sexp_procedurep(newaction) || sexp_opcodep(newaction)
          || sexp_booleanp(newaction)))
-    return sexp_type_exception(ctx, "not a procedure", newaction);
+    return sexp_type_exception(ctx, self, SEXP_PROCEDURE, newaction);
   if (! sexp_vectorp(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS)))
     sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS)
       = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_MAX_SIGNUM), SEXP_FALSE);
@@ -54,7 +54,7 @@ static sexp sexp_set_signal_action (sexp ctx, sexp signum, sexp newaction) {
                    : &call_sigaction),
                   NULL);
   if (res)
-    return sexp_user_exception(ctx, SEXP_FALSE, "couldn't set signal", signum);
+    return sexp_user_exception(ctx, self, "couldn't set signal", signum);
   sexp_vector_set(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS), signum, newaction);
   sexp_signal_contexts[sexp_unbox_fixnum(signum)] = ctx;
   return oldaction;

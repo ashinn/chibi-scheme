@@ -234,14 +234,14 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
 
   /* validate input, creating a new heap if needed */
   if (from->next) {
-    return sexp_type_exception(ctx, "can't copy a non-contiguous heap", ctx);
+    return sexp_user_exception(ctx, NULL, "can't copy a non-contiguous heap", ctx);
   } else if (! dst || sexp_not(dst)) {
     to = sexp_make_heap(from->size);
     dst = (sexp) ((char*)ctx + ((char*)to - (char*)from));
   } else if (! sexp_contextp(dst)) {
-    return sexp_type_exception(ctx, "destination not a context", dst);
+    return sexp_type_exception(ctx, NULL, SEXP_CONTEXT, dst);
   } else if (sexp_context_heap(dst)->size < from->size) {
-    return sexp_type_exception(ctx, "destination context too small", dst);
+    return sexp_user_exception(ctx, NULL, "destination context too small", dst);
   } else {
     to = sexp_context_heap(dst);
   }

@@ -348,26 +348,6 @@
         (thunk)
         (current-output-port old-out)))))
 
-(define (definite-article x)
-  (define (vowel? c)
-    (memv c '(#\a #\e #\i #\o #\u #\A #\E #\I #\O #\U)))
-  (define (vowel-exception? str)
-    (member (string-downcase str)
-            '("european" "ewe" "unicorn" "unicycle" "university" "user")))
-  (define (consonant-exception? str)
-    ;; not "historic" according to elements of style
-    (member (string-downcase str)
-            '("heir" "herb" "herbal" "herbivore" "honest" "honor" "hour")))
-  (let* ((full-str (with-output-to-string (lambda () (cat x))))
-         (i (string-scan #\space full-str))
-         (str (if i (substring full-str 0 i) full-str)))
-    (string-append
-     (cond
-      ((equal? str "") "a ")
-      ((vowel? (string-ref str 0)) (if (vowel-exception? str) "a " "an "))
-      (else (if (consonant-exception? str) "an " "a ")))
-     full-str)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; naming
 
@@ -607,6 +587,19 @@
       (newline (current-error-port))
       (cat "1")))))
 
+(define (type-id-number type)
+  (let ((base (type-base type)))
+    (cond
+     ((int-type? base) "SEXP_FIXNUM")
+     ((float-type? base) "SEXP_FLONUM")
+     ((string-type? base) "SEXP_STRING")
+     ((eq? base 'char) "SEXP_CHAR")
+     ((eq? base 'boolean) "SEXP_BOOLEAN")
+     ((eq? base 'port) "SEXP_IPORT")
+     ((eq? base 'input-port) "SEXP_IPORT")
+     ((eq? base 'output-port) "SEXP_OPORT")
+     (else (type-id-name base)))))
+
 (define (write-validator arg type)
   (let* ((type (parse-type type))
          (array (type-array type))
@@ -617,32 +610,31 @@
        ((number? array)
         (cat "  if (!sexp_listp(ctx, " arg ")"
              "      || sexp_unbox_fixnum(sexp_length(" arg ")) != " array ")\n"
-             "    return sexp_type_exception(ctx, \"not a list\", " arg ");\n")))
+             "    return sexp_type_exception(ctx, self, SEXP_PAIR, " arg ");\n")))
       (cat "  for (res=" arg "; sexp_pairp(res); res=sexp_cdr(res))\n"
            "    if (! " (lambda () (check-type "sexp_car(res)" type)) ")\n"
-           "      return sexp_type_exception(ctx, \"not a list of "
+           "      return sexp_xtype_exception(ctx, self, \"not a list of "
            (type-name type) "s\", " arg ");\n")
       (if (not (number? array))
           (cat "  if (! sexp_nullp(res))\n"
-               "    return sexp_type_exception(ctx, \"not a list of "
+               "    return sexp_xtype_exception(ctx, self, \"not a list of "
                (type-name type) "s\", " arg ");\n")))
      ((eq? base-type 'port-or-fd)
       (cat "if (! (sexp_portp(" arg ") || sexp_fixnump(" arg ")))\n"
-           "  return sexp_type_exception(ctx, \"not a port of file descriptor\"," arg ");\n"))
+           "  return sexp_xtype_exception(ctx, self, \"not a port of file descriptor\"," arg ");\n"))
      ((or (int-type? base-type)
           (float-type? base-type)
           (string-type? base-type)
           (port-type? base-type))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"
-       "    return sexp_type_exception(ctx, \"not "
-       (definite-article (type-name type)) "\", "
-       arg ");\n"))
+       "    return sexp_type_exception(ctx, self, "
+       (type-id-number type) ", " arg ");\n"))
      ((or (assq base-type *types*) (void-pointer-type? type))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"
-       "    return sexp_type_exception(ctx, \"not "
-       (definite-article (type-name type)) "\", " arg ");\n"))
+       "    return sexp_type_exception(ctx, self, "
+       (type-id-number type) ", " arg ");\n"))
      ((eq? 'sexp base-type))
      ((string-type? type)
       (write-validator arg 'string))
@@ -1055,7 +1047,7 @@
 
 (define (write-type-getter type name field)
   (cat "static sexp " (type-getter-name type name field)
-       " (sexp ctx, sexp x) {\n"
+       " (sexp ctx sexp_api_params(self, n), sexp x) {\n"
        (lambda () (write-validator "x" name))
        "  return "
        (lambda ()
@@ -1076,7 +1068,7 @@
 
 (define (write-type-setter type name field)
   (cat "static sexp " (type-setter-name type name field)
-       " (sexp ctx, sexp x, sexp v) {\n"
+       " (sexp ctx sexp_api_params(self, n), sexp x, sexp v) {\n"
        (lambda () (write-validator "x" name))
        (lambda () (write-validator "v" (car field)))
        "  "
@@ -1097,7 +1089,7 @@
      ((memq 'finalizer: type)
       => (lambda (x)
            (cat "static sexp " (generate-stub-name (cadr x))
-                " (sexp ctx, sexp x) {\n"
+                " (sexp ctx sexp_api_params(self, n), sexp x) {\n"
                 "  if (sexp_cpointer_freep(x))\n"
                 "    " (cadr x) "(sexp_cpointer_value(x));\n"
                 "  return SEXP_VOID;\n"
@@ -1109,7 +1101,7 @@
            (let ((make (caadr x))
                  (args (cdadr x)))
              (cat "static sexp " (generate-stub-name make)
-                  " (sexp ctx"
+                  " (sexp ctx sexp_api_params(self, n)"
                   (lambda ()
                     (let lp ((ls args) (i 0))
                       (cond ((pair? ls)

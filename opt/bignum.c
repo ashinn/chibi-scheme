@@ -1,6 +1,6 @@
-/*  bignum.c -- bignum support                           */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  bignum.c -- bignum support                                */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #define SEXP_INIT_BIGNUM_SIZE 2
 
@@ -61,8 +61,8 @@ sexp sexp_double_to_bignum (sexp ctx, double f) {
   int sign;
   sexp_gc_var3(res, scale, tmp);
   sexp_gc_preserve3(ctx, res, scale, tmp);
-  res = sexp_fixnum_to_bignum(ctx, sexp_make_fixnum(0));
-  scale = sexp_fixnum_to_bignum(ctx, sexp_make_fixnum(1));
+  res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
+  scale = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   sign = (f < 0 ? -1 : 1);
   for (f=fabs(f); f >= 1.0; f=trunc(f/10)) {
     tmp = sexp_bignum_fxmul(ctx, NULL, scale, double_10s_digit(f), 0);
@@ -390,7 +390,7 @@ static sexp quot_step (sexp ctx, sexp *rem, sexp a, sexp b, sexp k, sexp i) {
   sexp_gc_var5(x, prod, diff, k2, i2);
   if (sexp_bignum_compare(k, a) > 0) {
     *rem = a;
-    return sexp_fixnum_to_bignum(ctx, sexp_make_fixnum(0));
+    return sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
   }
   sexp_gc_preserve5(ctx, x, prod, diff, k2, i2);
   k2 = sexp_bignum_double(ctx, k);
@@ -418,7 +418,7 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
   b1 = sexp_copy_bignum(ctx, NULL, b, 0);
   sexp_bignum_sign(b1) = 1;
   k = sexp_copy_bignum(ctx, NULL, b1, 0);
-  i = sexp_fixnum_to_bignum(ctx, sexp_make_fixnum(1));
+  i = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   res = quot_step(ctx, rem, a1, b1, k, i);
   sexp_bignum_sign(res) = sexp_bignum_sign(a) * sexp_bignum_sign(b);
   if (sexp_bignum_sign(a) < 0) {
@@ -449,7 +449,7 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
   sexp_sint_t e = sexp_unbox_fixnum(sexp_fx_abs(b));
   sexp_gc_var2(res, acc);
   sexp_gc_preserve2(ctx, res, acc);
-  res = sexp_fixnum_to_bignum(ctx, sexp_make_fixnum(1));
+  res = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   acc = sexp_copy_bignum(ctx, NULL, a, 0);
   for (; e; e>>=1, acc=sexp_bignum_mul(ctx, NULL, acc, acc))
     if (e & 1)
@@ -504,7 +504,7 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-    r = sexp_type_exception(ctx, "+: not a number", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
     break;
   case SEXP_NUM_FIX_FIX:
     r = sexp_fx_add(a, b);      /* VM catches this case */
@@ -536,10 +536,10 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-    r = sexp_type_exception(ctx, "-: not a number", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
     break;
   case SEXP_NUM_FIX_NOT: case SEXP_NUM_FLO_NOT: case SEXP_NUM_BIG_NOT:
-    r = sexp_type_exception(ctx, "-: not a number", b);
+    r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, b);
     break;
   case SEXP_NUM_FIX_FIX:
     r = sexp_fx_sub(a, b);      /* VM catches this case */
@@ -584,7 +584,7 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-    r = sexp_type_exception(ctx, "*: not a number", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
     break;
   case SEXP_NUM_FIX_FIX:
     r = sexp_fx_mul(a, b);
@@ -618,10 +618,10 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-    r = sexp_type_exception(ctx, "/: not a number", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
     break;
   case SEXP_NUM_FIX_NOT: case SEXP_NUM_FLO_NOT: case SEXP_NUM_BIG_NOT:
-    r = sexp_type_exception(ctx, "/: not a number", b);
+    r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, b);
     break;
   case SEXP_NUM_FIX_FIX:
     f = sexp_fixnum_to_double(a) / sexp_fixnum_to_double(b);
@@ -670,16 +670,16 @@ sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-    r = sexp_type_exception(ctx, "quotient: not a number", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
     break;
   case SEXP_NUM_FIX_NOT: case SEXP_NUM_FLO_NOT: case SEXP_NUM_BIG_NOT:
-    r = sexp_type_exception(ctx, "quotient: not a number", b);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
     break;
   case SEXP_NUM_FLO_FIX: case SEXP_NUM_FLO_FLO: case SEXP_NUM_FLO_BIG:
-    r = sexp_type_exception(ctx, "quotient: can't take quotient of inexact", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
     break;
   case SEXP_NUM_FIX_FLO: case SEXP_NUM_BIG_FLO:
-    r = sexp_type_exception(ctx, "quotient: can't take quotient of inexact", b);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
     break;
   case SEXP_NUM_FIX_FIX:
     r = sexp_fx_div(a, b);
@@ -706,16 +706,16 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
   switch ((at << 2) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
   case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-    r = sexp_type_exception(ctx, "remainder: not a number", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
     break;
   case SEXP_NUM_FIX_NOT: case SEXP_NUM_FLO_NOT: case SEXP_NUM_BIG_NOT:
-    r = sexp_type_exception(ctx, "remainder: not a number", b);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
     break;
   case SEXP_NUM_FLO_FIX: case SEXP_NUM_FLO_FLO: case SEXP_NUM_FLO_BIG:
-    r = sexp_type_exception(ctx, "remainder: can't take quotient of inexact", a);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
     break;
   case SEXP_NUM_FIX_FLO: case SEXP_NUM_BIG_FLO:
-    r = sexp_type_exception(ctx, "remainder: can't take quotient of inexact", b);
+    r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
     break;
   case SEXP_NUM_FIX_FIX:
     r = sexp_fx_rem(a, b);
@@ -745,7 +745,7 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
     switch ((at << 2) + bt) {
     case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
     case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
-      r = sexp_type_exception(ctx, "compare: not a number", a);
+      r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
       break;
     case SEXP_NUM_FIX_FIX:
       r = sexp_make_fixnum(sexp_unbox_fixnum(a) - sexp_unbox_fixnum(b));

@@ -1,6 +1,6 @@
-/*  qsort.c -- quicksort implementation                  */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  qsort.c -- quicksort implementation                       */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
 
@@ -147,7 +147,7 @@ static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
   vec = (sexp_truep(sexp_listp(ctx, seq)) ? sexp_list_to_vector(ctx, seq) : seq);
 
   if (! sexp_vectorp(vec)) {
-    res = sexp_type_exception(ctx, "sort: not a vector", vec);
+    res = sexp_type_exception(ctx, self, SEXP_VECTOR, vec);
   } else {
     data = sexp_vector_data(vec);
     len = sexp_vector_length(vec);
@@ -156,9 +156,9 @@ static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
       if (sexp_opcodep(less) && sexp_opcode_inverse(less))
         sexp_vector_nreverse(ctx, vec);
     } else if (! (sexp_procedurep(less) || sexp_opcodep(less))) {
-      res = sexp_type_exception(ctx, "sort: not a procedure", less);
+      res = sexp_type_exception(ctx, self, SEXP_PROCEDURE, less);
     } else if (! (sexp_procedurep(key) || sexp_opcodep(key) || sexp_not(key))) {
-      res = sexp_type_exception(ctx, "sort: not a procedure", less);
+      res = sexp_type_exception(ctx, self, SEXP_PROCEDURE, key);
     } else {
       res = sexp_qsort_less(ctx, data, 0, len-1, less, key);
     }
