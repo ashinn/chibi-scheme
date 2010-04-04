@@ -131,19 +131,20 @@ static cookie_io_functions_t sexp_cookie_no_seek = {
 
 #if SEXP_USE_STRING_STREAMS
 
-static sexp sexp_make_custom_port (sexp ctx, char *mode, sexp read, sexp write,
+static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
+                                   sexp read, sexp write,
                                    sexp seek, sexp close) {
   FILE *in;
   sexp res;
   sexp_gc_var1(vec);
   if (sexp_truep(read) && ! sexp_procedurep(read))
-    return sexp_type_exception(ctx, "make-custom-port: read not a procedure", read);
+    return sexp_type_exception(ctx, self, SEXP_PROCEDURE, read);
   if (sexp_truep(write) && ! sexp_procedurep(write))
-    return sexp_type_exception(ctx, "make-custom-port: write not a procedure", write);
+    return sexp_type_exception(ctx, self, SEXP_PROCEDURE, write);
   if (sexp_truep(seek) && ! sexp_procedurep(seek))
-    return sexp_type_exception(ctx, "make-custom-port: seek not a procedure", seek);
+    return sexp_type_exception(ctx, self, SEXP_PROCEDURE, seek);
   if (sexp_truep(close) && ! sexp_procedurep(close))
-    return sexp_type_exception(ctx, "make-custom-port: close not a procedure", close);
+    return sexp_type_exception(ctx, self, SEXP_PROCEDURE, close);
   sexp_gc_preserve1(ctx, vec);
   vec = sexp_make_vector(ctx, SEXP_SIX, SEXP_VOID);
   sexp_cookie_ctx(vec) = ctx;
@@ -163,7 +164,7 @@ static sexp sexp_make_custom_port (sexp ctx, char *mode, sexp read, sexp write,
   in = fopencookie(vec, mode, (sexp_truep(seek) ? sexp_cookie : sexp_cookie_no_seek));
 #endif
   if (! in) {
-    res = sexp_user_exception(ctx, read, "couldn't make custom port", read);
+    res = sexp_user_exception(ctx, self, "couldn't make custom port", read);
   } else {
     res = sexp_make_input_port(ctx, in, SEXP_FALSE);
     sexp_port_cookie(res) = vec;  /* for gc preserving */
@@ -174,19 +175,22 @@ static sexp sexp_make_custom_port (sexp ctx, char *mode, sexp read, sexp write,
 
 #else
 
-static sexp sexp_make_custom_port (sexp ctx, char *mode, sexp read, sexp write,
+static sexp sexp_make_custom_port (sexp ctx, sexp self,
+                                   char *mode, sexp read, sexp write,
                                    sexp seek, sexp close) {
-  return sexp_user_exception(ctx, SEXP_FALSE, "custom ports not supported in this configuration", SEXP_NULL);
+  return sexp_user_exception(ctx, self, "custom ports not supported in this configuration", SEXP_NULL);
 }
 
 #endif
 
-static sexp sexp_make_custom_input_port (sexp ctx, sexp read, sexp seek, sexp close) {
-  return sexp_make_custom_port(ctx, "r", read, SEXP_FALSE, seek, close);
+static sexp sexp_make_custom_input_port (sexp ctx, sexp self,
+                                         sexp read, sexp seek, sexp close) {
+  return sexp_make_custom_port(ctx, self, "r", read, SEXP_FALSE, seek, close);
 }
 
-static sexp sexp_make_custom_output_port (sexp ctx, sexp write, sexp seek, sexp close) {
-  sexp res = sexp_make_custom_port(ctx, "w", SEXP_FALSE, write, seek, close);
+static sexp sexp_make_custom_output_port (sexp ctx, sexp self,
+                                          sexp write, sexp seek, sexp close) {
+  sexp res = sexp_make_custom_port(ctx, self, "w", SEXP_FALSE, write, seek, close);
   sexp_pointer_tag(res) = SEXP_OPORT;
   return res;
 }

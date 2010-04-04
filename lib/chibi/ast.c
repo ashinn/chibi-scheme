@@ -1,11 +1,10 @@
-/*  ast.c -- interface to the Abstract Syntax Tree       */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  ast.c -- interface to the Abstract Syntax Tree            */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
 
-static void sexp_define_type_predicate (sexp ctx, sexp env,
-                                        char *cname, sexp_uint_t type) {
+static void sexp_define_type_predicate (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
   name = sexp_c_string(ctx, cname, -1);
@@ -28,7 +27,7 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
   sexp_gc_release2(ctx);
 }
 
-static sexp sexp_get_env_cell (sexp ctx, sexp env, sexp id) {
+static sexp sexp_get_env_cell (sexp ctx sexp_api_params(self, n), sexp env, sexp id) {
   sexp cell = sexp_env_cell(env, id);
   while ((! cell) && sexp_synclop(id)) {
     env = sexp_synclo_env(id);
@@ -37,9 +36,9 @@ static sexp sexp_get_env_cell (sexp ctx, sexp env, sexp id) {
   return cell ? cell : SEXP_FALSE;
 }
 
-static sexp sexp_get_opcode_name (sexp ctx, sexp op) {
+static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
   if (! sexp_opcodep(op))
-    return sexp_type_exception(ctx, "not an opcode", op);
+    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   else if (! sexp_opcode_name(op))
     return SEXP_FALSE;
   else

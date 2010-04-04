@@ -42,7 +42,7 @@
 (c-include "signal.c")
 
 (define-c sexp (set-signal-action! "sexp_set_signal_action")
-  ((value ctx sexp) sexp  sexp))
+  ((value ctx sexp) (value self sexp) sexp  sexp))
 
 (define-c errno (make-signal-set "sigemptyset") ((result sigset_t)))
 (define-c errno (signal-set-fill! "sigfillset") (sigset_t))

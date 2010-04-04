@@ -1,6 +1,6 @@
-/*  disasm.c -- optional debugging utilities             */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  disasm.c -- optional debugging utilities                  */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
 
@@ -23,7 +23,7 @@ static const char* reverse_opcode_names[] =
    "WRITE-CHAR", "NEWLINE", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
   };
 
-static sexp disasm (sexp ctx, sexp bc, sexp out, int depth) {
+static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp tmp;
   unsigned char *ip, opcode, i;
 
@@ -33,10 +33,10 @@ static sexp disasm (sexp ctx, sexp bc, sexp out, int depth) {
     sexp_printf(ctx, out, "%s is a primitive\n", sexp_opcode_name(bc));
     return SEXP_VOID;
   } else if (! sexp_bytecodep(bc)) {
-    return sexp_type_exception(ctx, "not a procedure", bc);
+    return sexp_type_exception(ctx, self, SEXP_BYTECODE, bc);
   }
   if (! sexp_oportp(out)) {
-    return sexp_type_exception(ctx, "not an output-port", out);
+    return sexp_type_exception(ctx, self, SEXP_OPORT, out);
   }
 
   for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
@@ -100,14 +100,14 @@ static sexp disasm (sexp ctx, sexp bc, sexp out, int depth) {
   sexp_write_char(ctx, '\n', out);
   if ((opcode == SEXP_OP_PUSH) && (depth < SEXP_DISASM_MAX_DEPTH)
       && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
-    disasm(ctx, tmp, out, depth+1);
+    disasm(ctx, self, tmp, out, depth+1);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
   return SEXP_VOID;
 }
 
-static sexp sexp_disasm (sexp ctx, sexp bc, sexp out) {
-  return disasm(ctx, bc, out, 0);
+static sexp sexp_disasm (sexp ctx sexp_api_params(self, n), sexp bc, sexp out) {
+  return disasm(ctx, self, bc, out, 0);
 }
 
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {

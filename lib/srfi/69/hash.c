@@ -1,6 +1,6 @@
-/*  hash.c -- type-general hashing                       */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  hash.c -- type-general hashing                            */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
 
@@ -25,9 +25,9 @@ static sexp_uint_t string_hash (char *str, sexp_uint_t bound) {
 
 static sexp sexp_string_hash (sexp ctx sexp_api_params(self, n), sexp str, sexp bound) {
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "string-hash: not a string", str);
-  else if (! sexp_integerp(bound))
-    return sexp_type_exception(ctx, "string-hash: not an integer", bound);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
+  else if (! sexp_fixnump(bound))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
   return sexp_make_fixnum(string_hash(sexp_string_data(str),
                                       sexp_unbox_fixnum(bound)));
 }
@@ -40,9 +40,9 @@ static sexp_uint_t string_ci_hash (char *str, sexp_uint_t bound) {
 
 static sexp sexp_string_ci_hash (sexp ctx sexp_api_params(self, n), sexp str, sexp bound) {
   if (! sexp_stringp(str))
-    return sexp_type_exception(ctx, "string-ci-hash: not a string", str);
-  else if (! sexp_integerp(bound))
-    return sexp_type_exception(ctx, "string-ci-hash: not an integer", bound);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str);
+  else if (! sexp_fixnump(bound))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
   return sexp_make_fixnum(string_ci_hash(sexp_string_data(str),
                                          sexp_unbox_fixnum(bound)));
 }
@@ -91,13 +91,13 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
 
 static sexp sexp_hash (sexp ctx sexp_api_params(self, n), sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
-    return sexp_type_exception(ctx, "hash: not an integer", bound);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
   return sexp_make_fixnum(hash_one(ctx, obj, sexp_unbox_fixnum(bound), HASH_DEPTH));
 }
 
 static sexp sexp_hash_by_identity (sexp ctx sexp_api_params(self, n), sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
-    return sexp_type_exception(ctx, "hash-by-identity: not an integer", bound);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
   return sexp_make_fixnum((sexp_uint_t)obj % sexp_unbox_fixnum(bound));
 }
 
@@ -184,8 +184,8 @@ static sexp sexp_hash_table_cell (sexp ctx sexp_api_params(self, n), sexp ht, se
   sexp buckets, eq_fn, hash_fn, i;
   sexp_uint_t size;
   sexp_gc_var1(res);
-  if (! sexp_pointerp(ht))
-    return sexp_type_exception(ctx, "not a hash-table", ht);
+  if (! sexp_pointerp(ht))      /* XXXX check the real type id */
+    return sexp_xtype_exception(ctx, self, "not a hash-table", ht);
   buckets = sexp_hash_table_buckets(ht);
   eq_fn = sexp_hash_table_eq_fn(ht);
   hash_fn = sexp_hash_table_hash_fn(ht);

@@ -93,12 +93,12 @@ sexp sexp_env_define (sexp ctx, sexp env, sexp key, sexp value) {
   sexp cell = sexp_assq(ctx, key, sexp_env_bindings(env)), res=SEXP_VOID;
   sexp_gc_var1(tmp);
   if (sexp_immutablep(env)) {
-    res = sexp_type_exception(ctx, "immutable binding", key);
+    res = sexp_user_exception(ctx, NULL, "immutable binding", key);
   } else {
     sexp_gc_preserve1(ctx, tmp);
     if (sexp_truep(cell)) {
       if (sexp_immutablep(cell))
-        res = sexp_type_exception(ctx, "immutable binding", key);
+        res = sexp_user_exception(ctx, NULL, "immutable binding", key);
       else
         sexp_cdr(cell) = value;
     } else {
@@ -2029,24 +2029,23 @@ static sexp sexp_exception_type_op (sexp ctx sexp_api_params(self, n), sexp exn)
   if (sexp_exceptionp(exn))
     return sexp_exception_kind(exn);
   else
-    return sexp_type_exception(ctx, "not an exception", exn);
+    return sexp_type_exception(ctx, self, SEXP_EXCEPTION, exn);
 }
 
 static sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   FILE *in;
   if (! sexp_stringp(path))
-    return sexp_type_exception(ctx, "not a string", path);
+    return sexp_type_exception(ctx, self, SEXP_STRING, path);
   in = fopen(sexp_string_data(path), "r");
   if (! in)
-    return
-      sexp_user_exception(ctx, SEXP_FALSE, "couldn't open input file", path);
+    return sexp_user_exception(ctx, self, "couldn't open input file", path);
   return sexp_make_input_port(ctx, in, path);
 }
 
 static sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   FILE *out;
   if (! sexp_stringp(path))
-    return sexp_type_exception(ctx, "not a string", path);
+    return sexp_type_exception(ctx, self, SEXP_STRING, path);
   out = fopen(sexp_string_data(path), "w");
   if (! out)
     return
@@ -2056,7 +2055,7 @@ static sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp pa
 
 static sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
   if (! sexp_portp(port))
-    return sexp_type_exception(ctx, "not a port", port);
+    return sexp_type_exception(ctx, self, SEXP_OPORT, port);
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, SEXP_FALSE, "port already closed", port);
   return sexp_finalize_port(ctx sexp_api_pass(self, n), port);
@@ -2110,9 +2109,9 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
   sexp tmp, out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
   if (! sexp_stringp(source))
-    return sexp_type_exception(ctx, "not a string", source);
+    return sexp_type_exception(ctx, self, SEXP_STRING, source);
   if (! sexp_envp(env))
-    return sexp_type_exception(ctx, "not an environment", env);
+    return sexp_type_exception(ctx, self, SEXP_ENV, env);
 #if SEXP_USE_DL
   suffix = sexp_string_data(source)
     + sexp_string_length(source) - strlen(sexp_so_extension);
@@ -2165,7 +2164,7 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
 #endif
 
 #define define_math_op(name, cname)       \
-  static sexp name (sexp ctx, sexp z) {   \
+  static sexp name (sexp ctx sexp_api_params(self, n), sexp z) {        \
     double d;                             \
     if (sexp_flonump(z))                  \
       d = sexp_flonum_value(z);           \
@@ -2173,7 +2172,7 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
       d = (double)sexp_unbox_fixnum(z);  \
     maybe_convert_bignum(z)               \
     else                                  \
-      return sexp_type_exception(ctx, "not a number", z); \
+      return sexp_type_exception(ctx, self, SEXP_FIXNUM, z);  \
     return sexp_make_flonum(ctx, cname(d));               \
   }
 
@@ -2190,7 +2189,7 @@ define_math_op(sexp_trunc, trunc)
 define_math_op(sexp_floor, floor)
 define_math_op(sexp_ceiling, ceil)
 
-static sexp sexp_sqrt (sexp ctx, sexp z) {
+static sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
   double d, r;
   if (sexp_flonump(z))
     d = sexp_flonum_value(z);
@@ -2198,7 +2197,7 @@ static sexp sexp_sqrt (sexp ctx, sexp z) {
     d = (double)sexp_unbox_fixnum(z);
   maybe_convert_bignum(z)       /* XXXX add bignum sqrt */
   else
-    return sexp_type_exception(ctx, "not a number", z);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, z);
   r = sqrt(d);
   if (sexp_fixnump(z) && ((r*r) == (double)sexp_unbox_fixnum(z)))
     return sexp_make_fixnum(round(r));
@@ -2232,7 +2231,7 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
     x1 = sexp_flonum_value(x);
 #endif
   else
-    return sexp_type_exception(ctx, "expt: not a number", x);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   if (sexp_fixnump(e))
     e1 = sexp_unbox_fixnum(e);
 #if SEXP_USE_FLONUMS
@@ -2240,7 +2239,7 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
     e1 = sexp_flonum_value(e);
 #endif
   else
-    return sexp_type_exception(ctx, "expt: not a number", e);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, e);
   f = pow(x1, e1);
   if ((f > SEXP_MAX_FIXNUM) || (f < SEXP_MIN_FIXNUM)
 #if SEXP_USE_FLONUMS
@@ -2268,9 +2267,9 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
 static sexp sexp_string_cmp_op (sexp ctx sexp_api_params(self, n), sexp str1, sexp str2, sexp ci) {
   sexp_sint_t len1, len2, len, diff;
   if (! sexp_stringp(str1))
-    return sexp_type_exception(ctx, "not a string", str1);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str1);
   if (! sexp_stringp(str2))
-    return sexp_type_exception(ctx, "not a string", str2);
+    return sexp_type_exception(ctx, self, SEXP_STRING, str2);
   len1 = sexp_string_length(str1);
   len2 = sexp_string_length(str2);
   len = ((len1<len2) ? len1 : len2);
@@ -2322,22 +2321,22 @@ static sexp sexp_copy_opcode (sexp ctx, sexp op) {
   return res;
 }
 
-sexp sexp_make_opcode (sexp ctx, sexp name, sexp op_class, sexp code,
+sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
                        sexp num_args, sexp flags, sexp arg1t, sexp arg2t,
                        sexp invp, sexp data, sexp data2, sexp_proc1 func) {
   sexp res;
   if (! sexp_stringp(name))
-    res = sexp_type_exception(ctx, "make-opcode: not a string", name);
+    res = sexp_type_exception(ctx, self, SEXP_STRING, name);
   else if ((! sexp_fixnump(op_class)) || (sexp_unbox_fixnum(op_class) <= 0)
       || (sexp_unbox_fixnum(op_class) >= SEXP_OPC_NUM_OP_CLASSES))
-    res = sexp_type_exception(ctx, "make-opcode: bad opcode class", op_class);
+    res = sexp_user_exception(ctx, self, "make-opcode: bad opcode class", op_class);
   else if ((! sexp_fixnump(code)) || (sexp_unbox_fixnum(code) <= 0)
       || (sexp_unbox_fixnum(code) >= SEXP_OP_NUM_OPCODES))
-    res = sexp_type_exception(ctx, "make-opcode: bad opcode", code);
+    res = sexp_user_exception(ctx, self, "make-opcode: bad opcode", code);
   else if (! sexp_fixnump(num_args))
-    res = sexp_type_exception(ctx, "make-opcode: bad num_args", num_args);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, num_args);
   else if (! sexp_fixnump(flags))
-    res = sexp_type_exception(ctx, "make-opcode: bad flags", flags);
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, flags);
   else {
     res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
     sexp_opcode_class(res) = sexp_unbox_fixnum(op_class);
@@ -2359,7 +2358,7 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
                         int flags, sexp_proc1 f, sexp data) {
   sexp res;
   if (num_args > 6) {
-    res = sexp_type_exception(ctx, "make-foreign: exceeded foreign arg limit",
+    res = sexp_user_exception(ctx, NULL, "make-foreign: exceeded foreign arg limit",
                               sexp_make_fixnum(num_args));
   } else {
     res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
@@ -2405,8 +2404,8 @@ sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_ar
 
 sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
   if (! sexp_fixnump(type))
-    return sexp_type_exception(ctx, "make-type-predicate: bad type", type);
-  return sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
+  return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
                           sexp_make_fixnum(SEXP_OP_TYPEP), SEXP_ONE, SEXP_ZERO,
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
 }
@@ -2414,9 +2413,9 @@ sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, 
 sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
   sexp_uint_t type_size;
   if (! sexp_fixnump(type))
-    return sexp_type_exception(ctx, "make-constructor: bad type", type);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
   type_size = sexp_type_size_base(sexp_type_by_index(ctx, sexp_unbox_fixnum(type)));
-  return sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_CONSTRUCTOR),
+  return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_CONSTRUCTOR),
                           sexp_make_fixnum(SEXP_OP_MAKE), SEXP_ZERO, SEXP_ZERO,
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type,
                           sexp_make_fixnum(type_size), NULL);
@@ -2424,22 +2423,22 @@ sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sex
 
 sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
   if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
-    return sexp_type_exception(ctx, "make-getter: bad type", type);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
   if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
-    return sexp_type_exception(ctx, "make-getter: bad index", index);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
   return
-    sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_GETTER),
+    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_GETTER),
                      sexp_make_fixnum(SEXP_OP_SLOT_REF), SEXP_ONE, SEXP_ZERO,
                      type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
 sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
   if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
-    return sexp_type_exception(ctx, "make-setter: bad type", type);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
   if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
-    return sexp_type_exception(ctx, "make-setter: bad index", index);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
   return
-    sexp_make_opcode(ctx, name, sexp_make_fixnum(SEXP_OPC_SETTER),
+    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
                      sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
                      type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
@@ -2553,15 +2552,15 @@ sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
 #if SEXP_USE_MODULES
 static sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file) {
   if (! sexp_stringp(file))
-    return sexp_type_exception(ctx, "not a string", file);
+    return sexp_type_exception(ctx, self, SEXP_STRING, file);
   else
     return sexp_find_module_file(ctx, sexp_string_data(file));
 }
 sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sexp env) {
   if (! sexp_stringp(file))
-    return sexp_type_exception(ctx, "not a string", file);
+    return sexp_type_exception(ctx, self, SEXP_STRING, file);
   else if (! sexp_envp(env))
-    return sexp_type_exception(ctx, "not an environment", env);
+    return sexp_type_exception(ctx, self, SEXP_ENV, env);
   return sexp_load_module_file(ctx, sexp_string_data(file), env);
 }
 #endif
@@ -2569,7 +2568,7 @@ sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sex
 sexp sexp_add_module_directory_op (sexp ctx sexp_api_params(self, n), sexp dir, sexp appendp) {
   sexp ls;
   if (! sexp_stringp(dir))
-    return sexp_type_exception(ctx, "not a string", dir);
+    return sexp_type_exception(ctx, self, SEXP_STRING, dir);
   if (sexp_truep(appendp)) {
     if (sexp_pairp(ls=sexp_global(ctx, SEXP_G_MODULE_PATH))) {
       for ( ; sexp_pairp(sexp_cdr(ls)); ls=sexp_cdr(ls))
@@ -2709,7 +2708,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     proc = make_opcode_procedure(ctx, proc, len);
   if (! sexp_procedurep(proc)) {
     res = sexp_exceptionp(proc) ? proc :
-      sexp_type_exception(ctx, "apply: not a procedure", proc);
+      sexp_type_exception(ctx, NULL, SEXP_PROCEDURE, proc);
   } else {
     offset = top + len;
     for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
@@ -2753,7 +2752,7 @@ sexp sexp_eval_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   if (! env)
     env = sexp_context_env(ctx);
   else if (! sexp_envp(env))
-    return sexp_type_exception(ctx, "eval: not an env", env);
+    return sexp_type_exception(ctx, self, SEXP_ENV, env);
   sexp_gc_preserve2(ctx, res, err_handler);
   top = sexp_context_top(ctx);
   err_handler = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));

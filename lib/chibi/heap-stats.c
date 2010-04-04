@@ -1,6 +1,6 @@
-/* heap-stats.c -- count or dump heap objects           */
-/* Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/* BSD-style license: http://synthcode.com/license.txt  */
+/* heap-stats.c -- count or dump heap objects                */
+/* Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/* BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
 
@@ -111,13 +111,13 @@ static sexp sexp_heap_walk (sexp ctx, int depth, int printp) {
   return res;
 }
 
-static sexp sexp_heap_stats (sexp ctx) {
+static sexp sexp_heap_stats (sexp ctx sexp_api_params(self, n)) {
   return sexp_heap_walk(ctx, 0, 0);
 }
 
-static sexp sexp_heap_dump (sexp ctx, sexp depth) {
+static sexp sexp_heap_dump (sexp ctx sexp_api_params(self, n), sexp depth) {
   if (! sexp_fixnump(depth) || (sexp_unbox_fixnum(depth) < 0))
-    return sexp_type_exception(ctx, "bad heap-dump depth", depth);
+    return sexp_xtype_exception(ctx, self, "bad heap-dump depth", depth);
   return sexp_heap_walk(ctx, sexp_unbox_fixnum(depth), 1);
 }
 
