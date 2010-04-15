@@ -1645,7 +1645,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 #if SEXP_USE_BIGNUMS
           if (sexp_bignump(res)) {
             if ((sexp_bignum_hi(res) == 1)
-                && sexp_bignum_data(res)[0] == SEXP_MAX_FIXNUM)
+                && (sexp_bignum_data(res)[0] == (SEXP_MAX_FIXNUM+1)))
               res = sexp_make_fixnum(-sexp_bignum_data(res)[0]);
             else
               sexp_bignum_sign(res) = -sexp_bignum_sign(res);
