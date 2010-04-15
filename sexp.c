@@ -784,7 +784,7 @@ sexp sexp_string_to_symbol_op (sexp ctx sexp_api_params(self, n), sexp str) {
   return sexp_intern(ctx, sexp_string_data(str), sexp_string_length(str));
 }
 
-sexp sexp_make_vector (sexp ctx, sexp len, sexp dflt) {
+sexp sexp_make_vector_op (sexp ctx sexp_api_params(self, n), sexp len, sexp dflt) {
   sexp vec, *x;
   int i, clen = sexp_unbox_fixnum(len);
   if (! clen) return sexp_global(ctx, SEXP_G_EMPTY_VECTOR);
@@ -1643,9 +1643,13 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         else
 #endif
 #if SEXP_USE_BIGNUMS
-          if (sexp_bignump(res))
-            sexp_bignum_sign(res) = -sexp_bignum_sign(res);
-          else
+          if (sexp_bignump(res)) {
+            if ((sexp_bignum_hi(res) == 1)
+                && sexp_bignum_data(res)[0] == SEXP_MAX_FIXNUM)
+              res = sexp_make_fixnum(-sexp_bignum_data(res)[0]);
+            else
+              sexp_bignum_sign(res) = -sexp_bignum_sign(res);
+          } else
 #endif
             res = sexp_fx_mul(res, SEXP_NEG_ONE);
       }
