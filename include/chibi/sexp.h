@@ -848,7 +848,7 @@ SEXP_API sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sex
 SEXP_API sexp sexp_intern (sexp ctx, const char *str, sexp_sint_t len);
 SEXP_API sexp sexp_string_to_symbol_op (sexp ctx sexp_api_params(self, n), sexp str);
 SEXP_API sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp b);
-SEXP_API sexp sexp_make_vector (sexp ctx, sexp len, sexp dflt);
+SEXP_API sexp sexp_make_vector_op (sexp ctx sexp_api_params(self, n), sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector_op (sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
 SEXP_API sexp sexp_write_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out);
@@ -915,6 +915,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_nreverse(ctx, x) sexp_nreverse_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_cons(ctx, a, b) sexp_cons_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_append2(ctx, a, b) sexp_append2_op(ctx sexp_api_pass(NULL, 2), a, b)
+#define sexp_make_vector(ctx, a, b) sexp_make_vector_op(ctx sexp_api_pass(NULL, 2), a, b);
 #define sexp_list_to_vector(ctx, x) sexp_list_to_vector_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_exception_type(ctx, x) sexp_exception_type_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_string_to_number(ctx, s, b) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), s, b)

@@ -27,7 +27,7 @@ sexp sexp_fixnum_to_bignum (sexp ctx, sexp a) {
 
 sexp sexp_make_integer (sexp ctx, sexp_lsint_t x) {
   sexp res;
-  if ((SEXP_MIN_FIXNUM < x) && (x < SEXP_MAX_FIXNUM)) {
+  if ((SEXP_MIN_FIXNUM <= x) && (x <= SEXP_MAX_FIXNUM)) {
     res = sexp_make_fixnum(x);
   } else {
     res = sexp_make_bignum(ctx, 1);
@@ -44,7 +44,7 @@ sexp sexp_make_integer (sexp ctx, sexp_lsint_t x) {
 
 sexp sexp_make_unsigned_integer (sexp ctx, sexp_luint_t x) {
   sexp res;
-  if (x < SEXP_MAX_FIXNUM) {
+  if (x <= SEXP_MAX_FIXNUM) {
     res = sexp_make_fixnum(x);
   } else {
     res = sexp_make_bignum(ctx, 1);
@@ -487,7 +487,7 @@ enum sexp_number_combs {
 };
 
 static int sexp_number_types[] =
-  {0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0};
+  {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0};
 
 static int sexp_number_type (sexp a) {
   return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&15]
