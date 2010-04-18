@@ -92,8 +92,7 @@ COMPILED_LIBS := lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
 	lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) lib/srfi/98/env$(SO) \
 	lib/chibi/ast$(SO) lib/chibi/net$(SO) lib/chibi/filesystem$(SO) \
 	lib/chibi/process$(SO) lib/chibi/time$(SO) lib/chibi/system$(SO) \
-	lib/chibi/io/io$(SO) lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) \
-	lib/chibi/x86$(SO)
+	lib/chibi/io/io$(SO) lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO)
 
 libs: $(COMPILED_LIBS)
 
@@ -109,7 +108,7 @@ include/chibi/install.h: Makefile
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
-eval.o: eval.c opcodes.c opt/simplify.c $(INCLUDES) include/chibi/eval.h Makefile
+eval.o: eval.c opcodes.c vm.c opt/simplify.c $(INCLUDES) include/chibi/eval.h Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 main.o: main.c $(INCLUDES) include/chibi/eval.h Makefile
