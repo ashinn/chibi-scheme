@@ -205,16 +205,19 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
 
 void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
-  size_t max_freed, sum_freed;
+  size_t max_freed, sum_freed, total_size;
   sexp_heap h;
   size = sexp_heap_align(size);
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
-    h = sexp_heap_last(sexp_context_heap(ctx));
+    for (total_size=0, h=sexp_context_heap(ctx); h->next; h=h->next)
+      total_size += h->size;
+    total_size += h->size;
     if (((max_freed < size)
-         || ((h->size - sum_freed) > (h->size*SEXP_GROW_HEAP_RATIO)))
-        && ((! SEXP_MAXIMUM_HEAP_SIZE) || (h->size < SEXP_MAXIMUM_HEAP_SIZE)))
+         || ((total_size > sum_freed)
+             && (total_size - sum_freed) > (total_size*SEXP_GROW_HEAP_RATIO)))
+        && ((!SEXP_MAXIMUM_HEAP_SIZE) || (total_size < SEXP_MAXIMUM_HEAP_SIZE)))
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
     if (! res)
