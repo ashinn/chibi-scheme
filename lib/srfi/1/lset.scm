@@ -23,7 +23,7 @@
 (define (lset-union2 eq a b)
   (if (null? b)
       a
-      (lset-union2 (cdr b) (if (member (car b) a eq) a (cons (car b) a)))))
+      (lset-union2 eq (if (member (car b) a eq) a (cons (car b) a)) (cdr b))))
 
 (define (lset-union eq . sets)
   (reduce (lambda (a b) (lset-union2 eq a b)) '() sets))
