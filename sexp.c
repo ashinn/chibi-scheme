@@ -1132,7 +1132,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       } else
 #endif
       {
-        i = sprintf(numbuf, "%.15g", f);
+        i = snprintf(numbuf, 20, "%.15g", f);
         if (f == trunc(f) && ! strchr(numbuf, '.')) {
           numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
         }
@@ -1191,7 +1191,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    sprintf(numbuf, "%ld", sexp_unbox_fixnum(obj));
+    snprintf(numbuf, 20, "%ld", sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
@@ -1203,7 +1203,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     } else
 #endif
     {
-      i = sprintf(numbuf, "%.8g", f);
+      i = snprintf(numbuf, 20, "%.8g", f);
       if (f == trunc(f) && ! strchr(numbuf, '.')) {
         numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
       }
