@@ -1080,6 +1080,8 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   return p;
 }
 
+#define NUMBUF_LEN 32
+
 sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_HUFF_SYMS
   unsigned long res, c;
@@ -1088,7 +1090,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
   long i=0;
   double f;
   sexp x, *elts;
-  char *str=NULL, numbuf[20];
+  char *str=NULL, numbuf[NUMBUF_LEN];
 
   if (! obj) {
     sexp_write_string(ctx, "#<null>", out); /* shouldn't happen */
@@ -1132,7 +1134,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       } else
 #endif
       {
-        i = snprintf(numbuf, 20, "%.15g", f);
+        i = snprintf(numbuf, NUMBUF_LEN, "%.15g", f);
         if (f == trunc(f) && ! strchr(numbuf, '.')) {
           numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
         }
@@ -1191,7 +1193,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    snprintf(numbuf, 20, "%ld", sexp_unbox_fixnum(obj));
+    snprintf(numbuf, NUMBUF_LEN, "%ld", sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
@@ -1203,7 +1205,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     } else
 #endif
     {
-      i = snprintf(numbuf, 20, "%.8g", f);
+      i = snprintf(numbuf, NUMBUF_LEN, "%.8g", f);
       if (f == trunc(f) && ! strchr(numbuf, '.')) {
         numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
       }
