@@ -1,0 +1,10 @@
+
+(define-module (chibi stty)
+  (export stty with-stty TCSANOW TCSADRAIN TCSAFLUSH)
+  (import-immutable (scheme)
+                    (srfi 33)
+                    (srfi 69))
+  (include-shared "stty")
+  (include "stty.scm")
+  )
+
