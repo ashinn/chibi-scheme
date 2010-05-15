@@ -1,10 +1,10 @@
 
 (c-system-include "termios.h")
+(c-system-include "sys/ioctl.h")
 
 (define-c-struct termios
   predicate: term-attrs?
   constructor: (make-term-attrs)
-  ;;destructor: free-term-attrs
   (unsigned-long c_iflag term-attrs-iflag term-attrs-iflag-set!)
   (unsigned-long c_oflag term-attrs-oflag term-attrs-oflag-set!)
   (unsigned-long c_cflag term-attrs-cflag term-attrs-cflag-set!)
@@ -13,10 +13,18 @@
   (unsigned-long c_ispeed term-attrs-ispeed term-attrs-ispeed-set!)
   (unsigned-long c_ospeed term-attrs-ospeed term-attrs-ospeed-set!))
 
+(define-c-struct winsize
+  predicate: winsize?
+  (unsigned-short ws_row winsize-row)
+  (unsigned-short ws_col winsize-col))
+
+(define-c errno ioctl (port-or-fd unsigned-long (result winsize)))
+
+(define-c-const int TIOCGWINSZ)
+
 (define-c-const int TCSANOW)
 (define-c-const int TCSADRAIN)
 (define-c-const int TCSAFLUSH)
-;; (define-c-const int TCSASOFT)
 
 (define-c-const unsigned-long IGNBRK)
 (define-c-const unsigned-long BRKINT)
@@ -92,5 +100,7 @@
 (define-c-const unsigned-long VREPRINT)
 ;; (define-c-const unsigned-long VSTATUS)
 
-(define-c errno (get-terminal-attributes "tcgetattr") (port-or-fd (result termios)))
-(define-c errno (set-terminal-attributes! "tcsetattr") (port-or-fd int termios))
+(define-c errno (get-terminal-attributes "tcgetattr")
+  (port-or-fd (result termios)))
+(define-c errno (set-terminal-attributes! "tcsetattr")
+  (port-or-fd int termios))
