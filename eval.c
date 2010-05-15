@@ -535,7 +535,7 @@ static sexp analyze_set (sexp ctx, sexp x) {
 #define sexp_return(res, val) do {res=val; goto cleanup;} while (0)
 
 static sexp analyze_lambda (sexp ctx, sexp x) {
-  sexp name, ls;
+  sexp name, ls, ctx3;
   sexp_gc_var6(res, body, tmp, value, defs, ctx2);
   sexp_gc_preserve6(ctx, res, body, tmp, value, defs, ctx2);
   /* verify syntax */
@@ -558,17 +558,18 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   defs = SEXP_NULL;
   for (ls=sexp_lambda_defs(res); sexp_pairp(ls); ls=sexp_cdr(ls)) {
     tmp = sexp_car(ls);
-    if (sexp_pairp(sexp_cadr(tmp))) {
-      name = sexp_caadr(tmp);
-      tmp = sexp_cons(ctx2, sexp_cdadr(tmp), sexp_cddr(tmp));
-      value = analyze_lambda(ctx2, sexp_cons(ctx2, SEXP_VOID, tmp));
+    ctx3 = sexp_cdr(tmp);
+    if (sexp_pairp(sexp_caar(tmp))) {
+      name = sexp_caaar(tmp);
+      tmp = sexp_cons(ctx3, sexp_cdaar(tmp), sexp_cdar(tmp));
+      value = analyze_lambda(ctx3, sexp_cons(ctx3, SEXP_VOID, tmp));
     } else {
-      name = sexp_cadr(tmp);
-      value = analyze(ctx2, sexp_caddr(tmp));
+      name = sexp_caar(tmp);
+      value = analyze(ctx3, sexp_cadar(tmp));
     }
     if (sexp_exceptionp(value)) sexp_return(res, value);
-    sexp_push(ctx2, defs,
-              sexp_make_set(ctx2, analyze_var_ref(ctx2, name, NULL), value));
+    sexp_push(ctx3, defs,
+              sexp_make_set(ctx3, analyze_var_ref(ctx3, name, NULL), value));
   }
   if (sexp_pairp(defs)) {
     if (! sexp_seqp(body)) {
@@ -620,7 +621,8 @@ static sexp analyze_define (sexp ctx, sexp x) {
       sexp_push(ctx, sexp_env_bindings(env), tmp);
       sexp_push(ctx, sexp_lambda_sv(sexp_env_lambda(env)), name);
       sexp_push(ctx, sexp_lambda_locals(sexp_env_lambda(env)), name);
-      sexp_push(ctx, sexp_lambda_defs(sexp_env_lambda(env)), x);
+      tmp = sexp_cons(ctx, sexp_cdr(x), ctx);
+      sexp_push(ctx, sexp_lambda_defs(sexp_env_lambda(env)), tmp);
       res = SEXP_VOID;
     } else {
       if (sexp_synclop(name)) name = sexp_synclo_expr(name);
