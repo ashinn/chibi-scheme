@@ -205,7 +205,7 @@
                 ((char)
                  ;;(term-attrs-cc-set! attr (cadr x) (or (cadr lst) 0))
                  (lp (cddr lst) iflag oflag cflag lflag invert? return))
-                ((combine) ;; recurse on def of this command
+                ((combine)
                  (lp (cadr x) iflag oflag cflag lflag invert?
                      (lambda (i o c l) (lp (cdr lst) i o c l invert? return))))
                 ((special)
@@ -222,3 +222,14 @@
         (lambda () (stty setting))
         thunk
         (lambda () (set-terminal-attributes! port TCSANOW orig-attrs)))))
+
+(define (with-raw-io port thunk)
+  (with-stty '(not icanon echo) thunk port))
+
+(define (get-terminal-width x)
+  (let ((ws (ioctl x TIOCGWINSZ)))
+    (and ws (winsize-col ws))))
+
+(define (get-terminal-dimensions x)
+  (let ((ws (ioctl x TIOCGWINSZ)))
+    (and ws (list (winsize-col ws) (winsize-row ws)))))
