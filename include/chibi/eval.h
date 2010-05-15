@@ -129,7 +129,6 @@ SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
 SEXP_API sexp sexp_compile_error (sexp ctx, const char *message, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
-SEXP_API sexp sexp_apply_optimization (sexp context, sexp proc, sexp ast);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp lambda, sexp name);
 SEXP_API sexp sexp_eval_op (sexp context sexp_api_params(self, n), sexp obj, sexp env);
@@ -152,7 +151,7 @@ SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
-SEXP_API sexp sexp_make_procedure (sexp ctx, sexp flags, sexp num_args, sexp bc, sexp vars);
+SEXP_API sexp sexp_make_procedure_op (sexp ctx sexp_api_params(self, n), sexp flags, sexp num_args, sexp bc, sexp vars);
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 
@@ -170,6 +169,7 @@ SEXP_API sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name,
 
 /* simplify primitive API interface */
 #define sexp_make_synclo(ctx, a, b, c) sexp_make_synclo_op(ctx sexp_api_pass(NULL, 3) a, b, c)
+#define sexp_make_procedure(ctx, f, n, b, v) sexp_make_procedure_op(ctx sexp_api_pass(NULL, 4), f, n, b, v)
 #define sexp_make_env(ctx) sexp_make_env_op(ctx sexp_api_pass(NULL, 0))
 #define sexp_make_null_env(ctx, v) sexp_make_null_env_op(ctx sexp_api_pass(NULL, 0), v)
 #define sexp_make_standard_env(ctx) sexp_make_standard_env_op(ctx sexp_api_pass(NULL, 0))
