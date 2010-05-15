@@ -47,7 +47,7 @@ static void repl (sexp ctx) {
         sexp_print_exception(ctx, res, err);
       } else {
 #if SEXP_USE_WARN_UNDEFS
-        sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, err);
+        sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp);
 #endif
         if (res != SEXP_VOID) {
           sexp_write(ctx, res, out);
