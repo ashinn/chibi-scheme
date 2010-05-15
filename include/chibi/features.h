@@ -7,6 +7,9 @@
 /*   option will disable any not explicitly enabled. */
 /* #define SEXP_USE_NO_FEATURES 1 */
 
+/* uncomment this to enable the experimental native x86 backend */
+/* #define SEXP_USE_NATIVE_X86 1 */
+
 /* uncomment this to disable the module system */
 /*   Currently this just loads the config.scm from main and */
 /*   sets up an (import (module name)) macro. */
@@ -206,6 +209,10 @@
 #define SEXP_USE_NO_FEATURES 0
 #endif
 
+#ifndef SEXP_USE_NATIVE_X86
+#define SEXP_USE_NATIVE_X86 0
+#endif
+
 #ifndef SEXP_USE_MODULES
 #define SEXP_USE_MODULES ! SEXP_USE_NO_FEATURES
 #endif
@@ -336,6 +343,17 @@
 
 #ifndef SEXP_USE_CHECK_STACK
 #define SEXP_USE_CHECK_STACK ! SEXP_USE_NO_FEATURES
+#endif
+
+#if SEXP_USE_NATIVE_X86
+#undef SEXP_USE_BOEHM
+#define SEXP_USE_BOEHM 1
+#undef SEXP_USE_FLONUMS
+#define SEXP_USE_FLONUMS 0
+#undef SEXP_USE_BIGNUMS
+#define SEXP_USE_BIGNUMS 0
+#undef SEXP_USE_SIMPLIFY
+#define SEXP_USE_SIMPLIFY 0
 #endif
 
 #ifndef SEXP_USE_ALIGNED_BYTECODE

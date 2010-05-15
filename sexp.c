@@ -547,6 +547,18 @@ sexp sexp_nreverse_op (sexp ctx sexp_api_params(self, n), sexp ls) {
   return b;
 }
 
+sexp sexp_copy_list_op (sexp ctx sexp_api_params(self, n), sexp ls) {
+  sexp tmp;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  if (! sexp_pairp(ls)) return ls;
+  tmp = res = sexp_cons(ctx, sexp_car(ls), sexp_cdr(ls));
+  for (ls=sexp_cdr(ls); sexp_pairp(ls); ls=sexp_cdr(ls), tmp=sexp_cdr(tmp))
+    sexp_cdr(tmp) = sexp_cons(ctx, sexp_car(ls), sexp_cdr(ls));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 sexp sexp_append2_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
   sexp_gc_var2(a1, b1);
   sexp_gc_preserve2(ctx, a1, b1);

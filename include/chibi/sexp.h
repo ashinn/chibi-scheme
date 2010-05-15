@@ -41,21 +41,21 @@ typedef unsigned long size_t;
 #include <stdio.h>
 
 /* tagging system
- *   bits end in  00:  pointer
- *                01:  fixnum
- *               011:  immediate flonum (optional)
- *               111:  immediate symbol (optional)
- *              0110:  char
- *              1110:  other immediate object (NULL, TRUE, FALSE)
+ *   bits end in    00:  pointer
+ *                  01:  fixnum
+ *                 011:  immediate flonum (optional)
+ *                 111:  immediate symbol (optional)
+ *              000110:  char
+ *              001110:  unique immediate (NULL, TRUE, FALSE)
  */
 
 #define SEXP_FIXNUM_BITS 2
 #define SEXP_IMMEDIATE_BITS 3
-#define SEXP_EXTENDED_BITS 4
+#define SEXP_EXTENDED_BITS 6
 
 #define SEXP_FIXNUM_MASK 3
 #define SEXP_IMMEDIATE_MASK 7
-#define SEXP_EXTENDED_MASK 15
+#define SEXP_EXTENDED_MASK 63
 
 #define SEXP_POINTER_TAG 0
 #define SEXP_FIXNUM_TAG 1
@@ -208,7 +208,7 @@ struct sexp_struct {
       sexp kind, message, irritants, procedure, source;
     } exception;
     struct {
-      char sign;
+      signed char sign;
       sexp_uint_t length;
       sexp_uint_t data[];
     } bignum;
@@ -837,6 +837,7 @@ SEXP_API sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b)
 SEXP_API sexp sexp_listp_op(sexp ctx sexp_api_params(self, n), sexp obj);
 SEXP_API sexp sexp_reverse_op(sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_nreverse_op(sexp ctx sexp_api_params(self, n), sexp ls);
+SEXP_API sexp sexp_copy_list_op(sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_append2_op(sexp ctx sexp_api_params(self, n), sexp a, sexp b);
 SEXP_API sexp sexp_memq_op(sexp ctx sexp_api_params(self, n), sexp x, sexp ls);
 SEXP_API sexp sexp_assq_op(sexp ctx sexp_api_params(self, n), sexp x, sexp ls);
@@ -913,6 +914,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_length(ctx, x) sexp_length_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_reverse(ctx, x) sexp_reverse_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_nreverse(ctx, x) sexp_nreverse_op(ctx sexp_api_pass(NULL, 1), x)
+#define sexp_copy_list(ctx, x) sexp_copy_list_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_cons(ctx, a, b) sexp_cons_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_append2(ctx, a, b) sexp_append2_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_vector(ctx, a, b) sexp_make_vector_op(ctx sexp_api_pass(NULL, 2), a, b);
