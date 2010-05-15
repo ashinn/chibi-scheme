@@ -27,9 +27,9 @@ static void repl (sexp ctx) {
   sexp_env_define(ctx, sexp_context_env(ctx),
                   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
   sexp_context_tracep(ctx) = 1;
-  in = sexp_eval_string(ctx, "(current-input-port)", -1, env);
-  out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
-  err = sexp_eval_string(ctx, "(current-error-port)", -1, env);
+  in = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), SEXP_FALSE);
+  out = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), SEXP_FALSE);
+  err = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE);
   sexp_port_sourcep(in) = 1;
   while (1) {
     sexp_write_string(ctx, "> ", out);
