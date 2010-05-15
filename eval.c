@@ -41,6 +41,24 @@ sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
   return exn;
 }
 
+static void sexp_warn (sexp ctx, char *msg, sexp x) {
+  sexp out = sexp_current_error_port(ctx);
+  if (sexp_oportp(out)) {
+    sexp_write_string(ctx, "WARNING: ", out);
+    sexp_write_string(ctx, msg, out);
+    sexp_write(ctx, x, out);
+    sexp_write_char(ctx, '\n', out);
+  }
+}
+
+void sexp_warn_undefs (sexp ctx, sexp from, sexp to) {
+  sexp x;
+  for (x=from; sexp_pairp(x) && x!=to; x=sexp_cdr(x))
+    if (sexp_cdar(x) == SEXP_UNDEF)
+      sexp_warn(ctx, "reference to undefined variable", sexp_caar(x));
+}
+
+
 /********************** environment utilities ***************************/
 
 static sexp sexp_env_cell_loc (sexp env, sexp key, sexp *varenv) {
@@ -768,13 +786,13 @@ static sexp analyze (sexp ctx, sexp object) {
           res = analyze_app(ctx, x);
         }
       }
-    } else if (sexp_truep(sexp_listp(ctx, sexp_car(x)))
-               || (sexp_synclop(sexp_car(x))
-                   && sexp_truep(sexp_listp(ctx,
-                                            sexp_synclo_expr(sexp_car(x)))))) {
-      res = analyze_app(ctx, x);
     } else {
-      res = sexp_compile_error(ctx, "invalid operand in application", x);
+      if (! (sexp_truep(sexp_listp(ctx, sexp_car(x)))
+             || (sexp_synclop(sexp_car(x))
+                 && sexp_truep(sexp_listp(ctx,
+                                          sexp_synclo_expr(sexp_car(x)))))))
+        sexp_warn(ctx, "invalid operand in application: ", x);
+      res = analyze_app(ctx, x);
     }
   } else if (sexp_idp(x)) {
     res = analyze_var_ref(ctx, x, NULL);
@@ -898,16 +916,6 @@ static sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
   return sexp_finalize_port(ctx sexp_api_pass(self, n), port);
 }
 
-void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp out) {
-  sexp x;
-  for (x=from; sexp_pairp(x) && x!=to; x=sexp_cdr(x))
-    if (sexp_cdar(x) == SEXP_UNDEF) {
-      sexp_write_string(ctx, "WARNING: reference to undefined variable: ", out);
-      sexp_write(ctx, sexp_caar(x), out);
-      sexp_write_char(ctx, '\n', out);
-    }
-}
-
 #if SEXP_USE_DL
 #ifdef __MINGW32__
 #include <windows.h>
@@ -983,8 +991,8 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
   }
 #endif
 #if SEXP_USE_WARN_UNDEFS
-  if (sexp_oportp(out) && ! sexp_exceptionp(res))
-    sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, out);
+  if (! sexp_exceptionp(res))
+    sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp);
 #endif
   return res;
 }
@@ -1472,7 +1480,7 @@ sexp sexp_make_standard_env_op (sexp ctx sexp_api_params(self, n), sexp version)
 }
 
 sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp) {
-  sexp oldname, newname, value, out;
+  sexp oldname, newname, value;
   if (! sexp_envp(to)) to = sexp_context_env(ctx);
   if (! sexp_envp(from)) from = sexp_context_env(ctx);
   if (sexp_not(ls)) {
@@ -1497,10 +1505,8 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
       if (value != SEXP_UNDEF) {
         sexp_env_define(ctx, to, newname, value);
 #if SEXP_USE_WARN_UNDEFS
-      } else if (sexp_oportp(out=sexp_current_error_port(ctx))) {
-        sexp_write_string(ctx, "WARNING: importing undefined variable: ", out);
-        sexp_write(ctx, oldname, out);
-        sexp_write_char(ctx, '\n', out);
+      } else {
+        sexp_warn(ctx, "importing undefined variable: ", oldname);
 #endif
       }
     }
