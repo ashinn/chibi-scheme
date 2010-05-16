@@ -1,0 +1,5 @@
+
+(define-module (chibi term edit-line)
+  (export edit-line edit-line-repl)
+  (import-immutable (scheme) (chibi stty) (srfi 9))
+  (include "edit-line.scm"))
