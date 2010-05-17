@@ -109,7 +109,7 @@ include/chibi/install.h: Makefile
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
-eval.o: eval.c opcodes.c vm.c opt/x86.c opt/simplify.c $(INCLUDES) include/chibi/eval.h Makefile
+eval.o: eval.c opcodes.c vm.c opt/simplify.c $(INCLUDES) include/chibi/eval.h Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
 main.o: main.c $(INCLUDES) include/chibi/eval.h Makefile
