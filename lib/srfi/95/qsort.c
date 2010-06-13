@@ -4,6 +4,10 @@
 
 #include "chibi/eval.h"
 
+#if SEXP_USE_HUFF_SYMS
+#include "../../../opt/sexp-hufftabs.c"
+#endif
+
 #define swap(tmp_var, a, b) (tmp_var=a, a=b, b=tmp_var)
 
 static sexp sexp_vector_copy_to_list (sexp ctx, sexp vec, sexp seq) {
@@ -32,8 +36,28 @@ static int sexp_basic_comparator (sexp op) {
   return 0;
 }
 
+#if SEXP_USE_HUFF_SYMS
+static int sexp_isymbol_compare (sexp ctx, sexp a, sexp b) {
+  int res, res2, tmp;
+  sexp_uint_t c = ((sexp_uint_t)a)>>3, d = ((sexp_uint_t)b)>>3;
+  while (c && d) {
+#include "../../../opt/sexp-unhuff.c"
+#define c d
+#define res res2
+#include "../../../opt/sexp-unhuff.c"
+#undef c
+#undef res
+    if ((tmp=res-res2) != 0)
+      return tmp;
+  }
+  return c ? 1 : d ? -1 : 0;
+}
+#endif
+
 static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
   int res;
+  if (a == b)
+    return 0;
   if (sexp_pointerp(a)) {
     if (sexp_pointerp(b)) {
       if (sexp_pointer_tag(a) != sexp_pointer_tag(b)) {
@@ -49,20 +73,44 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
         case SEXP_STRING:
           res = strcmp(sexp_string_data(a), sexp_string_data(b));
           break;
+        case SEXP_SYMBOL:
+          res = strcmp(sexp_string_data(sexp_symbol_string(a)),
+                       sexp_string_data(sexp_symbol_string(b)));
+          break;
         default:
           res = 0;
           break;
         }
       }
+#if SEXP_USE_HUFF_SYMS
+    } else if (sexp_lsymbolp(a) && sexp_isymbolp(b)) {
+      res = sexp_object_compare(ctx, sexp_symbol_string(a),
+                                sexp_write_to_string(ctx, b));
+#endif
     } else {
       res = 1;
     }
   } else if (sexp_pointerp(b)) {
-    res = -1;
+#if SEXP_USE_HUFF_SYMS
+    if (sexp_isymbolp(a) && sexp_lsymbolp(b))
+      res = sexp_object_compare(ctx, sexp_symbol_string(b),
+                                sexp_write_to_string(ctx, a));
+    else
+#endif
+      res = -1;
   } else {
-    res = (sexp_sint_t)a - (sexp_sint_t)b;
+#if SEXP_USE_HUFF_SYMS
+    if (sexp_isymbolp(a) && sexp_isymbolp(b))
+      return sexp_isymbol_compare(ctx, a, b);
+    else
+#endif
+      res = (sexp_sint_t)a - (sexp_sint_t)b;
   }
   return res;
+}
+
+static sexp sexp_object_compare_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
+  return sexp_make_fixnum(sexp_object_compare(ctx, a, b));
 }
 
 static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
@@ -174,6 +222,7 @@ static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
 }
 
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+  sexp_define_foreign(ctx, env, "object-cmp", 2, sexp_object_compare_op);
   sexp_define_foreign_opt(ctx, env, "sort!", 3, sexp_sort_x, SEXP_FALSE);
   return SEXP_VOID;
 }

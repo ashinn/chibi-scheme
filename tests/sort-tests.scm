@@ -47,5 +47,11 @@
     (sort '((7) (5) (2) (8) (1) (6) (4) (9) (3))
           (lambda (a b) (< (car a) (car b))))
   '((1) (2) (3) (4) (5) (6) (7) (8) (9)))
+(test "sort 1-char symbols" (sort '(h b k d a c j i e g f))
+  '(a b c d e f g h i j k))
+(test "sort short symbols" (sort '(h b aa k d a ee c j i e g f))
+  '(a aa b c d e ee f g h i j k))
+(test "sort long symbols" (sort '(h b aa k d a ee c j i bzzzzzzzzzzzzzzzzzzzzzzz e g f))
+  '(a aa b bzzzzzzzzzzzzzzzzzzzzzzz c d e ee f g h i j k))
 
 (test-report)
