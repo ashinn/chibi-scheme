@@ -421,7 +421,7 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
 #define _PUSH(x) (stack[top++]=(x))
 
 #if SEXP_USE_ALIGNED_BYTECODE
-#define _ALIGN_IP() ip = (unsigned char *)sexp_word_align((unsigned long)ip)
+#define _ALIGN_IP() ip = (unsigned char *)sexp_word_align((sexp_uint_t)ip)
 #else
 #define _ALIGN_IP()
 #endif

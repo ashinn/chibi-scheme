@@ -8,13 +8,13 @@
 #include <sys/mman.h>
 #endif
 
-#define SEXP_MINIMUM_OBJECT_SIZE (sexp_sizeof(pair))
-
 #if SEXP_64_BIT
 #define sexp_heap_align(n) sexp_align(n, 5)
 #else
 #define sexp_heap_align(n) sexp_align(n, 4)
 #endif
+
+#define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(sexp_sizeof(pair)))
 
 #define sexp_heap_pad_size(s) (sizeof(struct sexp_heap_t) + (s) + sexp_heap_align(1))
 
@@ -22,7 +22,7 @@
 sexp_heap sexp_global_heap;
 #endif
 
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_CONSERVATIVE_GC
 static sexp* stack_base;
 #endif
 
@@ -41,6 +41,25 @@ sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   return res;
 }
 
+#if SEXP_USE_SAFE_GC_MARK
+static int sexp_in_heap(sexp ctx, sexp_uint_t x) {
+  sexp_heap h;
+  if (x & (sexp_heap_align(1)-1)) {
+    fprintf(stderr, "invalid heap alignment: %p %d\n", (sexp)x, sexp_pointer_tag((sexp)x));
+    return 0;
+  }
+  for (h=sexp_context_heap(ctx); h; h=h->next)
+    if (((sexp_uint_t)h < x) && (x < (sexp_uint_t)(h->data + h->size)))
+      return 1;
+  fprintf(stderr, "invalid object outside heap: %p %d\n", (sexp)x, sexp_pointer_tag((sexp)x));
+  return 0;
+}
+#endif
+
+#if SEXP_USE_DEBUG_GC
+#include "opt/gc_debug.c"
+#endif
+
 void sexp_mark (sexp ctx, sexp x) {
   sexp_sint_t i, len;
   sexp t, *p;
@@ -48,6 +67,16 @@ void sexp_mark (sexp ctx, sexp x) {
  loop:
   if ((! x) || (! sexp_pointerp(x)) || sexp_gc_mark(x))
     return;
+#if SEXP_USE_SAFE_GC_MARK
+  if (! sexp_in_heap(ctx, (sexp_uint_t)x))
+    return;
+#endif
+#if SEXP_USE_HEADER_MAGIC
+  if (sexp_pointer_magic(x) != SEXP_POINTER_MAGIC && sexp_pointer_tag(x) != SEXP_TYPE
+      && sexp_pointer_tag(x) != SEXP_OPCODE && sexp_pointer_tag(x) != SEXP_CORE
+      && sexp_pointer_tag(x) != SEXP_STACK)
+    return;
+#endif
   sexp_gc_mark(x) = 1;
   if (sexp_contextp(x))
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
@@ -63,7 +92,7 @@ void sexp_mark (sexp ctx, sexp x) {
   }
 }
 
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_CONSERVATIVE_GC
 int stack_references_pointer_p (sexp ctx, sexp x) {
   sexp *p;
   for (p=(&x)+1; p<stack_base; p++)
@@ -85,7 +114,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   for ( ; h; h=h->next) {
     p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
     q = h->free_list;
-    end = (sexp) ((char*)h->data + h->size);
+    end = (sexp) ((char*)h->data + h->size - sexp_heap_align(sexp_sizeof(pair)));
     while (p < end) {
       /* find the preceding and succeeding free list pointers */
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
@@ -148,6 +177,9 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
     sexp_mark(ctx, sexp_symbol_table[i]);
 #endif
   sexp_mark(ctx, ctx);
+#if SEXP_USE_DEBUG_GC
+  sexp_sweep_stats(ctx, 2, NULL, "* \x1B[31mFREE:\x1B[0m ");
+#endif
   res = sexp_sweep(ctx, sum_freed);
   return res;
 }
@@ -166,7 +198,7 @@ sexp_heap sexp_make_heap (size_t size) {
   h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
   free = h->free_list = (sexp_free_list) h->data;
   h->next = NULL;
-  next = (sexp_free_list) ((char*)free + sexp_heap_align(sexp_sizeof(pair)));
+  next = (sexp_free_list) (((char*)free) + sexp_heap_align(sexp_sizeof(pair)));
   free->size = 0; /* actually sexp_sizeof(pair) */
   free->next = next;
   next->size = size - sexp_heap_align(sexp_sizeof(pair));
@@ -308,13 +340,13 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
 #endif
 
 void sexp_gc_init (void) {
-#if SEXP_USE_GLOBAL_HEAP || SEXP_USE_DEBUG_GC
+#if SEXP_USE_GLOBAL_HEAP || SEXP_USE_CONSERVATIVE_GC
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
 #endif
 #if SEXP_USE_GLOBAL_HEAP
   sexp_global_heap = sexp_make_heap(size);
 #endif
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_CONSERVATIVE_GC
   /* the +32 is a hack, but this is just for debugging anyway */
   stack_base = ((sexp*)&size) + 32;
 #endif

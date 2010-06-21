@@ -64,6 +64,10 @@ typedef unsigned long size_t;
 #define SEXP_CHAR_TAG 6
 #define SEXP_EXTENDED_TAG 14
 
+#ifndef SEXP_POINTER_MAGIC
+#define SEXP_POINTER_MAGIC 0xFDCA9764uL /* arbitrary */
+#endif
+
 #if SEXP_USE_HASH_SYMS
 #define SEXP_SYMBOL_TABLE_SIZE 389
 #else
@@ -105,8 +109,8 @@ enum sexp_types {
   SEXP_NUM_CORE_TYPES
 };
 
-typedef unsigned long sexp_uint_t;
-typedef long sexp_sint_t;
+typedef unsigned int sexp_uint_t;
+typedef int sexp_sint_t;
 #if SEXP_64_BIT
 typedef unsigned int sexp_tag_t;
 #else
@@ -154,12 +158,16 @@ struct sexp_heap_t {
   sexp_uint_t size;
   sexp_free_list free_list;
   sexp_heap next;
+  /* note this must be aligned on a proper heap boundary, */
+  /* so we can't just use char data[] */
   char *data;
 };
 
 struct sexp_gc_var_t {
   sexp *var;
-  /* char *name; */
+#if SEXP_USE_CONSERVATIVE_GC
+  char *name;
+#endif
   struct sexp_gc_var_t *next;
 };
 
@@ -168,6 +176,9 @@ struct sexp_struct {
   char gc_mark;
   unsigned int immutablep:1;
   unsigned int freep:1;
+#if SEXP_USE_HEADER_MAGIC
+  unsigned int magic;
+#endif
   union {
     /* basic types */
     double flonum;
@@ -314,10 +325,16 @@ struct sexp_struct {
   sexp x = SEXP_VOID;                           \
   struct sexp_gc_var_t y = {NULL, NULL};
 
+#if SEXP_USE_CONSERVATIVE_GC
+#define sexp_gc_preserve_name(ctx, x, y) (y).name = #x
+#else
+#define sexp_gc_preserve_name(ctx, x, y)
+#endif
+
 #define sexp_gc_preserve(ctx, x, y)     \
   do {                                  \
+    sexp_gc_preserve_name(ctx, x, y);   \
     (y).var = &(x);                     \
-    /* (y).name = #x; */                      \
     (y).next = sexp_context_saves(ctx); \
     sexp_context_saves(ctx) = &(y);     \
   } while (0)
@@ -403,6 +420,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_flags(x)            ((x)->flags)
 #define sexp_immutablep(x)       ((x)->immutablep)
 #define sexp_freep(x)            ((x)->freep)
+#define sexp_pointer_magic(x)    ((x)->magic)
 
 #define sexp_check_tag(x,t)  (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
@@ -829,7 +847,7 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
 
-SEXP_API sexp sexp_make_context(sexp ctx, sexp_uint_t size);
+SEXP_API sexp sexp_make_context(sexp ctx, size_t size);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 SEXP_API sexp sexp_cons_op(sexp ctx sexp_api_params(self, n), sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
