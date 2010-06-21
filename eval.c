@@ -337,18 +337,18 @@ static void sexp_add_path (sexp ctx, const char *str) {
 }
 
 void sexp_init_eval_context_globals (sexp ctx) {
-  sexp_gc_var2(tmp, vec);
+  sexp_gc_var3(tmp, vec, ctx2);
   ctx = sexp_make_child_context(ctx, NULL);
-  sexp_gc_preserve2(ctx, tmp, vec);
+  sexp_gc_preserve3(ctx, tmp, vec, ctx2);
   vec = sexp_intern(ctx, "*current-exception-handler*", -1);
   sexp_global(ctx, SEXP_G_ERR_HANDLER)
     = sexp_env_cell_create(ctx, sexp_context_env(ctx), vec, SEXP_FALSE, NULL);
 #if ! SEXP_USE_NATIVE_X86
   emit(ctx, SEXP_OP_RESUMECC);
   sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = finalize_bytecode(ctx);
-  ctx = sexp_make_child_context(ctx, NULL);
-  emit(ctx, SEXP_OP_DONE);
-  tmp = finalize_bytecode(ctx);
+  ctx2 = sexp_make_child_context(ctx, NULL);
+  emit(ctx2, SEXP_OP_DONE);
+  tmp = finalize_bytecode(ctx2);
   vec = sexp_make_vector(ctx, 0, SEXP_VOID);
   sexp_global(ctx, SEXP_G_FINAL_RESUMER)
     = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, tmp, vec);
@@ -362,7 +362,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
   tmp = sexp_c_string(ctx, ".", 1);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
 }
 
 sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size) {
@@ -390,10 +390,12 @@ sexp sexp_make_child_context (sexp ctx, sexp lambda) {
                                     sexp_context_stack(ctx),
                                     sexp_context_env(ctx),
                                     0);
-  sexp_context_lambda(res) = lambda;
-  sexp_context_top(res) = sexp_context_top(ctx);
-  sexp_context_fv(res) = sexp_context_fv(ctx);
-  sexp_context_tracep(res) = sexp_context_tracep(ctx);
+  if (! sexp_exceptionp(res)) {
+    sexp_context_lambda(res) = lambda;
+    sexp_context_top(res) = sexp_context_top(ctx);
+    sexp_context_fv(res) = sexp_context_fv(ctx);
+    sexp_context_tracep(res) = sexp_context_tracep(ctx);
+  }
   return res;
 }
 
@@ -547,7 +549,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
     else if (sexp_truep(sexp_memq(ctx, sexp_car(ls), sexp_cdr(ls))))
       sexp_return(res, sexp_compile_error(ctx, "duplicate parameter", x));
   /* build lambda and analyze body */
-  res = sexp_make_lambda(ctx, sexp_copy_list(ctx, sexp_cadr(x)));
+  res = sexp_make_lambda(ctx, tmp=sexp_copy_list(ctx, sexp_cadr(x)));
   ctx2 = sexp_make_child_context(ctx, res);
   tmp = sexp_flatten_dot(ctx2, sexp_lambda_params(res));
   sexp_context_env(ctx2) = sexp_extend_env(ctx2, sexp_context_env(ctx2), tmp, res);
@@ -581,7 +583,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   }
   sexp_lambda_body(res) = body;
  cleanup:
-  sexp_gc_release1(ctx);
+  sexp_gc_release6(ctx);
   return res;
 }
 

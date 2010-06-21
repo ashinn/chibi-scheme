@@ -49,7 +49,12 @@ sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 
 sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
   sexp res = (sexp) sexp_alloc(ctx, size);
-  if (res && ! sexp_exceptionp(res)) sexp_pointer_tag(res) = tag;
+  if (res && ! sexp_exceptionp(res)) {
+    sexp_pointer_tag(res) = tag;
+#if SEXP_USE_HEADER_MAGIC
+    sexp_pointer_magic(res) = SEXP_POINTER_MAGIC;
+#endif
+  }
   return res;
 }
 
@@ -266,7 +271,7 @@ sexp sexp_bootstrap_context (sexp_uint_t size) {
 }
 #endif
 
-sexp sexp_make_context (sexp ctx, sexp_uint_t size) {
+sexp sexp_make_context (sexp ctx, size_t size) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
 #if ! SEXP_USE_GLOBAL_HEAP
@@ -550,8 +555,8 @@ sexp sexp_nreverse_op (sexp ctx sexp_api_params(self, n), sexp ls) {
 sexp sexp_copy_list_op (sexp ctx sexp_api_params(self, n), sexp ls) {
   sexp tmp;
   sexp_gc_var1(res);
-  sexp_gc_preserve1(ctx, res);
   if (! sexp_pairp(ls)) return ls;
+  sexp_gc_preserve1(ctx, res);
   tmp = res = sexp_cons(ctx, sexp_car(ls), sexp_cdr(ls));
   for (ls=sexp_cdr(ls); sexp_pairp(ls); ls=sexp_cdr(ls), tmp=sexp_cdr(tmp))
     sexp_cdr(tmp) = sexp_cons(ctx, sexp_car(ls), sexp_cdr(ls));
@@ -664,6 +669,9 @@ sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch) 
   s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
   if (sexp_exceptionp(s)) return s;
   sexp_pointer_tag(s) = SEXP_STRING;
+#if SEXP_USE_HEADER_MAGIC
+  sexp_pointer_magic(s) = SEXP_POINTER_MAGIC;
+#endif
   sexp_string_length(s) = clen;
   if (sexp_charp(ch))
     memset(sexp_string_data(s), sexp_unbox_character(ch), clen);
@@ -1205,7 +1213,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    snprintf(numbuf, NUMBUF_LEN, "%ld", sexp_unbox_fixnum(obj));
+    snprintf(numbuf, NUMBUF_LEN, "%d", sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {

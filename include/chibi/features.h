@@ -66,6 +66,15 @@
 /* uncomment this to add conservative checks to the native GC */
 /*   Please mail the author if enabling this makes a bug */
 /*   go away and you're not working on your own C extension. */
+/* #define SEXP_USE_CONSERVATIVE_GC 1 */
+
+/* uncomment this to add additional native checks to only mark objects in the heap */
+/* #define SEXP_USE_SAFE_GC_MARK 1 */
+
+/* uncomment this to add additional native gc checks to verify a magic header */
+/* #define SEXP_USE_HEADER_MAGIC 1 */
+
+/* uncomment this to add very verbose debugging stats to the native GC */
 /* #define SEXP_USE_DEBUG_GC 1 */
 
 /* uncomment this to make the heap common to all contexts */
@@ -175,7 +184,7 @@
 #define SEXP_MAXIMUM_HEAP_SIZE 0
 #endif
 #ifndef SEXP_MINIMUM_HEAP_SIZE
-#define SEXP_MINIMUM_HEAP_SIZE 512*1024
+#define SEXP_MINIMUM_HEAP_SIZE 8*1024
 #endif
 
 /* if after GC more than this percentage of memory is still in use, */
@@ -255,6 +264,18 @@
 
 #ifndef SEXP_USE_DEBUG_GC
 #define SEXP_USE_DEBUG_GC 0
+#endif
+
+#ifndef SEXP_USE_SAFE_GC_MARK
+#define SEXP_USE_SAFE_GC_MARK 0
+#endif
+
+#ifndef SEXP_USE_CONSERVATIVE_GC
+#define SEXP_USE_CONSERVATIVE_GC 0
+#endif
+
+#ifndef SEXP_USE_HEADER_MAGIC
+#define SEXP_USE_HEADER_MAGIC 0
 #endif
 
 #ifndef SEXP_USE_GLOBAL_HEAP

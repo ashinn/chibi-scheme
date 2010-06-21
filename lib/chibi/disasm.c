@@ -74,7 +74,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL4:
   case SEXP_OP_FCALL5:
   case SEXP_OP_FCALL6:
-    sexp_printf(ctx, out, "%ld", (sexp_sint_t) ((sexp*)ip)[0]);
+    sexp_printf(ctx, out, "%d", (sexp_sint_t) ((sexp*)ip)[0]);
     ip += sizeof(sexp);
     break;
   case SEXP_OP_SLOT_REF:
