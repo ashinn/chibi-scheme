@@ -206,7 +206,8 @@ struct sexp_struct {
       char data[];
     } string;
     struct {
-      sexp string;
+      sexp_uint_t length;
+      char data[];
     } symbol;
     struct {
       FILE *stream;
@@ -569,7 +570,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_string_ref(x, i) (sexp_make_character((unsigned char)sexp_string_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_character(v))
 
-#define sexp_symbol_string(x)  ((x)->value.symbol.string)
+#define sexp_symbol_string(x)  (x)
 
 #define sexp_port_stream(p)    ((p)->value.port.stream)
 #define sexp_port_name(p)      ((p)->value.port.name)

@@ -87,7 +87,7 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, "char", NULL),
   _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, "boolean", NULL),
   _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, "pair", NULL),
-  _DEF_TYPE(SEXP_SYMBOL, sexp_offsetof(symbol, string), 1, 1, 0, 0, sexp_sizeof(symbol), 0, 0, "symbol", NULL),
+  _DEF_TYPE(SEXP_SYMBOL, 0, 0, 0, 0, 0, sexp_sizeof(symbol)+1, sexp_offsetof(symbol, length), 1, "symbol", NULL),
   _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string", NULL),
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector", NULL),
   _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "real", NULL),
@@ -790,9 +790,9 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 
   /* not found, make a new symbol */
   sexp_gc_preserve1(ctx, sym);
-  sym = sexp_alloc_type(ctx, symbol, SEXP_SYMBOL);
+  sym = sexp_c_string(ctx, str, len);
   if (sexp_exceptionp(sym)) return sym;
-  sexp_symbol_string(sym) = sexp_c_string(ctx, str, len);
+  sexp_pointer_tag(sym) = SEXP_SYMBOL;
   sexp_push(ctx, sexp_context_symbols(ctx)[bucket], sym);
   sexp_gc_release1(ctx);
   return sym;
