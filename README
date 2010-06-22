@@ -1,0 +1,440 @@
+
+                             Chibi-Scheme
+                            --------------
+                                   
+    Minimal Scheme Implementation for use as an Extension Language
+
+              http://synthcode.com/wiki/chibi-scheme/
+
+
+Chibi-Scheme is a very small but mostly complete R5RS Scheme
+implementation using a reasonably fast custom VM.  Chibi-Scheme tries
+as much as possible not to trade its small size by cutting corners,
+and provides full continuations, both low and high-level hygienic
+macros based on syntactic-closures, string ports and exceptions.
+Chibi-Scheme is written in highly portable C and supports multiple
+simultaneous VM instances to run.
+
+------------------------------------------------------------------------
+INSTALLING
+
+To build, just run "make".  This will provide a shared library
+"libchibi-scheme", as well as a sample "chibi-scheme" command-line
+repl.  The "chibi-scheme-static" make target builds an equivalent
+static executable.
+
+You can edit the file chibi/features.h for a number of settings,
+mostly disabling features to make the executable smaller.  You can
+specify standard options directly as arguments to make, for example
+
+  make CFLAGS=-Os CPPFLAGS=-DSEXP_USE_NO_FEATURES=1
+
+to optimize for size, or
+
+  make LDFLAGS=-L/usr/local/lib CPPFLAGS=-I/usr/local/include
+
+to compile against a library installed in /usr/local.
+
+By default Chibi uses a custom, precise, non-moving GC.  You can link
+against the Boehm conservative GC by editing the features.h file, or
+directly from make with:
+
+  make SEXP_USE_BOEHM=1
+
+To compile a static executable, use
+
+  make chibi-scheme-static SEXP_USE_DL=0
+
+To compile a static executable with all C libraries statically
+included, first you need to create a clibs.c file, which can be done
+with:
+
+  make clibs.c
+
+or edited manually.  Be sure to run this with a non-static
+chibi-scheme.  Then you can make the static executable with:
+
+  make cleaner
+  make chibi-scheme-static SEXP_USE_DL=0 CPPFLAGS=-DSEXP_USE_STATIC_LIBS
+
+------------------------------------------------------------------------
+CHIBI-SCHEME LANGUAGE
+
+The default language is mostly compatible with the R5RS, with all
+differences made by design, not through difficulty of implementation.
+The following procedures are omitted:
+
+  transcript-on and transcript-off (because they're silly)
+  rationalize (pending the addition of rational numbers)
+
+Apart from this, chibi-scheme is case-sensitive, unlike the R5RS.
+The default configuration includes fixnums, flonums and bignums
+but no exact rationals or complex numbers.
+
+Full continuations are supported, but currently continuations don't
+take C code into account.  The only higher-order C functions in the
+standard environment are LOAD and EVAL.
+
+LOAD is extended to accept an optional environment argument, like
+EVAL.  You can also LOAD shared libraries in addition to Scheme source
+files - in this case the function sexp_init_library is automatically
+called with the following signature:
+
+  sexp_init_library(sexp context, sexp environment)
+
+SYNTAX-RULES macros are provided by default, with the extensions from
+SRFI-46.  In addition, low-level hygienic macros are provided with
+a syntactic-closures interface, including SC-MACRO-TRANSFORMER,
+RSC-MACRO-TRANSFORMER, and ER-MACRO-TRANSFORMER.  A good introduction
+to syntactic-closures can be found at:
+
+  http://community.schemewiki.org/?syntactic-closures
+
+IDENTIFIER?, IDENTIFIER->SYMBOL, IDENTIFIER=?, and
+MAKE-SYNTACTIC-CLOSURE and STRIP-SYNTACTIC-CLOSURES are provided.
+
+SRFI-0's COND-EXPAND is provided, with the feature `chibi'.
+
+STRING-CONCATENATE concatenates a list of strings.
+
+------------------------------------------------------------------------
+TYPES
+
+You can define new data types with SRFI-9.  This is just syntactic
+sugar for the following more primitive type constructors:
+
+(register-simple-type <name-string> <num-fields>)
+ => <type-id> ; a fixnum
+
+(make-type-predicate <opcode-name-string> <type-id>)
+ => <opcode>  ; takes 1 arg, returns #t iff that arg is of the type
+
+(make-constructor <constructor-name-string> <type-id>)
+ => <opcode>  ; takes 0 args, returns a newly allocated instance of type
+
+(make-getter <getter-name-string> <type-id> <field-index>)
+ => <opcode>  ; takes 1 args, retrieves the field located at the index
+
+(make-setter <setter-name-string> <type-id> <field-index>)
+ => <opcode>  ; takes 2 args, sets the field located at the index
+
+------------------------------------------------------------------------
+MODULE SYSTEM
+
+A configurable module system, in the style of the Scheme48 module
+system, is provided by default.
+
+Modules names are hierarchical lists of symbols or numbers.  The
+definition of the module (foo bar baz) is searched for in the file
+foo/bar/baz.module.  This file should contain an expression of the
+form:
+
+  (define-module (foo bar baz)
+    <module-declarations> ...)
+
+where <module-declarations> can be any of
+
+  (export <id> ...)                    - specify an export list
+  (import <import-spec> ...)           - specify one or more imports
+  (import-immutable <import-spec> ...) - specify an immutable import
+  (body <expr> ...)                    - inline Scheme code
+  (include <file> ...)                 - load one or more files
+  (include-shared <file> ...)          - dynamic load a library
+
+<import-spec> can either be a module name or any of
+
+  (only <import-spec> <id> ...)
+  (except <import-spec> <id> ...)
+  (rename <import-spec> (<from-id> <to-id>) ...)
+  (prefix <prefix-id> <import-spec>)
+
+The can be composed and perform basic selection and renaming of
+individual identifiers from the given module.
+
+Files are loaded relative to the .module file, and are written with
+their extension (so you can use whatever suffix you prefer - .scm,
+.ss, .sls, etc.).
+
+Shared modules, on the other hand, should be specified _without_ the
+extension - the correct suffix will be added portably (e.g. .so for
+Unix and .dylib for OS X).
+
+You may also use COND-EXPAND and arbitrary macro expansions in a
+module definition to generate <module-declarations>.
+
+------------------------------------------------------------------------
+MODULES
+
+The default environment is (scheme) - you almost always want to import
+this.
+
+Currently you can load the following SRFIs with (import (srfi N)):
+
+  (srfi 0)  - cond-expand
+  (srfi 1)  - list library
+  (srfi 2)  - and-let*
+  (srfi 6)  - basic string ports
+  (srfi 8)  - receive
+  (srfi 9)  - define-record-type
+  (srfi 11) - let-values/let*-values
+  (srfi 16) - case-lambda
+  (srfi 22) - running scheme scripts on Unix
+  (srfi 23) - error reporting mechanism
+  (srfi 26) - cut/cute partial application
+  (srfi 27) - sources of random bits
+  (srfi 33) - bitwise operators
+  (srfi 39) - prameter objects
+  (srfi 46) - basic syntax-rules extensions
+  (srfi 62) - s-expression comments
+  (srfi 69) - basic hash tables
+  (srfi 95) - sorting and merging
+  (srfi 98) - environment access
+
+although 0, 22, 23, 46 and 62 are built into the default environment
+so there's no need to import them.
+
+Included non-standard modules are put in the (chibi) module namespace.
+The following additional modules are available:
+
+  (chibi net)         - networking interface
+  (chibi filesystem)  - local filesystem and file descriptor interface
+  (chibi process)     - processes and signals
+  (chibi system)      - host system and user information
+  (chibi time)        - time and date library
+  (chibi match)       - pattern-matching library
+  (chibi loop)        - extensible loop syntax
+  (chibi pathname)    - pathname manipulation utilities
+  (chibi uri)         - URI parsing and construction utilities
+  (chibi macroexpand) - macro expansion utility
+  (chibi ast)         - interface to the internal Abstract Syntax Tree
+  (chibi disasm)      - disassembly utility for the chibi VM
+  (chibi heap-stats)  - debugging tool to analyze or dump the heap
+
+------------------------------------------------------------------------
+C INTERFACE
+
+See the file main.c for an example of using chibi-scheme as a library.
+
+The basic usage involves creating a context for evaluation and loading
+or evaluating Scheme source with it.  Begin by including the eval.h
+header file:
+
+  #include <chibi/eval.h>
+
+then call
+
+  sexp_scheme_init();
+
+with no parameters to initialize any globals (this actually does
+nothing in the standard configuration but is a good idea to call
+anyway).
+
+Then you can use the following to create and manipulate contexts:
+
+  sexp_make_eval_context(context, stack, environment, heap_size)
+    Creates a new context with the given stack and environment.
+    If context is non-NULL, this will be the "parent" context and
+    the two contexts will share a heap.  Otherwise, a new heap
+    will be allocated with heap_size, or a default size if heap_size
+    is zero.  stack and environment may both also be NULL (and _must_
+    be NULL if context is NULL) and will be given standard defaults.
+
+    Thus the to create your first context you generally call:
+
+      sexp_make_eval_context(NULL, NULL, NULL, 0)
+
+    You can create as many contexts as you want, and other than those
+    sharing a heap they are all independent and thread-safe.
+
+  sexp_load_standard_env(context, env, version)
+    Loads the init.scm file in the environment env.  Version refers
+    to the RnRS version number and should always be SEXP_FIVE.  The
+    environment created with sexp_make_eval_context only contains
+    core syntactic forms and C primitives (thus for example it has
+    CAR but not CADR or LIST), so to get a full featured
+    environment, plus a module system with which to load additional
+    modules, you want to use this.
+
+  sexp_destroy_context(context)
+    Signals that you no longer need context, or any other context
+    sharing the heap.  It will thus free() the context and heap and
+    all associated memory.  Does nothing if using the Boehm GC.
+
+Environments can be handled with the following:
+
+  sexp_context_env(context)
+    A macro returning the default environment associated with context.
+
+  sexp_env_define(context, env, symbol, value)
+    Define a variable in an environment.
+
+  sexp_env_ref(env, symbol, dflt)
+    Fetch the binding for symbol from the environment env,
+    returning the default dflt if the symbol is unbound.
+
+You can evaluate code with the following utility:
+
+  sexp_eval(context, expr, env)
+    Evaluates an s-expression in an environment.
+    env can be NULL to use the context's default env.
+
+  sexp_eval_string(context, str, env)
+    Reads an s-expression from str and evaluates it in env.
+
+  sexp_load(context, file, env)
+    Read and eval all top-level forms from file in environment env.
+    As described in LOAD above, file may be a shared library.
+
+To define new primitive functions from C, use sexp_define_foreign,
+which takes a Scheme environment, a name, a number of arguments the C
+function takes (not counting the context argument), and a C function.
+
+  /* sexp_define_foreign(context, env, name, num_args, f) */
+
+  sexp add (sexp context, sexp x, sexp y) {
+    return sexp_fx_add(x, y);
+  }
+
+  sexp_define_foreign(context, env, "add", 2, add);
+
+You can also define functions with a single optional argument:
+
+  sexp_define_foreign_opt(context, env, "add", 2, add, sexp_make_fixnum(1));
+
+See the SRFI-69 implementation for more detailed examples of this.
+
+------------------------------------------------------------------------
+FFI
+
+Simple C FFI.  "genstubs.scm file.stub" will read in the C function
+FFI definitions from file.stub and output the appropriate C
+wrappers into file.c.  You can then compile that file with:
+
+  cc -fPIC -shared file.c -lchibi-scheme
+
+(or using whatever flags are appropriate to generate shared libs on
+your platform) and then the generated .so file can be loaded
+directly with LOAD, or portably using (include-shared "file") in a
+module definition (note that include-shared uses no suffix).
+
+The goal of this interface is to make access to C types and
+functions easy, without requiring the user to write any C code.
+That means the stubber needs to be intelligent about various C
+calling conventions and idioms, such as return values passed in
+actual parameters.  Writing C by hand is still possible, and
+several of the core modules provide C interfaces directly without
+using the stubber.
+
+================================
+
+Struct Interface
+
+(define-c-struct struct-name
+  [predicate: predicate-name]
+  [constructor: constructor-name]
+  [finalizer: c_finalizer_name]
+  (type c_field_name getter-name setter-name) ...)
+
+
+================================
+
+
+Function Interface
+
+(define-c return-type name-spec (arg-type ...))
+
+where name-space is either a symbol name, or a list of
+(scheme-name c_name).  If just a symbol, the C name is taken
+to be the same with -'s replaced by _'s.
+
+arg-type is a type suitable for input validation and conversion.
+
+================================
+
+
+Types
+
+Types
+
+Basic Types
+  void
+  boolean
+  char
+  sexp (no conversions)
+
+Integer Types:
+  signed-char short int long
+  unsigned-char unsigned-short unsigned-int unsigned-long size_t pid_t
+  time_t (in seconds, but using the chibi epoch of 2010/01/01)
+  errno (as a return type returns #f on error)
+
+Float Types:
+  float double long-double
+
+String Types:
+  string - a null-terminated char*
+  env-string - a VAR=VALUE string represented as a (VAR . VALUE) pair inScheme
+  in addition you can use (array char) as a string
+
+Port Types:
+  input-port output-port
+
+Struct Types:
+
+Struct types are by default just referred to by the bare
+struct-name from define-c-struct, and it is assumed you want a
+pointer to that type.  To refer to the full struct, use the struct
+modifier, as in (struct struct-name).
+
+Type modifiers
+
+Any type may also be written as a list of modifiers followed by the
+type itself.  The supported modifiers are:
+
+const: prepends the "const" C type modifier
+       * as a return or result parameter, makes non-immediates immutable
+
+free:  it's Scheme's responsibility to "free" this resource
+       * as a return or result parameter, registers the freep flag
+         this causes the type finalizer to be run when GCed
+
+maybe-null: this pointer type may be NULL
+       * as a result parameter, NULL is translated to #f
+         normally this would just return a wrapped NULL pointer
+       * as an input parameter, #f is translated to NULL
+         normally this would be a type error
+
+pointer: create a pointer to this type
+       * as a return parameter, wraps the result in a vanilla cpointer
+       * as a result parameter, boxes then unboxes the value
+
+struct: treat this struct type as a struct, not a pointer
+       * as an input parameter, dereferences the pointer
+       * as a type field, indicates a nested struct
+
+link:  add a gc link
+       * as a field getter, link to the parent object, so the
+         parent won't be GCed so long as we have a reference
+         to the child.  this behavior is automatic for nested
+         structs.
+
+result: return a result in this parameter
+       * if there are multiple results (including the return type),
+         they are all returned in a list
+       * if there are any result parameters, a return type
+         of errno returns #f on failure, and as eliminated
+         from the list of results otherwise
+
+(value <expr>): specify a fixed value
+       * as an input parameter, this parameter is not provided
+         in the Scheme API but always passed as <expr>
+
+(default <expr>): specify a default value
+       * as the final input parameter, makes the Scheme parameter
+         optional, defaulting to <expr>
+
+(array <type> [<length>])  an array type
+       * length must be specified for return and result parameters
+       * if specified, length can be any of
+       ** an integer, for a fixed size
+       ** the symbol null, indicating a NULL-terminated array
