@@ -73,6 +73,7 @@
 ;;
 ;; Port Types:
 ;;   input-port output-port
+;;   port-or-fd - an fd-backed port or a fixnum
 ;;
 ;; Struct Types:
 ;;
@@ -620,8 +621,8 @@
                "    return sexp_xtype_exception(ctx, self, \"not a list of "
                (type-name type) "s\", " arg ");\n")))
      ((eq? base-type 'port-or-fd)
-      (cat "if (! (sexp_portp(" arg ") || sexp_fixnump(" arg ")))\n"
-           "  return sexp_xtype_exception(ctx, self, \"not a port of file descriptor\"," arg ");\n"))
+      (cat "  if (! (sexp_portp(" arg ") || sexp_fixnump(" arg ")))\n"
+           "    return sexp_xtype_exception(ctx, self, \"not a port or file descriptor\"," arg ");\n"))
      ((or (int-type? base-type)
           (float-type? base-type)
           (string-type? base-type)

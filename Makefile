@@ -213,3 +213,10 @@ dist: cleaner
 	for f in `hg manifest`; do mkdir -p chibi-scheme-`cat VERSION`/`dirname $$f`; ln -s `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
 	tar cphzvf chibi-scheme-`cat VERSION`.tgz chibi-scheme-`cat VERSION`
 	rm -rf chibi-scheme-`cat VERSION`
+
+mips-dist: cleaner
+	rm -f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz
+	mkdir chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
+	for f in `hg manifest`; do mkdir -p chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/`dirname $$f`; ln -s `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/$$f; done
+	tar cphzvf chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
+	rm -rf chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`

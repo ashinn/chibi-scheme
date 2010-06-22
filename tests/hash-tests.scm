@@ -11,8 +11,8 @@
        (set! *tests-run* (+ *tests-run* 1))
        (let ((str (call-with-output-string
                     (lambda (out)
-                      (write *tests-run*)
-                      (display ". ")
+                      (write *tests-run* out)
+                      (display ". " out)
                       (display 'expr out))))
              (res expr))
          (display str)

@@ -113,12 +113,17 @@ enum sexp_types {
 typedef unsigned int sexp_tag_t;
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
+#define sexp_heap_align(n) sexp_align(n, 5)
 #else
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;
+#define sexp_heap_align(n) sexp_align(n, 4)
 #endif
+
 typedef struct sexp_struct *sexp;
+
+#define sexp_heap_pad_size(s) (sizeof(struct sexp_heap_t) + (s) + sexp_heap_align(1))
 
 #define __HALF_MAX_SIGNED(type) ((type)1 << (sizeof(type)*8-2))
 #define __MAX_SIGNED(type) (__HALF_MAX_SIGNED(type) - 1 + __HALF_MAX_SIGNED(type))

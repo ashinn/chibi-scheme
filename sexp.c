@@ -311,7 +311,7 @@ void sexp_destroy_context (sexp ctx) {
     for ( ; heap; heap=tmp) {
       tmp = heap->next;
 #if SEXP_USE_MMAP_GC
-      munmap(heap, heap->size);
+      munmap(heap, sexp_heap_pad_size(heap->size));
 #else
       free(heap);
 #endif
