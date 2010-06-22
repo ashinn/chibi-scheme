@@ -61,12 +61,11 @@ sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
 sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port) {
   if (sexp_port_openp(port)) {
     sexp_port_openp(port) = 0;
-    if (sexp_port_stream(port) && ! sexp_port_no_closep(port))
+    if (sexp_port_stream(port) && ! sexp_port_no_closep(port)) {
       fclose(sexp_port_stream(port));
-#if ! SEXP_USE_STRING_STREAMS
-    if (sexp_port_buf(port) && sexp_oportp(port))
-      free(sexp_port_buf(port));
-#endif
+      if (sexp_port_buf(port) && sexp_oportp(port))
+	free(sexp_port_buf(port));
+    }
   }
   return SEXP_VOID;
 }
