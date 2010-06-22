@@ -207,6 +207,7 @@ void run_main (int argc, char **argv) {
   }
 
   sexp_gc_release2(ctx);
+  sexp_destroy_context(ctx);
 }
 
 int main (int argc, char **argv) {
