@@ -79,13 +79,13 @@ sexp sexp_copy_bignum (sexp ctx, sexp dst, sexp a, sexp_uint_t len0) {
   size = sexp_sizeof(bignum) + len*sizeof(sexp_uint_t);
   if (! dst || sexp_bignum_length(dst) < len) {
     dst = sexp_alloc_tagged(ctx, size, SEXP_BIGNUM);
-    memcpy(dst, a, size);
+    memmove(dst, a, size);
     sexp_bignum_length(dst) = len;
   } else {
     memset(dst->value.bignum.data, 0,
            sexp_bignum_length(dst)*sizeof(sexp_uint_t));
-    memcpy(dst->value.bignum.data, a->value.bignum.data,
-           sexp_bignum_length(a)*sizeof(sexp_uint_t));
+    memmove(dst->value.bignum.data, a->value.bignum.data,
+            sexp_bignum_length(a)*sizeof(sexp_uint_t));
   }
   return dst;
 }
