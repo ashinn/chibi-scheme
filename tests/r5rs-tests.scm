@@ -216,24 +216,6 @@
 
 (test 288 (lcm 32 -36))
 
-;;;; these will fail when compiled either without flonums or trig funcs
-
-;; (test #t (= -5 (floor -4.3)))
-
-;; (test #t (= -4 (ceiling -4.3)))
-
-;; (test #t (= -4 (truncate -4.3)))
-
-;; (test #t (= -4 (round -4.3)))
-
-;; (test #t (= 3 (floor 3.5)))
-
-;; (test #t (= 4 (ceiling 3.5)))
-
-;; (test #t (= 3 (truncate 3.5)))
-
-;; (test #t (= 4 (round 3.5)))
-
 (test 100 (string->number "100"))
 
 (test 256 (string->number "100" 16))

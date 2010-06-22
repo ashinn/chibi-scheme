@@ -115,6 +115,7 @@
   (gap buffer-gap buffer-gap-set!)
   (width buffer-width buffer-width-set!)
   (string buffer-string buffer-string-set!)
+  (kill-ring buffer-kill-ring buffer-kill-ring-set!)
   (history buffer-history buffer-history-set!))
 
 (define default-buffer-size 256)

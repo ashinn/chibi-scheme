@@ -5,6 +5,7 @@ syntax: glob
 *.o
 *.so
 *.dylib
+*.class
 *.dSYM
 *.orig
 .hg

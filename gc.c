@@ -8,15 +8,7 @@
 #include <sys/mman.h>
 #endif
 
-#if SEXP_64_BIT
-#define sexp_heap_align(n) sexp_align(n, 5)
-#else
-#define sexp_heap_align(n) sexp_align(n, 4)
-#endif
-
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(sexp_sizeof(pair)))
-
-#define sexp_heap_pad_size(s) (sizeof(struct sexp_heap_t) + (s) + sexp_heap_align(1))
 
 #if SEXP_USE_GLOBAL_HEAP
 sexp_heap sexp_global_heap;
