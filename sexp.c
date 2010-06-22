@@ -1212,7 +1212,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    snprintf(numbuf, NUMBUF_LEN, "%d", sexp_unbox_fixnum(obj));
+    snprintf(numbuf, NUMBUF_LEN, "%ld", (long)sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
@@ -1252,7 +1252,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
   } else if (sexp_symbolp(obj)) {
 
 #if SEXP_USE_HUFF_SYMS
-    if (((sexp_uint_t)obj&7)==7) {
+    if (sexp_isymbolp(obj)) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
 #include "opt/sexp-unhuff.c"

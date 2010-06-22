@@ -109,12 +109,14 @@ enum sexp_types {
   SEXP_NUM_CORE_TYPES
 };
 
-typedef unsigned int sexp_uint_t;
-typedef int sexp_sint_t;
 #if SEXP_64_BIT
 typedef unsigned int sexp_tag_t;
+typedef unsigned long sexp_uint_t;
+typedef long sexp_sint_t;
 #else
 typedef unsigned short sexp_tag_t;
+typedef unsigned int sexp_uint_t;
+typedef int sexp_sint_t;
 #endif
 typedef struct sexp_struct *sexp;
 
