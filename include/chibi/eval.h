@@ -160,6 +160,9 @@ SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int
 
 SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args, sexp_proc1 f, const char *param);
 
+#define sexp_env_next_cell(x) sexp_pair_source(x)
+#define sexp_env_push(ctx, env, tmp, name, value) (tmp=sexp_cons(ctx,name,value), sexp_env_next_cell(tmp)=sexp_env_bindings(env), sexp_env_bindings(env)=tmp)
+
 #if SEXP_USE_TYPE_DEFS
 SEXP_API sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type);
 SEXP_API sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type);
