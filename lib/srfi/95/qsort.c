@@ -84,8 +84,8 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
       }
 #if SEXP_USE_HUFF_SYMS
     } else if (sexp_lsymbolp(a) && sexp_isymbolp(b)) {
-      res = sexp_object_compare(ctx, sexp_symbol_string(a),
-                                sexp_write_to_string(ctx, b));
+      res = strcmp(sexp_string_data(sexp_symbol_string(a)),
+		   sexp_string_data(sexp_write_to_string(ctx, b)));
 #endif
     } else {
       res = 1;
@@ -93,8 +93,8 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
   } else if (sexp_pointerp(b)) {
 #if SEXP_USE_HUFF_SYMS
     if (sexp_isymbolp(a) && sexp_lsymbolp(b))
-      res = sexp_object_compare(ctx, sexp_symbol_string(b),
-                                sexp_write_to_string(ctx, a));
+      res = strcmp(sexp_string_data(sexp_write_to_string(ctx, a)),
+		   sexp_string_data(sexp_symbol_string(b)));
     else
 #endif
       res = -1;
