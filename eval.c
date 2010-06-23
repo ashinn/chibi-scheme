@@ -665,7 +665,7 @@ static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
         if (sexp_synclop(name) && sexp_env_global_p(sexp_context_env(bind_ctx)))
           name = sexp_synclo_expr(name);
         mac = sexp_make_macro(eval_ctx, proc, sexp_context_env(bind_ctx));
-	sexp_env_push(eval_ctx, sexp_context_env(bind_ctx), tmp, name, mac);
+        sexp_env_define(eval_ctx, sexp_context_env(bind_ctx), name, mac);
       } else {
         res = (sexp_exceptionp(proc) ? proc
                : sexp_compile_error(eval_ctx, "non-procedure macro:", proc));
