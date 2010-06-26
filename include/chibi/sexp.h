@@ -183,6 +183,7 @@ struct sexp_struct {
   char gc_mark;
   unsigned int immutablep:1;
   unsigned int freep:1;
+  unsigned int syntacticp:1;
 #if SEXP_USE_HEADER_MAGIC
   unsigned int magic;
 #endif
@@ -239,12 +240,11 @@ struct sexp_struct {
     } cpointer;
     /* runtime types */
     struct {
-      unsigned int syntacticp:1;
       sexp parent, lambda, bindings;
     } env;
     struct {
       sexp_uint_t length;
-      sexp name, literals;
+      sexp name, literals, source;
       unsigned char data[];
     } bytecode;
     struct {
@@ -271,22 +271,22 @@ struct sexp_struct {
     } core;
     /* ast types */
     struct {
-      sexp name, params, body, defs, locals, flags, fv, sv;
+      sexp name, params, body, defs, locals, flags, fv, sv, source;
     } lambda;
     struct {
-      sexp test, pass, fail;
+      sexp test, pass, fail, source;
     } cnd;
     struct {
-      sexp var, value;
+      sexp var, value, source;
     } set;
     struct {
-      sexp name, cell;
+      sexp name, cell, source;
     } ref;
     struct {
-      sexp ls;
+      sexp ls, source;
     } seq;
     struct {
-      sexp value;
+      sexp value, source;
     } lit;
     /* compiler state */
     struct {
@@ -604,9 +604,10 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_bytecode_length(x)   ((x)->value.bytecode.length)
 #define sexp_bytecode_name(x)     ((x)->value.bytecode.name)
 #define sexp_bytecode_literals(x) ((x)->value.bytecode.literals)
+#define sexp_bytecode_source(x)   ((x)->value.bytecode.source)
 #define sexp_bytecode_data(x)     ((x)->value.bytecode.data)
 
-#define sexp_env_syntactic_p(x)   ((x)->value.env.syntacticp)
+#define sexp_env_syntactic_p(x)   ((x)->syntacticp)
 #define sexp_env_parent(x)        ((x)->value.env.parent)
 #define sexp_env_bindings(x)      ((x)->value.env.bindings)
 #define sexp_env_local_p(x)       (sexp_env_parent(x))
@@ -648,21 +649,27 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_lambda_body(x)   ((x)->value.lambda.body)
 #define sexp_lambda_fv(x)     ((x)->value.lambda.fv)
 #define sexp_lambda_sv(x)     ((x)->value.lambda.sv)
+#define sexp_lambda_source(x) ((x)->value.lambda.source)
 
 #define sexp_cnd_test(x)      ((x)->value.cnd.test)
 #define sexp_cnd_pass(x)      ((x)->value.cnd.pass)
 #define sexp_cnd_fail(x)      ((x)->value.cnd.fail)
+#define sexp_cnd_source(x)    ((x)->value.cnd.source)
 
 #define sexp_set_var(x)       ((x)->value.set.var)
 #define sexp_set_value(x)     ((x)->value.set.value)
+#define sexp_set_source(x)    ((x)->value.set.source)
 
 #define sexp_ref_name(x)      ((x)->value.ref.name)
 #define sexp_ref_cell(x)      ((x)->value.ref.cell)
 #define sexp_ref_loc(x)       (sexp_cdr(sexp_ref_cell(x)))
+#define sexp_ref_source(x)    ((x)->value.ref.source)
 
 #define sexp_seq_ls(x)        ((x)->value.seq.ls)
+#define sexp_seq_source(x)    ((x)->value.seq.source)
 
 #define sexp_lit_value(x)     ((x)->value.lit.value)
+#define sexp_lit_source(x)    ((x)->value.lit.source)
 
 #define sexp_stack_length(x)  ((x)->value.stack.length)
 #define sexp_stack_top(x)     ((x)->value.stack.top)

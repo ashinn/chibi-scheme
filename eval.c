@@ -204,7 +204,7 @@ static void expand_bcode (sexp ctx, sexp_uint_t size) {
   if (sexp_bytecode_length(sexp_context_bc(ctx))
       < (sexp_context_pos(ctx))+size) {
     tmp=sexp_alloc_bytecode(ctx, sexp_bytecode_length(sexp_context_bc(ctx))*2);
-    sexp_bytecode_name(tmp) = SEXP_FALSE;
+    sexp_bytecode_name(tmp) = sexp_bytecode_name(sexp_context_bc(ctx));
     sexp_bytecode_length(tmp)
       = sexp_bytecode_length(sexp_context_bc(ctx))*2;
     sexp_bytecode_literals(tmp)
@@ -551,6 +551,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
       sexp_return(res, sexp_compile_error(ctx, "duplicate parameter", x));
   /* build lambda and analyze body */
   res = sexp_make_lambda(ctx, tmp=sexp_copy_list(ctx, sexp_cadr(x)));
+  sexp_lambda_source(res) = sexp_pair_source(x);
   ctx2 = sexp_make_child_context(ctx, res);
   tmp = sexp_flatten_dot(ctx2, sexp_lambda_params(res));
   sexp_context_env(ctx2) = sexp_extend_env(ctx2, sexp_context_env(ctx2), tmp, res);
@@ -624,6 +625,7 @@ static sexp analyze_define (sexp ctx, sexp x) {
       sexp_push(ctx, sexp_lambda_sv(sexp_env_lambda(env)), name);
       sexp_push(ctx, sexp_lambda_locals(sexp_env_lambda(env)), name);
       tmp = sexp_cons(ctx, sexp_cdr(x), ctx);
+      sexp_pair_source(tmp) = sexp_pair_source(x);
       sexp_push(ctx, sexp_lambda_defs(sexp_env_lambda(env)), tmp);
       res = SEXP_VOID;
     } else {

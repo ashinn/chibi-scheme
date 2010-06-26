@@ -100,15 +100,15 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_MACRO, sexp_offsetof(macro, proc), 2, 2, 0, 0, sexp_sizeof(macro), 0, 0, "macro", NULL),
   _DEF_TYPE(SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, "syntactic-closure", NULL),
   _DEF_TYPE(SEXP_ENV, sexp_offsetof(env, parent), 3, 3, 0, 0, sexp_sizeof(env), 0, 0, "environment", NULL),
-  _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 2, 2, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode", NULL),
+  _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode", NULL),
   _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form", NULL),
   _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 3, 3, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode", NULL),
-  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 8, 8, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda", NULL),
-  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 3, 3, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional", NULL),
-  _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 2, 2, 0, 0, sexp_sizeof(ref), 0, 0, "reference", NULL),
-  _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 2, 2, 0, 0, sexp_sizeof(set), 0, 0, "set!", NULL),
-  _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 1, 1, 0, 0, sexp_sizeof(seq), 0, 0, "sequence", NULL),
-  _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 1, 1, 0, 0, sexp_sizeof(lit), 0, 0, "literal", NULL),
+  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 9, 9, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda", NULL),
+  _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 4, 4, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional", NULL),
+  _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 3, 3, 0, 0, sexp_sizeof(ref), 0, 0, "reference", NULL),
+  _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 3, 3, 0, 0, sexp_sizeof(set), 0, 0, "set!", NULL),
+  _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, "sequence", NULL),
+  _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, "literal", NULL),
   _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack", NULL),
   _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 7, 7, 0, 0, sexp_sizeof(context), 0, 0, "context", NULL),
 };
@@ -417,8 +417,10 @@ sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp 
         sexp_write_string(ctx, sexp_opcode_name(sexp_exception_procedure(exn)), out);
       }
     }
-    if (sexp_pairp(sexp_exception_source(exn))) {
-      ls = sexp_exception_source(exn);
+    ls = sexp_exception_source(exn);
+    if ((! (ls && sexp_pairp(ls))) && sexp_exception_procedure(exn))
+      ls = sexp_bytecode_source(sexp_procedure_code(sexp_exception_procedure(exn)));
+    if (ls && sexp_pairp(ls)) {
       if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
         sexp_write_string(ctx, " on line ", out);
         sexp_write(ctx, sexp_cdr(ls), out);
