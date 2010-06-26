@@ -301,6 +301,7 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   len = sexp_length(ctx2, sexp_lambda_params(lambda));
   bc = finalize_bytecode(ctx2);
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
+  sexp_bytecode_source(bc) = sexp_lambda_source(lambda);
   if (sexp_nullp(fv)) {
     /* shortcut, no free vars */
     tmp = sexp_make_vector(ctx2, SEXP_ZERO, SEXP_VOID);
@@ -441,9 +442,12 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
       goto call_error_handler;}                                     \
   while (0)
 
-#define sexp_check_exception() do {if (sexp_exceptionp(_ARG1)) \
-                                     goto call_error_handler;} \
-                                while (0)
+#define sexp_check_exception()                                 \
+  do {if (sexp_exceptionp(_ARG1)) {                            \
+      if (! sexp_exception_procedure(_ARG1))                   \
+        sexp_exception_procedure(_ARG1) = self;                \
+      goto call_error_handler;}}                               \
+    while (0)
 
 sexp sexp_vm (sexp ctx, sexp proc) {
   sexp bc = sexp_procedure_code(proc), cp = sexp_procedure_vars(proc);
