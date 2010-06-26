@@ -1087,7 +1087,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_buf(p) = NULL;
   sexp_port_openp(p) = 1;
   sexp_port_no_closep(p) = 0;
-  sexp_port_sourcep(p) = 1;
+  sexp_port_sourcep(p) = 0;
   sexp_port_cookie(p) = SEXP_VOID;
   return p;
 }
