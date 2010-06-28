@@ -476,6 +476,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_RAISE:
   call_error_handler:
     tmp1 = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
+    sexp_context_last_fp(ctx) = fp;
     if (! sexp_procedurep(tmp1)) goto end_loop;
     stack[top] = (sexp) 1;
     stack[top+1] = sexp_make_fixnum(ip-sexp_bytecode_data(bc));
