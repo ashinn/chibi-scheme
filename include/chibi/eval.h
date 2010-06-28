@@ -128,6 +128,7 @@ SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env, sexp_u
 SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
 SEXP_API sexp sexp_compile_error (sexp ctx, const char *message, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
+SEXP_API void sexp_stack_trace (sexp ctx, sexp out);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp lambda, sexp name);

@@ -45,6 +45,7 @@ static void repl (sexp ctx) {
       res = sexp_eval(ctx, obj, env);
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, err);
+        sexp_stack_trace(ctx, err);
       } else {
 #if SEXP_USE_WARN_UNDEFS
         sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp);

@@ -20,6 +20,34 @@ static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) 
 }
 #endif
 
+void sexp_stack_trace (sexp ctx, sexp out) {
+  int i, fp=sexp_context_last_fp(ctx);
+  sexp self, bc, ls, *stack=sexp_stack_data(sexp_context_stack(ctx));
+  if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
+  for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
+    self = stack[i+2];
+    if (sexp_procedurep(self)) {
+      sexp_write_string(ctx, "  called from ", out);
+      bc = sexp_procedure_code(self);
+      if (sexp_truep(sexp_bytecode_name(bc)))
+        sexp_write(ctx, sexp_bytecode_name(bc), out);
+      else
+        sexp_printf(ctx, out, "anon: %p", bc);
+      if ((ls=sexp_bytecode_source(bc))) {
+        if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
+          sexp_write_string(ctx, " on line ", out);
+          sexp_write(ctx, sexp_cdr(ls), out);
+        }
+        if (sexp_stringp(sexp_car(ls))) {
+          sexp_write_string(ctx, " of file ", out);
+          sexp_write_string(ctx, sexp_string_data(sexp_car(ls)), out);
+        }
+      }
+      sexp_write_char(ctx, '\n', out);
+    }
+  }
+}
+
 static sexp analyze (sexp ctx, sexp x);
 static void generate (sexp ctx, sexp x);
 
@@ -1558,6 +1586,7 @@ sexp sexp_eval_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
     res = sexp_apply(ctx2, res, SEXP_NULL);
   sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER)) = err_handler;
   sexp_context_top(ctx) = top;
+  sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
   sexp_gc_release2(ctx);
   return res;
 }

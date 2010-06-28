@@ -296,7 +296,7 @@ struct sexp_struct {
     struct {
       sexp_heap heap;
       struct sexp_gc_var_t *saves;
-      sexp_uint_t pos, depth, tailp, tracep;
+      sexp_uint_t pos, depth, tailp, tracep, last_fp;
       sexp bc, lambda, stack, env, fv, parent, globals;
     } context;
   } value;
@@ -687,6 +687,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
 #define sexp_context_globals(x) ((x)->value.context.globals)
+#define sexp_context_last_fp(x) ((x)->value.context.last_fp)
 
 #if SEXP_USE_ALIGNED_BYTECODE
 #define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = sexp_word_align(sexp_context_pos(ctx))
