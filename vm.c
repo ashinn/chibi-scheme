@@ -2,6 +2,8 @@
 /*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
+static sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
+
 /************************* code generation ****************************/
 
 static void emit_word (sexp ctx, sexp_uint_t val)  {
@@ -449,11 +451,19 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
       goto call_error_handler;}}                               \
     while (0)
 
+#if SEXP_USE_DEBUG_VM
+#include "opt/opcode_names.h"
+#endif
+
 sexp sexp_vm (sexp ctx, sexp proc) {
   sexp bc = sexp_procedure_code(proc), cp = sexp_procedure_vars(proc);
   sexp *stack = sexp_stack_data(sexp_context_stack(ctx));
   unsigned char *ip = sexp_bytecode_data(bc);
   sexp_sint_t i, j, k, fp, top = sexp_stack_top(sexp_context_stack(ctx));
+#if SEXP_USE_GREEN_THREADS
+  sexp root_thread = ctx;
+  sexp_sint_t fuel = sexp_context_refuel(ctx);
+#endif
 #if SEXP_USE_BIGNUMS
   sexp_lsint_t prod;
 #endif
@@ -463,6 +473,29 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   self = proc;
 
  loop:
+#if SEXP_USE_GREEN_THREADS
+  if (--fuel <= 0) {
+    tmp1 = sexp_global(ctx, SEXP_G_THREADS_SCHEDULER);
+    if (sexp_applicablep(tmp1)) {
+      /* save thread */
+      sexp_context_top(ctx) = top;
+      sexp_context_ip(ctx) = ip;
+      sexp_context_last_fp(ctx) = fp;
+      sexp_context_proc(ctx) = self;
+      /* run scheduler */
+      ctx = sexp_apply1(ctx, tmp1, root_thread);
+      /* restore thread */
+      stack = sexp_stack_data(sexp_context_stack(ctx));
+      top = sexp_context_top(ctx);
+      fp = sexp_context_last_fp(ctx);
+      ip = sexp_context_ip(ctx);
+      self = sexp_context_proc(ctx);
+      bc = sexp_procedure_code(self);
+      cp = sexp_procedure_vars(self);
+    }
+    fuel = sexp_context_refuel(ctx);
+  }
+#endif
 #if SEXP_USE_DEBUG_VM
   if (sexp_context_tracep(ctx)) {
     sexp_print_stack(ctx, stack, top, fp, SEXP_FALSE);
@@ -1163,16 +1196,19 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_READ_CHAR:
     if (! sexp_iportp(_ARG1))
-      sexp_raise("read-char: not an intput-port", sexp_list1(ctx, _ARG1));
+      sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case SEXP_OP_PEEK_CHAR:
     if (! sexp_iportp(_ARG1))
-      sexp_raise("peek-char: not an intput-port", sexp_list1(ctx, _ARG1));
+      sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
     sexp_push_char(ctx, i, _ARG1);
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
+    break;
+  case SEXP_OP_YIELD:
+    fuel = 0;
     break;
   case SEXP_OP_RET:
     i = sexp_unbox_fixnum(stack[fp]);
@@ -1192,6 +1228,12 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   goto loop;
 
  end_loop:
+#if SEXP_USE_GREEN_THREADS
+  if (ctx != root_thread) { /* don't return from child threads */
+    sexp_context_refuel(ctx) = fuel = 0;
+    goto loop;
+  }
+#endif
   sexp_gc_release3(ctx);
   sexp_context_top(ctx) = top;
   return _ARG1;
@@ -1225,8 +1267,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     offset = top + len;
     for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
       stack[--offset] = sexp_car(ls);
-    stack[top] = sexp_make_fixnum(len);
-    top++;
+    stack[top++] = sexp_make_fixnum(len);
     stack[top++] = SEXP_ZERO;
     stack[top++] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
     stack[top++] = SEXP_ZERO;

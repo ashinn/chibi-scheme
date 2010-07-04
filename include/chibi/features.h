@@ -7,6 +7,9 @@
 /*   option will disable any not explicitly enabled. */
 /* #define SEXP_USE_NO_FEATURES 1 */
 
+/* uncomment this to disable interpreter-based threads */
+/* #define SEXP_USE_GREEN_THREADS 0 */
+
 /* uncomment this to enable the experimental native x86 backend */
 /* #define SEXP_USE_NATIVE_X86 1 */
 
@@ -193,6 +196,11 @@
 #define SEXP_GROW_HEAP_RATIO 0.75
 #endif
 
+/* the default number of opcodes to run each thread for */
+#ifndef SEXP_DEFAULT_QUANTUM
+#define SEXP_DEFAULT_QUANTUM 1000
+#endif
+
 /************************************************************************/
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/
@@ -216,6 +224,10 @@
 
 #ifndef SEXP_USE_NO_FEATURES
 #define SEXP_USE_NO_FEATURES 0
+#endif
+
+#ifndef SEXP_USE_GREEN_THREADS
+#define SEXP_USE_GREEN_THREADS 1
 #endif
 
 #ifndef SEXP_USE_NATIVE_X86
