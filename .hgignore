@@ -27,3 +27,4 @@ lib/chibi/net.c
 lib/chibi/process.c
 lib/chibi/system.c
 lib/chibi/time.c
+lib/chibi/stty.c

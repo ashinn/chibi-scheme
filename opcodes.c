@@ -150,5 +150,8 @@ _FN1(SEXP_STRING, "find-module-file", 0, sexp_find_module_file_op),
 _FN2(SEXP_STRING, SEXP_ENV, "load-module-file", 0, sexp_load_module_file_op),
 _FN2(SEXP_STRING, SEXP_BOOLEAN, "add-module-directory", 0, sexp_add_module_directory_op),
 #endif
+#if SEXP_USE_GREEN_THREADS
+_OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, 0, 0, 0, "thread-yield!", 0, NULL),
+#endif
 };
 

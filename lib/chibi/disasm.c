@@ -3,25 +3,10 @@
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
+#include "../../opt/opcode_names.h"
 
 #define SEXP_DISASM_MAX_DEPTH 8
 #define SEXP_DISASM_PAD_WIDTH 4
-
-static const char* reverse_opcode_names[] =
-  {"NOOP", "RAISE", "RESUMECC", "CALLCC", "APPLY1", "TAIL-CALL", "CALL",
-   "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "FCALL5", "FCALL6",
-   "JUMP-UNLESS", "JUMP", "PUSH", "DROP", "GLOBAL-REF", "GLOBAL-KNOWN-REF",
-   "STACK-REF", "LOCAL-REF", "LOCAL-SET",
-   "CLOSURE-REF", "VECTOR-REF", "VECTOR-SET", "VECTOR-LENGTH", "STRING-REF",
-   "STRING-SET", "STRING-LENGTH", "MAKE-PROCEDURE", "MAKE-VECTOR",
-   "MAKE-EXCEPTION", "AND", "NULL?", "FIXNUM?", "SYMBOL?", "CHAR?",
-   "EOF?", "TYPEP", "MAKE", "SLOT-REF", "SLOT-SET", "CAR", "CDR",
-   "SET-CAR", "SET-CDR", "CONS", "ADD", "SUB",
-   "MUL", "DIV", "QUOTIENT", "REMAINDER",
-   "LT", "LE", "EQN", "EQ", "EXACT->INEXACT", "INEXACT->EXACT",
-   "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
-   "WRITE-CHAR", "NEWLINE", "READ-CHAR", "PEEK-CHAR", "RET", "DONE",
-  };
 
 static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp tmp;

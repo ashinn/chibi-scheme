@@ -110,7 +110,7 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, "sequence", NULL),
   _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, "literal", NULL),
   _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack", NULL),
-  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 7, 7, 0, 0, sexp_sizeof(context), 0, 0, "context", NULL),
+  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 11, 11, 0, 0, sexp_sizeof(context), 0, 0, "context", NULL),
 };
 #undef _DEF_TYPE
 
@@ -285,12 +285,14 @@ sexp sexp_make_context (sexp ctx, size_t size) {
     }
   sexp_context_parent(res) = ctx;
   sexp_context_lambda(res) = SEXP_FALSE;
+  sexp_context_name(res) = sexp_context_specific(res) = SEXP_FALSE;
   sexp_context_fv(res) = SEXP_NULL;
-  sexp_context_saves(res) = 0;
-  sexp_context_depth(res) = 0;
-  sexp_context_pos(res) = 0;
+  sexp_context_saves(res) = NULL;
+  sexp_context_depth(res)=sexp_context_tracep(res)=sexp_context_pos(res)=0;
   sexp_context_tailp(res) = 1;
-  sexp_context_tracep(res) = 0;
+#if SEXP_USE_GREEN_THREADS
+  sexp_context_refuel(res) = SEXP_DEFAULT_QUANTUM;
+#endif
   if (ctx) {
     sexp_context_globals(res) = sexp_context_globals(ctx);
     sexp_gc_release1(ctx);
@@ -418,7 +420,8 @@ sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp 
       }
     }
     ls = sexp_exception_source(exn);
-    if ((! (ls && sexp_pairp(ls))) && sexp_exception_procedure(exn))
+    if ((! (ls && sexp_pairp(ls)))
+        && sexp_procedurep(sexp_exception_procedure(exn)))
       ls = sexp_bytecode_source(sexp_procedure_code(sexp_exception_procedure(exn)));
     if (ls && sexp_pairp(ls)) {
       if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
@@ -1165,7 +1168,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #endif
     case SEXP_PROCEDURE:
       sexp_write_string(ctx, "#<procedure: ", out);
-      sexp_write_one(ctx, sexp_bytecode_name(sexp_procedure_code(obj)), out);
+      x = sexp_bytecode_name(sexp_procedure_code(obj));
+      sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out);
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_STRING:

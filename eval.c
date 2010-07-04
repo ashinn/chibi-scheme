@@ -391,6 +391,10 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
   tmp = sexp_c_string(ctx, ".", 1);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
+#if SEXP_USE_GREEN_THREADS
+  sexp_global(ctx, SEXP_G_THREADS_FRONT) = SEXP_NULL;
+  sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
+#endif
   sexp_gc_release3(ctx);
 }
 
@@ -410,7 +414,10 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size) {
   sexp_context_stack(res) = stack;
   sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_FIVE));
   if (! ctx) sexp_init_eval_context_globals(res);
-  if (ctx) sexp_gc_release1(ctx);
+  if (ctx) {
+    sexp_context_tracep(res) = sexp_context_tracep(ctx);
+    sexp_gc_release1(ctx);
+  }
   return res;
 }
 

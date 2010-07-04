@@ -296,8 +296,15 @@ struct sexp_struct {
     struct {
       sexp_heap heap;
       struct sexp_gc_var_t *saves;
-      sexp_uint_t pos, depth, tailp, tracep, last_fp;
-      sexp bc, lambda, stack, env, fv, parent, globals;
+#if SEXP_USE_GREEN_THREADS
+      sexp_sint_t refuel;
+      unsigned char* ip;
+      struct timeval tval;
+#endif
+      char tailp, tracep, timeoutp, waitp;
+      sexp_uint_t pos, depth, last_fp;
+      sexp bc, lambda, stack, env, fv, parent, globals,
+        proc, name, specific, event;
     } context;
   } value;
 };
@@ -479,6 +486,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_contextp(x)    (sexp_check_tag(x, SEXP_CONTEXT))
+
+#define sexp_applicablep(x) (sexp_procedurep(x) || sexp_opcodep(x))
 
 #if SEXP_USE_HUFF_SYMS
 #define sexp_symbolp(x)     (sexp_isymbolp(x) || sexp_lsymbolp(x))
@@ -688,6 +697,15 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_tracep(x)  ((x)->value.context.tailp)
 #define sexp_context_globals(x) ((x)->value.context.globals)
 #define sexp_context_last_fp(x) ((x)->value.context.last_fp)
+#define sexp_context_refuel(x)  ((x)->value.context.refuel)
+#define sexp_context_ip(x)      ((x)->value.context.ip)
+#define sexp_context_proc(x)    ((x)->value.context.proc)
+#define sexp_context_timeval(x) ((x)->value.context.tval)
+#define sexp_context_name(x)    ((x)->value.context.name)
+#define sexp_context_specific(x) ((x)->value.context.specific)
+#define sexp_context_event(x)    ((x)->value.context.event)
+#define sexp_context_timeoutp(x) ((x)->value.context.timeoutp)
+#define sexp_context_waitp(x)    ((x)->value.context.waitp)
 
 #if SEXP_USE_ALIGNED_BYTECODE
 #define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = sexp_word_align(sexp_context_pos(ctx))
@@ -806,6 +824,13 @@ enum sexp_context_globals {
   SEXP_G_ERR_HANDLER,
   SEXP_G_RESUMECC_BYTECODE,
   SEXP_G_FINAL_RESUMER,
+#if SEXP_USE_GREEN_THREADS
+  SEXP_G_THREADS_SCHEDULER,
+  SEXP_G_THREADS_FRONT,
+  SEXP_G_THREADS_BACK,
+  SEXP_G_THREADS_PAUSED,
+  SEXP_G_THREADS_LOCAL,
+#endif
   SEXP_G_NUM_GLOBALS
 };
 
