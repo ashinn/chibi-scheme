@@ -19,3 +19,6 @@
   (name condition-variable-name)
   (specific condition-variable-specific condition-variable-specific-set!)
   (threads %condition-variable-threads %condition-variable-threads-set!))
+
+(define (make-condition-variable . o)
+  (%make-condition-variable (and (pair? o) (car o)) #f #f))

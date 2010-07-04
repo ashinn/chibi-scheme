@@ -9,7 +9,7 @@
 #define sexp_mutex_name(x)       sexp_slot_ref(x, 0)
 #define sexp_mutex_specific(x)   sexp_slot_ref(x, 1)
 #define sexp_mutex_thread(x)     sexp_slot_ref(x, 2)
-#define sexp_mutex_lock(x)       sexp_slot_ref(x, 3)
+#define sexp_mutex_lockp(x)       sexp_slot_ref(x, 3)
 
 #define sexp_condvar_name(x)     sexp_slot_ref(x, 0)
 #define sexp_condvar_specific(x) sexp_slot_ref(x, 1)
@@ -19,6 +19,8 @@
 #define sexp_context_before(c, t) ((sexp_context_timeval(c).tv_sec != 0) && timeval_le(sexp_context_timeval(c), t))
 
 /* static int mutex_id, condvar_id; */
+
+/**************************** threads *************************************/
 
 static void sexp_define_type_predicate (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
@@ -108,7 +110,7 @@ sexp sexp_thread_terminate (sexp ctx sexp_api_params(self, n), sexp thread) {
   return sexp_make_boolean(ctx == thread);
 }
 
-void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
+static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
 #if SEXP_USE_FLONUMS
   double d;
 #endif
@@ -148,6 +150,68 @@ sexp sexp_thread_join (sexp ctx sexp_api_params(self, n), sexp thread, sexp time
   sexp_insert_timed(ctx, ctx, timeout);
   return SEXP_FALSE;
 }
+
+sexp sexp_thread_sleep (sexp ctx sexp_api_params(self, n), sexp timeout) {
+  sexp_assert_type(ctx, sexp_numberp, SEXP_NUMBER, timeout);
+  sexp_context_waitp(ctx) = 1;
+  sexp_insert_timed(ctx, ctx, timeout);
+  return SEXP_FALSE;
+}
+
+/**************************** mutexes *************************************/
+
+sexp sexp_mutex_state (sexp ctx sexp_api_params(self, n), sexp mutex) {
+  /* sexp_assert_type(ctx, sexp_mutexp, mutex_id, timeout); */
+  if (sexp_truep(sexp_mutex_lockp(mutex))) {
+    if (sexp_contextp(sexp_mutex_thread(mutex)))
+      return sexp_mutex_thread(mutex);
+    else
+      return sexp_intern(ctx, "not-owned", -1);
+  } else {
+    return sexp_intern(ctx, (sexp_mutex_thread(mutex) ? "not-abandoned" : "abandoned"), -1);
+  }
+}
+
+sexp sexp_mutex_lock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp timeout, sexp thread) {
+  if (thread == SEXP_TRUE)
+    thread = ctx;
+  if (sexp_not(sexp_mutex_lockp(mutex))) {
+    sexp_mutex_lockp(mutex) = SEXP_TRUE;
+    sexp_mutex_thread(mutex) = thread;
+    return SEXP_TRUE;
+  } else {
+    sexp_context_waitp(ctx) = 1;
+    sexp_context_event(ctx) = mutex;
+    sexp_insert_timed(ctx, ctx, timeout);
+    return SEXP_FALSE;
+  }
+}
+
+sexp sexp_mutex_unlock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp condvar, sexp timeout) {
+  if (sexp_not(condvar)) {
+    /* normal unlock */
+    if (sexp_truep(sexp_mutex_lockp(mutex))) {
+      sexp_mutex_lockp(mutex) = SEXP_FALSE;
+      sexp_mutex_thread(mutex) = ctx;
+      /* XXXX search for threads blocked on this mutex */
+    }
+  } else {
+    /* wait on condition var */
+    
+  }
+}
+
+/**************************** condition variables *************************/
+
+sexp sexp_condition_variable_signal (sexp ctx sexp_api_params(self, n), sexp condvar) {
+  return SEXP_VOID;
+}
+
+sexp sexp_condition_variable_broadcast (sexp ctx sexp_api_params(self, n), sexp condvar) {
+  return SEXP_VOID;
+}
+
+/**************************** the scheduler *******************************/
 
 sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   struct timeval tval;
@@ -223,6 +287,8 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   return res;
 }
 
+/**************************************************************************/
+
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
 
   sexp_define_type_predicate(ctx, env, "thread?", SEXP_CONTEXT);
@@ -232,9 +298,15 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "thread-start!", 1, sexp_thread_start);
   sexp_define_foreign(ctx, env, "%thread-terminate!", 1, sexp_thread_terminate);
   sexp_define_foreign(ctx, env, "%thread-join!", 2, sexp_thread_join);
+  sexp_define_foreign(ctx, env, "%thread-sleep!", 1, sexp_thread_sleep);
   sexp_define_foreign(ctx, env, "thread-name", 1, sexp_thread_name);
   sexp_define_foreign(ctx, env, "thread-specific", 1, sexp_thread_specific);
   sexp_define_foreign(ctx, env, "thread-specific-set!", 2, sexp_thread_specific_set);
+  sexp_define_foreign(ctx, env, "mutex-state", 1, sexp_mutex_state);
+  sexp_define_foreign(ctx, env, "%mutex-lock!", 3, sexp_mutex_lock);
+  sexp_define_foreign(ctx, env, "%mutex-unlock!", 3, sexp_mutex_unlock);
+  sexp_define_foreign(ctx, env, "condition-variable-signal!", 1, sexp_condition_variable_signal);
+  sexp_define_foreign(ctx, env, "condition-variable-broadcast!", 1, sexp_condition_variable_broadcast);
 
   sexp_global(ctx, SEXP_G_THREADS_SCHEDULER)
     = sexp_make_foreign(ctx, "scheduler", 0, 0, (sexp_proc1)sexp_scheduler, SEXP_FALSE);
