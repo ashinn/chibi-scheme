@@ -96,6 +96,9 @@
 /*   heap, of course. */
 /* #define SEXP_USE_GLOBAL_SYMBOLS 1 */
 
+/* uncomment this to disable foreign function bindings with > 6 args */
+/* #define SEXP_USE_EXTENDED_FCALL 0 */
+
 /* uncomment this if you don't need flonum support */
 /*   This is only for EVAL - you'll still be able to read */
 /*   and write flonums directly through the sexp API. */
@@ -308,6 +311,10 @@
 #else
 #define SEXP_USE_GLOBAL_SYMBOLS 0
 #endif
+#endif
+
+#ifndef SEXP_USE_EXTENDED_FCALL
+#define SEXP_USE_EXTENDED_FCALL 1
 #endif
 
 #ifndef SEXP_USE_FLONUMS
