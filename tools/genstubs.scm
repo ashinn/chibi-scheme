@@ -200,6 +200,12 @@
       (number->string (type-index type))
       ""))
 
+(define (struct-fields ls)
+  (let lp ((ls ls) (res '()))
+    (cond ((null? ls) (reverse res))
+          ((symbol? (car ls)) (lp (cddr ls) res))
+          (else (lp (cdr ls) (cons (car ls) res))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type predicates
 
@@ -1054,10 +1060,10 @@
        (lambda ()
          (c->scheme-converter
           (car field)
-          (string-append "((" (x->string (or (type-struct-type name) ""))
+          (string-append (if (type-struct? (car field)) "&" "")
+                         "((" (x->string (or (type-struct-type name) ""))
                          " " (mangle name) "*)"
-                         "sexp_cpointer_value(x))"
-                         (if (type-struct? (car field)) "." "->")
+                         "sexp_cpointer_value(x))" "->"
                          (x->string (cadr field)))
           (and (or (type-struct? (car field)) (type-link? (car field))) "x")))
        ";\n"
@@ -1067,18 +1073,42 @@
   (string-append "sexp_" (x->string (type-name (parse-type name)))
                  "_set_" (x->string (type-base (parse-type (cadr field))))))
 
+(define (write-type-setter-assignment type name field dst val)
+  (cond
+   ((type-struct? (car field))
+    ;; assign to a nested struct - copy field-by-field
+    (let ((field-type
+           (cond ((assq (type-name (car field)) *types*) => cdddr)
+                 (else (cdr field)))))
+      (lambda ()
+        (for-each
+         (lambda (subfield)
+           (let ((subname (x->string (cadr subfield))))
+             (cat
+              "  "
+              (string-append dst "." (x->string (cadr subfield)))
+              " = "
+              (string-append
+               "((" (x->string (or (type-struct-type (type-name (car field))) ""))
+               " " (mangle (type-name (car field))) "*)" "sexp_cpointer_value(" val "))"
+               "->" (x->string (cadr subfield)))
+              ";\n")))
+         (struct-fields field-type)))))
+   (else
+    (lambda ()
+      (cat "  " dst " = " (lambda () (scheme->c-converter (car field) val)) ";\n")))))
+
 (define (write-type-setter type name field)
   (cat "static sexp " (type-setter-name type name field)
        " (sexp ctx sexp_api_params(self, n), sexp x, sexp v) {\n"
        (lambda () (write-validator "x" name))
        (lambda () (write-validator "v" (car field)))
-       "  "
-       (string-append "((" (x->string (or (type-struct-type name) ""))
-                      " " (mangle name) "*)"
-                      "sexp_cpointer_value(x))"
-                      (if (type-struct? (car field)) "." "->")
-                      (x->string (cadr field)))
-       " = " (lambda () (scheme->c-converter (car field) "v")) ";\n"
+       (write-type-setter-assignment
+        type name field
+        (string-append "((" (x->string (or (type-struct-type name) ""))
+                       " " (mangle name) "*)" "sexp_cpointer_value(x))"
+                        "->" (x->string (cadr field)))
+        "v")
        "  return SEXP_VOID;\n"
        "}\n\n"))
 
@@ -1173,7 +1203,7 @@
                            ,(type-setter-name type name field))
                           (,name ,(car field))))
                        *funcs*)))))))
-     type)))
+     (struct-fields type))))
 
 (define (write-const const)
   (let ((scheme-name (if (pair? (cadr const)) (caadr const) (cadr const)))
