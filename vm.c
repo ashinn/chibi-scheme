@@ -455,6 +455,10 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
 #include "opt/opcode_names.h"
 #endif
 
+#if SEXP_USE_EXTENDED_FCALL
+#include "opt/fcall.c"
+#endif
+
 sexp sexp_vm (sexp ctx, sexp proc) {
   sexp bc = sexp_procedure_code(proc), cp = sexp_procedure_vars(proc);
   sexp *stack = sexp_stack_data(sexp_context_stack(ctx));
@@ -692,6 +696,18 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
+#if SEXP_USE_EXTENDED_FCALL
+  case SEXP_OP_FCALLN:
+    _ALIGN_IP();
+    sexp_context_top(ctx) = top;
+    i = sexp_opcode_num_args(_WORD0);
+    tmp1 = sexp_fcall(ctx, self, i, _WORD0);
+    top -= (i-1);
+    _ARG1 = tmp1;
+    ip += sizeof(sexp);
+    sexp_check_exception();
+    break;
+#endif
   case SEXP_OP_JUMP_UNLESS:
     _ALIGN_IP();
     if (stack[--top] == SEXP_FALSE)

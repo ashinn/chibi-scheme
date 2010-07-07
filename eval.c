@@ -1222,20 +1222,25 @@ sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
 sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
                         int flags, sexp_proc1 f, sexp data) {
   sexp res;
-  if (num_args > 6) {
-    res = sexp_user_exception(ctx, NULL, "make-foreign: exceeded foreign arg limit",
-                              sexp_make_fixnum(num_args));
-  } else {
-    res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
-    sexp_opcode_class(res) = SEXP_OPC_FOREIGN;
+#if ! SEXP_USE_EXTENDED_FCALL
+  if (num_args > 6)
+    return sexp_user_exception(ctx, NULL, "make-foreign: exceeded foreign arg limit",
+                               sexp_make_fixnum(num_args));
+#endif
+  res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
+  sexp_opcode_class(res) = SEXP_OPC_FOREIGN;
+#if SEXP_USE_EXTENDED_FCALL
+  if (num_args > 6)
+    sexp_opcode_code(res) = SEXP_OP_FCALLN;
+  else
+#endif
     sexp_opcode_code(res) = SEXP_OP_FCALL1+num_args-1;
-    if (flags & 1) num_args--;
-    sexp_opcode_num_args(res) = num_args;
-    sexp_opcode_flags(res) = flags;
-    sexp_opcode_name(res) = name;
-    sexp_opcode_data(res) = data;
-    sexp_opcode_func(res) = f;
-  }
+  if (flags & 1) num_args--;
+  sexp_opcode_num_args(res) = num_args;
+  sexp_opcode_flags(res) = flags;
+  sexp_opcode_name(res) = name;
+  sexp_opcode_data(res) = data;
+  sexp_opcode_func(res) = f;
   return res;
 }
 
