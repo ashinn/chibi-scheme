@@ -33,7 +33,7 @@ void sexp_stack_trace (sexp ctx, sexp out) {
         sexp_write(ctx, sexp_bytecode_name(bc), out);
       else
         sexp_printf(ctx, out, "anon: %p", bc);
-      if ((ls=sexp_bytecode_source(bc))) {
+      if ((ls=sexp_bytecode_source(bc)) && sexp_pairp(ls)) {
         if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
           sexp_write_string(ctx, " on line ", out);
           sexp_write(ctx, sexp_cdr(ls), out);

@@ -74,6 +74,7 @@ static sexp check_exception (sexp ctx, sexp res) {
     if (! sexp_oportp(err))
       err = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
     sexp_print_exception(ctx, res, err);
+    sexp_stack_trace(ctx, err);
     exit_failure();
   }
   return res;
