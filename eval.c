@@ -43,7 +43,7 @@ void sexp_warn_undefs (sexp ctx, sexp from, sexp to) {
   sexp x;
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_env_next_cell(x))
     if (sexp_cdr(x) == SEXP_UNDEF)
-      sexp_warn(ctx, "reference to undefined variable", sexp_car(x));
+      sexp_warn(ctx, "reference to undefined variable: ", sexp_car(x));
 }
 
 
@@ -298,14 +298,6 @@ static sexp sexp_make_lit (sexp ctx, sexp value) {
   sexp_lit_value(res) = value;
   return res;
 }
-
-/************************* backend ***************************/
-
-#if SEXP_USE_NATIVE_X86
-#include "opt/x86.c"
-#else
-#include "vm.c"
-#endif
 
 /****************************** contexts ******************************/
 
@@ -1123,6 +1115,142 @@ static sexp sexp_string_cmp_op (sexp ctx sexp_api_params(self, n), sexp str1, se
   return sexp_make_fixnum(diff);
 }
 
+#if SEXP_USE_UTF8_STRINGS
+
+static int sexp_utf8_initial_byte_count(int c) {
+  if (c < 0xC0) return 1;
+  if (c < 0xE0) return 2;
+  return ((c>>4)&1)+3;
+}
+
+static int sexp_utf8_char_byte_count(int c) {
+  if (c < 0x80) return 1;
+  if (c < 0x800) return 2;
+  if (c < 0x10000) return 3;
+  return 4;
+}
+
+static int sexp_string_utf8_length (unsigned char *p, int len) {
+  unsigned char *q = p+len;
+  int i;
+  for (i=0; p<q; i++)
+    p += sexp_utf8_initial_byte_count(*p);
+  return i;
+}
+
+sexp sexp_string_index_to_offset (sexp ctx sexp_api_params(self, n), sexp str, sexp index) {
+  sexp_sint_t i, j, limit;
+  unsigned char *p;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, index);
+  p = (unsigned char*)sexp_string_data(str);
+  limit = sexp_string_length(str);
+  for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
+    j += sexp_utf8_initial_byte_count(p[j]);
+  if (i>0)
+    return sexp_user_exception(ctx, self, "string-index->offset: index out of range", index);
+  return sexp_make_fixnum(j);
+}
+
+sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
+  unsigned char *p=(unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(i);
+  if (*p < 0x80)
+    return sexp_make_character(*p);
+  else if ((*p < 0xC0) || (*p > 0xF7))
+    return sexp_user_exception(ctx, NULL, "string-ref: invalid utf8 byte", i);
+  else if (*p < 0xE0)
+    return sexp_make_character(((p[0]&0x3F)<<6) + (p[1]&0x3F));
+  else if (*p < 0xF0)
+    return sexp_make_character(((p[0]&0x1F)<<12) + ((p[1]&0x3F)<<6) + (p[2]&0x3F));
+  else
+    return sexp_make_character(((p[0]&0x0F)<<16) + ((p[1]&0x3F)<<6) + ((p[2]&0x3F)<<6) + (p[2]&0x3F));
+}
+
+sexp sexp_string_utf8_index_ref (sexp ctx sexp_api_params(self, n), sexp str, sexp i) {
+  sexp off;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
+  off = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, i);
+  if (sexp_exceptionp(off)) return off;
+  return sexp_string_utf8_ref(ctx, str, off);
+}
+
+void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
+  switch (len) {
+  case 4:  *p++ = (0xF0 + ((c)>>18)); *p++ = (0x80 + ((c>>12)&0x3F));
+    *p++ = (0x80 + ((c>>6)&0x3F));    *p = (0x80 + (c&0x3F)); break;
+  case 3:  *p++ = (0xE0 + ((c)>>12)); *p++ = (0x80 + ((c>>6)&0x3F));
+    *p = (0x80 + (c&0x3F)); break;
+  case 2:  *p++ = (0xC0 + ((c)>>6));  *p = (0x80 + (c&0x3F)); break;
+  default: *p = c; break;
+  }
+}
+
+void sexp_write_utf8_char (sexp ctx, int c, sexp out) {
+  unsigned char buf[8];
+  int len = sexp_utf8_char_byte_count(c);
+  sexp_utf8_encode_char(buf, len, c);
+  buf[len+1] = 0;
+  sexp_write_string(ctx, (char*)buf, out);
+}
+
+sexp sexp_read_utf8_char (sexp ctx, sexp port, int i) {
+  if (i >= 0x80) {
+    if ((i < 0xC0) || (i > 0xF7)) {
+      return sexp_user_exception(ctx, NULL, "read-char: invalid utf8 byte", sexp_make_fixnum(i));
+    } else if (i < 0xE0) {
+      i = ((i&0x3F)<<6) + (sexp_read_char(ctx, port)&0x3F);
+    } else if (i < 0xF0) {
+      i = ((i&0x1F)<<12) + ((sexp_read_char(ctx, port)&0x3F)<<6);
+      i += sexp_read_char(ctx, port)&0x3F;
+    } else {
+      i = ((i&0x0F)<<16) + ((sexp_read_char(ctx, port)&0x3F)<<6);
+      i += (sexp_read_char(ctx, port)&0x3F)<<6;
+      i += sexp_read_char(ctx, port)&0x3F;
+    }
+  }
+  return sexp_make_character(i);
+}
+
+#if SEXP_USE_MUTABLE_STRINGS
+
+void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
+  sexp b;
+  unsigned char *p, *q;
+  int i = sexp_unbox_fixnum(index), c = sexp_unbox_character(ch),
+    old_len, new_len, len;
+  p = (unsigned char*)sexp_string_data(str) + i;
+  old_len = sexp_utf8_initial_byte_count(*p);
+  new_len = sexp_utf8_char_byte_count(c);
+  if (old_len != new_len) { /* resize bytes if needed */
+    len = sexp_string_length(str)+(new_len-old_len);
+    b = sexp_make_bytes(ctx, sexp_make_fixnum(len), SEXP_VOID);
+    if (! sexp_exceptionp(b)) {
+      q = (unsigned char*)sexp_bytes_data(b);
+      memcpy(q, sexp_string_data(str), i);
+      memcpy(q+i+new_len, p+old_len, len-i-new_len+1);
+      sexp_string_bytes(str) = b;
+      p = q + i;
+    }
+    sexp_string_length(str) += new_len - old_len;
+  }
+  sexp_utf8_encode_char(p, new_len, c);
+}
+
+sexp sexp_string_utf8_index_set (sexp ctx sexp_api_params(self, n), sexp str, sexp i, sexp ch) {
+  sexp off;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
+  sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
+  off = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, i);
+  if (sexp_exceptionp(off)) return off;
+  sexp_string_utf8_set(ctx, str, off, ch);
+  return SEXP_VOID;
+}
+
+#endif
+#endif
+
 #ifdef PLAN9
 #include "opt/plan9.c"
 #endif
@@ -1439,6 +1567,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
 #if SEXP_USE_BOEHM
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc", -1));
 #endif
+#if SEXP_USE_UTF8_STRINGS
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc", -1));
+#endif
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi", -1));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*features*", -1), tmp);
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
@@ -1518,6 +1649,14 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
   }
   return SEXP_VOID;
 }
+
+/************************* backend ***************************/
+
+#if SEXP_USE_NATIVE_X86
+#include "opt/x86.c"
+#else
+#include "vm.c"
+#endif
 
 /************************** eval interface ****************************/
 

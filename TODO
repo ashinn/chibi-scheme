@@ -8,7 +8,12 @@
 ** DONE exceptions
    - State "DONE"       [2009-04-09 Thu 14:45]
 ** TODO native x86 backend
+   API redesign in preparation complete, initial
+   tests on native factorial and closures working.
 ** TODO fasl/image files
+   sexp_copy_context() can form the basis for images,
+   FASL for arbitrary modules will need additional
+   help with resolving external references.
 ** DONE shared stack on EVAL
    - State "DONE"       [2009-12-26 Sat 08:22]
 
@@ -58,8 +63,17 @@
 * runtime
 ** DONE bignums
    - State "DONE"       [2009-07-07 Tue 14:42]
-** TODO unicode
-** TODO threads
+** DONE unicode
+   - State "DONE"       from "TODO"       [2010-07-11 Sun 23:58]
+   Supported with UTF-8 strings, string-ref is O(n) and
+   string-set! may need to reallocate the whole string.
+   string-cursor-ref can be used for O(1) string access.
+** DONE threads
+   - State "DONE"       from "TODO"       [2010-07-11 Sun 15:31]
+   VM now supports an optional hook for green threads,
+   and a SRFI-18 interface is provided as a separate module.
+   I/O operations will currently block all threads though,
+   this needs to be addressed.
 ** DONE virtual ports
    - State "DONE"       [2010-01-02 Sat 20:12]
 ** DONE dynamic-wind
@@ -107,7 +121,8 @@
 ** DONE loop library
    - State "DONE"       [2009-12-08 Tue 14:54]
 ** TODO network interface
-** TODO posix interface
+** DONE posix interface
+   - State "DONE"       from "TODO"       [2010-07-11 Sun 15:36]
    Splitting this into several parts.
 *** DONE filesystem interface
     - State "DONE"       [2009-12-26 Sat 01:50]

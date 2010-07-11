@@ -5,18 +5,23 @@ The `dynamic-wind' implementation is adapted from the implementation
 in the appendix to the Scheme48 reference manual, reportedly first
 written by Chris Hanson and John Lamping.
 
-Thanks to the following people for patches:
+Thanks to the following people for patches and bug reports:
 
+  * Alexander Shendi
   * Andreas Rottman
   * Bruno Deferrari
   * Derrick Eddington
+  * Eduardo Cavazos
   * Felix Winkelmann
   * Gregor Klinke
+  * Jeremy Wolff
+  * Jeronimo Pellegrini
   * John Cowan
   * John Samsa
   * Lars J Aas
   * Lorenzo Campedelli
   * Michal Kowalski (sladegen)
+  * Taylor Venable
 
 If you would prefer not to be listed, or are one of the users listed
 without a full name, please contact me.  If you've made a contribution

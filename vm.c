@@ -2,8 +2,6 @@
 /*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
-static sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
-
 #if SEXP_USE_DEBUG_VM > 1
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
   int i;
@@ -834,6 +832,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("vector-length: not a vector", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_vector_length(_ARG1));
     break;
+  case SEXP_OP_BYTES_REF:
   case SEXP_OP_STRING_REF:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-ref: not a string", sexp_list1(ctx, _ARG1));
@@ -842,9 +841,17 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     i = sexp_unbox_fixnum(_ARG2);
     if ((i < 0) || (i >= sexp_string_length(_ARG1)))
       sexp_raise("string-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
-    _ARG2 = sexp_string_ref(_ARG1, _ARG2);
+    if (ip[-1] == SEXP_OP_BYTES_REF)
+      _ARG2 = sexp_bytes_ref(_ARG1, _ARG2);
+    else
+#if SEXP_USE_UTF8_STRINGS
+      _ARG2 = sexp_string_utf8_ref(ctx, _ARG1, _ARG2);
+#else
+      _ARG2 = sexp_string_ref(_ARG1, _ARG2);
+#endif
     top--;
     break;
+  case SEXP_OP_BYTES_SET:
   case SEXP_OP_STRING_SET:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
@@ -857,14 +864,30 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     i = sexp_unbox_fixnum(_ARG2);
     if ((i < 0) || (i >= sexp_string_length(_ARG1)))
       sexp_raise("string-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
-    sexp_string_set(_ARG1, _ARG2, _ARG3);
+    if (ip[-1] == SEXP_OP_BYTES_SET)
+      sexp_bytes_set(_ARG1, _ARG2, _ARG3);
+    else
+#if SEXP_USE_UTF8_STRINGS
+      sexp_string_utf8_set(ctx, _ARG1, _ARG2, _ARG3);
+#else
+      sexp_string_set(_ARG1, _ARG2, _ARG3);
+#endif
     _ARG3 = SEXP_VOID;
     top-=2;
+    break;
+  case SEXP_OP_BYTES_LENGTH:
+    if (! sexp_stringp(_ARG1))
+      sexp_raise("bytes-length: not a byte-vector", sexp_list1(ctx, _ARG1));
+    _ARG1 = sexp_make_fixnum(sexp_bytes_length(_ARG1));
     break;
   case SEXP_OP_STRING_LENGTH:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-length: not a string", sexp_list1(ctx, _ARG1));
+#if SEXP_USE_UTF8_STRINGS
+    _ARG1 = sexp_make_fixnum(sexp_string_utf8_length((unsigned char*)sexp_string_data(_ARG1), sexp_string_length(_ARG1)));
+#else
     _ARG1 = sexp_make_fixnum(sexp_string_length(_ARG1));
+#endif
     break;
   case SEXP_OP_MAKE_PROCEDURE:
     sexp_context_top(ctx) = top;
@@ -1244,6 +1267,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
     if (! sexp_oportp(_ARG2))
       sexp_raise("write-char: not an output-port", sexp_list1(ctx, _ARG2));
+#if SEXP_USE_UTF8_STRINGS
+    if (sexp_unbox_character(_ARG1) >= 0x80)
+      sexp_write_utf8_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
+    else
+#endif
     sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     _ARG2 = SEXP_VOID;
     top--;
@@ -1258,6 +1286,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
+#if SEXP_USE_UTF8_STRINGS
+    if (i >= 0x80)
+      _ARG1 = sexp_read_utf8_char(ctx, _ARG1, i);
+    else
+#endif
     _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
     break;
   case SEXP_OP_PEEK_CHAR:
@@ -1302,7 +1335,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 
 /******************************* apply ********************************/
 
-static sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
+sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
   sexp res;
   sexp_gc_var1(args);
   if (sexp_opcodep(f)) {

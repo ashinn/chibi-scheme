@@ -83,6 +83,7 @@ enum sexp_types {
   SEXP_BOOLEAN,
   SEXP_PAIR,
   SEXP_SYMBOL,
+  SEXP_BYTES,
   SEXP_STRING,
   SEXP_VECTOR,
   SEXP_FLONUM,
@@ -210,6 +211,15 @@ struct sexp_struct {
     struct {
       sexp_uint_t length;
       char data[];
+    } bytes;
+    struct {
+#if SEXP_USE_PACKED_STRINGS
+      sexp_uint_t length;
+      char data[];
+#else
+      sexp_uint_t offset, length;
+      sexp bytes;
+#endif
     } string;
     struct {
       sexp_uint_t length;
@@ -578,12 +588,26 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_procedure_code(x) ((x)->value.procedure.bc)
 #define sexp_procedure_vars(x) ((x)->value.procedure.vars)
 
+#define sexp_bytes_length(x) ((x)->value.bytes.length)
+#define sexp_bytes_data(x)   ((x)->value.bytes.data)
+
 #define sexp_string_length(x) ((x)->value.string.length)
+#if SEXP_USE_PACKED_STRINGS
 #define sexp_string_data(x)   ((x)->value.string.data)
+#else
+#define sexp_string_bytes(x)  ((x)->value.string.bytes)
+#define sexp_string_offset(x) ((x)->value.string.offset)
+#define sexp_string_data(x)   (sexp_bytes_data(sexp_string_bytes(x))+sexp_string_offset(x))
+#endif
+
+#define sexp_bytes_ref(x, i) (sexp_make_fixnum((unsigned char)sexp_bytes_data(x)[sexp_unbox_fixnum(i)]))
+#define sexp_bytes_set(x, i, v) (sexp_bytes_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_fixnum(v))
 
 #define sexp_string_ref(x, i) (sexp_make_character((unsigned char)sexp_string_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_character(v))
 
+#define sexp_symbol_data(x)    ((x)->value.symbol.data)
+#define sexp_symbol_length(x)  ((x)->value.symbol.length)
 #define sexp_symbol_string(x)  (x)
 
 #define sexp_port_stream(p)    ((p)->value.port.stream)
@@ -902,6 +926,7 @@ SEXP_API sexp sexp_memq_op(sexp ctx sexp_api_params(self, n), sexp x, sexp ls);
 SEXP_API sexp sexp_assq_op(sexp ctx sexp_api_params(self, n), sexp x, sexp ls);
 SEXP_API sexp sexp_length_op(sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen);
+SEXP_API sexp sexp_make_bytes_op(sexp ctx sexp_api_params(self, n), sexp len, sexp i);
 SEXP_API sexp sexp_make_string_op(sexp ctx sexp_api_params(self, n), sexp len, sexp ch);
 SEXP_API sexp sexp_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start, sexp end);
 SEXP_API sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sexp str_ls, sexp sep);
@@ -980,6 +1005,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_list_to_vector(ctx, x) sexp_list_to_vector_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_exception_type(ctx, x) sexp_exception_type_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_string_to_number(ctx, s, b) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), s, b)
+#define sexp_make_bytes(ctx, l, i) sexp_make_bytes_op(ctx sexp_api_pass(NULL, 2), l, i)
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), l, c)
 #define sexp_string_cmp(ctx, a, b, c) sexp_string_cmp_op(ctx sexp_api_pass(NULL, 3), a, b, c)
 #define sexp_substring(ctx, a, b, c) sexp_substring_op(ctx sexp_api_pass(NULL, 3), a, b, c)
