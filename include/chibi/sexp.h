@@ -694,7 +694,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_parent(x)  ((x)->value.context.parent)
 #define sexp_context_saves(x)   ((x)->value.context.saves)
 #define sexp_context_tailp(x)   ((x)->value.context.tailp)
-#define sexp_context_tracep(x)  ((x)->value.context.tailp)
+#define sexp_context_tracep(x)  ((x)->value.context.tracep)
 #define sexp_context_globals(x) ((x)->value.context.globals)
 #define sexp_context_last_fp(x) ((x)->value.context.last_fp)
 #define sexp_context_refuel(x)  ((x)->value.context.refuel)

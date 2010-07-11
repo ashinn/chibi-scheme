@@ -5,6 +5,7 @@
 #include <chibi/eval.h>
 #include <time.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #define sexp_mutex_name(x)       sexp_slot_ref(x, 0)
 #define sexp_mutex_specific(x)   sexp_slot_ref(x, 1)
@@ -16,7 +17,7 @@
 #define sexp_condvar_threads(x)  sexp_slot_ref(x, 2)
 
 #define timeval_le(a, b) (((a).tv_sec < (b).tv_sec) || (((a).tv_sec == (b).tv_sec) && ((a).tv_usec < (b).tv_usec)))
-#define sexp_context_before(c, t) ((sexp_context_timeval(c).tv_sec != 0) && timeval_le(sexp_context_timeval(c), t))
+#define sexp_context_before(c, t) (((sexp_context_timeval(c).tv_sec != 0) || (sexp_context_timeval(c).tv_usec != 0)) && timeval_le(sexp_context_timeval(c), t))
 
 /* static int mutex_id, condvar_id; */
 
@@ -72,13 +73,12 @@ sexp sexp_make_thread (sexp ctx sexp_api_params(self, n), sexp thunk, sexp name)
 sexp sexp_thread_start (sexp ctx sexp_api_params(self, n), sexp thread) {
   sexp cell;
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
+  cell = sexp_cons(ctx, thread, SEXP_NULL);
   if (sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
-    cell = sexp_cons(ctx, thread, SEXP_NULL);
     sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = cell;
     sexp_global(ctx, SEXP_G_THREADS_BACK) = cell;
   } else {			/* init queue */
-    sexp_global(ctx, SEXP_G_THREADS_BACK) = sexp_global(ctx, SEXP_G_THREADS_FRONT)
-      = sexp_cons(ctx, thread, SEXP_NULL);
+    sexp_global(ctx, SEXP_G_THREADS_BACK) = sexp_global(ctx, SEXP_G_THREADS_FRONT) = cell;
   }
   return SEXP_VOID;
 }
@@ -115,14 +115,15 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
   double d;
 #endif
   sexp ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
+  if (sexp_integerp(timeout) || sexp_flonump(timeout))
+    gettimeofday(&sexp_context_timeval(ctx), NULL);
   if (sexp_integerp(timeout)) {
-    sexp_context_timeval(ctx).tv_sec = sexp_unbox_fixnum(timeout);
-    sexp_context_timeval(ctx).tv_usec = 0;
+    sexp_context_timeval(ctx).tv_sec += sexp_unbox_fixnum(timeout);
 #if SEXP_USE_FLONUMS
   } else if (sexp_flonump(timeout)) {
     d = sexp_flonum_value(timeout);
-    sexp_context_timeval(ctx).tv_sec = trunc(d);
-    sexp_context_timeval(ctx).tv_usec = (d-trunc(d))*1000000;
+    sexp_context_timeval(ctx).tv_sec += trunc(d);
+    sexp_context_timeval(ctx).tv_usec += (d-trunc(d))*1000000;
 #endif
   } else {
     sexp_context_timeval(ctx).tv_sec = 0;
@@ -143,8 +144,10 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
 
 sexp sexp_thread_join (sexp ctx sexp_api_params(self, n), sexp thread, sexp timeout) {
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
-  if (sexp_context_refuel(thread) <= 0) /* return true if already terminated */
+  if (sexp_context_refuel(thread) <= 0) /* return true if already terminated */ {
     return SEXP_TRUE;
+  }
+  sexp_context_timeoutp(ctx) = 0;
   sexp_context_waitp(ctx) = 1;
   sexp_context_event(ctx) = thread;
   sexp_insert_timed(ctx, ctx, timeout);
@@ -188,30 +191,78 @@ sexp sexp_mutex_lock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp timeou
 }
 
 sexp sexp_mutex_unlock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp condvar, sexp timeout) {
+  sexp ls1, ls2;
   if (sexp_not(condvar)) {
-    /* normal unlock */
+    /* normal unlock - always succeeds, just need to unblock threads */
     if (sexp_truep(sexp_mutex_lockp(mutex))) {
       sexp_mutex_lockp(mutex) = SEXP_FALSE;
       sexp_mutex_thread(mutex) = ctx;
-      /* XXXX search for threads blocked on this mutex */
+      /* search for threads blocked on this mutex */
+      for (ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
+           sexp_pairp(ls2); ls1=ls2, ls2=sexp_cdr(ls2))
+        if (sexp_context_event(sexp_car(ls2)) == mutex) {
+          if (ls1==SEXP_NULL)
+            sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
+          else
+            sexp_cdr(ls1) = sexp_cdr(ls2);
+          sexp_cdr(ls2) = sexp_global(ctx, SEXP_G_THREADS_FRONT);
+          sexp_global(ctx, SEXP_G_THREADS_FRONT) = ls2;
+          if (! sexp_pairp(sexp_cdr(ls2)))
+            sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
+          sexp_context_waitp(sexp_car(ls2))
+            = sexp_context_timeoutp(sexp_car(ls2)) = 0;
+          break;
+        }
     }
+    return SEXP_TRUE;
   } else {
     /* wait on condition var */
-    
+    sexp_context_waitp(ctx) = 1;
+    sexp_context_event(ctx) = condvar;
+    sexp_insert_timed(ctx, ctx, timeout);
+    return SEXP_FALSE;
   }
 }
 
 /**************************** condition variables *************************/
 
 sexp sexp_condition_variable_signal (sexp ctx sexp_api_params(self, n), sexp condvar) {
-  return SEXP_VOID;
+  sexp ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
+  for ( ; sexp_pairp(ls2); ls1=ls2, ls2=sexp_cdr(ls2))
+    if (sexp_context_event(sexp_car(ls2)) == condvar) {
+      if (ls1==SEXP_NULL)
+	sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
+      else
+	sexp_cdr(ls1) = sexp_cdr(ls2);
+      sexp_cdr(ls2) = sexp_global(ctx, SEXP_G_THREADS_FRONT);
+      sexp_global(ctx, SEXP_G_THREADS_FRONT) = ls2;
+      if (! sexp_pairp(sexp_cdr(ls2)))
+	sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
+      sexp_context_waitp(sexp_car(ls2)) = sexp_context_timeoutp(sexp_car(ls2)) = 0;
+      return SEXP_TRUE;
+    }
+  return SEXP_FALSE;
 }
 
 sexp sexp_condition_variable_broadcast (sexp ctx sexp_api_params(self, n), sexp condvar) {
-  return SEXP_VOID;
+  sexp res = SEXP_FALSE;
+  while (sexp_truep(sexp_condition_variable_signal(ctx, self, n, condvar)))
+    res = SEXP_TRUE;
+  return res;
 }
 
 /**************************** the scheduler *******************************/
+
+void sexp_wait_on_single_thread (sexp ctx) {
+  struct timeval tval;
+  useconds_t usecs = 0;
+  gettimeofday(&tval, NULL);
+  if (tval.tv_sec < sexp_context_timeval(ctx).tv_sec)
+    usecs = (sexp_context_timeval(ctx).tv_sec - tval.tv_sec) * 1000000;
+  if (tval.tv_usec < sexp_context_timeval(ctx).tv_usec)
+    usecs += sexp_context_timeval(ctx).tv_usec - tval.tv_usec;
+  usleep(usecs);
+}
 
 sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   struct timeval tval;
@@ -221,27 +272,31 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
 
   /* if we've terminated, check threads joining us */
   if (sexp_context_refuel(ctx) <= 0) {
-    for (ls1=SEXP_NULL, ls2=paused; sexp_pairp(ls2); ls2=sexp_cdr(ls2))
+    for (ls1=SEXP_NULL, ls2=paused; sexp_pairp(ls2); ) {
       if (sexp_context_event(sexp_car(ls2)) == ctx) {
-        sexp_context_waitp(ctx) = 0;
+        sexp_context_waitp(sexp_car(ls2)) = 0;
+        sexp_context_timeoutp(sexp_car(ls2)) = 0;
         if (ls1==SEXP_NULL)
           sexp_global(ctx, SEXP_G_THREADS_PAUSED) = paused = sexp_cdr(ls2);
         else
           sexp_cdr(ls1) = sexp_cdr(ls2);
         tmp = sexp_cdr(ls2);
-        sexp_cdr(ls2) = front;
-        sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
+        sexp_cdr(ls2) = SEXP_NULL;
+	if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
+	  sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
+	} else {
+	  sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = ls2;
+	}
+	sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
         ls2 = tmp;
       } else {
         ls1 = ls2;
         ls2 = sexp_cdr(ls2);
       }
+    }
   }
 
-  /* TODO: check threads blocked on I/O */
-  /* ... */
-
-  /* check timeouts (must be _after_ previous checks) */
+  /* check timeouts */
   if (sexp_pairp(paused)) {
     if (gettimeofday(&tval, NULL) == 0) {
       ls1 = SEXP_NULL;
@@ -253,9 +308,14 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
         ls2 = sexp_cdr(ls2);
       }
       if (sexp_pairp(ls1)) {
-        sexp_cdr(ls1) = front;
-        sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = paused;
-        sexp_global(ctx, SEXP_G_THREADS_PAUSED) = ls2;
+        sexp_cdr(ls1) = SEXP_NULL;
+	if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
+	  sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = paused;
+	} else {
+	  sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = paused;
+	}
+	sexp_global(ctx, SEXP_G_THREADS_BACK) = ls1;
+        sexp_global(ctx, SEXP_G_THREADS_PAUSED) = paused = ls2;
       }
     }
   }
@@ -266,7 +326,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     if ((sexp_context_refuel(ctx) <= 0) || sexp_context_waitp(ctx)) {
       /* either terminated or paused */
       sexp_global(ctx, SEXP_G_THREADS_FRONT) = sexp_cdr(front);
-      if (ctx == sexp_car(sexp_global(ctx, SEXP_G_THREADS_BACK)))
+      if (! sexp_pairp(sexp_cdr(front)))
         sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
     } else {
       /* swap with front of queue */
@@ -282,6 +342,13 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     }
   } else {
     res = ctx;
+  }
+
+  if (sexp_context_waitp(res)) {
+    /* the only thread available was waiting */
+    sexp_wait_on_single_thread(res);
+    sexp_context_timeoutp(res) = 1;
+    sexp_context_waitp(res) = 0;
   }
 
   return res;

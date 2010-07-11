@@ -4,6 +4,48 @@
 
 static sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
 
+#if SEXP_USE_DEBUG_VM > 1
+static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
+  int i;
+  if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
+  for (i=0; i<top; i++) {
+    sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
+    sexp_write(ctx, stack[i], out);
+    sexp_printf(ctx, out, "\n");
+  }
+}
+#else
+#define sexp_print_stack(ctx, stacl, top, fp, out)
+#endif
+
+void sexp_stack_trace (sexp ctx, sexp out) {
+  int i, fp=sexp_context_last_fp(ctx);
+  sexp self, bc, ls, *stack=sexp_stack_data(sexp_context_stack(ctx));
+  if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
+  for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
+    self = stack[i+2];
+    if (sexp_procedurep(self)) {
+      sexp_write_string(ctx, "  called from ", out);
+      bc = sexp_procedure_code(self);
+      if (sexp_truep(sexp_bytecode_name(bc)))
+        sexp_write(ctx, sexp_bytecode_name(bc), out);
+      else
+        sexp_printf(ctx, out, "anon: %p", bc);
+      if ((ls=sexp_bytecode_source(bc)) && sexp_pairp(ls)) {
+        if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
+          sexp_write_string(ctx, " on line ", out);
+          sexp_write(ctx, sexp_cdr(ls), out);
+        }
+        if (sexp_stringp(sexp_car(ls))) {
+          sexp_write_string(ctx, " of file ", out);
+          sexp_write_string(ctx, sexp_string_data(sexp_car(ls)), out);
+        }
+      }
+      sexp_write_char(ctx, '\n', out);
+    }
+  }
+}
+
 /************************* code generation ****************************/
 
 static void emit_word (sexp ctx, sexp_uint_t val)  {
@@ -503,8 +545,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #if SEXP_USE_DEBUG_VM
   if (sexp_context_tracep(ctx)) {
     sexp_print_stack(ctx, stack, top, fp, SEXP_FALSE);
-    fprintf(stderr, "%s\n", (*ip<=SEXP_OP_NUM_OPCODES) ?
-            reverse_opcode_names[*ip] : "UNKNOWN");
+    fprintf(stderr, "%s ip: %p stack: %p top: %d fp: %d\n", (*ip<=SEXP_OP_NUM_OPCODES) ?
+            reverse_opcode_names[*ip] : "UNKNOWN", ip, stack, top, fp);
   }
 #endif
   switch (*ip++) {
@@ -515,7 +557,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     tmp1 = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
     if (! sexp_procedurep(tmp1)) goto end_loop;
-    stack[top] = (sexp) 1;
+    stack[top] = SEXP_ONE;
     stack[top+1] = sexp_make_fixnum(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
     stack[top+3] = sexp_make_fixnum(fp);
@@ -643,8 +685,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fp = top-4;
     break;
   case SEXP_OP_FCALL0:
+    tmp1 = _WORD0;
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
+    sexp_context_last_fp(ctx) = fp;
     _PUSH(((sexp_proc1)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 0)));
     ip += sizeof(sexp);
     sexp_check_exception();
@@ -1225,6 +1269,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_YIELD:
     fuel = 0;
+    _PUSH(SEXP_VOID);
     break;
   case SEXP_OP_RET:
     i = sexp_unbox_fixnum(stack[fp]);
