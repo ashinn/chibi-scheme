@@ -76,6 +76,9 @@ enum sexp_opcode_names {
   SEXP_OP_VECTOR_REF,
   SEXP_OP_VECTOR_SET,
   SEXP_OP_VECTOR_LENGTH,
+  SEXP_OP_BYTES_REF,
+  SEXP_OP_BYTES_SET,
+  SEXP_OP_BYTES_LENGTH,
   SEXP_OP_STRING_REF,
   SEXP_OP_STRING_SET,
   SEXP_OP_STRING_LENGTH,
@@ -132,6 +135,7 @@ SEXP_API sexp sexp_compile_error (sexp ctx, const char *message, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
 SEXP_API void sexp_stack_trace (sexp ctx, sexp out);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
+SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp lambda, sexp name);
 SEXP_API sexp sexp_eval_op (sexp context sexp_api_params(self, n), sexp obj, sexp env);

@@ -88,7 +88,12 @@ static struct sexp_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, "boolean", NULL),
   _DEF_TYPE(SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, "pair", NULL),
   _DEF_TYPE(SEXP_SYMBOL, 0, 0, 0, 0, 0, sexp_sizeof(symbol)+1, sexp_offsetof(symbol, length), 1, "symbol", NULL),
+  _DEF_TYPE(SEXP_BYTES, 0, 0, 0, 0, 0, sexp_sizeof(bytes)+1, sexp_offsetof(bytes, length), 1, "byte-vector", NULL),
+#if SEXP_USE_PACKED_STRINGS
   _DEF_TYPE(SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, "string", NULL),
+#else
+  _DEF_TYPE(SEXP_STRING, sexp_offsetof(string, bytes), 1, 1, 0, 0, sexp_sizeof(string), 0, 0, "string", NULL),
+#endif
   _DEF_TYPE(SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), "vector", NULL),
   _DEF_TYPE(SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, "real", NULL),
   _DEF_TYPE(SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp_uint_t), "bignum", NULL),
@@ -666,22 +671,42 @@ sexp sexp_make_flonum (sexp ctx, float f) {
 #endif
 #endif
 
-sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch) {
+sexp sexp_make_bytes_op (sexp ctx sexp_api_params(self, n), sexp len, sexp i) {
   sexp_sint_t clen = sexp_unbox_fixnum(len);
   sexp s;
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, len);
   if (clen < 0) return sexp_xtype_exception(ctx, self, "negative length", len);
-  s = sexp_alloc_atomic(ctx, sexp_sizeof(string)+clen+1);
+  s = sexp_alloc_atomic(ctx, sexp_sizeof(bytes)+clen+1);
   if (sexp_exceptionp(s)) return s;
-  sexp_pointer_tag(s) = SEXP_STRING;
+  sexp_pointer_tag(s) = SEXP_BYTES;
 #if SEXP_USE_HEADER_MAGIC
   sexp_pointer_magic(s) = SEXP_POINTER_MAGIC;
 #endif
-  sexp_string_length(s) = clen;
-  if (sexp_charp(ch))
-    memset(sexp_string_data(s), sexp_unbox_character(ch), clen);
-  sexp_string_data(s)[clen] = '\0';
+  sexp_bytes_length(s) = clen;
+  if (sexp_fixnump(i))
+    memset(sexp_bytes_data(s), sexp_unbox_fixnum(i), clen);
+  sexp_bytes_data(s)[clen] = '\0';
   return s;
+}
+
+sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch)
+{
+  sexp i = (sexp_charp(ch) ? sexp_make_fixnum(sexp_unbox_character(ch)) : ch);
+  sexp_gc_var2(b, s);
+  b = sexp_make_bytes_op(ctx sexp_api_pass(self, n), len, i);
+  if (sexp_exceptionp(b)) return b;
+#if SEXP_USE_PACKED_STRINGS
+  sexp_pointer_tag(b) = SEXP_STRING;
+  return b;
+#else
+  sexp_gc_preserve2(ctx, b, s);
+  s = sexp_alloc_type(ctx, string, SEXP_STRING);
+  sexp_string_bytes(s) = b;
+  sexp_string_offset(s) = 0;
+  sexp_string_length(s) = sexp_unbox_fixnum(len);
+  sexp_gc_release2(ctx);
+  return s;
+#endif
 }
 
 sexp sexp_c_string (sexp ctx, const char *str, sexp_sint_t slen) {
@@ -790,14 +815,17 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
   bucket = 0;
 #endif
   for (ls=sexp_context_symbols(ctx)[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
-    if ((sexp_string_length(tmp=sexp_symbol_string(sexp_car(ls))) == len)
-        && ! strncmp(str, sexp_string_data(tmp), len))
+    if ((sexp_symbol_length(tmp=sexp_car(ls)) == len)
+        && ! strncmp(str, sexp_symbol_data(tmp), len))
       return sexp_car(ls);
 
   /* not found, make a new symbol */
   sexp_gc_preserve1(ctx, sym);
   sym = sexp_c_string(ctx, str, len);
   if (sexp_exceptionp(sym)) return sym;
+#if ! SEXP_USE_PACKED_STRINGS
+  sym = sexp_string_bytes(sym);
+#endif
   sexp_pointer_tag(sym) = SEXP_SYMBOL;
   sexp_push(ctx, sexp_context_symbols(ctx)[bucket], sym);
   sexp_gc_release1(ctx);
@@ -1190,8 +1218,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_char(ctx, '"', out);
       break;
     case SEXP_SYMBOL:
-      i = sexp_string_length(sexp_symbol_string(obj));
-      str = sexp_string_data(sexp_symbol_string(obj));
+      i = sexp_symbol_length(obj);
+      str = sexp_symbol_data(obj);
       for ( ; i>0; str++, i--) {
         if ((str[0] == '\\') || is_separator(str[0]))
           sexp_write_char(ctx, '\\', out);
@@ -1253,8 +1281,17 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_char(ctx, sexp_unbox_character(obj), out);
     } else {
       sexp_write_string(ctx, "#\\x", out);
-      sexp_write_char(ctx, hex_digit(sexp_unbox_character(obj)>>4), out);
-      sexp_write_char(ctx, hex_digit(sexp_unbox_character(obj)&0xF), out);
+      c = sexp_unbox_character(obj);
+      if (c >= 0x100) {
+        if (c >= 0x10000) {
+          sexp_write_char(ctx, hex_digit((c>>20)&0x0F), out);
+          sexp_write_char(ctx, hex_digit((c>>16)&0x0F), out);
+        }
+        sexp_write_char(ctx, hex_digit((c>>12)&0x0F), out);
+        sexp_write_char(ctx, hex_digit((c>>8)&0x0F), out);
+      }
+      sexp_write_char(ctx, hex_digit((c>>4)&0x0F), out);
+      sexp_write_char(ctx, hex_digit(c&0x0F), out);
     }
   } else if (sexp_symbolp(obj)) {
 

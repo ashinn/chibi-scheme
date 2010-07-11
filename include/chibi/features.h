@@ -145,6 +145,16 @@
 /*   non-immediate symbols in a single list. */
 /* #define SEXP_USE_HASH_SYMS 0 */
 
+/* uncomment this to disable UTF-8 string support */
+/*   The default settings store strings in memory as UTF-8, */
+/*   and assumes strings passed to/from the C FFI are UTF-8.  */
+/* #define SEXP_USE_UTF8_STRINGS 0 */
+
+/* uncomment this to disable the string-set! opcode */
+/*   By default (non-literal) strings are mutable. */
+/*   Making them immutable allows for packed UTF-8 strings. */
+/* #define SEXP_USE_MUTABLE_STRINGS 0 */
+
 /* uncomment this to disable string ports */
 /*   If disabled some basic functionality such as number->string */
 /*   will not be available by default. */
@@ -201,7 +211,7 @@
 
 /* the default number of opcodes to run each thread for */
 #ifndef SEXP_DEFAULT_QUANTUM
-#define SEXP_DEFAULT_QUANTUM 1000
+#define SEXP_DEFAULT_QUANTUM 500
 #endif
 
 /************************************************************************/
@@ -230,7 +240,7 @@
 #endif
 
 #ifndef SEXP_USE_GREEN_THREADS
-#define SEXP_USE_GREEN_THREADS 1
+#define SEXP_USE_GREEN_THREADS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_NATIVE_X86
@@ -314,7 +324,7 @@
 #endif
 
 #ifndef SEXP_USE_EXTENDED_FCALL
-#define SEXP_USE_EXTENDED_FCALL 1
+#define SEXP_USE_EXTENDED_FCALL ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_FLONUMS
@@ -359,6 +369,21 @@
 
 #ifndef SEXP_USE_DEBUG_VM
 #define SEXP_USE_DEBUG_VM 0
+#endif
+
+#ifndef SEXP_USE_UTF8_STRINGS
+#define SEXP_USE_UTF8_STRINGS ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_MUTABLE_STRINGS
+#define SEXP_USE_MUTABLE_STRINGS 1
+#endif
+
+#if (SEXP_USE_UTF8_STRINGS && SEXP_USE_MUTABLE_STRINGS)
+#define SEXP_USE_PACKED_STRINGS 0
+#endif
+#ifndef SEXP_USE_PACKED_STRINGS
+#define SEXP_USE_PACKED_STRINGS 1
 #endif
 
 #ifndef SEXP_USE_STRING_STREAMS

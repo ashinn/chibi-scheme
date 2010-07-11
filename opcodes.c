@@ -24,8 +24,21 @@ _OP(SEXP_OPC_SETTER, SEXP_OP_SET_CDR, 2, 0, SEXP_PAIR, 0, 0, "set-cdr!", 0, NULL
 _OP(SEXP_OPC_GETTER, SEXP_OP_VECTOR_REF,2,0, SEXP_VECTOR, SEXP_FIXNUM, 0,"vector-ref", 0, NULL),
 _OP(SEXP_OPC_SETTER, SEXP_OP_VECTOR_SET,3,0, SEXP_VECTOR, SEXP_FIXNUM, 0,"vector-set!", 0, NULL),
 _OP(SEXP_OPC_GETTER, SEXP_OP_VECTOR_LENGTH,1,0, SEXP_VECTOR, 0, 0,"vector-length", 0, NULL),
+_OP(SEXP_OPC_GETTER, SEXP_OP_BYTES_REF,2,0, SEXP_BYTES, SEXP_FIXNUM, 0,"byte-vector-ref", 0, NULL),
+_OP(SEXP_OPC_SETTER, SEXP_OP_BYTES_SET,3,0, SEXP_BYTES, SEXP_FIXNUM, 0,"byte-vector-set!", 0, NULL),
+_OP(SEXP_OPC_GETTER, SEXP_OP_BYTES_LENGTH,1,0, SEXP_BYTES, 0, 0,"byte-vector-length", 0, NULL),
+#if SEXP_USE_UTF8_STRINGS
+_OP(SEXP_OPC_GETTER, SEXP_OP_STRING_REF,2,0, SEXP_STRING, SEXP_FIXNUM, 0,"string-cursor-ref", 0, NULL),
+#else
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_REF,2,0, SEXP_STRING, SEXP_FIXNUM, 0,"string-ref", 0, NULL),
+#endif
+#if SEXP_USE_MUTABLE_STRINGS
+#if SEXP_USE_UTF8_STRINGS
+_OP(SEXP_OPC_SETTER, SEXP_OP_STRING_SET,3,0, SEXP_STRING, SEXP_FIXNUM, 0,"string-cursor-set!", 0, NULL),
+#else
 _OP(SEXP_OPC_SETTER, SEXP_OP_STRING_SET,3,0, SEXP_STRING, SEXP_FIXNUM, 0,"string-set!", 0, NULL),
+#endif
+#endif
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_LENGTH,1,0, SEXP_STRING, 0, 0,"string-length", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_FIX2FLO, 1, 0, 0, 0, 0, "exact->inexact", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_FLO2FIX, 1, 0, 0, 0, 0, "inexact->exact", 0, NULL),
@@ -101,6 +114,7 @@ _FN4(SEXP_ENV, SEXP_ENV, "%env-copy!", 0, sexp_env_copy_op),
 _FN2(SEXP_EXCEPTION, SEXP_OPORT, "print-exception", 0, sexp_print_exception_op),
 _FN1(SEXP_EXCEPTION, "exception-type", 0, sexp_exception_type_op),
 _FN2OPT(SEXP_FIXNUM, SEXP_CHAR, "make-string", sexp_make_character(' '), sexp_make_string_op),
+_FN2OPT(SEXP_FIXNUM, SEXP_FIXNUM, "make-byte-vector", SEXP_ZERO, sexp_make_bytes_op),
 _FN2OPT(SEXP_FIXNUM, SEXP_FIXNUM, "string->number", SEXP_TEN, sexp_string_to_number_op),
 _FN3(SEXP_STRING, SEXP_STRING, "string-cmp", 0, sexp_string_cmp_op),
 _FN3(SEXP_STRING, SEXP_FIXNUM, "substring", 0, sexp_substring_op),
@@ -134,6 +148,11 @@ _FN1(0, "floor", 0, sexp_floor),
 _FN1(0, "ceiling", 0, sexp_ceiling),
 #endif
 _FN2(0, 0, "expt", 0, sexp_expt_op),
+#if SEXP_USE_UTF8_STRINGS
+_FN2(SEXP_STRING, SEXP_FIXNUM, "string-index->offset", 0, sexp_string_index_to_offset),
+_FN2(SEXP_STRING, SEXP_FIXNUM, "string-ref", 0, sexp_string_utf8_index_ref),
+_FN3(SEXP_STRING, SEXP_FIXNUM, "string-set!", 0, sexp_string_utf8_index_set),
+#endif
 #if SEXP_USE_TYPE_DEFS
 _FN2(SEXP_STRING, SEXP_FIXNUM, "register-simple-type", 0, sexp_register_simple_type_op),
 _FN2(SEXP_STRING, SEXP_FIXNUM, "make-type-predicate", 0, sexp_make_type_predicate_op),
