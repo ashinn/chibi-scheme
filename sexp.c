@@ -421,6 +421,7 @@ sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp 
     }
     ls = sexp_exception_source(exn);
     if ((! (ls && sexp_pairp(ls)))
+	&& sexp_exception_procedure(exn)
         && sexp_procedurep(sexp_exception_procedure(exn)))
       ls = sexp_bytecode_source(sexp_procedure_code(sexp_exception_procedure(exn)));
     if (ls && sexp_pairp(ls)) {

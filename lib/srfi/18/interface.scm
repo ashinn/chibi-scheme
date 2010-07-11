@@ -8,7 +8,8 @@
       (if (thread-timeout?)
           (if (and (pair? o) (pair? (cdr o)))
               (cadr o)
-              (error "timed out waiting for thread" thread)))))))
+              (error "timed out waiting for thread" thread))
+	  #t)))))
 
 (define (thread-terminate! thread)
   (if (%thread-terminate! thread) ;; need to yield if terminating ourself
@@ -21,11 +22,18 @@
 (define (mutex-lock! mutex . o)
   (let ((timeout (and (pair? o) (car o)))
         (thread (if (and (pair? o) (pair? (cdr o))) (cadr o) #t)))
-    (if (not (%mutex-lock! mutex timeout thread))
-        (thread-yield!))))
+    (cond ((%mutex-lock! mutex timeout thread))
+	  (else
+	   (thread-yield!)
+	   (not (thread-timeout?))))))
 
 (define (mutex-unlock! mutex . o)
-  #f)
+  (let ((condvar (and (pair? o) (car o)))
+        (timeout (if (and (pair? o) (pair? (cdr o))) (cadr o) #f)))
+    (cond ((%mutex-unlock! mutex condvar timeout))
+	  (else
+	   (thread-yield!)
+	   (not (thread-timeout?))))))
 
 (define current-time get-time-of-day)
 (define time? timeval?)

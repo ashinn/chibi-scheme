@@ -161,6 +161,9 @@ test-basic: chibi-scheme$(EXE)
 test-build:
 	./tests/build/build-tests.sh
 
+test-threads: chibi-scheme$(EXE)
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/thread-tests.scm
+
 test-numbers: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/numeric-tests.scm
 
