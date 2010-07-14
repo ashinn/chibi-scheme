@@ -14,9 +14,14 @@ extern "C" {
 #include "chibi/features.h"
 #include "chibi/install.h"
 
+#if defined(_WIN32) || defined(__MINGW32__)
+#include <windows.h>
+#else
 #if SEXP_USE_DL
-#ifndef __MINGW32__
 #include <dlfcn.h>
+#endif
+#if SEXP_USE_GREEN_THREADS
+#include <sys/time.h>
 #endif
 #endif
 
@@ -173,10 +178,33 @@ struct sexp_heap_t {
 
 struct sexp_gc_var_t {
   sexp *var;
-#if SEXP_USE_CONSERVATIVE_GC
+#if SEXP_USE_DEBUG_GC
   char *name;
 #endif
   struct sexp_gc_var_t *next;
+};
+
+struct sexp_type_struct {
+  sexp_tag_t tag;
+  short field_base, field_eq_len_base, field_len_base, field_len_off;
+  unsigned short field_len_scale;
+  short size_base, size_off;
+  unsigned short size_scale;
+  char *name;
+  sexp_proc2 finalize;
+};
+
+struct sexp_opcode_struct {
+  unsigned char op_class, code, num_args, flags,
+    arg1_type, arg2_type, inverse;
+  const char *name;
+  sexp data, data2, proc;
+  sexp_proc1 func;
+};
+
+struct sexp_core_form_struct {
+  char code;
+  const char *name;
 };
 
 struct sexp_struct {
@@ -191,15 +219,7 @@ struct sexp_struct {
   union {
     /* basic types */
     double flonum;
-    struct {
-      sexp_tag_t tag;
-      short field_base, field_eq_len_base, field_len_base, field_len_off;
-      unsigned short field_len_scale;
-      short size_base, size_off;
-      unsigned short size_scale;
-      char *name;
-      sexp_proc2 finalize;
-    } type;
+    struct sexp_type_struct type;
     struct {
       sexp car, cdr;
       sexp source;
@@ -268,17 +288,8 @@ struct sexp_struct {
     struct {
       sexp env, free_vars, expr;
     } synclo;
-    struct {
-      unsigned char op_class, code, num_args, flags,
-        arg1_type, arg2_type, inverse;
-      const char *name;
-      sexp data, data2, proc;
-      sexp_proc1 func;
-    } opcode;
-    struct {
-      char code;
-      const char *name;
-    } core;
+    struct sexp_opcode_struct opcode;
+    struct sexp_core_form_struct core;
     /* ast types */
     struct {
       sexp name, params, body, defs, locals, flags, fv, sv, source;
@@ -350,7 +361,7 @@ struct sexp_struct {
   sexp x = SEXP_VOID;                           \
   struct sexp_gc_var_t y = {NULL, NULL};
 
-#if SEXP_USE_CONSERVATIVE_GC
+#if SEXP_USE_DEBUG_GC
 #define sexp_gc_preserve_name(ctx, x, y) (y).name = #x
 #else
 #define sexp_gc_preserve_name(ctx, x, y)
@@ -384,11 +395,11 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #endif
 
 #define sexp_gc_var1(x) sexp_gc_var(ctx, x, __sexp_gc_preserver1)
-#define sexp_gc_var2(x, y) sexp_gc_var1(x); sexp_gc_var(ctx, y, __sexp_gc_preserver2)
-#define sexp_gc_var3(x, y, z) sexp_gc_var2(x, y); sexp_gc_var(ctx, z, __sexp_gc_preserver3)
-#define sexp_gc_var4(x, y, z, w) sexp_gc_var3(x, y, z); sexp_gc_var(ctx, w, __sexp_gc_preserver4)
-#define sexp_gc_var5(x, y, z, w, v) sexp_gc_var4(x, y, z, w); sexp_gc_var(ctx, v, __sexp_gc_preserver5)
-#define sexp_gc_var6(x, y, z, w, v, u) sexp_gc_var5(x, y, z, w, v); sexp_gc_var(ctx, u, __sexp_gc_preserver6)
+#define sexp_gc_var2(x, y) sexp_gc_var1(x) sexp_gc_var(ctx, y, __sexp_gc_preserver2)
+#define sexp_gc_var3(x, y, z) sexp_gc_var2(x, y) sexp_gc_var(ctx, z, __sexp_gc_preserver3)
+#define sexp_gc_var4(x, y, z, w) sexp_gc_var3(x, y, z) sexp_gc_var(ctx, w, __sexp_gc_preserver4)
+#define sexp_gc_var5(x, y, z, w, v) sexp_gc_var4(x, y, z, w) sexp_gc_var(ctx, v, __sexp_gc_preserver5)
+#define sexp_gc_var6(x, y, z, w, v, u) sexp_gc_var5(x, y, z, w, v) sexp_gc_var(ctx, u, __sexp_gc_preserver6)
 
 #define sexp_gc_preserve1(ctx, x) sexp_gc_preserve(ctx, x, __sexp_gc_preserver1)
 #define sexp_gc_preserve2(ctx, x, y) sexp_gc_preserve1(ctx, x); sexp_gc_preserve(ctx, y, __sexp_gc_preserver2)

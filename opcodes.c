@@ -1,7 +1,5 @@
 
-#define _OP(c,o,n,m,t,u,i,s,d,f)                                \
-  {.tag=SEXP_OPCODE,                                            \
-      .value={.opcode={c, o, n, m, t, u, i, s, d, NULL, NULL, f}}}
+#define _OP(c,o,n,m,t,u,i,s,d,f) {c, o, n, m, t, u, i, s, d, NULL, NULL, f}
 #define _FN(o,n,m,t,u,s,d,f) _OP(SEXP_OPC_FOREIGN, o, n, m, t, u, 0, s, d, (sexp_proc1)f)
 #define _FN0(s, d, f) _FN(SEXP_OP_FCALL0, 0, 0, 0, 0, s, d, f)
 #define _FN1(t, s, d, f) _FN(SEXP_OP_FCALL1, 1, 0, t, 0, s, d, f)
@@ -16,7 +14,7 @@
 #define _FN6(t, u, s, d, f) _FN(SEXP_OP_FCALL6, 6, 0, t, u, s, d, f)
 #define _PARAM(n, a, t) _OP(SEXP_OPC_PARAMETER, SEXP_OP_NOOP, 0, 3, t, 0, 0, n, a, 0)
 
-static struct sexp_struct opcodes[] = {
+static struct sexp_opcode_struct opcodes[] = {
 _OP(SEXP_OPC_GETTER, SEXP_OP_CAR, 1, 0, SEXP_PAIR, 0, 0, "car", 0, NULL),
 _OP(SEXP_OPC_SETTER, SEXP_OP_SET_CAR, 2, 0, SEXP_PAIR, 0, 0, "set-car!", 0, NULL),
 _OP(SEXP_OPC_GETTER, SEXP_OP_CDR, 1, 0, SEXP_PAIR, 0, 0, "cdr", 0, NULL),

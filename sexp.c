@@ -76,10 +76,9 @@ sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port) {
 #define SEXP_FINALIZE_PORT NULL
 #endif
 
-#define _DEF_TYPE(t,fb,felb,flb,flo,fls,sb,so,sc,n,f)                   \
-  {.tag=SEXP_TYPE, .value={.type={t,fb,felb,flb,flo,fls,sb,so,sc,n,f}}}
+#define _DEF_TYPE(t,fb,felb,flb,flo,fls,sb,so,sc,n,f) {t,fb,felb,flb,flo,fls,sb,so,sc,n,f}
 
-static struct sexp_struct _sexp_type_specs[] = {
+static struct sexp_type_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, "object", NULL),
   _DEF_TYPE(SEXP_TYPE, 0, 0, 0, 0, 0, sexp_sizeof(type), 0, 0, "type", NULL),
   _DEF_TYPE(SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, "integer", NULL),
@@ -251,7 +250,7 @@ void sexp_init_context_globals (sexp ctx) {
   vec = sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES));
   for (i=0; i<SEXP_NUM_CORE_TYPES; i++) {
     type = sexp_alloc_type(ctx, type, SEXP_TYPE);
-    memcpy(type, &(_sexp_type_specs[i]), sexp_sizeof(type));
+    memcpy(&(type->value), &(_sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
     vec[i] = type;
   }
 #endif

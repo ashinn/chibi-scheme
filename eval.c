@@ -1265,15 +1265,15 @@ sexp sexp_string_utf8_index_set (sexp ctx sexp_api_params(self, n), sexp str, se
 
 #include "opcodes.c"
 
-static sexp sexp_copy_core (sexp ctx, sexp core) {
+static sexp sexp_copy_core (sexp ctx, struct sexp_core_form_struct *core) {
   sexp res = sexp_alloc_type(ctx, core, SEXP_CORE);
-  memcpy(res, core, sexp_sizeof(core));
+  memcpy(&(res->value), core, sizeof(core[0]));
   return res;
 }
 
-static sexp sexp_copy_opcode (sexp ctx, sexp op) {
+static sexp sexp_copy_opcode (sexp ctx, struct sexp_opcode_struct *op) {
   sexp res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
-  memcpy(res, op, sexp_sizeof(opcode));
+  memcpy(&(res->value), op, sizeof(op[0]));
   return res;
 }
 
@@ -1407,17 +1407,17 @@ sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp typ
 
 /*********************** standard environment *************************/
 
-static struct sexp_struct core_forms[] = {
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE, "define"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SET, "set!"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LAMBDA, "lambda"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_IF, "if"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_BEGIN, "begin"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_QUOTE, "quote"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_SYNTAX_QUOTE, "syntax-quote"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_DEFINE_SYNTAX, "define-syntax"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LET_SYNTAX, "let-syntax"}}},
-  {.tag=SEXP_CORE, .value={.core={SEXP_CORE_LETREC_SYNTAX, "letrec-syntax"}}},
+static struct sexp_core_form_struct core_forms[] = {
+  {SEXP_CORE_DEFINE, "define"},
+  {SEXP_CORE_SET, "set!"},
+  {SEXP_CORE_LAMBDA, "lambda"},
+  {SEXP_CORE_IF, "if"},
+  {SEXP_CORE_BEGIN, "begin"},
+  {SEXP_CORE_QUOTE, "quote"},
+  {SEXP_CORE_SYNTAX_QUOTE, "syntax-quote"},
+  {SEXP_CORE_DEFINE_SYNTAX, "define-syntax"},
+  {SEXP_CORE_LET_SYNTAX, "let-syntax"},
+  {SEXP_CORE_LETREC_SYNTAX, "letrec-syntax"},
 };
 
 sexp sexp_make_env_op (sexp ctx sexp_api_params(self, n)) {
@@ -1430,10 +1430,11 @@ sexp sexp_make_env_op (sexp ctx sexp_api_params(self, n)) {
 
 sexp sexp_make_null_env_op (sexp ctx sexp_api_params(self, n), sexp version) {
   sexp_uint_t i;
-  sexp e = sexp_make_env(ctx);
-  for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++)
-    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_core_name(&core_forms[i]), -1),
-                    sexp_copy_core(ctx, &core_forms[i]));
+  sexp e = sexp_make_env(ctx), core;
+  for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++) {
+    core = sexp_copy_core(ctx, &core_forms[i]);
+    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_core_name(core), -1), core);
+  }
   return e;
 }
 
