@@ -213,7 +213,7 @@
   (memq type '(signed-char short int long boolean)))
 
 (define (unsigned-int-type? type)
-  (memq type '(unsigned-char unsigned-short unsigned-int unsigned-long
+  (memq type '(unsigned-char unsigned-short unsigned unsigned-int unsigned-long
                size_t off_t time_t clock_t dev_t ino_t mode_t nlink_t
                uid_t gid_t pid_t blksize_t blkcnt_t sigval_t)))
 
@@ -425,6 +425,11 @@
    (lambda (expr rename compare)
      `(define-struct-like ,(cadr expr) type: class ,@(cddr expr)))))
 
+(define-syntax define-c-union
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(define-struct-like ,(cadr expr) type: union ,@(cddr expr)))))
+
 (define-syntax define-c-type
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -439,8 +444,9 @@
 (define-syntax define-c-const
   (er-macro-transformer
    (lambda (expr rename compare)
-     (set! *consts*
-           (cons (cons (parse-type (cadr expr)) (cddr expr)) *consts*)))))
+     (let ((type (parse-type (cadr expr))))
+       (for-each (lambda (x) (set! *consts* (cons (list type x) *consts*)))
+                 (cddr expr))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C code generation
@@ -568,7 +574,7 @@
      (if (type-const? type) "const " "")
      (if struct-type (string-append (symbol->string struct-type) " ") "")
      (string-replace (base-type-c-name base) #\- " ")
-     (if type-spec "*" "")
+     (if struct-type "*" "")
      (if (type-pointer? type) "*" ""))))
 
 (define (check-type arg type)
@@ -605,6 +611,7 @@
      ((eq? base 'port) "SEXP_IPORT")
      ((eq? base 'input-port) "SEXP_IPORT")
      ((eq? base 'output-port) "SEXP_OPORT")
+     ((void-pointer-type? type) "SEXP_CPOINTER")
      (else (type-id-name base)))))
 
 (define (write-validator arg type)
@@ -1112,9 +1119,9 @@
        "  return SEXP_VOID;\n"
        "}\n\n"))
 
-(define (write-type-funcs type)
-  (let ((name (car type))
-        (type (cdr type)))
+(define (write-type-funcs orig-type)
+  (let ((name (car orig-type))
+        (type (cdr orig-type)))
     ;; maybe write finalizer
     (cond
      ((memq 'finalizer: type)
@@ -1139,7 +1146,7 @@
                              (cat ", sexp arg" i)
                              (lp (cdr ls) (+ i 1))))))
                   ") {\n"
-                  "  struct " (type-name name) " *r;\n"
+                  "  " (or (type-struct-type name) "") " " (type-name name) " *r;\n"
                   "  sexp_gc_var1(res);\n"
                   "  sexp_gc_preserve1(ctx, res);\n"
                   ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
@@ -1149,8 +1156,8 @@
                   "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), "
                   (type-id-name name)
                   ");\n"
-                  "  r = sexp_cpointer_value(res) = malloc(sizeof(struct "
-                  (type-name name) "));\n"
+                  "  r = sexp_cpointer_value(res) = malloc(sizeof("
+                  (or (type-struct-type name) "") " " (type-name name) "));\n"
                   "  sexp_freep(res) = 1;\n"
                   (lambda ()
                     (let lp ((ls args) (i 0))
