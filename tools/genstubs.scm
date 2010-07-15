@@ -719,7 +719,7 @@
      (lambda (x)
        (let ((len (get-array-length func x)))
          (cat "  " (type-c-name (type-base x)) " ")
-         (if (and (type-array x) (not (number? len)))
+         (if (or (and (type-array x) (not (number? len))) (type-pointer? x))
              (cat "*"))
          (cat (if (type-auto-expand? x) "buf" "tmp") (type-index-string x))
          (if (number? len)
@@ -730,7 +730,9 @@
          (if (type-auto-expand? x)
              (cat "  " (type-c-name (type-base x))
                   " *tmp" (type-index-string x) ";\n"))))
-     (append (if (type-array ret-type) (list ret-type) '())
+     (append (if (or (type-array ret-type) (type-pointer? ret-type))
+                 (list ret-type)
+                 '())
              results
              (remove type-result? (filter type-array scheme-args))))
     (for-each
@@ -788,7 +790,7 @@
          (if (not (number? (type-array a)))
              (cat "  tmp" (type-index a) "[i] = NULL;\n")))
         ((and (type-result? a) (not (basic-type? a))
-              (not (type-free? a)) (not (type-pointer? a))
+              (not (type-free? a)) ;;(not (type-pointer? a))
               (not (type-auto-expand? a))
               (or (not (type-array a))
                   (not (integer? len))))
@@ -820,7 +822,7 @@
            => (lambda (y) (cat "len" (type-index y))))
           (else (write x)))))
    ((or (type-result? arg) (type-array arg))
-    (cat (if (or (type-pointer? arg) (type-free? arg) (basic-type? arg))
+    (cat (if (or (type-free? arg) (basic-type? arg)) ;; (type-pointer? arg)
              "&"
              "")
          "tmp" (type-index arg)))

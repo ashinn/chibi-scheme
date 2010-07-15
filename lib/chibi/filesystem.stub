@@ -79,7 +79,7 @@
 (define-c errno (delete-directory "rmdir") (string))
 
 (define-c (free DIR) opendir (string))
-(define-c dirent readdir ((link DIR)))
+(define-c dirent readdir ((link (pointer DIR))))
 
 (define-c int (duplicate-file-descriptor "dup") (int))
 (define-c errno (duplicate-file-descriptor-to "dup2") (int int))
