@@ -722,22 +722,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     ip += sizeof(sexp);
     sexp_check_exception();
     break;
-  case SEXP_OP_FCALL5:
-    _ALIGN_IP();
-    sexp_context_top(ctx) = top;
-    _ARG5 = ((sexp_proc6)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 5), _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
-    top -= 4;
-    ip += sizeof(sexp);
-    sexp_check_exception();
-    break;
-  case SEXP_OP_FCALL6:
-    _ALIGN_IP();
-    sexp_context_top(ctx) = top;
-    _ARG6 = ((sexp_proc7)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 6), _ARG1, _ARG2, _ARG3, _ARG4, _ARG5, _ARG6);
-    top -= 5;
-    ip += sizeof(sexp);
-    sexp_check_exception();
-    break;
 #if SEXP_USE_EXTENDED_FCALL
   case SEXP_OP_FCALLN:
     _ALIGN_IP();

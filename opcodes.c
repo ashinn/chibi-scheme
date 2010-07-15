@@ -10,8 +10,6 @@
 #define _FN2OPTP(t, u, s, d, f) _FN(SEXP_OP_FCALL2, 1, 3, t, u, s, d, f)
 #define _FN3(t, u, s, d, f) _FN(SEXP_OP_FCALL3, 3, 0, t, u, s, d, f)
 #define _FN4(t, u, s, d, f) _FN(SEXP_OP_FCALL4, 4, 0, t, u, s, d, f)
-#define _FN5(t, u, s, d, f) _FN(SEXP_OP_FCALL5, 5, 0, t, u, s, d, f)
-#define _FN6(t, u, s, d, f) _FN(SEXP_OP_FCALL6, 6, 0, t, u, s, d, f)
 #define _PARAM(n, a, t) _OP(SEXP_OPC_PARAMETER, SEXP_OP_NOOP, 0, 3, t, 0, 0, n, a, 0)
 
 static struct sexp_opcode_struct opcodes[] = {

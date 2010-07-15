@@ -1311,14 +1311,14 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
                         int flags, sexp_proc1 f, sexp data) {
   sexp res;
 #if ! SEXP_USE_EXTENDED_FCALL
-  if (num_args > 6)
+  if (num_args > 4)
     return sexp_user_exception(ctx, NULL, "make-foreign: exceeded foreign arg limit",
                                sexp_make_fixnum(num_args));
 #endif
   res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
   sexp_opcode_class(res) = SEXP_OPC_FOREIGN;
 #if SEXP_USE_EXTENDED_FCALL
-  if (num_args > 6)
+  if (num_args > 4)
     sexp_opcode_code(res) = SEXP_OP_FCALLN;
   else
 #endif
