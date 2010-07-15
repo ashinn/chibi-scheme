@@ -5,7 +5,7 @@
 #ifndef SEXP_BIGNUM_H
 #define SEXP_BIGNUM_H
 
-#if (SEXP_64_BIT)
+#if (SEXP_64_BIT) && defined(__GNUC__)
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 typedef int sint128_t __attribute__((mode(TI)));
 typedef uint128_t sexp_luint_t;

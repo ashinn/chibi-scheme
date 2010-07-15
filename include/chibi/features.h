@@ -230,7 +230,7 @@
 #define SEXP_BSD 1
 #else
 #define SEXP_BSD 0
-#ifndef _GNU_SOURCE
+#if ! defined(_GNU_SOURCE) && ! defined(_WIN32) && ! defined(PLAN9)
 #define _GNU_SOURCE
 #endif
 #endif
@@ -260,7 +260,7 @@
 #endif
 
 #ifndef SEXP_USE_DL
-#ifdef PLAN9
+#if defined(PLAN9) || defined(_WIN32)
 #define SEXP_USE_DL 0
 #else
 #define SEXP_USE_DL ! SEXP_USE_NO_FEATURES
@@ -387,7 +387,11 @@
 #endif
 
 #ifndef SEXP_USE_STRING_STREAMS
+#ifdef _WIN32
+#define SEXP_USE_STRING_STREAMS 0
+#else
 #define SEXP_USE_STRING_STREAMS ! SEXP_USE_NO_FEATURES
+#endif
 #endif
 
 #ifndef SEXP_USE_AUTOCLOSE_PORTS
@@ -434,6 +438,24 @@
 #define strncasecmp cistrncmp
 #define round(x) floor((x)+0.5)
 #define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
+#elif defined(_WIN32)
+#define snprintf(buf, len, fmt, val) sprintf(buf, fmt, val)
+#define strcasecmp lstrcmpi
+#define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
+#define round(x) floor((x)+0.5)
+#define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
+#define isnan(x) (x!=x)
+#define isinf(x) (x > DBL_MAX || x < -DBL_MAX)
+#endif
+
+#ifdef _WIN32
+#define sexp_pos_infinity (DBL_MAX*DBL_MAX)
+#define sexp_neg_infinity -sexp_pos_infinity
+#define sexp_nan log(-2)
+#else
+#define sexp_pos_infinity (1.0/0.0)
+#define sexp_neg_infinity -sexp_pos_infinity
+#define sexp_nan (0.0/0.0)
 #endif
 
 #ifdef __MINGW32__
