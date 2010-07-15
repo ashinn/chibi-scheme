@@ -851,9 +851,8 @@ sexp sexp_make_vector_op (sexp ctx sexp_api_params(self, n), sexp len, sexp dflt
 }
 
 sexp sexp_list_to_vector_op (sexp ctx sexp_api_params(self, n), sexp ls) {
-  sexp x, vec = sexp_make_vector(ctx, sexp_length(ctx, ls), SEXP_VOID);
-  sexp *elts;
   int i;
+  sexp x, *elts, vec = sexp_make_vector(ctx, sexp_length(ctx, ls), SEXP_VOID);
   if (sexp_exceptionp(vec)) return vec;
   elts = sexp_vector_data(vec);
   for (i=0, x=ls; sexp_pairp(x); i++, x=sexp_cdr(x))
@@ -1054,7 +1053,8 @@ sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
 
 sexp sexp_buffered_flush (sexp ctx, sexp p) {
   sexp_gc_var1(tmp);
-  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, p);
+  if (! sexp_oportp(p))
+	  return sexp_type_exception(ctx, NULL, SEXP_OPORT, p);
   if (! sexp_port_openp(p))
     return sexp_user_exception(ctx, SEXP_FALSE, "port is closed", p);
   else {
@@ -1722,11 +1722,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       res = sexp_read_symbol(ctx, in, c1, 1);
 #if SEXP_USE_INFINITIES
       if (res == sexp_intern(ctx, "+inf.0", -1))
-        res = sexp_make_flonum(ctx, 1.0/0.0);
+        res = sexp_make_flonum(ctx, sexp_pos_infinity);
       else if (res == sexp_intern(ctx, "-inf.0", -1))
-        res = sexp_make_flonum(ctx, -1.0/0.0);
+        res = sexp_make_flonum(ctx, sexp_neg_infinity);
       else if (res == sexp_intern(ctx, "+nan.0", -1))
-        res = sexp_make_flonum(ctx, 0.0/0.0);
+        res = sexp_make_flonum(ctx, sexp_nan);
 #endif
     }
     break;

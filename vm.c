@@ -28,7 +28,7 @@ void sexp_stack_trace (sexp ctx, sexp out) {
       if (sexp_truep(sexp_bytecode_name(bc)))
         sexp_write(ctx, sexp_bytecode_name(bc), out);
       else
-        sexp_printf(ctx, out, "anon: %p", bc);
+        sexp_write_string(ctx, "<anonymous>", out);
       if ((ls=sexp_bytecode_source(bc)) && sexp_pairp(ls)) {
         if (sexp_fixnump(sexp_cdr(ls)) && (sexp_cdr(ls) >= SEXP_ZERO)) {
           sexp_write_string(ctx, " on line ", out);
@@ -1071,7 +1071,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     if (tmp2 == SEXP_ZERO) {
 #if SEXP_USE_FLONUMS
       if (sexp_flonump(tmp1) && sexp_flonum_value(tmp1) == 0.0)
-        _ARG1 = sexp_make_flonum(ctx, 0.0/0.0);
+        _ARG1 = sexp_make_flonum(ctx, 0.0);
       else
 #endif
         sexp_raise("divide by zero", SEXP_NULL);

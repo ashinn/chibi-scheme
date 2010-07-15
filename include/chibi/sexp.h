@@ -40,6 +40,10 @@ typedef unsigned long size_t;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
+#if SEXP_USE_FLONUMS
+#include <float.h>
+#include <limits.h>
+#endif
 #endif
 
 #include <ctype.h>
@@ -115,7 +119,12 @@ enum sexp_types {
   SEXP_NUM_CORE_TYPES
 };
 
-#if SEXP_64_BIT
+#ifdef _WIN32
+typedef unsigned short sexp_tag_t;
+typedef SIZE_T sexp_uint_t;
+typedef SSIZE_T sexp_sint_t;
+#define sexp_heap_align(n) sexp_align(n, 5)
+#elif SEXP_64_BIT
 typedef unsigned int sexp_tag_t;
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;

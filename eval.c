@@ -1334,9 +1334,9 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
 
 sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args,
                               int flags, sexp_proc1 f, sexp data) {
+  sexp res = SEXP_VOID;
   sexp_gc_var1(op);
   sexp_gc_preserve1(ctx, op);
-  sexp res = SEXP_VOID;
   op = sexp_make_foreign(ctx, name, num_args, flags, f, data);
   if (sexp_exceptionp(op))
     res = op;
