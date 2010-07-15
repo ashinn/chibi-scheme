@@ -414,7 +414,7 @@ sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp 
       if (sexp_procedurep(sexp_exception_procedure(exn))) {
         ls = sexp_bytecode_name(
               sexp_procedure_code(sexp_exception_procedure(exn)));
-        if (sexp_symbolp(ls)) {
+        if (ls && sexp_symbolp(ls)) {
           sexp_write_string(ctx, " in ", out);
           sexp_write(ctx, ls, out);
         }
