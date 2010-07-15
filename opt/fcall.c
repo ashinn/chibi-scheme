@@ -16,6 +16,8 @@ sexp sexp_fcall (sexp ctx, sexp self, sexp_sint_t n, sexp f) {
   sexp *stack = sexp_stack_data(sexp_context_stack(ctx));
   sexp_sint_t top = sexp_context_top(ctx);
   switch (n) {
+  case 5: return ((sexp_proc6)sexp_opcode_func(f))(ctx, f, 5, _A(1), _A(2), _A(3), _A(4), _A(5));
+  case 6: return ((sexp_proc7)sexp_opcode_func(f))(ctx, f, 6, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6));
   case 7: return ((sexp_proc8)sexp_opcode_func(f))(ctx, f, 7, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7));
   case 8: return ((sexp_proc9)sexp_opcode_func(f))(ctx, f, 8, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8));
   case 9: return ((sexp_proc10)sexp_opcode_func(f))(ctx, f, 9, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9));
