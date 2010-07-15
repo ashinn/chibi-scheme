@@ -1,8 +1,7 @@
 
 static const char* reverse_opcode_names[] =
-  {"NOOP", "RAISE", "RESUMECC", "CALLCC", "APPLY1",
-   "TAIL-CALL", "CALL", "FCALL0", "FCALL1", "FCALL2",
-   "FCALL3", "FCALL4", "FCALL5", "FCALL6", "FCALLN",
+  {"NOOP", "RAISE", "RESUMECC", "CALLCC", "APPLY1", "TAIL-CALL", "CALL",
+   "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "FCALLN",
    "JUMP-UNLESS", "JUMP", "PUSH", "DROP",
    "GLOBAL-REF", "GLOBAL-KNOWN-REF", "STACK-REF",
    "LOCAL-REF", "LOCAL-SET", "CLOSURE-REF",
