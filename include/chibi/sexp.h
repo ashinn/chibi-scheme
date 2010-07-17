@@ -472,6 +472,8 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_slot_ref(x,i)   (((sexp*)&((x)->value))[i])
 #define sexp_slot_set(x,i,v) (((sexp*)&((x)->value))[i] = (v))
 
+#define sexp_isa(a, b) (sexp_pointerp(a) && sexp_typep(b) && (sexp_pointer_tag(a) == sexp_type_tag(b)))
+
 #if SEXP_USE_IMMEDIATE_FLONUMS
 union sexp_flonum_conv {
   float flonum;

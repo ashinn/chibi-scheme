@@ -183,7 +183,7 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
     sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
     sexp_type_name(type) = strdup(sexp_string_data(name));
     sexp_type_finalize(type) = f;
-    res = sexp_make_fixnum(num_types);
+    res = type;
 #if SEXP_USE_GLOBAL_TYPES
     sexp_num_types = num_types + 1;
 #else
@@ -1198,6 +1198,11 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_string(ctx, "#<procedure: ", out);
       x = sexp_bytecode_name(sexp_procedure_code(obj));
       sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out);
+      sexp_write_string(ctx, ">", out);
+      break;
+    case SEXP_SYNCLO:
+      sexp_write_string(ctx, "#<sc: ", out);
+      sexp_write(ctx, sexp_synclo_expr(obj), out);
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_STRING:
