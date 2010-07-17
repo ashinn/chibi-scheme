@@ -1,6 +1,7 @@
 
 (define-module (chibi ast)
   (export analyze env-cell opcode-name
+          lam cnd set ref seq lit
           syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode?
           syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
           lambda-name lambda-params lambda-body lambda-defs
