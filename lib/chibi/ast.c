@@ -45,7 +45,20 @@ static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
     return sexp_intern(ctx, sexp_opcode_name(op), -1);
 }
 
+static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x) {
+  return sexp_analyze(ctx, x);
+}
+
+#define sexp_define_type(ctx, name, tag) \
+  sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
+
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+  sexp_define_type(ctx, "lam", SEXP_LAMBDA);
+  sexp_define_type(ctx, "cnd", SEXP_CND);
+  sexp_define_type(ctx, "set", SEXP_SET);
+  sexp_define_type(ctx, "ref", SEXP_REF);
+  sexp_define_type(ctx, "seq", SEXP_SEQ);
+  sexp_define_type(ctx, "lit", SEXP_LIT);
   sexp_define_type_predicate(ctx, env, "syntactic-closure?", SEXP_SYNCLO);
   sexp_define_type_predicate(ctx, env, "lambda?", SEXP_LAMBDA);
   sexp_define_type_predicate(ctx, env, "cnd?", SEXP_CND);
@@ -70,7 +83,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_REF, 1, "ref-cell", "ref-cell-set!");
   sexp_define_accessors(ctx, env, SEXP_SEQ, 0, "seq-ls", "seq-ls-set!");
   sexp_define_accessors(ctx, env, SEXP_LIT, 0, "lit-value", "lit-value-set!");
-  sexp_define_foreign(ctx, env, "analyze", 1, sexp_analyze);
+  sexp_define_foreign(ctx, env, "analyze", 1, sexp_analyze_op);
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
