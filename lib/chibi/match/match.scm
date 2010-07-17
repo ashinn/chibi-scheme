@@ -161,6 +161,10 @@
      (match-extract-vars p (match-gen-search v p q g+s sk fk i) i ()))
     ((match-two v (p *** . q) g+s sk fk i)
      (match-syntax-error "invalid use of ***" (p *** . q)))
+    ((match-two v ($ rec p ...) g+s sk fk i)
+     (if (is-a? v rec)
+         (match-record-refs v rec 0 (p ...) g+s sk fk i)
+         fk))
     ((match-two v (p . q) g+s sk fk i)
      (if (pair? v)
          (let ((w (car v)) (x (cdr v)))
@@ -470,6 +474,15 @@
            (match-one w p ((vector-ref v j) (vetor-set! v j))
                       (match-drop-ids (loop (+ j 1) (cons id id-ls) ...))
                       fk i)))))))
+
+(define-syntax match-record-refs
+  (syntax-rules ()
+    ((_ v rec n (p . q) g+s sk fk i)
+     (let ((w (slot-ref rec v n)))
+       (match-one w p ((slot-ref rec v n) (slot-set! rec v n))
+                  (match-record-refs v rec (+ n 1) q g+s sk fk) fk i)))
+    ((_ v rec n () g+s (sk ...) fk i)
+     (sk ... i))))
 
 ;; Extract all identifiers in a pattern.  A little more complicated
 ;; than just looking for symbols, we need to ignore special keywords

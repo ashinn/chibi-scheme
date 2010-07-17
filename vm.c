@@ -931,6 +931,33 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     ip += sizeof(sexp)*2;
     top--;
     break;
+  case SEXP_OP_ISA:
+    _ARG2 = sexp_make_boolean(sexp_isa(_ARG1, _ARG2));
+    top--;
+    break;
+  case SEXP_OP_SLOTN_REF:
+    if (! sexp_typep(_ARG1))
+      sexp_raise("slot-ref: not a record type", sexp_list1(ctx, _ARG1));
+    else if (! sexp_isa(_ARG2, _ARG1))
+      sexp_raise("slot-ref: bad type", sexp_list1(ctx, _ARG2));
+    else if (! sexp_fixnump(_ARG3))
+      sexp_raise("slot-ref: not an integer", sexp_list1(ctx, _ARG3));
+    _ARG3 = sexp_slot_ref(_ARG2, sexp_unbox_fixnum(_ARG3));
+    top-=2;
+    break;
+  case SEXP_OP_SLOTN_SET:
+    if (! sexp_typep(_ARG1))
+      sexp_raise("slot-ref: not a record type", sexp_list1(ctx, _ARG1));
+    else if (! sexp_isa(_ARG2, _ARG1))
+      sexp_raise("slot-set!: bad type", sexp_list1(ctx, _ARG2));
+    else if (sexp_immutablep(_ARG2))
+      sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG2));
+    else if (! sexp_fixnump(_ARG3))
+      sexp_raise("slot-ref: not an integer", sexp_list1(ctx, _ARG3));
+    sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
+    _ARG4 = SEXP_VOID;
+    top-=3;
+    break;
   case SEXP_OP_CAR:
     if (! sexp_pairp(_ARG1))
       sexp_raise("car: not a pair", sexp_list1(ctx, _ARG1));
