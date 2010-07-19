@@ -1549,6 +1549,9 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         break;
       }
       res = sexp_cons(ctx, tmp, res);
+      if (sexp_port_sourcep(in) && (line >= 0))
+        sexp_pair_source(res)
+          = sexp_cons(ctx, sexp_port_name(in), sexp_make_fixnum(line));
       tmp = sexp_read_raw(ctx, in);
     }
     if (! sexp_exceptionp(res)) {
