@@ -564,7 +564,9 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
     if (sexp_pairp(sexp_caar(tmp))) {
       name = sexp_caaar(tmp);
       tmp = sexp_cons(ctx3, sexp_cdaar(tmp), sexp_cdar(tmp));
-      value = analyze_lambda(ctx3, sexp_cons(ctx3, SEXP_VOID, tmp));
+      tmp = sexp_cons(ctx3, SEXP_VOID, tmp);
+      sexp_pair_source(tmp) = sexp_pair_source(sexp_caar(ls));
+      value = analyze_lambda(ctx3, tmp);
     } else {
       name = sexp_caar(tmp);
       value = analyze(ctx3, sexp_cadar(tmp));
@@ -624,6 +626,7 @@ static sexp analyze_define (sexp ctx, sexp x) {
       sexp_push(ctx, sexp_lambda_sv(sexp_env_lambda(env)), name);
       sexp_push(ctx, sexp_lambda_locals(sexp_env_lambda(env)), name);
       tmp = sexp_cons(ctx, sexp_cdr(x), ctx);
+      sexp_pair_source(sexp_cdr(x)) = sexp_pair_source(x);
       sexp_push(ctx, sexp_lambda_defs(sexp_env_lambda(env)), tmp);
       res = SEXP_VOID;
     } else {
