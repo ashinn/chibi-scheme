@@ -68,7 +68,8 @@
       (cond
        ((lambda? x)
         `(lambda ,(map (lambda (id) (get-rename id x renames)) (lambda-params x))
-           ,@(map (lambda (d) `(define ,(identifier->symbol (cadr d)) #f)) (lambda-defs x))
+           ,@(map (lambda (d) `(define ,(identifier->symbol (cadar d)) #f))
+                  (lambda-defs x))
            ,@(if (seq? (lambda-body x))
                  (map a2s (seq-ls (lambda-body x)))
                  (list (a2s (lambda-body x))))))
