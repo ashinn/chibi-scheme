@@ -457,14 +457,9 @@ static sexp analyze_app (sexp ctx, sexp x) {
     res = sexp_nreverse(ctx, res);
     if (sexp_lambdap(sexp_car(res))) {
       p=sexp_lambda_params(sexp_car(res));
-      for (tmp=sexp_cdr(res);
-           sexp_pairp(tmp) && sexp_pairp(p);
-           tmp=sexp_cdr(tmp), p=sexp_cdr(p)) {
-        if (sexp_lambdap(sexp_car(tmp))) {
-          sexp_debug(ctx, "setting lambda name: ", sexp_car(p));
+      for (tmp=sexp_cdr(res); sexp_pairp(tmp)&&sexp_pairp(p); tmp=sexp_cdr(tmp), p=sexp_cdr(p))
+        if (sexp_lambdap(sexp_car(tmp)))
           sexp_lambda_name(sexp_car(tmp)) = sexp_car(p);
-        }
-      }
     }
   }
   sexp_gc_release2(ctx);
