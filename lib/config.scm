@@ -1,5 +1,5 @@
 ;; config.scm -- configuration module
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2010 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -168,6 +168,7 @@
 
 (define *modules*
   (list (cons '(scheme) (make-module #f (interaction-environment) '()))
+        (cons '(config) (make-module #f (current-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (interaction-environment)
                                      (list (list 'export 'cond-expand))))
