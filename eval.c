@@ -550,6 +550,10 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   /* build lambda and analyze body */
   res = sexp_make_lambda(ctx, tmp=sexp_copy_list(ctx, sexp_cadr(x)));
   sexp_lambda_source(res) = sexp_pair_source(x);
+  if (! (sexp_lambda_source(res) && sexp_pairp(sexp_lambda_source(res))))
+    sexp_lambda_source(res) = sexp_pair_source(sexp_cdr(x));
+  if (! (sexp_lambda_source(res) && sexp_pairp(sexp_lambda_source(res))))
+    sexp_lambda_source(res) = sexp_pair_source(sexp_cddr(x));
   ctx2 = sexp_make_child_context(ctx, res);
   tmp = sexp_flatten_dot(ctx2, sexp_lambda_params(res));
   sexp_context_env(ctx2) = sexp_extend_env(ctx2, sexp_context_env(ctx2), tmp, res);
