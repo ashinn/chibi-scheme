@@ -440,6 +440,7 @@ static sexp sexp_identifier_eq_op (sexp ctx sexp_api_params(self, n), sexp e1, s
 /************************* the compiler ***************************/
 
 static sexp analyze_app (sexp ctx, sexp x) {
+  sexp p;
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   for (res=SEXP_NULL; sexp_pairp(x); x=sexp_cdr(x)) {
@@ -452,8 +453,22 @@ static sexp analyze_app (sexp ctx, sexp x) {
       sexp_car(res) = tmp;
     }
   }
+  if (sexp_pairp(res)) {        /* fill in lambda names */
+    res = sexp_nreverse(ctx, res);
+    if (sexp_lambdap(sexp_car(res))) {
+      p=sexp_lambda_params(sexp_car(res));
+      for (tmp=sexp_cdr(res);
+           sexp_pairp(tmp) && sexp_pairp(p);
+           tmp=sexp_cdr(tmp), p=sexp_cdr(p)) {
+        if (sexp_lambdap(sexp_car(tmp))) {
+          sexp_debug(ctx, "setting lambda name: ", sexp_car(p));
+          sexp_lambda_name(sexp_car(tmp)) = sexp_car(p);
+        }
+      }
+    }
+  }
   sexp_gc_release2(ctx);
-  return (sexp_pairp(res) ? sexp_nreverse(ctx, res) : res);
+  return res;
 }
 
 static sexp analyze_seq (sexp ctx, sexp ls) {
@@ -560,6 +575,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
       value = analyze(ctx3, sexp_cadar(tmp));
     }
     if (sexp_exceptionp(value)) sexp_return(res, value);
+    if (sexp_lambdap(value)) sexp_lambda_name(value) = name;
     sexp_push(ctx3, defs,
               sexp_make_set(ctx3, analyze_var_ref(ctx3, name, NULL), value));
   }
@@ -626,14 +642,16 @@ static sexp analyze_define (sexp ctx, sexp x) {
       } else
         value = analyze(ctx, sexp_caddr(x));
       ref = analyze_var_ref(ctx, name, &varenv);
-      if (sexp_exceptionp(ref))
+      if (sexp_exceptionp(ref)) {
         res = ref;
-      else if (sexp_exceptionp(value))
+      } else if (sexp_exceptionp(value)) {
         res = value;
-      else if (varenv && sexp_immutablep(varenv))
+      } else if (varenv && sexp_immutablep(varenv)) {
         res = sexp_compile_error(ctx, "immutable binding", name);
-      else
+      } else {
+        if (sexp_lambdap(value)) sexp_lambda_name(value) = name;
         res = sexp_make_set(ctx, ref, value);
+      }
     }
   }
   sexp_gc_release4(ctx);
