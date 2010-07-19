@@ -12,8 +12,9 @@ static sexp analyze (sexp ctx, sexp x);
 static void generate (sexp ctx, sexp x);
 
 #if SEXP_USE_MODULES
-static sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sexp env);
-static sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file);
+sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sexp env);
+sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file);
+sexp sexp_current_environment (sexp ctx sexp_api_params(self, n));
 #endif
 
 sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
@@ -1511,7 +1512,7 @@ sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
 }
 
 #if SEXP_USE_MODULES
-static sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file) {
+sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, file);
   return sexp_find_module_file(ctx, sexp_string_data(file));
 }
@@ -1519,6 +1520,9 @@ sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sex
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, file);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   return sexp_load_module_file(ctx, sexp_string_data(file), env);
+}
+sexp sexp_current_environment (sexp ctx sexp_api_params(self, n)) {
+  return sexp_context_env(ctx);
 }
 #endif
 

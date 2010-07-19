@@ -163,6 +163,7 @@ _FN3(SEXP_STRING, SEXP_FIXNUM, "make-setter", 0, sexp_make_setter_op),
 #include "opt/plan9-opcodes.c"
 #endif
 #if SEXP_USE_MODULES
+_FN0("current-environment", 0, sexp_current_environment),
 _FN1(SEXP_ENV, "env-exports", 0, sexp_env_exports_op),
 _FN1(SEXP_STRING, "find-module-file", 0, sexp_find_module_file_op),
 _FN2(SEXP_STRING, SEXP_ENV, "load-module-file", 0, sexp_load_module_file_op),
