@@ -239,7 +239,7 @@ Then you can use the following to create and manipulate contexts:
     is zero.  stack and environment may both also be NULL (and _must_
     be NULL if context is NULL) and will be given standard defaults.
 
-    Thus the to create your first context you generally call:
+    Thus to create your first context you generally call:
 
       sexp_make_eval_context(NULL, NULL, NULL, 0)
 
