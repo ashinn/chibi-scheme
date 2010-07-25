@@ -1,16 +1,24 @@
 
 (define-module (chibi ast)
-  (export analyze env-cell opcode-name
+  (export analyze optimize env-cell opcode-name ast->sexp macroexpand
           lam cnd set ref seq lit
+          pair-source pair-source-set!
           syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode?
           syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
-          lambda-name lambda-params lambda-body lambda-defs
+          lambda-name lambda-params lambda-body lambda-defs lambda-locals
+          lambda-flags lambda-free-vars lambda-set-vars lambda-return-type
+          lambda-param-types lambda-source
           lambda-name-set! lambda-params-set! lambda-body-set! lambda-defs-set!
+          lambda-locals-set! lambda-flags-set! lambda-free-vars-set!
+          lambda-set-vars-set! lambda-return-type-set! lambda-param-types-set!
+          lambda-source-set!
           cnd-test cnd-pass cnd-fail
           cnd-test-set! cnd-pass-set! cnd-fail-set!
           set-var set-value set-var-set! set-value-set!
           ref-name ref-cell ref-name-set! ref-cell-set!
-          seq-ls seq-ls-set! lit-value lit-value-set!)
+          seq-ls seq-ls-set! lit-value lit-value-set!
+          procedure-code procedure-vars procedure-name bytecode-name)
   (import-immutable (scheme))
-  (include-shared "ast"))
+  (include-shared "ast")
+  (include "ast.scm"))
 

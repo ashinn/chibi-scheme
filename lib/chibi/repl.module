@@ -1,5 +1,6 @@
 
 (define-module (chibi repl)
   (export repl)
-  (import-immutable (scheme) (chibi process))
+  (import-immutable (scheme))
+  (import (chibi process))
   (include "repl.scm"))

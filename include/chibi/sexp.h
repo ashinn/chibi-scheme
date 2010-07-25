@@ -301,7 +301,7 @@ struct sexp_struct {
     struct sexp_core_form_struct core;
     /* ast types */
     struct {
-      sexp name, params, body, defs, locals, flags, fv, sv, source;
+      sexp name, params, body, defs, locals, flags, fv, sv, ret, types, source;
     } lambda;
     struct {
       sexp test, pass, fail, source;
@@ -704,6 +704,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_lambda_body(x)   ((x)->value.lambda.body)
 #define sexp_lambda_fv(x)     ((x)->value.lambda.fv)
 #define sexp_lambda_sv(x)     ((x)->value.lambda.sv)
+#define sexp_lambda_return_type(x) ((x)->value.lambda.ret)
+#define sexp_lambda_param_types(x) ((x)->value.lambda.types)
 #define sexp_lambda_source(x) ((x)->value.lambda.source)
 
 #define sexp_cnd_test(x)      ((x)->value.cnd.test)

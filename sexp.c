@@ -107,7 +107,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, "bytecode", NULL),
   _DEF_TYPE(SEXP_CORE, 0, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, "core-form", NULL),
   _DEF_TYPE(SEXP_OPCODE, sexp_offsetof(opcode, data), 3, 3, 0, 0, sexp_sizeof(opcode), 0, 0, "opcode", NULL),
-  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 9, 9, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda", NULL),
+  _DEF_TYPE(SEXP_LAMBDA, sexp_offsetof(lambda, name), 11, 11, 0, 0, sexp_sizeof(lambda), 0, 0, "lambda", NULL),
   _DEF_TYPE(SEXP_CND, sexp_offsetof(cnd, test), 4, 4, 0, 0, sexp_sizeof(cnd), 0, 0, "conditional", NULL),
   _DEF_TYPE(SEXP_REF, sexp_offsetof(ref, name), 3, 3, 0, 0, sexp_sizeof(ref), 0, 0, "reference", NULL),
   _DEF_TYPE(SEXP_SET, sexp_offsetof(set, var), 3, 3, 0, 0, sexp_sizeof(set), 0, 0, "set!", NULL),

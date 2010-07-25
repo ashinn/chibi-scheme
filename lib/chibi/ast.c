@@ -45,8 +45,25 @@ static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
     return sexp_intern(ctx, sexp_opcode_name(op), -1);
 }
 
-static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x) {
-  return sexp_analyze(ctx, x);
+static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
+  sexp ctx2 = ctx;
+  if (sexp_envp(e)) {
+    ctx2 = sexp_make_child_context(ctx, NULL);
+    sexp_context_env(ctx2) = e;
+  }
+  return sexp_analyze(ctx2, x);
+}
+
+static sexp sexp_optimize (sexp ctx sexp_api_params(self, n), sexp x) {
+  sexp_gc_var2(ls, res);
+  sexp_gc_preserve2(ctx, ls, res);
+  res = x;
+  ls = sexp_global(ctx, SEXP_G_OPTIMIZATIONS);
+  for ( ; sexp_pairp(ls); ls=sexp_cdr(ls))
+    res = sexp_apply1(ctx, sexp_cdar(ls), res);
+  sexp_free_vars(ctx, res, SEXP_NULL);
+  sexp_gc_release2(ctx);
+  return res;
 }
 
 #define sexp_define_type(ctx, name, tag) \
@@ -67,6 +84,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type_predicate(ctx, env, "seq?", SEXP_SEQ);
   sexp_define_type_predicate(ctx, env, "lit?", SEXP_LIT);
   sexp_define_type_predicate(ctx, env, "opcode?", SEXP_OPCODE);
+  sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
+  sexp_define_accessors(ctx, env, SEXP_PAIR, 2, "pair-source", "pair-source-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", "syntactic-closure-env-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", "syntactic-closure-vars-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 2, "syntactic-closure-expr", "syntactic-closure-expr-set!");
@@ -74,6 +93,13 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 1, "lambda-params", "lambda-params-set!");
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 2, "lambda-body", "lambda-body-set!");
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 3, "lambda-defs", "lambda-defs-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 4, "lambda-locals", "lambda-locals-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 5, "lambda-flags", "lambda-flags-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 6, "lambda-free-vars", "lambda-free-vars-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 7, "lambda-set-vars", "lambda-set-vars-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 8, "lambda-return-type", "lambda-return-type-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 9, "lambda-param-types", "lambda-param-types-set!");
+  sexp_define_accessors(ctx, env, SEXP_LAMBDA, 10, "lambda-source", "lambda-source-set!");
   sexp_define_accessors(ctx, env, SEXP_CND, 0, "cnd-test", "cnd-test-set!");
   sexp_define_accessors(ctx, env, SEXP_CND, 1, "cnd-pass", "cnd-pass-set!");
   sexp_define_accessors(ctx, env, SEXP_CND, 2, "cnd-fail", "cnd-fail-set!");
@@ -83,10 +109,14 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_REF, 1, "ref-cell", "ref-cell-set!");
   sexp_define_accessors(ctx, env, SEXP_SEQ, 0, "seq-ls", "seq-ls-set!");
   sexp_define_accessors(ctx, env, SEXP_LIT, 0, "lit-value", "lit-value-set!");
-  sexp_define_foreign(ctx, env, "analyze", 1, sexp_analyze_op);
+  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 1, "procedure-code", "procedure-code-set!");
+  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 2, "procedure-vars", "procedure-vars-set!");
+  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 1, "bytecode-name", "bytecode-name-set!");
+  sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
+  sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   return SEXP_VOID;
 }
 
