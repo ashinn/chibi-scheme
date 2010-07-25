@@ -7,7 +7,7 @@
 
 (define *this-module* '())
 
-(define (make-module exports env meta) (vector exports env meta))
+(define (make-module exports env meta) (vector exports env meta #f))
 (define (%module-exports mod) (vector-ref mod 0))
 (define (module-env mod) (vector-ref mod 1))
 (define (module-meta-data mod) (vector-ref mod 2))
@@ -167,7 +167,8 @@
 (define-config-primitive body)
 
 (define *modules*
-  (list (cons '(scheme) (make-module #f (interaction-environment) '()))
+  (list (cons '(scheme) (make-module #f (interaction-environment)
+                                     '((include "init.scm"))))
         (cons '(config) (make-module #f (current-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (interaction-environment)

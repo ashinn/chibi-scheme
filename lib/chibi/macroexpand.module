@@ -1,6 +1,0 @@
-
-(define-module (chibi macroexpand)
-  (import-immutable (scheme))
-  (import (chibi ast))
-  (export macroexpand ast->sexp)
-  (include "macroexpand.scm"))
