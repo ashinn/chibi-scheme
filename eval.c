@@ -1317,8 +1317,8 @@ sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
     sexp_opcode_code(res) = sexp_unbox_fixnum(code);
     sexp_opcode_num_args(res) = sexp_unbox_fixnum(num_args);
     sexp_opcode_flags(res) = sexp_unbox_fixnum(flags);
-    sexp_opcode_arg1_type(res) = sexp_unbox_fixnum(arg1t);
-    sexp_opcode_arg2_type(res) = sexp_unbox_fixnum(arg2t);
+    sexp_opcode_arg1_type(res) = arg1t;
+    sexp_opcode_arg2_type(res) = arg2t;
     sexp_opcode_inverse(res) = sexp_unbox_fixnum(invp);
     sexp_opcode_data(res) = data;
     sexp_opcode_data2(res) = data2;

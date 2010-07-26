@@ -204,10 +204,9 @@ struct sexp_type_struct {
 };
 
 struct sexp_opcode_struct {
-  unsigned char op_class, code, num_args, flags,
-    arg1_type, arg2_type, inverse;
+  unsigned char op_class, code, num_args, flags, inverse;
   const char *name;
-  sexp data, data2, proc;
+  sexp data, data2, proc, ret_type, arg1_type, arg2_type, arg3_type;
   sexp_proc1 func;
 };
 
@@ -683,13 +682,15 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_opcode_code(x)       ((x)->value.opcode.code)
 #define sexp_opcode_num_args(x)   ((x)->value.opcode.num_args)
 #define sexp_opcode_flags(x)      ((x)->value.opcode.flags)
-#define sexp_opcode_arg1_type(x)  ((x)->value.opcode.arg1_type)
-#define sexp_opcode_arg2_type(x)  ((x)->value.opcode.arg2_type)
 #define sexp_opcode_inverse(x)    ((x)->value.opcode.inverse)
 #define sexp_opcode_name(x)       ((x)->value.opcode.name)
 #define sexp_opcode_data(x)       ((x)->value.opcode.data)
 #define sexp_opcode_data2(x)      ((x)->value.opcode.data2)
 #define sexp_opcode_proc(x)       ((x)->value.opcode.proc)
+#define sexp_opcode_return_type(x) ((x)->value.opcode.ret_type)
+#define sexp_opcode_arg1_type(x)  ((x)->value.opcode.arg1_type)
+#define sexp_opcode_arg2_type(x)  ((x)->value.opcode.arg2_type)
+#define sexp_opcode_arg3_type(x)  ((x)->value.opcode.arg3_type)
 #define sexp_opcode_func(x)       ((x)->value.opcode.func)
 
 #define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)
