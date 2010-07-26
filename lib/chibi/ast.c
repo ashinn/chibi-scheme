@@ -45,6 +45,62 @@ static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
     return sexp_intern(ctx, sexp_opcode_name(op), -1);
 }
 
+static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
+  sexp_gc_var2(res, tmp);
+  res = type;
+  if (sexp_nullp(res)) {        /* opcode list types */
+    sexp_gc_preserve2(ctx, res, tmp);
+    tmp = sexp_intern(ctx, "or", -1);
+    res = sexp_cons(ctx, sexp_make_fixnum(SEXP_PAIR), SEXP_NULL);
+    res = sexp_cons(ctx, SEXP_NULL, res);
+    res = sexp_cons(ctx, tmp, res);
+    sexp_gc_release2(ctx);
+  }
+  return res;
+}
+
+static sexp sexp_get_opcode_ret_type (sexp ctx sexp_api_params(self, n), sexp op) {
+  sexp res;
+  if (! sexp_opcodep(op))
+    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  res = sexp_opcode_return_type(op);
+  if (sexp_fixnump(res))
+    res = sexp_type_by_index(ctx, sexp_unbox_fixnum(res));
+  return sexp_translate_opcode_type(ctx, res);
+}
+
+static sexp sexp_get_opcode_param_type (sexp ctx sexp_api_params(self, n), sexp op, sexp k) {
+  sexp res;
+  if (! sexp_opcodep(op))
+    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  else if (! sexp_fixnump(k))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, k);
+  switch (sexp_unbox_fixnum(k)) {
+  case 0:
+    res = sexp_opcode_arg1_type(op);
+    break;
+  case 1:
+    res = sexp_opcode_arg2_type(op);
+    break;
+  default:
+    res = sexp_opcode_arg3_type(op);
+    if (sexp_vectorp(res)) {
+      if (sexp_vector_length(res) > (sexp_unbox_fixnum(k)-2))
+        res = sexp_vector_ref(res, sexp_fx_sub(k, SEXP_TWO));
+      else
+        res = sexp_type_by_index(ctx, 0);
+    }
+    break;
+  }
+  return sexp_translate_opcode_type(ctx, res);
+}
+
+static sexp sexp_get_opcode_num_params (sexp ctx sexp_api_params(self, n), sexp op) {
+  if (! sexp_opcodep(op))
+    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  return sexp_make_fixnum(sexp_opcode_num_args(op));
+}
+
 static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
   sexp ctx2 = ctx;
   if (sexp_envp(e)) {
@@ -116,6 +172,9 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
+  sexp_define_foreign(ctx, env, "opcode-num-params", 1, sexp_get_opcode_num_params);
+  sexp_define_foreign(ctx, env, "opcode-return-type", 1, sexp_get_opcode_ret_type);
+  sexp_define_foreign(ctx, env, "opcode-param-type", 1, sexp_get_opcode_param_type);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   return SEXP_VOID;
 }
