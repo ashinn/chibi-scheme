@@ -1195,14 +1195,19 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
 #endif
     case SEXP_PROCEDURE:
-      sexp_write_string(ctx, "#<procedure: ", out);
+      sexp_write_string(ctx, "#<procedure ", out);
       x = sexp_bytecode_name(sexp_procedure_code(obj));
       sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out);
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_SYNCLO:
-      sexp_write_string(ctx, "#<sc: ", out);
+      sexp_write_string(ctx, "#<sc ", out);
       sexp_write(ctx, sexp_synclo_expr(obj), out);
+      sexp_write_string(ctx, ">", out);
+      break;
+    case SEXP_TYPE:
+      sexp_write_string(ctx, "#<type ", out);
+      sexp_write_string(ctx, sexp_type_name(obj), out);
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_STRING:
