@@ -48,7 +48,9 @@ static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
 static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
   sexp_gc_var2(res, tmp);
   res = type;
-  if (sexp_nullp(res)) {        /* opcode list types */
+  if (sexp_fixnump(res)) {
+    res = sexp_type_by_index(ctx, sexp_unbox_fixnum(res));
+  } else if (sexp_nullp(res)) {        /* opcode list types */
     sexp_gc_preserve2(ctx, res, tmp);
     tmp = sexp_intern(ctx, "or", -1);
     res = sexp_cons(ctx, sexp_make_fixnum(SEXP_PAIR), SEXP_NULL);
@@ -174,7 +176,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
   sexp_define_foreign(ctx, env, "opcode-num-params", 1, sexp_get_opcode_num_params);
   sexp_define_foreign(ctx, env, "opcode-return-type", 1, sexp_get_opcode_ret_type);
-  sexp_define_foreign(ctx, env, "opcode-param-type", 1, sexp_get_opcode_param_type);
+  sexp_define_foreign(ctx, env, "opcode-param-type", 2, sexp_get_opcode_param_type);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   return SEXP_VOID;
 }
