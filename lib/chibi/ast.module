@@ -1,7 +1,7 @@
 
 (define-module (chibi ast)
   (export analyze optimize env-cell ast->sexp macroexpand
-          lam cnd set ref seq lit
+          object lam cnd set ref seq lit
           pair-source pair-source-set!
           syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode? type?
           syntactic-closure-expr syntactic-closure-env syntactic-closure-vars

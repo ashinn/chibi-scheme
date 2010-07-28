@@ -128,6 +128,7 @@ static sexp sexp_optimize (sexp ctx sexp_api_params(self, n), sexp x) {
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+  sexp_define_type(ctx, "object", SEXP_OBJECT);
   sexp_define_type(ctx, "lam", SEXP_LAMBDA);
   sexp_define_type(ctx, "cnd", SEXP_CND);
   sexp_define_type(ctx, "set", SEXP_SET);

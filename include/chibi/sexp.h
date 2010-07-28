@@ -1046,7 +1046,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_make_type_predicate(ctx, a, b) sexp_make_type_predicate_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_constructor(ctx, a, b) sexp_make_constructor_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
-#define sexp_make_setter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
+#define sexp_make_setter(ctx, a, b, c) sexp_make_setter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
 
 #ifdef __cplusplus
 } /* extern "C" */
