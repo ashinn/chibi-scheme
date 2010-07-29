@@ -2,10 +2,10 @@
 (define-module (chibi ast)
   (export analyze optimize env-cell ast->sexp macroexpand
           object opcode procedure bytecode macro env number bignum flonum integer
-	  lam cnd set ref seq lit sc
+          context  lam cnd set ref seq lit sc
           pair-source pair-source-set!
           syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode? type?
-	  environment? bytecode? exception? macro?
+          environment? bytecode? exception? macro? context?
           syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
           lambda-name lambda-params lambda-body lambda-defs lambda-locals
           lambda-flags lambda-free-vars lambda-set-vars lambda-return-type
@@ -20,6 +20,7 @@
           ref-name ref-cell ref-name-set! ref-cell-set!
           seq-ls seq-ls-set! lit-value lit-value-set!
           opcode-name opcode-num-params opcode-return-type opcode-param-type
+          opcode-variadic?
           procedure-code procedure-vars procedure-name bytecode-name)
   (import-immutable (scheme))
   (include-shared "ast")

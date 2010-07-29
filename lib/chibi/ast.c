@@ -75,11 +75,14 @@ static sexp sexp_get_opcode_ret_type (sexp ctx sexp_api_params(self, n), sexp op
 
 static sexp sexp_get_opcode_param_type (sexp ctx sexp_api_params(self, n), sexp op, sexp k) {
   sexp res;
+  int p = sexp_unbox_fixnum(k);
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   else if (! sexp_fixnump(k))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, k);
-  switch (sexp_unbox_fixnum(k)) {
+  if (p > sexp_opcode_num_args(op) && sexp_opcode_variadic_p(op))
+    p = sexp_opcode_num_args(op);
+  switch (p) {
   case 0:
     res = sexp_opcode_arg1_type(op);
     break;
@@ -92,7 +95,7 @@ static sexp sexp_get_opcode_param_type (sexp ctx sexp_api_params(self, n), sexp 
       if (sexp_vector_length(res) > (sexp_unbox_fixnum(k)-2))
         res = sexp_vector_ref(res, sexp_fx_sub(k, SEXP_TWO));
       else
-        res = sexp_type_by_index(ctx, 0);
+        res = sexp_type_by_index(ctx, SEXP_OBJECT);
     }
     break;
   }
@@ -103,6 +106,12 @@ static sexp sexp_get_opcode_num_params (sexp ctx sexp_api_params(self, n), sexp 
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   return sexp_make_fixnum(sexp_opcode_num_args(op));
+}
+
+static sexp sexp_get_opcode_variadic_p (sexp ctx sexp_api_params(self, n), sexp op) {
+  if (! sexp_opcodep(op))
+    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  return sexp_make_boolean(sexp_opcode_variadic_p(op));
 }
 
 static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
@@ -147,6 +156,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type(ctx, "seq", SEXP_SEQ);
   sexp_define_type(ctx, "lit", SEXP_LIT);
   sexp_define_type(ctx, "sc", SEXP_SYNCLO);
+  sexp_define_type(ctx, "context", SEXP_CONTEXT);
   sexp_define_type_predicate(ctx, env, "environment?", SEXP_ENV);
   sexp_define_type_predicate(ctx, env, "bytecode?", SEXP_BYTECODE);
   sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
@@ -160,6 +170,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type_predicate(ctx, env, "lit?", SEXP_LIT);
   sexp_define_type_predicate(ctx, env, "opcode?", SEXP_OPCODE);
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
+  sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
   sexp_define_accessors(ctx, env, SEXP_PAIR, 2, "pair-source", "pair-source-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", "syntactic-closure-env-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", "syntactic-closure-vars-set!");
@@ -191,6 +202,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
+  sexp_define_foreign(ctx, env, "opcode-variadic?", 1, sexp_get_opcode_variadic_p);
   sexp_define_foreign(ctx, env, "opcode-num-params", 1, sexp_get_opcode_num_params);
   sexp_define_foreign(ctx, env, "opcode-return-type", 1, sexp_get_opcode_ret_type);
   sexp_define_foreign(ctx, env, "opcode-param-type", 2, sexp_get_opcode_param_type);
