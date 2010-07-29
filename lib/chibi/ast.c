@@ -48,7 +48,9 @@ static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
 static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
   sexp_gc_var2(res, tmp);
   res = type;
-  if (sexp_fixnump(res)) {
+  if (! res) {
+    res = sexp_type_by_index(ctx, SEXP_OBJECT);
+  } if (sexp_fixnump(res)) {
     res = sexp_type_by_index(ctx, sexp_unbox_fixnum(res));
   } else if (sexp_nullp(res)) {        /* opcode list types */
     sexp_gc_preserve2(ctx, res, tmp);
@@ -129,12 +131,26 @@ static sexp sexp_optimize (sexp ctx sexp_api_params(self, n), sexp x) {
 
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type(ctx, "object", SEXP_OBJECT);
+  sexp_define_type(ctx, "number", SEXP_NUMBER);
+  sexp_define_type(ctx, "bignum", SEXP_BIGNUM);
+  sexp_define_type(ctx, "flonum", SEXP_FLONUM);
+  sexp_define_type(ctx, "integer", SEXP_FIXNUM);
+  sexp_define_type(ctx, "opcode", SEXP_OPCODE);
+  sexp_define_type(ctx, "procedure", SEXP_PROCEDURE);
+  sexp_define_type(ctx, "bytecode", SEXP_BYTECODE);
+  sexp_define_type(ctx, "env", SEXP_ENV);
+  sexp_define_type(ctx, "macro", SEXP_MACRO);
   sexp_define_type(ctx, "lam", SEXP_LAMBDA);
   sexp_define_type(ctx, "cnd", SEXP_CND);
   sexp_define_type(ctx, "set", SEXP_SET);
   sexp_define_type(ctx, "ref", SEXP_REF);
   sexp_define_type(ctx, "seq", SEXP_SEQ);
   sexp_define_type(ctx, "lit", SEXP_LIT);
+  sexp_define_type(ctx, "sc", SEXP_SYNCLO);
+  sexp_define_type_predicate(ctx, env, "environment?", SEXP_ENV);
+  sexp_define_type_predicate(ctx, env, "bytecode?", SEXP_BYTECODE);
+  sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
+  sexp_define_type_predicate(ctx, env, "macro?", SEXP_MACRO);
   sexp_define_type_predicate(ctx, env, "syntactic-closure?", SEXP_SYNCLO);
   sexp_define_type_predicate(ctx, env, "lambda?", SEXP_LAMBDA);
   sexp_define_type_predicate(ctx, env, "cnd?", SEXP_CND);
