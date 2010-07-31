@@ -1040,11 +1040,11 @@
         (type (cdr type)))
     (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
          "  " (type-id-name name)
-         " = sexp_unbox_fixnum(sexp_register_c_type(ctx, name, "
+         " = sexp_unbox_fixnum(sexp_type_tag(sexp_register_c_type(ctx, name, "
          (cond ((memq 'finalizer: type)
                 => (lambda (x) (generate-stub-name (cadr x))))
                (else "sexp_finalize_c_type"))
-         "));\n")
+         ")));\n")
     (cond
      ((memq 'predicate: type)
       => (lambda (x)
