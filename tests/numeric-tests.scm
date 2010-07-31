@@ -2,39 +2,9 @@
 ;; these tests are only valid if chibi-scheme is compiled with full
 ;; numeric support (USE_BIGNUMS, USE_FLONUMS and USE_MATH)
 
-(define *tests-run* 0)
-(define *tests-passed* 0)
+(import (chibi test))
 
-(define-syntax test
-  (syntax-rules ()
-    ((test expect expr)
-     (begin
-       (set! *tests-run* (+ *tests-run* 1))
-       (let ((str (call-with-output-string (lambda (out) (display 'expr out))))
-             (res expr))
-         (display str)
-         (write-char #\space)
-         (display (make-string (max 0 (- 72 (string-length str))) #\.))
-         (flush-output)
-         (cond
-          ((equal? res expect)
-           (set! *tests-passed* (+ *tests-passed* 1))
-           (display " [PASS]\n"))
-          (else
-           (display " [FAIL]\n")
-           (display "    expected ") (write expect)
-           (display " but got ") (write res) (newline))))))))
-
-(define (test-report)
-  (write *tests-passed*)
-  (display " out of ")
-  (write *tests-run*)
-  (display " passed (")
-  (write (* (/ *tests-passed* *tests-run*) 100))
-  (display "%)")
-  (newline))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(test-begin "numbers")
 
 (define (integer-neighborhoods x)
   (list x (+ 1 x) (+ -1 x) (- x) (- 1 x) (- -1 x)))
@@ -147,4 +117,4 @@
         (-18446744078004518913 -18446744069414584321 79228162514264337597838917632 4294967296 -1))
     (sign-combinations (+ 1 (expt 2 64)) (expt 2 32)))
 
-(test-report)
+(test-end)

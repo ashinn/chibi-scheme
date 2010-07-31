@@ -1,40 +1,7 @@
 
-(import (srfi 18))
+(import (srfi 18) (chibi test))
 
-(define *tests-run* 0)
-(define *tests-passed* 0)
-
-(define-syntax test
-  (syntax-rules ()
-    ((test name expr expect)
-     (begin
-       (set! *tests-run* (+ *tests-run* 1))
-       (let ((str (call-with-output-string (lambda (out) (display name out))))
-             (res expr))
-         (display str)
-         (write-char #\space)
-         (display (make-string (max 0 (- 72 (string-length str))) #\.))
-         (flush-output)
-         (cond
-          ((equal? res expect)
-           (set! *tests-passed* (+ *tests-passed* 1))
-           (display " [PASS]\n"))
-          (else
-           (display " [FAIL]\n")
-           (display "    expected ") (write expect)
-           (display " but got ") (write res) (newline))))))))
-
-(define (test-report)
-  (write *tests-passed*)
-  (display " out of ")
-  (write *tests-run*)
-  (display " passed (")
-  (write (* (/ *tests-passed* *tests-run*) 100))
-  (display "%)")
-  (newline))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; run tests
+(test-begin)
 
 (test "no threads" (begin 'ok) 'ok)
 (test "unstarted thread" (let ((t (make-thread (lambda () (error "oops"))))) 'ok) 'ok)
@@ -54,5 +21,5 @@
 
 ;(test "mailbox")
 
-(test-report)
+(test-end)
 
