@@ -182,6 +182,9 @@ test-loop: chibi-scheme$(EXE)
 test-sort: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/sort-tests.scm
 
+test-libs: chibi-scheme$(EXE)
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/lib-tests.scm
+
 test: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/r5rs-tests.scm
 
