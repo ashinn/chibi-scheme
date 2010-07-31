@@ -112,6 +112,7 @@ static sexp sexp_object_compare_op (sexp ctx sexp_api_params(self, n), sexp a, s
   return sexp_make_fixnum(sexp_object_compare(ctx, a, b));
 }
 
+/* fast path when using general object-cmp comparator with no key */
 static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
   sexp_sint_t mid, i, j;
   sexp tmp, tmp2;
@@ -125,8 +126,8 @@ static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
     swap(tmp, vec[j], vec[hi]);
     if ((hi-lo) > 2) {
       sexp_qsort(ctx, vec, lo, j-1);
-      lo = j+1;
-      goto loop;
+      lo = j;
+      goto loop; /* tail recurse on right side */
     }
   }
 }
@@ -172,8 +173,8 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
       res = sexp_qsort_less(ctx, vec, lo, j-1, less, key);
       if (sexp_exceptionp(res))
         goto done;
-      lo = j+1;
-      goto loop;
+      lo = j;
+      goto loop; /* tail recurse on right side */
     }
   }
  done:
