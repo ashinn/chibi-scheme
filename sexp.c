@@ -1371,6 +1371,13 @@ sexp sexp_read_string (sexp ctx, sexp in) {
       case 'n': c = '\n'; break;
       case 'r': c = '\r'; break; 
       case 't': c = '\t'; break;
+      case 'x':
+        c = sexp_read_char(ctx, in);
+        if (isxdigit(c)) {
+          c = digit_value(c)*16 + digit_value(sexp_read_char(ctx, in));
+        } else {
+          sexp_push_char(ctx, c, in); c = 'x';
+        }
       }
     }
     if (c == EOF) {
