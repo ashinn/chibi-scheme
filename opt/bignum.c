@@ -487,7 +487,7 @@ enum sexp_number_combs {
 };
 
 static int sexp_number_types[] =
-  {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0};
+  {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0};
 
 static int sexp_number_type (sexp a) {
   return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&15]
