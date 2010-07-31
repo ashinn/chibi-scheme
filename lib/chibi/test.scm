@@ -48,7 +48,7 @@
 (define (timeval-difference tv1 tv2)
   (let ((seconds (- (timeval-seconds tv1) (timeval-seconds tv2)))
         (ms (- (timeval-microseconds tv1) (timeval-microseconds tv2))))
-    (+ (max seconds 0.0) (/ ms 100000.0))))
+    (+ (max seconds 0.0) (/ ms 1000000.0))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
