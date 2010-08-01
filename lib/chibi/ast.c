@@ -55,8 +55,8 @@ static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
   } else if (sexp_nullp(res)) {        /* opcode list types */
     sexp_gc_preserve2(ctx, res, tmp);
     tmp = sexp_intern(ctx, "or", -1);
-    res = sexp_cons(ctx, sexp_make_fixnum(SEXP_PAIR), SEXP_NULL);
-    res = sexp_cons(ctx, SEXP_NULL, res);
+    res = sexp_cons(ctx, SEXP_NULL, SEXP_NULL);
+    res = sexp_cons(ctx, sexp_type_by_index(ctx, SEXP_PAIR), res);
     res = sexp_cons(ctx, tmp, res);
     sexp_gc_release2(ctx);
   }
@@ -67,6 +67,8 @@ static sexp sexp_get_opcode_ret_type (sexp ctx sexp_api_params(self, n), sexp op
   sexp res;
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  if (sexp_opcode_code(op) == SEXP_OP_RAISE)
+    return sexp_list1(ctx, sexp_intern(ctx, "error", -1));
   res = sexp_opcode_return_type(op);
   if (sexp_fixnump(res))
     res = sexp_type_by_index(ctx, sexp_unbox_fixnum(res));
@@ -145,6 +147,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type(ctx, "<flonum>", SEXP_FLONUM);
   sexp_define_type(ctx, "<integer>", SEXP_FIXNUM);
   sexp_define_type(ctx, "<symbol>", SEXP_SYMBOL);
+  sexp_define_type(ctx, "<char>", SEXP_CHAR);
+  sexp_define_type(ctx, "<boolean>", SEXP_BOOLEAN);
   sexp_define_type(ctx, "<string>", SEXP_STRING);
   sexp_define_type(ctx, "<byte-vector>", SEXP_BYTES);
   sexp_define_type(ctx, "<pair>", SEXP_PAIR);
