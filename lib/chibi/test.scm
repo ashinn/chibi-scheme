@@ -68,8 +68,7 @@
      (test-info name expect expr ()))
     ((test a ...)
      (test-syntax-error 'test "2 or 3 arguments required"
-                        (test a ...)))
-    ))
+                        (test a ...)))))
 
 (define-syntax test-assert
   (syntax-rules ()
@@ -79,8 +78,15 @@
      (test-info name #f expr ((assertion . #t))))
     ((test a ...)
      (test-syntax-error 'test-assert "1 or 2 arguments required"
-                        (test a ...)))
-    ))
+                        (test a ...)))))
+
+(define-syntax test-values
+  (syntax-rules ()
+    ((_ expect expr)
+    (test-values #f expect expr))
+    ((_ name expect expr)
+     (test name (call-with-values (lambda () expect) (lambda results results))
+       (call-with-values (lambda () expr) (lambda results results))))))
 
 (define-syntax test-error
   (syntax-rules ()
@@ -90,8 +96,7 @@
      (test-info name #f expr ((expect-error . #t))))
     ((test a ...)
      (test-syntax-error 'test-error "1 or 2 arguments required"
-                        (test a ...)))
-    ))
+                        (test a ...)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; group interface
@@ -219,6 +224,14 @@
                           (truncate-source (car (reverse x)) (- width 3) #t))))
       ((and (pair? x) (eq? 'call-with-current-continuation (car x)))
        (truncate-source (cons 'call/cc (cdr x)) width (and (pair? o) (car o))))
+      ((and (pair? x) (eq? 'call-with-values (car x)))
+       (string-append
+        "..."
+        (truncate-source (if (and (pair? (cadr x)) (eq? 'lambda (caadr x)))
+                             (car (reverse (cadr x)))
+                             (cadr x))
+                         (- width 3)
+                         #t)))
       (else
        (string-append
         (substring str 0 (min (max 0 (- width 3)) (string-length str)))
