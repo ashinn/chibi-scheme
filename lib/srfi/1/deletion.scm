@@ -10,7 +10,7 @@
             (if tail
                 (lp (cdr tail) (take-up-to-reverse ls tail rev))
                 (if (pair? rev) (append-reverse! rev ls) ls))))
-        (filter (lambda (y) (eq x y)) ls))))
+        (remove (lambda (y) (eq x y)) ls))))
 
 (define delete! delete)
 
