@@ -15,7 +15,7 @@
      (call-with-current-continuation
       (lambda (return)
         (with-exception-handler
-         (lambda (exn) handler)
+         (lambda (exn) (return handler))
          (lambda () body ...)))))))
 
 (define (warning msg . args)
