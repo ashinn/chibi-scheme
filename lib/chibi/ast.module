@@ -3,7 +3,7 @@
   (export
    analyze optimize env-cell ast->sexp macroexpand
    <object> <opcode> <procedure> <bytecode> <macro> <env>
-   <number> <bignum> <flonum> <integer>
+   <number> <bignum> <flonum> <integer> <char> <boolean>
    <symbol> <string> <byte-vector> <vector> <pair>
    <context> <lam> <cnd> <set> <ref> <seq> <lit> <sc>
    pair-source pair-source-set!
