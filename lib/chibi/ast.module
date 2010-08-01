@@ -1,7 +1,7 @@
 
 (define-module (chibi ast)
   (export
-   analyze optimize env-cell ast->sexp macroexpand
+   analyze optimize env-cell ast->sexp macroexpand type-of
    <object> <opcode> <procedure> <bytecode> <macro> <env>
    <number> <bignum> <flonum> <integer> <char> <boolean>
    <symbol> <string> <byte-vector> <vector> <pair>

@@ -116,6 +116,27 @@ static sexp sexp_get_opcode_variadic_p (sexp ctx sexp_api_params(self, n), sexp 
   return sexp_make_boolean(sexp_opcode_variadic_p(op));
 }
 
+static sexp sexp_type_of (sexp ctx sexp_api_params(self, n), sexp x) {
+  if (sexp_pointerp(x))
+    return sexp_object_type(ctx, x);
+  else if (sexp_fixnump(x))
+    return sexp_type_by_index(ctx, SEXP_FIXNUM);
+  else if (sexp_booleanp(x))
+    return sexp_type_by_index(ctx, SEXP_BOOLEAN);
+  else if (sexp_charp(x))
+    return sexp_type_by_index(ctx, SEXP_CHAR);
+#if SEXP_USE_HUFF_SYMS
+  else if (sexp_symbolp(x))
+    return sexp_type_by_index(ctx, SEXP_SYMBOL);
+#endif
+#if SEXP_USE_IMMEDIATE_FLONUMS
+  else if (sexp_flonump(x))
+    return sexp_type_by_index(ctx, SEXP_FLONUM);
+#endif
+  else
+    return sexp_type_by_index(ctx, SEXP_OBJECT);
+}
+
 static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
   sexp ctx2 = ctx;
   if (sexp_envp(e)) {
@@ -216,6 +237,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "opcode-return-type", 1, sexp_get_opcode_ret_type);
   sexp_define_foreign(ctx, env, "opcode-param-type", 2, sexp_get_opcode_param_type);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
+  sexp_define_foreign(ctx, env, "type-of", 1, sexp_type_of);
   return SEXP_VOID;
 }
 
