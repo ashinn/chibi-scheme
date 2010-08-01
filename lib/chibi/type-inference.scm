@@ -65,17 +65,6 @@
         (cons (car a) (lset-adjoin equal? (cdr a) b))))
    (else (list 'and a b))))
 
-(define (type-of x)
-  (cond ((boolean? x) <boolean>)
-        ((char? x) <char>)
-        ((symbol? x) <symbol>)
-        ((string? x) <string>)
-        ((and (integer? x) (exact? x)) <integer>)
-        ((flonum? x) <flonum>)
-        ((pair? x) <pair>)
-        ((vector? x) <vector>)
-        (else <object>)))
-
 (define (lambda-param-types-initialize! f)
   (lambda-param-types-set! f (map (lambda (p) (list 'param-type f p))
                                   (lambda-params f))))
