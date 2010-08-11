@@ -17,6 +17,7 @@
    uncaught-exception-reason)
   (import-immutable (scheme)
                     (srfi 9)
+                    (chibi ast)
                     (chibi time))
   (include-shared "18/threads")
   (include "18/types.scm" "18/interface.scm"))

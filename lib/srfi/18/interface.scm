@@ -37,3 +37,13 @@
 
 (define current-time get-time-of-day)
 (define time? timeval?)
+
+(define (join-timeout-exception? x)
+  (and (exception? x)
+       (equal? (exception-message x) "timed out waiting for thread")))
+
+;; flush out exception types
+(define (abandoned-mutex-exception? x) #f)
+(define (terminated-thread-exception? x) #f)
+(define (uncaught-exception? x) #f)
+(define (uncaught-exception-reason x) #f)
