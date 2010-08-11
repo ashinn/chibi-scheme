@@ -264,11 +264,40 @@ void sexp_wait_on_single_thread (sexp ctx) {
   usleep(usecs);
 }
 
+static const sexp_uint_t sexp_log2_lookup[32] = {
+  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
+  31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+};
+
+/* only works on powers of two */
+static sexp_uint_t sexp_log2_of_pow2 (sexp_uint_t n) {
+  return sexp_log2_lookup[(n * 0x077CB531U) >> 27];
+}
+
 sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   struct timeval tval;
-  sexp res, ls1, ls2, tmp, paused, front=sexp_global(ctx, SEXP_G_THREADS_FRONT);
+  int allsigs, restsigs, signum;
+  sexp res, ls1, ls2, handler, paused, front;
+  sexp_gc_var1(tmp);
+  sexp_gc_preserve1(ctx, tmp);
 
+  front  = sexp_global(ctx, SEXP_G_THREADS_FRONT);
   paused = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
+
+  /* run signal handlers */
+  while (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) != SEXP_ZERO) {
+    allsigs = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_THREADS_SIGNALS));
+    restsigs = allsigs & (allsigs-1);
+    sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = sexp_make_fixnum(restsigs);
+    signum = sexp_log2_of_pow2(allsigs-restsigs);
+    handler = sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS),
+                              sexp_make_fixnum(signum));
+    if (sexp_applicablep(handler)) {
+      tmp = sexp_cons(ctx, SEXP_FALSE, SEXP_NULL);
+      tmp = sexp_cons(ctx, sexp_make_fixnum(signum), tmp);
+      sexp_apply(ctx, handler, tmp);
+    }
+  }
 
   /* if we've terminated, check threads joining us */
   if (sexp_context_refuel(ctx) <= 0) {
@@ -351,6 +380,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     sexp_context_waitp(res) = 0;
   }
 
+  sexp_gc_release1(ctx);
   return res;
 }
 
