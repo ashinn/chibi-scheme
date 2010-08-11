@@ -187,6 +187,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type(ctx, "<lit>", SEXP_LIT);
   sexp_define_type(ctx, "<sc>", SEXP_SYNCLO);
   sexp_define_type(ctx, "<context>", SEXP_CONTEXT);
+  sexp_define_type(ctx, "<exception>", SEXP_EXCEPTION);
   sexp_define_type_predicate(ctx, env, "environment?", SEXP_ENV);
   sexp_define_type_predicate(ctx, env, "bytecode?", SEXP_BYTECODE);
   sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
@@ -201,6 +202,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type_predicate(ctx, env, "opcode?", SEXP_OPCODE);
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
+  sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
   sexp_define_accessors(ctx, env, SEXP_PAIR, 2, "pair-source", "pair-source-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", "syntactic-closure-env-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", "syntactic-closure-vars-set!");
@@ -228,6 +230,9 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 1, "procedure-code", "procedure-code-set!");
   sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 2, "procedure-vars", "procedure-vars-set!");
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 1, "bytecode-name", "bytecode-name-set!");
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 0, "exception-kind", "exception-kind-set!");
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", "exception-message-set!");
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", "exception-irritants-set!");
   sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
