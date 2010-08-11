@@ -1,39 +1,41 @@
-/*  signal.c -- process signals interface                */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  signal.c -- process signals interface                     */
+/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #define SEXP_MAX_SIGNUM 32
 
 static sexp sexp_signal_contexts[SEXP_MAX_SIGNUM];
 
+static struct sigaction call_sigaction, call_sigdefault, call_sigignore;
+
 static void sexp_call_sigaction (int signum, siginfo_t *info, void *uctx) {
-  sexp ctx, sigctx, handler;
+  sexp ctx;
+#if ! SEXP_USE_GREEN_THREADS
+  sexp sigctx, handler;
   sexp_gc_var1(args);
+#endif
   ctx = sexp_signal_contexts[signum];
   if (ctx) {
+#if SEXP_USE_GREEN_THREADS
+    sexp_global(ctx, SEXP_G_THREADS_SIGNALS) =
+      (sexp) ((sexp_uint_t)sexp_global(ctx, SEXP_G_THREADS_SIGNALS)
+              | (sexp_uint_t)sexp_make_fixnum(signum));
+#else
     handler = sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS),
                               sexp_make_fixnum(signum));
-    if (sexp_truep(handler)) {
+    if (sexp_applicablep(handler)) {
       sigctx = sexp_make_child_context(ctx, NULL);
       sexp_gc_preserve1(sigctx, args);
       args = sexp_cons(sigctx, SEXP_FALSE, SEXP_NULL);
       sexp_car(args)
         = sexp_make_cpointer(sigctx, sexp_siginfo_t_type_id, info, SEXP_FALSE, 0);
-      args = sexp_cons(sigctx, SEXP_FALSE, args);
-      sexp_car(args) = sexp_make_fixnum(signum);
+      args = sexp_cons(sigctx, sexp_make_fixnum(signum), args);
       sexp_apply(sigctx, handler, args);
       sexp_gc_release1(sigctx);
     }
+#endif
   }
 }
-
-static struct sigaction call_sigaction = {
-  .sa_sigaction = sexp_call_sigaction,
-  .sa_flags = SA_SIGINFO | SA_NODEFER
-};
-
-static struct sigaction call_sigdefault = {.sa_handler = SIG_DFL};
-static struct sigaction call_sigignore = {.sa_handler = SIG_IGN};
 
 static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newaction) {
   int res;
@@ -60,3 +62,15 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
   return oldaction;
 }
 
+static void sexp_init_signals (sexp ctx, sexp env) {
+  call_sigaction.sa_sigaction  = sexp_call_sigaction;
+#if SEXP_USE_GREEN_THREADS
+  call_sigaction.sa_flags      = SA_SIGINFO /* | SA_NODEFER */;
+  sigfillset(&call_sigaction.sa_mask);
+#else
+  call_sigaction.sa_flags      = SA_SIGINFO | SA_NODEFER;
+#endif
+  call_sigdefault.sa_handler   = SIG_DFL;
+  call_sigignore.sa_handler    = SIG_IGN;
+  memset(sexp_signal_contexts, 0, sizeof(sexp_signal_contexts));
+}

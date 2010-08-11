@@ -349,6 +349,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
 #if SEXP_USE_GREEN_THREADS
   sexp_global(ctx, SEXP_G_THREADS_FRONT) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
+  sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = SEXP_ZERO;
 #endif
   sexp_gc_release3(ctx);
 }
@@ -1599,7 +1600,10 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc", -1));
 #endif
 #if SEXP_USE_UTF8_STRINGS
-  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "boehm-gc", -1));
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "utf-8", -1));
+#endif
+#if SEXP_USE_GREEN_THREADS
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "threads", -1));
 #endif
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi", -1));
   sexp_env_define(ctx, e, sexp_intern(ctx, "*features*", -1), tmp);

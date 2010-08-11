@@ -141,6 +141,7 @@
 (define *types* '())
 (define *funcs* '())
 (define *consts* '())
+(define *inits* '())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
@@ -391,6 +392,9 @@
 
 (define (c-system-include header)
   (cat "\n#include <" header ">\n"))
+
+(define (c-init x)
+  (set! *inits* (cons x *inits*)))
 
 (define (parse-struct-like ls)
   (let lp ((ls ls) (res '()))
@@ -1249,6 +1253,7 @@
   (for-each write-const *consts*)
   (for-each write-type *types*)
   (for-each write-func-binding *funcs*)
+  (for-each (lambda (x) (cat "  " x "\n")) (reverse *inits*))
   (cat "  sexp_gc_release2(ctx);\n"
        "  return SEXP_VOID;\n"
        "}\n\n"))

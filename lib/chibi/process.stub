@@ -70,3 +70,4 @@
 (define-c void exit (int))
 (define-c int (execute execvp) (string (array string)))
 
+(c-init "sexp_init_signals(ctx, env);")
