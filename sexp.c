@@ -1659,7 +1659,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         if (sexp_string_length(res) == 1) {
           res = sexp_make_character(c1);
         } else if ((c1 == 'x' || c1 == 'X') &&
-                   isxdigit(str[1]) && isxdigit(str[2]) && str[3] == '\0') {
+                   (isxdigit)(str[1]) && (isxdigit)(str[2]) && str[3] == '\0') {
           res = sexp_make_character(16 * digit_value(str[1])
                                     + digit_value(str[2]));
         } else {

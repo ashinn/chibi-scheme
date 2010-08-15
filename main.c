@@ -163,8 +163,8 @@ void run_main (int argc, char **argv) {
       check_nonull_arg('h', arg);
       heap_size = atol(arg);
       len = strlen(arg);
-      if (heap_size && isalpha(arg[len-1])) {
-        switch (tolower(arg[len-1])) {
+      if (heap_size && (isalpha)(arg[len-1])) {
+        switch ((tolower)(arg[len-1])) {
         case 'k': heap_size *= 1024; break;
         case 'm': heap_size *= (1024*1024); break;
         }
