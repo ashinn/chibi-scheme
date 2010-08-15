@@ -1512,7 +1512,10 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
  scan_loop:
   switch (c1 = sexp_read_char(ctx, in)) {
   case EOF:
-    res = SEXP_EOF;
+    if (sexp_at_eofp(in))
+      res = SEXP_EOF;
+    else
+      goto scan_loop;
     break;
   case ';':
     while ((c1 = sexp_read_char(ctx, in)) != EOF)

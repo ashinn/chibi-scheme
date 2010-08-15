@@ -350,6 +350,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_THREADS_FRONT) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = SEXP_ZERO;
+  sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = SEXP_FALSE;
 #endif
   sexp_gc_release3(ctx);
 }

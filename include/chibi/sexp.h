@@ -885,6 +885,7 @@ enum sexp_context_globals {
   SEXP_G_THREADS_PAUSED,
   SEXP_G_THREADS_LOCAL,
   SEXP_G_THREADS_SIGNALS,
+  SEXP_G_THREADS_SIGNAL_RUNNER,
 #endif
   SEXP_G_NUM_GLOBALS
 };
@@ -942,6 +943,7 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 #endif
 
 #define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
+#define sexp_at_eofp(p) (feof(sexp_port_stream(p)))
 
 SEXP_API sexp sexp_make_context(sexp ctx, size_t size);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
