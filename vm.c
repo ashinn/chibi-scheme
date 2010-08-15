@@ -486,8 +486,6 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
 
 #define sexp_check_exception()                                 \
   do {if (sexp_exceptionp(_ARG1)) {                            \
-      if (! sexp_exception_procedure(_ARG1))                   \
-        sexp_exception_procedure(_ARG1) = self;                \
       goto call_error_handler;}}                               \
     while (0)
 
@@ -550,8 +548,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   switch (*ip++) {
   case SEXP_OP_NOOP:
     break;
-  case SEXP_OP_RAISE:
   call_error_handler:
+    if (! sexp_exception_procedure(_ARG1))
+      sexp_exception_procedure(_ARG1) = self;
+  case SEXP_OP_RAISE:
     tmp1 = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
     if (! sexp_procedurep(tmp1)) goto end_loop;
