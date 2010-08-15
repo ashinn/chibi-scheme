@@ -129,7 +129,7 @@ typedef unsigned int sexp_tag_t;
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 5)
-#elif __CYGWIN__
+#elif defined(__CYGWIN__)
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;

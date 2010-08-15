@@ -19,7 +19,7 @@
               SEXP_RANDOM_STATE_SIZE,                                   \
               sexp_random_data(x))
 
-#if SEXP_BSD
+#if SEXP_BSD || defined(__CYGWIN__)
 typedef unsigned int sexp_random_t;
 #define sexp_call_random(rs, dst) ((dst) = rand_r(sexp_random_data(rs)))
 #define sexp_seed_random(n, rs) *sexp_random_data(rs) = (n)
@@ -85,7 +85,7 @@ static sexp sexp_random_real (sexp ctx sexp_api_params(self, n)) {
   return sexp_rs_random_real(ctx sexp_api_pass(self, n), default_random_source);
 }
 
-#if SEXP_BSD
+#if SEXP_BSD || defined(__CYGWIN__)
 
 static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
   sexp res;
