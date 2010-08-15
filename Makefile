@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: all libs doc dist clean cleaner test install uninstall
+.PHONY: all libs doc dist clean cleaner dist-clean test install uninstall
 .PRECIOUS: %.c
 
 # install configuration
@@ -162,6 +162,9 @@ cleaner: clean
 	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) $(COMPILED_LIBS) *$(SO) *.a include/chibi/install.h
 	rm -rf *.dSYM
 
+dist-clean: cleaner
+	for f in `find lib -name \*.stub`; do rm -f $${f%.stub}.c; done
+
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
 	    LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
@@ -227,14 +230,14 @@ uninstall:
 	cd $(DESTDIR)$(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
 	rm -rf $(DESTDIR)$(MODDIR)
 
-dist: cleaner
+dist: dist-clean
 	rm -f chibi-scheme-`cat VERSION`.tgz
 	mkdir chibi-scheme-`cat VERSION`
 	for f in `hg manifest`; do mkdir -p chibi-scheme-`cat VERSION`/`dirname $$f`; ln -s `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
 	tar cphzvf chibi-scheme-`cat VERSION`.tgz chibi-scheme-`cat VERSION`
 	rm -rf chibi-scheme-`cat VERSION`
 
-mips-dist: cleaner
+mips-dist: dist-clean
 	rm -f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz
 	mkdir chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
 	for f in `hg manifest`; do mkdir -p chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/`dirname $$f`; ln -s `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/$$f; done
