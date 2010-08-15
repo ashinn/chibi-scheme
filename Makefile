@@ -36,7 +36,13 @@ PLATFORM=mingw
 SOLIBDIR = $(BINDIR)
 DIFFOPTS = -b
 else
+ifeq ($(shell uname -o),Cygwin)
+PLATFORM=cygwin
+SOLIBDIR = $(BINDIR)
+DIFFOPTS = -b
+else
 PLATFORM=unix
+endif
 endif
 endif
 endif
@@ -57,10 +63,18 @@ LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 STATICFLAGS = -DSEXP_USE_DL=0
 LIBDL = 
 else
+ifeq ($(PLATFORM),cygwin)
+SO  = .dll
+EXE = .exe
+CC = gcc
+CLIBFLAGS = -shared
+LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+else
 SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
+endif
 endif
 endif
 
