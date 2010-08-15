@@ -42,8 +42,22 @@
   (and (exception? x)
        (equal? (exception-message x) "timed out waiting for thread")))
 
-;; flush out exception types
+;; XXXX flush out exception types
 (define (abandoned-mutex-exception? x) #f)
 (define (terminated-thread-exception? x) #f)
 (define (uncaught-exception? x) #f)
 (define (uncaught-exception-reason x) #f)
+
+;; signal runner
+
+(define (signal-runner)
+  (let lp ()
+    (let ((n (pop-signal!)))
+      (cond
+       ((integer? n)
+        (let ((handler (get-signal-handler n)))
+          (if (procedure? handler)
+              (handler n))))
+       (else
+        (thread-sleep! #t))))
+    (lp)))

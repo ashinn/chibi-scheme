@@ -19,7 +19,7 @@ static void sexp_call_sigaction (int signum, siginfo_t *info, void *uctx) {
 #if SEXP_USE_GREEN_THREADS
     sexp_global(ctx, SEXP_G_THREADS_SIGNALS) =
       (sexp) ((sexp_uint_t)sexp_global(ctx, SEXP_G_THREADS_SIGNALS)
-              | (sexp_uint_t)sexp_make_fixnum(signum));
+              | (sexp_uint_t)sexp_make_fixnum(1UL<<signum));
 #else
     handler = sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS),
                               sexp_make_fixnum(signum));

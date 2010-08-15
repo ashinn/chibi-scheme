@@ -155,9 +155,11 @@ sexp sexp_thread_join (sexp ctx sexp_api_params(self, n), sexp thread, sexp time
 }
 
 sexp sexp_thread_sleep (sexp ctx sexp_api_params(self, n), sexp timeout) {
-  sexp_assert_type(ctx, sexp_numberp, SEXP_NUMBER, timeout);
   sexp_context_waitp(ctx) = 1;
-  sexp_insert_timed(ctx, ctx, timeout);
+  if (timeout != SEXP_TRUE) {
+    sexp_assert_type(ctx, sexp_numberp, SEXP_NUMBER, timeout);
+    sexp_insert_timed(ctx, ctx, timeout);
+  }
   return SEXP_FALSE;
 }
 
@@ -274,28 +276,48 @@ static sexp_uint_t sexp_log2_of_pow2 (sexp_uint_t n) {
   return sexp_log2_lookup[(n * 0x077CB531U) >> 27];
 }
 
+static sexp sexp_pop_signal (sexp ctx sexp_api_params(self, n)) {
+  int allsigs, restsigs, signum;
+  if (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) == SEXP_ZERO) {
+    return SEXP_FALSE;
+  } else {
+    allsigs = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_THREADS_SIGNALS));
+    restsigs = allsigs & (allsigs-1);
+    sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = sexp_make_fixnum(restsigs);
+    signum = sexp_log2_of_pow2(allsigs-restsigs);
+    return sexp_make_fixnum(signum);
+  }
+}
+
+static sexp sexp_get_signal_handler (sexp ctx sexp_api_params(self, n), sexp signum) {
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, signum);
+  return sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS), signum);
+}
+
 sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   struct timeval tval;
-  int allsigs, restsigs, signum;
-  sexp res, ls1, ls2, handler, paused, front;
+  sexp res, ls1, ls2, runner, paused, front;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
 
   front  = sexp_global(ctx, SEXP_G_THREADS_FRONT);
   paused = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
 
-  /* run signal handlers */
-  while (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) != SEXP_ZERO) {
-    allsigs = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_THREADS_SIGNALS));
-    restsigs = allsigs & (allsigs-1);
-    sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = sexp_make_fixnum(restsigs);
-    signum = sexp_log2_of_pow2(allsigs-restsigs);
-    handler = sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS),
-                              sexp_make_fixnum(signum));
-    if (sexp_applicablep(handler)) {
-      tmp = sexp_cons(ctx, SEXP_FALSE, SEXP_NULL);
-      tmp = sexp_cons(ctx, sexp_make_fixnum(signum), tmp);
-      sexp_apply(ctx, handler, tmp);
+  /* check for signals */
+  if (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) != SEXP_ZERO) {
+    runner = sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER);
+    if (! sexp_contextp(runner)) { /* ensure the runner exists */
+      if (sexp_envp(runner)) {
+        tmp = sexp_env_cell(runner, (tmp=sexp_intern(ctx, "signal-runner", -1)));
+        if (sexp_pairp(tmp) && sexp_procedurep(sexp_cdr(tmp))) {
+          runner = sexp_make_thread(ctx, self, 2, sexp_cdr(tmp), SEXP_FALSE);
+          sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = runner;
+          sexp_thread_start(ctx, self, 1, runner);
+        }
+      }
+    } else if (sexp_context_waitp(runner)) { /* wake it if it's sleeping */
+      sexp_context_waitp(runner) = 0;
+      sexp_thread_start(ctx, self, 1, runner);
     }
   }
 
@@ -404,9 +426,14 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "%mutex-unlock!", 3, sexp_mutex_unlock);
   sexp_define_foreign(ctx, env, "condition-variable-signal!", 1, sexp_condition_variable_signal);
   sexp_define_foreign(ctx, env, "condition-variable-broadcast!", 1, sexp_condition_variable_broadcast);
+  sexp_define_foreign(ctx, env, "pop-signal!", 0, sexp_pop_signal);
+  sexp_define_foreign(ctx, env, "get-signal-handler", 1, sexp_get_signal_handler);
 
   sexp_global(ctx, SEXP_G_THREADS_SCHEDULER)
     = sexp_make_foreign(ctx, "scheduler", 0, 0, (sexp_proc1)sexp_scheduler, SEXP_FALSE);
+
+  /* remember the env to lookup the runner later */
+  sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = env;
 
   return SEXP_VOID;
 }
