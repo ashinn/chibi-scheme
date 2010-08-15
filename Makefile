@@ -58,7 +58,7 @@ SO  = .dll
 EXE = .exe
 CC = gcc
 CLIBFLAGS = -shared
-CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL -DSEXP_USE_DEBUG=0
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL
 LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 STATICFLAGS = -DSEXP_USE_DL=0
 LIBDL = 
@@ -68,7 +68,8 @@ SO  = .dll
 EXE = .exe
 CC = gcc
 CLIBFLAGS = -shared
-LDFLAGS += -DSEXP_USE_STRING_STREAMS=0 -Wl,--out-implib,libchibi-scheme$(SO).a
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
+LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
