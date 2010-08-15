@@ -1,3 +1,7 @@
+;;;; edit-line.scm - pure scheme line editing tool
+;;
+;; Copyright (c) 2010 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vt100 terminal utilities

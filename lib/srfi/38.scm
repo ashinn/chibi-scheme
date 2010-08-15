@@ -197,7 +197,7 @@
                   (if (memv (peek-char in) delimiters)
                       c
                       (read-named-char c in))))
-               (else ; last resort
+               (else
                 (error "unknown # syntax: " (peek-char in)))))
             ((#\()
              (read-char in)
