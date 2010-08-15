@@ -68,7 +68,7 @@ SO  = .dll
 EXE = .exe
 CC = gcc
 CLIBFLAGS = -shared
-LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+LDFLAGS += -DSEXP_USE_STRING_STREAMS=0 -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
