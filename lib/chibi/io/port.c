@@ -86,6 +86,11 @@ static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size
 }
 
 #if ! SEXP_BSD
+
+#ifdef __CYGWIN__
+#define off64_t off_t
+#endif
+
 static int sexp_cookie_seeker (void *cookie, off64_t *position, int whence) {
   sexp vec = (sexp)cookie, ctx, res;
   if (! sexp_procedurep(sexp_cookie_seek(vec))) return -1;
