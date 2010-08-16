@@ -65,10 +65,10 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
 static void sexp_init_signals (sexp ctx, sexp env) {
   call_sigaction.sa_sigaction  = sexp_call_sigaction;
 #if SEXP_USE_GREEN_THREADS
-  call_sigaction.sa_flags      = SA_SIGINFO /* | SA_NODEFER */;
+  call_sigaction.sa_flags      = SA_SIGINFO | SA_RESTART /* | SA_NODEFER */;
   sigfillset(&call_sigaction.sa_mask);
 #else
-  call_sigaction.sa_flags      = SA_SIGINFO | SA_NODEFER;
+  call_sigaction.sa_flags      = SA_SIGINFO | SA_RESTART | SA_NODEFER;
 #endif
   call_sigdefault.sa_handler   = SIG_DFL;
   call_sigignore.sa_handler    = SIG_IGN;

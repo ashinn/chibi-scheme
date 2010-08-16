@@ -1728,9 +1728,11 @@ sexp sexp_eval_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   err_handler = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
   sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER)) = SEXP_FALSE;
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0);
+  sexp_context_child(ctx) = ctx2;
   res = sexp_compile(ctx2, obj);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
+  sexp_context_child(ctx) = SEXP_FALSE;
   sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER)) = err_handler;
   sexp_context_top(ctx) = top;
   sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
