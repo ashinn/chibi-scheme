@@ -367,7 +367,12 @@
   (buffer-goto! buf out (- (buffer-pos buf) 1)))
 
 (define (command/forward-delete-char ch buf out return)
-  (buffer-delete! buf out (buffer-pos buf) (+ (buffer-pos buf) 1)))
+  (cond
+   ((zero? (- (buffer-length buf) (buffer-min buf)))
+    (newline out)
+    (return 'eof))
+   (else
+    (buffer-delete! buf out (buffer-pos buf) (+ (buffer-pos buf) 1)))))
 
 (define (command/backward-delete-char ch buf out return)
   (buffer-delete! buf out (- (buffer-pos buf) 1) (buffer-pos buf)))
@@ -443,7 +448,7 @@
       (let* ((width (or terminal-width (get-terminal-width out)))
              (buf (make-buffer))
              (done? #f)
-             (return (lambda o (set! done? #t))))
+             (return (lambda o (set! done? (if (pair? o) (car o) #t)))))
         (buffer-refresh?-set! buf #t)
         (buffer-width-set! buf width)
         (buffer-insert! buf out prompt)
@@ -457,7 +462,8 @@
            (let lp ((kmap keymap))
              (let ((ch (read-char in)))
                (if (eof-object? ch)
-                   (buffer->string buf)
+                   (let ((res (buffer->string buf)))
+                     (if (equal? res "") ch res))
                    (let ((x (keymap-lookup kmap (char->integer ch))))
                      (cond
                       ((keymap? x)
@@ -465,7 +471,9 @@
                       ((procedure? x)
                        (x ch buf out return)
                        (buffer-refresh buf out)
-                       (if done? (buffer->string buf) (lp keymap)))
+                       (if done?
+                           (and (not (eq? done? 'eof)) (buffer->string buf))
+                           (lp keymap)))
                       (else
                        ;;(command/beep ch buf out return)
                        (lp keymap)))))))))))))
