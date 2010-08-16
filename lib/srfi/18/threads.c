@@ -84,30 +84,11 @@ sexp sexp_thread_start (sexp ctx sexp_api_params(self, n), sexp thread) {
 }
 
 sexp sexp_thread_terminate (sexp ctx sexp_api_params(self, n), sexp thread) {
-  sexp ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_FRONT);
-  sexp_context_refuel(thread) = 0;
-  for ( ; sexp_pairp(ls2) && (sexp_car(ls2) != thread); ls2=sexp_cdr(ls2))
-    ls1 = ls2;
-  if (sexp_pairp(ls2)) {
-    if (ls1 == SEXP_NULL)
-      sexp_global(ctx, SEXP_G_THREADS_FRONT) = sexp_cdr(ls2);
-    else			/* splice */
-      sexp_cdr(ls1) = sexp_cdr(ls2);
-    if (ls2 == sexp_global(ctx, SEXP_G_THREADS_BACK))
-      sexp_global(ctx, SEXP_G_THREADS_BACK) = ls1;
-  } else {                      /* check for paused threads */
-    ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
-    for ( ; sexp_pairp(ls2) && (sexp_car(ls2) != thread); ls2=sexp_cdr(ls2))
-      ls1 = ls2;
-    if (sexp_pairp(ls2)) {
-      if (ls1 == SEXP_NULL)
-        sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
-      else			/* splice */
-        sexp_cdr(ls1) = sexp_cdr(ls2);
-    }
-  }
+  sexp res = sexp_make_boolean(ctx == thread);
+  for ( ; thread && sexp_contextp(thread); thread=sexp_context_child(thread))
+    sexp_context_refuel(thread) = 0;
   /* return true if terminating self */
-  return sexp_make_boolean(ctx == thread);
+  return res;
 }
 
 static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {

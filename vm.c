@@ -536,6 +536,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       cp = sexp_procedure_vars(self);
     }
     fuel = sexp_context_refuel(ctx);
+    if (fuel <= 0) goto end_loop;
   }
 #endif
 #if SEXP_USE_DEBUG_VM
@@ -1334,9 +1335,15 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 
  end_loop:
 #if SEXP_USE_GREEN_THREADS
-  if (ctx != root_thread) { /* don't return from child threads */
-    sexp_context_refuel(ctx) = fuel = 0;
-    goto loop;
+  if (ctx != root_thread) {
+    if (sexp_context_refuel(root_thread) <= 0) {
+      /* the root already terminated */
+      _ARG1 = SEXP_VOID;
+    } else {
+      /* don't return from child threads */
+      sexp_context_refuel(ctx) = fuel = 0;
+      goto loop;
+    }
   }
 #endif
   sexp_gc_release3(ctx);

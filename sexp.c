@@ -114,7 +114,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   _DEF_TYPE(SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, "sequence", NULL),
   _DEF_TYPE(SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, "literal", NULL),
   _DEF_TYPE(SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), "stack", NULL),
-  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 11, 11, 0, 0, sexp_sizeof(context), 0, 0, "context", NULL),
+  _DEF_TYPE(SEXP_CONTEXT, sexp_offsetof(context, bc), 12, 12, 0, 0, sexp_sizeof(context), 0, 0, "context", NULL),
 };
 #undef _DEF_TYPE
 
