@@ -7,9 +7,12 @@ static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) 
   int i;
   if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
   for (i=0; i<top; i++) {
-    sexp_printf(ctx, out, "%s %02d: ", ((i==fp) ? "*" : " "), i);
+    sexp_write_char(ctx, ((i==fp) ? '*' : ' '), out);
+    if (i < 10) sexp_write_char(ctx, '0', out);
+    sexp_write(ctx, sexp_make_fixnum(i), out);
+    sexp_write_string(ctx, ": ", out);
     sexp_write(ctx, stack[i], out);
-    sexp_printf(ctx, out, "\n");
+    sexp_newline(ctx, out);
   }
 }
 #else
