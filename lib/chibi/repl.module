@@ -1,0 +1,9 @@
+
+(define-module (chibi repl)
+  (export repl)
+  (import-immutable (scheme))
+  (import (chibi ast)
+          (chibi process)
+          (chibi term edit-line)
+          (srfi 18))
+  (include "repl.scm"))
