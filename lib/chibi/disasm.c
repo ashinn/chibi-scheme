@@ -8,6 +8,12 @@
 #define SEXP_DISASM_MAX_DEPTH 8
 #define SEXP_DISASM_PAD_WIDTH 4
 
+static void sexp_write_pointer (sexp ctx, void *p, sexp out) {
+  char buf[32];
+  sprintf(buf, "%p", p);
+  sexp_write_string(ctx, buf, out);
+}
+
 static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp tmp;
   unsigned char *ip, opcode, i;
@@ -15,7 +21,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
   } else if (sexp_opcodep(bc)) {
-    sexp_printf(ctx, out, "%s is a primitive\n", sexp_opcode_name(bc));
+    sexp_write_string(ctx, sexp_opcode_name(bc), out);
+    sexp_write_string(ctx, " is a primitive\n", out);
     return SEXP_VOID;
   } else if (! sexp_bytecodep(bc)) {
     return sexp_type_exception(ctx, self, SEXP_BYTECODE, bc);
@@ -31,7 +38,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     sexp_write(ctx, sexp_bytecode_name(bc), out);
     sexp_write_char(ctx, ' ', out);
   }
-  sexp_printf(ctx, out, "%p\n", bc);
+  sexp_write_pointer(ctx, bc, out);
+  sexp_newline(ctx, out);
 
   ip = sexp_bytecode_data(bc);
 
@@ -40,9 +48,13 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     sexp_write_char(ctx, ' ', out);
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
-    sexp_printf(ctx, out, "  %s ", reverse_opcode_names[opcode]);
+    sexp_write_char(ctx, ' ', out);
+    sexp_write_string(ctx, reverse_opcode_names[opcode], out);
+    sexp_write_char(ctx, ' ', out);
   } else {
-    sexp_printf(ctx, out, "  <unknown> %d ", opcode);
+    sexp_write_string(ctx, "  <unknown> ", out);
+    sexp_write(ctx, sexp_make_fixnum(opcode), out);
+    sexp_write_char(ctx, ' ', out);
   }
   switch (opcode) {
   case SEXP_OP_STACK_REF:
@@ -57,7 +69,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL2:
   case SEXP_OP_FCALL3:
   case SEXP_OP_FCALL4:
-    sexp_printf(ctx, out, "%ld", (long) ((sexp*)ip)[0]);
+    sexp_write_pointer(ctx, ((sexp*)ip)[0], out);
     ip += sizeof(sexp);
     break;
   case SEXP_OP_SLOT_REF:
