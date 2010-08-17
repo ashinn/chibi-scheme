@@ -1303,14 +1303,36 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       _ARG1 = sexp_read_utf8_char(ctx, _ARG1, i);
     else
 #endif
-    _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
+    if (i == EOF) {
+#if SEXP_USE_GREEN_THREADS
+      if ((errno == EAGAIN)
+          && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
+        fuel = 0;
+        ip--;      /* try again */
+      } else
+#endif
+        _ARG1 = SEXP_EOF;
+    } else
+      _ARG1 = sexp_make_character(i);
     break;
   case SEXP_OP_PEEK_CHAR:
     if (! sexp_iportp(_ARG1))
       sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
     sexp_push_char(ctx, i, _ARG1);
-    _ARG1 = (i == EOF) ? SEXP_EOF : sexp_make_character(i);
+    if (i == EOF) {
+#if SEXP_USE_GREEN_THREADS
+      if ((errno == EAGAIN)
+          && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
+        fuel = 0;
+        ip--;      /* try again */
+      } else
+#endif
+        _ARG1 = SEXP_EOF;
+    } else
+      _ARG1 = sexp_make_character(i);
     break;
   case SEXP_OP_YIELD:
     fuel = 0;

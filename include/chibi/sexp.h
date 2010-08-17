@@ -22,6 +22,7 @@ extern "C" {
 #endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
+#include <sys/errno.h>
 #endif
 #endif
 
@@ -887,6 +888,8 @@ enum sexp_context_globals {
   SEXP_G_THREADS_LOCAL,
   SEXP_G_THREADS_SIGNALS,
   SEXP_G_THREADS_SIGNAL_RUNNER,
+  SEXP_G_THREADS_POLL_FDS,
+  SEXP_G_THREADS_BLOCKER,
 #endif
   SEXP_G_NUM_GLOBALS
 };
