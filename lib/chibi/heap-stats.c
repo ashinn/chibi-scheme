@@ -6,17 +6,8 @@
 
 #define SEXP_HEAP_VECTOR_DEPTH 1
 
-#if SEXP_64_BIT
-#define sexp_heap_align(n) sexp_align(n, 5)
-#else
-#define sexp_heap_align(n) sexp_align(n, 4)
-#endif
-
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
 extern sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x);
-
-#if SEXP_USE_GLOBAL_HEAP
-#endif
 
 static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
   int i;
