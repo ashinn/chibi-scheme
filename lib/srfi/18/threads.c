@@ -275,6 +275,10 @@ static sexp sexp_get_signal_handler (sexp ctx sexp_api_params(self, n), sexp sig
   return sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS), signum);
 }
 
+static sexp sexp_blocker (sexp ctx sexp_api_params(self, n), sexp port) {
+  return SEXP_VOID;
+}
+
 sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   struct timeval tval;
   sexp res, ls1, ls2, runner, paused, front;
@@ -284,7 +288,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   front  = sexp_global(ctx, SEXP_G_THREADS_FRONT);
   paused = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
 
-  /* check for signals */
+  /* check signals */
   if (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) != SEXP_ZERO) {
     runner = sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER);
     if (! sexp_contextp(runner)) { /* ensure the runner exists */
@@ -301,6 +305,10 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
       sexp_thread_start(ctx, self, 1, runner);
     }
   }
+
+  /* check blocked fds */
+  /* if () { */
+  /* } */
 
   /* if we've terminated, check threads joining us */
   if (sexp_context_refuel(ctx) <= 0) {
@@ -411,7 +419,9 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "get-signal-handler", 1, sexp_get_signal_handler);
 
   sexp_global(ctx, SEXP_G_THREADS_SCHEDULER)
-    = sexp_make_foreign(ctx, "scheduler", 0, 0, (sexp_proc1)sexp_scheduler, SEXP_FALSE);
+    = sexp_make_foreign(ctx, "scheduler", 1, 0, (sexp_proc1)sexp_scheduler, SEXP_FALSE);
+  sexp_global(ctx, SEXP_G_THREADS_BLOCKER)
+    = sexp_make_foreign(ctx, "blocker", 1, 0, (sexp_proc1)sexp_blocker, SEXP_FALSE);
 
   /* remember the env to lookup the runner later */
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = env;
