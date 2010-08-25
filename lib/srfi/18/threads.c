@@ -80,7 +80,7 @@ sexp sexp_thread_start (sexp ctx sexp_api_params(self, n), sexp thread) {
   } else {			/* init queue */
     sexp_global(ctx, SEXP_G_THREADS_BACK) = sexp_global(ctx, SEXP_G_THREADS_FRONT) = cell;
   }
-  return SEXP_VOID;
+  return thread;
 }
 
 sexp sexp_thread_terminate (sexp ctx sexp_api_params(self, n), sexp thread) {
