@@ -91,11 +91,26 @@ sexp sexp_thread_terminate (sexp ctx sexp_api_params(self, n), sexp thread) {
   return res;
 }
 
+static int sexp_delete_list (sexp ctx, int global, sexp x) {
+  sexp ls1=NULL, ls2=sexp_global(ctx, global);
+  for ( ; sexp_pairp(ls2) && sexp_car(ls2) != x; ls1=ls2, ls2=sexp_cdr(ls2))
+    ;
+  if (sexp_pairp(ls2)) {
+    if (ls1) sexp_cdr(ls1) = sexp_cdr(ls2);
+    else     sexp_global(ctx, global) = sexp_cdr(ls2);
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
 #if SEXP_USE_FLONUMS
   double d;
 #endif
-  sexp ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
+  sexp ls1=SEXP_NULL, ls2;
+  sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, thread);
+  ls2 = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
   if (sexp_integerp(timeout) || sexp_flonump(timeout))
     gettimeofday(&sexp_context_timeval(thread), NULL);
   if (sexp_integerp(timeout)) {
@@ -106,11 +121,14 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
     sexp_context_timeval(thread).tv_sec += trunc(d);
     sexp_context_timeval(thread).tv_usec += (d-trunc(d))*1000000;
 #endif
+  } else if (sexp_contextp(timeout)) {
+    sexp_context_timeval(thread).tv_sec = sexp_context_timeval(timeout).tv_sec;
+    sexp_context_timeval(thread).tv_usec = sexp_context_timeval(timeout).tv_usec;
   } else {
     sexp_context_timeval(thread).tv_sec = 0;
     sexp_context_timeval(thread).tv_usec = 0;
   }
-  if (sexp_numberp(timeout))
+  if (sexp_numberp(timeout) || sexp_contextp(timeout))
     while (sexp_pairp(ls2)
            && sexp_context_before(sexp_car(ls2), sexp_context_timeval(thread)))
       ls1=ls2, ls2=sexp_cdr(ls2);
@@ -386,6 +404,14 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
 
   if (sexp_context_waitp(res)) {
     /* the only thread available was waiting */
+    if (sexp_pairp(paused)
+        && sexp_context_before(sexp_car(paused), sexp_context_timeval(res))) {
+      tmp = res;
+      res = sexp_car(paused);
+      sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(paused);
+      if (sexp_not(sexp_memq(ctx, tmp, paused)))
+        sexp_insert_timed(ctx, tmp, tmp);
+    }
     sexp_wait_on_single_thread(res);
     sexp_context_timeoutp(res) = 1;
     sexp_context_waitp(res) = 0;
