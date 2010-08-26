@@ -97,22 +97,22 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
 #endif
   sexp ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
   if (sexp_integerp(timeout) || sexp_flonump(timeout))
-    gettimeofday(&sexp_context_timeval(ctx), NULL);
+    gettimeofday(&sexp_context_timeval(thread), NULL);
   if (sexp_integerp(timeout)) {
-    sexp_context_timeval(ctx).tv_sec += sexp_unbox_fixnum(timeout);
+    sexp_context_timeval(thread).tv_sec += sexp_unbox_fixnum(timeout);
 #if SEXP_USE_FLONUMS
   } else if (sexp_flonump(timeout)) {
     d = sexp_flonum_value(timeout);
-    sexp_context_timeval(ctx).tv_sec += trunc(d);
-    sexp_context_timeval(ctx).tv_usec += (d-trunc(d))*1000000;
+    sexp_context_timeval(thread).tv_sec += trunc(d);
+    sexp_context_timeval(thread).tv_usec += (d-trunc(d))*1000000;
 #endif
   } else {
-    sexp_context_timeval(ctx).tv_sec = 0;
-    sexp_context_timeval(ctx).tv_usec = 0;
+    sexp_context_timeval(thread).tv_sec = 0;
+    sexp_context_timeval(thread).tv_usec = 0;
   }
   if (sexp_numberp(timeout))
     while (sexp_pairp(ls2)
-           && sexp_context_before(sexp_car(ls2), sexp_context_timeval(ctx)))
+           && sexp_context_before(sexp_car(ls2), sexp_context_timeval(thread)))
       ls1=ls2, ls2=sexp_cdr(ls2);
   else
     while (sexp_pairp(ls2) && sexp_context_timeval(sexp_car(ls2)).tv_sec)
