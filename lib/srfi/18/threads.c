@@ -262,6 +262,8 @@ void sexp_wait_on_single_thread (sexp ctx) {
     usecs = (sexp_context_timeval(ctx).tv_sec - tval.tv_sec) * 1000000;
   if (tval.tv_usec < sexp_context_timeval(ctx).tv_usec)
     usecs += sexp_context_timeval(ctx).tv_usec - tval.tv_usec;
+  else if (usecs > 0)
+    usecs -= tval.tv_usec - sexp_context_timeval(ctx).tv_usec;
   usleep(usecs);
 }
 
