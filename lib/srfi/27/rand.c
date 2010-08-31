@@ -34,7 +34,7 @@ typedef struct random_data sexp_random_t;
 
 #define sexp_sizeof_random (sexp_sizeof_header + sizeof(sexp_random_t) + sizeof(sexp))
 
-static sexp_uint_t rs_type_id;
+static sexp_uint_t rs_type_id = 0;
 static sexp default_random_source;
 
 static sexp sexp_rs_random_integer (sexp ctx sexp_api_params(self, n), sexp rs, sexp bound) {
@@ -124,6 +124,7 @@ static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
   sexp_gc_preserve1(ctx, state);
   state = sexp_make_string(ctx, STATE_SIZE, SEXP_UNDEF);
   res = sexp_alloc_tagged(ctx, sexp_sizeof_random, rs_type_id);
+  if (sexp_exceptionp(res)) return res;
   sexp_random_state(res) = state;
   sexp_random_init(res, 1);
   sexp_gc_release1(ctx);
@@ -171,12 +172,13 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_preserve2(ctx, name, op);
 
   name = sexp_c_string(ctx, "random-source", -1);
-  rs_type_id
-    = sexp_unbox_fixnum(sexp_register_type(ctx, name,
-                                           sexp_make_fixnum(sexp_offsetof_slot0),
-                                           ONE, ONE, ZERO, ZERO,
-                                           sexp_make_fixnum(sexp_sizeof_random),
-                                           ZERO, ZERO, NULL));
+  op = sexp_register_type(ctx, name, sexp_make_fixnum(sexp_offsetof_slot0),
+                          ONE, ONE, ZERO, ZERO,
+                          sexp_make_fixnum(sexp_sizeof_random),
+                          ZERO, ZERO, NULL);
+  if (sexp_exceptionp(op))
+    return op;
+  rs_type_id = sexp_type_tag(op);
 
   name = sexp_c_string(ctx, "random-source?", -1);
   op = sexp_make_type_predicate(ctx, name, sexp_make_fixnum(rs_type_id));
