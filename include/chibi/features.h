@@ -57,6 +57,9 @@
 /*   if you suspect a bug in the native GC. */
 /* #define SEXP_USE_BOEHM 1 */
 
+/* uncomment this to disable weak references */
+/* #define SEXP_USE_WEAK_REFERENCES 0 */
+
 /* uncomment this to just malloc manually instead of any GC */
 /*   Mostly for debugging purposes, this is the no GC option. */
 /*   You can use just the read/write API and */
@@ -277,6 +280,10 @@
 
 #ifndef SEXP_USE_BOEHM
 #define SEXP_USE_BOEHM 0
+#endif
+
+#ifndef SEXP_USE_WEAK_REFERENCES
+#define SEXP_USE_WEAK_REFERENCES 1
 #endif
 
 #ifndef SEXP_USE_MALLOC
