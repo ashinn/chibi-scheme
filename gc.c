@@ -96,6 +96,50 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
 #define stack_references_pointer_p(ctx, x) 0
 #endif
 
+#if SEXP_USE_WEAK_REFERENCES
+void sexp_reset_weak_references(sexp ctx) {
+  int i, len, all_reset_p;
+  sexp_heap h = sexp_context_heap(ctx);
+  sexp p, t, end, *v;
+  sexp_free_list q, r;
+  for ( ; h; h=h->next) {   /* just scan the whole heap */
+    p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
+    q = h->free_list;
+    end = (sexp) ((char*)h->data + h->size - sexp_heap_align(sexp_sizeof(pair)));
+    while (p < end) {
+      /* find the preceding and succeeding free list pointers */
+      for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
+        ;
+      if ((char*)r == (char*)p) { /* this is a free block, skip it */
+        p = (sexp) (((char*)p) + r->size);
+        continue;
+      }
+      if (sexp_gc_mark(p)) {
+        t = sexp_object_type(ctx, p);
+        if (sexp_type_weak_base(t) > 0) {
+          all_reset_p = 1;
+          v = (sexp*) ((char*)p + sexp_type_weak_base(t));
+          len = sexp_type_num_weak_slots_of_object(t, p);
+          for (i=0; i<len; i++) {
+            if (v[i] && sexp_pointerp(v[i]) && ! sexp_gc_mark(v[i])) {
+              v[i] = SEXP_FALSE;
+              sexp_brokenp(p) = 1;
+            } else {
+              all_reset_p = 0;
+            }
+          }
+          if (all_reset_p) {      /* ephemerons */
+            len += sexp_type_weak_len_extra(t);
+            for ( ; i<len; i++) v[i] = SEXP_FALSE;
+          }
+        }
+      }
+      p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
+    }
+  }
+}
+#endif
+
 sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   size_t freed, max_freed=0, sum_freed=0, size;
   sexp_heap h = sexp_context_heap(ctx);
@@ -171,6 +215,9 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp_mark(ctx, ctx);
 #if SEXP_USE_DEBUG_GC
   sexp_sweep_stats(ctx, 2, NULL, "* \x1B[31mFREE:\x1B[0m ");
+#endif
+#if SEXP_USE_WEAK_REFERENCES
+  sexp_reset_weak_references(ctx);
 #endif
   res = sexp_sweep(ctx, sum_freed);
   return res;
