@@ -85,6 +85,7 @@ void sexp_mark (sexp ctx, sexp x) {
 }
 
 #if SEXP_USE_CONSERVATIVE_GC
+
 int stack_references_pointer_p (sexp ctx, sexp x) {
   sexp *p;
   for (p=(&x)+1; p<stack_base; p++)
@@ -92,8 +93,31 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
       return 1;
   return 0;
 }
+
+void sexp_conservative_mark (sexp ctx) {
+  sexp_heap h = sexp_context_heap(ctx);
+  sexp p, end;
+  sexp_free_list q, r;
+  for ( ; h; h=h->next) {   /* just scan the whole heap */
+    p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
+    q = h->free_list;
+    end = (sexp) ((char*)h->data + h->size - sexp_heap_align(sexp_sizeof(pair)));
+    while (p < end) {
+      for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
+        ;
+      if ((char*)r == (char*)p) {
+        p = (sexp) (((char*)p) + r->size);
+        continue;
+      }
+      if (! sexp_gc_mark(p) && stack_references_pointer_p(ctx, p))
+        sexp_mark(ctx, p);
+      p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
+    }
+  }
+}
+
 #else
-#define stack_references_pointer_p(ctx, x) 0
+#define sexp_conservative_mark(ctx)
 #endif
 
 #if SEXP_USE_WEAK_REFERENCES
@@ -160,7 +184,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
-      if ((! sexp_gc_mark(p)) && (! stack_references_pointer_p(ctx, p))) {
+      if (! sexp_gc_mark(p)) {
         /* free p */
         finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
         if (finalizer) finalizer(ctx sexp_api_pass(NULL, 1), p);
@@ -213,6 +237,7 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
     sexp_mark(ctx, sexp_symbol_table[i]);
 #endif
   sexp_mark(ctx, ctx);
+  sexp_conservative_mark(ctx);
 #if SEXP_USE_DEBUG_GC
   sexp_sweep_stats(ctx, 2, NULL, "* \x1B[31mFREE:\x1B[0m ");
 #endif
