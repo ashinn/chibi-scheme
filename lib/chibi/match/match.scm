@@ -28,6 +28,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2010/09/07 - fixing identifier extraction in some `...' and `***' patterns
 ;; 2009/11/25 - adding `***' tree search patterns
 ;; 2008/03/20 - fixing bug where (a ...) matched non-lists
 ;; 2008/03/15 - removing redundant check in vector patterns
@@ -240,6 +241,11 @@
   (syntax-rules ()
     ((_ expr ids ...) expr)))
 
+(define-syntax match-tuck-ids
+  (syntax-rules ()
+    ((_ (letish args (expr ...)) ids ...)
+     (letish args (expr ... ids ...)))))
+
 (define-syntax match-drop-first-arg
   (syntax-rules ()
     ((_ arg expr) expr)))
@@ -316,7 +322,7 @@
               (cond
                 ((= n tail-len)
                  (let ((id (reverse id-ls)) ...)
-                   (match-one ls r (#f #f) (sk ... i) fk i)))
+                   (match-one ls r (#f #f) (sk ...) fk i)))
                 ((pair? ls)
                  (let ((w (car ls)))
                    (match-one w p ((car ls) (set-car! ls))
@@ -380,7 +386,7 @@
     ((match-gen-search v p q g+s sk fk i ((id id-ls) ...))
      (letrec ((try (lambda (w fail id-ls ...)
                      (match-one w q g+s
-                                (match-drop-ids
+                                (match-tuck-ids
                                  (let ((id (reverse id-ls)) ...)
                                    sk))
                                 (next w fail id-ls ...) i)))
