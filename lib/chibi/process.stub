@@ -70,4 +70,9 @@
 (define-c void exit (int))
 (define-c int (execute execvp) (string (array string)))
 
+(cond-expand
+ (unix)
+ (else
+  (define-c sexp (process-command-line sexp_pid_cmdline) ((value ctx sexp) int))))
+
 (c-init "sexp_init_signals(ctx, env);")

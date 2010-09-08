@@ -62,6 +62,51 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
   return oldaction;
 }
 
+#if SEXP_BSD
+
+#include <sys/sysctl.h>
+#include <sys/proc.h>
+
+static sexp sexp_pid_cmdline (sexp ctx, int pid) {
+  unsigned long reslen = sizeof(struct kinfo_proc);
+  struct kinfo_proc res;
+  int name[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  if (sysctl(name, 4, &res, &reslen, NULL, 0) >= 0) {
+    return sexp_c_string(ctx, res.kp_proc.p_comm, -1);
+  } else {
+    return SEXP_FALSE;
+  }
+}
+
+#else
+
+/* #include <sys/syscall.h> */
+/* #include <linux/sysctl.h> */
+
+/* #define CMDLINE_LENGTH 512 */
+
+/* static sexp sexp_pid_cmdline (sexp ctx, int pid) { */
+/*   struct __sysctl_args args; */
+/*   char cmdline[CMDLINE_LENGTH]; */
+/*   size_t cmdline_length; */
+/*   int name[] = { CTL_KERN, KERN_OSTYPE }; */
+
+/*   memset(&args, 0, sizeof(struct __sysctl_args)); */
+/*   args.name = name; */
+/*   args.nlen = sizeof(name)/sizeof(name[0]); */
+/*   args.oldval = cmdline; */
+/*   args.oldlenp = &cmdline_length; */
+/*   cmdline_length = sizeof(cmdline); */
+
+/*   if (syscall(SYS__sysctl, &args) == -1) { */
+/*     return SEXP_FALSE; */
+/*   } else { */
+/*     return sexp_c_string(ctx, cmdline, -1); */
+/*   } */
+/* } */
+
+#endif
+
 static void sexp_init_signals (sexp ctx, sexp env) {
   call_sigaction.sa_sigaction  = sexp_call_sigaction;
 #if SEXP_USE_GREEN_THREADS

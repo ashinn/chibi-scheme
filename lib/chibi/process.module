@@ -1,6 +1,7 @@
 
 (define-module (chibi process)
   (export exit sleep alarm fork kill execute waitpid
+          process-command-line  process-running?
           set-signal-action! make-signal-set signal-set-contains?
           signal-set-fill! signal-set-add! signal-set-delete!
           current-signal-mask
@@ -14,5 +15,34 @@
           signal/tty-output)
   (import-immutable (scheme))
   (cond-expand (threads (import (srfi 18))) (else #f))
-  (include-shared "process"))
+  (include-shared "process")
+  (cond-expand
+   (unix
+    (body
+     (define (process-command-line pid)
+       (call-with-current-continuation
+        (lambda (return)
+          (with-exception-handler
+           (lambda (exn) (return #f))
+           (lambda ()
+             (let ((file (string-append "/proc/" (number->string pid) "/cmdline")))
+               (call-with-input-file file
+                 (lambda (in)
+                   (let lp ((arg '()) (res '()))
+                     (let ((ch (read-char in)))
+                       (if (or (eof-object? ch) (eqv? (char->integer ch) 0))
+                           (let ((res (cons (list->string (reverse arg)) res))
+                                 (ch2 (peek-char in)))
+                             (if (or (eof-object? ch2) (eqv? (char->integer ch2) 0))
+                                 (reverse res)
+                                 (lp '() res)))
+                           (lp (cons ch arg) res))))))))))))))
+   (else #f))
+  (body
+   (define (process-running? pid . o)
+     (let ((cmdline (process-command-line pid)))
+       (and (pair? cmdline)
+            (or (null? o)
+                (not (car o))
+                (equal? (car o) (car cmdline))))))))
 

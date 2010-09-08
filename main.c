@@ -12,6 +12,10 @@
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
 
+#if SEXP_USE_GREEN_THREADS
+#include <fcntl.h>
+#endif
+
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
 #else
@@ -27,7 +31,7 @@ static void repl (sexp ctx) {
   sexp_env_define(ctx, sexp_context_env(ctx),
                   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
   sexp_context_tracep(ctx) = 1;
-  in = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), SEXP_FALSE);
+  in  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), SEXP_FALSE);
   out = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), SEXP_FALSE);
   err = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE);
   sexp_port_sourcep(in) = 1;
@@ -80,6 +84,19 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
+static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
+  sexp p, res = sexp_load_standard_env(ctx, env, k);
+#if SEXP_USE_GREEN_THREADS
+  p  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), SEXP_FALSE);
+  if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
+  p  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), SEXP_FALSE);
+  if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
+  p  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE);
+  if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
+#endif
+  return res;
+}
+
 #define init_context() if (! ctx) do {                                  \
       ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size);        \
       env = sexp_context_env(ctx);                                      \
@@ -88,7 +105,7 @@ static sexp check_exception (sexp ctx, sexp res) {
 
 #define load_init() if (! init_loaded++) do {                           \
       init_context();                                                   \
-      check_exception(ctx, sexp_load_standard_env(ctx, env, SEXP_FIVE)); \
+      check_exception(ctx, sexp_load_standard_repl_env(ctx, env, SEXP_FIVE)); \
     } while (0)
 
 void run_main (int argc, char **argv) {

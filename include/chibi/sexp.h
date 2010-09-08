@@ -844,9 +844,9 @@ SEXP_API struct sexp_struct *sexp_type_specs;
 #define sexp_type_name(x)              ((x)->value.type.name)
 #define sexp_type_finalize(x)          ((x)->value.type.finalize)
 
-#define sexp_bignum_sign(x)           ((x)->value.bignum.sign)
-#define sexp_bignum_length(x)         ((x)->value.bignum.length)
-#define sexp_bignum_data(x)           ((x)->value.bignum.data)
+#define sexp_bignum_sign(x)            ((x)->value.bignum.sign)
+#define sexp_bignum_length(x)          ((x)->value.bignum.length)
+#define sexp_bignum_data(x)            ((x)->value.bignum.data)
 
 /****************************** arithmetic ****************************/
 
@@ -904,6 +904,7 @@ enum sexp_context_globals {
   SEXP_G_THREADS_SIGNALS,
   SEXP_G_THREADS_SIGNAL_RUNNER,
   SEXP_G_THREADS_POLL_FDS,
+  SEXP_G_THREADS_FD_THREADS,
   SEXP_G_THREADS_BLOCKER,
 #endif
   SEXP_G_NUM_GLOBALS
@@ -961,8 +962,9 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 
 #endif
 
-#define sexp_newline(ctx, p) sexp_write_char(ctx, '\n', (p))
-#define sexp_at_eofp(p) (feof(sexp_port_stream(p)))
+#define sexp_newline(ctx, p) sexp_write_char((ctx), '\n', (p))
+#define sexp_at_eofp(p)      (feof(sexp_port_stream(p)))
+#define sexp_port_fileno(p)  (fileno(sexp_port_stream(p)))
 
 SEXP_API sexp sexp_make_context(sexp ctx, size_t size);
 SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);

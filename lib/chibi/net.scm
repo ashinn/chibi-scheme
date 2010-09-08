@@ -15,13 +15,18 @@
                             (address-info-protocol addr))))
           (if (negative? sock)
               (lp (address-info-next addr))
-              (if (negative?
-                   (connect sock
-                            (address-info-address addr)
-                            (address-info-address-length addr)))
-                  (lp (address-info-next addr))
-                  (list (open-input-file-descriptor sock)
-                        (open-output-file-descriptor sock))))))))
+              (cond
+               ((negative?
+                 (connect sock
+                          (address-info-address addr)
+                          (address-info-address-length addr)))
+                (lp (address-info-next addr)))
+               (else
+                (cond-expand
+                 (threads (set-file-descriptor-flags! sock open/non-block))
+                 (else #f))
+                (list (open-input-file-descriptor sock)
+                      (open-output-file-descriptor sock)))))))))
 
 (define (with-net-io host service proc)
   (let ((io (open-net-io host service)))

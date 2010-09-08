@@ -1,6 +1,7 @@
 
 (define-module (chibi net)
-  (export sockaddr? address-info? get-address-info socket connect
+  (export sockaddr? address-info? get-address-info
+          socket connect bind accept listen
           with-net-io open-net-io
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next)
