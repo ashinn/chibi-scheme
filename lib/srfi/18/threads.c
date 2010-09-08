@@ -6,20 +6,37 @@
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <poll.h>
 
+#define sexp_mutexp(x)           (sexp_check_tag(x, sexp_mutex_id))
 #define sexp_mutex_name(x)       sexp_slot_ref(x, 0)
 #define sexp_mutex_specific(x)   sexp_slot_ref(x, 1)
 #define sexp_mutex_thread(x)     sexp_slot_ref(x, 2)
-#define sexp_mutex_lockp(x)       sexp_slot_ref(x, 3)
+#define sexp_mutex_lockp(x)      sexp_slot_ref(x, 3)
 
+#define sexp_condvarp(x)         (sexp_check_tag(x, sexp_condvar_id))
 #define sexp_condvar_name(x)     sexp_slot_ref(x, 0)
 #define sexp_condvar_specific(x) sexp_slot_ref(x, 1)
 #define sexp_condvar_threads(x)  sexp_slot_ref(x, 2)
 
+struct sexp_pollfds_t {
+  struct pollfd *fds;
+  nfds_t nfds, mfds;
+};
+
+#define SEXP_INIT_POLLFDS_MAX_FDS 16
+
+#define sexp_pollfdsp(x)         (sexp_check_tag(x, sexp_pollfds_id))
+#define sexp_pollfds_fds(x)      (((struct sexp_pollfds_t*)(&(x)->value))->fds)
+#define sexp_pollfds_num_fds(x)  (((struct sexp_pollfds_t*)(&(x)->value))->nfds)
+#define sexp_pollfds_max_fds(x)  (((struct sexp_pollfds_t*)(&(x)->value))->mfds)
+
+#define sexp_sizeof_pollfds (sexp_sizeof_header + sizeof(struct sexp_pollfds_t))
+
 #define timeval_le(a, b) (((a).tv_sec < (b).tv_sec) || (((a).tv_sec == (b).tv_sec) && ((a).tv_usec < (b).tv_usec)))
 #define sexp_context_before(c, t) (((sexp_context_timeval(c).tv_sec != 0) || (sexp_context_timeval(c).tv_usec != 0)) && timeval_le(sexp_context_timeval(c), t))
 
-/* static int mutex_id, condvar_id; */
+static int sexp_mutex_id, sexp_condvar_id, sexp_pollfds_id;
 
 /**************************** threads *************************************/
 
@@ -165,7 +182,7 @@ sexp sexp_thread_sleep (sexp ctx sexp_api_params(self, n), sexp timeout) {
 /**************************** mutexes *************************************/
 
 sexp sexp_mutex_state (sexp ctx sexp_api_params(self, n), sexp mutex) {
-  /* sexp_assert_type(ctx, sexp_mutexp, mutex_id, timeout); */
+  sexp_assert_type(ctx, sexp_mutexp, sexp_mutex_id, mutex);
   if (sexp_truep(sexp_mutex_lockp(mutex))) {
     if (sexp_contextp(sexp_mutex_thread(mutex)))
       return sexp_mutex_thread(mutex);
@@ -254,19 +271,6 @@ sexp sexp_condition_variable_broadcast (sexp ctx sexp_api_params(self, n), sexp 
 
 /**************************** the scheduler *******************************/
 
-void sexp_wait_on_single_thread (sexp ctx) {
-  struct timeval tval;
-  useconds_t usecs = 0;
-  gettimeofday(&tval, NULL);
-  if (tval.tv_sec < sexp_context_timeval(ctx).tv_sec)
-    usecs = (sexp_context_timeval(ctx).tv_sec - tval.tv_sec) * 1000000;
-  if (tval.tv_usec < sexp_context_timeval(ctx).tv_usec)
-    usecs += sexp_context_timeval(ctx).tv_usec - tval.tv_usec;
-  else if (usecs > 0)
-    usecs -= tval.tv_usec - sexp_context_timeval(ctx).tv_usec;
-  usleep(usecs);
-}
-
 static const sexp_uint_t sexp_log2_lookup[32] = {
   0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
   31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
@@ -295,13 +299,73 @@ static sexp sexp_get_signal_handler (sexp ctx sexp_api_params(self, n), sexp sig
   return sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS), signum);
 }
 
+static sexp sexp_make_pollfds (sexp ctx) {
+  sexp res = sexp_alloc_tagged(ctx, sexp_sizeof_pollfds, sexp_pollfds_id);
+  sexp_pollfds_fds(res) = malloc(SEXP_INIT_POLLFDS_MAX_FDS * sizeof(struct pollfd));
+  sexp_pollfds_num_fds(res) = 0;
+  sexp_pollfds_max_fds(res) = SEXP_INIT_POLLFDS_MAX_FDS;
+  return res;
+}
+
+static sexp sexp_free_pollfds (sexp ctx sexp_api_params(self, n), sexp pollfds) {
+  if (sexp_pollfds_fds(pollfds)) {
+    free(sexp_pollfds_fds(pollfds));
+    sexp_pollfds_fds(pollfds) = NULL;
+    sexp_pollfds_num_fds(pollfds) = 0;
+    sexp_pollfds_max_fds(pollfds) = 0;
+  }
+  return SEXP_VOID;
+}
+
+/* return true if this fd was already being polled */
+static sexp sexp_insert_pollfd (sexp ctx, int fd, int events) {
+  int i;
+  struct pollfd *pfd;
+  sexp pollfds = sexp_global(ctx, SEXP_G_THREADS_POLL_FDS);
+  if (! (pollfds && sexp_pollfdsp(pollfds))) {
+    sexp_global(ctx, SEXP_G_THREADS_POLL_FDS) = pollfds = sexp_make_pollfds(ctx);
+  }
+  for (i=0; i<sexp_pollfds_num_fds(pollfds); ++i) {
+    if (sexp_pollfds_fds(pollfds)[i].fd == fd) {
+      sexp_pollfds_fds(pollfds)[i].events |= events;
+      return SEXP_TRUE;
+    }
+  }
+  if (sexp_pollfds_num_fds(pollfds) == sexp_pollfds_max_fds(pollfds)) {
+    sexp_pollfds_max_fds(pollfds) = i*2;
+    pfd = sexp_pollfds_fds(pollfds);
+    sexp_pollfds_fds(pollfds) = malloc(i*2*sizeof(struct pollfd));
+    if (sexp_pollfds_fds(pollfds))
+      memcpy(sexp_pollfds_fds(pollfds), pfd, i*2*sizeof(struct pollfd));
+    free(pfd);
+  }
+  pfd = &(sexp_pollfds_fds(pollfds)[sexp_pollfds_num_fds(pollfds)++]);
+  pfd->fd = fd;
+  pfd->events = events;
+  return SEXP_FALSE;
+}
+
+/* block the current thread on the specified port */
 static sexp sexp_blocker (sexp ctx sexp_api_params(self, n), sexp port) {
+  int fd;
+  sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
+  /* register the fd */
+  fd = sexp_port_fileno(port);
+  if (fd >= 0)
+    sexp_insert_pollfd(ctx, fd, sexp_iportp(port) ? POLLIN : POLLOUT);
+  /* pause the current thread */
+  sexp_context_waitp(ctx) = 1;
+  sexp_context_event(ctx) = port;
+  sexp_insert_timed(ctx, ctx, SEXP_FALSE);
   return SEXP_VOID;
 }
 
 sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
+  int i, k;
   struct timeval tval;
-  sexp res, ls1, ls2, runner, paused, front;
+  struct pollfd *pfds;
+  useconds_t usecs = 0;
+  sexp res, ls1, ls2, runner, paused, front, pollfds;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
 
@@ -327,8 +391,42 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
   }
 
   /* check blocked fds */
-  /* if () { */
-  /* } */
+  pollfds = sexp_global(ctx, SEXP_G_THREADS_POLL_FDS);
+  if (sexp_pollfdsp(pollfds) && sexp_pollfds_num_fds(pollfds) > 0) {
+    pfds = sexp_pollfds_fds(pollfds);
+    k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), 0);
+  unblock_io_threads:
+    for (i=sexp_pollfds_num_fds(pollfds)-1; i>=0 && k>0; --i) {
+      if (pfds[i].revents > 0) { /* free all threads blocked on this fd */
+        k--;
+        pfds[i].events = 0;     /* FIXME: delete from queue completely */
+        for (ls1=SEXP_NULL, ls2=paused; sexp_pairp(ls2); ) {
+          /* FIXME distinguish input and output on the same fd */
+          if (sexp_portp(sexp_context_event(sexp_car(ls2)))
+              && sexp_port_fileno(sexp_context_event(sexp_car(ls2))) == pfds[i].fd) {
+            sexp_context_waitp(sexp_car(ls2)) = 0;
+            sexp_context_timeoutp(sexp_car(ls2)) = 0;
+            if (ls1==SEXP_NULL)
+              sexp_global(ctx, SEXP_G_THREADS_PAUSED) = paused = sexp_cdr(ls2);
+            else
+              sexp_cdr(ls1) = sexp_cdr(ls2);
+            tmp = sexp_cdr(ls2);
+            sexp_cdr(ls2) = SEXP_NULL;
+            if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
+              sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
+            } else {
+              sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = ls2;
+            }
+            sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
+            ls2 = tmp;
+          } else {
+            ls1 = ls2;
+            ls2 = sexp_cdr(ls2);
+          }
+        }
+      }
+    }
+  }
 
   /* if we've terminated, check threads joining us */
   if (sexp_context_refuel(ctx) <= 0) {
@@ -414,9 +512,24 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
       if (sexp_not(sexp_memq(ctx, tmp, paused)))
         sexp_insert_timed(ctx, tmp, tmp);
     }
-    sexp_wait_on_single_thread(res);
-    sexp_context_timeoutp(res) = 1;
-    sexp_context_waitp(res) = 0;
+    usecs = 0;
+    gettimeofday(&tval, NULL);
+    if (tval.tv_sec < sexp_context_timeval(res).tv_sec)
+      usecs = (sexp_context_timeval(res).tv_sec - tval.tv_sec) * 1000000;
+    if (tval.tv_usec < sexp_context_timeval(res).tv_usec)
+      usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
+    else if (usecs > 0)
+      usecs -= tval.tv_usec - sexp_context_timeval(res).tv_usec;
+    /* either wait on an fd, or just sleep */
+    pollfds = sexp_global(res, SEXP_G_THREADS_POLL_FDS);
+    if (sexp_portp(sexp_context_event(res)) && sexp_pollfdsp(pollfds)) {
+      if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0)
+        goto unblock_io_threads;
+    } else {
+      usleep(usecs);
+      sexp_context_timeoutp(res) = 1;
+      sexp_context_waitp(res) = 0;
+    }
   }
 
   sexp_gc_release1(ctx);
@@ -425,7 +538,25 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
 
 /**************************************************************************/
 
+int sexp_lookup_type (sexp ctx, sexp env, const char *name) {
+  sexp t = sexp_env_ref(env, sexp_intern(ctx, name, -1), SEXP_FALSE);
+  return (sexp_typep(t)) ? sexp_type_tag(t) : -1;
+}
+
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+  sexp t;
+  sexp_gc_var1(name);
+  sexp_gc_preserve1(ctx, name);
+
+  sexp_mutex_id   = sexp_lookup_type(ctx, env, "mutex");
+  sexp_condvar_id = sexp_lookup_type(ctx, env, "condition-variable");
+  name = sexp_c_string(ctx, "pollfds", -1);
+  t = sexp_register_type(ctx, name, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
+                         SEXP_ZERO, sexp_make_fixnum(sexp_sizeof_pollfds),
+                         SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
+                         SEXP_ZERO, SEXP_ZERO, (sexp_proc2)sexp_free_pollfds);
+  if (sexp_typep(t))
+    sexp_pollfds_id = sexp_type_tag(t);
 
   sexp_define_type_predicate(ctx, env, "thread?", SEXP_CONTEXT);
   sexp_define_foreign(ctx, env, "thread-timeout?", 0, sexp_thread_timeoutp);
@@ -454,6 +585,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   /* remember the env to lookup the runner later */
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = env;
 
+  sexp_gc_release1(ctx);
   return SEXP_VOID;
 }
 

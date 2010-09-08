@@ -19,6 +19,7 @@
                     (srfi 9)
                     (chibi ast)
                     (chibi time))
+  (include "18/types.scm")
   (include-shared "18/threads")
-  (include "18/types.scm" "18/interface.scm"))
+  (include "18/interface.scm"))
 
