@@ -27,7 +27,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_preserve3(ctx, name, t, op);
 
   name = sexp_c_string(ctx, "Ephemeron", -1);
-  t = sexp_register_simple_type(ctx, name, SEXP_TWO);
+  t = sexp_register_simple_type(ctx, name, SEXP_FALSE, SEXP_TWO);
   sexp_ephemeron_id = sexp_type_tag(t);
   sexp_type_field_len_base(t) = 0;
   sexp_type_weak_base(t) = sexp_type_field_base(t);

@@ -172,7 +172,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_preserve2(ctx, name, op);
 
   name = sexp_c_string(ctx, "random-source", -1);
-  op = sexp_register_type(ctx, name, sexp_make_fixnum(sexp_offsetof_slot0),
+  op = sexp_register_type(ctx, name, SEXP_FALSE, SEXP_FALSE,
+                          sexp_make_fixnum(sexp_offsetof_slot0),
                           ONE, ONE, ZERO, ZERO,
                           sexp_make_fixnum(sexp_sizeof_random),
                           ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, NULL);
