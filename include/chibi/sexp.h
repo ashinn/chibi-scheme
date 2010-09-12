@@ -206,7 +206,9 @@ struct sexp_type_struct {
   short size_base, size_off;
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
+  short depth;
   char *name;
+  sexp cpl, slots;
   sexp_proc2 finalize;
 };
 
@@ -841,7 +843,10 @@ SEXP_API struct sexp_struct *sexp_type_specs;
 #define sexp_type_weak_len_off(x)      ((x)->value.type.weak_len_off)
 #define sexp_type_weak_len_scale(x)    ((x)->value.type.weak_len_scale)
 #define sexp_type_weak_len_extra(x)    ((x)->value.type.weak_len_extra)
+#define sexp_type_depth(x)             ((x)->value.type.depth)
 #define sexp_type_name(x)              ((x)->value.type.name)
+#define sexp_type_cpl(x)               ((x)->value.type.cpl)
+#define sexp_type_slots(x)             ((x)->value.type.slots)
 #define sexp_type_finalize(x)          ((x)->value.type.finalize)
 
 #define sexp_bignum_sign(x)            ((x)->value.bignum.sign)
@@ -1027,13 +1032,14 @@ SEXP_API sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags);
 #endif
 
 #if SEXP_USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
-SEXP_API sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp slots);
+SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
+SEXP_API sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp parent, sexp slots);
 SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj);
 #define sexp_register_c_type(ctx, name, finalizer)                      \
-  sexp_register_type(ctx, name, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, \
-                     SEXP_ZERO, sexp_make_fixnum(sexp_sizeof(cpointer)), \
-                     SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, \
+  sexp_register_type(ctx, name, SEXP_FALSE, SEXP_FALSE, SEXP_ZERO, SEXP_ZERO, \
+                     SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,                   \
+                     sexp_make_fixnum(sexp_sizeof(cpointer)),           \
+                     SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,        \
                      SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, (sexp_proc2)finalizer)
 #endif
 
@@ -1070,8 +1076,8 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_make_input_string_port(ctx, s) sexp_make_input_string_port_op(ctx sexp_api_pass(NULL, 1), s)
 #define sexp_get_output_string(ctx, out) sexp_get_output_string_op(ctx sexp_api_pass(NULL, 1), out)
 #define sexp_expt(ctx, a, b) sexp_expt_op(ctx sexp_api_pass(NULL, 2), a, b)
-#define sexp_register_simple_type(ctx, a, b) sexp_register_simple_type_op(ctx sexp_api_pass(NULL, 2), a, b)
-#define sexp_register_type(ctx, a, b, c, d, e, f, g, h, i, j, k, l, m, o, p) sexp_register_type_op(ctx sexp_api_pass(NULL, 15), a, b, c, d, e, f, g, h, i, j, k, l, m, o, p)
+#define sexp_register_simple_type(ctx, a, b, c) sexp_register_simple_type_op(ctx sexp_api_pass(NULL, 3), a, b, c)
+#define sexp_register_type(ctx, a, b, c, d, e, f, g, h, i, j, k, l, m, o, p, q, r) sexp_register_type_op(ctx sexp_api_pass(NULL, 17), a, b, c, d, e, f, g, h, i, j, k, l, m, o, p, q, r)
 #define sexp_make_type_predicate(ctx, a, b) sexp_make_type_predicate_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_constructor(ctx, a, b) sexp_make_constructor_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)

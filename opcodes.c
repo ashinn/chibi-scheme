@@ -154,7 +154,7 @@ _FN2(_I(SEXP_CHAR), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-ref", 0, sexp_stri
 _FN3(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "string-set!", 0, sexp_string_utf8_index_set),
 #endif
 #if SEXP_USE_TYPE_DEFS
-_FN2(_I(SEXP_TYPE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "register-simple-type", 0, sexp_register_simple_type_op),
+_FN3(_I(SEXP_TYPE), _I(SEXP_STRING), _I(SEXP_TYPE), SEXP_NULL, "register-simple-type", 0, sexp_register_simple_type_op),
 _FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-type-predicate", 0, sexp_make_type_predicate_op),
 _FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-constructor", 0, sexp_make_constructor_op),
 _FN3(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-getter", 0, sexp_make_getter_op),
