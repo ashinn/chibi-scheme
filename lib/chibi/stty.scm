@@ -111,12 +111,12 @@
    ;;(echok    local    ,ECHOK)   ; echo a newline after a kill character
    (echoke   local    ,ECHOKE)  ; same as [-]crtkill
    (echonl   local    ,ECHONL)  ; echo newline even if not echoing other characters
-   (echoprt  local    ,ECHOPRT) ; echo erased characters backward, between `\' and '/'
+   ;;(echoprt  local    ,ECHOPRT) ; echo erased characters backward, between `\' and '/'
    (icanon   local    ,ICANON)  ; enable erase, kill, werase, and rprnt special characters
    ;;(iexten   local    ,IEXTEN)  ; enable non-POSIX special characters
    (isig     local    ,ISIG)    ; enable interrupt, quit, and suspend special characters
    (noflsh   local    ,NOFLSH)  ; disable flushing after interrupt and quit special characters
-   (prterase local    ,ECHOPRT) ; same as [-]echoprt
+   ;;(prterase local    ,ECHOPRT) ; same as [-]echoprt
    (tostop   local    ,TOSTOP)  ; stop background jobs that try to write to the terminal
    ;;(xcase    local    ,XCASE)   ; with icanon, escape with `\' for uppercase characters
 
