@@ -9,6 +9,8 @@ typedef sexp (*sexp_proc14) (sexp sexp_api_params(self, n), sexp, sexp, sexp, se
 typedef sexp (*sexp_proc15) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc16) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc17) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc18) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc19) (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 #define _A(i) stack[top-i]
 
@@ -28,6 +30,8 @@ sexp sexp_fcall (sexp ctx, sexp self, sexp_sint_t n, sexp f) {
   case 14: return ((sexp_proc15)sexp_opcode_func(f))(ctx, f, 14, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14));
   case 15: return ((sexp_proc16)sexp_opcode_func(f))(ctx, f, 15, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15));
   case 16: return ((sexp_proc17)sexp_opcode_func(f))(ctx, f, 16, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15), _A(16));
+  case 17: return ((sexp_proc18)sexp_opcode_func(f))(ctx, f, 17, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15), _A(16), _A(17));
+  case 18: return ((sexp_proc19)sexp_opcode_func(f))(ctx, f, 18, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15), _A(16), _A(17), _A(18));
   default: return sexp_user_exception(ctx, self, "too many FFI arguments", f);
   }
 }
