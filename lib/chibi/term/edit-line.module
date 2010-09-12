@@ -1,5 +1,5 @@
 
 (define-module (chibi term edit-line)
-  (export edit-line edit-line-repl)
+  (export edit-line edit-line-repl make-history history-insert! history-commit!)
   (import-immutable (scheme) (chibi stty) (srfi 9))
   (include "edit-line.scm"))
