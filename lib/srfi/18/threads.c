@@ -527,7 +527,6 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
         goto unblock_io_threads;
     } else {
       usleep(usecs);
-      sexp_context_timeoutp(res) = 1;
       sexp_context_waitp(res) = 0;
     }
   }
