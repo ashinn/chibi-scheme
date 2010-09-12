@@ -23,4 +23,4 @@
 (define-c int listen (int int))
 (define-c int socket (int int int))
 (define-c int connect (int sockaddr int))
-(define-c int accept (int sockaddr int))
+(define-c int accept (int sockaddr (pointer unsigned)))
