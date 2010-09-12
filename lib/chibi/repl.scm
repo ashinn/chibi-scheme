@@ -18,24 +18,29 @@
         thunk
         (lambda () (set-signal-action! sig old-handler)))))
 
-(define (run-repl module env)
-  (let ((line (edit-line (if module (string-append (symbol->string module) "> ") "> "))))
-    (cond
-     ((or (not line) (eof-object? line)))
-     ((equal? line "") (run-repl module env))
-     (else
-      (handle-exceptions exn (print-exception exn (current-error-port))
-       (let* ((expr (call-with-input-string line read))
-              (thread (make-thread (lambda ()
-                                     (let ((res (eval expr env)))
-                                       (if (not (eq? res (if #f #f)))
-                                           (write res)))))))
-         (with-signal-handler
-          signal/interrupt
-          (lambda (n) (thread-terminate! thread))
-          (lambda () (thread-start! thread) (thread-join! thread)))))
-      (newline)
-      (run-repl module env)))))
+(define (run-repl module env . o)
+  (let ((history (make-history)))
+    (let lp ((module module) (env env))
+      (let ((line (edit-line (if module (string-append (symbol->string module) "> ") "> ")
+                             'history: history)))
+        (cond
+         ((or (not line) (eof-object? line)))
+         ((equal? line "") (lp module env))
+         (else
+          (history-commit! history line)
+          (handle-exceptions
+           exn (print-exception exn (current-error-port))
+           (let* ((expr (call-with-input-string line read/ss))
+                  (thread (make-thread (lambda ()
+                                         (let ((res (eval expr env)))
+                                           (if (not (eq? res (if #f #f)))
+                                               (write/ss res))
+                                           (newline))))))
+             (with-signal-handler
+              signal/interrupt
+              (lambda (n) (thread-terminate! thread))
+              (lambda () (thread-start! thread) (thread-join! thread)))))
+          (lp module env)))))))
 
 (define (repl)
   (run-repl #f (interaction-environment)))
