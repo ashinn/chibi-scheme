@@ -969,13 +969,13 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_SLOTN_SET:
     if (! sexp_typep(_ARG1))
-      sexp_raise("slot-ref: not a record type", sexp_list1(ctx, _ARG1));
+      sexp_raise("slot-set!: not a record type", sexp_list1(ctx, _ARG1));
     else if (! sexp_check_type(ctx, _ARG2, _ARG1))
       sexp_raise("slot-set!: bad type", sexp_list1(ctx, _ARG2));
     else if (sexp_immutablep(_ARG2))
       sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG2));
     else if (! sexp_fixnump(_ARG3))
-      sexp_raise("slot-ref: not an integer", sexp_list1(ctx, _ARG3));
+      sexp_raise("slot-set!: not an integer", sexp_list1(ctx, _ARG3));
     sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
     _ARG4 = SEXP_VOID;
     top-=3;

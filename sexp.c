@@ -173,6 +173,7 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
     type = sexp_type_by_index(ctx, num_types);
     sexp_pointer_tag(type) = SEXP_TYPE;
     sexp_type_tag(type) = num_types;
+    sexp_type_slots(type) = slots;
     sexp_type_field_base(type) = sexp_unbox_fixnum(fb);
     sexp_type_field_eq_len_base(type) = sexp_unbox_fixnum(felb);
     sexp_type_field_len_base(type) = sexp_unbox_fixnum(flb);

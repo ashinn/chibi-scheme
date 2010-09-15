@@ -89,3 +89,8 @@
        ((opcode? x) (or (opcode-name x) x))
        (else x)))))
 
+(define (type-parent x)
+  (let ((v (type-cpl x)))
+    (and (vector? v)
+         (> (vector-length v) 1)
+         (vector-ref v (- (vector-length v) 2)))))
