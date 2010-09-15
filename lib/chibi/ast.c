@@ -137,6 +137,29 @@ static sexp sexp_type_of (sexp ctx sexp_api_params(self, n), sexp x) {
     return sexp_type_by_index(ctx, SEXP_OBJECT);
 }
 
+static sexp sexp_type_name_op (sexp ctx sexp_api_params(self, n), sexp t) {
+  sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
+  return sexp_c_string(ctx, sexp_type_name(t), -1);
+}
+
+static sexp sexp_type_cpl_op (sexp ctx sexp_api_params(self, n), sexp t) {
+  sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
+  return sexp_type_cpl(t);
+}
+
+static sexp sexp_type_slots_op (sexp ctx sexp_api_params(self, n), sexp t) {
+  sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
+  return sexp_type_slots(t);
+}
+
+static sexp sexp_object_size (sexp ctx sexp_api_params(self, n), sexp x) {
+  sexp t;
+  if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_context_num_types(ctx)))
+    return SEXP_ZERO;
+  t = sexp_object_type(ctx, x);
+  return sexp_make_fixnum(sexp_type_size_of_object(t, x));
+}
+
 static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
   sexp ctx2 = ctx;
   if (sexp_envp(e)) {
@@ -243,6 +266,10 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "opcode-param-type", 2, sexp_get_opcode_param_type);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   sexp_define_foreign(ctx, env, "type-of", 1, sexp_type_of);
+  sexp_define_foreign(ctx, env, "type-name", 1, sexp_type_name_op);
+  sexp_define_foreign(ctx, env, "type-cpl", 1, sexp_type_cpl_op);
+  sexp_define_foreign(ctx, env, "type-slots", 1, sexp_type_slots_op);
+  sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   return SEXP_VOID;
 }
 

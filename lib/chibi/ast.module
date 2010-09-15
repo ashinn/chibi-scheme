@@ -26,7 +26,9 @@
    exception-irritants exception-irritants-set!
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-variadic?
-   procedure-code procedure-vars procedure-name bytecode-name)
+   procedure-code procedure-vars procedure-name bytecode-name
+   type? type-name type-cpl type-parent type-slots
+   object-size)
   (import-immutable (scheme))
   (include-shared "ast")
   (include "ast.scm"))

@@ -1288,6 +1288,73 @@ sexp sexp_string_utf8_index_set (sexp ctx sexp_api_params(self, n), sexp str, se
 
 /***************************** opcodes ********************************/
 
+#if SEXP_USE_TYPE_DEFS
+
+sexp sexp_type_slot_offset_op (sexp ctx  sexp_api_params(self, n), sexp type, sexp slot) {
+  sexp cpl, slots, *v;
+  int i, offset=0, len;
+  sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, type);
+  cpl = sexp_type_cpl(type);
+  if (sexp_vectorp(cpl)) {
+    v = sexp_vector_data(cpl);
+    len = sexp_vector_length(cpl);
+  } else {
+    v = &sexp_type_slots(type);
+    len = 1;
+  }
+  len = sexp_vectorp(cpl) ? sexp_vector_length(cpl) : 1;
+  for (i=0; i<len; i++)
+    for (slots=sexp_type_slots(v[i]); sexp_pairp(slots); slots=sexp_cdr(slots), offset++)
+      if (sexp_car(slots) == slot)
+        return sexp_make_fixnum(offset);
+  return SEXP_FALSE;
+}
+
+sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
+  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
+  return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
+                          sexp_make_fixnum(SEXP_OP_TYPEP), SEXP_ONE, SEXP_ZERO,
+                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
+}
+
+sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
+  sexp_uint_t type_size;
+  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
+  type_size = sexp_type_size_base(sexp_type_by_index(ctx, sexp_unbox_fixnum(type)));
+  return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_CONSTRUCTOR),
+                          sexp_make_fixnum(SEXP_OP_MAKE), SEXP_ZERO, SEXP_ZERO,
+                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type,
+                          sexp_make_fixnum(type_size), NULL);
+}
+
+sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
+  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
+  if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
+  if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
+  return
+    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_GETTER),
+                     sexp_make_fixnum(SEXP_OP_SLOT_REF), SEXP_ONE, SEXP_ZERO,
+                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
+}
+
+sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
+  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
+  if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
+  if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
+  return
+    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
+                     sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
+                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
+}
+
+#endif
+
 #include "opcodes.c"
 
 static sexp sexp_copy_core (sexp ctx, struct sexp_core_form_struct *core) {
@@ -1382,53 +1449,6 @@ sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_ar
   sexp_gc_release1(ctx);
   return res;
 }
-
-#if SEXP_USE_TYPE_DEFS
-
-sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
-  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
-  return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
-                          sexp_make_fixnum(SEXP_OP_TYPEP), SEXP_ONE, SEXP_ZERO,
-                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
-}
-
-sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
-  sexp_uint_t type_size;
-  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
-  type_size = sexp_type_size_base(sexp_type_by_index(ctx, sexp_unbox_fixnum(type)));
-  return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_CONSTRUCTOR),
-                          sexp_make_fixnum(SEXP_OP_MAKE), SEXP_ZERO, SEXP_ZERO,
-                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type,
-                          sexp_make_fixnum(type_size), NULL);
-}
-
-sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
-  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
-  if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
-  if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
-  return
-    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_GETTER),
-                     sexp_make_fixnum(SEXP_OP_SLOT_REF), SEXP_ONE, SEXP_ZERO,
-                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
-}
-
-sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
-  if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
-  if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
-  if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
-  return
-    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
-                     sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
-                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
-}
-
-#endif
 
 #if SEXP_USE_STATIC_LIBS
 #include "clibs.c"
