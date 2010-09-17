@@ -633,7 +633,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     tmp2 = stack[fp+3];
     j = sexp_unbox_fixnum(stack[fp]);
     self = stack[fp+2];
-    bc = sexp_procedure_vars(self);
+    bc = sexp_procedure_code(self);
     cp = sexp_procedure_vars(self);
     ip = (sexp_bytecode_data(bc)
           + sexp_unbox_fixnum(stack[fp+1])) - sizeof(sexp);
