@@ -1,0 +1,8 @@
+
+(define-module (chibi modules)
+  (export analyze-module module-ast module-ast-set!
+          module-ref module-contains? containing-module
+          procedure-analysis)
+  (import-immutable (scheme) (config))
+  (import (chibi ast))
+  (include "modules.scm"))
