@@ -12,6 +12,13 @@
 #define sexp_cookie_seek(vec) sexp_vector_ref((sexp)vec, SEXP_FOUR)
 #define sexp_cookie_close(vec) sexp_vector_ref((sexp)vec, SEXP_FIVE)
 
+#define sexp_cookie_ctx_set(vec, x) sexp_vector_set((sexp)vec, SEXP_ZERO, x)
+#define sexp_cookie_buffer_set(vec, x) sexp_vector_set((sexp)vec, SEXP_ONE, x)
+#define sexp_cookie_read_set(vec, x) sexp_vector_set((sexp)vec, SEXP_TWO, x)
+#define sexp_cookie_write_set(vec, x) sexp_vector_set((sexp)vec, SEXP_THREE, x)
+#define sexp_cookie_seek_set(vec, x) sexp_vector_set((sexp)vec, SEXP_FOUR, x)
+#define sexp_cookie_close_set(vec, x) sexp_vector_set((sexp)vec, SEXP_FIVE, x)
+
 #if ! SEXP_USE_BOEHM
 static int sexp_in_heap_p (sexp_heap h, sexp p) {
   for ( ; h; h = h->next)
@@ -52,7 +59,7 @@ static ssize_t sexp_cookie_reader (void *cookie, char *buffer, size_t size)
   ctx2 = sexp_last_context(ctx, (sexp*)&cookie);
   sexp_gc_preserve2(ctx, ctx2, args);
   if (size > sexp_string_length(sexp_cookie_buffer(vec)))
-    sexp_cookie_buffer(vec) = sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID);
+    sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID));
   args = sexp_list2(ctx, sexp_cookie_buffer(vec), sexp_make_fixnum(size));
   res = sexp_apply(ctx, sexp_cookie_read(vec), args);
   sexp_gc_release2(ctx);
@@ -77,7 +84,7 @@ static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size
   ctx2 = sexp_last_context(ctx, (sexp*)&cookie);
   sexp_gc_preserve2(ctx, ctx2, args);
   if (size > sexp_string_length(sexp_cookie_buffer(vec)))
-    sexp_cookie_buffer(vec) = sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID);
+    sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID));
   memcpy(sexp_string_data(sexp_cookie_buffer(vec)), buffer, size);
   args = sexp_list2(ctx, sexp_cookie_buffer(vec), sexp_make_fixnum(size));
   res = sexp_apply(ctx, sexp_cookie_write(vec), args);
@@ -152,13 +159,12 @@ static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
     return sexp_type_exception(ctx, self, SEXP_PROCEDURE, close);
   sexp_gc_preserve1(ctx, vec);
   vec = sexp_make_vector(ctx, SEXP_SIX, SEXP_VOID);
-  sexp_cookie_ctx(vec) = ctx;
-  sexp_cookie_buffer(vec)
-    = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
-  sexp_cookie_read(vec) = read;
-  sexp_cookie_write(vec) = write;
-  sexp_cookie_seek(vec) = seek;
-  sexp_cookie_close(vec) = close;
+  sexp_cookie_ctx_set(vec, ctx);
+  sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID));
+  sexp_cookie_read_set(vec, read);
+  sexp_cookie_write_set(vec, write);
+  sexp_cookie_seek_set(vec, seek);
+  sexp_cookie_close_set(vec, close);
 #if SEXP_BSD
   in = funopen(vec,
                (sexp_procedurep(read) ? sexp_cookie_reader : NULL),
