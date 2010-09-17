@@ -610,17 +610,24 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #if SEXP_USE_SAFE_ACCESSORS
 #define sexp_field(x, type, id, field) (*(((x) && sexp_check_tag(x, id)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, sexp_pointerp(x) ? sexp_pointer_tag(x) : -1), &(((sexp)NULL)->value.type.field))))
+#define sexp_pred_field(x, type, pred, field) (*(((x) && pred(x)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, sexp_pointerp(x) ? sexp_pointer_tag(x) : -1), &(((sexp)NULL)->value.type.field))))
 #define sexp_cpointer_field(x, field) (*(((x) && sexp_pointerp(x) && sexp_pointer_tag(x) >= SEXP_CPOINTER) ? &((x)->value.cpointer.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a cpointer\n", __FILE__, __LINE__, x, sexp_pointerp(x) ? sexp_pointer_tag(x) : -1), &(((sexp)NULL)->value.cpointer.field))))
 #else
 #define sexp_field(x, type, id, field) ((x)->value.type.field)
+#define sexp_pred_field(x, type, pred, field) ((x)->value.type.field)
 #define sexp_cpointer_field(x, field) ((x)->value.cpointer.field)
 #endif
 
 #define sexp_vector_length(x) (sexp_field(x, vector, SEXP_VECTOR, length))
 #define sexp_vector_data(x)   (sexp_field(x, vector, SEXP_VECTOR, data))
 
+#if SEXP_USE_SAFE_ACCESSORS
+#define sexp_vector_ref(x,i)   (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)] : (fprintf(stderr, "vector-ref length out of range %s on line %d: vector %p (length %u): %d\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
+#define sexp_vector_set(x,i,v) (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v) : (fprintf(stderr, "vector-set! length out of range in %s on line %d: vector %p (length %u): %d\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
+#else
 #define sexp_vector_ref(x,i)   (sexp_vector_data(x)[sexp_unbox_fixnum(i)])
 #define sexp_vector_set(x,i,v) (sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v))
+#endif
 
 #define sexp_procedure_num_args(x)   (sexp_field(x, procedure, SEXP_PROCEDURE, num_args))
 #define sexp_procedure_flags(x)      (sexp_field(x, procedure, SEXP_PROCEDURE, flags))
@@ -649,16 +656,16 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_symbol_data(x)    (sexp_field(x, symbol, SEXP_SYMBOL, data))
 #define sexp_symbol_length(x)  (sexp_field(x, symbol, SEXP_SYMBOL, length))
 
-#define sexp_port_stream(p)    ((p)->value.port.stream)
-#define sexp_port_name(p)      ((p)->value.port.name)
-#define sexp_port_line(p)      ((p)->value.port.line)
-#define sexp_port_openp(p)     ((p)->value.port.openp)
-#define sexp_port_no_closep(p) ((p)->value.port.no_closep)
-#define sexp_port_sourcep(p)   ((p)->value.port.sourcep)
-#define sexp_port_cookie(p)    ((p)->value.port.cookie)
-#define sexp_port_buf(p)       ((p)->value.port.buf)
-#define sexp_port_size(p)      ((p)->value.port.size)
-#define sexp_port_offset(p)    ((p)->value.port.offset)
+#define sexp_port_stream(p)    (sexp_pred_field(p, port, sexp_portp, stream))
+#define sexp_port_name(p)      (sexp_pred_field(p, port, sexp_portp, name))
+#define sexp_port_line(p)      (sexp_pred_field(p, port, sexp_portp, line))
+#define sexp_port_openp(p)     (sexp_pred_field(p, port, sexp_portp, openp))
+#define sexp_port_no_closep(p) (sexp_pred_field(p, port, sexp_portp, no_closep))
+#define sexp_port_sourcep(p)   (sexp_pred_field(p, port, sexp_portp, sourcep))
+#define sexp_port_cookie(p)    (sexp_pred_field(p, port, sexp_portp, cookie))
+#define sexp_port_buf(p)       (sexp_pred_field(p, port, sexp_portp, buf))
+#define sexp_port_size(p)      (sexp_pred_field(p, port, sexp_portp, size))
+#define sexp_port_offset(p)    (sexp_pred_field(p, port, sexp_portp, offset))
 
 #define sexp_exception_kind(x)      (sexp_field(x, exception, SEXP_EXCEPTION, kind))
 #define sexp_exception_message(x)   (sexp_field(x, exception, SEXP_EXCEPTION, message))
