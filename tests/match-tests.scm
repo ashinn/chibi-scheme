@@ -132,103 +132,13 @@
      (list tag attrs text))
     (else #f)))
 
-(test "joined tail" '(1 2)
-      (match '(1 2 3) ((and (a ... b) x) a)))
-    (((x . y) ... u v w) (list x y u v w))))
-
-(test "Riastradh quasiquote" '(2 3)
-  (match '(1 2 3) (`(1 ,b ,c) (list b c))))
-
-(test "trivial tree search" '(1 2 3)
-  (match '(1 2 3) ((_ *** (a b c)) (list a b c))))
-
-(test "simple tree search" '(1 2 3)
-  (match '(x (1 2 3)) ((_ *** (a b c)) (list a b c))))
-
-(test "deep tree search" '(1 2 3)
-  (match '(x (x (x (1 2 3)))) ((_ *** (a b c)) (list a b c))))
-
-(test "non-tail tree search" '(1 2 3)
-  (match '(x (x (x a b c (1 2 3) d e f))) ((_ *** (a b c)) (list a b c))))
-
-(test "restricted tree search" '(1 2 3)
-  (match '(x (x (x a b c (1 2 3) d e f))) (('x *** (a b c)) (list a b c))))
-
-(test "fail restricted tree search" #f
-  (match '(x (y (x a b c (1 2 3) d e f)))
-    (('x *** (a b c)) (list a b c))
-    (else #f)))
-
-(test "sxml tree search" '(((href . "http://synthcode.com/")) ("synthcode"))
-  (match '(p (ul (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((or 'p 'ul 'li 'b) *** ('a ('^ attrs ...) text ...))
-     (list attrs text))
-    (else #f)))
-
-(test "failed sxml tree search" #f
-  (match '(p (ol (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((or 'p 'ul 'li 'b) *** ('a ('^ attrs ...) text ...))
-     (list attrs text))
-    (else #f)))
-
-(test "collect tree search"
-    '((p ul li) ((href . "http://synthcode.com/")) ("synthcode"))
-  (match '(p (ul (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((and tag (or 'p 'ul 'li 'b)) *** ('a ('^ attrs ...) text ...))
-     (list tag attrs text))
-    (else #f)))
-
-(test "joined tail" '(1 2)
-      (match '(1 2 3) ((and (a ... b) x) a)))
-
-    (((x . y) ... u v w) (list x y u v w))))
-
-(test "Riastradh quasiquote" '(2 3)
-  (match '(1 2 3) (`(1 ,b ,c) (list b c))))
-
-(test "trivial tree search" '(1 2 3)
-  (match '(1 2 3) ((_ *** (a b c)) (list a b c))))
-
-(test "simple tree search" '(1 2 3)
-  (match '(x (1 2 3)) ((_ *** (a b c)) (list a b c))))
-
-(test "deep tree search" '(1 2 3)
-  (match '(x (x (x (1 2 3)))) ((_ *** (a b c)) (list a b c))))
-
-(test "non-tail tree search" '(1 2 3)
-  (match '(x (x (x a b c (1 2 3) d e f))) ((_ *** (a b c)) (list a b c))))
-
-(test "restricted tree search" '(1 2 3)
-  (match '(x (x (x a b c (1 2 3) d e f))) (('x *** (a b c)) (list a b c))))
-
-(test "fail restricted tree search" #f
-  (match '(x (y (x a b c (1 2 3) d e f)))
-    (('x *** (a b c)) (list a b c))
-    (else #f)))
-
-(test "sxml tree search" '(((href . "http://synthcode.com/")) ("synthcode"))
-  (match '(p (ul (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((or 'p 'ul 'li 'b) *** ('a ('^ attrs ...) text ...))
-     (list attrs text))
-    (else #f)))
-
-(test "failed sxml tree search" #f
-  (match '(p (ol (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((or 'p 'ul 'li 'b) *** ('a ('^ attrs ...) text ...))
-     (list attrs text))
-    (else #f)))
-
-(test "collect tree search"
-    '((p ul li) ((href . "http://synthcode.com/")) ("synthcode"))
-  (match '(p (ul (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((and tag (or 'p 'ul 'li 'b)) *** ('a ('^ attrs ...) text ...))
-     (list tag attrs text))
-    (else #f)))
-
 (test "anded tail pattern" '(1 2)
       (match '(1 2 3) ((and (a ... b) x) a)))
 
 (test "anded search pattern" '(a b c)
       (match '(a (b (c d))) ((and (p *** 'd) x) p)))
+
+(test "joined tail" '(1 2)
+      (match '(1 2 3) ((and (a ... b) x) a)))
 
 (test-end)
