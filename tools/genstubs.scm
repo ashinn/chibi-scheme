@@ -378,7 +378,7 @@
   (string-append "sexp_" (mangle sym) "_stub"))
 
 (define (type-id-name sym)
-  (string-append "sexp_" (mangle sym) "_type_id"))
+  (string-append "sexp_" (mangle sym) "_type_t"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; .stub file interface
@@ -415,7 +415,7 @@
            `((,(cadr expr)
               ,@(parse-struct-like (cddr expr)))
              ,@*types*))
-     `(cat "\nstatic sexp_uint_t " ,(type-id-name (cadr expr)) ";\n"))))
+     `(cat "\nstatic sexp " ,(type-id-name (cadr expr)) ";\n"))))
 
 (define-syntax define-c-struct
   (er-macro-transformer
@@ -468,6 +468,8 @@
       (cat "sexp_make_unsigned_integer(ctx, " val ")"))
      ((signed-int-type? base)
       (cat "sexp_make_integer(ctx, " val ")"))
+     ((float-type? base)
+      (cat "sexp_make_flonum(ctx, " val ")"))
      ((eq? base 'char)
       (if (type-array type)
           (cat "sexp_c_string(ctx, " val ", -1)")
@@ -488,7 +490,10 @@
         (cond
          ((or ctype void*?)
           (cat "sexp_make_cpointer(ctx, "
-               (if void*? "SEXP_CPOINTER" (type-id-name base)) ", "
+               (if void*?
+                   "SEXP_CPOINTER"
+                   (string-append "sexp_type_tag(" (type-id-name base) ")"))
+               ", "
                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
                (if (or (type-free? type)
                        (and (type-result? type) (not (basic-type? type))))
@@ -512,6 +517,8 @@
       (cat "sexp_sint_value(" val ")"))
      ((unsigned-int-type? base)
       (cat "sexp_uint_value(" val ")"))
+     ((float-type? base)
+      (cat "sexp_flonum_value(" val ")"))
      ((eq? base 'char)
       (cat "sexp_unbox_character(" val ")"))
      ((eq? base 'env-string)
@@ -594,7 +601,10 @@
        (if (type-null? type) "(" "")
        "(sexp_pointerp(" arg  ")"
        " && (sexp_pointer_tag(" arg  ") == "
-       (if (void-pointer-type? type) "SEXP_CPOINTER" (type-id-name base)) "))"
+       (if (void-pointer-type? type)
+           "SEXP_CPOINTER"
+           (string-append "sexp_type_tag(" (type-id-name base) ")"))
+       "))"
        (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
      (else
       (display "WARNING: don't know how to check: " (current-error-port))
@@ -614,7 +624,7 @@
      ((eq? base 'input-port) "SEXP_IPORT")
      ((eq? base 'output-port) "SEXP_OPORT")
      ((void-pointer-type? type) "SEXP_CPOINTER")
-     (else (type-id-name base)))))
+     (else (string-append "sexp_type_tag(" (type-id-name base) ")")))))
 
 (define (write-validator arg type)
   (let* ((type (parse-type type))
@@ -1044,17 +1054,17 @@
         (type (cdr type)))
     (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
          "  " (type-id-name name)
-         " = sexp_unbox_fixnum(sexp_type_tag(sexp_register_c_type(ctx, name, "
+         " = sexp_register_c_type(ctx, name, "
          (cond ((memq 'finalizer: type)
                 => (lambda (x) (generate-stub-name (cadr x))))
                (else "sexp_finalize_c_type"))
-         ")));\n")
+         ");\n")
     (cond
      ((memq 'predicate: type)
       => (lambda (x)
            (let ((pred (cadr x)))
              (cat "  tmp = sexp_make_type_predicate(ctx, name, "
-                  "sexp_make_fixnum(" (type-id-name name) "));\n"
+                  (type-id-name name) ");\n"
                   "  name = sexp_intern(ctx, \"" pred "\", "
                   (string-length (x->string pred)) ");\n"
                   "  sexp_env_define(ctx, env, name, tmp);\n")))))))
@@ -1157,9 +1167,9 @@
                   ;; (type-id-name name)
                   ;; ");\n"
                   ;; "  r = sexp_cpointer_value(res) = sexp_cpointer_body(res);\n"
-                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), "
+                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), sexp_type_tag("
                   (type-id-name name)
-                  ");\n"
+                  "));\n"
                   "  r = sexp_cpointer_value(res) = malloc(sizeof("
                   (or (type-struct-type name) "") " " (type-name name) "));\n"
                   "  sexp_freep(res) = 1;\n"
