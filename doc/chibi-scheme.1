@@ -1,0 +1,133 @@
+.TH "chibi-scheme" "1" "" ""
+.UC 4
+.SH NAME
+.PP
+chibi-scheme \- a tiny Scheme interpreter
+
+.SH SYNOPSIS
+.B chibi-scheme
+[-qV]
+[-I
+.I path
+]
+[-A
+.I path
+]
+[-m
+.I module
+]
+[-l
+.I file
+]
+[-e
+.I expr
+]
+[-p
+.I expr
+]
+[--]
+[
+.I script argument ...
+]
+.br
+.sp 0.3
+
+.SH DESCRIPTION
+.I chibi-scheme
+is a sample interactive Scheme interpreter for the
+.I chibi-scheme
+library.  It serves as an example of how to embed
+.I chibi-scheme
+in applications, and can be useful on its own for writing
+scripts and interactive development.
+
+When
+.I script
+is given, the script will be loaded with SRFI-22 semantics,
+calling the procedure
+.I main
+(if defined) with a single parameter as a list of the
+command-line arguments beginning with the script name.
+
+Otherwise, if no script is given and no -e or -p options
+are given an interactive repl is entered, reading, evaluating,
+then printing expressions until EOF is reached.  The repl
+provided is very minimal - if you want readline
+completion you may want to wrap it with the
+.I rlwrap(1)
+program.  Signals aren't caught either - to enable handling keyboard
+interrupts you can use the (chibi process) module.
+
+.SH OPTIONS
+.TP 5
+.BI -V
+Prints the version information and exits.
+.TP
+.BI -q
+Don't load the initialization file.  The resulting
+environment will only contain the core syntactic forms
+and primitives coded in C.
+.TP
+.BI -h size
+Specifies the initial size of the heap, in bytes.
+.I size
+can be any integer value, optionally suffixed by
+"K" for kilobytes, or "M" for megabytes.
+.I -h
+must be specified before any options which load or
+evaluate Scheme code.
+.TP
+.BI -I path
+Inserts
+.I path
+on front of the load path list.  
+.TP
+.BI -A path
+Appends
+.I path
+to the load path list.  
+.TP
+.BI -m module
+Imports
+.I module
+as though "(import
+.I module
+)" were evaluated.  However, to reduce the need for shell
+escapes, modules are written in a dot notation, so that the module
+.I (foo bar)
+is written as
+.I foo.bar
+.TP
+.BI -l file
+Loads the Scheme source from the file
+.I file
+searched for in the default load path.
+.TP
+.BI -e expr
+Evaluates the Scheme expression
+.I expr.
+.TP
+.BI -p expr
+Evaluates the Scheme expression
+.I expr
+then prints the result to stdout.
+
+.SH ENVIRONMENT
+.TP
+.B CHIBI_MODULE_PATH
+.TQ
+A colon separated list of directories to search for module
+files, inserted before the system default load paths.
+
+.SH AUTHORS
+.PP
+Alex Shinn (alexshinn @ gmail . com)
+
+.SH SEE ALSO
+.PP
+More detailed information can be found in the README file
+included in the distribution.
+
+The chibi-scheme home-page:
+.br
+http://code.google.com/p/chibi-scheme/
