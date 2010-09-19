@@ -160,8 +160,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; high-level interface
 
-(define (port? x) (or (input-port? x) (output-port? x)))
-
 (define (stty . args)
   (let* ((port (if (and (pair? args) (port? (car args)))
                    (car args)
