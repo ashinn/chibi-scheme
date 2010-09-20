@@ -523,8 +523,10 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     /* either wait on an fd, or just sleep */
     pollfds = sexp_global(res, SEXP_G_THREADS_POLL_FDS);
     if (sexp_portp(sexp_context_event(res)) && sexp_pollfdsp(pollfds)) {
-      if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0)
+      if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0) {
+        pfds = sexp_pollfds_fds(pollfds);
         goto unblock_io_threads;
+      }
     } else {
       usleep(usecs);
       sexp_context_waitp(res) = 0;

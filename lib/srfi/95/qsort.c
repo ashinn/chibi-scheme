@@ -203,6 +203,7 @@ static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
       sexp_qsort(ctx, data, 0, len-1);
       if (sexp_opcodep(less) && sexp_opcode_inverse(less))
         sexp_vector_nreverse(ctx, vec);
+      res = vec;
     } else if (! (sexp_procedurep(less) || sexp_opcodep(less))) {
       res = sexp_type_exception(ctx, self, SEXP_PROCEDURE, less);
     } else if (! (sexp_procedurep(key) || sexp_opcodep(key) || sexp_not(key))) {
@@ -212,10 +213,8 @@ static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
     }
   }
 
-  if (sexp_pairp(seq))
+  if (sexp_pairp(seq) && ! sexp_exceptionp(res))
     res = sexp_vector_copy_to_list(ctx, vec, seq);
-  else if (! sexp_exceptionp(res))
-    res = vec;
 
   sexp_gc_release1(ctx);
   return res;
