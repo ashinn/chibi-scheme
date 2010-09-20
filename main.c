@@ -110,7 +110,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
 
 void run_main (int argc, char **argv) {
   char *arg, *impmod, *p;
-  sexp env, out=SEXP_FALSE, res=SEXP_VOID, ctx=NULL;
+  sexp out=SEXP_FALSE, res=SEXP_VOID, env=NULL, ctx=NULL;
   sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0;
   sexp_uint_t heap_size=0;
   sexp_gc_var2(tmp, args);

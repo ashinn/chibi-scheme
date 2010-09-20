@@ -15,7 +15,7 @@ static void sexp_write_pointer (sexp ctx, void *p, sexp out) {
 }
 
 static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
-  sexp tmp;
+  sexp tmp=NULL;
   unsigned char *ip, opcode, i;
 
   if (sexp_procedurep(bc)) {
@@ -94,7 +94,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   }
   sexp_write_char(ctx, '\n', out);
   if ((opcode == SEXP_OP_PUSH) && (depth < SEXP_DISASM_MAX_DEPTH)
-      && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
+      && tmp && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
     disasm(ctx, self, tmp, out, depth+1);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;

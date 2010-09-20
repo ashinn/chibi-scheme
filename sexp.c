@@ -771,7 +771,7 @@ sexp sexp_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start,
 sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sexp str_ls, sexp sep) {
   sexp res, ls;
   sexp_uint_t len=0, i=0, sep_len=0;
-  char *p, *csep;
+  char *p, *csep=NULL;
   for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls), i++)
     if (! sexp_stringp(sexp_car(ls)))
       return sexp_type_exception(ctx, self, SEXP_STRING, sexp_car(ls));
