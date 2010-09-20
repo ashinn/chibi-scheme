@@ -339,6 +339,10 @@ void sexp_destroy_context (sexp ctx) {
   if (sexp_context_heap(ctx)) {
     heap = sexp_context_heap(ctx);
     sexp_gc_mark(ctx) = 1;
+#if ! SEXP_USE_GLOBAL_TYPES
+    sexp_gc_mark(sexp_context_globals(ctx)) = 1;
+    sexp_gc_mark(sexp_global(ctx, SEXP_G_TYPES)) = 1;
+#endif
     sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {

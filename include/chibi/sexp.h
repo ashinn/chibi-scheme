@@ -609,9 +609,9 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 /*************************** field accessors **************************/
 
 #if SEXP_USE_SAFE_ACCESSORS
-#define sexp_field(x, type, id, field) (*(((x) && sexp_check_tag(x, id)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, sexp_pointerp(x) ? sexp_pointer_tag(x) : -1), &(((sexp)NULL)->value.type.field))))
-#define sexp_pred_field(x, type, pred, field) (*(((x) && pred(x)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, sexp_pointerp(x) ? sexp_pointer_tag(x) : -1), &(((sexp)NULL)->value.type.field))))
-#define sexp_cpointer_field(x, field) (*(((x) && sexp_pointerp(x) && sexp_pointer_tag(x) >= SEXP_CPOINTER) ? &((x)->value.cpointer.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a cpointer\n", __FILE__, __LINE__, x, sexp_pointerp(x) ? sexp_pointer_tag(x) : -1), &(((sexp)NULL)->value.cpointer.field))))
+#define sexp_field(x, type, id, field) (*(((x) && sexp_check_tag(x, id)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, (int)(sexp_pointerp(x) ? sexp_pointer_tag(x) : -1)), &(((sexp)NULL)->value.type.field))))
+#define sexp_pred_field(x, type, pred, field) (*(((x) && pred(x)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, (int)(sexp_pointerp(x) ? sexp_pointer_tag(x) : -1)), &(((sexp)NULL)->value.type.field))))
+#define sexp_cpointer_field(x, field) (*(((x) && sexp_pointerp(x) && sexp_pointer_tag(x) >= SEXP_CPOINTER) ? &((x)->value.cpointer.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a cpointer\n", __FILE__, __LINE__, x, (int)(sexp_pointerp(x) ? sexp_pointer_tag(x) : -1)), &(((sexp)NULL)->value.cpointer.field))))
 #else
 #define sexp_field(x, type, id, field) ((x)->value.type.field)
 #define sexp_pred_field(x, type, pred, field) ((x)->value.type.field)
@@ -622,8 +622,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_vector_data(x)   (sexp_field(x, vector, SEXP_VECTOR, data))
 
 #if SEXP_USE_SAFE_ACCESSORS
-#define sexp_vector_ref(x,i)   (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)] : (fprintf(stderr, "vector-ref length out of range %s on line %d: vector %p (length %u): %d\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
-#define sexp_vector_set(x,i,v) (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v) : (fprintf(stderr, "vector-set! length out of range in %s on line %d: vector %p (length %u): %d\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
+#define sexp_vector_ref(x,i)   (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)] : (fprintf(stderr, "vector-ref length out of range %s on line %d: vector %p (length %lu): %ld\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
+#define sexp_vector_set(x,i,v) (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v) : (fprintf(stderr, "vector-set! length out of range in %s on line %d: vector %p (length %lu): %ld\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
 #else
 #define sexp_vector_ref(x,i)   (sexp_vector_data(x)[sexp_unbox_fixnum(i)])
 #define sexp_vector_set(x,i,v) (sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v))
