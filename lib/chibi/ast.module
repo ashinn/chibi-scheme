@@ -28,7 +28,7 @@
    opcode-variadic?
    procedure-code procedure-vars procedure-name bytecode-name
    type? type-name type-cpl type-parent type-slots
-   object-size)
+   object-size gc)
   (import-immutable (scheme))
   (include-shared "ast")
   (include "ast.scm"))

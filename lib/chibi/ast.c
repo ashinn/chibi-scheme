@@ -4,6 +4,10 @@
 
 #include <chibi/eval.h>
 
+#if ! SEXP_USE_BOEHM
+extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
+#endif
+
 static void sexp_define_type_predicate (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
@@ -181,6 +185,16 @@ static sexp sexp_optimize (sexp ctx sexp_api_params(self, n), sexp x) {
   return res;
 }
 
+static sexp sexp_gc_op (sexp ctx sexp_api_params(self, n)) {
+  size_t sum_freed=0;
+#if SEXP_USE_BOEHM
+  GC_gcollect();
+#else
+  sexp_gc(ctx, &sum_freed);
+#endif
+  return sexp_make_unsigned_integer(ctx, sum_freed);
+}
+
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
@@ -270,6 +284,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "type-cpl", 1, sexp_type_cpl_op);
   sexp_define_foreign(ctx, env, "type-slots", 1, sexp_type_slots_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
+  sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
   return SEXP_VOID;
 }
 
