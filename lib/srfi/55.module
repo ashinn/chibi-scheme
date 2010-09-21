@@ -1,0 +1,9 @@
+
+(define-module (srfi 55)
+  (export require-extension)
+  (import-immutable (scheme))
+  (body
+   (define-syntax require-extension
+     (syntax-rules ()
+       ((require-extension (prefix mod ...))
+        (begin (import (prefix mod) ...)))))))
