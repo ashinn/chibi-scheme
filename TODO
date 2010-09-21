@@ -32,7 +32,11 @@
 ** TODO unsafe operations
    Possibly, don't want to make things too complicated or unstable.
 ** TODO plugin infrastructure
-** TODO type inference with warnings
+** DONE type inference with warnings
+   - State "DONE"       from "TODO"       [2010-09-21 Tue 23:18]
+*** TODO structured type inference
+*** TODO infer error branches
+*** TODO elide type checks from type information
 
 * macros
 ** DONE hygiene
@@ -58,7 +62,9 @@
    - State "DONE"       [2009-12-08 Tue 14:29]
 ** DONE add finalizers
    - State "DONE"       [2009-12-08 Tue 14:29]
-** TODO support weak references
+** DONE support weak references
+   - State "DONE"       from "TODO"       [2010-09-21 Tue 23:16]
+*** TODO support proper weak key-value references
 
 * runtime
 ** DONE bignums
@@ -74,6 +80,8 @@
    and a SRFI-18 interface is provided as a separate module.
    I/O operations will currently block all threads though,
    this needs to be addressed.
+*** TODO thread-local parameters
+*** TODO efficient priority queues
 ** DONE virtual ports
    - State "DONE"       [2010-01-02 Sat 20:12]
 ** DONE dynamic-wind
