@@ -203,6 +203,9 @@ test-sort: chibi-scheme$(EXE)
 test-records: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/record-tests.scm
 
+test-weak: chibi-scheme$(EXE)
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/weak-tests.scm
+
 test-libs: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/lib-tests.scm
 

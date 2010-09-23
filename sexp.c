@@ -111,7 +111,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, 0, 0, 0, 0, 0, 0, "sequence", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, 0, 0, 0, 0, 0, 0, "literal", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), 0, 0, 0, 0, 0, 0, "stack", SEXP_FALSE, SEXP_FALSE, NULL},
-  {SEXP_CONTEXT, sexp_offsetof(context, bc), 12, 12, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, "context", SEXP_FALSE, SEXP_FALSE, NULL},
+  {SEXP_CONTEXT, sexp_offsetof(context, bc), 13, 13, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, "context", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, "cpointer", SEXP_FALSE, SEXP_FALSE, NULL},
 };
 
@@ -263,10 +263,10 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL) = sexp_intern(ctx, "quasiquote", -1);
   sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL) = sexp_intern(ctx, "unquote", -1);
   sexp_global(ctx, SEXP_G_UNQUOTE_SPLICING_SYMBOL) = sexp_intern(ctx, "unquote-splicing", -1);
-  sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "*current-input-port*", -1);
-  sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "*current-output-port*", -1);
-  sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "*current-error-port*", -1);
-  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "*interaction-environment*", -1);
+  sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "current-input-port", -1);
+  sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "current-output-port", -1);
+  sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "current-error-port", -1);
+  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "interaction-environment", -1);
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
 #if ! SEXP_USE_GLOBAL_TYPES
@@ -318,6 +318,7 @@ sexp sexp_make_context (sexp ctx, size_t size) {
   sexp_context_name(res) = sexp_context_specific(res) = SEXP_FALSE;
   sexp_context_fv(res) = SEXP_NULL;
   sexp_context_saves(res) = NULL;
+  sexp_context_params(res) = SEXP_NULL;
   sexp_context_depth(res)=sexp_context_tracep(res)=sexp_context_pos(res)=0;
   sexp_context_tailp(res) = 1;
 #if SEXP_USE_GREEN_THREADS

@@ -206,7 +206,14 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       inv_default = 1;
     } else {
       emit_push(ctx, sexp_opcode_data(op));
-      if (sexp_opcode_opt_param_p(op)) emit(ctx, SEXP_OP_CDR);
+      if (sexp_opcode_opt_param_p(op)) {
+#if SEXP_USE_GREEN_THREADS
+        emit(ctx, SEXP_OP_PARAMETER_REF);
+        emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
+        sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), sexp_opcode_data(op));
+#endif
+        emit(ctx, SEXP_OP_CDR);
+      }
       sexp_context_depth(ctx)++;
       num_args++;
     }
@@ -273,6 +280,11 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     break;
   case SEXP_OPC_PARAMETER:
     emit_push(ctx, sexp_opcode_data(op));
+#if SEXP_USE_GREEN_THREADS
+    emit(ctx, SEXP_OP_PARAMETER_REF);
+    emit_word(ctx, (sexp_uint_t)op);
+    sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), op);
+#endif
     emit(ctx, ((num_args == 0) ? SEXP_OP_CDR : SEXP_OP_SET_CDR));
     break;
   default:
@@ -782,7 +794,20 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _PUSH(sexp_cdr(_WORD0));
     ip += sizeof(sexp);
     break;
-  case SEXP_OP_STACK_REF:            /* `pick' in forth */
+#if SEXP_USE_GREEN_THREADS
+  case SEXP_OP_PARAMETER_REF:
+    _ALIGN_IP();
+    tmp2 = _WORD0;
+    ip += sizeof(sexp);
+    for (tmp1=sexp_context_params(ctx); sexp_pairp(tmp1); tmp1=sexp_cdr(tmp1))
+      if (sexp_car(tmp1) == tmp2) {
+        _PUSH(sexp_car(tmp1));
+        goto loop;
+      }
+    _PUSH(sexp_opcode_data(tmp2));
+    break;
+#endif
+  case SEXP_OP_STACK_REF:
     _ALIGN_IP();
     stack[top] = stack[top - _SWORD0];
     ip += sizeof(sexp);

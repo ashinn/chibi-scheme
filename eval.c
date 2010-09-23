@@ -1496,7 +1496,7 @@ sexp sexp_make_primitive_env (sexp ctx, sexp version) {
     op = sexp_copy_opcode(ctx, &opcodes[i]);
     if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
       sym = sexp_intern(ctx, (char*)sexp_opcode_data(op), -1);
-      sexp_opcode_data(op) = sexp_env_cell_create(ctx, e, sym, SEXP_VOID, NULL);
+      sexp_opcode_data(op) = sexp_env_ref(e, sym, SEXP_FALSE);
     }
     sexp_env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op), -1), op);
   }
@@ -1587,18 +1587,31 @@ sexp sexp_add_module_directory_op (sexp ctx sexp_api_params(self, n), sexp dir, 
   return SEXP_VOID;
 }
 
-sexp sexp_load_standard_parameters (sexp ctx, sexp e) {
+static void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
+  sexp param = sexp_env_ref(env, name, SEXP_FALSE);
+  if (sexp_opcodep(param)) {
+    if (! sexp_pairp(sexp_opcode_data(param)))
+      sexp_opcode_data(param) = sexp_cons(ctx, name, value);
+    else
+      sexp_cdr(sexp_opcode_data(param)) = value;
+  }
+}
+
+sexp sexp_load_standard_parameters (sexp ctx, sexp env) {
   /* add io port and interaction env parameters */
-  sexp p = sexp_make_input_port(ctx, stdin, SEXP_FALSE);
+  sexp_gc_var1(p);
+  sexp_gc_preserve1(ctx, p);
+  p = sexp_make_input_port(ctx, stdin, SEXP_FALSE);
   sexp_port_no_closep(p) = 1;
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), p);
+  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), p);
   p = sexp_make_output_port(ctx, stdout, SEXP_FALSE);
   sexp_port_no_closep(p) = 1;
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), p);
+  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), p);
   p = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
   sexp_port_no_closep(p) = 1;
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), p);
-  sexp_env_define(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
+  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), p);
+  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
+  sexp_gc_release1(ctx);
   return SEXP_VOID;
 }
 

@@ -342,8 +342,8 @@ struct sexp_struct {
 #endif
       char tailp, tracep, timeoutp, waitp;
       sexp_uint_t pos, depth, last_fp;
-      sexp bc, lambda, stack, env, fv, parent, child, globals,
-        proc, name, specific, event;
+      sexp bc, lambda, stack, env, fv, parent, child,
+        globals, params, proc, name, specific, event;
     } context;
   } value;
 };
@@ -771,6 +771,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_tailp(x)    (sexp_field(x, context, SEXP_CONTEXT, tailp))
 #define sexp_context_tracep(x)   (sexp_field(x, context, SEXP_CONTEXT, tracep))
 #define sexp_context_globals(x)  (sexp_field(x, context, SEXP_CONTEXT, globals))
+#define sexp_context_params(x)   (sexp_field(x, context, SEXP_CONTEXT, params))
 #define sexp_context_last_fp(x)  (sexp_field(x, context, SEXP_CONTEXT, last_fp))
 #define sexp_context_refuel(x)   (sexp_field(x, context, SEXP_CONTEXT, refuel))
 #define sexp_context_ip(x)       (sexp_field(x, context, SEXP_CONTEXT, ip))
