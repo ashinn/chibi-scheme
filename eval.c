@@ -1489,18 +1489,21 @@ sexp sexp_make_null_env_op (sexp ctx sexp_api_params(self, n), sexp version) {
 
 sexp sexp_make_primitive_env (sexp ctx, sexp version) {
   int i;
-  sexp_gc_var3(e, op, sym);
-  sexp_gc_preserve3(ctx, e, op, sym);
+  sexp_gc_var4(e, op, sym, name);
+  sexp_gc_preserve4(ctx, e, op, sym, name);
   e = sexp_make_null_env(ctx, version);
   for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
     op = sexp_copy_opcode(ctx, &opcodes[i]);
+    name = sexp_intern(ctx, sexp_opcode_name(op), -1);
     if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
       sym = sexp_intern(ctx, (char*)sexp_opcode_data(op), -1);
       sexp_opcode_data(op) = sexp_env_ref(e, sym, SEXP_FALSE);
+    } else if (sexp_opcode_class(op) == SEXP_OPC_PARAMETER) {
+      sexp_opcode_data(op) = sexp_cons(ctx, name, SEXP_FALSE);
     }
-    sexp_env_define(ctx, e, sexp_intern(ctx, sexp_opcode_name(op), -1), op);
+    sexp_env_define(ctx, e, name, op);
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release4(ctx);
   return e;
 }
 
