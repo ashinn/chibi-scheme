@@ -33,8 +33,6 @@ static void repl (sexp ctx) {
   sexp_gc_preserve4(ctx, obj, tmp, res, env);
   env = sexp_make_env(ctx);
   sexp_env_parent(env) = sexp_context_env(ctx);
-  sexp_env_define(ctx, sexp_context_env(ctx),
-                  sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
   sexp_context_tracep(ctx) = 1;
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
