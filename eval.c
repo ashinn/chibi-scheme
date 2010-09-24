@@ -1373,7 +1373,6 @@ sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
                        sexp num_args, sexp flags, sexp arg1t, sexp arg2t,
                        sexp invp, sexp data, sexp data2, sexp_proc1 func) {
   sexp res;
-  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, name);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, num_args);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, flags);
   if ((! sexp_fixnump(op_class)) || (sexp_unbox_fixnum(op_class) <= 0)
@@ -1394,7 +1393,7 @@ sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
     sexp_opcode_data(res) = data;
     sexp_opcode_data2(res) = data2;
     sexp_opcode_func(res) = func;
-    sexp_opcode_name(res) = strdup(sexp_string_data(name));
+    sexp_opcode_name(res) = sexp_stringp(name) ? strdup(sexp_string_data(name)) : "";
   }
   return res;
 }

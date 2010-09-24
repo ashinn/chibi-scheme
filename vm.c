@@ -197,34 +197,36 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   num_args = sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(app)));
   sexp_context_tailp(ctx) = 0;
 
-  /* maybe push the default for an optional argument */
-  if ((num_args == sexp_opcode_num_args(op))
-      && sexp_opcode_variadic_p(op)
-      && sexp_opcode_data(op)
-      && (sexp_opcode_class(op) != SEXP_OPC_PARAMETER)) {
-    if (sexp_opcode_inverse(op)) {
-      inv_default = 1;
-    } else {
-      emit_push(ctx, sexp_opcode_data(op));
-      if (sexp_opcode_opt_param_p(op)) {
-#if SEXP_USE_GREEN_THREADS
-        emit(ctx, SEXP_OP_PARAMETER_REF);
-        emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
-        sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), sexp_opcode_data(op));
-#endif
-        emit(ctx, SEXP_OP_CDR);
-      }
-      sexp_context_depth(ctx)++;
-      num_args++;
-    }
-  }
+  if (sexp_opcode_class(op) != SEXP_OPC_PARAMETER) {
 
-  /* push the arguments onto the stack in reverse order */
-  ls = ((sexp_opcode_inverse(op)
-         && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC))
-        ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
-  for ( ; sexp_pairp(ls); ls = sexp_cdr(ls))
-    generate(ctx, sexp_car(ls));
+    /* maybe push the default for an optional argument */
+    if ((num_args == sexp_opcode_num_args(op))
+        && sexp_opcode_variadic_p(op) && sexp_opcode_data(op)) {
+      if (sexp_opcode_inverse(op)) {
+        inv_default = 1;
+      } else {
+        emit_push(ctx, sexp_opcode_data(op));
+        if (sexp_opcode_opt_param_p(op)) {
+#if SEXP_USE_GREEN_THREADS
+          emit(ctx, SEXP_OP_PARAMETER_REF);
+          emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
+          sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), sexp_opcode_data(op));
+#endif
+          emit(ctx, SEXP_OP_CDR);
+        }
+        sexp_context_depth(ctx)++;
+        num_args++;
+      }
+    }
+
+    /* push the arguments onto the stack in reverse order */
+    ls = ((sexp_opcode_inverse(op)
+           && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC))
+          ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
+    for ( ; sexp_pairp(ls); ls = sexp_cdr(ls))
+      generate(ctx, sexp_car(ls));
+
+  }
 
   /* push the default for inverse opcodes */
   if (inv_default) {
@@ -280,10 +282,19 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     break;
   case SEXP_OPC_PARAMETER:
 #if SEXP_USE_GREEN_THREADS
+    if (num_args > 0) {
+      if (sexp_opcode_data2(op) && sexp_applicablep(sexp_opcode_data2(op))) {
+        ls = sexp_list2(ctx, sexp_opcode_data2(op), sexp_cadr(app));
+        generate(ctx, ls);
+      } else {
+        generate(ctx, sexp_cadr(app));
+      }
+    }
     emit(ctx, SEXP_OP_PARAMETER_REF);
     emit_word(ctx, (sexp_uint_t)op);
     sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), op);
 #else
+    if (num_args > 0) generate(ctx, sexp_cadr(app));
     emit_push(ctx, sexp_opcode_data(op));
 #endif
     emit(ctx, ((num_args == 0) ? SEXP_OP_CDR : SEXP_OP_SET_CDR));
@@ -801,7 +812,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     tmp2 = _WORD0;
     ip += sizeof(sexp);
     for (tmp1=sexp_context_params(ctx); sexp_pairp(tmp1); tmp1=sexp_cdr(tmp1))
-      if (sexp_car(tmp1) == tmp2) {
+      if (sexp_caar(tmp1) == tmp2) {
         _PUSH(sexp_car(tmp1));
         goto loop;
       }
