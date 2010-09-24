@@ -1,21 +1,4 @@
 
-;; (param) => get-cell + cdr
-;; (param value) => get-cell + [convert] + set-cdr!
-
-;; need 3 opcodes: param cell
-;;                 context params
-;;                 context-params-set!
-
-;; analyze needs to translate param calls to proper usages of the
-;; first two opcodes
-
-;; (parameterize ((param value)) body ...)
-;;  => (let* ((old-params (thread-parameters))
-;;            (new-params (cons (cons param (param-convert value)) old-params)))
-;;       (dynamic-wind (lambda () (thread-set-parameters! new-params))
-;;                     (lambda () body ...)
-;;                     (lambda () (thread-set-parameters! old-params))))
-
 (define-module (srfi 39)
   (export make-parameter parameterize)
   (import-immutable (scheme))
