@@ -279,11 +279,12 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     }
     break;
   case SEXP_OPC_PARAMETER:
-    emit_push(ctx, sexp_opcode_data(op));
 #if SEXP_USE_GREEN_THREADS
     emit(ctx, SEXP_OP_PARAMETER_REF);
     emit_word(ctx, (sexp_uint_t)op);
     sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), op);
+#else
+    emit_push(ctx, sexp_opcode_data(op));
 #endif
     emit(ctx, ((num_args == 0) ? SEXP_OP_CDR : SEXP_OP_SET_CDR));
     break;
