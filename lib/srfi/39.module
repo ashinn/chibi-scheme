@@ -19,24 +19,5 @@
 (define-module (srfi 39)
   (export make-parameter parameterize)
   (import-immutable (scheme))
-  (body
-   (define (make-parameter value . o)
-     (if (pair? o)
-         (let ((converter (car o)))
-           (lambda args
-             (if (null? args)
-                 value
-                 (set! value (converter (car args))))))
-         (lambda args (if (null? args) value (set! value (car args))))))
-   (define-syntax parameterize
-     (syntax-rules ()
-       ((parameterize ("step") ((param value tmp1 tmp2) ...) () body)
-        (let ((tmp1 value) ...)
-          (let ((tmp2 (param)) ...)
-            (dynamic-wind (lambda () (param tmp1) ...)
-                          (lambda () . body)
-                          (lambda () (param tmp2) ...)))))
-       ((parameterize ("step") args ((param value) . rest) body)
-        (parameterize ("step") ((param value tmp1 tmp2) . args) rest body))
-       ((parameterize ((param value) ...) . body)
-        (parameterize ("step") () ((param value) ...) body))))))
+  (include-shared "39/param")
+  (include "39/syntax.scm"))
