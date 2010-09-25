@@ -24,7 +24,7 @@
 
 static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
   sexp res=sexp_env_ref(env, name, SEXP_FALSE);
-  return sexp_opcodep(res) ? sexp_cdr(sexp_opcode_data(res)) : SEXP_VOID;
+  return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : SEXP_VOID;
 }
 
 static void repl (sexp ctx) {
@@ -90,17 +90,11 @@ static sexp check_exception (sexp ctx, sexp res) {
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
   sexp p, res = sexp_load_standard_env(ctx, env, k);
 #if SEXP_USE_GREEN_THREADS
-  p  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), SEXP_FALSE);
-  if (sexp_opcodep(p)) p = sexp_opcode_data(p);
-  if (sexp_pairp(p)) p = sexp_cdr(p);
+  p  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
-  p  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), SEXP_FALSE);
-  if (sexp_opcodep(p)) p = sexp_opcode_data(p);
-  if (sexp_pairp(p)) p = sexp_cdr(p);
+  p  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
   if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
-  p  = sexp_env_ref(env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE);
-  if (sexp_opcodep(p)) p = sexp_opcode_data(p);
-  if (sexp_pairp(p)) p = sexp_cdr(p);
+  p  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
   if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
 #endif
   return res;
