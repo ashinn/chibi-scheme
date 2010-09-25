@@ -14,6 +14,12 @@ static void sexp_write_pointer (sexp ctx, void *p, sexp out) {
   sexp_write_string(ctx, buf, out);
 }
 
+static void sexp_write_integer (sexp ctx, sexp_sint_t n, sexp out) {
+  char buf[32];
+  sprintf(buf, "%ld", n);
+  sexp_write_string(ctx, buf, out);
+}
+
 static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp tmp=NULL;
   unsigned char *ip, opcode, i;
@@ -64,6 +70,9 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_JUMP:
   case SEXP_OP_JUMP_UNLESS:
   case SEXP_OP_TYPEP:
+    sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
+    ip += sizeof(sexp);
+    break;
   case SEXP_OP_FCALL0:
   case SEXP_OP_FCALL1:
   case SEXP_OP_FCALL2:
@@ -79,6 +88,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     break;
   case SEXP_OP_GLOBAL_REF:
   case SEXP_OP_GLOBAL_KNOWN_REF:
+  case SEXP_OP_PARAMETER_REF:
   case SEXP_OP_TAIL_CALL:
   case SEXP_OP_CALL:
   case SEXP_OP_PUSH:
@@ -86,6 +96,10 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     if (((opcode == SEXP_OP_GLOBAL_REF) || (opcode == SEXP_OP_GLOBAL_KNOWN_REF))
         && sexp_pairp(tmp))
       tmp = sexp_car(tmp);
+    else if ((opcode == SEXP_OP_PARAMETER_REF)
+             && sexp_opcodep(tmp) && sexp_opcode_data(tmp)
+             && sexp_pairp(sexp_opcode_data(tmp)))
+      tmp = sexp_car(sexp_opcode_data(tmp));
     else if ((opcode == SEXP_OP_PUSH) && (sexp_pairp(tmp) || sexp_idp(tmp)))
       sexp_write_char(ctx, '\'', out);
     sexp_write(ctx, tmp, out);
@@ -106,6 +120,6 @@ static sexp sexp_disasm (sexp ctx sexp_api_params(self, n), sexp bc, sexp out) {
 }
 
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
-  sexp_define_foreign_param(ctx, env, "disasm", 2, (sexp_proc1)sexp_disasm, "*current-output-port*");
+  sexp_define_foreign_param(ctx, env, "disasm", 2, (sexp_proc1)sexp_disasm, "current-output-port");
   return SEXP_VOID;
 }

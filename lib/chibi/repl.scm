@@ -5,41 +5,46 @@
 
 (define-syntax handle-exceptions
   (syntax-rules ()
-    ((handle-exceptions exn handler expr)
+    ((handle-exceptions exn handle-expr expr)
      (call-with-current-continuation
       (lambda (return)
-        (with-exception-handler (lambda (exn) (return handler))
-                                (lambda () expr)))))))
+        (with-exception-handler
+         (lambda (exn) (return handle-expr))
+         (lambda () expr)))))))
 
 (define (with-signal-handler sig handler thunk)
   (let ((old-handler #f))
     (dynamic-wind
-        (lambda () (set! old-handler (set-signal-action! sig handler)))
-        thunk
-        (lambda () (set-signal-action! sig old-handler)))))
+      (lambda () (set! old-handler (set-signal-action! sig handler)))
+      thunk
+      (lambda () (set-signal-action! sig old-handler)))))
 
 (define (run-repl module env . o)
   (let ((history (make-history)))
     (let lp ((module module) (env env))
-      (let ((line (edit-line (if module (string-append (symbol->string module) "> ") "> ")
-                             'history: history)))
+      (let ((line
+             (edit-line
+              (string-append (if module (symbol->string module) "") "> ")
+              'history: history)))
         (cond
          ((or (not line) (eof-object? line)))
          ((equal? line "") (lp module env))
          (else
           (history-commit! history line)
           (handle-exceptions
-           exn (print-exception exn (current-error-port))
+           exn
+           (print-exception exn (current-error-port))
            (let* ((expr (call-with-input-string line read/ss))
-                  (thread (make-thread (lambda ()
-                                         (let ((res (eval expr env)))
-                                           (if (not (eq? res (if #f #f)))
-                                               (write/ss res))
-                                           (newline))))))
+                  (thread (make-thread
+                           (lambda ()
+                             (let ((res (eval expr env)))
+                               (if (not (eq? res (if #f #f)))
+                                   (write/ss res))
+                               (newline))))))
              (with-signal-handler
               signal/interrupt
               (lambda (n) (thread-terminate! thread))
-              (lambda () (thread-start! thread) (thread-join! thread)))))
+              (lambda () (thread-join! (thread-start! thread))))))
           (lp module env)))))))
 
 (define (repl)

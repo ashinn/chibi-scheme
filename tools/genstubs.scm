@@ -1024,11 +1024,11 @@
     (let ((value (type-value x)))
       (cond
        ((equal? value '(current-input-port))
-        (cat "\"*current-input-port*\""))
+        (cat "\"current-input-port\""))
        ((equal? value '(current-output-port))
-        (cat "\"*current-output-port*\""))
+        (cat "\"current-output-port\""))
        ((equal? value '(current-error-port))
-        (cat "\"*current-error-port*\""))
+        (cat "\"current-error-port\""))
        (else
         (c->scheme-converter x value))))))
 

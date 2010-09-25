@@ -205,15 +205,19 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       if (sexp_opcode_inverse(op)) {
         inv_default = 1;
       } else {
-        emit_push(ctx, sexp_opcode_data(op));
         if (sexp_opcode_opt_param_p(op)) {
 #if SEXP_USE_GREEN_THREADS
           emit(ctx, SEXP_OP_PARAMETER_REF);
           emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
-          sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), sexp_opcode_data(op));
+#else
+          emit_push(ctx, sexp_opcode_data(op));
 #endif
           emit(ctx, SEXP_OP_CDR);
+        } else {
+          emit_push(ctx, sexp_opcode_data(op));
         }
+        sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)),
+                  sexp_opcode_data(op));
         sexp_context_depth(ctx)++;
         num_args++;
       }
@@ -584,8 +588,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #if SEXP_USE_DEBUG_VM
   if (sexp_context_tracep(ctx)) {
     sexp_print_stack(ctx, stack, top, fp, SEXP_FALSE);
-    fprintf(stderr, "%s ip: %p stack: %p top: %d fp: %d\n", (*ip<=SEXP_OP_NUM_OPCODES) ?
-            reverse_opcode_names[*ip] : "UNKNOWN", ip, stack, top, fp);
+    fprintf(stderr, "%s %s ip: %p stack: %p top: %ld fp: %ld (%ld)\n",
+            (*ip<=SEXP_OP_NUM_OPCODES) ? reverse_opcode_names[*ip] : "UNKNOWN",
+            (SEXP_OP_FCALL0 <= *ip && *ip <= SEXP_OP_FCALL4
+             ? sexp_opcode_name(((sexp*)(ip+1))[0]) : ""),
+            ip, stack, top, fp, (fp<1024 ? sexp_unbox_fixnum(stack[fp+3]) : -1));
   }
 #endif
   switch (*ip++) {
@@ -595,9 +602,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     if (! sexp_exception_procedure(_ARG1))
       sexp_exception_procedure(_ARG1) = self;
   case SEXP_OP_RAISE:
-    tmp1 = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
+    tmp1 = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
-    if (! sexp_procedurep(tmp1)) goto end_loop;
+    if (! sexp_procedurep(tmp1))
+      goto end_loop;
     stack[top] = SEXP_ONE;
     stack[top+1] = sexp_make_fixnum(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
