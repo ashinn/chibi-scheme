@@ -171,9 +171,9 @@
                                      '((include "init.scm"))))
         (cons '(config) (make-module #f (current-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
-                                     (interaction-environment)
+                                     (current-environment)
                                      (list (list 'export 'cond-expand))))
         (cons '(srfi 46) (make-module (list 'syntax-rules)
-                                      (interaction-environment)
+                                      (current-environment)
                                       (list (list 'export 'syntax-rules))))))
 

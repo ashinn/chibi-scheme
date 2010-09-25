@@ -324,9 +324,6 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_gc_var3(tmp, vec, ctx2);
   ctx = sexp_make_child_context(ctx, NULL);
   sexp_gc_preserve3(ctx, tmp, vec, ctx2);
-  vec = sexp_intern(ctx, "*current-exception-handler*", -1);
-  sexp_global(ctx, SEXP_G_ERR_HANDLER)
-    = sexp_env_cell_create(ctx, sexp_context_env(ctx), vec, SEXP_FALSE, NULL);
 #if ! SEXP_USE_NATIVE_X86
   emit(ctx, SEXP_OP_RESUMECC);
   sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = finalize_bytecode(ctx);
@@ -372,6 +369,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size) {
   sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_FIVE));
   if (! ctx) sexp_init_eval_context_globals(res);
   if (ctx) {
+    sexp_context_params(res) = sexp_context_params(ctx);
     sexp_context_tracep(res) = sexp_context_tracep(ctx);
     sexp_gc_release1(ctx);
   }
@@ -1443,8 +1441,9 @@ sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_ar
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
   tmp = sexp_intern(ctx, param, -1);
-  tmp = sexp_env_cell(env, tmp);
-  res = sexp_define_foreign_aux(ctx, env, name, num_args, 3, f, tmp);
+  tmp = sexp_env_ref(env, tmp, SEXP_FALSE);
+  if (sexp_opcodep(tmp))
+    res = sexp_define_foreign_aux(ctx, env, name, num_args, 3, f, tmp);
   sexp_gc_release1(ctx);
   return res;
 }
@@ -1589,6 +1588,17 @@ sexp sexp_add_module_directory_op (sexp ctx sexp_api_params(self, n), sexp dir, 
   return SEXP_VOID;
 }
 
+sexp sexp_parameter_ref (sexp ctx, sexp param) {
+#if SEXP_USE_GREEN_THREADS
+  sexp ls;
+  for (ls=sexp_context_params(ctx); sexp_pairp(ls); ls=sexp_cdr(ls))
+    if (sexp_caar(ls) == param)
+      return sexp_cdar(ls);
+#endif
+  return sexp_opcodep(param) && sexp_opcode_data(param) && sexp_pairp(sexp_opcode_data(param))
+    ? sexp_cdr(sexp_opcode_data(param)) : SEXP_FALSE;
+}
+
 static void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
   sexp param = sexp_env_ref(env, name, SEXP_FALSE);
   if (sexp_opcodep(param)) {
@@ -1650,6 +1660,8 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), tmp);
 #endif
+  sexp_global(ctx, SEXP_G_ERR_HANDLER)
+    = sexp_env_ref(e, sym=sexp_intern(ctx, "current-exception-handler", -1), SEXP_FALSE);
   /* load init.scm */
   tmp = sexp_load_module_file(ctx, sexp_init_file, e);
   /* load and bind config env */
@@ -1755,20 +1767,20 @@ sexp sexp_compile (sexp ctx, sexp x) {
 sexp sexp_eval_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   sexp_sint_t top;
   sexp ctx2;
-  sexp_gc_var2(res, err_handler);
+  sexp_gc_var2(res, params);
   if (! env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
-  sexp_gc_preserve2(ctx, res, err_handler);
+  sexp_gc_preserve2(ctx, res, params);
   top = sexp_context_top(ctx);
-  err_handler = sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER));
-  sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER)) = SEXP_FALSE;
+  params = sexp_context_params(ctx);
+  sexp_context_params(ctx) = SEXP_NULL;
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0);
   sexp_context_child(ctx) = ctx2;
   res = sexp_compile(ctx2, obj);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
   sexp_context_child(ctx) = SEXP_FALSE;
-  sexp_cdr(sexp_global(ctx, SEXP_G_ERR_HANDLER)) = err_handler;
+  sexp_context_params(ctx) = params;
   sexp_context_top(ctx) = top;
   sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
   sexp_gc_release2(ctx);
