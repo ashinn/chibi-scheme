@@ -208,7 +208,7 @@ sexp_uint_t sexp_bignum_fxdiv (sexp ctx, sexp a, sexp_uint_t b, int offset) {
 }
 
 sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
-                       char sign, sexp_uint_t base) {
+                       signed char sign, sexp_uint_t base) {
   int c, digit;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
