@@ -22,7 +22,7 @@ extern "C" {
 #endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
-#include <sys/errno.h>
+#include <errno.h>
 #endif
 #endif
 
