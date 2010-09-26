@@ -141,4 +141,21 @@
 (test "joined tail" '(1 2)
       (match '(1 2 3) ((and (a ... b) x) a)))
 
+(test "list ..1" '(a b c)
+    (match '(a b c) ((x ..1) x)))
+
+(test "list ..1 failed" #f
+    (match '()
+      ((x ..1) x)
+      (else #f)))
+
+(test "list ..1 with predicate" '(a b c)
+    (match '(a b c)
+      (((and x (? symbol?)) ..1) x)))
+
+(test "list ..1 with failed predicate" #f
+    (match '(a b 3)
+      (((and x (? symbol?)) ..1) x)
+      (else #f)))
+
 (test-end)
