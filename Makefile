@@ -143,12 +143,12 @@ chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
 clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi
-	make chibi-scheme$(EXE)
-	make libs
+	$(MAKE) chibi-scheme$(EXE)
+	$(MAKE) libs
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" PATH=".:$(PATH)" $(GENSTATIC) $< > $@
 
 %.c: %.stub $(GENSTUBS)
-	make chibi-scheme$(EXE)
+	$(MAKE) chibi-scheme$(EXE)
 	-LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" PATH=".:$(PATH)" $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
