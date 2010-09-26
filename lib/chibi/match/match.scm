@@ -28,6 +28,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2010/09/26 - adding `..1' patterns (thanks to Ludovic Courtè´≤s)
 ;; 2010/09/07 - fixing identifier extraction in some `...' and `***' patterns
 ;; 2009/11/25 - adding `***' tree search patterns
 ;; 2008/03/20 - fixing bug where (a ...) matched non-lists
@@ -126,7 +127,7 @@
 ;; pattern so far.
 
 (define-syntax match-two
-  (syntax-rules (_ ___ *** quote quasiquote ? $ = and or not set! get!)
+  (syntax-rules (_ ___ ..1 *** quote quasiquote ? $ = and or not set! get!)
     ((match-two v () g+s (sk ...) fk i)
      (if (null? v) (sk ... i) fk))
     ((match-two v (quote p) g+s (sk ...) fk i)
@@ -162,6 +163,10 @@
      (match-extract-vars p (match-gen-search v p q g+s sk fk i) i ()))
     ((match-two v (p *** . q) g+s sk fk i)
      (match-syntax-error "invalid use of ***" (p *** . q)))
+    ((match-two v (p ..1) g+s sk fk i)
+     (if (pair? v)
+         (match-one v (p ___) g+s sk fk i)
+         fk))
     ((match-two v ($ rec p ...) g+s sk fk i)
      (if (is-a? v rec)
          (match-record-refs v rec 0 (p ...) g+s sk fk i)
@@ -503,7 +508,7 @@
 ;; (match-extract-vars pattern continuation (ids ...) (new-vars ...))
 
 (define-syntax match-extract-vars
-  (syntax-rules (_ ___ *** ? $ = quote quasiquote and or not get! set!)
+  (syntax-rules (_ ___ ..1 *** ? $ = quote quasiquote and or not get! set!)
     ((match-extract-vars (? pred . p) . x)
      (match-extract-vars p . x))
     ((match-extract-vars ($ rec . p) . x)
@@ -534,6 +539,7 @@
     ((match-extract-vars _ (k ...) i v)    (k ... v))
     ((match-extract-vars ___ (k ...) i v)  (k ... v))
     ((match-extract-vars *** (k ...) i v)  (k ... v))
+    ((match-extract-vars ..1 (k ...) i v)  (k ... v))
     ;; This is the main part, the only place where we might add a new
     ;; var if it's an unbound symbol.
     ((match-extract-vars p (k ...) (i ...) v)
@@ -541,7 +547,7 @@
          ((new-sym?
            (syntax-rules (i ...)
              ((new-sym? p sk fk) sk)
-             ((new-sym? x sk fk) fk))))
+             ((new-sym? any sk fk) fk))))
        (new-sym? random-sym-to-match
                  (k ... ((p p-ls) . v))
                  (k ... v))))
