@@ -1743,22 +1743,27 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
 
 /************************** eval interface ****************************/
 
-sexp sexp_compile (sexp ctx, sexp x) {
+sexp sexp_compile_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   sexp_gc_var3(ast, vec, res);
   sexp_gc_preserve3(ctx, ast, vec, res);
-  ast = sexp_analyze(ctx, x);
+  sexp ctx2;
+  if (! env) env = sexp_context_env(ctx);
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
+  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0);
+  sexp_context_child(ctx) = ctx2;
+  ast = sexp_analyze(ctx2, obj);
   if (sexp_exceptionp(ast)) {
     res = ast;
   } else {
-    res = sexp_global(ctx, SEXP_G_OPTIMIZATIONS);
+    res = sexp_global(ctx2, SEXP_G_OPTIMIZATIONS);
     for ( ; sexp_pairp(res); res=sexp_cdr(res))
-      ast = sexp_apply1(ctx, sexp_cdar(res), ast);
-    sexp_free_vars(ctx, ast, SEXP_NULL);    /* should return SEXP_NULL */
-    emit_enter(ctx);
-    generate(ctx, ast);
-    res = finalize_bytecode(ctx);
-    vec = sexp_make_vector(ctx, 0, SEXP_VOID);
-    res = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, res, vec);
+      ast = sexp_apply1(ctx2, sexp_cdar(res), ast);
+    sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
+    emit_enter(ctx2);
+    generate(ctx2, ast);
+    res = finalize_bytecode(ctx2);
+    vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
+    res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);
   }
   sexp_gc_release3(ctx);
   return res;
@@ -1776,7 +1781,7 @@ sexp sexp_eval_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   sexp_context_params(ctx) = SEXP_NULL;
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0);
   sexp_context_child(ctx) = ctx2;
-  res = sexp_compile(ctx2, obj);
+  res = sexp_compile_op(ctx2, self, n, obj, env);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
   sexp_context_child(ctx) = SEXP_FALSE;

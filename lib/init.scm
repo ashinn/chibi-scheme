@@ -65,6 +65,9 @@
          (apply1 proc (append2 (reverse (cdr lol)) (car lol))))
        (reverse args))))
 
+(define (eval x . o)
+  ((compile x (if (pair? o) (car o) (interaction-environment)))))
+
 ;; map with a fast-path for single lists
 
 (define (map proc ls . lol)
