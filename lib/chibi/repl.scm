@@ -37,13 +37,19 @@
            (let* ((expr (call-with-input-string line read/ss))
                   (thread (make-thread
                            (lambda ()
-                             (let ((res (eval expr env)))
-                               (if (not (eq? res (if #f #f)))
-                                   (write/ss res))
-                               (newline))))))
+                             (handle-exceptions
+                              exn
+                              (print-exception exn (current-error-port))
+                              (let ((res (eval expr env)))
+                                (cond
+                                 ((not (eq? res (if #f #f)))
+                                  (write/ss res)
+                                  (newline)))))))))
              (with-signal-handler
               signal/interrupt
-              (lambda (n) (thread-terminate! thread))
+              (lambda (n)
+                (display "Interrupt\n" (current-error-port))
+                (thread-terminate! thread))
               (lambda () (thread-join! (thread-start! thread))))))
           (lp module env)))))))
 

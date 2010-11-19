@@ -659,7 +659,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     goto make_call;
   case SEXP_OP_TAIL_CALL:
     _ALIGN_IP();
-    i = sexp_unbox_fixnum(_WORD0);    /* number of params */
+    i = sexp_unbox_fixnum(_WORD0);             /* number of params */
     tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
     tmp2 = stack[fp+3];
@@ -734,8 +734,8 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fp = top-4;
     break;
   case SEXP_OP_FCALL0:
-    tmp1 = _WORD0;
     _ALIGN_IP();
+    tmp1 = _WORD0;
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
     _PUSH(((sexp_proc1)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 0)));

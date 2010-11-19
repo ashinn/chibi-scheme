@@ -140,6 +140,7 @@ SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp lambda, sexp name);
+SEXP_API sexp sexp_compile_op (sexp context sexp_api_params(self, n), sexp obj, sexp env);
 SEXP_API sexp sexp_eval_op (sexp context sexp_api_params(self, n), sexp obj, sexp env);
 SEXP_API sexp sexp_eval_string (sexp context, const char *str, sexp_sint_t len, sexp env);
 SEXP_API sexp sexp_load_op (sexp context sexp_api_params(self, n), sexp expr, sexp env);
