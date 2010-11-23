@@ -1435,9 +1435,9 @@ sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args
   return res;
 }
 
-sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args,
-                                sexp_proc1 f, const char *param) {
-  sexp res;
+sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name,
+                                int num_args, sexp_proc1 f, const char *param) {
+  sexp res = SEXP_FALSE;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
   tmp = sexp_intern(ctx, param, -1);
