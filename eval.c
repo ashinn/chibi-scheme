@@ -1745,10 +1745,10 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
 
 sexp sexp_compile_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   sexp_gc_var3(ast, vec, res);
-  sexp_gc_preserve3(ctx, ast, vec, res);
   sexp ctx2;
   if (! env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
+  sexp_gc_preserve3(ctx, ast, vec, res);
   ctx2 = sexp_make_eval_context(ctx, NULL, env, 0);
   sexp_context_child(ctx) = ctx2;
   ast = sexp_analyze(ctx2, obj);
@@ -1765,6 +1765,7 @@ sexp sexp_compile_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
     vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
     res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);
   }
+  sexp_context_child(ctx) = SEXP_FALSE;
   sexp_gc_release3(ctx);
   return res;
 }
