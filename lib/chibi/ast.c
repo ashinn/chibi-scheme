@@ -267,6 +267,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 1, "procedure-code", "procedure-code-set!");
   sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 2, "procedure-vars", "procedure-vars-set!");
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 1, "bytecode-name", "bytecode-name-set!");
+  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 2, "bytecode-literals", "bytecode-literals-set!");
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 0, "exception-kind", "exception-kind-set!");
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", "exception-message-set!");
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", "exception-irritants-set!");

@@ -26,7 +26,8 @@
    exception-irritants exception-irritants-set!
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-variadic?
-   procedure-code procedure-vars procedure-name bytecode-name
+   procedure-code procedure-vars procedure-name
+   bytecode-name bytecode-literals
    type? type-name type-cpl type-parent type-slots
    object-size gc)
   (import-immutable (scheme))
