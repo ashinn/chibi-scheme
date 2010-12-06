@@ -1,0 +1,36 @@
+
+(define-module (chibi ast)
+  (export
+   analyze optimize env-cell ast->sexp macroexpand type-of
+   <object> <opcode> <procedure> <bytecode> <macro> <env>
+   <number> <bignum> <flonum> <integer> <char> <boolean>
+   <symbol> <string> <byte-vector> <vector> <pair>
+   <context> <lam> <cnd> <set> <ref> <seq> <lit> <sc> <exception>
+   pair-source pair-source-set!
+   syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode? type?
+   environment? bytecode? exception? macro? context? exception?
+   syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
+   lambda-name lambda-params lambda-body lambda-defs lambda-locals
+   lambda-flags lambda-free-vars lambda-set-vars lambda-return-type
+   lambda-param-types lambda-source
+   lambda-name-set! lambda-params-set! lambda-body-set! lambda-defs-set!
+   lambda-locals-set! lambda-flags-set! lambda-free-vars-set!
+   lambda-set-vars-set! lambda-return-type-set! lambda-param-types-set!
+   lambda-source-set!
+   cnd-test cnd-pass cnd-fail
+   cnd-test-set! cnd-pass-set! cnd-fail-set!
+   set-var set-value set-var-set! set-value-set!
+   ref-name ref-cell ref-name-set! ref-cell-set!
+   seq-ls seq-ls-set! lit-value lit-value-set!
+   exception-kind exception-kind-set! exception-message exception-message-set!
+   exception-irritants exception-irritants-set!
+   opcode-name opcode-num-params opcode-return-type opcode-param-type
+   opcode-variadic?
+   procedure-code procedure-vars procedure-name
+   bytecode-name bytecode-literals
+   type? type-name type-cpl type-parent type-slots
+   object-size gc)
+  (import-immutable (scheme))
+  (include-shared "ast")
+  (include "ast.scm"))
+
