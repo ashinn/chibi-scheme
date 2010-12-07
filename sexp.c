@@ -1539,6 +1539,27 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
   return sexp_make_fixnum(negativep ? -res : res);
 }
 
+#if SEXP_USE_UTF8_STRINGS
+static int sexp_decode_utf8_char(const unsigned char* str) {
+  const unsigned char* tail=str;
+  int i = str[0], res = -1;
+  if ((i >= 0xC0) && (i <= 0xF7)) {
+    if (i < 0xE0) {
+      res = ((i&0x3F)<<6) + (str[1]&0x3F);
+      tail = str + 2;
+    } else if (i < 0xF0) {
+      res = ((i&0x1F)<<12) + ((str[1]&0x3F)<<6) + (str[2]&0x3F);
+      tail = str + 3;
+    } else {
+      res = ((i&0x0F)<<16) + ((str[1]&0x3F)<<6)
+        + ((str[2]&0x3F)<<6) + (str[3]&0x3F);
+      tail = str + 4;
+    }
+  }
+  return *tail ? -1 : res;
+}
+#endif
+
 sexp sexp_read_raw (sexp ctx, sexp in) {
   char *str;
   int c1, c2, line;
@@ -1711,6 +1732,10 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
             res = sexp_make_character('\r');
           else if (strcasecmp(str, "tab") == 0)
             res = sexp_make_character('\t');
+#if SEXP_USE_UTF8_STRINGS
+          else if ((c1=sexp_decode_utf8_char((unsigned char*)str)) > 0)
+            res = sexp_make_character(c1);
+#endif
           else {
             tmp = sexp_c_string(ctx, str, -1);
             res = sexp_read_error(ctx, "unknown character name", tmp, in);
