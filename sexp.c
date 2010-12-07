@@ -1091,7 +1091,7 @@ sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
 sexp sexp_buffered_flush (sexp ctx, sexp p) {
   sexp_gc_var1(tmp);
   if (! sexp_oportp(p))
-	  return sexp_type_exception(ctx, NULL, SEXP_OPORT, p);
+    return sexp_type_exception(ctx, NULL, SEXP_OPORT, p);
   if (! sexp_port_openp(p))
     return sexp_user_exception(ctx, SEXP_FALSE, "port is closed", p);
   else {

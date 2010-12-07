@@ -48,10 +48,6 @@ static int sexp_in_heap(sexp ctx, sexp_uint_t x) {
 }
 #endif
 
-#if SEXP_USE_DEBUG_GC
-#include "opt/gc_debug.c"
-#endif
-
 void sexp_mark (sexp ctx, sexp x) {
   sexp_sint_t i, len;
   sexp t, *p;
