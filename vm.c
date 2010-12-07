@@ -49,6 +49,13 @@ void sexp_stack_trace (sexp ctx, sexp out) {
 
 /************************* code generation ****************************/
 
+static void bytecode_preserve (sexp ctx, sexp obj) {
+  sexp ls = sexp_bytecode_literals(sexp_context_bc(ctx));
+  if (sexp_pointerp(obj) && !sexp_symbolp(obj)
+      && sexp_not(sexp_memq(ctx, obj, ls)))
+    sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), obj);
+}
+
 static void emit_word (sexp ctx, sexp_uint_t val)  {
   unsigned char *data;
   expand_bcode(ctx, sizeof(sexp));
@@ -61,8 +68,7 @@ static void emit_word (sexp ctx, sexp_uint_t val)  {
 static void emit_push (sexp ctx, sexp obj) {
   emit(ctx, SEXP_OP_PUSH);
   emit_word(ctx, (sexp_uint_t)obj);
-  if (sexp_pointerp(obj) && ! sexp_symbolp(obj))
-    sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), obj);
+  bytecode_preserve(ctx, obj);
 }
 
 static void emit_enter (sexp ctx) {return;}
@@ -152,8 +158,7 @@ static void generate_ref (sexp ctx, sexp ref, int unboxp) {
       emit(ctx, (sexp_cdr(sexp_ref_cell(ref)) == SEXP_UNDEF)
                  ? SEXP_OP_GLOBAL_REF : SEXP_OP_GLOBAL_KNOWN_REF);
       emit_word(ctx, (sexp_uint_t)sexp_ref_cell(ref));
-      sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)),
-                sexp_ref_cell(ref));
+      bytecode_preserve(ctx, sexp_ref_cell(ref));
     } else
       emit_push(ctx, sexp_ref_cell(ref));
   } else {
@@ -210,10 +215,9 @@ static void generate_opcode_app (sexp ctx, sexp app) {
 #if SEXP_USE_GREEN_THREADS
           emit(ctx, SEXP_OP_PARAMETER_REF);
           emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
+          bytecode_preserve(ctx, sexp_opcode_data(op));
 #else
           emit_push(ctx, sexp_opcode_data(op));
-          sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)),
-                    sexp_opcode_data(op));
 #endif
           emit(ctx, SEXP_OP_CDR);
         } else {
@@ -271,7 +275,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   case SEXP_OPC_FOREIGN:
     emit(ctx, sexp_opcode_code(op));
     emit_word(ctx, (sexp_uint_t)op);
-    sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), op);
+    bytecode_preserve(ctx, op);
     break;
   case SEXP_OPC_TYPE_PREDICATE:
   case SEXP_OPC_GETTER:
@@ -284,7 +288,8 @@ static void generate_opcode_app (sexp ctx, sexp app) {
         emit_word(ctx, sexp_unbox_fixnum(sexp_opcode_data(op)));
       if (sexp_opcode_data2(op))
         emit_word(ctx, sexp_unbox_fixnum(sexp_opcode_data2(op)));
-      sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), op);
+      if (sexp_opcode_data(op) || sexp_opcode_data2(op))
+        bytecode_preserve(ctx, op);
     }
     break;
   case SEXP_OPC_PARAMETER:
@@ -299,7 +304,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     }
     emit(ctx, SEXP_OP_PARAMETER_REF);
     emit_word(ctx, (sexp_uint_t)op);
-    sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), op);
+    bytecode_preserve(ctx, op);
 #else
     if (num_args > 0) generate(ctx, sexp_cadr(app));
     emit_push(ctx, sexp_opcode_data(op));
@@ -382,7 +387,7 @@ static void generate_lambda (sexp ctx, sexp lambda) {
     /* shortcut, no free vars */
     tmp = sexp_make_vector(ctx2, SEXP_ZERO, SEXP_VOID);
     tmp = sexp_make_procedure(ctx2, flags, len, bc, tmp);
-    sexp_push(ctx, sexp_bytecode_literals(sexp_context_bc(ctx)), tmp);
+    bytecode_preserve(ctx, tmp);
     generate_lit(ctx, tmp);
   } else {
     /* push the closed vars */
