@@ -394,15 +394,15 @@ sexp sexp_make_child_context (sexp ctx, sexp lambda) {
 
 /**************************** identifiers *****************************/
 
-static sexp sexp_identifierp_op (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_identifierp_op (sexp ctx sexp_api_params(self, n), sexp x) {
   return sexp_make_boolean(sexp_idp(x));
 }
 
-static sexp sexp_syntactic_closure_expr_op (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_syntactic_closure_expr_op (sexp ctx sexp_api_params(self, n), sexp x) {
   return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
 }
 
-static sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
   sexp res;
   sexp_gc_var2(kar, kdr);
   sexp_gc_preserve2(ctx, kar, kdr);
@@ -422,7 +422,7 @@ static sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
   return res;
 }
 
-static sexp sexp_identifier_eq_op (sexp ctx sexp_api_params(self, n), sexp e1, sexp id1, sexp e2, sexp id2) {
+sexp sexp_identifier_eq_op (sexp ctx sexp_api_params(self, n), sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell, lam1=SEXP_FALSE, lam2=SEXP_FALSE;
   if (sexp_synclop(id1)) {
     e1 = sexp_synclo_env(id1);
@@ -908,7 +908,7 @@ static sexp sexp_exception_type_op (sexp ctx sexp_api_params(self, n), sexp exn)
   return sexp_exception_kind(exn);
 }
 
-static sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   FILE *in;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
   in = fopen(sexp_string_data(path), "r");
@@ -917,7 +917,7 @@ static sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp pat
   return sexp_make_input_port(ctx, in, path);
 }
 
-static sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   FILE *out;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
   out = fopen(sexp_string_data(path), "w");
@@ -926,7 +926,7 @@ static sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp pa
   return sexp_make_output_port(ctx, out, path);
 }
 
-static sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
+sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, self, "port already closed", port);
