@@ -80,7 +80,8 @@
    and a SRFI-18 interface is provided as a separate module.
    I/O operations will currently block all threads though,
    this needs to be addressed.
-*** TODO thread-local parameters
+*** DONE thread-local parameters
+    CLOSED: [2010-12-06 Mon 21:52]
 *** TODO efficient priority queues
 ** DONE virtual ports
    - State "DONE"       [2010-01-02 Sat 20:12]
