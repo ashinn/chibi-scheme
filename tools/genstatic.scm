@@ -121,7 +121,7 @@
 (define (init-c-lib lib)
   (display "  ")
   (display (cdr lib))
-  (display "(ctx, env);\n"))
+  (display "(ctx sexp_api_pass(NULL, 1), env);\n"))
 
 (define (main args)
   (find-c-libs (if (pair? (cdr args)) (cadr args) "lib"))
