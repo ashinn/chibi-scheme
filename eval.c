@@ -148,8 +148,10 @@ static sexp sexp_reverse_flatten_dot (sexp ctx, sexp ls) {
   sexp_gc_preserve1(ctx, res);
   for (res=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls))
     sexp_push(ctx, res, sexp_car(ls));
+  if (!sexp_nullp(ls))
+    res = sexp_cons(ctx, ls, res);
   sexp_gc_release1(ctx);
-  return (sexp_nullp(ls) ? res : sexp_cons(ctx, ls, res));
+  return res;
 }
 
 static sexp sexp_flatten_dot (sexp ctx, sexp ls) {
@@ -392,15 +394,15 @@ sexp sexp_make_child_context (sexp ctx, sexp lambda) {
 
 /**************************** identifiers *****************************/
 
-static sexp sexp_identifierp_op (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_identifierp_op (sexp ctx sexp_api_params(self, n), sexp x) {
   return sexp_make_boolean(sexp_idp(x));
 }
 
-static sexp sexp_syntactic_closure_expr_op (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_syntactic_closure_expr_op (sexp ctx sexp_api_params(self, n), sexp x) {
   return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
 }
 
-static sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
   sexp res;
   sexp_gc_var2(kar, kdr);
   sexp_gc_preserve2(ctx, kar, kdr);
@@ -420,7 +422,7 @@ static sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
   return res;
 }
 
-static sexp sexp_identifier_eq_op (sexp ctx sexp_api_params(self, n), sexp e1, sexp id1, sexp e2, sexp id2) {
+sexp sexp_identifier_eq_op (sexp ctx sexp_api_params(self, n), sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell, lam1=SEXP_FALSE, lam2=SEXP_FALSE;
   if (sexp_synclop(id1)) {
     e1 = sexp_synclo_env(id1);
@@ -906,7 +908,7 @@ static sexp sexp_exception_type_op (sexp ctx sexp_api_params(self, n), sexp exn)
   return sexp_exception_kind(exn);
 }
 
-static sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   FILE *in;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
   in = fopen(sexp_string_data(path), "r");
@@ -915,7 +917,7 @@ static sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp pat
   return sexp_make_input_port(ctx, in, path);
 }
 
-static sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   FILE *out;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
   out = fopen(sexp_string_data(path), "w");
@@ -924,7 +926,7 @@ static sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp pa
   return sexp_make_output_port(ctx, out, path);
 }
 
-static sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
+sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, self, "port already closed", port);
@@ -1423,15 +1425,14 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
 
 sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args,
                               int flags, sexp_proc1 f, sexp data) {
-  sexp res = SEXP_VOID;
-  sexp_gc_var1(op);
-  sexp_gc_preserve1(ctx, op);
+  sexp_gc_var2(op, res);
+  sexp_gc_preserve2(ctx, op, res);
   op = sexp_make_foreign(ctx, name, num_args, flags, f, data);
   if (sexp_exceptionp(op))
     res = op;
   else
-    sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), op);
-  sexp_gc_release1(ctx);
+    sexp_env_define(ctx, env, res = sexp_intern(ctx, name, -1), op);
+  sexp_gc_release2(ctx);
   return res;
 }
 
@@ -1477,11 +1478,14 @@ sexp sexp_make_env_op (sexp ctx sexp_api_params(self, n)) {
 
 sexp sexp_make_null_env_op (sexp ctx sexp_api_params(self, n), sexp version) {
   sexp_uint_t i;
-  sexp e = sexp_make_env(ctx), core;
+  sexp_gc_var2(e, core);
+  sexp_gc_preserve2(ctx, e, core);
+  e = sexp_make_env(ctx);
   for (i=0; i<(sizeof(core_forms)/sizeof(core_forms[0])); i++) {
     core = sexp_copy_core(ctx, &core_forms[i]);
     sexp_env_define(ctx, e, sexp_intern(ctx, sexp_core_name(core), -1), core);
   }
+  sexp_gc_release2(ctx);
   return e;
 }
 
@@ -1652,7 +1656,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "threads", -1));
 #endif
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi", -1));
-  sexp_env_define(ctx, e, sexp_intern(ctx, "*features*", -1), tmp);
+  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), tmp);
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
 #if SEXP_USE_SIMPLIFY
   op = sexp_make_foreign(ctx, "simplify", 1, 0,
@@ -1699,7 +1703,9 @@ sexp sexp_make_standard_env_op (sexp ctx sexp_api_params(self, n), sexp version)
 }
 
 sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp) {
-  sexp oldname, newname, value;
+  sexp oldname, newname;
+  sexp_gc_var1(value);
+  sexp_gc_preserve1(ctx, value);
   if (! sexp_envp(to)) to = sexp_context_env(ctx);
   if (! sexp_envp(from)) from = sexp_context_env(ctx);
   if (sexp_not(ls)) {
@@ -1730,6 +1736,7 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
       }
     }
   }
+  sexp_gc_release1(ctx);
   return SEXP_VOID;
 }
 
