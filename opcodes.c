@@ -10,6 +10,7 @@
 #define _FN2OPT(rt, a1, a2, s, d, f) _FN(SEXP_OP_FCALL2, 1, 1, rt, a1, a2, SEXP_FALSE, s, d, f)
 #define _FN2OPTP(rt, a1, a2, s, d, f) _FN(SEXP_OP_FCALL2, 1, 3, rt, a1, a2, SEXP_FALSE, s, d, f)
 #define _FN3(rt, a1, a2, a3, s, d, f) _FN(SEXP_OP_FCALL3, 3, 0, rt, a1, a2, a3, s, d, f)
+#define _FN3OPT(rt, a1, a2, a3, s, d, f) _FN(SEXP_OP_FCALL3, 2, 1, rt, a1, a2, a3, s, d, f)
 #define _FN4(rt, a1, a2, a3, s, d, f) _FN(SEXP_OP_FCALL4, 4, 0, rt, a1, a2, a3, s, d, f)
 #define _PARAM(n, t) _OP(SEXP_OPC_PARAMETER, SEXP_OP_PARAMETER_REF, 0, 1, t, t, SEXP_FALSE, SEXP_FALSE, 0, n, SEXP_FALSE, 0)
 
@@ -120,7 +121,6 @@ _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "make-string", sexp_mak
 _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-byte-vector", SEXP_ZERO, sexp_make_bytes_op),
 _FN2OPT(_I(SEXP_NUMBER), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string->number", SEXP_TEN, sexp_string_to_number_op),
 _FN3(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_BOOLEAN), "string-cmp", 0, sexp_string_cmp_op),
-_FN3(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring", 0, sexp_substring_op),
 _FN1(_I(SEXP_SYMBOL), _I(SEXP_STRING), "string->symbol", 0, sexp_string_to_symbol_op),
 _FN2OPT(_I(SEXP_STRING), SEXP_NULL, _I(SEXP_STRING), "string-concatenate", SEXP_FALSE, sexp_string_concatenate_op),
 _FN2(_I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_NULL, "memq", 0, sexp_memq_op),
@@ -150,6 +150,10 @@ _FN2(_I(SEXP_NUMBER), _I(SEXP_NUMBER), _I(SEXP_NUMBER), "expt", 0, sexp_expt_op)
 _FN2(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-index->offset", 0, sexp_string_index_to_offset),
 _FN2(_I(SEXP_CHAR), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-ref", 0, sexp_string_utf8_index_ref),
 _FN3(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "string-set!", 0, sexp_string_utf8_index_set),
+_FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring-cursor", SEXP_FALSE, sexp_substring_op),
+_FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring", SEXP_FALSE, sexp_utf8_substring_op),
+#else
+_FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring", SEXP_FALSE, sexp_substring_op),
 #endif
 #if SEXP_USE_TYPE_DEFS
 _FN3(_I(SEXP_TYPE), _I(SEXP_STRING), _I(SEXP_TYPE), SEXP_NULL, "register-simple-type", 0, sexp_register_simple_type_op),

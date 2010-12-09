@@ -206,6 +206,9 @@ test-records: chibi-scheme$(EXE)
 test-weak: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/weak-tests.scm
 
+test-unicode: chibi-scheme$(EXE)
+	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/unicode-tests.scm
+
 test-libs: chibi-scheme$(EXE)
 	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/lib-tests.scm
 

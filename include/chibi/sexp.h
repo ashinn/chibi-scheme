@@ -1034,6 +1034,12 @@ SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp out);
 SEXP_API void sexp_init(void);
 
+#if SEXP_USE_UTF8_STRINGS
+SEXP_API sexp sexp_string_index_to_offset (sexp ctx sexp_api_params(self, n), sexp str, sexp index);
+SEXP_API sexp sexp_utf8_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start, sexp end);
+SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
+#endif
+
 #define sexp_assert_type(ctx, pred, type_id, obj) if (! pred(obj)) return sexp_type_exception(ctx, self, type_id, obj)
 
 #define SEXP_COPY_DEFAULT SEXP_ZERO

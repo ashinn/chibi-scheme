@@ -1142,13 +1142,13 @@ static sexp sexp_string_cmp_op (sexp ctx sexp_api_params(self, n), sexp str1, se
 
 #if SEXP_USE_UTF8_STRINGS
 
-static int sexp_utf8_initial_byte_count(int c) {
+static int sexp_utf8_initial_byte_count (int c) {
   if (c < 0xC0) return 1;
   if (c < 0xE0) return 2;
   return ((c>>4)&1)+3;
 }
 
-static int sexp_utf8_char_byte_count(int c) {
+static int sexp_utf8_char_byte_count (int c) {
   if (c < 0x80) return 1;
   if (c < 0x800) return 2;
   if (c < 0x10000) return 3;
@@ -1161,20 +1161,6 @@ static int sexp_string_utf8_length (unsigned char *p, int len) {
   for (i=0; p<q; i++)
     p += sexp_utf8_initial_byte_count(*p);
   return i;
-}
-
-sexp sexp_string_index_to_offset (sexp ctx sexp_api_params(self, n), sexp str, sexp index) {
-  sexp_sint_t i, j, limit;
-  unsigned char *p;
-  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, index);
-  p = (unsigned char*)sexp_string_data(str);
-  limit = sexp_string_length(str);
-  for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
-    j += sexp_utf8_initial_byte_count(p[j]);
-  if (i>0)
-    return sexp_user_exception(ctx, self, "string-index->offset: index out of range", index);
-  return sexp_make_fixnum(j);
 }
 
 sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
@@ -1198,17 +1184,6 @@ sexp sexp_string_utf8_index_ref (sexp ctx sexp_api_params(self, n), sexp str, se
   off = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, i);
   if (sexp_exceptionp(off)) return off;
   return sexp_string_utf8_ref(ctx, str, off);
-}
-
-void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
-  switch (len) {
-  case 4:  *p++ = (0xF0 + ((c)>>18)); *p++ = (0x80 + ((c>>12)&0x3F));
-    *p++ = (0x80 + ((c>>6)&0x3F));    *p = (0x80 + (c&0x3F)); break;
-  case 3:  *p++ = (0xE0 + ((c)>>12)); *p++ = (0x80 + ((c>>6)&0x3F));
-    *p = (0x80 + (c&0x3F)); break;
-  case 2:  *p++ = (0xC0 + ((c)>>6));  *p = (0x80 + (c&0x3F)); break;
-  default: *p = c; break;
-  }
 }
 
 void sexp_write_utf8_char (sexp ctx, int c, sexp out) {
