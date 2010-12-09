@@ -720,10 +720,64 @@ sexp sexp_make_bytes_op (sexp ctx sexp_api_params(self, n), sexp len, sexp i) {
   return s;
 }
 
+#if SEXP_USE_UTF8_STRINGS
+
+static int sexp_utf8_initial_byte_count (int c) {
+  if (c < 0xC0) return 1;
+  if (c < 0xE0) return 2;
+  return ((c>>4)&1)+3;
+}
+
+static int sexp_utf8_char_byte_count (int c) {
+  if (c < 0x80) return 1;
+  if (c < 0x800) return 2;
+  if (c < 0x10000) return 3;
+  return 4;
+}
+
+void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
+  switch (len) {
+  case 4:  *p++ = (0xF0 + ((c)>>18)); *p++ = (0x80 + ((c>>12)&0x3F));
+    *p++ = (0x80 + ((c>>6)&0x3F));    *p = (0x80 + (c&0x3F)); break;
+  case 3:  *p++ = (0xE0 + ((c)>>12)); *p++ = (0x80 + ((c>>6)&0x3F));
+    *p = (0x80 + (c&0x3F)); break;
+  case 2:  *p++ = (0xC0 + ((c)>>6));  *p = (0x80 + (c&0x3F)); break;
+  default: *p = c; break;
+  }
+}
+
+sexp sexp_string_index_to_offset (sexp ctx sexp_api_params(self, n), sexp str, sexp index) {
+  sexp_sint_t i, j, limit;
+  unsigned char *p;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, index);
+  p = (unsigned char*)sexp_string_data(str);
+  limit = sexp_string_length(str);
+  for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
+    j += sexp_utf8_initial_byte_count(p[j]);
+  if (i>0)
+    return sexp_user_exception(ctx, self, "string-index->offset: index out of range", index);
+  return sexp_make_fixnum(j);
+}
+
+#endif
+
 sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch)
 {
   sexp i = (sexp_charp(ch) ? sexp_make_fixnum(sexp_unbox_character(ch)) : ch);
   sexp_gc_var2(b, s);
+#if SEXP_USE_UTF8_STRINGS
+  int j, clen;
+  if (sexp_charp(ch) && (sexp_unbox_character(ch) >= 0x80)) {
+    sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, len);
+    clen = sexp_utf8_char_byte_count(sexp_unbox_character(ch));
+    b = sexp_make_bytes_op(ctx sexp_api_pass(self, n),
+                           sexp_fx_mul(len, sexp_make_fixnum(clen)), SEXP_VOID);
+    for (j=0; j<sexp_unbox_fixnum(len); j++)
+      sexp_utf8_encode_char((unsigned char*)sexp_bytes_data(b)+(j*clen), clen,
+                            sexp_unbox_character(ch));
+  } else
+#endif
   b = sexp_make_bytes_op(ctx sexp_api_pass(self, n), len, i);
   if (sexp_exceptionp(b)) return b;
 #if SEXP_USE_PACKED_STRINGS
@@ -734,7 +788,7 @@ sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch)
   s = sexp_alloc_type(ctx, string, SEXP_STRING);
   sexp_string_bytes(s) = b;
   sexp_string_offset(s) = 0;
-  sexp_string_length(s) = sexp_unbox_fixnum(len);
+  sexp_string_length(s) = sexp_bytes_length(b);
   sexp_gc_release2(ctx);
   return s;
 #endif
@@ -768,6 +822,17 @@ sexp sexp_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start,
   sexp_string_data(res)[sexp_string_length(res)] = '\0';
   return res;
 }
+
+#if SEXP_USE_UTF8_STRINGS
+sexp sexp_utf8_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start, sexp end) {
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
+  start = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, start);
+  if (sexp_fixnump(end))
+    end = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, end);
+  return sexp_substring_op(ctx sexp_api_pass(self, n), str, start, end);
+}
+#endif
 
 sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sexp str_ls, sexp sep) {
   sexp res, ls;
@@ -1540,23 +1605,18 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
 }
 
 #if SEXP_USE_UTF8_STRINGS
-static int sexp_decode_utf8_char(const unsigned char* str) {
-  const unsigned char* tail=str;
-  int i = str[0], res = -1;
-  if ((i >= 0xC0) && (i <= 0xF7)) {
-    if (i < 0xE0) {
-      res = ((i&0x3F)<<6) + (str[1]&0x3F);
-      tail = str + 2;
-    } else if (i < 0xF0) {
-      res = ((i&0x1F)<<12) + ((str[1]&0x3F)<<6) + (str[2]&0x3F);
-      tail = str + 3;
-    } else {
-      res = ((i&0x0F)<<16) + ((str[1]&0x3F)<<6)
-        + ((str[2]&0x3F)<<6) + (str[3]&0x3F);
-      tail = str + 4;
+static int sexp_decode_utf8_char(const unsigned char* s) {
+  int i = s[0], len = strlen((const char*)s);
+  if ((i >= 0xC0) && (i <= 0xF7) && (s[1]>>6 == 2)) {
+    if ((i < 0xE0) && (len == 2)) {
+      return ((i&0x3F)<<6) + (s[1]&0x3F);
+    } else if ((i < 0xF0) && (len == 3) && (s[2]>>6 == 2)) {
+      return ((i&0x1F)<<12) + ((s[1]&0x3F)<<6) + (s[2]&0x3F);
+    } else if ((len == 4) && (s[2]>>6 == 2) && (s[3]>>6 == 2)) {
+      return ((i&0x0F)<<16) + ((s[1]&0x3F)<<6) + ((s[2]&0x3F)<<6) + (s[3]&0x3F);
     }
   }
-  return *tail ? -1 : res;
+  return -1;
 }
 #endif
 
