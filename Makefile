@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: all libs doc dist clean cleaner dist-clean test install uninstall
+.PHONY: all libs doc dist clean cleaner dist-clean install uninstall test
 .PRECIOUS: %.c
 
 # install configuration
@@ -103,6 +103,8 @@ endif
 
 all: chibi-scheme$(EXE) libs
 
+CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE)
+
 COMPILED_LIBS := lib/srfi/18/threads$(SO) lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
 	lib/srfi/39/param$(SO) lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) \
 	lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/net$(SO) \
@@ -142,33 +144,29 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
-clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi
-	$(MAKE) chibi-scheme$(EXE)
-	$(MAKE) libs
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" PATH=".:$(PATH)" $(GENSTATIC) $< > $@
+clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi chibi-scheme$(EXE) libs
+	$(CHIBI) $< > $@
 
-%.c: %.stub $(GENSTUBS)
-	$(MAKE) chibi-scheme$(EXE)
-	-LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" PATH=".:$(PATH)" $(GENSTUBS) $<
+%.c: %.stub $(GENSTUBS) chibi-scheme$(EXE)
+	-$(CHIBI) $(GENSTUBS) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 clean:
 	rm -f *.o *.i *.s *.8
-	find lib -name \*$(SO) -exec rm -f '{}' \;
 	rm -f tests/basic/*.out tests/basic/*.err
 
 cleaner: clean
-	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) $(COMPILED_LIBS) *$(SO) *.a include/chibi/install.h
-	rm -rf *.dSYM
+	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) *.a include/chibi/install.h
+	find lib -name \*$(SO) -o -name \*$(SO).dSYM -exec rm -rf '{}' \;
 
 dist-clean: cleaner
 	for f in `find lib -name \*.stub`; do rm -f $${f%.stub}.c; done
 
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
-	    LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
+	    $(CHIBI) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if diff -q $(DIFFOPTS) $${f%.scm}.out $${f%.scm}.res; then \
 	        echo "[PASS] $${f%.scm}"; \
 	    else \
@@ -179,41 +177,41 @@ test-basic: chibi-scheme$(EXE)
 test-build:
 	./tests/build/build-tests.sh
 
-test-threads: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/thread-tests.scm
+test-threads: chibi-scheme$(EXE) lib/srfi/18/threads$(SO) lib/srfi/39/param$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/time$(SO)
+	$(CHIBI) tests/thread-tests.scm
 
 test-numbers: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/numeric-tests.scm
+	$(CHIBI) tests/numeric-tests.scm
 
 test-flonums: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/flonum-tests.scm
+	$(CHIBI) tests/flonum-tests.scm
 
-test-hash: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/hash-tests.scm
+test-hash: chibi-scheme$(EXE) lib/srfi/69/hash$(SO)
+	$(CHIBI) tests/hash-tests.scm
 
 test-match: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/match-tests.scm
+	$(CHIBI) tests/match-tests.scm
 
 test-loop: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/loop-tests.scm
+	$(CHIBI) tests/loop-tests.scm
 
-test-sort: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/sort-tests.scm
+test-sort: chibi-scheme$(EXE) lib/srfi/33/bit$(SO)
+	$(CHIBI) tests/sort-tests.scm
 
 test-records: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/record-tests.scm
+	$(CHIBI) tests/record-tests.scm
 
-test-weak: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/weak-tests.scm
+test-weak: chibi-scheme$(EXE) lib/chibi/weak$(SO)
+	$(CHIBI) tests/weak-tests.scm
 
 test-unicode: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/unicode-tests.scm
+	$(CHIBI) tests/unicode-tests.scm
 
 test-libs: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/lib-tests.scm
+	$(CHIBI) tests/lib-tests.scm
 
 test: chibi-scheme$(EXE)
-	LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE) tests/r5rs-tests.scm
+	$(CHIBI) tests/r5rs-tests.scm
 
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
