@@ -524,6 +524,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     pollfds = sexp_global(res, SEXP_G_THREADS_POLL_FDS);
     if (sexp_portp(sexp_context_event(res)) && sexp_pollfdsp(pollfds)) {
       if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0) {
+        fprintf(stderr, "polling\n");
         pfds = sexp_pollfds_fds(pollfds);
         goto unblock_io_threads;
       }
