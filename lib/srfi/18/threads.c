@@ -513,18 +513,22 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
         sexp_insert_timed(ctx, tmp, tmp);
     }
     usecs = 0;
-    gettimeofday(&tval, NULL);
-    if (tval.tv_sec < sexp_context_timeval(res).tv_sec)
-      usecs = (sexp_context_timeval(res).tv_sec - tval.tv_sec) * 1000000;
-    if (tval.tv_usec < sexp_context_timeval(res).tv_usec)
-      usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
-    else if (usecs > 0)
-      usecs -= tval.tv_usec - sexp_context_timeval(res).tv_usec;
+    if ((sexp_context_timeval(res).tv_sec == 0)
+        && (sexp_context_timeval(res).tv_usec == 0)) {
+      /* no timeout, wait for default 10ms */
+      usecs = 10*1000;
+    } else {
+      /* wait until the next timeout */
+      gettimeofday(&tval, NULL);
+      if (tval.tv_sec < sexp_context_timeval(res).tv_sec)
+        usecs = (sexp_context_timeval(res).tv_sec - tval.tv_sec) * 1000000;
+      if (tval.tv_usec < sexp_context_timeval(res).tv_usec || usecs > 0)
+        usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
+    }
     /* either wait on an fd, or just sleep */
     pollfds = sexp_global(res, SEXP_G_THREADS_POLL_FDS);
     if (sexp_portp(sexp_context_event(res)) && sexp_pollfdsp(pollfds)) {
       if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0) {
-        fprintf(stderr, "polling\n");
         pfds = sexp_pollfds_fds(pollfds);
         goto unblock_io_threads;
       }
