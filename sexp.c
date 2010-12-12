@@ -1632,6 +1632,7 @@ int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
     if (sexp_port_flags(in) & O_NONBLOCK) {
       if (!forcep
           && (((c = sexp_read_char(ctx, in)) == EOF)
+              && (errno == EAGAIN)
               && sexp_opcodep((f=sexp_global(ctx, SEXP_G_THREADS_BLOCKER))))) {
         ((sexp_proc2)sexp_opcode_func(f))(ctx sexp_api_pass(f, 1), in);
         return 1;
