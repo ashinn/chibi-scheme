@@ -775,6 +775,13 @@
      (write-validator (string-append "arg" (type-index-string a)) a))
    args))
 
+(define (write-additional-checks args)
+  (for-each
+   (lambda (a)
+     (if (eq? 'input-port (type-base a))
+         (cat "  sexp_check_block_port(ctx, arg" (type-index a) ", 0);\n")))
+   args))
+
 (define (write-temporaries func)
   (for-each
    (lambda (a)
@@ -975,6 +982,8 @@
          (if (number? len)
              (cat "  if (len" i " != " len ")\n"
                   "    free(tmp" i ");\n"))))
+      ((eq? (type-base a) 'input-port)
+       (cat "  sexp_maybe_unblock_port(ctx, arg" (type-index a) ");\n"))
       ((and (type-result? a) (not (basic-type? a))
             (not (assq (type-base a) *types*))
             (not (type-free? a)) (not (type-pointer? a))
@@ -1006,6 +1015,7 @@
        (write-parameters (func-scheme-args func)) ") {\n")
   (write-locals func)
   (write-validators (func-scheme-args func))
+  (write-additional-checks (func-c-args func))
   (write-temporaries func)
   (write-call func)
   (write-results func)
