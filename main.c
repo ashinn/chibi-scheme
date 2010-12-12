@@ -12,10 +12,6 @@
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
 
-#if SEXP_USE_GREEN_THREADS
-#include <fcntl.h>
-#endif
-
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
 #else
@@ -41,7 +37,9 @@ static void repl (sexp ctx) {
   while (1) {
     sexp_write_string(ctx, "> ", out);
     sexp_flush(ctx, out);
+    sexp_maybe_block_port(ctx, in, 1);
     obj = sexp_read(ctx, in);
+    sexp_maybe_unblock_port(ctx, in);
     if (obj == SEXP_EOF)
       break;
     if (sexp_exceptionp(obj)) {

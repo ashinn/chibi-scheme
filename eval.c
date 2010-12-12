@@ -346,6 +346,8 @@ void sexp_init_eval_context_globals (sexp ctx) {
   tmp = sexp_c_string(ctx, ".", 1);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
 #if SEXP_USE_GREEN_THREADS
+  sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)
+    = sexp_user_exception(ctx, SEXP_FALSE, "I/O would block", SEXP_NULL);
   sexp_global(ctx, SEXP_G_THREADS_FRONT) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = SEXP_ZERO;

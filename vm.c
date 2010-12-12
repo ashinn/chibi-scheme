@@ -543,6 +543,27 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
     && sexp_vector_ref(v, sexp_make_fixnum(d)) == b;
 }
 
+#if SEXP_USE_GREEN_THREADS
+#define sexp_fcall_return(x, i)                         \
+  if (sexp_exceptionp(x)) {                             \
+    if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)) { \
+      fuel = 0; ip--; goto loop;                        \
+    } else {                                            \
+      top -= i;                                         \
+      _ARG1 = x;                                        \
+      ip += sizeof(sexp);                               \
+      goto call_error_handler;                          \
+    }                                                   \
+  } else {                                              \
+    top -= i;                                           \
+    _ARG1 = x;                                          \
+    ip += sizeof(sexp);                                 \
+  }
+#else
+#define sexp_fcall_return(x, i)                                 \
+  top -= i; _ARG1 = x; ip += s; sexp_check_exception(x);
+#endif
+
 #if SEXP_USE_DEBUG_VM
 #include "opt/opcode_names.h"
 #endif
@@ -743,43 +764,34 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_FCALL0:
     _ALIGN_IP();
-    tmp1 = _WORD0;
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    _PUSH(((sexp_proc1)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 0)));
-    ip += sizeof(sexp);
-    sexp_check_exception();
+    tmp1 = ((sexp_proc1)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 0));
+    sexp_fcall_return(tmp1, -1)
     break;
   case SEXP_OP_FCALL1:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
-    _ARG1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 1), _ARG1);
-    ip += sizeof(sexp);
-    sexp_check_exception();
+    tmp1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 1), _ARG1);
+    sexp_fcall_return(tmp1, 0)
     break;
   case SEXP_OP_FCALL2:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
-    _ARG2 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 2), _ARG1, _ARG2);
-    top--;
-    ip += sizeof(sexp);
-    sexp_check_exception();
+    tmp1 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 2), _ARG1, _ARG2);
+    sexp_fcall_return(tmp1, 1)
     break;
   case SEXP_OP_FCALL3:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
-    _ARG3 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 3), _ARG1, _ARG2, _ARG3);
-    top -= 2;
-    ip += sizeof(sexp);
-    sexp_check_exception();
+    tmp1 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 3), _ARG1, _ARG2, _ARG3);
+    sexp_fcall_return(tmp1, 2)
     break;
   case SEXP_OP_FCALL4:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
-    _ARG4 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 4), _ARG1, _ARG2, _ARG3, _ARG4);
-    top -= 3;
-    ip += sizeof(sexp);
-    sexp_check_exception();
+    tmp1 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx sexp_api_pass(_WORD0, 4), _ARG1, _ARG2, _ARG3, _ARG4);
+    sexp_fcall_return(tmp1, 3)
     break;
 #if SEXP_USE_EXTENDED_FCALL
   case SEXP_OP_FCALLN:
@@ -787,10 +799,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     sexp_context_top(ctx) = top;
     i = sexp_opcode_num_args(_WORD0);
     tmp1 = sexp_fcall(ctx, self, i, _WORD0);
-    top -= (i-1);
-    _ARG1 = tmp1;
-    ip += sizeof(sexp);
-    sexp_check_exception();
+    sexp_fcall_return(tmp1, i-1)
     break;
 #endif
   case SEXP_OP_JUMP_UNLESS:

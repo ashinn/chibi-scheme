@@ -23,6 +23,7 @@ extern "C" {
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
 #include <errno.h>
+#include <fcntl.h>
 #endif
 #endif
 
@@ -266,8 +267,8 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      char openp, no_closep, sourcep;
-      sexp_uint_t offset, line;
+      char openp, no_closep, sourcep, blockedp;
+      sexp_uint_t offset, line, flags;
       size_t size;
       sexp name;
       sexp cookie;
@@ -662,10 +663,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_openp(p)     (sexp_pred_field(p, port, sexp_portp, openp))
 #define sexp_port_no_closep(p) (sexp_pred_field(p, port, sexp_portp, no_closep))
 #define sexp_port_sourcep(p)   (sexp_pred_field(p, port, sexp_portp, sourcep))
+#define sexp_port_blockedp(p)  (sexp_pred_field(p, port, sexp_portp, blockedp))
 #define sexp_port_cookie(p)    (sexp_pred_field(p, port, sexp_portp, cookie))
 #define sexp_port_buf(p)       (sexp_pred_field(p, port, sexp_portp, buf))
 #define sexp_port_size(p)      (sexp_pred_field(p, port, sexp_portp, size))
 #define sexp_port_offset(p)    (sexp_pred_field(p, port, sexp_portp, offset))
+#define sexp_port_flags(p)     (sexp_pred_field(p, port, sexp_portp, flags))
 
 #define sexp_exception_kind(x)      (sexp_field(x, exception, SEXP_EXCEPTION, kind))
 #define sexp_exception_message(x)   (sexp_field(x, exception, SEXP_EXCEPTION, message))
@@ -916,6 +919,7 @@ enum sexp_context_globals {
   SEXP_G_WEAK_REFERENCE_CACHE,
 #endif
 #if SEXP_USE_GREEN_THREADS
+  SEXP_G_IO_BLOCK_ERROR,
   SEXP_G_THREADS_SCHEDULER,
   SEXP_G_THREADS_FRONT,
   SEXP_G_THREADS_BACK,
@@ -1039,6 +1043,20 @@ SEXP_API sexp sexp_string_index_to_offset (sexp ctx sexp_api_params(self, n), se
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx sexp_api_params(self, n), sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
 #endif
+
+#if SEXP_USE_GREEN_THREADS
+SEXP_API int sexp_maybe_block_port (sexp ctx, sexp in, int forcep);
+SEXP_API void sexp_maybe_unblock_port (sexp ctx, sexp in);
+#define sexp_check_block_port(ctx, in, forcep)          \
+  if (sexp_maybe_block_port(ctx, in, forcep))           \
+    return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)
+#else
+#define sexp_maybe_block_port(ctx, in, forcep) 0
+#define sexp_maybe_unblock_port(ctx, in) 0
+#define sexp_check_block_port(ctx, in, forcep) 0
+#endif
+
+#define SEXP_PORT_UNKNOWN_FLAGS -1uL
 
 #define sexp_assert_type(ctx, pred, type_id, obj) if (! pred(obj)) return sexp_type_exception(ctx, self, type_id, obj)
 
