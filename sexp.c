@@ -1219,10 +1219,12 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_stream(p) = in;
   sexp_port_name(p) = name;
   sexp_port_line(p) = 1;
+  sexp_port_flags(p) = SEXP_PORT_UNKNOWN_FLAGS;
   sexp_port_buf(p) = NULL;
   sexp_port_openp(p) = 1;
   sexp_port_no_closep(p) = 0;
   sexp_port_sourcep(p) = 0;
+  sexp_port_blockedp(p) = 0;
   sexp_port_cookie(p) = SEXP_VOID;
   return p;
 }
@@ -1620,20 +1622,49 @@ static int sexp_decode_utf8_char(const unsigned char* s) {
 }
 #endif
 
+#if SEXP_USE_GREEN_THREADS
+int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
+  sexp f;
+  int c;
+  if (sexp_port_fileno(in) >= 0) {
+    if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
+      sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
+    if (sexp_port_flags(in) & O_NONBLOCK) {
+      if (!forcep
+          && (((c = sexp_read_char(ctx, in)) == EOF)
+              && sexp_opcodep((f=sexp_global(ctx, SEXP_G_THREADS_BLOCKER))))) {
+        ((sexp_proc2)sexp_opcode_func(f))(ctx sexp_api_pass(f, 1), in);
+        return 1;
+      } else {
+        if (!forcep) sexp_push_char(ctx, c, in);
+        sexp_port_blockedp(in) = 1;
+        fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in) & ~O_NONBLOCK);
+      }
+    }
+  }
+  return 0;
+}
+
+void sexp_maybe_unblock_port (sexp ctx, sexp in) {
+  if (sexp_port_blockedp(in)) {
+    sexp_port_blockedp(in) = 0;
+    fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in));
+  }
+}
+#endif
+
 sexp sexp_read_raw (sexp ctx, sexp in) {
   char *str;
   int c1, c2, line;
   sexp tmp2;
   sexp_gc_var2(res, tmp);
+  sexp_check_block_port(ctx, in, 0);
   sexp_gc_preserve2(ctx, res, tmp);
 
  scan_loop:
   switch (c1 = sexp_read_char(ctx, in)) {
   case EOF:
-    if (sexp_at_eofp(in))
-      res = SEXP_EOF;
-    else
-      goto scan_loop;
+    res = SEXP_EOF;
     break;
   case ';':
     while ((c1 = sexp_read_char(ctx, in)) != EOF)
@@ -1887,6 +1918,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 
   if (sexp_port_sourcep(in) && sexp_pointerp(res))
     sexp_immutablep(res) = 1;
+  sexp_maybe_unblock_port(ctx, in);
   sexp_gc_release2(ctx);
   return res;
 }
