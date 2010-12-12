@@ -916,6 +916,9 @@ sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   in = fopen(sexp_string_data(path), "r");
   if (! in)
     return sexp_user_exception(ctx, self, "couldn't open input file", path);
+#if SEXP_USE_GREEN_THREADS
+  fcntl(fileno(in), F_SETFL, O_NONBLOCK);
+#endif
   return sexp_make_input_port(ctx, in, path);
 }
 
