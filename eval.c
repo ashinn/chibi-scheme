@@ -69,18 +69,25 @@ sexp sexp_env_cell (sexp env, sexp key) {
   return sexp_env_cell_loc(env, key, NULL);
 }
 
+static sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
+                                  sexp value, sexp *varenv) {
+  sexp_gc_var2(cell, ls);
+  while (sexp_env_lambda(env) || sexp_env_syntactic_p(env))
+    env = sexp_env_parent(env);
+  if (varenv) *varenv = env;
+  for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
+    if (sexp_car(ls) == key)
+      return ls;
+  sexp_gc_preserve2(ctx, cell, ls);
+  sexp_env_push(ctx, env, cell, key, value);
+  sexp_gc_release2(ctx);
+  return cell;
+}
+
 static sexp sexp_env_cell_create (sexp ctx, sexp env, sexp key,
                                   sexp value, sexp *varenv) {
-  sexp_gc_var1(cell);
-  cell = sexp_env_cell_loc(env, key, varenv);
-  if (! cell) {
-    sexp_gc_preserve1(ctx, cell);
-    while (sexp_env_lambda(env) || sexp_env_syntactic_p(env))
-      env = sexp_env_parent(env);
-    sexp_env_push(ctx, env, cell, key, value);
-    if (varenv) *varenv = env;
-    sexp_gc_release1(ctx);
-  }
+  sexp cell = sexp_env_cell_loc(env, key, varenv);
+  if (!cell) cell = sexp_env_cell_define(ctx, env, key, value, varenv);
   return cell;
 }
 
@@ -641,7 +648,7 @@ static sexp analyze_define (sexp ctx, sexp x) {
       res = SEXP_VOID;
     } else {
       if (sexp_synclop(name)) name = sexp_synclo_expr(name);
-      sexp_env_cell_create(ctx, env, name, SEXP_VOID, NULL);
+      sexp_env_cell_define(ctx, env, name, SEXP_VOID, NULL);
       if (sexp_pairp(sexp_cadr(x))) {
         tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
         tmp = sexp_cons(ctx, SEXP_VOID, tmp);
