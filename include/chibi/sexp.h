@@ -1051,9 +1051,9 @@ SEXP_API void sexp_maybe_unblock_port (sexp ctx, sexp in);
   if (sexp_maybe_block_port(ctx, in, forcep))           \
     return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)
 #else
-#define sexp_maybe_block_port(ctx, in, forcep) 0
-#define sexp_maybe_unblock_port(ctx, in) 0
-#define sexp_check_block_port(ctx, in, forcep) 0
+#define sexp_maybe_block_port(ctx, in, forcep)
+#define sexp_maybe_unblock_port(ctx, in)
+#define sexp_check_block_port(ctx, in, forcep)
 #endif
 
 #define SEXP_PORT_UNKNOWN_FLAGS -1uL
