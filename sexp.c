@@ -216,15 +216,24 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
 }
 
 sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp parent, sexp slots) {
-  sexp num_slots = sexp_length(ctx, slots);
-  short type_size = sexp_sizeof_header + sizeof(sexp)*sexp_unbox_fixnum(num_slots);
+  short i, num_slots = sexp_unbox_fixnum(sexp_length(ctx, slots));
+  sexp type_size, num_slots_obj, cpl, tmp;
+  if (parent && sexp_typep(parent)) {
+    num_slots += sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(parent)));
+    if (sexp_vectorp((cpl = sexp_type_cpl(parent))))
+      for (i=sexp_vector_length(cpl)-1; i>=0; i--) {
+        tmp = sexp_vector_ref(cpl, sexp_make_fixnum(i));
+        num_slots += sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(tmp)));
+      }
+  }
+  num_slots_obj = sexp_make_fixnum(num_slots);
+  type_size = sexp_make_fixnum(sexp_sizeof_header + sizeof(sexp)*num_slots);
   return
     sexp_register_type(ctx, name, parent, slots,
                        sexp_make_fixnum(sexp_offsetof_slot0),
-                       num_slots, num_slots, SEXP_ZERO, SEXP_ZERO,
-                       sexp_make_fixnum(type_size), SEXP_ZERO, SEXP_ZERO,
-                       SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
-                       NULL);
+                       num_slots_obj, num_slots_obj, SEXP_ZERO, SEXP_ZERO,
+                       type_size, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
+                       SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, NULL);
 }
 
 sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj) {
