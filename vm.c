@@ -211,13 +211,13 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       if (sexp_opcode_inverse(op)) {
         inv_default = 1;
       } else {
-        if (sexp_opcode_opt_param_p(op)) {
+        if (sexp_opcode_opt_param_p(op) && sexp_opcodep(sexp_opcode_data(op))) {
 #if SEXP_USE_GREEN_THREADS
           emit(ctx, SEXP_OP_PARAMETER_REF);
           emit_word(ctx, (sexp_uint_t)sexp_opcode_data(op));
           bytecode_preserve(ctx, sexp_opcode_data(op));
 #else
-          emit_push(ctx, sexp_opcode_data(op));
+          emit_push(ctx, sexp_opcode_data(sexp_opcode_data(op)));
 #endif
           emit(ctx, SEXP_OP_CDR);
         } else {
@@ -561,7 +561,7 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
   }
 #else
 #define sexp_fcall_return(x, i)                                 \
-  top -= i; _ARG1 = x; ip += s; sexp_check_exception(x);
+  top -= i; _ARG1 = x; ip += sizeof(sexp); sexp_check_exception();
 #endif
 
 #if SEXP_USE_DEBUG_VM

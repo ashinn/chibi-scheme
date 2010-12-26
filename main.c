@@ -86,9 +86,9 @@ static sexp check_exception (sexp ctx, sexp res) {
 }
 
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
-  sexp p, res = sexp_load_standard_env(ctx, env, k);
+  sexp res = sexp_load_standard_env(ctx, env, k);
 #if SEXP_USE_GREEN_THREADS
-  p  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
+  sexp p  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
   p  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
   if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
