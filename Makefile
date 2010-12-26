@@ -159,7 +159,7 @@ clean:
 
 cleaner: clean
 	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) *.a include/chibi/install.h
-	find lib -name \*$(SO) -o -name \*$(SO).dSYM -exec rm -rf '{}' \;
+	find lib -name \*$(SO) -exec rm -rf '{}' \;
 
 dist-clean: cleaner
 	for f in `find lib -name \*.stub`; do rm -f $${f%.stub}.c; done
