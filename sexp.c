@@ -331,6 +331,7 @@ sexp sexp_make_context (sexp ctx, size_t size) {
   sexp_context_depth(res)=sexp_context_tracep(res)=sexp_context_pos(res)=0;
   sexp_context_tailp(res) = 1;
 #if SEXP_USE_GREEN_THREADS
+  sexp_context_event(res) = SEXP_FALSE;
   sexp_context_refuel(res) = SEXP_DEFAULT_QUANTUM;
 #endif
   if (ctx) {
@@ -1249,9 +1250,9 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
 
 sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_HUFF_SYMS
-  unsigned long res, c;
+  unsigned long res;
 #endif
-  unsigned long len;
+  unsigned long len, c;
   long i=0;
   double f;
   sexp x, *elts;
