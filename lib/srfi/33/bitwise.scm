@@ -2,7 +2,7 @@
 ;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-(define (bitwise-not i) (- (+ i 1)))
+(define (bitwise-not i) (- -1 i))
 
 (define (bitwise-complement f) (lambda args (bitwise-not (apply f args))))
 
