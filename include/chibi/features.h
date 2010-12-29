@@ -77,6 +77,9 @@
 /* uncomment this to add additional native checks to only mark objects in the heap */
 /* #define SEXP_USE_SAFE_GC_MARK 1 */
 
+/* uncomment this to track what C source line each object is allocated from */
+/* #define SEXP_USE_TRACK_ALLOC_SOURCE 1 */
+
 /* uncomment this to add additional native gc checks to verify a magic header */
 /* #define SEXP_USE_HEADER_MAGIC 1 */
 
@@ -91,7 +94,7 @@
 /* uncomment this to make type definitions common to all contexts */
 /*   By default types are only global if you don't allow user type */
 /*   definitions, so new types will be local to a given set of */
-/*   contexts sharing thei heap. */
+/*   contexts sharing their heap. */
 /* #define SEXP_USE_GLOBAL_TYPES 1 */
 
 /* uncomment this to make the symbol table common to all contexts */
@@ -303,7 +306,11 @@
 #endif
 
 #ifndef SEXP_USE_CONSERVATIVE_GC
-#define SEXP_USE_CONSERVATIVE_GC 0
+#define SEXP_USE_CONSERVATIVE_GC SEXP_USE_DEBUG_GC > 1
+#endif
+
+#ifndef SEXP_USE_TRACK_ALLOC_SOURCE
+#define SEXP_USE_TRACK_ALLOC_SOURCE SEXP_USE_DEBUG_GC > 1
 #endif
 
 #ifndef SEXP_USE_HEADER_MAGIC

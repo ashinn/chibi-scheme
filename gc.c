@@ -105,8 +105,15 @@ void sexp_conservative_mark (sexp ctx) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      if (! sexp_gc_mark(p) && stack_references_pointer_p(ctx, p))
+      if (! sexp_gc_mark(p) && stack_references_pointer_p(ctx, p)) {
+#if SEXP_USE_DEBUG_GC > 1
+        if (p && sexp_pointerp(p)) {
+          fprintf(stderr, "GC MISS: %p: %s\n", p, sexp_pointer_source(p));
+          fflush(stderr);
+        }
+#endif
         sexp_mark(ctx, p);
+      }
       p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
     }
   }
@@ -235,6 +242,9 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp_mark(ctx, ctx);
   sexp_conservative_mark(ctx);
 #if SEXP_USE_DEBUG_GC
+  fprintf(stderr, "******************** GC ********************\n");
+#endif
+#if SEXP_USE_DEBUG_GC > 2
   sexp_sweep_stats(ctx, 2, NULL, "* \x1B[31mFREE:\x1B[0m ");
 #endif
 #if SEXP_USE_WEAK_REFERENCES
