@@ -47,10 +47,13 @@ static int is_separator(int c) {
 sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 #endif
 
-sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag) {
+sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_source_param) {
   sexp res = (sexp) sexp_alloc(ctx, size);
   if (res && ! sexp_exceptionp(res)) {
     sexp_pointer_tag(res) = tag;
+#if SEXP_USE_TRACK_ALLOC_SOURCE
+    sexp_pointer_source(res) = source;
+#endif
 #if SEXP_USE_HEADER_MAGIC
     sexp_pointer_magic(res) = SEXP_POINTER_MAGIC;
 #endif

@@ -232,6 +232,9 @@ struct sexp_struct {
   unsigned int freep:1;
   unsigned int brokenp:1;
   unsigned int syntacticp:1;
+#if SEXP_USE_TRACK_ALLOC_SOURCE
+  const char* source;
+#endif
 #if SEXP_USE_HEADER_MAGIC
   unsigned int magic;
 #endif
@@ -444,12 +447,18 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 
 #define sexp_sizeof(x) (offsetof(struct sexp_struct, value) \
                          + sizeof(((sexp)0)->value.x))
-
 #define sexp_offsetof(type, f) (offsetof(struct sexp_struct, value.type.f))
-
 #define sexp_offsetof_slot0 (offsetof(struct sexp_struct, value))
-
 #define sexp_sizeof_header (sexp_sizeof(flonum) - sizeof(double))
+
+#if SEXP_USE_TRACK_ALLOC_SOURCE
+#define sexp_with_current_source0(file, line) file ": " #line
+#define sexp_with_current_source(file, line) , sexp_with_current_source0(file, line)
+#else
+#define sexp_with_current_source(file, line)
+#endif
+
+#define sexp_alloc_tagged(ctx, type, tag) sexp_alloc_tagged_aux(ctx, type, tag sexp_with_current_source(__FILE__, __LINE__))
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 #define sexp_alloc_bytecode(ctx, i) sexp_alloc_tagged(ctx, sexp_sizeof(bytecode) + i, SEXP_BYTECODE)
@@ -477,6 +486,12 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_freep(x)            ((x)->freep)
 #define sexp_brokenp(x)          ((x)->brokenp)
 #define sexp_pointer_magic(x)    ((x)->magic)
+
+#if SEXP_USE_TRACK_ALLOC_SOURCE
+#define sexp_pointer_source(x)   ((x)->source)
+#else
+#define sexp_pointer_source(x)   ""
+#endif
 
 #define sexp_check_tag(x,t)  (sexp_pointerp(x) && (sexp_pointer_tag(x) == (t)))
 
@@ -990,8 +1005,14 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 #define sexp_at_eofp(p)      (feof(sexp_port_stream(p)))
 #define sexp_port_fileno(p)  (fileno(sexp_port_stream(p)))
 
+#if SEXP_USE_TRACK_ALLOC_SOURCE
+#define sexp_current_source_param , const char* source
+#else
+#define sexp_current_source_param
+#endif
+
+SEXP_API sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_source_param);
 SEXP_API sexp sexp_make_context(sexp ctx, size_t size);
-SEXP_API sexp sexp_alloc_tagged(sexp ctx, size_t size, sexp_uint_t tag);
 SEXP_API sexp sexp_cons_op(sexp ctx sexp_api_params(self, n), sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
 SEXP_API sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b);
