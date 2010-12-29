@@ -25,7 +25,7 @@ void sexp_stack_trace (sexp ctx, sexp out) {
   if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
   for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
     self = stack[i+2];
-    if (sexp_procedurep(self)) {
+    if (self && sexp_procedurep(self)) {
       sexp_write_string(ctx, "  called from ", out);
       bc = sexp_procedure_code(self);
       if (sexp_truep(sexp_bytecode_name(bc)))
