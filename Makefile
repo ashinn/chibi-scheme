@@ -85,10 +85,10 @@ endif
 
 ifeq ($(SEXP_USE_BOEHM),1)
 GCLDFLAGS := -lgc
-XCPPFLAGS := $(CPPFLAGS) -Iinclude -DSEXP_USE_BOEHM=1
+XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%) -DSEXP_USE_BOEHM=1
 else
 GCLDFLAGS :=
-XCPPFLAGS := $(CPPFLAGS) -Iinclude
+XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%)
 endif
 
 ifeq ($(SEXP_USE_DL),0)
