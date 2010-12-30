@@ -76,7 +76,7 @@ sexp sexp_current_thread (sexp ctx sexp_api_params(self, n)) {
 sexp sexp_make_thread (sexp ctx sexp_api_params(self, n), sexp thunk, sexp name) {
   sexp res, *stack;
   sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, thunk);
-  res = sexp_make_eval_context(ctx, SEXP_FALSE, sexp_context_env(ctx), 0);
+  res = sexp_make_eval_context(ctx, SEXP_FALSE, sexp_context_env(ctx), 0, 0);
   sexp_context_proc(res) = thunk;
   sexp_context_ip(res) = sexp_bytecode_data(sexp_procedure_code(thunk));
   stack = sexp_stack_data(sexp_context_stack(res));

@@ -184,7 +184,7 @@ struct sexp_free_list_t {
 
 typedef struct sexp_heap_t *sexp_heap;
 struct sexp_heap_t {
-  sexp_uint_t size;
+  sexp_uint_t size, max_size;
   sexp_free_list free_list;
   sexp_heap next;
   /* note this must be aligned on a proper heap boundary, */
@@ -1012,7 +1012,7 @@ SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
 #endif
 
 SEXP_API sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_source_param);
-SEXP_API sexp sexp_make_context(sexp ctx, size_t size);
+SEXP_API sexp sexp_make_context(sexp ctx, size_t size, size_t max_size);
 SEXP_API sexp sexp_cons_op(sexp ctx sexp_api_params(self, n), sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
 SEXP_API sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b);
