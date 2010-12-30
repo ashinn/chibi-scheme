@@ -357,7 +357,7 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   prev_lambda = sexp_context_lambda(ctx);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
-  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx), 0);
+  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx), 0, 0);
   sexp_context_lambda(ctx2) = lambda;
   /* allocate space for local vars */
   for (ls=sexp_lambda_locals(lambda); sexp_pairp(ls); ls=sexp_cdr(ls))

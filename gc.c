@@ -254,7 +254,7 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   return res;
 }
 
-sexp_heap sexp_make_heap (size_t size) {
+sexp_heap sexp_make_heap (size_t size, size_t max_size) {
   sexp_free_list free, next;
   sexp_heap h;
 #if SEXP_USE_MMAP_GC
@@ -265,7 +265,8 @@ sexp_heap sexp_make_heap (size_t size) {
 #endif
   if (! h) return NULL;
   h->size = size;
-  h->data = (char*) sexp_heap_align((sexp_uint_t)&(h->data));
+  h->max_size = max_size;
+  h->data = (char*) sexp_heap_align(sizeof(h->data)+(sexp_uint_t)&(h->data));
   free = h->free_list = (sexp_free_list) h->data;
   h->next = NULL;
   next = (sexp_free_list) (((char*)free) + sexp_heap_align(sexp_sizeof(pair)));
@@ -281,7 +282,7 @@ int sexp_grow_heap (sexp ctx, size_t size) {
   sexp_heap h = sexp_heap_last(sexp_context_heap(ctx));
   cur_size = h->size;
   new_size = sexp_heap_align(((cur_size > size) ? cur_size : size) * 2);
-  h->next = sexp_make_heap(new_size);
+  h->next = sexp_make_heap(new_size, h->max_size);
   return (h->next != NULL);
 }
 
@@ -319,7 +320,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
     if (((max_freed < size)
          || ((total_size > sum_freed)
              && (total_size - sum_freed) > (total_size*SEXP_GROW_HEAP_RATIO)))
-        && ((!SEXP_MAXIMUM_HEAP_SIZE) || (total_size < SEXP_MAXIMUM_HEAP_SIZE)))
+        && ((!h->max_size) || (total_size < h->max_size)))
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
     if (! res)
@@ -341,7 +342,7 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
   if (from->next) {
     return sexp_user_exception(ctx, NULL, "can't copy a non-contiguous heap", ctx);
   } else if (! dst || sexp_not(dst)) {
-    to = sexp_make_heap(from->size);
+    to = sexp_make_heap(from->size, from->max_size);
     dst = (sexp) ((char*)ctx + ((char*)to - (char*)from));
   } else if (! sexp_contextp(dst)) {
     return sexp_type_exception(ctx, NULL, SEXP_CONTEXT, dst);
@@ -414,7 +415,7 @@ void sexp_gc_init (void) {
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);
 #endif
 #if SEXP_USE_GLOBAL_HEAP
-  sexp_global_heap = sexp_make_heap(size);
+  sexp_global_heap = sexp_make_heap(size, SEXP_MAXIMUM_HEAP_SIZE);
 #endif
 #if SEXP_USE_CONSERVATIVE_GC
   /* the +32 is a hack, but this is just for debugging anyway */

@@ -65,6 +65,15 @@ static void repl (sexp ctx) {
   sexp_gc_release4(ctx);
 }
 
+static sexp_uint_t multiplier (char c) {
+  switch ((tolower)(c)) {
+  case 'k': return 1024;
+  case 'm': return (1024*1024);
+  case 'g': return (1024*1024*1024);
+  default:  return 1;
+  }
+}
+
 static void check_nonull_arg (int c, char *arg) {
   if (! arg) {
     fprintf(stderr, "chibi-scheme: option '%c' requires an argument\n", c);
@@ -101,7 +110,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
 }
 
 #define init_context() if (! ctx) do {                                  \
-      ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size);        \
+      ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size, heap_max_size); \
       env = sexp_context_env(ctx);                                      \
       sexp_gc_preserve2(ctx, tmp, args);                                \
     } while (0)
@@ -115,7 +124,7 @@ void run_main (int argc, char **argv) {
   char *arg, *impmod, *p;
   sexp out=SEXP_FALSE, res=SEXP_VOID, env=NULL, ctx=NULL;
   sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0;
-  sexp_uint_t heap_size=0;
+  sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp_gc_var2(tmp, args);
   args = SEXP_NULL;
 
@@ -181,13 +190,11 @@ void run_main (int argc, char **argv) {
     case 'h':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('h', arg);
-      heap_size = atol(arg);
-      len = strlen(arg);
-      if (heap_size && (isalpha)(arg[len-1])) {
-        switch ((tolower)(arg[len-1])) {
-        case 'k': heap_size *= 1024; break;
-        case 'm': heap_size *= (1024*1024); break;
-        }
+      heap_size = strtoul(arg, &arg, 0);
+      if ((isalpha)(*arg)) heap_size *= multiplier(*arg++);
+      if (*arg == '/') {
+        heap_max_size = strtoul(arg+1, &arg, 0);
+        if ((isalpha)(*arg)) heap_max_size *= multiplier(*arg++);
       }
       break;
     case 'V':
