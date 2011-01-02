@@ -35,8 +35,10 @@
 (define (length+ x)
   (if (not (pair? x))
       0
-      (let lp ((hare (cdr x)) (tortoise x) (res 0))
+      (let lp ((hare (cdr x)) (tortoise x) (res 1))
         (and (not (eq? hare tortoise))
              (if (pair? hare)
-                 (lp (cddr hare) (cdr tortoise) (+ res 1))
+                 (if (not (pair? (cdr hare)))
+                     (+ res 1)
+                     (lp (cddr hare) (cdr tortoise) (+ res 2)))
                  res)))))
