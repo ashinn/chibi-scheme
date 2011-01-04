@@ -98,11 +98,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
   sexp e = sexp_load_standard_env(ctx, env, k), res;
 #if SEXP_USE_GREEN_THREADS
   sexp p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
-  if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
-  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
-  if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
-  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
-  if (sexp_portp(p)) fcntl(sexp_port_fileno(p), F_SETFL, O_NONBLOCK);
+  if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
 #endif
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
