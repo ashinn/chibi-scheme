@@ -5,6 +5,7 @@
           close-file-descriptor renumber-file-descriptor
           delete-file link-file symbolic-link-file rename-file
           directory-files directory-fold create-directory delete-directory
+          open-pipe make-fifo
           file-status
           file-device               file-inode
           file-mode                 file-num-links
