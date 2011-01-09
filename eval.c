@@ -392,7 +392,7 @@ sexp sexp_make_child_context (sexp ctx, sexp lambda) {
                                     sexp_context_stack(ctx),
                                     sexp_context_env(ctx),
                                     0,
-                                    sexp_context_heap(ctx)->max_size);
+                                    sexp_context_max_size(ctx));
   if (! sexp_exceptionp(res)) {
     sexp_context_lambda(res) = lambda;
     sexp_context_top(res) = sexp_context_top(ctx);
