@@ -813,9 +813,11 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #if ! SEXP_USE_BOEHM
 SEXP_API sexp_heap sexp_global_heap;
 #endif
-#define sexp_context_heap(ctx)  sexp_global_heap
+#define sexp_context_heap(ctx)     sexp_global_heap
+#define sexp_context_max_size(ctx) 0
 #else
-#define sexp_context_heap(ctx)  ((ctx)->value.context.heap)
+#define sexp_context_heap(ctx)     ((ctx)->value.context.heap)
+#define sexp_context_max_size(ctx) sexp_context_heap(ctx)->max_size
 #endif
 
 #if SEXP_USE_GLOBAL_SYMBOLS
