@@ -105,9 +105,9 @@ all: chibi-scheme$(EXE) libs
 
 CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE)
 
-COMPILED_LIBS := lib/srfi/18/threads$(SO) lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
-	lib/srfi/39/param$(SO) lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) \
-	lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/net$(SO) \
+COMPILED_LIBS := lib/srfi/18/threads$(SO) lib/srfi/27/rand$(SO) \
+	lib/srfi/33/bit$(SO) lib/srfi/39/param$(SO) lib/srfi/69/hash$(SO) \
+	lib/srfi/95/qsort$(SO) lib/srfi/98/env$(SO) lib/chibi/net$(SO) \
 	lib/chibi/filesystem$(SO) lib/chibi/process$(SO) lib/chibi/time$(SO) \
 	lib/chibi/system$(SO) lib/chibi/io/io$(SO) lib/chibi/stty$(SO) \
 	lib/chibi/weak$(SO) lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO)
@@ -149,6 +149,9 @@ clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi chibi-scheme$(EXE) libs
 
 %.c: %.stub $(GENSTUBS) chibi-scheme$(EXE)
 	-$(CHIBI) $(GENSTUBS) $<
+
+lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
+	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
