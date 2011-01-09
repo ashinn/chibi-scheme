@@ -29,8 +29,9 @@ static int sexp_in_heap_p (sexp_heap h, sexp p) {
 #endif
 
 static sexp sexp_last_context (sexp ctx, sexp *cstack) {
-  sexp res=SEXP_FALSE, p;
+  sexp res=SEXP_FALSE;
 #if ! SEXP_USE_BOEHM
+  sexp p;
   sexp_sint_t i;
   sexp_heap h = sexp_context_heap(ctx);
   for (i=0; i<SEXP_LAST_CONTEXT_CHECK_LIMIT; i++) {

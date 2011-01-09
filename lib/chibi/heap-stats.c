@@ -1,10 +1,12 @@
 /* heap-stats.c -- count or dump heap objects                */
-/* Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/* Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
 
 #define SEXP_HEAP_VECTOR_DEPTH 1
+
+#if ! SEXP_USE_BOEHM
 
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
 extern sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x);
@@ -112,9 +114,20 @@ static sexp sexp_heap_dump (sexp ctx sexp_api_params(self, n), sexp depth) {
   return sexp_heap_walk(ctx, sexp_unbox_fixnum(depth), 1);
 }
 
+#else
+
+static sexp sexp_heap_stats (sexp ctx sexp_api_params(self, n)) {
+  return SEXP_NULL;
+}
+
+static sexp sexp_heap_dump (sexp ctx sexp_api_params(self, n), sexp depth) {
+  return SEXP_NULL;
+}
+
+#endif
+
 sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "heap-stats", 0, sexp_heap_stats);
   sexp_define_foreign_opt(ctx, env, "heap-dump", 1, sexp_heap_dump, SEXP_ONE);
   return SEXP_VOID;
 }
-
