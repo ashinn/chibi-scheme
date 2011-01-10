@@ -112,6 +112,9 @@ void sexp_conservative_mark (sexp ctx) {
           fflush(stderr);
         }
 #endif
+#if SEXP_USE_CONSERVATIVE_GC_PRESERVE_TAG
+        if (sexp_pointer_tag(p) == SEXP_USE_CONSERVATIVE_GC_PRESERVE_TAG)
+#endif
         sexp_mark(ctx, p);
       }
       p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
