@@ -8,7 +8,7 @@
 #include <sys/mman.h>
 #endif
 
-#define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(sexp_sizeof(pair)))
+#define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(sexp_sizeof(flonum)))
 
 #if SEXP_USE_GLOBAL_HEAP
 sexp_heap sexp_global_heap;
