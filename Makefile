@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: all libs doc dist clean cleaner dist-clean install uninstall test
+.PHONY: all libs doc dist clean cleaner dist-clean install uninstall test checkdefs
 .PRECIOUS: %.c
 
 # install configuration
@@ -166,6 +166,13 @@ cleaner: clean
 
 dist-clean: cleaner
 	for f in `find lib -name \*.stub`; do rm -f $${f%.stub}.c; done
+
+checkdefs:
+	@for d in $(D); do \
+	    if ! grep -q " SEXP_USE_$${d%%=*} " include/chibi/features.h; then \
+	        echo "WARNING: unknown definition $$d"; \
+	    fi; \
+	done
 
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
