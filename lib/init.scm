@@ -301,20 +301,6 @@
      `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr expr))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; promises
-
-(define (make-promise thunk)
-  (lambda ()
-    (let ((computed? #f) (result #f))
-      (if (not computed?)
-          (begin
-            (set! result (thunk))
-            (set! computed? #t)))
-      result)))
-
-(define (force x) (if (procedure? x) (x) x))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exceptions
 
 (define (error msg . args)
@@ -876,3 +862,19 @@
              ((check (caar ls)) `(,(rename 'begin) ,@(cdar ls)))
              (else (expand (cdr ls))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; promises
+
+(cond-expand
+ (auto-force
+  (define (force x) x))
+ (else
+  (define (make-promise thunk)
+   (lambda ()
+     (let ((computed? #f) (result #f))
+       (if (not computed?)
+           (begin
+             (set! result (thunk))
+             (set! computed? #t)))
+       result)))
+  (define (force x) (if (procedure? x) (x) x))))

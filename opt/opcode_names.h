@@ -17,5 +17,5 @@ static const char* reverse_opcode_names[] =
    "LT", "LE", "EQN", "EQ", "EXACT->INEXACT", "INEXACT->EXACT",
    "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
    "WRITE-CHAR", "NEWLINE", "READ-CHAR", "PEEK-CHAR",
-   "YIELD", "RET", "DONE",
+   "YIELD", "FORCE", "RET", "DONE",
   };

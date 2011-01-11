@@ -1264,6 +1264,17 @@ sexp sexp_string_utf8_index_set (sexp ctx sexp_api_params(self, n), sexp str, se
 #endif
 #endif
 
+#if SEXP_USE_AUTO_FORCE
+sexp sexp_make_promise (sexp ctx sexp_api_params(self, n), sexp thunk) {
+  sexp_assert_type(ctx, sexp_applicablep, SEXP_PROCEDURE, thunk);
+  sexp res = sexp_alloc_type(ctx, promise, SEXP_PROMISE);
+  sexp_promise_donep(res) = 0;
+  sexp_promise_thunk(res) = thunk;
+  sexp_promise_value(res) = SEXP_VOID;
+  return res;
+}
+#endif
+
 #ifdef PLAN9
 #include "opt/plan9.c"
 #endif
@@ -1642,6 +1653,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
 #endif
 #if SEXP_USE_GREEN_THREADS
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "threads", -1));
+#endif
+#if SEXP_USE_AUTO_FORCE
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "auto-force", -1));
 #endif
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi", -1));
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), tmp);

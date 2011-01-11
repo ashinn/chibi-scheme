@@ -116,6 +116,9 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), 0, 0, 0, 0, 0, 0, "stack", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_CONTEXT, sexp_offsetof(context, bc), 13, 13, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, "context", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, "cpointer", SEXP_FALSE, SEXP_FALSE, NULL},
+#if SEXP_USE_AUTO_FORCE
+  {SEXP_PROMISE, sexp_offsetof(promise, thunk), 2, 2, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, "promise", SEXP_FALSE, SEXP_FALSE, NULL},
+#endif
 };
 
 #if SEXP_USE_GLOBAL_TYPES
