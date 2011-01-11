@@ -6,9 +6,9 @@
 
 static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
   int check;
-  sexp ls1, ls2, p1, p2, sv, ctx2;
-  sexp_gc_var4(res, substs, tmp, app);
-  sexp_gc_preserve4(ctx, res, substs, tmp, app);
+  sexp ls1, ls2, p1, p2, sv;
+  sexp_gc_var5(res, substs, tmp, app, ctx2);
+  sexp_gc_preserve5(ctx, res, substs, tmp, app, ctx2);
   res = ast;                    /* return the ast as-is by default */
   substs = init_substs;
 
@@ -133,7 +133,7 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
 
   }
 
-  sexp_gc_release4(ctx);
+  sexp_gc_release5(ctx);
   return res;
 }
 
