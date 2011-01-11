@@ -232,8 +232,14 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     ls = ((sexp_opcode_inverse(op)
            && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC))
           ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
-    for ( ; sexp_pairp(ls); ls = sexp_cdr(ls))
+    for ( ; sexp_pairp(ls); ls = sexp_cdr(ls)) {
       generate(ctx, sexp_car(ls));
+#if SEXP_USE_AUTO_FORCE
+      if ((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
+          || sexp_opcode_code(op) == SEXP_OP_MAKE_VECTOR)
+        emit(ctx, SEXP_OP_FORCE);
+#endif
+    }
 
   }
 
@@ -1422,6 +1428,22 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fuel = 0;
 #endif
     _PUSH(SEXP_VOID);
+    break;
+  case SEXP_OP_FORCE:
+#if SEXP_USE_AUTO_FORCE
+    while (sexp_promisep(_ARG1)) {
+      if (sexp_promise_donep(_ARG1)) {
+        _ARG1 = sexp_promise_value(_ARG1);
+      } else {
+        sexp_context_top(ctx) = top;
+        tmp1 = sexp_apply(ctx, sexp_promise_thunk(_ARG1), SEXP_NULL);
+        sexp_promise_value(_ARG1) = tmp1;
+        sexp_promise_donep(_ARG1) = 1;
+        sexp_promise_thunk(_ARG1) = SEXP_FALSE;
+        _ARG1 = tmp1;
+      }
+    }
+#endif
     break;
   case SEXP_OP_RET:
     i = sexp_unbox_fixnum(stack[fp]);

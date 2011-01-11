@@ -118,6 +118,7 @@ enum sexp_types {
   SEXP_STACK,
   SEXP_CONTEXT,
   SEXP_CPOINTER,
+  SEXP_PROMISE,
   SEXP_NUM_CORE_TYPES
 };
 
@@ -349,6 +350,12 @@ struct sexp_struct {
       sexp bc, lambda, stack, env, fv, parent, child,
         globals, params, proc, name, specific, event;
     } context;
+#if SEXP_USE_AUTO_FORCE
+    struct {
+      int donep;
+      sexp thunk, value;
+    } promise;
+#endif
   } value;
 };
 
@@ -544,6 +551,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_contextp(x)    (sexp_check_tag(x, SEXP_CONTEXT))
+#define sexp_promisep(x)    (sexp_check_tag(x, SEXP_PROMISE))
 
 #define sexp_applicablep(x) (sexp_procedurep(x) || sexp_opcodep(x))
 
@@ -775,6 +783,10 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_stack_length(x)  (sexp_field(x, stack, SEXP_STACK, length))
 #define sexp_stack_top(x)     (sexp_field(x, stack, SEXP_STACK, top))
 #define sexp_stack_data(x)    (sexp_field(x, stack, SEXP_STACK, data))
+
+#define sexp_promise_donep(x) (sexp_field(x, promise, SEXP_PROMISE, donep))
+#define sexp_promise_thunk(x) (sexp_field(x, promise, SEXP_PROMISE, thunk))
+#define sexp_promise_value(x) (sexp_field(x, promise, SEXP_PROMISE, value))
 
 #define sexp_context_env(x)      (sexp_field(x, context, SEXP_CONTEXT, env))
 #define sexp_context_stack(x)    (sexp_field(x, context, SEXP_CONTEXT, stack))

@@ -249,6 +249,10 @@
 #define SEXP_USE_GREEN_THREADS ! SEXP_USE_NO_FEATURES
 #endif
 
+#ifndef SEXP_USE_AUTO_FORCE
+#define SEXP_USE_AUTO_FORCE 0
+#endif
+
 #ifndef SEXP_USE_NATIVE_X86
 #define SEXP_USE_NATIVE_X86 0
 #endif
