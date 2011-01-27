@@ -1,5 +1,5 @@
 
-(import (chibi match) (chibi test))
+;;(import (chibi match) (chibi test))
 
 (test-begin "match")
 
@@ -89,6 +89,11 @@
 (test "multiple tail" '((a b) (1 2) (c . 3) (d . 4) (e . 5))
   (match '((a . 1) (b . 2) (c . 3) (d . 4) (e . 5))
     (((x . y) ... u v w) (list x y u v w))))
+
+(test "tail against improper list" #f
+  (match '(a b c d e f . g)
+    ((x ... y u v w) (list x y u v w))
+    (else #f)))
 
 (test "Riastradh quasiquote" '(2 3)
   (match '(1 2 3) (`(1 ,b ,c) (list b c))))
