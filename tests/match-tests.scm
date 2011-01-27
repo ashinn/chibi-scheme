@@ -1,5 +1,5 @@
 
-;;(import (chibi match) (chibi test))
+(import (chibi match) (chibi test))
 
 (test-begin "match")
 
