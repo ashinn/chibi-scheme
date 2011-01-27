@@ -101,7 +101,7 @@ endif
 
 ########################################################################
 
-all: chibi-scheme$(EXE) libs
+all: chibi-scheme$(EXE) libs lib/chibi/ast$(SO)
 
 CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE)
 
