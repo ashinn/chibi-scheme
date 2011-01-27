@@ -28,7 +28,8 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
-;; 2010/09/26 - adding `..1' patterns (thanks to Ludovic Courtè´≤s)
+;; 2011/01/27 - fixing bug when matching tail patterns against improper lists
+;; 2010/09/26 - adding `..1' patterns (thanks to Ludovic Court√®s)
 ;; 2010/09/07 - fixing identifier extraction in some `...' and `***' patterns
 ;; 2009/11/25 - adding `***' tree search patterns
 ;; 2008/03/20 - fixing bug where (a ...) matched non-lists
@@ -320,8 +321,8 @@
       r
       (let* ((tail-len (length 'r))
              (ls v)
-             (len (length ls)))
-        (if (< len tail-len)
+             (len (and (list? ls) (length ls))))
+        (if (or (not len) (< len tail-len))
             fk
             (let loop ((ls ls) (n len) (id-ls '()) ...)
               (cond
