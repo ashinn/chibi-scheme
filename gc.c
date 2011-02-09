@@ -43,20 +43,22 @@ sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
 }
 
 #if SEXP_USE_SAFE_GC_MARK
-static int sexp_in_heap_p(sexp ctx, sexp_uint_t x) {
+static int sexp_in_heap_p(sexp ctx, sexp x) {
   sexp_heap h;
-  if (x & (sexp_heap_align(1)-1)) {
+  if ((sexp_uint_t)x & (sexp_heap_align(1)-1)) {
     fprintf(stderr, SEXP_BANNER("invalid heap alignment: %p %d"),
-            (sexp)x, sexp_pointer_tag((sexp)x));
+            x, sexp_pointer_tag(x));
     return 0;
   }
   for (h=sexp_context_heap(ctx); h; h=h->next)
-    if (((sexp_uint_t)h < x) && (x < (sexp_uint_t)(h->data + h->size)))
+    if (((sexp)h < x) && (x < (sexp)(h->data + h->size)))
       return 1;
   fprintf(stderr, SEXP_BANNER("invalid object outside heap: %p %d"),
-          (sexp)x, sexp_pointer_tag((sexp)x));
+          x, sexp_pointer_tag(x));
   return 0;
 }
+#else
+#define sexp_in_heap_p(ctx, x) 1
 #endif
 
 void sexp_mark (sexp ctx, sexp x) {
@@ -64,12 +66,8 @@ void sexp_mark (sexp ctx, sexp x) {
   sexp t, *p;
   struct sexp_gc_var_t *saves;
  loop:
-  if ((! x) || (! sexp_pointerp(x)) || sexp_gc_mark(x))
+  if (!x || !sexp_pointerp(x) || !sexp_in_heap_p(ctx, x) || sexp_gc_mark(x))
     return;
-#if SEXP_USE_SAFE_GC_MARK
-  if (!sexp_in_heap_p(ctx, (sexp_uint_t)x))
-    return;
-#endif
 #if SEXP_USE_HEADER_MAGIC
   if (sexp_pointer_magic(x) != SEXP_POINTER_MAGIC && sexp_pointer_tag(x) != SEXP_TYPE
       && sexp_pointer_tag(x) != SEXP_OPCODE && sexp_pointer_tag(x) != SEXP_CORE
