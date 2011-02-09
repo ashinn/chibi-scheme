@@ -76,9 +76,9 @@ void sexp_mark (sexp ctx, sexp x) {
   }
 #endif
 #if SEXP_USE_DEBUG_GC > 1
-  if (sexp_pointer_tag(p)<=0 || sexp_pointer_tag(p)>sexp_context_num_types(ctx)){
+  if (sexp_pointer_tag(x)<=0 || sexp_pointer_tag(x)>sexp_context_num_types(ctx)){
     fprintf(stderr, SEXP_BANNER("%p mark: bad object at %p: tag: %d"),
-            ctx, p, sexp_pointer_tag(p));
+            ctx, x, sexp_pointer_tag(x));
     return;
   }
 #endif
