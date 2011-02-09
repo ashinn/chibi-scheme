@@ -67,14 +67,24 @@ void sexp_mark (sexp ctx, sexp x) {
   if ((! x) || (! sexp_pointerp(x)) || sexp_gc_mark(x))
     return;
 #if SEXP_USE_SAFE_GC_MARK
-  if (! sexp_in_heap_p(ctx, (sexp_uint_t)x))
+  if (!sexp_in_heap_p(ctx, (sexp_uint_t)x))
     return;
 #endif
 #if SEXP_USE_HEADER_MAGIC
   if (sexp_pointer_magic(x) != SEXP_POINTER_MAGIC && sexp_pointer_tag(x) != SEXP_TYPE
       && sexp_pointer_tag(x) != SEXP_OPCODE && sexp_pointer_tag(x) != SEXP_CORE
-      && sexp_pointer_tag(x) != SEXP_STACK)
+      && sexp_pointer_tag(x) != SEXP_STACK) {
+    fprintf(stderr, SEXP_BANNER("%p mark: bad magic at %p: %p"),
+            ctx, p, sexp_pointer_magic(p));
     return;
+  }
+#endif
+#if SEXP_USE_DEBUG_GC > 1
+  if (sexp_pointer_tag(p)<=0 || sexp_pointer_tag(p)>sexp_context_num_types(ctx)){
+    fprintf(stderr, SEXP_BANNER("%p mark: bad object at %p: tag: %d"),
+            ctx, p, sexp_pointer_tag(p));
+    return;
+  }
 #endif
   sexp_gc_mark(x) = 1;
   if (sexp_contextp(x))
@@ -198,14 +208,14 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         ;
 #if SEXP_USE_HEADER_MAGIC
       if (sexp_pointer_magic(p) != SEXP_POINTER_MAGIC)
-        fprintf(stderr, SEXP_BANNER("%p (heap: %p): bad magic at %p: %p"),
-                ctx, sexp_context_heap(ctx), p, sexp_pointer_magic(p));
+        fprintf(stderr, SEXP_BANNER("%p sweep: bad magic at %p: %p"),
+                ctx, p, sexp_pointer_magic(p));
 #endif
 #if SEXP_USE_DEBUG_GC > 1
       if (sexp_pointer_tag(p) <= 0
           || sexp_pointer_tag(p) > sexp_context_num_types(ctx))
-        fprintf(stderr, SEXP_BANNER("%p (heap: %p): bad object at %p: tag: %d"),
-                ctx, sexp_context_heap(ctx), p, sexp_pointer_tag(p));
+        fprintf(stderr, SEXP_BANNER("%p sweep: bad object at %p: tag: %d"),
+                ctx, p, sexp_pointer_tag(p));
 #endif
       if ((char*)r == (char*)p) { /* this is a free block, skip it */
         p = (sexp) (((char*)p) + r->size);
@@ -214,8 +224,8 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
 #if SEXP_USE_DEBUG_GC
       if (r && ((char*)p)+size > (char*)r)
-        fprintf(stderr, SEXP_BANNER("%p (heap: %p): bad size at %p + %d > %p"),
-                ctx, sexp_context_heap(ctx), p, sexp_pointer_tag(p), r);
+        fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p + %d > %p"),
+                ctx, p, sexp_pointer_tag(p), r);
 #endif
       if (! sexp_gc_mark(p)) {
         /* free p */
@@ -269,12 +279,12 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
     sexp_mark(ctx, sexp_symbol_table[i]);
 #endif
-  sexp_mark(ctx, ctx);
-  sexp_conservative_mark(ctx);
 #if SEXP_USE_DEBUG_GC
   fprintf(stderr, SEXP_BANNER("%p (heap: %p size: %lu)"), ctx,
           sexp_context_heap(ctx), sexp_heap_total_size(sexp_context_heap(ctx)));
 #endif
+  sexp_mark(ctx, ctx);
+  sexp_conservative_mark(ctx);
 #if SEXP_USE_WEAK_REFERENCES
   sexp_reset_weak_references(ctx);
 #endif
