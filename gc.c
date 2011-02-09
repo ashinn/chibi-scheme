@@ -46,15 +46,13 @@ sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
 static int sexp_in_heap_p(sexp ctx, sexp x) {
   sexp_heap h;
   if ((sexp_uint_t)x & (sexp_heap_align(1)-1)) {
-    fprintf(stderr, SEXP_BANNER("invalid heap alignment: %p %d"),
-            x, sexp_pointer_tag(x));
+    fprintf(stderr, SEXP_BANNER("invalid heap alignment: %p"), x);
     return 0;
   }
   for (h=sexp_context_heap(ctx); h; h=h->next)
     if (((sexp)h < x) && (x < (sexp)(h->data + h->size)))
       return 1;
-  fprintf(stderr, SEXP_BANNER("invalid object outside heap: %p %d"),
-          x, sexp_pointer_tag(x));
+  fprintf(stderr, SEXP_BANNER("invalid object outside heap: %p"), x);
   return 0;
 }
 #else
