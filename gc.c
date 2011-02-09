@@ -1,5 +1,5 @@
 /*  gc.c -- simple mark&sweep garbage collector               */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/sexp.h"
@@ -8,7 +8,9 @@
 #include <sys/mman.h>
 #endif
 
-#define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(sexp_sizeof(flonum)))
+#define SEXP_BANNER(x) ("**************** GC "x"\n")
+
+#define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(1))
 
 #if SEXP_USE_GLOBAL_HEAP
 sexp_heap sexp_global_heap;
@@ -23,6 +25,13 @@ static sexp_heap sexp_heap_last (sexp_heap h) {
   return h;
 }
 
+static size_t sexp_heap_total_size (sexp_heap h) {
+  size_t total_size = 0;
+  for (; h; h=h->next)
+    total_size += h->size;
+  return total_size;
+}
+
 sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   sexp_uint_t res;
   sexp t;
@@ -34,16 +43,18 @@ sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
 }
 
 #if SEXP_USE_SAFE_GC_MARK
-static int sexp_in_heap(sexp ctx, sexp_uint_t x) {
+static int sexp_in_heap_p(sexp ctx, sexp_uint_t x) {
   sexp_heap h;
   if (x & (sexp_heap_align(1)-1)) {
-    fprintf(stderr, "invalid heap alignment: %p %d\n", (sexp)x, sexp_pointer_tag((sexp)x));
+    fprintf(stderr, SEXP_BANNER("invalid heap alignment: %p %d"),
+            (sexp)x, sexp_pointer_tag((sexp)x));
     return 0;
   }
   for (h=sexp_context_heap(ctx); h; h=h->next)
     if (((sexp_uint_t)h < x) && (x < (sexp_uint_t)(h->data + h->size)))
       return 1;
-  fprintf(stderr, "invalid object outside heap: %p %d\n", (sexp)x, sexp_pointer_tag((sexp)x));
+  fprintf(stderr, SEXP_BANNER("invalid object outside heap: %p %d"),
+          (sexp)x, sexp_pointer_tag((sexp)x));
   return 0;
 }
 #endif
@@ -56,7 +67,7 @@ void sexp_mark (sexp ctx, sexp x) {
   if ((! x) || (! sexp_pointerp(x)) || sexp_gc_mark(x))
     return;
 #if SEXP_USE_SAFE_GC_MARK
-  if (! sexp_in_heap(ctx, (sexp_uint_t)x))
+  if (! sexp_in_heap_p(ctx, (sexp_uint_t)x))
     return;
 #endif
 #if SEXP_USE_HEADER_MAGIC
@@ -106,9 +117,9 @@ void sexp_conservative_mark (sexp ctx) {
         continue;
       }
       if (! sexp_gc_mark(p) && stack_references_pointer_p(ctx, p)) {
-#if SEXP_USE_DEBUG_GC > 1
+#if SEXP_USE_DEBUG_GC > 3
         if (p && sexp_pointerp(p)) {
-          fprintf(stderr, "GC MISS: %p: %s\n", p, sexp_pointer_source(p));
+          fprintf(stderr, SEXP_BANNER("MISS: %p: %s"), p,sexp_pointer_source(p));
           fflush(stderr);
         }
 #endif
@@ -185,11 +196,27 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       /* find the preceding and succeeding free list pointers */
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
+#if SEXP_USE_HEADER_MAGIC
+      if (sexp_pointer_magic(p) != SEXP_POINTER_MAGIC)
+        fprintf(stderr, SEXP_BANNER("%p (heap: %p): bad magic at %p: %p"),
+                ctx, sexp_context_heap(ctx), p, sexp_pointer_magic(p));
+#endif
+#if SEXP_USE_DEBUG_GC > 1
+      if (sexp_pointer_tag(p) <= 0
+          || sexp_pointer_tag(p) > sexp_context_num_types(ctx))
+        fprintf(stderr, SEXP_BANNER("%p (heap: %p): bad object at %p: tag: %d"),
+                ctx, sexp_context_heap(ctx), p, sexp_pointer_tag(p));
+#endif
       if ((char*)r == (char*)p) { /* this is a free block, skip it */
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
+#if SEXP_USE_DEBUG_GC
+      if (r && ((char*)p)+size > (char*)r)
+        fprintf(stderr, SEXP_BANNER("%p (heap: %p): bad size at %p + %d > %p"),
+                ctx, sexp_context_heap(ctx), p, sexp_pointer_tag(p), r);
+#endif
       if (! sexp_gc_mark(p)) {
         /* free p */
         finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
@@ -245,15 +272,17 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp_mark(ctx, ctx);
   sexp_conservative_mark(ctx);
 #if SEXP_USE_DEBUG_GC
-  fprintf(stderr, "******************** GC ********************\n");
-#endif
-#if SEXP_USE_DEBUG_GC > 2
-  sexp_sweep_stats(ctx, 2, NULL, "* \x1B[31mFREE:\x1B[0m ");
+  fprintf(stderr, SEXP_BANNER("%p (heap: %p size: %lu)"), ctx,
+          sexp_context_heap(ctx), sexp_heap_total_size(sexp_context_heap(ctx)));
 #endif
 #if SEXP_USE_WEAK_REFERENCES
   sexp_reset_weak_references(ctx);
 #endif
   res = sexp_sweep(ctx, sum_freed);
+#if SEXP_USE_DEBUG_GC
+  fprintf(stderr, SEXP_BANNER("%p (freed: %lu max_freed: %lu)"),
+          ctx, *sum_freed, sexp_unbox_fixnum(res));
+#endif
   return res;
 }
 
@@ -317,9 +346,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
-    for (total_size=0, h=sexp_context_heap(ctx); h->next; h=h->next)
-      total_size += h->size;
-    total_size += h->size;
+    total_size = sexp_heap_total_size(sexp_context_heap(ctx));
     if (((max_freed < size)
          || ((total_size > sum_freed)
              && (total_size - sum_freed) > (total_size*SEXP_GROW_HEAP_RATIO)))
@@ -425,4 +452,3 @@ void sexp_gc_init (void) {
   stack_base = ((sexp*)&size) + 32;
 #endif
 }
-
