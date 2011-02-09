@@ -207,17 +207,17 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         fprintf(stderr, SEXP_BANNER("%p sweep: bad magic at %p: %p"),
                 ctx, p, sexp_pointer_magic(p));
 #endif
+      if ((char*)r == (char*)p) { /* this is a free block, skip it */
+        p = (sexp) (((char*)p) + r->size);
+        continue;
+      }
+      size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
 #if SEXP_USE_DEBUG_GC > 1
       if (sexp_pointer_tag(p) <= 0
           || sexp_pointer_tag(p) > sexp_context_num_types(ctx))
         fprintf(stderr, SEXP_BANNER("%p sweep: bad object at %p: tag: %d"),
                 ctx, p, sexp_pointer_tag(p));
 #endif
-      if ((char*)r == (char*)p) { /* this is a free block, skip it */
-        p = (sexp) (((char*)p) + r->size);
-        continue;
-      }
-      size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
 #if SEXP_USE_DEBUG_GC
       if (r && ((char*)p)+size > (char*)r)
         fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p + %d > %p"),
