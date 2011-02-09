@@ -161,7 +161,7 @@ clean:
 	rm -f tests/basic/*.out tests/basic/*.err
 
 cleaner: clean
-	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) *.a include/chibi/install.h
+	rm -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) libchibi-scheme$(SO) *.a include/chibi/install.h
 	find lib -name \*$(SO) -exec rm -rf '{}' \;
 
 dist-clean: cleaner
