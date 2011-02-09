@@ -118,7 +118,9 @@ enum sexp_types {
   SEXP_STACK,
   SEXP_CONTEXT,
   SEXP_CPOINTER,
+#if SEXP_USE_AUTO_FORCE
   SEXP_PROMISE,
+#endif
   SEXP_NUM_CORE_TYPES
 };
 
