@@ -151,7 +151,7 @@ clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi chibi-scheme$(EXE) libs
 	-$(CHIBI) $(GENSTUBS) $<
 
 lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
-	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
+	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(XLDFLAGS) -L. -lchibi-scheme
 
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
