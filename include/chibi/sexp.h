@@ -1107,6 +1107,18 @@ SEXP_API void sexp_destroy_context (sexp ctx);
 SEXP_API sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags);
 #endif
 
+#if SEXP_USE_SAFE_GC_MARK
+SEXP_API int sexp_in_heap_p(sexp ctx, sexp x);
+#else
+#define sexp_in_heap_p(ctx, x) 1
+#endif
+
+#if SEXP_DEBUG_GC > 1 || SEXP_USE_SAFE_GC_MARK || SEXP_USE_HEADER_MAGIC
+SEXP_API int sexp_valid_object_p(sexp ctx, sexp x);
+#else
+#define sexp_valid_object_p(ctx, x) 1
+#endif
+
 #if SEXP_USE_TYPE_DEFS
 SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
 SEXP_API sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp parent, sexp slots);
