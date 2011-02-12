@@ -107,9 +107,9 @@ void sexp_mark (sexp ctx, sexp x) {
   sexp t, *p;
   struct sexp_gc_var_t *saves;
  loop:
-  if (!x || !sexp_pointerp(x) || !sexp_valid_object_p(ctx, x) || sexp_gc_mark(x))
+  if (!x || !sexp_pointerp(x) || !sexp_valid_object_p(ctx, x) || sexp_markedp(x))
     return;
-  sexp_gc_mark(x) = 1;
+  sexp_markedp(x) = 1;
   if (sexp_contextp(x))
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
       if (saves->var) sexp_mark(ctx, *(saves->var));
@@ -150,7 +150,7 @@ void sexp_conservative_mark (sexp ctx) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      if (!sexp_gc_mark(p) && stack_references_pointer_p(ctx, p)) {
+      if (!sexp_markedp(p) && stack_references_pointer_p(ctx, p)) {
 #if SEXP_USE_DEBUG_GC > 3
         if (p && sexp_pointerp(p)) {
           fprintf(stderr, SEXP_BANNER("MISS: %p: %s"), p,sexp_pointer_source(p));
@@ -189,14 +189,14 @@ void sexp_reset_weak_references(sexp ctx) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      if (sexp_gc_mark(p)) {
+      if (sexp_markedp(p)) {
         t = sexp_object_type(ctx, p);
         if (sexp_type_weak_base(t) > 0) {
           all_reset_p = 1;
           v = (sexp*) ((char*)p + sexp_type_weak_base(t));
           len = sexp_type_num_weak_slots_of_object(t, p);
           for (i=0; i<len; i++) {
-            if (v[i] && sexp_pointerp(v[i]) && ! sexp_gc_mark(v[i])) {
+            if (v[i] && sexp_pointerp(v[i]) && ! sexp_markedp(v[i])) {
               v[i] = SEXP_FALSE;
               sexp_brokenp(p) = 1;
             } else {
@@ -243,7 +243,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p + %d > %p"),
                 ctx, p, sexp_pointer_tag(p), r);
 #endif
-      if (! sexp_gc_mark(p)) {
+      if (! sexp_markedp(p)) {
         /* free p */
         finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
         if (finalizer) finalizer(ctx sexp_api_pass(NULL, 1), p);
@@ -279,7 +279,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         if (freed > max_freed)
           max_freed = freed;
       } else {
-        sexp_gc_mark(p) = 0;
+        sexp_markedp(p) = 0;
         p = (sexp) (((char*)p)+size);
       }
     }
