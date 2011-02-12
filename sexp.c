@@ -1570,9 +1570,13 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   } else {
     sexp_push_char(ctx, c, in);
   }
+#if SEXP_USE_FLONUMS
   res = (whole + res) * pow(10, e);
   if (negp) res *= -1;
   return sexp_make_flonum(ctx, res);
+#else
+  return sexp_make_fixnum((sexp_uint_t)whole);
+#endif
 }
 
 sexp sexp_read_number (sexp ctx, sexp in, int base) {
