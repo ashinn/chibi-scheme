@@ -20,7 +20,7 @@
 #define sexp_cookie_close_set(vec, x) sexp_vector_set((sexp)vec, SEXP_FIVE, x)
 
 #if ! SEXP_USE_BOEHM
-static int sexp_in_heap_p (sexp_heap h, sexp p) {
+static int in_heap_p (sexp_heap h, sexp p) {
   for ( ; h; h = h->next)
     if (((sexp)h < p) && (p < (sexp)((char*)h + h->size)))
       return 1;
@@ -36,7 +36,7 @@ static sexp sexp_last_context (sexp ctx, sexp *cstack) {
   sexp_heap h = sexp_context_heap(ctx);
   for (i=0; i<SEXP_LAST_CONTEXT_CHECK_LIMIT; i++) {
     p = cstack[i];
-    if (p && (p != ctx) && sexp_pointerp(p) && sexp_in_heap_p(h, p)
+    if (p && (p != ctx) && sexp_pointerp(p) && in_heap_p(h, p)
         && (sexp_pointer_tag(p) == SEXP_CONTEXT)
         && (sexp_context_heap(p) == h)) {
       res = p;
