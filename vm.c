@@ -623,7 +623,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #if SEXP_USE_DEBUG_VM
   if (sexp_context_tracep(ctx)) {
     sexp_print_stack(ctx, stack, top, fp, SEXP_FALSE);
-    fprintf(stderr, "%s %s ip: %p stack: %p top: %ld fp: %ld (%ld)\n",
+    fprintf(stderr, "****** VM %s %s ip: %p stack: %p top: %ld fp: %ld (%ld)\n",
             (*ip<=SEXP_OP_NUM_OPCODES) ? reverse_opcode_names[*ip] : "UNKNOWN",
             (SEXP_OP_FCALL0 <= *ip && *ip <= SEXP_OP_FCALL4
              ? sexp_opcode_name(((sexp*)(ip+1))[0]) : ""),
@@ -1460,6 +1460,12 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   default:
     sexp_raise("unknown opcode", sexp_list1(ctx, sexp_make_fixnum(*(ip-1))));
   }
+#if SEXP_USE_DEBUG_VM
+  if (sexp_context_tracep(ctx))
+    fprintf(stderr, "****** VM => %p (%d)\n", _ARG1,
+            sexp_pointerp(_ARG1) && sexp_in_heap_p(ctx, _ARG1)
+            ? sexp_pointer_tag(_ARG1) : -1);
+#endif
   goto loop;
 
  end_loop:
