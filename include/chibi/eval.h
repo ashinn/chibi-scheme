@@ -13,9 +13,6 @@ extern "C" {
 
 /************************* additional types ***************************/
 
-#define SEXP_INIT_BCODE_SIZE 128
-#define SEXP_INIT_STACK_SIZE 8192
-
 #define sexp_init_file "init.scm"
 #define sexp_config_file "config.scm"
 

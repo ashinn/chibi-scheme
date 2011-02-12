@@ -500,6 +500,29 @@ static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
   return len;
 }
 
+#if SEXP_USE_CHECK_STACK
+static int sexp_grow_stack (sexp ctx) {
+  sexp stack, *from, *to;
+  int i, size = sexp_stack_length(sexp_context_stack(ctx)), new_size;
+  new_size = size * 2;
+  if (new_size > SEXP_MAX_STACK_SIZE) {
+    if (size == SEXP_MAX_STACK_SIZE)
+      return 0;
+    new_size = SEXP_MAX_STACK_SIZE;
+  }
+  stack = sexp_alloc_tagged(ctx, (sexp_sizeof(stack)+sizeof(sexp)*new_size),
+                            SEXP_STACK);
+  sexp_stack_length(stack) = new_size;
+  sexp_stack_top(stack) = sexp_context_top(ctx);
+  from = sexp_stack_data(sexp_context_stack(ctx));
+  to = sexp_stack_data(stack);
+  for (i=sexp_context_top(ctx); i>=0; i--)
+    to[i] = from[i];
+  sexp_context_stack(ctx) = stack;
+  return 1;
+}
+#endif
+
 #define _ARG1 stack[top-1]
 #define _ARG2 stack[top-2]
 #define _ARG3 stack[top-3]
@@ -714,9 +737,13 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_CALL:
     sexp_context_top(ctx) = top;
 #if SEXP_USE_CHECK_STACK
-    if (top+16 >= SEXP_INIT_STACK_SIZE) {
-      _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);
-      goto end_loop;
+    if (top+64 >= sexp_stack_length(sexp_context_stack(ctx))) {
+      if (sexp_grow_stack(ctx)) {
+        stack = sexp_stack_data(sexp_context_stack(ctx));
+      } else {
+        _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);
+        goto end_loop;
+      }
     }
 #endif
     _ALIGN_IP();
