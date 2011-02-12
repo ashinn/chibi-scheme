@@ -230,7 +230,7 @@ struct sexp_core_form_struct {
 
 struct sexp_struct {
   sexp_tag_t tag;
-  char gc_mark;
+  char markedp;
   unsigned int immutablep:1;
   unsigned int freep:1;
   unsigned int brokenp:1;
@@ -489,7 +489,7 @@ void *sexp_realloc(sexp ctx, sexp x, size_t size);
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
 #define sexp_pointer_tag(x)      ((x)->tag)
-#define sexp_gc_mark(x)          ((x)->gc_mark)
+#define sexp_markedp(x)          ((x)->markedp)
 #define sexp_flags(x)            ((x)->flags)
 #define sexp_immutablep(x)       ((x)->immutablep)
 #define sexp_freep(x)            ((x)->freep)
