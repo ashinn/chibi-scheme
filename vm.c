@@ -637,6 +637,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     if (! sexp_exception_procedure(_ARG1))
       sexp_exception_procedure(_ARG1) = self;
   case SEXP_OP_RAISE:
+    sexp_context_top(ctx) = top;
     tmp1 = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
     if (! sexp_procedurep(tmp1))
@@ -653,6 +654,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fp = top-4;
     break;
   case SEXP_OP_RESUMECC:
+    sexp_context_top(ctx) = top;
     tmp1 = stack[fp-1];
     top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
     fp = sexp_unbox_fixnum(_ARG1);
@@ -702,8 +704,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     self = stack[fp+2];
     bc = sexp_procedure_code(self);
     cp = sexp_procedure_vars(self);
-    ip = (sexp_bytecode_data(bc)
-          + sexp_unbox_fixnum(stack[fp+1])) - sizeof(sexp);
+    ip = (sexp_bytecode_data(bc)+sexp_unbox_fixnum(stack[fp+1])) - sizeof(sexp);
     /* copy new args into place */
     for (k=0; k<i; k++)
       stack[fp-j+k] = stack[top-1-i+k];
@@ -711,6 +712,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fp = sexp_unbox_fixnum(tmp2);
     goto make_call;
   case SEXP_OP_CALL:
+    sexp_context_top(ctx) = top;
 #if SEXP_USE_CHECK_STACK
     if (top+16 >= SEXP_INIT_STACK_SIZE) {
       _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);
@@ -723,7 +725,6 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   make_call:
     if (sexp_opcodep(tmp1)) {
       /* compile non-inlined opcode applications on the fly */
-      sexp_context_top(ctx) = top;
       tmp1 = make_opcode_procedure(ctx, tmp1, i);
       if (sexp_exceptionp(tmp1)) {
         _ARG1 = tmp1;
@@ -840,6 +841,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #if SEXP_USE_GREEN_THREADS
   case SEXP_OP_PARAMETER_REF:
     _ALIGN_IP();
+    sexp_context_top(ctx) = top;
     tmp2 = _WORD0;
     ip += sizeof(sexp);
     for (tmp1=sexp_context_params(ctx); sexp_pairp(tmp1); tmp1=sexp_cdr(tmp1))
@@ -973,6 +975,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case SEXP_OP_MAKE_EXCEPTION:
+    sexp_context_top(ctx) = top;
     _ARG5 = sexp_make_exception(ctx, _ARG1, _ARG2, _ARG3, _ARG4, _ARG5);
     top -= 4;
     break;
@@ -1004,6 +1007,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_MAKE:
     _ALIGN_IP();
+    sexp_context_top(ctx) = top;
     _PUSH(sexp_alloc_tagged(ctx, _UWORD1, _UWORD0));
     ip += sizeof(sexp)*2;
     break;
@@ -1318,6 +1322,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case SEXP_OP_FIX2FLO:
+    sexp_context_top(ctx) = top;
     if (sexp_fixnump(_ARG1))
       _ARG1 = sexp_fixnum_to_flonum(ctx, _ARG1);
 #if SEXP_USE_BIGNUMS
@@ -1364,6 +1369,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
     break;
   case SEXP_OP_WRITE_CHAR:
+    sexp_context_top(ctx) = top;
     if (! sexp_charp(_ARG1))
       sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
     if (! sexp_oportp(_ARG2))
@@ -1378,12 +1384,14 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case SEXP_OP_NEWLINE:
+    sexp_context_top(ctx) = top;
     if (! sexp_oportp(_ARG1))
       sexp_raise("newline: not an output-port", sexp_list1(ctx, _ARG1));
     sexp_newline(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
     break;
   case SEXP_OP_READ_CHAR:
+    sexp_context_top(ctx) = top;
     if (! sexp_iportp(_ARG1))
       sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
@@ -1406,6 +1414,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       _ARG1 = sexp_make_character(i);
     break;
   case SEXP_OP_PEEK_CHAR:
+    sexp_context_top(ctx) = top;
     if (! sexp_iportp(_ARG1))
       sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
     i = sexp_read_char(ctx, _ARG1);
@@ -1431,6 +1440,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     break;
   case SEXP_OP_FORCE:
 #if SEXP_USE_AUTO_FORCE
+    sexp_context_top(ctx) = top;
     while (sexp_promisep(_ARG1)) {
       if (sexp_promise_donep(_ARG1)) {
         _ARG1 = sexp_promise_value(_ARG1);
