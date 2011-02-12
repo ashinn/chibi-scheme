@@ -219,6 +219,7 @@ void run_main (int argc, char **argv) {
     sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
     sexp_eval_string(ctx, sexp_argv_proc, -1, env);
     if (i < argc) {             /* script usage */
+      sexp_context_tracep(ctx) = 1;
       check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
       tmp = sexp_intern(ctx, "main", -1);
       tmp = sexp_env_ref(env, tmp, SEXP_FALSE);
