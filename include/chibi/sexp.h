@@ -149,6 +149,10 @@ typedef int sexp_sint_t;
 typedef struct sexp_struct *sexp;
 
 #define sexp_heap_pad_size(s) (sizeof(struct sexp_heap_t) + (s) + sexp_heap_align(1))
+#define sexp_free_chunk_size (sizeof(struct sexp_free_list_t))
+#define sexp_heap_first_block(h) ((sexp)(h->data + sexp_heap_align(sexp_free_chunk_size)))
+#define sexp_heap_last_block(h) ((sexp)((char*)h->data + h->size - sexp_heap_align(sexp_free_chunk_size)))
+#define sexp_heap_end(h) ((sexp)((char*)h->data + h->size))
 
 #define __HALF_MAX_SIGNED(type) ((type)1 << (sizeof(type)*8-2))
 #define __MAX_SIGNED(type) (__HALF_MAX_SIGNED(type) - 1 + __HALF_MAX_SIGNED(type))

@@ -55,6 +55,34 @@ sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
 }
 
 #if SEXP_USE_SAFE_GC_MARK
+
+#if SEXP_USE_DEBUG_GC > 2
+int sexp_valid_heap_position(sexp ctx, sexp_heap h, sexp x) {
+  sexp p = sexp_heap_first_block(h), end = sexp_heap_end(h);
+  sexp_free_list q = h->free_list, r;
+  while (p < end) {
+    for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
+      ;
+    if ((char*)r == (char*)p) {
+      p = (sexp) (((char*)p) + r->size);
+      continue;
+    }
+    if (p == x) {
+      return 1;
+    } else if (p > x) {
+      fprintf(stderr, SEXP_BANNER("bad heap position: %p free: %p-%p : %p-%p"),
+              x, q, ((char*)q)+q->size, r, ((char*)r)+r->size);
+      return 0;
+    }
+    p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
+  }
+  fprintf(stderr, SEXP_BANNER("bad heap position: %p heap: %p-%p"), x, h, end);
+  return 0;
+}
+#else
+#define sexp_valid_heap_position(ctx, h, x) 1
+#endif
+
 int sexp_in_heap_p(sexp ctx, sexp x) {
   sexp_heap h;
   if ((sexp_uint_t)x & (sexp_heap_align(1)-1)) {
@@ -63,7 +91,7 @@ int sexp_in_heap_p(sexp ctx, sexp x) {
   }
   for (h=sexp_context_heap(ctx); h; h=h->next)
     if (((sexp)h < x) && (x < (sexp)(h->data + h->size)))
-      return 1;
+      return sexp_valid_heap_position(ctx, h, x);
   fprintf(stderr, SEXP_BANNER("invalid object outside heap: %p"), x);
   return 0;
 }
@@ -78,6 +106,8 @@ int sexp_valid_object_type_p (sexp ctx, sexp x) {
   }
   return 1;
 }
+#else
+#define sexp_valid_object_type_p(ctx, x) 1
 #endif
 
 #if SEXP_USE_HEADER_MAGIC
@@ -120,7 +150,7 @@ void sexp_mark (sexp ctx, sexp x) {
     for (i=0; i<len; i++)
       sexp_mark(ctx, p[i]);
     x = p[len];
-    /* goto loop; */
+    goto loop;
     sexp_mark(ctx, x);
   }
 }
@@ -140,9 +170,9 @@ void sexp_conservative_mark (sexp ctx) {
   sexp p, end;
   sexp_free_list q, r;
   for ( ; h; h=h->next) {   /* just scan the whole heap */
-    p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
+    p = sexp_heap_first_block(h);
     q = h->free_list;
-    end = (sexp) ((char*)h->data + h->size - sexp_heap_align(sexp_sizeof(pair)));
+    end = sexp_heap_end(h);
     while (p < end) {
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
@@ -178,9 +208,9 @@ void sexp_reset_weak_references(sexp ctx) {
   sexp p, t, end, *v;
   sexp_free_list q, r;
   for ( ; h; h=h->next) {   /* just scan the whole heap */
-    p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
+    p = sexp_heap_first_block(h);
     q = h->free_list;
-    end = (sexp) ((char*)h->data + h->size - sexp_heap_align(sexp_sizeof(pair)));
+    end = sexp_heap_end(h);
     while (p < end) {
       /* find the preceding and succeeding free list pointers */
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
@@ -189,7 +219,7 @@ void sexp_reset_weak_references(sexp ctx) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      if (sexp_markedp(p)) {
+      if (sexp_valid_object_p(ctx, p) && sexp_markedp(p)) {
         t = sexp_object_type(ctx, p);
         if (sexp_type_weak_base(t) > 0) {
           all_reset_p = 1;
@@ -225,9 +255,9 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   sexp_proc2 finalizer;
   /* scan over the whole heap */
   for ( ; h; h=h->next) {
-    p = (sexp) (h->data + sexp_heap_align(sexp_sizeof(pair)));
+    p = sexp_heap_first_block(h);
     q = h->free_list;
-    end = (sexp) ((char*)h->data + h->size - sexp_heap_align(sexp_sizeof(pair)));
+    end = sexp_heap_end(h);
     while (p < end) {
       /* find the preceding and succeeding free list pointers */
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
@@ -236,21 +266,24 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         p = (sexp) (((char*)p) + r->size);
         continue;
       }
-      sexp_valid_object_p(ctx, p);
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
 #if SEXP_USE_DEBUG_GC
+      sexp_valid_object_p(ctx, p);
+      if ((char*)q + q->size > (char*)p)
+        fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p < %p + %lu"),
+                ctx, p, q, q->size);
       if (r && ((char*)p)+size > (char*)r)
-        fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p + %d > %p"),
-                ctx, p, sexp_pointer_tag(p), r);
+        fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p + %lu > %p"),
+                ctx, p, size, r);
 #endif
-      if (! sexp_markedp(p)) {
+      if (!sexp_markedp(p)) {
         /* free p */
         finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
         if (finalizer) finalizer(ctx sexp_api_pass(NULL, 1), p);
         sum_freed += size;
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */
-          if (r && ((((char*)p)+size) == (char*)r)) {
+          if (r && r->size && ((((char*)p)+size) == (char*)r)) {
             /* ... and with r */
             q->next = r->next;
             freed = q->size + size + r->size;
@@ -262,7 +295,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
           q->size = freed;
         } else {
           s = (sexp_free_list)p;
-          if (r && ((((char*)p)+size) == (char*)r)) {
+          if (r && r->size && ((((char*)p)+size) == (char*)r)) {
             /* merge p with r */
             s->size = size + r->size;
             s->next = r->next;
@@ -327,11 +360,19 @@ sexp_heap sexp_make_heap (size_t size, size_t max_size) {
   h->data = (char*) sexp_heap_align(sizeof(h->data)+(sexp_uint_t)&(h->data));
   free = h->free_list = (sexp_free_list) h->data;
   h->next = NULL;
-  next = (sexp_free_list) (((char*)free) + sexp_heap_align(sexp_sizeof(pair)));
-  free->size = 0; /* actually sexp_sizeof(pair) */
+  next = (sexp_free_list) (((char*)free)+sexp_heap_align(sexp_free_chunk_size));
+  free->size = 0; /* actually sexp_heap_align(sexp_free_chunk_size) */
   free->next = next;
-  next->size = size - sexp_heap_align(sexp_sizeof(pair));
+  next->size = size - sexp_heap_align(sexp_free_chunk_size);
   next->next = NULL;
+#if SEXP_USE_DEBUG_GC
+  fprintf(stderr, SEXP_BANNER("heap: %p-%p data: %p-%p"),
+          h, ((char*)h)+sexp_heap_pad_size(size), h->data, h->data + size);
+  fprintf(stderr, SEXP_BANNER("first: %p end: %p"),
+          sexp_heap_first_block(h), sexp_heap_end(h));
+  fprintf(stderr, SEXP_BANNER("free1: %p-%p free2: %p-%p"),
+          free, ((char*)free)+free->size, next, ((char*)next)+next->size);
+#endif
   return h;
 }
 
@@ -350,6 +391,13 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
   for (h=sexp_context_heap(ctx); h; h=h->next)
     for (ls1=h->free_list, ls2=ls1->next; ls2; ls1=ls2, ls2=ls2->next)
       if (ls2->size >= size) {
+#if SEXP_USE_DEBUG_GC
+        ls3 = (sexp_free_list) sexp_heap_end(h);
+        if (ls2 >= ls3)
+          fprintf(stderr, "alloced %lu bytes past end of heap: %p (%lu) >= %p"
+                  " next: %p (%lu)\n", size, ls2, ls2->size, ls3, ls2->next,
+                  (ls2->next ? ls2->next->size : 0));
+#endif
         if (ls2->size >= (size + SEXP_MINIMUM_OBJECT_SIZE)) {
           ls3 = (sexp_free_list) (((char*)ls2)+size); /* the tail after ls2 */
           ls3->size = ls2->size - size;
@@ -367,7 +415,7 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
 void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
   size_t max_freed, sum_freed, total_size;
-  sexp_heap h;
+  sexp_heap h = sexp_context_heap(ctx);
   size = sexp_heap_align(size);
   res = sexp_try_alloc(ctx, size);
   if (! res) {
@@ -431,7 +479,7 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
   }
 
   /* adjust data by traversing over the _original_ heap */
-  p = (sexp) (from->data + sexp_heap_align(sexp_sizeof(pair)));
+  p = (sexp) (from->data + sexp_heap_align(sexp_free_chunk_size));
   q = from->free_list;
   while (p < end) {
     /* find the next free list pointer */
