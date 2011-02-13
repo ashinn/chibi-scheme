@@ -30,7 +30,7 @@ chibi-scheme \- a tiny Scheme interpreter
 .I script argument ...
 ]
 .br
-.sp 0.3
+.sp 0.4
 
 .SH DESCRIPTION
 .I chibi-scheme
@@ -68,11 +68,13 @@ Don't load the initialization file.  The resulting
 environment will only contain the core syntactic forms
 and primitives coded in C.
 .TP
-.BI -h size
-Specifies the initial size of the heap, in bytes.
+.BI -h size[/max_size]
+Specifies the initial size of the heap, in bytes,
+optionally followed by the maximum size the heap can
+grow to.
 .I size
 can be any integer value, optionally suffixed by
-"K" for kilobytes, or "M" for megabytes.
+"K", for kilobytes, "M" for megabytes, or "G" for gigabytes.
 .I -h
 must be specified before any options which load or
 evaluate Scheme code.
