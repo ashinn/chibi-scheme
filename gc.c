@@ -151,7 +151,6 @@ void sexp_mark (sexp ctx, sexp x) {
       sexp_mark(ctx, p[i]);
     x = p[len];
     goto loop;
-    sexp_mark(ctx, x);
   }
 }
 
