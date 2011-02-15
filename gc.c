@@ -133,8 +133,8 @@ int sexp_valid_object_p (sexp ctx, sexp x) {
 #endif
 
 void sexp_mark (sexp ctx, sexp x) {
-  sexp_sint_t i, len;
-  sexp t, *p;
+  sexp_sint_t len;
+  sexp t, *p, *q;
   struct sexp_gc_var_t *saves;
  loop:
   if (!x || !sexp_pointerp(x) || !sexp_valid_object_p(ctx, x) || sexp_markedp(x))
@@ -144,12 +144,17 @@ void sexp_mark (sexp ctx, sexp x) {
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
       if (saves->var) sexp_mark(ctx, *(saves->var));
   t = sexp_object_type(ctx, x);
-  p = (sexp*) (((char*)x) + sexp_type_field_base(t));
   len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
-    for (i=0; i<len; i++)
-      sexp_mark(ctx, p[i]);
-    x = p[len];
+    p = (sexp*) (((char*)x) + sexp_type_field_base(t));
+    q = p + len;
+    while (p < q && ! (*q && sexp_pointerp(*q)))
+      q--;                      /* skip trailing immediates */
+    while (p < q && *q == q[-1])
+      q--;                      /* skip trailing duplicates */
+    while (p < q)
+      sexp_mark(ctx, *p++);
+    x = *p;
     goto loop;
   }
 }
