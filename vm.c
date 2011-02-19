@@ -735,9 +735,9 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     fp = sexp_unbox_fixnum(tmp2);
     goto make_call;
   case SEXP_OP_CALL:
-    sexp_context_top(ctx) = top;
 #if SEXP_USE_CHECK_STACK
     if (top+64 >= sexp_stack_length(sexp_context_stack(ctx))) {
+      sexp_context_top(ctx) = top;
       if (sexp_grow_stack(ctx)) {
         stack = sexp_stack_data(sexp_context_stack(ctx));
       } else {
@@ -750,6 +750,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     i = sexp_unbox_fixnum(_WORD0);
     tmp1 = _ARG1;
   make_call:
+    sexp_context_top(ctx) = top;
     if (sexp_opcodep(tmp1)) {
       /* compile non-inlined opcode applications on the fly */
       tmp1 = make_opcode_procedure(ctx, tmp1, i);
@@ -968,7 +969,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       sexp_bytes_set(_ARG1, _ARG2, _ARG3);
     else
 #if SEXP_USE_UTF8_STRINGS
-      sexp_string_utf8_set(ctx, _ARG1, _ARG2, _ARG3);
+      {
+        sexp_context_top(ctx) = top;
+        sexp_string_utf8_set(ctx, _ARG1, _ARG2, _ARG3);
+      }
 #else
       sexp_string_set(_ARG1, _ARG2, _ARG3);
 #endif
@@ -1366,6 +1370,7 @@ sexp sexp_vm (sexp ctx, sexp proc) {
 #if SEXP_USE_BIGNUMS
       } else if ((sexp_flonum_value(_ARG1) > SEXP_MAX_FIXNUM)
                  || sexp_flonum_value(_ARG1) < SEXP_MIN_FIXNUM) {
+        sexp_context_top(ctx) = top;
         _ARG1 = sexp_double_to_bignum(ctx, sexp_flonum_value(_ARG1));
 #endif
       } else {
@@ -1396,11 +1401,11 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
     break;
   case SEXP_OP_WRITE_CHAR:
-    sexp_context_top(ctx) = top;
     if (! sexp_charp(_ARG1))
       sexp_raise("write-char: not a character", sexp_list1(ctx, _ARG1));
     if (! sexp_oportp(_ARG2))
       sexp_raise("write-char: not an output-port", sexp_list1(ctx, _ARG2));
+    sexp_context_top(ctx) = top;
 #if SEXP_USE_UTF8_STRINGS
     if (sexp_unbox_character(_ARG1) >= 0x80)
       sexp_write_utf8_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
@@ -1411,16 +1416,16 @@ sexp sexp_vm (sexp ctx, sexp proc) {
     top--;
     break;
   case SEXP_OP_NEWLINE:
-    sexp_context_top(ctx) = top;
     if (! sexp_oportp(_ARG1))
       sexp_raise("newline: not an output-port", sexp_list1(ctx, _ARG1));
+    sexp_context_top(ctx) = top;
     sexp_newline(ctx, _ARG1);
     _ARG1 = SEXP_VOID;
     break;
   case SEXP_OP_READ_CHAR:
-    sexp_context_top(ctx) = top;
     if (! sexp_iportp(_ARG1))
       sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
+    sexp_context_top(ctx) = top;
     i = sexp_read_char(ctx, _ARG1);
 #if SEXP_USE_UTF8_STRINGS
     if (i >= 0x80)
@@ -1441,9 +1446,9 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       _ARG1 = sexp_make_character(i);
     break;
   case SEXP_OP_PEEK_CHAR:
-    sexp_context_top(ctx) = top;
     if (! sexp_iportp(_ARG1))
       sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
+    sexp_context_top(ctx) = top;
     i = sexp_read_char(ctx, _ARG1);
     sexp_push_char(ctx, i, _ARG1);
     if (i == EOF) {
