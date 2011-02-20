@@ -1646,7 +1646,7 @@ static int sexp_decode_utf8_char(const unsigned char* s) {
 int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
   sexp f;
   int c;
-  if (sexp_port_fileno(in) >= 0) {
+  if (sexp_port_stream(in) && sexp_port_fileno(in) >= 0) {
     if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
       sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
     if (sexp_port_flags(in) & O_NONBLOCK) {
