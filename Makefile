@@ -41,7 +41,11 @@ PLATFORM=cygwin
 SOLIBDIR = $(BINDIR)
 DIFFOPTS = -b
 else
+ifeq ($(shell uname -o),GNU/Linux)
+PLATFORM=linux
+else
 PLATFORM=unix
+endif
 endif
 endif
 endif
@@ -79,6 +83,11 @@ endif
 endif
 endif
 
+ifeq ($(PLATFORM),unix)
+#RLDFLAGS=-rpath $(DESTDIR)$(LIBDIR)
+RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
+
 ifeq ($(USE_BOEHM),1)
 SEXP_USE_BOEHM = 1
 endif
@@ -92,10 +101,10 @@ XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%)
 endif
 
 ifeq ($(SEXP_USE_DL),0)
-XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) -lm
+XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) -lm
 XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g3 $(CFLAGS)
 else
-XLDFLAGS  := $(LDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
+XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
 XCFLAGS   := -Wall -g3 $(CFLAGS)
 endif
 
