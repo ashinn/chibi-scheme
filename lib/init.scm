@@ -620,18 +620,17 @@
            (_quote (rename 'syntax-quote)) (_apply (rename 'apply))
            (_append (rename 'append))      (_map (rename 'map))
            (_vector? (rename 'vector?))    (_list? (rename 'list?))
-           (_lp (rename 'lp))              (_reverse (rename 'reverse))
            (_len (rename'len))             (_length (rename 'length))
            (_- (rename '-))   (_>= (rename '>=))   (_error (rename 'error))
            (_ls (rename 'ls)) (_res (rename 'res)) (_i (rename 'i))
-           (_vector->list (rename 'vector->list))
+           (_reverse (rename 'reverse))    (_vector->list (rename 'vector->list))
            (_list->vector (rename 'list->vector)))
        (define ellipse (rename (if ellipse-specified? (cadr expr) '...)))
        (define lits (if ellipse-specified? (caddr expr) (cadr expr)))
        (define forms (if ellipse-specified? (cdddr expr) (cddr expr)))
-       (define (next-v)
+       (define (next-symbol s)
          (set! count (+ count 1))
-         (rename (string->symbol (string-append "v." (number->string count)))))
+         (rename (string->symbol (string-append s (number->string count)))))
        (define (expand-pattern pat tmpl)
          (let lp ((p (cdr pat))
                   (x (list _cdr _expr))
@@ -640,7 +639,7 @@
                   (k (lambda (vars)
                        (or (expand-template tmpl vars)
                            (list _begin #f)))))
-           (let ((v (next-v)))
+           (let ((v (next-symbol "v.")))
              (list
               _let (list (list v x))
               (cond
@@ -658,7 +657,8 @@
                          (cddr p))
                     (error "multiple ellipses" p))
                    (else
-                    (let ((len (length (cdr (cdr p)))))
+                    (let ((len (length (cdr (cdr p))))
+                          (_lp (next-symbol "lp.")))
                       `(,_let ((,_len (,_length ,v)))
                          (,_and (,_>= ,_len ,len)
                                 (,_let ,_lp ((,_ls ,v)
@@ -678,15 +678,15 @@
                         (list _let (list (list (car p) v))
                               (k (cons (cons (car p) (+ 1 dim)) vars)))))
                  (else
-                  (let* ((w (next-v))
+                  (let* ((w (next-symbol "w."))
+                         (_lp (next-symbol "lp."))
                          (new-vars (all-vars (car p) (+ dim 1)))
                          (ls-vars (map (lambda (x)
-                                         (rename
-                                          (string->symbol
-                                           (string-append
-                                            (symbol->string
-                                             (identifier->symbol (car x)))
-                                            "-ls"))))
+                                         (next-symbol
+                                          (string-append
+                                           (symbol->string
+                                            (identifier->symbol (car x)))
+                                           "-ls")))
                                        new-vars))
                          (once
                           (lp (car p) (list _car w) (+ dim 1) '()
