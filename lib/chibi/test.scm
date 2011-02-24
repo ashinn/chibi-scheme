@@ -80,6 +80,11 @@
      (test-syntax-error 'test-assert "1 or 2 arguments required"
                         (test a ...)))))
 
+(define-syntax test-not
+  (syntax-rules ()
+    ((_ expr) (test-assert (not expr)))
+    ((_ name expr) (test-assert name (not expr)))))
+
 (define-syntax test-values
   (syntax-rules ()
     ((_ expect expr)
