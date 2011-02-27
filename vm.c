@@ -484,8 +484,8 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
 
 #if SEXP_USE_CHECK_STACK
 static int sexp_grow_stack (sexp ctx) {
-  sexp stack, *from, *to;
-  int i, size = sexp_stack_length(sexp_context_stack(ctx)), new_size;
+  sexp stack, old_stack = sexp_context_stack(ctx), *from, *to;
+  int i, size = sexp_stack_length(old_stack), new_size;
   new_size = size * 2;
   if (new_size > SEXP_MAX_STACK_SIZE) {
     if (size == SEXP_MAX_STACK_SIZE)
@@ -494,13 +494,17 @@ static int sexp_grow_stack (sexp ctx) {
   }
   stack = sexp_alloc_tagged(ctx, (sexp_sizeof(stack)+sizeof(sexp)*new_size),
                             SEXP_STACK);
+  if (!stack || sexp_exceptionp(stack))
+    return 0;
   sexp_stack_length(stack) = new_size;
   sexp_stack_top(stack) = sexp_context_top(ctx);
-  from = sexp_stack_data(sexp_context_stack(ctx));
+  from = sexp_stack_data(old_stack);
   to = sexp_stack_data(stack);
-  for (i=sexp_context_top(ctx); i>=0; i--)
+  for (i=sexp_context_top(ctx)+1; i>=0; i--)
     to[i] = from[i];
-  sexp_context_stack(ctx) = stack;
+  for (; ctx; ctx=sexp_context_parent(ctx))
+    if (sexp_context_stack(ctx) == old_stack)
+      sexp_context_stack(ctx) = stack;
   return 1;
 }
 #endif
