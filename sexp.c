@@ -1,5 +1,5 @@
 /*  sexp.c -- standalone sexp library implementation          */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/sexp.h"
@@ -166,6 +166,10 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
       sexp_type_array_size = len;
 #else
       res = sexp_make_vector(ctx, sexp_make_fixnum(len), SEXP_VOID);
+      if (sexp_exceptionp(res)) {
+        sexp_gc_release2(ctx);
+        return res;
+      }
       v1 = sexp_vector_data(res);
       v2 = sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES));
       for (i=0; i<num_types; i++)
@@ -177,45 +181,47 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
     sexp_type_by_index(ctx, num_types) = sexp_alloc_type(ctx, type, SEXP_TYPE);
 #endif
     type = sexp_type_by_index(ctx, num_types);
-    sexp_pointer_tag(type) = SEXP_TYPE;
-    sexp_type_tag(type) = num_types;
-    sexp_type_slots(type) = slots;
-    sexp_type_field_base(type) = sexp_unbox_fixnum(fb);
-    sexp_type_field_eq_len_base(type) = sexp_unbox_fixnum(felb);
-    sexp_type_field_len_base(type) = sexp_unbox_fixnum(flb);
-    sexp_type_field_len_off(type) = sexp_unbox_fixnum(flo);
-    sexp_type_field_len_scale(type) = sexp_unbox_fixnum(fls);
-    sexp_type_size_base(type) = sexp_unbox_fixnum(sb);
-    sexp_type_size_off(type) = sexp_unbox_fixnum(so);
-    sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
-    sexp_type_weak_base(type) = sexp_unbox_fixnum(w);
-    sexp_type_weak_len_base(type) = sexp_unbox_fixnum(wb);
-    sexp_type_weak_len_off(type) = sexp_unbox_fixnum(wo);
-    sexp_type_weak_len_scale(type) = sexp_unbox_fixnum(ws);
-    sexp_type_weak_len_extra(type) = sexp_unbox_fixnum(we);
-    sexp_type_name(type) = strdup(sexp_string_data(name));
-    sexp_type_finalize(type) = f;
-    if (sexp_typep(parent)) {
-      len = sexp_vectorp(sexp_type_cpl(parent)) ? sexp_vector_length(sexp_type_cpl(parent)) : 1;
-      sexp_type_cpl(type) = sexp_make_vector(ctx, sexp_make_fixnum(len+1), SEXP_VOID);
-      if (sexp_vectorp(sexp_type_cpl(parent)))
-        memcpy(sexp_vector_data(sexp_type_cpl(type)),
-               sexp_vector_data(sexp_type_cpl(parent)),
-               len * sizeof(sexp));
-      else
-        sexp_vector_data(sexp_type_cpl(type))[len-1] = parent;
-    } else {
-      len = 0;
-      sexp_type_cpl(type) = sexp_make_vector(ctx, SEXP_ONE, SEXP_VOID);
-    }
-    sexp_vector_data(sexp_type_cpl(type))[len] = type;
-    sexp_type_depth(type) = len;
-    res = type;
+    if (!sexp_exceptionp(type)) {
+      sexp_pointer_tag(type) = SEXP_TYPE;
+      sexp_type_tag(type) = num_types;
+      sexp_type_slots(type) = slots;
+      sexp_type_field_base(type) = sexp_unbox_fixnum(fb);
+      sexp_type_field_eq_len_base(type) = sexp_unbox_fixnum(felb);
+      sexp_type_field_len_base(type) = sexp_unbox_fixnum(flb);
+      sexp_type_field_len_off(type) = sexp_unbox_fixnum(flo);
+      sexp_type_field_len_scale(type) = sexp_unbox_fixnum(fls);
+      sexp_type_size_base(type) = sexp_unbox_fixnum(sb);
+      sexp_type_size_off(type) = sexp_unbox_fixnum(so);
+      sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
+      sexp_type_weak_base(type) = sexp_unbox_fixnum(w);
+      sexp_type_weak_len_base(type) = sexp_unbox_fixnum(wb);
+      sexp_type_weak_len_off(type) = sexp_unbox_fixnum(wo);
+      sexp_type_weak_len_scale(type) = sexp_unbox_fixnum(ws);
+      sexp_type_weak_len_extra(type) = sexp_unbox_fixnum(we);
+      sexp_type_name(type) = strdup(sexp_string_data(name));
+      sexp_type_finalize(type) = f;
+      if (sexp_typep(parent)) {
+        len = sexp_vectorp(sexp_type_cpl(parent)) ? sexp_vector_length(sexp_type_cpl(parent)) : 1;
+        sexp_type_cpl(type) = sexp_make_vector(ctx, sexp_make_fixnum(len+1), SEXP_VOID);
+        if (sexp_vectorp(sexp_type_cpl(parent)))
+          memcpy(sexp_vector_data(sexp_type_cpl(type)),
+                 sexp_vector_data(sexp_type_cpl(parent)),
+                 len * sizeof(sexp));
+        else
+          sexp_vector_data(sexp_type_cpl(type))[len-1] = parent;
+      } else {
+        len = 0;
+        sexp_type_cpl(type) = sexp_make_vector(ctx, SEXP_ONE, SEXP_VOID);
+      }
+      sexp_vector_data(sexp_type_cpl(type))[len] = type;
+      sexp_type_depth(type) = len;
 #if SEXP_USE_GLOBAL_TYPES
-    sexp_num_types = num_types + 1;
+      sexp_num_types = num_types + 1;
 #else
-    sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(num_types + 1);
+      sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(num_types + 1);
 #endif
+    }
+    res = type;
   }
   sexp_gc_release2(ctx);
   return res;
@@ -299,18 +305,21 @@ void sexp_init_context_globals (sexp ctx) {
 
 #if ! SEXP_USE_GLOBAL_HEAP
 sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
-  sexp dummy_ctx, ctx;
+  sexp ctx;
   sexp_heap heap;
+  struct sexp_struct dummy_ctx;
   if (size < SEXP_MINIMUM_HEAP_SIZE) size = SEXP_INITIAL_HEAP_SIZE;
   heap = sexp_make_heap(sexp_heap_align(size), sexp_heap_align(max_size));
-  dummy_ctx = (sexp) malloc(sexp_sizeof(context));
-  sexp_pointer_tag(dummy_ctx) = SEXP_CONTEXT;
-  sexp_context_saves(dummy_ctx) = NULL;
-  sexp_context_heap(dummy_ctx) = heap;
-  ctx = sexp_alloc_type(dummy_ctx, context, SEXP_CONTEXT);
-  sexp_context_heap(dummy_ctx) = NULL;
-  sexp_context_heap(ctx) = heap;
-  free(dummy_ctx);
+  if (!heap) return 0;
+  sexp_pointer_tag(&dummy_ctx) = SEXP_CONTEXT;
+  sexp_context_saves(&dummy_ctx) = NULL;
+  sexp_context_heap(&dummy_ctx) = heap;
+  ctx = sexp_alloc_type(&dummy_ctx, context, SEXP_CONTEXT);
+  if (!ctx || sexp_exceptionp(ctx)) {
+    sexp_free_heap(heap);
+  } else {
+    sexp_context_heap(ctx) = heap;
+  }
   return ctx;
 }
 #endif
@@ -319,8 +328,10 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   sexp_gc_var1(res);
   if (ctx) sexp_gc_preserve1(ctx, res);
 #if ! SEXP_USE_GLOBAL_HEAP
-  if (! ctx) res = sexp_bootstrap_context(size, max_size);
-  else
+  if (! ctx) {
+    res = sexp_bootstrap_context(size, max_size);
+    if (!res || sexp_exceptionp(res)) return res;
+  } else
 #endif
     {
       res = sexp_alloc_type(ctx, context, SEXP_CONTEXT);
@@ -328,6 +339,7 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
       sexp_context_heap(res) = sexp_context_heap(ctx);
 #endif
     }
+  if (!res || sexp_exceptionp(res)) return res;
   sexp_context_parent(res) = ctx;
   sexp_context_lambda(res) = SEXP_FALSE;
   sexp_context_name(res) = sexp_context_specific(res) = SEXP_FALSE;
@@ -364,11 +376,7 @@ void sexp_destroy_context (sexp ctx) {
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {
       tmp = heap->next;
-#if SEXP_USE_MMAP_GC
-      munmap(heap, sexp_heap_pad_size(heap->size));
-#else
-      free(heap);
-#endif
+      sexp_free_heap(heap);
     }
   }
 }
@@ -1206,9 +1214,13 @@ sexp sexp_make_output_string_port_op (sexp ctx sexp_api_params(self, n)) {
   sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
   if (sexp_exceptionp(res)) return res;
   sexp_port_buf(res) = (char*) malloc(SEXP_PORT_BUFFER_SIZE);
-  sexp_port_size(res) = SEXP_PORT_BUFFER_SIZE;
-  sexp_port_offset(res) = 0;
-  sexp_port_cookie(res) = SEXP_NULL;
+  if (!sexp_port_buf(res)) {
+    res = sexp_global(ctx, SEXP_G_OOM_ERROR);
+  } else {
+    sexp_port_size(res) = SEXP_PORT_BUFFER_SIZE;
+    sexp_port_offset(res) = 0;
+    sexp_port_cookie(res) = SEXP_NULL;
+  }
   return res;
 }
 

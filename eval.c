@@ -1,5 +1,5 @@
 /*  eval.c -- evaluator library implementation                */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -365,8 +365,10 @@ void sexp_init_eval_context_globals (sexp ctx) {
 
 sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, sexp_uint_t max_size) {
   sexp_gc_var1(res);
-  if (ctx) sexp_gc_preserve1(ctx, res);
   res = sexp_make_context(ctx, size, max_size);
+  if (!res || sexp_exceptionp(res))
+    return res;
+  if (ctx) sexp_gc_preserve1(ctx, res);
   sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
@@ -1530,6 +1532,7 @@ sexp sexp_find_module_file (sexp ctx, const char *file) {
     slash = dir[dirlen-1] == '/';
     len = dirlen+filelen+2-slash;
     path = (char*) malloc(len);
+    if (! path) return sexp_global(ctx, SEXP_G_OOM_ERROR);
     memcpy(path, dir, dirlen);
     if (! slash) path[dirlen] = '/';
     memcpy(path+len-filelen-1, file, filelen);
