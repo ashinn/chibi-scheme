@@ -1014,7 +1014,7 @@ int sstream_read (void *vec, char *dst, int n) {
   if (pos >= len) return 0;
   if (n > (len - pos)) n = (len - pos);
   memcpy(dst, sexp_string_data(sexp_stream_buf(vec))+pos, n);
-  sexp_stream_pos_set(vec, sexp_make_fixnum(n));
+  sexp_stream_pos_set(vec, sexp_make_fixnum(pos + n));
   return n;
 }
 
