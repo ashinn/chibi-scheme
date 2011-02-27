@@ -482,24 +482,6 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
 
 /*********************** the virtual machine **************************/
 
-static sexp sexp_save_stack (sexp ctx, sexp *stack, sexp_uint_t to) {
-  sexp res, *data;
-  sexp_uint_t i;
-  res = sexp_make_vector(ctx, sexp_make_fixnum(to), SEXP_VOID);
-  data = sexp_vector_data(res);
-  for (i=0; i<to; i++)
-    data[i] = stack[i];
-  return res;
-}
-
-static sexp_uint_t sexp_restore_stack (sexp saved, sexp *current) {
-  sexp_uint_t len = sexp_vector_length(saved), i;
-  sexp *from = sexp_vector_data(saved);
-  for (i=0; i<len; i++)
-    current[i] = from[i];
-  return len;
-}
-
 #if SEXP_USE_CHECK_STACK
 static int sexp_grow_stack (sexp ctx) {
   sexp stack, *from, *to;
@@ -522,6 +504,31 @@ static int sexp_grow_stack (sexp ctx) {
   return 1;
 }
 #endif
+
+static sexp sexp_save_stack (sexp ctx, sexp *stack, sexp_uint_t to) {
+  sexp res, *data;
+  sexp_uint_t i;
+  res = sexp_make_vector(ctx, sexp_make_fixnum(to), SEXP_VOID);
+  data = sexp_vector_data(res);
+  for (i=0; i<to; i++)
+    data[i] = stack[i];
+  return res;
+}
+
+static sexp sexp_restore_stack (sexp ctx, sexp saved) {
+  sexp_uint_t len = sexp_vector_length(saved), i;
+  sexp *from = sexp_vector_data(saved), *to;
+#if SEXP_USE_CHECK_STACK
+  if ((len+64 >= sexp_stack_length(sexp_context_stack(ctx)))
+      && !sexp_grow_stack(ctx))
+    return sexp_global(ctx, SEXP_G_OOS_ERROR);
+#endif
+  to = sexp_stack_data(sexp_context_stack(ctx));
+  for (i=0; i<len; i++)
+    to[i] = from[i];
+  sexp_context_top(ctx) = len;
+  return SEXP_VOID;
+}
 
 #define _ARG1 stack[top-1]
 #define _ARG2 stack[top-2]
@@ -679,7 +686,9 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_RESUMECC:
     sexp_context_top(ctx) = top;
     tmp1 = stack[fp-1];
-    top = sexp_restore_stack(sexp_vector_ref(cp, 0), stack);
+    tmp2 = sexp_restore_stack(ctx, sexp_vector_ref(cp, 0));
+    if (sexp_exceptionp(tmp2)) {_ARG1 = tmp2; goto call_error_handler;}
+    top = sexp_context_top(ctx);
     fp = sexp_unbox_fixnum(_ARG1);
     self = _ARG2;
     bc = sexp_procedure_code(self);
