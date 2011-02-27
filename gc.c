@@ -38,6 +38,14 @@ static size_t sexp_heap_total_size (sexp_heap h) {
   return total_size;
 }
 
+void sexp_free_heap (sexp_heap heap) {
+#if SEXP_USE_MMAP_GC
+  munmap(heap, sexp_heap_pad_size(heap->size));
+#else
+  free(heap);
+#endif
+}
+
 sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   sexp_uint_t res;
   sexp t;
@@ -451,6 +459,7 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
     return sexp_user_exception(ctx, NULL, "can't copy a non-contiguous heap", ctx);
   } else if (! dst || sexp_not(dst)) {
     to = sexp_make_heap(from->size, from->max_size);
+    if (!to) return sexp_global(ctx, SEXP_G_OOM_ERROR);
     dst = (sexp) ((char*)ctx + ((char*)to - (char*)from));
   } else if (! sexp_contextp(dst)) {
     return sexp_type_exception(ctx, NULL, SEXP_CONTEXT, dst);

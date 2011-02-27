@@ -1,5 +1,5 @@
 /* main.c -- chibi-scheme command-line app                   */
-/* Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/* Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -95,9 +95,10 @@ static sexp check_exception (sexp ctx, sexp res) {
 }
 
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
-  sexp e = sexp_load_standard_env(ctx, env, k), res;
+  sexp e = sexp_load_standard_env(ctx, env, k), p, res;
+  if (sexp_exceptionp(e)) return e;
 #if SEXP_USE_GREEN_THREADS
-  sexp p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
+  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
 #endif
   res = sexp_make_env(ctx);
@@ -107,6 +108,10 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
 
 #define init_context() if (! ctx) do {                                  \
       ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size, heap_max_size); \
+      if (! ctx) {                                                      \
+        fprintf(stderr, "chibi-scheme: out of memory\n");               \
+        exit_failure();                                                 \
+      }                                                                 \
       env = sexp_context_env(ctx);                                      \
       sexp_gc_preserve2(ctx, tmp, args);                                \
     } while (0)
