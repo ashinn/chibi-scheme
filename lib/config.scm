@@ -1,5 +1,5 @@
 ;; config.scm -- configuration module
-;; Copyright (c) 2009-2010 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -123,7 +123,7 @@
           (cond-expand
            (dynamic-loading (load-modules (cdr x) *shared-object-extension*))
            (else #f)))
-         ((body)
+         ((body begin)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))
     env))
@@ -159,6 +159,11 @@
                         *modules*)))
           (set! *this-module* tmp))))))
 
+(define-syntax module
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (cons (rename 'define-module) (cdr expr)))))
+
 (define-syntax define-config-primitive
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -173,6 +178,7 @@
 (define-config-primitive include)
 (define-config-primitive include-shared)
 (define-config-primitive body)
+(define-config-primitive begin)
 
 (define *modules*
   (list (cons '(scheme) (make-module #f (interaction-environment)
@@ -184,4 +190,3 @@
         (cons '(srfi 46) (make-module (list 'syntax-rules)
                                       (current-environment)
                                       (list (list 'export 'syntax-rules))))))
-
