@@ -772,9 +772,10 @@
             ((pair? t)
              (cond
               ((ellipse-escape? t)
-               (if (pair? (cdr t))
-                   (if (pair? (cddr t)) (cddr t) (cadr t))
-                   (cdr t)))
+               (list _quote
+                     (if (pair? (cdr t))
+                         (if (pair? (cddr t)) (cddr t) (cadr t))
+                         (cdr t))))
               ((ellipse? t)
                (let* ((depth (ellipse-depth t))
                       (ell-dim (+ dim depth))
