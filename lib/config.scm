@@ -140,11 +140,19 @@
      (let ((name (cadr expr))
            (body (cddr expr)))
        `(let ((tmp *this-module*))
+          (define (rewrite-export x)
+            (if (pair? x)
+                (if (and (= 3 (length x))
+                         (eq? 'rename (identifier->symbol (car x))))
+                    (cons (caddr x) (cadr x))
+                    (error "invalid module export" x))
+                x))
           (set! *this-module* '())
           ,@body
           (set! *this-module* (reverse *this-module*))
           (let ((exports
-                 (cond ((assq 'export *this-module*) => cdr)
+                 (cond ((assq 'export *this-module*)
+                        => (lambda (x) (map rewrite-export (cdr x))))
                        (else '()))))
             (set! *modules*
                   (cons (cons ',name (make-module exports #f *this-module*))
