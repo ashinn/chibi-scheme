@@ -112,6 +112,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
         fprintf(stderr, "chibi-scheme: out of memory\n");               \
         exit_failure();                                                 \
       }                                                                 \
+      sexp_global(ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(fold_case); \
       env = sexp_context_env(ctx);                                      \
       sexp_gc_preserve2(ctx, tmp, args);                                \
     } while (0)
@@ -124,7 +125,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
 void run_main (int argc, char **argv) {
   char *arg, *impmod, *p;
   sexp out=SEXP_FALSE, res=SEXP_VOID, env=NULL, ctx=NULL;
-  sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0;
+  sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp_gc_var2(tmp, args);
   args = SEXP_NULL;
@@ -207,6 +208,10 @@ void run_main (int argc, char **argv) {
       sexp_write(ctx, tmp, out);
       sexp_newline(ctx, out);
       return;
+    case 'f':
+      fold_case = 1;
+      if (ctx) sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
+      break;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
       exit_failure();

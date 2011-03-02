@@ -1,5 +1,5 @@
 /*  features.h -- general feature configuration               */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 /* uncomment this to disable most features */
@@ -391,6 +391,14 @@
 
 #ifndef SEXP_USE_HASH_SYMS
 #define SEXP_USE_HASH_SYMS ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_FOLD_CASE_SYMS
+#define SEXP_USE_FOLD_CASE_SYMS ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_DEFAULT_FOLD_CASE_SYMS
+#define SEXP_DEFAULT_FOLD_CASE_SYMS 0
 #endif
 
 #ifndef SEXP_USE_DEBUG_VM

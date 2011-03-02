@@ -278,6 +278,9 @@ void sexp_init_context_globals (sexp ctx) {
 #if ! SEXP_USE_GLOBAL_SYMBOLS
   sexp_global(ctx, SEXP_G_SYMBOLS) = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_SYMBOL_TABLE_SIZE), SEXP_NULL);
 #endif
+#if SEXP_USE_FOLD_CASE_SYMS
+  sexp_global(ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(SEXP_DEFAULT_FOLD_CASE_SYMS);
+#endif
   sexp_global(ctx, SEXP_G_OOM_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of memory", SEXP_NULL);
   sexp_global(ctx, SEXP_G_OOS_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of stack space", SEXP_NULL);
   sexp_global(ctx, SEXP_G_QUOTE_SYMBOL) = sexp_intern(ctx, "quote", -1);
@@ -1253,6 +1256,9 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_no_closep(p) = 0;
   sexp_port_sourcep(p) = 0;
   sexp_port_blockedp(p) = 0;
+#if SEXP_USE_FOLD_CASE_SYMS
+  sexp_port_fold_casep(p) = sexp_truep(sexp_global(ctx, SEXP_G_FOLD_CASE_P));
+#endif
   sexp_port_cookie(p) = SEXP_VOID;
   return p;
 }
@@ -1537,11 +1543,18 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
   char initbuf[INIT_STRING_BUFFER_SIZE];
   char *buf=initbuf, *tmp;
   sexp res;
+#if SEXP_USE_FOLD_CASE_SYMS
+  int foldp = sexp_port_fold_casep(in);
+  init = (foldp ? tolower(init) : init);
+#endif
 
   if (init != EOF)
     buf[i++] = init;
 
   for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
+#if SEXP_USE_FOLD_CASE_SYMS
+    if (foldp) c = tolower(c);
+#endif
     if (c == '\\') c = sexp_read_char(ctx, in);
     if (c == EOF || is_separator(c)) {
       sexp_push_char(ctx, c, in);
