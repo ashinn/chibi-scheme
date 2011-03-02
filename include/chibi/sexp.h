@@ -277,7 +277,7 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      char openp, no_closep, sourcep, blockedp;
+      char openp, no_closep, sourcep, blockedp, fold_casep;
       sexp_uint_t offset, line, flags;
       size_t size;
       sexp name;
@@ -686,18 +686,19 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_symbol_data(x)    (sexp_field(x, symbol, SEXP_SYMBOL, data))
 #define sexp_symbol_length(x)  (sexp_field(x, symbol, SEXP_SYMBOL, length))
 
-#define sexp_port_stream(p)    (sexp_pred_field(p, port, sexp_portp, stream))
-#define sexp_port_name(p)      (sexp_pred_field(p, port, sexp_portp, name))
-#define sexp_port_line(p)      (sexp_pred_field(p, port, sexp_portp, line))
-#define sexp_port_openp(p)     (sexp_pred_field(p, port, sexp_portp, openp))
-#define sexp_port_no_closep(p) (sexp_pred_field(p, port, sexp_portp, no_closep))
-#define sexp_port_sourcep(p)   (sexp_pred_field(p, port, sexp_portp, sourcep))
-#define sexp_port_blockedp(p)  (sexp_pred_field(p, port, sexp_portp, blockedp))
-#define sexp_port_cookie(p)    (sexp_pred_field(p, port, sexp_portp, cookie))
-#define sexp_port_buf(p)       (sexp_pred_field(p, port, sexp_portp, buf))
-#define sexp_port_size(p)      (sexp_pred_field(p, port, sexp_portp, size))
-#define sexp_port_offset(p)    (sexp_pred_field(p, port, sexp_portp, offset))
-#define sexp_port_flags(p)     (sexp_pred_field(p, port, sexp_portp, flags))
+#define sexp_port_stream(p)     (sexp_pred_field(p, port, sexp_portp, stream))
+#define sexp_port_name(p)       (sexp_pred_field(p, port, sexp_portp, name))
+#define sexp_port_line(p)       (sexp_pred_field(p, port, sexp_portp, line))
+#define sexp_port_openp(p)      (sexp_pred_field(p, port, sexp_portp, openp))
+#define sexp_port_no_closep(p)  (sexp_pred_field(p, port, sexp_portp, no_closep))
+#define sexp_port_sourcep(p)    (sexp_pred_field(p, port, sexp_portp, sourcep))
+#define sexp_port_blockedp(p)   (sexp_pred_field(p, port, sexp_portp, blockedp))
+#define sexp_port_fold_casep(p) (sexp_pred_field(p, port, sexp_portp, fold_casep))
+#define sexp_port_cookie(p)     (sexp_pred_field(p, port, sexp_portp, cookie))
+#define sexp_port_buf(p)        (sexp_pred_field(p, port, sexp_portp, buf))
+#define sexp_port_size(p)       (sexp_pred_field(p, port, sexp_portp, size))
+#define sexp_port_offset(p)     (sexp_pred_field(p, port, sexp_portp, offset))
+#define sexp_port_flags(p)      (sexp_pred_field(p, port, sexp_portp, flags))
 
 #define sexp_exception_kind(x)      (sexp_field(x, exception, SEXP_EXCEPTION, kind))
 #define sexp_exception_message(x)   (sexp_field(x, exception, SEXP_EXCEPTION, message))
@@ -950,6 +951,9 @@ enum sexp_context_globals {
   SEXP_G_ERR_HANDLER,
   SEXP_G_RESUMECC_BYTECODE,
   SEXP_G_FINAL_RESUMER,
+#if SEXP_USE_FOLD_CASE_SYMS
+  SEXP_G_FOLD_CASE_P,
+#endif
 #if SEXP_USE_WEAK_REFERENCES
   SEXP_G_WEAK_REFERENCE_CACHE,
 #endif
