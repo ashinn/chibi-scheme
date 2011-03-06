@@ -659,7 +659,9 @@ static sexp analyze_define (sexp ctx, sexp x) {
         value = analyze_lambda(ctx, tmp);
       } else
         value = analyze(ctx, sexp_caddr(x));
-      ref = analyze_var_ref(ctx, name, &varenv);
+      tmp = sexp_env_cell_loc(env, name, &varenv);
+      if (!tmp) tmp = sexp_env_cell_create(ctx, env, name, SEXP_UNDEF, &varenv);
+      ref = sexp_make_ref(ctx, name, tmp);
       if (sexp_exceptionp(ref)) {
         res = ref;
       } else if (sexp_exceptionp(value)) {
