@@ -104,25 +104,33 @@ sexp sexp_env_global_ref (sexp env, sexp key, sexp dflt) {
 
 sexp sexp_env_define (sexp ctx, sexp env, sexp key, sexp value) {
   sexp cell=SEXP_FALSE, res=SEXP_VOID;
-  sexp_gc_var1(tmp);
-  for (tmp=sexp_env_bindings(env); sexp_pairp(tmp); tmp=sexp_env_next_cell(tmp))
-    if (sexp_car(tmp) == key) {
-      cell = tmp;
-      break;
-    }
+  sexp_gc_var2(ls1, ls2);
   if (sexp_immutablep(env)) {
     res = sexp_user_exception(ctx, NULL, "immutable binding", key);
   } else {
-    sexp_gc_preserve1(ctx, tmp);
+    sexp_gc_preserve2(ctx, ls1, ls2);
+    for (ls1=NULL, ls2=sexp_env_bindings(env); sexp_pairp(ls2);
+         ls1=ls2, ls2=sexp_env_next_cell(ls2))
+      if (sexp_car(ls2) == key) {
+        cell = ls2;
+        break;
+      }
     if (sexp_truep(cell)) {
-      if (sexp_immutablep(cell))
+      if (sexp_immutablep(cell)) {
         res = sexp_user_exception(ctx, NULL, "immutable binding", key);
-      else
+      } else if ((sexp_corep(value) || sexp_macrop(value))
+                 && !(sexp_corep(sexp_cdr(cell))
+                      || sexp_macrop(sexp_cdr(cell)))) {
+        if (ls1) sexp_env_next_cell(ls1) = sexp_env_next_cell(ls2);
+        else sexp_env_bindings(env) = sexp_env_next_cell(ls2);
+        sexp_env_push(ctx, env, ls2, key, value);
+      } else {
         sexp_cdr(cell) = value;
+      }
     } else {
-      sexp_env_push(ctx, env, tmp, key, value);
+      sexp_env_push(ctx, env, ls2, key, value);
     }
-    sexp_gc_release1(ctx);
+    sexp_gc_release2(ctx);
   }
   return res;
 }
