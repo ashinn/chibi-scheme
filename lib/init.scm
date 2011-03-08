@@ -663,8 +663,10 @@
                                              (,_i (,_- ,_len ,len))
                                              (,_res (,_quote ())))
                                   (,_if (,_>= 0 ,_i)
-                                      ,(lp `(,@(cdr (cdr p)) ,(car p) ,(car (cdr p)))
-                                           `(,_append ,_ls (,_reverse ,_res))
+                                      ,(lp `(,(cddr p) (,(car p) ,(car (cdr p))))
+                                           `(,_cons ,_ls
+                                                    (,_cons (,_reverse ,_res)
+                                                            (,_quote ())))
                                            dim
                                            vars
                                            k)
@@ -739,7 +741,7 @@
                   (if (any (lambda (lit) (compare x lit)) lits)
                       vars
                       (cons (cons x dim) vars)))
-                 ((ellipsis? x) (lp (car x) (+ dim 1) vars))
+                 ((ellipsis? x) (lp (car x) (+ dim 1) (lp (cddr x) dim vars)))
                  ((pair? x) (lp (car x) dim (lp (cdr x) dim vars)))
                  ((vector? x) (lp (vector->list x) dim vars))
                  (else vars))))
