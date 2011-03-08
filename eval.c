@@ -767,6 +767,8 @@ static sexp analyze (sexp ctx, sexp object) {
                              sexp_synclo_expr(sexp_car(x)));
       if (! cell) {
         res = analyze_app(ctx, x);
+        if (sexp_exceptionp(res))
+          sexp_warn(ctx, "exception inside undefined operator: ", sexp_car(x));
       } else {
         op = sexp_cdr(cell);
         if (sexp_corep(op)) {
