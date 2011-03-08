@@ -651,8 +651,6 @@
                 (cond
                  ((not (null? (cddr p)))
                   (cond
-                   ((not (list? (cddr p)))
-                    (error "dotted ellipse" p))
                    ((any (lambda (x) (and (identifier? x) (compare x ellipse)))
                          (cddr p))
                     (error "multiple ellipses" p))
