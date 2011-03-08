@@ -826,10 +826,9 @@ static sexp analyze (sexp ctx, sexp object) {
         }
       }
     } else {
-      if (! (sexp_truep(sexp_listp(ctx, sexp_car(x)))
+      if (! (sexp_pairp(sexp_car(x))
              || (sexp_synclop(sexp_car(x))
-                 && sexp_truep(sexp_listp(ctx,
-                                          sexp_synclo_expr(sexp_car(x)))))))
+                 && sexp_pairp(sexp_synclo_expr(sexp_car(x))))))
         sexp_warn(ctx, "invalid operand in application: ", x);
       res = analyze_app(ctx, x);
     }
@@ -843,6 +842,8 @@ static sexp analyze (sexp ctx, sexp object) {
                                         sexp_context_fv(tmp));
     x = sexp_synclo_expr(x);
     res = analyze(tmp, x);
+  } else if (sexp_nullp(x)) {
+    res = sexp_compile_error(ctx, "empty application in source", x);
   } else {
     res = x;
   }

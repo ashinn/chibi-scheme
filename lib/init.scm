@@ -1,5 +1,5 @@
 ;; init.scm -- R5RS library procedures
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;; provide c[ad]{2,4}r
@@ -201,7 +201,7 @@
           (else
            (list (rename 'cons) (qq (car x) d) (qq (cdr x) d)))))
         ((vector? x) (list (rename 'list->vector) (qq (vector->list x) d)))
-        ((symbol? x) (list (rename 'quote) x))
+        ((if (symbol? x) #t (null? x)) (list (rename 'quote) x))
         (else x)))
      (qq (cadr expr) 0))))
 
@@ -702,7 +702,7 @@
                     (list
                      _let
                      _lp (cons (list w v)
-                               (map (lambda (x) (list x '())) ls-vars))
+                               (map (lambda (x) (list x (list _quote '()))) ls-vars))
                      (list _if (list _null? w)
                            (list _let (map (lambda (x l)
                                              (list (car x) (list _reverse l)))
