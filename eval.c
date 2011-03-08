@@ -828,11 +828,12 @@ static sexp analyze (sexp ctx, sexp object) {
         }
       }
     } else {
-      if (! (sexp_pairp(sexp_car(x))
-             || (sexp_synclop(sexp_car(x))
-                 && sexp_pairp(sexp_synclo_expr(sexp_car(x))))))
-        sexp_warn(ctx, "invalid operand in application: ", x);
       res = analyze_app(ctx, x);
+      if (!sexp_exceptionp(res)
+          && !(sexp_pairp(sexp_car(x))
+               || (sexp_synclop(sexp_car(x))
+                   && sexp_pairp(sexp_synclo_expr(sexp_car(x))))))
+        sexp_warn(ctx, "invalid operator in application: ", x);
     }
   } else if (sexp_idp(x)) {
     res = analyze_var_ref(ctx, x, NULL);
