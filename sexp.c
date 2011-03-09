@@ -642,11 +642,16 @@ sexp sexp_append2_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
   return b1;
 }
 
-sexp sexp_length_op (sexp ctx sexp_api_params(self, n), sexp ls) {
-  sexp_uint_t res=0;
-  for ( ; sexp_pairp(ls); res++, ls=sexp_cdr(ls))
-    ;
-  return sexp_make_fixnum(res);
+sexp sexp_length_op (sexp ctx sexp_api_params(self, n), sexp ls1) {
+  sexp ls2;
+  sexp_uint_t res = 1;
+  if (!sexp_pairp(ls1))
+    return SEXP_ZERO;
+  for (ls2=sexp_cdr(ls1); sexp_pairp(ls2) && sexp_pairp(sexp_cdr(ls2));
+       res+=2, ls1=sexp_cdr(ls1), ls2=sexp_cddr(ls2))
+    if (ls1 == ls2)
+      return SEXP_FALSE;
+  return sexp_make_fixnum(res + (sexp_pairp(ls2) ? 1 : 0));
 }
 
 sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
