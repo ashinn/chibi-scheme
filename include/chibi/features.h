@@ -123,6 +123,9 @@
 /*   in opt/bignum.c. */
 /* #define SEXP_USE_BIGNUMS 0 */
 
+/* uncomment this if you don't want 1## style approximate digits */
+/* #define SEXP_USE_PLACEHOLDER_DIGITS 0 */
+
 /* uncomment this if you don't need extended math operations */
 /*   This includes the trigonometric and expt functions. */
 /*   Automatically disabled if you've disabled flonums. */
@@ -367,6 +370,14 @@
 
 #ifndef SEXP_USE_IMMEDIATE_FLONUMS
 #define SEXP_USE_IMMEDIATE_FLONUMS 0
+#endif
+
+#ifndef SEXP_USE_PLACEHOLDER_DIGITS
+#define SEXP_USE_PLACEHOLDER_DIGITS SEXP_USE_FLONUMS
+#endif
+
+#ifndef SEXP_PLACEHOLDER_DIGIT
+#define SEXP_PLACEHOLDER_DIGIT '#'
 #endif
 
 #ifndef SEXP_USE_BIGNUMS
