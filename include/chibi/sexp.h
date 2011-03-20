@@ -598,6 +598,14 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #define sexp_fixnum_to_double(x) ((double)sexp_unbox_fixnum(x))
 
+#if SEXP_USE_PLACEHOLDER_DIGITS
+#define sexp_placeholder_digit_p(c) ((c) == SEXP_PLACEHOLDER_DIGIT)
+#else
+#define sexp_placeholder_digit_p(c) 0
+#endif
+
+#define sexp_placeholder_digit_value(base) ((base)/2)
+
 #if SEXP_USE_FLONUMS
 #define sexp_fp_integerp(x) (sexp_flonum_value(x) == trunc(sexp_flonum_value(x)))
 #define _or_integer_flonump(x) || (sexp_flonump(x) && sexp_fp_integerp(x))

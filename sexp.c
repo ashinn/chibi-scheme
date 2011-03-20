@@ -1589,6 +1589,10 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
        isdigit(c);
        c=sexp_read_char(ctx, in), scale*=0.1)
     res += digit_value(c)*scale;
+#if SEXP_USE_PLACEHOLDER_DIGITS
+  for (; c==SEXP_PLACEHOLDER_DIGIT; c=sexp_read_char(ctx, in), scale*=0.1)
+    res += sexp_placeholder_digit_value(10)*scale;
+#endif
   if (c=='e' || c=='E') {
     exponent = sexp_read_number(ctx, in, 10);
     if (sexp_exceptionp(exponent)) return exponent;
@@ -1613,6 +1617,9 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
   sexp den;
   sexp_uint_t res = 0, tmp;
   int c, digit, negativep = 0;
+#if SEXP_USE_PLACEHOLDER_DIGITS
+  double whole = 0.0, scale = 0.1;
+#endif
 
   c = sexp_read_char(ctx, in);
   if (c == '-') {
@@ -1633,6 +1640,29 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
 #endif
     res = tmp;
   }
+
+#if SEXP_USE_PLACEHOLDER_DIGITS
+  if (sexp_placeholder_digit_p(c)) {
+    whole = res;
+    for ( ; sexp_placeholder_digit_p(c); c=sexp_read_char(ctx, in))
+      whole = whole*10 + sexp_placeholder_digit_value(base);
+    if ((c=='.' || c=='e' || c=='E') && (base != 10))
+      return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
+    if (c=='.')
+      for (c=sexp_read_char(ctx, in); sexp_placeholder_digit_p(c);
+           c=sexp_read_char(ctx, in), scale*=0.1)
+        whole += sexp_placeholder_digit_value(10)*scale;
+    if (c=='e' || c=='E') {
+      sexp_push_char(ctx, c, in);
+      return sexp_read_float_tail(ctx, in, whole, negativep);
+    } else if ((c!=EOF) && !is_separator(c)) {
+      return sexp_read_error(ctx, "invalid numeric syntax after placeholders",
+                             sexp_make_character(c), in);
+    }
+    sexp_push_char(ctx, c, in);
+    return sexp_make_flonum(ctx, (negativep ? -whole : whole));
+  }
+#endif
 
   if (c=='.' || c=='e' || c=='E') {
     if (base != 10)
