@@ -1,0 +1,6 @@
+
+(define-module (chibi equiv)
+  (export equiv?)
+  (import-immutable (scheme))
+  (import (srfi 69))
+  (include "equiv.scm"))

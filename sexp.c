@@ -654,7 +654,7 @@ sexp sexp_length_op (sexp ctx sexp_api_params(self, n), sexp ls1) {
   return sexp_make_fixnum(res + (sexp_pairp(ls2) ? 1 : 0));
 }
 
-sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
+sexp sexp_equalp_bound (sexp ctx sexp_api_params(self, n), sexp a, sexp b, sexp bound) {
   sexp_uint_t size;
   sexp_sint_t i, len;
   sexp t, *p, *q;
@@ -662,7 +662,7 @@ sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
 
  loop:
   if (a == b)
-    return SEXP_TRUE;
+    return bound;
   else if ((! sexp_pointerp(a)) || (! sexp_pointerp(b))
            || (sexp_pointer_tag(a) != sexp_pointer_tag(b)))
     return SEXP_FALSE;
@@ -670,12 +670,15 @@ sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
   /* a and b are both pointers of the same type */
 #if SEXP_USE_BIGNUMS
   if (sexp_pointer_tag(a) == SEXP_BIGNUM)
-    return sexp_make_boolean(!sexp_bignum_compare(a, b));
+    return !sexp_bignum_compare(a, b) ? bound : SEXP_FALSE;
 #endif
 #if SEXP_USE_FLONUMS && ! SEXP_USE_IMMEDIATE_FLONUMS
   if (sexp_pointer_tag(a) == SEXP_FLONUM)
-    return sexp_make_boolean(sexp_flonum_value(a) == sexp_flonum_value(b));
+    return (sexp_flonum_value(a) == sexp_flonum_value(b)) ? bound : SEXP_FALSE;
 #endif
+  if (sexp_unbox_fixnum(bound) < 0)
+    return bound;
+  bound = sexp_fx_sub(bound, SEXP_ONE);
   t = sexp_object_type(ctx, a);
   p0 = ((char*)a) + offsetof(struct sexp_struct, value);
   p = (sexp*) (((char*)a) + sexp_type_field_base(t));
@@ -698,13 +701,20 @@ sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
   /* check eq-object slots */
   len = sexp_type_num_eq_slots_of_object(t, a);
   if (len > 0) {
-    for (i=0; i<len-1; i++)
-      if (p[i] != q[i] && sexp_not(sexp_equalp(ctx, p[i], q[i])))
-        return SEXP_FALSE;
+    for (i=0; i<len-1; i++) {
+      bound = sexp_equalp_bound(ctx sexp_api_pass(self, n), p[i], q[i], bound);
+      if (sexp_not(bound)) return SEXP_FALSE;
+    }
     /* tail-recurse on the last value */
     a = p[len-1]; b = q[len-1]; goto loop;
   }
-  return SEXP_TRUE;
+  return bound;
+}
+
+sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
+  return sexp_make_boolean(
+    sexp_truep(sexp_equalp_bound(ctx sexp_api_pass(self, n), a, b,
+                                 sexp_make_fixnum(1000000000))));
 }
 
 /********************* strings, symbols, vectors **********************/
