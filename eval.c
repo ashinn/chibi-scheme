@@ -1192,6 +1192,12 @@ static int sexp_string_utf8_length (unsigned char *p, int len) {
   return i;
 }
 
+static char* sexp_string_utf8_prev (unsigned char *p) {
+  while ((*--p)>>6 == 2)
+    ;
+  return (char*)p;
+}
+
 sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
   unsigned char *p=(unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(i);
   if (*p < 0x80)

@@ -81,11 +81,6 @@
  (loop ((for c (in-string "hello" 0 4)) (for res (listing c))) => res))
 
 (test
- "in-string with start, end and step"
- '(#\e #\l)
- (loop ((for c (in-string "hello" 1 4 2)) (for res (listing c))) => res))
-
-(test
  "in-string-reverse"
  '(#\o #\l #\l #\e #\h)
  (loop ((for c (in-string-reverse "hello")) (for res (listing c))) => res))
@@ -94,6 +89,11 @@
  "in-vector"
  '(1 2 3)
  (loop ((for x (in-vector '#(1 2 3))) (for res (listing x))) => res))
+
+(test
+ "in-vector-reverse"
+ '(3 2 1)
+ (loop ((for x (in-vector-reverse '#(1 2 3))) (for res (listing x))) => res))
 
 (test "up-from" '(5 6 7)
   (loop ((for i (up-from 5 (to 8)))

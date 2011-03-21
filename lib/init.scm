@@ -879,3 +879,22 @@
              (set! computed? #t)))
        result)))
   (define (force x) (if (procedure? x) (x) x))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; string cursors
+
+(define string-cursor<? <)
+(define string-cursor<=? <=)
+(define string-cursor>? >)
+(define string-cursor>=? >=)
+(define string-cursor=? =)
+
+(define (string-cursor-start s) 0)
+
+(cond-expand
+ (utf-8
+  (define string-cursor-end string-size))
+ (else
+  (define string-cursor-end string-length)
+  (define (string-cursor-next s i) (+ i 1))
+  (define (string-cursor-prev s i) (- i 1))))

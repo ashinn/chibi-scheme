@@ -1,6 +1,6 @@
 ;;;; loop.scm - the chibi loop (aka foof-loop)
 ;;
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;; The loop API is compatible with Taylor Campbell's foof-loop, but
@@ -194,34 +194,46 @@
      (begin
        (define-syntax in-type
          (syntax-rules ()
-           ((in-type ls next . rest)
-            (%in-idx >= + 0 (length tmp) ref tmp ls next . rest))))
+           ((in-type seq next . rest)
+            (%in-idx >= (lambda (x i) (+ i 1)) (lambda (x) 0) length ref tmp seq next . rest))))
        (define-syntax in-type-reverse
          (syntax-rules ()
-           ((in-type-reverse ls next . rest)
-            (%in-idx < - (- (length tmp) 1) 0 ref tmp ls next . rest))))
+           ((in-type-reverse seq next . rest)
+            (%in-idx < (lambda (x i) (- i 1)) (lambda (x) (- (length x) 1)) (lambda (x) 0) ref tmp seq next . rest))))
        ))))
 
-(define-in-indexed in-string in-string-reverse string-length string-ref)
 (define-in-indexed in-vector in-vector-reverse vector-length vector-ref)
+
+(define-syntax in-string
+  (syntax-rules ()
+    ((in-string s next . rest)
+     (%in-idx string-cursor>=? string-cursor-next
+              string-cursor-start string-cursor-end string-cursor-ref
+              tmp s next . rest))))
+
+(define-syntax in-string-reverse
+  (syntax-rules ()
+    ((in-string-reverse s next . rest)
+     (%in-idx string-cursor<? string-cursor-prev
+              (lambda (x) (string-cursor-prev x (string-cursor-end x)))
+              string-cursor-start string-cursor-ref
+              tmp s next . rest))))
 
 ;; helper for the above string and vector iterators
 (define-syntax %in-idx
   (syntax-rules ()
     ;;   cmp inc start end ref
-    ((%in-idx ge + s e r tmp-vec ((var) (vec ...)) next . rest)
-     (%in-idx ge + s e r tmp-vec ((var vec-index) (vec ...)) next . rest))
-    ((%in-idx ge + s e r tmp-vec ((var index) (vec)) next . rest)
-     (%in-idx ge + s e r tmp-vec ((var index) (vec s e 1)) next . rest))
-    ((%in-idx ge + s e r tmp-vec ((var index) (vec from)) next . rest)
-     (%in-idx ge + s e r tmp-vec ((var index) (vec from e 1)) next . rest))
-    ((%in-idx ge + s e r tmp-vec ((var index) (vec from to)) next . rest)
-     (%in-idx ge + s e r tmp-vec ((var index) (vec from to 1)) next . rest))
-    ((%in-idx ge + s e r tmp-vec ((var index) (vec from to step)) next . rest)
-     (next ((tmp-vec vec) (end to))
-           ((index from (+ index step)))
+    ((%in-idx ge + s e r tmp ((var) (seq ...)) next . rest)
+     (%in-idx ge + s e r tmp ((var seq-index) (seq ...)) next . rest))
+    ((%in-idx ge + s e r tmp ((var index) (seq)) next . rest)
+     (%in-idx ge + s e r tmp ((var index) (seq (s tmp) (e tmp))) next . rest))
+    ((%in-idx ge + s e r tmp ((var index) (seq from)) next . rest)
+     (%in-idx ge + s e r tmp ((var index) (seq from (e tmp))) next . rest))
+    ((%in-idx ge + s e r tmp ((var index) (seq from to)) next . rest)
+     (next ((tmp seq) (end to))
+           ((index from (+ tmp index)))
            ((ge index end))
-           ((var (r tmp-vec index)))
+           ((var (r tmp index)))
            ()
        . rest))
     ))
