@@ -358,17 +358,14 @@
   (call-with-output-string (lambda (out) (write sym out))))
 
 (define (list->string ls)
-  (let ((str (make-string (length ls) #\space)))
-    (let lp ((ls ls) (i 0))
-      (if (pair? ls)
-          (begin
-            (string-set! str i (car ls))
-            (lp (cdr ls) (+ i 1)))))
-    str))
+  (call-with-output-string
+    (lambda (out) (for-each (lambda (ch) (write-char ch out)) ls))))
 
 (define (string->list str)
-  (let lp ((i (- (string-length str) 1)) (res '()))
-    (if (< i 0) res (lp (- i 1) (cons (string-ref str i) res)))))
+  (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))
+    (if (< i 0)
+        res
+        (lp (string-cursor-prev str i) (cons (string-cursor-ref str i) res)))))
 
 (define (string-fill! str ch)
   (let lp ((i (- (string-length str) 1)))
@@ -389,6 +386,10 @@
 (define (string-ci<=? s1 s2) (<= (string-cmp s1 s2 #t) 0))
 (define (string-ci>? s1 s2) (> (string-cmp s1 s2 #t) 0))
 (define (string-ci>=? s1 s2) (>= (string-cmp s1 s2 #t) 0))
+
+(define (string-map proc . los)
+  (list->string (apply map (map string->list los))))
+(define string-for-each string-map)
 
 ;; list utils
 
@@ -896,5 +897,6 @@
   (define string-cursor-end string-size))
  (else
   (define string-cursor-end string-length)
+  (define string-cursor-ref string-ref)
   (define (string-cursor-next s i) (+ i 1))
   (define (string-cursor-prev s i) (- i 1))))
