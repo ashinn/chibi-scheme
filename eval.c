@@ -1088,7 +1088,7 @@ static sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
   r = sqrt(d);
-  if (sexp_fixnump(z) && ((r*r) == (double)sexp_unbox_fixnum(z)))
+  if (sexp_fixnump(z) && (((sexp_uint_t)r*(sexp_uint_t)r)==sexp_unbox_fixnum(z)))
     return sexp_make_fixnum(round(r));
   else
     return sexp_make_flonum(ctx, r);
