@@ -604,6 +604,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax-rules
 
+(define-syntax syntax-error
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (apply error (cdr expr)))))
+
 (define-syntax syntax-rules
   (er-macro-transformer
    (lambda (expr rename compare)
