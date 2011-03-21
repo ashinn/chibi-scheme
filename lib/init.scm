@@ -419,8 +419,16 @@
 (define real? number?)
 (define (exact? x) (if (fixnum? x) #t (bignum? x)))
 (define inexact? flonum?)
+(define (exact-integer? x) (if (fixnum? x) #t (bignum? x)))
 (define (integer? x)
-  (if (fixnum? x) #t (if (bignum? x) #t (and (flonum? x) (= x (truncate x))))))
+  (if (exact-integer? x) #t (and (flonum? x) (= x (truncate x)))))
+
+(define (exact-integer-sqrt x)
+  (let ((res (sqrt x)))
+    (if (exact? res)
+        (values res 0)
+        (let ((res (inexact->exact (truncate res))))
+          (values res (- x (* res res)))))))
 
 (define (zero? x) (= x 0))
 (define (positive? x) (> x 0))
