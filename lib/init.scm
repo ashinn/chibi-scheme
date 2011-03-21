@@ -819,6 +819,11 @@
                 (list (list _error "no expansion for"
                             (list (rename 'strip-syntactic-closures) _expr)))))))))))
 
+(define-syntax letrec*
+  (syntax-rules ()
+    ((letrec* ((var val) ...) . body)
+     (let () (define var val) ... . body))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; modules
 
