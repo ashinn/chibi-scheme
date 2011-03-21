@@ -40,4 +40,14 @@
         (string-fill! s #\字)
         s))
 
+(import (chibi loop))
+
+(test "in-string"
+ '(#\日 #\本 #\語)
+ (loop ((for c (in-string "日本語")) (for res (listing c))) => res))
+
+(test "in-string-reverse"
+ '(#\語 #\本 #\日)
+ (loop ((for c (in-string-reverse "日本語")) (for res (listing c))) => res))
+
 (test-end)
