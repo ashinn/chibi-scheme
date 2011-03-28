@@ -301,22 +301,6 @@
      `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr expr))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; exceptions
-
-(define (error msg . args)
-  (raise (make-exception 'user msg args #f #f)))
-
-(define (with-exception-handler handler thunk)
-  (letrec ((orig-handler (current-exception-handler))
-           (self (lambda (exn)
-                   (current-exception-handler orig-handler)
-                   (handler exn))))
-    (current-exception-handler self)
-    (let ((res (thunk)))
-      (current-exception-handler orig-handler)
-      res)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; library functions
 
 ;; booleans
@@ -612,11 +596,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax-rules
 
-(define-syntax syntax-error
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (apply error (cdr expr)))))
-
 (define-syntax syntax-rules
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -827,10 +806,62 @@
                 (list (list _error "no expansion for"
                             (list (rename 'strip-syntactic-closures) _expr)))))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; additional syntax
+
+(define-syntax syntax-error
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (apply error (cdr expr)))))
+
 (define-syntax letrec*
   (syntax-rules ()
     ((letrec* ((var val) ...) . body)
      (let () (define var val) ... . body))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; exceptions
+
+(define (error msg . args)
+  (raise (make-exception 'user msg args #f #f)))
+
+(define *continuable* (list 'continuable))
+
+(define (raise-continuable exn)
+  (raise (list *continuable* exn)))
+
+(define (with-exception-handler handler thunk)
+  (letrec ((orig-handler (current-exception-handler))
+           (self (lambda (exn)
+                   (current-exception-handler orig-handler)
+                   (dynamic-wind
+                     (lambda () (current-exception-handler orig-handler))
+                     (lambda ()
+                       (cond
+                        ((and (pair? exn) (eq? *continuable* (car exn)))
+                         (handler (cadr exn)))
+                        (else
+                         (handler exn)
+                         (error "exception handler returned"))))
+                     (lambda () (current-exception-handler self))))))
+    (dynamic-wind
+      (lambda () (current-exception-handler self))
+      thunk
+      (lambda () (current-exception-handler orig-handler)))))
+
+(define-syntax guard
+  (syntax-rules (else)
+    ((guard (var (test . handler) ... (else . else-handler)) body ...)
+     (call-with-current-continuation
+      (lambda (return)
+        (with-exception-handler
+         (lambda (var)
+           (return
+            (cond (test . handler) ...
+                  (else . else-handler))))
+         (lambda () body ...)))))
+    ((guard (var (test . handler) ...) body ...)
+     (guard (var (test . handler) ... (else (raise var))) body ...))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; modules
