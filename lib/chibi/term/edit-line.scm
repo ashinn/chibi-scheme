@@ -1,6 +1,6 @@
-;;;; edit-line.scm - pure scheme line editing tool
+;;;; edit-line.scm - pure scheme line editor
 ;;
-;; Copyright (c) 2010 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -104,6 +104,13 @@
           ((< i start))
         (string-set! dst j (string-ref src i)))))
 
+(define (string-index ch x)
+  (let ((len (string-length x)))
+    (let lp ((i 0))
+      (cond ((>= i len) #f)
+            ((eqv? ch (string-ref x i)))
+            (else (lp (+ i 1)))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buffers
 
@@ -120,7 +127,8 @@
   (width buffer-width buffer-width-set!)
   (string buffer-string buffer-string-set!)
   (kill-ring buffer-kill-ring buffer-kill-ring-set!)
-  (history buffer-history buffer-history-set!))
+  (history buffer-history buffer-history-set!)
+  (complete? buffer-complete? buffer-complete?-set!))
 
 (define default-buffer-size 256)
 (define default-buffer-width 80)
@@ -159,6 +167,7 @@
 (define (buffer-update-position! buf)
   (let ((pos (buffer-pos buf))
         (gap (buffer-gap buf))
+        (str (buffer-string buf))
         (end (string-length (buffer-string buf)))
         (width (buffer-width buf)))
     (let lp ((i 0) (row 0) (col 0)) ;; update row/col
@@ -169,6 +178,8 @@
             ((>= i end)
              (buffer-max-row-set!
               buf (if (and (zero? col) (> row 0)) (- row 1) row)))
+            ((eqv? #\newline (string-ref str i))
+             (lp (+ i 1) (+ row 1) 0))
             ((= (+ col 1) width)
              (lp (+ i 1) (+ row 1) 0))
             (else
@@ -234,7 +245,10 @@
     (cond
      ((buffer-refresh? buf))
      ((and (= (buffer-gap buf) (string-length (buffer-string buf)))
-           (< (+ (buffer-col buf) len) (buffer-width buf)))
+           (< (+ (buffer-col buf) len) (buffer-width buf))
+           (if (char? x)
+               (not (eqv? x #\newline))
+               (not (string-index #\newline x))))
       ;; fast path - append to end of buffer w/o wrapping to next line
       (display x out)
       (buffer-col-set! buf (+ (buffer-col buf) len)))
@@ -344,9 +358,13 @@
   (buffer-insert! buf out ch))
 
 (define (command/enter ch buf out return)
-  (command/end-of-line ch buf out return)
-  (newline out)
-  (return))
+  (cond
+   (((buffer-complete? buf) buf)
+    (command/end-of-line ch buf out return)
+    (newline out)
+    (return))
+   (else
+    (command/self-insert ch buf out return))))
 
 (define (command/beep ch buf out return)
   (write-char (integer->char 7) out))
@@ -442,6 +460,7 @@
 (define (make-line-editor . args)
   (let* ((prompt (get-key args 'prompt: "> "))
          (history (get-key args 'history:))
+         (complete? (get-key args 'complete?: (lambda (buf) #t)))
          (terminal-width (get-key args 'terminal-width:))
          (keymap (get-key args 'keymap: standard-keymap)))
     (lambda (in out)
@@ -454,6 +473,7 @@
         (buffer-insert! buf out prompt)
         (buffer-min-set! buf (string-length prompt))
         (buffer-history-set! buf history)
+        (buffer-complete?-set! buf complete?)
         (buffer-refresh buf out)
         (flush-output out)
         ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
