@@ -202,8 +202,9 @@
                     (scribble-parse-escape in escape-char))
                    (else
                     (skip-line in)
-                    (let lp ()
-                      (cond ((char-whitespace? (peek-char in)) (read-char in) (lp))))))
+                    ;; (let lp ()
+                    ;;   (cond ((char-whitespace? (peek-char in)) (read-char in) (lp))))
+                    ))
              (tok str res punc depth))
             ((eqv? c #\|)
              (read-char in)
@@ -232,15 +233,17 @@
           (else (tok (cons c str) res punc (- depth 1)))))
         ((eqv? c #\newline)
          (let* ((first? (and (null? res) (null? str)))
-                (res (collect (drop-while char-whitespace? str) res))
+                ;;(res (collect (drop-while char-whitespace? str) res))
+                (res (collect str res))
                 (res (if (or first? (eqv? #\} (peek-char in)))
                          res
                          (cons "\n" res))))
-           (let lp ((ls '()))
-             (let ((c (peek-char in)))
-               (cond
-                ((char-whitespace? c) (read-char in) (lp (cons c ls)))
-                (else (tok (if (eqv? c #\}) ls '()) res punc depth)))))))
+           ;; (let lp ((ls '()))
+           ;;   (let ((c (peek-char in)))
+           ;;     (cond
+           ;;      ((char-whitespace? c) (read-char in) (lp (cons c ls)))
+           ;;      (else (tok (if (eqv? c #\}) ls '()) res punc depth)))))
+           (tok '() res punc depth)))
         (else
          (tok (cons c str) res punc depth)))))
   ;; begin
