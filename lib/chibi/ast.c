@@ -164,6 +164,14 @@ static sexp sexp_object_size (sexp ctx sexp_api_params(self, n), sexp x) {
   return sexp_make_fixnum(sexp_type_size_of_object(t, x));
 }
 
+static sexp sexp_integer_to_immediate (sexp ctx sexp_api_params(self, n), sexp i, sexp dflt) {
+  sexp x = (sexp)sexp_unbox_fixnum(i);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
+  if (sexp_pointerp(x))
+    return dflt;
+  return x;
+}
+
 static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
   sexp ctx2 = ctx;
   if (sexp_envp(e)) {
@@ -285,6 +293,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "type-cpl", 1, sexp_type_cpl_op);
   sexp_define_foreign(ctx, env, "type-slots", 1, sexp_type_slots_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
+  sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
   return SEXP_VOID;
 }
