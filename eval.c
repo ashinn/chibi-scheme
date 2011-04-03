@@ -377,6 +377,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
   if (!res || sexp_exceptionp(res))
     return res;
   if (ctx) sexp_gc_preserve1(ctx, res);
+  sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_FIVE));
   sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
@@ -387,7 +388,6 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
     sexp_stack_top(stack) = 0;
   }
   sexp_context_stack(res) = stack;
-  sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_FIVE));
   if (! ctx) sexp_init_eval_context_globals(res);
   if (ctx) {
     sexp_context_params(res) = sexp_context_params(ctx);

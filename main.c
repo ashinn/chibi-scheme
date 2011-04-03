@@ -124,7 +124,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
 
 void run_main (int argc, char **argv) {
   char *arg, *impmod, *p;
-  sexp out=SEXP_FALSE, res=SEXP_VOID, env=NULL, ctx=NULL;
+  sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
   sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp_gc_var2(tmp, args);
@@ -139,12 +139,11 @@ void run_main (int argc, char **argv) {
       print = (argv[i][1] == 'p');
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('e', arg);
-      res = check_exception(ctx, sexp_read_from_string(ctx, arg, -1));
-      res = check_exception(ctx, sexp_eval(ctx, res, env));
+      tmp = check_exception(ctx, sexp_eval_string(ctx, arg, -1, env));
       if (print) {
         if (! sexp_oportp(out))
           out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
-        sexp_write(ctx, res, out);
+        sexp_write(ctx, tmp, out);
         sexp_write_char(ctx, '\n', out);
       }
       quit = 1;

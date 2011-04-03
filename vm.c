@@ -22,7 +22,8 @@ static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) 
 void sexp_stack_trace (sexp ctx, sexp out) {
   int i, fp=sexp_context_last_fp(ctx);
   sexp self, bc, ls, *stack=sexp_stack_data(sexp_context_stack(ctx));
-  if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
+  if (! sexp_oportp(out))
+    out = sexp_current_error_port(ctx);
   for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
     self = stack[i+2];
     if (self && sexp_procedurep(self)) {
