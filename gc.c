@@ -177,6 +177,16 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
   return 0;
 }
 
+const char* sexp_debug_string(sexp ctx, sexp p) {
+  static char buf[32];
+  if (sexp_pointerp(p))
+    return sexp_object_type_name(ctx, p);
+  else if (sexp_nullp(p))
+    return "()";
+  sprintf(buf, "%p", p);
+  return buf;
+}
+
 void sexp_conservative_mark (sexp ctx) {
   sexp_heap h = sexp_context_heap(ctx);
   sexp p, end;
@@ -193,16 +203,41 @@ void sexp_conservative_mark (sexp ctx) {
         continue;
       }
       if (!sexp_markedp(p) && stack_references_pointer_p(ctx, p)) {
-#if SEXP_USE_DEBUG_GC > 3
-        if (p && sexp_pointerp(p)) {
-          fprintf(stderr, SEXP_BANNER("MISS: %p: %s"), p,sexp_pointer_source(p));
-          fflush(stderr);
-        }
-#endif
-#if SEXP_USE_CONSERVATIVE_GC_PRESERVE_TAG
+#ifdef SEXP_USE_CONSERVATIVE_GC_PRESERVE_TAG
         if (sexp_pointer_tag(p) == SEXP_USE_CONSERVATIVE_GC_PRESERVE_TAG)
 #endif
-        sexp_mark(ctx, p);
+        if (sexp_pairp(p) && sexp_pairp(sexp_car(p))
+            && sexp_symbolp(sexp_caar(p))
+            && (sexp_caar(p)==(sexp)0x6c7677
+                /* || sexp_caar(p)==(sexp)0xffd27 */
+                )
+            ) {
+#if SEXP_USE_DEBUG_GC > 3
+          if (p && sexp_pointerp(p)) {
+            if (sexp_pairp(p)) {
+              fprintf(stderr, SEXP_BANNER("MISS: %p (%s . %s): %s"), p,
+                      sexp_debug_string(ctx, sexp_car(p)),
+                      sexp_debug_string(ctx, sexp_cdr(p)),
+                      sexp_pointer_source(p));
+              if (sexp_pairp(sexp_car(p))) {
+                fprintf(stderr, "car: (%s . %s)\n",
+                        sexp_debug_string(ctx, sexp_caar(p)),
+                        sexp_debug_string(ctx, sexp_cdar(p)));
+                if (sexp_pairp(sexp_cdar(p)))
+                  fprintf(stderr, "cdar: (%s . %s)\n",
+                          sexp_debug_string(ctx, sexp_cadar(p)),
+                          sexp_debug_string(ctx, sexp_cddar(p)));
+              }
+            } else {
+              fprintf(stderr, SEXP_BANNER("MISS: %p: %s"), p,
+                      sexp_pointer_source(p));
+            }
+            sexp_stack_trace(ctx, SEXP_FALSE);
+            fflush(stderr);
+          }
+#endif
+          sexp_mark(ctx, p);
+        }
       }
       p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
     }

@@ -261,14 +261,16 @@
         ((null? ls) #f)
         ((compare (rename 'else) (caar ls))
          `(,(rename 'begin) ,@(cdar ls)))
+        ((and (pair? (car (car ls))) (null? (cdr (car (car ls)))))
+         `(,(rename 'if) (,(rename 'eqv?) ,(rename 'tmp)
+                          (,(rename 'quote) ,(caaar ls)))
+           (,(rename 'begin) ,@(cdar ls))
+           ,(clause (cdr ls))))
         (else
-         (if (and (pair? (caar ls)) (null? (cdaar ls)))
-             `(,(rename 'if) (,(rename 'eqv?) ,(rename 'tmp) ',(caaar ls))
-               (,(rename 'begin) ,@(cdar ls))
-               ,(clause (cdr ls)))
-             `(,(rename 'if) (,(rename 'memv) ,(rename 'tmp) ',(caar ls))
-               (,(rename 'begin) ,@(cdar ls))
-               ,(clause (cdr ls)))))))
+         `(,(rename 'if) (,(rename 'memv) ,(rename 'tmp)
+                          (,(rename 'quote) ,(caar ls)))
+           (,(rename 'begin) ,@(cdar ls))
+           ,(clause (cdr ls))))))
      `(let ((,(rename 'tmp) ,(cadr expr)))
         ,(clause (cddr expr))))))
 
@@ -344,6 +346,11 @@
 (define (list->string ls)
   (call-with-output-string
     (lambda (out) (for-each (lambda (ch) (write-char ch out)) ls))))
+
+;; (define (list->string ls)
+;;   (let lp ((ls ls) (res '()))
+;;     (cond ((null? ls) (string-concatenate (reverse res)))
+;;           (else (lp (cdr ls) (cons (make-string 1 (car ls)) res))))))
 
 (define (string->list str)
   (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))

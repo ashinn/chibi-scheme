@@ -1150,6 +1150,10 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
                      SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, (sexp_proc2)finalizer)
 #endif
 
+SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
+SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param);
+SEXP_API void sexp_stack_trace (sexp ctx, sexp out);
+
 #define sexp_current_error_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE))
 #define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
 

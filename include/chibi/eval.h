@@ -136,7 +136,7 @@ SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env, sexp_u
 SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
 SEXP_API sexp sexp_compile_error (sexp ctx, const char *message, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
-SEXP_API void sexp_stack_trace (sexp ctx, sexp out);
+/* SEXP_API void sexp_stack_trace (sexp ctx, sexp out); */
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
@@ -164,9 +164,9 @@ SEXP_API sexp sexp_open_output_file_op(sexp ctx sexp_api_params(self, n), sexp x
 SEXP_API sexp sexp_close_port_op(sexp ctx sexp_api_params(self, n), sexp x);
 SEXP_API sexp sexp_env_define (sexp ctx, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_env_cell (sexp env, sexp sym);
-SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
+/* SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt); */
 SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
-SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param);
+/* SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param); */
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
 SEXP_API sexp sexp_make_procedure_op (sexp ctx sexp_api_params(self, n), sexp flags, sexp num_args, sexp bc, sexp vars);
