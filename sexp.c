@@ -1044,45 +1044,14 @@ int sstream_read (void *vec, char *dst, int n) {
   return n;
 }
 
-#define SEXP_LAST_CONTEXT_CHECK_LIMIT 256
-
-#if ! SEXP_USE_BOEHM
-static int in_heap_p (sexp_heap h, sexp p) {
-  for ( ; h; h = h->next)
-    if (((sexp)h < p) && (p < (sexp)((char*)h + h->size)))
-      return 1;
-  return 0;
-}
-#endif
-
-static sexp sexp_last_context (sexp ctx, sexp *cstack) {
-  sexp res=SEXP_FALSE;
-#if ! SEXP_USE_BOEHM
-  sexp p;
-  sexp_sint_t i;
-  sexp_heap h = sexp_context_heap(ctx);
-  for (i=0; i<SEXP_LAST_CONTEXT_CHECK_LIMIT; i++) {
-    p = cstack[i];
-    if (p && (p != ctx) && sexp_pointerp(p) && in_heap_p(h, p)
-        && (sexp_pointer_tag(p) == SEXP_CONTEXT)
-        && (sexp_context_heap(p) == h)) {
-      res = p;
-      break;
-    }
-  }
-#endif
-  return res;
-}
-
 int sstream_write (void *vec, const char *src, int n) {
   sexp_uint_t len, pos, newpos;
-  sexp newbuf, ctx;
+  sexp newbuf;
   len = sexp_unbox_fixnum(sexp_stream_size(vec));
   pos = sexp_unbox_fixnum(sexp_stream_pos(vec));
   newpos = pos+n;
-  ctx = sexp_last_context(sexp_stream_ctx(vec), &ctx);
   if (newpos >= len) {
-    newbuf = sexp_make_string(ctx, /* sexp_stream_ctx(vec) */
+    newbuf = sexp_make_string(sexp_stream_ctx(vec),
                               sexp_make_fixnum(newpos*2),
                               SEXP_VOID);
     memcpy(sexp_string_data(newbuf),
@@ -1218,12 +1187,8 @@ sexp sexp_buffered_write_char (sexp ctx, int c, sexp p) {
 sexp sexp_buffered_write_string_n (sexp ctx, const char *str,
                                    sexp_uint_t len, sexp p) {
   int diff;
-  /* fprintf(stderr, "write %s: off: %ld size: %ld len: %ld\n", */
-  /*         str, sexp_port_offset(p), sexp_port_size(p), len); */
   while (sexp_port_offset(p)+len >= sexp_port_size(p)) {
     diff = sexp_port_size(p) - sexp_port_offset(p);
-    /* fprintf(stderr, "write: off: %ld size: %ld len: %ld diff: %ld\n", */
-    /*         sexp_port_offset(p), sexp_port_size(p), len, diff); */
     memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, diff);
     sexp_buffered_flush(ctx, p);
     str += diff;
@@ -1239,7 +1204,7 @@ sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
 }
 
 sexp sexp_buffered_flush (sexp ctx, sexp p) {
-  sexp_gc_var2(tmp, ls);
+  sexp_gc_var1(tmp);
   if (! sexp_oportp(p))
     return sexp_type_exception(ctx, NULL, SEXP_OPORT, p);
   if (! sexp_port_openp(p))
@@ -1249,12 +1214,10 @@ sexp sexp_buffered_flush (sexp ctx, sexp p) {
       fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
       fflush(sexp_port_stream(p));
     } else if (sexp_port_offset(p) > 0) {
-      sexp_gc_preserve2(ctx, tmp, ls);
-      ls = sexp_port_cookie(p);
+      sexp_gc_preserve1(ctx, tmp);
       tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
-      /* sexp_push(ctx, sexp_port_cookie(p), tmp); */
-      sexp_port_cookie(p) = sexp_cons(ctx, tmp, ls);
-      sexp_gc_release2(ctx);
+      sexp_push(ctx, sexp_port_cookie(p), tmp);
+      sexp_gc_release1(ctx);
     }
     sexp_port_offset(p) = 0;
     return SEXP_VOID;
