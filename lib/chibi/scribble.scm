@@ -232,17 +232,10 @@
                     (lp (cdr p) (cons (read-char in) ls))))))
           (else (tok (cons c str) res punc (- depth 1)))))
         ((eqv? c #\newline)
-         (let* ((first? (and (null? res) (null? str)))
-                ;;(res (collect (drop-while char-whitespace? str) res))
-                (res (collect str res))
-                (res (if (or first? (eqv? #\} (peek-char in)))
+         (let* ((res (collect str res))
+                (res (if (and (null? res) (null? str))
                          res
                          (cons "\n" res))))
-           ;; (let lp ((ls '()))
-           ;;   (let ((c (peek-char in)))
-           ;;     (cond
-           ;;      ((char-whitespace? c) (read-char in) (lp (cons c ls)))
-           ;;      (else (tok (if (eqv? c #\}) ls '()) res punc depth)))))
            (tok '() res punc depth)))
         (else
          (tok (cons c str) res punc depth)))))
