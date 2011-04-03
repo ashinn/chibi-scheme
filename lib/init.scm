@@ -347,11 +347,6 @@
   (call-with-output-string
     (lambda (out) (for-each (lambda (ch) (write-char ch out)) ls))))
 
-;; (define (list->string ls)
-;;   (let lp ((ls ls) (res '()))
-;;     (cond ((null? ls) (string-concatenate (reverse res)))
-;;           (else (lp (cdr ls) (cons (make-string 1 (car ls)) res))))))
-
 (define (string->list str)
   (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))
     (if (< i 0)
