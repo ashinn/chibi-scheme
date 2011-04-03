@@ -29,7 +29,7 @@
    procedure-code procedure-vars procedure-name
    bytecode-name bytecode-literals
    type? type-name type-cpl type-parent type-slots
-   object-size gc)
+   object-size integer->immediate gc)
   (import-immutable (scheme))
   (include-shared "ast")
   (include "ast.scm"))
