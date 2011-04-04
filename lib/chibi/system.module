@@ -10,4 +10,6 @@
           set-root-directory!)
   (import-immutable (scheme))
   (include-shared "system")
-  (include "system.scm"))
+  (body
+   (define (user-information user)
+     (car (if (string? user) (getpwnam_r user) (getpwuid_r user))))))
