@@ -203,6 +203,15 @@ static sexp sexp_gc_op (sexp ctx sexp_api_params(self, n)) {
   return sexp_make_unsigned_integer(ctx, sum_freed);
 }
 
+
+static sexp sexp_string_contains (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
+  const char *res;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, x);
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, y);
+  res = strstr(sexp_string_data(x), sexp_string_data(y));
+  return res ? sexp_make_fixnum(res-sexp_string_data(x)) : SEXP_FALSE;
+}
+
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
@@ -295,6 +304,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
+  sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
   return SEXP_VOID;
 }
 
