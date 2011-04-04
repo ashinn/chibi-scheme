@@ -1225,7 +1225,7 @@ void sexp_write_utf8_char (sexp ctx, int c, sexp out) {
   unsigned char buf[8];
   int len = sexp_utf8_char_byte_count(c);
   sexp_utf8_encode_char(buf, len, c);
-  buf[len+1] = 0;
+  buf[len] = 0;
   sexp_write_string(ctx, (char*)buf, out);
 }
 
