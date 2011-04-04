@@ -1,0 +1,7 @@
+
+(module (chibi highlight)
+  (export highlight highlight-detect-language highlight-style
+          highlight-scheme highlight-c highlight-assembly)
+  (import-immutable (scheme))
+  (import (srfi 1) (chibi io) (chibi ast))
+  (include "highlight.scm"))
