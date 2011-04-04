@@ -1152,7 +1152,7 @@ sexp sexp_make_output_string_port_op (sexp ctx sexp_api_params(self, n)) {
 }
 
 sexp sexp_get_output_string_op (sexp ctx sexp_api_params(self, n), sexp port) {
-  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
+  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
   fflush(sexp_port_stream(port));
   return sexp_c_string(ctx, sexp_port_buf(port), sexp_port_size(port));
 }
