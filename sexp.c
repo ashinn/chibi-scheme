@@ -714,7 +714,7 @@ sexp sexp_equalp_bound (sexp ctx sexp_api_params(self, n), sexp a, sexp b, sexp 
 sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
   return sexp_make_boolean(
     sexp_truep(sexp_equalp_bound(ctx sexp_api_pass(self, n), a, b,
-                                 sexp_make_fixnum(1000000000))));
+                                 sexp_make_fixnum(SEXP_MAX_FIXNUM))));
 }
 
 /********************* strings, symbols, vectors **********************/
