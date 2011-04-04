@@ -1,6 +1,6 @@
 
 (define-module (chibi system)
-  (export user-information user-name user-password
+  (export user-information user? user-name user-password
           user-id user-group-id user-gecos user-home user-shell
           current-user-id current-group-id
           current-effective-user-id current-effective-group-id
@@ -10,6 +10,4 @@
           set-root-directory!)
   (import-immutable (scheme))
   (include-shared "system")
-  ;;(include "system.scm")
-  )
-
+  (include "system.scm"))
