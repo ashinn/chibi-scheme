@@ -1661,6 +1661,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*", -1),
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
 #endif
+#if SEXP_BSD
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "bsd", -1));
+#endif
   tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform, -1));
 #if SEXP_USE_DL
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "dynamic-loading", -1));
