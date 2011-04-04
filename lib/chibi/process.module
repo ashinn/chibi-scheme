@@ -17,7 +17,8 @@
   (cond-expand (threads (import (srfi 18))) (else #f))
   (include-shared "process")
   (cond-expand
-   (unix
+   (bsd #f)
+   (else
     (body
      (define (process-command-line pid)
        (call-with-current-continuation
@@ -36,8 +37,7 @@
                              (if (or (eof-object? ch2) (eqv? (char->integer ch2) 0))
                                  (reverse res)
                                  (lp '() res)))
-                           (lp (cons ch arg) res))))))))))))))
-   (else #f))
+                           (lp (cons ch arg) res)))))))))))))))
   (body
    (define (process-running? pid . o)
      (let ((cmdline (process-command-line pid)))
