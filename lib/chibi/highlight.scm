@@ -318,7 +318,7 @@
                      ,(highlight-class "type" (reverse decls))
                      ,@res))
                   (else
-                   `(,space ,id ,@(reverse decls) ,@res)))))))))
+                   `(,space ,id ,@decls ,@res)))))))))
         (else
          res))))
     (define (highlight str res)
@@ -351,10 +351,6 @@
                  (highlight '() (cons (highlight-class "string" s) res))))
               ((#\newline)
                (highlight-line (collect (cons #\newline str) res)))
-              ;; ((#\<)
-              ;;  (highlight (append '(#\; #\t #\l #\&) str) res))
-              ;; ((#\&)
-              ;;  (highlight (append '(#\; #\p #\m #\a #\&) str) res))
               (else
                (cond
                 ((char-c-initial? c)
