@@ -377,7 +377,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
   if (!res || sexp_exceptionp(res))
     return res;
   if (ctx) sexp_gc_preserve1(ctx, res);
-  sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_FIVE));
+  sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_SEVEN));
   sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
   sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
   sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
@@ -1656,6 +1656,7 @@ sexp sexp_load_standard_parameters (sexp ctx, sexp env) {
 sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
+  if (!e) e = sexp_context_env(ctx);
   sexp_load_standard_parameters(ctx, e);
 #if SEXP_USE_DL
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*", -1),

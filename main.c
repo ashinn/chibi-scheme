@@ -119,7 +119,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
 
 #define load_init() if (! init_loaded++) do {                           \
       init_context();                                                   \
-      check_exception(ctx, sexp_load_standard_repl_env(ctx, env, SEXP_FIVE)); \
+      check_exception(ctx, sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN)); \
     } while (0)
 
 void run_main (int argc, char **argv) {
