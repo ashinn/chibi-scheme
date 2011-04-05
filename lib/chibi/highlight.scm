@@ -12,26 +12,23 @@
 
 (define (highlight-detect-language str)
   (cond
-   ((or (string-contains str "(define")
-        (string-contains str "(eval")
-        (string-contains str "(set")
-        (string-contains str "(string")
-        (string-contains str "(let")
-        (string-contains str "(lambda (")
-        )
+   ((guard (exn (else #f))
+      (call-with-input-string str
+        (lambda (in) (do ((x #f (read in))) ((eof-object? x)))))
+      #t)
     'scheme)
-   ((string-contains str "\tmovl\t")
-    'asm)
    (else
     'c)))
 
+(define (highlighter-for language)
+  (case language
+    ((scheme) highlight-scheme)
+    ((asm) highlight-assembly)
+    (else highlight-c)))
+
 (define (highlight source)
   (let ((str (if (string? source) source (port->string source))))
-    ((case (highlight-detect-language str)
-       ((scheme) highlight-scheme)
-       ((asm) highlight-assembly)
-       ((c) highlight-c))
-     str)))
+    ((highlighter-for (highlight-detect-language str)) str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -49,7 +46,8 @@
      (character    . "#0055AA")
      (syntaxerror  . "#FF0000")
      (diff-deleted . "#5F2121")
-     (diff-added   . "#215F21"))))
+     (diff-added   . "#215F21")
+     )))
 
 (define highlight-paren-styles
   ;;'("#BAFFFF" "#FFCACA" "#FFFFBA" "#CACAFF" "#CAFFCA" "FFBAFF")
@@ -60,9 +58,14 @@
    (append
     (map
      (lambda (x)
-       (string-append
-        "." (symbol->string (car x)) " { color: " (cdr x)
-        "; background-color: inherit; }\n"))
+       (if (and (list? x) (= 3 (length x)))
+           (string-append
+            "." (symbol->string (car x)) " { color: " (cadr x)
+            "; background-color: " (caddr x) "; }\n")
+           (string-append
+            "." (symbol->string (car x)) " { color: "
+            (if (pair? (cdr x)) (cadr x) (cdr x))
+            "; background-color: inherit; }\n")))
      (cond ((assq (and (pair? theme) (car theme)) highlight-themes) => cdr)
            (else (cdar highlight-themes))))
     (map
@@ -73,21 +76,10 @@
         "span.paren" (number->string i)
         " { color: " s "; background-color: inherit; }\n"))
      highlight-paren-styles
-     (cdr (iota (+ 1 (length highlight-paren-styles)))))
-    )))
+     (cdr (iota (+ 1 (length highlight-paren-styles))))))))
 
-(define (highlight-start class out)
-  (display "<span class=\"" out)
-  (display class out)
-  (display "\">" out))
-
-(define (highlight-end class out)
-  (display "</span>" out))
-
-(define (highlight-class class str out)
-  (highlight-start class out)
-  (display str out)
-  (highlight-end class out))
+(define (highlight-class class x)
+  `(span (^ (class . ,class)) ,@(if (list? x) x (list x))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -98,11 +90,12 @@
         (reverse-list->string res))))
 
 (define (read-to-whitespace in res)
-  (cond
-   ((char-whitespace? (peek-char in))
-    (reverse-list->string res))
-   (else
-    (read-to-whitespace in (cons (read-char in) res)))))
+  (let ((c (peek-char in)))
+    (cond
+     ((or (eof-object? c) (char-whitespace? c))
+      (reverse-list->string res))
+     (else
+      (read-to-whitespace in (cons (read-char in) res))))))
 
 (define (read-escaped in term ls)
   (let ((c (read-char in)))
@@ -115,8 +108,18 @@
      ;;((eqv? c #\\) (read-escaped in term (cons (read-char in) (cons c ls))))
      (else (read-escaped in term (cons c ls))))))
 
+(define (read-to-eol in ls)
+  (let ((c (read-char in)))
+    (cond
+     ((eof-object? c) (reverse-list->string ls))
+     ((eqv? c #\newline) (reverse-list->string (cons c ls)))
+     (else (read-to-eol in (cons c ls))))))
+
 (define (html-escape str)
   (call-with-input-string str (lambda (in) (read-escaped in #f '()))))
+
+(define (collect str res)
+  (if (pair? str) (cons (reverse-list->string str) res) res))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -138,8 +141,9 @@
              quote quasiquote unquote unquote-splicing error errorf
              define-syntax let-syntax letrec-syntax syntax-rules
              syntax-case parameterize module library require
-             require-extension use use-modules import export
-             define-module select-module provide autoload
+             require-extension use use-modules import import-immutable
+             define-module select-module provide autoload export
+             only except rename prefix include include-shared
              condition-case guard cond-expand for with to by
              in-list in-lists in-string in-string-reverse
              in-vector in-vector-reverse in-file listing appending
@@ -148,117 +152,100 @@
 
 (define (highlight-scheme source)
   (let ((in (if (string? source) (open-input-string source) source)))
-    (call-with-output-string
-     (lambda (out)
-       (define (read-to-eol ls)
-         (let ((c (read-char in)))
-           (cond
-            ((eof-object? c) (reverse-list->string ls))
-            ((eqv? c #\newline) (reverse-list->string (cons c ls)))
-            (else (read-to-eol (cons c ls))))))
-       (define (read-identifier ls)
-         (let ((c (peek-char in)))
-           (cond
-            ((highlight-scheme-delimiter? c)
-             (string->symbol (reverse-list->string ls)))
-            (else
-             (read-char in)
-             (read-identifier (cons c ls))))))
-       (define (hash-mark n)
-         (let ((c (read-char in)))
-           (case c
-             ((#\;)
-              (highlight-start 'comment out)
-              (highlight n)
-              (highlight-end 'comment out))
-             ((#\\)
-              (let ((id (read-identifier (list (read-char in) #\\ #\#))))
-                (highlight-class 'string id out)
-                (highlight n)))
-             (else
-              (write-char #\# out)
-              (write-char c out)
-              (highlight n)))))
-       (define (highlight n)
-         (let ((c (read-char in)))
-           (if (eof-object? c)
-               #f
-               (case c
-                 ((#\;)
-                  (let lp ((ls '()))
-                    (let ((ls (cons (read-to-eol (list #\;)) ls)))
-                      (cond
-                       ((eqv? #\; (peek-char in))
-                        (lp ls))
-                       (else
-                        (highlight-class 'comment
-                                         (string-concatenate-reverse ls)
-                                         out)
-                        (highlight n))))))
-                 ((#\")
-                  (let ((str (read-escaped in #\" (list #\"))))
-                    (highlight-class 'string str out)
-                    (highlight n)))
-                 ((#\()
-                  ;;(highlight-start
-                  ;; (string->symbol
-                  ;;  (string-append
-                  ;;   "paren"
-                  ;;   (number->string
-                  ;;    (+ 1 (modulo n (length highlight-paren-styles))))))
-                  ;;out)
-                  (write-char #\( out)
-                  (if (highlight-scheme-delimiter? (peek-char in))
-                      (highlight (+ n 1))
-                      (let ((id (read-identifier '())))
-                        (cond
-                         ((highlight-scheme-definition? id)
-                          (highlight-class 'keyword id out)
-                          (display (read-whitespace in) out)
-                          (if (eqv? #\( (peek-char in))
-                              (write-char (read-char in) out))
-                          (highlight-class 'function (read-identifier '()) out)
-                          (highlight (+ n 1)))
-                         ((highlight-scheme-syntax? id)
-                          (highlight-class 'keyword id out)
-                          (highlight (+ n 1)))
-                         (else
-                          (display "<span>" out)
-                          (display id out)
-                          (display "</span>" out)
-                          (highlight (+ n 1)))))))
-                 ((#\))
-                  (cond
-                   ((zero? n)
-                    (highlight-class 'syntaxerror c out)
-                    (highlight n))
-                   (else
-                    (write-char c out)
-                    ;;(highlight-end 'paren out)
-                    (highlight (- n 1)))))
-                 ((#\#)
-                  (hash-mark n))
-                 ((#\<)
-                  (display "&lt;" out)
-                  (highlight n))
-                 ((#\&)
-                  (display "&amp;" out)
-                  (highlight n))
-                 ;;((#\newline)
-                 ;; (write-char c out)
-                 ;; (highlight 0))
-                 (else
-                  (cond
-                   ((highlight-scheme-delimiter? c)
-                    (write-char c out)
-                    (highlight n))
-                   (else
-                    (let ((id (read-identifier (list c))))
-                      (display "<span>")
-                      (display id out)
-                      (display "</span>")
-                      (highlight n)))))))))
-       (highlight 0)))))
+    (define (read-identifier ls)
+      (let ((c (peek-char in)))
+        (cond
+         ((highlight-scheme-delimiter? c)
+          (reverse-list->string ls))
+         (else
+          (read-char in)
+          (read-identifier (cons c ls))))))
+    (define (hash-mark)
+      (let ((c (read-char in)))
+        (case c
+          ((#\;)
+           (highlight-class "comment" (highlight 0 '(#\; #\#) '())))
+          ((#\\)
+           (highlight-class "string"
+                            (read-identifier (list (read-char in) #\\ #\#))))
+          (else
+           "#"))))
+    (define (highlight n str res)
+      (let ((c (read-char in)))
+        (if (eof-object? c)
+            (reverse (collect str res))
+            (case c
+              ((#\;)
+               (let lp ((ls '()))
+                 (let ((ls (cons (read-to-eol in (list #\;)) ls)))
+                   (cond
+                    ((eqv? #\; (peek-char in))
+                     (lp ls))
+                    (else
+                     (highlight n
+                                '()
+                                (cons (highlight-class
+                                       "comment"
+                                       (string-concatenate-reverse ls))
+                                      (collect str res))))))))
+              ((#\")
+               (let ((s (read-escaped in #\" (list #\"))))
+                 (highlight n
+                            '()
+                            (cons (highlight-class "string" s)
+                                  (collect str res)))))
+              ((#\()
+               ;;(highlight-start
+               ;; (string->symbol
+               ;;  (string-append
+               ;;   "paren"
+               ;;   (number->string
+               ;;    (+ 1 (modulo n (length highlight-paren-styles))))))
+               ;;out)
+               (let ((res (collect (cons #\( str) res)))
+                 (if (highlight-scheme-delimiter? (peek-char in))
+                     (highlight (+ n 1) '() res)
+                     (let* ((id (read-identifier '()))
+                            (sym (string->symbol id)))
+                       (cond
+                        ((highlight-scheme-definition? sym)
+                         (let* ((res (cons (read-whitespace in) res))
+                                (res (cons (highlight-class "keyword" id) res))
+                                (res (if (eqv? #\( (peek-char in))
+                                         (cons (string (read-char in)) res)
+                                         res)))
+                           (highlight
+                            (+ n 1)
+                            '()
+                            (cons
+                             (highlight-class "function" (read-identifier '()))
+                             res))))
+                        ((highlight-scheme-syntax? sym)
+                         (highlight (+ n 1)
+                                    '()
+                                    (cons (highlight-class "keyword" id) res)))
+                        (else
+                         (highlight (+ n 1) '() (cons id res))))))))
+              ((#\))
+               (cond
+                ((zero? n)
+                 (highlight n
+                            '()
+                            (cons (highlight-class "syntaxerror" c)
+                                  (collect str res))))
+                (else
+                 ;;(highlight-end 'paren
+                 (highlight (- n 1) (cons c str) res))))
+              ((#\#)
+               (highlight n '() (cons (hash-mark) (collect str res))))
+              (else
+               (cond
+                ((highlight-scheme-delimiter? c)
+                 (highlight n (cons c str) res))
+                (else
+                 (let ((id (read-identifier (list c))))
+                   (highlight n '() (cons `(span ,id) (collect str res)))))))))))
+    (highlight 0 '() '())))
 
 (define (highlight-c-keyword? id)
   (memq id '(asm break case catch const_cast continue default delete
@@ -270,203 +257,176 @@
 
 (define (highlight-c-type? id)
   (memq id '(auto bool char class const double enum extern float inline int long
-             short signed static struct union unsigned void volatile wchar_t)))
+             short signed static struct union unsigned void volatile wchar_t
+             sexp)))
 
 (define (highlight-c source)
   (let ((in (if (string? source) (open-input-string source) source)))
-    (call-with-output-string
-      (lambda (out)
-        (define (read-to-eol ls)
-          (let ((c (read-char in)))
-            (cond
-             ((eof-object? c) (reverse-list->string ls))
-             ((eqv? c #\newline) (reverse-list->string (cons c ls)))
-             (else (read-to-eol (cons c ls))))))
-        (define (char-c-initial? c)
-          (and (char? c) (or (char-alphabetic? c) (eqv? c #\_) (eqv? c #\$))))
-        (define (char-c-identifier? c)
-          (and (char? c) (or (char-c-initial? c) (char-numeric? c))))
-        (define (read-identifier ls)
-          (let ((c (peek-char in)))
-            (if (char-c-identifier? c)
-                (read-identifier (cons (read-char in) ls))
-                (string->symbol (reverse-list->string ls)))))
-        (define (write-identifier id)
-          (cond
-           ((highlight-c-keyword? id)
-            (highlight-class 'keyword id out))
-           ((highlight-c-type? id)
-            (highlight-class 'type id out))
-           (else
-            (display id out))))
-        (define (highlight-line)
-          (cond
-           ((eqv? #\# (peek-char in))
-            (highlight-start 'preprocessor out)
-            (write-char (read-char in) out)
-            (display (read-whitespace in) out)
-            (let ((id (read-identifier '())))
-              (display id out)
-              (highlight-end 'preprocessor out)
-              (display (read-whitespace in) out)
-              (cond
-               ((eq? 'define id)
-                (highlight-class
-                 'function
-                 (html-escape (read-to-whitespace in '()))
-                 out))
-               ((memq id '(include import))
-                (highlight-class
-                 'string
-                 (html-escape (read-to-whitespace in '()))
-                 out)))))
-           ((char-c-initial? (peek-char in))
-            ;; line beginning w/ an identifier is probably a
-            ;; function declaration
-            (let ((id1 (read-identifier '())))
-              (cond
-               ((eqv? #\: (peek-char in))
-                (highlight-class 'function id1 out))
-               (else
-                (let lp ((decls '())
-                         (id id1))
-                  (let ((space (read-whitespace in)))
-                    (cond
-                     ((char-c-initial? (peek-char in))
-                      (lp (cons space (cons id decls))
-                          (read-identifier '())))
-                     ((eqv? #\( (peek-char in))
-                      (highlight-start 'type out)
-                      (for-each (lambda (x) (display x out))
-                                (reverse decls))
-                      (highlight-end 'type out)
-                      (highlight-start 'function out)
-                      (display id out)
-                      (highlight-end 'function out)
-                      (display space out))
-                     (else
-                      (for-each write-identifier (reverse decls))
-                      (display id out)
-                      (display space out))))))))))
-          (highlight))
-        (define (highlight)
-          (let ((c (read-char in)))
-            (if (eof-object? c)
-                #f
-                (case c
-                  ((#\/)
-                   (case (peek-char in)
-                     ((#\/)
-                      (highlight-start 'comment out)
-                      (write-char c out)
-                      (display (read-to-eol '()) out)
-                      (highlight-end 'comment out)
-                      (newline out)
-                      (highlight))
-                     ((#\*)
-                      (highlight-start 'comment out)
-                      (write-char c out)
-                      (write-char (read-char in) out)
-                      (let ((prev (read-char in)))
-                        (write-char prev out)
-                        (let lp ((prev prev))
-                          (let ((c (read-char in)))
-                            (write-char c out)
-                            (if (not (and (eqv? prev #\*) (eqv? c #\/)))
-                                (lp c)
-                                #f))))
-                      (highlight-end 'comment out)
-                      (highlight))
-                     (else
-                      (write-char c out)
-                      (highlight))))
-                  ((#\" #\')
-                   (let ((str (read-escaped in c (list c))))
-                     (highlight-class 'string str out)
-                     (highlight)))
-                  ((#\newline)
-                   (newline out)
-                   (highlight-line))
-                  ((#\<)
-                   (display "&lt;" out)
-                   (highlight))
-                  ((#\&)
-                   (display "&amp;" out)
-                   (highlight))
+    (define (char-c-initial? c)
+      (and (char? c) (or (char-alphabetic? c) (eqv? c #\_) (eqv? c #\$))))
+    (define (char-c-identifier? c)
+      (and (char? c) (or (char-c-initial? c) (char-numeric? c))))
+    (define (read-identifier in ls)
+      (let ((c (peek-char in)))
+        (if (char-c-identifier? c)
+            (read-identifier in (cons (read-char in) ls))
+            (reverse-list->string ls))))
+    (define (highlight-identifier id)
+      (let ((sym (string->symbol id)))
+        (cond
+         ((highlight-c-keyword? sym)
+          (highlight-class "keyword" id))
+         ((highlight-c-type? sym)
+          (highlight-class "type" id))
+         (else
+          id))))
+    (define (highlight-line res)
+      (highlight
+       '()
+       (cond
+        ((eqv? #\# (peek-char in))
+         (read-char in)
+         (let* ((res (cons (read-whitespace in) (cons "#" res)))
+                (id (read-identifier in '()))
+                (res (cons (read-whitespace in)
+                           (cons (highlight-class "preprocessor" id) res))))
+           (case (string->symbol id)
+            ((define)
+             (cons (highlight-class "function" (read-to-whitespace in '())) res))
+            ((include import)
+             (cons (highlight-class "string" (read-to-whitespace in '())) res))
+            (else
+             res))))
+        ((char-c-initial? (peek-char in))
+         ;; line beginning w/ an identifier is probably a
+         ;; function declaration
+         (let ((id1 (read-identifier in '())))
+           (cond
+            ((eqv? #\: (peek-char in))
+             (cons (highlight-class "function" id1) res))
+            (else
+             (let lp ((decls '())
+                      (id id1))
+               (let ((space (read-whitespace in)))
+                 (cond
+                  ((char-c-initial? (peek-char in))
+                   (lp (cons space (cons id decls))
+                       (read-identifier in '())))
+                  ((eqv? #\( (peek-char in))
+                   `(,space
+                     ,(highlight-class "function" id)
+                     ,(highlight-class "type" (reverse decls))
+                     ,@res))
                   (else
-                   (cond
-                    ((char-c-initial? c)
-                     (let ((id (read-identifier (list c))))
-                       (if (eqv? #\: (peek-char in))
-                           (highlight-class 'function id out)
-                           (write-identifier id))))
-                    (else
-                     (write-char c out)))
-                   (highlight))))))
-        (highlight-line)))))
+                   `(,space ,id ,@(reverse decls) ,@res)))))))))
+        (else
+         res))))
+    (define (highlight str res)
+      (let ((c (read-char in)))
+        (if (eof-object? c)
+            (reverse (collect str res))
+            (case c
+              ((#\/)
+               (case (peek-char in)
+                 ((#\/)
+                  (highlight
+                   '()
+                   (cons (highlight-class "comment" (read-to-eol in '(#\/ #\/)))
+                         (collect str res))))
+                 ((#\*)
+                  (let lp ((ls (cons (read-char in) '(#\/))))
+                    (let ((c (read-char in)))
+                      (if (not (and (eqv? (car ls) #\*) (eqv? c #\/)))
+                          (lp (cons c ls))
+                          (highlight
+                           '()
+                           (cons (highlight-class "comment"
+                                                  (reverse-list->string ls))
+                                 (collect str res)))))))
+                 (else
+                  (highlight (cons c str) res))))
+              ((#\" #\')
+               (let ((res (collect str res))
+                     (s (read-escaped in c (list c))))
+                 (highlight '() (cons (highlight-class "string" s) res))))
+              ((#\newline)
+               (highlight-line (collect (cons #\newline str) res)))
+              ;; ((#\<)
+              ;;  (highlight (append '(#\; #\t #\l #\&) str) res))
+              ;; ((#\&)
+              ;;  (highlight (append '(#\; #\p #\m #\a #\&) str) res))
+              (else
+               (cond
+                ((char-c-initial? c)
+                 (highlight
+                  '()
+                  (cons
+                   (let ((id (read-identifier in (list c))))
+                     (if (eqv? #\: (peek-char in))
+                         (highlight-class "function" id)
+                         (highlight-identifier id)))
+                   (collect str res))))
+                (else
+                 (highlight (cons c str) res))))))))
+    (highlight-line '())))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (highlight-assembly source)
   (let ((in (if (string? source) (open-input-string source) source)))
-    (call-with-output-string
-      (lambda (out)
-        (define (read-to-eol ls)
-          (let ((c (read-char in)))
-            (cond
-             ((eof-object? c) (reverse-list->string ls))
-             ((eqv? c #\newline) (reverse-list->string (cons c ls)))
-             (else (read-to-eol (cons c ls))))))
-        (define (char-asm-initial? c)
-          (and (char? c) (or (char-alphabetic? c) (memv c '(#\_ #\$ #\.)))))
-        (define (char-asm-identifier? c)
-          (and (char? c) (or (char-asm-initial? c) (char-numeric? c))))
-        (define (read-identifier ls)
-          (let ((c (peek-char in)))
-            (if (char-asm-identifier? c)
-                (read-identifier (cons (read-char in) ls))
-                (string->symbol (reverse-list->string ls)))))
-        (define (highlight)
-          (let ((c (read-char in)))
-            (cond
-             ((eof-object? c))
-             (else
-              (case c
-                ((#\newline)
-                 (write-char c out)
-                 (line))
-                ((#\")
-                 (let ((str (read-escaped in c (list c))))
-                   (highlight-class 'string str out)
-                   (highlight)))
-                ((#\%)
-                 (highlight-class 'variable (read-identifier (list c)) out)
-                 (highlight))
-                ((#\;)
-                 (highlight-class 'comment (read-to-eol (list c)) out)
-                 (highlight))
-                ((#\<)
-                 (display "&lt;" out)
-                 (highlight))
-                ((#\&)
-                 (display "&amp;" out)
-                 (highlight))
-                (else
-                 (write-char c out)
-                 (highlight)))))))
-        (define (line) 
-          (cond
-           ((eof-object? (peek-char in)))
-           ((char-asm-initial? (peek-char in))
-            (let ((id (read-identifier '())))
-              (if (eqv? #\: (peek-char in))
-                  (highlight-class 'function id out)
-                  (highlight-class 'keyword id out))
-              (highlight)))
-           ((eqv? #\tab (peek-char in))
-            (write-char (read-char in) out)
-            (highlight-class 'keyword (read-identifier '()) out)
-            (highlight))
-           (else
-            (highlight))))
-        (line)))))
+    (define (char-asm-initial? c)
+      (and (char? c) (or (char-alphabetic? c) (memv c '(#\_ #\$ #\.)))))
+    (define (char-asm-identifier? c)
+      (and (char? c) (or (char-asm-initial? c) (char-numeric? c))))
+    (define (read-identifier in ls)
+      (let ((c (peek-char in)))
+        (if (char-asm-identifier? c)
+            (read-identifier (cons (read-char in) ls))
+            (reverse-list->string ls))))
+    (define (highlight str res)
+      (let ((c (read-char in)))
+        (cond
+         ((eof-object? c)
+          (reverse (collect str res)))
+         (else
+          (case c
+            ((#\newline)
+             (highlight-line (collect str res)))
+            ((#\")
+             (let ((s (read-escaped in c (list c))))
+               (highlight
+                '()
+                (cons (highlight-class "string" s) (collect str res)))))
+            ((#\%)
+             (highlight
+              '()
+              (cons (highlight-class "variable" (read-identifier in (list c)))
+                    (collect str res))))
+            ((#\;)
+             (highlight
+              '()
+              (cons (highlight-class "comment" (read-to-eol in (list c)))
+                    (collect str res))))
+            (else
+             (highlight (cons c str) res)))))))
+    (define (highlight-line res) 
+      (cond
+       ((eof-object? (peek-char in))
+        (highlight '() res))
+       ((char-asm-initial? (peek-char in))
+        (let ((id (read-identifier in '())))
+          (highlight
+           '()
+           (cons
+            (if (eqv? #\: (peek-char in))
+                (highlight-class "function" id)
+                (highlight-class "keyword" id))
+            res))))
+       ((eqv? #\tab (peek-char in))
+        (highlight
+         '()
+         (cons (highlight-class "keyword" (read-identifier in '()))
+               (cons "\t" res))))
+       (else
+        (highlight '() res))))
+    (highlight-line '())))
