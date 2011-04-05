@@ -1842,7 +1842,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       } else if (tmp == SEXP_CLOSE) {
         res = (sexp_pairp(res) ? sexp_nreverse(ctx, res) : res);
       } else {
-        res = sexp_read_error(ctx, "missing trailing ')'", SEXP_NULL, in);
+        res = sexp_read_error(ctx, "missing trailing ')' started on line",
+                              sexp_make_fixnum(line), in);
       }
     }
     if ((line >= 0) && sexp_pairp(res)) {
