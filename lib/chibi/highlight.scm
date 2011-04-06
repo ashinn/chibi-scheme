@@ -258,7 +258,7 @@
 (define (highlight-c-type? id)
   (memq id '(auto bool char class const double enum extern float inline int long
              short signed static struct union unsigned void volatile wchar_t
-             sexp)))
+             sexp sexp_uint_t sexp_sint_t)))
 
 (define (highlight-c source)
   (let ((in (if (string? source) (open-input-string source) source)))

@@ -165,6 +165,11 @@ lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
+%.html: %.scrbl tools/chibi-doc
+	$(CHIBI) tools/chibi-doc $< > $@
+
+doc: doc/chibi.html
+
 clean:
 	rm -f *.o *.i *.s *.8
 	rm -f tests/basic/*.out tests/basic/*.err
