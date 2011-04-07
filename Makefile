@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: all libs doc dist clean cleaner dist-clean install uninstall test checkdefs
+.PHONY: all libs dist clean cleaner dist-clean install uninstall test checkdefs
 .PRECIOUS: %.c
 
 # install configuration
@@ -17,8 +17,8 @@ MANDIR   ?= $(PREFIX)/share/man/man1
 
 DESTDIR  ?=
 
-GENSTUBS  ?= ./tools/genstubs.scm
-GENSTATIC ?= ./tools/genstatic.scm
+GENSTUBS  ?= ./tools/chibi-ffi
+GENSTATIC ?= ./tools/chibi-genstatic
 
 ########################################################################
 # system configuration - if not using GNU make, set PLATFORM and the
@@ -165,7 +165,7 @@ lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
 lib/%$(SO): lib/%.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
-%.html: %.scrbl tools/chibi-doc
+%.html: %.scrbl tools/chibi-doc chibi-scheme$(EXE)
 	$(CHIBI) tools/chibi-doc $< > $@
 
 doc: doc/chibi.html
@@ -240,7 +240,8 @@ test: chibi-scheme$(EXE)
 install: chibi-scheme$(EXE)
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
-	cp tools/genstubs.scm $(DESTDIR)$(BINDIR)/
+	cp tools/chibi-ffi $(DESTDIR)$(BINDIR)/
+	cp tools/chibi-doc $(DESTDIR)$(BINDIR)/
 	mkdir -p $(DESTDIR)$(MODDIR)
 	cp -r lib/* $(DESTDIR)$(MODDIR)/
 	mkdir -p $(DESTDIR)$(INCDIR)

@@ -3,7 +3,7 @@
 ;; Note: this evolved as a throw-away script to provide certain core
 ;; modules, and so is a mess.  Tread carefully.
 
-;; Simple C FFI.  "genstubs.scm file.stub" will read in the C function
+;; Simple C FFI.  "chibi-ffi file.stub" will read in the C function
 ;; FFI definitions from file.stub and output the appropriate C
 ;; wrappers into file.c.  You can then compile that file with:
 ;;
@@ -13,6 +13,9 @@
 ;; your platform) and then the generated .so file can be loaded
 ;; directly with load, or portably using (include-shared "file") in a
 ;; module definition (note that include-shared uses no suffix).
+;;
+;; Passing the -c/--compile option will attempt to compile the .so
+;; file in a single step.
 
 ;; The goal of this interface is to make access to C types and
 ;; functions easy, without requiring the user to write any C code.
@@ -21,119 +24,6 @@
 ;; actual parameters.  Writing C by hand is still possible, and
 ;; several of the core modules provide C interfaces directly without
 ;; using the stubber.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Struct Interface
-;;
-;; (define-c-struct struct-name
-;;   [predicate: predicate-name]
-;;   [constructor: constructor-name]
-;;   [finalizer: c_finalizer_name]
-;;   (type c_field_name getter-name setter-name) ...)
-;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Function Interface
-;;
-;; (define-c return-type name-spec (arg-type ...))
-;;
-;; where name-space is either a symbol name, or a list of
-;; (scheme-name c_name).  If just a symbol, the C name is taken
-;; to be the same with -'s replaced by _'s.
-;;
-;; arg-type is a type suitable for input validation and conversion.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Types
-;;
-;; Types
-;;
-;; Basic Types
-;;   void
-;;   boolean
-;;   char
-;;   sexp (no conversions)
-;;
-;; Integer Types:
-;;   signed-char short int long
-;;   unsigned-char unsigned-short unsigned-int unsigned-long size_t pid_t
-;;   time_t (in seconds, but using the chibi epoch of 2010/01/01)
-;;   errno (as a return type returns #f on error)
-;;
-;; Float Types:
-;;   float double long-double
-;;
-;; String Types:
-;;   string - a null-terminated char*
-;;   env-string - a VAR=VALUE string represented as a (VAR . VALUE) pair inScheme
-;;   in addition you can use (array char) as a string
-;;
-;; Port Types:
-;;   input-port output-port
-;;   port-or-fd - an fd-backed port or a fixnum
-;;
-;; Struct Types:
-;;
-;; Struct types are by default just referred to by the bare
-;; struct-name from define-c-struct, and it is assumed you want a
-;; pointer to that type.  To refer to the full struct, use the struct
-;; modifier, as in (struct struct-name).
-
-;; Type modifiers
-;;
-;; Any type may also be written as a list of modifiers followed by the
-;; type itself.  The supported modifiers are:
-;;
-;; const: prepends the "const" C type modifier
-;;        * as a return or result parameter, makes non-immediates immutable
-;;
-;; free:  it's Scheme's responsibility to "free" this resource
-;;        * as a return or result parameter, registers the freep flag
-;;          this causes the type finalizer to be run when GCed
-;;
-;; maybe-null: this pointer type may be NULL
-;;        * as a result parameter, NULL is translated to #f
-;;          normally this would just return a wrapped NULL pointer
-;;        * as an input parameter, #f is translated to NULL
-;;          normally this would be a type error
-;;
-;; pointer: create a pointer to this type
-;;        * as a return parameter, wraps the result in a vanilla cpointer
-;;        * as a result parameter, boxes then unboxes the value
-;;
-;; struct: treat this struct type as a struct, not a pointer
-;;        * as an input parameter, dereferences the pointer
-;;        * as a type field, indicates a nested struct
-;;
-;; link:  add a gc link
-;;        * as a field getter, link to the parent object, so the
-;;          parent won't be GCed so long as we have a reference
-;;          to the child.  this behavior is automatic for nested
-;;          structs.
-;;
-;; result: return a result in this parameter
-;;        * if there are multiple results (including the return type),
-;;          they are all returned in a list
-;;        * if there are any result parameters, a return type
-;;          of errno returns #f on failure, and as eliminated
-;;          from the list of results otherwise
-;;
-;; (value <expr>): specify a fixed value
-;;        * as an input parameter, this parameter is not provided
-;;          in the Scheme API but always passed as <expr>
-;;
-;; (default <expr>): specify a default value
-;;        * as the final input parameter, makes the Scheme parameter
-;;          optional, defaulting to <expr>
-;;
-;; (array <type> [<length>])  an array type
-;;        * length must be specified for return and result parameters
-;;        * if specified, length can be any of
-;;        ** an integer, for a fixed size
-;;        ** the symbol null, indicating a NULL-terminated array
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; globals
@@ -336,10 +226,20 @@
        ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (cons r (collect))))
        (else (lp from (+ i 1) res))))))
 
+(define (string-split str c . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (string-length str)))
+    (let lp ((from start) (i start) (res '()))
+      (define (collect) (if (= i from) res (cons (substring str from i) res)))
+      (cond
+       ((>= i end) (reverse (collect)))
+       ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (collect)))
+       (else (lp from (+ i 1) res))))))
+
 (define (string-scan c str . o)
-  (let ((limit (string-length str)))
+  (let ((end (string-length str)))
     (let lp ((i (if (pair? o) (car o) 0)))
-      (cond ((>= i limit) #f)
+      (cond ((>= i end) #f)
             ((eqv? c (string-ref str i)) i)
             (else (lp (+ i 1)))))))
 
@@ -1288,13 +1188,31 @@
 ;; main
 
 (define (main args)
-  (case (length args)
-    ((1)
-     (with-output-to-file (string-append (strip-extension (car args)) ".c")
-       (lambda () (generate (car args)))))
-    ((2)
-     (if (equal? "-" (cadr args))
-         (generate (car args))
-         (with-output-to-file (cadr args) (lambda () (generate (car args))))))
-    (else
-     (error "usage: genstubs <file.stub> [<output.c>]"))))
+  (let* ((compile? (and (pair? args) (member (car args) '("-c" "--compile"))))
+         (args (if compile? (cdr args) args))
+         (cflags (if (and (pair? args) (member (car args) '("-f" "--flags")))
+                     (string-split (cadr args) " ")
+                     #f))
+         (args (if cflags (cddr args) args))
+         (src (car args))
+         (dest
+          (case (length args)
+            ((1) (string-append (strip-extension src) ".c"))
+            ((2) (cadr args))
+            (else (error "usage: chibi-ffi [-c] <file.stub> [<output.c>]")))))
+    (if (equal? "-" dest)
+        (generate src)
+        (with-output-to-file dest (lambda () (generate src))))
+    (cond
+     ((and compile? (not (equal? "-" dest)))
+      ;; This has to use `eval' for bootstrapping, since we need
+      ;; chibi-ffi to compile to (chibi process) module.
+      (let* ((so (string-append (strip-extension src) *shared-object-extension*))
+             (system (begin (eval '(import (chibi process)))
+                            (eval 'system)))
+             (base-args (append (or cflags '())
+                                `("-o" ,so ,dest "-lchibi-scheme")))
+             (args (cond-expand
+                    (macosx (append '("-dynamiclib" "-Oz") base-args))
+                    (else (append '("-fPIC" "-shared" "-Os") base-args)))))
+        (apply system "cc" args))))))
