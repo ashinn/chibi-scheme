@@ -1625,7 +1625,7 @@ sexp sexp_parameter_ref (sexp ctx, sexp param) {
     ? sexp_cdr(sexp_opcode_data(param)) : SEXP_FALSE;
 }
 
-static void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
+void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
   sexp param = sexp_env_ref(env, name, SEXP_FALSE);
   if (sexp_opcodep(param)) {
     if (! sexp_pairp(sexp_opcode_data(param)))
@@ -1635,20 +1635,26 @@ static void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
   }
 }
 
-sexp sexp_load_standard_parameters (sexp ctx, sexp env) {
-  /* add io port and interaction env parameters */
+sexp sexp_load_standard_ports (sexp ctx, sexp env, FILE* in, FILE* out,
+                               FILE* err, int no_close) {
   sexp_gc_var1(p);
   sexp_gc_preserve1(ctx, p);
-  p = sexp_make_input_port(ctx, stdin, SEXP_FALSE);
-  sexp_port_no_closep(p) = 1;
-  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), p);
-  p = sexp_make_output_port(ctx, stdout, SEXP_FALSE);
-  sexp_port_no_closep(p) = 1;
-  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), p);
-  p = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
-  sexp_port_no_closep(p) = 1;
-  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), p);
-  sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
+  if (!env) env = sexp_context_env(ctx);
+  if (in) {
+    p = sexp_make_input_port(ctx, in, SEXP_FALSE);
+    sexp_port_no_closep(p) = no_close;
+    sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL), p);
+  }
+  if (out) {
+    p = sexp_make_output_port(ctx, out, SEXP_FALSE);
+    sexp_port_no_closep(p) = no_close;
+    sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL), p);
+  }
+  if (err) {
+    p = sexp_make_output_port(ctx, err, SEXP_FALSE);
+    sexp_port_no_closep(p) = no_close;
+    sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL), p);
+  }
   sexp_gc_release1(ctx);
   return SEXP_VOID;
 }
@@ -1657,7 +1663,6 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
   if (!e) e = sexp_context_env(ctx);
-  sexp_load_standard_parameters(ctx, e);
 #if SEXP_USE_DL
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*", -1),
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
@@ -1697,6 +1702,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
     = sexp_env_ref(e, sym=sexp_intern(ctx, "current-exception-handler", -1), SEXP_FALSE);
   /* load init.scm */
   tmp = sexp_load_module_file(ctx, sexp_init_file, e);
+  sexp_set_parameter(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   /* load and bind config env */
 #if SEXP_USE_MODULES
   if (! sexp_exceptionp(tmp)) {

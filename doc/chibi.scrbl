@@ -295,6 +295,7 @@ int main(int argc, char** argv) {
   sexp ctx;
   ctx = sexp_make_eval_context(NULL, NULL, NULL, 0, 0);
   sexp_load_standard_env(ctx, NULL, SEXP_SEVEN);
+  sexp_load_standard_ports(ctx, NULL, stdin, stdout, stderr, 0);
   dostuff(ctx);
   sexp_destroy_context(ctx);
 }
@@ -373,19 +374,25 @@ core forms: @scheme{define}, @scheme{set!}, @scheme{lambda}, @scheme{if},
 @scheme{let-syntax}, and @scheme{letrec-syntax}.
 }}
 
-@item{@ccode{sexp_load_standard_parameters(sexp ctx, sexp env)}
-@p{
-Creates @scheme{current-input-port}, @scheme{current-output-port}, and
-@scheme{current-error-port} parameters from stdin, stdout and stderr, and binds
-them in @var{env}.  Also creates an @scheme{interaction-environment} parameter
-and sets @var{env} itself to that.
-}}
-
 @item{@ccode{sexp_load_standard_env(sexp ctx, sexp env, sexp version)}
 @p{
 Loads the standard parameters for @var{env}, constructs the feature list from
 pre-compiled defaults, and loads the installed initialization file for
 @var{version}, which currently should be the value @var{SEXP_SEVEN}.
+Also creates an @scheme{interaction-environment} parameter
+and sets @var{env} itself to that.
+}}
+
+@item{@ccode{sexp_load_standard_ports(sexp ctx, sexp env, FILE* in, FILE* out, FILE* err, int leave_open)}
+@p{
+Creates @scheme{current-input-port}, @scheme{current-output-port}, and
+@scheme{current-error-port} parameters from @var{in}, @var{out} and
+@var{err}, and binds them in @var{env}.  If @var{env} is @cvar{NULL}
+the default context environment is used.  Any of the @ctype{FILE*} may
+be @cvar{NULL}, in which case the corresponding port is not set.  If
+@var{leave_open} is true, then the underlying @ctype{FILE*} is left
+open after the Scheme port is closed, otherwise they are both closed
+together.
 }}
 
 @item{@ccode{sexp_load(sexp ctx, sexp file, sexp env)}
@@ -493,7 +500,7 @@ sexp foo(sexp ctx, sexp bar, sexp baz) {
   sexp_assert_type(ctx, sexp_bazp, SEXP_BAZ, baz);
 
   /* preserve the variables in ctx */
-  sexp_gc_var3(ctx, tmp1, tmp2, res);
+  sexp_gc_preserve3(ctx, tmp1, tmp2, res);
 
   /* perform your computations */
   tmp1 = ...
