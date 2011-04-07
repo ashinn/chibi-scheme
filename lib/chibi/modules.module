@@ -1,7 +1,8 @@
 
 (module (chibi modules)
-  (export analyze-module module-ast module-ast-set!
-          module-ref module-contains? containing-module
+  (export module-name module-dir module-includes
+          module-ast module-ast-set! module-ref module-contains?
+          analyze-module containing-module
           procedure-analysis)
   (import-immutable (scheme) (config))
   (import (chibi ast))
