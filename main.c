@@ -23,12 +23,10 @@ static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
   return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : SEXP_VOID;
 }
 
-static void repl (sexp ctx) {
+static void repl (sexp ctx, sexp env) {
   sexp in, out, err;
-  sexp_gc_var4(obj, tmp, res, env);
-  sexp_gc_preserve4(ctx, obj, tmp, res, env);
-  env = sexp_make_env(ctx);
-  sexp_env_parent(env) = sexp_context_env(ctx);
+  sexp_gc_var3(obj, tmp, res);
+  sexp_gc_preserve3(ctx, obj, tmp, res);
   sexp_context_tracep(ctx) = 1;
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
@@ -62,7 +60,7 @@ static void repl (sexp ctx) {
       }
     }
   }
-  sexp_gc_release4(ctx);
+  sexp_gc_release3(ctx);
 }
 
 static sexp_uint_t multiplier (char c) {
@@ -95,31 +93,41 @@ static sexp check_exception (sexp ctx, sexp res) {
 }
 
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
-  sexp e = sexp_load_standard_env(ctx, env, k), p, res;
+  sexp_gc_var3(e, p, res);
+  sexp_gc_preserve3(ctx, e, p, res);
+  e = sexp_load_standard_env(ctx, env, k);
   if (sexp_exceptionp(e)) return e;
+  sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
 #if SEXP_USE_GREEN_THREADS
   p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
 #endif
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
+  sexp_set_parameter(ctx, res, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
+  sexp_gc_release3(ctx);
   return res;
 }
 
+static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
+                             sexp_uint_t heap_max_size, sexp_sint_t fold_case) {
+  *ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size, heap_max_size);
+  if (! *ctx) {
+    fprintf(stderr, "chibi-scheme: out of memory\n");
+    exit_failure();
+  }
+  sexp_global(*ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(fold_case);
+  *env = sexp_context_env(*ctx);
+}
+
 #define init_context() if (! ctx) do {                                  \
-      ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size, heap_max_size); \
-      if (! ctx) {                                                      \
-        fprintf(stderr, "chibi-scheme: out of memory\n");               \
-        exit_failure();                                                 \
-      }                                                                 \
-      sexp_global(ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(fold_case); \
-      env = sexp_context_env(ctx);                                      \
+      do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case); \
       sexp_gc_preserve2(ctx, tmp, args);                                \
     } while (0)
 
 #define load_init() if (! init_loaded++) do {                           \
       init_context();                                                   \
-      check_exception(ctx, sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN)); \
+      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN)); \
     } while (0)
 
 void run_main (int argc, char **argv) {
@@ -171,7 +179,8 @@ void run_main (int argc, char **argv) {
       break;
     case 'q':
       init_context();
-      if (! init_loaded++) sexp_load_standard_parameters(ctx, env);
+      if (! init_loaded++)
+        sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
       break;
     case 'A':
       init_context();
@@ -237,7 +246,7 @@ void run_main (int argc, char **argv) {
         check_exception(ctx, sexp_apply(ctx, tmp, args));
       }
     } else {
-      repl(ctx);
+      repl(ctx, env);
     }
   }
 
