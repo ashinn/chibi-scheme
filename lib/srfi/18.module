@@ -1,5 +1,5 @@
 
-(define-module (srfi 18)
+(module (srfi 18)
   (export
    current-thread thread? make-thread thread-name
    thread-specific thread-specific-set! thread-start!

@@ -1,5 +1,5 @@
 
-(define-module (srfi 33)
+(module (srfi 33)
   (export bitwise-not
           bitwise-and   bitwise-ior 
           bitwise-xor   bitwise-eqv

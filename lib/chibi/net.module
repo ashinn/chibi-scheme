@@ -1,5 +1,5 @@
 
-(define-module (chibi net)
+(module (chibi net)
   (export sockaddr? address-info? get-address-info
           socket connect bind accept listen
           with-net-io open-net-io

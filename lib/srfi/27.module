@@ -1,5 +1,5 @@
 
-(define-module (srfi 27)
+(module (srfi 27)
   (export random-integer random-real default-random-source
           make-random-source random-source?
           random-source-state-ref random-source-state-set!

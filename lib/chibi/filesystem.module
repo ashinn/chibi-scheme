@@ -1,5 +1,5 @@
 
-(define-module (chibi filesystem)
+(module (chibi filesystem)
   (export open-input-file-descriptor open-output-file-descriptor
           duplicate-file-descriptor duplicate-file-descriptor-to
           close-file-descriptor renumber-file-descriptor

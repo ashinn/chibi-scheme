@@ -1,5 +1,5 @@
 
-(define-module (chibi quoted-printable)
+(module (chibi quoted-printable)
   (export quoted-printable-encode quoted-printable-encode-string
           quoted-printable-encode-header
           quoted-printable-decode quoted-printable-decode-string)

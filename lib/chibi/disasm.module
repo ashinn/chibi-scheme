@@ -1,5 +1,5 @@
 
-(define-module (chibi disasm)
+(module (chibi disasm)
   (export disasm)
   (import-immutable (scheme))
   (include-shared "disasm"))

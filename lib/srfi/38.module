@@ -1,5 +1,5 @@
 
-(define-module (srfi 38)
+(module (srfi 38)
   (import-immutable (scheme))
   (export write-with-shared-structure write/ss
           read-with-shared-structure read/ss)

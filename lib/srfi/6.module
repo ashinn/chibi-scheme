@@ -1,5 +1,5 @@
 
-(define-module (srfi 6)
+(module (srfi 6)
   (export open-input-string open-output-string get-output-string)
   (import-immutable (scheme)))
 
