@@ -991,7 +991,7 @@ for interactive line editing.
 
 The @scheme{(chibi time)} provides an interface to the current system time.
 
-@subsection{Type Inferance}
+@subsection{Type Inference}
 
 The @scheme{(chibi type-inference)} is an easy-to-use type inference system.
 
