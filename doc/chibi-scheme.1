@@ -6,7 +6,7 @@ chibi-scheme \- a tiny Scheme interpreter
 
 .SH SYNOPSIS
 .B chibi-scheme
-[-qV]
+[-qfV]
 [-I
 .I path
 ]
@@ -67,6 +67,9 @@ Prints the version information and exits.
 Don't load the initialization file.  The resulting
 environment will only contain the core syntactic forms
 and primitives coded in C.
+.TP
+.BI -f
+Change the reader to case-fold symbols as in R5RS.
 .TP
 .BI -h size[/max_size]
 Specifies the initial size of the heap, in bytes,

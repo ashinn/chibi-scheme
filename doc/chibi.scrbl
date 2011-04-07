@@ -191,16 +191,16 @@ primitive type constructors:
 (register-simple-type <name-string> <num-fields>)
  => <type>
 
-(make-type-predicate <opcode-name-string> <type-id>)
+(make-type-predicate <opcode-name-string> <type>)
  => <opcode>  ; takes 1 arg, returns #t iff that arg is of the type
 
-(make-constructor <constructor-name-string> <type-id>)
+(make-constructor <constructor-name-string> <type>)
  => <opcode>  ; takes 0 args, returns a newly allocated instance of type
 
-(make-getter <getter-name-string> <type-id> <field-index>)
+(make-getter <getter-name-string> <type> <field-index>)
  => <opcode>  ; takes 1 args, retrieves the field located at the index
 
-(make-setter <setter-name-string> <type-id> <field-index>)
+(make-setter <setter-name-string> <type> <field-index>)
  => <opcode>  ; takes 2 args, sets the field located at the index
 }
 
@@ -718,25 +718,87 @@ and idioms, such as return values passed in actual parameters.
 Writing C by hand is still possible, and several of the core modules
 provide C interfaces directly without using the stubber.
 
+@subsection{Includes and Initializations}
+
+@itemlist[
+@item{@scheme{(c-include header)} - includes the file @var{header}}
+@item{@scheme{(c-system-include header)} - includes the system file @var{header}}
+@item{@scheme{(c-declare args ...)} - outputs @var{args} directly in the top-level C source}
+@item{@scheme{(c-init args ...)} - evaluates @var{args} as C code after all other library initializations have been performed, with @cvar{ctx} and @cvar{env} in scope}
+]
+
 @subsection{Struct Interface}
 
+C structs can be bound as Scheme types with the
+@scheme{define-c-struct} form:
+
 @schemeblock{
-(define-c-struct struct-name
+(define-c-struct struct_name
   [predicate: predicate-name]
   [constructor: constructor-name]
   [finalizer: c_finalizer_name]
   (type c_field_name getter-name setter-name) ...)
 }
 
+@var{struct_name} should be the name of a C struct type.  If provided,
+@var{predicate-name} is bound to a procedure which takes one object
+and returns @scheme{#t} iff the object is of type @var{struct_name}.
+
+If provided, @var{constructor-name} is bound to a procedure of zero
+arguments which creates and returns a newly allocated instance of the
+type.
+
+If a finalizer is provided, @var{c_finalizer_name} must be a C
+function which takes one argument, a pointer to the struct, and
+performs any cleanup or freeing of resources necessary.
+
+The remaining slots are similar to the SRFI-9 syntax, except they are
+prefixed with a C type (described below).  The @var{c_field_name}
+should be a field name of @var{struct_name}.  @var{getter-name} will
+then be bound to a procedure of one argument, a @{struct_name} type,
+which returns the given field.  If provided, @var{setter-name} will be
+bound to a procedure of two arguments to mutate the given field.
+
+The variants @scheme{define-c-class} and @scheme{define-c-union} take
+the same syntax but define types with the @ccode{class} and
+@ccode{union} keywords respectively.  @scheme{define-c-type} just
+defines accessors to an opaque type without any specific struct-like
+keyword.
+
+@schemeblock{
+;; Example: the struct addrinfo returned by getaddrinfo.
+
+(c-system-include "netdb.h")
+
+(define-c-struct addrinfo
+  finalizer: freeaddrinfo
+  predicate: address-info?
+  (int              ai_family    address-info-family)
+  (int              ai_socktype  address-info-socket-type)
+  (int              ai_protocol  address-info-protocol)
+  ((link sockaddr)  ai_addr      address-info-address)
+  (size_t           ai_addrlen   address-info-address-length)
+  ((link addrinfo)  ai_next      address-info-next))
+}
+
 @subsection{Function Interface}
+
+C functions are defined with:
 
 @scheme{(define-c return-type name-spec (arg-type ...))}
 
-where name-space is either a symbol name, or a list of
-(scheme-name c_name).  If just a symbol, the C name is taken
-to be the same with -'s replaced by _'s.
+where @var{name-space} is either a symbol name, or a list of
+@scheme{(scheme-name c_name)}.  If just a symbol is used, the C name
+is generated automatically by replacing any dashes (-) in the Scheme
+name with underscores (_).
 
-@var{arg-type} is a type suitable for input validation and conversion.
+Each @var{arg-type} is a type suitable for input validation and
+conversion as discussed below.
+
+@schemeblock{
+;; Example: define connect(2) in Scheme
+(define-c int connect (int sockaddr int))
+}
 
 @subsection{C Types}
 
@@ -794,9 +856,9 @@ to be the same with -'s replaced by _'s.
 @subsubsection{Struct Types}
 
 Struct types are by default just referred to by the bare
-struct-name from define-c-struct, and it is assumed you want a
-pointer to that type.  To refer to the full struct, use the struct
-modifier, as in (struct struct-name).
+@var{struct_name} from @scheme{define-c-struct}, and it is assumed you
+want a pointer to that type.  To refer to the full struct, use the
+struct modifier, as in @scheme{(struct struct-name)}.
 
 @subsubsection{Type modifiers}
 
@@ -949,7 +1011,8 @@ pattern matching syntax.
 
 @subsection{RFC2045 MIME}
 
-The @scheme{(chibi mime)} module
+The @scheme{(chibi mime)} module provides utilities for parsing MIME
+files into an SXML format.
 
 @subsection{Module Introspection}
 
@@ -993,6 +1056,10 @@ current user information.
 
 The @scheme{(chibi term edit-line)} provides an @scheme{edit-line} procedure
 for interactive line editing.
+
+@subsection{Testing}
+
+The @scheme{(chibi test)} provides a simple unit testing framework.
 
 @subsection{Times and Dates}
 
