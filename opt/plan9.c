@@ -15,7 +15,7 @@ sexp sexp_file_exists_p (sexp ctx sexp_api_params(self, n), sexp path) {
   int res;
   uchar statbuf[STATMAX];
   if (! sexp_stringp(path))
-    return sexp_type_exception(ctx, "file-exists?: not a string", path);
+    return sexp_type_exception(ctx, self, SEXP_STRING, path);
   res = stat(sexp_string_data(path), statbuf, sizeof(statbuf));
   return (res < 0) ? SEXP_FALSE : SEXP_TRUE;
 }
@@ -23,9 +23,9 @@ sexp sexp_file_exists_p (sexp ctx sexp_api_params(self, n), sexp path) {
 sexp sexp_fdopen (sexp ctx sexp_api_params(self, n), sexp fd, sexp mode) {
   FILE *f;
   if (! sexp_integerp(fd))
-    return sexp_type_exception(ctx, "fdopen: not an integer", fd);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, fd);
   if (! sexp_stringp(mode))
-    return sexp_type_exception(ctx, "fdopen: not a mode string", mode);
+    return sexp_type_exception(ctx, self, SEXP_STRING, mode);
   f = fdopen(sexp_unbox_fixnum(fd), sexp_string_data(mode));
   if (! f)
     return sexp_user_exception(ctx, SEXP_FALSE, "fdopen failed", fd);
@@ -38,7 +38,7 @@ sexp sexp_fdopen (sexp ctx sexp_api_params(self, n), sexp fd, sexp mode) {
 
 sexp sexp_fileno (sexp ctx sexp_api_params(self, n), sexp port) {
   if (! sexp_portp(port))
-    return sexp_type_exception(ctx, "fileno: not a port", port);
+    return sexp_type_exception(ctx, self, SEXP_IPORT, port);
   return sexp_make_fixnum(fileno(sexp_port_stream(port)));
 }
 
@@ -74,7 +74,7 @@ sexp sexp_pipe (sexp ctx sexp_api_params(self, n)) {
 
 sexp sexp_sleep (sexp ctx sexp_api_params(self, n), sexp msecs) {
   if (! sexp_integerp(msecs))
-    return sexp_type_exception(ctx, "sleep: not an integer", msecs);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, msecs);
   sleep(sexp_unbox_fixnum(msecs));
   return SEXP_VOID;
 }
@@ -82,7 +82,7 @@ sexp sexp_sleep (sexp ctx sexp_api_params(self, n), sexp msecs) {
 sexp sexp_getenv (sexp ctx sexp_api_params(self, n), sexp name) {
   char *value;
   if (! sexp_stringp(name))
-    return sexp_type_exception(ctx, "getenv: not a string", name);
+    return sexp_type_exception(ctx, self, SEXP_STRING, name);
   value = getenv(sexp_string_data(name));
   return ((! value) ? SEXP_FALSE : sexp_c_string(ctx, value, -1));
 }
@@ -95,7 +95,7 @@ sexp sexp_getwd (sexp ctx sexp_api_params(self, n)) {
 
 sexp sexp_chdir (sexp ctx sexp_api_params(self, n), sexp path) {
   if (! sexp_stringp(path))
-    return sexp_type_exception(ctx, "chdir: not a string", path);
+    return sexp_type_exception(ctx, self, SEXP_STRING, path);
   chdir(sexp_string_data(path));
   return SEXP_VOID;
 }
@@ -122,9 +122,9 @@ sexp sexp_wait (sexp ctx sexp_api_params(self, n)) { /* just return (pid msg) */
 
 sexp sexp_postnote (sexp ctx sexp_api_params(self, n), sexp pid, sexp note) {
   if (! sexp_integerp(pid))
-    return sexp_type_exception(ctx, "postnote: not an integer", pid);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, pid);
   if (! sexp_stringp(note))
-    return sexp_type_exception(ctx, "postnote: not a string", note);
+    return sexp_type_exception(ctx, self, SEXP_STRING, note);
   postnote(PNPROC, sexp_unbox_fixnum(pid), sexp_string_data(note));
   return SEXP_VOID;
 }
@@ -286,13 +286,13 @@ sexp sexp_postmountsrv (sexp ctx sexp_api_params(self, n), sexp ls, sexp name, s
   Srv s;
   struct sexp_plan9_srv p9s;
   if (! sexp_listp(ctx, ls))
-    return sexp_type_exception(ctx, "postmountsrv: not a list", ls);
+    return sexp_type_exception(ctx, self, SEXP_PAIR, ls);
   if (! sexp_stringp(name))
-    return sexp_type_exception(ctx, "postmountsrv: not a string", name);
+    return sexp_type_exception(ctx, self, SEXP_STRING, name);
   if (! sexp_stringp(mtpt))
-    return sexp_type_exception(ctx, "postmountsrv: not a string", mtpt);
+    return sexp_type_exception(ctx, self, SEXP_STRING, mtpt);
   if (! sexp_integerp(flags))
-    return sexp_type_exception(ctx, "postmountsrv: not an integer", flags);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, flags);
   sexp_build_srv(ctx, &p9s, ls);
   s.aux = &p9s;
   s.auth = &sexp_9p_auth;
