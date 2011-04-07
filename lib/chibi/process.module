@@ -1,6 +1,6 @@
 
 (define-module (chibi process)
-  (export exit sleep alarm fork kill execute waitpid
+  (export exit sleep alarm fork kill execute waitpid system
           process-command-line  process-running?
           set-signal-action! make-signal-set signal-set-contains?
           signal-set-fill! signal-set-add! signal-set-delete!
@@ -16,6 +16,12 @@
   (import-immutable (scheme))
   (cond-expand (threads (import (srfi 18))) (else #f))
   (include-shared "process")
+  (body
+   (define (system cmd . args)
+     (let ((pid (fork)))
+       (if (zero? pid)
+           (execute cmd (cons cmd args))
+           (waitpid pid 0)))))
   (cond-expand
    (bsd #f)
    (else
