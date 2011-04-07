@@ -1,5 +1,5 @@
 
-(define-module (srfi 39)
+(module (srfi 39)
   (export make-parameter parameterize)
   (import-immutable (scheme))
   (include-shared "39/param")

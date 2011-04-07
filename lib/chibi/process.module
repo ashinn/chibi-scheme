@@ -1,5 +1,5 @@
 
-(define-module (chibi process)
+(module (chibi process)
   (export exit sleep alarm fork kill execute waitpid system
           process-command-line  process-running?
           set-signal-action! make-signal-set signal-set-contains?

@@ -1,5 +1,5 @@
 
-(define-module (chibi modules)
+(module (chibi modules)
   (export analyze-module module-ast module-ast-set!
           module-ref module-contains? containing-module
           procedure-analysis)

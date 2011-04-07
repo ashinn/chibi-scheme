@@ -1,5 +1,5 @@
 
-(define-module (chibi stty)
+(module (chibi stty)
   (export stty with-stty with-raw-io
           get-terminal-width get-terminal-dimensions
           TCSANOW TCSADRAIN TCSAFLUSH)

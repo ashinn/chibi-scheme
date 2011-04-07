@@ -1,5 +1,5 @@
 
-(define-module (srfi 9)
+(module (srfi 9)
   (export define-record-type)
   (import-immutable (scheme))
   (include "9.scm"))

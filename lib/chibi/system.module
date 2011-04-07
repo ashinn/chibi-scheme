@@ -1,5 +1,5 @@
 
-(define-module (chibi system)
+(module (chibi system)
   (export user-information user? user-name user-password
           user-id user-group-id user-gecos user-home user-shell
           current-user-id current-group-id

@@ -1,5 +1,5 @@
 
-(define-module (chibi repl)
+(module (chibi repl)
   (export repl)
   (import-immutable (scheme))
   (import (chibi ast)

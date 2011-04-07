@@ -1,5 +1,5 @@
 
-(define-module (chibi equiv)
+(module (chibi equiv)
   (export equiv?)
   (import-immutable (scheme))
   (import (srfi 69))

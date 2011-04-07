@@ -1,8 +1,8 @@
 
-(define-module (srfi 11)
+(module (srfi 11)
   (export let-values let*-values)
   (import-immutable (scheme))
-  (body
+  (begin
    (define-syntax let*-values
      (syntax-rules ()
        ((let*-values () . body)
