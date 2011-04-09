@@ -26,8 +26,9 @@
    exception-irritants exception-irritants-set!
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-variadic?
+   macro-procedure macro-env
    procedure-code procedure-vars procedure-name
-   bytecode-name bytecode-literals
+   bytecode-name bytecode-literals bytecode-source
    port-line port-line-set!
    type? type-name type-cpl type-parent type-slots
    object-size integer->immediate gc
