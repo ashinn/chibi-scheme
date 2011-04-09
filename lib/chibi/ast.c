@@ -120,6 +120,18 @@ static sexp sexp_get_opcode_variadic_p (sexp ctx sexp_api_params(self, n), sexp 
   return sexp_make_boolean(sexp_opcode_variadic_p(op));
 }
 
+static sexp sexp_get_port_line (sexp ctx sexp_api_params(self, n), sexp p) {
+  sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, p);
+  return sexp_make_fixnum(sexp_port_line(p));
+}
+
+static sexp sexp_set_port_line (sexp ctx sexp_api_params(self, n), sexp p, sexp i) {
+  sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, p);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
+  sexp_port_line(p) = sexp_unbox_fixnum(i);
+  return SEXP_VOID;
+}
+
 static sexp sexp_type_of (sexp ctx sexp_api_params(self, n), sexp x) {
   if (sexp_pointerp(x))
     return sexp_object_type(ctx, x);
@@ -296,6 +308,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "opcode-num-params", 1, sexp_get_opcode_num_params);
   sexp_define_foreign(ctx, env, "opcode-return-type", 1, sexp_get_opcode_ret_type);
   sexp_define_foreign(ctx, env, "opcode-param-type", 2, sexp_get_opcode_param_type);
+  sexp_define_foreign(ctx, env, "port-line", 1, sexp_get_port_line);
+  sexp_define_foreign(ctx, env, "port-line-set!", 2, sexp_set_port_line);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   sexp_define_foreign(ctx, env, "type-of", 1, sexp_type_of);
   sexp_define_foreign(ctx, env, "type-name", 1, sexp_type_name_op);

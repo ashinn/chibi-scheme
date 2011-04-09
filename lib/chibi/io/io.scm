@@ -1,5 +1,5 @@
 ;; io.scm -- various input/output utilities
-;; Copyright (c) 2010 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2010-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -14,6 +14,13 @@
       ((>= i to))
     (string-set! dst j (string-ref src i))))
 
+(define (string-count ch str . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
+    (do ((i start (+ i 1))
+         (c 0 (if (eqv? ch (string-ref str i)) (+ c 1) c)))
+        ((>= i end) c))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reading and writing
 
@@ -26,6 +33,7 @@
   (let ((in (if (pair? o) (car o) (current-input-port)))
         (n (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) 8192)))
     (let ((res (%read-line n in)))
+      (port-line-set! in (+ 1 (port-line in)))
       (if (not res)
           eof
           (let ((len (string-length res)))
@@ -38,9 +46,19 @@
 (define (read-string n . o)
   (let ((in (if (pair? o) (car o) (current-input-port))))
     (let ((res (%read-string n in)))
-      (if (if (pair? res) (= 0 (car res)) #t)
-          eof
-          (cadr res)))))
+      (cond
+       ((if (pair? res) (= 0 (car res)) #t)
+        eof)
+       (else
+        (port-line-set! in (+ (string-count #\newline (cadr res))
+                              (port-line in)))
+        (cadr res))))))
+
+(define (read-string! str n . o)
+  (let* ((in (if (pair? o) (car o) (current-input-port)))
+         (res (%read-string! str n in)))
+    (port-line-set! in (+ (string-count #\newline str 0 n) (port-line in)))
+    res))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; higher order port operations

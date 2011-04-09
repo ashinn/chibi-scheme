@@ -28,6 +28,7 @@
    opcode-variadic?
    procedure-code procedure-vars procedure-name
    bytecode-name bytecode-literals
+   port-line port-line-set!
    type? type-name type-cpl type-parent type-slots
    object-size integer->immediate gc
    string-contains)

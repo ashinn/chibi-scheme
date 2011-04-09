@@ -1486,8 +1486,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
       } else
 #endif
         _ARG1 = SEXP_EOF;
-    } else
+    } else {
+      if (i == '\n') sexp_port_line(_ARG1)++;
       _ARG1 = sexp_make_character(i);
+    }
     break;
   case SEXP_OP_PEEK_CHAR:
     if (! sexp_iportp(_ARG1))

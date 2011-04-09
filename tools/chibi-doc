@@ -387,4 +387,4 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
          (convert (current-input-port))
          (call-with-input-file (car args) convert)))
     (else
-     (error "usage: chibi-scribble [<input-file>]"))))
+     (error "usage: chibi-doc [<input-file>]"))))
