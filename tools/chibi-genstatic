@@ -124,7 +124,7 @@
   (display "(ctx sexp_api_pass(NULL, 1), env);\n"))
 
 (define (main args)
-  (find-c-libs (if (pair? (cdr args)) (cadr args) "lib"))
+  (find-c-libs (if (and (pair? args) (pair? (cdr args))) (cadr args) "lib"))
   (newline)
   (for-each include-c-lib c-libs)
   (newline)
