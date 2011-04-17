@@ -44,15 +44,17 @@
                 res))))))
 
 (define (read-string n . o)
-  (let ((in (if (pair? o) (car o) (current-input-port))))
-    (let ((res (%read-string n in)))
-      (cond
-       ((if (pair? res) (= 0 (car res)) #t)
-        eof)
-       (else
-        (port-line-set! in (+ (string-count #\newline (cadr res))
-                              (port-line in)))
-        (cadr res))))))
+  (if (zero? n)
+      ""
+      (let ((in (if (pair? o) (car o) (current-input-port))))
+        (let ((res (%read-string n in)))
+          (cond
+           ((if (pair? res) (= 0 (car res)) #t)
+            eof)
+           (else
+            (port-line-set! in (+ (string-count #\newline (cadr res))
+                                  (port-line in)))
+            (cadr res)))))))
 
 (define (read-string! str n . o)
   (let* ((in (if (pair? o) (car o) (current-input-port)))
