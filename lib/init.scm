@@ -795,6 +795,7 @@
               (else (list _cons (lp (car t) dim) (lp (cdr t) dim)))))
             ((vector? t) (list _list->vector (lp (vector->list t) dim)))
             ((null? t) (list _quote '()))
+            ((not t) (list _quote (list _quote #f)))
             (else t))))
        (list
         _er-macro-transformer
