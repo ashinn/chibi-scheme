@@ -1,5 +1,5 @@
 
-(import (srfi 95) (chibi test))
+(import (srfi 95) (only (chibi test) test-begin test test-end))
 
 (test-begin "sorting")
 

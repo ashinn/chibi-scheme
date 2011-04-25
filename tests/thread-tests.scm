@@ -1,5 +1,5 @@
 
-(import (srfi 18) (chibi test))
+(import (srfi 18) (only (chibi test) test-begin test test-end))
 
 (test-begin)
 

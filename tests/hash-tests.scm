@@ -1,5 +1,5 @@
 
-(import (srfi 69) (chibi test))
+(import (srfi 69) (only (chibi test) test-begin test test-end))
 
 (test-begin "hash")
 
