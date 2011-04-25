@@ -1,4 +1,6 @@
 
+(define thread-yield! yield!)
+
 (define (thread-join! thread . o)
   (let ((timeout (if (pair? o) (car o) #f)))
     (cond
