@@ -300,6 +300,9 @@ struct sexp_struct {
     /* runtime types */
     struct {
       sexp parent, lambda, bindings;
+#if SEXP_USE_RENAME_BINDINGS
+      sexp renames;
+#endif
     } env;
     struct {
       sexp_uint_t length;
@@ -549,6 +552,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_corep(x)       (sexp_check_tag(x, SEXP_CORE))
 #define sexp_opcodep(x)     (sexp_check_tag(x, SEXP_OPCODE))
 #define sexp_macrop(x)      (sexp_check_tag(x, SEXP_MACRO))
+#define sexp_syntacticp(x)  (sexp_corep(x) || sexp_macrop(x))
 #define sexp_synclop(x)     (sexp_check_tag(x, SEXP_SYNCLO))
 #define sexp_lambdap(x)     (sexp_check_tag(x, SEXP_LAMBDA))
 #define sexp_cndp(x)        (sexp_check_tag(x, SEXP_CND))
@@ -730,6 +734,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_env_syntactic_p(x)   ((x)->syntacticp)
 #define sexp_env_parent(x)        (sexp_field(x, env, SEXP_ENV, parent))
 #define sexp_env_bindings(x)      (sexp_field(x, env, SEXP_ENV, bindings))
+#define sexp_env_renames(x)       (sexp_field(x, env, SEXP_ENV, renames))
 #define sexp_env_local_p(x)       (sexp_env_parent(x))
 #define sexp_env_global_p(x)      (! sexp_env_local_p(x))
 #define sexp_env_lambda(x)        (sexp_field(x, env, SEXP_ENV, lambda))

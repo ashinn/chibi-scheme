@@ -62,14 +62,10 @@
    ((and (pair? (cdr x)) (pair? (cadr x)))
     (if (memq (car x) '(only except rename))
         (let* ((mod-name+imports (resolve-import (cadr x)))
-               (imp-ids (cdr mod-name+imports))
-               (imp-ids (if (and (not imp-ids) (not (eq? 'only (car x))))
-                            (begin
-                              (set-cdr! mod-name+imports
-                                        (module-exports
-                                         (find-module (car mod-name+imports))))
-                              (cdr mod-name+imports))
-                            imp-ids)))
+               (imp-ids (or (cdr mod-name+imports)
+                            (and (not (eq? 'only (car x)))
+                                 (module-exports
+                                  (find-module (car mod-name+imports)))))))
           (cons (car mod-name+imports)
                 (case (car x)
                   ((only)
@@ -81,7 +77,7 @@
                   ((rename)
                    (map (lambda (i)
                           (let ((rename (assq (to-id i) (cddr x))))
-                            (if rename (cons (cdr rename) (from-id i)) i)))
+                            (if rename (cons (cadr rename) (from-id i)) i)))
                         imp-ids)))))
         (error "invalid import modifier" x)))
    ((and (eq? 'prefix (car x)) (symbol? (cadr x)) (list? (caddr x)))
@@ -116,7 +112,11 @@
                     (mod2 (load-module (car mod2-name+imports))))
                (%env-copy! env (module-env mod2) (cdr mod2-name+imports)
                            (eq? (car x) 'import-immutable))))
-           (cdr x)))
+           (cdr x)))))
+     (module-meta-data mod))
+    (for-each
+     (lambda (x)
+       (case (and (pair? x) (car x))
          ((include)
           (load-modules (cdr x) ""))
          ((include-shared)

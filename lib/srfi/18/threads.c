@@ -377,7 +377,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     runner = sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER);
     if (! sexp_contextp(runner)) { /* ensure the runner exists */
       if (sexp_envp(runner)) {
-        tmp = sexp_env_cell(runner, (tmp=sexp_intern(ctx, "signal-runner", -1)));
+        tmp = sexp_env_cell(runner, (tmp=sexp_intern(ctx, "signal-runner", -1)), 0);
         if (sexp_pairp(tmp) && sexp_procedurep(sexp_cdr(tmp))) {
           runner = sexp_make_thread(ctx, self, 2, sexp_cdr(tmp), SEXP_FALSE);
           sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = runner;

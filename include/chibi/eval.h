@@ -164,9 +164,8 @@ SEXP_API sexp sexp_open_input_file_op(sexp ctx sexp_api_params(self, n), sexp x)
 SEXP_API sexp sexp_open_output_file_op(sexp ctx sexp_api_params(self, n), sexp x);
 SEXP_API sexp sexp_close_port_op(sexp ctx sexp_api_params(self, n), sexp x);
 SEXP_API sexp sexp_env_define (sexp ctx, sexp env, sexp sym, sexp val);
-SEXP_API sexp sexp_env_cell (sexp env, sexp sym);
+SEXP_API sexp sexp_env_cell (sexp env, sexp sym, int localp);
 SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
-SEXP_API sexp sexp_env_global_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param);
 SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
@@ -179,8 +178,11 @@ SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int
 
 SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args, sexp_proc1 f, const char *param);
 
+#define sexp_env_key(x) sexp_car(x)
+#define sexp_env_value(x) sexp_cdr(x)
 #define sexp_env_next_cell(x) sexp_pair_source(x)
 #define sexp_env_push(ctx, env, tmp, name, value) (tmp=sexp_cons(ctx,name,value), sexp_env_next_cell(tmp)=sexp_env_bindings(env), sexp_env_bindings(env)=tmp)
+#define sexp_env_push_rename(ctx, env, tmp, name, value) (tmp=sexp_cons(ctx,name,value), sexp_env_next_cell(tmp)=sexp_env_renames(env), sexp_env_renames(env)=tmp)
 
 #if SEXP_USE_TYPE_DEFS
 SEXP_API sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type);
