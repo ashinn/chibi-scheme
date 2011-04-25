@@ -103,7 +103,11 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, "procedure", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_MACRO, sexp_offsetof(macro, proc), 2, 2, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, "macro", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, "syntactic-closure", SEXP_FALSE, SEXP_FALSE, NULL},
+#if SEXP_USE_RENAME_BINDINGS
+  {SEXP_ENV, sexp_offsetof(env, parent), 4, 4, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, "environment", SEXP_FALSE, SEXP_FALSE, NULL},
+#else
   {SEXP_ENV, sexp_offsetof(env, parent), 3, 3, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, "environment", SEXP_FALSE, SEXP_FALSE, NULL},
+#endif
   {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, "bytecode", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_CORE, 0, 0, 0, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, "core-form", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_OPCODE, sexp_offsetof(opcode, data), 7, 7, 0, 0, sexp_sizeof(opcode), 0, 0, 0, 0, 0, 0, 0, 0, "opcode", SEXP_FALSE, SEXP_FALSE, NULL},

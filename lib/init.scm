@@ -640,7 +640,9 @@
               (cond
                ((identifier? p)
                 (if (any (lambda (l) (compare p l)) lits)
-                    (list _and (list _compare v (list _quote p)) (k vars))
+                    (list _and
+                          (list _compare v (list _rename (list _quote p)))
+                          (k vars))
                     (list _let (list (list p v)) (k (cons (cons p dim) vars)))))
                ((ellipsis? p)
                 (cond

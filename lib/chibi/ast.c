@@ -32,7 +32,7 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
 }
 
 static sexp sexp_get_env_cell (sexp ctx sexp_api_params(self, n), sexp env, sexp id) {
-  sexp cell = sexp_env_cell(env, id);
+  sexp cell = sexp_env_cell(env, id, 0);
   while ((! cell) && sexp_synclop(id)) {
     env = sexp_synclo_env(id);
     id = sexp_synclo_expr(id);

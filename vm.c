@@ -466,7 +466,7 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   env = sexp_extend_env(ctx2, sexp_context_env(ctx), params, lambda);
   sexp_context_env(ctx2) = env;
   for (ls=params, refs=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    ref = sexp_make_ref(ctx2, sexp_car(ls), sexp_env_cell(env, sexp_car(ls)));
+    ref = sexp_make_ref(ctx2, sexp_car(ls), sexp_env_cell(env, sexp_car(ls), 0));
     sexp_push(ctx2, refs, ref);
   }
   refs = sexp_reverse(ctx2, refs);
