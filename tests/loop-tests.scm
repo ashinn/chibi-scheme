@@ -1,5 +1,5 @@
 
-(import (chibi loop) (chibi test))
+(import (chibi loop) (only (chibi test) test-begin test test-end))
 
 (test-begin "loops")
 

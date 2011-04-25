@@ -1,7 +1,7 @@
 ;; These tests are only valid if chibi-scheme is compiled with Unicode
 ;; support (SEXP_USE_UTF8_STRINGS).
 
-(import (chibi test))
+(import (only (chibi test) test-begin test test-end))
 
 (test-begin "unicode")
 

@@ -1,6 +1,6 @@
 ;;;; these will fail when compiled either without flonums or trig funcs
 
-(import (chibi test))
+(import (only (chibi test) test-begin test-assert test test-end))
 
 (test-begin "floating point")
 

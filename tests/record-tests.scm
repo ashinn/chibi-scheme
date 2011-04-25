@@ -1,5 +1,6 @@
 
-(import (srfi 99 records syntactic) (chibi test))
+(import (srfi 99 records syntactic)
+        (only (chibi test) test-begin test-assert test test-end))
 
 (test-begin "records")
 
