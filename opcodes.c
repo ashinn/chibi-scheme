@@ -180,7 +180,7 @@ _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_ENV), "load-module-file", 0, sexp_load_
 _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_BOOLEAN), "add-module-directory", 0, sexp_add_module_directory_op),
 #endif
 #if SEXP_USE_GREEN_THREADS
-_OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, SEXP_VOID, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, 0, "thread-yield!", 0, NULL),
+_OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, SEXP_VOID, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, 0, "yield!", 0, NULL),
 #endif
 #if SEXP_USE_AUTO_FORCE
 _FN1(_I(SEXP_PROMISE), _I(SEXP_PROCEDURE), "make-promise", 0, sexp_make_promise),
