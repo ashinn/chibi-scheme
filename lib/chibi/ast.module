@@ -7,8 +7,8 @@
    <symbol> <string> <byte-vector> <vector> <pair>
    <context> <lam> <cnd> <set> <ref> <seq> <lit> <sc> <exception>
    pair-source pair-source-set!
-   syntactic-closure? lambda? cnd? set? ref? seq? lit? opcode? type?
-   environment? bytecode? exception? macro? context? exception?
+   syntactic-closure? lambda? cnd? set? ref? seq? lit? type?
+   environment? bytecode? exception? macro? context?
    syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
    lambda-name lambda-params lambda-body lambda-defs lambda-locals
    lambda-flags lambda-free-vars lambda-set-vars lambda-return-type
@@ -30,7 +30,7 @@
    procedure-code procedure-vars procedure-name
    bytecode-name bytecode-literals bytecode-source
    port-line port-line-set!
-   type? type-name type-cpl type-parent type-slots
+   type-name type-cpl type-parent type-slots
    object-size integer->immediate gc
    string-contains)
   (import-immutable (scheme))
