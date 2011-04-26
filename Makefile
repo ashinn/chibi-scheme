@@ -84,8 +84,8 @@ endif
 endif
 
 ifeq ($(PLATFORM),unix)
-#RLDFLAGS=-rpath $(DESTDIR)$(LIBDIR)
-RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+#RLDFLAGS=-rpath $(LIBDIR)
+RLDFLAGS=-Wl,-R$(LIBDIR)
 endif
 
 ifeq ($(USE_BOEHM),1)
