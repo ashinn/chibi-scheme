@@ -1,7 +1,7 @@
 
 (import (srfi 18) (only (chibi test) test-begin test test-end))
 
-(test-begin)
+(test-begin "threads")
 
 (test "no threads" (begin 'ok) 'ok)
 (test "unstarted thread" (let ((t (make-thread (lambda () (error "oops"))))) 'ok) 'ok)
