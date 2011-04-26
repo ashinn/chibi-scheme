@@ -1,5 +1,7 @@
 
-(import (chibi loop) (only (chibi test) test-begin test test-end))
+(cond-expand
+ (modules (import (chibi loop) (only (chibi test) test-begin test test-end)))
+ (else (load "lib/chibi/loop/loop.scm")))
 
 (test-begin "loops")
 

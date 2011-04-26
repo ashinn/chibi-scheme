@@ -1,7 +1,9 @@
 ;; These tests are only valid if chibi-scheme is compiled with Unicode
 ;; support (SEXP_USE_UTF8_STRINGS).
 
-(import (only (chibi test) test-begin test test-end))
+(cond-expand
+ (modules (import (only (chibi test) test-begin test test-end)))
+ (else #f))
 
 (test-begin "unicode")
 
@@ -40,7 +42,7 @@
         (string-fill! s #\字)
         s))
 
-(import (chibi loop))
+(cond-expand (modules (import (chibi loop))) (else #f))
 
 (test "in-string"
  '(#\日 #\本 #\語)

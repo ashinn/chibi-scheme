@@ -1,6 +1,8 @@
 ;;;; these will fail when compiled either without flonums or trig funcs
 
-(import (only (chibi test) test-begin test-assert test test-end))
+(cond-expand
+ (modules (import (only (chibi test) test-begin test-assert test test-end)))
+ (else #f))
 
 (test-begin "floating point")
 
