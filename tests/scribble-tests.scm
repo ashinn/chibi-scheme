@@ -1,5 +1,7 @@
 
-(import (chibi scribble) (only (chibi test) test-begin test test-end))
+(cond-expand
+ (modules (import (chibi scribble) (only (chibi test) test-begin test test-end)))
+ (else (load "lib/chibi/scribble.scm")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

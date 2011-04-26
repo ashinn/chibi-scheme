@@ -4,6 +4,8 @@
 
 (define-syntax test
   (syntax-rules ()
+    ((test name expect expr)
+     (test expect expr))
     ((test expect expr)
      (begin
        (set! *tests-run* (+ *tests-run* 1))
@@ -26,7 +28,14 @@
            (display "    expected ") (write expect)
            (display " but got ") (write res) (newline))))))))
 
-(define (test-report)
+(define-syntax test-assert
+  (syntax-rules ()
+    ((test-assert expr) (test #t expr))))
+
+(define (test-begin . name)
+  #f)
+
+(define (test-end)
   (write *tests-passed*)
   (display " out of ")
   (write *tests-run*)
@@ -36,6 +45,8 @@
   (newline))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(test-begin "r5rs")
 
 (test 8 ((lambda (x) (+ x x)) 4))
 
@@ -462,4 +473,4 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(test-report)
+(test-end)

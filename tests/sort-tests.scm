@@ -1,5 +1,7 @@
 
-(import (srfi 95) (only (chibi test) test-begin test test-end))
+(cond-expand
+ (modules (import (srfi 95) (only (chibi test) test-begin test test-end)))
+ (else #f))
 
 (test-begin "sorting")
 

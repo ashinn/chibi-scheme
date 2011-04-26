@@ -1,6 +1,9 @@
 
-(import (srfi 99 records syntactic)
-        (only (chibi test) test-begin test-assert test test-end))
+(cond-expand
+ (modules
+  (import (srfi 99 records syntactic)
+          (only (chibi test) test-begin test-assert test test-end)))
+ (else #f))
 
 (test-begin "records")
 

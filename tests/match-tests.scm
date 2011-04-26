@@ -1,5 +1,7 @@
 
-(import (chibi match) (only (chibi test) test-begin test test-end))
+(cond-expand
+ (modules (import (chibi match) (only (chibi test) test-begin test test-end)))
+ (else (load "lib/chibi/match/match.scm")))
 
 (test-begin "match")
 

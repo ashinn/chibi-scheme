@@ -2,7 +2,9 @@
 ;; these tests are only valid if chibi-scheme is compiled with full
 ;; numeric support (USE_BIGNUMS, USE_FLONUMS and USE_MATH)
 
-(import (only (chibi test) test-begin test test-end))
+(cond-expand
+ (modules (import (only (chibi test) test-begin test test-end)))
+ (else #f))
 
 (test-begin "numbers")
 
