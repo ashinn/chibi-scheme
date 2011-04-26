@@ -17,7 +17,7 @@
 (test-scribble '((foo width: 2 "blah blah")) "@foo[width: 2]{blah blah}")
 (test-scribble '((foo "blah blah" "\n" "     yada yada")) "@foo{blah blah
      yada yada}")
-(test-scribble '((foo "  blah blah" "\n" "  yada yada")) "@foo{
+(test-scribble '((foo "  blah blah" "\n" "  yada yada" "\n")) "@foo{
   blah blah
   yada yada
 }")
@@ -136,18 +136,18 @@
 (test-scribble '((foo " bar" "\n" "     baz ")) "@foo{ bar
      baz }")
 
-(test-scribble '((foo "bar")) "@foo{bar
+(test-scribble '((foo "bar" "\n")) "@foo{bar
 }")
-(test-scribble '((foo "  bar") "\n") "@foo{
+(test-scribble '((foo "  bar" "\n") "\n") "@foo{
   bar
 }
 ")
-(test-scribble '((foo "  bar" "\n")) "@foo{
+(test-scribble '((foo "  bar" "\n" "\n")) "@foo{
 
   bar
 
 }")
-(test-scribble '((foo "  bar" "\n" "\n" "  baz")) "@foo{
+(test-scribble '((foo "  bar" "\n" "\n" "  baz" "\n")) "@foo{
   bar
 
   baz
@@ -160,7 +160,7 @@
 (test-scribble '((foo " bar" "\n" "     baz ")) "@foo{ bar
      baz }")
 
-(test-scribble '((foo "  bar" "\n" "  baz" "\n" "  blah")) "@foo{
+(test-scribble '((foo "  bar" "\n" "  baz" "\n" "  blah" "\n")) "@foo{
   bar
   baz
   blah
