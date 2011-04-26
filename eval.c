@@ -1771,29 +1771,27 @@ sexp sexp_make_standard_env_op (sexp ctx sexp_api_params(self, n), sexp version)
   return env;
 }
 
+#if SEXP_USE_RENAME_BINDINGS
+#define sexp_same_bindingp(x, y) ((x) == (y))
+#else
+#define sexp_same_bindingp(x, y) (sexp_env_value(x) == sexp_env_value(y))
+#endif
+
 sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp) {
   sexp oldname, newname;
-  sexp_gc_var1(value);
-  sexp_gc_preserve1(ctx, value);
+  sexp_gc_var2(value, oldcell);
+  sexp_gc_preserve2(ctx, value, oldcell);
   if (! sexp_envp(to)) to = sexp_context_env(ctx);
   if (! sexp_envp(from)) from = sexp_context_env(ctx);
+  value = sexp_make_env(ctx);
+  sexp_env_parent(value) = sexp_env_parent(to);
+  sexp_env_parent(to) = value;
+  sexp_immutablep(value) = sexp_truep(immutp);
   if (sexp_not(ls)) {
-    if (sexp_truep(immutp)) {
-      value = sexp_make_env(ctx);
-      sexp_env_parent(value) = sexp_env_parent(to);
-      sexp_env_parent(to) = value;
-      sexp_immutablep(value) = 1;
-      sexp_env_bindings(value) = sexp_env_bindings(from);
-      sexp_env_renames(value) = sexp_env_renames(from);
-    } else {
-      for (ls=sexp_env_bindings(from); sexp_pairp(ls); ls=sexp_env_next_cell(ls)) {
+    sexp_env_bindings(value) = sexp_env_bindings(from);
 #if SEXP_USE_RENAME_BINDINGS
-        sexp_env_rename(ctx, to, sexp_car(ls), ls);
-#else
-        sexp_env_define(ctx, to, sexp_car(ls), sexp_cdr(ls));
+    sexp_env_renames(value) = sexp_env_renames(from);
 #endif
-      }
-    }
   } else {
     for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
       if (sexp_pairp(sexp_car(ls))) {
@@ -1801,6 +1799,7 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
       } else {
         newname = oldname = sexp_car(ls);
       }
+      oldcell = sexp_env_cell(to, newname, 0);
       value = sexp_env_cell(from, oldname, 0);
       if (value) {
 #if SEXP_USE_RENAME_BINDINGS
@@ -1809,13 +1808,15 @@ sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, se
         sexp_env_define(ctx, to, newname, sexp_cdr(value));
 #endif
 #if SEXP_USE_WARN_UNDEFS
+        if (oldcell && !sexp_same_bindingp(oldcell, value))
+          sexp_warn(ctx, "importing already defined binding: ", newname);
       } else {
         sexp_warn(ctx, "importing undefined variable: ", oldname);
 #endif
       }
     }
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release2(ctx);
   return SEXP_VOID;
 }
 
