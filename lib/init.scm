@@ -632,8 +632,7 @@
                   (dim 0)
                   (vars '())
                   (k (lambda (vars)
-                       (or (expand-template tmpl vars)
-                           (list _begin #f)))))
+                       (list _cons (expand-template tmpl vars) #f))))
            (let ((v (next-symbol "v.")))
              (list
               _let (list (list v x))
@@ -797,19 +796,22 @@
               (else (list _cons (lp (car t) dim) (lp (cdr t) dim)))))
             ((vector? t) (list _list->vector (lp (vector->list t) dim)))
             ((null? t) (list _quote '()))
-            ((not t) (list _quote (list _quote #f)))
             (else t))))
        (list
         _er-macro-transformer
         (list _lambda (list _expr _rename _compare)
-              (cons
-               _or
-               (append
-                (map
-                 (lambda (clause) (expand-pattern (car clause) (cadr clause)))
-                 forms)
-                (list (list _error "no expansion for"
-                            (list (rename 'strip-syntactic-closures) _expr)))))))))))
+              (list
+               _car
+               (cons
+                _or
+                (append
+                 (map
+                  (lambda (clause) (expand-pattern (car clause) (cadr clause)))
+                  forms)
+                 (list _cons
+                       (list _error "no expansion for"
+                             (list (rename 'strip-syntactic-closures) _expr))
+                       #f))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; additional syntax
