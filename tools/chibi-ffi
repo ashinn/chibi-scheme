@@ -703,7 +703,7 @@
         ((and (not (type-result? a)) (type-array a) (not (string-type? a)))
          (if (not (number? (type-array a)))
              (cat "  tmp" (type-index a)
-                  " = (" (type-c-name (type-base a)) "*) calloc(1, "
+                  " = (" (type-c-name (type-base a)) "*) malloc("
                   "(sexp_unbox_fixnum(sexp_length(ctx, arg" (type-index a)
                   "))+1) * sizeof(tmp" (type-index a) "[0]));\n"))
          (cat "  for (i=0, res=arg" (type-index a)
@@ -720,12 +720,16 @@
               (not (type-auto-expand? a))
               (or (not (type-array a))
                   (not (integer? len))))
-         (cat "  tmp" (type-index a) " = calloc(1, "
+         (cat "  tmp" (type-index a) " = malloc(1 + "
               (if (and (symbol? len) (not (eq? len 'null)))
                   (lambda () (cat (lambda () (scheme->c-converter 'unsigned-int len))
                               "*sizeof(tmp" (type-index a) "[0])"))
                   (lambda () (cat "sizeof(tmp" (type-index a) "[0])")))
-              ");\n"))
+              ");\n"
+              (lambda ()
+                (if (and (symbol? len) (not (eq? len 'null)))
+                    (cat "  tmp" (type-index a) "[" (lambda () (scheme->c-converter 'unsigned-int len))
+                         "*sizeof(tmp" (type-index a) "[0])] = 0;\n")))))
         ((and (type-pointer? a) (basic-type? a))
          (cat "  tmp" (type-index a) " = "
               (lambda ()
@@ -848,7 +852,7 @@
                                  "    free(tmp" i ");\n"))
                         (cat "  len" i " *= 2;\n"
                              "  tmp" i
-                             " = calloc(1, len" i "*sizeof(tmp" i "[0]));\n"
+                             " = malloc(len" i "*sizeof(tmp" i "[0]));\n"
                              "  goto loop;\n")))))
               (else
                "  res = SEXP_FALSE;\n"))
@@ -1087,7 +1091,7 @@
                   "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), sexp_type_tag("
                   (type-id-name name)
                   "));\n"
-                  "  r = sexp_cpointer_value(res) = calloc(1, sizeof("
+                  "  r = sexp_cpointer_value(res) = malloc(sizeof("
                   (or (type-struct-type name) "") " " (type-name name) "));\n"
                   "  sexp_freep(res) = 1;\n"
                   (lambda ()
@@ -1161,7 +1165,7 @@
          *funcs*)
     (cat "static char* sexp_concat_env_string (sexp x) {\n"
          "  int klen=sexp_string_length(sexp_car(x)), vlen=sexp_string_length(sexp_cdr(x));\n"
-         "  char *res = (char*) calloc(1, klen+vlen+2);\n"
+         "  char *res = (char*) malloc(klen+vlen+2);\n"
          "  strncpy(res, sexp_string_data(sexp_car(x)), klen);\n"
          "  res[sexp_string_length(sexp_car(x))] = '=';\n"
          "  strncpy(res+sexp_string_length(sexp_car(x)), sexp_string_data(sexp_cdr(x)), vlen);\n"
