@@ -209,8 +209,8 @@
                             (sym (string->symbol id)))
                        (cond
                         ((highlight-scheme-definition? sym)
-                         (let* ((res (cons (read-whitespace in) res))
-                                (res (cons (highlight-class "keyword" id) res))
+                         (let* ((res (cons (highlight-class "keyword" id) res))
+                                (res (cons (read-whitespace in) res))
                                 (res (if (eqv? #\( (peek-char in))
                                          (cons (string (read-char in)) res)
                                          res)))
