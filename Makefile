@@ -237,7 +237,7 @@ test-libs: chibi-scheme$(EXE)
 test: chibi-scheme$(EXE)
 	$(CHIBI) tests/r5rs-tests.scm
 
-install: chibi-scheme$(EXE) libs
+install: all
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	cp tools/chibi-ffi $(DESTDIR)$(BINDIR)/
