@@ -101,7 +101,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, "output-port", SEXP_FALSE, SEXP_FALSE, SEXP_FINALIZE_PORT},
   {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, "exception", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, "procedure", SEXP_FALSE, SEXP_FALSE, NULL},
-  {SEXP_MACRO, sexp_offsetof(macro, proc), 2, 2, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, "macro", SEXP_FALSE, SEXP_FALSE, NULL},
+  {SEXP_MACRO, sexp_offsetof(macro, proc), 3, 3, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, "macro", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, "syntactic-closure", SEXP_FALSE, SEXP_FALSE, NULL},
 #if SEXP_USE_RENAME_BINDINGS
   {SEXP_ENV, sexp_offsetof(env, parent), 4, 4, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, "environment", SEXP_FALSE, SEXP_FALSE, NULL},
@@ -1853,6 +1853,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     if ((line >= 0) && sexp_pairp(res)) {
       sexp_pair_source(res)
         = sexp_cons(ctx, sexp_port_name(in), sexp_make_fixnum(line));
+      for (tmp=sexp_cdr(res); sexp_pairp(tmp); tmp=sexp_cdr(tmp))
+        sexp_pair_source(tmp) = sexp_pair_source(res);
     }
     if (sexp_port_sourcep(in))
       for (tmp=res; sexp_pairp(tmp); tmp=sexp_cdr(tmp))

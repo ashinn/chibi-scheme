@@ -256,17 +256,21 @@
   (cons 'lambda (cons (lambda-return-type x) (lambda-param-types x))))
 
 (define (procedure-signature x)
-  (if (opcode? x)
-      (cdr (opcode-type x))
-      (let lp ((count 0))
-        (let ((lam (procedure-analysis x)))
-          (cond
-           ((and lam (not (typed? lam)) (zero? count)
-                 (containing-module x))
-            => (lambda (mod)
-                 (and (type-analyze-module (car mod))
-                      (lp (+ count 1)))))
-           ((lambda? lam)
-            (cdr (lambda-type lam)))
-           (else
-            #f))))))
+  (cond
+   ((opcode? x)
+    (cdr (opcode-type x)))
+   ((macro? x)
+    (procedure-signature (macro-procedure x)))
+   (else
+    (let lp ((count 0))
+      (let ((lam (procedure-analysis x)))
+        (cond
+         ((and lam (not (typed? lam)) (zero? count)
+               (containing-module x))
+          => (lambda (mod)
+               (and (type-analyze-module (car mod))
+                    (lp (+ count 1)))))
+         ((lambda? lam)
+          (cdr (lambda-type lam)))
+         (else
+          #f)))))))
