@@ -1,8 +1,13 @@
 #! /usr/bin/env chibi-scheme
 
-(import (chibi match) (chibi time) (chibi scribble) (chibi highlight))
+(import
+ (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match) (chibi time)
+ (chibi filesystem) (chibi scribble) (chibi highlight) (chibi type-inference))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (write-to-string x)
+  (call-with-output-string (lambda (out) (write x out))))
 
 (define (string-concatenate-reverse ls)
   (string-concatenate (reverse ls)))
@@ -13,6 +18,14 @@
       (cond ((>= i limit) #f)
             ((eqv? ch (string-ref str i)) i)
             (else (lp (+ i 1)))))))
+
+(define (string-split str ch)
+  (let ((len (string-length str)))
+    (let lp ((from 0) (to 0) (res '()))
+      (define (collect) (cons (substring str from to) res))
+      (cond ((>= to len) (reverse (collect)))
+            ((eqv? ch (string-ref str to)) (lp (+ to 1) (+ to 1) (collect)))
+            (else (lp from (+ to 1) res))))))
 
 (define (string-strip str . o)
   (let ((bad (if (pair? o) (car o) " \t\n")))
@@ -27,6 +40,32 @@
                   (if (not (string-scan ch bad))
                       (write-char ch out))
                   (lp)))))))))))
+
+(define (string-first-token str sep)
+  (let ((len (string-length str)))
+    (let lp ((i 0))
+      (cond ((= i len) str)
+            ((not (string-scan (string-ref str i) sep)) (lp (+ i 1)))
+            (else
+             (let lp ((j (+ i 1)))
+               (cond ((= j len) "")
+                     ((string-scan (string-ref str j) sep) (lp (+ j 1)))
+                     (else
+                      (let lp ((k (+ j 1)))
+                        (cond
+                         ((or (= k len) (string-scan (string-ref str k) sep))
+                          (substring str j k))
+                         (else
+                          (lp (+ k 1)))))))))))))
+
+(define (intersperse ls x)
+  (if (or (null? ls) (null? (cdr ls)))
+      ls
+      (let lp ((ls (cdr ls)) (res (list (car ls))))
+        (let ((res (cons (car ls) (cons x res))))
+          (if (null? (cdr ls))
+              (reverse res)
+              (lp (cdr ls) res))))))
 
 (define (normalize-sxml x)
   (cond
@@ -47,6 +86,11 @@
   (if (pair? x)
       (cons (map-sxml proc (car x))  (map-sxml proc (cdr x)))
       (proc x)))
+
+(define (sxml-body x)
+  (cond ((not (and (pair? x) (pair? (cdr x)))) '())
+        ((and (pair? (cadr x)) (eq? '^ (caadr x))) (cddr x))
+        (else (cdr x))))
 
 (define (env-ref env name . o)
   (cond ((assq name (car env)) => cdr)
@@ -81,6 +125,7 @@
      (ctype . code)
      (url . ,expand-url)
      (hyperlink . ,expand-hyperlink)
+     (rawcode . code)
      (code . ,expand-code)
      (codeblock . ,expand-codeblock)
      (ccode
@@ -98,7 +143,12 @@
      (command . ,expand-command)
      (author . ,expand-author)
      (margin-note . ,expand-note)
+     (example . ,expand-example)
+     (example-import . ,expand-example-import)
      )))
+
+(define (sxml->sexp-list x)
+  (call-with-input-string (sxml-strip x) port->sexp-list))
 
 (define (section-name tag name)
   (string-strip
@@ -151,6 +201,25 @@
 (define (expand-codeblock sxml env)
   `(pre ,(expand-code sxml env)))
 
+(define (expand-example x env)
+  (let ((expr `(begin ,@(sxml->sexp-list x)))
+        (example-env (or (env-ref env 'example-env) (interaction-environment))))
+    `(div
+      ,(expand-codeblock `(,(car x) language: scheme ,@(cdr x)) env)
+      (code
+       (div (^ (class . "result"))
+            ,(call-with-output-string
+               (lambda (out)
+                 (guard (exn (#t (print-exception exn out)))
+                        (let ((res (eval expr example-env)))
+                          (display "=> " out)
+                          (write res out))))))))))
+
+(define (expand-example-import x env)
+  (eval `(import ,@(cdr x))
+        (or (env-ref env 'example-env) (interaction-environment)))
+  "")
+
 (define (expand-command sxml env)
   `(pre (^ (class . "command"))
         (code ,@(map (lambda (x) (expand x env)) (cdr sxml)))))
@@ -178,8 +247,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (header-index h)
-  (- 6 (length (memq h '(h1 h2 h3 h4 h5 h6)))))
+(define header-index
+  (let* ((headers '(h1 h2 h3 h4 h5 h6))
+         (len (length headers)))
+    (lambda (h) (- len (length (memq h headers))))))
 
 (define (extract-contents x)
   (match x
@@ -219,6 +290,7 @@ div#menu  {font-size: smaller; position: absolute; top: 0; left: 0; width: 180px
 div#menu ol {margin-left: 10px; padding-left: 10px}
 div#main  {position: absolute; top: 0; left: 200px; width: 520px; height: 100%}
 div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 0px; font-size: smaller;}
+.result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
 .command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
 "
                  ,(highlight-style))
@@ -263,6 +335,114 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
 
 (define (fix-begins x)
   x)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (skip-whitespace in)
+  (cond ((char-whitespace? (peek-char in))
+         (read-char in)
+         (skip-whitespace in))))
+
+(define (external-clause? x)
+  (not (and (pair? (cdr x)) (pair? (cadr x)) (string? (caadr x)))))
+
+(define (get-signature proc source form)
+  (match form
+    (('define (name . args) . body)
+     (cons name args))
+    (('define-syntax name ('syntax-rules () (clause . body) ...))
+     (map (lambda (x) (cons name (cdr x)))
+          (filter external-clause? clause)))
+    (else
+     (or (and (procedure? proc) (procedure-signature proc))
+         (procedure-name proc)))))
+
+(define section-number
+  (let ((sections '(section subsection subsubsection subsubsubsection)))
+    (lambda (x) (length (or (memq x sections) '())))))
+
+(define (section>=? x n)
+  (and (pair? x)
+       (if (memq (car x) '(div))
+           (any (lambda (y) (section>=? y n)) (sxml-body x))
+           (>= (section-number (car x)) n))))
+
+(define (extract-sxml tag x)
+  (and (pair? x)
+       (cond ((eq? tag (car x)) x)
+             ((memq (car x) '(div))
+              (any (lambda (y) (extract-sxml tag y)) (sxml-body x)))
+             (else #f))))
+
+(define (section-describes? x name)
+  (and (pair? x) (pair? (cdr x))
+       (string-ci=? (string-first-token (sxml-strip (cadr x)) " \t\r\n()#")
+                    (symbol->string name))))
+
+(define (insert-signature orig-ls name sig)
+  (let lp ((ls orig-ls) (rev-pre '()))
+    (cond
+     ((or (null? ls) (section>=? (car ls) (section-number 'subsubsubsection)))
+      `(,@(reverse rev-pre)
+        ,@(if (and (pair? ls)
+                   (section-describes?
+                    (extract-sxml 'subsubsubsection (car ls))
+                    name))
+              '()
+              `((subsubsubsection
+                 (rawcode ,@(intersperse (map write-to-string sig) '(br))))))
+        ,@ls))
+     (else
+      (lp (cdr ls) (cons (car ls) rev-pre))))))
+
+(define (extract-docs file defs res)
+  (call-with-input-file file
+    (lambda (in)
+      (let ((defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdaddr x)))
+                       (filter (lambda (x) (equal? file (caaddr x))) defs))))
+        (let lp ((lines '()) (cur '()) (res res))
+          (define (collect)
+            (if (pair? lines)
+                (append
+                 (reverse
+                  (call-with-input-string
+                      (string-concatenate (reverse lines) "\n")
+                    scribble-parse))
+                 cur)
+                cur))
+          (skip-whitespace in)
+          (cond
+           ((eof-object? (peek-char in))
+            (append (collect) res))
+           ((eqv? #\newline (peek-char in))
+            (lp lines cur res))
+           ((eqv? #\; (peek-char in))
+            (read-char in)
+            (cond
+             ((and (eqv? #\; (peek-char in))
+                   (begin (read-char in) (eqv? #\> (peek-char in))))
+              (read-char in)
+              (if (eqv? #\space (peek-char in)) (read-char in))
+              (lp (cons (read-line in) lines) cur res))
+             (else
+              (read-line in)
+              (lp '() (collect) res))))
+           (else  ;; found a top-level expression
+            (let* ((cur (collect))
+                   (line1 (port-line in))
+                   (x (read in))
+                   (line2 (port-line in))
+                   (procs (filter (lambda (x) (<= line1 (caddr x) line2))
+                                  (filter caddr defs))))
+              (cond
+               ((= 1 (length procs))
+                (let* ((sig (or (get-signature (caar procs) (cdar procs) x)
+                                '()))
+                       (res (append (insert-signature cur (caar procs) sig)
+                                    res)))
+                  (lp '() '() res)))
+               (else
+                (lp '() '() (append cur res))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; html conversions
@@ -372,19 +552,45 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (output doc)
+  (sxml-display-as-html
+   (fix-header (fix-paragraphs (fix-begins (expand doc (make-default-env)))))))
+
 (define (convert in)
-  (let ((doc (scribble-parse in))
-        (env (make-default-env)))
-    (sxml-display-as-html
-     (fix-header (fix-paragraphs (fix-begins (expand doc env)))))))
+  (output (scribble-parse in)))
+
+(define (object-source x)
+  (cond ((opcode? x) #f)
+        ((bytecode? x) (bytecode-source x))
+        ((procedure? x) (bytecode-source (procedure-code x)))
+        ((macro? x) (macro-source x))
+        (else #f)))
+
+(define (extract mod-name)
+  (let* ((mod (load-module mod-name))
+         (exports (module-exports mod))
+         (defs (map (lambda (x) `(,(car x) ,(cdr x) ,(object-source (cdr x))))
+                    (filter (lambda (x) (or (procedure? (cdr x)) (macro? (cdr x))))
+                            (map (lambda (x) (cons x (module-ref mod-name x)))
+                                 exports)))))
+    (let lp ((includes (module-includes mod))
+             (res `((title ,(write-to-string mod-name)))))
+      (if (null? includes)
+          (output (reverse res))
+          (lp (cdr includes) (extract-docs (car includes) defs res))))))
 
 (define (main args)
   (case (length args)
     ((0)
      (convert (current-input-port)))
     ((1)
-     (if (equal? "-" (car args))
-         (convert (current-input-port))
-         (call-with-input-file (car args) convert)))
+     (cond
+      ((equal? "-" (car args))
+       (convert (current-input-port)))
+      ((file-exists? (car args))
+       (call-with-input-file (car args) convert))
+      (else
+       (extract (map (lambda (x) (or (string->number x) (string->symbol x)))
+                     (string-split (car args) #\.))))))
     (else
-     (error "usage: chibi-doc [<input-file>]"))))
+     (error "usage: chibi-doc [<file-or-module-name>]"))))

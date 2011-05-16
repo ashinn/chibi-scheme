@@ -237,8 +237,8 @@
 
 ;;> @subsubsection{Syntax}
 
-;;> @subsubsubsection{(match expr (pattern . body) ...)@br{}
-;;> (match expr (pattern (=> failure) . body) ...)}
+;;> @subsubsubsection{@rawcode{(match expr (pattern . body) ...)@br{}
+;;> (match expr (pattern (=> failure) . body) ...)}}
 
 ;;> The result of @var{expr} is matched against each @var{pattern} in
 ;;> turn, according to the pattern rules described in the previous
@@ -840,7 +840,7 @@
     ((_ loop (v ...) ((pat expr) . rest) . body)
      (match-named-let loop (v ... (pat expr tmp)) rest . body))))
 
-;;> @subsubsubsection{(match-let* ((var value) ...) body ...)}
+;;> @subsubsubsection{@rawcode{(match-let* ((var value) ...) body ...)}}
 
 ;;> Similar to @scheme{match-let}, but analogously to @scheme{let*}
 ;;> matches and binds the variables in sequence, with preceding match
