@@ -24,6 +24,7 @@
   (case language
     ((scheme) highlight-scheme)
     ((asm) highlight-assembly)
+    ((none) (lambda (x) x))
     (else highlight-c)))
 
 (define (highlight source)

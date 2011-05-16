@@ -168,7 +168,12 @@ lib/%$(SO): lib/%.c $(INCLUDES)
 %.html: %.scrbl tools/chibi-doc chibi-scheme$(EXE)
 	$(CHIBI) tools/chibi-doc $< > $@
 
-doc: doc/chibi.html
+doc/lib/chibi/%.html: lib/chibi/%.module tools/chibi-doc chibi-scheme$(EXE)
+	$(CHIBI) tools/chibi-doc $< > $@
+
+MODULE_DOCS := doc/lib/chibi/match.html
+
+doc: doc/chibi.html $(MODULE_DOCS)
 
 clean:
 	rm -f *.o *.i *.s *.8
