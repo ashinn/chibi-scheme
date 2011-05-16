@@ -303,6 +303,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", "exception-irritants-set!");
   sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", "macro-procedure-set!");
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", "macro-env-set!");
+  sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", "macro-source-set!");
   sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);

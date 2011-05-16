@@ -26,7 +26,7 @@
    exception-irritants exception-irritants-set!
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-variadic?
-   macro-procedure macro-env
+   macro-procedure macro-env macro-source
    procedure-code procedure-vars procedure-name
    bytecode-name bytecode-literals bytecode-source
    port-line port-line-set!
