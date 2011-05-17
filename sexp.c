@@ -1545,8 +1545,9 @@ sexp sexp_read_string (sexp ctx, sexp in) {
           sexp_push_char(ctx, c, in); c = 'x';
         }
       }
-    }
-    if (c == EOF) {
+    } else if (c == '\n') {
+      sexp_port_line(in)++;
+    } else if (c == EOF) {
       res = sexp_read_error(ctx, "premature end of string", SEXP_NULL, in);
       break;
     }
@@ -1579,7 +1580,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
   if (init != EOF)
     buf[i++] = init;
 
-  for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
+  for (c = sexp_read_char(ctx, in); ; c = sexp_read_char(ctx, in)) {
 #if SEXP_USE_FOLD_CASE_SYMS
     if (foldp) c = tolower(c);
 #endif
