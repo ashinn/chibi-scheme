@@ -30,19 +30,31 @@
         ""
         (module-name-prefix name))))
 
+(define (module-metas mod metas)
+  (let ((mod (if (module? mod) mod (find-module mod))))
+    (let lp ((ls (module-meta-data mod)) (res '()))
+      (cond
+       ((not (pair? ls)) (reverse res))
+       ((and (pair? (car ls)) (memq (caar ls) metas))
+        (lp (cdr ls) (append (reverse (cdar ls)) res)))
+       (else (lp (cdr ls) res))))))
+
 (define (module-includes mod)
   (let* ((mod (if (module? mod) mod (find-module mod)))
          (dir (module-dir mod)))
     (define (module-file f)
       (find-module-file (string-append dir f)))
-    (let lp ((ls (module-meta-data mod)) (res '()))
-      (cond
-       ((not (pair? ls))
-        (reverse res))
-       ((and (pair? (car ls)) (eq? 'include (caar ls)))
-        (lp (cdr ls) (append (map module-file (reverse (cdar ls))) res)))
-       (else
-        (lp (cdr ls) res))))))
+    (map module-file (module-metas mod '(include)))))
+
+(define (module-shared-includes mod)
+  (let* ((mod (if (module? mod) mod (find-module mod)))
+         (dir (module-dir mod)))
+    (define (module-file f)
+      (find-module-file (string-append dir f ".stub")))
+    (let lp ((ls (module-metas mod '(include-shared))) (res '()))
+      (cond ((null? ls) (reverse res))
+            ((module-file (car ls)) => (lambda (x) (lp (cdr ls) (cons x res))))
+            (else (lp (cdr ls) res))))))
 
 (define (analyze-module-source name mod recursive?)
   (let ((env (module-env mod))
