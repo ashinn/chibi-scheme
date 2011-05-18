@@ -12,7 +12,7 @@
           signal/alarm      signal/term        signal/user1
           signal/user2      signal/child       signal/continue
           signal/stop       signal/tty-stop    signal/tty-input
-          signal/tty-output)
+          signal/tty-output wait/no-hang)
   (import-immutable (scheme))
   (cond-expand (threads (import (srfi 18))) (else #f))
   (include-shared "process")

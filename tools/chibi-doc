@@ -160,9 +160,15 @@
 
 (define (expand-section tag)
   (lambda (sxml env)
-    (let ((body (map (lambda (x) (expand x env)) (cdr sxml))))
-      `(div (a (^ (name . ,(section-name tag (sxml-strip (cons tag body))))))
-            (,tag ,@body)))))
+    (if (null? (cdr sxml))
+        (error "section must not be empty" sxml)
+        (let* ((name (and (eq? 'tag: (cadr sxml))
+                          (pair? (cddr sxml))
+                          (sxml-strip (caddr sxml))))
+               (body (map (lambda (x) (expand x env))
+                          (if name (cdddr sxml) (cdr sxml))))
+               (name (or name (sxml-strip (cons tag body)))))
+          `(div (a (^ (name . ,(section-name tag name)))) (,tag ,@body))))))
 
 (define (expand-url sxml env)
   (if (not (= 2 (length sxml)))
@@ -171,11 +177,10 @@
         `(a (^ (href . ,url)) ,url))))
 
 (define (expand-hyperlink sxml env)
-  (if (not (= 3 (length sxml)))
-      (error "hyperlink expects two arguments" sxml)
-      (let ((url (expand (cadr sxml) env))
-            (text (expand (caddr sxml) env)))
-        `(a (^ (href . ,url)) ,text))))
+  (if (not (>= (length sxml) 3))
+      (error "hyperlink expects at least two arguments" sxml)
+      (let ((url (expand (cadr sxml) env)))
+        `(a (^ (href . ,url)) ,(map (lambda (x) (expand x env)) (cddr sxml))))))
 
 (define (expand-note sxml env)
   `(div (^ (id . "notes"))
@@ -286,10 +291,10 @@
                (style (^ (type . "text/css"))
                  "
 body {color: #000; background-color: #FFF}
-div#menu  {font-size: smaller; position: absolute; top: 0; left: 0; width: 180px; height: 100%}
-div#menu ol {margin-left: 10px; padding-left: 10px}
+div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 180px; height: 100%}
 div#main  {position: absolute; top: 0; left: 200px; width: 520px; height: 100%}
 div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 0px; font-size: smaller;}
+div#footer {padding-bottom: 50px}
 .result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
 .command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
 "
@@ -303,7 +308,8 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
                         (if (and (pair? x) (eq? 'title (car x)))
                             (cons 'h1 (cdr x))
                             x))
-                      x)))))
+                      x)
+               (div (^ (id . "footer")))))))
 
 (define (fix-paragraphs x)
   (let lp ((ls x) (p '()) (res '()))
@@ -349,13 +355,44 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
 (define (get-signature proc source form)
   (match form
     (('define (name . args) . body)
-     (cons name args))
+     (list (cons name args)))
     (('define-syntax name ('syntax-rules () (clause . body) ...))
      (map (lambda (x) (cons name (cdr x)))
           (filter external-clause? clause)))
+    ((procedure? proc)
+     (procedure-signature proc))
     (else
-     (or (and (procedure? proc) (procedure-signature proc))
-         (procedure-name proc)))))
+     '())))
+
+(define (get-ffi-signatures form)
+  (match form
+    (('define-c ret-type (or (name _) name) (args ...))
+     (list (cons name (map (lambda (x) (if (pair? x) (last x) x)) args))))
+    (('define-c-const type (or (name _) name))
+     (list (list 'const: type name)))
+    (((or 'define-c-struct 'define-c-class 'define-c-type) name . rest)
+     (let lp ((ls rest) (res '()))
+       (cond
+        ((null? ls)
+         (reverse res))
+        ((eq? 'predicate: (car ls))
+         (lp (cddr ls) (cons (list (cadr ls) 'obj) res)))
+        ((eq? 'constructor: (car ls))
+         (lp (cddr ls)
+             (cons (if (pair? (cadr ls)) (cadr ls) (list (cadr ls))) res)))
+        ((pair? (car ls))
+         (lp (cdr ls)
+             (append (if (pair? (cdddar ls))
+                         (list (list (car (cdddar ls)) name (caar ls)))
+                         '())
+                     (list (list (caddar ls) name))
+                     res)))
+        ((symbol? (car ls))
+         (lp (cddr ls) res))
+        (else
+         (lp (cdr ls) res)))))
+    (else
+     #f)))
 
 (define section-number
   (let ((sections '(section subsection subsubsection subsubsubsection)))
@@ -380,27 +417,42 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
                     (symbol->string name))))
 
 (define (insert-signature orig-ls name sig)
-  (let lp ((ls orig-ls) (rev-pre '()))
-    (cond
-     ((or (null? ls) (section>=? (car ls) (section-number 'subsubsubsection)))
-      `(,@(reverse rev-pre)
-        ,@(if (and (pair? ls)
-                   (section-describes?
-                    (extract-sxml 'subsubsubsection (car ls))
-                    name))
-              '()
-              `((subsubsubsection
-                 (rawcode ,@(intersperse (map write-to-string sig) '(br))))))
-        ,@ls))
-     (else
-      (lp (cdr ls) (cons (car ls) rev-pre))))))
+  (cond
+   ((not (pair? sig))
+    orig-ls)
+   (else
+    (let ((name
+           (or name (if (eq? 'const: (caar sig)) (caddar sig) (caar sig)))))
+      (let lp ((ls orig-ls) (rev-pre '()))
+        (cond
+         ((or (null? ls)
+              (section>=? (car ls) (section-number 'subsubsubsection)))
+          `(,@(reverse rev-pre)
+            ,@(if (and (pair? ls)
+                       (section-describes?
+                        (extract-sxml 'subsubsubsection (car ls))
+                        name))
+                  '()
+                  `((subsubsubsection
+                     tag: ,(write-to-string name)
+                     (rawcode
+                      ,@(if (eq? 'const: (caar sig))
+                            `((i ,(write-to-string (cadar sig)) ": ")
+                              ,(write-to-string (caddar sig)))
+                            (intersperse (map write-to-string sig) '(br)))))))
+            ,@ls))
+         (else
+          (lp (cdr ls) (cons (car ls) rev-pre)))))))))
 
-(define (extract-docs file defs res)
+(define (extract-docs file defs . o)
   (call-with-input-file file
     (lambda (in)
-      (let ((defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdaddr x)))
-                       (filter (lambda (x) (equal? file (caaddr x))) defs))))
-        (let lp ((lines '()) (cur '()) (res res))
+      (let ((lang (or (and (pair? o) (car o)) 'scheme))
+            (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdaddr x)))
+                       (filter (lambda (x) (and (pair? (caddr x))
+                                           (equal? file (caaddr x))))
+                               defs))))
+        (let lp ((lines '()) (cur '()) (res '()))
           (define (collect)
             (if (pair? lines)
                 (append
@@ -435,6 +487,9 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
                    (procs (filter (lambda (x) (<= line1 (caddr x) line2))
                                   (filter caddr defs))))
               (cond
+               ((and (eq? lang 'ffi) (get-ffi-signatures x))
+                => (lambda (sigs)
+                     (lp '() '() (append (insert-signature cur #f sigs) res))))
                ((= 1 (length procs))
                 (let* ((sig (or (get-signature (caar procs) (cdar procs) x)
                                 '()))
@@ -573,11 +628,12 @@ div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 
                     (filter (lambda (x) (or (procedure? (cdr x)) (macro? (cdr x))))
                             (map (lambda (x) (cons x (module-ref mod-name x)))
                                  exports)))))
-    (let lp ((includes (module-includes mod))
-             (res `((title ,(write-to-string mod-name)))))
-      (if (null? includes)
-          (output (reverse res))
-          (lp (cdr includes) (extract-docs (car includes) defs res))))))
+    (output
+     `((title ,(write-to-string mod-name))
+       ,@(reverse (append-map (lambda (x) (extract-docs x defs))
+                              (module-includes mod)))
+       ,@(reverse (append-map (lambda (x) (extract-docs x defs 'ffi))
+                              (module-shared-includes mod)))))))
 
 (define (main args)
   (case (length args)

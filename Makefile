@@ -169,11 +169,13 @@ lib/%$(SO): lib/%.c $(INCLUDES)
 	$(CHIBI) tools/chibi-doc $< > $@
 
 doc/lib/chibi/%.html: lib/chibi/%.module tools/chibi-doc chibi-scheme$(EXE)
-	$(CHIBI) tools/chibi-doc $< > $@
+	$(CHIBI) tools/chibi-doc chibi.$* > $@
 
-MODULE_DOCS := doc/lib/chibi/match.html
+MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
+	match mime modules net pathname process repl scribble stty \
+	system test time type-inference uri weak
 
-doc: doc/chibi.html $(MODULE_DOCS)
+doc: doc/chibi.html $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
 clean:
 	rm -f *.o *.i *.s *.8

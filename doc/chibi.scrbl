@@ -963,117 +963,52 @@ SRFIs used in standard Chibi modules
 Additional non-standard modules are put in the @scheme{(chibi)} module
 namespace.
 
-@subsection{Internals Interface}
+@itemlist[
 
-The @scheme{(chibi ast)} module provides access to the Abstract Syntax Tree and
-other internal data structures not typically needed for everyday programs.
+@item{@hyperlink["lib/chibi/ast.html"]{(chibi ast) - Abstract Syntax Tree and other internal data types}}
 
-@subsection{Disassember}
+@item{@hyperlink["lib/chibi/disasm.html"]{(chibi disasm) - Disassembler for the virtual machine}}
 
-The @scheme{(chibi disasm)} module provides a disassembler for the virtual
-machine.
+@item{@hyperlink["lib/chibi/equiv.html"]{(chibi equiv) - A version of @scheme{equal?} which is guaranteed to terminate}}
 
-@subsection{Printed Equivalence}
+@item{@hyperlink["lib/chibi/filesystem.html"]{(chibi filesystem) - Interface to the filesystem and file descriptor objects}}
 
-The @scheme{(chibi equiv)} module provides the @scheme{equiv?} procedure, which
-is similar to @scheme{equal?} but is guaranteed to terminate.  It takes two
-arguments and returns true iff they would print the same using SRFI-38 style
-read/write syntax.
+@item{@hyperlink["lib/chibi/generic.html"]{(chibi generic) - Generic methods for CLOS-style object oriented programming}}
 
-@subsection{Filesystem Interface}
+@item{@hyperlink["lib/chibi/heap-stats.html"]{(chibi heap-stats) - Utilities for gathering statistics on the heap}}
 
-The @scheme{(chibi filesystem)} module provides access to the filesystem and
-file descriptor objects.
+@item{@hyperlink["lib/chibi/io.html"]{(chibi io) - Various I/O extensions and custom ports}}
 
-@subsection{Generic Functions}
+@item{@hyperlink["lib/chibi/loop.html"]{(chibi loop) - Fast and extensible loop syntax}}
 
-The @scheme{(chibi generic)} module provides generic methods for CLOS-style
-object oriented programming.
+@item{@hyperlink["lib/chibi/match.html"]{(chibi match) - Intuitive and widely supported pattern matching syntax}}
 
-@subsection{Heap Introspection}
+@item{@hyperlink["lib/chibi/mime.html"]{(chibi mime) - Parse MIME files into SXML}}
 
-The @scheme{(chibi heap-stats)} module provides utilities for gathering
-statistics on the heap.
+@item{@hyperlink["lib/chibi/modules.html"]{(chibi modules) - Introspection for the module system itself}}
 
-@subsection{Input/Output Extensions}
+@item{@hyperlink["lib/chibi/net.html"]{(chibi net) - Simple networking interface}}
 
-The @scheme{(chibi io)} module provides various I/O extensions, including
-custom ports.
+@item{@hyperlink["lib/chibi/pathname.html"]{(chibi pathname) - Utilities to decompose and manipulate pathnames}}
 
-@subsection{Extensible Loop Syntax}
+@item{@hyperlink["lib/chibi/process.html"]{(chibi process) - Interface to spawn processes and handle signals}}
 
-The @scheme{(chibi loop)} module provides a fast and extensible loop syntax.
+@item{@hyperlink["lib/chibi/repl.html"]{(chibi repl) - A full-featured Read/Eval/Print Loop}}
 
-@subsection{Pattern-Matching}
+@item{@hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
-The @scheme{(chibi match)} module provides an intuitive and widely supported
-pattern matching syntax.
+@item{@hyperlink["lib/chibi/stty.html"]{(chibi stty) - A high-level interface to ioctl}}
 
-@subsection{RFC2045 MIME}
+@item{@hyperlink["lib/chibi/system.html"]{(chibi system) - Access to the host system and current user information}}
 
-The @scheme{(chibi mime)} module provides utilities for parsing MIME
-files into an SXML format.
+@item{@hyperlink["lib/chibi/test.html"]{(chibi test) - A simple unit testing framework}}
 
-@subsection{Module Introspection}
+@item{@hyperlink["lib/chibi/time.html"]{(chibi time) - An interface to the current system time}}
 
-The @scheme{(chibi modules)} module provides introspection utilities for the
-module system itself.
+@item{@hyperlink["lib/chibi/type-inference.html"]{(chibi type-inference) - An easy-to-use type inference system}}
 
-@subsection{Networking Interface}
+@item{@hyperlink["lib/chibi/uri.html"]{(chibi uri) - Utilities to parse and construct URIs}}
 
-The @scheme{(chibi net)} module provides a simple networking interface.
+@item{@hyperlink["lib/chibi/weak.html"]{(chibi weak) - Data structures with weak references}}
 
-@subsection{Pathname Utilities}
-
-The @scheme{(chibi pathname)} module provides utilities to decompose and
-manipulate pathnames.
-
-@subsection{Processes and Signals}
-
-The @scheme{(chibi process)} module provides utilities to spawn processes and
-send and handle signals between processes.
-
-@subsection{Read/Eval/Print Loop}
-
-The @scheme{(chibi repl)} module provides a more full-featured repl than the
-chibi-scheme executable.
-
-@subsection{Scribble Syntax}
-
-The @scheme{(chibi scribble)} module provides a parser for the scribble syntax
-used to write this manual.
-
-@subsection{Stty Interface}
-
-The @scheme{(chibi stty)} provides a high-level interface to ioctl.
-
-@subsection{System Information}
-
-The @scheme{(chibi system)} module provides access to the host system and
-current user information.
-
-@subsection{Line Editing}
-
-The @scheme{(chibi term edit-line)} provides an @scheme{edit-line} procedure
-for interactive line editing.
-
-@subsection{Testing}
-
-The @scheme{(chibi test)} provides a simple unit testing framework.
-
-@subsection{Times and Dates}
-
-The @scheme{(chibi time)} provides an interface to the current system time.
-
-@subsection{Type Inference}
-
-The @scheme{(chibi type-inference)} is an easy-to-use type inference system.
-
-@subsection{URI Utilities}
-
-The @scheme{(chibi uri)} module provides utilities to parse and construct URIs.
-
-@subsection{Weak References}
-
-The @scheme{(chibi weak)} module provides data structures with weak references.
-
+]
