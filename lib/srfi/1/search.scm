@@ -1,5 +1,5 @@
 ;; search.scm -- list searching and splitting
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (find pred ls)
@@ -30,19 +30,6 @@
 (define (break pred ls) (span (lambda (x) (not (pred x))) ls))
 
 (define break! break)
-
-(define (any pred ls . lists)
-  (if (null? lists)
-      (let lp ((ls ls)) (and (pair? ls) (if (pred (car ls)) (car ls) (lp (cdr ls)))))
-      (let lp ((lists (cons ls lists)))
-        (and (every pair? lists)
-             (let ((args (map car lists)))
-               (if (apply pred args) args (lp (map cdr lists))))))))
-
-(define (every pred ls . lists)
-  (if (null? lists)
-      (let lp ((ls ls)) (if (pair? ls) (and (pred (car ls)) (lp (cdr ls))) #t))
-      (not (apply any (lambda (x) (not (pred x))) ls lists))))
 
 (define (list-index pred ls . lists)
   (if (null? lists)
