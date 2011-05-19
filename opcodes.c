@@ -186,3 +186,8 @@ _OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, SEXP_VOID, SEXP_FALSE, SEXP_FALSE, SE
 _FN1(_I(SEXP_PROMISE), _I(SEXP_PROCEDURE), "make-promise", 0, sexp_make_promise),
 #endif
 };
+
+#undef _I
+#undef _OP
+#undef _FN
+#undef _PARAM
