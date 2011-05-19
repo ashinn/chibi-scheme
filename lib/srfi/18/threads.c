@@ -40,7 +40,7 @@ static int sexp_mutex_id, sexp_condvar_id, sexp_pollfds_id;
 
 /**************************** threads *************************************/
 
-static void sexp_define_type_predicate (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
+static void sexp_define_type_predicate_by_tag (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
   name = sexp_c_string(ctx, cname, -1);
@@ -565,7 +565,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   if (sexp_typep(t))
     sexp_pollfds_id = sexp_type_tag(t);
 
-  sexp_define_type_predicate(ctx, env, "thread?", SEXP_CONTEXT);
+  sexp_define_type_predicate_by_tag(ctx, env, "thread?", SEXP_CONTEXT);
   sexp_define_foreign(ctx, env, "thread-timeout?", 0, sexp_thread_timeoutp);
   sexp_define_foreign(ctx, env, "current-thread", 0, sexp_current_thread);
   sexp_define_foreign_opt(ctx, env, "make-thread", 2, sexp_make_thread, SEXP_FALSE);

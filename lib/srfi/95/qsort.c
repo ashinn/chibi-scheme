@@ -5,7 +5,11 @@
 #include "chibi/eval.h"
 
 #if SEXP_USE_HUFF_SYMS
+#if SEXP_USE_STATIC_LIBS
+#include "../../../opt/sexp-hufftabdefs.h"
+#else
 #include "../../../opt/sexp-hufftabs.c"
+#endif
 #endif
 
 #define swap(tmp_var, a, b) (tmp_var=a, a=b, b=tmp_var)
