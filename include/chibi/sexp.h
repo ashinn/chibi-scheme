@@ -16,6 +16,8 @@ extern "C" {
 
 #if defined(_WIN32) || defined(__MINGW32__)
 #include <windows.h>
+#define sexp_isalpha(x) ((isalpha)(x))
+#define sexp_isxdigit(x) ((isxdigit)(x))
 #else
 #if SEXP_USE_DL
 #include <dlfcn.h>
@@ -25,6 +27,8 @@ extern "C" {
 #include <errno.h>
 #include <fcntl.h>
 #endif
+#define sexp_isalpha(x) (isalpha(x))
+#define sexp_isxdigit(x) (isxdigit(x))
 #endif
 
 #ifdef PLAN9
