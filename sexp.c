@@ -1539,7 +1539,7 @@ sexp sexp_read_string (sexp ctx, sexp in) {
       case 't': c = '\t'; break;
       case 'x':
         c = sexp_read_char(ctx, in);
-        if (isxdigit(c)) {
+        if (sexp_isxdigit(c)) {
           c = digit_value(c)*16 + digit_value(sexp_read_char(ctx, in));
         } else {
           sexp_push_char(ctx, c, in); c = 'x';
@@ -1651,7 +1651,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     c = sexp_read_char(ctx, in);
   }
 
-  for ( ; isxdigit(c); c=sexp_read_char(ctx, in)) {
+  for ( ; sexp_isxdigit(c); c=sexp_read_char(ctx, in)) {
     digit = digit_value(c);
     if ((digit < 0) || (digit >= base))
       break;
@@ -1919,7 +1919,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         if (sexp_string_length(res) == 1) {
           res = sexp_make_character(c1);
         } else if ((c1 == 'x' || c1 == 'X') &&
-                   (isxdigit)(str[1]) && (isxdigit)(str[2]) && str[3] == '\0') {
+                   sexp_isxdigit(str[1])
+                   && sexp_isxdigit(str[2]) && str[3] == '\0') {
           res = sexp_make_character(16 * digit_value(str[1])
                                     + digit_value(str[2]));
         } else {
