@@ -156,7 +156,7 @@ SEXP_API sexp sexp_find_module_file (sexp ctx, const char *file);
 SEXP_API sexp sexp_load_module_file (sexp ctx, const char *file, sexp env);
 SEXP_API sexp sexp_add_module_directory_op (sexp ctx sexp_api_params(self, n), sexp dir, sexp appendp);
 SEXP_API sexp sexp_extend_env (sexp ctx, sexp env, sexp vars, sexp value);
-SEXP_API sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp);
+SEXP_API sexp sexp_env_import_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp);
 SEXP_API sexp sexp_identifier_op(sexp ctx sexp_api_params(self, n), sexp x);
 SEXP_API sexp sexp_syntactic_closure_expr(sexp ctx sexp_api_params(self, n), sexp x);
 SEXP_API sexp sexp_identifier_eq_op(sexp ctx sexp_api_params(self, n), sexp a, sexp b, sexp c, sexp d);
@@ -200,7 +200,7 @@ SEXP_API sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name,
 #define sexp_add_module_directory(ctx, d, a) sexp_add_module_directory_op(ctx sexp_api_pass(NULL, 1), d, a)
 #define sexp_eval(ctx, x, e) sexp_eval_op(ctx sexp_api_pass(NULL, 2), x, e)
 #define sexp_load(ctx, f, e) sexp_load_op(ctx sexp_api_pass(NULL, 2), f, e)
-#define sexp_env_copy(ctx, a, b, c, d) sexp_env_copy_op(ctx sexp_api_pass(NULL, 4), a, b, c, d)
+#define sexp_env_import(ctx, a, b, c, d) sexp_env_import_op(ctx sexp_api_pass(NULL, 4), a, b, c, d)
 #define sexp_identifierp(ctx, x) sexp_identifierp_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_identifier_to_symbol(ctx, x) sexp_syntactic_closure_expr(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_identifier_eq(ctx, a, b, c, d) sexp_identifier_eq_op(ctx sexp_api_pass(NULL, 4), a, b, c, d)
