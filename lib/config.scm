@@ -110,7 +110,7 @@
            (lambda (m)
              (let* ((mod2-name+imports (resolve-import m))
                     (mod2 (load-module (car mod2-name+imports))))
-               (%env-copy! env (module-env mod2) (cdr mod2-name+imports) #t)))
+               (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
            (cdr x)))))
      (module-meta-data mod))
     (for-each

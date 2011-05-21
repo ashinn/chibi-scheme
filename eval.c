@@ -178,6 +178,27 @@ sexp sexp_extend_env (sexp ctx, sexp env, sexp vars, sexp value) {
   return e;
 }
 
+sexp sexp_extend_synclo_env (sexp ctx, sexp env) {
+  sexp e1, e2;
+  sexp_gc_var1(e);
+  sexp_gc_preserve1(ctx, e);
+  e = env;
+  if (sexp_pairp(sexp_context_fv(ctx))) {
+    e = sexp_alloc_type(ctx, env, SEXP_ENV);
+    for (e1=env, e2=NULL; e1; e1=sexp_env_parent(e1)) {
+      e2 = e2 ? (sexp_env_parent(e2) = sexp_alloc_type(ctx, env, SEXP_ENV)) : e;
+      sexp_env_bindings(e2) = sexp_env_bindings(e1);
+      sexp_env_syntactic_p(e2) = 1;
+#if SEXP_USE_RENAME_BINDINGS
+      sexp_env_renames(e2) = sexp_env_renames(e1);
+#endif
+    }
+    sexp_env_parent(e2) = sexp_context_env(ctx);
+  }
+  sexp_gc_release1(ctx);
+  return e;
+}
+
 static sexp sexp_reverse_flatten_dot (sexp ctx, sexp ls) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
@@ -871,10 +892,10 @@ static sexp analyze (sexp ctx, sexp object) {
     res = analyze_var_ref(ctx, x, NULL);
   } else if (sexp_synclop(x)) {
     tmp = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
-    sexp_context_env(tmp) = sexp_synclo_env(x);
     sexp_context_fv(tmp) = sexp_append2(tmp,
                                         sexp_synclo_free_vars(x),
                                         sexp_context_fv(tmp));
+    sexp_context_env(tmp) = sexp_extend_synclo_env(tmp, sexp_synclo_env(x));
     x = sexp_synclo_expr(x);
     res = analyze(tmp, x);
   } else if (sexp_nullp(x)) {
@@ -1778,7 +1799,7 @@ sexp sexp_make_standard_env_op (sexp ctx sexp_api_params(self, n), sexp version)
 #define sexp_same_bindingp(x, y) (sexp_env_value(x) == sexp_env_value(y))
 #endif
 
-sexp sexp_env_copy_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp) {
+sexp sexp_env_import_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp) {
   sexp oldname, newname;
   sexp_gc_var2(value, oldcell);
   sexp_gc_preserve2(ctx, value, oldcell);

@@ -897,7 +897,7 @@
          (let ((mod+imps (eval `(resolve-import ',(car ls)) *config-env*)))
            (if (pair? mod+imps)
                (lp (cdr ls)
-                   (cons `(%env-copy!
+                   (cons `(%import
                            #f
                            (vector-ref
                             (eval '(load-module ',(car mod+imps)) *config-env*)
