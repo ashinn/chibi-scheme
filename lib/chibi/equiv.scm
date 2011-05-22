@@ -1,4 +1,9 @@
 
+;;> Cycle-aware equality.  Returns @scheme{#t} iff @scheme{a} and
+;;> @scheme{b} are @scheme{equal?}, including cycles.  Another way
+;;> to think of it is they are @scheme{equiv} if they print the
+;;> same, assuming all elements can be printed.
+
 (define (equiv? a b)
   (let ((equivs (make-hash-table eq?)))
     (define (get-equivs x)

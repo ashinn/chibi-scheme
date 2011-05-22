@@ -1,4 +1,6 @@
 
+;;> Simple generic function interface.
+
 (module (chibi generic)
   (export define-generic define-method make-generic generic-add!)
   (import-immutable (scheme))

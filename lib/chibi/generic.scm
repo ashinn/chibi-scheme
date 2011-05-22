@@ -1,9 +1,12 @@
 
+;;> Define a new generic function named @var{name}.
+
 (define-syntax define-generic
   (syntax-rules ()
     ((define-generic name)
      (define name (make-generic 'name)))))
 
+;; call-next-method needs to be unhygienic
 '(define-syntax define-method
   (syntax-rules ()
     ((define-method (name (param type) ...) . body)
@@ -12,6 +15,11 @@
                    (lambda (next param ...)
                      (let-syntax ((call))
                        . body))))))
+
+;;> @subsubsubsection{(define-method (name (param type) ...) body ...)}
+
+;;> Extends the generic function @var{name} with a new method that
+;;> applies when the given param types all match.
 
 (define-syntax define-method
   (er-macro-transformer
@@ -37,6 +45,8 @@
         (else #f)))
 
 (define add-method-tag (list 'add-method-tag))
+
+;;> Create a new first-class generic function named @var{name}.
 
 (define (make-generic name)
   (let ((name name)
@@ -74,6 +84,10 @@
                    vec)))
       (vector-set! res plen (cons (cons preds f) (vector-ref res plen)))
       res)))
+
+;;> Extend the generic @var{g} with a new method @var{f}
+;;> that applies when all parameters match the given list
+;;> of predicates @var{preds}.
 
 (define (generic-add! g preds f)
   (g add-method-tag preds f))

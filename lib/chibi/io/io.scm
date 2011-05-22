@@ -24,10 +24,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reading and writing
 
+;; Display @var{str} to the given output port, defaulting to
+;; @scheme{(current-output-port)}, followed by a newline.
+
 (define (write-line str . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (display str out)
     (newline out)))
+
+;;> @subsubsubsection{(read-line [in [n]])}
+
+;;> Read a line from the input port @var{in}, defaulting to
+;;> @scheme{(current-input-port)}, and return the result as
+;;> a string not including the newline.  Reads at most @var{n}
+;;> characters, defaulting to 8192.
 
 (define (read-line . o)
   (let ((in (if (pair? o) (car o) (current-input-port)))
@@ -43,6 +53,15 @@
                     (substring res 0 (- len 1)))
                 res))))))
 
+;;> @subsubsubsection{(read-string n [in])}
+
+;;> Reads @var{n} characters from input-port @var{in},
+;;> defaulting to @scheme{(current-input-port)}, and
+;;> returns the result as a string.  Returns @scheme{""}
+;;> if @var{n} is zero.  May return a string with fewer
+;;> than @var{n} characters if the end of file is reached,
+;;> or the eof-object if no characters are available.
+
 (define (read-string n . o)
   (if (zero? n)
       ""
@@ -56,7 +75,18 @@
                                   (port-line in)))
             (cadr res)))))))
 
+;;> @subsubsubsection{(read-string! str n [in])}
+
+;;> Reads @var{n} characters from port @var{in}, which
+;;> defaults to @scheme{(current-input-port)}, and writes
+;;> them into the string @var{str} starting at index 0.
+;;> Returns the number of characters read.
+;;> An error is signalled if the length of @var{str} is smaller
+;;> than @var{n}.
+
 (define (read-string! str n . o)
+  (if (>= n (string-length str))
+      (error "string to small to read chars" str n))
   (let* ((in (if (pair? o) (car o) (current-input-port)))
          (res (%read-string! str n in)))
     (port-line-set! in (+ (string-count #\newline str 0 n) (port-line in)))
@@ -64,6 +94,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; higher order port operations
+
+;;> The fundamental port iterator.
 
 (define (port-fold kons knil . o)
   (let ((read (if (pair? o) (car o) read))
