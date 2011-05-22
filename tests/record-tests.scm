@@ -1,7 +1,7 @@
 
 (cond-expand
  (modules
-  (import (srfi 99 records syntactic)
+  (import (srfi 99)
           (only (chibi test) test-begin test-assert test test-end)))
  (else #f))
 
@@ -151,5 +151,25 @@
 ;;;; SRFI-99 forbids this, but we currently do it anyway.
 ;;(test-assert (equal? (make-employee "Chuck" 'male 20 'janitorial 50000.0)
 ;;                     (make-employee "Chuck" 'male 20 'janitorial 50000.0)))
+
+(test-assert (record? alice))
+(test 'person (rtd-name person))
+(let* ((constructor (rtd-constructor person))
+       (trent (constructor "Trent" 'male 44)))
+  (test "Trent" (person-name trent))
+  (test 'male (person-sex trent))
+  (test 44 ((rtd-accessor person 'age) trent))
+  ((rtd-mutator person 'age) trent 45)
+  (test 45 (person-age trent)))
+
+(test-assert (rtd-field-mutable? employee 'department))
+
+;;; We do not retain mutability information ATM.
+;; (define-record-type foo
+;;   (make-foo x)
+;;   foo?
+;;   (x foo-x))
+
+;; (test-assert (not (rtd-field-mutable? foo 'x)))
 
 (test-end)

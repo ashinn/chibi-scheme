@@ -7,7 +7,7 @@
   (type? x))
 
 (define (rtd-constructor rtd . o)
-  (let ((fields (vector->list (if (pair? o) (car o) (rtd-all-field-names))))
+  (let ((fields (vector->list (if (pair? o) (car o) (rtd-all-field-names rtd))))
         (make (make-constructor (type-name rtd) rtd)))
     (lambda args
       (let ((res (make)))
@@ -16,7 +16,7 @@
            ((null? a) (if (null? p) res (error "not enough args" p)))
            ((null? p) (error "too many args" a))
            (else
-            (slot-set! res rtd (car p) (car a))
+            (slot-set! rtd res (rtd-field-offset rtd (car p)) (car a))
             (lp (cdr a) (cdr p)))))))))
 
 (define (rtd-predicate rtd)
@@ -42,10 +42,10 @@
                    i))))))
 
 (define (rtd-accessor rtd field)
-  (make-getter rtd (type-name rtd) (rtd-field-offset rtd field)))
+  (make-getter (type-name rtd) rtd (rtd-field-offset rtd field)))
 
 (define (rtd-mutator rtd field)
   (if (rtd-field-mutable? rtd field)
-      (make-setter rtd (type-name rtd) (rtd-field-offset rtd field))
+      (make-setter (type-name rtd) rtd (rtd-field-offset rtd field))
       (error "can't make mutator for immutable field" rtd field)))
 
