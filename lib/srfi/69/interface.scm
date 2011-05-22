@@ -112,4 +112,3 @@
   (let ((res (make-hash-table (hash-table-equivalence-function table))))
     (hash-table-merge! res table)
     res))
-
