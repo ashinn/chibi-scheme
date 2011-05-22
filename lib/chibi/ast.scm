@@ -111,8 +111,10 @@
 ;;> @subsubsection{Types}
 
 ;;> All objects have an associated type, and types may have parent
-;;> types.  When using SRFI-9 @scheme{define-record-type}, the
-;;> name is bound to a first class type object.
+;;> types.  When using
+;;> @hyperlink["http://srfi.schemers.org/srfi-9/srfi-9/html"]{SRFI-9}
+;;> @scheme{define-record-type}, the name is bound to a first class
+;;> type object.
 
 ;;> The following core types are also available by name, and may be
 ;;> used in the @scheme{match} @scheme{($ ...)} syntax.

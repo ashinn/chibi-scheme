@@ -86,8 +86,8 @@ differences made by design, not through difficulty of implementation.
 The following procedures are omitted:
 
 @itemlist[
-@item{@scheme{transcript-on} - removed from R7RS}
-@item{@scheme{transcript-off} - removed from R7RS}
+@item{@scheme{transcript-on} - in R5RS but not R7RS}
+@item{@scheme{transcript-off} - in R5RS but not R7RS}
 @item{@scheme{rationalize} - pending the addition of rational numbers}
 ]
 
@@ -154,8 +154,9 @@ where @var{<module-declarations>} can be any of
   (prefix <prefix-id> <import-spec>)
 }
 
-The can be composed and perform basic selection and renaming of
-individual identifiers from the given module.
+These forms perform basic selection and renaming of individual
+identifiers from the given module. They may be composed to perform
+combined selection and renaming.
 
 Files are loaded relative to the .module file, and are written with
 their extension (so you can use whatever suffix you prefer - .scm,
@@ -171,7 +172,8 @@ module definition to generate @var{<module-declarations>}.
 @subsection{Macro System}
 
 @scheme{syntax-rules} macros are provided by default, with the extensions from
-SRFI-46.  In addition, low-level hygienic macros are provided with a
+@hyperlink["http://srfi.schemers.org/srfi-46/srfi-46.html"]{SRFI-46}.
+In addition, low-level hygienic macros are provided with a
 syntactic-closures interface, including @scheme{sc-macro-transformer},
 @scheme{rsc-macro-transformer}, and @scheme{er-macro-transformer}.  A good
 introduction to syntactic-closures can be found at
@@ -183,9 +185,12 @@ available.
 
 @subsection{Types}
 
-You can define new record types with SRFI-9, or inherited record types
-with SRFI-99.  These are just syntactic sugar for the following more
-primitive type constructors:
+You can define new record types with
+@hyperlink["http://srfi.schemers.org/srfi-9/srfi-9.html"]{SRFI-9}, or
+inherited record types with
+@hyperlink["http://srfi.schemers.org/srfi-99/srfi-99.html"]{SRFI-99}.
+These are just syntactic sugar for the following more primitive type
+constructors:
 
 @schemeblock{
 (register-simple-type <name-string> <num-fields>)
@@ -752,12 +757,14 @@ If a finalizer is provided, @var{c_finalizer_name} must be a C
 function which takes one argument, a pointer to the struct, and
 performs any cleanup or freeing of resources necessary.
 
-The remaining slots are similar to the SRFI-9 syntax, except they are
-prefixed with a C type (described below).  The @var{c_field_name}
-should be a field name of @var{struct_name}.  @var{getter-name} will
-then be bound to a procedure of one argument, a @{struct_name} type,
-which returns the given field.  If provided, @var{setter-name} will be
-bound to a procedure of two arguments to mutate the given field.
+The remaining slots are similar to the
+@hyperlink["http://srfi.schemers.org/srfi-9/srfi-9.html"]{SRFI-9} syntax,
+except they are prefixed with a C type (described below).  The
+@var{c_field_name} should be a field name of @var{struct_name}.
+@var{getter-name} will then be bound to a procedure of one argument, a
+@{struct_name} type, which returns the given field.  If provided,
+@var{setter-name} will be bound to a procedure of two arguments to
+mutate the given field.
 
 The variants @scheme{define-c-class} and @scheme{define-c-union} take
 the same syntax but define types with the @ccode{class} and
@@ -805,52 +812,52 @@ conversion as discussed below.
 @subsubsection{Basic Types}
 
 @itemlist[
-@item{@ccode{void}}
-@item{@ccode{boolean}}
-@item{@ccode{char}}
-@item{@ccode{sexp} (no conversions)}
+@item{@rawcode{void}}
+@item{@rawcode{boolean}}
+@item{@rawcode{char}}
+@item{@rawcode{sexp} (no conversions)}
 ]
 
 @subsubsection{Integer Types}
 
 @itemlist[
-@item{@ccode{signed-char}}
-@item{@ccode{short}}
-@item{@ccode{int}}
-@item{@ccode{long}}
-@item{@ccode{unsigned-char}}
-@item{@ccode{unsigned-short}}
-@item{@ccode{unsigned-int}}
-@item{@ccode{unsigned-long}}
-@item{@ccode{size_t}}
-@item{@ccode{pid_t}}
-@item{@ccode{uid_t}}
-@item{@ccode{gid_t}}
-@item{@ccode{time_t} (in seconds, but using the chibi epoch of 2010/01/01)}
-@item{@ccode{errno} (as a return type returns @scheme{#f} on error)}
+@item{@rawcode{signed-char}}
+@item{@rawcode{short}}
+@item{@rawcode{int}}
+@item{@rawcode{long}}
+@item{@rawcode{unsigned-char}}
+@item{@rawcode{unsigned-short}}
+@item{@rawcode{unsigned-int}}
+@item{@rawcode{unsigned-long}}
+@item{@rawcode{size_t}}
+@item{@rawcode{pid_t}}
+@item{@rawcode{uid_t}}
+@item{@rawcode{gid_t}}
+@item{@rawcode{time_t} (in seconds, but using the chibi epoch of 2010/01/01)}
+@item{@rawcode{errno} (as a return type returns @scheme{#f} on error)}
 ]
 
 @subsubsection{Float Types}
 
 @itemlist[
-@item{@ccode{float}}
-@item{@ccode{double}}
-@item{@ccode{long-double}}
+@item{@rawcode{float}}
+@item{@rawcode{double}}
+@item{@rawcode{long-double}}
 ]
 
 @subsubsection{String Types}
 
 @itemlist[
-@item{@ccode{string} - a null-terminated char*}
-@item{@ccode{env-string} - a @ccode{VAR=VALUE} string represented as a @scheme{(VAR . VALUE)} pair in Scheme}
-@item{@scheme{(array char)} is equivalent to @ccode{string}}
+@item{@rawcode{string} - a null-terminated char*}
+@item{@rawcode{env-string} - a @rawcode{VAR=VALUE} string represented as a @scheme{(VAR . VALUE)} pair in Scheme}
+@item{@scheme{(array char)} is equivalent to @rawcode{string}}
 ]
 
 @subsubsection{Port Types}
 
 @itemlist[
-@item{@ccode{input-port}}
-@item{@ccode{output-port}}
+@item{@rawcode{input-port}}
+@item{@rawcode{output-port}}
 ]
 
 @subsubsection{Struct Types}
@@ -867,39 +874,44 @@ type itself.  The supported modifiers are:
 
 @itemlist[
 
-@item{@ccode{const}
+@item{@rawcode{const}
 @p{Prepends the "const" C type modifier.
 As a return or result parameter, makes non-immediates immutable.}}
 
-@item{@ccode{free}
+@item{@rawcode{free}
 @p{It's Scheme's responsibility to "free" this resource.
 As a return or result parameter, registers the freep flag
 this causes the type finalizer to be run when GCed.}}
 
-@item{@ccode{maybe-null}
+@item{@rawcode{maybe-null}
 @p{This pointer type may be NULL.
 As a result parameter, NULL is translated to #f
 normally this would just return a wrapped NULL pointer.
 As an input parameter, #f is translated to NULL
 normally this would be a type error.}}
 
-@item{@ccode{pointer}
+@item{@rawcode{pointer}
 @p{Create a pointer to this type.
 As a return parameter, wraps the result in a vanilla cpointer.
 As a result parameter, boxes then unboxes the value.}}
 
-@item{@ccode{struct}
+@item{@rawcode{reference}
+@p{A stack-allocated pointer to this type.
+As a result parameter, passes a stack-allocated pointer to
+the value, then returns the dereferenced pointer.}}
+
+@item{@rawcode{struct}
 @p{Treat this struct type as a struct, not a pointer.
 As an input parameter, dereferences the pointer.
 As a type field, indicates a nested struct.}}
 
-@item{@ccode{link}
+@item{@rawcode{link}
 @p{Add a gc link.
 As a field getter, link to the parent object, so the
 parent won't be GCed so long as we have a reference
 to the child.  This behavior is automatic for nested structs.}}
 
-@item{@ccode{result}
+@item{@rawcode{result}
 @p{Return a result in this parameter.
 If there are multiple results (including the return type),
 they are all returned in a list.

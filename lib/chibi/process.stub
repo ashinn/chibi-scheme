@@ -83,8 +83,9 @@
 (define-c unsigned-int alarm (unsigned-int))
 
 ;;> Suspend the current process for @var{unsigned-int} seconds.
-;;> See SRFI-18 @scheme{thread-sleep!} for a light-weight sleep
-;;> for only the current thread.
+;;> See @hyperlink["http://srfi.schemers.org/srfi-18/srfi-18.html"]{SRFI-18}
+;;> @scheme{thread-sleep!} for a light-weight sleep for only the
+;;> current thread.
 
 (define-c unsigned-int sleep (unsigned-int))
 
