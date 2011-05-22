@@ -2,6 +2,8 @@
 ;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+;;> Module introspection library.
+
 (define (file->sexp-list file)
   (call-with-input-file file
     (lambda (in)

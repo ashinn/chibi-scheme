@@ -1,3 +1,6 @@
+;; filesystem.stub -- filesystem bindings
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (c-system-include "sys/types.h")
 (c-system-include "unistd.h")
@@ -62,30 +65,79 @@
 (define-c errno fstat (int (result stat)))
 (define-c errno (file-link-status "lstat") (string (result stat)))
 
+;;> Creates a new input-port from the file descriptor @var{int}.
+
 (define-c input-port (open-input-file-descriptor "fdopen")
   (int (value "r" string)))
+
+;;> Creates a new output-port from the file descriptor @var{int}.
+
 (define-c output-port (open-output-file-descriptor "fdopen")
   (int (value "w" string)))
 
+;;> Unlinks the file named @var{string} from the filesystem.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (delete-file "unlink") (string))
+
+;;> Creates a hard link to the first arg from the second.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (link-file "link") (string string))
+
+;;> Creates a symbolic link to the first arg from the second.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (symbolic-link-file "symlink") (string string))
+
+;;> Renames the first arg to the second.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (rename-file "rename") (string string))
+
+;;> Returns the current working directory of the process as a string.
 
 (define-c non-null-string (current-directory "getcwd")
   ((result (array char (auto-expand arg1))) (value 256 int)))
 
+;;> Creates a new directory with the given mode.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (create-directory "mkdir") (string int))
+
+;;> Deletes the directory named @var{string} from the filesystem.
+;;> Does not attempt to delete recursively.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (delete-directory "rmdir") (string))
 
 (define-c (free DIR) opendir (string))
 (define-c dirent readdir ((link (pointer DIR))))
 
+;;> Duplicates the given file descriptor, returning he new value,
+;; or -1 on failure.
+
 (define-c int (duplicate-file-descriptor "dup") (int))
+
+;;> Copies the first file descriptor to the second, closing
+;;> it if needed.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (duplicate-file-descriptor-to "dup2") (int int))
+
+;;> Closes the given file descriptor.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (close-file-descriptor "close") (int))
 
+;;> Returns a list of 2 new file descriptors, the input and
+;;> output end of a new pipe, respectively.
+
 (define-c errno (open-pipe "pipe") ((result (array int 2))))
+
+;;> Creates a new named pipe in the given path.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
 (define-c errno (make-fifo "mkfifo") (string (default #o644 int)))
 
 (define-c int (get-file-descriptor-flags "fcntl")
@@ -93,10 +145,16 @@
 (define-c errno (set-file-descriptor-flags! "fcntl")
   (int (value F_SETFD int) long))
 
+;;> Get and set the flags for the given file descriptor.
+;;/
+
 (define-c int (get-file-descriptor-status "fcntl")
   (int (value F_GETFL int)))
 (define-c errno (set-file-descriptor-status! "fcntl")
   (int (value F_SETFL int) long))
+
+;;> Get and set the status for the given file descriptor.
+;;/
 
 ;; (define-c int (get-file-descriptor-lock "fcntl")
 ;;   (int (value F_GETLK int) flock))
@@ -114,5 +172,10 @@
 (define-c-const int (open/append "O_APPEND"))
 (define-c-const int (open/non-block "O_NONBLOCK"))
 
-(define-c boolean (is-a-tty? "isatty") (port-or-fd))
+;;> File opening modes.
+;;/
 
+;;> Returns @scheme{#t} if the given port of file descriptor
+;;> if backed by a TTY object, and @scheme{#f} otherwise.
+
+(define-c boolean (is-a-tty? "isatty") (port-or-fd))

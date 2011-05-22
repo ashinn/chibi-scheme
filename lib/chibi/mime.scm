@@ -1,68 +1,8 @@
 ;; mime.scm -- RFC2045 MIME library
-;; Copyright (c) 2005-2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; RFC2822 headers
-
-;; Procedure: mime-header-fold kons knil [source [limit [kons-from]]]
-;;
-;;  Performs a fold operation on the MIME headers of source which can be
-;;  either a string or port, and defaults to current-input-port.  kons
-;;  is called on the three values:
-;;     kons header value accumulator
-;;  where accumulator begins with knil.  Neither the header nor the
-;;  value are modified, except wrapped lines are handled for the value.
-;;
-;;  The optional procedure KONS-FROM is a procedure to be called when
-;;  the first line of the headers is an "From <address> <date>" line, to
-;;  enable this procedure to be used as-is on mbox files and the like.
-;;  It defaults to KONS, and if such a line is found the fold will begin
-;;  with (KONS-FROM "%from" <address> (KONS-FROM "%date" <date> KNIL)).
-;;
-;; The optional LIMIT gives a limit on the number of headers to read.
-
-;; Procedure: mime-headers->list [source]
-;;   Return an alist of the MIME headers from source with headers all
-;;   downcased.
-
-;; Procedure: mime-parse-content-type str
-;;   Parses STR as a Content-Type style-value returning the list
-;;     (type (attr . val) ...)
-;;  For example:
-;;     (mime-parse-content-type
-;;        "text/html; CHARSET=US-ASCII; filename=index.html")
-;;       => ("text/html" ("charset" . "US-ASCII") ("filename" . "index.html"))
-
-;; Procedure: mime-decode-header str
-;;   Replace all occurrences of RFC1522 =?ENC?...?= escapes in STR with
-;;   the appropriate decoded and charset converted value.
-
-;; Procedure: mime-ref headers str [default]
-;;   A case-insensitive assoc-ref.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; RFC2045 MIME encoding
-
-;; Procedure: mime-message-fold src headers kons knil
-;;   Performs a fold operation on the given string or port SRC as a MIME
-;;   body corresponding to the headers give in HEADERS.  KONS is called
-;;   on the successive values:
-;;
-;;      KONS part-headers part-body accumulator
-;;
-;;   where part-headers are the headers for the given MIME part (the
-;;   original headers for single-part MIME), part-body is the
-;;   appropriately decoded and charset-converted body of the message,
-;;   and the accumulator begins with KNIL.
-;;
-;; TODO: Extend mime-message-fold to (optionally?) pass KONS an
-;; input-port instead of string for the body to handle very large bodies
-;; (this is not much of an issue for SMTP since the messages are in
-;; practice limited, but it could be problematic for large HTTP bodies).
-;;
-;; This does a depth-first search, folding in sequence.  It should
-;; probably be doing a tree-fold as in html-parser.
+;;> A library to parse MIME headers and bodies into SXML.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -84,6 +24,9 @@
         (eq (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) equal?)))
     (cond ((assoc* key ls eq) => cdr)
           (else default))))
+
+;;> @subsubsubsection{@scheme{(mime-ref headers str [default])}}
+;;> A case-insensitive @scheme{assoc-ref}.
 
 (define (mime-ref ls key . o)
   (assoc-ref ls key (and (pair? o) (car o)) string-ci=?))
@@ -205,7 +148,24 @@
             (reverse (cons (substring str i len) res)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; header parsing
+;;> @subsubsection{RFC2822 Headers}
+
+;;> @subsubsubsection{@scheme{(mime-header-fold kons knil [source [limit [kons-from]]])}}
+;;>
+;;> Performs a fold operation on the MIME headers of source which can be
+;;> either a string or port, and defaults to current-input-port.  @var{kons}
+;;> is called on the three values:
+;;>    @scheme{(kons header value accumulator)}
+;;> where accumulator begins with @var{knil}.  Neither the header nor the
+;;> value are modified, except wrapped lines are handled for the value.
+;;>
+;;> The optional procedure @var{kons-from} is a procedure to be called when
+;;> the first line of the headers is an "From <address> <date>" line, to
+;;> enable this procedure to be used as-is on mbox files and the like.
+;;> It defaults to @var{kons}, and if such a line is found the fold will begin
+;;> with @scheme{(kons-from "%from" <address> (kons-from "%date" <date> knil))}.
+;;>
+;;> The optional @var{limit} gives a limit on the number of headers to read.
 
 (define (mime-header-fold kons knil . o)
   (let ((src (and (pair? o) (car o)))
@@ -254,6 +214,10 @@
      (else
       (out first-line knil 0)))))
 
+;;> @subsubsubsection{@scheme{(mime-headers->list [source])}}
+;;> Return an alist of the MIME headers from source with headers all
+;;> downcased.
+
 (define (mime-headers->list . o)
   (reverse
    (apply
@@ -273,8 +237,20 @@
                 (substring s (+ i 1) (string-length s)))))
       (cons (string-downcase (string-trim-white-space s)) ""))))
 
+;;> @subsubsubsection{@scheme{(mime-parse-content-type str)}}
+;;> Parses @var{str} as a Content-Type style-value returning the list
+;;> @scheme{(type (attr . val) ...)}.
+
+;;> @example{
+;;> (mime-parse-content-type "text/html; CHARSET=UTF-8; filename=index.html")
+;;> }
+
 (define (mime-parse-content-type str)
   (map mime-split-name+value (string-split str #\;)))
+
+;;> @subsubsubsection{@scheme{(mime-decode-header str)}}
+;;> Replace all occurrences of RFC1522 =?ENC?...?= escapes in @var{str} with
+;;> the appropriate decoded and charset converted value.
 
 (define (mime-decode-header str)
   (let* ((len (string-length str))
@@ -334,9 +310,20 @@
    (lambda (x) (next (mime-convert-part x cte enc)))
    (lambda (x) (final (mime-convert-part x cte enc)))))
 
-;; (kons parent-headers part-headers part-body seed)
-;; (start headers seed)
-;; (end headers parent-seed seed)
+;;> @subsubsection{RFC2045 MIME Encoding}
+
+;;> @subsubsubsection{@scheme{(mime-message-fold src kons knil [start end headers])}}
+;;> Performs a fold operation on the given string or port @var{src} as a
+;;> MIME body corresponding to the headers give in @var{headers}.  @var{kons}
+;;> is called on the successive values:
+;;>
+;;> @schemeblock{(kons parent-headers part-headers part-body accumulator)}
+;;>
+;;> where @var{part-headers} are the headers for the given MIME part (the
+;;> original headers for single-part MIME), @var{part-body} is the
+;;> appropriately decoded and charset-converted body of the message,
+;;> and the @var{accumulator} begins with @var{knil}.
+
 (define (mime-message-fold src kons init-seed . o)
   (let ((port (if (string? src) (open-input-string src) src)))
     (let ((kons-start
@@ -392,7 +379,12 @@
              (lambda (x) (next (kons parent-headers headers x seed)))
              (lambda (x) (final (kons parent-headers headers x seed)))))))))))
 
-;; (mime (^ (header . value) ...) parts ...)
+;;> @subsubsubsection{@scheme{(mime-message->sxml [src])}}
+;;> 
+;;> Parse the given source as a MIME message and return
+;;> the result as an SXML object of the form:
+;;> @scheme{(mime (^ (header . value) ...) parts ...)}.
+
 (define (mime-message->sxml . o)
   (car
    (apply
@@ -407,4 +399,3 @@
               ,@(if (pair? seed) (reverse seed) seed))
         ,@parent-seed))
     (if (pair? o) (cdr o) '()))))
-

@@ -1,4 +1,9 @@
 
+;;> Interface to the filesystem and file descriptor objects.
+;;> Note that file descriptors are currently represented as
+;;> integers, but may be replaced with opaque (and gc-managed)
+;;> objects in a future release.
+
 (module (chibi filesystem)
   (export open-input-file-descriptor open-output-file-descriptor
           duplicate-file-descriptor duplicate-file-descriptor-to

@@ -2,6 +2,9 @@
 ;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+;;> Library for highlighting source code in different
+;;> languages.  Currently supports Scheme, C and Assembly.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (string-concatenate-reverse ls)
@@ -9,6 +12,18 @@
 
 (define (reverse-list->string ls)
   (list->string (reverse ls)))
+
+;;> Returns an sxml structure representing the code from source
+;;> with various language constructs wrapped in highlighting
+;;> forms.  @var{source} should be a string or port.  The
+;;> language to highlight for is auto-detected.
+
+(define (highlight source)
+  (let ((str (if (string? source) source (port->string source))))
+    ((highlighter-for (highlight-detect-language str)) str)))
+
+;;> Attempst to auto-detect which language @var{str} is code
+;;> for, and returns a symbol representing that language.
 
 (define (highlight-detect-language str)
   (cond
@@ -20,16 +35,14 @@
    (else
     'c)))
 
+;;> Return a procedure for highlighting the given language.
+
 (define (highlighter-for language)
   (case language
     ((scheme) highlight-scheme)
     ((asm) highlight-assembly)
     ((none) (lambda (x) x))
     (else highlight-c)))
-
-(define (highlight source)
-  (let ((str (if (string? source) source (port->string source))))
-    ((highlighter-for (highlight-detect-language str)) str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -53,6 +66,11 @@
 (define highlight-paren-styles
   ;;'("#BAFFFF" "#FFCACA" "#FFFFBA" "#CACAFF" "#CAFFCA" "FFBAFF")
   '("#AAAAAA" "#888888" "#666666" "#444444" "#222222" "#000000"))
+
+;;> Returns a string representing the CSS needed for the output
+;;> of @var{highlight}.  This should be included in a referenced
+;;> CSS file, or in a @var{<script>} section in the generated in
+;;> the generated HTML output.
 
 (define (highlight-style . theme)
   (string-concatenate
@@ -151,6 +169,8 @@
              summing multpliying up-from down-from else
              )))
 
+;;> Highlighter for Scheme source code.
+
 (define (highlight-scheme source)
   (let ((in (if (string? source) (open-input-string source) source)))
     (define (read-identifier ls)
@@ -170,7 +190,7 @@
            (highlight-class "string"
                             (read-identifier (list (read-char in) #\\ #\#))))
           (else
-           "#"))))
+           (string-append "#" (if (char? c) (string c) ""))))))
     (define (highlight n str res)
       (let ((c (read-char in)))
         (if (eof-object? c)
@@ -260,6 +280,8 @@
   (memq id '(auto bool char class const double enum extern float inline int long
              short signed static struct union unsigned void volatile wchar_t
              sexp sexp_uint_t sexp_sint_t)))
+
+;;> Highlighter for C source code.
 
 (define (highlight-c source)
   (let ((in (if (string? source) (open-input-string source) source)))
@@ -368,6 +390,8 @@
     (highlight-line '())))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;> Highlighter for Assembly source code.
 
 (define (highlight-assembly source)
   (let ((in (if (string? source) (open-input-string source) source)))
