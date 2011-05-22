@@ -43,7 +43,7 @@ where the result of <code>expr</code> is matched against each pattern in
 turn, and the corresponding body is evaluated for the first to
 succeed.  Thus, a list of three elements matches a list of three
 elements.
-</p><div><pre><code>(<span class="keyword">let</span> ((ls (list <span>1</span> <span>2</span> <span>3</span>))) (<span class="keyword">match</span> <span>ls</span> ((1 <span>2</span> <span>3</span>) #)))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">let</span> ((ls (list <span>1</span> <span>2</span> <span>3</span>))) (<span class="keyword">match</span> <span>ls</span> ((1 <span>2</span> <span>3</span>) #t)))</code></pre><code><div class="result">=> #t</div></code></div><p>
 If no patterns match an error is signalled.
 Identifiers will match anything, and make the corresponding
 binding available in the body.
@@ -65,9 +65,9 @@ parts unquoted.
 Often you want to match any number of a repeated pattern.  Inside
 a list pattern you can append <code><span>...</span></code> after an element to
 match zero or more of that pattern (like a regexp Kleene star).
-</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #))</code></pre><code><div class="result">=> #t</div></code></div><p>
-</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #))</code></pre><code><div class="result">=> #t</div></code></div><p>
-</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>3</span> <span>3</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>3</span> <span>3</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
 Pattern variables matched inside the repeated pattern are bound to
 a list of each matching instance in the body.
 </p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span>) ((a <span>b</span> <span>c</span> <span>...</span>) <span>c</span>))</code></pre><code><div class="result">=> ()</div></code></div><p>
@@ -96,7 +96,7 @@ bind <code>x</code> to the entire value that matches <code>pat</code>
 (c.f. "as-patterns" in ML or Haskell).  Another common use is in
 conjunction with <code><span>not</span></code> patterns to match a general case
 with certain exceptions.
-</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and) #))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
 </p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
 </p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and <span>x</span> <span>1</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
 The <code><span>or</span></code> operator ensures that at least one subpattern
@@ -104,12 +104,12 @@ matches.  If the same identifier occurs in different subpatterns,
 it is matched independently.  All identifiers from all subpatterns
 are bound if the <code><span>or</span></code> operator matches, but the binding is
 only defined for identifiers from the subpattern which matched.
-</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or) #) (<span class="keyword">else</span> #))</code></pre><code><div class="result">=> #f</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or) #t) (<span class="keyword">else</span> #f))</code></pre><code><div class="result">=> #f</div></code></div><p>
 </p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
 </p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or <span>x</span> <span>2</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
 The <code><span>not</span></code> operator succeeds if the given pattern doesn't
 match.  None of the identifiers used are available in the body.
-</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((not <span>2</span>) #))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((not <span>2</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
 The more general operator <code><span>?</span></code> can be used to provide a
 predicate.  The usage is <code>(? <span>predicate</span> <span>pat</span> <span>...</span>)</code> where
 <code>predicate</code> is a Scheme expression evaluating to a predicate

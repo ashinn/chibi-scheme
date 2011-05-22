@@ -616,10 +616,9 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
 #include "opt/fcall.c"
 #endif
 
-sexp sexp_vm (sexp ctx, sexp proc) {
-  sexp bc = sexp_procedure_code(proc), cp = sexp_procedure_vars(proc);
-  sexp *stack = sexp_stack_data(sexp_context_stack(ctx));
-  unsigned char *ip = sexp_bytecode_data(bc);
+sexp sexp_vm (sexp ctx, sexp proc, sexp args) {
+  unsigned char *ip;
+  sexp bc, cp, *stack = sexp_stack_data(sexp_context_stack(ctx));
   sexp_sint_t i, j, k, fp, top = sexp_stack_top(sexp_context_stack(ctx));
 #if SEXP_USE_GREEN_THREADS
   sexp root_thread = ctx;
@@ -631,7 +630,12 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   sexp_gc_var3(self, tmp1, tmp2);
   sexp_gc_preserve3(ctx, self, tmp1, tmp2);
   fp = top - 4;
-  self = proc;
+  self = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
+  bc = sexp_procedure_code(self);
+  cp = sexp_procedure_vars(self);
+  ip = sexp_bytecode_data(bc);
+  tmp1 = proc, tmp2 = args;
+  goto apply1;
 
  loop:
 #if SEXP_USE_GREEN_THREADS
@@ -727,8 +731,10 @@ sexp sexp_vm (sexp ctx, sexp proc) {
   case SEXP_OP_APPLY1:
     tmp1 = _ARG1;
     tmp2 = _ARG2;
+    top -= 2;
+  apply1:
     i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
-    top += (i-2);
+    top += i;
     for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
       _ARG1 = sexp_car(tmp2);
     top += i+1;
@@ -1593,26 +1599,16 @@ sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
 }
 
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
-  sexp res, ls, *stack = sexp_stack_data(sexp_context_stack(ctx));
-  sexp_sint_t top = sexp_context_top(ctx), len, offset;
+  sexp res;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
-  len = sexp_unbox_fixnum(sexp_length(ctx, args));
   if (sexp_opcodep(proc))
-    proc = tmp = make_opcode_procedure(ctx, proc, len);
+    proc = tmp = make_opcode_procedure(ctx, proc, sexp_unbox_fixnum(sexp_length(ctx, args)));
   if (! sexp_procedurep(proc)) {
     res = sexp_exceptionp(proc) ? proc :
       sexp_type_exception(ctx, NULL, SEXP_PROCEDURE, proc);
   } else {
-    offset = top + len;
-    for (ls=args; sexp_pairp(ls); ls=sexp_cdr(ls), top++)
-      stack[--offset] = sexp_car(ls);
-    stack[top++] = sexp_make_fixnum(len);
-    stack[top++] = SEXP_ZERO;
-    stack[top++] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
-    stack[top++] = SEXP_ZERO;
-    sexp_context_top(ctx) = top;
-    res = sexp_vm(ctx, proc);
+    res = sexp_vm(ctx, proc, args);
     if (! res) res = SEXP_VOID; /* shouldn't happen */
   }
   sexp_gc_release1(ctx);
