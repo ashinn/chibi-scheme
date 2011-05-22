@@ -616,7 +616,7 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
 #include "opt/fcall.c"
 #endif
 
-sexp sexp_vm (sexp ctx, sexp proc, sexp args) {
+sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   unsigned char *ip;
   sexp bc, cp, *stack = sexp_stack_data(sexp_context_stack(ctx));
   sexp_sint_t i, j, k, fp, top = sexp_stack_top(sexp_context_stack(ctx));
@@ -1583,8 +1583,6 @@ sexp sexp_vm (sexp ctx, sexp proc, sexp args) {
   return _ARG1;
 }
 
-/******************************* apply ********************************/
-
 sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
   sexp res;
   sexp_gc_var1(args);
@@ -1595,22 +1593,5 @@ sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
     res = sexp_apply(ctx, f, args=sexp_list1(ctx, x));
     sexp_gc_release1(ctx);
   }
-  return res;
-}
-
-sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
-  sexp res;
-  sexp_gc_var1(tmp);
-  sexp_gc_preserve1(ctx, tmp);
-  if (sexp_opcodep(proc))
-    proc = tmp = make_opcode_procedure(ctx, proc, sexp_unbox_fixnum(sexp_length(ctx, args)));
-  if (! sexp_procedurep(proc)) {
-    res = sexp_exceptionp(proc) ? proc :
-      sexp_type_exception(ctx, NULL, SEXP_PROCEDURE, proc);
-  } else {
-    res = sexp_vm(ctx, proc, args);
-    if (! res) res = SEXP_VOID; /* shouldn't happen */
-  }
-  sexp_gc_release1(ctx);
   return res;
 }
