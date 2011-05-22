@@ -6,7 +6,6 @@
    <number> <bignum> <flonum> <integer> <char> <boolean>
    <symbol> <string> <byte-vector> <vector> <pair>
    <context> <lam> <cnd> <set> <ref> <seq> <lit> <sc> <exception>
-   pair-source pair-source-set!
    syntactic-closure? lambda? cnd? set? ref? seq? lit? type?
    environment? bytecode? exception? macro? context?
    syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
@@ -22,13 +21,13 @@
    set-var set-value set-var-set! set-value-set!
    ref-name ref-cell ref-name-set! ref-cell-set!
    seq-ls seq-ls-set! lit-value lit-value-set!
-   exception-kind exception-kind-set! exception-message exception-message-set!
-   exception-irritants exception-irritants-set!
+   exception-kind exception-message exception-irritants
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-variadic?
    macro-procedure macro-env macro-source
    procedure-code procedure-vars procedure-name
    bytecode-name bytecode-literals bytecode-source
+   pair-source pair-source-set!
    port-line port-line-set!
    type-name type-cpl type-parent type-slots
    object-size integer->immediate gc
