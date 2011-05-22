@@ -1,5 +1,5 @@
 /*  ast.c -- interface to the Abstract Syntax Tree            */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
@@ -24,10 +24,14 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
   sexp_gc_preserve2(ctx, name, op);
   type = sexp_make_fixnum(ctype);
   index = sexp_make_fixnum(cindex);
-  op = sexp_make_getter(ctx, name=sexp_c_string(ctx, get, -1), type, index);
-  sexp_env_define(ctx, env, name=sexp_intern(ctx, get, -1), op);
-  op = sexp_make_setter(ctx, name=sexp_c_string(ctx, set, -1), type, index);
-  sexp_env_define(ctx, env, name=sexp_intern(ctx, set, -1), op);
+  if (get) {
+    op = sexp_make_getter(ctx, name=sexp_c_string(ctx, get, -1), type, index);
+    sexp_env_define(ctx, env, name=sexp_intern(ctx, get, -1), op);
+  }
+  if (set) {
+    op = sexp_make_setter(ctx, name=sexp_c_string(ctx, set, -1), type, index);
+    sexp_env_define(ctx, env, name=sexp_intern(ctx, set, -1), op);
+  }
   sexp_gc_release2(ctx);
 }
 
@@ -256,7 +260,6 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type(ctx, "<exception>", SEXP_EXCEPTION);
   sexp_define_type_predicate(ctx, env, "environment?", SEXP_ENV);
   sexp_define_type_predicate(ctx, env, "bytecode?", SEXP_BYTECODE);
-  sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
   sexp_define_type_predicate(ctx, env, "macro?", SEXP_MACRO);
   sexp_define_type_predicate(ctx, env, "syntactic-closure?", SEXP_SYNCLO);
   sexp_define_type_predicate(ctx, env, "lambda?", SEXP_LAMBDA);
@@ -270,9 +273,9 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
   sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
   sexp_define_accessors(ctx, env, SEXP_PAIR, 2, "pair-source", "pair-source-set!");
-  sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", "syntactic-closure-env-set!");
-  sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", "syntactic-closure-vars-set!");
-  sexp_define_accessors(ctx, env, SEXP_SYNCLO, 2, "syntactic-closure-expr", "syntactic-closure-expr-set!");
+  sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", NULL);
+  sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", NULL);
+  sexp_define_accessors(ctx, env, SEXP_SYNCLO, 2, "syntactic-closure-expr", NULL);
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 0, "lambda-name", "lambda-name-set!");
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 1, "lambda-params", "lambda-params-set!");
   sexp_define_accessors(ctx, env, SEXP_LAMBDA, 2, "lambda-body", "lambda-body-set!");
@@ -293,18 +296,19 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_REF, 1, "ref-cell", "ref-cell-set!");
   sexp_define_accessors(ctx, env, SEXP_SEQ, 0, "seq-ls", "seq-ls-set!");
   sexp_define_accessors(ctx, env, SEXP_LIT, 0, "lit-value", "lit-value-set!");
-  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 1, "procedure-code", "procedure-code-set!");
-  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 2, "procedure-vars", "procedure-vars-set!");
-  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 1, "bytecode-name", "bytecode-name-set!");
-  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 2, "bytecode-literals", "bytecode-literals-set!");
-  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 3, "bytecode-source", "bytecode-source-set!");
-  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 0, "exception-kind", "exception-kind-set!");
-  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", "exception-message-set!");
-  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", "exception-irritants-set!");
-  sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", "macro-procedure-set!");
-  sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", "macro-env-set!");
-  sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", "macro-source-set!");
+  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 1, "procedure-code", NULL);
+  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 2, "procedure-vars", NULL);
+  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 1, "bytecode-name", NULL);
+  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 2, "bytecode-literals", NULL);
+  sexp_define_accessors(ctx, env, SEXP_BYTECODE, 3, "bytecode-source", NULL);
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 0, "exception-kind", NULL);
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", NULL);
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", NULL);
+  sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", NULL);
+  sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
+  sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);
   sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
+  sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
@@ -314,7 +318,6 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "opcode-param-type", 2, sexp_get_opcode_param_type);
   sexp_define_foreign(ctx, env, "port-line", 1, sexp_get_port_line);
   sexp_define_foreign(ctx, env, "port-line-set!", 2, sexp_set_port_line);
-  sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
   sexp_define_foreign(ctx, env, "type-of", 1, sexp_type_of);
   sexp_define_foreign(ctx, env, "type-name", 1, sexp_type_name_op);
   sexp_define_foreign(ctx, env, "type-cpl", 1, sexp_type_cpl_op);
@@ -325,4 +328,3 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
   return SEXP_VOID;
 }
-
