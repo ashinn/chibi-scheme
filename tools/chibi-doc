@@ -367,7 +367,12 @@ div#footer {padding-bottom: 50px}
 (define (get-ffi-signatures form)
   (match form
     (('define-c ret-type (or (name _) name) (args ...))
-     (list (cons name (map (lambda (x) (if (pair? x) (last x) x)) args))))
+     (list (cons name
+                 (map (lambda (x) (if (pair? x) (last x) x))
+                      (remove (lambda (x)
+                                (and (pair? x)
+                                     (memq (car x) '(value result))))
+                              args)))))
     (('define-c-const type (or (name _) name))
      (list (list 'const: type name)))
     (((or 'define-c-struct 'define-c-class 'define-c-type) name . rest)
@@ -412,9 +417,14 @@ div#footer {padding-bottom: 50px}
              (else #f))))
 
 (define (section-describes? x name)
-  (and (pair? x) (pair? (cdr x))
-       (string-ci=? (string-first-token (sxml-strip (cadr x)) " \t\r\n()#")
-                    (symbol->string name))))
+  (let ((name (symbol->string name)))
+    (and (pair? x) (pair? (cdr x))
+         (let* ((str (sxml-strip (cadr x)))
+                (op (string-first-token str " \t\r\n()#")))
+           (or (string=? op name)
+               ;; FIXME: hack for loop iterators
+               (and (string=? op "for")
+                    (string-contains str (string-append "(" name " "))))))))
 
 (define (insert-signature orig-ls name sig)
   (cond
@@ -444,14 +454,15 @@ div#footer {padding-bottom: 50px}
          (else
           (lp (cdr ls) (cons (car ls) rev-pre)))))))))
 
-(define (extract-docs file defs . o)
+(define (extract-docs file defs exports . o)
   (call-with-input-file file
     (lambda (in)
-      (let ((lang (or (and (pair? o) (car o)) 'scheme))
-            (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdaddr x)))
-                       (filter (lambda (x) (and (pair? (caddr x))
-                                           (equal? file (caaddr x))))
-                               defs))))
+      (let* ((lang (or (and (pair? o) (car o)) 'scheme))
+             (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdaddr x)))
+                        (filter
+                         (lambda (x)
+                           (and (pair? (caddr x)) (equal? file (caaddr x))))
+                         defs))))
         (let lp ((lines '()) (cur '()) (res '()))
           (define (collect)
             (if (pair? lines)
@@ -477,8 +488,15 @@ div#footer {padding-bottom: 50px}
               (if (eqv? #\space (peek-char in)) (read-char in))
               (lp (cons (read-line in) lines) cur res))
              (else
-              (read-line in)
-              (lp '() (collect) res))))
+              (let lp ()
+                (cond ((eqv? #\; (peek-char in))
+                       (read-char in)
+                       (lp))))
+              (let ((line (read-line in))
+                    (cur (collect)))
+                (if (equal? line "/")
+                    (lp '() '() (append cur res))
+                    (lp '() cur res))))))
            (else  ;; found a top-level expression
             (let* ((cur (collect))
                    (line1 (port-line in))
@@ -489,8 +507,12 @@ div#footer {padding-bottom: 50px}
               (cond
                ((and (eq? lang 'ffi) (get-ffi-signatures x))
                 => (lambda (sigs)
-                     (lp '() '() (append (insert-signature cur #f sigs) res))))
-               ((= 1 (length procs))
+                     (let ((sigs (filter
+                                  (lambda (x)
+                                    (memq (if (eq? 'const: (car x)) (caddr x) (car x)) exports))
+                                  sigs)))
+                       (lp '() '() (append (insert-signature cur #f sigs) res)))))
+               ((and (eq? lang 'scheme) (= 1 (length procs)))
                 (let* ((sig (or (get-signature (caar procs) (cdar procs) x)
                                 '()))
                        (res (append (insert-signature cur (caar procs) sig)
@@ -630,9 +652,13 @@ div#footer {padding-bottom: 50px}
                                  exports)))))
     (output
      `((title ,(write-to-string mod-name))
-       ,@(reverse (append-map (lambda (x) (extract-docs x defs))
+       ,@(cond
+          ((find-module-file (module-name->file mod-name))
+           => (lambda (f) (reverse (extract-docs f defs exports 'module))))
+          (else '()))
+       ,@(reverse (append-map (lambda (x) (extract-docs x defs exports))
                               (module-includes mod)))
-       ,@(reverse (append-map (lambda (x) (extract-docs x defs 'ffi))
+       ,@(reverse (append-map (lambda (x) (extract-docs x defs exports 'ffi))
                               (module-shared-includes mod)))))))
 
 (define (main args)
