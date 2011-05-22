@@ -5,7 +5,7 @@
 (define (record-rtd x)
   (type-of x))
 
-(define (rtd-name x) (type-name x))
+(define (rtd-name x) (string->symbol (type-name x)))
 
 (define (rtd-parent x) (type-parent x))
 

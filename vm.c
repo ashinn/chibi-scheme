@@ -578,9 +578,12 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
     return 1;
   t = sexp_object_type(ctx, a);
   v = sexp_type_cpl(t);
+  if (! sexp_vectorp(v))
+    return 0;
+  if (b == sexp_type_by_index(ctx, SEXP_OBJECT))
+    return 1;
   d = sexp_type_depth(b);
-  return sexp_vectorp(v)
-    && (d < sexp_vector_length(v))
+  return (d < sexp_vector_length(v))
     && sexp_vector_ref(v, sexp_make_fixnum(d)) == b;
 }
 
