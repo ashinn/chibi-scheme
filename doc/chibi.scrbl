@@ -28,8 +28,8 @@ standard modules.  You can choose whichever layer suits your needs
 best and customize the rest.  Adding your own primitives or wrappers
 around existing C libraries is easy with the C FFI.
 
-Chibi is known to build and run on 32 and 64-bit Linux, OS X, Windows
-(under cygwin) and Plan9.
+Chibi is known to build and run on 32 and 64-bit Linux, OS X,
+iPhone OS, Windows (under cygwin) and Plan9.
 
 @section{Installation}
 
@@ -72,9 +72,30 @@ or edited manually.  Be sure to run this with a non-static
 chibi-scheme.  Then you can make the static executable with:
 
 @command{
-make cleaner
-make chibi-scheme-static SEXP_USE_DL=0 CPPFLAGS=-DSEXP_USE_STATIC_LIBS
+make -B chibi-scheme-static SEXP_USE_DL=0 CPPFLAGS=-DSEXP_USE_STATIC_LIBS
 }
+
+@subsection{Compile-Time Options}
+
+The include file @ccode{"chibi/features.h"} describes a number of
+C preprocessor values which can be enabled or disabled by setting to
+1 or 0 respectively.  For example, the above commands used the
+features @ccode{SEXP_USE_BOEHM}, @ccode{SEXP_USE_DL} and
+@ccode{SEXP_USE_STATIC_LIBS}.  Many features are still experimental
+and may be removed from future releases, but the important features
+are listed below.
+
+@itemlist[
+@item{@ccode{SEXP_USE_BOEHM} - link with the Boehm GC instead of the native Chibi GC}
+@item{@ccode{SEXP_USE_DL} - allow dynamic linking (enabled by default)}
+@item{@ccode{SEXP_USE_STATIC_LIBS} - compile the standard C libs statically}
+@item{@ccode{SEXP_USE_MODULES} - use the module system}
+@item{@ccode{SEXP_USE_GREEN_THREADS} - use lightweight threads (enabled by default)}
+@item{@ccode{SEXP_USE_SIMPLIFY} - use a simplification optimizer pass (enabled by default)}
+@item{@ccode{SEXP_USE_BIGNUMS} - use bignums (enabled by default)}
+@item{@ccode{SEXP_USE_FLONUMS} - use flonums (enabled by default)}
+@item{@ccode{SEXP_USE_NO_FEATURES} - disable almost all features}
+]
 
 @section{Default Language}
 
@@ -123,7 +144,8 @@ environment:
 
 @subsection{Module System}
 
-A configurable module system, in the style of the Scheme48 module
+A configurable module system, in the style of the
+@hyperlink["http://s48.org/"]{Scheme48} module
 system, is provided if you choose to use it.
 
 Modules names are hierarchical lists of symbols or numbers.  The definition of
@@ -177,11 +199,11 @@ In addition, low-level hygienic macros are provided with a
 syntactic-closures interface, including @scheme{sc-macro-transformer},
 @scheme{rsc-macro-transformer}, and @scheme{er-macro-transformer}.  A good
 introduction to syntactic-closures can be found at
-@url{http://community.schemewiki.org/?syntactic-closures}
+@url{http://community.schemewiki.org/?syntactic-closures}.
 
 @scheme{identifier?}, @scheme{identifier->symbol}, @scheme{identifier=?}, and
 @scheme{make-syntactic-closure} and @scheme{strip-syntactic-closures} are
-available.
+also available.
 
 @subsection{Types}
 
