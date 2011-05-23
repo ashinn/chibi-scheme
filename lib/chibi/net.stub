@@ -16,11 +16,31 @@
   (size_t           ai_addrlen   address-info-address-length)
   ((link addrinfo)  ai_next      address-info-next))
 
+;;> The addrinfo struct accessors.
+;;/
+
+;;> Create and return a new addrinfo structure for the
+;;> given host and service.
+
 (define-c errno (get-address-info getaddrinfo)
   (string string (maybe-null addrinfo) (result free addrinfo)))
 
+;;> Bind a name to a socket.
+
 (define-c int bind (int sockaddr int))
+
+;;> Listen on a socket.
+
 (define-c int listen (int int))
-(define-c int socket (int int int))
-(define-c int connect (int sockaddr int))
+
+;;> Accept a connection on a socket.
+
 (define-c int accept (int sockaddr (pointer unsigned)))
+
+;;> Create an endpoint for communication.
+
+(define-c int socket (int int int))
+
+;;> Initiate a connection on a socket.
+
+(define-c int connect (int sockaddr int))
