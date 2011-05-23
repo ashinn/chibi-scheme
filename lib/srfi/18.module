@@ -15,11 +15,7 @@
    join-timeout-exception? abandoned-mutex-exception?
    terminated-thread-exception? uncaught-exception?
    uncaught-exception-reason)
-  (import-immutable (scheme)
-                    (srfi 9)
-                    (chibi ast)
-                    (chibi time))
+  (import (scheme) (srfi 9) (chibi ast) (chibi time))
   (include "18/types.scm")
   (include-shared "18/threads")
   (include "18/interface.scm"))
-

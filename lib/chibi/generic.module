@@ -3,5 +3,5 @@
 
 (module (chibi generic)
   (export define-generic define-method make-generic generic-add!)
-  (import-immutable (scheme))
+  (import (scheme))
   (include "generic.scm"))

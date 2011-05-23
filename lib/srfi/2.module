@@ -1,7 +1,7 @@
 
 (module (srfi 2)
   (export and-let*)
-  (import-immutable (scheme))
+  (import (scheme))
   (begin
    (define-syntax and-let*
      (syntax-rules ()
@@ -13,4 +13,3 @@
        ((and-let* ((expr) . rest) . body)
         (let ((tmp expr))
           (and tmp (and-let* rest . body))))))))
-

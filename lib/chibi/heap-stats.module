@@ -20,6 +20,5 @@
 
 (module (chibi heap-stats)
   (export heap-stats heap-dump)
-  (import-immutable (scheme))
+  (import (scheme))
   (include-shared "heap-stats"))
-

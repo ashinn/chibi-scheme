@@ -1,5 +1,5 @@
 
-(define-module (srfi 99 records)
+(module (srfi 99 records)
   (import (srfi 99 records procedural)
           (srfi 99 records inspection)
           (srfi 99 records syntactic))

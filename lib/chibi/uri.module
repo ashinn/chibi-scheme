@@ -5,6 +5,5 @@
           uri-with-scheme uri-with-user uri-with-host uri-with-path
           uri-with-query uri-with-fragment
           uri-encode uri-decode uri-query->alist uri-alist->query)
-  (import-immutable (scheme)
-                    (srfi 9))
+  (import (scheme) (srfi 9))
   (include "uri.scm"))

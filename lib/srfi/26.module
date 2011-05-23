@@ -1,7 +1,7 @@
 
 (module (srfi 26)
   (export cut cute)
-  (import-immutable (scheme))
+  (import (scheme))
   (begin
    (define-syntax %cut
      (syntax-rules (<> <...>)
@@ -21,4 +21,3 @@
      (syntax-rules () ((cut args ...) (%cut #f () () args ...))))
    (define-syntax cute
      (syntax-rules () ((cute args ...) (%cut #t () () args ...))))))
-

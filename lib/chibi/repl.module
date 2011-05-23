@@ -1,7 +1,7 @@
 
 (module (chibi repl)
   (export repl)
-  (import-immutable (scheme))
+  (import (scheme))
   (import (chibi ast)
           (chibi io)
           (chibi process)

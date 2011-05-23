@@ -1,6 +1,5 @@
 
-(define-module (srfi 99 records syntactic)
+(module (srfi 99 records syntactic)
   (export define-record-type)
-  (import-immutable (scheme))
-  (import (srfi 99 records inspection))
+  (import (scheme) (srfi 99 records inspection))
   (include "syntactic.scm"))

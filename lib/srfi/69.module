@@ -10,8 +10,6 @@
    hash-table-walk hash-table-fold hash-table->alist
    hash-table-copy hash-table-merge!
    hash string-hash string-ci-hash hash-by-identity)
-  (import-immutable (scheme)
-                    (srfi 9))
+  (import (scheme) (srfi 9))
   (include-shared "69/hash")
   (include "69/type.scm" "69/interface.scm"))
-

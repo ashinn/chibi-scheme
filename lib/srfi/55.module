@@ -1,7 +1,7 @@
 
 (module (srfi 55)
   (export require-extension)
-  (import-immutable (scheme))
+  (import (scheme))
   (begin
    (define-syntax require-extension
      (syntax-rules ()

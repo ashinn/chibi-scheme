@@ -4,6 +4,6 @@
           listing listing-reverse appending appending-reverse
           summing multiplying in-string in-string-reverse
           in-vector in-vector-reverse)
-  (import-immutable (scheme))
+  (import (scheme))
   (include "loop/loop.scm"))
 
