@@ -1,4 +1,6 @@
 
+;;> Library for weak data structures.
+
 (module (chibi weak)
   (export make-ephemeron ephemeron? ephemeron-broken?
           ephemeron-key ephemeron-value

@@ -1,6 +1,7 @@
-;; uri.scm -- URI parsing library
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
+
+;;> Library for parsing and constructing URI objects.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; URI representation
@@ -16,7 +17,11 @@
   (query uri-query)
   (fragment uri-fragment))
 
-;; (make-uri scheme [user host port path query fragment])
+;;> Accessors for the URI type.
+;;/
+
+;;> @subsubsubsection{@scheme{(make-uri scheme [user host port path query fragment])}}
+
 (define (make-uri scheme . o)
   (let* ((user (if (pair? o) (car o) #f))
          (o (if (pair? o) (cdr o) '()))
@@ -81,7 +86,6 @@
         (lp (+ i 1)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; functional updaters (uses as much shared state as possible)
 
 (define (uri-with-scheme u scheme)
   (%make-uri scheme (uri-user u) (uri-host u) (uri-port u)
@@ -110,6 +114,10 @@
 (define (uri-with-fragment u fragment)
   (%make-uri (uri-scheme u) (uri-user u) (uri-host u) (uri-port u)
              (uri-path u) (uri-query u) fragment))
+
+;;> Functional updaters - returns a new uri identical to @var{u}
+;;> with only the specified field changed.
+;;/
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; parsing - without :// we just split into scheme & path
@@ -181,8 +189,12 @@
                                   (decode (substring str (+ pound 1) len)))
                              ))))))))))
 
+;;> Parses a string and returns a new URI object.
+
 (define (string->uri str . o)
   (apply string->path-uri #f str o))
+
+;;> Convert a URI object to a string.
 
 (define (uri->string uri . o)
   (define encode? (and (pair? o) (car o)))
@@ -221,6 +233,12 @@
       res
       (cons (substring str from to) res)))
 
+;;> @subsubsubsection{@scheme{(uri-encode str [plus?])}}
+
+;;> Return the URI encoded version of the string @var{str},
+;;> using hex escapes as needed and replacing spaces with "+"
+;;> iff the optional argument @var{plus?} is true.
+
 (define (uri-encode str . o)
   (define (encode-1-space ch)
     (if (eqv? ch #\space)
@@ -248,6 +266,12 @@
                 (lp from next res)
                 (lp next next (cons (encode-1 ch)
                                     (collect str from to res)))))))))
+
+;;> @subsubsubsection{@scheme{(uri-decode str [plus?])}}
+
+;;> Decodes any URI hex escapes in the given string, and
+;;> translates any pluses ("+") to space iff the optional
+;;> argument @var{plus?} is true.
 
 (define (uri-decode str . o)
   (let ((space-as-plus? (and (pair? o) (car o)))
@@ -277,6 +301,12 @@
              (else
               (lp from next res))))))))
 
+;;> @subsubsubsection{@scheme{(uri-query->alist str [plus?])}}
+
+;;> Parses the query part of a URI as a delimited list of
+;;> URI encoded @rawcode{VAR=VALUE} pairs, decodes them and
+;;> returns the result as an alist.
+
 (define (uri-query->alist str . o)
   (define (split-char? c) (if (eqv? c #\&) #t (eqv? c #\;)))
   (let ((len (string-length str))
@@ -291,6 +321,11 @@
                                  (uri-decode (substring str (+ k 1) j) plus?))
                            (cons (uri-decode (substring str i j) plus?) #f))))
             (lp (+ j 1) (cons cell res)))))))
+
+;;> @subsubsubsection{@scheme{(uri-alist->query ls [plus?])}}
+
+;;> The reverse of the above, formats the alist as a URI
+;;> query string.
 
 (define (uri-alist->query ls . o)
   (define plus? (and (pair? o) (car o)))

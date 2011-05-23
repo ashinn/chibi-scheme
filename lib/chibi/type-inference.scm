@@ -1,7 +1,7 @@
-;; type-inference.scm -- general type-inference for Scheme
-;;
-;; Copyright (c) 2010 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2010-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
+
+;;> General type-inference library.
 
 (define (typed? x)
   (and (lambda? x)
@@ -226,6 +226,8 @@
   (for-each type-analyze-expr ls)
   (for-each type-resolve-circularities ls))
 
+;;> Analyze the types of all bindings in the module @var{name}.
+
 (define (type-analyze-module name)
   (let* ((mod (analyze-module name))
          (ls (and (vector? mod) (module-ast mod))))
@@ -239,6 +241,9 @@
            (if (and x (not (typed? x)))
                (type-analyze-module-body name ls))
            ls))))
+
+;;> Return the type signature for a given source
+;;> code expression.
 
 (define (type-analyze sexp . o)
   (type-analyze-expr (apply analyze sexp o)))
@@ -254,6 +259,10 @@
 
 (define (lambda-type x)
   (cons 'lambda (cons (lambda-return-type x) (lambda-param-types x))))
+
+;;> Return the type signature for the procedure @var{x} as
+;;> a list whose first element is the return type and whose
+;;> remaining arguments are the parameter types.
 
 (define (procedure-signature x)
   (cond
