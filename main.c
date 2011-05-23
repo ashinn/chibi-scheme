@@ -116,7 +116,9 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
     fprintf(stderr, "chibi-scheme: out of memory\n");
     exit_failure();
   }
+#if SEXP_USE_FOLD_CASE_SYMS
   sexp_global(*ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(fold_case);
+#endif
   *env = sexp_context_env(*ctx);
 }
 
@@ -216,10 +218,12 @@ void run_main (int argc, char **argv) {
       sexp_write(ctx, tmp, out);
       sexp_newline(ctx, out);
       return;
+#if SEXP_USE_FOLD_CASE_SYMS
     case 'f':
       fold_case = 1;
       if (ctx) sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
       break;
+#endif
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
       exit_failure();
