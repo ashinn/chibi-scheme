@@ -42,6 +42,9 @@
   (let ((past (history-past h)) (future (history-future h)))
     (if (pair? past) (cons (car past) (append future (cdr past))) future)))
 
+(define (list->history ls)
+  (%make-history (max maximum-history-size (length ls)) ls '()))
+
 (define (history-flatten! h)
   (history-past-set! h (history->list h))
   (history-future-set! h '()))

@@ -1,3 +1,10 @@
+;; scribble.scm - scribble parsing
+;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
+
+;;> A library used for parsing "scribble" format, introduced
+;;> by @hyperlink["http://www.racket-lang.org/"]{Racket} and
+;;> the format used to write this manual.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; general character utils

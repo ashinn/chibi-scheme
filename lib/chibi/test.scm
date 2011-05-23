@@ -1,22 +1,11 @@
-;;;; test.scm -- testing framework
-;;
-;; Easy to use test suite adapted from the Chicken "test" module.
-;;
-;; Copyright (c) 2010 Alex Shinn. All rights reserved.
+;; Copyright (c) 2010-2011 Alex Shinn. All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
+
+;;> Simple testing framework adapted from the Chicken @scheme{test}
+;;> module.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exception utilities
-
-;; from SRFI-12, pending stabilization of an exception library for WG1
-(define-syntax handle-exceptions
-  (syntax-rules ()
-    ((handle-exceptions exn handler body ...)
-     (call-with-current-continuation
-      (lambda (return)
-        (with-exception-handler
-         (lambda (exn) (return handler))
-         (lambda () body ...)))))))
 
 (define (warning msg . args)
   (display msg (current-error-port))
@@ -53,6 +42,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
 
+;;> @subsubsubsection{@scheme{(test [name] expect expr)}}
+
+;;> Evaluate @var{expr} and check that it is @scheme{equal?}
+;;> to @var{expect}.  @var{name} is used in reporting, and
+;;> defaults to a printed summary of @var{expr}.
+
 (define-syntax test
   (syntax-rules ()
     ((test expect expr)
@@ -70,6 +65,10 @@
      (test-syntax-error 'test "2 or 3 arguments required"
                         (test a ...)))))
 
+;;> @subsubsubsection{@scheme{(test-assert [name] expr)}}
+
+;;> Like @scheme{test} but evaluates @var{expr} and checks that it's true.
+
 (define-syntax test-assert
   (syntax-rules ()
     ((_ expr)
@@ -80,10 +79,19 @@
      (test-syntax-error 'test-assert "1 or 2 arguments required"
                         (test a ...)))))
 
+;;> @subsubsubsection{@scheme{(test-not [name] expr)}}
+
+;;> Like @scheme{test} but evaluates @var{expr} and checks that it's false.
+
 (define-syntax test-not
   (syntax-rules ()
     ((_ expr) (test-assert (not expr)))
     ((_ name expr) (test-assert name (not expr)))))
+
+;;> @subsubsubsection{@scheme{(test-values [name] expect expr)}}
+
+;;> Like @scheme{test} but @var{expect} and @var{expr} can both
+;;> return multiple values.
 
 (define-syntax test-values
   (syntax-rules ()
@@ -92,6 +100,11 @@
     ((_ name expect expr)
      (test name (call-with-values (lambda () expect) (lambda results results))
        (call-with-values (lambda () expr) (lambda results results))))))
+
+;;> @subsubsubsection{@scheme{(test-error [name] expr)}}
+
+;;> Like @scheme{test} but evaluates @var{expr} and checks that it
+;;> raises an error.
 
 (define-syntax test-error
   (syntax-rules ()
@@ -106,6 +119,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; group interface
 
+;;> Wraps @var{body} as a single test group, which can be filtered
+;;> and summarized separately.
+
 (define-syntax test-group
   (syntax-rules ()
     ((_ name-expr body ...)
@@ -114,13 +130,13 @@
        (if (not (string? name))
            (error "a name is required, got " 'name-expr name))
        (test-begin name)
-       (handle-exceptions
-        exn
-        (begin
-          (warning "error in group outside of tests")
-          (print-exception e (current-error-port))
-          (test-group-inc! (current-test-group) 'count)
-          (test-group-inc! (current-test-group) 'ERROR))
+       (guard
+        (exn
+         (else
+           (warning "error in group outside of tests")
+           (print-exception e (current-error-port))
+           (test-group-inc! (current-test-group) 'count)
+           (test-group-inc! (current-test-group) 'ERROR)))
         body ...)
        (test-end name)
        (current-test-group old-group)))))
@@ -320,21 +336,21 @@
         (display (make-string indent #\space)))
     (test-print-name info indent)
     (let ((expect-val
-           (handle-exceptions
-            exn
-            (begin
-              (warning "bad expect value")
-              (print-exception exn (current-error-port))
-              #f)
+           (guard
+            (exn
+             (else
+               (warning "bad expect value")
+               (print-exception exn (current-error-port))
+               #f))
             (expect))))
-      (handle-exceptions
-       exn
-       (begin
+      (guard
+       (exn
+        (else
          ((current-test-handler)
           (if (assq-ref info 'expect-error) 'PASS 'ERROR)
           expect
           expr
-          (append `((exception . ,exn)) info)))
+           (append `((exception . ,exn)) info))))
        (let ((res (expr)))
          (let ((status
                 (if (and (not (assq-ref info 'expect-error))
@@ -528,6 +544,8 @@
       (display (make-string (max 0 (- (current-column-width) len)) #\-))
       (newline)))
 
+;;> Begin testing a new group until the closing @scheme{(test-end)}.
+
 (define (test-begin . o)
   (let* ((name (if (pair? o) (car o) ""))
          (group (make-test-group name))
@@ -556,6 +574,9 @@
      (or (and parent (test-group-ref parent 'skip-group?))
          (not (every (lambda (f) (f group)) (current-test-group-filters)))))
     (current-test-group group)))
+
+;;> Ends testing group introduced with @scheme{(test-begin)}, and
+;;> summarizes the results.
 
 (define (test-end . o)
   (cond
@@ -625,14 +646,14 @@
   (cond
     ((get-environment-variable name)
      => (lambda (s)
-          (handle-exceptions
-           exn
-           (begin
+          (guard
+           (exn
+            (else
              (warning
               (string-append "invalid filter '" s
                              "' from environment variable: " name))
              (print-exception exn (current-error-port))
-             '())
+             '()))
            (let ((f (proc s)))
              (list (if (and (pair? o) (car o))
                        (lambda (x) (not (f x)))
