@@ -1,7 +1,7 @@
 
 (module (srfi 16)
   (export case-lambda)
-  (import-immutable (scheme))
+  (import (scheme))
   (begin
    (define-syntax %case
      (syntax-rules ()
@@ -21,4 +21,3 @@
      (syntax-rules ()
        ((case-lambda . clauses)
         (lambda args (let ((len (length args))) (%case args len 0 () . clauses))))))))
-

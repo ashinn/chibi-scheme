@@ -1,7 +1,7 @@
 
 (module (srfi 11)
   (export let-values let*-values)
-  (import-immutable (scheme))
+  (import (scheme))
   (begin
    (define-syntax let*-values
      (syntax-rules ()
@@ -25,4 +25,3 @@
        ((let-values ((params expr) . rest) . body)
         (let-values ("step") () () expr () params rest . body))
        ))))
-

@@ -32,7 +32,7 @@
    type-name type-cpl type-parent type-slots
    object-size integer->immediate gc
    string-contains)
-  (import-immutable (scheme))
+  (import (scheme))
   (include-shared "ast")
   (include "ast.scm"))
 

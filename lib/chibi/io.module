@@ -8,6 +8,6 @@
           make-null-output-port make-broadcast-port make-concatenated-port
           make-generated-input-port make-filtered-output-port
           make-filtered-input-port)
-  (import-immutable (scheme) (chibi ast))
+  (import (scheme) (chibi ast))
   (include-shared "io/io")
   (include "io/io.scm"))

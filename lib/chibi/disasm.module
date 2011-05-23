@@ -6,5 +6,5 @@
 
 (module (chibi disasm)
   (export disasm)
-  (import-immutable (scheme))
+  (import (scheme))
   (include-shared "disasm"))

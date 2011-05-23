@@ -1,5 +1,5 @@
 
 (module (chibi scribble)
   (export scribble-parse scribble-read)
-  (import-immutable (scheme))
+  (import (scheme))
   (include "scribble.scm"))

@@ -5,7 +5,7 @@
           with-net-io open-net-io
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next)
-  (import-immutable (scheme))
+  (import (scheme))
   (import (chibi filesystem))
   (include-shared "net")
   (include "net.scm"))
