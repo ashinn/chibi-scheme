@@ -29,7 +29,7 @@ best and customize the rest.  Adding your own primitives or wrappers
 around existing C libraries is easy with the C FFI.
 
 Chibi is known to build and run on 32 and 64-bit Linux, OS X,
-iPhone OS, Windows (under cygwin) and Plan9.
+iOS, Windows (under cygwin) and Plan9.
 
 @section{Installation}
 
@@ -94,6 +94,7 @@ are listed below.
 @item{@ccode{SEXP_USE_SIMPLIFY} - use a simplification optimizer pass (enabled by default)}
 @item{@ccode{SEXP_USE_BIGNUMS} - use bignums (enabled by default)}
 @item{@ccode{SEXP_USE_FLONUMS} - use flonums (enabled by default)}
+@item{@ccode{SEXP_USE_UTF8_STRINGS} - Unicode sopport (enabled by default)}
 @item{@ccode{SEXP_USE_NO_FEATURES} - disable almost all features}
 ]
 
@@ -101,7 +102,9 @@ are listed below.
 
 @subsection{Scheme Standard}
 
-The default language is mostly compatible with the R5RS and R7RS, with all
+The default language is mostly compatible with the
+@hyperlink["http://www.schemers.org/Documents/Standards/R5RS/HTML/"]{R5RS} and
+@hyperlink["http://scheme-reports.org/"]{R7RS}, with all
 differences made by design, not through difficulty of implementation.
 
 The following procedures are omitted:
