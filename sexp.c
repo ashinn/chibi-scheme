@@ -125,29 +125,16 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #endif
 };
 
-#if SEXP_USE_GLOBAL_TYPES
-struct sexp_struct *sexp_type_specs = _sexp_type_specs;
-#endif
-
 #define SEXP_INIT_NUM_TYPES (SEXP_NUM_CORE_TYPES*2)
 
 #if SEXP_USE_TYPE_DEFS
-
-#if SEXP_USE_GLOBAL_TYPES
-static sexp_uint_t sexp_num_types = SEXP_NUM_CORE_TYPES;
-static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
-#endif
 
 sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
                             sexp parent, sexp slots,
                             sexp fb, sexp felb, sexp flb, sexp flo, sexp fls,
                             sexp sb, sexp so, sexp sc, sexp w, sexp wb, sexp wo,
                             sexp ws, sexp we, sexp_proc2 f) {
-#if SEXP_USE_GLOBAL_TYPES
-  struct sexp_struct *new, *tmp;
-#else
   sexp *v1, *v2;
-#endif
   sexp_gc_var2(res, type);
   sexp_uint_t i, len, num_types=sexp_context_num_types(ctx),
     type_array_size=sexp_context_type_array_size(ctx);
@@ -160,17 +147,6 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
     if (num_types >= type_array_size) {
       len = type_array_size*2;
       if (len > SEXP_MAXIMUM_TYPES) len = SEXP_MAXIMUM_TYPES;
-#if SEXP_USE_GLOBAL_TYPES
-      new = malloc(len * sizeof(sexp_struct));
-      for (i=0; i<num_types; i++) {
-        new[i].tag = SEXP_TYPE;
-        memcpy(&(new[i].value), &(sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
-      }
-      tmp = sexp_type_specs;
-      sexp_type_specs = new;
-      if (type_array_size > num_types) free(tmp);
-      sexp_type_array_size = len;
-#else
       res = sexp_make_vector(ctx, sexp_make_fixnum(len), SEXP_VOID);
       if (sexp_exceptionp(res)) {
         sexp_gc_release2(ctx);
@@ -181,11 +157,8 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
       for (i=0; i<num_types; i++)
         v1[i] = v2[i];
       sexp_global(ctx, SEXP_G_TYPES) = res;
-#endif
     }
-#if ! SEXP_USE_GLOBAL_TYPES
     sexp_type_by_index(ctx, num_types) = sexp_alloc_type(ctx, type, SEXP_TYPE);
-#endif
     type = sexp_type_by_index(ctx, num_types);
     if (!sexp_exceptionp(type)) {
       sexp_pointer_tag(type) = SEXP_TYPE;
@@ -221,11 +194,7 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
       }
       sexp_vector_data(sexp_type_cpl(type))[len] = type;
       sexp_type_depth(type) = len;
-#if SEXP_USE_GLOBAL_TYPES
-      sexp_num_types = num_types + 1;
-#else
       sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(num_types + 1);
-#endif
     }
     res = type;
   }
@@ -275,10 +244,8 @@ sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj) {
 /****************************** contexts ******************************/
 
 void sexp_init_context_globals (sexp ctx) {
-#if ! SEXP_USE_GLOBAL_TYPES
   sexp type, *vec;
   int i;
-#endif
   sexp_context_globals(ctx)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
 #if ! SEXP_USE_GLOBAL_SYMBOLS
@@ -299,7 +266,6 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "interaction-environment", -1);
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
-#if ! SEXP_USE_GLOBAL_TYPES
   sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(SEXP_NUM_CORE_TYPES);
   sexp_global(ctx, SEXP_G_TYPES)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_INIT_NUM_TYPES), SEXP_VOID);
@@ -309,7 +275,6 @@ void sexp_init_context_globals (sexp ctx) {
     memcpy(&(type->value), &(_sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
     vec[i] = type;
   }
-#endif
 }
 
 #if ! SEXP_USE_GLOBAL_HEAP
@@ -377,10 +342,8 @@ void sexp_destroy_context (sexp ctx) {
   if (sexp_context_heap(ctx)) {
     heap = sexp_context_heap(ctx);
     sexp_markedp(ctx) = 1;
-#if ! SEXP_USE_GLOBAL_TYPES
     sexp_markedp(sexp_context_globals(ctx)) = 1;
     sexp_markedp(sexp_global(ctx, SEXP_G_TYPES)) = 1;
-#endif
     sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {
