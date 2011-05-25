@@ -1066,6 +1066,7 @@ SEXP_API sexp sexp_string_concatenate_op (sexp ctx sexp_api_params(self, n), sex
 SEXP_API sexp sexp_intern (sexp ctx, const char *str, sexp_sint_t len);
 SEXP_API sexp sexp_string_to_symbol_op (sexp ctx sexp_api_params(self, n), sexp str);
 SEXP_API sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp b);
+SEXP_API sexp sexp_flonump_op (sexp ctx sexp_api_params(self, n), sexp x);
 SEXP_API sexp sexp_make_vector_op (sexp ctx sexp_api_params(self, n), sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector_op (sexp ctx sexp_api_params(self, n), sexp ls);
 SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);

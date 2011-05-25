@@ -688,6 +688,10 @@ sexp sexp_equalp_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
 
 /********************* strings, symbols, vectors **********************/
 
+sexp sexp_flonump_op (sexp ctx sexp_api_params(self, n), sexp x) {
+  return sexp_make_boolean(sexp_flonump(x));
+}
+
 #if ! SEXP_USE_IMMEDIATE_FLONUMS
 sexp sexp_make_flonum (sexp ctx, double f) {
   sexp x = sexp_alloc_type(ctx, flonum, SEXP_FLONUM);
@@ -696,9 +700,6 @@ sexp sexp_make_flonum (sexp ctx, double f) {
   return x;
 }
 #else
-sexp sexp_flonump_op (sexp ctx sexp_api_params(self, n), sexp x) {
-  return sexp_make_boolean(sexp_flonump(x));
-}
 #if SEXP_64_BIT
 float sexp_flonum_value (sexp x) {
   union sexp_flonum_conv r;
