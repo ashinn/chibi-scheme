@@ -129,13 +129,13 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 struct sexp_struct *sexp_type_specs = _sexp_type_specs;
 #endif
 
+#define SEXP_INIT_NUM_TYPES (SEXP_NUM_CORE_TYPES*2)
+
 #if SEXP_USE_TYPE_DEFS
 
 #if SEXP_USE_GLOBAL_TYPES
 static sexp_uint_t sexp_num_types = SEXP_NUM_CORE_TYPES;
 static sexp_uint_t sexp_type_array_size = SEXP_NUM_CORE_TYPES;
-#else
-#define SEXP_INIT_NUM_TYPES (SEXP_NUM_CORE_TYPES*2)
 #endif
 
 sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
