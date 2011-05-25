@@ -1039,8 +1039,9 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 
   return entry->init(ctx sexp_api_pass(NULL, 1), env);
 }
-#elif SEXP_USE_DL
+#else
 #define sexp_find_static_library(path) NULL
+#if SEXP_USE_DL
 #ifdef __MINGW32__
 #include <windows.h>
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
@@ -1068,6 +1069,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   }
   return init(ctx sexp_api_pass(NULL, 1), env);
 }
+#endif
 #endif
 #endif
 
