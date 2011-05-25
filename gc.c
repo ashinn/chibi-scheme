@@ -38,6 +38,7 @@ static size_t sexp_heap_total_size (sexp_heap h) {
   return total_size;
 }
 
+#if ! SEXP_USE_GLOBAL_HEAP
 void sexp_free_heap (sexp_heap heap) {
 #if SEXP_USE_MMAP_GC
   munmap(heap, sexp_heap_pad_size(heap->size));
@@ -45,6 +46,7 @@ void sexp_free_heap (sexp_heap heap) {
   free(heap);
 #endif
 }
+#endif
 
 sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   sexp_uint_t res;
