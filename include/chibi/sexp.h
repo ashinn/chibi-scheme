@@ -864,20 +864,12 @@ SEXP_API sexp_heap sexp_global_heap;
 #define sexp_context_symbols(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_SYMBOLS))
 #endif
 
-#if SEXP_USE_GLOBAL_TYPES
-SEXP_API struct sexp_type_struct *sexp_type_specs;
-#define sexp_context_types(ctx)    sexp_type_specs
-#define sexp_type_by_index(ctx,i)  (&(sexp_context_types(ctx)[i]))
-#define sexp_context_num_types(ctx) sexp_num_types
-#define sexp_context_type_array_size(ctx) sexp_type_array_size
-#else
 #define sexp_context_types(ctx)    sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES))
 #define sexp_type_by_index(ctx,i)  (sexp_context_types(ctx)[i])
 #define sexp_context_num_types(ctx)             \
   sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_TYPES))
 #define sexp_context_type_array_size(ctx)                               \
   sexp_vector_length(sexp_global(ctx, SEXP_G_TYPES))
-#endif
 
 #define sexp_object_type(ctx,x)        (sexp_type_by_index(ctx, ((x)->tag)))
 #define sexp_object_type_name(ctx,x)   (sexp_type_name(sexp_object_type(ctx, x)))
@@ -948,10 +940,8 @@ enum sexp_context_globals {
 #if ! SEXP_USE_GLOBAL_SYMBOLS
   SEXP_G_SYMBOLS,
 #endif
-#if ! SEXP_USE_GLOBAL_TYPES
   SEXP_G_TYPES,
   SEXP_G_NUM_TYPES,
-#endif
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
   SEXP_G_OPTIMIZATIONS,
