@@ -569,10 +569,12 @@
 
 (define *values-tag* (list 'values))
 
-(define (values . ls)
+(define (%values ls)
   (if (and (pair? ls) (null? (cdr ls)))
       (car ls)
       (cons *values-tag* ls)))
+
+(define (values . ls) (%values ls))
 
 (define (call-with-values producer consumer)
   (let ((res (producer)))
@@ -604,7 +606,7 @@
 
 (define (call-with-current-continuation proc)
   (let ((dk *dk*))
-    (%call/cc (lambda (k) (proc (lambda (x) (set-dk! dk) (k x)))))))
+    (%call/cc (lambda (k) (proc (lambda x (set-dk! dk) (k (%values x))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax-rules
