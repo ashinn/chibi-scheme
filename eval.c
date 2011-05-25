@@ -1015,7 +1015,32 @@ sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
   return sexp_finalize_port(ctx sexp_api_pass(self, n), port);
 }
 
-#if SEXP_USE_DL
+#if SEXP_USE_STATIC_LIBS
+#include "clibs.c"
+static sexp_library_entry_t *sexp_find_static_library(const char *file)
+{
+  size_t base_len;
+  sexp_library_entry_t *entry;
+
+  if (file[0] == '.' && file[1] == '/')
+    file += 2;
+  base_len = strlen(file) - strlen(sexp_so_extension);
+  if (strcmp(file + base_len, sexp_so_extension))
+    return NULL;
+  for (entry = &sexp_static_libraries[0]; entry->name; entry++)
+    if (! strncmp(file, entry->name, base_len))
+      return entry;
+  return NULL;
+}
+static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
+  sexp_library_entry_t *entry = sexp_find_static_library(sexp_string_data(file));
+  if (! entry)
+    return sexp_compile_error(ctx, "couldn't find builtin library", file);
+
+  return entry->init(ctx sexp_api_pass(NULL, 1), env);
+}
+#elif SEXP_USE_DL
+#define sexp_find_static_library(path) NULL
 #ifdef __MINGW32__
 #include <windows.h>
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
@@ -1047,14 +1072,14 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #endif
 
 sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
-#if SEXP_USE_DL
+#if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   char *suffix;
 #endif
   sexp tmp, out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, source);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
-#if SEXP_USE_DL
+#if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   suffix = sexp_string_data(source)
     + sexp_string_length(source) - strlen(sexp_so_extension);
   if (strcmp(suffix, sexp_so_extension) == 0) {
@@ -1090,7 +1115,7 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
     sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp);
 #endif
   sexp_gc_release4(ctx);
-#if SEXP_USE_DL
+#if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   }
 #endif
   return res;
@@ -1523,10 +1548,6 @@ sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name,
   return res;
 }
 
-#if SEXP_USE_STATIC_LIBS
-#include "clibs.c"
-#endif
-
 /*********************** standard environment *************************/
 
 static struct sexp_core_form_struct core_forms[] = {
@@ -1613,7 +1634,7 @@ sexp sexp_find_module_file (sexp ctx, const char *file) {
     if (! slash) path[dirlen] = '/';
     memcpy(path+len-filelen-1, file, filelen);
     path[len-1] = '\0';
-    if (file_exists_p(path, buf))
+    if (sexp_find_static_library(path) || file_exists_p(path, buf))
       res = sexp_c_string(ctx, path, len-1);
     free(path);
   }
@@ -1719,10 +1740,8 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
   if (!e) e = sexp_context_env(ctx);
-#if SEXP_USE_DL
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*", -1),
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
-#endif
   tmp = sexp_list1(ctx, sym=sexp_intern(ctx, sexp_platform, -1));
 #if SEXP_BSD
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "bsd", -1));
@@ -1776,9 +1795,6 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
     }
     sexp_env_define(ctx, e, sym, tmp);
   }
-#endif
-#if SEXP_USE_STATIC_LIBS
-  sexp_init_all_libraries(ctx, e);
 #endif
   sexp_gc_release3(ctx);
   return sexp_exceptionp(tmp) ? tmp : e;

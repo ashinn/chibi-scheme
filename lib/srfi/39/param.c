@@ -46,3 +46,4 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   return SEXP_VOID;
 }
 
+#undef _I
