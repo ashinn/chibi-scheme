@@ -161,9 +161,11 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
       len = type_array_size*2;
       if (len > SEXP_MAXIMUM_TYPES) len = SEXP_MAXIMUM_TYPES;
 #if SEXP_USE_GLOBAL_TYPES
-      new = malloc(len * sizeof(_sexp_type_specs[0]));
-      for (i=0; i<num_types; i++)
-        memcpy(&(new[i]), &(sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
+      new = malloc(len * sizeof(sexp_struct));
+      for (i=0; i<num_types; i++) {
+        new[i].tag = SEXP_TYPE;
+        memcpy(&(new[i].value), &(sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
+      }
       tmp = sexp_type_specs;
       sexp_type_specs = new;
       if (type_array_size > num_types) free(tmp);
