@@ -119,9 +119,7 @@
          ((include)
           (load-modules (cdr x) ""))
          ((include-shared)
-          (cond-expand
-           (dynamic-loading (load-modules (cdr x) *shared-object-extension*))
-           (else #f)))
+          (load-modules (cdr x) *shared-object-extension*))
          ((body begin)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))
