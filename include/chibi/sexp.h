@@ -865,7 +865,7 @@ SEXP_API sexp_heap sexp_global_heap;
 #endif
 
 #if SEXP_USE_GLOBAL_TYPES
-SEXP_API struct sexp_struct *sexp_type_specs;
+SEXP_API struct sexp_type_struct *sexp_type_specs;
 #define sexp_context_types(ctx)    sexp_type_specs
 #define sexp_type_by_index(ctx,i)  (&(sexp_context_types(ctx)[i]))
 #define sexp_context_num_types(ctx) sexp_num_types
