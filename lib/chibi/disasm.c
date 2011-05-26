@@ -1,5 +1,5 @@
 /*  disasm.c -- optional debugging utilities                  */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -7,6 +7,12 @@
 
 #define SEXP_DISASM_MAX_DEPTH 8
 #define SEXP_DISASM_PAD_WIDTH 4
+
+#if SEXP_64_BIT
+#define SEXP_PRId "%ld"
+#else
+#define SEXP_PRId "%d"
+#endif
 
 static void sexp_write_pointer (sexp ctx, void *p, sexp out) {
   char buf[32];
@@ -16,7 +22,7 @@ static void sexp_write_pointer (sexp ctx, void *p, sexp out) {
 
 static void sexp_write_integer (sexp ctx, sexp_sint_t n, sexp out) {
   char buf[32];
-  sprintf(buf, "%ld", n);
+  sprintf(buf, SEXP_PRId, n);
   sexp_write_string(ctx, buf, out);
 }
 
