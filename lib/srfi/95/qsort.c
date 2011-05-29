@@ -1,5 +1,5 @@
 /*  qsort.c -- quicksort implementation                       */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -128,8 +128,8 @@ static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
       if (sexp_object_compare(ctx, vec[i], tmp) < 0)
         swap(tmp2, vec[i], vec[j]), j++;
     swap(tmp, vec[j], vec[hi]);
-    if ((hi-lo) > 2) {
-      sexp_qsort(ctx, vec, lo, j-1);
+    sexp_qsort(ctx, vec, lo, j-1);
+    if (j < hi-1) {
       lo = j;
       goto loop; /* tail recurse on right side */
     }
@@ -173,10 +173,10 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
         swap(res, vec[i], vec[j]), j++;
     }
     swap(tmp, vec[j], vec[hi]);
-    if ((hi-lo) > 2) {
-      res = sexp_qsort_less(ctx, vec, lo, j-1, less, key);
-      if (sexp_exceptionp(res))
-        goto done;
+    res = sexp_qsort_less(ctx, vec, lo, j-1, less, key);
+    if (sexp_exceptionp(res))
+      goto done;
+    if (j < hi-1) {
       lo = j;
       goto loop; /* tail recurse on right side */
     }
