@@ -13,6 +13,8 @@
 (test "sort random list 1" '(1 2 3 4 5 6 7 8 9) (sort '(7 5 2 8 1 6 4 9 3)))
 (test "sort random list 2" '(1 2 3 4 5 6 7 8) (sort '(5 3 4 1 7 6 8 2)))
 (test "sort random list 3" '(1 2 3 4 5 6 7 8 9) (sort '(5 3 4 1 7 9 6 8 2)))
+(test "sort short random list" '(1 2 3) (sort '(2 1 3)))
+(test "sort short random list cmp" '(1 2 3) (sort '(2 1 3) (lambda (a b) (< a b))))
 (test "sort numeric list <" '(1 2 3 4 5 6 7 8 9)
   (sort '(7 5 2 8 1 6 4 9 3) <))
 (test "sort numeric list < car" '((1) (2) (3) (4) (5) (6) (7) (8) (9))
