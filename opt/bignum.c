@@ -455,7 +455,7 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
     if (e & 1)
       res = sexp_bignum_mul(ctx, NULL, res, acc);
   sexp_gc_release2(ctx);
-  return res;
+  return sexp_bignum_normalize(res);
 }
 
 /****************** generic arithmetic ************************/

@@ -1210,7 +1210,7 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
   else
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, e);
   f = pow(x1, e1);
-  if ((f > SEXP_MAX_FIXNUM) || (f < SEXP_MIN_FIXNUM)
+  if ((f*1000.0 > SEXP_MAX_FIXNUM) || (f*1000.0 < SEXP_MIN_FIXNUM)
 #if SEXP_USE_FLONUMS
       || (! sexp_fixnump(x)) || (! sexp_fixnump(e))
 #endif
