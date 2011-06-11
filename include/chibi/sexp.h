@@ -128,6 +128,11 @@ enum sexp_types {
   SEXP_NUM_CORE_TYPES
 };
 
+/* procedure flags */
+#define SEXP_PROC_NONE 0uL
+#define SEXP_PROC_VARIADIC 1uL
+#define SEXP_PROC_UNUSED_REST 2uL
+
 #ifdef _WIN32
 typedef unsigned short sexp_tag_t;
 typedef SIZE_T sexp_uint_t;
@@ -677,7 +682,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #define sexp_procedure_num_args(x)   (sexp_field(x, procedure, SEXP_PROCEDURE, num_args))
 #define sexp_procedure_flags(x)      (sexp_field(x, procedure, SEXP_PROCEDURE, flags))
-#define sexp_procedure_variadic_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & 1)
+#define sexp_procedure_variadic_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_VARIADIC)
+#define sexp_procedure_unused_rest_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_UNUSED_REST)
 #define sexp_procedure_code(x)       (sexp_field(x, procedure, SEXP_PROCEDURE, bc))
 #define sexp_procedure_vars(x)       (sexp_field(x, procedure, SEXP_PROCEDURE, vars))
 #define sexp_procedure_source(x)     sexp_bytecode_source(sexp_procedure_code(x))

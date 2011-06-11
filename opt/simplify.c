@@ -1,6 +1,6 @@
-/*  simplify.c -- basic simplification pass              */
-/*  Copyright (c) 2010 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  simplify.c -- basic simplification pass                   */
+/*  Copyright (c) 2010-2011 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #define simplify_it(it) ((it) = simplify(ctx, it, substs, lambda))
 
@@ -141,3 +141,38 @@ sexp sexp_simplify (sexp ctx sexp_api_params(self, n), sexp ast) {
   return simplify(ctx, ast, SEXP_NULL, NULL);
 }
 
+static int usedp (sexp lambda, sexp var, sexp x) {
+  sexp ls;
+ loop:
+  switch (sexp_pointerp(x) ? sexp_pointer_tag(x) : 0) {
+  case SEXP_REF:
+    return sexp_ref_name(x) == var && sexp_ref_loc(x) == lambda;
+  case SEXP_SET:
+    x = sexp_set_value(x);
+    goto loop;
+  case SEXP_LAMBDA:
+    x = sexp_lambda_body(x);
+    goto loop;
+  case SEXP_CND:
+    if (usedp(lambda, var, sexp_cnd_test(x))
+        || usedp(lambda, var, sexp_cnd_pass(x)))
+      return 1;
+    x = sexp_cnd_fail(x);
+    goto loop;
+  case SEXP_SEQ:
+    x = sexp_seq_ls(x);
+  case SEXP_PAIR:
+    for (ls=x; sexp_pairp(ls); ls=sexp_cdr(ls))
+      if (usedp(lambda, var, sexp_car(ls)))
+        return 1;
+  }
+  return 0;
+}
+
+int sexp_rest_unused_p (sexp lambda) {
+  sexp var;
+  for (var=sexp_lambda_params(lambda); sexp_pairp(var); var=sexp_cdr(var))
+    ;
+  if (sexp_nullp(var)) return 0;
+  return !usedp(lambda, var, sexp_lambda_body(lambda));
+}
