@@ -1385,6 +1385,8 @@ sexp sexp_make_promise (sexp ctx sexp_api_params(self, n), sexp thunk) {
 
 #if SEXP_USE_SIMPLIFY
 #include "opt/simplify.c"
+#else
+#define sexp_rest_unused_p(lambda) 0
 #endif
 
 /***************************** opcodes ********************************/

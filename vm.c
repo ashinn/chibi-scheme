@@ -384,8 +384,10 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   }
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, sexp_lambda_body(lambda));
-  flags = sexp_make_fixnum((sexp_listp(ctx2, sexp_lambda_params(lambda))
-                             == SEXP_FALSE) ? 1uL : 0uL);
+  flags = sexp_make_fixnum(sexp_not(sexp_listp(ctx, sexp_lambda_params(lambda)))
+                           ? (SEXP_PROC_VARIADIC + (sexp_rest_unused_p(lambda)
+                                                    ? SEXP_PROC_UNUSED_REST: 0))
+                           : SEXP_PROC_NONE);
   len = sexp_length(ctx2, sexp_lambda_params(lambda));
   bc = finalize_bytecode(ctx2);
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
@@ -790,16 +792,17 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
                  sexp_list2(ctx, tmp1, sexp_make_fixnum(i)));
     if (j > 0) {
       if (sexp_procedure_variadic_p(tmp1)) {
-        stack[top-i-1] = sexp_cons(ctx, stack[top-i-1], SEXP_NULL);
-        for (k=top-i; k<top-(i-j)-1; k++)
-          stack[top-i-1] = sexp_cons(ctx, stack[k], stack[top-i-1]);
-        for ( ; k<top; k++)
-          stack[k-j+1] = stack[k];
-        top -= (j-1);
-        i -= (j-1);
+        if (!sexp_procedure_unused_rest_p(tmp1)) {
+          stack[top-i-1] = sexp_cons(ctx, stack[top-i-1], SEXP_NULL);
+          for (k=top-i; k<top-(i-j)-1; k++)
+            stack[top-i-1] = sexp_cons(ctx, stack[k], stack[top-i-1]);
+          for ( ; k<top; k++)
+            stack[k-j+1] = stack[k];
+          top -= (j-1);
+          i -= (j-1);
+        }
       } else {
-        sexp_raise("too many args",
-                   sexp_list2(ctx, tmp1, sexp_make_fixnum(i)));
+        sexp_raise("too many args", sexp_list2(ctx, tmp1, sexp_make_fixnum(i)));
       }
     } else if (sexp_procedure_variadic_p(tmp1)) {
       /* shift stack, set extra arg to null */
