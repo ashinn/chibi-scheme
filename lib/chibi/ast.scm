@@ -212,6 +212,9 @@
 (define (procedure-name x)
   (bytecode-name (procedure-code x)))
 
+(define (procedure-name-set! x name)
+  (bytecode-name-set! (procedure-code x) name))
+
 ;;> @subsubsubsection{Macros}
 
 ;;> @itemlist[

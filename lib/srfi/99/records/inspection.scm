@@ -1,6 +1,6 @@
 
 (define (record? x)
-  (is-a? x <object>))
+  (is-a? x Object))
 
 (define (record-rtd x)
   (type-of x))
