@@ -2,10 +2,10 @@
 (module (chibi ast)
   (export
    analyze optimize env-cell ast->sexp macroexpand type-of
-   <object> <opcode> <procedure> <bytecode> <macro> <env>
-   <number> <bignum> <flonum> <integer> <char> <boolean>
-   <symbol> <string> <byte-vector> <vector> <pair>
-   <context> <lam> <cnd> <set> <ref> <seq> <lit> <sc> <exception>
+   Object Opcode Procedure Bytecode Macro Env
+   Number Bignum Flonum Integer Char Boolean
+   Symbol String Byte-Vector Vector Pair
+   Context Lam Cnd Set Ref Seq Lit Sc Exception
    syntactic-closure? lambda? cnd? set? ref? seq? lit? type?
    environment? bytecode? exception? macro? context?
    syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
@@ -25,7 +25,7 @@
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-variadic?
    macro-procedure macro-env macro-source
-   procedure-code procedure-vars procedure-name
+   procedure-code procedure-vars procedure-name procedure-name-set!
    bytecode-name bytecode-literals bytecode-source
    pair-source pair-source-set!
    port-line port-line-set!
@@ -35,4 +35,3 @@
   (import (scheme))
   (include-shared "ast")
   (include "ast.scm"))
-

@@ -23,17 +23,17 @@
   (not (unfinalized-type? a)))
 
 (define (numeric-type? a)
-  (or (eq? a <number>) (eq? a <flonum>) (eq? a <integer>)))
+  (or (eq? a Number) (eq? a Flonum) (eq? a Integer)))
 
 (define (procedure-type? a)
-  (or (eq? a <opcode>)
-      (eq? a <procedure>)
+  (or (eq? a Opcode)
+      (eq? a Procedure)
       (and (pair? a) (eq? (car a) 'lambda))))
 
 (define (type-subset? a b)
   (or (equal? a b)
-      (equal? a <object>)
-      (equal? b <object>)
+      (equal? a Object)
+      (equal? b Object)
       (and (numeric-type? a) (numeric-type? b))
       (and (procedure-type? a) (procedure-type? b))
       (if (union-type? a)
@@ -46,7 +46,7 @@
 (define (type-union a b)
   (cond
    ((equal? a b) a)
-   ((or (equal? a <object>) (equal? b <object>)) <object>)
+   ((or (equal? a Object) (equal? b Object)) Object)
    ((union-type? a)
     (if (union-type? b)
         (cons (car a) (lset-union equal? (cdr a) (cdr b)))
@@ -57,8 +57,8 @@
 (define (type-intersection a b)
   (cond
    ((equal? a b) a)
-   ((or (equal? a <object>) (unfinalized-type? a)) b)
-   ((or (equal? b <object>) (unfinalized-type? b)) a)
+   ((or (equal? a Object) (unfinalized-type? a)) b)
+   ((or (equal? b Object) (unfinalized-type? b)) a)
    ((intersection-type? a)
     (if (intersection-type? b)
         (lset-intersection equal? (cdr a) (cdr b))
@@ -90,7 +90,7 @@
 
 (define (type-analyze-expr x)
   (match x
-    (($ <lam> name params body defs)
+    (($ Lam name params body defs)
      (cond
       ((not (lambda-return-type x))
        (lambda-return-type-set! x (list 'return-type x))
@@ -98,10 +98,10 @@
        (let ((ret-type (type-analyze-expr body)))
          (lambda-return-type-set! x ret-type)
          (cons 'lambda (cons ret-type (lambda-param-types x)))))))
-    (($ <set> ref value)
+    (($ Set ref value)
      (type-analyze-expr value)
      (if #f #f))
-    (($ <ref> name (value . loc) source)
+    (($ Ref name (value . loc) source)
      (cond
       ((lambda? loc) (lambda-param-type-ref loc name))
       ((procedure? loc)
@@ -109,13 +109,13 @@
          (if (and (pair? sig) (car sig))
              (cons 'lambda sig)
              (list 'return-type (procedure-analysis loc)))))
-      (else <object>)))
-    (($ <cnd> test pass fail)
+      (else Object)))
+    (($ Cnd test pass fail)
      (let ((test-type (type-analyze-expr test))
            (pass-type (type-analyze-expr pass))
            (fail-type (type-analyze-expr fail)))
        (type-union pass-type fail-type)))
-    (($ <seq> ls)
+    (($ Seq ls)
      (let lp ((ls ls))
        (cond ((null? (cdr ls))
               (type-analyze-expr (car ls)))
@@ -135,7 +135,7 @@
                              (car p)
                              (opcode-param-type f (opcode-num-params f)))))
                     (match (car a)
-                     (($ <ref> name (_ . (and g ($ <lam>))))
+                     (($ Ref name (_ . (and g ($ Lam))))
                       (let ((t (type-intersection (lambda-param-type-ref g name)
                                                   p-type)))
                         (lambda-param-type-set! g name t)))
@@ -165,12 +165,12 @@
           ((and (pair? f-type) (memq (car f-type) '(return-type param-type)))
            f-type)
           (else
-           <object>))))))
+           Object))))))
     (else
      (type-of x))))
 
 (define (resolve-delayed-type x)
-  (let lp ((x x) (seen '()) (default <object>))
+  (let lp ((x x) (seen '()) (default Object))
     (match x
       (('return-type f)
        (if (memq f seen)
@@ -183,7 +183,7 @@
       (('or y ...)
        (let ((z (find finalized-type? y)))
          (if z
-             (let ((default (if (eq? default <object>)
+             (let ((default (if (eq? default Object)
                                 (lp z seen default)
                                 (type-union (lp z seen default) default))))
                (fold type-union
@@ -199,7 +199,7 @@
 
 (define (type-resolve-circularities x)
   (match x
-    (($ <lam> name params body defs)
+    (($ Lam name params body defs)
      (if (unfinalized-type? (lambda-return-type x))
          (lambda-return-type-set! x (resolve-delayed-type
                                      (lambda-return-type x))))
@@ -210,13 +210,13 @@
       params
       (lambda-param-types x))
      (type-resolve-circularities (lambda-body x)))
-    (($ <set> ref value)
+    (($ Set ref value)
      (type-resolve-circularities value))
-    (($ <cnd> test pass fail)
+    (($ Cnd test pass fail)
      (type-resolve-circularities test)
      (type-resolve-circularities pass)
      (type-resolve-circularities fail))
-    (($ <seq> ls)
+    (($ Seq ls)
      (for-each type-resolve-circularities ls))
     ((app ...)
      (for-each type-resolve-circularities app))
