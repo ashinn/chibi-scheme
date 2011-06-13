@@ -9,6 +9,7 @@
    syntactic-closure? lambda? cnd? set? ref? seq? lit? type?
    environment? bytecode? exception? macro? context?
    syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
+   copy-lambda make-lambda make-cnd make-ref make-set make-seq make-lit
    lambda-name lambda-params lambda-body lambda-defs lambda-locals
    lambda-flags lambda-free-vars lambda-set-vars lambda-return-type
    lambda-param-types lambda-source
