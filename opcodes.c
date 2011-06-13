@@ -134,6 +134,7 @@ _FN1(_I(SEXP_OBJECT), _I(SEXP_OBJECT), "strip-syntactic-closures", 0, sexp_strip
 _FN0(_I(SEXP_OPORT), "open-output-string", 0, sexp_make_output_string_port_op),
 _FN1(_I(SEXP_IPORT), _I(SEXP_STRING), "open-input-string", 0, sexp_make_input_string_port_op),
 _FN1(_I(SEXP_STRING), _I(SEXP_OPORT), "get-output-string", 0, sexp_get_output_string_op),
+_FN2OPT(_I(SEXP_OBJECT), _I(SEXP_PROCEDURE), _I(SEXP_FIXNUM), "register-optimization!", _I(600), sexp_register_optimization),
 #if SEXP_USE_MATH
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "exp", 0, sexp_exp),
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "log", 0, sexp_log),

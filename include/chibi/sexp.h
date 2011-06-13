@@ -779,6 +779,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)
 #define sexp_opcode_opt_param_p(x) (sexp_opcode_flags(x) & 2)
 #define sexp_opcode_ref_trans_p(x) (sexp_opcode_flags(x) & 4)
+#define sexp_opcode_static_param_p(x) (sexp_opcode_flags(x) & 8)
 
 #define sexp_lambda_name(x)        (sexp_field(x, lambda, SEXP_LAMBDA, name))
 #define sexp_lambda_params(x)      (sexp_field(x, lambda, SEXP_LAMBDA, params))

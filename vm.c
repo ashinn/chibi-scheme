@@ -1,5 +1,5 @@
 /*  vm.c -- stack-based virtual machine backend               */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #if SEXP_USE_DEBUG_VM > 1
@@ -230,16 +230,18 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     }
 
     /* push the arguments onto the stack in reverse order */
-    ls = ((sexp_opcode_inverse(op)
-           && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC))
-          ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
-    for ( ; sexp_pairp(ls); ls = sexp_cdr(ls)) {
-      generate(ctx, sexp_car(ls));
+    if (!sexp_opcode_static_param_p(op)) {
+      ls = ((sexp_opcode_inverse(op)
+             && (sexp_opcode_class(op) != SEXP_OPC_ARITHMETIC))
+            ? sexp_cdr(app) : sexp_reverse(ctx, sexp_cdr(app)));
+      for ( ; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        generate(ctx, sexp_car(ls));
 #if SEXP_USE_AUTO_FORCE
-      if ((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
-          || sexp_opcode_code(op) == SEXP_OP_MAKE_VECTOR)
-        emit(ctx, SEXP_OP_FORCE);
+        if ((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
+            || sexp_opcode_code(op) == SEXP_OP_MAKE_VECTOR)
+          emit(ctx, SEXP_OP_FORCE);
 #endif
+      }
     }
 
   }
@@ -322,6 +324,12 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     emit(ctx, sexp_opcode_code(op));
   }
 
+  if (sexp_opcode_static_param_p(op))
+    for (ls=sexp_cdr(app); sexp_pairp(ls); ls=sexp_cdr(ls))
+      emit_word(ctx, sexp_unbox_fixnum(sexp_litp(sexp_car(ls)) ?
+                                       sexp_lit_value(sexp_car(ls)) :
+                                       sexp_car(ls)));
+
   sexp_context_depth(ctx) -= (num_args-1);
   sexp_gc_release1(ctx);
 }
@@ -367,8 +375,11 @@ static void generate_lambda (sexp ctx, sexp lambda) {
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx), 0, 0);
   sexp_context_lambda(ctx2) = lambda;
   /* allocate space for local vars */
-  for (ls=sexp_lambda_locals(lambda); sexp_pairp(ls); ls=sexp_cdr(ls))
-    emit_push(ctx2, SEXP_VOID);
+  k = sexp_unbox_fixnum(sexp_length(ctx, sexp_lambda_locals(lambda)));
+  if (k > 0) {
+    emit(ctx2, SEXP_OP_RESERVE);
+    emit_word(ctx2, k);
+  }
   /* box mutable vars */
   for (ls=sexp_lambda_sv(lambda); sexp_pairp(ls); ls=sexp_cdr(ls)) {
     k = sexp_param_index(lambda, sexp_car(ls));
@@ -804,7 +815,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       } else {
         sexp_raise("too many args", sexp_list2(ctx, tmp1, sexp_make_fixnum(i)));
       }
-    } else if (sexp_procedure_variadic_p(tmp1)) {
+    } else if (sexp_procedure_variadic_p(tmp1) &&
+               !sexp_procedure_unused_rest_p(tmp1)) {
       /* shift stack, set extra arg to null */
       for (k=top; k>=top-i; k--)
         stack[k] = stack[k-1];
@@ -877,6 +889,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_PUSH:
     _ALIGN_IP();
     _PUSH(_WORD0);
+    ip += sizeof(sexp);
+    break;
+  case SEXP_OP_RESERVE:
+    _ALIGN_IP();
+    top += _SWORD0;
     ip += sizeof(sexp);
     break;
   case SEXP_OP_DROP:
