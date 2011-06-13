@@ -1123,6 +1123,14 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
   return res;
 }
 
+sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp priority) {
+  sexp_assert_type(ctx, sexp_applicablep, SEXP_PROCEDURE, f);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, priority);
+  sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), SEXP_VOID);
+  sexp_car(sexp_global(ctx, SEXP_G_OPTIMIZATIONS)) = sexp_cons(ctx, priority, f);
+  return SEXP_VOID;
+}
+
 #if SEXP_USE_MATH
 
 #if SEXP_USE_BIGNUMS

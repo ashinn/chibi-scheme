@@ -76,6 +76,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_JUMP:
   case SEXP_OP_JUMP_UNLESS:
   case SEXP_OP_TYPEP:
+  case SEXP_OP_RESERVE:
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
     ip += sizeof(sexp);
     break;
