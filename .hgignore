@@ -28,3 +28,5 @@ lib/chibi/process.c
 lib/chibi/system.c
 lib/chibi/time.c
 lib/chibi/stty.c
+doc/*.html
+doc/lib/chibi/*.html
