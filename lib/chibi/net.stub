@@ -7,6 +7,7 @@
   predicate:   sockaddr?)
 
 (define-c-struct addrinfo
+  constructor: (make-address-info ai_family ai_socktype ai_protocol)
   finalizer: freeaddrinfo
   predicate: address-info?
   (int              ai_family    address-info-family)
@@ -44,3 +45,10 @@
 ;;> Initiate a connection on a socket.
 
 (define-c int connect (int sockaddr int))
+
+(define-c-const int (address-family/unix "AF_UNIX"))
+(define-c-const int (address-family/inet "AF_INET"))
+(define-c-const int (socket-type/stream "SOCK_STREAM"))
+(define-c-const int (socket-type/datagram "SOCK_DGRAM"))
+(define-c-const int (socket-type/raw "SOCK_RAW"))
+
