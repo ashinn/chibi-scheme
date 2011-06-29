@@ -293,8 +293,14 @@ static sexp sexp_string_contains (sexp ctx sexp_api_params(self, n), sexp x, sex
 }
 
 static sexp sexp_error_string (sexp ctx sexp_api_params(self, n), sexp x) {
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, x);
-  return sexp_c_string(ctx, strerror(sexp_unbox_fixnum(x)), -1);
+  int err;
+  if (x == SEXP_FALSE) {
+    err = errno;
+  } else {
+    sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, x);
+    err = sexp_unbox_fixnum(x);
+  }
+  return sexp_c_string(ctx, strerror(err), -1);
 }
 
 #define sexp_define_type(ctx, name, tag) \
@@ -402,6 +408,6 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
-  sexp_define_foreign(ctx, env, "integer->error-string", 1, sexp_error_string);
+  sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
   return SEXP_VOID;
 }
