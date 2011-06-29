@@ -406,7 +406,7 @@ div#footer {padding-bottom: 50px}
 (define (section>=? x n)
   (and (pair? x)
        (if (memq (car x) '(div))
-           (any (lambda (y) (section>=? y n)) (sxml-body x))
+           (find (lambda (y) (section>=? y n)) (sxml-body x))
            (>= (section-number (car x)) n))))
 
 (define (extract-sxml tag x)

@@ -2,12 +2,6 @@
 ;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-(define (find pred ls)
-  (cond ((find-tail pred ls) => car) (else #f)))
-
-(define (find-tail pred ls)
-  (and (pair? ls) (if (pred (car ls)) ls (find-tail pred (cdr ls)))))
-
 (define (take-while pred ls)
   (let lp ((ls ls) (res '()))
     (if (and (pair? ls) (pred (car ls)))
