@@ -91,25 +91,24 @@
 
 (define (any pred ls . lol)
   (define (any1 pred ls)
-    (if (pair? ls) (if (pred (car ls)) (car ls) (any1 pred (cdr ls))) #f))
+    (if (null? (cdr ls))
+        (pred (car ls))
+        ((lambda (x) (if x x (any1 pred (cdr ls)))) (pred (car ls)))))
   (define (anyn pred lol)
     (if (every pair? lol)
-        ((lambda (args) (if (apply pred args) args (anyn pred (map cdr lol))))
-         (map car lol))
+        ((lambda (x) (if x x (anyn pred (map cdr lol))))
+         (apply pred (map car lol)))
         #f))
-  (if (null? lol) (any1 pred ls) (anyn pred (cons ls lol))))
+  (if (null? lol) (if (null? ls) #f (any1 pred ls)) (anyn pred (cons ls lol))))
 
 (define (every pred ls . lol)
   (define (every1 pred ls)
-    (if (pair? ls) (if (pred (car ls)) (every1 pred (cdr ls)) #f) #t))
+    (if (null? (cdr ls))
+        (pred (car ls))
+        (if (pred (car ls)) (every1 pred (cdr ls)) #f)))
   (if (null? lol)
-      (every1 pred ls)
+      (if (null? ls) #t (every1 pred ls))
       (not (apply any (lambda (x) (not (pred x))) ls lol))))
-
-(define (delq x ls)
-  (if (pair? ls)
-      (if (eq? x (car ls)) (delq x (cdr ls)) (cons (car ls) (delq x (cdr ls))))
-      '()))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax
@@ -407,6 +406,12 @@
           (assoc obj (cdr ls)))))
 
 (define assv assoc)
+
+(define (find-tail pred ls)
+  (and (pair? ls) (if (pred (car ls)) ls (find-tail pred (cdr ls)))))
+
+(define (find pred ls)
+  (cond ((find-tail pred ls) => car) (else #f)))
 
 ;; math utils
 
@@ -771,7 +776,7 @@
            (cond
             ((identifier? t)
              (cond
-              ((any (lambda (v) (compare t (car v))) vars)
+              ((find (lambda (v) (compare t (car v))) vars)
                => (lambda (cell)
                     (if (<= (cdr cell) dim)
                         t

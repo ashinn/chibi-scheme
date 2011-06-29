@@ -744,11 +744,11 @@
    ((and (not (type-default? arg)) (type-value arg))
     => (lambda (x)
          (cond
-          ((any (lambda (y)
-                  (and (type-array y)
-                       (type-auto-expand? y)
-                       (eq? x (get-array-length func y))))
-                (func-c-args func))
+          ((find (lambda (y)
+                   (and (type-array y)
+                        (type-auto-expand? y)
+                        (eq? x (get-array-length func y))))
+                 (func-c-args func))
            => (lambda (y) (cat "len" (type-index y))))
           (else (write x)))))
    ((or (type-result? arg) (type-array arg))
@@ -785,7 +785,7 @@
         c-args)
        (cat ")"))
      (cond
-      ((any type-link? (func-c-args func))
+      ((find type-link? (func-c-args func))
        => (lambda (a) (string-append "arg" (type-index-string a))))
       (else #f)))
     (cat ";\n")
@@ -842,7 +842,7 @@
                  "")
              "err) {\n"
              (cond
-              ((any type-auto-expand? (func-c-args func))
+              ((find type-auto-expand? (func-c-args func))
                => (lambda (a)
                     (lambda ()
                       (let ((len (get-array-length func a))
@@ -1100,8 +1100,8 @@
                        ((pair? ls)
                         (let* ((a (car ls))
                                (field
-                                (any (lambda (f) (and (pair? f) (eq? a (cadr f))))
-                                     (cddr x))))
+                                (find (lambda (f) (and (pair? f) (eq? a (cadr f))))
+                                      (cddr x))))
                           (if field
                               (cat "  r->" (cadr field) " = "
                                    (lambda ()
