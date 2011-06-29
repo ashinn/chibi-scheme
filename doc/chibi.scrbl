@@ -310,7 +310,7 @@ void dostuff(sexp ctx) {
   sexp_load(ctx, "/path/to/source/file.scm", NULL);
 
   /* eval a C string as Scheme code */
-  sexp_eval_string(ctx, "(some scheme expression)", NULL);
+  sexp_eval_string(ctx, "(some scheme expression)", NULL, NULL);
 
   /* construct a Scheme expression to eval */
   obj1 = sexp_intern(ctx, "my-procedure", -1);
