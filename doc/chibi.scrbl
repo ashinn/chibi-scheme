@@ -307,7 +307,8 @@ void dostuff(sexp ctx) {
   sexp_gc_preserve2(ctx, obj1, obj2);
 
   /* load a file containing Scheme code */
-  sexp_load(ctx, "/path/to/source/file.scm", NULL);
+  obj1 = sexp_c_string(ctx, "/path/to/source/file.scm", -1);
+  sexp_load(ctx, obj1, NULL);
 
   /* eval a C string as Scheme code */
   sexp_eval_string(ctx, "(some scheme expression)", NULL, NULL);
