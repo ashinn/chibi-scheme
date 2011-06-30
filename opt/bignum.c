@@ -554,7 +554,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     r = sexp_bignum_normalize(r);
     break;
   case SEXP_NUM_FLO_FIX:
-    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(b)+sexp_flonum_value(a));
+    r = sexp_make_flonum(ctx, sexp_flonum_value(a) - sexp_fixnum_to_double(b));
     break;
   case SEXP_NUM_FLO_FLO:
     r = sexp_fp_sub(ctx, a, b);
