@@ -205,6 +205,8 @@
 
 (test -3 (- 3))
 
+(test -1.0 (- 3.0 4))
+
 (test 7 (abs -7))
 
 (test 1 (modulo 13 4))
