@@ -1080,6 +1080,7 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
   sexp tmp, out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, source);
+  if (!env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   suffix = sexp_string_data(source)
