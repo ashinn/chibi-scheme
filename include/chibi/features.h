@@ -414,6 +414,10 @@
 #define SEXP_USE_DEBUG_VM 0
 #endif
 
+#ifndef SEXP_USE_PROFILE_VM
+#define SEXP_USE_PROFILE_VM 0
+#endif
+
 #ifndef SEXP_USE_UTF8_STRINGS
 #define SEXP_USE_UTF8_STRINGS ! SEXP_USE_NO_FEATURES
 #endif

@@ -1467,6 +1467,11 @@ sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp typ
 
 #endif
 
+#if SEXP_USE_PROFILE_VM
+static sexp sexp_reset_vm_profile (sexp ctx sexp_api_params(self, n));
+static sexp sexp_print_vm_profile (sexp ctx sexp_api_params(self, n));
+#endif
+
 #include "opcodes.c"
 
 static sexp sexp_copy_core (sexp ctx, struct sexp_core_form_struct *core) {
