@@ -183,6 +183,10 @@ _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_BOOLEAN), "add-module-directory", 0, se
 #if SEXP_USE_GREEN_THREADS
 _OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, SEXP_VOID, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, 0, "yield!", 0, NULL),
 #endif
+#if SEXP_USE_PROFILE_VM
+_FN0(SEXP_VOID, "reset-vm-profile", 0, sexp_reset_vm_profile),
+_FN0(SEXP_VOID, "print-vm-profile", 0, sexp_print_vm_profile),
+#endif
 #if SEXP_USE_AUTO_FORCE
 _FN1(_I(SEXP_PROMISE), _I(SEXP_PROCEDURE), "make-promise", 0, sexp_make_promise),
 #endif

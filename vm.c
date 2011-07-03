@@ -621,12 +621,37 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
   top -= i; _ARG1 = x; ip += sizeof(sexp); sexp_check_exception();
 #endif
 
-#if SEXP_USE_DEBUG_VM
+#if SEXP_USE_DEBUG_VM || SEXP_USE_PROFILE_VM
 #include "opt/opcode_names.h"
 #endif
 
 #if SEXP_USE_EXTENDED_FCALL
 #include "opt/fcall.c"
+#endif
+
+#if SEXP_USE_PROFILE_VM
+sexp_uint_t profile1[SEXP_OP_NUM_OPCODES];
+sexp_uint_t profile2[SEXP_OP_NUM_OPCODES][SEXP_OP_NUM_OPCODES];
+
+static sexp sexp_reset_vm_profile (sexp ctx sexp_api_params(self, n)) {
+  int i, j;
+  for (i=0; i<SEXP_OP_NUM_OPCODES; i++) {
+    profile1[i] = 0;
+    for (j=0; j<SEXP_OP_NUM_OPCODES; j++) profile2[i][j] = 0;
+  }
+  return SEXP_VOID;
+}
+
+static sexp sexp_print_vm_profile (sexp ctx sexp_api_params(self, n)) {
+  int i, j;
+  for (i=0; i<SEXP_OP_NUM_OPCODES; i++)
+    fprintf(stderr, "%s %lu\n", reverse_opcode_names[i], profile1[i]);
+  for (i=0; i<SEXP_OP_NUM_OPCODES; i++)
+    for (j=0; j<SEXP_OP_NUM_OPCODES; j++)
+      fprintf(stderr, "%s %s %lu\n", reverse_opcode_names[i],
+              reverse_opcode_names[j], profile2[i][j]);
+  return SEXP_VOID;
+}
 #endif
 
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
@@ -636,6 +661,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
   sexp root_thread = ctx;
   sexp_sint_t fuel = sexp_context_refuel(ctx);
+#endif
+#if SEXP_USE_PROFILE_VM
+  unsigned char last_op = SEXP_OP_NOOP;
 #endif
 #if SEXP_USE_BIGNUMS
   sexp_lsint_t prod;
@@ -684,6 +712,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
              ? sexp_opcode_name(((sexp*)(ip+1))[0]) : ""),
             ip, stack, top, fp, (fp<1024 ? sexp_unbox_fixnum(stack[fp+3]) : -1));
   }
+#endif
+#if SEXP_USE_PROFILE_VM
+  profile1[*ip]++;
+  profile2[last_op][*ip]++;
+  last_op = *ip;
 #endif
   switch (*ip++) {
   case SEXP_OP_NOOP:
@@ -1606,7 +1639,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
   sexp res;
   sexp_gc_var1(args);
-  if (sexp_opcodep(f)) {
+  if (sexp_opcodep(f) && sexp_opcode_func(f)) {
     res = ((sexp_proc2)sexp_opcode_func(f))(ctx sexp_api_pass(f, 1), x);
   } else {
     sexp_gc_preserve1(ctx, args);
