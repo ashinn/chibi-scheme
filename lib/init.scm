@@ -398,12 +398,12 @@
 
 (define memv member)
 
-(define (assoc obj ls)
-  (if (null? ls)
-      #f
-      (if (equal? obj (caar ls))
-          (car ls)
-          (assoc obj (cdr ls)))))
+(define (assoc obj ls . o)
+  (let ((eq (if (pair? o) (car o) equal?)))
+    (let assoc ((ls ls))
+      (cond ((null? ls) #f)
+            ((eq obj (caar ls)) (car ls))
+            (else (assoc (cdr ls)))))))
 
 (define assv assoc)
 
