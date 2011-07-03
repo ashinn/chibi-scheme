@@ -410,6 +410,10 @@
 #define SEXP_DEFAULT_FOLD_CASE_SYMS 0
 #endif
 
+#ifndef SEXP_USE_TAIL_JUMPS
+#define SEXP_USE_TAIL_JUMPS ! SEXP_USE_NO_FEATURES
+#endif
+
 #ifndef SEXP_USE_DEBUG_VM
 #define SEXP_USE_DEBUG_VM 0
 #endif
