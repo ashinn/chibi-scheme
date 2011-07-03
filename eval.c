@@ -9,7 +9,7 @@
 static int scheme_initialized_p = 0;
 
 static sexp analyze (sexp ctx, sexp x);
-static void generate (sexp ctx, sexp x);
+static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
 
 #if SEXP_USE_MODULES
 sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sexp env);
@@ -1903,7 +1903,7 @@ sexp sexp_compile_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
       ast = sexp_apply1(ctx2, sexp_cdar(res), ast);
     sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
     emit_enter(ctx2);
-    generate(ctx2, ast);
+    generate(ctx2, 0, 0, 0, ast);
     res = finalize_bytecode(ctx2);
     vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
     res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);
