@@ -303,6 +303,10 @@ static sexp sexp_error_string (sexp ctx sexp_api_params(self, n), sexp x) {
   return sexp_c_string(ctx, strerror(err), -1);
 }
 
+static sexp sexp_update_free_vars (sexp ctx sexp_api_params(self, n), sexp x) {
+  return sexp_free_vars(ctx, x, SEXP_NULL);
+}
+
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
@@ -409,5 +413,6 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
+  sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);
   return SEXP_VOID;
 }

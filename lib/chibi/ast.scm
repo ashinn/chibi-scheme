@@ -50,10 +50,6 @@
               (lp2 (cdr ls2) found?))
              (else
               (lp2 (cdr ls2) found?)))))))))
-  (define (flatten-dot x)
-    (cond ((pair? x) (cons (car x) (flatten-dot (cdr x))))
-          ((null? x) x)
-          (else (list x))))
   (define (extend-env lam env)
     (cons (map (lambda (x) (cons x lam)) (flatten-dot (lambda-params lam))) env))
   (let lp ((x ast) (env '()))
@@ -65,6 +61,11 @@
      ((seq? x) (for-each (lambda (x) (lp x env)) (seq-ls x)))
      ((pair? x) (for-each (lambda (x) (lp x env)) x))))
   renames)
+
+(define (flatten-dot x)
+  (cond ((pair? x) (cons (car x) (flatten-dot (cdr x))))
+        ((null? x) x)
+        (else (list x))))
 
 (define (get-rename id lam renames)
   (let ((ls (assq lam renames)))
