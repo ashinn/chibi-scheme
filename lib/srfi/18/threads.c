@@ -278,7 +278,7 @@ static const sexp_uint_t sexp_log2_lookup[32] = {
 
 /* only works on powers of two */
 static sexp_uint_t sexp_log2_of_pow2 (sexp_uint_t n) {
-  return sexp_log2_lookup[(n * 0x077CB531U) >> 27];
+  return sexp_log2_lookup[((unsigned)n * 0x077CB531U) >> 27];
 }
 
 static sexp sexp_pop_signal (sexp ctx sexp_api_params(self, n)) {
