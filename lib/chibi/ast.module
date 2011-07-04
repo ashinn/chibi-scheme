@@ -32,7 +32,8 @@
    port-line port-line-set!
    type-name type-cpl type-parent type-slots
    object-size integer->immediate gc
-   string-contains integer->error-string)
+   string-contains integer->error-string
+   flatten-dot update-free-vars!)
   (import (scheme))
   (include-shared "ast")
   (include "ast.scm"))
