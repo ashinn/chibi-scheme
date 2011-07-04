@@ -104,7 +104,13 @@ static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   for ( ; sexp_pairp(tail); head=tail, tail=sexp_cdr(tail))
     if (sexp_pointerp(sexp_car(head)) && (! sexp_litp(sexp_car(head)))) {
       generate(ctx, name, loc, lam, sexp_car(head));
-      emit(ctx, SEXP_OP_DROP);
+      if ((sexp_pairp(sexp_car(head)) && sexp_opcodep(sexp_caar(head))
+           && sexp_opcode_return_type(sexp_caar(head)) == SEXP_VOID
+           && sexp_opcode_class(sexp_caar(head)) != SEXP_OPC_FOREIGN)
+          || sexp_setp(sexp_car(head)))
+        sexp_context_pos(ctx) -= 1 + sizeof(sexp);
+      else
+        emit(ctx, SEXP_OP_DROP);
       sexp_context_depth(ctx)--;
     }
   sexp_context_tailp(ctx) = tailp;
@@ -195,6 +201,7 @@ static void generate_set (sexp ctx, sexp set) {
       emit_word(ctx, sexp_param_index(lambda, sexp_ref_name(ref)));
     }
   }
+  emit_push(ctx, SEXP_VOID);
   sexp_context_depth(ctx)--;
 }
 
@@ -322,6 +329,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
     emit_push(ctx, sexp_opcode_data(op));
 #endif
     emit(ctx, ((num_args == 0) ? SEXP_OP_CDR : SEXP_OP_SET_CDR));
+    if (num_args > 0) emit_push(ctx, SEXP_VOID);
     break;
   default:
     emit(ctx, sexp_opcode_code(op));
@@ -332,6 +340,10 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       emit_word(ctx, sexp_unbox_fixnum(sexp_litp(sexp_car(ls)) ?
                                        sexp_lit_value(sexp_car(ls)) :
                                        sexp_car(ls)));
+
+  if (sexp_opcodep(op) && sexp_opcode_return_type(op) == SEXP_VOID
+      && sexp_opcode_class(op) != SEXP_OPC_FOREIGN)
+    emit_push(ctx, SEXP_VOID);
 
   sexp_context_depth(ctx) -= (num_args-1);
   sexp_gc_release1(ctx);
@@ -380,7 +392,6 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
   for (ls1=ls3; sexp_pairp(ls1); ls1=sexp_cdr(ls1)) {
     emit(ctx, SEXP_OP_LOCAL_SET);
     emit_word(ctx, sexp_param_index(lam, sexp_car(ls1)));
-    emit(ctx, SEXP_OP_DROP);
   }
 
   /* jump */
@@ -432,7 +443,6 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
       emit(ctx2, SEXP_OP_CONS);
       emit(ctx2, SEXP_OP_LOCAL_SET);
       emit_word(ctx2, k);
-      emit(ctx2, SEXP_OP_DROP);
     }
   }
   sexp_context_tailp(ctx2) = 1;
@@ -465,7 +475,6 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
       emit(ctx, SEXP_OP_STACK_REF);
       emit_word(ctx, 3);
       emit(ctx, SEXP_OP_VECTOR_SET);
-      emit(ctx, SEXP_OP_DROP);
       sexp_context_depth(ctx)--;
     }
     /* push the additional procedure info and make the closure */
@@ -597,6 +606,7 @@ static sexp sexp_restore_stack (sexp ctx, sexp saved) {
 #define _ARG5 stack[top-5]
 #define _ARG6 stack[top-6]
 #define _PUSH(x) (stack[top++]=(x))
+#define _POP() (stack[--top])
 
 #if SEXP_USE_ALIGNED_BYTECODE
 #define _ALIGN_IP() ip = (unsigned char *)sexp_word_align((sexp_uint_t)ip)
@@ -1012,8 +1022,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
   case SEXP_OP_LOCAL_SET:
     _ALIGN_IP();
-    stack[fp - 1 - _SWORD0] = _ARG1;
-    _ARG1 = SEXP_VOID;
+    stack[fp - 1 - _SWORD0] = _POP();
     ip += sizeof(sexp);
     break;
   case SEXP_OP_CLOSURE_REF:
@@ -1043,8 +1052,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if ((i < 0) || (i >= sexp_vector_length(_ARG1)))
       sexp_raise("vector-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     sexp_vector_set(_ARG1, _ARG2, _ARG3);
-    _ARG3 = SEXP_VOID;
-    top-=2;
+    top-=3;
     break;
   case SEXP_OP_VECTOR_LENGTH:
     if (! sexp_vectorp(_ARG1))
@@ -1097,8 +1105,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #else
       sexp_string_set(_ARG1, _ARG2, _ARG3);
 #endif
-    _ARG3 = SEXP_VOID;
-    top-=2;
+    top-=3;
     break;
 #if SEXP_USE_UTF8_STRINGS
   case SEXP_OP_STRING_CURSOR_NEXT:
@@ -1204,9 +1211,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (sexp_immutablep(_ARG1))
       sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG1));
     sexp_slot_set(_ARG1, _UWORD1, _ARG2);
-    _ARG2 = SEXP_VOID;
     ip += sizeof(sexp)*2;
-    top--;
+    top-=2;
     break;
   case SEXP_OP_SLOTN_REF:
     if (! sexp_typep(_ARG1))
@@ -1228,8 +1234,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (! sexp_fixnump(_ARG3))
       sexp_raise("slot-set!: not an integer", sexp_list1(ctx, _ARG3));
     sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
-    _ARG4 = SEXP_VOID;
-    top-=3;
+    top-=4;
     break;
   case SEXP_OP_CAR:
     if (! sexp_pairp(_ARG1))
@@ -1245,8 +1250,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (sexp_immutablep(_ARG1))
       sexp_raise("set-car!: immutable pair", sexp_list1(ctx, _ARG1));
     sexp_car(_ARG1) = _ARG2;
-    _ARG2 = SEXP_VOID;
-    top--;
+    top-=2;
     break;
   case SEXP_OP_SET_CDR:
     if (! sexp_pairp(_ARG1))
@@ -1254,8 +1258,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (sexp_immutablep(_ARG1))
       sexp_raise("set-cdr!: immutable pair", sexp_list1(ctx, _ARG1));
     sexp_cdr(_ARG1) = _ARG2;
-    _ARG2 = SEXP_VOID;
-    top--;
+    top-=2;
     break;
   case SEXP_OP_CONS:
     sexp_context_top(ctx) = top;
@@ -1560,15 +1563,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else
 #endif
     sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
-    _ARG2 = SEXP_VOID;
-    top--;
+    top-=2;
     break;
   case SEXP_OP_NEWLINE:
     if (! sexp_oportp(_ARG1))
       sexp_raise("newline: not an output-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
     sexp_newline(ctx, _ARG1);
-    _ARG1 = SEXP_VOID;
+    top--;
     break;
   case SEXP_OP_READ_CHAR:
     if (! sexp_iportp(_ARG1))
@@ -1618,7 +1620,6 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
     fuel = 0;
 #endif
-    _PUSH(SEXP_VOID);
     break;
   case SEXP_OP_FORCE:
 #if SEXP_USE_AUTO_FORCE
