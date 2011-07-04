@@ -5,7 +5,7 @@
 #include "chibi/eval.h"
 #include "../../opt/opcode_names.h"
 
-#define SEXP_DISASM_MAX_DEPTH 8
+#define SEXP_DISASM_MAX_DEPTH 16
 #define SEXP_DISASM_PAD_WIDTH 4
 
 #if SEXP_64_BIT
@@ -86,6 +86,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL3:
   case SEXP_OP_FCALL4:
     sexp_write_pointer(ctx, ((sexp*)ip)[0], out);
+    sexp_write_string(ctx, ": ", out);
+    sexp_write_string(ctx, sexp_opcode_name(((sexp*)ip)[0]), out);
     ip += sizeof(sexp);
     break;
   case SEXP_OP_SLOT_REF:
