@@ -3,6 +3,7 @@
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
+#include <errno.h>
 
 #if ! SEXP_USE_BOEHM
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
