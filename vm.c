@@ -341,7 +341,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
                                        sexp_lit_value(sexp_car(ls)) :
                                        sexp_car(ls)));
 
-  if (sexp_opcodep(op) && sexp_opcode_return_type(op) == SEXP_VOID
+  if (sexp_opcode_return_type(op) == SEXP_VOID
       && sexp_opcode_class(op) != SEXP_OPC_FOREIGN)
     emit_push(ctx, SEXP_VOID);
 
