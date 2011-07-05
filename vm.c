@@ -396,7 +396,7 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
 
   /* jump */
   emit(ctx, SEXP_OP_JUMP);
-  emit_word(ctx, (sexp_uint_t) (-sexp_context_pos(ctx) - 1 +
+  emit_word(ctx, (sexp_uint_t) (-sexp_context_pos(ctx) +
                                 (sexp_pairp(sexp_lambda_locals(lam))
                                  ? 1 + sizeof(sexp) : 0)));
 
