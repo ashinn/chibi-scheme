@@ -1454,15 +1454,18 @@ sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp typ
 }
 
 sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
+  sexp res;
   if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
   if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
   if ((! sexp_fixnump(index)) || (sexp_unbox_fixnum(index) < 0))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
-  return
-    sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
-                     sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
-                     type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
+  res
+    = sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
+                       sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
+                       type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
+  if (!sexp_exceptionp(res)) sexp_opcode_return_type(res) = SEXP_VOID;
+  return res;
 }
 
 #endif
