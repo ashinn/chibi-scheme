@@ -9,8 +9,8 @@ static sexp sexp_num_parameters (sexp ctx sexp_api_params(self, n)) {
 }
 
 struct sexp_opcode_struct local_ref_op =
-  {SEXP_OPC_GENERIC, SEXP_OP_LOCAL_REF, 1, 8, 0, "local-ref", NULL, NULL,
-   NULL, sexp_make_fixnum(SEXP_OBJECT), sexp_make_fixnum(SEXP_FIXNUM),
+  {SEXP_OPC_GENERIC, SEXP_OP_LOCAL_REF, 1, 8, 0, "local-ref", SEXP_VOID,
+   NULL, NULL, sexp_make_fixnum(SEXP_OBJECT), sexp_make_fixnum(SEXP_FIXNUM),
    0, 0, NULL};
 
 static sexp sexp_copy_opcode (sexp ctx, struct sexp_opcode_struct *op) {
