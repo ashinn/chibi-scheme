@@ -652,6 +652,8 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
     if (sexp_lambdap(value)) sexp_lambda_name(value) = name;
     sexp_push(ctx3, defs,
               sexp_make_set(ctx3, analyze_var_ref(ctx3, name, NULL), value));
+    if (!sexp_lambdap(value) || !SEXP_USE_UNBOXED_LOCALS)
+      sexp_insert(ctx3, sexp_lambda_sv(res), name);
   }
   if (sexp_pairp(defs)) {
     if (! sexp_seqp(body)) {
@@ -700,7 +702,6 @@ static sexp analyze_define (sexp ctx, sexp x) {
       res = sexp_compile_error(ctx, "can't define a non-symbol", x);
     } else if (sexp_env_lambda(env) && sexp_lambdap(sexp_env_lambda(env))) {
       sexp_env_push(ctx, env, tmp, name, sexp_context_lambda(ctx));
-      sexp_push(ctx, sexp_lambda_sv(sexp_env_lambda(env)), name);
       sexp_push(ctx, sexp_lambda_locals(sexp_env_lambda(env)), name);
       tmp = sexp_cons(ctx, sexp_cdr(x), ctx);
       sexp_pair_source(sexp_cdr(x)) = sexp_pair_source(x);
