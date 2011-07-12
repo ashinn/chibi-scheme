@@ -97,6 +97,17 @@ static void generate_lit (sexp ctx, sexp value) {
   emit_push(ctx, value);
 }
 
+static void generate_drop_prev (sexp ctx, sexp prev) {
+  if ((sexp_pairp(prev) && sexp_opcodep(sexp_car(prev))
+       && ((sexp_opcode_return_type(sexp_car(prev)) == SEXP_VOID
+            && sexp_opcode_class(sexp_car(prev)) != SEXP_OPC_FOREIGN)
+           || (sexp_opcode_code(sexp_car(prev)) == SEXP_OP_PUSH)))
+      || sexp_setp(prev) || sexp_litp(prev) || prev == SEXP_VOID)
+    sexp_context_pos(ctx) -= 1 + sizeof(sexp);
+  else
+    emit(ctx, SEXP_OP_DROP);
+}
+
 static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   sexp head=app, tail=sexp_cdr(app);
   sexp_uint_t tailp = sexp_context_tailp(ctx);
@@ -104,13 +115,7 @@ static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   for ( ; sexp_pairp(tail); head=tail, tail=sexp_cdr(tail))
     if (sexp_pointerp(sexp_car(head)) && (! sexp_litp(sexp_car(head)))) {
       generate(ctx, name, loc, lam, sexp_car(head));
-      if ((sexp_pairp(sexp_car(head)) && sexp_opcodep(sexp_caar(head))
-           && sexp_opcode_return_type(sexp_caar(head)) == SEXP_VOID
-           && sexp_opcode_class(sexp_caar(head)) != SEXP_OPC_FOREIGN)
-          || sexp_setp(sexp_car(head)))
-        sexp_context_pos(ctx) -= 1 + sizeof(sexp);
-      else
-        emit(ctx, SEXP_OP_DROP);
+      generate_drop_prev(ctx, sexp_car(head));
       sexp_context_depth(ctx)--;
     }
   sexp_context_tailp(ctx) = tailp;
@@ -152,7 +157,7 @@ static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
     emit(ctx, SEXP_OP_CLOSURE_REF);
     emit_word(ctx, i);
   }
-  if (unboxp && (sexp_memq(ctx, name, sexp_lambda_sv(loc)) != SEXP_FALSE))
+  if (unboxp && (sexp_truep(sexp_memq(ctx, name, sexp_lambda_sv(loc)))))
     emit(ctx, SEXP_OP_CDR);
   sexp_context_depth(ctx)++;
 }
@@ -408,18 +413,105 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
 static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   if (sexp_opcodep(sexp_car(app)))
     generate_opcode_app(ctx, app);
-  else if (SEXP_USE_TAIL_JUMPS && sexp_context_tailp(ctx)
-           && sexp_refp(sexp_car(app))
+#if SEXP_USE_TAIL_JUMPS
+  else if (sexp_context_tailp(ctx) && sexp_refp(sexp_car(app))
            && name == sexp_ref_name(sexp_car(app))
            && loc == sexp_ref_loc(sexp_car(app)))
     generate_tail_jump(ctx, name, loc, lam, app);
+#endif
   else
     generate_general_app(ctx, app);
 }
 
+#if SEXP_USE_UNBOXED_LOCALS
+static int sexp_internal_definep(sexp ctx, sexp x) {
+  return sexp_lambdap(sexp_ref_loc(x))
+    && sexp_truep(sexp_memq(ctx, sexp_ref_name(x),
+                            sexp_lambda_locals(sexp_ref_loc(x))));
+}
+
+static int sexp_mutual_internal_definep(sexp ctx, sexp x, sexp fv) {
+  return sexp_internal_definep(ctx, x)
+    && sexp_ref_loc(x) == sexp_ref_loc(fv) && sexp_internal_definep(ctx, fv)
+    && sexp_not(sexp_memq(ctx, sexp_ref_name(fv),
+                          sexp_lambda_sv(sexp_ref_loc(fv))));
+}
+
+static int generate_lambda_locals (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
+  sexp ls;
+  if (sexp_seqp(x)) {
+    for (ls=sexp_seq_ls(x); sexp_pairp(ls); ls=sexp_cdr(ls))
+      if (!generate_lambda_locals(ctx, name, loc, lam, sexp_car(ls)))
+        return 0;
+    return 1;
+  } else if (sexp_setp(x) && sexp_internal_definep(ctx, sexp_set_var(x))) {
+    generate(ctx, name, loc, lam, x);
+    sexp_context_pos(ctx) -= 1 + sizeof(sexp);
+    return 1;
+  }
+  return 0;
+}
+
+static int generate_lambda_body (sexp ctx, sexp name, sexp loc, sexp lam, sexp x, sexp prev_lam) {
+  sexp_uint_t k, updatep, tailp;
+  sexp ls, ref, fv, prev_fv;
+  if (sexp_seqp(x)) {
+    tailp = sexp_context_tailp(ctx);
+    sexp_context_tailp(ctx) = 0;
+    for (ls=sexp_seq_ls(x); sexp_pairp(ls); ls=sexp_cdr(ls)) {
+      if (sexp_nullp(sexp_cdr(ls))) sexp_context_tailp(ctx) = tailp;
+      if (!generate_lambda_body(ctx, name, loc, lam, sexp_car(ls), prev_lam)) {
+        if (sexp_pairp(sexp_cdr(ls))) {
+          generate_drop_prev(ctx, sexp_car(ls));
+          for (ls=sexp_cdr(ls); sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls));
+               ls=sexp_cdr(ls)) {
+            generate(ctx, name, loc, lam, sexp_car(ls));
+            generate_drop_prev(ctx, sexp_car(ls));
+          }
+          sexp_context_tailp(ctx) = tailp;
+          generate(ctx, name, loc, lam, sexp_car(ls));
+        }
+        return 0;
+      }
+    }
+    return 1;
+  } else if (sexp_setp(x) && sexp_internal_definep(ctx, sexp_set_var(x))) {
+    updatep = 0;
+    if (sexp_lambdap(sexp_set_value(x))) {
+      /* update potentially changed bindings */
+      fv = sexp_lambda_fv(sexp_set_value(x));
+      prev_fv = sexp_lambdap(prev_lam) ? sexp_lambda_fv(prev_lam) : SEXP_NULL;
+      for (k=0; fv && sexp_pairp(fv); fv=sexp_cdr(fv), k++) {
+        ref = sexp_car(fv);
+        if (sexp_mutual_internal_definep(ctx, sexp_set_var(x), ref)) {
+          if (!updatep) {
+            updatep = 1;
+            generate_non_global_ref(ctx, sexp_ref_name(sexp_set_var(x)),
+                                    sexp_ref_cell(sexp_set_var(x)),
+                                    lam, sexp_lambda_fv(lam), 1);
+            emit(ctx, SEXP_OP_CLOSURE_VARS);
+          }
+          generate_non_global_ref(ctx, sexp_ref_name(ref), sexp_ref_cell(ref),
+                                  lam, sexp_lambda_fv(lam), 1);
+          emit_push(ctx, sexp_make_fixnum(k));
+          emit(ctx, SEXP_OP_STACK_REF);
+          emit_word(ctx, 3);
+          emit(ctx, SEXP_OP_VECTOR_SET);
+          sexp_context_depth(ctx)--;
+        }
+      }
+    }
+    if (updatep) emit(ctx, SEXP_OP_DROP);
+    return 1;
+  }
+  generate(ctx, name, loc, lam, x);
+  return 0;
+}
+#endif
+
 static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda) {
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
-  sexp_uint_t k;
+  sexp_sint_t k;
   sexp_gc_var2(tmp, bc);
   sexp_gc_preserve2(ctx, tmp, bc);
   prev_lambda = sexp_context_lambda(ctx);
@@ -430,23 +522,33 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   /* allocate space for local vars */
   k = sexp_unbox_fixnum(sexp_length(ctx, sexp_lambda_locals(lambda)));
   if (k > 0) {
+#if SEXP_USE_RESERVE_OPCODE
     emit(ctx2, SEXP_OP_RESERVE);
     emit_word(ctx2, k);
+#else
+    while (k--) emit_push(ctx2, SEXP_UNDEF);
+#endif
   }
   /* box mutable vars */
   for (ls=sexp_lambda_sv(lambda); sexp_pairp(ls); ls=sexp_cdr(ls)) {
     k = sexp_param_index(lambda, sexp_car(ls));
-    if (k >= 0) {
-      emit(ctx2, SEXP_OP_LOCAL_REF);
-      emit_word(ctx2, k);
-      emit_push(ctx2, sexp_car(ls));
-      emit(ctx2, SEXP_OP_CONS);
-      emit(ctx2, SEXP_OP_LOCAL_SET);
-      emit_word(ctx2, k);
-    }
+    emit(ctx2, SEXP_OP_LOCAL_REF);
+    emit_word(ctx2, k);
+    emit_push(ctx2, sexp_car(ls));
+    emit(ctx2, SEXP_OP_CONS);
+    emit(ctx2, SEXP_OP_LOCAL_SET);
+    emit_word(ctx2, k);
   }
+  if (lam != lambda) loc = 0;
+#if SEXP_USE_UNBOXED_LOCALS
+  sexp_context_tailp(ctx2) = 0;
+  generate_lambda_locals(ctx2, name, loc, lambda, sexp_lambda_body(lambda));
   sexp_context_tailp(ctx2) = 1;
-  generate(ctx2, name, (lam == lambda ? loc : 0), lam, sexp_lambda_body(lambda));
+  generate_lambda_body(ctx2, name, loc, lambda, sexp_lambda_body(lambda), prev_lambda);
+#else
+  sexp_context_tailp(ctx2) = 1;
+  generate(ctx2, name, loc, lam, sexp_lambda_body(lambda));
+#endif
   flags = sexp_make_fixnum(sexp_not(sexp_listp(ctx, sexp_lambda_params(lambda)))
                            ? (SEXP_PROC_VARIADIC + (sexp_rest_unused_p(lambda)
                                                     ? SEXP_PROC_UNUSED_REST: 0))
@@ -976,11 +1078,13 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     _PUSH(_WORD0);
     ip += sizeof(sexp);
     break;
+#if SEXP_USE_RESERVE_OPCODE
   case SEXP_OP_RESERVE:
     _ALIGN_IP();
     top += _SWORD0;
     ip += sizeof(sexp);
     break;
+#endif
   case SEXP_OP_DROP:
     top--;
     break;
@@ -1029,6 +1133,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     _ALIGN_IP();
     _PUSH(sexp_vector_ref(cp, sexp_make_fixnum(_WORD0)));
     ip += sizeof(sexp);
+    break;
+  case SEXP_OP_CLOSURE_VARS:
+    _ARG1 = sexp_procedure_vars(_ARG1);
     break;
   case SEXP_OP_VECTOR_REF:
     if (! sexp_vectorp(_ARG1))
