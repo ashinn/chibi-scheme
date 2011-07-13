@@ -86,7 +86,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL3:
   case SEXP_OP_FCALL4:
     sexp_write_pointer(ctx, ((sexp*)ip)[0], out);
-    sexp_write_string(ctx, ": ", out);
+    sexp_write_char(ctx, '\n', out);
     sexp_write_string(ctx, sexp_opcode_name(((sexp*)ip)[0]), out);
     ip += sizeof(sexp);
     break;
@@ -94,6 +94,13 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_SLOT_SET:
   case SEXP_OP_MAKE:
     ip += sizeof(sexp)*2;
+    break;
+  case SEXP_OP_MAKE_PROCEDURE:
+    sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
+    sexp_write_string(ctx, " ", out);
+    sexp_write_integer(ctx, ((sexp_sint_t*)ip)[1], out);
+    tmp = ((sexp*)ip)[2];
+    ip += sizeof(sexp)*3;
     break;
   case SEXP_OP_GLOBAL_REF:
   case SEXP_OP_GLOBAL_KNOWN_REF:
@@ -116,7 +123,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     break;
   }
   sexp_write_char(ctx, '\n', out);
-  if ((opcode == SEXP_OP_PUSH) && (depth < SEXP_DISASM_MAX_DEPTH)
+  if ((opcode == SEXP_OP_PUSH || opcode == SEXP_OP_MAKE_PROCEDURE)
+      && (depth < SEXP_DISASM_MAX_DEPTH)
       && tmp && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
     disasm(ctx, self, tmp, out, depth+1);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
