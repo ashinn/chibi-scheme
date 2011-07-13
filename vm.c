@@ -580,10 +580,11 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
       sexp_context_depth(ctx)--;
     }
     /* push the additional procedure info and make the closure */
-    emit_push(ctx, bc);
-    emit_push(ctx, len);
-    emit_push(ctx, flags);
     emit(ctx, SEXP_OP_MAKE_PROCEDURE);
+    emit_word(ctx, (sexp_uint_t)flags);
+    emit_word(ctx, (sexp_uint_t)len);
+    emit_word(ctx, (sexp_uint_t)bc);
+    bytecode_preserve(ctx, bc);
   }
   sexp_gc_release2(ctx);
 }
@@ -722,6 +723,7 @@ static sexp sexp_restore_stack (sexp ctx, sexp saved) {
 #define _WORD1 ((sexp*)ip)[1]
 #define _UWORD1 ((sexp_uint_t*)ip)[1]
 #define _SWORD1 ((sexp_sint_t*)ip)[1]
+#define _WORD2 ((sexp*)ip)[2]
 
 #define sexp_raise(msg, args)                                       \
   do {sexp_context_top(ctx) = top+1;                                \
@@ -1257,8 +1259,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
   case SEXP_OP_MAKE_PROCEDURE:
     sexp_context_top(ctx) = top;
-    _ARG4 = sexp_make_procedure(ctx, _ARG1, _ARG2, _ARG3, _ARG4);
-    top-=3;
+    _ALIGN_IP();
+    _ARG1 = sexp_make_procedure(ctx, _WORD0, _WORD1, _WORD2, _ARG1);
+    ip += (3 * sizeof(sexp));
     break;
   case SEXP_OP_MAKE_VECTOR:
     sexp_context_top(ctx) = top;
