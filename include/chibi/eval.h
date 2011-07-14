@@ -194,7 +194,7 @@ SEXP_API sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name,
 #endif
 
 /* simplify primitive API interface */
-#define sexp_make_synclo(ctx, a, b, c) sexp_make_synclo_op(ctx sexp_api_pass(NULL, 3) a, b, c)
+#define sexp_make_synclo(ctx, a, b, c) sexp_make_synclo_op(ctx sexp_api_pass(NULL, 3), a, b, c)
 #define sexp_make_procedure(ctx, f, n, b, v) sexp_make_procedure_op(ctx sexp_api_pass(NULL, 4), f, n, b, v)
 #define sexp_make_env(ctx) sexp_make_env_op(ctx sexp_api_pass(NULL, 0))
 #define sexp_make_null_env(ctx, v) sexp_make_null_env_op(ctx sexp_api_pass(NULL, 0), v)
