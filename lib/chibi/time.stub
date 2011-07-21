@@ -19,6 +19,7 @@
 
 (define-c-struct timeval
   predicate: timeval?
+  constructor: (make-timeval tv_sec tv_usec)
   (time_t  tv_sec          timeval-seconds)
   (int     tv_usec         timeval-microseconds))
 

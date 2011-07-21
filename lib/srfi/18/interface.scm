@@ -40,6 +40,12 @@
 (define current-time get-time-of-day)
 (define time? timeval?)
 
+(define (time->seconds x)
+  (timeval-seconds (if (pair? x) (car x) x)))
+
+(define (seconds->time x)
+  (make-timeval (if (inexact? x) (inexact->exact x) x) 0))
+
 (define (join-timeout-exception? x)
   (and (exception? x)
        (equal? (exception-message x) "timed out waiting for thread")))
