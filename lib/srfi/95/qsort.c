@@ -68,12 +68,16 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
         res = sexp_pointer_tag(a) - sexp_pointer_tag(b);
       } else {
         switch (sexp_pointer_tag(a)) {
+#if SEXP_USE_FLONUMS
         case SEXP_FLONUM:
           res = sexp_flonum_value(a) - sexp_flonum_value(b);
           break;
+#endif
+#if SEXP_USE_BIGNUMS
         case SEXP_BIGNUM:
           res = sexp_bignum_compare(a, b);
           break;
+#endif
         case SEXP_STRING:
           res = strcmp(sexp_string_data(a), sexp_string_data(b));
           break;
