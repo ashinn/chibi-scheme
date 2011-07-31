@@ -892,8 +892,20 @@
 ;; math utils
 
 (cond-expand
+ (complex
+  (define (exact-complex? x)
+    (and (complex? x) (exact? (complex-real x)) (exact? (complex-imag x))))))
+
+(cond-expand
  (ratios
-  (define (exact? x) (if (fixnum? x) #t (if (bignum? x) #t (ratio? x))))
+  (cond-expand
+   (complex
+    (define (exact? x)
+      (if (fixnum? x)
+          #t
+          (if (bignum? x) #t (if (ratio? x) #t (exact-complex? x))))))
+   (else
+    (define (exact? x) (if (fixnum? x) #t (if (bignum? x) #t (ratio? x))))))
   (define (numerator x)
     (if (ratio? x)
         (ratio-numerator x)
@@ -903,7 +915,12 @@
         (if (ratio? x) (ratio-denominator x) 1)
         (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10)))))))
  (else
-  (define (exact? x) (if (fixnum? x) #t (bignum? x)))
+  (cond-expand
+   (complex
+    (define (exact? x)
+      (if (fixnum? x) #t (if (bignum? x) #t (exact-complex? x)))))
+   (else
+    (define (exact? x) (if (fixnum? x) #t (bignum? x)))))
   (define (numerator x)
     (if (integer? x) x (numerator (* x 10))))
   (define (denominator x)
@@ -911,14 +928,20 @@
         1
         (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10))))))))
 
-(define inexact? flonum?)
+(cond-expand
+ (complex
+  (define (inexact? x)
+    (if (flonum? x) #t (and (complex? x) (not (exact-complex? x))))))
+ (else (define inexact? flonum?)))
 (define (exact-integer? x) (if (fixnum? x) #t (bignum? x)))
 (define (integer? x)
   (if (exact-integer? x) #t (and (flonum? x) (= x (truncate x)))))
 (define (number? x) (if (inexact? x) #t (exact? x)))
 (define complex? number?)
-(define rational? number?)
-(define real? number?)
+(cond-expand
+ (complex (define (rational? x) (and (number? x) (not (complex? x)))))
+ (else (define rational? number?)))
+(define real? rational?)
 
 (define (exact-integer-sqrt x)
   (let ((res (sqrt x)))
