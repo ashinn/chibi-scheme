@@ -1591,35 +1591,103 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
   return res;
 }
 
+#if SEXP_USE_COMPLEX
+sexp sexp_make_complex (sexp ctx, sexp real, sexp image) {
+  sexp res = sexp_alloc_type(ctx, complex, SEXP_COMPLEX);
+  sexp_complex_real(res) = real;
+  sexp_complex_imag(res) = image;
+  return res;
+}
+
+sexp sexp_complex_normalize (sexp cpx) {
+  return sexp_complexp(cpx)
+    && (sexp_complex_imag(cpx) == SEXP_ZERO
+        || (sexp_flonump(sexp_complex_imag(cpx))
+            && sexp_flonum_value(sexp_complex_imag(cpx)) == 0.0))
+    ? sexp_complex_real(cpx) : cpx;
+}
+
+sexp sexp_read_complex_tail (sexp ctx, sexp in, double real, int exactp) {
+  int c = sexp_read_char(ctx, in), c2;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  if (c=='i' || c=='I') {
+  trailing_i:
+    c = sexp_read_char(ctx, in);
+    if ((c!=EOF) && ! is_separator(c))
+      res = sexp_read_error(ctx, "invalid complex numeric syntax", sexp_make_character(c), in);
+    else
+      sexp_push_char(ctx, c, in);
+    if (!sexp_exceptionp(res)) {
+      res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+      sexp_complex_imag(res) = exactp ? sexp_make_fixnum(real) : sexp_make_flonum(ctx, real);
+    }
+  } else {
+    c2 = sexp_read_char(ctx, in);
+    if (c2=='i' || c2=='I') {
+      real = 1.0;
+      exactp = 1;
+      goto trailing_i;
+    } else {
+      sexp_push_char(ctx, c2, in);
+    }
+    if (c=='-') sexp_push_char(ctx, c, in);
+    res = sexp_read_number(ctx, in, 10);
+    if (sexp_complexp(res)) {
+      if (sexp_complex_real(res) == SEXP_ZERO)
+        sexp_complex_real(res) = (exactp ? sexp_make_fixnum(real) : sexp_make_flonum(ctx, real));
+      else
+        res = sexp_read_error(ctx, "multiple real parts of complex", res, in);
+    } else if ((res == SEXP_ZERO)
+               || (sexp_flonump(res) && sexp_flonum_value(res) == 0.0)) {
+      res = sexp_make_complex(ctx, (exactp ? sexp_make_fixnum(real) : sexp_make_flonum(ctx, real)), res);
+    } else {
+      res = sexp_exceptionp(res) ? res
+        : sexp_read_error(ctx, "missing imaginary part of complex", res, in);
+    }
+  }
+  sexp_gc_release1(ctx);
+  return sexp_complex_normalize(res);
+}
+#endif
+
 sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   sexp exponent=SEXP_VOID;
-  double res=0.0, scale=0.1, e=0.0;
+  double val=0.0, scale=0.1, e=0.0;
   int c;
   for (c=sexp_read_char(ctx, in);
        isdigit(c);
        c=sexp_read_char(ctx, in), scale*=0.1)
-    res += digit_value(c)*scale;
+    val += digit_value(c)*scale;
 #if SEXP_USE_PLACEHOLDER_DIGITS
   for (; c==SEXP_PLACEHOLDER_DIGIT; c=sexp_read_char(ctx, in), scale*=0.1)
-    res += sexp_placeholder_digit_value(10)*scale;
+    val += sexp_placeholder_digit_value(10)*scale;
 #endif
   if (c=='e' || c=='E') {
     exponent = sexp_read_number(ctx, in, 10);
     if (sexp_exceptionp(exponent)) return exponent;
     e = (sexp_fixnump(exponent) ? sexp_unbox_fixnum(exponent)
          : sexp_flonump(exponent) ? sexp_flonum_value(exponent) : 0.0);
-  } else if ((c!=EOF) && ! is_separator(c)) {
-    return sexp_read_error(ctx, "invalid numeric syntax",
-                           sexp_make_character(c), in);
-  } else {
-    sexp_push_char(ctx, c, in);
+  }
+  val = (whole + val) * pow(10, e);
+  if (negp) val *= -1;
+  if (!(c=='e' || c=='E')) {
+#if SEXP_USE_COMPLEX
+    if (c=='i' || c=='i' || c=='+' || c=='-') {
+      sexp_push_char(ctx, c, in);
+      return sexp_read_complex_tail(ctx, in, val, 0);
+    } else
+#endif
+    if ((c!=EOF) && ! is_separator(c))
+      return sexp_read_error(ctx, "invalid numeric syntax",
+                             sexp_make_character(c), in);
+    else
+      sexp_push_char(ctx, c, in);
   }
 #if SEXP_USE_FLONUMS
-  res = (whole + res) * pow(10, e);
-  if (negp) res *= -1;
-  return sexp_make_flonum(ctx, res);
+  return sexp_make_flonum(ctx, val);
 #else
-  return sexp_make_fixnum((sexp_uint_t)whole);
+  return sexp_make_fixnum((sexp_uint_t)val);
 #endif
 }
 
@@ -1675,6 +1743,10 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     negativep = 1;
     c = sexp_read_char(ctx, in);
   }
+
+#if SEXP_USE_COMPLEX
+  if (c == 'i' || c == 'I') whole = 1.0;
+#endif
 
   for ( ; sexp_isxdigit(c); c=sexp_read_char(ctx, in)) {
     digit = digit_value(c);
@@ -1733,6 +1805,13 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
 #endif
     sexp_gc_release2(ctx);
     return res;
+#if SEXP_USE_COMPLEX
+  } else if (c=='i' || c=='I' || c=='+' || c=='-') {
+    if (base != 10)
+      return sexp_read_error(ctx, "found non-base 10 complex", SEXP_NULL, in);
+    sexp_push_char(ctx, c, in);
+    return sexp_read_complex_tail(ctx, in, (negativep ? -val : val), 1);
+#endif
   } else {
     if ((c!=EOF) && ! is_separator(c))
       return sexp_read_error(ctx, "invalid numeric syntax",
@@ -2068,6 +2147,12 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = sexp_make_flonum(ctx, sexp_neg_infinity);
       else if (res == sexp_intern(ctx, "+nan.0", -1))
         res = sexp_make_flonum(ctx, sexp_nan);
+#endif
+#if SEXP_USE_COMPLEX
+      if (res == sexp_intern(ctx, "+i", -1))
+        res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ONE);
+      else if (res == sexp_intern(ctx, "-i", -1))
+        res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_NEG_ONE);
 #endif
     }
     break;

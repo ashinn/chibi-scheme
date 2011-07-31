@@ -961,10 +961,19 @@
         lo
         (lp (if (< (car ls) lo) (car ls) lo) (cdr ls)))))
 
-(define (real-part z) z)
-(define (imag-part z) 0.0)
-(define magnitude abs)
-(define (angle z) (if (< z 0) 3.141592653589793 0))
+(cond-expand
+ (complex
+  (define (real-part z) (if (complex? z) (complex-real z) z))
+  (define (imag-part z) (if (complex? z) (complex-imag z) 0.0))
+  (define (magnitude z)
+    (sqrt (+ (* (real-part z) (real-part z))
+             (* (imag-part z) (imag-part z)))))
+  (define (angle z) (atan (imag-part z) (real-part z))))
+ (else
+  (define (real-part z) z)
+  (define (imag-part z) 0.0)
+  (define magnitude abs)
+  (define (angle z) (if (< z 0) 3.141592653589793 0))))
 
 (define (atan x . o) (if (null? o) (atan1 x) (atan1 (/ x (car o)))))
 

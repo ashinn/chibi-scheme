@@ -1177,21 +1177,51 @@ define_math_op(sexp_floor, floor)
 define_math_op(sexp_ceiling, ceil)
 
 static sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
+  int negativep;
   double d, r;
+  sexp_gc_var1(res);
   if (sexp_flonump(z))
     d = sexp_flonum_value(z);
   else if (sexp_fixnump(z))
     d = (double)sexp_unbox_fixnum(z);
   maybe_convert_bignum(z)       /* XXXX add bignum sqrt */
+  maybe_convert_ratio(z)        /* XXXX add ratio sqrt */
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
+  sexp_gc_preserve1(ctx, res);
+#if SEXP_USE_COMPLEX
+  if (d < 0) {
+    negativep = 1;
+    d = -d;
+  }
+#endif
   r = sqrt(d);
-  if (sexp_fixnump(z) && (((sexp_uint_t)r*(sexp_uint_t)r)==sexp_unbox_fixnum(z)))
-    return sexp_make_fixnum(round(r));
+  if (sexp_fixnump(z)
+      && (((sexp_uint_t)r*(sexp_uint_t)r)==abs(sexp_unbox_fixnum(z))))
+    res = sexp_make_fixnum(round(r));
   else
-    return sexp_make_flonum(ctx, r);
+    res = sexp_make_flonum(ctx, r);
+#if SEXP_USE_COMPLEX
+  if (negativep)
+    res = sexp_make_complex(ctx, SEXP_ZERO, res);
+#endif
+  sexp_gc_release1(ctx);
+  return res;
 }
 
+#endif
+
+#if SEXP_USE_RATIOS
+sexp sexp_generic_expt (sexp ctx, sexp x, sexp_sint_t e) {
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  for (res = SEXP_ONE, tmp = x; e > 0; e >>= 1) {
+    if (e&1) res = sexp_mul(ctx, res, tmp);
+    tmp = sexp_mul(ctx, tmp, tmp);
+  }
+  sexp_gc_release2(ctx);
+  return res;
+}
 #endif
 
 static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
@@ -1217,6 +1247,19 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
   else if (sexp_flonump(x))
     x1 = sexp_flonum_value(x);
 #endif
+#if SEXP_USE_RATIOS
+  else if (sexp_ratiop(x)) {
+    if (sexp_fixnump(e)) {
+      return sexp_generic_expt(ctx, x, sexp_unbox_fixnum(e));
+    } else {
+      x1 = sexp_ratio_to_double(x);
+    }
+  }
+#endif
+#if SEXP_USE_COMPLEX
+  else if (sexp_complexp(x))
+    return sexp_generic_expt(ctx, x, sexp_unbox_fixnum(e));
+#endif
   else
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   if (sexp_fixnump(e))
@@ -1224,6 +1267,10 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
 #if SEXP_USE_FLONUMS
   else if (sexp_flonump(e))
     e1 = sexp_flonum_value(e);
+#endif
+#if SEXP_USE_RATIOS
+  else if (sexp_ratiop(e))
+    e1 = sexp_ratio_to_double(e);
 #endif
   else
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, e);
@@ -1259,6 +1306,17 @@ static sexp sexp_ratio_numerator_op (sexp ctx sexp_api_params(self, n), sexp rat
 static sexp sexp_ratio_denominator_op (sexp ctx sexp_api_params(self, n), sexp rat) {
   sexp_assert_type(ctx, sexp_ratiop, SEXP_RATIO, rat);
   return sexp_ratio_denominator(rat);
+}
+#endif
+
+#if SEXP_USE_COMPLEX
+static sexp sexp_complex_real_op (sexp ctx sexp_api_params(self, n), sexp cpx) {
+  sexp_assert_type(ctx, sexp_complexp, SEXP_COMPLEX, cpx);
+  return sexp_complex_real(cpx);
+}
+static sexp sexp_complex_imag_op (sexp ctx sexp_api_params(self, n), sexp cpx) {
+  sexp_assert_type(ctx, sexp_complexp, SEXP_COMPLEX, cpx);
+  return sexp_complex_imag(cpx);
 }
 #endif
 
@@ -1804,6 +1862,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
 #endif
 #if SEXP_USE_AUTO_FORCE
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "auto-force", -1));
+#endif
+#if SEXP_USE_COMPLEX
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "complex", -1));
 #endif
 #if SEXP_USE_RATIOS
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "ratios", -1));
