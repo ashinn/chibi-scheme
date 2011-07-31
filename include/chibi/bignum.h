@@ -43,6 +43,10 @@ double sexp_ratio_to_double (sexp rat);
 sexp sexp_make_ratio (sexp ctx, sexp num, sexp den);
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);
 #endif
+#if SEXP_USE_COMPLEX
+sexp sexp_make_complex (sexp ctx, sexp real, sexp image);
+sexp sexp_complex_normalize (sexp real);
+#endif
 
 #endif  /* ! SEXP_BIGNUM_H */
 
