@@ -97,6 +97,8 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), 0, 0, 0, 0, 0, 0, "vector", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, 0, 0, 0, 0, 0, 0, "real", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp_uint_t), 0, 0, 0, 0, 0, 0, "bignum", SEXP_FALSE, SEXP_FALSE, NULL},
+  {SEXP_RATIO, sexp_offsetof(ratio, numerator), 2, 2, 0, 0, sexp_sizeof(ratio), 0, 0, 0, 0, 0, 0, 0, 0, "ratio", SEXP_FALSE, SEXP_FALSE, NULL},
+  {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, "complex", SEXP_FALSE, SEXP_FALSE, NULL},
   {SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, "input-port", SEXP_FALSE, SEXP_FALSE, SEXP_FINALIZE_PORT},
   {SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, "output-port", SEXP_FALSE, SEXP_FALSE, SEXP_FINALIZE_PORT},
   {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, "exception", SEXP_FALSE, SEXP_FALSE, NULL},
@@ -1372,6 +1374,22 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_bignum(ctx, obj, out, 10);
       break;
 #endif
+#if SEXP_USE_RATIOS
+    case SEXP_RATIO:
+      sexp_write(ctx, sexp_ratio_numerator(obj), out);
+      sexp_write_char(ctx, '/', out);
+      sexp_write(ctx, sexp_ratio_denominator(obj), out);
+      break;
+#endif
+#if SEXP_USE_COMPLEX
+    case SEXP_COMPLEX:
+      sexp_write(ctx, sexp_complex_real(obj), out);
+      if (!sexp_negativep(sexp_complex_imag(obj)))
+        sexp_write_char(ctx, '+', out);
+      sexp_write(ctx, sexp_complex_imag(obj), out);
+      sexp_write_char(ctx, 'i', out);
+      break;
+#endif
     case SEXP_OPCODE:
       sexp_write_string(ctx, "#<opcode ", out);
       sexp_write_string(ctx, sexp_opcode_name(obj), out);
@@ -1460,7 +1478,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     case (sexp_uint_t) SEXP_VOID:
       sexp_write_string(ctx, "#<undef>", out); break;
     default:
-      sexp_write_string(ctx, "#<invalid immediate>", out);
+      sexp_write_string(ctx, "#<invalid immediate: ", out);
+      sexp_write(ctx, sexp_make_fixnum(obj), out);
+      sexp_write_char(ctx, '>', out);
     }
   }
   return SEXP_VOID;
@@ -1603,13 +1623,52 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
 #endif
 }
 
+#if SEXP_USE_RATIOS
+sexp sexp_make_ratio (sexp ctx, sexp num, sexp den) {
+  sexp res = sexp_alloc_type(ctx, ratio, SEXP_RATIO);
+  sexp_ratio_numerator(res) = num;
+  sexp_ratio_denominator(res) = den;
+  return res;
+}
+
+sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
+  sexp tmp;
+  sexp_gc_var2(num, den);
+  sexp_gc_preserve2(ctx, num, den);
+  num = sexp_ratio_numerator(rat), den = sexp_ratio_denominator(rat);
+  if (den == SEXP_ZERO)
+    return sexp_read_error(ctx, "zero denominator in ratio", rat, in);
+  else if (num == SEXP_ZERO)
+    return SEXP_ZERO;
+  while (den != SEXP_ZERO) {
+    tmp = sexp_remainder(ctx, num, den);
+    if (sexp_exceptionp(tmp)) {
+      sexp_gc_release2(ctx);
+      return tmp;
+    }
+    num = den, den = tmp;
+  }
+  sexp_ratio_denominator(rat)
+    = den = sexp_quotient(ctx, sexp_ratio_denominator(rat), num);
+  sexp_ratio_numerator(rat)
+    = sexp_quotient(ctx, sexp_ratio_numerator(rat), num);
+  if (sexp_exact_negativep(sexp_ratio_denominator(rat))) {
+    sexp_negate(sexp_ratio_numerator(rat));
+    sexp_negate(sexp_ratio_denominator(rat));
+  }
+  sexp_gc_release2(ctx);
+  return (sexp_ratio_denominator(rat) == SEXP_ONE) ? sexp_ratio_numerator(rat)
+    : rat;
+}
+#endif
+
 sexp sexp_read_number (sexp ctx, sexp in, int base) {
-  sexp den;
-  sexp_uint_t res = 0, tmp;
+  sexp_sint_t val = 0, tmp;
   int c, digit, negativep = 0;
 #if SEXP_USE_PLACEHOLDER_DIGITS
   double whole = 0.0, scale = 0.1;
 #endif
+  sexp_gc_var2(res, den);
 
   c = sexp_read_char(ctx, in);
   if (c == '-') {
@@ -1621,19 +1680,19 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     digit = digit_value(c);
     if ((digit < 0) || (digit >= base))
       break;
-    tmp = res * base + digit;
+    tmp = val * base + digit;
 #if SEXP_USE_BIGNUMS
-    if ((tmp < res) || (tmp > SEXP_MAX_FIXNUM)) {
+    if ((tmp < val) || (tmp > SEXP_MAX_FIXNUM)) {
       sexp_push_char(ctx, c, in);
-      return sexp_read_bignum(ctx, in, res, (negativep ? -1 : 1), base);
+      return sexp_read_bignum(ctx, in, val, (negativep ? -1 : 1), base);
     }
 #endif
-    res = tmp;
+    val = tmp;
   }
 
 #if SEXP_USE_PLACEHOLDER_DIGITS
   if (sexp_placeholder_digit_p(c)) {
-    whole = res;
+    whole = val;
     for ( ; sexp_placeholder_digit_p(c); c=sexp_read_char(ctx, in))
       whole = whole*10 + sexp_placeholder_digit_value(base);
     if ((c=='.' || c=='e' || c=='E') && (base != 10))
@@ -1658,14 +1717,22 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     if (base != 10)
       return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
     if (c!='.') sexp_push_char(ctx, c, in);
-    return sexp_read_float_tail(ctx, in, res, negativep);
+    return sexp_read_float_tail(ctx, in, val, negativep);
   } else if (c=='/') {
+    sexp_gc_preserve2(ctx, res, den);
     den = sexp_read_number(ctx, in, base);
-    if (! sexp_fixnump(den))
+    if (! (sexp_fixnump(den) || sexp_bignump(den)))
       return (sexp_exceptionp(den)
               ? den : sexp_read_error(ctx, "invalid rational syntax", den, in));
-    return sexp_make_flonum(ctx, (double)(negativep ? -res : res)
-                            / (double)sexp_unbox_fixnum(den));
+#if SEXP_USE_RATIOS
+    res = sexp_make_ratio(ctx, sexp_make_fixnum(negativep ? -val : val), den);
+    res = sexp_ratio_normalize(ctx, res, in);
+#else
+    res = sexp_make_flonum(ctx, (double)(negativep ? -val : val)
+                           / (double)sexp_unbox_fixnum(den));
+#endif
+    sexp_gc_release2(ctx);
+    return res;
   } else {
     if ((c!=EOF) && ! is_separator(c))
       return sexp_read_error(ctx, "invalid numeric syntax",
@@ -1673,7 +1740,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     sexp_push_char(ctx, c, in);
   }
 
-  return sexp_make_fixnum(negativep ? -res : res);
+  return sexp_make_fixnum(negativep ? -val : val);
 }
 
 #if SEXP_USE_UTF8_STRINGS
@@ -1977,6 +2044,16 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
               res = sexp_make_fixnum(-sexp_bignum_data(res)[0]);
             else
               sexp_bignum_sign(res) = -sexp_bignum_sign(res);
+          } else
+#endif
+#if SEXP_USE_RATIOS
+          if (sexp_ratiop(res)) {
+            sexp_negate(sexp_ratio_numerator(res));
+          } else
+#endif
+#if SEXP_USE_COMPLEX
+          if (sexp_complexp(res)) {
+            sexp_negate(sexp_complex_real(res));
           } else
 #endif
             res = sexp_fx_mul(res, SEXP_NEG_ONE);

@@ -350,6 +350,26 @@
 
 ;; string utils
 
+(define (digit-char n)
+  (if (<= n 9)
+      (integer->char (+ n (char->integer #\0)))
+      (integer->char (+ (- n 10) (char->integer #\A)))))
+(define (digit-value ch)
+  (if (char-numeric? ch)
+      (- (char->integer ch) (char->integer #\0))
+      (and (<= 65 (char->integer (char-upcase ch)) 70)
+           (- (char->integer (char-upcase ch)) 55))))
+
+(define (number->string num . o)
+  (if (if (null? o) #t (eq? 10 (car o)))
+      (call-with-output-string (lambda (out) (write num out)))
+      (let lp ((n (abs num)) (d (car o)) (res '()))
+        (if (> n 0)
+            (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
+            (if (null? res)
+                "0"
+                (list->string (if (negative? num) (cons #\- res) res)))))))
+
 (define (symbol->string sym)
   (call-with-output-string (lambda (out) (write sym out))))
 
@@ -412,93 +432,6 @@
 
 (define (find pred ls)
   (cond ((find-tail pred ls) => car) (else #f)))
-
-;; math utils
-
-(define (number? x) (if (fixnum? x) #t (if (bignum? x) #t (flonum? x))))
-(define complex? number?)
-(define rational? number?)
-(define real? number?)
-(define (exact? x) (if (fixnum? x) #t (bignum? x)))
-(define inexact? flonum?)
-(define (exact-integer? x) (if (fixnum? x) #t (bignum? x)))
-(define (integer? x)
-  (if (exact-integer? x) #t (and (flonum? x) (= x (truncate x)))))
-
-(define (exact-integer-sqrt x)
-  (let ((res (sqrt x)))
-    (if (exact? res)
-        (values res 0)
-        (let ((res (inexact->exact (truncate res))))
-          (values res (- x (* res res)))))))
-
-(define (zero? x) (= x 0))
-(define (positive? x) (> x 0))
-(define (negative? x) (< x 0))
-(define (even? n) (= (remainder n 2) 0))
-(define (odd? n) (= (remainder n 2) 1))
-
-(define (abs x) (if (< x 0) (- x) x))
-
-(define (numerator x)
-  (if (integer? x) x (numerator (* x 10))))
-(define (denominator x)
-  (if (exact? x)
-      1
-      (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10))))))
-
-(define (modulo a b)
-  (let ((res (remainder a b)))
-    (if (< b 0)
-        (if (<= res 0) res (+ res b))
-        (if (>= res 0) res (+ res b)))))
-
-(define (gcd a b)
-  (if (= b 0)
-      (abs a)
-      (gcd b (remainder a b))))
-
-(define (lcm a b)
-  (abs (quotient (* a b) (gcd a b))))
-
-(define (max x . rest)
-  (let lp ((hi x) (ls rest))
-    (if (null? ls)
-        hi
-        (lp (if (> (car ls) hi) (car ls) hi) (cdr ls)))))
-
-(define (min x . rest)
-  (let lp ((lo x) (ls rest))
-    (if (null? ls)
-        lo
-        (lp (if (< (car ls) lo) (car ls) lo) (cdr ls)))))
-
-(define (real-part z) z)
-(define (imag-part z) 0.0)
-(define magnitude abs)
-(define (angle z) (if (< z 0) 3.141592653589793 0))
-
-(define (atan x . o) (if (null? o) (atan1 x) (atan1 (/ x (car o)))))
-
-(define (digit-char n)
-  (if (<= n 9)
-      (integer->char (+ n (char->integer #\0)))
-      (integer->char (+ (- n 10) (char->integer #\A)))))
-(define (digit-value ch)
-  (if (char-numeric? ch)
-      (- (char->integer ch) (char->integer #\0))
-      (and (<= 65 (char->integer (char-upcase ch)) 70)
-           (- (char->integer (char-upcase ch)) 55))))
-
-(define (number->string num . o)
-  (if (if (null? o) #t (eq? 10 (car o)))
-      (call-with-output-string (lambda (out) (write num out)))
-      (let lp ((n (abs num)) (d (car o)) (res '()))
-        (if (> n 0)
-            (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
-            (if (null? res)
-                "0"
-                (list->string (if (negative? num) (cons #\- res) res)))))))
 
 ;; vector utils
 
@@ -954,6 +887,86 @@
              (set! computed? #t)))
        result)))
   (define (force x) (if (procedure? x) (x) x))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; math utils
+
+(cond-expand
+ (ratios
+  (define (exact? x) (if (fixnum? x) #t (if (bignum? x) #t (ratio? x))))
+  (define (numerator x)
+    (if (ratio? x)
+        (ratio-numerator x)
+        (if (integer? x) x (numerator (* x 10)))))
+  (define (denominator x)
+    (if (exact? x)
+        (if (ratio? x) (ratio-denominator x) 1)
+        (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10)))))))
+ (else
+  (define (exact? x) (if (fixnum? x) #t (bignum? x)))
+  (define (numerator x)
+    (if (integer? x) x (numerator (* x 10))))
+  (define (denominator x)
+    (if (exact? x)
+        1
+        (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10))))))))
+
+(define inexact? flonum?)
+(define (exact-integer? x) (if (fixnum? x) #t (bignum? x)))
+(define (integer? x)
+  (if (exact-integer? x) #t (and (flonum? x) (= x (truncate x)))))
+(define (number? x) (if (inexact? x) #t (exact? x)))
+(define complex? number?)
+(define rational? number?)
+(define real? number?)
+
+(define (exact-integer-sqrt x)
+  (let ((res (sqrt x)))
+    (if (exact? res)
+        (values res 0)
+        (let ((res (inexact->exact (truncate res))))
+          (values res (- x (* res res)))))))
+
+(define (zero? x) (= x 0))
+(define (positive? x) (> x 0))
+(define (negative? x) (< x 0))
+(define (even? n) (= (remainder n 2) 0))
+(define (odd? n) (= (remainder n 2) 1))
+
+(define (abs x) (if (< x 0) (- x) x))
+
+(define (modulo a b)
+  (let ((res (remainder a b)))
+    (if (< b 0)
+        (if (<= res 0) res (+ res b))
+        (if (>= res 0) res (+ res b)))))
+
+(define (gcd a b)
+  (if (= b 0)
+      (abs a)
+      (gcd b (remainder a b))))
+
+(define (lcm a b)
+  (abs (quotient (* a b) (gcd a b))))
+
+(define (max x . rest)
+  (let lp ((hi x) (ls rest))
+    (if (null? ls)
+        hi
+        (lp (if (> (car ls) hi) (car ls) hi) (cdr ls)))))
+
+(define (min x . rest)
+  (let lp ((lo x) (ls rest))
+    (if (null? ls)
+        lo
+        (lp (if (< (car ls) lo) (car ls) lo) (cdr ls)))))
+
+(define (real-part z) z)
+(define (imag-part z) 0.0)
+(define magnitude abs)
+(define (angle z) (if (< z 0) 3.141592653589793 0))
+
+(define (atan x . o) (if (null? o) (atan1 x) (atan1 (/ x (car o)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; string cursors
