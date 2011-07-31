@@ -1,6 +1,6 @@
-/*  bignum.h -- header for bignum utilities              */
-/*  Copyright (c) 2009 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  bignum.h -- header for bignum utilities                   */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_BIGNUM_H
 #define SEXP_BIGNUM_H
@@ -38,6 +38,11 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b);
 sexp sexp_div (sexp ctx, sexp a, sexp b);
 sexp sexp_quotient (sexp ctx, sexp a, sexp b);
 sexp sexp_remainder (sexp ctx, sexp a, sexp b);
+#if SEXP_USE_RATIOS
+double sexp_ratio_to_double (sexp rat);
+sexp sexp_make_ratio (sexp ctx, sexp num, sexp den);
+sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);
+#endif
 
 #endif  /* ! SEXP_BIGNUM_H */
 

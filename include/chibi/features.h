@@ -117,6 +117,13 @@
 /*   in opt/bignum.c. */
 /* #define SEXP_USE_BIGNUMS 0 */
 
+/* uncomment this if you don't want exact ratio support */
+/*   Ratios are part of the bignum library and imply bignums. */
+/* #define SEXP_USE_RATIOS 0 */
+
+/* uncomment this if you don't want imaginary number support */
+/* #define SEXP_USE_COMPLEX 0 */
+
 /* uncomment this if you don't want 1## style approximate digits */
 /* #define SEXP_USE_PLACEHOLDER_DIGITS 0 */
 
@@ -354,6 +361,19 @@
 #define SEXP_USE_EXTENDED_FCALL ! SEXP_USE_NO_FEATURES
 #endif
 
+#ifndef SEXP_USE_RATIOS
+#define SEXP_USE_RATIOS ! SEXP_USE_NO_FEATURES
+#endif
+
+/* #ifndef SEXP_USE_COMPLEX */
+/* #define SEXP_USE_COMPLEX ! SEXP_USE_NO_FEATURES */
+/* #endif */
+#define SEXP_USE_COMPLEX 0
+
+#ifndef SEXP_USE_BIGNUMS
+#define SEXP_USE_BIGNUMS (SEXP_USE_RATIOS || SEXP_USE_COMPLEX)
+#endif
+
 #ifndef SEXP_USE_FLONUMS
 #define SEXP_USE_FLONUMS ! SEXP_USE_NO_FEATURES
 #endif
@@ -376,10 +396,6 @@
 
 #ifndef SEXP_PLACEHOLDER_DIGIT
 #define SEXP_PLACEHOLDER_DIGIT '#'
-#endif
-
-#ifndef SEXP_USE_BIGNUMS
-#define SEXP_USE_BIGNUMS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_MATH

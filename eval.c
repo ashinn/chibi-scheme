@@ -1142,6 +1142,13 @@ sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp
 #define maybe_convert_bignum(z)
 #endif
 
+#if SEXP_USE_RATIOS
+#define maybe_convert_ratio(z) \
+  else if (sexp_ratiop(z)) d = sexp_ratio_to_double(z);
+#else
+#define maybe_convert_ratio(z)
+#endif
+
 #define define_math_op(name, cname)                                     \
   static sexp name (sexp ctx sexp_api_params(self, n), sexp z) {        \
     double d;                                                           \
@@ -1149,6 +1156,7 @@ sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp
       d = sexp_flonum_value(z);                                         \
     else if (sexp_fixnump(z))                                           \
       d = (double)sexp_unbox_fixnum(z);                                 \
+    maybe_convert_ratio(z)                                              \
     maybe_convert_bignum(z)                                             \
     else                                                                \
       return sexp_type_exception(ctx, self, SEXP_NUMBER, z);            \
@@ -1242,6 +1250,17 @@ static sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
 #endif
   return res;
 }
+
+#if SEXP_USE_RATIOS
+static sexp sexp_ratio_numerator_op (sexp ctx sexp_api_params(self, n), sexp rat) {
+  sexp_assert_type(ctx, sexp_ratiop, SEXP_RATIO, rat);
+  return sexp_ratio_numerator(rat);
+}
+static sexp sexp_ratio_denominator_op (sexp ctx sexp_api_params(self, n), sexp rat) {
+  sexp_assert_type(ctx, sexp_ratiop, SEXP_RATIO, rat);
+  return sexp_ratio_denominator(rat);
+}
+#endif
 
 static sexp sexp_string_cmp_op (sexp ctx sexp_api_params(self, n), sexp str1, sexp str2, sexp ci) {
   sexp_sint_t len1, len2, len, diff;
@@ -1785,6 +1804,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
 #endif
 #if SEXP_USE_AUTO_FORCE
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "auto-force", -1));
+#endif
+#if SEXP_USE_RATIOS
+  sexp_push(ctx, tmp, sym=sexp_intern(ctx, "ratios", -1));
 #endif
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, "chibi", -1));
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), tmp);

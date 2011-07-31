@@ -103,6 +103,8 @@ enum sexp_types {
   SEXP_VECTOR,
   SEXP_FLONUM,
   SEXP_BIGNUM,
+  SEXP_RATIO,
+  SEXP_COMPLEX,
   SEXP_IPORT,
   SEXP_OPORT,
   SEXP_EXCEPTION,
@@ -300,6 +302,12 @@ struct sexp_struct {
       sexp_uint_t length;
       sexp_uint_t data[];
     } bignum;
+    struct {
+      sexp numerator, denominator;
+    } ratio;
+    struct {
+      sexp real, imag;
+    } complex;
     struct {
       sexp_uint_t length;
       void *value;
@@ -553,6 +561,8 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
 #define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
+#define sexp_ratiop(x)      (sexp_check_tag(x, SEXP_RATIO))
+#define sexp_complexp(x)    (sexp_check_tag(x, SEXP_COMPLEX))
 #define sexp_cpointerp(x)   (sexp_check_tag(x, SEXP_CPOINTER))
 #define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
 #define sexp_procedurep(x)  (sexp_check_tag(x, SEXP_PROCEDURE))
@@ -646,6 +656,18 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_numberp(x) sexp_exact_integerp(x)
 #endif
 
+#define sexp_exact_negativep(x) (sexp_fixnump(x) ? (sexp_unbox_fixnum(x) < 0) \
+                                 : (SEXP_USE_BIGNUMS && sexp_bignump(x)) \
+                                 && (sexp_bignum_sign(x) < 0))
+#define sexp_negativep(x) (sexp_exact_negativep(x) ||                   \
+                           (sexp_flonump(x) && sexp_flonum_value(x) < 0))
+
+#define sexp_negate(x)                                  \
+  if (sexp_bignump(x))                                  \
+    sexp_bignum_sign(x) = -sexp_bignum_sign(x);         \
+  else if (sexp_fixnump(x))                             \
+    x = sexp_fx_neg(x);
+
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
 #define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_data(x)[0]))
 #define sexp_sint_value(x) ((sexp_sint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_sign(x)*sexp_bignum_data(x)[0]))
@@ -722,6 +744,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_size(p)       (sexp_pred_field(p, port, sexp_portp, size))
 #define sexp_port_offset(p)     (sexp_pred_field(p, port, sexp_portp, offset))
 #define sexp_port_flags(p)      (sexp_pred_field(p, port, sexp_portp, flags))
+
+#define sexp_ratio_numerator(q)   (sexp_pred_field(q, ratio, sexp_ratiop, numerator))
+#define sexp_ratio_denominator(q) (sexp_pred_field(q, ratio, sexp_ratiop, denominator))
+
+#define sexp_complex_real(q)   (sexp_pred_field(q, complex, sexp_complexp, real))
+#define sexp_complex_imag(q)   (sexp_pred_field(q, complex, sexp_complexp, imag))
 
 #define sexp_exception_kind(x)      (sexp_field(x, exception, SEXP_EXCEPTION, kind))
 #define sexp_exception_message(x)   (sexp_field(x, exception, SEXP_EXCEPTION, message))
