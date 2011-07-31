@@ -31,6 +31,9 @@ ifndef PLATFORM
 ifeq ($(shell uname),Darwin)
 PLATFORM=macosx
 else
+ifeq ($(shell uname),FreeBSD)
+PLATFORM=FreeBSD
+else
 ifeq ($(shell uname -o),Msys)
 PLATFORM=mingw
 SOLIBDIR = $(BINDIR)
@@ -45,6 +48,7 @@ ifeq ($(shell uname -o),GNU/Linux)
 PLATFORM=linux
 else
 PLATFORM=unix
+endif
 endif
 endif
 endif
@@ -79,6 +83,10 @@ SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
+ifeq ($(PLATFORM),FreeBSD)
+LIBDL=
+RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
 endif
 endif
 endif
@@ -207,7 +215,7 @@ test-basic: chibi-scheme$(EXE)
 	done
 
 test-build:
-	./tests/build/build-tests.sh
+	MAKE=$(MAKE) ./tests/build/build-tests.sh
 
 test-threads: chibi-scheme$(EXE) lib/srfi/18/threads$(SO) lib/srfi/39/param$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/time$(SO)
 	$(CHIBI) tests/thread-tests.scm
