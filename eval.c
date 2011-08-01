@@ -1177,7 +1177,7 @@ define_math_op(sexp_floor, floor)
 define_math_op(sexp_ceiling, ceil)
 
 static sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
-  int negativep;
+  int negativep = 0;
   double d, r;
   sexp_gc_var1(res);
   if (sexp_flonump(z))
