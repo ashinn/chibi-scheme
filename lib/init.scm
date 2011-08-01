@@ -894,7 +894,7 @@
 (cond-expand
  (complex
   (define (exact-complex? x)
-    (and (complex? x) (exact? (complex-real x)) (exact? (complex-imag x))))))
+    (and (%complex? x) (exact? (complex-real x)) (exact? (complex-imag x))))))
 
 (cond-expand
  (ratios
@@ -931,7 +931,7 @@
 (cond-expand
  (complex
   (define (inexact? x)
-    (if (flonum? x) #t (and (complex? x) (not (exact-complex? x))))))
+    (if (flonum? x) #t (and (%complex? x) (not (exact-complex? x))))))
  (else (define inexact? flonum?)))
 (define (exact-integer? x) (if (fixnum? x) #t (bignum? x)))
 (define (integer? x)
@@ -939,7 +939,7 @@
 (define (number? x) (if (inexact? x) #t (exact? x)))
 (define complex? number?)
 (cond-expand
- (complex (define (rational? x) (and (number? x) (not (complex? x)))))
+ (complex (define (rational? x) (and (number? x) (not (%complex? x)))))
  (else (define rational? number?)))
 (define real? rational?)
 
@@ -986,12 +986,16 @@
 
 (cond-expand
  (complex
-  (define (real-part z) (if (complex? z) (complex-real z) z))
-  (define (imag-part z) (if (complex? z) (complex-imag z) 0.0))
+  (define (real-part z) (if (%complex? z) (complex-real z) z))
+  (define (imag-part z) (if (%complex? z) (complex-imag z) 0.0))
   (define (magnitude z)
     (sqrt (+ (* (real-part z) (real-part z))
              (* (imag-part z) (imag-part z)))))
-  (define (angle z) (atan (imag-part z) (real-part z))))
+  (define (angle z) (atan (imag-part z) (real-part z)))
+  (define (make-rectangular x y)
+    (+ x (* z 0+1i)))
+  (define (make-polar r phi)
+    (make-rectangular (* r (cos phi)) (* r (sin phi)))))
  (else
   (define (real-part z) z)
   (define (imag-part z) 0.0)
