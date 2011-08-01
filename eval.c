@@ -1149,7 +1149,14 @@ sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp
 #define maybe_convert_ratio(z)
 #endif
 
-#define define_math_op(name, cname)                                     \
+#if SEXP_USE_COMPLEX
+#define maybe_convert_complex(z, f)             \
+  else if (sexp_complexp(z)) return sexp_complex_normalize(f(ctx, z));
+#else
+#define maybe_convert_complex(z, f)
+#endif
+
+#define define_math_op(name, cname, complexf)                           \
   static sexp name (sexp ctx sexp_api_params(self, n), sexp z) {        \
     double d;                                                           \
     if (sexp_flonump(z))                                                \
@@ -1158,23 +1165,24 @@ sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp
       d = (double)sexp_unbox_fixnum(z);                                 \
     maybe_convert_ratio(z)                                              \
     maybe_convert_bignum(z)                                             \
+    maybe_convert_complex(z, complexf)                                  \
     else                                                                \
       return sexp_type_exception(ctx, self, SEXP_NUMBER, z);            \
     return sexp_make_flonum(ctx, cname(d));                             \
   }
 
-define_math_op(sexp_exp, exp)
-define_math_op(sexp_log, log)
-define_math_op(sexp_sin, sin)
-define_math_op(sexp_cos, cos)
-define_math_op(sexp_tan, tan)
-define_math_op(sexp_asin, asin)
-define_math_op(sexp_acos, acos)
-define_math_op(sexp_atan, atan)
-define_math_op(sexp_round, round)
-define_math_op(sexp_trunc, trunc)
-define_math_op(sexp_floor, floor)
-define_math_op(sexp_ceiling, ceil)
+define_math_op(sexp_exp, exp, sexp_complex_exp)
+define_math_op(sexp_log, log, sexp_complex_log)
+define_math_op(sexp_sin, sin, sexp_complex_sin)
+define_math_op(sexp_cos, cos, sexp_complex_cos)
+define_math_op(sexp_tan, tan, sexp_complex_math_error)
+define_math_op(sexp_asin, asin, sexp_complex_asin)
+define_math_op(sexp_acos, acos, sexp_complex_acos)
+define_math_op(sexp_atan, atan, sexp_complex_math_error)
+define_math_op(sexp_round, round, sexp_complex_math_error)
+define_math_op(sexp_trunc, trunc, sexp_complex_math_error)
+define_math_op(sexp_floor, floor, sexp_complex_math_error)
+define_math_op(sexp_ceiling, ceil, sexp_complex_math_error)
 
 static sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
   int negativep = 0;
@@ -1186,6 +1194,7 @@ static sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
     d = (double)sexp_unbox_fixnum(z);
   maybe_convert_bignum(z)       /* XXXX add bignum sqrt */
   maybe_convert_ratio(z)        /* XXXX add ratio sqrt */
+  maybe_convert_complex(z, sexp_complex_sqrt)
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
   sexp_gc_preserve1(ctx, res);

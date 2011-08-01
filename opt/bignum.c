@@ -423,7 +423,7 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
   res = quot_step(ctx, rem, a1, b1, k, i);
   sexp_bignum_sign(res) = sexp_bignum_sign(a) * sexp_bignum_sign(b);
   if (sexp_bignum_sign(a) < 0) {
-    sexp_negate(*rem);
+    sexp_negate_exact(*rem);
   }
   sexp_gc_release4(ctx);
   return res;
@@ -529,6 +529,17 @@ sexp sexp_complex_add (sexp ctx, sexp a, sexp b) {
   return sexp_complex_normalize(res);
 }
 
+sexp sexp_complex_sub (sexp ctx, sexp a, sexp b) {
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  tmp = sexp_make_complex(ctx, sexp_complex_real(b), sexp_complex_imag(b));
+  sexp_negate(sexp_complex_real(tmp));
+  sexp_negate(sexp_complex_imag(tmp));
+  res = sexp_complex_add(ctx, a, tmp);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
 sexp sexp_complex_mul (sexp ctx, sexp a, sexp b) {
   sexp_gc_var3(res, real, imag);
   sexp_gc_preserve3(ctx, res, real, imag);
@@ -569,6 +580,121 @@ sexp sexp_complex_div (sexp ctx, sexp a, sexp b) {
   return sexp_complex_normalize(res);
 }
 
+#if SEXP_USE_MATH
+
+static double sexp_to_double (sexp x) {
+  if (sexp_flonump(x))
+    return sexp_flonum_value(x);
+  else if (sexp_fixnump(x))
+    return sexp_fixnum_to_double(x);
+  else if (sexp_bignump(x))
+    return sexp_bignum_to_double(x);
+#if SEXP_USE_RATIOS
+  else if (sexp_ratiop(x))
+    return sexp_ratio_to_double(x);
+#endif
+  else
+    return 0.0;
+}
+
+sexp sexp_complex_math_error (sexp ctx, sexp z) {
+  return sexp_type_exception(ctx, NULL, SEXP_NUMBER, z);
+}
+
+sexp sexp_complex_sqrt (sexp ctx, sexp z) {
+  double x = sexp_to_double(sexp_complex_real(z)),
+    y = sexp_to_double(sexp_complex_imag(z)), r;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  r = sqrt(x*x + y*y);
+  res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(res) = sexp_make_flonum(ctx, sqrt((x+r)/2));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, (y<0?-1:1)*sqrt((-x+r)/2));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_complex_exp (sexp ctx, sexp z) {
+  double x = sexp_to_double(sexp_complex_real(z)),
+    y = sexp_to_double(sexp_complex_imag(z));
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(res) = sexp_make_flonum(ctx, exp(x)*cos(y));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, sin(y));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_complex_log (sexp ctx, sexp z) {
+  double x = sexp_to_double(sexp_complex_real(z)),
+    y = sexp_to_double(sexp_complex_imag(z));
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(res) = sexp_make_flonum(ctx, log(sqrt(x*x + y*y)));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, atan2(y, x));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_complex_sin (sexp ctx, sexp z) {
+  double x = sexp_to_double(sexp_complex_real(z)),
+    y = sexp_to_double(sexp_complex_imag(z));
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(res) = sexp_make_flonum(ctx, sin(x)*cosh(y));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, cos(x)*sinh(y));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_complex_cos (sexp ctx, sexp z) {
+  double x = sexp_to_double(sexp_complex_real(z)),
+    y = sexp_to_double(sexp_complex_imag(z));
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(res) = sexp_make_flonum(ctx, cos(x)*cosh(y));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, -sin(x)*sinh(y));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_complex_asin (sexp ctx, sexp z) {
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  res = sexp_complex_mul(ctx, z, z);
+  tmp = sexp_make_complex(ctx, SEXP_ONE, SEXP_ZERO);
+  res = sexp_complex_sub(ctx, tmp, res);
+  res = sexp_complex_sqrt(ctx, res);
+  /* tmp = iz */
+  sexp_complex_real(tmp) = sexp_complex_imag(z);
+  sexp_negate(sexp_complex_real(tmp));
+  sexp_complex_imag(tmp) = sexp_complex_real(z);
+  res = sexp_complex_add(ctx, tmp, res);
+  tmp = sexp_complex_log(ctx, res);
+  /* res = -i*tmp */
+  sexp_complex_real(res) = sexp_complex_imag(tmp);
+  sexp_complex_imag(res) = sexp_complex_real(tmp);
+  sexp_negate(sexp_complex_imag(res));
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+sexp sexp_complex_acos (sexp ctx, sexp z) {
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  res = sexp_complex_asin(ctx, z);
+  tmp = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(tmp) = sexp_make_flonum(ctx, acos(-1)/2);
+  res = sexp_sub(ctx, tmp, res);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+#endif
 #endif
 
 /****************** generic arithmetic ************************/
@@ -757,7 +883,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
   case SEXP_NUM_FIX_BIG:
     tmp1 = sexp_fixnum_to_bignum(ctx, a);
     r = sexp_bignum_sub(ctx, NULL, b, tmp1);
-    sexp_negate(r);
+    sexp_negate_exact(r);
     r = sexp_bignum_normalize(r);
     break;
   case SEXP_NUM_FLO_FIX:
@@ -797,13 +923,13 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     /* ... FALLTHROUGH ... */
   case SEXP_NUM_RAT_RAT:
     tmp2 = sexp_make_ratio(ctx, sexp_ratio_numerator(b), sexp_ratio_denominator(b));
-    sexp_negate(sexp_ratio_numerator(tmp2));
+    sexp_negate_exact(sexp_ratio_numerator(tmp2));
     r = sexp_ratio_add(ctx, a, tmp2);
     if (negatep) {
       if (sexp_ratiop(r)) {
-        sexp_negate(sexp_ratio_numerator(r));
+        sexp_negate_exact(sexp_ratio_numerator(r));
       } else {
-        sexp_negate(r);
+        sexp_negate_exact(r);
       }
     }
     break;
@@ -828,10 +954,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     /* ... FALLTHROUGH ... */
   case SEXP_NUM_CPX_CPX:
   complex_sub:
-    tmp2 = sexp_make_complex(ctx, sexp_complex_real(b), sexp_complex_imag(b));
-    sexp_negate(sexp_complex_real(tmp2));
-    sexp_negate(sexp_complex_imag(tmp2));
-    r = sexp_complex_add(ctx, a, tmp2);
+    r = sexp_complex_sub(ctx, a, b);
     if (negatep) {
       if (sexp_complexp(r)) {
         sexp_negate(sexp_complex_real(r));

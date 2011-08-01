@@ -88,7 +88,7 @@ _FN1(_I(SEXP_FIXNUM), _I(SEXP_RATIO), "ratio-numerator", 0, sexp_ratio_numerator
 _FN1(_I(SEXP_FIXNUM), _I(SEXP_RATIO), "ratio-denominator", 0, sexp_ratio_denominator_op),
 #endif
 #if SEXP_USE_COMPLEX
-_OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "complex?", _I(SEXP_COMPLEX), 0),
+_OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "%complex?", _I(SEXP_COMPLEX), 0),
 _FN1(_I(SEXP_FLONUM), _I(SEXP_RATIO), "complex-real", 0, sexp_complex_real_op),
 _FN1(_I(SEXP_FLONUM), _I(SEXP_RATIO), "complex-imag", 0, sexp_complex_imag_op),
 #endif

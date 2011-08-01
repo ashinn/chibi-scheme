@@ -662,11 +662,17 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_negativep(x) (sexp_exact_negativep(x) ||                   \
                            (sexp_flonump(x) && sexp_flonum_value(x) < 0))
 
-#define sexp_negate(x)                                  \
+#define sexp_negate_exact(x)                            \
   if (sexp_bignump(x))                                  \
     sexp_bignum_sign(x) = -sexp_bignum_sign(x);         \
   else if (sexp_fixnump(x))                             \
     x = sexp_fx_neg(x);
+
+#define sexp_negate(x)                                  \
+  if (sexp_flonump(x))                                  \
+    sexp_flonum_value(x) = -sexp_flonum_value(x);       \
+  else                                                  \
+    sexp_negate_exact(x)
 
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
 #define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_data(x)[0]))

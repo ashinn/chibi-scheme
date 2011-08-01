@@ -46,6 +46,14 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);
 #if SEXP_USE_COMPLEX
 sexp sexp_make_complex (sexp ctx, sexp real, sexp image);
 sexp sexp_complex_normalize (sexp real);
+sexp sexp_complex_math_error (sexp ctx, sexp z);
+sexp sexp_complex_sqrt (sexp ctx, sexp z);
+sexp sexp_complex_exp (sexp ctx, sexp z);
+sexp sexp_complex_log (sexp ctx, sexp z);
+sexp sexp_complex_sin (sexp ctx, sexp z);
+sexp sexp_complex_cos (sexp ctx, sexp z);
+sexp sexp_complex_asin (sexp ctx, sexp z);
+sexp sexp_complex_acos (sexp ctx, sexp z);
 #endif
 
 #endif  /* ! SEXP_BIGNUM_H */
