@@ -597,8 +597,19 @@ static double sexp_to_double (sexp x) {
     return 0.0;
 }
 
-sexp sexp_complex_math_error (sexp ctx, sexp z) {
-  return sexp_type_exception(ctx, NULL, SEXP_NUMBER, z);
+static sexp sexp_to_complex (sexp ctx, sexp x) {
+  sexp_gc_var1(tmp);
+  if (sexp_flonump(x) || sexp_fixnump(x) || sexp_bignump(x)) {
+    return sexp_make_complex(ctx, x, SEXP_ZERO);
+  } else if (sexp_ratiop(x)) {
+    sexp_gc_preserve1(ctx, tmp);
+    tmp = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+    sexp_complex_real(tmp) = sexp_make_flonum(ctx, sexp_to_double(x));
+    sexp_gc_release1(ctx);
+    return tmp;
+  } else {
+    return x;
+  }
 }
 
 sexp sexp_complex_sqrt (sexp ctx, sexp z) {
@@ -622,6 +633,17 @@ sexp sexp_complex_exp (sexp ctx, sexp z) {
   res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
   sexp_complex_real(res) = sexp_make_flonum(ctx, exp(x)*cos(y));
   sexp_complex_imag(res) = sexp_make_flonum(ctx, sin(y));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_complex_expt (sexp ctx, sexp a, sexp b) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_to_complex(ctx, a);
+  res = sexp_complex_log(ctx, res);
+  res = sexp_mul(ctx, b, res);
+  res = sexp_complex_exp(ctx, res);
   sexp_gc_release1(ctx);
   return res;
 }
@@ -662,6 +684,17 @@ sexp sexp_complex_cos (sexp ctx, sexp z) {
   return res;
 }
 
+sexp sexp_complex_tan (sexp ctx, sexp z) {
+  sexp res;
+  sexp_gc_var2(sin, cos);
+  sexp_gc_preserve2(ctx, sin, cos);
+  sin = sexp_complex_sin(ctx, z);
+  cos = sexp_complex_cos(ctx, z);
+  res = sexp_complex_div(ctx, sin, cos);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
 sexp sexp_complex_asin (sexp ctx, sexp z) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
@@ -690,6 +723,25 @@ sexp sexp_complex_acos (sexp ctx, sexp z) {
   tmp = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
   sexp_complex_real(tmp) = sexp_make_flonum(ctx, acos(-1)/2);
   res = sexp_sub(ctx, tmp, res);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+sexp sexp_complex_atan (sexp ctx, sexp z) {
+  sexp_gc_var3(res, tmp1, tmp2);
+  sexp_gc_preserve3(ctx, res, tmp1, tmp2);
+  tmp1 = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ONE);
+  tmp1 = sexp_complex_mul(ctx, z, tmp1);
+  res = sexp_make_complex(ctx, SEXP_ONE, SEXP_ZERO);
+  res = sexp_complex_sub(ctx, res, tmp1);
+  res = sexp_complex_log(ctx, res);
+  tmp2 = sexp_make_complex(ctx, SEXP_ONE, SEXP_ZERO);
+  tmp2 = sexp_complex_add(ctx, tmp2, tmp1);
+  tmp2 = sexp_complex_log(ctx, tmp2);
+  res = sexp_complex_sub(ctx, res, tmp2);
+  tmp1 = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ONE);
+  sexp_complex_imag(tmp1) = sexp_make_flonum(ctx, 0.5);
+  res = sexp_complex_mul(ctx, res, tmp1);
   sexp_gc_release2(ctx);
   return res;
 }
