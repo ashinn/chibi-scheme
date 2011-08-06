@@ -1086,7 +1086,9 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
 
 sexp sexp_div (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
+#if ! SEXP_USE_RATIOS
   double f;
+#endif
   sexp r=SEXP_VOID;
   sexp_gc_var2(tmp, rem);
   sexp_gc_preserve2(ctx, tmp, rem);
@@ -1105,15 +1107,23 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, b);
     break;
   case SEXP_NUM_FIX_FIX:
+#if SEXP_USE_RATIOS
+    r = sexp_make_ratio(ctx, a, b);
+#else
     f = sexp_fixnum_to_double(a) / sexp_fixnum_to_double(b);
     r = ((f == trunc(f)) ? sexp_make_fixnum((sexp_sint_t)f)
          : sexp_make_flonum(ctx, f));
+#endif
     break;
   case SEXP_NUM_FIX_FLO:
     r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_flonum_value(b));
     break;
   case SEXP_NUM_FIX_BIG:
-    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b));
+#if SEXP_USE_RATIOS
+    r = sexp_make_ratio(ctx, a, b);
+#else
+    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b)); 
+#endif
     break;
   case SEXP_NUM_FLO_FIX:
     r = sexp_make_flonum(ctx, sexp_flonum_value(a)/sexp_fixnum_to_double(b));
@@ -1125,15 +1135,24 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     r = sexp_make_flonum(ctx, sexp_flonum_value(a) / sexp_bignum_to_double(b));
     break;
   case SEXP_NUM_BIG_FIX:
+#if SEXP_USE_RATIOS
+    r = sexp_make_ratio(ctx, a, b);
+    break;
+#else
     b = tmp = sexp_fixnum_to_bignum(ctx, b);
-    /* ... FALLTHROUGH ... */
+#endif
+    /* ... FALLTHROUGH if ! SEXP_USE_RATIOS ... */
   case SEXP_NUM_BIG_BIG:
+#if SEXP_USE_RATIOS
+    r = sexp_make_ratio(ctx, a, b);
+#else
     r = sexp_bignum_quot_rem(ctx, &rem, a, b);
     if (sexp_bignum_normalize(rem) != SEXP_ZERO)
       r = sexp_make_flonum(ctx, sexp_bignum_to_double(a)
                            / sexp_bignum_to_double(b));
     else
       r = sexp_bignum_normalize(r);
+#endif
     break;
   case SEXP_NUM_BIG_FLO:
     r = sexp_make_flonum(ctx, sexp_bignum_to_double(a) / sexp_flonum_value(b));
