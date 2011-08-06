@@ -20,10 +20,7 @@
 ;;> The addrinfo struct accessors.
 ;;/
 
-;;> Create and return a new addrinfo structure for the
-;;> given host and service.
-
-(define-c errno (get-address-info getaddrinfo)
+(define-c errno (%get-address-info getaddrinfo)
   (string string (maybe-null addrinfo) (result free addrinfo)))
 
 ;;> Bind a name to a socket.
@@ -51,4 +48,8 @@
 (define-c-const int (socket-type/stream "SOCK_STREAM"))
 (define-c-const int (socket-type/datagram "SOCK_DGRAM"))
 (define-c-const int (socket-type/raw "SOCK_RAW"))
+(define-c-const int (ip-proto/tcp "IPPROTO_TCP"))
+(define-c-const int (ip-proto/udp "IPPROTO_UDP"))
 
+;;> The constants for the addrinfo struct.
+;;/
