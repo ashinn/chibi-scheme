@@ -1,6 +1,20 @@
 ;; Copyright (c) 2010-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+;;> @subsubsubsection{@scheme{(get-address-info host service [addrinfo])}}
+
+;;> Create and return a new addrinfo structure for the given host
+;;> and service.  @var{host} should be a string and @var{service} a
+;;> string or integer.  The optional @var{addrinfo} defaults to
+;;> a TCP/IP stream setting.
+
+(define (get-address-info host service . o)
+  (%get-address-info host
+                     (if (integer? service) (number->string service) service)
+                     (make-address-info address-family/inet
+                                        socket-type/stream
+                                        ip-proto/tcp)))
+
 ;;> Opens a client net connection to @var{host}, a string,
 ;;> on port @var{service}, which can be a string such as
 ;;> @scheme{"http"} or an integer.  Returns a list of two
@@ -8,11 +22,7 @@
 ;;> or @scheme{#f} on failure.
 
 (define (open-net-io host service)
-  (let lp ((addr (get-address-info host
-                                   (if (integer? service)
-                                       (number->string service)
-                                       service)
-                                   #f)))
+  (let lp ((addr (get-address-info host service #f)))
     (if (not addr)
         (error "couldn't find address" host service)
         (let ((sock (socket (address-info-family addr)
