@@ -11,9 +11,11 @@
 (define (get-address-info host service . o)
   (%get-address-info host
                      (if (integer? service) (number->string service) service)
-                     (make-address-info address-family/inet
-                                        socket-type/stream
-                                        ip-proto/tcp)))
+                     (if (and (pair? o) (car o))
+                         (car o)
+                         (make-address-info address-family/inet
+                                         socket-type/stream
+                                         ip-proto/tcp))))
 
 ;;> Opens a client net connection to @var{host}, a string,
 ;;> on port @var{service}, which can be a string such as
@@ -22,7 +24,7 @@
 ;;> or @scheme{#f} on failure.
 
 (define (open-net-io host service)
-  (let lp ((addr (get-address-info host service #f)))
+  (let lp ((addr (get-address-info host service)))
     (if (not addr)
         (error "couldn't find address" host service)
         (let ((sock (socket (address-info-family addr)
