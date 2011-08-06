@@ -1473,6 +1473,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
         sexp_raise("divide by zero", SEXP_NULL);
     } else if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
+#if SEXP_USE_RATIOS
+      _ARG1 = sexp_make_ratio(ctx, tmp1, tmp2);
+#else
 #if SEXP_USE_FLONUMS
       tmp1 = sexp_fixnum_to_flonum(ctx, tmp1);
       tmp2 = sexp_fixnum_to_flonum(ctx, tmp2);
@@ -1481,6 +1484,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         _ARG1 = sexp_make_fixnum(sexp_flonum_value(_ARG1));
 #else
       _ARG1 = sexp_fx_div(tmp1, tmp2);
+#endif
 #endif
     }
 #if SEXP_USE_BIGNUMS
