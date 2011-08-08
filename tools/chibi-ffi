@@ -1093,6 +1093,8 @@
                   "));\n"
                   "  r = sexp_cpointer_value(res) = malloc(sizeof("
                   (or (type-struct-type name) "") " " (type-name name) "));\n"
+                  "  memset(r, 0, sizeof("
+                  (or (type-struct-type name) "") " " (type-name name) "));\n"
                   "  sexp_freep(res) = 1;\n"
                   (lambda ()
                     (let lp ((ls args) (i 0))
