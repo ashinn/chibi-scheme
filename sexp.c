@@ -1578,7 +1578,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
   int c, i=0, size=INIT_STRING_BUFFER_SIZE;
   char initbuf[INIT_STRING_BUFFER_SIZE];
   char *buf=initbuf, *tmp;
-  sexp res;
+  sexp res=SEXP_VOID;
 #if SEXP_USE_FOLD_CASE_SYMS
   int foldp = sexp_port_fold_casep(in);
   init = (foldp ? tolower(init) : init);
@@ -1599,6 +1599,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
     buf[i++] = c;
     if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
       tmp = (char*) sexp_malloc(size*2);
+      if (!tmp) {res = sexp_global(ctx, SEXP_G_OOM_ERROR); break;}
       memcpy(tmp, buf, i);
       if (size != INIT_STRING_BUFFER_SIZE) free(buf);
       buf = tmp;
@@ -1606,8 +1607,10 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
     }
   }
 
-  buf[i] = '\0';
-  res = (internp ? sexp_intern(ctx, buf, i) : sexp_c_string(ctx, buf, i));
+  if (!sexp_exceptionp(res)) {
+    buf[i] = '\0';
+    res = (internp ? sexp_intern(ctx, buf, i) : sexp_c_string(ctx, buf, i));
+  }
   if (size != INIT_STRING_BUFFER_SIZE) free(buf);
   return res;
 }
