@@ -1737,7 +1737,7 @@ sexp sexp_find_module_file (sexp ctx, const char *file) {
     dirlen = sexp_string_length(sexp_car(ls));
     slash = dir[dirlen-1] == '/';
     len = dirlen+filelen+2-slash;
-    path = (char*) malloc(len);
+    path = (char*) sexp_malloc(len);
     if (! path) return sexp_global(ctx, SEXP_G_OOM_ERROR);
     memcpy(path, dir, dirlen);
     if (! slash) path[dirlen] = '/';

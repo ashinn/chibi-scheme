@@ -1213,7 +1213,7 @@ sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str
 sexp sexp_make_output_string_port_op (sexp ctx sexp_api_params(self, n)) {
   sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
   if (sexp_exceptionp(res)) return res;
-  sexp_port_buf(res) = (char*) malloc(SEXP_PORT_BUFFER_SIZE);
+  sexp_port_buf(res) = (char*) sexp_malloc(SEXP_PORT_BUFFER_SIZE);
   if (!sexp_port_buf(res)) {
     res = sexp_global(ctx, SEXP_G_OOM_ERROR);
   } else {
@@ -1557,7 +1557,7 @@ sexp sexp_read_string (sexp ctx, sexp in) {
     }
     buf[i++] = c;
     if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
-      tmp = (char*) malloc(size*2);
+      tmp = (char*) sexp_malloc(size*2);
       if (!tmp) {res = sexp_global(ctx, SEXP_G_OOM_ERROR); break;}
       memcpy(tmp, buf, i);
       if (size != INIT_STRING_BUFFER_SIZE) free(buf);
@@ -1566,8 +1566,10 @@ sexp sexp_read_string (sexp ctx, sexp in) {
     }
   }
 
-  buf[i] = '\0';
-  if (!sexp_exceptionp(res)) res = sexp_c_string(ctx, buf, i);
+  if (!sexp_exceptionp(res)) {
+    buf[i] = '\0';
+    res = sexp_c_string(ctx, buf, i);
+  }
   if (size != INIT_STRING_BUFFER_SIZE) free(buf);
   return res;
 }
@@ -1596,7 +1598,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
     }
     buf[i++] = c;
     if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
-      tmp = (char*) malloc(size*2);
+      tmp = (char*) sexp_malloc(size*2);
       memcpy(tmp, buf, i);
       if (size != INIT_STRING_BUFFER_SIZE) free(buf);
       buf = tmp;

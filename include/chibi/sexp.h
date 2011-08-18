@@ -397,6 +397,14 @@ struct sexp_struct {
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
 
+#if SEXP_USE_LIMITED_MALLOC
+void* sexp_malloc(size_t size);
+void sexp_free(void* ptr);
+#else
+#define sexp_malloc malloc
+#define sexp_free free
+#endif
+
 #if SEXP_USE_BOEHM
 
 #define sexp_gc_var(ctx, x, y)       sexp x;
@@ -406,9 +414,6 @@ struct sexp_struct {
 #include "gc/gc.h"
 #define sexp_alloc(ctx, size)        GC_malloc(size)
 #define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
-#define sexp_realloc(ctx, x, size)   GC_realloc(x, size)
-#define sexp_free(ctx, x)
-#define sexp_deep_free(ctx, x)
 
 #else
 
@@ -433,19 +438,11 @@ struct sexp_struct {
 #define sexp_gc_release(ctx, x, y)   (sexp_context_saves(ctx) = y.next)
 
 #if SEXP_USE_MALLOC
-#define sexp_alloc(ctx, size)        malloc(size)
-#define sexp_alloc_atomic(ctx, size) malloc(size)
-#define sexp_realloc(ctx, x, size)   realloc(x, size)
-#define sexp_free(ctx, x)            free(x)
-void sexp_deep_free(sexp ctx, sexp obj);
-
+#define sexp_alloc(ctx, size)        sexp_malloc(size)
+#define sexp_alloc_atomic(ctx, size) sexp_malloc(size)
 #else  /* native gc */
-void *sexp_alloc(sexp ctx, size_t size);
+void* sexp_alloc(sexp ctx, size_t size);
 #define sexp_alloc_atomic            sexp_alloc
-void *sexp_realloc(sexp ctx, sexp x, size_t size);
-#define sexp_free(ctx, x)
-#define sexp_deep_free(ctx, x)
-
 #endif
 #endif
 

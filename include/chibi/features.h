@@ -301,6 +301,10 @@
 #define SEXP_USE_MALLOC 0
 #endif
 
+#ifndef SEXP_USE_LIMITED_MALLOC
+#define SEXP_USE_LIMITED_MALLOC 0
+#endif
+
 #ifndef SEXP_USE_MMAP_GC
 #define SEXP_USE_MMAP_GC 0
 #endif
@@ -509,6 +513,10 @@
 #define SEXP_USE_FLONUMS 0
 #undef SEXP_USE_BIGNUMS
 #define SEXP_USE_BIGNUMS 0
+#undef SEXP_USE_RATIOS
+#define SEXP_USE_RATIOS 0
+#undef SEXP_USE_COMPLEX
+#define SEXP_USE_COMPLEX 0
 #undef SEXP_USE_SIMPLIFY
 #define SEXP_USE_SIMPLIFY 0
 #endif
