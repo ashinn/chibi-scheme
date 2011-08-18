@@ -48,6 +48,27 @@ void sexp_free_heap (sexp_heap heap) {
 }
 #endif
 
+#if SEXP_USE_LIMITED_MALLOC
+static sexp_sint_t allocated_bytes=0, max_allocated_bytes=-1;
+void* sexp_malloc(size_t size) {
+  char* max_alloc;
+  void* res;
+  if (max_allocated_bytes < 0) {
+    max_alloc = getenv("CHIBI_MAX_ALLOC");
+    max_allocated_bytes = max_alloc ? atoi(max_alloc) : 8192000; /* 8MB */
+  }
+  if (max_allocated_bytes > 0 && allocated_bytes + size > max_allocated_bytes)
+    return NULL;
+  if (!(res = malloc(size))) return NULL;
+  allocated_bytes += size;
+  return res;
+}
+/* TODO: subtract freed memory from max_allocated_bytes */
+void sexp_free(void* ptr) {
+  free(ptr);
+}
+#endif
+
 sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   sexp_uint_t res;
   sexp t;
@@ -369,7 +390,7 @@ sexp_heap sexp_make_heap (size_t size, size_t max_size) {
   h =  mmap(NULL, sexp_heap_pad_size(size), PROT_READ|PROT_WRITE|PROT_EXEC,
             MAP_ANON|MAP_PRIVATE, 0, 0);
 #else
-  h =  malloc(sexp_heap_pad_size(size));
+  h =  sexp_malloc(sexp_heap_pad_size(size));
 #endif
   if (! h) return NULL;
   h->size = size;

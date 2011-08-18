@@ -214,6 +214,9 @@ test-basic: chibi-scheme$(EXE)
 	    fi; \
 	done
 
+test-memory:
+	./tests/memory/memory-tests.sh
+
 test-build:
 	MAKE=$(MAKE) ./tests/build/build-tests.sh
 
