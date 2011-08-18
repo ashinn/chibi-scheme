@@ -787,6 +787,7 @@ sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch)
     clen = sexp_utf8_char_byte_count(sexp_unbox_character(ch));
     b = sexp_make_bytes_op(ctx sexp_api_pass(self, n),
                            sexp_fx_mul(len, sexp_make_fixnum(clen)), SEXP_VOID);
+    if (sexp_exceptionp(b)) return b;
     for (j=0; j<sexp_unbox_fixnum(len); j++)
       sexp_utf8_encode_char((unsigned char*)sexp_bytes_data(b)+(j*clen), clen,
                             sexp_unbox_character(ch));
@@ -811,6 +812,7 @@ sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch)
 sexp sexp_c_string (sexp ctx, const char *str, sexp_sint_t slen) {
   sexp_sint_t len = ((slen >= 0) ? slen : strlen(str));
   sexp s = sexp_make_string(ctx, sexp_make_fixnum(len), SEXP_VOID);
+  if (sexp_exceptionp(s)) return s;
   memcpy(sexp_string_data(s), str, len);
   sexp_string_data(s)[len] = '\0';
   return s;
@@ -1352,10 +1354,20 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         switch (str[0]) {
         case '\\': sexp_write_string(ctx, "\\\\", out); break;
         case '"': sexp_write_string(ctx, "\\\"", out); break;
+        case '\a': sexp_write_string(ctx, "\\a", out); break;
+        case '\b': sexp_write_string(ctx, "\\b", out); break;
         case '\n': sexp_write_string(ctx, "\\n", out); break;
         case '\r': sexp_write_string(ctx, "\\r", out); break;
         case '\t': sexp_write_string(ctx, "\\t", out); break;
-        default: sexp_write_char(ctx, str[0], out);
+        default:
+          if (str[0] < ' ') {
+            sexp_write_string(ctx, "\\x", out);
+            sexp_write_char(ctx, hex_digit(str[0]>>8), out);
+            sexp_write_char(ctx, hex_digit(str[0]&0x0F), out);
+            sexp_write_char(ctx, ';', out);
+          } else {
+            sexp_write_char(ctx, str[0], out);
+          }
         }
       }
       sexp_write_char(ctx, '"', out);
@@ -1511,26 +1523,32 @@ sexp sexp_flush_output_op (sexp ctx sexp_api_params(self, n), sexp out) {
 #define INIT_STRING_BUFFER_SIZE 128
 
 sexp sexp_read_string (sexp ctx, sexp in) {
-  int c, i=0, size=INIT_STRING_BUFFER_SIZE;
+  int c, i=0;
+  sexp_sint_t size=INIT_STRING_BUFFER_SIZE;
   char initbuf[INIT_STRING_BUFFER_SIZE];
   char *buf=initbuf, *tmp;
-  sexp res;
+  sexp res = SEXP_FALSE;
 
   for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
     if (c == '\\') {
       c = sexp_read_char(ctx, in);
       switch (c) {
+      case 'a': c = '\a'; break;
+      case 'b': c = '\b'; break;
       case 'n': c = '\n'; break;
       case 'r': c = '\r'; break; 
       case 't': c = '\t'; break;
       case 'x':
-        c = sexp_read_char(ctx, in);
-        if (sexp_isxdigit(c)) {
-          c = digit_value(c)*16 + digit_value(sexp_read_char(ctx, in));
-        } else {
-          sexp_push_char(ctx, c, in); c = 'x';
+        res = sexp_read_number(ctx, in, 16);
+        if (sexp_fixnump(res)) {
+          c = sexp_read_char(ctx, in);
+          if (c == ';')
+            c = sexp_unbox_fixnum(res);
+          else
+            res = sexp_read_error(ctx, "missing ; in \\x escape", SEXP_NULL, in);
         }
       }
+      if (sexp_exceptionp(res)) break;
     } else if (c == '\n') {
       sexp_port_line(in)++;
     } else if (c == EOF) {
@@ -1540,6 +1558,7 @@ sexp sexp_read_string (sexp ctx, sexp in) {
     buf[i++] = c;
     if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
       tmp = (char*) malloc(size*2);
+      if (!tmp) {res = sexp_global(ctx, SEXP_G_OOM_ERROR); break;}
       memcpy(tmp, buf, i);
       if (size != INIT_STRING_BUFFER_SIZE) free(buf);
       buf = tmp;
@@ -1548,7 +1567,7 @@ sexp sexp_read_string (sexp ctx, sexp in) {
   }
 
   buf[i] = '\0';
-  res = sexp_c_string(ctx, buf, i);
+  if (!sexp_exceptionp(res)) res = sexp_c_string(ctx, buf, i);
   if (size != INIT_STRING_BUFFER_SIZE) free(buf);
   return res;
 }
