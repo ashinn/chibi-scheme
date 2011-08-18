@@ -301,14 +301,14 @@
 (define (display-to-string x)
   (if (string? x) x (call-with-output-string (lambda (out) (display x out)))))
 
-(define (red x) (string-append "\x1B[31m" (display-to-string x) "\x1B[0m"))
-(define (green x) (string-append "\x1B[32m" (display-to-string x) "\x1B[0m"))
-(define (yellow x) (string-append "\x1B[33m" (display-to-string x) "\x1B[0m"))
-;; (define (blue x) (string-append "\x1B[34m" (display-to-string x) "\x1B[0m"))
-;; (define (magenta x) (string-append "\x1B[35m" (display-to-string x) "\x1B[0m"))
-;; (define (cyan x) (string-append "\x1B[36m" (display-to-string x) "\x1B[0m"))
-(define (bold x) (string-append "\x1B[1m" (display-to-string x) "\x1B[0m"))
-(define (underline x) (string-append "\x1B[4m" (display-to-string x) "\x1B[0m"))
+(define (red x) (string-append "\x1B;[31m" (display-to-string x) "\x1B;[0m"))
+(define (green x) (string-append "\x1B;[32m" (display-to-string x) "\x1B;[0m"))
+(define (yellow x) (string-append "\x1B;[33m" (display-to-string x) "\x1B;[0m"))
+;; (define (blue x) (string-append "\x1B;[34m" (display-to-string x) "\x1B;[0m"))
+;; (define (magenta x) (string-append "\x1B;[35m" (display-to-string x) "\x1B;[0m"))
+;; (define (cyan x) (string-append "\x1B;[36m" (display-to-string x) "\x1B;[0m"))
+(define (bold x) (string-append "\x1B;[1m" (display-to-string x) "\x1B;[0m"))
+(define (underline x) (string-append "\x1B;[4m" (display-to-string x) "\x1B;[0m"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
