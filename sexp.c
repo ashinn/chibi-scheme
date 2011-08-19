@@ -1542,11 +1542,20 @@ sexp sexp_read_string (sexp ctx, sexp in) {
         res = sexp_read_number(ctx, in, 16);
         if (sexp_fixnump(res)) {
           c = sexp_read_char(ctx, in);
-          if (c == ';')
-            c = sexp_unbox_fixnum(res);
-          else
+          if (c != ';') {
+#if SEXP_USE_ESCAPE_REQUIRES_TRAILING_SEMI_COLON
             res = sexp_read_error(ctx, "missing ; in \\x escape", SEXP_NULL, in);
+#else
+            sexp_push_char(ctx, c, in);
+#endif
+          }
+          c = sexp_unbox_fixnum(res);
         }
+        break;
+#if SEXP_USE_ESCAPE_NEWLINE
+      default:
+        if (isspace(c)) while (isspace(c) && c!=EOF) c=sexp_read_char(ctx, in);
+#endif
       }
       if (sexp_exceptionp(res)) break;
     } else if (c == '\n') {
