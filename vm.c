@@ -416,7 +416,9 @@ static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
 #if SEXP_USE_TAIL_JUMPS
   else if (sexp_context_tailp(ctx) && sexp_refp(sexp_car(app))
            && name == sexp_ref_name(sexp_car(app))
-           && loc == sexp_ref_loc(sexp_car(app)))
+           && loc == sexp_ref_loc(sexp_car(app))
+           && (sexp_length(ctx, sexp_cdr(app))
+               == sexp_length(ctx, sexp_lambda_params(lam))))
     generate_tail_jump(ctx, name, loc, lam, app);
 #endif
   else
