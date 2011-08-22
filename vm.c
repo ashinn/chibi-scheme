@@ -1475,6 +1475,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     } else if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
 #if SEXP_USE_RATIOS
       _ARG1 = sexp_make_ratio(ctx, tmp1, tmp2);
+      _ARG1 = sexp_ratio_normalize(ctx, _ARG1, SEXP_FALSE);
 #else
 #if SEXP_USE_FLONUMS
       tmp1 = sexp_fixnum_to_flonum(ctx, tmp1);
