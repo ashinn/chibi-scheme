@@ -354,7 +354,7 @@ static sexp sexp_make_cnd (sexp ctx, sexp test, sexp pass, sexp fail) {
   return res;
 }
 
-static sexp sexp_make_lit (sexp ctx, sexp value) {
+sexp sexp_make_lit (sexp ctx, sexp value) {
   sexp res = sexp_alloc_type(ctx, lit, SEXP_LIT);
   sexp_lit_value(res) = value;
   return res;
