@@ -65,9 +65,8 @@ sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_s
 
 #if SEXP_USE_OBJECT_BRACE_LITERALS
 sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp obj, sexp out) {
-  sexp_sint_t i, len;
-  sexp t, *elts;
-  /* check eq-object slots */
+  sexp_sint_t i, len, nulls=0;
+  sexp t, x, *elts;
   i = sexp_pointer_tag(obj);
   sexp_write_char(ctx, '{', out);
   sexp_write_string(ctx,
@@ -78,8 +77,14 @@ sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp obj, sexp
   len = sexp_type_num_slots_of_object(t, obj);
   elts = (sexp*) (((char*)obj) + sexp_type_field_base(t));
   for (i=0; i<len; i++) {
-    sexp_write_char(ctx, ' ', out);
-    sexp_write(ctx, sexp_slot_ref(obj, i), out);
+    x = sexp_slot_ref(obj, i);
+    if (x) {
+      while (nulls--) sexp_write_string(ctx, " #<null>", out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_slot_ref(obj, i), out);
+    } else {
+      nulls++;
+    }
   }
   sexp_write_char(ctx, '}', out);
   return SEXP_VOID;
