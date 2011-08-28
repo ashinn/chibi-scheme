@@ -561,7 +561,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
                          SEXP_ZERO, sexp_make_fixnum(sexp_sizeof_pollfds),
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
-                         SEXP_ZERO, SEXP_ZERO, (sexp_proc2)sexp_free_pollfds);
+                         SEXP_ZERO, SEXP_ZERO, (sexp_proc2)sexp_free_pollfds,
+                         NULL);
   if (sexp_typep(t))
     sexp_pollfds_id = sexp_type_tag(t);
 

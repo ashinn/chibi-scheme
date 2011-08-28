@@ -756,8 +756,12 @@ enum sexp_number_types {
   SEXP_NUM_FIX,
   SEXP_NUM_FLO,
   SEXP_NUM_BIG,
+#if SEXP_USE_RATIOS
   SEXP_NUM_RAT,
+#endif
+#if SEXP_USE_COMPLEX
   SEXP_NUM_CPX,
+#endif
 };
 
 enum sexp_number_combs {
@@ -824,12 +828,22 @@ enum sexp_number_combs {
 };
 
 static int sexp_number_types[] =
+#if SEXP_USE_RATIOS && SEXP_USE_COMPLEX
   {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 4, 5, 0, 0};
+#else
+#if SEXP_USE_RATIOS || SEXP_USE_COMPLEX
+  {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 4, 0, 0, 0};
+#else
+  {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0};
+#endif
+#endif
 
 #define SEXP_NUM_NUMBER_TYPES (4 + SEXP_USE_RATIOS + SEXP_USE_COMPLEX)
 
 static int sexp_number_type (sexp a) {
-  return sexp_pointerp(a) ? sexp_number_types[sexp_pointer_tag(a)&15]
+  return sexp_pointerp(a) ?
+    (sexp_pointer_tag(a)<(sizeof(sexp_number_types)/sizeof(sexp_number_types[0]))
+     ? sexp_number_types[sexp_pointer_tag(a)] : 0)
 #if SEXP_USE_IMMEDIATE_FLONUMS
     : sexp_flonump(a) ? 2
 #endif
