@@ -79,7 +79,8 @@ sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp obj, sexp
   for (i=0; i<len; i++) {
     x = sexp_slot_ref(obj, i);
     if (x) {
-      while (nulls--) sexp_write_string(ctx, " #<null>", out);
+      if (nulls)
+        while (--nulls) sexp_write_string(ctx, " #<null>", out);
       sexp_write_char(ctx, ' ', out);
       sexp_write(ctx, sexp_slot_ref(obj, i), out);
     } else {
@@ -2074,7 +2075,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
               break;
             } else if (tmp2 == SEXP_CLOSE_BRACE) {
               break;
-            } else if (c1 >= sexp_type_num_slots_of_object(ctx, tmp)) {
+            } else if (c1 >= sexp_type_field_len_base(tmp)) {
               res = sexp_read_error(ctx, "too many slots in object literal", res, in);
               break;
             } else {
@@ -2299,7 +2300,11 @@ sexp sexp_read_op (sexp ctx sexp_api_params(self, n), sexp in) {
   res = sexp_read_raw(ctx, in);
   if (res == SEXP_CLOSE)
     res = sexp_read_error(ctx, "too many ')'s", SEXP_NULL, in);
-  if (res == SEXP_RAWDOT)
+#if SEXP_USE_OBJECT_BRACE_LITERALS
+  else if (res == SEXP_CLOSE_BRACE)
+    res = sexp_read_error(ctx, "too many '}'s", SEXP_NULL, in);
+#endif
+  else if (res == SEXP_RAWDOT)
     res = sexp_read_error(ctx, "unexpected '.'", SEXP_NULL, in);
   return res;
 }
