@@ -1171,6 +1171,16 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     _ARG1 = sexp_make_fixnum(sexp_vector_length(_ARG1));
     break;
   case SEXP_OP_BYTES_REF:
+    if (! sexp_bytesp(_ARG1))
+      sexp_raise("byte-vector-ref: not a byte-vector", sexp_list1(ctx, _ARG1));
+    if (! sexp_fixnump(_ARG2))
+      sexp_raise("byte-vector-ref: not an integer", sexp_list1(ctx, _ARG2));
+    i = sexp_unbox_fixnum(_ARG2);
+    if ((i < 0) || (i >= sexp_bytes_length(_ARG1)))
+      sexp_raise("byte-vector-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
+    _ARG2 = sexp_bytes_ref(_ARG1, _ARG2);
+    top--;
+    break;
   case SEXP_OP_STRING_REF:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-ref: not a string", sexp_list1(ctx, _ARG1));
@@ -1179,9 +1189,6 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     i = sexp_unbox_fixnum(_ARG2);
     if ((i < 0) || (i >= sexp_string_length(_ARG1)))
       sexp_raise("string-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
-    if (ip[-1] == SEXP_OP_BYTES_REF)
-      _ARG2 = sexp_bytes_ref(_ARG1, _ARG2);
-    else
 #if SEXP_USE_UTF8_STRINGS
       _ARG2 = sexp_string_utf8_ref(ctx, _ARG1, _ARG2);
 #else
@@ -1193,6 +1200,22 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     break;
   case SEXP_OP_BYTES_SET:
+    if (! sexp_bytesp(_ARG1))
+      sexp_raise("byte-vector-set!: not a byte-vector", sexp_list1(ctx, _ARG1));
+    else if (sexp_immutablep(_ARG1))
+      sexp_raise("byte-vector-set!: immutable byte-vector", sexp_list1(ctx, _ARG1));
+    else if (! sexp_fixnump(_ARG2))
+      sexp_raise("byte-vector-set!: not an integer", sexp_list1(ctx, _ARG2));
+    else if (!(sexp_fixnump(_ARG3) && sexp_unbox_fixnum(_ARG3)>=0
+               && sexp_unbox_fixnum(_ARG3)<0x100))
+      sexp_raise("byte-vector-set!: not an octet", sexp_list1(ctx, _ARG3));
+    i = sexp_unbox_fixnum(_ARG2);
+    if ((i < 0) || (i >= sexp_bytes_length(_ARG1)))
+      sexp_raise("byte-vector-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
+    sexp_bytes_set(_ARG1, _ARG2, _ARG3);
+    top-=3;
+    _ARG1 = SEXP_VOID;
+    break;
   case SEXP_OP_STRING_SET:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
@@ -1205,18 +1228,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     i = sexp_unbox_fixnum(_ARG2);
     if ((i < 0) || (i >= sexp_string_length(_ARG1)))
       sexp_raise("string-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
-    if (ip[-1] == SEXP_OP_BYTES_SET)
-      sexp_bytes_set(_ARG1, _ARG2, _ARG3);
-    else
 #if SEXP_USE_UTF8_STRINGS
-      {
-        sexp_context_top(ctx) = top;
-        sexp_string_utf8_set(ctx, _ARG1, _ARG2, _ARG3);
-      }
+    sexp_context_top(ctx) = top;
+    sexp_string_utf8_set(ctx, _ARG1, _ARG2, _ARG3);
 #else
-      sexp_string_set(_ARG1, _ARG2, _ARG3);
+    sexp_string_set(_ARG1, _ARG2, _ARG3);
 #endif
     top-=3;
+    _ARG1 = SEXP_VOID;
     break;
 #if SEXP_USE_UTF8_STRINGS
   case SEXP_OP_STRING_CURSOR_NEXT:
@@ -1246,7 +1265,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
 #endif
   case SEXP_OP_BYTES_LENGTH:
-    if (! sexp_stringp(_ARG1))
+    if (! sexp_bytesp(_ARG1))
       sexp_raise("bytes-length: not a byte-vector", sexp_list1(ctx, _ARG1));
     _ARG1 = sexp_make_fixnum(sexp_bytes_length(_ARG1));
     break;

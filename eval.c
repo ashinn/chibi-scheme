@@ -378,11 +378,10 @@ static void sexp_add_path (sexp ctx, const char *str) {
   }
 }
 
-void sexp_init_eval_context_globals (sexp ctx) {
-  sexp_gc_var3(tmp, vec, ctx2);
-  ctx = sexp_make_child_context(ctx, NULL);
-  sexp_gc_preserve3(ctx, tmp, vec, ctx2);
 #if ! SEXP_USE_NATIVE_X86
+static void sexp_init_eval_context_bytecodes (sexp ctx) {
+  sexp_gc_var3(tmp, vec, ctx2);
+  sexp_gc_preserve3(ctx, tmp, vec, ctx2);
   emit(ctx, SEXP_OP_RESUMECC);
   sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = finalize_bytecode(ctx);
   ctx2 = sexp_make_child_context(ctx, NULL);
@@ -393,6 +392,16 @@ void sexp_init_eval_context_globals (sexp ctx) {
     = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, tmp, vec);
   sexp_bytecode_name(sexp_procedure_code(sexp_global(ctx, SEXP_G_FINAL_RESUMER)))
     = sexp_intern(ctx, "final-resumer", -1);
+  sexp_gc_release3(ctx);
+}
+#endif
+
+void sexp_init_eval_context_globals (sexp ctx) {
+  sexp_gc_var1(tmp);
+  ctx = sexp_make_child_context(ctx, NULL);
+  sexp_gc_preserve1(ctx, tmp);
+#if ! SEXP_USE_NATIVE_X86
+  sexp_init_eval_context_bytecodes(ctx);
 #endif
   sexp_global(ctx, SEXP_G_MODULE_PATH) = SEXP_NULL;
   sexp_add_path(ctx, sexp_default_module_dir);
@@ -409,7 +418,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = SEXP_ZERO;
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = SEXP_FALSE;
 #endif
-  sexp_gc_release3(ctx);
+  sexp_gc_release1(ctx);
 }
 
 sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, sexp_uint_t max_size) {
