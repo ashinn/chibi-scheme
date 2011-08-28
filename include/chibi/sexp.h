@@ -562,6 +562,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_pairp(x)       (sexp_check_tag(x, SEXP_PAIR))
 #define sexp_stringp(x)     (sexp_check_tag(x, SEXP_STRING))
 #define sexp_lsymbolp(x)    (sexp_check_tag(x, SEXP_SYMBOL))
+#define sexp_bytesp(x)      (sexp_check_tag(x, SEXP_BYTES))
 #define sexp_vectorp(x)     (sexp_check_tag(x, SEXP_VECTOR))
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))

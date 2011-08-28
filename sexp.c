@@ -1452,6 +1452,18 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_string(ctx, sexp_opcode_name(obj), out);
       sexp_write_char(ctx, '>', out);
       break;
+#if SEXP_USE_BYTEVECTOR_LITERALS
+    case SEXP_BYTES:
+      sexp_write_string(ctx, "#u8(", out);
+      str = sexp_bytes_data(obj);
+      len = sexp_bytes_length(obj);
+      for (i=0; i<len; i++) {
+        if (i!=0) sexp_write_char(ctx, ' ', out);
+        sexp_write(ctx, sexp_make_fixnum(str[i]), out);
+      }
+      sexp_write_char(ctx, ')', out);
+      break;
+#endif
     default:
       i = sexp_pointer_tag(obj);
       if (i < 0 || i >= sexp_context_num_types(ctx)) {
@@ -2120,6 +2132,39 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = sexp_read_error(ctx, "invalid syntax #%c%c", tmp, in);
       }
       break;
+#if SEXP_USE_BYTEVECTOR_LITERALS
+    case 'v': case 'V':
+      c1 = sexp_read_char(ctx, in);
+      if (!(c1=='u'||c1=='U')) {
+        res = sexp_read_error(ctx, "invalid syntax #v%c", sexp_make_character(c1), in);
+        break;
+      }
+      /* ... FALLTHROUGH ... */
+    case 'u': case 'U':
+      if ((c1 = sexp_read_char(ctx, in)) == '8') {
+        tmp = sexp_read(ctx, in);
+        if (!sexp_listp(ctx, tmp)) {
+          res = sexp_exceptionp(tmp) ? tmp
+            : sexp_read_error(ctx, "invalid syntax object after #u8", tmp, in);
+        } else {
+          res = sexp_make_bytes(ctx, sexp_length(ctx, tmp), SEXP_VOID);
+          for (c1=0; sexp_pairp(tmp); tmp=sexp_cdr(tmp), c1++) {
+            tmp2 = sexp_car(tmp);
+            if (!(sexp_fixnump(tmp2) && sexp_unbox_fixnum(tmp2) >= 0
+                  && sexp_unbox_fixnum(tmp2) < 0x100)) {
+              res = sexp_read_error(ctx, "invalid bytevector value", tmp2, in);
+              break;
+            } else {
+              sexp_bytes_set(res, sexp_make_fixnum(c1), tmp2);
+            }
+          }
+        }
+      } else {
+        tmp = sexp_list2(ctx, sexp_make_character('u'), sexp_make_character(c1));
+        res = sexp_read_error(ctx, "invalid syntax #%c%c", tmp, in);
+      }
+      break;
+#endif
 /*     case '0': case '1': case '2': case '3': case '4': */
 /*     case '5': case '6': case '7': case '8': case '9': */
     case ';':
