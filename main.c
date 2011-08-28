@@ -45,6 +45,8 @@ static void repl (sexp ctx, sexp env) {
     } else {
       tmp = sexp_env_bindings(env);
       sexp_context_top(ctx) = 0;
+      if (!(sexp_idp(obj)||sexp_pairp(obj)))
+        obj = sexp_make_lit(ctx, obj);
       res = sexp_eval(ctx, obj, env);
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, err);
