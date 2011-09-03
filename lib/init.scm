@@ -894,7 +894,9 @@
 (cond-expand
  (complex
   (define (exact-complex? x)
-    (and (%complex? x) (exact? (complex-real x)) (exact? (complex-imag x))))))
+    (and (%complex? x) (exact? (complex-real x)) (exact? (complex-imag x)))))
+ (else
+  (define (exact-complex? x) #f)))
 
 (cond-expand
  (ratios
@@ -993,7 +995,7 @@
              (* (imag-part z) (imag-part z)))))
   (define (angle z) (atan (imag-part z) (real-part z)))
   (define (make-rectangular x y)
-    (+ x (* z 0+1i)))
+    (+ x (* z (sqrt -1))))
   (define (make-polar r phi)
     (make-rectangular (* r (cos phi)) (* r (sin phi)))))
  (else
