@@ -2305,14 +2305,19 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       }
     } else {
       sexp_push_char(ctx, c2, in);
-      res = sexp_read_symbol(ctx, in, c1, 1);
+      res = sexp_read_symbol(ctx, in, c1, 0);
 #if SEXP_USE_INFINITIES
-      if (res == sexp_intern(ctx, "+inf.0", -1))
-        res = sexp_make_flonum(ctx, sexp_pos_infinity);
-      else if (res == sexp_intern(ctx, "-inf.0", -1))
-        res = sexp_make_flonum(ctx, sexp_neg_infinity);
-      else if (res == sexp_intern(ctx, "+nan.0", -1))
-        res = sexp_make_flonum(ctx, sexp_nan);
+      if (sexp_stringp(res)) {
+        str = sexp_string_data(res);
+        if (strcasecmp(str, "+inf.0") == 0)
+          res = sexp_make_flonum(ctx, sexp_pos_infinity);
+        else if (strcasecmp(str, "-inf.0") == 0)
+          res = sexp_make_flonum(ctx, sexp_neg_infinity);
+        else if (strcasecmp(str, "+nan.0") == 0)
+          res = sexp_make_flonum(ctx, sexp_nan);
+        else
+          res = sexp_intern(ctx, str, sexp_string_length(res));
+      }
 #endif
 #if SEXP_USE_COMPLEX
       if (res == sexp_intern(ctx, "+i", -1))
