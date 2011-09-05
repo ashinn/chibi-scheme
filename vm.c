@@ -1617,6 +1617,17 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       i = tmp1 == tmp2;
 #if SEXP_USE_BIGNUMS
       _ARG1 = sexp_make_boolean(i);
+#if SEXP_USE_COMPLEX
+    } else if (sexp_complexp(tmp1)) {
+      if (!sexp_complexp(tmp2)) {
+        _ARG1 = SEXP_FALSE;
+      } else {
+        i = (sexp_complex_real(tmp1) == sexp_complex_real(tmp2)
+             || (sexp_flonump(tmp1) && (sexp_flonum_value(tmp1) == (sexp_flonump(tmp2) ? sexp_flonum_value(tmp2) : sexp_unbox_fixnum(tmp2))))
+             || (sexp_flonump(tmp2) && (sexp_flonum_value(tmp2) == sexp_unbox_fixnum(tmp2))));
+        _ARG1 = sexp_make_boolean(i);
+      }
+#endif
     } else {
       _ARG1 = sexp_compare(ctx, tmp1, tmp2);
       sexp_check_exception();
