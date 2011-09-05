@@ -2307,7 +2307,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       }
     } else {
       sexp_push_char(ctx, c2, in);
-      res = sexp_read_symbol(ctx, in, c1, 0);
+      res = sexp_read_symbol(ctx, in, c1, !SEXP_USE_INFINITIES);
 #if SEXP_USE_INFINITIES
       if (sexp_stringp(res)) {
         str = sexp_string_data(res);
