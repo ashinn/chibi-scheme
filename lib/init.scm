@@ -995,7 +995,7 @@
              (* (imag-part z) (imag-part z)))))
   (define (angle z) (atan (imag-part z) (real-part z)))
   (define (make-rectangular x y)
-    (+ x (* z (sqrt -1))))
+    (+ x (* y (sqrt -1))))
   (define (make-polar r phi)
     (make-rectangular (* r (cos phi)) (* r (sin phi)))))
  (else
