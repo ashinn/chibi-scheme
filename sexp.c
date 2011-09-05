@@ -1801,12 +1801,12 @@ sexp sexp_make_ratio (sexp ctx, sexp num, sexp den) {
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
   sexp tmp;
   sexp_gc_var2(num, den);
-  sexp_gc_preserve2(ctx, num, den);
   num = sexp_ratio_numerator(rat), den = sexp_ratio_denominator(rat);
   if (den == SEXP_ZERO)
     return sexp_read_error(ctx, "zero denominator in ratio", rat, in);
   else if (num == SEXP_ZERO)
     return SEXP_ZERO;
+  sexp_gc_preserve2(ctx, num, den);
   while (den != SEXP_ZERO) {
     tmp = sexp_remainder(ctx, num, den);
     if (sexp_exceptionp(tmp)) {
