@@ -1830,7 +1830,7 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
 #endif
 
 sexp sexp_read_number (sexp ctx, sexp in, int base) {
-  sexp_sint_t val = 0, tmp;
+  sexp_sint_t val = 0, tmp = -1;
   int c, digit, negativep = 0;
 #if SEXP_USE_PLACEHOLDER_DIGITS
   double whole = 0.0, scale = 0.1;
@@ -1862,7 +1862,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
   }
 
 #if SEXP_USE_PLACEHOLDER_DIGITS
-  if (sexp_placeholder_digit_p(c)) {
+  if (sexp_placeholder_digit_p(c) && tmp >= 0) {
     whole = val;
     for ( ; sexp_placeholder_digit_p(c); c=sexp_read_char(ctx, in))
       whole = whole*10 + sexp_placeholder_digit_value(base);
@@ -2103,20 +2103,20 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 #endif
   case '#':
     switch (c1=sexp_read_char(ctx, in)) {
-    case 'b':
+    case 'b': case 'B':
       res = sexp_read_number(ctx, in, 2); break;
-    case 'o':
+    case 'o': case 'O':
       res = sexp_read_number(ctx, in, 8); break;
-    case 'd':
+    case 'd': case 'D':
       res = sexp_read_number(ctx, in, 10); break;
-    case 'x':
+    case 'x': case 'X':
       res = sexp_read_number(ctx, in, 16); break;
-    case 'e':
+    case 'e': case 'E':
       res = sexp_read(ctx, in);
       if (sexp_flonump(res))
         res = sexp_make_fixnum((sexp_sint_t)sexp_flonum_value(res));
       break;
-    case 'i':
+    case 'i': case 'I':
       res = sexp_read(ctx, in);
       if (sexp_fixnump(res))
         res = sexp_make_flonum(ctx, sexp_unbox_fixnum(res));
@@ -2377,13 +2377,18 @@ sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, b);
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
     return sexp_user_exception(ctx, self, "invalid numeric base", b);
-  if (sexp_string_data(str)[0] == '\0'
-      || (sexp_string_data(str)[0] == '.' && sexp_string_data(str)[1] == '\0'))
+  if (sexp_string_data(str)[0]=='\0'
+      || (sexp_string_data(str)[1]=='\0' && !isdigit(sexp_string_data(str)[0])))
     return SEXP_FALSE;
   sexp_gc_preserve1(ctx, in);
   in = sexp_make_input_string_port(ctx, str);
-  if (sexp_string_data(str)[0] == '+')
-    sexp_read_char(ctx, in);
+  if (sexp_string_data(str)[0] == '+') {
+    if (isdigit(sexp_string_data(str)[1])
+        || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
+      sexp_read_char(ctx, in);
+    else
+      return SEXP_FALSE;
+  }
   in = ((sexp_string_data(str)[0] == '#') ?
         sexp_read(ctx, in) : sexp_read_number(ctx, in, base));
   sexp_gc_release1(ctx);
