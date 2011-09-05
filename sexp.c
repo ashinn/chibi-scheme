@@ -2377,8 +2377,13 @@ sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, b);
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
     return sexp_user_exception(ctx, self, "invalid numeric base", b);
+  if (sexp_string_data(str)[0] == '\0'
+      || (sexp_string_data(str)[0] == '.' && sexp_string_data(str)[1] == '\0'))
+    return SEXP_FALSE;
   sexp_gc_preserve1(ctx, in);
   in = sexp_make_input_string_port(ctx, str);
+  if (sexp_string_data(str)[0] == '+')
+    sexp_read_char(ctx, in);
   in = ((sexp_string_data(str)[0] == '#') ?
         sexp_read(ctx, in) : sexp_read_number(ctx, in, base));
   sexp_gc_release1(ctx);
