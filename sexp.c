@@ -1915,6 +1915,8 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     if ((c!=EOF) && ! is_separator(c))
       return sexp_read_error(ctx, "invalid numeric syntax",
                              sexp_make_character(c), in);
+    else if (tmp < 0)
+      return sexp_read_error(ctx, "digitless numeric literal", SEXP_NULL, in);
     sexp_push_char(ctx, c, in);
   }
 
@@ -2386,10 +2388,8 @@ sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp
     if (isdigit(sexp_string_data(str)[1])
         || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
       sexp_read_char(ctx, in);
-    else
-      return SEXP_FALSE;
   }
-  in = ((sexp_string_data(str)[0] == '#') ?
+  in = ((sexp_string_data(str)[0] == '#') || base == 10 ?
         sexp_read(ctx, in) : sexp_read_number(ctx, in, base));
   sexp_gc_release1(ctx);
   return sexp_numberp(in) ? in : SEXP_FALSE;
