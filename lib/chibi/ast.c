@@ -247,7 +247,7 @@ static sexp sexp_make_seq (sexp ctx sexp_api_params(self, n), sexp ls) {
   return res;
 }
 
-static sexp sexp_make_lit (sexp ctx sexp_api_params(self, n), sexp value) {
+static sexp sexp_make_lit_op (sexp ctx sexp_api_params(self, n), sexp value) {
   sexp res = sexp_alloc_type(ctx, lit, SEXP_LIT);
   sexp_lit_value(res) = value;
   return res;
@@ -392,7 +392,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign_opt(ctx, env, "make-cnd", 3, sexp_make_cnd, SEXP_VOID);
   sexp_define_foreign(ctx, env, "make-ref", 2, sexp_make_ref);
   sexp_define_foreign(ctx, env, "make-set", 2, sexp_make_set);
-  sexp_define_foreign(ctx, env, "make-lit", 1, sexp_make_lit);
+  sexp_define_foreign(ctx, env, "make-lit", 1, sexp_make_lit_op);
   sexp_define_foreign(ctx, env, "make-seq", 1, sexp_make_seq);
   sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
