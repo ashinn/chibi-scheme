@@ -1122,7 +1122,8 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_FIX_FIX:
 #if SEXP_USE_RATIOS
-    r = sexp_make_ratio(ctx, a, b);
+    tmp = sexp_make_ratio(ctx, a, b);
+    r = sexp_ratio_normalize(ctx, tmp, SEXP_FALSE);
 #else
     f = sexp_fixnum_to_double(a) / sexp_fixnum_to_double(b);
     r = ((f == trunc(f)) ? sexp_make_fixnum((sexp_sint_t)f)
@@ -1134,7 +1135,8 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_FIX_BIG:
 #if SEXP_USE_RATIOS
-    r = sexp_make_ratio(ctx, a, b);
+    tmp = sexp_make_ratio(ctx, a, b);
+    r = sexp_ratio_normalize(ctx, tmp, SEXP_FALSE);
 #else
     r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b)); 
 #endif
@@ -1150,7 +1152,8 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_BIG_FIX:
 #if SEXP_USE_RATIOS
-    r = sexp_make_ratio(ctx, a, b);
+    tmp = sexp_make_ratio(ctx, a, b);
+    r = sexp_ratio_normalize(ctx, tmp, SEXP_FALSE);
     break;
 #else
     b = tmp = sexp_fixnum_to_bignum(ctx, b);
@@ -1158,7 +1161,8 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     /* ... FALLTHROUGH if ! SEXP_USE_RATIOS ... */
   case SEXP_NUM_BIG_BIG:
 #if SEXP_USE_RATIOS
-    r = sexp_make_ratio(ctx, a, b);
+    tmp = sexp_make_ratio(ctx, a, b);
+    r = sexp_ratio_normalize(ctx, tmp, SEXP_FALSE);
 #else
     r = sexp_bignum_quot_rem(ctx, &rem, a, b);
     if (sexp_bignum_normalize(rem) != SEXP_ZERO)
