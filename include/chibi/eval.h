@@ -176,6 +176,17 @@ SEXP_API sexp sexp_make_procedure_op (sexp ctx sexp_api_params(self, n), sexp fl
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 
+#if SEXP_USE_NATIVE_X86
+SEXP_API sexp sexp_write_char_op(sexp ctx sexp_api_params(self, n), sexp ch, sexp out);
+SEXP_API sexp sexp_newline_op(sexp ctx sexp_api_params(self, n), sexp out);
+SEXP_API sexp sexp_read_char_op(sexp ctx sexp_api_params(self, n), sexp in);
+SEXP_API sexp sexp_peek_char_op(sexp ctx sexp_api_params(self, n), sexp in);
+SEXP_API sexp sexp_exact_to_inexact(sexp ctx sexp_api_params(self, n), sexp i);
+SEXP_API sexp sexp_inexact_to_exact(sexp ctx sexp_api_params(self, n), sexp x);
+SEXP_API sexp sexp_char_upcase(sexp ctx sexp_api_params(self, n), sexp ch);
+SEXP_API sexp sexp_char_downcase(sexp ctx sexp_api_params(self, n), sexp ch);
+#endif
+
 #define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(sexp_proc1)f,NULL)
 #define sexp_define_foreign_opt(c,e,s,n,f,d) sexp_define_foreign_aux(c,e,s,n,1,(sexp_proc1)f,d)
 
