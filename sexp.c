@@ -2139,8 +2139,16 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = (tolower(c1) == 't' ? SEXP_TRUE : SEXP_FALSE);
         sexp_push_char(ctx, c2, in);
       } else {
-        tmp = sexp_list2(ctx, sexp_make_character(c1), sexp_make_character(c2));
-        res = sexp_read_error(ctx, "invalid syntax #%c%c", tmp, in);
+        sexp_push_char(ctx, c2, in);
+        res = sexp_read_symbol(ctx, in, c1, 0);
+        if (!sexp_exceptionp(res)) {
+          if (strcasecmp("true", sexp_string_data(res)) == 0)
+            res = SEXP_TRUE;
+          else if (strcasecmp("false", sexp_string_data(res)) == 0)
+            res = SEXP_FALSE;
+          else
+            res = sexp_read_error(ctx, "invalid # syntax", res, in);
+        }
       }
       break;
 #if SEXP_USE_BYTEVECTOR_LITERALS
