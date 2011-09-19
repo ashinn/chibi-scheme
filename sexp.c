@@ -1318,6 +1318,15 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   return p;
 }
 
+#if SEXP_USE_FOLD_CASE_SYMS
+sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x) {
+  sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
+  sexp_assert_type(ctx, sexp_booleanp, SEXP_BOOLEAN, x);
+  sexp_port_fold_casep(in) = x;
+  return SEXP_VOID;
+}
+#endif
+
 #define NUMBUF_LEN 32
 
 sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {

@@ -1089,19 +1089,23 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
 #endif
   sexp tmp, out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
-  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, source);
   if (!env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
-  suffix = sexp_string_data(source)
-    + sexp_string_length(source) - strlen(sexp_so_extension);
+  suffix = sexp_stringp(source) ? sexp_string_data(source)
+    + sexp_string_length(source) - strlen(sexp_so_extension) : "...";
   if (strcmp(suffix, sexp_so_extension) == 0) {
     res = sexp_load_dl(ctx, source, env);
   } else {
 #endif
-  sexp_gc_preserve4(ctx, ctx2, x, in, res);
   res = SEXP_VOID;
-  in = sexp_open_input_file(ctx, source);
+  if (sexp_iportp(source)) {
+    in = source;
+  } else {
+    sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, source);
+    in = sexp_open_input_file(ctx, source);
+  }
+  sexp_gc_preserve4(ctx, ctx2, x, in, res);
   out = sexp_current_error_port(ctx);
   ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
   sexp_context_parent(ctx2) = ctx;

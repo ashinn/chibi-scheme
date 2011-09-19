@@ -95,12 +95,20 @@
 (define (eval-module name mod)
   (let ((env (make-environment))
         (dir (module-name-prefix name)))
-    (define (load-modules files extension)
+    (define (load-modules files extension fold?)
       (for-each
        (lambda (f)
          (let ((f (string-append dir f extension)))
-           (cond ((find-module-file f) => (lambda (x) (load x env)))
-                 (else (error "couldn't find include" f)))))
+           (cond
+            ((find-module-file f)
+             => (lambda (path)
+                  (cond (fold?
+                         (let ((in (open-input-file path)))
+                           (set-port-fold-case! in #t)
+                           (load in env)))
+                        (else
+                         (load path env)))))
+            (else (error "couldn't find include" f)))))
        files))
     (for-each
      (lambda (x)
@@ -117,9 +125,11 @@
      (lambda (x)
        (case (and (pair? x) (car x))
          ((include)
-          (load-modules (cdr x) ""))
+          (load-modules (cdr x) "" #f))
+         ((include-ci)
+          (load-modules (cdr x) "" #t))
          ((include-shared)
-          (load-modules (cdr x) *shared-object-extension*))
+          (load-modules (cdr x) *shared-object-extension* #f))
          ((body begin)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))
@@ -131,7 +141,7 @@
         (module-env-set! mod (eval-module name mod)))
     mod))
 
-(define-syntax define-module
+(define define-library-transformer
   (er-macro-transformer
    (lambda (expr rename compare)
      (let ((name (cadr expr))
@@ -156,10 +166,9 @@
                         *modules*)))
           (set! *this-module* tmp))))))
 
-(define-syntax module
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (cons (rename 'define-module) (cdr expr)))))
+(define-syntax define-library define-library-transformer)
+(define-syntax define-module define-library-transformer)
+(define-syntax module define-library-transformer)
 
 (define-syntax define-config-primitive
   (er-macro-transformer
@@ -173,6 +182,7 @@
 (define-config-primitive import-immutable)
 (define-config-primitive export)
 (define-config-primitive include)
+(define-config-primitive include-ci)
 (define-config-primitive include-shared)
 (define-config-primitive body)
 (define-config-primitive begin)

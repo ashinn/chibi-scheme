@@ -1142,6 +1142,9 @@ SEXP_API sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp 
 SEXP_API sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
+#if SEXP_USE_FOLD_CASE_SYMS
+SEXP_API sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x);
+#endif
 SEXP_API sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str);
 SEXP_API sexp sexp_make_output_string_port_op (sexp ctx sexp_api_params(self, n));
 SEXP_API sexp sexp_get_output_string_op (sexp ctx sexp_api_params(self, n), sexp port);
