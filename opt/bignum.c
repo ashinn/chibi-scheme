@@ -1001,7 +1001,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     r = sexp_make_flonum(ctx, sexp_flonum_value(a) - sexp_ratio_to_double(b));
     break;
   case SEXP_NUM_RAT_FLO:
-    r = sexp_make_flonum(ctx, sexp_ratio_to_double(b) - sexp_flonum_value(a));
+    r = sexp_make_flonum(ctx, sexp_ratio_to_double(a) - sexp_flonum_value(b));
     break;
   case SEXP_NUM_RAT_FIX:
   case SEXP_NUM_RAT_BIG:
