@@ -1322,7 +1322,7 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
 sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x) {
   sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
   sexp_assert_type(ctx, sexp_booleanp, SEXP_BOOLEAN, x);
-  sexp_port_fold_casep(in) = x;
+  sexp_port_fold_casep(in) = sexp_truep(x);
   return SEXP_VOID;
 }
 #endif
@@ -2125,12 +2125,20 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     case 'e': case 'E':
       res = sexp_read(ctx, in);
       if (sexp_flonump(res))
-        res = sexp_make_fixnum((sexp_sint_t)sexp_flonum_value(res));
+#if SEXP_USE_RATIOS
+        res = sexp_double_to_ratio(ctx, sexp_flonum_value(res));
+#else
+        res = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(res)));
+#endif
       break;
     case 'i': case 'I':
       res = sexp_read(ctx, in);
-      if (sexp_fixnump(res))
+      if (sexp_exact_integerp(res))
         res = sexp_make_flonum(ctx, sexp_unbox_fixnum(res));
+#if SEXP_USE_RATIOS
+      else if (sexp_ratiop(res))
+        res = sexp_make_flonum(ctx, sexp_ratio_to_double(res));
+#endif
       break;
     case 'f': case 'F':
     case 't': case 'T':

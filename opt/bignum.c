@@ -471,6 +471,31 @@ double sexp_ratio_to_double (sexp rat) {
        : sexp_fixnum_to_double(den));
 }
 
+sexp sexp_double_to_ratio (sexp ctx, double f) {
+  int sign, i;
+  sexp_gc_var4(res, whole, scale, tmp);
+  if (f == trunc(f))
+    return sexp_double_to_bignum(ctx, f);
+  sexp_gc_preserve4(ctx, res, whole, scale, tmp);
+  whole = sexp_double_to_bignum(ctx, trunc(f));
+  res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
+  scale = SEXP_ONE;
+  sign = (f < 0 ? -1 : 1);
+  for (i=0, f=fabs(f-trunc(f)); f != trunc(f) && i < 15; i++) {
+    res = sexp_bignum_fxmul(ctx, NULL, res, 10, 0);
+    f = f * 10;
+    res = sexp_bignum_fxadd(ctx, res, double_10s_digit(f));
+    f = f - trunc(f);
+    scale = sexp_mul(ctx, scale, SEXP_TEN);
+  }
+  sexp_bignum_sign(res) = sign;
+  res = sexp_make_ratio(ctx, res, scale);
+  res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
+  res = sexp_add(ctx, res, whole);
+  sexp_gc_release4(ctx);
+  return res;
+}
+
 sexp sexp_ratio_add (sexp ctx, sexp a, sexp b) {
   sexp_gc_var3(res, num, den);
   sexp_gc_preserve3(ctx, res, num, den);
