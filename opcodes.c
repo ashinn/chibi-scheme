@@ -1,7 +1,11 @@
 
 #define _I(n) sexp_make_fixnum(n)
-#define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) {c, o, n, m, i, s, d, NULL, NULL, rt, a1, a2, a3, f}
+#define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, SEXP_FALSE, f}
+#if SEXP_USE_IMAGE_LOADING
+#define _FN(o,n,m,rt,a1,a2,a3,s,d,f) {SEXP_OPC_FOREIGN, o, n, m, 0, (sexp)s, d, (sexp)#f, NULL, rt, a1, a2, a3, SEXP_FALSE, (sexp_proc1)f}
+#else
 #define _FN(o,n,m,rt,a1,a2,a3,s,d,f) _OP(SEXP_OPC_FOREIGN, o, n, m, rt, a1, a2, a3, 0, s, d, (sexp_proc1)f)
+#endif
 #define _FN0(rt, s, d, f) _FN(SEXP_OP_FCALL0, 0, 0, rt, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, s, d, f)
 #define _FN1(rt, a1, s, d, f) _FN(SEXP_OP_FCALL1, 1, 0, rt, a1, SEXP_FALSE, SEXP_FALSE, s, d, f)
 #define _FN1OPT(rt, a1, s, d, f) _FN(SEXP_OP_FCALL1, 0, 1, rt, a1, SEXP_FALSE, SEXP_FALSE, s, d, f)

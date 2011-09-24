@@ -41,7 +41,7 @@ static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
   } else {
   print_name:
     sexp_write_string(ctx, "#<", out);
-    sexp_write_string(ctx, sexp_object_type_name(ctx, x), out);
+    sexp_display(ctx, sexp_object_type_name(ctx, x), out);
     sexp_write_string(ctx, ">", out);
   }
 }
@@ -97,7 +97,7 @@ static sexp sexp_heap_walk (sexp ctx, int depth, int printp) {
   res = SEXP_NULL;
   for (i=hi_type; i>0; i--)
     if (stats[i]) {
-      name = sexp_intern(ctx, sexp_type_name_by_index(ctx, i), -1);
+      name = sexp_string_to_symbol(ctx, sexp_type_name_by_index(ctx, i));
       tmp = sexp_cons(ctx, name, sexp_make_fixnum(stats[i]));
       res = sexp_cons(ctx, tmp, res);
     }

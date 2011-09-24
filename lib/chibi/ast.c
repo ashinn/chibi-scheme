@@ -53,7 +53,7 @@ static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
   else if (! sexp_opcode_name(op))
     return SEXP_FALSE;
   else
-    return sexp_intern(ctx, sexp_opcode_name(op), -1);
+    return sexp_opcode_name(op);
 }
 
 static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
@@ -162,7 +162,7 @@ static sexp sexp_type_of (sexp ctx sexp_api_params(self, n), sexp x) {
 
 static sexp sexp_type_name_op (sexp ctx sexp_api_params(self, n), sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
-  return sexp_c_string(ctx, sexp_type_name(t), -1);
+  return sexp_type_name(t);
 }
 
 static sexp sexp_type_cpl_op (sexp ctx sexp_api_params(self, n), sexp t) {
@@ -283,7 +283,6 @@ static sexp sexp_gc_op (sexp ctx sexp_api_params(self, n)) {
 #endif
   return sexp_make_unsigned_integer(ctx, sum_freed);
 }
-
 
 static sexp sexp_string_contains (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
   const char *res;

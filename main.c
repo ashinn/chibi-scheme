@@ -18,6 +18,80 @@
 #define exit_failure() exit(70)
 #endif
 
+#if SEXP_USE_IMAGE_LOADING
+
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
+#define SEXP_IMAGE_MAGIC "\x07\x07chibi\n\0"
+#define SEXP_IMAGE_MAJOR_VERSION 1
+#define SEXP_IMAGE_MINOR_VERSION 0
+
+typedef struct sexp_image_header_t* sexp_image_header;
+struct sexp_image_header_t {
+  const char magic[8];
+  short major, minor;
+  sexp_uint_t size, base, context;
+};
+
+void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types, sexp flags);
+
+static sexp sexp_load_image (const char* file) {
+  sexp ctx, *globals, *types;
+  int fd;
+  sexp_sint_t offset;
+  char* image;
+  struct sexp_image_header_t header;
+  fd = open(file, O_RDONLY);
+  if (fd < 0) {
+    fprintf(stderr, "can't open image file: %s\n", file);
+    return NULL;
+  }
+  read(fd, &header, sizeof(header));
+  if (memcmp(header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic)) != 0) {
+    fprintf(stderr, "invalid image file magic for %s: %s\n", file, header.magic);
+    return NULL;
+  } else if (header.major != SEXP_IMAGE_MAJOR_VERSION
+             || header.major < SEXP_IMAGE_MINOR_VERSION) {
+    fprintf(stderr, "unsupported image version: %d.%d\n", header.major, header.minor);
+    return NULL;
+  }
+  image = malloc(sexp_heap_pad_size(header.size));
+  read(fd, image, header.size);
+  offset = (sexp_sint_t)(image - (sexp_sint_t)header.base);
+  ctx = (sexp)(header.context + offset);
+  globals = sexp_vector_data((sexp)((char*)sexp_context_globals(ctx) + offset));
+  types = sexp_vector_data((sexp)((char*)(globals[SEXP_G_TYPES]) + offset));
+  sexp_offset_heap_pointers((sexp_heap)image, (sexp_heap)header.base, types, sexp_fx_add(SEXP_COPY_LOADP, SEXP_COPY_FREEP));
+  close(fd);
+  return ctx;
+}
+
+static int sexp_save_image (sexp ctx, const char* path) {
+  sexp_heap heap;
+  FILE* file;
+  struct sexp_image_header_t header;
+  file = fopen(path, "w");
+  if (!file) {
+    fprintf(stderr, "couldn't open image file for writing: %s\n", path);
+    return 0;
+  }
+  heap = sexp_context_heap(ctx);
+  memcpy(&header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic));
+  header.major = SEXP_IMAGE_MAJOR_VERSION;
+  header.minor = SEXP_IMAGE_MINOR_VERSION;
+  header.size = heap->size;
+  header.base = (sexp_uint_t)heap;
+  header.context = (sexp_uint_t)ctx;
+  fwrite(&header, sizeof(header), 1, file);
+  fwrite(heap, heap->size, 1, file);
+  fclose(file);
+  return 1;
+}
+
+#endif
+
 static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
   sexp res=sexp_env_ref(env, name, SEXP_FALSE);
   return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : SEXP_VOID;
@@ -211,6 +285,29 @@ void run_main (int argc, char **argv) {
         if (sexp_isalpha(*arg)) heap_max_size *= multiplier(*arg++);
       }
       break;
+#if SEXP_USE_IMAGE_LOADING
+    case 'i':
+      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      if (ctx) {
+        fprintf(stderr, "-:i <file>: image files must be loaded first\n");
+        exit_failure();
+      }
+      ctx = sexp_load_image(arg);
+      if (!ctx) {
+        fprintf(stderr, "-:i <file>: couldn't open file for reading: %s\n", arg);
+        exit_failure();
+      }
+      env = sexp_context_env(ctx);
+      init_loaded++;
+      break;
+    case 'd':
+      load_init();
+      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      if (!sexp_save_image(ctx, arg))
+        exit_failure();
+      quit = 1;
+      break;
+#endif
     case 'V':
       load_init();
       if (! sexp_oportp(out))
@@ -241,7 +338,7 @@ void run_main (int argc, char **argv) {
     else
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
-    sexp_eval_string(ctx, sexp_argv_proc, -1, env);
+    /* sexp_eval_string(ctx, sexp_argv_proc, -1, env); */
     if (i < argc) {             /* script usage */
       sexp_context_tracep(ctx) = 1;
       check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
