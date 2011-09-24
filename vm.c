@@ -642,7 +642,7 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   refs = sexp_cons(ctx2, op, refs);
   generate_opcode_app(ctx2, refs);
   bc = finalize_bytecode(ctx2);
-  sexp_bytecode_name(bc) = sexp_c_string(ctx2, sexp_opcode_name(op), -1);
+  sexp_bytecode_name(bc) = sexp_opcode_name(op);
   res=sexp_make_procedure(ctx2, SEXP_ZERO, sexp_make_fixnum(i), bc, SEXP_VOID);
   if (i == sexp_opcode_num_args(op))
     sexp_opcode_proc(op) = res;
@@ -1331,14 +1331,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_SLOT_REF:
     _ALIGN_IP();
     if (! sexp_check_type(ctx, _ARG1, sexp_type_by_index(ctx, _UWORD0)))
-      sexp_raise("slot-ref: bad type", sexp_list2(ctx, tmp1=sexp_c_string(ctx, sexp_type_name_by_index(ctx, _UWORD0), -1), _ARG1));
+      sexp_raise("slot-ref: bad type", sexp_list2(ctx, sexp_type_name_by_index(ctx, _UWORD0), _ARG1));
     _ARG1 = sexp_slot_ref(_ARG1, _UWORD1);
     ip += sizeof(sexp)*2;
     break;
   case SEXP_OP_SLOT_SET:
     _ALIGN_IP();
     if (! sexp_check_type(ctx, _ARG1, sexp_type_by_index(ctx, _UWORD0)))
-      sexp_raise("slot-set!: bad type", sexp_list2(ctx, tmp1=sexp_c_string(ctx, sexp_type_name_by_index(ctx, _UWORD0), -1), _ARG1));
+      sexp_raise("slot-set!: bad type", sexp_list2(ctx, sexp_type_name_by_index(ctx, _UWORD0), _ARG1));
     else if (sexp_immutablep(_ARG1))
       sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG1));
     sexp_slot_set(_ARG1, _UWORD1, _ARG2);

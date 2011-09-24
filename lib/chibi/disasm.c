@@ -33,7 +33,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
   } else if (sexp_opcodep(bc)) {
-    sexp_write_string(ctx, sexp_opcode_name(bc), out);
+    sexp_display(ctx, sexp_opcode_name(bc), out);
     sexp_write_string(ctx, " is a primitive\n", out);
     return SEXP_VOID;
   } else if (! sexp_bytecodep(bc)) {
@@ -87,7 +87,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL4:
     sexp_write_pointer(ctx, ((sexp*)ip)[0], out);
     sexp_write_char(ctx, '\n', out);
-    sexp_write_string(ctx, sexp_opcode_name(((sexp*)ip)[0]), out);
+    sexp_display(ctx, sexp_opcode_name(((sexp*)ip)[0]), out);
     ip += sizeof(sexp);
     break;
   case SEXP_OP_SLOT_REF:

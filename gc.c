@@ -473,12 +473,88 @@ void* sexp_alloc (sexp ctx, size_t size) {
 
 #if ! SEXP_USE_GLOBAL_HEAP
 
-sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
-  sexp_sint_t i, off, len, freep;
-  sexp_heap to, from = sexp_context_heap(ctx);
+void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types, sexp flags) {
+  sexp_sint_t i, off, len, freep, loadp;
   sexp_free_list q;
-  sexp p, p2, t, end, *v;
+  sexp p, t, end, name, *v;
   freep = sexp_unbox_fixnum(flags) & sexp_unbox_fixnum(SEXP_COPY_FREEP);
+  loadp = sexp_unbox_fixnum(flags) & sexp_unbox_fixnum(SEXP_COPY_LOADP);
+
+  off = (sexp_sint_t)((sexp_sint_t)heap - (sexp_sint_t)from_heap);
+  heap->data += off;
+  end = (sexp) (heap->data + heap->size);
+
+  /* adjust the free list */
+  heap->free_list = (sexp_free_list) ((char*)heap->free_list + off);
+  for (q=heap->free_list; q->next; q=q->next)
+    q->next = (sexp_free_list) ((char*)q->next + off);
+
+  /* adjust data by traversing over the new heap */
+  p = (sexp) (heap->data + sexp_heap_align(sexp_free_chunk_size));
+  q = heap->free_list;
+  while (p < end) {
+    /* find the next free list pointer */
+    for ( ; q && ((char*)q < (char*)p); q=q->next)
+      ;
+    if ((char*)q == (char*)p) { /* this is a free block, skip it */
+      p = (sexp) (((char*)p) + q->size);
+    } else {
+      t = (sexp)((char*)(types[sexp_pointer_tag(p)])
+                 + ((char*)types > (char*)p ? off : 0));
+      len = sexp_type_num_slots_of_object(t, p);
+      v = (sexp*) ((char*)p + sexp_type_field_base(t));
+      /* offset any pointers in the _destination_ heap */
+      for (i=0; i<len; i++)
+        if (v[i] && sexp_pointerp(v[i]))
+          v[i] = (sexp) ((char*)v[i] + off);
+      /* don't free unless specified - only the original cleans up */
+      if (! freep)
+        sexp_freep(p) = 0;
+      /* adjust context heaps, don't copy saved sexp_gc_vars */
+      if (sexp_contextp(p)) {
+        sexp_context_ip(p) += off;
+        sexp_context_saves(p) = NULL;
+        /* if (sexp_context_heap(p) - off != from_heap) */
+        /*   fprintf(stderr, "unexpected heap: %p\n", sexp_context_heap(p)); */
+        sexp_context_heap(p) = heap;
+      } else if (loadp && sexp_dlp(p)) {
+        sexp_dl_handle(p) = NULL;
+      }
+      p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));
+    }
+  }
+
+  /* make a second pass to fix code references */
+  if (loadp) {
+    p = (sexp) (heap->data + sexp_heap_align(sexp_free_chunk_size));
+    q = heap->free_list;
+    while (p < end) {
+      /* find the next free list pointer */
+      for ( ; q && ((char*)q < (char*)p); q=q->next)
+        ;
+      if ((char*)q == (char*)p) { /* this is a free block, skip it */
+        p = (sexp) (((char*)p) + q->size);
+      } else {
+        if (sexp_opcodep(p) && sexp_opcode_func(p)) {
+          name = (sexp_opcode_data2(p) && sexp_stringp(sexp_opcode_data2(p))) ? sexp_opcode_data2(p) : sexp_opcode_name(p);
+          if (sexp_dlp(sexp_opcode_dl(p))) {
+            if (!sexp_dl_handle(sexp_opcode_dl(p)))
+              sexp_dl_handle(sexp_opcode_dl(p)) = dlopen(sexp_string_data(sexp_dl_file(sexp_opcode_dl(p))), RTLD_LAZY);
+            sexp_opcode_func(p) = dlsym(sexp_dl_handle(sexp_opcode_dl(p)), sexp_string_data(name));
+          } else {
+            sexp_opcode_func(p) = dlsym(RTLD_SELF, sexp_string_data(name));
+          }
+        }
+        t = types[sexp_pointer_tag(p)];
+        p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));
+      }
+    }
+  }
+}
+
+sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
+  sexp_sint_t off;
+  sexp_heap to, from = sexp_context_heap(ctx);
 
   /* validate input, creating a new heap if needed */
   if (from->next) {
@@ -498,55 +574,9 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
   /* copy the raw data */
   off = (char*)to - (char*)from;
   memcpy(to, from, sexp_heap_pad_size(from->size));
-  to->free_list = (sexp_free_list) ((char*)to->free_list + off);
-  to->data += off;
-  end = (sexp) (from->data + from->size);
 
-  /* adjust the free list */
-  for (q=to->free_list; q->next; q=q->next)
-    q->next = (sexp_free_list) ((char*)q->next + off);
-
-  /* adjust if the destination is larger */
-  if (from->size < to->size) {
-    if (((char*)q + q->size - off) >= (char*)end) {
-      q->size += (to->size - from->size);
-    } else {
-      q->next = (sexp_free_list) ((char*)end + off);
-      q->next->next = NULL;
-      q->next->size = (to->size - from->size);
-    }
-  }
-
-  /* adjust data by traversing over the _original_ heap */
-  p = (sexp) (from->data + sexp_heap_align(sexp_free_chunk_size));
-  q = from->free_list;
-  while (p < end) {
-    /* find the next free list pointer */
-    for ( ; q && ((char*)q < (char*)p); q=q->next)
-      ;
-    if ((char*)q == (char*)p) { /* this is a free block, skip it */
-      p = (sexp) (((char*)p) + q->size);
-    } else {
-      t = sexp_object_type(ctx, p);
-      len = sexp_type_num_slots_of_object(t, p);
-      p2 = (sexp)((char*)p + off);
-      v = (sexp*) ((char*)p2 + sexp_type_field_base(t));
-      /* offset any pointers in the _destination_ heap */
-      for (i=0; i<len; i++)
-        if (v[i] && sexp_pointerp(v[i]))
-          v[i] = (sexp) ((char*)v[i] + off);
-      /* don't free unless specified - only the original cleans up */
-      if (! freep)
-        sexp_freep(p2) = 0;
-      /* adjust context heaps, don't copy saved sexp_gc_vars */
-      if (sexp_contextp(p2)) {
-        sexp_context_saves(p2) = NULL;
-        if (sexp_context_heap(p2) == from)
-          sexp_context_heap(p2) = to;
-      }
-      p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
-    }
-  }
+  /* adjust the pointers */
+  sexp_offset_heap_pointers(to, from, sexp_context_types(ctx) + off, flags);
 
   return dst;
 }

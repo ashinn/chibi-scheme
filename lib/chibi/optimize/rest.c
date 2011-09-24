@@ -9,7 +9,7 @@ static sexp sexp_num_parameters (sexp ctx sexp_api_params(self, n)) {
 }
 
 struct sexp_opcode_struct local_ref_op =
-  {SEXP_OPC_GENERIC, SEXP_OP_LOCAL_REF, 1, 8, 0, "local-ref", SEXP_VOID,
+  {SEXP_OPC_GENERIC, SEXP_OP_LOCAL_REF, 1, 8, 0, (sexp)"local-ref", SEXP_VOID,
    NULL, NULL, sexp_make_fixnum(SEXP_OBJECT), sexp_make_fixnum(SEXP_FIXNUM),
    0, 0, NULL};
 
@@ -24,7 +24,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_preserve2(ctx, name, op);
   sexp_define_foreign(ctx, env, "num-parameters", 0, sexp_num_parameters);
   op = sexp_copy_opcode(ctx, &local_ref_op);
-  name = sexp_intern(ctx, sexp_opcode_name(op), -1);
+  sexp_opcode_name(op) = sexp_c_string(ctx, (char*)sexp_opcode_name(op), -1);
+  name = sexp_string_to_symbol(ctx, sexp_opcode_name(op));
   sexp_env_define(ctx, env, name, op);
   sexp_gc_release2(ctx);
   return SEXP_VOID;

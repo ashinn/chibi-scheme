@@ -118,6 +118,9 @@ enum sexp_types {
   SEXP_ENV,
   SEXP_BYTECODE,
   SEXP_CORE,
+#if SEXP_USE_DL
+  SEXP_DL,
+#endif
   SEXP_OPCODE,
   SEXP_LAMBDA,
   SEXP_CND,
@@ -230,22 +233,20 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  char *name;
-  sexp cpl, slots;
+  sexp name, cpl, slots;
   sexp_proc2 finalize;
   sexp_proc3 print;
 };
 
 struct sexp_opcode_struct {
   unsigned char op_class, code, num_args, flags, inverse;
-  const char *name;
-  sexp data, data2, proc, ret_type, arg1_type, arg2_type, arg3_type;
+  sexp name, data, data2, proc, ret_type, arg1_type, arg2_type, arg3_type, dl;
   sexp_proc1 func;
 };
 
 struct sexp_core_form_struct {
   char code;
-  const char *name;
+  sexp name;
 };
 
 struct sexp_struct {
@@ -342,6 +343,10 @@ struct sexp_struct {
     struct {
       sexp env, free_vars, expr;
     } synclo;
+    struct {
+      sexp file;
+      void* handle;
+    } dl;
     struct sexp_opcode_struct opcode;
     struct sexp_core_form_struct core;
     /* ast types */
@@ -380,6 +385,9 @@ struct sexp_struct {
       sexp_uint_t pos, depth, last_fp;
       sexp bc, lambda, stack, env, fv, parent, child,
         globals, params, proc, name, specific, event;
+#if SEXP_USE_DL
+      sexp dl;
+#endif
     } context;
 #if SEXP_USE_AUTO_FORCE
     struct {
@@ -575,6 +583,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_envp(x)        (sexp_check_tag(x, SEXP_ENV))
 #define sexp_bytecodep(x)   (sexp_check_tag(x, SEXP_BYTECODE))
 #define sexp_corep(x)       (sexp_check_tag(x, SEXP_CORE))
+#define sexp_dlp(x)         (sexp_check_tag(x, SEXP_DL))
 #define sexp_opcodep(x)     (sexp_check_tag(x, SEXP_OPCODE))
 #define sexp_macrop(x)      (sexp_check_tag(x, SEXP_MACRO))
 #define sexp_syntacticp(x)  (sexp_corep(x) || sexp_macrop(x))
@@ -811,11 +820,15 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_core_code(x)         (sexp_field(x, core, SEXP_CORE, code))
 #define sexp_core_name(x)         (sexp_field(x, core, SEXP_CORE, name))
 
+#define sexp_dl_file(x)            (sexp_field(x, dl, SEXP_DL, file))
+#define sexp_dl_handle(x)          (sexp_field(x, dl, SEXP_DL, handle))
+
 #define sexp_opcode_class(x)       (sexp_field(x, opcode, SEXP_OPCODE, op_class))
 #define sexp_opcode_code(x)        (sexp_field(x, opcode, SEXP_OPCODE, code))
 #define sexp_opcode_num_args(x)    (sexp_field(x, opcode, SEXP_OPCODE, num_args))
 #define sexp_opcode_flags(x)       (sexp_field(x, opcode, SEXP_OPCODE, flags))
 #define sexp_opcode_inverse(x)     (sexp_field(x, opcode, SEXP_OPCODE, inverse))
+#define sexp_opcode_dl(x)          (sexp_field(x, opcode, SEXP_OPCODE, dl))
 #define sexp_opcode_name(x)        (sexp_field(x, opcode, SEXP_OPCODE, name))
 #define sexp_opcode_data(x)        (sexp_field(x, opcode, SEXP_OPCODE, data))
 #define sexp_opcode_data2(x)       (sexp_field(x, opcode, SEXP_OPCODE, data2))
@@ -895,6 +908,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_event(x)    (sexp_field(x, context, SEXP_CONTEXT, event))
 #define sexp_context_timeoutp(x) (sexp_field(x, context, SEXP_CONTEXT, timeoutp))
 #define sexp_context_waitp(x)    (sexp_field(x, context, SEXP_CONTEXT, waitp))
+#define sexp_context_dl(x)       (sexp_field(x, context, SEXP_CONTEXT, dl))
 
 #if SEXP_USE_ALIGNED_BYTECODE
 #define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = sexp_word_align(sexp_context_pos(ctx))
@@ -1180,6 +1194,7 @@ SEXP_API void sexp_maybe_unblock_port (sexp ctx, sexp in);
 
 #define SEXP_COPY_DEFAULT SEXP_ZERO
 #define SEXP_COPY_FREEP   SEXP_ONE
+#define SEXP_COPY_LOADP   SEXP_TWO
 
 #if SEXP_USE_GLOBAL_HEAP
 #define sexp_free_heap(heap)
@@ -1236,7 +1251,8 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_make_vector(ctx, a, b) sexp_make_vector_op(ctx sexp_api_pass(NULL, 2), a, b);
 #define sexp_list_to_vector(ctx, x) sexp_list_to_vector_op(ctx sexp_api_pass(NULL, 1), x)
 #define sexp_exception_type(ctx, x) sexp_exception_type_op(ctx sexp_api_pass(NULL, 1), x)
-#define sexp_string_to_number(ctx, s, b) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), s, b)
+#define sexp_string_to_symbol(ctx, s) sexp_string_to_symbol_op(ctx sexp_api_pass(NULL, 1), s)
+#define sexp_string_to_number(ctx, s, b) sexp_string_to_number_op(ctx sexp_api_pass(NULL, 2), s, b)
 #define sexp_make_bytes(ctx, l, i) sexp_make_bytes_op(ctx sexp_api_pass(NULL, 2), l, i)
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx sexp_api_pass(NULL, 2), l, c)
 #define sexp_string_cmp(ctx, a, b, c) sexp_string_cmp_op(ctx sexp_api_pass(NULL, 3), a, b, c)
