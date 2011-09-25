@@ -517,6 +517,10 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
         /* if (sexp_context_heap(p) - off != from_heap) */
         /*   fprintf(stderr, "unexpected heap: %p\n", sexp_context_heap(p)); */
         sexp_context_heap(p) = heap;
+      } else if (sexp_portp(p) && sexp_port_stream(p)) {
+        sexp_port_stream(p) = 0;
+        sexp_port_openp(p) = 0;
+        sexp_freep(p) = 0;
       } else if (loadp && sexp_dlp(p)) {
         sexp_dl_handle(p) = NULL;
       }
