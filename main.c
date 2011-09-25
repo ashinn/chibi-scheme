@@ -35,6 +35,7 @@ struct sexp_image_header_t {
   sexp_uint_t size, base, context;
 };
 
+sexp sexp_gc (sexp ctx, size_t *sum_freed);
 void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types, sexp flags);
 
 static sexp sexp_load_image (const char* file) {
@@ -85,6 +86,7 @@ static int sexp_save_image (sexp ctx, const char* path) {
   header.base = (sexp_uint_t)heap;
   header.context = (sexp_uint_t)ctx;
   fwrite(&header, sizeof(header), 1, file);
+  sexp_gc(ctx, NULL);
   fwrite(heap, heap->size, 1, file);
   fclose(file);
   return 1;
@@ -298,6 +300,7 @@ void run_main (int argc, char **argv) {
         exit_failure();
       }
       env = sexp_context_env(ctx);
+      sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
       init_loaded++;
       break;
     case 'd':
@@ -338,7 +341,7 @@ void run_main (int argc, char **argv) {
     else
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
-    /* sexp_eval_string(ctx, sexp_argv_proc, -1, env); */
+    sexp_eval_string(ctx, sexp_argv_proc, -1, env);
     if (i < argc) {             /* script usage */
       sexp_context_tracep(ctx) = 1;
       check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
