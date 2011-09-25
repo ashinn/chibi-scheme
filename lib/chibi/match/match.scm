@@ -1,5 +1,4 @@
-;;;; match.scm -- portable hygienic pattern matcher
-;;;; -*- coding: utf-8 -*-
+;;;; match.scm -- portable hygienic pattern matcher -*- coding: utf-8 -*-
 ;;
 ;; This code is written by Alex Shinn and placed in the
 ;; Public Domain.  All warranties are disclaimed.
@@ -211,6 +210,8 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2011/09/25 - fixing bug when directly matching an identifier repeated in
+;;              the pattern (thanks to Stefan Israelsson Tampe)
 ;; 2011/01/27 - fixing bug when matching tail patterns against improper lists
 ;; 2010/09/26 - adding `..1' patterns (thanks to Ludovic Courtès)
 ;; 2010/09/07 - fixing identifier extraction in some `...' and `***' patterns
@@ -269,7 +270,8 @@
      (let ((v #(vec ...)))
        (match-next v (v (set! v)) (pat . body) ...)))
     ((match atom (pat . body) ...)
-     (match-next atom (atom (set! atom)) (pat . body) ...))
+     (let ((v atom))
+       (match-next v (atom (set! atom)) (pat . body) ...)))
     ))
 
 ;; MATCH-NEXT passes each clause to MATCH-ONE in turn with its failure
