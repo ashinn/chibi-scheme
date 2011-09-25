@@ -27,6 +27,7 @@
 (test "duplicate symbols pass" 'ok (match '(ok . ok) ((x . x) x)))
 (test "duplicate symbols fail" 'ok (match '(ok . bad) ((x . x) 'bad) (else 'ok)))
 (test "duplicate symbols samth" 'ok (match '(ok . ok) ((x . 'bad) x) (('ok . x) x)))
+(test "duplicate symbols bound" 3 (let ((a '(1 2))) (match a ((and (a 2) (1 b)) (+ a b)) (_ #f))))
 
 (test "ellipses" '((a b c) (1 2 3))
   (match '((a . 1) (b . 2) (c . 3))
