@@ -404,7 +404,7 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_init_eval_context_bytecodes(ctx);
 #endif
   sexp_global(ctx, SEXP_G_MODULE_PATH) = SEXP_NULL;
-  sexp_add_path(ctx, sexp_default_module_dir);
+  sexp_add_path(ctx, sexp_default_module_path);
   sexp_add_path(ctx, getenv(SEXP_MODULE_PATH_VAR));
   tmp = sexp_c_string(ctx, "./lib", 5);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);

@@ -3,7 +3,7 @@
   (import (except (scheme) equal?)
           (rename (chibi equiv) (equiv? equal?))
           (chibi io)
-          (srfi 9) (srfi 11) (srfi 38) (srfi 39))
+          (srfi 9) (srfi 11) (srfi 39))
   (export
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin
    binary-port?  boolean?  bytevector-copy bytevector-copy!

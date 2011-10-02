@@ -5,17 +5,17 @@
 
 # install configuration
 
-CC       ?= cc
-PREFIX   ?= /usr/local
-BINDIR   ?= $(PREFIX)/bin
-LIBDIR   ?= $(PREFIX)/lib
-SOLIBDIR ?= $(PREFIX)/lib
-INCDIR   ?= $(PREFIX)/include/chibi
-MODDIR   ?= $(PREFIX)/share/chibi
-LIBDIR   ?= $(PREFIX)/lib/chibi
-MANDIR   ?= $(PREFIX)/share/man/man1
+CC        ?= cc
+PREFIX    ?= /usr/local
+BINDIR    ?= $(PREFIX)/bin
+LIBDIR    ?= $(PREFIX)/lib
+SOLIBDIR  ?= $(PREFIX)/lib
+INCDIR    ?= $(PREFIX)/include/chibi
+MODDIR    ?= $(PREFIX)/share/chibi
+BINMODDIR ?= $(PREFIX)/lib/chibi
+MANDIR    ?= $(PREFIX)/share/man/man1
 
-DESTDIR  ?=
+DESTDIR   ?=
 
 GENSTUBS  ?= ./tools/chibi-ffi
 GENSTATIC ?= ./tools/chibi-genstatic
@@ -136,7 +136,7 @@ INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
-	echo '#define sexp_default_module_dir "'$(MODDIR)'"' >> $@
+	echo '#define sexp_default_module_path "'$(MODDIR):$(BINMODDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
 	echo '#define sexp_version "'`cat VERSION`'"' >> $@
 	echo '#define sexp_release_name "'`cat RELEASE`'"' >> $@
@@ -261,7 +261,9 @@ install: all
 	cp chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	cp tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	cp tools/chibi-doc $(DESTDIR)$(BINDIR)/
-	mkdir -p $(DESTDIR)$(MODDIR)
+	mkdir -p $(DESTDIR)$(MODDIR)/chibi
+	mkdir -p $(DESTDIR)$(MODDIR)/scheme
+	mkdir -p $(DESTDIR)$(MODDIR)/srfi
 	cp -r lib/* $(DESTDIR)$(MODDIR)/
 	mkdir -p $(DESTDIR)$(INCDIR)
 	cp $(INCLUDES) include/chibi/eval.h $(DESTDIR)$(INCDIR)/
@@ -281,6 +283,7 @@ uninstall:
 	rm -f $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
 	cd $(DESTDIR)$(INCDIR) && rm -f $(INCLUDES) include/chibi/eval.h
 	rm -rf $(DESTDIR)$(MODDIR)
+	rm -rf $(DESTDIR)$(BINMODDIR)
 
 dist: dist-clean
 	rm -f chibi-scheme-`cat VERSION`.tgz
