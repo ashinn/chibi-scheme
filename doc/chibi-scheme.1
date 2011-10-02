@@ -25,6 +25,12 @@ chibi-scheme \- a tiny Scheme interpreter
 [-p
 .I expr
 ]
+[-d
+.I image-file
+]
+[-i
+.I image-file
+]
 [--]
 [
 .I script argument ...
@@ -116,6 +122,17 @@ Evaluates the Scheme expression
 Evaluates the Scheme expression
 .I expr
 then prints the result to stdout.
+.TP
+.BI -d image-file
+Dumps the current Scheme heap to
+.I image-file
+and exits.  This feature is still experimental.
+.TP
+.BI -i image-file
+Loads the Scheme heap from
+.I image-file
+instead of compiling the init file on the fly.
+This feature is still experimental.
 
 .SH ENVIRONMENT
 .TP
