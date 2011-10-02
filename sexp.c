@@ -2212,6 +2212,24 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       else
         goto scan_loop;
       break;
+    case '|':
+      for (c2 = 1; c2 > 0 && c1 != EOF; ) {
+        c1 = sexp_read_char(ctx, in);
+        if (c1 == '#') {
+          while ((c1 = sexp_read_char(ctx, in)) == '#')
+            ;
+          if (c1 == '|') c2++;
+        } else if (c1 == '|') {
+          while ((c1 = sexp_read_char(ctx, in)) == '|')
+            ;
+          if (c1 == '#') c2--;
+        }
+      }
+      if (c1 == EOF)
+        res = sexp_read_error(ctx, "unterminated #| comment", SEXP_NULL, in);
+      else
+        goto scan_loop;
+      break;
     case '!':
 #if SEXP_USE_FOLD_CASE_SYMS
       res = sexp_read_symbol(ctx, in, '!', 0);
