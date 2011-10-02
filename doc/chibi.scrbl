@@ -409,7 +409,7 @@ core forms: @scheme{define}, @scheme{set!}, @scheme{lambda}, @scheme{if},
 @p{
 Loads the standard parameters for @var{env}, constructs the feature list from
 pre-compiled defaults, and loads the installed initialization file for
-@var{version}, which currently should be the value @var{SEXP_SEVEN}.
+@var{version}, which should be the value @var{SEXP_SEVEN}.
 Also creates an @scheme{interaction-environment} parameter
 and sets @var{env} itself to that.
 }}

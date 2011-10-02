@@ -1885,6 +1885,8 @@ sexp sexp_load_standard_ports (sexp ctx, sexp env, FILE* in, FILE* out,
 }
 
 sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
+  int len;
+  char init_file[128];
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
   if (!e) e = sexp_context_env(ctx);
@@ -1930,18 +1932,23 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_global(ctx, SEXP_G_ERR_HANDLER)
     = sexp_env_ref(e, sym=sexp_intern(ctx, "current-exception-handler", -1), SEXP_FALSE);
   /* load init.scm */
-  tmp = sexp_load_module_file(ctx, sexp_init_file, e);
+  len = strlen(sexp_init_file);
+  strncpy(init_file, sexp_init_file, len);
+  init_file[len] = sexp_unbox_fixnum(version) + '0';
+  strncpy(init_file + len + 1, sexp_init_file_suffix, strlen(sexp_init_file_suffix));
+  init_file[len + 1 + strlen(sexp_init_file_suffix)] = 0;
+  tmp = sexp_load_module_file(ctx, init_file, e);
   sexp_set_parameter(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   /* load and bind config env */
 #if SEXP_USE_MODULES
   if (! sexp_exceptionp(tmp)) {
-    sym = sexp_intern(ctx, "*config-env*", -1);
-    if (! sexp_envp(tmp=sexp_global(ctx, SEXP_G_CONFIG_ENV))) {
+    sym = sexp_intern(ctx, "*meta-env*", -1);
+    if (! sexp_envp(tmp=sexp_global(ctx, SEXP_G_META_ENV))) {
       tmp = sexp_make_env(ctx);
       if (! sexp_exceptionp(tmp)) {
-        sexp_global(ctx, SEXP_G_CONFIG_ENV) = tmp;
+        sexp_global(ctx, SEXP_G_META_ENV) = tmp;
         sexp_env_parent(tmp) = e;
-        op = sexp_load_module_file(ctx, sexp_config_file, tmp);
+        op = sexp_load_module_file(ctx, sexp_meta_file, tmp);
         if (sexp_exceptionp(op))
           sexp_print_exception(ctx, op, sexp_current_error_port(ctx));
         sexp_env_define(ctx, tmp, sym, tmp);

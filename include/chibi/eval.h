@@ -1,5 +1,5 @@
 /*  eval.h -- headers for eval library                        */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_EVAL_H
@@ -13,8 +13,9 @@ extern "C" {
 
 /************************* additional types ***************************/
 
-#define sexp_init_file "init.scm"
-#define sexp_config_file "config.scm"
+#define sexp_init_file "init-"
+#define sexp_init_file_suffix ".scm"
+#define sexp_meta_file "meta.scm"
 
 enum sexp_core_form_names {
   SEXP_CORE_DEFINE = 1,

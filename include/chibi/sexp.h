@@ -1018,7 +1018,7 @@ enum sexp_context_globals {
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
   SEXP_G_OPTIMIZATIONS,
   SEXP_G_SIGNAL_HANDLERS,
-  SEXP_G_CONFIG_ENV,
+  SEXP_G_META_ENV,
   SEXP_G_MODULE_PATH,
   SEXP_G_QUOTE_SYMBOL,
   SEXP_G_QUASIQUOTE_SYMBOL,
