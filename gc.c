@@ -8,6 +8,12 @@
 #include <sys/mman.h>
 #endif
 
+#ifdef __APPLE__
+#define SEXP_RTLD_DEFAULT RTLD_SELF
+#else
+#define SEXP_RTLD_DEFAULT RTLD_DEFAULT
+#endif
+
 #define SEXP_BANNER(x) ("**************** GC "x"\n")
 
 #define SEXP_MINIMUM_OBJECT_SIZE (sexp_heap_align(1))
@@ -546,7 +552,7 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
               sexp_dl_handle(sexp_opcode_dl(p)) = dlopen(sexp_string_data(sexp_dl_file(sexp_opcode_dl(p))), RTLD_LAZY);
             sexp_opcode_func(p) = dlsym(sexp_dl_handle(sexp_opcode_dl(p)), sexp_string_data(name));
           } else {
-            sexp_opcode_func(p) = dlsym(RTLD_SELF, sexp_string_data(name));
+            sexp_opcode_func(p) = dlsym(SEXP_RTLD_DEFAULT, sexp_string_data(name));
           }
         }
         t = types[sexp_pointer_tag(p)];
