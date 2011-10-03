@@ -294,7 +294,7 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      char openp, no_closep, sourcep, blockedp, fold_casep;
+      char openp, binaryp, no_closep, sourcep, blockedp, fold_casep;
       sexp_uint_t offset, line, flags;
       size_t size;
       sexp name;
@@ -766,6 +766,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_name(p)       (sexp_pred_field(p, port, sexp_portp, name))
 #define sexp_port_line(p)       (sexp_pred_field(p, port, sexp_portp, line))
 #define sexp_port_openp(p)      (sexp_pred_field(p, port, sexp_portp, openp))
+#define sexp_port_binaryp(p)    (sexp_pred_field(p, port, sexp_portp, binaryp))
 #define sexp_port_no_closep(p)  (sexp_pred_field(p, port, sexp_portp, no_closep))
 #define sexp_port_sourcep(p)    (sexp_pred_field(p, port, sexp_portp, sourcep))
 #define sexp_port_blockedp(p)   (sexp_pred_field(p, port, sexp_portp, blockedp))
@@ -1156,6 +1157,8 @@ SEXP_API sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp 
 SEXP_API sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
+SEXP_API sexp sexp_port_binaryp_op (sexp ctx sexp_api_params(self, n), sexp port);
+SEXP_API sexp sexp_port_openp_op (sexp ctx sexp_api_params(self, n), sexp port);
 #if SEXP_USE_FOLD_CASE_SYMS
 SEXP_API sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x);
 #endif

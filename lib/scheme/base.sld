@@ -3,6 +3,11 @@
   (import (except (scheme) equal?)
           (rename (chibi equiv) (equiv? equal?))
           (chibi io)
+          (rename (only (chibi ast)
+                        exception? exception-message exception-irritants)
+                  (exception? error-object?)
+                  (exception-message error-object-message)
+                  (exception-irritants error-object-irritants))
           (srfi 9) (srfi 11) (srfi 39))
   (export
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin

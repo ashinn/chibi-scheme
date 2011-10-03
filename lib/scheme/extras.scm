@@ -1,10 +1,30 @@
 
 (define call/cc call-with-current-continuation)
 
+;; Adapted from Bawden's algorithm.
+(define (rationalize x e)
+  (define (sr x y return)
+    (let ((fx (inexact->exact (floor x))) (fy (inexact->exact (floor y))))
+      (cond
+       ((>= fx x)
+        (return fx 1))
+       ((= fx fy)
+        (sr (/ (- y fy)) (/ (- x fx)) (lambda (n d) (return (+ d (* fx n)) n))))
+       (else
+        (return (+ fx 1) 1)))))
+  (if (exact? x)
+      (let ((return (if (negative? x) (lambda (num den) (/ (- num) den)) /))
+            (x (abs x))
+            (e (abs e)))
+        (sr (- x e) (+ x e) return))
+      x))
+
 (define flush-output-port flush-output)
 
 (define (close-port port)
   ((if (input-port? port) close-input-port close-output-port) port))
+
+(define (u8-ready? port) (char-ready? port))
 
 (define (call-with-port port proc)
   (let ((res (proc port)))
@@ -52,3 +72,21 @@
 
 (define (string->vector vec)
   (list->vector (string->list vec)))
+
+(define (bytevector-copy bv)
+  (let ((res (make-bytevector (bytevector-length bv))))
+    (bytevector-copy! bv res)
+    res))
+
+(define (bytevector-copy! from to)
+  (bytevector-copy-partial! from 0 (bytevector-length from) to 0))
+
+(define (bytevector-copy-partial bv start end)
+  (let ((res (make-bytevector (- end start))))
+    (bytevector-copy-partial! bv start end res 0)
+    res))
+
+(define (bytevector-copy-partial! from start end to at)
+  (do ((i start (+ i 1)))
+      ((= i end))
+    (bytevector-u8-set! to (+ i at) (bytevector-u8-ref from i))))
