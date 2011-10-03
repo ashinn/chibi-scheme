@@ -144,6 +144,9 @@ include/chibi/install.h: Makefile
 sexp.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
+sexp-ulimit.o: sexp.c gc.c opt/bignum.c $(INCLUDES) Makefile
+	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -DSEXP_USE_LIMITED_MALLOC -o $@ $<
+
 eval.o: eval.c opcodes.c vm.c opt/simplify.c $(INCLUDES) include/chibi/eval.h Makefile
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
@@ -160,6 +163,9 @@ chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o eval.o sexp.o
+	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
+
+chibi-scheme-ulimit$(EXE): main.o eval.o sexp-ulimit.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
 clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi chibi-scheme$(EXE) libs
@@ -214,7 +220,7 @@ test-basic: chibi-scheme$(EXE)
 	    fi; \
 	done
 
-test-memory:
+test-memory: chibi-scheme-ulimit$(EXE)
 	./tests/memory/memory-tests.sh
 
 test-build:
