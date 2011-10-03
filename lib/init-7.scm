@@ -474,6 +474,8 @@
 
 (define (port? x) (or (input-port? x) (output-port? x)))
 
+(define textual-port? port?)
+
 (define (char-ready? . o)
   (not (eof-object? (peek-char (if (pair? o) (car o) (current-input-port))))))
 
