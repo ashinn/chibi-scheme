@@ -21,6 +21,9 @@
          (c 0 (if (eqv? ch (string-ref str i)) (+ c 1) c)))
         ((>= i end) c))))
 
+(define (utf8->string vec)
+  (string-copy (utf8->string! vec)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reading and writing
 
