@@ -249,6 +249,19 @@ sexp sexp_get_output_bytevector (sexp ctx, sexp self, sexp port) {
   return res;
 }
 
+sexp sexp_string_to_utf8 (sexp ctx, sexp self, sexp str) {
+  sexp res;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  res = sexp_c_string(ctx, sexp_string_data(str), sexp_string_length(str));
+  return sexp_string_to_bytes(ctx, res);
+}
+
+/* TODO: add validation */
+sexp sexp_utf8_to_string_x (sexp ctx, sexp self, sexp vec) {
+  sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, vec);
+  return sexp_bytes_to_string(ctx, vec);
+}
+
 sexp sexp_write_u8 (sexp ctx, sexp self, sexp u8, sexp out) {
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, u8);
   if (sexp_unbox_fixnum(u8) < 0 || sexp_unbox_fixnum(u8) > 255)
