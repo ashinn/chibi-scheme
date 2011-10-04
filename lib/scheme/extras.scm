@@ -31,6 +31,35 @@
     (close-port port)
     res))
 
+(define (read-bytevector n . o)
+  (if (zero? n)
+      ""
+      (let ((res (read-string n (if (pair? o) (car o) (current-input-port)))))
+        (if (equal? res "")
+            (read-char (open-input-string res))
+            (string->utf8 res)))))
+
+(define (read-bytevector! vec start end . o)
+  (if (>= start end)
+      0
+      (let* ((res (read-bytevector!
+                   (- end start)
+                   (if (pair? o) (car o) (current-input-port))))
+             (len (bytevector-length res)))
+        (cond
+         ((zero? len)
+          (read-char (open-input-string "")))
+         (else
+          (do ((i 0 (+ i 1)))
+              ((>= i len) len)
+            (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))))))))
+
+(define (write-bytevector vec . o)
+  (apply write-string (utf8->string vec) o))
+
+(define (write-partial-bytevector vec start end . o)
+  (apply write-string (utf8->string (bytevector-copy-partial vec start end)) o))
+
 (define (make-list n . o)
   (let ((init (and (pair? o) (car o))))
     (let lp ((i 0) (res '()))
