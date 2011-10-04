@@ -753,6 +753,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_string_data(x)   (sexp_bytes_data(sexp_string_bytes(x))+sexp_string_offset(x))
 #endif
 
+#if SEXP_USE_PACKED_STRINGS
+#define sexp_string_to_bytes(ctx, x)  ((x)->tag = SEXP_BYTES, x)
+#else
+#define sexp_string_to_bytes(ctx, x)  sexp_string_bytes(x)
+#endif
+
 #define sexp_bytes_ref(x, i)    (sexp_make_fixnum((unsigned char)sexp_bytes_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_bytes_set(x, i, v) (sexp_bytes_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_fixnum(v))
 

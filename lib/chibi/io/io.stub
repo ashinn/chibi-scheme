@@ -25,3 +25,17 @@
 
 (define-c sexp (%make-custom-output-port "sexp_make_custom_output_port")
   ((value ctx sexp) (value self sexp) sexp sexp sexp))
+
+(define-c sexp (open-input-bytevector "sexp_open_input_bytevector")
+  ((value ctx sexp) (value self sexp) sexp))
+(define-c sexp (open-output-bytevector "sexp_open_output_bytevector")
+  ((value ctx sexp) (value self sexp)))
+(define-c sexp (get-output-bytevector "sexp_get_output_bytevector")
+  ((value ctx sexp) (value self sexp) sexp))
+
+(define-c sexp (write-u8 "sexp_write_u8")
+  ((value ctx sexp) (value self sexp) sexp (default (current-output-port) sexp)))
+(define-c sexp (read-u8 "sexp_read_u8")
+  ((value ctx sexp) (value self sexp) (default (current-input-port) sexp)))
+(define-c sexp (peek-u8 "sexp_peek_u8")
+  ((value ctx sexp) (value self sexp) (default (current-input-port) sexp)))

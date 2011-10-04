@@ -7,7 +7,9 @@
           make-custom-input-port make-custom-output-port
           make-null-output-port make-broadcast-port make-concatenated-port
           make-generated-input-port make-filtered-output-port
-          make-filtered-input-port)
+          make-filtered-input-port
+          open-input-bytevector open-output-bytevector get-output-bytevector
+          write-u8 read-u8 peek-u8)
   (import (scheme) (chibi ast))
   (include-shared "io/io")
   (include "io/io.scm"))
