@@ -65,8 +65,8 @@
 ;;>
 ;;> @itemlist[
 ;;> @item{@scheme|{@in [<module>]}| - switch to @var{<module>}, or the @scheme{interaction-environment} if @var{<module>} is not specified}
-;;> @item{@scheme|{@config <expr>}| - evaluate @var{<expr>} in the @scheme{(config)} module}
-;;> @item{@scheme|{@config-module-is <module>}| - switch the config module to @var{<module>}}
+;;> @item{@scheme|{@meta <expr>}| - evaluate @var{<expr>} in the @scheme{(meta)} module}
+;;> @item{@scheme|{@meta-module-is <module>}| - switch the meta module to @var{<module>}}
 ;;> @item{@scheme|{@exit}| - exit the REPL}
 ;;> ]
 
@@ -79,7 +79,7 @@
                   (module-env
                    (if (module? module)
                        module
-                       (eval `(load-module ',module) *config-env*)))
+                       (eval `(load-module ',module) *meta-env*)))
                   (interaction-environment)))
          (history-file
           (cond ((memq 'history-file: o) => cadr)
@@ -95,7 +95,7 @@
          (raw? (cond ((memq 'raw?: o) => cadr)
                      (else (member (get-environment-variable "TERM")
                                    '("emacs" "dumb"))))))
-    (let lp ((module module) (env env) (config-env *config-env*))
+    (let lp ((module module) (env env) (meta-env *meta-env*))
       (let* ((prompt
               (string-append (if module (write-to-string module) "") "> "))
              (line
@@ -111,7 +111,7 @@
                  'complete?: buffer-complete-sexp?)))))
         (cond
          ((or (not line) (eof-object? line)))
-         ((equal? line "") (lp module env config-env))
+         ((equal? line "") (lp module env meta-env))
          (else
           (history-commit! history line)
           (cond
@@ -121,7 +121,7 @@
                        (continue lp))
               (define (fail msg . args)
                 (apply warn msg args)
-                (continue module env config-env))
+                (continue module env meta-env))
               (call-with-input-string line
                (lambda (in)
                  (let ((op (read/ss in)))
@@ -130,28 +130,30 @@
                       (let ((name (read/ss in)))
                         (cond
                          ((eof-object? name)
-                          (continue #f (interaction-environment) config-env))
-                         ((eval `(load-module ',name) config-env)
+                          (continue #f (interaction-environment) meta-env))
+                         ((eval `(load-module ',name) meta-env)
                           => (lambda (m)
-                               (continue name (module-env m) config-env)))
+                               (continue name (module-env m) meta-env)))
                          (else
                           (fail "couldn't find module:" name)))))
-                     ((config)
+                     ((meta config)
+                      (if (eq? op 'config)
+                          (display "Note: @config has been renamed @meta\n" out))
                       (let ((expr (read/ss in)))
                         (cond
                          ((and
                            (symbol? expr)
                            (eqv? escape (string-ref (symbol->string expr) 0)))
-                          (meta config-env
+                          (meta meta-env
                                 (substring line 6 (string-length line))
-                                (lambda _ (continue module env config-env))))
+                                (lambda _ (continue module env meta-env))))
                          (else
-                          (eval expr config-env)
-                          (continue module env config-env)))))
-                     ((config-module-is)
+                          (eval expr meta-env)
+                          (continue module env meta-env)))))
+                     ((meta-module-is)
                       (let ((name (read/ss in)))
                         (cond
-                         ((eval `(load-module ',name) config-env)
+                         ((eval `(load-module ',name) meta-env)
                           => (lambda (m) (lp module env (module-env m))))
                          (else
                           (fail "couldn't find module:" name)))))
@@ -180,7 +182,7 @@
                   (display "Interrupt\n" (current-error-port))
                   (thread-terminate! thread))
                 (lambda () (thread-join! (thread-start! thread))))))
-            (lp module env config-env)))))))
+            (lp module env meta-env)))))))
     (if history-file
         (call-with-output-file history-file
           (lambda (out) (write (history->list history) out))))))
