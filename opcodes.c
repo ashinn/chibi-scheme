@@ -223,7 +223,8 @@ _FN0(SEXP_VOID, "reset-vm-profile", 0, sexp_reset_vm_profile),
 _FN0(SEXP_VOID, "print-vm-profile", 0, sexp_print_vm_profile),
 #endif
 #if SEXP_USE_AUTO_FORCE
-_FN1(_I(SEXP_PROMISE), _I(SEXP_PROCEDURE), "make-promise", 0, sexp_make_promise),
+_OP(SEXP_OPC_GENERIC, SEXP_OP_FORCE, 1, 0, _I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "force", 0, NULL),
+_FN2(_I(SEXP_PROMISE), _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "make-promise", 0, sexp_make_promise),
 #endif
 };
 

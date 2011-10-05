@@ -1780,10 +1780,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         _ARG1 = sexp_promise_value(_ARG1);
       } else {
         sexp_context_top(ctx) = top;
-        tmp1 = sexp_apply(ctx, sexp_promise_thunk(_ARG1), SEXP_NULL);
-        sexp_promise_value(_ARG1) = tmp1;
-        sexp_promise_donep(_ARG1) = 1;
-        sexp_promise_thunk(_ARG1) = SEXP_FALSE;
+        tmp1 = sexp_apply(ctx, sexp_promise_value(_ARG1), SEXP_NULL);
+        if (!sexp_promise_donep(_ARG1)) {
+          sexp_promise_value(_ARG1) = tmp1;
+          sexp_promise_donep(_ARG1) = 1;
+        }
         _ARG1 = tmp1;
       }
     }
