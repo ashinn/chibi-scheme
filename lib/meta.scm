@@ -134,6 +134,16 @@
      (module-meta-data mod))
     env))
 
+(define (environment . ls)
+  (let ((env (make-environment)))
+    (for-each
+     (lambda (m)
+       (let* ((mod2-name+imports (resolve-import m))
+              (mod2 (load-module (car mod2-name+imports))))
+         (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
+     ls)
+    env))
+
 (define (load-module name)
   (let ((mod (find-module name)))
     (if (and mod (not (module-env mod)))
@@ -188,7 +198,7 @@
 (define *modules*
   (list (cons '(scheme) (make-module #f (interaction-environment)
                                      '((include "init.scm"))))
-        (cons '(config) (make-module #f (current-environment) '()))
+        (cons '(meta) (make-module #f (current-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (current-environment)
                                      (list (list 'export 'cond-expand))))))
