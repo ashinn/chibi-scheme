@@ -49,7 +49,8 @@ static sexp sexp_load_image (const char* file) {
     fprintf(stderr, "can't open image file: %s\n", file);
     return NULL;
   }
-  read(fd, &header, sizeof(header));
+  if (read(fd, &header, sizeof(header)) != sizeof(header))
+    return NULL;
   if (memcmp(header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic)) != 0) {
     fprintf(stderr, "invalid image file magic for %s: %s\n", file, header.magic);
     return NULL;
@@ -59,7 +60,10 @@ static sexp sexp_load_image (const char* file) {
     return NULL;
   }
   image = malloc(sexp_heap_pad_size(header.size));
-  read(fd, image, header.size);
+  if (read(fd, image, header.size) != header.size) {
+    fprintf(stderr, "error reading image\n");
+    return NULL;
+  }
   offset = (sexp_sint_t)(image - (sexp_sint_t)header.base);
   ctx = (sexp)(header.context + offset);
   globals = sexp_vector_data((sexp)((char*)sexp_context_globals(ctx) + offset));
@@ -85,9 +89,12 @@ static int sexp_save_image (sexp ctx, const char* path) {
   header.size = heap->size;
   header.base = (sexp_uint_t)heap;
   header.context = (sexp_uint_t)ctx;
-  fwrite(&header, sizeof(header), 1, file);
   sexp_gc(ctx, NULL);
-  fwrite(heap, heap->size, 1, file);
+  if (! (fwrite(&header, sizeof(header), 1, file) == 1
+         && fwrite(heap, heap->size, 1, file) == 1)) {
+    fprintf(stderr, "error writing image file\n");
+    return 0;
+  }
   fclose(file);
   return 1;
 }
