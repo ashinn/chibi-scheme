@@ -14,7 +14,7 @@
 /* #define SEXP_USE_NATIVE_X86 1 */
 
 /* uncomment this to disable the module system */
-/*   Currently this just loads the config.scm from main and */
+/*   Currently this just loads the meta.scm from main and */
 /*   sets up an (import (module name)) macro. */
 /* #define SEXP_USE_MODULES 0 */
 

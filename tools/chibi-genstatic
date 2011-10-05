@@ -91,7 +91,7 @@
              (mod-name (map (lambda (x) (or (string->number x) (string->symbol x)))
                             (path-split mod-path))))
         (cond
-         ((eval `(find-module ',mod-name) *config-env*)
+         ((eval `(find-module ',mod-name) *meta-env*)
           => (lambda (mod)
                (cond
                 ((assq 'include-shared (vector-ref mod 2))
