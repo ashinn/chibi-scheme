@@ -308,10 +308,15 @@
          ,(map (lambda (x) (list (car x) (cadr x))) (cadr expr))
          ,wrap)))))
 
+(define-syntax lazy
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(,(rename 'make-promise) #f (,(rename 'lambda) () ,(cadr expr))))))
+
 (define-syntax delay
   (er-macro-transformer
    (lambda (expr rename compare)
-     `(,(rename 'make-promise) (,(rename 'lambda) () ,(cadr expr))))))
+     `(,(rename 'lazy) (,(rename 'make-promise) #t ,(cadr expr))))))
 
 (define-syntax define-auxiliary-syntax
   (er-macro-transformer
@@ -896,17 +901,23 @@
 
 (cond-expand
  (auto-force
-  (define (force x) x))
+  )
  (else
-  (define (make-promise thunk)
-   (lambda ()
-     (let ((computed? #f) (result #f))
-       (if (not computed?)
-           (begin
-             (set! result (thunk))
-             (set! computed? #t)))
-       result)))
-  (define (force x) (if (procedure? x) (x) x))))
+  (define (make-promise done? proc)
+    (list (cons done? proc)))
+  (define (promise-done? x) (car (car x)))
+  (define (promise-value x) (cdr (car x)))
+  (define (promise-update! new old)
+    (set-car! (car old) (promise-done? new))
+    (set-cdr! (car old) (promise-value new))
+    (set-car! new (car old)))
+  (define (force promise)
+    (if (promise-done? promise)
+        (promise-value promise)
+        (let ((promise* ((promise-value promise))))
+          (if (not (promise-done? promise))
+            (promise-update! promise* promise))
+          (force promise))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; math utils
