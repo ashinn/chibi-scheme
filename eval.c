@@ -1018,6 +1018,18 @@ sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   return sexp_make_output_port(ctx, out, path);
 }
 
+sexp sexp_open_binary_input_file (sexp ctx sexp_api_params(self, n), sexp path) {
+  sexp res = sexp_open_input_file_op(ctx, self, n, path);
+  if (sexp_portp(res)) sexp_port_binaryp(res) = 1;
+  return res;
+}
+
+sexp sexp_open_binary_output_file (sexp ctx sexp_api_params(self, n), sexp path) {
+  sexp res = sexp_open_output_file_op(ctx, self, n, path);
+  if (sexp_portp(res)) sexp_port_binaryp(res) = 1;
+  return res;
+}
+
 sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
   if (! sexp_port_openp(port))
