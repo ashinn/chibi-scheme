@@ -184,7 +184,7 @@ lib/%$(SO): lib/%.c $(INCLUDES)
 %.html: %.scrbl tools/chibi-doc chibi-scheme$(EXE)
 	$(CHIBI) tools/chibi-doc $< > $@
 
-doc/lib/chibi/%.html: lib/chibi/%.module tools/chibi-doc chibi-scheme$(EXE)
+doc/lib/chibi/%.html: lib/chibi/%.sld tools/chibi-doc chibi-scheme$(EXE)
 	$(CHIBI) tools/chibi-doc chibi.$* > $@
 
 MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
