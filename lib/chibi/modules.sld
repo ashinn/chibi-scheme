@@ -4,5 +4,5 @@
           module-ast module-ast-set! module-ref module-contains?
           analyze-module containing-module load-module module-exports
           module-name->file procedure-analysis)
-  (import (scheme) (config) (chibi ast))
+  (import (scheme) (meta) (chibi ast))
   (include "modules.scm"))
