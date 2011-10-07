@@ -153,7 +153,7 @@ system, is provided if you choose to use it.
 
 Modules names are hierarchical lists of symbols or numbers.  The definition of
 the module @scheme{(foo bar baz)} is searched for in the file
-foo/bar/baz.module.  This file should contain an expression of the form:
+foo/bar/baz.sld.  This file should contain an expression of the form:
 
 @schemeblock{
   (module (foo bar baz)
@@ -183,7 +183,7 @@ These forms perform basic selection and renaming of individual
 identifiers from the given module. They may be composed to perform
 combined selection and renaming.
 
-Files are loaded relative to the .module file, and are written with
+Files are loaded relative to the .sld file, and are written with
 their extension (so you can use whatever suffix you prefer - .scm,
 .ss, .sls, etc.).
 
