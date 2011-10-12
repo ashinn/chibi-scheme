@@ -1984,13 +1984,10 @@ int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
     if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
       sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
     if (sexp_port_flags(in) & O_NONBLOCK) {
+      errno = 0;
       if (!forcep
           && (((c = sexp_read_char(ctx, in)) == EOF)
-#if SEXP_USE_STRING_STREAMS
-              && (ferror(sexp_port_stream(in)) == EAGAIN)
-#else
               && (errno == EAGAIN)
-#endif
               && sexp_opcodep((f=sexp_global(ctx, SEXP_G_THREADS_BLOCKER))))) {
         ((sexp_proc2)sexp_opcode_func(f))(ctx sexp_api_pass(f, 1), in);
         return 1;
