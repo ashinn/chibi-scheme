@@ -867,7 +867,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     fprintf(stderr, "****** VM %s %s ip: %p stack: %p top: %ld fp: %ld (%ld)\n",
             (*ip<=SEXP_OP_NUM_OPCODES) ? reverse_opcode_names[*ip] : "UNKNOWN",
             (SEXP_OP_FCALL0 <= *ip && *ip <= SEXP_OP_FCALL4
-             ? sexp_opcode_name(((sexp*)(ip+1))[0]) : ""),
+             ? sexp_string_data(sexp_opcode_name(((sexp*)(ip+1))[0])) : ""),
             ip, stack, top, fp, (fp<1024 ? sexp_unbox_fixnum(stack[fp+3]) : -1));
   }
 #endif
@@ -1727,6 +1727,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
+    errno = 0;
     i = sexp_read_char(ctx, _ARG1);
 #if SEXP_USE_UTF8_STRINGS
     if (i >= 0x80)
@@ -1752,8 +1753,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
+    errno = 0;
     i = sexp_read_char(ctx, _ARG1);
-    sexp_push_char(ctx, i, _ARG1);
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
       if ((errno == EAGAIN)
@@ -1764,8 +1765,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       } else
 #endif
         _ARG1 = SEXP_EOF;
-    } else
+    } else {
+      sexp_push_char(ctx, i, _ARG1);
       _ARG1 = sexp_make_character(i);
+    }
     break;
   case SEXP_OP_YIELD:
 #if SEXP_USE_GREEN_THREADS
