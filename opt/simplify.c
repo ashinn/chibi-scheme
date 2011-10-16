@@ -56,32 +56,34 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
       ls1 = app;
       ls2 = sexp_cdr(app);
       sv = sexp_lambda_sv(sexp_car(app));
-      for ( ; sexp_pairp(ls2); ls2=sexp_cdr(ls2), p2=sexp_cdr(p2)) {
-        if (sexp_not(sexp_memq(ctx, sexp_car(p2), sv))
-            && (! sexp_pointerp(sexp_car(ls2)) || sexp_litp(sexp_car(ls2))
-                || (sexp_refp(sexp_car(ls2))
-                    && sexp_lambdap(sexp_ref_loc(sexp_car(ls2)))
-                    && sexp_not(sexp_memq(ctx, sexp_ref_name(sexp_car(ls2)),
-                                          sexp_lambda_sv(sexp_ref_loc(sexp_car(ls2)))))))) {
-          tmp = sexp_cons(ctx, sexp_car(app), sexp_car(ls2));
-          tmp = sexp_cons(ctx, sexp_car(p2), tmp);
-          sexp_push(ctx, substs, tmp);
-          sexp_cdr(ls1) = sexp_cdr(ls2);
-          if (p1)
-            sexp_cdr(p1) = sexp_cdr(p2);
-          else
-            sexp_lambda_params(sexp_car(app)) = sexp_cdr(p2);
-        } else {
-          p1 = p2;
-          ls1 = ls2;
+      if (sexp_length(ctx, p2) == sexp_length(ctx, ls2)) {
+        for ( ; sexp_pairp(ls2); ls2=sexp_cdr(ls2), p2=sexp_cdr(p2)) {
+          if (sexp_not(sexp_memq(ctx, sexp_car(p2), sv))
+              && (! sexp_pointerp(sexp_car(ls2)) || sexp_litp(sexp_car(ls2))
+                  || (sexp_refp(sexp_car(ls2))
+                      && sexp_lambdap(sexp_ref_loc(sexp_car(ls2)))
+                      && sexp_not(sexp_memq(ctx, sexp_ref_name(sexp_car(ls2)),
+                                            sexp_lambda_sv(sexp_ref_loc(sexp_car(ls2)))))))) {
+            tmp = sexp_cons(ctx, sexp_car(app), sexp_car(ls2));
+            tmp = sexp_cons(ctx, sexp_car(p2), tmp);
+            sexp_push(ctx, substs, tmp);
+            sexp_cdr(ls1) = sexp_cdr(ls2);
+            if (p1)
+              sexp_cdr(p1) = sexp_cdr(p2);
+            else
+              sexp_lambda_params(sexp_car(app)) = sexp_cdr(p2);
+          } else {
+            p1 = p2;
+            ls1 = ls2;
+          }
         }
+        sexp_lambda_body(sexp_car(app))
+          = simplify(ctx, sexp_lambda_body(sexp_car(app)), substs, sexp_car(app));
+        if (sexp_nullp(sexp_cdr(app))
+            && sexp_nullp(sexp_lambda_params(sexp_car(app)))
+            && sexp_nullp(sexp_lambda_defs(sexp_car(app))))
+          app = sexp_lambda_body(sexp_car(app));
       }
-      sexp_lambda_body(sexp_car(app))
-        = simplify(ctx, sexp_lambda_body(sexp_car(app)), substs, sexp_car(app));
-      if (sexp_nullp(sexp_cdr(app))
-          && sexp_nullp(sexp_lambda_params(sexp_car(app)))
-          && sexp_nullp(sexp_lambda_defs(sexp_car(app))))
-        app = sexp_lambda_body(sexp_car(app));
     }
     res = app;
     break;
