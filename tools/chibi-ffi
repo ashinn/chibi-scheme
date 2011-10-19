@@ -665,12 +665,19 @@
       (cat "  sexp " (car sexps))
       (for-each (lambda (x) (display ", ") (display x)) (cdr sexps))
       (cat ";\n")))
+    ;; Declare the gc vars.
     (cond
      ((pair? gc-vars)
       (cat "  sexp_gc_var" num-gc-vars "(")
       (display (car gc-vars))
       (for-each (lambda (x) (display ", ") (display x)) (cdr gc-vars))
-      (cat ");\n")
+      (cat ");\n")))
+    ;; Shortcut returns should come before preserving.
+    (write-validators (func-scheme-args func))
+    (write-additional-checks (func-c-args func))
+    ;; Preserve the gc vars.
+    (cond
+     ((pair? gc-vars)
       (cat "  sexp_gc_preserve" num-gc-vars "(ctx")
       (for-each (lambda (x) (display ", ") (display x)) gc-vars)
       (cat ");\n")))))
@@ -925,8 +932,6 @@
        " (sexp ctx sexp_api_params(self, n)"
        (write-parameters (func-scheme-args func)) ") {\n")
   (write-locals func)
-  (write-validators (func-scheme-args func))
-  (write-additional-checks (func-c-args func))
   (write-temporaries func)
   (write-call func)
   (write-results func)
