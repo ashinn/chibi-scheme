@@ -767,7 +767,7 @@ sexp sexp_complex_atan (sexp ctx, sexp z) {
   tmp1 = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ONE);
   sexp_complex_imag(tmp1) = sexp_make_flonum(ctx, 0.5);
   res = sexp_complex_mul(ctx, res, tmp1);
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
   return res;
 }
 
