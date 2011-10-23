@@ -77,6 +77,7 @@ sexp sexp_make_thread (sexp ctx sexp_api_params(self, n), sexp thunk, sexp name)
   sexp res, *stack;
   sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, thunk);
   res = sexp_make_eval_context(ctx, SEXP_FALSE, sexp_context_env(ctx), 0, 0);
+  sexp_context_name(res) = name;
   sexp_context_proc(res) = thunk;
   sexp_context_ip(res) = sexp_bytecode_data(sexp_procedure_code(thunk));
   stack = sexp_stack_data(sexp_context_stack(res));
@@ -174,6 +175,7 @@ sexp sexp_thread_sleep (sexp ctx sexp_api_params(self, n), sexp timeout) {
   sexp_context_waitp(ctx) = 1;
   if (timeout != SEXP_TRUE) {
     sexp_assert_type(ctx, sexp_numberp, SEXP_NUMBER, timeout);
+    sexp_context_event(ctx) = SEXP_FALSE;
     sexp_insert_timed(ctx, ctx, timeout);
   }
   return SEXP_FALSE;
@@ -535,6 +537,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     } else {
       usleep(usecs);
       sexp_context_waitp(res) = 0;
+      sexp_context_timeoutp(res) = 1;
     }
   }
 
