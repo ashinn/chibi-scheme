@@ -1167,6 +1167,7 @@ SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_port_binaryp_op (sexp ctx sexp_api_params(self, n), sexp port);
 SEXP_API sexp sexp_port_openp_op (sexp ctx sexp_api_params(self, n), sexp port);
 #if SEXP_USE_FOLD_CASE_SYMS
+SEXP_API sexp sexp_get_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in);
 SEXP_API sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x);
 #endif
 SEXP_API sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str);
