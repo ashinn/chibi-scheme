@@ -188,19 +188,23 @@
             (else
              (lp (+ i 1) row (+ col 1)))))))
 
+(define (buffer-clear buf out)
+  ;; goto start of input
+  (terminal-goto-col out 0)
+  (if (positive? (buffer-row buf))
+      (terminal-up out (buffer-row buf)))
+  ;; clear below
+  (terminal-clear-below out))
+
 (define (buffer-draw buf out)
   (let* ((gap (buffer-gap buf))
          (str (buffer-string buf))
          (end (string-length str))
          (old-row (buffer-row buf))
          (old-col (buffer-col buf)))
+    ;; update position and clear the current input
+    (buffer-clear buf out)
     (buffer-update-position! buf)
-    ;; goto start of input
-    (terminal-goto-col out 0)
-    (if (positive? old-row)
-        (terminal-up out old-row))
-    ;; clear and display new buffer
-    (terminal-clear-below out)
     (display (substring str 0 (buffer-pos buf)) out)
     (display (substring str (buffer-gap buf) end) out)
     ;; move to next line if point at eol
@@ -361,13 +365,17 @@
   (buffer-insert! buf out ch))
 
 (define (command/enter ch buf out return)
-  (cond
-   (((buffer-complete? buf) buf)
-    (command/end-of-line ch buf out return)
-    (newline out)
-    (return))
-   (else
-    (command/self-insert ch buf out return))))
+  (guard (exn (else
+               (buffer-clear buf out)
+               (print-exception exn out)
+               (buffer-draw buf out)))
+    (cond
+     (((buffer-complete? buf) buf)
+      (command/end-of-line ch buf out return)
+      (newline out)
+      (return))
+     (else
+      (command/self-insert ch buf out return)))))
 
 (define (command/beep ch buf out return)
   (write-char (integer->char 7) out))
