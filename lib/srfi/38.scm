@@ -38,11 +38,12 @@
               (else
                (cond (cell
                       (display prefix out)
-                      (display "#=" out)
+                      (display "#" out)
                       (write count out)
+                      (display "=" out)
                       (set-cdr! cell count)
                       (set! count (+ count 1))))
-               (cont x)))))
+               (cont x cell)))))
     (cond
      ((null? shared)
       (write x out))
@@ -51,7 +52,7 @@
         (check-shared
          x
          ""
-         (lambda (x)
+         (lambda (x shared?)
            (cond
             ((pair? x)
              (display "(" out)
@@ -60,12 +61,22 @@
                (check-shared
                 ls
                 " . "
-                (lambda (ls)
+                (lambda (ls shared?)
                   (cond ((null? ls))
                         ((pair? ls)
-                         (display " " out)
-                         (wr (car ls))
-                         (lp (cdr ls)))
+                         (cond
+                          (shared?
+                           (display "(" out)
+                           (wr (car ls))
+                           (check-shared
+                            (cdr ls)
+                            " . "
+                            (lambda (ls shared?) (lp ls)))
+                           (display ")" out))
+                          (else
+                           (display " " out)
+                           (wr (car ls))
+                           (lp (cdr ls)))))
                         (else
                          (display " . " out)
                          (wr ls))))))
@@ -188,26 +199,25 @@
             ((#\#)
              (read-char in)
              (case (char-downcase (peek-char in))
-               ((#\=)
-                (read-char in)
-                (let* ((str (read-label '()))
-                       (n (string->number str))
-                       (cell (list #f))
-                       (thunk (lambda () (car cell))))
-                  (if (not n) (error "read error: invalid reference" str))
-                  (set! shared (cons (cons n thunk) shared))
-                  (let ((x (read-one)))
-                    (set-car! cell x)
-                    x)))
                ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
-                (let ((n (string->number (read-label '()))))
+                (let* ((str (read-label '()))
+                       (n (string->number str)))
+                  (if (not n) (error "read error: invalid reference" str))
                   (cond
-                   ((not (eqv? #\# (peek-char in)))
-                    (error "read error: expected # after #n" (read-char in)))
-                   (else
+                   ((eqv? #\= (peek-char in))
+                    (read-char in)
+                    (let* ((cell (list #f))
+                           (thunk (lambda () (car cell))))
+                      (set! shared (cons (cons n thunk) shared))
+                      (let ((x (read-one)))
+                        (set-car! cell x)
+                        x)))
+                   ((eqv? #\# (peek-char in))
                     (read-char in)
                     (cond ((assv n shared) => cdr)
-                          (else (error "read error: unknown reference" n)))))))
+                          (else (error "read error: unknown reference" n))))
+                   (else
+                    (error "read error: expected # after #n" (read-char in))))))
                ((#\;)
                 (read-char in)
                 (read-one) ;; discard
