@@ -547,7 +547,7 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
 
 /**************************************************************************/
 
-int sexp_lookup_type (sexp ctx, sexp env, const char *name) {
+int sexp_lookup_named_type (sexp ctx, sexp env, const char *name) {
   sexp t = sexp_env_ref(env, sexp_intern(ctx, name, -1), SEXP_FALSE);
   return (sexp_typep(t)) ? sexp_type_tag(t) : -1;
 }
@@ -557,8 +557,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_var1(name);
   sexp_gc_preserve1(ctx, name);
 
-  sexp_mutex_id   = sexp_lookup_type(ctx, env, "mutex");
-  sexp_condvar_id = sexp_lookup_type(ctx, env, "condition-variable");
+  sexp_mutex_id   = sexp_lookup_named_type(ctx, env, "mutex");
+  sexp_condvar_id = sexp_lookup_named_type(ctx, env, "condition-variable");
   name = sexp_c_string(ctx, "pollfds", -1);
   t = sexp_register_type(ctx, name, SEXP_FALSE, SEXP_FALSE,
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
