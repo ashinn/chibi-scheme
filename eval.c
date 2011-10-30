@@ -473,39 +473,22 @@ sexp sexp_syntactic_closure_expr_op (sexp ctx sexp_api_params(self, n), sexp x) 
 }
 
 sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
-  sexp ls1, ls2, ls3;
-  sexp_gc_var2(res, tmp);
-  sexp_gc_preserve2(ctx, res, tmp);
+  sexp_gc_var3(res, kar, kdr);
+  sexp_gc_preserve3(ctx, res, kar, kdr);
  loop:
   if (sexp_synclop(x)) {
     x = sexp_synclo_expr(x);
     goto loop;
-  } else if (sexp_pairp(x)) {
-    tmp = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_car(x));
-    ls3 = res = sexp_cons(ctx, tmp, SEXP_NULL);
-    for (ls1=sexp_cdr(x), ls2=x;
-         sexp_pairp(ls1) && sexp_pairp(sexp_cdr(ls1)) && ls1 != ls2;
-         ls1=sexp_cddr(ls1), ls2=sexp_cdr(ls2)) {
-      tmp = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_car(ls1));
-      sexp_cdr(ls3) = sexp_cons(ctx, tmp, SEXP_NULL);
-      ls3 = sexp_cdr(ls3);
-      tmp = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_cadr(ls1));
-      sexp_cdr(ls3) = sexp_cons(ctx, tmp, SEXP_NULL);
-      ls3 = sexp_cdr(ls3);
-    }
-    if (sexp_pairp(ls1)) {
-      tmp = (ls1 == ls2) ? sexp_car(ls1) : sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_car(ls1));
-      sexp_cdr(ls3) = sexp_cons(ctx, tmp, SEXP_NULL);
-      ls3 = sexp_cdr(ls3);
-      ls1 = sexp_cdr(ls1);
-    }
-    sexp_cdr(ls3) = (ls1 == ls2) ? ls1 : sexp_strip_synclos(ctx sexp_api_pass(self, n), ls1);
+  } else if (sexp_pairp(x) && sexp_truep(sexp_length(ctx, x))) {
+    kar = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_car(x));
+    kdr = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_cdr(x));
+    res = sexp_cons(ctx, kar, kdr);
     sexp_pair_source(res) = sexp_pair_source(x);
     sexp_immutablep(res) = 1;
   } else {
     res = x;
   }
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
   return res;
 }
 
