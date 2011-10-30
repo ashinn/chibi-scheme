@@ -112,7 +112,7 @@
               (skip-comment in depth)))))
 
 (define delimiters
-  '(#\( #\) #\[ #\] #\space #\tab #\newline #\return))
+  '(#\( #\) #\{ #\} #\space #\tab #\newline #\return))
 
 (define read-with-shared-structure
   (let ((read read))
@@ -148,6 +148,40 @@
             (cond ((string-ci=? name "space") #\space)
                   ((string-ci=? name "newline") #\newline)
                   (else (error "unknown char name")))))
+        (define (read-type-id in)
+          (let ((ch (peek-char in)))
+            (cond
+             ((eqv? ch #\#)
+              (read-char in)
+              (let ((id (read in)))
+                (cond ((eq? id 't) #t)
+                      ((integer? id) id)
+                      (else (error "invalid type identifier" id)))))
+             ((eqv? ch #\")
+              (read in))
+             (else
+              (error "invalid type identifier syntax" ch)))))
+        (define (read-object)
+          (let ((name (read-name #f in)))
+            (skip-whitespace in)
+            (let* ((id (read-type-id in))
+                   (type (lookup-type name id)))
+              (let lp ((ls '()))
+                (skip-whitespace in)
+                (cond
+                 ((eof-object? (peek-char in))
+                  (error "missing closing }"))
+                 ((eqv? #\} (peek-char in))
+                  (read-char in)
+                  (let ((res ((make-constructor #f type))))
+                    (let lp ((ls (reverse ls)) ( i 0))
+                      (cond
+                       ((null? ls)
+                        res)
+                       (else
+                        (slot-set! type res i (car ls))
+                        (lp (cdr ls) (+ i 1)))))))
+                 (else (lp (cons (read-one) ls))))))))
         (define (read-one)
           (skip-whitespace in)
           (case (peek-char in)
@@ -240,6 +274,9 @@
                     (if (eof-object? c)
                         (error "unterminated list")
                         (lp (cons (read-one) res))))))))
+            ((#\{)
+             (read-char in)
+             (read-object))
             ((#\') (read-char in) (list 'quote (read-one)))
             ((#\`) (read-char in) (list 'quasiquote (read-one)))
             ((#\,)
