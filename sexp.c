@@ -1347,6 +1347,10 @@ sexp sexp_port_openp_op (sexp ctx sexp_api_params(self, n), sexp port) {
 }
 
 #if SEXP_USE_FOLD_CASE_SYMS
+sexp sexp_get_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in) {
+  sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
+  return sexp_make_boolean(sexp_port_fold_casep(in));
+}
 sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x) {
   sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
   sexp_assert_type(ctx, sexp_booleanp, SEXP_BOOLEAN, x);
