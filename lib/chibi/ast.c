@@ -175,6 +175,11 @@ static sexp sexp_type_slots_op (sexp ctx sexp_api_params(self, n), sexp t) {
   return sexp_type_slots(t);
 }
 
+static sexp sexp_type_printer_op (sexp ctx sexp_api_params(self, n), sexp t) {
+  sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
+  return sexp_type_print(t) ? sexp_make_foreign(ctx, "print", 3, 0, (sexp_proc1)sexp_type_print(t), NULL) : SEXP_FALSE;
+}
+
 static sexp sexp_object_size (sexp ctx sexp_api_params(self, n), sexp x) {
   sexp t;
   if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_context_num_types(ctx)))
@@ -408,6 +413,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "type-name", 1, sexp_type_name_op);
   sexp_define_foreign(ctx, env, "type-cpl", 1, sexp_type_cpl_op);
   sexp_define_foreign(ctx, env, "type-slots", 1, sexp_type_slots_op);
+  sexp_define_foreign(ctx, env, "type-printer", 1, sexp_type_printer_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
