@@ -184,8 +184,13 @@
                ((#\() (list->vector (read-one)))
                ((#\') (read-char in) (list 'syntax (read-one)))
                ((#\`) (read-char in) (list 'quasisyntax (read-one)))
-               ((#\t) (read-char in) #t)
-               ((#\f) (read-char in) #f) ; support SRFI-4 f32/64 vectors
+               ((#\t) (let ((s (read-name #f in)))
+                        (or (string-ci=? s "t") (string-ci=? s "true")
+                            (error "bad # syntax" s))))
+               ((#\f) (let ((s (read-name #f in)))
+                        (if (or (string-ci=? s "f") (string-ci=? s "false"))
+                            #f
+                            (error "bad # syntax" s))))
                ((#\d) (read-char in) (read in))
                ((#\x) (read-char in) (read-number 16))
                ((#\o) (read-char in) (read-number 8))
