@@ -100,7 +100,6 @@ static int sexp_save_image (sexp ctx, const char* path) {
   sexp_heap heap;
   FILE* file;
   struct sexp_image_header_t header;
-  sexp_free_list q;
   file = fopen(path, "w");
   if (!file) {
     fprintf(stderr, "couldn't open image file for writing: %s\n", path);
