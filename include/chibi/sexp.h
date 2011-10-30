@@ -1154,7 +1154,7 @@ SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, se
 SEXP_API sexp sexp_write_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out);
 SEXP_API sexp sexp_display_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp out);
 SEXP_API sexp sexp_flush_output_op (sexp ctx sexp_api_params(self, n), sexp out);
-SEXP_API sexp sexp_read_string (sexp ctx, sexp in);
+SEXP_API sexp sexp_read_string (sexp ctx, sexp in, int sentinel);
 SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
 SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base);
 SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);

@@ -1001,9 +1001,10 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 
 #if SEXP_USE_HUFF_SYMS
   res = 0;
+  if (len == 0) goto normal_intern;
   for ( ; i<len; i++, p++) {
     c = *p;
-    if ((unsigned char)c > 127)
+    if ((unsigned char)c <= 32 || (unsigned char)c > 127 || c == '\\')
       goto normal_intern;
     he = huff_table[(unsigned char)c];
     newbits = he.len;
@@ -1493,13 +1494,16 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_char(ctx, '"', out);
       break;
     case SEXP_SYMBOL:
-      i = sexp_symbol_length(obj);
       str = sexp_symbol_data(obj);
-      for ( ; i>0; str++, i--) {
-        if ((str[0] == '\\') || is_separator(str[0]))
-          sexp_write_char(ctx, '\\', out);
+      c = sexp_symbol_length(obj) > 0 ? EOF : '|';
+      for (i=sexp_symbol_length(obj)-1; i>=0; i--)
+        if (str[i] <= ' ' || str[i] == '\\' || is_separator(str[i])) c = '|';
+      if (c!=EOF) sexp_write_char(ctx, c, out);
+      for (i=sexp_symbol_length(obj); i>0; str++, i--) {
+        if (str[0] == '\\') sexp_write_char(ctx, '\\', out);
         sexp_write_char(ctx, str[0], out);
       }
+      if (c!=EOF) sexp_write_char(ctx, c, out);
       break;
 #if SEXP_USE_BIGNUMS
     case SEXP_BIGNUM:
@@ -1663,14 +1667,14 @@ sexp sexp_flush_output_op (sexp ctx sexp_api_params(self, n), sexp out) {
 
 #define INIT_STRING_BUFFER_SIZE 128
 
-sexp sexp_read_string (sexp ctx, sexp in) {
+sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
   int c, i=0;
   sexp_sint_t size=INIT_STRING_BUFFER_SIZE;
   char initbuf[INIT_STRING_BUFFER_SIZE];
   char *buf=initbuf, *tmp;
   sexp res = SEXP_FALSE;
 
-  for (c = sexp_read_char(ctx, in); c != '"'; c = sexp_read_char(ctx, in)) {
+  for (c = sexp_read_char(ctx, in); c != sentinel; c = sexp_read_char(ctx, in)) {
     if (c == '\\') {
       c = sexp_read_char(ctx, in);
       switch (c) {
@@ -2095,7 +2099,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     }
     break;
   case '"':
-    res = sexp_read_string(ctx, in);
+    res = sexp_read_string(ctx, in, '"');
     break;
   case '(':
     line = (sexp_port_sourcep(in) ? sexp_port_line(in) : -1);
@@ -2163,7 +2167,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         else if (!sexp_fixnump(tmp))
           tmp = sexp_read_error(ctx, "invalid type identifier", tmp, in);
       } else if (c1=='"') {
-        tmp = sexp_read_string(ctx, in);
+        tmp = sexp_read_string(ctx, in, '"');
       } else {
         tmp = sexp_read_error(ctx, "brace literal missing type identifier", sexp_make_character(c1), in);
       }
@@ -2389,6 +2393,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     res = SEXP_CLOSE_BRACE;
     break;
 #endif
+  case '|':
+    res = sexp_read_string(ctx, in, '|');
+    if (sexp_stringp(res))
+      res = sexp_intern(ctx, sexp_string_data(res), sexp_string_length(res));
+    break;
   case '+':
   case '-':
     c2 = sexp_read_char(ctx, in);
