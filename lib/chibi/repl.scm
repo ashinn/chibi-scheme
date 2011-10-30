@@ -29,11 +29,9 @@
   (call-with-output-string (lambda (out) (write x out))))
 
 (define (buffer-complete-sexp? buf)
-  (guard (exn (else #f))
-    (call-with-input-string (buffer->string buf)
-      (lambda (in)
-        (let lp () (if (not (eof-object? (read/ss in))) (lp)))))
-    #t))
+  (call-with-input-string (buffer->string buf)
+    (lambda (in)
+      (let lp () (if (not (eof-object? (read/ss in))) (lp))))))
 
 (define module? vector?)
 (define (module-env mod) (vector-ref mod 1))
