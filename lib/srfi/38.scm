@@ -17,7 +17,18 @@
         (set! seen (cons (cons x 1) seen))
         (do ((i 0 (+ i 1)))
             ((= i (vector-length x)))
-          (find (vector-ref x i))))))
+          (find (vector-ref x i))))
+       (else
+        (let* ((type (type-of x))
+               (slots (and type (type-slots type))))
+          (cond
+           (slots
+            (set! seen (cons (cons x 1) seen))
+            (let lp ((i 0) (ls slots))
+              (cond
+               ((pair? ls)
+                (find (slot-ref type x i))
+                (lp (+ i 1) (cdr ls)))))))))))
     (let extract ((ls seen) (res '()))
       (cond
        ((null? ls) res)
@@ -91,6 +102,9 @@
                         (display " " out)
                         (wr (vector-ref x i))))))
              (display ")" out))
+            ((let ((type (type-of x)))
+               (and (type? type) (type-printer type)))
+             => (lambda (printer) (printer x wr out)))
             (else
              (write x out))))))))))
 
@@ -317,6 +331,19 @@
       (let ((elt (vector-ref x i)))
         (if (hole? elt)
             (vector-set! x i (fill-hole elt))
-            (patch elt)))))))
+            (patch elt)))))
+   (else
+    (let* ((type (type-of x))
+           (slots (and type (type-slots type))))
+      (cond
+       (slots
+        (let lp ((i 0) (ls slots))
+          (cond
+           ((pair? ls)
+            (let ((elt (slot-ref type x i)))
+              (if (hole? elt)
+                  (slot-set! type x i (fill-hole elt))
+                  (patch elt))
+              (lp (+ i 1) (cdr ls))))))))))))
 
 (define read/ss read-with-shared-structure)
