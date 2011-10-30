@@ -233,7 +233,7 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  sexp name, cpl, slots, dl;
+  sexp name, cpl, slots, dl, id;
   sexp_proc2 finalize;
   sexp_proc3 print;
 };
@@ -993,6 +993,7 @@ SEXP_API sexp_heap sexp_global_heap;
 #define sexp_type_finalize(x)          (sexp_field(x, type, SEXP_TYPE, finalize))
 #define sexp_type_print(x)             (sexp_field(x, type, SEXP_TYPE, print))
 #define sexp_type_dl(x)                (sexp_field(x, type, SEXP_TYPE, dl))
+#define sexp_type_id(x)                (sexp_field(x, type, SEXP_TYPE, id))
 
 #define sexp_bignum_sign(x)            (sexp_field(x, bignum, SEXP_BIGNUM, sign))
 #define sexp_bignum_length(x)          (sexp_field(x, bignum, SEXP_BIGNUM, length))
@@ -1170,6 +1171,9 @@ SEXP_API sexp sexp_port_openp_op (sexp ctx sexp_api_params(self, n), sexp port);
 SEXP_API sexp sexp_get_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in);
 SEXP_API sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x);
 #endif
+#if SEXP_USE_OBJECT_BRACE_LITERALS
+SEXP_API sexp sexp_lookup_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp id);
+#endif
 SEXP_API sexp sexp_make_input_string_port_op (sexp ctx sexp_api_params(self, n), sexp str);
 SEXP_API sexp sexp_make_output_string_port_op (sexp ctx sexp_api_params(self, n));
 SEXP_API sexp sexp_get_output_string_op (sexp ctx sexp_api_params(self, n), sexp port);
@@ -1281,6 +1285,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
 #define sexp_make_constructor(ctx, a, b) sexp_make_constructor_op(ctx sexp_api_pass(NULL, 2), a, b)
 #define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
 #define sexp_make_setter(ctx, a, b, c) sexp_make_setter_op(ctx sexp_api_pass(NULL, 3), a, b, c)
+#define sexp_lookup_type(ctx, name, id) sexp_lookup_type_op(ctx sexp_api_pass(NULL, 2), name, id)
 
 #ifdef __cplusplus
 } /* extern "C" */

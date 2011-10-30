@@ -198,6 +198,9 @@ _FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "sub
 _FN1(SEXP_VOID, _I(SEXP_IPORT), "port-fold-case?", 0, sexp_get_port_fold_case),
 _FN2(SEXP_VOID, _I(SEXP_IPORT), _I(SEXP_BOOLEAN), "set-port-fold-case!", 0, sexp_set_port_fold_case),
 #endif
+#if SEXP_USE_OBJECT_BRACE_LITERALS
+_FN2(_I(SEXP_TYPE), _I(SEXP_STRING), _I(SEXP_OBJECT), "lookup-type", 0, sexp_lookup_type_op),
+#endif
 #if SEXP_USE_TYPE_DEFS
 _FN3(_I(SEXP_TYPE), _I(SEXP_STRING), _I(SEXP_TYPE), SEXP_NULL, "register-simple-type", 0, sexp_register_simple_type_op),
 _FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-type-predicate", 0, sexp_make_type_predicate_op),
