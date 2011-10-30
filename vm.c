@@ -1354,6 +1354,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_raise("slot-ref: not an integer", sexp_list1(ctx, _ARG3));
     _ARG3 = sexp_slot_ref(_ARG2, sexp_unbox_fixnum(_ARG3));
     top-=2;
+    if (!_ARG1) _ARG1 = SEXP_VOID;
     break;
   case SEXP_OP_SLOTN_SET:
     if (! sexp_typep(_ARG1))
