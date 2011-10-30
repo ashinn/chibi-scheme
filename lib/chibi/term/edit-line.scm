@@ -336,6 +336,7 @@
          (v (car keymap)))
     (vector-set! v   1 command/beggining-of-line)
     (vector-set! v   2 command/backward-char)
+    (vector-set! v   3 command/cancel)
     (vector-set! v   4 command/forward-delete-char)
     (vector-set! v   5 command/end-of-line)
     (vector-set! v   6 command/forward-char)
@@ -376,6 +377,13 @@
       (return))
      (else
       (command/self-insert ch buf out return)))))
+
+(define (command/cancel ch buf out return)
+  (command/end-of-line ch buf out return)
+  (display "^C" out)
+  (newline out)
+  (buffer-delete! buf out 0 (buffer-length buf))
+  (buffer-draw buf out))
 
 (define (command/beep ch buf out return)
   (write-char (integer->char 7) out))
