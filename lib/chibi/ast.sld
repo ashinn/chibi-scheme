@@ -30,7 +30,7 @@
    bytecode-name bytecode-literals bytecode-source
    pair-source pair-source-set!
    port-line port-line-set!
-   type-name type-cpl type-parent type-slots
+   type-name type-cpl type-parent type-slots type-printer
    object-size integer->immediate gc
    string-contains integer->error-string
    flatten-dot update-free-vars!)
