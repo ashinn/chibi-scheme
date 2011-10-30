@@ -26,23 +26,26 @@
 
 #define SEXP_IMAGE_MAGIC "\x07\x07chibi\n\0"
 #define SEXP_IMAGE_MAJOR_VERSION 1
-#define SEXP_IMAGE_MINOR_VERSION 0
+#define SEXP_IMAGE_MINOR_VERSION 1
 
 typedef struct sexp_image_header_t* sexp_image_header;
 struct sexp_image_header_t {
   const char magic[8];
   short major, minor;
-  sexp_uint_t size, base, context;
+  sexp_uint_t size;
+  sexp_heap base;
+  sexp context;
 };
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed);
 void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types, sexp flags);
 
-static sexp sexp_load_image (const char* file) {
-  sexp ctx, *globals, *types;
+static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_t heap_max_size) {
+  sexp ctx, flags, *globals, *types;
   int fd;
   sexp_sint_t offset;
-  char* image;
+  sexp_heap heap;
+  sexp_free_list q;
   struct sexp_image_header_t header;
   fd = open(file, O_RDONLY);
   if (fd < 0) {
@@ -56,19 +59,39 @@ static sexp sexp_load_image (const char* file) {
     return NULL;
   } else if (header.major != SEXP_IMAGE_MAJOR_VERSION
              || header.major < SEXP_IMAGE_MINOR_VERSION) {
-    fprintf(stderr, "unsupported image version: %d.%d\n", header.major, header.minor);
+    fprintf(stderr, "unsupported image version: %d.%d\n",
+            header.major, header.minor);
     return NULL;
   }
-  image = malloc(sexp_heap_pad_size(header.size));
-  if (read(fd, image, header.size) != header.size) {
+  if (heap_size < header.size) heap_size = header.size;
+  heap = (sexp_heap)malloc(sexp_heap_pad_size(heap_size));
+  if (read(fd, heap, header.size) != header.size) {
     fprintf(stderr, "error reading image\n");
     return NULL;
   }
-  offset = (sexp_sint_t)(image - (sexp_sint_t)header.base);
+  offset = (sexp_sint_t)((char*)heap - (sexp_sint_t)header.base);
+  /* expand the last free chunk if necessary */
+  if (heap->size < heap_size) {
+    for (q=(sexp_free_list)((char*)heap->free_list + offset); q->next;
+         q=(sexp_free_list)((char*)q->next + offset))
+      ;
+    if ((char*)q + q->size >= (char*)heap->data + heap->size) {
+      /* last free chunk at end of heap */
+      q->size += heap_size - heap->size;
+    } else {
+      /* last free chunk in the middle of the heap */
+      q->next = (sexp_free_list)((char*)heap->data + heap->size);
+      q = (sexp_free_list)((char*)q->next + offset);
+      q->size = heap_size - heap->size;
+      q->next = NULL;
+    }
+    heap->size += (heap_size - heap->size);
+  }
   ctx = (sexp)(header.context + offset);
   globals = sexp_vector_data((sexp)((char*)sexp_context_globals(ctx) + offset));
   types = sexp_vector_data((sexp)((char*)(globals[SEXP_G_TYPES]) + offset));
-  sexp_offset_heap_pointers((sexp_heap)image, (sexp_heap)header.base, types, sexp_fx_add(SEXP_COPY_LOADP, SEXP_COPY_FREEP));
+  flags = sexp_fx_add(SEXP_COPY_LOADP, SEXP_COPY_FREEP);
+  sexp_offset_heap_pointers(heap, header.base, types, flags);
   close(fd);
   return ctx;
 }
@@ -77,6 +100,7 @@ static int sexp_save_image (sexp ctx, const char* path) {
   sexp_heap heap;
   FILE* file;
   struct sexp_image_header_t header;
+  sexp_free_list q;
   file = fopen(path, "w");
   if (!file) {
     fprintf(stderr, "couldn't open image file for writing: %s\n", path);
@@ -87,8 +111,8 @@ static int sexp_save_image (sexp ctx, const char* path) {
   header.major = SEXP_IMAGE_MAJOR_VERSION;
   header.minor = SEXP_IMAGE_MINOR_VERSION;
   header.size = heap->size;
-  header.base = (sexp_uint_t)heap;
-  header.context = (sexp_uint_t)ctx;
+  header.base = heap;
+  header.context = ctx;
   sexp_gc(ctx, NULL);
   if (! (fwrite(&header, sizeof(header), 1, file) == 1
          && fwrite(heap, heap->size, 1, file) == 1)) {
@@ -301,7 +325,7 @@ void run_main (int argc, char **argv) {
         fprintf(stderr, "-:i <file>: image files must be loaded first\n");
         exit_failure();
       }
-      ctx = sexp_load_image(arg);
+      ctx = sexp_load_image(arg, heap_size, heap_max_size);
       if (!ctx) {
         fprintf(stderr, "-:i <file>: couldn't open file for reading: %s\n", arg);
         exit_failure();

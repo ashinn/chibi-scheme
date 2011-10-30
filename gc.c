@@ -384,8 +384,8 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp_conservative_mark(ctx);
   sexp_reset_weak_references(ctx);
   res = sexp_sweep(ctx, sum_freed);
-  sexp_debug_printf("%p (freed: %lu max_freed: %lu)", ctx, *sum_freed,
-                    sexp_unbox_fixnum(res));
+  sexp_debug_printf("%p (freed: %lu max_freed: %lu)", ctx,
+                    (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res));
   return res;
 }
 
@@ -519,10 +519,34 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
       /* adjust context heaps, don't copy saved sexp_gc_vars */
       if (sexp_contextp(p)) {
         sexp_context_ip(p) += off;
+        sexp_context_last_fp(p) += off;
+        sexp_stack_top(sexp_context_stack(p)) = 0;
         sexp_context_saves(p) = NULL;
-        /* if (sexp_context_heap(p) - off != from_heap) */
-        /*   fprintf(stderr, "unexpected heap: %p\n", sexp_context_heap(p)); */
         sexp_context_heap(p) = heap;
+      } else if (sexp_bytecodep(p)) {
+        for (i=0; i<sexp_bytecode_length(p); ) {
+          switch (sexp_bytecode_data(p)[i++]) {
+            case SEXP_OP_STACK_REF:   case SEXP_OP_LOCAL_REF:
+            case SEXP_OP_LOCAL_SET:   case SEXP_OP_CLOSURE_REF:
+            case SEXP_OP_JUMP:        case SEXP_OP_JUMP_UNLESS:
+            case SEXP_OP_TYPEP:       case SEXP_OP_RESERVE:
+            case SEXP_OP_FCALL0:      case SEXP_OP_FCALL1:
+            case SEXP_OP_FCALL2:      case SEXP_OP_FCALL3:
+            case SEXP_OP_FCALL4:      case SEXP_OP_CALL:
+            case SEXP_OP_GLOBAL_REF:  case SEXP_OP_GLOBAL_KNOWN_REF:
+            case SEXP_OP_TAIL_CALL:   case SEXP_OP_PARAMETER_REF:
+            case SEXP_OP_PUSH:
+              v = (sexp*)(&(sexp_bytecode_data(p)[i]));
+              if (v[0] && sexp_pointerp(v[0])) v[0] = (sexp) ((char*)v[0] + off);
+              i += sizeof(sexp); break;
+            case SEXP_OP_SLOT_REF: case SEXP_OP_SLOT_SET: case SEXP_OP_MAKE:
+              i += 2*sizeof(sexp); break;
+            case SEXP_OP_MAKE_PROCEDURE:
+              v = (sexp*)(&(sexp_bytecode_data(p)[i]));
+              if (v[2] && sexp_pointerp(v[2])) v[2] = (sexp) ((char*)v[2] + off);
+              i += 3*sizeof(sexp); break;
+          }
+        }
       } else if (sexp_portp(p) && sexp_port_stream(p)) {
         sexp_port_stream(p) = 0;
         sexp_port_openp(p) = 0;
@@ -554,6 +578,11 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
           } else {
             sexp_opcode_func(p) = dlsym(SEXP_RTLD_DEFAULT, sexp_string_data(name));
           }
+        } else if (sexp_typep(p)) {
+          if (sexp_type_finalize(p))
+            sexp_type_finalize(p) = sexp_type_tag(p) == SEXP_DL ? sexp_finalize_dl : SEXP_FINALIZE_PORT;
+          if (sexp_type_print(p))
+            sexp_type_print(p) = sexp_write_simple_object;
         }
         t = types[sexp_pointer_tag(p)];
         p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));
