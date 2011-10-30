@@ -235,7 +235,7 @@ struct sexp_type_struct {
   short depth;
   sexp name, cpl, slots, dl, id;
   sexp_proc2 finalize;
-  sexp_proc3 print;
+  sexp_proc4 print;
 };
 
 struct sexp_opcode_struct {
@@ -1161,7 +1161,7 @@ SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);
 SEXP_API sexp sexp_read_op (sexp ctx sexp_api_params(self, n), sexp in);
 SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len);
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
-SEXP_API sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp obj, sexp out);
+SEXP_API sexp sexp_write_simple_object (sexp ctx sexp_api_params(self, n), sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx sexp_api_params(self, n), sexp port);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
@@ -1183,6 +1183,8 @@ SEXP_API sexp sexp_type_exception (sexp ctx, sexp self, sexp_uint_t type_id, sex
 SEXP_API sexp sexp_xtype_exception (sexp ctx, sexp self, const char *msg, sexp x);
 SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp out);
+SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
+SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
 SEXP_API void sexp_init(void);
 
 #if SEXP_USE_UTF8_STRINGS
@@ -1233,7 +1235,7 @@ SEXP_API int sexp_valid_object_p(sexp ctx, sexp x);
 #endif
 
 #if SEXP_USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2, sexp_proc3);
+SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2, sexp_proc4);
 SEXP_API sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp parent, sexp slots);
 SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj);
 #define sexp_register_c_type(ctx, name, finalizer)                      \
