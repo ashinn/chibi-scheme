@@ -233,15 +233,15 @@
   (let* ((port (if (pair? o) (car o) (current-input-port)))
          (orig-attrs (get-terminal-attributes port)))
     (dynamic-wind
-        (lambda () (stty setting))
-        thunk
-        (lambda () (set-terminal-attributes! port TCSANOW orig-attrs)))))
+      (lambda () (stty setting))
+      thunk
+      (lambda () (set-terminal-attributes! port TCSANOW orig-attrs)))))
 
 ;;> Run @var{thunk} with the "raw" (no canonical or echo) options
 ;;> needed for a terminal application.
 
 (define (with-raw-io port thunk)
-  (with-stty '(not icanon echo) thunk port))
+  (with-stty '(not icanon isig echo) thunk port))
 
 ;;> Returns the current terminal width in characters of @var{x},
 ;;> which must be a port or a file descriptor.
