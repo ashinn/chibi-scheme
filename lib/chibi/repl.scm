@@ -162,7 +162,12 @@
             (guard
              (exn
               (else (print-exception exn (current-error-port))))
-             (let* ((expr (call-with-input-string line read/ss))
+             (let* ((expr (call-with-input-string line
+                            (lambda (in2)
+                              (set-port-fold-case! in2 (port-fold-case? in))
+                              (let ((expr (read/ss in2)))
+                                (set-port-fold-case! in (port-fold-case? in2))
+                                expr))))
                     (thread
                      (make-thread
                       (lambda ()
