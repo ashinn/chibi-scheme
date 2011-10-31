@@ -65,6 +65,10 @@ static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_
   }
   if (heap_size < header.size) heap_size = header.size;
   heap = (sexp_heap)malloc(sexp_heap_pad_size(heap_size));
+  if (!heap) {
+    fprintf(stderr, "couldn't malloc heap\n");
+    return NULL;
+  }
   if (read(fd, heap, header.size) != header.size) {
     fprintf(stderr, "error reading image\n");
     return NULL;
@@ -87,7 +91,7 @@ static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_
     }
     heap->size += (heap_size - heap->size);
   }
-  ctx = (sexp)(header.context + offset);
+  ctx = (sexp)(((char*)header.context) + offset);
   globals = sexp_vector_data((sexp)((char*)sexp_context_globals(ctx) + offset));
   types = sexp_vector_data((sexp)((char*)(globals[SEXP_G_TYPES]) + offset));
   flags = sexp_fx_add(SEXP_COPY_LOADP, SEXP_COPY_FREEP);
