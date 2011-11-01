@@ -46,7 +46,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
 
   for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
     sexp_write_char(ctx, ' ', out);
-  sexp_write_string(ctx, "-------------- ", out);
+  sexp_write_string(ctx, "      -------------- ", out);
   if (sexp_truep(sexp_bytecode_name(bc))) {
     sexp_write(ctx, sexp_bytecode_name(bc), out);
     sexp_write_char(ctx, ' ', out);
