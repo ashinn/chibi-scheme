@@ -27,8 +27,9 @@ static void sexp_write_integer (sexp ctx, sexp_sint_t n, sexp out) {
 }
 
 static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
-  sexp tmp=NULL;
   unsigned char *ip, opcode, i;
+  sexp tmp=NULL;
+  sexp_sint_t *labels, label=1, off;
 
   if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
@@ -53,11 +54,53 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp_write_pointer(ctx, bc, out);
   sexp_newline(ctx, out);
 
+  labels = calloc(sexp_bytecode_length(bc), sizeof(sexp_sint_t));
   ip = sexp_bytecode_data(bc);
+  while (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc)) {
+    switch (*ip++) {
+    case SEXP_OP_JUMP:
+    case SEXP_OP_JUMP_UNLESS:
+      off = ip - sexp_bytecode_data(bc) + ((sexp_sint_t*)ip)[0];
+      if (off > 0 && off < sexp_bytecode_length(bc) && labels[off] == 0)
+        labels[off] = label++;
+    case SEXP_OP_CALL:
+    case SEXP_OP_CLOSURE_REF:
+    case SEXP_OP_GLOBAL_KNOWN_REF:
+    case SEXP_OP_GLOBAL_REF:
+    case SEXP_OP_LOCAL_REF:
+    case SEXP_OP_LOCAL_SET:
+    case SEXP_OP_PARAMETER_REF:
+    case SEXP_OP_PUSH:
+    case SEXP_OP_RESERVE:
+    case SEXP_OP_STACK_REF:
+    case SEXP_OP_TAIL_CALL:
+    case SEXP_OP_TYPEP:
+      ip += sizeof(sexp);
+      break;
+    case SEXP_OP_SLOT_REF:
+    case SEXP_OP_SLOT_SET:
+    case SEXP_OP_MAKE:
+      ip += sizeof(sexp)*2;
+      break;
+    case SEXP_OP_MAKE_PROCEDURE:
+      ip += sizeof(sexp)*3;
+      break;
+    }
+  }
 
+  ip = sexp_bytecode_data(bc);
  loop:
   for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
     sexp_write_char(ctx, ' ', out);
+  if (labels[ip - sexp_bytecode_data(bc)] == 0) {
+    sexp_write_string(ctx, "     ", out);
+  } else {
+    sexp_write_char(ctx, 'L', out);
+    sexp_write_integer(ctx, labels[ip - sexp_bytecode_data(bc)], out);
+    sexp_write_string(ctx, ": ", out);
+    if (labels[ip - sexp_bytecode_data(bc)] < 10)
+      sexp_write_char(ctx, ' ', out);
+  }
   opcode = *ip++;
   if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
     sexp_write_char(ctx, ' ', out);
@@ -73,11 +116,19 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_LOCAL_REF:
   case SEXP_OP_LOCAL_SET:
   case SEXP_OP_CLOSURE_REF:
-  case SEXP_OP_JUMP:
-  case SEXP_OP_JUMP_UNLESS:
   case SEXP_OP_TYPEP:
   case SEXP_OP_RESERVE:
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
+    ip += sizeof(sexp);
+    break;
+  case SEXP_OP_JUMP:
+  case SEXP_OP_JUMP_UNLESS:
+    sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
+    off = ip - sexp_bytecode_data(bc) + ((sexp_sint_t*)ip)[0];
+    if (off > 0 && off < sexp_bytecode_length(bc) && labels[off] > 0) {
+      sexp_write_string(ctx, " L", out);
+      sexp_write_integer(ctx, labels[off], out);
+    }
     ip += sizeof(sexp);
     break;
   case SEXP_OP_FCALL0:
@@ -129,6 +180,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     disasm(ctx, self, tmp, out, depth+1);
   if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
     goto loop;
+
+  free(labels);
   return SEXP_VOID;
 }
 
