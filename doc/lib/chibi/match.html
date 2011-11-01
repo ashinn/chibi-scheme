@@ -1,0 +1,188 @@
+<html><head><title>(chibi match)</title>
+<style type="text/css">
+body {color: #000; background-color: #FFF}
+div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 180px; height: 100%}
+div#main  {position: absolute; top: 0; left: 200px; width: 520px; height: 100%}
+div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 0px; font-size: smaller;}
+div#footer {padding-bottom: 50px}
+.result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
+.command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
+.keyword { color: #800080; background-color: inherit; }
+.type { color: #008000; background-color: inherit; }
+.function { color: #0000FF; background-color: inherit; }
+.variable { color: #B8860B; background-color: inherit; }
+.comment { color: #FF0000; background-color: inherit; }
+.string { color: #BC8F8F; background-color: inherit; }
+.attribute { color: #FF5000; background-color: inherit; }
+.preprocessor { color: #FF00FF; background-color: inherit; }
+.builtin { color: #FF00FF; background-color: inherit; }
+.character { color: #0055AA; background-color: inherit; }
+.syntaxerror { color: #FF0000; background-color: inherit; }
+.diff-deleted { color: #5F2121; background-color: inherit; }
+.diff-added { color: #215F21; background-color: inherit; }
+span.paren1 { color: #AAAAAA; background-color: inherit; }
+span.paren2 { color: #888888; background-color: inherit; }
+span.paren3 { color: #666666; background-color: inherit; }
+span.paren4 { color: #444444; background-color: inherit; }
+span.paren5 { color: #222222; background-color: inherit; }
+span.paren6 { color: #000000; background-color: inherit; }
+</style>
+</head><body><div id="menu"><ol><li><a href="#h3_Patterns">Patterns</a></li><li><a href="#h3_Syntax">Syntax</a><ol><li><a href="#h4_(matchexpr(pattern.body)...)(matchexpr(pattern(=>failure).body)...)">(match expr (pattern . body) ...)
+(match expr (pattern (=> failure) . body) ...)</a></li><li><a href="#h4_match-lambda">(match-lambda (pattern . body) ...)</a></li><li><a href="#h4_match-lambda*">(match-lambda* (pattern . body) ...)</a></li><li><a href="#h4_match-let">(match-let ((var value) ...) . body)(match-let loop ((var init) ...) . body)</a></li><li><a href="#h4_match-letrec">(match-letrec ((var value) ...) . body)</a></li><li><a href="#h4_(match-let*((varvalue)...)body...)">(match-let* ((var value) ...) body ...)</a></li></ol></li></ol></div><div id="main"><h1>(chibi match)</h1><p>
+This is a full superset of the popular <a href="http://www.cs.indiana.edu/scheme-repository/code.match.html">match</a>
+package by Andrew Wright, written in fully portable <code><span>syntax-rules</span></code>
+and thus preserving hygiene.
+The most notable extensions are the ability to use <em>non-linear</em>
+patterns - patterns in which the same identifier occurs multiple
+times, tail patterns after ellipsis, and the experimental tree patterns.
+</p><div><a name="h3_Patterns"></a><h3>Patterns</h3></div><p>
+Patterns are written to look like the printed representation of
+the objects they match.  The basic usage is
+<code>(<span class="keyword">match</span> <span>expr</span> (pat <span>body</span> <span>...</span>) <span>...</span>)</code>
+where the result of <code>expr</code> is matched against each pattern in
+turn, and the corresponding body is evaluated for the first to
+succeed.  Thus, a list of three elements matches a list of three
+elements.
+</p><div><pre><code>(<span class="keyword">let</span> ((ls (list <span>1</span> <span>2</span> <span>3</span>))) (<span class="keyword">match</span> <span>ls</span> ((1 <span>2</span> <span>3</span>) #t)))</code></pre><code><div class="result">=> #t</div></code></div><p>
+If no patterns match an error is signalled.
+Identifiers will match anything, and make the corresponding
+binding available in the body.
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) ((a <span>b</span> <span>c</span>) <span>b</span>))</code></pre><code><div class="result">=> 2</div></code></div><p>
+If the same identifier occurs multiple times, the first instance
+will match anything, but subsequent instances must match a value
+which is <code><span>equal?</span></code> to the first.
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>1</span>) ((a <span>a</span> <span>b</span>) <span>1</span>) ((a <span>b</span> <span>a</span>) <span>2</span>))</code></pre><code><div class="result">=> 2</div></code></div><p>
+The special identifier <code><span>_</span></code> matches anything, no matter how
+many times it is used, and does not bind the result in the body.
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>1</span>) ((_ <span>_</span> <span>b</span>) <span>1</span>) ((a <span>b</span> <span>a</span>) <span>2</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+To match a literal identifier (or list or any other literal), use
+<code><span>quote</span></code>.
+</p><div><pre><code>(<span class="keyword">match</span> '<span>a</span> ('<span>b</span> <span>1</span>) ('<span>a</span> <span>2</span>))</code></pre><code><div class="result">=> 2</div></code></div><p>
+Analogous to its normal usage in scheme, <code><span>quasiquote</span></code> can
+be used to quote a mostly literally matching object with selected
+parts unquoted.
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) (`(1 ,<span>b</span> ,<span>c</span>) (list <span>b</span> <span>c</span>)))</code></pre><code><div class="result">=> (2 3)</div></code></div><p>
+Often you want to match any number of a repeated pattern.  Inside
+a list pattern you can append <code><span>...</span></code> after an element to
+match zero or more of that pattern (like a regexp Kleene star).
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>3</span> <span>3</span>) ((1 <span>2</span> <span>3</span> <span>...</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+Pattern variables matched inside the repeated pattern are bound to
+a list of each matching instance in the body.
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span>) ((a <span>b</span> <span>c</span> <span>...</span>) <span>c</span>))</code></pre><code><div class="result">=> ()</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) ((a <span>b</span> <span>c</span> <span>...</span>) <span>c</span>))</code></pre><code><div class="result">=> (3)</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>4</span> <span>5</span>) ((a <span>b</span> <span>c</span> <span>...</span>) <span>c</span>))</code></pre><code><div class="result">=> (3 4 5)</div></code></div><p>
+More than one <code><span>...</span></code> may not be used in the same list, since
+this would require exponential backtracking in the general case.
+However, <code><span>...</span></code> need not be the final element in the list,
+and may be succeeded by a fixed number of patterns.
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>4</span>) ((a <span>b</span> <span>c</span> <span>...</span> <span>d</span> <span>e</span>) <span>c</span>))</code></pre><code><div class="result">=> ()</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>4</span> <span>5</span>) ((a <span>b</span> <span>c</span> <span>...</span> <span>d</span> <span>e</span>) <span>c</span>))</code></pre><code><div class="result">=> (3)</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span> <span>4</span> <span>5</span> <span>6</span> <span>7</span>) ((a <span>b</span> <span>c</span> <span>...</span> <span>d</span> <span>e</span>) <span>c</span>))</code></pre><code><div class="result">=> (3 4 5)</div></code></div><p>
+<code><span>___</span></code> is provided as an alias for <code><span>...</span></code> when it is
+inconvenient to use the ellipsis (as in a syntax-rules template).
+The <code><span>..1</span></code> syntax is exactly like the <code><span>...</span></code> except
+that it matches one or more repetitions (like a regexp "+").
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span>) ((a <span>b</span> <span>c</span> <span>..1</span>) <span>c</span>))</code></pre><code><div class="result">ERROR: match: "no matching pattern"
+</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> (list <span>1</span> <span>2</span> <span>3</span>) ((a <span>b</span> <span>c</span> <span>..1</span>) <span>c</span>))</code></pre><code><div class="result">=> (3)</div></code></div><p>
+The boolean operators <code><span>and</span></code>, <code><span>or</span></code> and <code><span>not</span></code>
+can be used to group and negate patterns analogously to their
+Scheme counterparts.
+The <code><span>and</span></code> operator ensures that all subpatterns match.
+This operator is often used with the idiom <code>(and <span>x</span> <span>pat</span>)</code> to
+bind <code>x</code> to the entire value that matches <code>pat</code>
+(c.f. "as-patterns" in ML or Haskell).  Another common use is in
+conjunction with <code><span>not</span></code> patterns to match a general case
+with certain exceptions.
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((and <span>x</span> <span>1</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+The <code><span>or</span></code> operator ensures that at least one subpattern
+matches.  If the same identifier occurs in different subpatterns,
+it is matched independently.  All identifiers from all subpatterns
+are bound if the <code><span>or</span></code> operator matches, but the binding is
+only defined for identifiers from the subpattern which matched.
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or) #t) (<span class="keyword">else</span> #f))</code></pre><code><div class="result">=> #f</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((or <span>x</span> <span>2</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+The <code><span>not</span></code> operator succeeds if the given pattern doesn't
+match.  None of the identifiers used are available in the body.
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((not <span>2</span>) #t))</code></pre><code><div class="result">=> #t</div></code></div><p>
+The more general operator <code><span>?</span></code> can be used to provide a
+predicate.  The usage is <code>(? <span>predicate</span> <span>pat</span> <span>...</span>)</code> where
+<code>predicate</code> is a Scheme expression evaluating to a predicate
+called on the value to match, and any optional patterns after the
+predicate are then matched as in an <code><span>and</span></code> pattern.
+</p><div><pre><code>(<span class="keyword">match</span> <span>1</span> ((? <span>odd?</span> <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+The field operator <code><span>=</span></code> is used to extract an arbitrary
+field and match against it.  It is useful for more complex or
+conditional destructuring that can't be more directly expressed in
+the pattern syntax.  The usage is <code>(= <span>field</span> <span>pat</span>)</code>, where
+<code>field</code> can be any expression, and should result in a
+procedure of one argument, which is applied to the value to match
+to generate a new value to match against <code>pat</code>.
+Thus the pattern <code>(and (= <span>car</span> <span>x</span>) (= <span>cdr</span> <span>y</span>))</code> is equivalent
+to <code>(x <span>.</span> <span>y</span>)</code>, except it will result in an immediate error
+if the value isn't a pair.
+</p><div><pre><code>(<span class="keyword">match</span> '(1 <span>.</span> <span>2</span>) ((= <span>car</span> <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 1</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> <span>4</span> ((= <span>sqrt</span> <span>x</span>) <span>x</span>))</code></pre><code><div class="result">=> 2</div></code></div><p>
+The record operator <code><span>$</span></code> is used as a concise way to match
+records defined by SRFI-9 (or SRFI-99).  The usage is
+<code>($ <span>rtd</span> <span>field</span> <span>...</span>)</code>, where <code>rtd</code> should be the record
+type descriptor specified as the first argument to
+<code><span>define-record-type</span></code>, and each <code>field</code> is a subpattern
+matched against the fields of the record in order.  Not all fields
+must be present.
+</p><div><pre><code>(<span class="keyword">let</span> ()
+  (<span class="keyword">define-record-type</span> <span class="function">employee</span>
+    (make-employee <span>name</span> <span>title</span>)
+    <span>employee?</span>
+    (name <span>get-name</span>)
+    (title <span>get-title</span>))
+  (<span class="keyword">match</span> (make-employee <span class="string">"Bob"</span> <span class="string">"Doctor"</span>)
+    (($ <span>employee</span> <span>n</span> <span>t</span>) (list <span>t</span> <span>n</span>))))
+</code></pre><code><div class="result">=> ("Doctor" "Bob")</div></code></div><p>
+The <code><span>set!</span></code> and <code><span>get!</span></code> operators are used to bind an
+identifier to the setter and getter of a field, respectively.  The
+setter is a procedure of one argument, which mutates the field to
+that argument.  The getter is a procedure of no arguments which
+returns the current value of the field.
+</p><div><pre><code>(<span class="keyword">let</span> ((x (cons <span>1</span> <span>2</span>))) (<span class="keyword">match</span> <span>x</span> ((1 <span>.</span> (<span class="keyword">set!</span> <span>s</span>)) (s <span>3</span>) <span>x</span>)))</code></pre><code><div class="result">=> (1 . 3)</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> '(1 <span>.</span> <span>2</span>) ((1 <span>.</span> (get! <span>g</span>)) (g)))</code></pre><code><div class="result">=> 2</div></code></div><p>
+The new operator <code><span>***</span></code> can be used to search a tree for
+subpatterns.  A pattern of the form <code>(x <span>***</span> <span>y</span>)</code> represents
+the subpattern <code>y</code> located somewhere in a tree where the path
+from the current object to <code>y</code> can be seen as a list of the
+form <code>(x <span>...</span>)</code>.  <code>y</code> can immediately match the current
+object in which case the path is the empty list.  In a sense it's
+a 2-dimensional version of the <code><span>...</span></code> pattern.
+As a common case the pattern <code>(_ <span>***</span> <span>y</span>)</code> can be used to
+search for <code>y</code> anywhere in a tree, regardless of the path
+used.
+</p><div><pre><code>(<span class="keyword">match</span> '(a (a (a <span>b</span>))) ((x <span>***</span> '<span>b</span>) <span>x</span>))</code></pre><code><div class="result">=> (a a a)</div></code></div><p>
+</p><div><pre><code>(<span class="keyword">match</span> '(a (b) (c (d <span>e</span>) (f <span>g</span>))) ((x <span>***</span> '<span>g</span>) <span>x</span>))</code></pre><code><div class="result">=> (a c f)</div></code></div><div><a name="h3_Syntax"></a><h3>Syntax</h3></div><p>
+</p><div><a name="h4_(matchexpr(pattern.body)...)(matchexpr(pattern(=>failure).body)...)"></a><h4><code>(match expr (pattern . body) ...)<br></br>
+(match expr (pattern (=> failure) . body) ...)</code></h4></div><p>
+The result of <code>expr</code> is matched against each <code>pattern</code> in
+turn, according to the pattern rules described in the previous
+section, until the the first <code>pattern</code> matches.  When a match is
+found, the corresponding <code>body</code>s are evaluated in order,
+and the result of the last expression is returned as the result
+of the entire <code><span>match</span></code>.  If a <code>failure</code> is provided,
+then it is bound to a procedure of no arguments which continues,
+processing at the next <code>pattern</code>.  If no <code>pattern</code> matches,
+an error is signalled.</p><div><a name="h4_match-lambda"></a><h4><code>(match-lambda (pattern . body) ...)</code></h4></div><p>Shortcut for <code><span>lambda</span></code> + <code><span>match</span></code>.  Creates a
+procedure of one argument, and matches that argument against each
+clause.</p><div><a name="h4_match-lambda*"></a><h4><code>(match-lambda* (pattern . body) ...)</code></h4></div><p>Similar to <code><span>match-lambda</span></code>.  Creates a procedure of any
+number of arguments, and matches the argument list against each
+clause.</p><div><a name="h4_match-let"></a><h4><code>(match-let ((var value) ...) . body)<br></br>(match-let loop ((var init) ...) . body)</code></h4></div><p>Matches each var to the corresponding expression, and evaluates
+the body with all match variables in scope.  Raises an error if
+any of the expressions fail to match.  Syntax analogous to named
+let can also be used for recursive functions which match on their
+arguments as in <code><span>match-lambda*</span></code>.</p><div><a name="h4_match-letrec"></a><h4><code>(match-letrec ((var value) ...) . body)</code></h4></div><p>Similar to <code><span>match-let</span></code>, but analogously to <code><span>letrec</span></code>
+matches and binds the variables with all match variables in scope.</p><div><a name="h4_(match-let*((varvalue)...)body...)"></a><h4><code>(match-let* ((var value) ...) body ...)</code></h4></div><p>
+Similar to <code><span>match-let</span></code>, but analogously to <code><span>let*</span></code>
+matches and binds the variables in sequence, with preceding match
+variables in scope.</p><div id="footer"></div></div></body></html>

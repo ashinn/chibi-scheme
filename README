@@ -1,0 +1,25 @@
+
+                             Chibi-Scheme
+                            --------------
+                                   
+    Minimal Scheme Implementation for use as an Extension Language
+
+              http://synthcode.com/wiki/chibi-scheme/
+
+Chibi-Scheme is a very small library intended for use as an extension
+and scripting language in C programs.  In addition to support for
+lightweight VM-based threads, each VM itself runs in an isolated heap
+allowing multiple VMs to run simultaneously in different OS threads.
+
+The default language is R5RS Scheme with support for additional
+languages such as JavaScript to be provided in future releases.
+Scheme is chosen as a substrate because its first class continuations
+and guaranteed tail-call optimization makes implementing other
+languages easy.
+
+To build on most platforms just run "make".  This will provide a
+shared library "libchibi-scheme", as well as a sample "chibi-scheme"
+command-line repl.
+
+For more detailed documentation, run "make doc" and see the generated
+"doc/chibi.html".

@@ -1,0 +1,6 @@
+
+(define-library (chibi type-inference)
+  (export type-analyze-module type-analyze procedure-signature)
+  (import (scheme) (srfi 1) (srfi 69) (chibi modules) (chibi ast) (chibi match))
+  (include "type-inference.scm"))
+

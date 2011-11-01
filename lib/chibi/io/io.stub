@@ -1,0 +1,46 @@
+
+(define-c non-null-string (%read-line "fgets")
+  ((result (array char arg1)) int (default (current-input-port) input-port)))
+
+(define-c size_t (%read-string "fread")
+  ((result (array char arg2)) (value 1 size_t) size_t (default (current-input-port) input-port)))
+
+(define-c size_t (%read-string! "fread")
+  (string (value 1 size_t) size_t (default (current-input-port) input-port)))
+
+(define-c size_t (write-string "fwrite")
+  (string (value 1 size_t) size_t (default (current-output-port) output-port)))
+
+(define-c-const int (seek/set "SEEK_SET"))
+(define-c-const int (seek/cur "SEEK_CUR"))
+(define-c-const int (seek/end "SEEK_END"))
+
+(define-c long (file-position "ftell") (port))
+(define-c long (set-file-position! "fseek") (port long int))
+
+(c-include "port.c")
+
+(define-c sexp (%make-custom-input-port "sexp_make_custom_input_port")
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))
+
+(define-c sexp (%make-custom-output-port "sexp_make_custom_output_port")
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))
+
+(define-c sexp (open-input-bytevector "sexp_open_input_bytevector")
+  ((value ctx sexp) (value self sexp) sexp))
+(define-c sexp (open-output-bytevector "sexp_open_output_bytevector")
+  ((value ctx sexp) (value self sexp)))
+(define-c sexp (get-output-bytevector "sexp_get_output_bytevector")
+  ((value ctx sexp) (value self sexp) sexp))
+
+(define-c sexp (string->utf8 "sexp_string_to_utf8")
+  ((value ctx sexp) (value self sexp) sexp))
+(define-c sexp (utf8->string! "sexp_utf8_to_string_x")
+  ((value ctx sexp) (value self sexp) sexp))
+
+(define-c sexp (write-u8 "sexp_write_u8")
+  ((value ctx sexp) (value self sexp) sexp (default (current-output-port) sexp)))
+(define-c sexp (read-u8 "sexp_read_u8")
+  ((value ctx sexp) (value self sexp) (default (current-input-port) sexp)))
+(define-c sexp (peek-u8 "sexp_peek_u8")
+  ((value ctx sexp) (value self sexp) (default (current-input-port) sexp)))
