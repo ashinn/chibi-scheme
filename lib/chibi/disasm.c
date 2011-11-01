@@ -86,7 +86,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL3:
   case SEXP_OP_FCALL4:
     sexp_write_pointer(ctx, ((sexp*)ip)[0], out);
-    sexp_write_char(ctx, '\n', out);
+    sexp_write_char(ctx, ' ', out);
     sexp_display(ctx, sexp_opcode_name(((sexp*)ip)[0]), out);
     ip += sizeof(sexp);
     break;
@@ -97,7 +97,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     break;
   case SEXP_OP_MAKE_PROCEDURE:
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
-    sexp_write_string(ctx, " ", out);
+    sexp_write_char(ctx, ' ', out);
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[1], out);
     tmp = ((sexp*)ip)[2];
     ip += sizeof(sexp)*3;
