@@ -76,8 +76,8 @@ static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_
   offset = (sexp_sint_t)((char*)heap - (sexp_sint_t)header.base);
   /* expand the last free chunk if necessary */
   if (heap->size < heap_size) {
-    for (q=(sexp_free_list)((char*)heap->free_list + offset); q->next;
-         q=(sexp_free_list)((char*)q->next + offset))
+    for (q=(sexp_free_list)(((char*)heap->free_list) + offset); q->next;
+         q=(sexp_free_list)(((char*)q->next) + offset))
       ;
     if ((char*)q + q->size >= (char*)heap->data + heap->size) {
       /* last free chunk at end of heap */
@@ -85,7 +85,7 @@ static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_
     } else {
       /* last free chunk in the middle of the heap */
       q->next = (sexp_free_list)((char*)heap->data + heap->size);
-      q = (sexp_free_list)((char*)q->next + offset);
+      q = (sexp_free_list)(((char*)q->next) + offset);
       q->size = heap_size - heap->size;
       q->next = NULL;
     }
@@ -204,11 +204,9 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
-static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
-  sexp_gc_var3(e, p, res);
-  sexp_gc_preserve3(ctx, e, p, res);
-  e = sexp_load_standard_env(ctx, env, k);
-  if (sexp_exceptionp(e)) return e;
+static sexp sexp_load_standard_params (sexp ctx, sexp e) {
+  sexp_gc_var2(p, res);
+  sexp_gc_preserve2(ctx, p, res);
   sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
 #if SEXP_USE_GREEN_THREADS
   p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
@@ -219,6 +217,16 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
   sexp_set_parameter(ctx, res, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
   sexp_gc_release3(ctx);
   return res;
+}
+
+static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
+  sexp_gc_var1(e);
+  sexp_gc_preserve1(ctx, e);
+  e = sexp_load_standard_env(ctx, env, k);
+  if (sexp_exceptionp(e)) return e;
+  e = sexp_load_standard_params(ctx, e);
+  sexp_gc_release1(ctx);
+  return e;
 }
 
 static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
@@ -333,12 +341,14 @@ void run_main (int argc, char **argv) {
         fprintf(stderr, "-:i <file>: couldn't open file for reading: %s\n", arg);
         exit_failure();
       }
-      env = sexp_context_env(ctx);
-      sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
+      env = sexp_load_standard_params(ctx, sexp_context_env(ctx));
       init_loaded++;
       break;
     case 'd':
-      load_init();
+      if (! init_loaded++) {
+        init_context();
+        env = sexp_load_standard_env(ctx, env, SEXP_SEVEN);
+      } 
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       if (!sexp_save_image(ctx, arg))
         exit_failure();
