@@ -526,24 +526,32 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
       } else if (sexp_bytecodep(p)) {
         for (i=0; i<sexp_bytecode_length(p); ) {
           switch (sexp_bytecode_data(p)[i++]) {
-            case SEXP_OP_STACK_REF:   case SEXP_OP_LOCAL_REF:
-            case SEXP_OP_LOCAL_SET:   case SEXP_OP_CLOSURE_REF:
-            case SEXP_OP_JUMP:        case SEXP_OP_JUMP_UNLESS:
-            case SEXP_OP_TYPEP:       case SEXP_OP_RESERVE:
+            case SEXP_OP_CLOSURE_REF: case SEXP_OP_PUSH:
             case SEXP_OP_FCALL0:      case SEXP_OP_FCALL1:
             case SEXP_OP_FCALL2:      case SEXP_OP_FCALL3:
             case SEXP_OP_FCALL4:      case SEXP_OP_CALL:
-            case SEXP_OP_GLOBAL_REF:  case SEXP_OP_GLOBAL_KNOWN_REF:
             case SEXP_OP_TAIL_CALL:   case SEXP_OP_PARAMETER_REF:
-            case SEXP_OP_PUSH:
+            case SEXP_OP_GLOBAL_REF:  case SEXP_OP_GLOBAL_KNOWN_REF:
+#if SEXP_USE_EXTENDED_FCALL
+            case SEXP_OP_FCALLN:
+#endif
               v = (sexp*)(&(sexp_bytecode_data(p)[i]));
-              if (v[0] && sexp_pointerp(v[0])) v[0] = (sexp) ((char*)v[0] + off);
+              if (v[0] && sexp_pointerp(v[0])) v[0] = (sexp) (((char*)v[0]) + off);
+              /* ... FALLTHROUGH ... */
+            case SEXP_OP_JUMP:        case SEXP_OP_JUMP_UNLESS:
+            case SEXP_OP_STACK_REF:   case SEXP_OP_LOCAL_REF:
+            case SEXP_OP_LOCAL_SET:   case SEXP_OP_TYPEP:
+#if SEXP_USE_RESERVE_OPCODE
+            case SEXP_OP_RESERVE:
+#endif
               i += sizeof(sexp); break;
-            case SEXP_OP_SLOT_REF: case SEXP_OP_SLOT_SET: case SEXP_OP_MAKE:
+            case SEXP_OP_MAKE: case SEXP_OP_SLOT_REF: case SEXP_OP_SLOT_SET:
               i += 2*sizeof(sexp); break;
             case SEXP_OP_MAKE_PROCEDURE:
               v = (sexp*)(&(sexp_bytecode_data(p)[i]));
-              if (v[2] && sexp_pointerp(v[2])) v[2] = (sexp) ((char*)v[2] + off);
+              if (v[0] && sexp_pointerp(v[0])) v[0] = (sexp) (((char*)v[0]) + off);
+              if (v[1] && sexp_pointerp(v[1])) v[1] = (sexp) (((char*)v[1]) + off);
+              if (v[2] && sexp_pointerp(v[2])) v[2] = (sexp) (((char*)v[2]) + off);
               i += 3*sizeof(sexp); break;
           }
         }
