@@ -103,8 +103,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type predicates
 
+(define *c-int-types* '())
+
+(define-syntax define-c-int-type
+  (syntax-rules ()
+    ((define-c-int-type type)
+     (if (not (memq 'type *c-int-types*))
+         (set! *c-int-types* (cons 'type *c-int-types*))))))
+
 (define (signed-int-type? type)
-  (memq type '(signed-char short int long boolean)))
+  (or (memq type '(signed-char short int long boolean))
+      (memq type *c-int-types*)))
 
 (define (unsigned-int-type? type)
   (memq type '(unsigned-char unsigned-short unsigned unsigned-int unsigned-long

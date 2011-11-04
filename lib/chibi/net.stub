@@ -3,6 +3,8 @@
 (c-system-include "sys/socket.h")
 (c-system-include "netdb.h")
 
+(define-c-int-type socklen_t)
+
 (define-c-struct sockaddr
   predicate:   sockaddr?)
 
@@ -33,7 +35,7 @@
 
 ;;> Accept a connection on a socket.
 
-(define-c int accept (int sockaddr (pointer unsigned)))
+(define-c int accept (int sockaddr (pointer socklen_t)))
 
 ;;> Create an endpoint for communication.
 
