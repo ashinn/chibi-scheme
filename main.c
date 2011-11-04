@@ -24,7 +24,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#define SEXP_IMAGE_MAGIC "\x07\x07chibi\n\0"
+#define SEXP_IMAGE_MAGIC "\a\achibi\n\0"
 #define SEXP_IMAGE_MAJOR_VERSION 1
 #define SEXP_IMAGE_MINOR_VERSION 1
 
