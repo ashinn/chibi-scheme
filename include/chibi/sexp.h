@@ -16,8 +16,8 @@ extern "C" {
 
 #if defined(_WIN32) || defined(__MINGW32__)
 #include <windows.h>
-#define sexp_isalpha(x) ((isalpha)(x))
-#define sexp_isxdigit(x) ((isxdigit)(x))
+#define sexp_isalpha(x) ((isalpha)((unsigned char)(x)))
+#define sexp_isxdigit(x) ((isxdigit)((unsigned char)(x)))
 #else
 #if SEXP_USE_DL
 #include <dlfcn.h>
