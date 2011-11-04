@@ -189,7 +189,7 @@ doc/lib/chibi/%.html: lib/chibi/%.sld tools/chibi-doc chibi-scheme$(EXE)
 
 MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
 	match mime modules net pathname process repl scribble stty \
-	system test time type-inference uri weak
+	system test time trace type-inference uri weak
 
 doc: doc/chibi.html $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
