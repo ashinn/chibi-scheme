@@ -196,7 +196,7 @@ static sexp sexp_integer_to_immediate (sexp ctx sexp_api_params(self, n), sexp i
   return x;
 }
 
-static sexp sexp_make_lambda (sexp ctx sexp_api_params(self, n), sexp name, sexp params, sexp body, sexp locals) {
+static sexp sexp_make_lambda_op (sexp ctx sexp_api_params(self, n), sexp name, sexp params, sexp body, sexp locals) {
   sexp res = sexp_alloc_type(ctx, lambda, SEXP_LAMBDA);
   sexp_lambda_name(res) = name;
   sexp_lambda_params(res) = params;
@@ -224,21 +224,21 @@ static sexp sexp_copy_lambda (sexp ctx sexp_api_params(self, n), sexp lambda) {
   return res;
 }
 
-static sexp sexp_make_set (sexp ctx sexp_api_params(self, n), sexp var, sexp value) {
+static sexp sexp_make_set_op (sexp ctx sexp_api_params(self, n), sexp var, sexp value) {
   sexp res = sexp_alloc_type(ctx, set, SEXP_SET);
   sexp_set_var(res) = var;
   sexp_set_value(res) = value;
   return res;
 }
 
-static sexp sexp_make_ref (sexp ctx sexp_api_params(self, n), sexp name, sexp cell) {
+static sexp sexp_make_ref_op (sexp ctx sexp_api_params(self, n), sexp name, sexp cell) {
   sexp res = sexp_alloc_type(ctx, ref, SEXP_REF);
   sexp_ref_name(res) = name;
   sexp_ref_cell(res) = cell;
   return res;
 }
 
-static sexp sexp_make_cnd (sexp ctx sexp_api_params(self, n), sexp test, sexp pass, sexp fail) {
+static sexp sexp_make_cnd_op (sexp ctx sexp_api_params(self, n), sexp test, sexp pass, sexp fail) {
   sexp res = sexp_alloc_type(ctx, cnd, SEXP_CND);
   sexp_cnd_test(res) = test;
   sexp_cnd_pass(res) = pass;
@@ -392,10 +392,10 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);
   sexp_define_foreign(ctx, env, "copy-lambda", 1, sexp_copy_lambda);
-  sexp_define_foreign_opt(ctx, env, "make-lambda", 4, sexp_make_lambda, SEXP_NULL);
-  sexp_define_foreign_opt(ctx, env, "make-cnd", 3, sexp_make_cnd, SEXP_VOID);
-  sexp_define_foreign(ctx, env, "make-ref", 2, sexp_make_ref);
-  sexp_define_foreign(ctx, env, "make-set", 2, sexp_make_set);
+  sexp_define_foreign_opt(ctx, env, "make-lambda", 4, sexp_make_lambda_op, SEXP_NULL);
+  sexp_define_foreign_opt(ctx, env, "make-cnd", 3, sexp_make_cnd_op, SEXP_VOID);
+  sexp_define_foreign(ctx, env, "make-ref", 2, sexp_make_ref_op);
+  sexp_define_foreign(ctx, env, "make-set", 2, sexp_make_set_op);
   sexp_define_foreign(ctx, env, "make-lit", 1, sexp_make_lit_op);
   sexp_define_foreign(ctx, env, "make-seq", 1, sexp_make_seq);
   sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
