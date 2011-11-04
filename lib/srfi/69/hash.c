@@ -53,38 +53,40 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
   sexp t, *p;
   char *p0;
  loop:
+  if (obj) {
 #if SEXP_USE_FLONUMS
-  if (sexp_flonump(obj))
-    acc ^= (sexp_sint_t) sexp_flonum_value(obj);
-  else
+    if (sexp_flonump(obj))
+      acc ^= (sexp_sint_t) sexp_flonum_value(obj);
+    else
 #endif
-  if (sexp_pointerp(obj)) {
-    if (depth) {
-      t = sexp_object_type(ctx, obj);
-      p = (sexp*) (((char*)obj) + sexp_type_field_base(t));
-      p0 = ((char*)obj) + offsetof(struct sexp_struct, value);
-      if ((sexp)p == obj) p=(sexp*)p0;
-      /* hash trailing non-object data */
-      size = sexp_type_size_of_object(t, obj)-offsetof(struct sexp_struct, value);
-      p0 = ((char*)p + sexp_type_num_slots_of_object(t,obj)*sizeof(sexp));
-      if (((char*)obj + size) > p0)
-        for (i=0; i<size; i++) {acc *= FNV_PRIME; acc ^= p0[i];}
-      /* hash eq-object slots */
-      len = sexp_type_num_eq_slots_of_object(t, obj);
-      if (len > 0) {
-        depth--;
-        for (i=0; i<len-1; i++) {
-          acc *= FNV_PRIME;
-          acc ^= hash_one(ctx, p[i], 0, depth);
+    if (sexp_pointerp(obj)) {
+      if (depth) {
+        t = sexp_object_type(ctx, obj);
+        p = (sexp*) (((char*)obj) + sexp_type_field_base(t));
+        p0 = ((char*)obj) + offsetof(struct sexp_struct, value);
+        if ((sexp)p == obj) p=(sexp*)p0;
+        /* hash trailing non-object data */
+        size = sexp_type_size_of_object(t, obj)-offsetof(struct sexp_struct, value);
+        p0 = ((char*)p + sexp_type_num_slots_of_object(t,obj)*sizeof(sexp));
+        if (((char*)obj + size) > p0)
+          for (i=0; i<size; i++) {acc *= FNV_PRIME; acc ^= p0[i];}
+        /* hash eq-object slots */
+        len = sexp_type_num_eq_slots_of_object(t, obj);
+        if (len > 0) {
+          depth--;
+          for (i=0; i<len-1; i++) {
+            acc *= FNV_PRIME;
+            acc ^= hash_one(ctx, p[i], 0, depth);
+          }
+          /* tail-recurse on the last value */
+          obj = p[len-1]; goto loop;
         }
-        /* tail-recurse on the last value */
-        obj = p[len-1]; goto loop;
+      } else {
+        acc ^= sexp_pointer_tag(obj);
       }
     } else {
-      acc ^= sexp_pointer_tag(obj);
+      acc ^= (sexp_uint_t)obj;
     }
-  } else {
-    acc ^= (sexp_uint_t)obj;
   }
   return (bound ? acc % bound : acc);
 }
