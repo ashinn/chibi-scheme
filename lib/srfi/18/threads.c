@@ -557,8 +557,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_var1(name);
   sexp_gc_preserve1(ctx, name);
 
-  sexp_mutex_id   = sexp_lookup_named_type(ctx, env, "mutex");
-  sexp_condvar_id = sexp_lookup_named_type(ctx, env, "condition-variable");
+  sexp_mutex_id   = sexp_lookup_named_type(ctx, env, "Mutex");
+  sexp_condvar_id = sexp_lookup_named_type(ctx, env, "Condition-Variable");
   name = sexp_c_string(ctx, "pollfds", -1);
   t = sexp_register_type(ctx, name, SEXP_FALSE, SEXP_FALSE,
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,

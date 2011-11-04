@@ -1,8 +1,8 @@
 ;; types.scm -- thread types
-;; Copyright (c) 2010 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2010-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-(define-record-type mutex
+(define-record-type Mutex
   (%make-mutex name specific thread lock)
   mutex?
   (name mutex-name)
@@ -13,7 +13,7 @@
 (define (make-mutex . o)
   (%make-mutex (and (pair? o) (car o)) #f #f #f))
 
-(define-record-type condition-variable
+(define-record-type Condition-Variable
   (%make-condition-variable name specific threads)
   condition-variable?
   (name condition-variable-name)
