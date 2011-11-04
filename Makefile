@@ -7,11 +7,11 @@
 
 CC        ?= cc
 CD        ?= cd
-RM        ?= rm
+RM        ?= rm -f
 LS        ?= ls
 INSTALL   ?= install
 MKDIR     ?= $(INSTALL) -d
-RMDIR     ?= rmdir
+RMDIR     ?= rmdir -f
 TAR       ?= tar
 DIFF      ?= diff
 GREP      ?= grep
@@ -213,15 +213,15 @@ MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
 doc: doc/chibi.html $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
 clean:
-	$(RM) -f *.o *.i *.s *.8
-	$(RM) -f tests/basic/*.out tests/basic/*.err
+	$(RM) *.o *.i *.s *.8
+	$(RM) tests/basic/*.out tests/basic/*.err
 
 cleaner: clean
-	$(RM) -f chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) libchibi-scheme$(SO) *.a include/chibi/install.h
-	$(FIND) lib -name \*$(SO) -exec $(RM) -rf '{}' \;
+	$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) libchibi-scheme$(SO) *.a include/chibi/install.h
+	$(FIND) lib -name \*$(SO) -exec $(RM) -r '{}' \;
 
 dist-clean: cleaner
-	for f in `find lib -name \*.stub`; do $(RM) -f $${f%.stub}.c; done
+	for f in `find lib -name \*.stub`; do $(RM) $${f%.stub}.c; done
 
 checkdefs:
 	@for d in $(D); do \
@@ -336,25 +336,25 @@ install: all
 	-if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
-	$(RM) -f $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
-	$(RM) -f $(DESTDIR)$(BINDIR)/chibi-scheme-static$(EXE)
-	$(RM) -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
-	$(RM) -f $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
-	$(CD) $(DESTDIR)$(INCDIR) && rm -f $(INCLUDES)
-	$(RM) -f $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
-	$(CD) $(DESTDIR)$(BINMODDIR) && $(RM) -f $(COMPILED_LIBS:lib/%=%) chibi/ast$(SO)
-	-if [ -d $(DESTDIR)$(BINMODDIR) ] && ! $(LS) -A $(DESTDIR)$(BINMODDIR) | $(GREP) -q -E .; then $(RMDIR) -f $(DESTDIR)$(BINMODDIR); fi
+	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
+	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme-static$(EXE)
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
+	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
+	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
+	-$(RM) $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
+	-$(CD) $(DESTDIR)$(BINMODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%) chibi/ast$(SO)
+	-if [ -d $(DESTDIR)$(BINMODDIR) ] && ! $(LS) -A $(DESTDIR)$(BINMODDIR) | $(GREP) -q -E .; then $(RMDIR) $(DESTDIR)$(BINMODDIR); fi
 
 dist: dist-clean
-	$(RM) -f chibi-scheme-`cat VERSION`.tgz
+	$(RM) chibi-scheme-`cat VERSION`.tgz
 	$(MKDIR) chibi-scheme-`cat VERSION`
 	@for f in `hg manifest`; do $(MKDIR) chibi-scheme-`cat VERSION`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
 	$(TAR) cphzvf chibi-scheme-`cat VERSION`.tgz chibi-scheme-`cat VERSION`
-	$(RM) -rf chibi-scheme-`cat VERSION`
+	$(RM) -r chibi-scheme-`cat VERSION`
 
 mips-dist: dist-clean
-	$(RM) -f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz
+	$(RM) chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz
 	$(MKDIR) chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
 	@for f in `hg manifest`; do $(MKDIR) chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/$$f; done
 	$(TAR) cphzvf chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
-	$(RM) -rf chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
+	$(RM) -r chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
