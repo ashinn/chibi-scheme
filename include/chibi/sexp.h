@@ -693,9 +693,15 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
   else if (sexp_fixnump(x))                             \
     x = sexp_fx_neg(x);
 
+#if SEXP_USE_IMMEDIATE_FLONUMS
+#define sexp_negate_flonum(x) (x) = sexp_make_flonum(NULL, -(sexp_flonum_value(x)))
+#else
+#define sexp_negate_flonum(x) sexp_flonum_value(x) = -(sexp_flonum_value(x))
+#endif
+
 #define sexp_negate(x)                                  \
   if (sexp_flonump(x))                                  \
-    sexp_flonum_value(x) = -sexp_flonum_value(x);       \
+    sexp_negate_flonum(x);                              \
   else                                                  \
     sexp_negate_exact(x)
 
