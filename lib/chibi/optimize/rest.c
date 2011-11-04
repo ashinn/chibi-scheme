@@ -13,7 +13,7 @@ struct sexp_opcode_struct local_ref_op =
    NULL, NULL, sexp_make_fixnum(SEXP_OBJECT), sexp_make_fixnum(SEXP_FIXNUM),
    0, 0, NULL};
 
-static sexp sexp_copy_opcode (sexp ctx, struct sexp_opcode_struct *op) {
+static sexp copy_opcode (sexp ctx, struct sexp_opcode_struct *op) {
   sexp res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
   memcpy(&(res->value), op, sizeof(op[0]));
   return res;
@@ -23,7 +23,7 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
   sexp_define_foreign(ctx, env, "num-parameters", 0, sexp_num_parameters);
-  op = sexp_copy_opcode(ctx, &local_ref_op);
+  op = copy_opcode(ctx, &local_ref_op);
   sexp_opcode_name(op) = sexp_c_string(ctx, (char*)sexp_opcode_name(op), -1);
   name = sexp_string_to_symbol(ctx, sexp_opcode_name(op));
   sexp_env_define(ctx, env, name, op);
