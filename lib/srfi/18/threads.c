@@ -135,6 +135,10 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
     d = sexp_flonum_value(timeout);
     sexp_context_timeval(thread).tv_sec += trunc(d);
     sexp_context_timeval(thread).tv_usec += (d-trunc(d))*1000000;
+    if (sexp_context_timeval(thread).tv_usec > 1000000) {
+      sexp_context_timeval(thread).tv_sec += 1;
+      sexp_context_timeval(thread).tv_usec -= 1000000;
+    }
 #endif
   } else if (sexp_contextp(timeout)) {
     sexp_context_timeval(thread).tv_sec = sexp_context_timeval(timeout).tv_sec;
@@ -520,10 +524,11 @@ sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
     } else {
       /* wait until the next timeout */
       gettimeofday(&tval, NULL);
-      if (tval.tv_sec < sexp_context_timeval(res).tv_sec)
+      if (tval.tv_sec <= sexp_context_timeval(res).tv_sec) {
         usecs = (sexp_context_timeval(res).tv_sec - tval.tv_sec) * 1000000;
-      if (tval.tv_usec < sexp_context_timeval(res).tv_usec || usecs > 0)
-        usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
+        if (tval.tv_usec < sexp_context_timeval(res).tv_usec || usecs > 0)
+          usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
+      }
     }
     /* either wait on an fd, or just sleep */
     pollfds = sexp_global(res, SEXP_G_THREADS_POLL_FDS);
