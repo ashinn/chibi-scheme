@@ -1,12 +1,14 @@
 ;; interface.scm -- hash-table interface
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;; the non-exported hash-table-cell is the heart of the implemenation
 
 (define (make-hash-table . o)
-  (let ((eq-fn (if (pair? o) (car o) equal?))
-        (hash-fn (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) hash)))
+  (let* ((eq-fn (if (pair? o) (car o) equal?))
+         (hash-fn (if (and (pair? o) (pair? (cdr o)))
+                      (car (cdr o))
+                      (if (eq? eq? eq-fn) hash-by-identity hash))))
     (cond
      ((not (procedure? eq-fn))
       (error "make-hash-table: bad equivalence function" eq-fn))
