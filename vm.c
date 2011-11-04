@@ -1135,7 +1135,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
   case SEXP_OP_CLOSURE_REF:
     _ALIGN_IP();
-    _PUSH(sexp_vector_ref(cp, sexp_make_fixnum(_WORD0)));
+    _PUSH(sexp_vector_ref(cp, sexp_make_fixnum(_SWORD0)));
     ip += sizeof(sexp);
     break;
   case SEXP_OP_CLOSURE_VARS:
