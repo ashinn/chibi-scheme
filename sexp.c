@@ -352,6 +352,9 @@ void sexp_init_context_globals (sexp ctx) {
 #if SEXP_USE_FOLD_CASE_SYMS
   sexp_global(ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(SEXP_DEFAULT_FOLD_CASE_SYMS);
 #endif
+#if ! SEXP_USE_BOEHM
+  sexp_global(ctx, SEXP_G_PRESERVATIVES) = SEXP_NULL;
+#endif
   sexp_global(ctx, SEXP_G_OOM_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of memory", SEXP_NULL);
   sexp_global(ctx, SEXP_G_OOS_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of stack space", SEXP_NULL);
   sexp_global(ctx, SEXP_G_QUOTE_SYMBOL) = sexp_intern(ctx, "quote", -1);

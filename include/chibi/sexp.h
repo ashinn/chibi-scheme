@@ -427,6 +427,9 @@ void sexp_free(void* ptr);
 #define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
 
+#define sexp_preserve_object(ctx, x)
+#define sexp_release_object(ctx, x)
+
 #include "gc/gc.h"
 #define sexp_alloc(ctx, size)        GC_malloc(size)
 #define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
@@ -452,6 +455,9 @@ void sexp_free(void* ptr);
   } while (0)
 
 #define sexp_gc_release(ctx, x, y)   (sexp_context_saves(ctx) = y.next)
+
+SEXP_API void sexp_preserve_object(sexp ctx, sexp x);
+SEXP_API void sexp_release_object(sexp ctx, sexp x);
 
 #if SEXP_USE_MALLOC
 #define sexp_alloc(ctx, size)        sexp_malloc(size)
@@ -1052,6 +1058,9 @@ enum sexp_context_globals {
 #endif
 #if SEXP_USE_WEAK_REFERENCES
   SEXP_G_WEAK_REFERENCE_CACHE,
+#endif
+#if ! SEXP_USE_BOEHM
+  SEXP_G_PRESERVATIVES,
 #endif
 #if SEXP_USE_GREEN_THREADS
   SEXP_G_IO_BLOCK_ERROR,
