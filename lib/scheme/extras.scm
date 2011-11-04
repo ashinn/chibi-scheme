@@ -118,4 +118,4 @@
 (define (bytevector-copy-partial! from start end to at)
   (do ((i start (+ i 1)))
       ((= i end))
-    (bytevector-u8-set! to (+ i at) (bytevector-u8-ref from i))))
+    (bytevector-u8-set! to (+ (- i start) at) (bytevector-u8-ref from i))))
