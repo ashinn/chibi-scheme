@@ -1174,14 +1174,14 @@ sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp
 #if SEXP_USE_MATH
 
 #if SEXP_USE_BIGNUMS
-#define maybe_convert_bignum(z) \
+#define maybe_convert_bignum(z)                                 \
   else if (sexp_bignump(z)) d = sexp_bignum_to_double(z);
 #else
 #define maybe_convert_bignum(z)
 #endif
 
 #if SEXP_USE_RATIOS
-#define maybe_convert_ratio(z) \
+#define maybe_convert_ratio(z)                          \
   else if (sexp_ratiop(z)) d = sexp_ratio_to_double(z);
 #else
 #define maybe_convert_ratio(z)
@@ -1224,7 +1224,9 @@ define_math_op(sexp_floor, floor, 0, sexp_complex_dummy)
 define_math_op(sexp_ceiling, ceil, 0, sexp_complex_dummy)
 
 sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
+#if SEXP_USE_COMPLEX
   int negativep = 0;
+#endif
   double d, r;
   sexp_gc_var1(res);
   if (sexp_flonump(z))
@@ -1257,7 +1259,7 @@ sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
   return res;
 }
 
-#endif
+#endif  /* SEXP_USE_MATH */
 
 #if SEXP_USE_RATIOS
 sexp sexp_generic_expt (sexp ctx, sexp x, sexp_sint_t e) {

@@ -135,6 +135,9 @@ sexp sexp_finalize_dl (sexp ctx sexp_api_params(self, n), sexp dl) {
   dlclose(sexp_dl_handle(dl));
   return SEXP_VOID;
 }
+#define SEXP_FINALIZE_DL sexp_finalize_dl
+#else
+#define SEXP_FINALIZE_DL NULL
 #endif
 
 static struct sexp_type_struct _sexp_type_specs[] = {
@@ -171,7 +174,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Bytecode", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_CORE, sexp_offsetof(core, name), 1, 1, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Core-Form", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #if SEXP_USE_DL
-  {SEXP_DL, sexp_offsetof(dl, file), 1, 1, 0, 0, sexp_sizeof(dl), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Dynamic-Library", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, sexp_finalize_dl, NULL},
+  {SEXP_DL, sexp_offsetof(dl, file), 1, 1, 0, 0, sexp_sizeof(dl), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Dynamic-Library", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, SEXP_FINALIZE_DL, NULL},
 #endif
   {SEXP_OPCODE, sexp_offsetof(opcode, name), 8+SEXP_USE_DL, 8+SEXP_USE_DL, 0, 0, sexp_sizeof(opcode), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Opcode", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_LAMBDA, sexp_offsetof(lambda, name), 11, 11, 0, 0, sexp_sizeof(lambda), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lambda", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
@@ -243,7 +246,9 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
       sexp_type_name(type) = name;
       sexp_type_finalize(type) = f;
       sexp_type_id(type) = SEXP_FALSE;
+#if SEXP_USE_DL
       if (f) sexp_type_dl(type) = sexp_context_dl(ctx);
+#endif
       sexp_type_print(type) = p;
       if (sexp_typep(parent)) {
         len = sexp_vectorp(sexp_type_cpl(parent)) ? sexp_vector_length(sexp_type_cpl(parent)) : 1;
@@ -874,7 +879,11 @@ sexp sexp_string_index_to_offset (sexp ctx sexp_api_params(self, n), sexp str, s
 sexp sexp_make_string_op (sexp ctx sexp_api_params(self, n), sexp len, sexp ch)
 {
   sexp i = (sexp_charp(ch) ? sexp_make_fixnum(sexp_unbox_character(ch)) : ch);
+#if SEXP_USE_PACKED_STRINGS
+  sexp b;
+#else
   sexp_gc_var2(b, s);
+#endif
 #if SEXP_USE_UTF8_STRINGS
   int j, clen;
   if (sexp_charp(ch) && (sexp_unbox_character(ch) >= 0x80)) {
@@ -989,18 +998,22 @@ static sexp_uint_t sexp_string_hash(const char *str, sexp_sint_t len,
 sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 #if SEXP_USE_HUFF_SYMS
   struct sexp_huff_entry he;
-  sexp_uint_t space=3, newbits;
+  sexp_sint_t space, newbits;
   char c;
 #endif
-  sexp_uint_t res=FNV_OFFSET_BASIS, bucket, i=0;
-  const char *p=str;
   sexp ls, tmp;
   sexp_gc_var1(sym);
+  sexp_sint_t bucket=0;
+#if (SEXP_USE_HASH_SYMS || SEXP_USE_HUFF_SYMS)
+  sexp_sint_t i=0, res=FNV_OFFSET_BASIS;
+  const char *p=str;
+#endif
 
   if (len < 0) len = strlen(str);
 
 #if SEXP_USE_HUFF_SYMS
   res = 0;
+  space = 3;
   if (len == 0) goto normal_intern;
   for ( ; i<len; i++, p++) {
     c = *p;
@@ -1019,8 +1032,6 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 #endif
 #if SEXP_USE_HASH_SYMS
   bucket = (sexp_string_hash(p, len-i, res) % SEXP_SYMBOL_TABLE_SIZE);
-#else
-  bucket = 0;
 #endif
   for (ls=sexp_context_symbols(ctx)[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
     if ((sexp_symbol_length(tmp=sexp_car(ls)) == len)
@@ -1789,6 +1800,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, double real, int exactp) {
   int c = sexp_read_char(ctx, in), c2;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
+  res = SEXP_VOID;
   if (c=='i' || c=='I') {
   trailing_i:
     c = sexp_read_char(ctx, in);
@@ -1923,7 +1935,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
   }
 
 #if SEXP_USE_COMPLEX
-  if (c == 'i' || c == 'I') whole = 1.0;
+  if (c == 'i' || c == 'I') val = 1;
 #endif
 
   for ( ; sexp_isxdigit(c); c=sexp_read_char(ctx, in)) {
@@ -2209,8 +2221,10 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       if (sexp_flonump(res))
 #if SEXP_USE_RATIOS
         res = sexp_double_to_ratio(ctx, sexp_flonum_value(res));
-#else
+#elif SEXP_USE_BIGNUMS
         res = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(res)));
+#else
+        res = sexp_make_fixnum(sexp_flonum_value(res));
 #endif
       break;
     case 'i': case 'I':

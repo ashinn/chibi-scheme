@@ -2,6 +2,8 @@
 /*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
+#include <errno.h>
+
 #if SEXP_USE_DEBUG_VM > 1
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
   int i;

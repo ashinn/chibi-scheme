@@ -312,7 +312,8 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
 #if SEXP_USE_DEBUG_GC
-      sexp_valid_object_p(ctx, p);
+      if (!sexp_valid_object_p(ctx, p))
+        fprintf(stderr, SEXP_BANNER("%p sweep: invalid object at %p"), ctx, p);
       if ((char*)q + q->size > (char*)p)
         fprintf(stderr, SEXP_BANNER("%p sweep: bad size at %p < %p + %lu"),
                 ctx, p, q, q->size);
@@ -366,7 +367,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
 }
 
 #if SEXP_USE_GLOBAL_SYMBOLS
-void sexp_mark_global_symbols(ctx) {
+void sexp_mark_global_symbols(sexp ctx) {
   int i;
   for (i=0; i<SEXP_SYMBOL_TABLE_SIZE; i++)
     sexp_mark(ctx, sexp_symbol_table[i]);
@@ -482,7 +483,10 @@ void* sexp_alloc (sexp ctx, size_t size) {
 void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types, sexp flags) {
   sexp_sint_t i, off, len, freep, loadp;
   sexp_free_list q;
-  sexp p, t, end, name, *v;
+  sexp p, t, end, *v;
+#if SEXP_USE_DL
+  sexp name;
+#endif
   freep = sexp_unbox_fixnum(flags) & sexp_unbox_fixnum(SEXP_COPY_FREEP);
   loadp = sexp_unbox_fixnum(flags) & sexp_unbox_fixnum(SEXP_COPY_LOADP);
 
@@ -518,7 +522,9 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
         sexp_freep(p) = 0;
       /* adjust context heaps, don't copy saved sexp_gc_vars */
       if (sexp_contextp(p)) {
+#if SEXP_USE_GREEN_THREADS
         sexp_context_ip(p) += off;
+#endif
         sexp_context_last_fp(p) += off;
         sexp_stack_top(sexp_context_stack(p)) = 0;
         sexp_context_saves(p) = NULL;
@@ -560,8 +566,10 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
         sexp_port_stream(p) = 0;
         sexp_port_openp(p) = 0;
         sexp_freep(p) = 0;
+#if SEXP_USE_DL
       } else if (loadp && sexp_dlp(p)) {
         sexp_dl_handle(p) = NULL;
+#endif
       }
       p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));
     }
@@ -578,6 +586,7 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
       if ((char*)q == (char*)p) { /* this is a free block, skip it */
         p = (sexp) (((char*)p) + q->size);
       } else {
+#if SEXP_USE_DL
         if (sexp_opcodep(p) && sexp_opcode_func(p)) {
           name = (sexp_opcode_data2(p) && sexp_stringp(sexp_opcode_data2(p))) ? sexp_opcode_data2(p) : sexp_opcode_name(p);
           if (sexp_dlp(sexp_opcode_dl(p))) {
@@ -587,9 +596,19 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
           } else {
             sexp_opcode_func(p) = dlsym(SEXP_RTLD_DEFAULT, sexp_string_data(name));
           }
-        } else if (sexp_typep(p)) {
-          if (sexp_type_finalize(p))
-            sexp_type_finalize(p) = sexp_type_tag(p) == SEXP_DL ? sexp_finalize_dl : SEXP_FINALIZE_PORT;
+        } else
+#endif
+        if (sexp_typep(p)) {
+          if (sexp_type_finalize(p)) {
+            /* TODO: handle arbitrary finalizers in images */
+#if SEXP_USE_DL
+            if (sexp_type_tag(p) == SEXP_DL)
+              sexp_type_finalize(p) = SEXP_FINALIZE_DL;
+            else
+#endif
+              sexp_type_finalize(p) = SEXP_FINALIZE_PORT;
+          }
+          /* TODO: handle arbitrary printers in images */
           if (sexp_type_print(p))
             sexp_type_print(p) = sexp_write_simple_object;
         }
