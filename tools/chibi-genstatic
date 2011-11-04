@@ -86,7 +86,7 @@
     (cond
      ((file-directory? file)
       (process-dir file))
-     ((equal? "module" (path-extension file))
+     ((equal? "sld" (path-extension file))
       (let* ((mod-path (path-strip-extension (path-relative file basedir)))
              (mod-name (map (lambda (x) (or (string->number x) (string->symbol x)))
                             (path-split mod-path))))
