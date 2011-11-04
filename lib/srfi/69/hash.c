@@ -186,8 +186,9 @@ static sexp sexp_hash_table_cell (sexp ctx sexp_api_params(self, n), sexp ht, se
   sexp buckets, eq_fn, hash_fn, i;
   sexp_uint_t size;
   sexp_gc_var1(res);
-  if (! sexp_pointerp(ht))      /* XXXX check the real type id */
-    return sexp_xtype_exception(ctx, self, "not a hash-table", ht);
+  /* extra check - exact type should be checked by the calling procedure */
+  if (! sexp_pointerp(ht))
+    return sexp_xtype_exception(ctx, self, "not a Hash-Table", ht);
   buckets = sexp_hash_table_buckets(ht);
   eq_fn = sexp_hash_table_eq_fn(ht);
   hash_fn = sexp_hash_table_hash_fn(ht);
@@ -241,4 +242,3 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
 
   return SEXP_VOID;
 }
-

@@ -6,7 +6,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; URI representation
 
-(define-record-type uri
+(define-record-type Uri
   (%make-uri scheme user host port path query fragment)
   uri?
   (scheme uri-scheme)

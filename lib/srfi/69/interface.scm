@@ -31,7 +31,7 @@
   (syntax-rules ()
     ((assert-hash-table from obj)
      (if (not (hash-table? obj))
-         (error (string-append from ": not a hash-table") obj)))))
+         (error (string-append from ": not a Hash-Table") obj)))))
 
 (define (hash-table-ref table key . o)
   (assert-hash-table "hash-table-ref" table)

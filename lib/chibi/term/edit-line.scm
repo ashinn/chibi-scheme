@@ -24,7 +24,7 @@
 
 (define maximum-history-size 128)
 
-(define-record-type history
+(define-record-type History
   (%make-history remaining past future)
   history?
   (remaining history-remaining history-remaining-set!)
@@ -117,7 +117,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; buffers
 
-(define-record-type buffer
+(define-record-type Buffer
   (%make-buffer refresh? min pos row max-row col gap width string history)
   buffer?
   (refresh? buffer-refresh? buffer-refresh?-set!)
