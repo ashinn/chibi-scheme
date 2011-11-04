@@ -1,5 +1,5 @@
 /*  hash.c -- type-general hashing                            */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
@@ -60,7 +60,7 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
     else
 #endif
     if (sexp_pointerp(obj)) {
-      if (depth) {
+      if (depth > 0) {
         t = sexp_object_type(ctx, obj);
         p = (sexp*) (((char*)obj) + sexp_type_field_base(t));
         p0 = ((char*)obj) + offsetof(struct sexp_struct, value);
@@ -107,9 +107,9 @@ static sexp sexp_get_bucket (sexp ctx, sexp buckets, sexp hash_fn, sexp obj) {
   sexp_gc_var1(args);
   sexp res;
   sexp_uint_t len = sexp_vector_length(buckets);
-  if (hash_fn == sexp_make_fixnum(1))
+  if (hash_fn == SEXP_ONE)
     res = sexp_hash_by_identity(ctx sexp_api_pass(NULL, 2), obj, sexp_make_fixnum(len));
-  else if (hash_fn == sexp_make_fixnum(2))
+  else if (hash_fn == SEXP_TWO)
     res = sexp_hash(ctx sexp_api_pass(NULL, 2), obj, sexp_make_fixnum(len));
   else {
     sexp_gc_preserve1(ctx, args);
@@ -118,7 +118,7 @@ static sexp sexp_get_bucket (sexp ctx, sexp buckets, sexp hash_fn, sexp obj) {
     if (sexp_exceptionp(res)) {
       args = sexp_eval_string(ctx, "(current-error-port)", -1, sexp_context_env(ctx));
       sexp_print_exception(ctx, res, args);
-      res = sexp_make_fixnum(0);
+      res = SEXP_ZERO;
     } else if (sexp_unbox_fixnum(res) >= len) {
       res = SEXP_ZERO;
     }
@@ -131,8 +131,8 @@ static sexp sexp_scan_bucket (sexp ctx, sexp ls, sexp obj, sexp eq_fn) {
   sexp_gc_var1(res);
   sexp p;
   res = SEXP_FALSE;
-  if ((eq_fn == sexp_make_fixnum(1))
-      || ((eq_fn == sexp_make_fixnum(2))
+  if ((eq_fn == SEXP_ONE)
+      || ((eq_fn == SEXP_TWO)
           && (sexp_pointerp(obj) ?
               (sexp_pointer_tag(obj) == SEXP_SYMBOL) : ! sexp_fixnump(obj)))) {
     for (p=ls; sexp_pairp(p); p=sexp_cdr(p)) {
@@ -141,7 +141,7 @@ static sexp sexp_scan_bucket (sexp ctx, sexp ls, sexp obj, sexp eq_fn) {
         break;
       }
     }
-  } else if (eq_fn == sexp_make_fixnum(2)) {
+  } else if (eq_fn == SEXP_TWO) {
     for (p=ls; sexp_pairp(p); p=sexp_cdr(p)) {
       if (sexp_truep(sexp_equalp(ctx, sexp_caar(p), obj))) {
         res = p;
@@ -220,8 +220,7 @@ static sexp sexp_hash_table_delete (sexp ctx sexp_api_params(self, n), sexp ht, 
   i = sexp_get_bucket(ctx, buckets, hash_fn, obj);
   res = sexp_scan_bucket(ctx, sexp_vector_ref(buckets, i), obj, eq_fn);
   if (sexp_pairp(res)) {
-    sexp_hash_table_size(ht)
-      = sexp_fx_sub(sexp_hash_table_size(ht), sexp_make_fixnum(1));
+    sexp_hash_table_size(ht) = sexp_fx_sub(sexp_hash_table_size(ht), SEXP_ONE);
     if (res == sexp_vector_ref(buckets, i)) {
       sexp_vector_set(buckets, i, sexp_cdr(res));
     } else {

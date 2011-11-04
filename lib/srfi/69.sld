@@ -1,6 +1,6 @@
 
 (define-library (srfi 69)
-  (export
+  (export hash-table-cell
    make-hash-table hash-table? alist->hash-table
    hash-table-equivalence-function hash-table-hash-function
    hash-table-ref hash-table-ref/default hash-table-set!
