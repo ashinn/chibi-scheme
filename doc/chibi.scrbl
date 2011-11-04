@@ -94,6 +94,8 @@ are listed below.
 @item{@ccode{SEXP_USE_SIMPLIFY} - use a simplification optimizer pass (enabled by default)}
 @item{@ccode{SEXP_USE_BIGNUMS} - use bignums (enabled by default)}
 @item{@ccode{SEXP_USE_FLONUMS} - use flonums (enabled by default)}
+@item{@ccode{SEXP_USE_RATIOS} - use exact ratios (enabled by default)}
+@item{@ccode{SEXP_USE_COMPLEX} - use complex numbers (enabled by default)}
 @item{@ccode{SEXP_USE_UTF8_STRINGS} - Unicode sopport (enabled by default)}
 @item{@ccode{SEXP_USE_NO_FEATURES} - disable almost all features}
 ]
@@ -548,6 +550,28 @@ sexp foo(sexp ctx, sexp bar, sexp baz) {
 If compiled with the Boehm GC, sexp_gc_var@italic{n} just translates to the
 plain declaration, while sexp_gc_preserve@italic{n} and
 sexp_gc_release@italic{n} become noops.
+
+When interacting with a garbage collection system from another
+language, or communicating between different Chibi managed heaps, you
+may want to manually ensure objects are preserved irrespective of any
+references to it from other objects in the same heap.  This can be
+done with the @ccode{sexp_preserve_object} and
+@ccode{sexp_release_object} utilities.
+
+@ccode{
+sexp_preserve_object(ctx, obj)
+}
+
+Increment the absolute reference count for @var{obj}.  So long as the
+reference count is above 0, @var{obj} will not be reclaimed even if
+there are no references to it from other object in the Chibi managed
+heap.
+
+@ccode{
+sexp_release_object(ctx, obj)
+}
+
+Decrement the absolute reference count for @var{obj}.
 
 @subsection{API Index}
 
@@ -1042,6 +1066,8 @@ namespace.
 @item{@hyperlink["lib/chibi/test.html"]{(chibi test) - A simple unit testing framework}}
 
 @item{@hyperlink["lib/chibi/time.html"]{(chibi time) - An interface to the current system time}}
+
+@item{@hyperlink["lib/chibi/trace.html"]{(chibi trace) - A utility to trace procedure calls}}
 
 @item{@hyperlink["lib/chibi/type-inference.html"]{(chibi type-inference) - An easy-to-use type inference system}}
 

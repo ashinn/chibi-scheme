@@ -75,6 +75,20 @@ void sexp_free(void* ptr) {
 }
 #endif
 
+void sexp_preserve_object(sexp ctx, sexp x) {
+  sexp_global(ctx, SEXP_G_PRESERVATIVES) = sexp_cons(ctx, x, sexp_global(ctx, SEXP_G_PRESERVATIVES));
+}
+
+void sexp_release_object(sexp ctx, sexp x) {
+  sexp ls1, ls2;
+  for (ls1=NULL, ls2=sexp_global(ctx, SEXP_G_PRESERVATIVES); sexp_pairp(ls2);
+       ls1=ls2, ls2=sexp_cdr(ls2))
+    if (sexp_car(ls2) == x) {
+      if (ls1) sexp_cdr(ls1) = sexp_cdr(ls2);
+      else sexp_global(ctx, SEXP_G_PRESERVATIVES) = ls2;
+    }
+}
+
 sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   sexp_uint_t res;
   sexp t;
