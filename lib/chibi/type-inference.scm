@@ -148,7 +148,7 @@
                                (not (type-subset? t p-type)))
                           (display "WARNING: incompatible type: "
                                    (current-error-port))
-                          (write (list x t p-type) (current-error-port))
+                          (write/ss (list x t p-type) (current-error-port))
                           (newline (current-error-port))))
                         t))))
                   (lp (and (pair? p) (cdr p)) (cdr a)))
