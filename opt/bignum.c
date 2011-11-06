@@ -209,7 +209,7 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   res = sexp_make_bignum(ctx, SEXP_INIT_BIGNUM_SIZE);
   sexp_bignum_sign(res) = sign;
   sexp_bignum_data(res)[0] = init;
-  for (c=sexp_read_char(ctx, in); isxdigit(c); c=sexp_read_char(ctx, in)) {
+  for (c=sexp_read_char(ctx, in); sexp_isxdigit(c); c=sexp_read_char(ctx, in)) {
     digit = digit_value(c);
     if ((digit < 0) || (digit >= base))
       break;
