@@ -16,6 +16,9 @@ chibi-scheme \- a tiny Scheme interpreter
 [-m
 .I module
 ]
+[-x
+.I module
+]
 [-l
 .I file
 ]
@@ -99,6 +102,8 @@ Appends
 to the load path list.  
 .TP
 .BI -m module
+.TP
+.BI -x module
 Imports
 .I module
 as though "(import
@@ -108,6 +113,11 @@ escapes, modules are written in a dot notation, so that the module
 .I (foo bar)
 is written as
 .I foo.bar
+If the
+.BI -x
+version is used, then
+.I module
+replaces the current environment instead of being added to it.
 .TP
 .BI -l file
 Loads the Scheme source from the file
