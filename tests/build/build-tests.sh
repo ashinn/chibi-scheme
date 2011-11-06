@@ -15,7 +15,7 @@ MAKE=${MAKE:-make}
 i=0
 
 for opts in $(cat ${BUILDDIR}/build-opts.txt); do
-    opts=${opts//;/ }
+    opts=$(echo ${opts} | tr ';' ' ')
     $MAKE cleaner 2>&1 >/dev/null
     if $MAKE $opts chibi-scheme 2>&1 >${BUILDDIR}/build${i}-make.out; then
         if $MAKE test 2>&1 | tee ${BUILDDIR}/build${i}-test.out | grep -q -E 'FAIL|ERROR'; then
