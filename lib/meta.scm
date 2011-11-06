@@ -228,7 +228,7 @@
 
 (define *modules*
   (list (cons '(scheme) (make-module #f (interaction-environment)
-                                     '((include "init.scm"))))
+                                     '((include "init-7.scm"))))
         (cons '(meta) (make-module #f (current-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (current-environment)
