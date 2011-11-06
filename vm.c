@@ -2,8 +2,6 @@
 /*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
-#include <errno.h>
-
 #if SEXP_USE_DEBUG_VM > 1
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
   int i;
@@ -1728,7 +1726,6 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
-    errno = 0;
     i = sexp_read_char(ctx, _ARG1);
 #if SEXP_USE_UTF8_STRINGS
     if (i >= 0x80)
@@ -1737,8 +1734,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if ((errno == EAGAIN)
+      if (sexp_port_stream(_ARG1) && ferror(sexp_port_stream(_ARG1))
+          && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+        clearerr(sexp_port_stream(_ARG1));
         sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
         fuel = 0;
         ip--;      /* try again */
@@ -1754,12 +1753,13 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
-    errno = 0;
     i = sexp_read_char(ctx, _ARG1);
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if ((errno == EAGAIN)
+      if (sexp_port_stream(_ARG1) && ferror(sexp_port_stream(_ARG1))
+          && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+        clearerr(sexp_port_stream(_ARG1));
         sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
         fuel = 0;
         ip--;      /* try again */
