@@ -34,7 +34,7 @@ static const char sexp_separators[] = {
 };
 
 static int digit_value (int c) {
-  return (((c)<='9') ? ((c) - '0') : ((toupper(c) - 'A') + 10));
+  return (((c)<='9') ? ((c) - '0') : ((sexp_toupper(c) - 'A') + 10));
 }
 
 static int hex_digit (int n) {
@@ -1749,7 +1749,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
   sexp res=SEXP_VOID;
 #if SEXP_USE_FOLD_CASE_SYMS
   int foldp = sexp_port_fold_casep(in);
-  init = (foldp ? tolower(init) : init);
+  init = (foldp ? sexp_tolower(init) : init);
 #endif
 
   if (init != EOF)
@@ -1757,7 +1757,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
 
   for (c = sexp_read_char(ctx, in); ; c = sexp_read_char(ctx, in)) {
 #if SEXP_USE_FOLD_CASE_SYMS
-    if (foldp) c = tolower(c);
+    if (foldp) c = sexp_tolower(c);
 #endif
     if (c == '\\') c = sexp_read_char(ctx, in);
     if (c == EOF || is_separator(c)) {
@@ -1848,8 +1848,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   sexp exponent=SEXP_VOID;
   double val=0.0, scale=0.1, e=0.0;
   int c;
-  for (c=sexp_read_char(ctx, in);
-       isdigit(c);
+  for (c=sexp_read_char(ctx, in); sexp_isdigit(c);
        c=sexp_read_char(ctx, in), scale*=0.1)
     val += digit_value(c)*scale;
 #if SEXP_USE_PLACEHOLDER_DIGITS
@@ -2243,7 +2242,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     case 't': case 'T':
       c2 = sexp_read_char(ctx, in);
       if (c2 == EOF || is_separator(c2)) {
-        res = (tolower(c1) == 't' ? SEXP_TRUE : SEXP_FALSE);
+        res = (sexp_tolower(c1) == 't' ? SEXP_TRUE : SEXP_FALSE);
         sexp_push_char(ctx, c2, in);
       } else {
         sexp_push_char(ctx, c2, in);
@@ -2396,7 +2395,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     sexp_push_char(ctx, c1, in);
     if (c1 == EOF || is_separator(c1)) {
       res = SEXP_RAWDOT;
-    } else if (isdigit(c1)) {
+    } else if (sexp_isdigit(c1)) {
       res = sexp_read_float_tail(ctx, in, 0, 0);
     } else {
       res = sexp_read_symbol(ctx, in, '.', 1);
@@ -2418,7 +2417,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '+':
   case '-':
     c2 = sexp_read_char(ctx, in);
-    if (c2 == '.' || isdigit(c2)) {
+    if (c2 == '.' || sexp_isdigit(c2)) {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_number(ctx, in, 10);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
@@ -2527,12 +2526,12 @@ sexp sexp_string_to_number_op (sexp ctx sexp_api_params(self, n), sexp str, sexp
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
     return sexp_user_exception(ctx, self, "invalid numeric base", b);
   if (sexp_string_data(str)[0]=='\0'
-      || (sexp_string_data(str)[1]=='\0' && !isdigit(sexp_string_data(str)[0])))
+      || (sexp_string_data(str)[1]=='\0' && !sexp_isdigit(sexp_string_data(str)[0])))
     return SEXP_FALSE;
   sexp_gc_preserve1(ctx, in);
   in = sexp_make_input_string_port(ctx, str);
   if (sexp_string_data(str)[0] == '+') {
-    if (isdigit(sexp_string_data(str)[1])
+    if (sexp_isdigit(sexp_string_data(str)[1])
         || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
       sexp_read_char(ctx, in);
   }

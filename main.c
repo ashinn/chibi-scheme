@@ -176,7 +176,7 @@ static void repl (sexp ctx, sexp env) {
 }
 
 static sexp_uint_t multiplier (char c) {
-  switch ((tolower)(c)) {
+  switch (sexp_tolower(c)) {
   case 'k': return 1024;
   case 'm': return (1024*1024);
   case 'g': return (1024*1024*1024);

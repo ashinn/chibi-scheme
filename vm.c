@@ -1696,12 +1696,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_CHAR_UPCASE:
     if (! sexp_charp(_ARG1))
       sexp_raise("char-upcase: not a character", sexp_list1(ctx, _ARG1));
-    _ARG1 = sexp_make_character(toupper(sexp_unbox_character(_ARG1)));
+    _ARG1 = sexp_make_character(sexp_toupper(sexp_unbox_character(_ARG1)));
     break;
   case SEXP_OP_CHAR_DOWNCASE:
     if (! sexp_charp(_ARG1))
       sexp_raise("char-downcase: not a character", sexp_list1(ctx, _ARG1));
-    _ARG1 = sexp_make_character(tolower(sexp_unbox_character(_ARG1)));
+    _ARG1 = sexp_make_character(sexp_tolower(sexp_unbox_character(_ARG1)));
     break;
   case SEXP_OP_WRITE_CHAR:
     if (! sexp_charp(_ARG1))
