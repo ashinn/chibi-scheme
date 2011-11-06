@@ -87,8 +87,8 @@
           (cond ((memq 'history: o) => cadr)
                 (else
                  (or (guard (exn (else #f))
-                      (list->history
-                       (call-with-input-file history-file read)))
+                       (list->history
+                        (call-with-input-file history-file read)))
                      (make-history)))))
          (raw? (cond ((memq 'raw?: o) => cadr)
                      (else (member (get-environment-variable "TERM")
@@ -104,9 +104,9 @@
                 (read-line in))
                (else
                 (edit-line in out
-                 'prompt: prompt
-                 'history: history
-                 'complete?: buffer-complete-sexp?)))))
+                           'prompt: prompt
+                           'history: history
+                           'complete?: buffer-complete-sexp?)))))
         (cond
          ((or (not line) (eof-object? line)))
          ((equal? line "") (lp module env meta-env))
@@ -121,70 +121,85 @@
                 (apply warn msg args)
                 (continue module env meta-env))
               (call-with-input-string line
-               (lambda (in)
-                 (let ((op (read/ss in)))
-                   (case op
-                     ((in)
-                      (let ((name (read/ss in)))
-                        (cond
-                         ((eof-object? name)
-                          (continue #f (interaction-environment) meta-env))
-                         ((eval `(load-module ',name) meta-env)
-                          => (lambda (m)
-                               (continue name (module-env m) meta-env)))
-                         (else
-                          (fail "couldn't find module:" name)))))
-                     ((meta config)
-                      (if (eq? op 'config)
-                          (display "Note: @config has been renamed @meta\n" out))
-                      (let ((expr (read/ss in)))
-                        (cond
-                         ((and
-                           (symbol? expr)
-                           (eqv? escape (string-ref (symbol->string expr) 0)))
-                          (meta meta-env
-                                (substring line 6 (string-length line))
-                                (lambda _ (continue module env meta-env))))
-                         (else
-                          (eval expr meta-env)
-                          (continue module env meta-env)))))
-                     ((meta-module-is)
-                      (let ((name (read/ss in)))
-                        (cond
-                         ((eval `(load-module ',name) meta-env)
-                          => (lambda (m) (lp module env (module-env m))))
-                         (else
-                          (fail "couldn't find module:" name)))))
-                     ((exit))
-                     (else
-                      (fail "unknown repl command:" op))))))))
+                (lambda (in)
+                  (let ((op (read/ss in)))
+                    (case op
+                      ((import import-only)
+                       (let* ((mod-name (read in))
+                              (mod+imps (eval `(resolve-import ',mod-name)
+                                              meta-env)))
+                         (if (pair? mod+imps)
+                             (let ((env (if (eq? op 'import-only)
+                                            (make-environment)
+                                            env))
+                                   (imp-env
+                                    (vector-ref
+                                     (eval `(load-module ',mod-name) meta-env)
+                                     1)))
+                               (%import env imp-env (cdr mod+imps) #f)
+                               (continue module env meta-env))
+                             (fail "couldn't find module:" mod-name))))
+                      ((in)
+                       (let ((name (read/ss in)))
+                         (cond
+                          ((eof-object? name)
+                           (continue #f (interaction-environment) meta-env))
+                          ((eval `(load-module ',name) meta-env)
+                           => (lambda (m)
+                                (continue name (module-env m) meta-env)))
+                          (else
+                           (fail "couldn't find module:" name)))))
+                      ((meta config)
+                       (if (eq? op 'config)
+                           (display "Note: @config has been renamed @meta\n" out))
+                       (let ((expr (read/ss in)))
+                         (cond
+                          ((and
+                            (symbol? expr)
+                            (eqv? escape (string-ref (symbol->string expr) 0)))
+                           (meta meta-env
+                                 (substring line 6 (string-length line))
+                                 (lambda _ (continue module env meta-env))))
+                          (else
+                           (eval expr meta-env)
+                           (continue module env meta-env)))))
+                      ((meta-module-is)
+                       (let ((name (read/ss in)))
+                         (cond
+                          ((eval `(load-module ',name) meta-env)
+                           => (lambda (m) (lp module env (module-env m))))
+                          (else
+                           (fail "couldn't find module:" name)))))
+                      ((exit))
+                      (else
+                       (fail "unknown repl command:" op))))))))
            (else
             (guard
-             (exn
-              (else (print-exception exn (current-error-port))))
-             (let* ((expr (call-with-input-string line
-                            (lambda (in2)
-                              (set-port-fold-case! in2 (port-fold-case? in))
-                              (let ((expr (read/ss in2)))
-                                (set-port-fold-case! in (port-fold-case? in2))
-                                expr))))
-                    (thread
-                     (make-thread
-                      (lambda ()
-                        (guard
-                         (exn
-                          (else (print-exception exn (current-error-port))))
-                         (let ((res (eval expr env)))
-                           (cond
-                            ((not (eq? res (if #f #f)))
-                             (write/ss res)
-                             (newline)))))))))
-               (with-signal-handler
-                signal/interrupt
-                (lambda (n)
-                  (display "Interrupt\n" (current-error-port))
-                  (thread-terminate! thread))
-                (lambda () (thread-join! (thread-start! thread))))))
+                (exn
+                 (else (print-exception exn (current-error-port))))
+              (let* ((expr (call-with-input-string line
+                             (lambda (in2)
+                               (set-port-fold-case! in2 (port-fold-case? in))
+                               (let ((expr (read/ss in2)))
+                                 (set-port-fold-case! in (port-fold-case? in2))
+                                 expr))))
+                     (thread
+                      (make-thread
+                       (lambda ()
+                         (guard
+                             (exn
+                              (else (print-exception exn (current-error-port))))
+                           (let ((res (eval expr env)))
+                             (cond
+                              ((not (eq? res (if #f #f)))
+                               (write/ss res)
+                               (newline)))))))))
+                (with-signal-handler
+                 signal/interrupt
+                 (lambda (n)
+                   (display "Interrupt\n" (current-error-port))
+                   (thread-terminate! thread))
+                 (lambda () (thread-join! (thread-start! thread))))))
             (lp module env meta-env)))))))
     (if history-file
         (call-with-output-file history-file
