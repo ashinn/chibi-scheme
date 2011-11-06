@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/sh
 
 # test basic build options
 
@@ -31,7 +31,7 @@ for opts in $(cat ${BUILDDIR}/build-opts.txt); do
     i=$((i+1))
 done
 
-if (( FAILURES == 0 )); then
+if [ $FAILURES = 0 ]; then
     echo "build-tests: all tests passed"
 else
     echo "build-tests: ${FAILURES} tests failed"
