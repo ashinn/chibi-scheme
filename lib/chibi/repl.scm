@@ -77,9 +77,7 @@
          (module (cond ((memq 'module: o) => cadr) (else #f)))
          (env (if module
                   (module-env
-                   (if (module? module)
-                       module
-                       (eval `(load-module ',module) *meta-env*)))
+                   (if (module? module) module (load-module module)))
                   (interaction-environment)))
          (history-file
           (cond ((memq 'history-file: o) => cadr)
@@ -95,7 +93,7 @@
          (raw? (cond ((memq 'raw?: o) => cadr)
                      (else (member (get-environment-variable "TERM")
                                    '("emacs" "dumb"))))))
-    (let lp ((module module) (env env) (meta-env *meta-env*))
+    (let lp ((module module) (env env) (meta-env (load-module '(meta))))
       (let* ((prompt
               (string-append (if module (write-to-string module) "") "> "))
              (line
