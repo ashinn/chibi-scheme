@@ -428,6 +428,11 @@
 #define SEXP_USE_OBJECT_BRACE_LITERALS (SEXP_USE_TYPE_DEFS && !SEXP_USE_NO_FEATURES)
 #endif
 
+/* Dangerous without shared object detection. */
+#ifndef SEXP_USE_TYPE_PRINTERS
+#define SEXP_USE_TYPE_PRINTERS 0
+#endif
+
 #ifndef SEXP_USE_BYTEVECTOR_LITERALS
 #define SEXP_USE_BYTEVECTOR_LITERALS ! SEXP_USE_NO_FEATURES
 #endif

@@ -19,16 +19,16 @@
             ((= i (vector-length x)))
           (find (vector-ref x i))))
        (else
-        (let* ((type (type-of x))
-               (slots (and type (type-slots type))))
+        (let ((type (type-of x)))
           (cond
-           (slots
+           ((and type (type-printer type))
             (set! seen (cons (cons x 1) seen))
-            (let lp ((i 0) (ls slots))
-              (cond
-               ((pair? ls)
-                (find (slot-ref type x i))
-                (lp (+ i 1) (cdr ls)))))))))))
+            (let ((num-slots (type-num-slots type)))
+              (let lp ((i 0))
+                (cond
+                 ((< i num-slots)
+                  (find (slot-ref type x i))
+                  (lp (+ i 1))))))))))))
     (let extract ((ls seen) (res '()))
       (cond
        ((null? ls) res)
