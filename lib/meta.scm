@@ -31,10 +31,12 @@
 (define (module-name-prefix name)
   (string-concatenate (reverse (cdr (cdr (module-name->strings name '()))))))
 
-(define (load-module-definition name)
-  (let* ((file (module-name->file name))
-         (path (find-module-file file)))
-    (if path (load path *meta-env*))))
+(define load-module-definition
+  (let ((meta-env (current-environment)))
+    (lambda (name)
+      (let* ((file (module-name->file name))
+             (path (find-module-file file)))
+        (if path (load path meta-env))))))
 
 (define (find-module name)
   (cond
@@ -154,8 +156,11 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      (let ((name (cadr expr))
-           (body (cddr expr)))
-       `(let ((tmp *this-module*))
+           (body (cddr expr))
+           (tmp (rename 'tmp))
+           (this-module (rename '*this-module*))
+           (modules (rename '*modules*)))
+       `(let ((,tmp ,this-module))
           (define (rewrite-export x)
             (if (pair? x)
                 (if (and (= 3 (length x))
@@ -163,17 +168,17 @@
                     (cons (caddr x) (cadr x))
                     (error "invalid module export" x))
                 x))
-          (set! *this-module* '())
+          (set! ,this-module '())
           ,@body
-          (set! *this-module* (reverse *this-module*))
+          (set! ,this-module (reverse ,this-module))
           (let ((exports
-                 (cond ((assq 'export *this-module*)
+                 (cond ((assq 'export ,this-module)
                         => (lambda (x) (map rewrite-export (cdr x))))
                        (else '()))))
-            (set! *modules*
-                  (cons (cons ',name (make-module exports #f *this-module*))
-                        *modules*)))
-          (set! *this-module* tmp))))))
+            (set! ,modules
+                  (cons (cons ',name (make-module exports #f ,this-module))
+                        ,modules)))
+          (set! ,this-module ,tmp))))))
 
 (define-syntax define-library define-library-transformer)
 (define-syntax module define-library-transformer)
@@ -184,8 +189,10 @@
      `(define-syntax ,(cadr expr)
         (er-macro-transformer
          (lambda (expr rename compare)
-           `(set! *this-module* (cons ',expr *this-module*))))))))
+           (let ((this-module (rename '*this-module*)))
+             `(set! ,this-module (cons ',expr ,this-module)))))))))
 
+(define-syntax orig-begin begin)
 (define-config-primitive import)
 (define-config-primitive import-immutable)
 (define-config-primitive export)
@@ -194,6 +201,30 @@
 (define-config-primitive include-shared)
 (define-config-primitive body)
 (define-config-primitive begin)
+
+;; The `import' binding used by (scheme) and (scheme base), etc.
+(define-syntax repl-import
+  (er-macro-transformer
+   (let ((meta-env (current-environment)))
+     (lambda (expr rename compare)
+       (let lp ((ls (cdr expr)) (res '()))
+         (cond
+          ((null? ls)
+           (cons (rename 'orig-begin) (reverse res)))
+          (else
+           (let ((mod+imps (resolve-import (car ls))))
+             (cond
+              ((pair? mod+imps)
+               (lp (cdr ls)
+                   (cons `(,(rename '%import)
+                           #f
+                           (,(rename 'module-env)
+                            (,(rename 'load-module) ',(car mod+imps)))
+                           ',(cdr mod+imps)
+                           #f)
+                         res)))
+              (else
+               (error "couldn't find module" (car ls))))))))))))
 
 (define *modules*
   (list (cons '(scheme) (make-module #f (interaction-environment)

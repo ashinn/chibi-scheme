@@ -847,32 +847,6 @@
      (guard (var (test . handler) ... (else (raise var))) body ...))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; modules
-
-(define *meta-env* #f)
-
-(define-syntax import
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (let lp ((ls (cdr expr)) (res '()))
-       (cond
-        ((null? ls)
-         (cons 'begin (reverse res)))
-        (else
-         (let ((mod+imps (eval `(resolve-import ',(car ls)) *meta-env*)))
-           (if (pair? mod+imps)
-               (lp (cdr ls)
-                   (cons `(%import
-                           #f
-                           (vector-ref
-                            (eval '(load-module ',(car mod+imps)) *meta-env*)
-                            1)
-                           ',(cdr mod+imps)
-                           #f)
-                         res))
-               (error "couldn't find module" (car ls))))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; SRFI-0
 
 (define-syntax cond-expand

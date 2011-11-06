@@ -746,29 +746,33 @@ static sexp analyze_define (sexp ctx, sexp x) {
 
 static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
   sexp res = SEXP_VOID, name;
-  sexp_gc_var2(proc, mac);
-  sexp_gc_preserve2(eval_ctx, proc, mac);
+  sexp_gc_var1(mac);
+  sexp_gc_preserve1(eval_ctx, mac);
   for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
     if (! (sexp_pairp(sexp_car(ls)) && sexp_pairp(sexp_cdar(ls))
            && sexp_nullp(sexp_cddar(ls)))) {
       res = sexp_compile_error(eval_ctx, "bad syntax binding", sexp_car(ls));
     } else {
-      proc = sexp_eval(eval_ctx, sexp_cadar(ls), NULL);
-      if (sexp_procedurep(proc)) {
-        name = sexp_caar(ls);
-        if (sexp_synclop(name) && sexp_env_global_p(sexp_context_env(bind_ctx)))
-          name = sexp_synclo_expr(name);
-        mac = sexp_make_macro(eval_ctx, proc, sexp_context_env(bind_ctx));
-        sexp_macro_source(mac) = sexp_pair_source(sexp_cadar(ls));
-        sexp_env_define(eval_ctx, sexp_context_env(bind_ctx), name, mac);
-      } else {
-        res = (sexp_exceptionp(proc) ? proc
-               : sexp_compile_error(eval_ctx, "non-procedure macro:", proc));
+      if (sexp_idp(sexp_cadar(ls)))
+        mac = sexp_env_ref(sexp_context_env(eval_ctx), sexp_cadar(ls), SEXP_FALSE);
+      else
+        mac = sexp_eval(eval_ctx, sexp_cadar(ls), NULL);
+      if (sexp_procedurep(mac)) {
+        mac = sexp_make_macro(eval_ctx, mac, sexp_context_env(bind_ctx));
+      } else if (!(sexp_macrop(mac)||sexp_corep(mac))) {
+        res = (sexp_exceptionp(mac) ? mac
+               : sexp_compile_error(eval_ctx, "non-procedure macro", mac));
         break;
       }
+      name = sexp_caar(ls);
+      if (sexp_synclop(name) && sexp_env_global_p(sexp_context_env(bind_ctx)))
+        name = sexp_synclo_expr(name);
+      if (sexp_macrop(mac) && sexp_pairp(sexp_cadar(ls)))
+        sexp_macro_source(mac) = sexp_pair_source(sexp_cadar(ls));
+      sexp_env_define(eval_ctx, sexp_context_env(bind_ctx), name, mac);
     }
   }
-  sexp_gc_release2(eval_ctx);
+  sexp_gc_release1(eval_ctx);
   return res;
 }
 
@@ -1953,9 +1957,8 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_set_parameter(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   /* load and bind config env */
 #if SEXP_USE_MODULES
-  if (! sexp_exceptionp(tmp)) {
-    sym = sexp_intern(ctx, "*meta-env*", -1);
-    if (! sexp_envp(tmp=sexp_global(ctx, SEXP_G_META_ENV))) {
+  if (!sexp_exceptionp(tmp)) {
+    if (!sexp_envp(tmp=sexp_global(ctx, SEXP_G_META_ENV))) {
       tmp = sexp_make_env(ctx);
       if (! sexp_exceptionp(tmp)) {
         sexp_global(ctx, SEXP_G_META_ENV) = tmp;
@@ -1963,10 +1966,14 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
         op = sexp_load_module_file(ctx, sexp_meta_file, tmp);
         if (sexp_exceptionp(op))
           sexp_print_exception(ctx, op, sexp_current_error_port(ctx));
-        sexp_env_define(ctx, tmp, sym, tmp);
       }
     }
-    sexp_env_define(ctx, e, sym, tmp);
+    if (!sexp_exceptionp(tmp)) {
+      sym = sexp_intern(ctx, "repl-import", -1);
+      tmp = sexp_env_ref(tmp, sym, SEXP_VOID);
+      sym = sexp_intern(ctx, "import", -1);
+      sexp_env_define(ctx, e, sym, tmp);
+    }
   }
 #endif
   sexp_gc_release3(ctx);
