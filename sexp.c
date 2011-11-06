@@ -1583,14 +1583,18 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, '>', out);
       } else {
         x = sexp_type_by_index(ctx, i);
+#if SEXP_USE_TYPE_PRINTERS
         if (sexp_type_print(x)) {
           x = sexp_apply_writer(ctx, sexp_type_print(x), obj, out);
           if (sexp_exceptionp(x)) return x;
         } else {
+#endif
           sexp_write_string(ctx, "#<", out);
           sexp_display(ctx, sexp_type_name(x), out);
           sexp_write_char(ctx, '>', out);
+#if SEXP_USE_TYPE_PRINTERS
         }
+#endif
       }
       break;
     }
