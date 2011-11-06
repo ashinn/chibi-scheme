@@ -239,9 +239,8 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  sexp name, cpl, slots, dl, id;
+  sexp name, cpl, slots, dl, id, print;
   sexp_proc2 finalize;
-  sexp_proc4 print;
 };
 
 struct sexp_opcode_struct {
@@ -1208,6 +1207,7 @@ SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
 SEXP_API sexp sexp_print_exception_op (sexp ctx sexp_api_params(self, n), sexp exn, sexp out);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
+SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API void sexp_init(void);
 
 #if SEXP_USE_UTF8_STRINGS
@@ -1258,7 +1258,7 @@ SEXP_API int sexp_valid_object_p(sexp ctx, sexp x);
 #endif
 
 #if SEXP_USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2, sexp_proc4);
+SEXP_API sexp sexp_register_type_op (sexp sexp_api_params(self, n), sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
 SEXP_API sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name, sexp parent, sexp slots);
 SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj);
 #define sexp_register_c_type(ctx, name, finalizer)                      \
@@ -1266,8 +1266,8 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj)
                      SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,                   \
                      sexp_make_fixnum(sexp_sizeof(cpointer)),           \
                      SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,        \
-                     SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, (sexp_proc2)finalizer, \
-                     NULL)
+                     SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, NULL,             \
+                     (sexp_proc2)finalizer)
 #endif
 
 #define sexp_current_error_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE))

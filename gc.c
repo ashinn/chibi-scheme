@@ -622,9 +622,6 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
 #endif
               sexp_type_finalize(p) = SEXP_FINALIZE_PORT;
           }
-          /* TODO: handle arbitrary printers in images */
-          if (sexp_type_print(p))
-            sexp_type_print(p) = sexp_write_simple_object;
         }
         t = types[sexp_pointer_tag(p)];
         p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));

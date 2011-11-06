@@ -142,7 +142,7 @@ sexp sexp_finalize_dl (sexp ctx sexp_api_params(self, n), sexp dl) {
 
 static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Object", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
-  {SEXP_TYPE, sexp_offsetof(type, name), 4+SEXP_USE_DL, 4+SEXP_USE_DL, 0, 0, sexp_sizeof(type), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Type", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
+  {SEXP_TYPE, sexp_offsetof(type, name), 5+SEXP_USE_DL, 5+SEXP_USE_DL, 0, 0, sexp_sizeof(type), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Type", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Integer", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_NUMBER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Number", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Char", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
@@ -164,25 +164,25 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #if SEXP_USE_COMPLEX
   {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Complex", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #endif
-  {SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, SEXP_FINALIZE_PORT, NULL},
-  {SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, SEXP_FINALIZE_PORT, NULL},
-  {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
+  {SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
+  {SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
+  {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
   {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_MACRO, sexp_offsetof(macro, proc), 3, 3, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Macro", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
-  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Syntactic-Closure", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
+  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Syntactic-Closure", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
   {SEXP_ENV, sexp_offsetof(env, parent), 3+SEXP_USE_RENAME_BINDINGS, 3+SEXP_USE_RENAME_BINDINGS, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Environment", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Bytecode", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_CORE, sexp_offsetof(core, name), 1, 1, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Core-Form", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #if SEXP_USE_DL
-  {SEXP_DL, sexp_offsetof(dl, file), 1, 1, 0, 0, sexp_sizeof(dl), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Dynamic-Library", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, SEXP_FINALIZE_DL, NULL},
+  {SEXP_DL, sexp_offsetof(dl, file), 1, 1, 0, 0, sexp_sizeof(dl), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Dynamic-Library", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_DL},
 #endif
   {SEXP_OPCODE, sexp_offsetof(opcode, name), 8+SEXP_USE_DL, 8+SEXP_USE_DL, 0, 0, sexp_sizeof(opcode), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Opcode", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
-  {SEXP_LAMBDA, sexp_offsetof(lambda, name), 11, 11, 0, 0, sexp_sizeof(lambda), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lambda", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
-  {SEXP_CND, sexp_offsetof(cnd, test), 4, 4, 0, 0, sexp_sizeof(cnd), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Conditional", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
-  {SEXP_REF, sexp_offsetof(ref, name), 3, 3, 0, 0, sexp_sizeof(ref), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Reference", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
-  {SEXP_SET, sexp_offsetof(set, var), 3, 3, 0, 0, sexp_sizeof(set), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Set!", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
-  {SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sequence", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
-  {SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Literal", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, (sexp_proc4)sexp_write_simple_object},
+  {SEXP_LAMBDA, sexp_offsetof(lambda, name), 11, 11, 0, 0, sexp_sizeof(lambda), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lambda", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
+  {SEXP_CND, sexp_offsetof(cnd, test), 4, 4, 0, 0, sexp_sizeof(cnd), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Conditional", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
+  {SEXP_REF, sexp_offsetof(ref, name), 3, 3, 0, 0, sexp_sizeof(ref), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Reference", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
+  {SEXP_SET, sexp_offsetof(set, var), 3, 3, 0, 0, sexp_sizeof(set), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Set!", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
+  {SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sequence", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
+  {SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Literal", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
   {SEXP_STACK, sexp_offsetof(stack, data), 1, 1, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Stack", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_CONTEXT, sexp_offsetof(context, bc), 13+SEXP_USE_DL, 13+SEXP_USE_DL, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Context", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Cpointer", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
@@ -199,7 +199,7 @@ sexp sexp_register_type_op (sexp ctx sexp_api_params(self, n), sexp name,
                             sexp parent, sexp slots,
                             sexp fb, sexp felb, sexp flb, sexp flo, sexp fls,
                             sexp sb, sexp so, sexp sc, sexp w, sexp wb, sexp wo,
-                            sexp ws, sexp we, sexp_proc2 f, sexp_proc4 p) {
+                            sexp ws, sexp we, sexp p, sexp_proc2 f) {
   sexp *v1, *v2;
   sexp_gc_var2(res, type);
   sexp_uint_t i, len, num_types=sexp_context_num_types(ctx),
@@ -291,8 +291,9 @@ sexp sexp_register_simple_type_op (sexp ctx sexp_api_params(self, n), sexp name,
                        sexp_make_fixnum(sexp_offsetof_slot0),
                        num_slots_obj, num_slots_obj, SEXP_ZERO, SEXP_ZERO,
                        type_size, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
-                       SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, NULL,
-                       (sexp_proc4)sexp_write_simple_object);
+                       SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
+                       sexp_type_print(sexp_type_by_index(ctx, SEXP_EXCEPTION)),
+                       NULL);
 }
 
 #if SEXP_USE_OBJECT_BRACE_LITERALS
@@ -342,7 +343,7 @@ sexp sexp_finalize_c_type (sexp ctx sexp_api_params(self, n), sexp obj) {
 /****************************** contexts ******************************/
 
 void sexp_init_context_globals (sexp ctx) {
-  sexp type, *vec;
+  sexp type, *vec, print=NULL;
   int i;
   sexp_context_globals(ctx)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
@@ -376,6 +377,12 @@ void sexp_init_context_globals (sexp ctx) {
     memcpy(&(type->value), &(_sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
     vec[i] = type;
     sexp_type_name(type) = sexp_c_string(ctx, (char*)sexp_type_name(type), -1);
+    if (sexp_type_print(type)) {
+      if (print && ((sexp_proc1)sexp_type_print(type) == sexp_opcode_func(print)))
+        sexp_type_print(type) = print;
+      else
+        sexp_type_print(type) = print = sexp_make_foreign(ctx, "sexp_write_simple_object", 3, 0, (sexp_proc1)sexp_type_print(type), NULL);
+    }
   }
 }
 
@@ -1410,6 +1417,17 @@ sexp sexp_set_port_fold_case (sexp ctx sexp_api_params(self, n), sexp in, sexp x
 
 #define NUMBUF_LEN 32
 
+sexp sexp_apply_writer(sexp ctx, sexp writer, sexp obj, sexp out) {
+  sexp res;
+  sexp_gc_var1(args);
+  sexp_gc_preserve1(ctx, args);
+  args = sexp_list2(ctx, NULL, out);
+  args = sexp_cons(ctx, obj, args);
+  res = sexp_apply(ctx, writer, args);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_HUFF_SYMS
   unsigned long res;
@@ -1566,7 +1584,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       } else {
         x = sexp_type_by_index(ctx, i);
         if (sexp_type_print(x)) {
-          x = sexp_type_print(x)(ctx, NULL, 2, obj, NULL, out);
+          x = sexp_apply_writer(ctx, sexp_type_print(x), obj, out);
           if (sexp_exceptionp(x)) return x;
         } else {
           sexp_write_string(ctx, "#<", out);
@@ -2186,7 +2204,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         tmp = sexp_read_error(ctx, "brace literal missing type identifier", sexp_make_character(c1), in);
       }
       if (!sexp_exceptionp(tmp)) tmp = sexp_lookup_type(ctx, res, tmp);
-      if (tmp && sexp_typep(tmp) && sexp_type_print(tmp) == sexp_write_simple_object) {
+      if (tmp && sexp_typep(tmp) && sexp_opcodep(sexp_type_print(tmp))
+          && sexp_opcode_func(sexp_type_print(tmp)) == (sexp_proc1)sexp_write_simple_object) {
         res = sexp_alloc_tagged(ctx, sexp_type_size_base(tmp), sexp_type_tag(tmp));
         for (c1=0; ; c1++) {
           tmp2 = sexp_read_raw(ctx, in);
