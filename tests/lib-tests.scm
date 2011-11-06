@@ -18,6 +18,7 @@
     (load "tests/record-tests.scm")
     (load "tests/hash-tests.scm")
     (load "tests/sort-tests.scm")
+    (load "tests/io-tests.scm")
     (load "tests/thread-tests.scm")))
  (else #f))
 
