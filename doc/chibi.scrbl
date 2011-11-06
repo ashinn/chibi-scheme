@@ -104,23 +104,20 @@ are listed below.
 
 @subsection{Scheme Standard}
 
-The default language is mostly compatible with the
-@hyperlink["http://www.schemers.org/Documents/Standards/R5RS/HTML/"]{R5RS} and
-@hyperlink["http://scheme-reports.org/"]{R7RS}, with all
-differences made by design, not through difficulty of implementation.
+The default language is based on the latest draft of
+@hyperlink["http://scheme-reports.org/"]{R7RS}, which is mostly a
+superset of
+@hyperlink["http://www.schemers.org/Documents/Standards/R5RS/HTML/"]{R5RS}.
+Some of the more expensive bindings are not included in the interest
+of size and quick startup, and some extra low-level utilities are
+included for convenience and bootstrapping.
 
-The following procedures are omitted:
+To get the exact R7RS language, you can @scheme{(import (scheme base))},
+and likewise for the other R7RS libraries.
 
-@itemlist[
-@item{@scheme{transcript-on} - in R5RS but not R7RS}
-@item{@scheme{transcript-off} - in R5RS but not R7RS}
-@item{@scheme{rationalize} - pending the addition of rational numbers}
-]
-
-@margin-note{Exact non-integer rationals are planned for a future release.}
-Apart from this, the reader defaults case-sensitive, like R6RS and R7RS but
-unlike the R5RS.  The default configuration includes fixnums, flonums and
-bignums but no exact rationals or complex numbers.
+The reader defaults to case-sensitive, like R6RS and R7RS but unlike
+R5RS.  The default configuration includes the full numeric tower:
+fixnums, flonums, bignums, exact rationals and complex numbers.
 
 Full continuations are supported, but currently continuations don't
 take C code into account.  This means that you can call from Scheme to
