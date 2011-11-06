@@ -219,6 +219,7 @@ clean:
 cleaner: clean
 	$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) libchibi-scheme$(SO) *.a include/chibi/install.h
 	$(FIND) lib -name \*$(SO) -exec $(RM) -r '{}' \;
+	$(FIND) lib -name \*.o -exec $(RM) -r '{}' \;
 
 dist-clean: cleaner
 	for f in `find lib -name \*.stub`; do $(RM) $${f%.stub}.c; done
