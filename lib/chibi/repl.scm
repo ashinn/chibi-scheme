@@ -62,6 +62,8 @@
 ;;> the @scheme{escape:} keyword.  The following commands are available:
 ;;>
 ;;> @itemlist[
+;;> @item{@scheme|{@import <import-spec>}| - import the @var{<import-spec>} in the @scheme{interaction-environment}, useful if the @scheme{import} binding is not available}
+;;> @item{@scheme|{@import-only <import-spec>}| - replace the @scheme{interaction-environment} with the given @var{<import-spec>}}
 ;;> @item{@scheme|{@in [<module>]}| - switch to @var{<module>}, or the @scheme{interaction-environment} if @var{<module>} is not specified}
 ;;> @item{@scheme|{@meta <expr>}| - evaluate @var{<expr>} in the @scheme{(meta)} module}
 ;;> @item{@scheme|{@meta-module-is <module>}| - switch the meta module to @var{<module>}}
@@ -130,7 +132,9 @@
                                               meta-env)))
                          (if (pair? mod+imps)
                              (let ((env (if (eq? op 'import-only)
-                                            (make-environment)
+                                            (let ((env (make-environment)))
+                                              (interaction-environment env)
+                                              env)
                                             env))
                                    (imp-env
                                     (vector-ref
