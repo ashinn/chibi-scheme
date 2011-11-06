@@ -185,11 +185,11 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   return SEXP_VOID;
 }
 
-static sexp sexp_disasm (sexp ctx sexp_api_params(self, n), sexp bc, sexp out) {
+static sexp sexp_disasm (sexp ctx, sexp self, sexp_sint_t n, sexp bc, sexp out) {
   return disasm(ctx, self, bc, out, 0);
 }
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp_define_foreign_param(ctx, env, "disasm", 2, (sexp_proc1)sexp_disasm, "current-output-port");
   return SEXP_VOID;
 }

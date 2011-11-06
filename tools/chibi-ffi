@@ -938,7 +938,7 @@
 
 (define (write-func func)
   (cat "static sexp " (func-stub-name func)
-       " (sexp ctx sexp_api_params(self, n)"
+       " (sexp ctx, sexp self, sexp_sint_t n"
        (write-parameters (func-scheme-args func)) ") {\n")
   (write-locals func)
   (write-temporaries func)
@@ -1010,7 +1010,7 @@
 
 (define (write-type-getter type name field)
   (cat "static sexp " (type-getter-name type name field)
-       " (sexp ctx sexp_api_params(self, n), sexp x) {\n"
+       " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
        (lambda () (write-validator "x" name))
        "  return "
        (lambda ()
@@ -1056,7 +1056,7 @@
 
 (define (write-type-setter type name field)
   (cat "static sexp " (type-setter-name type name field)
-       " (sexp ctx sexp_api_params(self, n), sexp x, sexp v) {\n"
+       " (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp v) {\n"
        (lambda () (write-validator "x" name))
        (lambda () (write-validator "v" (car field)))
        (write-type-setter-assignment
@@ -1076,7 +1076,7 @@
      ((memq 'finalizer: type)
       => (lambda (x)
            (cat "static sexp " (generate-stub-name (cadr x))
-                " (sexp ctx sexp_api_params(self, n), sexp x) {\n"
+                " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
                 "  if (sexp_cpointer_freep(x))\n"
                 "    " (cadr x) "(sexp_cpointer_value(x));\n"
                 "  return SEXP_VOID;\n"
@@ -1088,7 +1088,7 @@
            (let ((make (caadr x))
                  (args (cdadr x)))
              (cat "static sexp " (generate-stub-name make)
-                  " (sexp ctx sexp_api_params(self, n)"
+                  " (sexp ctx, sexp self, sexp_sint_t n"
                   (lambda ()
                     (let lp ((ls args) (i 0))
                       (cond ((pair? ls)
@@ -1194,7 +1194,7 @@
   (write-utilities)
   (for-each write-func *funcs*)
   (for-each write-type-funcs *types*)
-  (cat "sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {\n"
+  (cat "sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {\n"
        "  sexp_gc_var2(name, tmp);\n"
        "  sexp_gc_preserve2(ctx, name, tmp);\n")
   (for-each write-const *consts*)

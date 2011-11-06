@@ -46,31 +46,31 @@ static void sexp_define_type_predicate_by_tag (sexp ctx, sexp env, char *cname, 
   sexp_gc_release2(ctx);
 }
 
-sexp sexp_thread_timeoutp (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_thread_timeoutp (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_boolean(sexp_context_timeoutp(ctx));
 }
 
-sexp sexp_thread_name (sexp ctx sexp_api_params(self, n), sexp thread) {
+sexp sexp_thread_name (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   return sexp_context_name(thread);
 }
 
-sexp sexp_thread_specific (sexp ctx sexp_api_params(self, n), sexp thread) {
+sexp sexp_thread_specific (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   return sexp_context_specific(thread);
 }
 
-sexp sexp_thread_specific_set (sexp ctx sexp_api_params(self, n), sexp thread, sexp val) {
+sexp sexp_thread_specific_set (sexp ctx, sexp self, sexp_sint_t n, sexp thread, sexp val) {
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   sexp_context_specific(thread) = val;
   return SEXP_VOID;
 }
 
-sexp sexp_current_thread (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_current_thread (sexp ctx, sexp self, sexp_sint_t n) {
   return ctx;
 }
 
-sexp sexp_make_thread (sexp ctx sexp_api_params(self, n), sexp thunk, sexp name) {
+sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name) {
   sexp res, *stack;
   sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, thunk);
   res = sexp_make_eval_context(ctx, SEXP_FALSE, sexp_context_env(ctx), 0, 0);
@@ -85,7 +85,7 @@ sexp sexp_make_thread (sexp ctx sexp_api_params(self, n), sexp thunk, sexp name)
   return res;
 }
 
-sexp sexp_thread_start (sexp ctx sexp_api_params(self, n), sexp thread) {
+sexp sexp_thread_start (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp cell;
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   cell = sexp_cons(ctx, thread, SEXP_NULL);
@@ -98,7 +98,7 @@ sexp sexp_thread_start (sexp ctx sexp_api_params(self, n), sexp thread) {
   return thread;
 }
 
-sexp sexp_thread_terminate (sexp ctx sexp_api_params(self, n), sexp thread) {
+sexp sexp_thread_terminate (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp res = sexp_make_boolean(ctx == thread);
   for ( ; thread && sexp_contextp(thread); thread=sexp_context_child(thread))
     sexp_context_refuel(thread) = 0;
@@ -160,7 +160,7 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
     sexp_cdr(ls1) = sexp_cons(ctx, thread, ls2);
 }
 
-sexp sexp_thread_join (sexp ctx sexp_api_params(self, n), sexp thread, sexp timeout) {
+sexp sexp_thread_join (sexp ctx, sexp self, sexp_sint_t n, sexp thread, sexp timeout) {
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   if (sexp_context_refuel(thread) <= 0) /* return true if already terminated */ {
     return SEXP_TRUE;
@@ -172,7 +172,7 @@ sexp sexp_thread_join (sexp ctx sexp_api_params(self, n), sexp thread, sexp time
   return SEXP_FALSE;
 }
 
-sexp sexp_thread_sleep (sexp ctx sexp_api_params(self, n), sexp timeout) {
+sexp sexp_thread_sleep (sexp ctx, sexp self, sexp_sint_t n, sexp timeout) {
   sexp_context_waitp(ctx) = 1;
   if (timeout != SEXP_TRUE) {
     sexp_assert_type(ctx, sexp_numberp, SEXP_NUMBER, timeout);
@@ -184,7 +184,7 @@ sexp sexp_thread_sleep (sexp ctx sexp_api_params(self, n), sexp timeout) {
 
 /**************************** mutexes *************************************/
 
-sexp sexp_mutex_state (sexp ctx sexp_api_params(self, n), sexp mutex) {
+sexp sexp_mutex_state (sexp ctx, sexp self, sexp_sint_t n, sexp mutex) {
   if (!sexp_mutexp(ctx, mutex))
     return sexp_type_exception(ctx, self, sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_THREADS_POLLFDS_ID)), mutex);
   if (sexp_truep(sexp_mutex_lockp(mutex))) {
@@ -197,7 +197,7 @@ sexp sexp_mutex_state (sexp ctx sexp_api_params(self, n), sexp mutex) {
   }
 }
 
-sexp sexp_mutex_lock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp timeout, sexp thread) {
+sexp sexp_mutex_lock (sexp ctx, sexp self, sexp_sint_t n, sexp mutex, sexp timeout, sexp thread) {
   if (thread == SEXP_TRUE)
     thread = ctx;
   if (sexp_not(sexp_mutex_lockp(mutex))) {
@@ -212,7 +212,7 @@ sexp sexp_mutex_lock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp timeou
   }
 }
 
-sexp sexp_mutex_unlock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp condvar, sexp timeout) {
+sexp sexp_mutex_unlock (sexp ctx, sexp self, sexp_sint_t n, sexp mutex, sexp condvar, sexp timeout) {
   sexp ls1, ls2;
   if (sexp_not(condvar)) {
     /* normal unlock - always succeeds, just need to unblock threads */
@@ -248,7 +248,7 @@ sexp sexp_mutex_unlock (sexp ctx sexp_api_params(self, n), sexp mutex, sexp cond
 
 /**************************** condition variables *************************/
 
-sexp sexp_condition_variable_signal (sexp ctx sexp_api_params(self, n), sexp condvar) {
+sexp sexp_condition_variable_signal (sexp ctx, sexp self, sexp_sint_t n, sexp condvar) {
   sexp ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
   for ( ; sexp_pairp(ls2); ls1=ls2, ls2=sexp_cdr(ls2))
     if (sexp_context_event(sexp_car(ls2)) == condvar) {
@@ -266,7 +266,7 @@ sexp sexp_condition_variable_signal (sexp ctx sexp_api_params(self, n), sexp con
   return SEXP_FALSE;
 }
 
-sexp sexp_condition_variable_broadcast (sexp ctx sexp_api_params(self, n), sexp condvar) {
+sexp sexp_condition_variable_broadcast (sexp ctx, sexp self, sexp_sint_t n, sexp condvar) {
   sexp res = SEXP_FALSE;
   while (sexp_truep(sexp_condition_variable_signal(ctx, self, n, condvar)))
     res = SEXP_TRUE;
@@ -285,7 +285,7 @@ static sexp_uint_t sexp_log2_of_pow2 (sexp_uint_t n) {
   return sexp_log2_lookup[((unsigned)n * 0x077CB531U) >> 27];
 }
 
-static sexp sexp_pop_signal (sexp ctx sexp_api_params(self, n)) {
+static sexp sexp_pop_signal (sexp ctx, sexp self, sexp_sint_t n) {
   int allsigs, restsigs, signum;
   if (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) == SEXP_ZERO) {
     return SEXP_FALSE;
@@ -298,7 +298,7 @@ static sexp sexp_pop_signal (sexp ctx sexp_api_params(self, n)) {
   }
 }
 
-static sexp sexp_get_signal_handler (sexp ctx sexp_api_params(self, n), sexp signum) {
+static sexp sexp_get_signal_handler (sexp ctx, sexp self, sexp_sint_t n, sexp signum) {
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, signum);
   return sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS), signum);
 }
@@ -311,7 +311,7 @@ static sexp sexp_make_pollfds (sexp ctx) {
   return res;
 }
 
-static sexp sexp_free_pollfds (sexp ctx sexp_api_params(self, n), sexp pollfds) {
+static sexp sexp_free_pollfds (sexp ctx, sexp self, sexp_sint_t n, sexp pollfds) {
   if (sexp_pollfds_fds(pollfds)) {
     free(sexp_pollfds_fds(pollfds));
     sexp_pollfds_fds(pollfds) = NULL;
@@ -350,7 +350,7 @@ static sexp sexp_insert_pollfd (sexp ctx, int fd, int events) {
 }
 
 /* block the current thread on the specified port */
-static sexp sexp_blocker (sexp ctx sexp_api_params(self, n), sexp port) {
+static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   int fd;
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
   /* register the fd */
@@ -364,7 +364,7 @@ static sexp sexp_blocker (sexp ctx sexp_api_params(self, n), sexp port) {
   return SEXP_VOID;
 }
 
-sexp sexp_scheduler (sexp ctx sexp_api_params(self, n), sexp root_thread) {
+sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
   int i, k;
   struct timeval tval;
   struct pollfd *pfds;
@@ -555,7 +555,7 @@ sexp sexp_lookup_named_type (sexp ctx, sexp env, const char *name) {
   return sexp_make_fixnum((sexp_typep(t)) ? sexp_type_tag(t) : -1);
 }
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp t;
   sexp_gc_var1(name);
   sexp_gc_preserve1(ctx, name);
@@ -566,8 +566,8 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
                          SEXP_ZERO, sexp_make_fixnum(sexp_sizeof_pollfds),
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
-                         SEXP_ZERO, SEXP_ZERO, (sexp_proc2)sexp_free_pollfds,
-                         NULL);
+                         SEXP_ZERO, SEXP_ZERO, NULL,
+                         (sexp_proc2)sexp_free_pollfds);
   if (sexp_typep(t)) {
     sexp_global(ctx, SEXP_G_THREADS_POLLFDS_ID) = sexp_make_fixnum(sexp_type_tag(t));
   }

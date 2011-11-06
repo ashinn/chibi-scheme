@@ -1,5 +1,5 @@
 /*  env.c -- SRFI-98 environment interface                    */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifdef __APPLE__
@@ -11,7 +11,7 @@ extern char **environ;
 
 #include <chibi/eval.h>
 
-sexp sexp_get_environment_variable (sexp ctx sexp_api_params(self, n), sexp str) {
+sexp sexp_get_environment_variable (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
   char *cstr;
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, self, SEXP_STRING, str);
@@ -19,7 +19,7 @@ sexp sexp_get_environment_variable (sexp ctx sexp_api_params(self, n), sexp str)
   return cstr ? sexp_c_string(ctx, cstr, -1) : SEXP_FALSE;
 }
 
-sexp sexp_get_environment_variables (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_get_environment_variables (sexp ctx, sexp self, sexp_sint_t n) {
   int i;
   char **env, *cname, *cval;
   sexp_gc_var3(res, name, val);
@@ -40,7 +40,7 @@ sexp sexp_get_environment_variables (sexp ctx sexp_api_params(self, n)) {
   return res;
 }
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp_define_foreign(ctx, env, "get-environment-variable", 1, sexp_get_environment_variable);
   sexp_define_foreign(ctx, env, "get-environment-variables", 0, sexp_get_environment_variables);
   return SEXP_VOID;

@@ -338,7 +338,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       if (!sexp_markedp(p)) {
         /* free p */
         finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
-        if (finalizer) finalizer(ctx sexp_api_pass(NULL, 1), p);
+        if (finalizer) finalizer(ctx, NULL, 1, p);
         sum_freed += size;
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */

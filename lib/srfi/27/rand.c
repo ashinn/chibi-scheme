@@ -1,5 +1,5 @@
 /*  rand.c -- rand_r/random_r interface                       */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <time.h>
@@ -37,7 +37,7 @@ typedef struct random_data sexp_random_t;
 static sexp_uint_t rs_type_id = 0;
 static sexp default_random_source;
 
-static sexp sexp_rs_random_integer (sexp ctx sexp_api_params(self, n), sexp rs, sexp bound) {
+static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
   sexp res;
   int32_t m;
 #if SEXP_USE_BIGNUMS
@@ -69,11 +69,11 @@ static sexp sexp_rs_random_integer (sexp ctx sexp_api_params(self, n), sexp rs, 
   return res;
 }
 
-static sexp sexp_random_integer (sexp ctx sexp_api_params(self, n), sexp bound) {
-  return sexp_rs_random_integer(ctx sexp_api_pass(self, n), default_random_source, bound);
+static sexp sexp_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp bound) {
+  return sexp_rs_random_integer(ctx, self, n, default_random_source, bound);
 }
 
-static sexp sexp_rs_random_real (sexp ctx sexp_api_params(self, n), sexp rs) {
+static sexp sexp_rs_random_real (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   int32_t res;
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
@@ -81,27 +81,27 @@ static sexp sexp_rs_random_real (sexp ctx sexp_api_params(self, n), sexp rs) {
   return sexp_make_flonum(ctx, (double)res / (double)RAND_MAX);
 }
 
-static sexp sexp_random_real (sexp ctx sexp_api_params(self, n)) {
-  return sexp_rs_random_real(ctx sexp_api_pass(self, n), default_random_source);
+static sexp sexp_random_real (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_rs_random_real(ctx, self, n, default_random_source);
 }
 
 #if SEXP_BSD || defined(__CYGWIN__)
 
-static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
+static sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res;
   res = sexp_alloc_tagged(ctx, sexp_sizeof_random, rs_type_id);
   *sexp_random_data(res) = 1;
   return res;
 }
 
-static sexp sexp_random_source_state_ref (sexp ctx sexp_api_params(self, n), sexp rs) {
+static sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else
     return sexp_make_integer(ctx, *sexp_random_data(rs));
 }
 
-static sexp sexp_random_source_state_set (sexp ctx sexp_api_params(self, n), sexp rs, sexp state) {
+static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else if (sexp_fixnump(state))
@@ -118,7 +118,7 @@ static sexp sexp_random_source_state_set (sexp ctx sexp_api_params(self, n), sex
 
 #else
 
-static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
+static sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res;
   sexp_gc_var1(state);
   sexp_gc_preserve1(ctx, state);
@@ -131,14 +131,14 @@ static sexp sexp_make_random_source (sexp ctx sexp_api_params(self, n)) {
   return res;
 }
 
-static sexp sexp_random_source_state_ref (sexp ctx sexp_api_params(self, n), sexp rs) {
+static sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else
     return sexp_substring(ctx, sexp_random_state(rs), ZERO, STATE_SIZE);
 }
 
-static sexp sexp_random_source_state_set (sexp ctx sexp_api_params(self, n), sexp rs, sexp state) {
+static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else if (! (sexp_stringp(state)
@@ -151,14 +151,14 @@ static sexp sexp_random_source_state_set (sexp ctx sexp_api_params(self, n), sex
 
 #endif
 
-static sexp sexp_random_source_randomize (sexp ctx sexp_api_params(self, n), sexp rs) {
+static sexp sexp_random_source_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   sexp_seed_random(time(NULL), rs);
   return SEXP_VOID;
 }
 
-static sexp sexp_random_source_pseudo_randomize (sexp ctx sexp_api_params(self, n), sexp rs, sexp seed) {
+static sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp seed) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   if (! sexp_fixnump(seed))
@@ -167,7 +167,7 @@ static sexp sexp_random_source_pseudo_randomize (sexp ctx sexp_api_params(self, 
   return SEXP_VOID;
 }
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
 
@@ -196,10 +196,10 @@ sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
   sexp_define_foreign(ctx, env, "random-source-randomize!", 1, sexp_random_source_randomize);
   sexp_define_foreign(ctx, env, "random-source-pseudo-randomize!", 2, sexp_random_source_pseudo_randomize);
 
-  default_random_source = op = sexp_make_random_source(ctx sexp_api_pass(NULL, 0));
+  default_random_source = op = sexp_make_random_source(ctx, NULL, 0);
   name = sexp_intern(ctx, "default-random-source", -1);
   sexp_env_define(ctx, env, name, default_random_source);
-  sexp_random_source_randomize(ctx sexp_api_pass(NULL, 0), default_random_source);
+  sexp_random_source_randomize(ctx, NULL, 0, default_random_source);
 
   sexp_gc_release2(ctx);
   return SEXP_VOID;

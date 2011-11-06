@@ -36,7 +36,7 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
   sexp_gc_release2(ctx);
 }
 
-static sexp sexp_get_env_cell (sexp ctx sexp_api_params(self, n), sexp env, sexp id) {
+static sexp sexp_get_env_cell (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp id) {
   sexp cell;
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   cell = sexp_env_cell(env, id, 0);
@@ -47,7 +47,7 @@ static sexp sexp_get_env_cell (sexp ctx sexp_api_params(self, n), sexp env, sexp
   return cell ? cell : SEXP_FALSE;
 }
 
-static sexp sexp_get_opcode_name (sexp ctx sexp_api_params(self, n), sexp op) {
+static sexp sexp_get_opcode_name (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   else if (! sexp_opcode_name(op))
@@ -74,7 +74,7 @@ static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
   return res;
 }
 
-static sexp sexp_get_opcode_ret_type (sexp ctx sexp_api_params(self, n), sexp op) {
+static sexp sexp_get_opcode_ret_type (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   sexp res;
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
@@ -86,7 +86,7 @@ static sexp sexp_get_opcode_ret_type (sexp ctx sexp_api_params(self, n), sexp op
   return sexp_translate_opcode_type(ctx, res);
 }
 
-static sexp sexp_get_opcode_param_type (sexp ctx sexp_api_params(self, n), sexp op, sexp k) {
+static sexp sexp_get_opcode_param_type (sexp ctx, sexp self, sexp_sint_t n, sexp op, sexp k) {
   sexp res;
   int p = sexp_unbox_fixnum(k);
   if (! sexp_opcodep(op))
@@ -115,31 +115,31 @@ static sexp sexp_get_opcode_param_type (sexp ctx sexp_api_params(self, n), sexp 
   return sexp_translate_opcode_type(ctx, res);
 }
 
-static sexp sexp_get_opcode_num_params (sexp ctx sexp_api_params(self, n), sexp op) {
+static sexp sexp_get_opcode_num_params (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   return sexp_make_fixnum(sexp_opcode_num_args(op));
 }
 
-static sexp sexp_get_opcode_variadic_p (sexp ctx sexp_api_params(self, n), sexp op) {
+static sexp sexp_get_opcode_variadic_p (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   return sexp_make_boolean(sexp_opcode_variadic_p(op));
 }
 
-static sexp sexp_get_port_line (sexp ctx sexp_api_params(self, n), sexp p) {
+static sexp sexp_get_port_line (sexp ctx, sexp self, sexp_sint_t n, sexp p) {
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, p);
   return sexp_make_fixnum(sexp_port_line(p));
 }
 
-static sexp sexp_set_port_line (sexp ctx sexp_api_params(self, n), sexp p, sexp i) {
+static sexp sexp_set_port_line (sexp ctx, sexp self, sexp_sint_t n, sexp p, sexp i) {
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, p);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   sexp_port_line(p) = sexp_unbox_fixnum(i);
   return SEXP_VOID;
 }
 
-static sexp sexp_type_of (sexp ctx sexp_api_params(self, n), sexp x) {
+static sexp sexp_type_of (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   if (sexp_pointerp(x))
     return sexp_object_type(ctx, x);
   else if (sexp_fixnump(x))
@@ -160,33 +160,33 @@ static sexp sexp_type_of (sexp ctx sexp_api_params(self, n), sexp x) {
     return sexp_type_by_index(ctx, SEXP_OBJECT);
 }
 
-static sexp sexp_type_name_op (sexp ctx sexp_api_params(self, n), sexp t) {
+static sexp sexp_type_name_op (sexp ctx, sexp self, sexp_sint_t n, sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
   return sexp_type_name(t);
 }
 
-static sexp sexp_type_cpl_op (sexp ctx sexp_api_params(self, n), sexp t) {
+static sexp sexp_type_cpl_op (sexp ctx, sexp self, sexp_sint_t n, sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
   return sexp_type_cpl(t);
 }
 
-static sexp sexp_type_slots_op (sexp ctx sexp_api_params(self, n), sexp t) {
+static sexp sexp_type_slots_op (sexp ctx, sexp self, sexp_sint_t n, sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
   return sexp_type_slots(t);
 }
 
-static sexp sexp_type_num_slots_op (sexp ctx sexp_api_params(self, n), sexp t) {
+static sexp sexp_type_num_slots_op (sexp ctx, sexp self, sexp_sint_t n, sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
   return sexp_truep(sexp_type_slots(t)) ? sexp_length(ctx, sexp_type_slots(t))
     : sexp_make_fixnum(sexp_type_field_eq_len_base(t));
 }
 
-static sexp sexp_type_printer_op (sexp ctx sexp_api_params(self, n), sexp t) {
+static sexp sexp_type_printer_op (sexp ctx, sexp self, sexp_sint_t n, sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
   return sexp_type_print(t) ? sexp_type_print(t) : SEXP_FALSE;
 }
 
-static sexp sexp_object_size (sexp ctx sexp_api_params(self, n), sexp x) {
+static sexp sexp_object_size (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   sexp t;
   if ((! sexp_pointerp(x)) || (sexp_pointer_tag(x) >= sexp_context_num_types(ctx)))
     return SEXP_ZERO;
@@ -194,7 +194,7 @@ static sexp sexp_object_size (sexp ctx sexp_api_params(self, n), sexp x) {
   return sexp_make_fixnum(sexp_type_size_of_object(t, x));
 }
 
-static sexp sexp_integer_to_immediate (sexp ctx sexp_api_params(self, n), sexp i, sexp dflt) {
+static sexp sexp_integer_to_immediate (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp dflt) {
   sexp x = (sexp)sexp_unbox_fixnum(i);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   if (sexp_pointerp(x))
@@ -202,7 +202,7 @@ static sexp sexp_integer_to_immediate (sexp ctx sexp_api_params(self, n), sexp i
   return x;
 }
 
-static sexp sexp_make_lambda_op (sexp ctx sexp_api_params(self, n), sexp name, sexp params, sexp body, sexp locals) {
+static sexp sexp_make_lambda_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp params, sexp body, sexp locals) {
   sexp res = sexp_alloc_type(ctx, lambda, SEXP_LAMBDA);
   sexp_lambda_name(res) = name;
   sexp_lambda_params(res) = params;
@@ -216,7 +216,7 @@ static sexp sexp_make_lambda_op (sexp ctx sexp_api_params(self, n), sexp name, s
   return res;
 }
 
-static sexp sexp_copy_lambda (sexp ctx sexp_api_params(self, n), sexp lambda) {
+static sexp sexp_copy_lambda (sexp ctx, sexp self, sexp_sint_t n, sexp lambda) {
   sexp res = sexp_alloc_type(ctx, lambda, SEXP_LAMBDA);
   sexp_lambda_name(res) = sexp_lambda_name(lambda);
   sexp_lambda_params(res) = sexp_lambda_params(lambda);
@@ -230,21 +230,21 @@ static sexp sexp_copy_lambda (sexp ctx sexp_api_params(self, n), sexp lambda) {
   return res;
 }
 
-static sexp sexp_make_set_op (sexp ctx sexp_api_params(self, n), sexp var, sexp value) {
+static sexp sexp_make_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp var, sexp value) {
   sexp res = sexp_alloc_type(ctx, set, SEXP_SET);
   sexp_set_var(res) = var;
   sexp_set_value(res) = value;
   return res;
 }
 
-static sexp sexp_make_ref_op (sexp ctx sexp_api_params(self, n), sexp name, sexp cell) {
+static sexp sexp_make_ref_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp cell) {
   sexp res = sexp_alloc_type(ctx, ref, SEXP_REF);
   sexp_ref_name(res) = name;
   sexp_ref_cell(res) = cell;
   return res;
 }
 
-static sexp sexp_make_cnd_op (sexp ctx sexp_api_params(self, n), sexp test, sexp pass, sexp fail) {
+static sexp sexp_make_cnd_op (sexp ctx, sexp self, sexp_sint_t n, sexp test, sexp pass, sexp fail) {
   sexp res = sexp_alloc_type(ctx, cnd, SEXP_CND);
   sexp_cnd_test(res) = test;
   sexp_cnd_pass(res) = pass;
@@ -252,19 +252,19 @@ static sexp sexp_make_cnd_op (sexp ctx sexp_api_params(self, n), sexp test, sexp
   return res;
 }
 
-static sexp sexp_make_seq (sexp ctx sexp_api_params(self, n), sexp ls) {
+static sexp sexp_make_seq (sexp ctx, sexp self, sexp_sint_t n, sexp ls) {
   sexp res = sexp_alloc_type(ctx, seq, SEXP_SEQ);
   sexp_seq_ls(res) = ls;
   return res;
 }
 
-static sexp sexp_make_lit_op (sexp ctx sexp_api_params(self, n), sexp value) {
+static sexp sexp_make_lit_op (sexp ctx, sexp self, sexp_sint_t n, sexp value) {
   sexp res = sexp_alloc_type(ctx, lit, SEXP_LIT);
   sexp_lit_value(res) = value;
   return res;
 }
 
-static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
+static sexp sexp_analyze_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
   sexp ctx2 = ctx;
   if (sexp_envp(e)) {
     ctx2 = sexp_make_child_context(ctx, NULL);
@@ -273,7 +273,7 @@ static sexp sexp_analyze_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) 
   return sexp_analyze(ctx2, x);
 }
 
-static sexp sexp_optimize (sexp ctx sexp_api_params(self, n), sexp x) {
+static sexp sexp_optimize (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   sexp_gc_var2(ls, res);
   sexp_gc_preserve2(ctx, ls, res);
   res = x;
@@ -285,7 +285,7 @@ static sexp sexp_optimize (sexp ctx sexp_api_params(self, n), sexp x) {
   return res;
 }
 
-static sexp sexp_gc_op (sexp ctx sexp_api_params(self, n)) {
+static sexp sexp_gc_op (sexp ctx, sexp self, sexp_sint_t n) {
   size_t sum_freed=0;
 #if SEXP_USE_BOEHM
   GC_gcollect();
@@ -295,7 +295,7 @@ static sexp sexp_gc_op (sexp ctx sexp_api_params(self, n)) {
   return sexp_make_unsigned_integer(ctx, sum_freed);
 }
 
-static sexp sexp_string_contains (sexp ctx sexp_api_params(self, n), sexp x, sexp y) {
+static sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   const char *res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, x);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, y);
@@ -303,7 +303,7 @@ static sexp sexp_string_contains (sexp ctx sexp_api_params(self, n), sexp x, sex
   return res ? sexp_make_fixnum(res-sexp_string_data(x)) : SEXP_FALSE;
 }
 
-static sexp sexp_error_string (sexp ctx sexp_api_params(self, n), sexp x) {
+static sexp sexp_error_string (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   int err;
   if (x == SEXP_FALSE) {
     err = errno;
@@ -314,14 +314,14 @@ static sexp sexp_error_string (sexp ctx sexp_api_params(self, n), sexp x) {
   return sexp_c_string(ctx, strerror(err), -1);
 }
 
-static sexp sexp_update_free_vars (sexp ctx sexp_api_params(self, n), sexp x) {
+static sexp sexp_update_free_vars (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return sexp_free_vars(ctx, x, SEXP_NULL);
 }
 
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp_define_type(ctx, "Object", SEXP_OBJECT);
   sexp_define_type(ctx, "Number", SEXP_NUMBER);
   sexp_define_type(ctx, "Bignum", SEXP_BIGNUM);
