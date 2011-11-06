@@ -116,7 +116,7 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
   return res;
 }
 
-static sexp sexp_object_compare_op (sexp ctx sexp_api_params(self, n), sexp a, sexp b) {
+static sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b) {
   return sexp_make_fixnum(sexp_object_compare(ctx, a, b));
 }
 
@@ -190,7 +190,7 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
   return res;
 }
 
-static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
+static sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
                          sexp less, sexp key) {
   sexp_sint_t len;
   sexp res, *data;
@@ -228,7 +228,7 @@ static sexp sexp_sort_x (sexp ctx sexp_api_params(self, n), sexp seq,
   return res;
 }
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp_define_foreign(ctx, env, "object-cmp", 2, sexp_object_compare_op);
   sexp_define_foreign_opt(ctx, env, "sort!", 3, sexp_sort_x, SEXP_FALSE);
   return SEXP_VOID;

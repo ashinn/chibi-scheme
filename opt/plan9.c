@@ -2,16 +2,16 @@
 /*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
-sexp sexp_rand (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_rand (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_fixnum(rand());
 }
 
-sexp sexp_srand (sexp ctx sexp_api_params(self, n), sexp seed) {
+sexp sexp_srand (sexp ctx, sexp self, sexp_sint_t n, sexp seed) {
   srand(sexp_unbox_fixnum(seed));
   return SEXP_VOID;
 }
 
-sexp sexp_file_exists_p (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_file_exists_p (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   int res;
   uchar statbuf[STATMAX];
   if (! sexp_stringp(path))
@@ -20,7 +20,7 @@ sexp sexp_file_exists_p (sexp ctx sexp_api_params(self, n), sexp path) {
   return (res < 0) ? SEXP_FALSE : SEXP_TRUE;
 }
 
-sexp sexp_fdopen (sexp ctx sexp_api_params(self, n), sexp fd, sexp mode) {
+sexp sexp_fdopen (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp mode) {
   FILE *f;
   if (! sexp_integerp(fd))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, fd);
@@ -36,17 +36,17 @@ sexp sexp_fdopen (sexp ctx sexp_api_params(self, n), sexp fd, sexp mode) {
     return sexp_make_input_port(ctx, f, SEXP_FALSE);
 }
 
-sexp sexp_fileno (sexp ctx sexp_api_params(self, n), sexp port) {
+sexp sexp_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   if (! sexp_portp(port))
     return sexp_type_exception(ctx, self, SEXP_IPORT, port);
   return sexp_make_fixnum(fileno(sexp_port_stream(port)));
 }
 
-sexp sexp_fork (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_fork (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_fixnum(fork());
 }
 
-sexp sexp_exec (sexp ctx sexp_api_params(self, n), sexp name, sexp args) {
+sexp sexp_exec (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp args) {
   int i, len = sexp_unbox_fixnum(sexp_length(ctx, args));
   char **argv = malloc((len+1)*sizeof(char*));
   for (i=0; i<len; i++, args=sexp_cdr(args))
@@ -56,30 +56,30 @@ sexp sexp_exec (sexp ctx sexp_api_params(self, n), sexp name, sexp args) {
   return SEXP_VOID;             /* won't really return */
 }
 
-void sexp_exits (sexp ctx sexp_api_params(self, n), sexp msg) {
+void sexp_exits (sexp ctx, sexp self, sexp_sint_t n, sexp msg) {
   exits(sexp_string_data(sexp_stringp(msg)
                          ? msg : sexp_write_to_string(ctx, msg)));
 }
 
-sexp sexp_dup (sexp ctx sexp_api_params(self, n), sexp oldfd, sexp newfd) {
+sexp sexp_dup (sexp ctx, sexp self, sexp_sint_t n, sexp oldfd, sexp newfd) {
   return sexp_make_fixnum(dup(sexp_unbox_fixnum(oldfd),
                                sexp_unbox_fixnum(newfd)));
 }
 
-sexp sexp_pipe (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_pipe (sexp ctx, sexp self, sexp_sint_t n) {
   int fds[2];
   pipe(fds);
   return sexp_list2(ctx, sexp_make_fixnum(fds[0]), sexp_make_fixnum(fds[1]));
 }
 
-sexp sexp_sleep (sexp ctx sexp_api_params(self, n), sexp msecs) {
+sexp sexp_sleep (sexp ctx, sexp self, sexp_sint_t n, sexp msecs) {
   if (! sexp_integerp(msecs))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, msecs);
   sleep(sexp_unbox_fixnum(msecs));
   return SEXP_VOID;
 }
 
-sexp sexp_getenv (sexp ctx sexp_api_params(self, n), sexp name) {
+sexp sexp_getenv (sexp ctx, sexp self, sexp_sint_t n, sexp name) {
   char *value;
   if (! sexp_stringp(name))
     return sexp_type_exception(ctx, self, SEXP_STRING, name);
@@ -87,28 +87,28 @@ sexp sexp_getenv (sexp ctx sexp_api_params(self, n), sexp name) {
   return ((! value) ? SEXP_FALSE : sexp_c_string(ctx, value, -1));
 }
 
-sexp sexp_getwd (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_getwd (sexp ctx, sexp self, sexp_sint_t n) {
   char buf[512];
   getwd(buf, 512);
   return sexp_c_string(ctx, buf, -1);
 }
 
-sexp sexp_chdir (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_chdir (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   if (! sexp_stringp(path))
     return sexp_type_exception(ctx, self, SEXP_STRING, path);
   chdir(sexp_string_data(path));
   return SEXP_VOID;
 }
 
-sexp sexp_getuser (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_getuser (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_c_string(ctx, getuser(), -1);
 }
 
-sexp sexp_sysname (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_sysname (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_c_string(ctx, sysname(), -1);
 }
 
-sexp sexp_wait (sexp ctx sexp_api_params(self, n)) { /* just return (pid msg) */
+sexp sexp_wait (sexp ctx, sexp self, sexp_sint_t n) { /* just return (pid msg) */
   Waitmsg *wmsg;
   sexp res;
   sexp_gc_var(ctx, msg, s_msg);
@@ -120,7 +120,7 @@ sexp sexp_wait (sexp ctx sexp_api_params(self, n)) { /* just return (pid msg) */
   return res;
 }
 
-sexp sexp_postnote (sexp ctx sexp_api_params(self, n), sexp pid, sexp note) {
+sexp sexp_postnote (sexp ctx, sexp self, sexp_sint_t n, sexp pid, sexp note) {
   if (! sexp_integerp(pid))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, pid);
   if (! sexp_stringp(note))
@@ -282,7 +282,7 @@ void sexp_9p_end (Srv *srv) {
   sexp_gc_release(ctx, ptr, s_ptr);
 }
 
-sexp sexp_postmountsrv (sexp ctx sexp_api_params(self, n), sexp ls, sexp name, sexp mtpt, sexp flags) {
+sexp sexp_postmountsrv (sexp ctx, sexp self, sexp_sint_t n, sexp ls, sexp name, sexp mtpt, sexp flags) {
   Srv s;
   struct sexp_plan9_srv p9s;
   if (! sexp_listp(ctx, ls))
@@ -316,35 +316,35 @@ sexp sexp_postmountsrv (sexp ctx sexp_api_params(self, n), sexp ls, sexp name, s
   return SEXP_UNDEF;
 }
 
-sexp sexp_9p_req_offset (sexp ctx sexp_api_params(self, n), sexp req) {
+sexp sexp_9p_req_offset (sexp ctx, sexp self, sexp_sint_t n, sexp req) {
   return sexp_make_integer(ctx, ((Req*)sexp_cpointer_value(req))->ifcall.offset);
 }
 
-sexp sexp_9p_req_count (sexp ctx sexp_api_params(self, n), sexp req) {
+sexp sexp_9p_req_count (sexp ctx, sexp self, sexp_sint_t n, sexp req) {
   return sexp_make_integer(ctx, ((Req*)sexp_cpointer_value(req))->ifcall.count);
 }
 
 #if 0
-sexp sexp_9p_req_path (sexp ctx sexp_api_params(self, n), sexp req) {
+sexp sexp_9p_req_path (sexp ctx, sexp self, sexp_sint_t n, sexp req) {
   return sexp_c_string(ctx, ((Req*)sexp_cpointer_value(req))->fid->qid.path, -1);
 }
 #endif
 
-sexp sexp_9p_req_fid (sexp ctx sexp_api_params(self, n), sexp req) {
+sexp sexp_9p_req_fid (sexp ctx, sexp self, sexp_sint_t n, sexp req) {
   return sexp_make_cpointer(ctx, SEXP_CPOINTER, ((Req*)sexp_cpointer_value(req))->fid, SEXP_FALSE, 0);
 }
 
-sexp sexp_9p_req_newfid (sexp ctx sexp_api_params(self, n), sexp req) {
+sexp sexp_9p_req_newfid (sexp ctx, sexp self, sexp_sint_t n, sexp req) {
   return sexp_make_cpointer(ctx, SEXP_CPOINTER, ((Req*)sexp_cpointer_value(req))->newfid, SEXP_FALSE, 0);
 }
 
-sexp sexp_9p_respond (sexp ctx sexp_api_params(self, n), sexp req, sexp err) {
+sexp sexp_9p_respond (sexp ctx, sexp self, sexp_sint_t n, sexp req, sexp err) {
   char *cerr = sexp_stringp(err) ? sexp_string_data(err) : nil;
   respond(sexp_cpointer_value(req), cerr);
   return SEXP_VOID;
 }
 
-sexp sexp_9p_responderror (sexp ctx sexp_api_params(self, n), sexp req) {
+sexp sexp_9p_responderror (sexp ctx, sexp self, sexp_sint_t n, sexp req) {
   responderror(sexp_cpointer_value(req));
   return SEXP_VOID;
 }

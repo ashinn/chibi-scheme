@@ -12,9 +12,9 @@ static sexp analyze (sexp ctx, sexp x);
 static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
 
 #if SEXP_USE_MODULES
-sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sexp env);
-sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file);
-sexp sexp_current_environment (sexp ctx sexp_api_params(self, n));
+sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, sexp env);
+sexp sexp_find_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file);
+sexp sexp_current_environment (sexp ctx, sexp self, sexp_sint_t n);
 #endif
 
 sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
@@ -148,7 +148,7 @@ sexp sexp_env_rename (sexp ctx, sexp env, sexp key, sexp value) {
 }
 #endif
 
-sexp sexp_env_exports_op (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_env_exports_op (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp ls;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
@@ -289,7 +289,7 @@ static void emit (sexp ctx, unsigned char c)  {
   sexp_bytecode_data(sexp_context_bc(ctx))[sexp_context_pos(ctx)++] = c;
 }
 
-sexp sexp_make_procedure_op (sexp ctx sexp_api_params(self, n), sexp flags,
+sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags,
                              sexp num_args, sexp bc, sexp vars) {
   sexp proc = sexp_alloc_type(ctx, procedure, SEXP_PROCEDURE);
   sexp_procedure_flags(proc) = (char) (sexp_uint_t) flags;
@@ -306,7 +306,7 @@ static sexp sexp_make_macro (sexp ctx, sexp p, sexp e) {
   return mac;
 }
 
-sexp sexp_make_synclo_op (sexp ctx sexp_api_params(self, n), sexp env, sexp fv, sexp expr) {
+sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv, sexp expr) {
   sexp res;
   if (! (sexp_symbolp(expr) || sexp_pairp(expr)))
     return expr;
@@ -464,15 +464,15 @@ sexp sexp_make_child_context (sexp ctx, sexp lambda) {
 
 /**************************** identifiers *****************************/
 
-sexp sexp_identifierp_op (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_identifierp_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return sexp_make_boolean(sexp_idp(x));
 }
 
-sexp sexp_syntactic_closure_expr_op (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_syntactic_closure_expr_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
 }
 
-sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
+sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   sexp_gc_var3(res, kar, kdr);
   sexp_gc_preserve3(ctx, res, kar, kdr);
  loop:
@@ -480,8 +480,8 @@ sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
     x = sexp_synclo_expr(x);
     goto loop;
   } else if (sexp_pairp(x) && sexp_truep(sexp_length(ctx, x))) {
-    kar = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_car(x));
-    kdr = sexp_strip_synclos(ctx sexp_api_pass(self, n), sexp_cdr(x));
+    kar = sexp_strip_synclos(ctx, self, n, sexp_car(x));
+    kdr = sexp_strip_synclos(ctx, self, n, sexp_cdr(x));
     res = sexp_cons(ctx, kar, kdr);
     sexp_pair_source(res) = sexp_pair_source(x);
     sexp_immutablep(res) = 1;
@@ -492,7 +492,7 @@ sexp sexp_strip_synclos (sexp ctx sexp_api_params(self, n), sexp x) {
   return res;
 }
 
-sexp sexp_identifier_eq_op (sexp ctx sexp_api_params(self, n), sexp e1, sexp id1, sexp e2, sexp id2) {
+sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell1, cell2;
   cell1 = sexp_env_cell(e1, id1, 0);
   if (!cell1 && sexp_synclop(id1)) {
@@ -857,7 +857,7 @@ static sexp analyze (sexp ctx, sexp object) {
             else
               res = sexp_make_lit(ctx,
                                   (sexp_core_code(op) == SEXP_CORE_QUOTE) ?
-                                  sexp_strip_synclos(ctx  sexp_api_pass(NULL, 1), sexp_cadr(x)) :
+                                  sexp_strip_synclos(ctx , NULL, 1, sexp_cadr(x)) :
                                   sexp_cadr(x));
             break;
           case SEXP_CORE_DEFINE_SYNTAX:
@@ -996,12 +996,12 @@ sexp sexp_free_vars (sexp ctx, sexp x, sexp fv) {
 
 /************************ library procedures **************************/
 
-sexp sexp_exception_type_op (sexp ctx sexp_api_params(self, n), sexp exn) {
+sexp sexp_exception_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn) {
   sexp_assert_type(ctx, sexp_exceptionp, SEXP_EXCEPTION, exn);
   return sexp_exception_kind(exn);
 }
 
-sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_input_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   FILE *in;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
   in = fopen(sexp_string_data(path), "r");
@@ -1013,7 +1013,7 @@ sexp sexp_open_input_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   return sexp_make_input_port(ctx, in, path);
 }
 
-sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_output_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   FILE *out;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
   out = fopen(sexp_string_data(path), "w");
@@ -1022,23 +1022,23 @@ sexp sexp_open_output_file_op (sexp ctx sexp_api_params(self, n), sexp path) {
   return sexp_make_output_port(ctx, out, path);
 }
 
-sexp sexp_open_binary_input_file (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_binary_input_file (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   sexp res = sexp_open_input_file_op(ctx, self, n, path);
   if (sexp_portp(res)) sexp_port_binaryp(res) = 1;
   return res;
 }
 
-sexp sexp_open_binary_output_file (sexp ctx sexp_api_params(self, n), sexp path) {
+sexp sexp_open_binary_output_file (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   sexp res = sexp_open_output_file_op(ctx, self, n, path);
   if (sexp_portp(res)) sexp_port_binaryp(res) = 1;
   return res;
 }
 
-sexp sexp_close_port_op (sexp ctx sexp_api_params(self, n), sexp port) {
+sexp sexp_close_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
   if (! sexp_port_openp(port))
     return sexp_user_exception(ctx, self, "port already closed", port);
-  return sexp_finalize_port(ctx sexp_api_pass(self, n), port);
+  return sexp_finalize_port(ctx, self, n, port);
 }
 
 #if SEXP_USE_STATIC_LIBS
@@ -1063,7 +1063,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   if (! entry)
     return sexp_compile_error(ctx, "couldn't find builtin library", file);
 
-  return entry->init(ctx sexp_api_pass(NULL, 1), env);
+  return entry->init(ctx, NULL, 1, env);
 }
 #else
 #define sexp_find_static_library(path) NULL
@@ -1080,7 +1080,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
     FreeLibrary(handle);
     return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
   }
-  return init(ctx sexp_api_pass(NULL, 1), env);
+  return init(ctx, NULL, 1, env);
 }
 #else
 static sexp sexp_make_dl (sexp ctx, sexp file, void* handle) {
@@ -1103,7 +1103,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_gc_preserve2(ctx, res, old_dl);
   old_dl = sexp_context_dl(ctx);
   sexp_context_dl(ctx) = sexp_make_dl(ctx, file, handle);
-  res = init(ctx sexp_api_pass(NULL, 1), env);
+  res = init(ctx, NULL, 1, env);
   sexp_context_dl(ctx) = old_dl;
   sexp_gc_release2(ctx);
   return res;
@@ -1112,7 +1112,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #endif
 #endif
 
-sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
+sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   char *suffix;
 #endif
@@ -1167,7 +1167,7 @@ sexp sexp_load_op (sexp ctx sexp_api_params(self, n), sexp source, sexp env) {
   return res;
 }
 
-sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp priority) {
+sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sexp priority) {
   sexp_assert_type(ctx, sexp_applicablep, SEXP_PROCEDURE, f);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, priority);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), SEXP_VOID);
@@ -1200,7 +1200,7 @@ sexp sexp_register_optimization (sexp ctx sexp_api_params(self, n), sexp f, sexp
 #endif
 
 #define define_math_op(name, cname, t, f)                               \
-  sexp name (sexp ctx sexp_api_params(self, n), sexp z) {               \
+  sexp name (sexp ctx, sexp self, sexp_sint_t n, sexp z) {               \
     double d;                                                           \
     if (sexp_flonump(z))                                                \
       d = sexp_flonum_value(z);                                         \
@@ -1227,7 +1227,7 @@ define_math_op(sexp_trunc, trunc, 0, sexp_complex_dummy)
 define_math_op(sexp_floor, floor, 0, sexp_complex_dummy)
 define_math_op(sexp_ceiling, ceil, 0, sexp_complex_dummy)
 
-sexp sexp_sqrt (sexp ctx sexp_api_params(self, n), sexp z) {
+sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 #if SEXP_USE_COMPLEX
   int negativep = 0;
 #endif
@@ -1278,7 +1278,7 @@ sexp sexp_generic_expt (sexp ctx, sexp x, sexp_sint_t e) {
 }
 #endif
 
-sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
+sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
   long double f, x1, e1;
   sexp res;
 #if SEXP_USE_COMPLEX
@@ -1353,28 +1353,28 @@ sexp sexp_expt_op (sexp ctx sexp_api_params(self, n), sexp x, sexp e) {
 }
 
 #if SEXP_USE_RATIOS
-sexp sexp_ratio_numerator_op (sexp ctx sexp_api_params(self, n), sexp rat) {
+sexp sexp_ratio_numerator_op (sexp ctx, sexp self, sexp_sint_t n, sexp rat) {
   sexp_assert_type(ctx, sexp_ratiop, SEXP_RATIO, rat);
   return sexp_ratio_numerator(rat);
 }
-sexp sexp_ratio_denominator_op (sexp ctx sexp_api_params(self, n), sexp rat) {
+sexp sexp_ratio_denominator_op (sexp ctx, sexp self, sexp_sint_t n, sexp rat) {
   sexp_assert_type(ctx, sexp_ratiop, SEXP_RATIO, rat);
   return sexp_ratio_denominator(rat);
 }
 #endif
 
 #if SEXP_USE_COMPLEX
-sexp sexp_complex_real_op (sexp ctx sexp_api_params(self, n), sexp cpx) {
+sexp sexp_complex_real_op (sexp ctx, sexp self, sexp_sint_t n, sexp cpx) {
   sexp_assert_type(ctx, sexp_complexp, SEXP_COMPLEX, cpx);
   return sexp_complex_real(cpx);
 }
-sexp sexp_complex_imag_op (sexp ctx sexp_api_params(self, n), sexp cpx) {
+sexp sexp_complex_imag_op (sexp ctx, sexp self, sexp_sint_t n, sexp cpx) {
   sexp_assert_type(ctx, sexp_complexp, SEXP_COMPLEX, cpx);
   return sexp_complex_imag(cpx);
 }
 #endif
 
-sexp sexp_string_cmp_op (sexp ctx sexp_api_params(self, n), sexp str1, sexp str2, sexp ci) {
+sexp sexp_string_cmp_op (sexp ctx, sexp self, sexp_sint_t n, sexp str1, sexp str2, sexp ci) {
   sexp_sint_t len1, len2, len, diff;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str1);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str2);
@@ -1433,11 +1433,11 @@ sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
     return sexp_make_character(((p[0]&0x0F)<<16) + ((p[1]&0x3F)<<6) + ((p[2]&0x3F)<<6) + (p[2]&0x3F));
 }
 
-sexp sexp_string_utf8_index_ref (sexp ctx sexp_api_params(self, n), sexp str, sexp i) {
+sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i) {
   sexp off;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
-  off = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, i);
+  off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
   return sexp_string_utf8_ref(ctx, str, off);
 }
@@ -1493,12 +1493,12 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
   sexp_utf8_encode_char(p, new_len, c);
 }
 
-sexp sexp_string_utf8_index_set (sexp ctx sexp_api_params(self, n), sexp str, sexp i, sexp ch) {
+sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i, sexp ch) {
   sexp off;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
-  off = sexp_string_index_to_offset(ctx sexp_api_pass(self, n), str, i);
+  off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
   sexp_string_utf8_set(ctx, str, off, ch);
   return SEXP_VOID;
@@ -1508,7 +1508,7 @@ sexp sexp_string_utf8_index_set (sexp ctx sexp_api_params(self, n), sexp str, se
 #endif
 
 #if SEXP_USE_AUTO_FORCE
-sexp sexp_make_promise (sexp ctx sexp_api_params(self, n), sexp done, sexp val) {
+sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, sexp val) {
   sexp res = sexp_alloc_type(ctx, promise, SEXP_PROMISE);
   sexp_promise_donep(res) = sexp_unbox_boolean(done);
   sexp_promise_value(res) = val;
@@ -1532,7 +1532,7 @@ sexp sexp_make_promise (sexp ctx sexp_api_params(self, n), sexp done, sexp val) 
 
 #if SEXP_USE_TYPE_DEFS
 
-sexp sexp_type_slot_offset_op (sexp ctx  sexp_api_params(self, n), sexp type, sexp slot) {
+sexp sexp_type_slot_offset_op (sexp ctx , sexp self, sexp_sint_t n, sexp type, sexp slot) {
   sexp cpl, slots, *v;
   int i, offset=0, len;
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, type);
@@ -1552,7 +1552,7 @@ sexp sexp_type_slot_offset_op (sexp ctx  sexp_api_params(self, n), sexp type, se
   return SEXP_FALSE;
 }
 
-sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
+sexp sexp_make_type_predicate_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type) {
   if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
   return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
@@ -1560,7 +1560,7 @@ sexp sexp_make_type_predicate_op (sexp ctx sexp_api_params(self, n), sexp name, 
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
 }
 
-sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type) {
+sexp sexp_make_constructor_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type) {
   sexp_uint_t type_size;
   if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
@@ -1571,7 +1571,7 @@ sexp sexp_make_constructor_op (sexp ctx sexp_api_params(self, n), sexp name, sex
                           sexp_make_fixnum(type_size), NULL);
 }
 
-sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
+sexp sexp_make_getter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type, sexp index) {
   if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
   if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, type);
@@ -1583,7 +1583,7 @@ sexp sexp_make_getter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp typ
                      type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
-sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp type, sexp index) {
+sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type, sexp index) {
   sexp res;
   if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
   if ((! sexp_fixnump(type))  || (sexp_unbox_fixnum(type) < 0))
@@ -1601,8 +1601,8 @@ sexp sexp_make_setter_op (sexp ctx sexp_api_params(self, n), sexp name, sexp typ
 #endif
 
 #if SEXP_USE_PROFILE_VM
-static sexp sexp_reset_vm_profile (sexp ctx sexp_api_params(self, n));
-static sexp sexp_print_vm_profile (sexp ctx sexp_api_params(self, n));
+static sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
+static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
 #endif
 
 #include "opcodes.c"
@@ -1722,7 +1722,7 @@ static struct sexp_core_form_struct core_forms[] = {
   {SEXP_CORE_LETREC_SYNTAX, (sexp)"letrec-syntax"},
 };
 
-sexp sexp_make_env_op (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_make_env_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp e = sexp_alloc_type(ctx, env, SEXP_ENV);
   sexp_env_lambda(e) = NULL;
   sexp_env_parent(e) = NULL;
@@ -1733,7 +1733,7 @@ sexp sexp_make_env_op (sexp ctx sexp_api_params(self, n)) {
   return e;
 }
 
-sexp sexp_make_null_env_op (sexp ctx sexp_api_params(self, n), sexp version) {
+sexp sexp_make_null_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version) {
   sexp_uint_t i;
   sexp_gc_var2(e, core);
   sexp_gc_preserve2(ctx, e, core);
@@ -1824,21 +1824,21 @@ sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
 }
 
 #if SEXP_USE_MODULES
-sexp sexp_find_module_file_op (sexp ctx sexp_api_params(self, n), sexp file) {
+sexp sexp_find_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, file);
   return sexp_find_module_file(ctx, sexp_string_data(file));
 }
-sexp sexp_load_module_file_op (sexp ctx sexp_api_params(self, n), sexp file, sexp env) {
+sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, sexp env) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, file);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   return sexp_load_module_file(ctx, sexp_string_data(file), env);
 }
-sexp sexp_current_environment (sexp ctx sexp_api_params(self, n)) {
+sexp sexp_current_environment (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_context_env(ctx);
 }
 #endif
 
-sexp sexp_add_module_directory_op (sexp ctx sexp_api_params(self, n), sexp dir, sexp appendp) {
+sexp sexp_add_module_directory_op (sexp ctx, sexp self, sexp_sint_t n, sexp dir, sexp appendp) {
   sexp ls;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, dir);
   if (sexp_truep(appendp)) {
@@ -1980,7 +1980,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   return sexp_exceptionp(tmp) ? tmp : e;
 }
 
-sexp sexp_make_standard_env_op (sexp ctx sexp_api_params(self, n), sexp version) {
+sexp sexp_make_standard_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version) {
   sexp_gc_var1(env);
   sexp_gc_preserve1(ctx, env);
   env = sexp_make_primitive_env(ctx, version);
@@ -1995,7 +1995,7 @@ sexp sexp_make_standard_env_op (sexp ctx sexp_api_params(self, n), sexp version)
 #define sexp_same_bindingp(x, y) (sexp_env_value(x) == sexp_env_value(y))
 #endif
 
-sexp sexp_env_import_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, sexp ls, sexp immutp) {
+sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from, sexp ls, sexp immutp) {
   sexp oldname, newname;
   sexp_gc_var2(value, oldcell);
   sexp_gc_preserve2(ctx, value, oldcell);
@@ -2048,7 +2048,7 @@ sexp sexp_env_import_op (sexp ctx sexp_api_params(self, n), sexp to, sexp from, 
 
 /************************** eval interface ****************************/
 
-sexp sexp_compile_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
+sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_gc_var3(ast, vec, res);
   sexp ctx2;
   if (! env) env = sexp_context_env(ctx);
@@ -2075,7 +2075,7 @@ sexp sexp_compile_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
   return res;
 }
 
-sexp sexp_eval_op (sexp ctx sexp_api_params(self, n), sexp obj, sexp env) {
+sexp sexp_eval_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_sint_t top;
   sexp ctx2;
   sexp_gc_var2(res, params);

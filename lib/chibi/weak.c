@@ -1,6 +1,6 @@
-/*  weak.c -- weak pointers and ephemerons               */
-/*  Copyright (c) 2010 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  weak.c -- weak pointers and ephemerons                    */
+/*  Copyright (c) 2010-2011 Alex Shinn.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
 
@@ -12,7 +12,7 @@ static int sexp_ephemeron_id, sexp_weak_vector_id;
 
 #define sexp_weak_vector_p(x) sexp_check_tag(x, sexp_weak_vector_id)
 
-sexp sexp_make_ephemeron (sexp ctx sexp_api_params(self, n), sexp key, sexp value) {
+sexp sexp_make_ephemeron (sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
   sexp res = sexp_alloc_type(ctx, pair, sexp_ephemeron_id);
   if (! sexp_exceptionp(res)) {
     sexp_ephemeron_key(res) = key;
@@ -21,11 +21,11 @@ sexp sexp_make_ephemeron (sexp ctx sexp_api_params(self, n), sexp key, sexp valu
   return res;
 }
 
-sexp sexp_ephemeron_brokenp_op (sexp ctx sexp_api_params(self, n), sexp eph) {
+sexp sexp_ephemeron_brokenp_op (sexp ctx, sexp self, sexp_sint_t n, sexp eph) {
   return sexp_make_boolean(sexp_brokenp(eph));
 }
 
-sexp sexp_make_weak_vector (sexp ctx sexp_api_params(self, n), sexp len) {
+sexp sexp_make_weak_vector (sexp ctx, sexp self, sexp_sint_t n, sexp len) {
   sexp vec, *x;
   int i, clen = sexp_unbox_fixnum(len);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, len);
@@ -39,25 +39,25 @@ sexp sexp_make_weak_vector (sexp ctx sexp_api_params(self, n), sexp len) {
   return vec;
 }
 
-sexp sexp_weak_vector_length (sexp ctx sexp_api_params(self, n), sexp v) {
+sexp sexp_weak_vector_length (sexp ctx, sexp self, sexp_sint_t n, sexp v) {
   sexp_assert_type(ctx, sexp_weak_vector_p, sexp_weak_vector_id, v);
   return sexp_make_fixnum(sexp_vector_length(v));
 }
 
-sexp sexp_weak_vector_ref (sexp ctx sexp_api_params(self, n), sexp v, sexp k) {
+sexp sexp_weak_vector_ref (sexp ctx, sexp self, sexp_sint_t n, sexp v, sexp k) {
   sexp_assert_type(ctx, sexp_weak_vector_p, sexp_weak_vector_id, v);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, k);
   return sexp_vector_ref(v, k);
 }
 
-sexp sexp_weak_vector_set (sexp ctx sexp_api_params(self, n), sexp v, sexp k, sexp x) {
+sexp sexp_weak_vector_set (sexp ctx, sexp self, sexp_sint_t n, sexp v, sexp k, sexp x) {
   sexp_assert_type(ctx, sexp_weak_vector_p, sexp_weak_vector_id, v);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, k);
   sexp_vector_set(v, k, x);
   return SEXP_VOID;
 }
 
-sexp sexp_init_library (sexp ctx sexp_api_params(self, n), sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp v;
   sexp_gc_var3(name, t, op);
   sexp_gc_preserve3(ctx, name, t, op);
