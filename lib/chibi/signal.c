@@ -1,5 +1,5 @@
 /*  signal.c -- process signals interface                     */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #define SEXP_MAX_SIGNUM 32
@@ -64,15 +64,20 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
 
 #if SEXP_BSD
 
-#include <sys/sysctl.h>
 #include <sys/proc.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
 
 static sexp sexp_pid_cmdline (sexp ctx, int pid) {
-  unsigned long reslen = sizeof(struct kinfo_proc);
+  size_t reslen = sizeof(struct kinfo_proc);
   struct kinfo_proc res;
   int name[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
   if (sysctl(name, 4, &res, &reslen, NULL, 0) >= 0) {
+#ifdef __APPLE__
     return sexp_c_string(ctx, res.kp_proc.p_comm, -1);
+#else
+    return sexp_c_string(ctx, res.ki_comm, -1);
+#endif
   } else {
     return SEXP_FALSE;
   }

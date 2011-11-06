@@ -1,6 +1,7 @@
 
 (c-system-include "sys/types.h")
 (c-system-include "sys/socket.h")
+(c-system-include "netinet/in.h")
 (c-system-include "netdb.h")
 
 (define-c-int-type socklen_t)
