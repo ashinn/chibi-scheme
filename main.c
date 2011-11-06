@@ -255,7 +255,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
     } while (0)
 
 void run_main (int argc, char **argv) {
-  char *arg, *impmod, *p, *prefix, *suffix;
+  char *arg, *impmod, *p, *prefix=NULL, *suffix=NULL;
   sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
   sexp_sint_t i, j, c, len, quit=0, print=0, init_loaded=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
