@@ -9,6 +9,8 @@
 
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
+#define sexp_environment_prefix "(environment '("
+#define sexp_environment_suffix "))"
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
 
@@ -253,16 +255,16 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
     } while (0)
 
 void run_main (int argc, char **argv) {
-  char *arg, *impmod, *p;
+  char *arg, *impmod, *p, *prefix, *suffix;
   sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
-  sexp_sint_t i, j, len, quit=0, print=0, init_loaded=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
+  sexp_sint_t i, j, c, len, quit=0, print=0, init_loaded=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp_gc_var2(tmp, args);
   args = SEXP_NULL;
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
-    switch (argv[i][1]) {
+    switch ((c=argv[i][1])) {
     case 'e':
     case 'p':
       load_init();
@@ -284,20 +286,25 @@ void run_main (int argc, char **argv) {
       check_nonull_arg('l', arg);
       check_exception(ctx, sexp_load_module_file(ctx, arg, env));
       break;
+    case 'x':
+      prefix = sexp_environment_prefix;
+      suffix = sexp_environment_suffix;
     case 'm':
+      if (c != 'x') {prefix = sexp_import_prefix; suffix = sexp_import_suffix;}
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      check_nonull_arg('m', arg);
-      len = strlen(arg)+strlen(sexp_import_prefix)+strlen(sexp_import_suffix);
+      check_nonull_arg(c, arg);
+      len = strlen(arg)+strlen(prefix)+strlen(suffix);
       impmod = (char*) malloc(len+1);
-      strcpy(impmod, sexp_import_prefix);
-      strcpy(impmod+strlen(sexp_import_prefix), arg);
-      strcpy(impmod+len-+strlen(sexp_import_suffix), sexp_import_suffix);
+      strcpy(impmod, prefix);
+      strcpy(impmod+strlen(prefix), arg);
+      strcpy(impmod+len-+strlen(suffix), suffix);
       impmod[len] = '\0';
       for (p=impmod; *p; p++)
         if (*p == '.') *p=' ';
-      check_exception(ctx, sexp_eval_string(ctx, impmod, -1, env));
+      tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, (c=='x' ? sexp_global(ctx, SEXP_G_META_ENV) : env)));
       free(impmod);
+      if (c == 'x') sexp_context_env(ctx) = env = tmp;
       break;
     case 'q':
       init_context();
