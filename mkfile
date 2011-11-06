@@ -13,9 +13,8 @@ HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/features.h includ
 </sys/src/cmd/mkone
 
 include/chibi/install.h: mkfile
-	echo '#define sexp_default_module_dir "'$MODDIR'"' > include/chibi/install.h
+	echo '#define sexp_default_module_path "'$MODDIR'"' > include/chibi/install.h
 	echo '#define sexp_so_extension ""' >> include/chibi/install.h
-	echo '#define sexp_default_module_dir "'$MODDIR'"' >> include/chibi/install.h
 	echo '#define sexp_platform "plan9"' >> include/chibi/install.h
 	echo '#define sexp_version "'`{cat VERSION}'"' >> include/chibi/install.h
 	echo '#define sexp_release_name "'`{cat RELEASE}'"' >> include/chibi/install.h
