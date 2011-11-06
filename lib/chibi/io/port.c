@@ -124,7 +124,7 @@ static int sexp_cookie_cleaner (void *cookie) {
   return (sexp_exceptionp(res) ? -1 : sexp_truep(res));
 }
 
-#if ! SEXP_BSD
+#if (SEXP_USE_STRING_STREAMS && !SEXP_BSD)
 
 static cookie_io_functions_t sexp_cookie = {
   .read  = (cookie_read_function_t*)sexp_cookie_reader,
