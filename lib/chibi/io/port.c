@@ -19,6 +19,7 @@
 #define sexp_cookie_seek_set(vec, x) sexp_vector_set((sexp)vec, SEXP_FOUR, x)
 #define sexp_cookie_close_set(vec, x) sexp_vector_set((sexp)vec, SEXP_FIVE, x)
 
+#if SEXP_USE_STRING_STREAMS
 #if ! SEXP_USE_BOEHM
 static int in_heap_p (sexp_heap h, sexp p) {
   for ( ; h; h = h->next)
@@ -124,7 +125,7 @@ static int sexp_cookie_cleaner (void *cookie) {
   return (sexp_exceptionp(res) ? -1 : sexp_truep(res));
 }
 
-#if (SEXP_USE_STRING_STREAMS && !SEXP_BSD)
+#if !SEXP_BSD
 
 static cookie_io_functions_t sexp_cookie = {
   .read  = (cookie_read_function_t*)sexp_cookie_reader,
@@ -141,8 +142,6 @@ static cookie_io_functions_t sexp_cookie_no_seek = {
 };
 
 #endif
-
-#if SEXP_USE_STRING_STREAMS
 
 static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
                                    sexp read, sexp write,

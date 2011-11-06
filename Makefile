@@ -259,6 +259,9 @@ test-flonums: chibi-scheme$(EXE)
 test-hash: chibi-scheme$(EXE) lib/srfi/69/hash$(SO)
 	$(CHIBI) tests/hash-tests.scm
 
+test-io: chibi-scheme$(EXE) lib/chibi/io/io$(SO)
+	$(CHIBI) tests/io-tests.scm
+
 test-match: chibi-scheme$(EXE)
 	$(CHIBI) tests/match-tests.scm
 
