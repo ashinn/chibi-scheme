@@ -555,9 +555,12 @@ sexp sexp_lookup_named_type (sexp ctx, sexp env, const char *name) {
   return sexp_make_fixnum((sexp_typep(t)) ? sexp_type_tag(t) : -1);
 }
 
-sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
   sexp t;
   sexp_gc_var1(name);
+  if (!(sexp_version_compatible(ctx, version, sexp_version)
+        && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
+    return sexp_global(ctx, SEXP_G_ABI_ERROR);
   sexp_gc_preserve1(ctx, name);
 
   sexp_global(ctx, SEXP_G_THREADS_MUTEX_ID) = sexp_lookup_named_type(ctx, env, "Mutex");

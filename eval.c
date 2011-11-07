@@ -1071,16 +1071,16 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #ifdef __MINGW32__
 #include <windows.h>
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
-  sexp_proc2 init;
+  sexp_proc4 init;
   HINSTANCE handle = LoadLibraryA(sexp_string_data(file));
   if(!handle)
     return sexp_compile_error(ctx, "couldn't load dynamic library", file);
-  init = (sexp_proc2) GetProcAddress(handle, "sexp_init_library");
+  init = (sexp_proc4) GetProcAddress(handle, "sexp_init_library");
   if(!init) {
     FreeLibrary(handle);
     return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
   }
-  return init(ctx, NULL, 1, env);
+  return init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
 }
 #else
 static sexp sexp_make_dl (sexp ctx, sexp file, void* handle) {
@@ -1090,7 +1090,7 @@ static sexp sexp_make_dl (sexp ctx, sexp file, void* handle) {
   return res;
 }
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
-  sexp_proc2 init;
+  sexp_proc4 init;
   sexp_gc_var2(res, old_dl);
   void *handle = dlopen(sexp_string_data(file), RTLD_LAZY);
   if (! handle)
@@ -1103,7 +1103,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_gc_preserve2(ctx, res, old_dl);
   old_dl = sexp_context_dl(ctx);
   sexp_context_dl(ctx) = sexp_make_dl(ctx, file, handle);
-  res = init(ctx, NULL, 1, env);
+  res = init(ctx, NULL, 3, env, (sexp)sexp_version, (sexp)SEXP_ABI_IDENTIFIER);
   sexp_context_dl(ctx) = old_dl;
   sexp_gc_release2(ctx);
   return res;

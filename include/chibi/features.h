@@ -132,10 +132,6 @@
 /*   Automatically disabled if you've disabled flonums. */
 /* #define SEXP_USE_MATH 0 */
 
-/* uncomment this to disable the self and n parameters to primitives */
-/*   This is the old style API. */
-/* #define SEXP_USE_SELF_PARAMETER 0 */
-
 /* uncomment this to disable warning about references to undefined variables */
 /*   This is something of a hack, but can be quite useful. */
 /*   It's very fast and doesn't involve any separate analysis */
@@ -601,3 +597,87 @@
 #else
 #define SEXP_API
 #endif
+
+/************************************************************************/
+/* Feature signature.  Used for image files and dynamically loaded      */
+/* libraries to verify they are compatible with the compiled options .  */
+/************************************************************************/
+
+typedef char sexp_abi_identifier_t[8];
+
+#if SEXP_USE_BOEHM
+#define SEXP_ABI_GC "b"
+#elif (SEXP_USE_HEADER_MAGIC && SEXP_USE_TRACK_ALLOC_SOURCE)
+#define SEXP_ABI_GC "d"
+#elif SEXP_USE_HEADER_MAGIC
+#define SEXP_ABI_GC "m"
+#elif SEXP_USE_TRACK_ALLOC_SOURCE
+#define SEXP_ABI_GC "s"
+#else
+#define SEXP_ABI_GC "c"
+#endif
+
+#if SEXP_USE_NATIVE_X86
+#define SEXP_ABI_BACKEND "x"
+#else
+#define SEXP_ABI_BACKEND "v"
+#endif
+
+#if (SEXP_USE_RESERVE_OPCODE && SEXP_USE_AUTO_FORCE)
+#define SEXP_ABI_INSTRUCTIONS "*"
+#elif SEXP_USE_RESERVE_OPCODE
+#define SEXP_ABI_INSTRUCTIONS "r"
+#elif SEXP_USE_AUTO_FORCE
+#define SEXP_ABI_INSTRUCTIONS "f"
+#else
+#define SEXP_ABI_INSTRUCTIONS "-"
+#endif
+
+#if SEXP_USE_GREEN_THREADS
+#define SEXP_ABI_THREADS "g"
+#else
+#define SEXP_ABI_THREADS "-"
+#endif
+
+#if SEXP_USE_MODULES
+#define SEXP_ABI_MODULES "m"
+#else
+#define SEXP_ABI_MODULES "-"
+#endif
+
+#if (SEXP_USE_COMPLEX && SEXP_USE_RATIOS)
+#define SEXP_ABI_NUMBERS "*"
+#elif SEXP_USE_COMPLEX
+#define SEXP_ABI_NUMBERS "c"
+#elif SEXP_USE_RATIOS
+#define SEXP_ABI_NUMBERS "r"
+#elif SEXP_USE_BIGNUMS
+#define SEXP_ABI_NUMBERS "b"
+#elif SEXP_USE_INFINITIES
+#define SEXP_ABI_NUMBERS "i"
+#elif SEXP_USE_FLONUMS
+#define SEXP_ABI_NUMBERS "f"
+#else
+#define SEXP_ABI_NUMBERS "-"
+#endif
+
+#if SEXP_USE_UTF8_STRINGS
+#define SEXP_ABI_STRINGS "u"
+#elif SEXP_USE_PACKED_STRINGS
+#define SEXP_ABI_STRINGS "p"
+#else
+#define SEXP_ABI_STRINGS "-"
+#endif
+
+#if SEXP_USE_HUFF_SYMS
+#define SEXP_ABI_SYMS "h"
+#else
+#define SEXP_ABI_SYMS "-"
+#endif
+
+#define SEXP_ABI_IDENTIFIER \
+  (SEXP_ABI_GC SEXP_ABI_BACKEND SEXP_ABI_INSTRUCTIONS SEXP_ABI_THREADS \
+   SEXP_ABI_MODULES SEXP_ABI_NUMBERS SEXP_ABI_STRINGS SEXP_ABI_SYMS)
+
+#define sexp_version_compatible(ctx, subver, genver) (strcmp((subver), (genver)) == 0)
+#define sexp_abi_compatible(ctx, subabi, genabi) (strcmp((subabi), (genabi)) == 0)
