@@ -131,7 +131,7 @@
   (newline)
   (display "typedef struct {\n")
   (display "  const char *name;\n")
-  (display "  sexp (*init)(sexp ctx, sexp self, sexp_sint_t n, sexp env);\n")
+  (display "  sexp (*init)(sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi);\n")
   (display "} sexp_library_entry_t;\n")
   (newline)
   (display "static sexp_library_entry_t sexp_static_libraries[] = {\n")

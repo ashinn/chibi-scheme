@@ -1042,6 +1042,7 @@ enum sexp_context_globals {
   SEXP_G_NUM_TYPES,
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */
+  SEXP_G_ABI_ERROR,             /* incompatible ABI loading library */
   SEXP_G_OPTIMIZATIONS,
   SEXP_G_SIGNAL_HANDLERS,
   SEXP_G_META_ENV,
