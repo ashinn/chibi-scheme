@@ -65,6 +65,10 @@ static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_
     fprintf(stderr, "unsupported image version: %d.%d\n",
             header.major, header.minor);
     return NULL;
+  } else if (!sexp_abi_compatible(NULL, header.abi, SEXP_ABI_IDENTIFIER)) {
+    fprintf(stderr, "unsupported ABI: %s (expected %s)\n",
+            header.abi, SEXP_ABI_IDENTIFIER);
+    return NULL;
   }
   if (heap_size < header.size) heap_size = header.size;
   heap = (sexp_heap)malloc(sexp_heap_pad_size(heap_size));
@@ -114,6 +118,7 @@ static int sexp_save_image (sexp ctx, const char* path) {
   }
   heap = sexp_context_heap(ctx);
   memcpy(&header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic));
+  memcpy(&header.abi, SEXP_ABI_IDENTIFIER, sizeof(header.abi));
   header.major = SEXP_IMAGE_MAJOR_VERSION;
   header.minor = SEXP_IMAGE_MINOR_VERSION;
   header.size = heap->size;
