@@ -1080,7 +1080,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
     FreeLibrary(handle);
     return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
   }
-  return init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
+  return init(ctx, NULL, 3, env, (sexp)sexp_version, (sexp)SEXP_ABI_IDENTIFIER);
 }
 #else
 static sexp sexp_make_dl (sexp ctx, sexp file, void* handle) {
