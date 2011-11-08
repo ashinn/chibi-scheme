@@ -305,12 +305,58 @@ void sexp_reset_weak_references(sexp ctx) {
 #define sexp_reset_weak_references(ctx)
 #endif
 
+sexp sexp_finalize (sexp ctx) {
+  size_t size;
+  sexp p, t, end;
+  sexp_free_list q, r;
+  sexp_proc2 finalizer;
+  sexp_sint_t finalize_count = 0;
+  sexp_heap h = sexp_context_heap(ctx);
+#if SEXP_USE_DL
+  sexp_sint_t free_dls = 0, pass = 0;
+ loop:
+#endif
+  /* scan over the whole heap */
+  for ( ; h; h=h->next) {
+    p = sexp_heap_first_block(h);
+    q = h->free_list;
+    end = sexp_heap_end(h);
+    while (p < end) {
+      /* find the preceding and succeeding free list pointers */
+      for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
+        ;
+      if ((char*)r == (char*)p) { /* this is a free block, skip it */
+        p = (sexp) (((char*)p) + r->size);
+        continue;
+      }
+      size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
+      if (!sexp_markedp(p)) {
+        t = sexp_object_type(ctx, p);
+        finalizer = sexp_type_finalize(t);
+        if (finalizer) {
+          finalize_count++;
+#if SEXP_USE_DL
+          if (sexp_type_tag(t) == SEXP_DL && pass <= 0)
+            free_dls = 1;
+          else
+#endif
+            finalizer(ctx, NULL, 1, p);
+        }
+      }
+      p = (sexp) (((char*)p)+size);
+    }
+  }
+#if SEXP_USE_DL
+  if (free_dls && pass++ <= 0) goto loop;
+#endif
+  return sexp_make_fixnum(finalize_count);
+}
+
 sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   size_t freed, max_freed=0, sum_freed=0, size;
   sexp_heap h = sexp_context_heap(ctx);
   sexp p, end;
   sexp_free_list q, r, s;
-  sexp_proc2 finalizer;
   /* scan over the whole heap */
   for ( ; h; h=h->next) {
     p = sexp_heap_first_block(h);
@@ -337,8 +383,6 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
 #endif
       if (!sexp_markedp(p)) {
         /* free p */
-        finalizer = sexp_type_finalize(sexp_object_type(ctx, p));
-        if (finalizer) finalizer(ctx, NULL, 1, p);
         sum_freed += size;
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */
@@ -391,16 +435,18 @@ void sexp_mark_global_symbols(sexp ctx) {
 #endif
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
-  sexp res;
+  sexp res, finalized;
   sexp_debug_printf("%p (heap: %p size: %lu)", ctx, sexp_context_heap(ctx),
                     sexp_heap_total_size(sexp_context_heap(ctx)));
   sexp_mark_global_symbols(ctx);
   sexp_mark(ctx, ctx);
   sexp_conservative_mark(ctx);
   sexp_reset_weak_references(ctx);
+  finalized = sexp_finalize(ctx);
   res = sexp_sweep(ctx, sum_freed);
-  sexp_debug_printf("%p (freed: %lu max_freed: %lu)", ctx,
-                    (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res));
+  sexp_debug_printf("%p (freed: %lu max_freed: %lu finalized: %lu)", ctx,
+                    (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res),
+                    sexp_unbox_fixnum(finalized));
   return res;
 }
 
