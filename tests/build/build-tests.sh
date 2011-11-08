@@ -30,6 +30,7 @@ for opts in $(cat ${BUILDDIR}/build-opts.txt); do
     fi
     i=$((i+1))
 done
+$MAKE cleaner 2>&1 >/dev/null
 
 if [ $FAILURES = 0 ]; then
     echo "build-tests: all tests passed"
