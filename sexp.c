@@ -457,7 +457,9 @@ void sexp_destroy_context (sexp ctx) {
     sexp_markedp(ctx) = 1;
     sexp_markedp(sexp_context_globals(ctx)) = 1;
     sexp_mark(ctx, sexp_global(ctx, SEXP_G_TYPES));
-    sexp_sweep(ctx, &sum_freed); /* sweep w/o mark to run finalizers */
+    sexp_finalize(ctx);
+    sexp_sweep(ctx, &sum_freed);
+    sexp_finalize(ctx);
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {
       tmp = heap->next;
