@@ -1345,24 +1345,24 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
   case SEXP_OP_SLOTN_REF:
     if (! sexp_typep(_ARG1))
-      sexp_raise("slot-ref: not a record type", sexp_list1(ctx, _ARG1));
+      sexp_raise("slotn-ref: not a record type", sexp_list1(ctx, _ARG1));
     else if (! sexp_check_type(ctx, _ARG2, _ARG1))
-      sexp_raise("slot-ref: bad type", sexp_list1(ctx, _ARG2));
+      sexp_raise("slotn-ref: bad type", sexp_list1(ctx, _ARG2));
     else if (! sexp_fixnump(_ARG3))
-      sexp_raise("slot-ref: not an integer", sexp_list1(ctx, _ARG3));
+      sexp_raise("slotn-ref: not an integer", sexp_list1(ctx, _ARG3));
     _ARG3 = sexp_slot_ref(_ARG2, sexp_unbox_fixnum(_ARG3));
     top-=2;
     if (!_ARG1) _ARG1 = SEXP_VOID;
     break;
   case SEXP_OP_SLOTN_SET:
     if (! sexp_typep(_ARG1))
-      sexp_raise("slot-set!: not a record type", sexp_list1(ctx, _ARG1));
+      sexp_raise("slotn-set!: not a record type", sexp_list1(ctx, _ARG1));
     else if (! sexp_check_type(ctx, _ARG2, _ARG1))
-      sexp_raise("slot-set!: bad type", sexp_list1(ctx, _ARG2));
+      sexp_raise("slotn-set!: bad type", sexp_list1(ctx, _ARG2));
     else if (sexp_immutablep(_ARG2))
-      sexp_raise("slot-set!: immutable object", sexp_list1(ctx, _ARG2));
+      sexp_raise("slotn-set!: immutable object", sexp_list1(ctx, _ARG2));
     else if (! sexp_fixnump(_ARG3))
-      sexp_raise("slot-set!: not an integer", sexp_list1(ctx, _ARG3));
+      sexp_raise("slotn-set!: not an integer", sexp_list1(ctx, _ARG3));
     sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
     top-=4;
     break;
