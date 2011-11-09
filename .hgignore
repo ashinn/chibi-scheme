@@ -4,12 +4,18 @@ syntax: glob
 *.s
 *.o
 *.so
+*.sch
+*.sps
+*.txt
+*.image
+*.wav
 *.dylib
 *.class
 *.dSYM
 *.orig
 .hg
 junk*
+*.tgz
 *.tar.gz
 *.tar.bz2
 *.log
@@ -30,3 +36,4 @@ lib/chibi/time.c
 lib/chibi/stty.c
 doc/*.html
 doc/lib/chibi/*.html
+misc/*
