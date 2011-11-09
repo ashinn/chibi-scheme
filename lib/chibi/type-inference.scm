@@ -166,13 +166,15 @@
            f-type)
           (else
            Object))))))
+    (($ Lit value)
+     (type-of value))
     (else
      (type-of x))))
 
 (define (resolve-delayed-type x)
   (let lp ((x x) (seen '()) (default Object))
     (match x
-      (('return-type f)
+      (('return-type (? lambda? f))
        (if (memq f seen)
            default
            (lp (lambda-return-type f) (cons f seen) default)))
