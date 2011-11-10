@@ -215,8 +215,12 @@ static sexp sexp_hash_table_cell (sexp ctx, sexp self, sexp_sint_t n, sexp ht, s
 }
 
 static sexp sexp_hash_table_delete (sexp ctx, sexp self, sexp_sint_t n, sexp ht, sexp obj) {
-  sexp buckets=sexp_hash_table_buckets(ht), eq_fn=sexp_hash_table_eq_fn(ht),
-    hash_fn=sexp_hash_table_hash_fn(ht), i, p, res;
+  sexp buckets, eq_fn, hash_fn, i, p, res;
+  if (!(sexp_pointerp(ht) && strcmp(sexp_string_data(sexp_object_type_name(ctx, ht)), "Hash-Table") == 0))
+    return sexp_xtype_exception(ctx, self, "not a Hash-Table", ht);
+  buckets = sexp_hash_table_buckets(ht);
+  eq_fn = sexp_hash_table_eq_fn(ht);
+  hash_fn = sexp_hash_table_hash_fn(ht);
   i = sexp_get_bucket(ctx, buckets, hash_fn, obj);
   res = sexp_scan_bucket(ctx, sexp_vector_ref(buckets, i), obj, eq_fn);
   if (sexp_pairp(res)) {
