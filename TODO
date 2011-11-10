@@ -14,6 +14,10 @@
    sexp_copy_context() can form the basis for images,
    FASL for arbitrary modules will need additional
    help with resolving external references.
+*** DONE optional image loading on startup
+    - State "DONE"       from "TODO"       [2011-11-10 Thu 20:44]
+*** TODO external tool to compact and optimize images
+*** TODO fasl versions of modules
 ** DONE shared stack on EVAL
    - State "DONE"       [2009-12-26 Sat 08:22]
 
@@ -129,7 +133,8 @@
    - State "DONE"       [2009-12-08 Tue 14:54]
 ** DONE loop library
    - State "DONE"       [2009-12-08 Tue 14:54]
-** TODO network interface
+** DONE network interface
+   - State "DONE"       from "TODO"       [2011-11-10 Thu 20:46]
 ** DONE posix interface
    - State "DONE"       from "TODO"       [2010-07-11 Sun 15:36]
    Splitting this into several parts.
@@ -158,14 +163,15 @@
    - State "DONE"       [2009-08-10 Mon 14:37]
 ** DONE 64-bit support
    - State "DONE"       [2009-11-01 Sun 14:37]
-** TODO iPhone support
+** DONE iPhone support
+   - State "DONE"       from "TODO"       [2011-11-10 Thu 20:46]
 ** TODO bare-metal support
 
 * miscellaneous
-** TODO overall cleanup
-** TODO user documentation
-** TODO thorough source documentation
+** DONE user documentation
+   - State "DONE"       from "TODO"       [2011-11-10 Thu 20:45]
 ** TODO full test suite for libraries
+** TODO thorough source documentation
 
 * distribution
 ** TODO packaging format
