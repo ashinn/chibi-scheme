@@ -42,6 +42,11 @@
               (member b (cdr a)))
           (and (union-type? b) (member a (cdr b))))))
 
+(define (type-not a)
+  (match a
+    (('not b) b)
+    (else (list 'not a))))
+
 ;; XXXX check for type hierarchies
 (define (type-union a b)
   (cond
@@ -88,6 +93,20 @@
   (cond ((lambda-param-type-memq f x)
          => (lambda (cell) (set-car! cell y)))))
 
+(define (type-assert x true?)
+  (match x
+    (((? opcode? f) ($ Ref name (_ . (? lambda? g))))
+     (cond
+      ((eq? (opcode-class f) (opcode-class pair?))
+       (let ((t (type-intersection
+                 (lambda-param-type-ref g name)
+                 (if true? (opcode-data f) (type-not (opcode-data f))))))
+         (lambda-param-type-set! g name t)))))
+    ((($ Ref _ ('not . (? procedure? f))) expr)
+     (if (eq? f not)
+         (type-assert expr (not true?))))
+    (else #f)))
+
 (define (type-analyze-expr x)
   (match x
     (($ Lam name params body defs)
@@ -101,7 +120,7 @@
     (($ Set ref value)
      (type-analyze-expr value)
      (if #f #f))
-    (($ Ref name (value . loc) source)
+    (($ Ref name (value . loc))
      (cond
       ((lambda? loc) (lambda-param-type-ref loc name))
       ((procedure? loc)
@@ -114,7 +133,15 @@
      (let ((test-type (type-analyze-expr test))
            (pass-type (type-analyze-expr pass))
            (fail-type (type-analyze-expr fail)))
-       (type-union pass-type fail-type)))
+       (cond
+        ((equal? '(error) pass-type)
+         (type-assert test #f)
+         fail-type)
+        ((equal? '(error) fail-type)
+         (type-assert test #t)
+         pass-type)
+        (else
+         (type-union pass-type fail-type)))))
     (($ Seq ls)
      (let lp ((ls ls))
        (cond ((null? (cdr ls))
@@ -122,50 +149,49 @@
              (else
               (type-analyze-expr (car ls))
               (lp (cdr ls))))))
-    ((f args ...)
-     (cond
-      ((opcode? f)
-       (let lp ((p (opcode-param-types f))
-                (a args))
+    (((? opcode? f) args ...)
+     (let lp ((p (opcode-param-types f))
+              (a args))
+       (cond
+        ((pair? a)
          (cond
-          ((pair? a)
-           (cond ((or (pair? p) (opcode-variadic? f))
-                  (let ((p-type
-                         (if (pair? p)
-                             (car p)
-                             (opcode-param-type f (opcode-num-params f)))))
-                    (match (car a)
-                     (($ Ref name (_ . (and g ($ Lam))))
-                      (let ((t (type-intersection (lambda-param-type-ref g name)
-                                                  p-type)))
-                        (lambda-param-type-set! g name t)))
-                     (else
-                      (let ((t (type-analyze-expr (car a))))
-                        (cond
-                         ((and t p-type
-                               (finalized-type? t)
-                               (finalized-type? p-type)
-                               (not (type-subset? t p-type)))
-                          (display "WARNING: incompatible type: "
-                                   (current-error-port))
-                          (write/ss (list x t p-type) (current-error-port))
-                          (newline (current-error-port))))
-                        t))))
-                  (lp (and (pair? p) (cdr p)) (cdr a)))
-                 (else
-                  (for-each type-analyze-expr a))))))
-       (opcode-return-type f))
-      (else
-       (let ((f-type (type-analyze-expr f)))
-         ;; XXXX apply f-type to params
-         (for-each type-analyze-expr args)
-         (cond
-          ((and (pair? f-type) (eq? (car f-type) 'lambda))
-           (cadr f-type))
-          ((and (pair? f-type) (memq (car f-type) '(return-type param-type)))
-           f-type)
+          ((or (pair? p) (opcode-variadic? f))
+           (let ((p-type
+                  (if (pair? p)
+                      (car p)
+                      (opcode-param-type f (opcode-num-params f)))))
+             (match (car a)
+               (($ Ref name (_ . (and g ($ Lam))))
+                (let ((t (type-intersection (lambda-param-type-ref g name)
+                                            p-type)))
+                  (lambda-param-type-set! g name t)))
+               (else
+                (let ((t (type-analyze-expr (car a))))
+                  (cond
+                   ((and t p-type
+                         (finalized-type? t)
+                         (finalized-type? p-type)
+                         (not (type-subset? t p-type)))
+                    (display "WARNING: incompatible type: "
+                             (current-error-port))
+                    (write/ss (list x t p-type) (current-error-port))
+                    (newline (current-error-port))))
+                  t))))
+           (lp (and (pair? p) (cdr p)) (cdr a)))
           (else
-           Object))))))
+           (for-each type-analyze-expr a))))))
+     (opcode-return-type f))
+    ((f args ...)
+     (let ((f-type (type-analyze-expr f)))
+       ;; XXXX apply f-type to params
+       (for-each type-analyze-expr args)
+       (cond
+        ((and (pair? f-type) (eq? (car f-type) 'lambda))
+         (cadr f-type))
+        ((and (pair? f-type) (memq (car f-type) '(return-type param-type)))
+         f-type)
+        (else
+         Object))))
     (($ Lit value)
      (type-of value))
     (else
