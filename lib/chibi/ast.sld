@@ -24,7 +24,7 @@
    seq-ls seq-ls-set! lit-value lit-value-set!
    exception-kind exception-message exception-irritants
    opcode-name opcode-num-params opcode-return-type opcode-param-type
-   opcode-variadic?
+   opcode-class opcode-code opcode-data opcode-variadic?
    macro-procedure macro-env macro-source
    procedure-code procedure-vars procedure-name procedure-name-set!
    bytecode-name bytecode-literals bytecode-source

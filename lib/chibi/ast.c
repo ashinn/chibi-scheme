@@ -76,6 +76,8 @@ static sexp sexp_translate_opcode_type (sexp ctx, sexp type) {
 
 static sexp sexp_get_opcode_ret_type (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   sexp res;
+  if (!op)
+    return sexp_type_by_index(ctx, SEXP_OBJECT);
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
   if (sexp_opcode_code(op) == SEXP_OP_RAISE)
@@ -104,7 +106,7 @@ static sexp sexp_get_opcode_param_type (sexp ctx, sexp self, sexp_sint_t n, sexp
     break;
   default:
     res = sexp_opcode_arg3_type(op);
-    if (sexp_vectorp(res)) {
+    if (res && sexp_vectorp(res)) {
       if (sexp_vector_length(res) > (sexp_unbox_fixnum(k)-2))
         res = sexp_vector_ref(res, sexp_fx_sub(k, SEXP_TWO));
       else
@@ -115,15 +117,34 @@ static sexp sexp_get_opcode_param_type (sexp ctx, sexp self, sexp_sint_t n, sexp
   return sexp_translate_opcode_type(ctx, res);
 }
 
+static sexp sexp_get_opcode_class (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
+  sexp_assert_type(ctx, sexp_opcodep, SEXP_OPCODE, op);
+  return sexp_make_fixnum(sexp_opcode_class(op));
+}
+
+static sexp sexp_get_opcode_code (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
+  sexp_assert_type(ctx, sexp_opcodep, SEXP_OPCODE, op);
+  return sexp_make_fixnum(sexp_opcode_code(op));
+}
+
+static sexp sexp_get_opcode_data (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
+  sexp data;
+  sexp_assert_type(ctx, sexp_opcodep, SEXP_OPCODE, op);
+  data = sexp_opcode_data(op);
+  if (!data) return SEXP_VOID;
+  return sexp_opcode_class(op) == SEXP_OPC_TYPE_PREDICATE
+    && 0 <= sexp_unbox_fixnum(data)
+    && sexp_unbox_fixnum(data) <= sexp_context_num_types(ctx) ?
+    sexp_type_by_index(ctx, sexp_unbox_fixnum(data)) : data;
+}
+
 static sexp sexp_get_opcode_num_params (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
-  if (! sexp_opcodep(op))
-    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  sexp_assert_type(ctx, sexp_opcodep, SEXP_OPCODE, op);
   return sexp_make_fixnum(sexp_opcode_num_args(op));
 }
 
 static sexp sexp_get_opcode_variadic_p (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
-  if (! sexp_opcodep(op))
-    return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
+  sexp_assert_type(ctx, sexp_opcodep, SEXP_OPCODE, op);
   return sexp_make_boolean(sexp_opcode_variadic_p(op));
 }
 
@@ -412,6 +433,9 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
   sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
+  sexp_define_foreign(ctx, env, "opcode-class", 1, sexp_get_opcode_class);
+  sexp_define_foreign(ctx, env, "opcode-code", 1, sexp_get_opcode_code);
+  sexp_define_foreign(ctx, env, "opcode-data", 1, sexp_get_opcode_data);
   sexp_define_foreign(ctx, env, "opcode-variadic?", 1, sexp_get_opcode_variadic_p);
   sexp_define_foreign(ctx, env, "opcode-num-params", 1, sexp_get_opcode_num_params);
   sexp_define_foreign(ctx, env, "opcode-return-type", 1, sexp_get_opcode_ret_type);
