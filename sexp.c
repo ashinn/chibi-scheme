@@ -747,7 +747,7 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
  loop:
   if (a == b)
     return bound;
-  else if ((! sexp_pointerp(a)) || (! sexp_pointerp(b))
+  else if ((!a || !sexp_pointerp(a)) || (!b || !sexp_pointerp(b))
            || (sexp_pointer_tag(a) != sexp_pointer_tag(b)))
     return SEXP_FALSE;
 
@@ -760,7 +760,7 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
   if (sexp_pointer_tag(a) == SEXP_FLONUM)
     return (sexp_flonum_value(a) == sexp_flonum_value(b)) ? bound : SEXP_FALSE;
 #endif
-  if (sexp_unbox_fixnum(bound) < 0)
+  if (sexp_unbox_fixnum(bound) < 0) /* exceeded limit */
     return bound;
   bound = sexp_fx_sub(bound, SEXP_ONE);
   t = sexp_object_type(ctx, a);
@@ -785,6 +785,15 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
   /* check eq-object slots */
   len = sexp_type_num_eq_slots_of_object(t, a);
   if (len > 0) {
+    for (; len > 1; len--) {
+      a = p[len-1]; b = q[len-1];
+      if (a != b) {
+        if ((!a || !sexp_pointerp(a)) || (!b || !sexp_pointerp(b))
+            || (sexp_pointer_tag(a) != sexp_pointer_tag(b)))
+          return SEXP_FALSE;
+        else break;
+      }
+    }
     for (i=0; i<len-1; i++) {
       bound = sexp_equalp_bound(ctx, self, n, p[i], q[i], bound);
       if (sexp_not(bound)) return SEXP_FALSE;
@@ -798,7 +807,7 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
 sexp sexp_equalp_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b) {
   return sexp_make_boolean(
     sexp_truep(sexp_equalp_bound(ctx, self, n, a, b,
-                                 sexp_make_fixnum(SEXP_MAX_FIXNUM))));
+                                 sexp_make_fixnum(SEXP_DEFAULT_EQUAL_BOUND))));
 }
 
 /********************* strings, symbols, vectors **********************/
