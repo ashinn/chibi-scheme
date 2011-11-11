@@ -44,7 +44,7 @@
         (cond ((and cell (cdr cell))
                (display prefix out)
                (display "#" out)
-               (write (cdr cell))
+               (write (cdr cell) out)
                (display "#" out))
               (else
                (cond (cell
