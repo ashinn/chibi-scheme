@@ -30,17 +30,29 @@
       (eq? a Procedure)
       (and (pair? a) (eq? (car a) 'lambda))))
 
+(define (type=? a b)
+  (cond
+   ((and (pair? a) (eq? (car a) 'param-type))
+    (and (pair? b) (eq? (car b) 'param-type)
+         (eq? (cadr a) (cadr b))
+         (eq? (caddr a) (caddr b))))
+   ((and (pair? a) (eq? (car a) 'return-type))
+    (and (pair? b) (eq? (car b) 'return-type)
+         (eq? (cadr a) (cadr b))))
+   (else
+    (equal? a b))))
+
 (define (type-subset? a b)
-  (or (equal? a b)
-      (equal? a Object)
-      (equal? b Object)
+  (or (type=? a b)
+      (eq? a Object)
+      (eq? b Object)
       (and (numeric-type? a) (numeric-type? b))
       (and (procedure-type? a) (procedure-type? b))
       (if (union-type? a)
           (if (union-type? b)
-              (lset<= equal? (cdr a) (cdr b))
-              (member b (cdr a)))
-          (and (union-type? b) (member a (cdr b))))))
+              (lset<= type=? (cdr a) (cdr b))
+              (member b (cdr a) type=?))
+          (and (union-type? b) (member a (cdr b) type=?)))))
 
 (define (type-not a)
   (match a
@@ -50,24 +62,24 @@
 ;; XXXX check for type hierarchies
 (define (type-union a b)
   (cond
-   ((equal? a b) a)
-   ((or (equal? a Object) (equal? b Object)) Object)
+   ((type=? a b) a)
+   ((or (eq? a Object) (eq? b Object)) Object)
    ((union-type? a)
     (if (union-type? b)
-        (cons (car a) (lset-union equal? (cdr a) (cdr b)))
-        (cons (car a) (lset-adjoin equal? (cdr a) b))))
+        (cons (car a) (lset-union type=? (cdr a) (cdr b)))
+        (cons (car a) (lset-adjoin type=? (cdr a) b))))
    (else (list 'or a b))))
 
 ;; XXXX check for conflicts
 (define (type-intersection a b)
   (cond
-   ((equal? a b) a)
-   ((or (equal? a Object) (unfinalized-type? a)) b)
-   ((or (equal? b Object) (unfinalized-type? b)) a)
+   ((type=? a b) a)
+   ((or (eq? a Object) (unfinalized-type? a)) b)
+   ((or (eq? b Object) (unfinalized-type? b)) a)
    ((intersection-type? a)
     (if (intersection-type? b)
-        (lset-intersection equal? (cdr a) (cdr b))
-        (cons (car a) (lset-adjoin equal? (cdr a) b))))
+        (lset-intersection type=? (cdr a) (cdr b))
+        (cons (car a) (lset-adjoin type=? (cdr a) b))))
    (else (list 'and a b))))
 
 (define (lambda-param-types-initialize! f)
