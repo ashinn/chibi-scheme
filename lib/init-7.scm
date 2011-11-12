@@ -110,6 +110,9 @@
       (if (pair? ls) (every1 pred ls) #t)
       (not (apply any (lambda (x) (not (pred x))) ls lol))))
 
+(define (error msg . args)
+  (raise (make-exception 'user msg args #f #f)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax
 
@@ -544,29 +547,58 @@
         (consumer res))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; SRFI-0
+
+(define-syntax cond-expand
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (define (check x)
+       (if (pair? x)
+           (case (car x)
+             ((and) (every check (cdr x)))
+             ((or) (any check (cdr x)))
+             ((not) (not (check (cadr x))))
+             (else (error "cond-expand: bad feature" x)))
+           (memq (identifier->symbol x) *features*)))
+     (let expand ((ls (cdr expr)))
+       (cond ((null? ls) (error "cond-expand: no expansions" expr))
+             ((not (pair? (car ls))) (error "cond-expand: bad clause" (car ls)))
+             ((eq? 'else (identifier->symbol (caar ls)))
+              (if (pair? (cdr ls))
+                  (error "cond-expand: else in non-final position")
+                  `(,(rename 'begin) ,@(cdar ls))))
+             ((check (caar ls)) `(,(rename 'begin) ,@(cdar ls)))
+             (else (expand (cdr ls))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dynamic-wind
 
-(define *dk* (list #f))
+(cond-expand
+ (threads)
+ (else
+  (define %dk
+    (let ((dk (list #f)))
+      (lambda o (if (pair? o) (set! dk (car o)) dk))))))
 
 (define (dynamic-wind before thunk after)
-  (let ((dk *dk*))
+  (let ((dk (%dk)))
     (set-dk! (cons (cons before after) dk))
     (let ((res (thunk))) (set-dk! dk) res)))
 
 (define (set-dk! dk)
-  (if (not (eq? dk *dk*))
+  (if (not (eq? dk (%dk)))
       (begin
         (set-dk! (cdr dk))
         (let ((before (car (car dk))) (dk dk))
-          (set-car! *dk* (cons (cdr (car dk)) before))
-          (set-cdr! *dk* dk)
+          (set-car! (%dk) (cons (cdr (car dk)) before))
+          (set-cdr! (%dk) dk)
           (set-car! dk #f)
           (set-cdr! dk '())
-          (set! *dk* dk)
+          (%dk dk)
           (before)))))
 
 (define (call-with-current-continuation proc)
-  (let ((dk *dk*))
+  (let ((dk (%dk)))
     (%call/cc (lambda (k) (proc (lambda x (set-dk! dk) (k (%values x))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -805,9 +837,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exceptions
 
-(define (error msg . args)
-  (raise (make-exception 'user msg args #f #f)))
-
 (define *continuable* (list 'continuable))
 
 (define (raise-continuable exn)
@@ -845,30 +874,6 @@
          (lambda () body ...)))))
     ((guard (var (test . handler) ...) body ...)
      (guard (var (test . handler) ... (else (raise var))) body ...))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; SRFI-0
-
-(define-syntax cond-expand
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (define (check x)
-       (if (pair? x)
-           (case (car x)
-             ((and) (every check (cdr x)))
-             ((or) (any check (cdr x)))
-             ((not) (not (check (cadr x))))
-             (else (error "cond-expand: bad feature" x)))
-           (memq (identifier->symbol x) *features*)))
-     (let expand ((ls (cdr expr)))
-       (cond ((null? ls) (error "cond-expand: no expansions" expr))
-             ((not (pair? (car ls))) (error "cond-expand: bad clause" (car ls)))
-             ((eq? 'else (identifier->symbol (caar ls)))
-              (if (pair? (cdr ls))
-                  (error "cond-expand: else in non-final position")
-                  `(,(rename 'begin) ,@(cdar ls))))
-             ((check (caar ls)) `(,(rename 'begin) ,@(cdar ls)))
-             (else (expand (cdr ls))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; promises

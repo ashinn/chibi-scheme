@@ -442,7 +442,10 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
   if (ctx) {
     sexp_context_params(res) = sexp_context_params(ctx);
     sexp_context_tracep(res) = sexp_context_tracep(ctx);
+    sexp_context_dk(res) = sexp_context_dk(ctx);
     sexp_gc_release1(ctx);
+  } else {
+    sexp_context_dk(res) = sexp_list1(res, SEXP_FALSE);
   }
   return res;
 }
@@ -1865,6 +1868,17 @@ sexp sexp_parameter_ref (sexp ctx, sexp param) {
   return sexp_opcodep(param) && sexp_opcode_data(param) && sexp_pairp(sexp_opcode_data(param))
     ? sexp_cdr(sexp_opcode_data(param)) : SEXP_FALSE;
 }
+
+#if SEXP_USE_GREEN_THREADS
+sexp sexp_dk (sexp ctx, sexp self, sexp_uint_t n, sexp val) {
+  if (sexp_not(val)) {
+    return sexp_context_dk(ctx) ? sexp_context_dk(ctx) : SEXP_FALSE;
+  } else {
+    sexp_context_dk(ctx) = val;
+    return SEXP_VOID;
+  }
+}
+#endif
 
 void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
   sexp param = sexp_env_ref(env, name, SEXP_FALSE);
