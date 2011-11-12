@@ -222,6 +222,7 @@ _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_ENV), "load-module-file", 0, sexp_load_
 _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_BOOLEAN), "add-module-directory", 0, sexp_add_module_directory_op),
 #endif
 #if SEXP_USE_GREEN_THREADS
+_FN1OPT(_I(SEXP_OBJECT), _I(SEXP_OBJECT), "%dk", SEXP_FALSE, sexp_dk),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, SEXP_VOID, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, 0, "yield!", 0, NULL),
 #endif
 #if SEXP_USE_PROFILE_VM

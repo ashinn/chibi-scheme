@@ -71,8 +71,10 @@ sexp sexp_current_thread (sexp ctx, sexp self, sexp_sint_t n) {
 }
 
 sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name) {
-  sexp res, *stack;
+  sexp *stack;
+  sexp_gc_var1(res);
   sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, thunk);
+  sexp_gc_preserve1(ctx, res);
   res = sexp_make_eval_context(ctx, SEXP_FALSE, sexp_context_env(ctx), 0, 0);
   sexp_context_name(res) = name;
   sexp_context_proc(res) = thunk;
@@ -82,6 +84,8 @@ sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name
   stack[2] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
   sexp_context_top(res) = 4;
   sexp_context_last_fp(res) = 0;
+  sexp_context_dk(res) = sexp_list1(ctx, SEXP_FALSE);
+  sexp_gc_release1(ctx);
   return res;
 }
 
