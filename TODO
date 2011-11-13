@@ -16,8 +16,14 @@
    help with resolving external references.
 *** DONE optional image loading on startup
     - State "DONE"       from "TODO"       [2011-11-10 Thu 20:44]
+*** TODO static image compiled into library
+    With this you'll be able to run Chibi without any filesystem.
 *** TODO external tool to compact and optimize images
+    The current GC is mark&sweep, which can cause fragmentation,
+    but we can at at least compact the initial fixed image.
 *** TODO fasl versions of modules
+    Important for large applications, and fast loading of script
+    with many dependencies.
 ** DONE shared stack on EVAL
    - State "DONE"       [2009-12-26 Sat 08:22]
 
@@ -39,7 +45,8 @@
 ** DONE type inference with warnings
    - State "DONE"       from "TODO"       [2010-09-21 Tue 23:18]
 *** TODO structured type inference
-*** TODO infer error branches
+*** DONE infer error branches
+    CLOSED: [2011-11-14 Mon 08:17]
 *** TODO elide type checks from type information
 
 * macros
@@ -174,7 +181,7 @@
 ** TODO thorough source documentation
 
 * distribution
-** TODO packaging format
+** TODO packaging format (Snow2)
 ** TODO code repository with fetch+install tool
 ** TODO translator to/from other implementations
 
