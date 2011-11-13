@@ -55,7 +55,7 @@
             (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))))))))
 
 (define (write-bytevector vec . o)
-  (apply write-string (utf8->string vec) o))
+  (apply write-string (utf8->string vec) (bytevector-length vec) o))
 
 (define (write-partial-bytevector vec start end . o)
   (apply write-string (utf8->string (bytevector-copy-partial vec start end)) o))
