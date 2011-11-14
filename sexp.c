@@ -1221,7 +1221,9 @@ sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n) {
 }
 
 sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
-  sexp cookie = sexp_port_cookie(port);
+  sexp cookie;
+  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
+  cookie = sexp_port_cookie(port);
   fflush(sexp_port_stream(port));
   return sexp_substring(ctx,
                         sexp_stream_buf(cookie),
