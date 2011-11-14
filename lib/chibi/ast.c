@@ -358,6 +358,8 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type(ctx, "Byte-Vector", SEXP_BYTES);
   sexp_define_type(ctx, "Pair", SEXP_PAIR);
   sexp_define_type(ctx, "Vector", SEXP_VECTOR);
+  sexp_define_type(ctx, "Input-Port", SEXP_IPORT);
+  sexp_define_type(ctx, "Output-Port", SEXP_OPORT);
   sexp_define_type(ctx, "Opcode", SEXP_OPCODE);
   sexp_define_type(ctx, "Procedure", SEXP_PROCEDURE);
   sexp_define_type(ctx, "Bytecode", SEXP_BYTECODE);
