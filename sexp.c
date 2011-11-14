@@ -2125,6 +2125,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     goto scan_loop;
   case ' ':
   case '\t':
+  case '\f':
   case '\r':
     goto scan_loop;
   case '\'':
