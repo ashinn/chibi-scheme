@@ -16,11 +16,11 @@ extern "C" {
 
 #if defined(_WIN32) || defined(__MINGW32__)
 #include <windows.h>
-#define sexp_isalpha(x) ((isalpha)((int)(unsigned int)(x)))
-#define sexp_isxdigit(x) ((isxdigit)((int)(unsigned int)(x)))
-#define sexp_isdigit(x) ((isdigit)((int)(unsigned int)(x)))
-#define sexp_tolower(x) ((tolower)((int)(unsigned int)(x)))
-#define sexp_toupper(x) ((toupper)((int)(unsigned int)(x)))
+#define sexp_isalpha(x) ((isalpha)((int)(x)))
+#define sexp_isxdigit(x) ((isxdigit)((int)(x)))
+#define sexp_isdigit(x) ((isdigit)((int)(x)))
+#define sexp_tolower(x) ((tolower)((int)(x)))
+#define sexp_toupper(x) ((toupper)((int)(x)))
 #else
 #if SEXP_USE_DL
 #include <dlfcn.h>

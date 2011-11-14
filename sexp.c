@@ -2386,8 +2386,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         if (sexp_string_length(res) == 1) {
           res = sexp_make_character(c1);
         } else if ((c1 == 'x' || c1 == 'X') &&
-                   sexp_isxdigit(str[1])
-                   && sexp_isxdigit(str[2]) && str[3] == '\0') {
+                   sexp_isxdigit((unsigned char)(str[1]))
+                   && sexp_isxdigit((unsigned char)(str[2])) && str[3] == '\0') {
           res = sexp_make_character(16 * digit_value(str[1])
                                     + digit_value(str[2]));
         } else {
@@ -2564,12 +2564,12 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
     return sexp_user_exception(ctx, self, "invalid numeric base", b);
   if (sexp_string_data(str)[0]=='\0'
-      || (sexp_string_data(str)[1]=='\0' && !sexp_isdigit(sexp_string_data(str)[0])))
+      || (sexp_string_data(str)[1]=='\0' && !sexp_isdigit((unsigned char)(sexp_string_data(str)[0]))))
     return SEXP_FALSE;
   sexp_gc_preserve1(ctx, in);
   in = sexp_make_input_string_port(ctx, str);
   if (sexp_string_data(str)[0] == '+') {
-    if (sexp_isdigit(sexp_string_data(str)[1])
+    if (sexp_isdigit((unsigned char)(sexp_string_data(str)[1]))
         || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
       sexp_read_char(ctx, in);
   }
