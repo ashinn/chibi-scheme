@@ -2,7 +2,7 @@
 (define-library (chibi ast)
   (export
    analyze optimize env-cell ast->sexp macroexpand type-of
-   Object Opcode Procedure Bytecode Macro Env
+   Object Input-Port Output-Port Opcode Procedure Bytecode Macro Env
    Number Bignum Flonum Integer Char Boolean
    Symbol String Byte-Vector Vector Pair
    Context Lam Cnd Set Ref Seq Lit Sc Exception
