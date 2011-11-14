@@ -336,10 +336,10 @@ void run_main (int argc, char **argv) {
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('h', arg);
       heap_size = strtoul(arg, &arg, 0);
-      if (sexp_isalpha(*arg)) heap_size *= multiplier(*arg++);
+      if (sexp_isalpha((unsigned char)*arg)) heap_size *= multiplier(*arg++);
       if (*arg == '/') {
         heap_max_size = strtoul(arg+1, &arg, 0);
-        if (sexp_isalpha(*arg)) heap_max_size *= multiplier(*arg++);
+        if (sexp_isalpha((unsigned char)*arg)) heap_max_size *= multiplier(*arg++);
       }
       break;
 #if SEXP_USE_IMAGE_LOADING
