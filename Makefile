@@ -337,6 +337,8 @@ install: all
 	-$(INSTALL) libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
 	$(MKDIR) $(DESTDIR)$(MANDIR)
 	$(INSTALL) doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
 	-if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
@@ -372,6 +374,7 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(BINMODDIR)/srfi/99
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi $(DESTDIR)$(BINMODDIR)/srfi
 	-$(RMDIR) $(DESTDIR)$(MODDIR) $(DESTDIR)$(BINMODDIR)
+	-$(RM) $(DESTDIR)$(MANDIR)/chibi-scheme.1 $(DESTDIR)$(MANDIR)/chibi-ffi.1 $(DESTDIR)$(MANDIR)/chibi-doc.1
 
 dist: dist-clean
 	$(RM) chibi-scheme-`cat VERSION`.tgz

@@ -1,0 +1,40 @@
+.TH "chibi-doc" "1" "" ""
+.UC 4
+.SH NAME
+.PP
+chibi-doc \- generate docs from Scheme scribble syntax
+
+.SH SYNOPSIS
+.B chibi-doc
+[
+.I file
+]
+.BR
+
+.B chibi-doc
+.I dotted-name.of.module
+.BR
+.SP 0.4
+
+.SH DESCRIPTION
+.I chibi-doc
+is a tool to generate documentation from the Scheme scribble syntax
+from Racket.  It works like a Unix filter, translating from the
+current input or a file to standard output.  You can also specify a
+module name, with components separated with dots, and it will search
+for the module and generate documentation from it automatically from
+literate comments in the module or any of its source files.  These
+comments are any line beginning with the characters
+.I ;;>
+
+The scribble syntax is described in the manual.
+
+.SH AUTHORS
+.PP
+Alex Shinn (alexshinn @ gmail . com)
+
+.SH SEE ALSO
+.PP
+The chibi-scheme home-page:
+.BR
+http://code.google.com/p/chibi-scheme/

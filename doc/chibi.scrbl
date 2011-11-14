@@ -38,7 +38,12 @@ To build, just run "make".  This will provide a shared library
 repl.  The "chibi-scheme-static" make target builds an equivalent
 static executable.  If your make doesn't support GNU make
 conditionals, then you'll need to edit the top of the Makefile to
-choose the appropriate settings.  On Plan9 just run "mk".
+choose the appropriate settings.  On Plan9 just run "mk".  You can
+test the build with "make test".
+
+To install run "make install".  If you want to try the executable out
+without installing, you will probably need to set LD_LIBRARY_PATH,
+depending on your platform.
 
 You can edit the file chibi/features.h for a number of settings,
 mostly disabling features to make the executable smaller.  You can
@@ -52,7 +57,8 @@ to optimize for size, or
 
 to compile against a library installed in /usr/local.
 
-By default Chibi uses a custom, precise, non-moving GC.  You can link
+By default Chibi uses a custom, precise, non-moving GC (non-moving is
+important so you can maintain references from C code).  You can link
 against the Boehm conservative GC by editing the features.h file, or
 directly from make with:
 
@@ -96,7 +102,7 @@ are listed below.
 @item{@ccode{SEXP_USE_FLONUMS} - use flonums (enabled by default)}
 @item{@ccode{SEXP_USE_RATIOS} - use exact ratios (enabled by default)}
 @item{@ccode{SEXP_USE_COMPLEX} - use complex numbers (enabled by default)}
-@item{@ccode{SEXP_USE_UTF8_STRINGS} - Unicode sopport (enabled by default)}
+@item{@ccode{SEXP_USE_UTF8_STRINGS} - Unicode support (enabled by default)}
 @item{@ccode{SEXP_USE_NO_FEATURES} - disable almost all features}
 ]
 
@@ -110,7 +116,11 @@ superset of
 @hyperlink["http://www.schemers.org/Documents/Standards/R5RS/HTML/"]{R5RS}.
 Some of the more expensive bindings are not included in the interest
 of size and quick startup, and some extra low-level utilities are
-included for convenience and bootstrapping.
+included for convenience and bootstrapping.  Note the builtin
+@scheme{equal?}  does not support cyclic structures (you need the R7RS
+@scheme{(scheme base)} or @scheme{(chibi equiv)}), nor do the default
+reader and writer (you need @scheme{(srfi 38)} or the R7RS
+@scheme{(scheme read)} and @scheme{(scheme write)}).
 
 To get the exact R7RS language, you can @scheme{(import (scheme base))},
 and likewise for the other R7RS libraries.
@@ -124,7 +134,20 @@ take C code into account.  This means that you can call from Scheme to
 C and then from C to Scheme again, but continuations passing through
 this chain may not do what you expect.  The only higher-order C
 functions (thus potentially running afoul of this) in the standard
-environment are @scheme{load} and @scheme{eval}.
+environment are @scheme{load} and @scheme{eval}.  The result of
+invoking a continuation created by a different thread is also
+currently unspecified.
+
+In R7RS (and R6RS) semantics it is impossible to use two macros from
+different modules which both use the same auxiliary keywords (like
+@scheme{else} in @scheme{cond} forms) without renaming one of the
+keywords.  By default Chibi considers all top-level bindings
+effectively unbound when matching auxiliary keywords, so this case
+will "just work".  This decision was made because the chance of
+different modules using the same keywords seems more likely than user
+code unintentionally matching a top-level keyword with a different
+binding, however if you want to use R7RS semantics you can compile
+with @ccode{SEXP_USE_STRICT_TOPLEVEL_BINDINGS=1}.
 
 @scheme{load} is extended to accept an optional environment argument, like
 @scheme{eval}.  You can also @scheme{load} shared libraries in addition to
@@ -139,27 +162,29 @@ The following additional procedures are available in the default
 environment:
 
 @itemlist[
-@item{@scheme{(current-error-port)} - bound to stderr}
-@item{@scheme{(flush-output [port])} - flushes any buffered output to the port}
+@item{@scheme{(print-exception exn out)} - prints a human-readable description of @var{exn} to the output port @var{out}}
+@item{@scheme{(port-fold-case? port)} - returns @scheme{#t} iff the given input port folds case on @scheme{read}}
+@item{@scheme{(set-port-fold-case! port bool)} - set the case-folding behavior of @var{port}}
 @item{@scheme{(string-concatenate list-of-strings [sep])} - append the strings joined by @var{sep}}
 ]
 
 @subsection{Module System}
 
-A configurable module system, in the style of the
-@hyperlink["http://s48.org/"]{Scheme48} module
-system, is provided if you choose to use it.
+Chibi uses the R7RS module system natively, which is a simple static
+module system in the style of the
+@hyperlink["http://s48.org/"]{Scheme48} module system.  As with most
+features this is optional, and can be ignored or completely disabled
+at compile time.
 
-Modules names are hierarchical lists of symbols or numbers.  The definition of
-the module @scheme{(foo bar baz)} is searched for in the file
-foo/bar/baz.sld.  This file should contain an expression of the form:
+Modules names are hierarchical lists of symbols or numbers.  A module
+definition uses the following form:
 
 @schemeblock{
-  (module (foo bar baz)
-    <module-declarations> ...)
+  (define-library (foo bar baz)
+    <library-declarations> ...)
 }
 
-where @var{<module-declarations>} can be any of
+where @var{<library-declarations>} can be any of
 
 @schemeblock{
   (export <id> ...)                    ;; specify an export list
@@ -182,9 +207,21 @@ These forms perform basic selection and renaming of individual
 identifiers from the given module. They may be composed to perform
 combined selection and renaming.
 
-Files are loaded relative to the .sld file, and are written with
-their extension (so you can use whatever suffix you prefer - .scm,
-.ss, .sls, etc.).
+Some modules can be statically included in the initial configuration,
+and even more may be included in image files, however in general
+modules are searched for in a module load path.  The definition of the
+module @scheme{(foo bar baz)} is searched for in the file
+@scheme{"foo/bar/baz.sld"}.  The default module path includes the
+installed directories, @scheme{"."} and @scheme{"./lib"}.  Additional
+directories can be specified with the command-line options @ccode{-I}
+and @ccode{-A} (see the command-line options below) or with the
+@scheme{add-modue-directory} procedure at runtime.  You can search for
+a module file with @scheme{(find-module-file <file>)}, or load it with
+@scheme{(load-module-file <file> <env>)}.
+
+Within the module definition, files are loaded relative to the .sld
+file, and are written with their extension (so you can use whatever
+suffix you prefer - .scm, .ss, .sls, etc.).
 
 Shared modules, on the other hand, should be specified @emph{without} the
 extension - the correct suffix will be added portably (e.g. .so for Unix and
