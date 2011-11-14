@@ -427,10 +427,6 @@
 (define (string-ci>? s1 s2) (> (string-cmp s1 s2 #t) 0))
 (define (string-ci>=? s1 s2) (>= (string-cmp s1 s2 #t) 0))
 
-(define (string-map proc . los)
-  (list->string (apply map (map string->list los))))
-(define string-for-each string-map)
-
 ;; list utils
 
 (define (eqv? a b) (if (eq? a b) #t (and (flonum? a) (flonum? b) (= a b))))

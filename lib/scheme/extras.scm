@@ -58,7 +58,7 @@
   (apply write-string (utf8->string vec) (bytevector-length vec) o))
 
 (define (write-partial-bytevector vec start end . o)
-  (apply write-string (utf8->string (bytevector-copy-partial vec start end)) o))
+  (apply write-bytevector (bytevector-copy-partial vec start end) o))
 
 (define (make-list n . o)
   (let ((init (and (pair? o) (car o))))
@@ -78,7 +78,7 @@
       (let lp ((i (vector-length vec)) (res '()))
         (if (zero? i)
             (list->vector res)
-            (lp (- i 1) (cons (proc (vector-ref vec i)) res))))
+            (lp (- i 1) (cons (proc (vector-ref vec (- i 1))) res))))
       (list->vector (apply map proc (map vector->list (cons vec lov))))))
 
 (define (vector-for-each proc vec . lov)
@@ -101,6 +101,16 @@
 
 (define (string->vector vec)
   (list->vector (string->list vec)))
+
+(define (string-map proc . los)
+  (list->string (apply map proc (map string->list los))))
+
+(define (string-for-each proc str . los)
+  (if (null? los)
+      (let ((len (string-length str)))
+        (let lp ((i 0))
+          (if (< i len) (begin (proc (string-ref str i)) (lp (+ i 1))))))
+      (apply string-map (lambda (ch) (proc ch) ch) str los)))
 
 (define (bytevector-copy bv)
   (let ((res (make-bytevector (bytevector-length bv))))
