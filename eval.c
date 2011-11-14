@@ -1065,8 +1065,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_library_entry_t *entry = sexp_find_static_library(sexp_string_data(file));
   if (! entry)
     return sexp_compile_error(ctx, "couldn't find builtin library", file);
-
-  return entry->init(ctx, NULL, 1, env);
+  return entry->init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
 }
 #else
 #define sexp_find_static_library(path) NULL
@@ -1074,16 +1073,16 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #ifdef __MINGW32__
 #include <windows.h>
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
-  sexp_proc4 init;
+  sexp_init_proc init;
   HINSTANCE handle = LoadLibraryA(sexp_string_data(file));
   if(!handle)
     return sexp_compile_error(ctx, "couldn't load dynamic library", file);
-  init = (sexp_proc4) GetProcAddress(handle, "sexp_init_library");
+  init = (sexp_init_proc) GetProcAddress(handle, "sexp_init_library");
   if(!init) {
     FreeLibrary(handle);
     return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
   }
-  return init(ctx, NULL, 3, env, (sexp)sexp_version, (sexp)SEXP_ABI_IDENTIFIER);
+  return init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
 }
 #else
 static sexp sexp_make_dl (sexp ctx, sexp file, void* handle) {
@@ -1093,7 +1092,7 @@ static sexp sexp_make_dl (sexp ctx, sexp file, void* handle) {
   return res;
 }
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
-  sexp_proc4 init;
+  sexp_init_proc init;
   sexp_gc_var2(res, old_dl);
   void *handle = dlopen(sexp_string_data(file), RTLD_LAZY);
   if (! handle)
@@ -1106,7 +1105,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_gc_preserve2(ctx, res, old_dl);
   old_dl = sexp_context_dl(ctx);
   sexp_context_dl(ctx) = sexp_make_dl(ctx, file, handle);
-  res = init(ctx, NULL, 3, env, (sexp)sexp_version, (sexp)SEXP_ABI_IDENTIFIER);
+  res = init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
   sexp_context_dl(ctx) = old_dl;
   sexp_gc_release2(ctx);
   return res;

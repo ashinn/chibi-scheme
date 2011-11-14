@@ -206,6 +206,7 @@ typedef sexp (*sexp_proc4) (sexp, sexp, sexp_sint_t, sexp, sexp, sexp);
 typedef sexp (*sexp_proc5) (sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc6) (sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc7) (sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_init_proc)(sexp, sexp, sexp_sint_t, sexp, const char*, sexp_abi_identifier_t);
 
 typedef struct sexp_free_list_t *sexp_free_list;
 struct sexp_free_list_t {

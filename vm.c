@@ -1215,6 +1215,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     sexp_bytes_set(_ARG1, _ARG2, _ARG3);
     top-=3;
     break;
+#if SEXP_USE_MUTABLE_STRINGS
   case SEXP_OP_STRING_SET:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
@@ -1235,6 +1236,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     top-=3;
     break;
+#endif
 #if SEXP_USE_UTF8_STRINGS
   case SEXP_OP_STRING_CURSOR_NEXT:
     if (! sexp_stringp(_ARG1))
