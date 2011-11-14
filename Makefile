@@ -342,6 +342,8 @@ install: all
 uninstall:
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme-static$(EXE)
+	-$(RM) $(DESTDIR)$(BINDIR)/chibi-ffi
+	-$(RM) $(DESTDIR)$(BINDIR)/chibi-doc
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
