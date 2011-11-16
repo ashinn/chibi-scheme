@@ -4,8 +4,7 @@
 
 #include "chibi/eval.h"
 
-#define sexp_argv_symbol "*command-line-arguments*"
-#define sexp_argv_proc   "(define (command-line-arguments) "sexp_argv_symbol")"
+#define sexp_argv_symbol "command-line"
 
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
@@ -397,8 +396,7 @@ void run_main (int argc, char **argv) {
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
     else
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
-    sexp_env_define(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
-    sexp_eval_string(ctx, sexp_argv_proc, -1, env);
+    sexp_set_parameter(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i < argc) {             /* script usage */
       sexp_context_tracep(ctx) = 1;
       check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
