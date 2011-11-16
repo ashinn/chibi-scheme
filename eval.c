@@ -1194,15 +1194,15 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
 #endif
 
 #if SEXP_USE_COMPLEX
-#define maybe_convert_complex(z, t, f)                                  \
-  else if (t && sexp_complexp(z)) return sexp_complex_normalize(f(ctx, z));
+#define maybe_convert_complex(z, f)                                     \
+  else if (sexp_complexp(z)) return sexp_complex_normalize(f(ctx, z));
 #define sexp_complex_dummy(ctx, z) 0
 #else
-#define maybe_convert_complex(z, t, f)
+#define maybe_convert_complex(z, f)
 #endif
 
-#define define_math_op(name, cname, t, f)                               \
-  sexp name (sexp ctx, sexp self, sexp_sint_t n, sexp z) {               \
+#define define_math_op(name, cname, f)                                  \
+  sexp name (sexp ctx, sexp self, sexp_sint_t n, sexp z) {              \
     double d;                                                           \
     if (sexp_flonump(z))                                                \
       d = sexp_flonum_value(z);                                         \
@@ -1210,24 +1210,49 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
       d = (double)sexp_unbox_fixnum(z);                                 \
     maybe_convert_ratio(z)                                              \
     maybe_convert_bignum(z)                                             \
-    maybe_convert_complex(z, t, f)                                      \
+    maybe_convert_complex(z, f)                                         \
     else                                                                \
       return sexp_type_exception(ctx, self, SEXP_NUMBER, z);            \
     return sexp_make_flonum(ctx, cname(d));                             \
   }
 
-define_math_op(sexp_exp, exp, 1, sexp_complex_exp)
-define_math_op(sexp_log, log, 1, sexp_complex_log)
-define_math_op(sexp_sin, sin, 1, sexp_complex_sin)
-define_math_op(sexp_cos, cos, 1, sexp_complex_cos)
-define_math_op(sexp_tan, tan, 1, sexp_complex_tan)
-define_math_op(sexp_asin, asin, 1, sexp_complex_asin)
-define_math_op(sexp_acos, acos, 1, sexp_complex_acos)
-define_math_op(sexp_atan, atan, 1, sexp_complex_atan)
-define_math_op(sexp_round, round, 0, sexp_complex_dummy)
-define_math_op(sexp_trunc, trunc, 0, sexp_complex_dummy)
-define_math_op(sexp_floor, floor, 0, sexp_complex_dummy)
-define_math_op(sexp_ceiling, ceil, 0, sexp_complex_dummy)
+define_math_op(sexp_exp, exp, sexp_complex_exp)
+define_math_op(sexp_log, log, sexp_complex_log)
+define_math_op(sexp_sin, sin, sexp_complex_sin)
+define_math_op(sexp_cos, cos, sexp_complex_cos)
+define_math_op(sexp_tan, tan, sexp_complex_tan)
+define_math_op(sexp_asin, asin, sexp_complex_asin)
+define_math_op(sexp_acos, acos, sexp_complex_acos)
+define_math_op(sexp_atan, atan, sexp_complex_atan)
+
+#if SEXP_USE_RATIOS
+#define maybe_round_ratio(ctx, q, f)            \
+  if (sexp_ratiop(q)) return f(ctx, q);
+#else
+#define maybe_round_ratio(ctx, q, f)
+#endif
+
+#define define_math_rounder(name, cname, f)                             \
+  sexp name (sexp ctx, sexp self, sexp_sint_t n, sexp z) {              \
+    maybe_round_ratio(ctx, z, f)                                        \
+    if (sexp_flonump(z))                                                \
+      return sexp_make_flonum(ctx, cname(sexp_flonum_value(z)));        \
+    else if (sexp_fixnump(z) || sexp_bignump(z))                        \
+      return z;                                                         \
+    return sexp_type_exception(ctx, self, SEXP_NUMBER, z);              \
+  }
+
+static double even_round (double d) {
+  double res = round(d);
+  if (fabs(d - res) == 0.5 && ((long)res & 1))
+    res += (res < 0) ? 1 : -1;
+  return res;
+}
+
+define_math_rounder(sexp_round, even_round, sexp_ratio_round)
+define_math_rounder(sexp_trunc, trunc, sexp_ratio_trunc)
+define_math_rounder(sexp_floor, floor, sexp_ratio_floor)
+define_math_rounder(sexp_ceiling, ceil, sexp_ratio_ceiling)
 
 sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 #if SEXP_USE_COMPLEX
@@ -1241,7 +1266,7 @@ sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     d = (double)sexp_unbox_fixnum(z);
   maybe_convert_bignum(z)       /* XXXX add bignum sqrt */
   maybe_convert_ratio(z)        /* XXXX add ratio sqrt */
-  maybe_convert_complex(z, 1, sexp_complex_sqrt)
+  maybe_convert_complex(z, sexp_complex_sqrt)
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
   sexp_gc_preserve1(ctx, res);

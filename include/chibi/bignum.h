@@ -42,6 +42,10 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b);
 double sexp_ratio_to_double (sexp rat);
 sexp sexp_make_ratio (sexp ctx, sexp num, sexp den);
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);
+sexp sexp_ratio_round (sexp ctx, sexp a);
+sexp sexp_ratio_trunc (sexp ctx, sexp a);
+sexp sexp_ratio_floor (sexp ctx, sexp a);
+sexp sexp_ratio_ceiling (sexp ctx, sexp a);
 #endif
 #if SEXP_USE_COMPLEX
 sexp sexp_make_complex (sexp ctx, sexp real, sexp image);
