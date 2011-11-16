@@ -1225,6 +1225,7 @@ SEXP_API void sexp_init(void);
 SEXP_API sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
+SEXP_API void sexp_write_utf8_char (sexp ctx, int c, sexp out);
 #endif
 
 #if SEXP_USE_GREEN_THREADS

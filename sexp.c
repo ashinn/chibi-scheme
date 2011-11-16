@@ -1699,13 +1699,23 @@ sexp sexp_write_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
   return sexp_write_one(ctx, obj, out);
 }
 
+#if SEXP_USE_UTF8_STRINGS
+void sexp_write_utf8_char (sexp ctx, int c, sexp out) {
+  unsigned char buf[8];
+  int len = sexp_utf8_char_byte_count(c);
+  sexp_utf8_encode_char(buf, len, c);
+  buf[len] = 0;
+  sexp_write_string(ctx, (char*)buf, out);
+}
+#endif
+
 sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
   sexp res=SEXP_VOID;
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
   if (sexp_stringp(obj))
     sexp_write_string(ctx, sexp_string_data(obj), out);
   else if (sexp_charp(obj))
-    sexp_write_char(ctx, sexp_unbox_character(obj), out);
+    sexp_write_utf8_char(ctx, sexp_unbox_character(obj), out);
   else
     res = sexp_write_one(ctx, obj, out);
   return res;
