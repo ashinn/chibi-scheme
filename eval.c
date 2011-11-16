@@ -1469,14 +1469,6 @@ sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   return sexp_string_utf8_ref(ctx, str, off);
 }
 
-void sexp_write_utf8_char (sexp ctx, int c, sexp out) {
-  unsigned char buf[8];
-  int len = sexp_utf8_char_byte_count(c);
-  sexp_utf8_encode_char(buf, len, c);
-  buf[len] = 0;
-  sexp_write_string(ctx, (char*)buf, out);
-}
-
 sexp sexp_read_utf8_char (sexp ctx, sexp port, int i) {
   if (i >= 0x80) {
     if ((i < 0xC0) || (i > 0xF7)) {
