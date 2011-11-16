@@ -538,6 +538,47 @@ sexp sexp_ratio_compare (sexp ctx, sexp a, sexp b) {
   return a2;
 }
 
+sexp sexp_ratio_round (sexp ctx, sexp a) {
+  sexp_gc_var2(q, r);
+  sexp_gc_preserve2(ctx, q, r);
+  q = sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
+  if ((sexp_ratio_denominator(a) == SEXP_TWO) && sexp_oddp(q)) {
+    q = sexp_add(ctx, q, (sexp_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
+  } else {
+    r = sexp_remainder(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
+    r = sexp_mul(ctx, r, SEXP_TWO);
+    if (sexp_negativep(r)) {sexp_negate(r);}
+    if (sexp_unbox_fixnum(sexp_compare(ctx, r, sexp_ratio_denominator(a))) > 0)
+      q = sexp_add(ctx, q, (sexp_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
+  }
+  sexp_gc_release2(ctx);
+  return q;
+}
+
+sexp sexp_ratio_trunc (sexp ctx, sexp a) {
+  return sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
+}
+
+sexp sexp_ratio_floor (sexp ctx, sexp a) {
+  sexp_gc_var1(q);
+  sexp_gc_preserve1(ctx, q);
+  q = sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
+  if (sexp_negativep(sexp_ratio_numerator(a)))
+    q = sexp_add(ctx, q, SEXP_NEG_ONE);
+  sexp_gc_release1(ctx);
+  return q;
+}
+
+sexp sexp_ratio_ceiling (sexp ctx, sexp a) {
+  sexp_gc_var1(q);
+  sexp_gc_preserve1(ctx, q);
+  q = sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
+  if (sexp_positivep(sexp_ratio_numerator(a)))
+    q = sexp_add(ctx, q, SEXP_ONE);
+  sexp_gc_release1(ctx);
+  return q;
+}
+
 #endif
 
 /************************ complex numbers ****************************/
@@ -1401,7 +1442,7 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(f > 0.0 ? 1 : f == 0.0 ? 0 : -1);
       break;
     case SEXP_NUM_FIX_BIG:
-      r = sexp_make_fixnum(-1);
+      r = sexp_make_fixnum(sexp_bignum_sign(b) < 0 ? 1 : -1);
       break;
     case SEXP_NUM_FLO_FLO:
       f = sexp_flonum_value(a) - sexp_flonum_value(b);

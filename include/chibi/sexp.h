@@ -698,6 +698,15 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
                                  && (sexp_bignum_sign(x) < 0))
 #define sexp_negativep(x) (sexp_exact_negativep(x) ||                   \
                            (sexp_flonump(x) && sexp_flonum_value(x) < 0))
+#define sexp_positivep(x) (!(sexp_negativep(x)))
+
+#if SEXP_USE_BIGNUMS
+#define sexp_oddp(x) (sexp_fixnump(x) ? sexp_unbox_fixnum(x) & 1 : \
+                      sexp_bignump(x) && (sexp_bignum_data(x)[0] & 1))
+#else
+#define sexp_oddp(x) (sexp_fixnump(x) && (sexp_unbox_fixnum(x) & 1))
+#endif
+#define sexp_evenp(x) (!(sexp_oddp(x)))
 
 #define sexp_negate_exact(x)                            \
   if (sexp_bignump(x))                                  \
