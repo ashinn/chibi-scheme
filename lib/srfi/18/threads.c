@@ -407,9 +407,8 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
     for (i=sexp_pollfds_num_fds(pollfds)-1; i>=0 && k>0; --i) {
       if (pfds[i].revents > 0) { /* free all threads blocked on this fd */
         k--;
-        pfds[i].events = 0;     /* FIXME: delete from queue completely */
         for (ls1=SEXP_NULL, ls2=paused; sexp_pairp(ls2); ) {
-          /* FIXME distinguish input and output on the same fd */
+          /* TODO: distinguish input and output on the same fd? */
           if (sexp_portp(sexp_context_event(sexp_car(ls2)))
               && sexp_port_fileno(sexp_context_event(sexp_car(ls2))) == pfds[i].fd) {
             sexp_context_waitp(sexp_car(ls2)) = 0;
@@ -432,6 +431,10 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
             ls2 = sexp_cdr(ls2);
           }
         }
+        if (i < (sexp_pollfds_num_fds(pollfds) - 1)) {
+          pfds[i] = pfds[sexp_pollfds_num_fds(pollfds) - 1];
+        }
+        sexp_pollfds_num_fds(pollfds) -= 1;
       }
     }
   }
