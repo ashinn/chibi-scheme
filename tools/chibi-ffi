@@ -756,17 +756,31 @@
    (func-c-args func)))
 
 (define (write-actual-parameter func arg)
+  (define (write-value val)
+    (cond
+     ((find (lambda (x)
+              (and (type-array x)
+                   (type-auto-expand? x)
+                   (eq? val (get-array-length func x))))
+            (func-c-args func))
+      => (lambda (x) (cat "len" (type-index x))))
+     ((assq val *types*)
+      (cat (or (type-struct-type val) "") " " val))
+     ((list? val)
+      (write (car val))
+      (cat
+       "("
+       (lambda ()
+         (cond
+          ((pair? (cdr val))
+           (write-value (cadr val))
+           (for-each (lambda (x) (display ", ") (write-value x)) (cddr val)))))
+       ")"))
+     (else
+      (write val))))
   (cond
    ((and (not (type-default? arg)) (type-value arg))
-    => (lambda (x)
-         (cond
-          ((find (lambda (y)
-                   (and (type-array y)
-                        (type-auto-expand? y)
-                        (eq? x (get-array-length func y))))
-                 (func-c-args func))
-           => (lambda (y) (cat "len" (type-index y))))
-          (else (write x)))))
+    => write-value)
    ((or (type-result? arg) (type-array arg))
     (cat (if (or (type-free? arg) (type-reference? arg) (basic-type? arg))
              "&"
