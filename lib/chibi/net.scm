@@ -14,8 +14,8 @@
                      (if (and (pair? o) (car o))
                          (car o)
                          (make-address-info address-family/inet
-                                         socket-type/stream
-                                         ip-proto/tcp))))
+                                            socket-type/stream
+                                            ip-proto/tcp))))
 
 ;;> Opens a client net connection to @var{host}, a string,
 ;;> on port @var{service}, which can be a string such as
@@ -59,3 +59,30 @@
         (let ((res (proc (car io) (car (cdr io)))))
           (close-input-port (car io))
           res))))
+
+;;> @subsubsubsection{@scheme{(make-listener-socket addrinfo [max-conn])}}
+
+;;> Convenience wrapper to call socket, bind and listen to return
+;;> a socket suitable for accepting connections on the given
+;;> @var{addrinfo}.  @var{max-conn} is the maximum number of pending
+;;> connections, and defaults to 128.
+
+(define (make-listener-socket addrinfo . o)
+  (let* ((max-connections (if (pair? o) (car o) 128))
+         (sock (socket (address-info-family addrinfo)
+                       (address-info-socket-type addrinfo)
+                       (address-info-protocol addrinfo))))
+    (cond
+     ((negative? sock)
+      (error "couldn't create socket for: " addrinfo))
+     ((negative? (bind sock
+                       (address-info-address addrinfo)
+                       (address-info-address-length addrinfo)))
+      (close-file-descriptor sock)
+      (error "couldn't bind socket for: " addrinfo))
+     ((negative? (listen sock 100))
+      (close-file-descriptor sock)
+      (error "couldn't listen on socket for: " addrinfo))
+     (else
+      (set-file-descriptor-status! sock open/non-block)
+      sock))))
