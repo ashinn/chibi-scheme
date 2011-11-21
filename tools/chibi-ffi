@@ -704,6 +704,45 @@
          (cat "  sexp_check_block_port(ctx, arg" (type-index a) ", 0);\n")))
    args))
 
+(define (write-value func val)
+  (cond
+   ((find (lambda (x)
+            (and (type-array x)
+                 (type-auto-expand? x)
+                 (eq? val (get-array-length func x))))
+          (func-c-args func))
+    => (lambda (x) (cat "len" (type-index x))))
+   ((assq val *types*)
+    (cat (or (type-struct-type val) "") " " val))
+   ((list? val)
+    (write (car val))
+    (cat
+     "("
+     (lambda ()
+       (cond
+        ((pair? (cdr val))
+         (write-value func (cadr val))
+         (for-each (lambda (x) (display ", ") (write-value func x)) (cddr val)))))
+     ")"))
+   (else
+    (write val))))
+
+(define (write-actual-parameter func arg)
+  (cond
+   ((or (type-result? arg) (type-array arg))
+    (cat (if (or (type-free? arg) (type-reference? arg) (basic-type? arg))
+             "&"
+             "")
+         "tmp" (type-index arg)))
+   ((and (not (type-default? arg)) (type-value arg))
+    => (lambda (x) (write-value func x)))
+   ((and (type-pointer? arg) (basic-type? arg))
+    (cat "&tmp" (type-index arg)))
+   (else
+    (scheme->c-converter
+     arg
+     (string-append "arg" (type-index-string arg))))))
+
 (define (write-temporaries func)
   (for-each
    (lambda (a)
@@ -746,6 +785,9 @@
                 (if (and (symbol? len) (not (eq? len 'null)))
                     (cat "  tmp" (type-index a) "[" (lambda () (scheme->c-converter 'unsigned-int len))
                          "*sizeof(tmp" (type-index a) "[0])] = 0;\n")))))
+        ((and (type-result? a) (type-value a))
+         (cat "  tmp" (type-index a) " = "
+              (lambda () (write-value func (type-value a))) ";\n"))
         ((and (type-pointer? a) (basic-type? a))
          (cat "  tmp" (type-index a) " = "
               (lambda ()
@@ -754,44 +796,6 @@
                  (string-append "arg" (type-index-string a))))
               ";\n")))))
    (func-c-args func)))
-
-(define (write-actual-parameter func arg)
-  (define (write-value val)
-    (cond
-     ((find (lambda (x)
-              (and (type-array x)
-                   (type-auto-expand? x)
-                   (eq? val (get-array-length func x))))
-            (func-c-args func))
-      => (lambda (x) (cat "len" (type-index x))))
-     ((assq val *types*)
-      (cat (or (type-struct-type val) "") " " val))
-     ((list? val)
-      (write (car val))
-      (cat
-       "("
-       (lambda ()
-         (cond
-          ((pair? (cdr val))
-           (write-value (cadr val))
-           (for-each (lambda (x) (display ", ") (write-value x)) (cddr val)))))
-       ")"))
-     (else
-      (write val))))
-  (cond
-   ((and (not (type-default? arg)) (type-value arg))
-    => write-value)
-   ((or (type-result? arg) (type-array arg))
-    (cat (if (or (type-free? arg) (type-reference? arg) (basic-type? arg))
-             "&"
-             "")
-         "tmp" (type-index arg)))
-   ((and (type-pointer? arg) (basic-type? arg))
-    (cat "&tmp" (type-index arg)))
-   (else
-    (scheme->c-converter
-     arg
-     (string-append "arg" (type-index-string arg))))))
 
 (define (write-call func)
   (let ((ret-type (func-ret-type func))
