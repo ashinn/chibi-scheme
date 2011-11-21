@@ -84,5 +84,4 @@
       (close-file-descriptor sock)
       (error "couldn't listen on socket for: " addrinfo))
      (else
-      (set-file-descriptor-status! sock open/non-block)
       sock))))
