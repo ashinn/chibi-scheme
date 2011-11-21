@@ -2087,18 +2087,19 @@ int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
     if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
       sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
     if (sexp_port_flags(in) & O_NONBLOCK) {
-      errno = 0;
       if (!forcep
           && (((c = sexp_read_char(ctx, in)) == EOF)
-              && (errno == EAGAIN)
-              && sexp_opcodep((f=sexp_global(ctx, SEXP_G_THREADS_BLOCKER))))) {
-        ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, in);
-        return 1;
-      } else {
-        if (!forcep) sexp_push_char(ctx, c, in);
-        sexp_port_blockedp(in) = 1;
-        fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in) & ~O_NONBLOCK);
+              && sexp_port_stream(in)
+              && ferror(sexp_port_stream(in)) && (errno == EAGAIN))) {
+        f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
+        if (sexp_opcodep(f)) {
+          ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, in);
+          return 1;
+        }
       }
+      if (!forcep) sexp_push_char(ctx, c, in);
+      sexp_port_blockedp(in) = 1;
+      fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in) & ~O_NONBLOCK);
     }
   }
   return 0;
