@@ -32,11 +32,13 @@
 
 ;;> Listen on a socket.
 
-(define-c int listen (int int))
+(define-c sexp (listen "sexp_listen")
+  ((value ctx sexp) (value self sexp) sexp sexp))
 
 ;;> Accept a connection on a socket.
 
-(define-c int accept (int sockaddr (pointer socklen_t)))
+(define-c sexp (accept "sexp_accept")
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))
 
 ;;> Create an endpoint for communication.
 
@@ -56,3 +58,5 @@
 
 ;;> The constants for the addrinfo struct.
 ;;/
+
+(c-include "accept.c")
