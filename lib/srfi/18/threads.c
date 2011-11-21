@@ -419,12 +419,14 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
               sexp_cdr(ls1) = sexp_cdr(ls2);
             tmp = sexp_cdr(ls2);
             sexp_cdr(ls2) = SEXP_NULL;
-            if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
-              sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
-            } else {
-              sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = ls2;
+            if (sexp_car(ls2) != ctx) {
+              if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
+                sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
+              } else {
+                sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = ls2;
+              }
+              sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
             }
-            sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
             ls2 = tmp;
           } else {
             ls1 = ls2;
@@ -472,7 +474,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
       ls2 = paused;
       while (sexp_pairp(ls2) && sexp_context_before(sexp_car(ls2), tval)) {
         sexp_context_timeoutp(sexp_car(ls2)) = 1;
-        sexp_context_waitp(ctx) = 0;
+        sexp_context_waitp(sexp_car(ls2)) = 0;
         ls1 = ls2;
         ls2 = sexp_cdr(ls2);
       }
