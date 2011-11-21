@@ -354,16 +354,20 @@ static sexp sexp_insert_pollfd (sexp ctx, int fd, int events) {
 }
 
 /* block the current thread on the specified port */
-static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd) {
   int fd;
-  sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
   /* register the fd */
-  fd = sexp_port_fileno(port);
+  if (sexp_portp(portorfd))
+    fd = sexp_port_fileno(portorfd);
+  else if (sexp_fixnump(portorfd))
+    fd = sexp_unbox_fixnum(portorfd);
+  else
+    return sexp_type_exception(ctx, self, SEXP_IPORT, portorfd);
   if (fd >= 0)
-    sexp_insert_pollfd(ctx, fd, sexp_iportp(port) ? POLLIN : POLLOUT);
+    sexp_insert_pollfd(ctx, fd, sexp_oportp(portorfd) ? POLLOUT : POLLIN);
   /* pause the current thread */
   sexp_context_waitp(ctx) = 1;
-  sexp_context_event(ctx) = port;
+  sexp_context_event(ctx) = portorfd;
   sexp_insert_timed(ctx, ctx, SEXP_FALSE);
   return SEXP_VOID;
 }
@@ -373,7 +377,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
   struct timeval tval;
   struct pollfd *pfds;
   useconds_t usecs = 0;
-  sexp res, ls1, ls2, runner, paused, front, pollfds;
+  sexp res, ls1, ls2, evt, runner, paused, front, pollfds;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
 
@@ -409,8 +413,9 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
         k--;
         for (ls1=SEXP_NULL, ls2=paused; sexp_pairp(ls2); ) {
           /* TODO: distinguish input and output on the same fd? */
-          if (sexp_portp(sexp_context_event(sexp_car(ls2)))
-              && sexp_port_fileno(sexp_context_event(sexp_car(ls2))) == pfds[i].fd) {
+          evt = sexp_context_event(sexp_car(ls2));
+          if ((sexp_portp(evt) && sexp_port_fileno(evt) == pfds[i].fd)
+              || (sexp_fixnump(evt) && sexp_unbox_fixnum(evt) == pfds[i].fd)) {
             sexp_context_waitp(sexp_car(ls2)) = 0;
             sexp_context_timeoutp(sexp_car(ls2)) = 0;
             if (ls1==SEXP_NULL)
@@ -541,7 +546,8 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
     }
     /* either wait on an fd, or just sleep */
     pollfds = sexp_global(res, SEXP_G_THREADS_POLL_FDS);
-    if (sexp_portp(sexp_context_event(res)) && sexp_pollfdsp(ctx, pollfds)) {
+    if ((sexp_portp(sexp_context_event(res)) || sexp_fixnump(sexp_context_event(res)))
+        && sexp_pollfdsp(ctx, pollfds)) {
       if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0) {
         pfds = sexp_pollfds_fds(pollfds);
         goto unblock_io_threads;
