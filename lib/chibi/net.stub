@@ -28,7 +28,7 @@
 
 ;;> Bind a name to a socket.
 
-(define-c int bind (int sockaddr int))
+(define-c errno bind (int sockaddr int))
 
 ;;> Listen on a socket.
 

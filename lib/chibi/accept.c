@@ -43,5 +43,5 @@ sexp sexp_listen (sexp ctx, sexp self, sexp arg0, sexp arg1) {
   if (res >= 0)
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 #endif
-  return sexp_make_integer(ctx, res);
+  return (res == 0) ? SEXP_TRUE : SEXP_FALSE;
 }

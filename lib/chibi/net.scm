@@ -78,12 +78,12 @@
       (error "couldn't create socket for: " addrinfo))
      ((not (set-socket-option! sock level/socket socket-opt/reuseaddr 1))
       (error "couldn't set the socket to be reusable" addrinfo))
-     ((negative? (bind sock
+     ((not (bind sock
                        (address-info-address addrinfo)
                        (address-info-address-length addrinfo)))
       (close-file-descriptor sock)
       (error "couldn't bind socket for: " addrinfo))
-     ((negative? (listen sock 100))
+     ((not (listen sock max-connections))
       (close-file-descriptor sock)
       (error "couldn't listen on socket for: " addrinfo))
      (else
