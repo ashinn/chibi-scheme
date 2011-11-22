@@ -517,7 +517,18 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
       sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = SEXP_NULL;
     }
   } else {
+    /* no threads to dequeue */
     res = ctx;
+    /* prefer a thread we can wait on instead of spinning */
+    if (sexp_context_refuel(ctx) <= 0) {
+      for (ls1=paused; sexp_pairp(ls1); ls1=sexp_cdr(ls1)) {
+        evt = sexp_context_event(sexp_car(ls1));
+        if (sexp_fixnump(evt) || sexp_portp(evt)) {
+          res = sexp_car(ls1);
+          break;
+        }
+      }
+    }
   }
 
   if (sexp_context_waitp(res)) {
