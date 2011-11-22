@@ -65,7 +65,8 @@
 ;;> Convenience wrapper to call socket, bind and listen to return
 ;;> a socket suitable for accepting connections on the given
 ;;> @var{addrinfo}.  @var{max-conn} is the maximum number of pending
-;;> connections, and defaults to 128.
+;;> connections, and defaults to 128.  Automatically specifies
+;;> @scheme{socket-opt/reuseaddr}.
 
 (define (make-listener-socket addrinfo . o)
   (let* ((max-connections (if (pair? o) (car o) 128))
@@ -75,6 +76,8 @@
     (cond
      ((negative? sock)
       (error "couldn't create socket for: " addrinfo))
+     ((not (set-socket-option! sock level/socket socket-opt/reuseaddr 1))
+      (error "couldn't set the socket to be reusable" addrinfo))
      ((negative? (bind sock
                        (address-info-address addrinfo)
                        (address-info-address-length addrinfo)))
@@ -85,3 +88,12 @@
       (error "couldn't listen on socket for: " addrinfo))
      (else
       sock))))
+
+;;> Returns the socket option of the given @var{name} for @var{socket}.
+;;> @var{socket} should be a file descriptor, level the constant
+;;> @scheme{level/socket}, and name one of the constants beginning with
+;;> "socket-opt/".
+
+(define (get-socket-option socket level name)
+  (let ((res (getsockopt socket level name)))
+    (and (pair? res) (car res))))

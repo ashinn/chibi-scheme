@@ -60,3 +60,30 @@
 ;;/
 
 (c-include "accept.c")
+
+(define-c errno getsockopt
+  (int int int (result int) (result (value (sizeof int) socklen_t))))
+
+;;> Set an option for the given socket.  For example, to make the
+;;> address reusable:
+;;> @scheme{(set-socket-option! sock level/socket socket-opt/reuseaddr 1)}
+
+(define-c errno (set-socket-option! "setsockopt")
+  (int int int (pointer int) (value (sizeof int) socklen_t)))
+
+(define-c-const int (level/socket "SOL_SOCKET"))
+
+(define-c-const int (socket-opt/debug "SO_DEBUG"))
+(define-c-const int (socket-opt/broadcast "SO_BROADCAST"))
+(define-c-const int (socket-opt/reuseaddr "SO_REUSEADDR"))
+(define-c-const int (socket-opt/keepalive "SO_KEEPALIVE"))
+(define-c-const int (socket-opt/oobinline "SO_OOBINLINE"))
+(define-c-const int (socket-opt/sndbuf "SO_SNDBUF"))
+(define-c-const int (socket-opt/rcvbuf "SO_RCVBUF"))
+(define-c-const int (socket-opt/dontroute "SO_DONTROUTE"))
+(define-c-const int (socket-opt/rcvlowat "SO_RCVLOWAT"))
+(define-c-const int (socket-opt/sndlowat "SO_SNDLOWAT"))
+
+;;> The constants for the @scheme{get-socket-option} and
+;;> @scheme{set-socket-option!}.
+;;/
