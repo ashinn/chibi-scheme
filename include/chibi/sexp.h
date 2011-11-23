@@ -1198,6 +1198,8 @@ SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
+SEXP_API sexp sexp_make_non_null_input_port (sexp ctx, FILE* in, sexp name);
+SEXP_API sexp sexp_make_non_null_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_port_binaryp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 SEXP_API sexp sexp_port_openp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 #if SEXP_USE_FOLD_CASE_SYMS

@@ -1407,6 +1407,16 @@ sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name) {
   return p;
 }
 
+sexp sexp_make_non_null_input_port (sexp ctx, FILE* in, sexp name) {
+  if (!in) return sexp_user_exception(ctx, SEXP_FALSE, "null input-port", name);
+  return sexp_make_input_port(ctx, in, name);
+}
+
+sexp sexp_make_non_null_output_port (sexp ctx, FILE* out, sexp name) {
+  if (!out) return sexp_user_exception(ctx, SEXP_FALSE, "null output-port", name);
+  return sexp_make_output_port(ctx, out, name);
+}
+
 sexp sexp_port_binaryp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
   return sexp_make_boolean(sexp_port_binaryp(port));
