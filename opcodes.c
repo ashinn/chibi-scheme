@@ -1,8 +1,8 @@
 
 #define _I(n) sexp_make_fixnum(n)
-#define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, SEXP_FALSE, f}
+#define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, NULL, SEXP_FALSE, f}
 #if SEXP_USE_IMAGE_LOADING
-#define _FN(o,n,m,rt,a1,a2,a3,s,d,f) {SEXP_OPC_FOREIGN, o, n, m, 0, (sexp)s, d, (sexp)#f, NULL, rt, a1, a2, a3, SEXP_FALSE, (sexp_proc1)f}
+#define _FN(o,n,m,rt,a1,a2,a3,s,d,f) {SEXP_OPC_FOREIGN, o, n, m, 0, (sexp)s, d, (sexp)#f, NULL, rt, a1, a2, a3, NULL, SEXP_FALSE, (sexp_proc1)f}
 #else
 #define _FN(o,n,m,rt,a1,a2,a3,s,d,f) _OP(SEXP_OPC_FOREIGN, o, n, m, rt, a1, a2, a3, 0, s, d, (sexp_proc1)f)
 #endif
