@@ -246,7 +246,8 @@ struct sexp_type_struct {
 
 struct sexp_opcode_struct {
   unsigned char op_class, code, num_args, flags, inverse;
-  sexp name, data, data2, proc, ret_type, arg1_type, arg2_type, arg3_type, dl;
+  sexp name, data, data2, proc, ret_type, arg1_type, arg2_type, arg3_type,
+    argn_type, dl;
   sexp_proc1 func;
 };
 
@@ -871,6 +872,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_opcode_arg1_type(x)   (sexp_field(x, opcode, SEXP_OPCODE, arg1_type))
 #define sexp_opcode_arg2_type(x)   (sexp_field(x, opcode, SEXP_OPCODE, arg2_type))
 #define sexp_opcode_arg3_type(x)   (sexp_field(x, opcode, SEXP_OPCODE, arg3_type))
+#define sexp_opcode_argn_type(x)   (sexp_field(x, opcode, SEXP_OPCODE, argn_type))
 #define sexp_opcode_func(x)        (sexp_field(x, opcode, SEXP_OPCODE, func))
 
 #define sexp_opcode_variadic_p(x)  (sexp_opcode_flags(x) & 1)

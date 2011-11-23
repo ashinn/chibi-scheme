@@ -38,7 +38,7 @@
 ;;> Accept a connection on a socket.
 
 (define-c sexp (accept "sexp_accept")
-  ((value ctx sexp) (value self sexp) sexp sexp sexp))
+  ((value ctx sexp) (value self sexp) int sockaddr int))
 
 ;;> Create an endpoint for communication.
 

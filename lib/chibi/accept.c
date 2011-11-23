@@ -4,23 +4,15 @@
 /* EWOULDBLOCK and block on the socket, and listen should automatically make */
 /* sockets non-blocking. */
 
-sexp sexp_accept (sexp ctx, sexp self, sexp arg0, sexp arg1, sexp arg2) {
+sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_t len) {
   sexp f;
-  socklen_t tmp;
   int res;
-  if (! sexp_exact_integerp(arg0))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, arg0);
-  if (! (sexp_pointerp(arg1) && (sexp_pointer_tag(arg1) == sexp_type_tag(sexp_sockaddr_type_t))))
-    return sexp_type_exception(ctx, self, sexp_type_tag(sexp_sockaddr_type_t), arg1);
-  if (! sexp_exact_integerp(arg2))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, arg2);
-  tmp = sexp_sint_value(arg2);
-  res = accept(sexp_sint_value(arg0), (struct sockaddr*)sexp_cpointer_value(arg1), &tmp);
+  res = accept(sock, addr, &len);
 #if SEXP_USE_GREEN_THREADS
   if (res < 0 && errno == EWOULDBLOCK) {
     f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
     if (sexp_opcodep(f)) {
-      ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, arg0);
+      ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, sexp_make_fixnum(sock));
       return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
     }
   }

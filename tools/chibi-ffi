@@ -32,6 +32,7 @@
 (define *funcs* '())
 (define *consts* '())
 (define *inits* '())
+(define *tags* '())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
@@ -99,6 +100,18 @@
     (cond ((null? ls) (reverse res))
           ((symbol? (car ls)) (lp (cddr ls) res))
           (else (lp (cdr ls) (cons (car ls) res))))))
+
+(define (type-field-type type field)
+  (cond
+   ((assq (type-base (parse-type type)) *types*)
+    => (lambda (x)
+         (let lp ((ls (struct-fields (cdr x))))
+           (cond
+            ((null? ls) #f)
+            ((eq? field (caar ls)) (cadar ls))
+            (else (lp (cdr ls)))))))
+   (else
+    #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type predicates
@@ -266,6 +279,14 @@
         (thunk)
         (current-output-port old-out)))))
 
+(define (warn msg . args)
+  (let ((err (current-error-port)))
+    (display "WARNING: " err)
+    (display msg err)
+    (if (pair? args) (display ":" err))
+    (for-each (lambda (x) (display " " err) (write x err)) args)
+    (newline err)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; naming
 
@@ -290,7 +311,7 @@
   (string-append "sexp_" (mangle sym) "_stub"))
 
 (define (type-id-name sym)
-  (string-append "sexp_" (mangle sym) "_type_t"))
+  (string-append "sexp_" (mangle sym) "_type_tag"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; .stub file interface
@@ -327,7 +348,8 @@
            `((,(cadr expr)
               ,@(parse-struct-like (cddr expr)))
              ,@*types*))
-     `(cat "\nstatic sexp " ,(type-id-name (cadr expr)) ";\n"))))
+     (set! *tags* `(,(type-id-name (cadr expr)) ,@*tags*))
+     #f)))
 
 (define-syntax define-c-struct
   (er-macro-transformer
@@ -364,6 +386,75 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C code generation
+
+(define (type-predicate type)
+  (let ((base (type-base (parse-type type))))
+    (cond
+     ((int-type? base) "sexp_exact_integerp")
+     ((float-type? base) "sexp_flonump")
+     ((string-type? base) "sexp_stringp")
+     ((eq? base 'char) "sexp_charp")
+     ((eq? base 'boolean) "sexp_booleanp")
+     ((eq? base 'port) "sexp_portp")
+     ((eq? base 'input-port) "sexp_iportp")
+     ((eq? base 'output-port) "sexp_oportp")
+     (else #f))))
+
+(define (type-name type)
+  (let ((base (type-base (parse-type type))))
+    (cond
+     ((int-type? base) "integer")
+     ((float-type? base) "flonum")
+     ((eq? 'boolean base) "int")
+     (else base))))
+
+(define (type-id-number type . o)
+  (let ((base (type-base type)))
+    (cond
+     ((int-type? base) "SEXP_FIXNUM")
+     ((float-type? base) "SEXP_FLONUM")
+     ((string-type? base) "SEXP_STRING")
+     ((eq? base 'char) "SEXP_CHAR")
+     ((eq? base 'boolean) "SEXP_BOOLEAN")
+     ((eq? base 'string) "SEXP_STRING")
+     ((eq? base 'symbol) "SEXP_SYMBOL")
+     ((eq? base 'pair) "SEXP_PAIR")
+     ((eq? base 'port) "SEXP_IPORT")
+     ((eq? base 'input-port) "SEXP_IPORT")
+     ((eq? base 'output-port) "SEXP_OPORT")
+     ((void-pointer-type? type) "SEXP_CPOINTER")
+     ((assq base *types*)
+      ;; (string-append "sexp_type_tag(" (type-id-name base) ")")
+      (let ((i (type-index type)))
+        (cond
+         ((not i)
+          ;;(warn "type-id-number on unknown arg" type)
+          (if (and (pair? o) (car o))
+              "sexp_unbox_fixnum(sexp_opcode_return_type(self))"
+              (string-append "sexp_type_tag(" (type-id-name base) ")")))
+         ((< i 3)
+          (string-append
+           "sexp_unbox_fixnum(sexp_opcode_arg"
+           (number->string (+ i 1)) "_type(self))"))
+         (else
+          (string-append
+           "sexp_unbox_fixnum(sexp_vector_ref(sexp_opcode_argn_type(self), "
+           (number->string (- i 3)) "))")))))
+     (else "SEXP_OBJECT"))))
+
+(define (type-id-value type . o)
+  (cond
+   ((eq? 'void (type-base type))
+    "SEXP_VOID")
+   (else
+    (string-append "sexp_make_fixnum(" (apply type-id-number type o) ")"))))
+
+(define (type-id-init-value type)
+  (cond
+   ((assq (type-base type) *types*)
+    (string-append "sexp_make_fixnum(sexp_type_tag(" (type-id-name (type-base type)) "))"))
+   (else
+    (type-id-value type))))
 
 (define (c->scheme-converter type val . o)
   (let ((base (type-base type)))
@@ -404,7 +495,8 @@
           (cat "sexp_make_cpointer(ctx, "
                (if void*?
                    "SEXP_CPOINTER"
-                   (string-append "sexp_type_tag(" (type-id-name base) ")"))
+                   ;;(string-append "sexp_type_tag(" (type-id-name base) ")")
+                   (type-id-number type #t))
                ", "
                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
                (if (or (type-free? type)
@@ -455,27 +547,6 @@
          (else
           (error "unknown type" base))))))))
 
-(define (type-predicate type)
-  (let ((base (type-base (parse-type type))))
-    (cond
-     ((int-type? base) "sexp_exact_integerp")
-     ((float-type? base) "sexp_flonump")
-     ((string-type? base) "sexp_stringp")
-     ((eq? base 'char) "sexp_charp")
-     ((eq? base 'boolean) "sexp_booleanp")
-     ((eq? base 'port) "sexp_portp")
-     ((eq? base 'input-port) "sexp_iportp")
-     ((eq? base 'output-port) "sexp_oportp")
-     (else #f))))
-
-(define (type-name type)
-  (let ((base (type-base (parse-type type))))
-   (cond
-    ((int-type? base) "integer")
-    ((float-type? base) "flonum")
-    ((eq? 'boolean base) "int")
-    (else base))))
-
 (define (base-type-c-name base)
   (case base
     ((string env-string non-null-string) "char*")
@@ -515,28 +586,12 @@
        " && (sexp_pointer_tag(" arg  ") == "
        (if (void-pointer-type? type)
            "SEXP_CPOINTER"
-           (string-append "sexp_type_tag(" (type-id-name base) ")"))
+           (type-id-number type))
        "))"
        (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
      (else
-      (display "WARNING: don't know how to check: " (current-error-port))
-      (write type (current-error-port))
-      (newline (current-error-port))
+      (warn "don't know how to check" type)
       (cat "1")))))
-
-(define (type-id-number type)
-  (let ((base (type-base type)))
-    (cond
-     ((int-type? base) "SEXP_FIXNUM")
-     ((float-type? base) "SEXP_FLONUM")
-     ((string-type? base) "SEXP_STRING")
-     ((eq? base 'char) "SEXP_CHAR")
-     ((eq? base 'boolean) "SEXP_BOOLEAN")
-     ((eq? base 'port) "SEXP_IPORT")
-     ((eq? base 'input-port) "SEXP_IPORT")
-     ((eq? base 'output-port) "SEXP_OPORT")
-     ((void-pointer-type? type) "SEXP_CPOINTER")
-     (else (string-append "sexp_type_tag(" (type-id-name base) ")")))))
 
 (define (write-validator arg type)
   (let* ((type (parse-type type))
@@ -577,9 +632,7 @@
      ((string-type? type)
       (write-validator arg 'string))
      (else
-      (display "WARNING: don't know how to validate: " (current-error-port))
-      (write type (current-error-port))
-      (newline (current-error-port))))))
+      (warn "don't know how to validate" type)))))
 
 (define (write-parameters args)
   (lambda () (for-each (lambda (a) (cat ", sexp arg" (type-index a))) args)))
@@ -982,6 +1035,8 @@
         (cat "\"current-output-port\""))
        ((equal? value '(current-error-port))
         (cat "\"current-error-port\""))
+       ((equal? value 'NULL)
+        (cat "SEXP_FALSE"))
        (else
         (c->scheme-converter x value))))))
 
@@ -989,18 +1044,48 @@
   (let ((default (and (pair? (func-scheme-args func))
                       (type-default? (car (reverse (func-scheme-args func))))
                       (car (reverse (func-scheme-args func))))))
-    (cat (if default
+    (cat "  op = "
+         (if default
              (if (parameter-default? (type-value default))
-                 "  sexp_define_foreign_param(ctx, env, "
-                 "  sexp_define_foreign_opt(ctx, env, ")
-             "  sexp_define_foreign(ctx, env, ")
+                 "sexp_define_foreign_param(ctx, env, "
+                 "sexp_define_foreign_opt(ctx, env, ")
+             "sexp_define_foreign(ctx, env, ")
          (lambda () (write (symbol->string (func-scheme-name func))))
          ", " (length (func-scheme-args func))  ", "
          (if default "(sexp_proc1)" "")
          (func-stub-name func)
          (if default ", " "")
          (if default (write-default default) "")
-         ");\n")))
+         ");\n"
+         (cond
+          ((and (pair? (func-c-args func))
+                (any (lambda (a) (not (eq? 'sexp (type-base a))))
+                     (func-c-args func)))
+           (lambda ()
+             (cat
+              "  if (sexp_opcodep(op)) {\n"
+              "    sexp_opcode_return_type(op) = "
+              (type-id-init-value (func-ret-type func)) ";\n"
+              (lambda ()
+                (do ((ls (func-c-args func) (cdr ls))
+                     (i 1 (+ i 1)))
+                    ((null? ls))
+                  (cond
+                   ((<= i 3)
+                    (cat "    sexp_opcode_arg" i "_type(op) = "
+                         (type-id-init-value (car ls)) ";\n"))
+                   (else
+                    (if (= i 4)
+                        (cat "    sexp_opcode_argn_type(op) = "
+                             "sexp_make_vector(ctx, sexp_make_fixnum("
+                             (- i 3) "),"
+                             " sexp_make_fixnum(SEXP_OBJECT));\n"))
+                    (cat "    sexp_vector_set(sexp_opcode_argn_type(op), "
+                         "sexp_make_fixnum(" (- i 4) "), "
+                         (type-id-init-value (car ls)) ");\n")))))
+              "  }\n")))
+          (else
+           "")))))
 
 (define (write-type type)
   (let ((name (car type))
@@ -1029,7 +1114,7 @@
 (define (write-type-getter type name field)
   (cat "static sexp " (type-getter-name type name field)
        " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
-       (lambda () (write-validator "x" name))
+       (lambda () (write-validator "x" (parse-type name 0)))
        "  return "
        (lambda ()
          (c->scheme-converter
@@ -1075,8 +1160,8 @@
 (define (write-type-setter type name field)
   (cat "static sexp " (type-setter-name type name field)
        " (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp v) {\n"
-       (lambda () (write-validator "x" name))
-       (lambda () (write-validator "v" (car field)))
+       (lambda () (write-validator "x" (parse-type name 0)))
+       (lambda () (write-validator "v" (parse-type (car field) 1)))
        (write-type-setter-assignment
         type name field
         (string-append "((" (x->string (or (type-struct-type name) ""))
@@ -1113,16 +1198,22 @@
                              (cat ", sexp arg" i)
                              (lp (cdr ls) (+ i 1))))))
                   ") {\n"
-                  "  " (or (type-struct-type name) "") " " (type-name name) " *r;\n"
+                  "  " (or (type-struct-type name) "")
+                  " " (type-name name) " *r;\n"
                   "  sexp_gc_var1(res);\n"
                   "  sexp_gc_preserve1(ctx, res);\n"
-                  ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer) + sizeof(struct " (type-name name) "), "
+                  ;; TODO: support heap-managed allocations
+                  ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer)"
+                  ;; " + sizeof(struct " (type-name name) "), "
                   ;; (type-id-name name)
                   ;; ");\n"
-                  ;; "  r = sexp_cpointer_value(res) = sexp_cpointer_body(res);\n"
-                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), sexp_type_tag("
-                  (type-id-name name)
-                  "));\n"
+                  ;; "  r = sexp_cpointer_value(res) = "
+                  ;; "sexp_cpointer_body(res);\n"
+                  ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), sexp_type_tag("
+                  ;; (type-id-name name)
+                  ;; "));\n"
+                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), "
+                  "sexp_unbox_fixnum(sexp_opcode_return_type(self)));\n"
                   "  r = sexp_cpointer_value(res) = calloc(1, sizeof("
                   (or (type-struct-type name) "") " " (type-name name) "));\n"
                   "  memset(r, 0, sizeof("
@@ -1149,7 +1240,16 @@
                   "  return res;\n"
                   "}\n\n")
              (set! *funcs*
-                   (cons (parse-func `(void ,make ,args)) *funcs*))))))
+                   (cons (parse-func
+                          `(,name ,make
+                                  ,(map (lambda (a)
+                                          (cond
+                                           ((find (lambda (x) (eq? a (cadr x)))
+                                                  (struct-fields type))
+                                            => car)
+                                           (else 'sexp)))
+                                        args)))
+                         *funcs*))))))
     ;; write field accessors
     (for-each
      (lambda (field)
@@ -1213,16 +1313,20 @@
   (for-each write-func *funcs*)
   (for-each write-type-funcs *types*)
   (cat "sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {\n"
-       "  sexp_gc_var2(name, tmp);\n"
+       (lambda ()
+         (for-each
+          (lambda (t) (cat "  sexp " t ";\n"))
+          *tags*))
+       "  sexp_gc_var3(name, tmp, op);\n"
        "  if (!(sexp_version_compatible(ctx, version, sexp_version)\n"
        "        && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))\n"
-       "    return sexp_global(ctx, SEXP_G_ABI_ERROR);"
-       "  sexp_gc_preserve2(ctx, name, tmp);\n")
+       "    return sexp_global(ctx, SEXP_G_ABI_ERROR);\n"
+       "  sexp_gc_preserve3(ctx, name, tmp, op);\n")
   (for-each write-const *consts*)
   (for-each write-type *types*)
   (for-each write-func-binding *funcs*)
   (for-each (lambda (x) (cat "  " x "\n")) (reverse *inits*))
-  (cat "  sexp_gc_release2(ctx);\n"
+  (cat "  sexp_gc_release3(ctx);\n"
        "  return SEXP_VOID;\n"
        "}\n\n"))
 
