@@ -1725,7 +1725,11 @@ sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
   if (sexp_stringp(obj))
     sexp_write_string(ctx, sexp_string_data(obj), out);
   else if (sexp_charp(obj))
+#if SEXP_USE_UTF8_STRINGS
     sexp_write_utf8_char(ctx, sexp_unbox_character(obj), out);
+#else
+    sexp_write_char(ctx, sexp_unbox_character(obj), out);
+#endif
   else
     res = sexp_write_one(ctx, obj, out);
   return res;
