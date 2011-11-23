@@ -393,9 +393,9 @@
      ((string-type? base)
       (cat "sexp_c_string(ctx, " val ", -1)"))
      ((eq? 'input-port base)
-      (cat "sexp_make_input_port(ctx, " val ", SEXP_FALSE)"))
+      (cat "sexp_make_non_null_input_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'output-port base)
-      (cat "sexp_make_output_port(ctx, " val ", SEXP_FALSE)"))
+      (cat "sexp_make_non_null_output_port(ctx, " val ", SEXP_FALSE)"))
      (else
       (let ((ctype (assq base *types*))
             (void*? (void-pointer-type? type)))
