@@ -56,7 +56,8 @@ is given, the script will be loaded with SRFI-22 semantics,
 calling the procedure
 .I main
 (if defined) with a single parameter as a list of the
-command-line arguments beginning with the script name.
+command-line arguments beginning with the script name.  This
+works as expected with shell #! semantics.
 
 Otherwise, if no script is given and no -e or -p options
 are given an interactive repl is entered, reading, evaluating,
@@ -65,7 +66,15 @@ provided is very minimal - if you want readline
 completion you may want to wrap it with the
 .I rlwrap(1)
 program.  Signals aren't caught either - to enable handling keyboard
-interrupts you can use the (chibi process) module.
+interrupts you can use the (chibi process) module.  For a more
+sophisticated REPL with readline support, signal handling, module
+management and smarter read/write you may want to use the (chibi repl)
+module.  For example,
+.I chibi-scheme -mchibi.repl -e'(repl)'
+
+The default language is an extended subset of the draft R7RS
+(scheme base) module.  To get exactly the base module, use
+.I chibi-scheme -xscheme.base
 
 .SH OPTIONS
 .TP 5
