@@ -65,7 +65,7 @@
 (define-c errno (make-signal-set "sigemptyset") ((pointer result sigset_t)))
 (define-c errno (signal-set-fill! "sigfillset") ((pointer sigset_t)))
 (define-c errno (signal-set-add! "sigaddset") ((pointer sigset_t) int))
-(define-c errno (signal-set-delete! "sigaddset") ((pointer sigset_t) int))
+(define-c errno (signal-set-delete! "sigdelset") ((pointer sigset_t) int))
 (define-c boolean (signal-set-contains? "sigismember") ((pointer sigset_t) int))
 
 (define-c errno (signal-mask-block! "sigprocmask")
@@ -124,9 +124,18 @@
 
 (define-c int (execute execvp) (string (array string)))
 
+;;> Returns the current process id.
+
+(define-c pid_t (current-process-id getpid) ())
+
+;;> Returns the parent process id.
+
+(define-c pid_t (parent-process-id getppid) ())
+
 (cond-expand
  (bsd
-  (define-c sexp (process-command-line sexp_pid_cmdline) ((value ctx sexp) int)))
+  (define-c sexp (%process-command-line sexp_pid_cmdline)
+    ((value ctx sexp) int)))
  (else #f))
 
 (c-init "sexp_init_signals(ctx, env);")

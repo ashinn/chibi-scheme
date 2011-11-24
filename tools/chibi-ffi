@@ -439,7 +439,7 @@
          (else
           (string-append
            "sexp_unbox_fixnum(sexp_vector_ref(sexp_opcode_argn_type(self), "
-           (number->string (- i 3)) "))")))))
+           "sexp_make_fixnum("(number->string (- i 3)) ")))")))))
      (else "SEXP_OBJECT"))))
 
 (define (type-id-value type . o)

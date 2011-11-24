@@ -280,6 +280,12 @@ test-weak: chibi-scheme$(EXE) lib/chibi/weak$(SO)
 test-unicode: chibi-scheme$(EXE)
 	$(CHIBI) tests/unicode-tests.scm
 
+test-process: chibi-scheme$(EXE) lib/chibi/process$(SO)
+	$(CHIBI) tests/process-tests.scm
+
+test-system: chibi-scheme$(EXE) lib/chibi/system$(SO)
+	$(CHIBI) tests/system-tests.scm
+
 test-libs: chibi-scheme$(EXE)
 	$(CHIBI) tests/lib-tests.scm
 
