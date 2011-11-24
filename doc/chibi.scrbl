@@ -13,13 +13,12 @@ and scripting language in C programs.  In addition to support for
 lightweight VM-based threads, each VM itself runs in an isolated heap
 allowing multiple VMs to run simultaneously in different OS threads.
 
-@margin-note{Converging with the
-R7RS Scheme small language standard when the standard is finalized.}
-The default language is R5RS Scheme with support for additional
-languages such as JavaScript to be provided in future releases.
-Scheme is chosen as a substrate because its first class continuations
-and guaranteed tail-call optimization makes implementing other
-languages easy.
+The default language is an extended subset of the current draft R7RS
+Scheme, with support for all libraries.  Support for additional
+languages such as JavaScript, Go, Lua and Bash are planned for future
+releases.  Scheme is chosen as a substrate because its first class
+continuations and guaranteed tail-call optimization makes implementing
+other languages easy.
 
 The system is designed in optional layers, beginning with a VM based
 on a small set of opcodes, a set of primitives implemented in C, a
@@ -28,8 +27,8 @@ standard modules.  You can choose whichever layer suits your needs
 best and customize the rest.  Adding your own primitives or wrappers
 around existing C libraries is easy with the C FFI.
 
-Chibi is known to build and run on 32 and 64-bit Linux, OS X,
-iOS, Windows (under cygwin) and Plan9.
+Chibi is known to build and run on 32 and 64-bit Linux, FreeBSD, OS X,
+iOS, Windows (under Cygwin) and Plan9.
 
 @section{Installation}
 
@@ -43,7 +42,8 @@ test the build with "make test".
 
 To install run "make install".  If you want to try the executable out
 without installing, you will probably need to set LD_LIBRARY_PATH,
-depending on your platform.
+depending on your platform.  If you have an old version installed,
+run "make uninstall" first, or manually delete the directory.
 
 You can edit the file chibi/features.h for a number of settings,
 mostly disabling features to make the executable smaller.  You can
@@ -105,6 +105,18 @@ are listed below.
 @item{@ccode{SEXP_USE_UTF8_STRINGS} - Unicode support (enabled by default)}
 @item{@ccode{SEXP_USE_NO_FEATURES} - disable almost all features}
 ]
+
+@subsection{Installed Programs}
+
+The command-line programs @ccode{chibi-scheme}, @ccode{chibi-doc} and
+@ccode{chibi-ffi} are installed by default, along with manpages.
+@ccode{chibi-scheme} provides a REPL and way to run scripts.  In the
+interest of size it has no --help option - see the man page for usage.
+@ccode{chibi-doc} is the command-line interface to the literate
+documentation system described in
+@hyperlink["lib/chibi/scribble.html"]{(chibi scribble)}, and used to
+build this manual.  @ccode{chibi-ffi} is a tool to build wrappers for
+C libraries, described in the FFI section below.
 
 @section{Default Language}
 

@@ -11,11 +11,12 @@ and scripting language in C programs.  In addition to support for
 lightweight VM-based threads, each VM itself runs in an isolated heap
 allowing multiple VMs to run simultaneously in different OS threads.
 
-The default language is R7RS Scheme with support for additional
-languages such as JavaScript to be provided in future releases.
-Scheme is chosen as a substrate because its first class continuations
-and guaranteed tail-call optimization makes implementing other
-languages easy.
+The default language is an extended subset of the current draft R7RS
+Scheme, with support for all libraries.  Support for additional
+languages such as JavaScript, Go, Lua and Bash are planned for future
+releases.  Scheme is chosen as a substrate because its first class
+continuations and guaranteed tail-call optimization makes implementing
+other languages easy.
 
 To build on most platforms just run "make && make test".  This will
 provide a shared library "libchibi-scheme", as well as a sample
