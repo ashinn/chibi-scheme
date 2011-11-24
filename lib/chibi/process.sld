@@ -2,9 +2,10 @@
 (define-library (chibi process)
   (export exit sleep alarm fork kill execute waitpid system
           process-command-line  process-running?
-          set-signal-action! make-signal-set signal-set-contains?
+          set-signal-action! make-signal-set
+          signal-set? signal-set-contains?
           signal-set-fill! signal-set-add! signal-set-delete!
-          current-signal-mask
+          current-signal-mask current-process-id parent-process-id
           signal-mask-block! signal-mask-unblock! signal-mask-set!
           signal/hang-up    signal/interrupt   signal/quit
           signal/illegal    signal/abort       signal/fpe
@@ -23,7 +24,12 @@
            (execute cmd (cons cmd args))
            (waitpid pid 0)))))
   (cond-expand
-   (bsd #f)
+   (bsd
+    (body
+     (define (process-command-line pid)
+       (let ((res (%process-command-line pid)))
+         ;; TODO: get command-line arguments
+         (if (string? res) (list res) res)))))
    (else
     (body
      (define (process-command-line pid)
