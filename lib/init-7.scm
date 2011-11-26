@@ -415,7 +415,6 @@
 
 (define (string . args) (list->string args))
 (define (string-append . args) (string-concatenate args))
-(define (string-copy s) (substring s 0 (string-length s)))
 
 (define (string=? s1 s2) (eq? (string-cmp s1 s2 #f) 0))
 (define (string<? s1 s2) (< (string-cmp s1 s2 #f) 0))
@@ -1027,8 +1026,10 @@
 
 (cond-expand
  (utf-8
+  (define (string-copy s) (substring-cursor s 0 (string-size s)))
   (define string-cursor-end string-size))
  (else
+  (define (string-copy s) (substring s 0 (string-length s)))
   (define string-cursor-end string-length)
   (define string-cursor-ref string-ref)
   (define (string-cursor-next s i) (+ i 1))
