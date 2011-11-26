@@ -35,14 +35,14 @@
   (if (zero? n)
       ""
       (let ((res (read-string n (if (pair? o) (car o) (current-input-port)))))
-        (if (equal? res "")
-            (read-char (open-input-string res))
+        (if (eof-object? res)
+            res
             (string->utf8 res)))))
 
 (define (read-bytevector! vec start end . o)
   (if (>= start end)
       0
-      (let* ((res (read-bytevector!
+      (let* ((res (read-bytevector
                    (- end start)
                    (if (pair? o) (car o) (current-input-port))))
              (len (bytevector-length res)))
@@ -55,7 +55,7 @@
             (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))))))))
 
 (define (write-bytevector vec . o)
-  (apply write-string (utf8->string vec) (bytevector-length vec) o))
+  (write-string (utf8->string vec) (bytevector-length vec) (if (pair? o) (car o) (current-output-port))))
 
 (define (write-partial-bytevector vec start end . o)
   (apply write-bytevector (bytevector-copy-partial vec start end) o))
