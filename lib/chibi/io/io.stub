@@ -3,7 +3,7 @@
   ((result (array char arg1)) int (default (current-input-port) input-port)))
 
 (define-c size_t (%read-string "fread")
-  ((result (array char arg2)) (value 1 size_t) size_t (default (current-input-port) input-port)))
+  ((result (array char (result arg2))) (value 1 size_t) size_t (default (current-input-port) input-port)))
 
 (define-c size_t (%read-string! "fread")
   (string (value 1 size_t) size_t (default (current-input-port) input-port)))
@@ -33,6 +33,8 @@
 (define-c sexp (get-output-bytevector "sexp_get_output_bytevector")
   ((value ctx sexp) (value self sexp) sexp))
 
+(define-c sexp (string-count "sexp_string_count")
+  ((value ctx sexp) (value self sexp) sexp sexp sexp (default NULL sexp)))
 (define-c sexp (string->utf8 "sexp_string_to_utf8")
   ((value ctx sexp) (value self sexp) sexp))
 (define-c sexp (utf8->string! "sexp_utf8_to_string_x")

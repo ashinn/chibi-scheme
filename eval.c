@@ -1419,20 +1419,20 @@ sexp sexp_string_cmp_op (sexp ctx, sexp self, sexp_sint_t n, sexp str1, sexp str
 
 #if SEXP_USE_UTF8_STRINGS
 
-static int sexp_utf8_initial_byte_count (int c) {
+int sexp_utf8_initial_byte_count (int c) {
   if (c < 0xC0) return 1;
   if (c < 0xE0) return 2;
   return ((c>>4)&1)+3;
 }
 
-static int sexp_utf8_char_byte_count (int c) {
+int sexp_utf8_char_byte_count (int c) {
   if (c < 0x80) return 1;
   if (c < 0x800) return 2;
   if (c < 0x10000) return 3;
   return 4;
 }
 
-static int sexp_string_utf8_length (unsigned char *p, int len) {
+int sexp_string_utf8_length (unsigned char *p, int len) {
   unsigned char *q = p+len;
   int i;
   for (i=0; p<q; i++)
@@ -1440,7 +1440,7 @@ static int sexp_string_utf8_length (unsigned char *p, int len) {
   return i;
 }
 
-static char* sexp_string_utf8_prev (unsigned char *p) {
+char* sexp_string_utf8_prev (unsigned char *p) {
   while ((*--p)>>6 == 2)
     ;
   return (char*)p;

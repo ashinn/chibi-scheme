@@ -90,6 +90,13 @@ SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int
 #if SEXP_USE_GREEN_THREADS
 SEXP_API sexp sexp_dk (sexp ctx, sexp self, sexp_uint_t n, sexp val);
 #endif
+#if SEXP_USE_UTF8_STRINGS
+SEXP_API int sexp_utf8_initial_byte_count (int c);
+SEXP_API int sexp_utf8_char_byte_count (int c);
+SEXP_API int sexp_string_utf8_length (unsigned char *p, int len);
+SEXP_API char* sexp_string_utf8_prev (unsigned char *p);
+SEXP_API sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i);
+#endif
 
 #if SEXP_USE_NATIVE_X86
 SEXP_API sexp sexp_write_char_op(sexp ctx, sexp self, sexp_sint_t n, sexp ch, sexp out);
