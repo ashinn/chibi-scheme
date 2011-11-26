@@ -457,7 +457,9 @@
     (type-id-value type))))
 
 (define (c-array-length type)
-  (or (get-array-length #f type) "-1"))
+  (if (memq 'result (type-array type))
+      "sexp_unbox_fixnum(res)"
+      "-1"))
 
 (define (c->scheme-converter type val . o)
   (let ((base (type-base type)))
