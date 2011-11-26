@@ -1,6 +1,6 @@
 
 (define-library (scheme char)
-  (import (scheme))
+  (import (scheme) (only (scheme base) string-map))
   (export
    char-alphabetic? char-ci<=? char-ci<? char-ci=? char-ci>=? char-ci>?
    char-downcase char-foldcase char-lower-case? char-numeric?
