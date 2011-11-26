@@ -1595,7 +1595,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       len = sexp_bytes_length(obj);
       for (i=0; i<len; i++) {
         if (i!=0) sexp_write_char(ctx, ' ', out);
-        sexp_write(ctx, sexp_make_fixnum(str[i]), out);
+        sexp_write(ctx, sexp_make_fixnum(((unsigned char*)str)[i]), out);
       }
       sexp_write_char(ctx, ')', out);
       break;
