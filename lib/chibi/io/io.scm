@@ -14,13 +14,6 @@
       ((>= i to))
     (string-set! dst j (string-ref src i))))
 
-(define (string-count ch str . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
-    (do ((i start (+ i 1))
-         (c 0 (if (eqv? ch (string-ref str i)) (+ c 1) c)))
-        ((>= i end) c))))
-
 (define (utf8->string vec)
   (string-copy (utf8->string! vec)))
 
@@ -74,7 +67,7 @@
            ((if (pair? res) (= 0 (car res)) #t)
             eof)
            (else
-            (port-line-set! in (+ (string-count #\newline (cadr res))
+            (port-line-set! in (+ (string-count #\newline (cadr res) 0)
                                   (port-line in)))
             (cadr res)))))))
 

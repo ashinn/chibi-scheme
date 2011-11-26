@@ -248,6 +248,39 @@ sexp sexp_get_output_bytevector (sexp ctx, sexp self, sexp port) {
   return res;
 }
 
+sexp sexp_string_count (sexp ctx, sexp self, sexp ch, sexp str, sexp start, sexp end) {
+  const unsigned char *s, *e;
+  sexp_sint_t c, count = 0;
+#if SEXP_USE_UTF8_STRINGS
+  sexp_sint_t i;
+#endif
+  sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
+  if (sexp_not(end)) end = sexp_make_fixnum(sexp_string_length(str));
+  else sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
+  c = sexp_unbox_character(ch);
+#if SEXP_USE_UTF8_STRINGS
+  if (c < 128) {
+#endif
+    s = (unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(start);
+    e = (unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(end);
+    if (e > (unsigned char*)sexp_string_data(str) + sexp_string_length(str))
+      return sexp_user_exception(ctx, self, "string-count: end index out of range", end);
+    /* fast case for ASCII chars */
+    while (s < e) if (*s++ == c) count++;
+#if SEXP_USE_UTF8_STRINGS
+  } else {
+    /* decode utf8 chars */
+    s = (unsigned char*)sexp_string_data(str);
+    for (i = sexp_unbox_fixnum(start); i < sexp_unbox_fixnum(end);
+         i += sexp_utf8_initial_byte_count(s[i]))
+      if (sexp_string_utf8_ref(ctx, str, sexp_make_fixnum(i)) == ch) count++;
+  }
+#endif
+  return sexp_make_fixnum(count);
+}
+
 sexp sexp_string_to_utf8 (sexp ctx, sexp self, sexp str) {
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);

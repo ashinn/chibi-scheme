@@ -456,6 +456,9 @@
    (else
     (type-id-value type))))
 
+(define (c-array-length type)
+  (or (get-array-length #f type) "-1"))
+
 (define (c->scheme-converter type val . o)
   (let ((base (type-base type)))
     (cond
@@ -475,14 +478,15 @@
       (cat "sexp_make_flonum(ctx, " val ")"))
      ((eq? base 'char)
       (if (type-array type)
-          (cat "sexp_c_string(ctx, " val ", -1)")
+          (cat "sexp_c_string(ctx, " val ", " (c-array-length type) ")")
           (cat "sexp_make_character(ctx, " val ")")))
      ((eq? 'env-string base)
       (cat "(p=strchr(" val ", '=') ? "
-           "sexp_cons(ctx, str=sexp_c_string(ctx, " val ", p - " val "), str=sexp_c_string(ctx, p, -1))"
+           "sexp_cons(ctx, str=sexp_c_string(ctx, " val
+           ", p - " val "), str=sexp_c_string(ctx, p, -1))"
            " : sexp_cons(ctx, str=" val ", SEXP_FALSE)"))
      ((string-type? base)
-      (cat "sexp_c_string(ctx, " val ", -1)"))
+      (cat "sexp_c_string(ctx, " val ", " (c-array-length type) ")"))
      ((eq? 'input-port base)
       (cat "sexp_make_non_null_input_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'output-port base)
@@ -641,17 +645,22 @@
   (let ((len (if (pair? (type-array x))
                  (car (reverse (type-array x)))
                  (type-array x))))
-    (if (number? len)
-        len
-        (and (symbol? len)
-             (let* ((str (symbol->string len))
-                    (len2 (string-length str)))
-               (and (> len2 3)
-                    (string=? "arg" (substring str 0 3))
-                    (let ((i (string->number (substring str 3 len2))))
-                      (if i
-                          (let ((y (list-ref (func-c-args func) i)))
-                            (or (type-value y) len))))))))))
+    (cond
+     ((number? len)
+      len)
+     ((memq 'result (type-array x))
+      "sexp_unbox_fixnum(res)")
+     (else
+      (and func
+           (symbol? len)
+           (let* ((str (symbol->string len))
+                  (len2 (string-length str)))
+             (and (> len2 3)
+                  (string=? "arg" (substring str 0 3))
+                  (let ((i (string->number (substring str 3 len2))))
+                    (if i
+                        (let ((y (list-ref (func-c-args func) i)))
+                          (or (type-value y) len)))))))))))
 
 (define (write-locals func)
   (define (arg-res x)
