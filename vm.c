@@ -1670,7 +1670,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_FLO2FIX:
     if (sexp_flonump(_ARG1)) {
       if (sexp_flonum_value(_ARG1) != trunc(sexp_flonum_value(_ARG1))) {
+#if SEXP_USE_RATIOS
+        _ARG1 = sexp_double_to_ratio(ctx, sexp_flonum_value(_ARG1));
+#else
         sexp_raise("inexact->exact: not an integer", sexp_list1(ctx, _ARG1));
+#endif
 #if SEXP_USE_BIGNUMS
       } else if ((sexp_flonum_value(_ARG1) > SEXP_MAX_FIXNUM)
                  || sexp_flonum_value(_ARG1) < SEXP_MIN_FIXNUM) {
