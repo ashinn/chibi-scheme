@@ -71,7 +71,7 @@
 (define (list-set! ls k x)
   (cond ((null? ls) (error "invalid list index"))
         ((zero? k) (set-car! ls x))
-        (else (list-set! ls (- k 1) x))))
+        (else (list-set! (cdr ls) (- k 1) x))))
 
 (define (vector-map proc vec . lov)
   (if (null? lov)
