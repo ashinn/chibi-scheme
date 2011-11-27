@@ -39,6 +39,7 @@ sexp sexp_div (sexp ctx, sexp a, sexp b);
 sexp sexp_quotient (sexp ctx, sexp a, sexp b);
 sexp sexp_remainder (sexp ctx, sexp a, sexp b);
 #if SEXP_USE_RATIOS
+sexp sexp_double_to_ratio (sexp ctx, double f);
 double sexp_ratio_to_double (sexp rat);
 sexp sexp_make_ratio (sexp ctx, sexp num, sexp den);
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);
