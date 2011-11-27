@@ -978,13 +978,25 @@
         (if (<= res 0) res (+ res b))
         (if (>= res 0) res (+ res b)))))
 
-(define (gcd a b)
+(define (gcd2 a b)
   (if (= b 0)
       (abs a)
       (gcd b (remainder a b))))
 
-(define (lcm a b)
+(define (gcd . args)
+  (if (null? args)
+      0
+      (let lp ((x (car args)) (ls (cdr args)))
+        (if (null? ls) x (lp (gcd2 x (car ls)) (cdr ls))))))
+
+(define (lcm2 a b)
   (abs (quotient (* a b) (gcd a b))))
+
+(define (lcm . args)
+  (if (null? args)
+      1
+      (let lp ((x (car args)) (ls (cdr args)))
+        (if (null? ls) x (lp (lcm2 x (car ls)) (cdr ls))))))
 
 (define (max x . rest)
   (let lp ((hi x) (ls rest))
