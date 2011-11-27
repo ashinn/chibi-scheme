@@ -1085,7 +1085,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_RESERVE_OPCODE
   case SEXP_OP_RESERVE:
     _ALIGN_IP();
-    top += _SWORD0;
+    for (i=_SWORD0; i > 0; i--)
+      stack[top++] = SEXP_VOID;
     ip += sizeof(sexp);
     break;
 #endif
