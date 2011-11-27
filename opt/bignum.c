@@ -1306,6 +1306,12 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
   return r;
 }
 
+sexp sexp_to_inexact (sexp ctx, sexp a) {
+  if (sexp_fixnump(a)) return sexp_fixnum_to_flonum(ctx, a);
+  if (sexp_bignump(a)) return sexp_make_flonum(ctx, sexp_bignum_to_double(a));
+  return a;
+}
+
 sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
   sexp r=SEXP_VOID;
@@ -1321,8 +1327,18 @@ sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_FLO_FIX: case SEXP_NUM_FLO_FLO: case SEXP_NUM_FLO_BIG:
 #if SEXP_USE_RATIOS
-  case SEXP_NUM_FLO_RAT: case SEXP_NUM_RAT_FIX: case SEXP_NUM_RAT_FLO:
-  case SEXP_NUM_RAT_BIG: case SEXP_NUM_RAT_RAT:
+  case SEXP_NUM_FLO_RAT:
+#endif
+    if (sexp_flonum_value(a) != trunc(sexp_flonum_value(a))) {
+      r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
+    } else {
+      tmp = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(a)));
+      tmp = sexp_quotient(ctx, tmp, b);
+      r = sexp_to_inexact(ctx, tmp);
+    }
+    break;
+#if SEXP_USE_RATIOS
+  case SEXP_NUM_RAT_FIX: case SEXP_NUM_RAT_BIG: case SEXP_NUM_RAT_RAT:
 #endif
 #if SEXP_USE_COMPLEX
   case SEXP_NUM_FLO_CPX: case SEXP_NUM_CPX_FIX: case SEXP_NUM_CPX_FLO:
@@ -1334,6 +1350,17 @@ sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
     break;
   case SEXP_NUM_FIX_FLO: case SEXP_NUM_BIG_FLO:
+#if SEXP_USE_RATIOS
+  case SEXP_NUM_RAT_FLO:
+#endif
+    if (sexp_flonum_value(b) != trunc(sexp_flonum_value(b))) {
+      r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
+    } else {
+      tmp = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(b)));
+      tmp = sexp_quotient(ctx, a, tmp);
+      r = sexp_to_inexact(ctx, tmp);
+    }
+    break;
 #if SEXP_USE_RATIOS
   case SEXP_NUM_FIX_RAT: case SEXP_NUM_BIG_RAT:
 #endif
@@ -1374,8 +1401,18 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_FLO_FIX: case SEXP_NUM_FLO_FLO: case SEXP_NUM_FLO_BIG:
 #if SEXP_USE_RATIOS
-  case SEXP_NUM_FLO_RAT: case SEXP_NUM_RAT_FIX: case SEXP_NUM_RAT_FLO:
-  case SEXP_NUM_RAT_BIG: case SEXP_NUM_RAT_RAT:
+  case SEXP_NUM_FLO_RAT:
+#endif
+    if (sexp_flonum_value(a) != trunc(sexp_flonum_value(a))) {
+      r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
+    } else {
+      tmp = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(a)));
+      tmp = sexp_remainder(ctx, tmp, b);
+      r = sexp_to_inexact(ctx, tmp);
+    }
+    break;
+#if SEXP_USE_RATIOS
+  case SEXP_NUM_RAT_FIX: case SEXP_NUM_RAT_BIG: case SEXP_NUM_RAT_RAT:
 #endif
 #if SEXP_USE_COMPLEX
   case SEXP_NUM_FLO_CPX: case SEXP_NUM_CPX_FIX: case SEXP_NUM_CPX_FLO:
@@ -1387,6 +1424,17 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
     break;
   case SEXP_NUM_FIX_FLO: case SEXP_NUM_BIG_FLO:
+#if SEXP_USE_RATIOS
+  case SEXP_NUM_RAT_FLO:
+#endif
+    if (sexp_flonum_value(b) != trunc(sexp_flonum_value(b))) {
+      r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
+    } else {
+      tmp = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(b)));
+      tmp = sexp_remainder(ctx, a, tmp);
+      r = sexp_to_inexact(ctx, tmp);
+    }
+    break;
 #if SEXP_USE_RATIOS
   case SEXP_NUM_FIX_RAT: case SEXP_NUM_BIG_RAT:
 #endif
