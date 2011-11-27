@@ -76,7 +76,7 @@
         (map1 proc (cdr ls) (cons (proc (car ls)) res))
         (reverse res)))
   (define (mapn proc lol res)
-    (if (pair? (car lol))
+    (if (every pair? lol)
         (mapn proc
               (map1 cdr lol '())
               (cons (apply1 proc (map1 car lol '())) res))
