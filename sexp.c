@@ -1855,8 +1855,10 @@ sexp sexp_make_complex (sexp ctx, sexp real, sexp image) {
 sexp sexp_complex_normalize (sexp cpx) {
   return sexp_complexp(cpx)
     && (sexp_complex_imag(cpx) == SEXP_ZERO
-        || (sexp_flonump(sexp_complex_imag(cpx))
-            && sexp_flonum_value(sexp_complex_imag(cpx)) == 0.0))
+        /* Only normalize for an exact zero imaginary part.  */
+        /* || (sexp_flonump(sexp_complex_imag(cpx)) */
+        /*     && sexp_flonum_value(sexp_complex_imag(cpx)) == 0.0) */
+        )
     ? sexp_complex_real(cpx) : cpx;
 }
 
