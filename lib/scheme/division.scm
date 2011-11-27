@@ -1,3 +1,19 @@
+;;;; division.scm -- portable R7RS (scheme division) implementation
+;;
+;; This code is written by Alex Shinn and placed in the
+;; Public Domain.  All warranties are disclaimed.
+;;
+;; This is basically the simplest possible implementation.  Note the
+;; code below assumes that either 1) exact ratios are supported and
+;; are handled correctly by floor, ceiling and round, or 2) that
+;; you're using a simple implementation with only fixnums and flonums.
+;; In the intermediate case where you have bignums but no ratios there
+;; will be a loss of precision for large values.
+;;
+;; In case 1) the calls to inexact->exact below are unecessary and can
+;; be removed.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; The builtin quotient and remainder implement truncation - the
 ;; fractional part is always discarded.
