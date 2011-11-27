@@ -2620,6 +2620,14 @@ sexp sexp_write_to_string (sexp ctx, sexp obj) {
   return str;
 }
 
+sexp sexp_symbol_to_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp sym) {
+#if SEXP_USE_HUFF_SYMS
+  if (sexp_isymbolp(sym)) return sexp_write_to_string(ctx, sym);
+#endif
+  sexp_assert_type(ctx, sexp_lsymbolp, SEXP_SYMBOL, sym);
+  return sexp_c_string(ctx, sexp_symbol_data(sym), sexp_symbol_length(sym));
+}
+
 void sexp_init (void) {
 #if SEXP_USE_GLOBAL_SYMBOLS
   int i;
