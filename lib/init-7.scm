@@ -922,11 +922,11 @@
   (define (numerator x)
     (if (ratio? x)
         (ratio-numerator x)
-        (if (integer? x) x (numerator (* x 10)))))
+        (if (inexact? x) (ratio-numerator (inexact->exact x)) x)))
   (define (denominator x)
     (if (exact? x)
         (if (ratio? x) (ratio-denominator x) 1)
-        (let lp ((x x) (r 1.0)) (if (integer? x) r (lp (* x 10) (* r 10)))))))
+        (if (integer? x) 1 (ratio-denominator (inexact->exact x))))))
  (else
   (cond-expand
    (complex
