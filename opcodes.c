@@ -161,6 +161,7 @@ _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-bytevector", SE
 _FN2OPT(_I(SEXP_NUMBER), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string->number", SEXP_TEN, sexp_string_to_number_op),
 _FN3(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_BOOLEAN), "string-cmp", 0, sexp_string_cmp_op),
 _FN1(_I(SEXP_SYMBOL), _I(SEXP_STRING), "string->symbol", 0, sexp_string_to_symbol_op),
+_FN1(_I(SEXP_STRING), _I(SEXP_SYMBOL), "symbol->string", 0, sexp_symbol_to_string_op),
 _FN2OPT(_I(SEXP_STRING), SEXP_NULL, _I(SEXP_STRING), "string-concatenate", SEXP_FALSE, sexp_string_concatenate_op),
 _FN2(_I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_NULL, "memq", 0, sexp_memq_op),
 _FN2(_I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_NULL, "assq", 0, sexp_assq_op),
