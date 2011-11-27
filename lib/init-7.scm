@@ -270,20 +270,24 @@
 (define-syntax case
   (er-macro-transformer
    (lambda (expr rename compare)
+     (define (body exprs)
+       (if (compare (rename '=>) (car exprs))
+           `(,(cadr exprs) ,(rename 'tmp))
+           `(,(rename 'begin) ,@exprs)))
      (define (clause ls)
        (cond
         ((null? ls) #f)
         ((compare (rename 'else) (caar ls))
-         `(,(rename 'begin) ,@(cdar ls)))
+         (body (cdar ls)))
         ((and (pair? (car (car ls))) (null? (cdr (car (car ls)))))
          `(,(rename 'if) (,(rename 'eqv?) ,(rename 'tmp)
                           (,(rename 'quote) ,(caaar ls)))
-           (,(rename 'begin) ,@(cdar ls))
+           ,(body (cdar ls))
            ,(clause (cdr ls))))
         (else
          `(,(rename 'if) (,(rename 'memv) ,(rename 'tmp)
                           (,(rename 'quote) ,(caar ls)))
-           (,(rename 'begin) ,@(cdar ls))
+           ,(body (cdar ls))
            ,(clause (cdr ls))))))
      `(let ((,(rename 'tmp) ,(cadr expr)))
         ,(clause (cddr expr))))))
