@@ -400,9 +400,6 @@
                 "0"
                 (list->string (if (negative? num) (cons #\- res) res)))))))
 
-(define (symbol->string sym)
-  (call-with-output-string (lambda (out) (write sym out))))
-
 (define (list->string ls)
   (call-with-output-string
     (lambda (out) (for-each (lambda (ch) (write-char ch out)) ls))))
