@@ -952,9 +952,10 @@
 (define (number? x) (if (inexact? x) #t (exact? x)))
 (define complex? number?)
 (cond-expand
- (complex (define (rational? x) (and (number? x) (not (%complex? x)))))
- (else (define rational? number?)))
-(define real? rational?)
+ (complex (define (real? x) (and (number? x) (not (%complex? x)))))
+ (else (define real? number?)))
+(define (rational? x)
+  (and (real? x) (= x x) (not (= x (+ x (if (positive? x) 1 -1))))))
 
 (define (exact-integer-sqrt x)
   (let ((res (sqrt x)))
