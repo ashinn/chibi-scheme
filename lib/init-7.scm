@@ -271,9 +271,13 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      (define (body exprs)
-       (if (compare (rename '=>) (car exprs))
-           `(,(cadr exprs) ,(rename 'tmp))
-           `(,(rename 'begin) ,@exprs)))
+       (cond
+        ((null? exprs)
+         (rename 'tmp))
+        ((compare (rename '=>) (car exprs))
+         `(,(cadr exprs) ,(rename 'tmp)))
+        (else
+         `(,(rename 'begin) ,@exprs))))
      (define (clause ls)
        (cond
         ((null? ls) #f)
