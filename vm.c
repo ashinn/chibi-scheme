@@ -1684,7 +1684,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       } else {
         _ARG1 = sexp_make_fixnum((sexp_sint_t)sexp_flonum_value(_ARG1));
       }
-    } else if (! sexp_fixnump(_ARG1) && ! sexp_bignump(_ARG1)) {
+    } else if (!sexp_exactp(_ARG1)) {
       sexp_raise("inexact->exact: not a number", sexp_list1(ctx, _ARG1));
     }
     break;
