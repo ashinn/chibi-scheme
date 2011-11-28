@@ -116,18 +116,18 @@
                 (even? (- n 1))))))
   (even? 88)))
 
-;; (test 5
-;; (letrec* ((p
-;;            (lambda (x)
-;;              (+ 1 (q (- x 1)))))
-;;           (q
-;;            (lambda (y)
-;;              (if (zero? y)
-;;                  0
-;;                  (+ 1 (p (- y 1))))))
-;;           (x (p 5))
-;;           (y x))
-;;   y))
+(test 5
+(letrec* ((p
+           (lambda (x)
+             (+ 1 (q (- x 1)))))
+          (q
+           (lambda (y)
+             (if (zero? y)
+                 0
+                 (+ 1 (p (- y 1))))))
+          (x (p 5))
+          (y x))
+  y))
 (let*-values (((root rem) (exact-integer-sqrt 32)))
   (test 35 (* root rem)))
 

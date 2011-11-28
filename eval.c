@@ -621,6 +621,7 @@ static sexp analyze_set (sexp ctx, sexp x) {
 #define sexp_return(res, val) do {res=val; goto cleanup;} while (0)
 
 static sexp analyze_lambda (sexp ctx, sexp x) {
+  int trailing_non_procs;
   sexp name, ls, ctx3;
   sexp_gc_var6(res, body, tmp, value, defs, ctx2);
   sexp_gc_preserve6(ctx, res, body, tmp, value, defs, ctx2);
@@ -646,6 +647,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   body = analyze_seq(ctx2, sexp_cddr(x));
   if (sexp_exceptionp(body)) sexp_return(res, body);
   /* delayed analyze internal defines */
+  trailing_non_procs = 0;
   defs = SEXP_NULL;
   for (ls=sexp_lambda_defs(res); sexp_pairp(ls); ls=sexp_cdr(ls)) {
     tmp = sexp_car(ls);
@@ -664,7 +666,8 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
     if (sexp_lambdap(value)) sexp_lambda_name(value) = name;
     sexp_push(ctx3, defs,
               sexp_make_set(ctx3, analyze_var_ref(ctx3, name, NULL), value));
-    if (!sexp_lambdap(value) || !SEXP_USE_UNBOXED_LOCALS)
+    if (!sexp_lambdap(value)) trailing_non_procs = 1;
+    if (trailing_non_procs || !SEXP_USE_UNBOXED_LOCALS)
       sexp_insert(ctx3, sexp_lambda_sv(res), name);
   }
   if (sexp_pairp(defs)) {
