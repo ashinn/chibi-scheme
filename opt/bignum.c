@@ -921,6 +921,7 @@ static int sexp_number_type (sexp a) {
 }
 
 sexp sexp_add (sexp ctx, sexp a, sexp b) {
+  sexp_sint_t sum;
   int at=sexp_number_type(a), bt=sexp_number_type(b), t;
   sexp r=SEXP_VOID;
   sexp_gc_var1(tmp);
@@ -938,7 +939,11 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
     break;
   case SEXP_NUM_FIX_FIX:
-    r = sexp_fx_add(a, b);      /* VM catches this case */
+    sum = sexp_unbox_fixnum(a) + sexp_unbox_fixnum(b);
+    if ((sum < SEXP_MIN_FIXNUM) || (sum > SEXP_MAX_FIXNUM))
+      r = sexp_add(ctx, tmp=sexp_fixnum_to_bignum(ctx, a), b);
+    else
+      r = sexp_make_fixnum(sum);
     break;
   case SEXP_NUM_FIX_FLO:
     r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)+sexp_flonum_value(b));
