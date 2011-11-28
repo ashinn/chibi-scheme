@@ -1113,6 +1113,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_mul (sexp ctx, sexp a, sexp b) {
+  sexp_lsint_t prod;
   int at=sexp_number_type(a), bt=sexp_number_type(b), t;
   sexp r=SEXP_VOID;
   sexp_gc_var1(tmp);
@@ -1127,7 +1128,11 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
     r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
     break;
   case SEXP_NUM_FIX_FIX:
-    r = sexp_fx_mul(a, b);
+    prod = (sexp_lsint_t)sexp_unbox_fixnum(a) * sexp_unbox_fixnum(b);
+    if ((prod < SEXP_MIN_FIXNUM) || (prod > SEXP_MAX_FIXNUM))
+      r = sexp_mul(ctx, tmp=sexp_fixnum_to_bignum(ctx, a), b);
+    else
+      r = sexp_make_fixnum(prod);
     break;
   case SEXP_NUM_FIX_FLO:
     r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)*sexp_flonum_value(b));
