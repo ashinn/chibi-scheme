@@ -676,6 +676,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #define sexp_integerp(x) (sexp_exact_integerp(x) _or_integer_flonump(x))
 
+#if SEXP_USE_RATIOS
+#define sexp_exactp(x) (sexp_exact_integerp(x) || sexp_ratiop(x))
+#else
+#define sexp_exactp(x) sexp_exact_integerp(x)
+#endif
+
 #if SEXP_USE_FLONUMS
 #define sexp_fixnum_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_fixnum(x)))
 #if SEXP_USE_RATIOS
