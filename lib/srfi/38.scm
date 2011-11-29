@@ -159,7 +159,8 @@
           (let lp ((res 0.0) (k 0.1))
             (let ((c (peek-char in)))
               (cond
-               ((char-numeric? c) (lp (+ res (* (read-char in) k)) (* k 0.1)))
+               ((char-numeric? c)
+                (lp (+ res (* (digit-value (read-char in)) k)) (* k 0.1)))
                ((or (eof-object? c) (memv c delimiters)) res)
                (else (error "invalid char in float syntax" c))))))
         (define (read-name c in)
@@ -292,7 +293,8 @@
                         (if (eqv? #\) (peek-char in))
                             (begin (read-char in) (append (reverse res) tail))
                             (error "expected end of list after dot"))))
-                     ((char-numeric? (peek-char in)) (read-float-tail in))
+                     ((char-numeric? (peek-char in))
+                      (lp (cons (read-float-tail in) res)))
                      (else (string->symbol (read-name #\. in)))))
                    (else
                     (if (eof-object? c)
