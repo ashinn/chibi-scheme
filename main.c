@@ -251,7 +251,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 
 #define init_context() if (! ctx) do {                                  \
       do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case); \
-      sexp_gc_preserve2(ctx, tmp, args);                                \
+      sexp_gc_preserve3(ctx, tmp, sym, args);                           \
     } while (0)
 
 #define load_init() if (! init_loaded++) do {                           \
@@ -262,9 +262,10 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 void run_main (int argc, char **argv) {
   char *arg, *impmod, *p, *prefix=NULL, *suffix=NULL;
   sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
-  sexp_sint_t i, j, c, len, quit=0, print=0, init_loaded=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
+  sexp_sint_t i, j, c, len, quit=0, print=0, init_loaded=0, mods_loaded=0,
+    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
-  sexp_gc_var2(tmp, args);
+  sexp_gc_var3(tmp, sym, args);
   args = SEXP_NULL;
 
   /* parse options */
@@ -296,6 +297,7 @@ void run_main (int argc, char **argv) {
       suffix = sexp_environment_suffix;
     case 'm':
       if (c != 'x') {prefix = sexp_import_prefix; suffix = sexp_import_suffix;}
+      mods_loaded = 1;
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg(c, arg);
@@ -372,7 +374,7 @@ void run_main (int argc, char **argv) {
       if (! sexp_oportp(out))
         out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
       sexp_write_string(ctx, sexp_version_string, out);
-      tmp = sexp_env_ref(env, sexp_intern(ctx, "*features*", -1), SEXP_NULL);
+      tmp = sexp_env_ref(env, sym=sexp_intern(ctx, "*features*", -1), SEXP_NULL);
       sexp_write(ctx, tmp, out);
       sexp_newline(ctx, out);
       return;
@@ -396,12 +398,24 @@ void run_main (int argc, char **argv) {
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
     else
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
-    sexp_set_parameter(ctx, env, sexp_intern(ctx, sexp_argv_symbol, -1), args);
+    sexp_set_parameter(ctx, env, sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i < argc) {             /* script usage */
+#if SEXP_USE_MODULES
+      /* reset the environment to have only the `import' binding */
+      if (!mods_loaded) {
+        sexp_context_env(ctx) = env = sexp_make_env(ctx);
+        sym = sexp_intern(ctx, "repl-import", -1);
+        tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
+        sym = sexp_intern(ctx, "import", -1);
+        sexp_env_define(ctx, env, sym, tmp);
+      }
+#endif
+      /* load the script */
       sexp_context_tracep(ctx) = 1;
       check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
-      tmp = sexp_intern(ctx, "main", -1);
-      tmp = sexp_env_ref(env, tmp, SEXP_FALSE);
+      /* SRFI-22: run main if specified */
+      sym = sexp_intern(ctx, "main", -1);
+      tmp = sexp_env_ref(env, sym, SEXP_FALSE);
       if (sexp_procedurep(tmp)) {
         args = sexp_list1(ctx, args);
         check_exception(ctx, sexp_apply(ctx, tmp, args));
@@ -411,7 +425,7 @@ void run_main (int argc, char **argv) {
     }
   }
 
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
   sexp_destroy_context(ctx);
 }
 
