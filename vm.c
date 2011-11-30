@@ -1838,8 +1838,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   }
 #endif
   sexp_gc_release3(ctx);
-  sexp_context_top(ctx) = top;
-  return _ARG1;
+  tmp1 = _ARG1;
+  sexp_context_top(ctx) = --top;
+  return tmp1;
 }
 
 sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
