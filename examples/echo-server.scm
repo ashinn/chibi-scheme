@@ -1,5 +1,5 @@
 
-(import (srfi 18) (chibi net) (chibi io) (chibi filesystem))
+(import (scheme) (srfi 18) (chibi net) (chibi io) (chibi filesystem))
 
 ;; Copy each input line to output.
 (define (echo-handler in out)

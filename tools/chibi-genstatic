@@ -1,6 +1,7 @@
 #! /usr/bin/env chibi-scheme
 
-(import (chibi filesystem)
+(import (scheme)
+        (chibi filesystem)
         (chibi pathname)
         (only (meta) find-module))
 

@@ -233,7 +233,7 @@ checkdefs:
 
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
-	    $(CHIBI) $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
+	    $(CHIBI) -xscheme $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if $(DIFF) -q $(DIFFOPTS) $${f%.scm}.out $${f%.scm}.res; then \
 	        echo "[PASS] $${f%.scm}"; \
 	    else \
@@ -248,49 +248,49 @@ test-build:
 	MAKE=$(MAKE) ./tests/build/build-tests.sh
 
 test-threads: chibi-scheme$(EXE) lib/srfi/18/threads$(SO) lib/srfi/39/param$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/time$(SO)
-	$(CHIBI) tests/thread-tests.scm
+	$(CHIBI) -xscheme tests/thread-tests.scm
 
 test-numbers: chibi-scheme$(EXE)
-	$(CHIBI) tests/numeric-tests.scm
+	$(CHIBI) -xscheme tests/numeric-tests.scm
 
 test-flonums: chibi-scheme$(EXE)
-	$(CHIBI) tests/flonum-tests.scm
+	$(CHIBI) -xscheme tests/flonum-tests.scm
 
 test-hash: chibi-scheme$(EXE) lib/srfi/69/hash$(SO)
-	$(CHIBI) tests/hash-tests.scm
+	$(CHIBI) -xscheme tests/hash-tests.scm
 
 test-io: chibi-scheme$(EXE) lib/chibi/io/io$(SO)
-	$(CHIBI) tests/io-tests.scm
+	$(CHIBI) -xscheme tests/io-tests.scm
 
 test-match: chibi-scheme$(EXE)
-	$(CHIBI) tests/match-tests.scm
+	$(CHIBI) -xscheme tests/match-tests.scm
 
 test-loop: chibi-scheme$(EXE)
-	$(CHIBI) tests/loop-tests.scm
+	$(CHIBI) -xscheme tests/loop-tests.scm
 
 test-sort: chibi-scheme$(EXE) lib/srfi/33/bit$(SO)
-	$(CHIBI) tests/sort-tests.scm
+	$(CHIBI) -xscheme tests/sort-tests.scm
 
 test-records: chibi-scheme$(EXE)
-	$(CHIBI) tests/record-tests.scm
+	$(CHIBI) -xscheme tests/record-tests.scm
 
 test-weak: chibi-scheme$(EXE) lib/chibi/weak$(SO)
-	$(CHIBI) tests/weak-tests.scm
+	$(CHIBI) -xscheme tests/weak-tests.scm
 
 test-unicode: chibi-scheme$(EXE)
-	$(CHIBI) tests/unicode-tests.scm
+	$(CHIBI) -xscheme tests/unicode-tests.scm
 
 test-process: chibi-scheme$(EXE) lib/chibi/process$(SO)
-	$(CHIBI) tests/process-tests.scm
+	$(CHIBI) -xscheme tests/process-tests.scm
 
 test-system: chibi-scheme$(EXE) lib/chibi/system$(SO)
-	$(CHIBI) tests/system-tests.scm
+	$(CHIBI) -xscheme tests/system-tests.scm
 
 test-libs: chibi-scheme$(EXE)
-	$(CHIBI) tests/lib-tests.scm
+	$(CHIBI) -xscheme tests/lib-tests.scm
 
 test: chibi-scheme$(EXE)
-	$(CHIBI) tests/r5rs-tests.scm
+	$(CHIBI) -xscheme tests/r5rs-tests.scm
 
 install: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
