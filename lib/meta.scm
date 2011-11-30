@@ -219,8 +219,9 @@
                    (cons `(,(rename '%import)
                            #f
                            (,(rename 'module-env)
-                            (,(rename 'load-module) ',(car mod+imps)))
-                           ',(cdr mod+imps)
+                            (,(rename 'load-module)
+                             (,(rename 'quote) ,(car mod+imps))))
+                           (,(rename 'quote) ,(cdr mod+imps))
                            #f)
                          res)))
               (else
