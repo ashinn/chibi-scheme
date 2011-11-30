@@ -24,39 +24,39 @@ install:V: $BIN/$TARG
 	{cd lib; tar c .} | {cd $MODDIR ; tar x }
 
 test:V:
-	./$O.out tests/r5rs-tests.scm
+	./$O.out -xscheme tests/r5rs-tests.scm
 
 test-threads:
-	./$O.out tests/thread-tests.scm
+	./$O.out -xscheme tests/thread-tests.scm
 
 test-numbers:
-	./$O.out tests/numeric-tests.scm
+	./$O.out -xscheme tests/numeric-tests.scm
 
 test-flonums:
-	./$O.out tests/flonum-tests.scm
+	./$O.out -xscheme tests/flonum-tests.scm
 
 test-hash:
-	./$O.out tests/hash-tests.scm
+	./$O.out -xscheme tests/hash-tests.scm
 
 test-match:
-	./$O.out tests/match-tests.scm
+	./$O.out -xscheme tests/match-tests.scm
 
 test-loop:
-	./$O.out tests/loop-tests.scm
+	./$O.out -xscheme tests/loop-tests.scm
 
 test-sort:
-	./$O.out tests/sort-tests.scm
+	./$O.out -xscheme tests/sort-tests.scm
 
 test-records:
-	./$O.out tests/record-tests.scm
+	./$O.out -xscheme tests/record-tests.scm
 
 test-weak:
-	./$O.out tests/weak-tests.scm
+	./$O.out -xscheme tests/weak-tests.scm
 
 test-unicode:
-	./$O.out tests/unicode-tests.scm
+	./$O.out -xscheme tests/unicode-tests.scm
 
 test-libs:
-	./$O.out tests/lib-tests.scm
+	./$O.out -xscheme tests/lib-tests.scm
 
 sexp.c:N:	gc.c opt/bignum.c

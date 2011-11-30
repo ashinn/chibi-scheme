@@ -1,8 +1,9 @@
 #! /usr/bin/env chibi-scheme
 
 (import
- (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match) (chibi time)
- (chibi filesystem) (chibi scribble) (chibi highlight) (chibi type-inference))
+ (scheme) (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match)
+ (chibi time) (chibi filesystem) (chibi scribble) (chibi highlight)
+ (chibi type-inference))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -208,7 +209,7 @@
 
 (define (expand-example x env)
   (let ((expr `(begin ,@(sxml->sexp-list x)))
-        (example-env (or (env-ref env 'example-env) (interaction-environment))))
+        (example-env (or (env-ref env 'example-env) (current-environment))))
     `(div
       ,(expand-codeblock `(,(car x) language: scheme ,@(cdr x)) env)
       (code
@@ -222,7 +223,7 @@
 
 (define (expand-example-import x env)
   (eval `(import ,@(cdr x))
-        (or (env-ref env 'example-env) (interaction-environment)))
+        (or (env-ref env 'example-env) (current-environment)))
   "")
 
 (define (expand-command sxml env)

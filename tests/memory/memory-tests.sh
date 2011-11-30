@@ -1,7 +1,7 @@
 #!/bin/sh
 
 for f in tests/memory/*.scm; do
-    ./chibi-scheme-ulimit $f >${f%.scm}.out 2>${f%.scm}.err
+    ./chibi-scheme-ulimit -xscheme $f >${f%.scm}.out 2>${f%.scm}.err
     if diff -q ${f%.scm}.out ${f%.scm}.res \
         && diff -q ${f%.scm}.err ${f%.scm}.err-res; then
         echo "[PASS] ${f%.scm}"

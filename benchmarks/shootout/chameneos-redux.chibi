@@ -5,7 +5,8 @@
 
 ;;; based on Racket version by Matthew Flatt
 
-(import (srfi 18)
+(import (scheme)
+        (srfi 18)
         (chibi match))
 
 (define (print . args)
