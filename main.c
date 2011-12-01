@@ -411,7 +411,10 @@ void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
       /* reset the environment to have only the `import' binding */
       if (!mods_loaded) {
-        sexp_context_env(ctx) = env = sexp_make_env(ctx);
+        env = sexp_make_env(ctx);
+        sexp_set_parameter(ctx, sexp_context_env(ctx),
+                           sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
+        sexp_context_env(ctx) = env;
         sym = sexp_intern(ctx, "repl-import", -1);
         tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
         sym = sexp_intern(ctx, "import", -1);
