@@ -260,11 +260,15 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
     } while (0)
 
 void run_main (int argc, char **argv) {
-  char *arg, *impmod, *p, *prefix=NULL, *suffix=NULL;
-  sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
-  sexp_sint_t i, j, c, len, quit=0, print=0, init_loaded=0, mods_loaded=0,
+#if SEXP_USE_MODULES
+  char *impmod, *p;
+  sexp_sint_t len;
+#endif
+  char *arg, *prefix=NULL, *suffix=NULL;
+  sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
+  sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
   sexp_gc_var3(tmp, sym, args);
   args = SEXP_NULL;
 
@@ -273,6 +277,7 @@ void run_main (int argc, char **argv) {
     switch ((c=argv[i][1])) {
     case 'e':
     case 'p':
+      mods_loaded = 1;
       load_init();
       print = (argv[i][1] == 'p');
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
@@ -287,6 +292,7 @@ void run_main (int argc, char **argv) {
       quit = 1;
       break;
     case 'l':
+      mods_loaded = 1;
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('l', arg);
@@ -300,6 +306,7 @@ void run_main (int argc, char **argv) {
       mods_loaded = 1;
       load_init();
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+#if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
       len = strlen(arg)+strlen(prefix)+strlen(suffix);
       impmod = (char*) malloc(len+1);
@@ -312,6 +319,7 @@ void run_main (int argc, char **argv) {
       tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, (c=='x' ? sexp_global(ctx, SEXP_G_META_ENV) : env)));
       free(impmod);
       if (c == 'x') sexp_context_env(ctx) = env = tmp;
+#endif
       break;
     case 'q':
       init_context();
