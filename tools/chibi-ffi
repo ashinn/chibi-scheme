@@ -1089,7 +1089,7 @@
                     (if (= i 4)
                         (cat "    sexp_opcode_argn_type(op) = "
                              "sexp_make_vector(ctx, sexp_make_fixnum("
-                             (- i 3) "),"
+                             (- (length (func-c-args func)) 3) "),"
                              " sexp_make_fixnum(SEXP_OBJECT));\n"))
                     (cat "    sexp_vector_set(sexp_opcode_argn_type(op), "
                          "sexp_make_fixnum(" (- i 4) "), "
