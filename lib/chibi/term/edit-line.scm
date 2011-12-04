@@ -294,6 +294,59 @@
     (let lp ((i (- (buffer-pos buf) 1)))
       (if (or (< i 0) (not (pred (string-ref str i)))) i (lp (- i 1))))))
 
+(define (buffer-previous-word buf)
+  (let ((i (buffer-skip-reverse buf char-word-constituent?)))
+    (substring (buffer-string buf) (+ i 1) (buffer-pos buf))))
+
+(define (buffer-format-list buf out words)
+  (let ((width (buffer-width buf)))
+    (define (write-rows num-cols widths)
+      (let lp ((ls words) (i 0))
+        (cond
+         ((pair? ls)
+          (let ((diff (- (vector-ref widths i) (string-length (car ls)))))
+            (display (car ls) out)
+            (if (= (+ i 1) num-cols)
+                (newline out)
+                (display (make-string (+ 1 diff) #\space) out))
+            (lp (cdr ls) (modulo (+ i 1) num-cols)))))))
+    (let try-cols ((num-cols (length words)))
+      (cond
+       ((<= num-cols 1)
+        (newline out)
+        (for-each (lambda (x) (display x out) (newline out)) words))
+       (else
+        (let ((widths (make-vector num-cols 0)))
+          (let lp ((ls words) (i 0) (avail (- num-cols 1)))
+            (cond
+             ((null? ls)
+              (write-rows num-cols widths))
+             (else
+              (let ((diff (- (string-length (car ls)) (vector-ref widths i))))
+                (if (positive? diff)
+                    (let ((avail (+ avail diff)))
+                      (cond
+                       ((> avail width)
+                        (try-cols (- num-cols 1)))
+                       (else
+                        (vector-set! widths i (string-length (car ls)))
+                        (lp (cdr ls) (modulo (+ i 1) num-cols) avail))))
+                    (lp (cdr ls) (modulo (+ i 1) num-cols) avail))))))))))))
+
+(define (buffer-make-completer generate)
+  (lambda (ch buf out return)
+    (let* ((word (buffer-previous-word buf))
+           (ls (generate buf word)))
+      (cond
+       ((null? ls)
+        (command/beep ch buf out return))
+       ((= 1 (length ls))
+        (buffer-insert! buf out (substring (car ls) (string-length word))))
+       (else
+        (newline out)
+        (buffer-format-list buf out ls)
+        (buffer-draw buf out))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; keymaps
 
@@ -480,6 +533,7 @@
   (let* ((prompt (get-key args 'prompt: "> "))
          (history (get-key args 'history:))
          (complete? (get-key args 'complete?: (lambda (buf) #t)))
+         (completion (get-key args 'completion: (lambda args '())))
          (terminal-width (get-key args 'terminal-width:))
          (keymap (get-key args 'keymap: standard-keymap)))
     (lambda (in out)
@@ -495,6 +549,8 @@
         (buffer-complete?-set! buf complete?)
         (buffer-refresh buf out)
         (flush-output out)
+        (if completion
+            (vector-set! (car keymap) 9 completion))
         ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
          out
          (lambda ()
@@ -508,7 +564,11 @@
                       ((keymap? x)
                        (lp x))
                       ((procedure? x)
-                       (x ch buf out return)
+                       (guard (exn (else
+                                    (buffer-clear buf out)
+                                    (print-exception exn out)
+                                    (buffer-draw buf out)))
+                         (x ch buf out return))
                        (buffer-refresh buf out)
                        (if done?
                            (and (not (eq? done? 'eof)) (buffer->string buf))
