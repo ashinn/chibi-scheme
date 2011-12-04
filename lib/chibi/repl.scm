@@ -93,7 +93,9 @@
          (raw? (cond ((memq 'raw?: o) => cadr)
                      (else (member (get-environment-variable "TERM")
                                    '("emacs" "dumb"))))))
-    (let lp ((module module) (env env) (meta-env (load-module '(meta))))
+    (let lp ((module module)
+             (env env)
+             (meta-env (module-env (load-module '(meta)))))
       (let* ((prompt
               (string-append (if module (write-to-string module) "") "> "))
              (line
