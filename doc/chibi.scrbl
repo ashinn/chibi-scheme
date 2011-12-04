@@ -167,7 +167,8 @@ Scheme source files - in this case the function @cfun{sexp_init_library} is
 automatically called with the following signature:
 
 @ccode{
-  sexp_init_library(sexp context, sexp environment);
+  sexp_init_library(sexp context, sexp self, sexp_sint_t n, sexp environment,
+                    const char* version, sexp_abi_identifier_t abi);
 }
 
 The following additional procedures are available in the default
@@ -359,7 +360,7 @@ void dostuff(sexp ctx) {
   sexp_load(ctx, obj1, NULL);
 
   /* eval a C string as Scheme code */
-  sexp_eval_string(ctx, "(some scheme expression)", NULL, NULL);
+  sexp_eval_string(ctx, "(some scheme expression)", -1, NULL);
 
   /* construct a Scheme expression to eval */
   obj1 = sexp_intern(ctx, "my-procedure", -1);
