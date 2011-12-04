@@ -138,7 +138,7 @@
                                             env))
                                    (imp-env
                                     (vector-ref
-                                     (eval `(load-module ',mod-name) meta-env)
+                                     (eval `(load-module ',(car mod+imps)) meta-env)
                                      1)))
                                (%import env imp-env (cdr mod+imps) #f)
                                (continue module env meta-env))
