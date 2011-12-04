@@ -36,6 +36,23 @@
 (define module? vector?)
 (define (module-env mod) (vector-ref mod 1))
 
+(define (all-exports env)
+  (let lp ((env env) (res '()))
+    (if (not env)
+        res
+        (lp (environment-parent env) (append (env-exports env) res)))))
+
+(define (make-sexp-buffer-completer)
+  (buffer-make-completer
+   (lambda (buf word)
+     (let ((len (string-length word)))
+       (sort
+        (filter
+         (lambda (w)
+           (and (>= (string-length w) len)
+                (equal? word (substring w 0 len))))
+         (map symbol->string (all-exports (interaction-environment)))))))))
+
 ;;> Runs an interactive REPL.  Repeatedly displays a prompt,
 ;;> then Reads an expression, Evaluates the expression, Prints
 ;;> the result then Loops.  Terminates when the end of input is
@@ -108,7 +125,8 @@
                 (edit-line in out
                            'prompt: prompt
                            'history: history
-                           'complete?: buffer-complete-sexp?)))))
+                           'complete?: buffer-complete-sexp?
+                           'completion: (make-sexp-buffer-completer))))))
         (cond
          ((or (not line) (eof-object? line)))
          ((equal? line "") (lp module env meta-env))
