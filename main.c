@@ -15,6 +15,7 @@
 
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
+#define exit		exits
 #else
 #define exit_failure() exit(70)
 #endif
@@ -447,5 +448,5 @@ void run_main (int argc, char **argv) {
 int main (int argc, char **argv) {
   sexp_scheme_init();
   run_main(argc, argv);
-  return 0;
+  exit(0);
 }
