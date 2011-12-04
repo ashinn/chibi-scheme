@@ -409,7 +409,8 @@ void run_main (int argc, char **argv) {
     sexp_set_parameter(ctx, env, sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i < argc) {             /* script usage */
 #if SEXP_USE_MODULES
-      /* reset the environment to have only the `import' binding */
+      /* reset the environment to have only the `import' and */
+      /* `cond-expand' bindings */
       if (!mods_loaded) {
         env = sexp_make_env(ctx);
         sexp_set_parameter(ctx, sexp_context_env(ctx),
@@ -418,6 +419,9 @@ void run_main (int argc, char **argv) {
         sym = sexp_intern(ctx, "repl-import", -1);
         tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
         sym = sexp_intern(ctx, "import", -1);
+        sexp_env_define(ctx, env, sym, tmp);
+        sym = sexp_intern(ctx, "cond-expand", -1);
+        tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
         sexp_env_define(ctx, env, sym, tmp);
       }
 #endif
