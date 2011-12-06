@@ -1,0 +1,69 @@
+# bash -*- shell-script -*- completion for chibi-scheme
+
+type chibi-scheme >/dev/null 2>/dev/null && {
+
+_chibi-modules() {
+  for dir in ./lib/ /usr/local/share/chibi/ "$@" \
+    $(echo $CHIBI_MODULE_PATH | tr ':' ' '); do
+    find "$dir" -name \*.sld 2>/dev/null \
+      | sed 's!'"$dir"'/*!!;s!\.sld$!!;s!/!.!g'
+  done | sort -u
+}
+
+_chibi-scheme() {
+  local cur prev
+  # Just some likely sample sizes, you're not limited to these.
+  local sizes="1M 2M 4M 8M 16M 32M 64M 128M 256M 512M 1G 2G 4G"
+
+  COMPREPLY=()
+
+  # We don't require a space between single-char options and the value.
+  cur=`_get_cword`
+  case "$cur" in
+    -m*)
+      COMPREPLY=( $( compgen -W "$(_chibi-modules | sed 's!^!-m!')" -- "$cur") )
+      return 0;;
+    -x*)
+      COMPREPLY=( $( compgen -W "$(_chibi-modules | sed 's!^!-x!')" -- "$cur") )
+      return 0;;
+    -l*)
+      compopt -o nospace
+      _filedir
+      return 0;;
+    -A*)
+      compopt -o nospace
+      COMPREPLY=( $( compgen -d -- "${cur#-A}" | sed 's!^!-A!' ) )
+      return 0;;
+    -I*)
+      compopt -o nospace
+      COMPREPLY=( $( compgen -d -- "${cur#-I}" | sed 's!^!-I!' ) )
+      return 0;;
+    -h*)
+      COMPREPLY=( $( compgen -W "$(echo $sizes | tr ' ' '\n' | sed 's!^!-h!')" -- "${cur}" ) )
+      return 0;;
+    -)
+      COMPREPLY=( $( compgen -W '-d -e -f -h -i -l -m -p -q -x -A -I -V' \
+        -- "$cur") )
+      return 0;;
+    -*)
+      return 0;;
+  esac
+
+  # Not connected to the option, check the previous word.
+  prev=${COMP_WORDS[COMP_CWORD-1]}
+  case "$prev" in
+    -[mx])
+      COMPREPLY=( $( compgen -W "$(_chibi-modules)" -- "$cur") )
+      return 0;;
+    -[AIl])
+      _filedir
+      return 0;;
+    -h)
+      COMPREPLY=( $( compgen -W "$sizes" -- "$cur" ) )
+      return 0;;
+  esac
+}
+
+complete -f -F _chibi-scheme chibi-scheme
+
+}
