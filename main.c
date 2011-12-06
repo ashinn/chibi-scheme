@@ -15,9 +15,39 @@
 
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
-#define exit		exits
+#define exit           exits
 #else
 #define exit_failure() exit(70)
+#endif
+#define exit_success() exit(0)
+
+#if SEXP_USE_MAIN_HELP
+void sexp_usage(int err) {
+  printf("usage: chibi-scheme [<options> ...] [<file> <args> ...]\n"
+#if SEXP_USE_FOLD_CASE_SYMS
+         "  -f          - case-fold symbols\n"
+#endif
+         "  -q          - don't load the initialization file\n"
+         "  -V          - print version information\n"
+         "  -h <size>   - specify the initial heap size\n"
+#if SEXP_USE_IMAGE_LOADING
+         "  -A <dir>    - append a module search directory\n"
+         "  -I <dir>    - prepend a module search directory\n"
+         "  -m <module> - import a module\n"
+         "  -x <module> - import only a module\n"
+#endif
+         "  -e <expr>   - evaluate an expression\n"
+         "  -p <expr>   - evaluate and print an expression\n"
+#if SEXP_USE_IMAGE_LOADING
+         "  -d <file>   - dump an image file and exit\n"
+         "  -i <file>   - load an image file\n"
+#endif
+         );
+  if (err == 0) exit_success();
+  else exit_failure();
+}
+#else
+#define sexp_usage(err) (err ? exit_failure() : exit_success())
 #endif
 
 #if SEXP_USE_IMAGE_LOADING
@@ -195,7 +225,7 @@ static sexp_uint_t multiplier (char c) {
 static void check_nonull_arg (int c, char *arg) {
   if (! arg) {
     fprintf(stderr, "chibi-scheme: option '%c' requires an argument\n", c);
-    exit_failure();
+    sexp_usage(1);
   }
 }
 
@@ -340,8 +370,11 @@ void run_main (int argc, char **argv) {
       sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_FALSE);
       break;
     case '-':
-      i++;
-      goto done_options;
+      if (argv[i][2] == '\0') {
+        i++;
+        goto done_options;
+      }
+      sexp_usage(1);
     case 'h':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('h', arg);
@@ -395,7 +428,7 @@ void run_main (int argc, char **argv) {
 #endif
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
-      exit_failure();
+      sexp_usage(1);
     }
   }
 
@@ -448,5 +481,5 @@ void run_main (int argc, char **argv) {
 int main (int argc, char **argv) {
   sexp_scheme_init();
   run_main(argc, argv);
-  exit(0);
+  exit_success();
 }
