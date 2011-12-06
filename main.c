@@ -30,7 +30,7 @@ void sexp_usage(int err) {
          "  -q          - don't load the initialization file\n"
          "  -V          - print version information\n"
          "  -h <size>   - specify the initial heap size\n"
-#if SEXP_USE_IMAGE_LOADING
+#if SEXP_USE_MODULES
          "  -A <dir>    - append a module search directory\n"
          "  -I <dir>    - prepend a module search directory\n"
          "  -m <module> - import a module\n"
