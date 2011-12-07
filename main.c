@@ -29,7 +29,9 @@ void sexp_usage(int err) {
 #endif
          "  -q          - don't load the initialization file\n"
          "  -V          - print version information\n"
+#if ! SEXP_USE_BOEHM
          "  -h <size>   - specify the initial heap size\n"
+#endif
 #if SEXP_USE_MODULES
          "  -A <dir>    - append a module search directory\n"
          "  -I <dir>    - prepend a module search directory\n"
@@ -375,6 +377,7 @@ void run_main (int argc, char **argv) {
         goto done_options;
       }
       sexp_usage(1);
+#if ! SEXP_USE_BOEHM
     case 'h':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('h', arg);
@@ -385,6 +388,7 @@ void run_main (int argc, char **argv) {
         if (sexp_isalpha((unsigned char)*arg)) heap_max_size *= multiplier(*arg++);
       }
       break;
+#endif
 #if SEXP_USE_IMAGE_LOADING
     case 'i':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
