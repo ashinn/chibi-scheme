@@ -59,6 +59,11 @@
            (vector-set! x 2 x)
            x))
 
+(test 255 (read-from-string "#xff"))
+(test 99 (read-from-string "#d99"))
+(test 63 (read-from-string "#o77"))
+(test 3 (read-from-string "#b11"))
+
 (cond-expand
  (chicken
   (test-io "(#0=\"abc\" #0# #0#)"
