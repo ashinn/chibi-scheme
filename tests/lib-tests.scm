@@ -14,14 +14,17 @@
 
 (cond-expand
  (modules
-  (begin
-    (load "tests/record-tests.scm")
-    (load "tests/hash-tests.scm")
-    (load "tests/sort-tests.scm")
-    (load "tests/io-tests.scm")
-    (load "tests/process-tests.scm")
-    (load "tests/system-tests.scm")
-    (load "tests/thread-tests.scm")))
+  (load "tests/record-tests.scm")
+  (load "tests/hash-tests.scm")
+  (load "tests/sort-tests.scm")
+  (load "tests/io-tests.scm")
+  (load "tests/process-tests.scm")
+  (load "tests/system-tests.scm"))
+ (else #f))
+
+(cond-expand
+ ((and modules threads)
+  (load "tests/thread-tests.scm"))
  (else #f))
 
 (test-end)
