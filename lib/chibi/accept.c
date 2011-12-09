@@ -5,7 +5,9 @@
 /* sockets non-blocking. */
 
 sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_t len) {
+#if SEXP_USE_GREEN_THREADS
   sexp f;
+#endif
   int res;
   res = accept(sock, addr, &len);
 #if SEXP_USE_GREEN_THREADS
