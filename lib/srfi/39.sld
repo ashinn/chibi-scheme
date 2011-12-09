@@ -3,4 +3,8 @@
   (export make-parameter parameterize)
   (import (scheme))
   (include-shared "39/param")
-  (include "39/syntax.scm"))
+  (cond-expand
+   (threads
+    (include "39/syntax.scm"))
+   (else
+    (include "39/syntax-no-threads.scm"))))

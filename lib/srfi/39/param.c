@@ -26,6 +26,7 @@ static sexp sexp_parameter_converter (sexp ctx, sexp self, sexp_sint_t n, sexp p
   return res ? res : SEXP_FALSE;
 }
 
+#if SEXP_USE_GREEN_THREADS
 static sexp sexp_thread_parameters (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res = sexp_context_params(ctx);
   return res ? res : SEXP_NULL;
@@ -35,6 +36,7 @@ static sexp sexp_thread_parameters_set (sexp ctx, sexp self, sexp_sint_t n, sexp
   sexp_context_params(ctx) = new;
   return SEXP_VOID;
 }
+#endif
 
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
@@ -43,8 +45,11 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
 
   sexp_define_foreign(ctx, env, "%make-parameter", 2, sexp_make_parameter);
   sexp_define_foreign(ctx, env, "parameter-converter", 1, sexp_parameter_converter);
+
+#if SEXP_USE_GREEN_THREADS
   sexp_define_foreign(ctx, env, "thread-parameters", 0, sexp_thread_parameters);
   sexp_define_foreign(ctx, env, "thread-parameters-set!", 1, sexp_thread_parameters_set);
+#endif
 
   return SEXP_VOID;
 }
