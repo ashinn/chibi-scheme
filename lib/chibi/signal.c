@@ -26,10 +26,7 @@ static void sexp_call_sigaction (int signum, siginfo_t *info, void *uctx) {
     if (sexp_applicablep(handler)) {
       sigctx = sexp_make_child_context(ctx, NULL);
       sexp_gc_preserve1(sigctx, args);
-      args = sexp_cons(sigctx, SEXP_FALSE, SEXP_NULL);
-      sexp_car(args)
-        = sexp_make_cpointer(sigctx, sexp_siginfo_t_type_id, info, SEXP_FALSE, 0);
-      args = sexp_cons(sigctx, sexp_make_fixnum(signum), args);
+      args = sexp_cons(sigctx, sexp_make_fixnum(signum), SEXP_NULL);
       sexp_apply(sigctx, handler, args);
       sexp_gc_release1(sigctx);
     }
@@ -64,6 +61,7 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
 
 #if SEXP_BSD
 
+#include <sys/time.h>
 #include <sys/proc.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
