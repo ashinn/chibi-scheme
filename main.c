@@ -57,6 +57,7 @@ void sexp_usage(int err) {
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #define SEXP_IMAGE_MAGIC "\a\achibi\n\0"
 #define SEXP_IMAGE_MAJOR_VERSION 1
