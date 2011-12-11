@@ -186,8 +186,8 @@ chibi-scheme-static$(EXE): main.o eval.o sexp.o
 chibi-scheme-ulimit$(EXE): main.o eval.o sexp-ulimit.o
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
-clibs.c: $(GENSTATIC) lib lib/chibi lib/srfi chibi-scheme$(EXE) libs
-	$(CHIBI) $< > $@
+clibs.c: $(GENSTATIC) chibi-scheme$(EXE)
+	$(FIND) lib -name \*.sld | $(CHIBI) $(GENSTATIC) > $@
 
 %.c: %.stub $(GENSTUBS) chibi-scheme$(EXE)
 	-$(CHIBI) $(GENSTUBS) $<

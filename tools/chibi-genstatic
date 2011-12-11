@@ -1,7 +1,27 @@
 #! /usr/bin/env chibi-scheme
 
+;; This is a build-only tool (not installed) used to generate the
+;; clibs.c file used by Chibi for a SEXP_USE_STATIC_LIBS=1 build,
+;; i.e. a build of Chibi with all libraries that would be loaded
+;; dynamically included statically into libchibi-scheme (though not
+;; necessarily statically linked).
+;;
+;; usage: find <dir> -name \*.sld | chibi-genstatic [-x <mods> ...] > clibs.c
+;;
+;; where <mods> is a list of modules _not_ to generate static bindings for.
+;;
+;; This is only intended for libraries in the core distribution, and
+;; currently makes the assumption that the .sld files contain a
+;; `define-library' form.  If you want to make a custom build with
+;; your own libraries included statically, be sure to follow this
+;; convention.
+;;
+;; This relies on an external find, instead of one from (chibi
+;; filesystem), because the latter is a dynamically loaded library
+;; which presents a bootstrapping issue on platforms with no dynamic
+;; loading.
+
 (import (scheme)
-        (chibi filesystem)
         (chibi pathname)
         (only (meta) find-module))
 
@@ -14,6 +34,16 @@
         ((symbol? x) (symbol->string x))
         ((number? x) (number->string x))
         (else (error "non-stringable object" x))))
+
+(define (string-split str c . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (string-length str)))
+    (let lp ((from start) (i start) (res '()))
+      (define (collect) (if (= i from) res (cons (substring str from i) res)))
+      (cond
+       ((>= i end) (reverse (collect)))
+       ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (collect)))
+       (else (lp from (+ i 1) res))))))
 
 (define (string-scan c str . o)
   (let ((limit (string-length str)))
@@ -48,64 +78,57 @@
    (string-replace (string-replace (c-escape (x->string x)) #\- "_") #\? "_p")
    #\! "_x"))
 
+(define (read-line . o)
+  (let ((in (if (pair? o) (car o) (current-input-port))))
+    (let lp ((res '()))
+      (let ((c (read-char in)))
+        (if (or (eof-object? c) (eqv? c #\newline))
+            (list->string (reverse res))
+            (lp (cons c res)))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (path-relative path dir)
-  (let ((p-len (string-length path))
-        (d-len (string-length dir)))
-    (and (> p-len d-len)
-         (string=? dir (substring path 0 d-len))
-         (cond
-          ((eqv? #\/ (string-ref path d-len))
-           (substring path (+ d-len 1) p-len))
-          ((eqv? #\/ (string-ref path (- d-len 1)))
-           (substring path d-len p-len))
-          (else #f)))))
-
-(define (path-split file)
-  (let ((len (string-length file)))
-    (let lp ((i 0) (res '()))
-      (let ((j (string-scan #\/ file i)))
-        (cond
-         (j (lp (+ j 1) (cons (substring file i j) res)))
-         (else (reverse (if (= i len)
-                            res
-                            (cons (substring file i len) res)))))))))
 
 (define (init-name mod)
   (string-append "sexp_init_lib_"
                  (string-concatenate (map mangle mod) "_")))
 
-(define (find-c-libs basedir)
-  (define (process-dir dir)
-    (directory-fold
-     dir
-     (lambda (f x)
-       (if (and (not (equal? "" f)) (not (eqv? #\. (string-ref f 0))))
-           (process (string-append dir "/" f))))
-     #f))
+(define (find-c-libs excluded-c-libs)
+  (define (extract-module-name file)
+    (call-with-input-file file
+      (lambda (in)
+        (let lp ()
+          (let ((expr (read in)))
+            (cond
+             ((eof-object? expr) #f)
+             ((and (pair? expr)
+                   (pair? (cdr expr))
+                   (memq (car expr)
+                         '(define-library define-module library module)))
+              (cadr expr))
+             (else (lp))))))))
   (define (process file)
-    (cond
-     ((file-directory? file)
-      (process-dir file))
-     ((equal? "sld" (path-extension file))
-      (let* ((mod-path (path-strip-extension (path-relative file basedir)))
-             (mod-name (map (lambda (x) (or (string->number x) (string->symbol x)))
-                            (path-split mod-path))))
-        (cond
-         ((find-module mod-name)
-          => (lambda (mod)
-               (cond
-                ((assq 'include-shared (vector-ref mod 2))
-                 => (lambda (x)
-                      (set! c-libs
-                            (cons (cons (string-append
-                                         (path-directory file)
-                                         "/"
-                                         (cadr x))
-                                        mod-name)
-                                  c-libs))))))))))))
-  (process-dir basedir))
+    (let ((mod-name (extract-module-name file)))
+      (cond
+       ((and mod-name
+             (not (member mod-name excluded-c-libs))
+             (find-module mod-name))
+        => (lambda (mod)
+             (cond
+              ((assq 'include-shared (vector-ref mod 2))
+               => (lambda (x)
+                    (set! c-libs
+                          (cons (cons (string-append
+                                       (path-directory file)
+                                       "/"
+                                       (cadr x))
+                                      mod-name)
+                                c-libs))))))))))
+  (let lp ()
+    (let ((file (read-line)))
+      (cond
+       ((not (or (eof-object? file) (equal? "" file)))
+        (process file)
+        (lp))))))
 
 (define (include-c-lib lib)
   (display "#define sexp_init_library ")
@@ -127,7 +150,13 @@
   (display " },\n"))
 
 (define (main args)
-  (find-c-libs (if (and (pair? args) (pair? (cdr args))) (cadr args) "lib"))
+  (find-c-libs
+   (if (and (pair? args) (member (car args) '("-x" "--exclude")))
+       (map (lambda (m)
+              (map (lambda (x) (or (string->number x) (string->symbol x)))
+                   (string-split m #\.)))
+            (cdr args))
+       '()))
   (newline)
   (for-each include-c-lib c-libs)
   (newline)
