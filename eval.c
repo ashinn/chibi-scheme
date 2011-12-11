@@ -863,7 +863,7 @@ static sexp analyze (sexp ctx, sexp object) {
             else
               res = sexp_make_lit(ctx,
                                   (sexp_core_code(op) == SEXP_CORE_QUOTE) ?
-                                  sexp_strip_synclos(ctx , NULL, 1, sexp_cadr(x)) :
+                                  tmp=sexp_strip_synclos(ctx , NULL, 1, sexp_cadr(x)) :
                                   sexp_cadr(x));
             break;
           case SEXP_CORE_DEFINE_SYNTAX:
