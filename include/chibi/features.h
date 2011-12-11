@@ -465,8 +465,10 @@
 #define SEXP_USE_RESERVE_OPCODE SEXP_USE_TAIL_JUMPS
 #endif
 
+/* experimental optimization to avoid boxing locals which aren't set! */
 #ifndef SEXP_USE_UNBOXED_LOCALS
-#define SEXP_USE_UNBOXED_LOCALS ! SEXP_USE_NO_FEATURES
+/* #define SEXP_USE_UNBOXED_LOCALS ! SEXP_USE_NO_FEATURES */
+#define SEXP_USE_UNBOXED_LOCALS 0
 #endif
 
 #ifndef SEXP_USE_DEBUG_VM
