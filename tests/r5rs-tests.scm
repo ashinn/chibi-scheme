@@ -177,6 +177,10 @@
 
 (test #t (equal? "abc" "abc"))
 
+(test #f (equal? "abc" "abcd"))
+
+(test #f (equal? "a" "b"))
+
 (test #t (equal? 2 2))
 
 ;;(test #f (eqv? 2 2.0))
@@ -357,6 +361,50 @@
 (test "Martin" (symbol->string 'Martin))
 
 (test "Malvina" (symbol->string (string->symbol "Malvina")))
+
+(test #t (string? "a"))
+
+(test #f (string? 'a))
+
+(test 0 (string-length ""))
+
+(test 3 (string-length "abc"))
+
+(test #\a (string-ref "abc" 0))
+
+(test #\c (string-ref "abc" 2))
+
+(test "axc" (let ((s (string #\a #\b #\c))) (string-set! s 1 #\x) s))
+
+(test #t (string=? "a" (string #\a)))
+
+(test #f (string=? "a" (string #\b)))
+
+(test #t (string<? "a" "aa"))
+
+(test #f (string<? "aa" "a"))
+
+(test #f (string<? "a" "a"))
+
+(test #t (string<=? "a" "aa"))
+
+(test #t (string<=? "a" "a"))
+
+(test #t (string=? "a" (make-string 1 #\a)))
+
+(test #f (string=? "a" (make-string 1 #\b)))
+
+(test "" (substring "abc" 0 0))
+
+(test "a" (substring "abc" 0 1))
+
+(test "bc" (substring "abc" 1 3))
+
+(test "abc" (string-append "abc" ""))
+
+(test "abc" (string-append "" "abc"))
+
+(test "abc" (string-append "a" "bc"))
 
 (test '#(0 ("Sue" "Sue") "Anna")
  (let ((vec (vector 0 '(2 2 2 2) "Anna")))
