@@ -242,8 +242,8 @@ void sexp_conservative_mark (sexp ctx) {
         if (1) {
 #if SEXP_USE_DEBUG_GC > 3
           if (p && sexp_pointerp(p)) {
-            fprintf(stderr, SEXP_BANNER("MISS: %p: %s"), p,
-                    sexp_pointer_source(p));
+            fprintf(stderr, SEXP_BANNER("MISS: %p [%d]: %s"), p,
+                    sexp_pointer_tag(p), sexp_pointer_source(p));
             fflush(stderr);
           }
 #endif
