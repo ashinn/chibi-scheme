@@ -216,6 +216,7 @@ static void repl (sexp ctx, sexp env) {
   sexp_gc_release3(ctx);
 }
 
+#if ! SEXP_USE_BOEHM
 static sexp_uint_t multiplier (char c) {
   switch (sexp_tolower(c)) {
   case 'k': return 1024;
@@ -224,6 +225,7 @@ static sexp_uint_t multiplier (char c) {
   default:  return 1;
   }
 }
+#endif
 
 static void check_nonull_arg (int c, char *arg) {
   if (! arg) {
