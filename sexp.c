@@ -740,10 +740,10 @@ sexp sexp_length_op (sexp ctx, sexp self, sexp_sint_t n, sexp ls1) {
 }
 
 sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp bound) {
-  sexp_uint_t size;
+  sexp_uint_t left_size, right_size;
   sexp_sint_t i, len;
   sexp t, *p, *q;
-  char *p0, *q0;
+  char *p_left, *p_right, *q_left, *q_right;
 
  loop:
   if (a == b)
@@ -765,25 +765,27 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
     return bound;
   bound = sexp_fx_sub(bound, SEXP_ONE);
   t = sexp_object_type(ctx, a);
-  p0 = ((char*)a) + offsetof(struct sexp_struct, value);
+  p_left = ((char*)a) + offsetof(struct sexp_struct, value);
   p = (sexp*) (((char*)a) + sexp_type_field_base(t));
-  q0 = ((char*)b) + offsetof(struct sexp_struct, value);
+  q_left = ((char*)b) + offsetof(struct sexp_struct, value);
   q = (sexp*) (((char*)b) + sexp_type_field_base(t));
-  if ((sexp)p == a) {p=(sexp*)p0; q=(sexp*)q0;}
+  /* if no fields, the base is value (just past the header) */
+  if ((sexp)p == a) {p=(sexp*)p_left; q=(sexp*)q_left;}
   /* check preliminary non-object data */
-  if ((p0 < (char*)p) && memcmp(p0, q0, ((char*)p - p0)))
+  left_size = (char*)p - p_left;
+  if ((left_size > 0) && memcmp(p_left, q_left, left_size))
     return SEXP_FALSE;
   /* check trailing non-object data */
-  size = sexp_type_size_of_object(t, a) - offsetof(struct sexp_struct, value);
-  p0 = ((char*)p + sexp_type_num_slots_of_object(t,a)*sizeof(sexp));
-  if (((char*)a + size) > p0) {
-    q0 = ((char*)q + sexp_type_num_slots_of_object(t,b)*sizeof(sexp));
-    if (size != sexp_type_size_of_object(t,b)-offsetof(struct sexp_struct,value))
+  p_right = ((char*)p + sexp_type_num_slots_of_object(t,a)*sizeof(sexp));
+  right_size = ((char*)a + sexp_type_size_of_object(t, a)) - p_right;
+  if (right_size > 0) {
+    q_right = ((char*)q + sexp_type_num_slots_of_object(t,b)*sizeof(sexp));
+    if (right_size != ((char*)b + sexp_type_size_of_object(t, b)) - q_right)
       return SEXP_FALSE;
-    if (memcmp(p0, q0, size))
+    if (memcmp(p_right, q_right, right_size))
       return SEXP_FALSE;
   }
-  /* check eq-object slots */
+  /* left and right non-object data is the same, now check eq-object slots */
   len = sexp_type_num_eq_slots_of_object(t, a);
   if (len > 0) {
     for (; len > 1; len--) {
