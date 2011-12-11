@@ -374,8 +374,6 @@
 
 (test #\c (string-ref "abc" 2))
 
-(test "axc" (let ((s (string #\a #\b #\c))) (string-set! s 1 #\x) s))
-
 (test #t (string=? "a" (string #\a)))
 
 (test #f (string=? "a" (string #\b)))
