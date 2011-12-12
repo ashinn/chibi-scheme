@@ -894,7 +894,7 @@ sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   limit = sexp_string_length(str);
   for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
     j += sexp_utf8_initial_byte_count(p[j]);
-  if (i>0)
+  if (i != 0)
     return sexp_user_exception(ctx, self, "string-index->offset: index out of range", index);
   return sexp_make_fixnum(j);
 }

@@ -1469,6 +1469,8 @@ sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
+  if (sexp_unbox_fixnum(off) >= sexp_string_length(str))
+    return sexp_user_exception(ctx, self, "string-ref: index out of range", i);
   return sexp_string_utf8_ref(ctx, str, off);
 }
 
@@ -1522,6 +1524,8 @@ sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
   off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
+  if (sexp_unbox_fixnum(off) >= sexp_string_length(str))
+    return sexp_user_exception(ctx, self, "string-set!: index out of range", i);
   sexp_string_utf8_set(ctx, str, off, ch);
   return SEXP_VOID;
 }
