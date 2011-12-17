@@ -1043,7 +1043,7 @@
 (define (string-cursor-start s) 0)
 
 (cond-expand
- (utf-8
+ (full-unicode
   (define (string-copy s) (substring-cursor s 0 (string-size s)))
   (define string-cursor-end string-size))
  (else

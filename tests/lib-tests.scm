@@ -10,7 +10,7 @@
 (load "tests/loop-tests.scm")
 (load "tests/match-tests.scm")
 (load "tests/scribble-tests.scm")
-(cond-expand (utf-8 (load "tests/unicode-tests.scm")) (else #f))
+(cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
 (cond-expand
  (modules
