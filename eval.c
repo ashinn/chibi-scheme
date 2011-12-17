@@ -1011,17 +1011,12 @@ sexp sexp_open_input_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   FILE *in;
   int count = 0;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
- loop:
-  in = fopen(sexp_string_data(path), "r");
-  if (!in) {
-#if SEXP_USE_GC_FILE_DESCRIPTORS
-    if (errno == EMFILE && !count++) {
-      sexp_gc(ctx, NULL);
-      goto loop;
-    }
-#endif
+  do {
+    if (count != 0) sexp_gc(ctx, NULL);
+    in = fopen(sexp_string_data(path), "r");
+  } while (!in && sexp_out_of_file_descriptors() && !count++);
+  if (!in)
     return sexp_user_exception(ctx, self, "couldn't open input file", path);
-  }
 #if SEXP_USE_GREEN_THREADS
   fcntl(fileno(in), F_SETFL, O_NONBLOCK);
 #endif
@@ -1032,17 +1027,12 @@ sexp sexp_open_output_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   FILE *out;
   int count = 0;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, path);
- loop:
-  out = fopen(sexp_string_data(path), "w");
-  if (!out) {
-#if SEXP_USE_GC_FILE_DESCRIPTORS
-    if (errno == EMFILE && !count++) {
-      sexp_gc(ctx, NULL);
-      goto loop;
-    }
-#endif
+  do {
+    if (count != 0) sexp_gc(ctx, NULL);
+    out = fopen(sexp_string_data(path), "w");
+  } while (!out && sexp_out_of_file_descriptors() && !count++);
+  if (!out)
     return sexp_user_exception(ctx, self, "couldn't open output file", path);
-  }
   return sexp_make_output_port(ctx, out, path);
 }
 

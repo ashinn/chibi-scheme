@@ -25,9 +25,11 @@ extern "C" {
 #if SEXP_USE_DL
 #include <dlfcn.h>
 #endif
+#if SEXP_USE_GREEN_THREADS || SEXP_USE_GC_FILE_DESCRIPTORS
+#include <errno.h>
+#endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
-#include <errno.h>
 #include <fcntl.h>
 #endif
 #define sexp_isalpha(x) (isalpha(x))
@@ -35,6 +37,12 @@ extern "C" {
 #define sexp_isdigit(x) (isdigit(x))
 #define sexp_tolower(x) (tolower(x))
 #define sexp_toupper(x) (toupper(x))
+#endif
+
+#if SEXP_USE_GC_FILE_DESCRIPTORS
+#define sexp_out_of_file_descriptors() (errno == EMFILE)
+#else
+#define sexp_out_of_file_descriptors() (0)
 #endif
 
 #ifdef PLAN9
@@ -430,6 +438,8 @@ void sexp_free(void* ptr);
 
 #if SEXP_USE_BOEHM
 
+#define sexp_gc(ctx, sum)
+
 #define sexp_gc_var(ctx, x, y)       sexp x;
 #define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
@@ -442,6 +452,8 @@ void sexp_free(void* ptr);
 #define sexp_alloc_atomic(ctx, size) GC_malloc_atomic(size)
 
 #else
+
+SEXP_API sexp sexp_gc(sexp ctx, size_t *sum_freed);
 
 #define sexp_gc_var(ctx, x, y)                  \
   sexp x = SEXP_VOID;                           \
