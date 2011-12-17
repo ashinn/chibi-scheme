@@ -115,7 +115,7 @@ static int sexp_cookie_seeker (void *cookie, off64_t *position, int whence) {
   sexp_gc_release2(ctx);
   return sexp_fixnump(res);
 }
-#endif
+#endif  /* !SEXP_BSD */
 
 static int sexp_cookie_cleaner (void *cookie) {
   sexp vec = (sexp)cookie, ctx, res;
@@ -141,7 +141,7 @@ static cookie_io_functions_t sexp_cookie_no_seek = {
   .close = (cookie_close_function_t*)sexp_cookie_cleaner,
 };
 
-#endif
+#endif  /* !SEXP_BSD */
 
 static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
                                    sexp read, sexp write,
@@ -184,7 +184,7 @@ static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
   return res;
 }
 
-#else
+#else  /* ! SEXP_USE_STRING_STREAMS */
 
 static sexp sexp_make_custom_port (sexp ctx, sexp self,
                                    char *mode, sexp read, sexp write,
@@ -202,7 +202,8 @@ static sexp sexp_make_custom_input_port (sexp ctx, sexp self,
 static sexp sexp_make_custom_output_port (sexp ctx, sexp self,
                                           sexp write, sexp seek, sexp close) {
   sexp res = sexp_make_custom_port(ctx, self, "w", SEXP_FALSE, write, seek, close);
-  sexp_pointer_tag(res) = SEXP_OPORT;
+  if (!sexp_exceptionp(res))
+    sexp_pointer_tag(res) = SEXP_OPORT;
   return res;
 }
 
