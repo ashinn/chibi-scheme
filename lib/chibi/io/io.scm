@@ -28,12 +28,38 @@
     (display str out)
     (newline out)))
 
+;;> @subsubsubsection{(write-string str n [out])}
+
+;;> Writes the first @var{n} bytes of @var{str} to output port
+;;> @var{out}.
+
+(cond-expand
+ ((not string-streams)
+  (define (write-string str n . o)
+    (let ((out (if (pair? o) (car o) (current-output-port))))
+      (display (substring str 0 n out))))))
+
 ;;> @subsubsubsection{(read-line [in [n]])}
 
 ;;> Read a line from the input port @var{in}, defaulting to
 ;;> @scheme{(current-input-port)}, and return the result as
 ;;> a string not including the newline.  Reads at most @var{n}
 ;;> characters, defaulting to 8192.
+
+(cond-expand
+ ((not string-streams)
+  (define (%read-line n in)
+    (let ((out (open-output-string)))
+      (let lp ()
+        (let ((ch (read-char in)))
+          (cond
+           ((eof-object? ch)
+            (get-output-string out))
+           (else
+            (write-char ch out)
+            (if (eqv? ch #\newline)
+                (get-output-string out)
+                (lp))))))))))
 
 (define (read-line . o)
   (let ((in (if (pair? o) (car o) (current-input-port)))
@@ -58,6 +84,15 @@
 ;;> than @var{n} characters if the end of file is reached,
 ;;> or the eof-object if no characters are available.
 
+(cond-expand
+ ((not string-streams)
+  (define (%read-string n in)
+    (let ((out (open-output-string)))
+      (do ((i 0 (+ i 1))
+           (ch (read-char in) (read-char in)))
+          ((or (= i n) (eof-object? ch)) (get-output-string out))
+        (write-char ch out))))))
+
 (define (read-string n . o)
   (if (zero? n)
       ""
@@ -79,6 +114,14 @@
 ;;> Returns the number of characters read.
 ;;> An error is signalled if the length of @var{str} is smaller
 ;;> than @var{n}.
+
+(cond-expand
+ ((not string-streams)
+  (define (%read-string! str n in)
+    (do ((i 0 (+ i 1))
+         (ch (read-char in) (read-char in)))
+        ((or (= i n) (eof-object? ch)) i)
+      (string-set! str i ch)))))
 
 (define (read-string! str n . o)
   (if (>= n (string-length str))
