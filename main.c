@@ -218,7 +218,7 @@ static void repl (sexp ctx, sexp env) {
 
 #if ! SEXP_USE_BOEHM
 static sexp_uint_t multiplier (char c) {
-  switch (sexp_tolower(c)) {
+  switch (sexp_tolower((unsigned char)c)) {
   case 'k': return 1024;
   case 'm': return (1024*1024);
   case 'g': return (1024*1024*1024);
