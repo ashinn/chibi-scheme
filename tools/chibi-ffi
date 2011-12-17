@@ -764,6 +764,13 @@
 (define (write-additional-checks args)
   (for-each
    (lambda (a)
+     (if (port-type? (type-base a))
+         (cat "  if (!sexp_stream_portp(arg" (type-index a) "))\n"
+              "    return sexp_xtype_exception(ctx, self,"
+              " \"not a FILE* backed port\", arg" (type-index a) ");\n")))
+   args)
+  (for-each
+   (lambda (a)
      (if (eq? 'input-port (type-base a))
          (cat "  sexp_check_block_port(ctx, arg" (type-index a) ", 0);\n")))
    args))

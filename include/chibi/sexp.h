@@ -635,6 +635,12 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #define sexp_portp(x) (sexp_iportp(x) || sexp_oportp(x))
 
+#if SEXP_USE_STRING_STREAMS
+#define sexp_stream_portp(x) 1
+#else
+#define sexp_stream_portp(x) (sexp_port_stream(x) != NULL)
+#endif
+
 /***************************** constructors ****************************/
 
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
