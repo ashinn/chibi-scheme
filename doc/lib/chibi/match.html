@@ -28,7 +28,7 @@ span.paren5 { color: #222222; background-color: inherit; }
 span.paren6 { color: #000000; background-color: inherit; }
 </style>
 </head><body><div id="menu"><ol><li><a href="#h3_Patterns">Patterns</a></li><li><a href="#h3_Syntax">Syntax</a><ol><li><a href="#h4_(matchexpr(pattern.body)...)(matchexpr(pattern(=>failure).body)...)">(match expr (pattern . body) ...)
-(match expr (pattern (=> failure) . body) ...)</a></li><li><a href="#h4_match-lambda">(match-lambda (pattern . body) ...)</a></li><li><a href="#h4_match-lambda*">(match-lambda* (pattern . body) ...)</a></li><li><a href="#h4_match-let">(match-let ((var value) ...) . body)(match-let loop ((var init) ...) . body)</a></li><li><a href="#h4_match-letrec">(match-letrec ((var value) ...) . body)</a></li><li><a href="#h4_(match-let*((varvalue)...)body...)">(match-let* ((var value) ...) body ...)</a></li></ol></li></ol></div><div id="main"><h1>(chibi match)</h1><p>
+(match expr (pattern (=> failure) . body) ...)</a></li><li><a href="#h4_match-let">(match-verify-no-ellipses (x . y) sk)(match-verify-no-ellipses () sk)(match-verify-no-ellipses x sk)</a></li><li><a href="#h4_match-let*">(match-gen-search v p q g+s sk fk i ((id id-ls) ...))</a></li><li><a href="#h4_(match-let*((varvalue)...)body...)">(match-let* ((var value) ...) body ...)</a></li></ol></li></ol></div><div id="main"><h1>(chibi match)</h1><p>
 This is a full superset of the popular <a href="http://www.cs.indiana.edu/scheme-repository/code.match.html">match</a>
 package by Andrew Wright, written in fully portable <code><span>syntax-rules</span></code>
 and thus preserving hygiene.
@@ -173,15 +173,15 @@ and the result of the last expression is returned as the result
 of the entire <code><span>match</span></code>.  If a <code>failure</code> is provided,
 then it is bound to a procedure of no arguments which continues,
 processing at the next <code>pattern</code>.  If no <code>pattern</code> matches,
-an error is signalled.</p><div><a name="h4_match-lambda"></a><h4><code>(match-lambda (pattern . body) ...)</code></h4></div><p>Shortcut for <code><span>lambda</span></code> + <code><span>match</span></code>.  Creates a
+an error is signalled.</p><div><a name="h4_match-let"></a><h4><code>(match-verify-no-ellipses (x . y) sk)<br></br>(match-verify-no-ellipses () sk)<br></br>(match-verify-no-ellipses x sk)</code></h4></div><div><a name="h4_match-let*"></a><h4><code>(match-gen-search v p q g+s sk fk i ((id id-ls) ...))</code></h4></div><p>Shortcut for <code><span>lambda</span></code> + <code><span>match</span></code>.  Creates a
 procedure of one argument, and matches that argument against each
-clause.</p><div><a name="h4_match-lambda*"></a><h4><code>(match-lambda* (pattern . body) ...)</code></h4></div><p>Similar to <code><span>match-lambda</span></code>.  Creates a procedure of any
+clause.Similar to <code><span>match-lambda</span></code>.  Creates a procedure of any
 number of arguments, and matches the argument list against each
-clause.</p><div><a name="h4_match-let"></a><h4><code>(match-let ((var value) ...) . body)<br></br>(match-let loop ((var init) ...) . body)</code></h4></div><p>Matches each var to the corresponding expression, and evaluates
+clause.Matches each var to the corresponding expression, and evaluates
 the body with all match variables in scope.  Raises an error if
 any of the expressions fail to match.  Syntax analogous to named
 let can also be used for recursive functions which match on their
-arguments as in <code><span>match-lambda*</span></code>.</p><div><a name="h4_match-letrec"></a><h4><code>(match-letrec ((var value) ...) . body)</code></h4></div><p>Similar to <code><span>match-let</span></code>, but analogously to <code><span>letrec</span></code>
+arguments as in <code><span>match-lambda*</span></code>.Similar to <code><span>match-let</span></code>, but analogously to <code><span>letrec</span></code>
 matches and binds the variables with all match variables in scope.</p><div><a name="h4_(match-let*((varvalue)...)body...)"></a><h4><code>(match-let* ((var value) ...) body ...)</code></h4></div><p>
 Similar to <code><span>match-let</span></code>, but analogously to <code><span>let*</span></code>
 matches and binds the variables in sequence, with preceding match

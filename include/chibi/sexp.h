@@ -599,9 +599,21 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_vectorp(x)     (sexp_check_tag(x, SEXP_VECTOR))
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
+#if SEXP_USE_BIGNUMS
 #define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
+#else
+#define sexp_bignump(x)     0
+#endif
+#if SEXP_USE_RATIOS
 #define sexp_ratiop(x)      (sexp_check_tag(x, SEXP_RATIO))
+#else
+#define sexp_ratiop(x)      0
+#endif
+#if SEXP_USE_COMPLEX
 #define sexp_complexp(x)    (sexp_check_tag(x, SEXP_COMPLEX))
+#else
+#define sexp_complexp(x)    0
+#endif
 #define sexp_cpointerp(x)   (sexp_check_tag(x, SEXP_CPOINTER))
 #define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
 #define sexp_procedurep(x)  (sexp_check_tag(x, SEXP_PROCEDURE))
@@ -1217,6 +1229,9 @@ SEXP_API sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out
 SEXP_API sexp sexp_read_string (sexp ctx, sexp in, int sentinel);
 SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
 SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base);
+#if SEXP_USE_COMPLEX
+SEXP_API sexp sexp_read_complex_tail(sexp ctx, sexp in, sexp res);
+#endif
 SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);
 SEXP_API sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in);
 SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len);

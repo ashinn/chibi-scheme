@@ -230,6 +230,12 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
     sexp_ratio_denominator(res) = sexp_read_number(ctx, in, 10);
     res = sexp_ratio_normalize(ctx, res, in);
 #endif
+#if SEXP_USE_COMPLEX
+  } else if (c=='i' || c=='i' || c=='+' || c=='-') {
+    sexp_push_char(ctx, c, in);
+    res = sexp_bignum_normalize(res);
+    res = sexp_read_complex_tail(ctx, in, res);
+#endif
   } else if ((c!=EOF) && ! is_separator(c)) {
     res = sexp_read_error(ctx, "invalid numeric syntax",
                           sexp_make_character(c), in);
