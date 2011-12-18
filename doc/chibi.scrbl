@@ -885,7 +885,7 @@ keyword.
   ((link addrinfo)  ai_next      address-info-next))
 }
 
-@subsection{Function Interface}
+@subsection{Function and Constant Interface}
 
 C functions are defined with:
 
@@ -902,6 +902,19 @@ conversion as discussed below.
 @schemeblock{
 ;; Example: define connect(2) in Scheme
 (define-c int connect (int sockaddr int))
+}
+
+Constants can be defined with:
+
+@scheme{(define-c-const type name-space)}
+
+where @var{name-space} is the same form as in @scheme{define-c}.  This
+defines a Scheme variable with the same value as the C constant.
+
+@schemeblock{
+;; Example: define address family constants in Scheme
+(define-c-const int (address-family/unix "AF_UNIX"))
+(define-c-const int (address-family/inet "AF_INET"))
 }
 
 @subsection{C Types}
