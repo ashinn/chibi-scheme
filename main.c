@@ -175,9 +175,8 @@ static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
 }
 
 static void repl (sexp ctx, sexp env) {
-  sexp in, out, err;
-  sexp_gc_var3(obj, tmp, res);
-  sexp_gc_preserve3(ctx, obj, tmp, res);
+  sexp_gc_var6(obj, tmp, res, in, out, err);
+  sexp_gc_preserve6(ctx, obj, tmp, res, in, out, err);
   sexp_context_tracep(ctx) = 1;
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
@@ -213,7 +212,7 @@ static void repl (sexp ctx, sexp env) {
       }
     }
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release6(ctx);
 }
 
 #if ! SEXP_USE_BOEHM
