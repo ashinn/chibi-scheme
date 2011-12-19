@@ -514,22 +514,6 @@
     (close-output-port out)
     res))
 
-(define (with-input-from-file file thunk)
-  (let ((old-in (current-input-port))
-        (tmp-in (open-input-file file)))
-    (current-input-port tmp-in)
-    (let ((res (thunk)))
-      (current-input-port old-in)
-      res)))
-
-(define (with-output-to-file file thunk)
-  (let ((old-out (current-output-port))
-        (tmp-out (open-output-file file)))
-    (current-output-port tmp-out)
-    (let ((res (thunk)))
-      (current-output-port old-out)
-      res)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; values
 
@@ -602,6 +586,22 @@
 (define (call-with-current-continuation proc)
   (let ((dk (%dk)))
     (%call/cc (lambda (k) (proc (lambda x (set-dk! dk) (k (%values x))))))))
+
+(define (with-input-from-file file thunk)
+  (let ((old-in (current-input-port))
+        (tmp-in (open-input-file file)))
+    (dynamic-wind
+      (lambda () (current-input-port tmp-in))
+      thunk
+      (lambda () (current-input-port old-in)))))
+
+(define (with-output-to-file file thunk)
+  (let ((old-out (current-output-port))
+        (tmp-out (open-output-file file)))
+    (dynamic-wind
+      (lambda () (current-output-port tmp-out))
+      thunk
+      (lambda () (current-output-port old-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax-rules
