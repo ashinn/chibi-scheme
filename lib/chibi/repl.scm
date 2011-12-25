@@ -196,11 +196,14 @@
                       (else
                        (fail "unknown repl command:" op))))))))
            (else
-            (guard
-                (exn
-                 (else (print-exception exn (current-error-port))))
+            ;; The outer guard in the parent thread catches read
+            ;; errors and errors in the repl logic itself.
+            (guard (exn (else (print-exception exn (current-error-port))))
               (let* ((expr (call-with-input-string line
                              (lambda (in2)
+                               ;; Ugly wrapper to account for the
+                               ;; implicit state mutation implied by
+                               ;; the #!fold-case read syntax.
                                (set-port-fold-case! in2 (port-fold-case? in))
                                (let ((expr (read/ss in2)))
                                  (set-port-fold-case! in (port-fold-case? in2))
@@ -208,20 +211,26 @@
                      (thread
                       (make-thread
                        (lambda ()
+                         ;; The inner guard in the child thread
+                         ;; catches errors from eval.
                          (guard
                              (exn
-                              (else (print-exception exn (current-error-port))))
+                              (else (print-exception exn (current-output-port))))
                            (let ((res (eval expr env)))
                              (cond
                               ((not (eq? res (if #f #f)))
                                (write/ss res)
                                (newline)))))))))
+                ;; If an interrupt occurs while the child thread is
+                ;; still running, terminate it, otherwise wait for it
+                ;; to complete.
                 (with-signal-handler
                  signal/interrupt
                  (lambda (n)
                    (display "Interrupt\n" (current-error-port))
                    (thread-terminate! thread))
                  (lambda () (thread-join! (thread-start! thread))))))
+            ;; Loop whether there were errors or interrupts or not.
             (lp module env meta-env)))))))
     (if history-file
         (call-with-output-file history-file

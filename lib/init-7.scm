@@ -65,9 +65,6 @@
          (apply1 proc (append2 (reverse (cdr lol)) (car lol))))
        (reverse args))))
 
-(define (eval x . o)
-  ((compile x (if (pair? o) (car o) (interaction-environment)))))
-
 ;; map with a fast-path for single lists
 
 (define (map proc ls . lol)
@@ -844,38 +841,71 @@
 (define (raise-continuable exn)
   (raise (list *continuable* exn)))
 
+(define (%with-exception-handler handler thunk)
+  (let* ((old (thread-parameters))
+         (new (cons (cons current-exception-handler handler) old)))
+    (dynamic-wind
+      (lambda () (thread-parameters-set! new))
+      thunk
+      (lambda () (thread-parameters-set! old)))))
+
 (define (with-exception-handler handler thunk)
   (letrec ((orig-handler (current-exception-handler))
            (self (lambda (exn)
-                   (current-exception-handler orig-handler)
-                   (dynamic-wind
-                     (lambda () (current-exception-handler orig-handler))
+                   (%with-exception-handler orig-handler
                      (lambda ()
                        (cond
                         ((and (pair? exn) (eq? *continuable* (car exn)))
                          (handler (cadr exn)))
                         (else
                          (handler exn)
-                         (error "exception handler returned"))))
-                     (lambda () (current-exception-handler self))))))
-    (dynamic-wind
-      (lambda () (current-exception-handler self))
-      thunk
-      (lambda () (current-exception-handler orig-handler)))))
+                         (error "exception handler returned"))))))))
+    (%with-exception-handler self thunk)))
 
 (define-syntax guard
-  (syntax-rules (else)
-    ((guard (var (test . handler) ... (else . else-handler)) body ...)
-     (call-with-current-continuation
-      (lambda (return)
-        (with-exception-handler
-         (lambda (var)
-           (return
-            (cond (test . handler) ...
-                  (else . else-handler))))
-         (lambda () body ...)))))
-    ((guard (var (test . handler) ...) body ...)
-     (guard (var (test . handler) ... (else (raise var))) body ...))))
+  (syntax-rules ()
+    ((guard (var clause ...) e1 e2 ...)
+     ((call-with-current-continuation
+       (lambda (guard-k)
+         (with-exception-handler
+          (lambda (condition)
+            ((call-with-current-continuation
+              (lambda (handler-k)
+                (guard-k
+                 (lambda ()
+                   (let ((var condition))
+                     (guard-aux (handler-k (lambda ()
+                                             (raise-continuable condition)))
+                                clause ...))))))))
+          (lambda ()
+            (call-with-values (lambda () e1 e2 ...)
+              (lambda args
+                (guard-k (lambda () (apply values args)))))))))))))
+
+(define-syntax guard-aux
+  (syntax-rules (else =>)
+    ((guard-aux reraise (else result1 result2 ...))
+     (begin result1 result2 ...))
+    ((guard-aux reraise (test => result))
+     (let ((temp test))
+       (if temp (result temp) reraise)))
+    ((guard-aux reraise (test => result) clause1 clause2 ...)
+     (let ((temp test))
+       (if temp (result temp) (guard-aux reraise clause1 clause2 ...))))
+    ((guard-aux reraise (test))
+     test)
+    ((guard-aux reraise (test) clause1 clause2 ...)
+     (or test (guard-aux reraise clause1 clause2 ...)))
+    ((guard-aux reraise (test result1 result2 ...))
+     (if test (begin result1 result2 ...) reraise))
+    ((guard-aux reraise (test result1 result2 ...) clause1 clause2 ...)
+     (if test
+         (begin result1 result2 ...)
+         (guard-aux reraise clause1 clause2 ...)))))
+
+(define (eval x . o)
+  (let ((thunk (compile x (if (pair? o) (car o) (interaction-environment)))))
+    (if (procedure? thunk) (thunk) (raise thunk))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; promises
