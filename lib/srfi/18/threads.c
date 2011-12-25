@@ -394,6 +394,8 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
           runner = sexp_make_thread(ctx, self, 2, sexp_cdr(tmp), SEXP_FALSE);
           sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = runner;
           sexp_thread_start(ctx, self, 1, runner);
+          if (!sexp_pairp(front))
+            front = sexp_global(ctx, SEXP_G_THREADS_FRONT);
         }
       }
     } else if (sexp_context_waitp(runner)) { /* wake it if it's sleeping */
