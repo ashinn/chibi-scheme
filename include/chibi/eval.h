@@ -88,7 +88,9 @@ SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, 
 SEXP_API sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags, sexp num_args, sexp bc, sexp vars);
 SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 #if SEXP_USE_GREEN_THREADS
-SEXP_API sexp sexp_dk (sexp ctx, sexp self, sexp_uint_t n, sexp val);
+SEXP_API sexp sexp_dk (sexp ctx, sexp self, sexp_sint_t n, sexp val);
+SEXP_API sexp sexp_thread_parameters (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_thread_parameters_set (sexp ctx, sexp self, sexp_sint_t n, sexp val);
 #endif
 #if SEXP_USE_UTF8_STRINGS
 SEXP_API int sexp_utf8_initial_byte_count (int c);

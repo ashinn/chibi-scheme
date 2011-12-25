@@ -227,6 +227,8 @@ _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_BOOLEAN), "add-module-directory", 0, se
 #endif
 #if SEXP_USE_GREEN_THREADS
 _FN1OPT(_I(SEXP_OBJECT), _I(SEXP_OBJECT), "%dk", SEXP_FALSE, sexp_dk),
+_FN0(_I(SEXP_OBJECT), "thread-parameters", 0, sexp_thread_parameters),
+_FN1(_I(SEXP_OBJECT), _I(SEXP_OBJECT), "thread-parameters-set!", 0, sexp_thread_parameters_set),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_YIELD, 0, 0, SEXP_VOID, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, 0, "yield!", 0, NULL),
 #endif
 #if SEXP_USE_PROFILE_VM
