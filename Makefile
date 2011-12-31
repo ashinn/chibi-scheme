@@ -251,66 +251,66 @@ dist-clean: dist-clean-libs cleaner
 
 install: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
-	$(INSTALL) chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
-	$(INSTALL) tools/chibi-ffi $(DESTDIR)$(BINDIR)/
-	$(INSTALL) tools/chibi-doc $(DESTDIR)$(BINDIR)/
+	$(INSTALL) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
+	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
+	$(INSTALL) -m0755 tools/chibi-doc $(DESTDIR)$(BINDIR)/
 	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
-	$(INSTALL) lib/*.scm $(DESTDIR)$(MODDIR)/
-	$(INSTALL) lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
-	$(INSTALL) lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
-	$(INSTALL) lib/chibi/crypto/*.sld lib/chibi/crypto/*.scm $(DESTDIR)$(MODDIR)/chibi/crypto/
-	$(INSTALL) lib/chibi/io/*.scm $(DESTDIR)$(MODDIR)/chibi/io/
-	$(INSTALL) lib/chibi/iset/*.sld lib/chibi/iset/*.scm $(DESTDIR)$(MODDIR)/chibi/iset/
-	$(INSTALL) lib/chibi/loop/*.scm $(DESTDIR)$(MODDIR)/chibi/loop/
-	$(INSTALL) lib/chibi/match/*.scm $(DESTDIR)$(MODDIR)/chibi/match/
-	$(INSTALL) lib/chibi/math/*.sld lib/chibi/math/*.scm $(DESTDIR)$(MODDIR)/chibi/math/
-	$(INSTALL) lib/chibi/monad/*.sld lib/chibi/monad/*.scm $(DESTDIR)$(MODDIR)/chibi/monad/
-	$(INSTALL) lib/chibi/net/*.sld lib/chibi/net/*.scm $(DESTDIR)$(MODDIR)/chibi/net/
-	$(INSTALL) lib/chibi/optimize/*.sld lib/chibi/optimize/*.scm $(DESTDIR)$(MODDIR)/chibi/optimize/
-	$(INSTALL) lib/chibi/parse/*.sld lib/chibi/parse/*.scm $(DESTDIR)$(MODDIR)/chibi/parse/
-	$(INSTALL) lib/chibi/show/*.sld lib/chibi/show/*.scm $(DESTDIR)$(MODDIR)/chibi/show/
-	$(INSTALL) lib/chibi/term/*.sld lib/chibi/term/*.scm $(DESTDIR)$(MODDIR)/chibi/term/
-	$(INSTALL) lib/scheme/*.sld lib/scheme/*.scm $(DESTDIR)$(MODDIR)/scheme/
-	$(INSTALL) lib/scheme/char/*.sld lib/scheme/char/*.scm $(DESTDIR)$(MODDIR)/scheme/char/
-	$(INSTALL) lib/scheme/time/*.sld $(DESTDIR)$(MODDIR)/scheme/time/
-	$(INSTALL) lib/srfi/*.sld lib/srfi/*.scm $(DESTDIR)$(MODDIR)/srfi/
-	$(INSTALL) lib/srfi/1/*.scm $(DESTDIR)$(MODDIR)/srfi/1/
-	$(INSTALL) lib/srfi/18/*.scm $(DESTDIR)$(MODDIR)/srfi/18/
-	$(INSTALL) lib/srfi/27/*.scm $(DESTDIR)$(MODDIR)/srfi/27/
-	$(INSTALL) lib/srfi/33/*.scm $(DESTDIR)$(MODDIR)/srfi/33/
-	$(INSTALL) lib/srfi/39/*.scm $(DESTDIR)$(MODDIR)/srfi/39/
-	$(INSTALL) lib/srfi/69/*.scm $(DESTDIR)$(MODDIR)/srfi/69/
-	$(INSTALL) lib/srfi/95/*.scm $(DESTDIR)$(MODDIR)/srfi/95/
-	$(INSTALL) lib/srfi/99/*.sld $(DESTDIR)$(MODDIR)/srfi/99/
-	$(INSTALL) lib/srfi/99/records/*.sld lib/srfi/99/records/*.scm $(DESTDIR)$(MODDIR)/srfi/99/records/
+	$(INSTALL) -m0644 lib/*.scm $(DESTDIR)$(MODDIR)/
+	$(INSTALL) -m0644 lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
+	$(INSTALL) -m0644 lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
+	$(INSTALL) -m0644 lib/chibi/crypto/*.sld lib/chibi/crypto/*.scm $(DESTDIR)$(MODDIR)/chibi/crypto/
+	$(INSTALL) -m0644 lib/chibi/io/*.scm $(DESTDIR)$(MODDIR)/chibi/io/
+	$(INSTALL) -m0644 lib/chibi/iset/*.sld lib/chibi/iset/*.scm $(DESTDIR)$(MODDIR)/chibi/iset/
+	$(INSTALL) -m0644 lib/chibi/loop/*.scm $(DESTDIR)$(MODDIR)/chibi/loop/
+	$(INSTALL) -m0644 lib/chibi/match/*.scm $(DESTDIR)$(MODDIR)/chibi/match/
+	$(INSTALL) -m0644 lib/chibi/math/*.sld lib/chibi/math/*.scm $(DESTDIR)$(MODDIR)/chibi/math/
+	$(INSTALL) -m0644 lib/chibi/monad/*.sld lib/chibi/monad/*.scm $(DESTDIR)$(MODDIR)/chibi/monad/
+	$(INSTALL) -m0644 lib/chibi/net/*.sld lib/chibi/net/*.scm $(DESTDIR)$(MODDIR)/chibi/net/
+	$(INSTALL) -m0644 lib/chibi/optimize/*.sld lib/chibi/optimize/*.scm $(DESTDIR)$(MODDIR)/chibi/optimize/
+	$(INSTALL) -m0644 lib/chibi/parse/*.sld lib/chibi/parse/*.scm $(DESTDIR)$(MODDIR)/chibi/parse/
+	$(INSTALL) -m0644 lib/chibi/show/*.sld lib/chibi/show/*.scm $(DESTDIR)$(MODDIR)/chibi/show/
+	$(INSTALL) -m0644 lib/chibi/term/*.sld lib/chibi/term/*.scm $(DESTDIR)$(MODDIR)/chibi/term/
+	$(INSTALL) -m0644 lib/scheme/*.sld lib/scheme/*.scm $(DESTDIR)$(MODDIR)/scheme/
+	$(INSTALL) -m0644 lib/scheme/char/*.sld lib/scheme/char/*.scm $(DESTDIR)$(MODDIR)/scheme/char/
+	$(INSTALL) -m0644 lib/scheme/time/*.sld $(DESTDIR)$(MODDIR)/scheme/time/
+	$(INSTALL) -m0644 lib/srfi/*.sld lib/srfi/*.scm $(DESTDIR)$(MODDIR)/srfi/
+	$(INSTALL) -m0644 lib/srfi/1/*.scm $(DESTDIR)$(MODDIR)/srfi/1/
+	$(INSTALL) -m0644 lib/srfi/18/*.scm $(DESTDIR)$(MODDIR)/srfi/18/
+	$(INSTALL) -m0644 lib/srfi/27/*.scm $(DESTDIR)$(MODDIR)/srfi/27/
+	$(INSTALL) -m0644 lib/srfi/33/*.scm $(DESTDIR)$(MODDIR)/srfi/33/
+	$(INSTALL) -m0644 lib/srfi/39/*.scm $(DESTDIR)$(MODDIR)/srfi/39/
+	$(INSTALL) -m0644 lib/srfi/69/*.scm $(DESTDIR)$(MODDIR)/srfi/69/
+	$(INSTALL) -m0644 lib/srfi/95/*.scm $(DESTDIR)$(MODDIR)/srfi/95/
+	$(INSTALL) -m0644 lib/srfi/99/*.sld $(DESTDIR)$(MODDIR)/srfi/99/
+	$(INSTALL) -m0644 lib/srfi/99/records/*.sld lib/srfi/99/records/*.scm $(DESTDIR)$(MODDIR)/srfi/99/records/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/io/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/scheme/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/srfi/18 $(DESTDIR)$(BINMODDIR)/srfi/27 $(DESTDIR)$(BINMODDIR)/srfi/33 $(DESTDIR)$(BINMODDIR)/srfi/39 $(DESTDIR)$(BINMODDIR)/srfi/69 $(DESTDIR)$(BINMODDIR)/srfi/95 $(DESTDIR)$(BINMODDIR)/srfi/98
-	$(INSTALL) $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
-	$(INSTALL) $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
-	$(INSTALL) $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
-	$(INSTALL) lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
-	$(INSTALL) lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
-	$(INSTALL) lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
-	$(INSTALL) lib/srfi/33/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/33
-	$(INSTALL) lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
-	$(INSTALL) lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
-	$(INSTALL) lib/srfi/95/qsort$(SO) $(DESTDIR)$(BINMODDIR)/srfi/95
-	$(INSTALL) lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
+	$(INSTALL) -m0644 $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
+	$(INSTALL) -m0644 $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
+	$(INSTALL) -m0644 $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
+	$(INSTALL) -m0644 lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
+	$(INSTALL) -m0644 lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
+	$(INSTALL) -m0644 lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
+	$(INSTALL) -m0644 lib/srfi/33/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/33
+	$(INSTALL) -m0644 lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
+	$(INSTALL) -m0644 lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
+	$(INSTALL) -m0644 lib/srfi/95/qsort$(SO) $(DESTDIR)$(BINMODDIR)/srfi/95
+	$(INSTALL) -m0644 lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
 	$(MKDIR) $(DESTDIR)$(INCDIR)
-	$(INSTALL) $(INCLUDES) $(DESTDIR)$(INCDIR)/
+	$(INSTALL) -m0644 $(INCLUDES) $(DESTDIR)$(INCDIR)/
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
-	$(INSTALL) libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
-	-$(INSTALL) libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
+	$(INSTALL) -m0644 libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
+	-$(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
 	$(MKDIR) $(DESTDIR)$(MANDIR)
-	$(INSTALL) doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
-	$(INSTALL) doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
-	$(INSTALL) doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
 	-if type ldconfig >/dev/null 2>/dev/null; then ldconfig; fi
 
 uninstall:
