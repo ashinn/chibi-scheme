@@ -150,6 +150,7 @@
   (display " },\n"))
 
 (define (main args)
+  (if (not (null? args)) (set! args (cdr args)))
   (find-c-libs
    (if (and (pair? args) (member (car args) '("-x" "--exclude")))
        (map (lambda (m)

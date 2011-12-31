@@ -664,16 +664,17 @@ div#footer {padding-bottom: 50px}
 
 (define (main args)
   (case (length args)
-    ((0)
+    ((0 1)
      (convert (current-input-port)))
-    ((1)
-     (cond
-      ((equal? "-" (car args))
-       (convert (current-input-port)))
-      ((file-exists? (car args))
-       (call-with-input-file (car args) convert))
-      (else
-       (extract (map (lambda (x) (or (string->number x) (string->symbol x)))
-                     (string-split (car args) #\.))))))
+    ((2)
+     (let ((name (cadr args)))
+       (cond
+        ((equal? "-" name)
+         (convert (current-input-port)))
+        ((file-exists? name)
+         (call-with-input-file name convert))
+        (else
+         (extract (map (lambda (x) (or (string->number x) (string->symbol x)))
+                       (string-split name #\.)))))))
     (else
      (error "usage: chibi-doc [<file-or-module-name>]"))))

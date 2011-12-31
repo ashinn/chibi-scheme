@@ -27,7 +27,7 @@
 (define (print . args) (for-each display args) (newline))
 
 (define (main args)
-  (let* ((n (string->number (car args)))
+  (let* ((n (string->number (cadr args)))
          (min-depth 4)
          (max-depth (max (+ min-depth 2) n))
          (stretch-depth (+ max-depth 1)))
