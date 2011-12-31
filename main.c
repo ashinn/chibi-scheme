@@ -442,7 +442,7 @@ void run_main (int argc, char **argv) {
   if (! quit) {
     load_init();
     if (i < argc)
-      for (j=argc-1; j>i; j--)
+      for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
     else
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
