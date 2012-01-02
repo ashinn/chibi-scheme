@@ -181,6 +181,10 @@ static void repl (sexp ctx, sexp env) {
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
   err = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
+  if (!(sexp_iportp(in) && sexp_oportp(out) && sexp_oportp(err))) {
+    fprintf(stderr, "No standing I/O ports found, aborting.  Maybe a bad -x language?\n");
+    exit_failure();
+  }
   sexp_port_sourcep(in) = 1;
   while (1) {
     sexp_write_string(ctx, "> ", out);
