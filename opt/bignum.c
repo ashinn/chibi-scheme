@@ -1521,7 +1521,8 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       break;
 #if SEXP_USE_RATIOS
     case SEXP_NUM_FLO_RAT:
-      r = sexp_make_fixnum((sexp_sint_t)(sexp_flonum_value(a) - sexp_ratio_to_double(b)));
+      f = sexp_flonum_value(a) - sexp_ratio_to_double(b);
+      r = sexp_make_fixnum(f > 0.0 ? 1 : f == 0.0 ? 0 : -1);
       break;
     case SEXP_NUM_FIX_RAT:
     case SEXP_NUM_BIG_RAT:
