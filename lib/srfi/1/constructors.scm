@@ -1,5 +1,5 @@
 ;; constructors.scm -- list construction utilities
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (xcons a b) (cons b a))
@@ -29,8 +29,7 @@
 (define (iota count . o)
   (let ((start (if (pair? o) (car o) 0))
         (step (if (and (pair? o) (pair? (cdr o))) (cadr o) 1)))
-    (let lp ((i count) (n (+ start (* (- count 1) step))) (res '()))
+    (let lp ((i count) (res '()))
       (if (<= i 0)
           res
-          (lp (- i 1) (- n step) (cons n res))))))
-
+          (lp (- i 1) (cons (+ start (* (- i 1) step)) res))))))
