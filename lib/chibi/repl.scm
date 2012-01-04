@@ -74,7 +74,7 @@
 ;;>
 ;;> REPL commands in the style of @hyperlink["http://s48.org/"]{Scheme48}
 ;;> are available to control out-of-band properties.  By default a command
-;;> is written as an identifier beginning with an "@" character (which
+;;> is written as an identifier beginning with an "@"@"" character (which
 ;;> would not be a portable identifier), but this can be customized with
 ;;> the @scheme{escape:} keyword.  The following commands are available:
 ;;>
