@@ -65,7 +65,7 @@ sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_s
 
 #if SEXP_USE_OBJECT_BRACE_LITERALS
 sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out) {
-  sexp t, x, *elts;
+  sexp t, x;
   sexp_gc_var1(args);
   sexp_sint_t i, len, nulls=0;
   i = sexp_pointer_tag(obj);
@@ -84,7 +84,6 @@ sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sex
       sexp_write(ctx, sexp_make_fixnum(sexp_type_tag(t)), out);
     }
     len = sexp_type_num_slots_of_object(t, obj);
-    elts = (sexp*) (((char*)obj) + sexp_type_field_base(t));
     args = sexp_list1(ctx, SEXP_FALSE);
     for (i=0; i<len; i++) {
       x = sexp_slot_ref(obj, i);
