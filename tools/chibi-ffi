@@ -149,7 +149,7 @@
            (eq? 'char (type-base type)))))
 
 (define (port-type? type)
-  (memq type '(port input-port output-port)))
+  (memq type '(port input-port output-port input-output-port)))
 
 (define (error-type? type)
   (memq type '(errno non-null-string non-null-pointer)))
@@ -400,6 +400,7 @@
      ((eq? base 'port) "sexp_portp")
      ((eq? base 'input-port) "sexp_iportp")
      ((eq? base 'output-port) "sexp_oportp")
+     ((eq? base 'input-output-port) "sexp_ioportp")
      (else #f))))
 
 (define (type-name type)
@@ -424,6 +425,7 @@
      ((eq? base 'port) "SEXP_IPORT")
      ((eq? base 'input-port) "SEXP_IPORT")
      ((eq? base 'output-port) "SEXP_OPORT")
+     ((eq? base 'input-output-port) "SEXP_IPORT")
      ((void-pointer-type? type) "SEXP_CPOINTER")
      ((assq base *types*)
       ;; (string-append "sexp_type_tag(" (type-id-name base) ")")
@@ -495,6 +497,8 @@
       (cat "sexp_make_non_null_input_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'output-port base)
       (cat "sexp_make_non_null_output_port(ctx, " val ", SEXP_FALSE)"))
+     ((eq? 'input-output-port base)
+      (cat "sexp_make_non_null_input_output_port(ctx, " val ", SEXP_FALSE)"))
      (else
       (let ((ctype (assq base *types*))
             (void*? (void-pointer-type? type)))
@@ -895,7 +899,17 @@
       (else #f)))
     (cat ";\n")
     (if (type-array ret-type)
-        (write-result ret-type))))
+        (write-result ret-type)
+        (write-result-adjustment ret-type))))
+
+(define (write-result-adjustment result)
+  (cond
+   ((memq (type-base result) '(input-port input-output-port))
+    (let ((res (string-append "res" (type-index-string result))))
+      (cat "#ifdef SEXP_USE_GREEN_THREADS\n"
+           "  if (sexp_portp(" res "))\n"
+           "    fcntl(fileno(sexp_port_stream(" res ")), F_SETFL, O_NONBLOCK);\n"
+           "#endif\n")))))
 
 (define (write-result result)
   (let ((res (string-append "res" (type-index-string result)))
@@ -934,7 +948,8 @@
       (c->scheme-converter
        result
        (string-append "tmp" (type-index-string result)))
-      (cat ";\n")))))
+      (cat ";\n")))
+    (write-result-adjustment result)))
 
 (define (write-results func)
   (let ((error-res? (error-type? (type-base (func-ret-type func))))
@@ -998,7 +1013,7 @@
          (if (number? len)
              (cat "  if (len" i " != " len ")\n"
                   "    free(tmp" i ");\n"))))
-      ((eq? (type-base a) 'input-port)
+      ((memq (type-base a) '(input-port input-output-port))
        (cat "  sexp_maybe_unblock_port(ctx, arg" (type-index a) ");\n"))
       ((and (type-result? a) (not (basic-type? a))
             (not (assq (type-base a) *types*))

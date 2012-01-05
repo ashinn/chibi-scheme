@@ -1,5 +1,5 @@
 /*  sexp.c -- standalone sexp library implementation          */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/sexp.h"
@@ -1390,6 +1390,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_flags(p) = SEXP_PORT_UNKNOWN_FLAGS;
   sexp_port_buf(p) = NULL;
   sexp_port_openp(p) = 1;
+  sexp_port_bidirp(p) = 0;
   sexp_port_binaryp(p) = 1;
   sexp_port_no_closep(p) = 0;
   sexp_port_sourcep(p) = 0;
@@ -1417,6 +1418,18 @@ sexp sexp_make_non_null_output_port (sexp ctx, FILE* out, sexp name) {
   if (!out) return sexp_user_exception(ctx, SEXP_FALSE, "null output-port", name);
   return sexp_make_output_port(ctx, out, name);
 }
+
+#if SEXP_USE_BIDIRECTIONAL_PORTS
+sexp sexp_make_non_null_input_output_port (sexp ctx, FILE* io, sexp name) {
+  sexp res;
+  if (!io) return sexp_user_exception(ctx, SEXP_FALSE, "null input-output-port", name);
+  res = sexp_make_input_port(ctx, io, name);
+  if (sexp_portp(res)) sexp_port_bidirp(res) = 1;
+  return res;
+}
+#else
+#define sexp_make_non_null_input_output_port sexp_make_non_null_input_port
+#endif
 
 sexp sexp_port_binaryp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);

@@ -1,4 +1,4 @@
-;; Copyright (c) 2010-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2010-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> @subsubsubsection{@scheme{(get-address-info host service [addrinfo])}}
@@ -42,8 +42,13 @@
                 (cond-expand
                  (threads (set-file-descriptor-flags! sock open/non-block))
                  (else #f))
-                (list (open-input-file-descriptor sock)
-                      (open-output-file-descriptor sock)))))))))
+                (cond-expand
+                 (bidir-ports
+                  (let ((port (open-input-output-file-descriptor sock)))
+                    (list port port)))
+                 (else
+                  (list (open-input-file-descriptor sock)
+                        (open-output-file-descriptor sock)))))))))))
 
 ;;> Convenience wrapper around @scheme{open-net-io}, opens
 ;;> the connection then calls @var{proc} with two arguments,
@@ -56,8 +61,9 @@
   (let ((io (open-net-io host service)))
     (if (not (pair? io))
         (error "couldn't find address" host service)
-        (let ((res (proc (car io) (car (cdr io)))))
+        (let ((res (proc (car io) (cadr io))))
           (close-input-port (car io))
+          (close-output-port (cadr io))
           res))))
 
 ;;> @subsubsubsection{@scheme{(make-listener-socket addrinfo [max-conn])}}
