@@ -1,5 +1,5 @@
 /*  sexp.h -- header for sexp library                         */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_H
@@ -315,7 +315,7 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      char openp, binaryp, no_closep, sourcep, blockedp, fold_casep;
+      char openp, bidirp, binaryp, no_closep, sourcep, blockedp, fold_casep;
       sexp_uint_t offset, line, flags;
       size_t size;
       sexp name;
@@ -604,7 +604,11 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_bytesp(x)      (sexp_check_tag(x, SEXP_BYTES))
 #define sexp_vectorp(x)     (sexp_check_tag(x, SEXP_VECTOR))
 #define sexp_iportp(x)      (sexp_check_tag(x, SEXP_IPORT))
+#if SEXP_USE_BIDIRECTIONAL_PORTS
+#define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT) || (sexp_check_tag(x, SEXP_IPORT) && sexp_port_bidirp(x)))
+#else
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
+#endif
 #if SEXP_USE_BIGNUMS
 #define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
 #else
@@ -651,7 +655,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_idp(x) \
   (sexp_symbolp(x) || (sexp_synclop(x) && sexp_symbolp(sexp_synclo_expr(x))))
 
-#define sexp_portp(x) (sexp_iportp(x) || sexp_oportp(x))
+#define sexp_portp(x) (sexp_check_tag(x, SEXP_IPORT) || sexp_check_tag(x, SEXP_OPORT))
 
 #if SEXP_USE_STRING_STREAMS
 #define sexp_stream_portp(x) 1
@@ -842,6 +846,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_name(p)       (sexp_pred_field(p, port, sexp_portp, name))
 #define sexp_port_line(p)       (sexp_pred_field(p, port, sexp_portp, line))
 #define sexp_port_openp(p)      (sexp_pred_field(p, port, sexp_portp, openp))
+#define sexp_port_bidirp(p)     (sexp_pred_field(p, port, sexp_portp, bidirp))
 #define sexp_port_binaryp(p)    (sexp_pred_field(p, port, sexp_portp, binaryp))
 #define sexp_port_no_closep(p)  (sexp_pred_field(p, port, sexp_portp, no_closep))
 #define sexp_port_sourcep(p)    (sexp_pred_field(p, port, sexp_portp, sourcep))
@@ -1248,6 +1253,7 @@ SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_make_non_null_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_non_null_output_port (sexp ctx, FILE* out, sexp name);
+SEXP_API sexp sexp_make_non_null_input_output_port (sexp ctx, FILE* io, sexp name);
 SEXP_API sexp sexp_port_binaryp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 SEXP_API sexp sexp_port_openp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 #if SEXP_USE_FOLD_CASE_SYMS

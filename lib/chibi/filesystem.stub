@@ -1,5 +1,5 @@
 ;; filesystem.stub -- filesystem bindings
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (c-system-include "sys/types.h")
@@ -74,6 +74,11 @@
 
 (define-c output-port (open-output-file-descriptor "fdopen")
   (int (value "w" string)))
+
+;;> Creates a new bidirectional port from the file descriptor @var{int}.
+
+(define-c input-output-port (open-input-output-file-descriptor "fdopen")
+  (int (value "r+" string)))
 
 ;;> Unlinks the file named @var{string} from the filesystem.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.

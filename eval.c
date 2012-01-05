@@ -1,5 +1,5 @@
 /*  eval.c -- evaluator library implementation                */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -1050,8 +1050,6 @@ sexp sexp_open_binary_output_file (sexp ctx, sexp self, sexp_sint_t n, sexp path
 
 sexp sexp_close_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
-  if (! sexp_port_openp(port))
-    return sexp_user_exception(ctx, self, "port already closed", port);
   return sexp_finalize_port(ctx, self, n, port);
 }
 
@@ -1963,6 +1961,9 @@ static const char* sexp_initial_features[] = {
 #endif
 #if SEXP_USE_DL
   "dynamic-loading",
+#endif
+#if SEXP_USE_BIDIRECTIONAL_PORTS
+  "bidir-ports",
 #endif
 #if SEXP_USE_STRING_STREAMS
   "string-streams",

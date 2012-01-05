@@ -6,6 +6,7 @@
 
 (define-library (chibi filesystem)
   (export open-input-file-descriptor open-output-file-descriptor
+          open-input-output-file-descriptor
           duplicate-file-descriptor duplicate-file-descriptor-to
           close-file-descriptor renumber-file-descriptor
           delete-file link-file symbolic-link-file rename-file

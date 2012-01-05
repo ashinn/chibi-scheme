@@ -1,5 +1,5 @@
 /*  features.h -- general feature configuration               */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 /* uncomment this to disable most features */
@@ -508,6 +508,10 @@
 
 #ifndef SEXP_USE_GC_FILE_DESCRIPTORS
 #define SEXP_USE_GC_FILE_DESCRIPTORS (SEXP_USE_AUTOCLOSE_PORTS &&!SEXP_USE_BOEHM && !defined(PLAN9))
+#endif
+
+#ifndef SEXP_USE_BIDIRECTIONAL_PORTS
+#define SEXP_USE_BIDIRECTIONAL_PORTS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_2010_EPOCH
