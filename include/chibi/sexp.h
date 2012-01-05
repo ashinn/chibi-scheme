@@ -45,6 +45,12 @@ extern "C" {
 #define sexp_out_of_file_descriptors() (0)
 #endif
 
+#ifdef __GNUC__
+#define SEXP_NO_WARN_UNUSED __attribute__((unused))
+#else
+#define SEXP_NO_WARN_UNUSED
+#endif
+
 #ifdef PLAN9
 #include <u.h>
 #include <libc.h>
