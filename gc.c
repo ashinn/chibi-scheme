@@ -435,12 +435,7 @@ void sexp_mark_global_symbols(sexp ctx) {
 #endif
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
-  sexp res;
-#ifdef __GNUC__
-  sexp finalized __attribute__((unused));
-#else
-  sexp finalized;
-#endif
+  sexp res, finalized SEXP_NO_WARN_UNUSED;
   sexp_debug_printf("%p (heap: %p size: %lu)", ctx, sexp_context_heap(ctx),
                     sexp_heap_total_size(sexp_context_heap(ctx)));
   sexp_mark_global_symbols(ctx);
