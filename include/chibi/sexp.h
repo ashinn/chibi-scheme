@@ -184,6 +184,12 @@ typedef int sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 4)
 #endif
 
+#if SEXP_USE_LONG_PROCEDURE_ARGS
+typedef int sexp_proc_num_args_t;
+#else
+typedef short sexp_proc_num_args_t;
+#endif
+
 typedef struct sexp_struct *sexp;
 
 #define sexp_heap_pad_size(s) (sizeof(struct sexp_heap_t) + (s) + sexp_heap_align(1))
@@ -355,7 +361,7 @@ struct sexp_struct {
     } bytecode;
     struct {
       char flags;
-      unsigned short num_args;
+      sexp_proc_num_args_t num_args;
       sexp bc, vars;
     } procedure;
     struct {
