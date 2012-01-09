@@ -293,7 +293,7 @@ sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags,
                              sexp num_args, sexp bc, sexp vars) {
   sexp proc = sexp_alloc_type(ctx, procedure, SEXP_PROCEDURE);
   sexp_procedure_flags(proc) = (char) (sexp_uint_t) flags;
-  sexp_procedure_num_args(proc) = (unsigned short) (sexp_uint_t) num_args;
+  sexp_procedure_num_args(proc) = sexp_unbox_fixnum(num_args);
   sexp_procedure_code(proc) = bc;
   sexp_procedure_vars(proc) = vars;
   return proc;

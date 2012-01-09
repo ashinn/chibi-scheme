@@ -1,5 +1,5 @@
 /*  vm.c -- stack-based virtual machine backend               */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #if SEXP_USE_DEBUG_VM > 1
@@ -652,11 +652,12 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
 
 /*********************** the virtual machine **************************/
 
-#if SEXP_USE_CHECK_STACK
-static int sexp_grow_stack (sexp ctx) {
+#if SEXP_USE_GROW_STACK
+static int sexp_grow_stack (sexp ctx, int min_size) {
   sexp stack, old_stack = sexp_context_stack(ctx), *from, *to;
   int i, size = sexp_stack_length(old_stack), new_size;
   new_size = size * 2;
+  if (new_size < min_size) new_size = min_size;
   if (new_size > SEXP_MAX_STACK_SIZE) {
     if (size == SEXP_MAX_STACK_SIZE)
       return 0;
@@ -677,6 +678,8 @@ static int sexp_grow_stack (sexp ctx) {
       sexp_context_stack(ctx) = stack;
   return 1;
 }
+#else
+#define sexp_grow_stack(ctx, min_size) 0
 #endif
 
 static sexp sexp_save_stack (sexp ctx, sexp *stack, sexp_uint_t to) {
@@ -694,7 +697,7 @@ static sexp sexp_restore_stack (sexp ctx, sexp saved) {
   sexp *from = sexp_vector_data(saved), *to;
 #if SEXP_USE_CHECK_STACK
   if ((len+64 >= sexp_stack_length(sexp_context_stack(ctx)))
-      && !sexp_grow_stack(ctx))
+      && !sexp_grow_stack(ctx, len+64))
     return sexp_global(ctx, SEXP_G_OOS_ERROR);
 #endif
   to = sexp_stack_data(sexp_context_stack(ctx));
@@ -810,6 +813,21 @@ static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
               reverse_opcode_names[j], profile2[i][j]);
   return SEXP_VOID;
 }
+#endif
+
+#if SEXP_USE_CHECK_STACK
+#define sexp_ensure_stack(n)                                   \
+  if (top+n >= sexp_stack_length(sexp_context_stack(ctx))) {   \
+    sexp_context_top(ctx) = top;                               \
+    if (sexp_grow_stack(ctx, n)) {                             \
+      stack = sexp_stack_data(sexp_context_stack(ctx));        \
+    } else {                                                   \
+      _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);              \
+      goto end_loop;                                           \
+    }                                                          \
+  }
+#else
+#define sexp_ensure_stack(n)
 #endif
 
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
@@ -938,6 +956,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     top -= 2;
   apply1:
     i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
+    sexp_ensure_stack(i + 64);
     top += i;
     for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
       _ARG1 = sexp_car(tmp2);
@@ -962,17 +981,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     fp = sexp_unbox_fixnum(tmp2);
     goto make_call;
   case SEXP_OP_CALL:
-#if SEXP_USE_CHECK_STACK
-    if (top+64 >= sexp_stack_length(sexp_context_stack(ctx))) {
-      sexp_context_top(ctx) = top;
-      if (sexp_grow_stack(ctx)) {
-        stack = sexp_stack_data(sexp_context_stack(ctx));
-      } else {
-        _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);
-        goto end_loop;
-      }
-    }
-#endif
+    sexp_ensure_stack(64);  /* TODO: pre-compute stack needed for each proc */
     _ALIGN_IP();
     i = sexp_unbox_fixnum(_WORD0);
     tmp1 = _ARG1;
@@ -988,7 +997,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     }
     if (! sexp_procedurep(tmp1))
       sexp_raise("non procedure application", sexp_list1(ctx, tmp1));
-    j = i - sexp_unbox_fixnum(sexp_procedure_num_args(tmp1));
+    j = i - sexp_procedure_num_args(tmp1);
     if (j < 0)
       sexp_raise("not enough args",
                  sexp_list2(ctx, tmp1, sexp_make_fixnum(i)));

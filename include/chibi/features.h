@@ -183,6 +183,12 @@
 /*   this enabled. */
 /* #define SEXP_USE_CHECK_STACK 0 */
 
+/* uncomment this to disable growing the stack on overflow */
+/*   If enabled, chibi attempts to grow the stack on overflow, */
+/*   up to SEXP_MAX_STACK_SIZE, otherwise a failed stack check */
+/*   will just raise an error immediately. */
+/* #define SEXP_USE_GROW_STACK 0 */
+
 /* #define SEXP_USE_DEBUG_VM 0 */
 /*   Experts only. */
 /*   For *very* verbose output on every VM operation. */
@@ -528,6 +534,14 @@
 
 #ifndef SEXP_USE_CHECK_STACK
 #define SEXP_USE_CHECK_STACK ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_GROW_STACK
+#define SEXP_USE_GROW_STACK SEXP_USE_CHECK_STACK && ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_LONG_PROCEDURE_ARGS
+#define SEXP_USE_LONG_PROCEDURE_ARGS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_INIT_BCODE_SIZE
