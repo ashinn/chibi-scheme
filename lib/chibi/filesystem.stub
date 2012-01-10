@@ -135,6 +135,10 @@
 
 (define-c errno (close-file-descriptor "close") (int))
 
+;;> Opens the given file and returns a file descriptor.
+
+(define-c int open (string int (default #o644 int)))
+
 ;;> Returns a list of 2 new file descriptors, the input and
 ;;> output end of a new pipe, respectively.
 
