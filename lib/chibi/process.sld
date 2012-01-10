@@ -13,49 +13,10 @@
           signal/alarm      signal/term        signal/user1
           signal/user2      signal/child       signal/continue
           signal/stop       signal/tty-stop    signal/tty-input
-          signal/tty-output wait/no-hang)
-  (import (scheme))
+          signal/tty-output wait/no-hang
+          call-with-process-io
+          process->string process->string-list process->output+error)
+  (import (scheme) (chibi io) (chibi filesystem))
   (cond-expand (threads (import (srfi 18))) (else #f))
   (include-shared "process")
-  (body
-   (define (system cmd . args)
-     (let ((pid (fork)))
-       (if (zero? pid)
-           (execute cmd (cons cmd args))
-           (waitpid pid 0)))))
-  (cond-expand
-   (bsd
-    (body
-     (define (process-command-line pid)
-       (let ((res (%process-command-line pid)))
-         ;; TODO: get command-line arguments
-         (if (string? res) (list res) res)))))
-   (else
-    (body
-     (define (process-command-line pid)
-       (call-with-current-continuation
-        (lambda (return)
-          (with-exception-handler
-           (lambda (exn) (return #f))
-           (lambda ()
-             (let ((file
-                    (string-append "/proc/" (number->string pid) "/cmdline")))
-               (call-with-input-file file
-                 (lambda (in)
-                   (let lp ((arg '()) (res '()))
-                     (let ((ch (read-char in)))
-                       (if (or (eof-object? ch) (eqv? (char->integer ch) 0))
-                           (let ((res (cons (list->string (reverse arg)) res))
-                                 (ch2 (peek-char in)))
-                             (if (or (eof-object? ch2)
-                                     (eqv? (char->integer ch2) 0))
-                                 (reverse res)
-                                 (lp '() res)))
-                           (lp (cons ch arg) res)))))))))))))))
-  (body
-   (define (process-running? pid . o)
-     (let ((cmdline (process-command-line pid)))
-       (and (pair? cmdline)
-            (or (null? o)
-                (not (car o))
-                (equal? (car o) (car cmdline))))))))
+  (include "process.scm"))
