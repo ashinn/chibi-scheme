@@ -1091,9 +1091,10 @@
          (if default (write-default default) "")
          ");\n"
          (cond
-          ((and (pair? (func-c-args func))
-                (any (lambda (a) (not (eq? 'sexp (type-base a))))
-                     (func-c-args func)))
+          ((or (not (eq? 'sexp (type-base (func-ret-type func))))
+               (and (pair? (func-c-args func))
+                    (any (lambda (a) (not (eq? 'sexp (type-base a))))
+                         (func-c-args func))))
            (lambda ()
              (cat
               "  if (sexp_opcodep(op)) {\n"
@@ -1104,6 +1105,7 @@
                      (i 1 (+ i 1)))
                     ((null? ls))
                   (cond
+                   ((eq? 'sexp (type-base (car ls))))
                    ((<= i 3)
                     (cat "    sexp_opcode_arg" i "_type(op) = "
                          (type-id-init-value (car ls)) ";\n"))
