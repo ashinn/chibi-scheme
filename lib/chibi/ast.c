@@ -47,6 +47,16 @@ static sexp sexp_get_env_cell (sexp ctx, sexp self, sexp_sint_t n, sexp env, sex
   return cell ? cell : SEXP_FALSE;
 }
 
+static sexp sexp_get_procedure_code (sexp ctx, sexp self, sexp_sint_t n, sexp proc) {
+  sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, proc);
+  return sexp_procedure_code(proc);
+}
+
+static sexp sexp_get_procedure_vars (sexp ctx, sexp self, sexp_sint_t n, sexp proc) {
+  sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, proc);
+  return sexp_procedure_vars(proc);
+}
+
 static sexp sexp_get_opcode_name (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
@@ -417,8 +427,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_REF, 1, "ref-cell", "ref-cell-set!");
   sexp_define_accessors(ctx, env, SEXP_SEQ, 0, "seq-ls", "seq-ls-set!");
   sexp_define_accessors(ctx, env, SEXP_LIT, 0, "lit-value", "lit-value-set!");
-  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 1, "procedure-code", NULL);
-  sexp_define_accessors(ctx, env, SEXP_PROCEDURE, 2, "procedure-vars", NULL);
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 1, "bytecode-name", "bytecode-name-set!");
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 2, "bytecode-literals", NULL);
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 3, "bytecode-source", NULL);
@@ -428,6 +436,8 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);
+  sexp_define_foreign(ctx, env, "procedure-code", 1, sexp_get_procedure_code);
+  sexp_define_foreign(ctx, env, "procedure-vars", 1, sexp_get_procedure_vars);
   sexp_define_foreign(ctx, env, "copy-lambda", 1, sexp_copy_lambda);
   sexp_define_foreign_opt(ctx, env, "make-lambda", 4, sexp_make_lambda_op, SEXP_NULL);
   sexp_define_foreign_opt(ctx, env, "make-cnd", 3, sexp_make_cnd_op, SEXP_VOID);
