@@ -271,6 +271,9 @@ test-loop: chibi-scheme$(EXE)
 test-sort: chibi-scheme$(EXE) lib/srfi/33/bit$(SO)
 	$(CHIBI) -xscheme tests/sort-tests.scm
 
+test-srfi-1: chibi-scheme$(EXE)
+	$(CHIBI) -xscheme tests/srfi-1-tests.scm
+
 test-records: chibi-scheme$(EXE)
 	$(CHIBI) -xscheme tests/record-tests.scm
 
