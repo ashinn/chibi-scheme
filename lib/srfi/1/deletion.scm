@@ -1,5 +1,5 @@
 ;; deletion.scm -- list deletion utilities
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (delete x ls . o)
@@ -18,8 +18,7 @@
   (let ((eq (if (pair? o) (car o) equal?)))
     (let lp ((ls ls) (res '()))
       (if (pair? ls)
-          (lp (cdr ls) (if (member (car ls) res) res (cons (car ls) res)))
+          (lp (cdr ls) (if (member (car ls) res eq) res (cons (car ls) res)))
           (reverse! res)))))
 
 (define delete-duplicates! delete-duplicates)
-

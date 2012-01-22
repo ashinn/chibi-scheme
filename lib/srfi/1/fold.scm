@@ -1,5 +1,5 @@
 ;; fold.scm -- list fold/reduce utilities
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (fold kons knil ls . lists)
@@ -17,7 +17,7 @@
         (if (pair? ls) (kons (car ls) (lp (cdr ls))) knil))
       (let lp ((lists (cons ls lists)))
         (if (every pair? lists)
-            (apply kons (map-onto car lists (lp (map cdr lists))))
+            (apply kons (map-onto car lists (list (lp (map cdr lists)))))
             knil))))
 
 (define (pair-fold kons knil ls . lists)
@@ -32,10 +32,10 @@
 (define (pair-fold-right kons knil ls . lists)
   (if (null? lists)
       (let lp ((ls ls))
-        (if (pair? ls) (kons (car ls) (lp (cdr ls))) knil))
+        (if (pair? ls) (kons ls (lp (cdr ls))) knil))
       (let lp ((lists (cons ls lists)))
         (if (every pair? lists)
-            (apply kons (append lists (lp (map cdr lists))))
+            (apply kons (append lists (list (lp (map cdr lists)))))
             knil))))
 
 (define (reduce f identity ls)
@@ -77,13 +77,13 @@
 (define map-in-order map)
 
 (define (pair-for-each f ls . lists)
-  (apply pair-fold (lambda (x _) (f x)) ls lists))
+  (apply pair-fold (lambda (x _) (f x)) #f ls lists))
 
 (define (filter-map f ls . lists)
   (if (null? lists)
       (let lp ((ls ls) (res '()))
         (if (pair? ls)
-            (let ((x (f (car ls)))) (lp (cdr ls) (if f (cons f res) res)))
+            (let ((x (f (car ls)))) (lp (cdr ls) (if x (cons x res) res)))
             (reverse! res)))
       (filter (lambda (x) x) (apply map f ls lists))))
 

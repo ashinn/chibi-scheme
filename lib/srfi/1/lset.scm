@@ -1,5 +1,5 @@
 ;; lset.scm -- list set library
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (lset<= eq . sets)
@@ -18,7 +18,7 @@
   (and (apply lset<= eq sets) (apply lset<= eq (reverse sets))))
 
 (define (lset-adjoin eq set . elts)
-  (lset-union2 eq elts set))
+  (lset-union2 eq set elts))
 
 (define (lset-union2 eq a b)
   (if (null? b)
@@ -26,18 +26,19 @@
       (lset-union2 eq (if (member (car b) a eq) a (cons (car b) a)) (cdr b))))
 
 (define (lset-union eq . sets)
-  (reduce (lambda (a b) (lset-union2 eq a b)) '() sets))
+  (reduce (lambda (a b) (lset-union2 eq b a)) '() sets))
 
 (define (lset-intersection eq . sets)
-  (reduce (lambda (a b) (filter (lambda (x) (member x b eq)) a)) '() sets))
+  (reduce (lambda (a b) (filter (lambda (x) (member x a eq)) b)) '() sets))
+
+(define (lset-diff2 eq a b)
+  (remove (lambda (x) (member x a eq)) b))
 
 (define (lset-difference eq . sets)
-  (reduce (lambda (a b) (remove (lambda (x) (member x b eq)) a)) '() sets))
+  (reduce (lambda (a b) (lset-diff2 eq a b)) '() sets))
 
 (define (lset-xor eq . sets)
-  (reduce (lambda (a b)
-            (append (filter (lambda (x) (member x b eq)) a)
-                    (filter (lambda (x) (member x a eq)) b)))
+  (reduce (lambda (a b) (append (lset-diff2 eq a b) (lset-diff2 eq b a)))
           '()
           sets))
 
