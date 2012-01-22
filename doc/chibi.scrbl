@@ -674,6 +674,7 @@ The following shortcuts for various immediate values are available.
 @item{@ccode{SEXP_ZERO} - shortcut for sexp_make_fixnum(0)}
 @item{...}
 @item{@ccode{SEXP_TEN} - shortcut for sexp_make_fixnum(10)}
+@item{@ccode{SEXP_NEG_ONE} - shortcut for sexp_make_fixnum(-1)}
 ]
 
 @subsubsection{Accessors}
@@ -693,12 +694,19 @@ once.
 @item{@ccode{sexp_unbox_character(obj)} - converts a character to a C char}
 @item{@ccode{sexp_car(pair)} - the car of @var{pair}}
 @item{@ccode{sexp_cdr(pair)} - the cdr of @var{pair}}
+@item{@ccode{sexp_ratio_numerator(q)} - the numerator of the ratio @var{q}}
+@item{@ccode{sexp_ratio_denominator(q)} - the denominator of the ratio @var{q}}
+@item{@ccode{sexp_complex_real(z)} - the real part of the complex @var{z}}
+@item{@ccode{sexp_complex_imag(z)} - the imaginary part of the complex @var{z}}
 @item{@ccode{sexp_string_length(str)} - the byte length of @var{str} as an int}
 @item{@ccode{sexp_string_ref(str, i)} - the @var{i}'th byte of string @var{str}}
 @item{@ccode{sexp_string_set(str, i, ch)} - set the @var{i}'th byte of string @var{str}}
 @item{@ccode{sexp_vector_length(vec)} - the length of @var{vec} as an int}
 @item{@ccode{sexp_vector_ref(vec, i)} - the @var{i}'th object of vector @var{vec}}
 @item{@ccode{sexp_vector_set(vec, i, obj)} - set the @var{i}'th object of vector @var{vec}}
+@item{@ccode{sexp_bytes_length(bv)} - the number of bytes in bytevector @var{bv}}
+@item{@ccode{sexp_bytes_ref(bv, i)} - the @var{i}'th byte of bytevector @var{bv}}
+@item{@ccode{sexp_bytes_set(bv, i, k)} - set the @var{i}'th byte of bytevector @var{bv}}
 ]
 
 @subsubsection{Constructors}
@@ -748,6 +756,9 @@ Any of these may fail and return the OOM exception object.
 @item{@ccode{sexp_append2(sexp ctx, sexp ls)} - @scheme{append} for two arguments}
 @item{@ccode{sexp_copy_list(sexp ctx, sexp ls)} - return a shallow copy of @var{ls}}
 @item{@ccode{sexp_list_to_vector(sexp ctx, sexp ls)} - @scheme{list->vector}}
+@item{@ccode{sexp_symbol_to_string(sexp ctx, sexp sym)} - @scheme{symbol->string}}
+@item{@ccode{sexp_string_to_symbol(sexp ctx, sexp str)} - @scheme{string->symbol}}
+@item{@ccode{sexp_string_to_number(sexp ctx, sexp str)} - @scheme{string->number}}
 ]
 
 @subsection{Customizing}
