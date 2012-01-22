@@ -86,6 +86,21 @@
 /* uncomment this to add very verbose debugging stats to the native GC */
 /* #define SEXP_USE_DEBUG_GC 1 */
 
+/* uncomment this to enable "safe" field accessors for primitive types */
+/*   The sexp union type fields are abstracted away with macros of the */
+/*   form sexp_<type>_<field>(<obj>), however these are just convenience */
+/*   macros equivalent to directly accessing the union field, and will */
+/*   return incorrect results (or segfault) if <obj> isn't of the correct */
+/*   <type>.  Thus you're required to check the types manually before */
+/*   accessing them.  However, to detect errors earlier you can enable */
+/*   SEXP_USE_SAFE_ACCESSORS, and on invalid accesses chibi will print */
+/*   a friendly error message and immediately segfault itself so you */
+/*   can see where the invalid access was made. */
+/*   Note this is only intended for debugging, and mostly for user code. */
+/*   If you want to build chibi itself with this option, compilation */
+/*   may be very slow and using CFLAGS=-O0 is recommended. */
+/* #define SEXP_USE_SAFE_ACCESSORS 1 */
+
 /* uncomment this to make the heap common to all contexts */
 /*   By default separate contexts can have separate heaps, */
 /*   and are thus thread-safe and independant. */

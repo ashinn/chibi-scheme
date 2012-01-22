@@ -845,8 +845,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_string_ref(x, i)    (sexp_make_character((unsigned char)sexp_string_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_character(v))
 
-#define sexp_symbol_data(x)    (sexp_field(x, symbol, SEXP_SYMBOL, data))
-#define sexp_symbol_length(x)  (sexp_field(x, symbol, SEXP_SYMBOL, length))
+#define sexp_lsymbol_data(x)   (sexp_field(x, symbol, SEXP_SYMBOL, data))
+#define sexp_lsymbol_length(x) (sexp_field(x, symbol, SEXP_SYMBOL, length))
 
 #define sexp_port_stream(p)     (sexp_pred_field(p, port, sexp_portp, stream))
 #define sexp_port_name(p)       (sexp_pred_field(p, port, sexp_portp, name))

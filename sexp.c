@@ -1058,8 +1058,8 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
   bucket = (sexp_string_hash(p, len-i, res) % SEXP_SYMBOL_TABLE_SIZE);
 #endif
   for (ls=sexp_context_symbols(ctx)[bucket]; sexp_pairp(ls); ls=sexp_cdr(ls))
-    if ((sexp_symbol_length(tmp=sexp_car(ls)) == len)
-        && ! strncmp(str, sexp_symbol_data(tmp), len))
+    if ((sexp_lsymbol_length(tmp=sexp_car(ls)) == len)
+        && ! strncmp(str, sexp_lsymbol_data(tmp), len))
       return sexp_car(ls);
 
   /* not found, make a new symbol */
@@ -1565,12 +1565,12 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_char(ctx, '"', out);
       break;
     case SEXP_SYMBOL:
-      str = sexp_symbol_data(obj);
-      c = sexp_symbol_length(obj) > 0 ? EOF : '|';
-      for (i=sexp_symbol_length(obj)-1; i>=0; i--)
+      str = sexp_lsymbol_data(obj);
+      c = sexp_lsymbol_length(obj) > 0 ? EOF : '|';
+      for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
         if (str[i] <= ' ' || str[i] == '\\' || is_separator(str[i])) c = '|';
       if (c!=EOF) sexp_write_char(ctx, c, out);
-      for (i=sexp_symbol_length(obj); i>0; str++, i--) {
+      for (i=sexp_lsymbol_length(obj); i>0; str++, i--) {
         if (str[0] == '\\') sexp_write_char(ctx, '\\', out);
         sexp_write_char(ctx, str[0], out);
       }
@@ -2663,7 +2663,7 @@ sexp sexp_symbol_to_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp sym) {
   if (sexp_isymbolp(sym)) return sexp_write_to_string(ctx, sym);
 #endif
   sexp_assert_type(ctx, sexp_lsymbolp, SEXP_SYMBOL, sym);
-  return sexp_c_string(ctx, sexp_symbol_data(sym), sexp_symbol_length(sym));
+  return sexp_c_string(ctx, sexp_lsymbol_data(sym), sexp_lsymbol_length(sym));
 }
 
 void sexp_init (void) {
