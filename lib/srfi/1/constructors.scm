@@ -16,7 +16,7 @@
       (if (<= n 0) res (lp (- n 1) (cons default res))))))
 
 (define (list-tabulate n proc)
-  (let lp ((n n) (res '()))
+  (let lp ((n (- n 1)) (res '()))
     (if (< n 0) res (lp (- n 1) (cons (proc n) res)))))
 
 (define (list-copy ls) (reverse! (reverse ls)))

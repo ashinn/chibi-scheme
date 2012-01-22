@@ -1,5 +1,5 @@
 ;; misc.scm -- miscellaneous list utilities
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (map-onto proc ls init)
@@ -17,7 +17,7 @@
       '()
       (let lp ((ls lists))
         (cond ((not (pair? (cdr ls)))
-               lists)
+               (car lists))
               (else
                (set-cdr! (last-pair (car ls)) (cadr ls))
                (lp (cdr ls)))))))
@@ -51,4 +51,3 @@
         (if (every pair? lists)
             (lp (map cdr lists) (if (apply pred (map car lists)) (+ res 1) res))
             res))))
-
