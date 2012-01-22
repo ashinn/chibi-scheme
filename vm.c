@@ -48,6 +48,11 @@ void sexp_stack_trace (sexp ctx, sexp out) {
   }
 }
 
+sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
+  sexp_stack_trace(ctx, out);
+  return SEXP_UNDEF;
+}
+
 /************************* code generation ****************************/
 
 static void bytecode_preserve (sexp ctx, sexp obj) {
