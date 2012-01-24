@@ -1098,6 +1098,13 @@ SEXP_API sexp_heap sexp_global_heap;
 #define sexp_fp_mul(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) * sexp_flonum_value(b)))
 #define sexp_fp_div(x,a,b) (sexp_make_flonum(x, sexp_flonum_value(a) / sexp_flonum_value(b)))
 
+#if ! (SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS)
+#define sexp_add(ctx, a, b) sexp_fx_add(a, b)
+#define sexp_sub(ctx, a, b) sexp_fx_sub(a, b)
+#define sexp_mul(ctx, a, b) sexp_fx_mul(a, b)
+#define sexp_div(ctx, a, b) sexp_fx_div(a, b)
+#endif
+
 /****************************** utilities *****************************/
 
 enum sexp_context_globals {

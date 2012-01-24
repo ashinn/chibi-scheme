@@ -1301,7 +1301,7 @@ sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 
 #endif  /* SEXP_USE_MATH */
 
-#if SEXP_USE_RATIOS
+#if SEXP_USE_RATIOS || !SEXP_USE_FLONUMS
 sexp sexp_generic_expt (sexp ctx, sexp x, sexp_sint_t e) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
@@ -1315,6 +1315,11 @@ sexp sexp_generic_expt (sexp ctx, sexp x, sexp_sint_t e) {
 #endif
 
 sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
+#if !SEXP_USE_FLONUMS
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, x);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, e);
+  return sexp_generic_expt(ctx, x, sexp_unbox_fixnum(e));
+#else
   long double f, x1, e1;
   sexp res;
 #if SEXP_USE_COMPLEX
@@ -1337,10 +1342,8 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
 #endif
   if (sexp_fixnump(x))
     x1 = sexp_unbox_fixnum(x);
-#if SEXP_USE_FLONUMS
   else if (sexp_flonump(x))
     x1 = sexp_flonum_value(x);
-#endif
 #if SEXP_USE_RATIOS
   else if (sexp_ratiop(x)) {
     if (sexp_fixnump(e)) {
@@ -1354,10 +1357,8 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   if (sexp_fixnump(e))
     e1 = sexp_unbox_fixnum(e);
-#if SEXP_USE_FLONUMS
   else if (sexp_flonump(e))
     e1 = sexp_flonum_value(e);
-#endif
 #if SEXP_USE_RATIOS
   else if (sexp_ratiop(e))
     e1 = sexp_ratio_to_double(e);
@@ -1366,26 +1367,20 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, e);
   f = pow(x1, e1);
   if ((f*1000.0 > SEXP_MAX_FIXNUM) || (f*1000.0 < SEXP_MIN_FIXNUM)
-#if SEXP_USE_FLONUMS
-      || (! sexp_fixnump(x)) || (! sexp_fixnump(e))
-#endif
-      ) {
+      || (! sexp_fixnump(x)) || (! sexp_fixnump(e))) {
 #if SEXP_USE_BIGNUMS
     if (sexp_fixnump(x) && sexp_fixnump(e))
       res = sexp_bignum_expt(ctx, sexp_fixnum_to_bignum(ctx, x), e);
     else
 #endif
-#if SEXP_USE_FLONUMS
       res = sexp_make_flonum(ctx, f);
-#else
-      res = sexp_make_fixnum((sexp_sint_t)round(f));
-#endif
   } else
     res = sexp_make_fixnum((sexp_sint_t)round(f));
 #if SEXP_USE_BIGNUMS
   }
 #endif
   return res;
+#endif  /* !SEXP_USE_FLONUMS */
 }
 
 #if SEXP_USE_RATIOS
