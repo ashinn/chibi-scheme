@@ -1667,6 +1667,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     top--;
     break;
   case SEXP_OP_FIX2FLO:
+#if SEXP_USE_FLONUMS
     sexp_context_top(ctx) = top;
     if (sexp_fixnump(_ARG1))
       _ARG1 = sexp_fixnum_to_flonum(ctx, _ARG1);
@@ -1680,8 +1681,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     else if (! sexp_flonump(_ARG1))
       sexp_raise("exact->inexact: not a number", sexp_list1(ctx, _ARG1));
+#endif
     break;
   case SEXP_OP_FLO2FIX:
+#if SEXP_USE_FLONUMS
     if (sexp_flonump(_ARG1)) {
       if (sexp_flonum_value(_ARG1) != trunc(sexp_flonum_value(_ARG1))) {
 #if SEXP_USE_RATIOS
@@ -1701,6 +1704,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     } else if (!sexp_exactp(_ARG1)) {
       sexp_raise("inexact->exact: not a number", sexp_list1(ctx, _ARG1));
     }
+#endif
     break;
   case SEXP_OP_CHAR2INT:
     if (! sexp_charp(_ARG1))
