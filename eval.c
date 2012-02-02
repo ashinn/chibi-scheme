@@ -2051,7 +2051,7 @@ sexp sexp_make_standard_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version
   sexp_gc_var1(env);
   sexp_gc_preserve1(ctx, env);
   env = sexp_make_primitive_env(ctx, version);
-  if (! sexp_exceptionp(env)) sexp_load_standard_env(ctx, env, version);
+  if (! sexp_exceptionp(env)) env = sexp_load_standard_env(ctx, env, version);
   sexp_gc_release1(ctx);
   return env;
 }
