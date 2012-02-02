@@ -29,7 +29,7 @@ void sexp_stack_trace (sexp ctx, sexp out) {
     if (self && sexp_procedurep(self)) {
       sexp_write_string(ctx, "  called from ", out);
       bc = sexp_procedure_code(self);
-      if (sexp_truep(sexp_bytecode_name(bc)))
+      if (sexp_symbolp(sexp_bytecode_name(bc)))
         sexp_write(ctx, sexp_bytecode_name(bc), out);
       else
         sexp_write_string(ctx, "<anonymous>", out);
@@ -1050,24 +1050,28 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_FCALL1:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
+    sexp_context_last_fp(ctx) = fp;
     tmp1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _WORD0, 1, _ARG1);
     sexp_fcall_return(tmp1, 0)
     break;
   case SEXP_OP_FCALL2:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
+    sexp_context_last_fp(ctx) = fp;
     tmp1 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _WORD0, 2, _ARG1, _ARG2);
     sexp_fcall_return(tmp1, 1)
     break;
   case SEXP_OP_FCALL3:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
+    sexp_context_last_fp(ctx) = fp;
     tmp1 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _WORD0, 3, _ARG1, _ARG2, _ARG3);
     sexp_fcall_return(tmp1, 2)
     break;
   case SEXP_OP_FCALL4:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
+    sexp_context_last_fp(ctx) = fp;
     tmp1 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _WORD0, 4, _ARG1, _ARG2, _ARG3, _ARG4);
     sexp_fcall_return(tmp1, 3)
     break;
@@ -1075,6 +1079,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_FCALLN:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
+    sexp_context_last_fp(ctx) = fp;
     i = sexp_opcode_num_args(_WORD0);
     tmp1 = sexp_fcall(ctx, self, i, _WORD0);
     sexp_fcall_return(tmp1, i-1)
