@@ -1473,7 +1473,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #endif
   unsigned long len, c;
   long i=0;
+#if SEXP_USE_FLONUMS
   double f;
+#endif
   sexp x, *elts;
   char *str=NULL, numbuf[NUMBUF_LEN];
 
@@ -1509,6 +1511,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, ')', out);
       }
       break;
+#if SEXP_USE_FLONUMS
 #if ! SEXP_USE_IMMEDIATE_FLONUMS
     case SEXP_FLONUM:
       f = sexp_flonum_value(obj);
@@ -1526,6 +1529,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       }
       sexp_write_string(ctx, numbuf, out);
       break;
+#endif
 #endif
     case SEXP_PROCEDURE:
       sexp_write_string(ctx, "#<procedure ", out);
