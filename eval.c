@@ -40,10 +40,11 @@ static void sexp_warn (sexp ctx, char *msg, sexp x) {
   }
 }
 
-void sexp_warn_undefs (sexp ctx, sexp from, sexp to) {
-  sexp x;
+void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp res) {
+  sexp x, ignore = sexp_exceptionp(res) ? sexp_exception_irritants(res) : SEXP_NULL;
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_env_next_cell(x))
-    if (sexp_cdr(x) == SEXP_UNDEF)
+    if (sexp_cdr(x) == SEXP_UNDEF && sexp_car(x) != ignore
+        && sexp_not(sexp_memq(ctx, sexp_car(x), ignore)))
       sexp_warn(ctx, "reference to undefined variable: ", sexp_car(x));
 }
 
@@ -1148,8 +1149,8 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
   sexp_gc_preserve4(ctx, ctx2, x, in, res);
   out = sexp_current_error_port(ctx);
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
-  sexp_context_parent(ctx2) = ctx;
   tmp = sexp_env_bindings(env);
+  sexp_context_parent(ctx2) = ctx;
   sexp_context_tailp(ctx2) = 0;
   if (sexp_exceptionp(in)) {
     if (sexp_not(out)) out = sexp_current_error_port(ctx);
@@ -1169,8 +1170,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
     sexp_close_port(ctx, in);
   }
 #if SEXP_USE_WARN_UNDEFS
-  if (! sexp_exceptionp(res))
-    sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp);
+  sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, res);
 #endif
   sexp_gc_release4(ctx);
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
