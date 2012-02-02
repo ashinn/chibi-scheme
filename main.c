@@ -197,22 +197,20 @@ static void repl (sexp ctx, sexp env) {
     if (sexp_exceptionp(obj)) {
       sexp_print_exception(ctx, obj, err);
     } else {
-      tmp = sexp_env_bindings(env);
       sexp_context_top(ctx) = 0;
       if (!(sexp_idp(obj)||sexp_pairp(obj)))
         obj = sexp_make_lit(ctx, obj);
+      tmp = sexp_env_bindings(env);
       res = sexp_eval(ctx, obj, env);
+#if SEXP_USE_WARN_UNDEFS
+      sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, res);
+#endif
       if (sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, err);
         sexp_stack_trace(ctx, err);
-      } else {
-#if SEXP_USE_WARN_UNDEFS
-        sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp);
-#endif
-        if (res != SEXP_VOID) {
-          sexp_write(ctx, res, out);
-          sexp_write_char(ctx, '\n', out);
-        }
+      } else if (res != SEXP_VOID) {
+        sexp_write(ctx, res, out);
+        sexp_write_char(ctx, '\n', out);
       }
     }
   }
