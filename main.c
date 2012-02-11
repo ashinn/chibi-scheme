@@ -355,7 +355,10 @@ void run_main (int argc, char **argv) {
         if (*p == '.') *p=' ';
       tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, (c=='x' ? sexp_global(ctx, SEXP_G_META_ENV) : env)));
       free(impmod);
-      if (c == 'x') sexp_context_env(ctx) = env = tmp;
+      if (c == 'x') {
+        sexp_context_env(ctx) = env = tmp;
+        sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
+      }
 #endif
       break;
     case 'q':
