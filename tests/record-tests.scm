@@ -172,4 +172,9 @@
 
 ;; (test-assert (not (rtd-field-mutable? foo 'x)))
 
+(define point (make-rtd "point" #(x y)))
+(define make-point (rtd-constructor point #(x y)))
+(define point-x (rtd-accessor point 'x))
+(test 3 (point-x (make-point 3 2)))
+
 (test-end)
