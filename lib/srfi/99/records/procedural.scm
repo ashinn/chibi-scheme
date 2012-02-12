@@ -1,7 +1,7 @@
 
 (define (make-rtd name fields . o)
   (let ((parent (and (pair? o) (car o))))
-    (register-simple-type name (vector->list fields) parent)))
+    (register-simple-type name parent (vector->list fields))))
 
 (define (rtd? x)
   (type? x))
