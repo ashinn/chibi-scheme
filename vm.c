@@ -50,7 +50,7 @@ void sexp_stack_trace (sexp ctx, sexp out) {
 
 sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp_stack_trace(ctx, out);
-  return SEXP_UNDEF;
+  return SEXP_VOID;
 }
 
 /************************* code generation ****************************/
@@ -197,6 +197,11 @@ static void generate_set (sexp ctx, sexp set) {
   }
   if (! sexp_lambdap(sexp_ref_loc(ref))) {
     /* global vars are set directly */
+    if (sexp_cdr(sexp_ref_cell(ref)) == SEXP_UNDEF) {
+      /* force an undefined variable error if still undef at runtime */
+      generate_ref(ctx, ref, 1);
+      emit(ctx, SEXP_OP_DROP);
+    }
     emit_push(ctx, sexp_ref_cell(ref));
     emit(ctx, SEXP_OP_SET_CDR);
   } else {
