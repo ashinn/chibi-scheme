@@ -103,8 +103,11 @@ static sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
     }
 #endif
   for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
-    if (sexp_car(ls) == key)
+    if (sexp_car(ls) == key) {
+      if (sexp_cdr(ls) == SEXP_UNDEF)
+        sexp_cdr(ls) = value;
       return ls;
+    }
   sexp_gc_preserve2(ctx, cell, ls);
   sexp_env_push(ctx, env, cell, key, value);
   sexp_gc_release2(ctx);
