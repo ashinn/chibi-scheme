@@ -472,7 +472,11 @@ void run_main (int argc, char **argv) {
 #endif
       /* load the script */
       sexp_context_tracep(ctx) = 1;
-      check_exception(ctx, sexp_load(ctx, tmp=sexp_c_string(ctx, argv[i], -1), env));
+      tmp = sexp_env_bindings(env);
+      check_exception(ctx, sexp_load(ctx, sym=sexp_c_string(ctx, argv[i], -1), env));
+#if SEXP_USE_WARN_UNDEFS
+      sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
+#endif
       /* SRFI-22: run main if specified */
       sym = sexp_intern(ctx, "main", -1);
       tmp = sexp_env_ref(env, sym, SEXP_FALSE);
