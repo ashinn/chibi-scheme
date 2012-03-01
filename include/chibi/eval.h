@@ -82,7 +82,7 @@ SEXP_API sexp sexp_env_define (sexp ctx, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_env_cell (sexp env, sexp sym, int localp);
 SEXP_API sexp sexp_env_ref (sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param);
-SEXP_API void sexp_warn_undefs (sexp ctx, sexp from, sexp to, sexp res);
+SEXP_API sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from, sexp to, sexp res);
 SEXP_API sexp sexp_make_lit (sexp ctx, sexp value);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
 SEXP_API sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags, sexp num_args, sexp bc, sexp vars);
@@ -145,6 +145,7 @@ SEXP_API sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name
 #define sexp_open_input_file(ctx, x) sexp_open_input_file_op(ctx, NULL, 1, x)
 #define sexp_open_output_file(ctx, x) sexp_open_output_file_op(ctx, NULL, 1, x)
 #define sexp_close_port(ctx, x) sexp_close_port_op(ctx, NULL, 1, x)
+#define sexp_warn_undefs(ctx, from, to, res) sexp_warn_undefs_op(ctx, NULL, 3, from, to, res)
 
 #ifdef __cplusplus
 } /* extern "C" */

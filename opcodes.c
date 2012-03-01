@@ -156,6 +156,7 @@ _FN2OPTP(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_ENV), "load", (sexp)"interaction-en
 _FN4(SEXP_VOID, _I(SEXP_ENV), _I(SEXP_ENV), _I(SEXP_OBJECT), "%import", 0, sexp_env_import_op),
 _FN2OPTP(SEXP_VOID, _I(SEXP_EXCEPTION), _I(SEXP_OPORT), "print-exception", (sexp)"current-error-port", sexp_print_exception_op),
 _FN1OPTP(SEXP_VOID, _I(SEXP_OPORT), "print-stack-trace", (sexp)"current-error-port", sexp_stack_trace_op),
+_FN3OPT(SEXP_VOID, _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "warn-undefs", SEXP_FALSE, sexp_warn_undefs_op),
 _FN1(_I(SEXP_OBJECT), _I(SEXP_EXCEPTION), "exception-type", 0, sexp_exception_type_op),
 _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "make-string", sexp_make_character(' '), sexp_make_string_op),
 _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-bytevector", SEXP_ZERO, sexp_make_bytes_op),

@@ -146,6 +146,7 @@
          ((body begin)
           (for-each (lambda (expr) (eval expr env)) (cdr x)))))
      (module-meta-data mod))
+    (warn-undefs env #f)
     env))
 
 (define (environment . ls)
