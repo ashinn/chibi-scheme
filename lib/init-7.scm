@@ -815,10 +815,11 @@
                  (map
                   (lambda (clause) (expand-pattern (car clause) (cadr clause)))
                   forms)
-                 (list _cons
-                       (list _error "no expansion for"
-                             (list (rename 'strip-syntactic-closures) _expr))
-                       #f))))))))))
+                 (list
+                  (list _cons
+                        (list _error "no expansion for"
+                              (list (rename 'strip-syntactic-closures) _expr))
+                        #f)))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; additional syntax
