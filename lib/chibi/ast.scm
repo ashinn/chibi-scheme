@@ -106,7 +106,7 @@
         (let ((v (lit-value x)))
           (if (or (pair? v) (null? v) (symbol? v)) `',v v)))
        ((pair? x) (cons (a2s (car x)) (a2s (cdr x))))
-       ((opcode? x) (or (opcode-name x) x))
+       ((opcode? x) (cond ((opcode-name x) => string->symbol) (else x)))
        (else x)))))
 
 ;;> @subsubsection{Types}
