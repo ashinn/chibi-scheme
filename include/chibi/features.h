@@ -166,6 +166,9 @@
 /*   non-immediate symbols in a single list. */
 /* #define SEXP_USE_HASH_SYMS 0 */
 
+/* uncomment this to disable extended char names as defined in R7RS */
+/* #define SEXP_USE_EXTENDED_CHAR_NAMES 0 */
+
 /* uncomment this to disable UTF-8 string support */
 /*   The default settings store strings in memory as UTF-8, */
 /*   and assumes strings passed to/from the C FFI are UTF-8.  */
@@ -498,6 +501,10 @@
 
 #ifndef SEXP_USE_PROFILE_VM
 #define SEXP_USE_PROFILE_VM 0
+#endif
+
+#ifndef SEXP_USE_EXTENDED_CHAR_NAMES
+#define SEXP_USE_EXTENDED_CHAR_NAMES ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_UTF8_STRINGS
