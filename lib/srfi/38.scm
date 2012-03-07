@@ -137,7 +137,18 @@
               (skip-comment in depth)))))
 
 (define delimiters
-  '(#\( #\) #\{ #\} #\space #\tab #\newline #\return))
+  '(#\; #\( #\) #\{ #\} #\space #\tab #\newline #\return))
+
+(define named-chars
+  `(("newline" . #\newline)
+    ("return" . #\return)
+    ("space" . #\space)
+    ("tab" . #\tab)
+    ("null" . ,(integer->char 0))
+    ("alarm" . ,(integer->char 7))
+    ("backspace" . ,(integer->char 8))
+    ("escape" . ,(integer->char 27))
+    ("delete" . ,(integer->char 127))))
 
 (define read-with-shared-structure
   (let ((read read))
@@ -174,9 +185,8 @@
                     (else (lp (cons (read-char in) ls)))))))
         (define (read-named-char c in)
           (let ((name (read-name c in)))
-            (cond ((string-ci=? name "space") #\space)
-                  ((string-ci=? name "newline") #\newline)
-                  (else (error "unknown char name")))))
+            (cond ((assoc name named-chars string-ci=?) => cdr)
+                  (else (error "unknown char name" name)))))
         (define (read-type-id in)
           (let ((ch (peek-char in)))
             (cond
@@ -272,10 +282,11 @@
                ((#\e) (read-char in) (inexact->exact (read-one)))
                ((#\\)
                 (read-char in)
-                (let ((c (read-char in)))
-                  (if (memv (peek-char in) delimiters)
-                      c
-                      (read-named-char c in))))
+                (let* ((c1 (read-char in))
+                       (c2 (peek-char in)))
+                  (if (or (eof-object? c2) (memv c2 delimiters))
+                      c1
+                      (read-named-char c1 in))))
                (else
                 (error "unknown # syntax: " (peek-char in)))))
             ((#\()
