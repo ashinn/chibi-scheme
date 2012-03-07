@@ -1456,6 +1456,22 @@ sexp sexp_set_port_fold_case (sexp ctx, sexp self, sexp_sint_t n, sexp in, sexp 
 
 #define NUMBUF_LEN 32
 
+static struct {const char* name; char ch;} sexp_char_names[] = {
+  {"newline", '\n'},
+  {"return", '\r'},
+  {"space", ' '},
+  {"tab", '\t'},
+#if SEXP_USE_EXTENDED_CHAR_NAMES
+  {"alarm", '\a'},
+  {"backspace", '\b'},
+  {"delete", 127},
+  {"escape", '\e'},
+  {"null", 0},
+#endif
+};
+
+#define sexp_num_char_names (sizeof(sexp_char_names)/sizeof(sexp_char_names[0]))
+
 sexp sexp_apply_writer(sexp ctx, sexp writer, sexp obj, sexp out) {
   sexp res;
   sexp_gc_var1(args);
@@ -1665,31 +1681,31 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     sexp_write_string(ctx, numbuf, out);
 #endif
   } else if (sexp_charp(obj)) {
-    if (obj == sexp_make_character(' '))
-      sexp_write_string(ctx, "#\\space", out);
-    else if (obj == sexp_make_character('\n'))
-      sexp_write_string(ctx, "#\\newline", out);
-    else if (obj == sexp_make_character('\r'))
-      sexp_write_string(ctx, "#\\return", out);
-    else if (obj == sexp_make_character('\t'))
-      sexp_write_string(ctx, "#\\tab", out);
-    else if ((33 <= sexp_unbox_character(obj))
-             && (sexp_unbox_character(obj) < 127)) {
-      sexp_write_string(ctx, "#\\", out);
-      sexp_write_char(ctx, sexp_unbox_character(obj), out);
-    } else {
-      sexp_write_string(ctx, "#\\x", out);
-      c = sexp_unbox_character(obj);
-      if (c >= 0x100) {
-        if (c >= 0x10000) {
-          sexp_write_char(ctx, hex_digit((c>>20)&0x0F), out);
-          sexp_write_char(ctx, hex_digit((c>>16)&0x0F), out);
-        }
-        sexp_write_char(ctx, hex_digit((c>>12)&0x0F), out);
-        sexp_write_char(ctx, hex_digit((c>>8)&0x0F), out);
+    sexp_write_string(ctx, "#\\", out);
+    for (i=0; i < sexp_num_char_names; i++) {
+      if (sexp_unbox_character(obj) == sexp_char_names[i].ch) {
+        sexp_write_string(ctx, sexp_char_names[i].name, out);
+        break;
       }
-      sexp_write_char(ctx, hex_digit((c>>4)&0x0F), out);
-      sexp_write_char(ctx, hex_digit(c&0x0F), out);
+    }
+    if (i >= sexp_num_char_names) {
+      if ((33 <= sexp_unbox_character(obj))
+          && (sexp_unbox_character(obj) < 127)) {
+        sexp_write_char(ctx, sexp_unbox_character(obj), out);
+      } else {
+        sexp_write_string(ctx, "x", out);
+        c = sexp_unbox_character(obj);
+        if (c >= 0x100) {
+          if (c >= 0x10000) {
+            sexp_write_char(ctx, hex_digit((c>>20)&0x0F), out);
+            sexp_write_char(ctx, hex_digit((c>>16)&0x0F), out);
+          }
+          sexp_write_char(ctx, hex_digit((c>>12)&0x0F), out);
+          sexp_write_char(ctx, hex_digit((c>>8)&0x0F), out);
+        }
+        sexp_write_char(ctx, hex_digit((c>>4)&0x0F), out);
+        sexp_write_char(ctx, hex_digit(c&0x0F), out);
+      }
     }
   } else if (sexp_symbolp(obj)) {
 
@@ -2462,19 +2478,20 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           res = sexp_make_character(16 * digit_value(str[1])
                                     + digit_value(str[2]));
         } else {
-          if (strcasecmp(str, "space") == 0)
-            res = sexp_make_character(' ');
-          else if (strcasecmp(str, "newline") == 0)
-            res = sexp_make_character('\n');
-          else if (strcasecmp(str, "return") == 0)
-            res = sexp_make_character('\r');
-          else if (strcasecmp(str, "tab") == 0)
-            res = sexp_make_character('\t');
+          res = 0;
+          for (c2=0; c2 < sexp_num_char_names; c2++) {
+            if (strcasecmp(str, sexp_char_names[c2].name) == 0) {
+              res = sexp_make_character(sexp_char_names[c2].ch);
+              break;
+            }
+          }
+          if (!res) {
 #if SEXP_USE_UTF8_STRINGS
-          else if ((c1=sexp_decode_utf8_char((unsigned char*)str)) > 0)
-            res = sexp_make_character(c1);
+            if ((c1=sexp_decode_utf8_char((unsigned char*)str)) > 0) {
+              res = sexp_make_character(c1);
+              break;
+            }
 #endif
-          else {
             tmp = sexp_c_string(ctx, str, -1);
             res = sexp_read_error(ctx, "unknown character name", tmp, in);
           }
