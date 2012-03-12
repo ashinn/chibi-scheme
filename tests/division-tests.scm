@@ -293,6 +293,86 @@
 
 (test-end)
 
+(test-begin "exactness")
+
+(define-syntax values->list
+  (syntax-rules ()
+    ((values->list expr) (call-with-values (lambda () expr) list))))
+
+(test '(4.0 -3.0) (values->list (ceiling/ 13.0 4)))
+(test '(4.0 -3.0) (values->list (ceiling/ 13 4.0)))
+(test '(4.0 -3.0) (values->list (ceiling/ 13.0 4.0)))
+
+(test 4.0 (ceiling-quotient 13.0 4))
+(test 4.0 (ceiling-quotient 13 4.0))
+(test 4.0 (ceiling-quotient 13.0 4.0))
+
+(test -3.0 (ceiling-remainder 13.0 4))
+(test -3.0 (ceiling-remainder 13 4.0))
+(test -3.0 (ceiling-remainder 13.0 4.0))
+
+(test '(3.0 1.0) (values->list (floor/ 13.0 4)))
+(test '(3.0 1.0) (values->list (floor/ 13 4.0)))
+(test '(3.0 1.0) (values->list (floor/ 13.0 4.0)))
+
+(test 3.0 (floor-quotient 13.0 4))
+(test 3.0 (floor-quotient 13 4.0))
+(test 3.0 (floor-quotient 13.0 4.0))
+
+(test 1.0 (floor-remainder 13.0 4))
+(test 1.0 (floor-remainder 13 4.0))
+(test 1.0 (floor-remainder 13.0 4.0))
+
+(test '(3.0 1.0) (values->list (truncate/ 13.0 4)))
+(test '(3.0 1.0) (values->list (truncate/ 13 4.0)))
+(test '(3.0 1.0) (values->list (truncate/ 13.0 4.0)))
+
+(test 3.0 (truncate-quotient 13.0 4))
+(test 3.0 (truncate-quotient 13 4.0))
+(test 3.0 (truncate-quotient 13.0 4.0))
+
+(test 1.0 (truncate-remainder 13.0 4))
+(test 1.0 (truncate-remainder 13 4.0))
+(test 1.0 (truncate-remainder 13.0 4.0))
+
+(test '(3.0 1.0) (values->list (round/ 13.0 4)))
+(test '(3.0 1.0) (values->list (round/ 13 4.0)))
+(test '(3.0 1.0) (values->list (round/ 13.0 4.0)))
+
+(test 3.0 (round-quotient 13.0 4))
+(test 3.0 (round-quotient 13 4.0))
+(test 3.0 (round-quotient 13.0 4.0))
+
+(test 1.0 (round-remainder 13.0 4))
+(test 1.0 (round-remainder 13 4.0))
+(test 1.0 (round-remainder 13.0 4.0))
+
+(test '(3.0 1.0) (values->list (euclidean/ 13.0 4)))
+(test '(3.0 1.0) (values->list (euclidean/ 13 4.0)))
+(test '(3.0 1.0) (values->list (euclidean/ 13.0 4.0)))
+
+(test 3.0 (euclidean-quotient 13.0 4))
+(test 3.0 (euclidean-quotient 13 4.0))
+(test 3.0 (euclidean-quotient 13.0 4.0))
+
+(test 1.0 (euclidean-remainder 13.0 4))
+(test 1.0 (euclidean-remainder 13 4.0))
+(test 1.0 (euclidean-remainder 13.0 4.0))
+
+(test '(3.0 1.0) (values->list (centered/ 13.0 4)))
+(test '(3.0 1.0) (values->list (centered/ 13 4.0)))
+(test '(3.0 1.0) (values->list (centered/ 13.0 4.0)))
+
+(test 3.0 (centered-quotient 13.0 4))
+(test 3.0 (centered-quotient 13 4.0))
+(test 3.0 (centered-quotient 13.0 4.0))
+
+(test 1.0 (centered-remainder 13.0 4))
+(test 1.0 (centered-remainder 13 4.0))
+(test 1.0 (centered-remainder 13.0 4.0))
+
+(test-end)
+
 (test-begin "bignum division")
 
 ;; A repeat of the fixnum division tests above, using bignums to test

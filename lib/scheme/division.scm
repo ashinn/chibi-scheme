@@ -10,8 +10,10 @@
 ;; In the intermediate case where you have bignums but no ratios there
 ;; will be a loss of precision for large values.
 ;;
-;; In case 1) the calls to inexact->exact below are unecessary and can
-;; be removed.
+;; We handle both cases by the use of the cond-expand form in
+;; division.sld to conditionally define copy-exactness2.  In case 1,
+;; no adjustment is needed, whereas in case 2 we want to convert the
+;; intermediate result back to exact if both inputs were exact.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -28,21 +30,21 @@
 ;; from that.
 
 (define (floor-quotient n m)
-  (inexact->exact (floor (/ n m))))
+  (copy-exactness2 n m (floor (/ n m))))
 (define (floor-remainder n m)
   (- n (* m (floor-quotient n m))))
 (define (floor/ n m)
   (values (floor-quotient n m) (floor-remainder n m)))
 
 (define (ceiling-quotient n m)
-  (inexact->exact (ceiling (/ n m))))
+  (copy-exactness2 n m (ceiling (/ n m))))
 (define (ceiling-remainder n m)
   (- n (* m (ceiling-quotient n m))))
 (define (ceiling/ n m)
   (values (ceiling-quotient n m) (ceiling-remainder n m)))
 
 (define (round-quotient n m)
-  (inexact->exact (round (/ n m))))
+  (copy-exactness2 n m (round (/ n m))))
 (define (round-remainder n m)
   (- n (* m (round-quotient n m))))
 (define (round/ n m)
