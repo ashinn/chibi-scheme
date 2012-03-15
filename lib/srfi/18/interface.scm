@@ -1,6 +1,6 @@
 
 (define current-time get-time-of-day)
-(define time? timeval?)
+(define (time? x) (timeval? (if (pair? x) (car x) x)))
 
 (define (time->seconds x)
   (timeval-seconds (if (pair? x) (car x) x)))
