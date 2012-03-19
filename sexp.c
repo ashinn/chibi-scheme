@@ -1129,6 +1129,8 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value,
 
 #if SEXP_BSD
 
+#define sexp_streamp(vec) sexp_vectorp(vec)
+
 #define sexp_stream_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
 #define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, SEXP_ONE)
 #define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, SEXP_TWO)
@@ -1139,7 +1141,7 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value,
 #define sexp_stream_size_set(vec, x) sexp_vector_set((sexp)vec, SEXP_TWO, x)
 #define sexp_stream_pos_set(vec, x) sexp_vector_set((sexp)vec, SEXP_THREE, x)
 
-int sstream_read (void *vec, char *dst, int n) {
+static int sstream_read (void *vec, char *dst, int n) {
   sexp_uint_t len = sexp_unbox_fixnum(sexp_stream_size(vec));
   sexp_uint_t pos = sexp_unbox_fixnum(sexp_stream_pos(vec));
   if (pos >= len) return 0;
@@ -1149,7 +1151,7 @@ int sstream_read (void *vec, char *dst, int n) {
   return n;
 }
 
-int sstream_write (void *vec, const char *src, int n) {
+static int sstream_write (void *vec, const char *src, int n) {
   sexp_uint_t len, pos, newpos;
   sexp newbuf;
   len = sexp_unbox_fixnum(sexp_stream_size(vec));
@@ -1170,7 +1172,7 @@ int sstream_write (void *vec, const char *src, int n) {
   return n;
 }
 
-off_t sstream_seek (void *vec, off_t offset, int whence) {
+static off_t sstream_seek (void *vec, off_t offset, int whence) {
   sexp_sint_t pos;
   if (whence == SEEK_SET) {
     pos = offset;
@@ -1225,6 +1227,8 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp cookie;
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
   cookie = sexp_port_cookie(port);
+  if (!sexp_streamp(cookie))
+    return sexp_xtype_exception(ctx, self, "not a string port", port);
   fflush(sexp_port_stream(port));
   return sexp_substring(ctx,
                         sexp_stream_buf(cookie),
@@ -1259,11 +1263,14 @@ sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp_port_stream(res)
     = open_memstream(&sexp_port_buf(res), &sexp_port_size(res));
   sexp_port_binaryp(res) = 0;
+  sexp_port_cookie(res) = SEXP_STRING_OPORT;
   return res;
 }
 
 sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
+  if (sexp_port_cookie(port) != SEXP_STRING_OPORT)
+    return sexp_xtype_exception(ctx, self, "not an output string port", port);
   fflush(sexp_port_stream(port));
   return sexp_c_string(ctx, sexp_port_buf(port), sexp_port_size(port));
 }
@@ -1374,7 +1381,13 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   } else {
     ls = sexp_port_cookie(out);
   }
-  res = sexp_string_concatenate(ctx, ls, SEXP_FALSE);
+  for (tmp = ls; sexp_pairp(tmp); tmp = sexp_cdr(tmp))
+    if (!sexp_stringp(sexp_car(tmp)))
+      res = sexp_xtype_exception(ctx, self, "not an output string port", out);
+  if (!sexp_nullp(tmp))
+    res = sexp_xtype_exception(ctx, self, "not an output string port", out);
+  if (!sexp_exceptionp(res))
+    res = sexp_string_concatenate(ctx, ls, SEXP_FALSE);
   sexp_gc_release2(ctx);
   return res;
 }

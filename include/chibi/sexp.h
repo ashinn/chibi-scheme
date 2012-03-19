@@ -436,8 +436,9 @@ struct sexp_struct {
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
+#define SEXP_STRING_OPORT SEXP_MAKE_IMMEDIATE(8) /* internal use */
 #if SEXP_USE_OBJECT_BRACE_LITERALS
-#define SEXP_CLOSE_BRACE SEXP_MAKE_IMMEDIATE(8) /* internal use */
+#define SEXP_CLOSE_BRACE SEXP_MAKE_IMMEDIATE(9) /* internal use */
 #endif
 
 #if SEXP_USE_LIMITED_MALLOC
