@@ -255,6 +255,10 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e) {
 #if SEXP_USE_GREEN_THREADS
   p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
+  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
+  if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
+  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
+  if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
 #endif
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;

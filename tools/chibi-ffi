@@ -1020,7 +1020,7 @@
 
 (define (write-result-adjustment result)
   (cond
-   ((memq (type-base result) '(input-port input-output-port))
+   ((memq (type-base result) '(input-port output-port input-output-port))
     (let ((res (string-append "res" (type-index-string result))))
       (cat "#ifdef SEXP_USE_GREEN_THREADS\n"
            "  if (sexp_portp(" res "))\n"

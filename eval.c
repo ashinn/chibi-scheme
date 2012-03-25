@@ -1039,6 +1039,9 @@ sexp sexp_open_output_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   } while (!out && sexp_out_of_file_descriptors() && !count++);
   if (!out)
     return sexp_user_exception(ctx, self, "couldn't open output file", path);
+#if SEXP_USE_GREEN_THREADS
+  fcntl(fileno(out), F_SETFL, O_NONBLOCK);
+#endif
   return sexp_make_output_port(ctx, out, path);
 }
 

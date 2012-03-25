@@ -479,6 +479,15 @@
 
 ;; I/O utils
 
+(define (display x . o)
+  (let ((out (if (pair? o) (car o) (current-output-port))))
+    (cond ((char? x) (write-char x out))
+          ((string? x) (write-string x #t out))
+          (else (write x out)))))
+
+(define (newline . o)
+  (write-char #\newline (if (pair? o) (car o) (current-output-port))))
+
 (define (port? x) (or (input-port? x) (output-port? x)))
 
 (define textual-port? port?)

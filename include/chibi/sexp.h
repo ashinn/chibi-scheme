@@ -1297,7 +1297,7 @@ SEXP_API void sexp_init(void);
 SEXP_API sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
-SEXP_API void sexp_write_utf8_char (sexp ctx, int c, sexp out);
+SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
 #endif
 
 #if SEXP_USE_GREEN_THREADS
@@ -1474,7 +1474,7 @@ enum sexp_opcode_names {
   SEXP_OP_CHAR_UPCASE,
   SEXP_OP_CHAR_DOWNCASE,
   SEXP_OP_WRITE_CHAR,
-  SEXP_OP_NEWLINE,
+  SEXP_OP_WRITE_STRING,
   SEXP_OP_READ_CHAR,
   SEXP_OP_PEEK_CHAR,
   SEXP_OP_YIELD,

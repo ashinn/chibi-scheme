@@ -41,7 +41,7 @@ static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
   } else {
   print_name:
     sexp_write_string(ctx, "#<", out);
-    sexp_display(ctx, sexp_object_type_name(ctx, x), out);
+    sexp_write(ctx, sexp_object_type_name(ctx, x), out);
     sexp_write_string(ctx, ">", out);
   }
 }
