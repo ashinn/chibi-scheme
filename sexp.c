@@ -563,7 +563,7 @@ sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp
         }
       } else if (sexp_opcodep(sexp_exception_procedure(exn))) {
         sexp_write_string(ctx, " in ", out);
-        sexp_display(ctx, sexp_opcode_name(sexp_exception_procedure(exn)), out);
+        sexp_write(ctx, sexp_opcode_name(sexp_exception_procedure(exn)), out);
       }
     }
     ls = sexp_exception_source(exn);
@@ -1467,6 +1467,54 @@ sexp sexp_set_port_fold_case (sexp ctx, sexp self, sexp_sint_t n, sexp in, sexp 
 }
 #endif
 
+#if SEXP_USE_GREEN_THREADS
+int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
+  sexp f;
+  int c;
+  if (sexp_port_stream(in) && sexp_port_fileno(in) >= 0) {
+    if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
+      sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
+    if (sexp_port_flags(in) & O_NONBLOCK) {
+      if (!forcep
+          && (((c = sexp_read_char(ctx, in)) == EOF)
+              && sexp_port_stream(in)
+              && ferror(sexp_port_stream(in)) && (errno == EAGAIN))) {
+        clearerr(sexp_port_stream(in));
+        f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
+        if (sexp_opcodep(f)) {
+          ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, in);
+          return 1;
+        }
+      }
+      if (!forcep) sexp_push_char(ctx, c, in);
+      sexp_port_blockedp(in) = 1;
+      fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in) & ~O_NONBLOCK);
+    }
+  }
+  return 0;
+}
+
+int sexp_maybe_block_output_port (sexp ctx, sexp out) {
+  if (sexp_port_stream(out) && sexp_port_fileno(out) >= 0) {
+    if (sexp_port_flags(out) == SEXP_PORT_UNKNOWN_FLAGS)
+      sexp_port_flags(out) = fcntl(sexp_port_fileno(out), F_GETFL);
+    if (sexp_port_flags(out) & O_NONBLOCK) {
+      sexp_port_blockedp(out) = 1;
+      fcntl(sexp_port_fileno(out), F_SETFL, sexp_port_flags(out) & ~O_NONBLOCK);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+void sexp_maybe_unblock_port (sexp ctx, sexp port) {
+  if (sexp_port_blockedp(port)) {
+    sexp_port_blockedp(port) = 0;
+    fcntl(sexp_port_fileno(port), F_SETFL, sexp_port_flags(port));
+  }
+}
+#endif
+
 #define NUMBUF_LEN 32
 
 static struct {const char* name; char ch;} sexp_char_names[] = {
@@ -1568,7 +1616,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     case SEXP_TYPE:
       sexp_write_string(ctx, "#<type ", out);
-      sexp_display(ctx, sexp_type_name(obj), out);
+      sexp_write(ctx, sexp_type_name(obj), out);
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_STRING:
@@ -1635,7 +1683,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #endif
     case SEXP_OPCODE:
       sexp_write_string(ctx, "#<opcode ", out);
-      sexp_display(ctx, sexp_opcode_name(obj), out);
+      sexp_write(ctx, sexp_opcode_name(obj), out);
       sexp_write_char(ctx, '>', out);
       break;
 #if SEXP_USE_BYTEVECTOR_LITERALS
@@ -1665,7 +1713,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         } else {
 #endif
           sexp_write_string(ctx, "#<", out);
-          sexp_display(ctx, sexp_type_name(x), out);
+          sexp_write(ctx, sexp_type_name(x), out);
           sexp_write_char(ctx, '>', out);
 #if SEXP_USE_TYPE_PRINTERS
         }
@@ -1755,35 +1803,26 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 }
 
 sexp sexp_write_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
+  sexp res;
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
-  return sexp_write_one(ctx, obj, out);
-}
-
-#if SEXP_USE_UTF8_STRINGS
-void sexp_write_utf8_char (sexp ctx, int c, sexp out) {
-  unsigned char buf[8];
-  int len = sexp_utf8_char_byte_count(c);
-  sexp_utf8_encode_char(buf, len, c);
-  buf[len] = 0;
-  sexp_write_string(ctx, (char*)buf, out);
-}
-#endif
-
-sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
-  sexp res=SEXP_VOID;
-  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
-  if (sexp_stringp(obj))
-    sexp_write_string(ctx, sexp_string_data(obj), out);
-  else if (sexp_charp(obj))
-#if SEXP_USE_UTF8_STRINGS
-    sexp_write_utf8_char(ctx, sexp_unbox_character(obj), out);
-#else
-    sexp_write_char(ctx, sexp_unbox_character(obj), out);
-#endif
-  else
-    res = sexp_write_one(ctx, obj, out);
+  sexp_maybe_block_output_port(ctx, out);
+  res = sexp_write_one(ctx, obj, out);
+  sexp_maybe_unblock_port(ctx, out);
   return res;
 }
+
+#if SEXP_USE_UTF8_STRINGS
+int sexp_write_utf8_char (sexp ctx, int c, sexp out) {
+  unsigned char buf[8];
+  int len = sexp_utf8_char_byte_count(c), i;
+  sexp_utf8_encode_char(buf, len, c);
+  buf[len] = 0;
+  i = sexp_write_char(ctx, buf[0], out);
+  if (i == EOF) return EOF;
+  sexp_write_string(ctx, (char*)buf+1, out);
+  return len;
+}
+#endif
 
 sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp_flush(ctx, out);
@@ -2163,41 +2202,6 @@ static int sexp_decode_utf8_char(const unsigned char* s) {
     }
   }
   return -1;
-}
-#endif
-
-#if SEXP_USE_GREEN_THREADS
-int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
-  sexp f;
-  int c;
-  if (sexp_port_stream(in) && sexp_port_fileno(in) >= 0) {
-    if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
-      sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
-    if (sexp_port_flags(in) & O_NONBLOCK) {
-      if (!forcep
-          && (((c = sexp_read_char(ctx, in)) == EOF)
-              && sexp_port_stream(in)
-              && ferror(sexp_port_stream(in)) && (errno == EAGAIN))) {
-        clearerr(sexp_port_stream(in));
-        f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
-        if (sexp_opcodep(f)) {
-          ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, in);
-          return 1;
-        }
-      }
-      if (!forcep) sexp_push_char(ctx, c, in);
-      sexp_port_blockedp(in) = 1;
-      fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in) & ~O_NONBLOCK);
-    }
-  }
-  return 0;
-}
-
-void sexp_maybe_unblock_port (sexp ctx, sexp in) {
-  if (sexp_port_blockedp(in)) {
-    sexp_port_blockedp(in) = 0;
-    fcntl(sexp_port_fileno(in), F_SETFL, sexp_port_flags(in));
-  }
 }
 #endif
 

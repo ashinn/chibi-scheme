@@ -10,8 +10,7 @@
   (define-c size_t (%read-string! "fread")
     (string (value 1 size_t) size_t (default (current-input-port) input-port)))
 
-  (define-c size_t (write-string "fwrite")
-    (string (value 1 size_t) size_t (default (current-output-port) output-port)))))
+  ))
 
 (define-c-const int (seek/set "SEEK_SET"))
 (define-c-const int (seek/cur "SEEK_CUR"))

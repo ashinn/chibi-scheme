@@ -302,7 +302,8 @@ sexp sexp_write_u8 (sexp ctx, sexp self, sexp u8, sexp out) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
   if (!sexp_port_binaryp(out))
     return sexp_xtype_exception(ctx, self, "not a binary port", out);
-  sexp_write_char(ctx, sexp_unbox_fixnum(u8), out);
+  if (sexp_write_char(ctx, sexp_unbox_fixnum(u8), out) == EOF)
+    return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
   return SEXP_VOID;
 }
 
