@@ -687,13 +687,13 @@ static sexp sexp_to_complex (sexp ctx, sexp x) {
 }
 
 sexp sexp_complex_exp (sexp ctx, sexp z) {
-  double x = sexp_to_double(sexp_complex_real(z)),
+  double e2x = exp(sexp_to_double(sexp_complex_real(z))),
     y = sexp_to_double(sexp_complex_imag(z));
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
-  sexp_complex_real(res) = sexp_make_flonum(ctx, exp(x)*cos(y));
-  sexp_complex_imag(res) = sexp_make_flonum(ctx, sin(y));
+  sexp_complex_real(res) = sexp_make_flonum(ctx, e2x*cos(y));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, e2x*sin(y));
   sexp_gc_release1(ctx);
   return res;
 }
