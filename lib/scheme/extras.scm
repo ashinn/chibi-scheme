@@ -58,7 +58,9 @@
   (write-string (utf8->string vec) (bytevector-length vec) (if (pair? o) (car o) (current-output-port))))
 
 (define (write-partial-bytevector vec start end . o)
-  (apply write-bytevector (bytevector-copy-partial vec start end) o))
+  (if (zero? start)
+      (apply write-bytevector vec end o)
+      (apply write-bytevector (bytevector-copy-partial vec start end) o)))
 
 (define (make-list n . o)
   (let ((init (and (pair? o) (car o))))
@@ -120,10 +122,7 @@
 (define (bytevector-copy! from to)
   (bytevector-copy-partial! from 0 (bytevector-length from) to 0))
 
-(define (bytevector-copy-partial bv start end)
-  (let ((res (make-bytevector (- end start))))
-    (bytevector-copy-partial! bv start end res 0)
-    res))
+(define bytevector-copy-partial subbytes)
 
 (define (bytevector-copy-partial! from start end to at)
   (do ((i start (+ i 1)))

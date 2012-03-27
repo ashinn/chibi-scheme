@@ -967,6 +967,26 @@ sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start
   return res;
 }
 
+sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp vec, sexp start, sexp end) {
+  sexp res;
+  sexp_gc_var1(str);
+  sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, vec);
+  sexp_gc_preserve1(ctx, str);
+#if SEXP_USE_PACKED_STRINGS
+  str = sexp_c_string(ctx, sexp_bytes_data(vec), sexp_bytes_length(vec));
+#else
+  str = sexp_alloc_type(ctx, string, SEXP_STRING);
+  sexp_string_bytes(str) = vec;
+  sexp_string_offset(str) = 0;
+  sexp_string_length(str) = sexp_bytes_length(vec);
+#endif
+  res = sexp_substring_op(ctx, self, n, str, start, end);
+  if (!sexp_exceptionp(res))
+    res = sexp_string_to_bytes(ctx, res);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 #if SEXP_USE_UTF8_STRINGS
 sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
