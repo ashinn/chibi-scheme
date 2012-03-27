@@ -620,6 +620,7 @@
 #ifdef PLAN9
 #define strcasecmp cistrcmp
 #define strncasecmp cistrncmp
+#define strcasestr cistrstr
 #define round(x) floor((x)+0.5)
 #define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
 #elif defined(_WIN32)
