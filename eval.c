@@ -1136,7 +1136,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   char *suffix;
 #endif
-  sexp tmp, out=SEXP_FALSE;
+  sexp out=SEXP_FALSE;
   sexp_gc_var4(ctx2, x, in, res);
   if (!env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
@@ -1157,7 +1157,6 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
   sexp_gc_preserve4(ctx, ctx2, x, in, res);
   out = sexp_current_error_port(ctx);
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
-  tmp = sexp_env_bindings(env);
   sexp_context_parent(ctx2) = ctx;
   sexp_context_tailp(ctx2) = 0;
   if (sexp_exceptionp(in)) {
