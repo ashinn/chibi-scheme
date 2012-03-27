@@ -104,16 +104,6 @@
 (define (string->vector vec)
   (list->vector (string->list vec)))
 
-(define (string-map proc . los)
-  (list->string (apply map proc (map string->list los))))
-
-(define (string-for-each proc str . los)
-  (if (null? los)
-      (let ((len (string-length str)))
-        (let lp ((i 0))
-          (if (< i len) (begin (proc (string-ref str i)) (lp (+ i 1))))))
-      (apply string-map (lambda (ch) (proc ch) ch) str los)))
-
 (define (bytevector-copy bv)
   (let ((res (make-bytevector (bytevector-length bv))))
     (bytevector-copy! bv res)

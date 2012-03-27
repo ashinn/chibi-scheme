@@ -2,6 +2,7 @@
 (define-library (scheme base)
   (import (except (scheme) equal?)
           (rename (chibi equiv) (equiv? equal?))
+          (only (chibi strings) string-map string-for-each)
           (chibi io)
           (rename (only (chibi ast)
                         exception? exception-message exception-irritants)
