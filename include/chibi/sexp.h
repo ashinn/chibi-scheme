@@ -1240,6 +1240,7 @@ SEXP_API sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen);
 SEXP_API sexp sexp_make_bytes_op(sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp i);
 SEXP_API sexp sexp_make_string_op(sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch);
 SEXP_API sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
+SEXP_API sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API sexp sexp_string_concatenate_op (sexp ctx, sexp self, sexp_sint_t n, sexp str_ls, sexp sep);
 SEXP_API sexp sexp_intern (sexp ctx, const char *str, sexp_sint_t len);
 SEXP_API sexp sexp_string_to_symbol_op (sexp ctx, sexp self, sexp_sint_t n, sexp str);
@@ -1382,6 +1383,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx, NULL, 2, l, c)
 #define sexp_string_cmp(ctx, a, b, c) sexp_string_cmp_op(ctx, NULL, 3, a, b, c)
 #define sexp_substring(ctx, a, b, c) sexp_substring_op(ctx, NULL, 3, a, b, c)
+#define sexp_subbytes(ctx, a, b, c) sexp_subbytes_op(ctx, NULL, 3, a, b, c)
 #define sexp_string_concatenate(ctx, ls, s) sexp_string_concatenate_op(ctx, NULL, 2, ls, s)
 #define sexp_memq(ctx, a, b) sexp_memq_op(ctx, NULL, 2, a, b)
 #define sexp_assq(ctx, a, b) sexp_assq_op(ctx, NULL, 2, a, b)

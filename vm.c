@@ -1783,45 +1783,53 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     _ARG1 = SEXP_VOID;
     break;
   case SEXP_OP_WRITE_STRING:
-    if (! sexp_stringp(_ARG1))
-      sexp_raise("write-string: not a string", sexp_list1(ctx, _ARG1));
+    if (sexp_stringp(_ARG1))
+#if SEXP_USE_PACKED_STRINGS
+      tmp1 = _ARG1;
+#else
+      tmp1 = sexp_string_bytes(_ARG1);
+#endif
+    else if (sexp_bytesp(_ARG1))
+      tmp1 = _ARG1;
+    else
+      sexp_raise("write-string: not a string or bytes", sexp_list1(ctx, _ARG1));
     if (! sexp_fixnump(_ARG2)) {
       if (_ARG2 == SEXP_TRUE)
-        _ARG2 = sexp_make_fixnum(sexp_string_length(_ARG1));
+        _ARG2 = sexp_make_fixnum(sexp_bytes_length(tmp1));
       else
         sexp_raise("write-string: not an integer", sexp_list1(ctx, _ARG2));
     }
-    if (sexp_unbox_fixnum(_ARG2) < 0 || sexp_unbox_fixnum(_ARG2) > sexp_string_length(_ARG1))
-      sexp_raise("write-string: not a valid string count", sexp_list2(ctx, _ARG1, _ARG2));
+    if (sexp_unbox_fixnum(_ARG2) < 0 || sexp_unbox_fixnum(_ARG2) > sexp_bytes_length(tmp1))
+      sexp_raise("write-string: not a valid string count", sexp_list2(ctx, tmp1, _ARG2));
     if (! sexp_oportp(_ARG3))
       sexp_raise("write-string: not an output-port", sexp_list1(ctx, _ARG3));
     sexp_context_top(ctx) = top;
     if (sexp_port_stream(_ARG3)) {
-      i = fwrite(sexp_string_data(_ARG1), 1, sexp_unbox_fixnum(_ARG2), sexp_port_stream(_ARG3));
+      i = fwrite(sexp_bytes_data(tmp1), 1, sexp_unbox_fixnum(_ARG2), sexp_port_stream(_ARG3));
 #if SEXP_USE_GREEN_THREADS
       if ((i < sexp_unbox_fixnum(_ARG2)) && ferror(sexp_port_stream(_ARG3))
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-        clearerr(sexp_port_stream(_ARG3));
-        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
-        fuel = 0;
         if (i > 0) {
           /* modify stack in-place so we continue where we left off next time */
           _ARG1 = sexp_substring(ctx, _ARG1, SEXP_ZERO, sexp_make_fixnum(i));
           _ARG2 = sexp_make_fixnum(sexp_unbox_fixnum(_ARG2) - i);
         }
+        clearerr(sexp_port_stream(_ARG3));
+        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
+        fuel = 0;
         ip--;      /* try again */
         goto loop;
       }
 #endif
     } else {  /* not a stream-backed string */
-      if (sexp_string_length(_ARG1) != sexp_unbox_fixnum(_ARG2))
-        _ARG1 = sexp_substring(ctx, _ARG1, SEXP_ZERO, _ARG2);
-      sexp_write_string(ctx, sexp_string_data(_ARG1), _ARG3);
+      if (sexp_bytes_length(tmp1) != sexp_unbox_fixnum(_ARG2))
+        tmp1 = sexp_subbytes(ctx, tmp1, SEXP_ZERO, _ARG2);
+      sexp_write_string(ctx, sexp_bytes_data(tmp1), _ARG3);
     }
-    i = _ARG2;
+    tmp1 = _ARG2;     /* return the number of bytes written */
     top-=2;
-    _ARG1 = sexp_make_fixnum(i);
+    _ARG1 = tmp1;
     break;
   case SEXP_OP_READ_CHAR:
     if (! sexp_iportp(_ARG1))
