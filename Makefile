@@ -1,116 +1,25 @@
 # -*- makefile-gmake -*-
 
-.PHONY: all libs dist clean cleaner dist-clean install uninstall test checkdefs
-.PRECIOUS: %.c
+.PHONY: dist mips-dist cleaner test checkdefs
 
-# install configuration
+CHIBI_FFI ?= $(CHIBI) tools/chibi-ffi
+CHIBI_FFI_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-ffi
 
-CC        ?= cc
-CD        ?= cd
-RM        ?= rm -f
-LS        ?= ls
-INSTALL   ?= install
-MKDIR     ?= $(INSTALL) -d
-RMDIR     ?= rmdir
-TAR       ?= tar
-DIFF      ?= diff
-GREP      ?= grep
-FIND      ?= find
-SYMLINK   ?= ln -s
+CHIBI_DOC ?= $(CHIBI) tools/chibi-doc
+CHIBI_DOC_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-doc
 
-PREFIX    ?= /usr/local
-BINDIR    ?= $(PREFIX)/bin
-LIBDIR    ?= $(PREFIX)/lib
-SOLIBDIR  ?= $(PREFIX)/lib
-INCDIR    ?= $(PREFIX)/include/chibi
-MODDIR    ?= $(PREFIX)/share/chibi
-BINMODDIR ?= $(PREFIX)/lib/chibi
-MANDIR    ?= $(PREFIX)/share/man/man1
-
-DESTDIR   ?=
-
-GENSTUBS  ?= ./tools/chibi-ffi
 GENSTATIC ?= ./tools/chibi-genstatic
 
+CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE)
+CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
+
 ########################################################################
-# system configuration - if not using GNU make, set PLATFORM and the
-# following flags as necessary.
-
-# 
-LIBDL = -ldl
-
-ifndef PLATFORM
-ifeq ($(shell uname),Darwin)
-PLATFORM=macosx
-else
-ifeq ($(shell uname),FreeBSD)
-PLATFORM=FreeBSD
-else
-ifeq ($(shell uname -o),Msys)
-PLATFORM=mingw
-SOLIBDIR = $(BINDIR)
-DIFFOPTS = -b
-else
-ifeq ($(shell uname -o),Cygwin)
-PLATFORM=cygwin
-SOLIBDIR = $(BINDIR)
-DIFFOPTS = -b
-else
-ifeq ($(shell uname -o),GNU/Linux)
-PLATFORM=linux
-else
-PLATFORM=unix
-endif
-endif
-endif
-endif
-endif
-endif
-
-ifeq ($(PLATFORM),macosx)
-SO  = .dylib
-EXE =
-CLIBFLAGS = -dynamiclib
-STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
-else
-ifeq ($(PLATFORM),mingw)
-SO  = .dll
-EXE = .exe
-CC = gcc
-CLIBFLAGS = -shared
-CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL
-LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
-STATICFLAGS = -DSEXP_USE_DL=0
-LIBDL = 
-else
-ifeq ($(PLATFORM),cygwin)
-SO  = .dll
-EXE = .exe
-CC = gcc
-CLIBFLAGS = -shared
-CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
-LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
-else
-SO  = .so
-EXE =
-CLIBFLAGS = -fPIC -shared
-STATICFLAGS = -static -DSEXP_USE_DL=0
-ifeq ($(PLATFORM),FreeBSD)
-LIBDL=
-RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
-endif
-endif
-endif
-endif
-
-ifeq ($(PLATFORM),unix)
-#RLDFLAGS=-rpath $(LIBDIR)
-RLDFLAGS=-Wl,-R$(LIBDIR)
-endif
-
-ifeq ($(USE_BOEHM),1)
-SEXP_USE_BOEHM = 1
-endif
+# Library config.
+#
+# This is to allow "make SEXP_USE_BOEHM=1" and "make SEXP_USE_DL=0" to
+# automatically include the necessary compiler and linker flags in
+# addition to setting those features.  If not using GNU make just
+# comment out the ifs and use the else branches for the defaults.
 
 ifeq ($(SEXP_USE_BOEHM),1)
 GCLDFLAGS := -lgc
@@ -130,27 +39,29 @@ endif
 
 ########################################################################
 
-all: chibi-scheme$(EXE) libs lib/chibi/ast$(SO)
-
-CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE)
-
-CHIBI_COMPILED_LIBS := lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
+CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
 	lib/chibi/time$(SO) lib/chibi/system$(SO) lib/chibi/stty$(SO) \
 	lib/chibi/weak$(SO) lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) \
 	lib/chibi/net$(SO)
-CHIBI_IO_COMPILED_LIBS := lib/chibi/io/io$(SO)
-CHIBI_OPT_COMPILED_LIBS := lib/chibi/optimize/rest$(SO) \
+CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
+CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
 	lib/chibi/optimize/profile$(SO)
-COMPILED_LIBS := $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
+COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	$(CHIBI_OPT_COMPILED_LIBS) lib/srfi/18/threads$(SO) \
 	lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) lib/srfi/39/param$(SO) \
 	lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) lib/srfi/98/env$(SO) \
 	lib/scheme/time$(SO)
 
-libs: $(COMPILED_LIBS)
-
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
+
+########################################################################
+
+include Makefile.libs
+
+########################################################################
+
+all: chibi-scheme$(EXE) all-libs lib/chibi/ast$(SO)
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
@@ -189,40 +100,34 @@ chibi-scheme-ulimit$(EXE): main.o eval.o sexp-ulimit.o
 clibs.c: $(GENSTATIC) chibi-scheme$(EXE)
 	$(FIND) lib -name \*.sld | $(CHIBI) $(GENSTATIC) > $@
 
-%.c: %.stub $(GENSTUBS) chibi-scheme$(EXE)
-	-$(CHIBI) $(GENSTUBS) $<
-
 # A special case, this needs to be linked with the LDFLAGS in case
 # we're using Boehm.
 lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(XLDFLAGS) -L. -lchibi-scheme
 
-lib/%$(SO): lib/%.c $(INCLUDES)
-	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
-
-%.html: %.scrbl tools/chibi-doc chibi-scheme$(EXE)
-	$(CHIBI) tools/chibi-doc $< > $@
-
-doc/lib/chibi/%.html: lib/chibi/%.sld tools/chibi-doc chibi-scheme$(EXE)
-	$(CHIBI) tools/chibi-doc chibi.$* > $@
+doc/lib/chibi/%.html: lib/chibi/%.sld $(CHIBI_DOC_DEPENDENCIES)
+	$(CHIBI_DOC) chibi.$* > $@
 
 MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
 	match mime modules net pathname process repl scribble stty \
 	system test time trace type-inference uri weak
 
-doc: doc/chibi.html $(MODULE_DOCS:%=doc/lib/chibi/%.html)
+doc: doc/chibi.html doc-libs
 
-clean:
-	$(RM) *.o *.i *.s *.8
-	$(RM) tests/basic/*.out tests/basic/*.err
+HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
+
+%.html: %.scrbl $(CHIBI_DOC_DEPENDENCIES)
+	$(CHIBI_DOC) $< > $@
+
+clean: clean-libs
+	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err
 
 cleaner: clean
-	$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) libchibi-scheme$(SO) *.a include/chibi/install.h
-	$(FIND) lib -name \*$(SO) -exec $(RM) -r '{}' \;
-	$(FIND) lib -name \*.o -exec $(RM) -r '{}' \;
+	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
+	    libchibi-scheme$(SO) *.a include/chibi/install.h \
+	    $(shell $(FIND) lib -name \*.o)
 
-dist-clean: cleaner
-	for f in `find lib -name \*.stub`; do $(RM) $${f%.stub}.c; done
+dist-clean: dist-clean-libs cleaner
 
 checkdefs:
 	@for d in $(D); do \
