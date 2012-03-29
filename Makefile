@@ -56,6 +56,12 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
 
+MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
+	match mime modules net pathname process repl scribble stty \
+	system test time trace type-inference uri weak
+
+HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
+
 ########################################################################
 
 include Makefile.libs
@@ -109,13 +115,7 @@ lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
 doc/lib/chibi/%.html: lib/chibi/%.sld $(CHIBI_DOC_DEPENDENCIES)
 	$(CHIBI_DOC) chibi.$* > $@
 
-MODULE_DOCS := ast disasm equiv filesystem generic heap-stats io loop \
-	match mime modules net pathname process repl scribble stty \
-	system test time trace type-inference uri weak
-
 doc: doc/chibi.html doc-libs
-
-HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
 %.html: %.scrbl $(CHIBI_DOC_DEPENDENCIES)
 	$(CHIBI_DOC) $< > $@
