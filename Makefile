@@ -15,30 +15,6 @@ CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" ./chibi-scheme$(EXE)
 CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
 
 ########################################################################
-# Library config.
-#
-# This is to allow "make SEXP_USE_BOEHM=1" and "make SEXP_USE_DL=0" to
-# automatically include the necessary compiler and linker flags in
-# addition to setting those features.  If not using GNU make just
-# comment out the ifs and use the else branches for the defaults.
-
-ifeq ($(SEXP_USE_BOEHM),1)
-GCLDFLAGS := -lgc
-XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%) -DSEXP_USE_BOEHM=1
-else
-GCLDFLAGS :=
-XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%)
-endif
-
-ifeq ($(SEXP_USE_DL),0)
-XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g -g3 -Os $(CFLAGS)
-else
-XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
-XCFLAGS   := -Wall -g -g3 -Os $(CFLAGS)
-endif
-
-########################################################################
 
 CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
 	lib/chibi/time$(SO) lib/chibi/system$(SO) lib/chibi/stty$(SO) \
