@@ -54,6 +54,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp_write_pointer(ctx, bc, out);
   sexp_newline(ctx, out);
 
+  /* build a table of labels that are jumped to */
   labels = calloc(sexp_bytecode_length(bc), sizeof(sexp_sint_t));
   ip = sexp_bytecode_data(bc);
   while (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc)) {
@@ -61,7 +62,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     case SEXP_OP_JUMP:
     case SEXP_OP_JUMP_UNLESS:
       off = ip - sexp_bytecode_data(bc) + ((sexp_sint_t*)ip)[0];
-      if (off > 0 && off < sexp_bytecode_length(bc) && labels[off] == 0)
+      if (off >= 0 && off < sexp_bytecode_length(bc) && labels[off] == 0)
         labels[off] = label++;
     case SEXP_OP_CALL:
     case SEXP_OP_CLOSURE_REF:
@@ -84,6 +85,9 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
       break;
     case SEXP_OP_MAKE_PROCEDURE:
       ip += sizeof(sexp)*3;
+      break;
+    default:
+      /* opcode takes no additional instruction args */
       break;
     }
   }
@@ -125,7 +129,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_JUMP_UNLESS:
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
     off = ip - sexp_bytecode_data(bc) + ((sexp_sint_t*)ip)[0];
-    if (off > 0 && off < sexp_bytecode_length(bc) && labels[off] > 0) {
+    if (off >= 0 && off < sexp_bytecode_length(bc) && labels[off] > 0) {
       sexp_write_string(ctx, " L", out);
       sexp_write_integer(ctx, labels[off], out);
     }
