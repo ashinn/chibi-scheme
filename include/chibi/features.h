@@ -481,8 +481,10 @@
 #define SEXP_DEFAULT_FOLD_CASE_SYMS 0
 #endif
 
+/* experimental optimization to use jumps instead of the TAIL-CALL opcode */
 #ifndef SEXP_USE_TAIL_JUMPS
-#define SEXP_USE_TAIL_JUMPS ! SEXP_USE_NO_FEATURES
+/* #define SEXP_USE_TAIL_JUMPS ! SEXP_USE_NO_FEATURES */
+#define SEXP_USE_TAIL_JUMPS 0
 #endif
 
 #ifndef SEXP_USE_RESERVE_OPCODE
