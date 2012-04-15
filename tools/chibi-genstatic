@@ -1,0 +1,172 @@
+#! /usr/bin/env chibi-scheme
+
+;; This is a build-only tool (not installed) used to generate the
+;; clibs.c file used by Chibi for a SEXP_USE_STATIC_LIBS=1 build,
+;; i.e. a build of Chibi with all libraries that would be loaded
+;; dynamically included statically into libchibi-scheme (though not
+;; necessarily statically linked).
+;;
+;; usage: find <dir> -name \*.sld | chibi-genstatic [-x <mods> ...] > clibs.c
+;;
+;; where <mods> is a list of modules _not_ to generate static bindings for.
+;;
+;; This is only intended for libraries in the core distribution, and
+;; currently makes the assumption that the .sld files contain a
+;; `define-library' form.  If you want to make a custom build with
+;; your own libraries included statically, be sure to follow this
+;; convention.
+;;
+;; This relies on an external find, instead of one from (chibi
+;; filesystem), because the latter is a dynamically loaded library
+;; which presents a bootstrapping issue on platforms with no dynamic
+;; loading.
+
+(import (scheme)
+        (chibi pathname)
+        (only (meta) find-module))
+
+(define c-libs '())
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (x->string x)
+  (cond ((string? x) x)
+        ((symbol? x) (symbol->string x))
+        ((number? x) (number->string x))
+        (else (error "non-stringable object" x))))
+
+(define (string-split str c . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (string-length str)))
+    (let lp ((from start) (i start) (res '()))
+      (define (collect) (if (= i from) res (cons (substring str from i) res)))
+      (cond
+       ((>= i end) (reverse (collect)))
+       ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (collect)))
+       (else (lp from (+ i 1) res))))))
+
+(define (string-scan c str . o)
+  (let ((limit (string-length str)))
+    (let lp ((i (if (pair? o) (car o) 0)))
+      (cond ((>= i limit) #f)
+            ((eqv? c (string-ref str i)) i)
+            (else (lp (+ i 1)))))))
+
+(define (string-replace str c r)
+  (let ((len (string-length str)))
+    (let lp ((from 0) (i 0) (res '()))
+      (define (collect) (if (= i from) res (cons (substring str from i) res)))
+      (cond
+       ((>= i len) (string-concatenate (reverse (collect))))
+       ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (cons r (collect))))
+       (else (lp from (+ i 1) res))))))
+
+(define (c-char? c)
+  (or (char-alphabetic? c) (char-numeric? c) (memv c '(#\_ #\- #\! #\?))))
+
+(define (c-escape str)
+  (let ((len (string-length str)))
+    (let lp ((from 0) (i 0) (res '()))
+      (define (collect) (if (= i from) res (cons (substring str from i) res)))
+      (cond
+       ((>= i len) (string-concatenate (reverse (collect))))
+       ((not (c-char? (string-ref str i))) (lp (+ i 1) (+ i 1) (cons "_" (cons (number->string (char->integer (string-ref str i)) 16) (collect)))))
+       (else (lp from (+ i 1) res))))))
+
+(define (mangle x)
+  (string-replace
+   (string-replace (string-replace (c-escape (x->string x)) #\- "_") #\? "_p")
+   #\! "_x"))
+
+(define (read-line . o)
+  (let ((in (if (pair? o) (car o) (current-input-port))))
+    (let lp ((res '()))
+      (let ((c (read-char in)))
+        (if (or (eof-object? c) (eqv? c #\newline))
+            (list->string (reverse res))
+            (lp (cons c res)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (init-name mod)
+  (string-append "sexp_init_lib_"
+                 (string-concatenate (map mangle mod) "_")))
+
+(define (find-c-libs excluded-c-libs)
+  (define (extract-module-name file)
+    (call-with-input-file file
+      (lambda (in)
+        (let lp ()
+          (let ((expr (read in)))
+            (cond
+             ((eof-object? expr) #f)
+             ((and (pair? expr)
+                   (pair? (cdr expr))
+                   (memq (car expr)
+                         '(define-library define-module library module)))
+              (cadr expr))
+             (else (lp))))))))
+  (define (process file)
+    (let ((mod-name (extract-module-name file)))
+      (cond
+       ((and mod-name
+             (not (member mod-name excluded-c-libs))
+             (find-module mod-name))
+        => (lambda (mod)
+             (cond
+              ((assq 'include-shared (vector-ref mod 2))
+               => (lambda (x)
+                    (set! c-libs
+                          (cons (cons (string-append
+                                       (path-directory file)
+                                       "/"
+                                       (cadr x))
+                                      mod-name)
+                                c-libs))))))))))
+  (let lp ()
+    (let ((file (read-line)))
+      (cond
+       ((not (or (eof-object? file) (equal? "" file)))
+        (process file)
+        (lp))))))
+
+(define (include-c-lib lib)
+  (display "#define sexp_init_library ")
+  (display (init-name (cdr lib)))
+  (newline)
+  (display "#include \"")
+  (display (string-append (car lib) ".c"))
+  (display "\"")
+  (newline)
+  (display "#undef sexp_init_library")
+  (newline)
+  (newline))
+
+(define (init-c-lib lib)
+  (display "  { \"")
+  (display (car lib))
+  (display "\", ")
+  (display (init-name (cdr lib)))
+  (display " },\n"))
+
+(define (main args)
+  (if (not (null? args)) (set! args (cdr args)))
+  (find-c-libs
+   (if (and (pair? args) (member (car args) '("-x" "--exclude")))
+       (map (lambda (m)
+              (map (lambda (x) (or (string->number x) (string->symbol x)))
+                   (string-split m #\.)))
+            (cdr args))
+       '()))
+  (newline)
+  (for-each include-c-lib c-libs)
+  (newline)
+  (display "typedef struct {\n")
+  (display "  const char *name;\n")
+  (display "  sexp_init_proc init;\n")
+  (display "} sexp_library_entry_t;\n")
+  (newline)
+  (display "static sexp_library_entry_t sexp_static_libraries[] = {\n")
+  (for-each init-c-lib c-libs)
+  (display "  { NULL, NULL }\n")
+  (display "};\n\n"))

@@ -1,0 +1,190 @@
+;; filesystem.stub -- filesystem bindings
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
+
+(c-system-include "sys/types.h")
+(c-system-include "unistd.h")
+(c-system-include "dirent.h")
+(c-system-include "fcntl.h")
+
+(define-c-type DIR
+  finalizer: closedir)
+
+(define-c-struct dirent
+  (string d_name dirent-name))
+
+(define-c-struct stat
+  predicate: stat?
+  (dev_t      st_dev      stat-dev)
+  (ino_t      st_ino      stat-ino)
+  (mode_t     st_mode     stat-mode)
+  (nlink_t    st_nlink    stat-nlinks)
+  (uid_t      st_uid      stat-uid)
+  (gid_t      st_gid      stat-gid)
+  (dev_t      st_rdev     stat-rdev)
+  (off_t      st_size     stat-size)
+  (blksize_t  st_blksize  stat-blksize)
+  (blkcnt_t   st_blocks   stat-blocks)
+  (time_t     st_atime    stat-atime)
+  (time_t     st_mtime    stat-mtime)
+  (time_t     st_ctime    stat-ctime))
+
+(define-c boolean S_ISREG (mode_t))
+(define-c boolean S_ISDIR (mode_t))
+(define-c boolean S_ISCHR (mode_t))
+(define-c boolean S_ISBLK (mode_t))
+(define-c boolean S_ISFIFO (mode_t))
+(define-c boolean S_ISLNK (mode_t))
+(define-c boolean S_ISSOCK (mode_t))
+
+;;(define-c-const int ("S_IFMT"))
+(define-c-const int (file/socket "S_IFSOCK"))
+(define-c-const int (file/link "S_IFLNK"))
+(define-c-const int (file/regular "S_IFREG"))
+(define-c-const int (file/block "S_IFBLK"))
+(define-c-const int (file/directory "S_IFDIR"))
+(define-c-const int (file/character "S_IFCHR"))
+(define-c-const int (file/fifo "S_IFIFO"))
+(define-c-const int (file/suid "S_ISUID"))
+(define-c-const int (file/sgid "S_ISGID"))
+(define-c-const int (file/sticky "S_ISVTX"))
+;;(define-c-const int ("S_IRWXU"))
+(define-c-const int (perm/user-read "S_IRUSR"))
+(define-c-const int (perm/user-write "S_IWUSR"))
+(define-c-const int (perm/user-execute "S_IXUSR"))
+;;(define-c-const int ("S_IRWXG"))
+(define-c-const int (perm/group-read "S_IRGRP"))
+(define-c-const int (perm/group-write "S_IWGRP"))
+(define-c-const int (perm/group-execute "S_IXGRP"))
+;;(define-c-const int ("S_IRWXO"))
+(define-c-const int (perm/others-read "S_IROTH"))
+(define-c-const int (perm/others-write "S_IWOTH"))
+(define-c-const int (perm/others-execute "S_IXOTH"))
+
+(define-c errno stat (string (result stat)))
+(define-c errno fstat (int (result stat)))
+(define-c errno (file-link-status "lstat") (string (result stat)))
+
+;;> Creates a new input-port from the file descriptor @var{int}.
+
+(define-c input-port (open-input-file-descriptor "fdopen")
+  (int (value "r" string)))
+
+;;> Creates a new output-port from the file descriptor @var{int}.
+
+(define-c output-port (open-output-file-descriptor "fdopen")
+  (int (value "w" string)))
+
+;;> Creates a new bidirectional port from the file descriptor @var{int}.
+
+(define-c input-output-port (open-input-output-file-descriptor "fdopen")
+  (int (value "r+" string)))
+
+;;> Unlinks the file named @var{string} from the filesystem.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (delete-file "unlink") (string))
+
+;;> Creates a hard link to the first arg from the second.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (link-file "link") (string string))
+
+;;> Creates a symbolic link to the first arg from the second.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (symbolic-link-file "symlink") (string string))
+
+;;> Renames the first arg to the second.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (rename-file "rename") (string string))
+
+;;> Returns the current working directory of the process as a string.
+
+(define-c non-null-string (current-directory "getcwd")
+  ((result (array char (auto-expand arg1))) (value 256 int)))
+
+;;> Creates a new directory with the given mode.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (create-directory "mkdir") (string int))
+
+;;> Deletes the directory named @var{string} from the filesystem.
+;;> Does not attempt to delete recursively.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (delete-directory "rmdir") (string))
+
+(define-c (free DIR) opendir (string))
+(define-c dirent readdir ((link (pointer DIR))))
+
+;;> Duplicates the given file descriptor, returning he new value,
+;; or -1 on failure.
+
+(define-c int (duplicate-file-descriptor "dup") (int))
+
+;;> Copies the first file descriptor to the second, closing
+;;> it if needed.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (duplicate-file-descriptor-to "dup2") (int int))
+
+;;> Closes the given file descriptor.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (close-file-descriptor "close") (int))
+
+;;> Opens the given file and returns a file descriptor.
+
+(define-c int open (string int (default #o644 int)))
+
+;;> Returns a list of 2 new file descriptors, the input and
+;;> output end of a new pipe, respectively.
+
+(define-c errno (open-pipe "pipe") ((result (array int 2))))
+
+;;> Creates a new named pipe in the given path.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define-c errno (make-fifo "mkfifo") (string (default #o644 int)))
+
+(define-c int (get-file-descriptor-flags "fcntl")
+  (int (value F_GETFD int)))
+(define-c errno (set-file-descriptor-flags! "fcntl")
+  (int (value F_SETFD int) long))
+
+;;> Get and set the flags for the given file descriptor.
+;;/
+
+(define-c int (get-file-descriptor-status "fcntl")
+  (int (value F_GETFL int)))
+(define-c errno (set-file-descriptor-status! "fcntl")
+  (int (value F_SETFL int) long))
+
+;;> Get and set the status for the given file descriptor.
+;;/
+
+;; (define-c int (get-file-descriptor-lock "fcntl")
+;;   (int (value F_GETLK int) flock))
+;; (define-c errno (set-file-descriptor-lock! "fcntl")
+;;   (int (value F_SETLK int) flock))
+;; (define-c errno (try-set-file-descriptor-lock! "fcntl")
+;;   (int (value F_SETLKW int) flock))
+
+(define-c-const int (open/read "O_RDONLY"))
+(define-c-const int (open/write "O_WRONLY"))
+(define-c-const int (open/read-write "O_RDWR"))
+(define-c-const int (open/create "O_CREAT"))
+(define-c-const int (open/exclusive "O_EXCL"))
+(define-c-const int (open/truncate "O_TRUNC"))
+(define-c-const int (open/append "O_APPEND"))
+(define-c-const int (open/non-block "O_NONBLOCK"))
+
+;;> File opening modes.
+;;/
+
+;;> Returns @scheme{#t} if the given port of file descriptor
+;;> if backed by a TTY object, and @scheme{#f} otherwise.
+
+(define-c boolean (is-a-tty? "isatty") (port-or-fd))

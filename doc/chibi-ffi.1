@@ -1,0 +1,45 @@
+.TH "chibi-ffi" "1" "" ""
+.UC 4
+.SH NAME
+.PP
+chibi-ffi \- generate C from Scheme stub files
+
+.SH SYNOPSIS
+.B chibi-ffi
+[-c]
+[-f
+.I
+cflags
+]
+input.stub
+[
+.I output.c
+]
+.BR
+.SP 0.4
+
+.SH DESCRIPTION
+.I chibi-ffi
+reads in the C function FFI definitions from an input file and outputs
+the appropriate C wrappers into a file with the same base name and the
+".c" extension.  You can then compile that C file into a shared
+library:
+
+  chibi-ffi file.stub
+  cc -fPIC -shared file.c -lchibi-scheme
+
+If the -c option is specified then chibi-ffi attempts to compile the
+generated C code for you in one step.  In this case, additional flags
+for the C compiler may be given with the -f option.
+
+The FFI syntax is described in the manual.
+
+.SH AUTHORS
+.PP
+Alex Shinn (alexshinn @ gmail . com)
+
+.SH SEE ALSO
+.PP
+The chibi-scheme home-page:
+.BR
+http://code.google.com/p/chibi-scheme/
