@@ -840,8 +840,6 @@ static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
 #define sexp_ensure_stack(n)
 #endif
 
-#include <unistd.h>
-
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   unsigned char *ip;
   sexp bc, cp, *stack = sexp_stack_data(sexp_context_stack(ctx));
