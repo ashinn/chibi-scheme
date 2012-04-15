@@ -1205,10 +1205,10 @@ enum sexp_context_globals {
 #define sexp_flush(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p) : (fflush(sexp_port_stream(p)), SEXP_VOID))
 
 SEXP_API int sexp_buffered_read_char (sexp ctx, sexp p);
-SEXP_API sexp sexp_buffered_write_char (sexp ctx, int c, sexp p);
-SEXP_API sexp sexp_buffered_write_string_n (sexp ctx, const char *str, sexp_uint_t len, sexp p);
-SEXP_API sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p);
-SEXP_API sexp sexp_buffered_flush (sexp ctx, sexp p);
+SEXP_API int sexp_buffered_write_char (sexp ctx, int c, sexp p);
+SEXP_API int sexp_buffered_write_string_n (sexp ctx, const char *str, sexp_uint_t len, sexp p);
+SEXP_API int sexp_buffered_write_string (sexp ctx, const char *str, sexp p);
+SEXP_API int sexp_buffered_flush (sexp ctx, sexp p);
 
 #endif
 

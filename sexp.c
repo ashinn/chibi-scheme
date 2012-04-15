@@ -1315,14 +1315,14 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
   }
 }
 
-sexp sexp_buffered_write_char (sexp ctx, int c, sexp p) {
+int sexp_buffered_write_char (sexp ctx, int c, sexp p) {
   if (sexp_port_offset(p)+1 >= sexp_port_size(p))
     sexp_buffered_flush(ctx, p);
   sexp_port_buf(p)[sexp_port_offset(p)++] = c;
-  return SEXP_VOID;
+  return 0;
 }
 
-sexp sexp_buffered_write_string_n (sexp ctx, const char *str,
+int sexp_buffered_write_string_n (sexp ctx, const char *str,
                                    sexp_uint_t len, sexp p) {
   int diff;
   while (sexp_port_offset(p)+len >= sexp_port_size(p)) {
@@ -1334,32 +1334,32 @@ sexp sexp_buffered_write_string_n (sexp ctx, const char *str,
   }
   memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, len);
   sexp_port_offset(p) += len;
-  return SEXP_VOID;
+  return 0;
 }
 
-sexp sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
+int sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
   return sexp_buffered_write_string_n(ctx, str, strlen(str), p);
 }
 
-sexp sexp_buffered_flush (sexp ctx, sexp p) {
+int sexp_buffered_flush (sexp ctx, sexp p) {
+  int res;
   sexp_gc_var1(tmp);
-  if (! sexp_oportp(p))
-    return sexp_type_exception(ctx, NULL, SEXP_OPORT, p);
-  if (! sexp_port_openp(p))
-    return sexp_user_exception(ctx, SEXP_FALSE, "port is closed", p);
-  else {
-    if (sexp_port_stream(p)) {
-      fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
-      fflush(sexp_port_stream(p));
-    } else if (sexp_port_offset(p) > 0) {
-      sexp_gc_preserve1(ctx, tmp);
-      tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
+  if (! (sexp_oportp(p) && sexp_port_openp(p)))
+    return -1;
+  if (sexp_port_stream(p)) {
+    fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
+    res = fflush(sexp_port_stream(p));
+  } else if (sexp_port_offset(p) > 0) {
+    sexp_gc_preserve1(ctx, tmp);
+    tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
+    if (tmp && sexp_stringp(tmp))
       sexp_push(ctx, sexp_port_cookie(p), tmp);
-      sexp_gc_release1(ctx);
-    }
-    sexp_port_offset(p) = 0;
-    return SEXP_VOID;
+    else
+      res = -1;
+    sexp_gc_release1(ctx);
   }
+  sexp_port_offset(p) = 0;
+  return res;
 }
 
 sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
@@ -1845,8 +1845,15 @@ int sexp_write_utf8_char (sexp ctx, int c, sexp out) {
 #endif
 
 sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
-  sexp_flush(ctx, out);
-  return SEXP_VOID;
+  int res;
+  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
+  res = sexp_flush(ctx, out);
+  if (res == EOF) {
+    if (sexp_port_stream(out) && ferror(sexp_port_stream(out)) && (errno == EAGAIN))
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+    return SEXP_FALSE;
+  }
+  return SEXP_TRUE;
 }
 
 #define INIT_STRING_BUFFER_SIZE 128
