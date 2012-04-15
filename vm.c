@@ -1815,9 +1815,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
           goto write_string_yield;
       }
       errno = 0;
-#endif
       /* fwrite doesn't give reliable counts, use write(2) directly */
       i = write(sexp_port_fileno(_ARG3), sexp_bytes_data(tmp1), sexp_unbox_fixnum(_ARG2));
+#else
+      i = fwrite(sexp_bytes_data(tmp1), 1, sexp_unbox_fixnum(_ARG2), sexp_port_stream(_ARG3));
+#endif
 #if SEXP_USE_GREEN_THREADS
       if (i < sexp_unbox_fixnum(_ARG2)) {
         /* modify stack in-place so we continue where we left off next time */
