@@ -1825,9 +1825,13 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 sexp sexp_write_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
   sexp res;
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
+#if SEXP_USE_GREEN_THREADS
   sexp_maybe_block_output_port(ctx, out);
+#endif
   res = sexp_write_one(ctx, obj, out);
+#if SEXP_USE_GREEN_THREADS
   sexp_maybe_unblock_port(ctx, out);
+#endif
   return res;
 }
 
@@ -1849,8 +1853,10 @@ sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
   res = sexp_flush(ctx, out);
   if (res == EOF) {
+#if SEXP_USE_GREEN_THREADS
     if (sexp_port_stream(out) && ferror(sexp_port_stream(out)) && (errno == EAGAIN))
       return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+#endif
     return SEXP_FALSE;
   }
   return SEXP_TRUE;
