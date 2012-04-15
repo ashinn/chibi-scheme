@@ -409,7 +409,7 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
     emit_word(ctx, sexp_param_index(lam, sexp_car(ls1)));
   }
 
-  /* jump */
+  /* drop the current result and jump */
   emit(ctx, SEXP_OP_JUMP);
   emit_word(ctx, (sexp_uint_t) (-sexp_context_pos(ctx) +
                                 (sexp_pairp(sexp_lambda_locals(lam))
@@ -839,6 +839,8 @@ static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
 #else
 #define sexp_ensure_stack(n)
 #endif
+
+#include <unistd.h>
 
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   unsigned char *ip;
@@ -1804,13 +1806,22 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_oportp(_ARG3))
       sexp_raise("write-string: not an output-port", sexp_list1(ctx, _ARG3));
     sexp_context_top(ctx) = top;
-    if (sexp_port_stream(_ARG3)) {
-      i = fwrite(sexp_bytes_data(tmp1), 1, sexp_unbox_fixnum(_ARG2), sexp_port_stream(_ARG3));
+    if (sexp_port_stream(_ARG3) && sexp_port_fileno(_ARG3) >= 0) {
+      /* first flush anything pending */
+      i = fflush(sexp_port_stream(_ARG3));
 #if SEXP_USE_GREEN_THREADS
-      if ((i < sexp_unbox_fixnum(_ARG2))
-          && ferror(sexp_port_stream(_ARG3))
-          && (errno == EAGAIN)) {
+      if (i) {
+        i = 0;
         clearerr(sexp_port_stream(_ARG3));
+        if (errno == EAGAIN)
+          goto write_string_yield;
+      }
+      errno = 0;
+#endif
+      /* fwrite doesn't give reliable counts, use write(2) directly */
+      i = write(sexp_port_fileno(_ARG3), sexp_bytes_data(tmp1), sexp_unbox_fixnum(_ARG2));
+#if SEXP_USE_GREEN_THREADS
+      if (i < sexp_unbox_fixnum(_ARG2)) {
         /* modify stack in-place so we continue where we left off next time */
         if (i > 0) {
           if (sexp_stringp(_ARG1))
@@ -1819,7 +1830,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
             _ARG1 = sexp_subbytes(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
           _ARG2 = sexp_make_fixnum(sexp_unbox_fixnum(_ARG2) - i);
         }
-        /* yield if threads are enabled */
+        /* yield if threads are enabled (otherwise busy loop) */
+      write_string_yield:
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
           sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
           fuel = 0;
@@ -1832,8 +1844,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       if (sexp_bytes_length(tmp1) != sexp_unbox_fixnum(_ARG2))
         tmp1 = sexp_subbytes(ctx, tmp1, SEXP_ZERO, _ARG2);
       sexp_write_string(ctx, sexp_bytes_data(tmp1), _ARG3);
+      i = sexp_unbox_fixnum(_ARG2);
     }
-    tmp1 = _ARG2;     /* return the number of bytes written */
+    tmp1 = sexp_make_fixnum(i);     /* return the number of bytes written */
     top-=2;
     _ARG1 = tmp1;
     break;
