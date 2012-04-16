@@ -1464,6 +1464,11 @@ sexp sexp_make_non_null_input_output_port (sexp ctx, FILE* io, sexp name) {
 #define sexp_make_non_null_input_output_port sexp_make_non_null_input_port
 #endif
 
+sexp sexp_port_outputp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+  sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
+  return sexp_make_boolean(sexp_oportp(port));
+}
+
 sexp sexp_port_binaryp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
   return sexp_make_boolean(sexp_port_binaryp(port));
