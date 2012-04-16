@@ -13,67 +13,78 @@
 
 (define (complement pred) (lambda (x) (not (pred x))))
 
-(define (string-every x str)
+(define (string-any x str)
   (let ((pred (make-char-predicate x))
         (end (string-cursor-end str)))
-    (let lp ((i (string-cursor-start str)))
-      (if (string-cursor>=? i end)
-          #t
-          (and (pred (string-cursor-ref str i))
-               (lp (string-cursor-next str i)))))))
+    (and (string-cursor>? end (string-cursor-start str))
+         (let lp ((i (string-cursor-start str)))
+           (let ((i2 (string-cursor-next str i))
+                 (ch (string-cursor-ref str i)))
+             (if (string-cursor>=? i2 end)
+                 (pred ch)  ;; tail call
+                 (or (pred ch) (lp i2))))))))
 
-(define (string-any x str)
-  (not (string-every (complement (make-char-predicate x)) str)))
+(define (string-every x str)
+  (not (string-any (complement (make-char-predicate x)) str)))
 
-(define (string-index str x . o)
+(define (string-find str x . o)
   (let ((pred (make-char-predicate x))
         (end (string-cursor-end str)))
     (let lp ((i (if (pair? o) (car o) (string-cursor-start str))))
-      (cond ((string-cursor>=? i end) #f)
+      (cond ((string-cursor>=? i end) end)
             ((pred (string-ref str i)) i)
             (else (lp (string-cursor-next str i)))))))
 
-(define (string-index-right str x . o)
+(define (string-find-right str x . o)
   (let ((pred (make-char-predicate x))
         (end (string-cursor-start str)))
-    (let lp ((i (if (pair? o)
-                    (car o)
-                    (string-cursor-prev str (string-cursor-end str)))))
-      (cond ((string-cursor<? i end) #f)
-            ((pred (string-ref str i)) i)
-            (else (lp (string-cursor-prev str i)))))))
+    (let lp ((i (if (pair? o) (car o) (string-cursor-end str))))
+      (let ((i2 (string-cursor-prev str i)))
+        (cond ((string-cursor<? i2 end) end)
+              ((pred (string-ref str i2)) i)
+              (else (lp i2)))))))
 
 (define (string-skip str x . o)
-  (apply string-index (complement (make-char-predicate x)) o))
+  (apply string-find str (complement (make-char-predicate x)) o))
 
 (define (string-skip-right str x . o)
-  (apply string-index-right (complement (make-char-predicate x)) o))
+  (apply string-find-right str (complement (make-char-predicate x)) o))
 
 (define string-join string-concatenate)
 
 (define (string-split str . o)
-  (let ((pred (make-char-predicate (if (pair? o) (car o) " ")))
+  (let ((pred (make-char-predicate (if (pair? o) (car o) #\space)))
+        (limit (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-size str)))
+        (start (string-cursor-start str))
         (end (string-cursor-end str)))
-    (let lp ((i (string-cursor-start str)) (res '()))
-      (let ((j (string-index str pred i)))
-        (if j
-            (lp (string-cursor-next str j)
-                (cons (substring-cursor str i j) res))
-            (reverse (cons (substring-cursor str i end) res)))))))
+    (if (string-cursor>=? start end)
+        (list "")
+        (let lp ((i start) (n 1) (res '()))
+          (cond
+           ((>= n limit)
+            (reverse (cons (substring-cursor str i) res)))
+           (else
+            (let* ((j (string-find str pred i))
+                   (res (cons (substring-cursor str i j) res)))
+              (if (string-cursor>=? j end)
+                  (reverse res)
+                  (lp (string-cursor-next str j) (+ n 1) res)))))))))
 
 (define (string-trim-left str . o)
-  (let ((pred (make-char-predicate (if (pair? o) (car o) " "))))
+  (let ((pred (make-char-predicate (if (pair? o) (car o) #\space))))
     (substring-cursor str (string-skip str pred))))
 
 (define (string-trim-right str . o)
-  (let ((pred (make-char-predicate (if (pair? o) (car o) " "))))
+  (let ((pred (make-char-predicate (if (pair? o) (car o) #\space))))
     (substring-cursor str
                       (string-cursor-start str)
                       (string-skip-right str pred))))
 
 (define (string-trim str . o)
-  (let ((pred (make-char-predicate (if (pair? o) (car o) " "))))
-    (string-trim-right (string-trim-left str pred) pred)))
+  (let ((pred (make-char-predicate (if (pair? o) (car o) #\space))))
+    (substring-cursor str
+                      (string-skip str pred)
+                      (string-skip-right str pred))))
 
 (define (string-mismatch prefix str)
   (let ((end1 (string-cursor-end prefix))
