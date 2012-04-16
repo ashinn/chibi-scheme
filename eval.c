@@ -1866,6 +1866,9 @@ sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, se
 sexp sexp_current_environment (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_context_env(ctx);
 }
+sexp sexp_meta_environment (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_global(ctx, SEXP_G_META_ENV);
+}
 #endif
 
 sexp sexp_add_module_directory_op (sexp ctx, sexp self, sexp_sint_t n, sexp dir, sexp appendp) {

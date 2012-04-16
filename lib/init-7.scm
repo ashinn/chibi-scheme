@@ -550,6 +550,7 @@
              ((and) (every check (cdr x)))
              ((or) (any check (cdr x)))
              ((not) (not (check (cadr x))))
+             ((library) (eval `(find-module ',(cadr x)) (%meta-env)))
              (else (error "cond-expand: bad feature" x)))
            (memq (identifier->symbol x) *features*)))
      (let expand ((ls (cdr expr)))
