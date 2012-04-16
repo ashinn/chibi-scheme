@@ -226,6 +226,8 @@
           (case (peek-char in)
             ((#\#)
              (read-char in)
+             (if (eof-object? (peek-char in))
+                 (error "read error: incomplete # found at end of input"))
              (case (char-downcase (peek-char in))
                ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
                 (let* ((str (read-label '()))
