@@ -2562,8 +2562,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       }
       break;
     default:
-      res = sexp_read_error(ctx, "invalid # syntax",
-                            sexp_make_character(c1), in);
+      res = sexp_read_error(ctx, "invalid char following '#'",
+                            c1 == EOF ? SEXP_EOF : sexp_make_character(c1), in);
     }
     break;
   case '.':
