@@ -5,8 +5,8 @@ The Makefile.libs file distributed with the Chibi Scheme sources
 can facilitate building and installing Chibi Scheme libraries written
 in C or Scheme. To use it, follow these instructions:
 
-1. Copy the Makefile.libs file from the Chibi Scheme source
-   directory to the library source top-level directory.
+1. Copy the Makefile.libs and Makefile.detect files from the Chibi
+   Scheme source directory to the library source top-level directory.
 
 2. Place the library source in the subdirectory "lib" of the library
    source top-level directory. For example,
