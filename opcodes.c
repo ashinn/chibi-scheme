@@ -221,6 +221,7 @@ _OP(SEXP_OPC_SETTER, SEXP_OP_SLOTN_SET, 4, 0, SEXP_VOID, _I(SEXP_OBJECT), _I(SEX
 #endif
 #if SEXP_USE_MODULES
 _FN0(_I(SEXP_ENV), "current-environment", 0, sexp_current_environment),
+_FN0(_I(SEXP_ENV), "%meta-env", 0, sexp_meta_environment),
 _FN1(SEXP_NULL, _I(SEXP_ENV), "env-exports", 0, sexp_env_exports_op),
 _FN1(_I(SEXP_STRING), _I(SEXP_STRING), "find-module-file", 0, sexp_find_module_file_op),
 _FN2(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_ENV), "load-module-file", 0, sexp_load_module_file_op),
