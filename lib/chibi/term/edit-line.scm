@@ -537,7 +537,7 @@
          (terminal-width (get-key args 'terminal-width:))
          (keymap (get-key args 'keymap: standard-keymap)))
     (lambda (in out)
-      (let* ((width (or terminal-width (get-terminal-width out)))
+      (let* ((width (or terminal-width (get-terminal-width out) 80))
              (buf (make-buffer))
              (done? #f)
              (return (lambda o (set! done? (if (pair? o) (car o) #t)))))
