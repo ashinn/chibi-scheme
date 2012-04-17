@@ -232,10 +232,15 @@
 (define (with-stty setting thunk . o)
   (let* ((port (if (pair? o) (car o) (current-input-port)))
          (orig-attrs (get-terminal-attributes port)))
-    (dynamic-wind
-      (lambda () (stty setting))
-      thunk
-      (lambda () (set-terminal-attributes! port TCSANOW orig-attrs)))))
+    (cond
+     (orig-attrs
+      (dynamic-wind
+        (lambda () (stty setting))
+        thunk
+        (lambda () (set-terminal-attributes! port TCSANOW orig-attrs))))
+     (else
+      ;; No terminal attributes means this isn't a tty.
+      (thunk)))))
 
 ;;> Run @var{thunk} with the "raw" (no canonical or echo) options
 ;;> needed for a terminal application.
