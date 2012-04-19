@@ -3,7 +3,10 @@
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
+
+#ifndef PLAN9
 #include <errno.h>
+#endif
 
 #if ! SEXP_USE_BOEHM
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
@@ -340,6 +343,9 @@ static sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, se
 }
 
 static sexp sexp_error_string (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+#ifdef PLAN9
+  return SEXP_FALSE;
+#else
   int err;
   if (x == SEXP_FALSE) {
     err = errno;
@@ -348,6 +354,7 @@ static sexp sexp_error_string (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
     err = sexp_unbox_fixnum(x);
   }
   return sexp_c_string(ctx, strerror(err), -1);
+#endif
 }
 
 static sexp sexp_update_free_vars (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
