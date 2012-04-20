@@ -1,0 +1,78 @@
+# -*- makefile-gmake -*-
+
+########################################################################
+# Detect the PLATFORM with uname.
+
+ifndef PLATFORM
+ifeq ($(shell uname),Darwin)
+PLATFORM=macosx
+else
+ifeq ($(shell uname),FreeBSD)
+PLATFORM=FreeBSD
+else
+ifeq ($(shell uname -o),Msys)
+PLATFORM=mingw
+SOLIBDIR = $(BINDIR)
+DIFFOPTS = -b
+else
+ifeq ($(shell uname -o),Cygwin)
+PLATFORM=cygwin
+SOLIBDIR = $(BINDIR)
+DIFFOPTS = -b
+else
+ifeq ($(shell uname -o),GNU/Linux)
+PLATFORM=linux
+else
+PLATFORM=unix
+endif
+endif
+endif
+endif
+endif
+endif
+
+########################################################################
+# Set default variables for the platform.
+
+LIBDL = -ldl
+
+ifeq ($(PLATFORM),macosx)
+SO  = .dylib
+EXE =
+CLIBFLAGS = -dynamiclib
+STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
+else
+ifeq ($(PLATFORM),mingw)
+SO  = .dll
+EXE = .exe
+CC = gcc
+CLIBFLAGS = -shared
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL
+LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+STATICFLAGS = -DSEXP_USE_DL=0
+LIBDL = 
+else
+ifeq ($(PLATFORM),cygwin)
+SO  = .dll
+EXE = .exe
+CC = gcc
+CLIBFLAGS = -shared
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
+LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+else
+SO  = .so
+EXE =
+CLIBFLAGS = -fPIC -shared
+STATICFLAGS = -static -DSEXP_USE_DL=0
+ifeq ($(PLATFORM),FreeBSD)
+LIBDL=
+RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
+endif
+endif
+endif
+
+ifeq ($(PLATFORM),unix)
+#RLDFLAGS=-rpath $(LIBDIR)
+RLDFLAGS=-Wl,-R$(LIBDIR)
+endif
