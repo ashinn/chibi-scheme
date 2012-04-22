@@ -662,6 +662,10 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
 
 /*********************** the virtual machine **************************/
 
+sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args) {
+  return sexp_make_exception(ctx, SEXP_TRAMPOLINE, SEXP_FALSE, args, proc, SEXP_FALSE);
+}
+
 #if SEXP_USE_GROW_STACK
 static int sexp_grow_stack (sexp ctx, int min_size) {
   sexp stack, old_stack = sexp_context_stack(ctx), *from, *to;
@@ -772,20 +776,20 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
 }
 
 #if SEXP_USE_GREEN_THREADS
-#define sexp_fcall_return(x, i)                         \
-  if (sexp_exceptionp(x)) {                             \
-    if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)) { \
-      fuel = 0; ip--; goto loop;                        \
-    } else {                                            \
-      top -= i;                                         \
-      _ARG1 = x;                                        \
-      ip += sizeof(sexp);                               \
-      goto call_error_handler;                          \
-    }                                                   \
-  } else {                                              \
-    top -= i;                                           \
-    _ARG1 = x;                                          \
-    ip += sizeof(sexp);                                 \
+#define sexp_fcall_return(x, i)                             \
+  if (sexp_exceptionp(x)) {                                 \
+    if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)) {     \
+      fuel = 0; ip--; goto loop;                            \
+    } else {                                                \
+      top -= i;                                             \
+      _ARG1 = x;                                            \
+      ip += sizeof(sexp);                                   \
+      goto call_error_handler;                              \
+    }                                                       \
+  } else {                                                  \
+    top -= i;                                               \
+    _ARG1 = x;                                              \
+    ip += sizeof(sexp);                                     \
   }
 #else
 #define sexp_fcall_return(x, i)                                 \
@@ -912,6 +916,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_exception_procedure(_ARG1) = self;
   case SEXP_OP_RAISE:
     sexp_context_top(ctx) = top;
+    if (sexp_trampolinep(_ARG1)) {
+      tmp1 = sexp_trampoline_procedure(_ARG1);
+      tmp2 = sexp_trampoline_args(_ARG1);
+      top--;
+      goto apply1;
+    }
     tmp1 = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
     if (! sexp_procedurep(tmp1))

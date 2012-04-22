@@ -437,9 +437,10 @@ struct sexp_struct {
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
-#define SEXP_STRING_OPORT SEXP_MAKE_IMMEDIATE(8) /* internal use */
+#define SEXP_STRING_OPORT SEXP_MAKE_IMMEDIATE(8)  /* internal use */
+#define SEXP_TRAMPOLINE   SEXP_MAKE_IMMEDIATE(9)  /* internal use */
 #if SEXP_USE_OBJECT_BRACE_LITERALS
-#define SEXP_CLOSE_BRACE SEXP_MAKE_IMMEDIATE(9) /* internal use */
+#define SEXP_CLOSE_BRACE  SEXP_MAKE_IMMEDIATE(10) /* internal use */
 #endif
 
 #if SEXP_USE_LIMITED_MALLOC
@@ -878,6 +879,10 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_exception_procedure(x) (sexp_field(x, exception, SEXP_EXCEPTION, procedure))
 #define sexp_exception_source(x)    (sexp_field(x, exception, SEXP_EXCEPTION, source))
 
+#define sexp_trampolinep(x) (sexp_exceptionp(x) && sexp_exception_kind(x) == SEXP_TRAMPOLINE)
+#define sexp_trampoline_procedure(x) sexp_exception_procedure(x)
+#define sexp_trampoline_args(x) sexp_exception_irritants(x)
+
 #define sexp_cpointer_freep(x)      (sexp_freep(x))
 #define sexp_cpointer_length(x)     (sexp_cpointer_field(x, length))
 #define sexp_cpointer_body(x)       (sexp_cpointer_field(x, body))
@@ -1194,7 +1199,6 @@ enum sexp_context_globals {
 #define sexp_push_char(x, c, p) (ungetc(c, sexp_port_stream(p)))
 #define sexp_write_char(x, c, p) (putc(c, sexp_port_stream(p)))
 #define sexp_write_string(x, s, p) (fputs(s, sexp_port_stream(p)))
-#define sexp_printf(x, p, ...) (fprintf(sexp_port_stream(p), __VA_ARGS__))
 #define sexp_flush(x, p) (fflush(sexp_port_stream(p)))
 
 #else
@@ -1293,6 +1297,7 @@ SEXP_API sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp 
 SEXP_API sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
+SEXP_API sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API void sexp_init(void);
 
