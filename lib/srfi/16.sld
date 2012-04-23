@@ -13,7 +13,7 @@
         (%case args len (+ n 1) (p ... x) (y . body) . rest))
        ((%case args len n (p ...) (y . body) . rest)
         (if (>= len n)
-            (apply (lambda (p ... y) . body) args)
+            (apply (lambda (p ... . y) . body) args)
             (%case args len 0 () . rest)))
        ((%case args len n p)
         (error "case-lambda: no cases matched"))))
