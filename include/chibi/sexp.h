@@ -64,8 +64,9 @@ typedef unsigned long size_t;
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <math.h>
 #if SEXP_USE_FLONUMS
 #include <float.h>
@@ -132,6 +133,7 @@ enum sexp_types {
 #endif
   SEXP_IPORT,
   SEXP_OPORT,
+  SEXP_FILENO,
   SEXP_EXCEPTION,
   SEXP_PROCEDURE,
   SEXP_MACRO,
@@ -327,7 +329,12 @@ struct sexp_struct {
       size_t size;
       sexp name;
       sexp cookie;
+      sexp fd;
     } port;
+    struct {
+      char openp, socketp, no_closep;
+      sexp_sint_t fd;
+    } fileno;
     struct {
       sexp kind, message, irritants, procedure, source;
     } exception;
@@ -618,6 +625,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #else
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
 #endif
+#define sexp_filenop(x)     (sexp_check_tag(x, SEXP_FILENO))
 #if SEXP_USE_BIGNUMS
 #define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
 #else
@@ -866,6 +874,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_size(p)       (sexp_pred_field(p, port, sexp_portp, size))
 #define sexp_port_offset(p)     (sexp_pred_field(p, port, sexp_portp, offset))
 #define sexp_port_flags(p)      (sexp_pred_field(p, port, sexp_portp, flags))
+#define sexp_port_fd(p)         (sexp_pred_field(p, port, sexp_portp, fd))
+
+#define sexp_fileno_fd(f)        (sexp_pred_field(f, fileno, sexp_filenop, fd))
+#define sexp_fileno_openp(f)     (sexp_pred_field(f, fileno, sexp_filenop, openp))
+#define sexp_fileno_socketp(f)   (sexp_pred_field(f, fileno, sexp_filenop, socketp))
+#define sexp_fileno_no_closep(f) (sexp_pred_field(f, fileno, sexp_filenop, no_closep))
 
 #define sexp_ratio_numerator(q)   (sexp_pred_field(q, ratio, sexp_ratiop, numerator))
 #define sexp_ratio_denominator(q) (sexp_pred_field(q, ratio, sexp_ratiop, denominator))
@@ -1219,7 +1233,7 @@ SEXP_API int sexp_buffered_flush (sexp ctx, sexp p);
 
 #define sexp_newline(ctx, p) sexp_write_char((ctx), '\n', (p))
 #define sexp_at_eofp(p)      (feof(sexp_port_stream(p)))
-#define sexp_port_fileno(p)  (fileno(sexp_port_stream(p)))
+#define sexp_port_fileno(p)  (sexp_port_stream(p) ? fileno(sexp_port_stream(p)) : sexp_filenop(sexp_port_fd(p)) ? sexp_fileno_fd(sexp_port_fd(p)) : -1)
 
 #if SEXP_USE_TRACK_ALLOC_SOURCE
 #define sexp_current_source_param , const char* source
@@ -1270,6 +1284,7 @@ SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len)
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
 SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
+SEXP_API sexp sexp_make_fileno (sexp ctx, int fd, int socketp);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_make_non_null_input_port (sexp ctx, FILE* in, sexp name);
