@@ -28,7 +28,7 @@
 
 ;;> Bind a name to a socket.
 
-(define-c errno bind (int sockaddr int))
+(define-c errno bind (fileno sockaddr int))
 
 ;;> Listen on a socket.
 
@@ -38,15 +38,15 @@
 ;;> Accept a connection on a socket.
 
 (define-c sexp (accept "sexp_accept")
-  ((value ctx sexp) (value self sexp) int sockaddr int))
+  ((value ctx sexp) (value self sexp) fileno sockaddr int))
 
 ;;> Create an endpoint for communication.
 
-(define-c int socket (int int int))
+(define-c fileno socket (int int int))
 
 ;;> Initiate a connection on a socket.
 
-(define-c int connect (int sockaddr int))
+(define-c int connect (fileno sockaddr int))
 
 (define-c-const int (address-family/unix "AF_UNIX"))
 (define-c-const int (address-family/inet "AF_INET"))
@@ -62,14 +62,14 @@
 (c-include "accept.c")
 
 (define-c errno getsockopt
-  (int int int (result int) (result (value (sizeof int) socklen_t))))
+  (fileno int int (result int) (result (value (sizeof int) socklen_t))))
 
 ;;> Set an option for the given socket.  For example, to make the
 ;;> address reusable:
 ;;> @scheme{(set-socket-option! sock level/socket socket-opt/reuseaddr 1)}
 
 (define-c errno (set-socket-option! "setsockopt")
-  (int int int (pointer int) (value (sizeof int) socklen_t)))
+  (fileno int int (pointer int) (value (sizeof int) socklen_t)))
 
 (define-c-const int (level/socket "SOL_SOCKET"))
 

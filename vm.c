@@ -662,6 +662,10 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
 
 /*********************** the virtual machine **************************/
 
+sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args) {
+  return sexp_make_exception(ctx, SEXP_TRAMPOLINE, SEXP_FALSE, args, proc, SEXP_FALSE);
+}
+
 #if SEXP_USE_GROW_STACK
 static int sexp_grow_stack (sexp ctx, int min_size) {
   sexp stack, old_stack = sexp_context_stack(ctx), *from, *to;
@@ -772,20 +776,20 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
 }
 
 #if SEXP_USE_GREEN_THREADS
-#define sexp_fcall_return(x, i)                         \
-  if (sexp_exceptionp(x)) {                             \
-    if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)) { \
-      fuel = 0; ip--; goto loop;                        \
-    } else {                                            \
-      top -= i;                                         \
-      _ARG1 = x;                                        \
-      ip += sizeof(sexp);                               \
-      goto call_error_handler;                          \
-    }                                                   \
-  } else {                                              \
-    top -= i;                                           \
-    _ARG1 = x;                                          \
-    ip += sizeof(sexp);                                 \
+#define sexp_fcall_return(x, i)                             \
+  if (sexp_exceptionp(x)) {                                 \
+    if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)) {     \
+      fuel = 0; ip--; goto loop;                            \
+    } else {                                                \
+      top -= i;                                             \
+      _ARG1 = x;                                            \
+      ip += sizeof(sexp);                                   \
+      goto call_error_handler;                              \
+    }                                                       \
+  } else {                                                  \
+    top -= i;                                               \
+    _ARG1 = x;                                              \
+    ip += sizeof(sexp);                                     \
   }
 #else
 #define sexp_fcall_return(x, i)                                 \
@@ -912,6 +916,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_exception_procedure(_ARG1) = self;
   case SEXP_OP_RAISE:
     sexp_context_top(ctx) = top;
+    if (sexp_trampolinep(_ARG1)) {
+      tmp1 = sexp_trampoline_procedure(_ARG1);
+      tmp2 = sexp_trampoline_args(_ARG1);
+      top--;
+      goto apply1;
+    }
     tmp1 = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
     if (! sexp_procedurep(tmp1))
@@ -1759,6 +1769,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_oportp(_ARG2))
       sexp_raise("write-char: not an output-port", sexp_list1(ctx, _ARG2));
     sexp_context_top(ctx) = top;
+#if SEXP_USE_GREEN_THREADS
+    errno = 0;
+#endif
 #if SEXP_USE_UTF8_STRINGS
     if (sexp_unbox_character(_ARG1) >= 0x80)
       i = sexp_write_utf8_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
@@ -1767,10 +1780,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     i = sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if (sexp_port_stream(_ARG2) && ferror(sexp_port_stream(_ARG2))
+      if (sexp_port_stream(_ARG2) /* && ferror(sexp_port_stream(_ARG2)) */
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-        clearerr(sexp_port_stream(_ARG2));
+        if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG2));
         sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2);
         fuel = 0;
         ip--;      /* try again */
@@ -1810,7 +1823,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
       if (i) {
         i = 0;
-        clearerr(sexp_port_stream(_ARG3));
+        if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG3));
         if (errno == EAGAIN)
           goto write_string_yield;
       }
@@ -1854,6 +1867,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("read-char: not an input-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
+#if SEXP_USE_GREEN_THREADS
+    errno = 0;
+#endif
     i = sexp_read_char(ctx, _ARG1);
 #if SEXP_USE_UTF8_STRINGS
     if (i >= 0x80)
@@ -1862,10 +1878,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if (sexp_port_stream(_ARG1) && ferror(sexp_port_stream(_ARG1))
+      if (sexp_port_stream(_ARG1) /* && ferror(sexp_port_stream(_ARG1)) */
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-        clearerr(sexp_port_stream(_ARG1));
+        if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
         sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
         fuel = 0;
         ip--;      /* try again */
@@ -1881,13 +1897,16 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_iportp(_ARG1))
       sexp_raise("peek-char: not an input-port", sexp_list1(ctx, _ARG1));
     sexp_context_top(ctx) = top;
+#if SEXP_USE_GREEN_THREADS
+    errno = 0;
+#endif
     i = sexp_read_char(ctx, _ARG1);
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if (sexp_port_stream(_ARG1) && ferror(sexp_port_stream(_ARG1))
+      if (sexp_port_stream(_ARG1) /* && ferror(sexp_port_stream(_ARG1)) */
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-        clearerr(sexp_port_stream(_ARG1));
+        if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
         sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
         fuel = 0;
         ip--;      /* try again */
