@@ -64,8 +64,9 @@ typedef unsigned long size_t;
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <math.h>
 #if SEXP_USE_FLONUMS
 #include <float.h>
@@ -132,6 +133,7 @@ enum sexp_types {
 #endif
   SEXP_IPORT,
   SEXP_OPORT,
+  SEXP_FILENO,
   SEXP_EXCEPTION,
   SEXP_PROCEDURE,
   SEXP_MACRO,
@@ -327,7 +329,12 @@ struct sexp_struct {
       size_t size;
       sexp name;
       sexp cookie;
+      sexp fd;
     } port;
+    struct {
+      char openp, socketp, no_closep;
+      sexp_sint_t fd;
+    } fileno;
     struct {
       sexp kind, message, irritants, procedure, source;
     } exception;
@@ -437,9 +444,10 @@ struct sexp_struct {
 #define SEXP_UNDEF  SEXP_MAKE_IMMEDIATE(5) /* internal use */
 #define SEXP_CLOSE  SEXP_MAKE_IMMEDIATE(6) /* internal use */
 #define SEXP_RAWDOT SEXP_MAKE_IMMEDIATE(7) /* internal use */
-#define SEXP_STRING_OPORT SEXP_MAKE_IMMEDIATE(8) /* internal use */
+#define SEXP_STRING_OPORT SEXP_MAKE_IMMEDIATE(8)  /* internal use */
+#define SEXP_TRAMPOLINE   SEXP_MAKE_IMMEDIATE(9)  /* internal use */
 #if SEXP_USE_OBJECT_BRACE_LITERALS
-#define SEXP_CLOSE_BRACE SEXP_MAKE_IMMEDIATE(9) /* internal use */
+#define SEXP_CLOSE_BRACE  SEXP_MAKE_IMMEDIATE(10) /* internal use */
 #endif
 
 #if SEXP_USE_LIMITED_MALLOC
@@ -617,6 +625,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #else
 #define sexp_oportp(x)      (sexp_check_tag(x, SEXP_OPORT))
 #endif
+#define sexp_filenop(x)     (sexp_check_tag(x, SEXP_FILENO))
 #if SEXP_USE_BIGNUMS
 #define sexp_bignump(x)     (sexp_check_tag(x, SEXP_BIGNUM))
 #else
@@ -865,6 +874,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_size(p)       (sexp_pred_field(p, port, sexp_portp, size))
 #define sexp_port_offset(p)     (sexp_pred_field(p, port, sexp_portp, offset))
 #define sexp_port_flags(p)      (sexp_pred_field(p, port, sexp_portp, flags))
+#define sexp_port_fd(p)         (sexp_pred_field(p, port, sexp_portp, fd))
+
+#define sexp_fileno_fd(f)        (sexp_pred_field(f, fileno, sexp_filenop, fd))
+#define sexp_fileno_openp(f)     (sexp_pred_field(f, fileno, sexp_filenop, openp))
+#define sexp_fileno_socketp(f)   (sexp_pred_field(f, fileno, sexp_filenop, socketp))
+#define sexp_fileno_no_closep(f) (sexp_pred_field(f, fileno, sexp_filenop, no_closep))
 
 #define sexp_ratio_numerator(q)   (sexp_pred_field(q, ratio, sexp_ratiop, numerator))
 #define sexp_ratio_denominator(q) (sexp_pred_field(q, ratio, sexp_ratiop, denominator))
@@ -877,6 +892,10 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_exception_irritants(x) (sexp_field(x, exception, SEXP_EXCEPTION, irritants))
 #define sexp_exception_procedure(x) (sexp_field(x, exception, SEXP_EXCEPTION, procedure))
 #define sexp_exception_source(x)    (sexp_field(x, exception, SEXP_EXCEPTION, source))
+
+#define sexp_trampolinep(x) (sexp_exceptionp(x) && sexp_exception_kind(x) == SEXP_TRAMPOLINE)
+#define sexp_trampoline_procedure(x) sexp_exception_procedure(x)
+#define sexp_trampoline_args(x) sexp_exception_irritants(x)
 
 #define sexp_cpointer_freep(x)      (sexp_freep(x))
 #define sexp_cpointer_length(x)     (sexp_cpointer_field(x, length))
@@ -1194,7 +1213,6 @@ enum sexp_context_globals {
 #define sexp_push_char(x, c, p) (ungetc(c, sexp_port_stream(p)))
 #define sexp_write_char(x, c, p) (putc(c, sexp_port_stream(p)))
 #define sexp_write_string(x, s, p) (fputs(s, sexp_port_stream(p)))
-#define sexp_printf(x, p, ...) (fprintf(sexp_port_stream(p), __VA_ARGS__))
 #define sexp_flush(x, p) (fflush(sexp_port_stream(p)))
 
 #else
@@ -1215,7 +1233,7 @@ SEXP_API int sexp_buffered_flush (sexp ctx, sexp p);
 
 #define sexp_newline(ctx, p) sexp_write_char((ctx), '\n', (p))
 #define sexp_at_eofp(p)      (feof(sexp_port_stream(p)))
-#define sexp_port_fileno(p)  (fileno(sexp_port_stream(p)))
+#define sexp_port_fileno(p)  (sexp_port_stream(p) ? fileno(sexp_port_stream(p)) : sexp_filenop(sexp_port_fd(p)) ? sexp_fileno_fd(sexp_port_fd(p)) : -1)
 
 #if SEXP_USE_TRACK_ALLOC_SOURCE
 #define sexp_current_source_param , const char* source
@@ -1266,6 +1284,7 @@ SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len)
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
 SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
+SEXP_API sexp sexp_make_fileno (sexp ctx, int fd, int socketp);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_make_non_null_input_port (sexp ctx, FILE* in, sexp name);
@@ -1293,6 +1312,7 @@ SEXP_API sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp 
 SEXP_API sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_apply (sexp context, sexp proc, sexp args);
 SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
+SEXP_API sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API void sexp_init(void);
 

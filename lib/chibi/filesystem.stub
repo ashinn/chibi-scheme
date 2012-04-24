@@ -68,17 +68,17 @@
 ;;> Creates a new input-port from the file descriptor @var{int}.
 
 (define-c input-port (open-input-file-descriptor "fdopen")
-  (int (value "r" string)))
+  (fileno (value "r" string)))
 
 ;;> Creates a new output-port from the file descriptor @var{int}.
 
 (define-c output-port (open-output-file-descriptor "fdopen")
-  (int (value "w" string)))
+  (fileno (value "w" string)))
 
-;;> Creates a new bidirectional port from the file descriptor @var{int}.
+;; Creates a new bidirectional port from the file descriptor @var{int}.
 
-(define-c input-output-port (open-input-output-file-descriptor "fdopen")
-  (int (value "r+" string)))
+;; (define-c input-output-port (open-input-output-file-descriptor "fdopen")
+;;   (fileno (value "r+" string)))
 
 ;;> Unlinks the file named @var{string} from the filesystem.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
@@ -122,27 +122,27 @@
 ;;> Duplicates the given file descriptor, returning he new value,
 ;; or -1 on failure.
 
-(define-c int (duplicate-file-descriptor "dup") (int))
+(define-c fileno (duplicate-file-descriptor "dup") (fileno))
 
 ;;> Copies the first file descriptor to the second, closing
 ;;> it if needed.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
 
-(define-c errno (duplicate-file-descriptor-to "dup2") (int int))
+(define-c errno (duplicate-file-descriptor-to "dup2") (fileno fileno))
 
 ;;> Closes the given file descriptor.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
 
-(define-c errno (close-file-descriptor "close") (int))
+(define-c errno (close-file-descriptor "close") (fileno))
 
 ;;> Opens the given file and returns a file descriptor.
 
-(define-c int open (string int (default #o644 int)))
+(define-c fileno open (string int (default #o644 int)))
 
 ;;> Returns a list of 2 new file descriptors, the input and
 ;;> output end of a new pipe, respectively.
 
-(define-c errno (open-pipe "pipe") ((result (array int 2))))
+(define-c errno (open-pipe "pipe") ((result (array fileno 2))))
 
 ;;> Creates a new named pipe in the given path.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
@@ -150,17 +150,17 @@
 (define-c errno (make-fifo "mkfifo") (string (default #o644 int)))
 
 (define-c int (get-file-descriptor-flags "fcntl")
-  (int (value F_GETFD int)))
+  (fileno (value F_GETFD int)))
 (define-c errno (set-file-descriptor-flags! "fcntl")
-  (int (value F_SETFD int) long))
+  (fileno (value F_SETFD int) long))
 
 ;;> Get and set the flags for the given file descriptor.
 ;;/
 
 (define-c int (get-file-descriptor-status "fcntl")
-  (int (value F_GETFL int)))
+  (fileno (value F_GETFL int)))
 (define-c errno (set-file-descriptor-status! "fcntl")
-  (int (value F_SETFL int) long))
+  (fileno (value F_SETFL int) long))
 
 ;;> Get and set the status for the given file descriptor.
 ;;/
@@ -187,4 +187,4 @@
 ;;> Returns @scheme{#t} if the given port of file descriptor
 ;;> if backed by a TTY object, and @scheme{#f} otherwise.
 
-(define-c boolean (is-a-tty? "isatty") (port-or-fd))
+(define-c boolean (is-a-tty? "isatty") (port-or-fileno))
