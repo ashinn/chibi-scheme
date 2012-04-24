@@ -18,7 +18,7 @@
   (unsigned-short ws_row winsize-row)
   (unsigned-short ws_col winsize-col))
 
-(define-c errno ioctl (port-or-fd unsigned-long (result winsize)))
+(define-c errno ioctl (port-or-fileno unsigned-long (result winsize)))
 
 (define-c-const int TIOCGWINSZ)
 
@@ -101,6 +101,6 @@
 ;; (define-c-const unsigned-long VSTATUS)
 
 (define-c errno (get-terminal-attributes "tcgetattr")
-  (port-or-fd (result termios)))
+  (port-or-fileno (result termios)))
 (define-c errno (set-terminal-attributes! "tcsetattr")
-  (port-or-fd int termios))
+  (port-or-fileno int termios))

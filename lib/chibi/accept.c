@@ -19,7 +19,7 @@ sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_
     }
   }
 #endif
-  return sexp_make_integer(ctx, res);
+  return sexp_make_fileno(ctx, res, 1);
 }
 
 /* If we're listening on a socket from Scheme, we most likely want it */
