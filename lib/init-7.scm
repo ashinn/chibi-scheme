@@ -1070,8 +1070,15 @@
   (define magnitude abs)
   (define (angle z) (if (< z 0) 3.141592653589793 0))))
 
-(define (atan x . o)
-  (if (null? o) (atan1 x) (atan1 (/ x (exact->inexact (car o))))))
+(define (atan y . o)
+  (if (null? o)
+      (atan1 y)
+      (let ((x (exact->inexact (car o))))
+        (if (negative? x)
+            (if (negative? y)
+                (- (atan1 (/ y x)) 3.141592653589793)
+                (- 3.141592653589793 (atan1 (/ y (- x)))))
+            (atan1 (/ y x))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; string cursors
