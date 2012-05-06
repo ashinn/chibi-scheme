@@ -576,6 +576,7 @@
                                     (print-exception exn out)
                                     (buffer-draw buf out)))
                          (x ch buf out return))
+                       (flush-output out)
                        (buffer-refresh buf out)
                        (if done?
                            (and (not (eq? done? 'eof)) (buffer->string buf))
