@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <chibi/eval.h>
 
-#define SEXP_PORT_BUFFER_SIZE 1024
 #define SEXP_LAST_CONTEXT_CHECK_LIMIT 256
 
 #define sexp_cookie_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
@@ -62,7 +61,8 @@ static ssize_t sexp_cookie_reader (void *cookie, char *buffer, size_t size)
   sexp_gc_preserve2(ctx, ctx2, args);
   if (size > sexp_string_length(sexp_cookie_buffer(vec)))
     sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID));
-  args = sexp_list2(ctx, sexp_cookie_buffer(vec), sexp_make_fixnum(size));
+  args = sexp_list2(ctx, SEXP_ZERO, sexp_make_fixnum(size));
+  args = sexp_cons(ctx, sexp_cookie_buffer(vec), args);
   res = sexp_apply(ctx, sexp_cookie_read(vec), args);
   sexp_gc_release2(ctx);
   if (sexp_fixnump(res)) {
@@ -88,7 +88,8 @@ static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size
   if (size > sexp_string_length(sexp_cookie_buffer(vec)))
     sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID));
   memcpy(sexp_string_data(sexp_cookie_buffer(vec)), buffer, size);
-  args = sexp_list2(ctx, sexp_cookie_buffer(vec), sexp_make_fixnum(size));
+  args = sexp_list2(ctx, SEXP_ZERO, sexp_make_fixnum(size));
+  args = sexp_cons(ctx, sexp_cookie_buffer(vec), args);
   res = sexp_apply(ctx, sexp_cookie_write(vec), args);
   sexp_gc_release2(ctx);
   return (sexp_fixnump(res) ? sexp_unbox_fixnum(res) : -1);
@@ -189,21 +190,47 @@ static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
 static sexp sexp_make_custom_port (sexp ctx, sexp self,
                                    char *mode, sexp read, sexp write,
                                    sexp seek, sexp close) {
-  return sexp_user_exception(ctx, self, "custom ports not supported in this configuration", SEXP_NULL);
+  sexp vec;
+  sexp_gc_var2(res, str);
+  sexp_gc_preserve2(ctx, res, str);
+  str = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
+  if (sexp_exceptionp(str)) return str;
+  res = sexp_make_input_string_port(ctx, str);
+  if (sexp_exceptionp(res)) return res;
+  if (mode && mode[0] == 'w') {
+    sexp_pointer_tag(res) = SEXP_OPORT;
+    sexp_port_cookie(res) = str;
+  } else {
+    sexp_port_offset(res) = 0;
+    sexp_port_size(res) = 0;
+  }
+  vec = sexp_make_vector(ctx, SEXP_SIX, SEXP_VOID);
+  if (sexp_exceptionp(vec)) return vec;
+  sexp_vector_set(vec, SEXP_ZERO, SEXP_FALSE);
+  sexp_vector_set(vec, SEXP_ONE, sexp_port_cookie(res));
+  sexp_vector_set(vec, SEXP_TWO, read);
+  sexp_vector_set(vec, SEXP_THREE, write);
+  sexp_vector_set(vec, SEXP_FOUR, seek);
+  sexp_vector_set(vec, SEXP_FIVE, close);
+  sexp_port_cookie(res) = vec;
+  sexp_gc_release2(ctx);
+  return res;
 }
 
 #endif
 
-static sexp sexp_make_custom_input_port (sexp ctx, sexp self,
-                                         sexp read, sexp seek, sexp close) {
+sexp sexp_make_custom_input_port (sexp ctx, sexp self,
+                                  sexp read, sexp seek, sexp close) {
   return sexp_make_custom_port(ctx, self, "r", read, SEXP_FALSE, seek, close);
 }
 
-static sexp sexp_make_custom_output_port (sexp ctx, sexp self,
-                                          sexp write, sexp seek, sexp close) {
+sexp sexp_make_custom_output_port (sexp ctx, sexp self,
+                                   sexp write, sexp seek, sexp close) {
   sexp res = sexp_make_custom_port(ctx, self, "w", SEXP_FALSE, write, seek, close);
+#if SEXP_USE_STRING_STREAMS
   if (!sexp_exceptionp(res))
     sexp_pointer_tag(res) = SEXP_OPORT;
+#endif
   return res;
 }
 

@@ -179,10 +179,10 @@
 /*   Making them immutable allows for packed UTF-8 strings. */
 /* #define SEXP_USE_MUTABLE_STRINGS 0 */
 
-/* uncomment this to disable string ports */
-/*   If disabled some basic functionality such as number->string */
-/*   will not be available by default. */
-/* #define SEXP_USE_STRING_STREAMS 0 */
+/* uncomment this to base string ports on C streams */
+/*   This historic option enables string and custom ports backed */
+/*   by FILE* objects using memstreams and funopen/fopencookie. */
+/* #define SEXP_USE_STRING_STREAMS 1 */
 
 /* uncomment this to disable automatic closing of ports */
 /*   If enabled, the underlying FILE* for file ports will be */
@@ -525,11 +525,7 @@
 #endif
 
 #ifndef SEXP_USE_STRING_STREAMS
-#ifdef _WIN32
 #define SEXP_USE_STRING_STREAMS 0
-#else
-#define SEXP_USE_STRING_STREAMS ! SEXP_USE_NO_FEATURES
-#endif
 #endif
 
 #ifndef SEXP_USE_AUTOCLOSE_PORTS
@@ -542,6 +538,10 @@
 
 #ifndef SEXP_USE_BIDIRECTIONAL_PORTS
 #define SEXP_USE_BIDIRECTIONAL_PORTS ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_PORT_BUFFER_SIZE
+#define SEXP_PORT_BUFFER_SIZE 4096
 #endif
 
 #ifndef SEXP_USE_2010_EPOCH

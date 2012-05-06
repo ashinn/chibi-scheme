@@ -9,7 +9,6 @@
 
   (define-c size_t (%read-string! "fread")
     (string (value 1 size_t) size_t (default (current-input-port) input-port)))
-
   ))
 
 (define-c-const int (seek/set "SEEK_SET"))

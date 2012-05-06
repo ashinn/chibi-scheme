@@ -1058,7 +1058,17 @@ sexp sexp_open_binary_output_file (sexp ctx, sexp self, sexp_sint_t n, sexp path
 }
 
 sexp sexp_close_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+  sexp res = SEXP_VOID;
   sexp_assert_type(ctx, sexp_portp, SEXP_OPORT, port);
+  /* we can't run arbitrary scheme code in the finalizer, so we need */
+  /* to flush and run the closer here */
+  if (sexp_port_customp(port)) {
+    if (sexp_oportp(port)) res = sexp_flush_output(ctx, port);
+    if (sexp_exceptionp(res)) return res;
+    if (sexp_applicablep(sexp_port_closer(port)))
+      res = sexp_apply1(ctx, sexp_port_closer(port), port);
+    if (sexp_exceptionp(res)) return res;
+  }
   return sexp_finalize_port(ctx, self, n, port);
 }
 
