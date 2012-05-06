@@ -32,7 +32,7 @@
    port-line port-line-set!
    environment-parent
    type-name type-cpl type-parent type-slots type-num-slots type-printer
-   object-size integer->immediate gc
+   object-size integer->immediate gc atomically
    string-contains integer->error-string
    flatten-dot update-free-vars!)
   (import (scheme))
