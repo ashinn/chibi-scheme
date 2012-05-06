@@ -397,7 +397,7 @@
     (vector-set! v  10 command/enter)
     (vector-set! v  11 command/forward-delete-line)
     (vector-set! v  12 command/refresh)
-    (vector-set! v  13 command/enter)
+    (vector-set! v  13 command/skip)
     (vector-set! v  21 command/backward-delete-line)
     (vector-set! v  27 (make-standard-escape-keymap))
     (vector-set! v 127 command/backward-delete-char)
@@ -440,6 +440,9 @@
 
 (define (command/beep ch buf out return)
   (write-char (integer->char 7) out))
+
+(define (command/skip ch buf out return)
+  #f)
 
 (define (command/refresh ch buf out return)
   (buffer-draw buf out))
