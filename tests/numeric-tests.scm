@@ -119,6 +119,30 @@
         (-18446744078004518913 -18446744069414584321 79228162514264337597838917632 4294967296 -1))
     (sign-combinations (+ 1 (expt 2 64)) (expt 2 32)))
 
+(test #f (< +nan.0 +nan.0))
+(test #f (<= +nan.0 +nan.0))
+(test #f (= +nan.0 +nan.0))
+(test #f (>= +nan.0 +nan.0))
+(test #f (> +nan.0 +nan.0))
+
+(test #f (< +inf.0 +inf.0))
+(test #t (<= +inf.0 +inf.0))
+(test #t (= +inf.0 +inf.0))
+(test #t (>= +inf.0 +inf.0))
+(test #f (> +inf.0 +inf.0))
+
+(test #f (< -inf.0 -inf.0))
+(test #t (<= -inf.0 -inf.0))
+(test #t (= -inf.0 -inf.0))
+(test #t (>= -inf.0 -inf.0))
+(test #f (> -inf.0 -inf.0))
+
+(test #t (< -inf.0 +inf.0))
+(test #t (<= -inf.0 +inf.0))
+(test #f (= -inf.0 +inf.0))
+(test #f (>= -inf.0 +inf.0))
+(test #f (> -inf.0 +inf.0))
+
 (cond-expand
  (ratios
   (test #t (< 1/2 1.0))

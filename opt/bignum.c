@@ -1479,7 +1479,7 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
 sexp sexp_compare (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
   sexp r=SEXP_VOID;
-  double f;
+  double f, g;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
   if (at > bt) {
@@ -1502,27 +1502,31 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(sexp_unbox_fixnum(a) - sexp_unbox_fixnum(b));
       break;
     case SEXP_NUM_FIX_FLO:
-      f = sexp_fixnum_to_double(a) - sexp_flonum_value(b);
-      r = sexp_make_fixnum(f > 0.0 ? 1 : f == 0.0 ? 0 : -1);
+      f = sexp_fixnum_to_double(a);
+      g = sexp_flonum_value(b);
+      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FIX_BIG:
       r = sexp_make_fixnum(sexp_bignum_sign(b) < 0 ? 1 : -1);
       break;
     case SEXP_NUM_FLO_FLO:
-      f = sexp_flonum_value(a) - sexp_flonum_value(b);
-      r = sexp_make_fixnum(f > 0.0 ? 1 : f == 0.0 ? 0 : -1);
+      f = sexp_flonum_value(a);
+      g = sexp_flonum_value(b);
+      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FLO_BIG:
-      f = sexp_flonum_value(a) - sexp_bignum_to_double(b);
-      r = sexp_make_fixnum(f > 0.0 ? 1 : f == 0.0 ? 0 : -1);
+      f = sexp_flonum_value(a);
+      g = sexp_bignum_to_double(b);
+      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_BIG_BIG:
       r = sexp_make_fixnum(sexp_bignum_compare(a, b));
       break;
 #if SEXP_USE_RATIOS
     case SEXP_NUM_FLO_RAT:
-      f = sexp_flonum_value(a) - sexp_ratio_to_double(b);
-      r = sexp_make_fixnum(f > 0.0 ? 1 : f == 0.0 ? 0 : -1);
+      f = sexp_flonum_value(a);
+      g = sexp_ratio_to_double(b);
+      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FIX_RAT:
     case SEXP_NUM_BIG_RAT:
