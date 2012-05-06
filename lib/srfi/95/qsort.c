@@ -122,16 +122,24 @@ static sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, 
 
 /* fast path when using general object-cmp comparator with no key */
 static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
-  sexp_sint_t mid, i, j;
+  sexp_sint_t mid, i, j, diff;
   sexp tmp, tmp2;
  loop:
   if (lo < hi) {
     mid = lo + (hi-lo)/2;
     swap(tmp, vec[mid], vec[hi]);
-    for (i=j=lo; i < hi; i++)
-      if (sexp_object_compare(ctx, vec[i], tmp) < 0)
-        swap(tmp2, vec[i], vec[j]), j++;
+    /* partition */
+    for (i=j=lo; i < hi; i++) {
+      diff = sexp_object_compare(ctx, vec[i], tmp);
+      if (diff < 0) {
+        swap(tmp2, vec[i], vec[j]);
+        j++;
+      } else if (diff == 0) {
+        j++;
+      }
+    }
     swap(tmp, vec[j], vec[hi]);
+    /* recurse */
     sexp_qsort(ctx, vec, lo, j-1);
     if (j < hi-1) {
       lo = j;
@@ -171,10 +179,16 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
       sexp_car(args2) = a;
       sexp_car(args1) = b;
       res = sexp_apply(ctx, less, args2);
-      if (sexp_exceptionp(res))
+      if (sexp_exceptionp(res)) {
         goto done;
-      else if (sexp_truep(res))
+      } else if (sexp_truep(res)) {
         swap(res, vec[i], vec[j]), j++;
+      } else {
+        sexp_car(args2) = b;
+        sexp_car(args1) = a;
+        res = sexp_apply(ctx, less, args2);
+        if (sexp_not(res)) j++;  /* equal */
+      }
     }
     swap(tmp, vec[j], vec[hi]);
     res = sexp_qsort_less(ctx, vec, lo, j-1, less, key);
