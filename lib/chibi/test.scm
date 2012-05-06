@@ -451,7 +451,7 @@
   (define (plural word n)
     (if (= n 1) word (string-append word "s")))
   (define (percent n d)
-    (string-append " (" (number->string (/ (round (* 1000 (/ n d))) 10)) "%)"))
+    (string-append " (" (number->string (/ (round (* 1000.0 (/ n d))) 10)) "%)"))
   (let* ((end-time (get-time-of-day))
          (start-time (test-group-ref group 'start-time))
          (duration (timeval-difference (car end-time) (car start-time)))
