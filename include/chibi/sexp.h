@@ -324,7 +324,8 @@ struct sexp_struct {
     struct {
       FILE *stream;
       char *buf;
-      char openp, bidirp, binaryp, no_closep, sourcep, blockedp, fold_casep;
+      char openp, bidirp, binaryp, shutdownp, no_closep, sourcep,
+        blockedp, fold_casep;
       sexp_uint_t offset, line, flags;
       size_t size;
       sexp name;
@@ -332,7 +333,7 @@ struct sexp_struct {
       sexp fd;
     } port;
     struct {
-      char openp, socketp, no_closep;
+      char openp, no_closep;
       sexp_sint_t fd;
     } fileno;
     struct {
@@ -865,6 +866,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_openp(p)      (sexp_pred_field(p, port, sexp_portp, openp))
 #define sexp_port_bidirp(p)     (sexp_pred_field(p, port, sexp_portp, bidirp))
 #define sexp_port_binaryp(p)    (sexp_pred_field(p, port, sexp_portp, binaryp))
+#define sexp_port_shutdownp(p)  (sexp_pred_field(p, port, sexp_portp, shutdownp))
 #define sexp_port_no_closep(p)  (sexp_pred_field(p, port, sexp_portp, no_closep))
 #define sexp_port_sourcep(p)    (sexp_pred_field(p, port, sexp_portp, sourcep))
 #define sexp_port_blockedp(p)   (sexp_pred_field(p, port, sexp_portp, blockedp))
@@ -1213,6 +1215,7 @@ enum sexp_context_globals {
 #define sexp_push_char(x, c, p) (ungetc(c, sexp_port_stream(p)))
 #define sexp_write_char(x, c, p) (putc(c, sexp_port_stream(p)))
 #define sexp_write_string(x, s, p) (fputs(s, sexp_port_stream(p)))
+#define sexp_write_string_n(x, s, n, p) (fwrite(s, 1, n, sexp_port_stream(p)))
 #define sexp_flush(x, p) (fflush(sexp_port_stream(p)))
 
 #else
@@ -1221,6 +1224,7 @@ enum sexp_context_globals {
 #define sexp_push_char(x, c, p) ((c!=EOF) && (sexp_port_buf(p) ? (sexp_port_buf(p)[--sexp_port_offset(p)] = ((char)(c))) : ungetc(c, sexp_port_stream(p))))
 #define sexp_write_char(x, c, p) (sexp_port_buf(p) ? ((sexp_port_offset(p) < sexp_port_size(p)) ? ((((sexp_port_buf(p))[sexp_port_offset(p)++]) = (char)(c)), 0) : sexp_buffered_write_char(x, c, p)) : putc(c, sexp_port_stream(p)))
 #define sexp_write_string(x, s, p) (sexp_port_buf(p) ? sexp_buffered_write_string(x, s, p) : fputs(s, sexp_port_stream(p)))
+#define sexp_write_string_n(x, s, n, p) (sexp_port_buf(p) ? sexp_buffered_write_string_n(x, s, n, p) : fwrite(s, 1, n, sexp_port_stream(p)))
 #define sexp_flush(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p) : fflush(sexp_port_stream(p)))
 
 SEXP_API int sexp_buffered_read_char (sexp ctx, sexp p);
@@ -1284,9 +1288,11 @@ SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len)
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
 SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
-SEXP_API sexp sexp_make_fileno (sexp ctx, int fd, int socketp);
+SEXP_API sexp sexp_make_fileno (sexp ctx, int fd, int no_closep);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
+SEXP_API sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp socketp);
+SEXP_API sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp socketp);
 SEXP_API sexp sexp_make_non_null_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_non_null_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_make_non_null_input_output_port (sexp ctx, FILE* io, sexp name);
@@ -1386,7 +1392,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_write(ctx, obj, out) sexp_write_op(ctx, NULL, 2, obj, out)
 #define sexp_display(ctx, obj, out) sexp_display_op(ctx, NULL, 2, obj, out)
 #define sexp_print_exception(ctx, e, out) sexp_print_exception_op(ctx, NULL, 2, e, out)
-#define sexp_flush_output(ctx, obj, out) sexp_flush_output_op(ctx, NULL, 1, out)
+#define sexp_flush_output(ctx, out) sexp_flush_output_op(ctx, NULL, 1, out)
 #define sexp_equalp(ctx, a, b) sexp_equalp_op(ctx, NULL, 2, a, b)
 #define sexp_listp(ctx, x) sexp_listp_op(ctx, NULL, 1, x)
 #define sexp_length(ctx, x) sexp_length_op(ctx, NULL, 1, x)

@@ -65,15 +65,15 @@
 (define-c errno fstat (int (result stat)))
 (define-c errno (file-link-status "lstat") (string (result stat)))
 
-;;> Creates a new input-port from the file descriptor @var{int}.
+;; Creates a new input-port from the file descriptor @var{int}.
 
-(define-c input-port (open-input-file-descriptor "fdopen")
-  (fileno (value "r" string)))
+;; (define-c input-port (open-input-file-descriptor "fdopen")
+;;   (fileno (value "r" string)))
 
-;;> Creates a new output-port from the file descriptor @var{int}.
+;; Creates a new output-port from the file descriptor @var{int}.
 
-(define-c output-port (open-output-file-descriptor "fdopen")
-  (fileno (value "w" string)))
+;; (define-c output-port (open-output-file-descriptor "fdopen")
+;;   (fileno (value "w" string)))
 
 ;; Creates a new bidirectional port from the file descriptor @var{int}.
 

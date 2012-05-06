@@ -1780,7 +1780,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     i = sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if (sexp_port_stream(_ARG2) /* && ferror(sexp_port_stream(_ARG2)) */
+      if ((sexp_port_stream(_ARG2) ? ferror(sexp_port_stream(_ARG2)) : 1)
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG2));
@@ -1817,48 +1817,30 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_oportp(_ARG3))
       sexp_raise("write-string: not an output-port", sexp_list1(ctx, _ARG3));
     sexp_context_top(ctx) = top;
-    if (sexp_port_stream(_ARG3) && sexp_port_fileno(_ARG3) >= 0) {
-      /* first flush anything pending */
-      i = fflush(sexp_port_stream(_ARG3));
 #if SEXP_USE_GREEN_THREADS
-      if (i) {
-        i = 0;
-        if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG3));
-        if (errno == EAGAIN)
-          goto write_string_yield;
-      }
-      errno = 0;
-      /* fwrite doesn't give reliable counts, use write(2) directly */
-      i = write(sexp_port_fileno(_ARG3), sexp_bytes_data(tmp1), sexp_unbox_fixnum(_ARG2));
-#else
-      i = fwrite(sexp_bytes_data(tmp1), 1, sexp_unbox_fixnum(_ARG2), sexp_port_stream(_ARG3));
+    errno = 0;
 #endif
+    i = sexp_write_string_n(ctx, sexp_bytes_data(tmp1), sexp_unbox_fixnum(_ARG2), _ARG3);
 #if SEXP_USE_GREEN_THREADS
-      if (i < sexp_unbox_fixnum(_ARG2)) {
-        /* modify stack in-place so we continue where we left off next time */
-        if (i > 0) {
-          if (sexp_stringp(_ARG1))
-            _ARG1 = sexp_substring(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
-          else
-            _ARG1 = sexp_subbytes(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
-          _ARG2 = sexp_make_fixnum(sexp_unbox_fixnum(_ARG2) - i);
-        }
-        /* yield if threads are enabled (otherwise busy loop) */
-      write_string_yield:
-        if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
-          fuel = 0;
-        }
-        ip--;      /* try again */
-        goto loop;
+    if (i < sexp_unbox_fixnum(_ARG2)) {
+      if (sexp_port_stream(_ARG3)) clearerr(sexp_port_stream(_ARG3));
+      /* modify stack in-place so we continue where we left off next time */
+      if (i > 0) {
+        if (sexp_stringp(_ARG1))
+          _ARG1 = sexp_substring(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
+        else
+          _ARG1 = sexp_subbytes(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
+        _ARG2 = sexp_make_fixnum(sexp_unbox_fixnum(_ARG2) - i);
       }
-#endif
-    } else {  /* not a stream-backed string, won't block */
-      if (sexp_bytes_length(tmp1) != sexp_unbox_fixnum(_ARG2))
-        tmp1 = sexp_subbytes(ctx, tmp1, SEXP_ZERO, _ARG2);
-      sexp_write_string(ctx, sexp_bytes_data(tmp1), _ARG3);
-      i = sexp_unbox_fixnum(_ARG2);
+      /* yield if threads are enabled (otherwise busy loop) */
+      if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
+        fuel = 0;
+      }
+      ip--;      /* try again */
+      goto loop;
     }
+#endif
     tmp1 = sexp_make_fixnum(i);     /* return the number of bytes written */
     top-=2;
     _ARG1 = tmp1;
@@ -1878,7 +1860,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if (sexp_port_stream(_ARG1) /* && ferror(sexp_port_stream(_ARG1)) */
+      if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
@@ -1903,7 +1885,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     i = sexp_read_char(ctx, _ARG1);
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
-      if (sexp_port_stream(_ARG1) /* && ferror(sexp_port_stream(_ARG1)) */
+      if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
           && (errno == EAGAIN)
           && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));

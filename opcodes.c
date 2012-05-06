@@ -90,6 +90,7 @@ _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJ
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "string?", _I(SEXP_STRING), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "vector?", _I(SEXP_VECTOR), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "bytevector?", _I(SEXP_BYTES), 0),
+_OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "fileno?", _I(SEXP_FILENO), 0),
 #if SEXP_USE_IMMEDIATE_FLONUMS
 _FN1(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "flonum?", 0, sexp_flonump_op),
 #else
@@ -170,6 +171,8 @@ _FN1(_I(SEXP_OBJECT), _I(SEXP_OBJECT), "strip-syntactic-closures", 0, sexp_strip
 _FN0(_I(SEXP_OPORT), "open-output-string", 0, sexp_make_output_string_port_op),
 _FN1(_I(SEXP_IPORT), _I(SEXP_STRING), "open-input-string", 0, sexp_make_input_string_port_op),
 _FN1(_I(SEXP_STRING), _I(SEXP_OPORT), "get-output-string", 0, sexp_get_output_string_op),
+_FN2OPT(_I(SEXP_IPORT), _I(SEXP_FIXNUM), _I(SEXP_BOOLEAN), "open-input-file-descriptor", SEXP_FALSE, sexp_open_input_file_descriptor),
+_FN2OPT(_I(SEXP_OPORT), _I(SEXP_FIXNUM), _I(SEXP_BOOLEAN), "open-output-file-descriptor", SEXP_FALSE, sexp_open_output_file_descriptor),
 _FN2OPT(_I(SEXP_OBJECT), _I(SEXP_PROCEDURE), _I(SEXP_FIXNUM), "register-optimization!", _I(600), sexp_register_optimization),
 #if SEXP_USE_MATH
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "exp", 0, sexp_exp),

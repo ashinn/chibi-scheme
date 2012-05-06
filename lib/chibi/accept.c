@@ -19,20 +19,18 @@ sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_
     }
   }
 #endif
-  return sexp_make_fileno(ctx, res, 1);
+  return sexp_make_fileno(ctx, res, 0);
 }
 
 /* If we're listening on a socket from Scheme, we most likely want it */
 /* to be non-blocking. */
 
-sexp sexp_listen (sexp ctx, sexp self, sexp arg0, sexp arg1) {
+sexp sexp_listen (sexp ctx, sexp self, sexp fileno, sexp backlog) {
   int fd, res;
-  if (! sexp_exact_integerp(arg0))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, arg0);
-  if (! sexp_exact_integerp(arg1))
-    return sexp_type_exception(ctx, self, SEXP_FIXNUM, arg1);
-  fd = sexp_sint_value(arg0);
-  res = listen(fd, sexp_sint_value(arg1));
+  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, backlog);
+  fd = sexp_fileno_fd(fileno);
+  res = listen(fd, sexp_unbox_fixnum(backlog));
 #if SEXP_USE_GREEN_THREADS
   if (res >= 0)
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
