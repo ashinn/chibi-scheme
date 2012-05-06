@@ -23,40 +23,34 @@
   (call-with-input-string "abc\ndef"
     (lambda (in) (let ((line (read-line in))) (list line (read-line in))))))
 
-;; Custom ports are only supported with string streams (i.e. either
-;; GNU fopencookie or BSD funopen).
+(test "null-output-port" #t
+  (let ((out (make-null-output-port)))
+    (write 1 out)
+    (close-output-port out)
+    #t))
 
-(cond-expand
- (string-streams
+(test "null-input-port" #t
+  (let ((in (make-null-input-port)))
+    (let ((res (eof-object? (read-char in))))
+      (close-input-port in)
+      res)))
 
-  (test "null-output-port" #t
-    (let ((out (make-null-output-port)))
-      (write 1 out)
-      (close-output-port out)
-      #t))
+(define (string-upcase str)
+  (list->string (map char-upcase (string->list str))))
 
-  (test "null-input-port" #t
-    (let ((in (make-concatenated-port)))
-      (let ((res (eof-object? (read-char in))))
-        (close-input-port in)
-        res)))
+(test "upcase-input-port" "ABC"
+  (call-with-input-string "abc"
+    (lambda (in)
+      (let ((in (make-filtered-input-port string-upcase in)))
+        (let ((res (read-line in)))
+          (close-input-port in)
+          res)))))
 
-  (define (string-upcase str)
-    (list->string (map char-upcase (string->list str))))
-
-  (test "upcase-input-port" "ABC"
-    (call-with-input-string "abc"
-      (lambda (in)
-        (let ((in (make-filtered-input-port string-upcase in)))
-          (let ((res (read-line in)))
-            (close-input-port in)
-            res)))))
-
-  (test "upcase-output-port" "ABC"
-    (call-with-output-string
-      (lambda (out)
-        (let ((out (make-filtered-output-port string-upcase out)))
-          (display "abc" out)
-          (close-output-port out)))))))
+(test "upcase-output-port" "ABC"
+  (call-with-output-string
+    (lambda (out)
+      (let ((out (make-filtered-output-port string-upcase out)))
+        (display "abc" out)
+        (close-output-port out)))))
 
 (test-end)

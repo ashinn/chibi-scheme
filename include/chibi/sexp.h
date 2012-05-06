@@ -681,6 +681,15 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_stream_portp(x) (sexp_port_stream(x) != NULL)
 #endif
 
+#define sexp_port_customp(x) (sexp_vectorp(sexp_port_cookie(x)) && sexp_vector_length(sexp_port_cookie(x)) == 6)
+
+/* only valid on custom ports */
+#define sexp_port_buffer(x)  (sexp_vector_ref(sexp_port_cookie(x), SEXP_ONE))
+#define sexp_port_reader(x)  (sexp_vector_ref(sexp_port_cookie(x), SEXP_TWO))
+#define sexp_port_writer(x)  (sexp_vector_ref(sexp_port_cookie(x), SEXP_THREE))
+#define sexp_port_seeker(x)  (sexp_vector_ref(sexp_port_cookie(x), SEXP_FOUR))
+#define sexp_port_closer(x)  (sexp_vector_ref(sexp_port_cookie(x), SEXP_FIVE))
+
 /***************************** constructors ****************************/
 
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
