@@ -1073,11 +1073,15 @@ sexp sexp_close_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 }
 
 #if SEXP_USE_STATIC_LIBS
+#ifndef PLAN9
 #include "clibs.c"
-static sexp_library_entry_t *sexp_find_static_library(const char *file)
+#else
+struct sexp_library_entry_t sexp_static_libraries[];
+#endif
+static struct sexp_library_entry_t *sexp_find_static_library(const char *file)
 {
   size_t base_len;
-  sexp_library_entry_t *entry;
+  struct sexp_library_entry_t *entry;
 
   if (file[0] == '.' && file[1] == '/')
     file += 2;
@@ -1090,7 +1094,7 @@ static sexp_library_entry_t *sexp_find_static_library(const char *file)
   return NULL;
 }
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
-  sexp_library_entry_t *entry = sexp_find_static_library(sexp_string_data(file));
+  struct sexp_library_entry_t *entry = sexp_find_static_library(sexp_string_data(file));
   if (! entry)
     return sexp_compile_error(ctx, "couldn't find builtin library", file);
   return entry->init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);

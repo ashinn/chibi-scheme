@@ -1,12 +1,14 @@
-/*  env.c -- SRFI-98 environment interface                    */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt       */
+/* env.c -- SRFI-98 environment interface                    */
+/* Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/* BSD-style license: http://synthcode.com/license.txt       */
 
 #ifdef __APPLE__
 #include <crt_externs.h>
 #define environ (*_NSGetEnviron())
 #else
+#ifndef PLAN9
 extern char **environ;
+#endif
 #endif
 
 #include <chibi/eval.h>
@@ -25,6 +27,7 @@ sexp sexp_get_environment_variables (sexp ctx, sexp self, sexp_sint_t n) {
   sexp_gc_var3(res, name, val);
   sexp_gc_preserve3(ctx, res, name, val);
   res = SEXP_NULL;
+#ifndef PLAN9
   env = environ;
   for (i=0; env[i]; i++) {
     cname = env[i];
@@ -36,6 +39,7 @@ sexp sexp_get_environment_variables (sexp ctx, sexp self, sexp_sint_t n) {
       res = sexp_cons(ctx, val, res);
     }
   }
+#endif
   sexp_gc_release3(ctx);
   return res;
 }

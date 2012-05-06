@@ -2,8 +2,13 @@
 /* Copyright (c) 2011-2012 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
-#include <time.h>
 #include <chibi/eval.h>
+
+#ifndef PLAN9
+#include <time.h>
+#else
+typedef long time_t;
+#endif
 
 /* TODO: Check a leap second table file at appropriate intervals. */
 static time_t leap_seconds_since_epoch = 24;

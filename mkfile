@@ -4,13 +4,51 @@ BIN=/$objtype/bin
 TARG=chibi-scheme
 MODDIR=/sys/lib/chibi-scheme
 
-CPPFLAGS= -Iinclude -DPLAN9 -DSEXP_USE_STRING_STREAMS=0 -DSEXP_USE_GREEN_THREADS=0
-CFLAGS= -p $CPPFLAGS
+CHIBI=./$O.out
+GENSTATIC=./tools/chibi-genstatic
 
-OFILES=sexp.$O eval.$O main.$O
+CPPFLAGS= -Iinclude -DPLAN9 -DSEXP_USE_GREEN_THREADS=0
+CFLAGS= -p $CPPFLAGS
+CFLAGS_STATIC=$CFLAGS -DSEXP_USE_STATIC_LIBS
+
+OFILES=sexp.$O eval.$O main.$O $STATIC
 HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/features.h include/chibi/install.h
+CLEANFILES=tests/basic/*.out tests/basic/*.err
+
+EXCLUDE=srfi.18 srfi.27 chibi.filesystem chibi.io \
+	chibi.net chibi.process chibi.stty chibi.system \
+	chibi.time
+
+CHIBI_LIBS = lib/chibi/filesystem.c lib/chibi/process.c \
+	lib/chibi/time.c lib/chibi/system.c lib/chibi/stty.c \
+	lib/chibi/weak.c lib/chibi/heap-stats.c lib/chibi/disasm.c \
+	lib/chibi/net.c
+CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io.c
+CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest.c \
+	lib/chibi/optimize/profile.c
+COMPILED_LIBS = $CHIBI_COMPILED_LIBS $CHIBI_IO_COMPILED_LIBS \
+	$CHIBI_OPT_COMPILED_LIBS \
+	lib/srfi/33/bit.c lib/srfi/39/param.c \
+	lib/srfi/69/hash.c lib/srfi/95/qsort.c lib/srfi/98/env.c \
+	lib/scheme/time.c
 
 </sys/src/cmd/mkone
+
+clean:
+	rm -f $CLEANFILES
+
+clibs.$O: clibs.c
+
+$TARG: $O.out
+	rm $OFILES
+	mk 'CFLAGS=$CFLAGS_STATIC' clibs.$O $OFILES
+	mk 'CFLAGS=$CFLAGS_STATIC' 'STATIC=clibs.$O' default
+
+target: $O.out
+	mv $O.out $TARG
+
+%.c:   %.stub
+	$CHIBI ./tools/chibi-ffi $stem.stub
 
 include/chibi/install.h: mkfile
 	echo '#define sexp_default_module_path "'$MODDIR'"' > include/chibi/install.h
@@ -19,9 +57,20 @@ include/chibi/install.h: mkfile
 	echo '#define sexp_version "'`{cat VERSION}'"' >> include/chibi/install.h
 	echo '#define sexp_release_name "'`{cat RELEASE}'"' >> include/chibi/install.h
 
+dist-clean: clean
+	rm -f include/chibi/install.h clibs.c
+
 install:V: $BIN/$TARG
 	test -d $MODDIR || mkdir -p $MODDIR
 	{cd lib; tar c .} | {cd $MODDIR ; tar x }
+
+clibs.c:V: $GENSTATIC $CHIBI $COMPILED_LIBS
+	du -a lib | sed 's/^[0-9]*[ 	]*//' | grep '\.sld$' | \
+	$CHIBI $GENSTATIC \
+	-x srfi.27 -x srfi.18 -x chibi.filesystem -x chibi.io \
+	-x chibi.net -x chibi.process -x chibi.stty -x chibi.system \
+	-x chibi.time \
+	> ,clibs.c && mv ,clibs.c clibs.c
 
 test:V:
 	./$O.out -xscheme tests/r5rs-tests.scm

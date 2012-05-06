@@ -255,6 +255,11 @@ struct sexp_gc_var_t {
   struct sexp_gc_var_t *next;
 };
 
+struct sexp_library_entry_t {   /* for static builds */
+  const char *name;
+  sexp_init_proc init;
+};
+
 struct sexp_type_struct {
   sexp_tag_t tag;
   short field_base, field_eq_len_base, field_len_base, field_len_off;

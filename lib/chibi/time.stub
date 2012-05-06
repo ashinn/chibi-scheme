@@ -1,6 +1,9 @@
 
-(c-system-include "time.h")
-(c-system-include "sys/time.h")
+(cond-expand
+ (plan9)
+ (else
+  (c-system-include "time.h")
+  (c-system-include "sys/time.h")))
 
 (define-c-struct tm
   predicate: tm?
