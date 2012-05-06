@@ -1,9 +1,14 @@
 /*  bit.c -- bitwise operators                                */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
+
+#ifndef PLAN9
 #include <limits.h>
+#else
+#define CHAR_BIT 8
+#endif
 
 #if SEXP_USE_BIGNUMS
 #include <chibi/bignum.h>
