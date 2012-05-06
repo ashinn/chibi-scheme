@@ -363,10 +363,15 @@
 ;;> (e.g. running an infinite loop) can render the system unusable.
 ;;> Never expose to a sandbox.
 
-(define-syntax atomically
-  (syntax-rules ()
-    ((atomic . body)
-     (let* ((atomic? (%set-atomic! #t))
-            (res (begin . body)))
-       (%set-atomic! atomic?)
-       res))))
+(cond-expand
+ (threads
+  (define-syntax atomically
+    (syntax-rules ()
+      ((atomically . body)
+       (let* ((atomic? (%set-atomic! #t))
+              (res (begin . body)))
+         (%set-atomic! atomic?)
+         res)))))
+ (else
+  (define-syntax atomically
+    (syntax-rules () ((atomically . body) (begin . body))))))
