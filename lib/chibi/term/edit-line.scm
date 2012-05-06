@@ -1,6 +1,6 @@
 ;;;; edit-line.scm - pure scheme line editor
 ;;
-;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2011-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -213,7 +213,8 @@
     ;; move to correct row then col
     (if (< (buffer-row buf) (buffer-max-row buf))
         (terminal-up out (- (buffer-max-row buf) (buffer-row buf))))
-    (terminal-goto-col out (buffer-col buf))))
+    (terminal-goto-col out (buffer-col buf))
+    (flush-output out)))
 
 (define (buffer-refresh buf out)
   (cond ((buffer-refresh? buf)
@@ -258,6 +259,7 @@
                (not (string-index #\newline x))))
       ;; fast path - append to end of buffer w/o wrapping to next line
       (display x out)
+      (flush-output out)
       (buffer-col-set! buf (+ (buffer-col buf) len)))
      (else
       (buffer-refresh?-set! buf #t)))))
@@ -387,6 +389,7 @@
 (define (make-standard-keymap)
   (let* ((keymap (make-printable-keymap))
          (v (car keymap)))
+    (vector-set! v   0 command/enter)   ;; for telnet
     (vector-set! v   1 command/beggining-of-line)
     (vector-set! v   2 command/backward-char)
     (vector-set! v   3 command/cancel)
@@ -406,7 +409,7 @@
 (define (keymap-lookup keymap n)
   (let ((table (car keymap)))
     (or (if (vector? table)
-            (and (< n (vector-length table)) (vector-ref table n))
+            (and (< -1 n (vector-length table)) (vector-ref table n))
             (cond ((assv n table) => cdr) (else #f)))
         (if (keymap? (cdr keymap))
             (keymap-lookup (cdr keymap) n)
@@ -426,7 +429,8 @@
     (cond
      (((buffer-complete? buf) buf)
       (command/end-of-line ch buf out return)
-      (newline out)
+      (display "\r\n" out)
+      (flush-output out)
       (return))
      (else
       (command/self-insert ch buf out return)))))
@@ -554,7 +558,8 @@
         (flush-output out)
         (if completion
             (vector-set! (car keymap) 9 completion))
-        ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
+        ((if (get-key args 'no-stty?:) (lambda (in out f) (f)) with-raw-io)
+         in
          out
          (lambda ()
            (let lp ((kmap keymap))
@@ -594,7 +599,8 @@
            (history (or (get-key rest 'history:) (make-history))))
        (let ((edit-line
               (apply make-line-editor 'no-stty?: #t 'history: history rest)))
-         ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
+         ((if (get-key args 'no-stty?:) (lambda (in out f) (f)) with-raw-io)
+          in
           out
           (lambda ()
             (let lp ()
