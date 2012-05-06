@@ -112,10 +112,13 @@ sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sex
 #endif
 
 sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+  sexp res = SEXP_VOID;
   if (sexp_port_openp(port)) {
     sexp_port_openp(port) = 0;
     if (sexp_port_stream(port) && ! sexp_port_no_closep(port)) {
+      /* close the stream */
       fclose(sexp_port_stream(port));
+      /* free the buffer if allocated */
       if (sexp_port_buf(port)
           && (sexp_oportp(port)
 #if !SEXP_USE_STRING_STREAMS
@@ -123,18 +126,23 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 #endif
               ))
 	free(sexp_port_buf(port));
-#ifndef PLAN9
-    } else if (sexp_filenop(sexp_port_fd(port))
-               && sexp_fileno_socketp(sexp_port_fd(port))
-               && !sexp_fileno_no_closep(sexp_port_fd(port)))  {
-      if (sexp_iportp(port))
-        shutdown(sexp_fileno_fd(sexp_port_fd(port)), SHUT_RD);
-      if (sexp_oportp(port))
-        shutdown(sexp_fileno_fd(sexp_port_fd(port)), SHUT_WR);
-#endif
     }
+#ifndef PLAN9
+    if (sexp_filenop(sexp_port_fd(port))
+        && sexp_fileno_openp(sexp_port_fd(port))) {
+      if (sexp_oportp(port)) res = sexp_flush_output(ctx, port);
+      if (sexp_exceptionp(res)) return res;
+      if (sexp_port_shutdownp(port)) {
+        /* shutdown the socket if requested */
+        if (sexp_iportp(port))
+          shutdown(sexp_port_fileno(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
+        if (sexp_oportp(port))
+          shutdown(sexp_port_fileno(port), SHUT_WR);
+      }
+    }
+#endif
   }
-  return SEXP_VOID;
+  return res;
 }
 
 sexp sexp_finalize_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp fileno) {
@@ -1322,6 +1330,28 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 
 #endif
 
+sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
+  sexp res;
+  FILE* in;
+  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
+  in = fdopen(sexp_fileno_fd(fileno), "r");
+  if (!in) return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
+  res = sexp_make_input_port(ctx, in, SEXP_FALSE);
+  if (!sexp_exceptionp(res)) sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+  return res;
+}
+
+sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
+  sexp res;
+  FILE* out;
+  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
+  out = fdopen(sexp_fileno_fd(fileno), "w");
+  if (!out) return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
+  res = sexp_make_output_port(ctx, out, SEXP_FALSE);
+  if (!sexp_exceptionp(res)) sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+  return res;
+}
+
 #else  /* ! SEXP_USE_STRING_STREAMS */
 
 #define SEXP_PORT_BUFFER_SIZE 4096
@@ -1338,7 +1368,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
       res = ((sexp_port_offset(p) < sexp_port_size(p))
              ? sexp_port_buf(p)[sexp_port_offset(p)++] : EOF);
     }
-  } else if (sexp_filenop(sexp_port_fd(p)) && sexp_not(sexp_port_cookie(p))) {
+  } else if (sexp_filenop(sexp_port_fd(p))) {
     res = read(sexp_port_fileno(p), sexp_port_buf(p), SEXP_PORT_BUFFER_SIZE);
     if (res >= 0) {
       sexp_port_offset(p) = 0;
@@ -1367,15 +1397,16 @@ int sexp_buffered_write_string_n (sexp ctx, const char *str,
   while (sexp_port_offset(p)+len >= sexp_port_size(p)) {
     diff = sexp_port_size(p) - sexp_port_offset(p);
     memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, diff);
+    sexp_port_offset(p) = sexp_port_size(p);
     if ((res = sexp_buffered_flush(ctx, p)))
-      return written;
-    written += diff;
+      return written + diff;
+    written += sexp_port_size(p);
     str += diff;
     len -= diff;
   }
   memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, len);
   sexp_port_offset(p) += len;
-  return 0;
+  return written + len;
 }
 
 int sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
@@ -1383,26 +1414,38 @@ int sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
 }
 
 int sexp_buffered_flush (sexp ctx, sexp p) {
-  int res;
+  long res = 0, off;
   sexp_gc_var1(tmp);
   if (! (sexp_oportp(p) && sexp_port_openp(p)))
     return -1;
+  off = sexp_port_offset(p);
   if (sexp_port_stream(p)) {
-    fwrite(sexp_port_buf(p), 1, sexp_port_offset(p), sexp_port_stream(p));
+    if (off > 0) fwrite(sexp_port_buf(p), 1, off, sexp_port_stream(p));
     res = fflush(sexp_port_stream(p));
   } else if (sexp_filenop(sexp_port_fd(p))) {
-    res = write(sexp_fileno_fd(sexp_port_fd(p)), sexp_port_buf(p), sexp_port_offset(p));
-  } else if (sexp_port_offset(p) > 0) {
-    sexp_gc_preserve1(ctx, tmp);
-    tmp = sexp_c_string(ctx, sexp_port_buf(p), sexp_port_offset(p));
-    res = 0;
-    if (tmp && sexp_stringp(tmp))
-      sexp_push(ctx, sexp_port_cookie(p), tmp);
-    else
+    res = write(sexp_fileno_fd(sexp_port_fd(p)), sexp_port_buf(p), off);
+    if (res < off) {
+      if (res > 0) {
+        memmove(sexp_port_buf(p), sexp_port_buf(p) + res, off - res);
+        sexp_port_offset(p) = off - res;
+      }
       res = -1;
+    } else {
+      sexp_port_offset(p) = 0;
+      res = 0;
+    }
+  } else if (sexp_port_offset(p) > 0) { /* string port */
+    sexp_gc_preserve1(ctx, tmp);
+    tmp = sexp_c_string(ctx, sexp_port_buf(p), off);
+    if (tmp && sexp_stringp(tmp)) {
+      sexp_push(ctx, sexp_port_cookie(p), tmp);
+      sexp_port_offset(p) = 0;
+      res = 0;
+    } else {
+      res = -1;
+    }
     sexp_gc_release1(ctx);
   }
-  if (res == 0) sexp_port_offset(p) = 0;
   return res;
 }
 
@@ -1416,7 +1459,6 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   sexp_port_offset(res) = 0;
   sexp_port_size(res) = sexp_string_length(str);
   sexp_port_binaryp(res) = 0;
-  sexp_port_cookie(res) = SEXP_TRUE;
   return res;
 }
 
@@ -1446,6 +1488,7 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   } else {
     ls = sexp_port_cookie(out);
   }
+  res = SEXP_FALSE;
   for (tmp = ls; sexp_pairp(tmp); tmp = sexp_cdr(tmp))
     if (!sexp_stringp(sexp_car(tmp)))
       res = sexp_xtype_exception(ctx, self, "not an output string port", out);
@@ -1457,13 +1500,41 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   return res;
 }
 
-#endif
+sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
+  sexp_gc_var2(res, str);
+  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
+  if (sexp_unbox_fixnum(fileno) < 0)
+    return sexp_user_exception(ctx, self, "invalid file descriptor", fileno);
+  sexp_gc_preserve2(ctx, res, str);
+  str = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
+  res = sexp_make_input_string_port(ctx, str);
+  if (!sexp_exceptionp(res)) {
+    sexp_port_fd(res) = fileno;
+    sexp_port_offset(res) = SEXP_PORT_BUFFER_SIZE;
+    sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+  }
+  sexp_gc_release2(ctx);
+  return res;
+}
 
-sexp sexp_make_fileno (sexp ctx, int fd, int socketp) {
-  sexp res = sexp_alloc_type(ctx, fileno, SEXP_FILENO);
+sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
+  sexp res = sexp_open_input_file_descriptor(ctx, self, n, fileno, shutdownp);
+  if (!sexp_exceptionp(res)) {
+    sexp_pointer_tag(res) = SEXP_OPORT;
+    sexp_port_offset(res) = 0;
+  }
+  return res;
+}
+
+#endif  /* ! SEXP_USE_STRING_STREAMS */
+
+sexp sexp_make_fileno (sexp ctx, int fd, int no_closep) {
+  sexp res;
+  if (fd < 0) return SEXP_FALSE;
+  res = sexp_alloc_type(ctx, fileno, SEXP_FILENO);
   if (!sexp_exceptionp(res)) {
     sexp_fileno_fd(res) = fd;
-    sexp_fileno_socketp(res) = socketp;
+    sexp_fileno_no_closep(res) = no_closep;
   }
   return res;
 }
@@ -1480,6 +1551,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   sexp_port_openp(p) = 1;
   sexp_port_bidirp(p) = 0;
   sexp_port_binaryp(p) = 1;
+  sexp_port_shutdownp(p) = 0;
   sexp_port_no_closep(p) = 0;
   sexp_port_sourcep(p) = 0;
   sexp_port_blockedp(p) = 0;

@@ -19,9 +19,9 @@
 
 ;;> Opens a client net connection to @var{host}, a string,
 ;;> on port @var{service}, which can be a string such as
-;;> @scheme{"http"} or an integer.  Returns a list of two
-;;> values on success - an input port and output port -
-;;> or @scheme{#f} on failure.
+;;> @scheme{"http"} or an integer.  Returns a list of three
+;;> values on success - the socket, an input port, and an
+;;> output port - or @scheme{#f} on failure.
 
 (define (open-net-io host service)
   (let lp ((addr (get-address-info host service)))
@@ -42,13 +42,8 @@
                 (cond-expand
                  (threads (set-file-descriptor-flags! sock open/non-block))
                  (else #f))
-                (cond-expand
-                 (bidir-ports
-                  (let ((port (open-input-output-file-descriptor sock)))
-                    (list port port)))
-                 (else
-                  (list (open-input-file-descriptor sock)
-                        (open-output-file-descriptor sock)))))))))))
+                (list (open-input-file-descriptor sock #t)
+                      (open-output-file-descriptor sock #t)))))))))
 
 ;;> Convenience wrapper around @scheme{open-net-io}, opens
 ;;> the connection then calls @var{proc} with two arguments,
@@ -61,9 +56,10 @@
   (let ((io (open-net-io host service)))
     (if (not (pair? io))
         (error "couldn't find address" host service)
-        (let ((res (proc (car io) (cadr io))))
-          (close-input-port (car io))
-          (close-output-port (cadr io))
+        (let ((res (proc (cadr io) (caddr io))))
+          (close-input-port (cadr io))
+          (close-output-port (caddr io))
+          (close-file-descriptor (car io))
           res))))
 
 ;;> @subsubsubsection{@scheme{(make-listener-socket addrinfo [max-conn])}}
@@ -80,18 +76,18 @@
                        (address-info-socket-type addrinfo)
                        (address-info-protocol addrinfo))))
     (cond
-     ((negative? sock)
+     ((not sock)
       (error "couldn't create socket for: " addrinfo))
      ((not (set-socket-option! sock level/socket socket-opt/reuseaddr 1))
       (error "couldn't set the socket to be reusable" addrinfo))
      ((not (bind sock
-                       (address-info-address addrinfo)
-                       (address-info-address-length addrinfo)))
+                 (address-info-address addrinfo)
+                 (address-info-address-length addrinfo)))
       (close-file-descriptor sock)
-      (error "couldn't bind socket for: " addrinfo))
+      (error "couldn't bind socket" sock addrinfo))
      ((not (listen sock max-connections))
       (close-file-descriptor sock)
-      (error "couldn't listen on socket for: " addrinfo))
+      (error "couldn't listen on socket" sock addrinfo))
      (else
       sock))))
 
