@@ -802,6 +802,9 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_shift_epoch(x) ((x)-SEXP_EPOCH_OFFSET)
 #define sexp_unshift_epoch(x) ((x)+SEXP_EPOCH_OFFSET)
 
+#define sexp_infp(x) (sexp_flonump(x) && isinf(sexp_flonum_value(x)))
+#define sexp_nanp(x) (sexp_flonump(x) && isnan(sexp_flonum_value(x)))
+
 /*************************** field accessors **************************/
 
 #if SEXP_USE_SAFE_ACCESSORS
