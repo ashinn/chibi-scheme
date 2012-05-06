@@ -558,8 +558,7 @@
         (flush-output out)
         (if completion
             (vector-set! (car keymap) 9 completion))
-        ((if (get-key args 'no-stty?:) (lambda (in out f) (f)) with-raw-io)
-         in
+        ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
          out
          (lambda ()
            (let lp ((kmap keymap))
@@ -599,8 +598,7 @@
            (history (or (get-key rest 'history:) (make-history))))
        (let ((edit-line
               (apply make-line-editor 'no-stty?: #t 'history: history rest)))
-         ((if (get-key args 'no-stty?:) (lambda (in out f) (f)) with-raw-io)
-          in
+         ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
           out
           (lambda ()
             (let lp ()
