@@ -1,5 +1,5 @@
 ;; repl.scm - friendlier repl with line editing and signal handling
-;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> A user-friendly REPL with line editing and signal handling.
@@ -219,8 +219,8 @@
                            (let ((res (eval expr env)))
                              (cond
                               ((not (eq? res (if #f #f)))
-                               (write/ss res)
-                               (newline)))))))))
+                               (write/ss res out)
+                               (newline out)))))))))
                 ;; If an interrupt occurs while the child thread is
                 ;; still running, terminate it, otherwise wait for it
                 ;; to complete.
