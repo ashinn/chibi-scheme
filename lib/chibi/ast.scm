@@ -1,5 +1,5 @@
 ;; ast.scm -- ast utilities
-;; Copyright (c) 2010-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2010-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Abstract Syntax Tree.  Interface to the types used by
@@ -355,3 +355,18 @@
 
 ;;> Returns the first string cursor of @var{pat} in @var{str},
 ;;> of @scheme{#f} if it's not found.
+
+;;> @subsubsubsection{@scheme{(atomically @var{expr})}}
+
+;;> Run @var{expr} atomically, disabling yields.  Ideally should only
+;;> be used for brief, deterministic expressions.  If used incorrectly
+;;> (e.g. running an infinite loop) can render the system unusable.
+;;> Never expose to a sandbox.
+
+(define-syntax atomically
+  (syntax-rules ()
+    ((atomic . body)
+     (let* ((atomic? (%set-atomic! #t))
+            (res (begin . body)))
+       (%set-atomic! atomic?)
+       res))))

@@ -1,5 +1,5 @@
 /*  ast.c -- interface to the Abstract Syntax Tree            */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
@@ -334,6 +334,12 @@ static sexp sexp_gc_op (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_unsigned_integer(ctx, sum_freed);
 }
 
+static sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new) {
+  sexp res = sexp_global(ctx, SEXP_G_ATOMIC_P);
+  sexp_global(ctx, SEXP_G_ATOMIC_P) = new;
+  return res;
+}
+
 static sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   const char *res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, x);
@@ -476,6 +482,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
+  sexp_define_foreign(ctx, env, "%set-atomic!", 1, sexp_set_atomic);
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);

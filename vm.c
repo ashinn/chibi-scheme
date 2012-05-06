@@ -872,7 +872,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
   if (--fuel <= 0) {
     tmp1 = sexp_global(ctx, SEXP_G_THREADS_SCHEDULER);
-    if (sexp_applicablep(tmp1)) {
+    if (sexp_applicablep(tmp1) && sexp_not(sexp_global(ctx, SEXP_G_ATOMIC_P))) {
       /* save thread */
       sexp_context_top(ctx) = top;
       sexp_context_ip(ctx) = ip;
