@@ -235,7 +235,7 @@
     (cond
      (orig-attrs
       (dynamic-wind
-        (lambda () (stty setting))
+        (lambda () (stty port setting))
         thunk
         (lambda () (set-terminal-attributes! port TCSANOW orig-attrs))))
      (else
