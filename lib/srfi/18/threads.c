@@ -218,36 +218,35 @@ sexp sexp_mutex_lock (sexp ctx, sexp self, sexp_sint_t n, sexp mutex, sexp timeo
 
 sexp sexp_mutex_unlock (sexp ctx, sexp self, sexp_sint_t n, sexp mutex, sexp condvar, sexp timeout) {
   sexp ls1, ls2;
-  if (sexp_not(condvar)) {
-    /* normal unlock - always succeeds, just need to unblock threads */
-    if (sexp_truep(sexp_mutex_lockp(mutex))) {
-      sexp_mutex_lockp(mutex) = SEXP_FALSE;
-      sexp_mutex_thread(mutex) = ctx;
-      /* search for threads blocked on this mutex */
-      for (ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
-           sexp_pairp(ls2); ls1=ls2, ls2=sexp_cdr(ls2))
-        if (sexp_context_event(sexp_car(ls2)) == mutex) {
-          if (ls1==SEXP_NULL)
-            sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
-          else
-            sexp_cdr(ls1) = sexp_cdr(ls2);
-          sexp_cdr(ls2) = sexp_global(ctx, SEXP_G_THREADS_FRONT);
-          sexp_global(ctx, SEXP_G_THREADS_FRONT) = ls2;
-          if (! sexp_pairp(sexp_cdr(ls2)))
-            sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
-          sexp_context_waitp(sexp_car(ls2))
-            = sexp_context_timeoutp(sexp_car(ls2)) = 0;
-          break;
-        }
-    }
-    return SEXP_TRUE;
-  } else {
-    /* wait on condition var */
+  /* first unlock and unblock threads */
+  if (sexp_truep(sexp_mutex_lockp(mutex))) {
+    sexp_mutex_lockp(mutex) = SEXP_FALSE;
+    sexp_mutex_thread(mutex) = ctx;
+    /* search for threads blocked on this mutex */
+    for (ls1=SEXP_NULL, ls2=sexp_global(ctx, SEXP_G_THREADS_PAUSED);
+         sexp_pairp(ls2); ls1=ls2, ls2=sexp_cdr(ls2))
+      if (sexp_context_event(sexp_car(ls2)) == mutex) {
+        if (ls1==SEXP_NULL)
+          sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
+        else
+          sexp_cdr(ls1) = sexp_cdr(ls2);
+        sexp_cdr(ls2) = sexp_global(ctx, SEXP_G_THREADS_FRONT);
+        sexp_global(ctx, SEXP_G_THREADS_FRONT) = ls2;
+        if (! sexp_pairp(sexp_cdr(ls2)))
+          sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
+        sexp_context_waitp(sexp_car(ls2))
+          = sexp_context_timeoutp(sexp_car(ls2)) = 0;
+        break;
+      }
+  }
+  if (sexp_truep(condvar)) {
+    /* wait on condition var if specified */
     sexp_context_waitp(ctx) = 1;
     sexp_context_event(ctx) = condvar;
     sexp_insert_timed(ctx, ctx, timeout);
     return SEXP_FALSE;
   }
+  return SEXP_TRUE;
 }
 
 /**************************** condition variables *************************/
