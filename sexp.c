@@ -2865,7 +2865,7 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
     return sexp_user_exception(ctx, self, "invalid numeric base", b);
   if (sexp_string_data(str)[0]=='\0'
-      || (sexp_string_data(str)[1]=='\0' && !sexp_isdigit((unsigned char)(sexp_string_data(str)[0]))))
+      || (sexp_string_data(str)[1]=='\0' && !sexp_isxdigit((unsigned char)(sexp_string_data(str)[0]))))
     return SEXP_FALSE;
   sexp_gc_preserve1(ctx, in);
   in = sexp_make_input_string_port(ctx, str);
