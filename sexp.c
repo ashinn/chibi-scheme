@@ -1528,7 +1528,7 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
 sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
   sexp_gc_var2(res, str);
   sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
-  if (sexp_unbox_fixnum(fileno) < 0)
+  if (sexp_fileno_fd(fileno) < 0)
     return sexp_user_exception(ctx, self, "invalid file descriptor", fileno);
   sexp_gc_preserve2(ctx, res, str);
   str = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
