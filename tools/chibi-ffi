@@ -607,7 +607,7 @@
      ((eq? 'input-output-port base)
       (cat "sexp_make_non_null_input_output_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'fileno base)
-      (cat "sexp_make_fileno(ctx, " val ", 0)"))
+      (cat "sexp_make_fileno(ctx, sexp_make_fixnum(" val "), SEXP_FALSE)"))
      (else
       (let ((ctype (lookup-type base))
             (void*? (void-pointer-type? type)))
@@ -656,7 +656,8 @@
      ((port-type? base)
       (cat "sexp_port_stream(" val ")"))
      ((eq? base 'fileno)
-      (cat "sexp_fileno_fd(" val ")"))
+      (cat "(sexp_filenop(" val ") ? sexp_fileno_fd(" val ")"
+           " : sexp_unbox_fixnum(" val "))"))
      (else
       (let ((ctype (lookup-type base))
             (void*? (void-pointer-type? type)))
@@ -711,8 +712,10 @@
      ((eq? base 'env-string)
       (cat "(sexp_pairp(" arg ") && sexp_stringp(sexp_car(" arg
            ")) && sexp_stringp(sexp_cdr(" arg ")))"))
+     ((eq? base 'fileno)
+      (cat "(sexp_filenop(" arg ") || sexp_fixnump(" arg "))"))
      ((or (int-type? base) (float-type? base)
-          (string-type? base) (port-type? base) (eq? base 'fileno))
+          (string-type? base) (port-type? base))
       (cat (type-predicate type) "(" arg ")"))
      ((or (lookup-type base) (void-pointer-type? type))
       (cat

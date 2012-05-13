@@ -49,23 +49,6 @@
      (else
       (waitpid pid 0)))))
 
-(define (string-char-index str c . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
-    (let lp ((i start))
-      (cond
-       ((= i end) #f)
-       ((eq? c (string-ref str i)) i)
-       (else (lp (+ i 1)))))))
-
-(define (string-split str ch)
-  (let ((len (string-length str)))
-    (let lp ((i 0) (res '()))
-      (let ((j (string-char-index str ch i)))
-        (if j
-            (lp (+ j 1) (cons (substring str i j) res))
-            (reverse (cons (substring str i len) res)))))))
-
 (define (call-with-process-io command proc)
   (let ((command-ls (if (string? command) (string-split command) command))
         (in-pipe (open-pipe))
