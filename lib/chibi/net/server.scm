@@ -57,5 +57,6 @@
                   (lambda ()
                     (set! requests (+ requests 1))
                     (run sock addr count)
-                    (set! requests (- requests 1)))))
+                    (set! requests (- requests 1)))
+                  "net-client"))
                 (serve (+ 1 count))))))))))
