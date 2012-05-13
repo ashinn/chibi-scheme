@@ -118,7 +118,8 @@
 ;; buffers
 
 (define-record-type Buffer
-  (%make-buffer refresh? min pos row max-row col gap width string history)
+  (%make-buffer refresh? min pos row max-row col gap start width string
+                history complete? single-line?)
   buffer?
   (refresh? buffer-refresh? buffer-refresh?-set!)
   (min buffer-min buffer-min-set!)
@@ -127,18 +128,20 @@
   (max-row buffer-max-row buffer-max-row-set!)
   (col buffer-col buffer-col-set!)
   (gap buffer-gap buffer-gap-set!)
+  (start buffer-start buffer-start-set!)
   (width buffer-width buffer-width-set!)
   (string buffer-string buffer-string-set!)
   (kill-ring buffer-kill-ring buffer-kill-ring-set!)
   (history buffer-history buffer-history-set!)
-  (complete? buffer-complete? buffer-complete?-set!))
+  (complete? buffer-complete? buffer-complete?-set!)
+  (single-line? buffer-single-line? buffer-single-line?-set!))
 
 (define default-buffer-size 256)
 (define default-buffer-width 80)
 
 (define (make-buffer)
-  (%make-buffer #f 0 0 0 0 0 default-buffer-size default-buffer-width
-                (make-string default-buffer-size) '()))
+  (%make-buffer #f 0 0 0 0 0 default-buffer-size 0 default-buffer-width
+                (make-string default-buffer-size) '() #f #f))
 
 (define (buffer->string buf)
   (let ((str (buffer-string buf)))
@@ -173,20 +176,46 @@
         (str (buffer-string buf))
         (end (string-length (buffer-string buf)))
         (width (buffer-width buf)))
-    (let lp ((i 0) (row 0) (col 0)) ;; update row/col
-      (cond ((= i pos)
-             (buffer-row-set! buf row)
-             (buffer-col-set! buf col)
-             (lp gap row col))
-            ((>= i end)
-             (buffer-max-row-set!
-              buf (if (and (zero? col) (> row 0)) (- row 1) row)))
-            ((eqv? #\newline (string-ref str i))
-             (lp (+ i 1) (+ row 1) 0))
-            ((= (+ col 1) width)
-             (lp (+ i 1) (+ row 1) 0))
-            (else
-             (lp (+ i 1) row (+ col 1)))))))
+    ;; TODO: Support double and zero-width chars and ANSI escapes.
+    (cond
+     ((buffer-single-line? buf)
+      ;; The "start" is the last left-most column of the buffer when
+      ;; we overflow and need to scroll horizontally.  This defaults
+      ;; to 0 and increments as we move past the last column.  We
+      ;; update it when we find that (via movement or insertion) the
+      ;; point would no longer be visible from "start" to the end of
+      ;; the line, by shifting the start to the rightmost column that
+      ;; would show the point.  Thus, after scrolling off the
+      ;; beginning of the buffer, successive movements left will first
+      ;; go to the 0th column, then scroll to the start one character
+      ;; at a time.  A beginning-of-line command will restore the
+      ;; "start" to 0 immediately.
+      ;; We assume no embedded newlines in this case.
+      (let ((start (buffer-start buf)))
+        (cond
+         ((> start pos)
+          (buffer-start-set! buf pos))
+         ((> (+ 1 (buffer-min buf) (- pos start)) (buffer-width buf))
+          (buffer-start-set! buf (max 0 (- (+ 1 (buffer-min buf) pos)
+                                           (buffer-width buf))))))
+        (buffer-col-set! buf (+ (buffer-min buf) (- pos (buffer-start buf))))))
+     (else
+      ;; Otherwise, in a multi-line editor we need to scan for
+      ;; newlines to determine the current (relative) row and column.
+      (let lp ((i 0) (row 0) (col 0)) ;; update row/col
+        (cond ((= i pos)
+               (buffer-row-set! buf row)
+               (buffer-col-set! buf col)
+               (lp gap row col))      ;; skip from pos->gap
+              ((>= i end)
+               (buffer-max-row-set!
+                buf (if (and (zero? col) (> row 0)) (- row 1) row)))
+              ((eqv? #\newline (string-ref str i))
+               (lp (+ i 1) (+ row 1) 0))
+              ((= (+ col 1) width)
+               (lp (+ i 1) (+ row 1) 0))
+              (else
+               (lp (+ i 1) row (+ col 1)))))))))
 
 (define (buffer-clear buf out)
   ;; goto start of input
@@ -205,14 +234,25 @@
     ;; update position and clear the current input
     (buffer-clear buf out)
     (buffer-update-position! buf)
-    (display (substring str 0 (buffer-pos buf)) out)
-    (display (substring str (buffer-gap buf) end) out)
-    ;; move to next line if point at eol
-    (if (and (zero? (buffer-col buf)) (positive? (buffer-row buf)))
-        (write-char #\space out))
-    ;; move to correct row then col
-    (if (< (buffer-row buf) (buffer-max-row buf))
-        (terminal-up out (- (buffer-max-row buf) (buffer-row buf))))
+    (let ((left (if (buffer-single-line? buf)
+                    (buffer-start buf)
+                    (buffer-min buf)))
+          (right
+           (if (buffer-single-line? buf)
+               (min end (+ (buffer-gap buf)
+                           (- (buffer-width buf) (buffer-col buf))))
+               end)))
+      (display (substring str 0 (buffer-min buf)) out)
+      (display (substring str left (buffer-pos buf)) out)
+      (display (substring str (buffer-gap buf) right) out))
+    (cond
+     ((not (buffer-single-line? buf))
+      ;; move to next line if point at eol
+      (if (and (zero? (buffer-col buf)) (positive? (buffer-row buf)))
+          (write-char #\space out))
+      ;; move to correct row then col
+      (if (< (buffer-row buf) (buffer-max-row buf))
+          (terminal-up out (- (buffer-max-row buf) (buffer-row buf))))))
     (terminal-goto-col out (buffer-col buf))
     (flush-output out)))
 
@@ -227,7 +267,7 @@
         (str (buffer-string buf))
         (n (buffer-clamp buf n)))
     (cond ((not (= n pos))
-           (buffer-update-position! buf) ;; XXXX shouldn't be needed
+           (buffer-update-position! buf) ;; necesary?
            (if (< n pos)
                (string-copy! str (- gap (- pos n)) str n pos)
                (string-copy! str pos str gap (+ gap (- n pos))))
@@ -235,12 +275,17 @@
            (buffer-gap-set! buf (+ gap (- n pos)))
            (cond
             ((not (buffer-refresh? buf))
-             (let ((old-row (buffer-row buf)))
+             (let ((old-row (buffer-row buf))
+                   (old-start (buffer-start buf)))
                (buffer-update-position! buf)
-               (let ((row-diff (- old-row (buffer-row buf))))
-                 (cond ((> row-diff 0) (terminal-up out row-diff))
-                       ((< row-diff 0) (terminal-down out (- row-diff)))))
-               (terminal-goto-col out (buffer-col buf)))))))))
+               (cond
+                ((not (= old-start (buffer-start buf)))
+                 (buffer-refresh?-set! buf #t))
+                (else
+                 (let ((row-diff (- old-row (buffer-row buf))))
+                   (cond ((> row-diff 0) (terminal-up out row-diff))
+                         ((< row-diff 0) (terminal-down out (- row-diff)))))
+                 (terminal-goto-col out (buffer-col buf)))))))))))
 
 (define (buffer-insert! buf out x)
   (let ((len (if (char? x) 1 (string-length x)))
@@ -390,7 +435,7 @@
   (let* ((keymap (make-printable-keymap))
          (v (car keymap)))
     (vector-set! v   0 command/enter)   ;; for telnet
-    (vector-set! v   1 command/beggining-of-line)
+    (vector-set! v   1 command/beginning-of-line)
     (vector-set! v   2 command/backward-char)
     (vector-set! v   3 command/cancel)
     (vector-set! v   4 command/forward-delete-char)
@@ -451,7 +496,7 @@
 (define (command/refresh ch buf out return)
   (buffer-draw buf out))
 
-(define (command/beggining-of-line ch buf out return)
+(define (command/beginning-of-line ch buf out return)
   (buffer-goto! buf out 0))
 
 (define (command/end-of-line ch buf out return)
@@ -537,28 +582,36 @@
       (proc (current-input-port) (current-output-port) ls)))
 
 (define (make-line-editor . args)
-  (let* ((prompt (get-key args 'prompt: "> "))
+  (let* ((prompter (get-key args 'prompt: "> "))
          (history (get-key args 'history:))
          (complete? (get-key args 'complete?: (lambda (buf) #t)))
          (completion (get-key args 'completion: (lambda args '())))
          (terminal-width (get-key args 'terminal-width:))
-         (keymap (get-key args 'keymap: standard-keymap)))
+         (single-line? (get-key args 'single-line?: #f))
+         (no-stty? (get-key args 'no-stty?: #f))
+         (keymap (get-key args 'keymap: standard-keymap))
+         (buf (or (get-key args 'buffer: #f) (make-buffer))))
+    (if completion
+        (vector-set! (car keymap) 9 completion))
     (lambda (in out)
       (let* ((width (or terminal-width (get-terminal-width out) 80))
-             (buf (make-buffer))
+             (prompt (if (procedure? prompter) (prompter) prompter))
              (done? #f)
              (return (lambda o (set! done? (if (pair? o) (car o) #t)))))
+        ;; Clear buffer and reset prompt.
         (buffer-refresh?-set! buf #t)
+        (buffer-min-set! buf 0)
+        (buffer-delete! buf out 0 (buffer-length buf))
         (buffer-width-set! buf width)
         (buffer-insert! buf out prompt)
         (buffer-min-set! buf (string-length prompt))
         (buffer-history-set! buf history)
         (buffer-complete?-set! buf complete?)
+        (buffer-single-line?-set! buf single-line?)
+        (if single-line? (buffer-start-set! buf (buffer-min buf)))
         (buffer-refresh buf out)
         (flush-output out)
-        (if completion
-            (vector-set! (car keymap) 9 completion))
-        ((if (get-key args 'no-stty?:) (lambda (out f) (f)) with-raw-io)
+        ((if no-stty? (lambda (out f) (f)) with-raw-io)
          out
          (lambda ()
            (let lp ((kmap keymap))
