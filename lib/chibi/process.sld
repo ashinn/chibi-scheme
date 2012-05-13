@@ -16,7 +16,7 @@
           signal/tty-output wait/no-hang
           call-with-process-io
           process->string process->string-list process->output+error)
-  (import (scheme) (chibi io) (chibi filesystem))
+  (import (scheme) (chibi io) (chibi strings) (chibi filesystem))
   (cond-expand (threads (import (srfi 18))) (else #f))
   (include-shared "process")
   (include "process.scm"))

@@ -1553,13 +1553,14 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
 
 #endif  /* ! SEXP_USE_STRING_STREAMS */
 
-sexp sexp_make_fileno (sexp ctx, int fd, int no_closep) {
+sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_closep) {
   sexp res;
-  if (fd < 0) return SEXP_FALSE;
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, fd);
+  if (sexp_unbox_fixnum(fd) < 0) return SEXP_FALSE;
   res = sexp_alloc_type(ctx, fileno, SEXP_FILENO);
   if (!sexp_exceptionp(res)) {
-    sexp_fileno_fd(res) = fd;
-    sexp_fileno_no_closep(res) = no_closep;
+    sexp_fileno_fd(res) = sexp_unbox_fixnum(fd);
+    sexp_fileno_no_closep(res) = sexp_truep(no_closep);
   }
   return res;
 }

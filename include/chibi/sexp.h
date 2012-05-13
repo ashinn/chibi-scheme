@@ -1159,6 +1159,7 @@ enum sexp_context_globals {
   SEXP_G_ABI_ERROR,             /* incompatible ABI loading library */
   SEXP_G_OPTIMIZATIONS,
   SEXP_G_SIGNAL_HANDLERS,
+  SEXP_G_FILE_DESCRIPTORS,
   SEXP_G_META_ENV,
   SEXP_G_MODULE_PATH,
   SEXP_G_QUOTE_SYMBOL,
@@ -1306,7 +1307,7 @@ SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len)
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
 SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
-SEXP_API sexp sexp_make_fileno (sexp ctx, int fd, int no_closep);
+SEXP_API sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_closep);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp socketp);
@@ -1444,6 +1445,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx, NULL, 3, a, b, c)
 #define sexp_make_setter(ctx, a, b, c) sexp_make_setter_op(ctx, NULL, 3, a, b, c)
 #define sexp_lookup_type(ctx, name, id) sexp_lookup_type_op(ctx, NULL, 2, name, id)
+#define sexp_make_fileno(ctx, fd, no_closep) sexp_make_fileno_op(ctx, NULL, 2, fd, no_closep)
 
 enum sexp_opcode_names {
   SEXP_OP_NOOP,
