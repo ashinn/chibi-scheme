@@ -18,6 +18,8 @@ sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_
       return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
     }
   }
+  if (res >= 0)
+    fcntl(res, F_SETFL, fcntl(res, F_GETFL) | O_NONBLOCK);
 #endif
   return sexp_make_fileno(ctx, sexp_make_fixnum(res), SEXP_FALSE);
 }
