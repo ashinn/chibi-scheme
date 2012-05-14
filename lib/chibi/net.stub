@@ -1,0 +1,89 @@
+
+(c-system-include "sys/types.h")
+(c-system-include "sys/socket.h")
+(c-system-include "netinet/in.h")
+(c-system-include "netdb.h")
+
+(define-c-int-type socklen_t)
+
+(define-c-struct sockaddr
+  predicate:   sockaddr?)
+
+(define-c-struct addrinfo
+  constructor: (make-address-info ai_family ai_socktype ai_protocol)
+  finalizer: freeaddrinfo
+  predicate: address-info?
+  (int              ai_family    address-info-family)
+  (int              ai_socktype  address-info-socket-type)
+  (int              ai_protocol  address-info-protocol)
+  ((link sockaddr)  ai_addr      address-info-address)
+  (size_t           ai_addrlen   address-info-address-length)
+  ((link addrinfo)  ai_next      address-info-next))
+
+;;> The addrinfo struct accessors.
+;;/
+
+(define-c errno (%get-address-info getaddrinfo)
+  (string string (maybe-null addrinfo) (result free addrinfo)))
+
+;;> Bind a name to a socket.
+
+(define-c errno bind (fileno sockaddr int))
+
+;;> Listen on a socket.
+
+(define-c sexp (listen "sexp_listen")
+  ((value ctx sexp) (value self sexp) sexp sexp))
+
+;;> Accept a connection on a socket.
+
+(define-c sexp (accept "sexp_accept")
+  ((value ctx sexp) (value self sexp) fileno sockaddr int))
+
+;;> Create an endpoint for communication.
+
+(define-c fileno socket (int int int))
+
+;;> Initiate a connection on a socket.
+
+(define-c int connect (fileno sockaddr int))
+
+(define-c-const int (address-family/unix "AF_UNIX"))
+(define-c-const int (address-family/inet "AF_INET"))
+(define-c-const int (socket-type/stream "SOCK_STREAM"))
+(define-c-const int (socket-type/datagram "SOCK_DGRAM"))
+(define-c-const int (socket-type/raw "SOCK_RAW"))
+(define-c-const int (ip-proto/tcp "IPPROTO_TCP"))
+(define-c-const int (ip-proto/udp "IPPROTO_UDP"))
+
+;;> The constants for the addrinfo struct.
+;;/
+
+(c-include "accept.c")
+
+(define-c errno getsockopt
+  (fileno int int (result int) (result (value (sizeof int) socklen_t))))
+
+;;> Set an option for the given socket.  For example, to make the
+;;> address reusable:
+;;> @scheme{(set-socket-option! sock level/socket socket-opt/reuseaddr 1)}
+
+(define-c errno (set-socket-option! "setsockopt")
+  (fileno int int (pointer int) (value (sizeof int) socklen_t)))
+
+(define-c-const int (level/socket "SOL_SOCKET"))
+
+(define-c-const int (socket-opt/debug "SO_DEBUG"))
+(define-c-const int (socket-opt/broadcast "SO_BROADCAST"))
+(define-c-const int (socket-opt/reuseaddr "SO_REUSEADDR"))
+(define-c-const int (socket-opt/keepalive "SO_KEEPALIVE"))
+(define-c-const int (socket-opt/oobinline "SO_OOBINLINE"))
+(define-c-const int (socket-opt/sndbuf "SO_SNDBUF"))
+(define-c-const int (socket-opt/rcvbuf "SO_RCVBUF"))
+(define-c-const int (socket-opt/dontroute "SO_DONTROUTE"))
+(define-c-const int (socket-opt/rcvlowat "SO_RCVLOWAT"))
+(define-c-const int (socket-opt/sndlowat "SO_SNDLOWAT"))
+
+;;> The constants for the @scheme{get-socket-option} and
+;;> @scheme{set-socket-option!}.
+;;/

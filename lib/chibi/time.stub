@@ -1,0 +1,76 @@
+
+(cond-expand
+ (plan9)
+ (else
+  (c-system-include "time.h")
+  (c-system-include "sys/time.h")))
+
+(define-c-struct tm
+  predicate: tm?
+  (int     tm_sec    time-second)
+  (int     tm_min    time-minute)
+  (int     tm_hour   time-hour)
+  (int     tm_mday   time-day)
+  (int     tm_mon    time-month)
+  (int     tm_year   time-year)
+  (int     tm_wday   time-day-of-week)
+  (int     tm_yday   time-day-of-year)
+  (int     tm_isdst  time-dst?))
+
+;;> Accessors for the @scheme{tm} struct.
+;;/
+
+(define-c-struct timeval
+  predicate: timeval?
+  constructor: (make-timeval tv_sec tv_usec)
+  (time_t  tv_sec          timeval-seconds)
+  (int     tv_usec         timeval-microseconds))
+
+;;> Accessors for the @scheme{timeval} struct.
+;;/
+
+(define-c-struct timezone
+  predicate: timezone?
+  (int     tz_minuteswest  timezone-offset)
+  (int     tz_dsttime      timezone-dst-time))
+
+;;> Accessors for the @scheme{timezone} struct.
+;;/
+
+;;> Returns the current time as an integer number
+;;> of seconds since an arbitrary epoch.
+
+(define-c time_t (current-seconds "time") ((value NULL)))
+
+;;> Returns the current time as a list of a timeval struct
+;;> and a timezone.
+
+(define-c errno (get-time-of-day "gettimeofday")
+  ((result timeval) (result timezone)))
+
+;;> Set the current time from a timeval struct and
+;;> and optional timezone.
+
+(define-c errno (set-time-of-day! "settimeofday")
+  (timeval (maybe-null default NULL timezone)))
+
+;;> Convert an integer number of epoch seconds to a broken-down tm struct.
+
+(define-c non-null-pointer (seconds->time "localtime_r")
+  ((pointer time_t) (result tm)))
+
+;;> Convert a tm struct to an integer number of seconds.
+
+(define-c time_t (time->seconds "mktime")
+  (tm))
+
+;;> Format a datetime string from an integer number of epoch seconds.
+
+(define-c non-null-string (seconds->string "ctime_r")
+  ((pointer time_t) (result (array char 64))))
+
+;;> Format a datetime string from a tm struct.
+
+(define-c non-null-string (time->string "asctime_r")
+  (tm (result (array char 64))))
+
