@@ -10,6 +10,7 @@
 (define (make-module exports env meta) (vector exports env meta #f))
 (define (%module-exports mod) (vector-ref mod 0))
 (define (module-env mod) (vector-ref mod 1))
+(define (module-env-set! mod env) (vector-set! mod 1 env))
 (define (module-meta-data mod) (vector-ref mod 2))
 
 (define (module-exports mod)
@@ -45,6 +46,18 @@
     (load-module-definition name)
     (cond ((assoc name *modules*) => cdr)
           (else #f)))))
+
+(define (add-module! name module)
+  (set! *modules* (cons (cons name module) *modules*)))
+
+(define (delete-module! name)
+  (let lp ((ls *modules*) (prev #f))
+    (cond ((null? ls))
+          ((equal? name (car (car ls)))
+           (if prev
+               (set-cdr! prev (cdr ls))
+               (set! *modules* (cdr ls))))
+          (else (lp (cdr ls) ls)))))
 
 (define (symbol-append a b)
   (string->symbol (string-append (symbol->string a) (symbol->string b))))
@@ -118,8 +131,8 @@
    (else
     (error "couldn't find import" x))))
 
-(define (eval-module name mod)
-  (let ((env (make-environment))
+(define (eval-module name mod . o)
+  (let ((env (if (pair? o) (car o) (make-environment)))
         (dir (module-name-prefix name)))
     (define (load-modules files extension fold?)
       (for-each
@@ -175,7 +188,7 @@
 (define (load-module name)
   (let ((mod (find-module name)))
     (if (and mod (not (module-env mod)))
-        (vector-set! mod 1 (eval-module name mod)))
+        (module-env-set! mod (eval-module name mod)))
     mod))
 
 (define define-library-transformer
@@ -185,7 +198,7 @@
            (body (cddr expr))
            (tmp (rename 'tmp))
            (this-module (rename '*this-module*))
-           (modules (rename '*modules*)))
+           (add-module! (rename 'add-module!)))
        `(let ((,tmp ,this-module))
           (define (rewrite-export x)
             (if (pair? x)
@@ -201,9 +214,7 @@
                  (cond ((assq 'export ,this-module)
                         => (lambda (x) (map rewrite-export (cdr x))))
                        (else '()))))
-            (set! ,modules
-                  (cons (cons ',name (make-module exports #f ,this-module))
-                        ,modules)))
+            (,add-module! ',name (make-module exports #f ,this-module)))
           (set! ,this-module ,tmp))))))
 
 (define-syntax define-library define-library-transformer)
