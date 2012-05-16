@@ -1,3 +1,6 @@
+;; reload.scm -- automatic module reloading
+;; Copyright (c) 2012 Alex Shinn.  All rights reserved.
+;; BSD-style license: http://synthcode.com/license.txt
 
 (define last-modified-time (current-seconds))
 
@@ -34,8 +37,7 @@
                             (delete-module! module-name)
                             (add-module! module-name old-module)))
             (let ((env (eval-module module-name module)))
-              (%import (module-env module) env (module-exports module) #f)
-              ))))))))
+              (%import (module-env module) env (env-exports env) #f)))))))))
 
 (define (file-modified? path)
   (and path (> (file-modification-time path) last-modified-time)))
@@ -43,16 +45,19 @@
 (define (module-definition-modified? module-name module)
   (file-modified? (find-module-file (module-name->file module-name))))
 
-(define (module-includes-modified? module)
-  (any
-   (lambda (x)
-     (and (pair? x) (memq (car x) '(include include-ci))
-          (any file-modified? (map find-module-file (cdr x)))))
-   (module-meta-data module)))
+(define (module-includes-modified? module-name module)
+  (let ((dir (module-name-prefix module-name)))
+    (any
+     (lambda (x)
+       (and (pair? x) (memq (car x) '(include include-ci))
+            (any file-modified?
+                 (map (lambda (f) (find-module-file (string-append dir f)))
+                      (cdr x)))))
+     (module-meta-data module))))
 
 (define (module-modified? module-name module)
   (or (module-definition-modified? module-name module)
-      (module-includes-modified? module)))
+      (module-includes-modified? module-name module)))
 
 (define (reload-modified-modules)
   (for-each
