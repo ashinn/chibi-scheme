@@ -329,8 +329,20 @@ sexp sexp_write_u8 (sexp ctx, sexp self, sexp u8, sexp out) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
   if (!sexp_port_binaryp(out))
     return sexp_xtype_exception(ctx, self, "not a binary port", out);
-  if (sexp_write_char(ctx, sexp_unbox_fixnum(u8), out) == EOF)
-    return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+#if SEXP_USE_GREEN_THREADS
+  errno = 0;
+#endif
+  if (sexp_write_char(ctx, sexp_unbox_fixnum(u8), out) == EOF) {
+    if (sexp_port_stream(out))
+      clearerr(sexp_port_stream(out));
+#if SEXP_USE_GREEN_THREADS
+    if ((errno == EAGAIN)
+        && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+      sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), out);
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+    }
+#endif
+  }
   return SEXP_VOID;
 }
 
@@ -343,27 +355,23 @@ sexp sexp_read_u8 (sexp ctx, sexp self, sexp in) {
   errno = 0;
 #endif
   c = sexp_read_char(ctx, in);
-  if (c == EOF) {
 #if SEXP_USE_GREEN_THREADS
-    if ((sexp_port_stream(in) ? ferror(sexp_port_stream(in)) : 1)
-        && (errno == EAGAIN)
-        && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-      if (sexp_port_stream(in))
-        clearerr(sexp_port_stream(in));
-      sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), in);
-      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
-    }
-#endif
-    return SEXP_EOF;
+  if ((c == EOF)
+      && (errno == EAGAIN)
+      && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+    if (sexp_port_stream(in))
+      clearerr(sexp_port_stream(in));
+    sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), in);
+    return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
   }
+#endif
   if (c == '\n') sexp_port_line(in)++;
-  else if (c < 0) c += 128;
   return sexp_make_fixnum(c);
 }
 
 sexp sexp_peek_u8 (sexp ctx, sexp self, sexp in) {
   sexp res = sexp_read_u8(ctx, self, in);
-  if (sexp_charp(res))
-    sexp_push_char(ctx, sexp_unbox_character(res), in);
+  if (sexp_fixnump(res))
+    sexp_push_char(ctx, sexp_unbox_fixnum(res), in);
   return res;
 }
