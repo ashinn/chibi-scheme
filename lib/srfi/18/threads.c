@@ -546,7 +546,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
     if ((sexp_context_timeval(res).tv_sec == 0)
         && (sexp_context_timeval(res).tv_usec == 0)) {
       /* no timeout, wait for default 10ms */
-      usecs = 10*1000   *100;   /* 1s */
+      usecs = 10*1000;
     } else {
       /* wait until the next timeout */
       gettimeofday(&tval, NULL);
