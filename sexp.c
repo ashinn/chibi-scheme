@@ -1365,14 +1365,14 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
   sexp_gc_var1(tmp);
   int res = 0;
   if (sexp_port_offset(p) < sexp_port_size(p)) {
-    return sexp_port_buf(p)[sexp_port_offset(p)++];
+    return ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++];
   } else if (sexp_port_stream(p)) {
     res = fread(sexp_port_buf(p), 1, SEXP_PORT_BUFFER_SIZE, sexp_port_stream(p));
     if (res >= 0) {
       sexp_port_offset(p) = 0;
       sexp_port_size(p) = res;
       res = ((sexp_port_offset(p) < sexp_port_size(p))
-             ? sexp_port_buf(p)[sexp_port_offset(p)++] : EOF);
+             ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
     }
   } else if (sexp_filenop(sexp_port_fd(p))) {
     res = read(sexp_port_fileno(p), sexp_port_buf(p), SEXP_PORT_BUFFER_SIZE);
@@ -1380,7 +1380,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
       sexp_port_offset(p) = 0;
       sexp_port_size(p) = res;
       res = ((sexp_port_offset(p) < sexp_port_size(p))
-             ? sexp_port_buf(p)[sexp_port_offset(p)++] : EOF);
+             ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
     }
   } else if (sexp_port_customp(p)) {
     sexp_gc_preserve1(ctx, tmp);
@@ -1391,7 +1391,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
       sexp_port_offset(p) = 0;
       sexp_port_size(p) = sexp_unbox_fixnum(tmp);
       res = ((sexp_port_offset(p) < sexp_port_size(p))
-             ? sexp_port_buf(p)[sexp_port_offset(p)++] : EOF);
+             ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
     } else {
       res = EOF;
       sexp_port_size(p) = 0;
