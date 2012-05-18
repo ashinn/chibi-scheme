@@ -1341,7 +1341,10 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
   in = fdopen(sexp_fileno_fd(fileno), "r");
   if (!in) return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
   res = sexp_make_input_port(ctx, in, SEXP_FALSE);
-  if (!sexp_exceptionp(res)) sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+  if (!sexp_exceptionp(res)) {
+    sexp_port_binaryp(res) = 1;
+    sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+  }
   return res;
 }
 
@@ -1536,6 +1539,7 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
   if (!sexp_exceptionp(res)) {
     sexp_port_fd(res) = fileno;
     sexp_port_offset(res) = SEXP_PORT_BUFFER_SIZE;
+    sexp_port_binaryp(res) = 1;
     sexp_port_shutdownp(res) = sexp_truep(shutdownp);
   }
   sexp_gc_release2(ctx);
@@ -1649,15 +1653,18 @@ sexp sexp_set_port_fold_case (sexp ctx, sexp self, sexp_sint_t n, sexp in, sexp 
 int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
   sexp f;
   int c;
-  if (sexp_port_stream(in) && sexp_port_fileno(in) >= 0) {
+  if ((sexp_port_stream(in) || sexp_filenop(sexp_port_fd(in)))
+      && sexp_port_fileno(in) >= 0) {
     if (sexp_port_flags(in) == SEXP_PORT_UNKNOWN_FLAGS)
       sexp_port_flags(in) = fcntl(sexp_port_fileno(in), F_GETFL);
     if (sexp_port_flags(in) & O_NONBLOCK) {
       if (!forcep
           && (((c = sexp_read_char(ctx, in)) == EOF)
               && sexp_port_stream(in)
-              && ferror(sexp_port_stream(in)) && (errno == EAGAIN))) {
-        clearerr(sexp_port_stream(in));
+              && (sexp_port_stream(in) ? ferror(sexp_port_stream(in)) : 1)
+              && (errno == EAGAIN))) {
+        if (sexp_port_stream(in))
+          clearerr(sexp_port_stream(in));
         f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
         if (sexp_opcodep(f)) {
           ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, in);

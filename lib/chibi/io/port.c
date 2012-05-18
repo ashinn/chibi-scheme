@@ -339,20 +339,31 @@ sexp sexp_read_u8 (sexp ctx, sexp self, sexp in) {
   sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
   if (!sexp_port_binaryp(in))
     return sexp_xtype_exception(ctx, self, "not a binary port", in);
-  sexp_check_block_port(ctx, in, 0);
+#if SEXP_USE_GREEN_THREADS
+  errno = 0;
+#endif
   c = sexp_read_char(ctx, in);
-  return c == EOF ? SEXP_EOF : sexp_make_fixnum(c);
+  if (c == EOF) {
+#if SEXP_USE_GREEN_THREADS
+    if ((sexp_port_stream(in) ? ferror(sexp_port_stream(in)) : 1)
+        && (errno == EAGAIN)
+        && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+      if (sexp_port_stream(in))
+        clearerr(sexp_port_stream(in));
+      sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), in);
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+    }
+#endif
+    return SEXP_EOF;
+  }
+  if (c == '\n') sexp_port_line(in)++;
+  else if (c < 0) c += 128;
+  return sexp_make_fixnum(c);
 }
 
 sexp sexp_peek_u8 (sexp ctx, sexp self, sexp in) {
-  int c;
-  sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
-  if (!sexp_port_binaryp(in))
-    return sexp_xtype_exception(ctx, self, "not a binary port", in);
-  sexp_check_block_port(ctx, in, 0);
-  c = sexp_read_char(ctx, in);
-  if (c == EOF)
-    return SEXP_EOF;
-  sexp_push_char(ctx, c, in);
-  return sexp_make_fixnum(c);
+  sexp res = sexp_read_u8(ctx, self, in);
+  if (sexp_charp(res))
+    sexp_push_char(ctx, sexp_unbox_character(res), in);
+  return res;
 }
