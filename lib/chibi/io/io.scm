@@ -54,7 +54,8 @@
         (let ((ch (read-char in)))
           (cond
            ((eof-object? ch)
-            (get-output-string out))
+            (let ((res (get-output-string out)))
+              (and (not (equal? res "")) res)))
            (else
             (write-char ch out)
             (if (eqv? ch #\newline)
