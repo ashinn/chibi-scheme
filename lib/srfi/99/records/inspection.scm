@@ -29,6 +29,6 @@
                  (rtd-field-mutable? p x)
                  (error "unknown field" rtd x))))
           ((eq? x (car ls)))
-          ((and (pair? (car ls)) (eq? x (cadar ls)))
+          ((and (pair? (car ls)) (eq? x (cadr (car ls))))
            (not (eq? 'immutable (caar ls))))
           (else (lp (cdr ls))))))

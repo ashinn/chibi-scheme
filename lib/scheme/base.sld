@@ -16,9 +16,7 @@
    bytevector-copy-partial bytevector-copy-partial!  bytevector-length
    bytevector-u8-ref bytevector-u8-set!  bytevector?  caar cadr
    call-with-current-continuation call-with-port call-with-values
-   call/cc car case cdr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar
-   cdddr caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr cdaaar
-   cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr ceiling char->integer
+   call/cc car case cdr cdar cddr ceiling char->integer
    char-ready? char<=?  char<?  char=?  char>=?  char>?  char?
    close-input-port close-output-port close-port complex?  cond cond-expand
    cons current-error-port current-input-port current-output-port define

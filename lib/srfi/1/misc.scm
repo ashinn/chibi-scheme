@@ -34,14 +34,14 @@
 
 (define (zip . lists) (apply map list lists))
 
-(define (unzip1 ls) (map car ls))
-(define (unzip2 ls) (values (map car ls) (map cadr ls)))
-(define (unzip3 ls) (values (map car ls) (map cadr ls) (map caddr ls)))
+(define (unzip1 ls) (map first ls))
+(define (unzip2 ls) (values (map first ls) (map second ls)))
+(define (unzip3 ls) (values (map first ls) (map second ls) (map third ls)))
 (define (unzip4 ls)
-  (values (map car ls) (map cadr ls) (map caddr ls) (map cadddr ls)))
+  (values (map first ls) (map second ls) (map third ls) (map fourth ls)))
 (define (unzip5 ls)
-  (values (map car ls) (map cadr ls) (map caddr ls)
-          (map cadddr ls) (map (lambda (x) (car (cddddr x))) ls)))
+  (values (map first ls) (map second ls) (map third ls) (map fourth ls)
+          (map fifth ls)))
 
 (define (count pred ls . lists)
   (if (null? lists)

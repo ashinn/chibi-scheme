@@ -26,7 +26,7 @@
   (let lp ((i 0) (ls ls))
     (cond ((null? ls ) #f)
           ((if (pair? (car ls))
-               (eq? field (cadar ls))
+               (eq? field (car (cdar ls)))
                (eq? field (car ls)))
            i)
           (else (lp (+ i 1) (cdr ls))))))

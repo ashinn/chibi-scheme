@@ -164,13 +164,13 @@
             ((and (pair? (car ls))
                   (eq? 'mime (caar ls))
                   (pair? (cdar ls))
-                  (pair? (cadar ls))
-                  (memq (caadar ls) '(^ @)))
-             (let* ((disp0 (mime-ref (cdadar ls) "content-disposition" ""))
+                  (pair? (car (cdar ls)))
+                  (memq (caar (cdar ls)) '(^ @)))
+             (let* ((disp0 (mime-ref (cdar (cdar ls)) "content-disposition" ""))
                     (disp (mime-parse-content-type disp0))
                     (name (mime-ref disp "name")))
                (if name
-                   (lp (cdr ls) (cons (cons name (caddar ls)) res))
+                   (lp (cdr ls) (cons (cons name (cadr (cdar ls))) res))
                    (lp (cdr ls) res))))
             (else
              (lp (cdr ls) res))))

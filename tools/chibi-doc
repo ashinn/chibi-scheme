@@ -90,7 +90,7 @@
 
 (define (sxml-body x)
   (cond ((not (and (pair? x) (pair? (cdr x)))) '())
-        ((and (pair? (cadr x)) (eq? '^ (caadr x))) (cddr x))
+        ((and (pair? (cadr x)) (eq? '^ (car (cadr x)))) (cddr x))
         (else (cdr x))))
 
 (define (env-ref env name . o)
@@ -165,9 +165,9 @@
         (error "section must not be empty" sxml)
         (let* ((name (and (eq? 'tag: (cadr sxml))
                           (pair? (cddr sxml))
-                          (sxml-strip (caddr sxml))))
+                          (sxml-strip (car (cddr sxml)))))
                (body (map (lambda (x) (expand x env))
-                          (if name (cdddr sxml) (cdr sxml))))
+                          (if name (cdr (cddr sxml)) (cdr sxml))))
                (name (or name (sxml-strip (cons tag body)))))
           `(div (a (^ (name . ,(section-name tag name)))) (,tag ,@body))))))
 
@@ -195,10 +195,10 @@
 
 (define (expand-code sxml env)
   (let* ((hl (if (and (pair? (cdr sxml)) (eq? 'language: (cadr sxml)))
-                 (highlighter-for (caddr sxml))
+                 (highlighter-for (car (cddr sxml)))
                  highlight))
          (body (if (and (pair? (cdr sxml)) (eq? 'language: (cadr sxml)))
-                   (cdddr sxml)
+                   (cdr (cddr sxml))
                    (cdr sxml))))
     `(code ,@(map-sxml (lambda (x) (if (string? x) (hl x) x))
                        (normalize-sxml
@@ -274,7 +274,7 @@
   (if (null? x)
       '()
       (let ((d (caar x)))
-        (let lp ((ls (cdr x)) (parent (cadar x)) (kids '()) (res '()))
+        (let lp ((ls (cdr x)) (parent (car (cdar x))) (kids '()) (res '()))
           (define (collect)
             (cons `(li ,parent ,(get-contents (reverse kids))) res))
           (cond
@@ -283,7 +283,7 @@
            ((> (caar ls) d)
             (lp (cdr ls) parent (cons (car ls) kids) res))
            (else
-            (lp (cdr ls) (cadar ls) '() (collect))))))))
+            (lp (cdr ls) (car (cdar ls)) '() (collect))))))))
 
 (define (fix-header x)
   `(html (head ,@(cond ((assq 'title x) => (lambda (x) (list x)))
@@ -351,7 +351,7 @@ div#footer {padding-bottom: 50px}
          (skip-whitespace in))))
 
 (define (external-clause? x)
-  (not (and (pair? (cdr x)) (pair? (cadr x)) (string? (caadr x)))))
+  (not (and (pair? (cdr x)) (pair? (cadr x)) (string? (car (cadr x))))))
 
 (define (get-signature proc source form)
   (match form
@@ -388,10 +388,10 @@ div#footer {padding-bottom: 50px}
              (cons (if (pair? (cadr ls)) (cadr ls) (list (cadr ls))) res)))
         ((pair? (car ls))
          (lp (cdr ls)
-             (append (if (pair? (cdddar ls))
-                         (list (list (car (cdddar ls)) name (caar ls)))
+             (append (if (pair? (cddr (cdar ls)))
+                         (list (list (car (cddr (cdar ls))) name (caar ls)))
                          '())
-                     (list (list (caddar ls) name))
+                     (list (list (cadr (cdar ls)) name))
                      res)))
         ((symbol? (car ls))
          (lp (cddr ls) res))
@@ -433,7 +433,7 @@ div#footer {padding-bottom: 50px}
     orig-ls)
    (else
     (let ((name
-           (or name (if (eq? 'const: (caar sig)) (caddar sig) (caar sig)))))
+           (or name (if (eq? 'const: (caar sig)) (cadr (cdar sig)) (caar sig)))))
       (let lp ((ls orig-ls) (rev-pre '()))
         (cond
          ((or (null? ls)
@@ -448,8 +448,8 @@ div#footer {padding-bottom: 50px}
                      tag: ,(write-to-string name)
                      (rawcode
                       ,@(if (eq? 'const: (caar sig))
-                            `((i ,(write-to-string (cadar sig)) ": ")
-                              ,(write-to-string (caddar sig)))
+                            `((i ,(write-to-string (car (cdar sig))) ": ")
+                              ,(write-to-string (cadr (cdar sig))))
                             (intersperse (map write-to-string sig) '(br)))))))
             ,@ls))
          (else
@@ -459,10 +459,10 @@ div#footer {padding-bottom: 50px}
   (call-with-input-file file
     (lambda (in)
       (let* ((lang (or (and (pair? o) (car o)) 'scheme))
-             (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdaddr x)))
+             (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdar (cddr x))))
                         (filter
                          (lambda (x)
-                           (and (pair? (caddr x)) (equal? file (caaddr x))))
+                           (and (pair? (third x)) (equal? file (car (third x)))))
                          defs))))
         (let lp ((lines '()) (cur '()) (res '()))
           (define (collect)
@@ -503,14 +503,14 @@ div#footer {padding-bottom: 50px}
                    (line1 (port-line in))
                    (x (read in))
                    (line2 (port-line in))
-                   (procs (filter (lambda (x) (<= line1 (caddr x) line2))
-                                  (filter caddr defs))))
+                   (procs (filter (lambda (x) (<= line1 (third x) line2))
+                                  (filter third defs))))
               (cond
                ((and (eq? lang 'ffi) (get-ffi-signatures x))
                 => (lambda (sigs)
                      (let ((sigs (filter
                                   (lambda (x)
-                                    (memq (if (eq? 'const: (car x)) (caddr x) (car x)) exports))
+                                    (memq (if (eq? 'const: (car x)) (third x) (car x)) exports))
                                   sigs)))
                        (lp '() '() (append (insert-signature cur #f sigs) res)))))
                ((and (eq? lang 'scheme) (= 1 (length procs)))

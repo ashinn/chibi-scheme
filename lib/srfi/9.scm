@@ -2,13 +2,15 @@
 (define-syntax define-record-type
   (er-macro-transformer
    (lambda (expr rename compare)
-     (let* ((name (if (pair? (cadr expr)) (caadr expr) (cadr expr)))
-            (parent (and (pair? (cadr expr)) (cadadr expr)))
+     (let* ((name+parent (cadr expr))
+            (name (if (pair? name+parent) (car name+parent) name+parent))
+            (parent (and (pair? name+parent) (cadr name+parent)))
             (name-str (symbol->string (identifier->symbol name)))
-            (make (caaddr expr))
-            (make-fields (cdaddr expr))
-            (pred (cadddr expr))
-            (fields (cddddr expr))
+            (procs (cddr expr))
+            (make (caar procs))
+            (make-fields (cdar procs))
+            (pred (cadr procs))
+            (fields (cddr procs))
             (_define (rename 'define))
             (_lambda (rename 'lambda))
             (_let (rename 'let))
@@ -34,10 +36,10 @@
                 fields)
          ,@(map (lambda (f)
                   (and (pair? f) (pair? (cdr f)) (pair? (cddr f))
-                       `(,_define ,(caddr f)
+                       `(,_define ,(car (cddr f))
                           (,(rename 'make-setter)
                            ,(symbol->string
-                             (identifier->symbol (caddr f)))
+                             (identifier->symbol (car (cddr f))))
                            ,name
                            (,_type_slot_offset ,name ',(car f))))))
                 fields)
@@ -60,7 +62,7 @@
                     (error "unknown record field in constructor" (car ls)))
                    ((pair? (cddr field))
                     (lp (cdr ls)
-                        (cons `(,(caddr field) res ,(car ls)) sets)))
+                        (cons `(,(car (cddr field)) res ,(car ls)) sets)))
                    (else
                     (lp (cdr ls)
                         (cons `(,_slot-set! ,name res (,_type_slot_offset ,name ',(car ls)) ,(car ls))
