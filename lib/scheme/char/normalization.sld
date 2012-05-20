@@ -1,3 +1,5 @@
+;; This library is deprecated, occurring in early R7RS drafts before
+;; being removed.
 
 (define-library (scheme char normalization)
   (import (rename (scheme)
