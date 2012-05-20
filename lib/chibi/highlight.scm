@@ -80,7 +80,7 @@
        (if (and (list? x) (= 3 (length x)))
            (string-append
             "." (symbol->string (car x)) " { color: " (cadr x)
-            "; background-color: " (caddr x) "; }\n")
+            "; background-color: " (car (cddr x)) "; }\n")
            (string-append
             "." (symbol->string (car x)) " { color: "
             (if (pair? (cdr x)) (cadr x) (cdr x))
@@ -252,7 +252,7 @@
                 ((zero? n)
                  (highlight n
                             '()
-                            (cons (highlight-class "syntaxerror" c)
+                            (cons (highlight-class "syntaxerror" ")")
                                   (collect str res))))
                 (else
                  ;;(highlight-end 'paren
