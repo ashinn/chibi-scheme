@@ -5,9 +5,9 @@
      (let ((condition
             (make-syntactic-closure environment '() (cadr form)))
            (consequent
-            (make-syntactic-closure environment '(it) (caddr form)))
+            (make-syntactic-closure environment '(it) (car (cddr form))))
            (alternative
-            (make-syntactic-closure environment '() (cadddr form))))
+            (make-syntactic-closure environment '() (cadr (cddr form)))))
        `(let ((it ,condition))
              (if it
                  ,consequent

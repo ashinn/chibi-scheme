@@ -2,36 +2,10 @@
 ;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;; provide c[ad]{2,4}r
-
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
 (define (cdar x) (cdr (car x)))
 (define (cddr x) (cdr (cdr x)))
-(define (caaar x) (car (car (car x))))
-(define (caadr x) (car (car (cdr x))))
-(define (cadar x) (car (cdr (car x))))
-(define (caddr x) (car (cdr (cdr x))))
-(define (cdaar x) (cdr (car (car x))))
-(define (cdadr x) (cdr (car (cdr x))))
-(define (cddar x) (cdr (cdr (car x))))
-(define (cdddr x) (cdr (cdr (cdr x))))
-(define (caaaar x) (car (car (car (car x)))))
-(define (caaadr x) (car (car (car (cdr x)))))
-(define (caadar x) (car (car (cdr (car x)))))
-(define (caaddr x) (car (car (cdr (cdr x)))))
-(define (cadaar x) (car (cdr (car (car x)))))
-(define (cadadr x) (car (cdr (car (cdr x)))))
-(define (caddar x) (car (cdr (cdr (car x)))))
-(define (cadddr x) (car (cdr (cdr (cdr x)))))
-(define (cdaaar x) (cdr (car (car (car x)))))
-(define (cdaadr x) (cdr (car (car (cdr x)))))
-(define (cdadar x) (cdr (car (cdr (car x)))))
-(define (cdaddr x) (cdr (car (cdr (cdr x)))))
-(define (cddaar x) (cdr (cdr (car (car x)))))
-(define (cddadr x) (cdr (cdr (car (cdr x)))))
-(define (cdddar x) (cdr (cdr (cdr (car x)))))
-(define (cddddr x) (cdr (cdr (cdr (cdr x)))))
 
 ;; basic utils
 
@@ -155,7 +129,7 @@
                                 (list (rename 'if) (rename 'tmp)
                                       (if (null? (cdr cl))
                                           (rename 'tmp)
-                                          (list (caddr cl) (rename 'tmp)))
+                                          (list (car (cddr cl)) (rename 'tmp)))
                                       (cons (rename 'cond) (cddr expr))))
                           (car cl))
                     (list (rename 'if)
@@ -207,8 +181,8 @@
           ((and (<= d 0) (pair? (car x))
                 (compare (rename 'unquote-splicing) (caar x)))
            (if (null? (cdr x))
-               (cadar x)
-               (list (rename 'append) (cadar x) (qq (cdr x) d))))
+               (cadr (car x))
+               (list (rename 'append) (cadr (car x)) (qq (cdr x) d))))
           (else
            (list (rename 'cons) (qq (car x) d) (qq (cdr x) d)))))
         ((vector? x) (list (rename 'list->vector) (qq (vector->list x) d)))
@@ -238,14 +212,14 @@
                    `((,(rename 'lambda) ,vars
                       (,(rename 'letrec) ((,(cadr expr)
                                            (,(rename 'lambda) ,vars
-                                            ,@(cdddr expr))))
+                                            ,@(cdr (cddr expr)))))
                        (,(cadr expr) ,@vars)))
                      ,@vals)
                    `((,(rename 'lambda) ,vars ,@(cddr expr)) ,@vals)))
              (map car bindings)
              (map cadr bindings))
             (error "bad let syntax" expr)))
-      (if (identifier? (cadr expr)) (caddr expr) (cadr expr))))))
+      (if (identifier? (cadr expr)) (car (cddr expr)) (cadr expr))))))
 
 (define-syntax let*
   (er-macro-transformer
@@ -260,8 +234,8 @@
                     (if (pair? x) (if (pair? (cdr x)) (null? (cddr x)) #f) #f))
                   (cadr expr))
                  #f)
-             `(,(rename 'let) (,(caadr expr))
-               (,(rename 'let*) ,(cdadr expr) ,@(cddr expr)))
+             `(,(rename 'let) (,(caar (cdr expr)))
+               (,(rename 'let*) ,(cdar (cdr expr)) ,@(cddr expr)))
              (error "bad let* syntax"))))))
 
 (define-syntax case
@@ -282,7 +256,7 @@
          (body (cdar ls)))
         ((and (pair? (car (car ls))) (null? (cdr (car (car ls)))))
          `(,(rename 'if) (,(rename 'eqv?) ,(rename 'tmp)
-                          (,(rename 'quote) ,(caaar ls)))
+                          (,(rename 'quote) ,(car (caar ls))))
            ,(body (cdar ls))
            ,(clause (cdr ls))))
         (else
@@ -298,11 +272,11 @@
    (lambda (expr rename compare)
      (let* ((body
              `(,(rename 'begin)
-               ,@(cdddr expr)
+               ,@(cdr (cddr expr))
                (,(rename 'lp)
-                ,@(map (lambda (x) (if (pair? (cddr x)) (caddr x) (car x)))
+                ,@(map (lambda (x) (if (pair? (cddr x)) (car (cddr x)) (car x)))
                        (cadr expr)))))
-            (check (caddr expr))
+            (check (car (cddr expr)))
             (wrap
              (if (null? (cdr check))
                  `(,(rename 'let) ((,(rename 'tmp) ,(car check)))
@@ -637,8 +611,8 @@
            (_vector->list (rename 'vector->list))
            (_list->vector (rename 'list->vector)))
        (define ellipsis (rename (if ellipsis-specified? (cadr expr) '...)))
-       (define lits (if ellipsis-specified? (caddr expr) (cadr expr)))
-       (define forms (if ellipsis-specified? (cdddr expr) (cddr expr)))
+       (define lits (if ellipsis-specified? (car (cddr expr)) (cadr expr)))
+       (define forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr)))
        (define (next-symbol s)
          (set! count (+ count 1))
          (rename (string->symbol (string-append s (number->string count)))))

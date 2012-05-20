@@ -35,7 +35,7 @@
    ((and (pair? a) (eq? (car a) 'param-type))
     (and (pair? b) (eq? (car b) 'param-type)
          (eq? (cadr a) (cadr b))
-         (eq? (caddr a) (caddr b))))
+         (eq? (car (cddr a)) (car (cddr b)))))
    ((and (pair? a) (eq? (car a) 'return-type))
     (and (pair? b) (eq? (car b) 'return-type)
          (eq? (cadr a) (cadr b))))

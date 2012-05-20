@@ -170,7 +170,7 @@
 (define (mime-header-fold kons knil . o)
   (let ((src (and (pair? o) (car o)))
         (limit (and (pair? o) (pair? (cdr o)) (car (cdr o))))
-        (kons-from (if (and (pair? o) (pair? (cdr o)) (pair? (cddr o))) (caddr o) kons)))
+        (kons-from (if (and (pair? o) (pair? (cdr o)) (pair? (cddr o))) (car (cddr o)) kons)))
     ((if (string? src) mime-header-fold-string mime-header-fold-port)
      kons knil (or src (current-input-port)) limit kons-from)))
 

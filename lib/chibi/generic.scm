@@ -24,8 +24,8 @@
 (define-syntax define-method
   (er-macro-transformer
    (lambda (e r c)
-     (let ((name (caadr e))
-           (params (cdadr e))
+     (let ((name (car (cadr e)))
+           (params (cdr (cadr e)))
            (body (cddr e)))
        `(,(r 'generic-add!) ,name
          (,(r 'list) ,@(map cadr params))

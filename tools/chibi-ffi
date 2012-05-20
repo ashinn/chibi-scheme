@@ -72,7 +72,7 @@
         ((result)
          (lp (next) free? const? null-ptr? ptr? ref? struct? link? #t array value default? template))
         ((array)
-         (lp (cadr type) free? const? null-ptr? ref? ptr? struct? link? result? (if (pair? (cddr type)) (caddr type) #t) value default? template))
+         (lp (cadr type) free? const? null-ptr? ref? ptr? struct? link? result? (if (pair? (cddr type)) (car (cddr type)) #t) value default? template))
         ((value)
          (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) default? template))
         ((default)
@@ -123,7 +123,7 @@
          (let lp ((ls (struct-fields (cdr x))))
            (cond
             ((null? ls) #f)
-            ((eq? field (caar ls)) (cadar ls))
+            ((eq? field (caar ls)) (car (cdar ls)))
             (else (lp (cdr ls)))))))
    (else
     #f)))
@@ -190,18 +190,18 @@
                          (<= 1 (length (cadr func)) 3)
                          (every (lambda (x) (or (identifier? x) (not x) (string? x)))
                                 (cadr func))))
-                (list? (caddr func))))
+                (list? (car (cddr func)))))
       (error "bad function definition" func))
   (let* ((method? (and (pair? o) (car o)))
          (ret-type (parse-type (car func)))
-         (scheme-name (if (pair? (cadr func)) (caadr func) (cadr func)))
+         (scheme-name (if (pair? (cadr func)) (car (cadr func)) (cadr func)))
          (c-name (if (pair? (cadr func))
-                     (cadadr func)
+                     (cadr (cadr func))
                      (mangle scheme-name)))
-         (stub-name (if (and (pair? (cadr func)) (pair? (cddadr func)))
-                        (car (cddadr func))
+         (stub-name (if (and (pair? (cadr func)) (pair? (cddr (cadr func))))
+                        (car (cddr (cadr func)))
                         (generate-stub-name scheme-name))))
-    (let lp ((ls (if (equal? (caddr func) '(void)) '() (caddr func)))
+    (let lp ((ls (if (equal? (car (cddr func)) '(void)) '() (car (cddr func))))
              (i 0)
              (results '())
              (c-args '())
@@ -428,7 +428,7 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      (let ((type (parse-type (cadr expr)))
-           (name (caddr expr)))
+           (name (car (cddr expr))))
        (set! *typedefs* `((,name ,@type) ,@*typedefs*))
        `(,(rename 'cat) "typedef " ,(type-c-name type) " " ',name ";\n")))))
 
@@ -469,11 +469,11 @@
    (lambda (expr rename compare)
      (ensure-c++ 'define-c++-method)
      (let* ((class (cadr expr))
-            (ret-type (caddr expr))
-            (name (cadddr expr))
+            (ret-type (car (cddr expr)))
+            (name (cadr (cddr expr)))
             (meths (map (lambda (x)
                           (parse-func `(,ret-type ,name (,class ,@x)) #t))
-                        (cddddr expr))))
+                        (cddr (cddr expr)))))
        (set! *methods* (cons (cons name meths) *methods*))))))
 
 ;; (define-syntax define-c++-constructor
@@ -1405,7 +1405,8 @@
    ((type-struct? (car field))
     ;; assign to a nested struct - copy field-by-field
     (let ((field-type
-           (cond ((lookup-type (type-name (car field))) => cdddr)
+           (cond ((lookup-type (type-name (car field)))
+                  => (lambda (x) (cddr (cdr x))))
                  (else (cdr field)))))
       (lambda ()
         (for-each
@@ -1456,8 +1457,8 @@
     (cond
      ((memq 'constructor: type)
       => (lambda (x)
-           (let ((make (caadr x))
-                 (args (cdadr x)))
+           (let ((make (car (cadr x)))
+                 (args (cdr (cadr x))))
              (cat "static sexp " (generate-stub-name make)
                   " (sexp ctx, sexp self, sexp_sint_t n"
                   (lambda ()
@@ -1524,25 +1525,25 @@
        (cond
         ((and (pair? field) (pair? (cdr field)))
          (cond
-          ((and (pair? (cddr field)) (caddr field))
+          ((and (pair? (cddr field)) (car (cddr field)))
            (write-type-getter type name field)
            (set! *funcs*
                  (cons (parse-func
                         `(,(car field)
-                          (,(caddr field)
+                          (,(car (cddr field))
                            #f
                            ,(type-getter-name type name field))
                           (,name)))
                        *funcs*))))
          (cond
           ((and (pair? (cddr field))
-                (pair? (cdddr field))
-                (car (cdddr field)))
+                (pair? (cdr (cddr field)))
+                (cadr (cddr field)))
            (write-type-setter type name field)
            (set! *funcs*
                  (cons (parse-func
                         `(,(car field)
-                          (,(car (cdddr field))
+                          (,(cadr (cddr field))
                            #f
                            ,(type-setter-name type name field))
                           (,name ,(car field))))
@@ -1550,8 +1551,8 @@
      (struct-fields type))))
 
 (define (write-const const)
-  (let ((scheme-name (if (pair? (cadr const)) (caadr const) (cadr const)))
-        (c-name (if (pair? (cadr const)) (cadadr const) (mangle (cadr const)))))
+  (let ((scheme-name (if (pair? (cadr const)) (car (cadr const)) (cadr const)))
+        (c-name (if (pair? (cadr const)) (cadr (cadr const)) (mangle (cadr const)))))
     (cat "  name = sexp_intern(ctx, \"" scheme-name "\", "
          (string-length (x->string scheme-name)) ");\n"
          "  sexp_env_define(ctx, env, name, tmp="

@@ -248,7 +248,7 @@
       ((and (pair? x) (eq? 'call-with-values (car x)))
        (string-append
         "..."
-        (truncate-source (if (and (pair? (cadr x)) (eq? 'lambda (caadr x)))
+        (truncate-source (if (and (pair? (cadr x)) (eq? 'lambda (car (cadr x))))
                              (car (reverse (cadr x)))
                              (cadr x))
                          (- width 3)

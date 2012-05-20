@@ -4,8 +4,8 @@
 
 (define first car)
 (define second cadr)
-(define third caddr)
-(define fourth cadddr)
+(define (third ls)   (car (cdr (cdr ls))))
+(define (fourth ls)  (car (cdr (cdr (cdr ls)))))
 (define (fifth ls)   (car (cdr (cdr (cdr (cdr ls))))))
 (define (sixth ls)   (car (cdr (cdr (cdr (cdr (cdr ls)))))))
 (define (seventh ls) (car (cdr (cdr (cdr (cdr (cdr (cdr ls))))))))

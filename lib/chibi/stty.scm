@@ -11,7 +11,7 @@
 (for-each
  (lambda (c)
    (let ((type (cadr c))
-         (value (caddr c)))
+         (value (car (cddr c))))
      (hash-table-set! stty-lookup (car c) (cdr c))))
 
  ;; ripped from the stty man page, then trimmed down to what seemed

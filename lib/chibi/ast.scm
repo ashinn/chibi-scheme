@@ -356,11 +356,11 @@
 ;;> Returns the first string cursor of @var{pat} in @var{str},
 ;;> of @scheme{#f} if it's not found.
 
-;;> @subsubsubsection{@scheme{(atomically @var{expr})}}
+;;> @subsubsubsection{@scheme{(atomically expr)}}
 
-;;> Run @var{expr} atomically, disabling yields.  Ideally should only
-;;> be used for brief, deterministic expressions.  If used incorrectly
-;;> (e.g. running an infinite loop) can render the system unusable.
+;;> Run @var{expr} atomically, disabling yields.  Ideally should only be
+;;> used for brief, deterministic expressions.  If used incorrectly (e.g.
+;;> running an infinite loop) can render the system unusable.
 ;;> Never expose to a sandbox.
 
 (cond-expand

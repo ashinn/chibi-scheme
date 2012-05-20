@@ -56,9 +56,9 @@
   (let ((io (open-net-io host service)))
     (if (not (pair? io))
         (error "couldn't find address" host service)
-        (let ((res (proc (cadr io) (caddr io))))
+        (let ((res (proc (cadr io) (car (cddr io)))))
           (close-input-port (cadr io))
-          (close-output-port (caddr io))
+          (close-output-port (car (cddr io)))
           (close-file-descriptor (car io))
           res))))
 

@@ -44,7 +44,7 @@
                      ((pair? posns)
                       (lp (cdr ls) (cdr posns) (cons (car posns) args)))
                      (else
-                      (lp (cdr ls) posns (cons (cadar ls) args))))))))))))
+                      (lp (cdr ls) posns (cons (car (cdar ls)) args))))))))))))
        . body))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
