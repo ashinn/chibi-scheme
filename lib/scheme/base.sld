@@ -12,8 +12,8 @@
           (srfi 9) (srfi 11) (srfi 39))
   (export
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin
-   binary-port?  boolean?  bytevector-copy bytevector-copy!
-   bytevector-copy-partial bytevector-copy-partial!  bytevector-length
+   binary-port?  boolean?  boolean=?  bytevector-copy bytevector-copy!
+   bytevector-copy-partial bytevector-length
    bytevector-u8-ref bytevector-u8-set!  bytevector?  caar cadr
    call-with-current-continuation call-with-port call-with-values
    call/cc car case cdr cdar cddr ceiling char->integer
@@ -23,9 +23,9 @@
    define-record-type define-syntax define-values denominator do
    dynamic-wind else eof-object?  eq?  equal?  eqv?  error
    error-object-irritants error-object-message error-object?  even?
-   exact->inexact exact-integer-sqrt exact-integer?  exact?  expt floor
+   exact exact-integer-sqrt exact-integer?  exact?  expt floor
    flush-output-port for-each gcd get-output-bytevector get-output-string
-   guard if import inexact->exact inexact?  input-port?  integer->char
+   guard if import inexact inexact?  input-port?  integer->char
    integer?  lambda lcm length let let* let*-values let-syntax let-values
    letrec letrec* letrec-syntax list list->string list->vector list-copy
    list-ref list-set!  list-tail list?  make-bytevector make-list
@@ -40,11 +40,11 @@
    string->number string->symbol string->utf8 string->vector string-append
    string-copy string-fill!  string-for-each string-length string-map
    string-ref string-set!  string<=?  string<?  string=?  string>=?
-   string>?  string?  substring symbol->string symbol?  syntax-error
+   string>?  string?  substring symbol->string symbol?  symbol=?  syntax-error
    syntax-rules textual-port?  truncate u8-ready?  unless unquote
    unquote-splicing utf8->string values vector vector->list vector->string
-   vector-copy vector-fill!  vector-for-each vector-length vector-map
-   vector-ref vector-set!  vector?  when with-exception-handler
+   vector-copy vector-copy! vector-fill!  vector-for-each vector-length
+   vector-map vector-ref vector-set!  vector?  when with-exception-handler
    write-bytevector write-char write-partial-bytevector write-u8 zero?)
   (include "define-values.scm"
            "extras.scm"

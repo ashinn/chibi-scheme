@@ -290,15 +290,15 @@
          ,(map (lambda (x) (list (car x) (cadr x))) (cadr expr))
          ,wrap)))))
 
-(define-syntax lazy
+(define-syntax delay-force
   (er-macro-transformer
    (lambda (expr rename compare)
-     `(,(rename 'make-promise) #f (,(rename 'lambda) () ,(cadr expr))))))
+     `(,(rename 'promise) #f (,(rename 'lambda) () ,(cadr expr))))))
 
 (define-syntax delay
   (er-macro-transformer
    (lambda (expr rename compare)
-     `(,(rename 'lazy) (,(rename 'make-promise) #t ,(cadr expr))))))
+     `(,(rename 'delay-force) (,(rename 'promise) #t ,(cadr expr))))))
 
 (define-syntax define-auxiliary-syntax
   (er-macro-transformer
@@ -899,7 +899,7 @@
  (auto-force
   )
  (else
-  (define (make-promise done? proc)
+  (define (promise done? proc)
     (list (cons done? proc)))
   (define (promise-done? x) (car (car x)))
   (define (promise-value x) (cdr (car x)))

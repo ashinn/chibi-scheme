@@ -1,5 +1,5 @@
 
 (define-library (scheme lazy)
   (import (scheme))
-  (export delay force lazy eager)
-  (begin (define (eager x) (delay x))))
+  (export delay force delay-force make-promise)
+  (begin (define (make-promise x) (delay x))))

@@ -1,4 +1,10 @@
 
+(define exact inexact->exact)
+(define inexact exact->inexact)
+
+(define (boolean=? x y) (eq? x y))
+(define (symbol=? x y) (eq? x y))
+
 (define call/cc call-with-current-continuation)
 
 ;; Adapted from Bawden's algorithm.
@@ -18,6 +24,8 @@
             (e (abs e)))
         (sr (- x e) (+ x e) return))
       x))
+
+(define (square x) (* x x))
 
 (define flush-output-port flush-output)
 
@@ -98,6 +106,13 @@
     (do ((i 0 (+ i 1))) ((>= i len) res)
       (vector-set! res i (vector-ref vec i)))))
 
+(define (vector-copy! to at from . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length from))))
+    (do ((i at (+ i 1)) (j start (+ i 1)))
+        ((>= j end))
+      (vector-set! to i (vector-ref from j)))))
+
 (define (vector->string vec)
   (list->string (vector->list vec)))
 
@@ -109,12 +124,41 @@
     (bytevector-copy! bv res)
     res))
 
-(define (bytevector-copy! from to)
-  (bytevector-copy-partial! from 0 (bytevector-length from) to 0))
+(define (bytevector-copy! to at from . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o)))
+                 (cadr o)
+                 (bytevector-length from))))
+    (do ((i at (+ i 1)) (j start (+ i 1)))
+        ((>= j end))
+      (bytevector-u8-set! to i (bytevector-u8-ref from j)))))
 
 (define bytevector-copy-partial subbytes)
 
-(define (bytevector-copy-partial! from start end to at)
-  (do ((i start (+ i 1)))
-      ((= i end))
-    (bytevector-u8-set! to (+ (- i start) at) (bytevector-u8-ref from i))))
+;; Never use this!
+(define (string-copy! to at from . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length from))))
+    (do ((i at (+ i 1)) (j start (+ i 1)))
+        ((>= j end))
+      (string-set! to i (string-ref from j)))))
+
+(define truncate-quotient quotient)
+(define truncate-remainder remainder)
+(define (truncate/ n m)
+  (values (truncate-quotient n m) (truncate-remainder n m)))
+
+(cond-expand
+ (ratios
+  (define (floor-quotient n m)
+    (floor (/ n m))))
+ (else
+  (define (floor-quotient n m)
+    (let ((res (floor (/ n m))))
+      (if (and (exact? n) (exact? m))
+          (exact res)
+          res)))))
+(define (floor-remainder n m)
+  (- n (* m (floor-quotient n m))))
+(define (floor/ n m)
+  (values (floor-quotient n m) (floor-remainder n m)))
