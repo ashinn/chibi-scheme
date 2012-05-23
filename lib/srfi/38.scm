@@ -311,7 +311,7 @@
                             (error "expected end of list after dot"))))
                      ((char-numeric? (peek-char in))
                       (lp (cons (read-float-tail in) res)))
-                     (else (string->symbol (read-name #\. in)))))
+                     (else (lp (cons (string->symbol (read-name #\. in)) res)))))
                    (else
                     (if (eof-object? c)
                         (error "unterminated list")
