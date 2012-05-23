@@ -210,6 +210,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2012/05/23 - fixing combinatorial explosion of code in certain or patterns
 ;; 2011/09/25 - fixing bug when directly matching an identifier repeated in
 ;;              the pattern (thanks to Stefan Israelsson Tampe)
 ;; 2011/01/27 - fixing bug when matching tail patterns against improper lists
@@ -479,7 +480,8 @@
      (match-one v p . x))
     ((_ v (p . q) g+s sk fk i)
      ;; match one and try the remaining on failure
-     (match-one v p g+s sk (match-gen-or-step v q g+s sk fk i) i))
+     (let ((fk2 (lambda () (match-gen-or-step v q g+s sk fk i))))
+       (match-one v p g+s sk (fk2) i)))
     ))
 
 ;; We match a pattern (p ...) by matching the pattern p in a loop on
