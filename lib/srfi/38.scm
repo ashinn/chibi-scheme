@@ -55,58 +55,54 @@
                       (set-cdr! cell count)
                       (set! count (+ count 1))))
                (cont x cell)))))
-    (cond
-     ((null? shared)
-      (write x out))
-     (else
-      (let wr ((x x))
-        (check-shared
-         x
-         ""
-         (lambda (x shared?)
-           (cond
-            ((pair? x)
-             (display "(" out)
-             (wr (car x))
-             (let lp ((ls (cdr x)))
-               (check-shared
-                ls
-                " . "
-                (lambda (ls shared?)
-                  (cond ((null? ls))
-                        ((pair? ls)
-                         (cond
-                          (shared?
-                           (display "(" out)
-                           (wr (car ls))
-                           (check-shared
-                            (cdr ls)
-                            " . "
-                            (lambda (ls shared?) (lp ls)))
-                           (display ")" out))
-                          (else
-                           (display " " out)
-                           (wr (car ls))
-                           (lp (cdr ls)))))
+    (let wr ((x x))
+      (check-shared
+       x
+       ""
+       (lambda (x shared?)
+         (cond
+          ((pair? x)
+           (display "(" out)
+           (wr (car x))
+           (let lp ((ls (cdr x)))
+             (check-shared
+              ls
+              " . "
+              (lambda (ls shared?)
+                (cond ((null? ls))
+                      ((pair? ls)
+                       (cond
+                        (shared?
+                         (display "(" out)
+                         (wr (car ls))
+                         (check-shared
+                          (cdr ls)
+                          " . "
+                          (lambda (ls shared?) (lp ls)))
+                         (display ")" out))
                         (else
-                         (display " . " out)
-                         (wr ls))))))
-             (display ")" out))
-            ((vector? x)
-             (display "#(" out)
-             (let ((len (vector-length x)))
-               (cond ((> len 0)
-                      (wr (vector-ref x 0))
-                      (do ((i 1 (+ i 1)))
-                          ((= i len))
-                        (display " " out)
-                        (wr (vector-ref x i))))))
-             (display ")" out))
-            ((let ((type (type-of x)))
-               (and (type? type) (type-printer type)))
-             => (lambda (printer) (printer x wr out)))
-            (else
-             (write x out))))))))))
+                         (display " " out)
+                         (wr (car ls))
+                         (lp (cdr ls)))))
+                      (else
+                       (display " . " out)
+                       (wr ls))))))
+           (display ")" out))
+          ((vector? x)
+           (display "#(" out)
+           (let ((len (vector-length x)))
+             (cond ((> len 0)
+                    (wr (vector-ref x 0))
+                    (do ((i 1 (+ i 1)))
+                        ((= i len))
+                      (display " " out)
+                      (wr (vector-ref x i))))))
+           (display ")" out))
+          ((let ((type (type-of x)))
+             (and (type? type) (type-printer type)))
+           => (lambda (printer) (printer x wr out)))
+          (else
+           (write x out))))))))
 
 (define write/ss write-with-shared-structure)
 
