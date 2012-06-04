@@ -70,7 +70,7 @@ static sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
       res = sexp_copy_bignum(ctx, NULL, x, 0);
-      sexp_bignum_data(x)[0] |= sexp_unbox_fixnum(y);
+      sexp_bignum_data(res)[0] |= (sexp_uint_t)sexp_unbox_fixnum(y);
     } else if (sexp_bignump(y)) {
       if (sexp_bignum_length(x) >= sexp_bignum_length(y)) {
         res = sexp_copy_bignum(ctx, NULL, x, 0);
@@ -110,7 +110,7 @@ static sexp sexp_bit_xor (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   } else if (sexp_bignump(x)) {
     if (sexp_fixnump(y)) {
       res = sexp_copy_bignum(ctx, NULL, x, 0);
-      sexp_bignum_data(x)[0] ^= sexp_unbox_fixnum(y);
+      sexp_bignum_data(res)[0] ^= sexp_unbox_fixnum(y);
     } else if (sexp_bignump(y)) {
       if (sexp_bignum_length(x) >= sexp_bignum_length(y)) {
         res = sexp_copy_bignum(ctx, NULL, x, 0);
