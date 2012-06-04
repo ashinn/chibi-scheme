@@ -281,14 +281,14 @@ static sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) 
   if (! sexp_fixnump(i))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, i);
   if (sexp_fixnump(x)) {
-    return sexp_make_boolean(sexp_unbox_fixnum(x) & (1<<sexp_unbox_fixnum(i)));
+    return sexp_make_boolean(sexp_unbox_fixnum(x) & (1UL<<sexp_unbox_fixnum(i)));
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     pos = sexp_unbox_fixnum(i) / (sizeof(sexp_uint_t)*CHAR_BIT);
     return sexp_make_boolean((pos < sexp_bignum_length(x))
                              && (sexp_bignum_data(x)[pos]
-                                 & (1<<(sexp_unbox_fixnum(i)
-                                        - pos*sizeof(sexp_uint_t)*CHAR_BIT))));
+                                 & (1UL<<(sexp_unbox_fixnum(i)
+                                          - pos*sizeof(sexp_uint_t)*CHAR_BIT))));
 #endif
   } else {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
