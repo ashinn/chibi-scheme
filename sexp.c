@@ -2683,37 +2683,42 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       goto scan_loop;
     case '\\':
       c1 = sexp_read_char(ctx, in);
-      res = sexp_read_symbol(ctx, in, c1, 0);
-      if (sexp_stringp(res)) {
-        str = sexp_string_data(res);
-        if (sexp_string_length(res) == 0)
-          res =
-            sexp_read_error(ctx, "unexpected end of character literal",
-                            SEXP_NULL, in);
-        if (sexp_string_length(res) == 1) {
-          res = sexp_make_character(c1);
-        } else if ((c1 == 'x' || c1 == 'X') &&
-                   sexp_isxdigit((unsigned char)(str[1]))
-                   && sexp_isxdigit((unsigned char)(str[2])) && str[3] == '\0') {
-          res = sexp_make_character(16 * digit_value(str[1])
-                                    + digit_value(str[2]));
-        } else {
-          res = 0;
-          for (c2=0; c2 < sexp_num_char_names; c2++) {
-            if (strcasecmp(str, sexp_char_names[c2].name) == 0) {
-              res = sexp_make_character(sexp_char_names[c2].ch);
-              break;
+      c2 = sexp_read_char(ctx, in);
+      sexp_push_char(ctx, c2, in);
+      if ((c1 == 'x' || c1 == 'X') && (sexp_isxdigit(c2))) {
+        res = sexp_read_number(ctx, in, 16);
+        if (sexp_fixnump(res) && sexp_unbox_fixnum(res) >= 0 && sexp_unbox_fixnum(res) <= 0x10FFFF)
+          res = sexp_make_character(sexp_unbox_fixnum(res));
+        else if (!sexp_exceptionp(res))
+          res = sexp_read_error(ctx, "bad character #\\x literal", res, in);
+      } else {
+        res = sexp_read_symbol(ctx, in, c1, 0);
+        if (sexp_stringp(res)) {
+          str = sexp_string_data(res);
+          if (sexp_string_length(res) == 0)
+            res =
+              sexp_read_error(ctx, "unexpected end of character literal",
+                              SEXP_NULL, in);
+          if (sexp_string_length(res) == 1) {
+            res = sexp_make_character(c1);
+          } else {
+            res = 0;
+            for (c2=0; c2 < sexp_num_char_names; c2++) {
+              if (strcasecmp(str, sexp_char_names[c2].name) == 0) {
+                res = sexp_make_character(sexp_char_names[c2].ch);
+                break;
+              }
             }
-          }
-          if (!res) {
+            if (!res) {
 #if SEXP_USE_UTF8_STRINGS
-            if ((c1=sexp_decode_utf8_char((unsigned char*)str)) > 0) {
-              res = sexp_make_character(c1);
-              break;
-            }
+              if ((c1=sexp_decode_utf8_char((unsigned char*)str)) > 0) {
+                res = sexp_make_character(c1);
+                break;
+              }
 #endif
-            tmp = sexp_c_string(ctx, str, -1);
-            res = sexp_read_error(ctx, "unknown character name", tmp, in);
+              tmp = sexp_c_string(ctx, str, -1);
+              res = sexp_read_error(ctx, "unknown character name", tmp, in);
+            }
           }
         }
       }
