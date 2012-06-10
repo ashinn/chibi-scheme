@@ -266,8 +266,8 @@ static sexp sexp_integer_length (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     hi = sexp_bignum_hi(x);
-    return sexp_make_fixnum(integer_log2(sexp_bignum_data(x)[hi])
-                            + hi*sizeof(sexp_uint_t)*CHAR_BIT);
+    return sexp_make_fixnum(integer_log2(sexp_bignum_data(x)[hi-1])
+                            + (hi-1)*sizeof(sexp_uint_t)*CHAR_BIT);
 #endif
   } else {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
