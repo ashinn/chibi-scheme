@@ -928,6 +928,8 @@ static sexp analyze (sexp ctx, sexp object) {
   } else if (sexp_nullp(x)) {
     res = sexp_compile_error(ctx, "empty application in source", x);
   } else {
+    if (sexp_pointerp(x))      /* accept vectors and other literals directly, */
+      sexp_immutablep(x) = 1;  /* but they must be immutable */
     res = x;
   }
   if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(res))
