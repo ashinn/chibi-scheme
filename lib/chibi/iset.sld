@@ -73,5 +73,5 @@
    iset-union iset-union! iset-intersection iset-intersection!
    iset-difference iset-difference!
    iset-empty? iset-fold iset-fold-node iset-for-each iset-for-each-node
-   iset-map iset->list iset-size
+   iset-map iset->list iset-size iset= iset<= iset>=
    iset-cursor iset-cursor? iset-cursor-next iset-ref end-of-iset?))

@@ -35,11 +35,6 @@
 (define (iset-copy-node iset)
   (%make-iset (iset-start iset) (iset-end iset) (iset-bits iset) #f #f))
 
-(define (iset-set-node! a b)
-  (iset-start-set! a (iset-start b))
-  (iset-end-set! a (iset-end b))
-  (iset-bits-set! a (iset-bits b)))
-
 (define (iset-max-end iset)
   (cond ((iset-right iset) => iset-max-end)
         (else (iset-end iset))))
@@ -67,7 +62,7 @@
 
 (define (iset-squash-bits! iset)
   (let ((bits (iset-bits iset)))
-    (if (= bits (range->bits (iset-start iset) (iset-end iset)))
+    (if (and bits (= bits (range->bits (iset-start iset) (iset-end iset))))
         (iset-bits-set! iset #f))))
 
 (define (iset-adjoin1! iset n)
