@@ -93,7 +93,6 @@
           ((= (iset-ref is1 cur1) (iset-ref is2 cur2))
            (lp (iset-cursor-next is1 cur1) (iset-cursor-next is2 cur2)))
           (else
-           (write `(not (= ,(iset-ref is1 cur1) ,(iset-ref is2 cur2)))) (newline)
            #f))))
 
 (define (iset2<= is1 is2)
