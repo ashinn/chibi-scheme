@@ -17,25 +17,27 @@
 
 ;; Create a new iset cursor pointing to the first element of iset,
 ;; with an optional stack argument.
-(define (iset-cursor iset . o)
+(define (%iset-cursor iset . o)
   (iset-cursor-advance
    (make-iset-cursor iset
                      (or (iset-bits iset) (iset-start iset))
                      (if (pair? o) (car o) '()))))
+
+(define (iset-cursor iset . o)
+  (let ((stack (if (pair? o) (car o) '())))
+    (if (iset-left iset)
+        (iset-cursor (iset-left iset) (cons iset stack))
+        (%iset-cursor iset stack))))
 
 ;; Continue to the next node in the search stack.
 (define (iset-cursor-pop cur)
   (let ((node (iset-cursor-node cur))
         (stack (iset-cursor-stack cur)))
     (cond
-     ((iset-left node)
-      (iset-cursor
-       (iset-left node)
-       (if (iset-right node) (cons (iset-right node) stack) stack)))
      ((iset-right node)
       (iset-cursor (iset-right node) stack))
      ((pair? stack)
-      (iset-cursor (car stack) (cdr stack)))
+      (%iset-cursor (car stack) (cdr stack)))
      (else
       cur))))
 
@@ -44,9 +46,10 @@
 (define (iset-cursor-advance cur)
   (let ((node (iset-cursor-node cur))
         (pos (iset-cursor-pos cur)))
-    (if (if (iset-bits node) (zero? pos) (> pos (iset-end node)))
-        (iset-cursor-pop cur)
-        cur)))
+    (cond
+     ((if (iset-bits node) (zero? pos) (> pos (iset-end node)))
+      (iset-cursor-pop cur))
+     (else cur))))
 
 (define (iset-cursor-next iset cur)
   (iset-cursor-advance
@@ -76,7 +79,6 @@
     (and (if (iset-bits node)
              (zero? (iset-cursor-pos cur))
              (> (iset-cursor-pos cur) (iset-end node)))
-         (not (iset-left node))
          (not (iset-right node))
          (null? (iset-cursor-stack cur)))))
 
@@ -90,7 +92,9 @@
           ((end-of-iset? cur2) #f)
           ((= (iset-ref is1 cur1) (iset-ref is2 cur2))
            (lp (iset-cursor-next is1 cur1) (iset-cursor-next is2 cur2)))
-          (else #f))))
+          (else
+           (write `(not (= ,(iset-ref is1 cur1) ,(iset-ref is2 cur2)))) (newline)
+           #f))))
 
 (define (iset2<= is1 is2)
   (let lp ((cur1 (iset-cursor is1))
