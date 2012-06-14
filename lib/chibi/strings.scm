@@ -32,7 +32,7 @@
         (end (string-cursor-end str)))
     (let lp ((i (if (pair? o) (car o) (string-cursor-start str))))
       (cond ((string-cursor>=? i end) end)
-            ((pred (string-ref str i)) i)
+            ((pred (string-cursor-ref str i)) i)
             (else (lp (string-cursor-next str i)))))))
 
 (define (string-find-right str x . o)
@@ -41,7 +41,7 @@
     (let lp ((i (if (pair? o) (car o) (string-cursor-end str))))
       (let ((i2 (string-cursor-prev str i)))
         (cond ((string-cursor<? i2 end) end)
-              ((pred (string-ref str i2)) i)
+              ((pred (string-cursor-ref str i2)) i)
               (else (lp i2)))))))
 
 (define (string-skip str x . o)
@@ -93,7 +93,7 @@
              (j (string-cursor-start str)))
       (if (or (string-cursor>=? i end1)
               (string-cursor>=? j end2)
-              (not (eq? (string-ref prefix i) (string-ref str j))))
+              (not (eq? (string-cursor-ref prefix i) (string-cursor-ref str j))))
           j
           (lp (string-cursor-next prefix i) (string-cursor-next str j))))))
 
@@ -104,7 +104,7 @@
              (j (string-cursor-prev str (string-cursor-end str))))
       (if (or (string-cursor<? i end1)
               (string-cursor<? j end2)
-              (not (eq? (string-ref suffix i) (string-ref str j))))
+              (not (eq? (string-cursor-ref suffix i) (string-cursor-ref str j))))
           j
           (lp (string-cursor-prev suffix i) (string-cursor-prev str j))))))
 
