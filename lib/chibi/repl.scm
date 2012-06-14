@@ -42,16 +42,32 @@
         res
         (lp (environment-parent env) (append (env-exports env) res)))))
 
+(define (string-common-prefix-length strings)
+  (if (null? strings)
+      0
+      (let lp ((len (string-length (car strings)))
+               (prev (car strings))
+               (ls (cdr strings)))
+        (if (or (null? ls) (zero? len))
+            len
+            (lp (min len (string-mismatch prev (car ls)))
+                (car ls)
+                (cdr ls))))))
+
 (define (make-sexp-buffer-completer)
   (buffer-make-completer
    (lambda (buf word)
-     (let ((len (string-length word)))
-       (sort
-        (filter
-         (lambda (w)
-           (and (>= (string-length w) len)
-                (equal? word (substring w 0 len))))
-         (map symbol->string (all-exports (interaction-environment)))))))))
+     (let* ((len (string-length word))
+            (candidates
+             (filter
+              (lambda (w)
+                (and (>= (string-length w) len)
+                     (equal? word (substring w 0 len))))
+              (map symbol->string (all-exports (interaction-environment)))))
+            (prefix-len (string-common-prefix-length candidates)))
+       (if (> prefix-len len)
+           (list (substring (car candidates) 0 prefix-len))
+           (sort candidates))))))
 
 ;;> Runs an interactive REPL.  Repeatedly displays a prompt,
 ;;> then Reads an expression, Evaluates the expression, Prints
