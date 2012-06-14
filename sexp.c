@@ -2200,7 +2200,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
 #endif
 
 sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
-  int c;
+  int c, c2;
   sexp exponent=SEXP_VOID;
   double val=0.0, scale=0.1, e=0.0;
   sexp_gc_var1(res);
@@ -2213,6 +2213,8 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
     val += sexp_placeholder_digit_value(10)*scale;
 #endif
   if (c=='e' || c=='E') {
+    c2 = sexp_read_char(ctx, in);
+    if (c2 != '+') sexp_push_char(ctx, c2, in);
     exponent = sexp_read_number(ctx, in, 10);
     if (sexp_exceptionp(exponent)) return exponent;
     e = (sexp_fixnump(exponent) ? sexp_unbox_fixnum(exponent)
