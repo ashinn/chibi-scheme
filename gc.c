@@ -85,7 +85,8 @@ void sexp_release_object(sexp ctx, sexp x) {
        ls1=ls2, ls2=sexp_cdr(ls2))
     if (sexp_car(ls2) == x) {
       if (ls1) sexp_cdr(ls1) = sexp_cdr(ls2);
-      else sexp_global(ctx, SEXP_G_PRESERVATIVES) = ls2;
+      else sexp_global(ctx, SEXP_G_PRESERVATIVES) = sexp_cdr(ls2);
+      break;
     }
 }
 
