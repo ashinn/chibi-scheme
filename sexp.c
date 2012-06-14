@@ -1507,15 +1507,16 @@ sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n) {
 
 sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp res;
-  sexp_gc_var2(ls, tmp);
+  sexp_gc_var3(ls, rev, tmp);
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
-  sexp_gc_preserve2(ctx, ls, tmp);
+  sexp_gc_preserve3(ctx, ls, rev, tmp);
   if (sexp_port_offset(out) > 0) {
     tmp = sexp_c_string(ctx, sexp_port_buf(out), sexp_port_offset(out));
-    ls = sexp_cons(ctx, tmp, sexp_port_cookie(out));
+    rev = sexp_cons(ctx, tmp, sexp_port_cookie(out));
   } else {
-    ls = sexp_port_cookie(out);
+    rev = sexp_port_cookie(out);
   }
+  ls = sexp_reverse(ctx, rev);
   res = SEXP_FALSE;
   for (tmp = ls; sexp_pairp(tmp); tmp = sexp_cdr(tmp))
     if (!sexp_stringp(sexp_car(tmp)))
@@ -1524,7 +1525,7 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
     res = sexp_xtype_exception(ctx, self, "not an output string port", out);
   if (!sexp_exceptionp(res))
     res = sexp_string_concatenate(ctx, ls, SEXP_FALSE);
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
   return res;
 }
 
