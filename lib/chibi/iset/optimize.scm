@@ -3,24 +3,25 @@
 ;; Optimizing Iset Representation
 
 (define (iset-balance iset)
-  (let ((nodes '()))
-    (iset-for-each-node
-     (lambda (is) (set! nodes (cons (iset-copy-node is) nodes)))
-     iset)
-    (let reduce ((nodes (reverse nodes)))
-      (let ((len (length nodes)))
-        (case len
-          ((0) #f)
-          ((1) (car nodes))
-          (else
-           (let ((mid (quotient len 2)))
-             (let lp ((i 0) (ls nodes) (left '()))
-               (if (= i mid)
-                 (let ((res (car ls)))
-                   (iset-left-set! res (reduce (reverse left)))
-                   (iset-right-set! res (reduce (cdr ls)))
-                   res)
-                 (lp (+ i 1) (cdr ls) (cons (car ls) left)))))))))))
+  (and iset
+       (let ((nodes '()))
+         (iset-for-each-node
+          (lambda (is) (set! nodes (cons (iset-copy-node is) nodes)))
+          iset)
+         (let reduce ((nodes (reverse nodes)))
+           (let ((len (length nodes)))
+             (case len
+               ((0) #f)
+               ((1) (car nodes))
+               (else
+                (let ((mid (quotient len 2)))
+                  (let lp ((i 0) (ls nodes) (left '()))
+                    (if (= i mid)
+                        (let ((res (car ls)))
+                          (iset-left-set! res (reduce (reverse left)))
+                          (iset-right-set! res (reduce (cdr ls)))
+                          res)
+                        (lp (+ i 1) (cdr ls) (cons (car ls) left))))))))))))
 
 (define (iset-balance! iset)
   (iset-balance iset))

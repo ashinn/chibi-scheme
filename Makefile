@@ -120,15 +120,25 @@ doc: doc/chibi.html doc-libs
 %.html: %.scrbl $(CHIBI_DOC_DEPENDENCIES)
 	$(CHIBI_DOC) $< > $@
 
-clean: clean-libs
-	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err
+########################################################################
+# Dist builds - rules to build generated files included in distribution
+# (currently just char-sets since it takes a long time and we don't want
+# to bundle the raw Unicode files or require a net connection to build).
 
-cleaner: clean
-	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
-	    libchibi-scheme$(SO) *.a include/chibi/install.h \
-	    $(shell $(FIND) lib -name \*.o)
+data/%.txt:
+	curl --silent http://www.unicode.org/Public/UNIDATA/$*.txt > $@
 
-dist-clean: dist-clean-libs cleaner
+build-lib/chibi/char-set/derived.scm: data/UnicodeData.txt data/DerivedCoreProperties.txt chibi-scheme$(EXE)
+	$(CHIBI) tools/extract-unicode-props.scm --default > $@
+
+lib/chibi/char-set/ascii.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(EXE)
+	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm --ascii chibi.char-set.compute > $@
+
+lib/chibi/char-set/full.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(EXE)
+	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm chibi.char-set.compute > $@
+
+########################################################################
+# Tests
 
 checkdefs:
 	@for d in $(D); do \
@@ -200,6 +210,19 @@ test-libs: chibi-scheme$(EXE)
 
 test: chibi-scheme$(EXE)
 	$(CHIBI) -xscheme tests/r5rs-tests.scm
+
+########################################################################
+# Packaging
+
+clean: clean-libs
+	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err
+
+cleaner: clean
+	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
+	    libchibi-scheme$(SO) *.a include/chibi/install.h \
+	    $(shell $(FIND) lib -name \*.o)
+
+dist-clean: dist-clean-libs cleaner
 
 install: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
