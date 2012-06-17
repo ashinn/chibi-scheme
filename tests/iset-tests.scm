@@ -1,6 +1,6 @@
 
 (cond-expand
- (modules (import (chibi iset) (srfi 1) (chibi test)))
+ (modules (import (chibi iset) (chibi iset optimize) (srfi 1) (chibi test)))
  (else #f))
 
 (test-begin "iset")
@@ -18,6 +18,9 @@
          ((1 128 127))
          ((129 2 127))
          ((1 -128 -126))
+         (() (u: 349 680) (u: 682 685))
+         (() (u: 64434 64449) (u: 65020 65021) (u #xFE62))
+         (() (u: 716 747) (u: 750 1084))
          )))
   (for-each
    (lambda (tst)
@@ -51,9 +54,19 @@
             ((u)
              (set! is (iset-union is (list->iset (cdr op))))
              (for-each (lambda (x) (test-assert (iset-contains? is x))) (cdr op)))
+            ((u:)
+             (set! is (iset-union is (make-iset (cadr op) (car (cddr op)))))
+             (for-each (lambda (x) (test-assert (iset-contains? is x))) (cdr op)))
             ((z) (test (iset-empty? is) (if (pair? (cdr op)) (cadr op) #t)))
             (else (error "unknown operation" (car op)))))
-        (cdr tst))))
+        (cdr tst))
+       ;; optimization
+       (let* ((is2 (iset-optimize is))
+              (is3 (iset-balance is))
+              (is4 (iset-balance is2)))
+         (test-assert (iset= is is2))
+         (test-assert (iset= is is3))
+         (test-assert (iset= is is4)))))
    tests))
 
 (test-end)
