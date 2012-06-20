@@ -1,5 +1,13 @@
 
 (cond-expand
+ (plan9
+  (define (exit . o)
+    (%exit (if (pair? o) (if (string? (car o)) (car o) "error") ""))))
+ (else
+  (define (exit . o)
+    (%exit (if (pair? o) (if (integer? (car o)) (car o) 1) 0)))))
+
+(cond-expand
  (bsd
   (define (process-command-line pid)
     (let ((res (%process-command-line pid)))

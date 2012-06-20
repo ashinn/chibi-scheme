@@ -117,7 +117,9 @@
 
 ;;> Exits the current process immediately.  Finalizers are not run.
 
-(define-c void exit (int))
+(cond-expand
+ (plan9 (define-c void (%exit exit) (string)))
+ (else (define-c void (%exit exit) (int))))
 
 ;;> Replace the current process with the given command.  Finalizers
 ;;> are not run.
