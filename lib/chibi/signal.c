@@ -62,7 +62,9 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
 #if SEXP_BSD
 
 #include <sys/time.h>
+#ifndef __DragonFly__
 #include <sys/proc.h>
+#endif
 #include <sys/sysctl.h>
 #include <sys/user.h>
 
@@ -73,6 +75,8 @@ static sexp sexp_pid_cmdline (sexp ctx, int pid) {
   if (sysctl(name, 4, &res, &reslen, NULL, 0) >= 0) {
 #ifdef __APPLE__
     return sexp_c_string(ctx, res.kp_proc.p_comm, -1);
+#elif __DragonFly__
+    return sexp_c_string(ctx, res.kp_comm, -1);
 #else
     return sexp_c_string(ctx, res.ki_comm, -1);
 #endif

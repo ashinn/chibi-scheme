@@ -8,7 +8,10 @@ ifeq ($(shell uname),Darwin)
 PLATFORM=macosx
 else
 ifeq ($(shell uname),FreeBSD)
-PLATFORM=FreeBSD
+PLATFORM=bsd
+else
+ifeq ($(shell uname),DragonFly)
+PLATFORM=bsd
 else
 ifeq ($(shell uname -o),Msys)
 PLATFORM=mingw
@@ -64,9 +67,10 @@ SO  = .so
 EXE =
 CLIBFLAGS = -fPIC -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
-ifeq ($(PLATFORM),FreeBSD)
+ifeq ($(PLATFORM),BSD)
 LIBDL=
 RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
 endif
 endif
 endif
@@ -74,5 +78,5 @@ endif
 
 ifeq ($(PLATFORM),unix)
 #RLDFLAGS=-rpath $(LIBDIR)
-RLDFLAGS=-Wl,-R$(LIBDIR)
+RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
 endif
