@@ -25,10 +25,8 @@ extern "C" {
 #if SEXP_USE_DL
 #include <dlfcn.h>
 #endif
-#if SEXP_USE_GREEN_THREADS || SEXP_USE_GC_FILE_DESCRIPTORS
 #include <errno.h>
 #include <unistd.h>
-#endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
 #include <fcntl.h>

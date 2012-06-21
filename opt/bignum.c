@@ -1,5 +1,5 @@
 /*  bignum.c -- bignum support                                */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #define SEXP_INIT_BIGNUM_SIZE 2
@@ -999,7 +999,10 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_sub (sexp ctx, sexp a, sexp b) {
-  int at=sexp_number_type(a), bt=sexp_number_type(b), negatep=0;
+#if SEXP_USE_FLONUMS
+  int negatep=0;
+#endif
+  int at=sexp_number_type(a), bt=sexp_number_type(b);
   sexp r=SEXP_VOID;
   sexp_gc_var2(tmp1, tmp2);
   sexp_gc_preserve2(ctx, tmp1, tmp2);

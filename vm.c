@@ -796,10 +796,6 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
   top -= i; _ARG1 = x; ip += sizeof(sexp); sexp_check_exception();
 #endif
 
-#if SEXP_USE_DEBUG_VM || SEXP_USE_PROFILE_VM
-#include "opt/opcode_names.h"
-#endif
-
 #if SEXP_USE_EXTENDED_FCALL
 #include "opt/fcall.c"
 #endif

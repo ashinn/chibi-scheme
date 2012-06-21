@@ -3,7 +3,9 @@
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
+#if ! SEXP_USE_STATIC_LIBS
 #include "../../opt/opcode_names.h"
+#endif
 
 #define SEXP_DISASM_MAX_DEPTH 16
 #define SEXP_DISASM_PAD_WIDTH 4
