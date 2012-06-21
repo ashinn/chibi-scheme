@@ -65,7 +65,7 @@ void sexp_usage(int err) {
 
 typedef struct sexp_image_header_t* sexp_image_header;
 struct sexp_image_header_t {
-  const char magic[8];
+  char magic[8];
   short major, minor;
   sexp_abi_identifier_t abi;
   sexp_uint_t size;
