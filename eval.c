@@ -4,6 +4,10 @@
 
 #include "chibi/eval.h"
 
+#if SEXP_USE_DEBUG_VM || SEXP_USE_PROFILE_VM || SEXP_USE_STATIC_LIBS
+#include "opt/opcode_names.h"
+#endif
+
 /************************************************************************/
 
 static int scheme_initialized_p = 0;

@@ -4,7 +4,7 @@
 # for usage.
 
 .PHONY: all all-libs clean clean-libs dist-clean dist-clean-libs install install-libs uninstall uninstall-libs doc doc-libs
-.PRECIOUS: %.c
+.PRECIOUS: %.c lib/%.c
 
 # install configuration
 
