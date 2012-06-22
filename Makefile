@@ -230,12 +230,14 @@ install: all
 	$(INSTALL) chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) tools/chibi-doc $(DESTDIR)$(BINDIR)/
-	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/term
+	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
 	$(INSTALL) lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
+	$(INSTALL) lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
 	$(INSTALL) lib/chibi/io/*.scm $(DESTDIR)$(MODDIR)/chibi/io/
+	$(INSTALL) lib/chibi/iset/*.sld lib/chibi/iset/*.scm $(DESTDIR)$(MODDIR)/chibi/iset/
 	$(INSTALL) lib/chibi/loop/*.scm $(DESTDIR)$(MODDIR)/chibi/loop/
 	$(INSTALL) lib/chibi/match/*.scm $(DESTDIR)$(MODDIR)/chibi/match/
 	$(INSTALL) lib/chibi/net/*.sld lib/chibi/net/*.scm $(DESTDIR)$(MODDIR)/chibi/net/
