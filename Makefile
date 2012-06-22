@@ -77,31 +77,32 @@ include/chibi/install.h: Makefile
 	echo '#define sexp_version "'`cat VERSION`'"' >> $@
 	echo '#define sexp_release_name "'`cat RELEASE`'"' >> $@
 
-sexp.o: sexp.c gc.c opt/bignum.c $(BASE_INCLUDES) Makefile
+%.o: %.c $(BASE_INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
 
-sexp-ulimit.o: sexp.c gc.c opt/bignum.c $(BASE_INCLUDES) Makefile
+sexp-ulimit.o: sexp.c $(BASE_INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -DSEXP_USE_LIMITED_MALLOC -o $@ $<
 
-eval.o: eval.c opcodes.c vm.c opt/simplify.c $(INCLUDES) Makefile
-	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
-
-main.o: main.c $(INCLUDES) Makefile
+main.o: main.c $(INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
-libchibi-sexp$(SO): sexp.o
+SEXP_OBJS = gc.o sexp.o opt/bignum.o
+SEXP_ULIMIT_OBJS = gc.o sexp-ulimit.o opt/bignum.o
+EVAL_OBJS = opcodes.o vm.o eval.o opt/simplify.o
+
+libchibi-sexp$(SO): $(SEXP_OBJS)
 	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
 
-libchibi-scheme$(SO): eval.o sexp.o
+libchibi-scheme$(SO): $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
-chibi-scheme-static$(EXE): main.o eval.o sexp.o
+chibi-scheme-static$(EXE): main.o $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
-chibi-scheme-ulimit$(EXE): main.o eval.o sexp-ulimit.o
+chibi-scheme-ulimit$(EXE): main.o $(SEXP_ULIMIT_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
 clibs.c: $(GENSTATIC) chibi-scheme$(EXE)

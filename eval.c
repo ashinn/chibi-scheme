@@ -13,7 +13,6 @@
 static int scheme_initialized_p = 0;
 
 static sexp analyze (sexp ctx, sexp x);
-static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
 
 #if SEXP_USE_MODULES
 sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, sexp env);
@@ -241,7 +240,7 @@ int sexp_param_index (sexp lambda, sexp name) {
 
 /************************* bytecode utilities ***************************/
 
-static void shrink_bcode (sexp ctx, sexp_uint_t i) {
+void sexp_shrink_bcode (sexp ctx, sexp_uint_t i) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(ctx)) != i) {
     tmp = sexp_alloc_bytecode(ctx, i);
@@ -256,7 +255,7 @@ static void shrink_bcode (sexp ctx, sexp_uint_t i) {
   }
 }
 
-static void expand_bcode (sexp ctx, sexp_uint_t size) {
+void sexp_expand_bcode (sexp ctx, sexp_uint_t size) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(ctx))
       < (sexp_context_pos(ctx))+size) {
@@ -273,14 +272,15 @@ static void expand_bcode (sexp ctx, sexp_uint_t size) {
   }
 }
 
-static void emit_enter (sexp ctx);
-static void emit_return (sexp ctx);
-static void bless_bytecode (sexp ctx, sexp bc);
+void sexp_emit (sexp ctx, unsigned char c)  {
+  sexp_expand_bcode(ctx, 1);
+  sexp_bytecode_data(sexp_context_bc(ctx))[sexp_context_pos(ctx)++] = c;
+}
 
-static sexp finalize_bytecode (sexp ctx) {
+sexp sexp_complete_bytecode (sexp ctx) {
   sexp bc;
-  emit_return(ctx);
-  shrink_bcode(ctx, sexp_context_pos(ctx));
+  sexp_emit_return(ctx);
+  sexp_shrink_bcode(ctx, sexp_context_pos(ctx));
   bc = sexp_context_bc(ctx);
   if (sexp_pairp(sexp_bytecode_literals(bc))) { /* compress literals */
     if (sexp_nullp(sexp_cdr(sexp_bytecode_literals(bc))))
@@ -290,13 +290,8 @@ static sexp finalize_bytecode (sexp ctx) {
     else
       sexp_bytecode_literals(bc) = sexp_list_to_vector(ctx, sexp_bytecode_literals(bc));
   }
-  bless_bytecode(ctx, bc);
+  sexp_bless_bytecode(ctx, bc);
   return bc;
-}
-
-static void emit (sexp ctx, unsigned char c)  {
-  expand_bcode(ctx, 1);
-  sexp_bytecode_data(sexp_context_bc(ctx))[sexp_context_pos(ctx)++] = c;
 }
 
 sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags,
@@ -329,7 +324,7 @@ sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv,
 
 /* internal AST */
 
-static sexp sexp_make_lambda (sexp ctx, sexp params) {
+sexp sexp_make_lambda (sexp ctx, sexp params) {
   sexp res = sexp_alloc_type(ctx, lambda, SEXP_LAMBDA);
   sexp_lambda_name(res) = SEXP_FALSE;
   sexp_lambda_params(res) = params;
@@ -342,17 +337,17 @@ static sexp sexp_make_lambda (sexp ctx, sexp params) {
   return res;
 }
 
+sexp sexp_make_ref (sexp ctx, sexp name, sexp cell) {
+  sexp res = sexp_alloc_type(ctx, ref, SEXP_REF);
+  sexp_ref_name(res) = name;
+  sexp_ref_cell(res) = cell;
+  return res;
+}
+
 static sexp sexp_make_set (sexp ctx, sexp var, sexp value) {
   sexp res = sexp_alloc_type(ctx, set, SEXP_SET);
   sexp_set_var(res) = var;
   sexp_set_value(res) = value;
-  return res;
-}
-
-static sexp sexp_make_ref (sexp ctx, sexp name, sexp cell) {
-  sexp res = sexp_alloc_type(ctx, ref, SEXP_REF);
-  sexp_ref_name(res) = name;
-  sexp_ref_cell(res) = cell;
   return res;
 }
 
@@ -392,11 +387,11 @@ static void sexp_add_path (sexp ctx, const char *str) {
 static void sexp_init_eval_context_bytecodes (sexp ctx) {
   sexp_gc_var3(tmp, vec, ctx2);
   sexp_gc_preserve3(ctx, tmp, vec, ctx2);
-  emit(ctx, SEXP_OP_RESUMECC);
-  sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = finalize_bytecode(ctx);
+  sexp_emit(ctx, SEXP_OP_RESUMECC);
+  sexp_global(ctx, SEXP_G_RESUMECC_BYTECODE) = sexp_complete_bytecode(ctx);
   ctx2 = sexp_make_child_context(ctx, NULL);
-  emit(ctx2, SEXP_OP_DONE);
-  tmp = finalize_bytecode(ctx2);
+  sexp_emit(ctx2, SEXP_OP_DONE);
+  tmp = sexp_complete_bytecode(ctx2);
   vec = sexp_make_vector(ctx, 0, SEXP_VOID);
   sexp_global(ctx, SEXP_G_FINAL_RESUMER)
     = sexp_make_procedure(ctx, SEXP_ZERO, SEXP_ZERO, tmp, vec);
@@ -1449,47 +1444,6 @@ sexp sexp_string_cmp_op (sexp ctx, sexp self, sexp_sint_t n, sexp str1, sexp str
 
 #if SEXP_USE_UTF8_STRINGS
 
-int sexp_utf8_initial_byte_count (int c) {
-  if (c < 0xC0) return 1;
-  if (c < 0xE0) return 2;
-  return ((c>>4)&1)+3;
-}
-
-int sexp_utf8_char_byte_count (int c) {
-  if (c < 0x80) return 1;
-  if (c < 0x800) return 2;
-  if (c < 0x10000) return 3;
-  return 4;
-}
-
-int sexp_string_utf8_length (unsigned char *p, int len) {
-  unsigned char *q = p+len;
-  int i;
-  for (i=0; p<q; i++)
-    p += sexp_utf8_initial_byte_count(*p);
-  return i;
-}
-
-char* sexp_string_utf8_prev (unsigned char *p) {
-  while ((*--p)>>6 == 2)
-    ;
-  return (char*)p;
-}
-
-sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
-  unsigned char *p=(unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(i);
-  if (*p < 0x80)
-    return sexp_make_character(*p);
-  else if ((*p < 0xC0) || (*p > 0xF7))
-    return sexp_user_exception(ctx, NULL, "string-ref: invalid utf8 byte", i);
-  else if (*p < 0xE0)
-    return sexp_make_character(((p[0]&0x3F)<<6) + (p[1]&0x3F));
-  else if (*p < 0xF0)
-    return sexp_make_character(((p[0]&0x1F)<<12) + ((p[1]&0x3F)<<6) + (p[2]&0x3F));
-  else
-    return sexp_make_character(((p[0]&0x0F)<<16) + ((p[1]&0x3F)<<6) + ((p[2]&0x3F)<<6) + (p[2]&0x3F));
-}
-
 sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i) {
   sexp off;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
@@ -1573,14 +1527,6 @@ sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, sexp val)
 #include "opt/plan9.c"
 #endif
 
-/************************** optimizations *****************************/
-
-#if SEXP_USE_SIMPLIFY
-#include "opt/simplify.c"
-#else
-#define sexp_rest_unused_p(lambda) 0
-#endif
-
 /***************************** opcodes ********************************/
 
 #if SEXP_USE_TYPE_DEFS
@@ -1657,8 +1603,6 @@ sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp ty
 static sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
 static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
 #endif
-
-#include "opcodes.c"
 
 static sexp sexp_copy_core (sexp ctx, struct sexp_core_form_struct *core) {
   sexp res = sexp_alloc_type(ctx, core, SEXP_CORE);
@@ -1803,8 +1747,8 @@ sexp sexp_make_primitive_env (sexp ctx, sexp version) {
   sexp_gc_var4(e, op, sym, name);
   sexp_gc_preserve4(ctx, e, op, sym, name);
   e = sexp_make_null_env(ctx, version);
-  for (i=0; i<(sizeof(opcodes)/sizeof(opcodes[0])); i++) {
-    op = sexp_copy_opcode(ctx, &opcodes[i]);
+  for (i=0; sexp_primitive_opcodes[i].op_class; i++) {
+    op = sexp_copy_opcode(ctx, &sexp_primitive_opcodes[i]);
     name = sexp_intern(ctx, (char*)sexp_opcode_name(op), -1);
     sexp_opcode_name(op) = sexp_c_string(ctx, (char*)sexp_opcode_name(op), -1);
     if (sexp_opcode_opt_param_p(op) && sexp_opcode_data(op)) {
@@ -2133,14 +2077,6 @@ sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from,
   return SEXP_VOID;
 }
 
-/************************* backend ***************************/
-
-#if SEXP_USE_NATIVE_X86
-#include "opt/x86.c"
-#else
-#include "vm.c"
-#endif
-
 /************************** eval interface ****************************/
 
 sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
@@ -2160,9 +2096,9 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
     for ( ; sexp_pairp(res); res=sexp_cdr(res))
       ast = sexp_apply1(ctx2, sexp_cdar(res), ast);
     sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
-    emit_enter(ctx2);
-    generate(ctx2, 0, 0, 0, ast);
-    res = finalize_bytecode(ctx2);
+    sexp_emit_enter(ctx2);
+    sexp_generate(ctx2, 0, 0, 0, ast);
+    res = sexp_complete_bytecode(ctx2);
     vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
     res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);
   }

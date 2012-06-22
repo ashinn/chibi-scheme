@@ -1,4 +1,6 @@
 
+#include "chibi/eval.h"
+
 #define _I(n) sexp_make_fixnum(n)
 #define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, f}
 #if SEXP_USE_IMAGE_LOADING
@@ -244,7 +246,10 @@ _FN0(SEXP_VOID, "print-vm-profile", 0, sexp_print_vm_profile),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_FORCE, 1, 0, _I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "force", 0, NULL),
 _FN2(_I(SEXP_PROMISE), _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "promise", 0, sexp_make_promise),
 #endif
+_OP(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 };
+
+struct sexp_opcode_struct* sexp_primitive_opcodes = opcodes;
 
 #undef _I
 #undef _OP

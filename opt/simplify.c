@@ -1,6 +1,10 @@
 /*  simplify.c -- basic simplification pass                   */
-/*  Copyright (c) 2010-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2010-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
+
+#include "chibi/eval.h"
+
+#if SEXP_USE_SIMPLIFY
 
 #define simplify_it(it) ((it) = simplify(ctx, it, substs, lambda))
 
@@ -37,8 +41,8 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
         }
         if (check) {
           ctx2 = sexp_make_eval_context(ctx, NULL, sexp_context_env(ctx), 0, 0);
-          generate(ctx2, 0, 0, 0, app);
-          res = finalize_bytecode(ctx2);
+          sexp_generate(ctx2, 0, 0, 0, app);
+          res = sexp_complete_bytecode(ctx2);
           if (! sexp_exceptionp(res)) {
             tmp = sexp_make_vector(ctx2, 0, SEXP_VOID);
             tmp = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, tmp);
@@ -178,3 +182,5 @@ int sexp_rest_unused_p (sexp lambda) {
   if (sexp_nullp(var)) return 0;
   return !usedp(lambda, var, sexp_lambda_body(lambda));
 }
+
+#endif
