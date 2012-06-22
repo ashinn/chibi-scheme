@@ -1256,6 +1256,21 @@ SEXP_API int sexp_buffered_flush (sexp ctx, sexp p);
 #define sexp_at_eofp(p)      (feof(sexp_port_stream(p)))
 #define sexp_port_fileno(p)  (sexp_port_stream(p) ? fileno(sexp_port_stream(p)) : sexp_filenop(sexp_port_fd(p)) ? sexp_fileno_fd(sexp_port_fd(p)) : -1)
 
+#if SEXP_USE_AUTOCLOSE_PORTS
+#define SEXP_FINALIZE_PORT sexp_finalize_port
+#define SEXP_FINALIZE_FILENO sexp_finalize_fileno
+#else
+#define SEXP_FINALIZE_PORT NULL
+#define SEXP_FINALIZE_FILENO NULL
+#endif
+
+#if SEXP_USE_DL
+sexp sexp_finalize_dl (sexp ctx, sexp self, sexp_sint_t n, sexp dl);
+#define SEXP_FINALIZE_DL sexp_finalize_dl
+#else
+#define SEXP_FINALIZE_DL NULL
+#endif
+
 #if SEXP_USE_TRACK_ALLOC_SOURCE
 #define sexp_current_source_param , const char* source
 #else
@@ -1290,18 +1305,26 @@ SEXP_API sexp sexp_flonump_op (sexp ctx, sexp self, sexp_sint_t n, sexp x);
 SEXP_API sexp sexp_make_vector_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp dflt);
 SEXP_API sexp sexp_list_to_vector_op (sexp ctx, sexp self, sexp_sint_t n, sexp ls);
 SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
+SEXP_API int sexp_is_separator(int c);
 SEXP_API sexp sexp_write_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out);
 SEXP_API sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out);
 SEXP_API sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_read_string (sexp ctx, sexp in, int sentinel);
 SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
 SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base);
+#if SEXP_USE_BIGNUMS
+SEXP_API sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
+				signed char sign, sexp_uint_t base);
+SEXP_API sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base);
+#endif
+SEXP_API sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
 #if SEXP_USE_COMPLEX
 SEXP_API sexp sexp_read_complex_tail(sexp ctx, sexp in, sexp res);
 #endif
 SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);
 SEXP_API sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in);
 SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len);
+SEXP_API sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port);
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
 SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
@@ -1340,6 +1363,11 @@ SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int f
 SEXP_API void sexp_init(void);
 
 #if SEXP_USE_UTF8_STRINGS
+SEXP_API int sexp_utf8_initial_byte_count (int c);
+SEXP_API int sexp_utf8_char_byte_count (int c);
+SEXP_API int sexp_string_utf8_length (unsigned char *p, int len);
+SEXP_API char* sexp_string_utf8_prev (unsigned char *p);
+SEXP_API sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i);
 SEXP_API sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
@@ -1365,6 +1393,14 @@ SEXP_API void sexp_maybe_unblock_port (sexp ctx, sexp in);
 #define SEXP_COPY_DEFAULT SEXP_ZERO
 #define SEXP_COPY_FREEP   SEXP_ONE
 #define SEXP_COPY_LOADP   SEXP_TWO
+
+#if ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC
+SEXP_API void sexp_gc_init (void);
+SEXP_API sexp_heap sexp_make_heap (size_t size, size_t max_size);
+SEXP_API void sexp_mark (sexp ctx, sexp x);
+SEXP_API sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr);
+SEXP_API sexp sexp_finalize (sexp ctx);
+#endif
 
 #if SEXP_USE_GLOBAL_HEAP
 #define sexp_free_heap(heap)
@@ -1426,7 +1462,6 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_symbol_to_string(ctx, s) sexp_symbol_to_string_op(ctx, NULL, 1, s)
 #define sexp_make_bytes(ctx, l, i) sexp_make_bytes_op(ctx, NULL, 2, l, i)
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx, NULL, 2, l, c)
-#define sexp_string_cmp(ctx, a, b, c) sexp_string_cmp_op(ctx, NULL, 3, a, b, c)
 #define sexp_substring(ctx, a, b, c) sexp_substring_op(ctx, NULL, 3, a, b, c)
 #define sexp_subbytes(ctx, a, b, c) sexp_subbytes_op(ctx, NULL, 3, a, b, c)
 #define sexp_string_concatenate(ctx, ls, s) sexp_string_concatenate_op(ctx, NULL, 2, ls, s)

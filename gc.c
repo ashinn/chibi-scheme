@@ -1,6 +1,8 @@
 /*  gc.c -- simple mark&sweep garbage collector               */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
+
+#if ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC
 
 #include "chibi/sexp.h"
 
@@ -720,3 +722,5 @@ void sexp_gc_init (void) {
   stack_base = ((sexp*)&size) + 32;
 #endif
 }
+
+#endif

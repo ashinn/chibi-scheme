@@ -2,7 +2,19 @@
 /*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
+#include "chibi/sexp.h"
+
+#if SEXP_USE_BIGNUMS
+
 #define SEXP_INIT_BIGNUM_SIZE 2
+
+static int digit_value (int c) {
+  return (((c)<='9') ? ((c) - '0') : ((sexp_toupper(c) - 'A') + 10));
+}
+
+static int hex_digit (int n) {
+  return ((n<=9) ? ('0' + n) : ('A' + n - 10));
+}
 
 sexp sexp_make_bignum (sexp ctx, sexp_uint_t len) {
   sexp_uint_t size = sexp_sizeof(bignum) + len*sizeof(sexp_uint_t);
@@ -236,7 +248,7 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
     res = sexp_bignum_normalize(res);
     res = sexp_read_complex_tail(ctx, in, res);
 #endif
-  } else if ((c!=EOF) && ! is_separator(c)) {
+  } else if ((c!=EOF) && ! sexp_is_separator(c)) {
     res = sexp_read_error(ctx, "invalid numeric syntax",
                           sexp_make_character(c), in);
   } else {
@@ -1544,3 +1556,5 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
   sexp_gc_release1(ctx);
   return r;
 }
+
+#endif

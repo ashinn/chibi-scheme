@@ -19,8 +19,6 @@ static struct sexp_huff_entry huff_table[] = {
 
 static int sexp_initialized_p = 0;
 
-sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
-
 static const char sexp_separators[] = {
   /* 1  2  3  4  5  6  7  8  9  a  b  c  d  e  f         */
   0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, /* x0_ */
@@ -41,7 +39,7 @@ static int hex_digit (int n) {
   return ((n<=9) ? ('0' + n) : ('A' + n - 10));
 }
 
-static int is_separator(int c) {
+int sexp_is_separator(int c) {
   return 0<c && c<0x80 && sexp_separators[c];
 }
 
@@ -157,22 +155,11 @@ sexp sexp_finalize_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp fileno) {
   return SEXP_VOID;
 }
 
-#if SEXP_USE_AUTOCLOSE_PORTS
-#define SEXP_FINALIZE_PORT sexp_finalize_port
-#define SEXP_FINALIZE_FILENO sexp_finalize_fileno
-#else
-#define SEXP_FINALIZE_PORT NULL
-#define SEXP_FINALIZE_FILENO NULL
-#endif
-
 #if SEXP_USE_DL
 sexp sexp_finalize_dl (sexp ctx, sexp self, sexp_sint_t n, sexp dl) {
   dlclose(sexp_dl_handle(dl));
   return SEXP_VOID;
 }
-#define SEXP_FINALIZE_DL sexp_finalize_dl
-#else
-#define SEXP_FINALIZE_DL NULL
 #endif
 
 static struct sexp_type_struct _sexp_type_specs[] = {
@@ -367,14 +354,6 @@ sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
 #else
 #define sexp_num_types SEXP_NUM_CORE_TYPES
 #endif
-
-#if ! SEXP_USE_BOEHM
-
-#if ! SEXP_USE_MALLOC
-#include "gc.c"
-#endif
-
-#endif  /* ! SEXP_USE_BOEHM */
 
 /****************************** contexts ******************************/
 
@@ -652,7 +631,7 @@ sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp
   return SEXP_VOID;
 }
 
-static sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port) {
+sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port) {
   sexp res;
   sexp_gc_var4(sym, name, str, irr);
   sexp_gc_preserve4(ctx, sym, name, str, irr);
@@ -897,17 +876,45 @@ sexp sexp_make_bytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp i) {
 
 #if SEXP_USE_UTF8_STRINGS
 
-static int sexp_utf8_initial_byte_count (int c) {
+int sexp_utf8_initial_byte_count (int c) {
   if (c < 0xC0) return 1;
   if (c < 0xE0) return 2;
   return ((c>>4)&1)+3;
 }
 
-static int sexp_utf8_char_byte_count (int c) {
+int sexp_utf8_char_byte_count (int c) {
   if (c < 0x80) return 1;
   if (c < 0x800) return 2;
   if (c < 0x10000) return 3;
   return 4;
+}
+
+int sexp_string_utf8_length (unsigned char *p, int len) {
+  unsigned char *q = p+len;
+  int i;
+  for (i=0; p<q; i++)
+    p += sexp_utf8_initial_byte_count(*p);
+  return i;
+}
+
+char* sexp_string_utf8_prev (unsigned char *p) {
+  while ((*--p)>>6 == 2)
+    ;
+  return (char*)p;
+}
+
+sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
+  unsigned char *p=(unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(i);
+  if (*p < 0x80)
+    return sexp_make_character(*p);
+  else if ((*p < 0xC0) || (*p > 0xF7))
+    return sexp_user_exception(ctx, NULL, "string-ref: invalid utf8 byte", i);
+  else if (*p < 0xE0)
+    return sexp_make_character(((p[0]&0x3F)<<6) + (p[1]&0x3F));
+  else if (*p < 0xF0)
+    return sexp_make_character(((p[0]&0x1F)<<12) + ((p[1]&0x3F)<<6) + (p[2]&0x3F));
+  else
+    return sexp_make_character(((p[0]&0x0F)<<16) + ((p[1]&0x3F)<<6) + ((p[2]&0x3F)<<6) + (p[2]&0x3F));
 }
 
 void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
@@ -1175,10 +1182,6 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value,
 }
 
 /************************ reading and writing *************************/
-
-#if SEXP_USE_BIGNUMS
-#include "opt/bignum.c"
-#endif
 
 #if SEXP_USE_STRING_STREAMS
 
@@ -1835,7 +1838,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       str = sexp_lsymbol_data(obj);
       c = sexp_lsymbol_length(obj) > 0 ? EOF : '|';
       for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
-        if (str[i] <= ' ' || str[i] == '\\' || is_separator(str[i])) c = '|';
+        if (str[i] <= ' ' || str[i] == '\\' || sexp_is_separator(str[i])) c = '|';
       if (c!=EOF) sexp_write_char(ctx, c, out);
       for (i=sexp_lsymbol_length(obj); i>0; str++, i--) {
         if (str[0] == '\\') sexp_write_char(ctx, '\\', out);
@@ -2114,7 +2117,7 @@ sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp) {
     if (foldp) c = sexp_tolower(c);
 #endif
     if (c == '\\') c = sexp_read_char(ctx, in);
-    if (c == EOF || is_separator(c)) {
+    if (c == EOF || sexp_is_separator(c)) {
       sexp_push_char(ctx, c, in);
       break;
     }
@@ -2164,7 +2167,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
   if (c=='i' || c=='I') {       /* trailing i, no sign */
   trailing_i:
     c = sexp_read_char(ctx, in);
-    if ((c!=EOF) && ! is_separator(c))
+    if ((c!=EOF) && ! sexp_is_separator(c))
       res = sexp_read_error(ctx, "invalid complex numeric syntax", sexp_make_character(c), in);
     else
       sexp_push_char(ctx, c, in);
@@ -2235,7 +2238,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
       res = sexp_read_complex_tail(ctx, in, res);
     } else
 #endif
-    if ((c!=EOF) && ! is_separator(c))
+    if ((c!=EOF) && ! sexp_is_separator(c))
       res = sexp_read_error(ctx, "invalid numeric syntax",
                             sexp_make_character(c), in);
     else
@@ -2330,7 +2333,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     if (c=='e' || c=='E') {
       sexp_push_char(ctx, c, in);
       return sexp_read_float_tail(ctx, in, whole, negativep);
-    } else if ((c!=EOF) && !is_separator(c)) {
+    } else if ((c!=EOF) && !sexp_is_separator(c)) {
       return sexp_read_error(ctx, "invalid numeric syntax after placeholders",
                              sexp_make_character(c), in);
     }
@@ -2384,7 +2387,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     return sexp_read_complex_tail(ctx, in, sexp_make_fixnum(negativep ? -val : val));
 #endif
   } else {
-    if ((c!=EOF) && ! is_separator(c))
+    if ((c!=EOF) && ! sexp_is_separator(c))
       return sexp_read_error(ctx, "invalid numeric syntax",
                              sexp_make_character(c), in);
     else if (tmp < 0)
@@ -2589,7 +2592,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     case 'f': case 'F':
     case 't': case 'T':
       c2 = sexp_read_char(ctx, in);
-      if (c2 == EOF || is_separator(c2)) {
+      if (c2 == EOF || sexp_is_separator(c2)) {
         res = (sexp_tolower(c1) == 't' ? SEXP_TRUE : SEXP_FALSE);
         sexp_push_char(ctx, c2, in);
       } else {
@@ -2747,7 +2750,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '.':
     c1 = sexp_read_char(ctx, in);
     sexp_push_char(ctx, c1, in);
-    if (c1 == EOF || is_separator(c1)) {
+    if (c1 == EOF || sexp_is_separator(c1)) {
       res = SEXP_RAWDOT;
     } else if (sexp_isdigit(c1)) {
       res = sexp_read_float_tail(ctx, in, 0, 0);
