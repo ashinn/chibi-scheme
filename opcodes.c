@@ -2,12 +2,24 @@
 #include "chibi/eval.h"
 
 #define _I(n) sexp_make_fixnum(n)
-#define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, f}
+
+#define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) \
+ {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, f}
+
+#define _GETTER(name, type, index) \
+  {SEXP_OPC_GETTER, SEXP_OP_SLOT_REF, 1, 0, 0, (sexp)name, _I(type), _I(index), NULL, _I(SEXP_OBJECT), _I(type), NULL, NULL, NULL, NULL, SEXP_FALSE, NULL}
+#define _SETTER(name, type, index) \
+  {SEXP_OPC_SETTER, SEXP_OP_SLOT_SET, 2, 0, 0, (sexp)name, _I(type), _I(index), NULL, SEXP_VOID, _I(type), _I(SEXP_OBJECT), NULL, NULL, NULL, SEXP_FALSE, NULL}
+
+#define _PARAM(n, t) \
+  _OP(SEXP_OPC_PARAMETER, SEXP_OP_PARAMETER_REF, 0, 1, t, t, SEXP_FALSE, SEXP_FALSE, 0, n, SEXP_FALSE, 0)
+
 #if SEXP_USE_IMAGE_LOADING
 #define _FN(o,n,m,rt,a1,a2,a3,s,d,f) {SEXP_OPC_FOREIGN, o, n, m, 0, (sexp)s, d, (sexp)#f, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, (sexp_proc1)f}
 #else
 #define _FN(o,n,m,rt,a1,a2,a3,s,d,f) _OP(SEXP_OPC_FOREIGN, o, n, m, rt, a1, a2, a3, 0, s, d, (sexp_proc1)f)
 #endif
+
 #define _FN0(rt, s, d, f) _FN(SEXP_OP_FCALL0, 0, 0, rt, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, s, d, f)
 #define _FN1(rt, a1, s, d, f) _FN(SEXP_OP_FCALL1, 1, 0, rt, a1, SEXP_FALSE, SEXP_FALSE, s, d, f)
 #define _FN1OPT(rt, a1, s, d, f) _FN(SEXP_OP_FCALL1, 0, 1, rt, a1, SEXP_FALSE, SEXP_FALSE, s, d, f)
@@ -19,7 +31,6 @@
 #define _FN3OPT(rt, a1, a2, a3, s, d, f) _FN(SEXP_OP_FCALL3, 2, 1, rt, a1, a2, a3, s, d, f)
 #define _FN4(rt, a1, a2, a3, s, d, f) _FN(SEXP_OP_FCALL4, 4, 0, rt, a1, a2, a3, s, d, f)
 #define _FN5(rt, a1, a2, a3, s, d, f) _FN(SEXP_OP_FCALLN, 5, 0, rt, a1, a2, a3, s, d, f)
-#define _PARAM(n, t) _OP(SEXP_OPC_PARAMETER, SEXP_OP_PARAMETER_REF, 0, 1, t, t, SEXP_FALSE, SEXP_FALSE, 0, n, SEXP_FALSE, 0)
 
 static struct sexp_opcode_struct opcodes[] = {
 _PARAM("current-input-port", _I(SEXP_IPORT)),
@@ -32,6 +43,8 @@ _OP(SEXP_OPC_GETTER, SEXP_OP_CAR, 1, 0, _I(SEXP_OBJECT), _I(SEXP_PAIR), SEXP_FAL
 _OP(SEXP_OPC_SETTER, SEXP_OP_SET_CAR, 2, 0, SEXP_VOID, _I(SEXP_PAIR), _I(SEXP_OBJECT), SEXP_FALSE, 0, "set-car!", 0, NULL),
 _OP(SEXP_OPC_GETTER, SEXP_OP_CDR, 1, 0, _I(SEXP_OBJECT), _I(SEXP_PAIR), SEXP_FALSE, SEXP_FALSE, 0, "cdr", 0, NULL),
 _OP(SEXP_OPC_SETTER, SEXP_OP_SET_CDR, 2, 0, SEXP_VOID, _I(SEXP_PAIR), _I(SEXP_OBJECT), SEXP_FALSE, 0, "set-cdr!", 0, NULL),
+_GETTER("pair-source", SEXP_PAIR, 2),
+_SETTER("pair-source-set!", SEXP_PAIR, 2),
 _OP(SEXP_OPC_GETTER, SEXP_OP_VECTOR_REF, 2, 0, _I(SEXP_OBJECT), _I(SEXP_VECTOR), _I(SEXP_FIXNUM), SEXP_FALSE, 0,"vector-ref", 0, NULL),
 _OP(SEXP_OPC_SETTER, SEXP_OP_VECTOR_SET, 3, 0, SEXP_VOID, _I(SEXP_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_OBJECT), 0,"vector-set!", 0, NULL),
 _OP(SEXP_OPC_GETTER, SEXP_OP_VECTOR_LENGTH, 1, 0, _I(SEXP_FIXNUM), _I(SEXP_VECTOR), SEXP_FALSE, SEXP_FALSE, 0,"vector-length", 0, NULL),
@@ -250,8 +263,3 @@ _OP(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 };
 
 struct sexp_opcode_struct* sexp_primitive_opcodes = opcodes;
-
-#undef _I
-#undef _OP
-#undef _FN
-#undef _PARAM
