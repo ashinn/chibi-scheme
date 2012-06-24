@@ -1,11 +1,18 @@
-;; init.scm -- R5RS library procedures
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; init-7.scm -- core library procedures for R7RS
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
 (define (cdar x) (cdr (car x)))
 (define (cddr x) (cdr (cdr x)))
+
+(define (cons-source kar kdr source)
+  ((lambda (pair)
+     (if (pair? source)
+         (pair-source-set! pair (pair-source source)))
+     pair)
+   (cons kar kdr)))
 
 ;; basic utils
 
@@ -612,7 +619,8 @@
            (_ls (rename 'ls)) (_res (rename 'res)) (_i (rename 'i))
            (_reverse (rename 'reverse))
            (_vector->list (rename 'vector->list))
-           (_list->vector (rename 'list->vector)))
+           (_list->vector (rename 'list->vector))
+           (_cons3 (rename 'cons-source)))
        (define ellipsis (rename (if ellipsis-specified? (cadr expr) '...)))
        (define lits (if ellipsis-specified? (car (cddr expr)) (cadr expr)))
        (define forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr)))
@@ -662,7 +670,9 @@
                                            k)
                                       (,_lp (,_cdr ,_ls)
                                             (,_- ,_i 1)
-                                            (,_cons (,_car ,_ls) ,_res))))))))))
+                                            (,_cons3 (,_car ,_ls)
+                                                     ,_res
+                                                     ,_ls))))))))))
                  ((identifier? (car p))
                   (list _and (list _list? v)
                         (list _let (list (list (car p) v))
@@ -770,24 +780,29 @@
                (let* ((depth (ellipsis-depth t))
                       (ell-dim (+ dim depth))
                       (ell-vars (free-vars (car t) vars ell-dim)))
-                 (if (null? ell-vars)
-                     (error "too many ...'s")
-                     (let* ((once (lp (car t) ell-dim))
-                            (nest (if (and (null? (cdr ell-vars))
-                                           (identifier? once)
-                                           (eq? once (car vars)))
-                                      once ;; shortcut
-                                      (cons _map
-                                            (cons (list _lambda ell-vars once)
-                                                  ell-vars))))
-                            (many (do ((d depth (- d 1))
-                                       (many nest
-                                             (list _apply _append many)))
-                                      ((= d 1) many))))
-                       (if (null? (ellipsis-tail t))
-                           many ;; shortcut
-                           (list _append many (lp (ellipsis-tail t) dim)))))))
-              (else (list _cons (lp (car t) dim) (lp (cdr t) dim)))))
+                 (cond
+                  ((null? ell-vars)
+                   (error "too many ...'s"))
+                  ((and (null? (cdr (cdr t))) (identifier? (car t)))
+                   ;; shortcut for (var ...)
+                   (lp (car t) depth))
+                  (else
+                   (let* ((once (lp (car t) ell-dim))
+                          (nest (if (and (null? (cdr ell-vars))
+                                         (identifier? once)
+                                         (eq? once (car vars)))
+                                    once ;; shortcut
+                                    (cons _map
+                                          (cons (list _lambda ell-vars once)
+                                                ell-vars))))
+                          (many (do ((d depth (- d 1))
+                                     (many nest
+                                           (list _apply _append many)))
+                                    ((= d 1) many))))
+                     (if (null? (ellipsis-tail t))
+                         many ;; shortcut
+                         (list _append many (lp (ellipsis-tail t) dim))))))))
+              (else (list _cons3 (lp (car t) dim) (lp (cdr t) dim) (list _quote t)))))
             ((vector? t) (list _list->vector (lp (vector->list t) dim)))
             ((null? t) (list _quote '()))
             (else t))))
