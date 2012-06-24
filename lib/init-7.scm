@@ -552,16 +552,19 @@
     (set-dk! (cons (cons before after) dk))
     (let ((res (thunk))) (set-dk! dk) res)))
 
-(define (set-dk! dk)
-  (if (not (eq? dk (%dk)))
+;; TODO: Implement a non-mutating tree oriented stack so we don't need
+;; to reset the stack in child threads.
+(define (set-dk! new-dk)
+  (if (not (eq? new-dk (%dk)))
       (begin
-        (set-dk! (cdr dk))
-        (let ((before (car (car dk))) (dk dk))
-          (set-car! (%dk) (cons (cdr (car dk)) before))
-          (set-cdr! (%dk) dk)
-          (set-car! dk #f)
-          (set-cdr! dk '())
-          (%dk dk)
+        (set-dk! (cdr new-dk))
+        (let ((before (car (car new-dk)))
+	      (old-dk (%dk)))
+          (set-car! old-dk (cons (cdr (car new-dk)) before))
+          (set-cdr! old-dk new-dk)
+          (set-car! new-dk #f)
+          (set-cdr! new-dk '())
+          (%dk new-dk)
           (before)))))
 
 (define (call-with-current-continuation proc)
