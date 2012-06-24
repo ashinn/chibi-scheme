@@ -2087,7 +2087,6 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_gc_preserve3(ctx, ast, vec, res);
   ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
   sexp_context_child(ctx) = ctx2;
-  sexp_context_dk(ctx2) = sexp_list1(ctx2, SEXP_FALSE);
   ast = sexp_analyze(ctx2, obj);
   if (sexp_exceptionp(ast)) {
     res = ast;
@@ -2120,7 +2119,6 @@ sexp sexp_eval_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_context_params(ctx) = SEXP_NULL;
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
   sexp_context_child(ctx) = ctx2;
-  sexp_context_dk(ctx2) = sexp_list1(ctx, SEXP_FALSE);
   res = sexp_compile_op(ctx2, self, n, obj, env);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
