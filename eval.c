@@ -435,23 +435,32 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
   if (ctx) sexp_gc_preserve1(ctx, res);
   sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_SEVEN));
   sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
-  sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
-  sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
-  sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
-  if ((! stack) || (stack == SEXP_FALSE)) {
-    stack = sexp_alloc_tagged(res, SEXP_STACK_SIZE, SEXP_STACK);
-    sexp_stack_length(stack) = SEXP_INIT_STACK_SIZE;
-    sexp_stack_top(stack) = 0;
-  }
-  sexp_context_stack(res) = stack;
-  if (! ctx) sexp_init_eval_context_globals(res);
-  if (ctx) {
-    sexp_context_params(res) = sexp_context_params(ctx);
-    sexp_context_tracep(res) = sexp_context_tracep(ctx);
-    sexp_context_dk(res) = sexp_context_dk(ctx);
-    sexp_gc_release1(ctx);
+  if (sexp_exceptionp(sexp_context_bc(res))) {
+    res = sexp_context_bc(res);
   } else {
-    sexp_context_dk(res) = sexp_list1(res, SEXP_FALSE);
+    sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
+    sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
+    sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
+    if ((! stack) || (stack == SEXP_FALSE)) {
+      stack = sexp_alloc_tagged(res, SEXP_STACK_SIZE, SEXP_STACK);
+      if (sexp_exceptionp(stack)) {
+        if (ctx) sexp_gc_release1(ctx);
+        return stack;
+      } else {
+        sexp_stack_length(stack) = SEXP_INIT_STACK_SIZE;
+        sexp_stack_top(stack) = 0;
+      }
+    }
+    sexp_context_stack(res) = stack;
+    if (! ctx) sexp_init_eval_context_globals(res);
+    if (ctx) {
+      sexp_context_params(res) = sexp_context_params(ctx);
+      sexp_context_tracep(res) = sexp_context_tracep(ctx);
+      sexp_context_dk(res) = sexp_context_dk(ctx);
+      sexp_gc_release1(ctx);
+    } else {
+      sexp_context_dk(res) = sexp_list1(res, SEXP_FALSE);
+    }
   }
   return res;
 }
@@ -2086,23 +2095,28 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   sexp_gc_preserve3(ctx, ast, vec, res);
   ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
-  sexp_context_child(ctx) = ctx2;
-  ast = sexp_analyze(ctx2, obj);
-  if (sexp_exceptionp(ast)) {
-    res = ast;
+  if (sexp_exceptionp(ctx2)) {
+    res = ctx2;
   } else {
-    res = sexp_global(ctx2, SEXP_G_OPTIMIZATIONS);
-    for ( ; sexp_pairp(res); res=sexp_cdr(res))
-      ast = sexp_apply1(ctx2, sexp_cdar(res), ast);
-    sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
-    sexp_emit_enter(ctx2);
-    sexp_generate(ctx2, 0, 0, 0, ast);
-    res = sexp_complete_bytecode(ctx2);
-    vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
-    res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);
+    sexp_context_child(ctx) = ctx2;
+    ast = sexp_analyze(ctx2, obj);
+    if (sexp_exceptionp(ast)) {
+      res = ast;
+    } else {
+      res = sexp_global(ctx2, SEXP_G_OPTIMIZATIONS);
+      for ( ; sexp_pairp(res); res=sexp_cdr(res))
+        ast = sexp_apply1(ctx2, sexp_cdar(res), ast);
+      sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
+      sexp_emit_enter(ctx2);
+      sexp_generate(ctx2, 0, 0, 0, ast);
+      res = sexp_complete_bytecode(ctx2);
+      vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
+      if (sexp_exceptionp(vec)) res = vec;
+      else res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);
+    }
+    sexp_context_child(ctx) = SEXP_FALSE;
+    sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
   }
-  sexp_context_child(ctx) = SEXP_FALSE;
-  sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
   sexp_gc_release3(ctx);
   return res;
 }
