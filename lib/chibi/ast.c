@@ -418,7 +418,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
   sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
-  sexp_define_accessors(ctx, env, SEXP_PAIR, 2, "pair-source", "pair-source-set!");
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", NULL);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 2, "syntactic-closure-expr", NULL);
