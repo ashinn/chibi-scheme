@@ -183,7 +183,7 @@
 (head (tail (tail integers))))
 
 (define (stream-filter p? s)
-  (lazy
+  (delay-force
    (if (null? (force s)) 
        (delay '())
        (let ((h (car (force s)))
@@ -468,7 +468,7 @@
 (test 3 (numerator (/ 6 4)))
 (test 2 (denominator (/ 6 4)))
 (test 2.0 (denominator
-  (exact->inexact (/ 6 4))))
+  (inexact (/ 6 4))))
 
 (test -5.0 (floor -4.3))
 (test -4.0 (ceiling -4.3))
@@ -484,7 +484,7 @@
 (test 7 (round 7))
 
 (test 1/3 (rationalize
-  (inexact->exact .3) 1/10))    ; exact
+  (exact .3) 1/10))    ; exact
 ;; (test #i1/3 (rationalize .3 1/10))  ; inexact%
 
 (test '(2 0) (call-with-values (lambda () (exact-integer-sqrt 4)) list))
@@ -587,7 +587,7 @@
 
 (test 'c (list-ref '(a b c d) 2))
 (test 'c (list-ref '(a b c d)
-          (inexact->exact (round 1.8))))
+          (exact (round 1.8))))
 
 (test '(0 ("Sue" "Sue") "Anna")
     (let ((lst (list 0 '(2 2 2 2) "Anna")))
@@ -659,7 +659,7 @@
 (test 13 (vector-ref '#(1 1 2 3 5 8 13 21)
             (let ((i (round (* 2 (acos -1)))))
               (if (inexact? i)
-                  (inexact->exact i)
+                  (exact i)
                   i))))
 
 (test #(0 ("Sue" "Sue") "Anna") (let ((vec (vector 0 '(2 2 2 2) "Anna")))
