@@ -1,4 +1,4 @@
-;; Copyright (c) 2010-2011 Alex Shinn. All rights reserved.
+;; Copyright (c) 2010-2012 Alex Shinn. All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Simple testing framework adapted from the Chicken @scheme{test}
@@ -51,16 +51,27 @@
 (define-syntax test
   (syntax-rules ()
     ((test expect expr)
-     (test #f expect expr))
+     (let ((x 'expr))
+       (write x (current-error-port))
+       (display " => " (current-error-port))
+       (write (cond ((pair? x) (pair-source x))
+                    ((syntactic-closure? x)
+                     (if (pair? (syntactic-closure-expr x))
+                         (pair-source (syntactic-closure-expr x))
+                         'N/A-sc))
+                    (else 'N/A))
+              (current-error-port))
+       (newline (current-error-port))
+       (test #f expect expr)))
     ((test name expect (expr ...))
-     (test-info name expect (expr ...) ()))
+     (test-propagate-info name expect (expr ...) ()))
     ((test name (expect ...) expr)
      (test-syntax-error
       'test
       "the test expression should come last "
       (test name (expect ...) expr)))
     ((test name expect expr)
-     (test-info name expect expr ()))
+     (test-propagate-info name expect expr ()))
     ((test a ...)
      (test-syntax-error 'test "2 or 3 arguments required"
                         (test a ...)))))
@@ -74,7 +85,7 @@
     ((_ expr)
     (test-assert #f expr))
     ((_ name expr)
-     (test-info name #f expr ((assertion . #t))))
+     (test-propagate-info name #f expr ((assertion . #t))))
     ((test a ...)
      (test-syntax-error 'test-assert "1 or 2 arguments required"
                         (test a ...)))))
@@ -111,10 +122,28 @@
     ((_ expr)
      (test-error #f expr))
     ((_ name expr)
-     (test-info name #f expr ((expect-error . #t))))
+     (test-propagate-info name #f expr ((expect-error . #t))))
     ((test a ...)
      (test-syntax-error 'test-error "1 or 2 arguments required"
                         (test a ...)))))
+
+;; TODO: Extract interesting variables so we can show their values on
+;; failure.
+(define-syntax test-propagate-info
+  (syntax-rules ()
+    ((test-propagate-info name expect expr info)
+     (test-vars () name expect expr info))))
+
+(define-syntax test-vars
+  (syntax-rules ()
+    ((_ (vars ...) n expect expr ((key . val) ...))
+     (test-run (lambda () expect)
+               (lambda () expr)
+               (cons (cons 'name n)
+                     '((source . expr)
+                       ;;(var-names . (vars ...))
+                       ;;(var-values . ,(list vars))
+                       (key . val) ...))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; group interface
@@ -147,22 +176,6 @@
 (define-syntax test-syntax-error
   (syntax-rules ()
     ((_) (syntax-error "invalid use of test-syntax-error"))))
-
-(define-syntax test-info
-  (syntax-rules ()
-    ((test-info name expect expr info)
-     (test-vars () name expect expr ((source . expr) . info)))))
-
-(define-syntax test-vars
-  (syntax-rules ()
-    ((_ (vars ...) n expect expr ((key . val) ...))
-     (test-run (lambda () expect)
-               (lambda () expr)
-               (cons (cons 'name n)
-                     '((source . expr)
-                       ;;(var-names . (vars ...))
-                       ;;(var-values . ,(list vars))
-                       (key . val) ...))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test-group representation
@@ -269,6 +282,9 @@
                   (truncate-source src (- (current-column-width) 12))))
             ((current-test-group)
              => (lambda (g)
+                  (display "no source in: " (current-error-port))
+                  (write info (current-error-port))
+                  (display "\n" (current-error-port))
                   (string-append
                    "test-"
                    (number->string (test-group-ref g 'count 0)))))
@@ -312,13 +328,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (test-expand-info info)
+  (let ((expr (assq-ref info 'source)))
+    (display "test-expand-info: " (current-error-port))
+    (write info (current-error-port))
+    (display " => " (current-error-port))
+    (write expr (current-error-port))
+    (display " => " (current-error-port))
+    (write (if (pair? expr) (pair-source expr) 'N/A) (current-error-port))
+    (display "\n" (current-error-port))
+    (if (and (pair? expr)
+             (pair-source expr)
+             (not (assq-ref info 'line-number)))
+        `((file-name . ,(car (pair-source expr)))
+          (line-number . ,(cdr (pair-source expr)))
+          ,@info)
+        info)))
+
 (define (test-run expect expr info)
-  (if (and (cond ((current-test-group)
-                  => (lambda (g) (not (test-group-ref g 'skip-group?))))
-                 (else #t))
-           (every (lambda (f) (f info)) (current-test-filters)))
-    ((current-test-applier) expect expr info)
-    ((current-test-skipper) expect expr info)))
+  (let ((info (test-expand-info info)))
+    (if (and (cond ((current-test-group)
+                    => (lambda (g) (not (test-group-ref g 'skip-group?))))
+                   (else #t))
+             (every (lambda (f) (f info)) (current-test-filters)))
+        ((current-test-applier) expect expr info)
+        ((current-test-skipper) expect expr info))))
 
 (define (test-default-applier expect expr info)
   (let* ((group (current-test-group))
@@ -423,7 +457,7 @@
          (cond
           ((assq-ref info 'line-number)
            => (lambda (line)
-                (display "    in line ")
+                (display "    on line ")
                 (write line)
                 (cond ((assq-ref info 'file-name)
                        => (lambda (file) (display " of file ") (write file))))

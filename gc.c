@@ -535,8 +535,10 @@ void* sexp_alloc (sexp ctx, size_t size) {
         && ((!h->max_size) || (total_size < h->max_size)))
       sexp_grow_heap(ctx, size);
     res = sexp_try_alloc(ctx, size);
-    if (! res)
+    if (! res) {
       res = sexp_global(ctx, SEXP_G_OOM_ERROR);
+      sexp_debug_printf("ran out of memory allocating %lu bytes => %p", size, res);
+    }
   }
   return res;
 }
