@@ -119,13 +119,24 @@
      (- (string-mismatch-right suffix str)
         (- (string-cursor-end str) (string-cursor-end suffix)))))
 
-(define (string-fold kons knil str)
-  (let ((end (string-cursor-end str)))
-    (let lp ((i (string-cursor-start str)) (acc knil))
-      (if (string-cursor>=? i end)
-          acc
-          (lp (string-cursor-next str i)
-              (kons (string-cursor-ref str i) acc))))))
+(define (string-fold kons knil str . los)
+  (if (null? los)
+      (let ((end (string-cursor-end str)))
+	(let lp ((i (string-cursor-start str)) (acc knil))
+	  (if (string-cursor>=? i end)
+	      acc
+	      (lp (string-cursor-next str i)
+		  (kons (string-cursor-ref str i) acc)))))
+      (let ((los (cons str los)))
+	(let lp ((is (map string-cursor-start los))
+		 (acc knil))
+	  (if (any (lambda (str i)
+		     (string-cursor>=? i (string-cursor-end str)))
+		   los is)
+	      acc
+	      (lp (map string-cursor-next los is)
+		  (apply kons (append (map string-cursor-ref los is)
+				      (list acc)))))))))
 
 (define (string-fold-right kons knil str)
   (let ((end (string-cursor-end str)))
@@ -138,17 +149,25 @@
   (let ((pred (make-char-predicate x)))
     (string-fold (lambda (ch count) (if (pred ch) (+ count 1) count)) 0 str)))
 
-(define (string-for-each proc str)
-  (let ((end (string-cursor-end str)))
-    (let lp ((i (string-cursor-start str)))
-      (cond ((string-cursor<? i end)
-             (proc (string-cursor-ref str i))
-             (lp (string-cursor-next str i)))))))
+(define (string-for-each proc str . los)
+  (if (null? los)
+      (string-fold (lambda (ch a) (proc ch)) #f str)
+      (let ((los (cons str los)))
+	(let lp ((is (map string-cursor-start los)))
+	  (cond
+	   ((any (lambda (str i)
+		   (string-cursor>=? i (string-cursor-end str)))
+		 los is))
+	   (else
+	    (apply proc (map string-cursor-ref los is))
+	    (lp (map string-cursor-next los is))))))))
 
-(define (string-map proc str)
+(define (string-map proc str . los)
   (call-with-output-string
     (lambda (out)
-      (string-for-each (lambda (ch) (write-char (proc ch) out)) str))))
+      (apply string-for-each
+	     (lambda args (write-char (apply proc args) out))
+	     str los))))
 
 (define (make-string-searcher needle)
   (lambda (haystack) (string-contains haystack needle)))
