@@ -5,11 +5,15 @@
 
 (test-begin "libraries")
 
+(load "tests/srfi-1-tests.scm")
+(load "tests/srfi-16-tests.scm")
+(load "tests/srfi-38-tests.scm")
 (load "tests/flonum-tests.scm")
 (load "tests/numeric-tests.scm")
 (load "tests/loop-tests.scm")
 (load "tests/match-tests.scm")
 (load "tests/scribble-tests.scm")
+(load "tests/iset-tests.scm")
 (cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
 (cond-expand
