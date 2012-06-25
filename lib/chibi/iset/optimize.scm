@@ -133,24 +133,27 @@
         (sparse 0 '()))))))
 
 ;; Remove empty nodes.
-(define (iset-prune! iset)
+(define (%iset-prune! is)
   (cond
-   ((not iset)
+   ((not is)
     #f)
    (else
-    (iset-left-set! iset (iset-prune! (iset-left iset)))
-    (iset-right-set! iset (iset-prune! (iset-right iset)))
-    (if (and (eq? 0 (iset-bits iset))
-             (not (iset-left iset))
-             (not (iset-right iset)))
+    (iset-left-set! is (%iset-prune! (iset-left is)))
+    (iset-right-set! is (%iset-prune! (iset-right is)))
+    (if (and (eq? 0 (iset-bits is))
+             (not (iset-left is))
+             (not (iset-right is)))
         #f
-        iset))))
+        is))))
+
+(define (iset-prune! is)
+  (or (%iset-prune! is) (iset)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (iset-optimize! is . opt)
   (let ((span (if (pair? opt) (car opt) (* 40 8)))
-        (is (or (iset-prune! is) (iset))))
+        (is (iset-prune! is)))
     (iset-for-each-node (lambda (node) (iset-optimize-node! node span)) is)
     (iset-prune! is)))
 

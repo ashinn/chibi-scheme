@@ -5,7 +5,7 @@
 (define char-set:upper-case (immutable-char-set (%make-iset 65 90 #f #f #f)))
 
 ;; char-set:title-case
-(define char-set:title-case (immutable-char-set #f))
+(define char-set:title-case (immutable-char-set (%make-iset 0 0 0 #f #f)))
 
 ;; char-set:letter
 (define char-set:letter (immutable-char-set (%make-iset 97 122 #f (%make-iset 65 90 #f #f #f) #f)))
