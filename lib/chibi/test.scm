@@ -51,30 +51,18 @@
 (define-syntax test
   (syntax-rules ()
     ((test expect expr)
-     (let ((x 'expr))
-       (write x (current-error-port))
-       (display " => " (current-error-port))
-       (write (cond ((pair? x) (pair-source x))
-                    ((syntactic-closure? x)
-                     (if (pair? (syntactic-closure-expr x))
-                         (pair-source (syntactic-closure-expr x))
-                         'N/A-sc))
-                    (else 'N/A))
-              (current-error-port))
-       (newline (current-error-port))
-       (test #f expect expr)))
+     (test #f expect expr))
     ((test name expect (expr ...))
      (test-propagate-info name expect (expr ...) ()))
     ((test name (expect ...) expr)
      (test-syntax-error
       'test
-      "the test expression should come last "
+      "the test expression should come last: (test <expected> (<expr> ...)) "
       (test name (expect ...) expr)))
     ((test name expect expr)
      (test-propagate-info name expect expr ()))
     ((test a ...)
-     (test-syntax-error 'test "2 or 3 arguments required"
-                        (test a ...)))))
+     (test-syntax-error 'test "test requires 2 or 3 arguments" (test a ...)))))
 
 ;;> @subsubsubsection{@scheme{(test-assert [name] expr)}}
 
@@ -181,29 +169,49 @@
 ;; test-group representation
 
 ;; (name (prop value) ...)
-(define (make-test-group name)
-  (list name
-        (cons 'start-time (get-time-of-day))))
+(define (make-test-group name . o)
+  (let ((parent (and (pair? o) (car o)))
+        (group (list name (cons 'start-time (get-time-of-day)))))
+    (test-group-set! group 'parent parent)
+    (test-group-set! group 'verbose
+                     (if parent
+                         (test-group-ref parent 'verbose)
+                         (current-test-verbosity)))
+    (test-group-set! group 'level
+                     (if parent
+                         (+ 1 (test-group-ref parent 'level 0))
+                         0))
+    (test-group-set!
+     group
+     'skip-group?
+     (or (and parent (test-group-ref parent 'skip-group?))
+         (not (every (lambda (f) (f group)) (current-test-group-filters)))))
+    group))
 
 (define test-group-name car)
 
 (define (test-group-ref group field . o)
-  (apply assq-ref (cdr group) field o))
+  (if group
+      (apply assq-ref (cdr group) field o)
+      (and (pair? o) (car o))))
 
 (define (test-group-set! group field value)
-  (cond ((assq field (cdr group))
-         => (lambda (x) (set-cdr! x value)))
-        (else (set-cdr! group (cons (cons field value) (cdr group))))))
+  (cond
+   ((assq field (cdr group))
+    => (lambda (x) (set-cdr! x value)))
+   (else (set-cdr! group (cons (cons field value) (cdr group))))))
 
 (define (test-group-inc! group field)
-  (cond ((assq field (cdr group))
-         => (lambda (x) (set-cdr! x (+ 1 (cdr x)))))
-        (else (set-cdr! group (cons (cons field 1) (cdr group))))))
+  (cond
+   ((assq field (cdr group))
+    => (lambda (x) (set-cdr! x (+ 1 (cdr x)))))
+   (else (set-cdr! group (cons (cons field 1) (cdr group))))))
 
 (define (test-group-push! group field value)
-  (cond ((assq field (cdr group))
-         => (lambda (x) (set-cdr! x (cons value (cdr x)))))
-        (else (set-cdr! group (cons (cons field (list value)) (cdr group))))))
+  (cond
+   ((assq field (cdr group))
+    => (lambda (x) (set-cdr! x (cons value (cdr x)))))
+   (else (set-cdr! group (cons (cons field (list value)) (cdr group))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; utilities
@@ -317,26 +325,20 @@
 (define (display-to-string x)
   (if (string? x) x (call-with-output-string (lambda (out) (display x out)))))
 
-(define (red x) (string-append "\x1B;[31m" (display-to-string x) "\x1B;[0m"))
-(define (green x) (string-append "\x1B;[32m" (display-to-string x) "\x1B;[0m"))
-(define (yellow x) (string-append "\x1B;[33m" (display-to-string x) "\x1B;[0m"))
-;; (define (blue x) (string-append "\x1B;[34m" (display-to-string x) "\x1B;[0m"))
-;; (define (magenta x) (string-append "\x1B;[35m" (display-to-string x) "\x1B;[0m"))
-;; (define (cyan x) (string-append "\x1B;[36m" (display-to-string x) "\x1B;[0m"))
-(define (bold x) (string-append "\x1B;[1m" (display-to-string x) "\x1B;[0m"))
-(define (underline x) (string-append "\x1B;[4m" (display-to-string x) "\x1B;[0m"))
+(define (ansi-color code)
+  (lambda (x)
+    (string-append "\x1B;[" (number->string code) "m"
+                   (display-to-string x) "\x1B;[0m")))
+(define red (ansi-color 31))
+(define green (ansi-color 32))
+(define yellow (ansi-color 33))
+(define bold (ansi-color 1))
+(define underline (ansi-color 4))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (test-expand-info info)
   (let ((expr (assq-ref info 'source)))
-    (display "test-expand-info: " (current-error-port))
-    (write info (current-error-port))
-    (display " => " (current-error-port))
-    (write expr (current-error-port))
-    (display " => " (current-error-port))
-    (write (if (pair? expr) (pair-source expr) 'N/A) (current-error-port))
-    (display "\n" (current-error-port))
     (if (and (pair? expr)
              (pair-source expr)
              (not (assq-ref info 'line-number)))
@@ -352,23 +354,16 @@
                    (else #t))
              (every (lambda (f) (f info)) (current-test-filters)))
         ((current-test-applier) expect expr info)
-        ((current-test-skipper) expect expr info))))
+        ((current-test-skipper) info))))
 
 (define (test-default-applier expect expr info)
   (let* ((group (current-test-group))
          (indent (and group (test-group-indent-width group))))
     (cond
-     ((and group
-           (equal? 0 (test-group-ref group 'count 0))
-           (zero? (test-group-ref group 'subgroups-count 0))
-           (test-group-ref group 'verbosity))
-      (newline)
-      (print-header-line
-       (string-append "testing " (or (test-group-name group) ""))
-       (or indent 0))))
-    (if (and indent (positive? indent))
-        (display (make-string indent #\space)))
-    (test-print-name info indent)
+     ((test-group-ref group 'verbose)
+      (if (and indent (positive? indent))
+          (display (make-string indent #\space)))
+      (test-print-name info indent)))
     (let ((expect-val
            (guard
             (exn
@@ -382,9 +377,7 @@
         (else
          ((current-test-handler)
           (if (assq-ref info 'expect-error) 'PASS 'ERROR)
-          expect
-          expr
-           (append `((exception . ,exn)) info))))
+          (append `((exception . ,exn)) info))))
        (let ((res (expr)))
          (let ((status
                 (if (and (not (assq-ref info 'expect-error))
@@ -394,12 +387,95 @@
                     'PASS
                     'FAIL))
                (info `((result . ,res) (expected . ,expect-val) ,@info)))
-           ((current-test-handler) status expect expr info)))))))
+           ((current-test-handler) status info)))))))
 
-(define (test-default-skipper expect expr info)
-  ((current-test-handler) 'SKIP expect expr info))
+(define (test-default-skipper info)
+  ((current-test-handler) 'SKIP info))
 
-(define (test-default-handler status expect expr info)
+(define (test-status-color status)
+  (if (test-ansi?)
+      (case status
+        ((ERROR) (lambda (x) (underline (red x))))
+        ((FAIL) red)
+        ((SKIP) yellow)
+        (else (lambda (x) x)))
+      (lambda (x) x)))
+
+(define (test-status-message status)
+  ((test-status-color status) status))
+
+(define (test-status-code status)
+  ((test-status-color status)
+   (case status
+     ((ERROR) "!")
+     ((FAIL) "x")
+     ((SKIP) "-")
+     (else "."))))
+
+(define (test-print-explanation indent status info)
+  (cond
+   ((eq? status 'ERROR)
+    (display indent)
+    (cond ((assq 'exception info)
+           => (lambda (e)
+                (print-exception (cdr e) (current-output-port))))))
+   ((and (eq? status 'FAIL) (assq-ref info 'assertion))
+    (display indent)
+    (display "assertion failed\n"))
+   ((and (eq? status 'FAIL) (assq-ref info 'expect-error))
+    (display indent)
+    (display "expected an error but got ")
+    (write (assq-ref info 'result)) (newline))
+   ((eq? status 'FAIL)
+    (display indent)
+    (display "expected ") (write (assq-ref info 'expected))
+    (display " but got ") (write (assq-ref info 'result)) (newline))))
+
+(define (test-print-source indent status info)
+  (case status
+    ((FAIL ERROR)
+     (cond
+      ((assq-ref info 'line-number)
+       => (lambda (line)
+            (display "    on line ")
+            (write line)
+            (cond ((assq-ref info 'file-name)
+                   => (lambda (file) (display " of file ") (write file))))
+            (newline))))
+     (cond
+      ((assq-ref info 'source)
+       => (lambda (s)
+            (cond
+             ((or (assq-ref info 'name)
+                  (> (string-length (write-to-string s))
+                     (current-column-width)))
+              (display (write-to-string s))
+              (newline))))))
+     (cond
+      ((assq-ref info 'values)
+       => (lambda (v)
+            (for-each
+             (lambda (v)
+               (display "    ") (display (car v))
+               (display ": ") (write (cdr v)) (newline))
+             v)))))))
+
+(define (test-print-failure indent status info)
+  ;; display status explanation
+  (test-print-explanation indent status info)
+  ;; display line, source and values info
+  (test-print-source indent status info))
+
+(define (test-print-header-line str . indent)
+  (let* ((header (string-append
+                  (make-string (if (pair? indent) (car indent) 0) #\space)
+                  "-- " str " "))
+         (len (string-length header)))
+      (display (if (test-ansi?) (bold header) header))
+      (display (make-string (max 0 (- (current-column-width) len)) #\-))
+      (newline)))
+
+(define (test-default-handler status info)
   (define indent
     (make-string
      (+ 4 (cond ((current-test-group)
@@ -412,73 +488,34 @@
               (if (not (eq? 'SKIP status))
                   (test-group-inc! group 'count))
               (test-group-inc! group status))))
+  (if (and (current-test-group)
+           (zero?
+            (modulo
+             (+ (string-length (test-group-name (current-test-group)))
+                (or (test-group-ref (current-test-group) 'count) 0)
+                1)
+             (current-column-width))))
+      (display (string-append "\n" (substring indent 4))))
   (cond
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
     (test-failure-count (+ 1 (test-failure-count)))))
   (cond
-   ((not (eq? status 'SKIP))
+   ((eq? status 'SKIP))
+   ((test-group-ref (current-test-group) 'verbose)
     ;; display status
     (display "[")
     (if (not (eq? status 'ERROR)) (display " ")) ; pad
-    (display ((if (test-ansi?)
-                  (case status
-                    ((ERROR) (lambda (x) (underline (red x))))
-                    ((FAIL) red)
-                    ((SKIP) yellow)
-                    (else green))
-                  (lambda (x) x))
-              status))
+    (display (test-status-message status))
     (display "]")
     (newline)
-    ;; display status explanation
+    (test-print-failure indent status info))
+   (else
+    (display (test-status-code status))
     (cond
-     ((eq? status 'ERROR)
-      (display indent)
-      (cond ((assq 'exception info)
-             => (lambda (e)
-                  (print-exception (cdr e) (current-output-port))))))
-     ((and (eq? status 'FAIL) (assq-ref info 'assertion))
-      (display indent)
-      (display "assertion failed\n"))
-     ((and (eq? status 'FAIL) (assq-ref info 'expect-error))
-      (display indent)
-      (display "expected an error but got ")
-      (write (assq-ref info 'result)) (newline))
-     ((eq? status 'FAIL)
-      (display indent)
-      (display "expected ") (write (assq-ref info 'expected))
-      (display " but got ") (write (assq-ref info 'result)) (newline)))
-    ;; display line, source and values info
-    (cond
-     ((or (not (current-test-group))
-          (test-group-ref (current-test-group) 'verbosity))
-      (case status
-        ((FAIL ERROR)
-         (cond
-          ((assq-ref info 'line-number)
-           => (lambda (line)
-                (display "    on line ")
-                (write line)
-                (cond ((assq-ref info 'file-name)
-                       => (lambda (file) (display " of file ") (write file))))
-                (newline))))
-         (cond
-          ((assq-ref info 'source)
-           => (lambda (s)
-                (cond
-                 ((or (assq-ref info 'name)
-                      (> (string-length (write-to-string s))
-                         (current-column-width)))
-                  (display (write-to-string s))
-                  (newline))))))
-         (cond
-          ((assq-ref info 'values)
-           => (lambda (v)
-                (for-each
-                 (lambda (v)
-                   (display "    ") (display (car v))
-                   (display ": ") (write (cdr v)) (newline))
-                 v))))))))))
+     ((and (memq status '(FAIL ERROR)) (current-test-group))
+      => (lambda (group)
+           (test-group-push! group 'failures (list indent status info)))))))
+  (flush-output)
   status)
 
 (define (test-default-group-reporter group)
@@ -497,6 +534,8 @@
          (subgroups-count (or (test-group-ref group 'subgroups-count) 0))
          (subgroups-pass (or (test-group-ref group 'subgroups-pass) 0))
          (indent (make-string (or (test-group-indent-width group) 0) #\space)))
+    (if (not (test-group-ref group 'verbose))
+        (newline))
     (cond
      ((or (positive? count) (positive? subgroups-count))
       (if (not (= count (+ pass fail err)))
@@ -534,6 +573,17 @@
                 (percent err count) ".")))
              (newline)))
       (cond
+       ((not (test-group-ref group 'verbose))
+        (for-each
+         (lambda (failure)
+           (display indent)
+           (display ((if (test-ansi?) red (lambda (x) x))
+                     (string-append (display-to-string (cadr failure)) ": ")))
+           (display (test-get-name! (car (cddr failure))))
+           (newline)
+           (apply test-print-failure failure))
+         (test-group-ref group 'failures))))
+      (cond
        ((positive? count)
         (display indent)
         (display
@@ -553,13 +603,13 @@
            (number->string subgroups-count)
            (percent subgroups-pass subgroups-count)
            (plural " subgroup" subgroups-pass) " passed.")))
-        (newline)))
-      ))
-    (print-header-line
-     (string-append "done testing " (or (test-group-name group) ""))
-     (or (test-group-indent-width group) 0))
-    (newline)
-    ))
+        (newline)))))
+    (cond
+     ((test-group-ref group 'verbose)
+      (test-print-header-line
+       (string-append "done testing " (or (test-group-name group) ""))
+       (or (test-group-indent-width group) 0))
+      (newline)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -569,44 +619,27 @@
            (inexact? expect)
            (approx-equal? expect res (current-test-epsilon)))))
 
-(define (print-header-line str . indent)
-  (let* ((header (string-append
-                  (make-string (if (pair? indent) (car indent) 0) #\space)
-                  "-- " str " "))
-         (len (string-length header)))
-      (display (if (test-ansi?) (bold header) header))
-      (display (make-string (max 0 (- (current-column-width) len)) #\-))
-      (newline)))
-
 ;;> Begin testing a new group until the closing @scheme{(test-end)}.
 
 (define (test-begin . o)
   (let* ((name (if (pair? o) (car o) ""))
-         (group (make-test-group name))
-         (parent (current-test-group)))
+         (parent (current-test-group))
+         (group (make-test-group name parent)))
     (cond
      ((and parent
            (equal? 0 (test-group-ref parent 'count 0))
-           (zero? (test-group-ref parent 'subgroups-count 0))
-           (test-group-ref parent 'verbosity))
-      (newline)
-      (print-header-line
-       (string-append "testing " (test-group-name parent))
-       (or (test-group-indent-width parent) 0))))
-    (test-group-set! group 'parent parent)
-    (test-group-set! group 'verbosity
-                     (if parent
-                         (test-group-ref parent 'verbosity)
-                         (current-test-verbosity)))
-    (test-group-set! group 'level
-                     (if parent
-                         (+ 1 (test-group-ref parent 'level 0))
-                         0))
-    (test-group-set!
-     group
-     'skip-group?
-     (or (and parent (test-group-ref parent 'skip-group?))
-         (not (every (lambda (f) (f group)) (current-test-group-filters)))))
+           (zero? (test-group-ref parent 'subgroups-count 0)))
+      (newline)))
+    (cond
+     ((test-group-ref group 'verbose)
+      (test-print-header-line
+       (string-append "testing " name)
+       (or (test-group-indent-width group) 0)))
+     (else
+      (display
+       (make-string (or (test-group-indent-width group) 0)
+                    #\space))
+      (display (bold (string-append name ": ")))))
     (current-test-group group)))
 
 ;;> Ends testing group introduced with @scheme{(test-begin)}, and
@@ -614,26 +647,26 @@
 
 (define (test-end . o)
   (cond
-    ((current-test-group)
-     => (lambda (group)
-          (if (and (pair? o) (not (equal? (car o) (test-group-name group))))
-            (warning "mismatched test-end:" (car o) (test-group-name group)))
-          (let ((parent (test-group-ref group 'parent)))
-            (cond
-             ((not (test-group-ref group 'skip-group?))
-              ;; only report if there's something to say
-              ((current-test-group-reporter) group)
-              (cond
-               (parent
-                (test-group-inc! parent 'subgroups-count)
-                (cond
-                 ((and (zero? (test-group-ref group 'FAIL 0))
-                       (zero? (test-group-ref group 'ERROR 0))
-                       (= (test-group-ref group 'subgroups-pass 0)
-                          (test-group-ref group 'subgroups-count 0)))
-                  (test-group-inc! parent 'subgroups-pass)))))))
-            (current-test-group parent)
-            group)))))
+   ((current-test-group)
+    => (lambda (group)
+         (if (and (pair? o) (not (equal? (car o) (test-group-name group))))
+             (warning "mismatched test-end:" (car o) (test-group-name group)))
+         (let ((parent (test-group-ref group 'parent)))
+           (cond
+            ((not (test-group-ref group 'skip-group?))
+             ;; only report if there's something to say
+             ((current-test-group-reporter) group)
+             (cond
+              (parent
+               (test-group-inc! parent 'subgroups-count)
+               (cond
+                ((and (zero? (test-group-ref group 'FAIL 0))
+                      (zero? (test-group-ref group 'ERROR 0))
+                      (= (test-group-ref group 'subgroups-pass 0)
+                         (test-group-ref group 'subgroups-count 0)))
+                 (test-group-inc! parent 'subgroups-pass)))))))
+           (current-test-group parent)
+           group)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; parameters
@@ -641,9 +674,9 @@
 (define current-test-group (make-parameter #f))
 (define current-test-verbosity
   (make-parameter
-   (cond ((get-environment-variable "TEST_QUIET")
-          => (lambda (s) (equal? s "0")))
-         (else #t))))
+   (cond ((get-environment-variable "TEST_VERBOSE")
+          => (lambda (s) (not (member s "" "0"))))
+         (else #f))))
 (define current-test-epsilon (make-parameter 1e-5))
 (define current-test-comparator (make-parameter test-equal?))
 (define current-test-applier (make-parameter test-default-applier))
