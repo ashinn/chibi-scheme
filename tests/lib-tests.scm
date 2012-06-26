@@ -13,6 +13,7 @@
 (load "tests/loop-tests.scm")
 (load "tests/match-tests.scm")
 (load "tests/scribble-tests.scm")
+(load "tests/string-tests.scm")
 (load "tests/iset-tests.scm")
 (cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
