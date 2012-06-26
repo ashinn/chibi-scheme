@@ -2,10 +2,16 @@
 (cond-expand
  (plan9
   (define (exit . o)
-    (%exit (if (pair? o) (if (string? (car o)) (car o) "error") ""))))
+    (%exit (if (pair? o)
+               (if (string? (car o))
+                   (car o)
+                   (if (eq? #t (car o)) "" "chibi error"))
+               ""))))
  (else
   (define (exit . o)
-    (%exit (if (pair? o) (if (integer? (car o)) (car o) 1) 0)))))
+    (%exit (if (pair? o)
+               (if (integer? (car o)) (car o) (if (eq? #t (car o)) 0 1))
+               0)))))
 
 (cond-expand
  (bsd
