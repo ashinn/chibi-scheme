@@ -5,7 +5,7 @@
 #include <chibi/eval.h>
 
 #ifndef PLAN9
-#include <time.h>
+#include <sys/time.h>
 #else
 typedef long time_t;
 #endif
@@ -14,8 +14,17 @@ typedef long time_t;
 static time_t leap_seconds_since_epoch = 24;
 
 static sexp sexp_current_second (sexp ctx, sexp self, sexp_sint_t n) {
+#ifndef PLAN9
+  struct timeval tv;
+  struct timezone tz;
+  if (gettimeofday(&tv, &tz))
+    return sexp_user_exception(ctx, self, "couldn't gettimeofday", SEXP_FALSE);
+  return sexp_make_flonum(ctx, tv.tv_sec + tv.tv_usec / 1000000.0
+                          + leap_seconds_since_epoch);
+#else
   time_t res = time(NULL);
   return sexp_make_flonum(ctx, res + leap_seconds_since_epoch);
+#endif
 }
 
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
