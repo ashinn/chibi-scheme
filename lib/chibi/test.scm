@@ -32,14 +32,6 @@
                 (else (lp2 (+ j 1) (+ k 1))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; time utilities
-
-(define (timeval-difference tv1 tv2)
-  (let ((seconds (- (timeval-seconds tv1) (timeval-seconds tv2)))
-        (ms (- (timeval-microseconds tv1) (timeval-microseconds tv2))))
-    (+ (max seconds 0.0) (/ ms 1000000.0))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
 
 ;;> @subsubsubsection{@scheme{(test [name] expect expr)}}
@@ -63,6 +55,17 @@
      (test-propagate-info name expect expr ()))
     ((test a ...)
      (test-syntax-error 'test "test requires 2 or 3 arguments" (test a ...)))))
+
+;;> @subsubsubsection{@scheme{(test-equal equal [name] expect expr)}}
+
+;;> Equivalent to test, using @var{equal} for comparison instead of
+;;> @scheme{equal?}.
+
+(define-syntax test-equal
+  (syntax-rules ()
+    ((test-equal equal . args)
+     (parameterize ((current-test-comparator equal))
+       (test . args)))))
 
 ;;> @subsubsubsection{@scheme{(test-assert [name] expr)}}
 
@@ -133,6 +136,14 @@
                        ;;(var-values . ,(list vars))
                        (key . val) ...))))))
 
+;;> @subsubsubsection{@scheme{(test-exit)}}
+
+;;> Exits with a failure status if any tests have failed,
+;;> and a successful status otherwise.
+
+(define (test-exit)
+  (exit (zero? (test-failure-count))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; group interface
 
@@ -171,7 +182,7 @@
 ;; (name (prop value) ...)
 (define (make-test-group name . o)
   (let ((parent (and (pair? o) (car o)))
-        (group (list name (cons 'start-time (get-time-of-day)))))
+        (group (list name (cons 'start-time (current-second)))))
     (test-group-set! group 'parent parent)
     (test-group-set! group 'verbose
                      (if parent
@@ -224,6 +235,11 @@
 (define (approx-equal? a b epsilon)
   (< (abs (- 1 (abs (if (zero? b) (+ 1 a) (/ a b)))))
      epsilon))
+
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (get-output-string out)))
 
 ;; partial pretty printing to abbreviate `quote' forms and the like
 (define (write-to-string x)
@@ -312,7 +328,7 @@
        ((positive? diff)
         (display (make-string diff #\.)))))
     (display " ")
-    (flush-output)))
+    (flush-output-port)))
 
 (define (test-group-indent-width group)
   (let ((level (max 0 (+ 1 (- (test-group-ref group 'level 0)
@@ -496,6 +512,7 @@
                 1)
              (current-column-width))))
       (display (string-append "\n" (substring indent 4))))
+  ;; update global failure count for exit status
   (cond
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
     (test-failure-count (+ 1 (test-failure-count)))))
@@ -515,7 +532,7 @@
      ((and (memq status '(FAIL ERROR)) (current-test-group))
       => (lambda (group)
            (test-group-push! group 'failures (list indent status info)))))))
-  (flush-output)
+  (flush-output-port)
   status)
 
 (define (test-default-group-reporter group)
@@ -523,9 +540,9 @@
     (if (= n 1) word (string-append word "s")))
   (define (percent n d)
     (string-append " (" (number->string (/ (round (* 1000.0 (/ n d))) 10)) "%)"))
-  (let* ((end-time (get-time-of-day))
+  (let* ((end-time (current-second))
          (start-time (test-group-ref group 'start-time))
-         (duration (timeval-difference (car end-time) (car start-time)))
+         (duration (- end-time start-time))
          (count (or (test-group-ref group 'count) 0))
          (pass (or (test-group-ref group 'PASS) 0))
          (fail (or (test-group-ref group 'FAIL) 0))
@@ -582,7 +599,7 @@
            (display (test-get-name! (car (cddr failure))))
            (newline)
            (apply test-print-failure failure))
-         (test-group-ref group 'failures))))
+         (reverse (or (test-group-ref group 'failures) '())))))
       (cond
        ((positive? count)
         (display indent)
