@@ -367,6 +367,7 @@ void run_main (int argc, char **argv) {
       break;
     case 'q':
       init_context();
+      mods_loaded = 1;
       if (! init_loaded++)
         sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
       break;
