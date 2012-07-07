@@ -1,5 +1,5 @@
 /*  disasm.c -- optional debugging utilities                  */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -30,8 +30,12 @@ static void sexp_write_integer (sexp ctx, sexp_sint_t n, sexp out) {
 
 static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   unsigned char *ip, opcode, i;
-  sexp tmp=NULL;
+  sexp tmp=NULL, src;
   sexp_sint_t *labels, label=1, off;
+#if SEXP_USE_FULL_SOURCE_INFO
+  sexp src_here=NULL;
+  sexp_sint_t src_off=0;
+#endif
 
   if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
@@ -46,6 +50,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     return sexp_type_exception(ctx, self, SEXP_OPORT, out);
   }
 
+  src = sexp_bytecode_source(bc);
+
   for (i=0; i<(depth*SEXP_DISASM_PAD_WIDTH); i++)
     sexp_write_char(ctx, ' ', out);
   sexp_write_string(ctx, "      -------------- ", out);
@@ -54,6 +60,17 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     sexp_write_char(ctx, ' ', out);
   }
   sexp_write_pointer(ctx, bc, out);
+#if SEXP_USE_FULL_SOURCE_INFO
+  if (!(src && sexp_vectorp(src)))
+    src_off = -1;
+  /* if (src) sexp_write(ctx, src, out); */
+#else
+  if (src && sexp_pair(src)) {
+    sexp_write(ctx, sexp_car(src), out);
+    sexp_write_string(ctx, ":", out);
+    sexp_write(ctx, sexp_cdr(src), out);
+  }
+#endif
   sexp_newline(ctx, out);
 
   /* build a table of labels that are jumped to */
@@ -107,13 +124,24 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     if (labels[ip - sexp_bytecode_data(bc)] < 10)
       sexp_write_char(ctx, ' ', out);
   }
+#if SEXP_USE_FULL_SOURCE_INFO
+  if ((src_off >= 0)
+      && ((ip-sexp_bytecode_data(bc))
+          == sexp_unbox_fixnum(
+               sexp_car(sexp_vector_ref(src, sexp_make_fixnum(src_off)))))) {
+    src_here = sexp_cdr(sexp_vector_ref(src, sexp_make_fixnum(src_off)));
+    src_off = src_off < sexp_vector_length(src)-1 ? src_off + 1 : -1;
+  } else {
+    src_here = NULL;
+  }
+#endif
   opcode = *ip++;
-  if (opcode*sizeof(char*) < sizeof(reverse_opcode_names)) {
+  if (opcode < SEXP_OP_NUM_OPCODES) {
     sexp_write_char(ctx, ' ', out);
-    sexp_write_string(ctx, reverse_opcode_names[opcode], out);
+    sexp_write_string(ctx, sexp_opcode_names[opcode], out);
     sexp_write_char(ctx, ' ', out);
   } else {
-    sexp_write_string(ctx, "  <unknown> ", out);
+    sexp_write_string(ctx, "  <invalid> ", out);
     sexp_write(ctx, sexp_make_fixnum(opcode), out);
     sexp_write_char(ctx, ' ', out);
   }
@@ -179,6 +207,14 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     ip += sizeof(sexp);
     break;
   }
+#if SEXP_USE_FULL_SOURCE_INFO
+  if (src_here && sexp_pairp(src_here)) {
+    sexp_write_string(ctx, "    ; ", out);
+    sexp_write(ctx, sexp_car(src_here), out);
+    sexp_write_string(ctx, ":", out);
+    sexp_write(ctx, sexp_cdr(src_here), out);
+  }
+#endif
   sexp_write_char(ctx, '\n', out);
   if ((opcode == SEXP_OP_PUSH || opcode == SEXP_OP_MAKE_PROCEDURE)
       && (depth < SEXP_DISASM_MAX_DEPTH)

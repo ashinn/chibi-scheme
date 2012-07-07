@@ -1,5 +1,5 @@
 
-static const char* reverse_opcode_names[] =
+static const char* sexp_opcode_names_[] =
   {"NOOP", "RAISE", "RESUMECC", "CALLCC", "APPLY1", "TAIL-CALL", "CALL",
    "FCALL0", "FCALL1", "FCALL2", "FCALL3", "FCALL4", "FCALLN",
    "JUMP-UNLESS", "JUMP", "PUSH", "RESERVE", "DROP",
@@ -20,3 +20,5 @@ static const char* reverse_opcode_names[] =
    "WRITE-CHAR", "WRITE-STRING", "READ-CHAR", "PEEK-CHAR",
    "YIELD", "FORCE", "RET", "DONE",
   };
+
+const char** sexp_opcode_names = sexp_opcode_names_;

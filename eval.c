@@ -248,6 +248,8 @@ void sexp_shrink_bcode (sexp ctx, sexp_uint_t i) {
     sexp_bytecode_length(tmp) = i;
     sexp_bytecode_literals(tmp)
       = sexp_bytecode_literals(sexp_context_bc(ctx));
+    sexp_bytecode_source(tmp)
+      = sexp_bytecode_source(sexp_context_bc(ctx));
     memcpy(sexp_bytecode_data(tmp),
            sexp_bytecode_data(sexp_context_bc(ctx)),
            i);
@@ -265,6 +267,8 @@ void sexp_expand_bcode (sexp ctx, sexp_uint_t size) {
       = sexp_bytecode_length(sexp_context_bc(ctx))*2;
     sexp_bytecode_literals(tmp)
       = sexp_bytecode_literals(sexp_context_bc(ctx));
+    sexp_bytecode_source(tmp)
+      = sexp_bytecode_source(sexp_context_bc(ctx));
     memcpy(sexp_bytecode_data(tmp),
            sexp_bytecode_data(sexp_context_bc(ctx)),
            sexp_bytecode_length(sexp_context_bc(ctx)));
@@ -290,6 +294,12 @@ sexp sexp_complete_bytecode (sexp ctx) {
     else
       sexp_bytecode_literals(bc) = sexp_list_to_vector(ctx, sexp_bytecode_literals(bc));
   }
+#if SEXP_USE_FULL_SOURCE_INFO
+  if (sexp_bytecode_source(bc) && sexp_pairp(sexp_bytecode_source(bc))) {
+    sexp_bytecode_source(bc) = sexp_nreverse(ctx, sexp_bytecode_source(bc));
+    sexp_bytecode_source(bc) = sexp_list_to_vector(ctx, sexp_bytecode_source(bc));
+  }
+#endif
   sexp_bless_bytecode(ctx, bc);
   return bc;
 }
@@ -550,6 +560,7 @@ static sexp analyze_app (sexp ctx, sexp x) {
       res = tmp;
       break;
     } else {
+      sexp_pair_source(res) = sexp_pair_source(x);
       sexp_car(res) = tmp;
     }
   }
@@ -575,6 +586,7 @@ static sexp analyze_seq (sexp ctx, sexp ls) {
     res = analyze(ctx, sexp_car(ls));
   else {
     res = sexp_alloc_type(ctx, seq, SEXP_SEQ);
+    sexp_seq_source(res) = sexp_pair_source(ls);
     tmp = analyze_app(ctx, ls);
     if (sexp_exceptionp(tmp))
       res = tmp;
@@ -599,10 +611,11 @@ static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
     }
     cell = sexp_env_cell_create(ctx, env, x, SEXP_UNDEF, varenv);
   }
-  if (sexp_macrop(sexp_cdr(cell)) || sexp_corep(sexp_cdr(cell)))
+  if (sexp_macrop(sexp_cdr(cell)) || sexp_corep(sexp_cdr(cell))) {
     res = sexp_compile_error(ctx, "invalid use of syntax as value", x);
-  else 
+  } else {
     res = sexp_make_ref(ctx, x, cell);
+  }
   sexp_gc_release1(ctx);
   return res;
 }
@@ -619,15 +632,17 @@ static sexp analyze_set (sexp ctx, sexp x) {
     if (sexp_lambdap(sexp_ref_loc(ref)))
       sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
     value = analyze(ctx, sexp_caddr(x));
-    if (sexp_exceptionp(ref))
+    if (sexp_exceptionp(ref)) {
       res = ref;
-    else if (sexp_exceptionp(value))
+    } else if (sexp_exceptionp(value)) {
       res = value;
-    else if (sexp_immutablep(sexp_ref_cell(ref))
-             || (varenv && sexp_immutablep(varenv)))
+    } else if (sexp_immutablep(sexp_ref_cell(ref))
+               || (varenv && sexp_immutablep(varenv))) {
       res = sexp_compile_error(ctx, "immutable binding", sexp_cadr(x));
-    else
+    } else {
       res = sexp_make_set(ctx, ref, value);
+      sexp_set_source(res) = sexp_pair_source(x);
+    }
   }
   sexp_gc_release2(ctx);
   return res;
@@ -712,6 +727,7 @@ static sexp analyze_if (sexp ctx, sexp x) {
     fail = analyze(ctx, fail_expr);
     res = (sexp_exceptionp(test) ? test : sexp_exceptionp(pass) ? pass :
            sexp_exceptionp(fail) ? fail : sexp_make_cnd(ctx, test, pass, fail));
+    if (sexp_cndp(res)) sexp_cnd_source(res) = sexp_pair_source(x);
   }
   sexp_gc_release3(ctx);
   return res;
@@ -758,6 +774,7 @@ static sexp analyze_define (sexp ctx, sexp x) {
       } else {
         if (sexp_lambdap(value)) sexp_lambda_name(value) = name;
         res = sexp_make_set(ctx, ref, value);
+        if (sexp_setp(res)) sexp_set_source(res) = sexp_pair_source(x);
       }
     }
   }
@@ -908,8 +925,11 @@ static sexp analyze (sexp ctx, sexp object) {
             res = sexp_compile_error(ctx, "too many args for opcode", x);
           } else {
             res = analyze_app(ctx, sexp_cdr(x));
-            if (! sexp_exceptionp(res))
+            if (! sexp_exceptionp(res)) {
               sexp_push(ctx, res, op);
+              if (sexp_pairp(res))
+                sexp_pair_source(res) = sexp_pair_source(x);
+            }
           }
         } else {
           res = analyze_app(ctx, x);

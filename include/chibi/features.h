@@ -33,6 +33,13 @@
 /*   to your needs. */
 /* #define SEXP_USE_STATIC_LIBS 1 */
 
+/* uncomment this to disable detailed source info for debugging */
+/*   By default Chibi will associate source info with every */
+/*   bytecode offset.  By disabling this only lambda-level source */
+/*   info will be recorded (the line of the opening paren for the */
+/*   lambda). */
+/* #define SEXP_USE_FULL_SOURCE_INFO 0 */
+
 /* uncomment this to disable a simplifying optimization pass */
 /*   This performs some simple optimizations such as dead-code */
 /*   elimination, constant-folding, and directly propagating */
@@ -307,6 +314,10 @@
 
 #ifndef SEXP_USE_STATIC_LIBS
 #define SEXP_USE_STATIC_LIBS 0
+#endif
+
+#ifndef SEXP_USE_FULL_SOURCE_INFO
+#define SEXP_USE_FULL_SOURCE_INFO ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_SIMPLIFY
