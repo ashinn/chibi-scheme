@@ -1051,7 +1051,7 @@ sexp sexp_string_concatenate_op (sexp ctx, sexp self, sexp_sint_t n, sexp str_ls
       return sexp_type_exception(ctx, self, SEXP_STRING, sexp_car(ls));
     else
       len += sexp_string_length(sexp_car(ls));
-  if (sexp_stringp(sep) && ((sep_len=sexp_string_length(sep)) > 0)) {
+  if ((i > 0) && sexp_stringp(sep) && ((sep_len=sexp_string_length(sep)) > 0)) {
     csep = sexp_string_data(sep);
     len += sep_len*(i-1);
   }
