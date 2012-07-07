@@ -48,6 +48,10 @@ enum sexp_opcode_classes {
 
 SEXP_API struct sexp_opcode_struct* sexp_primitive_opcodes;
 
+#if SEXP_USE_DEBUG_VM || SEXP_USE_PROFILE_VM || SEXP_USE_STATIC_LIBS
+SEXP_API const char** sexp_opcode_names;
+#endif
+
 /**************************** prototypes ******************************/
 
 SEXP_API void sexp_scheme_init (void);

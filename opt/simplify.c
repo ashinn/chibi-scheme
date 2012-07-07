@@ -25,8 +25,11 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
        substs list */
     app = sexp_list1(ctx, sexp_lambdap(sexp_car(res)) ? sexp_car(res)
                      : (tmp=simplify(ctx, sexp_car(res), substs, lambda)));
-    for (ls1=sexp_cdr(res); sexp_pairp(ls1); ls1=sexp_cdr(ls1))
+    sexp_pair_source(app) = sexp_pair_source(res);
+    for (ls1=sexp_cdr(res); sexp_pairp(ls1); ls1=sexp_cdr(ls1)) {
       sexp_push(ctx, app, tmp=simplify(ctx, sexp_car(ls1), substs, lambda));
+      if (sexp_pairp(app)) sexp_pair_source(app) = sexp_pair_source(ls1);
+    }
     app = sexp_nreverse(ctx, app);
     /* app now holds a copy of the list, and is the default result
        (res = app below) if we don't replace it with a simplification */

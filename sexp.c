@@ -1801,6 +1801,12 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_string(ctx, "#<procedure ", out);
       x = sexp_bytecode_name(sexp_procedure_code(obj));
       sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out);
+#if SEXP_USE_DEBUG_VM
+      if (sexp_procedure_source(obj)) {
+        sexp_write_string(ctx, " ", out);
+        sexp_write(ctx, sexp_procedure_source(obj), out);
+      }
+#endif
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_TYPE:
