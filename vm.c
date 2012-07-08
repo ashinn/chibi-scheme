@@ -29,7 +29,7 @@ static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) 
 #if SEXP_USE_FULL_SOURCE_INFO
 static sexp sexp_lookup_source_info (sexp src, int ip) {
   int i;
-  if (sexp_vectorp(src) && sexp_vector_length(src) > 0) {
+  if (src && sexp_vectorp(src) && sexp_vector_length(src) > 0) {
     for (i=1; i<sexp_vector_length(src); i++)
       if (sexp_unbox_fixnum(sexp_car(sexp_vector_ref(src, sexp_make_fixnum(i)))) > ip)
         return sexp_cdr(sexp_vector_ref(src, sexp_make_fixnum(i-1)));
