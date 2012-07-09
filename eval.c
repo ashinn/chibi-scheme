@@ -451,6 +451,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
     sexp_bytecode_name(sexp_context_bc(res)) = SEXP_FALSE;
     sexp_bytecode_length(sexp_context_bc(res)) = SEXP_INIT_BCODE_SIZE;
     sexp_bytecode_literals(sexp_context_bc(res)) = SEXP_NULL;
+    sexp_bytecode_source(sexp_context_bc(res)) = SEXP_NULL;
     if ((! stack) || (stack == SEXP_FALSE)) {
       stack = sexp_alloc_tagged(res, SEXP_STACK_SIZE, SEXP_STACK);
       if (sexp_exceptionp(stack)) {
