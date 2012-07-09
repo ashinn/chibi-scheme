@@ -72,13 +72,14 @@ in C or Scheme. To use it, follow these instructions:
       SCM_LIBS = lib/foo/bar.sld lib/foo/bar.scm
       HTML_LIBS = doc/lib/foo/bar.html
 
-5. Add additional flags as necessary to XCPPFLAGS and XCFLAGS.
+5. Add additional flags as necessary to XCPPFLAGS, XCFLAGS, and XLIBS.
    These flags are passed to the compiler and linker when they
-   generate the shared library. These should probably include at
-   least:
+   generate the shared library. These should probably be defined at
+   minimum as:
 
       XCPPFLAGS += -I$(PREFIX)/include
       XCFLAGS += -L$(PREFIX)/lib
+      XLIBS +=
   
    These additions will ensure that the compiler and linker can
    find the Chibi Scheme include and library files, even if they
@@ -104,5 +105,6 @@ A complete example is:
 
    XCPPFLAGS += -I$(PREFIX)/include
    XCFLAGS += -L$(PREFIX)/lib
+   XLIBS += -lpthread
 
    include Makefile.libs
