@@ -639,8 +639,12 @@ div#footer {padding-bottom: 50px}
 
 (define (object-source x)
   (cond ((opcode? x) #f)
-        ((bytecode? x) (bytecode-source x))
-        ((procedure? x) (bytecode-source (procedure-code x)))
+        ((bytecode? x)
+         (let ((src (bytecode-source x)))
+           (if (and (vector? src) (positive? (vector-length src)))
+               (vector-ref src 0)
+               src)))
+        ((procedure? x) (object-source (procedure-code x)))
         ((macro? x) (macro-source x))
         (else #f)))
 
