@@ -55,10 +55,10 @@ void sexp_stack_trace (sexp ctx, sexp out) {
         sexp_write_string(ctx, "<anonymous>", out);
       src = sexp_bytecode_source(bc);
 #if SEXP_USE_FULL_SOURCE_INFO
-      if (sexp_vectorp(src))
+      if (src && sexp_vectorp(src))
         src = sexp_lookup_source_info(src, sexp_unbox_fixnum(stack[i+3]));
 #endif
-      if (sexp_pairp(src)) {
+      if (src && sexp_pairp(src)) {
         if (sexp_fixnump(sexp_cdr(src)) && (sexp_cdr(src) >= SEXP_ZERO)) {
           sexp_write_string(ctx, " on line ", out);
           sexp_write(ctx, sexp_cdr(src), out);
