@@ -140,6 +140,10 @@ SEXP_API sexp sexp_ratio_denominator_op (sexp ctx, sexp self, sexp_sint_t n, sex
 SEXP_API sexp sexp_complex_real_op (sexp ctx, sexp self, sexp_sint_t n, sexp rat);
 SEXP_API sexp sexp_complex_imag_op (sexp ctx, sexp self, sexp_sint_t n, sexp rat);
 #endif
+#if SEXP_USE_PROFILE_VM
+SEXP_API sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
+#endif
 
 #if SEXP_USE_MATH
 SEXP_API sexp sexp_exp(sexp ctx, sexp self, sexp_sint_t n, sexp z);

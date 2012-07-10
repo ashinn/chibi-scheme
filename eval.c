@@ -1629,11 +1629,6 @@ sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp ty
 
 #endif
 
-#if SEXP_USE_PROFILE_VM
-static sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
-static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
-#endif
-
 static sexp sexp_copy_core (sexp ctx, struct sexp_core_form_struct *core) {
   sexp res = sexp_alloc_type(ctx, core, SEXP_CORE);
   memcpy(&(res->value), core, sizeof(core[0]));
