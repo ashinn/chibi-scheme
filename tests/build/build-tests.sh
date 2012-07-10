@@ -29,6 +29,7 @@ for opts in $(cat ${BUILDDIR}/build-opts.txt); do
     opts=$(echo ${opts} | tr ';' ' ')
     $MAKE cleaner 2>&1 >/dev/null
     if $MAKE $opts chibi-scheme 2>&1 >${BUILDDIR}/build${i}-make.out; then
+        sync
         if $MAKE test 2>&1 | tee ${BUILDDIR}/build${i}-test.out \
             | grep -q -E 'FAIL|ERROR'; then
             echo "[FAIL] ${i}: tests failed with $opts"
