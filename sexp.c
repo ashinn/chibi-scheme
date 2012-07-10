@@ -2602,6 +2602,12 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       res = sexp_read_number(ctx, in, 16); break;
     case 'e': case 'E':
       res = sexp_read(ctx, in);
+#if SEXP_USE_INFINITIES
+      if (sexp_flonump(res)
+          && (isnan(sexp_flonum_value(res)) || isinf(sexp_flonum_value(res))))
+        res = sexp_read_error(ctx, "can't convert non-finite flonum to exact", res, in);
+      else
+#endif
       if (sexp_flonump(res))
 #if SEXP_USE_RATIOS
         res = sexp_double_to_ratio(ctx, sexp_flonum_value(res));
