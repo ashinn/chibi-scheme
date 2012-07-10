@@ -84,6 +84,7 @@
 ;;> @item{@scheme{out:} - the output port (default @scheme{(current-output-port)})}
 ;;> @item{@scheme{module:} - the initial module (default @scheme{(interaction-environment)})}
 ;;> @item{@scheme{escape:} - the command escape character (default @scheme|{#\@}|)}
+;;> @item{@scheme{make-prompt:} - a procedure taking one argument (the current module name as a list) and returning a string to be used as the prompt}
 ;;> @item{@scheme{history:} - the initial command history}
 ;;> @item{@scheme{history-file:} - the file to save history to (default ~/.chibi-repl-history)}
 ;;> ]
@@ -112,6 +113,12 @@
                   (module-env
                    (if (module? module) module (load-module module)))
                   (interaction-environment)))
+         (make-prompt
+          (cond
+           ((memq 'make-prompt: o) => cadr)
+           (else
+            (lambda (module)
+              (string-append (if module (write-to-string module) "") "> ")))))
          (history-file
           (cond ((memq 'history-file: o) => cadr)
                 (else (string-append (get-environment-variable "HOME")
@@ -129,8 +136,7 @@
     (let lp ((module module)
              (env env)
              (meta-env (module-env (load-module '(meta)))))
-      (let* ((prompt
-              (string-append (if module (write-to-string module) "") "> "))
+      (let* ((prompt (make-prompt module))
              (line
               (cond
                (raw?
