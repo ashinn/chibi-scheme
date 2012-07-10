@@ -1060,6 +1060,7 @@ SEXP_API sexp_heap sexp_global_heap;
 
 #if SEXP_USE_GLOBAL_SYMBOLS
 #define sexp_context_symbols(ctx) sexp_symbol_table
+SEXP_API sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 #else
 #define sexp_context_symbols(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_SYMBOLS))
 #endif

@@ -855,7 +855,7 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
 sexp_uint_t profile1[SEXP_OP_NUM_OPCODES];
 sexp_uint_t profile2[SEXP_OP_NUM_OPCODES][SEXP_OP_NUM_OPCODES];
 
-static sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
   int i, j;
   for (i=0; i<SEXP_OP_NUM_OPCODES; i++) {
     profile1[i] = 0;
@@ -864,7 +864,7 @@ static sexp sexp_reset_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
   return SEXP_VOID;
 }
 
-static sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
   int i, j;
   for (i=0; i<SEXP_OP_NUM_OPCODES; i++)
     fprintf(stderr, "%s %lu\n", sexp_opcode_names[i], profile1[i]);
