@@ -2207,6 +2207,27 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
   sexp_gc_release1(ctx);
   return sexp_complex_normalize(res);
 }
+
+#if SEXP_USE_MATH
+sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
+  sexp_gc_var2(res, theta);
+  sexp_gc_preserve2(ctx, res, theta);
+  theta = sexp_read_number(ctx, in, 10);
+  if (sexp_exceptionp(theta)) {
+    res = theta;
+  } else if (sexp_complexp(theta) || !sexp_numberp(theta)) {
+    res = sexp_read_error(ctx, "invalid polar numeric syntax", theta, in);
+  } else {
+    res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+    sexp_complex_real(res) = sexp_cos(ctx, NULL, 1, theta);
+    sexp_complex_real(res) = sexp_mul(ctx, magnitude, sexp_complex_real(res));
+    sexp_complex_imag(res) = sexp_sin(ctx, NULL, 1, theta);
+    sexp_complex_imag(res) = sexp_mul(ctx, magnitude, sexp_complex_imag(res));
+  }
+  sexp_gc_release2(ctx);
+  return sexp_complex_normalize(res);
+}
+#endif
 #endif
 
 sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
@@ -2386,9 +2407,13 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     sexp_gc_release2(ctx);
     return res;
 #if SEXP_USE_COMPLEX
-  } else if (c=='i' || c=='I' || c=='+' || c=='-') {
+  } else if (c=='i' || c=='I' || c=='+' || c=='-' || c=='@') {
     if (base != 10)
       return sexp_read_error(ctx, "found non-base 10 complex", SEXP_NULL, in);
+#if SEXP_USE_MATH
+    if (c=='@')
+      return sexp_read_polar_tail(ctx, in, sexp_make_fixnum(negativep ? -val : val));
+#endif
     sexp_push_char(ctx, c, in);
     return sexp_read_complex_tail(ctx, in, sexp_make_fixnum(negativep ? -val : val));
 #endif
