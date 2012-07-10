@@ -356,7 +356,9 @@
             (if (= (+ i 1) num-cols)
                 (newline out)
                 (display (make-string (+ 1 diff) #\space) out))
-            (lp (cdr ls) (modulo (+ i 1) num-cols)))))))
+            (lp (cdr ls) (modulo (+ i 1) num-cols))))
+         ((< i num-cols)
+          (newline out)))))
     (let try-cols ((num-cols (length words)))
       (cond
        ((<= num-cols 1)
