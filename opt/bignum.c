@@ -493,7 +493,7 @@ sexp sexp_double_to_ratio (sexp ctx, double f) {
   int sign, i;
   sexp_gc_var3(res, whole, scale);
   if (f == trunc(f))
-    return sexp_double_to_bignum(ctx, f);
+    return sexp_bignum_normalize(sexp_double_to_bignum(ctx, f));
   sexp_gc_preserve3(ctx, res, whole, scale);
   whole = sexp_double_to_bignum(ctx, trunc(f));
   res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
@@ -507,6 +507,8 @@ sexp sexp_double_to_ratio (sexp ctx, double f) {
     scale = sexp_mul(ctx, scale, SEXP_TEN);
   }
   sexp_bignum_sign(res) = sign;
+  res = sexp_bignum_normalize(res);
+  scale = sexp_bignum_normalize(scale);
   res = sexp_make_ratio(ctx, res, scale);
   res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
   res = sexp_add(ctx, res, whole);
