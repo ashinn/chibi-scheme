@@ -2308,6 +2308,8 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
     sexp_negate(sexp_ratio_numerator(rat));
     sexp_negate(sexp_ratio_denominator(rat));
   }
+  sexp_ratio_numerator(rat) = sexp_bignum_normalize(sexp_ratio_numerator(rat));
+  sexp_ratio_denominator(rat) = sexp_bignum_normalize(sexp_ratio_denominator(rat));
   sexp_gc_release2(ctx);
   return (sexp_ratio_denominator(rat) == SEXP_ONE) ? sexp_ratio_numerator(rat)
     : rat;
