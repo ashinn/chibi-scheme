@@ -2851,7 +2851,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 #endif
 #if SEXP_USE_COMPLEX
           if (sexp_complexp(res)) {
-            sexp_negate(sexp_complex_real(res));
+            if (sexp_complex_real(res) == SEXP_ZERO) {
+              sexp_negate(sexp_complex_imag(res));
+            } else {
+              sexp_negate(sexp_complex_real(res));
+            }
           } else
 #endif
             res = sexp_fx_mul(res, SEXP_NEG_ONE);
