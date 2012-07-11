@@ -2394,12 +2394,15 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
       res = sexp_make_fixnum(negativep ? -val : val);
       if (sexp_complex_real(den) == SEXP_ZERO) {
         res = sexp_make_ratio(ctx, res, sexp_complex_imag(den));
-        sexp_complex_imag(den) = sexp_ratio_normalize(ctx, res, in);
+        res = sexp_ratio_normalize(ctx, res, in);
+        sexp_complex_imag(den) = res;
       } else {
         res = sexp_make_ratio(ctx, res, sexp_complex_real(den));
-        sexp_complex_real(den) = sexp_ratio_normalize(ctx, res, in);
+        res = sexp_ratio_normalize(ctx, res, in);
+        sexp_complex_real(den) = res;
       }
-      res = den;
+      if (!sexp_exceptionp(res))
+        res = den;
     } else
 #endif
       do {
@@ -2407,8 +2410,9 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     res = sexp_ratio_normalize(ctx, res, in);
       } while (0);
 #else
-    res = sexp_make_flonum(ctx, (double)(negativep ? -val : val)
-                           / (double)sexp_unbox_fixnum(den));
+    if (!sexp_exceptionp(res))
+      res = sexp_make_flonum(ctx, (double)(negativep ? -val : val)
+                             / (double)sexp_unbox_fixnum(den));
 #endif
     }
     sexp_gc_release2(ctx);
