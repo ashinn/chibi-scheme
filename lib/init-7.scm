@@ -583,7 +583,7 @@
         (tmp-in (open-input-file file)))
     (dynamic-wind
       (lambda () (current-input-port tmp-in))
-      thunk
+      (lambda () (let ((res (thunk))) (close-input-port tmp-in) res))
       (lambda () (current-input-port old-in)))))
 
 (define (with-output-to-file file thunk)
@@ -591,7 +591,7 @@
         (tmp-out (open-output-file file)))
     (dynamic-wind
       (lambda () (current-output-port tmp-out))
-      thunk
+      (lambda () (let ((res (thunk))) (close-output-port tmp-out) res))
       (lambda () (current-output-port old-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
