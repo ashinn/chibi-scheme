@@ -995,8 +995,6 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
 #if SEXP_USE_COMPLEX
 #if SEXP_USE_RATIOS
   case SEXP_NUM_RAT_CPX:
-    a = tmp = sexp_make_flonum(ctx, sexp_ratio_to_double(a));
-    /* ... FALLTHROUGH ... */
 #endif
   case SEXP_NUM_FLO_CPX:
   case SEXP_NUM_FIX_CPX:
