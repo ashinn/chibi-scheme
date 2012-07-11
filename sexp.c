@@ -39,6 +39,11 @@ static int hex_digit (int n) {
   return ((n<=9) ? ('0' + n) : ('A' + n - 10));
 }
 
+static int is_precision_indicator(int c) {
+  return c=='d' || c=='D' || c=='e' || c=='E' || c=='f' || c=='F'
+    || c=='l' || c=='L' || c=='s' || c=='S';
+}
+
 int sexp_is_separator(int c) {
   return 0<c && c<0x80 && sexp_separators[c];
 }
@@ -2243,7 +2248,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   for (; c==SEXP_PLACEHOLDER_DIGIT; c=sexp_read_char(ctx, in), scale*=0.1)
     val += sexp_placeholder_digit_value(10)*scale;
 #endif
-  if (c=='e' || c=='E') {
+  if (is_precision_indicator(c)) {
     c2 = sexp_read_char(ctx, in);
     if (c2 != '+') sexp_push_char(ctx, c2, in);
     exponent = sexp_read_number(ctx, in, 10);
@@ -2258,7 +2263,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
 #else
   res = sexp_make_fixnum((sexp_uint_t)val);
 #endif
-  if (!(c=='e' || c=='E')) {
+  if (!is_precision_indicator(c)) {
 #if SEXP_USE_COMPLEX
     if (c=='i' || c=='i' || c=='+' || c=='-') {
       sexp_push_char(ctx, c, in);
@@ -2353,13 +2358,13 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     whole = val;
     for ( ; sexp_placeholder_digit_p(c); c=sexp_read_char(ctx, in))
       whole = whole*10 + sexp_placeholder_digit_value(base);
-    if ((c=='.' || c=='e' || c=='E') && (base != 10))
+    if ((c=='.' || is_precision_indicator(c)) && (base != 10))
       return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
     if (c=='.')
       for (c=sexp_read_char(ctx, in); sexp_placeholder_digit_p(c);
            c=sexp_read_char(ctx, in), scale*=0.1)
         whole += sexp_placeholder_digit_value(10)*scale;
-    if (c=='e' || c=='E') {
+    if (is_precision_indicator(c)) {
       sexp_push_char(ctx, c, in);
       return sexp_read_float_tail(ctx, in, whole, negativep);
     } else if ((c!=EOF) && !sexp_is_separator(c)) {
@@ -2371,7 +2376,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
   }
 #endif
 
-  if (c=='.' || c=='e' || c=='E') {
+  if (c=='.' || is_precision_indicator(c)) {
     if (base != 10)
       return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
     if (c!='.') sexp_push_char(ctx, c, in);
