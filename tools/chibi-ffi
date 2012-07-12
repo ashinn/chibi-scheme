@@ -675,7 +675,7 @@
   (case base
     ((string env-string non-null-string) (if *c++?* "string" "char*"))
     ((fileno) "int")
-    (else (symbol->string base))))
+    (else (string-replace (symbol->string base) #\- " "))))
 
 (define (type-struct-type type)
   (let ((type-spec (lookup-type(if (vector? type) (type-base type) type))))
