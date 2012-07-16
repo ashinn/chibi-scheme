@@ -970,7 +970,7 @@
               ";\n"
               "  }\n")
          (if (not (number? (type-array a)))
-             (cat "  tmp" (type-index a) "[i] = NULL;\n")))
+             (cat "  tmp" (type-index a) "[i] = 0;\n")))
         ((and (type-result? a) (not (basic-type? a))
               (not (type-free? a)) ;;(not (type-pointer? a))
               (not (type-reference? a))
