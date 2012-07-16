@@ -592,7 +592,7 @@
      ((eq? base 'char)
       (if (type-array type)
           (cat "sexp_c_string(ctx, " val ", " (c-array-length type) ")")
-          (cat "sexp_make_character(ctx, " val ")")))
+          (cat "sexp_make_character(" val ")")))
      ((eq? 'env-string base)
       (cat "(p=strchr(" val ", '=') ? "
            "sexp_cons(ctx, str=sexp_c_string(ctx, " val
