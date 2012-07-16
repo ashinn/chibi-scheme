@@ -1130,7 +1130,7 @@
         (cat "  }\n"))))
 
 (define (write-free type)
-  (if (type-array type)
+  (if (and (type-array type) (not (number? (type-array type))))
       (cat "  free(tmp" (type-index-string type) ");\n")))
 
 (define (write-cleanup func)
