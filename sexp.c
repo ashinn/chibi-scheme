@@ -1041,8 +1041,11 @@ sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp 
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
   start = sexp_string_index_to_offset(ctx, self, n, str, start);
-  if (sexp_fixnump(end))
+  if (sexp_exceptionp(start)) return start;
+  if (sexp_fixnump(end)) {
     end = sexp_string_index_to_offset(ctx, self, n, str, end);
+    if (sexp_exceptionp(end)) return end;
+  }
   return sexp_substring_op(ctx, self, n, str, start, end);
 }
 #endif
