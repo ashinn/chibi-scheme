@@ -976,7 +976,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (! sexp_exception_procedure(_ARG1))
       sexp_exception_procedure(_ARG1) = self;
 #if SEXP_USE_FULL_SOURCE_INFO
-    if (sexp_not(sexp_exception_source(_ARG1)) && sexp_procedure_source(sexp_exception_procedure(_ARG1)))
+    if (sexp_not(sexp_exception_source(_ARG1))
+        && sexp_procedurep(sexp_exception_procedure(_ARG1))
+        && sexp_procedure_source(sexp_exception_procedure(_ARG1)))
       sexp_exception_source(_ARG1) = sexp_lookup_source_info(sexp_exception_procedure(_ARG1), (ip-sexp_bytecode_data(bc)));
 #endif
   case SEXP_OP_RAISE:
