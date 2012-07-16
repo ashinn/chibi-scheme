@@ -260,7 +260,7 @@ void sexp_shrink_bcode (sexp ctx, sexp_uint_t i) {
 void sexp_expand_bcode (sexp ctx, sexp_uint_t size) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(ctx))
-      < (sexp_context_pos(ctx))+size) {
+      < (sexp_unbox_fixnum(sexp_context_pos(ctx)))+size) {
     tmp=sexp_alloc_bytecode(ctx, sexp_bytecode_length(sexp_context_bc(ctx))*2);
     sexp_bytecode_name(tmp) = sexp_bytecode_name(sexp_context_bc(ctx));
     sexp_bytecode_length(tmp)
@@ -278,13 +278,14 @@ void sexp_expand_bcode (sexp ctx, sexp_uint_t size) {
 
 void sexp_emit (sexp ctx, unsigned char c)  {
   sexp_expand_bcode(ctx, 1);
-  sexp_bytecode_data(sexp_context_bc(ctx))[sexp_context_pos(ctx)++] = c;
+  sexp_bytecode_data(sexp_context_bc(ctx))[sexp_unbox_fixnum(sexp_context_pos(ctx))] = c;
+  sexp_context_pos(ctx) = sexp_fx_add(sexp_context_pos(ctx), SEXP_ONE);
 }
 
 sexp sexp_complete_bytecode (sexp ctx) {
   sexp bc;
   sexp_emit_return(ctx);
-  sexp_shrink_bcode(ctx, sexp_context_pos(ctx));
+  sexp_shrink_bcode(ctx, sexp_unbox_fixnum(sexp_context_pos(ctx)));
   bc = sexp_context_bc(ctx);
   if (sexp_pairp(sexp_bytecode_literals(bc))) { /* compress literals */
     if (sexp_nullp(sexp_cdr(sexp_bytecode_literals(bc))))
@@ -294,6 +295,7 @@ sexp sexp_complete_bytecode (sexp ctx) {
     else
       sexp_bytecode_literals(bc) = sexp_list_to_vector(ctx, sexp_bytecode_literals(bc));
   }
+  sexp_bytecode_max_depth(bc) = sexp_unbox_fixnum(sexp_context_max_depth(ctx));
 #if SEXP_USE_FULL_SOURCE_INFO
   if (sexp_bytecode_source(bc) && sexp_pairp(sexp_bytecode_source(bc))) {
     sexp_bytecode_source(bc) = sexp_nreverse(ctx, sexp_bytecode_source(bc));
@@ -444,6 +446,9 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
     return res;
   if (ctx) sexp_gc_preserve1(ctx, res);
   sexp_context_env(res) = (env ? env : sexp_make_primitive_env(res, SEXP_SEVEN));
+  sexp_context_specific(res) = sexp_make_vector(res, SEXP_SEVEN, SEXP_ZERO);
+  sexp_context_lambda(res) = SEXP_FALSE;
+  sexp_context_fv(res) = SEXP_NULL;
   sexp_context_bc(res) = sexp_alloc_bytecode(res, SEXP_INIT_BCODE_SIZE);
   if (sexp_exceptionp(sexp_context_bc(res))) {
     res = sexp_context_bc(res);
@@ -2126,6 +2131,7 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
       sexp_emit_enter(ctx2);
       sexp_generate(ctx2, 0, 0, 0, ast);
       res = sexp_complete_bytecode(ctx2);
+      sexp_context_specific(ctx2) = SEXP_FALSE;
       vec = sexp_make_vector(ctx2, 0, SEXP_VOID);
       if (sexp_exceptionp(vec)) res = vec;
       else res = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, vec);

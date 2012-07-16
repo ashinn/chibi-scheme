@@ -82,6 +82,17 @@ sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
 
 /************************* code generation ****************************/
 
+static void sexp_inc_context_pos(sexp ctx, sexp_sint_t off) {
+  sexp_context_pos(ctx) = sexp_fx_add(sexp_context_pos(ctx), sexp_make_fixnum(off));
+}
+
+static void sexp_inc_context_depth(sexp ctx, sexp_sint_t off) {
+  sexp_context_depth(ctx) = sexp_fx_add(sexp_context_depth(ctx), sexp_make_fixnum(off));
+  if (sexp_unbox_fixnum(sexp_context_depth(ctx))
+      > sexp_unbox_fixnum(sexp_context_max_depth(ctx)))
+    sexp_context_max_depth(ctx) = sexp_context_depth(ctx);
+}
+
 static void bytecode_preserve (sexp ctx, sexp obj) {
   sexp ls = sexp_bytecode_literals(sexp_context_bc(ctx));
   if (sexp_pointerp(obj) && !sexp_symbolp(obj)
@@ -94,13 +105,14 @@ static void sexp_emit_word (sexp ctx, sexp_uint_t val)  {
   sexp_expand_bcode(ctx, sizeof(sexp));
   data = sexp_bytecode_data(sexp_context_bc(ctx));
   sexp_context_align_pos(ctx);
-  *((sexp_uint_t*)(&(data[sexp_context_pos(ctx)]))) = val;
-  sexp_context_pos(ctx) += sizeof(sexp);
+  *((sexp_uint_t*)(&(data[sexp_unbox_fixnum(sexp_context_pos(ctx))]))) = val;
+  sexp_inc_context_pos(ctx, sizeof(sexp));
 }
 
 static void sexp_emit_push (sexp ctx, sexp obj) {
   sexp_emit(ctx, SEXP_OP_PUSH);
   sexp_emit_word(ctx, (sexp_uint_t)obj);
+  sexp_inc_context_depth(ctx, 1);
   bytecode_preserve(ctx, obj);
 }
 
@@ -116,9 +128,9 @@ static void sexp_push_source (sexp ctx, sexp source) {
     src = sexp_bytecode_source(bc);
     if (!src) src = sexp_bytecode_source(bc) = SEXP_NULL;
     if (!sexp_pairp(src)
-        || sexp_context_pos(ctx) > sexp_unbox_fixnum(sexp_caar(src))) {
+        || sexp_unbox_fixnum(sexp_context_pos(ctx)) > sexp_unbox_fixnum(sexp_caar(src))) {
       sexp_gc_preserve1(ctx, tmp);
-      tmp = sexp_cons(ctx, sexp_make_fixnum(sexp_context_pos(ctx)), source);
+      tmp = sexp_cons(ctx, sexp_context_pos(ctx), source);
       if (sexp_pairp(tmp)) {
         tmp = sexp_cons(ctx, tmp, src);
         if (sexp_pairp(tmp)) sexp_bytecode_source(bc) = tmp;
@@ -132,15 +144,15 @@ static void sexp_push_source (sexp ctx, sexp source) {
 static sexp_sint_t sexp_context_make_label (sexp ctx) {
   sexp_sint_t label;
   sexp_context_align_pos(ctx);
-  label = sexp_context_pos(ctx);
-  sexp_context_pos(ctx) += sizeof(sexp_uint_t);
+  label = sexp_unbox_fixnum(sexp_context_pos(ctx));
+  sexp_inc_context_pos(ctx, sizeof(sexp_uint_t));
   return label;
 }
 
 static void sexp_context_patch_label (sexp ctx, sexp_sint_t label) {
   sexp bc = sexp_context_bc(ctx);
   unsigned char *data = sexp_bytecode_data(bc)+label;
-  *((sexp_sint_t*)data) = sexp_context_pos(ctx)-label;
+  *((sexp_sint_t*)data) = sexp_unbox_fixnum(sexp_context_pos(ctx))-label;
 }
 
 static void generate_lit (sexp ctx, sexp value) {
@@ -153,7 +165,7 @@ static void generate_drop_prev (sexp ctx, sexp prev) {
             && sexp_opcode_class(sexp_car(prev)) != SEXP_OPC_FOREIGN)
            || (sexp_opcode_code(sexp_car(prev)) == SEXP_OP_PUSH)))
       || sexp_setp(prev) || sexp_litp(prev) || prev == SEXP_VOID)
-    sexp_context_pos(ctx) -= 1 + sizeof(sexp);
+    sexp_inc_context_pos(ctx, -(1 + sizeof(sexp)));
   else
     sexp_emit(ctx, SEXP_OP_DROP);
 }
@@ -167,7 +179,7 @@ static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
     if (sexp_pointerp(sexp_car(head)) && (! sexp_litp(sexp_car(head)))) {
       sexp_generate(ctx, name, loc, lam, sexp_car(head));
       generate_drop_prev(ctx, sexp_car(head));
-      sexp_context_depth(ctx)--;
+      sexp_inc_context_depth(ctx, -1);
     }
   sexp_context_tailp(ctx) = tailp;
   sexp_generate(ctx, name, loc, lam, sexp_car(head));
@@ -180,12 +192,12 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   sexp_generate(ctx, name, loc, lam, sexp_cnd_test(cnd));
   sexp_context_tailp(ctx) = tailp;
   sexp_emit(ctx, SEXP_OP_JUMP_UNLESS);
-  sexp_context_depth(ctx)--;
+  sexp_inc_context_depth(ctx, -1);
   label1 = sexp_context_make_label(ctx);
   sexp_generate(ctx, name, loc, lam, sexp_cnd_pass(cnd));
   sexp_context_tailp(ctx) = tailp;
   sexp_emit(ctx, SEXP_OP_JUMP);
-  sexp_context_depth(ctx)--;
+  sexp_inc_context_depth(ctx, -1);
   label2 = sexp_context_make_label(ctx);
   sexp_context_patch_label(ctx, label1);
   sexp_generate(ctx, name, loc, lam, sexp_cnd_fail(cnd));
@@ -211,7 +223,7 @@ static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
   }
   if (unboxp && (sexp_truep(sexp_memq(ctx, name, sexp_lambda_sv(loc)))))
     sexp_emit(ctx, SEXP_OP_CDR);
-  sexp_context_depth(ctx)++;
+  sexp_inc_context_depth(ctx, +1);
 }
 
 static void generate_ref (sexp ctx, sexp ref, int unboxp) {
@@ -266,7 +278,7 @@ static void generate_set (sexp ctx, sexp set) {
     }
   }
   sexp_emit_push(ctx, SEXP_VOID);
-  sexp_context_depth(ctx)--;
+  sexp_inc_context_depth(ctx, +1);
 }
 
 static void generate_opcode_app (sexp ctx, sexp app) {
@@ -298,7 +310,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
         } else {
           sexp_emit_push(ctx, sexp_opcode_data(op));
         }
-        sexp_context_depth(ctx)++;
+        sexp_inc_context_depth(ctx, +1);
         num_args++;
       }
     }
@@ -324,7 +336,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   if (inv_default) {
     sexp_emit_push(ctx, sexp_opcode_data(op));
     if (sexp_opcode_opt_param_p(op)) sexp_emit(ctx, SEXP_OP_CDR);
-    sexp_context_depth(ctx)++;
+    sexp_inc_context_depth(ctx, +1);
     num_args++;
   }
 
@@ -409,7 +421,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       && sexp_opcode_class(op) != SEXP_OPC_FOREIGN)
     sexp_emit_push(ctx, SEXP_VOID);
 
-  sexp_context_depth(ctx) -= (num_args-1);
+  sexp_inc_context_depth(ctx, -(num_args-1));
   sexp_gc_release1(ctx);
 }
 
@@ -432,7 +444,7 @@ static void generate_general_app (sexp ctx, sexp app) {
   sexp_emit_word(ctx, (sexp_uint_t)sexp_make_fixnum(len));
 
   sexp_context_tailp(ctx) = tailp;
-  sexp_context_depth(ctx) -= len;
+  sexp_inc_context_depth(ctx, -len);
   sexp_gc_release1(ctx);
 }
 
@@ -460,7 +472,7 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
 
   /* drop the current result and jump */
   sexp_emit(ctx, SEXP_OP_JUMP);
-  sexp_emit_word(ctx, (sexp_uint_t) (-sexp_context_pos(ctx) +
+  sexp_emit_word(ctx, (sexp_uint_t) (-sexp_unbox_fixnum(sexp_context_pos(ctx)) +
 				     (sexp_pairp(sexp_lambda_locals(lam))
 				      ? 1 + sizeof(sexp) : 0)));
 
@@ -508,7 +520,7 @@ static int generate_lambda_locals (sexp ctx, sexp name, sexp loc, sexp lam, sexp
     return 1;
   } else if (sexp_setp(x) && sexp_internal_definep(ctx, sexp_set_var(x))) {
     sexp_generate(ctx, name, loc, lam, x);
-    sexp_context_pos(ctx) -= 1 + sizeof(sexp);
+    sexp_inc_context_pos(ctx, -(1 + sizeof(sexp)));
     return 1;
   }
   return 0;
@@ -559,7 +571,7 @@ static int generate_lambda_body (sexp ctx, sexp name, sexp loc, sexp lam, sexp x
           sexp_emit(ctx, SEXP_OP_STACK_REF);
           sexp_emit_word(ctx, 3);
           sexp_emit(ctx, SEXP_OP_VECTOR_SET);
-          sexp_context_depth(ctx)--;
+          sexp_inc_context_depth(ctx, -1);
         }
       }
     }
@@ -633,7 +645,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_emit_push(ctx, SEXP_VOID);
     sexp_emit_push(ctx, sexp_length(ctx, fv));
     sexp_emit(ctx, SEXP_OP_MAKE_VECTOR);
-    sexp_context_depth(ctx)--;
+    sexp_inc_context_depth(ctx, -1);
     for (k=0; sexp_pairp(fv); fv=sexp_cdr(fv), k++) {
       ref = sexp_car(fv);
       generate_non_global_ref(ctx, sexp_ref_name(ref), sexp_ref_cell(ref),
@@ -642,7 +654,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
       sexp_emit(ctx, SEXP_OP_STACK_REF);
       sexp_emit_word(ctx, 3);
       sexp_emit(ctx, SEXP_OP_VECTOR_SET);
-      sexp_context_depth(ctx)--;
+      sexp_inc_context_depth(ctx, -1);
     }
     /* push the additional procedure info and make the closure */
     sexp_emit(ctx, SEXP_OP_MAKE_PROCEDURE);
@@ -879,15 +891,15 @@ sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
 #endif
 
 #if SEXP_USE_CHECK_STACK
-#define sexp_ensure_stack(n)                                   \
-  if (top+n >= sexp_stack_length(sexp_context_stack(ctx))) {   \
-    sexp_context_top(ctx) = top;                               \
-    if (sexp_grow_stack(ctx, n)) {                             \
-      stack = sexp_stack_data(sexp_context_stack(ctx));        \
-    } else {                                                   \
-      _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);              \
-      goto end_loop;                                           \
-    }                                                          \
+#define sexp_ensure_stack(n)                                            \
+  if (top+(n) >= sexp_stack_length(sexp_context_stack(ctx))) {          \
+    sexp_context_top(ctx) = top;                                        \
+    if (sexp_grow_stack(ctx, (n))) {                                    \
+      stack = sexp_stack_data(sexp_context_stack(ctx));                 \
+    } else {                                                            \
+      _ARG1 = sexp_global(ctx, SEXP_G_OOS_ERROR);                       \
+      goto end_loop;                                                    \
+    }                                                                   \
   }
 #else
 #define sexp_ensure_stack(n)
@@ -1029,7 +1041,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     top -= 2;
   apply1:
     i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
-    sexp_ensure_stack(i + 64);
+    sexp_ensure_stack(i + 64 + sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0);
     top += i;
     for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
       _ARG1 = sexp_car(tmp2);
@@ -1054,7 +1066,6 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     fp = sexp_unbox_fixnum(tmp2);
     goto make_call;
   case SEXP_OP_CALL:
-    sexp_ensure_stack(64);  /* TODO: pre-compute stack needed for each proc */
     _ALIGN_IP();
     i = sexp_unbox_fixnum(_WORD0);
     tmp1 = _ARG1;
@@ -1074,6 +1085,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (j < 0)
       sexp_raise("not enough args",
                  sexp_list2(ctx, tmp1, sexp_make_fixnum(i)));
+    /* ensure there's sufficient stack space before pushing args */
+    sexp_ensure_stack(sexp_bytecode_max_depth(sexp_procedure_code(tmp1))+64);
     if (j > 0) {
       if (sexp_procedure_variadic_p(tmp1)) {
         if (!sexp_procedure_unused_rest_p(tmp1)) {
