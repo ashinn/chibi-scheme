@@ -104,6 +104,13 @@
 ;;> @item{@scheme|{@exit}| - exit the REPL}
 ;;> ]
 
+(define (read/ss/all port)
+  (let loop ((l '()))
+    (let ((x (read/ss port)))
+      (if (eof-object? x)
+        (reverse l)
+        (loop (cons x l))))))
+      
 (define (repl . o)
   (let* ((in (cond ((memq 'in: o) => cadr) (else (current-input-port))))
          (out (cond ((memq 'out: o) => cadr) (else (current-output-port))))
@@ -221,15 +228,16 @@
             ;; The outer guard in the parent thread catches read
             ;; errors and errors in the repl logic itself.
             (guard (exn (else (print-exception exn (current-error-port))))
-              (let* ((expr (call-with-input-string line
-                             (lambda (in2)
-                               ;; Ugly wrapper to account for the
-                               ;; implicit state mutation implied by
-                               ;; the #!fold-case read syntax.
-                               (set-port-fold-case! in2 (port-fold-case? in))
-                               (let ((expr (read/ss in2)))
-                                 (set-port-fold-case! in (port-fold-case? in2))
-                                 expr))))
+              (let* ((expr-list
+                      (call-with-input-string line
+                        (lambda (in2)
+                          ;; Ugly wrapper to account for the
+                          ;; implicit state mutation implied by
+                          ;; the #!fold-case read syntax.
+                          (set-port-fold-case! in2 (port-fold-case? in))
+                          (let ((expr-list (read/ss/all in2)))
+                            (set-port-fold-case! in (port-fold-case? in2))
+                            expr-list))))          
                      (thread
                       (make-thread
                        (lambda ()
@@ -238,11 +246,23 @@
                          (guard
                              (exn
                               (else (print-exception exn (current-output-port))))
-                           (let ((res (eval expr env)))
-                             (cond
-                              ((not (eq? res (if #f #f)))
-                               (write/ss res out)
-                               (newline out)))))))))
+                           (for-each
+                            (lambda (expr)
+                              (call-with-values
+                               (lambda ()
+                                 (eval (list 'begin expr) env))
+                               (lambda res-list
+                                 (cond
+                                  ((not (or (null? res-list)
+                                            (equal? res-list (list (if #f #f)))))
+                                   (write/ss (car res-list) out)
+                                   (for-each
+                                    (lambda (res)
+                                      (write-char #\space out)
+                                      (write/ss res out))
+                                    (cdr res-list))
+                                   (newline out))))))
+                            expr-list))))))
                 ;; If an interrupt occurs while the child thread is
                 ;; still running, terminate it, otherwise wait for it
                 ;; to complete.
