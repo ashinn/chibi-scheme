@@ -29,6 +29,8 @@ static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) 
 #if SEXP_USE_FULL_SOURCE_INFO
 static sexp sexp_lookup_source_info (sexp src, int ip) {
   int i;
+  if (src && sexp_procedurep(src))
+    src = sexp_procedure_source(src);
   if (src && sexp_vectorp(src) && sexp_vector_length(src) > 0) {
     for (i=1; i<sexp_vector_length(src); i++)
       if (sexp_unbox_fixnum(sexp_car(sexp_vector_ref(src, sexp_make_fixnum(i)))) > ip)
@@ -963,7 +965,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_exception_procedure(_ARG1) = self;
 #if SEXP_USE_FULL_SOURCE_INFO
     if (sexp_not(sexp_exception_source(_ARG1)) && sexp_procedure_source(sexp_exception_procedure(_ARG1)))
-      sexp_exception_source(_ARG1) = sexp_lookup_source_info(sexp_procedure_source(sexp_exception_procedure(_ARG1)), (ip-sexp_bytecode_data(bc)));
+      sexp_exception_source(_ARG1) = sexp_lookup_source_info(sexp_exception_procedure(_ARG1), (ip-sexp_bytecode_data(bc)));
 #endif
   case SEXP_OP_RAISE:
     sexp_context_top(ctx) = top;
