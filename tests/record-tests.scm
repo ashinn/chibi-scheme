@@ -177,4 +177,10 @@
 (define point-x (rtd-accessor point 'x))
 (test 3 (point-x (make-point 3 2)))
 
+;; Name conflicts - make sure we rename 
+
+(define-record-type example make-example #t example)
+(test-assert (example? (make-example 3)))
+(test 3 (example-example (make-example 3)))
+
 (test-end)
