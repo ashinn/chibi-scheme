@@ -19,6 +19,7 @@
             (fields (cddr procs))
             (field-names (map (lambda (x) (if (pair? x) (car x) x)) fields))
             (make-fields (if (pair? make) (cdr make) (and (not parent) field-names)))
+            (_make (rename '%make))
             (_define (rename 'define))
             (_lambda (rename 'lambda))
             (_let (rename 'let))
@@ -66,34 +67,33 @@
                 fields)
          ;; constructor
          ,(if make-fields
+              (let ((fields (map (lambda (f) (cons (rename f) f)) make-fields)))
+                `(,_define ,make-name
+                   ,(let lp ((ls fields) (sets '()))
+                      (cond
+                       ((null? ls)
+                        `(,_let ((,_make (,(rename 'make-constructor)
+                                          ,(id->string make-name)
+                                          ,name)))
+                           (,_lambda ,(map car fields)
+                             (,_let ((res (,_make)))
+                               ,@sets
+                               res))))
+                       (else
+                        (let ((field (assq (cdar ls) fields)))
+                          (cond
+                           ((and (pair? field) (pair? (cdr field)) (pair? (cddr field)))
+                            (lp (cdr ls)
+                                (cons (list (car (cddr field)) 'res (cdar ls)) sets)))
+                           (else
+                            (lp (cdr ls)
+                                (cons `(,_slot-set! ,name res (,_type_slot_offset ,name ',(cdar ls)) ,(caar ls)) sets))))))))))
               `(,_define ,make-name
-                 ,(let lp ((ls make-fields) (sets '()))
-                    (cond
-                     ((null? ls)
-                      `(,_let ((%make (,(rename 'make-constructor)
-                                       ,(id->string make-name)
-                                       ,name)))
-                         (,_lambda ,make-fields
-                           (,_let ((res (%make)))
-                             ,@sets
-                             res))))
-                     (else
-                      (let ((field (assq (car ls) fields)))
-                        (cond
-                         ;;((not field)
-                         ;; (error "unknown record field in constructor" (car ls)))
-                         ((and (pair? field) (pair? (cdr field)) (pair? (cddr field)))
-                          (lp (cdr ls)
-                              (cons (list (car (cddr field)) 'res (car ls)) sets)))
-                         (else
-                          (lp (cdr ls)
-                              (cons `(,_slot-set! ,name res (,_type_slot_offset ,name ',(car ls)) ,(car ls)) sets)))))))))
-              `(,_define ,make-name
-                 (,_let ((%make (,(rename 'make-constructor)
-                                 ,(id->string make-name)
-                                 ,name)))
+                 (,_let ((,_make (,(rename 'make-constructor)
+                                  ,(id->string make-name)
+                                  ,name)))
                    (,_lambda args
-                     (,_let ((res (%make)))
+                     (,_let ((res (,_make)))
                        (let lp ((a args)
                                 (p (,_vector->list (,_rtd-all-field-names ,name))))
                          (cond
