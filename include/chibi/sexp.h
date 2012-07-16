@@ -367,7 +367,7 @@ struct sexp_struct {
 #endif
     } env;
     struct {
-      sexp_uint_t length;
+      sexp_uint_t length, max_depth;
       sexp name, literals, source;
       unsigned char data[];
     } bytecode;
@@ -421,8 +421,8 @@ struct sexp_struct {
       struct timeval tval;
 #endif
       char tailp, tracep, timeoutp, waitp;
-      sexp_uint_t pos, depth, last_fp;
-      sexp bc, lambda, stack, env, fv, parent, child,
+      sexp_uint_t last_fp;
+      sexp stack, env, parent, child,
         globals, dk, params, proc, name, specific, event;
 #if SEXP_USE_DL
       sexp dl;
@@ -922,6 +922,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_cpointer_maybe_null_value(x) (sexp_not(x) ? NULL : sexp_cpointer_value(x))
 
 #define sexp_bytecode_length(x)   (sexp_field(x, bytecode, SEXP_BYTECODE, length))
+#define sexp_bytecode_max_depth(x) (sexp_field(x, bytecode, SEXP_BYTECODE, max_depth))
 #define sexp_bytecode_name(x)     (sexp_field(x, bytecode, SEXP_BYTECODE, name))
 #define sexp_bytecode_literals(x) (sexp_field(x, bytecode, SEXP_BYTECODE, literals))
 #define sexp_bytecode_source(x)   (sexp_field(x, bytecode, SEXP_BYTECODE, source))
@@ -1014,11 +1015,6 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #define sexp_context_env(x)      (sexp_field(x, context, SEXP_CONTEXT, env))
 #define sexp_context_stack(x)    (sexp_field(x, context, SEXP_CONTEXT, stack))
-#define sexp_context_depth(x)    (sexp_field(x, context, SEXP_CONTEXT, depth))
-#define sexp_context_bc(x)       (sexp_field(x, context, SEXP_CONTEXT, bc))
-#define sexp_context_fv(x)       (sexp_field(x, context, SEXP_CONTEXT, fv))
-#define sexp_context_pos(x)      (sexp_field(x, context, SEXP_CONTEXT, pos))
-#define sexp_context_lambda(x)   (sexp_field(x, context, SEXP_CONTEXT, lambda))
 #define sexp_context_parent(x)   (sexp_field(x, context, SEXP_CONTEXT, parent))
 #define sexp_context_child(x)    (sexp_field(x, context, SEXP_CONTEXT, child))
 #define sexp_context_saves(x)    (sexp_field(x, context, SEXP_CONTEXT, saves))
@@ -1038,6 +1034,17 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_timeoutp(x) (sexp_field(x, context, SEXP_CONTEXT, timeoutp))
 #define sexp_context_waitp(x)    (sexp_field(x, context, SEXP_CONTEXT, waitp))
 #define sexp_context_dl(x)       (sexp_field(x, context, SEXP_CONTEXT, dl))
+
+/* during compilation, sexp_context_specific is set to a vector */
+/* containing the following elements: */
+
+#define sexp_context_bc(x)       (sexp_vector_ref(sexp_context_specific(x), SEXP_ZERO))
+#define sexp_context_fv(x)       (sexp_vector_ref(sexp_context_specific(x), SEXP_ONE))
+#define sexp_context_lambda(x)   (sexp_vector_ref(sexp_context_specific(x), SEXP_TWO))
+#define sexp_context_pos(x)      (sexp_vector_ref(sexp_context_specific(x), SEXP_THREE))
+#define sexp_context_depth(x)    (sexp_vector_ref(sexp_context_specific(x), SEXP_FOUR))
+#define sexp_context_max_depth(x) (sexp_vector_ref(sexp_context_specific(x), SEXP_FIVE))
+#define sexp_context_exception(x) (sexp_vector_ref(sexp_context_specific(x), SEXP_SIX))
 
 #if SEXP_USE_ALIGNED_BYTECODE
 #define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = sexp_word_align(sexp_context_pos(ctx))
