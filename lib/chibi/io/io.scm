@@ -58,9 +58,15 @@
               (and (not (equal? res "")) res)))
            (else
             (write-char ch out)
-            (if (eqv? ch #\newline)
-                (get-output-string out)
-                (lp))))))))))
+            (cond
+             ((eqv? ch #\newline)
+              (get-output-string out))
+             ((eqv? ch #\return)
+              (if (eqv? #\newline (peek-char in))
+                  (read-char in))
+              (get-output-string out))
+             (else
+              (lp)))))))))))
 
 (define (read-line . o)
   (let ((in (if (pair? o) (car o) (current-input-port)))
@@ -70,11 +76,15 @@
       (if (not res)
           eof
           (let ((len (string-length res)))
-            (if (and (> len 0) (eqv? #\newline (string-ref res (- len 1))))
-                (if (and (> len 1) (eqv? #\return (string-ref res (- len 2))))
-                    (substring res 0 (- len 2))
-                    (substring res 0 (- len 1)))
-                res))))))
+            (cond
+             ((and (> len 0) (eqv? #\newline (string-ref res (- len 1))))
+              (if (and (> len 1) (eqv? #\return (string-ref res (- len 2))))
+                  (substring res 0 (- len 2))
+                  (substring res 0 (- len 1))))
+             ((and (> len 0) (eqv? #\return (string-ref res (- len 1))))
+              (substring res 0 (- len 1)))
+             (else
+              res)))))))
 
 ;;> @subsubsubsection{(read-string n [in])}
 
