@@ -366,7 +366,7 @@ sexp sexp_read_u8 (sexp ctx, sexp self, sexp in) {
   }
 #endif
   if (c == '\n') sexp_port_line(in)++;
-  return sexp_make_fixnum(c);
+  return (c==EOF) ? SEXP_EOF : sexp_make_fixnum(c);
 }
 
 sexp sexp_peek_u8 (sexp ctx, sexp self, sexp in) {
