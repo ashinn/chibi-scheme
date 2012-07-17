@@ -52,6 +52,15 @@ int sexp_is_separator(int c) {
 sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 #endif
 
+#if ! SEXP_USE_UNSAFE_PUSH
+sexp sexp_push_op(sexp ctx, sexp* loc, sexp x) {
+  sexp tmp = sexp_cons(ctx, x, *loc);
+  if (sexp_exceptionp(tmp)) return *loc;
+  *loc = tmp;
+  return tmp;
+}
+#endif
+
 sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_source_param) {
   sexp res = (sexp) sexp_alloc(ctx, size);
   if (res && ! sexp_exceptionp(res)) {

@@ -832,7 +832,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_vector_length(x) (sexp_field(x, vector, SEXP_VECTOR, length))
 #define sexp_vector_data(x)   (sexp_field(x, vector, SEXP_VECTOR, data))
 
-#if SEXP_USE_SAFE_ACCESSORS
+#if SEXP_USE_SAFE_VECTOR_ACCESSORS
 #define sexp_vector_ref(x,i)   (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)] : (fprintf(stderr, "vector-ref length out of range %s on line %d: vector %p (length %lu): %ld\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
 #define sexp_vector_set(x,i,v) (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)]=(v) : (fprintf(stderr, "vector-set! length out of range in %s on line %d: vector %p (length %lu): %ld\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
 #else
@@ -1209,7 +1209,13 @@ enum sexp_context_globals {
 
 #define sexp_list1(x,a)        sexp_cons((x), (a), SEXP_NULL)
 
+SEXP_API sexp sexp_push_op(sexp ctx, sexp* loc, sexp x);
+
+#if SEXP_USE_UNSAFE_PUSH
 #define sexp_push(ctx, ls, x)    ((ls) = sexp_cons((ctx), (x), (ls)))
+#else
+#define sexp_push(ctx, ls, x)    (sexp_push_op((ctx), &(ls), (x)))
+#endif
 #define sexp_insert(ctx, ls, x)  ((sexp_memq(ctx, (x), (ls)) != SEXP_FALSE) ? (ls) : sexp_push((ctx), (ls), (x)))
 
 #define sexp_pair_source(x) (sexp_field(x, pair, SEXP_PAIR, source))

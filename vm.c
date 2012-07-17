@@ -103,6 +103,8 @@ static void bytecode_preserve (sexp ctx, sexp obj) {
 static void sexp_emit_word (sexp ctx, sexp_uint_t val)  {
   unsigned char *data;
   sexp_expand_bcode(ctx, sizeof(sexp));
+  if (sexp_exceptionp(sexp_context_exception(ctx)))
+    return;
   data = sexp_bytecode_data(sexp_context_bc(ctx));
   sexp_context_align_pos(ctx);
   *((sexp_uint_t*)(&(data[sexp_unbox_fixnum(sexp_context_pos(ctx))]))) = val;
@@ -152,7 +154,8 @@ static sexp_sint_t sexp_context_make_label (sexp ctx) {
 static void sexp_context_patch_label (sexp ctx, sexp_sint_t label) {
   sexp bc = sexp_context_bc(ctx);
   unsigned char *data = sexp_bytecode_data(bc)+label;
-  *((sexp_sint_t*)data) = sexp_unbox_fixnum(sexp_context_pos(ctx))-label;
+  if (!sexp_exceptionp(sexp_context_exception(ctx)))
+    *((sexp_sint_t*)data) = sexp_unbox_fixnum(sexp_context_pos(ctx))-label;
 }
 
 static void generate_lit (sexp ctx, sexp value) {
@@ -529,6 +532,8 @@ static int generate_lambda_locals (sexp ctx, sexp name, sexp loc, sexp lam, sexp
 static int generate_lambda_body (sexp ctx, sexp name, sexp loc, sexp lam, sexp x, sexp prev_lam) {
   sexp_uint_t k, updatep, tailp;
   sexp ls, ref, fv, prev_fv;
+  if (sexp_exceptionp(sexp_context_exception(ctx)))
+    return 0;
   if (sexp_seqp(x)) {
     tailp = sexp_context_tailp(ctx);
     sexp_context_tailp(ctx) = 0;
@@ -587,12 +592,18 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
   sexp_sint_t k;
   sexp_gc_var2(tmp, bc);
-  sexp_gc_preserve2(ctx, tmp, bc);
+  if (sexp_exceptionp(sexp_context_exception(ctx)))
+    return;
   prev_lambda = sexp_context_lambda(ctx);
   prev_fv = sexp_lambdap(prev_lambda) ? sexp_lambda_fv(prev_lambda) : SEXP_NULL;
   fv = sexp_lambda_fv(lambda);
   ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), sexp_context_env(ctx), 0, 0);
+  if (sexp_exceptionp(ctx2)) {
+    sexp_context_exception(ctx) = ctx2;
+    return;
+  }
   sexp_context_lambda(ctx2) = lambda;
+  sexp_gc_preserve2(ctx, tmp, bc);
   tmp = sexp_cons(ctx2, SEXP_ZERO, sexp_lambda_source(lambda));
   /* allocate space for local vars */
   k = sexp_unbox_fixnum(sexp_length(ctx, sexp_lambda_locals(lambda)));
@@ -630,6 +641,9 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
                            : SEXP_PROC_NONE);
   len = sexp_length(ctx2, sexp_lambda_params(lambda));
   bc = sexp_complete_bytecode(ctx2);
+  if (sexp_exceptionp(bc)) {
+    sexp_context_exception(ctx) = bc;
+  } else {
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
 #if ! SEXP_USE_FULL_SOURCE_INFO
   sexp_bytecode_source(bc) = sexp_lambda_source(lambda);
@@ -663,10 +677,13 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_emit_word(ctx, (sexp_uint_t)bc);
     bytecode_preserve(ctx, bc);
   }
+  }
   sexp_gc_release2(ctx);
 }
 
 void sexp_generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
+  if (sexp_exceptionp(sexp_context_exception(ctx)))
+    return;
   if (sexp_pointerp(x)) {
     switch (sexp_pointer_tag(x)) {
     case SEXP_PAIR:   generate_app(ctx, name, loc, lam, x); break;
@@ -708,19 +725,28 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   lambda = sexp_make_lambda(ctx, params);
   ctx2 = sexp_make_child_context(ctx, lambda);
   env = sexp_extend_env(ctx2, sexp_context_env(ctx), params, lambda);
-  sexp_context_env(ctx2) = env;
-  for (ls=params, refs=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    ref = sexp_make_ref(ctx2, sexp_car(ls), sexp_env_cell(env, sexp_car(ls), 0));
-    sexp_push(ctx2, refs, ref);
+  if (sexp_exceptionp(env)) {
+    res = env;
+  } else {
+    sexp_context_env(ctx2) = env;
+    for (ls=params, refs=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls)) {
+      ref = sexp_make_ref(ctx2, sexp_car(ls), sexp_env_cell(env, sexp_car(ls), 0));
+      if (!sexp_exceptionp(ref)) sexp_push(ctx2, refs, ref);
+    }
+    if (!sexp_exceptionp(refs))
+      refs = sexp_reverse(ctx2, refs);
+    refs = sexp_cons(ctx2, op, refs);
+    if (sexp_exceptionp(refs)) {
+      res = refs;
+    } else {
+      generate_opcode_app(ctx2, refs);
+      bc = sexp_complete_bytecode(ctx2);
+      sexp_bytecode_name(bc) = sexp_opcode_name(op);
+      res=sexp_make_procedure(ctx2, SEXP_ZERO, sexp_make_fixnum(i), bc, SEXP_VOID);
+      if (i == sexp_opcode_num_args(op))
+        sexp_opcode_proc(op) = res;
+    }
   }
-  refs = sexp_reverse(ctx2, refs);
-  refs = sexp_cons(ctx2, op, refs);
-  generate_opcode_app(ctx2, refs);
-  bc = sexp_complete_bytecode(ctx2);
-  sexp_bytecode_name(bc) = sexp_opcode_name(op);
-  res=sexp_make_procedure(ctx2, SEXP_ZERO, sexp_make_fixnum(i), bc, SEXP_VOID);
-  if (i == sexp_opcode_num_args(op))
-    sexp_opcode_proc(op) = res;
   sexp_gc_release6(ctx);
   return res;
 }
