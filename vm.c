@@ -290,6 +290,12 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   sexp_gc_var1(ls);
   sexp_gc_preserve1(ctx, ls);
 
+  if (sexp_opcode_tail_call_p(op) && !sexp_context_tailp(ctx)) {
+    sexp_warn(ctx, "tail-call only opcode in non-tail position: ", app);
+    generate_lit(ctx, SEXP_VOID);
+    return;
+  }
+
   num_args = sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(app)));
   sexp_context_tailp(ctx) = 0;
 
@@ -951,9 +957,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   self = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
   bc = sexp_procedure_code(self);
   cp = sexp_procedure_vars(self);
-  ip = sexp_bytecode_data(bc);
+  ip = sexp_bytecode_data(bc) - sizeof(sexp);
   tmp1 = proc, tmp2 = args;
-  goto apply1;
+  i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
+  sexp_ensure_stack(i + 64 + sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0);
+  for (top += i; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
+    _ARG1 = sexp_car(tmp2);
+  top += i+1;
+  goto make_call;
 
  loop:
 #if SEXP_USE_GREEN_THREADS
@@ -1066,23 +1077,27 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_APPLY1:
     tmp1 = _ARG1;
     tmp2 = _ARG2;
-    top -= 2;
   apply1:
-    i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
+    i = sexp_unbox_fixnum(sexp_length(ctx, tmp2)); /* number of params */
     sexp_ensure_stack(i + 64 + sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0);
-    top += i;
-    for ( ; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
-      _ARG1 = sexp_car(tmp2);
-    top += i+1;
-    ip -= sizeof(sexp);
+    k = sexp_unbox_fixnum(stack[fp+3]);            /* previous fp */
+    j = sexp_unbox_fixnum(stack[fp]);              /* previous num params */
+    self = stack[fp+2];
+    bc = sexp_procedure_code(self);
+    cp = sexp_procedure_vars(self);
+    ip = (sexp_bytecode_data(bc)+sexp_unbox_fixnum(stack[fp+1])) - sizeof(sexp);
+    for (top=fp-j+i-1; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
+      stack[top] = sexp_car(tmp2);
+    top = fp+i-j+1;
+    fp = k;
     goto make_call;
   case SEXP_OP_TAIL_CALL:
     _ALIGN_IP();
     i = sexp_unbox_fixnum(_WORD0);             /* number of params */
     tmp1 = _ARG1;                              /* procedure to call */
     /* save frame info */
-    tmp2 = stack[fp+3];
-    j = sexp_unbox_fixnum(stack[fp]);
+    tmp2 = stack[fp+3];                        /* previous fp */
+    j = sexp_unbox_fixnum(stack[fp]);          /* previous num params */
     self = stack[fp+2];
     bc = sexp_procedure_code(self);
     cp = sexp_procedure_vars(self);

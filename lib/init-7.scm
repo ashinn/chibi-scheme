@@ -57,7 +57,7 @@
     (if (every pair? lol)
         (mapn proc
               (map1 cdr lol '())
-              (cons (apply1 proc (map1 car lol '())) res))
+              (cons (apply proc (map1 car lol '())) res))
         (reverse res)))
   (if (null? lol)
       (map1 proc ls '())
