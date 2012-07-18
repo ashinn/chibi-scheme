@@ -33,7 +33,7 @@ sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
   return exn;
 }
 
-static void sexp_warn (sexp ctx, char *msg, sexp x) {
+void sexp_warn (sexp ctx, char *msg, sexp x) {
   sexp out = sexp_current_error_port(ctx);
   if (sexp_oportp(out)) {
     sexp_write_string(ctx, "WARNING: ", out);
