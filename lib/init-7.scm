@@ -372,15 +372,22 @@
       (and (<= 65 (char->integer (char-upcase ch)) 70)
            (- (char->integer (char-upcase ch)) 55))))
 
+(define (%number->string num)
+  (call-with-output-string (lambda (out) (write num out))))
+
 (define (number->string num . o)
-  (if (if (null? o) #t (eq? 10 (car o)))
-      (call-with-output-string (lambda (out) (write num out)))
-      (let lp ((n (abs num)) (d (car o)) (res '()))
-        (if (> n 0)
-            (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
-            (if (null? res)
-                "0"
-                (list->string (if (negative? num) (cons #\- res) res)))))))
+  (cond
+   ((not (number? num))
+    (error "not a number" num))
+   ((if (null? o) #t (eq? 10 (car o)))
+    (%number->string num))
+   (else
+    (let lp ((n (abs num)) (d (car o)) (res '()))
+      (if (> n 0)
+          (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
+          (if (null? res)
+              "0"
+              (list->string (if (negative? num) (cons #\- res) res))))))))
 
 (define (list->string ls)
   (call-with-output-string
@@ -626,7 +633,7 @@
        (define forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr)))
        (define (next-symbol s)
          (set! count (+ count 1))
-         (rename (string->symbol (string-append s (number->string count)))))
+         (rename (string->symbol (string-append s (%number->string count)))))
        (define (expand-pattern pat tmpl)
          (let lp ((p (cdr pat))
                   (x (list _cdr _expr))
