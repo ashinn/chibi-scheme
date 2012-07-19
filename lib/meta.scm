@@ -1,5 +1,5 @@
 ;; meta.scm -- meta langauge for describing modules
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -12,6 +12,7 @@
 (define (module-env mod) (vector-ref mod 1))
 (define (module-env-set! mod env) (vector-set! mod 1 env))
 (define (module-meta-data mod) (vector-ref mod 2))
+(define (module-meta-data-set! mod x) (vector-set! mod 2 x))
 
 (define (module-exports mod)
   (or (%module-exports mod) (env-exports (module-env mod))))
@@ -134,6 +135,7 @@
 
 (define (eval-module name mod . o)
   (let ((env (if (pair? o) (car o) (make-environment)))
+        (meta (module-meta-data mod))
         (dir (module-name-prefix name)))
     (define (load-modules files extension fold?)
       (for-each
@@ -150,6 +152,10 @@
                          (load path env)))))
             (else (error "couldn't find include" f)))))
        files))
+    ;; catch cyclic references
+    (module-meta-data-set!
+     mod
+     `((error "module attempted to reference itself while loading" ,name)))
     (for-each
      (lambda (x)
        (case (and (pair? x) (car x))
@@ -160,7 +166,7 @@
                     (mod2 (load-module (car mod2-name+imports))))
                (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
            (cdr x)))))
-     (module-meta-data mod))
+     meta)
     (for-each
      (lambda (x)
        (case (and (pair? x) (car x))
@@ -171,8 +177,11 @@
          ((include-shared)
           (load-modules (cdr x) *shared-object-extension* #f))
          ((body begin)
-          (for-each (lambda (expr) (eval expr env)) (cdr x)))))
-     (module-meta-data mod))
+          (for-each (lambda (expr) (eval expr env)) (cdr x)))
+         ((error)
+          (apply error (cdr x)))))
+     meta)
+    (module-meta-data-set! mod meta)
     (warn-undefs env #f)
     env))
 
