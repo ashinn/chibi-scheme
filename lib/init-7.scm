@@ -18,6 +18,9 @@
 
 (define (procedure? x) (if (closure? x) #t (opcode? x)))
 
+(define (length ls)
+  (if (list? ls) (length* ls) (error "not a list" ls)))
+
 (define (list . args) args)
 
 (define (list-tail ls k)
@@ -659,7 +662,7 @@
                          (cddr p))
                     (error "multiple ellipses" p))
                    (else
-                    (let ((len (length (cdr (cdr p))))
+                    (let ((len (length* (cdr (cdr p))))
                           (_lp (next-symbol "lp.")))
                       `(,_let ((,_len (,_length ,v)))
                          (,_and (,_>= ,_len ,len)

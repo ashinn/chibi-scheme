@@ -20,4 +20,4 @@
    (define-syntax case-lambda
      (syntax-rules ()
        ((case-lambda . clauses)
-        (lambda args (let ((len (length args))) (%case args len 0 () . clauses))))))))
+        (lambda args (let ((len (length* args))) (%case args len 0 () . clauses))))))))
