@@ -1,5 +1,5 @@
 /*  threads.c -- SRFI-18 thread primitives                    */
-/*  Copyright (c) 2010-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2010-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
@@ -96,18 +96,10 @@ sexp sexp_thread_start (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   if (sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
     sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = cell;
     sexp_global(ctx, SEXP_G_THREADS_BACK) = cell;
-  } else {			/* init queue */
+  } else {            /* init queue */
     sexp_global(ctx, SEXP_G_THREADS_BACK) = sexp_global(ctx, SEXP_G_THREADS_FRONT) = cell;
   }
   return thread;
-}
-
-sexp sexp_thread_terminate (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
-  sexp res = sexp_make_boolean(ctx == thread);
-  for ( ; thread && sexp_contextp(thread); thread=sexp_context_child(thread))
-    sexp_context_refuel(thread) = 0;
-  /* return true if terminating self */
-  return res;
 }
 
 static int sexp_delete_list (sexp ctx, int global, sexp x) {
@@ -121,6 +113,20 @@ static int sexp_delete_list (sexp ctx, int global, sexp x) {
   } else {
     return 0;
   }
+}
+
+sexp sexp_thread_terminate (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
+  sexp res = sexp_make_boolean(ctx == thread);
+  /* terminate the thread and all children */
+  for ( ; thread && sexp_contextp(thread); thread=sexp_context_child(thread)) {
+    /* zero the refuel - this tells the scheduler the thread is terminated */
+    sexp_context_refuel(thread) = 0;
+    /* unblock the thread if needed so it can be scheduled and terminated */
+    if (sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, thread))
+      sexp_thread_start(ctx, self, 1, thread);
+  }
+  /* return true if terminating self, then we can yield */
+  return res;
 }
 
 static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
@@ -256,13 +262,13 @@ sexp sexp_condition_variable_signal (sexp ctx, sexp self, sexp_sint_t n, sexp co
   for ( ; sexp_pairp(ls2); ls1=ls2, ls2=sexp_cdr(ls2))
     if (sexp_context_event(sexp_car(ls2)) == condvar) {
       if (ls1==SEXP_NULL)
-	sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
+        sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(ls2);
       else
-	sexp_cdr(ls1) = sexp_cdr(ls2);
+        sexp_cdr(ls1) = sexp_cdr(ls2);
       sexp_cdr(ls2) = sexp_global(ctx, SEXP_G_THREADS_FRONT);
       sexp_global(ctx, SEXP_G_THREADS_FRONT) = ls2;
       if (! sexp_pairp(sexp_cdr(ls2)))
-	sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
+        sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
       sexp_context_waitp(sexp_car(ls2)) = sexp_context_timeoutp(sexp_car(ls2)) = 0;
       return SEXP_TRUE;
     }
@@ -459,12 +465,12 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
           sexp_cdr(ls1) = sexp_cdr(ls2);
         tmp = sexp_cdr(ls2);
         sexp_cdr(ls2) = SEXP_NULL;
-	if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
-	  sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
-	} else {
-	  sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = ls2;
-	}
-	sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
+        if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
+          sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = ls2;
+        } else {
+          sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = ls2;
+        }
+        sexp_global(ctx, SEXP_G_THREADS_BACK) = ls2;
         ls2 = tmp;
       } else {
         ls1 = ls2;
@@ -486,12 +492,12 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
       }
       if (sexp_pairp(ls1)) {
         sexp_cdr(ls1) = SEXP_NULL;
-	if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
-	  sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = paused;
-	} else {
-	  sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = paused;
-	}
-	sexp_global(ctx, SEXP_G_THREADS_BACK) = ls1;
+        if (! sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
+          sexp_global(ctx, SEXP_G_THREADS_FRONT) = front = paused;
+        } else {
+          sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = paused;
+        }
+        sexp_global(ctx, SEXP_G_THREADS_BACK) = ls1;
         sexp_global(ctx, SEXP_G_THREADS_PAUSED) = paused = ls2;
       }
     }
