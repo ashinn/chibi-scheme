@@ -458,6 +458,7 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   sexp_context_saves(res) = NULL;
   sexp_context_params(res) = SEXP_NULL;
   sexp_context_tracep(res) = 0;
+  sexp_context_timeoutp(res) = 0;
   sexp_context_tailp(res) = 1;
 #if SEXP_USE_GREEN_THREADS
   sexp_context_event(res) = SEXP_FALSE;
