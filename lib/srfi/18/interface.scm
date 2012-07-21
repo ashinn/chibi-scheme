@@ -14,12 +14,12 @@
 (define thread-yield! yield!)
 
 (define (thread-join! thread . o)
-  (let ((timeout (if (pair? o) (car o) #f)))
+  (let ((timeout (and (pair? o) (car o))))
     (cond
      ((%thread-join! thread (timeout->seconds timeout)))
      (else
       (thread-yield!)
-      (if (thread-timeout?)
+      (if (and timeout (thread-timeout?))
           (if (and (pair? o) (pair? (cdr o)))
               (cadr o)
               (error "timed out waiting for thread" thread))
