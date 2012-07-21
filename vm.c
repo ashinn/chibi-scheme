@@ -922,6 +922,23 @@ sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n) {
 }
 #endif
 
+#if SEXP_USE_DEBUG_THREADS
+static const char* sexp_thread_debug_name(sexp ctx) {
+  if (sexp_stringp(sexp_context_name(ctx)))
+    return sexp_string_data(sexp_context_name(ctx));
+  return "?";
+}
+
+static char* sexp_thread_debug_event_type(sexp ctx) {
+  sexp evt = sexp_context_event(ctx);
+  return sexp_portp(evt) ? "p" : sexp_contextp(evt) ? "c" : "?";
+}
+
+static void* sexp_thread_debug_event(sexp ctx) {
+  return (void*)sexp_context_event(ctx);
+}
+#endif
+
 #if SEXP_USE_CHECK_STACK
 #define sexp_ensure_stack(n)                                            \
   if (top+(n) >= sexp_stack_length(sexp_context_stack(ctx))) {          \
@@ -977,6 +994,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_context_last_fp(ctx) = fp;
       sexp_context_proc(ctx) = self;
       /* run scheduler */
+#if SEXP_USE_DEBUG_THREADS
+      tmp2 = ctx;
+#endif
       ctx = sexp_apply1(ctx, tmp1, root_thread);
       /* restore thread */
       stack = sexp_stack_data(sexp_context_stack(ctx));
@@ -986,6 +1006,18 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       self = sexp_context_proc(ctx);
       bc = sexp_procedure_code(self);
       cp = sexp_procedure_vars(self);
+#if SEXP_USE_DEBUG_THREADS
+      if (ctx != tmp2) {
+        fprintf(stderr, "****** schedule: %p (%s) active:",
+                ctx, sexp_thread_debug_name(ctx));
+        for (tmp1=sexp_global(ctx, SEXP_G_THREADS_FRONT); sexp_pairp(tmp1); tmp1=sexp_cdr(tmp1))
+          fprintf(stderr, " %p (%s)", sexp_car(tmp1), sexp_thread_debug_name(sexp_car(tmp1)));
+        fprintf(stderr, " paused:");
+        for (tmp1=sexp_global(ctx, SEXP_G_THREADS_PAUSED); sexp_pairp(tmp1); tmp1=sexp_cdr(tmp1))
+          fprintf(stderr, " %p (%s) [%s %p]", sexp_car(tmp1), sexp_thread_debug_name(sexp_car(tmp1)), sexp_thread_debug_event_type(sexp_car(tmp1)), sexp_thread_debug_event(sexp_car(tmp1)));
+        fprintf(stderr, " ******\n");
+      }
+#endif
     }
     fuel = sexp_context_refuel(ctx);
     if (fuel <= 0) goto end_loop;
