@@ -1,5 +1,5 @@
 /* main.c -- chibi-scheme command-line app                   */
-/* Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/* Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -248,17 +248,26 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
+#if SEXP_USE_GREEN_THREADS
+static void sexp_make_unblocking (sexp ctx, sexp port) {
+  if (!(sexp_portp(port) && sexp_port_fileno(port) >= 0))
+    return;
+  if (sexp_port_flags(port) == SEXP_PORT_UNKNOWN_FLAGS)
+    sexp_port_flags(port) = fcntl(sexp_port_fileno(port), F_GETFL);
+  if (!(sexp_port_flags(port) & O_NONBLOCK))
+    if (fcntl(sexp_port_fileno(port), F_SETFL, sexp_port_flags(port) | O_NONBLOCK) == 0)
+      sexp_port_flags(port) |= O_NONBLOCK;
+}
+#endif
+
 static sexp sexp_load_standard_params (sexp ctx, sexp e) {
   sexp_gc_var2(p, res);
   sexp_gc_preserve2(ctx, p, res);
   sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
 #if SEXP_USE_GREEN_THREADS
-  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
-  if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
-  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
-  if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
-  p  = sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
-  if (sexp_portp(p)) sexp_maybe_block_port(ctx, p, 1);
+  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL)));
+  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL)));
+  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL)));
 #endif
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
