@@ -269,7 +269,7 @@
                 (with-signal-handler
                  signal/interrupt
                  (lambda (n)
-                   (display "Interrupt\n" (current-error-port))
+                   (display "\nInterrupt\n" (current-error-port))
                    (thread-terminate! thread))
                  (lambda () (thread-join! (thread-start! thread))))))
             ;; Loop whether there were errors or interrupts or not.
