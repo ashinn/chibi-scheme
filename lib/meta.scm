@@ -217,14 +217,24 @@
                     (cons (car (cddr x)) (cadr x))
                     (error "invalid module export" x))
                 x))
+          (define (extract-exports)
+            (cond
+             ((assq 'export-all ,this-module)
+              => (lambda (x)
+                   (if (pair? (cdr x))
+                       (error "export-all takes no parameters" x))
+                   #f))
+             (else
+              (let lp ((ls ,this-module) (res '()))
+                (cond
+                 ((null? ls) res)
+                 ((and (pair? (car ls)) (eq? 'export (caar ls)))
+                  (lp (cdr ls) (append (map rewrite-export (cdar ls)) res)))
+                 (else (lp (cdr ls) res)))))))
           (set! ,this-module '())
           ,@body
           (set! ,this-module (reverse ,this-module))
-          (let ((exports
-                 (cond ((assq 'export ,this-module)
-                        => (lambda (x) (map rewrite-export (cdr x))))
-                       (else '()))))
-            (,add-module! ',name (make-module exports #f ,this-module)))
+          (,add-module! ',name (make-module (extract-exports) #f ,this-module))
           (set! ,this-module ,tmp))))))
 
 (define-syntax define-library define-library-transformer)
@@ -243,6 +253,7 @@
 (define-config-primitive import)
 (define-config-primitive import-immutable)
 (define-config-primitive export)
+(define-config-primitive export-all)
 (define-config-primitive include)
 (define-config-primitive include-ci)
 (define-config-primitive include-shared)
