@@ -6,7 +6,7 @@
          (rest-parameter-cdrs ast))
     => (lambda (cdrs)
          (replace-rest-destructuring-with-stack-references
-          (length (lambda-params ast))
+          (length* (lambda-params ast))
           ast
           cdrs)))
    (else

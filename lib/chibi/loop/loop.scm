@@ -1,6 +1,6 @@
 ;;;; loop.scm - the chibi loop (aka foof-loop)
 ;;
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> The loop API is mostly compatible with Taylor Campbell's
