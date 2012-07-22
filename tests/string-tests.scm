@@ -59,6 +59,9 @@
 (test "abc" (string-trim "  abc"))
 (test "abc" (string-trim "abc  "))
 (test "abc" (string-trim "  abc  "))
+(test "" (string-trim ""))
+(test "" (string-trim " "))
+(test "" (string-trim "  "))
 
 (test #t (string-prefix? "abc" "abc"))
 (test #t (string-prefix? "abc" "abcde"))

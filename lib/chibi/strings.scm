@@ -81,10 +81,12 @@
                       (string-skip-right str pred))))
 
 (define (string-trim str . o)
-  (let ((pred (make-char-predicate (if (pair? o) (car o) #\space))))
-    (substring-cursor str
-                      (string-skip str pred)
-                      (string-skip-right str pred))))
+  (let* ((pred (if (pair? o) (car o) #\space))
+         (left (string-skip str pred))
+         (right (string-skip-right str pred)))
+    (if (string-cursor>=? left right)
+        ""
+        (substring-cursor str left right))))
 
 (define (string-mismatch prefix str)
   (let ((end1 (string-cursor-end prefix))
