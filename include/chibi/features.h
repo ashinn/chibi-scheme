@@ -760,4 +760,4 @@ typedef char sexp_abi_identifier_t[8];
    SEXP_ABI_MODULES SEXP_ABI_NUMBERS SEXP_ABI_STRINGS SEXP_ABI_SYMS)
 
 #define sexp_version_compatible(ctx, subver, genver) (strcmp((subver), (genver)) == 0)
-#define sexp_abi_compatible(ctx, subabi, genabi) (strcmp((subabi), (genabi)) == 0)
+#define sexp_abi_compatible(ctx, subabi, genabi) (strncmp((subabi), (genabi), sizeof(sexp_abi_identifier_t)) == 0)
