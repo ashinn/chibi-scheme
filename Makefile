@@ -138,6 +138,9 @@ lib/chibi/char-set/ascii.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$
 lib/chibi/char-set/full.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(EXE)
 	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm chibi.char-set.compute > $@
 
+lib/scheme/char/case-offsets.scm: data/CaseFolding.txt chibi-scheme$(EXE) all-libs
+	$(CHIBI) tools/extract-case-offsets.scm $< > $@
+
 ########################################################################
 # Tests
 
@@ -244,7 +247,7 @@ install: all
 	$(INSTALL) lib/chibi/optimize/*.sld lib/chibi/optimize/*.scm $(DESTDIR)$(MODDIR)/chibi/optimize/
 	$(INSTALL) lib/chibi/term/*.sld lib/chibi/term/*.scm $(DESTDIR)$(MODDIR)/chibi/term/
 	$(INSTALL) lib/scheme/*.sld lib/scheme/*.scm $(DESTDIR)$(MODDIR)/scheme/
-	$(INSTALL) lib/scheme/char/*.sld $(DESTDIR)$(MODDIR)/scheme/char/
+	$(INSTALL) lib/scheme/char/*.sld lib/scheme/char/*.scm $(DESTDIR)$(MODDIR)/scheme/char/
 	$(INSTALL) lib/srfi/*.sld lib/srfi/*.scm $(DESTDIR)$(MODDIR)/srfi/
 	$(INSTALL) lib/srfi/1/*.scm $(DESTDIR)$(MODDIR)/srfi/1/
 	$(INSTALL) lib/srfi/18/*.scm $(DESTDIR)$(MODDIR)/srfi/18/
