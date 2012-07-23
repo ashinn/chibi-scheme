@@ -1098,6 +1098,8 @@
   (define (string-copy s) (substring-cursor s 0 (string-size s)))
   (define string-cursor-end string-size))
  (else
+  (define string-size string-length)
+  (define substring-cursor substring)
   (define (string-copy s) (substring s 0 (string-length s)))
   (define string-cursor-end string-length)
   (define string-cursor-ref string-ref)
