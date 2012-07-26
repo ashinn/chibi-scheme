@@ -158,7 +158,9 @@
                            'completion: (make-sexp-buffer-completer))))))
         (cond
          ((or (not line) (eof-object? line)))
-         ((equal? line "") (lp module env meta-env))
+         ((equal? line "")
+          (history-reset! history)
+          (lp module env meta-env))
          (else
           (history-commit! history line)
           (cond
