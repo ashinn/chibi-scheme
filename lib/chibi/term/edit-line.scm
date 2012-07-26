@@ -22,17 +22,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; history
 
-(define maximum-history-size 128)
+(define maximum-history-size 512)
 
 (define-record-type History
-  (%make-history remaining past future)
+  (%make-history remaining past future filter)
   history?
   (remaining history-remaining history-remaining-set!)
   (past history-past history-past-set!)
-  (future history-future history-future-set!))
+  (future history-future history-future-set!)
+  (filter history-filter history-filter-set!))
 
 (define (make-history . o)
-  (%make-history (if (pair? o) (car o) maximum-history-size) '() '()))
+  (%make-history (if (pair? o) (car o) maximum-history-size)
+                 '()
+                 '()
+                 (and (pair? o) (pair? (cdr o)) (cadr o))))
 
 (define (history-current h)
   (let ((p (history-past h)))
@@ -42,8 +46,9 @@
   (let ((past (history-past h)) (future (history-future h)))
     (if (pair? past) (cons (car past) (append future (cdr past))) future)))
 
-(define (list->history ls)
-  (%make-history (max maximum-history-size (length ls)) ls '()))
+(define (list->history ls . o)
+  (%make-history (max maximum-history-size (length ls)) ls '()
+                 (and (pair? o) (car o))))
 
 (define (history-flatten! h)
   (history-past-set! h (history->list h))
@@ -61,16 +66,19 @@
 
 (define (history-insert! h x)
   (history-flatten! h)
-  (history-past-push! h x))
+  (if (not (and (history-filter h) ((history-filter h) x)))
+      (history-past-push! h x)))
 
-(define (history-commit! h x)
+(define (history-reset! h)
   (cond
    ((pair? (history-future h))
-    (history-past-set!
-     h (cons x (append (drop-last (history-future h)) (history-past h))))
-    (history-future-set! h '()))
-   (else
-    (history-insert! h x))))
+    (history-past-set! h (append (drop-last (history-future h))
+                                 (history-past h)))
+    (history-future-set! h '()))))
+
+(define (history-commit! h x)
+  (history-reset! h)
+  (history-insert! h x))
 
 (define (history-prev! h)
   (let ((past (history-past h)))
