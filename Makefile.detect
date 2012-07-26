@@ -10,6 +10,12 @@ else
 ifeq ($(shell uname),FreeBSD)
 PLATFORM=bsd
 else
+ifeq ($(shell uname),NetBSD)
+PLATFORM=bsd
+else
+ifeq ($(shell uname),OpenBSD)
+PLATFORM=bsd
+else
 ifeq ($(shell uname),DragonFly)
 PLATFORM=bsd
 else
@@ -33,6 +39,8 @@ endif
 endif
 endif
 endif
+endif
+endif
 
 ########################################################################
 # Set default variables for the platform.
@@ -44,6 +52,12 @@ SO  = .dylib
 EXE =
 CLIBFLAGS = -dynamiclib
 STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
+else
+ifeq ($(PLATFORM),bsd)
+SO  = .so
+EXE =
+CLIBFLAGS = -fPIC -shared
+LIBDL = 
 else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
@@ -70,6 +84,7 @@ STATICFLAGS = -static -DSEXP_USE_DL=0
 ifeq ($(PLATFORM),BSD)
 LIBDL=
 RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
 endif
 endif
 endif
