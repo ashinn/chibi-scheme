@@ -62,6 +62,8 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
 
 #include <sys/time.h>
 #ifndef __DragonFly__
+#include <sys/param.h>
+#include <sys/sysctl.h>
 #include <sys/proc.h>
 #endif
 #include <sys/sysctl.h>
@@ -72,8 +74,10 @@ static sexp sexp_pid_cmdline (sexp ctx, int pid) {
   struct kinfo_proc res;
   int name[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
   if (sysctl(name, 4, &res, &reslen, NULL, 0) >= 0) {
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__NetBSD__)
     return sexp_c_string(ctx, res.kp_proc.p_comm, -1);
+#elif __OpenBSD__
+    return sexp_c_string(ctx, res.p_comm, -1);
 #elif __DragonFly__
     return sexp_c_string(ctx, res.kp_comm, -1);
 #else
