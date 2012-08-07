@@ -36,18 +36,24 @@
 (define (mutex-lock! mutex . o)
   (let ((timeout (and (pair? o) (car o)))
         (thread (if (and (pair? o) (pair? (cdr o))) (cadr o) #t)))
-    (cond ((%mutex-lock! mutex (timeout->seconds timeout) thread))
-	  (else
-	   (thread-yield!)
-	   (not (thread-timeout?))))))
+    (cond
+     ((%mutex-lock! mutex (timeout->seconds timeout) thread))
+     (else
+      (thread-yield!)
+      ;; If we timed out, fail.
+      (if (thread-timeout?)
+          #f
+          ;; Otherwise the lock was released, try again.
+          (mutex-lock! mutex timeout thread))))))
 
 (define (mutex-unlock! mutex . o)
   (let ((condvar (and (pair? o) (car o)))
         (timeout (if (and (pair? o) (pair? (cdr o))) (cadr o) #f)))
-    (cond ((%mutex-unlock! mutex condvar (timeout->seconds timeout)))
-	  (else
-	   (thread-yield!)
-	   (not (thread-timeout?))))))
+    (cond
+     ((%mutex-unlock! mutex condvar (timeout->seconds timeout)))
+     (else
+      (thread-yield!)
+      (not (thread-timeout?))))))
 
 (define (join-timeout-exception? x)
   (and (exception? x)
