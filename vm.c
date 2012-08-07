@@ -1922,10 +1922,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG2) ? ferror(sexp_port_stream(_ARG2)) : 1)
-          && (errno == EAGAIN)
-          && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+          && (errno == EAGAIN)) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG2));
-        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2);
+        if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
+          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2);
         fuel = 0;
         ip--;      /* try again */
         goto loop;
@@ -2002,10 +2002,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
-          && (errno == EAGAIN)
-          && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+          && (errno == EAGAIN)) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
-        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
+        /* TODO: block and unblock */
+        if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
+          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
         fuel = 0;
         ip--;      /* try again */
       } else
@@ -2027,10 +2028,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (i == EOF) {
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
-          && (errno == EAGAIN)
-          && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+          && (errno == EAGAIN)) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
-        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
+        if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
+          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
         fuel = 0;
         ip--;      /* try again */
       } else
