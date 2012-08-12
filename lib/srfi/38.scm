@@ -3,58 +3,63 @@
 ;; This code was written by Alex Shinn in 2009 and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
-(define (extract-shared-objects x)
-  (let ((seen '()))
+(define (extract-shared-objects x cyclic-only?)
+  (let ((seen (make-hash-table eq?)))
+    ;; find shared references
     (let find ((x x))
-      (cond
-       ((assq x seen)
-        => (lambda (cell) (set-cdr! cell (+ (cdr cell) 1))))
-       ((pair? x)
-        (set! seen (cons (cons x 1) seen))
-        (find (car x))
-        (find (cdr x)))
-       ((vector? x)
-        (set! seen (cons (cons x 1) seen))
-        (do ((i 0 (+ i 1)))
-            ((= i (vector-length x)))
-          (find (vector-ref x i))))
-       (else
-        (let ((type (type-of x)))
+      (let ((type (type-of x)))
+        (cond ;; only interested in pairs, vectors and records
+         ((or (pair? x) (vector? x) (and type (type-printer type)))
+          ;; increment the count
+          (hash-table-update!/default seen x (lambda (n) (+ n 1)) 0)
+          ;; walk if this is the first time
           (cond
-           ((and type (type-printer type))
-            (set! seen (cons (cons x 1) seen))
+           ((> (hash-table-ref seen x) 1))
+           ((pair? x)
+            (find (car x))
+            (find (cdr x)))
+           ((vector? x)
+            (do ((i 0 (+ i 1)))
+                ((= i (vector-length x)))
+              (find (vector-ref x i))))
+           (else
             (let ((num-slots (type-num-slots type)))
               (let lp ((i 0))
-                (cond
-                 ((< i num-slots)
-                  (find (slot-ref type x i))
-                  (lp (+ i 1))))))))))))
-    (let extract ((ls seen) (res '()))
-      (cond
-       ((null? ls) res)
-       ((> (cdar ls) 1) (extract (cdr ls) (cons (cons (caar ls) #f) res)))
-       (else (extract (cdr ls) res))))))
+                (cond ((< i num-slots)
+                       (find (slot-ref type x i))
+                       (lp (+ i 1))))))))
+          ;; delete if this shouldn't count as a shared reference
+          (if (and cyclic-only?
+                   (<= (hash-table-ref/default seen x 0) 1))
+              (hash-table-delete! seen x))))))
+    ;; extract shared references
+    (let ((res (make-hash-table eq?)))
+      (hash-table-walk
+       seen
+       (lambda (k v) (if (> v 1) (hash-table-set! res k #t))))
+      res)))
 
 (define (write-with-shared-structure x . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
-        (shared (extract-shared-objects x))
+        (shared
+         (extract-shared-objects x (and (pair? o) (pair? (cdr o)) (cadr o))))
         (count 0))
     (define (check-shared x prefix cont)
-      (let ((cell (assq x shared)))
-        (cond ((and cell (cdr cell))
+      (let ((index (hash-table-ref/default shared x #f)))
+        (cond ((integer? index)
                (display prefix out)
                (display "#" out)
-               (write (cdr cell) out)
+               (write index out)
                (display "#" out))
               (else
-               (cond (cell
+               (cond (index
                       (display prefix out)
                       (display "#" out)
                       (write count out)
                       (display "=" out)
-                      (set-cdr! cell count)
+                      (hash-table-set! shared x count)
                       (set! count (+ count 1))))
-               (cont x cell)))))
+               (cont x index)))))
     (let wr ((x x))
       (check-shared
        x
