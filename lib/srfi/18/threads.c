@@ -547,6 +547,8 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
       sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(paused);
       if (sexp_not(sexp_memq(ctx, tmp, paused)))
         sexp_insert_timed(ctx, tmp, tmp);
+    } else {
+      sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, res);
     }
     usecs = 0;
     if ((sexp_context_timeval(res).tv_sec == 0)
