@@ -420,10 +420,10 @@ struct sexp_struct {
       unsigned char* ip;
       struct timeval tval;
 #endif
-      char tailp, tracep, timeoutp, waitp;
+      char tailp, tracep, timeoutp, waitp, errorp;
       sexp_uint_t last_fp;
       sexp stack, env, parent, child,
-        globals, dk, params, proc, name, specific, event;
+        globals, dk, params, proc, name, specific, event, result;
 #if SEXP_USE_DL
       sexp dl;
 #endif
@@ -1035,6 +1035,9 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_timeoutp(x) (sexp_field(x, context, SEXP_CONTEXT, timeoutp))
 #define sexp_context_waitp(x)    (sexp_field(x, context, SEXP_CONTEXT, waitp))
 #define sexp_context_dl(x)       (sexp_field(x, context, SEXP_CONTEXT, dl))
+
+#define sexp_context_result(x)   (sexp_field(x, context, SEXP_CONTEXT, result))
+#define sexp_context_errorp(x)   (sexp_field(x, context, SEXP_CONTEXT, errorp))
 
 /* during compilation, sexp_context_specific is set to a vector */
 /* containing the following elements: */

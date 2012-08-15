@@ -1,6 +1,6 @@
 
 (cond-expand
- (modules (import (srfi 18) (only (chibi test) test-begin test test-end)))
+ (modules (import (srfi 18) (chibi test)))
  (else #f))
 
 (test-begin "threads")
@@ -64,11 +64,48 @@
         (if (mutex-lock! m 0.1) 'fail-second 'timeout)
         'bad-timeout)))
 
-;(test "basic condition-variable" () 'ok)
-;(test "condition-variable signal" () 'ok)
-;(test "condition-variable broadcast" () 'ok)
+(test "thread-join! end result" 5
+  (let* ((th (make-thread (lambda () (+ 3 2)))))
+    (thread-start! th)
+    (thread-join! th)))
 
-;(test "mailbox")
+(test-error "thread-join! exception"
+  (let* ((th (make-thread (lambda () (+ 3 "2")))))
+    (thread-start! th)
+    (thread-join! th)))
+
+(test-assert "make-condition-variable"
+  (condition-variable? (make-condition-variable)))
+
+(test "condition-variable signal" 'ok
+  (let* ((mutex (make-mutex))
+         (cndvar (make-condition-variable))
+         (th (make-thread
+              (lambda ()
+                (if (mutex-unlock! mutex cndvar 0.1) 'ok 'timeout1)))))
+    (thread-start! th)
+    (thread-yield!)
+    (condition-variable-signal! cndvar)
+    (thread-join! th 0.1 'timeout2)))
+
+(test "condition-variable broadcast" '(ok1 ok2)
+  (let* ((mutex (make-mutex))
+         (cndvar (make-condition-variable))
+         (th1 (make-thread
+               (lambda ()
+                 (mutex-lock! mutex)
+                 (if (mutex-unlock! mutex cndvar 1.0) 'ok1 'timeout1))))
+         (th2 (make-thread
+               (lambda ()
+                 (mutex-lock! mutex)
+                 (if (mutex-unlock! mutex cndvar 1.0) 'ok2 'timeout2)))))
+    (thread-start! th1)
+    (thread-start! th2)
+    (thread-yield!)
+    (mutex-lock! mutex)
+    (condition-variable-broadcast! cndvar)
+    (mutex-unlock! mutex)
+    (list (thread-join! th1 0.1 'timeout3)
+          (thread-join! th2 0.1 'timeout4))))
 
 (test-end)
-

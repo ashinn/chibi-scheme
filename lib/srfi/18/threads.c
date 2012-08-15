@@ -66,6 +66,16 @@ sexp sexp_thread_specific_set (sexp ctx, sexp self, sexp_sint_t n, sexp thread, 
   return SEXP_VOID;
 }
 
+sexp sexp_thread_end_result (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
+  sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
+  return sexp_context_result(thread) ? sexp_context_result(thread) : SEXP_VOID;
+}
+
+sexp sexp_thread_exceptionp (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
+  sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
+  return sexp_make_boolean(sexp_context_errorp(thread));
+}
+
 sexp sexp_current_thread (sexp ctx, sexp self, sexp_sint_t n) {
   return ctx;
 }
@@ -92,6 +102,7 @@ sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name
 sexp sexp_thread_start (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp cell;
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
+  sexp_context_errorp(thread) = 0;
   cell = sexp_cons(ctx, thread, SEXP_NULL);
   if (sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_BACK))) {
     sexp_cdr(sexp_global(ctx, SEXP_G_THREADS_BACK)) = cell;
@@ -621,6 +632,8 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "thread-name", 1, sexp_thread_name);
   sexp_define_foreign(ctx, env, "thread-specific", 1, sexp_thread_specific);
   sexp_define_foreign(ctx, env, "thread-specific-set!", 2, sexp_thread_specific_set);
+  sexp_define_foreign(ctx, env, "%thread-end-result", 1, sexp_thread_end_result);
+  sexp_define_foreign(ctx, env, "%thread-exception?", 1, sexp_thread_exceptionp);
   sexp_define_foreign(ctx, env, "mutex-state", 1, sexp_mutex_state);
   sexp_define_foreign(ctx, env, "%mutex-lock!", 3, sexp_mutex_lock);
   sexp_define_foreign(ctx, env, "%mutex-unlock!", 3, sexp_mutex_unlock);

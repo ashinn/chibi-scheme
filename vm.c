@@ -1060,8 +1060,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     }
     tmp1 = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
     sexp_context_last_fp(ctx) = fp;
-    if (! sexp_procedurep(tmp1))
+    if (! sexp_procedurep(tmp1)) {
+#if SEXP_USE_GREEN_THREADS
+      sexp_context_errorp(ctx) = 1;
+#endif
       goto end_loop;
+    }
     stack[top] = SEXP_ONE;
     stack[top+1] = sexp_make_fixnum(ip-sexp_bytecode_data(bc));
     stack[top+2] = self;
@@ -2090,6 +2094,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 
  end_loop:
 #if SEXP_USE_GREEN_THREADS
+  sexp_context_result(ctx) = _ARG1;
   if (ctx != root_thread) {
     if (sexp_context_refuel(root_thread) <= 0) {
       /* the root already terminated */
