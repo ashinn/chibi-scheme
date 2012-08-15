@@ -9,7 +9,7 @@
 ;; char-sets to stdout.
 
 (import (scheme) (srfi 1) (srfi 69)
-        (chibi io) (chibi strings) (chibi modules)
+        (chibi io) (chibi string) (chibi modules)
         (chibi char-set) (chibi iset) (chibi iset optimize)
         (only (meta) load-module))
 

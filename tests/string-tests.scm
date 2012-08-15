@@ -1,7 +1,7 @@
 
 (cond-expand
  (modules (import (only (chibi test) test-begin test test-end)
-                  (chibi strings)))
+                  (chibi string)))
  (else #f))
 
 (test-begin "strings")
