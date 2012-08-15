@@ -1,5 +1,5 @@
 
-(define-library (chibi strings)
+(define-library (chibi string)
   (export
    string-cursor-start string-cursor-end string-cursor-ref
    string-cursor<? string-cursor<=? string-cursor>? string-cursor>=?
@@ -12,4 +12,4 @@
    string-fold string-fold-right string-map string-for-each
    string-contains make-string-searcher)
   (import (scheme) (chibi ast) (chibi char-set base))
-  (include "strings.scm"))
+  (include "string.scm"))

@@ -15,7 +15,7 @@
 ;;                        "char-downcase-offsets"
 ;;   -o <output-file>   - the output file, defaults to stdout
 
-(import (scheme) (srfi 1) (srfi 69) (srfi 95) (chibi io) (chibi strings)
+(import (scheme) (srfi 1) (srfi 69) (srfi 95) (chibi io) (chibi string)
         (chibi iset) (chibi iset optimize))
 
 (define (warn . args)
