@@ -9,9 +9,9 @@
   (call-with-input-string str
     (lambda (in) (read/ss in))))
 
-(define (write-to-string x)
+(define (write-to-string x . o)
   (call-with-output-string
-    (lambda (out) (write/ss x out))))
+    (lambda (out) (apply write/ss x out o))))
 
 (define-syntax test-io
   (syntax-rules ()
@@ -20,6 +20,14 @@
            (value expr))
        (test str (write-to-string value))
        (test str (write-to-string (read-from-string str)))))))
+
+(define-syntax test-cyclic-io
+  (syntax-rules ()
+    ((test-io str-expr expr)
+     (let ((str str-expr)
+           (value expr))
+       (test str (write-to-string value #t))
+       (test str (write-to-string (read-from-string str) #t))))))
 
 (define (circular-list . args)
   (let ((res (map (lambda (x) x) args)))
@@ -41,9 +49,20 @@
          (let ((x (list 1 2 3))) (set-car! (cdr x) x) (list x x)))
 (test-io "(#0=(1 . #0#) #1=(1 . #1#))"
          (list (circular-list 1) (circular-list 1)))
+
 (test-io "(#0=(1 . 2) #1=(1 . 2) #2=(3 . 4) #0# #1# #2#)"
          (let ((a (cons 1 2)) (b (cons 1 2)) (c (cons 3 4)))
            (list a b c a b c)))
+(test-cyclic-io "((1 . 2) (1 . 2) (3 . 4) (1 . 2) (1 . 2) (3 . 4))"
+                (let ((a (cons 1 2)) (b (cons 1 2)) (c (cons 3 4)))
+                  (list a b c a b c)))
+(test-cyclic-io "#0=((1 . 2) (1 . 2) (3 . 4) . #0#)"
+                (let* ((a (cons 1 2))
+                       (b (cons 1 2))
+                       (c (cons 3 4))
+                       (ls (list a b c)))
+                  (set-cdr! (cddr ls) ls)
+                  ls))
 
 (test-io "#0=#(#0#)"
          (let ((x (vector 1))) (vector-set! x 0 x) x))
