@@ -1583,10 +1583,6 @@ sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, sexp val)
 }
 #endif
 
-#ifdef PLAN9
-#include "opt/plan9.c"
-#endif
-
 /***************************** opcodes ********************************/
 
 #if SEXP_USE_TYPE_DEFS

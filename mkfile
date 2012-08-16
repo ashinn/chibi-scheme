@@ -11,7 +11,7 @@ CPPFLAGS= -Iinclude -DPLAN9 -DSEXP_USE_GREEN_THREADS=0
 CFLAGS= -p $CPPFLAGS
 CFLAGS_STATIC=$CFLAGS -DSEXP_USE_STATIC_LIBS
 
-OFILES=sexp.$O eval.$O main.$O $STATIC
+OFILES=gc.$O sexp.$O bignum.$O opcodes.$O plan9.$O vm.$O simplify.$O eval.$O main.$O $STATIC
 HFILES=include/chibi/sexp.h include/chibi/eval.h include/chibi/features.h include/chibi/install.h
 CLEANFILES=tests/basic/*.out tests/basic/*.err
 
@@ -107,5 +107,3 @@ test-unicode:
 
 test-libs:
 	./$O.out -xscheme tests/lib-tests.scm
-
-sexp.c:N:	gc.c opt/bignum.c
