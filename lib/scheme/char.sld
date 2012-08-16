@@ -3,7 +3,10 @@
   (import (scheme base))
   (cond-expand
    (full-unicode
-    (import (chibi char-set full) (chibi iset base) (only (scheme) digit-value))
+    (import (chibi char-set full)
+            (chibi char-set base)
+            (chibi iset base)
+            (only (scheme) digit-value))
     (include "char/full.scm")
     (include "char/case-offsets.scm"))
    (else
