@@ -1,9 +1,9 @@
 
-(define (char-alphabetic? ch) (iset-contains? char-set:letter ch))
-(define (char-lower-case? ch) (iset-contains? char-set:lower-case ch))
-(define (char-upper-case? ch) (iset-contains? char-set:upper-case ch))
-(define (char-numeric? ch) (iset-contains? char-set:digit ch))
-(define (char-whitespace? ch) (iset-contains? char-set:whitespace ch))
+(define (char-alphabetic? ch) (char-set-contains? char-set:letter ch))
+(define (char-lower-case? ch) (char-set-contains? char-set:lower-case ch))
+(define (char-upper-case? ch) (char-set-contains? char-set:upper-case ch))
+(define (char-numeric? ch) (char-set-contains? char-set:digit ch))
+(define (char-whitespace? ch) (char-set-contains? char-set:whitespace ch))
 
 (define (char-downcase ch)
   (let ((n (char->integer ch)))
