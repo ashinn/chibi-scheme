@@ -86,9 +86,9 @@ sexp-ulimit.o: sexp.c $(BASE_INCLUDES)
 main.o: main.c $(INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
-SEXP_OBJS = gc.o sexp.o opt/bignum.o
-SEXP_ULIMIT_OBJS = gc.o sexp-ulimit.o opt/bignum.o
-EVAL_OBJS = opcodes.o vm.o eval.o opt/simplify.o
+SEXP_OBJS = gc.o sexp.o bignum.o
+SEXP_ULIMIT_OBJS = gc.o sexp-ulimit.o bignum.o
+EVAL_OBJS = opcodes.o vm.o eval.o simplify.o
 
 libchibi-sexp$(SO): $(SEXP_OBJS)
 	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)

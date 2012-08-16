@@ -1,6 +1,8 @@
 /*  plan9.c -- extended Plan 9 system utils                   */
-/*  Copyright (c) 2009-2010 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
+
+#include "chibi/eval.h"
 
 sexp sexp_rand (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_fixnum(rand());

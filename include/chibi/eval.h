@@ -193,6 +193,34 @@ SEXP_API sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name
 SEXP_API sexp sexp_type_slot_offset_op (sexp ctx, sexp self, sexp_sint_t n, sexp type, sexp index);
 #endif
 
+#ifdef PLAN9
+SEXP_API sexp sexp_rand (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_srand (sexp ctx, sexp self, sexp_sint_t n, sexp seed);
+SEXP_API sexp sexp_file_exists_p (sexp ctx, sexp self, sexp_sint_t n, sexp path);
+SEXP_API sexp sexp_fdopen (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp mode);
+SEXP_API sexp sexp_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port);
+SEXP_API sexp sexp_fork (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_exec (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp args);
+SEXP_API void sexp_exits (sexp ctx, sexp self, sexp_sint_t n, sexp msg);
+SEXP_API sexp sexp_dup (sexp ctx, sexp self, sexp_sint_t n, sexp oldfd, sexp newfd);
+SEXP_API sexp sexp_pipe (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_sleep (sexp ctx, sexp self, sexp_sint_t n, sexp msecs);
+SEXP_API sexp sexp_getenv (sexp ctx, sexp self, sexp_sint_t n, sexp name);
+SEXP_API sexp sexp_getwd (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_chdir (sexp ctx, sexp self, sexp_sint_t n, sexp path);
+SEXP_API sexp sexp_getuser (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_sysname (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_wait (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_postnote (sexp ctx, sexp self, sexp_sint_t n, sexp pid, sexp note);
+SEXP_API sexp sexp_postmountsrv (sexp ctx, sexp self, sexp_sint_t n, sexp ls, sexp name, sexp mtpt, sexp flags);
+SEXP_API sexp sexp_9p_req_offset (sexp ctx, sexp self, sexp_sint_t n, sexp req);
+SEXP_API sexp sexp_9p_req_count (sexp ctx, sexp self, sexp_sint_t n, sexp req);
+SEXP_API sexp sexp_9p_req_fid (sexp ctx, sexp self, sexp_sint_t n, sexp req);
+SEXP_API sexp sexp_9p_req_newfid (sexp ctx, sexp self, sexp_sint_t n, sexp req);
+SEXP_API sexp sexp_9p_respond (sexp ctx, sexp self, sexp_sint_t n, sexp req, sexp err);
+SEXP_API sexp sexp_9p_responderror (sexp ctx, sexp self, sexp_sint_t n, sexp req);
+#endif
+
 #if SEXP_USE_SIMPLIFY
 SEXP_API int sexp_rest_unused_p (sexp lambda);
 #else

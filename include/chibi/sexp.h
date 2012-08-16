@@ -25,8 +25,10 @@ extern "C" {
 #if SEXP_USE_DL
 #include <dlfcn.h>
 #endif
+#ifndef PLAN9
 #include <errno.h>
 #include <unistd.h>
+#endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
 #include <fcntl.h>
