@@ -95,3 +95,14 @@ ifeq ($(PLATFORM),unix)
 #RLDFLAGS=-rpath $(LIBDIR)
 RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
 endif
+
+########################################################################
+# Check for NTP (who needs autoconf?)
+
+ifndef $(SEXP_USE_NTP_GETTIME)
+SEXP_USE_NTP_GETTIME := $(shell echo "main(){struct ntptimeval n; ntp_gettime(&n);}" | gcc -fsyntax-only -include sys/timex.h -xc - >/dev/null 2>/dev/null && echo 1 || echo 0)
+endif
+
+ifeq ($(SEXP_USE_NTP_GETTIME),1)
+CPPFLAGS += -DSEXP_USE_NTPGETTIME
+endif

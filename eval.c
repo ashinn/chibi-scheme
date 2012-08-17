@@ -1999,6 +1999,9 @@ static const char* sexp_initial_features[] = {
 #if SEXP_USE_GREEN_THREADS
   "threads",
 #endif
+#if SEXP_USE_NTP_GETTIME
+  "ntp",
+#endif
 #if SEXP_USE_AUTO_FORCE
   "auto-force",
 #endif
