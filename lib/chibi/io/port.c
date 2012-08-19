@@ -336,9 +336,9 @@ sexp sexp_write_u8 (sexp ctx, sexp self, sexp u8, sexp out) {
     if (sexp_port_stream(out))
       clearerr(sexp_port_stream(out));
 #if SEXP_USE_GREEN_THREADS
-    if ((errno == EAGAIN)
-        && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
-      sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), out);
+    if (errno == EAGAIN) {
+      if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
+        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), out);
       return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
     }
 #endif
@@ -357,11 +357,11 @@ sexp sexp_read_u8 (sexp ctx, sexp self, sexp in) {
   c = sexp_read_char(ctx, in);
 #if SEXP_USE_GREEN_THREADS
   if ((c == EOF)
-      && (errno == EAGAIN)
-      && sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+      && (errno == EAGAIN)) {
     if (sexp_port_stream(in))
       clearerr(sexp_port_stream(in));
-    sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), in);
+    if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
+      sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), in);
     return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
   }
 #endif
