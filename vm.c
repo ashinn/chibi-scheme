@@ -2080,6 +2080,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     fp = sexp_unbox_fixnum(stack[fp+3]);
     break;
   case SEXP_OP_DONE:
+    sexp_context_last_fp(ctx) = fp;
     goto end_loop;
   default:
     sexp_raise("unknown opcode", sexp_list1(ctx, sexp_make_fixnum(*(ip-1))));
