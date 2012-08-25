@@ -429,6 +429,15 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
     for (i=sexp_pollfds_num_fds(pollfds)-1; i>=0 && k>0; --i) {
       if (pfds[i].revents > 0) { /* free all threads blocked on this fd */
         k--;
+        /* maybe unblock the current thread */
+        evt = sexp_context_event(ctx);
+        if ((sexp_portp(evt) && (sexp_port_fileno(evt) == pfds[i].fd))
+            || (sexp_fixnump(evt) && (sexp_unbox_fixnum(evt) == pfds[i].fd))) {
+          sexp_context_waitp(ctx) = 0;
+          sexp_context_timeoutp(ctx) = 0;
+          sexp_context_event(ctx) = SEXP_FALSE;
+        }
+        /* maybe unblock paused threads */
         for (ls1=SEXP_NULL, ls2=paused; sexp_pairp(ls2); ) {
           /* TODO: distinguish input and output on the same fd? */
           evt = sexp_context_event(sexp_car(ls2));
@@ -436,6 +445,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
               || (sexp_fixnump(evt) && sexp_unbox_fixnum(evt) == pfds[i].fd)) {
             sexp_context_waitp(sexp_car(ls2)) = 0;
             sexp_context_timeoutp(sexp_car(ls2)) = 0;
+            sexp_context_event(sexp_car(ls2)) = SEXP_FALSE;
             if (ls1==SEXP_NULL)
               sexp_global(ctx, SEXP_G_THREADS_PAUSED) = paused = sexp_cdr(ls2);
             else
