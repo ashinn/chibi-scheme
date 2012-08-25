@@ -1967,7 +1967,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     i = sexp_write_string_n(ctx, sexp_bytes_data(tmp1), sexp_unbox_fixnum(_ARG2), _ARG3);
 #if SEXP_USE_GREEN_THREADS
-    if (i < sexp_unbox_fixnum(_ARG2)) {
+    if (i < sexp_unbox_fixnum(_ARG2) && errno == EAGAIN) {
       if (sexp_port_stream(_ARG3)) clearerr(sexp_port_stream(_ARG3));
       /* modify stack in-place so we continue where we left off next time */
       if (i > 0) {
@@ -1978,10 +1978,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         _ARG2 = sexp_make_fixnum(sexp_unbox_fixnum(_ARG2) - i);
       }
       /* yield if threads are enabled (otherwise busy loop) */
-      if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER))) {
+      /* TODO: the wait seems necessary on OS X to stop a print loop to ptys */
+      if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
         sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
-        fuel = 0;
-      }
+      else               /* no scheduler but output full, wait 5ms */
+        usleep(5*1000);
+      fuel = 0;
       ip--;      /* try again */
       goto loop;
     }
