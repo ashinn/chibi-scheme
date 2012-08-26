@@ -26,6 +26,7 @@ gc6.8
 clibs.c
 chibi-scheme
 chibi-scheme-static
+build-lib/chibi/char-set/derived.scm
 include/chibi/install.h
 lib/chibi/filesystem.c
 lib/chibi/io/io.c
