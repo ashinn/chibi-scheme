@@ -215,6 +215,9 @@ test-libs: chibi-scheme$(EXE)
 test: chibi-scheme$(EXE)
 	$(CHIBI) -xscheme tests/r5rs-tests.scm
 
+bench-gabriel: chibi-scheme$(EXE)
+	./benchmarks/gabriel/run.sh
+
 ########################################################################
 # Packaging
 
