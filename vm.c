@@ -1927,7 +1927,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG2) ? ferror(sexp_port_stream(_ARG2)) : 1)
           && (errno == EAGAIN)) {
-        if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG2));
+        if (sexp_port_stream(_ARG2)) clearerr(sexp_port_stream(_ARG2));
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
           sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2);
         fuel = 0;
