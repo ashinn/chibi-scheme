@@ -13,7 +13,7 @@
         (let lp ((lo 0) (hi (vector-length char-downcase-map)))
           (if (> lo hi)
               ch
-              (let* ((mid (+ lo (quotient (- hi lo) 2)))
+              (let* ((mid (+ lo (* (quotient (- hi lo) 4) 2)))
                      (m (vector-ref char-downcase-map mid)))
                 (cond
                  ((= n m)
@@ -36,7 +36,7 @@
         (let lp ((lo 0) (hi (vector-length char-upcase-map)))
           (if (> lo hi)
               ch
-              (let* ((mid (+ lo (quotient (- hi lo) 2)))
+              (let* ((mid (+ lo (* (quotient (- hi lo) 4) 2)))
                      (m (vector-ref char-upcase-map mid)))
                 (cond
                  ((= n m)
