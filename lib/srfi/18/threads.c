@@ -147,9 +147,9 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
   sexp ls1=SEXP_NULL, ls2;
   sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, thread);
   ls2 = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
-  if (sexp_integerp(timeout) || sexp_flonump(timeout))
+  if (sexp_fixnump(timeout) || sexp_flonump(timeout))
     gettimeofday(&sexp_context_timeval(thread), NULL);
-  if (sexp_integerp(timeout)) {
+  if (sexp_fixnump(timeout)) {
     sexp_context_timeval(thread).tv_sec += sexp_unbox_fixnum(timeout);
 #if SEXP_USE_FLONUMS
   } else if (sexp_flonump(timeout)) {
