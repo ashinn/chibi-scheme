@@ -528,10 +528,13 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
   if (sexp_pairp(front)) {
     res = sexp_car(front);
     if ((sexp_context_refuel(ctx) <= 0) || sexp_context_waitp(ctx)) {
-      /* either terminated or paused */
+      /* orig ctx is either terminated or paused */
       sexp_global(ctx, SEXP_G_THREADS_FRONT) = sexp_cdr(front);
       if (! sexp_pairp(sexp_cdr(front)))
         sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
+      if (sexp_context_refuel(ctx) > 0 && sexp_not(sexp_memq(ctx, ctx, paused)))
+        sexp_insert_timed(ctx, ctx, SEXP_FALSE);
+      paused = sexp_global(res, SEXP_G_THREADS_PAUSED);
     } else {
       /* swap with front of queue */
       sexp_car(sexp_global(ctx, SEXP_G_THREADS_FRONT)) = ctx;
@@ -565,12 +568,13 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
         && sexp_context_before(sexp_car(paused), sexp_context_timeval(res))) {
       tmp = res;
       res = sexp_car(paused);
-      sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(paused);
+      paused = sexp_global(ctx, SEXP_G_THREADS_PAUSED) = sexp_cdr(paused);
       if (sexp_not(sexp_memq(ctx, tmp, paused)))
         sexp_insert_timed(ctx, tmp, tmp);
     } else {
       sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, res);
     }
+    paused = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
     usecs = 0;
     if ((sexp_context_timeval(res).tv_sec == 0)
         && (sexp_context_timeval(res).tv_usec == 0)) {
