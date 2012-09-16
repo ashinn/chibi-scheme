@@ -58,5 +58,5 @@
                     (set! requests (+ requests 1))
                     (run sock addr count)
                     (set! requests (- requests 1)))
-                  "net-client"))
+                  (string-append "net-client-" (number->string count))))
                 (serve (+ 1 count))))))))))
