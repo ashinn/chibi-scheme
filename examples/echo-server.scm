@@ -1,38 +1,20 @@
 
-(import (scheme) (srfi 18) (chibi net) (chibi io) (chibi filesystem))
+;; Simple R7RS echo server, using (srfi 18) threads and the
+;; run-net-server utility from (chibi net server).
+
+(import (scheme base) (scheme write) (srfi 18) (chibi net server))
 
 ;; Copy each input line to output.
-(define (echo-handler in out)
+(define (echo-handler in out sock addr)
   (let ((line (read-line in)))
     (cond
-     ((not (eof-object? line))
+     ((not (or (eof-object? line) (equal? line "")))
+      (display "read: ") (write line) (newline)
       (display line out)
       (newline out)
-      (flush-output out)
-      (echo-handler in out)))))
+      (flush-output-port out)
+      (thread-yield!)
+      (echo-handler in out sock addr)))))
 
-;; Run a handler in a separate thread on the input and output ports,
-;; then cleanup.
-(define (run-io-handler sock handler)
-  (let ((in (open-input-file-descriptor sock))
-        (out (open-output-file-descriptor sock)))
-    (thread-start!
-     (make-thread
-      (lambda ()
-        (handler in out)
-        (close-input-port in)
-        (close-output-port out)
-        (close-file-descriptor sock))))))
-
-;; Basic server loop - repeatedly call accept, and dispatch the new
-;; socket to a handler.
-(define (serve host port)
-  (let* ((addrinfo (get-address-info host port))
-         (sock (make-listener-socket addrinfo)))
-    (do () (#f)
-      (let ((fd (accept sock
-                        (address-info-address addrinfo)
-                        (address-info-address-length addrinfo))))
-        (run-io-handler fd echo-handler)))))
-
-(serve "localhost" 5556)
+;; Start the server on localhost:5556 dispatching clients to echo-handler.
+(run-net-server 5556 echo-handler)

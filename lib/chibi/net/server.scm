@@ -4,9 +4,13 @@
 (define default-max-requests 10000)
 
 (define (run-net-server listener-or-addr handler . o)
-  (let* ((listener (if (integer? listener-or-addr)
-                       listener-or-addr
-                       (make-listener-socket listener-or-addr)))
+  (let* ((listener (cond
+                    ((fileno? listener-or-addr)
+                     listener-or-addr)
+                    ((integer? listener-or-addr)
+                     (make-listener-socket (get-address-info "localhost" 5556)))
+                    (else
+                     (make-listener-socket listener-or-addr))))
          (max-requests (if (pair? o) (car o) default-max-requests))
          (debug? (and (pair? o) (pair? (cdr o)))))
     (define (log-error msg . args)
