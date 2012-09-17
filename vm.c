@@ -2104,6 +2104,17 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       _ARG1 = SEXP_VOID;
     } else {
       /* don't return from child threads */
+      if (sexp_exceptionp(_ARG1)) {
+        tmp1 = sexp_current_error_port(ctx);
+        sexp_write_string(ctx, "ERROR in child thread: ", tmp1);
+        sexp_write(ctx, ctx, tmp1);
+        sexp_newline(ctx, tmp1);
+        sexp_print_exception(ctx, _ARG1, tmp1);
+      }
+#if SEXP_USE_DEBUG_THREADS
+      fprintf(stderr, "****** schedule: terminating %p (%s)\n",
+              ctx, sexp_thread_debug_name(ctx));
+#endif
       sexp_context_refuel(ctx) = fuel = 0;
       goto loop;
     }

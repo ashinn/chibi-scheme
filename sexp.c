@@ -579,9 +579,10 @@ sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
 }
 
 sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp out) {
-  sexp ls;
+  sexp_gc_var2(ls, tmp);
+  sexp_gc_preserve2(ctx, ls, tmp);
   if (! sexp_oportp(out))
-    out = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
+    out = tmp = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
   sexp_write_string(ctx, "ERROR", out);
   if (sexp_exceptionp(exn)) {
     if (sexp_exception_procedure(exn)) {
@@ -643,6 +644,7 @@ sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp
       sexp_write(ctx, exn, out);
     sexp_write_char(ctx, '\n', out);
   }
+  sexp_gc_release2(ctx);
   return SEXP_VOID;
 }
 
