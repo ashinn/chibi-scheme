@@ -1008,8 +1008,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       cp = sexp_procedure_vars(self);
 #if SEXP_USE_DEBUG_THREADS
       if (ctx != tmp2) {
-        fprintf(stderr, "****** schedule: %p (%s) active:",
-                ctx, sexp_thread_debug_name(ctx));
+        fprintf(stderr, "****** schedule %p: %p (%s) active:",
+                root_thread, ctx, sexp_thread_debug_name(ctx));
         for (tmp1=sexp_global(ctx, SEXP_G_THREADS_FRONT); sexp_pairp(tmp1); tmp1=sexp_cdr(tmp1))
           fprintf(stderr, " %p (%s)", sexp_car(tmp1), sexp_thread_debug_name(sexp_car(tmp1)));
         fprintf(stderr, " paused:");
@@ -2112,8 +2112,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         sexp_print_exception(ctx, _ARG1, tmp1);
       }
 #if SEXP_USE_DEBUG_THREADS
-      fprintf(stderr, "****** schedule: terminating %p (%s)\n",
-              ctx, sexp_thread_debug_name(ctx));
+      fprintf(stderr, "****** schedule %p: terminating %p (%s)\n",
+              root_thread, ctx, sexp_thread_debug_name(ctx));
 #endif
       sexp_context_refuel(ctx) = fuel = 0;
       goto loop;
