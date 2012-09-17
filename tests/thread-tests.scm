@@ -1,6 +1,6 @@
 
 (cond-expand
- (modules (import (srfi 18) (chibi test)))
+ (modules (import (srfi 18) (srfi 39) (chibi test)))
  (else #f))
 
 (test-begin "threads")
@@ -70,7 +70,10 @@
     (thread-join! th)))
 
 (test-error "thread-join! exception"
-  (let* ((th (make-thread (lambda () (+ 3 "2")))))
+  (let* ((th (make-thread
+              (lambda ()
+                (parameterize ((current-error-port (open-output-string)))
+                  (+ 3 "2"))))))
     (thread-start! th)
     (thread-join! th)))
 
