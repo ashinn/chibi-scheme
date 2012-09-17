@@ -2101,7 +2101,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   if (ctx != root_thread) {
     if (sexp_context_refuel(root_thread) <= 0) {
       /* the root already terminated */
-      _ARG1 = SEXP_VOID;
+      _ARG1 = sexp_context_result(root_thread);
     } else {
       /* don't return from child threads */
       if (sexp_exceptionp(_ARG1)) {
