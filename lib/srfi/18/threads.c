@@ -147,13 +147,23 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
   sexp ls1=SEXP_NULL, ls2;
   sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, thread);
   ls2 = sexp_global(ctx, SEXP_G_THREADS_PAUSED);
-  if (sexp_fixnump(timeout) || sexp_flonump(timeout))
+  if (sexp_realp(timeout))
     gettimeofday(&sexp_context_timeval(thread), NULL);
   if (sexp_fixnump(timeout)) {
     sexp_context_timeval(thread).tv_sec += sexp_unbox_fixnum(timeout);
 #if SEXP_USE_FLONUMS
   } else if (sexp_flonump(timeout)) {
     d = sexp_flonum_value(timeout);
+    sexp_context_timeval(thread).tv_sec += trunc(d);
+    sexp_context_timeval(thread).tv_usec += (d-trunc(d))*1000000;
+    if (sexp_context_timeval(thread).tv_usec > 1000000) {
+      sexp_context_timeval(thread).tv_sec += 1;
+      sexp_context_timeval(thread).tv_usec -= 1000000;
+    }
+#endif
+#if SEXP_USE_RATIOS
+  } else if (sexp_ratiop(timeout)) {
+    d = sexp_ratio_to_double(timeout);
     sexp_context_timeval(thread).tv_sec += trunc(d);
     sexp_context_timeval(thread).tv_usec += (d-trunc(d))*1000000;
     if (sexp_context_timeval(thread).tv_usec > 1000000) {
@@ -168,7 +178,7 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
     sexp_context_timeval(thread).tv_sec = 0;
     sexp_context_timeval(thread).tv_usec = 0;
   }
-  if (sexp_numberp(timeout) || sexp_contextp(timeout))
+  if (sexp_realp(timeout) || sexp_contextp(timeout))
     while (sexp_pairp(ls2)
            && sexp_context_before(sexp_car(ls2), sexp_context_timeval(thread)))
       ls1=ls2, ls2=sexp_cdr(ls2);
@@ -196,7 +206,7 @@ sexp sexp_thread_join (sexp ctx, sexp self, sexp_sint_t n, sexp thread, sexp tim
 sexp sexp_thread_sleep (sexp ctx, sexp self, sexp_sint_t n, sexp timeout) {
   sexp_context_waitp(ctx) = 1;
   if (timeout != SEXP_TRUE) {
-    sexp_assert_type(ctx, sexp_numberp, SEXP_NUMBER, timeout);
+    sexp_assert_type(ctx, sexp_realp, SEXP_NUMBER, timeout);
     sexp_context_event(ctx) = SEXP_FALSE;
     sexp_insert_timed(ctx, ctx, timeout);
   }
