@@ -1254,6 +1254,7 @@ SEXP_API sexp sexp_push_op(sexp ctx, sexp* loc, sexp x);
 #define sexp_write_string(x, s, p) (fputs(s, sexp_port_stream(p)))
 #define sexp_write_string_n(x, s, n, p) (fwrite(s, 1, n, sexp_port_stream(p)))
 #define sexp_flush(x, p) (fflush(sexp_port_stream(p)))
+#define sexp_flush_forced sexp_flush
 
 #else
 
@@ -1262,13 +1263,14 @@ SEXP_API sexp sexp_push_op(sexp ctx, sexp* loc, sexp x);
 #define sexp_write_char(x, c, p) (sexp_port_buf(p) ? ((sexp_port_offset(p) < sexp_port_size(p)) ? ((((sexp_port_buf(p))[sexp_port_offset(p)++]) = (char)(c)), 0) : sexp_buffered_write_char(x, c, p)) : putc(c, sexp_port_stream(p)))
 #define sexp_write_string(x, s, p) (sexp_port_buf(p) ? sexp_buffered_write_string(x, s, p) : fputs(s, sexp_port_stream(p)))
 #define sexp_write_string_n(x, s, n, p) (sexp_port_buf(p) ? sexp_buffered_write_string_n(x, s, n, p) : fwrite(s, 1, n, sexp_port_stream(p)))
-#define sexp_flush(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p) : fflush(sexp_port_stream(p)))
+#define sexp_flush(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p, 0) : fflush(sexp_port_stream(p)))
+#define sexp_flush_forced(x, p) (sexp_port_buf(p) ? sexp_buffered_flush(x, p, 1) : fflush(sexp_port_stream(p)))
 
 SEXP_API int sexp_buffered_read_char (sexp ctx, sexp p);
 SEXP_API int sexp_buffered_write_char (sexp ctx, int c, sexp p);
 SEXP_API int sexp_buffered_write_string_n (sexp ctx, const char *str, sexp_uint_t len, sexp p);
 SEXP_API int sexp_buffered_write_string (sexp ctx, const char *str, sexp p);
-SEXP_API int sexp_buffered_flush (sexp ctx, sexp p);
+SEXP_API int sexp_buffered_flush (sexp ctx, sexp p, int forcep);
 
 #endif
 
