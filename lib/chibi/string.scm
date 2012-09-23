@@ -8,7 +8,7 @@
 (define (make-char-predicate x)
   (cond ((procedure? x) x)
         ((char? x) (lambda (ch) (eq? ch x)))
-	((char-set? x) (lambda (ch) (char-set-contains? x ch)))
+        ((char-set? x) (lambda (ch) (char-set-contains? x ch)))
         (else (error "invalid character predicate" x))))
 
 (define (complement pred) (lambda (x) (not (pred x))))
