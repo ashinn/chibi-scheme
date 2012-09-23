@@ -127,6 +127,19 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp res = SEXP_VOID;
   if (sexp_port_openp(port)) {
     sexp_port_openp(port) = 0;
+    if (sexp_oportp(port)) sexp_flush_forced(ctx, port);
+#ifndef PLAN9
+    if (sexp_filenop(sexp_port_fd(port))
+        && sexp_fileno_openp(sexp_port_fd(port))) {
+      if (sexp_port_shutdownp(port)) {
+        /* shutdown the socket if requested */
+        if (sexp_iportp(port))
+          shutdown(sexp_port_fileno(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
+        if (sexp_oportp(port))
+          shutdown(sexp_port_fileno(port), SHUT_WR);
+      }
+    }
+#endif
     if (sexp_port_stream(port) && ! sexp_port_no_closep(port)) {
       /* close the stream */
       fclose(sexp_port_stream(port));
@@ -141,22 +154,8 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
           && !sexp_port_customp(port)
 #endif
           )
-	free(sexp_port_buf(port));
+        free(sexp_port_buf(port));
     }
-#ifndef PLAN9
-    if (sexp_filenop(sexp_port_fd(port))
-        && sexp_fileno_openp(sexp_port_fd(port))) {
-      if (sexp_oportp(port)) res = sexp_flush_output(ctx, port);
-      if (sexp_exceptionp(res)) return res;
-      if (sexp_port_shutdownp(port)) {
-        /* shutdown the socket if requested */
-        if (sexp_iportp(port))
-          shutdown(sexp_port_fileno(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
-        if (sexp_oportp(port))
-          shutdown(sexp_port_fileno(port), SHUT_WR);
-      }
-    }
-#endif
   }
   return res;
 }
@@ -600,7 +599,7 @@ sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp
     }
     ls = sexp_exception_source(exn);
     if ((! (ls && sexp_pairp(ls)))
-	&& sexp_exception_procedure(exn)
+        && sexp_exception_procedure(exn)
         && sexp_procedurep(sexp_exception_procedure(exn)))
       ls = sexp_bytecode_source(sexp_procedure_code(sexp_exception_procedure(exn)));
     if (ls && sexp_pairp(ls)) {
@@ -1429,7 +1428,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
 int sexp_buffered_write_char (sexp ctx, int c, sexp p) {
   int res;
   if (sexp_port_offset(p)+1 >= sexp_port_size(p))
-    if ((res = sexp_buffered_flush(ctx, p)))
+    if ((res = sexp_buffered_flush(ctx, p, 0)))
       return res;
   sexp_port_buf(p)[sexp_port_offset(p)++] = c;
   return 0;
@@ -1442,7 +1441,7 @@ int sexp_buffered_write_string_n (sexp ctx, const char *str,
     diff = sexp_port_size(p) - sexp_port_offset(p);
     memcpy(sexp_port_buf(p)+sexp_port_offset(p), str, diff);
     sexp_port_offset(p) = sexp_port_size(p);
-    if ((res = sexp_buffered_flush(ctx, p)))
+    if ((res = sexp_buffered_flush(ctx, p, 0)))
       return written + diff;
     written += sexp_port_size(p);
     str += diff;
@@ -1457,10 +1456,10 @@ int sexp_buffered_write_string (sexp ctx, const char *str, sexp p) {
   return sexp_buffered_write_string_n(ctx, str, strlen(str), p);
 }
 
-int sexp_buffered_flush (sexp ctx, sexp p) {
+int sexp_buffered_flush (sexp ctx, sexp p, int forcep) {
   long res = 0, off;
   sexp_gc_var1(tmp);
-  if (! (sexp_oportp(p) && sexp_port_openp(p)))
+  if (!sexp_oportp(p) || (!forcep && !sexp_port_openp(p)))
     return -1;
   off = sexp_port_offset(p);
   if (sexp_port_stream(p)) {
@@ -1478,6 +1477,8 @@ int sexp_buffered_flush (sexp ctx, sexp p) {
       sexp_port_offset(p) = 0;
       res = 0;
     }
+  } else if (!sexp_port_openp(p)) {
+    return -1;
   } else if (sexp_port_offset(p) > 0) {
     sexp_gc_preserve1(ctx, tmp);
     if (sexp_port_customp(p)) {   /* custom port */
@@ -2051,7 +2052,7 @@ int sexp_write_utf8_char (sexp ctx, int c, sexp out) {
 sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   int res;
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
-  res = sexp_flush(ctx, out);
+  res = sexp_flush_forced(ctx, out);
   if (res == EOF) {
 #if SEXP_USE_GREEN_THREADS
     if (sexp_port_stream(out) && ferror(sexp_port_stream(out)) && (errno == EAGAIN))
