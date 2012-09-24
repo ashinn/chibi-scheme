@@ -1,5 +1,5 @@
 ;; filesystem.scm -- additional filesystem utilities
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> The fundamental directory iterator.  Applies @var{kons} to
@@ -51,7 +51,7 @@
 ;;> Unless optional arg @var{ignore-errors?} is true, raises an error
 ;;> if any file can't be deleted.
 
-(define (delete-directory-hierarchy dir . o)
+(define (delete-file-hierarchy dir . o)
   (let ((ignore-errors? (and (pair? o) (car o))))
     (if (member dir '("" "/"))
         (error "won't delete unsafe directory" dir))
