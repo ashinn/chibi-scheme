@@ -9,7 +9,9 @@
           close-file-descriptor renumber-file-descriptor
           open-input-file-descriptor open-output-file-descriptor
           delete-file link-file symbolic-link-file rename-file
-          directory-files directory-fold create-directory delete-directory
+          directory-files directory-fold directory-fold-tree
+          delete-directory-hierarchy create-directory delete-directory
+          current-directory change-directory with-directory
           open open-pipe make-fifo
           file-status
           file-device               file-inode

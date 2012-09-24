@@ -105,6 +105,10 @@
 (define-c non-null-string (current-directory "getcwd")
   ((result (array char (auto-expand arg1))) (value 256 int)))
 
+;;> Change the current working directory of the process.
+
+(define-c errno (change-directory "chdir") (string))
+
 ;;> Creates a new directory with the given mode.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
 
