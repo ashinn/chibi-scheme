@@ -20,6 +20,61 @@
 (define (directory-files dir)
   (directory-fold dir cons '()))
 
+;;> The fundamental directory traverser.
+
+(define (directory-fold-tree file down up here . o)
+  ;; TODO: Use link count to reduce stats.
+  ;; TODO: Provide higher-level wrapper for filtering and avoids links.
+  (let ((knil (and (pair? o) (car o)))
+        (down (or down (lambda (f acc) acc)))
+        (up (or up (lambda (f acc) acc)))
+        (here (or here (lambda (f acc) acc))))
+    (let fold ((file file) (acc knil))
+      (cond
+       ((file-directory? file)
+        (let ((d (opendir file)))
+          (let lp ((acc acc))
+            (let ((e (readdir d)))
+              (cond
+               (e
+                (let ((f (dirent-name e)))
+                  (if (member f '("." ".."))
+                      (lp acc)
+                      (let ((path (string-append file "/" f)))
+                        (lp (fold path (down path acc)))))))
+               (else
+                (up file acc)))))))
+       (else
+        (here file acc))))))
+
+;;> Recursively delete all files and directories under @var{dir}.
+;;> Unless optional arg @var{ignore-errors?} is true, raises an error
+;;> if any file can't be deleted.
+
+(define (delete-directory-hierarchy dir . o)
+  (let ((ignore-errors? (and (pair? o) (car o))))
+    (if (member dir '("" "/"))
+        (error "won't delete unsafe directory" dir))
+    (directory-fold-tree
+     dir
+     #f
+     (lambda (d acc)
+       (if (and (not (delete-directory d)) (not ignore-errors?))
+           (error "couldn't delete directory" d)))
+     (lambda (f acc)
+       (if (and (not (delete-file f)) (not ignore-errors?))
+           (error "couldn't delete file" f))))))
+
+;;> Runs @var{thunk} with the current directory of the process temporarily
+;;> set to @var{dir}.
+
+(define (with-directory dir thunk)
+  (let ((pwd (current-directory)))
+    (dynamic-wind
+      (lambda () (change-directory dir))
+      thunk
+      (lambda () (change-directory pwd)))))
+
 ;;> Returns the @scheme{status} object for the given @var{file},
 ;;> which should be a string indicating the path or a file
 ;;> descriptor.
