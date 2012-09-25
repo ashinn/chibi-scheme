@@ -1466,7 +1466,8 @@ int sexp_buffered_flush (sexp ctx, sexp p, int forcep) {
     if (off > 0) fwrite(sexp_port_buf(p), 1, off, sexp_port_stream(p));
     res = fflush(sexp_port_stream(p));
   } else if (sexp_filenop(sexp_port_fd(p))) {
-    res = write(sexp_fileno_fd(sexp_port_fd(p)), sexp_port_buf(p), off);
+    if (off > 0)
+      res = write(sexp_fileno_fd(sexp_port_fd(p)), sexp_port_buf(p), off);
     if (res < off) {
       if (res > 0) {
         memmove(sexp_port_buf(p), sexp_port_buf(p) + res, off - res);
