@@ -1212,8 +1212,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   char *suffix;
 #endif
-  sexp out=SEXP_FALSE;
-  sexp_gc_var4(ctx2, x, in, res);
+  sexp_gc_var5(ctx2, x, in, res, out);
   if (!env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
@@ -1230,19 +1229,19 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
     sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, source);
     in = sexp_open_input_file(ctx, source);
   }
-  sexp_gc_preserve4(ctx, ctx2, x, in, res);
-  out = sexp_current_error_port(ctx);
-  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
-  sexp_context_parent(ctx2) = ctx;
-  sexp_context_tailp(ctx2) = 0;
+  sexp_gc_preserve5(ctx, ctx2, x, in, res, out);
   if (sexp_exceptionp(in)) {
+    out = sexp_current_error_port(ctx);
     if (sexp_not(out)) out = sexp_current_error_port(ctx);
     if (sexp_oportp(out))
       sexp_print_exception(ctx, in, out);
     res = in;
   } else {
     sexp_port_sourcep(in) = 1;
-    while ((x=sexp_read(ctx, in)) != (sexp) SEXP_EOF) {
+    ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
+    sexp_context_parent(ctx2) = ctx;
+    sexp_context_tailp(ctx2) = 0;
+    while ((x=sexp_read(ctx2, in)) != (sexp) SEXP_EOF) {
       res = sexp_exceptionp(x) ? x : sexp_eval(ctx2, x, env);
       if (sexp_exceptionp(res))
         break;
@@ -1252,7 +1251,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
       res = SEXP_VOID;
     sexp_close_port(ctx, in);
   }
-  sexp_gc_release4(ctx);
+  sexp_gc_release5(ctx);
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   }
 #endif
@@ -2183,7 +2182,7 @@ sexp sexp_eval_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   top = sexp_context_top(ctx);
   params = sexp_context_params(ctx);
   sexp_context_params(ctx) = SEXP_NULL;
-  ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
+  ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
   sexp_context_child(ctx) = ctx2;
   res = sexp_exceptionp(ctx2) ? ctx2 : sexp_compile_op(ctx2, self, n, obj, env);
   if (! sexp_exceptionp(res))
