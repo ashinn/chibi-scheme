@@ -784,7 +784,9 @@ static sexp analyze_define (sexp ctx, sexp x) {
       sexp_push(ctx, sexp_lambda_defs(sexp_env_lambda(env)), tmp);
       res = SEXP_VOID;
     } else {
+#if SEXP_USE_UNWRAPPED_TOPLEVEL_BINDINGS
       if (sexp_synclop(name)) name = sexp_synclo_expr(name);
+#endif
       sexp_env_cell_define(ctx, env, name, SEXP_VOID, &varenv);
       if (sexp_pairp(sexp_cadr(x))) {
         tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
