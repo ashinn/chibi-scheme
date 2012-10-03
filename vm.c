@@ -977,7 +977,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   ip = sexp_bytecode_data(bc) - sizeof(sexp);
   tmp1 = proc, tmp2 = args;
   i = sexp_unbox_fixnum(sexp_length(ctx, tmp2));
-  sexp_ensure_stack(i + 64 + sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0);
+  sexp_ensure_stack(i + 64 + (sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0));
   for (top += i; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
     _ARG1 = sexp_car(tmp2);
   top += i+1;
@@ -1115,7 +1115,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     tmp2 = _ARG2;
   apply1:
     i = sexp_unbox_fixnum(sexp_length(ctx, tmp2)); /* number of params */
-    sexp_ensure_stack(i + 64 + sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0);
+    sexp_ensure_stack(i + 64 + (sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0));
     k = sexp_unbox_fixnum(stack[fp+3]);            /* previous fp */
     j = sexp_unbox_fixnum(stack[fp]);              /* previous num params */
     self = stack[fp+2];
