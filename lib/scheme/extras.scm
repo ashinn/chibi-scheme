@@ -1,4 +1,6 @@
 
+(define (features) *features*)
+
 (define exact inexact->exact)
 (define inexact exact->inexact)
 

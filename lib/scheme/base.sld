@@ -23,7 +23,7 @@
    define-record-type define-syntax define-values denominator do
    dynamic-wind else eof-object?  eq?  equal?  eqv?  error
    error-object-irritants error-object-message error-object?  even?
-   exact exact-integer-sqrt exact-integer?  exact?  expt floor
+   exact exact-integer-sqrt exact-integer?  exact?  expt features floor
    flush-output-port for-each gcd get-output-bytevector get-output-string
    guard if import inexact inexact?  input-port?  integer->char
    integer?  lambda lcm length let let* let*-values let-syntax let-values
