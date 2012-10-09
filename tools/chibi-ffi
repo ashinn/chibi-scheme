@@ -678,7 +678,7 @@
     (else (string-replace (symbol->string base) #\- " "))))
 
 (define (type-struct-type type)
-  (let ((type-spec (lookup-type(if (vector? type) (type-base type) type))))
+  (let ((type-spec (lookup-type (if (vector? type) (type-base type) type))))
     (cond ((and type-spec (memq 'type: type-spec)) => cadr)
           (else #f))))
 
@@ -906,6 +906,11 @@
          (cat "  sexp_check_block_port(ctx, arg" (type-index a) ", 0);\n")))
    args))
 
+(define (scheme-procedure->c name)
+  (cond
+   ((eq? name 'string-length) 'sexp_string_length)
+   (else name)))
+
 (define (write-value func val)
   (cond
    ((find (lambda (x)
@@ -916,8 +921,8 @@
     => (lambda (x) (cat "len" (type-index x))))
    ((lookup-type val)
     (cat (or (type-struct-type val) "") " " val))
-   ((list? val)
-    (write (car val))
+   ((and (pair? val) (list? val))
+    (write (scheme-procedure->c (car val)))
     (cat
      "("
      (lambda ()
@@ -1042,7 +1047,7 @@
            "    fcntl(fileno(sexp_port_stream(" res ")), F_SETFL, O_NONBLOCK);\n"
            "#endif\n")))))
 
-(define (write-result result)
+(define (write-result result . o)
   (let ((res (string-append "res" (type-index-string result)))
         (tmp (string-append "tmp" (type-index-string result))))
     (cond
@@ -1076,9 +1081,11 @@
                "  }\n")))))
      (else
       (cat "  " res " = ")
-      (c->scheme-converter
+      (apply
+       c->scheme-converter
        result
-       (string-append "tmp" (type-index-string result)))
+       (string-append "tmp" (type-index-string result))
+       o)
       (cat ";\n")))
     (write-result-adjustment result)))
 
@@ -1111,7 +1118,17 @@
     (if (null? results)
         (if error-res?
             (cat "  res = SEXP_TRUE;\n"))
-        (for-each write-result results))
+        (let ((first-result-link
+               ;; the `link' modifier applies to the first result when
+               ;; there are multiple results
+               (and
+                (not (lookup-type (func-ret-type func)))
+                (cond
+                 ((find type-link? (func-c-args func))
+                  => (lambda (a) (string-append "arg" (type-index-string a))))
+                 (else #f)))))
+          (write-result (car results) first-result-link)
+          (for-each write-result (cdr results))))
     (cond
      ((> (length results) (if error-res? 1 0))
       (if error-res?
