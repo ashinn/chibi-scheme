@@ -52,9 +52,13 @@
 (define-c errno (set-root-directory! "chroot") (string))
 
 (define-c errno getpwuid_r
-  (uid_t (result passwd) (result (array char arg3))
-         (value 1024 int) (result pointer passwd)))
+  (uid_t (result passwd)
+         (link string)
+         (value (string-length arg2) int)
+         (result pointer passwd)))
 
 (define-c errno getpwnam_r
-  (string (result passwd) (result (array char arg3))
-          (value 1024 int) (result pointer passwd)))
+  (string (result passwd)
+          (link string)
+          (value (string-length arg2) int)
+          (result pointer passwd)))

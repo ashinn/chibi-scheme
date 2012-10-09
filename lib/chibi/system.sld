@@ -12,4 +12,6 @@
   (include-shared "system")
   (body
    (define (user-information user)
-     (car (if (string? user) (getpwnam_r user) (getpwuid_r user))))))
+     (car (if (string? user)
+              (getpwnam_r user (make-string 1024))
+              (getpwuid_r user (make-string 1024)))))))
