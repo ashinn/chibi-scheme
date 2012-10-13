@@ -2022,6 +2022,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       if (i == '\n') sexp_port_line(_ARG1)++;
       _ARG1 = sexp_make_character(i);
     }
+    sexp_check_exception();
     break;
   case SEXP_OP_PEEK_CHAR:
     if (! sexp_iportp(_ARG1))
@@ -2047,6 +2048,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_push_char(ctx, i, _ARG1);
       _ARG1 = sexp_make_character(i);
     }
+    sexp_check_exception();
     break;
   case SEXP_OP_YIELD:
 #if SEXP_USE_GREEN_THREADS
