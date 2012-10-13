@@ -43,11 +43,18 @@
 
 (define (read-bytevector n . o)
   (if (zero? n)
-      ""
-      (let ((res (read-string n (if (pair? o) (car o) (current-input-port)))))
-        (if (eof-object? res)
-            res
-            (string->utf8 res)))))
+      #u8()
+      (let ((in (if (pair? o) (car o) (current-input-port)))
+            (res (make-bytevector n)))
+        (let lp ((i 0))
+          (if (>= i n)
+              res
+              (let ((x (read-u8 in)))
+                (cond ((eof-object? x)
+                       (if (zero? i) x (subbytes res 0 i)))
+                      (else
+                       (bytevector-u8-set! res i x)
+                       (lp (+ i 1))))))))))
 
 (define (read-bytevector! vec start end . o)
   (if (>= start end)
