@@ -23,6 +23,32 @@
   (call-with-input-string "abc\ndef"
     (lambda (in) (let ((line (read-line in))) (list line (read-line in))))))
 
+(test "read-string" '("abc" "def")
+  (call-with-input-string "abcdef"
+    (lambda (in) (let ((str (read-string 3 in))) (list str (read-string 3 in))))))
+
+(test "read-string-to-eof" '("abc" "de")
+  (call-with-input-string "abcde"
+    (lambda (in) (let ((str (read-string 3 in))) (list str (read-string 3 in))))))
+
+(test "read-string!" '("abc" "def")
+  (call-with-input-string "abcdef"
+    (lambda (in)
+      (let* ((str1 (make-string 3))
+             (str2 (make-string 3)))
+        (read-string! str1 3 in)
+        (read-string! str2 3 in)
+        (list str1 str2)))))
+
+(test "read-string!-to-eof" '("abc" "de ")
+  (call-with-input-string "abcde"
+    (lambda (in)
+      (let* ((str1 (make-string 3))
+             (str2 (make-string 3 #\space)))
+        (read-string! str1 3 in)
+        (read-string! str2 3 in)
+        (list str1 str2)))))
+
 (test "null-output-port" #t
   (let ((out (make-null-output-port)))
     (write 1 out)
