@@ -22,18 +22,19 @@
 
 (define (thread-join! thread . o)
   (let ((timeout (and (pair? o) (car o))))
-    (cond
-     ((%thread-join! thread (timeout->seconds timeout))
-      (thread-result thread))
-     (else
-      (thread-yield!)
+    (let lp ()
       (cond
-       ((and timeout (thread-timeout?))
-        (if (and (pair? o) (pair? (cdr o)))
-            (cadr o)
-            (error "timed out waiting for thread" thread)))
+       ((%thread-join! thread (timeout->seconds timeout))
+        (thread-result thread))
        (else
-        (thread-result thread)))))))
+        (thread-yield!)
+        (cond
+         ((and timeout (thread-timeout?))
+          (if (and (pair? o) (pair? (cdr o)))
+              (cadr o)
+              (error "timed out waiting for thread" thread)))
+         (else
+          (lp))))))))
 
 (define (thread-terminate! thread)
   (if (%thread-terminate! thread) ;; need to yield if terminating ourself
