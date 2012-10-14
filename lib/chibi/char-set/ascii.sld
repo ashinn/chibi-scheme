@@ -1,6 +1,6 @@
 
 (define-library (chibi char-set ascii)
-  (import (scheme) (chibi iset base))
+  (import (chibi) (chibi iset base))
   (export char-set-contains?
           char-set:lower-case  char-set:upper-case  char-set:title-case
           char-set:letter      char-set:digit       char-set:letter+digit

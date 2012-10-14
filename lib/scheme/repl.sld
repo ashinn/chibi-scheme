@@ -1,4 +1,4 @@
 
 (define-library (scheme repl)
-  (import (scheme))
+  (import (chibi))
   (export interaction-environment))

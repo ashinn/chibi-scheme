@@ -28,7 +28,7 @@
 
 (define (module-dir mod)
   (let ((name (module-name mod)))
-    (if (member name '((scheme) (meta)))
+    (if (member name '((chibi) (meta)))
         ""
         (module-name-prefix name))))
 

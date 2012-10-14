@@ -1,4 +1,4 @@
 
 (define-library (srfi 46)
-  (import (scheme))
+  (import (chibi))
   (export syntax-rules))

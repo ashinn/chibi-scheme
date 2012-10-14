@@ -12,6 +12,6 @@
           first-set-bit
           extract-bit-field test-bit-field? clear-bit-field 
           replace-bit-field  copy-bit-field)
-  (import (scheme))
+  (import (chibi))
   (include-shared "33/bit")
   (include "33/bitwise.scm"))

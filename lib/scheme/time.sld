@@ -6,7 +6,7 @@
 
 (define-library (scheme time)
   (export current-second current-jiffy jiffies-per-second)
-  (import (scheme))
+  (import (chibi))
   (import (scheme process-context))
   (import (scheme time tai))
   (include-shared "time")

@@ -1,7 +1,7 @@
 
 (define-library (srfi 55)
   (export require-extension)
-  (import (scheme))
+  (import (chibi))
   (begin
    (define-syntax require-extension
      (syntax-rules ()

@@ -20,5 +20,5 @@
 
 (define-library (chibi heap-stats)
   (export heap-stats heap-dump)
-  (import (scheme))
+  (import (chibi))
   (include-shared "heap-stats"))

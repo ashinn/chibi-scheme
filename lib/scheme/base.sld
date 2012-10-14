@@ -1,6 +1,6 @@
 
 (define-library (scheme base)
-  (import (except (scheme) equal?)
+  (import (except (chibi) equal?)
           (rename (chibi equiv) (equiv? equal?))
           (only (chibi string) string-map string-for-each)
           (chibi io)

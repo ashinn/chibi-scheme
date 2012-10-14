@@ -1,7 +1,7 @@
 
 (define-library (srfi 16)
   (export case-lambda)
-  (import (scheme))
+  (import (chibi))
   (begin
    (define-syntax %case
      (syntax-rules ()

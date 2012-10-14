@@ -12,6 +12,6 @@
           open-input-bytevector open-output-bytevector get-output-bytevector
           string->utf8 utf8->string
           write-u8 read-u8 peek-u8)
-  (import (scheme) (chibi ast))
+  (import (chibi) (chibi ast))
   (include-shared "io/io")
   (include "io/io.scm"))

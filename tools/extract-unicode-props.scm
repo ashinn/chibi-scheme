@@ -28,7 +28,7 @@
 ;; in the data/ current directory, unless overridden with the --data or
 ;; --derived options.
 
-(import (scheme) (chibi io) (chibi string))
+(import (chibi) (chibi io) (chibi string))
 
 (define (warn . args)
   (let ((err (current-error-port)))

@@ -36,7 +36,7 @@
 ;; which presents a bootstrapping issue on platforms with no dynamic
 ;; loading.
 
-(import (scheme)
+(import (chibi)
         (only (chibi pathname) path-directory)
         (only (meta) find-module module-name->file))
 

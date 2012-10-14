@@ -1,7 +1,7 @@
 
 (define-library (srfi 26)
   (export cut cute)
-  (import (scheme))
+  (import (chibi))
   (begin
    (define-syntax %cut
      (syntax-rules (<> <...>)

@@ -6,13 +6,13 @@
     (import (chibi char-set full)
             (chibi char-set base)
             (chibi iset base)
-            (only (scheme) digit-value))
+            (only (chibi) digit-value))
     (include "char/full.scm")
     (include "char/case-offsets.scm"))
    (else
     (include "char/ascii.scm")
     (import
-     (only (scheme)
+     (only (chibi)
            string-ci<=? string-ci<? string-ci=? string-ci>=? string-ci>?
            char-ci<=? char-ci<? char-ci=? char-ci>=? char-ci>?
            char-alphabetic?  char-lower-case? char-numeric?

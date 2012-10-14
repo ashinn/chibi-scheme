@@ -5,6 +5,6 @@
           random-source-state-ref random-source-state-set!
           random-source-randomize! random-source-pseudo-randomize!
           random-source-make-integers random-source-make-reals)
-  (import (scheme))
+  (import (chibi))
   (include-shared "27/rand")
   (include "27/constructors.scm"))

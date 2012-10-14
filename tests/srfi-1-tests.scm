@@ -1,4 +1,4 @@
-(import (scheme) (chibi test) (srfi 1))
+(import (chibi) (chibi test) (srfi 1))
 
 (test-begin "srfi-1")
 

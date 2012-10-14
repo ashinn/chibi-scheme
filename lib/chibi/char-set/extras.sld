@@ -1,6 +1,6 @@
 
 (define-library (chibi char-set extras)
-  (import (scheme) (chibi iset) (chibi char-set base))
+  (import (chibi) (chibi iset) (chibi char-set base))
   (include "extras.scm")
   (export
    char-set ucs-range->char-set char-set-copy char-set-size

@@ -1,6 +1,6 @@
 
 (define-library (chibi iset base)
-  (import (scheme) (srfi 9) (srfi 33))
+  (import (chibi) (srfi 9) (srfi 33))
   (include "base.scm")
   (export
    %make-iset make-iset iset? iset-contains? Integer-Set

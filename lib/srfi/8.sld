@@ -1,7 +1,7 @@
 
 (define-library (srfi 8)
   (export receive)
-  (import (scheme))
+  (import (chibi))
   (body
    (define-syntax receive
      (syntax-rules ()

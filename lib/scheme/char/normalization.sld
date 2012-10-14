@@ -2,7 +2,7 @@
 ;; being removed.
 
 (define-library (scheme char normalization)
-  (import (rename (scheme)
+  (import (rename (chibi)
                   (string=? string-ni=?)
                   (string<? string-ni<?)
                   (string>? string-ni>?)

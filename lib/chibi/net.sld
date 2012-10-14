@@ -13,6 +13,6 @@
           socket-opt/keepalive socket-opt/oobinline socket-opt/sndbuf
           socket-opt/rcvbuf socket-opt/dontroute socket-opt/rcvlowat
           socket-opt/sndlowat)
-  (import (scheme) (chibi filesystem))
+  (import (chibi) (chibi filesystem))
   (include-shared "net")
   (include "net.scm"))

@@ -1,6 +1,6 @@
 
 (define-library (chibi char-set base)
-  (import (scheme) (chibi iset base))
+  (import (chibi) (chibi iset base))
   (export (rename Integer-Set Char-Set)
           (rename iset? char-set?)
           immutable-char-set

@@ -1,6 +1,6 @@
 
 (define-library (scheme file)
-  (import (scheme) (only (chibi filesystem) delete-file file-exists?))
+  (import (chibi) (only (chibi filesystem) delete-file file-exists?))
   (export
    call-with-input-file call-with-output-file
    delete-file file-exists?

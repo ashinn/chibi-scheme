@@ -30,7 +30,7 @@
           open/create      open/exclusive         open/truncate
           open/append      open/non-block
           is-a-tty?)
-  (import (scheme))
+  (import (chibi))
   (include-shared "filesystem")
   (include "filesystem.scm"))
 

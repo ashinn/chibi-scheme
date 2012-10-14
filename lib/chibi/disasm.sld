@@ -6,5 +6,5 @@
 
 (define-library (chibi disasm)
   (export disasm)
-  (import (scheme))
+  (import (chibi))
   (include-shared "disasm"))

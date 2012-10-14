@@ -1,6 +1,6 @@
 
 (define-library (chibi char-set full)
-  (import (scheme) (chibi iset base) (chibi char-set base))
+  (import (chibi) (chibi iset base) (chibi char-set base))
   (export char-set:lower-case  char-set:upper-case  char-set:title-case
           char-set:letter      char-set:digit       char-set:letter+digit
           char-set:graphic     char-set:printing    char-set:whitespace

@@ -1,6 +1,6 @@
 
 (define-library (chibi iset constructors)
-  (import (scheme) (srfi 33) (chibi iset base) (chibi iset iterators))
+  (import (chibi) (srfi 33) (chibi iset base) (chibi iset iterators))
   (include "constructors.scm")
   (export
    iset iset-copy list->iset list->iset! iset-map

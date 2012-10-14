@@ -7,5 +7,5 @@
           time-second time-minute time-hour time-day time-month time-year
           time-day-of-week time-day-of-year time-dst?
           tm? timeval? timezone?)
-  (import (scheme))
+  (import (chibi))
   (include-shared "time"))

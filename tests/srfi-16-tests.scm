@@ -1,6 +1,6 @@
 
 (cond-expand
- (modules (import (scheme) (chibi test) (srfi 16)))
+ (modules (import (chibi) (chibi test) (srfi 16)))
  (else #f))
 
 (define plus
