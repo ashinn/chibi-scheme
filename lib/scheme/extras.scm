@@ -72,12 +72,14 @@
             (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))))))))
 
 (define (write-bytevector vec . o)
-  (write-string (utf8->string vec) (bytevector-length vec) (if (pair? o) (car o) (current-output-port))))
-
-(define (write-partial-bytevector vec start end . o)
-  (if (zero? start)
-      (apply write-bytevector vec end o)
-      (apply write-bytevector (bytevector-copy-partial vec start end) o)))
+  (let* ((out (if (pair? o) (car o) (current-output-port)))
+         (o (if (pair? o) (cdr o) '()))
+         (start (if (pair? o) (car o) 0))
+         (o (if (pair? o) (cdr o) '()))
+         (end (if (pair? o) (car o) (bytevector-length vec))))
+    (do ((i start (+ i 1)))
+        ((>= i end))
+      (write-u8 (bytevector-u8-ref vec i) out))))
 
 (define (make-list n . o)
   (let ((init (and (pair? o) (car o))))
@@ -128,11 +130,6 @@
 (define (string->vector vec)
   (list->vector (string->list vec)))
 
-(define (bytevector-copy bv)
-  (let ((res (make-bytevector (bytevector-length bv))))
-    (bytevector-copy! bv res)
-    res))
-
 (define (bytevector-copy! to at from . o)
   (let ((start (if (pair? o) (car o) 0))
         (end (if (and (pair? o) (pair? (cdr o)))
@@ -142,7 +139,10 @@
         ((>= j end))
       (bytevector-u8-set! to i (bytevector-u8-ref from j)))))
 
-(define bytevector-copy-partial subbytes)
+(define (bytevector-copy vec . o)
+  (if (null? o)
+      (subbytes vec 0)
+      (apply subbytes vec o)))
 
 ;; Never use this!
 (define (string-copy! to at from . o)

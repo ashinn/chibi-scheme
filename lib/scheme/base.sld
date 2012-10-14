@@ -13,7 +13,7 @@
   (export
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin
    binary-port?  boolean?  boolean=?  bytevector-copy bytevector-copy!
-   bytevector-copy-partial bytevector-length
+   bytevector-length
    bytevector-u8-ref bytevector-u8-set!  bytevector?  caar cadr
    call-with-current-continuation call-with-port call-with-values
    call/cc car case cdr cdar cddr ceiling char->integer
@@ -45,7 +45,7 @@
    unquote-splicing utf8->string values vector vector->list vector->string
    vector-copy vector-copy! vector-fill!  vector-for-each vector-length
    vector-map vector-ref vector-set!  vector?  when with-exception-handler
-   write-bytevector write-char write-partial-bytevector write-u8 zero?)
+   write-bytevector write-char write-u8 zero?)
   (include "define-values.scm"
            "extras.scm"
            "misc-macros.scm"))
