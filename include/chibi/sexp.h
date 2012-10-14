@@ -1373,6 +1373,7 @@ SEXP_API sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t 
 SEXP_API sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 SEXP_API sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
 SEXP_API sexp sexp_user_exception (sexp ctx, sexp self, const char *msg, sexp x);
+SEXP_API sexp sexp_file_exception (sexp ctx, sexp self, const char *msg, sexp x);
 SEXP_API sexp sexp_type_exception (sexp ctx, sexp self, sexp_uint_t type_id, sexp x);
 SEXP_API sexp sexp_xtype_exception (sexp ctx, sexp self, const char *msg, sexp x);
 SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);

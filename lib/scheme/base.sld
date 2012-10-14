@@ -23,7 +23,8 @@
    define-record-type define-syntax define-values denominator do
    dynamic-wind else eof-object?  eq?  equal?  eqv?  error
    error-object-irritants error-object-message error-object?  even?
-   exact exact-integer-sqrt exact-integer?  exact?  expt features floor
+   exact exact-integer-sqrt exact-integer?  exact?  expt features
+   file-error? floor
    flush-output-port for-each gcd get-output-bytevector get-output-string
    guard if import include include-ci inexact inexact?  input-port?
    integer->char
@@ -36,7 +37,7 @@
    open-output-string or output-port?  pair?  parameterize peek-char
    peek-u8 port-open?  port?  positive?  procedure?  quasiquote quote
    quotient raise raise-continuable rational?  rationalize read-bytevector
-   read-bytevector!  read-char read-line read-u8 real?  remainder
+   read-bytevector!  read-char read-error? read-line read-u8 real?  remainder
    reverse round set!  set-car!  set-cdr!  string string->list
    string->number string->symbol string->utf8 string->vector string-append
    string-copy string-fill!  string-for-each string-length string-map
