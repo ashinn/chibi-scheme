@@ -1097,15 +1097,16 @@
 
 (define (string-cursor-start s) 0)
 
+(define (string-copy str . o)
+  (apply substring str (if (pair? o) o '(0))))
+
 (cond-expand
  (full-unicode
-  (define (string-copy s) (substring-cursor s 0 (string-size s)))
   (define string-cursor-end string-size))
  (else
   (define (string-index->offset str i) i)
   (define string-size string-length)
   (define substring-cursor substring)
-  (define (string-copy s) (substring s 0 (string-length s)))
   (define string-cursor-end string-length)
   (define string-cursor-ref string-ref)
   (define (string-cursor-next s i) (+ i 1))
