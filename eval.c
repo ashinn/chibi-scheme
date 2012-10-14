@@ -1086,7 +1086,7 @@ sexp sexp_open_input_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
     in = fopen(sexp_string_data(path), "r");
   } while (!in && sexp_out_of_file_descriptors() && !count++);
   if (!in)
-    return sexp_user_exception(ctx, self, "couldn't open input file", path);
+    return sexp_file_exception(ctx, self, "couldn't open input file", path);
 #if SEXP_USE_GREEN_THREADS
   fcntl(fileno(in), F_SETFL, O_NONBLOCK);
 #endif
@@ -1102,7 +1102,7 @@ sexp sexp_open_output_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
     out = fopen(sexp_string_data(path), "w");
   } while (!out && sexp_out_of_file_descriptors() && !count++);
   if (!out)
-    return sexp_user_exception(ctx, self, "couldn't open output file", path);
+    return sexp_file_exception(ctx, self, "couldn't open output file", path);
 #if SEXP_USE_GREEN_THREADS
   fcntl(fileno(out), F_SETFL, O_NONBLOCK);
 #endif

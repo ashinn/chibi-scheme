@@ -23,6 +23,12 @@
         ((null? files) (cons (rename 'begin) (reverse res)))
         (else (lp (cdr files) (append (read-sexps (car files) #t) res))))))))
 
+(define (read-error? x)
+  (and (error-object? x) (eq? 'read (exception-type x))))
+
+(define (file-error? x)
+  (and (error-object? x) (eq? 'file (exception-type x))))
+
 (define (features) *features*)
 
 (define exact inexact->exact)

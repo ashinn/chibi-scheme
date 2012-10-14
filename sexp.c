@@ -536,6 +536,15 @@ sexp sexp_user_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   return res;
 }
 
+sexp sexp_file_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_user_exception(ctx, self, ms, ir);
+  sexp_exception_kind(res) = sexp_intern(ctx, "file", -1);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 static sexp type_exception (sexp ctx, sexp self, sexp str, sexp obj, sexp src) {
   sexp_gc_var2(res, sym);
   sexp_gc_preserve2(ctx, res, sym);
