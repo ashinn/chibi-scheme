@@ -25,7 +25,8 @@
    error-object-irritants error-object-message error-object?  even?
    exact exact-integer-sqrt exact-integer?  exact?  expt features floor
    flush-output-port for-each gcd get-output-bytevector get-output-string
-   guard if import inexact inexact?  input-port?  integer->char
+   guard if import include include-ci inexact inexact?  input-port?
+   integer->char
    integer?  lambda lcm length let let* let*-values let-syntax let-values
    letrec letrec* letrec-syntax list list->string list->vector list-copy
    list-ref list-set!  list-tail list?  make-bytevector make-list
