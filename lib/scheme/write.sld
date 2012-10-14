@@ -1,6 +1,6 @@
 
 (define-library (scheme write)
-  (import (rename (scheme) (write write-simple) (display display-simple))
+  (import (rename (chibi) (write write-simple) (display display-simple))
           (rename (srfi 38) (write/ss write)))
   (export display write write-simple)
   (begin

@@ -260,7 +260,7 @@
 (define-config-primitive body)
 (define-config-primitive begin)
 
-;; The `import' binding used by (scheme) and (scheme base), etc.
+;; The `import' binding used by (chibi) and (scheme base), etc.
 (define-syntax repl-import
   (er-macro-transformer
    (let ((meta-env (current-environment)))
@@ -286,8 +286,9 @@
                (error "couldn't find module" (car ls))))))))))))
 
 (define *modules*
-  (list (cons '(scheme) (make-module #f (interaction-environment)
-                                     '((include "init-7.scm"))))
+  (list (cons '(chibi) (make-module #f (interaction-environment)
+                                    '((include "init-7.scm"))))
+        (cons '(scheme) (make-module #f (interaction-environment) '()))
         (cons '(meta) (make-module #f (current-environment) '()))
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (current-environment)

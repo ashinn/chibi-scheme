@@ -3,7 +3,7 @@
 ;; char-set representations.
 
 (define-library (chibi char-set compute)
-  (import (scheme) (chibi iset) (chibi char-set))
+  (import (chibi) (chibi iset) (chibi char-set))
   (include "derived.scm" "compute.scm")
   (export
    char-set:lower-case

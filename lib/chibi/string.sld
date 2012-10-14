@@ -11,5 +11,5 @@
    string-find string-find-right string-skip string-skip-right
    string-fold string-fold-right string-map string-for-each
    string-contains make-string-searcher)
-  (import (scheme) (chibi ast) (chibi char-set base))
+  (import (chibi) (chibi ast) (chibi char-set base))
   (include "string.scm"))

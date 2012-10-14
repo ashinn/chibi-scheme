@@ -1,4 +1,4 @@
 
 (define-library (scheme load)
-  (import (scheme))
+  (import (chibi))
   (export load))

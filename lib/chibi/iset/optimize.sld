@@ -1,6 +1,6 @@
 
 (define-library (chibi iset optimize)
-  (import (scheme) (srfi 9) (srfi 33)
+  (import (chibi) (srfi 9) (srfi 33)
           (chibi iset base)
           (chibi iset iterators)
           (chibi iset constructors))

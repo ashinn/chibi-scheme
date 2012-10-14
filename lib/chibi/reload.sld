@@ -1,6 +1,6 @@
 
 (define-library (chibi reload)
-  (import (scheme)
+  (import (chibi)
           (meta)
           (srfi 39)
           (only (chibi time) current-seconds)

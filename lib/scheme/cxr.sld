@@ -1,6 +1,6 @@
 
 (define-library (scheme cxr)
-  (import (scheme))
+  (import (chibi))
   (export
    caaar caadr cadar caddr cdaar cdadr cddar cdddr
    caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr

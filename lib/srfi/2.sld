@@ -1,7 +1,7 @@
 
 (define-library (srfi 2)
   (export and-let*)
-  (import (scheme))
+  (import (chibi))
   (begin
    (define-syntax and-let*
      (syntax-rules ()

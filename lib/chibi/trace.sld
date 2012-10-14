@@ -14,5 +14,5 @@
 
 (define-library (chibi trace)
   (export trace untrace untrace-all)
-  (import (scheme) (chibi ast) (srfi 38) (srfi 39) (srfi 69))
+  (import (chibi) (chibi ast) (srfi 38) (srfi 39) (srfi 69))
   (include "trace.scm"))

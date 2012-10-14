@@ -1,7 +1,7 @@
 
 (define-library (srfi 39)
   (export make-parameter parameterize)
-  (import (scheme))
+  (import (chibi))
   (include-shared "39/param")
   (cond-expand
    (threads

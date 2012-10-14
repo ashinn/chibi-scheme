@@ -5,7 +5,7 @@
 
 ;;; based on Racket version by Matthew Flatt
 
-(import (scheme)
+(import (chibi)
         (srfi 69)
         (srfi 95)
         (chibi io))

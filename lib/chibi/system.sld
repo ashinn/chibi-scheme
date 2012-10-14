@@ -8,7 +8,7 @@
           set-current-group-id! set-current-effective-group-id!
           current-session-id create-session
           set-root-directory!)
-  (import (scheme))
+  (import (chibi))
   (include-shared "system")
   (body
    (define (user-information user)

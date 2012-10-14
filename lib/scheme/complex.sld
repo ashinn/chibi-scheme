@@ -1,4 +1,4 @@
 
 (define-library (scheme complex)
-  (import (scheme))
+  (import (chibi))
   (export angle imag-part magnitude make-polar make-rectangular real-part))

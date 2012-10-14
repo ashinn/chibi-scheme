@@ -1,6 +1,6 @@
 
 (define-library (chibi equiv)
   (export equiv?)
-  (import (scheme))
+  (import (chibi))
   (import (srfi 69))
   (include "equiv.scm"))

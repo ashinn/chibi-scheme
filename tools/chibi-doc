@@ -1,7 +1,7 @@
 #! /usr/bin/env chibi-scheme
 
 (import
- (scheme) (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match)
+ (chibi) (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match)
  (chibi time) (chibi filesystem) (chibi scribble) (chibi highlight)
  (chibi type-inference))
 

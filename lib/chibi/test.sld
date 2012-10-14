@@ -16,7 +16,7 @@
           (only (srfi 1) every))
   (cond-expand
    (chibi
-    (import (only (scheme) pair-source print-exception)))
+    (import (only (chibi) pair-source print-exception)))
    (else
     (begin
       (define (pair-source x) #f)

@@ -2,7 +2,7 @@
 ;; being removed.
 
 (define-library (scheme division)
-  (import (scheme))
+  (import (chibi))
   (export ceiling-quotient ceiling-remainder ceiling/
           centered-quotient centered-remainder centered/
           euclidean-quotient euclidean-remainder euclidean/

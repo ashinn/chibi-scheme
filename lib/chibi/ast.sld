@@ -34,6 +34,6 @@
    object-size integer->immediate gc atomically
    string-contains integer->error-string
    flatten-dot update-free-vars!)
-  (import (scheme))
+  (import (chibi))
   (include-shared "ast")
   (include "ast.scm"))

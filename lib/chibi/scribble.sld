@@ -1,5 +1,5 @@
 
 (define-library (chibi scribble)
   (export scribble-parse scribble-read)
-  (import (scheme))
+  (import (chibi))
   (include "scribble.scm"))

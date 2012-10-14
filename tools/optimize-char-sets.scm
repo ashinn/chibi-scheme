@@ -8,7 +8,7 @@
 ;; Imports (module name) and writes optimized versions of all exported
 ;; char-sets to stdout.
 
-(import (scheme) (srfi 1) (srfi 69)
+(import (chibi) (srfi 1) (srfi 69)
         (chibi io) (chibi string) (chibi modules)
         (chibi char-set) (chibi iset) (chibi iset optimize)
         (only (meta) load-module))
