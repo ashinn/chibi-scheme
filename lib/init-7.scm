@@ -396,11 +396,15 @@
   (call-with-output-string
     (lambda (out) (for-each (lambda (ch) (write-char ch out)) ls))))
 
-(define (string->list str)
-  (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))
-    (if (< i 0)
-        res
-        (lp (string-cursor-prev str i) (cons (string-cursor-ref str i) res)))))
+(define (string->list str . o)
+  (cond
+   ((null? o)
+    (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))
+      (if (< i 0)
+          res
+          (lp (string-cursor-prev str i) (cons (string-cursor-ref str i) res)))))
+   (else
+    (string->list (apply substring str o)))))
 
 (define (string-fill! str ch)
   (let lp ((i (- (string-length str) 1)))
@@ -1098,6 +1102,7 @@
   (define (string-copy s) (substring-cursor s 0 (string-size s)))
   (define string-cursor-end string-size))
  (else
+  (define (string-index->offset str i) i)
   (define string-size string-length)
   (define substring-cursor substring)
   (define (string-copy s) (substring s 0 (string-length s)))
