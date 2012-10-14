@@ -406,9 +406,11 @@
    (else
     (string->list (apply substring str o)))))
 
-(define (string-fill! str ch)
-  (let lp ((i (- (string-length str) 1)))
-    (if (>= i 0) (begin (string-set! str i ch) (lp (- i 1))))))
+(define (string-fill! str ch . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
+    (let lp ((i (- end 1)))
+      (if (>= i start) (begin (string-set! str i ch) (lp (- i 1)))))))
 
 (define (string . args) (list->string args))
 (define (string-append . args) (string-concatenate args))
@@ -453,6 +455,13 @@
 
 ;; vector utils
 
+(define (vector-copy vec . o)
+  (let* ((start (if (pair? o) (car o) 0))
+         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length vec)))
+         (res (make-vector (- end start))))
+    (do ((i start (+ i 1))) ((>= i end) res)
+      (vector-set! res i (vector-ref vec i)))))
+
 (define (list->vector ls)
   (let ((vec (make-vector (length ls) #f)))
     (let lp ((ls ls) (i 0))
@@ -462,13 +471,17 @@
             (lp (cdr ls) (+ i 1)))))
     vec))
 
-(define (vector->list vec)
-  (let lp ((i (- (vector-length vec) 1)) (res '()))
-    (if (< i 0) res (lp (- i 1) (cons (vector-ref vec i) res)))))
+(define (vector->list vec . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length vec))))
+    (let lp ((i (- end 1)) (res '()))
+      (if (< i start) res (lp (- i 1) (cons (vector-ref vec i) res))))))
 
-(define (vector-fill! str ch)
-  (let lp ((i (- (vector-length str) 1)))
-    (if (>= i 0) (begin (vector-set! str i ch) (lp (- i 1))))))
+(define (vector-fill! vec ch . o)
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length vec))))
+    (let lp ((i (- end 1)))
+      (if (>= i start) (begin (vector-set! vec i ch) (lp (- i 1)))))))
 
 (define (vector . args) (list->vector args))
 
