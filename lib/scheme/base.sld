@@ -12,8 +12,8 @@
           (srfi 9) (srfi 11) (srfi 39))
   (export
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin
-   binary-port?  boolean?  boolean=?  bytevector-copy bytevector-copy!
-   bytevector-length
+   binary-port?  boolean?  boolean=?  bytevector-append
+   bytevector-copy bytevector-copy! bytevector-length
    bytevector-u8-ref bytevector-u8-set!  bytevector?  caar cadr
    call-with-current-continuation call-with-port call-with-values
    call/cc car case cdr cdar cddr ceiling char->integer
@@ -43,7 +43,8 @@
    string-ref string-set!  string<=?  string<?  string=?  string>=?
    string>?  string?  substring symbol->string symbol?  symbol=?  syntax-error
    syntax-rules textual-port?  truncate u8-ready?  unless unquote
-   unquote-splicing utf8->string values vector vector->list vector->string
+   unquote-splicing utf8->string values vector vector-append
+   vector->list vector->string
    vector-copy vector-copy! vector-fill!  vector-for-each vector-length
    vector-map vector-ref vector-set!  vector?  when with-exception-handler
    write-bytevector write-char write-u8 zero?)

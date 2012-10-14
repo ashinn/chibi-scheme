@@ -118,6 +118,16 @@
         ((zero? k) (set-car! ls x))
         (else (list-set! (cdr ls) (- k 1) x))))
 
+(define (vector-append . vecs)
+  (let* ((len (apply + (map vector-length vecs)))
+         (res (make-vector len)))
+    (let lp ((ls vecs) (i 0))
+      (if (null? ls)
+          res
+          (let ((v-len (vector-length (car ls))))
+            (vector-copy! res i (car ls))
+            (lp (cdr ls) (+ i v-len)))))))
+
 (define (vector-map proc vec . lov)
   (if (null? lov)
       (let lp ((i (vector-length vec)) (res '()))
@@ -138,7 +148,7 @@
 (define (vector-copy! to at from . o)
   (let ((start (if (pair? o) (car o) 0))
         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length from))))
-    (do ((i at (+ i 1)) (j start (+ i 1)))
+    (do ((i at (+ i 1)) (j start (+ j 1)))
         ((>= j end))
       (vector-set! to i (vector-ref from j)))))
 
@@ -153,7 +163,7 @@
         (end (if (and (pair? o) (pair? (cdr o)))
                  (cadr o)
                  (bytevector-length from))))
-    (do ((i at (+ i 1)) (j start (+ i 1)))
+    (do ((i at (+ i 1)) (j start (+ j 1)))
         ((>= j end))
       (bytevector-u8-set! to i (bytevector-u8-ref from j)))))
 
@@ -161,6 +171,16 @@
   (if (null? o)
       (subbytes vec 0)
       (apply subbytes vec o)))
+
+(define (bytevector-append . vecs)
+  (let* ((len (apply + (map bytevector-length vecs)))
+         (res (make-bytevector len)))
+    (let lp ((ls vecs) (i 0))
+      (if (null? ls)
+          res
+          (let ((v-len (bytevector-length (car ls))))
+            (bytevector-copy! res i (car ls))
+            (lp (cdr ls) (+ i v-len)))))))
 
 ;; Never use this!
 (define (string-copy! to at from . o)
