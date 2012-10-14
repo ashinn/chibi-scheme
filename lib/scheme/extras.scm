@@ -1,4 +1,28 @@
 
+(define (read-sexps file . o)
+  (let ((in (open-input-file file)))
+    (if (and (pair? o) (car o))
+        (set-port-fold-case! in #t))
+    (let lp ((res '()))
+      (let ((x (read in)))
+        (if (eof-object? x) res (lp (cons x res)))))))
+
+(define-syntax include
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let lp ((files (cdr expr)) (res '()))
+       (cond
+        ((null? files) (cons (rename 'begin) (reverse res)))
+        (else (lp (cdr files) (append (read-sexps (car files)) res))))))))
+
+(define-syntax include-ci
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let lp ((files (cdr expr)) (res '()))
+       (cond
+        ((null? files) (cons (rename 'begin) (reverse res)))
+        (else (lp (cdr files) (append (read-sexps (car files) #t) res))))))))
+
 (define (features) *features*)
 
 (define exact inexact->exact)
