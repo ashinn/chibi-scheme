@@ -135,12 +135,6 @@
                  (lp (+ i 1))))))
       (apply for-each proc (map vector->list (cons vec lov)))))
 
-(define (vector-copy vec)
-  (let* ((len (vector-length vec))
-         (res (make-vector len)))
-    (do ((i 0 (+ i 1))) ((>= i len) res)
-      (vector-set! res i (vector-ref vec i)))))
-
 (define (vector-copy! to at from . o)
   (let ((start (if (pair? o) (car o) 0))
         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length from))))
@@ -148,11 +142,11 @@
         ((>= j end))
       (vector-set! to i (vector-ref from j)))))
 
-(define (vector->string vec)
-  (list->string (vector->list vec)))
+(define (vector->string vec . o)
+  (list->string (apply vector->list vec o)))
 
-(define (string->vector vec)
-  (list->vector (string->list vec)))
+(define (string->vector vec . o)
+  (list->vector (apply string->list vec o)))
 
 (define (bytevector-copy! to at from . o)
   (let ((start (if (pair? o) (car o) 0))
