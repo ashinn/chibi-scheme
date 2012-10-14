@@ -30,7 +30,7 @@
         (let ((sock (socket (address-info-family addr)
                             (address-info-socket-type addr)
                             (address-info-protocol addr))))
-          (if (negative? sock)
+          (if (not (fileno? sock))
               (lp (address-info-next addr))
               (cond
                ((negative?
