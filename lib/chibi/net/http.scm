@@ -75,8 +75,8 @@
                         host
                         (or (uri-port uri)
                             (if (eq? 'https (uri-scheme uri)) 443 80))))
-                   (in (car io))
-                   (out (car (cdr io))))
+                   (in (cadr io))
+                   (out (car (cddr io))))
               (display "GET " out)
               (display (or (uri-path uri) "/") out)
               (display " HTTP/1.0\r\n" out)

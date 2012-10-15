@@ -42,7 +42,8 @@
                 (cond-expand
                  (threads (set-file-descriptor-flags! sock open/non-block))
                  (else #f))
-                (list (open-input-file-descriptor sock #t)
+                (list sock
+                      (open-input-file-descriptor sock #t)
                       (open-output-file-descriptor sock #t)))))))))
 
 ;;> Convenience wrapper around @scheme{open-net-io}, opens
