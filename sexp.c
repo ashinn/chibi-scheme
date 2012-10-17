@@ -799,7 +799,7 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
 #endif
 #if SEXP_USE_FLONUMS && ! SEXP_USE_IMMEDIATE_FLONUMS
   if (sexp_pointer_tag(a) == SEXP_FLONUM)
-    return (sexp_flonum_value(a) == sexp_flonum_value(b)) ? bound : SEXP_FALSE;
+    return sexp_flonum_eqv(a, b) ? bound : SEXP_FALSE;
 #endif
   if (sexp_unbox_fixnum(bound) < 0) /* exceeded limit */
     return bound;

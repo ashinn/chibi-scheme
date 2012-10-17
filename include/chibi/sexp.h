@@ -819,6 +819,13 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_infp(x) (sexp_flonump(x) && isinf(sexp_flonum_value(x)))
 #define sexp_nanp(x) (sexp_flonump(x) && isnan(sexp_flonum_value(x)))
 
+#if SEXP_USE_IEEE_EQV
+#define sexp_flonum_bits(x)   (*(long*)(&(sexp_flonum_value(x))))
+#define sexp_flonum_eqv(x, y) (sexp_flonum_bits(x) == sexp_flonum_bits(y))
+#else
+#define sexp_flonum_eqv(x, y) (sexp_flonum_value(x) == sexp_flonum_value(y))
+#endif
+
 /*************************** field accessors **************************/
 
 #if SEXP_USE_SAFE_ACCESSORS

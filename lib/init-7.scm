@@ -429,8 +429,6 @@
 
 ;; list utils
 
-(define (eqv? a b) (if (eq? a b) #t (and (flonum? a) (flonum? b) (= a b))))
-
 (define (member obj ls . o)
   (let ((eq (if (pair? o) (car o) equal?)))
     (let lp ((ls ls))
@@ -1017,6 +1015,8 @@
  (else (define real? number?)))
 (define (rational? x)
   (and (real? x) (= x x) (not (= x (+ x (if (positive? x) 1 -1))))))
+
+(define (eqv? a b) (if (eq? a b) #t (and (number? a) (equal? a b))))
 
 (define (exact-integer-sqrt x)
   (let ((res (sqrt x)))
