@@ -142,6 +142,7 @@ _OP(SEXP_OPC_IO, SEXP_OP_WRITE_STRING, 2, 3, SEXP_VOID, _I(SEXP_STRING), _I(SEXP
 _OP(SEXP_OPC_IO, SEXP_OP_READ_CHAR, 0, 3, _I(SEXP_CHAR), _I(SEXP_IPORT), SEXP_FALSE, SEXP_FALSE, 0, "read-char", (sexp)"current-input-port", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_PEEK_CHAR, 0, 3, _I(SEXP_CHAR), _I(SEXP_IPORT), SEXP_FALSE, SEXP_FALSE, 0, "peek-char", (sexp)"current-input-port", NULL),
 #endif
+_FN1OPTP(_I(SEXP_BOOLEAN), _I(SEXP_IPORT), "char-ready?", (sexp)"current-input-port", sexp_char_ready_p),
 _FN1OPTP(_I(SEXP_OBJECT), _I(SEXP_IPORT), "read", (sexp)"current-input-port", sexp_read_op),
 _FN2OPTP(SEXP_VOID,_I(SEXP_OBJECT), _I(SEXP_OPORT), "write", (sexp)"current-output-port", sexp_write_op),
 _FN1OPTP(SEXP_VOID, _I(SEXP_OPORT), "flush-output", (sexp)"current-output-port", sexp_flush_output_op),

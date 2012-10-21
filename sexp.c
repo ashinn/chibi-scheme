@@ -1732,6 +1732,44 @@ void sexp_maybe_unblock_port (sexp ctx, sexp port) {
 }
 #endif
 
+#if SEXP_USE_GREEN_THREADS
+static int sexp_fileno_ready_p (int fd) {
+  struct pollfd pfd;
+  if (fd < 0) return -1;
+  pfd.fd = fd;
+  pfd.events = POLLIN;
+  return poll(&pfd, 1, 0) == 1;
+}
+
+static int sexp_stream_ready_p (FILE* in) {
+  int flags = fcntl(fileno(in), F_GETFL), res;
+  if (! (flags & O_NONBLOCK)) fcntl(fileno(in), F_SETFL, flags & O_NONBLOCK);
+  res = getc(in);
+  if (! (flags & O_NONBLOCK)) fcntl(fileno(in), F_SETFL, flags);
+  return (res == EOF) ? feof(in) : 1;
+}
+#endif
+
+sexp sexp_char_ready_p (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
+  sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
+  if (!sexp_port_openp(in))
+    return SEXP_FALSE;
+#if !SEXP_USE_STRING_STREAMS
+  if (sexp_port_buf(in))
+    if (sexp_port_offset(in) < sexp_port_size(in)
+        || (!sexp_filenop(sexp_port_fd(in)) && !sexp_port_stream(in)))
+      return SEXP_TRUE;
+#endif
+#if SEXP_USE_GREEN_THREADS     /* maybe not just when threads are enabled */
+  if (sexp_filenop(sexp_port_fd(in)))
+    return sexp_make_boolean(sexp_fileno_ready_p(sexp_port_fileno(in)));
+  else if (sexp_port_stream(in))
+    return sexp_make_boolean(sexp_stream_ready_p(sexp_port_stream(in)));
+#endif
+  /* for custom ports and unthreaded compiles we just return true for now */
+  return SEXP_TRUE;
+}
+
 #define NUMBUF_LEN 32
 
 static struct {const char* name; char ch;} sexp_char_names[] = {

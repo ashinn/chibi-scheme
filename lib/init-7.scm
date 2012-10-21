@@ -498,9 +498,6 @@
 
 (define textual-port? port?)
 
-(define (char-ready? . o)
-  (not (eof-object? (peek-char (if (pair? o) (car o) (current-input-port))))))
-
 (define (call-with-input-string str proc)
   (let* ((in (open-input-string str))
          (res (proc in)))
