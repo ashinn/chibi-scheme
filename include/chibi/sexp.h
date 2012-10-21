@@ -32,6 +32,7 @@ extern "C" {
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
 #include <fcntl.h>
+#include <poll.h>
 #endif
 #define sexp_isalpha(x) (isalpha(x))
 #define sexp_isxdigit(x) (isxdigit(x))
@@ -1352,6 +1353,7 @@ SEXP_API sexp sexp_read_complex_tail(sexp ctx, sexp in, sexp res);
 #endif
 SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);
 SEXP_API sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in);
+SEXP_API sexp sexp_char_ready_p (sexp ctx, sexp self, sexp_sint_t n, sexp in);
 SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len);
 SEXP_API sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port);
 SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
