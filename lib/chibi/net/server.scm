@@ -8,7 +8,8 @@
                     ((fileno? listener-or-addr)
                      listener-or-addr)
                     ((integer? listener-or-addr)
-                     (make-listener-socket (get-address-info "localhost" 5556)))
+                     (make-listener-socket
+                      (get-address-info "localhost" listener-or-addr)))
                     (else
                      (make-listener-socket listener-or-addr))))
          (max-requests (if (pair? o) (car o) default-max-requests))
