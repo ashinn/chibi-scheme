@@ -1933,7 +1933,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_COMPLEX
     case SEXP_COMPLEX:
       sexp_write(ctx, sexp_complex_real(obj), out);
-      if (!sexp_negativep(sexp_complex_imag(obj)))
+      if (!sexp_negativep(sexp_complex_imag(obj))
+          && !sexp_infp(sexp_complex_imag(obj)))
         sexp_write_char(ctx, '+', out);
       if (sexp_complex_imag(obj) == SEXP_NEG_ONE)
         sexp_write_char(ctx, '-', out);
@@ -2242,9 +2243,16 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
   if (c=='i' || c=='I') {       /* trailing i, no sign */
   trailing_i:
     c = sexp_read_char(ctx, in);
-    if ((c!=EOF) && ! sexp_is_separator(c))
+    if (c=='n' || c=='N') {
+      res = sexp_read_symbol(ctx, in, c, 1);
+      if (res == sexp_intern(ctx, "nf.0i", -1))
+        real = res = sexp_make_flonum(ctx, real == SEXP_ONE ? sexp_pos_infinity : sexp_neg_infinity);
+      else
+        goto invalid;
+    } else if ((c!=EOF) && ! sexp_is_separator(c)) {
+    invalid:
       res = sexp_read_error(ctx, "invalid complex numeric syntax", sexp_make_character(c), in);
-    else
+    } else
       sexp_push_char(ctx, c, in);
     if (!sexp_exceptionp(res))
       res = sexp_make_complex(ctx, default_real, real);  /* NNNNi has 0 real */
@@ -2934,8 +2942,27 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           res = sexp_make_flonum(ctx, sexp_pos_infinity);
         else if (strcasecmp(str, "-inf.0") == 0)
           res = sexp_make_flonum(ctx, sexp_neg_infinity);
-        else if (strcasecmp(str, "+nan.0") == 0)
+        else if (strcasecmp(str+1, "nan.0") == 0)
           res = sexp_make_flonum(ctx, sexp_nan);
+#if SEXP_USE_COMPLEX
+        else if (strcasestr(str+1, "inf.0") == str+1) {
+          tmp = sexp_make_flonum(ctx, c1 == '+' ? sexp_pos_infinity : sexp_neg_infinity);
+          if (str[6] == 0) {
+            res = tmp;
+          } else if ((str[6] == 'i' || str[6] == 'I') && str[7] == 0) {
+            res = sexp_make_complex(ctx, SEXP_ZERO, tmp);
+          } else if (str[6] == '+' || str[6] == '-') {
+            res = sexp_substring(ctx, res, SEXP_SIX, SEXP_FALSE);
+            res = sexp_string_to_number(ctx, res, SEXP_TEN);
+            if (sexp_complexp(res) && (sexp_complex_real(res) == SEXP_ZERO))
+              sexp_complex_real(res) = tmp;
+            else
+              res = sexp_read_error(ctx, "invalid complex infinity", res, in);
+          } else {
+            res = sexp_read_error(ctx, "invalid infinity", res, in);
+          }
+        }
+#endif
         else
           res = sexp_intern(ctx, str, sexp_string_length(res));
       }
