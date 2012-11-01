@@ -165,6 +165,13 @@
 (define (string->vector vec . o)
   (list->vector (apply string->list vec o)))
 
+(define (bytevector . args)
+  (let* ((len (length args))
+         (res (make-bytevector len)))
+    (do ((i 0 (+ i 1)) (ls args (cdr ls)))
+        ((null? ls) res)
+      (bytevector-u8-set! res i (car ls)))))
+
 (define (bytevector-copy! to at from . o)
   (let* ((start (if (pair? o) (car o) 0))
          (end (if (and (pair? o) (pair? (cdr o)))
