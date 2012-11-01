@@ -457,8 +457,8 @@
   (let* ((start (if (pair? o) (car o) 0))
          (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length vec)))
          (res (make-vector (- end start))))
-    (do ((i start (+ i 1))) ((>= i end) res)
-      (vector-set! res i (vector-ref vec i)))))
+    (do ((i 0 (+ i 1)) (j start (+ j 1))) ((>= j end) res)
+      (vector-set! res i (vector-ref vec j)))))
 
 (define (list->vector ls)
   (let ((vec (make-vector (length ls) #f)))
