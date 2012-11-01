@@ -632,9 +632,13 @@
 
 (define (test-equal? expect res)
   (or (equal? expect res)
-      (and (number? expect)
-           (inexact? expect)
-           (approx-equal? expect res (current-test-epsilon)))))
+      (if (real? expect)
+          (and (inexact? expect)
+               (real? res)
+               (approx-equal? expect res (current-test-epsilon)))
+          (and (complex? res)
+               (test-equal? (real-part expect) (real-part res))
+               (test-equal? (imag-part expect) (imag-part res))))))
 
 ;;> Begin testing a new group until the closing @scheme{(test-end)}.
 
