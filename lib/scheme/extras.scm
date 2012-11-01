@@ -152,10 +152,11 @@
       (apply for-each proc (map vector->list (cons vec lov)))))
 
 (define (vector-copy! to at from . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length from))))
+  (let* ((start (if (pair? o) (car o) 0))
+         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (vector-length from)))
+         (limit (min end (+ start (- (vector-length to) at)))))
     (do ((i at (+ i 1)) (j start (+ j 1)))
-        ((>= j end))
+        ((>= j limit))
       (vector-set! to i (vector-ref from j)))))
 
 (define (vector->string vec . o)
@@ -165,12 +166,13 @@
   (list->vector (apply string->list vec o)))
 
 (define (bytevector-copy! to at from . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o)))
-                 (cadr o)
-                 (bytevector-length from))))
+  (let* ((start (if (pair? o) (car o) 0))
+         (end (if (and (pair? o) (pair? (cdr o)))
+                  (cadr o)
+                  (bytevector-length from)))
+         (limit (min end (+ start (- (bytevector-length to) at)))))
     (do ((i at (+ i 1)) (j start (+ j 1)))
-        ((>= j end))
+        ((>= j limit))
       (bytevector-u8-set! to i (bytevector-u8-ref from j)))))
 
 (define (bytevector-copy vec . o)
