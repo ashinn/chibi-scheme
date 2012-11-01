@@ -61,6 +61,9 @@
 
 (define flush-output-port flush-output)
 
+(define input-port-open? port-open?)
+(define output-port-open? port-open?)
+
 (define (close-port port)
   ((if (input-port? port) close-input-port close-output-port) port))
 
