@@ -11,6 +11,7 @@
    current-test-epsilon current-test-comparator)
   (import (scheme base)
           (scheme write)
+          (scheme complex)
           (scheme process-context)
           (scheme time)
           (only (srfi 1) every))
