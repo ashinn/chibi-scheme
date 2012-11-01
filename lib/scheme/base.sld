@@ -12,7 +12,7 @@
           (srfi 9) (srfi 11) (srfi 39))
   (export
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin
-   binary-port?  boolean?  boolean=?  bytevector-append
+   binary-port?  boolean?  boolean=?  bytevector bytevector-append
    bytevector-copy bytevector-copy! bytevector-length
    bytevector-u8-ref bytevector-u8-set!  bytevector?  caar cadr
    call-with-current-continuation call-with-port call-with-values
