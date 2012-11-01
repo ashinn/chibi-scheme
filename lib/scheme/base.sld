@@ -38,7 +38,8 @@
    peek-u8 input-port-open? output-port-open?  port?  positive?
    procedure?  quasiquote quote
    quotient raise raise-continuable rational?  rationalize read-bytevector
-   read-bytevector!  read-char read-error? read-line read-u8 real?  remainder
+   read-bytevector!  read-char read-error? read-line read-string read-u8
+   real?  remainder
    reverse round set!  set-car!  set-cdr!  square string string->list
    string->number string->symbol string->utf8 string->vector string-append
    string-copy string-copy! string-fill!  string-for-each string-length
