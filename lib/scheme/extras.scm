@@ -190,10 +190,11 @@
 
 ;; Never use this!
 (define (string-copy! to at from . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length from))))
-    (do ((i at (+ i 1)) (j start (+ i 1)))
-        ((>= j end))
+  (let* ((start (if (pair? o) (car o) 0))
+         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length from)))
+         (limit (min end (+ start (- (string-length to) at)))))
+    (do ((i at (+ i 1)) (j start (+ j 1)))
+        ((>= j limit))
       (string-set! to i (string-ref from j)))))
 
 (define truncate-quotient quotient)
