@@ -258,7 +258,8 @@
                 (read-one) ;; discard
                 (read-one))
                ((#\|)
-                (skip-comment in 0))
+                (skip-comment in 0)
+                (read-one))
                ((#\!)
                 (let ((name (read-name #f in)))
                   (cond
