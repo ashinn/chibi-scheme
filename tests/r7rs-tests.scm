@@ -534,12 +534,12 @@
 (test -1 (modulo -13 -4))
 (test -1 (remainder -13 -4))
 
-(test -1.0 (remainder -13 -4.0))  ; inexact%
+(test -1.0 (remainder -13 -4.0))
 
 (test 4 (gcd 32 -36))
 (test 0 (gcd))
 (test 288 (lcm 32 -36))
-(test 288.0 (lcm 32.0 -36))  ; inexact
+(test 288.0 (lcm 32.0 -36))
 (test 1 (lcm))
 
 (test 3 (numerator (/ 6 4)))
@@ -555,14 +555,34 @@
 (test 3.0 (floor 3.5))
 (test 4.0 (ceiling 3.5))
 (test 3.0 (truncate 3.5))
-(test 4.0 (round 3.5))  ; inexact
+(test 4.0 (round 3.5))
 
-(test 4 (round 7/2))    ; exact
+(test 4 (round 7/2))
 (test 7 (round 7))
 
-(test 1/3 (rationalize
-  (exact .3) 1/10))    ; exact
-;; (test #i1/3 (rationalize .3 1/10))  ; inexact%
+(test 1/3 (rationalize (exact .3) 1/10))
+;; (test #i1/3 (rationalize .3 1/10))  ; inexact
+
+(test 1.0 (exp 0))
+(test 20.0855369231877 (exp 3))
+
+(test 0.0 (log 1))
+(test 1.0 (log (exp 1)))
+(test 42.0 (log (exp 42)))
+(test 2.0 (log 100 10))
+(test 12.0 (log 4096 2))
+
+(test 0.0 (sin 0))
+(test 1.0 (sin 1.5707963267949))
+(test 1.0 (cos 0))
+(test -1.0 (cos 3.14159265358979))
+(test 0.0 (tan 0))
+(test 1.5574077246549 (tan 1))
+
+(test 0.0 (asin 0))
+(test 1.5707963267949 (asin 1))
+(test 0.0 (acos 1))
+(test 3.14159265358979 (acos -1))
 
 (test 0.0 (atan 0.0 1.0))
 (test -0.0 (atan -0.0 1.0))
@@ -574,11 +594,13 @@
 (test -2.35619449019234 (atan -1.0 -1.0))
 (test -1.5707963267949 (atan -1.0 0.0))
 (test -0.785398163397448 (atan -1.0 1.0))
-;;(test undefined (atan 0.0 0.0))
+;; (test undefined (atan 0.0 0.0))
 
 (test 1764 (square 42))
 (test 4.0 (square 2))
 
+(test 3 (sqrt 9))
+(test 1.4142135623731 (sqrt 2))
 (test +i (sqrt -1))
 
 (test '(2 0) (call-with-values (lambda () (exact-integer-sqrt 4)) list))
