@@ -1367,6 +1367,8 @@
     (write-u8 3 out)
     (get-output-bytevector out)))
 
+;; read syntax
+
 (test #t (read (open-input-string "#t")))
 (test #t (read (open-input-string "#true")))
 (test #f (read (open-input-string "#f")))
@@ -1378,10 +1380,29 @@
 (test '(1 2) (read (open-input-string "(1 . (2))")))
 (test '(1 2 3 4 5) (read (open-input-string "(1 . (2 3 4 . (5)))")))
 
+(test '(quote (1 2)) (read (open-input-string "'(1 2)")))
+(test '(quote (1 (unquote 2))) (read (open-input-string "'(1 ,2)")))
+(test '(quote (1 (unquote-splicing 2))) (read (open-input-string "'(1 ,@2)")))
+(test '(quasiquote (1 (unquote 2))) (read (open-input-string "`(1 ,2)")))
+
+(test #() (read (open-input-string "#()")))
+(test #(a b) (read (open-input-string "#(a b)")))
+
+(test #u8() (read (open-input-string "#u8()")))
+(test #u8(0 1) (read (open-input-string "#u8(0 1)")))
+
 (test 'abc (read (open-input-string "abc")))
 (test 'abc (read (open-input-string "abc def")))
 (test 'ABC (read (open-input-string "ABC")))
 (test 'Hello (read (open-input-string "|H\\x65;llo|")))
+
+(test 'abc (read (open-input-string "#!fold-case ABC")))
+(test 'ABC (read (open-input-string "#!fold-case #!no-fold-case ABC")))
+
+(test 'def (read (open-input-string "#; abc def")))
+(test 'def (read (open-input-string "; abc \ndef")))
+(test 'def (read (open-input-string "#| abc |# def")))
+(test 'ghi (read (open-input-string "#; ; abc\n def ghi")))
 
 (test #\a (read (open-input-string "#\\a")))
 (test #\space (read (open-input-string "#\\space")))
@@ -1393,6 +1414,169 @@
 (test "ABC" (read (open-input-string "\"ABC\"")))
 (test "Hello" (read (open-input-string "\"H\\x65;llo\"")))
 (test "line 1\nline 2\n" (read (open-input-string "\"line 1\nline 2\n\"")))
+
+;; Numeric syntax adapted from Peter Bex's tests.
+;;
+;; These are updated to R7RS, using string ports instead of
+;; string->number, and "error" tests removed because implementations
+;; are free to provide their own numeric extensions.  Currently all
+;; tests are run by default - need to cond-expand and test for
+;; infinities and -0.0.
+
+(define-syntax test-numeric-syntax
+  (syntax-rules ()
+    ((test-numeric-syntax str expect strs ...)
+     (let* ((z (read (open-input-string str)))
+            (out (open-output-string))
+            (z-str (begin (write z out) (get-output-string out))))
+       (test expect (values z))
+       (test #t (and (member z-str '(str strs ...)) #t))))))
+
+(define-syntax test-numeric-syntaxes
+  (syntax-rules ()
+    ((test-numeric-syntaxes (x ...))
+     (test-numeric-syntax x ...))
+    ((test-numeric-syntaxes (x ...) . rest)
+     (begin (test-numeric-syntax x ...)
+            (test-numeric-syntaxes . rest)))))
+
+;; Each test is of the form:
+;;
+;;   (input-str expected-value (expected-write-values ...))
+;;
+;; where the input should be eqv? to the expected-value, and the
+;; written output the same as any of the expected-write-values.  The
+;; form
+;;
+;;   (input-str expected-value)
+;;
+;; is a shorthand for
+;;
+;;   (input-str expected-value (input-str))
+
+(test-numeric-syntaxes
+ ;; Simple
+ ("1" 1)
+ ("+1" 1 "1")
+ ("-1" -1)
+ ("#i1" 1.0 "1.0" "1.")
+ ("#I1" 1.0 "1.0" "1.")
+ ("#i-1" -1.0 "-1.0" "-1.")
+ ;; Decimal
+ ("1.0" 1.0 "1.0" "1.")
+ ("1." 1.0 "1.0" "1.")
+ (".1" 0.1 "0.1" "100.0e-3")
+ ("-.1" -0.1 "-0.1" "-100.0e-3")
+ ;; Some Schemes don't allow negative zero. This is okay with the standard
+ ("-.0" -0.0 "-0." "-0.0" "0.0" "0." ".0")
+ ("-0." -0.0 "-.0" "-0.0" "0.0" "0." ".0")
+ ("#i1.0" 1.0 "1.0" "1.")
+ ("#e1.0" 1 "1")
+ ("#e-.0" 0 "0")
+ ("#e-0." 0 "0")
+ ;; Decimal notation with suffix
+ ("1e2" 100.0 "100.0" "100.")
+ ("1E2" 100.0 "100.0" "100.")
+ ("1s2" 100.0 "100.0" "100.")
+ ("1S2" 100.0 "100.0" "100.")
+ ("1f2" 100.0 "100.0" "100.")
+ ("1F2" 100.0 "100.0" "100.")
+ ("1d2" 100.0 "100.0" "100.")
+ ("1D2" 100.0 "100.0" "100.")
+ ("1l2" 100.0 "100.0" "100.")
+ ("1L2" 100.0 "100.0" "100.")
+ ;; NaN, Inf
+ ("+nan.0" +nan.0 "+nan.0" "+NaN.0")
+ ("+NAN.0" +nan.0 "+nan.0" "+NaN.0")
+ ("+inf.0" +inf.0 "+inf.0" "+Inf.0")
+ ("+InF.0" +inf.0 "+inf.0" "+Inf.0")
+ ("-inf.0" -inf.0 "-inf.0" "-Inf.0")
+ ("-iNF.0" -inf.0 "-inf.0" "-Inf.0")
+ ("#i+nan.0" +nan.0 "+nan.0" "+NaN.0")
+ ("#i+inf.0" +inf.0 "+inf.0" "+Inf.0")
+ ("#i-inf.0" -inf.0 "-inf.0" "-Inf.0")
+ ;; Exact ratios
+ ("1/2" (/ 1 2))
+ ("#e1/2" (/ 1 2) "1/2")
+ ("10/2" 5 "5")
+ ("-1/2" (- (/ 1 2)))
+ ("0/10" 0 "0")
+ ("#e0/10" 0 "0")
+ ("#i3/2" (/ 3.0 2.0) "1.5")
+ ;; Exact complex
+ ("1+2i" (make-rectangular 1 2))
+ ("1+2I" (make-rectangular 1 2) "1+2i")
+ ("1-2i" (make-rectangular 1 -2))
+ ("-1+2i" (make-rectangular -1 2))
+ ("-1-2i" (make-rectangular -1 -2))
+ ("+i" (make-rectangular 0 1) "+i" "+1i" "0+i" "0+1i")
+ ("0+i" (make-rectangular 0 1) "+i" "+1i" "0+i" "0+1i")
+ ("0+1i" (make-rectangular 0 1) "+i" "+1i" "0+i" "0+1i")
+ ("-i" (make-rectangular 0 -1) "-i" "-1i" "0-i" "0-1i")
+ ("0-i" (make-rectangular 0 -1) "-i" "-1i" "0-i" "0-1i")
+ ("0-1i" (make-rectangular 0 -1) "-i" "-1i" "0-i" "0-1i")
+ ("+2i" (make-rectangular 0 2) "2i" "+2i" "0+2i")
+ ("-2i" (make-rectangular 0 -2) "-2i" "0-2i")
+ ;; Decimal-notation complex numbers (rectangular notation)
+ ("1.0+2i" (make-rectangular 1.0 2) "1.0+2.0i" "1.0+2i" "1.+2i" "1.+2.i")
+ ("1+2.0i" (make-rectangular 1 2.0) "1.0+2.0i" "1+2.0i" "1.+2.i" "1+2.i")
+ ;; ("1e2+1.0i" (make-rectangular 100.0 1.0) "100.0+1.0i" "100.+1.i")
+ ;; ("1s2+1.0i" (make-rectangular 100.0 1.0) "100.0+1.0i" "100.+1.i")
+ ;; ("1.0+1e2i" (make-rectangular 1.0 100.0) "1.0+100.0i" "1.+100.i")
+ ;; ("1.0+1s2i" (make-rectangular 1.0 100.0) "1.0+100.0i" "1.+100.i")
+ ;; Fractional complex numbers (rectangular notation)
+ ("1/2+3/4i" (make-rectangular (/ 1 2) (/ 3 4)))
+ ;; Mixed fractional/decimal notation complex numbers (rectangular notation)
+ ("0.5+3/4i" (make-rectangular 0.5 (/ 3 4))
+  "0.5+0.75i" ".5+.75i" "0.5+3/4i" ".5+3/4i" "500.0e-3+750.0e-3i")
+ ;; Complex NaN, Inf (rectangular notation)
+ ;; ("+nan.0+nan.0i" (make-rectangular the-nan the-nan) "+NaN.0+NaN.0i")
+ ("+inf.0+inf.0i" (make-rectangular +inf.0 +inf.0) "+Inf.0+Inf.0i")
+ ("-inf.0+inf.0i" (make-rectangular -inf.0 +inf.0) "-Inf.0+Inf.0i")
+ ("-inf.0-inf.0i" (make-rectangular -inf.0 -inf.0) "-Inf.0-Inf.0i")
+ ("+inf.0-inf.0i" (make-rectangular +inf.0 -inf.0) "+Inf.0-Inf.0i")
+ ;; Complex numbers (polar notation)
+ ("1@2" -0.416146836547142+0.909297426825682i "-0.416146836547142+0.909297426825682i")
+ ;; Base prefixes
+ ("#x11" 17 "17")
+ ("#X11" 17 "17")
+ ("#d11" 11 "11")
+ ("#D11" 11 "11")
+ ("#o11" 9 "9")
+ ("#O11" 9 "9")
+ ("#b11" 3 "3")
+ ("#B11" 3 "3")
+ ("#o7" 7 "7")
+ ("#xa" 10 "10")
+ ("#xA" 10 "10")
+ ("#xf" 15 "15")
+ ("#x-10" -16 "-16")
+ ("#d-10" -10 "-10")
+ ("#o-10" -8 "-8")
+ ("#b-10" -2 "-2")
+ ;; Combination of prefixes
+ ("#e#x10" 16 "16")
+ ("#i#x10" 16.0 "16.0" "16.")
+ ;; (Attempted) decimal notation with base prefixes
+ ("#d1." 1.0 "1.0" "1.")
+ ("#d.1" 0.1 "0.1" ".1" "100.0e-3")
+ ("#x1e2" 482 "482")
+ ("#d1e2" 100.0 "100.0" "100.")
+ ;; Fractions with prefixes
+ ("#x10/2" 8 "8")
+ ("#x11/2" (/ 17 2) "17/2")
+ ("#d11/2" (/ 11 2) "11/2")
+ ("#o11/2" (/ 9 2) "9/2")
+ ("#b11/10" (/ 3 2) "3/2")
+ ;; Complex numbers with prefixes
+ ;;("#x10+11i" (make-rectangular 16 17) "16+17i")
+ ("#d1.0+1.0i" (make-rectangular 1.0 1.0) "1.0+1.0i" "1.+1.i")
+ ("#d10+11i" (make-rectangular 10 11) "10+11i")
+ ;;("#o10+11i" (make-rectangular 8 9) "8+9i")
+ ;;("#b10+11i" (make-rectangular 2 3) "2+3i")
+ ;;("#e1.0+1.0i" (make-rectangular 1 1) "1+1i" "1+i")
+ ;;("#i1.0+1.0i" (make-rectangular 1.0 1.0) "1.0+1.0i" "1.+1.i")
+ )
 
 ;; 6.14 System interface
 
