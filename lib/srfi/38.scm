@@ -161,9 +161,8 @@
             (cond
              ((and (not (eof-object? c))
                    (or (char-numeric? c)
-                       (memv (char-downcase c) '(#\a #\b #\c #\d #\e #\f))))
-              (read-label (cons (read-char in) res)))
-             ((and (memv c '(#\+ #\-)) (null? res))
+                       (memv (char-downcase c)
+                             '(#\- #\+ #\a #\b #\c #\d #\e #\f #\i))))
               (read-label (cons (read-char in) res)))
              ((and (eqv? c #\/) (not (memv #\/ res)))
               (read-label (cons (read-char in) res)))
