@@ -165,6 +165,8 @@
               (read-label (cons (read-char in) res)))
              ((and (memv c '(#\+ #\-)) (null? res))
               (read-label (cons (read-char in) res)))
+             ((and (eqv? c #\/) (not (memv #\/ res)))
+              (read-label (cons (read-char in) res)))
              (else
               (list->string (reverse res))))))
         (define (read-number base)
