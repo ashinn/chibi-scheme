@@ -1100,6 +1100,9 @@
   (define magnitude abs)
   (define (angle z) (if (< z 0) 3.141592653589793 0))))
 
+(define (log x . o)
+  (if (pair? o) (/ (ln x) (ln (car o))) (ln x)))
+
 (define (atan y . o)
   (if (null? o)
       (atan1 y)
