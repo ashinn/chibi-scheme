@@ -8,8 +8,11 @@
 
 (test-begin "r7rs")
 
-(define x 28)
-(test 28 x)
+;; 4.1 Primitive expression types
+
+(let ()
+  (define x 28)
+  (test 28 x))
 
 (test 'a (quote a))
 (test #(a b c) (quote #(a b c)))
@@ -32,7 +35,6 @@
 (test 7 (+ 3 4))
 (test 12 ((if #f + *) 3 4))
 
-;;(test {\em{}a procedure} (lambda (x) (+ x x)))
 (test 8 ((lambda (x) (+ x x)) 4))
 (define reverse-subtract
   (lambda (x y) (- y x)))
@@ -51,10 +53,11 @@
 (test 1 (if (> 3 2)
     (- 3 2)
     (+ 3 2)))
-(define x 2)
-(test 3 (+ x 1))
-;; (test \unspecified (set! x 4))
-;; (test 5 (+ x 1))
+(let ()
+  (define x 2)
+  (test 3 (+ x 1)))
+
+;; 4.2 Derived expression types
 
 (test 'greater (cond ((> 3 2) 'greater)
       ((< 3 2) 'less)))
@@ -69,9 +72,7 @@
 (test 'composite (case (* 2 3)
   ((2 3 5 7) 'prime)
   ((1 4 6 8 9) 'composite)))
-;; (test \unspecified (case (car '(c d))
-;;   ((a) 'a)
-;;   ((b) 'b)))
+
 (test 'c (case (car '(c d))
   ((a e i o u) 'vowel)
   ((w y) 'semivowel)
@@ -87,10 +88,6 @@
 (test #f (or #f #f #f))
 (test '(b c) (or (memq 'b '(a b c))
     (/ 3 0)))
-;; (display "1")
-;;   (test \unspecified (display "2"))
-;; (display "1")
-;;   (test \unspecified (display "2"))
 
 (test 6 (let ((x 2) (y 3))
   (* x y)))
@@ -106,30 +103,31 @@
     (* z x))))
 
 (test #t
-(letrec ((even?
-          (lambda (n)
-            (if (zero? n)
-                #t
-                (odd? (- n 1)))))
-         (odd?
-          (lambda (n)
-            (if (zero? n)
-                #f
-                (even? (- n 1))))))
-  (even? 88)))
+    (letrec ((even?
+              (lambda (n)
+                (if (zero? n)
+                    #t
+                    (odd? (- n 1)))))
+             (odd?
+              (lambda (n)
+                (if (zero? n)
+                    #f
+                    (even? (- n 1))))))
+      (even? 88)))
 
 (test 5
-(letrec* ((p
-           (lambda (x)
-             (+ 1 (q (- x 1)))))
-          (q
-           (lambda (y)
-             (if (zero? y)
-                 0
-                 (+ 1 (p (- y 1))))))
-          (x (p 5))
-          (y x))
-  y))
+    (letrec* ((p
+               (lambda (x)
+                 (+ 1 (q (- x 1)))))
+              (q
+               (lambda (y)
+                 (if (zero? y)
+                     0
+                     (+ 1 (p (- y 1))))))
+              (x (p 5))
+              (y x))
+             y))
+
 (let*-values (((root rem) (exact-integer-sqrt 32)))
   (test 35 (* root rem)))
 
@@ -137,11 +135,11 @@
   (let*-values (((a b) (values x y))
                 ((x y) (values a b)))
     (list a b x y))))
-(set! x 5)
-            (test 6 (+ x 1))
 
-;; (test \unspecified (begin (display "4 plus 1 equals ")
-;;        (display (+ 4 1))))
+(let ()
+  (define x 0)
+  (set! x 5)
+  (test 6 (+ x 1)))
 
 (test #(0 1 2 3 4) (do ((vec (make-vector 5))
      (i 0 (+ i 1)))
@@ -152,6 +150,7 @@
   (do ((x x (cdr x))
        (sum 0 (+ sum (car x))))
       ((null? x) sum))))
+
 (test '((6 1 3) (-5 -2))
     (let loop ((numbers '(3 -2 1 6 -5))
                (nonneg '())
@@ -167,9 +166,10 @@
                    (cons (car numbers) neg))))))
 
 (test 3 (force (delay (+ 1 2))))
+
 (test '(3 3)  
-(let ((p (delay (+ 1 2))))
-  (list (force p) (force p))))
+    (let ((p (delay (+ 1 2))))
+      (list (force p) (force p))))
 
 (define integers
   (letrec ((next
@@ -181,8 +181,7 @@
 (define tail
   (lambda (stream) (cdr (force stream))))
 
-(test 2  
-(head (tail (tail integers))))
+(test 2 (head (tail (tail integers))))
 
 (define (stream-filter p? s)
   (delay-force
@@ -194,26 +193,18 @@
              (delay (cons h (stream-filter p? t)))
              (stream-filter p? t))))))
 
-(test 5
-(head (tail (tail (stream-filter odd? integers)))))
+(test 5 (head (tail (tail (stream-filter odd? integers)))))
 
-(define count 0)
-(define p
-  (delay (begin (set! count (+ count 1))
-                (if (> count x)
-                    count
-                    (force p)))))
-(define x 5)
-;; (test {\it{}a promise} p)
-(test 6 (force p))
-;; (test {\it{}a promise, still} p)
-(test 6 (begin (set! x 10)
-       (force p)))
-
-;; (test \unspecified (eqv? (delay 1) 1))
-;; (test \unspecified (pair? (delay (cons 1 2))))
-
-;; (test 34 (+ (delay (* 3 7)) 13))
+(let ()
+  (define x 5)
+  (define count 0)
+  (define p
+    (delay (begin (set! count (+ count 1))
+                  (if (> count x)
+                      count
+                      (force p)))))
+  (test 6 (force p))
+  (test 6 (begin (set! x 10) (force p))))
 
 (define radix
   (make-parameter
@@ -228,16 +219,9 @@
   (f 12)))
 (test "12" (f 12))
 
-;; (test \unspecified (radix 16))
-
-;; (test \scherror (parameterize ((radix 0))
-;;   (f 12)))
-
 (test '(list 3 4) `(list ,(+ 1 2) 4))
 (let ((name 'a)) (test '(list a (quote a)) `(list ,name ',name)))
 (test '(a 3 4 5 6 b) `(a ,(+ 1 2) ,@(map abs '(4 -5 6)) b))
-;; `(({\cf foo} ,(- 10 3)) ,@(cdr '(c)) . ,(car '(cons))) (test '((foo 7) . cons)
-;; )
 (test #(10 5 2 4 3 8) `#(10 5 ,(sqrt 4) ,@(map sqrt '(16 9)) 8))
 (test '(a `(b ,(+ 1 2) ,(foo 4 d) e) f)
     `(a `(b ,(+ 1 2) ,(foo ,(+ 1 3) d) e) f) )
@@ -246,6 +230,35 @@
    (test '(a `(b ,x ,'y d) e) `(a `(b ,,name1 ,',name2 d) e)))
 (test '(list 3 4) (quasiquote (list (unquote (+ 1 2)) 4)) )
 (test `(list ,(+ 1 2) 4) (quasiquote (list (unquote (+ 1 2)) 4)))
+
+(define plus
+  (case-lambda 
+   (() 0)
+   ((x) x)
+   ((x y) (+ x y))
+   ((x y z) (+ (+ x y) z))
+   (args (apply + args))))
+
+(test 0 (plus))
+(test 1 (plus 1))
+(test 3 (plus 1 2))
+(test 6 (plus 1 2 3))
+(test 10 (plus 1 2 3 4))
+
+(define mult
+  (case-lambda 
+   (() 1)
+   ((x) x)
+   ((x y) (* x y))
+   ((x y . z) (apply mult (* x y) z))))
+
+(test 1 (mult))
+(test 1 (mult 1))
+(test 2 (mult 1 2))
+(test 6 (mult 1 2 3))
+(test 24 (mult 1 2 3 4))
+
+;; 4.3 Macros
 
 (test 'now (let-syntax ((when (syntax-rules ()
                      ((when test stmt1 stmt2 ...)
@@ -279,6 +292,7 @@
            (let temp)
            (if y)
            y))))
+
 (define-syntax be-like-begin
   (syntax-rules ()
     ((be-like-begin name)
@@ -291,21 +305,48 @@
 
 (test 'ok (let ((=> #f)) (cond (#t => 'ok))))
 
-;; (test #0= (let ((x (list 'a 'b 'c)))
-;;   (set-cdr! (cddr x) x)
-;;   x))
-;; (a b c . #0#)
+;; 5 Program structure
 
-;; (test #1=\scherror
-;; (begin (display #\backwhack{}x) . #1#))
+(define add3
+  (lambda (x) (+ x 3)))
+(test 6 (add3 3))
+(define first car)
+(test 1 (first '(1 2)))
 
-;; (test #t
-;; (string=? (symbol->string obj1)
-;;           (symbol->string obj2)))
+(test 45 (let ((x 5))
+  (define foo (lambda (y) (bar x y)))
+  (define bar (lambda (a b) (+ (* a b) a)))
+  (foo (+ x 3))))
 
-;; (test #f
-;; (string=? (symbol->string \vari{obj})
-;;           (symbol->string \varii{obj})))
+(test 3 (let ()
+  (define-values (x y) (values 1 2))
+  (+ x y)))
+
+(test '(2 1) (let ((x 1) (y 2))
+  (define-syntax swap!
+    (syntax-rules ()
+      ((swap! a b)
+       (let ((tmp a))
+         (set! a b)
+         (set! b tmp)))))
+  (swap! x y)
+  (list x y)))
+
+;; Records
+
+(define-record-type <pare>
+  (kons x y)
+  pare?
+  (x kar set-kar!)
+  (y kdr))
+
+(test #t (pare? (kons 1 2)))
+(test #f (pare? (cons 1 2)))
+(test 1 (kar (kons 1 2)))
+(test 2 (kdr (kons 1 2)))
+(test 3 (let ((k (kons 1 2)))
+          (set-kar! k 3)
+          (kar k)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 6 Standard Procedures
@@ -322,59 +363,31 @@
       (lambda () 2)))
 (test #f (eqv? #f 'nil))
 
-;; (test \unspecified (eqv? "" ""))
-;; (test \unspecified (eqv? '#() '#()))
-;; (test \unspecified (eqv? (lambda (x) x)
-;;       (lambda (x) x)))
-;; (test \unspecified (let ((p (lambda (x) x)))
-;;   (eqv? p p)))
-;; (test \unspecified (eqv? (lambda (x) x)
-;;       (lambda (y) y)))
-;; (test \unspecified (eqv? +nan.0 +nan.0))
 (define gen-counter
   (lambda ()
     (let ((n 0))
       (lambda () (set! n (+ n 1)) n))))
 (test #t (let ((g (gen-counter)))
   (eqv? g g)))
-(test #f
-(eqv? (gen-counter) (gen-counter)))
+(test #f (eqv? (gen-counter) (gen-counter)))
 (define gen-loser
   (lambda ()
     (let ((n 0))
       (lambda () (set! n (+ n 1)) 27))))
 (test #t (let ((g (gen-loser)))
   (eqv? g g)))
-;; (test \unspecified
-;; (eqv? (gen-loser) (gen-loser)))
-
-;; (test \unspecified
-;; (letrec ((f (lambda () (if (eqv? f g) 'both 'f)))
-;;          (g (lambda () (if (eqv? f g) 'both 'g))))
-;;   (eqv? f g)))
 
 (test #f
 (letrec ((f (lambda () (if (eqv? f g) 'f 'both)))
          (g (lambda () (if (eqv? f g) 'g 'both))))
   (eqv? f g)))
 
-;; (test \unspecified (eqv? '(a) '(a)))
-;; (test \unspecified (eqv? "a" "a"))
-;; (test \unspecified (eqv? '(b) (cdr '(a b))))
 (test #t (let ((x '(a)))
   (eqv? x x)))
 
 (test #t (eq? 'a 'a))
-;; (test \unspecified (eq? '(a) '(a)))
 (test #f (eq? (list 'a) (list 'a)))
-;; (test \unspecified (eq? "a" "a"))
-;; (test \unspecified (eq? "" ""))
 (test #t (eq? '() '()))
-;; (test \unspecified (eq? 2 2))
-;; (test \unspecified (eq? #\backwhack{}A #\backwhack{}A))
-;; (test \unspecified (eq? car car))
-;; (test \unspecified (let ((n (+ 2 3)))
-;;   (eq? n n)))
 (test #t (let ((x '(a)))
   (eq? x x)))
 (test #t (let ((x '#()))
@@ -390,8 +403,6 @@
 (test #t (equal? 2 2))
 (test #t (equal? (make-vector 5 'a)
         (make-vector 5 'a)))
-;; (test \unspecified (equal? (lambda (x) x)
-;;         (lambda (y) y)))
 
 ;; 6.2 Numbers
 
@@ -500,17 +511,6 @@
 
 (test 7 (abs -7))
 (test 7 (abs 7))
-
-;; (test \vr (\hyper{operator}/ \vri{n} \vrii{n}))
-;; {n_r}
-;; (test \vr (\hyper{operator}-quotient \vri{n} \vrii{n}))
-;; {n_q}
-;; (test \vr (\hyper{operator}-remainder \vri{n} \vrii{n}))
-;; {n_r}
-
-;;      (test #t
-;; (= \vri{n} (+ (* \vrii{n} (\hyper{operator}-quotient \vri{n} \vrii{n}))
-;;            (\hyper{operator}-remainder \vri{n} \vrii{n}))))
 
 (test-values (values 2 1) (floor/ 5 2))
 (test-values (values -3 1) (floor/ -5 2))
@@ -682,14 +682,10 @@
 (test 'a (car '(a b c)))
 (test '(a) (car '((a) b c d)))
 (test 1 (car '(1 . 2)))
-;; (test \scherror (car '()))
 
 (test '(b c d) (cdr '((a) b c d)))
 (test 2 (cdr '(1 . 2)))
-;; (test \scherror (cdr '()))
 (define (g) '(constant-list))
-;; (test \unspecified (set-car! (f) 3))
-;; (test \scherror (set-car! (g) 3))
 
 (test #t (list? '(a b c)))
 (test #t (list? '()))
@@ -726,33 +722,24 @@
       (list-set! lst 1 '("Sue" "Sue"))
       lst))
 
-;; (test \scherror (list-set! '(0 1 2) 1 "doe"))  ; constant list%
-
 (test '(a b c) (memq 'a '(a b c)))
 (test '(b c) (memq 'b '(a b c)))
 (test #f (memq 'a '(b c d)))
 (test #f (memq (list 'a) '(b (a) c)))
-(test '((a) c) (member (list 'a)
-        '(b (a) c)))
-(test '("b" "c") (member "B"
-        '("a" "b" "c")
-        string-ci=?))
-;; (test \unspecified (memq 101 '(100 101 102)))
+(test '((a) c) (member (list 'a) '(b (a) c)))
+(test '("b" "c") (member "B" '("a" "b" "c") string-ci=?))
 (test '(101 102) (memv 101 '(100 101 102)))
-(define e '((a 1) (b 2) (c 3)))
-(test '(a 1) (assq 'a e))
-(test '(b 2) (assq 'b e))
-(test #f (assq 'd e))
-(test #f
-(assq (list 'a) '(((a)) ((b)) ((c)))))
-(test '((a))   
-(assoc (list 'a) '(((a)) ((b)) ((c)))))
-(test '(2 4)
-(assoc 2.0 '((1 1) (2 4) (3 9)) =))
-;; (test \unspecified    
-;; (assq 5 '((2 3) (5 7) (11 13))))
-(test '(5 7)    
-(assv 5 '((2 3) (5 7) (11 13))))
+
+(let ()
+  (define e '((a 1) (b 2) (c 3)))
+  (test '(a 1) (assq 'a e))
+  (test '(b 2) (assq 'b e))
+  (test #f (assq 'd e)))
+
+(test #f (assq (list 'a) '(((a)) ((b)) ((c)))))
+(test '((a)) (assoc (list 'a) '(((a)) ((b)) ((c)))))
+(test '(2 4) (assoc 2.0 '((1 1) (2 4) (3 9)) =))
+(test '(5 7) (assv 5 '((2 3) (5 7) (11 13))))
 
 (test '(1 2 3) (list-copy '(1 2 3)))
 
@@ -1018,8 +1005,6 @@
   (vector-set! vec 1 '("Sue" "Sue"))
   vec))
 
-(test-error (vector-set! '#(0 1 2) 1 "doe"))  ; constant vector%
-
 (test '(dah dah didah) (vector->list '#(dah dah didah)))
 (test '(dah didah) (vector->list '#(dah dah didah) 1))
 (test '(dah) (vector->list '#(dah dah didah) 1 2))
@@ -1148,12 +1133,14 @@
 
 (test '(5 7 9) (map + '(1 2 3) '(4 5 6 7)))
 
-(test '(1 2) ; or '(2 1)
-    (let ((count 0))
-      (map (lambda (ignored)
-             (set! count (+ count 1))
-             count)
-           '(a b))))
+(test #t
+    (let ((res (let ((count 0))
+                 (map (lambda (ignored)
+                        (set! count (+ count 1))
+                        count)
+                      '(a b)))))
+      (or (equal? res '(1 2))
+          (equal? res '(2 1)))))
 
 (test "abdegh" (string-map char-foldcase "AbdEgH"))
 
@@ -1175,12 +1162,15 @@
 
 (test #(5 7 9) (vector-map + '#(1 2 3) '#(4 5 6 7)))
 
-;; (test #(1 2) or #(2 1) (let ((count 0))
-;;   (vector-map
-;;    (lambda (ignored)
-;;      (set! count (+ count 1))
-;;      count)
-;;    '#(a b))))
+(test #t
+    (let ((res (let ((count 0))
+                 (vector-map
+                  (lambda (ignored)
+                    (set! count (+ count 1))
+                    count)
+                  '#(a b)))))
+      (or (equal? res #(1 2))
+          (equal? res #(2 1)))))
 
 (test #(0 1 4 9 16) (let ((v (make-vector 5)))
   (for-each (lambda (i)
@@ -1223,9 +1213,6 @@
 (test 4 (list-length '(1 2 3 4)))
 
 (test #f (list-length '(a b . c)))
-;; (define (values . things)
-;;   (call-with-current-continuation 
-;;     (lambda (cont) (apply cont things))))
 
 (test 5
     (call-with-values (lambda () (values 4 5))
@@ -1602,50 +1589,5 @@
 (test #t (exact? (jiffies-per-second)))
 
 (test #t (list? (features)))
-
-;; Definitions
-
-(define add3
-  (lambda (x) (+ x 3)))
-(test 6 (add3 3))
-(define first car)
-(test 1 (first '(1 2)))
-
-(test 45 (let ((x 5))
-  (define foo (lambda (y) (bar x y)))
-  (define bar (lambda (a b) (+ (* a b) a)))
-  (foo (+ x 3))))
-
-(test 3 (let ()
-  (define-values (x y) (values 1 2))
-  (+ x y)))
-
-(test '(2 1) (let ((x 1) (y 2))
-  (define-syntax swap!
-    (syntax-rules ()
-      ((swap! a b)
-       (let ((tmp a))
-         (set! a b)
-         (set! b tmp)))))
-  (swap! x y)
-  (list x y)))
-
-;; Records
-
-(define-record-type <pare>
-  (kons x y)
-  pare?
-  (x kar set-kar!)
-  (y kdr))
-
-(test #t (pare? (kons 1 2)))
-(test #f (pare? (cons 1 2)))
-(test 1 (kar (kons 1 2)))
-(test 2 (kdr (kons 1 2)))
-(test 3 (let ((k (kons 1 2)))
-          (set-kar! k 3)
-          (kar k)))
-
-(test 40 (* 5 8))
 
 (test-end)
