@@ -42,7 +42,7 @@
 ;; Adapted from Bawden's algorithm.
 (define (rationalize x e)
   (define (sr x y return)
-    (let ((fx (inexact->exact (floor x))) (fy (inexact->exact (floor y))))
+    (let ((fx (floor x)) (fy (floor y)))
       (cond
        ((>= fx x)
         (return fx 1))
@@ -50,12 +50,10 @@
         (sr (/ (- y fy)) (/ (- x fx)) (lambda (n d) (return (+ d (* fx n)) n))))
        (else
         (return (+ fx 1) 1)))))
-  (if (exact? x)
-      (let ((return (if (negative? x) (lambda (num den) (/ (- num) den)) /))
-            (x (abs x))
-            (e (abs e)))
-        (sr (- x e) (+ x e) return))
-      x))
+  (let ((return (if (negative? x) (lambda (num den) (/ (- num) den)) /))
+        (x (abs x))
+        (e (abs e)))
+    (sr (- x e) (+ x e) return)))
 
 (define (square x) (* x x))
 
