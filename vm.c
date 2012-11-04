@@ -1861,7 +1861,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (sexp_ratiop(_ARG1))
       _ARG1 = sexp_make_flonum(ctx, sexp_ratio_to_double(_ARG1));
 #endif
-    } else if (! sexp_flonump(_ARG1))
+    else if (! sexp_flonump(_ARG1))
       sexp_raise("exact->inexact: not a number", sexp_list1(ctx, _ARG1));
 #endif
     break;
