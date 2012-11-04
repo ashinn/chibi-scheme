@@ -561,7 +561,7 @@
 (test 7 (round 7))
 
 (test 1/3 (rationalize (exact .3) 1/10))
-;; (test #i1/3 (rationalize .3 1/10))  ; inexact
+(test #i1/3 (rationalize .3 1/10))
 
 (test 1.0 (exp 0))
 (test 20.0855369231877 (exp 3))
