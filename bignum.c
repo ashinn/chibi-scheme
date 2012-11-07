@@ -1528,10 +1528,8 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FLO_BIG:
-      f = sexp_flonum_value(a);
-      g = sexp_bignum_to_double(b);
-      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
-      break;
+      a = tmp = sexp_double_to_bignum(ctx, sexp_flonum_value(a));
+      /* ... FALLTHROUGH ... */
     case SEXP_NUM_BIG_BIG:
       r = sexp_make_fixnum(sexp_bignum_compare(a, b));
       break;
