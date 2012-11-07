@@ -453,6 +453,40 @@
 (test #t (>= 2 1 1))
 (test #f (>= 1 2 1))
 
+;; From R7RS 6.2.6 Numerical operations:
+;;
+;; These predicates are required to be transitive.
+;;
+;; _Note:_ The traditional implementations of these predicates in
+;; Lisp-like languages, which involve converting all arguments to inexact
+;; numbers if any argument is inexact, are not transitive.
+
+;; Example from Alan Bawden
+(let ((a (- (expt 2 1000) 1))
+      (b (inexact (expt 2 1000))) ; assuming > single-float-epsilon
+      (c (+ (expt 2 1000) 1)))
+  (test #t (if (and (= a b) (= b c))
+               (= a c)
+               #t)))
+
+;; From CLtL 12.3. Comparisons on Numbers:
+;;
+;;  Let _a_ be the result of (/ 10.0 single-float-epsilon), and let
+;;  _j_ be the result of (floor a). ..., all of (<= a j), (< j (+ j
+;;  1)), and (<= (+ j 1) a) would be true; transitivity would then
+;;  imply that (< a a) ought to be true ...
+
+;; Transliteration from Jussi Piitulainen
+(define single-float-epsilon
+  (do ((eps 1.0 (* eps 2.0)))
+      ((= eps (+ eps 1.0)) eps)))
+
+(let* ((a (/ 10.0 single-float-epsilon))
+       (j (exact a)))
+  (test #t (if (and (<= a j) (< j (+ j 1)))
+               (not (<= (+ j 1) a))
+               #t)))
+
 (test #t (zero? 0))
 (test #t (zero? 0.0))
 (test #t (zero? 0.0+0.0i))
