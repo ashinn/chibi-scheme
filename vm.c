@@ -1862,17 +1862,19 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       _ARG1 = sexp_make_flonum(ctx, sexp_ratio_to_double(_ARG1));
 #endif
     else if (! sexp_flonump(_ARG1))
-      sexp_raise("exact->inexact: not a number", sexp_list1(ctx, _ARG1));
+      sexp_raise("inexact: not a number", sexp_list1(ctx, _ARG1));
 #endif
     break;
   case SEXP_OP_FLO2FIX:
 #if SEXP_USE_FLONUMS
     if (sexp_flonump(_ARG1)) {
-      if (sexp_flonum_value(_ARG1) != trunc(sexp_flonum_value(_ARG1))) {
+      if (isinf(sexp_flonum_value(_ARG1)) || isnan(sexp_flonum_value(_ARG1))) {
+        sexp_raise("exact: not an finite number", sexp_list1(ctx, _ARG1));
+      } else if (sexp_flonum_value(_ARG1) != trunc(sexp_flonum_value(_ARG1))) {
 #if SEXP_USE_RATIOS
         _ARG1 = sexp_double_to_ratio(ctx, sexp_flonum_value(_ARG1));
 #else
-        sexp_raise("inexact->exact: not an integer", sexp_list1(ctx, _ARG1));
+        sexp_raise("exact: not an integer", sexp_list1(ctx, _ARG1));
 #endif
 #if SEXP_USE_BIGNUMS
       } else if ((sexp_flonum_value(_ARG1) > SEXP_MAX_FIXNUM)
@@ -1884,7 +1886,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         _ARG1 = sexp_make_fixnum((sexp_sint_t)sexp_flonum_value(_ARG1));
       }
     } else if (!sexp_exactp(_ARG1)) {
-      sexp_raise("inexact->exact: not a number", sexp_list1(ctx, _ARG1));
+      sexp_raise("exact: not a number", sexp_list1(ctx, _ARG1));
     }
 #endif
     break;
