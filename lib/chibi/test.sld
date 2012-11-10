@@ -13,8 +13,7 @@
           (scheme write)
           (scheme complex)
           (scheme process-context)
-          (scheme time)
-          (only (srfi 1) every))
+          (scheme time))
   (cond-expand
    (chibi
     (import (only (chibi) pair-source print-exception)))
