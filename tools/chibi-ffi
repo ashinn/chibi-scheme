@@ -649,7 +649,10 @@
      ((eq? base 'env-string)
       (cat "sexp_concat_env_string(" val ")"))
      ((string-type? base)
-      (cat "sexp_string_data(" val ")"))
+      (cat (if (type-null? type)
+            "sexp_string_maybe_null_data"
+            "sexp_string_data")
+           "(" val ")"))
      ((eq? base 'port-or-fileno)
       (cat "(sexp_portp(" val ") ? sexp_port_fileno(" val ")"
            " : sexp_fileno_fd(" val "))"))
@@ -714,8 +717,12 @@
            ")) && sexp_stringp(sexp_cdr(" arg ")))"))
      ((eq? base 'fileno)
       (cat "(sexp_filenop(" arg ") || sexp_fixnump(" arg "))"))
-     ((or (int-type? base) (float-type? base)
-          (string-type? base) (port-type? base))
+     ((string-type? base)
+      (cat
+       (if (type-null? type) "(" "")
+       (type-predicate type) "(" arg ")"
+       (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
+     ((or (int-type? base) (float-type? base) (port-type? base))
       (cat (type-predicate type) "(" arg ")"))
      ((or (lookup-type base) (void-pointer-type? type))
       (cat
