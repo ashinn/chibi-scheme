@@ -660,6 +660,8 @@
 #define strcasestr cistrstr
 #define round(x) floor((x)+0.5)
 #define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
+#define isinf(x) (isInf(x,1) || isInf(x,-1))
+#define isnan(x) isNaN(x)
 #elif defined(_WIN32)
 #define snprintf(buf, len, fmt, val) sprintf(buf, fmt, val)
 #define strcasecmp lstrcmpi
@@ -674,6 +676,10 @@
 #define sexp_pos_infinity (DBL_MAX*DBL_MAX)
 #define sexp_neg_infinity -sexp_pos_infinity
 #define sexp_nan log(-2)
+#elif PLAN9
+#define sexp_pos_infinity Inf(1)
+#define sexp_neg_infinity Inf(-1)
+#define sexp_nan NaN()
 #else
 #define sexp_pos_infinity (1.0/0.0)
 #define sexp_neg_infinity -sexp_pos_infinity

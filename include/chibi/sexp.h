@@ -1062,7 +1062,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_exception(x) (sexp_vector_ref(sexp_context_specific(x), SEXP_SIX))
 
 #if SEXP_USE_ALIGNED_BYTECODE
-#define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = sexp_word_align(sexp_context_pos(ctx))
+#define sexp_context_align_pos(ctx) sexp_context_pos(ctx) = (sexp)sexp_word_align((sexp_uint_t)sexp_context_pos(ctx))
 #else
 #define sexp_context_align_pos(ctx)
 #endif
