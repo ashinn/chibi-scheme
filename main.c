@@ -511,4 +511,5 @@ int main (int argc, char **argv) {
   sexp_scheme_init();
   run_main(argc, argv);
   exit_success();
+  return 0;
 }
