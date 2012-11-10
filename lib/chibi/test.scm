@@ -5,6 +5,16 @@
 ;;> module.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; list utilities
+
+;; Simplified version of SRFI-1 every.
+(define (every pred ls)
+  (or (null? ls)
+      (if (null? (cdr ls))
+          (pred (car ls))
+          (if (pred (car ls)) (every1 pred (cdr ls)) #f))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exception utilities
 
 (define (warning msg . args)
