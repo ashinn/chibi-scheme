@@ -1528,7 +1528,16 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FLO_BIG:
-      a = tmp = sexp_double_to_bignum(ctx, sexp_flonum_value(a));
+      f = sexp_flonum_value(a);
+      if (isinf(f)) {
+        r = f > 0 ? SEXP_ONE : SEXP_NEG_ONE;
+        break;
+      } else if (isnan(f)) {
+        r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", a);
+        break;
+      } else {
+        a = tmp = sexp_double_to_bignum(ctx, f);
+      }
       /* ... FALLTHROUGH ... */
     case SEXP_NUM_BIG_BIG:
       r = sexp_make_fixnum(sexp_bignum_compare(a, b));
@@ -1536,8 +1545,14 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
 #if SEXP_USE_RATIOS
     case SEXP_NUM_FLO_RAT:
       f = sexp_flonum_value(a);
-      g = sexp_ratio_to_double(b);
-      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
+      if (isinf(f)) {
+        r = f > 0 ? SEXP_ONE : SEXP_NEG_ONE;
+      } else if (isnan(f)) {
+        r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", a);
+      } else {
+        g = sexp_ratio_to_double(b);
+        r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
+      }
       break;
     case SEXP_NUM_FIX_RAT:
     case SEXP_NUM_BIG_RAT:
