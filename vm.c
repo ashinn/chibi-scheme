@@ -1750,8 +1750,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       _ARG1 = sexp_make_boolean(i);
     } else {
       _ARG1 = sexp_compare(ctx, tmp1, tmp2);
-      sexp_check_exception();
-      _ARG1 = sexp_make_boolean(sexp_unbox_fixnum(_ARG1) < 0);
+      if (sexp_exceptionp(_ARG1)) {
+        if (strcmp("can't compare NaN", sexp_string_data(sexp_exception_message(_ARG1))) == 0)
+          _ARG1 = SEXP_FALSE;
+        else
+          goto call_error_handler;
+      } else {
+        _ARG1 = sexp_make_boolean(sexp_unbox_fixnum(_ARG1) < 0);
+      }
     }
 #else
 #if SEXP_USE_FLONUMS
@@ -1775,8 +1781,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       _ARG1 = sexp_make_boolean(i);
     } else {
       _ARG1 = sexp_compare(ctx, tmp1, tmp2);
-      sexp_check_exception();
-      _ARG1 = sexp_make_boolean(sexp_unbox_fixnum(_ARG1) <= 0);
+      if (sexp_exceptionp(_ARG1)) {
+        if (strcmp("can't compare NaN", sexp_string_data(sexp_exception_message(_ARG1))) == 0)
+          _ARG1 = SEXP_FALSE;
+        else
+          goto call_error_handler;
+      } else {
+        _ARG1 = sexp_make_boolean(sexp_unbox_fixnum(_ARG1) <= 0);
+      }
     }
 #else
 #if SEXP_USE_FLONUMS
@@ -1828,8 +1840,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
       /* neither is complex */
       _ARG1 = sexp_compare(ctx, tmp1, tmp2);
-      sexp_check_exception();
-      _ARG1 = sexp_make_boolean(_ARG1 == SEXP_ZERO);
+      if (sexp_exceptionp(_ARG1)) {
+        if (strcmp("can't compare NaN", sexp_string_data(sexp_exception_message(_ARG1))) == 0)
+          _ARG1 = SEXP_FALSE;
+        else
+          goto call_error_handler;
+      } else {
+        _ARG1 = sexp_make_boolean(_ARG1 == SEXP_ZERO);
+      }
     }
 #else
 #if SEXP_USE_FLONUMS
