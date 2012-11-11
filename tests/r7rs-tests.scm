@@ -855,6 +855,16 @@
 (test #f (char-lower-case? #\A))
 (test #f (char-lower-case? #\3))
 
+(test #t (char-alphabetic? #\Λ))
+(test #f (char-alphabetic? #\x0E50))
+(test #t (char-upper-case? #\Λ))
+(test #f (char-upper-case? #\λ))
+(test #f (char-lower-case? #\Λ))
+(test #t (char-lower-case? #\λ))
+(test #f (char-numeric? #\Λ))
+(test #t (char-numeric? #\x0E50))
+(test #t (char-whitespace? #\x1680))
+
 (test 0 (digit-value #\0))
 (test 3 (digit-value #\3))
 (test 9 (digit-value #\9))
@@ -954,6 +964,12 @@
 (test #t (string-ci>=? "abc" "aBc"))
 (test #f (string-ci>=? "abc" "aBcD"))
 (test #t (string-ci>=? "ABCd" "aBc"))
+
+(test #t (string-ci=? "ΑΒΓ" "αβγ"))
+(test #f (string-ci<? "ΑΒΓ" "αβγ"))
+(test #f (string-ci>? "ΑΒΓ" "αβγ"))
+(test #t (string-ci<=? "ΑΒΓ" "αβγ"))
+(test #t (string-ci>=? "ΑΒΓ" "αβγ"))
 
 (test "ABC" (string-upcase "abc"))
 (test "ABC" (string-upcase "ABC"))
