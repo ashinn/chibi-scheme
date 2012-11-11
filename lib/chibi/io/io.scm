@@ -14,8 +14,19 @@
       ((>= i to))
     (string-set! dst j (string-ref src i))))
 
-(define (utf8->string vec)
-  (string-copy (utf8->string! vec)))
+(define (utf8->string vec . o)
+  (if (pair? o)
+      (let ((start (car o))
+            (end (if (pair? (cdr o)) (cadr o) (bytevector-length vec))))
+        (utf8->string (subbytes vec start end)))
+      (string-copy (utf8->string! vec))))
+
+(define (string->utf8 str . o)
+  (if (pair? o)
+      (let ((start (car o))
+            (end (if (pair? (cdr o)) (cadr o) (string-length str))))
+        (string->utf8 (substring str start end)))
+      (%string->utf8 str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reading and writing
@@ -38,10 +49,8 @@
   (let ((out (if (pair? o) (car o) (current-output-port)))
         (o (if (pair? o) (cdr o) o)))
     (if (pair? o)
-        (let ((start (if (pair? o) (car o) 0))
-              (end (if (and (pair? o) (pair? (cdr o)))
-                       (cadr o)
-                       (string-length str))))
+        (let ((start (car o))
+              (end (if (pair? (cdr o)) (cadr o) (string-length str))))
           (cond-expand
            (string-streams
             (if (zero? start)
