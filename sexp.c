@@ -2115,6 +2115,9 @@ sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
 #define INIT_STRING_BUFFER_SIZE 128
 
 sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
+#if SEXP_USE_UTF8_STRINGS
+  int len;
+#endif
   int c, i=0;
   sexp_sint_t size=INIT_STRING_BUFFER_SIZE;
   char initbuf[INIT_STRING_BUFFER_SIZE];
@@ -2142,6 +2145,14 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
 #endif
           }
           c = sexp_unbox_fixnum(res);
+#if SEXP_USE_UTF8_STRINGS
+          if ((unsigned)c > 0x80) {
+            len = sexp_utf8_char_byte_count(c);
+            sexp_utf8_encode_char((unsigned char*)buf + i, len, c);
+            i += len;
+            continue;
+          }
+#endif
         }
         break;
 #if SEXP_USE_ESCAPE_NEWLINE
@@ -2157,7 +2168,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
       break;
     }
     buf[i++] = c;
-    if (i >= size) {       /* expand buffer w/ malloc(), later free() it */
+    if (i+4 >= size) {       /* expand buffer w/ malloc(), later free() it */
       tmp = (char*) sexp_malloc(size*2);
       if (!tmp) {res = sexp_global(ctx, SEXP_G_OOM_ERROR); break;}
       memcpy(tmp, buf, i);
