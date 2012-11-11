@@ -1649,5 +1649,6 @@
 (test #t (exact? (jiffies-per-second)))
 
 (test #t (list? (features)))
+(test #t (and (memq 'r7rs (features)) #t))
 
 (test-end)
