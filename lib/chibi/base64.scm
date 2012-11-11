@@ -223,12 +223,12 @@
                       (eqv? #\= (string-ref src src-offset)))
                  ;; done
                  (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
-                   (write-string dst dst-len out)))
+                   (write-string dst out 0 dst-len)))
                 ((eqv? b1 *outside-char*)
-                 (write-string dst dst-len out)
+                 (write-string dst out 0 dst-len)
                  (lp 0))
                 (else
-                 (write-string dst dst-len out)
+                 (write-string dst out 0 dst-len)
                  ;; one to three chars left in buffer
                  (string-set! src 0 (enc b1))
                  (cond
@@ -248,7 +248,7 @@
              src 0 src-len dst
              (lambda (src-offset dst-len b1 b2 b3)
                (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
-                 (write-string dst dst-len out)))))))))))
+                 (write-string dst out 0 dst-len)))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; encoding
@@ -318,7 +318,7 @@
       (let lp ()
         (let ((n (read-string! 2048 src in)))
           (base64-encode-string! src 0 n dst)
-          (write-string dst (* 3 (quotient (+ n 3) 4)) out)
+          (write-string dst out 0 (* 3 (quotient (+ n 3) 4)))
           (if (= n 2048)
               (lp)))))))
 

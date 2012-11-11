@@ -483,7 +483,7 @@
 (define (display x . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (cond ((char? x) (write-char x out))
-          ((string? x) (write-string x #t out))
+          ((string? x) (%write-string x #t out))
           (else (write x out)))))
 
 (define (newline . o)

@@ -1348,6 +1348,7 @@
       (output-port-open? out)))
 
 (test #t (eof-object? (read (open-input-string ""))))
+(test #t (char-ready? (open-input-string "42")))
 (test 42 (read (open-input-string " 42 ")))
 
 (test #t (eof-object? (read-char (open-input-string ""))))
@@ -1366,10 +1367,48 @@
       (write 'abc out)
       (get-output-string out)))
 
+(test "abc def"
+    (let ((out (open-output-string)))
+      (display "abc def" out)
+      (get-output-string out)))
+
+(test "abc"
+    (let ((out (open-output-string)))
+      (display #\a out)
+      (display "b" out)
+      (display #\c out)
+      (get-output-string out)))
+
+(test "\n"
+    (let ((out (open-output-string)))
+      (newline out)
+      (get-output-string out)))
+
+(test "abc def"
+    (let ((out (open-output-string)))
+      (write-string "abc def" out)
+      (get-output-string out)))
+
+(test "def"
+    (let ((out (open-output-string)))
+      (write-string "abc def" out 4)
+      (get-output-string out)))
+
+(test "c d"
+    (let ((out (open-output-string)))
+      (write-string "abc def" out 2 5)
+      (get-output-string out)))
+
+(test ""
+  (let ((out (open-output-bytevector)))
+    (flush-output-port out)
+    (get-output-string out)))
+
 (test #t (eof-object? (read-u8 (open-input-bytevector #u8()))))
 (test 1 (read-u8 (open-input-bytevector #u8(1 2 3))))
 
 (test #t (eof-object? (read-bytevector 3 (open-input-bytevector #u8()))))
+(test #t (u8-ready? (open-input-bytevector #u8(1))))
 (test #u8(1) (read-bytevector 3 (open-input-bytevector #u8(1))))
 (test #u8(1 2) (read-bytevector 3 (open-input-bytevector #u8(1 2))))
 (test #u8(1 2 3) (read-bytevector 3 (open-input-bytevector #u8(1 2 3))))
@@ -1395,6 +1434,26 @@
     (write-u8 1 out)
     (write-u8 2 out)
     (write-u8 3 out)
+    (get-output-bytevector out)))
+
+(test #u8(1 2 3 4 5)
+  (let ((out (open-output-bytevector)))
+    (write-bytevector #u8(1 2 3 4 5) out)
+    (get-output-bytevector out)))
+
+(test #u8(3 4 5)
+  (let ((out (open-output-bytevector)))
+    (write-bytevector #u8(1 2 3 4 5) out 2)
+    (get-output-bytevector out)))
+
+(test #u8(3 4)
+  (let ((out (open-output-bytevector)))
+    (write-bytevector #u8(1 2 3 4 5) out 2 4)
+    (get-output-bytevector out)))
+
+(test #u8()
+  (let ((out (open-output-bytevector)))
+    (flush-output-port out)
     (get-output-bytevector out)))
 
 (test "#0=(1 . #0#)"  ;; not guaranteed to be 0 indexed, spacing may differ
