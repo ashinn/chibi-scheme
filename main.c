@@ -314,7 +314,7 @@ void run_main (int argc, char **argv) {
   char *impmod, *p;
   sexp_sint_t len;
 #endif
-  char *arg, *prefix=NULL, *suffix=NULL;
+  char *arg, *prefix=NULL, *suffix=NULL, *main_symbol=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
@@ -451,6 +451,9 @@ void run_main (int argc, char **argv) {
       if (ctx) sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
       break;
 #endif
+    case 'r':
+      main_symbol = argv[i][2] == '\0' ? "main" : argv[i]+2;
+      break;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
       sexp_usage(1);
@@ -492,11 +495,13 @@ void run_main (int argc, char **argv) {
       sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
 #endif
       /* SRFI-22: run main if specified */
-      sym = sexp_intern(ctx, "main", -1);
-      tmp = sexp_env_ref(env, sym, SEXP_FALSE);
-      if (sexp_procedurep(tmp)) {
-        args = sexp_list1(ctx, args);
-        check_exception(ctx, sexp_apply(ctx, tmp, args));
+      if (main_symbol) {
+        sym = sexp_intern(ctx, main_symbol, -1);
+        tmp = sexp_env_ref(env, sym, SEXP_FALSE);
+        if (sexp_procedurep(tmp)) {
+          args = sexp_list1(ctx, args);
+          check_exception(ctx, sexp_apply(ctx, tmp, args));
+        }
       }
     } else {
       repl(ctx, env);

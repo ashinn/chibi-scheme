@@ -20,7 +20,7 @@
     (for-each (lambda (i) (hash-table-set! ls2-tab i #t)) ls2)
     (remove (lambda (i) (hash-table-exists? ls2-tab i)) ls1)))
 
-(define (main args)
+(let ((args (command-line)))
   (let lp ((ls (cdr args)) (ascii? #f))
     (cond
      ((and (pair? ls) (not (equal? "" (car ls)))
