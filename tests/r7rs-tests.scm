@@ -1172,8 +1172,7 @@
 
 (test '(b e h) (map cadr '((a b) (d e) (g h))))
 
-(test '(1 4 27 256 3125) (map (lambda (n) (expt n n))
-     '(1 2 3 4 5)))
+(test '(1 4 27 256 3125) (map (lambda (n) (expt n n)) '(1 2 3 4 5)))
 
 (test '(5 7 9) (map + '(1 2 3) '(4 5 6 7)))
 
@@ -1185,6 +1184,12 @@
                       '(a b)))))
       (or (equal? res '(1 2))
           (equal? res '(2 1)))))
+
+(test '(10 200 3000 40 500 6000)
+    (let ((ls1 (list 10 100 1000))
+          (ls2 (list 1 2 3 4 5 6)))
+      (set-cdr! (cddr ls1) ls1)
+      (map * ls1 ls2)))
 
 (test "abdegh" (string-map char-foldcase "AbdEgH"))
 
@@ -1216,11 +1221,20 @@
       (or (equal? res #(1 2))
           (equal? res #(2 1)))))
 
-(test #(0 1 4 9 16) (let ((v (make-vector 5)))
-  (for-each (lambda (i)
-              (vector-set! v i (* i i)))
-            '(0 1 2 3 4))
-  v))
+(test #(0 1 4 9 16)
+    (let ((v (make-vector 5)))
+      (for-each (lambda (i)
+                  (vector-set! v i (* i i)))
+                '(0 1 2 3 4))
+      v))
+
+(test 9750
+    (let ((ls1 (list 10 100 1000))
+          (ls2 (list 1 2 3 4 5 6))
+          (count 0))
+      (set-cdr! (cddr ls1) ls1)
+      (for-each (lambda (x y) (set! count (+ count (* x y)))) ls2 ls1)
+      count))
 
 (test '(101 100 99 98 97)
     (let ((v '()))
