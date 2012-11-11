@@ -369,11 +369,6 @@
   (if (<= n 9)
       (integer->char (+ n (char->integer #\0)))
       (integer->char (+ (- n 10) (char->integer #\A)))))
-(define (digit-value ch)
-  (if (char-numeric? ch)
-      (- (char->integer ch) (char->integer #\0))
-      (and (<= 65 (char->integer (char-upcase ch)) 70)
-           (- (char->integer (char-upcase ch)) 55))))
 
 (define (%number->string num)
   (call-with-output-string (lambda (out) (write num out))))
