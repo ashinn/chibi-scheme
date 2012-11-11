@@ -1145,7 +1145,13 @@
 (test #u8(0 1 2 3 4) (bytevector-append #u8(0 1 2) #u8(3 4)))
 (test #u8(0 1 2 3 4 5) (bytevector-append #u8(0 1 2) #u8(3 4) #u8(5)))
 
-(test "A" (utf8->string #u8(#x41)))
+(test "ABC" (utf8->string #u8(#x41 #x42 #x43)))
+(test "ABC" (utf8->string #u8(0 #x41 #x42 #x43) 1))
+(test "ABC" (utf8->string #u8(0 #x41  #x42 #x43 0) 1 4))
+(test "λ" (utf8->string #u8(0 #xCE #xBB 0) 1 3))
+(test #u8(#x41 #x42 #x43) (string->utf8 "ABC"))
+(test #u8(#x42 #x43) (string->utf8 "ABC" 1))
+(test #u8(#x42) (string->utf8 "ABC" 1 2))
 (test #u8(#xCE #xBB) (string->utf8 "λ"))
 
 ;; 6.10 Control Features
@@ -1736,5 +1742,8 @@
 
 (test #t (list? (features)))
 (test #t (and (memq 'r7rs (features)) #t))
+
+(test #t (file-exists? "."))
+(test #f (file-exists? " no such file "))
 
 (test-end)
