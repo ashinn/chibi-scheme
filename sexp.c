@@ -2150,7 +2150,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
             len = sexp_utf8_char_byte_count(c);
             sexp_utf8_encode_char((unsigned char*)buf + i, len, c);
             i += len;
-            continue;
+            goto maybe_expand;
           }
 #endif
         }
@@ -2168,6 +2168,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
       break;
     }
     buf[i++] = c;
+  maybe_expand:
     if (i+4 >= size) {       /* expand buffer w/ malloc(), later free() it */
       tmp = (char*) sexp_malloc(size*2);
       if (!tmp) {res = sexp_global(ctx, SEXP_G_OOM_ERROR); break;}
