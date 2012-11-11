@@ -96,7 +96,7 @@
                          (lambda () (make-iset))))))))))
             (lp))))))))
 
-(define (main args)
+(let ((args (command-line)))
   (let lp ((ls (cdr args))
            (min-count 26)
            (max-char-sets #f)

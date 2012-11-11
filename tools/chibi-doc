@@ -666,7 +666,7 @@ div#footer {padding-bottom: 50px}
        ,@(reverse (append-map (lambda (x) (extract-docs x defs exports 'ffi))
                               (module-shared-includes mod)))))))
 
-(define (main args)
+(let ((args (command-line)))
   (case (length args)
     ((0 1)
      (convert (current-input-port)))

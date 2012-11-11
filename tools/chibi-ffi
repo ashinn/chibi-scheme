@@ -1639,7 +1639,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; main
 
-(define (main args)
+(let ((args (command-line)))
   (if (not (null? args)) (set! args (cdr args)))
   (let* ((compile? (and (pair? args) (member (car args) '("-c" "--compile"))))
          (args (if compile? (cdr args) args))

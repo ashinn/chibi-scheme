@@ -178,7 +178,7 @@
     "Whitespace=Zs,Zl,Zp,0009,000A,000B,000C,000D"
     "Digit=Nd"))
 
-(define (main args)
+(let ((args (command-line)))
   (let lp ((ls (cdr args))
            (data "data/UnicodeData.txt")
            (derived "data/DerivedCoreProperties.txt")
