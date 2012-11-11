@@ -28,16 +28,28 @@
     (display str out)
     (newline out)))
 
-;;> @subsubsubsection{(write-string str n [out])}
+;;> @subsubsubsection{(write-string str [out [start [end]]])}
 
-;;> Writes the first @var{n} bytes of @var{str} to output port
-;;> @var{out}.
+;;> Writes the characters from @var{start} to @var{end} of string
+;;> @var{str} to output port @var{out}, where @var{start} defaults
+;;> to 0 and @var{end} defaults to @scheme{(string-length @var{str})}.
 
-(cond-expand
- ((not string-streams)
-  (define (write-string str n . o)
-    (let ((out (if (pair? o) (car o) (current-output-port))))
-      (display (substring str 0 n) out)))))
+(define (write-string str . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (o (if (pair? o) (cdr o) o)))
+    (if (pair? o)
+        (let ((start (if (pair? o) (car o) 0))
+              (end (if (and (pair? o) (pair? (cdr o)))
+                       (cadr o)
+                       (string-length str))))
+          (cond-expand
+           (string-streams
+            (if (zero? start)
+                (%write-string str end out)
+                (display (substring str start end) out)))
+           (else
+            (display (substring str start end) out))))
+        (display str out))))
 
 ;;> @subsubsubsection{(read-line [in [n]])}
 
@@ -200,7 +212,7 @@
    (lambda (str start end)
      (let ((str (if (zero? start) str (substring str start)))
            (n (- end start)))
-       (for-each (lambda (p) (write-string str n p)) ports)
+       (for-each (lambda (p) (%write-string str n p)) ports)
        n))))
 
 (define (make-filtered-output-port filter out)
@@ -210,7 +222,7 @@
             (s1 (if (and (zero? start) (= end len)) str (substring str start end)))
             (s2 (filter s1)))
        (if (string? s2)
-           (write-string s2 (string-length s2) out))))))
+           (%write-string s2 (string-length s2) out))))))
 
 (define (make-concatenated-port . ports)
   (make-custom-input-port

@@ -51,7 +51,7 @@
    vector->list vector->string
    vector-copy vector-copy! vector-fill!  vector-for-each vector-length
    vector-map vector-ref vector-set!  vector?  when with-exception-handler
-   write-bytevector write-char write-u8 zero?)
+   write-bytevector write-char write-string write-u8 zero?)
   (include "define-values.scm"
            "extras.scm"
            "misc-macros.scm"))

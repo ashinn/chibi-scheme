@@ -138,7 +138,7 @@ _FN1OPTP(SEXP_VOID, _I(SEXP_IPORT), "peek-char", (sexp)"current-input-port", sex
 _FN5(_I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "five", 0, sexp_five),
 #else
 _OP(SEXP_OPC_IO, SEXP_OP_WRITE_CHAR, 1, 3, SEXP_VOID, _I(SEXP_CHAR), _I(SEXP_OPORT), SEXP_FALSE, 0, "write-char", (sexp)"current-output-port", NULL),
-_OP(SEXP_OPC_IO, SEXP_OP_WRITE_STRING, 2, 3, SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_OPORT), 0, "write-string", (sexp)"current-output-port", NULL),
+_OP(SEXP_OPC_IO, SEXP_OP_WRITE_STRING, 2, 3, SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_OPORT), 0, "%write-string", (sexp)"current-output-port", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_READ_CHAR, 0, 3, _I(SEXP_CHAR), _I(SEXP_IPORT), SEXP_FALSE, SEXP_FALSE, 0, "read-char", (sexp)"current-input-port", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_PEEK_CHAR, 0, 3, _I(SEXP_CHAR), _I(SEXP_IPORT), SEXP_FALSE, SEXP_FALSE, 0, "peek-char", (sexp)"current-input-port", NULL),
 #endif
