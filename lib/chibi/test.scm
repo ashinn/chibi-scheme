@@ -658,7 +658,7 @@
          (group (make-test-group name parent)))
     (cond
      ((and parent
-           (equal? 0 (test-group-ref parent 'count 0))
+           ;; (zero? (test-group-ref parent 'count 0))
            (zero? (test-group-ref parent 'subgroups-count 0)))
       (newline)))
     (cond
