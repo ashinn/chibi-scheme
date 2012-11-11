@@ -1397,6 +1397,31 @@
     (write-u8 3 out)
     (get-output-bytevector out)))
 
+(test "#0=(1 . #0#)"  ;; not guaranteed to be 0 indexed, spacing may differ
+    (let ((out (open-output-string))
+          (x (list 1)))
+      (set-cdr! x x)
+      (write x out)
+      (get-output-string out)))
+
+(test "((1 2 3) (1 2 3))"
+    (let ((out (open-output-string))
+          (x (list 1 2 3)))
+      (write (list x x) out)
+      (get-output-string out)))
+
+(test "((1 2 3) (1 2 3))"
+    (let ((out (open-output-string))
+          (x (list 1 2 3)))
+      (write-simple (list x x) out)
+      (get-output-string out)))
+
+(test "(#0=(1 2 3) #0#)"
+    (let ((out (open-output-string))
+          (x (list 1 2 3)))
+      (write-shared (list x x) out)
+      (get-output-string out)))
+
 ;; read syntax
 
 (test #t (read (open-input-string "#t")))
@@ -1409,6 +1434,8 @@
 (test '(1 . 2) (read (open-input-string "(1 . 2)")))
 (test '(1 2) (read (open-input-string "(1 . (2))")))
 (test '(1 2 3 4 5) (read (open-input-string "(1 . (2 3 4 . (5)))")))
+(test '1 (cadr (read (open-input-string "#0=(1 . #0#)"))))
+(test '(1 2 3) (cadr (read (open-input-string "(#0=(1 2 3) #0#)"))))
 
 (test '(quote (1 2)) (read (open-input-string "'(1 2)")))
 (test '(quote (1 (unquote 2))) (read (open-input-string "'(1 ,2)")))
