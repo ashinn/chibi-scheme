@@ -855,9 +855,13 @@
 (test #f (char-lower-case? #\A))
 (test #f (char-lower-case? #\3))
 
+(test 0 (digit-value #\0))
 (test 3 (digit-value #\3))
-;; (test 4 (digit-value #\x0664))
-;; (test 0 (digit-value #\x0EA6))
+(test 9 (digit-value #\9))
+(test 4 (digit-value #\x0664))
+(test 0 (digit-value #\x0AE6))
+(test #f (digit-value #\.))
+(test #f (digit-value #\-))
 
 (test 97 (char->integer #\a))
 (test #\a (integer->char 97))
@@ -1468,7 +1472,7 @@
 
 ;; Each test is of the form:
 ;;
-;;   (input-str expected-value (expected-write-values ...))
+;;   (input-str expected-value expected-write-values ...)
 ;;
 ;; where the input should be eqv? to the expected-value, and the
 ;; written output the same as any of the expected-write-values.  The

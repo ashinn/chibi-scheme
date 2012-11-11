@@ -5,8 +5,7 @@
    (full-unicode
     (import (chibi char-set full)
             (chibi char-set base)
-            (chibi iset base)
-            (only (chibi) digit-value))
+            (chibi iset base))
     (include "char/full.scm")
     (include "char/case-offsets.scm"))
    (else
@@ -18,6 +17,7 @@
            char-alphabetic?  char-lower-case? char-numeric?
            char-upper-case? char-whitespace? digit-value
            char-upcase char-downcase))))
+  (include "digit-value.scm")
   (export
    char-alphabetic? char-ci<=? char-ci<? char-ci=? char-ci>=? char-ci>?
    char-downcase char-foldcase char-lower-case? char-numeric?
