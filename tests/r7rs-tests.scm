@@ -1,14 +1,44 @@
 ;; -*- coding: utf-8 -*-
 
-(import (scheme base) (scheme char) (scheme division) (scheme lazy)
-        (scheme inexact) (scheme complex) (scheme time) (scheme eval)
-        (scheme file) (scheme read) (scheme write) (scheme case-lambda)
-        (scheme process-context)
+(import (scheme base) (scheme char) (scheme lazy)
+        (scheme inexact) (scheme complex) (scheme time)
+        (scheme file) (scheme read) (scheme write)
+        (scheme eval) (scheme process-context) (scheme case-lambda)
         (chibi test))
 
-(test-begin "r7rs")
+;; R7RS test suite.  Covers all procedures and syntax in the small
+;; language except `delete-file'.  Currently assumes full-unicode
+;; support, the full numeric tower and all standard libraries
+;; provided.
+;;
+;; Uses the (chibi test) library which is written in portable R7RS.
+;; This provides test-begin, test-end and test, which could be defined
+;; as something like:
+;;
+;;   (define (test-begin . o) #f)
+;;
+;;   (define (test-end . o) #f)
+;;
+;;   (define-syntax test
+;;     (syntax-rules ()
+;;       ((test expected expr)
+;;        (let ((res expr))
+;;          (cond
+;;           ((not (equal? expr expected))
+;;            (display "FAIL: ")
+;;            (write 'expr)
+;;            (display ": expected ")
+;;            (write expected)
+;;            (display " but got ")
+;;            (write res)
+;;            (newline)))))))
+;;
+;; however (chibi test) provides nicer output, timings, and
+;; approximate equivalence for floating point numbers.
 
-;; 4.1 Primitive expression types
+(test-begin "R7RS")
+
+(test-begin "4.1 Primitive expression types")
 
 (let ()
   (define x 28)
@@ -57,26 +87,33 @@
   (define x 2)
   (test 3 (+ x 1)))
 
-;; 4.2 Derived expression types
+(test-end)
 
-(test 'greater (cond ((> 3 2) 'greater)
-      ((< 3 2) 'less)))
+(test-begin "4.2 Derived expression types")
 
-(test 'equal (cond ((> 3 3) 'greater)
-      ((< 3 3) 'less)
-      (else 'equal)))
+(test 'greater
+    (cond ((> 3 2) 'greater)
+          ((< 3 2) 'less)))
 
-(test 2 (cond ((assv 'b '((a 1) (b 2))) => cadr)
-      (else #f)))
+(test 'equal
+    (cond ((> 3 3) 'greater)
+          ((< 3 3) 'less)
+          (else 'equal)))
 
-(test 'composite (case (* 2 3)
-  ((2 3 5 7) 'prime)
-  ((1 4 6 8 9) 'composite)))
+(test 2
+    (cond ((assv 'b '((a 1) (b 2))) => cadr)
+          (else #f)))
 
-(test 'c (case (car '(c d))
-  ((a e i o u) 'vowel)
-  ((w y) 'semivowel)
-  (else => (lambda (x) x))))
+(test 'composite
+    (case (* 2 3)
+      ((2 3 5 7) 'prime)
+      ((1 4 6 8 9) 'composite)))
+
+(test 'c
+    (case (car '(c d))
+      ((a e i o u) 'vowel)
+      ((w y) 'semivowel)
+      (else => (lambda (x) x))))
 
 (test #t (and (= 2 2) (> 2 1)))
 (test #f (and (= 2 2) (< 2 1)))
@@ -258,16 +295,19 @@
 (test 6 (mult 1 2 3))
 (test 24 (mult 1 2 3 4))
 
-;; 4.3 Macros
+(test-end)
 
-(test 'now (let-syntax ((when (syntax-rules ()
-                     ((when test stmt1 stmt2 ...)
-                      (if test
-                          (begin stmt1
-                                 stmt2 ...))))))
-  (let ((if #t))
-    (when if (set! if 'now))
-    if)))
+(test-begin "4.3 Macros")
+
+(test 'now (let-syntax
+               ((when (syntax-rules ()
+                        ((when test stmt1 stmt2 ...)
+                         (if test
+                             (begin stmt1
+                                    stmt2 ...))))))
+             (let ((if #t))
+               (when if (set! if 'now))
+               if)))
 
 (test 'outer (let ((x 'outer))
   (let-syntax ((m (syntax-rules () ((m) x))))
@@ -305,7 +345,9 @@
 
 (test 'ok (let ((=> #f)) (cond (#t => 'ok))))
 
-;; 5 Program structure
+(test-end)
+
+(test-begin "5 Program structure")
 
 (define add3
   (lambda (x) (+ x 3)))
@@ -348,10 +390,12 @@
           (set-kar! k 3)
           (kar k)))
 
+(test-end)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 6 Standard Procedures
 
-;; 6.1 Equivalence Predicates
+(test-begin "6.1 Equivalence Predicates")
 
 (test #t (eqv? 'a 'a))
 (test #f (eqv? 'a 'b))
@@ -360,15 +404,16 @@
 (test #t (eqv? 100000000 100000000))
 (test #f (eqv? (cons 1 2) (cons 1 2)))
 (test #f (eqv? (lambda () 1)
-      (lambda () 2)))
+               (lambda () 2)))
 (test #f (eqv? #f 'nil))
 
 (define gen-counter
   (lambda ()
     (let ((n 0))
       (lambda () (set! n (+ n 1)) n))))
-(test #t (let ((g (gen-counter)))
-  (eqv? g g)))
+(test #t
+    (let ((g (gen-counter)))
+      (eqv? g g)))
 (test #f (eqv? (gen-counter) (gen-counter)))
 (define gen-loser
   (lambda ()
@@ -380,31 +425,37 @@
 (test #f
 (letrec ((f (lambda () (if (eqv? f g) 'f 'both)))
          (g (lambda () (if (eqv? f g) 'g 'both))))
-  (eqv? f g)))
+   (eqv? f g)))
 
-(test #t (let ((x '(a)))
-  (eqv? x x)))
+(test #t
+    (let ((x '(a)))
+      (eqv? x x)))
 
 (test #t (eq? 'a 'a))
 (test #f (eq? (list 'a) (list 'a)))
 (test #t (eq? '() '()))
-(test #t (let ((x '(a)))
-  (eq? x x)))
-(test #t (let ((x '#()))
-  (eq? x x)))
-(test #t (let ((p (lambda (x) x)))
-  (eq? p p)))
+(test #t
+    (let ((x '(a)))
+      (eq? x x)))
+(test #t
+    (let ((x '#()))
+      (eq? x x)))
+(test #t
+    (let ((p (lambda (x) x)))
+      (eq? p p)))
 
 (test #t (equal? 'a 'a))
 (test #t (equal? '(a) '(a)))
 (test #t (equal? '(a (b) c)
-        '(a (b) c)))
+                 '(a (b) c)))
 (test #t (equal? "abc" "abc"))
 (test #t (equal? 2 2))
 (test #t (equal? (make-vector 5 'a)
-        (make-vector 5 'a)))
+                 (make-vector 5 'a)))
 
-;; 6.2 Numbers
+(test-end)
+
+(test-begin "6.2 Numbers")
 
 (test #t (complex? 3+4i))
 (test #t (complex? 3))
@@ -578,8 +629,7 @@
 
 (test 3 (numerator (/ 6 4)))
 (test 2 (denominator (/ 6 4)))
-(test 2.0 (denominator
-  (inexact (/ 6 4))))
+(test 2.0 (denominator (inexact (/ 6 4))))
 
 (test -5.0 (floor -4.3))
 (test -4.0 (ceiling -4.3))
@@ -667,7 +717,9 @@
 (test 256 (string->number "100" 16))
 (test 100.0 (string->number "1e2"))
 
-;; 6.3 Booleans
+(test-end)
+
+(test-begin "6.3 Booleans")
 
 (test #t #t)
 (test #f #f)
@@ -689,7 +741,9 @@
 (test #t (boolean=? #f #f))
 (test #f (boolean=? #t #f))
 
-;; 6.4 Lists
+(test-end)
+
+(test-begin "6.4 Lists")
 
 (let* ((x (list 'a 'b 'c))
        (y x))
@@ -777,7 +831,9 @@
 
 (test '(1 2 3) (list-copy '(1 2 3)))
 
-;; 6.5 Symbols
+(test-end)
+
+(test-begin "6.5 Symbols")
 
 (test #t (symbol? 'foo))
 (test #t (symbol? (car '(a b))))
@@ -800,7 +856,9 @@
 (test #t (string=? "K. Harper, M.D."
                    (symbol->string (string->symbol "K. Harper, M.D."))))
 
-;; 6.6 Characters
+(test-end)
+
+(test-begin "6.6 Characters")
 
 (test #t (char? #\a))
 (test #f (char? "a"))
@@ -890,7 +948,9 @@
 (test #\λ (char-foldcase #\λ))
 (test #\λ (char-foldcase #\Λ))
 
-;; 6.7 Strings
+(test-end)
+
+(test-begin "6.7 Strings")
 
 (test #t (string? ""))
 (test #t (string? " "))
@@ -1035,7 +1095,9 @@
 (test "xx-xx"
     (let ((str (make-string 5 #\x))) (string-copy! str 2 "-----" 2 3) str))
 
-;; 6.8 Vectors
+(test-end)
+
+(test-begin "6.8 Vectors")
 
 (test #t (vector? #()))
 (test #t (vector? #(1 2 3)))
@@ -1106,7 +1168,9 @@
 (test #(1 2 c 4 5)
     (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e) 2 3) vec))
 
-;; 6.9 Bytevectors
+(test-end)
+
+(test-begin "6.9 Bytevectors")
 
 (test #t (bytevector? #u8()))
 (test #t (bytevector? #u8(0 1 2)))
@@ -1170,7 +1234,9 @@
 (test #u8(#x42) (string->utf8 "ABC" 1 2))
 (test #u8(#xCE #xBB) (string->utf8 "λ"))
 
-;; 6.10 Control Features
+(test-end)
+
+(test-begin "6.10 Control Features")
 
 (test #t (procedure? car))
 (test #f (procedure? 'car))
@@ -1222,8 +1288,9 @@
 
 (test #(b e h) (vector-map cadr '#((a b) (d e) (g h))))
 
-(test #(1 4 27 256 3125) (vector-map (lambda (n) (expt n n))
-            '#(1 2 3 4 5)))
+(test #(1 4 27 256 3125)
+    (vector-map (lambda (n) (expt n n))
+                '#(1 2 3 4 5)))
 
 (test #(5 7 9) (vector-map + '#(1 2 3) '#(4 5 6 7)))
 
@@ -1312,7 +1379,9 @@
             (c 'talk2)
             (reverse path)))))
 
-;; 6.11 Exceptions
+(test-end)
+
+(test-begin "6.11 Exceptions")
 
 (test 65
     (with-exception-handler
@@ -1338,7 +1407,9 @@
 (test #t
     (read-error? (guard (exn (else exn)) (read (open-input-string ")")))))
 
-;; 6.12 Environments and evaluation
+(test-end)
+
+(test-begin "6.12 Environments and evaluation")
 
 (test 21 (eval '(* 7 3) (scheme-report-environment 5)))
 
@@ -1351,7 +1422,9 @@
 (test 1024.0 (eval '(+ (expt 2 10) (sin 0))
                    (environment '(scheme base) '(scheme inexact))))
 
-;; 6.13 Input and output
+(test-end)
+
+(test-begin "6.13 Input and output")
 
 (test #t (port? (current-input-port)))
 (test #t (input-port? (current-input-port)))
@@ -1517,7 +1590,7 @@
       (write-shared (list x x) out)
       (get-output-string out)))
 
-;; read syntax
+(test-begin "Read syntax")
 
 (test #t (read (open-input-string "#t")))
 (test #t (read (open-input-string "#true")))
@@ -1583,6 +1656,10 @@
 (test #x7C (char->integer (string-ref (read (open-input-string "\"\\|\"")) 0)))
 (test "line 1\nline 2\n" (read (open-input-string "\"line 1\nline 2\n\"")))
 (test #x03BB (char->integer (string-ref (read (open-input-string "\"\\x03BB;\"")) 0)))
+
+(test-end)
+
+(test-begin "Numeric syntax")
 
 ;; Numeric syntax adapted from Peter Bex's tests.
 ;;
@@ -1747,6 +1824,12 @@
  ;;("#i1.0+1.0i" (make-rectangular 1.0 1.0) "1.0+1.0i" "1.+1.i")
  )
 
+(test-end)
+
+(test-end)
+
+(test-begin "6.14 System interface")
+
 ;; 6.14 System interface
 
 ;; (test "/usr/local/bin:/usr/bin:/bin" (get-environment-variable "PATH"))
@@ -1775,5 +1858,7 @@
 
 (test #t (file-exists? "."))
 (test #f (file-exists? " no such file "))
+
+(test-end)
 
 (test-end)
