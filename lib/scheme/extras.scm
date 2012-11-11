@@ -39,6 +39,21 @@
 
 (define call/cc call-with-current-continuation)
 
+(define truncate-quotient quotient)
+(define truncate-remainder remainder)
+(define (truncate/ n m)
+  (values (truncate-quotient n m) (truncate-remainder n m)))
+
+(define (floor-quotient n m)
+  (let ((res (floor (/ n m))))
+    (if (and (exact? n) (exact? m))
+        (inexact->exact res)
+        res)))
+(define (floor-remainder n m)
+  (- n (* m (floor-quotient n m))))
+(define (floor/ n m)
+  (values (floor-quotient n m) (floor-remainder n m)))
+
 ;; Adapted from Bawden's algorithm.
 (define (rationalize x e)
   (define (sr x y return)
