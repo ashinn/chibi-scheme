@@ -12,7 +12,7 @@
   (or (null? ls)
       (if (null? (cdr ls))
           (pred (car ls))
-          (if (pred (car ls)) (every1 pred (cdr ls)) #f))))
+          (if (pred (car ls)) (every pred (cdr ls)) #f))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exception utilities
