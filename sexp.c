@@ -2320,16 +2320,37 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   for (; c==SEXP_PLACEHOLDER_DIGIT; c=sexp_read_char(ctx, in), scale*=0.1)
     val += sexp_placeholder_digit_value(10)*scale;
 #endif
+  val += whole;
+  if (negp) val *= -1;
   if (is_precision_indicator(c)) {
     c2 = sexp_read_char(ctx, in);
     if (c2 != '+') sexp_push_char(ctx, c2, in);
     exponent = sexp_read_number(ctx, in, 10);
-    if (sexp_exceptionp(exponent)) return exponent;
+    if (sexp_exceptionp(exponent)) {
+      sexp_gc_release1(ctx);
+      return exponent;
+    }
+#if SEXP_USE_COMPLEX
+    if (sexp_complexp(exponent)) {
+      res = exponent;
+      exponent = (sexp_complex_real(res) == SEXP_ZERO ? sexp_complex_imag(res) : sexp_complex_real(res));
+    }
+#endif
     e = (sexp_fixnump(exponent) ? sexp_unbox_fixnum(exponent)
          : sexp_flonump(exponent) ? sexp_flonum_value(exponent) : 0.0);
+#if SEXP_USE_COMPLEX
+    if (sexp_complexp(res)) {
+      if (sexp_complex_real(res) == SEXP_ZERO) {
+        sexp_complex_imag(res) = sexp_make_flonum(ctx, val * pow(10, e));
+      } else {
+        sexp_complex_real(res) = sexp_make_flonum(ctx, val * pow(10, e));
+      }
+      sexp_gc_release1(ctx);
+      return res;
+    }
+#endif
   }
-  val = (whole + val) * pow(10, e);
-  if (negp) val *= -1;
+  if (e != 0.0) val *= pow(10, e);
 #if SEXP_USE_FLONUMS
   res = sexp_make_flonum(ctx, val);
 #else
