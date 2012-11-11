@@ -180,7 +180,7 @@
             (let ((c (peek-char in)))
               (cond
                ((char-numeric? c)
-                (lp (+ res (* (digit-value (read-char in)) k)) (* k 0.1)))
+                (lp (+ res (* (- (char->integer (read-char in)) (char->integer #\0)) k)) (* k 0.1)))
                ((or (eof-object? c) (memv c delimiters)) res)
                (else (error "invalid char in float syntax" c))))))
         (define (read-name c in)
