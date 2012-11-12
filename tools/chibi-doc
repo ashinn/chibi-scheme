@@ -3,7 +3,7 @@
 (import
  (chibi) (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match)
  (chibi time) (chibi filesystem) (chibi scribble) (chibi highlight)
- (chibi type-inference))
+ (chibi type-inference) (scheme eval))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -103,7 +103,7 @@
         (else (set-car! env (cons (cons name value) (car env))))))
 
 (define (env-extend env vars vals)
-  (append (map cons vars vals) env))
+  (list (append (map cons vars vals) (car env))))
 
 (define (make-default-env)
   `(((section . ,(expand-section 'h1))
@@ -630,9 +630,10 @@ div#footer {padding-bottom: 50px}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (output doc)
-  (sxml-display-as-html
-   (fix-header (fix-paragraphs (fix-begins (expand doc (make-default-env)))))))
+(define (output doc . o)
+  (let ((env (if (pair? o) (car o) (make-default-env))))
+    (sxml-display-as-html
+     (fix-header (fix-paragraphs (fix-begins (expand doc env)))))))
 
 (define (convert in)
   (output (scribble-parse in)))
@@ -664,7 +665,10 @@ div#footer {padding-bottom: 50px}
        ,@(reverse (append-map (lambda (x) (extract-docs x defs exports))
                               (module-includes mod)))
        ,@(reverse (append-map (lambda (x) (extract-docs x defs exports 'ffi))
-                              (module-shared-includes mod)))))))
+                              (module-shared-includes mod))))
+     (env-extend (make-default-env)
+                 '(example-env)
+                 (list (environment '(scheme base) mod-name))))))
 
 (let ((args (command-line)))
   (case (length args)

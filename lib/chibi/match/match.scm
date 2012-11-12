@@ -141,7 +141,7 @@
 ;;> if the value isn't a pair.
 
 ;;> @example{(match '(1 . 2) ((= car x) x))}
-;;> @example{(match 4 ((= sqrt x) x))}
+;;> @example{(match 4 ((= square x) x))}
 
 ;;> The record operator @scheme{$} is used as a concise way to match
 ;;> records defined by SRFI-9 (or SRFI-99).  The usage is
