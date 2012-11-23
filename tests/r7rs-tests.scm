@@ -1096,6 +1096,12 @@
 (test "xx-xx"
     (let ((str (make-string 5 #\x))) (string-copy! str 2 "-----" 2 3) str))
 
+;; same source and dest
+(test "aabde"
+    (let ((str (string-copy "abcde"))) (string-copy! str 1 str 0 2) str))
+(test "abcab"
+    (let ((str (string-copy "abcde"))) (string-copy! str 3 str 0 2) str))
+
 (test-end)
 
 (test-begin "6.8 Vectors")
@@ -1169,6 +1175,12 @@
 (test #(1 2 c 4 5)
     (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e) 2 3) vec))
 
+;; same source and dest
+(test #(1 1 2 4 5)
+    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 1 vec 0 2) vec))
+(test #(1 2 3 1 2)
+    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 3 vec 0 2) vec))
+
 (test-end)
 
 (test-begin "6.9 Bytevectors")
@@ -1217,6 +1229,16 @@
 (test #u8(1 2 8 4 5)
     (let ((bv (bytevector 1 2 3 4 5)))
       (bytevector-copy! bv 2 #u8(6 7 8 9 10) 2 3)
+      bv))
+
+;; same source and dest
+(test #u8(1 1 2 4 5)
+    (let ((bv (bytevector 1 2 3 4 5)))
+      (bytevector-copy! bv 1 bv 0 2)
+      bv))
+(test #u8(1 2 3 1 2)
+    (let ((bv (bytevector 1 2 3 4 5)))
+      (bytevector-copy! bv 3 bv 0 2)
       bv))
 
 (test #u8() (bytevector-append #u8()))
