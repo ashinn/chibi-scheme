@@ -140,22 +140,16 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
       }
     }
 #endif
-    if (sexp_port_stream(port) && ! sexp_port_no_closep(port)) {
+    if (sexp_port_stream(port) && ! sexp_port_no_closep(port))
       /* close the stream */
       fclose(sexp_port_stream(port));
       /* free the buffer if allocated */
-      if (sexp_port_buf(port)
-          && (sexp_oportp(port)
+    if (sexp_port_buf(port) && sexp_oportp(port)
 #if !SEXP_USE_STRING_STREAMS
-              || (sexp_iportp(port) && sexp_truep(sexp_port_cookie(port)))
+        && !sexp_port_customp(port)
 #endif
-              )
-#if SEXP_USE_STRING_STREAMS
-          && !sexp_port_customp(port)
-#endif
-          )
-        free(sexp_port_buf(port));
-    }
+        )
+      free(sexp_port_buf(port));
   }
   return res;
 }
