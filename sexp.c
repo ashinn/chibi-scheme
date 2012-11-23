@@ -144,7 +144,9 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
       /* close the stream */
       fclose(sexp_port_stream(port));
       /* free the buffer if allocated */
-    if (sexp_port_buf(port) && sexp_oportp(port) && sexp_vectorp(sexp_port_cookie(port))
+    if (sexp_port_buf(port) && sexp_oportp(port)
+        /* output string ports have list cookies */
+        && (sexp_nullp(sexp_port_cookie(port)) || sexp_pairp(sexp_port_cookie(port)))
 #if !SEXP_USE_STRING_STREAMS
         && !sexp_port_customp(port)
 #endif
