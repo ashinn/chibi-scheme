@@ -1526,17 +1526,17 @@
 
 (test #u8(6 7 8 9 10)
   (let ((bv (bytevector 1 2 3 4 5)))
-    (read-bytevector! bv 0 5 (open-input-bytevector #u8(6 7 8 9 10)))
+    (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 0 5)
     bv))
 
 (test #u8(6 7 8 4 5)
   (let ((bv (bytevector 1 2 3 4 5)))
-    (read-bytevector! bv 0 3 (open-input-bytevector #u8(6 7 8 9 10)))
+    (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 0 3)
     bv))
 
 (test #u8(1 2 3 6 5)
   (let ((bv (bytevector 1 2 3 4 5)))
-    (read-bytevector! bv 3 4 (open-input-bytevector #u8(6 7 8 9 10)))
+    (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 3 4)
     bv))
 
 (test #u8(1 2 3)
