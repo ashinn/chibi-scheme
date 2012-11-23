@@ -1510,7 +1510,7 @@
       (get-output-string out)))
 
 (test ""
-  (let ((out (open-output-bytevector)))
+  (let ((out (open-output-string)))
     (flush-output-port out)
     (get-output-string out)))
 
