@@ -521,7 +521,7 @@
                 (or (test-group-ref (current-test-group) 'count) 0)
                 1)
              (current-column-width))))
-      (display (string-append "\n" (substring indent 4))))
+      (display (string-append "\n" (string-copy indent 4))))
   ;; update global failure count for exit status
   (cond
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
