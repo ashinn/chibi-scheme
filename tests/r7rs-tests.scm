@@ -1092,7 +1092,7 @@
 (test "---xx"
     (let ((str (make-string 5 #\x))) (string-copy! str 0 "-----" 2) str))
 (test "xx---"
-    (let ((str (make-string 5 #\x))) (string-copy! str 2 "-----") str))
+    (let ((str (make-string 5 #\x))) (string-copy! str 2 "-----" 0 3) str))
 (test "xx-xx"
     (let ((str (make-string 5 #\x))) (string-copy! str 2 "-----" 2 3) str))
 
@@ -1165,7 +1165,7 @@
 (test #(c d e 4 5)
     (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 0 #(a b c d e) 2) vec))
 (test #(1 2 a b c)
-    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e)) vec))
+    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e) 0 3) vec))
 (test #(1 2 c 4 5)
     (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e) 2 3) vec))
 
@@ -1212,7 +1212,7 @@
       bv))
 (test #u8(1 2 6 7 8)
     (let ((bv (bytevector 1 2 3 4 5)))
-      (bytevector-copy! bv 2 #u8(6 7 8 9 10))
+      (bytevector-copy! bv 2 #u8(6 7 8 9 10) 0 3)
       bv))
 (test #u8(1 2 8 4 5)
     (let ((bv (bytevector 1 2 3 4 5)))
