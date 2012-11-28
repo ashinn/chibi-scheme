@@ -210,6 +210,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2012/11/28 - fixing typo s/vetor/vector in largely unused set! code
 ;; 2012/05/23 - fixing combinatorial explosion of code in certain or patterns
 ;; 2011/09/25 - fixing bug when directly matching an identifier repeated in
 ;;              the pattern (thanks to Stefan Israelsson Tampe)
@@ -671,7 +672,7 @@
        (if (>= j len)
          (let ((id (reverse id-ls)) ...) (sk ... i))
          (let ((w (vector-ref v j)))
-           (match-one w p ((vector-ref v j) (vetor-set! v j))
+           (match-one w p ((vector-ref v j) (vector-set! v j))
                       (match-drop-ids (loop (+ j 1) (cons id id-ls) ...))
                       fk i)))))))
 
