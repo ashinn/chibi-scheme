@@ -522,9 +522,9 @@
      ;; remaining list length so we don't need any backtracking
      (match-verify-no-ellipses
       r
-      (let* ((tail-len (length* 'r))
+      (let* ((tail-len (length 'r))
              (ls v)
-             (len (and (list? ls) (length* ls))))
+             (len (and (list? ls) (length ls))))
         (if (or (not len) (< len tail-len))
             fk
             (let loop ((ls ls) (n len) (id-ls '()) ...)
