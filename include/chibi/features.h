@@ -146,6 +146,9 @@
 /* uncomment this if you don't want imaginary number support */
 /* #define SEXP_USE_COMPLEX 0 */
 
+/* uncomment this if you don't want inexact huge number support */
+/* #define SEXP_USE_HUGENUMS 0 */
+
 /* uncomment this if you don't want 1## style approximate digits */
 /* #define SEXP_USE_PLACEHOLDER_DIGITS 0 */
 
@@ -428,6 +431,23 @@
 #define SEXP_USE_COMPLEX SEXP_USE_FLONUMS
 #endif
 
+#ifndef SEXP_USE_HUGENUMS
+#define SEXP_USE_HUGENUMS SEXP_USE_RATIOS
+#endif
+
+/* hugenums imply ratios and complex */
+#if SEXP_USE_HUGENUMS
+#undef SEXP_USE_RATIOS
+#define SEXP_USE_RATIOS 1
+#undef SEXP_USE_COMPLEX
+#define SEXP_USE_COMPLEX 1
+#endif
+
+#ifndef SEXP_MAX_BIGNUM_LENGTH
+#define SEXP_MAX_BIGNUM_LENGTH (128*1024*1024)  /* 128MB */
+#endif
+
+/* either of ratios or complex imply bignums and flonums */
 #if (SEXP_USE_RATIOS || SEXP_USE_COMPLEX)
 #undef SEXP_USE_BIGNUMS
 #define SEXP_USE_BIGNUMS 1
@@ -461,6 +481,10 @@
 
 #ifndef SEXP_USE_MATH
 #define SEXP_USE_MATH SEXP_USE_FLONUMS && ! SEXP_USE_NO_FEATURES
+#endif
+#if SEXP_USE_HUGENUMS
+#undef SEXP_USE_MATH
+#define SEXP_USE_MATH 1
 #endif
 
 #ifndef SEXP_USE_ESCAPE_NEWLINE

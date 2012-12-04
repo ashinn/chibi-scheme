@@ -132,6 +132,9 @@ enum sexp_types {
 #if SEXP_USE_COMPLEX
   SEXP_COMPLEX,
 #endif
+#if SEXP_USE_HUGENUMS
+  SEXP_HUGENUM,
+#endif
   SEXP_IPORT,
   SEXP_OPORT,
   SEXP_FILENO,
@@ -350,6 +353,10 @@ struct sexp_struct {
       sexp_uint_t length;
       sexp_uint_t data[];
     } bignum;
+    struct {
+      sexp_uint_t length;
+      sexp data[];
+    } hugenum;
     struct {
       sexp numerator, denominator;
     } ratio;
@@ -648,6 +655,11 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #else
 #define sexp_complexp(x)    0
 #endif
+#if SEXP_USE_HUGENUMS
+#define sexp_hugenump(x)    (sexp_check_tag(x, SEXP_HUGENUM))
+#else
+#define sexp_hugenump(x)    0
+#endif
 #define sexp_cpointerp(x)   (sexp_check_tag(x, SEXP_CPOINTER))
 #define sexp_exceptionp(x)  (sexp_check_tag(x, SEXP_EXCEPTION))
 #define sexp_procedurep(x)  (sexp_check_tag(x, SEXP_PROCEDURE))
@@ -732,7 +744,11 @@ sexp sexp_make_flonum(sexp ctx, double f);
 
 #if SEXP_USE_FLONUMS
 #define sexp_fp_integerp(x) (sexp_flonum_value(x) == trunc(sexp_flonum_value(x)))
+#if SEXP_USE_HUGENUMS
+#define _or_integer_flonump(x) || (sexp_flonump(x) && sexp_fp_integerp(x)) || sexp_hugenump(x)
+#else
 #define _or_integer_flonump(x) || (sexp_flonump(x) && sexp_fp_integerp(x))
+#endif
 #else
 #define _or_integer_flonump(x)
 #endif
@@ -758,7 +774,11 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #if SEXP_USE_FLONUMS
 #define sexp_fixnum_to_flonum(ctx, x) (sexp_make_flonum(ctx, sexp_unbox_fixnum(x)))
 #if SEXP_USE_RATIOS
+#if SEXP_USE_HUGENUMS
+#define sexp_realp(x) (sexp_exact_integerp(x) || sexp_flonump(x) || sexp_ratiop(x) || sexp_hugenump(x))
+#else
 #define sexp_realp(x) (sexp_exact_integerp(x) || sexp_flonump(x) || sexp_ratiop(x))
+#endif
 #else
 #define sexp_realp(x) (sexp_exact_integerp(x) || sexp_flonump(x))
 #endif
@@ -773,11 +793,18 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_numberp(x) (sexp_realp(x))
 #endif
 
-#define sexp_exact_negativep(x) (sexp_fixnump(x) ? (sexp_unbox_fixnum(x) < 0) \
-                                 : (SEXP_USE_BIGNUMS && sexp_bignump(x)) \
-                                 && (sexp_bignum_sign(x) < 0))
-#define sexp_negativep(x) (sexp_exact_negativep(x) ||                   \
-                           (sexp_flonump(x) && sexp_flonum_value(x) < 0))
+#define sexp_exact_integer_negativep(x)                                 \
+  (sexp_fixnump(x) ? (sexp_unbox_fixnum(x) < 0)                         \
+  : (sexp_bignump(x) && (sexp_bignum_sign(x) < 0)))
+
+#define sexp_exact_negativep(x)                                         \
+  (sexp_ratiop(x) ? sexp_exact_integer_negativep(sexp_ratio_numerator(x)) \
+   : sexp_exact_integer_negativep(x))
+
+#define sexp_negativep(x)                                               \
+   (sexp_flonump(x) ? (sexp_flonum_value(x) < 0)                        \
+    : sexp_hugenump(x) ? (sexp_exact_integer_negativep(sexp_hugenum_data(x)[0])) \
+    : sexp_exact_negativep(x))
 #define sexp_positivep(x) (!(sexp_negativep(x)))
 
 #if SEXP_USE_BIGNUMS
@@ -801,9 +828,11 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #endif
 
 #define sexp_negate(x)                                  \
-  if (sexp_flonump(x))                                  \
+  if (sexp_flonump(x)) {                                \
     sexp_negate_flonum(x);                              \
-  else                                                  \
+  } else if (sexp_hugenump(x)) {                        \
+    sexp_negate_exact(sexp_hugenum_data(x)[0]);         \
+  } else                                                \
     sexp_negate_exact(x)
 
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
@@ -914,6 +943,9 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #define sexp_complex_real(q)   (sexp_pred_field(q, complex, sexp_complexp, real))
 #define sexp_complex_imag(q)   (sexp_pred_field(q, complex, sexp_complexp, imag))
+
+#define sexp_hugenum_length(h) (sexp_pred_field(h, hugenum, sexp_hugenump, length))
+#define sexp_hugenum_data(h)   (sexp_pred_field(h, hugenum, sexp_hugenump, data))
 
 #define sexp_exception_kind(x)      (sexp_field(x, exception, SEXP_EXCEPTION, kind))
 #define sexp_exception_message(x)   (sexp_field(x, exception, SEXP_EXCEPTION, message))
@@ -1342,13 +1374,13 @@ SEXP_API sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sex
 SEXP_API sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_read_string (sexp ctx, sexp in, int sentinel);
 SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
-SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base);
+SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp);
 #if SEXP_USE_BIGNUMS
 SEXP_API sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
 				signed char sign, sexp_uint_t base);
 SEXP_API sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base);
 #endif
-SEXP_API sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
+SEXP_API sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp, int exactp);
 #if SEXP_USE_COMPLEX
 SEXP_API sexp sexp_read_complex_tail(sexp ctx, sexp in, sexp res);
 #endif

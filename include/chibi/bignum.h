@@ -65,6 +65,11 @@ SEXP_API sexp sexp_complex_asin (sexp ctx, sexp z);
 SEXP_API sexp sexp_complex_acos (sexp ctx, sexp z);
 SEXP_API sexp sexp_complex_atan (sexp ctx, sexp z);
 #endif
+#if SEXP_USE_HUGENUMS
+SEXP_API sexp sexp_make_hugenum (sexp ctx, sexp_uint_t len);
+SEXP_API sexp sexp_hugenum2 (sexp ctx, sexp base, sexp exponent);
+SEXP_API sexp sexp_max_hugenum (sexp ctx, sexp a, sexp b);
+#endif
 
 #endif  /* ! SEXP_BIGNUM_H */
 

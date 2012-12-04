@@ -195,6 +195,9 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #if SEXP_USE_COMPLEX
   {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Complex", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #endif
+#if SEXP_USE_HUGENUMS
+  {SEXP_HUGENUM, sexp_offsetof(hugenum, data), 0, 0, sexp_offsetof(hugenum, length), 1, sexp_sizeof(hugenum), sexp_offsetof(hugenum, length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Hugenum", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
+#endif
   {SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
   {SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
   {SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_FILENO},
@@ -1939,6 +1942,20 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_char(ctx, 'i', out);
       break;
 #endif
+#if SEXP_USE_HUGENUMS
+    case SEXP_HUGENUM:
+      if (sexp_hugenum_length(obj) == 2 && sexp_hugenum_data(obj)[0] == SEXP_TEN) {
+        sexp_write_string(ctx, "1e", out);
+        sexp_write(ctx, sexp_hugenum_data(obj)[1], out);
+      } else {
+        sexp_write(ctx, sexp_hugenum_data(obj)[0], out);
+        for (i=1; i<sexp_hugenum_length(obj); i++) {
+          sexp_write_string(ctx, "->", out);
+          sexp_write(ctx, sexp_hugenum_data(obj)[i], out);
+        }
+      }
+      break;
+#endif
     case SEXP_OPCODE:
       sexp_write_string(ctx, "#<opcode ", out);
       sexp_write(ctx, sexp_opcode_name(obj), out);
@@ -2130,7 +2147,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
       case 'r': c = '\r'; break; 
       case 't': c = '\t'; break;
       case 'x':
-        res = sexp_read_number(ctx, in, 16);
+        res = sexp_read_number(ctx, in, 16, 1);
         if (sexp_fixnump(res)) {
           c = sexp_read_char(ctx, in);
           if (c != ';') {
@@ -2244,9 +2261,12 @@ sexp sexp_complex_normalize (sexp cpx) {
 
 sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
   int c = sexp_read_char(ctx, in), c2;
+#if SEXP_USE_HUGENUMS
+  int i;
+#endif
   sexp default_real = SEXP_ZERO;
-  sexp_gc_var1(res);
-  sexp_gc_preserve1(ctx, res);
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
   res = SEXP_VOID;
   if (c=='i' || c=='I') {       /* trailing i, no sign */
   trailing_i:
@@ -2270,11 +2290,34 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
       default_real = real;
       real = (c=='-') ? SEXP_NEG_ONE : SEXP_ONE;
       goto trailing_i;
+#if SEXP_USE_HUGENUMS
+    } else if (c=='-' && c2=='>') { /* chained arrow */
+      if (!sexp_exact_integerp(real)) {
+        res = sexp_read_error(ctx, "chains can only follow exact integers", real, in);
+      } else {
+        tmp = sexp_read_number(ctx, in, 10, 1);
+        if (real == SEXP_ONE || tmp == SEXP_ONE) {
+          res = real;
+        } else if (sexp_hugenump(tmp)) {
+          res = sexp_make_hugenum(ctx, sexp_hugenum_length(tmp)+1);
+          sexp_hugenum_data(res)[0] = real;
+          for (i=0; i<sexp_hugenum_length(tmp); i++)
+            sexp_hugenum_data(res)[i+1] = sexp_hugenum_data(tmp)[i];
+        } else if (sexp_exact_integerp(tmp)) {
+          res = sexp_make_hugenum(ctx, 2);
+          sexp_hugenum_data(res)[0] = real;
+          sexp_hugenum_data(res)[1] = tmp;
+        } else {
+          res = sexp_exceptionp(tmp) ? tmp
+            : sexp_read_error(ctx, "invalid chained arrow component", tmp, in);
+        }
+      }
+#endif
     } else {
       sexp_push_char(ctx, c2, in);
       /* read imaginary part */
       if (c=='-') sexp_push_char(ctx, c, in);
-      res = sexp_read_number(ctx, in, 10);
+      res = sexp_read_number(ctx, in, 10, 0);
       if (sexp_complexp(res)) {
         if (sexp_complex_real(res) == SEXP_ZERO)
           sexp_complex_real(res) = real;
@@ -2289,7 +2332,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
       }
     }
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release2(ctx);
   return sexp_complex_normalize(res);
 }
 
@@ -2297,7 +2340,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
 sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
   sexp_gc_var2(res, theta);
   sexp_gc_preserve2(ctx, res, theta);
-  theta = sexp_read_number(ctx, in, 10);
+  theta = sexp_read_number(ctx, in, 10, 0);
   if (sexp_exceptionp(theta)) {
     res = theta;
   } else if (sexp_complexp(theta) || !sexp_numberp(theta)) {
@@ -2315,12 +2358,11 @@ sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
 #endif
 #endif
 
-sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
+sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp, int exactp) {
   int c, c2;
-  sexp exponent=SEXP_VOID;
   double val=0.0, scale=0.1, e=0.0;
-  sexp_gc_var1(res);
-  sexp_gc_preserve1(ctx, res);
+  sexp_gc_var2(res, exponent);
+  sexp_gc_preserve2(ctx, res, exponent);
   for (c=sexp_read_char(ctx, in); sexp_isdigit(c);
        c=sexp_read_char(ctx, in), scale*=0.1)
     val += digit_value(c)*scale;
@@ -2333,9 +2375,9 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   if (is_precision_indicator(c)) {
     c2 = sexp_read_char(ctx, in);
     if (c2 != '+') sexp_push_char(ctx, c2, in);
-    exponent = sexp_read_number(ctx, in, 10);
+    exponent = sexp_read_number(ctx, in, 10, 1);
     if (sexp_exceptionp(exponent)) {
-      sexp_gc_release1(ctx);
+      sexp_gc_release2(ctx);
       return exponent;
     }
 #if SEXP_USE_COMPLEX
@@ -2345,7 +2387,11 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
     }
 #endif
     e = (sexp_fixnump(exponent) ? sexp_unbox_fixnum(exponent)
-         : sexp_flonump(exponent) ? sexp_flonum_value(exponent) : 0.0);
+         : sexp_flonump(exponent) ? sexp_flonum_value(exponent)
+#if SEXP_USE_HUGENUMS
+         : (sexp_bignump(exponent) || sexp_hugenump(exponent)) ? (DBL_MAX_EXP+1)
+#endif
+         : 0.0);
 #if SEXP_USE_COMPLEX
     if (sexp_complexp(res)) {
       if (sexp_complex_real(res) == SEXP_ZERO) {
@@ -2353,17 +2399,44 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
       } else {
         sexp_complex_real(res) = sexp_make_flonum(ctx, val * pow(10, e));
       }
-      sexp_gc_release1(ctx);
+      sexp_gc_release2(ctx);
       return res;
     }
 #endif
   }
-  if (e != 0.0) val *= pow(10, e);
-#if SEXP_USE_FLONUMS
-  res = sexp_make_flonum(ctx, val);
-#else
-  res = sexp_make_fixnum((sexp_uint_t)val);
+  if (e != 0.0) {
+#if SEXP_USE_BIGNUMS
+    if (exactp && (val == trunc(val))) {
+      res = sexp_make_integer(ctx, (sexp_sint_t)val);
+      exponent = sexp_expt(ctx, SEXP_TEN, exponent);
+      res = sexp_mul(ctx, res, exponent);
+      sexp_gc_release2(ctx);
+      return res;
+    } else
 #endif
+      val *= pow(10, e);
+  }
+#if SEXP_USE_HUGENUMS
+  if (isinf(val)) {
+    if (sexp_hugenump(exponent)) {
+      res = sexp_expt(ctx, SEXP_TEN, exponent);
+    } else {
+      res = sexp_make_hugenum(ctx, 2);
+      if (sexp_flonump(exponent)) {
+        sexp_hugenum_data(res)[1] = sexp_flonum_value(exponent) > SEXP_MAX_FIXNUM ? sexp_double_to_bignum(ctx, sexp_flonum_value(exponent)) : sexp_make_fixnum((sexp_sint_t)sexp_flonum_value(exponent));
+      } else {
+        sexp_hugenum_data(res)[1] = exponent;
+      }
+      sexp_hugenum_data(res)[0] = SEXP_TEN;
+    }
+  } else
+#endif
+#if SEXP_USE_FLONUMS
+  if (!exactp)
+    res = sexp_make_flonum(ctx, val);
+  else
+#endif
+    res = sexp_make_fixnum((sexp_sint_t)val);
   if (!is_precision_indicator(c)) {
 #if SEXP_USE_COMPLEX
     if (c=='i' || c=='i' || c=='+' || c=='-') {
@@ -2377,7 +2450,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
     else
       sexp_push_char(ctx, c, in);
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release2(ctx);
   return res;
 }
 
@@ -2422,7 +2495,7 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
 }
 #endif
 
-sexp sexp_read_number (sexp ctx, sexp in, int base) {
+sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
   sexp_sint_t val = 0, tmp = -1;
   int c, digit, negativep = 0;
 #if SEXP_USE_PLACEHOLDER_DIGITS
@@ -2467,7 +2540,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
         whole += sexp_placeholder_digit_value(10)*scale;
     if (is_precision_indicator(c)) {
       sexp_push_char(ctx, c, in);
-      return sexp_read_float_tail(ctx, in, whole, negativep);
+      return sexp_read_float_tail(ctx, in, whole, negativep, exactp);
     } else if ((c!=EOF) && !sexp_is_separator(c)) {
       return sexp_read_error(ctx, "invalid numeric syntax after placeholders",
                              sexp_make_character(c), in);
@@ -2481,10 +2554,10 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
     if (base != 10)
       return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
     if (c!='.') sexp_push_char(ctx, c, in);
-    return sexp_read_float_tail(ctx, in, val, negativep);
+    return sexp_read_float_tail(ctx, in, val, negativep, exactp);
   } else if (c=='/') {
     sexp_gc_preserve2(ctx, res, den);
-    den = sexp_read_number(ctx, in, base);
+    den = sexp_read_number(ctx, in, base, 1);
     if (! (sexp_fixnump(den) || sexp_bignump(den) || sexp_complexp(den)))
       res = (sexp_exceptionp(den)
              ? den : sexp_read_error(ctx, "invalid rational syntax", den, in));
@@ -2705,15 +2778,31 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '#':
     switch (c1=sexp_read_char(ctx, in)) {
     case 'b': case 'B':
-      res = sexp_read_number(ctx, in, 2); break;
+      res = sexp_read_number(ctx, in, 2, 0); break;
     case 'o': case 'O':
-      res = sexp_read_number(ctx, in, 8); break;
+      res = sexp_read_number(ctx, in, 8, 0); break;
     case 'd': case 'D':
-      res = sexp_read_number(ctx, in, 10); break;
+      res = sexp_read_number(ctx, in, 10, 0); break;
     case 'x': case 'X':
-      res = sexp_read_number(ctx, in, 16); break;
+      res = sexp_read_number(ctx, in, 16, 0); break;
     case 'e': case 'E':
-      res = sexp_read(ctx, in);
+      if ((c1=sexp_read_char(ctx, in)) == '#') {
+        switch (c2=sexp_read_char(ctx, in)) {
+        case 'b': case 'B':
+          res = sexp_read_number(ctx, in, 2, 1); break;
+        case 'o': case 'O':
+          res = sexp_read_number(ctx, in, 8, 1); break;
+        case 'd': case 'D':
+          res = sexp_read_number(ctx, in, 10, 1); break;
+        case 'x': case 'X':
+          res = sexp_read_number(ctx, in, 16, 1); break;
+        default:
+          res = sexp_read_error(ctx, "invalid numeric syntax after #e#", sexp_make_character(c2), in); break;
+        }
+      } else {
+        sexp_push_char(ctx, c1, in);
+        res = sexp_read_number(ctx, in, 10, 1);
+      }
 #if SEXP_USE_INFINITIES
       if (sexp_flonump(res)
           && (isnan(sexp_flonum_value(res)) || isinf(sexp_flonum_value(res))))
@@ -2841,7 +2930,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       c2 = sexp_read_char(ctx, in);
       sexp_push_char(ctx, c2, in);
       if ((c1 == 'x' || c1 == 'X') && (sexp_isxdigit(c2))) {
-        res = sexp_read_number(ctx, in, 16);
+        res = sexp_read_number(ctx, in, 16, 1);
         if (sexp_fixnump(res) && sexp_unbox_fixnum(res) >= 0 && sexp_unbox_fixnum(res) <= 0x10FFFF)
           res = sexp_make_character(sexp_unbox_fixnum(res));
         else if (!sexp_exceptionp(res))
@@ -2902,7 +2991,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     if (c1 == EOF || sexp_is_separator(c1)) {
       res = SEXP_RAWDOT;
     } else if (sexp_isdigit(c1)) {
-      res = sexp_read_float_tail(ctx, in, 0, 0);
+      res = sexp_read_float_tail(ctx, in, 0, 0, 0);
     } else {
       res = sexp_read_symbol(ctx, in, '.', 1);
     }
@@ -2925,7 +3014,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     c2 = sexp_read_char(ctx, in);
     if (c2 == '.' || sexp_isdigit(c2)) {
       sexp_push_char(ctx, c2, in);
-      res = sexp_read_number(ctx, in, 10);
+      res = sexp_read_number(ctx, in, 10, 0);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
 #if SEXP_USE_FLONUMS
         if (sexp_flonump(res))
@@ -2957,6 +3046,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
             } else {
               sexp_negate(sexp_complex_real(res));
             }
+          } else
+#endif
+#if SEXP_USE_HUGENUMS
+          if (sexp_hugenump(res)) {
+            sexp_negate(sexp_hugenum_data(res)[0]);
           } else
 #endif
             res = sexp_fx_mul(res, SEXP_NEG_ONE);
@@ -3007,7 +3101,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '0': case '1': case '2': case '3': case '4':
   case '5': case '6': case '7': case '8': case '9':
     sexp_push_char(ctx, c1, in);
-    res = sexp_read_number(ctx, in, 10);
+    res = sexp_read_number(ctx, in, 10, 0);
     break;
   default:
     res = sexp_read_symbol(ctx, in, c1, 1);
@@ -3065,7 +3159,7 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
       sexp_read_char(ctx, in);
   }
   in = ((sexp_string_data(str)[0] == '#') || base == 10 ?
-        sexp_read(ctx, in) : sexp_read_number(ctx, in, base));
+        sexp_read(ctx, in) : sexp_read_number(ctx, in, base, 0));
   sexp_gc_release1(ctx);
   return sexp_numberp(in) ? in : SEXP_FALSE;
 }

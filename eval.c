@@ -1308,7 +1308,6 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
   }
 
 define_math_op(sexp_exp, exp, sexp_complex_exp)
-define_math_op(sexp_log, log, sexp_complex_log)
 define_math_op(sexp_sin, sin, sexp_complex_sin)
 define_math_op(sexp_cos, cos, sexp_complex_cos)
 define_math_op(sexp_tan, tan, sexp_complex_tan)
@@ -1381,6 +1380,34 @@ sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
   return res;
 }
 
+sexp sexp_log_op (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
+  double d;
+  sexp_gc_var1(tmp);
+  if (sexp_flonump(z))
+    d = sexp_flonum_value(z);
+  else if (sexp_fixnump(z))
+    d = (double)sexp_unbox_fixnum(z);
+  maybe_convert_ratio(z)
+  maybe_convert_bignum(z)
+  maybe_convert_complex(z, sexp_complex_log)
+#if SEXP_USE_HUGENUMS
+  else if (sexp_hugenump(z)) {
+    if (sexp_hugenum_length(z) == 2) {
+      sexp_gc_preserve1(ctx, tmp);
+      tmp = sexp_log(ctx, sexp_hugenum_data(z)[0]);
+      tmp = sexp_mul(ctx, tmp, sexp_hugenum_data(z)[1]);
+      sexp_gc_release1(ctx);
+      return tmp;
+    } else {
+      return z;
+    }
+  }
+#endif
+  else
+    return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
+  return sexp_make_flonum(ctx, log(d));
+}
+
 #endif  /* SEXP_USE_MATH */
 
 #if SEXP_USE_RATIOS || !SEXP_USE_FLONUMS
@@ -1403,10 +1430,26 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
   return sexp_generic_expt(ctx, x, sexp_unbox_fixnum(e));
 #else
   long double f, x1, e1;
-  sexp res;
+  sexp_gc_var1(res);
 #if SEXP_USE_COMPLEX
   if (sexp_complexp(x) || sexp_complexp(e))
     return sexp_complex_expt(ctx, x, e);
+#endif
+  sexp_gc_preserve1(ctx, res);
+#if SEXP_USE_HUGENUMS
+  if (sexp_hugenump(x)) {
+    if (sexp_hugenum_length(x) == 2 && (!sexp_hugenump(e) || sexp_hugenum_length(e) <= 2)) {
+      res = sexp_make_hugenum(ctx, 2);
+      sexp_hugenum_data(res)[0] = sexp_hugenum_data(x)[0];
+      sexp_hugenum_data(res)[1] = sexp_mul(ctx, sexp_hugenum_data(x)[1], e);
+    } else if (sexp_hugenump(e)) {
+      res = sexp_max_hugenum(ctx, x, e);
+    } else {
+      res = x;
+    }
+  } else if (sexp_hugenump(e)) {
+    res = e;
+  } else
 #endif
 #if SEXP_USE_BIGNUMS
   if (sexp_bignump(e)) {        /* bignum exponent needs special handling */
@@ -1416,6 +1459,10 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
       res = SEXP_ONE;                                  /* 1.0    */
     else if (sexp_flonump(x))
       res = sexp_make_flonum(ctx, pow(sexp_flonum_value(x), sexp_bignum_to_double(e)));
+#if SEXP_USE_HUGENUMS
+    else if (sexp_fixnump(x) || sexp_bignump(x))
+      res = sexp_hugenum2(ctx, x, e);
+#endif
     else
       res = sexp_make_flonum(ctx, pow(10.0, 1e100));   /* +inf.0 */
   } else if (sexp_bignump(x)) {
@@ -1429,14 +1476,17 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
 #if SEXP_USE_RATIOS
   else if (sexp_ratiop(x)) {
     if (sexp_fixnump(e)) {
+      sexp_gc_release1(ctx);
       return sexp_generic_expt(ctx, x, sexp_unbox_fixnum(e));
     } else {
       x1 = sexp_ratio_to_double(x);
     }
   }
 #endif
-  else
+  else {
+    sexp_gc_release1(ctx);
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
+  }
   if (sexp_fixnump(e))
     e1 = sexp_unbox_fixnum(e);
   else if (sexp_flonump(e))
@@ -1461,6 +1511,7 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
 #if SEXP_USE_BIGNUMS
   }
 #endif
+  sexp_gc_release1(ctx);
   return res;
 #endif  /* !SEXP_USE_FLONUMS */
 }
