@@ -80,10 +80,7 @@
 ;; (define-c input-output-port (open-input-output-file-descriptor "fdopen")
 ;;   (fileno (value "r+" string)))
 
-;;> Unlinks the file named @var{string} from the filesystem.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
-
-(define-c errno (delete-file "unlink") (string))
+(define-c errno (%delete-file "unlink") (string))
 
 ;;> Creates a hard link to the first arg from the second.
 ;;> Returns @scheme{#t} on success and @scheme{#f} on failure.

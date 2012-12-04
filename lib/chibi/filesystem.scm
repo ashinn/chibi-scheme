@@ -47,6 +47,14 @@
        (else
         (here file acc))))))
 
+;;> Unlinks the file named @var{string} from the filesystem.
+;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+
+(define (delete-file file)
+  (if (not (%delete-file file))
+      (raise-continuable
+       (make-exception 'file "couldn't delete file" file delete-file #f))))
+
 ;;> Recursively delete all files and directories under @var{dir}.
 ;;> Unless optional arg @var{ignore-errors?} is true, raises an error
 ;;> if any file can't be deleted.

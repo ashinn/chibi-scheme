@@ -1805,7 +1805,8 @@
  ("-inf.0-inf.0i" (make-rectangular -inf.0 -inf.0) "-Inf.0-Inf.0i")
  ("+inf.0-inf.0i" (make-rectangular +inf.0 -inf.0) "+Inf.0-Inf.0i")
  ;; Complex numbers (polar notation)
- ("1@2" -0.416146836547142+0.909297426825682i "-0.416146836547142+0.909297426825682i")
+ ;; Need to account for imprecision in write output.
+ ;; ("1@2" -0.416146836547142+0.909297426825682i "-0.416146836547142+0.909297426825682i")
  ;; Base prefixes
  ("#x11" 17 "17")
  ("#X11" 17 "17")
@@ -1881,6 +1882,10 @@
 
 (test #t (file-exists? "."))
 (test #f (file-exists? " no such file "))
+
+(test #t (file-error?
+          (guard (exn (else exn))
+            (delete-file " no such file "))))
 
 (test-end)
 

@@ -1366,7 +1366,7 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
   FILE* in;
   sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
   in = fdopen(sexp_fileno_fd(fileno), "r");
-  if (!in) return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
+  if (!in) return sexp_file_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
   res = sexp_make_input_port(ctx, in, SEXP_FALSE);
   if (!sexp_exceptionp(res)) {
     sexp_port_binaryp(res) = 1;
@@ -1563,7 +1563,7 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
   sexp_gc_var2(res, str);
   sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
   if (sexp_fileno_fd(fileno) < 0)
-    return sexp_user_exception(ctx, self, "invalid file descriptor", fileno);
+    return sexp_file_exception(ctx, self, "invalid file descriptor", fileno);
   sexp_gc_preserve2(ctx, res, str);
   str = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
   res = sexp_make_input_string_port(ctx, str);
