@@ -148,7 +148,8 @@ SEXP_API sexp sexp_print_vm_profile (sexp ctx, sexp self, sexp_sint_t n);
 
 #if SEXP_USE_MATH
 SEXP_API sexp sexp_exp(sexp ctx, sexp self, sexp_sint_t n, sexp z);
-SEXP_API sexp sexp_log(sexp ctx, sexp self, sexp_sint_t n, sexp z);
+SEXP_API sexp sexp_log_op(sexp ctx, sexp self, sexp_sint_t n, sexp z);
+#define sexp_log(ctx, z) sexp_log_op(ctx, NULL, 1, z)
 SEXP_API sexp sexp_sin(sexp ctx, sexp self, sexp_sint_t n, sexp z);
 SEXP_API sexp sexp_cos(sexp ctx, sexp self, sexp_sint_t n, sexp z);
 SEXP_API sexp sexp_tan(sexp ctx, sexp self, sexp_sint_t n, sexp z);

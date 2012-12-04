@@ -192,7 +192,7 @@ _FN2OPT(_I(SEXP_OPORT), _I(SEXP_FIXNUM), _I(SEXP_BOOLEAN), "open-output-file-des
 _FN2OPT(_I(SEXP_OBJECT), _I(SEXP_PROCEDURE), _I(SEXP_FIXNUM), "register-optimization!", _I(600), sexp_register_optimization),
 #if SEXP_USE_MATH
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "exp", 0, sexp_exp),
-_FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "ln", 0, sexp_log),
+_FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "ln", 0, sexp_log_op),
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "sin", 0, sexp_sin),
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "cos", 0, sexp_cos),
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "tan", 0, sexp_tan),
