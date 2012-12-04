@@ -927,7 +927,7 @@
      (let ((temp test))
        (if temp (result temp) (guard-aux reraise clause1 clause2 ...))))
     ((guard-aux reraise (test))
-     test)
+     (or test reraise))
     ((guard-aux reraise (test) clause1 clause2 ...)
      (or test (guard-aux reraise clause1 clause2 ...)))
     ((guard-aux reraise (test result1 result2 ...))
