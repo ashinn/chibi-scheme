@@ -433,7 +433,8 @@ div#footer {padding-bottom: 50px}
     orig-ls)
    (else
     (let ((name
-           (or name (if (eq? 'const: (caar sig)) (cadr (cdar sig)) (caar sig)))))
+           (or name
+               (if (eq? 'const: (caar sig)) (cadr (cdar sig)) (caar sig)))))
       (let lp ((ls orig-ls) (rev-pre '()))
         (cond
          ((or (null? ls)
@@ -462,7 +463,8 @@ div#footer {padding-bottom: 50px}
              (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdar (cddr x))))
                         (filter
                          (lambda (x)
-                           (and (pair? (third x)) (equal? file (car (third x)))))
+                           (and (pair? (third x))
+                                (equal? file (car (third x)))))
                          defs))))
         (let lp ((lines '()) (cur '()) (res '()))
           (define (collect)
@@ -508,11 +510,17 @@ div#footer {padding-bottom: 50px}
               (cond
                ((and (eq? lang 'ffi) (get-ffi-signatures x))
                 => (lambda (sigs)
-                     (let ((sigs (filter
-                                  (lambda (x)
-                                    (memq (if (eq? 'const: (car x)) (third x) (car x)) exports))
-                                  sigs)))
-                       (lp '() '() (append (insert-signature cur #f sigs) res)))))
+                     (let ((sigs
+                            (filter
+                             (lambda (x)
+                               (memq (if (eq? 'const: (car x))
+                                         (third x)
+                                         (car x))
+                                     exports))
+                             sigs)))
+                       (lp '()
+                           '()
+                           (append (insert-signature cur #f sigs) res)))))
                ((and (eq? lang 'scheme) (= 1 (length procs)))
                 (let* ((sig (or (get-signature (caar procs) (cdar procs) x)
                                 '()))
@@ -524,6 +532,13 @@ div#footer {padding-bottom: 50px}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; html conversions
+
+(define (display-to-string x)
+  (cond ((string? x) x)
+        ((char? x) (string x))
+        ((symbol? x) (symbol->string x))
+        ((number? x) (number->string x))
+        (else (error "don't know how to display" x))))
 
 (define (html-display-escaped-attr str . o)
   (let ((start 0)
@@ -551,12 +566,13 @@ div#footer {padding-bottom: 50px}
 
 (define (html-escape-attr str)
   (call-with-output-string
-    (lambda (out) (html-display-escaped-attr str out))))
+    (lambda (out) (html-display-escaped-attr (display-to-string str) out))))
 
 (define (html-attr->string attr)
   (if (cdr attr)
-      (string-append (symbol->string (car attr))
-                     "=\"" (html-escape-attr (cdr attr)) "\"")
+      (let ((val (if (pair? (cdr attr)) (cadr attr) (cdr attr))))
+        (string-append (symbol->string (car attr))
+                       "=\"" (html-escape-attr val) "\""))
       (symbol->string (car attr))))
 
 (define (html-tag->string tag attrs)
