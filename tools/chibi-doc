@@ -235,7 +235,7 @@
 
 (define (expand sxml env)
   (cond
-   ((pair? sxml)
+   ((list? sxml)
     (cond
      ((symbol? (car sxml))
       (let ((op (env-ref env (car sxml))))
