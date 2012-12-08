@@ -28,10 +28,25 @@
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))
 
-(define (buffer-complete-sexp? buf)
-  (call-with-input-string (buffer->string buf)
+(define (complete-sexp? str)
+  (call-with-input-string str
     (lambda (in)
       (let lp () (if (not (eof-object? (read/ss in))) (lp))))))
+
+(define (read-line/complete-sexp in)
+  (let lp ((res ""))
+    (let ((line (read-line in)))
+      (cond
+       ((eof-object? line)
+        (if (equal? res "") line res))
+       (else
+        (let ((res (string-append res line "\n")))
+          (if (guard (exn (else #f)) (complete-sexp? res))
+              res
+              (lp res))))))))
+
+(define (buffer-complete-sexp? buf)
+  (complete-sexp? (buffer->string buf)))
 
 (define module? vector?)
 (define (module-env mod) (vector-ref mod 1))
@@ -149,7 +164,7 @@
                (raw?
                 (display prompt out)
                 (flush-output out)
-                (read-line in))
+                (read-line/complete-sexp in))
                (else
                 (edit-line in out
                            'prompt: prompt
