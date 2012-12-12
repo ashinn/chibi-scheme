@@ -605,6 +605,22 @@ sexp sexp_ratio_ceiling (sexp ctx, sexp a) {
 
 #if SEXP_USE_COMPLEX
 
+static sexp sexp_complex_copy (sexp ctx, sexp a) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_complex(ctx, sexp_complex_real(a), sexp_complex_imag(a));
+  if (sexp_flonump(sexp_complex_real(a)))
+    sexp_complex_real(a) = sexp_make_flonum(ctx, sexp_flonum_value(sexp_complex_real(a)));
+  else if (sexp_bignump(sexp_complex_real(a)))
+    sexp_complex_real(a) = sexp_copy_bignum(ctx, NULL, sexp_complex_real(a), 0);
+  if (sexp_flonump(sexp_complex_imag(a)))
+    sexp_complex_imag(a) = sexp_make_flonum(ctx, sexp_flonum_value(sexp_complex_imag(a)));
+  else if (sexp_bignump(sexp_complex_imag(a)))
+    sexp_complex_imag(a) = sexp_copy_bignum(ctx, NULL, sexp_complex_imag(a), 0);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 sexp sexp_complex_add (sexp ctx, sexp a, sexp b) {
   sexp_gc_var3(res, real, imag);
   sexp_gc_preserve3(ctx, res, real, imag);
@@ -618,7 +634,7 @@ sexp sexp_complex_add (sexp ctx, sexp a, sexp b) {
 sexp sexp_complex_sub (sexp ctx, sexp a, sexp b) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
-  tmp = sexp_make_complex(ctx, sexp_complex_real(b), sexp_complex_imag(b));
+  tmp = sexp_complex_copy(ctx, b);
   sexp_negate(sexp_complex_real(tmp));
   sexp_negate(sexp_complex_imag(tmp));
   res = sexp_complex_add(ctx, a, tmp);
@@ -799,8 +815,7 @@ sexp sexp_complex_asin (sexp ctx, sexp z) {
   res = sexp_complex_add(ctx, tmp, res);
   tmp = sexp_complex_log(ctx, res);
   /* res = -i*tmp */
-  sexp_complex_real(res) = sexp_complex_imag(tmp);
-  sexp_complex_imag(res) = sexp_complex_real(tmp);
+  res = sexp_complex_copy(ctx, tmp);
   sexp_negate(sexp_complex_imag(res));
   sexp_gc_release2(ctx);
   return res;
@@ -1125,6 +1140,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     r = sexp_complex_sub(ctx, a, b);
     if (negatep) {
       if (sexp_complexp(r)) {
+        r = sexp_complex_copy(ctx, r);
         sexp_negate(sexp_complex_real(r));
         sexp_negate(sexp_complex_imag(r));
       } else {
