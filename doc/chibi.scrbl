@@ -1061,9 +1061,10 @@ or the symbol null, indicating a NULL-terminated array.}}
 @section{Standard Modules}
 
 A number of SRFIs are provided in the default installation.  Note that
-SRFIs 0, 6, 22, 23, 46 and 62 are built into the default environment so
-there's no need to import them.  This list includes popular SRFIs or
-SRFIs used in standard Chibi modules
+SRFIs 0, 6, 23, 46 and 62 are built into the default environment so
+there's no need to import them.  SRFI 22 is available with the "-r"
+command-line option.  This list includes popular SRFIs or SRFIs used
+in standard Chibi modules
 
 @itemlist[
 
@@ -1099,6 +1100,8 @@ namespace.
 @itemlist[
 
 @item{@hyperlink["lib/chibi/ast.html"]{(chibi ast) - Abstract Syntax Tree and other internal data types}}
+
+@item{@hyperlink["lib/chibi/config.html"]{(chibi config) - General configuration management}}
 
 @item{@hyperlink["lib/chibi/disasm.html"]{(chibi disasm) - Disassembler for the virtual machine}}
 
