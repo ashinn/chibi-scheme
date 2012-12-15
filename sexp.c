@@ -2638,6 +2638,9 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           } else if (sexp_read_raw(ctx, in) != SEXP_CLOSE) {
             res = sexp_read_error(ctx, "multiple tokens in dotted tail",
                                   SEXP_NULL, in);
+          } else if (tmp == SEXP_RAWDOT) {
+            res = sexp_read_error(ctx, "multiple dots in list",
+                                  SEXP_NULL, in);
           } else {
             tmp2 = res;
             res = sexp_nreverse(ctx, res);
