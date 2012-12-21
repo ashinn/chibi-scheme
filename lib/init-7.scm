@@ -1080,7 +1080,7 @@
 (cond-expand
  (complex
   (define (real-part z) (if (%complex? z) (complex-real z) z))
-  (define (imag-part z) (if (%complex? z) (complex-imag z) 0.0))
+  (define (imag-part z) (if (%complex? z) (complex-imag z) 0))
   (define (magnitude z)
     (sqrt (+ (* (real-part z) (real-part z))
              (* (imag-part z) (imag-part z)))))
