@@ -541,7 +541,9 @@
     (cond
      ((and (memq status '(FAIL ERROR)) (current-test-group))
       => (lambda (group)
-           (test-group-push! group 'failures (list indent status info)))))))
+           (test-group-push! group 'failures (list indent status info)))))
+    (cond ((current-test-group)
+           => (lambda (group) (test-group-set! group 'trailing #t))))))
   (flush-output-port)
   status)
 
@@ -549,7 +551,8 @@
   (define (plural word n)
     (if (= n 1) word (string-append word "s")))
   (define (percent n d)
-    (string-append " (" (number->string (/ (round (* 1000.0 (/ n d))) 10)) "%)"))
+    (string-append " (" (number->string (/ (round (* 1000.0 (/ n d))) 10))
+                   "%)"))
   (let* ((end-time (current-second))
          (start-time (test-group-ref group 'start-time))
          (duration (- end-time start-time))
@@ -561,44 +564,44 @@
          (subgroups-count (or (test-group-ref group 'subgroups-count) 0))
          (subgroups-pass (or (test-group-ref group 'subgroups-pass) 0))
          (indent (make-string (or (test-group-indent-width group) 0) #\space)))
-    (if (not (test-group-ref group 'verbose))
+    (if (and (not (test-group-ref group 'verbose))
+             (test-group-ref group 'trailing))
         (newline))
     (cond
      ((or (positive? count) (positive? subgroups-count))
       (if (not (= count (+ pass fail err)))
           (warning "inconsistent count:" count pass fail err))
-      (display indent)
       (cond
        ((positive? count)
-        (write count) (display (plural " test" count))))
-      (if (and (positive? count) (positive? subgroups-count))
-          (display " and "))
-      (cond
-       ((positive? subgroups-count)
-        (write subgroups-count)
-        (display (plural " subgroup" subgroups-count))))
-      (display " completed in ") (write duration) (display " seconds")
-      (cond
-       ((not (zero? skip))
-        (display " (") (write skip) (display (plural " test" skip))
-        (display " skipped)")))
-      (display ".") (newline)
+        (display indent)
+        (display
+         ((if (and (test-ansi?) (= pass count)) green (lambda (x) x))
+          (string-append
+           (number->string pass) " out of " (number->string count)
+           (percent pass count))))
+        (display
+         (string-append
+          (plural " test" pass) " passed in "
+          (number->string duration) " seconds"
+          (cond
+           ((zero? skip) "")
+           (else (string-append " (" (number->string skip)
+                                (plural " test" skip) " skipped)")))
+          ".\n"))))
       (cond ((positive? fail)
              (display indent)
              (display
               ((if (test-ansi?) red (lambda (x) x))
                (string-append
                 (number->string fail) (plural " failure" fail)
-                (percent fail count) ".")))
-             (newline)))
+                (percent fail count) ".\n")))))
       (cond ((positive? err)
              (display indent)
              (display
               ((if (test-ansi?) (lambda (x) (underline (red x))) (lambda (x) x))
                (string-append
                 (number->string err) (plural " error" err)
-                (percent err count) ".")))
-             (newline)))
+                (percent err count) ".\n")))))
       (cond
        ((not (test-group-ref group 'verbose))
         (for-each
@@ -611,15 +614,6 @@
            (apply test-print-failure failure))
          (reverse (or (test-group-ref group 'failures) '())))))
       (cond
-       ((positive? count)
-        (display indent)
-        (display
-         ((if (and (test-ansi?) (= pass count)) green (lambda (x) x))
-          (string-append
-           (number->string pass) " out of " (number->string count)
-           (percent pass count) (plural " test" pass) " passed.")))
-        (newline)))
-      (cond
        ((positive? subgroups-count)
         (display indent)
         (display
@@ -628,15 +622,17 @@
           (string-append
            (number->string subgroups-pass) " out of "
            (number->string subgroups-count)
-           (percent subgroups-pass subgroups-count)
-           (plural " subgroup" subgroups-pass) " passed.")))
-        (newline)))))
+           (percent subgroups-pass subgroups-count))))
+        (display (plural " subgroup" subgroups-pass))
+        (display " passed.\n")))))
     (cond
      ((test-group-ref group 'verbose)
       (test-print-header-line
        (string-append "done testing " (or (test-group-name group) ""))
        (or (test-group-indent-width group) 0))
-      (newline)))))
+      (newline)))
+    (cond ((test-group-ref group 'parent)
+           => (lambda (parent) (test-group-set! parent 'trailing #f))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
