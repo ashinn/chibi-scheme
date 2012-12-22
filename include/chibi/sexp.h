@@ -301,6 +301,7 @@ struct sexp_struct {
   union {
     /* basic types */
     double flonum;
+    char flonum_bits[sizeof(double)];  /* for eqv? comparison on flonums */
     struct sexp_type_struct type;
     struct {
       sexp car, cdr;
@@ -609,6 +610,7 @@ union sexp_flonum_conv {
 SEXP_API sexp sexp_flonum_predicate (sexp ctx, sexp x);
 #if SEXP_64_BIT
 SEXP_API float sexp_flonum_value (sexp x);
+#define sexp_flonum_bits(f) ((char*)&f)
 SEXP_API sexp sexp_make_flonum(sexp ctx, float f);
 #else
 #define sexp_make_flonum(ctx, x)  ((sexp) ((((union sexp_flonum_conv)((float)(x))).bits & ~SEXP_IMMEDIATE_MASK) + SEXP_IFLONUM_TAG))
@@ -617,6 +619,7 @@ SEXP_API sexp sexp_make_flonum(sexp ctx, float f);
 #else
 #define sexp_flonump(x)      (sexp_check_tag(x, SEXP_FLONUM))
 #define sexp_flonum_value(f) ((f)->value.flonum)
+#define sexp_flonum_bits(f) ((f)->value.flonum_bits)
 sexp sexp_make_flonum(sexp ctx, double f);
 #endif
 
@@ -821,8 +824,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_nanp(x) (sexp_flonump(x) && isnan(sexp_flonum_value(x)))
 
 #if SEXP_USE_IEEE_EQV
-#define sexp_flonum_bits(x)   (*(long*)(&(sexp_flonum_value(x))))
-#define sexp_flonum_eqv(x, y) (sexp_flonum_bits(x) == sexp_flonum_bits(y))
+#define sexp_flonum_eqv(x, y) (memcmp(sexp_flonum_bits(x), sexp_flonum_bits(y), sizeof(double)) == 0)
 #else
 #define sexp_flonum_eqv(x, y) (sexp_flonum_value(x) == sexp_flonum_value(y))
 #endif
