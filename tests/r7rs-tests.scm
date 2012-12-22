@@ -169,6 +169,10 @@
 (let*-values (((root rem) (exact-integer-sqrt 32)))
   (test 35 (* root rem)))
 
+(let*-values (((root rem) (exact-integer-sqrt (expt 2 140))))
+  (test 0 rem)
+  (test (expt 2 140) (square root)))
+
 (test '(x y x y) (let ((a 'a) (b 'b) (x 'x) (y 'y))
   (let*-values (((a b) (values x y))
                 ((x y) (values a b)))

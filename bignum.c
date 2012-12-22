@@ -477,6 +477,44 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
   return sexp_bignum_normalize(res);
 }
 
+#define SEXP_MAX_ACCURATE_FLONUM_SQRT 1.15292150460685e18 /* 2^60 */
+
+sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
+  sexp_gc_var3(res, rem, tmp);
+  sexp_gc_preserve3(ctx, res, rem, tmp);
+  /* initial estimate via flonum, ignoring signs */
+  res = sexp_make_flonum(ctx, sexp_bignum_to_double(a));
+  if (sexp_negativep(res)) { sexp_negate(res); }
+  res = sexp_sqrt(ctx, NULL, 1, res);
+  if (sexp_flonump(res) &&
+      sexp_flonum_value(res) > SEXP_MAX_ACCURATE_FLONUM_SQRT) {
+    res = sexp_double_to_bignum(ctx, sexp_flonum_value(res));
+  loop:                           /* while abs(a - res*res) < res */
+    rem = sexp_mul(ctx, res, res);
+    tmp = rem = sexp_sub(ctx, a, rem);
+    if (sexp_negativep(tmp)) {
+      tmp = sexp_copy_bignum(ctx, NULL, tmp, 0);
+      sexp_negate(tmp);
+    }
+    tmp = sexp_compare(ctx, tmp, res);
+    if (sexp_positivep(tmp)) {
+      tmp = sexp_quotient(ctx, a, res);
+      res = sexp_add(ctx, res, tmp);
+      res = sexp_quotient(ctx, res, SEXP_TWO);
+      goto loop;
+    }
+    /* add back in an approximate remainder if non-zero */
+    rem = sexp_bignum_normalize(rem);
+    if (rem != SEXP_ZERO) {
+      rem = sexp_make_flonum(ctx, sexp_fixnump(rem) ? sexp_unbox_fixnum(rem) : sexp_bignum_to_double(rem));
+      rem = sexp_div(ctx, rem, a);
+      res = sexp_add(ctx, res, rem);
+    }
+  }
+  sexp_gc_release3(ctx);
+  return sexp_bignum_normalize(res);
+}
+
 /************************ ratios ******************************/
 
 #if SEXP_USE_RATIOS
