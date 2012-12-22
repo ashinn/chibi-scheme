@@ -222,11 +222,12 @@
     => (lambda (x) (set-cdr! x value)))
    (else (set-cdr! group (cons (cons field value) (cdr group))))))
 
-(define (test-group-inc! group field)
-  (cond
-   ((assq field (cdr group))
-    => (lambda (x) (set-cdr! x (+ 1 (cdr x)))))
-   (else (set-cdr! group (cons (cons field 1) (cdr group))))))
+(define (test-group-inc! group field . o)
+  (let ((amount (if (pair? o) (car o) 1)))
+    (cond
+     ((assq field (cdr group))
+      => (lambda (x) (set-cdr! x (+ amount (cdr x)))))
+     (else (set-cdr! group (cons (cons field amount) (cdr group)))))))
 
 (define (test-group-push! group field value)
   (cond
@@ -556,11 +557,15 @@
   (let* ((end-time (current-second))
          (start-time (test-group-ref group 'start-time))
          (duration (- end-time start-time))
-         (count (or (test-group-ref group 'count) 0))
-         (pass (or (test-group-ref group 'PASS) 0))
-         (fail (or (test-group-ref group 'FAIL) 0))
-         (err (or (test-group-ref group 'ERROR) 0))
+         (base-count (or (test-group-ref group 'count) 0))
+         (base-pass (or (test-group-ref group 'PASS) 0))
+         (base-fail (or (test-group-ref group 'FAIL) 0))
+         (base-err (or (test-group-ref group 'ERROR) 0))
          (skip (or (test-group-ref group 'SKIP) 0))
+         (pass (+ base-pass (or (test-group-ref group 'total-pass) 0)))
+         (fail (+ base-fail (or (test-group-ref group 'total-fail) 0)))
+         (err (+ base-err (or (test-group-ref group 'total-error) 0)))
+         (count (+ pass fail err))
          (subgroups-count (or (test-group-ref group 'subgroups-count) 0))
          (subgroups-pass (or (test-group-ref group 'subgroups-pass) 0))
          (indent (make-string (or (test-group-indent-width group) 0) #\space)))
@@ -569,8 +574,9 @@
         (newline))
     (cond
      ((or (positive? count) (positive? subgroups-count))
-      (if (not (= count (+ pass fail err)))
-          (warning "inconsistent count:" count pass fail err))
+      (if (not (= base-count (+ base-pass base-fail base-err)))
+          (warning "inconsistent count:"
+                   base-count base-pass base-fail base-err))
       (cond
        ((positive? count)
         (display indent)
@@ -631,8 +637,13 @@
        (string-append "done testing " (or (test-group-name group) ""))
        (or (test-group-indent-width group) 0))
       (newline)))
-    (cond ((test-group-ref group 'parent)
-           => (lambda (parent) (test-group-set! parent 'trailing #f))))))
+    (cond
+     ((test-group-ref group 'parent)
+      => (lambda (parent)
+           (test-group-set! parent 'trailing #f)
+           (test-group-inc! parent 'total-pass pass)
+           (test-group-inc! parent 'total-fail fail)
+           (test-group-inc! parent 'total-error err))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
