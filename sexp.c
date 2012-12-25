@@ -195,8 +195,8 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #if SEXP_USE_COMPLEX
   {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Complex", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #endif
-  {SEXP_IPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
-  {SEXP_OPORT, sexp_offsetof(port, name), 2, 2, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
+  {SEXP_IPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
+  {SEXP_OPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_PORT},
   {SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, SEXP_FINALIZE_FILENO},
   {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL},
   {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
