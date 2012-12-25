@@ -416,7 +416,7 @@
   (cons '() (and (pair? o) (car o))))
 
 (define (make-printable-keymap)
-  (let* ((keymap (make-keymap))
+  (let* ((keymap (make-keymap command/self-insert))
          (v (car keymap)))
     (do ((i #x20 (+ i 1))) ((= i #x7F) keymap)
       (vector-set! v i command/self-insert))))
