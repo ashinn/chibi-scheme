@@ -1308,7 +1308,6 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
   }
 
 define_math_op(sexp_exp, exp, sexp_complex_exp)
-define_math_op(sexp_log, log, sexp_complex_log)
 define_math_op(sexp_sin, sin, sexp_complex_sin)
 define_math_op(sexp_cos, cos, sexp_complex_cos)
 define_math_op(sexp_tan, tan, sexp_complex_tan)
@@ -1344,6 +1343,34 @@ define_math_rounder(sexp_round, even_round, sexp_ratio_round)
 define_math_rounder(sexp_trunc, trunc, sexp_ratio_trunc)
 define_math_rounder(sexp_floor, floor, sexp_ratio_floor)
 define_math_rounder(sexp_ceiling, ceil, sexp_ratio_ceiling)
+
+sexp sexp_log (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
+  double d;
+#if SEXP_USE_COMPLEX
+  sexp_gc_var1(tmp);
+  if (sexp_complexp(z))
+    return sexp_complex_log(ctx, z);
+#endif
+  if (sexp_flonump(z))
+    d = sexp_flonum_value(z);
+  else if (sexp_fixnump(z))
+    d = (double)sexp_unbox_fixnum(z);
+  maybe_convert_ratio(z)
+  maybe_convert_bignum(z)
+  else
+    return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
+#if SEXP_USE_COMPLEX
+  if (d < 0) {
+    sexp_gc_preserve1(ctx, tmp);
+    tmp = sexp_make_flonum(ctx, d);
+    tmp = sexp_make_complex(ctx, tmp, SEXP_ZERO);
+    tmp = sexp_complex_log(ctx, tmp);
+    sexp_gc_release1(ctx);
+    return tmp;
+  }
+#endif
+  return sexp_make_flonum(ctx, log(d));
+}
 
 sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 #if SEXP_USE_COMPLEX
