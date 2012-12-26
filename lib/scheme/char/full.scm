@@ -71,8 +71,15 @@
 (define (string-foldcase str)
   (string-map char-foldcase str))
 
-(define (string-ci<=? a b) (string<=? (string-foldcase a) (string-foldcase b)))
-(define (string-ci<? a b) (string<? (string-foldcase a) (string-foldcase b)))
-(define (string-ci=? a b) (string=? (string-foldcase a) (string-foldcase b)))
-(define (string-ci>=? a b) (string>=? (string-foldcase a) (string-foldcase b)))
-(define (string-ci>? a b) (string>? (string-foldcase a) (string-foldcase b)))
+(define (string-cmp-ci op a ls)
+  (let lp ((op op) (a (string-foldcase a)) (ls ls))
+    (if (null? ls)
+        #t
+        (let ((b (string-foldcase (car ls))))
+          (and (op a b) (lp op b (cdr ls)))))))
+
+(define (string-ci=? a . ls) (string-cmp-ci string=? a ls))
+(define (string-ci<? a . ls) (string-cmp-ci string<? a ls))
+(define (string-ci>? a . ls) (string-cmp-ci string>? a ls))
+(define (string-ci<=? a . ls) (string-cmp-ci string<=? a ls))
+(define (string-ci>=? a . ls) (string-cmp-ci string>=? a ls))

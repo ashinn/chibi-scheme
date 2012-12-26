@@ -980,32 +980,32 @@
 (test "a-c" (let ((str (string #\a #\b #\c))) (string-set! str 1 #\-) str))
 
 (test #t (string=? "" ""))
-(test #t (string=? "abc" "abc"))
+(test #t (string=? "abc" "abc" "abc"))
 (test #f (string=? "" "abc"))
 (test #f (string=? "abc" "aBc"))
 
 (test #f (string<? "" ""))
 (test #f (string<? "abc" "abc"))
-(test #t (string<? "abc" "abcd"))
+(test #t (string<? "abc" "abcd" "acd"))
 (test #f (string<? "abcd" "abc"))
 (test #t (string<? "abc" "bbc"))
 
 (test #f (string>? "" ""))
 (test #f (string>? "abc" "abc"))
 (test #f (string>? "abc" "abcd"))
-(test #t (string>? "abcd" "abc"))
+(test #t (string>? "acd" "abcd" "abc"))
 (test #f (string>? "abc" "bbc"))
 
 (test #t (string<=? "" ""))
 (test #t (string<=? "abc" "abc"))
-(test #t (string<=? "abc" "abcd"))
+(test #t (string<=? "abc" "abcd" "abcd"))
 (test #f (string<=? "abcd" "abc"))
 (test #t (string<=? "abc" "bbc"))
 
 (test #t (string>=? "" ""))
 (test #t (string>=? "abc" "abc"))
 (test #f (string>=? "abc" "abcd"))
-(test #t (string>=? "abcd" "abc"))
+(test #t (string>=? "abcd" "abcd" "abc"))
 (test #f (string>=? "abc" "bbc"))
 
 (test #t (string-ci=? "" ""))
@@ -1030,7 +1030,7 @@
 (test #f (string-ci>=? "abc" "aBcD"))
 (test #t (string-ci>=? "ABCd" "aBc"))
 
-(test #t (string-ci=? "ΑΒΓ" "αβγ"))
+(test #t (string-ci=? "ΑΒΓ" "αβγ" "αβγ"))
 (test #f (string-ci<? "ΑΒΓ" "αβγ"))
 (test #f (string-ci>? "ΑΒΓ" "αβγ"))
 (test #t (string-ci<=? "ΑΒΓ" "αβγ"))

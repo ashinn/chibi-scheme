@@ -419,17 +419,23 @@
 (define (string . args) (list->string args))
 (define (string-append . args) (string-concatenate args))
 
-(define (string=? s1 s2) (eq? (string-cmp s1 s2 #f) 0))
-(define (string<? s1 s2) (< (string-cmp s1 s2 #f) 0))
-(define (string<=? s1 s2) (<= (string-cmp s1 s2 #f) 0))
-(define (string>? s1 s2) (> (string-cmp s1 s2 #f) 0))
-(define (string>=? s1 s2) (>= (string-cmp s1 s2 #f) 0))
+(define (string-cmp-ls op ci? s ls)
+  (if (null? ls)
+      #t
+      (and (op (string-cmp s (car ls) ci?) 0)
+           (string-cmp-ls op ci? (car ls) (cdr ls)))))
 
-(define (string-ci=? s1 s2) (eq? (string-cmp s1 s2 #t) 0))
-(define (string-ci<? s1 s2) (< (string-cmp s1 s2 #t) 0))
-(define (string-ci<=? s1 s2) (<= (string-cmp s1 s2 #t) 0))
-(define (string-ci>? s1 s2) (> (string-cmp s1 s2 #t) 0))
-(define (string-ci>=? s1 s2) (>= (string-cmp s1 s2 #t) 0))
+(define (string=? s . ls) (string-cmp-ls eq? #f s ls))
+(define (string<? s . ls) (string-cmp-ls < #f s ls))
+(define (string>? s . ls) (string-cmp-ls > #f s ls))
+(define (string<=? s . ls) (string-cmp-ls <= #f s ls))
+(define (string>=? s . ls) (string-cmp-ls >= #f s ls))
+
+(define (string-ci=? s . ls) (string-cmp-ls eq? #t s ls))
+(define (string-ci<? s . ls) (string-cmp-ls < #t s ls))
+(define (string-ci>? s . ls) (string-cmp-ls > #t s ls))
+(define (string-ci<=? s . ls) (string-cmp-ls <= #t s ls))
+(define (string-ci>=? s . ls) (string-cmp-ls >= #t s ls))
 
 ;; list utils
 
