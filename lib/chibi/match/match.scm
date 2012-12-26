@@ -210,6 +210,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2012/12/26 - wrapping match-let&co body in lexical closure
 ;; 2012/11/28 - fixing typo s/vetor/vector in largely unused set! code
 ;; 2012/05/23 - fixing combinatorial explosion of code in certain or patterns
 ;; 2011/09/25 - fixing bug when directly matching an identifier repeated in
