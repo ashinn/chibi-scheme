@@ -1114,14 +1114,20 @@
   (if (pair? o) (/ (ln x) (ln (car o))) (ln x)))
 
 (define (atan y . o)
+  (define (inf? z) (if (= +inf.0 z) #t (= -inf.0 z)))
   (if (null? o)
       (atan1 y)
       (let ((x (exact->inexact (car o))))
-        (if (negative? x)
-            (if (negative? y)
-                (- (atan1 (/ y x)) 3.141592653589793)
-                (- 3.141592653589793 (atan1 (/ y (- x)))))
-            (atan1 (/ y x))))))
+        (if (and (inf? x) (inf? y))
+            (* (if (< y 0) -1 1) (if (= x -inf.0) 3 1) 0.7853981633974483)
+            (if (negative? x)
+                (if (negative? y)
+                    (- (atan1 (/ y x)) 3.141592653589793)
+                    (- 3.141592653589793 (atan1 (/ y (- x)))))
+                (if (and (zero? x) (zero? y))
+                    (* (if (eqv? y -0.0) -1 1)
+                       (if (eqv? x -0.0) 3.141592653589793 x))
+                    (atan1 (/ y x))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; string cursors
