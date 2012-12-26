@@ -854,7 +854,7 @@
 (define-syntax match-let*
   (syntax-rules ()
     ((_ () . body)
-     (begin . body))
+     (let () . body))
     ((_ ((pat expr) . rest) . body)
      (match expr (pat (match-let* rest . body))))))
 
