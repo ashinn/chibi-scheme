@@ -49,11 +49,18 @@
         (integer->char (- n (cdar ls))))
        (else (lp (cdr ls)))))))
 
-(define (char-ci<=? a b) (char<=? (char-foldcase a) (char-foldcase b)))
-(define (char-ci<? a b) (char<? (char-foldcase a) (char-foldcase b)))
-(define (char-ci=? a b) (char=? (char-foldcase a) (char-foldcase b)))
-(define (char-ci>=? a b) (char>=? (char-foldcase a) (char-foldcase b)))
-(define (char-ci>? a b) (char>? (char-foldcase a) (char-foldcase b)))
+(define (char-cmp-ci op a ls)
+  (let lp ((op op) (a (char->integer (char-foldcase a))) (ls ls))
+    (if (null? ls)
+        #t
+        (let ((b (char->integer (char-downcase (car ls)))))
+          (and (op a b) (lp op b (cdr ls)))))))
+
+(define (char-ci=? a . ls) (char-cmp-ci = a ls))
+(define (char-ci<? a . ls) (char-cmp-ci < a ls))
+(define (char-ci>? a . ls) (char-cmp-ci > a ls))
+(define (char-ci<=? a . ls) (char-cmp-ci <= a ls))
+(define (char-ci>=? a . ls) (char-cmp-ci >= a ls))
 
 (define (string-downcase str)
   (string-map char-downcase str))

@@ -346,22 +346,31 @@
 (define (char-upper-case? ch) (<= 65 (char->integer ch) 90))
 (define (char-lower-case? ch) (<= 97 (char->integer ch) 122))
 
-(define (char=? a b) (= (char->integer a) (char->integer b)))
-(define (char<? a b) (< (char->integer a) (char->integer b)))
-(define (char>? a b) (> (char->integer a) (char->integer b)))
-(define (char<=? a b) (<= (char->integer a) (char->integer b)))
-(define (char>=? a b) (>= (char->integer a) (char->integer b)))
+(define (char-cmp op a ls)
+  (let lp ((op op) (a (char->integer a)) (ls ls))
+    (if (null? ls)
+        #t
+        (let ((b (char->integer (car ls))))
+          (and (op a b) (lp op b (cdr ls)))))))
 
-(define (char-ci=? a b)
-  (= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-(define (char-ci<? a b)
-  (< (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-(define (char-ci>? a b)
-  (> (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-(define (char-ci<=? a b)
-  (<= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
-(define (char-ci>=? a b)
-  (>= (char->integer (char-downcase a)) (char->integer (char-downcase b))))
+(define (char=? a . ls) (char-cmp = a ls))
+(define (char<? a . ls) (char-cmp < a ls))
+(define (char>? a . ls) (char-cmp > a ls))
+(define (char<=? a . ls) (char-cmp <= a ls))
+(define (char>=? a . ls) (char-cmp >= a ls))
+
+(define (char-cmp-ci op a ls)
+  (let lp ((op op) (a (char->integer (char-downcase a))) (ls ls))
+    (if (null? ls)
+        #t
+        (let ((b (char->integer (char-downcase (car ls)))))
+          (and (op a b) (lp op b (cdr ls)))))))
+
+(define (char-ci=? a . ls) (char-cmp-ci = a ls))
+(define (char-ci<? a . ls) (char-cmp-ci < a ls))
+(define (char-ci>? a . ls) (char-cmp-ci > a ls))
+(define (char-ci<=? a . ls) (char-cmp-ci <= a ls))
+(define (char-ci>=? a . ls) (char-cmp-ci >= a ls))
 
 ;; string utils
 
