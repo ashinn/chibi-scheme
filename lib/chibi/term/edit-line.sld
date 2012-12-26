@@ -6,5 +6,5 @@
           make-buffer buffer-make-completer
           buffer-clear buffer-refresh buffer-draw
           buffer-row buffer-col)
-  (import (chibi) (chibi stty) (srfi 9))
+  (import (chibi) (chibi stty) (srfi 9) (srfi 33))
   (include "edit-line.scm"))
