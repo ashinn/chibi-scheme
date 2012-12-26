@@ -222,8 +222,8 @@
 ;; 2008/03/15 - removing redundant check in vector patterns
 ;; 2008/03/06 - you can use `...' portably now (thanks to Taylor Campbell)
 ;; 2007/09/04 - fixing quasiquote patterns
-;; 2007/07/21 - allowing ellipse patterns in non-final list positions
-;; 2007/04/10 - fixing potential hygiene issue in match-check-ellipse
+;; 2007/07/21 - allowing ellipsis patterns in non-final list positions
+;; 2007/04/10 - fixing potential hygiene issue in match-check-ellipsis
 ;;              (thanks to Taylor Campbell)
 ;; 2007/04/08 - clean up, commenting
 ;; 2006/12/24 - bugfixes
@@ -295,18 +295,18 @@
     ((match-next v g+s (pat . body) . rest)
      (match-next v g+s (pat (=> failure) . body) . rest))))
 
-;; MATCH-ONE first checks for ellipse patterns, otherwise passes on to
+;; MATCH-ONE first checks for ellipsis patterns, otherwise passes on to
 ;; MATCH-TWO.
 
 (define-syntax match-one
   (syntax-rules ()
     ;; If it's a list of two or more values, check to see if the
-    ;; second one is an ellipse and handle accordingly, otherwise go
+    ;; second one is an ellipsis and handle accordingly, otherwise go
     ;; to MATCH-TWO.
     ((match-one v (p q . r) g+s sk fk i)
-     (match-check-ellipse
+     (match-check-ellipsis
       q
-      (match-extract-vars p (match-gen-ellipses v p r  g+s sk fk i) i ())
+      (match-extract-vars p (match-gen-ellipsis v p r  g+s sk fk i) i ())
       (match-two v (p q . r) g+s sk fk i)))
     ;; Go directly to MATCH-TWO.
     ((match-one . x)
@@ -356,7 +356,7 @@
     ((match-two v (= proc p) . x)
      (let ((w (proc v))) (match-one w p . x)))
     ((match-two v (p ___ . r) g+s sk fk i)
-     (match-extract-vars p (match-gen-ellipses v p r g+s sk fk i) i ()))
+     (match-extract-vars p (match-gen-ellipsis v p r g+s sk fk i) i ()))
     ((match-two v (p) g+s sk fk i)
      (if (and (pair? v) (null? (cdr v)))
          (let ((w (car v)))
@@ -496,7 +496,7 @@
 ;; expects to see in the success body) to the reversed accumulated
 ;; list IDs.
 
-(define-syntax match-gen-ellipses
+(define-syntax match-gen-ellipsis
   (syntax-rules ()
     ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
      (match-check-identifier p
@@ -520,7 +520,7 @@
     ((_ v p r g+s (sk ...) fk i ((id id-ls) ...))
      ;; general case, trailing patterns to match, keep track of the
      ;; remaining list length so we don't need any backtracking
-     (match-verify-no-ellipses
+     (match-verify-no-ellipsis
       r
       (let* ((tail-len (length 'r))
              (ls v)
@@ -543,30 +543,30 @@
                  fk)))))))))
 
 ;; This is just a safety check.  Although unlike syntax-rules we allow
-;; trailing patterns after an ellipses, we explicitly disable multiple
-;; ellipses at the same level.  This is because in the general case
-;; such patterns are exponential in the number of ellipses, and we
+;; trailing patterns after an ellipsis, we explicitly disable multiple
+;; ellipsis at the same level.  This is because in the general case
+;; such patterns are exponential in the number of ellipsis, and we
 ;; don't want to make it easy to construct very expensive operations
 ;; with simple looking patterns.  For example, it would be O(n^2) for
 ;; patterns like (a ... b ...) because we must consider every trailing
 ;; element for every possible break for the leading "a ...".
 
-(define-syntax match-verify-no-ellipses
+(define-syntax match-verify-no-ellipsis
   (syntax-rules ()
     ((_ (x . y) sk)
-     (match-check-ellipse
+     (match-check-ellipsis
       x
       (match-syntax-error
-       "multiple ellipse patterns not allowed at same level")
-      (match-verify-no-ellipses y sk)))
+       "multiple ellipsis patterns not allowed at same level")
+      (match-verify-no-ellipsis y sk)))
     ((_ () sk)
      sk)
     ((_ x sk)
-     (match-syntax-error "dotted tail not allowed after ellipse" x))))
+     (match-syntax-error "dotted tail not allowed after ellipsis" x))))
 
 ;; To implement the tree search, we use two recursive procedures.  TRY
 ;; attempts to match Y once, and on success it calls the normal SK on
-;; the accumulated list ids as in MATCH-GEN-ELLIPSES.  On failure, we
+;; the accumulated list ids as in MATCH-GEN-ELLIPSIS.  On failure, we
 ;; call NEXT which first checks if the current value is a list
 ;; beginning with X, then calls TRY on each remaining element of the
 ;; list.  Since TRY will recursively call NEXT again on failure, this
@@ -614,11 +614,11 @@
 (define-syntax match-vector
   (syntax-rules (___)
     ((_ v n pats (p q) . x)
-     (match-check-ellipse q
-                          (match-gen-vector-ellipses v n pats p . x)
+     (match-check-ellipsis q
+                          (match-gen-vector-ellipsis v n pats p . x)
                           (match-vector-two v n pats (p q) . x)))
     ((_ v n pats (p ___) sk fk i)
-     (match-gen-vector-ellipses v n pats p sk fk i))
+     (match-gen-vector-ellipsis v n pats p sk fk i))
     ((_ . x)
      (match-vector-two . x))))
 
@@ -645,10 +645,10 @@
                   (match-vector-step v rest sk fk)
                   fk i)))))
 
-;; With a vector ellipse pattern we first check to see if the vector
+;; With a vector ellipsis pattern we first check to see if the vector
 ;; length is at least the required length.
 
-(define-syntax match-gen-vector-ellipses
+(define-syntax match-gen-vector-ellipsis
   (syntax-rules ()
     ((_ v n ((pat index) ...) p sk fk i)
      (if (vector? v)
@@ -692,7 +692,7 @@
 ;;
 ;; Calls the continuation with all new vars as a list of the form
 ;; ((orig-var tmp-name) ...), where tmp-name can be used to uniquely
-;; pair with the original variable (e.g. it's used in the ellipse
+;; pair with the original variable (e.g. it's used in the ellipsis
 ;; generation for list variables).
 ;;
 ;; (match-extract-vars pattern continuation (ids ...) (new-vars ...))
@@ -718,7 +718,7 @@
     ;; A non-keyword pair, expand the CAR with a continuation to
     ;; expand the CDR.
     ((match-extract-vars (p q . r) k i v)
-     (match-check-ellipse
+     (match-check-ellipsis
       q
       (match-extract-vars (p . r) k i v)
       (match-extract-vars p (match-extract-vars-step (q . r) k i v) i ())))
@@ -863,7 +863,7 @@
 ;; Otherwise COND-EXPANDed bits.
 
 ;; This *should* work, but doesn't :(
-;;   (define-syntax match-check-ellipse
+;;   (define-syntax match-check-ellipsis
 ;;     (syntax-rules (...)
 ;;       ((_ ... sk fk) sk)
 ;;       ((_ x sk fk) fk)))
@@ -871,21 +871,21 @@
 ;; This is a little more complicated, and introduces a new let-syntax,
 ;; but should work portably in any R[56]RS Scheme.  Taylor Campbell
 ;; originally came up with the idea.
-(define-syntax match-check-ellipse
+(define-syntax match-check-ellipsis
   (syntax-rules ()
     ;; these two aren't necessary but provide fast-case failures
-    ((match-check-ellipse (a . b) success-k failure-k) failure-k)
-    ((match-check-ellipse #(a ...) success-k failure-k) failure-k)
+    ((match-check-ellipsis (a . b) success-k failure-k) failure-k)
+    ((match-check-ellipsis #(a ...) success-k failure-k) failure-k)
     ;; matching an atom
-    ((match-check-ellipse id success-k failure-k)
-     (let-syntax ((ellipse? (syntax-rules ()
+    ((match-check-ellipsis id success-k failure-k)
+     (let-syntax ((ellipsis? (syntax-rules ()
                               ;; iff `id' is `...' here then this will
                               ;; match a list of any length
-                              ((ellipse? (foo id) sk fk) sk)
-                              ((ellipse? other sk fk) fk))))
+                              ((ellipsis? (foo id) sk fk) sk)
+                              ((ellipsis? other sk fk) fk))))
        ;; this list of three elements will only many the (foo id) list
        ;; above if `id' is `...'
-       (ellipse? (a b c) success-k failure-k)))))
+       (ellipsis? (a b c) success-k failure-k)))))
 
 
 ;; This is portable but can be more efficient with non-portable
