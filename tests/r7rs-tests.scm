@@ -1550,6 +1550,10 @@
 (test #u8(1 2 3) (read-bytevector 3 (open-input-bytevector #u8(1 2 3))))
 (test #u8(1 2 3) (read-bytevector 3 (open-input-bytevector #u8(1 2 3 4))))
 
+(test #t
+    (let ((bv (bytevector 1 2 3 4 5)))
+      (eof-object? (read-bytevector! bv (open-input-bytevector #u8())))))
+
 (test #u8(6 7 8 9 10)
   (let ((bv (bytevector 1 2 3 4 5)))
     (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 0 5)

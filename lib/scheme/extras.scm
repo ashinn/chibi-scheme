@@ -110,17 +110,17 @@
                   (cadr o)
                   (bytevector-length vec))))
     (if (>= start end)
-       0
-       (let* ((res (read-bytevector (- end start) in))
-              (len (bytevector-length res)))
-         (cond
-          ((zero? len)
-           (read-char (open-input-string "")))
-          (else
-           (do ((i 0 (+ i 1)))
-               ((>= i len) len)
-             (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))
-             )))))))
+        0
+        (let ((res (read-bytevector (- end start) in)))
+          (cond
+           ((eof-object? res)
+            res)
+           (else
+            (let ((len (bytevector-length res)))
+              (do ((i 0 (+ i 1)))
+                  ((>= i len) len)
+                (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))
+                ))))))))
 
 (define (write-bytevector vec . o)
   (let* ((out (if (pair? o) (car o) (current-output-port)))
