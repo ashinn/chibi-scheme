@@ -505,7 +505,7 @@
      ((eq? base 'input-port) "sexp_iportp")
      ((eq? base 'output-port) "sexp_oportp")
      ((eq? base 'input-output-port) "sexp_ioportp")
-     ((eq? base 'fileno) "sexp_filenop")
+     ((memq base '(fileno fileno-nonblock)) "sexp_filenop")
      (else #f))))
 
 (define (type-name type)
@@ -531,7 +531,7 @@
      ((eq? base 'input-port) "SEXP_IPORT")
      ((eq? base 'output-port) "SEXP_OPORT")
      ((eq? base 'input-output-port) "SEXP_IPORT")
-     ((eq? base 'fileno) "SEXP_FILENO")
+     ((memq base '(fileno fileno-nonblock)) "SEXP_FILENO")
      ((void-pointer-type? type) "SEXP_CPOINTER")
      ((lookup-type base)
       ;; (string-append "sexp_type_tag(" (type-id-name base) ")")
@@ -606,7 +606,7 @@
       (cat "sexp_make_non_null_output_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'input-output-port base)
       (cat "sexp_make_non_null_input_output_port(ctx, " val ", SEXP_FALSE)"))
-     ((eq? 'fileno base)
+     ((memq base '(fileno fileno-nonblock))
       (cat "sexp_make_fileno(ctx, sexp_make_fixnum(" val "), SEXP_FALSE)"))
      (else
       (let ((ctype (lookup-type base))
@@ -655,10 +655,11 @@
            "(" val ")"))
      ((eq? base 'port-or-fileno)
       (cat "(sexp_portp(" val ") ? sexp_port_fileno(" val ")"
-           " : sexp_fileno_fd(" val "))"))
+           " : sexp_filenop(" val ") ? sexp_fileno_fd(" val ")"
+           " : sexp_unbox_fixnum(" val "))"))
      ((port-type? base)
       (cat "sexp_port_stream(" val ")"))
-     ((eq? base 'fileno)
+     ((memq base '(fileno fileno-nonblock))
       (cat "(sexp_filenop(" val ") ? sexp_fileno_fd(" val ")"
            " : sexp_unbox_fixnum(" val "))"))
      (else
@@ -677,7 +678,7 @@
 (define (base-type-c-name base)
   (case base
     ((string env-string non-null-string) (if *c++?* "string" "char*"))
-    ((fileno) "int")
+    ((fileno fileno-nonblock) "int")
     (else (string-replace (symbol->string base) #\- " "))))
 
 (define (type-struct-type type)
@@ -715,7 +716,7 @@
      ((eq? base 'env-string)
       (cat "(sexp_pairp(" arg ") && sexp_stringp(sexp_car(" arg
            ")) && sexp_stringp(sexp_cdr(" arg ")))"))
-     ((eq? base 'fileno)
+     ((memq base '(fileno fileno-nonblock))
       (cat "(sexp_filenop(" arg ") || sexp_fixnump(" arg "))"))
      ((string-type? base)
       (cat
@@ -758,13 +759,13 @@
                "    return sexp_xtype_exception(ctx, self, \"not a list of "
                (type-name type) "s\", " arg ");\n")))
      ((eq? base-type 'port-or-fileno)
-      (cat "  if (! (sexp_portp(" arg ") || sexp_filenop(" arg ")))\n"
+      (cat "  if (! (sexp_portp(" arg ") || sexp_filenop(" arg ") || sexp_fixnump(" arg ")))\n"
            "    return sexp_xtype_exception(ctx, self, \"not a port or file descriptor\"," arg ");\n"))
      ((or (int-type? base-type)
           (float-type? base-type)
           (string-type? base-type)
           (port-type? base-type)
-          (eq? base-type 'fileno))
+          (memq base-type '(fileno fileno-nonblock)))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"
        "    return sexp_type_exception(ctx, self, "
@@ -1047,11 +1048,22 @@
 
 (define (write-result-adjustment result)
   (cond
+   ;; new port results are automatically made non-blocking
    ((memq (type-base result) '(input-port output-port input-output-port))
     (let ((res (string-append "res" (type-index-string result))))
       (cat "#ifdef SEXP_USE_GREEN_THREADS\n"
            "  if (sexp_portp(" res "))\n"
-           "    fcntl(fileno(sexp_port_stream(" res ")), F_SETFL, O_NONBLOCK);\n"
+           "    fcntl(fileno(sexp_port_stream(" res ")), F_SETFL, O_NONBLOCK "
+           " | fcntl(fileno(sexp_port_stream(" res ")), F_GETFL));\n"
+           "#endif\n")))
+   ;; a file descriptor result can be automatically made non-blocking
+   ;; by specifying a result type of fileno-nonblock
+   ((memq (type-base result) '(fileno-nonblock))
+    (let ((res (string-append "res" (type-index-string result))))
+      (cat "#ifdef SEXP_USE_GREEN_THREADS\n"
+           "  if (sexp_filenop(" res "))\n"
+           "    fcntl(sexp_fileno_fd(" res "), F_SETFL, O_NONBLOCK "
+           " | fcntl(sexp_fileno_fd(" res "), F_GETFL));\n"
            "#endif\n")))))
 
 (define (write-result result . o)
@@ -1661,7 +1673,8 @@
      ((and compile? (not (equal? "-" dest)))
       ;; This has to use `eval' for bootstrapping, since we need
       ;; chibi-ffi to compile to (chibi process) module.
-      (let* ((so (string-append (strip-extension src) *shared-object-extension*))
+      (let* ((so (string-append (strip-extension src)
+                                *shared-object-extension*))
              (system (begin (eval '(import (chibi process)))
                             (eval 'system)))
              (base-args (append (or cflags '())
