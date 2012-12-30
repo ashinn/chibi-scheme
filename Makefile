@@ -212,6 +212,9 @@ test-system: chibi-scheme$(EXE) lib/chibi/system$(SO)
 test-libs: chibi-scheme$(EXE)
 	$(CHIBI) -xscheme tests/lib-tests.scm
 
+test-r7rs: chibi-scheme$(EXE)
+	$(CHIBI) tests/r7rs-tests.scm
+
 test: chibi-scheme$(EXE)
 	$(CHIBI) -xscheme tests/r5rs-tests.scm
 
