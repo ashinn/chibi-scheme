@@ -385,6 +385,8 @@ static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd) {
   /* register the fd */
   if (sexp_portp(portorfd))
     fd = sexp_port_fileno(portorfd);
+  else if (sexp_filenop(portorfd))
+    fd = sexp_fileno_fd(portorfd);
   else if (sexp_fixnump(portorfd))
     fd = sexp_unbox_fixnum(portorfd);
   else
