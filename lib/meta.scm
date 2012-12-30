@@ -201,6 +201,9 @@
         (module-env-set! mod (eval-module name mod)))
     mod))
 
+(define-syntax meta-begin begin)
+(define-syntax meta-define define)
+
 (define define-library-transformer
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -208,34 +211,39 @@
            (body (cddr expr))
            (tmp (rename 'tmp))
            (this-module (rename '*this-module*))
-           (add-module! (rename 'add-module!)))
-       `(let ((,tmp ,this-module))
-          (define (rewrite-export x)
-            (if (pair? x)
-                (if (and (= 3 (length x))
-                         (eq? 'rename (identifier->symbol (car x))))
+           (add-module! (rename 'add-module!))
+           (_define (rename 'meta-define))
+           (_let (rename 'let))
+           (_if (rename 'if))
+           (_cond (rename 'cond))
+           (_set! (rename 'set!)))
+       `(,_let ((,tmp ,this-module))
+          (,_define (rewrite-export x)
+            (,_if (pair? x)
+                (,_if (and (= 3 (length x))
+                           (eq? 'rename (identifier->symbol (car x))))
                     (cons (car (cddr x)) (cadr x))
                     (error "invalid module export" x))
                 x))
-          (define (extract-exports)
-            (cond
+          (,_define (extract-exports)
+            (,_cond
              ((assq 'export-all ,this-module)
               => (lambda (x)
                    (if (pair? (cdr x))
                        (error "export-all takes no parameters" x))
                    #f))
              (else
-              (let lp ((ls ,this-module) (res '()))
-                (cond
+              (,_let lp ((ls ,this-module) (res '()))
+                (,_cond
                  ((null? ls) res)
                  ((and (pair? (car ls)) (eq? 'export (caar ls)))
                   (lp (cdr ls) (append (map rewrite-export (cdar ls)) res)))
                  (else (lp (cdr ls) res)))))))
-          (set! ,this-module '())
+          (,_set! ,this-module '())
           ,@body
-          (set! ,this-module (reverse ,this-module))
+          (,_set! ,this-module (reverse ,this-module))
           (,add-module! ',name (make-module (extract-exports) #f ,this-module))
-          (set! ,this-module ,tmp))))))
+          (,_set! ,this-module ,tmp))))))
 
 (define-syntax define-library define-library-transformer)
 (define-syntax module define-library-transformer)
@@ -249,7 +257,6 @@
            (let ((this-module (rename '*this-module*)))
              `(set! ,this-module (cons ',expr ,this-module)))))))))
 
-(define-syntax orig-begin begin)
 (define-config-primitive import)
 (define-config-primitive import-immutable)
 (define-config-primitive export)
@@ -268,7 +275,7 @@
        (let lp ((ls (cdr expr)) (res '()))
          (cond
           ((null? ls)
-           (cons (rename 'orig-begin) (reverse res)))
+           (cons (rename 'meta-begin) (reverse res)))
           (else
            (let ((mod+imps (resolve-import (car ls))))
              (cond
@@ -293,3 +300,8 @@
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (current-environment)
                                      (list (list 'export 'cond-expand))))))
+
+(define-syntax define
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (error "invalid use of define in library declarations - did you forget to wrap it in begin?" expr))))
