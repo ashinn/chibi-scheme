@@ -151,17 +151,17 @@
 (define-c errno (make-fifo "mkfifo") (string (default #o644 int)))
 
 (define-c int (get-file-descriptor-flags "fcntl")
-  (fileno (value F_GETFD int)))
+  (port-or-fileno (value F_GETFD int)))
 (define-c errno (set-file-descriptor-flags! "fcntl")
-  (fileno (value F_SETFD int) long))
+  (port-or-fileno (value F_SETFD int) long))
 
 ;;> Get and set the flags for the given file descriptor.
 ;;/
 
 (define-c int (get-file-descriptor-status "fcntl")
-  (fileno (value F_GETFL int)))
+  (port-or-fileno (value F_GETFL int)))
 (define-c errno (set-file-descriptor-status! "fcntl")
-  (fileno (value F_SETFL int) long))
+  (port-or-fileno (value F_SETFL int) long))
 
 ;;> Get and set the status for the given file descriptor.
 ;;/
