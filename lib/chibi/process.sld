@@ -17,6 +17,6 @@
           call-with-process-io
           process->string process->string-list process->output+error)
   (import (chibi) (chibi io) (chibi string) (chibi filesystem))
-  (cond-expand (threads (import (srfi 18))) (else #f))
+  (cond-expand (threads (import (srfi 18) (srfi 33))) (else #f))
   (include-shared "process")
   (include "process.scm"))

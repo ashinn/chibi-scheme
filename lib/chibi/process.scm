@@ -64,6 +64,14 @@
       (waitpid pid 0)))))
 
 (define (call-with-process-io command proc)
+  (define (set-non-blocking! fd)
+    (cond-expand
+     (threads
+      (set-file-descriptor-status!
+       fd
+       (bitwise-ior open/non-block (get-file-descriptor-status fd))))
+     (else
+      #f)))
   (let ((command-ls (if (string? command) (string-split command) command))
         (in-pipe (open-pipe))
         (out-pipe (open-pipe))
@@ -88,6 +96,9 @@
              (close-file-descriptor (car in-pipe))
              (close-file-descriptor (cadr out-pipe))
              (close-file-descriptor (cadr err-pipe))
+             (set-non-blocking! (cadr in-pipe))
+             (set-non-blocking! (car out-pipe))
+             (set-non-blocking! (car err-pipe))
              (proc pid
                    (open-output-file-descriptor (cadr in-pipe))
                    (open-input-file-descriptor (car out-pipe))
