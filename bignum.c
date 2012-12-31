@@ -344,7 +344,7 @@ sexp sexp_bignum_add_digits (sexp ctx, sexp dst, sexp a, sexp b) {
     carry = (n > (SEXP_UINT_T_MAX - bdata[i]) ? 1 : 0);
   }
   for ( ; carry && (i<alen); i++) {
-    carry = (cdata[i] == SEXP_UINT_T_MAX-1 ? 1 : 0);
+    carry = (cdata[i] == SEXP_UINT_T_MAX ? 1 : 0);
     cdata[i]++;
   }
   if (carry) {
