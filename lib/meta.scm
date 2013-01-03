@@ -71,14 +71,14 @@
         (string->symbol (substring bs (string-length as)))
         b)))
 
-;; (define (warn msg . args)
-;;   (display msg (current-error-port))
-;;   (display ":" (current-error-port))
-;;   (for-each (lambda (a)
-;;               (display " " (current-error-port))
-;;               (write a (current-error-port)))
-;;             args)
-;;   (newline (current-error-port)))
+(define (warn msg . args)
+  (display msg (current-error-port))
+  (display ":" (current-error-port))
+  (for-each (lambda (a)
+              (display " " (current-error-port))
+              (write a (current-error-port)))
+            args)
+  (newline (current-error-port)))
 
 (define (to-id id) (if (pair? id) (car id) id))
 (define (from-id id) (if (pair? id) (cdr id) id))
@@ -217,6 +217,14 @@
            (_if (rename 'if))
            (_cond (rename 'cond))
            (_set! (rename 'set!)))
+       ;; Check for suspicious defines.
+       (for-each
+        (lambda (x)
+          (if (and (pair? x) (memq (strip-syntactic-closures (car x))
+                                   '(define define-syntax)))
+              (warn "suspicious use of define in library declarations - did you forget to wrap it in begin?" x)))
+        (cdr expr))
+       ;; Generate the library wrapper.
        `(,_let ((,tmp ,this-module))
           (,_define (rewrite-export x)
             (,_if (pair? x)
@@ -300,8 +308,3 @@
         (cons '(srfi 0) (make-module (list 'cond-expand)
                                      (current-environment)
                                      (list (list 'export 'cond-expand))))))
-
-(define-syntax define
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (error "invalid use of define in library declarations - did you forget to wrap it in begin?" expr))))
