@@ -480,38 +480,38 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
 #define SEXP_MAX_ACCURATE_FLONUM_SQRT 1.15292150460685e18 /* 2^60 */
 
 sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
-  sexp_gc_var3(res, rem, tmp);
-  sexp_gc_preserve3(ctx, res, rem, tmp);
+  sexp_gc_var4(res, rem, tmp, tmpa);
+  sexp_gc_preserve4(ctx, res, rem, tmp, tmpa);
   /* initial estimate via flonum, ignoring signs */
+  if (sexp_negativep(a)) {
+    a = tmpa = sexp_copy_bignum(ctx, NULL, a, 0);
+    sexp_negate(a);
+  }
   res = sexp_make_flonum(ctx, sexp_bignum_to_double(a));
-  if (sexp_negativep(res)) { sexp_negate(res); }
   res = sexp_sqrt(ctx, NULL, 1, res);
   if (sexp_flonump(res) &&
       sexp_flonum_value(res) > SEXP_MAX_ACCURATE_FLONUM_SQRT) {
     res = sexp_double_to_bignum(ctx, sexp_flonum_value(res));
-  loop:                           /* while abs(a - res*res) < res */
+  loop:                           /* until 0 <= a - res*res < 2*res + 1 */
     rem = sexp_mul(ctx, res, res);
     tmp = rem = sexp_sub(ctx, a, rem);
-    if (sexp_negativep(tmp)) {
-      tmp = sexp_copy_bignum(ctx, NULL, tmp, 0);
-      sexp_negate(tmp);
-    }
+    if (!sexp_positivep(tmp)) goto adjust;
+    tmp = sexp_sub(ctx, tmp, SEXP_ONE);
+    tmp = sexp_quotient(ctx, tmp, SEXP_TWO);
     tmp = sexp_compare(ctx, tmp, res);
     if (sexp_positivep(tmp)) {
+    adjust:
       tmp = sexp_quotient(ctx, a, res);
       res = sexp_add(ctx, res, tmp);
       res = sexp_quotient(ctx, res, SEXP_TWO);
       goto loop;
     }
-    /* add back in an approximate remainder if non-zero */
+    /* convert back to inexact if non-zero remainder */
     rem = sexp_bignum_normalize(rem);
-    if (rem != SEXP_ZERO) {
-      rem = sexp_make_flonum(ctx, sexp_fixnump(rem) ? sexp_unbox_fixnum(rem) : sexp_bignum_to_double(rem));
-      rem = sexp_div(ctx, rem, a);
-      res = sexp_add(ctx, res, rem);
-    }
+    if (rem != SEXP_ZERO)
+      res = sexp_make_flonum(ctx, sexp_bignum_to_double(res));
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release4(ctx);
   return sexp_bignum_normalize(res);
 }
 
