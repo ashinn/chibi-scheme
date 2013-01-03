@@ -828,7 +828,7 @@ static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
       else
         mac = sexp_eval(eval_ctx, sexp_cadar(ls), NULL);
       if (sexp_procedurep(mac))
-        mac = sexp_make_macro(eval_ctx, mac, sexp_context_env(bind_ctx));
+        mac = sexp_make_macro(eval_ctx, mac, sexp_context_env(eval_ctx));
       if (!(sexp_macrop(mac)||sexp_corep(mac))) {
         res = (sexp_exceptionp(mac) ? mac
                : sexp_compile_error(eval_ctx, "non-procedure macro", mac));
