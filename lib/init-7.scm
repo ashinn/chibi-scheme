@@ -817,7 +817,7 @@
                    (error "too many ...'s"))
                   ((and (null? (cdr (cdr t))) (identifier? (car t)))
                    ;; shortcut for (var ...)
-                   (lp (car t) depth))
+                   (lp (car t) ell-dim))
                   (else
                    (let* ((once (lp (car t) ell-dim))
                           (nest (if (and (null? (cdr ell-vars))
