@@ -169,6 +169,26 @@
 (let*-values (((root rem) (exact-integer-sqrt 32)))
   (test 35 (* root rem)))
 
+(test '(1073741824 0)
+    (let*-values (((root rem) (exact-integer-sqrt (expt 2 60))))
+      (list root rem)))
+
+(test '(1518500249 3000631951)
+    (let*-values (((root rem) (exact-integer-sqrt (expt 2 61))))
+      (list root rem)))
+
+(test '(815238614083298888 443242361398135744)
+    (let*-values (((root rem) (exact-integer-sqrt (expt 2 119))))
+      (list root rem)))
+
+(test '(1152921504606846976 0)
+    (let*-values (((root rem) (exact-integer-sqrt (expt 2 120))))
+      (list root rem)))
+
+(test '(1630477228166597776 1772969445592542976)
+    (let*-values (((root rem) (exact-integer-sqrt (expt 2 121))))
+      (list root rem)))
+
 (let*-values (((root rem) (exact-integer-sqrt (expt 2 140))))
   (test 0 rem)
   (test (expt 2 140) (square root)))
