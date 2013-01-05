@@ -1039,13 +1039,6 @@
 
 (define (eqv? a b) (if (eq? a b) #t (and (number? a) (equal? a b))))
 
-(define (exact-integer-sqrt x)
-  (let ((res (sqrt x)))
-    (if (exact? res)
-        (values res 0)
-        (let ((res (inexact->exact (truncate res))))
-          (values res (- x (* res res)))))))
-
 (define (zero? x) (= x 0))
 (define (positive? x) (> x 0))
 (define (negative? x) (< x 0))
