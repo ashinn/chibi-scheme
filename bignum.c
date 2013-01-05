@@ -509,7 +509,7 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
     /* convert back to inexact if non-zero remainder */
     rem = sexp_bignum_normalize(rem);
     if (rem != SEXP_ZERO)
-      res = sexp_make_flonum(ctx, sexp_bignum_to_double(res));
+      res = sexp_make_flonum(ctx, sexp_fixnump(res) ? sexp_unbox_fixnum(res) : sexp_bignum_to_double(res));
   }
   sexp_gc_release4(ctx);
   return sexp_bignum_normalize(res);
