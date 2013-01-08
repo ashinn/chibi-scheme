@@ -820,8 +820,9 @@ static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx) {
   sexp_gc_preserve1(eval_ctx, mac);
   for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
     if (! (sexp_pairp(sexp_car(ls)) && sexp_pairp(sexp_cdar(ls))
-           && sexp_nullp(sexp_cddar(ls)))) {
-      res = sexp_compile_error(eval_ctx, "bad syntax binding", sexp_car(ls));
+           && sexp_idp(sexp_caar(ls)) && sexp_nullp(sexp_cddar(ls)))) {
+      res = sexp_compile_error(eval_ctx, "bad syntax binding", sexp_pairp(ls) ? sexp_car(ls) : ls);
+      break;
     } else {
       if (sexp_idp(sexp_cadar(ls)))
         mac = sexp_env_ref(sexp_context_env(eval_ctx), sexp_cadar(ls), SEXP_FALSE);
