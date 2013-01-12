@@ -196,7 +196,7 @@
           (else
            (list (rename 'cons) (qq (car x) d) (qq (cdr x) d)))))
         ((vector? x) (list (rename 'list->vector) (qq (vector->list x) d)))
-        ((if (symbol? x) #t (null? x)) (list (rename 'quote) x))
+        ((if (identifier? x) #t (null? x)) (list (rename 'quote) x))
         (else x)))
      (qq (cadr expr) 0))))
 
