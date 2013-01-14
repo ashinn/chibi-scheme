@@ -437,7 +437,6 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
   if (sexp_pollfdsp(ctx, pollfds) && sexp_pollfds_num_fds(pollfds) > 0) {
     pfds = sexp_pollfds_fds(pollfds);
     k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), 0);
-  unblock_io_threads:
     for (i=sexp_pollfds_num_fds(pollfds)-1; i>=0 && k>0; --i) {
       if (pfds[i].revents > 0) { /* free all threads blocked on this fd */
         k--;
@@ -601,24 +600,10 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
           usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
       }
     }
-    /* either wait on an fd, or just sleep */
-    pollfds = sexp_global(ctx, SEXP_G_THREADS_POLL_FDS);
-    if ((sexp_portp(sexp_context_event(res)) || sexp_fixnump(sexp_context_event(res)))
-        && sexp_pollfdsp(ctx, pollfds)) {
-      if ((k = poll(sexp_pollfds_fds(pollfds), sexp_pollfds_num_fds(pollfds), usecs/1000)) > 0) {
-        pfds = sexp_pollfds_fds(pollfds);
-        goto unblock_io_threads;
-      } else {
-        /* optimistically unblock this so we have a runnable result */
-        /* TODO: remove the fd from the pollfds */
-        sexp_context_waitp(res) = sexp_context_timeoutp(res) = 0;
-        sexp_context_event(res) = SEXP_FALSE;
-      }
-    } else {
-      usleep(usecs);
-      sexp_context_waitp(res) = 0;
-      sexp_context_timeoutp(res) = 1;
-    }
+    /* take a nap to avoid busy looping */
+    usleep(usecs);
+    sexp_context_waitp(res) = 0;
+    sexp_context_timeoutp(res) = 1;
   }
 
   sexp_gc_release1(ctx);
