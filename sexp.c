@@ -2796,7 +2796,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 /*     case '0': case '1': case '2': case '3': case '4': */
 /*     case '5': case '6': case '7': case '8': case '9': */
     case ';':
-      tmp = sexp_read_raw(ctx, in);   /* discard */
+      tmp = sexp_read(ctx, in);   /* discard */
       if (sexp_exceptionp(tmp))
         res = tmp;
       else
