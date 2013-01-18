@@ -332,7 +332,9 @@ sexp sexp_register_simple_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name
 sexp sexp_lookup_type_op(sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp id) {
   int i;
   sexp res;
-  const char* str = sexp_string_data(name);
+  const char* str;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, name);
+  str = sexp_string_data(name);
   if (sexp_fixnump(id)) {
     i = sexp_unbox_fixnum(id);
     if (i < sexp_context_num_types(ctx)
