@@ -1110,6 +1110,7 @@
 
 (define (write-results func)
   (let ((error-res? (error-type? (type-base (func-ret-type func))))
+        (void-res? (eq? 'void (type-base (func-ret-type func))))
         (results (func-results func)))
     (if error-res?
         (cat "  if ("
@@ -1149,13 +1150,13 @@
           (write-result (car results) first-result-link)
           (for-each write-result (cdr results))))
     (cond
-     ((> (length results) (if error-res? 1 0))
-      (if error-res?
+     ((> (length results) (if (or error-res? void-res?) 1 0))
+      (if (or error-res? void-res?)
           (cat "  res = SEXP_NULL;\n")
           (cat "  res = sexp_cons(ctx, res, SEXP_NULL);\n"))
       (for-each
        (lambda (x)
-         (if error-res?
+         (if (or error-res? void-res?)
              (cat "  sexp_push(ctx, res, res" (type-index x) ");\n")
              (cat "  sexp_push(ctx, res, sexp_car(res));\n"
                   "  sexp_cadr(res) = res" (type-index x) ";\n")))
