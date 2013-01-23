@@ -562,8 +562,9 @@ sexp sexp_ratio_add (sexp ctx, sexp a, sexp b) {
   num = sexp_add(ctx, num, den);
   den = sexp_mul(ctx, sexp_ratio_denominator(a), sexp_ratio_denominator(b));
   res = sexp_make_ratio(ctx, num, den);
+  res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
   sexp_gc_release3(ctx);
-  return sexp_ratio_normalize(ctx, res, SEXP_FALSE);
+  return res;
 }
 
 sexp sexp_ratio_mul (sexp ctx, sexp a, sexp b) {
@@ -572,8 +573,9 @@ sexp sexp_ratio_mul (sexp ctx, sexp a, sexp b) {
   num = sexp_mul(ctx, sexp_ratio_numerator(a), sexp_ratio_numerator(b));
   den = sexp_mul(ctx, sexp_ratio_denominator(a), sexp_ratio_denominator(b));
   res = sexp_make_ratio(ctx, num, den);
+  res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
   sexp_gc_release3(ctx);
-  return sexp_ratio_normalize(ctx, res, SEXP_FALSE);
+  return res;
 }
 
 sexp sexp_ratio_div (sexp ctx, sexp a, sexp b) {
@@ -582,8 +584,9 @@ sexp sexp_ratio_div (sexp ctx, sexp a, sexp b) {
   num = sexp_mul(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(b));
   den = sexp_mul(ctx, sexp_ratio_denominator(a), sexp_ratio_numerator(b));
   res = sexp_make_ratio(ctx, num, den);
+  res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
   sexp_gc_release3(ctx);
-  return sexp_ratio_normalize(ctx, res, SEXP_FALSE);
+  return res;
 }
 
 sexp sexp_ratio_compare (sexp ctx, sexp a, sexp b) {
