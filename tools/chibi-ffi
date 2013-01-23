@@ -784,6 +784,52 @@
 (define (write-parameters args)
   (lambda () (for-each (lambda (a) (cat ", sexp arg" (type-index a))) args)))
 
+(define (take ls n)
+  (let lp ((ls ls) (n n) (res '()))
+    (if (zero? n) (reverse res) (lp (cdr ls) (- n 1) (cons (car ls) res)))))
+
+(define max-gc-vars 7)
+
+(define (write-gc-vars ls . o)
+  (let ((num-gc-vars (length ls)))
+    (cond
+     ((zero? num-gc-vars))
+     ((<= num-gc-vars max-gc-vars)
+      (cat "  sexp_gc_var" num-gc-vars "(")
+      (display (car ls))
+      (for-each (lambda (x) (display ", ") (display x)) (cdr ls))
+      (cat ");\n"))
+     (else
+      (write-gc-vars (take ls max-gc-vars))
+      (let lp ((ls (list-tail ls max-gc-vars))
+               (i (+ max-gc-vars 1)))
+        (cond
+         ((pair? ls)
+          (cat "  sexp_gc_var(" (car ls) ", __sexp_gc_preserver" i ");\n")
+          (lp (cdr ls) (+ i 1)))))))))
+
+(define (write-gc-preserves ls)
+  (let ((num-gc-vars (length ls)))
+    (cond
+     ((zero? num-gc-vars))
+     ((<= num-gc-vars max-gc-vars)
+      (cat "  sexp_gc_preserve" num-gc-vars "(ctx")
+      (for-each (lambda (x) (display ", ") (display x)) ls)
+      (cat ");\n"))
+     (else
+      (write-gc-preserves (take ls max-gc-vars))
+      (let lp ((ls (list-tail ls max-gc-vars))
+               (i (+ max-gc-vars 1)))
+        (cond
+         ((pair? ls)
+          (cat "  sexp_gc_preserve(ctx, " (car ls)
+               ", __sexp_gc_preserver" i ");\n")
+          (lp (cdr ls) (+ i 1)))))))))
+
+(define (write-gc-release ls)
+  (if (pair? ls)
+      (cat "  sexp_gc_release" (min max-gc-vars (length ls)) "(ctx);\n")))
+
 (define (get-array-length func x)
   (let ((len (if (pair? (type-array x))
                  (car (reverse (type-array x)))
@@ -820,7 +866,6 @@
          (gc-vars (if tmp-string? (cons "str" gc-vars) gc-vars))
          (gc-vars (if preserve-res? (cons "res" gc-vars) gc-vars))
          (sexps (if preserve-res? '() '("res")))
-         (num-gc-vars (length gc-vars))
          (ints (if (or return-res?
                        (memq (type-base ret-type)
                              '(non-null-string non-null-pointer)))
@@ -878,21 +923,12 @@
       (for-each (lambda (x) (display ", ") (display x)) (cdr sexps))
       (cat ";\n")))
     ;; Declare the gc vars.
-    (cond
-     ((pair? gc-vars)
-      (cat "  sexp_gc_var" num-gc-vars "(")
-      (display (car gc-vars))
-      (for-each (lambda (x) (display ", ") (display x)) (cdr gc-vars))
-      (cat ");\n")))
+    (write-gc-vars gc-vars)
     ;; Shortcut returns should come before preserving.
     (write-validators (func-scheme-args func))
     (write-additional-checks (func-c-args func))
     ;; Preserve the gc vars.
-    (cond
-     ((pair? gc-vars)
-      (cat "  sexp_gc_preserve" num-gc-vars "(ctx")
-      (for-each (lambda (x) (display ", ") (display x)) gc-vars)
-      (cat ");\n")))))
+    (write-gc-preserves gc-vars)))
 
 (define (write-validators args)
   (for-each
@@ -1202,11 +1238,8 @@
                                  (func-results func))))
          (gc-vars results)
          (gc-vars (if tmp-string? (cons "str" gc-vars) gc-vars))
-         (gc-vars (if preserve-res? (cons "res" gc-vars) gc-vars))
-         (num-gc-vars (length gc-vars)))
-    (cond
-     ((pair? gc-vars)
-      (cat "  sexp_gc_release" num-gc-vars "(ctx);\n")))))
+         (gc-vars (if preserve-res? (cons "res" gc-vars) gc-vars)))
+    (write-gc-release gc-vars)))
 
 (define (write-func-declaration func)
   (cat "static sexp " (func-stub-name func)
