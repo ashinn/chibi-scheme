@@ -470,7 +470,7 @@ void sexp_free(void* ptr);
 
 #define sexp_gc(ctx, sum)
 
-#define sexp_gc_var(ctx, x, y)       sexp x;
+#define sexp_gc_var(x, y)            sexp x;
 #define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
 
@@ -485,7 +485,7 @@ void sexp_free(void* ptr);
 
 SEXP_API sexp sexp_gc(sexp ctx, size_t *sum_freed);
 
-#define sexp_gc_var(ctx, x, y)                  \
+#define sexp_gc_var(x, y)                       \
   sexp x = SEXP_VOID;                           \
   struct sexp_gc_var_t y = {NULL, NULL};
 
@@ -517,13 +517,13 @@ void* sexp_alloc(sexp ctx, size_t size);
 #endif
 #endif
 
-#define sexp_gc_var1(x) sexp_gc_var(ctx, x, __sexp_gc_preserver1)
-#define sexp_gc_var2(x, y) sexp_gc_var1(x) sexp_gc_var(ctx, y, __sexp_gc_preserver2)
-#define sexp_gc_var3(x, y, z) sexp_gc_var2(x, y) sexp_gc_var(ctx, z, __sexp_gc_preserver3)
-#define sexp_gc_var4(x, y, z, w) sexp_gc_var3(x, y, z) sexp_gc_var(ctx, w, __sexp_gc_preserver4)
-#define sexp_gc_var5(x, y, z, w, v) sexp_gc_var4(x, y, z, w) sexp_gc_var(ctx, v, __sexp_gc_preserver5)
-#define sexp_gc_var6(x, y, z, w, v, u) sexp_gc_var5(x, y, z, w, v) sexp_gc_var(ctx, u, __sexp_gc_preserver6)
-#define sexp_gc_var7(x, y, z, w, v, u, t) sexp_gc_var6(x, y, z, w, v, u) sexp_gc_var(ctx, t, __sexp_gc_preserver7)
+#define sexp_gc_var1(x) sexp_gc_var(x, __sexp_gc_preserver1)
+#define sexp_gc_var2(x, y) sexp_gc_var1(x) sexp_gc_var(y, __sexp_gc_preserver2)
+#define sexp_gc_var3(x, y, z) sexp_gc_var2(x, y) sexp_gc_var(z, __sexp_gc_preserver3)
+#define sexp_gc_var4(x, y, z, w) sexp_gc_var3(x, y, z) sexp_gc_var(w, __sexp_gc_preserver4)
+#define sexp_gc_var5(x, y, z, w, v) sexp_gc_var4(x, y, z, w) sexp_gc_var(v, __sexp_gc_preserver5)
+#define sexp_gc_var6(x, y, z, w, v, u) sexp_gc_var5(x, y, z, w, v) sexp_gc_var(u, __sexp_gc_preserver6)
+#define sexp_gc_var7(x, y, z, w, v, u, t) sexp_gc_var6(x, y, z, w, v, u) sexp_gc_var(t, __sexp_gc_preserver7)
 
 #define sexp_gc_preserve1(ctx, x) sexp_gc_preserve(ctx, x, __sexp_gc_preserver1)
 #define sexp_gc_preserve2(ctx, x, y) sexp_gc_preserve1(ctx, x); sexp_gc_preserve(ctx, y, __sexp_gc_preserver2)
