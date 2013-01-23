@@ -1399,7 +1399,10 @@
          "  " (type-id-name name)
          " = sexp_register_c_type(ctx, name, "
          (cond ((memq 'finalizer: type)
-                => (lambda (x) (generate-stub-name (cadr x))))
+                => (lambda (x)
+                     (let ((name (cadr x)))
+                       (generate-stub-name
+                        (if (pair? name) (car name) name)))))
                (else "sexp_finalize_c_type"))
          ");\n")
     (cond
@@ -1484,12 +1487,21 @@
     (cond
      ((memq 'finalizer: type)
       => (lambda (x)
-           (cat "static sexp " (generate-stub-name (cadr x))
-                " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
-                "  if (sexp_cpointer_freep(x))\n"
-                "    " (cadr x) "(sexp_cpointer_value(x));\n"
-                "  return SEXP_VOID;\n"
-                "}\n\n"))))
+           (let* ((y (cadr x))
+                  (scheme-name (if (pair? y) (car y) y))
+                  (cname (if (pair? y) (cadr y) y)))
+             (cat "static sexp " (generate-stub-name scheme-name)
+                  " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
+                  "  if (sexp_cpointer_freep(x)) {\n"
+                  "    " cname "(sexp_cpointer_value(x));\n"
+                  ;; TODO: keep track of open/close separately from ownership
+                  "    sexp_cpointer_freep(x) = 0;\n"
+                  "  }\n"
+                  "  return SEXP_VOID;\n"
+                  "}\n\n")
+             ;; make the finalizer available
+             (set! *funcs*
+                   (cons (parse-func `(void ,(cadr x) (,name))) *funcs*))))))
     ;; maybe write constructor
     (cond
      ((memq 'constructor: type)
