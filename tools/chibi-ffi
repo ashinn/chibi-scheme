@@ -723,7 +723,8 @@
        (if (type-null? type) "(" "")
        (type-predicate type) "(" arg ")"
        (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
-     ((or (int-type? base) (float-type? base) (port-type? base))
+     ((or (eq? base 'char) (int-type? base)
+          (float-type? base) (port-type? base))
       (cat (type-predicate type) "(" arg ")"))
      ((or (lookup-type base) (void-pointer-type? type))
       (cat
@@ -765,7 +766,8 @@
           (float-type? base-type)
           (string-type? base-type)
           (port-type? base-type)
-          (memq base-type '(fileno fileno-nonblock)))
+          (memq base-type '(fileno fileno-nonblock))
+          (and (not array) (eq? 'char base-type)))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"
        "    return sexp_type_exception(ctx, self, "
