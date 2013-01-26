@@ -777,10 +777,10 @@ sexp sexp_length_op (sexp ctx, sexp self, sexp_sint_t n, sexp ls1) {
   return sexp_make_fixnum(res + (sexp_pairp(ls2) ? 1 : 0));
 }
 
-sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp bound) {
+sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp depth, sexp bound) {
   sexp_uint_t left_size, right_size;
   sexp_sint_t i, len;
-  sexp t, *p, *q;
+  sexp t, *p, *q, depth2;
   char *p_left, *p_right, *q_left, *q_right;
 
  loop:
@@ -799,8 +799,10 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
   if (sexp_pointer_tag(a) == SEXP_FLONUM)
     return sexp_flonum_eqv(a, b) ? bound : SEXP_FALSE;
 #endif
-  if (sexp_unbox_fixnum(bound) < 0) /* exceeded limit */
+  /* check limits */
+  if (sexp_unbox_fixnum(bound) < 0 || sexp_unbox_fixnum(depth) < 0)
     return bound;
+  depth2 = sexp_fx_sub(depth, SEXP_ONE);
   bound = sexp_fx_sub(bound, SEXP_ONE);
   t = sexp_object_type(ctx, a);
   p_left = ((char*)a) + offsetof(struct sexp_struct, value);
@@ -836,10 +838,10 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
       }
     }
     for (i=0; i<len-1; i++) {
-      bound = sexp_equalp_bound(ctx, self, n, p[i], q[i], bound);
+      bound = sexp_equalp_bound(ctx, self, n, p[i], q[i], depth2, bound);
       if (sexp_not(bound)) return SEXP_FALSE;
     }
-    /* tail-recurse on the last value */
+    /* tail-recurse on the last value (same depth) */
     a = p[len-1]; b = q[len-1]; goto loop;
   }
   return bound;
@@ -848,6 +850,7 @@ sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp
 sexp sexp_equalp_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b) {
   return sexp_make_boolean(
     sexp_truep(sexp_equalp_bound(ctx, self, n, a, b,
+                                 sexp_make_fixnum(SEXP_DEFAULT_EQUAL_DEPTH),
                                  sexp_make_fixnum(SEXP_DEFAULT_EQUAL_BOUND))));
 }
 
