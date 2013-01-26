@@ -1317,7 +1317,7 @@ SEXP_API sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_
 SEXP_API sexp sexp_make_context(sexp ctx, size_t size, size_t max_size);
 SEXP_API sexp sexp_cons_op(sexp ctx, sexp self, sexp_sint_t n, sexp head, sexp tail);
 SEXP_API sexp sexp_list2(sexp ctx, sexp a, sexp b);
-SEXP_API sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp bound);
+SEXP_API sexp sexp_equalp_bound (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp depth, sexp bound);
 SEXP_API sexp sexp_equalp_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b);
 SEXP_API sexp sexp_listp_op(sexp ctx, sexp self, sexp_sint_t n, sexp obj);
 SEXP_API sexp sexp_reverse_op(sexp ctx, sexp self, sexp_sint_t n, sexp ls);

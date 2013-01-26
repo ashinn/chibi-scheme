@@ -147,7 +147,7 @@ _FN1OPTP(_I(SEXP_OBJECT), _I(SEXP_IPORT), "read", (sexp)"current-input-port", se
 _FN2OPTP(SEXP_VOID,_I(SEXP_OBJECT), _I(SEXP_OPORT), "write", (sexp)"current-output-port", sexp_write_op),
 _FN1OPTP(SEXP_VOID, _I(SEXP_OPORT), "flush-output", (sexp)"current-output-port", sexp_flush_output_op),
 _FN2(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "equal?", 0, sexp_equalp_op),
-_FN3(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "equal?/bounded", 0, sexp_equalp_bound),
+_FN4(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "equal?/bounded", 0, sexp_equalp_bound),
 _FN1(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "list?", 0, sexp_listp_op),
 _FN1(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "identifier?", 0, sexp_identifierp_op),
 _FN1(_I(SEXP_SYMBOL), _I(SEXP_OBJECT), "identifier->symbol", 0, sexp_syntactic_closure_expr_op),
