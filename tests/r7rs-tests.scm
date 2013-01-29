@@ -385,9 +385,30 @@
   (define bar (lambda (a b) (+ (* a b) a)))
   (foo (+ x 3))))
 
-(test 3 (let ()
-  (define-values (x y) (values 1 2))
-  (+ x y)))
+(test 'ok
+    (let ()
+      (define-values () (values))
+      'ok))
+(test 1
+    (let ()
+      (define-values (x) (values 1))
+      x))
+(test 3
+    (let ()
+      (define-values x (values 1 2))
+      (apply + x)))
+(test 3
+    (let ()
+      (define-values (x y) (values 1 2))
+      (+ x y)))
+(test 6
+    (let ()
+      (define-values (x y z) (values 1 2 3))
+      (+ x y z)))
+(test 10
+    (let ()
+      (define-values (x y . z) (values 1 2 3 4))
+      (+ x y (car z) (cadr z))))
 
 (test '(2 1) (let ((x 1) (y 2))
   (define-syntax swap!
