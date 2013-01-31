@@ -1724,12 +1724,12 @@
       ;; chibi-ffi to compile to (chibi process) module.
       (let* ((so (string-append (strip-extension src)
                                 *shared-object-extension*))
-             (system (begin (eval '(import (chibi process)))
-                            (eval 'system)))
+             (execute (begin (eval '(import (chibi process)))
+                             (eval 'execute)))
              (base-args (append (or cflags '())
                                 `("-o" ,so ,dest "-lchibi-scheme")))
              (args (cond-expand
                     (macosx (append '("-dynamiclib" "-Oz") base-args))
                     (else (append '("-fPIC" "-shared" "-Os") base-args))))
              (cc (if *c++?* "c++" "cc")))
-        (apply system cc args))))))
+        (execute cc (cons cc args)))))))
