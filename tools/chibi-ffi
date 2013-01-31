@@ -140,7 +140,7 @@
          (set! *c-int-types* (cons 'type *c-int-types*))))))
 
 (define (signed-int-type? type)
-  (or (memq type '(signed-char short int long boolean))
+  (or (memq type '(signed-char short int long))
       (memq type *c-int-types*)))
 
 (define (unsigned-int-type? type)
@@ -780,6 +780,7 @@
      ((eq? 'sexp base-type))
      ((string-type? type)
       (write-validator arg 'string))
+     ((eq? 'boolean base-type))
      (else
       (warn "don't know how to validate" type)))))
 
@@ -1729,5 +1730,6 @@
                                 `("-o" ,so ,dest "-lchibi-scheme")))
              (args (cond-expand
                     (macosx (append '("-dynamiclib" "-Oz") base-args))
-                    (else (append '("-fPIC" "-shared" "-Os") base-args)))))
-        (apply system (if *c++?* "c++" "cc") args))))))
+                    (else (append '("-fPIC" "-shared" "-Os") base-args))))
+             (cc (if *c++?* "c++" "cc")))
+        (apply system cc args))))))
