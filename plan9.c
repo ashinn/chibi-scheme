@@ -113,7 +113,7 @@ sexp sexp_sysname (sexp ctx, sexp self, sexp_sint_t n) {
 sexp sexp_wait (sexp ctx, sexp self, sexp_sint_t n) { /* just return (pid msg) */
   Waitmsg *wmsg;
   sexp res;
-  sexp_gc_var(ctx, msg, s_msg);
+  sexp_gc_var(msg, s_msg);
   sexp_gc_preserve(ctx, msg, s_msg);
   wmsg = wait();
   msg = sexp_c_string(ctx, wmsg->msg, -1);
@@ -184,8 +184,8 @@ void sexp_build_srv (sexp ctx, sexp_plan9_srv s, sexp ls) {
 void sexp_run_9p_handler (Req *r, sexp handler) {
   sexp_plan9_srv s = (sexp_plan9_srv)r->srv->aux;
   sexp ctx = s->context;
-  sexp_gc_var(ctx, ptr, s_ptr);
-  sexp_gc_var(ctx, args, s_args);
+  sexp_gc_var(ptr, s_ptr);
+  sexp_gc_var(args, s_args);
   sexp_gc_preserve(ctx, ptr, s_ptr);
   sexp_gc_preserve(ctx, args, s_args);
   ptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, r, SEXP_FALSE, 0);
@@ -214,8 +214,8 @@ sexp_def_9p_handler(sexp_9p_flush, flush)
 char* sexp_9p_walk1 (Fid *fid, char *name, Qid *qid) {
   sexp_plan9_srv s = (sexp_plan9_srv)fid->pool->srv->aux;
   sexp res, ctx = s->context;
-  sexp_gc_var(ctx, ptr, s_ptr);
-  sexp_gc_var(ctx, args, s_args);
+  sexp_gc_var(ptr, s_ptr);
+  sexp_gc_var(args, s_args);
   sexp_gc_preserve(ctx, ptr, s_ptr);
   sexp_gc_preserve(ctx, args, s_args);
   ptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, qid, SEXP_FALSE, 0);
@@ -232,8 +232,8 @@ char* sexp_9p_walk1 (Fid *fid, char *name, Qid *qid) {
 char* sexp_9p_clone (Fid *oldfid, Fid *newfid) {
   sexp_plan9_srv s = (sexp_plan9_srv)oldfid->pool->srv->aux;
   sexp res, ctx = s->context;
-  sexp_gc_var(ctx, ptr, s_ptr);
-  sexp_gc_var(ctx, args, s_args);
+  sexp_gc_var(ptr, s_ptr);
+  sexp_gc_var(args, s_args);
   sexp_gc_preserve(ctx, ptr, s_ptr);
   sexp_gc_preserve(ctx, args, s_args);
   ptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, oldfid, SEXP_FALSE, 0);
@@ -248,8 +248,8 @@ char* sexp_9p_clone (Fid *oldfid, Fid *newfid) {
 void sexp_9p_destroyfid (Fid *fid) {
   sexp_plan9_srv s = (sexp_plan9_srv)fid->pool->srv->aux;
   sexp ctx = s->context;
-  sexp_gc_var(ctx, ptr, s_ptr);
-  sexp_gc_var(ctx, args, s_args);
+  sexp_gc_var(ptr, s_ptr);
+  sexp_gc_var(args, s_args);
   sexp_gc_preserve(ctx, ptr, s_ptr);
   sexp_gc_preserve(ctx, args, s_args);
   ptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, fid, SEXP_FALSE, 0);
@@ -261,8 +261,8 @@ void sexp_9p_destroyfid (Fid *fid) {
 void sexp_9p_destroyreq (Req *r) {
   sexp_plan9_srv s = (sexp_plan9_srv)r->srv->aux;
   sexp ctx = s->context;
-  sexp_gc_var(ctx, ptr, s_ptr);
-  sexp_gc_var(ctx, args, s_args);
+  sexp_gc_var(ptr, s_ptr);
+  sexp_gc_var(args, s_args);
   sexp_gc_preserve(ctx, ptr, s_ptr);
   sexp_gc_preserve(ctx, args, s_args);
   ptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, r, SEXP_FALSE, 0);
@@ -274,8 +274,8 @@ void sexp_9p_destroyreq (Req *r) {
 void sexp_9p_end (Srv *srv) {
   sexp_plan9_srv s = (sexp_plan9_srv)srv->aux;
   sexp ctx = s->context;
-  sexp_gc_var(ctx, ptr, s_ptr);
-  sexp_gc_var(ctx, args, s_args);
+  sexp_gc_var(ptr, s_ptr);
+  sexp_gc_var(args, s_args);
   sexp_gc_preserve(ctx, ptr, s_ptr);
   sexp_gc_preserve(ctx, args, s_args);
   ptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, srv, SEXP_FALSE, 0);
