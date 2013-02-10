@@ -167,6 +167,9 @@ test-memory: chibi-scheme-ulimit$(EXE)
 test-build:
 	MAKE=$(MAKE) ./tests/build/build-tests.sh
 
+test-ffi: chibi-scheme$(EXE)
+	$(CHIBI) tests/ffi/ffi-tests.scm
+
 test-threads: chibi-scheme$(EXE) lib/srfi/18/threads$(SO) lib/srfi/39/param$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/time$(SO)
 	$(CHIBI) -xscheme tests/thread-tests.scm
 
