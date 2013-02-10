@@ -130,7 +130,7 @@ static sexp sexp_heap_dump (sexp ctx, sexp self, sexp_sint_t n, sexp depth) {
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
-    return sexp_global(ctx, SEXP_G_ABI_ERROR);
+    return SEXP_ABI_ERROR;
   sexp_define_foreign(ctx, env, "heap-stats", 0, sexp_heap_stats);
   sexp_define_foreign_opt(ctx, env, "heap-dump", 1, sexp_heap_dump, SEXP_ONE);
   return SEXP_VOID;

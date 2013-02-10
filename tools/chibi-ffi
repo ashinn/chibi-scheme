@@ -1679,7 +1679,7 @@
        "  sexp_gc_var3(name, tmp, op);\n"
        "  if (!(sexp_version_compatible(ctx, version, sexp_version)\n"
        "        && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))\n"
-       "    return sexp_global(ctx, SEXP_G_ABI_ERROR);\n"
+       "    return SEXP_ABI_ERROR;\n"
        "  sexp_gc_preserve3(ctx, name, tmp, op);\n")
   (for-each write-const *consts*)
   (for-each write-type *types*)
