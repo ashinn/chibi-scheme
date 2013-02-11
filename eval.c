@@ -1248,7 +1248,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
     res = in;
   } else {
     sexp_port_sourcep(in) = 1;
-    ctx2 = sexp_make_eval_context(ctx, sexp_context_stack(ctx), env, 0, 0);
+    ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
     sexp_context_parent(ctx2) = ctx;
     sexp_context_tailp(ctx2) = 0;
     while ((x=sexp_read(ctx2, in)) != (sexp) SEXP_EOF) {
@@ -2178,15 +2178,16 @@ sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from,
 /************************** eval interface ****************************/
 
 sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
-  sexp_gc_var3(ast, vec, res);
+  sexp_gc_var4(ast, vec, tmp, res);
   sexp ctx2;
   if (! env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
-  sexp_gc_preserve3(ctx, ast, vec, res);
+  sexp_gc_preserve4(ctx, ast, vec, tmp, res);
   ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
   if (sexp_exceptionp(ctx2)) {
     res = ctx2;
   } else {
+    tmp = sexp_context_child(ctx);
     sexp_context_child(ctx) = ctx2;
     ast = sexp_analyze(ctx2, obj);
     if (sexp_exceptionp(ast)) {
@@ -2210,33 +2211,34 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
         }
       }
     }
-    sexp_context_child(ctx) = SEXP_FALSE;
+    sexp_context_child(ctx) = tmp;
     sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release4(ctx);
   return res;
 }
 
 sexp sexp_eval_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_sint_t top;
   sexp ctx2;
-  sexp_gc_var2(res, params);
+  sexp_gc_var3(res, tmp, params);
   if (! env) env = sexp_context_env(ctx);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
-  sexp_gc_preserve2(ctx, res, params);
+  sexp_gc_preserve3(ctx, res, tmp, params);
   top = sexp_context_top(ctx);
   params = sexp_context_params(ctx);
   sexp_context_params(ctx) = SEXP_NULL;
   ctx2 = sexp_make_eval_context(ctx, NULL, env, 0, 0);
+  tmp = sexp_context_child(ctx);
   sexp_context_child(ctx) = ctx2;
   res = sexp_exceptionp(ctx2) ? ctx2 : sexp_compile_op(ctx2, self, n, obj, env);
   if (! sexp_exceptionp(res))
     res = sexp_apply(ctx2, res, SEXP_NULL);
-  sexp_context_child(ctx) = SEXP_FALSE;
+  sexp_context_child(ctx) = tmp;
   sexp_context_params(ctx) = params;
   sexp_context_top(ctx) = top;
   sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
   return res;
 }
 
