@@ -956,6 +956,27 @@
   (let ((thunk (compile x (if (pair? o) (car o) (interaction-environment)))))
     (if (procedure? thunk) (thunk) (raise thunk))))
 
+(define (load base . o)
+  (let* ((env (if (pair? o) (car o) (interaction-environment)))
+         (file (find-module-file base))
+         (len (and file (string-length file)))
+         (ext *shared-object-extension*)
+         (ext-len (string-length ext)))
+    (cond
+     ((not file)
+      (error "couldn't find file" base))
+     ((and (> len ext-len 0) (equal? ext (substring file (- len ext-len))))
+      (%load file env))
+     (else
+      (call-with-input-file file
+        (lambda (in)
+          (let lp ()
+            (let ((x (read in)))
+              (cond
+               ((not (eof-object? x))
+                (eval x env)
+                (lp)))))))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; promises
 
