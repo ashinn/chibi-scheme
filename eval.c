@@ -160,6 +160,7 @@ sexp sexp_env_rename (sexp ctx, sexp env, sexp key, sexp value) {
 sexp sexp_env_exports_op (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp ls;
   sexp_gc_var1(res);
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   sexp_gc_preserve1(ctx, res);
   res = SEXP_NULL;
 #if SEXP_USE_RENAME_BINDINGS
