@@ -125,7 +125,7 @@
       (if (eof-object? x)
         (reverse l)
         (loop (cons x l))))))
-      
+
 (define (repl . o)
   (let* ((in (cond ((memq 'in: o) => cadr) (else (current-input-port))))
          (out (cond ((memq 'out: o) => cadr) (else (current-output-port))))
@@ -202,7 +202,8 @@
                                             env))
                                    (imp-env
                                     (vector-ref
-                                     (eval `(load-module ',(car mod+imps)) meta-env)
+                                     (eval `(load-module ',(car mod+imps))
+                                           meta-env)
                                      1)))
                                (%import env imp-env (cdr mod+imps) #f)
                                (continue module env meta-env))
@@ -219,7 +220,8 @@
                            (fail "couldn't find module:" name)))))
                       ((meta config)
                        (if (eq? op 'config)
-                           (display "Note: @config has been renamed @meta\n" out))
+                           (display "Note: @config has been renamed @meta\n"
+                                    out))
                        (let ((expr (read/ss in)))
                          (cond
                           ((and
@@ -262,7 +264,8 @@
                          ;; catches errors from eval.
                          (guard
                              (exn
-                              (else (print-exception exn (current-output-port))))
+                              (else
+                               (print-exception exn (current-output-port))))
                            (for-each
                             (lambda (expr)
                               (call-with-values
@@ -271,7 +274,8 @@
                                (lambda res-list
                                  (cond
                                   ((not (or (null? res-list)
-                                            (equal? res-list (list (if #f #f)))))
+                                            (equal? res-list
+                                                    (list (if #f #f)))))
                                    (write/ss (car res-list) out)
                                    (for-each
                                     (lambda (res)
