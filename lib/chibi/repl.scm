@@ -31,7 +31,7 @@
 (define (complete-sexp? str)
   (call-with-input-string str
     (lambda (in)
-      (let lp () (if (not (eof-object? (read/ss in))) (lp))))))
+      (let lp () (or (eof-object? (read/ss in)) (lp))))))
 
 (define (read-line/complete-sexp in)
   (let lp ((res ""))
@@ -46,7 +46,7 @@
               (lp res))))))))
 
 (define (buffer-complete-sexp? buf)
-  (complete-sexp? (buffer->string buf)))
+  (guard (exn (else #f)) (complete-sexp? (buffer->string buf))))
 
 (define module? vector?)
 (define (module-env mod) (vector-ref mod 1))
