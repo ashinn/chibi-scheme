@@ -18,4 +18,61 @@
           parse-beginning-of-word parse-end-of-word
           parse-word parse-word+)
   (import (chibi) (chibi char-set base) (srfi 9))
-  (include "parse/parse.scm"))
+  (include "parse/parse.scm")
+  (cond-expand
+   (chibi
+    (begin
+      (define-syntax grammar-bind
+        (er-macro-transformer
+         (lambda (expr rename compare)
+           (let ((name (cadr expr))
+                 (k (car (cddr expr)))
+                 (f (cadr (cddr expr)))
+                 (bindings (car (cddr (cddr expr)))))
+             (if (and (identifier? name)
+                      (not (assq name bindings)))
+                 (let ((new-tmp (rename 'new-tmp))
+                       (save-tmp (rename 'save-tmp))
+                       (lambda_ (rename 'lambda))
+                       (set!_ (rename 'set!))
+                       (s (rename 's))
+                       (i (rename 'i))
+                       (sk (rename 'sk))
+                       (fk (rename 'fk))
+                       (r (rename 'r)))
+                   (append
+                    k
+                    (list
+                     `(,lambda_
+                       (,s ,i ,sk ,fk)
+                       ((,lambda_ (,save-tmp)
+                                  (,f ,s ,i
+                                      (,lambda_ (,r ,s ,i ,fk)
+                                                (,set!_ ,new-tmp ,r)
+                                                (,sk ,r ,s ,i ,fk))
+                                      (,lambda_ ()
+                                                (,set!_ ,new-tmp ,save-tmp)
+                                                (,fk))))
+                        ,new-tmp))
+                     (cons (list name new-tmp) bindings))))
+                 (append k (list f bindings)))))))))
+   (else
+    (begin
+      (define-syntax grammar-bind
+        (syntax-rules ()
+          ((grammar-bind name (k ...) f ((var tmp) ...))
+           (let-syntax ((new-symbol?
+                         (syntax-rules (var ...)
+                           ((new-symbol? name sk fk) sk)
+                           ((new-symbol? _ sk fk) fk))))
+             ;; Bind the name only to the first instance in the pattern.
+             (new-symbol?
+              random-symbol-to-match
+              (k ...
+                 (lambda (s i sk fk)
+                   (let ((save-tmp new-tmp))
+                     (f s i
+                        (lambda (r s i fk) (set! new-tmp r) (sk r s i fk))
+                        (lambda () (set! new-tmp save-tmp) (fk)))))
+                 ((var tmp) ... (name new-tmp)))
+              (k ... f ((var tmp) ...)))))))))))
