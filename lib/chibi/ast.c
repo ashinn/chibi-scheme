@@ -174,6 +174,8 @@ static sexp sexp_set_port_line (sexp ctx, sexp self, sexp_sint_t n, sexp p, sexp
 }
 
 static sexp sexp_type_of (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  if (!x)
+    return sexp_type_by_index(ctx, SEXP_OBJECT);
   if (sexp_pointerp(x))
     return sexp_object_type(ctx, x);
   else if (sexp_fixnump(x))
