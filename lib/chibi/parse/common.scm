@@ -31,7 +31,9 @@
         (hi (and (pair? o) (pair? (cdr o)) (cadr o))))
     (parse-assert-range
      (parse-map-substring
-      (parse-seq (parse-sign) (parse-token char-numeric?))
+      (parse-seq (parse-sign) (parse-token char-numeric?)
+                 ;; (parse-not (parse-or (parse-sign) (parse-char #\.)))
+                 )
       string->number)
      lo hi)))
 
@@ -39,7 +41,7 @@
   (parse-or
    (parse-map (parse-seq (parse-string "0x") (parse-token char-hex-digit?))
               (lambda (x) (string->number (cadr x) 16)))
-   (parse-map (parse-string "0" (parse-token char-octal-digit?))
+   (parse-map (parse-seq (parse-string "0") (parse-token char-octal-digit?))
               (lambda (x) (string->number (cadr x) 8)))
    (parse-integer)))
 
