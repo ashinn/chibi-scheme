@@ -99,6 +99,14 @@
       (parse-stream-ref source (- i 1))
       (parse-stream-prev-char source)))
 
+(define (parse-stream-max-char source)
+  (let ((buf (parse-stream-buffer source)))
+    (let lp ((i (parse-stream-offset source)))
+      (if (or (negative? i)
+              (char? (vector-ref buf i)))
+          i
+          (lp (- i 1))))))
+
 (define (parse-stream-next-source source i)
   (if (>= (+ i 1) (vector-length (parse-stream-buffer source)))
       (parse-stream-tail source)
@@ -162,11 +170,14 @@
     (call-with-parse f source index (lambda (r s i fk) r))))
 
 (define (parse-fully f source . o)
-  (let ((index (if (pair? o) (car o) 0)))
+  (let ((p (if (string? source) (string->parse-stream source) source))
+        (index (if (pair? o) (car o) 0)))
     (call-with-parse
-     f source index
+     f p index
      (lambda (r s i fk) (if (parse-stream-end? s i) r (fk)))
-     (lambda () (error "incomplete parse")))))
+     (lambda ()
+       (let ((i (parse-stream-max-char p)))
+         (error "incomplete parse, max char" i (parse-stream-ref p i)))))))
 
 (define (parse-fold f kons knil source . o)
   (let lp ((p (if (string? source) (string->parse-stream source) source))
@@ -183,7 +194,7 @@
            (acc '()))
     (f p index
        (lambda (r s i fk)
-         (if (eof-object? r) acc (lp s i (cons r acc))))
+         (if (eof-object? r) (reverse acc) (lp s i (cons r acc))))
        (lambda () (error "incomplete parse")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -252,9 +263,11 @@
 (define (maybe-parse-seq f . o)
   (if (null? o) f (apply parse-seq f o)))
 
-(define (parse-optional f)
-  (lambda (source index sk fk)
-    (f source index sk (lambda () (sk #f source index fk)))))
+(define (parse-optional f . o)
+  (if (pair? o)
+      (parse-optional (apply parse-seq f o))
+      (lambda (source index sk fk)
+        (f source index sk (lambda () (sk #f source index fk))))))
 
 (define ignored-value (list 'ignore))
 
@@ -447,8 +460,8 @@
       ((not) (apply parse-not (map parse-sre (cdr x))))
       ((*) (parse-repeat (apply maybe-parse-seq (map parse-sre (cdr x)))))
       ((+) (parse-repeat+ (apply maybe-parse-seq (map parse-sre (cdr x)))))
-      ((?) (parse-optional (apply maybe-parse-seq (map parse-sre (cdr x)))))
-      ((=>) (apply maybe-parse-seq (map parse-sre (cddr x))))
+      ((?) (apply parse-optional (map parse-sre (cdr x))))
+      ((=> ->) (apply maybe-parse-seq (map parse-sre (cddr x))))
       ((word) (apply parse-word (cdr x)))
       ((word+) (apply parse-word+ (cdr x)))
       (else (error "unknown sre list parser" x))))
@@ -523,14 +536,14 @@
 
 (define-syntax grammar/unmemoized
   (syntax-rules ()
-    ((grammar init (rule (clause . action) ...) ...)
+    ((grammar/unmemoized init (rule (clause . action) ...) ...)
      (letrec ((rule (parse-or (grammar-clause clause . action) ...))
               ...)
        init))))
 
 (define-syntax grammar
   (syntax-rules ()
-    ((grammar/memoized init (rule (clause . action) ...) ...)
+    ((grammar init (rule (clause . action) ...) ...)
      (letrec ((rule
                (parse-memoize
                 'rule
@@ -540,7 +553,7 @@
 
 (define-syntax define-grammar/unmemoized
   (syntax-rules ()
-    ((define-grammar name (rule (clause . action) ...) ...)
+    ((define-grammar/unmemoized name (rule (clause . action) ...) ...)
      (begin
        (define rule (parse-or (grammar-clause clause . action) ...))
        ...
@@ -548,7 +561,7 @@
 
 (define-syntax define-grammar
   (syntax-rules ()
-    ((define-grammar/memoized name (rule (clause . action) ...) ...)
+    ((define-grammar name (rule (clause . action) ...) ...)
      (begin
        (define rule
          (parse-memoize 'rule (parse-or (grammar-clause clause . action) ...)))
@@ -564,8 +577,13 @@
      (grammar-extract clause () (grammar-action action)))))
 
 (define-syntax grammar-extract
-  (syntax-rules (unquote => : seq * + ? or and)
+  (syntax-rules (unquote -> => : seq * + ? or and)
     ;; Named patterns
+    ((grammar-extract (-> name pattern) bindings k)
+     (grammar-extract pattern bindings (grammar-bind name k)))
+    ((grammar-extract (-> name pattern ...) bindings k)
+     (grammar-extract (: pattern ...) bindings (grammar-bind name k)))
+    ;; Allow => as an alias for -> for SRE compatibility.
     ((grammar-extract (=> name pattern) bindings k)
      (grammar-extract pattern bindings (grammar-bind name k)))
     ((grammar-extract (=> name pattern ...) bindings k)
@@ -575,10 +593,14 @@
     ;; Walk container patterns.
     ((grammar-extract (: x y ...) bindings k)
      (grammar-extract x bindings (grammar-map parse-seq (y ...) () k)))
+    ((grammar-extract (* x) bindings k)
+     (grammar-extract x bindings (grammar-map parse-repeat () () k)))
     ((grammar-extract (* x y ...) bindings k)
-     (grammar-extract  x bindings (grammar-map parse-repeat (y ...) () k)))
+     (grammar-extract (: x y ...) bindings (grammar-map parse-repeat () () k)))
+    ((grammar-extract (+ x) bindings k)
+     (grammar-extract x bindings (grammar-map parse-repeat+ () () k)))
     ((grammar-extract (+ x y ...) bindings k)
-     (grammar-extract x bindings (grammar-map parse-repeat+ (y ...) () k)))
+     (grammar-extract (: x y ...) bindings (grammar-map parse-repeat+ () () k)))
     ((grammar-extract (? x y ...) bindings k)
      (grammar-extract x bindings (grammar-map parse-optional (y ...) () k)))
     ((grammar-extract (or x y ...) bindings k)
@@ -588,25 +610,6 @@
     ;; Anything else is an implicitly quasiquoted SRE
     ((grammar-extract pattern bindings (k ...))
      (k ... (parse-sre `pattern) bindings))))
-
-(define-syntax grammar-bind
-  (syntax-rules ()
-    ((grammar-bind name (k ...) f ((var tmp) ...))
-     (let-syntax ((new-symbol?
-                   (syntax-rules (var ...)
-                     ((new-symbol? name sk fk) sk)
-                     ((new-symbol? _ sk fk) fk))))
-       ;; Bind the name only to the first instance in the pattern.
-       (new-symbol?
-        random-symbol-to-match
-        (k ...
-           (lambda (s i sk fk)
-             (let ((save-tmp new-tmp))
-               (f s i
-                  (lambda (r s i fk) (set! new-tmp r) (sk r s i fk))
-                  (lambda () (set! new-tmp save-tmp) (fk)))))
-           ((var tmp) ... (name new-tmp)))
-        (k ... f ((var tmp) ...)))))))
 
 (define-syntax grammar-map
   (syntax-rules ()
