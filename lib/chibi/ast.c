@@ -336,7 +336,7 @@ static sexp sexp_gc_op (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_unsigned_integer(ctx, sum_freed);
 }
 
-#ifdef SEXP_USE_GREEN_THREADS
+#if SEXP_USE_GREEN_THREADS
 static sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new) {
   sexp res = sexp_global(ctx, SEXP_G_ATOMIC_P);
   sexp_global(ctx, SEXP_G_ATOMIC_P) = new;
@@ -485,7 +485,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
-#ifdef SEXP_USE_GREEN_THREADS
+#if SEXP_USE_GREEN_THREADS
   sexp_define_foreign(ctx, env, "%set-atomic!", 1, sexp_set_atomic);
 #endif
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
