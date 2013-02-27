@@ -890,13 +890,22 @@
 (define (raise-continuable exn)
   (raise (list *continuable* exn)))
 
-(define (%with-exception-handler handler thunk)
-  (let* ((old (thread-parameters))
-         (new (cons (cons current-exception-handler handler) old)))
-    (dynamic-wind
-      (lambda () (thread-parameters-set! new))
-      thunk
-      (lambda () (thread-parameters-set! old)))))
+(cond-expand
+ (threads
+  (define (%with-exception-handler handler thunk)
+    (let* ((old (thread-parameters))
+           (new (cons (cons current-exception-handler handler) old)))
+      (dynamic-wind
+        (lambda () (thread-parameters-set! new))
+        thunk
+        (lambda () (thread-parameters-set! old))))))
+ (else
+  (define (%with-exception-handler handler thunk)
+    (let ((old (current-exception-handler)))
+      (dynamic-wind
+        (lambda () (current-exception-handler handler))
+        thunk
+        (lambda () (current-exception-handler old)))))))
 
 (define (with-exception-handler handler thunk)
   (letrec ((orig-handler (current-exception-handler))
