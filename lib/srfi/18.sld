@@ -15,8 +15,12 @@
    join-timeout-exception? abandoned-mutex-exception?
    terminated-thread-exception? uncaught-exception?
    uncaught-exception-reason)
-  (import (chibi) (srfi 9) (chibi ast)
-          (except (chibi time) time->seconds seconds->time))
-  (include "18/types.scm")
-  (include-shared "18/threads")
-  (include "18/interface.scm"))
+  (cond-expand
+   (threads
+    (import (chibi) (srfi 9) (chibi ast)
+            (except (chibi time) time->seconds seconds->time))
+    (include "18/types.scm")
+    (include-shared "18/threads")
+    (include "18/interface.scm"))
+   (else
+    (error "chibi was not compiled with threading support"))))
