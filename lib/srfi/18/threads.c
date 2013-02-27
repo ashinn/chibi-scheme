@@ -37,6 +37,8 @@ struct sexp_pollfds_t {
 
 /**************************** threads *************************************/
 
+#if SEXP_USE_GREEN_THREADS
+
 static void sexp_define_type_predicate_by_tag (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
@@ -617,12 +619,17 @@ sexp sexp_lookup_named_type (sexp ctx, sexp env, const char *name) {
   return sexp_make_fixnum((sexp_typep(t)) ? sexp_type_tag(t) : -1);
 }
 
+#endif  /* SEXP_USE_GREEN_THREADS */
+
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
   sexp t;
   sexp_gc_var1(name);
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
+
+#if SEXP_USE_GREEN_THREADS
+
   sexp_gc_preserve1(ctx, name);
 
   sexp_global(ctx, SEXP_G_THREADS_MUTEX_ID) = sexp_lookup_named_type(ctx, env, "Mutex");
@@ -667,5 +674,8 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = env;
 
   sexp_gc_release1(ctx);
+
+#endif  /* SEXP_USE_GREEN_THREADS */
+
   return SEXP_VOID;
 }
