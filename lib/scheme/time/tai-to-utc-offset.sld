@@ -16,7 +16,14 @@
   (import (scheme read))
   (import (scheme process-context))
   
-  (import (srfi 18))
+  (cond-expand
+   (threads
+    (import (srfi 18)))
+   (else
+    (begin
+      (define (make-thread thunk) #f)
+      (define (thread-start! th) #f)
+      (define (thread-sleep! secs) #f))))
   
   (cond-expand
    (chibi
