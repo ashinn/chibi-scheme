@@ -1969,6 +1969,7 @@ sexp sexp_dk (sexp ctx, sexp self, sexp_sint_t n, sexp val) {
     return SEXP_VOID;
   }
 }
+#endif
 
 sexp sexp_thread_parameters (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res = sexp_context_params(ctx);
@@ -1979,7 +1980,6 @@ sexp sexp_thread_parameters_set (sexp ctx, sexp self, sexp_sint_t n, sexp new) {
   sexp_context_params(ctx) = new;
   return SEXP_VOID;
 }
-#endif
 
 void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
   sexp param = sexp_env_ref(env, name, SEXP_FALSE);

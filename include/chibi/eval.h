@@ -129,9 +129,9 @@ SEXP_API sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, se
 #endif
 #if SEXP_USE_GREEN_THREADS
 SEXP_API sexp sexp_dk (sexp ctx, sexp self, sexp_sint_t n, sexp val);
+#endif
 SEXP_API sexp sexp_thread_parameters (sexp ctx, sexp self, sexp_sint_t n);
 SEXP_API sexp sexp_thread_parameters_set (sexp ctx, sexp self, sexp_sint_t n, sexp val);
-#endif
 SEXP_API sexp sexp_string_cmp_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b, sexp ci);
 #if SEXP_USE_RATIOS
 SEXP_API sexp sexp_ratio_numerator_op (sexp ctx, sexp self, sexp_sint_t n, sexp rat);
