@@ -383,6 +383,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type(ctx, "Bignum", SEXP_BIGNUM);
   sexp_define_type(ctx, "Flonum", SEXP_FLONUM);
   sexp_define_type(ctx, "Integer", SEXP_FIXNUM);
+  sexp_define_type(ctx, "Complex", SEXP_COMPLEX);
   sexp_define_type(ctx, "Symbol", SEXP_SYMBOL);
   sexp_define_type(ctx, "Char", SEXP_CHAR);
   sexp_define_type(ctx, "Boolean", SEXP_BOOLEAN);

@@ -3,7 +3,7 @@
   (export
    analyze optimize env-cell ast->sexp macroexpand type-of
    Object Input-Port Output-Port Opcode Procedure Bytecode Macro Env
-   Number Bignum Flonum Integer Char Boolean
+   Number Bignum Flonum Integer Complex Char Boolean
    Symbol String Byte-Vector Vector Pair
    Context Lam Cnd Set Ref Seq Lit Sc Exception
    syntactic-closure? lambda? cnd? set? ref? seq? lit? type?
