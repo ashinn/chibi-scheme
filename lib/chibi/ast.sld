@@ -4,10 +4,10 @@
    analyze optimize env-cell ast->sexp macroexpand type-of
    Object Input-Port Output-Port Opcode Procedure Bytecode Macro Env
    Number Bignum Flonum Integer Complex Char Boolean
-   Symbol String Byte-Vector Vector Pair
+   Symbol String Byte-Vector Vector Pair File-Descriptor
    Context Lam Cnd Set Ref Seq Lit Sc Exception
    syntactic-closure? lambda? cnd? set? ref? seq? lit? type?
-   environment? bytecode? exception? macro? context?
+   environment? bytecode? exception? macro? context? file-descriptor?
    syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
    copy-lambda make-lambda make-cnd make-ref make-set make-seq make-lit
    lambda-name lambda-params lambda-body lambda-defs lambda-locals

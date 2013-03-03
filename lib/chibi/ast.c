@@ -393,6 +393,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type(ctx, "Vector", SEXP_VECTOR);
   sexp_define_type(ctx, "Input-Port", SEXP_IPORT);
   sexp_define_type(ctx, "Output-Port", SEXP_OPORT);
+  sexp_define_type(ctx, "File-Descriptor", SEXP_FILENO);
   sexp_define_type(ctx, "Opcode", SEXP_OPCODE);
   sexp_define_type(ctx, "Procedure", SEXP_PROCEDURE);
   sexp_define_type(ctx, "Bytecode", SEXP_BYTECODE);
@@ -421,6 +422,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
   sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
+  sexp_define_type_predicate(ctx, env, "file-descriptor?", SEXP_FILENO);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", NULL);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 2, "syntactic-closure-expr", NULL);
