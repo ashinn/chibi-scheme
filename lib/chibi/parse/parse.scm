@@ -86,7 +86,7 @@
 
 (define (parse-stream-last-char source)
   (let ((buf (parse-stream-buffer source)))
-    (let lp ((i (parse-stream-offset source)))
+    (let lp ((i (min (- (vector-length buf) 1) (parse-stream-offset source))))
       (if (negative? i)
           (parse-stream-prev-char source)
           (let ((ch (vector-ref buf i)))
@@ -101,7 +101,7 @@
 
 (define (parse-stream-max-char source)
   (let ((buf (parse-stream-buffer source)))
-    (let lp ((i (parse-stream-offset source)))
+    (let lp ((i (min (- (vector-length buf) 1) (parse-stream-offset source))))
       (if (or (negative? i)
               (char? (vector-ref buf i)))
           i
@@ -120,11 +120,22 @@
 (define (parse-stream-close source)
   (close-input-port (parse-stream-port source)))
 
-(define (vector-substring vec start end)
-  (let ((res (make-string (- end start))))
+(define (vector-substring vec start . o)
+  (let* ((end (if (pair? o) (car o) (vector-length vec)))
+         (res (make-string (- end start))))
     (do ((i start (+ i 1)))
         ((= i end) res)
       (string-set! res (- i start) (vector-ref vec i)))))
+
+(define (parse-stream-in-tail? s0 s1)
+  (let ((s0^ (%parse-stream-tail s0)))
+    (or (eq? s0^ s1)
+        (and s0^ (parse-stream-in-tail? s0^ s1)))))
+
+(define (parse-stream< s0 i0 s1 i1)
+  (if (eq? s0 s1)
+      (< i0 i1)
+      (parse-stream-in-tail? s0 s1)))
 
 (define (parse-stream-substring s0 i0 s1 i1)
   (cond
@@ -132,16 +143,16 @@
     (parse-stream-fill! s0 i1)
     (vector-substring (parse-stream-buffer s0) i0 i1))
    (else
-    (let lp ((s (parse-stream-next-source s0))
-             (res (list (vector-substring (parse-stream-buffer s0) i0 i1))))
+    (let lp ((s (parse-stream-tail s0))
+             (res (list (vector-substring (parse-stream-buffer s0) i0))))
       (let ((buf (parse-stream-buffer s)))
         (cond
          ((eq? s s1)
           (apply string-append
                  (reverse (cons (vector-substring buf 0 i1) res))))
          (else
-          (lp (parse-stream-next-source s)
-              (cons (vector-substring buf 0 (vector-length buf)) res)))))))))
+          (lp (parse-stream-tail s)
+              (cons (vector-substring buf 0) res)))))))))
 
 (define (parse-stream-cache-cell s i f)
   (assv f (vector-ref (parse-stream-cache s) i)))
@@ -152,7 +163,8 @@
      ((assv f cache)
       => (lambda (cell)
            ;; prefer longer matches
-           (if (and (pair? (cdr cell)) (< (cadr (cddr cell)) i))
+           (if (and (pair? (cdr cell))
+                    (parse-stream< (car (cddr cell)) (cadr (cddr cell)) s i))
                (set-cdr! cell x))))
      (else
       (vector-set! (parse-stream-cache s) i (cons (cons f x) cache))))))
