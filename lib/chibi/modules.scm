@@ -14,7 +14,9 @@
               (lp (cons x res))))))))
 
 (define (module? x)
-  (and (vector? x) (>= (vector-length x) 4) (list? (vector-ref x 0))))
+  (and (vector? x)
+       (>= (vector-length x) 4)
+       (or (list? (vector-ref x 0)) (not (vector-ref x 0)))))
 
 (define (module-ast mod) (vector-ref mod 3))
 (define (module-ast-set! mod x) (vector-set! mod 3 x))
