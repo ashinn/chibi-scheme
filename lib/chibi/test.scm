@@ -140,11 +140,11 @@
     ((_ (vars ...) n expect expr ((key . val) ...))
      (test-run (lambda () expect)
                (lambda () expr)
-               (cons (cons 'name n)
-                     '((source . expr)
-                       ;;(var-names . (vars ...))
-                       ;;(var-values . ,(list vars))
-                       (key . val) ...))))))
+               `((name . ,n)
+                 (source . expr)
+                 (var-names . (vars ...))
+                 (var-values . ,(list vars ...))
+                 (key . val) ...)))))
 
 ;;> @subsubsubsection{@scheme{(test-exit)}}
 
@@ -456,7 +456,22 @@
    ((eq? status 'FAIL)
     (display indent)
     (display "expected ") (write (assq-ref info 'expected))
-    (display " but got ") (write (assq-ref info 'result)) (newline))))
+    (display " but got ") (write (assq-ref info 'result)) (newline)))
+  ;; print variables
+  (cond
+   ((and (memq status '(FAIL ERROR)) (assq-ref info 'var-names))
+    => (lambda (names)
+         (let ((values (assq-ref info 'var-values)))
+           (if (and (pair? names)
+                    (pair? values)
+                    (= (length names) (length values)))
+               (let ((indent2
+                      (string-append indent (make-string 2 #\space))))
+                 (for-each
+                  (lambda (name value)
+                    (display indent2) (write name) (display ": ")
+                    (write value) (newline))
+                  names values))))))))
 
 (define (test-print-source indent status info)
   (case status
