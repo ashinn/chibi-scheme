@@ -455,6 +455,38 @@
 ;; combinators.  A future version may translate pieces into a
 ;; non-backtracking engine where possible.
 (define (parse-sre x)
+  (define (ranges->char-set ranges)
+    (let lp ((ls ranges) (res (char-set)))
+      (cond
+       ((null? ls)
+        res)
+       ((string? (car ls))
+        (lp (append (string->list (car ls)) (cdr ls)) res))
+       ((null? (cdr ls))
+        (error "incomplete range in / char-set" ranges))
+       (else
+        (let ((cs (ucs-range->char-set (char->integer (car ls))
+                                       (+ 1 (char->integer (cadr ls))))))
+          (lp (cddr ls) (char-set-union cs res)))))))
+  (define (sre-list->char-set ls)
+    (apply char-set-union (map sre->char-set ls)))
+  (define (sre->char-set x)
+    (cond
+     ((char? x) (char-set x))
+     ((string? x) (if (= 1 (string-length x))
+                      (string->char-set x)
+                      (error "multi-element string in char-set" x)))
+     ((pair? x)
+      (if (and (string? (car x)) (null? (cdr x)))
+          (string->char-set (car x))
+          (case (car x)
+            ((/) (ranges->char-set (cdr x)))
+            ((~) (char-set-complement (sre-list->char-set (cdr x))))
+            ((-) (apply char-set-difference (map sre->char-set (cdr x))))
+            ((&) (apply char-set-intersection (map sre->char-set (cdr x))))
+            ((or) (sre-list->char-set (cdr x)))
+            (else (error "unknown SRE char-set operator" x)))))
+     (else (error "unknown SRE char-set" x))))
   (cond
    ((procedure? x)  ; an embedded parser
     x)
@@ -476,7 +508,11 @@
       ((=> ->) (apply maybe-parse-seq (map parse-sre (cddr x))))
       ((word) (apply parse-word (cdr x)))
       ((word+) (apply parse-word+ (cdr x)))
-      (else (error "unknown sre list parser" x))))
+      ((/ ~ & -) (parse-char (sre->char-set x)))
+      (else
+       (if (string? (car x))
+           (parse-char (sre->char-set x))
+           (error "unknown SRE operator" x)))))
    (else
     (case x
       ((any) parse-anything)
@@ -495,7 +531,7 @@
       ((eol) parse-end-of-line)
       ((bos) parse-beginning)
       ((eos) parse-end)
-      (else (error "unknown sre parser" x))))))
+      (else (error "unknown SRE parser" x))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; delayed combinators for self-referentiality

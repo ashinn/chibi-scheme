@@ -17,7 +17,7 @@
           parse-beginning-of-line parse-end-of-line
           parse-beginning-of-word parse-end-of-word
           parse-word parse-word+)
-  (import (chibi) (chibi char-set base) (srfi 9))
+  (import (chibi) (chibi char-set) (srfi 9))
   (include "parse/parse.scm")
   (cond-expand
    (chibi
