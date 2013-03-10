@@ -402,7 +402,6 @@
       (guard
        (exn
         (else
-         (write `(exception ,exn)) (newline)
          ((current-test-handler)
           (if (assq-ref info 'expect-error) 'PASS 'ERROR)
           (append `((exception . ,exn)) info))))
