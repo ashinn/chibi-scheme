@@ -1382,7 +1382,7 @@ sexp sexp_log (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 }
 
 sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
-#if SEXP_USE_COMPLEX
+#if SEXP_USE_COMPLEX || SEXP_USE_BIGNUMS
   int negativep = 0;
 #endif
   double d, r;
