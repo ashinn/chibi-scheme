@@ -12,6 +12,7 @@
 BUILDDIR=tests/build
 FAILURES=0
 MAKE=${MAKE:-make}
+vars=CFLAGS="-O0 -g0 -w"
 i=0
 
 for opts in $(cat ${BUILDDIR}/build-opts.txt); do
@@ -22,13 +23,13 @@ for opts in $(cat ${BUILDDIR}/build-opts.txt); do
         staticopts=$(echo ${staticopts} | tr ';' ' ')
         $MAKE cleaner 2>&1 >/dev/null
         rm -f clibs.c
-        $MAKE $staticopts 2>&1 >${BUILDDIR}/build${i}-bootstrap.out
-        $MAKE $staticopts clibs.c 2>&1 >${BUILDDIR}/build${i}-clibs.out
+        $MAKE -j 8 "$vars" $staticopts 2>&1 >${BUILDDIR}/build${i}-bootstrap.out
+        $MAKE -j 8 "$vars" $staticopts clibs.c 2>&1 >${BUILDDIR}/build${i}-clibs.out
     fi
     # Try to build then run tests.
     opts=$(echo ${opts} | tr ';' ' ')
     $MAKE cleaner 2>&1 >/dev/null
-    if $MAKE $opts chibi-scheme 2>&1 >${BUILDDIR}/build${i}-make.out; then
+    if $MAKE -j 8 "$vars" $opts chibi-scheme 2>&1 >${BUILDDIR}/build${i}-make.out; then
         sync
         if $MAKE test 2>&1 | tee ${BUILDDIR}/build${i}-test.out \
             | grep -q -E 'FAIL|ERROR'; then
