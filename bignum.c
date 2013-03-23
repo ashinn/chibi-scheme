@@ -477,6 +477,8 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
   return sexp_bignum_normalize(res);
 }
 
+#if SEXP_USE_MATH
+
 #define SEXP_MAX_ACCURATE_FLONUM_SQRT 1.12589990684262e15 /* 2^50 */
 
 sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
@@ -514,6 +516,8 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
   sexp_gc_release4(ctx);
   return sexp_bignum_normalize(res);
 }
+
+#endif  /* SEXP_USE_MATH */
 
 /************************ ratios ******************************/
 
