@@ -34,13 +34,20 @@ sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
 }
 
 void sexp_warn (sexp ctx, char *msg, sexp x) {
-  sexp out = sexp_current_error_port(ctx);
+  sexp_gc_var1(out);
+  sexp_gc_preserve1(ctx, out);
+  out = sexp_current_error_port(ctx);
+  if (sexp_not(out)) {          /* generate a throw-away port */
+    out = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
+    sexp_port_no_closep(out) = 1;
+  }
   if (sexp_oportp(out)) {
     sexp_write_string(ctx, "WARNING: ", out);
     sexp_write_string(ctx, msg, out);
     sexp_write(ctx, x, out);
     sexp_write_char(ctx, '\n', out);
   }
+  sexp_gc_release1(ctx);
 }
 
 sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from, sexp to, sexp res) {
