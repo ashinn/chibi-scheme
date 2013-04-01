@@ -961,17 +961,19 @@ static sexp analyze (sexp ctx, sexp object) {
         } else if (sexp_opcodep(op)) {
           res = sexp_length(ctx, sexp_cdr(x));
           if (sexp_unbox_fixnum(res) < sexp_opcode_num_args(op)) {
-            res = sexp_compile_error(ctx, "not enough args for opcode", x);
+            sexp_warn(ctx, "not enough args for opcode: ", x);
+            op = analyze_var_ref(ctx, sexp_car(x), NULL);
           } else if ((sexp_unbox_fixnum(res) > sexp_opcode_num_args(op))
                      && (! sexp_opcode_variadic_p(op))) {
-            res = sexp_compile_error(ctx, "too many args for opcode", x);
-          } else {
-            res = analyze_app(ctx, sexp_cdr(x));
-            if (! sexp_exceptionp(res)) {
-              sexp_push(ctx, res, op);
-              if (sexp_pairp(res))
-                sexp_pair_source(res) = sexp_pair_source(x);
-            }
+            sexp_warn(ctx, "too many args for opcode: ", x);
+            op = analyze_var_ref(ctx, sexp_car(x), NULL);
+          }
+          res = analyze_app(ctx, sexp_cdr(x));
+          if (! sexp_exceptionp(res)) {
+            /* push op, which will be a direct opcode if the call is valid */
+            sexp_push(ctx, res, op);
+            if (sexp_pairp(res))
+              sexp_pair_source(res) = sexp_pair_source(x);
           }
         } else {
           res = analyze_app(ctx, x);
