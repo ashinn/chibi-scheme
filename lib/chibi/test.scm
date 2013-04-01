@@ -1,4 +1,4 @@
-;; Copyright (c) 2010-2012 Alex Shinn. All rights reserved.
+;; Copyright (c) 2010-2013 Alex Shinn. All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Simple testing framework adapted from the Chicken @scheme{test}
@@ -525,19 +525,23 @@
                 (else 0)))
      #\space))
   ;; update group info
-  (cond ((current-test-group)
-         => (lambda (group)
-              (if (not (eq? 'SKIP status))
-                  (test-group-inc! group 'count))
-              (test-group-inc! group status))))
-  (if (and (current-test-group)
-           (zero?
-            (modulo
-             (+ (string-length (test-group-name (current-test-group)))
-                (or (test-group-ref (current-test-group) 'count) 0)
-                1)
-             (current-column-width))))
-      (display (string-append "\n" (string-copy indent 4))))
+  (cond
+   ((current-test-group)
+    => (lambda (group)
+         (if (not (eq? 'SKIP status))
+             (test-group-inc! group 'count))
+         (test-group-inc! group status)
+         ;; maybe wrap long status lines
+         (let ((width (max (- (current-column-width)
+                              (or (test-group-indent-width group) 0))
+                           4))
+               (column
+                (+ (string-length (or (test-group-name group) ""))
+                   (or (test-group-ref group 'count) 0)
+                   1)))
+           (if (and (zero? (modulo column width))
+                    (not (test-group-ref group 'verbose)))
+               (display (string-append "\n" (string-copy indent 4))))))))
   ;; update global failure count for exit status
   (cond
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
