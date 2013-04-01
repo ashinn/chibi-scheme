@@ -195,18 +195,23 @@
                               (mod+imps (eval `(resolve-import ',mod-name)
                                               meta-env)))
                          (if (pair? mod+imps)
-                             (let ((env (if (eq? op 'import-only)
-                                            (let ((env (make-environment)))
-                                              (interaction-environment env)
-                                              env)
-                                            env))
-                                   (imp-env
-                                    (vector-ref
-                                     (eval `(load-module ',(car mod+imps))
-                                           meta-env)
-                                     1)))
-                               (%import env imp-env (cdr mod+imps) #f)
-                               (continue module env meta-env))
+                             (guard
+                                 (exn
+                                  (else
+                                   (print-exception exn (current-error-port))
+                                   (fail "error loading module:" mod-name)))
+                               (let ((env (if (eq? op 'import-only)
+                                              (let ((env (make-environment)))
+                                                (interaction-environment env)
+                                                env)
+                                              env))
+                                     (imp-env
+                                      (vector-ref
+                                       (eval `(load-module ',(car mod+imps))
+                                             meta-env)
+                                       1)))
+                                 (%import env imp-env (cdr mod+imps) #f)
+                                 (continue module env meta-env)))
                              (fail "couldn't find module:" mod-name))))
                       ((in)
                        (let ((name (read/ss in)))
@@ -269,20 +274,20 @@
                            (for-each
                             (lambda (expr)
                               (call-with-values
-                               (lambda ()
-                                 (eval (list 'begin expr) env))
-                               (lambda res-list
-                                 (cond
-                                  ((not (or (null? res-list)
-                                            (equal? res-list
-                                                    (list (if #f #f)))))
-                                   (write/ss (car res-list) out)
-                                   (for-each
-                                    (lambda (res)
-                                      (write-char #\space out)
-                                      (write/ss res out))
-                                    (cdr res-list))
-                                   (newline out))))))
+                                  (lambda ()
+                                    (eval (list 'begin expr) env))
+                                (lambda res-list
+                                  (cond
+                                   ((not (or (null? res-list)
+                                             (equal? res-list
+                                                     (list (if #f #f)))))
+                                    (write/ss (car res-list) out)
+                                    (for-each
+                                     (lambda (res)
+                                       (write-char #\space out)
+                                       (write/ss res out))
+                                     (cdr res-list))
+                                    (newline out))))))
                             expr-list))))))
                 ;; If an interrupt occurs while the child thread is
                 ;; still running, terminate it, otherwise wait for it
