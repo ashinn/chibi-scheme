@@ -41,8 +41,10 @@
 (test "foobarbaz" (string-join '("foo" "bar" "baz")))
 (test "foo bar baz" (string-join '("foo" "bar" "baz") " "))
 
-(test '("") (string-split ""))
+(test '() (string-split ""))
+(test '("" "") (string-split " "))
 (test '("foo" "bar" "baz") (string-split "foo bar baz"))
+(test '("foo" "bar" "baz" "") (string-split "foo bar baz "))
 (test '("foo" "bar" "baz") (string-split "foo:bar:baz" #\:))
 (test '("" "foo" "bar" "baz") (string-split ":foo:bar:baz" #\:))
 (test '("foo" "bar" "baz" "") (string-split "foo:bar:baz:" #\:))
