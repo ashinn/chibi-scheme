@@ -923,22 +923,26 @@
 (define-syntax guard
   (syntax-rules ()
     ((guard (var clause ...) e1 e2 ...)
-     ((call-with-current-continuation
-       (lambda (guard-k)
-         (with-exception-handler
-          (lambda (condition)
-            ((call-with-current-continuation
-              (lambda (handler-k)
-                (guard-k
-                 (lambda ()
-                   (let ((var condition))
-                     (guard-aux (handler-k (lambda ()
-                                             (raise-continuable condition)))
-                                clause ...))))))))
-          (lambda ()
-            (call-with-values (lambda () e1 e2 ...)
-              (lambda args
-                (guard-k (lambda () (apply values args)))))))))))))
+     (let ((orig-handler (current-exception-handler)))
+       ((call-with-current-continuation
+         (lambda (guard-k)
+           (with-exception-handler
+            (lambda (condition)
+              ((call-with-current-continuation
+                (lambda (handler-k)
+                  (let* ((var condition)            ; clauses may set! var
+                         (res
+                          (with-exception-handler
+                           orig-handler
+                           (lambda ()
+                             (guard-aux
+                              (handler-k (lambda ()
+                                           (raise-continuable condition)))
+                              clause ...)))))
+                    (guard-k (lambda () res)))))))
+            (lambda ()
+              (let ((res (begin e1 e2 ...)))
+                (guard-k (lambda () res))))))))))))
 
 (define-syntax guard-aux
   (syntax-rules (else =>)
