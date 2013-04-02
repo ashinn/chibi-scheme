@@ -54,11 +54,13 @@
 
 (define (string-split str . o)
   (let ((pred (make-char-predicate (if (pair? o) (car o) #\space)))
-        (limit (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-size str)))
+        (limit (if (and (pair? o) (pair? (cdr o)))
+                   (cadr o)
+                   (+ 1 (string-size str))))
         (start (string-cursor-start str))
         (end (string-cursor-end str)))
     (if (string-cursor>=? start end)
-        (list "")
+        '()
         (let lp ((i start) (n 1) (res '()))
           (cond
            ((>= n limit)
