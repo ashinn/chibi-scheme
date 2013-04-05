@@ -17,6 +17,9 @@
             (_register (rename 'register-simple-type))
             (_slot-set! (rename 'slot-set!))
             (_type_slot_offset (rename 'type-slot-offset)))
+       ;; catch a common mistake
+       (if (eq? name make)
+           (error "same binding for record rtd and constructor" name))
        `(,(rename 'begin)
          ;; type
          (,_define ,name (,_register ,name-str ,parent ',(map car fields)))
