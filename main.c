@@ -205,7 +205,7 @@ static void repl (sexp ctx, sexp env) {
 #if SEXP_USE_WARN_UNDEFS
       sexp_warn_undefs(ctx, sexp_env_bindings(env), tmp, res);
 #endif
-      if (sexp_exceptionp(res)) {
+      if (res && sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, err);
         sexp_stack_trace(ctx, err);
       } else if (res != SEXP_VOID) {
