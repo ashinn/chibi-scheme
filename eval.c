@@ -51,7 +51,7 @@ void sexp_warn (sexp ctx, char *msg, sexp x) {
 }
 
 sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from, sexp to, sexp res) {
-  sexp x, ignore = sexp_exceptionp(res) ? sexp_exception_irritants(res) : SEXP_NULL;
+  sexp x, ignore = (res && sexp_exceptionp(res)) ? sexp_exception_irritants(res) : SEXP_NULL;
   if (sexp_envp(from)) from = sexp_env_bindings(from);
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_env_next_cell(x))
     if (sexp_cdr(x) == SEXP_UNDEF && sexp_car(x) != ignore
