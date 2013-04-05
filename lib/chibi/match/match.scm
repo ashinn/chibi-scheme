@@ -863,48 +863,64 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Otherwise COND-EXPANDed bits.
 
-;; This *should* work, but doesn't :(
-;;   (define-syntax match-check-ellipsis
-;;     (syntax-rules (...)
-;;       ((_ ... sk fk) sk)
-;;       ((_ x sk fk) fk)))
+(cond-expand
+ (chibi
+  (define-syntax match-check-ellipsis
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (compare '... (cadr expr))
+           (car (cddr expr))
+           (cadr (cddr expr))))))
+  (define-syntax match-check-identifier
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (identifier? (cadr expr))
+           (car (cddr expr))
+           (cadr (cddr expr)))))))
 
-;; This is a little more complicated, and introduces a new let-syntax,
-;; but should work portably in any R[56]RS Scheme.  Taylor Campbell
-;; originally came up with the idea.
-(define-syntax match-check-ellipsis
-  (syntax-rules ()
-    ;; these two aren't necessary but provide fast-case failures
-    ((match-check-ellipsis (a . b) success-k failure-k) failure-k)
-    ((match-check-ellipsis #(a ...) success-k failure-k) failure-k)
-    ;; matching an atom
-    ((match-check-ellipsis id success-k failure-k)
-     (let-syntax ((ellipsis? (syntax-rules ()
-                              ;; iff `id' is `...' here then this will
-                              ;; match a list of any length
-                              ((ellipsis? (foo id) sk fk) sk)
-                              ((ellipsis? other sk fk) fk))))
-       ;; this list of three elements will only many the (foo id) list
-       ;; above if `id' is `...'
-       (ellipsis? (a b c) success-k failure-k)))))
+ (else
+  ;; Portable versions
+  ;;
+  ;; This *should* work, but doesn't :(
+  ;;   (define-syntax match-check-ellipsis
+  ;;     (syntax-rules (...)
+  ;;       ((_ ... sk fk) sk)
+  ;;       ((_ x sk fk) fk)))
+  ;;
+  ;; This is a little more complicated, and introduces a new let-syntax,
+  ;; but should work portably in any R[56]RS Scheme.  Taylor Campbell
+  ;; originally came up with the idea.
+  (define-syntax match-check-ellipsis
+    (syntax-rules ()
+      ;; these two aren't necessary but provide fast-case failures
+      ((match-check-ellipsis (a . b) success-k failure-k) failure-k)
+      ((match-check-ellipsis #(a ...) success-k failure-k) failure-k)
+      ;; matching an atom
+      ((match-check-ellipsis id success-k failure-k)
+       (let-syntax ((ellipsis? (syntax-rules ()
+                                 ;; iff `id' is `...' here then this will
+                                 ;; match a list of any length
+                                 ((ellipsis? (foo id) sk fk) sk)
+                                 ((ellipsis? other sk fk) fk))))
+         ;; this list of three elements will only many the (foo id) list
+         ;; above if `id' is `...'
+         (ellipsis? (a b c) success-k failure-k)))))
 
-
-;; This is portable but can be more efficient with non-portable
-;; extensions.  This trick was originally discovered by Oleg Kiselyov.
-
-(define-syntax match-check-identifier
-  (syntax-rules ()
-    ;; fast-case failures, lists and vectors are not identifiers
-    ((_ (x . y) success-k failure-k) failure-k)
-    ((_ #(x ...) success-k failure-k) failure-k)
-    ;; x is an atom
-    ((_ x success-k failure-k)
-     (let-syntax
-         ((sym?
-           (syntax-rules ()
-             ;; if the symbol `abracadabra' matches x, then x is a
-             ;; symbol
-             ((sym? x sk fk) sk)
-             ;; otherwise x is a non-symbol datum
-             ((sym? y sk fk) fk))))
-       (sym? abracadabra success-k failure-k)))))
+  ;; This is portable but can be more efficient with non-portable
+  ;; extensions.  This trick was originally discovered by Oleg Kiselyov.
+  (define-syntax match-check-identifier
+    (syntax-rules ()
+      ;; fast-case failures, lists and vectors are not identifiers
+      ((_ (x . y) success-k failure-k) failure-k)
+      ((_ #(x ...) success-k failure-k) failure-k)
+      ;; x is an atom
+      ((_ x success-k failure-k)
+       (let-syntax
+           ((sym?
+             (syntax-rules ()
+               ;; if the symbol `abracadabra' matches x, then x is a
+               ;; symbol
+               ((sym? x sk fk) sk)
+               ;; otherwise x is a non-symbol datum
+               ((sym? y sk fk) fk))))
+         (sym? abracadabra success-k failure-k)))))))
