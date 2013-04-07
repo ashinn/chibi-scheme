@@ -101,8 +101,8 @@ static sexp sexp_env_undefine (sexp ctx, sexp env, sexp key) {
   return SEXP_FALSE;
 }
 
-static sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
-                                  sexp value, sexp *varenv) {
+sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
+                           sexp value, sexp *varenv) {
   sexp_gc_var2(cell, ls);
   while (sexp_env_lambda(env) || sexp_env_syntactic_p(env))
     env = sexp_env_parent(env);

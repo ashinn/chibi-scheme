@@ -86,6 +86,7 @@ SEXP_API sexp sexp_load_op (sexp context, sexp self, sexp_sint_t n, sexp expr, s
 SEXP_API sexp sexp_exception_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn);
 SEXP_API sexp sexp_make_env_op (sexp context, sexp self, sexp_sint_t n);
 SEXP_API sexp sexp_make_null_env_op (sexp context, sexp self, sexp_sint_t n, sexp version);
+SEXP_API sexp sexp_env_cell_define (sexp ctx, sexp env, sexp name, sexp value, sexp* varenv);
 SEXP_API sexp sexp_make_primitive_env (sexp context, sexp version);
 SEXP_API sexp sexp_make_standard_env_op (sexp context, sexp self, sexp_sint_t n, sexp version);
 SEXP_API void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value);
