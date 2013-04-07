@@ -579,36 +579,60 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dynamic-wind
 
+(define make-point vector)
+(define (point-depth point) (vector-ref point 0))
+(define (point-in point) (vector-ref point 1))
+(define (point-out point) (vector-ref point 2))
+(define (point-parent point) (vector-ref point 3))
+
+(define root-point			; Shared among all state spaces
+  (make-point 0
+	      (lambda () (error "winding in to root!"))
+	      (lambda () (error "winding out of root!"))
+	      #f))
+
 (cond-expand
  (threads)
  (else
   (define %dk
-    (let ((dk (list #f)))
+    (let ((dk root-point))
       (lambda o (if (pair? o) (set! dk (car o)) dk))))))
 
-(define (dynamic-wind before thunk after)
-  (let ((dk (%dk)))
-    (set-dk! (cons (cons before after) dk))
-    (let ((res (thunk))) (set-dk! dk) res)))
+(%dk root-point)
 
-;; TODO: Implement a non-mutating tree oriented stack so we don't need
-;; to reset the stack in child threads.
-(define (set-dk! new-dk)
-  (if (not (eq? new-dk (%dk)))
-      (begin
-        (set-dk! (cdr new-dk))
-        (let ((before (car (car new-dk)))
-	      (old-dk (%dk)))
-          (set-car! old-dk (cons (cdr (car new-dk)) before))
-          (set-cdr! old-dk new-dk)
-          (set-car! new-dk #f)
-          (set-cdr! new-dk '())
-          (%dk new-dk)
-          (before)))))
+(define (dynamic-wind in body out)
+  (in)
+  (let ((here (%dk)))
+    (%dk (make-point (+ (point-depth here) 1)
+                     in
+                     out
+                     here))
+    (let ((res (body)))
+      (%dk here)
+      (out)
+      res)))
+
+(define (travel-to-point! here target)
+  (cond
+   ((eq? here target)
+    'done)
+   ((< (point-depth here) (point-depth target))
+    (travel-to-point! here (point-parent target))
+    ((point-in target)))
+   (else
+    ((point-out here))
+    (travel-to-point! (point-parent here) target))))
+
+(define (continuation->procedure cont point)
+  (lambda res
+    (travel-to-point! (%dk) point)
+    (%dk point)
+    (cont (%values res))))
 
 (define (call-with-current-continuation proc)
-  (let ((dk (%dk)))
-    (%call/cc (lambda (k) (proc (lambda x (set-dk! dk) (k (%values x))))))))
+  (%call/cc
+   (lambda (cont)
+     (proc (continuation->procedure cont (%dk))))))
 
 (define (with-input-from-file file thunk)
   (let ((old-in (current-input-port))
@@ -932,13 +956,10 @@
                 (lambda (handler-k)
                   (let* ((var condition)            ; clauses may set! var
                          (res
-                          (with-exception-handler
-                           orig-handler
-                           (lambda ()
-                             (guard-aux
-                              (handler-k (lambda ()
-                                           (raise-continuable condition)))
-                              clause ...)))))
+                          (guard-aux
+                           (handler-k (lambda ()
+                                        (raise-continuable condition)))
+                           clause ...)))
                     (guard-k (lambda () res)))))))
             (lambda ()
               (let ((res (begin e1 e2 ...)))
