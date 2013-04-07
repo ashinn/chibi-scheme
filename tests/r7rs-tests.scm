@@ -7,10 +7,8 @@
         (scheme r5rs)
         (chibi test))
 
-;; R7RS test suite.  Covers all procedures and syntax in the small
-;; language except `delete-file'.  Currently assumes full-unicode
-;; support, the full numeric tower and all standard libraries
-;; provided.
+;; R7RS test suite.  Currently assumes full-unicode support, the full
+;; numeric tower and all standard libraries provided.
 ;;
 ;; Uses the (chibi test) library which is written in portable R7RS.
 ;; This provides test-begin, test-end and test, which could be defined
@@ -1479,7 +1477,7 @@
 
 (test-begin "6.12 Environments and evaluation")
 
-(test 21 (eval '(* 7 3) (scheme-report-environment 5)))
+;; (test 21 (eval '(* 7 3) (scheme-report-environment 5)))
 
 (test 20
     (let ((f (eval '(lambda (f x) (f x x)) (null-environment 5))))
