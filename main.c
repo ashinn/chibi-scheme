@@ -490,6 +490,16 @@ void run_main (int argc, char **argv) {
       /* load the script */
       sexp_context_tracep(ctx) = 1;
       tmp = sexp_env_bindings(env);
+#if SEXP_USE_MODULES
+      /* use scheme load if possible for better stack traces */
+      sym = sexp_intern(ctx, "load", -1);
+      tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_FALSE);
+      if (sexp_procedurep(tmp)) {
+        sym = sexp_c_string(ctx, argv[i], -1);
+        sym = sexp_list2(ctx, sym, env);
+        check_exception(ctx, sexp_apply(ctx, tmp, sym));
+      } else
+#endif
       check_exception(ctx, sexp_load(ctx, sym=sexp_c_string(ctx, argv[i], -1), env));
 #if SEXP_USE_WARN_UNDEFS
       sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
