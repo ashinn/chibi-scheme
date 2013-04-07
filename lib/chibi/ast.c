@@ -39,13 +39,18 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
   sexp_gc_release2(ctx);
 }
 
-static sexp sexp_get_env_cell (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp id) {
+static sexp sexp_get_env_cell (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp id, sexp createp) {
   sexp cell;
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   cell = sexp_env_cell(env, id, 0);
-  while ((! cell) && sexp_synclop(id)) {
-    env = sexp_synclo_env(id);
-    id = sexp_synclo_expr(id);
+  if (! cell) {
+    if (sexp_synclop(id)) {
+      env = sexp_synclo_env(id);
+      id = sexp_synclo_expr(id);
+    }
+    cell = sexp_env_cell(env, id, 0);
+    if (!cell && createp)
+      cell = sexp_env_cell_define(ctx, env, id, SEXP_UNDEF, NULL);
   }
   return cell ? cell : SEXP_FALSE;
 }
@@ -201,6 +206,55 @@ static sexp sexp_env_parent_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
   return sexp_env_parent(e) ? sexp_env_parent(e) : SEXP_FALSE;
 }
 
+static sexp sexp_env_parent_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
+  return sexp_env_parent(e) ? sexp_env_parent(e) : SEXP_FALSE;
+}
+
+static sexp sexp_env_lambda_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
+  return sexp_env_lambda(e) ? sexp_env_lambda(e) : SEXP_FALSE;
+}
+
+static sexp sexp_env_lambda_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp e, sexp lam) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
+  sexp_assert_type(ctx, sexp_lambdap, SEXP_LAMBDA, lam);
+  sexp_env_lambda(e) = lam;
+  return SEXP_VOID;
+}
+
+static sexp sexp_env_syntactic_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
+  return sexp_make_boolean(sexp_env_syntactic_p(e));
+}
+
+static sexp sexp_env_syntactic_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp e, sexp synp) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
+  sexp_env_syntactic_p(e) = sexp_truep(synp);
+  return SEXP_VOID;
+}
+
+static sexp sexp_env_define_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp name, sexp value) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
+  sexp_assert_type(ctx, sexp_idp, SEXP_SYMBOL, name);
+  return sexp_env_cell_define(ctx, env, name, value, NULL);
+}
+
+static sexp sexp_env_push_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp name, sexp value) {
+  sexp_gc_var1(tmp);
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
+  sexp_assert_type(ctx, sexp_idp, SEXP_SYMBOL, name);
+  sexp_gc_preserve1(ctx, tmp);
+  sexp_env_push(ctx, env, tmp, name, value);
+  sexp_gc_release1(ctx);
+  return SEXP_VOID;
+}
+
+static sexp sexp_core_code_op (sexp ctx, sexp self, sexp_sint_t n, sexp c) {
+  sexp_assert_type(ctx, sexp_corep, SEXP_CORE, c);
+  return sexp_make_fixnum(sexp_core_code(c));
+}
+
 static sexp sexp_type_name_op (sexp ctx, sexp self, sexp_sint_t n, sexp t) {
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, t);
   return sexp_type_name(t);
@@ -305,6 +359,13 @@ static sexp sexp_make_lit_op (sexp ctx, sexp self, sexp_sint_t n, sexp value) {
   return res;
 }
 
+static sexp sexp_make_macro_op (sexp ctx, sexp self, sexp_sint_t n, sexp proc, sexp env) {
+  sexp res = sexp_alloc_type(ctx, macro, SEXP_MACRO);
+  sexp_macro_proc(res) = proc;
+  sexp_macro_env(res) = env;
+  return res;
+}
+
 static sexp sexp_analyze_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
   sexp ctx2 = ctx;
   if (sexp_envp(e)) {
@@ -312,6 +373,11 @@ static sexp sexp_analyze_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e)
     sexp_context_env(ctx2) = e;
   }
   return sexp_analyze(ctx2, x);
+}
+
+static sexp sexp_extend_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp vars, sexp value) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
+  return sexp_extend_env(ctx, env, vars, value);
 }
 
 static sexp sexp_optimize (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
@@ -408,6 +474,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type(ctx, "Sc", SEXP_SYNCLO);
   sexp_define_type(ctx, "Context", SEXP_CONTEXT);
   sexp_define_type(ctx, "Exception", SEXP_EXCEPTION);
+  sexp_define_type(ctx, "Core", SEXP_CORE);
   sexp_define_type_predicate(ctx, env, "environment?", SEXP_ENV);
   sexp_define_type_predicate(ctx, env, "bytecode?", SEXP_BYTECODE);
   sexp_define_type_predicate(ctx, env, "macro?", SEXP_MACRO);
@@ -420,6 +487,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type_predicate(ctx, env, "lit?", SEXP_LIT);
   sexp_define_type_predicate(ctx, env, "opcode?", SEXP_OPCODE);
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
+  sexp_define_type_predicate(ctx, env, "core?", SEXP_CORE);
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
   sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
   sexp_define_type_predicate(ctx, env, "file-descriptor?", SEXP_FILENO);
@@ -452,6 +520,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 0, "exception-kind", NULL);
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", NULL);
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", NULL);
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 4, "exception-source", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);
@@ -464,10 +533,11 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "make-set", 2, sexp_make_set_op);
   sexp_define_foreign(ctx, env, "make-lit", 1, sexp_make_lit_op);
   sexp_define_foreign(ctx, env, "make-seq", 1, sexp_make_seq);
+  sexp_define_foreign(ctx, env, "make-macro", 2, sexp_make_macro_op);
   sexp_define_foreign_opt(ctx, env, "analyze", 2, sexp_analyze_op, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "optimize", 1, sexp_optimize);
-  sexp_define_foreign(ctx, env, "extend-env", 2, sexp_extend_env);
-  sexp_define_foreign(ctx, env, "env-cell", 2, sexp_get_env_cell);
+  sexp_define_foreign(ctx, env, "extend-env", 3, sexp_extend_env_op);
+  sexp_define_foreign_opt(ctx, env, "env-cell", 3, sexp_get_env_cell, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "opcode-name", 1, sexp_get_opcode_name);
   sexp_define_foreign(ctx, env, "opcode-class", 1, sexp_get_opcode_class);
   sexp_define_foreign(ctx, env, "opcode-code", 1, sexp_get_opcode_code);
@@ -484,7 +554,15 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "type-slots", 1, sexp_type_slots_op);
   sexp_define_foreign(ctx, env, "type-num-slots", 1, sexp_type_num_slots_op);
   sexp_define_foreign(ctx, env, "type-printer", 1, sexp_type_printer_op);
-  sexp_define_foreign(ctx, env, "environment-parent", 1, sexp_env_parent_op);
+  sexp_define_foreign(ctx, env, "env-parent", 1, sexp_env_parent_op);
+  sexp_define_foreign(ctx, env, "env-parent-set!", 2, sexp_env_parent_set_op);
+  sexp_define_foreign(ctx, env, "env-lambda", 1, sexp_env_lambda_op);
+  sexp_define_foreign(ctx, env, "env-lambda-set!", 2, sexp_env_lambda_set_op);
+  sexp_define_foreign(ctx, env, "env-syntactic?", 1, sexp_env_syntactic_op);
+  sexp_define_foreign(ctx, env, "env-syntactic?-set!", 2, sexp_env_syntactic_set_op);
+  sexp_define_foreign(ctx, env, "env-define!", 3, sexp_env_define_op);
+  sexp_define_foreign(ctx, env, "env-push!", 3, sexp_env_push_op);
+  sexp_define_foreign(ctx, env, "core-code", 1, sexp_core_code_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
