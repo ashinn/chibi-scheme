@@ -1811,6 +1811,14 @@ sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name,
 
 /*********************** standard environment *************************/
 
+/* The 10 core forms.  Note quote can be defined as derived syntax: */
+
+/*  (define-syntax quote */
+/*    (lambda (expr use-env mac-env) */
+/*      (list */
+/*       (make-syntactic-closure mac-env (list) (syntax-quote syntax-quote)) */
+/*       (strip-syntactic-closures (car (cdr expr)))))) */
+
 static struct sexp_core_form_struct core_forms[] = {
   {SEXP_CORE_DEFINE, (sexp)"define"},
   {SEXP_CORE_SET, (sexp)"set!"},
