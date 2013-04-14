@@ -479,14 +479,16 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
 
 #if SEXP_USE_MATH
 
-#define SEXP_MAX_ACCURATE_FLONUM_SQRT 1.12589990684262e15 /* 2^50 */
+#define SEXP_MAX_ACCURATE_FLONUM_SQRT 1073741824.0 /* 2^30 */
 
 sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
   sexp_gc_var4(res, rem, tmp, tmpa);
+  if (! sexp_bignump(a)) return sexp_type_exception(ctx, NULL, SEXP_BIGNUM, a);
   sexp_gc_preserve4(ctx, res, rem, tmp, tmpa);
   /* initial estimate via flonum, ignoring signs */
   if (sexp_negativep(a)) {
-    a = tmpa = sexp_copy_bignum(ctx, NULL, a, 0);
+    tmpa = sexp_copy_bignum(ctx, NULL, a, 0);
+    a = tmpa;
     sexp_negate(a);
   }
   res = sexp_make_flonum(ctx, sexp_bignum_to_double(a));
