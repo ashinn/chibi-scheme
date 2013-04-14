@@ -1398,6 +1398,7 @@ sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 #endif
   double d, r;
   sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
 #if SEXP_USE_BIGNUMS
   if (sexp_bignump(z)) {
     negativep = sexp_bignum_sign(z) < 0;
@@ -1410,9 +1411,10 @@ sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     d = (double)sexp_unbox_fixnum(z);
   maybe_convert_ratio(z)        /* XXXX add ratio sqrt */
   maybe_convert_complex(z, sexp_complex_sqrt)
-  else
+  else {
+    sexp_gc_release1(ctx);
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
-  sexp_gc_preserve1(ctx, res);
+  }
 #if SEXP_USE_COMPLEX
   if (d < 0) {
     negativep = 1;
