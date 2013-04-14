@@ -61,7 +61,7 @@
         (let lp ((res (inexact->exact (truncate res))))
           (let ((rem (- x (* res res))))
             (if (negative? rem)
-                (lp (- res 1))
+                (lp (quotient (+ res (quotient x res)) 2))
                 (values res rem)))))))
 
 ;; Adapted from Bawden's algorithm.
