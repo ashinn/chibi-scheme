@@ -267,7 +267,7 @@ These are just syntactic sugar for the following more primitive type
 constructors:
 
 @schemeblock{
-(register-simple-type <name-string> <num-fields>)
+(register-simple-type <name-string> <parent> <num-fields>)
  => <type>
 
 (make-type-predicate <opcode-name-string> <type>)
