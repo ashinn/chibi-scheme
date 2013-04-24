@@ -256,7 +256,7 @@
 /************************************************************************/
 
 #ifndef SEXP_64_BIT
-#if defined(__amd64) || defined(__x86_64) || defined(_WIN64) || defined(_Wp64)
+#if defined(__amd64) || defined(__x86_64) || defined(_WIN64) || defined(_Wp64) || defined(__LP64__) || defined(__PPC64__)
 #define SEXP_64_BIT 1
 #else
 #define SEXP_64_BIT 0
