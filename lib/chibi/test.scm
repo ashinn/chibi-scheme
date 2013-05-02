@@ -673,6 +673,7 @@
                (real? res)
                (approx-equal? expect res (current-test-epsilon)))
           (and (complex? res)
+               (complex? expect)
                (test-equal? (real-part expect) (real-part res))
                (test-equal? (imag-part expect) (imag-part res))))))
 
