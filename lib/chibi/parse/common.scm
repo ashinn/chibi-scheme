@@ -162,6 +162,61 @@
                  (apply parse-or parse-end (map parse-string terms)))
       car))))
 
+(define parse-space (parse-char char-whitespace?))
+
+(define (op-value op) (car op))
+(define (op-prec op) (cadr op))
+(define (op-assoc op)
+  (let ((tail (cddr op))) (if (pair? tail) (car tail) 'left)))
+(define (op<? op1 op2)
+  (or (< (op-prec op1) (op-prec op2))
+      (and (= (op-prec op1) (op-prec op2))
+           (eq? 'right (op-assoc op1)))))
+
+;; rules are of the form ((op precedence [assoc=left]) ...)
+;; ls is of the forms (expr [op expr] ...)
+;; returns an sexp representation of the operator chain
+(define (resolve-operator-precedence rules ls)
+  (define (lookup op rules)
+    (or (assoc op rules)
+        (list op 0)))
+  (define (join exprs ops)
+    `((,(op-value (car ops)) ,(cadr exprs) ,(car exprs))
+      ,@(cddr exprs)))
+  (if (null? ls) (error "empty operator chain"))
+  (let lp ((ls (cdr ls)) (exprs (list (car ls))) (ops '((#f -1))))
+    ;; ls: trailing operations ([op expr] ...)
+    ;; exprs: list of expressions (expr expr ...)
+    ;; ops: operator chain, same len as exprs ((op prec [assoc]) ...)
+    (cond
+     ((and (null? ls) (null? (cdr exprs)))
+      (car exprs))
+     ((null? ls)
+      (lp ls (join exprs ops) (cdr ops)))
+     ((null? (cdr ls))
+      (error "unbalanced expression" ls))
+     (else
+      (let ((op (lookup (car ls) rules))
+            (expr (cadr ls)))
+        (if (or (null? (cdr ops)) (op<? op (car ops)))
+            (lp (cddr ls) (cons expr exprs) (cons op ops))
+            (lp ls (join exprs ops) (cdr ops))))))))
+
+(define (parse-binary-op op rules expr . o)
+  (let* ((ws (if (pair? o) (car o) (parse-repeat parse-space)))
+         (ws-right (if (and (pair? o) (pair? (cdr o))) (cadr o) ws)))
+    (parse-map
+     (parse-seq ws expr (parse-repeat (parse-seq ws-right op ws expr)))
+     (lambda (x)
+       (resolve-operator-precedence
+        rules
+        (cons (cadr x)
+              (apply append
+                     (map (lambda (y) (list (cadr y) (cadr (cddr y))))
+                          (car (cddr x))))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define parse-ipv4-digit (parse-integer 0 255))
 
 (define parse-ipv4-address

@@ -1,7 +1,7 @@
 
 (import (chibi) (chibi test)
         (chibi char-set) (chibi char-set ascii)
-        (chibi parse))
+        (chibi parse) (chibi parse common))
 
 (test-begin "parse")
 
@@ -97,6 +97,25 @@
 (test 23 (parse calculator "2 + 2*10 + 1"))
 (test 25 (parse calculator "2+2 * 10+1 * 3"))
 (test 41 (parse calculator "(2 + 2) * 10 + 1"))
+
+(define prec-calc
+  (grammar expr
+    (simple (,(parse-integer))
+            ((: "(" (=> e1 ,expr) ")") e1))
+    (op
+     ("+" '+) ("-" '-) ("*" '*) ("/" '/) ("^" '^))
+    (expr
+     (,(parse-binary-op op `((+ 5) (- 5) (* 3) (/ 3) (^ 1 right)) simple)))))
+
+(test 42 (parse prec-calc "42"))
+(test '(+ 2 2) (parse prec-calc "2 + 2"))
+(test '(+ (+ 2 2) 2) (parse prec-calc "2 + 2 + 2"))
+(test '(+ (+ 2 (* 2 10)) 1) (parse prec-calc "2 + 2*10 + 1"))
+(test '(+ (+ 2 (* 2 10)) (* 1 3)) (parse prec-calc "2+2 * 10+1 * 3"))
+(test '(+ (* (+ 2 2) 10) 1) (parse prec-calc "(2 + 2) * 10 + 1"))
+(test '(^ 2 (^ 2 2)) (parse prec-calc "2 ^ 2 ^ 2"))
+(test '(+ (+ (+ 1 (* (* 2 (^ 3 (^ 4 5))) 6)) (^ 7 8)) 9)
+    (parse prec-calc "1 + 2 * 3 ^ 4 ^ 5 * 6 + 7 ^ 8 + 9"))
 
 ;; this takes exponential time without memoization
 (define explode
