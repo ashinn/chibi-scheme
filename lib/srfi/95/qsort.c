@@ -144,7 +144,7 @@ static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
     /* partition */
     for (i=j=lo; i < hi; i++) {
       diff = sexp_object_compare(ctx, vec[i], tmp);
-      if (diff < 0) {
+      if (diff <= 0) {
         swap(tmp2, vec[i], vec[j]);
         j++;
       } else if (diff == 0) {
@@ -182,6 +182,7 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
     } else {
       b = tmp;
     }
+    /* partition */
     for (i=j=lo; i < hi; i++) {
       if (sexp_truep(key)) {
         sexp_car(args1) = vec[i];
@@ -204,6 +205,7 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
       }
     }
     swap(tmp, vec[j], vec[hi]);
+    /* recurse */
     res = sexp_qsort_less(ctx, vec, lo, j-1, less, key);
     if (sexp_exceptionp(res))
       goto done;
