@@ -24,8 +24,8 @@
         (let lp ((i 0))
           (cond
            ((>= i len) #t)
-           ((not (less (key (vector-ref seq i))
-                       (key (vector-ref seq (+ i 1)))))
+           ((less (key (vector-ref seq (+ i 1)))
+                  (key (vector-ref seq i)))
             #f)
            (else (lp (+ i 1)))))))
      ((null? seq)
@@ -33,7 +33,7 @@
      (else
       (let lp ((ls1 seq) (ls2 (cdr seq)))
         (cond ((null? ls2) #t)
-              ((not (less (key (car ls1)) (key (car ls2)))) #f)
+              ((less (key (car ls2)) (key (car ls1))) #f)
               (else (lp ls2 (cdr ls2)))))))))
 
 (define (merge! ls1 ls2 less . o)
