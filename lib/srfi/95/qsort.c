@@ -81,7 +81,7 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
 #endif
 #if SEXP_USE_RATIOS
         case SEXP_RATIO:
-          res = sexp_ratio_compare(ctx, a, b);
+          res = sexp_unbox_fixnum(sexp_ratio_compare(ctx, a, b));
           break;
 #endif
 #if SEXP_USE_COMPLEX
@@ -165,9 +165,9 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
                              sexp_sint_t lo, sexp_sint_t hi,
                              sexp less, sexp key) {
   sexp_sint_t mid, i, j;
-  sexp tmp, res, args1;
-  sexp_gc_var3(a, b, args2);
-  sexp_gc_preserve3(ctx, a, b, args2);
+  sexp args1;
+  sexp_gc_var5(a, b, tmp, args2, res);
+  sexp_gc_preserve5(ctx, a, b, tmp, args2, res);
   args2 = sexp_list2(ctx, SEXP_VOID, SEXP_VOID);
   args1 = sexp_cdr(args2);
  loop:
@@ -213,7 +213,7 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
     }
   }
  done:
-  sexp_gc_release3(ctx);
+  sexp_gc_release5(ctx);
   return res;
 }
 
