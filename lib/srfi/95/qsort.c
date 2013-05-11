@@ -70,12 +70,24 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
         switch (sexp_pointer_tag(a)) {
 #if SEXP_USE_FLONUMS
         case SEXP_FLONUM:
-          res = sexp_flonum_value(a) - sexp_flonum_value(b);
+          res = sexp_flonum_value(a) > sexp_flonum_value(b) ? 1 :
+                sexp_flonum_value(a) < sexp_flonum_value(b) ? -1 : 0;
           break;
 #endif
 #if SEXP_USE_BIGNUMS
         case SEXP_BIGNUM:
           res = sexp_bignum_compare(a, b);
+          break;
+#endif
+#if SEXP_USE_RATIOS
+        case SEXP_RATIO:
+          res = sexp_ratio_compare(ctx, a, b);
+          break;
+#endif
+#if SEXP_USE_COMPLEX
+        case SEXP_COMPLEX:
+          res = sexp_object_compare(ctx, sexp_complex_real(a), sexp_complex_real(b));
+          if (res==0) res = sexp_object_compare(ctx, sexp_complex_imag(a), sexp_complex_imag(b));
           break;
 #endif
         case SEXP_STRING:
@@ -121,6 +133,7 @@ static sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, 
 }
 
 /* fast path when using general object-cmp comparator with no key */
+/* TODO: include another fast path when the key is a fixed offset */
 static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
   sexp_sint_t mid, i, j, diff;
   sexp tmp, tmp2;
