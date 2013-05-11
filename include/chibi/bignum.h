@@ -50,6 +50,7 @@ SEXP_API sexp sexp_ratio_round (sexp ctx, sexp a);
 SEXP_API sexp sexp_ratio_trunc (sexp ctx, sexp a);
 SEXP_API sexp sexp_ratio_floor (sexp ctx, sexp a);
 SEXP_API sexp sexp_ratio_ceiling (sexp ctx, sexp a);
+SEXP_API sexp sexp_ratio_compare (sexp ctx, sexp a, sexp b);
 #endif
 #if SEXP_USE_COMPLEX
 SEXP_API sexp sexp_make_complex (sexp ctx, sexp real, sexp image);
