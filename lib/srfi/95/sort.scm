@@ -30,11 +30,13 @@
            (else (lp (+ i 1)))))))
      ((null? seq)
       #t)
-     (else
+     ((pair? seq)
       (let lp ((ls1 seq) (ls2 (cdr seq)))
         (cond ((null? ls2) #t)
               ((less (key (car ls2)) (key (car ls1))) #f)
-              (else (lp ls2 (cdr ls2)))))))))
+              (else (lp ls2 (cdr ls2))))))
+     (else
+      (error "sorted?: not a list or vector" seq)))))
 
 (define (merge! ls1 ls2 less . o)
   (let ((key (if (pair? o) (car o) (lambda (x) x))))
