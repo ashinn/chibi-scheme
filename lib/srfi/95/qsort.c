@@ -147,8 +147,6 @@ static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
       if (diff <= 0) {
         swap(tmp2, vec[i], vec[j]);
         j++;
-      } else if (diff == 0) {
-        j++;
       }
     }
     swap(tmp, vec[j], vec[hi]);
@@ -190,12 +188,12 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
       } else {
         a = vec[i];
       }
-      sexp_car(args2) = a;
-      sexp_car(args1) = b;
+      sexp_car(args2) = b;
+      sexp_car(args1) = a;
       res = sexp_apply(ctx, less, args2);
       if (sexp_exceptionp(res)) {
         goto done;
-      } else if (sexp_truep(res)) {
+      } else if (sexp_not(res)) {
         swap(res, vec[i], vec[j]), j++;
       } else {
         sexp_car(args2) = b;
@@ -247,6 +245,7 @@ static sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
       res = sexp_type_exception(ctx, self, SEXP_PROCEDURE, key);
     } else {
       res = sexp_qsort_less(ctx, data, 0, len-1, less, key);
+      if (!sexp_exceptionp(res)) res = vec;
     }
   }
 
