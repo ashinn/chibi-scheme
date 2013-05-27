@@ -96,6 +96,7 @@ sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name
   stack[2] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
   sexp_context_top(res) = 4;
   sexp_context_last_fp(res) = 0;
+  sexp_context_dk(res) = sexp_make_vector(res, SEXP_FOUR, SEXP_FALSE);
   sexp_gc_release1(ctx);
   return res;
 }
