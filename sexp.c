@@ -2161,7 +2161,10 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
         if (isspace(c)) {
           while (c==' ' || c=='\t') c=sexp_read_char(ctx, in);
           if (c=='\r') c=sexp_read_char(ctx, in);
-          if (c=='\n') do {c=sexp_read_char(ctx, in);} while (c==' ' || c=='\t');
+          if (c=='\n') {
+            sexp_port_line(in)++;
+            do {c=sexp_read_char(ctx, in);} while (c==' ' || c=='\t');
+          }
         }
 #endif
       }
@@ -2822,6 +2825,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           while ((c1 = sexp_read_char(ctx, in)) == '|')
             ;
           if (c1 == '#') c2--;
+        } else if (c1 == '\n') {
+          sexp_port_line(in)++;
         }
       }
       if (c1 == EOF)
