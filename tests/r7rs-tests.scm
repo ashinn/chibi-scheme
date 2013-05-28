@@ -1725,6 +1725,11 @@
 (test #x22 (char->integer (string-ref (read (open-input-string "\"\\\"\"")) 0)))
 (test #x7C (char->integer (string-ref (read (open-input-string "\"\\|\"")) 0)))
 (test "line 1\nline 2\n" (read (open-input-string "\"line 1\nline 2\n\"")))
+(test "line 1continued\n" (read (open-input-string "\"line 1\\\ncontinued\n\"")))
+(test "line 1continued\n" (read (open-input-string "\"line 1\\ \ncontinued\n\"")))
+(test "line 1continued\n" (read (open-input-string "\"line 1\\\n continued\n\"")))
+(test "line 1continued\n" (read (open-input-string "\"line 1\\ \t \n \t continued\n\"")))
+(test "line 1\n\nline 3\n" (read (open-input-string "\"line 1\\ \t \n \t \n\nline 3\n\"")))
 (test #x03BB (char->integer (string-ref (read (open-input-string "\"\\x03BB;\"")) 0)))
 
 (test-end)
