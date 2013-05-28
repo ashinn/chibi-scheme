@@ -97,6 +97,7 @@ sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name
   sexp_context_top(res) = 4;
   sexp_context_last_fp(res) = 0;
   sexp_context_dk(res) = sexp_make_vector(res, SEXP_FOUR, SEXP_FALSE);
+  sexp_vector_set(sexp_context_dk(res), SEXP_ZERO, SEXP_ZERO);
   sexp_gc_release1(ctx);
   return res;
 }
