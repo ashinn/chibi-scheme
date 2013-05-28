@@ -2158,7 +2158,11 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
         break;
 #if SEXP_USE_ESCAPE_NEWLINE
       default:
-        if (isspace(c)) while (isspace(c) && c!=EOF) c=sexp_read_char(ctx, in);
+        if (isspace(c)) {
+          while (c==' ' || c=='\t') c=sexp_read_char(ctx, in);
+          if (c=='\r') c=sexp_read_char(ctx, in);
+          if (c=='\n') do {c=sexp_read_char(ctx, in);} while (c==' ' || c=='\t');
+        }
 #endif
       }
       if (sexp_exceptionp(res)) break;
