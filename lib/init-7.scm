@@ -579,14 +579,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dynamic-wind
 
-(define make-point vector)
-(define (point-depth point) (vector-ref point 0))
-(define (point-in point) (vector-ref point 1))
-(define (point-out point) (vector-ref point 2))
-(define (point-parent point) (vector-ref point 3))
+(define %make-point vector)
+(define (%point-depth point) (vector-ref point 0))
+(define (%point-in point) (vector-ref point 1))
+(define (%point-out point) (vector-ref point 2))
+(define (%point-parent point) (vector-ref point 3))
 
 (define root-point			; Shared among all state spaces
-  (make-point 0
+  (%make-point 0
 	      (lambda () (error "winding in to root!"))
 	      (lambda () (error "winding out of root!"))
 	      #f))
@@ -603,7 +603,7 @@
 (define (dynamic-wind in body out)
   (in)
   (let ((here (%dk)))
-    (%dk (make-point (+ (point-depth here) 1)
+    (%dk (%make-point (+ (%point-depth here) 1)
                      in
                      out
                      here))
@@ -616,12 +616,12 @@
   (cond
    ((eq? here target)
     'done)
-   ((< (point-depth here) (point-depth target))
-    (travel-to-point! here (point-parent target))
-    ((point-in target)))
+   ((< (%point-depth here) (%point-depth target))
+    (travel-to-point! here (%point-parent target))
+    ((%point-in target)))
    (else
-    ((point-out here))
-    (travel-to-point! (point-parent here) target))))
+    ((%point-out here))
+    (travel-to-point! (%point-parent here) target))))
 
 (define (continuation->procedure cont point)
   (lambda res
