@@ -1,5 +1,5 @@
 /*  simplify.c -- basic simplification pass                   */
-/*  Copyright (c) 2010-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2010-2013 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -12,12 +12,13 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
   int check;
   sexp ls1, ls2, p1, p2, sv;
   sexp_gc_var5(res, substs, tmp, app, ctx2);
+  if (!sexp_pointerp(ast))
+    return ast;
   sexp_gc_preserve5(ctx, res, substs, tmp, app, ctx2);
   res = ast;                    /* return the ast as-is by default */
   substs = init_substs;
 
- loop:
-  switch (sexp_pointerp(res) ? sexp_pointer_tag(res) : 0) {
+  switch (sexp_pointer_tag(res)) {
 
   case SEXP_PAIR:
     /* don't simplify the operator if it's a lambda because we
@@ -63,11 +64,13 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
       ls1 = app;
       ls2 = sexp_cdr(app);
       sv = sexp_lambda_sv(sexp_car(app));
+      /* inline constants and immutable references */
       if (sexp_length(ctx, p2) == sexp_length(ctx, ls2)) {
         for ( ; sexp_pairp(ls2); ls2=sexp_cdr(ls2), p2=sexp_cdr(p2)) {
           if (sexp_not(sexp_memq(ctx, sexp_car(p2), sv))
               && (! sexp_pointerp(sexp_car(ls2)) || sexp_litp(sexp_car(ls2))
-                  || (sexp_refp(sexp_car(ls2))
+                  /* disable inline references for now */
+                  || (0 && sexp_refp(sexp_car(ls2))
                       && sexp_lambdap(sexp_ref_loc(sexp_car(ls2)))
                       && sexp_not(sexp_memq(ctx, sexp_ref_name(sexp_car(ls2)),
                                             sexp_lambda_sv(sexp_ref_loc(sexp_car(ls2)))))))) {
@@ -86,10 +89,14 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
         }
         sexp_lambda_body(sexp_car(app))
           = simplify(ctx, sexp_lambda_body(sexp_car(app)), substs, sexp_car(app));
-        if (sexp_nullp(sexp_cdr(app))
-            && sexp_nullp(sexp_lambda_params(sexp_car(app)))
-            && sexp_nullp(sexp_lambda_defs(sexp_car(app))))
-          app = sexp_lambda_body(sexp_car(app));
+        /* TODO: Revisit this - it causes GC problems in rare cases. */
+        /* if (sexp_nullp(sexp_cdr(app)) */
+        /*     && sexp_nullp(sexp_lambda_params(sexp_car(app))) */
+        /*     && sexp_nullp(sexp_lambda_defs(sexp_car(app)))) */
+        /*   app = sexp_lambda_body(sexp_car(app)); */
+      } else if (sexp_lambdap(sexp_car(app))) {
+        sexp_lambda_body(sexp_car(app))
+          = simplify(ctx, sexp_lambda_body(sexp_car(app)), substs, sexp_car(app));
       }
     }
     res = app;
@@ -104,7 +111,7 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
     if (sexp_litp(tmp) || ! sexp_pointerp(tmp)) {
       res = sexp_not((sexp_litp(tmp) ? sexp_lit_value(tmp) : tmp))
         ? sexp_cnd_fail(res) : sexp_cnd_pass(res);
-      goto loop;
+      res = simplify(ctx, res, substs, lambda);
     } else {
       sexp_cnd_test(res) = tmp;
       simplify_it(sexp_cnd_pass(res));
