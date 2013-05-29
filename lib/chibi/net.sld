@@ -12,7 +12,9 @@
           socket-opt/debug socket-opt/broadcast socket-opt/reuseaddr
           socket-opt/keepalive socket-opt/oobinline socket-opt/sndbuf
           socket-opt/rcvbuf socket-opt/dontroute socket-opt/rcvlowat
-          socket-opt/sndlowat)
+          socket-opt/sndlowat
+          ;; C structs
+          sockaddr addrinfo)
   (import (chibi) (chibi filesystem))
   (include-shared "net")
   (include "net.scm"))
