@@ -343,7 +343,7 @@
   (string-append "sexp_" (mangle sym) "_stub"))
 
 (define (type-id-name sym)
-  (string-append "sexp_" (mangle sym) "_type_tag"))
+  (string-append "sexp_" (mangle sym) "_type_obj"))
 
 (define (make-integer x)
   (case x
@@ -410,6 +410,21 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      `(define-struct-like ,(cadr expr) ,@(cddr expr)))))
+
+(define-syntax declare-c-struct
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(define-struct-like ,(cadr expr) type: struct imported?: #t))))
+
+(define-syntax declare-c-class
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(define-struct-like ,(cadr expr) type: class imported?: #t))))
+
+(define-syntax declare-c-union
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     `(define-struct-like ,(cadr expr) type: union imported?: #t))))
 
 (define-syntax define-c
   (er-macro-transformer
@@ -1431,27 +1446,38 @@
        "  }\n"))
 
 (define (write-type type)
-  (let ((name (car type))
-        (type (cdr type)))
-    (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
-         "  " (type-id-name name)
-         " = sexp_register_c_type(ctx, name, "
-         (cond ((memq 'finalizer: type)
-                => (lambda (x)
-                     (let ((name (cadr x)))
-                       (generate-stub-name
-                        (if (pair? name) (car name) name)))))
-               (else "sexp_finalize_c_type"))
-         ");\n")
+  (let* ((name (car type))
+         (type (cdr type))
+         (imported? (cond ((member 'imported?: type) => cadr) (else #f))))
     (cond
-     ((memq 'predicate: type)
-      => (lambda (x)
-           (let ((pred (cadr x)))
-             (cat "  tmp = sexp_make_type_predicate(ctx, name, "
-                  (type-id-name name) ");\n"
-                  "  name = sexp_intern(ctx, \"" pred "\", "
-                  (string-length (x->string pred)) ");\n"
-                  "  sexp_env_define(ctx, env, name, tmp);\n")))))))
+     (imported?
+      (cat "  name = sexp_intern(ctx, \"" (type-name name) "\", -1);\n"
+           "  " (type-id-name name) " = sexp_env_ref(env, name, SEXP_FALSE);\n"
+           "  if (sexp_not(" (type-id-name name) ")) {\n"
+           "    sexp_warn(ctx, \"couldn't import declared type: \", name);\n"
+           "  }\n"))
+     (else
+      (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
+           "  " (type-id-name name)
+           " = sexp_register_c_type(ctx, name, "
+           (cond ((memq 'finalizer: type)
+                  => (lambda (x)
+                       (let ((name (cadr x)))
+                         (generate-stub-name
+                          (if (pair? name) (car name) name)))))
+                 (else "sexp_finalize_c_type"))
+           ");\n"
+           "  tmp = sexp_string_to_symbol(ctx, name);\n"
+           "  sexp_env_define(ctx, env, tmp, " (type-id-name name) ");\n")
+      (cond
+       ((memq 'predicate: type)
+        => (lambda (x)
+             (let ((pred (cadr x)))
+               (cat "  tmp = sexp_make_type_predicate(ctx, name, "
+                    (type-id-name name) ");\n"
+                    "  name = sexp_intern(ctx, \"" pred "\", "
+                    (string-length (x->string pred)) ");\n"
+                    "  sexp_env_define(ctx, env, name, tmp);\n")))))))))
 
 (define (type-getter-name type name field)
   (string-append "sexp_" (x->string (type-name (parse-type name)))
@@ -1518,128 +1544,135 @@
        "  return SEXP_VOID;\n"
        "}\n\n"))
 
-(define (write-type-funcs orig-type)
-  (let ((name (car orig-type))
-        (type (cdr orig-type)))
-    ;; maybe write finalizer
-    (cond
-     ((memq 'finalizer: type)
-      => (lambda (x)
-           (let* ((y (cadr x))
-                  (scheme-name (if (pair? y) (car y) y))
-                  (cname (if (pair? y) (cadr y) y)))
-             (cat "static sexp " (generate-stub-name scheme-name)
-                  " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
-                  "  if (sexp_cpointer_freep(x)) {\n"
-                  "    " cname "(sexp_cpointer_value(x));\n"
-                  ;; TODO: keep track of open/close separately from ownership
-                  "    sexp_cpointer_freep(x) = 0;\n"
-                  "  }\n"
-                  "  return SEXP_VOID;\n"
-                  "}\n\n")
-             ;; make the finalizer available
-             (set! *funcs*
-                   (cons (parse-func `(void ,(cadr x) (,name))) *funcs*))))))
-    ;; maybe write constructor
-    (cond
-     ((memq 'constructor: type)
-      => (lambda (x)
-           (let ((make (car (cadr x)))
-                 (args (cdr (cadr x))))
-             (cat "static sexp " (generate-stub-name make)
-                  " (sexp ctx, sexp self, sexp_sint_t n"
-                  (lambda ()
-                    (let lp ((ls args) (i 0))
-                      (cond ((pair? ls)
-                             (cat ", sexp arg" i)
-                             (lp (cdr ls) (+ i 1))))))
-                  ") {\n"
-                  "  " (type-c-name name) " r;\n"
-                  "  sexp_gc_var1(res);\n"
-                  "  sexp_gc_preserve1(ctx, res);\n"
-                  ;; TODO: support heap-managed allocations
-                  ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer)"
-                  ;; " + sizeof(struct " (type-name name) "), "
-                  ;; (type-id-name name)
-                  ;; ");\n"
-                  ;; "  r = sexp_cpointer_value(res) = "
-                  ;; "sexp_cpointer_body(res);\n"
-                  ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), sexp_type_tag("
-                  ;; (type-id-name name)
-                  ;; "));\n"
-                  "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), "
-                  "sexp_unbox_fixnum(sexp_opcode_return_type(self)));\n"
-                  "  sexp_cpointer_value(res) = calloc(1, sizeof("
-                  (type-c-name-derefed name) "));\n"
-                  "  r = (" (type-c-name name) ") sexp_cpointer_value(res);\n"
-                  "  memset(r, 0, sizeof("
-                  (type-c-name-derefed name) "));\n"
-                  "  sexp_freep(res) = 1;\n"
-                  (lambda ()
-                    (let lp ((ls args) (i 0))
-                      (cond
-                       ((pair? ls)
-                        (let* ((a (car ls))
-                               (field
-                                (find (lambda (f) (and (pair? f) (eq? a (cadr f))))
-                                      (cddr x))))
-                          (if field
-                              (cat "  r->" (cadr field) " = "
-                                   (lambda ()
-                                     (scheme->c-converter
-                                      (car field)
-                                      (string-append "arg"
-                                                     (number->string i))))
-                                   ";\n"))
-                          (lp (cdr ls) (+ i 1)))))))
-                  "  sexp_gc_release1(ctx);\n"
-                  "  return res;\n"
-                  "}\n\n")
-             (set! *funcs*
-                   (cons (parse-func
-                          `(,name ,make
-                                  ,(map (lambda (a)
-                                          (cond
-                                           ((find (lambda (x) (eq? a (cadr x)))
-                                                  (struct-fields type))
-                                            => car)
-                                           (else 'sexp)))
-                                        args)))
-                         *funcs*))))))
-    ;; write field accessors
-    (for-each
-     (lambda (field)
+(define (write-type-funcs-helper orig-type name type)
+  ;; maybe write finalizer
+  (cond
+   ((memq 'finalizer: type)
+    => (lambda (x)
+         (let* ((y (cadr x))
+                (scheme-name (if (pair? y) (car y) y))
+                (cname (if (pair? y) (cadr y) y)))
+           (cat "static sexp " (generate-stub-name scheme-name)
+                " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
+                "  if (sexp_cpointer_freep(x)) {\n"
+                "    " cname "(sexp_cpointer_value(x));\n"
+                ;; TODO: keep track of open/close separately from ownership
+                "    sexp_cpointer_freep(x) = 0;\n"
+                "  }\n"
+                "  return SEXP_VOID;\n"
+                "}\n\n")
+           ;; make the finalizer available
+           (set! *funcs*
+                 (cons (parse-func `(void ,(cadr x) (,name))) *funcs*))))))
+  ;; maybe write constructor
+  (cond
+   ((memq 'constructor: type)
+    => (lambda (x)
+         (let ((make (car (cadr x)))
+               (args (cdr (cadr x))))
+           (cat "static sexp " (generate-stub-name make)
+                " (sexp ctx, sexp self, sexp_sint_t n"
+                (lambda ()
+                  (let lp ((ls args) (i 0))
+                    (cond ((pair? ls)
+                           (cat ", sexp arg" i)
+                           (lp (cdr ls) (+ i 1))))))
+                ") {\n"
+                "  " (type-c-name name) " r;\n"
+                "  sexp_gc_var1(res);\n"
+                "  sexp_gc_preserve1(ctx, res);\n"
+                ;; TODO: support heap-managed allocations
+                ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer)"
+                ;; " + sizeof(struct " (type-name name) "), "
+                ;; (type-id-name name)
+                ;; ");\n"
+                ;; "  r = sexp_cpointer_value(res) = "
+                ;; "sexp_cpointer_body(res);\n"
+                ;; "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), sexp_type_tag("
+                ;; (type-id-name name)
+                ;; "));\n"
+                "  res = sexp_alloc_tagged(ctx, sexp_sizeof(cpointer), "
+                "sexp_unbox_fixnum(sexp_opcode_return_type(self)));\n"
+                "  sexp_cpointer_value(res) = calloc(1, sizeof("
+                (type-c-name-derefed name) "));\n"
+                "  r = (" (type-c-name name) ") sexp_cpointer_value(res);\n"
+                "  memset(r, 0, sizeof("
+                (type-c-name-derefed name) "));\n"
+                "  sexp_freep(res) = 1;\n"
+                (lambda ()
+                  (let lp ((ls args) (i 0))
+                    (cond
+                     ((pair? ls)
+                      (let* ((a (car ls))
+                             (field
+                              (find (lambda (f) (and (pair? f) (eq? a (cadr f))))
+                                    (cddr x))))
+                        (if field
+                            (cat "  r->" (cadr field) " = "
+                                 (lambda ()
+                                   (scheme->c-converter
+                                    (car field)
+                                    (string-append "arg"
+                                                   (number->string i))))
+                                 ";\n"))
+                        (lp (cdr ls) (+ i 1)))))))
+                "  sexp_gc_release1(ctx);\n"
+                "  return res;\n"
+                "}\n\n")
+           (set! *funcs*
+                 (cons (parse-func
+                        `(,name ,make
+                                ,(map (lambda (a)
+                                        (cond
+                                         ((find (lambda (x) (eq? a (cadr x)))
+                                                (struct-fields type))
+                                          => car)
+                                         (else 'sexp)))
+                                      args)))
+                       *funcs*))))))
+  ;; write field accessors
+  (for-each
+   (lambda (field)
+     (cond
+      ((and (pair? field) (pair? (cdr field)))
        (cond
-        ((and (pair? field) (pair? (cdr field)))
-         (cond
-          ((and (pair? (cddr field)) (car (cddr field)))
-           (write-type-getter type name field)
-           (set! *funcs*
-                 (cons (parse-func
-                        `(,(car field)
-                          (,(car (cddr field))
-                           #f
-                           ,(type-getter-name type name field))
-                          (,name)))
-                       *funcs*))))
-         (cond
-          ((and (pair? (cddr field))
-                (pair? (cdr (cddr field)))
-                (cadr (cddr field)))
-           (write-type-setter type name field)
-           (set! *funcs*
-                 (cons (parse-func
-                        `(,(car field)
-                          (,(cadr (cddr field))
-                           #f
-                           ,(type-setter-name type name field))
-                          (,name ,(car field))))
-                       *funcs*)))))))
-     (struct-fields type))))
+        ((and (pair? (cddr field)) (car (cddr field)))
+         (write-type-getter type name field)
+         (set! *funcs*
+               (cons (parse-func
+                      `(,(car field)
+                        (,(car (cddr field))
+                         #f
+                         ,(type-getter-name type name field))
+                        (,name)))
+                     *funcs*))))
+       (cond
+        ((and (pair? (cddr field))
+              (pair? (cdr (cddr field)))
+              (cadr (cddr field)))
+         (write-type-setter type name field)
+         (set! *funcs*
+               (cons (parse-func
+                      `(,(car field)
+                        (,(cadr (cddr field))
+                         #f
+                         ,(type-setter-name type name field))
+                        (,name ,(car field))))
+                     *funcs*)))))))
+   (struct-fields type)))
+
+(define (write-type-funcs orig-type)
+  (let* ((name (car orig-type))
+         (type (cdr orig-type))
+         (imported? (cond ((member 'imported?: type) => cadr) (else #f))))
+    (if (not imported?)
+        (write-type-funcs-helper orig-type name type))))
 
 (define (write-const const)
-  (let ((scheme-name (if (pair? (cadr const)) (car (cadr const)) (cadr const)))
-        (c-name (if (pair? (cadr const)) (cadr (cadr const)) (mangle (cadr const)))))
+  (let ((scheme-name
+         (if (pair? (cadr const)) (car (cadr const)) (cadr const)))
+        (c-name
+         (if (pair? (cadr const)) (cadr (cadr const)) (mangle (cadr const)))))
     (cat "  name = sexp_intern(ctx, \"" scheme-name "\", "
          (string-length (x->string scheme-name)) ");\n"
          "  sexp_env_define(ctx, env, name, tmp="
