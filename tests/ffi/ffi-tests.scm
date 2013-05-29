@@ -14,7 +14,14 @@
          (lambda (out) (write 'decls out) (newline out)))
        (let ((res (system
                    "./chibi-scheme" "tools/chibi-ffi" "-c"
-                   "-f" "-O0 -L. -Iinclude" stub-file)))
+                   "-f" (string-append
+                         "-O0 -L. -Iinclude"
+                         (cond-expand
+                          (boehm-gc
+                           " -DSEXP_USE_BOEHM=1 -I/opt/local/include")
+                          (else
+                           "")))
+                   stub-file)))
          (cond
           ((zero? (cadr res))
            (load lib-file)
@@ -293,6 +300,22 @@ double circle_area2(struct Circle circ) {
  (test-assert (color? (make_color 1 2 3)))
  (test 1 (color_red (make_color 1 2 3)))
  )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Exception wrapping.
+
+(test-ffi
+ "exceptions"
+ (begin
+   (c-declare "
+sexp usererror(sexp ctx, sexp self, const char* str) {
+  return sexp_maybe_wrap_error(ctx, sexp_user_exception(ctx, self, str, SEXP_NULL));
+}
+")
+   (define-c sexp usererror
+     ((value ctx sexp) (value self sexp) string)))
+ (test-assert (exception? (usererror "BOOM!")))
+ (test-error (usererror 'not-a-string)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; More complex return parameters.
