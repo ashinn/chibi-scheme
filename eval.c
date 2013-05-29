@@ -60,6 +60,18 @@ sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from, sexp to
   return SEXP_VOID;
 }
 
+sexp sexp_maybe_wrap_error (sexp ctx, sexp obj) {
+  sexp_gc_var2(tmp, res);
+  if (sexp_exceptionp(obj)) {
+    sexp_gc_preserve2(ctx, tmp, res);
+    tmp = obj;
+    tmp = sexp_list1(ctx, tmp);
+    res = sexp_make_trampoline(ctx, SEXP_FALSE, tmp);
+    sexp_gc_release2(ctx);
+    return res;
+  }
+  return obj;
+}
 
 /********************** environment utilities ***************************/
 

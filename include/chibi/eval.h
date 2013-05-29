@@ -59,6 +59,7 @@ SEXP_API void sexp_scheme_init (void);
 SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env, sexp_uint_t size, sexp_uint_t max_size);
 SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
 SEXP_API sexp sexp_compile_error (sexp ctx, const char *message, sexp obj);
+SEXP_API sexp sexp_maybe_wrap_error (sexp ctx, sexp obj);
 SEXP_API sexp sexp_analyze (sexp context, sexp x);
 SEXP_API sexp sexp_simplify (sexp ctx, sexp self, sexp_sint_t n, sexp ast);
 SEXP_API sexp sexp_make_lambda (sexp ctx, sexp params);
