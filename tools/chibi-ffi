@@ -1404,6 +1404,8 @@
            (cat "    sexp_vector_set(sexp_opcode_argn_type(" var "), "
                 (make-integer (- i 4)) ", "
                 (type-id-init-value (car ls)) ");\n")))))
+     ;; "  } else {\n"
+     ;; "    sexp_warn(ctx, \"couldn't generated opcode\", " var ");\n"
      "  }\n"))))
 
 (define (write-func-binding func . o)
