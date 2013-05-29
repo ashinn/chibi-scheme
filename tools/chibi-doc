@@ -2,10 +2,16 @@
 
 (import
  (chibi) (srfi 1) (chibi modules) (chibi ast) (chibi io) (chibi match)
- (chibi time) (chibi filesystem) (chibi scribble) (chibi highlight)
+ (chibi time) (chibi filesystem) (chibi process)
+ (chibi scribble) (chibi highlight)
  (chibi type-inference) (scheme eval))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (die . args)
+  (for-each display args)
+  (newline)
+  (exit 1))
 
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))
@@ -665,12 +671,11 @@ div#footer {padding-bottom: 50px}
         ((macro? x) (macro-source x))
         (else #f)))
 
-(define (extract mod-name)
-  (let* ((mod (load-module mod-name))
-         (exports (module-exports mod))
+(define (extract mod-name mod)
+  (let* ((exports (module-exports mod))
          (defs (map (lambda (x) `(,(car x) ,(cdr x) ,(object-source (cdr x))))
                     (filter (lambda (x) (or (procedure? (cdr x)) (macro? (cdr x))))
-                            (map (lambda (x) (cons x (module-ref mod-name x)))
+                            (map (lambda (x) (cons x (module-ref mod x)))
                                  exports)))))
     (output
      `((title ,(write-to-string mod-name))
@@ -698,7 +703,12 @@ div#footer {padding-bottom: 50px}
         ((file-exists? name)
          (call-with-input-file name convert))
         (else
-         (extract (map (lambda (x) (or (string->number x) (string->symbol x)))
-                       (string-split name #\.)))))))
+         (let* ((mod-name
+                 (map (lambda (x) (or (string->number x) (string->symbol x)))
+                      (string-split name #\.)))
+                (mod (load-module mod-name)))
+           (if mod
+               (extract mod-name mod)
+               (die "ERROR: couldn't find file or module: " name)))))))
     (else
-     (error "usage: chibi-doc [<file-or-module-name>]"))))
+     (die "usage: chibi-doc [<file-or-module-name>]"))))
