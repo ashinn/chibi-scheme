@@ -38,3 +38,5 @@ lib/chibi/stty.c
 doc/*.html
 doc/lib/chibi/*.html
 misc/*
+tests/ffi/*.c
+tests/ffi/*.stub
