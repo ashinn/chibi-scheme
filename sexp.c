@@ -376,6 +376,7 @@ void sexp_init_context_globals (sexp ctx) {
 #if ! SEXP_USE_GLOBAL_SYMBOLS
   sexp_global(ctx, SEXP_G_SYMBOLS) = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_SYMBOL_TABLE_SIZE), SEXP_NULL);
 #endif
+  sexp_global(ctx, SEXP_G_STRICT_P) = SEXP_FALSE;
 #if SEXP_USE_FOLD_CASE_SYMS
   sexp_global(ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(SEXP_DEFAULT_FOLD_CASE_SYMS);
 #endif

@@ -448,11 +448,15 @@ void run_main (int argc, char **argv) {
 #if SEXP_USE_FOLD_CASE_SYMS
     case 'f':
       fold_case = 1;
-      if (ctx) sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
+      init_context();
+      sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
       break;
 #endif
     case 'r':
       main_symbol = argv[i][2] == '\0' ? "main" : argv[i]+2;
+      break;
+    case 's':
+      init_context(); sexp_global(ctx, SEXP_G_STRICT_P) = SEXP_TRUE;
       break;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
@@ -490,7 +494,7 @@ void run_main (int argc, char **argv) {
       /* load the script */
       sexp_context_tracep(ctx) = 1;
       tmp = sexp_env_bindings(env);
-#if SEXP_USE_MODULES
+#if 0 /* SEXP_USE_MODULES */
       /* use scheme load if possible for better stack traces */
       sym = sexp_intern(ctx, "load", -1);
       tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_FALSE);
