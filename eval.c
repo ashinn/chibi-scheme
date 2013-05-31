@@ -427,6 +427,7 @@ static void sexp_add_path (sexp ctx, const char *str) {
     sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), SEXP_VOID);
     sexp_car(sexp_global(ctx, SEXP_G_MODULE_PATH))
       = sexp_c_string(ctx, str, colon-str);
+    sexp_immutablep(sexp_global(ctx, SEXP_G_MODULE_PATH)) = 1;
   }
 }
 
@@ -460,8 +461,10 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_add_path(ctx, getenv(SEXP_MODULE_PATH_VAR));
   tmp = sexp_c_string(ctx, "./lib", 5);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
+  sexp_immutablep(sexp_global(ctx, SEXP_G_MODULE_PATH)) = 1;
   tmp = sexp_c_string(ctx, ".", 1);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
+  sexp_immutablep(sexp_global(ctx, SEXP_G_MODULE_PATH)) = 1;
 #if SEXP_USE_GREEN_THREADS
   sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)
     = sexp_user_exception(ctx, SEXP_FALSE, "I/O would block", SEXP_NULL);
@@ -1951,6 +1954,9 @@ sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
 }
 
 #if SEXP_USE_MODULES
+sexp sexp_current_module_path_op (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_global(ctx, SEXP_G_MODULE_PATH);
+}
 sexp sexp_find_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, file);
   return sexp_find_module_file(ctx, sexp_string_data(file));
