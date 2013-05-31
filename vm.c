@@ -1056,6 +1056,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       tmp1 = sexp_trampoline_procedure(_ARG1);
       tmp2 = sexp_trampoline_args(_ARG1);
       top--;
+      if (sexp_not(tmp1) && sexp_pairp(tmp2)) { /* noop trampoline is */
+        _PUSH(sexp_car(tmp2));                  /* a wrapped exception */
+        goto loop;
+      }
       goto apply1;
     }
     tmp1 = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
