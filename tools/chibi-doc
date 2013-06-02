@@ -367,7 +367,7 @@ div#footer {padding-bottom: 50px}
      (map (lambda (x) (cons name (cdr x)))
           (filter external-clause? clause)))
     ((procedure? proc)
-     (procedure-signature proc))
+     (cond ((procedure-signature proc) => list) (else '())))
     (else
      '())))
 
@@ -404,7 +404,7 @@ div#footer {padding-bottom: 50px}
         (else
          (lp (cdr ls) res)))))
     (else
-     #f)))
+     '())))
 
 (define section-number
   (let ((sections '(section subsection subsubsection subsubsubsection)))
@@ -462,16 +462,21 @@ div#footer {padding-bottom: 50px}
          (else
           (lp (cdr ls) (cons (car ls) rev-pre)))))))))
 
-(define (extract-docs file defs exports . o)
+;; Extract inline scribble documentation (with the ;;> prefix) from a
+;; source file, associating any signatures from the provided defs when
+;; available and not overridden in the docs.
+(define (extract-file-docs file all-defs strict? . o)
   (call-with-input-file file
     (lambda (in)
       (let* ((lang (or (and (pair? o) (car o)) 'scheme))
-             (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cdar (cddr x))))
+             ;; filter to only defs found in this file
+             (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cddr (third x))))
+                        ;; (name value line)
                         (filter
                          (lambda (x)
                            (and (pair? (third x))
-                                (equal? file (car (third x)))))
-                         defs))))
+                                (equal? file (cadr (third x)))))
+                         all-defs))))
         (let lp ((lines '()) (cur '()) (res '()))
           (define (collect)
             (if (pair? lines)
@@ -503,38 +508,73 @@ div#footer {padding-bottom: 50px}
                        (lp))))
               (let ((line (read-line in))
                     (cur (collect)))
+                ;; ";;/" attaches the docs to the preceding form
                 (if (equal? line "/")
                     (lp '() '() (append cur res))
                     (lp '() cur res))))))
            (else  ;; found a top-level expression
             (let* ((cur (collect))
                    (line1 (port-line in))
-                   (x (read in))
+                   (form (read in))
                    (line2 (port-line in))
+                   ;; find all procedures defined by form
                    (procs (filter (lambda (x) (<= line1 (third x) line2))
-                                  (filter third defs))))
+                                  (filter third defs)))
+                   ;; the the signature for the form
+                   (sigs
+                    (cond
+                     ((eq? lang 'ffi)
+                      (filter
+                       (lambda (x)
+                         (assq (if (eq? 'const: (car x)) (third x) (car x))
+                               defs))
+                       (get-ffi-signatures form)))
+                     ((= 1 (length procs))
+                      (get-signature (caar procs) (cdar procs) form))
+                     (else
+                      (get-signature #f #f form)))))
               (cond
-               ((and (eq? lang 'ffi) (get-ffi-signatures x))
-                => (lambda (sigs)
-                     (let ((sigs
-                            (filter
-                             (lambda (x)
-                               (memq (if (eq? 'const: (car x))
-                                         (third x)
-                                         (car x))
-                                     exports))
-                             sigs)))
-                       (lp '()
-                           '()
-                           (append (insert-signature cur #f sigs) res)))))
+               ((and strict?
+                     (or (not (pair? sigs)) (not (assq (caar sigs) defs))))
+                ;; drop unrelated docs in strict mode
+                (lp '() '() res))
+               ((and (eq? lang 'ffi) (pair? sigs))
+                (lp '() '() (append (insert-signature cur #f sigs) res)))
                ((and (eq? lang 'scheme) (= 1 (length procs)))
-                (let* ((sig (or (get-signature (caar procs) (cdar procs) x)
-                                '()))
-                       (res (append (insert-signature cur (caar procs) sig)
+                (lp '() '() (append (insert-signature cur (caar procs) sigs)
                                     res)))
-                  (lp '() '() res)))
                (else
                 (lp '() '() (append cur res))))))))))))
+
+;; utility to get the source position of an object
+(define (object-source x)
+  (cond ((opcode? x) #f)
+        ((bytecode? x)
+         (let ((src (bytecode-source x)))
+           (if (and (vector? src) (positive? (vector-length src)))
+               (vector-ref src 0)
+               src)))
+        ((procedure? x) (object-source (procedure-code x)))
+        ((macro? x) (macro-source x))
+        (else #f)))
+
+;; extract documentation from a module
+(define (extract-module-docs mod-name mod strict? . o)
+  (let* ((exports (if (pair? o) (car o) (module-exports mod)))
+         (defs
+           (map (lambda (x)
+                  (let ((val (module-ref mod x)))
+                    `(,x ,val ,(object-source val))))
+                exports)))
+    (append
+     (cond
+      ((find-module-file (module-name->file mod-name))
+       => (lambda (f) (reverse (extract-file-docs f defs strict? 'module))))
+      (else '()))
+     (reverse (append-map (lambda (x) (extract-file-docs x defs strict?))
+                          (module-includes mod)))
+     (reverse (append-map (lambda (x) (extract-file-docs x defs strict? 'ffi))
+                          (module-shared-includes mod))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; html conversions
@@ -611,6 +651,7 @@ div#footer {padding-bottom: 50px}
   (call-with-output-string
     (lambda (out) (html-display-escaped-string str out))))
 
+;; utility to render (valid, expanded) sxml as html
 (define (sxml-display-as-html sxml . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (let lp ((sxml sxml))
@@ -634,10 +675,7 @@ div#footer {padding-bottom: 50px}
        ((null? sxml))
        (else (html-display-escaped-string sxml out))))))
 
-(define (sxml->html sxml . o)
-  (call-with-output-string
-    (lambda (out) (sxml-display-as-html sxml out))))
-
+;; utility to render sxml as simple text, stripping all tags
 (define (sxml-strip sxml)
   (call-with-output-string
     (lambda (out)
@@ -650,65 +688,111 @@ div#footer {padding-bottom: 50px}
          ((string? x)
           (display x out)))))))
 
+;; utility to render sxml as text for viewing in a terminal
+(define (sxml-display-as-text sxml . o)
+  (let ((out (if (pair? o) (car o) (current-output-port))))
+    (let lp ((sxml sxml))
+      (cond
+       ((pair? sxml)
+        (let ((tag (car sxml)))
+          (cond
+           ;; skip headers and the menu
+           ((or (memq tag '(head style script))
+                (and (eq? 'div tag)
+                     (pair? (cdr sxml))
+                     (pair? (cadr sxml))
+                     (eq? '^ (car (cadr sxml)))
+                     (equal? '(id . "menu") (assq 'id (cdr (cadr sxml)))))))
+           ;; recurse other tags, appending newlines for new sections
+           ((symbol? tag)
+            (for-each
+             lp
+             (if (and (pair? (cdr sxml)) (eq? '^ (cadr sxml)))
+                 (cddr sxml)
+                 (cdr sxml)))
+            (if (memq tag '(p br h1 h2 h3 h4 h5 h6))
+                (newline out)))
+           (else
+            (for-each lp sxml)))))
+       ((null? sxml))
+       (else (html-display-escaped-string sxml out))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (output doc . o)
+;; output the sexp document representation
+(define (output render doc . o)
   (let ((env (if (pair? o) (car o) (make-default-env))))
-    (sxml-display-as-html
+    ((or render sxml-display-as-html)
      (fix-header (fix-paragraphs (fix-begins (expand doc env)))))))
 
-(define (convert in)
-  (output (scribble-parse in)))
+;; convert directly from scribble to the output format
+(define (convert-scribble render in)
+  (output render (scribble-parse in)))
 
-(define (object-source x)
-  (cond ((opcode? x) #f)
-        ((bytecode? x)
-         (let ((src (bytecode-source x)))
-           (if (and (vector? src) (positive? (vector-length src)))
-               (vector-ref src 0)
-               src)))
-        ((procedure? x) (object-source (procedure-code x)))
-        ((macro? x) (macro-source x))
-        (else #f)))
+(define (make-env mod-name)
+  (env-extend (make-default-env)
+              '(example-env)
+              (list (environment '(scheme base) mod-name))))
 
-(define (extract mod-name mod)
-  (let* ((exports (module-exports mod))
-         (defs (map (lambda (x) `(,(car x) ,(cdr x) ,(object-source (cdr x))))
-                    (filter (lambda (x) (or (procedure? (cdr x)) (macro? (cdr x))))
-                            (map (lambda (x) (cons x (module-ref mod x)))
-                                 exports)))))
-    (output
-     `((title ,(write-to-string mod-name))
-       ,@(cond
-          ((find-module-file (module-name->file mod-name))
-           => (lambda (f) (reverse (extract-docs f defs exports 'module))))
-          (else '()))
-       ,@(reverse (append-map (lambda (x) (extract-docs x defs exports))
-                              (module-includes mod)))
-       ,@(reverse (append-map (lambda (x) (extract-docs x defs exports 'ffi))
-                              (module-shared-includes mod))))
-     (env-extend (make-default-env)
-                 '(example-env)
-                 (list (environment '(scheme base) mod-name))))))
+;; convert from a module to the output format
+(define (convert-module render mod-name mod . o)
+  (output render
+          `((title ,(write-to-string mod-name))
+            ,@(apply extract-module-docs mod-name mod #f o))
+          (make-env mod-name)))
 
-(let ((args (command-line)))
+(define (convert-module-var render mod-name mod var)
+  (output render
+          (extract-module-docs mod-name mod #t (list var))
+          (make-env mod-name)))
+
+;; utility to convert from "foo.bar" to (foo bar)
+(define (split-module-name str)
+  (map (lambda (x) (or (string->number x) (string->symbol x)))
+       (string-split str #\.)))
+
+;; main
+(define (run args render)
   (case (length args)
-    ((0 1)
-     (convert (current-input-port)))
-    ((2)
-     (let ((name (cadr args)))
+    ((0)
+     (convert-scribble render (current-input-port)))
+    ((1)
+     (let ((name (first args)))
        (cond
         ((equal? "-" name)
-         (convert (current-input-port)))
+         (convert-scribble render (current-input-port)))
         ((file-exists? name)
-         (call-with-input-file name convert))
+         (call-with-input-file name convert-scribble))
         (else
-         (let* ((mod-name
-                 (map (lambda (x) (or (string->number x) (string->symbol x)))
-                      (string-split name #\.)))
+         ;; load the module so that examples work
+         (let* ((mod-name (split-module-name name))
                 (mod (load-module mod-name)))
            (if mod
-               (extract mod-name mod)
+               (convert-module render mod-name mod)
                (die "ERROR: couldn't find file or module: " name)))))))
+    ((2)
+     (let* ((name (first args))
+            (var (second args))
+            (mod-name (split-module-name name))
+            (mod (load-module mod-name))
+            ;; display as text by default
+            (render (or render sxml-display-as-text)))
+       (if mod
+           (convert-module-var render mod-name mod (string->symbol var))
+           (die "ERROR: couldn't find module: " name))))
     (else
-     (die "usage: chibi-doc [<file-or-module-name>]"))))
+     (die "usage: chibi-doc [<scribble-file> | <module-name> [<var>]]"))))
+
+(let lp ((args (cdr (command-line)))
+         (render #f))
+  (cond
+   ((and (pair? args) (not (equal? "" (car args)))
+         (eqv? #\- (string-ref (car args) 0)))
+    (case (string->symbol (substring (car args) 1))
+      ((h) (lp (cdr args) sxml-display-as-html))
+      ((s) (lp (cdr args) write))
+      ((t) (lp (cdr args) sxml-display-as-text))
+      ((-) (run (cdr args) render))
+      (else (die "unknown option: " (car args)))))
+   (else
+    (run args render))))

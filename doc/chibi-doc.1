@@ -6,6 +6,7 @@ chibi-doc \- generate docs from Scheme scribble syntax
 
 .SH SYNOPSIS
 .B chibi-doc
+[-hst]
 [
 .I file
 ]
@@ -13,6 +14,9 @@ chibi-doc \- generate docs from Scheme scribble syntax
 
 .B chibi-doc
 .I dotted-name.of.module
+[
+.I identifier
+]
 .BR
 .SP 0.4
 
@@ -28,6 +32,17 @@ comments are any line beginning with the characters
 .I ;;>
 
 The scribble syntax is described in the manual.
+
+.SH OPTIONS
+.TP 5
+.BI -h
+Outputs in HTML format (the default).
+.TP
+.BI -s
+Outputs in SXML format.
+.TP
+.BI -t
+Outputs in text format (the default for describing a single variable).
 
 .SH AUTHORS
 .PP
