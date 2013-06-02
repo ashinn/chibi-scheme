@@ -190,6 +190,7 @@ _FN1(_I(SEXP_IPORT), _I(SEXP_STRING), "open-input-string", 0, sexp_make_input_st
 _FN1(_I(SEXP_STRING), _I(SEXP_OPORT), "get-output-string", 0, sexp_get_output_string_op),
 _FN2OPT(_I(SEXP_IPORT), _I(SEXP_FIXNUM), _I(SEXP_BOOLEAN), "open-input-file-descriptor", SEXP_FALSE, sexp_open_input_file_descriptor),
 _FN2OPT(_I(SEXP_OPORT), _I(SEXP_FIXNUM), _I(SEXP_BOOLEAN), "open-output-file-descriptor", SEXP_FALSE, sexp_open_output_file_descriptor),
+_FN2(_I(SEXP_VOID), _I(SEXP_IPORT), _I(SEXP_FIXNUM), "set-port-line!", 0, sexp_set_port_line_op),
 _FN2OPT(_I(SEXP_OBJECT), _I(SEXP_PROCEDURE), _I(SEXP_FIXNUM), "register-optimization!", _I(600), sexp_register_optimization),
 #if SEXP_USE_MATH
 _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "exp", 0, sexp_exp),
