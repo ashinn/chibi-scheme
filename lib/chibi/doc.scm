@@ -352,10 +352,10 @@ div#footer {padding-bottom: 50px}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (skip-whitespace in)
-  (cond ((char-whitespace? (peek-char in))
+(define (skip-horizontal-whitespace in)
+  (cond ((memv (peek-char in) '(#\space #\tab))
          (read-char in)
-         (skip-whitespace in))))
+         (skip-horizontal-whitespace in))))
 
 (define (external-clause? x)
   (not (and (pair? (cdr x)) (pair? (cadr x)) (string? (car (cadr x))))))
@@ -467,19 +467,30 @@ div#footer {padding-bottom: 50px}
 ;; source file, associating any signatures from the provided defs when
 ;; available and not overridden in the docs.
 (define (extract-file-docs file all-defs strict? . o)
+  ;; extract (<file> . <line>) macro source or
+  ;; (<offset> <file . <line>>) procedure source
+  (define (source-line source)
+    (and (pair? source)
+         (if (string? (car source))
+             (and (equal? file (car source))
+                  (number? (cdr source))
+                  (cdr source))
+             (and (number? (car source))
+                  (pair? (cdr source))
+                  (equal? file (cadr source))
+                  (cddr source)))))
   (call-with-input-file file
     (lambda (in)
       (let* ((lang (or (and (pair? o) (car o)) 'scheme))
              ;; filter to only defs found in this file
-             (defs (map (lambda (x) `(,(car x) ,(cadr x) ,(cddr (third x))))
-                        ;; (name value line)
-                        (filter
-                         (lambda (x)
-                           (and (pair? (third x))
-                                (pair? (cdr (third x)))
-                                (equal? file (cadr (third x)))))
-                         all-defs))))
-        (let lp ((lines '()) (cur '()) (res '()))
+             (defs (filter-map
+                    (lambda (x)
+                      (let ((line (source-line (third x))))
+                        (and line 
+                             ;; (name value line)
+                             `(,(car x) ,(cadr x) ,line))))
+                    all-defs)))
+        (let lp ((lines '()) (cur '()) (res '()) (last-line 0))
           (define (collect)
             (if (pair? lines)
                 (append
@@ -489,12 +500,13 @@ div#footer {padding-bottom: 50px}
                     scribble-parse))
                  cur)
                 cur))
-          (skip-whitespace in)
+          (skip-horizontal-whitespace in)
           (cond
            ((eof-object? (peek-char in))
             (append (collect) res))
            ((eqv? #\newline (peek-char in))
-            (lp lines cur res))
+            (read-char in)
+            (lp lines cur res last-line))
            ((eqv? #\; (peek-char in))
             (read-char in)
             (cond
@@ -502,7 +514,7 @@ div#footer {padding-bottom: 50px}
                    (begin (read-char in) (eqv? #\> (peek-char in))))
               (read-char in)
               (if (eqv? #\space (peek-char in)) (read-char in))
-              (lp (cons (read-line in) lines) cur res))
+              (lp (cons (read-line in) lines) cur res last-line))
              (else
               (let lp ()
                 (cond ((eqv? #\; (peek-char in))
@@ -512,15 +524,14 @@ div#footer {padding-bottom: 50px}
                     (cur (collect)))
                 ;; ";;/" attaches the docs to the preceding form
                 (if (equal? line "/")
-                    (lp '() '() (append cur res))
-                    (lp '() cur res))))))
+                    (lp '() '() (append cur res) last-line)
+                    (lp '() cur res last-line))))))
            (else  ;; found a top-level expression
             (let* ((cur (collect))
-                   (line1 (port-line in))
                    (form (read in))
-                   (line2 (port-line in))
+                   (line (port-line in))
                    ;; find all procedures defined by form
-                   (procs (filter (lambda (x) (<= line1 (third x) line2))
+                   (procs (filter (lambda (x) (<= last-line (third x) line))
                                   (filter third defs)))
                    ;; the the signature for the form
                    (sigs
@@ -539,14 +550,15 @@ div#footer {padding-bottom: 50px}
                ((and strict?
                      (or (not (pair? sigs)) (not (assq (caar sigs) defs))))
                 ;; drop unrelated docs in strict mode
-                (lp '() '() res))
+                (lp '() '() res line))
                ((and (eq? lang 'ffi) (pair? sigs))
-                (lp '() '() (append (insert-signature cur #f sigs) res)))
+                (lp '() '() (append (insert-signature cur #f sigs) res) line))
                ((and (eq? lang 'scheme) (= 1 (length procs)))
                 (lp '() '() (append (insert-signature cur (caar procs) sigs)
-                                    res)))
+                                    res)
+                    line))
                (else
-                (lp '() '() (append cur res))))))))))))
+                (lp '() '() (append cur res) line)))))))))))
 
 ;; utility to get the source position of an object
 (define (object-source x)
