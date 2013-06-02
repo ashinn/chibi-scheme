@@ -1167,6 +1167,14 @@ sexp sexp_close_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   return sexp_finalize_port(ctx, self, n, port);
 }
 
+sexp sexp_set_port_line_op (sexp ctx, sexp self, sexp_sint_t n, sexp port, sexp line) {
+  sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, port);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, line);
+  sexp_port_sourcep(port) = 1;
+  sexp_port_line(port) = sexp_unbox_fixnum(line);
+  return SEXP_VOID;
+}
+
 #if SEXP_USE_STATIC_LIBS
 #ifndef PLAN9
 #include "clibs.c"

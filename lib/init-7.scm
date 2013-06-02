@@ -1001,6 +1001,7 @@
      (else
       (call-with-input-file file
         (lambda (in)
+          (set-port-line! in 1)
           (let lp ()
             (let ((x (read in)))
               (cond
