@@ -573,19 +573,47 @@ div#footer {padding-bottom: 50px}
         (else #f)))
 
 ;; extract documentation from a module
-(define (extract-module-docs mod-name mod strict? . o)
-  (let* ((exports (if (pair? o) (car o) (module-exports mod)))
-         (defs
-           (map (lambda (x)
-                  (let ((val (module-ref mod x)))
-                    `(,x ,val ,(object-source val))))
-                exports)))
-    (append
-     (cond
-      ((find-module-file (module-name->file mod-name))
-       => (lambda (f) (reverse (extract-file-docs f defs strict? 'module))))
-      (else '()))
-     (reverse (append-map (lambda (x) (extract-file-docs x defs strict?))
-                          (module-includes mod)))
-     (reverse (append-map (lambda (x) (extract-file-docs x defs strict? 'ffi))
-                          (module-shared-includes mod))))))
+(define (extract-module-docs mod-name strict? . o)
+  (let ((mod (load-module mod-name)))
+    (if (not mod)
+        (error "couldn't find module" mod-name)
+        (let* ((exports (if (pair? o) (car o) (module-exports mod)))
+               (defs
+                 (map (lambda (x)
+                        (let ((val (module-ref mod x)))
+                          `(,x ,val ,(object-source val))))
+                      exports)))
+          (append
+           (cond
+            ((find-module-file (module-name->file mod-name))
+             => (lambda (f) (reverse (extract-file-docs f defs strict? 'module))))
+            (else '()))
+           (reverse (append-map (lambda (x) (extract-file-docs x defs strict?))
+                                (module-includes mod)))
+           (reverse (append-map (lambda (x) (extract-file-docs x defs strict? 'ffi))
+                                (module-shared-includes mod))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (print-module-docs mod-name . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (render (if (and (pair? o) (pair? (cdr o)))
+                    (cadr o)
+                    sxml-display-as-text)))
+    (render
+     (generate-docs
+      `((title ,(write-to-string mod-name))
+        ,@(apply extract-module-docs mod-name #f o))
+      (make-module-doc-env mod-name))
+     out)))
+
+(define (print-module-binding-docs mod-name var . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (render (if (and (pair? o) (pair? (cdr o)))
+                    (cadr o)
+                    sxml-display-as-text)))
+    (render
+     (generate-docs
+      (extract-module-docs mod-name #t (list var))
+      (make-module-doc-env mod-name))
+     out)))

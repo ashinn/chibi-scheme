@@ -114,12 +114,12 @@ lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
 	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
 
 doc/lib/chibi/%.html: lib/chibi/%.sld $(CHIBI_DOC_DEPENDENCIES)
-	$(CHIBI_DOC) chibi.$* > $@
+	$(CHIBI_DOC) --html chibi.$* > $@
 
 doc: doc/chibi.html doc-libs
 
 %.html: %.scrbl $(CHIBI_DOC_DEPENDENCIES)
-	$(CHIBI_DOC) $< > $@
+	$(CHIBI_DOC) --html $< > $@
 
 ########################################################################
 # Dist builds - rules to build generated files included in distribution
