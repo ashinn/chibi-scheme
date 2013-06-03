@@ -56,7 +56,7 @@ doc-libs: $(HTML_LIBS)
 
 doc/lib/%.html: lib/%.sld
 	$(MKDIR) $(dir $@)
-	$(CHIBI_DOC) $(subst /,.,$*) > $@
+	$(CHIBI_DOC) --html $(subst /,.,$*) > $@
 
 clean-libs:
 	$(RM) $(COMPILED_LIBS)
