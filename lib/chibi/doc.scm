@@ -597,8 +597,7 @@ div#footer {padding-bottom: 50px}
 
 (define (print-module-docs mod-name . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
-        (render (if (and (pair? o) (pair? (cdr o)))
-                    (cadr o)
+        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
                     sxml-display-as-text)))
     (render
      (generate-docs
@@ -609,8 +608,7 @@ div#footer {padding-bottom: 50px}
 
 (define (print-module-binding-docs mod-name var . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
-        (render (if (and (pair? o) (pair? (cdr o)))
-                    (cadr o)
+        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
                     sxml-display-as-text)))
     (render
      (generate-docs
