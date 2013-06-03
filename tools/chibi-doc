@@ -1,7 +1,7 @@
 #! /usr/bin/env chibi-scheme
 
-(import (chibi)
-        (only (meta) load-module)
+(import (scheme base)
+        (scheme write)
         (scheme file)
         (scheme process-context)
         (chibi string)
@@ -10,9 +10,6 @@
         (chibi sxml))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (write-to-string x)
-  (call-with-output-string (lambda (out) (write x out))))
 
 ;; print an error and exit without a stack trace
 (define (die . args)
@@ -24,20 +21,6 @@
 (define (convert-scribble render in)
   ((or render sxml-display-as-html)
    (generate-docs (scribble-parse in))))
-
-;; convert from a module to the output format
-(define (convert-module render mod-name mod . o)
-  ((or render sxml-display-as-html)
-   (generate-docs
-    `((title ,(write-to-string mod-name))
-      ,@(apply extract-module-docs mod-name mod #f o))
-    (make-module-doc-env mod-name))))
-
-(define (convert-module-var render mod-name mod var)
-  ((or render sxml-display-as-text)
-   (generate-docs
-    (extract-module-docs mod-name mod #t (list var))
-    (make-module-doc-env mod-name))))
 
 ;; utility to convert from "foo.bar" to (foo bar)
 (define (split-module-name str)
@@ -59,19 +42,14 @@
            (lambda (in) (convert-scribble render in))))
         (else
          ;; load the module so that examples work
-         (let* ((mod-name (split-module-name name))
-                (mod (load-module mod-name)))
-           (if mod
-               (convert-module render mod-name mod)
-               (die "ERROR: couldn't find file or module: " name)))))))
+         (let ((mod-name (split-module-name name)))
+           (print-module-docs mod-name (current-output-port) render))))))
     ((2)
      (let* ((name (car args))
             (var (cadr args))
-            (mod-name (split-module-name name))
-            (mod (load-module mod-name)))
-       (if mod
-           (convert-module-var render mod-name mod (string->symbol var))
-           (die "ERROR: couldn't find module: " name))))
+            (mod-name (split-module-name name)))
+       (print-module-binding-docs
+        mod-name (string->symbol var) (current-output-port) render)))
     (else
      (die "usage: chibi-doc [<scribble-file> | <module-name> [<var>]]"))))
 
