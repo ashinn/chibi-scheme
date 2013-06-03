@@ -10,7 +10,8 @@
 ;; represents a single buffered chunk of text.
 
 (define-record-type Parse-Stream
-  (%make-parse-stream filename port buffer cache offset prev-char tail)
+  (%make-parse-stream
+   filename port buffer cache offset prev-char line column tail)
   parse-stream?
   ;; The file the data came from, for debugging and error reporting.
   (filename parse-stream-filename)
@@ -32,6 +33,9 @@
   ;; The previous char before the beginning of this Parse-Stream.
   ;; Used for line/word-boundary checks.
   (prev-char parse-stream-prev-char)
+  ;; The debug info for the start line and column of this chunk.
+  (line parse-stream-line)
+  (column parse-stream-column)
   ;; The successor Parse-Stream chunk, created on demand and filled
   ;; from the same port.
   (tail %parse-stream-tail %parse-stream-tail-set!))
@@ -44,7 +48,7 @@
   (let ((port (if (pair? o) (car o) (open-input-file filename)))
         (len (if (and (pair? o) (pair? (cdr o))) (cadr o) default-buffer-size)))
     (%make-parse-stream
-     filename port (make-vector len #f) (make-vector len '()) 0 #f #f)))
+     filename port (make-vector len #f) (make-vector len '()) 0 #f 0 0 #f)))
 
 (define (file->parse-stream filename)
   (make-parse-stream filename (open-input-file filename)))
@@ -55,12 +59,19 @@
 (define (parse-stream-tail source)
   (or (%parse-stream-tail source)
       (let* ((len (vector-length (parse-stream-buffer source)))
+             (line-info (parse-stream-count-lines source))
+             (line (+ (parse-stream-line source) (car line-info)))
+             (col (if (zero? (car line-info))
+                      (+ (parse-stream-column source) (cadr line-info))
+                      (cadr line-info)))
              (tail (%make-parse-stream (parse-stream-filename source)
                                        (parse-stream-port source)
                                        (make-vector len #f)
                                        (make-vector len '())
                                        0
                                        (parse-stream-last-char source)
+                                       line
+                                       col
                                        #f)))
         (%parse-stream-tail-set! source tail)
         tail)))
@@ -101,11 +112,54 @@
 
 (define (parse-stream-max-char source)
   (let ((buf (parse-stream-buffer source)))
-    (let lp ((i (min (- (vector-length buf) 1) (parse-stream-offset source))))
+    (let lp ((i (min (- (vector-length buf) 1)
+                     (parse-stream-offset source))))
       (if (or (negative? i)
               (char? (vector-ref buf i)))
           i
           (lp (- i 1))))))
+
+(define (parse-stream-count-lines source . o)
+  (let* ((buf (parse-stream-buffer source))
+         (end (if (pair? o) (car o) (vector-length buf))))
+    (let lp ((i 0) (from 0) (lines 0))
+      (if (>= i end)
+          (list lines (- i from) from)
+          (let ((ch (vector-ref buf i)))
+            (cond
+             ((not (char? ch))
+              (list lines (- i from) from))
+             ((eqv? ch #\newline)
+              (lp (+ i 1) i (+ lines 1)))
+             (else
+              (lp (+ i 1) from lines))))))))
+
+(define (parse-stream-end-of-line source i)
+  (let* ((buf (parse-stream-buffer source))
+         (end (vector-length buf)))
+    (let lp ((i i))
+      (if (>= i end)
+          i
+          (let ((ch (vector-ref buf i)))
+            (if (or (not (char? ch)) (eqv? ch #\newline))
+                i
+                (lp (+ i 1))))))))
+
+(define (parse-stream-debug-info s i)
+  ;; i is the failed parse index, but we want the furthest reached
+  ;; location
+  (if (%parse-stream-tail s)
+      (parse-stream-debug-info (%parse-stream-tail s) i)
+      (let* ((line-info
+              (parse-stream-count-lines s (parse-stream-max-char s)))
+             (line (+ (parse-stream-line s) (car line-info)))
+             (col (if (zero? (car line-info))
+                      (+ (parse-stream-column s) (cadr line-info))
+                      (cadr line-info)))
+             (from (car (cddr line-info)))
+             (to (parse-stream-end-of-line s (+ from 1)))
+             (str (parse-stream-substring s from s to)))
+        (list line col str))))
 
 (define (parse-stream-next-source source i)
   (if (>= (+ i 1) (vector-length (parse-stream-buffer source)))
@@ -172,42 +226,49 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; the parser interface
 
+(define (parse-failure s i reason)
+  (let ((line+col (parse-stream-debug-info s i)))
+    (error "incomplete parse at" (append line+col (list reason)))))
+
 (define (call-with-parse f source index sk . o)
-  (let ((p (if (string? source) (string->parse-stream source) source))
-        (fk (if (pair? o) (car o) (lambda () #f))))
-    (f p index sk fk)))
+  (let ((s (if (string? source) (string->parse-stream source) source))
+        (fk (if (pair? o) (car o) (lambda (s i reason) #f))))
+    (f s index sk fk)))
 
 (define (parse f source . o)
   (let ((index (if (pair? o) (car o) 0)))
     (call-with-parse f source index (lambda (r s i fk) r))))
 
 (define (parse-fully f source . o)
-  (let ((p (if (string? source) (string->parse-stream source) source))
+  (let ((s (if (string? source) (string->parse-stream source) source))
         (index (if (pair? o) (car o) 0)))
     (call-with-parse
-     f p index
-     (lambda (r s i fk) (if (parse-stream-end? s i) r (fk)))
-     (lambda ()
-       (let ((i (parse-stream-max-char p)))
-         (error "incomplete parse, max char" i (parse-stream-ref p i)))))))
+     f s index
+     (lambda (r s i fk)
+       (if (parse-stream-end? s i) r (fk s i "incomplete parse")))
+     parse-failure)))
 
 (define (parse-fold f kons knil source . o)
   (let lp ((p (if (string? source) (string->parse-stream source) source))
            (index (if (pair? o) (car o) 0))
            (acc knil))
-    (f p index (lambda (r s i fk) (lp s i (kons r acc))) (lambda () acc))))
+    (f p index (lambda (r s i fk) (lp s i (kons r acc))) (lambda (s i r) acc))))
 
 (define (parse->list f source . o)
   (reverse (apply parse-fold cons '() f source o)))
 
 (define (parse-fully->list f source . o)
-  (let lp ((p (if (string? source) (string->parse-stream source) source))
+  (let lp ((s (if (string? source) (string->parse-stream source) source))
            (index (if (pair? o) (car o) 0))
            (acc '()))
-    (f p index
+    (f s index
        (lambda (r s i fk)
          (if (eof-object? r) (reverse acc) (lp s i (cons r acc))))
-       (lambda () (error "incomplete parse")))))
+       (lambda (s i reason) (error "incomplete parse")))))
+
+(define (parse-with-failure-reason f reason)
+  (lambda (r s i fk)
+    (f r s i (lambda (s i r) (fk s i reason)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; basic parsing combinators
@@ -219,7 +280,7 @@
 (define parse-anything
   (lambda (source index sk fk)
     (if (parse-stream-end? source index)
-        (fk)
+        (fk source index "end of input")
         (sk (parse-stream-ref source index)
             (parse-stream-next-source source index)
             (parse-stream-next-index source index)
@@ -227,14 +288,18 @@
 
 (define parse-nothing
   (lambda (source index sk fk)
-    (fk)))
+    (fk source index "nothing")))
 
 (define (parse-or f . o)
   (if (null? o)
       f
       (let ((g (apply parse-or o)))
         (lambda (source index sk fk)
-          (let ((fk2 (lambda () (g source index sk fk))))
+          (let ((fk2 (lambda (s i r)
+                       (g source index sk fk
+                          ;; (lambda (s2 i2 r2)
+                          ;;   (fk s2 i2 `(or ,r ,r2)))
+                          ))))
             (f source index sk fk2))))))
 
 (define (parse-and f g)
@@ -243,9 +308,10 @@
 
 (define (parse-not f)
   (lambda (source index sk fk)
-    (f source index (lambda (r s i fk) (fk)) (lambda () (sk #t source index fk)))))
+    (f source index (lambda (r s i fk) (fk s i "not"))
+       (lambda (s i r) (sk #t source index fk)))))
 
-(define (parse-seq . o)
+(define (parse-seq-list o)
   (cond
    ((null? o)
     parse-epsilon)
@@ -272,14 +338,17 @@
                 fk))
            fk))))))
 
-(define (maybe-parse-seq f . o)
-  (if (null? o) f (apply parse-seq f o)))
+(define (parse-seq . o)
+  (parse-seq-list o))
+
+(define (maybe-parse-seq ls)
+  (if (null? (cdr ls)) (car ls) (parse-seq-list ls)))
 
 (define (parse-optional f . o)
   (if (pair? o)
       (parse-optional (apply parse-seq f o))
       (lambda (source index sk fk)
-        (f source index sk (lambda () (sk #f source index fk))))))
+        (f source index sk (lambda (s i r) (sk #f source index fk))))))
 
 (define ignored-value (list 'ignore))
 
@@ -289,7 +358,7 @@
     (lambda (source0 index0 sk fk)
       (let repeat ((source source0) (index index0) (fk fk) (j 0) (res '()))
         (let ((fk (if (>= j lo)
-                      (lambda () (sk (reverse res) source index fk))
+                      (lambda (s i r) (sk (reverse res) source index fk))
                       fk)))
           (if (and hi (= j hi))
               (sk (reverse res) source index fk)
@@ -322,7 +391,7 @@
     (f source
        index
        (lambda (res s i fk)
-         (if (check? res) (sk res s i fk) (fk)))
+         (if (check? res) (sk res s i fk) (fk s i "assertion failed")))
        fk)))
 
 (define (parse-atomic f)
@@ -331,7 +400,7 @@
 
 (define (parse-commit f)
   (lambda (source index sk fk)
-    (f source index (lambda (res s i fk) (sk res s i (lambda () #f))) fk)))
+    (f source index (lambda (res s i fk) (sk res s i (lambda (s i r) #f))) fk)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; boundary checks
@@ -340,27 +409,27 @@
   (lambda (source index sk fk)
     (if (parse-stream-start? source index)
         (sk #t source index fk)
-        (fk))))
+        (fk source index "expected beginning"))))
 
 (define parse-end
   (lambda (source index sk fk)
     (if (parse-stream-end? source index)
         (sk #t source index fk)
-      (fk))))
+      (fk source index "expected end"))))
 
 (define parse-beginning-of-line
   (lambda (source index sk fk)
     (let ((before (parse-stream-char-before source index)))
       (if (or (not before) (eqv? #\newline before))
           (sk #t source index fk)
-          (fk)))))
+          (fk source index "expected beginning of line")))))
 
 (define parse-end-of-line
   (lambda (source index sk fk)
     (if (or (parse-stream-end? source index)
             (eqv? #\newline (parse-stream-ref source index)))
         (sk #t source index fk)
-        (fk))))
+        (fk source index "expected end of line"))))
 
 (define (char-word? ch)
   (or (char-alphabetic? ch) (eqv? ch #\_)))
@@ -372,7 +441,7 @@
                (not (parse-stream-end? source index))
                (char-word? (parse-stream-ref source index)))
           (sk #t source index fk)
-          (fk)))))
+          (fk source index "expected beginning of word")))))
 
 (define parse-end-of-word
   (lambda (source index sk fk)
@@ -382,7 +451,7 @@
                (or (parse-stream-end? source index)
                    (not (char-word? (parse-stream-ref source index)))))
           (sk #t source index fk)
-          (fk)))))
+          (fk source index "expected end of word")))))
 
 (define (parse-word . o)
   (let ((word (if (pair? o) (car o) (parse-token char-word?))))
@@ -408,7 +477,7 @@
               (parse-stream-next-source source index)
               (parse-stream-next-index source index)
               fk)
-          (fk)))))
+          (fk source index "failed char pred")))))
 
 (define (x->char-predicate x)
   (cond
@@ -429,7 +498,9 @@
     (parse-char-pred (lambda (ch) (not (pred ch))))))
 
 (define (parse-string x)
-  (parse-map (apply parse-seq (map parse-char (string->list x)))
+  (parse-map (parse-with-failure-reason
+              (parse-seq-list (map parse-char (string->list x)))
+              `(expected ,x))
              list->string))
 
 (define (parse-token x)
@@ -444,9 +515,9 @@
         (f source
            index
            (lambda (r s i fk) (lp s i))
-           (lambda ()
+           (lambda (s i r)
              (if (and (eq? source source0) (eqv? index index0))
-                 (fk)
+                 (fk s i r)
                  (sk (parse-stream-substring source0 index0 source index)
                      source index fk))))))))
 
@@ -498,14 +569,14 @@
     parse-epsilon)
    ((list? x)
     (case (car x)
-      ((: seq) (apply parse-seq (map parse-sre (cdr x))))
+      ((: seq) (parse-seq-list (map parse-sre (cdr x))))
       ((or) (apply parse-or (map parse-sre (cdr x))))
       ((and) (apply parse-and (map parse-sre (cdr x))))
       ((not) (apply parse-not (map parse-sre (cdr x))))
-      ((*) (parse-repeat (apply maybe-parse-seq (map parse-sre (cdr x)))))
-      ((+) (parse-repeat+ (apply maybe-parse-seq (map parse-sre (cdr x)))))
-      ((?) (apply parse-optional (map parse-sre (cdr x))))
-      ((=> ->) (apply maybe-parse-seq (map parse-sre (cddr x))))
+      ((*) (parse-repeat (maybe-parse-seq (map parse-sre (cdr x)))))
+      ((+) (parse-repeat+ (maybe-parse-seq (map parse-sre (cdr x)))))
+      ((?) (parse-optional (parse-seq-list (map parse-sre (cdr x)))))
+      ((=> ->) (maybe-parse-seq (map parse-sre (cddr x))))
       ((word) (apply parse-word (cdr x)))
       ((word+) (apply parse-word+ (cdr x)))
       ((/ ~ & -) (parse-char (sre->char-set x)))
@@ -553,25 +624,28 @@
 (define (procedure-name-set! f name)
   (set! *procedures* (cons (cons f name) *procedures*)))
 
+(define memoized-failure (list 'failure))
+
 (define (parse-memoize name f)
-  (if (not (procedure-name f)) (procedure-name-set! f name))
+  ;;(if (not (procedure-name f)) (procedure-name-set! f name))
   (lambda (source index sk fk)
     (cond
      ((parse-stream-cache-cell source index f)
       => (lambda (cell)
-           (if (cdr cell)
-               (apply sk (append (cdr cell) (list fk)))
-               (fk))))
+           (if (and (pair? (cdr cell)) (eq? memoized-failure (cadr cell)))
+               (fk source index (cddr cell))
+               (apply sk (append (cdr cell) (list fk))))))
      (else
       (f source
          index
          (lambda (res s i fk)
            (parse-stream-cache-set! source index f (list res s i))
            (sk res s i fk))
-         (lambda ()
+         (lambda (s i r)
            (if (not (pair? (parse-stream-cache-cell source index f)))
-               (parse-stream-cache-set! source index f #f))
-           (fk)))))))
+               (parse-stream-cache-set!
+                source index f (cons memoized-failure r)))
+           (fk s i r)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntactic sugar

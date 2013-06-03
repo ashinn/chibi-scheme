@@ -94,7 +94,7 @@
          (let lp ((s source) (i index))
            (subsequent
             s i (lambda (r s i fk) (lp s i))
-            (lambda ()
+            (lambda (s i r)
               (sk0 (string->symbol (parse-stream-substring source0 index0 s i))
                    s i fk0)))))
        fk0))))
