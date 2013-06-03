@@ -84,6 +84,49 @@
            (list (substring (car candidates) 0 prefix-len))
            (sort candidates))))))
 
+(define (describe x . o)
+  (let ((out (if (pair? o) (car o) (current-output-port))))
+    (cond
+     ((null? x)
+      (display "empty list\n" out))
+     ((list? x)
+      (display "list of length " out) (write (length x) out) (newline out)
+      (let lp ((ls x) (i 0))
+        (cond
+         ((pair? ls)
+          (display " " out) (write i out) (display ": " out)
+          (write/ss (car ls) out) (newline out)
+          (lp (cdr ls) (+ i 1))))))
+     ((pair? x)
+      (display "pair with car " out) (write/ss (car x) out) (newline out)
+      (display "and cdr " out) (write/ss (cdr x) out) (newline out))
+     ((vector? x)
+      (let ((len (vector-length x)))
+        (display "vector of length " out) (write len out) (newline out)
+        (let lp ((i 0))
+          (cond
+           ((< i len)
+            (display " " out) (write i out) (display ": " out)
+            (write/ss (vector-ref x i) out) (newline out)
+            (lp (+ i 1)))))))
+     ((boolean? x)
+      (display (if x "boolean true\n" "boolean false\n") out))
+     ((char? x)
+      (let ((n (char->integer x)))
+        (display "character " out) (write x out)
+        (display ", code: " out) (write n out)
+        (display ", #x" out) (display (number->string n 16) out)
+        (display ", #o" out) (display (number->string n 8) out)
+        (newline out)))
+     ((and (integer? x) (exact? x))
+      (display "exact integer " out) (write x out)
+      (display "\n  #x" out) (display (number->string x 16) out)
+      (display "\n  #o" out) (display (number->string x 8) out)
+      (display "\n  #b" out) (display (number->string x 2) out)
+      (newline out))
+     (else
+      (write/ss x out) (newline out)))))
+
 ;;> Runs an interactive REPL.  Repeatedly displays a prompt,
 ;;> then Reads an expression, Evaluates the expression, Prints
 ;;> the result then Loops.  Terminates when the end of input is
@@ -223,10 +266,10 @@
                                 (continue name (module-env m) meta-env)))
                           (else
                            (fail "couldn't find module:" name)))))
-                      ((meta config)
-                       (if (eq? op 'config)
-                           (display "Note: @config has been renamed @meta\n"
-                                    out))
+                      ((config)
+                       (display "Note: @config has been renamed @meta\n" out)
+                       (continue module env meta-env))
+                      ((meta)
                        (let ((expr (read/ss in)))
                          (cond
                           ((and
@@ -245,6 +288,33 @@
                            => (lambda (m) (lp module env (module-env m))))
                           (else
                            (fail "couldn't find module:" name)))))
+                      ((? h help)
+                       (let* ((x (read/ss in))
+                              (y (read/ss in)))
+                         (cond
+                          ((eof-object? x)
+                           (display "Try @help <identifier> [<module>]\n" out))
+                          ((eof-object? y)
+                           (let* ((failed (list 'failed))
+                                  (val (guard (exn
+                                               (else
+                                                (print-exception exn)
+                                                failed))
+                                         (eval x env)))
+                                  (mod (and (procedure? val)
+                                            (containing-module val))))
+                             (cond
+                              (mod
+                               (write val out) (newline out) (newline out)
+                               (print-module-binding-docs (car mod) x out))
+                              ((not (eq? val failed))
+                               (describe val out)))))
+                          (else
+                           (guard (exn
+                                   (else
+                                    (print-exception exn (current-error-port))))
+                             (print-module-binding-docs y x out))))
+                         (continue module env meta-env)))
                       ((exit))
                       (else
                        (fail "unknown repl command:" op))))))))
