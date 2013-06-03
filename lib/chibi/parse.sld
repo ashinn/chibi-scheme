@@ -16,7 +16,8 @@
           parse-beginning-of-line parse-end-of-line
           parse-beginning-of-line parse-end-of-line
           parse-beginning-of-word parse-end-of-word
-          parse-word parse-word+)
+          parse-word parse-word+
+          parse-with-failure-reason)
   (import (chibi) (chibi char-set) (srfi 9))
   (include "parse/parse.scm")
   (cond-expand
@@ -50,9 +51,9 @@
                                       (,lambda_ (,r ,s ,i ,fk)
                                                 (,set!_ ,new-tmp ,r)
                                                 (,sk ,r ,s ,i ,fk))
-                                      (,lambda_ ()
+                                      (,lambda_ (,s ,i ,r)
                                                 (,set!_ ,new-tmp ,save-tmp)
-                                                (,fk))))
+                                                (,fk ,s ,i ,r))))
                         ,new-tmp))
                      (cons (list name new-tmp) bindings))))
                  (append k (list f bindings)))))))))
@@ -73,6 +74,6 @@
                    (let ((save-tmp new-tmp))
                      (f s i
                         (lambda (r s i fk) (set! new-tmp r) (sk r s i fk))
-                        (lambda () (set! new-tmp save-tmp) (fk)))))
+                        (lambda (s i r) (set! new-tmp save-tmp) (fk s i r)))))
                  ((var tmp) ... (name new-tmp)))
               (k ... f ((var tmp) ...)))))))))))
