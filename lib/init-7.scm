@@ -1055,11 +1055,15 @@
   (define (numerator x)
     (if (ratio? x)
         (ratio-numerator x)
-        (if (inexact? x) (ratio-numerator (inexact->exact x)) x)))
+        (if (inexact? x)
+            (exact->inexact (ratio-numerator (inexact->exact x)))
+            x)))
   (define (denominator x)
     (if (exact? x)
         (if (ratio? x) (ratio-denominator x) 1)
-        (if (integer? x) 1 (ratio-denominator (inexact->exact x))))))
+        (if (integer? x)
+            1
+            (exact->inexact (ratio-denominator (inexact->exact x)))))))
  (else
   (cond-expand
    (complex
@@ -1127,16 +1131,28 @@
         (if (null? ls) x (lp (lcm2 x (car ls)) (cdr ls))))))
 
 (define (max x . rest)
-  (let lp ((hi x) (ls rest))
+  (define (~max hi ls)
     (if (null? ls)
-        hi
-        (lp (if (> (car ls) hi) (car ls) hi) (cdr ls)))))
+        (exact->inexact hi)
+        (~max (if (> (car ls) hi) (car ls) hi) (cdr ls))))
+  (if (inexact? x)
+      (~max x rest)
+      (let lp ((hi x) (ls rest))
+        (cond ((null? ls) hi)
+              ((inexact? (car ls)) (~max hi ls))
+              (else (lp (if (> (car ls) hi) (car ls) hi) (cdr ls)))))))
 
 (define (min x . rest)
-  (let lp ((lo x) (ls rest))
+  (define (~min lo ls)
     (if (null? ls)
-        lo
-        (lp (if (< (car ls) lo) (car ls) lo) (cdr ls)))))
+        (exact->inexact lo)
+        (~min (if (< (car ls) lo) (car ls) lo) (cdr ls))))
+  (if (inexact? x)
+      (~min x rest)
+      (let lp ((lo x) (ls rest))
+        (cond ((null? ls) lo)
+              ((inexact? (car ls)) (~min lo ls))
+              (else (lp (if (< (car ls) lo) (car ls) lo) (cdr ls)))))))
 
 (cond-expand
  (complex
