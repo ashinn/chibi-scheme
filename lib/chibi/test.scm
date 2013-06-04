@@ -671,6 +671,7 @@
       (if (real? expect)
           (and (inexact? expect)
                (real? res)
+               (inexact? res)
                (approx-equal? expect res (current-test-epsilon)))
           (and (complex? res)
                (complex? expect)
