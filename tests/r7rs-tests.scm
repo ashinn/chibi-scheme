@@ -725,7 +725,7 @@
 ;; (test undefined (atan 0.0 0.0))
 
 (test 1764 (square 42))
-(test 4.0 (square 2))
+(test 4 (square 2))
 
 (test 3 (sqrt 9))
 (test 1.4142135623731 (sqrt 2))
