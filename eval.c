@@ -599,8 +599,7 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
 
 /************************* the compiler ***************************/
 
-static sexp analyze_app (sexp ctx, sexp x) {
-  sexp p;
+static sexp analyze_list (sexp ctx, sexp x) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   for (res=SEXP_NULL; sexp_pairp(x); x=sexp_cdr(x)) {
@@ -614,16 +613,20 @@ static sexp analyze_app (sexp ctx, sexp x) {
       sexp_car(res) = tmp;
     }
   }
-  if (sexp_pairp(res)) {        /* fill in lambda names */
-    res = sexp_nreverse(ctx, res);
-    if (sexp_lambdap(sexp_car(res))) {
-      p=sexp_lambda_params(sexp_car(res));
-      for (tmp=sexp_cdr(res); sexp_pairp(tmp)&&sexp_pairp(p); tmp=sexp_cdr(tmp), p=sexp_cdr(p))
-        if (sexp_lambdap(sexp_car(tmp)))
-          sexp_lambda_name(sexp_car(tmp)) = sexp_car(p);
-    }
-  }
+  if (sexp_pairp(res)) res = sexp_nreverse(ctx, res);
   sexp_gc_release2(ctx);
+  return res;
+}
+
+static sexp analyze_app (sexp ctx, sexp x) {
+  sexp p, res, tmp;
+  res = analyze_list(ctx, x);
+  if (sexp_lambdap(sexp_car(res))) {       /* fill in lambda names */
+    p=sexp_lambda_params(sexp_car(res));
+    for (tmp=sexp_cdr(res); sexp_pairp(tmp)&&sexp_pairp(p); tmp=sexp_cdr(tmp), p=sexp_cdr(p))
+      if (sexp_lambdap(sexp_car(tmp)))
+        sexp_lambda_name(sexp_car(tmp)) = sexp_car(p);
+  }
   return res;
 }
 
@@ -637,7 +640,7 @@ static sexp analyze_seq (sexp ctx, sexp ls) {
   else {
     res = sexp_alloc_type(ctx, seq, SEXP_SEQ);
     sexp_seq_source(res) = sexp_pair_source(ls);
-    tmp = analyze_app(ctx, ls);
+    tmp = analyze_list(ctx, ls);
     if (sexp_exceptionp(tmp))
       res = tmp;
     else
@@ -988,7 +991,7 @@ static sexp analyze (sexp ctx, sexp object) {
             sexp_warn(ctx, "too many args for opcode: ", x);
             op = analyze_var_ref(ctx, sexp_car(x), NULL);
           }
-          res = analyze_app(ctx, sexp_cdr(x));
+          res = analyze_list(ctx, sexp_cdr(x));
           if (! sexp_exceptionp(res)) {
             /* push op, which will be a direct opcode if the call is valid */
             sexp_push(ctx, res, op);
