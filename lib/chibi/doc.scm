@@ -615,3 +615,19 @@ div#footer {padding-bottom: 50px}
       (extract-module-docs mod-name #t (list var))
       (make-module-doc-env mod-name))
      out)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (procedure-docs proc)
+  (let ((mod (and (procedure? proc) (containing-module proc))))
+    (and mod
+         (generate-docs
+          (extract-module-docs (car mod) #t (list (procedure-name proc)))
+          (make-module-doc-env (car mod))))))
+
+(define (print-procedure-docs proc . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
+                    sxml-display-as-text))
+        (docs (procedure-docs proc)))
+    (if docs (render docs out))))
