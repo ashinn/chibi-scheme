@@ -140,12 +140,15 @@
 ;;> @itemlist[
 ;;> @item{@scheme{in:} - the input port (default @scheme{(current-input-port)})}
 ;;> @item{@scheme{out:} - the output port (default @scheme{(current-output-port)})}
-;;> @item{@scheme{module:} - the initial module (default @scheme{(interaction-environment)})}
+;;> @item{@scheme{module:} - the initial module
+;;> @item{@scheme{environment:} - the initial environment (default @scheme{(interaction-environment)})}
 ;;> @item{@scheme{escape:} - the command escape character (default @scheme|{#\@}|)}
 ;;> @item{@scheme{make-prompt:} - a procedure taking one argument (the current module name as a list) and returning a string to be used as the prompt}
 ;;> @item{@scheme{history:} - the initial command history}
 ;;> @item{@scheme{history-file:} - the file to save history to (default ~/.chibi-repl-history)}
 ;;> ]
+;;>
+;;> The module: and environment: keyword arguments should not both be given.
 ;;>
 ;;> REPL commands in the style of @hyperlink["http://s48.org/"]{Scheme48}
 ;;> are available to control out-of-band properties.  By default a command
@@ -174,10 +177,16 @@
          (out (cond ((memq 'out: o) => cadr) (else (current-output-port))))
          (escape (cond ((memq 'escape: o) => cadr) (else #\@)))
          (module (cond ((memq 'module: o) => cadr) (else #f)))
-         (env (if module
-                  (module-env
-                   (if (module? module) module (load-module module)))
-                  (interaction-environment)))
+         (env (cond
+               ((memq 'environment: o) =>
+                (lambda (x)
+                  (if module
+                      (error "The module: and environment: keyword arguments should not both be given."))
+                  (cadr x)))
+               (module
+                (module-env
+                 (if (module? module) module (load-module module))))
+               (else (interaction-environment))))
          (make-prompt
           (cond
            ((memq 'make-prompt: o) => cadr)
