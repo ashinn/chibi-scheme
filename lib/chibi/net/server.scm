@@ -27,19 +27,19 @@
     (define (run sock addr count)
       (log-debug "net-server: accepting request:" count)
       (let ((ports
-             (guard (exn
-                     (else
-                      (log-error "net-server: couldn't create port:" sock)
-                      (close-file-descriptor sock)))
+             (protect (exn
+                       (else
+                        (log-error "net-server: couldn't create port:" sock)
+                        (close-file-descriptor sock)))
                (cons (open-input-file-descriptor sock)
                      (open-output-file-descriptor sock)))))
-        (guard (exn
-                (else (log-error "net-server: error in request:" count)
-                      (print-exception exn)
-                      (print-stack-trace exn)
-                      (close-input-port (car ports))
-                      (close-output-port (cdr ports))
-                      (close-file-descriptor sock)))
+        (protect (exn
+                  (else (log-error "net-server: error in request:" count)
+                        (print-exception exn)
+                        (print-stack-trace exn)
+                        (close-input-port (car ports))
+                        (close-output-port (cdr ports))
+                        (close-file-descriptor sock)))
           (handler (car ports) (cdr ports) sock addr)
           (close-input-port (car ports))
           (close-output-port (cdr ports))

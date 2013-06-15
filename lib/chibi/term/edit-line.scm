@@ -613,10 +613,10 @@
   (buffer-insert! buf out ch))
 
 (define (command/enter ch buf out return)
-  (guard (exn (else
-               (buffer-clear buf out)
-               (print-exception exn out)
-               (buffer-draw buf out)))
+  (protect (exn (else
+                 (buffer-clear buf out)
+                 (print-exception exn out)
+                 (buffer-draw buf out)))
     (cond
      (((buffer-complete? buf) buf)
       (command/end-of-line ch buf out return)
@@ -771,10 +771,10 @@
                       ((keymap? x)
                        (lp x))
                       ((procedure? x)
-                       (guard (exn (else
-                                    (buffer-clear buf out)
-                                    (print-exception exn out)
-                                    (buffer-draw buf out)))
+                       (protect (exn (else
+                                      (buffer-clear buf out)
+                                      (print-exception exn out)
+                                      (buffer-draw buf out)))
                          (x ch buf out return))
                        (flush-output out)
                        (buffer-refresh buf out)

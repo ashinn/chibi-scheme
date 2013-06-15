@@ -41,7 +41,7 @@
         (if (equal? res "") line res))
        (else
         (let ((res (string-append res line "\n")))
-          (if (guard (exn (else #f)) (complete-sexp? res))
+          (if (protect (exn (else #f)) (complete-sexp? res))
               res
               (lp res))))))))
 
@@ -140,7 +140,7 @@
 ;;> @itemlist[
 ;;> @item{@scheme{in:} - the input port (default @scheme{(current-input-port)})}
 ;;> @item{@scheme{out:} - the output port (default @scheme{(current-output-port)})}
-;;> @item{@scheme{module:} - the initial module
+;;> @item{@scheme{module:} - the initial module}
 ;;> @item{@scheme{environment:} - the initial environment (default @scheme{(interaction-environment)})}
 ;;> @item{@scheme{escape:} - the command escape character (default @scheme|{#\@}|)}
 ;;> @item{@scheme{make-prompt:} - a procedure taking one argument (the current module name as a list) and returning a string to be used as the prompt}
@@ -185,7 +185,7 @@
          (mod+imps (eval `(resolve-import ',mod-name) (repl-meta-env rp))))
     (cond
      ((pair? mod+imps)
-      (guard
+      (protect
           (exn
            (else
             (print-exception exn (current-error-port))
@@ -250,7 +250,7 @@
       (display "Try @help <identifier> [<module>]\n" out))
      ((null? (cddr args))
       (let* ((failed (list 'failed))
-             (val (guard (exn (else (print-exception exn) failed))
+             (val (protect (exn (else (print-exception exn) failed))
                     (eval (second args) (repl-env rp))))
              (mod (and (procedure? val) (containing-module val))))
         (cond
@@ -260,7 +260,7 @@
          ((not (eq? val failed))
           (describe val out)))))
      (else
-      (guard (exn (else (print-exception exn (current-error-port))))
+      (protect (exn (else (print-exception exn (current-error-port))))
         (print-module-binding-docs (third args) (second args) out))))
     (continue rp)))
 
@@ -281,13 +281,13 @@
 
 (define (repl/eval rp expr-list)
   (let ((out (repl-out rp)))
-    (guard (exn (else (print-exception exn out)))
+    (protect (exn (else (print-exception exn out)))
       (let ((thread
              (make-thread
               (lambda ()
-                ;; The inner guard in the child thread catches errors
+                ;; The inner protect in the child thread catches errors
                 ;; from eval.
-                (guard (exn (else (print-exception exn out)))
+                (protect (exn (else (print-exception exn out)))
                   (for-each
                    (lambda (expr)
                      (call-with-values (lambda () (eval expr (repl-env rp)))
@@ -316,7 +316,7 @@
 (define (repl/eval-string rp str)
   (repl/eval
    rp
-   (guard (exn (else (print-exception exn (current-error-port))))
+   (protect (exn (else (print-exception exn (current-error-port))))
      ;; Ugly wrapper to account for the implicit state mutation
      ;; implied by the #!fold-case read syntax.
      (let ((in (repl-in rp))
@@ -357,7 +357,7 @@
          (history
           (cond ((memq 'history: o) => cadr)
                 (else
-                 (or (guard (exn (else #f))
+                 (or (protect (exn (else #f))
                        (list->history
                         (call-with-input-file history-file read)))
                      (make-history)))))
