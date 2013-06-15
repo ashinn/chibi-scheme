@@ -28,11 +28,17 @@ To build on most platforms just run "make && make test".  This will
 provide a shared library "libchibi-scheme", as well as a sample
 "chibi-scheme" command-line repl.  You can then run
 
-  sudo make PREFIX=/usr/local install
+  sudo make install
 
-to install the binaries, leaving out the PREFIX for the default
-/usr/local or specifying an alternate install location.  If you want
-to try out chibi-scheme without installing, be sure to set
+to install the binaries and libraries.  You can optionally specify a
+PREFIX for the installation directory:
+
+  make PREFIX=/path/to/install/
+  sudo make PREFIX=/path/to/install/ install
+
+By default files are installed in /usr/local.
+
+If you want to try out chibi-scheme without installing, be sure to set
 LD_LIBRARY_PATH so it can find the shared libraries.
 
 For more detailed documentation, run "make doc" and see the generated
