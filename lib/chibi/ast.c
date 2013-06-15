@@ -494,7 +494,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
   sexp_define_type_predicate(ctx, env, "core?", SEXP_CORE);
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);
-  sexp_define_type_predicate(ctx, env, "exception?", SEXP_EXCEPTION);
   sexp_define_type_predicate(ctx, env, "file-descriptor?", SEXP_FILENO);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 0, "syntactic-closure-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_SYNCLO, 1, "syntactic-closure-vars", NULL);
@@ -522,9 +521,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 2, "bytecode-name", "bytecode-name-set!");
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 3, "bytecode-literals", NULL);
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 4, "bytecode-source", NULL);
-  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 0, "exception-kind", NULL);
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", NULL);
-  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 2, "exception-irritants", NULL);
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 4, "exception-source", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);

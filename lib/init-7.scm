@@ -909,10 +909,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exceptions
 
-(define *continuable* (list 'continuable))
-
+;; We wrap continuable objects in specially marked exceptions.
 (define (raise-continuable exn)
-  (raise (list *continuable* exn)))
+  (raise (make-exception 'continuable "" exn #f #f)))
 
 (cond-expand
  (threads
@@ -937,8 +936,9 @@
                    (%with-exception-handler orig-handler
                      (lambda ()
                        (cond
-                        ((and (pair? exn) (eq? *continuable* (car exn)))
-                         (handler (cadr exn)))
+                        ((and (exception? exn)
+                              (eq? 'continuable (exception-kind exn)))
+                         (handler (exception-irritants exn)))
                         (else
                          (handler exn)
                          (error "exception handler returned"))))))))

@@ -169,7 +169,7 @@
 ;; cell value.  Thus there is no FFI issue with storing exceptions.
 (let ((ht (make-hash-table)))
   (hash-table-set! ht 'boom (make-exception 'my-exn-type "boom!" '() #f #f))
-  (test 'my-exn-type (exception-type (hash-table-ref ht 'boom))))
+  (test 'my-exn-type (exception-kind (hash-table-ref ht 'boom))))
 
 ;; stress test
 (test 625

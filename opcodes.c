@@ -56,6 +56,8 @@ _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_REF, 2, 0, _I(SEXP_CHAR), _I(SEXP_STRING), _
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_CURSOR_NEXT, 2, 0, _I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), SEXP_FALSE, 0,"string-cursor-next", 0, NULL),
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_CURSOR_PREV, 2, 0, _I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), SEXP_FALSE, 0,"string-cursor-prev", 0, NULL),
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_SIZE, 1, 0, _I(SEXP_FIXNUM), _I(SEXP_STRING), SEXP_FALSE, SEXP_FALSE, 0,"string-size", 0, NULL),
+_GETTER("exception-kind", SEXP_EXCEPTION, 0),
+_GETTER("exception-irritants", SEXP_EXCEPTION, 2),
 #else
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_REF, 2, 0, _I(SEXP_CHAR), _I(SEXP_STRING), _I(SEXP_FIXNUM), SEXP_FALSE, 0,"string-ref", 0, NULL),
 #endif
@@ -106,6 +108,7 @@ _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJ
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "vector?", _I(SEXP_VECTOR), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "bytevector?", _I(SEXP_BYTES), 0),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "fileno?", _I(SEXP_FILENO), 0),
+_OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "exception?", _I(SEXP_EXCEPTION), 0),
 #if SEXP_USE_IMMEDIATE_FLONUMS
 _FN1(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "flonum?", 0, sexp_flonump_op),
 #else
@@ -173,7 +176,6 @@ _FN4(SEXP_VOID, _I(SEXP_ENV), _I(SEXP_ENV), _I(SEXP_OBJECT), "%import", 0, sexp_
 _FN2OPTP(SEXP_VOID, _I(SEXP_EXCEPTION), _I(SEXP_OPORT), "print-exception", (sexp)"current-error-port", sexp_print_exception_op),
 _FN1OPTP(SEXP_VOID, _I(SEXP_OPORT), "print-stack-trace", (sexp)"current-error-port", sexp_stack_trace_op),
 _FN3OPT(SEXP_VOID, _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "warn-undefs", SEXP_FALSE, sexp_warn_undefs_op),
-_FN1(_I(SEXP_OBJECT), _I(SEXP_EXCEPTION), "exception-type", 0, sexp_exception_type_op),
 _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "make-string", sexp_make_character(' '), sexp_make_string_op),
 _FN2OPT(_I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-bytevector", SEXP_ZERO, sexp_make_bytes_op),
 _FN2OPT(_I(SEXP_NUMBER), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string->number", SEXP_TEN, sexp_string_to_number_op),

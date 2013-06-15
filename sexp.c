@@ -394,6 +394,7 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "current-output-port", -1);
   sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "current-error-port", -1);
   sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL) = sexp_intern(ctx, "interaction-environment", -1);
+  sexp_global(ctx, SEXP_G_CONTINUABLE_SYMBOL) = sexp_intern(ctx, "continuable", -1);
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
   sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(SEXP_NUM_CORE_TYPES);
@@ -587,6 +588,12 @@ sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end) {
 
 sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp out) {
   sexp_gc_var2(ls, tmp);
+  /* unwrap continuable exceptions */
+  if (sexp_exceptionp(exn)
+      && sexp_exception_kind(exn) == sexp_global(ctx, SEXP_G_CONTINUABLE_SYMBOL)
+      && sexp_exceptionp(sexp_exception_irritants(exn))) {
+    return sexp_print_exception_op(ctx, self, n, sexp_exception_irritants(exn), out);
+  }
   sexp_gc_preserve2(ctx, ls, tmp);
   if (! sexp_oportp(out))
     out = tmp = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
