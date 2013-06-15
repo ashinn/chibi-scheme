@@ -1106,11 +1106,6 @@ sexp sexp_free_vars (sexp ctx, sexp x, sexp fv) {
 
 /************************ library procedures **************************/
 
-sexp sexp_exception_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn) {
-  sexp_assert_type(ctx, sexp_exceptionp, SEXP_EXCEPTION, exn);
-  return sexp_exception_kind(exn);
-}
-
 sexp sexp_open_input_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp path) {
   FILE *in;
   int count = 0;

@@ -24,10 +24,10 @@
         (else (lp (cdr files) (append (read-sexps (car files) #t) res))))))))
 
 (define (read-error? x)
-  (and (error-object? x) (eq? 'read (exception-type x))))
+  (and (error-object? x) (eq? 'read (exception-kind x))))
 
 (define (file-error? x)
-  (and (error-object? x) (eq? 'file (exception-type x))))
+  (and (error-object? x) (eq? 'file (exception-kind x))))
 
 (define (features) *features*)
 
