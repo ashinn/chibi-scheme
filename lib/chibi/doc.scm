@@ -216,10 +216,10 @@
        (div (^ (class . "result"))
             ,(call-with-output-string
                (lambda (out)
-                 (guard (exn (#t (print-exception exn out)))
-                        (let ((res (eval expr example-env)))
-                          (display "=> " out)
-                          (write res out))))))))))
+                 (protect (exn (#t (print-exception exn out)))
+                   (let ((res (eval expr example-env)))
+                     (display "=> " out)
+                     (write res out))))))))))
 
 (define (expand-example-import x env)
   (eval `(import ,@(cdr x))

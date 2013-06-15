@@ -27,7 +27,7 @@
 
 (define (highlight-detect-language str)
   (cond
-   ((guard (exn (else #f))
+   ((protect (exn (else #f))
       (call-with-input-string str
         (lambda (in) (do ((x #f (read in))) ((eof-object? x)))))
       #t)
@@ -163,7 +163,7 @@
              require-extension use use-modules import import-immutable
              define-module select-module provide autoload export
              only except rename prefix include include-shared
-             condition-case guard cond-expand for with to by
+             condition-case guard protect cond-expand for with to by
              in-list in-lists in-string in-string-reverse
              in-vector in-vector-reverse in-file listing appending
              summing multpliying up-from down-from else

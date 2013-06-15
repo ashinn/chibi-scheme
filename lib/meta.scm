@@ -167,7 +167,7 @@
                (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
            (cdr x)))))
      meta)
-    (guard
+    (protect
         (exn (else
               (module-meta-data-set! mod meta)
               (if (not (any (lambda (x)

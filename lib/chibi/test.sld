@@ -9,15 +9,17 @@
    current-test-applier current-test-handler current-test-skipper
    current-test-group-reporter test-failure-count
    current-test-epsilon current-test-comparator)
-  (import (scheme base)
-          (scheme write)
+  (import (scheme write)
           (scheme complex)
           (scheme process-context)
           (scheme time))
   (cond-expand
    (chibi
-    (import (only (chibi) pair-source print-exception)))
+    (import (except (scheme base) guard)
+            (rename (only (chibi) pair-source print-exception protect)
+                    (protect guard))))
    (else
+    (import (scheme base))
     (begin
       (define (pair-source x) #f)
       (define print-exception write))))

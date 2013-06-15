@@ -944,47 +944,39 @@
                          (error "exception handler returned"))))))))
     (%with-exception-handler self thunk)))
 
-(define-syntax guard
+(define-syntax protect
   (syntax-rules ()
-    ((guard (var clause ...) e1 e2 ...)
+    ((protect (var clause ...) e1 e2 ...)
      (let ((orig-handler (current-exception-handler)))
-       ((call-with-current-continuation
-         (lambda (guard-k)
-           (with-exception-handler
-            (lambda (condition)
-              ((call-with-current-continuation
-                (lambda (handler-k)
-                  (let* ((var condition)            ; clauses may set! var
-                         (res
-                          (guard-aux
-                           (handler-k (lambda ()
-                                        (raise-continuable condition)))
-                           clause ...)))
-                    (guard-k (lambda () res)))))))
-            (lambda ()
-              (let ((res (begin e1 e2 ...)))
-                (guard-k (lambda () res))))))))))))
+       (call-with-current-continuation
+        (lambda (protect-k)
+          (with-exception-handler
+           (lambda (condition)
+             (let ((var condition))  ; clauses may set! var
+               (protect-k
+                (protect-aux (raise-continuable condition) clause ...))))
+           (lambda () e1 e2 ...))))))))
 
-(define-syntax guard-aux
+(define-syntax protect-aux
   (syntax-rules (else =>)
-    ((guard-aux reraise (else result1 result2 ...))
+    ((protect-aux reraise (else result1 result2 ...))
      (begin result1 result2 ...))
-    ((guard-aux reraise (test => result))
+    ((protect-aux reraise (test => result))
      (let ((temp test))
        (if temp (result temp) reraise)))
-    ((guard-aux reraise (test => result) clause1 clause2 ...)
+    ((protect-aux reraise (test => result) clause1 clause2 ...)
      (let ((temp test))
-       (if temp (result temp) (guard-aux reraise clause1 clause2 ...))))
-    ((guard-aux reraise (test))
+       (if temp (result temp) (protect-aux reraise clause1 clause2 ...))))
+    ((protect-aux reraise (test))
      (or test reraise))
-    ((guard-aux reraise (test) clause1 clause2 ...)
-     (or test (guard-aux reraise clause1 clause2 ...)))
-    ((guard-aux reraise (test result1 result2 ...))
+    ((protect-aux reraise (test) clause1 clause2 ...)
+     (or test (protect-aux reraise clause1 clause2 ...)))
+    ((protect-aux reraise (test result1 result2 ...))
      (if test (begin result1 result2 ...) reraise))
-    ((guard-aux reraise (test result1 result2 ...) clause1 clause2 ...)
+    ((protect-aux reraise (test result1 result2 ...) clause1 clause2 ...)
      (if test
          (begin result1 result2 ...)
-         (guard-aux reraise clause1 clause2 ...)))))
+         (protect-aux reraise clause1 clause2 ...)))))
 
 (define (eval x . o)
   (let ((thunk (compile x (if (pair? o) (car o) (interaction-environment)))))
