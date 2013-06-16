@@ -494,7 +494,7 @@ void run_main (int argc, char **argv) {
       /* load the script */
       sexp_context_tracep(ctx) = 1;
       tmp = sexp_env_bindings(env);
-#if 0 /* SEXP_USE_MODULES */
+#if SEXP_USE_MODULES
       /* use scheme load if possible for better stack traces */
       sym = sexp_intern(ctx, "load", -1);
       tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_FALSE);
