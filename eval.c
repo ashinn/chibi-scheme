@@ -12,7 +12,7 @@
 
 static int scheme_initialized_p = 0;
 
-static sexp analyze (sexp ctx, sexp x);
+static sexp analyze (sexp ctx, sexp x, int depth);
 
 #if SEXP_USE_MODULES
 sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, sexp env);
@@ -599,12 +599,12 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
 
 /************************* the compiler ***************************/
 
-static sexp analyze_list (sexp ctx, sexp x) {
+static sexp analyze_list (sexp ctx, sexp x, int depth) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   for (res=SEXP_NULL; sexp_pairp(x); x=sexp_cdr(x)) {
     sexp_push(ctx, res, SEXP_FALSE);
-    tmp = analyze(ctx, sexp_car(x));
+    tmp = analyze(ctx, sexp_car(x), depth);
     if (sexp_exceptionp(tmp)) {
       res = tmp;
       break;
@@ -618,9 +618,9 @@ static sexp analyze_list (sexp ctx, sexp x) {
   return res;
 }
 
-static sexp analyze_app (sexp ctx, sexp x) {
+static sexp analyze_app (sexp ctx, sexp x, int depth) {
   sexp p, res, tmp;
-  res = analyze_list(ctx, x);
+  res = analyze_list(ctx, x, depth);
   if (sexp_lambdap(sexp_car(res))) {       /* fill in lambda names */
     p=sexp_lambda_params(sexp_car(res));
     for (tmp=sexp_cdr(res); sexp_pairp(tmp)&&sexp_pairp(p); tmp=sexp_cdr(tmp), p=sexp_cdr(p))
@@ -630,17 +630,17 @@ static sexp analyze_app (sexp ctx, sexp x) {
   return res;
 }
 
-static sexp analyze_seq (sexp ctx, sexp ls) {
+static sexp analyze_seq (sexp ctx, sexp ls, int depth) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   if (sexp_nullp(ls))
     res = SEXP_VOID;
   else if (sexp_nullp(sexp_cdr(ls)))
-    res = analyze(ctx, sexp_car(ls));
+    res = analyze(ctx, sexp_car(ls), depth);
   else {
     res = sexp_alloc_type(ctx, seq, SEXP_SEQ);
     sexp_seq_source(res) = sexp_pair_source(ls);
-    tmp = analyze_list(ctx, ls);
+    tmp = analyze_list(ctx, ls, depth);
     if (sexp_exceptionp(tmp))
       res = tmp;
     else
@@ -673,7 +673,7 @@ static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
   return res;
 }
 
-static sexp analyze_set (sexp ctx, sexp x) {
+static sexp analyze_set (sexp ctx, sexp x, int depth) {
   sexp res, varenv;
   sexp_gc_var2(ref, value);
   sexp_gc_preserve2(ctx, ref, value);
@@ -684,7 +684,7 @@ static sexp analyze_set (sexp ctx, sexp x) {
     ref = analyze_var_ref(ctx, sexp_cadr(x), &varenv);
     if (sexp_lambdap(sexp_ref_loc(ref)))
       sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
-    value = analyze(ctx, sexp_caddr(x));
+    value = analyze(ctx, sexp_caddr(x), depth);
     if (sexp_exceptionp(ref)) {
       res = ref;
     } else if (sexp_exceptionp(value)) {
@@ -703,7 +703,7 @@ static sexp analyze_set (sexp ctx, sexp x) {
 
 #define sexp_return(res, val) do {res=val; goto cleanup;} while (0)
 
-static sexp analyze_lambda (sexp ctx, sexp x) {
+static sexp analyze_lambda (sexp ctx, sexp x, int depth) {
   int trailing_non_procs;
   sexp name, ls, ctx3;
   sexp_gc_var6(res, body, tmp, value, defs, ctx2);
@@ -730,7 +730,7 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   sexp_context_env(ctx2) = sexp_extend_env(ctx2, sexp_context_env(ctx2), tmp, res);
   if (sexp_exceptionp(sexp_context_env(ctx2))) sexp_return(res, sexp_context_env(ctx2));
   sexp_env_lambda(sexp_context_env(ctx2)) = res;
-  body = analyze_seq(ctx2, sexp_cddr(x));
+  body = analyze_seq(ctx2, sexp_cddr(x), depth);
   if (sexp_exceptionp(body)) sexp_return(res, body);
   /* delayed analyze internal defines */
   trailing_non_procs = 0;
@@ -743,10 +743,10 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
       tmp = sexp_cons(ctx3, sexp_cdaar(tmp), sexp_cdar(tmp));
       tmp = sexp_cons(ctx3, SEXP_VOID, tmp);
       sexp_pair_source(tmp) = sexp_pair_source(sexp_caar(ls));
-      value = analyze_lambda(ctx3, tmp);
+      value = analyze_lambda(ctx3, tmp, depth);
     } else {
       name = sexp_caar(tmp);
-      value = analyze(ctx3, sexp_cadar(tmp));
+      value = analyze(ctx3, sexp_cadar(tmp), depth);
     }
     if (sexp_exceptionp(value)) sexp_return(res, value);
     if (sexp_lambdap(value)) sexp_lambda_name(value) = name;
@@ -775,17 +775,17 @@ static sexp analyze_lambda (sexp ctx, sexp x) {
   return res;
 }
 
-static sexp analyze_if (sexp ctx, sexp x) {
+static sexp analyze_if (sexp ctx, sexp x, int depth) {
   sexp res, fail_expr;
   sexp_gc_var3(test, pass, fail);
   sexp_gc_preserve3(ctx, test, pass, fail);
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x)))) {
     res = sexp_compile_error(ctx, "bad if syntax", x);
   } else {
-    test = analyze(ctx, sexp_cadr(x));
-    pass = analyze(ctx, sexp_caddr(x));
+    test = analyze(ctx, sexp_cadr(x), depth);
+    pass = analyze(ctx, sexp_caddr(x), depth);
     fail_expr = sexp_pairp(sexp_cdddr(x)) ? sexp_cadddr(x) : SEXP_VOID;
-    fail = analyze(ctx, fail_expr);
+    fail = analyze(ctx, fail_expr, depth);
     res = (sexp_exceptionp(test) ? test : sexp_exceptionp(pass) ? pass :
            sexp_exceptionp(fail) ? fail : sexp_make_cnd(ctx, test, pass, fail));
     if (sexp_cndp(res)) sexp_cnd_source(res) = sexp_pair_source(x);
@@ -794,7 +794,7 @@ static sexp analyze_if (sexp ctx, sexp x) {
   return res;
 }
 
-static sexp analyze_define (sexp ctx, sexp x) {
+static sexp analyze_define (sexp ctx, sexp x, int depth) {
   sexp name, res, varenv;
   sexp_gc_var4(ref, value, tmp, env);
   sexp_gc_preserve4(ctx, ref, value, tmp, env);
@@ -823,9 +823,9 @@ static sexp analyze_define (sexp ctx, sexp x) {
         tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
         tmp = sexp_cons(ctx, SEXP_VOID, tmp);
         sexp_pair_source(tmp) = sexp_pair_source(x);
-        value = analyze_lambda(ctx, tmp);
+        value = analyze_lambda(ctx, tmp, depth);
       } else
-        value = analyze(ctx, sexp_caddr(x));
+        value = analyze(ctx, sexp_caddr(x), depth);
       tmp = sexp_env_cell_loc(env, name, 0, &varenv);
       ref = sexp_make_ref(ctx, name, tmp);
       if (sexp_exceptionp(ref)) {
@@ -888,7 +888,7 @@ static sexp analyze_define_syntax (sexp ctx, sexp x) {
   return res;
 }
 
-static sexp analyze_let_syntax_aux (sexp ctx, sexp x, int recp) {
+static sexp analyze_let_syntax_aux (sexp ctx, sexp x, int recp, int depth) {
   sexp res;
   sexp_gc_var3(env, ctx2, tmp);
   sexp_gc_preserve3(ctx, env, ctx2, tmp);
@@ -905,25 +905,31 @@ static sexp analyze_let_syntax_aux (sexp ctx, sexp x, int recp) {
     ctx2 = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
     sexp_context_env(ctx2) = env;
     tmp = analyze_bind_syntax(sexp_cadr(x), (recp ? ctx2 : ctx), ctx2);
-    res = (sexp_exceptionp(tmp) ? tmp : analyze_seq(ctx2, sexp_cddr(x)));
+    res = (sexp_exceptionp(tmp) ? tmp : analyze_seq(ctx2, sexp_cddr(x), depth));
   }
   sexp_gc_release3(ctx);
   return res;
 }
 
-static sexp analyze_let_syntax (sexp ctx, sexp x) {
-  return analyze_let_syntax_aux(ctx, x, 0);
+static sexp analyze_let_syntax (sexp ctx, sexp x, int depth) {
+  return analyze_let_syntax_aux(ctx, x, 0, depth);
 }
 
-static sexp analyze_letrec_syntax (sexp ctx, sexp x) {
-  return analyze_let_syntax_aux(ctx, x, 1);
+static sexp analyze_letrec_syntax (sexp ctx, sexp x, int depth) {
+  return analyze_let_syntax_aux(ctx, x, 1, depth);
 }
 
-static sexp analyze (sexp ctx, sexp object) {
+static sexp analyze (sexp ctx, sexp object, int depth) {
   sexp op;
   sexp_gc_var4(res, tmp, x, cell);
   sexp_gc_preserve4(ctx, res, tmp, x, cell);
   x = object;
+
+  if (++depth > SEXP_MAX_ANALYZE_DEPTH) {
+    res = sexp_compile_error(ctx, "SEXP_MAX_ANALYZE_DEPTH exceeded", x);
+    goto error;
+  }
+
  loop:
   if (sexp_pairp(x)) {
     if (sexp_not(sexp_listp(ctx, x))) {
@@ -935,7 +941,7 @@ static sexp analyze (sexp ctx, sexp object) {
                              sexp_synclo_expr(sexp_car(x)),
                              0);
       if (! cell) {
-        res = analyze_app(ctx, x);
+        res = analyze_app(ctx, x, depth);
         if (sexp_exceptionp(res))
           sexp_warn(ctx, "exception inside undefined operator: ", sexp_car(x));
       } else {
@@ -943,15 +949,15 @@ static sexp analyze (sexp ctx, sexp object) {
         if (sexp_corep(op)) {
           switch (sexp_core_code(op)) {
           case SEXP_CORE_DEFINE:
-            res = analyze_define(ctx, x); break;
+            res = analyze_define(ctx, x, depth); break;
           case SEXP_CORE_SET:
-            res = analyze_set(ctx, x); break;
+            res = analyze_set(ctx, x, depth); break;
           case SEXP_CORE_LAMBDA:
-            res = analyze_lambda(ctx, x); break;
+            res = analyze_lambda(ctx, x, depth); break;
           case SEXP_CORE_IF:
-            res = analyze_if(ctx, x); break;
+            res = analyze_if(ctx, x, depth); break;
           case SEXP_CORE_BEGIN:
-            res = analyze_seq(ctx, sexp_cdr(x)); break;
+            res = analyze_seq(ctx, sexp_cdr(x), depth); break;
           case SEXP_CORE_QUOTE:
           case SEXP_CORE_SYNTAX_QUOTE:
             if (! (sexp_pairp(sexp_cdr(x)) && sexp_nullp(sexp_cddr(x))))
@@ -965,9 +971,9 @@ static sexp analyze (sexp ctx, sexp object) {
           case SEXP_CORE_DEFINE_SYNTAX:
             res = analyze_define_syntax(ctx, x); break;
           case SEXP_CORE_LET_SYNTAX:
-            res = analyze_let_syntax(ctx, x); break;
+            res = analyze_let_syntax(ctx, x, depth); break;
           case SEXP_CORE_LETREC_SYNTAX:
-            res = analyze_letrec_syntax(ctx, x); break;
+            res = analyze_letrec_syntax(ctx, x, depth); break;
           default:
             res = sexp_compile_error(ctx, "unknown core form", op); break;
           }
@@ -991,7 +997,7 @@ static sexp analyze (sexp ctx, sexp object) {
             sexp_warn(ctx, "too many args for opcode: ", x);
             op = analyze_var_ref(ctx, sexp_car(x), NULL);
           }
-          res = analyze_list(ctx, sexp_cdr(x));
+          res = analyze_list(ctx, sexp_cdr(x), 0);
           if (! sexp_exceptionp(res)) {
             /* push op, which will be a direct opcode if the call is valid */
             sexp_push(ctx, res, op);
@@ -999,11 +1005,11 @@ static sexp analyze (sexp ctx, sexp object) {
               sexp_pair_source(res) = sexp_pair_source(x);
           }
         } else {
-          res = analyze_app(ctx, x);
+          res = analyze_app(ctx, x, depth);
         }
       }
     } else {
-      res = analyze_app(ctx, x);
+      res = analyze_app(ctx, x, depth);
       if (!sexp_exceptionp(res)
           && !(sexp_pairp(sexp_car(x))
                || (sexp_synclop(sexp_car(x))
@@ -1019,7 +1025,7 @@ static sexp analyze (sexp ctx, sexp object) {
                                         sexp_context_fv(tmp));
     sexp_context_env(tmp) = sexp_extend_synclo_env(tmp, sexp_synclo_env(x));
     x = sexp_synclo_expr(x);
-    res = analyze(tmp, x);
+    res = analyze(tmp, x, depth);
   } else if (sexp_nullp(x)) {
     res = sexp_compile_error(ctx, "empty application in source", x);
   } else {
@@ -1027,6 +1033,8 @@ static sexp analyze (sexp ctx, sexp object) {
       sexp_immutablep(x) = 1;  /* but they must be immutable */
     res = x;
   }
+
+error:
   if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(res))
       && sexp_pairp(x))
     sexp_exception_source(res) = sexp_pair_source(x);
@@ -1034,7 +1042,7 @@ static sexp analyze (sexp ctx, sexp object) {
   return res;
 }
 
-sexp sexp_analyze (sexp ctx, sexp x) {return analyze(ctx, x);}
+sexp sexp_analyze (sexp ctx, sexp x) {return analyze(ctx, x, 0);}
 
 /********************** free varable analysis *************************/
 
