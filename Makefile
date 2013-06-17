@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: dist mips-dist cleaner test checkdefs
+.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs
 .DEFAULT_GOAL := all
 
 CHIBI_FFI ?= $(CHIBI) tools/chibi-ffi
@@ -156,7 +156,7 @@ checkdefs:
 
 test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
-	    $(CHIBI) -xscheme $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
+	    $(CHIBI) -xchibi $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if $(DIFF) -q $(DIFFOPTS) $${f%.scm}.out $${f%.scm}.res; then \
 	        echo "[PASS] $${f%.scm}"; \
 	    else \
@@ -174,55 +174,61 @@ test-ffi: chibi-scheme$(EXE)
 	$(CHIBI) tests/ffi/ffi-tests.scm
 
 test-threads: chibi-scheme$(EXE) lib/srfi/18/threads$(SO) lib/srfi/39/param$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/time$(SO)
-	$(CHIBI) -xscheme tests/thread-tests.scm
+	$(CHIBI) -xchibi tests/thread-tests.scm
 
 test-numbers: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/numeric-tests.scm
+	$(CHIBI) -xchibi tests/numeric-tests.scm
 
 test-flonums: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/flonum-tests.scm
+	$(CHIBI) -xchibi tests/flonum-tests.scm
 
 test-hash: chibi-scheme$(EXE) lib/srfi/69/hash$(SO)
-	$(CHIBI) -xscheme tests/hash-tests.scm
+	$(CHIBI) -xchibi tests/hash-tests.scm
 
 test-io: chibi-scheme$(EXE) lib/chibi/io/io$(SO)
-	$(CHIBI) -xscheme tests/io-tests.scm
+	$(CHIBI) -xchibi tests/io-tests.scm
 
 test-match: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/match-tests.scm
+	$(CHIBI) -xchibi tests/match-tests.scm
 
 test-loop: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/loop-tests.scm
+	$(CHIBI) -xchibi tests/loop-tests.scm
 
 test-sort: chibi-scheme$(EXE) lib/srfi/33/bit$(SO)
-	$(CHIBI) -xscheme tests/sort-tests.scm
+	$(CHIBI) -xchibi tests/sort-tests.scm
 
 test-srfi-1: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/srfi-1-tests.scm
+	$(CHIBI) -xchibi tests/srfi-1-tests.scm
 
 test-records: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/record-tests.scm
+	$(CHIBI) -xchibi tests/record-tests.scm
 
 test-weak: chibi-scheme$(EXE) lib/chibi/weak$(SO)
-	$(CHIBI) -xscheme tests/weak-tests.scm
+	$(CHIBI) -xchibi tests/weak-tests.scm
 
 test-unicode: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/unicode-tests.scm
+	$(CHIBI) -xchibi tests/unicode-tests.scm
 
 test-process: chibi-scheme$(EXE) lib/chibi/process$(SO)
-	$(CHIBI) -xscheme tests/process-tests.scm
+	$(CHIBI) -xchibi tests/process-tests.scm
 
 test-system: chibi-scheme$(EXE) lib/chibi/system$(SO)
-	$(CHIBI) -xscheme tests/system-tests.scm
+	$(CHIBI) -xchibi tests/system-tests.scm
 
 test-libs: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/lib-tests.scm
+	$(CHIBI) -xchibi tests/lib-tests.scm
+
+test-r5rs: chibi-scheme$(EXE)
+	$(CHIBI) -xchibi tests/r5rs-tests.scm
 
 test-r7rs: chibi-scheme$(EXE)
 	$(CHIBI) tests/r7rs-tests.scm
 
-test: chibi-scheme$(EXE)
-	$(CHIBI) -xscheme tests/r5rs-tests.scm
+test: test-r7rs
+
+test-all: test test-libs test-ffi
+
+test-dist: test-all test-memory test-build
 
 bench-gabriel: chibi-scheme$(EXE)
 	./benchmarks/gabriel/run.sh

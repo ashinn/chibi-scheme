@@ -1,11 +1,13 @@
 
 (cond-expand
- (modules (import (chibi test)))
+ (modules (import (only (chibi) load)
+                  (only (chibi test) test-begin test-end)))
  (else (load "tests/r5rs-tests.scm")))
 
 (test-begin "libraries")
 
 (load "tests/srfi-1-tests.scm")
+(load "tests/srfi-2-tests.scm")
 (load "tests/srfi-16-tests.scm")
 (load "tests/srfi-38-tests.scm")
 (load "tests/flonum-tests.scm")
@@ -22,9 +24,12 @@
   (load "tests/record-tests.scm")
   (load "tests/hash-tests.scm")
   (load "tests/sort-tests.scm")
+  (load "tests/parse-tests.scm")
+  (load "tests/weak-tests.scm")
   (load "tests/io-tests.scm")
   (load "tests/process-tests.scm")
-  (load "tests/system-tests.scm"))
+  (load "tests/system-tests.scm")
+  )
  (else #f))
 
 (cond-expand

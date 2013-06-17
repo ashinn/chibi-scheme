@@ -1,5 +1,5 @@
 
-(import (scheme base) (srfi 2) (chibi test))
+(import (chibi) (srfi 2) (chibi test))
 
 (test-begin "srfi-2")
 
