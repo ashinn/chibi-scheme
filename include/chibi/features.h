@@ -251,6 +251,10 @@
 #define SEXP_DEFAULT_QUANTUM 500
 #endif
 
+#ifndef SEXP_MAX_ANALYZE_DEPTH
+#define SEXP_MAX_ANALYZE_DEPTH 8192
+#endif
+
 /************************************************************************/
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/
