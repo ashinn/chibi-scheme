@@ -1,5 +1,5 @@
 /* main.c -- chibi-scheme command-line app                   */
-/* Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/* Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -40,6 +40,7 @@ void sexp_usage(int err) {
 #endif
          "  -e <expr>   - evaluate an expression\n"
          "  -p <expr>   - evaluate and print an expression\n"
+         "  -r[<main>]  - run a SRFI-22 main\n"
 #if SEXP_USE_IMAGE_LOADING
          "  -d <file>   - dump an image file and exit\n"
          "  -i <file>   - load an image file\n"
@@ -316,7 +317,7 @@ void run_main (int argc, char **argv) {
 #endif
   char *arg, *prefix=NULL, *suffix=NULL, *main_symbol=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
-    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
+    no_script=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
   sexp_gc_var3(tmp, sym, args);
@@ -395,6 +396,7 @@ void run_main (int argc, char **argv) {
     case '-':
       if (argv[i][2] == '\0') {
         i++;
+        no_script = 1;
         goto done_options;
       }
       sexp_usage(1);
@@ -467,47 +469,53 @@ void run_main (int argc, char **argv) {
  done_options:
   if (! quit) {
     load_init();
+    /* build argument list */
     if (i < argc)
       for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    else
+    if (i >= argc || no_script)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     sexp_set_parameter(ctx, env, sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
-    if (i < argc) {             /* script usage */
+    if (i >= argc && main_symbol == NULL) {
+      /* no script or main, run interactively */
+      repl(ctx, env);
+    } else {
+      if (i < argc && !no_script) {   /* script usage */
 #if SEXP_USE_MODULES
-      /* reset the environment to have only the `import' and */
-      /* `cond-expand' bindings */
-      if (!mods_loaded) {
-        env = sexp_make_env(ctx);
-        sexp_set_parameter(ctx, sexp_context_env(ctx),
-                           sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
-        sexp_context_env(ctx) = env;
-        sym = sexp_intern(ctx, "repl-import", -1);
-        tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
-        sym = sexp_intern(ctx, "import", -1);
-        sexp_env_define(ctx, env, sym, tmp);
-        sym = sexp_intern(ctx, "cond-expand", -1);
-        tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
-        sexp_env_define(ctx, env, sym, tmp);
-      }
+        /* reset the environment to have only the `import' and */
+        /* `cond-expand' bindings */
+        if (!mods_loaded) {
+          env = sexp_make_env(ctx);
+          sexp_set_parameter(ctx, sexp_context_env(ctx),
+                             sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
+          sexp_context_env(ctx) = env;
+          sym = sexp_intern(ctx, "repl-import", -1);
+          tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
+          sym = sexp_intern(ctx, "import", -1);
+          sexp_env_define(ctx, env, sym, tmp);
+          sym = sexp_intern(ctx, "cond-expand", -1);
+          tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
+          sexp_env_define(ctx, env, sym, tmp);
+        }
 #endif
-      /* load the script */
-      sexp_context_tracep(ctx) = 1;
-      tmp = sexp_env_bindings(env);
+        /* load the script */
+        sexp_context_tracep(ctx) = 1;
+        tmp = sexp_env_bindings(env);
 #if SEXP_USE_MODULES
-      /* use scheme load if possible for better stack traces */
-      sym = sexp_intern(ctx, "load", -1);
-      tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_FALSE);
-      if (sexp_procedurep(tmp)) {
-        sym = sexp_c_string(ctx, argv[i], -1);
-        sym = sexp_list2(ctx, sym, env);
-        check_exception(ctx, sexp_apply(ctx, tmp, sym));
-      } else
+        /* use scheme load if possible for better stack traces */
+        sym = sexp_intern(ctx, "load", -1);
+        tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_FALSE);
+        if (sexp_procedurep(tmp)) {
+          sym = sexp_c_string(ctx, argv[i], -1);
+          sym = sexp_list2(ctx, sym, env);
+          check_exception(ctx, sexp_apply(ctx, tmp, sym));
+        } else
 #endif
-      check_exception(ctx, sexp_load(ctx, sym=sexp_c_string(ctx, argv[i], -1), env));
+          check_exception(ctx, sexp_load(ctx, sym=sexp_c_string(ctx, argv[i], -1), env));
 #if SEXP_USE_WARN_UNDEFS
-      sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
+        sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
 #endif
+      }
       /* SRFI-22: run main if specified */
       if (main_symbol) {
         sym = sexp_intern(ctx, main_symbol, -1);
@@ -517,8 +525,6 @@ void run_main (int argc, char **argv) {
           check_exception(ctx, sexp_apply(ctx, tmp, args));
         }
       }
-    } else {
-      repl(ctx, env);
     }
   }
 
