@@ -467,7 +467,7 @@ void run_main (int argc, char **argv) {
   }
 
  done_options:
-  if (! quit) {
+  if (!quit || main_symbol != NULL) {
     load_init();
     /* build argument list */
     if (i < argc)
