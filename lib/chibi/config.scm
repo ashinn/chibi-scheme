@@ -202,9 +202,11 @@
 (define (conf-get-cell config key)
   (cond
    ((pair? key)
-    (if (null? (cdr key))
-        (conf-get-cell config (car key))
-        (any (lambda (x) (assq-chain key x)) config)))
+    (cond
+     ((null? (cdr key)) (conf-get-cell config (car key)))
+     ((assq-chain key (conf-alist config)))
+     ((conf-parent config) => (lambda (p) (conf-get-cell p key)))
+     (else #f)))
    (else
     (let search ((config config))
       (and config
