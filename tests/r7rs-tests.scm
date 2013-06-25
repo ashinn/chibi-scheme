@@ -1526,6 +1526,7 @@
       (close-port out)
       (output-port-open? out)))
 
+(test #t (eof-object? (eof-object)))
 (test #t (eof-object? (read (open-input-string ""))))
 (test #t (char-ready? (open-input-string "42")))
 (test 42 (read (open-input-string " 42 ")))

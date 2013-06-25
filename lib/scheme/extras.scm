@@ -97,6 +97,8 @@
     (close-port port)
     res))
 
+(define (eof-object) (read-char (open-input-string "")))
+
 (define (read-bytevector n . o)
   (if (zero? n)
       #u8()
