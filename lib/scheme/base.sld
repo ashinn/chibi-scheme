@@ -21,7 +21,7 @@
    close-input-port close-output-port close-port complex?  cond cond-expand
    cons current-error-port current-input-port current-output-port define
    define-record-type define-syntax define-values denominator do
-   dynamic-wind else eof-object?  eq?  equal?  eqv?  error
+   dynamic-wind else eof-object? eof-object  eq?  equal?  eqv?  error
    error-object-irritants error-object-message error-object?  even?
    exact exact-integer-sqrt exact-integer?  exact?  expt features
    file-error? floor
