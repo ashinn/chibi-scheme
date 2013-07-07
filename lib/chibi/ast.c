@@ -410,6 +410,22 @@ static sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new) {
 }
 #endif
 
+sexp sexp_thread_list (sexp ctx, sexp self, sexp_sint_t n) {
+  sexp ls;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = SEXP_NULL;
+#if SEXP_USE_GREEN_THREADS
+  for (ls=sexp_global(ctx, SEXP_G_THREADS_FRONT); sexp_pairp(ls); ls=sexp_cdr(ls))
+    sexp_push(ctx, res, sexp_car(ls));
+  for (ls=sexp_global(ctx, SEXP_G_THREADS_PAUSED); sexp_pairp(ls); ls=sexp_cdr(ls))
+    sexp_push(ctx, res, sexp_car(ls));
+#endif
+  if (sexp_not(sexp_memq(ctx, ctx, res))) sexp_push(ctx, res, ctx);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 static sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   const char *res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, x);
@@ -571,6 +587,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
 #if SEXP_USE_GREEN_THREADS
   sexp_define_foreign(ctx, env, "%set-atomic!", 1, sexp_set_atomic);
 #endif
+  sexp_define_foreign(ctx, env, "thread-list", 0, sexp_thread_list);
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);
