@@ -1,5 +1,5 @@
 ;; app.scm -- unified option parsing and config
-;; Copyright (c) 2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Parses command-line options into a config object.
@@ -156,9 +156,92 @@
           (error "unknown application spec" (car spec)))
       (parse-app prefix (cdr spec) opt-spec args config fail)))))
 
+(define (print-command-help command out)
+  (cond
+   ((and (pair? command) (symbol? (car command)))
+    (display "  " out)
+    (display (car command) out)
+    (cond
+     ((find (lambda (x) (and (pair? x) (procedure? (car x)))) command)
+      => (lambda (x)
+           (let lp ((args (cdr x)) (opt-depth 0))
+             (cond
+              ((null? args)
+               (display (make-string opt-depth #\]) out))
+              ((pair? (car args))
+               (display " [" out)
+               (display (caar args) out)
+               (lp (cdr args) (+ opt-depth 1)))
+              (else
+               (display " " out)
+               (display (car args) out)
+               (lp (cdr args) opt-depth)))))))
+    (cond
+     ((find string? command)
+      => (lambda (doc-string) (display " - " out) (display doc-string out))))
+    (newline out))))
+
+(define (print-option-help option out)
+  (let* ((str (symbol->string (car option)))
+         (names (if (and (pair? (cdr option)) (pair? (cddr option)))
+                    (car (cddr option))
+                    '()))
+         (pref-str (cond ((find string? names) => values) (else str)))
+         (pref-ch (find char? names))
+         (doc (find string? (cdr option))))
+    ;; TODO: consider aligning these
+    (cond
+     (pref-ch (display "  -" out) (write-char pref-ch out))
+     (else (display "    " out)))
+    (cond
+     (pref-str
+      (display (if pref-ch ", " "  ") out)
+      (display "--" out) (display pref-str out)))
+    (cond (doc (display " - " out) (display doc out)))
+    (newline out)))
+
+(define (print-help name docs commands options . o)
+  (let ((out (if (pair? o) (car o) (current-output-port))))
+    (display "Usage: " out) (display name out)
+    (if (pair? options) (display " [options]" out))
+    (case (length commands)
+      ((0) (newline out))
+      (else
+       (display " <command>\nCommands:\n" out)
+       (for-each (lambda (c) (print-command-help c out)) commands))
+      ((1) (print-command-help (car commands) out)))
+    (if (pair? options) (display "Options:\n" out))
+    (for-each (lambda (o) (print-option-help o out)) options)))
+
+(define (app-help spec args . o)
+  (let ((out (if (pair? o) (car o) (current-output-port))))
+    (let lp ((ls (cdr spec))
+             (docs #f)
+             (commands '())
+             (options '()))
+      (cond
+       ((null? ls)
+        (print-help (car spec) docs commands options out))
+       ((string? (car ls))
+        (lp (cdr ls) (car ls) commands options))
+       ((and (pair? (car ls)) (eq? '@ (caar ls)))
+        (lp (cdr ls) docs commands (append options (cadr (car ls)))))
+       ((and (pair? (car ls)) (symbol? (caar ls)))
+        ;; don't print nested commands
+        (if (pair? commands)
+            (print-help (car spec) docs commands options out)
+            (if (eq? 'or (caar ls))
+                (lp (cdr ls) docs (cdar ls) options)
+                (lp (cdr ls) docs (list (car ls)) options))))
+       (else
+        (lp (cdr ls) docs commands options))))))
+
+(define (app-help-command config spec . args)
+  (app-help spec args (current-output-port)))
+
 (define (run-application spec . o)
   (let ((args (if (pair? o) (car o) (command-line))))
     (let ((ls (parse-app '() (cdr spec) '() (cdr args) #f)))
       (if ls
-          (apply (car ls) (cadr ls) (car (cddr ls)))
+          (apply (car ls) (cadr ls) spec (car (cddr ls)))
           (error "Unknown command: " args)))))
