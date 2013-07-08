@@ -23,6 +23,14 @@
   (cond ((memq key ls) => cadr)
         (else (and (pair? o) (car o)))))
 
+(define-syntax keyword-ref*
+  (syntax-rules ()
+    ((keyword-ref* ls key default)
+     (cond ((memq key ls) => cadr) (else default)))))
+
+(define (symbol->keyword sym)
+  (string->symbol (string-append (symbol->string sym) ":")))
+
 (define-syntax let-keywords*
   (syntax-rules ()
     ((let-keywords* opt-ls () . body)
@@ -31,10 +39,10 @@
      (let ((tmp (op . args)))
        (let-keywords* tmp vars . body)))
     ((let-keywords* opt-ls ((var default) . rest) . body)
-     (let ((var (keyword-ref opt-ls 'var default)))
+     (let ((var (keyword-ref* opt-ls (symbol->keyword 'var) default)))
        (let-keywords* opt-ls rest . body)))
     ((let-keywords* opt-ls ((var key default) . rest) . body)
-     (let ((var (keyword-ref opt-ls 'key default)))
+     (let ((var (keyword-ref* opt-ls 'key default)))
        (let-keywords* opt-ls rest . body)))
     ((let-keywords* opt-ls tail . body)
      (let ((tail opt-ls)) . body))))
