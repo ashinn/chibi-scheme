@@ -1,5 +1,5 @@
 ;; mime.scm -- RFC2045 MIME library
-;; Copyright (c) 2005-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> A library to parse MIME headers and bodies into SXML.
@@ -11,18 +11,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; association lists
 
-(define (assoc* key ls . o)
-  (let ((eq (if (pair? o) (car o) equal?)))
-    (let lp ((ls ls))
-      (cond
-        ((null? ls) #f)
-        ((eq key (caar ls)) (car ls))
-        (else (lp (cdr ls)))))))
-
 (define (assoc-ref ls key . o)
   (let ((default (and (pair? o) (car o)))
         (eq (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) equal?)))
-    (cond ((assoc* key ls eq) => cdr)
+    (cond ((assoc key ls eq) => cdr)
           (else default))))
 
 ;;> @subsubsubsection{@scheme{(mime-ref headers str [default])}}
@@ -79,73 +71,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dummy encoder
 
+;; TODO: add conversion routines
 (define (ces-convert str . x)
   str)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; some srfi-13 & string utils
+;; inlined ascii-only srfi-13 string-downcase
 
-(define (string-copy! to tstart from . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length from))))
-    (let lp ((i start) (j tstart))
-      (cond
-       ((< i end)
-        (string-set! to j (string-ref from i))
-        (lp (+ i 1) (+ j 1)))))))
-
-(define (string-concatenate-reverse ls)
-  (let lp ((ls ls) (rev '()) (len 0))
-    (if (null? ls)
-        (let ((res (make-string len)))
-          (let lp ((ls rev) (i 0))
-            (cond
-             ((null? ls)
-              res)
-             (else
-              (string-copy! res i (car ls))
-              (lp (cdr ls) (+ i (string-length (car ls))))))))
-        (lp (cdr ls) (cons (car ls) rev) (+ len (string-length (car ls)))))))
-
-(define (string-downcase s . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length s))))
-    (let* ((len (- end start)) (s2 (make-string len)))
-      (let lp ((i start) (j 0))
-        (cond
-         ((>= i end)
-          s2)
-         (else
-          (string-set! s2 j (char-downcase (string-ref s i)))
-          (lp (+ i 1) (+ j 1))))))))
-
-(define (string-char-index str c . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
-    (let lp ((i start))
-      (cond
-       ((= i end) #f)
-       ((eq? c (string-ref str i)) i)
-       (else (lp (+ i 1)))))))
-
-(define (string-trim-white-space s)
-  (let ((len (string-length s)))
-    (let lp ((i 0))
-      (cond ((= i len) "")
-            ((char-whitespace? (string-ref s i)) (lp (+ i 1)))
-            (else
-             (let lp ((j (- len 1)))
-               (cond ((<= j i) "")
-                     ((char-whitespace? (string-ref s j)) (lp (- j 1)))
-                     (else (substring s i (+ j 1))))))))))
-
-(define (string-split str ch)
-  (let ((len (string-length str)))
-    (let lp ((i 0) (res '()))
-      (let ((j (string-char-index str ch i)))
-        (if j
-            (lp (+ j 1) (cons (substring str i j) res))
-            (reverse (cons (substring str i len) res)))))))
+(define (string-downcase s)
+  (call-with-output-string
+    (lambda (out)
+      (string-for-each (lambda (ch) (write-char (char-downcase ch) out)) s))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;> @subsubsection{RFC2822 Headers}
@@ -194,12 +130,12 @@
        ((and limit (> count limit))
         acc)
        ((or (eof-object? line) (string=? line ""))
-        (kons header (string-concatenate-reverse value) acc))
+        (kons header (string-join (reverse value)) acc))
        ((char-whitespace? (string-ref line 0))
         (in header (cons line value) acc (+ count 1)))
        (else
         (out line
-             (kons header (string-concatenate-reverse value) acc)
+             (kons header (string-join (reverse value)) acc)
              (+ count 1))))))
   (let ((first-line (read-line port mime-line-length-limit)))
     (cond
@@ -227,15 +163,15 @@
     o)))
 
 (define (mime-split-name+value s)
-  (let ((i (string-char-index s #\=)))
+  (let ((i (string-find s #\=)))
     (if i
-      (cons (string-downcase (string-trim-white-space (substring s 0 i)))
+      (cons (string-downcase (string-trim (substring s 0 i)))
             (if (= i (string-length s))
               ""
               (if (eqv? #\" (string-ref s (+ i 1)))
                 (substring s (+ i 2) (- (string-length s) 1))
                 (substring s (+ i 1) (string-length s)))))
-      (cons (string-downcase (string-trim-white-space s)) ""))))
+      (cons (string-downcase (string-trim s)) ""))))
 
 ;;> @subsubsubsection{@scheme{(mime-parse-content-type str)}}
 ;;> Parses @var{str} as a Content-Type style-value returning the list
@@ -257,11 +193,11 @@
          (limit (- len 8))) ; need at least 8 chars: "=?Q?X??="
     (let lp ((i 0) (from 0) (res '()))
       (if (>= i limit)
-        (string-concatenate (reverse (cons (substring str from len) res)))
+        (string-join (reverse (cons (substring str from len) res)))
         (if (and (eqv? #\= (string-ref str i))
                  (eqv? #\? (string-ref str (+ i 1))))
-          (let* ((j (string-char-index str #\? (+ i 3)))
-                 (k (string-char-index str #\? (+ j 3))))
+          (let* ((j (string-find str #\? (+ i 3)))
+                 (k (string-find str #\? (+ j 3))))
             (if (and j k (< (+ k 1) len)
                      (eqv? #\? (string-ref str (+ j 2)))
                      (memq (string-ref str (+ j 1)) '(#\Q #\B #\q #\b))
@@ -286,11 +222,11 @@
       (let ((line (read-line port mime-line-length-limit)))
         (cond
          ((or (eof-object? line) (equal? line final-boundary))
-          (final (string-concatenate (reverse res)
-                                     (call-with-output-string newline))))
+          (final (string-join (reverse res)
+                              (call-with-output-string newline))))
          ((equal? line boundary)
-          (next (string-concatenate (reverse res)
-                                    (call-with-output-string newline))))
+          (next (string-join (reverse res)
+                             (call-with-output-string newline))))
          (else
           (lp (cons line res))))))))
 
@@ -347,11 +283,11 @@
                   (final (lambda (x) x)))
         (let* ((ctype (mime-parse-content-type
                        (mime-ref headers "Content-Type" "text/plain")))
-               (type (string-trim-white-space (caar ctype)))
-               (enc (string-trim-white-space
+               (type (string-trim (caar ctype)))
+               (enc (string-trim
                      (or (mime-ref ctype "charset")
                          (mime-ref headers "charset" "ASCII"))))
-               (cte (string-trim-white-space
+               (cte (string-trim
                      (or (mime-ref headers "Content-Transfer-Encoding")
                          (mime-ref headers "Encoding" "7-bit")))))
           (cond
