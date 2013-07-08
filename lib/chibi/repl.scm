@@ -327,45 +327,34 @@
          (set-port-fold-case! in (port-fold-case? in2))
          expr-list)))))
 
-(define (keywords->repl o)
-  (let* ((in (cond ((memq 'in: o) => cadr) (else (current-input-port))))
-         (out (cond ((memq 'out: o) => cadr) (else (current-output-port))))
-         (escape (cond ((memq 'escape: o) => cadr) (else #\@)))
-         (module (cond ((memq 'module: o) => cadr) (else #f)))
-         (env
-          (cond
-           ((memq 'environment: o) =>
-            (lambda (x)
-              (if module
-                  (error (string-append "The module: and environment: keyword "
-                                        "arguments should not both be given.")))
-              (cadr x)))
-           (module
+(define (keywords->repl ls)
+  (let-keywords* ls
+      ((in in: (current-input-port))
+       (out out: (current-output-port))
+       (escape escape: #\@)
+       (module module: #f)
+       (env
+        environment:
+        (if module
             (module-env
-             (if (module? module) module (load-module module))))
-           (else (interaction-environment))))
-         (make-prompt
-          (cond
-           ((memq 'make-prompt: o) => cadr)
-           (else
-            (lambda (module)
-              (string-append (if module (write-to-string module) "") "> ")))))
-         (history-file
-          (cond ((memq 'history-file: o) => cadr)
-                (else (string-append (get-environment-variable "HOME")
-                                     "/.chibi-repl-history"))))
-         (history
-          (cond ((memq 'history: o) => cadr)
-                (else
-                 (or (protect (exn (else #f))
-                       (list->history
-                        (call-with-input-file history-file read)))
-                     (make-history)))))
-         (raw? (cond ((memq 'raw?: o) => cadr)
-                     (else (member (get-environment-variable "TERM")
-                                   '("emacs" "dumb")))))
-         (meta-env (cond ((memq 'meta: o) => cadr)
-                         (else (module-env (load-module '(meta)))))))
+             (if (module? module) module (load-module module)))
+            (interaction-environment)))
+       (make-prompt
+        make-prompt:
+        (lambda (module)
+          (string-append (if module (write-to-string module) "") "> ")))
+       (history-file
+        history-file:
+        (string-append (get-environment-variable "HOME")
+                       "/.chibi-repl-history"))
+       (history
+        history:
+        (or (protect (exn (else #f))
+              (list->history (call-with-input-file history-file read)))
+            (make-history)))
+       (raw? raw?:
+             (member (get-environment-variable "TERM") '("emacs" "dumb")))
+       (meta-env meta-env: (module-env (load-module '(meta)))))
     (make-repl
      in out escape module env meta-env make-prompt history-file history raw?)))
 
