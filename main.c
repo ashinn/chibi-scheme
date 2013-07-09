@@ -199,7 +199,7 @@ static void repl (sexp ctx, sexp env) {
       sexp_print_exception(ctx, obj, err);
     } else {
       sexp_context_top(ctx) = 0;
-      if (!(sexp_idp(obj)||sexp_pairp(obj)))
+      if (!(sexp_idp(obj)||sexp_pairp(obj)||sexp_nullp(obj)))
         obj = sexp_make_lit(ctx, obj);
       tmp = sexp_env_bindings(env);
       res = sexp_eval(ctx, obj, env);
