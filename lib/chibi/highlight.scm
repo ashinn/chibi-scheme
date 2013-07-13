@@ -98,7 +98,7 @@
      (cdr (iota (+ 1 (length highlight-paren-styles))))))))
 
 (define (highlight-class class x)
-  `(span (^ (class . ,class)) ,@(if (list? x) x (list x))))
+  `(span (@ (class . ,class)) ,@(if (list? x) x (list x))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

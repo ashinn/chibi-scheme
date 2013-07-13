@@ -122,21 +122,21 @@
     (else #f)))
 
 (test "sxml tree search" '(((href . "http://synthcode.com/")) ("synthcode"))
-  (match '(p (ul (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((or 'p 'ul 'li 'b) *** ('a ('^ attrs ...) text ...))
+  (match '(p (ul (li a (b c) (a (@ (href . "http://synthcode.com/")) "synthcode") d e f)))
+    (((or 'p 'ul 'li 'b) *** ('a ('@ attrs ...) text ...))
      (list attrs text))
     (else #f)))
 
 (test "failed sxml tree search" #f
-  (match '(p (ol (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((or 'p 'ul 'li 'b) *** ('a ('^ attrs ...) text ...))
+  (match '(p (ol (li a (b c) (a (@ (href . "http://synthcode.com/")) "synthcode") d e f)))
+    (((or 'p 'ul 'li 'b) *** ('a ('@ attrs ...) text ...))
      (list attrs text))
     (else #f)))
 
 (test "collect tree search"
     '((p ul li) ((href . "http://synthcode.com/")) ("synthcode"))
-  (match '(p (ul (li a (b c) (a (^ (href . "http://synthcode.com/")) "synthcode") d e f)))
-    (((and tag (or 'p 'ul 'li 'b)) *** ('a ('^ attrs ...) text ...))
+  (match '(p (ul (li a (b c) (a (@ (href . "http://synthcode.com/")) "synthcode") d e f)))
+    (((and tag (or 'p 'ul 'li 'b)) *** ('a ('@ attrs ...) text ...))
      (list tag attrs text))
     (else #f)))
 

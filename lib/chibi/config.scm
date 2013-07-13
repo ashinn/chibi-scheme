@@ -19,7 +19,7 @@
 ;;> command-line options, config files, environment variables, and/or
 ;;> other specialized settings.  These all have various pros and cons:
 ;;>
-;;> @table[(^ (border 1) (style border-collapse:collapse) (width "100%"))]{
+;;> @table[(@|@| (border 1) (style border-collapse:collapse) (width "100%"))]{
 ;;> @tr{@th{name} @th{pros} @th{cons}}
 ;;> @tr{@td{environment variables}
 ;;>     @td{implicit - no need to retype; can share between applications}
@@ -55,7 +55,7 @@
 ;;> coercing to a list.  The result is determined according to the
 ;;> structure of the alist cell as follows:
 ;;>
-;;> @table[(^ (border 1) (style border-collapse:collapse) (width "100%"))]{
+;;> @table[(@|@| (border 1) (style border-collapse:collapse) (width "100%"))]{
 ;;> @tr{@th{Cell} @th{@scheme{conf-get} result} @th{@scheme{conf-get-list} result}}
 ;;> @tr{@td{@scheme{(key)}} @td{@scheme{()}} @td{@scheme{()}}}
 ;;> @tr{@td{@scheme{(key . non-list-value)}} @td{@scheme{non-list-value}} @td{@scheme{(non-list-value)}}}
