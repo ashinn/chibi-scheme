@@ -11,17 +11,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; association lists
 
-(define (assoc-ref ls key . o)
-  (let ((default (and (pair? o) (car o)))
-        (eq (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) equal?)))
-    (cond ((assoc key ls eq) => cdr)
-          (else default))))
+;;> @subsubsubsection{@scheme{(assq-ref ls key [default])}}
+;;> Returns the @scheme{cdr} of the cell in @var{ls} whose
+;;> @scheme{car} is @scheme{eq?} to @var{key}, or @var{default}
+;;> if not found.  Useful for retrieving values associated with
+;;> MIME headers.
 
-;;> @subsubsubsection{@scheme{(mime-ref headers str [default])}}
-;;> A case-insensitive @scheme{assoc-ref}.
-
-(define (mime-ref ls key . o)
-  (assoc-ref ls key (and (pair? o) (car o)) string-ci=?))
+(define (assq-ref ls key . o)
+  (cond ((assq key ls) => cdr) (else (and (pair? o) (car o)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; simple matching instead of regexps
@@ -65,7 +62,7 @@
   (let ((i (string-scan-colon-or-maybe-equal line)))
     (and i
          (let ((j (string-skip-white-space line (+ i 1))))
-           (list (substring line 0 i)
+           (list (string->symbol (string-downcase (substring line 0 i)))
                  (substring line j (string-length line)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -144,8 +141,8 @@
      ((and kons-from (match-mbox-from-line first-line))
       => (lambda (m) ; special case check on first line for mbox files
            (out (read-line port mime-line-length-limit)
-                (kons-from "%from" (car m)
-                           (kons-from "%date" (cadr m) knil))
+                (kons-from '%from (car m)
+                           (kons-from '%date (cadr m) knil))
                 0)))
      (else
       (out first-line knil 0)))))
@@ -158,20 +155,20 @@
   (reverse
    (apply
     mime-header-fold
-    (lambda (h v acc) (cons (cons (string-downcase h) v) acc))
+    (lambda (h v acc) (cons (cons h v) acc))
     '()
     o)))
 
 (define (mime-split-name+value s)
   (let ((i (string-find s #\=)))
     (if i
-      (cons (string-downcase (string-trim (substring s 0 i)))
-            (if (= i (string-length s))
-              ""
-              (if (eqv? #\" (string-ref s (+ i 1)))
-                (substring s (+ i 2) (- (string-length s) 1))
-                (substring s (+ i 1) (string-length s)))))
-      (cons (string-downcase (string-trim s)) ""))))
+        (cons (string->symbol (string-downcase (string-trim (substring s 0 i))))
+              (if (= i (string-length s))
+                  ""
+                  (if (eqv? #\" (string-ref s (+ i 1)))
+                      (substring s (+ i 2) (- (string-length s) 1))
+                      (substring s (+ i 1) (string-length s)))))
+        (cons (string->symbol (string-downcase (string-trim s))) ""))))
 
 ;;> @subsubsubsection{@scheme{(mime-parse-content-type str)}}
 ;;> Parses @var{str} as a Content-Type style-value returning the list
@@ -182,7 +179,10 @@
 ;;> }
 
 (define (mime-parse-content-type str)
-  (map mime-split-name+value (string-split str #\;)))
+  (let ((res (map mime-split-name+value (string-split str #\;))))
+    (if (and (pair? res) (pair? (car res)) (equal? "" (cdar res)))
+        (cons (caar res) (cdr res))
+        res)))
 
 ;;> @subsubsubsection{@scheme{(mime-decode-header str)}}
 ;;> Replace all occurrences of RFC1522 =?ENC?...?= escapes in @var{str} with
@@ -282,17 +282,17 @@
                   (next (lambda (x) x))
                   (final (lambda (x) x)))
         (let* ((ctype (mime-parse-content-type
-                       (mime-ref headers "Content-Type" "text/plain")))
-               (type (string-trim (caar ctype)))
+                       (assq-ref headers 'content-type "text/plain")))
+               (type (car ctype))
                (enc (string-trim
-                     (or (mime-ref ctype "charset")
-                         (mime-ref headers "charset" "ASCII"))))
+                     (or (assq-ref ctype 'charset)
+                         (assq-ref headers 'charset "ascii"))))
                (cte (string-trim
-                     (or (mime-ref headers "Content-Transfer-Encoding")
-                         (mime-ref headers "Encoding" "7-bit")))))
+                     (or (assq-ref headers 'content-transfer-encoding)
+                         (assq-ref headers 'encoding "7-bit")))))
           (cond
-           ((and (string-ci=? type "multipart/")
-                 (mime-ref ctype "boundary"))
+           ((and (string-prefix? "multipart/" (symbol->string type))
+                 (assq-ref ctype 'boundary))
             => (lambda (boundary2)
                  (let ((boundary2 (string-append "--" boundary2)))
                    ;; skip preamble
@@ -307,8 +307,7 @@
                                 (if boundary
                                     (mime-read-to-boundary port boundary
                                                            (lambda (x) x) (lambda (x) x)))
-                                (next (kons-end headers seed x)))
-                              ))))))
+                                (next (kons-end headers seed x)))))))))
            (else
             (mime-read-part
              port cte enc boundary
