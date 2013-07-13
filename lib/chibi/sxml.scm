@@ -89,7 +89,7 @@
                 (cond
                  ((and (pair? rest)
                        (pair? (car rest))
-                       (eq? '^ (caar rest)))
+                       (eq? '@ (caar rest)))
                   (display (html-tag->string tag (cdar rest)) out)
                   (for-each lp (cdr rest))
                   (display "</" out) (display tag out) (display ">" out))
@@ -110,7 +110,7 @@
          ((pair? x)
           (for-each
            strip
-           (if (and (pair? (cdr x)) (eq? '^ (cadr x))) (cddr x) (cdr x))))
+           (if (and (pair? (cdr x)) (eq? '@ (cadr x))) (cddr x) (cdr x))))
          ((string? x)
           (display x out)))))))
 
@@ -127,13 +127,13 @@
                 (and (eq? 'div tag)
                      (pair? (cdr sxml))
                      (pair? (cadr sxml))
-                     (eq? '^ (car (cadr sxml)))
+                     (eq? '@ (car (cadr sxml)))
                      (equal? '(id . "menu") (assq 'id (cdr (cadr sxml)))))))
            ;; recurse other tags, appending newlines for new sections
            ((symbol? tag)
             (for-each
              lp
-             (if (and (pair? (cdr sxml)) (eq? '^ (cadr sxml)))
+             (if (and (pair? (cdr sxml)) (eq? '@ (cadr sxml)))
                  (cddr sxml)
                  (cdr sxml)))
             (if (memq tag '(p br h1 h2 h3 h4 h5 h6))

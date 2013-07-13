@@ -84,7 +84,7 @@
 
 (define (sxml-body x)
   (cond ((not (and (pair? x) (pair? (cdr x)))) '())
-        ((and (pair? (cadr x)) (eq? '^ (car (cadr x)))) (cddr x))
+        ((and (pair? (cadr x)) (eq? '@ (car (cadr x)))) (cddr x))
         (else (cdr x))))
 
 (define (env-ref env name . o)
@@ -168,27 +168,27 @@
                (body (map (lambda (x) (expand-docs x env))
                           (if name (cdr (cddr sxml)) (cdr sxml))))
                (name (or name (sxml-strip (cons tag body)))))
-          `(div (a (^ (name . ,(section-name tag name)))) (,tag ,@body))))))
+          `(div (a (@ (name . ,(section-name tag name)))) (,tag ,@body))))))
 
 (define (expand-url sxml env)
   (if (not (= 2 (length sxml)))
       (error "url expects one argument" sxml)
       (let ((url (expand-docs (cadr sxml) env)))
-        `(a (^ (href . ,url)) ,url))))
+        `(a (@ (href . ,url)) ,url))))
 
 (define (expand-hyperlink sxml env)
   (if (not (>= (length sxml) 3))
       (error "hyperlink expects at least two arguments" sxml)
       (let ((url (expand-docs (cadr sxml) env)))
-        `(a (^ (href . ,url))
+        `(a (@ (href . ,url))
             ,(map (lambda (x) (expand-docs x env)) (cddr sxml))))))
 
 (define (expand-note sxml env)
-  `(div (^ (id . "notes"))
+  `(div (@ (id . "notes"))
         ,@(map (lambda (x) (expand-docs x env)) (cdr sxml))))
 
 (define (expand-author sxml env)
-  `(div (^ (id . "notes"))
+  `(div (@ (id . "notes"))
         ,@(map (lambda (x) (expand-docs x env)) (cdr sxml))
         (br)
         ,(seconds->string (current-seconds))))
@@ -213,7 +213,7 @@
     `(div
       ,(expand-codeblock `(,(car x) language: scheme ,@(cdr x)) env)
       (code
-       (div (^ (class . "result"))
+       (div (@ (class . "result"))
             ,(call-with-output-string
                (lambda (out)
                  (protect (exn (#t (print-exception exn out)))
@@ -227,7 +227,7 @@
   "")
 
 (define (expand-command sxml env)
-  `(pre (^ (class . "command"))
+  `(pre (@ (class . "command"))
         (code ,@(map (lambda (x) (expand-docs x env)) (cdr sxml)))))
 
 (define (expand-tagged tag ls env)
@@ -260,10 +260,10 @@
 
 (define (extract-contents x)
   (match x
-    (('div ('a ('^ ('name . name)) . _)
+    (('div ('a ('@ ('name . name)) . _)
            ((and h (or 'h1 'h2 'h3 'h4 'h5 'h6)) . section))
      `((,(header-index h)
-        (a (^ (href . ,(string-append "#" name)))
+        (a (@ (href . ,(string-append "#" name)))
            ,(sxml-strip (cons h section))))))
     ((a . b)
      (append (extract-contents a) (extract-contents b)))
@@ -289,7 +289,7 @@
   `(html (head ,@(cond ((assq 'title x) => (lambda (x) (list x)))
                        (else '()))
                "\n"
-               (style (^ (type . "text/css"))
+               (style (@ (type . "text/css"))
                  "
 body {color: #000; background-color: #FFF}
 div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 180px; height: 100%}
@@ -302,15 +302,15 @@ div#footer {padding-bottom: 50px}
                  ,(highlight-style))
                "\n")
          (body
-          (div (^ (id . "menu"))
+          (div (@ (id . "menu"))
                ,(get-contents (extract-contents x)))
-          (div (^ (id . "main"))
+          (div (@ (id . "main"))
                ,@(map (lambda (x)
                         (if (and (pair? x) (eq? 'title (car x)))
                             (cons 'h1 (cdr x))
                             x))
                       x)
-               (div (^ (id . "footer")))))))
+               (div (@ (id . "footer")))))))
 
 (define (fix-paragraphs x)
   (let lp ((ls x) (p '()) (res '()))

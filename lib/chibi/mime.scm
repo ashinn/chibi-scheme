@@ -268,7 +268,7 @@
            (if (and (pair? o) (pair? (cdr o)))
                (car (cdr o))
                (lambda (headers parent-seed seed)
-                 `((mime (^ ,@headers)
+                 `((mime (@ ,@headers)
                          ,@(if (pair? seed) (reverse seed) seed))
                    ,@parent-seed))))
           (headers
@@ -319,7 +319,7 @@
 ;;> 
 ;;> Parse the given source as a MIME message and return
 ;;> the result as an SXML object of the form:
-;;> @scheme{(mime (^ (header . value) ...) parts ...)}.
+;;> @scheme{(mime (@ (header . value) ...) parts ...)}.
 
 (define (mime-message->sxml . o)
   (car
@@ -327,11 +327,11 @@
     mime-message-fold
     (if (pair? o) (car o) (current-input-port))
     (lambda (parent-headers headers body seed)
-      `((mime (^ ,@headers) ,body) ,@seed))
+      `((mime (@ ,@headers) ,body) ,@seed))
     '()
     (lambda (headers seed) '())
     (lambda (headers parent-seed seed)
-      `((mime (^ ,@headers)
+      `((mime (@ ,@headers)
               ,@(if (pair? seed) (reverse seed) seed))
         ,@parent-seed))
     (if (pair? o) (cdr o) '()))))
