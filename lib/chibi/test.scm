@@ -244,8 +244,13 @@
         (else #f)))
 
 (define (approx-equal? a b epsilon)
-  (< (abs (- 1 (abs (if (zero? b) (+ 1 a) (/ a b)))))
-     epsilon))
+  (cond
+   ((> (abs a) (abs b))
+    (approx-equal? b a epsilon))
+   ((zero? b)
+    (< (abs a) epsilon))
+   (else
+    (< (abs (/ (- a b) b)) epsilon))))
 
 (define (call-with-output-string proc)
   (let ((out (open-output-string)))
