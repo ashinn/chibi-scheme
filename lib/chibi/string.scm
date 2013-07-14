@@ -188,4 +188,4 @@
 (define (string-upcase-ascii s)
   (call-with-output-string
     (lambda (out)
-      (string-for-each (lambda (ch) (write-char (char-downcase ch) out)) s))))
+      (string-for-each (lambda (ch) (write-char (char-upcase ch) out)) s))))
