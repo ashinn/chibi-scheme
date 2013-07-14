@@ -25,7 +25,7 @@
   (load "tests/hash-tests.scm")
   (load "tests/sort-tests.scm")
   (load "tests/parse-tests.scm")
-  (load "tests/weak-tests.scm")
+  ;; (load "tests/weak-tests.scm")
   (load "tests/io-tests.scm")
   (load "tests/process-tests.scm")
   (load "tests/system-tests.scm")

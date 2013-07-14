@@ -11,7 +11,7 @@
 ;;> loading these collections from files while allowing extensions
 ;;> such as configurations from command-line options.
 
-;;> @subsubsection{Background}
+;;> \subsubsection{Background}
 ;;>
 ;;> As any application grows to sufficient complexity, it acquires
 ;;> options and behaviors that one may want to modify at startup or
@@ -19,17 +19,17 @@
 ;;> command-line options, config files, environment variables, and/or
 ;;> other specialized settings.  These all have various pros and cons:
 ;;>
-;;> @table[(@|@| (border 1) (style border-collapse:collapse) (width "100%"))]{
-;;> @tr{@th{name} @th{pros} @th{cons}}
-;;> @tr{@td{environment variables}
-;;>     @td{implicit - no need to retype; can share between applications}
-;;>     @td{unclear when set; unexpected differences between users; limited size}}
-;;> @tr{@td{command-line options}
-;;>     @td{explicit - visible each time a command is run; }
-;;>     @td{verbose; limited size}}
-;;> @tr{@td{config files}
-;;>     @td{implicit; preserved - can be shared and version controlled}
-;;>     @td{requires a parser}}
+;;> \table[(@ (border 1) (style border-collapse:collapse) (width "100%"))]{
+;;> \tr{\th{name} \th{pros} \th{cons}}
+;;> \tr{\td{environment variables}
+;;>     \td{implicit - no need to retype; can share between applications}
+;;>     \td{unclear when set; unexpected differences between users; limited size}}
+;;> \tr{\td{command-line options}
+;;>     \td{explicit - visible each time a command is run; }
+;;>     \td{verbose; limited size}}
+;;> \tr{\td{config files}
+;;>     \td{implicit; preserved - can be shared and version controlled}
+;;>     \td{requires a parser}}
 ;;> }
 ;;>
 ;;> Environment variables are convenient for broad preferences, used
@@ -40,7 +40,7 @@
 ;;> users of a group or whole system are likely to want to share, then
 ;;> it makes sense to cascade multiple config files.
 
-;;> @subsubsection{Syntax}
+;;> \subsubsection{Syntax}
 ;;>
 ;;> With any other language there is a question of config file syntax,
 ;;> and a few popular choices exist such as .ini syntax.  With Scheme
@@ -49,31 +49,31 @@
 ;;> arbitrary sexps for values.  The alists are intended primarily for
 ;;> editing by hand and need not be dotted, but the interface allows
 ;;> dotted values.  Disambiguation is handled as with two separate
-;;> functions, @scheme{(conf-get config key)} and
-;;> @scheme{(conf-get-list config key)}, which both retrieve the value
-;;> associated with @var{key} from @var{config}, in the latter case
+;;> functions, \scheme{(conf-get config key)} and
+;;> \scheme{(conf-get-list config key)}, which both retrieve the value
+;;> associated with \var{key} from \var{config}, in the latter case
 ;;> coercing to a list.  The result is determined according to the
 ;;> structure of the alist cell as follows:
 ;;>
-;;> @table[(@|@| (border 1) (style border-collapse:collapse) (width "100%"))]{
-;;> @tr{@th{Cell} @th{@scheme{conf-get} result} @th{@scheme{conf-get-list} result}}
-;;> @tr{@td{@scheme{(key)}} @td{@scheme{()}} @td{@scheme{()}}}
-;;> @tr{@td{@scheme{(key . non-list-value)}} @td{@scheme{non-list-value}} @td{@scheme{(non-list-value)}}}
-;;> @tr{@td{@scheme{(key non-list-value)}} @td{@scheme{non-list-value}} @td{@scheme{(non-list-value)}}}
-;;> @tr{@td{@scheme{(key (value1 value2 ...))}} @td{@scheme{(value1 value2 ...)}} @td{@scheme{(value1 value2 ...)}}}
-;;> @tr{@td{@scheme{(key value1 value2 ...)}} @td{@scheme{(value1 value2 ...)}} @td{@scheme{(value1 value2 ...)}}}
+;;> \table[(@ (border 1) (style border-collapse:collapse) (width "100%"))]{
+;;> \tr{\th{Cell} \th{\scheme{conf-get} result} \th{\scheme{conf-get-list} result}}
+;;> \tr{\td{\scheme{(key)}} \td{\scheme{()}} \td{\scheme{()}}}
+;;> \tr{\td{\scheme{(key . non-list-value)}} \td{\scheme{non-list-value}} \td{\scheme{(non-list-value)}}}
+;;> \tr{\td{\scheme{(key non-list-value)}} \td{\scheme{non-list-value}} \td{\scheme{(non-list-value)}}}
+;;> \tr{\td{\scheme{(key (value1 value2 ...))}} \td{\scheme{(value1 value2 ...)}} \td{\scheme{(value1 value2 ...)}}}
+;;> \tr{\td{\scheme{(key value1 value2 ...)}} \td{\scheme{(value1 value2 ...)}} \td{\scheme{(value1 value2 ...)}}}
 ;;> }
 ;;>
 ;;> Thus writing the non-dotted value will always do what you want.
 ;;> Specifically, the only thing to be careful of is if you want a
-;;> single-element list value, even with @scheme{conf-get}, you should
-;;> write @scheme{(key (value))}.
+;;> single-element list value, even with \scheme{conf-get}, you should
+;;> write \scheme{(key (value))}.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> @subsubsection{Interface}
+;;> \subsubsection{Interface}
 
-;;> Returns true iff @var{x} is a config object.
+;;> Returns true iff \var{x} is a config object.
 
 (define-record-type Config
   (make-conf alist parent source timestamp)
@@ -112,7 +112,7 @@
 (define (alist? x)
   (and (list? x) (every pair? x)))
 
-;;> Returns just the base of @var{config} without any parent.
+;;> Returns just the base of \var{config} without any parent.
 
 (define (conf-head config)
   (make-conf
@@ -121,9 +121,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loading from files.
 
-;;> @subsubsubsection{@rawcode{(conf-load file [conf])}}
+;;> \subsubsubsection{\rawcode{(conf-load file [conf])}}
 
-;;> Loads the config file @var{file}, prepending to @var{conf} if
+;;> Loads the config file \var{file}, prepending to \var{conf} if
 ;;> provided.
 
 (define (conf-load file . o)
@@ -133,8 +133,8 @@
    file
    (current-second)))
 
-;;> Search for and load any files named @var{file} in the
-;;> @var{config-path}, which should be a list of strings.
+;;> Search for and load any files named \var{file} in the
+;;> \var{config-path}, which should be a list of strings.
 
 (define (conf-load-in-path config-path file)
   (cond
@@ -151,11 +151,11 @@
                 (lp (cdr ls) (conf-load path res))
                 (lp (cdr ls) res))))))))
 
-;;> @subsubsubsection{@rawcode{(conf-load-cascaded config-path file [include-keyword])}}
+;;> \subsubsubsection{\rawcode{(conf-load-cascaded config-path file [include-keyword])}}
 
 ;;> Similar to conf-load-in-path, but also recursively loads any
 ;;> "include" config files, indicated by a top-level
-;;> @var{include-keyword} with either a string or symbol value.
+;;> \var{include-keyword} with either a string or symbol value.
 ;;> Includes are loaded relative to the current file, and cycles
 ;;> automatically ignored.
 
@@ -213,11 +213,11 @@
            (or (assq key (conf-alist config))
                (search (conf-parent config))))))))
 
-;;> @subsubsubsection{@rawcode{(conf-get config key [default])}}
+;;> \subsubsubsection{\rawcode{(conf-get config key [default])}}
 
-;;> Basic config lookup - retrieves the value from @var{config}
-;;> associated with @var{key}.  If not present, return @var{default}.
-;;> In @scheme{conf-get} and related accessors @var{key} can be either
+;;> Basic config lookup - retrieves the value from \var{config}
+;;> associated with \var{key}.  If not present, return \var{default}.
+;;> In \scheme{conf-get} and related accessors \var{key} can be either
 ;;> a symbol, or a list of symbols.  In the latter case, each symbol
 ;;> is used as a key in turn, with the value taken as an alist to
 ;;> further lookup values in.
@@ -230,9 +230,9 @@
             (cadr cell)
             (cdr cell)))))
 
-;;> @subsubsubsection{@rawcode{(conf-get-list config key [default])}}
+;;> \subsubsubsection{\rawcode{(conf-get-list config key [default])}}
 
-;;> Equivalent to @scheme{conf-get} but coerces its result to a list
+;;> Equivalent to \scheme{conf-get} but coerces its result to a list
 ;;> as described in the syntax section.
 
 (define (conf-get-list config key . opt)
@@ -241,7 +241,7 @@
         (if (or (pair? res) (null? res)) res (list res))
         (if (pair? opt) (car opt) '()))))
 
-;;> Equivalent to @scheme{conf-get-list} but returns a list of all
+;;> Equivalent to \scheme{conf-get-list} but returns a list of all
 
 (define (conf-get-multi config key)
   (if (not config)
@@ -263,7 +263,7 @@
     (make-conf (conf-alist a) parent (conf-source a) (conf-timestamp a))))
 
 ;;> Utility to create an alist cell representing the chained key
-;;> @var{key} mapped to @var{value}.
+;;> \var{key} mapped to \var{value}.
 
 (define (conf-unfold-key key value)
   (if (null? (cdr key))
@@ -310,7 +310,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> @subsubsection{Config Verification}
+;;> \subsubsection{Config Verification}
 
 (define (conf-default-warn . args)
   (for-each

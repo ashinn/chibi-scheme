@@ -1,7 +1,7 @@
 ;; Copyright (c) 2010-2013 Alex Shinn. All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> Simple testing framework adapted from the Chicken @scheme{test}
+;;> Simple testing framework adapted from the Chicken \scheme{test}
 ;;> module.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -44,11 +44,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
 
-;;> @subsubsubsection{@scheme{(test [name] expect expr)}}
+;;> \subsubsubsection{\scheme{(test [name] expect expr)}}
 
-;;> Evaluate @var{expr} and check that it is @scheme{equal?}
-;;> to @var{expect}.  @var{name} is used in reporting, and
-;;> defaults to a printed summary of @var{expr}.
+;;> Evaluate \var{expr} and check that it is \scheme{equal?}
+;;> to \var{expect}.  \var{name} is used in reporting, and
+;;> defaults to a printed summary of \var{expr}.
 
 (define-syntax test
   (syntax-rules ()
@@ -66,10 +66,10 @@
     ((test a ...)
      (test-syntax-error 'test "test requires 2 or 3 arguments" (test a ...)))))
 
-;;> @subsubsubsection{@scheme{(test-equal equal [name] expect expr)}}
+;;> \subsubsubsection{\scheme{(test-equal equal [name] expect expr)}}
 
-;;> Equivalent to test, using @var{equal} for comparison instead of
-;;> @scheme{equal?}.
+;;> Equivalent to test, using \var{equal} for comparison instead of
+;;> \scheme{equal?}.
 
 (define-syntax test-equal
   (syntax-rules ()
@@ -77,9 +77,9 @@
      (parameterize ((current-test-comparator equal))
        (test . args)))))
 
-;;> @subsubsubsection{@scheme{(test-assert [name] expr)}}
+;;> \subsubsubsection{\scheme{(test-assert [name] expr)}}
 
-;;> Like @scheme{test} but evaluates @var{expr} and checks that it's true.
+;;> Like \scheme{test} but evaluates \var{expr} and checks that it's true.
 
 (define-syntax test-assert
   (syntax-rules ()
@@ -91,18 +91,18 @@
      (test-syntax-error 'test-assert "1 or 2 arguments required"
                         (test a ...)))))
 
-;;> @subsubsubsection{@scheme{(test-not [name] expr)}}
+;;> \subsubsubsection{\scheme{(test-not [name] expr)}}
 
-;;> Like @scheme{test} but evaluates @var{expr} and checks that it's false.
+;;> Like \scheme{test} but evaluates \var{expr} and checks that it's false.
 
 (define-syntax test-not
   (syntax-rules ()
     ((_ expr) (test-assert (not expr)))
     ((_ name expr) (test-assert name (not expr)))))
 
-;;> @subsubsubsection{@scheme{(test-values [name] expect expr)}}
+;;> \subsubsubsection{\scheme{(test-values [name] expect expr)}}
 
-;;> Like @scheme{test} but @var{expect} and @var{expr} can both
+;;> Like \scheme{test} but \var{expect} and \var{expr} can both
 ;;> return multiple values.
 
 (define-syntax test-values
@@ -113,9 +113,9 @@
      (test name (call-with-values (lambda () expect) (lambda results results))
        (call-with-values (lambda () expr) (lambda results results))))))
 
-;;> @subsubsubsection{@scheme{(test-error [name] expr)}}
+;;> \subsubsubsection{\scheme{(test-error [name] expr)}}
 
-;;> Like @scheme{test} but evaluates @var{expr} and checks that it
+;;> Like \scheme{test} but evaluates \var{expr} and checks that it
 ;;> raises an error.
 
 (define-syntax test-error
@@ -146,7 +146,7 @@
                  (var-values . ,(list vars ...))
                  (key . val) ...)))))
 
-;;> @subsubsubsection{@scheme{(test-exit)}}
+;;> \subsubsubsection{\scheme{(test-exit)}}
 
 ;;> Exits with a failure status if any tests have failed,
 ;;> and a successful status otherwise.
@@ -157,7 +157,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; group interface
 
-;;> Wraps @var{body} as a single test group, which can be filtered
+;;> Wraps \var{body} as a single test group, which can be filtered
 ;;> and summarized separately.
 
 (define-syntax test-group
@@ -683,7 +683,7 @@
                (test-equal? (real-part expect) (real-part res))
                (test-equal? (imag-part expect) (imag-part res))))))
 
-;;> Begin testing a new group until the closing @scheme{(test-end)}.
+;;> Begin testing a new group until the closing \scheme{(test-end)}.
 
 (define (test-begin . o)
   (let* ((name (if (pair? o) (car o) ""))
@@ -706,7 +706,7 @@
       (display (bold (string-append name ": ")))))
     (current-test-group group)))
 
-;;> Ends testing group introduced with @scheme{(test-begin)}, and
+;;> Ends testing group introduced with \scheme{(test-begin)}, and
 ;;> summarizes the results.
 
 (define (test-end . o)

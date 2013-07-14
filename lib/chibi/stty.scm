@@ -164,12 +164,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; high-level interface
 
-;;> @subsubsubsection{@scheme{(stty [port] args ...)}}
+;;> \subsubsubsection{\scheme{(stty [port] args ...)}}
 
-;;> Set the terminal attributes for @var{port} (default
-;;> @scheme{(current-output-port)}) to @var{attrs}.
+;;> Set the terminal attributes for \var{port} (default
+;;> \scheme{(current-output-port)}) to \var{attrs}.
 ;;> Attributes are specified symbolically using the
-;;> names from the @rawcode{stty(1)} command.  In addition,
+;;> names from the \rawcode{stty(1)} command.  In addition,
 ;;> (not args ...) may be used to negate the listed symbols.
 
 (define (stty . args)
@@ -225,7 +225,7 @@
        (else
         (return iflag oflag cflag lflag))))))
 
-;;> Run @var{thunk} with the @scheme{stty} @var{setting}s in effect
+;;> Run \var{thunk} with the \scheme{stty} \var{setting}s in effect
 ;;> during its dynamic extent, resetting the original settings
 ;;> when it returns.
 
@@ -242,13 +242,13 @@
       ;; No terminal attributes means this isn't a tty.
       (thunk)))))
 
-;;> Run @var{thunk} with the "raw" (no canonical or echo) options
+;;> Run \var{thunk} with the "raw" (no canonical or echo) options
 ;;> needed for a terminal application.
 
 (define (with-raw-io port thunk)
   (with-stty '(not icanon isig echo) thunk port))
 
-;;> Returns the current terminal width in characters of @var{x},
+;;> Returns the current terminal width in characters of \var{x},
 ;;> which must be a port or a file descriptor.
 
 (define (get-terminal-width x)
@@ -256,7 +256,7 @@
     (and ws (winsize-col ws))))
 
 ;;> Returns the current terminal dimensions, as a list of character width
-;;> and height, of @var{x}, which must be a port or a file descriptor.
+;;> and height, of \var{x}, which must be a port or a file descriptor.
 
 (define (get-terminal-dimensions x)
   (let ((ws (ioctl x TIOCGWINSZ)))

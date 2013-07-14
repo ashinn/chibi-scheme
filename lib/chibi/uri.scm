@@ -20,7 +20,7 @@
 ;;> Accessors for the URI type.
 ;;/
 
-;;> @subsubsubsection{@scheme{(make-uri scheme [user host port path query fragment])}}
+;;> \subsubsubsection{\scheme{(make-uri scheme [user host port path query fragment])}}
 
 (define (make-uri scheme . o)
   (let* ((user (if (pair? o) (car o) #f))
@@ -115,7 +115,7 @@
   (%make-uri (uri-scheme u) (uri-user u) (uri-host u) (uri-port u)
              (uri-path u) (uri-query u) fragment))
 
-;;> Functional updaters - returns a new uri identical to @var{u}
+;;> Functional updaters - returns a new uri identical to \var{u}
 ;;> with only the specified field changed.
 ;;/
 
@@ -233,11 +233,11 @@
       res
       (cons (substring str from to) res)))
 
-;;> @subsubsubsection{@scheme{(uri-encode str [plus?])}}
+;;> \subsubsubsection{\scheme{(uri-encode str [plus?])}}
 
-;;> Return the URI encoded version of the string @var{str},
+;;> Return the URI encoded version of the string \var{str},
 ;;> using hex escapes as needed and replacing spaces with "+"
-;;> iff the optional argument @var{plus?} is true.
+;;> iff the optional argument \var{plus?} is true.
 
 (define (uri-encode str . o)
   (define (encode-1-space ch)
@@ -267,11 +267,11 @@
                 (lp next next (cons (encode-1 ch)
                                     (collect str from to res)))))))))
 
-;;> @subsubsubsection{@scheme{(uri-decode str [plus?])}}
+;;> \subsubsubsection{\scheme{(uri-decode str [plus?])}}
 
 ;;> Decodes any URI hex escapes in the given string, and
 ;;> translates any pluses ("+") to space iff the optional
-;;> argument @var{plus?} is true.
+;;> argument \var{plus?} is true.
 
 (define (uri-decode str . o)
   (let ((space-as-plus? (and (pair? o) (car o)))
@@ -301,10 +301,10 @@
              (else
               (lp from next res))))))))
 
-;;> @subsubsubsection{@scheme{(uri-query->alist str [plus?])}}
+;;> \subsubsubsection{\scheme{(uri-query->alist str [plus?])}}
 
 ;;> Parses the query part of a URI as a delimited list of
-;;> URI encoded @rawcode{VAR=VALUE} pairs, decodes them and
+;;> URI encoded \rawcode{VAR=VALUE} pairs, decodes them and
 ;;> returns the result as an alist.
 
 (define (uri-query->alist str . o)
@@ -322,7 +322,7 @@
                            (cons (uri-decode (substring str i j) plus?) #f))))
             (lp (+ j 1) (cons cell res)))))))
 
-;;> @subsubsubsection{@scheme{(uri-alist->query ls [plus?])}}
+;;> \subsubsubsection{\scheme{(uri-alist->query ls [plus?])}}
 
 ;;> The reverse of the above, formats the alist as a URI
 ;;> query string.
