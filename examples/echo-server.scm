@@ -1,20 +1,23 @@
 
-;; Simple R7RS echo server, using (srfi 18) threads and the
-;; run-net-server utility from (chibi net server).
+;; Simple R7RS echo server, using the run-net-server utility from
+;; (chibi net server).
 
-(import (scheme base) (scheme write) (srfi 18) (chibi net server))
+(import (scheme base) (scheme write) (chibi net) (chibi net server))
 
 ;; Copy each input line to output.
 (define (echo-handler in out sock addr)
   (let ((line (read-line in)))
     (cond
      ((not (or (eof-object? line) (equal? line "")))
-      (display "read: ") (write line) (newline)
+      ;; log the request to stdout
+      (display "read: ") (write line)
+      (display " from ") (display (sockaddr-name (address-info-address addr)))
+      (newline)
+      ;; write and flush the response
       (display line out)
       (newline out)
       (flush-output-port out)
-      (thread-yield!)
       (echo-handler in out sock addr)))))
 
-;; Start the server on localhost:5556 dispatching clients to echo-handler.
+;; Start the server on *:5556 dispatching clients to echo-handler.
 (run-net-server 5556 echo-handler)

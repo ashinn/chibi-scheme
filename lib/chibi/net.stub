@@ -10,12 +10,13 @@
   predicate:   sockaddr?)
 
 (define-c-struct addrinfo
-  constructor: (make-address-info ai_family ai_socktype ai_protocol)
+  constructor: (%make-address-info ai_family ai_socktype ai_protocol ai_flags)
   finalizer: freeaddrinfo
   predicate: address-info?
   (int              ai_family    address-info-family)
   (int              ai_socktype  address-info-socket-type)
   (int              ai_protocol  address-info-protocol)
+  (int              ai_flags     address-info-flags)
   ((link sockaddr)  ai_addr      address-info-address)
   (size_t           ai_addrlen   address-info-address-length)
   ((link addrinfo)  ai_next      address-info-next))
@@ -24,7 +25,8 @@
 ;;/
 
 (define-c errno (%get-address-info getaddrinfo)
-  (string string (maybe-null addrinfo) (result free addrinfo)))
+  ((maybe-null string) (maybe-null string) (maybe-null addrinfo)
+   (result free addrinfo)))
 
 ;;> Bind a name to a socket.
 
@@ -54,13 +56,23 @@
 (define-c errno (open-socket-pair "socketpair")
   (int int int (result (array fileno 2))))
 
+;;> Return the IP address of a sockaddr as an "N.N.N.N" string.
+
+(define-c sexp (sockaddr-name "sexp_sockaddr_name")
+  ((value ctx sexp) (value self sexp) sockaddr))
+
+(define-c-const int (address-family/unspecified "AF_UNSPEC"))
 (define-c-const int (address-family/unix "AF_UNIX"))
 (define-c-const int (address-family/inet "AF_INET"))
 (define-c-const int (socket-type/stream "SOCK_STREAM"))
 (define-c-const int (socket-type/datagram "SOCK_DGRAM"))
 (define-c-const int (socket-type/raw "SOCK_RAW"))
+(define-c-const int (ip-proto/ip "IPPROTO_IP"))
 (define-c-const int (ip-proto/tcp "IPPROTO_TCP"))
 (define-c-const int (ip-proto/udp "IPPROTO_UDP"))
+(define-c-const int (ai/passive "AI_PASSIVE"))
+(define-c-const int (ai/canonname "AI_CANONNAME"))
+(define-c-const int (ai/numeric-host "AI_NUMERICHOST"))
 
 ;;> The constants for the addrinfo struct.
 ;;/

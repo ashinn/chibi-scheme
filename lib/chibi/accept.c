@@ -39,3 +39,11 @@ sexp sexp_listen (sexp ctx, sexp self, sexp fileno, sexp backlog) {
 #endif
   return (res == 0) ? SEXP_TRUE : SEXP_FALSE;
 }
+
+sexp sexp_sockaddr_name (sexp ctx, sexp self, struct sockaddr* addr) {
+  char buf[20];
+  struct sockaddr_in *sa = (struct sockaddr_in *)addr;
+  unsigned char *ptr = (unsigned char *)&(sa->sin_addr);
+  sprintf(buf, "%d.%d.%d.%d", ptr[0], ptr[1], ptr[2], ptr[3]);
+  return sexp_c_string(ctx, buf, -1);
+}

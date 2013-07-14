@@ -1,6 +1,11 @@
 ;; Copyright (c) 2010-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+;;> \subsubsubsection{\scheme{(make-address-info family socktype proto [hints])}}
+
+(define (make-address-info family socktype proto . o)
+  (%make-address-info family socktype proto (if (pair? o) (car o) 0)))
+
 ;;> \subsubsubsection{\scheme{(get-address-info host service [addrinfo])}}
 
 ;;> Create and return a new addrinfo structure for the given host
@@ -13,9 +18,10 @@
                      (if (integer? service) (number->string service) service)
                      (if (and (pair? o) (car o))
                          (car o)
-                         (make-address-info address-family/inet
+                         (make-address-info address-family/unspecified
                                             socket-type/stream
-                                            ip-proto/tcp))))
+                                            ip-proto/ip
+                                            ai/passive))))
 
 ;;> Opens a client net connection to \var{host}, a string,
 ;;> on port \var{service}, which can be a string such as

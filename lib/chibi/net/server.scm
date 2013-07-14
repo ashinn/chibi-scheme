@@ -5,7 +5,7 @@
 
 (define (make-socket-listener-thunk listener port)
   (lambda ()
-    (let ((addr (get-address-info "localhost" port)))
+    (let ((addr (get-address-info #f port)))
       (cond
        ((accept listener
                 (address-info-address addr)
@@ -17,7 +17,7 @@
   (cond
    ((integer? x)
     (make-socket-listener-thunk
-     (make-listener-socket (get-address-info "localhost" x))
+     (make-listener-socket (get-address-info #f x))
      x))
    ((address-info? x)
     (make-socket-listener-thunk (make-listener-socket x) 80))
