@@ -62,7 +62,7 @@
   (let ((i (string-scan-colon-or-maybe-equal line)))
     (and i
          (let ((j (string-skip-white-space line (+ i 1))))
-           (list (string->symbol (string-downcase (substring line 0 i)))
+           (list (string->symbol (string-downcase-ascii (substring line 0 i)))
                  (substring line j (string-length line)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -71,14 +71,6 @@
 ;; TODO: add conversion routines
 (define (ces-convert str . x)
   str)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; inlined ascii-only srfi-13 string-downcase
-
-(define (string-downcase s)
-  (call-with-output-string
-    (lambda (out)
-      (string-for-each (lambda (ch) (write-char (char-downcase ch) out)) s))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;> \subsubsection{RFC2822 Headers}
@@ -162,13 +154,14 @@
 (define (mime-split-name+value s)
   (let ((i (string-find s #\=)))
     (if i
-        (cons (string->symbol (string-downcase (string-trim (substring s 0 i))))
+        (cons (string->symbol
+               (string-downcase-ascii (string-trim (substring s 0 i))))
               (if (= i (string-length s))
                   ""
                   (if (eqv? #\" (string-ref s (+ i 1)))
                       (substring s (+ i 2) (- (string-length s) 1))
                       (substring s (+ i 1) (string-length s)))))
-        (cons (string->symbol (string-downcase (string-trim s))) ""))))
+        (cons (string->symbol (string-downcase-ascii (string-trim s))) ""))))
 
 ;;> \subsubsubsection{\scheme{(mime-parse-content-type str)}}
 ;;> Parses \var{str} as a Content-Type style-value returning the list

@@ -179,3 +179,13 @@
 
 (define (make-string-searcher needle)
   (lambda (haystack) (string-contains haystack needle)))
+
+(define (string-downcase-ascii s)
+  (call-with-output-string
+    (lambda (out)
+      (string-for-each (lambda (ch) (write-char (char-downcase ch) out)) s))))
+
+(define (string-upcase-ascii s)
+  (call-with-output-string
+    (lambda (out)
+      (string-for-each (lambda (ch) (write-char (char-downcase ch) out)) s))))
