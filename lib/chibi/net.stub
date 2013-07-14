@@ -61,6 +61,11 @@
 (define-c sexp (sockaddr-name "sexp_sockaddr_name")
   ((value ctx sexp) (value self sexp) sockaddr))
 
+;;> Return the port a sockaddr is connected on.
+
+(define-c int (sockaddr-port "sexp_sockaddr_port")
+  ((value ctx sexp) (value self sexp) sockaddr))
+
 (define-c-const int (address-family/unspecified "AF_UNSPEC"))
 (define-c-const int (address-family/unix "AF_UNIX"))
 (define-c-const int (address-family/inet "AF_INET"))
