@@ -3,15 +3,33 @@
 
 (define default-max-requests 10000)
 
+(define (make-socket-listener-thunk listener port)
+  (lambda ()
+    (let ((addr (get-address-info "localhost" port)))
+      (cond
+       ((accept listener
+                (address-info-address addr)
+                (address-info-address-length addr))
+        => (lambda (sock) (list sock addr)))
+       (else #f)))))
+
+(define (make-listener-thunk x)
+  (cond
+   ((integer? x)
+    (make-socket-listener-thunk
+     (make-listener-socket (get-address-info "localhost" x))
+     x))
+   ((address-info? x)
+    (make-socket-listener-thunk (make-listener-socket x) 80))
+   ((fileno? x)
+    (make-socket-listener-thunk x 80))
+   ((procedure? x)
+    x)
+   (else
+    (error "expected a listener socket, fileno or thunk" x))))
+
 (define (run-net-server listener-or-addr handler . o)
-  (let* ((listener (cond
-                    ((fileno? listener-or-addr)
-                     listener-or-addr)
-                    ((integer? listener-or-addr)
-                     (make-listener-socket
-                      (get-address-info "localhost" listener-or-addr)))
-                    (else
-                     (make-listener-socket listener-or-addr))))
+  (let* ((listener-thunk (make-listener-thunk listener-or-addr))
          (max-requests (if (pair? o) (car o) default-max-requests))
          (debug? (and (pair? o) (pair? (cdr o)))))
     (define (log-error msg . args)
@@ -49,19 +67,16 @@
       (let serve ((count 0))
         (if (>= requests  max-requests)
             (thread-yield!)
-            (let* ((addr (get-address-info "127.0.0.1" "8000"))
-                   (sock (accept listener
-                                 (address-info-address addr)
-                                 (address-info-address-length addr))))
+            (let ((sock+addr (listener-thunk)))
               (cond
-               ((not sock)
+               ((not sock+addr)
                 (serve count))
                (else
                 (thread-start!
                  (make-thread
                   (lambda ()
                     (set! requests (+ requests 1))
-                    (run sock addr count)
+                    (run (car sock+addr) (cadr sock+addr) count)
                     (set! requests (- requests 1)))
                   (string-append "net-client-" (number->string count))))
                 (serve (+ 1 count))))))))))
