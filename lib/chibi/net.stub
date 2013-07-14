@@ -48,6 +48,12 @@
 
 (define-c int connect (fileno sockaddr int))
 
+;;> Returns a list of 2 new sockets, the input and output end of a new
+;;> pipe, respectively.
+
+(define-c errno (open-socket-pair "socketpair")
+  (int int int (result (array fileno 2))))
+
 (define-c-const int (address-family/unix "AF_UNIX"))
 (define-c-const int (address-family/inet "AF_INET"))
 (define-c-const int (socket-type/stream "SOCK_STREAM"))
