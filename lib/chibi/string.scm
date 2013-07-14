@@ -29,7 +29,9 @@
 
 (define (string-find str x . o)
   (let ((pred (make-char-predicate x))
-        (end (string-cursor-end str)))
+        (end (if (and (pair? o) (pair? (cdr o)))
+                 (cadr o)
+                 (string-cursor-end str))))
     (let lp ((i (if (pair? o) (car o) (string-cursor-start str))))
       (cond ((string-cursor>=? i end) end)
             ((pred (string-cursor-ref str i)) i)
@@ -37,10 +39,12 @@
 
 (define (string-find-right str x . o)
   (let ((pred (make-char-predicate x))
-        (end (string-cursor-start str)))
-    (let lp ((i (if (pair? o) (car o) (string-cursor-end str))))
+        (start (if (pair? o) (car o) (string-cursor-start str))))
+    (let lp ((i (if (and (pair? o) (pair? (cdr o)))
+                    (cadr o)
+                    (string-cursor-end str))))
       (let ((i2 (string-cursor-prev str i)))
-        (cond ((string-cursor<? i2 end) end)
+        (cond ((string-cursor<? i2 start) start)
               ((pred (string-cursor-ref str i2)) i)
               (else (lp i2)))))))
 
