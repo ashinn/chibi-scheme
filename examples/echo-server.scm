@@ -11,7 +11,9 @@
      ((not (or (eof-object? line) (equal? line "")))
       ;; log the request to stdout
       (display "read: ") (write line)
-      (display " from ") (display (sockaddr-name (address-info-address addr)))
+      (display " from ")
+      (display (sockaddr-name (address-info-address addr)))
+      (display ":") (write (sockaddr-port (address-info-address addr)))
       (newline)
       ;; write and flush the response
       (display line out)
