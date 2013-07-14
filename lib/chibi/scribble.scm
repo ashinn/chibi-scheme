@@ -2,9 +2,11 @@
 ;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> A library used for parsing "scribble" format, introduced
-;;> by @hyperlink["http://www.racket-lang.org/"]{Racket} and
-;;> the format used to write this manual.
+;;> A library used for parsing "scribble" format, introduced by
+;;> \hyperlink["http://www.racket-lang.org/"]{Racket} and the format
+;;> used to write this manual.  The default escape character is
+;;> backslash as in TeX instead of @ as in Racket, though this can be
+;;> overridden.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; general character utils
@@ -20,6 +22,8 @@
   (memv ch '(#\- #\+ #\! #\< #\> #\[ #\] #\|)))
 
 (define (char-digit ch) (- (char->integer ch) (char->integer #\0)))
+
+(define default-ecape-char #\\)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; list utils
@@ -80,11 +84,14 @@
       ((char-delimiter? c) (string->symbol (list->string (reverse ls))))
     (read-char in)))
 
-(define (scrib-read in)
+(define (scrib-read in . o)
   (define ch (read-char in))
+  (define ec (if (pair? o) (car o) default-ecape-char))
   (cond
    ((eof-object? ch) ch)
    ((char-whitespace? ch) (scrib-read in))
+   ((eqv? ch ec)
+    (scribble-parse-escape in ec))
    (else
     (case ch
       ((#\( #\[ #\{)
@@ -106,7 +113,6 @@
       ((#\') (list 'quote (scrib-read in)))
       ((#\`) (list 'quasiquote (scrib-read in)))
       ((#\,) (list (if-peek-char #\@ in 'unquote-splicing 'unquote) (scrib-read in)))
-      ((#\@) (scribble-parse-escape in #\@))
       ((#\;) (skip-line in) (scrib-read in))
       ((#\|) (string->symbol (read-escaped in #\|)))
       ((#\") (read-escaped in #\"))
@@ -132,8 +138,8 @@
            (read-number in (char-digit ch) 10)
            (read-symbol in (list ch))))))))
 
-(define (scribble-read in)
-  (let ((res (scrib-read in)))
+(define (scribble-read in . o)
+  (let ((res (scrib-read in (if (pair? o) (car o) default-ecape-char))))
     (cond ((eq? res scribble-dot) (error "invalid . in source"))
           ((eq? res scribble-close) (error "too many )'s"))
           (else res))))
@@ -167,9 +173,9 @@
   (define brace-char #\{)
   (let* ((wrap (read-prefix-wrapper in))
          (c (peek-char in))
-         (cmd (if (or (eqv? c bracket-char) (eqv? c brace-char)) '() (list (scribble-read in))))
+         (cmd (if (or (eqv? c bracket-char) (eqv? c brace-char)) '() (list (scribble-read in ec))))
          (data? (eqv? (peek-char in) bracket-char))
-         (data (if data? (scribble-read in) '()))
+         (data (if data? (scribble-read in ec) '()))
          (punc (read-punctuation in))
          (body? (eqv? (peek-char in) brace-char))
          (body (cond (body? (read-char in) (scribble-parse in punc ec)) (else '()))))
@@ -177,7 +183,8 @@
 
 (define (scribble-parse in . o)
   (define init-punc (if (pair? o) (car o) '()))
-  (define escape-char (if (and (pair? o) (pair? (cdr o))) (cadr o) #\@))
+  (define escape-char
+    (if (and (pair? o) (pair? (cdr o))) (cadr o) default-ecape-char))
   (define comment-char #\;)
   (define bracket-char #\[)
   (define brace-char #\{)

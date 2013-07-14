@@ -2,11 +2,11 @@
 ;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> The fundamental directory iterator.  Applies @var{kons} to
-;;> each filename in directory @var{dir} and the result of the
-;;> previous application, beginning with @var{knil}.  With
-;;> @var{kons} as @scheme{cons} and @var{knil} as @scheme{'()},
-;;> equivalent to @scheme{directory-files}.
+;;> The fundamental directory iterator.  Applies \var{kons} to
+;;> each filename in directory \var{dir} and the result of the
+;;> previous application, beginning with \var{knil}.  With
+;;> \var{kons} as \scheme{cons} and \var{knil} as \scheme{'()},
+;;> equivalent to \scheme{directory-files}.
 
 (define (directory-fold dir kons knil)
   (let ((dir (opendir dir)))
@@ -14,7 +14,7 @@
       (let ((file (readdir dir)))
         (if file (lp (kons (dirent-name file) res)) res)))))
 
-;;> Returns a list of the files in @var{dir} in an unspecified
+;;> Returns a list of the files in \var{dir} in an unspecified
 ;;> order.
 
 (define (directory-files dir)
@@ -47,16 +47,16 @@
        (else
         (here file acc))))))
 
-;;> Unlinks the file named @var{string} from the filesystem.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Unlinks the file named \var{string} from the filesystem.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define (delete-file file)
   (if (not (%delete-file file))
       (raise-continuable
        (make-exception 'file "couldn't delete file" file delete-file #f))))
 
-;;> Recursively delete all files and directories under @var{dir}.
-;;> Unless optional arg @var{ignore-errors?} is true, raises an error
+;;> Recursively delete all files and directories under \var{dir}.
+;;> Unless optional arg \var{ignore-errors?} is true, raises an error
 ;;> if any file can't be deleted.
 
 (define (delete-file-hierarchy dir . o)
@@ -73,8 +73,8 @@
        (if (and (not (delete-file f)) (not ignore-errors?))
            (error "couldn't delete file" f))))))
 
-;;> Runs @var{thunk} with the current directory of the process temporarily
-;;> set to @var{dir}.
+;;> Runs \var{thunk} with the current directory of the process temporarily
+;;> set to \var{dir}.
 
 (define (with-directory dir thunk)
   (let ((pwd (current-directory)))
@@ -83,7 +83,7 @@
       thunk
       (lambda () (change-directory pwd)))))
 
-;;> Returns the @scheme{status} object for the given @var{file},
+;;> Returns the \scheme{status} object for the given \var{file},
 ;;> which should be a string indicating the path or a file
 ;;> descriptor.
 
@@ -104,7 +104,7 @@
 (define (file-modification-time x) (stat-mtime (if (stat? x) x (file-status x))))
 (define (file-change-time x) (stat-ctime (if (stat? x) x (file-status x))))
 
-;;> File status accessors.  @var{x} should be a string indicating
+;;> File status accessors.  \var{x} should be a string indicating
 ;;> the file to lookup the status for, or an existing status object.
 ;;/
 
@@ -117,14 +117,14 @@
 (define (file-socket? x) (S_ISSOCK (file-mode x)))
 (define (file-exists? x) (and (file-status x) #t))
 
-;;> File type tests.  @var{x} should be a string indicating the
+;;> File type tests.  \var{x} should be a string indicating the
 ;;> file to lookup the status for, or an existing status object.
-;;> Returns @scheme{#t} if the file exists and the given type
-;;> is satisfied, and @scheme{#f} otherwise.
+;;> Returns \scheme{#t} if the file exists and the given type
+;;> is satisfied, and \scheme{#f} otherwise.
 ;;/
 
-;;> Equivalent to duplicating the file descriptor @var{old} to
-;;> @var{new} and closing @var{old}.
+;;> Equivalent to duplicating the file descriptor \var{old} to
+;;> \var{new} and closing \var{old}.
 
 (define (renumber-file-descriptor old new)
   (and (duplicate-file-descriptor-to old new)

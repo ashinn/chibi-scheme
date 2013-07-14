@@ -266,7 +266,7 @@
   (for-each type-analyze-expr ls)
   (for-each type-resolve-circularities ls))
 
-;;> Analyze the types of all bindings in the module @var{name}.
+;;> Analyze the types of all bindings in the module \var{name}.
 
 (define (type-analyze-module name)
   (let* ((mod (analyze-module name))
@@ -300,7 +300,7 @@
 (define (lambda-type x)
   (cons 'lambda (cons (lambda-return-type x) (lambda-param-types x))))
 
-;;> Return the type signature for the procedure @var{x} as
+;;> Return the type signature for the procedure \var{x} as
 ;;> a list whose first element is the return type and whose
 ;;> remaining arguments are the parameter types.
 

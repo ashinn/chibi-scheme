@@ -1,11 +1,11 @@
 ;; Copyright (c) 2010-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> @subsubsubsection{@scheme{(get-address-info host service [addrinfo])}}
+;;> \subsubsubsection{\scheme{(get-address-info host service [addrinfo])}}
 
 ;;> Create and return a new addrinfo structure for the given host
-;;> and service.  @var{host} should be a string and @var{service} a
-;;> string or integer.  The optional @var{addrinfo} defaults to
+;;> and service.  \var{host} should be a string and \var{service} a
+;;> string or integer.  The optional \var{addrinfo} defaults to
 ;;> a TCP/IP stream setting.
 
 (define (get-address-info host service . o)
@@ -17,11 +17,11 @@
                                             socket-type/stream
                                             ip-proto/tcp))))
 
-;;> Opens a client net connection to @var{host}, a string,
-;;> on port @var{service}, which can be a string such as
-;;> @scheme{"http"} or an integer.  Returns a list of three
+;;> Opens a client net connection to \var{host}, a string,
+;;> on port \var{service}, which can be a string such as
+;;> \scheme{"http"} or an integer.  Returns a list of three
 ;;> values on success - the socket, an input port, and an
-;;> output port - or @scheme{#f} on failure.
+;;> output port - or \scheme{#f} on failure.
 
 (define (open-net-io host service)
   (let lp ((addr (get-address-info host service)))
@@ -46,11 +46,11 @@
                       (open-input-file-descriptor sock #t)
                       (open-output-file-descriptor sock #t)))))))))
 
-;;> Convenience wrapper around @scheme{open-net-io}, opens
-;;> the connection then calls @var{proc} with two arguments,
+;;> Convenience wrapper around \scheme{open-net-io}, opens
+;;> the connection then calls \var{proc} with two arguments,
 ;;> the input port and the output port connected to the
 ;;> service, then closes the connection.  Returns the result
-;;> of @var{proc}.  Raises an error if a connection can't
+;;> of \var{proc}.  Raises an error if a connection can't
 ;;> be made.
 
 (define (with-net-io host service proc)
@@ -63,13 +63,13 @@
           (close-file-descriptor (car io))
           res))))
 
-;;> @subsubsubsection{@scheme{(make-listener-socket addrinfo [max-conn])}}
+;;> \subsubsubsection{\scheme{(make-listener-socket addrinfo [max-conn])}}
 
 ;;> Convenience wrapper to call socket, bind and listen to return
 ;;> a socket suitable for accepting connections on the given
-;;> @var{addrinfo}.  @var{max-conn} is the maximum number of pending
+;;> \var{addrinfo}.  \var{max-conn} is the maximum number of pending
 ;;> connections, and defaults to 128.  Automatically specifies
-;;> @scheme{socket-opt/reuseaddr}.
+;;> \scheme{socket-opt/reuseaddr}.
 
 (define (make-listener-socket addrinfo . o)
   (let* ((max-connections (if (pair? o) (car o) 128))
@@ -92,9 +92,9 @@
      (else
       sock))))
 
-;;> Returns the socket option of the given @var{name} for @var{socket}.
-;;> @var{socket} should be a file descriptor, level the constant
-;;> @scheme{level/socket}, and name one of the constants beginning with
+;;> Returns the socket option of the given \var{name} for \var{socket}.
+;;> \var{socket} should be a file descriptor, level the constant
+;;> \scheme{level/socket}, and name one of the constants beginning with
 ;;> "socket-opt/".
 
 (define (get-socket-option socket level name)

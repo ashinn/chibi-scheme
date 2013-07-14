@@ -9,7 +9,7 @@
 ;;> editing and signal handling, so that C-c will interrupt a
 ;;> computation and bring you back to the REPL prompt.  To use
 ;;> this repl, run
-;;> @command{chibi-scheme -mchibi.repl -e'(repl)'}
+;;> \command{chibi-scheme -mchibi.repl -e'(repl)'}
 ;;> from the command line or within Emacs.
 
 (define (with-signal-handler sig handler thunk)
@@ -130,39 +130,39 @@
 ;;> Runs an interactive REPL.  Repeatedly displays a prompt,
 ;;> then Reads an expression, Evaluates the expression, Prints
 ;;> the result then Loops.  Terminates when the end of input is
-;;> reached or the @scheme|{@exit}| command is given.
+;;> reached or the \scheme|{\exit}| command is given.
 ;;>
 ;;> Basic Emacs-style line editing with persistent history
 ;;> completion is provided.  C-c can be used to interrupt the
 ;;> current computation and drop back to the prompt.  The
 ;;> following keyword arguments customize the REPL:
 ;;>
-;;> @itemlist[
-;;> @item{@scheme{in:} - the input port (default @scheme{(current-input-port)})}
-;;> @item{@scheme{out:} - the output port (default @scheme{(current-output-port)})}
-;;> @item{@scheme{module:} - the initial module}
-;;> @item{@scheme{environment:} - the initial environment (default @scheme{(interaction-environment)})}
-;;> @item{@scheme{escape:} - the command escape character (default @scheme|{#\@}|)}
-;;> @item{@scheme{make-prompt:} - a procedure taking one argument (the current module name as a list) and returning a string to be used as the prompt}
-;;> @item{@scheme{history:} - the initial command history}
-;;> @item{@scheme{history-file:} - the file to save history to (default ~/.chibi-repl-history)}
+;;> \itemlist[
+;;> \item{\scheme{in:} - the input port (default \scheme{(current-input-port)})}
+;;> \item{\scheme{out:} - the output port (default \scheme{(current-output-port)})}
+;;> \item{\scheme{module:} - the initial module}
+;;> \item{\scheme{environment:} - the initial environment (default \scheme{(interaction-environment)})}
+;;> \item{\scheme{escape:} - the command escape character (default \scheme|{#\\}|)}
+;;> \item{\scheme{make-prompt:} - a procedure taking one argument (the current module name as a list) and returning a string to be used as the prompt}
+;;> \item{\scheme{history:} - the initial command history}
+;;> \item{\scheme{history-file:} - the file to save history to (default ~/.chibi-repl-history)}
 ;;> ]
 ;;>
 ;;> The module: and environment: keyword arguments should not both be given.
 ;;>
-;;> REPL commands in the style of @hyperlink["http://s48.org/"]{Scheme48}
-;;> are available to control out-of-band properties.  By default a command
-;;> is written as an identifier beginning with an "@"@"" character (which
-;;> would not be a portable identifier), but this can be customized with
-;;> the @scheme{escape:} keyword.  The following commands are available:
+;;> REPL commands in the style of \hyperlink["http://s48.org/"]{Scheme48}
+;;> are available to control out-of-band properties.  By default a
+;;> command is written as an identifier beginning with an "@"
+;;> character, but this can be customized with the \scheme{escape:}
+;;> keyword.  The following commands are available:
 ;;>
-;;> @itemlist[
-;;> @item{@scheme|{@import <import-spec>}| - import the @var{<import-spec>} in the @scheme{interaction-environment}, useful if the @scheme{import} binding is not available}
-;;> @item{@scheme|{@import-only <import-spec>}| - replace the @scheme{interaction-environment} with the given @var{<import-spec>}}
-;;> @item{@scheme|{@in [<module>]}| - switch to @var{<module>}, or the @scheme{interaction-environment} if @var{<module>} is not specified}
-;;> @item{@scheme|{@meta <expr>}| - evaluate @var{<expr>} in the @scheme{(meta)} module}
-;;> @item{@scheme|{@meta-module-is <module>}| - switch the meta module to @var{<module>}}
-;;> @item{@scheme|{@exit}| - exit the REPL}
+;;> \itemlist[
+;;> \item{\scheme|{\import <import-spec>}| - import the \var{<import-spec>} in the \scheme{interaction-environment}, useful if the \scheme{import} binding is not available}
+;;> \item{\scheme|{\import-only <import-spec>}| - replace the \scheme{interaction-environment} with the given \var{<import-spec>}}
+;;> \item{\scheme|{\in [<module>]}| - switch to \var{<module>}, or the \scheme{interaction-environment} if \var{<module>} is not specified}
+;;> \item{\scheme|{\meta <expr>}| - evaluate \var{<expr>} in the \scheme{(meta)} module}
+;;> \item{\scheme|{\meta-module-is <module>}| - switch the meta module to \var{<module>}}
+;;> \item{\scheme|{\exit}| - exit the REPL}
 ;;> ]
 
 (define-record-type Repl
@@ -236,7 +236,7 @@
 (define (repl/meta-module-is rp args meta continue)
   (cond
    ((null? (cdr args))
-    (warn "usage: @meta <module>"))
+    (warn "usage: @meta-module-is <module>"))
    ((eval `(load-module ',(cadr args)) (repl-meta-env rp))
     => (lambda (m) (repl-meta-env-set! rp (module-env m))))
    (else

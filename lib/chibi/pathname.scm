@@ -39,9 +39,9 @@
 ;;             (let ((start (string-scan-right #\/ path (- end 1))))
 ;;               (substring path (if start (+ start 1) 0) (+ end 1)))))))
 
-;;> Returns just the basename of @var{path}, with any directory
-;;> removed.  If @var{path} does not contain a directory separator,
-;;> return the whole @var{path}.  If @var{path} ends in a directory
+;;> Returns just the basename of \var{path}, with any directory
+;;> removed.  If \var{path} does not contain a directory separator,
+;;> return the whole \var{path}.  If \var{path} ends in a directory
 ;;> separator (i.e. path is a directory) return the empty string.
 
 ;; GNU basename
@@ -56,8 +56,8 @@
                   path
                   (substring path (+ slash 1) len)))))))
 
-;;> Returns just the directory of @var{path}.
-;;> If @var{path} is relative, return @scheme{"."}.
+;;> Returns just the directory of \var{path}.
+;;> If \var{path} is relative, return \scheme{"."}.
 
 (define (path-directory path)
   (if (string=? path "")
@@ -73,8 +73,8 @@
 
 (define (path-extension-pos path) (string-scan-right #\. path))
 
-;;> Returns the rightmost extension of @var{path}, not including
-;;> the @scheme{"."}.  If there is no extension, returns @scheme{#f}.
+;;> Returns the rightmost extension of \var{path}, not including
+;;> the \scheme{"."}.  If there is no extension, returns \scheme{#f}.
 
 (define (path-extension path)
   (let ((i (path-extension-pos path)))
@@ -82,8 +82,8 @@
          (let ((start (+ i 1)) (end (string-length path)))
            (and (< start end) (substring path start end))))))
 
-;;> Returns @var{path} with the extension, if any, removed,
-;;> along with the @scheme{"."}.
+;;> Returns \var{path} with the extension, if any, removed,
+;;> along with the \scheme{"."}.
 
 (define (path-strip-extension path)
   (let ((i (path-extension-pos path)))
@@ -91,18 +91,18 @@
         (substring path 0 i)
         path)))
 
-;;> Returns @var{path} with the extension, if any, replaced
-;;> with @var{ext}.
+;;> Returns \var{path} with the extension, if any, replaced
+;;> with \var{ext}.
 
 (define (path-replace-extension path ext)
   (string-append (path-strip-extension path) "." ext))
 
-;;> Returns @scheme{#t} iff @var{path} is an absolute path.
+;;> Returns \scheme{#t} iff \var{path} is an absolute path.
 
 (define (path-absolute? path)
   (and (not (string=? "" path)) (eqv? #\/ (string-ref path 0))))
 
-;;> Returns @scheme{#t} iff @var{path} is a relative path.
+;;> Returns \scheme{#t} iff \var{path} is a relative path.
 
 (define (path-relative? path) (not (path-absolute? path)))
 
@@ -114,7 +114,7 @@
 ;;> separators removed and "/./" and "x/../" references removed.
 ;;> Does not take symbolic links into account - this is meant to
 ;;> be abstract and applicable to paths on remote systems and in
-;;> URIs.  Returns @var{path} itself if @var{path} is already
+;;> URIs.  Returns \var{path} itself if \var{path} is already
 ;;> normalized.
 
 (define (path-normalize path)
@@ -184,7 +184,7 @@
         path
         ((if (eqv? #\/ (string-ref path 0)) boundary inside) 0 1 '()))))
 
-;;> Return a new string representing the path where each of @var{args}
+;;> Return a new string representing the path where each of \var{args}
 ;;> is a path component, separated with the directory separator.
 
 (define (make-path . args)

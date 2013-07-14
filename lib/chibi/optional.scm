@@ -31,6 +31,11 @@
 (define (symbol->keyword sym)
   (string->symbol (string-append (symbol->string sym) ":")))
 
+(define-syntax symbol->keyword*
+  (syntax-rules ()
+    ((symbol->keyword* sym)
+     (string->symbol (string-append (symbol->string sym) ":")))))
+
 (define-syntax let-keywords*
   (syntax-rules ()
     ((let-keywords* opt-ls () . body)
@@ -38,8 +43,10 @@
     ((let-keywords* (op . args) vars . body)
      (let ((tmp (op . args)))
        (let-keywords* tmp vars . body)))
+    ((let-keywords* opt-ls ((var) . rest) . body)
+     (let-keywords* opt-ls ((var #f) . rest) . body))
     ((let-keywords* opt-ls ((var default) . rest) . body)
-     (let ((var (keyword-ref* opt-ls (symbol->keyword 'var) default)))
+     (let ((var (keyword-ref* opt-ls (symbol->keyword* 'var) default)))
        (let-keywords* opt-ls rest . body)))
     ((let-keywords* opt-ls ((var key default) . rest) . body)
      (let ((var (keyword-ref* opt-ls 'key default)))

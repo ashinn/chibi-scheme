@@ -11,9 +11,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; association lists
 
-;;> @subsubsubsection{@scheme{(assq-ref ls key [default])}}
-;;> Returns the @scheme{cdr} of the cell in @var{ls} whose
-;;> @scheme{car} is @scheme{eq?} to @var{key}, or @var{default}
+;;> \subsubsubsection{\scheme{(assq-ref ls key [default])}}
+;;> Returns the \scheme{cdr} of the cell in \var{ls} whose
+;;> \scheme{car} is \scheme{eq?} to \var{key}, or \var{default}
 ;;> if not found.  Useful for retrieving values associated with
 ;;> MIME headers.
 
@@ -81,24 +81,24 @@
       (string-for-each (lambda (ch) (write-char (char-downcase ch) out)) s))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;> @subsubsection{RFC2822 Headers}
+;;> \subsubsection{RFC2822 Headers}
 
-;;> @subsubsubsection{@scheme{(mime-header-fold kons knil [source [limit [kons-from]]])}}
+;;> \subsubsubsection{\scheme{(mime-header-fold kons knil [source [limit [kons-from]]])}}
 ;;>
 ;;> Performs a fold operation on the MIME headers of source which can be
-;;> either a string or port, and defaults to current-input-port.  @var{kons}
+;;> either a string or port, and defaults to current-input-port.  \var{kons}
 ;;> is called on the three values:
-;;>    @scheme{(kons header value accumulator)}
-;;> where accumulator begins with @var{knil}.  Neither the header nor the
+;;>    \scheme{(kons header value accumulator)}
+;;> where accumulator begins with \var{knil}.  Neither the header nor the
 ;;> value are modified, except wrapped lines are handled for the value.
 ;;>
-;;> The optional procedure @var{kons-from} is a procedure to be called when
+;;> The optional procedure \var{kons-from} is a procedure to be called when
 ;;> the first line of the headers is an "From <address> <date>" line, to
 ;;> enable this procedure to be used as-is on mbox files and the like.
-;;> It defaults to @var{kons}, and if such a line is found the fold will begin
-;;> with @scheme{(kons-from "%from" <address> (kons-from "%date" <date> knil))}.
+;;> It defaults to \var{kons}, and if such a line is found the fold will begin
+;;> with \scheme{(kons-from '%from <address> (kons-from '%date <date> knil))}.
 ;;>
-;;> The optional @var{limit} gives a limit on the number of headers to read.
+;;> The optional \var{limit} gives a limit on the number of headers to read.
 
 (define (mime-header-fold kons knil . o)
   (let ((src (and (pair? o) (car o)))
@@ -147,7 +147,7 @@
      (else
       (out first-line knil 0)))))
 
-;;> @subsubsubsection{@scheme{(mime-headers->list [source])}}
+;;> \subsubsubsection{\scheme{(mime-headers->list [source])}}
 ;;> Return an alist of the MIME headers from source with headers all
 ;;> downcased.
 
@@ -170,11 +170,11 @@
                       (substring s (+ i 1) (string-length s)))))
         (cons (string->symbol (string-downcase (string-trim s))) ""))))
 
-;;> @subsubsubsection{@scheme{(mime-parse-content-type str)}}
-;;> Parses @var{str} as a Content-Type style-value returning the list
-;;> @scheme{(type (attr . val) ...)}.
+;;> \subsubsubsection{\scheme{(mime-parse-content-type str)}}
+;;> Parses \var{str} as a Content-Type style-value returning the list
+;;> \scheme{(type (attr . val) ...)}.
 
-;;> @example{
+;;> \example{
 ;;> (mime-parse-content-type "text/html; CHARSET=UTF-8; filename=index.html")
 ;;> }
 
@@ -184,8 +184,8 @@
         (cons (caar res) (cdr res))
         res)))
 
-;;> @subsubsubsection{@scheme{(mime-decode-header str)}}
-;;> Replace all occurrences of RFC1522 =?ENC?...?= escapes in @var{str} with
+;;> \subsubsubsection{\scheme{(mime-decode-header str)}}
+;;> Replace all occurrences of RFC1522 =?ENC?...?= escapes in \var{str} with
 ;;> the appropriate decoded and charset converted value.
 
 (define (mime-decode-header str)
@@ -246,19 +246,19 @@
    (lambda (x) (next (mime-convert-part x cte enc)))
    (lambda (x) (final (mime-convert-part x cte enc)))))
 
-;;> @subsubsection{RFC2045 MIME Encoding}
+;;> \subsubsection{RFC2045 MIME Encoding}
 
-;;> @subsubsubsection{@scheme{(mime-message-fold src kons knil [start end headers])}}
-;;> Performs a fold operation on the given string or port @var{src} as a
-;;> MIME body corresponding to the headers give in @var{headers}.  @var{kons}
+;;> \subsubsubsection{\scheme{(mime-message-fold src kons knil [start end headers])}}
+;;> Performs a fold operation on the given string or port \var{src} as a
+;;> MIME body corresponding to the headers give in \var{headers}.  \var{kons}
 ;;> is called on the successive values:
 ;;>
-;;> @schemeblock{(kons parent-headers part-headers part-body accumulator)}
+;;> \schemeblock{(kons parent-headers part-headers part-body accumulator)}
 ;;>
-;;> where @var{part-headers} are the headers for the given MIME part (the
-;;> original headers for single-part MIME), @var{part-body} is the
+;;> where \var{part-headers} are the headers for the given MIME part (the
+;;> original headers for single-part MIME), \var{part-body} is the
 ;;> appropriately decoded and charset-converted body of the message,
-;;> and the @var{accumulator} begins with @var{knil}.
+;;> and the \var{accumulator} begins with \var{knil}.
 
 (define (mime-message-fold src kons init-seed . o)
   (let ((port (if (string? src) (open-input-string src) src)))
@@ -314,11 +314,11 @@
              (lambda (x) (next (kons parent-headers headers x seed)))
              (lambda (x) (final (kons parent-headers headers x seed)))))))))))
 
-;;> @subsubsubsection{@scheme{(mime-message->sxml [src])}}
+;;> \subsubsubsection{\scheme{(mime-message->sxml [src])}}
 ;;> 
 ;;> Parse the given source as a MIME message and return
 ;;> the result as an SXML object of the form:
-;;> @scheme{(mime (@ (header . value) ...) parts ...)}.
+;;> \scheme{(mime (@ (header . value) ...) parts ...)}.
 
 (define (mime-message->sxml . o)
   (car

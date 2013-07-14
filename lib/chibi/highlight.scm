@@ -15,14 +15,14 @@
 
 ;;> Returns an sxml structure representing the code from source
 ;;> with various language constructs wrapped in highlighting
-;;> forms.  @var{source} should be a string or port.  The
+;;> forms.  \var{source} should be a string or port.  The
 ;;> language to highlight for is auto-detected.
 
 (define (highlight source)
   (let ((str (if (string? source) source (port->string source))))
     ((highlighter-for (highlight-detect-language str)) str)))
 
-;;> Attempst to auto-detect which language @var{str} is code
+;;> Attempst to auto-detect which language \var{str} is code
 ;;> for, and returns a symbol representing that language.
 
 (define (highlight-detect-language str)
@@ -68,8 +68,8 @@
   '("#AAAAAA" "#888888" "#666666" "#444444" "#222222" "#000000"))
 
 ;;> Returns a string representing the CSS needed for the output
-;;> of @var{highlight}.  This should be included in a referenced
-;;> CSS file, or in a @var{<script>} section in the generated in
+;;> of \var{highlight}.  This should be included in a referenced
+;;> CSS file, or in a \var{<script>} section in the generated in
 ;;> the generated HTML output.
 
 (define (highlight-style . theme)
