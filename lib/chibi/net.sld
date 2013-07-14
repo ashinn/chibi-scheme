@@ -2,12 +2,14 @@
 (define-library (chibi net)
   (export sockaddr? address-info? get-address-info make-address-info
           socket connect bind accept listen open-socket-pair
+          sockaddr-name
           with-net-io open-net-io make-listener-socket
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next
-          address-family/unix address-family/inet
+          address-family/unix address-family/inet address-family/unspecified
           socket-type/stream socket-type/datagram socket-type/raw
-          ip-proto/tcp ip-proto/udp
+          ip-proto/ip ip-proto/tcp ip-proto/udp
+          ai/passive ai/canonname ai/numeric-host
           get-socket-option set-socket-option! level/socket
           socket-opt/debug socket-opt/broadcast socket-opt/reuseaddr
           socket-opt/keepalive socket-opt/oobinline socket-opt/sndbuf
