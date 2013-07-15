@@ -1,4 +1,4 @@
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Library for parsing and constructing URI objects.
@@ -35,55 +35,6 @@
          (o (if (pair? o) (cdr o) '()))
          (fragment (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) #f)))
     (%make-uri scheme user host port path query fragment)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; string utils (don't feel like using SRFI-13 and these are more
-;; specialised)
-
-(define (string-scan str ch . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
-    (let lp ((i start))
-      (and (< i end)
-           (if (eqv? ch (string-ref str i))
-               i
-               (lp (+ i 1)))))))
-
-(define (string-scan-right str ch . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
-    (let lp ((i (- end 1)))
-      (and (>= i start)
-           (if (eqv? ch (string-ref str i))
-               i
-               (lp (- i 1)))))))
-
-(define (string-index-of str pred . o)
-  (let ((start (if (pair? o) (car o) 0))
-        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
-    (let lp ((i start))
-      (cond ((>= i end) #f)
-            ((pred (string-ref str i)) i)
-            (else (lp (+ i 1)))))))
-
-(define (string-downcase->symbol str)
-  (let ((len (string-length str)))
-    (let lp ((i 0))
-      (cond
-       ((= i len)
-        (string->symbol str))
-       ((char-upper-case? (string-ref str i))
-        (let ((res (make-string len)))
-          (do ((j 0 (+ j 1)))
-              ((= j i))
-            (string-set! res j (string-ref str j)))
-          (string-set! res i (char-downcase (string-ref str i)))
-          (do ((j (+ i 1) (+ j 1)))
-              ((= j len))
-            (string-set! res j (char-downcase (string-ref str j))))
-          (string->symbol res)))
-       (else
-        (lp (+ i 1)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -123,7 +74,12 @@
 ;; parsing - without :// we just split into scheme & path
 
 (define (char-uri-scheme-unsafe? ch)
-  (not (or (char-alphabetic? ch) (char-numeric? ch) (memv ch '(#\_ #\-)))))
+  (not (or (char-alphabetic? ch) (char-numeric? ch) (memv ch '(#\+ #\- #\.)))))
+
+;;> Parses a string with a default scheme and returns a new URI
+;;> object.  If the string does not begin with a scheme it is take to
+;;> be a simple path URI with the default scheme.  This is a
+;;> lightweight permissive parser.
 
 (define (string->path-uri scheme str . o)
   (define decode? (and (pair? o) (car o)))
@@ -132,18 +88,18 @@
     (if (and (pair? o) (pair? (cdr o)) (cadr o))
         uri-query->alist
         decode))
-  (if (pair? str)
+  (if (uri? str)
       str
       (let* ((len (string-length str))
-             (colon0 (string-scan str #\:))
+             (colon0 (string-find str #\:))
              (colon
-              (and (not (string-index-of str char-uri-scheme-unsafe?
-                                         0 (or colon0 len)))
+              (and (not (string-find str char-uri-scheme-unsafe?
+                                     0 (or colon0 len)))
                    colon0)))
         (if (or (not colon) (zero? colon))
             (and scheme
-                 (let* ((quest (string-scan str #\? 0))
-                        (pound (string-scan str #\# (or quest 0))))
+                 (let* ((quest (string-find str #\? 0))
+                        (pound (string-find str #\# (or quest 0))))
                    (make-uri scheme #f #f #f
                              (decode (substring str 0 (or quest pound len)))
                              (and quest
@@ -152,7 +108,8 @@
                              (and pound
                                   (decode (substring str (+ pound 1) len))))))
             (let ((sc1 (+ colon 1))
-                  (scheme (string-downcase->symbol (substring str 0 colon))))
+                  (scheme (string->symbol
+                           (string-downcase-ascii (substring str 0 colon)))))
               (if (= sc1 len)
                   (make-uri scheme)
                   (if (or (>= (+ sc1 1) len)
@@ -162,12 +119,12 @@
                       (if (>= (+ sc1 2) len)
                           (make-uri scheme #f "")
                           (let* ((sc2 (+ sc1 2))
-                                 (slash (string-scan str #\/ sc2))
+                                 (slash (string-find str #\/ sc2))
                                  (sc3 (or slash len))
-                                 (at (string-scan-right str #\@ sc2 sc3))
-                                 (colon3 (string-scan str #\: (or at sc2) sc3))
-                                 (quest (string-scan str #\? sc3))
-                                 (pound (string-scan str #\# (or quest sc3))))
+                                 (at (string-find-right str #\@ sc2 sc3))
+                                 (colon3 (string-find str #\: (or at sc2) sc3))
+                                 (quest (string-find str #\? sc3))
+                                 (pound (string-find str #\# (or quest sc3))))
                             (%make-uri
                              scheme
                              (and at (decode (substring str sc2 at)))
@@ -189,7 +146,8 @@
                                   (decode (substring str (+ pound 1) len)))
                              ))))))))))
 
-;;> Parses a string and returns a new URI object.
+;;> Parses a string and returns a new URI object.  If the string does
+;;> not have a scheme, returns false.
 
 (define (string->uri str . o)
   (apply string->path-uri #f str o))
@@ -314,8 +272,8 @@
     (let lp ((i 0) (res '()))
       (if (>= i len)
           (reverse res)
-          (let* ((j (or (string-index-of str split-char? i) len))
-                 (k (string-scan str #\= i j))
+          (let* ((j (or (string-find str split-char? i) len))
+                 (k (string-find str #\= i j))
                  (cell (if k
                            (cons (uri-decode (substring str i k) plus?)
                                  (uri-decode (substring str (+ k 1) j) plus?))
