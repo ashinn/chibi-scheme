@@ -284,7 +284,12 @@
              `(,(rename 'begin)
                ,@(cdr (cddr expr))
                (,(rename 'lp)
-                ,@(map (lambda (x) (if (pair? (cddr x)) (car (cddr x)) (car x)))
+                ,@(map (lambda (x)
+                         (if (pair? (cddr x))
+                             (if (pair? (cdr (cddr x)))
+                                 (error "too many forms in do iterator" x)
+                                 (car (cddr x)))
+                             (car x)))
                        (cadr expr)))))
             (check (car (cddr expr)))
             (wrap
