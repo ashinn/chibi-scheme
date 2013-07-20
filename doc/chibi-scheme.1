@@ -77,6 +77,10 @@ The default language is an extended subset of the draft R7RS
 .I chibi-scheme -xscheme.base
 
 .SH OPTIONS
+
+Space is optional between options and their arguments.
+Options without arguments may not be chained together.
+
 .TP 5
 .BI -V
 Prints the version information and exits.
@@ -162,9 +166,22 @@ This feature is still experimental.
 .SH ENVIRONMENT
 .TP
 .B CHIBI_MODULE_PATH
-.TQ
 A colon separated list of directories to search for module
-files, inserted before the system default load paths.
+files, inserted before the system default load paths.  chibi-scheme
+searchs for modules in directories in the following order:
+
+.TP
+          directories included with the -I path option
+.TP
+          .
+.TP
+          ./lib
+.TP
+          directories included from CHIBI_MODULE_PATH
+.TP
+          system directories 
+.TP
+          directories included with -A path option
 
 .SH AUTHORS
 .PP
@@ -172,8 +189,8 @@ Alex Shinn (alexshinn @ gmail . com)
 
 .SH SEE ALSO
 .PP
-More detailed information can be found in the README file
-included in the distribution.
+More detailed information can be found in the manuale included in
+doc/chibi.scrbl included in the distribution.
 
 The chibi-scheme home-page:
 .br
