@@ -1271,7 +1271,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
   suffix = sexp_stringp(source) ? sexp_string_data(source)
-    + sexp_string_length(source) - strlen(sexp_so_extension) : "...";
+    + sexp_string_size(source) - strlen(sexp_so_extension) : "...";
   if (strcmp(suffix, sexp_so_extension) == 0) {
     res = sexp_load_dl(ctx, source, env);
   } else {
@@ -1580,8 +1580,8 @@ sexp sexp_string_cmp_op (sexp ctx, sexp self, sexp_sint_t n, sexp str1, sexp str
   sexp_sint_t len1, len2, len, diff;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str1);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str2);
-  len1 = sexp_string_length(str1);
-  len2 = sexp_string_length(str2);
+  len1 = sexp_string_size(str1);
+  len2 = sexp_string_size(str2);
   len = ((len1<len2) ? len1 : len2);
   if (ci==SEXP_FALSE)
     diff = strncmp(sexp_string_data(str1), sexp_string_data(str2), len);
@@ -1600,7 +1600,7 @@ sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
-  if (sexp_unbox_fixnum(off) >= sexp_string_length(str))
+  if (sexp_unbox_fixnum(off) >= sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-ref: index out of range", i);
   return sexp_string_utf8_ref(ctx, str, off);
 }
@@ -1634,7 +1634,7 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
   old_len = sexp_utf8_initial_byte_count(*p);
   new_len = sexp_utf8_char_byte_count(c);
   if (old_len != new_len) { /* resize bytes if needed */
-    len = sexp_string_length(str)+(new_len-old_len);
+    len = sexp_string_size(str)+(new_len-old_len);
     b = sexp_make_bytes(ctx, sexp_make_fixnum(len), SEXP_VOID);
     if (! sexp_exceptionp(b)) {
       q = (unsigned char*)sexp_bytes_data(b);
@@ -1643,7 +1643,7 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
       sexp_string_bytes(str) = b;
       p = q + i;
     }
-    sexp_string_length(str) += new_len - old_len;
+    sexp_string_size(str) += new_len - old_len;
   }
   sexp_utf8_encode_char(p, new_len, c);
 }
@@ -1655,7 +1655,7 @@ sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
   off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
-  if (sexp_unbox_fixnum(off) >= sexp_string_length(str))
+  if (sexp_unbox_fixnum(off) >= sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-set!: index out of range", i);
   sexp_string_utf8_set(ctx, str, off, ch);
   return SEXP_VOID;
@@ -1933,7 +1933,7 @@ sexp sexp_find_module_file (sexp ctx, const char *file) {
   ls = sexp_global(ctx, SEXP_G_MODULE_PATH);
   for ( ; sexp_pairp(ls) && sexp_not(res); ls=sexp_cdr(ls)) {
     dir = sexp_string_data(sexp_car(ls));
-    dirlen = sexp_string_length(sexp_car(ls));
+    dirlen = sexp_string_size(sexp_car(ls));
     slash = dir[dirlen-1] == '/';
     len = dirlen+filelen+2-slash;
     path = (char*) sexp_malloc(len);

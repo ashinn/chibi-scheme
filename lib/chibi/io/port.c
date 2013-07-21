@@ -59,7 +59,7 @@ static ssize_t sexp_cookie_reader (void *cookie, char *buffer, size_t size)
   ctx = sexp_cookie_ctx(vec);
   ctx2 = sexp_last_context(ctx, (sexp*)&cookie);
   sexp_gc_preserve2(ctx, ctx2, args);
-  if (size > sexp_string_length(sexp_cookie_buffer(vec)))
+  if (size > sexp_string_size(sexp_cookie_buffer(vec)))
     sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID));
   args = sexp_list2(ctx, SEXP_ZERO, sexp_make_fixnum(size));
   args = sexp_cons(ctx, sexp_cookie_buffer(vec), args);
@@ -85,7 +85,7 @@ static ssize_t sexp_cookie_writer (void *cookie, const char *buffer, size_t size
   ctx = sexp_cookie_ctx(vec);
   ctx2 = sexp_last_context(ctx, (sexp*)&cookie);
   sexp_gc_preserve2(ctx, ctx2, args);
-  if (size > sexp_string_length(sexp_cookie_buffer(vec)))
+  if (size > sexp_string_size(sexp_cookie_buffer(vec)))
     sexp_cookie_buffer_set(vec, sexp_make_string(ctx, sexp_make_fixnum(size), SEXP_VOID));
   memcpy(sexp_string_data(sexp_cookie_buffer(vec)), buffer, size);
   args = sexp_list2(ctx, SEXP_ZERO, sexp_make_fixnum(size));
@@ -242,7 +242,7 @@ sexp sexp_bytes_to_string (sexp ctx, sexp vec) {
   res = sexp_alloc_type(ctx, string, SEXP_STRING);
   sexp_string_bytes(res) = vec;
   sexp_string_offset(res) = 0;
-  sexp_string_length(res) = sexp_bytes_length(vec);
+  sexp_string_size(res) = sexp_bytes_length(vec);
 #endif
   return res;
 }
@@ -285,7 +285,7 @@ sexp sexp_string_count (sexp ctx, sexp self, sexp ch, sexp str, sexp start, sexp
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
-  if (sexp_not(end)) end = sexp_make_fixnum(sexp_string_length(str));
+  if (sexp_not(end)) end = sexp_make_fixnum(sexp_string_size(str));
   else sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
   c = sexp_unbox_character(ch);
 #if SEXP_USE_UTF8_STRINGS
@@ -293,7 +293,7 @@ sexp sexp_string_count (sexp ctx, sexp self, sexp ch, sexp str, sexp start, sexp
 #endif
     s = (unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(start);
     e = (unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(end);
-    if (e > (unsigned char*)sexp_string_data(str) + sexp_string_length(str))
+    if (e > (unsigned char*)sexp_string_data(str) + sexp_string_size(str))
       return sexp_user_exception(ctx, self, "string-count: end index out of range", end);
     /* fast case for ASCII chars */
     while (s < e) if (*s++ == c) count++;
@@ -312,7 +312,7 @@ sexp sexp_string_count (sexp ctx, sexp self, sexp ch, sexp str, sexp start, sexp
 sexp sexp_string_to_utf8 (sexp ctx, sexp self, sexp str) {
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  res = sexp_c_string(ctx, sexp_string_data(str), sexp_string_length(str));
+  res = sexp_c_string(ctx, sexp_string_data(str), sexp_string_size(str));
   return sexp_string_to_bytes(ctx, res);
 }
 

@@ -54,11 +54,11 @@
 (define-c errno getpwuid_r
   (uid_t (result passwd)
          (link string)
-         (value (string-length arg2) int)
+         (value (string-size arg2) int)
          (result pointer passwd)))
 
 (define-c errno getpwnam_r
   (string (result passwd)
           (link string)
-          (value (string-length arg2) int)
+          (value (string-size arg2) int)
           (result pointer passwd)))

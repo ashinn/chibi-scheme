@@ -1371,17 +1371,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (! sexp_fixnump(_ARG2))
       sexp_raise("string-ref: not an integer", sexp_list1(ctx, _ARG2));
     i = sexp_unbox_fixnum(_ARG2);
-    if ((i < 0) || (i >= sexp_string_length(_ARG1)))
+    if ((i < 0) || (i >= sexp_string_size(_ARG1)))
       sexp_raise("string-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
-#if SEXP_USE_UTF8_STRINGS
-      _ARG2 = sexp_string_utf8_ref(ctx, _ARG1, _ARG2);
-#else
-      _ARG2 = sexp_string_ref(_ARG1, _ARG2);
-#endif
+    _ARG2 = sexp_string_cursor_ref(ctx, _ARG1, _ARG2);
     top--;
-#if SEXP_USE_UTF8_STRINGS
     sexp_check_exception();
-#endif
     break;
   case SEXP_OP_BYTES_SET:
     if (! sexp_bytesp(_ARG1))
@@ -1410,14 +1404,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (! sexp_charp(_ARG3))
       sexp_raise("string-set!: not a char", sexp_list1(ctx, _ARG3));
     i = sexp_unbox_fixnum(_ARG2);
-    if ((i < 0) || (i >= sexp_string_length(_ARG1)))
+    if ((i < 0) || (i >= sexp_string_size(_ARG1)))
       sexp_raise("string-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
-#if SEXP_USE_UTF8_STRINGS
     sexp_context_top(ctx) = top;
-    sexp_string_utf8_set(ctx, _ARG1, _ARG2, _ARG3);
-#else
-    sexp_string_set(_ARG1, _ARG2, _ARG3);
-#endif
+    sexp_string_set(ctx, _ARG1, _ARG2, _ARG3);
     top-=3;
     break;
 #endif
@@ -1427,8 +1417,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_raise("string-cursor-next: not a string", sexp_list1(ctx, _ARG1));
     else if (! sexp_fixnump(_ARG2))
       sexp_raise("string-cursor-next: not an integer", sexp_list1(ctx, _ARG2));
-    i = sexp_unbox_fixnum(_ARG2);
-    _ARG2 = sexp_make_fixnum(i + sexp_utf8_initial_byte_count(((unsigned char*)sexp_string_data(_ARG1))[i]));
+    _ARG2 = sexp_string_cursor_next(_ARG1, _ARG2);
     top--;
     sexp_check_exception();
     break;
@@ -1437,15 +1426,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_raise("string-cursor-prev: not a string", sexp_list1(ctx, _ARG1));
     else if (! sexp_fixnump(_ARG2))
       sexp_raise("string-cursor-prev: not an integer", sexp_list1(ctx, _ARG2));
-    i = sexp_unbox_fixnum(_ARG2);
-    _ARG2 = sexp_make_fixnum(sexp_string_utf8_prev((unsigned char*)sexp_string_data(_ARG1)+i) - sexp_string_data(_ARG1));
+    _ARG2 = sexp_string_cursor_prev(_ARG1, _ARG2);
     top--;
     sexp_check_exception();
     break;
   case SEXP_OP_STRING_SIZE:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-size: not a string", sexp_list1(ctx, _ARG1));
-    _ARG1 = sexp_make_fixnum(sexp_string_length(_ARG1));
+    _ARG1 = sexp_make_fixnum(sexp_string_size(_ARG1));
     break;
 #endif
   case SEXP_OP_BYTES_LENGTH:
@@ -1456,11 +1444,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_STRING_LENGTH:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-length: not a string", sexp_list1(ctx, _ARG1));
-#if SEXP_USE_UTF8_STRINGS
-    _ARG1 = sexp_make_fixnum(sexp_string_utf8_length((unsigned char*)sexp_string_data(_ARG1), sexp_string_length(_ARG1)));
-#else
     _ARG1 = sexp_make_fixnum(sexp_string_length(_ARG1));
-#endif
     break;
   case SEXP_OP_MAKE_PROCEDURE:
     sexp_context_top(ctx) = top;
