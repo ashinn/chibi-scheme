@@ -923,9 +923,9 @@ int sexp_utf8_char_byte_count (int c) {
   return 4;
 }
 
-int sexp_string_utf8_length (unsigned char *p, int len) {
+sexp_uint_t sexp_string_utf8_length (unsigned char *p, long len) {
   unsigned char *q = p+len;
-  int i;
+  sexp_uint_t i;
   for (i=0; p<q; i++)
     p += sexp_utf8_initial_byte_count(*p);
   return i;

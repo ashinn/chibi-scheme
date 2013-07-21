@@ -690,8 +690,8 @@ the following macros:
 
 \itemlist[
 \item{\ccode{char* sexp_string_data(s)} - the raw bytes of the string}
-\item{\ccode{unsigned long sexp_string_size(s)} - the number of raw bytes in the string}
-\item{\ccode{int sexp_string_length(sexp s)} - the number of characters encoded in \var{s}}
+\item{\ccode{sexp_uint_t sexp_string_size(s)} - the number of raw bytes in the string}
+\item{\ccode{sexp_uint_t sexp_string_length(sexp s)} - the number of characters encoded in \var{s}}
 ]
 
 Currently all Scheme strings also happen to be NULL-terminated, but

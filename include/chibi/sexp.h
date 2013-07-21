@@ -1403,7 +1403,7 @@ SEXP_API void sexp_init(void);
 #if SEXP_USE_UTF8_STRINGS
 SEXP_API int sexp_utf8_initial_byte_count (int c);
 SEXP_API int sexp_utf8_char_byte_count (int c);
-SEXP_API int sexp_string_utf8_length (unsigned char *p, int len);
+SEXP_API sexp_uint_t sexp_string_utf8_length (unsigned char *p, long len);
 SEXP_API char* sexp_string_utf8_prev (unsigned char *p);
 SEXP_API sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i);
 SEXP_API sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i);
