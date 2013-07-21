@@ -783,7 +783,9 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_debug(sexp ctx, char* msg, sexp obj)} - write \var{obj} with a debug message prefix to \scheme{current-error-port}}
 \item{\ccode{sexp_read_from_string(sexp ctx, char* str, int len)} - read a single datum from \var{str}, using at most \var{len} bytes if \var{len} is non-negative}
 \item{\ccode{sexp_write_to_string(sexp ctx, sexp obj)} - return a Scheme string representation of \var{obj}}
-\item{\ccode{sexp_make_input_string_port(sexp ctx, sexp str)} - equivalent to \scheme{open-input-string}}
+\item{\ccode{sexp_open_input_string(sexp ctx, sexp str)} - equivalent to \scheme{open-input-string}}
+\item{\ccode{sexp_open_output_string(sexp ctx)} - equivalent to \scheme{open-output-string}}
+\item{\ccode{sexp_get_output_string(sexp ctx, sexp port)} - equivalent to \scheme{open-output-string}}
 ]
 
 \subsubsection{Utilities}

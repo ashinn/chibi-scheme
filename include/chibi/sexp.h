@@ -1383,8 +1383,8 @@ SEXP_API sexp sexp_set_port_fold_case (sexp ctx, sexp self, sexp_sint_t n, sexp 
 #if SEXP_USE_OBJECT_BRACE_LITERALS
 SEXP_API sexp sexp_lookup_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp id);
 #endif
-SEXP_API sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp str);
-SEXP_API sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n);
+SEXP_API sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str);
+SEXP_API sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n);
 SEXP_API sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 SEXP_API sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source);
 SEXP_API sexp sexp_user_exception (sexp ctx, sexp self, const char *msg, sexp x);
@@ -1524,8 +1524,8 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_string_concatenate(ctx, ls, s) sexp_string_concatenate_op(ctx, NULL, 2, ls, s)
 #define sexp_memq(ctx, a, b) sexp_memq_op(ctx, NULL, 2, a, b)
 #define sexp_assq(ctx, a, b) sexp_assq_op(ctx, NULL, 2, a, b)
-#define sexp_make_output_string_port(ctx) sexp_make_output_string_port_op(ctx, NULL, 0)
-#define sexp_make_input_string_port(ctx, s) sexp_make_input_string_port_op(ctx, NULL, 1, s)
+#define sexp_open_output_string(ctx) sexp_open_output_string_op(ctx, NULL, 0)
+#define sexp_open_input_string(ctx, s) sexp_open_input_string_op(ctx, NULL, 1, s)
 #define sexp_get_output_string(ctx, out) sexp_get_output_string_op(ctx, NULL, 1, out)
 #define sexp_expt(ctx, a, b) sexp_expt_op(ctx, NULL, 2, a, b)
 #define sexp_register_simple_type(ctx, a, b, c) sexp_register_simple_type_op(ctx, NULL, 3, a, b, c)
