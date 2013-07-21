@@ -968,7 +968,7 @@ sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, index);
   p = (unsigned char*)sexp_string_data(str);
-  limit = sexp_string_length(str);
+  limit = sexp_string_size(str);
   for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
     j += sexp_utf8_initial_byte_count(p[j]);
   if (i != 0)
@@ -1009,7 +1009,7 @@ sexp sexp_make_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch)
   s = sexp_alloc_type(ctx, string, SEXP_STRING);
   sexp_string_bytes(s) = b;
   sexp_string_offset(s) = 0;
-  sexp_string_length(s) = sexp_bytes_length(b);
+  sexp_string_size(s) = sexp_bytes_length(b);
   sexp_gc_release2(ctx);
   return s;
 #endif
@@ -1029,19 +1029,19 @@ sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
   if (sexp_not(end))
-    end = sexp_make_fixnum(sexp_string_length(str));
+    end = sexp_make_fixnum(sexp_string_size(str));
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
   if ((sexp_unbox_fixnum(start) < 0)
-      || (sexp_unbox_fixnum(start) > sexp_string_length(str))
+      || (sexp_unbox_fixnum(start) > sexp_string_size(str))
       || (sexp_unbox_fixnum(end) < 0)
-      || (sexp_unbox_fixnum(end) > sexp_string_length(str))
+      || (sexp_unbox_fixnum(end) > sexp_string_size(str))
       || (end < start))
     return sexp_range_exception(ctx, str, start, end);
   res = sexp_make_string(ctx, sexp_fx_sub(end, start), SEXP_VOID);
   memcpy(sexp_string_data(res),
          sexp_string_data(str)+sexp_unbox_fixnum(start),
-         sexp_string_length(res));
-  sexp_string_data(res)[sexp_string_length(res)] = '\0';
+         sexp_string_size(res));
+  sexp_string_data(res)[sexp_string_size(res)] = '\0';
   return res;
 }
 
@@ -1056,7 +1056,7 @@ sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp vec, sexp start,
   str = sexp_alloc_type(ctx, string, SEXP_STRING);
   sexp_string_bytes(str) = vec;
   sexp_string_offset(str) = 0;
-  sexp_string_length(str) = sexp_bytes_length(vec);
+  sexp_string_size(str) = sexp_bytes_length(vec);
 #endif
   res = sexp_substring_op(ctx, self, n, str, start, end);
   if (!sexp_exceptionp(res))
@@ -1087,15 +1087,15 @@ sexp sexp_string_concatenate_op (sexp ctx, sexp self, sexp_sint_t n, sexp str_ls
     if (! sexp_stringp(sexp_car(ls)))
       return sexp_type_exception(ctx, self, SEXP_STRING, sexp_car(ls));
     else
-      len += sexp_string_length(sexp_car(ls));
-  if ((i > 0) && sexp_stringp(sep) && ((sep_len=sexp_string_length(sep)) > 0)) {
+      len += sexp_string_size(sexp_car(ls));
+  if ((i > 0) && sexp_stringp(sep) && ((sep_len=sexp_string_size(sep)) > 0)) {
     csep = sexp_string_data(sep);
     len += sep_len*(i-1);
   }
   res = sexp_make_string(ctx, sexp_make_fixnum(len), SEXP_VOID);
   p = sexp_string_data(res);
   for (ls=str_ls; sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    len = sexp_string_length(sexp_car(ls));
+    len = sexp_string_size(sexp_car(ls));
     memcpy(p, sexp_string_data(sexp_car(ls)), len);
     p += len;
     if (sep_len && sexp_pairp(sexp_cdr(ls))) {
@@ -1178,7 +1178,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 
 sexp sexp_string_to_symbol_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  return sexp_intern(ctx, sexp_string_data(str), sexp_string_length(str));
+  return sexp_intern(ctx, sexp_string_data(str), sexp_string_size(str));
 }
 
 sexp sexp_make_vector_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp dflt) {
@@ -1291,7 +1291,7 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   cookie = sexp_make_vector(ctx, sexp_make_fixnum(4), SEXP_VOID);
   sexp_stream_ctx_set(cookie, ctx);
   sexp_stream_buf_set(cookie, str);
-  sexp_stream_size_set(cookie, sexp_make_fixnum(sexp_string_length(str)));
+  sexp_stream_size_set(cookie, sexp_make_fixnum(sexp_string_size(str)));
   sexp_stream_pos_set(cookie, SEXP_ZERO);
   in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
   res = sexp_make_input_port(ctx, in, SEXP_FALSE);
@@ -1327,10 +1327,10 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   if (!sexp_streamp(cookie))
     return sexp_xtype_exception(ctx, self, "not a string port", port);
   fflush(sexp_port_stream(port));
-  return sexp_substring(ctx,
-                        sexp_stream_buf(cookie),
-                        SEXP_ZERO,
-                        sexp_stream_pos(cookie));
+  return sexp_substring_cursor(ctx,
+                               sexp_stream_buf(cookie),
+                               SEXP_ZERO,
+                               sexp_stream_pos(cookie));
 }
 
 #else  /* SEXP_USE_STRING_STREAMS && ! SEXP_BSD */
@@ -1339,13 +1339,13 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   FILE *in;
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  if (sexp_string_length(str) == 0)
+  if (sexp_string_size(str) == 0)
     in = fopen("/dev/null", "r");
   else
-    in = fmemopen(sexp_string_data(str), sexp_string_length(str), "r");
+    in = fmemopen(sexp_string_data(str), sexp_string_size(str), "r");
   if (in) {
     res = sexp_make_input_port(ctx, in, SEXP_FALSE);
-    if (sexp_string_length(str) == 0)
+    if (sexp_string_size(str) == 0)
       sexp_port_name(res) = sexp_c_string(ctx, "/dev/null", -1);
     sexp_port_cookie(res) = str;  /* for gc preservation */
     sexp_port_binaryp(res) = 0;
@@ -1528,7 +1528,7 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   sexp_port_cookie(res) = str;
   sexp_port_buf(res) = sexp_string_data(str);
   sexp_port_offset(res) = 0;
-  sexp_port_size(res) = sexp_string_length(str);
+  sexp_port_size(res) = sexp_string_size(str);
   sexp_port_binaryp(res) = 0;
   return res;
 }
@@ -1891,7 +1891,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     case SEXP_STRING:
       sexp_write_char(ctx, '"', out);
-      i = sexp_string_length(obj);
+      i = sexp_string_size(obj);
       str = sexp_string_data(obj);
       for ( ; i>0; str++, i--) {
         switch (str[0]) {
@@ -2876,11 +2876,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         res = sexp_read_symbol(ctx, in, c1, 0);
         if (sexp_stringp(res)) {
           str = sexp_string_data(res);
-          if (sexp_string_length(res) == 0)
+          if (sexp_string_size(res) == 0)
             res =
               sexp_read_error(ctx, "unexpected end of character literal",
                               SEXP_NULL, in);
-          if (sexp_string_length(res) == 1) {
+          if (sexp_string_size(res) == 1) {
             res = sexp_make_character(c1);
           } else {
             res = 0;
@@ -2944,7 +2944,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '|':
     res = sexp_read_string(ctx, in, '|');
     if (sexp_stringp(res))
-      res = sexp_intern(ctx, sexp_string_data(res), sexp_string_length(res));
+      res = sexp_intern(ctx, sexp_string_data(res), sexp_string_size(res));
     break;
   case '+':
   case '-':
@@ -3007,7 +3007,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           } else if ((str[6] == 'i' || str[6] == 'I') && str[7] == 0) {
             res = sexp_make_complex(ctx, SEXP_ZERO, tmp);
           } else if (str[6] == '+' || str[6] == '-') {
-            res = sexp_substring(ctx, res, SEXP_SIX, SEXP_FALSE);
+            res = sexp_substring_cursor(ctx, res, SEXP_SIX, SEXP_FALSE);
             res = sexp_string_to_number(ctx, res, SEXP_TEN);
             if (sexp_complexp(res) && (sexp_complex_real(res) == SEXP_ZERO))
               sexp_complex_real(res) = tmp;
@@ -3019,7 +3019,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         }
 #endif
         else
-          res = sexp_intern(ctx, str, sexp_string_length(res));
+          res = sexp_intern(ctx, str, sexp_string_size(res));
       }
 #endif
 #if SEXP_USE_COMPLEX

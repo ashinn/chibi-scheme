@@ -1,5 +1,5 @@
 /*  sexp.h -- header for sexp library                         */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_H
@@ -867,7 +867,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_bytes_length(x)  (sexp_field(x, bytes, SEXP_BYTES, length))
 #define sexp_bytes_data(x)    (sexp_field(x, bytes, SEXP_BYTES, data))
 
-#define sexp_string_length(x) (sexp_field(x, string, SEXP_STRING, length))
+#define sexp_string_size(x)   (sexp_field(x, string, SEXP_STRING, length))
 #if SEXP_USE_PACKED_STRINGS
 #define sexp_string_data(x)   (sexp_field(x, string, SEXP_STRING, data))
 #else
@@ -885,9 +885,6 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 
 #define sexp_bytes_ref(x, i)    (sexp_make_fixnum((unsigned char)sexp_bytes_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_bytes_set(x, i, v) (sexp_bytes_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_fixnum(v))
-
-#define sexp_string_ref(x, i)    (sexp_make_character((unsigned char)sexp_string_data(x)[sexp_unbox_fixnum(i)]))
-#define sexp_string_set(x, i, v) (sexp_string_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_character(v))
 
 #define sexp_lsymbol_data(x)   (sexp_field(x, symbol, SEXP_SYMBOL, data))
 #define sexp_lsymbol_length(x) (sexp_field(x, symbol, SEXP_SYMBOL, length))
@@ -1409,10 +1406,30 @@ SEXP_API int sexp_utf8_char_byte_count (int c);
 SEXP_API int sexp_string_utf8_length (unsigned char *p, int len);
 SEXP_API char* sexp_string_utf8_prev (unsigned char *p);
 SEXP_API sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i);
+SEXP_API sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i);
 SEXP_API sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
 SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
+#define sexp_string_ref(ctx, s, i)    (sexp_string_utf8_index_ref(ctx, NULL, 2, s, i))
+#define sexp_string_set(ctx, s, i, ch) (sexp_string_utf8_index_set(ctx, NULL, 3, s, i, ch))
+#define sexp_string_cursor_ref(ctx, s, i)    (sexp_string_utf8_ref(ctx, s, i))
+#define sexp_string_cursor_set(ctx, s, i)    (sexp_string_utf8_set(ctx, s, i))
+#define sexp_string_cursor_next(s, i) sexp_make_fixnum(sexp_unbox_fixnum(i) + sexp_utf8_initial_byte_count(((unsigned char*)sexp_string_data(s))[sexp_unbox_fixnum(i)]))
+#define sexp_string_cursor_prev(s, i) sexp_make_fixnum(sexp_string_utf8_prev((unsigned char*)sexp_string_data(s)+sexp_unbox_fixnum(i)) - sexp_string_data(s))
+#define sexp_string_length(s) sexp_string_utf8_length((unsigned char*)sexp_string_data(s), sexp_string_size(s))
+#define sexp_substring(ctx, s, i, j) sexp_utf8_substring_op(ctx, NULL, 3, s, i, j)
+#define sexp_substring_cursor(ctx, s, i, j) sexp_substring_op(ctx, NULL, 3, s, i, j)
+#else  /* ASCII strings */
+#define sexp_string_ref(ctx, s, i)    (sexp_make_character((unsigned char)sexp_string_data(s)[sexp_unbox_fixnum(i)]))
+#define sexp_string_set(ctx, s, i, ch) (sexp_string_data(s)[sexp_unbox_fixnum(i)] = sexp_unbox_character(ch))
+#define sexp_string_cursor_ref(ctx, s, i) sexp_string_ref(ctx, s, i)
+#define sexp_string_cursor_set(ctx, s, i, ch) sexp_string_set(ctx, s, i, ch)
+#define sexp_string_cursor_next(s, i) sexp_make_fixnum(sexp_unbox_fixnum(i) + 1)
+#define sexp_string_cursor_prev(s, i) sexp_make_fixnum(sexp_unbox_fixnum(i) - 1)
+#define sexp_string_length(s) sexp_string_size(s)
+#define sexp_substring(ctx, s, i, j) sexp_substring_op(ctx, NULL, 3, s, i, j)
+#define sexp_substring_cursor(ctx, s, i, j) sexp_substring_op(ctx, NULL, 3, s, i, j)
 #endif
 
 #if SEXP_USE_GREEN_THREADS
@@ -1503,7 +1520,6 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_symbol_to_string(ctx, s) sexp_symbol_to_string_op(ctx, NULL, 1, s)
 #define sexp_make_bytes(ctx, l, i) sexp_make_bytes_op(ctx, NULL, 2, l, i)
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx, NULL, 2, l, c)
-#define sexp_substring(ctx, a, b, c) sexp_substring_op(ctx, NULL, 3, a, b, c)
 #define sexp_subbytes(ctx, a, b, c) sexp_subbytes_op(ctx, NULL, 3, a, b, c)
 #define sexp_string_concatenate(ctx, ls, s) sexp_string_concatenate_op(ctx, NULL, 2, ls, s)
 #define sexp_memq(ctx, a, b) sexp_memq_op(ctx, NULL, 2, a, b)

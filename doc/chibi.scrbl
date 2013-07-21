@@ -630,6 +630,12 @@ following predicates can be used to distinguish these types.  Note the
 predicates in C all end in "p".  For efficiency they are implemented as macros,
 and so may evaluate their arguments multiple times.
 
+Note also that the non-immediate type checks will segfault if passed a
+NULL value.  At the Scheme level (and the return values of any
+exported primitives) NULLs are never exposed, however some unexposed
+values in C can in certain cases be NULL.  If you're not sure you'll
+need to check manually before applying the predicate.
+
 \itemlist[
 \item{\ccode{sexp_booleanp(obj)} - \var{obj} is \scheme{#t} or \scheme{#f}}
 \item{\ccode{sexp_fixnump(obj)} - \var{obj} is an immediate integer}
@@ -676,6 +682,42 @@ The following shortcuts for various immediate values are available.
 \item{\ccode{SEXP_TEN} - shortcut for sexp_make_fixnum(10)}
 \item{\ccode{SEXP_NEG_ONE} - shortcut for sexp_make_fixnum(-1)}
 ]
+
+\subsubsection{String Handling}
+
+Scheme strings are length bounded C strings which can be accessed with
+the following macros:
+
+\itemlist[
+\item{\ccode{char* sexp_string_data(s)} - the raw bytes of the string}
+\item{\ccode{unsigned long sexp_string_size(s)} - the number of raw bytes in the string}
+\item{\ccode{int sexp_string_length(sexp s)} - the number of characters encoded in \var{s}}
+]
+
+Currently all Scheme strings also happen to be NULL-terminated, but
+you should not rely on this and be sure to use the size as a bounds check.
+
+By default (unless you compile with -DSEXP_USE_UTF8_STRING=0), strings
+are interpreted as utf8 encoded on the Scheme side, as describe in
+section Unicode above.  In many cases you can ignore this on the C
+side and just treat the string as an opaque sequence of bytes.
+However, if you need to you can use the following macros to safely
+access the contents of the string regardless of the options Chibi was
+compiled with:
+
+\itemlist[
+\item{\ccode{sexp sexp_string_ref(sexp ctx, sexp s, sexp i)} - returns the character at index i}
+\item{\ccode{sexp sexp_string_set(sexp ctx, sexp s, sexp i, sexp ch)} - sets the character at index i}
+\item{\ccode{sexp sexp_string_cursor_ref(sexp ctx, sexp s, sexp i)} - returns the character at raw offset i (a fixnum)}
+\item{\ccode{sexp sexp_string_cursor_set(sexp ctx, sexp s, sexp i, sexp ch)} - sets the character at raw offset i (a fixnum)}
+\item{\ccode{sexp sexp_string_cursor_next(sexp s, sexp i)} - returns the next cursor after raw offset \var{i}}
+\item{\ccode{sexp sexp_string_cursor_prev(sexp s, sexp i)} - returns the previous cursor before raw offset \var{i}}
+\item{\ccode{sexp sexp_substring(sexp ctx, sexp s, sexp i, sexp j)} - returns the substring between indices \var{i} and \var{j}}
+\item{\ccode{sexp sexp_substring_cursor(sexp ctx, sexp s, sexp i, sexp j)} - returns the substring between raw offsets \var{i} and \var{j}}
+]
+
+When UTF8 support is not compiled in the cursor and non-cursor
+variants are equivalent.
 
 \subsubsection{Accessors}
 

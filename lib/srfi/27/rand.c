@@ -142,7 +142,7 @@ static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, se
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else if (! (sexp_stringp(state)
-              && (sexp_string_length(state) == SEXP_RANDOM_STATE_SIZE)))
+              && (sexp_string_size(state) == SEXP_RANDOM_STATE_SIZE)))
     return sexp_type_exception(ctx, self, SEXP_STRING, state);
   sexp_random_state(rs) = state;
   sexp_random_init(rs, 1);
