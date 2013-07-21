@@ -195,7 +195,7 @@ static sexp sexp_make_custom_port (sexp ctx, sexp self,
   sexp_gc_preserve2(ctx, res, str);
   str = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
   if (sexp_exceptionp(str)) return str;
-  res = sexp_make_input_string_port(ctx, str);
+  res = sexp_open_input_string(ctx, str);
   if (sexp_exceptionp(res)) return res;
   if (mode && mode[0] == 'w') {
     sexp_pointer_tag(res) = SEXP_OPORT;
@@ -252,14 +252,14 @@ sexp sexp_open_input_bytevector (sexp ctx, sexp self, sexp vec) {
   sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, vec);
   sexp_gc_preserve2(ctx, str, res);
   str = sexp_bytes_to_string(ctx, vec);
-  res = sexp_make_input_string_port(ctx, str);
+  res = sexp_open_input_string(ctx, str);
   sexp_port_binaryp(res) = 1;
   sexp_gc_release2(ctx);
   return res;
 }
 
 sexp sexp_open_output_bytevector (sexp ctx, sexp self) {
-  sexp res = sexp_make_output_string_port(ctx);
+  sexp res = sexp_open_output_string(ctx);
   sexp_port_binaryp(res) = 1;
   return res;
 }

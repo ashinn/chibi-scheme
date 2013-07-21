@@ -1282,7 +1282,7 @@ static off_t sstream_seek (void *vec, off_t offset, int whence) {
   return pos;
 }
 
-sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
+sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
   FILE *in;
   sexp res;
   sexp_gc_var1(cookie);
@@ -1301,7 +1301,7 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   return res;
 }
 
-sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
   FILE *out;
   sexp res, size;
   sexp_gc_var1(cookie);
@@ -1335,7 +1335,7 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 
 #else  /* SEXP_USE_STRING_STREAMS && ! SEXP_BSD */
 
-sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
+sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
   FILE *in;
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
@@ -1355,7 +1355,7 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   return res;
 }
 
-sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
   sexp_port_stream(res)
     = open_memstream(&sexp_port_buf(res), &sexp_port_size(res));
@@ -1520,7 +1520,7 @@ int sexp_buffered_flush (sexp ctx, sexp p, int forcep) {
   return res;
 }
 
-sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
+sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   res = sexp_make_input_port(ctx, NULL, SEXP_FALSE);
@@ -1533,7 +1533,7 @@ sexp sexp_make_input_string_port_op (sexp ctx, sexp self, sexp_sint_t n, sexp st
   return res;
 }
 
-sexp sexp_make_output_string_port_op (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
   if (sexp_exceptionp(res)) return res;
   sexp_port_buf(res) = (char*) sexp_malloc(SEXP_PORT_BUFFER_SIZE);
@@ -1579,7 +1579,7 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
     return sexp_file_exception(ctx, self, "invalid file descriptor", fileno);
   sexp_gc_preserve2(ctx, res, str);
   str = sexp_make_string(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
-  res = sexp_make_input_string_port(ctx, str);
+  res = sexp_open_input_string(ctx, str);
   if (!sexp_exceptionp(res)) {
     sexp_port_fd(res) = fileno;
     sexp_port_offset(res) = SEXP_PORT_BUFFER_SIZE;
@@ -3067,7 +3067,7 @@ sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len) {
   sexp_gc_var2(s, in);
   sexp_gc_preserve2(ctx, s, in);
   s = sexp_c_string(ctx, str, len);
-  in = sexp_make_input_string_port(ctx, s);
+  in = sexp_open_input_string(ctx, s);
   res = sexp_read(ctx, in);
   sexp_gc_release2(ctx);
   return res;
@@ -3084,7 +3084,7 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
       || (sexp_string_data(str)[1]=='\0' && !sexp_isxdigit((unsigned char)(sexp_string_data(str)[0]))))
     return SEXP_FALSE;
   sexp_gc_preserve1(ctx, in);
-  in = sexp_make_input_string_port(ctx, str);
+  in = sexp_open_input_string(ctx, str);
   if (sexp_string_data(str)[0] == '+') {
     if (sexp_isdigit((unsigned char)(sexp_string_data(str)[1]))
         || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
@@ -3100,7 +3100,7 @@ sexp sexp_write_to_string (sexp ctx, sexp obj) {
   sexp str;
   sexp_gc_var1(out);
   sexp_gc_preserve1(ctx, out);
-  out = sexp_make_output_string_port(ctx);
+  out = sexp_open_output_string(ctx);
   str = sexp_write(ctx, obj, out);
   if (! sexp_exceptionp(str))
     str = sexp_get_output_string(ctx, out);
