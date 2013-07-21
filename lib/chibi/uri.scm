@@ -33,7 +33,7 @@
          (o (if (pair? o) (cdr o) '()))
          (query (if (pair? o) (car o) #f))
          (o (if (pair? o) (cdr o) '()))
-         (fragment (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) #f)))
+         (fragment (and (pair? o) (car o))))
     (%make-uri scheme user host port path query fragment)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -86,64 +86,82 @@
   (define decode (if decode? uri-decode (lambda (x) x)))
   (define decode-query
     (if (and (pair? o) (pair? (cdr o)) (cadr o))
-        uri-query->alist
+        (if decode? (lambda (q) (uri-query->alist q #t)) uri-query->alist)
         decode))
   (if (uri? str)
       str
-      (let* ((len (string-length str))
+      (let* ((start (string-cursor-start str))
+             (end (string-cursor-end str))
              (colon0 (string-find str #\:))
              (colon
-              (and (not (string-find str char-uri-scheme-unsafe?
-                                     0 (or colon0 len)))
+              (and (string-cursor>=?
+                    (string-find str char-uri-scheme-unsafe? start colon0)
+                    colon0)
+                   (string-cursor<? colon0 end)
                    colon0)))
-        (if (or (not colon) (zero? colon))
+        (if (string-cursor>=? colon end)
             (and scheme
-                 (let* ((quest (string-find str #\? 0))
-                        (pound (string-find str #\# (or quest 0))))
+                 (let* ((quest (string-find str #\?))
+                        (pound
+                         (string-find
+                          str
+                          #\#
+                          (if (string-cursor<? quest end) quest start))))
                    (make-uri scheme #f #f #f
-                             (decode (substring str 0 (or quest pound len)))
-                             (and quest
+                             (decode
+                              (substring-cursor
+                               str start (if (< quest end) quest pound)))
+                             (and (< quest end)
                                   (decode-query
-                                   (substring str (+ quest 1) (or pound len))))
-                             (and pound
-                                  (decode (substring str (+ pound 1) len))))))
+                                   (substring-cursor str (+ quest 1) pound)))
+                             (and (< pound end)
+                                  (decode
+                                   (substring-cursor str (+ pound 1) end))))))
             (let ((sc1 (+ colon 1))
                   (scheme (string->symbol
-                           (string-downcase-ascii (substring str 0 colon)))))
-              (if (= sc1 len)
+                           (string-downcase-ascii
+                            (substring-cursor str start colon)))))
+              (if (string-cursor>=? sc1 end)
                   (make-uri scheme)
-                  (if (or (>= (+ sc1 1) len)
-                          (not (and (eqv? #\/ (string-ref str sc1))
-                                    (eqv? #\/ (string-ref str (+ sc1 1))))))
-                      (make-uri scheme #f #f #f (substring str sc1 len))
-                      (if (>= (+ sc1 2) len)
+                  (if (or (string-cursor>=? (+ sc1 1) end)
+                          (not
+                           (and (eqv? #\/ (string-cursor-ref str sc1))
+                                (eqv? #\/ (string-cursor-ref str (+ sc1 1))))))
+                      (make-uri scheme #f #f #f (substring-cursor str sc1 end))
+                      (if (string-cursor>=? (+ sc1 2) end)
                           (make-uri scheme #f "")
                           (let* ((sc2 (+ sc1 2))
                                  (slash (string-find str #\/ sc2))
-                                 (sc3 (or slash len))
-                                 (at (string-find-right str #\@ sc2 sc3))
-                                 (colon3 (string-find str #\: (or at sc2) sc3))
-                                 (quest (string-find str #\? sc3))
-                                 (pound (string-find str #\# (or quest sc3))))
+                                 (at (string-find-right str #\@ sc2 slash))
+                                 (colon3
+                                  (string-find
+                                   str #\: (if (> at sc2) at sc2) slash))
+                                 (quest (string-find str #\? slash))
+                                 (pound
+                                  (string-find
+                                   str #\# (if (< quest end) quest slash))))
                             (%make-uri
                              scheme
-                             (and at (decode (substring str sc2 at)))
+                             (and (> at sc2)
+                                  (decode (substring-cursor str sc2 at)))
                              (decode
-                              (substring str
-                                         (if at (+ at 1) sc2)
-                                         (or colon3 sc3)))
-                             (and colon3
+                              (substring-cursor
+                               str
+                               (if (> at sc2) (+ at 1) sc2)
+                               (if (< colon3 slash) colon3 slash)))
+                             (and (< colon3 slash)
                                   (string->number
-                                   (substring str (+ colon3 1) sc3)))
-                             (and slash
+                                   (substring-cursor str (+ colon3 1) slash)))
+                             (and (< slash end)
                                   (decode
-                                   (substring str slash (or quest pound len))))
-                             (and quest
+                                   (substring-cursor
+                                    str slash (if (< quest end) quest pound))))
+                             (and (< quest end)
                                   (decode-query
-                                   (substring str (+ quest 1)
-                                              (or pound len))))
-                             (and pound
-                                  (decode (substring str (+ pound 1) len)))
+                                   (substring-cursor str (+ quest 1) pound)))
+                             (and (< pound end)
+                                  (decode
+                                   (substring-cursor str (+ pound 1) end)))
                              ))))))))))
 
 ;;> Parses a string and returns a new URI object.  If the string does
@@ -189,7 +207,7 @@
 (define (collect str from to res)
   (if (>= from to)
       res
-      (cons (substring str from to) res)))
+      (cons (substring-cursor str from to) res)))
 
 ;;> \subsubsubsection{\scheme{(uri-encode str [plus?])}}
 
@@ -209,17 +227,17 @@
           (string-append "%0" hex)
           (string-append "%" hex))))
   (let ((start 0)
-        (end (string-length str))
+        (end (string-cursor-end str))
         (encode-1 (if (and (pair? o) (car o))
                       encode-1-space
                       encode-1-normal)))
     (let lp ((from start) (to start) (res '()))
-      (if (>= to end)
+      (if (string-cursor>=? to end)
           (if (zero? from)
               str
               (string-concatenate (reverse (collect str from to res))))
-          (let* ((ch (string-ref str to))
-                 (next (+ to 1)))
+          (let* ((ch (string-cursor-ref str to))
+                 (next (string-cursor-next str to)))
             (if (uri-safe-char? ch)
                 (lp from next res)
                 (lp next next (cons (encode-1 ch)
@@ -233,24 +251,24 @@
 
 (define (uri-decode str . o)
   (let ((space-as-plus? (and (pair? o) (car o)))
-        (start 0)
-        (end (string-length str)))
+        (start (string-cursor-start str))
+        (end (string-cursor-end str)))
     (let lp ((from start) (to start) (res '()))
-      (if (>= to end)
+      (if (string-cursor>=? to end)
           (if (zero? from)
               str
               (string-concatenate (reverse (collect str from to res))))
-          (let* ((ch (string-ref str to))
-                 (next (+ to 1)))
+          (let* ((ch (string-cursor-ref str to))
+                 (next (string-cursor-next str to)))
             (cond
              ((eqv? ch #\%)
-              (if (>= next end)
+              (if (string-cursor>=? next end)
                   (lp next next (collect str from to res))
-                  (let ((next2 (+ next 1)))
-                    (if (>= next2 end)
+                  (let ((next2 (string-cursor-next str next)))
+                    (if (string-cursor>=? next2 end)
                         (lp next2 next2 (collect str from to res))
                         (let* ((next3 (+ next2 1))
-                               (hex (substring str next next3))
+                               (hex (substring-cursor str next next3))
                                (i (string->number hex 16)))
                           (lp next3 next3 (cons (string (integer->char i))
                                                 (collect str from to res))))))))
@@ -267,17 +285,18 @@
 
 (define (uri-query->alist str . o)
   (define (split-char? c) (if (eqv? c #\&) #t (eqv? c #\;)))
-  (let ((len (string-length str))
+  (let ((end (string-cursor-end str))
         (plus? (and (pair? o) (car o))))
     (let lp ((i 0) (res '()))
-      (if (>= i len)
+      (if (string-cursor>=? i end)
           (reverse res)
-          (let* ((j (or (string-find str split-char? i) len))
+          (let* ((j (string-find str split-char? i))
                  (k (string-find str #\= i j))
-                 (cell (if k
-                           (cons (uri-decode (substring str i k) plus?)
-                                 (uri-decode (substring str (+ k 1) j) plus?))
-                           (cons (uri-decode (substring str i j) plus?) #f))))
+                 (cell
+                  (if (< k end)
+                      (cons (uri-decode (substring-cursor str i k) plus?)
+                            (uri-decode (substring-cursor str (+ k 1) j) plus?))
+                      (cons (uri-decode (substring-cursor str i j) plus?) #f))))
             (lp (+ j 1) (cons cell res)))))))
 
 ;;> \subsubsubsection{\scheme{(uri-alist->query ls [plus?])}}

@@ -17,6 +17,7 @@
 (load "tests/scribble-tests.scm")
 (load "tests/string-tests.scm")
 (load "tests/iset-tests.scm")
+(load "tests/uri-tests.scm")
 (cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
 (cond-expand
