@@ -1,5 +1,5 @@
 ;; http.scm -- http client
-;; Copyright (c) 2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,7 +82,7 @@
               (display " HTTP/1.0\r\n" out)
               (display "Host: " out) (display host out) (display "\r\n" out)
               (cond
-               ((not (mime-ref in-headers "user-agent"))
+               ((not (assq-ref in-headers 'user-agent))
                 (display "User-Agent: " out)
                 (display http-user-agent out)
                 (display "\r\n" out)))
@@ -98,7 +98,7 @@
                      (status (quotient (cadr resp) 100)))
                 (case status
                   ((2)
-                   (let ((enc (mime-ref headers "transfer-encoding")))
+                   (let ((enc (assq-ref headers 'transfer-encoding)))
                      (cond
                       ((equal? enc "chunked")
                        (http-wrap-chunked-input-port in))
@@ -107,7 +107,7 @@
                   ((3)
                    (close-input-port in)
                    (close-output-port out)
-                   (let ((url2 (mime-ref headers "location")))
+                   (let ((url2 (assq-ref headers 'location)))
                      (if url2
                          (http-get/raw url2 in-headers (- limit 1))
                          (error "redirect with no location header"))))
@@ -147,13 +147,14 @@
 ;; query or form parameter.
 (define (http-parse-form uri headers . o)
   (let* ((in (if (pair? o) (car o) (current-input-port)))
-         (type (mime-ref headers
-                         "content-type"
+         (type (assq-ref headers
+                         'content-type
                          "application/x-www-form-urlencoded")) 
          (query0 (or (uri-query (if (string? uri) (string->uri uri) uri)) '()))
          (query (if (string? query0) (uri-query->alist query0) query0)))
     (cond
-     ((string-ci=? "multipart/" type)
+     ((and (>= (string-length type) 10)
+           (string-ci=? "multipart/" (substring type 0 10)))
       (let ((mime (mime-message->sxml in headers)))
         (append
          (let lp ((ls (cddr mime))
@@ -166,9 +167,9 @@
                   (pair? (cdar ls))
                   (pair? (car (cdar ls)))
                   (memq (caar (cdar ls)) '(^ @)))
-             (let* ((disp0 (mime-ref (cdar (cdar ls)) "content-disposition" ""))
+             (let* ((disp0 (assq-ref (cdar (cdar ls)) 'content-disposition ""))
                     (disp (mime-parse-content-type disp0))
-                    (name (mime-ref disp "name")))
+                    (name (assq-ref disp 'name)))
                (if name
                    (lp (cdr ls) (cons (cons name (cadr (cdar ls))) res))
                    (lp (cdr ls) res))))
