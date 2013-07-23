@@ -172,7 +172,7 @@
         (exn
          (else
            (warning "error in group outside of tests")
-           (print-exception e (current-error-port))
+           (print-exception exn (current-error-port))
            (test-group-inc! (current-test-group) 'count)
            (test-group-inc! (current-test-group) 'ERROR)))
         body ...)
