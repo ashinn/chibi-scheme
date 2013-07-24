@@ -397,9 +397,10 @@
         ;; Terminate when the string is done or there are no more
         ;; searchers.  If we terminate prematurely and are not
         ;; searching, return false.
-        (and (or search? (string-cursor>=? i end))
-             (searcher? (cdr accept))
-             (searcher-matches (cdr accept))))
+        (and (searcher? (cdr accept))
+             (let ((matches (searcher-matches (cdr accept))))
+               (and (or search? (>= (rx-match-ref matches 1) end))
+                    (searcher-matches (cdr accept))))))
        (else
         ;; Otherwise advance normally.
         (let ((ch (string-cursor-ref str i))
