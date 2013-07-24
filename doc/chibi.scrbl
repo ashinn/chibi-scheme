@@ -622,6 +622,19 @@ Decrement the absolute reference count for \var{obj}.
 
 \subsection{API Index}
 
+The above sections describe most everything you need for embedding in
+a typical application, notably creating environments and evaluating
+code from sexps, strings or files.  The following sections expand on
+additional macros and utilities for inspecting, accessing and creating
+different Scheme types, and for performing port and string I/O.
+
+Being able to convert from C string to sexp, evaluate it, and convert
+the result back to a C string forms the basis of the C API.  Because
+Chibi is aimed primarily at minimal size, there are relatively few
+other utilities or helpers.  It is expected most high-level code will
+be written in Scheme, and most low-level code will be written in pure,
+Scheme-agnostic C and wrapped via the FFI.
+
 \subsubsection{Type Predicates}
 
 The sexp represents different Scheme types with the use of tag bits for
