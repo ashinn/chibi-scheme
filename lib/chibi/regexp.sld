@@ -6,7 +6,7 @@
           rx-match? rx-match-num-matches
           rx-match-submatch rx-match-submatch/list
           rx-match->list rx-match->sexp)
-  (import (scheme base)  (srfi 9) (srfi 33) (srfi 38) (srfi 69))
+  (import (srfi 9) (srfi 33) (srfi 38) (srfi 69))
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
    (chibi
