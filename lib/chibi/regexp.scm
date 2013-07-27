@@ -43,6 +43,13 @@
       (error "expected a state" next2))
   (%make-state accept? chars match match-rule next1 next2))
 
+(define ~none 0)
+(define ~ci? 1)
+
+(define (flag-set? flags i) (= i (bitwise-and flags i)))
+(define (flag-join a b) (if b (bitwise-ior a b) a))
+(define (flag-clear a b) (bitwise-and a (bitwise-not b)))
+
 (define (char-set-ci cset)
   (let ((res (char-set)))
     (for-each
@@ -53,7 +60,7 @@
     res))
 
 (define (make-char-state ch flags next)
-  (if (= ~ci? (bitwise-and ~ci? flags))
+  (if (flag-set? flags ~ci?)
       (let ((cset (cond ((char? ch) (char-set-ci (char-set ch)))
                         ((char-set? ch) (char-set-ci ch))
                         (else ch))))
@@ -439,16 +446,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Compiling
 
-(define ~none 0)
-(define ~ci? 1)
-
 (define (parse-flags ls)
   (define (symbol->flag s)
     (case s ((i ci case-insensitive) ~ci?) (else ~none)))
   (let lp ((ls ls) (res ~none))
     (if (not (pair? ls))
         res
-        (lp (cdr ls) (bitwise-ior res (symbol->flag (car ls)))))))
+        (lp (cdr ls) (flag-join res (symbol->flag (car ls)))))))
 
 (define char-set:nonl
   (char-set-difference char-set:full (char-set #\newline)))
@@ -481,12 +485,14 @@
        (char-word-constituent?
         (string-cursor-ref str (string-cursor-prev str i)))))
 
-(define (lookup-char-set name)
+(define (lookup-char-set name flags)
   (case name
     ((any) char-set:full)
     ((nonl) char-set:nonl)
-    ((lower-case lower) char-set:lower-case)
-    ((upper-case upper) char-set:upper-case)
+    ((lower-case lower)
+     (if (flag-set? flags ~ci?) char-set:letter char-set:lower-case))
+    ((upper-case upper)
+     (if (flag-set? flags ~ci?) char-set:letter char-set:upper-case))
     ((alphabetic alpha) char-set:letter)
     ((numeric num digit) char-set:digit)
     ((alphanumeric alphanum alnum) char-set:letter+digit)
@@ -514,28 +520,31 @@
      (else
       (lp (cddr ls) (cons (cons (car ls) (cadr ls)) res))))))
 
-(define (sre->char-set sre)
-  (cond
-   ((lookup-char-set sre))
-   ((char-set? sre) sre)
-   ((char? sre) (char-set sre))
-   ((pair? sre)
-    (if (string? (car sre))
-        (string->char-set (car sre))
-        (case (car sre)
-          ((/) (sre->char-set
-                `(or ,@(map (lambda (x)
-                              (ucs-range->char-set
-                               (char->integer (car x))
-                               (+ 1 (char->integer (cdr x)))))
-                            (sre-flatten-ranges (cdr sre))))))
-          ((& and) (apply char-set-intersection (map sre->char-set (cdr sre))))
-          ((|\|| or) (apply char-set-union (map sre->char-set (cdr sre))))
-          ((~ not) (char-set-complement (sre->char-set `(or ,@(cdr sre)))))
-          ((-) (char-set-difference (sre->char-set (cadr sre))
-                                    (sre->char-set `(or ,@(cddr sre)))))
-          (else (error "invalid sre char-set" sre)))))
-   (else (error "invalid sre char-set" sre))))
+(define (sre->char-set sre . o)
+  (let ((flags (if (pair? o) (car o) ~none)))
+    (define (->cs sre) (sre->char-set sre flags))
+    (cond
+     ((lookup-char-set sre flags))
+     ((char-set? sre) (char-set-ci sre))
+     ((char? sre) (char-set-ci (char-set sre)))
+     ((pair? sre)
+      (if (string? (car sre))
+          (string->char-set (car sre))
+          (case (car sre)
+            ((/) (->cs
+                  `(or ,@(map (lambda (x)
+                                (char-set-ci
+                                 (ucs-range->char-set
+                                  (char->integer (car x))
+                                  (+ 1 (char->integer (cdr x))))))
+                              (sre-flatten-ranges (cdr sre))))))
+            ((& and) (apply char-set-intersection (map ->cs (cdr sre))))
+            ((|\|| or) (apply char-set-union (map ->cs (cdr sre))))
+            ((~ not) (char-set-complement (->cs `(or ,@(cdr sre)))))
+            ((-) (char-set-difference (->cs (cadr sre))
+                                      (->cs `(or ,@(cddr sre)))))
+            (else (error "invalid sre char-set" sre)))))
+     (else (error "invalid sre char-set" sre)))))
 
 ;;> Compile an \var{sre} into a regexp.
 
@@ -562,8 +571,8 @@
       (make-char-state sre flags next))
      ((string? sre)
       (->rx (cons 'seq (string->list sre)) flags next))
-     ((and (symbol? sre) (lookup-char-set sre))
-      => (lambda (cset) (make-char-state cset flags next)))
+     ((and (symbol? sre) (lookup-char-set sre flags))
+      => (lambda (cset) (make-char-state cset ~none next)))
      ((symbol? sre)
       (case sre
         ((epsilon) next)
@@ -655,22 +664,22 @@
              (state-match-rule-set! n2 'list)
              n1)))
         ((~ - & |\|| / and or not)
-         (make-char-state (sre->char-set sre) flags next))
+         (make-char-state (sre->char-set sre flags) ~none next))
         ((word)
          (->rx `(: bow ,@(cdr sre) eow) flags next))
         ((word+)
          (->rx `(word (+ ,(char-set-intersection
                            char-set:word-constituent
-                           (sre->char-set `(or ,@(cdr sre))))))
+                           (sre->char-set `(or ,@(cdr sre)) flags))))
                flags
                next))
         ((w/case)
-         (->rx `(: ,@(cdr sre)) (bitwise-and flags (bitwise-not ~ci?)) next))
+         (->rx `(: ,@(cdr sre)) (flag-clear flags ~ci?) next))
         ((w/nocase)
-         (->rx `(: ,@(cdr sre)) (bitwise-ior flags ~ci?) next))
+         (->rx `(: ,@(cdr sre)) (flag-join flags ~ci?) next))
         (else
          (if (string? (car sre))
-             (make-char-state (sre->char-set sre) flags next)
+             (make-char-state (sre->char-set sre flags) ~none next)
              (error "unknown sre" sre)))))))
   (let ((flags (parse-flags (and (pair? o) (car o)))))
     (if (regexp? sre)

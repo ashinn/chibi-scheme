@@ -140,6 +140,9 @@
          '(: (* digit) (w/nocase ($ (* (/"af")))))
          "12345BeeF")
 
+(test-re #f '(* lower) "abcD")
+(test-re '("abcD") '(w/nocase (* lower)) "abcD")
+
 (test '("123" "456" "789") (regexp-extract '(+ digit) "abc123def456ghi789"))
 (test '("123" "456" "789") (regexp-extract '(* digit) "abc123def456ghi789"))
 (test '("abc" "def" "ghi") (regexp-split '(+ digit) "abc123def456ghi789"))
