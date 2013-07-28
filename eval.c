@@ -1,5 +1,5 @@
 /*  eval.c -- evaluator library implementation                */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -450,6 +450,7 @@ static void sexp_init_eval_context_bytecodes (sexp ctx) {
 #endif
 
 void sexp_init_eval_context_globals (sexp ctx) {
+  const char* user_path;
   sexp_gc_var1(tmp);
   ctx = sexp_make_child_context(ctx, NULL);
   sexp_gc_preserve1(ctx, tmp);
@@ -458,13 +459,9 @@ void sexp_init_eval_context_globals (sexp ctx) {
 #endif
   sexp_global(ctx, SEXP_G_MODULE_PATH) = SEXP_NULL;
   sexp_add_path(ctx, sexp_default_module_path);
-  sexp_add_path(ctx, getenv(SEXP_MODULE_PATH_VAR));
-  tmp = sexp_c_string(ctx, "./lib", 5);
-  sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
-  sexp_immutablep(sexp_global(ctx, SEXP_G_MODULE_PATH)) = 1;
-  tmp = sexp_c_string(ctx, ".", 1);
-  sexp_push(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH), tmp);
-  sexp_immutablep(sexp_global(ctx, SEXP_G_MODULE_PATH)) = 1;
+  user_path = getenv(SEXP_MODULE_PATH_VAR);
+  if (!user_path) user_path = sexp_default_user_module_path;
+  sexp_add_path(ctx, user_path);
 #if SEXP_USE_GREEN_THREADS
   sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)
     = sexp_user_exception(ctx, SEXP_FALSE, "I/O would block", SEXP_NULL);

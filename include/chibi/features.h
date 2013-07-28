@@ -304,6 +304,10 @@
 #define SEXP_USE_MODULES ! SEXP_USE_NO_FEATURES
 #endif
 
+#ifndef sexp_default_user_module_path
+#define sexp_default_user_module_path "./lib:."
+#endif
+
 #ifndef SEXP_USE_TYPE_DEFS
 #define SEXP_USE_TYPE_DEFS ! SEXP_USE_NO_FEATURES
 #endif

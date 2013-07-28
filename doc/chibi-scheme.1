@@ -173,15 +173,14 @@ searchs for modules in directories in the following order:
 .TP
           directories included with the -I path option
 .TP
-          .
-.TP
-          ./lib
-.TP
           directories included from CHIBI_MODULE_PATH
 .TP
           system directories 
 .TP
           directories included with -A path option
+
+If CHIBI_MODULE_PATH is unset, the directoriese "./lib", and "." are
+search in order.
 
 .SH AUTHORS
 .PP
