@@ -2340,7 +2340,6 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   sexp exponent=SEXP_VOID;
   double val=0.0, scale=0.1, e=0.0;
   sexp_gc_var1(res);
-  res = SEXP_VOID;    /* for Boehm */
   sexp_gc_preserve1(ctx, res);
   for (c=sexp_read_char(ctx, in); sexp_isdigit(c);
        c=sexp_read_char(ctx, in), scale*=0.1)
