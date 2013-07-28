@@ -471,7 +471,7 @@ void sexp_free(void* ptr);
 
 #define sexp_gc(ctx, sum)
 
-#define sexp_gc_var(x, y)            sexp x;
+#define sexp_gc_var(x, y)            sexp x = SEXP_VOID;
 #define sexp_gc_preserve(ctx, x, y)
 #define sexp_gc_release(ctx, x, y)
 
