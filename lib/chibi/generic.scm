@@ -17,22 +17,34 @@
                        . body))))))
 
 ;;> \subsubsubsection{(define-method (name (param type) ...) body ...)}
+;;> \subsubsubsection{\scheme{(define-method (name params ...) body ...)}}
+ 
+;;> Each parameter should be either a single identifier or a list of the form
+;;> \scheme{(param type)} where \var{param} is the parameter name and
+;;> \var{type} is a predicate which returns true if it's argument is of the
+;;> correct type.
+;;> Parameters without a predicate will always match.
 
-;;> Extends the generic function \var{name} with a new method that
-;;> applies when the given param types all match.
+;;> If multiple methods satisfy the arguments, the most recent method
+;;> will be used.  The special form \scheme{(call-next-method)} can be
+;;> invoked to call the next most recent method with the same arguments.
 
 (define-syntax define-method
   (er-macro-transformer
    (lambda (e r c)
      (let ((name (car (cadr e)))
-           (params (cdr (cadr e)))
+           (params (map (lambda (param)
+                          (if (identifier? param)
+                              `(,param (lambda _ #t))
+                              param))
+                        (cdr (cadr e))))
            (body (cddr e)))
        `(,(r 'generic-add!) ,name
          (,(r 'list) ,@(map cadr params))
-         (,(r 'lambda) (next ,@(map car params))
+         (,(r 'lambda) (,(r 'next) ,@(map car params))
           (,(r 'let-syntax) ((call-next-method
                               (,(r 'syntax-rules) ()
-                               ((_) (next)))))
+                               ((_) (,(r 'next))))))
            ,@body)))))))
 
 (define (no-applicable-method-error name args)
