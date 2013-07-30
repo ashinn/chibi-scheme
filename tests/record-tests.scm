@@ -2,6 +2,7 @@
 (cond-expand
  (modules
   (import (srfi 99)
+          (only (chibi) env-exports)
           (only (chibi test) test-begin test-assert test test-end)))
  (else #f))
 
@@ -112,8 +113,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define-record-type person #t #t name sex age)
-(define-record-type (employee person) #t #t department salary)
+(define-record-type person #t #t (name) (sex) (age))
+(define-record-type (employee person) #t #t (department) (salary))
 
 (define bob (make-employee "Bob" 'male 28 'hr 50000.0))
 (define alice (make-employee "Alice" 'female 32 'research 100000.0))
@@ -148,9 +149,9 @@
 (test #f (employee-department bob))
 (test 0.0 (employee-salary bob))
 
-;;;; SRFI-99 forbids this, but we currently do it anyway.
-;;(test-assert (equal? (make-employee "Chuck" 'male 20 'janitorial 50000.0)
-;;                     (make-employee "Chuck" 'male 20 'janitorial 50000.0)))
+;; SRFI-99 forbids this, but we currently do it anyway.
+(test-assert (equal? (make-employee "Chuck" 'male 20 'janitorial 50000.0)
+                     (make-employee "Chuck" 'male 20 'janitorial 50000.0)))
 
 (test-assert (record? alice))
 (test 'person (rtd-name person))
@@ -169,7 +170,7 @@
 ;;   (make-foo x)
 ;;   foo?
 ;;   (x foo-x))
-
+;;
 ;; (test-assert (not (rtd-field-mutable? foo 'x)))
 
 (define point (make-rtd "point" #(x y)))
@@ -182,5 +183,40 @@
 (define-record-type example make-example #t example)
 (test-assert (example? (make-example 3)))
 (test 3 (example-example (make-example 3)))
+
+;; record types definitions with #f passed as either the constructor or
+;; predicate argument should not create the corresponding function
+
+(define-record-type abstract
+  #f #t)
+
+(test #f (memq 'make-abstract (env-exports (current-environment))))
+
+(define-record-type (derived abstract)
+  #t #f)
+
+(define instance (make-derived))
+(test-assert (abstract? instance))
+(test #f (memq 'derived? (env-exports (current-environment))))
+
+(define-record-type container
+  #t #t
+  default-immutable
+  (default-mutable)
+  (named-immutable get-container-immutable)
+  (named-mutable get-container-mutable set-container-mutable!))
+
+(define container-instance (make-container 1 2 3 4))
+
+(test 1 (container-default-immutable container-instance))
+(test 2 (container-default-mutable container-instance))
+(test 3 (get-container-immutable container-instance))
+(test 4 (get-container-mutable container-instance))
+
+(container-default-mutable-set! container-instance #t)
+(test #t (container-default-mutable container-instance))
+
+(set-container-mutable! container-instance #t)
+(test #t (get-container-mutable container-instance))
 
 (test-end)

@@ -37,14 +37,15 @@
                    (,(rename 'make-type-predicate)
                     ,(id->string pred-name)
                     ,name)))
-               #f)
+               '())
          ;; accessors
          ,@(map (lambda (f)
                   (let ((g (if (and (pair? f) (pair? (cdr f)))
                                (cadr f)
-                               (and (identifier? f)
-                                    (string->symbol
-                                     (string-append name-str "-" (id->string f)))))))
+                               (string->symbol
+                                 (string-append name-str
+                                                "-"
+                                                (id->string (if (pair? f) (car f) f)))))))
                     (and g
                          `(,_define ,g
                             (,(rename 'make-getter)
@@ -53,11 +54,14 @@
                              (,_type_slot_offset ,name ',(if (pair? f) (car f) f)))))))
                 fields)
          ,@(map (lambda (f)
-                  (let ((s (if (and (pair? f) (pair? (cdr f)) (pair? (cddr f)))
-                               (car (cddr f))
-                               (and (identifier? f)
+                  (let ((s (and (pair? f)
+                                (if (and (pair? (cdr f)) (pair? (cddr f)))
+                                    (car (cddr f))
                                     (string->symbol
-                                     (string-append name-str "-" (id->string f) "-set!"))))))
+                                      (string-append name-str
+                                                     "-"
+                                                     (id->string (car f))
+                                                     "-set!"))))))
                     (and s
                          `(,_define ,s
                             (,(rename 'make-setter)
@@ -66,45 +70,47 @@
                              (,_type_slot_offset ,name ',(if (pair? f) (car f) f)))))))
                 fields)
          ;; constructor
-         ,(if make-fields
-              (let ((fields (map (lambda (f) (cons (rename f) f)) make-fields)))
-                `(,_define ,make-name
-                   ,(let lp ((ls fields) (sets '()))
-                      (cond
-                       ((null? ls)
-                        `(,_let ((,_make (,(rename 'make-constructor)
-                                          ,(id->string make-name)
-                                          ,name)))
-                           (,_lambda ,(map car fields)
-                             (,_let ((res (,_make)))
-                               ,@sets
-                               res))))
-                       (else
-                        (let ((field (assq (cdar ls) fields)))
-                          (cond
-                           ((and (pair? field) (pair? (cdr field)) (pair? (cddr field)))
-                            (lp (cdr ls)
-                                (cons (list (car (cddr field)) 'res (cdar ls)) sets)))
-                           (else
-                            (lp (cdr ls)
-                                (cons `(,_slot-set! ,name res (,_type_slot_offset ,name ',(cdar ls)) ,(caar ls)) sets))))))))))
-              `(,_define ,make-name
-                 (,_let ((,_make (,(rename 'make-constructor)
-                                  ,(id->string make-name)
-                                  ,name)))
-                   (,_lambda args
-                     (,_let ((res (,_make)))
-                       (let lp ((a args)
-                                (p (,_vector->list (,_rtd-all-field-names ,name))))
-                         (cond
-                          ((null? a)
-                           (if (null? p)
-                               res
-                               (error ,(string-append "not enough arguments to " (id->string make-name) ": missing")
-                                      p)))
-                          ((null? p)
-                           (error ,(string-append "too many arguments to " (id->string make-name))
-                                  a))
-                          (else
-                           (,_slot-set! ,name res (,_type_slot_offset ,name (car p)) (car a))
-                           (lp (cdr a) (cdr p)))))))))))))))
+         ,@(if make-name
+              (if make-fields
+                (let ((fields (map (lambda (f) (cons (rename f) f)) make-fields)))
+                  `((,_define ,make-name
+                     ,(let lp ((ls fields) (sets '()))
+                        (cond
+                         ((null? ls)
+                          `(,_let ((,_make (,(rename 'make-constructor)
+                                            ,(id->string make-name)
+                                            ,name)))
+                             (,_lambda ,(map car fields)
+                               (,_let ((res (,_make)))
+                                 ,@sets
+                                 res))))
+                         (else
+                          (let ((field (assq (cdar ls) fields)))
+                            (cond
+                             ((and (pair? field) (pair? (cdr field)) (pair? (cddr field)))
+                              (lp (cdr ls)
+                                  (cons (list (car (cddr field)) 'res (cdar ls)) sets)))
+                             (else
+                              (lp (cdr ls)
+                                  (cons `(,_slot-set! ,name res (,_type_slot_offset ,name ',(cdar ls)) ,(caar ls)) sets)))))))))))
+                `((,_define ,make-name
+                   (,_let ((,_make (,(rename 'make-constructor)
+                                    ,(id->string make-name)
+                                    ,name)))
+                     (,_lambda args
+                       (,_let ((res (,_make)))
+                         (let lp ((a args)
+                                  (p (,_vector->list (,_rtd-all-field-names ,name))))
+                           (cond
+                            ((null? a)
+                             (if (null? p)
+                                 res
+                                 (error ,(string-append "not enough arguments to " (id->string make-name) ": missing")
+                                        p)))
+                            ((null? p)
+                             (error ,(string-append "too many arguments to " (id->string make-name))
+                                    a))
+                            (else
+                             (,_slot-set! ,name res (,_type_slot_offset ,name (car p)) (car a))
+                             (lp (cdr a) (cdr p)))))))))))
+              '()))))))
