@@ -1,8 +1,8 @@
 
-;;> @subsubsubsection{(disasm f [out])}
+;;> \subsubsubsection{\scheme{(disasm f [out])}}
 
-;;> Write a human-readable disassembly for the procedure @var{f} to
-;;> the port @var{out}, defaulting to @scheme{(current-output-port)}.
+;;> Write a human-readable disassembly for the procedure \var{f} to
+;;> the port \var{out}, defaulting to \scheme{(current-output-port)}.
 
 (define-library (chibi disasm)
   (export disasm)
