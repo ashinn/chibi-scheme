@@ -252,9 +252,10 @@
 ;;> Extends the config with anadditional alist.
 
 (define (conf-extend config alist . o)
-  (if (pair? alist)
-      (make-conf alist config (and (pair? o) (car o)) (current-second))
-      config))
+  (let ((source (and (pair? o) (car o))))
+    (if (pair? alist)
+        (make-conf alist config source (current-second))
+        config)))
 
 ;;> Joins two configs.
 
@@ -450,9 +451,7 @@
        (else (conf-verify-match (cadr def) cell warn)))))))
 
 (define (conf-verify spec config . o)
-  (let ((warn (if (pair? o)
-                  (lambda args (apply (car o) args) #f)
-                  conf-default-warn)))
+  (let ((warn (if (pair? o) (car o) conf-default-warn)))
     (let lp ((config config))
       (cond
        (config
