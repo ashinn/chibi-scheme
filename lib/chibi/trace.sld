@@ -1,14 +1,14 @@
 
-;;> @subsubsubsection{(trace proc)}
+;;> \subsubsubsection{(trace proc)}
 
-;;> Write a trace of all calls to the procedure @var{proc} to
-;;> @scheme{(current-error-port)}.
+;;> Write a trace of all calls to the procedure \var{proc} to
+;;> \scheme{(current-error-port)}.
 
-;;> @subsubsubsection{(untrace proc)}
+;;> \subsubsubsection{(untrace proc)}
 
-;;> Remove any active traces on the procedure @var{proc}.
+;;> Remove any active traces on the procedure \var{proc}.
 
-;;> @subsubsubsection{(untrace-all)}
+;;> \subsubsubsection{(untrace-all)}
 
 ;;> Remove all active procedure traces.
 
