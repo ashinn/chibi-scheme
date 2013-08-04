@@ -65,17 +65,17 @@
 (define-c errno fstat (int (result stat)))
 (define-c errno (file-link-status "lstat") (string (result stat)))
 
-;; Creates a new input-port from the file descriptor @var{int}.
+;; Creates a new input-port from the file descriptor \var{int}.
 
 ;; (define-c input-port (open-input-file-descriptor "fdopen")
 ;;   (fileno (value "r" string)))
 
-;; Creates a new output-port from the file descriptor @var{int}.
+;; Creates a new output-port from the file descriptor \var{int}.
 
 ;; (define-c output-port (open-output-file-descriptor "fdopen")
 ;;   (fileno (value "w" string)))
 
-;; Creates a new bidirectional port from the file descriptor @var{int}.
+;; Creates a new bidirectional port from the file descriptor \var{int}.
 
 ;; (define-c input-output-port (open-input-output-file-descriptor "fdopen")
 ;;   (fileno (value "r+" string)))
@@ -83,17 +83,17 @@
 (define-c errno (%delete-file "unlink") (string))
 
 ;;> Creates a hard link to the first arg from the second.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (link-file "link") (string string))
 
 ;;> Creates a symbolic link to the first arg from the second.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (symbolic-link-file "symlink") (string string))
 
 ;;> Renames the first arg to the second.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (rename-file "rename") (string string))
 
@@ -107,13 +107,13 @@
 (define-c errno (change-directory "chdir") (string))
 
 ;;> Creates a new directory with the given mode.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (create-directory "mkdir") (string int))
 
-;;> Deletes the directory named @var{string} from the filesystem.
+;;> Deletes the directory named \var{string} from the filesystem.
 ;;> Does not attempt to delete recursively.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (delete-directory "rmdir") (string))
 
@@ -127,12 +127,12 @@
 
 ;;> Copies the first file descriptor to the second, closing
 ;;> it if needed.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (duplicate-file-descriptor-to "dup2") (fileno fileno))
 
 ;;> Closes the given file descriptor.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (close-file-descriptor "close") (fileno))
 
@@ -146,7 +146,7 @@
 (define-c errno (open-pipe "pipe") ((result (array fileno 2))))
 
 ;;> Creates a new named pipe in the given path.
-;;> Returns @scheme{#t} on success and @scheme{#f} on failure.
+;;> Returns \scheme{#t} on success and \scheme{#f} on failure.
 
 (define-c errno (make-fifo "mkfifo") (string (default #o644 int)))
 
@@ -185,7 +185,7 @@
 ;;> File opening modes.
 ;;/
 
-;;> Returns @scheme{#t} if the given port of file descriptor
-;;> if backed by a TTY object, and @scheme{#f} otherwise.
+;;> Returns \scheme{#t} if the given port of file descriptor
+;;> if backed by a TTY object, and \scheme{#f} otherwise.
 
 (define-c boolean (is-a-tty? "isatty") (port-or-fileno))
