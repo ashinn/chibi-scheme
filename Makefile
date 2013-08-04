@@ -264,6 +264,7 @@ install: all
 	$(INSTALL) lib/chibi/match/*.scm $(DESTDIR)$(MODDIR)/chibi/match/
 	$(INSTALL) lib/chibi/net/*.sld lib/chibi/net/*.scm $(DESTDIR)$(MODDIR)/chibi/net/
 	$(INSTALL) lib/chibi/optimize/*.sld lib/chibi/optimize/*.scm $(DESTDIR)$(MODDIR)/chibi/optimize/
+	$(INSTALL) lib/chibi/parse/*.sld lib/chibi/parse/*.scm $(DESTDIR)$(MODDIR)/chibi/parse/
 	$(INSTALL) lib/chibi/term/*.sld lib/chibi/term/*.scm $(DESTDIR)$(MODDIR)/chibi/term/
 	$(INSTALL) lib/scheme/*.sld lib/scheme/*.scm $(DESTDIR)$(MODDIR)/scheme/
 	$(INSTALL) lib/scheme/char/*.sld lib/scheme/char/*.scm $(DESTDIR)$(MODDIR)/scheme/char/
@@ -322,6 +323,7 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(BINMODDIR)/chibi/match
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(BINMODDIR)/chibi/net
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(BINMODDIR)/chibi/optimize
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(BINMODDIR)/chibi/parse
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/term $(DESTDIR)$(BINMODDIR)/chibi/term
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi $(DESTDIR)$(BINMODDIR)/chibi
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/scheme/char $(DESTDIR)$(BINMODDIR)/scheme/char
