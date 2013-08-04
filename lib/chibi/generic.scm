@@ -16,9 +16,8 @@
                      (let-syntax ((call))
                        . body))))))
 
-;;> \subsubsubsection{(define-method (name (param type) ...) body ...)}
 ;;> \subsubsubsection{\scheme{(define-method (name params ...) body ...)}}
- 
+
 ;;> Each parameter should be either a single identifier or a list of the form
 ;;> \scheme{(param type)} where \var{param} is the parameter name and
 ;;> \var{type} is a predicate which returns true if it's argument is of the
