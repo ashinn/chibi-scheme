@@ -4,7 +4,7 @@
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> The loop API is mostly compatible with Taylor Campbell's
-;;> @hyperlink["http://mumble.net/~campbell/scheme/foof-loop.txt"]{foof-loop},
+;;> \hyperlink["http://mumble.net/~campbell/scheme/foof-loop.txt"]{foof-loop},
 ;;> but the iterator API is different and subject to change.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -49,7 +49,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> @subsubsubsection{@scheme{(loop [name] (vars ...) [=> result] body ...)}}
+;;> \subsubsubsection{\scheme{(loop [name] (vars ...) [=> result] body ...)}}
 
 (define-syntax loop
   (syntax-rules ()
@@ -124,27 +124,27 @@
         . rest))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;> @subsubsection{Iterators}
+;;> \subsubsection{Iterators}
 
 ;; Each gets passed two lists, those items left of the macro and those to
 ;; the right, followed by a NEXT and REST continuation.
 ;;
 ;; Should finish with
 ;;
-;; @schemeblock{
+;; \schemeblock{
 ;;  (next (outer-vars ...) (cursor-vars ...) (done?-tests ...)
 ;;        (loop-vars ...) (final-vars ...) . rest)
 ;; }
 ;;
-;; @itemlist[
-;; @item{@var{outer-vars} - bound once outside the loop in a LET*}
-;; @item{@var{cursor-vars} - DO-style bindings of the form (name init update)}
-;; @item{@var{done?-tests} - possibly empty list of forms that terminate the loop on #t}
-;; @item{@var{loop-vars} - inner variables, updated in parallel after the cursors}
-;; @item{@var{final-vars} - final variables, bound only in the => result}
+;; \itemlist[
+;; \item{\var{outer-vars} - bound once outside the loop in a LET*}
+;; \item{\var{cursor-vars} - DO-style bindings of the form (name init update)}
+;; \item{\var{done?-tests} - possibly empty list of forms that terminate the loop on #t}
+;; \item{\var{loop-vars} - inner variables, updated in parallel after the cursors}
+;; \item{\var{final-vars} - final variables, bound only in the => result}
 ;; ]
 
-;;> @subsubsubsection{@scheme{(for var [pair] (in-list ls [cdr]))}}
+;;> \subsubsubsection{\scheme{(for var [pair] (in-list ls [cdr]))}}
 
 ;;> Basic list iterator.
 
@@ -172,7 +172,7 @@
            ()
            . rest))))
 
-;;> @subsubsubsection{@scheme{(for elts [pairs] (in-lists lol [cdr [done?]]))}}
+;;> \subsubsubsection{\scheme{(for elts [pairs] (in-lists lol [cdr [done?]]))}}
 
 ;;> Iterator from Taylor R. Campbell.  If you know the number of lists
 ;;> ahead of time it's much more efficient to iterate over each one
@@ -215,12 +215,12 @@
             (%in-idx < (lambda (x i) (- i 1)) (lambda (x) (- (length x) 1)) (lambda (x) 0) ref tmp seq next . rest))))
        ))))
 
-;;> @subsubsubsection{@scheme{(for var [index] (in-vector vec))}}
-;;> @subsubsubsection{@scheme{(for var [index] (in-vector-reverse vec))}}
+;;> \subsubsubsection{\scheme{(for var [index] (in-vector vec))}}
+;;> \subsubsubsection{\scheme{(for var [index] (in-vector-reverse vec))}}
 
 (define-in-indexed in-vector in-vector-reverse vector-length vector-ref)
 
-;;> @subsubsubsection{@scheme{(for ch [cursor] (in-string str))}}
+;;> \subsubsubsection{\scheme{(for ch [cursor] (in-string str))}}
 
 (define-syntax in-string
   (syntax-rules ()
@@ -229,7 +229,7 @@
               string-cursor-start string-cursor-end string-cursor-ref
               tmp s next . rest))))
 
-;;> @subsubsubsection{@scheme{(for ch [cursor] (in-string-reverse str))}}
+;;> \subsubsubsection{\scheme{(for ch [cursor] (in-string-reverse str))}}
 
 (define-syntax in-string-reverse
   (syntax-rules ()
@@ -258,7 +258,7 @@
        . rest))
     ))
 
-;;> @subsubsubsection{@scheme{(for ch (in-port [input-port [reader [eof?]]]))}}
+;;> \subsubsubsection{\scheme{(for ch (in-port [input-port [reader [eof?]]]))}}
 
 (define-syntax in-port
   (syntax-rules ()
@@ -278,7 +278,7 @@
            ()
        . rest))))
 
-;;> @subsubsubsection{@scheme{(for ch (in-file [input-port [reader [eof?]]]))}}
+;;> \subsubsubsection{\scheme{(for ch (in-file [input-port [reader [eof?]]]))}}
 
 (define-syntax in-file
   (syntax-rules ()
@@ -296,7 +296,7 @@
            ((dummy (close-input-port p)))
        . rest))))
 
-;;> @subsubsubsection{@scheme{(for x (up-from [start] [(to limit)] [(by step)]))}}
+;;> \subsubsubsection{\scheme{(for x (up-from [start] [(to limit)] [(by step)]))}}
 
 (define-syntax up-from
   (syntax-rules (to by)
@@ -322,7 +322,7 @@
      (next ((s start)) ((var s (+ var 1))) () () () . rest))
     ))
 
-;;> @subsubsubsection{@scheme{(for x (down-from [start] [(to limit)] [(by step)]))}}
+;;> \subsubsubsection{\scheme{(for x (down-from [start] [(to limit)] [(by step)]))}}
 
 (define-syntax down-from
   (syntax-rules (to by)
@@ -371,14 +371,14 @@
         ((var (final cursor)))
         . rest))))
 
-;;> @subsubsubsection{@scheme{(for x [pair] (listing expr))}}
+;;> \subsubsubsection{\scheme{(for x [pair] (listing expr))}}
 
 (define-syntax listing
   (syntax-rules ()
     ((listing args next . rest)
      (accumulating (cons reverse '()) args next . rest))))
 
-;;> @subsubsubsection{@scheme{(for x [pair] (listing-reverse expr))}}
+;;> \subsubsubsection{\scheme{(for x [pair] (listing-reverse expr))}}
 
 (define-syntax listing-reverse
   (syntax-rules ()
@@ -388,28 +388,28 @@
 (define (append-reverse rev tail)
   (if (null? rev) tail (append-reverse (cdr rev) (cons (car rev) tail))))
 
-;;> @subsubsubsection{@scheme{(for x [pair] (appending expr))}}
+;;> \subsubsubsection{\scheme{(for x [pair] (appending expr))}}
 
 (define-syntax appending
   (syntax-rules ()
     ((appending args next . rest)
      (accumulating (append-reverse reverse '()) args next . rest))))
 
-;;> @subsubsubsection{@scheme{(for x [pair] (appending-reverse expr))}}
+;;> \subsubsubsection{\scheme{(for x [pair] (appending-reverse expr))}}
 
 (define-syntax appending-reverse
   (syntax-rules ()
     ((appending-reverse args next . rest)
      (accumulating (append-reverse (lambda (x) x) '()) args next . rest))))
 
-;;> @subsubsubsection{@scheme{(for x (summing expr))}}
+;;> \subsubsubsection{\scheme{(for x (summing expr))}}
 
 (define-syntax summing
   (syntax-rules ()
     ((summing args next . rest)
      (accumulating (+ (lambda (x) x) 0) args next . rest))))
 
-;;> @subsubsubsection{@scheme{(for x (multiplying expr))}}
+;;> \subsubsubsection{\scheme{(for x (multiplying expr))}}
 
 (define-syntax multiplying
   (syntax-rules ()

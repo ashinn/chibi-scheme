@@ -44,12 +44,12 @@
 
 (c-include "signal.c")
 
-;;> @subsubsubsection{@rawcode{(set-signal-action! signal handler)}}
+;;> \subsubsubsection{\rawcode{(set-signal-action! signal handler)}}
 
-;;> Sets the signal handler for @var{signal} to @var{handler}
-;;> and returns the old handler.  @var{handler} should be a procedure
-;;> of one argument, the signal number, the value @scheme{#t} for
-;;> the default signal handler, or @scheme{#f} for no handler.
+;;> Sets the signal handler for \var{signal} to \var{handler}
+;;> and returns the old handler.  \var{handler} should be a procedure
+;;> of one argument, the signal number, the value \scheme{#t} for
+;;> the default signal handler, or \scheme{#f} for no handler.
 
 ;;> Signal handlers are queued run in a dedicated thread after the
 ;;> system handler has returned.
@@ -77,19 +77,19 @@
 (define-c errno (current-signal-mask "sigprocmask")
   ((value SIG_BLOCK int) (pointer value NULL sigset_t) (pointer result sigset_t)))
 
-;;> Send a @var{signal/alarm} signal to the current process
-;;> after @var{unsigned-int} seconds have elapsed.
+;;> Send a \var{signal/alarm} signal to the current process
+;;> after \var{unsigned-int} seconds have elapsed.
 
 (define-c unsigned-int alarm (unsigned-int))
 
-;;> Suspend the current process for @var{unsigned-int} seconds.
-;;> See @hyperlink["http://srfi.schemers.org/srfi-18/srfi-18.html"]{SRFI-18}
-;;> @scheme{thread-sleep!} for a light-weight sleep for only the
+;;> Suspend the current process for \var{unsigned-int} seconds.
+;;> See \hyperlink["http://srfi.schemers.org/srfi-18/srfi-18.html"]{SRFI-18}
+;;> \scheme{thread-sleep!} for a light-weight sleep for only the
 ;;> current thread.
 
 (define-c unsigned-int sleep (unsigned-int))
 
-;;> Fork the current process.  Returns @rawcode{0} for the newly
+;;> Fork the current process.  Returns \rawcode{0} for the newly
 ;;> created process, and the process id of the new process for
 ;;> the parent.
 
@@ -99,12 +99,12 @@
 
 ;;(define-c pid_t wait ((result int)))
 
-;;> @subsubsubsection{@rawcode{(waitpid pid options)}}
+;;> \subsubsubsection{\rawcode{(waitpid pid options)}}
 
-;;> Wait on the process @var{pid}, or any child process if @var{pid}
-;;> is @rawcode{-1}.  @var{options} should be 0, or @var{wait/no-hang}
+;;> Wait on the process \var{pid}, or any child process if \var{pid}
+;;> is \rawcode{-1}.  \var{options} should be 0, or \var{wait/no-hang}
 ;;> to return immediately if no processes have reported status.  Returns
-;;> a list whose first element is the actual @var{pid} reporting, and
+;;> a list whose first element is the actual \var{pid} reporting, and
 ;;> the second element is the integer status.
 
 (define-c pid_t waitpid (int (result int) int))

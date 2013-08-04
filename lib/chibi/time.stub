@@ -17,7 +17,7 @@
   (int     tm_yday   time-day-of-year)
   (int     tm_isdst  time-dst?))
 
-;;> Accessors for the @scheme{tm} struct.
+;;> Accessors for the \scheme{tm} struct.
 ;;/
 
 (define-c-struct timeval
@@ -26,7 +26,7 @@
   (time_t  tv_sec          timeval-seconds)
   (int     tv_usec         timeval-microseconds))
 
-;;> Accessors for the @scheme{timeval} struct.
+;;> Accessors for the \scheme{timeval} struct.
 ;;/
 
 (define-c-struct timezone
@@ -34,7 +34,7 @@
   (int     tz_minuteswest  timezone-offset)
   (int     tz_dsttime      timezone-dst-time))
 
-;;> Accessors for the @scheme{timezone} struct.
+;;> Accessors for the \scheme{timezone} struct.
 ;;/
 
 ;;> Returns the current time as an integer number

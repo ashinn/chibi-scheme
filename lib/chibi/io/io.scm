@@ -31,19 +31,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reading and writing
 
-;; Display @var{str} to the given output port, defaulting to
-;; @scheme{(current-output-port)}, followed by a newline.
+;; Display \var{str} to the given output port, defaulting to
+;; \scheme{(current-output-port)}, followed by a newline.
 
 (define (write-line str . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (display str out)
     (newline out)))
 
-;;> @subsubsubsection{(write-string str [out [start [end]]])}
+;;> \subsubsubsection{(write-string str [out [start [end]]])}
 
-;;> Writes the characters from @var{start} to @var{end} of string
-;;> @var{str} to output port @var{out}, where @var{start} defaults
-;;> to 0 and @var{end} defaults to @scheme{(string-length @var{str})}.
+;;> Writes the characters from \var{start} to \var{end} of string
+;;> \var{str} to output port \var{out}, where \var{start} defaults
+;;> to 0 and \var{end} defaults to \scheme{(string-length \var{str})}.
 
 (define (write-string str . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
@@ -60,11 +60,11 @@
             (display (substring str start end) out))))
         (display str out))))
 
-;;> @subsubsubsection{(read-line [in [n]])}
+;;> \subsubsubsection{(read-line [in [n]])}
 
-;;> Read a line from the input port @var{in}, defaulting to
-;;> @scheme{(current-input-port)}, and return the result as
-;;> a string not including the newline.  Reads at most @var{n}
+;;> Read a line from the input port \var{in}, defaulting to
+;;> \scheme{(current-input-port)}, and return the result as
+;;> a string not including the newline.  Reads at most \var{n}
 ;;> characters, defaulting to 8192.
 
 (cond-expand
@@ -109,13 +109,13 @@
              (else
               res)))))))
 
-;;> @subsubsubsection{(read-string n [in])}
+;;> \subsubsubsection{(read-string n [in])}
 
-;;> Reads @var{n} characters from input-port @var{in},
-;;> defaulting to @scheme{(current-input-port)}, and
-;;> returns the result as a string.  Returns @scheme{""}
-;;> if @var{n} is zero.  May return a string with fewer
-;;> than @var{n} characters if the end of file is reached,
+;;> Reads \var{n} characters from input-port \var{in},
+;;> defaulting to \scheme{(current-input-port)}, and
+;;> returns the result as a string.  Returns \scheme{""}
+;;> if \var{n} is zero.  May return a string with fewer
+;;> than \var{n} characters if the end of file is reached,
 ;;> or the eof-object if no characters are available.
 
 (cond-expand
@@ -140,14 +140,14 @@
                                   (port-line in)))
             (cadr res)))))))
 
-;;> @subsubsubsection{(read-string! str n [in])}
+;;> \subsubsubsection{(read-string! str n [in])}
 
-;;> Reads @var{n} characters from port @var{in}, which
-;;> defaults to @scheme{(current-input-port)}, and writes
-;;> them into the string @var{str} starting at index 0.
+;;> Reads \var{n} characters from port \var{in}, which
+;;> defaults to \scheme{(current-input-port)}, and writes
+;;> them into the string \var{str} starting at index 0.
 ;;> Returns the number of characters read.
-;;> An error is signalled if the length of @var{str} is smaller
-;;> than @var{n}.
+;;> An error is signalled if the length of \var{str} is smaller
+;;> than \var{n}.
 
 (cond-expand
  ((not string-streams)

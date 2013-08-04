@@ -3,9 +3,9 @@
 (c-system-include "pwd.h")
 (c-system-include "sys/types.h")
 
-;;> @subsubsubsection{@scheme{(user-information name-or-id)}}
+;;> \subsubsubsection{\scheme{(user-information name-or-id)}}
 
-;;> Returns the password entry for the given user.  @var{name-or-id}
+;;> Returns the password entry for the given user.  \var{name-or-id}
 ;;> should be a string indicating the user name, or an integer
 ;;> for the user id.
 
@@ -20,7 +20,7 @@
   (string  pw_shell    user-shell))
 
 ;;> Accessors for the password entry structure returned by
-;;> @scheme{user-information}.
+;;> \scheme{user-information}.
 ;;/
 
 (define-c uid_t (current-user-id "getuid") ())
@@ -45,7 +45,7 @@
 
 (define-c pid_t (create-session "setsid") ())
 
-;;> Set @var{string} to be the new root directory, so that
+;;> Set \var{string} to be the new root directory, so that
 ;;> paths beginning with "/" are resolved relative to the
 ;;> new root.
 
