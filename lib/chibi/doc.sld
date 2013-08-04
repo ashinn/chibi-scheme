@@ -1,10 +1,10 @@
 
 (define-library (chibi doc)
   (import
-   (chibi) (scheme eval) (srfi 1)
+   (except (chibi) eval) (scheme eval) (srfi 1) (srfi 95)
    (chibi modules) (chibi ast) (chibi io) (chibi match)
    (chibi time) (chibi filesystem) (chibi process)
-   (chibi scribble) (chibi sxml) (chibi highlight)
+   (chibi string) (chibi scribble) (chibi sxml) (chibi highlight)
    (chibi type-inference))
   (export procedure-docs print-procedure-docs
           print-module-docs print-module-binding-docs

@@ -1,26 +1,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; utils
 
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))
 
 (define (string-concatenate-reverse ls)
   (string-concatenate (reverse ls)))
-
-(define (string-scan ch str . o)
-  (let ((limit (string-length str)))
-    (let lp ((i (if (pair? o) (car o) 0)))
-      (cond ((>= i limit) #f)
-            ((eqv? ch (string-ref str i)) i)
-            (else (lp (+ i 1)))))))
-
-(define (string-split str ch)
-  (let ((len (string-length str)))
-    (let lp ((from 0) (to 0) (res '()))
-      (define (collect) (cons (substring str from to) res))
-      (cond ((>= to len) (reverse (collect)))
-            ((eqv? ch (string-ref str to)) (lp (+ to 1) (+ to 1) (collect)))
-            (else (lp from (+ to 1) res))))))
 
 (define (string-strip str . o)
   (let ((bad (if (pair? o) (car o) " \t\n")))
@@ -32,7 +18,7 @@
               (let ((ch (read-char in)))
                 (cond
                  ((not (eof-object? ch))
-                  (if (not (string-scan ch bad))
+                  (if (not (string-find? bad ch))
                       (write-char ch out))
                   (lp)))))))))))
 
@@ -40,15 +26,15 @@
   (let ((len (string-length str)))
     (let lp ((i 0))
       (cond ((= i len) str)
-            ((not (string-scan (string-ref str i) sep)) (lp (+ i 1)))
+            ((not (string-find? sep (string-ref str i))) (lp (+ i 1)))
             (else
              (let lp ((j (+ i 1)))
                (cond ((= j len) "")
-                     ((string-scan (string-ref str j) sep) (lp (+ j 1)))
+                     ((string-find? sep (string-ref str j)) (lp (+ j 1)))
                      (else
                       (let lp ((k (+ j 1)))
                         (cond
-                         ((or (= k len) (string-scan (string-ref str k) sep))
+                         ((or (= k len) (string-find? sep (string-ref str k)))
                           (substring str j k))
                          (else
                           (lp (+ k 1)))))))))))))
@@ -86,6 +72,12 @@
   (cond ((not (and (pair? x) (pair? (cdr x)))) '())
         ((and (pair? (cadr x)) (eq? '@ (car (cadr x)))) (cddr x))
         (else (cdr x))))
+
+(define (sxml->sexp-list x)
+  (call-with-input-string (sxml-strip x) port->sexp-list))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; doc environments
 
 (define (env-ref env name . o)
   (cond ((assq name (car env)) => cdr)
@@ -146,9 +138,6 @@
   (env-extend (make-default-doc-env)
               '(example-env)
               (list (environment '(scheme base) mod-name))))
-
-(define (sxml->sexp-list x)
-  (call-with-input-string (sxml-strip x) port->sexp-list))
 
 (define (section-name tag name)
   (string-strip
@@ -252,6 +241,7 @@
     sxml)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; adjustments for html
 
 (define header-index
   (let* ((headers '(h1 h2 h3 h4 h5 h6))
@@ -351,6 +341,7 @@ div#footer {padding-bottom: 50px}
    (expand-docs sxml (if (pair? o) (car o) (make-default-doc-env)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; extraction
 
 (define (skip-horizontal-whitespace in)
   (cond ((memv (peek-char in) '(#\space #\tab))
@@ -360,11 +351,80 @@ div#footer {padding-bottom: 50px}
 (define (external-clause? x)
   (not (and (pair? (cdr x)) (pair? (cadr x)) (string? (car (cadr x))))))
 
+(define (contains? tree x)
+  (or (eq? tree x)
+      (and (pair? tree)
+           (or (contains? (car tree) x)
+               (contains? (cdr tree) x)))))
+
+;; Try to determine the names of optional parameters checking common
+;; patterns.
+(define (get-optionals ls body)
+  (let lp ((ls ls) (pre '()))
+    (cond
+     ((pair? ls) (lp (cdr ls) (cons (car ls) pre)))
+     ((null? ls) (reverse pre))
+     (else
+      (let* ((o ls)
+             (o? (lambda (x) (eq? x o))))
+        (let extract ((x body)
+                      (vars '())
+                      (i 0))
+          (match x
+            ((('define x val) . rest)
+             (if (contains? val o)
+                 (extract #f vars i)
+                 (extract rest vars i)))
+            ((((or 'let 'let* 'letrec 'letrec*) (y ...) . body))
+             (let ((ordered? (memq (car x) '(let* letrec*))))
+               (let lp ((ls y) (vars vars) (j i))
+                 (cond
+                  ((pair? ls)
+                   (match (car ls)
+                     (((? o?) ('if ('pair? (? o?)) ('cdr (? o?)) default))
+                      (lp (cdr ls) vars (+ j 1)))
+                     (((? o?) expr)
+                      (extract #f vars i))
+                     ((v ('if ('pair? (? o?)) ('car (? o?)) default))
+                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                     ((v ('and ('pair? (? o?)) ('car (? o?))))
+                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                     ((v ('if ('and ('pair? (? o?)) ('pair? ('cdr (? o?))))
+                             ('cadr (? o?))
+                             default))
+                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                     (else
+                      (lp (cdr ls) vars j))))
+                  (else
+                   (extract body vars j))))))
+            ((((or 'let-optionals 'let-optionals*) ls ((var default) ...)
+               . body))
+             (let lp ((ls var) (vars vars) (i i))
+               (cond
+                ((pair? ls)
+                 (lp (cdr ls) (cons (cons (caar ls) i) vars) (+ i 1)))
+                (else
+                 (extract body vars i)))))
+            (else
+             (let ((opts (map car (sort vars < cdr)))
+                   (dotted? (contains? x o)))
+               (append (reverse pre)
+                       (cond
+                        ((and (pair? opts) dotted?)
+                         (list (append opts o)))
+                        (dotted?
+                         o)
+                        (else
+                         (list opts)))))))))))))
+
 (define (get-signature proc source form)
   (match form
-    (('define (name . args) . body)
+    (('define (name args ...) . body)
      (list (cons name args)))
+    (('define (name . args) . body)
+     (list (cons name (get-optionals args body))))
     (('define-syntax name ('syntax-rules () (clause . body) ...))
+     ;; TODO: smarter summary
      (map (lambda (x) (cons name (cdr x)))
           (filter external-clause? clause)))
     ((procedure? proc)
@@ -434,6 +494,37 @@ div#footer {padding-bottom: 50px}
                (and (string=? op "for")
                     (string-contains str (string-append "(" name " "))))))))
 
+;; write a signature handling a trailing list as [optional] parameters
+(define (write-signature sig)
+  (if (and (list? sig)
+           (> (length sig) 1)
+           (pair? (last sig))
+           (not (any pair? (drop-right sig 1))))
+      (call-with-output-string
+        (lambda (out)
+          (display "(" out)
+          (write (car sig) out)
+          (let lp ((ls sig))
+            (cond
+             ((pair? (car ls))
+              (display " [" out)
+              (write (caar ls) out)
+              (let lp ((ls (cdar ls)))
+                (cond
+                 ((pair? ls)
+                  (display " " out)
+                  (write (car ls) out)
+                  (lp (cdr ls)))
+                 ((not (null? ls))
+                  (display " . " out)
+                  (write ls out))))
+              (display "])" out))
+             (else
+              (display " " out)
+              (write (car ls) out)
+              (lp (cdr ls)))))))
+      (write-to-string sig)))
+
 (define (insert-signature orig-ls name sig)
   (cond
    ((not (pair? sig))
@@ -458,7 +549,7 @@ div#footer {padding-bottom: 50px}
                       ,@(if (eq? 'const: (caar sig))
                             `((i ,(write-to-string (car (cdar sig))) ": ")
                               ,(write-to-string (cadr (cdar sig))))
-                            (intersperse (map write-to-string sig) '(br)))))))
+                            (intersperse (map write-signature sig) '(br)))))))
             ,@ls))
          (else
           (lp (cdr ls) (cons (car ls) rev-pre)))))))))
@@ -602,7 +693,7 @@ div#footer {padding-bottom: 50px}
     (render
      (generate-docs
       `((title ,(write-to-string mod-name))
-        ,@(apply extract-module-docs mod-name #f o))
+        ,@(extract-module-docs mod-name #f))
       (make-module-doc-env mod-name))
      out)))
 
