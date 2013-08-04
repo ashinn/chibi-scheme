@@ -93,7 +93,9 @@
   (let ((in (if (pair? o) (car o) (current-input-port)))
         (n (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) 8192)))
     (let ((res (%read-line n in)))
-      (port-line-set! in (+ 1 (port-line in)))
+      (cond-expand
+       (string-streams
+        (port-line-set! in (+ 1 (port-line in)))))
       (if (not res)
           eof
           (let ((len (string-length res)))
