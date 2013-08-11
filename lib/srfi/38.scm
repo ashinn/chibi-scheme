@@ -106,7 +106,14 @@
           ((let ((type (type-of x)))
              (and (type? type) (type-printer type)))
            => (lambda (printer) (printer x wr out)))
+          ((null? x) (display "()" out))
+          ((char? x) (display "#\\" out) (write-char x out))
+          ((symbol? x) (display (symbol->string x) out))
+          ((number? x) (display (number->string x) out))
+          ((eq? x #t) (display "#t" out))
+          ((eq? x #f) (display "#f" out))
           (else
+           ;; (display "#<unknown>" out)
            (write x out))))))))
 
 (define write/ss write-with-shared-structure)
