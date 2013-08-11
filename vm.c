@@ -1941,6 +1941,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         if (sexp_port_stream(_ARG2)) clearerr(sexp_port_stream(_ARG2));
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
           sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2);
+        else               /* no scheduler but output full, wait 5ms */
+          usleep(5*1000);
         fuel = 0;
         ip--;      /* try again */
         goto loop;
