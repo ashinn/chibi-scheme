@@ -53,4 +53,13 @@
 (test '(("a" . "1") ("b" . "2 2") ("c" . "3"))
     (uri-query (string->uri "http://google.com/%73?a=1&b=2+2;c=%33" #t #t)))
 
+(let ((str "/"))
+  (test-assert (uri? (string->path-uri 'http str)))
+  (test 'http (uri-scheme (string->path-uri 'http str)))
+  (test #f (uri-host (string->path-uri 'http str)))
+  (test #f (uri-port (string->path-uri 'http str)))
+  (test "/" (uri-path (string->path-uri 'http str)))
+  (test #f (uri-query (string->path-uri 'http str)))
+  (test #f (uri-fragment (string->path-uri 'http str))))
+
 (test-end)
