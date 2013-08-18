@@ -375,3 +375,23 @@ sexp sexp_peek_u8 (sexp ctx, sexp self, sexp in) {
     sexp_push_char(ctx, sexp_unbox_fixnum(res), in);
   return res;
 }
+
+int sexp_is_a_socket_p (int fd) {
+#if defined(PLAN9) || defined(_WIN32)
+  return 0;
+#else
+  struct stat statbuf;
+  fstat(fd, &statbuf);
+  return S_ISSOCK(statbuf.st_mode);
+#endif
+}
+
+int sexp_send_file (int fd, int s, off_t offset, off_t len, off_t* res) {
+#if SEXP_USE_SEND_FILE
+  *res = len;
+  return sendfile(fd, s, offset, res, NULL, 0);
+#else
+  *res = 0;
+  return 22; /* EINVAL */
+#endif
+}
