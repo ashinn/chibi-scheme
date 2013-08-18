@@ -164,6 +164,27 @@
     (port-line-set! in (+ (string-count #\newline str 0 n) (port-line in)))
     res))
 
+;;> Sends the entire contents of a file or input port to an output port.
+
+(define (send-file fd-port-or-filename . o)
+  (let* ((in (if (string? fd-port-or-filename)
+                 (open-input-file fd-port-or-filename)
+                 fd-port-or-filename))
+         (out (if (pair? o) (car o) (current-output-port)))
+         (fd (if (port? in) (port-fileno in) in))
+         (sock (if (port? out) (port-fileno out) out)))
+    (if (and fd sock (is-a-socket? sock))
+        (let lp ((start 0))
+          (let ((res (%send-file fd sock start)))
+            (cond
+             ((not res) (lp start))
+             ((not (zero? res)) (lp (+ start res))))))
+        (let lp ()
+          (let ((str (read-string 8192 in)))
+            (cond ((not (eof-object? str))
+                   (display str out)
+                   (lp))))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; higher order port operations
 

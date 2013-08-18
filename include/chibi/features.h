@@ -641,6 +641,10 @@
 #define SEXP_USE_MAIN_HELP ! SEXP_USE_NO_FEATURES
 #endif
 
+#ifndef SEXP_USE_SEND_FILE
+#define SEXP_USE_SEND_FILE (!defined(_WIN32) && !defined(PLAN9))
+#endif
+
 #if SEXP_USE_NATIVE_X86
 #undef SEXP_USE_BOEHM
 #define SEXP_USE_BOEHM 1
