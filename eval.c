@@ -1180,9 +1180,11 @@ sexp sexp_set_port_line_op (sexp ctx, sexp self, sexp_sint_t n, sexp port, sexp 
 
 #ifndef PLAN9
 sexp sexp_get_port_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+  int fd;
   sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
-  if (sexp_port_stream(port) && sexp_port_fileno(port) >= 0)
-    return sexp_make_fixnum(sexp_port_fileno(port));
+  fd = sexp_port_fileno(port);
+  if (fd >= 0)
+    return sexp_make_fixnum(fd);
   return SEXP_FALSE;
 }
 #endif
