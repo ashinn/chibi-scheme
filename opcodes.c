@@ -239,8 +239,10 @@ _FN2(_I(SEXP_OPCODE), _I(SEXP_TYPE), _I(SEXP_SYMBOL), "type-slot-offset", 0, sex
 _OP(SEXP_OPC_GETTER, SEXP_OP_SLOTN_REF, 3, 0, _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_FIXNUM), 0, "slot-ref", 0, NULL),
 _OP(SEXP_OPC_SETTER, SEXP_OP_SLOTN_SET, 4, 0, SEXP_VOID, _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_FIXNUM), 0,"slot-set!", 0, NULL),
 #endif
-#if PLAN9
+#ifdef PLAN9
 #include "opt/plan9-opcodes.c"
+#else
+_FN1(_I(SEXP_OBJECT), _I(SEXP_IPORT), "port-fileno", 0, sexp_get_port_fileno),
 #endif
 #if SEXP_USE_MODULES
 _FN0(_I(SEXP_ENV), "current-environment", 0, sexp_current_environment),

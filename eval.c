@@ -1178,6 +1178,15 @@ sexp sexp_set_port_line_op (sexp ctx, sexp self, sexp_sint_t n, sexp port, sexp 
   return SEXP_VOID;
 }
 
+#ifndef PLAN9
+sexp sexp_get_port_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+  sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
+  if (sexp_port_stream(port) && sexp_port_fileno(port) >= 0)
+    return sexp_make_fixnum(sexp_port_fileno(port));
+  return SEXP_FALSE;
+}
+#endif
+
 #if SEXP_USE_STATIC_LIBS
 #ifndef PLAN9
 #include "clibs.c"

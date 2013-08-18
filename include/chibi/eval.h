@@ -224,6 +224,8 @@ SEXP_API sexp sexp_9p_req_fid (sexp ctx, sexp self, sexp_sint_t n, sexp req);
 SEXP_API sexp sexp_9p_req_newfid (sexp ctx, sexp self, sexp_sint_t n, sexp req);
 SEXP_API sexp sexp_9p_respond (sexp ctx, sexp self, sexp_sint_t n, sexp req, sexp err);
 SEXP_API sexp sexp_9p_responderror (sexp ctx, sexp self, sexp_sint_t n, sexp req);
+#else
+SEXP_API sexp sexp_get_port_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 #endif
 
 #if SEXP_USE_SIMPLIFY
