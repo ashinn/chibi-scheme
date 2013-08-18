@@ -94,11 +94,11 @@
              (end (string-cursor-end str))
              (colon0 (string-find str #\:))
              (colon
-              (and (string-cursor>=?
-                    (string-find str char-uri-scheme-unsafe? start colon0)
-                    colon0)
-                   (string-cursor<? colon0 end)
-                   colon0)))
+              (if (string-cursor>=?
+                   (string-find str char-uri-scheme-unsafe? start colon0)
+                   colon0)
+                  colon0
+                  end)))
         (if (string-cursor>=? colon end)
             (and scheme
                  (let* ((quest (string-find str #\?))
