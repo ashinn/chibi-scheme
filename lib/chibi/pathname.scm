@@ -1,94 +1,73 @@
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> A general, non-host-specific pathname library.
-
-(define (string-scan c str . o)
-  (let ((limit (string-length str)))
-    (let lp ((i (if (pair? o) (car o) 0)))
-      (cond ((>= i limit) #f)
-            ((eqv? c (string-ref str i)) i)
-            (else (lp (+ i 1)))))))
-
-(define (string-scan-right c str . o)
-  (let lp ((i (if (pair? o) (car o) (- (string-length str) 1))))
-    (cond ((negative? i) #f)
-          ((eqv? c (string-ref str i)) i)
-          (else (lp (- i 1))))))
-
-(define (string-skip c str . o)
-  (let ((limit (string-length str)))
-    (let lp ((i (if (pair? o) (car o) 0)))
-      (cond ((>= i limit) #f)
-            ((not (eqv? c (string-ref str i))) i)
-            (else (lp (+ i 1)))))))
-
-(define (string-skip-right c str . o)
-  (let lp ((i (if (pair? o) (car o) (- (string-length str) 1))))
-    (cond ((negative? i) #f)
-          ((not (eqv? c (string-ref str i))) i)
-          (else (lp (- i 1))))))
+;;> A general, non-filesystem-specific pathname library.
 
 ;; POSIX basename
 ;; (define (path-strip-directory path)
 ;;   (if (string=? path "")
 ;;       path
-;;       (let ((end (string-skip-right #\/ path)))
-;;         (if (not end)
+;;       (let ((end (string-skip-right path #\/)))
+;;         (if (zero? end)
 ;;             "/"
-;;             (let ((start (string-scan-right #\/ path (- end 1))))
-;;               (substring path (if start (+ start 1) 0) (+ end 1)))))))
+;;             (let ((start (string-find-right path #\/ 0 end)))
+;;               (substring-cursor path start end))))))
 
 ;;> Returns just the basename of \var{path}, with any directory
 ;;> removed.  If \var{path} does not contain a directory separator,
 ;;> return the whole \var{path}.  If \var{path} ends in a directory
-;;> separator (i.e. path is a directory) return the empty string.
+;;> separator (i.e. path is a directory), or is empty, return the
+;;> empty string.
 
 ;; GNU basename
 (define (path-strip-directory path)
-  (if (string=? path "")
-      path
-      (let ((len (string-length path)))
-        (if (eqv? #\/ (string-ref path (- len 1)))
-            ""
-            (let ((slash (string-scan-right #\/ path)))
-              (if (not slash)
-                  path
-                  (substring path (+ slash 1) len)))))))
+  (substring-cursor path (string-find-right path #\/)))
 
 ;;> Returns just the directory of \var{path}.
-;;> If \var{path} is relative, return \scheme{"."}.
+;;> If \var{path} is relative (or empty), return \scheme{"."}.
 
 (define (path-directory path)
   (if (string=? path "")
       "."
-      (let ((end (string-skip-right #\/ path)))
-        (if (not end)
+      (let ((end (string-skip-right path #\/)))
+        (if (zero? end)
             "/"
-            (let ((start (string-scan-right #\/ path (- end 1))))
-              (if (not start)
+            (let ((start (string-find-right path #\/ 0 end)))
+              (if (zero? start)
                   "."
-                  (let ((start (string-skip-right #\/ path start)))
-                    (if (not start) "/" (substring path 0 (+ start 1))))))))))
+                  (let ((start2 (string-skip-right path #\/ 0 start)))
+                    (if (zero? start2)
+                        "/"
+                        (substring-cursor path 0 start2)))))))))
 
-(define (path-extension-pos path) (string-scan-right #\. path))
+(define (path-extension-pos path)
+  (let ((end (string-cursor-end path)))
+    (let lp ((i end) (dot #f))
+      (if (<= i 0)
+          #f
+          (let* ((i2 (string-cursor-prev path i))
+                 (ch (string-cursor-ref path i2)))
+            (cond ((eqv? #\. ch) (and (< i end) (lp i2 (or dot i))))
+                  ((eqv? #\/ ch) #f)
+                  (dot)
+                  (else (lp i2 #f))))))))
 
-;;> Returns the rightmost extension of \var{path}, not including
-;;> the \scheme{"."}.  If there is no extension, returns \scheme{#f}.
+;;> Returns the rightmost extension of \var{path}, not including the
+;;> \scheme{"."}.  If there is no extension, returns \scheme{#f}.  The
+;;> extension will always be non-empty and contain no \scheme{"."}s.
 
 (define (path-extension path)
   (let ((i (path-extension-pos path)))
     (and i
-         (let ((start (+ i 1)) (end (string-length path)))
-           (and (< start end) (substring path start end))))))
+         (substring-cursor path i))))
 
 ;;> Returns \var{path} with the extension, if any, removed,
 ;;> along with the \scheme{"."}.
 
 (define (path-strip-extension path)
   (let ((i (path-extension-pos path)))
-    (if (and i (< (+ i 1) (string-length path)))
-        (substring path 0 i)
+    (if i
+        (substring-cursor path 0 (string-cursor-prev path i))
         path)))
 
 ;;> Returns \var{path} with the extension, if any, replaced
@@ -97,7 +76,8 @@
 (define (path-replace-extension path ext)
   (string-append (path-strip-extension path) "." ext))
 
-;;> Returns \scheme{#t} iff \var{path} is an absolute path.
+;;> Returns \scheme{#t} iff \var{path} is an absolute path,
+;;> i.e. begins with "/".
 
 (define (path-absolute? path)
   (and (not (string=? "" path)) (eqv? #\/ (string-ref path 0))))
@@ -105,6 +85,34 @@
 ;;> Returns \scheme{#t} iff \var{path} is a relative path.
 
 (define (path-relative? path) (not (path-absolute? path)))
+
+;;> Returns the suffix of \var{path} relative to the directory
+;;> \var{dir}, or \scheme{#f} if \var{path} is not contained in
+;;> \var{dir}.  If the two are the same (modulo a trailing
+;;> \scheme{"/"}), then \scheme{"."} is returned.
+
+(define (path-relative-to path dir)
+  (let* ((path (path-normalize path))
+         (path-end (string-cursor-end path))
+         (dir (path-normalize dir))
+         (dir-end (string-cursor-end dir))
+         (i (string-mismatch dir path)))
+    (cond
+     ((not (<= 1 dir-end i path-end))
+      (let ((i2 (string-cursor-next path i)))
+        (and (= i path-end)
+             (= i2 dir-end)
+             (eqv? #\/ (string-cursor-ref dir i))
+             ".")))
+     ((= i path-end)
+      ".")
+     ((eqv? #\/ (string-cursor-ref path i))
+      (let ((i2 (string-cursor-next path i)))
+        (if (= i2 path-end) "." (substring-cursor path i2))))
+     ((eqv? #\/ (string-cursor-ref path (string-cursor-prev path i)))
+      (substring-cursor path i))
+     (else
+      #f))))
 
 ;; This looks big and hairy, but it's mutation-free and guarantees:
 ;;   (string=? s (path-normalize s))  <=>  (eq? s (path-normalize s))
@@ -124,7 +132,7 @@
     (define (finish i res)
       (if (zero? i)
           path
-          (apply string-append (reverse (collect i len res)))))
+          (string-join (reverse (collect i len res)))))
     ;; loop invariants:
     ;;   - res is a list such that (string-concatenate-reverse res)
     ;;     is always the normalized string up to j
@@ -186,6 +194,8 @@
 
 ;;> Return a new string representing the path where each of \var{args}
 ;;> is a path component, separated with the directory separator.
+;;> \var{args} may include symbols and integers, in addition to
+;;> strings.
 
 (define (make-path . args)
   (define (x->string x)
@@ -194,8 +204,7 @@
           ((number? x) (number->string x))
           (else (error "not a valid path component" x))))
   (define (trim-trailing-slash s)
-    (let ((i (string-skip-right #\/ s)))
-      (if i (substring s 0 (+ i 1)) "")))
+    (substring-cursor s 0 (string-skip-right s #\/)))
   (if (null? args)
       ""
       (let ((start (trim-trailing-slash (x->string (car args)))))
@@ -203,7 +212,7 @@
                  (res (if (string=? "" start) '() (list start))))
           (cond
            ((null? ls)
-            (apply string-append (reverse res)))
+            (string-join (reverse res)))
            ((pair? (car ls))
             (lp (append (car ls) (cdr ls)) res))
            (else
