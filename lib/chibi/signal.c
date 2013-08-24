@@ -117,6 +117,18 @@ static sexp sexp_pid_cmdline (sexp ctx, int pid) {
 
 #endif
 
+static pid_t sexp_fork_and_kill_threads (sexp ctx) {
+  pid_t res = fork();
+#if SEXP_USE_GREEN_THREADS
+  if (res == 0) {               /* child */
+    sexp_global(ctx, SEXP_G_THREADS_FRONT) = SEXP_NULL;
+    sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
+    sexp_global(ctx, SEXP_G_THREADS_PAUSED) = SEXP_NULL;
+  }
+#endif
+  return res;
+}
+
 static void sexp_init_signals (sexp ctx, sexp env) {
   call_sigaction.sa_sigaction  = sexp_call_sigaction;
 #if SEXP_USE_GREEN_THREADS
