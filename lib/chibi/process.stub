@@ -90,10 +90,13 @@
 (define-c unsigned-int sleep (unsigned-int))
 
 ;;> Fork the current process.  Returns \rawcode{0} for the newly
-;;> created process, and the process id of the new process for
-;;> the parent.
+;;> created process, and the process id of the new process for the
+;;> parent.  If multiple threads are active, they are forked as well.
+;;> Use \scheme{fork} to also kill all other threads.
 
-(define-c pid_t fork ())
+(define-c pid_t (%fork fork) ())
+
+(define-c pid_t (fork sexp_fork_and_kill_threads) ((value ctx sexp)))
 
 (define-c-const int (wait/no-hang "WNOHANG"))
 
