@@ -35,7 +35,7 @@
    type-name type-cpl type-parent type-slots type-num-slots type-printer
    object-size integer->immediate gc atomically thread-list
    string-contains integer->error-string
-   flatten-dot update-free-vars!)
+   flatten-dot update-free-vars! setenv unsetenv)
   (import (chibi))
   (include-shared "ast")
   (include "ast.scm"))
