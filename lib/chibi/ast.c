@@ -453,6 +453,17 @@ static sexp sexp_update_free_vars (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return sexp_free_vars(ctx, x, SEXP_NULL);
 }
 
+static sexp sexp_setenv (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp value) {
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, name);
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, value);
+  return sexp_make_boolean(setenv(sexp_string_data(name), sexp_string_data(value), 1));
+}
+
+static sexp sexp_unsetenv (sexp ctx, sexp self, sexp_sint_t n, sexp name) {
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, name);
+  return sexp_make_boolean(unsetenv(sexp_string_data(name)));
+}
+
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
@@ -591,5 +602,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);
+  sexp_define_foreign(ctx, env, "setenv", 2, sexp_setenv);
+  sexp_define_foreign(ctx, env, "unsetenv", 1, sexp_unsetenv);
   return SEXP_VOID;
 }
