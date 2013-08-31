@@ -11,7 +11,7 @@
           delete-file link-file symbolic-link-file rename-file
           directory-files directory-fold directory-fold-tree
           delete-file-hierarchy delete-directory
-          create-directory
+          create-directory create-directory*
           current-directory change-directory with-directory
           open open-pipe make-fifo
           file-status
@@ -30,7 +30,7 @@
           open/create      open/exclusive         open/truncate
           open/append      open/non-block
           is-a-tty?)
-  (import (chibi))
+  (import (chibi) (chibi string))
   (include-shared "filesystem")
   (include "filesystem.scm"))
 

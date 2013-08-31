@@ -2,6 +2,22 @@
 ;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+;;> Creates the directory \var{dir}, including any parent directories
+;;> as needed.  Returns \scheme{#t} on success and \scheme{#f} on
+;;> failure.
+
+(define (create-directory* dir . o)
+  (let ((mode (if (pair? o) (car o) #o755)))
+    (or (create-directory dir mode)
+        (let ((slash
+               (string-find-right dir #\/ 0 (string-skip-right dir #\/))))
+          (and (> slash 0)
+               (let ((parent (substring-cursor dir 0 slash)))
+                 (and (not (equal? parent dir))
+                      (not (file-exists? parent))
+                      (create-directory* parent mode)
+                      (create-directory dir mode))))))))
+
 ;;> The fundamental directory iterator.  Applies \var{kons} to
 ;;> each filename in directory \var{dir} and the result of the
 ;;> previous application, beginning with \var{knil}.  With
