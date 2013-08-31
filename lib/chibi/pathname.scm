@@ -76,6 +76,13 @@
 (define (path-replace-extension path ext)
   (string-append (path-strip-extension path) "." ext))
 
+;;> Returns \var{path} with any leading ../ removed.
+
+(define (path-strip-leading-parents path)
+  (if (string-prefix? "../" path)
+      (path-strip-leading-parents (substring path 3))
+      (if (equal? path "..") "" path)))
+
 ;;> Returns \scheme{#t} iff \var{path} is an absolute path,
 ;;> i.e. begins with "/".
 
