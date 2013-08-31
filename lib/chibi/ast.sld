@@ -28,6 +28,7 @@
    opcode-class opcode-code opcode-data opcode-variadic?
    macro-procedure macro-env macro-source
    procedure-code procedure-vars procedure-name procedure-name-set!
+   procedure-arity procedure-variadic?
    bytecode-name bytecode-literals bytecode-source
    port-line port-line-set!
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!
