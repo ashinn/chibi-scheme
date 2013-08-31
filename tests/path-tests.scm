@@ -172,6 +172,13 @@
 (test "../.." (path-normalize "a/b/c/../../../../.."))
 (test "../../.." (path-normalize "../a/b/c/../../../../.."))
 
+(test "" (path-strip-leading-parents ".."))
+(test "" (path-strip-leading-parents "../"))
+(test "a" (path-strip-leading-parents "../a"))
+(test "a/b" (path-strip-leading-parents "../../a/b"))
+(test "a/b" (path-strip-leading-parents "../../../a/b"))
+(test "a/../b" (path-strip-leading-parents "../../../a/../b"))
+
 (test "path-relative-to" "c" (path-relative-to "/a/b/c" "/a/b"))
 (test "c" (path-relative-to "/a/b/c" "/a/b/"))
 (test "." (path-relative-to "/a/b/" "/a/b/"))
