@@ -246,6 +246,7 @@ _FN1(_I(SEXP_OBJECT), _I(SEXP_IPORT), "port-fileno", 0, sexp_get_port_fileno),
 #endif
 #if SEXP_USE_MODULES
 _FN0(_I(SEXP_ENV), "current-environment", 0, sexp_current_environment),
+_FN1(_I(SEXP_ENV), _I(SEXP_ENV), "set-current-environment!", 0, sexp_set_current_environment),
 _FN0(_I(SEXP_ENV), "%meta-env", 0, sexp_meta_environment),
 _FN1(SEXP_NULL, _I(SEXP_ENV), "env-exports", 0, sexp_env_exports_op),
 _FN0(_I(SEXP_PAIR), "current-module-path", 0, sexp_current_module_path_op),

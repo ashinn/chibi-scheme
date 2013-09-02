@@ -996,15 +996,20 @@
      ((and (> len ext-len 0) (equal? ext (substring file (- len ext-len))))
       (%load file env))
      (else
-      (call-with-input-file file
-        (lambda (in)
-          (set-port-line! in 1)
-          (let lp ()
-            (let ((x (read in)))
-              (cond
-               ((not (eof-object? x))
-                (eval x env)
-                (lp)))))))))))
+      (let ((old-env (current-environment)))
+        (dynamic-wind
+          (lambda () (set-current-environment! env))
+          (lambda ()
+            (call-with-input-file file
+              (lambda (in)
+                (set-port-line! in 1)
+                (let lp ()
+                  (let ((x (read in)))
+                    (cond
+                     ((not (eof-object? x))
+                      (eval x env)
+                      (lp))))))))
+          (lambda () (set-current-environment! old-env))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; promises

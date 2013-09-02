@@ -1991,6 +1991,13 @@ sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, se
 sexp sexp_current_environment (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_context_env(ctx);
 }
+sexp sexp_set_current_environment (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
+  sexp oldenv;
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
+  oldenv = sexp_context_env(ctx);
+  sexp_context_env(ctx) = env;
+  return oldenv;
+}
 sexp sexp_meta_environment (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_global(ctx, SEXP_G_META_ENV);
 }
