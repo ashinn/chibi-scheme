@@ -1320,7 +1320,9 @@
   (lambda (f g)
     (lambda args
       (f (apply g args)))))
-(test 30 ((compose sqrt *) 12 75))
+(test '(30 0)
+    (call-with-values (lambda () ((compose exact-integer-sqrt *) 12 75))
+      list))
 
 (test '(b e h) (map cadr '((a b) (d e) (g h))))
 
