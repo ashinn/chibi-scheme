@@ -102,6 +102,26 @@
                          (make-hash-table equal hash))))
     (make-memoizer proc arity cache)))
 
+;;> Equivalent to memoize except that the procedure's first argument
+;;> must be a pathname.  If the corresponding file has been modified
+;;> since the memoized value, the value is recomputed.  Useful to
+;;> automatically reflect external changes to a file-backed resource.
+
+(define (memoize-file-loader proc . o)
+  (let* ((f (lambda (file . rest)
+              (let ((mtime (file-modification-time file)))
+                (cons mtime (apply proc file rest)))))
+         (g (apply memoize f o)))
+    (lambda (file . rest)
+      (let ((cell (apply g file rest))
+            (mtime (file-modification-time file)))
+        (if (> mtime (car cell))
+            (let ((res (apply proc file rest)))
+              (set-car! cell mtime)
+              (set-cdr! cell res)
+              res)
+            (cdr cell))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; persistent memoization
 
@@ -142,6 +162,23 @@
   (encode-file-name
    (string-append (call-with-output-string (lambda (out) (write/ss args out)))
                   ".memo")))
+
+;;> Returns a memoized version of the procedure \var{proc} which
+;;> stores the memoized results persistently in a file.  Garbage
+;;> collection of the files is left as an external task for monitoring
+;;> tools or cron jobs.
+;;>
+;;> Accepts the following keyword arguments:
+;;>
+;;> \items[
+;;> \item{args-encoder: procedure which takes the arguments as a single list, and returns a string representation suitable for use as a (base) file name}
+;;> \item{proc-name: the name of the procedure, to use a a subdir of memo-dir to distinguish from other memoized procedures}
+;;> \item{memo-dir: the directory to store results in, defaulting to ~/.memo/}
+;;> \item{file-validator: validator to run on the existing file - if it returns false, the file is considered bad and the result recomputed}
+;;> \item{validator: validator to run on the result of reading the file}
+;;> \item{read: the read procedure to extract the result from the file}
+;;> \item{write: the write procedure to write the result to the file}
+;;> ]
 
 (define (memoize-to-file proc . o)
   (let-keywords* o
