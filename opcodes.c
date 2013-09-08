@@ -67,14 +67,12 @@ _OP(SEXP_OPC_SETTER, SEXP_OP_STRING_SET, 3, 0, SEXP_VOID, _I(SEXP_STRING), _I(SE
 #endif
 #endif
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_LENGTH, 1, 0, _I(SEXP_FIXNUM), _I(SEXP_STRING), SEXP_FALSE, SEXP_FALSE, 0,"string-length", 0, NULL),
-#if SEXP_USE_NATIVE_X86
 _FN1(_I(SEXP_FLONUM), _I(SEXP_FIXNUM), "exact->inexact", 0, sexp_exact_to_inexact),
 _FN1(_I(SEXP_FIXNUM), _I(SEXP_FLONUM), "inexact->exact", 0, sexp_inexact_to_exact),
+#if SEXP_USE_NATIVE_X86
 _FN1(_I(SEXP_CHAR), _I(SEXP_CHAR), "char-upcase", 0, sexp_char_upcase),
 _FN1(_I(SEXP_CHAR), _I(SEXP_CHAR), "char-downcase", 0, sexp_char_downcase),
 #else
-_OP(SEXP_OPC_GENERIC, SEXP_OP_FIX2FLO, 1, 0, _I(SEXP_FLONUM), _I(SEXP_NUMBER), SEXP_FALSE, SEXP_FALSE, 0, "exact->inexact", 0, NULL),
-_OP(SEXP_OPC_GENERIC, SEXP_OP_FLO2FIX, 1, 0, _I(SEXP_FIXNUM), _I(SEXP_NUMBER), SEXP_FALSE, SEXP_FALSE, 0, "inexact->exact", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_CHAR_UPCASE, 1, 0, _I(SEXP_CHAR), _I(SEXP_CHAR), SEXP_FALSE, SEXP_FALSE, 0, "char-upcase", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_CHAR_DOWNCASE, 1, 0, _I(SEXP_CHAR), _I(SEXP_CHAR), SEXP_FALSE, SEXP_FALSE, 0, "char-downcase", 0, NULL),
 #endif

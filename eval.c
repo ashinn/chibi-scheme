@@ -1584,6 +1584,77 @@ sexp sexp_complex_imag_op (sexp ctx, sexp self, sexp_sint_t n, sexp cpx) {
 }
 #endif
 
+sexp sexp_exact_to_inexact (sexp ctx, sexp self, sexp_sint_t n, sexp i) {
+  sexp_gc_var1(res);
+  res = i;
+  if (sexp_fixnump(i))
+    res = sexp_fixnum_to_flonum(ctx, i);
+#if SEXP_USE_FLONUMS
+  else if (sexp_flonump(i))
+    res = i;
+#endif
+#if SEXP_USE_BIGNUMS
+  else if (sexp_bignump(i))
+    res = sexp_make_flonum(ctx, sexp_bignum_to_double(i));
+#endif
+#if SEXP_USE_RATIOS
+  else if (sexp_ratiop(i))
+    res = sexp_make_flonum(ctx, sexp_ratio_to_double(i));
+#endif
+#if SEXP_USE_COMPLEX
+  else if (sexp_complexp(i)) {
+    sexp_gc_preserve1(ctx, res);
+    res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+    sexp_complex_real(res) = sexp_exact_to_inexact(ctx, self, 1, sexp_complex_real(i));
+    sexp_complex_imag(res) = sexp_exact_to_inexact(ctx, self, 1, sexp_complex_imag(i));
+    sexp_gc_release1(ctx);
+  }
+#endif
+  else
+    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, i);
+  return res;
+}
+
+sexp sexp_inexact_to_exact (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
+  sexp_gc_var1(res);
+  if (sexp_exactp(z)) {
+    res = z;
+  }
+#if SEXP_USE_FLONUMS
+  else if (sexp_flonump(z)) {
+    if (isinf(sexp_flonum_value(z)) || isnan(sexp_flonum_value(z))) {
+      res = sexp_xtype_exception(ctx, self, "exact: not an finite number", z);
+    } else if (sexp_flonum_value(z) != trunc(sexp_flonum_value(z))) {
+#if SEXP_USE_RATIOS
+      res = sexp_double_to_ratio(ctx, sexp_flonum_value(z));
+#else
+      res = sexp_xtype_exception(ctx, self, "exact: not an integer", z);
+#endif
+#if SEXP_USE_BIGNUMS
+    } else if ((sexp_flonum_value(z) > SEXP_MAX_FIXNUM)
+               || sexp_flonum_value(z) < SEXP_MIN_FIXNUM) {
+      res = sexp_double_to_bignum(ctx, sexp_flonum_value(z));
+#endif
+    } else {
+      res = sexp_make_fixnum((sexp_sint_t)sexp_flonum_value(z));
+    }
+  }
+#endif
+#if SEXP_USE_COMPLEX
+  else if (sexp_complexp(z)) {
+    sexp_gc_preserve1(ctx, res);
+    res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+    sexp_complex_real(res) = sexp_inexact_to_exact(ctx, self, 1, sexp_complex_real(z));
+    sexp_complex_imag(res) = sexp_inexact_to_exact(ctx, self, 1, sexp_complex_imag(z));
+    sexp_gc_release1(ctx);
+  }
+#endif
+  else {
+    res = sexp_type_exception(ctx, self, SEXP_FLONUM, z);
+  }
+  return res;
+}
+
 sexp sexp_string_cmp_op (sexp ctx, sexp self, sexp_sint_t n, sexp str1, sexp str2, sexp ci) {
   sexp_sint_t len1, len2, len, diff;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str1);
