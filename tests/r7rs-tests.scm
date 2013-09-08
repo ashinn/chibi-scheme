@@ -5,14 +5,17 @@
         (scheme file) (scheme read) (scheme write)
         (scheme eval) (scheme process-context) (scheme case-lambda)
         (scheme r5rs)
-        (chibi test))
+        (chibi test)  ; or (srfi 64)
+        )
 
-;; R7RS test suite.  Currently assumes full-unicode support, the full
-;; numeric tower and all standard libraries provided.
+;; R7RS test suite.  Covers all procedures and syntax in the small
+;; language except `delete-file'.  Currently assumes full-unicode
+;; support, the full numeric tower and all standard libraries
+;; provided.
 ;;
 ;; Uses the (chibi test) library which is written in portable R7RS.
-;; This provides test-begin, test-end and test, which could be defined
-;; as something like:
+;; This is mostly a subset of SRFI-64, providing test-begin, test-end
+;; and test, which could be defined as something like:
 ;;
 ;;   (define (test-begin . o) #f)
 ;;
@@ -282,7 +285,8 @@
 (test '(list 3 4) `(list ,(+ 1 2) 4))
 (let ((name 'a)) (test '(list a (quote a)) `(list ,name ',name)))
 (test '(a 3 4 5 6 b) `(a ,(+ 1 2) ,@(map abs '(4 -5 6)) b))
-(test #(10 5 2 4 3 8) `#(10 5 ,(sqrt 4) ,@(map sqrt '(16 9)) 8))
+(test #(10 5 4 16 9 8)
+    `#(10 5 ,(square 2) ,@(map square '(4 3)) 8))
 (test '(a `(b ,(+ 1 2) ,(foo 4 d) e) f)
     `(a `(b ,(+ 1 2) ,(foo ,(+ 1 3) d) e) f) )
 (let ((name1 'x)
@@ -731,9 +735,9 @@
 (test 1764 (square 42))
 (test 4 (square 2))
 
-(test 3 (sqrt 9))
+(test 3.0 (inexact (sqrt 9)))
 (test 1.4142135623731 (sqrt 2))
-(test +i (sqrt -1))
+(test 0.0+1.0i (inexact (sqrt -1)))
 
 (test '(2 0) (call-with-values (lambda () (exact-integer-sqrt 4)) list))
 (test '(2 1) (call-with-values (lambda () (exact-integer-sqrt 5)) list))
@@ -1642,12 +1646,16 @@
     (flush-output-port out)
     (get-output-bytevector out)))
 
-(test "#0=(1 . #0#)"  ;; not guaranteed to be 0 indexed, spacing may differ
-    (let ((out (open-output-string))
-          (x (list 1)))
-      (set-cdr! x x)
-      (write x out)
-      (get-output-string out)))
+(test #t
+    (and (member
+          (let ((out (open-output-string))
+                (x (list 1)))
+            (set-cdr! x x)
+            (write x out)
+            (get-output-string out))
+          ;; labels not guaranteed to be 0 indexed, spacing may differ
+          '("#0=(1 . #0#)" "#1=(1 . #1#)"))
+         #t))
 
 (test "((1 2 3) (1 2 3))"
     (let ((out (open-output-string))
@@ -1661,11 +1669,13 @@
       (write-simple (list x x) out)
       (get-output-string out)))
 
-(test "(#0=(1 2 3) #0#)"
-    (let ((out (open-output-string))
-          (x (list 1 2 3)))
-      (write-shared (list x x) out)
-      (get-output-string out)))
+(test #t
+    (and (member (let ((out (open-output-string))
+                       (x (list 1 2 3)))
+                   (write-shared (list x x) out)
+                   (get-output-string out))
+                 '("(#0=(1 2 3) #0#)" "(#1=(1 2 3) #1#)"))
+         #t))
 
 (test-begin "Read syntax")
 
