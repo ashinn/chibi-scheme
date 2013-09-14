@@ -642,7 +642,7 @@
 #endif
 
 #ifndef SEXP_USE_SEND_FILE
-#define SEXP_USE_SEND_FILE (!defined(_WIN32) && !defined(PLAN9))
+#define SEXP_USE_SEND_FILE (__linux || SEXP_BSD)
 #endif
 
 #if SEXP_USE_NATIVE_X86
