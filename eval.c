@@ -2130,6 +2130,8 @@ void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value) {
       sexp_opcode_data(param) = sexp_cons(ctx, name, value);
     else
       sexp_cdr(sexp_opcode_data(param)) = value;
+  } else {
+    sexp_warn(ctx, "can't set non-parameter: ", name);
   }
 }
 
