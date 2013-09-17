@@ -1,6 +1,6 @@
 
 (define-library (chibi regexp)
-  (export regexp regexp? regexp-match regexp-search
+  (export regexp regexp? regexp-match regexp-match? regexp-search
           regexp-replace regexp-replace-all
           regexp-fold regexp-extract regexp-split
           rx-match? rx-match-num-matches
