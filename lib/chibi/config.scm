@@ -129,7 +129,7 @@
 (define (conf-load file . o)
   (make-conf
    (read-from-file file '())
-   (if (pair? o) (car o) '())
+   (and (pair? o) (car o))
    file
    (current-second)))
 
