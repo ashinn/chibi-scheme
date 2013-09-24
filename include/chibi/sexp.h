@@ -563,7 +563,7 @@ void* sexp_alloc(sexp ctx, size_t size);
 #define sexp_with_current_source(file, line)
 #endif
 
-#define sexp_alloc_tagged(ctx, type, tag) sexp_alloc_tagged_aux(ctx, type, tag sexp_with_current_source(__FILE__, __LINE__))
+#define sexp_alloc_tagged(ctx, size, tag) sexp_alloc_tagged_aux(ctx, size, tag sexp_with_current_source(__FILE__, __LINE__))
 
 #define sexp_alloc_type(ctx, type, tag) sexp_alloc_tagged(ctx, sexp_sizeof(type), tag)
 #define sexp_alloc_bytecode(ctx, i) sexp_alloc_tagged(ctx, sexp_sizeof(bytecode) + i, SEXP_BYTECODE)
