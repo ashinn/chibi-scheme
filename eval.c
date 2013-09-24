@@ -1501,6 +1501,9 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
 #else
   long double f, x1, e1;
   sexp res;
+#if SEXP_USE_BIGNUMS
+  sexp_gc_var1(tmp);
+#endif
 #if SEXP_USE_COMPLEX
   if (sexp_complexp(x) || sexp_complexp(e))
     return sexp_complex_expt(ctx, x, e);
@@ -1548,9 +1551,12 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
   if ((f*1000.0 > SEXP_MAX_FIXNUM) || (f*1000.0 < SEXP_MIN_FIXNUM)
       || (! sexp_fixnump(x)) || (! sexp_fixnump(e))) {
 #if SEXP_USE_BIGNUMS
-    if (sexp_fixnump(x) && sexp_fixnump(e))
-      res = sexp_bignum_expt(ctx, sexp_fixnum_to_bignum(ctx, x), e);
-    else
+    if (sexp_fixnump(x) && sexp_fixnump(e)) {
+      sexp_gc_preserve1(ctx, tmp);
+      tmp = sexp_fixnum_to_bignum(ctx, x);
+      res = sexp_bignum_expt(ctx, tmp, e);
+      sexp_gc_release1(ctx);
+    } else
 #endif
       res = sexp_make_flonum(ctx, f);
   } else
