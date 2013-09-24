@@ -182,8 +182,10 @@ sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset) {
   sexp_luint_t n;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
-  if ((! d) || (sexp_bignum_length(d)+offset < len))
+  if ((! d) || (sexp_bignum_length(d) < len+offset))
     d = tmp = sexp_make_bignum(ctx, len);
+  else
+    tmp = d;
   data = sexp_bignum_data(d);
   for (i=0; i<len; i++) {
     n = (sexp_luint_t)adata[i]*b + carry;
@@ -191,7 +193,7 @@ sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset) {
     carry = n >> (sizeof(sexp_uint_t)*8);
   }
   if (carry) {
-    if (sexp_bignum_length(d)+offset <= len)
+    if (sexp_bignum_length(d) <= len+offset)
       d = sexp_copy_bignum(ctx, NULL, d, len+offset+1);
     sexp_bignum_data(d)[len+offset] = carry;
   }
