@@ -117,6 +117,15 @@
       ((w y) 'semivowel)
       (else => (lambda (x) x))))
 
+(test '((other . z) (semivowel . y) (other . x)
+        (semivowel . w) (vowel . u))
+    (map (lambda (x)
+           (case x
+             ((a e i o u) => (lambda (w) (cons 'vowel w)))
+             ((w y) (cons 'semivowel x))
+             (else => (lambda (w) (cons 'other w)))))
+         '(z y x w u)))
+
 (test #t (and (= 2 2) (> 2 1)))
 (test #f (and (= 2 2) (< 2 1)))
 (test '(f g) (and 1 2 'c '(f g)))
