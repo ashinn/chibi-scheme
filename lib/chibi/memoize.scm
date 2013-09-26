@@ -106,21 +106,31 @@
 ;;> must be a pathname.  If the corresponding file has been modified
 ;;> since the memoized value, the value is recomputed.  Useful to
 ;;> automatically reflect external changes to a file-backed resource.
+;;> The additional keyword argument \scheme{reloader?:}, if true,
+;;> indicates that the result of loading is itself a procedure which
+;;> should check for updates on each call.
 
 (define (memoize-file-loader proc . o)
   (let* ((f (lambda (file . rest)
               (let ((mtime (file-modification-time file)))
                 (cons mtime (apply proc file rest)))))
-         (g (apply memoize f o)))
+         (g (apply memoize f o))
+         (reloader? (cond ((memq 'reloader?: o) => cdr) (else #f))))
     (lambda (file . rest)
-      (let ((cell (apply g file rest))
-            (mtime (file-modification-time file)))
-        (if (> mtime (car cell))
-            (let ((res (apply proc file rest)))
-              (set-car! cell mtime)
-              (set-cdr! cell res)
-              res)
-            (cdr cell))))))
+      (let ((cell (apply g file rest)))
+        (let-syntax ((update!
+                      (syntax-rules ()
+                        ((update! default)
+                         (let ((mtime (file-modification-time file)))
+                           (if (> mtime (car cell))
+                               (let ((res (apply proc file rest)))
+                                 (set-car! cell mtime)
+                                 (set-cdr! cell res)
+                                 res)
+                               default))))))
+          (update! (if (and reloader? (procedure? (cdr cell)))
+                       (lambda args (apply (update! (cdr cell)) args))
+                       (cdr cell))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; persistent memoization
