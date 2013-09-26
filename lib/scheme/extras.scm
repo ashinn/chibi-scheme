@@ -150,7 +150,10 @@
       (if (>= i n) res (lp (+ i 1) (cons init res))))))
 
 (define (list-copy ls)
-  (reverse (reverse ls)))
+  (let lp ((ls ls) (res '()))
+    (if (pair? ls)
+        (lp (cdr ls) (cons (car ls) res))
+        (append (reverse res) ls))))
 
 (define (list-set! ls k x)
   (cond ((null? ls) (error "invalid list index"))
