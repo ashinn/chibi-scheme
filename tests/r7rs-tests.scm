@@ -891,6 +891,17 @@
 (test '(5 7) (assv 5 '((2 3) (5 7) (11 13))))
 
 (test '(1 2 3) (list-copy '(1 2 3)))
+(test "foo" (list-copy "foo"))
+(test '() (list-copy '()))
+(test '(3 . 4) (list-copy '(3 . 4)))
+(test '(6 7 8 . 9) (list-copy '(6 7 8 . 9)))
+(let* ((l1 '((a b) (c d) e))
+       (l2 (list-copy l1)))
+  (test l2 '((a b) (c d) e))
+  (test #t (eq? (car l1) (car l2)))
+  (test #t (eq? (cadr l1) (cadr l2)))
+  (test #f (eq? (cdr l1) (cdr l2)))
+  (test #f (eq? (cddr l1) (cddr l2))))
 
 (test-end)
 
