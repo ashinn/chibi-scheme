@@ -1,3 +1,4 @@
+#!/usr/bin/env chibi-scheme
 
 ;; Simple R7RS echo server, using the run-net-server utility from
 ;; (chibi net server).
