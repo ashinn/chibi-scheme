@@ -1699,10 +1699,19 @@
 
 (test-begin "Read syntax")
 
+;; check reading boolean followed by eof
 (test #t (read (open-input-string "#t")))
 (test #t (read (open-input-string "#true")))
 (test #f (read (open-input-string "#f")))
 (test #f (read (open-input-string "#false")))
+(define (read2 port)
+  (let* ((o1 (read port)) (o2 (read port)))
+    (cons o1 o2)))
+;; check reading boolean followed by delimiter
+(test '(#t . (5)) (read2 (open-input-string "#t(5)")))
+(test '(#t . 6) (read2 (open-input-string "#true 6 ")))
+(test '(#f . 7) (read2 (open-input-string "#f 7")))
+(test '(#f . "8") (read2 (open-input-string "#false\"8\"")))
 
 (test '() (read (open-input-string "()")))
 (test '(1 2) (read (open-input-string "(1 2)")))
