@@ -1976,7 +1976,7 @@ sexp sexp_make_null_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version) {
   return e;
 }
 
-sexp sexp_make_primitive_env (sexp ctx, sexp version) {
+sexp sexp_make_primitive_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version) {
   int i;
   sexp_gc_var4(e, op, sym, name);
   sexp_gc_preserve4(ctx, e, op, sym, name);
