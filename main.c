@@ -213,15 +213,6 @@ static void repl (sexp ctx, sexp env) {
   if (in == NULL || out == NULL || err == NULL) {
     fprintf(stderr, "Standard I/O ports not found, aborting.  Maybe a bad -x language?\n");
     exit_failure();
-  } else if (!(sexp_iportp(in) && sexp_oportp(out) && sexp_oportp(err))) {
-    res = sexp_load_standard_params(ctx, env);
-    if (sexp_exceptionp(res)) {
-      fprintf(stderr, "Couldn't load standard parameters, aborting.  Maybe a bad -x language?\n");
-      exit_failure();
-    }
-    in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
-    out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
-    err = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
   }
   sexp_port_sourcep(in) = 1;
   while (1) {
@@ -362,10 +353,12 @@ void run_main (int argc, char **argv) {
       prefix = sexp_environment_prefix;
       suffix = sexp_environment_suffix;
     case 'm':
+      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      if (c == 'x' && strcmp(arg, "chibi.primitive") == 0)
+        goto load_primitive;
       if (c != 'x') {prefix = sexp_import_prefix; suffix = sexp_import_suffix;}
       mods_loaded = 1;
       load_init();
-      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
 #if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
       len = strlen(arg)+strlen(prefix)+strlen(suffix);
@@ -381,9 +374,13 @@ void run_main (int argc, char **argv) {
       if (c == 'x') {
         sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), tmp);
         sexp_context_env(ctx) = env = tmp;
+        tmp = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
+        if (tmp != NULL && !sexp_oportp(tmp))
+          sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
       }
 #endif
       break;
+    load_primitive:
     case 'q':
       init_context();
       mods_loaded = 1;
