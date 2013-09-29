@@ -170,9 +170,37 @@ static int sexp_save_image (sexp ctx, const char* path) {
 
 #endif
 
+#if SEXP_USE_GREEN_THREADS
+static void sexp_make_unblocking (sexp ctx, sexp port) {
+  if (!(sexp_portp(port) && sexp_port_fileno(port) >= 0))
+    return;
+  if (sexp_port_flags(port) == SEXP_PORT_UNKNOWN_FLAGS)
+    sexp_port_flags(port) = fcntl(sexp_port_fileno(port), F_GETFL);
+  if (!(sexp_port_flags(port) & O_NONBLOCK))
+    if (fcntl(sexp_port_fileno(port), F_SETFL, sexp_port_flags(port) | O_NONBLOCK) == 0)
+      sexp_port_flags(port) |= O_NONBLOCK;
+}
+#endif
+
 static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
-  sexp res=sexp_env_ref(env, name, SEXP_FALSE);
-  return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : SEXP_VOID;
+  sexp res = sexp_env_ref(env, name, SEXP_FALSE);
+  return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : NULL;
+}
+
+static sexp sexp_load_standard_params (sexp ctx, sexp e) {
+  sexp_gc_var2(p, res);
+  sexp_gc_preserve2(ctx, p, res);
+  sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
+#if SEXP_USE_GREEN_THREADS
+  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL)));
+  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL)));
+  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL)));
+#endif
+  res = sexp_make_env(ctx);
+  sexp_env_parent(res) = e;
+  sexp_set_parameter(ctx, res, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
+  sexp_gc_release3(ctx);
+  return res;
 }
 
 static void repl (sexp ctx, sexp env) {
@@ -182,9 +210,18 @@ static void repl (sexp ctx, sexp env) {
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
   err = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
-  if (!(sexp_iportp(in) && sexp_oportp(out) && sexp_oportp(err))) {
-    fprintf(stderr, "No standard I/O ports found, aborting.  Maybe a bad -x language?\n");
+  if (in == NULL || out == NULL || err == NULL) {
+    fprintf(stderr, "Standard I/O ports not found, aborting.  Maybe a bad -x language?\n");
     exit_failure();
+  } else if (!(sexp_iportp(in) && sexp_oportp(out) && sexp_oportp(err))) {
+    res = sexp_load_standard_params(ctx, env);
+    if (sexp_exceptionp(res)) {
+      fprintf(stderr, "Couldn't load standard parameters, aborting.  Maybe a bad -x language?\n");
+      exit_failure();
+    }
+    in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
+    out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
+    err = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
   }
   sexp_port_sourcep(in) = 1;
   while (1) {
@@ -246,34 +283,6 @@ static sexp check_exception (sexp ctx, sexp res) {
     sexp_stack_trace(ctx, err);
     exit_failure();
   }
-  return res;
-}
-
-#if SEXP_USE_GREEN_THREADS
-static void sexp_make_unblocking (sexp ctx, sexp port) {
-  if (!(sexp_portp(port) && sexp_port_fileno(port) >= 0))
-    return;
-  if (sexp_port_flags(port) == SEXP_PORT_UNKNOWN_FLAGS)
-    sexp_port_flags(port) = fcntl(sexp_port_fileno(port), F_GETFL);
-  if (!(sexp_port_flags(port) & O_NONBLOCK))
-    if (fcntl(sexp_port_fileno(port), F_SETFL, sexp_port_flags(port) | O_NONBLOCK) == 0)
-      sexp_port_flags(port) |= O_NONBLOCK;
-}
-#endif
-
-static sexp sexp_load_standard_params (sexp ctx, sexp e) {
-  sexp_gc_var2(p, res);
-  sexp_gc_preserve2(ctx, p, res);
-  sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
-#if SEXP_USE_GREEN_THREADS
-  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL)));
-  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL)));
-  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL)));
-#endif
-  res = sexp_make_env(ctx);
-  sexp_env_parent(res) = e;
-  sexp_set_parameter(ctx, res, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
-  sexp_gc_release3(ctx);
   return res;
 }
 
