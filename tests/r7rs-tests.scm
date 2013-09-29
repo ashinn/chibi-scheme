@@ -1103,6 +1103,7 @@
 (test #t (string-ci<=? "ΑΒΓ" "αβγ"))
 (test #t (string-ci>=? "ΑΒΓ" "αβγ"))
 
+;; latin
 (test "ABC" (string-upcase "abc"))
 (test "ABC" (string-upcase "ABC"))
 (test "abc" (string-downcase "abc"))
@@ -1110,12 +1111,22 @@
 (test "abc" (string-foldcase "abc"))
 (test "abc" (string-foldcase "ABC"))
 
+;; cyrillic
 (test "ΑΒΓ" (string-upcase "αβγ"))
 (test "ΑΒΓ" (string-upcase "ΑΒΓ"))
 (test "αβγ" (string-downcase "αβγ"))
 (test "αβγ" (string-downcase "ΑΒΓ"))
 (test "αβγ" (string-foldcase "αβγ"))
 (test "αβγ" (string-foldcase "ΑΒΓ"))
+
+;; special cases
+(test "SSA" (string-upcase "ßa"))
+(test "ßa" (string-downcase "ßa"))
+(test "ssa" (string-downcase "SSA"))
+(test "İ" (string-upcase "İ"))
+(test "i̇" (string-downcase "İ"))
+(test "i̇" (string-foldcase "İ"))
+(test "J̌" (string-upcase "ǰ"))
 
 (test "" (substring "" 0 0))
 (test "" (substring "a" 0 0))
