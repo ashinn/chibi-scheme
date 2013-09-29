@@ -1128,6 +1128,15 @@
 (test "i̇" (string-foldcase "İ"))
 (test "J̌" (string-upcase "ǰ"))
 
+;; context-sensitive (final sigma)
+(test "ΓΛΏΣΣΑ" (string-upcase "γλώσσα"))
+(test "γλώσσα" (string-downcase "ΓΛΏΣΣΑ"))
+(test "γλώσσα" (string-foldcase "ΓΛΏΣΣΑ"))
+(test "ΜΈΛΟΣ" (string-upcase "μέλος"))
+(test "μέλος" (string-downcase "ΜΈΛΟΣ"))
+(test "μέλος" (string-foldcase "ΜΈΛΟΣ"))
+(test "μέλος ενός" (string-downcase "ΜΈΛΟΣ ΕΝΌΣ"))
+
 (test "" (substring "" 0 0))
 (test "" (substring "a" 0 0))
 (test "" (substring "abc" 1 1))
