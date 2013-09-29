@@ -465,7 +465,7 @@ sexp_heap sexp_make_heap (size_t size, size_t max_size) {
   if (! h) return NULL;
   h->size = size;
   h->max_size = max_size;
-  h->data = (char*) sexp_heap_align(sizeof(h->data)+(sexp_uint_t)&(h->data));
+  h->data = (char*) sexp_heap_align(sizeof(h) + (sexp_uint_t)&(h));
   free = h->free_list = (sexp_free_list) h->data;
   h->next = NULL;
   next = (sexp_free_list) (((char*)free)+sexp_heap_align(sexp_free_chunk_size));
