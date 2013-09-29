@@ -468,6 +468,8 @@ void run_main (int argc, char **argv) {
       break;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
+      /* ... FALLTHROUGH ... */
+    case '?':
       sexp_usage(1);
     }
   }
