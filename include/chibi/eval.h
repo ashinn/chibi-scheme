@@ -89,7 +89,7 @@ SEXP_API sexp sexp_exception_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp e
 SEXP_API sexp sexp_make_env_op (sexp context, sexp self, sexp_sint_t n);
 SEXP_API sexp sexp_make_null_env_op (sexp context, sexp self, sexp_sint_t n, sexp version);
 SEXP_API sexp sexp_env_cell_define (sexp ctx, sexp env, sexp name, sexp value, sexp* varenv);
-SEXP_API sexp sexp_make_primitive_env (sexp context, sexp version);
+SEXP_API sexp sexp_make_primitive_env_op (sexp context, sexp self, sexp_sint_t n, sexp version);
 SEXP_API sexp sexp_make_standard_env_op (sexp context, sexp self, sexp_sint_t n, sexp version);
 SEXP_API void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value);
 SEXP_API sexp sexp_load_standard_ports (sexp context, sexp env, FILE* in, FILE* out, FILE* err, int no_close);
@@ -240,7 +240,8 @@ SEXP_API int sexp_rest_unused_p (sexp lambda);
 #define sexp_make_procedure(ctx, f, n, b, v) sexp_make_procedure_op(ctx, NULL, 4, f, n, b, v)
 #define sexp_make_env(ctx) sexp_make_env_op(ctx, NULL, 0)
 #define sexp_make_null_env(ctx, v) sexp_make_null_env_op(ctx, NULL, 0, v)
-#define sexp_make_standard_env(ctx) sexp_make_standard_env_op(ctx, NULL, 0)
+#define sexp_make_primitive_env(ctx, v) sexp_make_primitive_env_op(ctx, NULL, 1, v)
+#define sexp_make_standard_env(ctx, v) sexp_make_standard_env_op(ctx, NULL, 1, v)
 #define sexp_add_module_directory(ctx, d, a) sexp_add_module_directory_op(ctx, NULL, 1, d, a)
 #define sexp_eval(ctx, x, e) sexp_eval_op(ctx, NULL, 2, x, e)
 #define sexp_load(ctx, f, e) sexp_load_op(ctx, NULL, 2, f, e)

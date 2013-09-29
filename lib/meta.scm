@@ -153,46 +153,50 @@
             (else (error "couldn't find include" f)))))
        files))
     ;; catch cyclic references
-    (module-meta-data-set!
-     mod
-     `((error "module attempted to reference itself while loading" ,name)))
-    (for-each
-     (lambda (x)
-       (case (and (pair? x) (car x))
-         ((import import-immutable)
-          (for-each
-           (lambda (m)
-             (let* ((mod2-name+imports (resolve-import m))
-                    (mod2 (load-module (car mod2-name+imports))))
-               (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
-           (cdr x)))))
-     meta)
-    (protect
-        (exn (else
-              (module-meta-data-set! mod meta)
-              (if (not (any (lambda (x)
-                              (and (pair? x)
-                                   (memq (car x) '(import import-immutable))))
-                            meta))
-                  (warn "WARNING: exception inside module with no imports - did you forget to (import (scheme base)) in" name))
-              (raise-continuable exn)))
+    (cond
+     ((procedure? meta)
+      (meta env))
+     (else
+      (module-meta-data-set!
+       mod
+       `((error "module attempted to reference itself while loading" ,name)))
       (for-each
        (lambda (x)
          (case (and (pair? x) (car x))
-           ((include)
-            (load-modules (cdr x) "" #f))
-           ((include-ci)
-            (load-modules (cdr x) "" #t))
-           ((include-shared)
-            (load-modules (cdr x) *shared-object-extension* #f))
-           ((body begin)
-            (for-each (lambda (expr) (eval expr env)) (cdr x)))
-           ((error)
-            (apply error (cdr x)))))
-       meta))
-    (module-meta-data-set! mod meta)
-    (warn-undefs env #f)
-    env))
+           ((import import-immutable)
+            (for-each
+             (lambda (m)
+               (let* ((mod2-name+imports (resolve-import m))
+                      (mod2 (load-module (car mod2-name+imports))))
+                 (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
+             (cdr x)))))
+       meta)
+      (protect
+          (exn (else
+                (module-meta-data-set! mod meta)
+                (if (not (any (lambda (x)
+                                (and (pair? x)
+                                     (memq (car x) '(import import-immutable))))
+                              meta))
+                    (warn "WARNING: exception inside module with no imports - did you forget to (import (scheme base)) in" name))
+                (raise-continuable exn)))
+        (for-each
+         (lambda (x)
+           (case (and (pair? x) (car x))
+             ((include)
+              (load-modules (cdr x) "" #f))
+             ((include-ci)
+              (load-modules (cdr x) "" #t))
+             ((include-shared)
+              (load-modules (cdr x) *shared-object-extension* #f))
+             ((body begin)
+              (for-each (lambda (expr) (eval expr env)) (cdr x)))
+             ((error)
+              (apply error (cdr x)))))
+         meta))
+      (module-meta-data-set! mod meta)
+      (warn-undefs env #f)
+      env))))
 
 (define (environment . ls)
   (let ((env (make-environment)))
@@ -310,10 +314,16 @@
                (error "couldn't find module" (car ls))))))))))))
 
 (define *modules*
-  (list (cons '(chibi) (make-module #f (interaction-environment)
-                                    '((include "init-7.scm"))))
-        (cons '(scheme) (make-module #f (interaction-environment) '()))
-        (cons '(meta) (make-module #f (current-environment) '()))
-        (cons '(srfi 0) (make-module (list 'cond-expand)
-                                     (current-environment)
-                                     (list (list 'export 'cond-expand))))))
+  (list
+   (cons '(chibi)
+         (make-module #f (interaction-environment) '((include "init-7.scm"))))
+   (cons '(chibi primitive)
+         (make-module #f #f (lambda (env) (primitive-environment 7))))
+   (cons '(scheme)
+         (make-module #f (interaction-environment) '()))
+   (cons '(meta)
+         (make-module #f (current-environment) '()))
+   (cons '(srfi 0)
+         (make-module (list 'cond-expand)
+                      (current-environment)
+                      (list (list 'export 'cond-expand))))))
