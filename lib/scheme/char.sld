@@ -3,10 +3,12 @@
   (import (scheme base))
   (cond-expand
    (full-unicode
-    (import (chibi char-set full)
+    (import (scheme write)
+            (chibi char-set full)
             (chibi char-set base)
             (chibi iset base))
     (include "char/full.scm")
+    (include "char/special-casing.scm")
     (include "char/case-offsets.scm"))
    (else
     (include "char/ascii.scm")

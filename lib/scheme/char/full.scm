@@ -62,14 +62,40 @@
 (define (char-ci<=? a . ls) (char-cmp-ci <= a ls))
 (define (char-ci>=? a . ls) (char-cmp-ci >= a ls))
 
+(define (char-get-special-case ch off)
+  (let ((i (char->integer ch)))
+    (let loop ((a 0) (b (vector-length special-cases)))
+      (if (= a b)
+          #f
+          (let* ((mid (+ a (quotient (- b a) 2)))
+                 (vec (vector-ref special-cases mid))
+                 (val (vector-ref vec 0)))
+            (cond ((< i val) (if (= mid b) #f (loop a mid)))
+                  ((> i val) (if (= mid a) #f (loop mid b)))
+                  (else (vector-ref vec off))))))))
+
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (get-output-string out)))
+
 (define (string-downcase str)
-  (string-map char-downcase str))
+  (call-with-output-string
+    (lambda (out)
+      (string-for-each
+       (lambda (ch)
+         (display (or (char-get-special-case ch 1) (char-downcase ch)) out))
+       str))))
+
+(define string-foldcase string-downcase)
 
 (define (string-upcase str)
-  (string-map char-upcase str))
-
-(define (string-foldcase str)
-  (string-map char-foldcase str))
+  (call-with-output-string
+    (lambda (out)
+      (string-for-each
+       (lambda (ch)
+         (display (or (char-get-special-case ch 3) (char-upcase ch)) out))
+       str))))
 
 (define (string-cmp-ci op a ls)
   (let lp ((op op) (a (string-foldcase a)) (ls ls))
