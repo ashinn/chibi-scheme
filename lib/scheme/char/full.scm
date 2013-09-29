@@ -64,15 +64,13 @@
 
 (define (char-get-special-case ch off)
   (let ((i (char->integer ch)))
-    (let loop ((a 0) (b (vector-length special-cases)))
-      (if (= a b)
-          #f
-          (let* ((mid (+ a (quotient (- b a) 2)))
-                 (vec (vector-ref special-cases mid))
-                 (val (vector-ref vec 0)))
-            (cond ((< i val) (if (= mid b) #f (loop a mid)))
-                  ((> i val) (if (= mid a) #f (loop mid b)))
-                  (else (vector-ref vec off))))))))
+    (let lp ((a 0) (b (vector-length special-cases)))
+      (let* ((mid (+ a (quotient (- b a) 2)))
+             (vec (vector-ref special-cases mid))
+             (val (vector-ref vec 0)))
+        (cond ((< i val) (and (< mid b) (lp a mid)))
+              ((> i val) (and (> mid a) (lp mid b)))
+              (else (vector-ref vec off)))))))
 
 (define (call-with-output-string proc)
   (let ((out (open-output-string)))
@@ -82,10 +80,21 @@
 (define (string-downcase str)
   (call-with-output-string
     (lambda (out)
-      (string-for-each
-       (lambda (ch)
-         (display (or (char-get-special-case ch 1) (char-downcase ch)) out))
-       str))))
+      (let ((in (open-input-string str)))
+        (let lp ()
+          (let ((ch (read-char in)))
+            (cond
+             ((not (eof-object? ch))
+              (display
+               (if (eqv? ch #\x03A3)
+                   (let ((ch2 (peek-char in)))
+                     (if (or (eof-object? ch2)
+                             (not (char-set-contains? char-set:letter ch2)))
+                         #\x03C2
+                         #\x03C3))
+                   (or (char-get-special-case ch 1) (char-downcase ch)))
+               out)
+              (lp)))))))))
 
 (define string-foldcase string-downcase)
 
@@ -94,7 +103,11 @@
     (lambda (out)
       (string-for-each
        (lambda (ch)
-         (display (or (char-get-special-case ch 3) (char-upcase ch)) out))
+         (display (if (memv ch '(#\x03C2 #\x03C3))
+                      #\x03A3
+                      (or (char-get-special-case ch 3)
+                          (char-upcase ch)))
+                  out))
        str))))
 
 (define (string-cmp-ci op a ls)
