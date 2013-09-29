@@ -319,8 +319,6 @@
          (make-module #f (interaction-environment) '((include "init-7.scm"))))
    (cons '(chibi primitive)
          (make-module #f #f (lambda (env) (primitive-environment 7))))
-   (cons '(scheme)
-         (make-module #f (interaction-environment) '()))
    (cons '(meta)
          (make-module #f (current-environment) '()))
    (cons '(srfi 0)
