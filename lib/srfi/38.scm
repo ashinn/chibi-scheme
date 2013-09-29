@@ -145,7 +145,7 @@
               (skip-comment in depth)))))
 
 (define delimiters
-  '(#\; #\( #\) #\{ #\} #\space #\tab #\newline #\return))
+  '(#\; #\" #\| #\( #\) #\{ #\} #\space #\tab #\newline #\return))
 
 (define named-chars
   `(("newline" . #\newline)
