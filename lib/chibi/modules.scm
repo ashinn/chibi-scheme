@@ -125,7 +125,7 @@
   (let lp1 ((ls (reverse *modules*)))
     (and (pair? ls)
          (let ((env (module-env (cdar ls))))
-           (let lp2 ((e-ls (env-exports env)))
+           (let lp2 ((e-ls (if (environment? env) (env-exports env) '())))
              (if (null? e-ls)
                  (lp1 (cdr ls))
                  (let ((cell (env-cell env (car e-ls))))
