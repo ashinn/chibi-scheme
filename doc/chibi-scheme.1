@@ -6,7 +6,7 @@ chibi-scheme \- a tiny Scheme interpreter
 
 .SH SYNOPSIS
 .B chibi-scheme
-[-qrfV]
+[-qQrfV]
 [-I
 .I path
 ]
@@ -72,9 +72,13 @@ management and smarter read/write you may want to use the (chibi repl)
 module.  For example,
 .I chibi-scheme -mchibi.repl -e'(repl)'
 
-The default language is an extended subset of the draft R7RS
-(scheme base) module.  To get exactly the base module, use
-.I chibi-scheme -xscheme.base
+The default language the R7RS
+(scheme base) module.  To get a mostly R5RS-compatible language, use
+.I chibi-scheme -xscheme.r5rs
+or to get just the core language used for bootstrapping, use
+.I chibi-scheme -xchibi
+or its shortcut
+.I chibi-scheme -q
 
 .SH OPTIONS
 
@@ -86,9 +90,18 @@ Options without arguments may not be chained together.
 Prints the version information and exits.
 .TP
 .BI -q
-Don't load the initialization file.  The resulting
-environment will only contain the core syntactic forms
-and primitives coded in C.
+"Quick" load, shortcut for
+.I chibi-scheme -xchibi
+This is a slightly different language from (scheme base),
+which may load faster, and is guaranteed not to load any
+additional shared libraries.
+.TP
+.BI -Q
+Extra "quick" load, shortcut for
+.I chibi-scheme -xchibi.primitive
+The resulting environment will only contain the core syntactic
+forms and primitives coded in C.  This is very fast and guaranteed
+not to load any external files, but is also very limited.
 .TP
 .BI -r
 Run the "main" procedure when the script finishes loading as in SRFI-22.

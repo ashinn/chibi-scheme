@@ -11,13 +11,7 @@ and scripting language in C programs.  In addition to support for
 lightweight VM-based threads, each VM itself runs in an isolated heap
 allowing multiple VMs to run simultaneously in different OS threads.
 
-The default language is based on an extended subset of the current
-draft R7RS Scheme, with support for all libraries.  To get a pure R7RS
-repl you can run
-
-  chibi-scheme -xscheme.base
-
-or see the (chibi repl) library for more options.
+The default language is the R7RS (scheme base) library.
 
 Support for additional languages such as JavaScript, Go, Lua and Bash
 are planned for future releases.  Scheme is chosen as a substrate
