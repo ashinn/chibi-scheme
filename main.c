@@ -366,7 +366,7 @@ void run_main (int argc, char **argv) {
         goto load_primitive;
       if (c != 'x') {prefix = sexp_import_prefix; suffix = sexp_import_suffix;}
       mods_loaded = 1;
-      load_init(1);
+      load_init(c == 'x');
 #if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
       len = strlen(arg)+strlen(prefix)+strlen(suffix);
