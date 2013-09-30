@@ -13,8 +13,8 @@ and scripting language in C programs.  In addition to support for
 lightweight VM-based threads, each VM itself runs in an isolated heap
 allowing multiple VMs to run simultaneously in different OS threads.
 
-The default language is an extended subset of the current draft R7RS
-Scheme, with support for all libraries.  Support for additional
+The default language is the R7RS (scheme base) library, with support
+for all libraries from the small language.  Support for additional
 languages such as JavaScript, Go, Lua and Bash are planned for future
 releases.  Scheme is chosen as a substrate because its first class
 continuations and guaranteed tail-call optimization makes implementing
@@ -122,24 +122,15 @@ C libraries, described in the FFI section below.
 
 \subsection{Scheme Standard}
 
-The default language is based on the latest draft of
+The default language is the \scheme{(scheme base)} library from
 \hyperlink["http://scheme-reports.org/"]{R7RS}, which is mostly a
 superset of
 \hyperlink["http://www.schemers.org/Documents/Standards/R5RS/HTML/"]{R5RS}.
-Some of the more expensive bindings are not included in the interest
-of size and quick startup, and some extra low-level utilities are
-included for convenience and bootstrapping.  Note the builtin
-\scheme{equal?}  does not support cyclic structures (you need the R7RS
-\scheme{(scheme base)} or \scheme{(chibi equiv)}), nor do the default
-reader and writer (you need \scheme{(srfi 38)} or the R7RS
-\scheme{(scheme read)} and \scheme{(scheme write)}).
-
-To get the exact R7RS language, you can \scheme{(import (scheme base))},
-and likewise for the other R7RS libraries.
 
 The reader defaults to case-sensitive, like R6RS and R7RS but unlike
 R5RS.  The default configuration includes the full numeric tower:
-fixnums, flonums, bignums, exact rationals and complex numbers.
+fixnums, flonums, bignums, exact rationals and complex numbers, though
+this can be customized at compile time.
 
 Full continuations are supported, but currently continuations don't
 take C code into account.  This means that you can call from Scheme to
@@ -170,16 +161,6 @@ automatically called with the following signature:
   sexp_init_library(sexp context, sexp self, sexp_sint_t n, sexp environment,
                     const char* version, sexp_abi_identifier_t abi);
 }
-
-The following additional procedures are available in the default
-environment:
-
-\itemlist[
-\item{\scheme{(print-exception exn out)} - prints a human-readable description of \var{exn} to the output port \var{out}}
-\item{\scheme{(port-fold-case? port)} - returns \scheme{#t} iff the given input port folds case on \scheme{read}}
-\item{\scheme{(set-port-fold-case! port bool)} - set the case-folding behavior of \var{port}}
-\item{\scheme{(string-concatenate list-of-strings [sep])} - append the strings joined by \var{sep}}
-]
 
 \subsection{Module System}
 

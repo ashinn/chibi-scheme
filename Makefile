@@ -3,7 +3,7 @@
 .PHONY: dist mips-dist cleaner test test-all test-dist checkdefs
 .DEFAULT_GOAL := all
 
-CHIBI_FFI ?= $(CHIBI) tools/chibi-ffi
+CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
 CHIBI_FFI_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-ffi
 
 CHIBI_DOC ?= $(CHIBI) tools/chibi-doc

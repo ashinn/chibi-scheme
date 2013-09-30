@@ -32,10 +32,6 @@ MANDIR    ?= $(PREFIX)/share/man/man1
 
 DESTDIR   ?=
 
-CHIBI     ?= chibi-scheme$(EXE)
-CHIBI_FFI ?= chibi-ffi
-CHIBI_DOC ?= chibi-doc
-
 ########################################################################
 # System configuration - if not using GNU make, set PLATFORM and the
 # flags from Makefile.detect (at least SO, EXE, CLIBFLAGS) as necessary.

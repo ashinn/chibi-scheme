@@ -10,6 +10,7 @@
 #define sexp_import_suffix "))"
 #define sexp_environment_prefix "(environment '("
 #define sexp_environment_suffix "))"
+#define sexp_default_environment "(environment '(scheme base))"
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
 
@@ -27,7 +28,8 @@ void sexp_usage(int err) {
 #if SEXP_USE_FOLD_CASE_SYMS
          "  -f          - case-fold symbols\n"
 #endif
-         "  -q          - don't load the initialization file\n"
+         "  -q          - \"quick\" load, use the core -xchibi language\n"
+         "  -Q          - extra \"quick\" load, -xchibi.primitive\n"
          "  -V          - print version information\n"
 #if ! SEXP_USE_BOEHM
          "  -h <size>   - specify the initial heap size\n"
@@ -198,7 +200,7 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e) {
 #endif
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
-  sexp_set_parameter(ctx, res, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
+  sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
   sexp_gc_release3(ctx);
   return res;
 }
@@ -277,11 +279,17 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
-static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k) {
+static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) {
   sexp_gc_var1(e);
   sexp_gc_preserve1(ctx, e);
   e = sexp_load_standard_env(ctx, env, k);
   if (sexp_exceptionp(e)) return e;
+#if SEXP_USE_MODULES
+  if (!bootp) {
+    e = sexp_eval_string(ctx, sexp_default_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
+    if (sexp_exceptionp(e)) return e;
+  }
+#endif
   e = sexp_load_standard_params(ctx, e);
   sexp_gc_release1(ctx);
   return e;
@@ -305,9 +313,9 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
       sexp_gc_preserve3(ctx, tmp, sym, args);                           \
     } while (0)
 
-#define load_init() if (! init_loaded++) do {                           \
+#define load_init(bootp) if (! init_loaded++) do {                      \
       init_context();                                                   \
-      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN)); \
+      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN, bootp)); \
     } while (0)
 
 void run_main (int argc, char **argv) {
@@ -329,7 +337,7 @@ void run_main (int argc, char **argv) {
     case 'e':
     case 'p':
       mods_loaded = 1;
-      load_init();
+      load_init(0);
       print = (argv[i][1] == 'p');
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('e', arg);
@@ -344,7 +352,7 @@ void run_main (int argc, char **argv) {
       break;
     case 'l':
       mods_loaded = 1;
-      load_init();
+      load_init(0);
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('l', arg);
       check_exception(ctx, sexp_load_module_file(ctx, arg, env));
@@ -358,7 +366,7 @@ void run_main (int argc, char **argv) {
         goto load_primitive;
       if (c != 'x') {prefix = sexp_import_prefix; suffix = sexp_import_suffix;}
       mods_loaded = 1;
-      load_init();
+      load_init(1);
 #if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
       len = strlen(arg)+strlen(prefix)+strlen(suffix);
@@ -372,7 +380,7 @@ void run_main (int argc, char **argv) {
       tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, (c=='x' ? sexp_global(ctx, SEXP_G_META_ENV) : env)));
       free(impmod);
       if (c == 'x') {
-        sexp_set_parameter(ctx, env, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), tmp);
+        sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
         sexp_context_env(ctx) = env = tmp;
         tmp = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
         if (tmp != NULL && !sexp_oportp(tmp))
@@ -381,11 +389,14 @@ void run_main (int argc, char **argv) {
 #endif
       break;
     load_primitive:
-    case 'q':
+    case 'Q':
       init_context();
       mods_loaded = 1;
       if (! init_loaded++)
         sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
+      break;
+    case 'q':
+      argv[i--] = "-xchibi";
       break;
     case 'A':
       init_context();
@@ -445,7 +456,7 @@ void run_main (int argc, char **argv) {
       break;
 #endif
     case 'V':
-      load_init();
+      load_init(0);
       if (! sexp_oportp(out))
         out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
       sexp_write_string(ctx, sexp_version_string, out);
@@ -476,7 +487,7 @@ void run_main (int argc, char **argv) {
 
  done_options:
   if (!quit || main_symbol != NULL) {
-    load_init();
+    load_init(0);
     /* build argument list */
     if (i < argc)
       for (j=argc-1; j>=i; j--)
@@ -494,7 +505,7 @@ void run_main (int argc, char **argv) {
         /* `cond-expand' bindings */
         if (!mods_loaded) {
           env = sexp_make_env(ctx);
-          sexp_set_parameter(ctx, sexp_context_env(ctx),
+          sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV),
                              sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
           sexp_context_env(ctx) = env;
           sym = sexp_intern(ctx, "repl-import", -1);
