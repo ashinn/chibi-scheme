@@ -29,6 +29,8 @@
           open/read        open/write             open/read-write
           open/create      open/exclusive         open/truncate
           open/append      open/non-block
+          file-lock
+          lock/shared lock/exclusive lock/non-blocking lock/unlock
           is-a-tty?)
   (import (chibi) (chibi string))
   (include-shared "filesystem")

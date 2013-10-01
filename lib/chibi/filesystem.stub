@@ -185,6 +185,19 @@
 ;;> File opening modes.
 ;;/
 
+;;> Applies the specified locking operation using flock(2) to the port
+;;> or file-descriptor.
+
+(define-c errno (file-lock "flock") (port-or-fileno int))
+
+(define-c-const int (lock/shared "LOCK_SH"))
+(define-c-const int (lock/exclusive "LOCK_EX"))
+(define-c-const int (lock/non-blocking "LOCK_NB"))
+(define-c-const int (lock/unlock "LOCK_UN"))
+
+;;> Locking operations.
+;;/
+
 ;;> Returns \scheme{#t} if the given port of file descriptor
 ;;> if backed by a TTY object, and \scheme{#f} otherwise.
 
