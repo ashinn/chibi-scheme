@@ -183,7 +183,7 @@ sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset) {
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
   if ((! d) || (sexp_bignum_length(d) < len+offset))
-    d = tmp = sexp_make_bignum(ctx, len);
+    d = tmp = sexp_make_bignum(ctx, len+offset);
   else
     tmp = d;
   data = sexp_bignum_data(d);
