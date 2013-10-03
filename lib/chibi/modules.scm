@@ -1,5 +1,5 @@
 ;; modules.scm -- module introspection utilities
-;; Copyright (c) 2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2011-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Module introspection library.
@@ -143,3 +143,53 @@
                          (eq? (procedure-name x) (ref-name (set-var (car ls)))))
                     (set-value (car ls))
                     (lp (cdr ls))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; finding all available modules
+
+(define (module-file? file)
+  (let ((len (string-length file)))
+    (and (> len 4) (equal? ".sld" (substring file (- len 4))))))
+
+(define (read-static-modules file)
+  (protect (exn (else '()))
+    (call-with-input-file file
+      (lambda (in)
+        (let lp ((res '()))
+          (let ((expr (read in)))
+            (cond
+             ((eof-object? expr)
+              res)
+             ((and (pair? expr) (eq? 'define-library (car expr)))
+              (let ((name (cadr expr))
+                    (exports (cond ((assq 'export (cddr expr)) => cdr)
+                                   (else '()))))
+                (lp (cons (cons name (make-module exports #f #f)) res))))
+             (else
+              (lp res)))))))))
+
+(define (available-modules-in-directory dir)
+  (directory-fold-tree
+   dir #f #f
+   (lambda (file res)
+     (if (module-file? file)
+         (append (read-static-modules file) res)
+         res))
+   '()))
+
+(define (available-modules)
+  (reverse
+   (apply append
+          *modules*
+          (map available-modules-in-directory
+               (current-module-path)))))
+
+(define (modules-exporting-identifier name)
+  (let lp ((ls (available-modules))
+           (res '()))
+    (cond
+     ((null? ls) (reverse res))
+     ((and (memq name (module-exports (cdar ls)))
+           (not (assoc (caar ls) res)))
+      (lp (cdr ls) (cons (car ls) res)))
+     (else (lp (cdr ls) res)))))
