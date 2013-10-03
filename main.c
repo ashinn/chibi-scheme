@@ -212,10 +212,11 @@ static void repl (sexp ctx, sexp env) {
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
   err = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
-  if (in == NULL || out == NULL || err == NULL) {
+  if (in == NULL || out == NULL) {
     fprintf(stderr, "Standard I/O ports not found, aborting.  Maybe a bad -x language?\n");
     exit_failure();
   }
+  if (err == NULL) err = out;
   sexp_port_sourcep(in) = 1;
   while (1) {
     sexp_write_string(ctx, "> ", out);
