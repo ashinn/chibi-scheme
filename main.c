@@ -284,14 +284,16 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) 
   sexp_gc_var1(e);
   sexp_gc_preserve1(ctx, e);
   e = sexp_load_standard_env(ctx, env, k);
-  if (sexp_exceptionp(e)) return e;
+  if (!sexp_exceptionp(e)) {
 #if SEXP_USE_MODULES
-  if (!bootp) {
-    e = sexp_eval_string(ctx, sexp_default_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
-    if (sexp_exceptionp(e)) return e;
-  }
+    if (!bootp) {
+      e = sexp_eval_string(ctx, sexp_default_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
+    }
 #endif
-  e = sexp_load_standard_params(ctx, e);
+    if (!sexp_exceptionp(e)) {
+      e = sexp_load_standard_params(ctx, e);
+    }
+  }
   sexp_gc_release1(ctx);
   return e;
 }
@@ -311,7 +313,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 
 #define init_context() if (! ctx) do {                                  \
       do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case); \
-      sexp_gc_preserve3(ctx, tmp, sym, args);                           \
+      sexp_gc_preserve4(ctx, tmp, sym, args, env);                      \
     } while (0)
 
 #define load_init(bootp) if (! init_loaded++) do {                      \
@@ -328,9 +330,10 @@ void run_main (int argc, char **argv) {
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     no_script=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
-  sexp out=SEXP_FALSE, env=NULL, ctx=NULL;
-  sexp_gc_var3(tmp, sym, args);
+  sexp out=SEXP_FALSE, ctx=NULL;
+  sexp_gc_var4(tmp, sym, args, env);
   args = SEXP_NULL;
+  env = NULL;
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
@@ -363,11 +366,20 @@ void run_main (int argc, char **argv) {
       suffix = sexp_environment_suffix;
     case 'm':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      if (c == 'x' && strcmp(arg, "chibi.primitive") == 0)
-        goto load_primitive;
-      if (c != 'x') {prefix = sexp_import_prefix; suffix = sexp_import_suffix;}
+      if (c == 'x') {
+        if (strcmp(arg, "chibi.primitive") == 0) {
+          goto load_primitive;
+        } else if (strcmp(arg, "scheme.base") == 0) {
+          load_init(0);
+          break;
+        }
+      } else {
+        prefix = sexp_import_prefix;
+        suffix = sexp_import_suffix;
+      }
       mods_loaded = 1;
-      load_init(c == 'x');
+      load_init(c == 'x');      /* only load the meta-env if we're */
+                                /* explicitly setting a language   */
 #if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
       len = strlen(arg)+strlen(prefix)+strlen(suffix);
@@ -548,7 +560,7 @@ void run_main (int argc, char **argv) {
     }
   }
 
-  sexp_gc_release3(ctx);
+  sexp_gc_release4(ctx);
   sexp_destroy_context(ctx);
 }
 
