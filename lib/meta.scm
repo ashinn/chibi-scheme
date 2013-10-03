@@ -15,7 +15,10 @@
 (define (module-meta-data-set! mod x) (vector-set! mod 2 x))
 
 (define (module-exports mod)
-  (or (%module-exports mod) (env-exports (module-env mod))))
+  (or (%module-exports mod)
+      (if (module-env mod)
+          (env-exports (module-env mod))
+          '())))
 
 (define (module-name->strings ls res)
   (if (null? ls)
