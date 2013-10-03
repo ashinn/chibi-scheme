@@ -28,7 +28,9 @@
   (let ((dir (opendir dir)))
     (let lp ((res knil))
       (let ((file (readdir dir)))
-        (if file (lp (kons (dirent-name file) res)) res)))))
+        (if file
+            (lp (kons (dirent-name file) res))
+            (begin (closedir dir) res))))))
 
 ;;> Returns a list of the files in \var{dir} in an unspecified
 ;;> order.
@@ -61,6 +63,7 @@
                           (let ((path (string-append file "/" f)))
                             (lp (fold path (down path acc)))))))
                    (else
+                    (closedir d)
                     (up file acc))))))))
        (else
         (here file acc))))))
