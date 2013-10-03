@@ -50,6 +50,7 @@
        ((file-directory? file)
         (let ((d (opendir file)))
           (if (not d)
+              acc
               (let lp ((acc acc))
                 (let ((e (readdir d)))
                   (cond
