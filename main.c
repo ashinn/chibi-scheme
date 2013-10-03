@@ -11,6 +11,7 @@
 #define sexp_environment_prefix "(environment '("
 #define sexp_environment_suffix "))"
 #define sexp_default_environment "(environment '(scheme base))"
+#define sexp_advice_environment "(load-module '(chibi repl))"
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
 
@@ -268,13 +269,30 @@ static void check_nonull_arg (int c, char *arg) {
 }
 
 static sexp check_exception (sexp ctx, sexp res) {
-  sexp err;
+  sexp_gc_var4(err, advise, sym, tmp);
   if (res && sexp_exceptionp(res)) {
+    sexp_gc_preserve4(ctx, err, advise, sym, tmp);
+    tmp = res;
     err = sexp_current_error_port(ctx);
     if (! sexp_oportp(err))
       err = sexp_make_output_port(ctx, stderr, SEXP_FALSE);
     sexp_print_exception(ctx, res, err);
     sexp_stack_trace(ctx, err);
+#if SEXP_USE_MAIN_ERROR_ADVISE
+    if (sexp_envp(sexp_global(ctx, SEXP_G_META_ENV))) {
+      advise = sexp_eval_string(ctx, sexp_advice_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
+      if (sexp_vectorp(advise)) {
+        advise = sexp_vector_ref(advise, SEXP_ONE);
+        if (sexp_envp(advise)) {
+          sym = sexp_intern(ctx, "repl-advise-exception", -1);
+          advise = sexp_env_ref(advise, sym, SEXP_FALSE);
+          if (sexp_procedurep(advise))
+            sexp_apply(ctx, advise, tmp=sexp_list2(ctx, res, err));
+        }
+      }
+    }
+#endif
+    sexp_gc_release4(ctx);
     exit_failure();
   }
   return res;
