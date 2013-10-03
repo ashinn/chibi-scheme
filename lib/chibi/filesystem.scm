@@ -49,17 +49,18 @@
       (cond
        ((file-directory? file)
         (let ((d (opendir file)))
-          (let lp ((acc acc))
-            (let ((e (readdir d)))
-              (cond
-               (e
-                (let ((f (dirent-name e)))
-                  (if (member f '("." ".."))
-                      (lp acc)
-                      (let ((path (string-append file "/" f)))
-                        (lp (fold path (down path acc)))))))
-               (else
-                (up file acc)))))))
+          (if (not d)
+              (let lp ((acc acc))
+                (let ((e (readdir d)))
+                  (cond
+                   (e
+                    (let ((f (dirent-name e)))
+                      (if (member f '("." ".."))
+                          (lp acc)
+                          (let ((path (string-append file "/" f)))
+                            (lp (fold path (down path acc)))))))
+                   (else
+                    (up file acc))))))))
        (else
         (here file acc))))))
 
