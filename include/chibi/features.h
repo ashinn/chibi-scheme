@@ -709,7 +709,7 @@
 #define SEXP_API    __declspec(dllimport)
 #endif
 #else
-#define SEXP_API
+#define SEXP_API    extern
 #endif
 
 /************************************************************************/
