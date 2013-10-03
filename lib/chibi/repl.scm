@@ -279,6 +279,24 @@
 (define (string->sexp-list str)
   (call-with-input-string str read/ss/all))
 
+;; Utility to provide additional help for common exceptions.
+(define (repl-advise-exception exn out)
+  (cond
+   ((and (exception? exn)
+         (equal? "undefined variable" (exception-message exn))
+         (pair? (exception-irritants exn)))
+    (let* ((name (car (exception-irritants exn)))
+           (mods (and (identifier? name)
+                      (modules-exporting-identifier name))))
+      (cond
+       ((pair? mods)
+        (display name out)
+        (display " is exported by:\n")
+        (for-each
+         (lambda (m)
+           (display "  " out) (write m out) (newline out))
+         (sort (map car mods)))))))))
+
 (define (repl/eval rp expr-list)
   (let ((out (repl-out rp)))
     (protect (exn (else (print-exception exn out)))
@@ -287,7 +305,10 @@
               (lambda ()
                 ;; The inner protect in the child thread catches errors
                 ;; from eval.
-                (protect (exn (else (print-exception exn out)))
+                (protect (exn
+                          (else
+                           (print-exception exn out)
+                           (repl-advise-exception exn (current-error-port))))
                   (for-each
                    (lambda (expr)
                      (call-with-values (lambda () (eval expr (repl-env rp)))
@@ -418,5 +439,12 @@
             (lp rp)))))))
     ;; Update the history file on completion.
     (if (repl-history-file rp)
-        (call-with-output-file (repl-history-file rp)
-          (lambda (out) (write (history->list (repl-history rp)) out))))))
+        (protect
+            (exn
+             (else
+              (let ((msg (integer->error-string)))
+                (display "couldn't save repl history: " (current-error-port))
+                (display msg (current-error-port))
+                (newline (current-error-port)))))
+          (call-with-output-file (repl-history-file rp)
+            (lambda (out) (write (history->list (repl-history rp)) out)))))))
