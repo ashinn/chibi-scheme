@@ -1,5 +1,5 @@
 ;; filesystem.scm -- additional filesystem utilities
-;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Creates the directory \var{dir}, including any parent directories
@@ -26,11 +26,13 @@
 
 (define (directory-fold dir kons knil)
   (let ((dir (opendir dir)))
-    (let lp ((res knil))
-      (let ((file (readdir dir)))
-        (if file
-            (lp (kons (dirent-name file) res))
-            (begin (closedir dir) res))))))
+    (if (not dir)
+        knil
+        (let lp ((res knil))
+          (let ((file (readdir dir)))
+            (if file
+                (lp (kons (dirent-name file) res))
+                (begin (closedir dir) res)))))))
 
 ;;> Returns a list of the files in \var{dir} in an unspecified
 ;;> order.
@@ -127,16 +129,24 @@
 
 ;;> File status accessors.  \var{x} should be a string indicating
 ;;> the file to lookup the status for, or an existing status object.
+;;> Raises an error in the string case for non-existing files.
 ;;/
 
-(define (file-regular? x) (S_ISREG (file-mode x)))
-(define (file-directory? x) (S_ISDIR (file-mode x)))
-(define (file-character? x) (S_ISCHR (file-mode x)))
-(define (file-block? x) (S_ISBLK (file-mode x)))
-(define (file-fifo? x) (S_ISFIFO (file-mode x)))
-(define (file-link? x) (S_ISLNK (file-mode x)))
-(define (file-socket? x) (S_ISSOCK (file-mode x)))
-(define (file-exists? x) (and (file-status x) #t))
+(define-syntax file-test-mode
+  (syntax-rules ()
+    ((file-test-mode op x)
+     (let* ((tmp x)
+            (st (if (stat? tmp) tmp (file-status tmp))))
+       (and st (op (stat-mode st)))))))
+
+(define (file-regular? x) (file-test-mode S_ISREG x))
+(define (file-directory? x) (file-test-mode S_ISDIR x))
+(define (file-character? x) (file-test-mode S_ISCHR x))
+(define (file-block? x) (file-test-mode S_ISBLK x))
+(define (file-fifo? x) (file-test-mode S_ISFIFO x))
+(define (file-link? x) (file-test-mode S_ISLNK x))
+(define (file-socket? x) (file-test-mode S_ISSOCK x))
+(define (file-exists? x) (and (if (stat? x) #t (file-status x)) #t))
 
 ;;> File type tests.  \var{x} should be a string indicating the
 ;;> file to lookup the status for, or an existing status object.
