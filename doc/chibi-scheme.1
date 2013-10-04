@@ -6,7 +6,7 @@ chibi-scheme \- a tiny Scheme interpreter
 
 .SH SYNOPSIS
 .B chibi-scheme
-[-qQrfV]
+[-qQrRfV]
 [-I
 .I path
 ]
@@ -103,8 +103,14 @@ The resulting environment will only contain the core syntactic
 forms and primitives coded in C.  This is very fast and guaranteed
 not to load any external files, but is also very limited.
 .TP
-.BI -r
+.BI -r [main]
 Run the "main" procedure when the script finishes loading as in SRFI-22.
+.TP
+.BI -R [module]
+Loads the given module and runs the "main" procedure it defines (which
+need not be exported) with a single argument of the list of command-line
+arguments as in SRFI-22.  The name "main" can be overridden with the -r
+option.
 .TP
 .BI -s
 Strict mode, escalating warnings to fatal errors.

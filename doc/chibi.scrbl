@@ -110,8 +110,8 @@ are listed below.
 
 The command-line programs \ccode{chibi-scheme}, \ccode{chibi-doc} and
 \ccode{chibi-ffi} are installed by default, along with manpages.
-\ccode{chibi-scheme} provides a REPL and way to run scripts.  In the
-interest of size it has no --help option - see the man page for usage.
+\ccode{chibi-scheme} provides a REPL and way to run scripts.  Run -?
+for a brief list of options, or see the man page for more details.
 \ccode{chibi-doc} is the command-line interface to the literate
 documentation system described in
 \hyperlink["lib/chibi/scribble.html"]{(chibi scribble)}, and used to

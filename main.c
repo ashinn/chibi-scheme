@@ -27,26 +27,27 @@
 void sexp_usage(int err) {
   printf("usage: chibi-scheme [<options> ...] [<file> <args> ...]\n"
 #if SEXP_USE_FOLD_CASE_SYMS
-         "  -f          - case-fold symbols\n"
+         "  -f           - case-fold symbols\n"
 #endif
-         "  -q          - \"quick\" load, use the core -xchibi language\n"
-         "  -Q          - extra \"quick\" load, -xchibi.primitive\n"
-         "  -V          - print version information\n"
+         "  -q           - \"quick\" load, use the core -xchibi language\n"
+         "  -Q           - extra \"quick\" load, -xchibi.primitive\n"
+         "  -V           - print version information\n"
 #if ! SEXP_USE_BOEHM
-         "  -h <size>   - specify the initial heap size\n"
+         "  -h <size>    - specify the initial heap size\n"
 #endif
 #if SEXP_USE_MODULES
-         "  -A <dir>    - append a module search directory\n"
-         "  -I <dir>    - prepend a module search directory\n"
-         "  -m <module> - import a module\n"
-         "  -x <module> - import only a module\n"
+         "  -A <dir>     - append a module search directory\n"
+         "  -I <dir>     - prepend a module search directory\n"
+         "  -m <module>  - import a module\n"
+         "  -x <module>  - import only a module\n"
 #endif
-         "  -e <expr>   - evaluate an expression\n"
-         "  -p <expr>   - evaluate and print an expression\n"
-         "  -r[<main>]  - run a SRFI-22 main\n"
+         "  -e <expr>    - evaluate an expression\n"
+         "  -p <expr>    - evaluate and print an expression\n"
+         "  -r[<main>]   - run a SRFI-22 main\n"
+         "  -R[<module>] - run main from a module\n"
 #if SEXP_USE_IMAGE_LOADING
-         "  -d <file>   - dump an image file and exit\n"
-         "  -i <file>   - load an image file\n"
+         "  -d <file>    - dump an image file and exit\n"
+         "  -i <file>    - load an image file\n"
 #endif
          );
   if (err == 0) exit_success();
@@ -261,6 +262,18 @@ static sexp_uint_t multiplier (char c) {
 }
 #endif
 
+static char* make_import(const char* prefix, const char* mod, const char* suffix) {
+  int len = strlen(mod) + strlen(prefix) + strlen(suffix);
+  char *p, *impmod = (char*) malloc(len+1);
+  strcpy(impmod, prefix);
+  strcpy(impmod+strlen(prefix), mod);
+  strcpy(impmod+len-+strlen(suffix), suffix);
+  impmod[len] = '\0';
+  for (p=impmod; *p; p++)
+    if (*p == '.') *p=' ';
+  return impmod;
+}
+
 static void check_nonull_arg (int c, char *arg) {
   if (! arg) {
     fprintf(stderr, "chibi-scheme: option '%c' requires an argument\n", c);
@@ -341,10 +354,9 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 
 void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
-  char *impmod, *p;
-  sexp_sint_t len;
+  char *impmod;
 #endif
-  char *arg, *prefix=NULL, *suffix=NULL, *main_symbol=NULL;
+  char *arg, *prefix=NULL, *suffix=NULL, *main_symbol=NULL, *main_module=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     no_script=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
@@ -400,14 +412,7 @@ void run_main (int argc, char **argv) {
                                 /* explicitly setting a language   */
 #if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
-      len = strlen(arg)+strlen(prefix)+strlen(suffix);
-      impmod = (char*) malloc(len+1);
-      strcpy(impmod, prefix);
-      strcpy(impmod+strlen(prefix), arg);
-      strcpy(impmod+len-+strlen(suffix), suffix);
-      impmod[len] = '\0';
-      for (p=impmod; *p; p++)
-        if (*p == '.') *p=' ';
+      impmod = make_import(prefix, arg, suffix);
       tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, (c=='x' ? sexp_global(ctx, SEXP_G_META_ENV) : env)));
       free(impmod);
       if (c == 'x') {
@@ -502,6 +507,10 @@ void run_main (int argc, char **argv) {
       sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
       break;
 #endif
+    case 'R':
+      main_module = argv[i][2] == '\0' ? "chibi.repl" : argv[i]+2;
+      if (main_symbol == NULL) main_symbol = "main";
+      break;
     case 'r':
       main_symbol = argv[i][2] == '\0' ? "main" : argv[i]+2;
       break;
@@ -530,6 +539,15 @@ void run_main (int argc, char **argv) {
       /* no script or main, run interactively */
       repl(ctx, env);
     } else {
+#if SEXP_USE_MODULES
+      /* load the module or script */
+      if (main_module != NULL) {
+        impmod = make_import("(load-module '(", main_module, "))");
+        env = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, sexp_global(ctx, SEXP_G_META_ENV)));
+        if (sexp_vectorp(env)) env = sexp_vector_ref(env, SEXP_ONE);
+        free(impmod);
+      } else
+#endif
       if (i < argc && !no_script) {   /* script usage */
 #if SEXP_USE_MODULES
         /* reset the environment to have only the `import' and */
@@ -548,7 +566,6 @@ void run_main (int argc, char **argv) {
           sexp_env_define(ctx, env, sym, tmp);
         }
 #endif
-        /* load the script */
         sexp_context_tracep(ctx) = 1;
         tmp = sexp_env_bindings(env);
 #if SEXP_USE_MODULES
@@ -573,6 +590,8 @@ void run_main (int argc, char **argv) {
         if (sexp_procedurep(tmp)) {
           args = sexp_list1(ctx, args);
           check_exception(ctx, sexp_apply(ctx, tmp, args));
+        } else {
+          fprintf(stderr, "couldn't find main binding: %s in %s\n", main_symbol, main_module ? main_module : argv[i]);
         }
       }
     }
