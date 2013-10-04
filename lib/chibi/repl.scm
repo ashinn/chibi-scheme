@@ -2,15 +2,13 @@
 ;; Copyright (c) 2012-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> A user-friendly REPL with line editing and signal handling.
-;;> The default REPL provided by chibi-scheme is very minimal,
-;;> meant primarily to be small and work on any platform.  This
-;;> module provides an advanced REPL that handles vt100 line
-;;> editing and signal handling, so that C-c will interrupt a
-;;> computation and bring you back to the REPL prompt.  To use
-;;> this repl, run
-;;> \command{chibi-scheme -mchibi.repl -e'(repl)'}
-;;> from the command line or within Emacs.
+;;> A user-friendly REPL with line editing and signal handling.  The
+;;> default REPL provided by chibi-scheme is very minimal, meant
+;;> primarily to be small and work on any platform.  This module
+;;> provides an advanced REPL that handles vt100 line editing and
+;;> signal handling, so that C-c will interrupt a computation and
+;;> bring you back to the REPL prompt.  To use this repl, run
+;;> \command{chibi-scheme -R} from the command line or within Emacs.
 
 (define (with-signal-handler sig handler thunk)
   (let ((old-handler #f))
@@ -448,3 +446,6 @@
                 (newline (current-error-port)))))
           (call-with-output-file (repl-history-file rp)
             (lambda (out) (write (history->list (repl-history rp)) out)))))))
+
+(define (main args)
+  (repl))
