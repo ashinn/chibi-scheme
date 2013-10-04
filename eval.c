@@ -2314,7 +2314,9 @@ sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from,
         sexp_env_define(ctx, to, newname, sexp_cdr(value));
 #endif
 #if SEXP_USE_WARN_UNDEFS
-        if (oldcell && !sexp_same_bindingp(oldcell, value))
+        if (oldcell
+            && sexp_cdr(oldcell) != SEXP_UNDEF
+            && !sexp_same_bindingp(oldcell, value))
           sexp_warn(ctx, "importing already defined binding: ", newname);
       } else {
         sexp_warn(ctx, "importing undefined variable: ", oldname);
