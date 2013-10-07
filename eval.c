@@ -360,12 +360,18 @@ static sexp sexp_make_macro (sexp ctx, sexp p, sexp e) {
 
 sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv, sexp expr) {
   sexp res;
-  if (! (sexp_symbolp(expr) || sexp_pairp(expr)))
+  if (! (sexp_symbolp(expr) || sexp_pairp(expr) || sexp_synclop(expr)))
     return expr;
   res = sexp_alloc_type(ctx, synclo, SEXP_SYNCLO);
-  sexp_synclo_env(res) = env;
-  sexp_synclo_free_vars(res) = fv;
-  sexp_synclo_expr(res) = expr;
+  if (sexp_synclop(expr)) {
+    sexp_synclo_env(res) = sexp_synclo_env(expr);
+    sexp_synclo_free_vars(res) = sexp_synclo_free_vars(expr);
+    sexp_synclo_expr(res) = sexp_synclo_expr(expr);
+  } else {
+    sexp_synclo_env(res) = env;
+    sexp_synclo_free_vars(res) = fv;
+    sexp_synclo_expr(res) = expr;
+  }
   return res;
 }
 
