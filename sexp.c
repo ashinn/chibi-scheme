@@ -1974,6 +1974,13 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write(ctx, sexp_make_fixnum(sexp_fileno_fd(obj)), out);
       sexp_write_char(ctx, '>', out);
       break;
+    case SEXP_SYNCLO:
+      sexp_write_string(ctx, "#<SC ", out);
+      sexp_write(ctx, sexp_make_fixnum(obj), out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_synclo_expr(obj), out);
+      sexp_write_char(ctx, '>', out);
+      break;
     default:
       i = sexp_pointer_tag(obj);
       if (i < 0 || i >= sexp_context_num_types(ctx)) {
