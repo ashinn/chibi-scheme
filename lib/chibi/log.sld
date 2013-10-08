@@ -22,5 +22,5 @@
    default-logger log-emergency log-alert log-critical log-error
    log-warn log-notice log-info log-debug)
   (import (chibi) (srfi 9) (chibi time) (chibi process) (chibi system)
-          (chibi filesystem) (chibi string) (chibi show))
+          (chibi filesystem) (chibi string) (chibi show base))
   (include "log.scm"))
