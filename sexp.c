@@ -2000,6 +2000,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
             sexp_write_string(ctx, sexp_string_data(sexp_type_name(x)), out);
           else
             sexp_write(ctx, sexp_type_name(x), out);
+          sexp_write_char(ctx, ' ', out);
+          sexp_write(ctx, sexp_make_fixnum(obj), out);
           sexp_write_char(ctx, '>', out);
 #if SEXP_USE_TYPE_PRINTERS
         }
