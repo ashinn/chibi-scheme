@@ -592,9 +592,12 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
   else if (!cell1 && !cell2 && (id1 == id2))
     return SEXP_TRUE;
 #if ! SEXP_USE_STRICT_TOPLEVEL_BINDINGS
-  else if (cell1 && !sexp_lambdap(sexp_cdr(cell1))
-           && cell2 && !sexp_lambdap(sexp_cdr(cell2))
-           && (id1 == id2))
+  /* If the identifiers are the same and the cells are either unbound *
+   * or bound to top-level variables, consider them the same.  Local  *
+   * (non-toplevel) bindings must still match exactly. */
+  else if ((id1 == id2)
+           && (!cell1 || !sexp_lambdap(sexp_cdr(cell1)))
+           && (!cell2 || !sexp_lambdap(sexp_cdr(cell2))))
     return SEXP_TRUE;
 #endif
   return SEXP_FALSE;
