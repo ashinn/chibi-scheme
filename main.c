@@ -202,6 +202,7 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e) {
 #endif
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
+  sexp_context_env(ctx) = res;
   sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
   sexp_gc_release3(ctx);
   return res;
