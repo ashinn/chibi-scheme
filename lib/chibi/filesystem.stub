@@ -1,7 +1,8 @@
 ;; filesystem.stub -- filesystem bindings
-;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+(c-system-include "sys/file.h")
 (c-system-include "sys/types.h")
 (c-system-include "unistd.h")
 (c-system-include "dirent.h")
