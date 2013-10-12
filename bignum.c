@@ -167,11 +167,16 @@ sexp sexp_bignum_fxadd (sexp ctx, sexp a, sexp_uint_t b) {
 }
 
 sexp sexp_bignum_fxsub (sexp ctx, sexp a, sexp_uint_t b) {
-  sexp_uint_t *data=sexp_bignum_data(a), borrow, i=0, n;
-  for (borrow=b; borrow; i++) {
-    n = data[i];
-    data[i] -= borrow;
-    borrow = (n < borrow);
+  sexp_uint_t len=sexp_bignum_hi(a), *data=sexp_bignum_data(a), borrow, i=0, n;
+  if ((len == 1) && (b > data[0])) {
+    data[0] = b - data[0];
+    sexp_bignum_sign(a) = -sexp_bignum_sign(a);
+  } else {
+    for (borrow=b; borrow; i++) {
+      n = data[i];
+      data[i] -= borrow;
+      borrow = (n < borrow);
+    }
   }
   return a;
 }
@@ -1585,7 +1590,11 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FIX_BIG:
-      r = sexp_make_fixnum(sexp_bignum_sign(b) < 0 ? 1 : -1);
+      if ((sexp_bignum_hi(b) > 1) ||
+          (sexp_bignum_data(b)[0] > SEXP_MAX_FIXNUM))
+        r = sexp_make_fixnum(sexp_bignum_sign(b) < 0 ? 1 : -1);
+      else
+        r = sexp_make_fixnum(sexp_unbox_fixnum(a) - (sexp_sint_t)sexp_bignum_data(b)[0]);
       break;
     case SEXP_NUM_FLO_FLO:
       f = sexp_flonum_value(a);
