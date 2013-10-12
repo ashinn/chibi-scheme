@@ -1236,6 +1236,7 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
   case SEXP_NUM_FIX_BIG:
     r = sexp_bignum_fxmul(ctx, NULL, b, sexp_unbox_fixnum(sexp_fx_abs(a)), 0);
     sexp_bignum_sign(r) = sexp_fx_sign(a) * sexp_bignum_sign(b);
+    r = sexp_bignum_normalize(r);
     break;
   case SEXP_NUM_FLO_FLO:
     r = sexp_fp_mul(ctx, a, b);
@@ -1244,7 +1245,7 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
     r = sexp_make_flonum(ctx, sexp_flonum_value(a) * sexp_bignum_to_double(b));
     break;
   case SEXP_NUM_BIG_BIG:
-    r = sexp_bignum_mul(ctx, NULL, a, b);
+    r = sexp_bignum_normalize(sexp_bignum_mul(ctx, NULL, a, b));
     break;
 #if SEXP_USE_RATIOS
   case SEXP_NUM_FLO_RAT:
