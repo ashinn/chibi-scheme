@@ -1,5 +1,5 @@
 ;; write.scm - written formatting, the default displayed for non-string/chars
-;; Copyright (c) 2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2006-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -258,7 +258,7 @@
           ((> v 1)
            (hash-table-set! res k (cons count #f))
            (set! count (+ count 1))))))
-      res)))
+      (cons res 0))))
 
 (define (maybe-gen-shared-ref cell shares)
   (cond
@@ -275,15 +275,16 @@
         (each "#" (number->string (car cell)) "#")
         (each (maybe-gen-shared-ref cell shares) proc))))
 
-(define (call-with-shared-ref/cdr obj shares proc)
-  (let ((cell (hash-table-ref/default (car shares) obj #f)))
+(define (call-with-shared-ref/cdr obj shares proc . o)
+  (let ((sep (displayed (if (pair? o) (car o) "")))
+        (cell (hash-table-ref/default (car shares) obj #f)))
     (cond
       ((and (pair? cell) (cdr cell))
-       (each ". #" (number->string (car cell)) "#"))
+       (each sep ". #" (number->string (car cell)) "#"))
       ((pair? cell)
-       (each ". " (maybe-gen-shared-ref cell shares) "(" proc ")"))
+       (each sep ". " (maybe-gen-shared-ref cell shares) "(" proc ")"))
       (else
-       proc))))
+       (each sep proc)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; written
@@ -352,13 +353,13 @@
 
 (define (written-default obj)
   (fn ()
-    (write-with-shares obj (cons (extract-shared-objects obj #t) 0))))
+    (write-with-shares obj (extract-shared-objects obj #t))))
 
 ;; Writes the object showing the full shared structure.
 
 (define (written-shared obj)
   (fn ()
-    (write-with-shares obj (cons (extract-shared-objects obj #f) 0))))
+    (write-with-shares obj (extract-shared-objects obj #f))))
 
 ;; The only expensive part, in both time and memory, of handling
 ;; shared structures when writing is building the initial table, so
@@ -367,7 +368,7 @@
 
 (define (written-simply obj)
   (fn ()
-    (write-with-shares obj (cons (make-hash-table eq?) 0))))
+    (write-with-shares obj (extract-shared-objects #f #f))))
 
 ;; Local variables:
 ;; eval: (put 'fn 'scheme-indent-function 1)
