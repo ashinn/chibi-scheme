@@ -1,5 +1,6 @@
 
-(import (scheme base) (chibi show) (chibi test))
+(import (scheme base) (scheme read) (chibi test)
+        (chibi show) (chibi show base) (chibi show pretty))
 
 (test-begin "show")
 
@@ -282,5 +283,85 @@
              11
              (written-simply
               (let ((ones (list 1))) (set-cdr! ones ones) ones)))))
+
+;; pretty printing
+
+(define-syntax test-pretty
+  (syntax-rules ()
+    ((test-pretty str)
+     (let ((sexp (read (open-input-string str))))
+       (test str (show #f (pretty sexp)))))))
+
+(test-pretty "(foo bar)\n")
+
+(test-pretty
+"((self . aquanet-paper-1991)
+ (type . paper)
+ (title . \"Aquanet: a hypertext tool to hold your\"))
+")
+
+(test-pretty
+"(abracadabra xylophone
+             bananarama
+             yellowstonepark
+             cryptoanalysis
+             zebramania
+             delightful
+             wubbleflubbery)\n")
+
+(test-pretty
+ "#(0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+  26 27 28 29 30 31 32 33 34 35 36 37)\n")
+
+(test-pretty
+ "(0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+ 26 27 28 29 30 31 32 33 34 35 36 37)\n")
+
+(test-pretty
+ "(define (fold kons knil ls)
+  (define (loop ls acc)
+    (if (null? ls) acc (loop (cdr ls) (kons (car ls) acc))))
+  (loop ls knil))\n")
+
+(test-pretty
+"(do ((vec (make-vector 5)) (i 0 (+ i 1))) ((= i 5) vec) (vector-set! vec i i))\n")
+
+(test-pretty
+"(do ((vec (make-vector 5)) (i 0 (+ i 1))) ((= i 5) vec)
+  (vector-set! vec i 'supercalifrajalisticexpialidocious))\n")
+
+(test-pretty
+"(do ((my-vector (make-vector 5)) (index 0 (+ index 1)))
+    ((= index 5) my-vector)
+  (vector-set! my-vector index index))\n")
+
+(test-pretty
+ "(define (fold kons knil ls)
+  (let loop ((ls ls) (acc knil))
+    (if (null? ls) acc (loop (cdr ls) (kons (car ls) acc)))))\n")
+
+(test-pretty
+ "(define (file->sexp-list pathname)
+  (call-with-input-file pathname
+    (lambda (port)
+      (let loop ((res '()))
+        (let ((line (read port)))
+          (if (eof-object? line) (reverse res) (loop (cons line res))))))))\n")
+
+(test "(let ((ones '#0=(1 . #0#))) ones)\n"
+    (show #f (pretty (let ((ones (list 1)))
+                       (set-cdr! ones ones)
+                       `(let ((ones ',ones)) ones)))))
+
+'(test
+"(let ((zeros '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
+      (ones '#0=(1 . #0#)))
+  (append zeros ones))\n"
+    (show #f (pretty
+              (let ((ones (list 1)))
+                (set-cdr! ones ones)
+                `(let ((zeros '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
+                       (ones ',ones))
+                   (append zeros ones))))))
 
 (test-end)
