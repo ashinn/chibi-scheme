@@ -78,24 +78,45 @@ sexp sexp_maybe_wrap_error (sexp ctx, sexp obj) {
 
 /********************** environment utilities ***************************/
 
+/* Look for the first defined instance of the variable.  If not found, */
+/* return the first undefined instance.  */
 static sexp sexp_env_cell_loc (sexp env, sexp key, int localp, sexp *varenv) {
-  sexp ls;
+  sexp ls, undefined = NULL, undefined_env = NULL;
 
   do {
 #if SEXP_USE_RENAME_BINDINGS
     for (ls=sexp_env_renames(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
       if (sexp_car(ls) == key) {
-        if (varenv) *varenv = env;
-        return sexp_cdr(ls);
+        if (sexp_pairp(sexp_cdr(ls)) && sexp_cdr(sexp_cdr(ls)) == SEXP_UNDEF) {
+          if (!undefined) {
+            undefined_env = env;
+            undefined = sexp_cdr(ls);
+          }
+        } else {
+          if (varenv) *varenv = env;
+          return sexp_cdr(ls);
+        }
       }
 #endif
     for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
       if (sexp_car(ls) == key) {
-        if (varenv) *varenv = env;
-        return ls;
+        if (sexp_cdr(ls) == SEXP_UNDEF) {
+          if (!undefined) {
+            undefined_env = env;
+            undefined = ls;
+          }
+        } else {
+          if (varenv) *varenv = env;
+          return ls;
+        }
       }
     env = (localp ? NULL : sexp_env_parent(env));
   } while (env && sexp_envp(env));
+
+  if (undefined) {
+    if (varenv) *varenv = undefined_env;
+    return undefined;
+  }
 
   return NULL;
 }
