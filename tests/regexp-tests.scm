@@ -148,6 +148,7 @@
 (test '("abc" "def" "ghi") (regexp-split '(+ digit) "abc123def456ghi789"))
 (test '("a" "b" "c" "d" "e" "f" "g" "h" "i")
     (regexp-split '(* digit) "abc123def456ghi789"))
+(test '("a" "b") (regexp-split '(+ whitespace) "a b"))
 
 (test "abc def" (regexp-replace '(+ space) "abc \t\n def" " "))
 (test "  abc-abc"
