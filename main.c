@@ -493,7 +493,7 @@ void run_main (int argc, char **argv) {
       break;
 #endif
     case 'V':
-      load_init(0);
+      load_init(1);
       if (! sexp_oportp(out))
         out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
       sexp_write_string(ctx, sexp_version_string, out);
