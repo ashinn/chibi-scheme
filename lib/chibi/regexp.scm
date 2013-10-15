@@ -708,7 +708,7 @@
                    j
                    (kons (string-offset->index str from) md str acc)))))
        (else
-        (finish (string-offset->index str i) #f str acc))))))
+        (finish (string-offset->index str from) #f str acc))))))
 
 (define (regexp-extract rx str . o)
   (apply regexp-fold
