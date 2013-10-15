@@ -592,6 +592,8 @@
     (vector-set! v  11 command/forward-delete-line)
     (vector-set! v  12 command/refresh)
     (vector-set! v  13 command/skip)
+    (vector-set! v  14 command/forward-history)
+    (vector-set! v  16 command/backward-history)
     (vector-set! v  21 command/backward-delete-line)
     (vector-set! v  27 (make-standard-escape-keymap))
     (vector-set! v 127 command/backward-delete-char)
