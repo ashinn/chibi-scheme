@@ -19,6 +19,7 @@
 (load "tests/iset-tests.scm")
 (load "tests/uri-tests.scm")
 (load "tests/mime-tests.scm")
+(load "tests/regexp-tests.scm")
 (cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
 (cond-expand
