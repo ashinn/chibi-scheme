@@ -7,6 +7,8 @@
 
 (define-c-struct tm
   predicate: tm?
+  constructor: (make-tm tm_sec tm_min tm_hour
+                tm_mday tm_mon tm_year tm_isdst)
   (int     tm_sec    time-second)
   (int     tm_min    time-minute)
   (int     tm_hour   time-hour)
