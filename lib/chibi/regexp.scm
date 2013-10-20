@@ -546,6 +546,31 @@
             (else (error "invalid sre char-set" sre)))))
      (else (error "invalid sre char-set" sre)))))
 
+(define (strip-submatches sre)
+  (if (pair? sre)
+      (case (car sre)
+        (($ submatch) (strip-submatches (cons ': (cdr sre))))
+        ((=> submatch-named) (strip-submatches (cons ': (cddr sre))))
+        (else (cons (strip-submatches (car sre))
+                    (strip-submatches (cdr sre)))))
+      sre))
+
+(define (sre-expand-reps from to sre)
+  (let ((sre0 (strip-submatches sre)))
+    (let lp ((i 0) (res '(:)))
+      (if (= i from)
+          (cond
+           ((not to)
+            (reverse (cons `(* ,sre) res)))
+           ((= from to)
+            (reverse (cons sre (cdr res))))
+           (else
+            (let lp ((i (+ i 1)) (res res))
+              (if (>= i to)
+                  (reverse (cons `(? ,sre) res))
+                  (lp (+ i 1) (cons `(? ,sre0) res))))))
+          (lp (+ i 1) (cons sre0 res))))))
+
 ;;> Compile an \var{sre} into a regexp.
 
 (define (regexp sre . o)
@@ -632,6 +657,19 @@
                 (n1 (->rx (cons 'seq (cdr sre)) flags n2)))
            (state-next2-set! n2 n1)
            n1))
+        ((=)
+         ;; Exact repetition.
+         (->rx (sre-expand-reps (cadr sre) (cadr sre) (cons 'seq (cddr sre)))
+               flags next))
+        ((>=)
+         ;; n-or-more repetition.
+         (->rx (sre-expand-reps (cadr sre) #f (cons 'seq (cddr sre)))
+               flags next))
+        ((**)
+         ;; n-to-m repetition.
+         (->rx (sre-expand-reps (cadr sre) (car (cddr sre))
+                                (cons 'seq (cdr (cddr sre))))
+               flags next))
         ((=> submatch-named)
          ;; Named submatches just record the name for the current
          ;; match and rewrite as a non-named submatch.
