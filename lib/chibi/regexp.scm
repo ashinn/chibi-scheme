@@ -635,7 +635,8 @@
         ((=> submatch-named)
          ;; Named submatches just record the name for the current
          ;; match and rewrite as a non-named submatch.
-         (set! match-names (cons (cons (cadr sre) current-match) match-names))
+         (set! match-names
+               (cons (cons (cadr sre) (+ 1 current-match)) match-names))
          (->rx (cons 'submatch (cddr sre)) flags next))
         ((*=> submatch-named-list)
          (set! match-names (cons (cons (cadr sre) current-match) match-names))
