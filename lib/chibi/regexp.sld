@@ -28,7 +28,7 @@
    (else
     (begin
       (define (string-start-arg s o)
-        (if (pair? o) (string-index->offset (car o)) 0))
+        (if (pair? o) (string-index->offset s (car o)) 0))
       (define (string-end-arg s o)
         (if (pair? o) (string-index->offset (car o)) (string-length s)))
       (define string-cursor=? =)
@@ -37,8 +37,11 @@
       (define string-cursor>? >)
       (define string-cursor>=? >=)
       (define string-cursor-ref string-ref)
+      (define (string-cursor-next s i) (+ i 1))
+      (define (string-cursor-prev s i) (- i 1))
       (define substring-cursor substring)
       (define (string-offset->index str off) off)
+      (define (string-index->offset str i) i)
       (define (string-concatenate-reverse ls)
         (apply string-append (reverse ls))))))
   (include "regexp.scm"))
