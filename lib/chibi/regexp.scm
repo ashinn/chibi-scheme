@@ -498,6 +498,7 @@
     ((alphanumeric alphanum alnum) char-set:letter+digit)
     ((punctuation punct) char-set:punctuation)
     ((graphic graph) char-set:graphic)
+    ((word-constituent) char-set:word-constituent)
     ((whitespace white space) char-set:whitespace)
     ((printing print) char-set:printing)
     ((control cntrl) char-set:control)
@@ -707,9 +708,11 @@
         ((word)
          (->rx `(: bow ,@(cdr sre) eow) flags next))
         ((word+)
-         (->rx `(word (+ ,(char-set-intersection
-                           char-set:word-constituent
-                           (sre->char-set `(or ,@(cdr sre)) flags))))
+         (->rx `(word (+ ,(if (equal? '(any) (cdr sre))
+                              'word-constituent
+                              (char-set-intersection
+                               char-set:word-constituent
+                               (sre->char-set `(or ,@(cdr sre)) flags)))))
                flags
                next))
         ((w/case)
