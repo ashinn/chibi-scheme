@@ -138,7 +138,11 @@
            (char-upper-case? (string-ref def 0))
            (char-lower-case? (string-ref def 1)))
       (extract-char-set-category def data))
-     (else  ;; derived property
+     ;; derived properties
+     ((and (> (string-length def) 1)
+           (eqv? #\: (string-ref def 0)))
+      (extract-char-set-property (substring def 1) derived))
+     (else
       (extract-char-set-property def derived)))))
 
 (define (extract-char-set def data derived)
@@ -154,7 +158,7 @@
 (define (process-char-set name def data derived out)
   (define (normalize-char-set-name str)
     (string-append
-     "char-set:"
+     (if (eqv? #\: (string-ref str 0)) "char-set" "char-set:")
      (string-map (lambda (ch) (if (eqv? ch #\_) #\- (char-downcase ch))) str)))
   (display ";; " out)
   (display def out)
