@@ -13,6 +13,7 @@
     (import (chibi) (srfi 9) (chibi char-set) (chibi char-set full)))
    (else
     (import (scheme base) (srfi 14))))
+  (import (chibi char-set boundary))
   ;; Use string-cursors where available.
   (begin
     (define string-cursor? integer?))

@@ -381,12 +381,10 @@
 
 ;; Run so long as there is more to match.
 
-(define (regexp-run search? rx str . o)
-  (let* ((start (string-start-arg str o))
-         (end (string-end-arg str (if (pair? o) (cdr o) o)))
-         (rx (regexp rx))
-         (epsilons (posse))
-         (accept (list #f)))
+(define (regexp-run-offsets search? rx str start end)
+  (let ((rx (regexp rx))
+        (epsilons (posse))
+        (accept (list #f)))
     (let lp ((i start)
              (searchers1 (posse))
              (searchers2 (posse)))
@@ -424,6 +422,13 @@
            searchers1)
           (posse-clear! searchers1)
           (lp i2 searchers2 searchers1)))))))
+
+;; Wrapper to determine start and end offsets.
+
+(define (regexp-run search? rx str . o)
+  (let ((start (string-start-arg str o))
+        (end (string-end-arg str (if (pair? o) (cdr o) o))))
+    (regexp-run-offsets search? rx str start end)))
 
 ;;> Match the given regexp or SRE against the entire string and return
 ;;> the match data on success.  Returns \scheme{#f} on failure.
@@ -484,6 +489,39 @@
        (string-cursor>? i start)
        (char-word-constituent?
         (string-cursor-ref str (string-cursor-prev str i)))))
+(define (match/bog str i ch start end matches)
+  (and
+   (string-cursor<? i end)
+   (or (string-cursor=? i start)
+       (let ((ch0 (string-cursor-ref str (string-cursor-prev str i))))
+         (cond
+          ((eqv? ch0 #\return)
+           (not (eqv? ch #\newline)))
+          ((char-set-contains? char-set:control ch0))
+          ((char-set-contains? char-set:regional-indicator ch0)
+           (not (char-set-contains? char-set:regional-indicator ch)))
+          ((char-set-contains? char-set:hangul-l ch0)
+           (not (or (char-set-contains? char-set:hangul-l ch0)
+                    (char-set-contains? char-set:hangul-lv ch0)
+                    (char-set-contains? char-set:hangul-lvt ch0)
+                    (char-set-contains? char-set:hangul-v ch0)
+                    (char-set-contains? char-set:hangul-t ch0))))
+          ((or (char-set-contains? char-set:hangul-lv ch0)
+               (char-set-contains? char-set:hangul-v ch0))
+           (not (or (char-set-contains? char-set:hangul-v ch0)
+                    (char-set-contains? char-set:hangul-t ch0))))
+          ((char-set-contains? char-set:hangul-t ch0)
+           (not (char-set-contains? char-set:hangul-t ch0)))
+          ((char-set-contains? char-set:hangul-lvt ch0)
+           (not (char-set-contains? char-set:hangul-t ch0)))
+          (else
+           (not (char-set-contains? char-set:extend-or-spacing-mark ch))))))))
+(define (match/eog str i ch start end matches)
+  (and (string-cursor>? i start)
+       (or (string-cursor>=? i end)
+           (let* ((i2 (string-cursor-next str i))
+                  (ch2 (string-cursor-ref str i2)))
+             (match/bog str i2 ch2 start end matches)))))
 
 (define (lookup-char-set name flags)
   (case name
@@ -608,6 +646,21 @@
         ((eol) (make-char-state match/eol flags next))
         ((bow) (make-char-state match/bow flags next))
         ((eow) (make-char-state match/eow flags next))
+        ((bog) (make-char-state match/bog flags next))
+        ((eog) (make-char-state match/eog flags next))
+        ((grapheme)
+         (->rx
+          `(or (: "\r\n")
+               (: (* ,char-set:hangul-l)
+                  (or ,char-set:hangul-lvt
+                      (: (? ,char-set:hangul-lv) (* ,char-set:hangul-v)))
+                  (* ,char-set:hangul-t))
+               (+ ,char-set:regional-indicator)
+               control
+               (: (~ control ("\r\n"))
+                  (+ ,char-set:extend-or-spacing-mark)))
+          flags
+          next))
         ((word) (->rx '(word+ any) flags next))
         (else (error "unknown sre" sre))))
      ((pair? sre)
@@ -743,10 +796,12 @@
              (from start)
              (acc knil))
       (cond
-       ((and (string-cursor<? i end) (regexp-search rx str i end))
+       ((and (string-cursor<? i end) (regexp-run-offsets #t rx str i end))
         => (lambda (md)
-             (let* ((j (rx-match-submatch-end md str 0)))
-               (lp (if (>= j end) j (string-cursor-next str j))
+             (let ((j (rx-match-ref md 1)))
+               (lp (if (and (string-cursor=? i j) (string-cursor<? j end))
+                       (string-cursor-next str j)
+                       j)
                    j
                    (kons (string-offset->index str from) md str acc)))))
        (else

@@ -11,9 +11,9 @@
     ((test-re res rx str start end)
      (test res (regexp-match->sexp rx str start end)))
     ((test-re res rx str start)
-     (test-re res rx str start (string-cursor-end str)))
+     (test-re res rx str start (string-length str)))
     ((test-re res rx str)
-     (test-re res rx str (string-cursor-start str)))))
+     (test-re res rx str 0))))
 
 (define (regexp-search->sexp rx str . o)
   (let ((res (apply regexp-search rx str o)))
@@ -24,9 +24,9 @@
     ((test-re-search res rx str start end)
      (test res (regexp-search->sexp rx str start end)))
     ((test-re-search res rx str start)
-     (test-re-search res rx str start (string-cursor-end str)))
+     (test-re-search res rx str start (string-length str)))
     ((test-re-search res rx str)
-     (test-re-search res rx str (string-cursor-start str)))))
+     (test-re-search res rx str 0))))
 
 (test-begin "regexp")
 
@@ -143,12 +143,20 @@
 (test-re #f '(* lower) "abcD")
 (test-re '("abcD") '(w/nocase (* lower)) "abcD")
 
+(test-re '("한") 'grapheme "한")
+(test-re '("글") 'grapheme "글")
+
 (test '("123" "456" "789") (regexp-extract '(+ digit) "abc123def456ghi789"))
 (test '("123" "456" "789") (regexp-extract '(* digit) "abc123def456ghi789"))
 (test '("abc" "def" "ghi") (regexp-split '(+ digit) "abc123def456ghi789"))
 (test '("a" "b" "c" "d" "e" "f" "g" "h" "i")
     (regexp-split '(* digit) "abc123def456ghi789"))
 (test '("a" "b") (regexp-split '(+ whitespace) "a b"))
+(test '("한" "글")
+    (regexp-extract
+     'grapheme
+     (utf8->string '#u8(#xe1 #x84 #x92 #xe1 #x85 #xa1 #xe1 #x86 #xab
+                        #xe1 #x84 #x80 #xe1 #x85 #xb3 #xe1 #x86 #xaf))))
 
 (test "abc def" (regexp-replace '(+ space) "abc \t\n def" " "))
 (test "  abc-abc"
