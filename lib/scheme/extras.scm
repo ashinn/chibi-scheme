@@ -34,8 +34,10 @@
 (define exact inexact->exact)
 (define inexact exact->inexact)
 
-(define (boolean=? x y) (eq? x y))
-(define (symbol=? x y) (eq? x y))
+(define (boolean=? x y . o)
+  (and (eq? x y) (if (pair? o) (apply boolean=? y o) #t)))
+(define (symbol=? x y . o)
+  (and (eq? x y) (if (pair? o) (apply symbol=? y o) #t)))
 
 (define call/cc call-with-current-continuation)
 

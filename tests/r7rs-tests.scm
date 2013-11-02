@@ -801,6 +801,8 @@
 (test #t (boolean=? #t #t))
 (test #t (boolean=? #f #f))
 (test #f (boolean=? #t #f))
+(test #t (boolean=? #f #f #f))
+(test #f (boolean=? #t #t #f))
 
 (test-end)
 
@@ -916,6 +918,8 @@
 
 (test #t (symbol=? 'a 'a))
 (test #f (symbol=? 'a 'A))
+(test #t (symbol=? 'a 'a 'a))
+(test #f (symbol=? 'a 'a 'A))
 
 (test "flying-fish"     
 (symbol->string 'flying-fish))
