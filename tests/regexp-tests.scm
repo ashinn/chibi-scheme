@@ -4,7 +4,7 @@
 
 (define (regexp-match->sexp rx str . o)
   (let ((res (apply regexp-match rx str o)))
-    (and res (rx-match->sexp res str))))
+    (and res (rx-match->sexp res))))
 
 (define-syntax test-re
   (syntax-rules ()
@@ -17,7 +17,7 @@
 
 (define (regexp-search->sexp rx str . o)
   (let ((res (apply regexp-search rx str o)))
-    (and res (rx-match->sexp res str))))
+    (and res (rx-match->sexp res))))
 
 (define-syntax test-re-search
   (syntax-rules ()
@@ -168,7 +168,7 @@
 
 (define (subst-matches matches input subst)
   (define (submatch n)
-    (rx-match-submatch matches input n))
+    (rx-match-submatch matches n))
   (and
    matches
    (call-with-output-string
