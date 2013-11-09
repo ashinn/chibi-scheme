@@ -75,65 +75,65 @@
 
 ;; A record holding the current match data - essentially a wrapper
 ;; around a vector, plus a reference to the RX for meta-info.
-(define-record-type Rx-Match
-  (%make-rx-match matches rx string)
-  rx-match?
-  (matches rx-match-matches rx-match-matches-set!)
-  (rx rx-match-rx)
-  (string rx-match-string))
+(define-record-type Regexp-Match
+  (%make-regexp-match matches rx string)
+  regexp-match?
+  (matches regexp-match-matches regexp-match-matches-set!)
+  (rx regexp-match-rx)
+  (string regexp-match-string))
 
-(define (rx-match-rules md)
-  (rx-rules (rx-match-rx md)))
-(define (rx-match-names md)
-  (rx-names (rx-match-rx md)))
-(define (make-rx-match len rx str)
-  (%make-rx-match (make-vector len #f) rx str))
-(define (make-rx-match-for-rx rx str)
-  (make-rx-match (rx-num-save-indexes rx) rx str))
-(define (rx-match-num-matches md)
-  (vector-length (rx-match-matches md)))
+(define (regexp-match-rules md)
+  (rx-rules (regexp-match-rx md)))
+(define (regexp-match-names md)
+  (rx-names (regexp-match-rx md)))
+(define (make-regexp-match len rx str)
+  (%make-regexp-match (make-vector len #f) rx str))
+(define (make-regexp-match-for-rx rx str)
+  (make-regexp-match (rx-num-save-indexes rx) rx str))
+(define (regexp-match-num-matches md)
+  (vector-length (regexp-match-matches md)))
 
-(define (rx-match-name-offset md name)
-  (cond ((assq name (rx-match-names md)) => cdr)
+(define (regexp-match-name-offset md name)
+  (cond ((assq name (regexp-match-names md)) => cdr)
         (else (error "unknown match name" md name))))
 
-(define (rx-match-ref md n)
-  (vector-ref (rx-match-matches md)
+(define (regexp-match-ref md n)
+  (vector-ref (regexp-match-matches md)
               (if (integer? n)
                   n
-                  (rx-match-name-offset md n))))
+                  (regexp-match-name-offset md n))))
 
-(define (rx-match-set! md n val)
-  (vector-set! (rx-match-matches md) n val))
+(define (regexp-match-set! md n val)
+  (vector-set! (regexp-match-matches md) n val))
 
-(define (copy-rx-match md)
-  (let* ((src (rx-match-matches md))
+(define (copy-regexp-match md)
+  (let* ((src (regexp-match-matches md))
          (len (vector-length src))
          (dst (make-vector len #f)))
     (do ((i 0 (+ i 1)))
         ((= i len)
-         (%make-rx-match dst (rx-match-rx md) (rx-match-string md)))
+         (%make-regexp-match dst (regexp-match-rx md) (regexp-match-string md)))
       (vector-set! dst i (vector-ref src i)))))
 
 ;;> Returns the matching result for the given named or indexed
 ;;> submatch \var{n}, possibly as a list for a submatch-list, or
 ;;> \scheme{#f} if not matched.
 
-(define (rx-match-submatch/list md n)
-  (let ((n (if (integer? n) n (rx-match-name-offset md n))))
+(define (regexp-match-submatch/list md n)
+  (let ((n (if (integer? n) n (regexp-match-name-offset md n))))
     (cond
-     ((>= n (vector-length (rx-match-rules md)))
+     ((>= n (vector-length (regexp-match-rules md)))
       #f)
      (else
-      (let ((rule (vector-ref (rx-match-rules md) n)))
+      (let ((rule (vector-ref (regexp-match-rules md) n)))
         (cond
          ((pair? rule)
-          (let ((start (rx-match-ref md (car rule)))
-                (end (rx-match-ref md (cdr rule)))
-                (str (rx-match-string md)))
+          (let ((start (regexp-match-ref md (car rule)))
+                (end (regexp-match-ref md (cdr rule)))
+                (str (regexp-match-string md)))
             (and start end (substring-cursor str start end))))
          (else
-          (let ((res (rx-match-ref md rule)))
+          (let ((res (regexp-match-ref md rule)))
             (if (pair? res)
                 (reverse res)
                 res)))))))))
@@ -141,18 +141,18 @@
 ;;> Returns the matching substring for the given named or indexed
 ;;> submatch \var{n}, or \scheme{#f} if not matched.
 
-(define (rx-match-submatch md n)
-  (let ((res (rx-match-submatch/list md n)))
+(define (regexp-match-submatch md n)
+  (let ((res (regexp-match-submatch/list md n)))
     (if (pair? res) (car res) res)))
 
-(define (rx-match-submatch-start+end md n)
-  (let ((n (if (string-cursor? n) n (rx-match-name-offset md n))))
-    (and (< n (vector-length (rx-match-rules md)))
-         (let ((rule (vector-ref (rx-match-rules md) n)))
+(define (regexp-match-submatch-start+end md n)
+  (let ((n (if (string-cursor? n) n (regexp-match-name-offset md n))))
+    (and (< n (vector-length (regexp-match-rules md)))
+         (let ((rule (vector-ref (regexp-match-rules md) n)))
            (if (pair? rule)
-               (let ((start (rx-match-ref md (car rule)))
-                     (end (rx-match-ref md (cdr rule)))
-                     (str (rx-match-string md)))
+               (let ((start (regexp-match-ref md (car rule)))
+                     (end (regexp-match-ref md (cdr rule)))
+                     (str (regexp-match-string md)))
                  (and start end
                       (cons (string-offset->index str start)
                             (string-offset->index str end))))
@@ -161,16 +161,16 @@
 ;;> Returns the start index for the given named or indexed submatch
 ;;> \var{n}, or \scheme{#f} if not matched.
 
-(define (rx-match-submatch-start md n)
-  (cond ((rx-match-submatch-start+end md n) => car) (else #f)))
+(define (regexp-match-submatch-start md n)
+  (cond ((regexp-match-submatch-start+end md n) => car) (else #f)))
 
 ;;> Returns the end index for the given named or indexed submatch
 ;;> \var{n}, or \scheme{#f} if not matched.
 
-(define (rx-match-submatch-end md n)
-  (cond ((rx-match-submatch-start+end md n) => cdr) (else #f)))
+(define (regexp-match-submatch-end md n)
+  (cond ((regexp-match-submatch-start+end md n) => cdr) (else #f)))
 
-(define (rx-match-convert recurse? md str)
+(define (regexp-match-convert recurse? md str)
   (cond
    ((vector? md)
     (let lp ((i 0) (res '()))
@@ -185,45 +185,45 @@
                   res)))
        (else
         (lp (+ i 1)
-            (cons (rx-match-convert recurse? (vector-ref md i) str)
+            (cons (regexp-match-convert recurse? (vector-ref md i) str)
                   res))))))
    ((list? md)
     (if recurse?
-        (map (lambda (x) (rx-match-convert recurse? x str)) (reverse md))
-        (rx-match-convert recurse? (car md) str)))
+        (map (lambda (x) (regexp-match-convert recurse? x str)) (reverse md))
+        (regexp-match-convert recurse? (car md) str)))
    ((and (pair? md) (string-cursor? (car md)) (string-cursor? (cdr md)))
     (substring-cursor str (car md) (cdr md)))
-   ((rx-match? md)
-    (rx-match-convert recurse? (rx-match-matches md) (rx-match-string md)))
+   ((regexp-match? md)
+    (regexp-match-convert recurse? (regexp-match-matches md) (regexp-match-string md)))
    (else
     md)))
 
-;;> Convert an rx-match result to a list of submatches, beginning
+;;> Convert an regexp-match result to a list of submatches, beginning
 ;;> with the full match, using \scheme{#f} for unmatched submatches.
 
-(define (rx-match->list md)
-  (rx-match-convert #f md #f))
+(define (regexp-match->list md)
+  (regexp-match-convert #f md #f))
 
-;;> Convert an rx-match result to a forest of submatches, beginning
+;;> Convert an regexp-match result to a forest of submatches, beginning
 ;;> with the full match, using \scheme{#f} for unmatched submatches.
 
-(define (rx-match->sexp md)
-  (rx-match-convert #t md #f))
+(define (regexp-match->sexp md)
+  (regexp-match-convert #t md #f))
 
 ;; Collect results from a list match.
 (define (match-collect md spec)
   (define (match-extract md n)
-    (let* ((vec (rx-match-matches md))
-           (rules (rx-match-rules md))
+    (let* ((vec (regexp-match-matches md))
+           (rules (regexp-match-rules md))
            (n-rule (vector-ref rules n))
            (rule (vector-ref rules n-rule)))
       (if (pair? rule)
-          (let ((start (rx-match-ref md (car rule)))
-                (end (rx-match-ref md (cdr rule))))
+          (let ((start (regexp-match-ref md (car rule)))
+                (end (regexp-match-ref md (cdr rule))))
             (and start end (cons start end)))
-          (rx-match-ref md rule))))
+          (regexp-match-ref md rule))))
   (let ((end (cadr spec))
-        (vec (rx-match-matches md)))
+        (vec (regexp-match-matches md)))
     (let lp ((i (+ 1 (car spec)))
              (ls '()))
       (if (>= i end)
@@ -237,41 +237,41 @@
   (state searcher-state searcher-state-set!)
   (matches searcher-matches searcher-matches-set!))
 
-;; Merge two rx-matches, preferring the leftmost-longest of their
+;; Merge two regexp-matches, preferring the leftmost-longest of their
 ;; matches.
-(define (rx-match>=? m1 m2)
-  (let ((end (- (vector-length (rx-match-matches m1)) 1)))
+(define (regexp-match>=? m1 m2)
+  (let ((end (- (vector-length (regexp-match-matches m1)) 1)))
     (let lp ((i 0))
       (cond
        ((>= i end)
         #t)
-       ((and (eqv? (rx-match-ref m1 i) (rx-match-ref m2 i))
-             (eqv? (rx-match-ref m1 (+ i 1)) (rx-match-ref m2 (+ i 1))))
+       ((and (eqv? (regexp-match-ref m1 i) (regexp-match-ref m2 i))
+             (eqv? (regexp-match-ref m1 (+ i 1)) (regexp-match-ref m2 (+ i 1))))
         (lp (+ i 2)))
-       ((and (string-cursor? (rx-match-ref m2 i))
-             (string-cursor? (rx-match-ref m2 (+ i 1)))
-             (or (not (string-cursor? (rx-match-ref m1 i)))
-                 (not (string-cursor? (rx-match-ref m1 (+ i 1))))
-                 (string-cursor<? (rx-match-ref m2 i) (rx-match-ref m1 i))
-                 (and (string-cursor=? (rx-match-ref m2 i) (rx-match-ref m1 i))
-                      (string-cursor>? (rx-match-ref m2 (+ i 1))
-                                       (rx-match-ref m1 (+ i 1))))))
+       ((and (string-cursor? (regexp-match-ref m2 i))
+             (string-cursor? (regexp-match-ref m2 (+ i 1)))
+             (or (not (string-cursor? (regexp-match-ref m1 i)))
+                 (not (string-cursor? (regexp-match-ref m1 (+ i 1))))
+                 (string-cursor<? (regexp-match-ref m2 i) (regexp-match-ref m1 i))
+                 (and (string-cursor=? (regexp-match-ref m2 i) (regexp-match-ref m1 i))
+                      (string-cursor>? (regexp-match-ref m2 (+ i 1))
+                                       (regexp-match-ref m1 (+ i 1))))))
         #f)
        (else
         #t)))))
 
-(define (rx-match-max m1 m2)
-  (if (rx-match>=? m1 m2) m1 m2))
+(define (regexp-match-max m1 m2)
+  (if (regexp-match>=? m1 m2) m1 m2))
 
 ;; Merge match data from sr2 into sr1, preferring the leftmost-longest
 ;; match in the event of a conflict.
 (define (searcher-merge! sr1 sr2)
-  (let ((m (rx-match-max (searcher-matches sr1) (searcher-matches sr2))))
+  (let ((m (regexp-match-max (searcher-matches sr1) (searcher-matches sr2))))
     (searcher-matches-set! sr1 m)))
 
 (define (searcher-max sr1 sr2)
   (if (or (not (searcher? sr2))
-          (rx-match>=? (searcher-matches sr1) (searcher-matches sr2)))
+          (regexp-match>=? (searcher-matches sr1) (searcher-matches sr2)))
       sr1
       sr2))
 
@@ -303,7 +303,7 @@
   (list->posse args))
 
 (define (make-start-searcher rx str)
-  (make-searcher (rx-start-state rx) (make-rx-match-for-rx rx str)))
+  (make-searcher (rx-start-state rx) (make-regexp-match-for-rx rx str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Execution
@@ -345,12 +345,12 @@
           (cond
            ((pair? index)
             ;; Submatch list, accumulate and push.
-            (let* ((prev (rx-match-ref matches (car index)))
+            (let* ((prev (regexp-match-ref matches (car index)))
                    (new (cons (match-collect matches (cdr index))
                               (if (pair? prev) prev '()))))
-              (rx-match-set! matches (car index) new)))
+              (regexp-match-set! matches (car index) new)))
            (else
-            (rx-match-set! matches index i))))))
+            (regexp-match-set! matches index i))))))
       ;; Follow transitions.
       (cond
        ((state-accept? st)
@@ -374,11 +374,11 @@
                (next2
                 (let ((sr2 (make-searcher
                             next2
-                            (copy-rx-match (searcher-matches sr)))))
+                            (copy-regexp-match (searcher-matches sr)))))
                   (advance! sr2)))))))))
        ;; Non-special, non-epsilon searcher, add to posse.
        ((posse-ref new sr)
-        ;; Merge rx-match for existing searcher.
+        ;; Merge regexp-match for existing searcher.
         => (lambda (sr-prev) (searcher-merge! sr-prev sr)))
        (else
         ;; Add new searcher.
@@ -409,7 +409,7 @@
         ;; searching, return false.
         (and (searcher? (cdr accept))
              (let ((matches (searcher-matches (cdr accept))))
-               (and (or search? (>= (rx-match-ref matches 1) end))
+               (and (or search? (>= (regexp-match-ref matches 1) end))
                     (searcher-matches (cdr accept))))))
        (else
         ;; Otherwise advance normally.
@@ -438,14 +438,14 @@
 ;;> Match the given regexp or SRE against the entire string and return
 ;;> the match data on success.  Returns \scheme{#f} on failure.
 
-(define (regexp-match rx str . o)
+(define (regexp-matches rx str . o)
   (apply regexp-run #f rx str o))
 
 ;;> Match the given regexp or SRE against the entire string and return
 ;;> the \scheme{#t} on success.  Returns \scheme{#f} on failure.
 
-(define (regexp-match? rx str . o)
-  (and (apply regexp-match rx str o) #t))
+(define (regexp-matches? rx str . o)
+  (and (apply regexp-matches rx str o) #t))
 
 ;;> Search for the given regexp or SRE within string and return
 ;;> the match data on success.  Returns \scheme{#f} on failure.
@@ -803,7 +803,7 @@
       (cond
        ((and (string-cursor<? i end) (regexp-run-offsets #t rx str i end))
         => (lambda (md)
-             (let ((j (rx-match-ref md 1)))
+             (let ((j (regexp-match-ref md 1)))
                (lp (if (and (string-cursor=? i j) (string-cursor<? j end))
                        (string-cursor-next str j)
                        j)
@@ -816,7 +816,7 @@
   (apply regexp-fold
          rx
          (lambda (from md str a)
-           (let ((s (rx-match-submatch md 0)))
+           (let ((s (regexp-match-submatch md 0)))
              (if (equal? s "") a (cons s a))))
          '()
          str
@@ -830,7 +830,7 @@
     (regexp-fold
      rx
      (lambda (from md str a)
-       (let ((i (rx-match-submatch-start md 0)))
+       (let ((i (regexp-match-submatch-start md 0)))
          (if (< from i) (cons (substring str from i) a) a)))
      '()
      str
@@ -848,11 +848,11 @@
          (cons
           (substring-cursor str
                             (string-index->offset str start)
-                            (rx-match-submatch-start m 0))
+                            (regexp-match-submatch-start m 0))
           (append
            (reverse (regexp-apply-match m str subst))
            (list (substring-cursor str
-                                   (rx-match-submatch-end m 0)
+                                   (regexp-match-submatch-end m 0)
                                    (string-index->offset str end))))))
         str)))
 
@@ -860,7 +860,7 @@
   (regexp-fold
    rx
    (lambda (i m str acc)
-     (let ((m-start (rx-match-submatch-start m 0)))
+     (let ((m-start (regexp-match-submatch-start m 0)))
        (append (regexp-apply-match m str subst)
                (if (>= i m-start)
                    acc
@@ -882,24 +882,24 @@
      ((not (pair? ls))
       (lp (list ls) res))
      ((integer? (car ls))
-      (lp (cdr ls) (cons (or (rx-match-submatch m (car ls)) "") res)))
+      (lp (cdr ls) (cons (or (regexp-match-submatch m (car ls)) "") res)))
      ((procedure? (car ls))
       (lp (cdr ls) (cons ((car ls) m) res)))
      ((symbol? (car ls))
       (case (car ls)
         ((pre)
          (lp (cdr ls)
-             (cons (substring-cursor str 0 (rx-match-submatch-start m 0))
+             (cons (substring-cursor str 0 (regexp-match-submatch-start m 0))
                    res)))
         ((post)
          (lp (cdr ls)
              (cons (substring str
-                              (rx-match-submatch-end m 0)
+                              (regexp-match-submatch-end m 0)
                               (string-length str))
                    res)))
         (else
          (cond
-          ((assq (car ls) (rx-match-names m))
+          ((assq (car ls) (regexp-match-names m))
            => (lambda (x) (lp (cons (cdr x) (cdr ls)) res)))
           (else
            (error "unknown match replacement" (car ls)))))))
