@@ -81,7 +81,7 @@
           (if (let* ((left (iset-left iset))
                      (m-end (and left (iset-max-end left))))
                 (and m-end
-                     (or (< n m-end)
+                     (or (<= n m-end)
                          (< (- n m-end) s-diff))))
               (iset-adjoin1! (iset-left iset) n)
               (cond
@@ -98,7 +98,7 @@
           (if (let* ((right (iset-right iset))
                      (m-start (and right (iset-min-start right))))
                 (and m-start
-                     (or (> n m-start)
+                     (or (>= n m-start)
                          (> (- n m-start) e-diff))))
               (iset-adjoin1! (iset-right iset) n)
               (cond
