@@ -1,6 +1,7 @@
 
 (cond-expand
- (modules (import (chibi iset) (chibi iset optimize) (srfi 1) (chibi test)))
+ (modules
+  (import (chibi) (chibi iset) (chibi iset optimize) (srfi 1) (chibi test)))
  (else #f))
 
 (test-begin "iset")
@@ -15,6 +16,7 @@
          ((0 1 2) (- 1) (- 2) (? 0))
          ((1 2 3 1000 2000) (u 1 4))
          ((1 2 3 1000 1005))
+         ((97308 97827 97845 97827))
          ((1 128 127))
          ((129 2 127))
          ((1 -128 -126))
@@ -25,10 +27,11 @@
   (for-each
    (lambda (tst)
      (let* ((ls (car tst))
-            (is (list->iset ls)))
+            (is (list->iset ls))
+            (ls2 (delete-duplicates ls =)))
        ;; initial creation and sanity checks
-       (test-assert (lset= equal? ls (iset->list is)))
-       (test (length ls) (iset-size is))
+       (test-assert (lset= equal? ls2 (iset->list is)))
+       (test (length ls2) (iset-size is))
        (for-each
         (lambda (x) (test-assert (iset-contains? is x)))
         ls)
