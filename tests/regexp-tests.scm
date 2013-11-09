@@ -2,27 +2,27 @@
 (import (chibi) (chibi regexp) (chibi regexp pcre)
         (chibi string) (chibi io) (chibi match) (chibi test))
 
-(define (regexp-match->sexp rx str . o)
-  (let ((res (apply regexp-match rx str o)))
-    (and res (rx-match->sexp res))))
+(define (maybe-match->sexp rx str . o)
+  (let ((res (apply regexp-matches rx str o)))
+    (and res (regexp-match->sexp res))))
 
 (define-syntax test-re
   (syntax-rules ()
     ((test-re res rx str start end)
-     (test res (regexp-match->sexp rx str start end)))
+     (test res (maybe-match->sexp rx str start end)))
     ((test-re res rx str start)
      (test-re res rx str start (string-length str)))
     ((test-re res rx str)
      (test-re res rx str 0))))
 
-(define (regexp-search->sexp rx str . o)
+(define (maybe-search->sexp rx str . o)
   (let ((res (apply regexp-search rx str o)))
-    (and res (rx-match->sexp res))))
+    (and res (regexp-match->sexp res))))
 
 (define-syntax test-re-search
   (syntax-rules ()
     ((test-re-search res rx str start end)
-     (test res (regexp-search->sexp rx str start end)))
+     (test res (maybe-search->sexp rx str start end)))
     ((test-re-search res rx str start)
      (test-re-search res rx str start (string-length str)))
     ((test-re-search res rx str)
@@ -168,7 +168,7 @@
 
 (define (subst-matches matches input subst)
   (define (submatch n)
-    (rx-match-submatch matches n))
+    (regexp-match-submatch matches n))
   (and
    matches
    (call-with-output-string

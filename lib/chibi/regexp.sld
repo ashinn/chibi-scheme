@@ -1,11 +1,11 @@
 
 (define-library (chibi regexp)
-  (export regexp regexp? regexp-match regexp-match? regexp-search
+  (export regexp regexp? regexp-matches regexp-matches? regexp-search
           regexp-replace regexp-replace-all
           regexp-fold regexp-extract regexp-split
-          rx-match? rx-match-num-matches
-          rx-match-submatch rx-match-submatch/list
-          rx-match->list rx-match->sexp)
+          regexp-match? regexp-match-num-matches
+          regexp-match-submatch regexp-match-submatch/list
+          regexp-match->list regexp-match->sexp)
   (import (srfi 33) (srfi 69))
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
