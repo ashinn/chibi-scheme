@@ -10,9 +10,32 @@
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
    (chibi
-    (import (chibi) (srfi 9) (chibi char-set) (chibi char-set full)))
+    (import (chibi) (srfi 9) (chibi char-set)
+            (chibi char-set full)
+            (prefix (chibi char-set ascii) %)))
    (else
-    (import (scheme base) (srfi 14))))
+    (import (scheme base) (srfi 14))
+    (begin
+      (define %char-set:letter
+        (char-set-intersection char-set:ascii char-set:letter))
+      (define %char-set:lower-case
+        (char-set-intersection char-set:ascii char-set:lower-case))
+      (define %char-set:upper-case
+        (char-set-intersection char-set:ascii char-set:upper-case))
+      (define %char-set:digit
+        (char-set-intersection char-set:ascii char-set:digit))
+      (define %char-set:letter+digit
+        (char-set-intersection char-set:ascii char-set:letter+digit))
+      (define %char-set:punctuation
+        (char-set-intersection char-set:ascii char-set:punctuation))
+      (define %char-set:graphic
+        (char-set-intersection char-set:ascii char-set:graphic))
+      (define %char-set:whitespace
+        (char-set-intersection char-set:ascii char-set:whitespace))
+      (define %char-set:printing
+        (char-set-intersection char-set:ascii char-set:printing))
+      (define %char-set:iso-control
+        (char-set-intersection char-set:ascii char-set:iso-control)))))
   (import (chibi char-set boundary))
   ;; Use string-cursors where available.
   (begin

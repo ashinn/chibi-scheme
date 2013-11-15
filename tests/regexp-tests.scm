@@ -143,6 +143,12 @@
 (test-re #f '(* lower) "abcD")
 (test-re '("abcD") '(w/nocase (* lower)) "abcD")
 
+(test-re '("кириллица") '(* alpha) "кириллица")
+(test-re #f '(w/ascii (* alpha)) "кириллица")
+
+(test-re '("１２３４５") '(* digit) "１２３４５")
+(test-re #f '(w/ascii (* digit)) "１２３４５")
+
 (test-re '("한") 'grapheme "한")
 (test-re '("글") 'grapheme "글")
 
