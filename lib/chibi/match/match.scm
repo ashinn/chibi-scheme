@@ -902,7 +902,7 @@
                                  ;; match a list of any length
                                  ((ellipsis? (foo id) sk fk) sk)
                                  ((ellipsis? other sk fk) fk))))
-         ;; this list of three elements will only many the (foo id) list
+         ;; this list of three elements will only match the (foo id) list
          ;; above if `id' is `...'
          (ellipsis? (a b c) success-k failure-k)))))
 
