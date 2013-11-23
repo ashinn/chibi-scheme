@@ -128,7 +128,7 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      (if (null? (cdr expr))
-         #f
+         (if #f #f)
          ((lambda (cl)
             (if (compare (rename 'else) (car cl))
                 (if (pair? (cddr expr))
