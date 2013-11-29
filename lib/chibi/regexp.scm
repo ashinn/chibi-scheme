@@ -510,38 +510,16 @@
        (char-word-constituent?
         (string-cursor-ref str (string-cursor-prev str i)))))
 (define (match/bog str i ch start end matches)
-  (and
-   (string-cursor<? i end)
-   (or (string-cursor=? i start)
-       (let ((ch0 (string-cursor-ref str (string-cursor-prev str i))))
-         (cond
-          ((eqv? ch0 #\return)
-           (not (eqv? ch #\newline)))
-          ((char-set-contains? char-set:control ch0))
-          ((char-set-contains? char-set:regional-indicator ch0)
-           (not (char-set-contains? char-set:regional-indicator ch)))
-          ((char-set-contains? char-set:hangul-l ch0)
-           (not (or (char-set-contains? char-set:hangul-l ch0)
-                    (char-set-contains? char-set:hangul-lv ch0)
-                    (char-set-contains? char-set:hangul-lvt ch0)
-                    (char-set-contains? char-set:hangul-v ch0)
-                    (char-set-contains? char-set:hangul-t ch0))))
-          ((or (char-set-contains? char-set:hangul-lv ch0)
-               (char-set-contains? char-set:hangul-v ch0))
-           (not (or (char-set-contains? char-set:hangul-v ch0)
-                    (char-set-contains? char-set:hangul-t ch0))))
-          ((char-set-contains? char-set:hangul-t ch0)
-           (not (char-set-contains? char-set:hangul-t ch0)))
-          ((char-set-contains? char-set:hangul-lvt ch0)
-           (not (char-set-contains? char-set:hangul-t ch0)))
-          (else
-           (not (char-set-contains? char-set:extend-or-spacing-mark ch))))))))
+  (and (string-cursor<? i end)
+       (or (string-cursor=? i start)
+           (match/eog str (string-cursor-prev str i) ch start end matches))))
 (define (match/eog str i ch start end matches)
   (and (string-cursor>? i start)
        (or (string-cursor>=? i end)
-           (let* ((i2 (string-cursor-next str i))
-                  (ch2 (string-cursor-ref str i2)))
-             (match/bog str i2 ch2 start end matches)))))
+           (let ((m (regexp-search re:grapheme str
+                                   (string-offset->index str i)
+                                   (string-offset->index str end))))
+             (and m (string-cursor<=? (regexp-match-submatch-end m 0) i))))))
 
 (define (lookup-char-set name flags)
   (cond
@@ -961,3 +939,5 @@
            (error "unknown match replacement" (car ls)))))))
      (else
       (lp (cdr ls) (cons (car ls) res))))))
+
+(define re:grapheme (regexp 'grapheme))

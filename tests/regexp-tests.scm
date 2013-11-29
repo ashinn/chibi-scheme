@@ -152,6 +152,9 @@
 (test-re '("한") 'grapheme "한")
 (test-re '("글") 'grapheme "글")
 
+(test-re '("한") '(: bog grapheme eog) "한")
+(test-re #f '(: "ᄒ" bog grapheme eog "ᆫ") "한")
+
 (test '("123" "456" "789") (regexp-extract '(+ digit) "abc123def456ghi789"))
 (test '("123" "456" "789") (regexp-extract '(* digit) "abc123def456ghi789"))
 (test '("abc" "def" "ghi") (regexp-split '(+ digit) "abc123def456ghi789"))
