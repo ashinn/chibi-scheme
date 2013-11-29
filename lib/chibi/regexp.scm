@@ -611,18 +611,19 @@
       (if (string? (car sre))
           (string->char-set (car sre))
           (case (car sre)
-            ((/) (->cs
-                  `(or ,@(map (lambda (x)
-                                (char-set-ci
-                                 (ucs-range->char-set
-                                  (char->integer (car x))
-                                  (+ 1 (char->integer (cdr x))))))
-                              (sre-flatten-ranges (cdr sre))))))
+            ((/ char-range)
+             (->cs
+              `(or ,@(map (lambda (x)
+                            (char-set-ci
+                             (ucs-range->char-set
+                              (char->integer (car x))
+                              (+ 1 (char->integer (cdr x))))))
+                          (sre-flatten-ranges (cdr sre))))))
             ((& and) (apply char-set-intersection (map ->cs (cdr sre))))
             ((|\|| or) (apply char-set-union (map ->cs (cdr sre))))
-            ((~ not) (char-set-complement (->cs `(or ,@(cdr sre)))))
-            ((-) (char-set-difference (->cs (cadr sre))
-                                      (->cs `(or ,@(cddr sre)))))
+            ((~ complement) (char-set-complement (->cs `(or ,@(cdr sre)))))
+            ((- difference) (char-set-difference (->cs (cadr sre))
+                                                 (->cs `(or ,@(cddr sre)))))
             (else (error "invalid sre char-set" sre)))))
      (else (error "invalid sre char-set" sre)))))
 
@@ -719,7 +720,7 @@
                     (n3 (->rx (cons 'seq (cddr sre)) flags next)))
                (state-next1-set! n2 n3)
                n1)))
-        ((or)
+        ((or |\||)
          ;; Alternation.  An empty alternation always fails.
          ;; Otherwise we fork between any of the alternations, each
          ;; continuing to next.
@@ -732,11 +733,11 @@
            (let* ((n1 (->rx (cadr sre) flags next))
                   (n2 (->rx (cons 'or (cddr sre)) flags next)))
              (make-fork-state n1 n2)))))
-        ((?)
+        ((? optional)
          ;; Optionality.  Either match the body or fork to the next
          ;; state directly.
          (make-fork-state (->rx (cons 'seq (cdr sre)) flags next) next))
-        ((*)
+        ((* zero-or-more)
          ;; Repetition.  Introduce two fork states which can jump from
          ;; the end of the loop to the beginning and from the
          ;; beginning to the end (to skip the first iteration).
@@ -744,7 +745,7 @@
                 (n1 (make-fork-state (->rx (cons 'seq (cdr sre)) flags n2) n2)))
            (state-next2-set! n2 n1)
            n1))
-        ((+)
+        ((+ one-or-more)
          ;; One-or-more repetition.  Same as above but the first
          ;; transition is required so the rx is simpler - we only
          ;; need one fork from the end of the loop to the beginning.
@@ -752,15 +753,15 @@
                 (n1 (->rx (cons 'seq (cdr sre)) flags n2)))
            (state-next2-set! n2 n1)
            n1))
-        ((=)
+        ((= exactly)
          ;; Exact repetition.
          (->rx (sre-expand-reps (cadr sre) (cadr sre) (cons 'seq (cddr sre)))
                flags next))
-        ((>=)
+        ((>= at-least)
          ;; n-or-more repetition.
          (->rx (sre-expand-reps (cadr sre) #f (cons 'seq (cddr sre)))
                flags next))
-        ((**)
+        ((** repeated)
          ;; n-to-m repetition.
          (->rx (sre-expand-reps (cadr sre) (car (cddr sre))
                                 (cons 'seq (cdr (cddr sre))))
@@ -797,7 +798,7 @@
              (state-match-set! n2 (list index num current-match))
              (state-match-rule-set! n2 'list)
              n1)))
-        ((~ - & |\|| / and or not)
+        ((~ - & / complement difference and char-range)
          (make-char-state (sre->char-set sre flags) ~none next))
         ((word)
          (->rx `(: bow ,@(cdr sre) eow) flags next))
