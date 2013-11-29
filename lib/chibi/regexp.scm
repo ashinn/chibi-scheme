@@ -696,10 +696,22 @@
         ((grapheme)
          (->rx
           `(or (: "\r\n")
-               (: (* ,char-set:hangul-l)
+               (: (+ ,char-set:hangul-l)
                   (or ,char-set:hangul-lvt
                       (: (? ,char-set:hangul-lv) (* ,char-set:hangul-v)))
                   (* ,char-set:hangul-t))
+               (: (* ,char-set:hangul-l)
+                  (or ,char-set:hangul-lvt
+                      (: ,char-set:hangul-lv (* ,char-set:hangul-v)))
+                  (* ,char-set:hangul-t))
+               (: (* ,char-set:hangul-l)
+                  (or ,char-set:hangul-lvt
+                      (: (? ,char-set:hangul-lv) (+ ,char-set:hangul-v)))
+                  (* ,char-set:hangul-t))
+               (: (* ,char-set:hangul-l)
+                  (or ,char-set:hangul-lvt
+                      (: (? ,char-set:hangul-lv) (* ,char-set:hangul-v)))
+                  (+ ,char-set:hangul-t))
                (+ ,char-set:regional-indicator)
                control
                (: (~ control ("\r\n"))
