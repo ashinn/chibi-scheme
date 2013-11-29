@@ -627,6 +627,9 @@
             (else (error "invalid sre char-set" sre)))))
      (else (error "invalid sre char-set" sre)))))
 
+(define (char-set->sre cset)
+  (list (char-set->string cset)))
+
 (define (strip-submatches sre)
   (if (pair? sre)
       (case (car sre)
