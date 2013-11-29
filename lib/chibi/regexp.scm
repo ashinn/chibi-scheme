@@ -5,13 +5,20 @@
 ;;; An rx represents a start state and meta-info such as the number
 ;;; and names of submatches.
 (define-record-type Rx
-  (make-rx start-state num-matches num-save-indexes match-rules match-names)
+  (make-rx start-state num-matches num-save-indexes match-rules match-names sre)
   regexp?
   (start-state rx-start-state rx-start-state-set!)
   (num-matches rx-num-matches rx-num-matches-set!)
   (num-save-indexes rx-num-save-indexes rx-num-save-indexes-set!)
   (match-rules rx-rules rx-rules-set!)
-  (match-names rx-names rx-names-set!))
+  (match-names rx-names rx-names-set!)
+  (sre regexp->sre))
+
+;; Syntactic sugar.
+(define-syntax rx
+  (syntax-rules ()
+    ((rx sre ...)
+     (regexp `(: sre ...)))))
 
 ;;; A state is a single nfa state with transition rules.
 (define-record-type State
@@ -819,7 +826,7 @@
         sre
         (let ((start (make-submatch-state sre flags (make-accept-state) 0)))
           (make-rx start current-match current-index
-                   (list->vector (reverse match-rules)) match-names)))))
+                   (list->vector (reverse match-rules)) match-names sre)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities
