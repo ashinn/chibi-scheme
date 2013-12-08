@@ -673,27 +673,19 @@
         ((eog) (make-char-state match/eog flags next))
         ((grapheme)
          (->rx
-          `(or (: "\r\n")
-               (: (+ ,char-set:hangul-l)
-                  (or ,char-set:hangul-lvt
-                      (: (? ,char-set:hangul-lv) (* ,char-set:hangul-v)))
+          `(or (: (* ,char-set:hangul-l) (+ ,char-set:hangul-v)
                   (* ,char-set:hangul-t))
-               (: (* ,char-set:hangul-l)
-                  (or ,char-set:hangul-lvt
-                      (: ,char-set:hangul-lv (* ,char-set:hangul-v)))
+               (: (* ,char-set:hangul-l) ,char-set:hangul-v
+                  (* ,char-set:hangul-v) (* ,char-set:hangul-t))
+               (: (* ,char-set:hangul-l) ,char-set:hangul-lvt
                   (* ,char-set:hangul-t))
-               (: (* ,char-set:hangul-l)
-                  (or ,char-set:hangul-lvt
-                      (: (? ,char-set:hangul-lv) (+ ,char-set:hangul-v)))
-                  (* ,char-set:hangul-t))
-               (: (* ,char-set:hangul-l)
-                  (or ,char-set:hangul-lvt
-                      (: (? ,char-set:hangul-lv) (* ,char-set:hangul-v)))
-                  (+ ,char-set:hangul-t))
+               (+ ,char-set:hangul-l)
+               (+ ,char-set:hangul-t)
                (+ ,char-set:regional-indicator)
-               control
+               (: "\r\n")
                (: (~ control ("\r\n"))
-                  (+ ,char-set:extend-or-spacing-mark)))
+                  (+ ,char-set:extend-or-spacing-mark))
+               control)
           flags
           next))
         ((word) (->rx '(word+ any) flags next))
