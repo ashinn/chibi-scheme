@@ -578,6 +578,20 @@
      (else
       (lp (cddr ls) (cons (cons (car ls) (cadr ls)) res))))))
 
+(define (char-set-sre? sre)
+  (or (char? sre)
+      (and (string? sre) (= 1 (string-length sre)))
+      (lookup-char-set sre ~none)
+      (and (pair? sre)
+           (or (string? (car sre))
+               (memq (car sre)
+                     '(char-set / char-range & and ~ complement - difference))
+               (and (memq (car sre) '(|\|| or))
+                    (let lp ((ls (cdr sre)))
+                      (or (null? ls)
+                          (and (char-set-sre? (car ls))
+                               (lp (cdr ls))))))))))
+
 (define (sre->char-set sre . o)
   (let ((flags (if (pair? o) (car o) ~none)))
     (define (->cs sre) (sre->char-set sre flags))
@@ -585,6 +599,10 @@
      ((lookup-char-set sre flags))
      ((char-set? sre) (char-set-ci sre))
      ((char? sre) (char-set-ci (char-set sre)))
+     ((string? sre)
+      (if (= 1 (string-length sre))
+          (string->char-set sre)
+          (error "only single char strings can be char-sets")))
      ((pair? sre)
       (if (string? (car sre))
           (string->char-set (car sre))
@@ -713,6 +731,8 @@
          (cond
           ((null? (cdr sre))
            #f)
+          ((char-set-sre? sre)
+           (make-char-state (sre->char-set sre) flags next))
           ((null? (cddr sre))
            (->rx (cadr sre) flags next))
           (else
