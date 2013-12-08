@@ -612,7 +612,7 @@
   (if (pair? sre)
       (case (car sre)
         (($ submatch) (strip-submatches (cons ': (cdr sre))))
-        ((=> submatch-named) (strip-submatches (cons ': (cddr sre))))
+        ((-> => submatch-named) (strip-submatches (cons ': (cddr sre))))
         (else (cons (strip-submatches (car sre))
                     (strip-submatches (cdr sre)))))
       sre))
@@ -759,13 +759,13 @@
          (->rx (sre-expand-reps (cadr sre) (car (cddr sre))
                                 (cons 'seq (cdr (cddr sre))))
                flags next))
-        ((=> submatch-named)
+        ((-> => submatch-named)
          ;; Named submatches just record the name for the current
          ;; match and rewrite as a non-named submatch.
          (set! match-names
                (cons (cons (cadr sre) (+ 1 current-match)) match-names))
          (->rx (cons 'submatch (cddr sre)) flags next))
-        ((*=> submatch-named-list)
+        ((*-> *=> submatch-named-list)
          (set! match-names (cons (cons (cadr sre) current-match) match-names))
          (->rx (cons 'submatch-list (cddr sre)) flags next))
         (($ submatch)
