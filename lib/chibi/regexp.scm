@@ -589,6 +589,7 @@
       (if (string? (car sre))
           (string->char-set (car sre))
           (case (car sre)
+            ((char-set) (string->char-set (cadr sre)))
             ((/ char-range)
              (->cs
               `(or ,@(map (lambda (x)
@@ -783,7 +784,7 @@
              (state-match-set! n2 (list index num current-match))
              (state-match-rule-set! n2 'list)
              n1)))
-        ((~ - & / complement difference and char-range)
+        ((~ - & / complement difference and char-range char-set)
          (make-char-state (sre->char-set sre flags) ~none next))
         ((word)
          (->rx `(: bow ,@(cdr sre) eow) flags next))
