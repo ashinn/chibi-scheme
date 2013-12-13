@@ -93,14 +93,22 @@
        (init-size init-size: 31)
        (limit size-limit: 1000)
        (compute-size compute-size: (lambda (k v) 1))
-       (cache cache: (if limit
-                         (make-lru-cache 'equal: equal
-                                         'hash: hash
-                                         'init-size: init-size
-                                         'size-limit: limit
-                                         'compute-size: compute-size)
-                         (make-hash-table equal hash))))
-    (make-memoizer proc arity cache)))
+       (cache-init cache: '()))
+    (let ((cache (cond ((lru-cache? cache-init)
+                        cache-init)
+                       (limit
+                        (make-lru-cache 'equal: equal
+                                        'hash: hash
+                                        'init-size: init-size
+                                        'size-limit: limit
+                                        'compute-size: compute-size))
+                       (else
+                        (make-hash-table equal hash)))))
+      ;; allow an alist initializer for the cache
+      (if (pair? cache-init)
+          (for-each (lambda (x) (lru-add! cache (car x) (cdr x)))
+                    cache-init))
+      (make-memoizer proc arity cache))))
 
 ;;> Equivalent to memoize except that the procedure's first argument
 ;;> must be a pathname.  If the corresponding file has been modified
