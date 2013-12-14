@@ -29,19 +29,8 @@
     (error "expected a listener socket, fileno or thunk" x))))
 
 (define (run-net-server listener-or-addr handler . o)
-  (let* ((listener-thunk (make-listener-thunk listener-or-addr))
-         (max-requests (if (pair? o) (car o) default-max-requests))
-         (debug? (and (pair? o) (pair? (cdr o)))))
-    (define (log-error msg . args)
-      (display msg (current-error-port))
-      (for-each
-       (lambda (x)
-         (write-char #\space (current-error-port))
-         (display x (current-error-port)))
-       args)
-      (newline (current-error-port)))
-    (define (log-debug msg . args)
-      (if debug? (apply log-error msg args)))
+  (let ((listener-thunk (make-listener-thunk listener-or-addr))
+        (max-requests (if (pair? o) (car o) default-max-requests)))
     (define (run sock addr count)
       (log-debug "net-server: accepting request:" count)
       (let ((ports
