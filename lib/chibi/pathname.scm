@@ -224,5 +224,10 @@
             (lp (append (car ls) (cdr ls)) res))
            (else
             (let ((x (trim-trailing-slash (x->string (car ls)))))
-              (lp (cdr ls)
-                  (if (string=? x "") res (cons x (cons "/" res)))))))))))
+              (cond
+               ((string=? x "")
+                (lp (cdr ls) res))
+               ((eqv? #\/ (string-ref x 0))
+                (lp (cdr ls) (cons x res)))
+               (else
+                (lp (cdr ls) (cons x (cons "/" res))))))))))))
