@@ -241,7 +241,17 @@
         (if (or (pair? res) (null? res)) res (list res))
         (if (pair? opt) (car opt) '()))))
 
+;;> Equivalent to \scheme{conf-get} but always returns the
+;;> \scheme{cdr} as-is without possibly taking its \scheme{car}.
+
+(define (conf-get-cdr config key . opt)
+  (let ((cell (conf-get-cell config key)))
+    (if (not cell)
+        (and (pair? opt) (car opt))
+        (cdr cell))))
+
 ;;> Equivalent to \scheme{conf-get-list} but returns a list of all
+;;> cascaded configs appended together.
 
 (define (conf-get-multi config key)
   (if (not config)
