@@ -172,7 +172,9 @@
 ;;> }
 
 (define (mime-parse-content-type str)
-  (let ((res (map mime-split-name+value (string-split str #\;))))
+  (let ((res (map mime-split-name+value
+                  (string-split str (lambda (ch)
+                                      (or (eqv? ch #\;) (eqv? ch #\,)))))))
     (if (and (pair? res) (pair? (car res)) (equal? "" (cdar res)))
         (cons (caar res) (cdr res))
         res)))
@@ -241,10 +243,13 @@
 
 ;;> \subsubsection{RFC2045 MIME Encoding}
 
-;;> \subsubsubsection{\scheme{(mime-message-fold src kons knil [start end headers])}}
-;;> Performs a fold operation on the given string or port \var{src} as a
-;;> MIME body corresponding to the headers give in \var{headers}.  \var{kons}
-;;> is called on the successive values:
+;;> \subsubsubsection{\scheme{(mime-message-fold src kons knil [down up headers])}}
+;;> Performs a tree fold operation on the given string or port
+;;> \var{src} as a MIME body corresponding to the headers give in
+;;> \var{headers}.  If \var{headers} are false or not provided they
+;;> are first read from \var{src}.
+;;>
+;;> \var{kons} is called on the successive values:
 ;;>
 ;;> \schemeblock{(kons parent-headers part-headers part-body accumulator)}
 ;;>
@@ -252,21 +257,37 @@
 ;;> original headers for single-part MIME), \var{part-body} is the
 ;;> appropriately decoded and charset-converted body of the message,
 ;;> and the \var{accumulator} begins with \var{knil}.
+;;>
+;;> If a multipart body is found, then a tree fold is performed,
+;;> calling \var{down} once to get a new accumulator to pass to
+;;> \var{kons}, and \var{up} on the result when returning.  Their
+;;> signatures are:
+;;>
+;;> \schemeblock{(down headers seed)}
+;;> \schemeblock{(up headers parent-seed seed)}
+;;>
+;;> The default \var{down} simply returns null, and the default
+;;> \var{up} wraps the seed in the following sxml:
+;;>
+;;> \schemeblock{
+;;>  ((mime (@ headers ...)
+;;>     seed ...)
+;;>   parent-seed ...)
+;;> }
 
 (define (mime-message-fold src kons init-seed . o)
   (let ((port (if (string? src) (open-input-string src) src)))
-    (let ((kons-start
-           (if (pair? o) (car o) (lambda (headers seed) '())))
-          (kons-end
-           (if (and (pair? o) (pair? (cdr o)))
-               (car (cdr o))
+    (let ((kons-down
+           (or (and (pair? o) (car o)) (lambda (headers seed) '())))
+          (kons-up
+           (or (and (pair? o) (pair? (cdr o)) (car (cdr o)))
                (lambda (headers parent-seed seed)
                  `((mime (@ ,@headers)
                          ,@(if (pair? seed) (reverse seed) seed))
                    ,@parent-seed))))
           (headers
-           (if (and (pair? o) (pair? (cdr o)) (pair? (cdr (cdr o))))
-               (car (cdr (cdr o)))
+           (or (and (pair? o) (pair? (cdr o)) (pair? (cdr (cdr o)))
+                    (car (cdr (cdr o))))
                (mime-headers->list port))))
       (let tfold ((parent-headers '())
                   (headers headers)
@@ -284,23 +305,25 @@
                      (or (assq-ref headers 'content-transfer-encoding)
                          (assq-ref headers 'encoding "7-bit")))))
           (cond
-           ((and (string-prefix? "multipart/" (symbol->string type))
-                 (assq-ref ctype 'boundary))
+           ((and (symbol? type)
+                 (string-prefix? "multipart/" (symbol->string type))
+                 (assq-ref (cdr ctype) 'boundary))
             => (lambda (boundary2)
                  (let ((boundary2 (string-append "--" boundary2)))
                    ;; skip preamble
                    (mime-read-to-boundary port boundary2 (lambda (x) x) (lambda (x) x))
-                   (let lp ((part-seed (kons-start headers seed)))
+                   (let lp ((part-seed (kons-down headers seed)))
                      (let ((part-headers (mime-headers->list port)))
-                       (tfold parent-headers part-headers
+                       (tfold headers part-headers
                               part-seed boundary2
                               lp
                               (lambda (x)
                                 ;; skip epilogue
                                 (if boundary
-                                    (mime-read-to-boundary port boundary
-                                                           (lambda (x) x) (lambda (x) x)))
-                                (next (kons-end headers seed x)))))))))
+                                    (mime-read-to-boundary
+                                     port boundary
+                                     (lambda (x) x) (lambda (x) x)))
+                                (next (kons-up headers seed x)))))))))
            (else
             (mime-read-part
              port cte enc boundary
@@ -319,7 +342,10 @@
     mime-message-fold
     (if (pair? o) (car o) (current-input-port))
     (lambda (parent-headers headers body seed)
-      `((mime (@ ,@headers) ,body) ,@seed))
+      ;; Discard empty bodies.
+      (if (and (equal? body "") (null? headers))
+          seed
+          `((mime (@ ,@headers) ,body) ,@seed)))
     '()
     (lambda (headers seed) '())
     (lambda (headers parent-seed seed)
