@@ -330,7 +330,7 @@
              (lambda (x) (next (kons parent-headers headers x seed)))
              (lambda (x) (final (kons parent-headers headers x seed)))))))))))
 
-;;> \subsubsubsection{\scheme{(mime-message->sxml [src])}}
+;;> \subsubsubsection{\scheme{(mime-message->sxml [src [headers]])}}
 ;;> 
 ;;> Parse the given source as a MIME message and return
 ;;> the result as an SXML object of the form:
@@ -346,10 +346,4 @@
       (if (and (equal? body "") (null? headers))
           seed
           `((mime (@ ,@headers) ,body) ,@seed)))
-    '()
-    (lambda (headers seed) '())
-    (lambda (headers parent-seed seed)
-      `((mime (@ ,@headers)
-              ,@(if (pair? seed) (reverse seed) seed))
-        ,@parent-seed))
-    (if (pair? o) (cdr o) '()))))
+    '() #f #f (if (pair? o) (cdr o) '()))))
