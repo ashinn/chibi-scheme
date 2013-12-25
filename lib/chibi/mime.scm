@@ -208,6 +208,15 @@
               (lp (+ i 2) from res)))
           (lp (+ i 1) from res))))))
 
+;;> Write out an alist of headers in mime format.
+
+(define (mime-write-headers headers out)
+  (for-each
+   (lambda (h)
+     (display (car h) out) (display ": " out)
+     (display (cdr h) out) (display "\r\n" out))
+   headers))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message parsing
 
