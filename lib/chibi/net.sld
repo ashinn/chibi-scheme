@@ -2,7 +2,7 @@
 (define-library (chibi net)
   (export sockaddr? address-info? get-address-info make-address-info
           socket connect bind accept listen open-socket-pair
-          sockaddr-name sockaddr-port
+          sockaddr-name sockaddr-port make-sockaddr
           with-net-io open-net-io make-listener-socket
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next
@@ -15,6 +15,7 @@
           socket-opt/keepalive socket-opt/oobinline socket-opt/sndbuf
           socket-opt/rcvbuf socket-opt/dontroute socket-opt/rcvlowat
           socket-opt/sndlowat
+          get-peer-name
           ;; C structs
           sockaddr addrinfo)
   (import (chibi) (chibi filesystem))
