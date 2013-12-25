@@ -444,6 +444,14 @@ static sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, se
   return res ? sexp_make_fixnum(res-sexp_string_data(x)) : SEXP_FALSE;
 }
 
+static sexp sexp_errno (sexp ctx, sexp self, sexp_sint_t n) {
+#ifdef PLAN9
+  return SEXP_FALSE;
+#else
+  return sexp_make_fixnum(errno);
+#endif
+}
+
 static sexp sexp_error_string (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
 #ifdef PLAN9
   return SEXP_FALSE;
@@ -612,6 +620,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
 #endif
   sexp_define_foreign(ctx, env, "thread-list", 0, sexp_thread_list);
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
+  sexp_define_foreign(ctx, env, "errno", 0, sexp_errno);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);
   sexp_define_foreign(ctx, env, "setenv", 2, sexp_setenv);
