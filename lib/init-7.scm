@@ -382,7 +382,7 @@
 (define (digit-char n)
   (if (<= n 9)
       (integer->char (+ n (char->integer #\0)))
-      (integer->char (+ (- n 10) (char->integer #\A)))))
+      (integer->char (+ (- n 10) (char->integer #\a)))))
 
 (define (%number->string num)
   (call-with-output-string (lambda (out) (write num out))))
