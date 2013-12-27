@@ -32,11 +32,11 @@ static const char sexp_separators[] = {
 };
 
 static int digit_value (int c) {
-  return (((c)<='9') ? ((c) - '0') : ((sexp_toupper(c) - 'A') + 10));
+  return (((c)<='9') ? ((c) - '0') : ((sexp_tolower(c) - 'a') + 10));
 }
 
 static int hex_digit (int n) {
-  return ((n<=9) ? ('0' + n) : ('A' + n - 10));
+  return ((n<=9) ? ('0' + n) : ('a' + n - 10));
 }
 
 static int is_precision_indicator(int c) {
