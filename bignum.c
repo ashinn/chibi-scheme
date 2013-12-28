@@ -1,5 +1,5 @@
 /*  bignum.c -- bignum support                                */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/sexp.h"
@@ -85,14 +85,13 @@ sexp sexp_copy_bignum (sexp ctx, sexp dst, sexp a, sexp_uint_t len0) {
   size = sexp_sizeof(bignum) + len*sizeof(sexp_uint_t);
   if (! dst || sexp_bignum_length(dst) < len) {
     dst = sexp_alloc_tagged(ctx, size, SEXP_BIGNUM);
-    memmove(dst, a, size);
     sexp_bignum_length(dst) = len;
-  } else {
-    memset(dst->value.bignum.data, 0,
-           sexp_bignum_length(dst)*sizeof(sexp_uint_t));
-    memmove(dst->value.bignum.data, a->value.bignum.data,
-            sexp_bignum_length(a)*sizeof(sexp_uint_t));
   }
+  sexp_bignum_sign(dst) = sexp_bignum_sign(a);
+  memset(sexp_bignum_data(dst), 0,
+         sexp_bignum_length(dst)*sizeof(sexp_uint_t));
+  memmove(sexp_bignum_data(dst), sexp_bignum_data(a),
+          sexp_bignum_length(a)*sizeof(sexp_uint_t));
   return dst;
 }
 
@@ -389,22 +388,64 @@ sexp sexp_bignum_sub (sexp ctx, sexp dst, sexp a, sexp b) {
   return res;
 }
 
+static void sexp_bignum_split (sexp ctx, sexp a, sexp_uint_t k, sexp* lo, sexp* hi) {
+  sexp_uint_t alen=sexp_bignum_hi(a), i, *adata=sexp_bignum_data(a),
+    *lodata, *hidata;
+  *lo = sexp_make_bignum(ctx, k);        /* must be gc protected by caller */
+  *hi = sexp_make_bignum(ctx, alen-k+1);
+  lodata = sexp_bignum_data(*lo);
+  hidata = sexp_bignum_data(*hi);
+  for (i=0; i<k; i++)                    /* split into a[0..k-1], a[k..] */
+    lodata[i] = adata[i];
+  for (i=k; i<alen; i++)
+    hidata[i-k] = adata[i];
+}
+
+static sexp sexp_bignum_shift (sexp ctx, sexp a, sexp_uint_t k) {
+  sexp res;
+  sexp_uint_t alen = sexp_bignum_hi(a), i;
+  res = sexp_make_bignum(ctx, alen + k + 1);
+  for (i=0; i<alen; i++)
+    sexp_bignum_data(res)[i+k] = sexp_bignum_data(a)[i];
+  return res;
+}
+
 sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
-  sexp_uint_t alen=sexp_bignum_hi(a), blen=sexp_bignum_hi(b), i,
+  sexp_uint_t alen=sexp_bignum_hi(a), blen=sexp_bignum_hi(b), k,
     *bdata=sexp_bignum_data(b);
-  sexp_gc_var2(c, d);
+  sexp_gc_var7(a0, a1, b0, b1, z0, z1, z2);
   if (alen < blen) return sexp_bignum_mul(ctx, dst, b, a);
-  sexp_gc_preserve2(ctx, c, d);
-  c = (dst ? dst : sexp_make_bignum(ctx, alen+blen+1));
-  d = sexp_make_bignum(ctx, alen+blen+1);
-  for (i=0; i<blen; i++) {
-    d = sexp_bignum_fxmul(ctx, d, a, bdata[i], i);
-    c = sexp_bignum_add_digits(ctx, NULL, c, d);
-    sexp_bignum_data(d)[i] = 0;
+  if (blen == 1) {
+    z1 = sexp_bignum_fxmul(ctx, NULL, a, bdata[0], 0);
+  } else {
+    /* karatsuba:                             */
+    /*   ab = (a1B^k + a0) * (b1B^k + b0)     */
+    /*      = z2B^2k + z1B^k + z0             */
+    /* where:                                 */
+    /*   z2 = a1b1                            */
+    /*   z1 = a1b0 + a0b1                     */
+    /*   z0 = a0b0                            */
+    /* then optimize further:                 */
+    /*   z1 = (a1 + a0)(b1 + b0) - z2 - z0    */
+    sexp_gc_preserve7(ctx, a0, a1, b0, b1, z0, z1, z2);
+    k = blen / 2;
+    sexp_bignum_split(ctx, a, k, &a0, &a1);
+    sexp_bignum_split(ctx, b, k, &b0, &b1);
+    z0 = sexp_bignum_add(ctx, NULL, a1, a0);  /* temp */
+    z1 = sexp_bignum_add(ctx, NULL, b1, b0);
+    z1 = sexp_bignum_mul(ctx, NULL, z1, z0);  /* 1 */
+    z0 = sexp_bignum_mul(ctx, NULL, a0, b0);  /* 2 */
+    z2 = sexp_bignum_mul(ctx, NULL, a1, b1);  /* 3 */
+    z1 = sexp_bignum_sub(ctx, NULL, z1, z0);
+    z1 = sexp_bignum_sub(ctx, NULL, z1, z2);
+    z2 = sexp_bignum_shift(ctx, z2, 2*k);
+    z1 = sexp_bignum_shift(ctx, z1, k);
+    z1 = sexp_bignum_add(ctx, NULL, z1, z0);
+    z1 = sexp_bignum_add(ctx, NULL, z1, z2);
+    sexp_gc_release7(ctx);
   }
-  sexp_bignum_sign(c) = sexp_bignum_sign(a) * sexp_bignum_sign(b);
-  sexp_gc_release2(ctx);
-  return c;
+  sexp_bignum_sign(z1) = sexp_bignum_sign(a) * sexp_bignum_sign(b);
+  return z1;
 }
 
 static sexp sexp_bignum_double (sexp ctx, sexp a) {
