@@ -1456,6 +1456,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     sexp_context_top(ctx) = top;
     if (! sexp_fixnump(_ARG1))
       sexp_raise("make-vector: not an integer", sexp_list1(ctx, _ARG1));
+    if (sexp_unbox_fixnum(_ARG1) < 0)
+      sexp_raise("make-vector: length must be non-negative", sexp_list1(ctx, _ARG1));
     _ARG2 = sexp_make_vector(ctx, _ARG1, _ARG2);
     top--;
     break;
