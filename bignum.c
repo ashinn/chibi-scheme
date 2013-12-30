@@ -219,6 +219,19 @@ sexp_uint_t sexp_bignum_fxdiv (sexp ctx, sexp a, sexp_uint_t b, int offset) {
   return r;
 }
 
+sexp sexp_bignum_fxrem (sexp ctx, sexp a, sexp_sint_t b) {
+  sexp_uint_t len=sexp_bignum_hi(a), *data=sexp_bignum_data(a), q, b0;
+  int i;
+  sexp_luint_t n = 0;
+  b0 = (b >= 0) ? b : -b;
+  for (i=len-1; i>=0; i--) {
+    n = (n << sizeof(sexp_uint_t)*8) + data[i];
+    q = n / b0;
+    n -= (sexp_luint_t)q * b0;
+  }
+  return sexp_make_fixnum(sexp_bignum_sign(a) * (sexp_sint_t)n);
+}
+
 sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
                        signed char sign, sexp_uint_t base) {
   int c, digit;
@@ -1591,8 +1604,8 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
     r = a;
     break;
   case SEXP_NUM_BIG_FIX:
-    b = tmp = sexp_fixnum_to_bignum(ctx, b);
-    /* ... FALLTHROUGH ... */
+    r = sexp_bignum_fxrem(ctx, a, sexp_unbox_fixnum(b));
+    break;
   case SEXP_NUM_BIG_BIG:
     r = sexp_bignum_normalize(sexp_bignum_remainder(ctx, a, b));
     break;
