@@ -101,6 +101,10 @@
        ((null? sxml))
        (else (html-display-escaped-string sxml out))))))
 
+(define (sxml->xml sxml)
+  (call-with-output-string
+    (lambda (out) (sxml-display-as-html sxml out))))
+
 ;; utility to render sxml as simple text, stripping all tags
 (define (sxml-strip sxml)
   (call-with-output-string
