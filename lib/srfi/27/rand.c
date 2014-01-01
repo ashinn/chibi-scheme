@@ -51,8 +51,8 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs,
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(bound)) {
     hi = sexp_bignum_hi(bound);
-    len = hi * sizeof(sexp_uint_t) / sizeof(int32_t);
-    res = sexp_make_bignum(ctx, hi);
+    len = hi * (sizeof(sexp_uint_t) / sizeof(int32_t));
+    res = sexp_make_bignum(ctx, hi + 1);
     data = (int32_t*) sexp_bignum_data(res);
     for (i=0; i<len-1; i++) {
       sexp_call_random(rs, m);
