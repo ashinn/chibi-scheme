@@ -176,6 +176,31 @@
               (y x))
              y))
 
+;; By Jussi Piitulainen <jpiitula@ling.helsinki.fi>
+;; and John Cowan <cowan@mercury.ccil.org>:
+;; http://lists.scheme-reports.org/pipermail/scheme-reports/2013-December/003876.html
+(define (means ton)
+  (letrec*
+     ((mean
+        (lambda (f g)
+          (f (/ (sum g ton) n))))
+      (sum
+        (lambda (g ton)
+          (if (null? ton)
+            (+)
+            (if (number? ton)
+                (g ton)
+                (+ (sum g (car ton))
+                   (sum g (cdr ton)))))))
+      (n (sum (lambda (x) 1) ton)))
+    (values (mean values values)
+            (mean exp log)
+            (mean / /))))
+(let*-values (((a b c) (means '(8 5 99 1 22))))
+  (test 27 a)
+  (test 9.728 b)
+  (test 1800/497 c))
+
 (let*-values (((root rem) (exact-integer-sqrt 32)))
   (test 35 (* root rem)))
 
