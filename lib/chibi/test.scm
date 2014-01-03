@@ -51,11 +51,13 @@
 ;;> defaults to a printed summary of \var{expr}.
 
 (define-syntax test
-  (syntax-rules ()
+  (syntax-rules (quote)
     ((test expect expr)
      (test #f expect expr))
     ((test name expect (expr ...))
      (test-propagate-info name expect (expr ...) ()))
+    ((test name 'expect expr)
+     (test-propagate-info name 'expect expr ()))
     ((test name (expect ...) expr)
      (test-syntax-error
       'test
