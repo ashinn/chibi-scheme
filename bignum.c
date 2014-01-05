@@ -394,15 +394,16 @@ sexp sexp_bignum_add (sexp ctx, sexp dst, sexp a, sexp b) {
 
 sexp sexp_bignum_sub (sexp ctx, sexp dst, sexp a, sexp b) {
   sexp res;
+  int sign;
   if (sexp_bignum_sign(a) == sexp_bignum_sign(b)) {
+    sign = (sexp_bignum_compare_abs(a, b) >= 0 ? sexp_bignum_sign(a)
+            : -sexp_bignum_sign(a));
     res = sexp_bignum_sub_digits(ctx, dst, a, b);
-    sexp_bignum_sign(res)
-      = (sexp_bignum_compare_abs(a, b) >= 0 ? sexp_bignum_sign(a)
-         : -sexp_bignum_sign(a));
   } else {
+    sign = sexp_bignum_sign(a);
     res = sexp_bignum_add_digits(ctx, dst, a, b);
-    sexp_bignum_sign(res) = sexp_bignum_sign(a);
   }
+  sexp_bignum_sign(res) = sign;
   return res;
 }
 
@@ -434,7 +435,7 @@ sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
   sexp_gc_var7(a0, a1, b0, b1, z0, z1, z2);
   if (alen < blen) return sexp_bignum_mul(ctx, dst, b, a);
   if (blen == 1) {
-    z1 = sexp_bignum_fxmul(ctx, NULL, a, bdata[0], 0);
+    z1 = sexp_bignum_fxmul(ctx, dst, a, bdata[0], 0);
   } else {
     /* karatsuba:                             */
     /*   ab = (a1B^k + a0) * (b1B^k + b0)     */
@@ -458,8 +459,8 @@ sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
     z1 = sexp_bignum_sub(ctx, NULL, z1, z2);
     z2 = sexp_bignum_shift(ctx, z2, 2*k);
     z1 = sexp_bignum_shift(ctx, z1, k);
-    z1 = sexp_bignum_add(ctx, NULL, z1, z0);
-    z1 = sexp_bignum_add(ctx, NULL, z1, z2);
+    z1 = sexp_bignum_add(ctx, z1, z1, z0);
+    z1 = sexp_bignum_add(ctx, z1, z1, z2);
     sexp_gc_release7(ctx);
   }
   sexp_bignum_sign(z1) = sexp_bignum_sign(a) * sexp_bignum_sign(b);
