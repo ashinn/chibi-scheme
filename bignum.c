@@ -469,8 +469,10 @@ sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
 
 sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
   sexp_uint_t d;
-  sexp_sint_t alen, blen, sign=1;
+  sexp_sint_t alen, blen=sexp_bignum_hi(b), sign=1;
   sexp_gc_var5(q, x, y, a1, b1);
+  if (blen == 1 && sexp_bignum_data(b)[0] == 0)
+    return sexp_xtype_exception(ctx, NULL, "divide by zero", a);
   sexp_gc_preserve5(ctx, q, x, y, a1, b1);
   a1 = sexp_copy_bignum(ctx, NULL, a, 0);
   sexp_bignum_sign(a1) = 1;
@@ -480,7 +482,6 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
   x = sexp_make_bignum(ctx, sexp_bignum_length(a));
   while (sexp_bignum_compare(a1, b1) > 0) {
     alen = sexp_bignum_hi(a1);
-    blen = sexp_bignum_hi(b1);
     d = sexp_bignum_data(a1)[alen-1] / sexp_bignum_data(b1)[blen-1];
     memset(sexp_bignum_data(x), 0, sexp_bignum_length(x)*sizeof(sexp_uint_t));
     if (d == 0) {
