@@ -223,6 +223,11 @@ sexp sexp_bignum_fxrem (sexp ctx, sexp a, sexp_sint_t b) {
   sexp_uint_t len=sexp_bignum_hi(a), *data=sexp_bignum_data(a), q, b0;
   int i;
   sexp_luint_t n = 0;
+  if (b > 0) {
+    q = b - 1;
+    if ((b & q) == 0)
+      return sexp_make_fixnum(sexp_bignum_sign(a) * (data[0] & q));
+  }
   b0 = (b >= 0) ? b : -b;
   for (i=len-1; i>=0; i--) {
     n = (n << sizeof(sexp_uint_t)*8) + data[i];
