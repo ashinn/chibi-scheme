@@ -186,6 +186,12 @@ static void sexp_make_unblocking (sexp ctx, sexp port) {
 }
 #endif
 
+static sexp sexp_meta_env (sexp ctx) {
+  if (sexp_envp(sexp_global(ctx, SEXP_G_META_ENV)))
+    return sexp_global(ctx, SEXP_G_META_ENV);
+  return sexp_context_env(ctx);
+}
+
 static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
   sexp res = sexp_env_ref(env, name, SEXP_FALSE);
   return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : NULL;
@@ -203,7 +209,7 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e) {
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
   sexp_context_env(ctx) = res;
-  sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
+  sexp_set_parameter(ctx, sexp_meta_env(ctx), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
   sexp_gc_release3(ctx);
   return res;
 }
@@ -535,7 +541,7 @@ void run_main (int argc, char **argv) {
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
     if (i >= argc || no_script)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
-    sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
+    sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
       repl(ctx, env);
@@ -544,7 +550,7 @@ void run_main (int argc, char **argv) {
       /* load the module or script */
       if (main_module != NULL) {
         impmod = make_import("(load-module '(", main_module, "))");
-        env = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, sexp_global(ctx, SEXP_G_META_ENV)));
+        env = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, sexp_meta_env(ctx)));
         if (sexp_vectorp(env)) env = sexp_vector_ref(env, SEXP_ONE);
         free(impmod);
       } else
@@ -555,15 +561,15 @@ void run_main (int argc, char **argv) {
         /* `cond-expand' bindings */
         if (!mods_loaded) {
           env = sexp_make_env(ctx);
-          sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV),
+          sexp_set_parameter(ctx, sexp_meta_env(ctx),
                              sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
           sexp_context_env(ctx) = env;
           sym = sexp_intern(ctx, "repl-import", -1);
-          tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
+          tmp = sexp_env_ref(sexp_meta_env(ctx), sym, SEXP_VOID);
           sym = sexp_intern(ctx, "import", -1);
           sexp_env_define(ctx, env, sym, tmp);
           sym = sexp_intern(ctx, "cond-expand", -1);
-          tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_VOID);
+          tmp = sexp_env_ref(sexp_meta_env(ctx), sym, SEXP_VOID);
           sexp_env_define(ctx, env, sym, tmp);
         }
 #endif
@@ -572,7 +578,7 @@ void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
         /* use scheme load if possible for better stack traces */
         sym = sexp_intern(ctx, "load", -1);
-        tmp = sexp_env_ref(sexp_global(ctx, SEXP_G_META_ENV), sym, SEXP_FALSE);
+        tmp = sexp_env_ref(sexp_meta_env(ctx), sym, SEXP_FALSE);
         if (sexp_procedurep(tmp)) {
           sym = sexp_c_string(ctx, argv[i], -1);
           sym = sexp_list2(ctx, sym, env);
