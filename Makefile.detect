@@ -50,20 +50,23 @@ LIBDL = -ldl
 ifeq ($(PLATFORM),macosx)
 SO  = .dylib
 EXE =
-CLIBFLAGS = -dynamiclib
+CLIBFLAGS =
+CLINKFLAGS = -dynamiclib
 STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
 else
 ifeq ($(PLATFORM),bsd)
 SO  = .so
 EXE =
-CLIBFLAGS = -fPIC -shared
+CLIBFLAGS = -fPIC
+CLINKFLAGS = -shared
 LIBDL = 
 else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
 CC = gcc
-CLIBFLAGS = -shared
+CLIBFLAGS =
+CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL
 LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 STATICFLAGS = -DSEXP_USE_DL=0
@@ -73,13 +76,15 @@ ifeq ($(PLATFORM),cygwin)
 SO  = .dll
 EXE = .exe
 CC = gcc
-CLIBFLAGS = -shared
+CLIBFLAGS =
+CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
 LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
-CLIBFLAGS = -fPIC -shared
+CLIBFLAGS = -fPIC
+CLINKFLAGS = -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
 ifeq ($(PLATFORM),BSD)
 LIBDL=

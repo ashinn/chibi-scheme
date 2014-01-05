@@ -46,7 +46,7 @@ lib/%.c: lib/%.stub $(CHIBI_FFI_DEPENDENCIES)
 	$(CHIBI_FFI) $<
 
 lib/%$(SO): lib/%.c $(INCLUDES)
-	$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. $(XLIBS) -lchibi-scheme
+	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. $(XLIBS) -lchibi-scheme
 
 doc-libs: $(HTML_LIBS)
 
