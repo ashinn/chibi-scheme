@@ -1102,7 +1102,7 @@
 (define (positive? x) (> x 0))
 (define (negative? x) (< x 0))
 (define (even? n) (= (remainder n 2) 0))
-(define (odd? n) (= (abs (remainder n 2)) 1))
+(define (odd? n) (not (= (remainder n 1) 0)))
 
 (define (abs x) (if (< x 0) (- x) x))
 
