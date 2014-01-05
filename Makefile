@@ -94,10 +94,10 @@ SEXP_ULIMIT_OBJS = gc-ulimit.o sexp-ulimit.o bignum.o
 EVAL_OBJS = opcodes.o vm.o eval.o simplify.o
 
 libchibi-sexp$(SO): $(SEXP_OBJS)
-	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
+	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -o $@ $^ $(XLDFLAGS)
 
 libchibi-scheme$(SO): $(SEXP_OBJS) $(EVAL_OBJS)
-	$(CC) $(CLIBFLAGS) -o $@ $^ $(XLDFLAGS)
+	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -o $@ $^ $(XLDFLAGS)
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
@@ -114,7 +114,7 @@ clibs.c: $(GENSTATIC) chibi-scheme$(EXE)
 # A special case, this needs to be linked with the LDFLAGS in case
 # we're using Boehm.
 lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES)
-	-$(CC) $(CLIBFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
+	-$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
 
 doc/lib/chibi/%.html: lib/chibi/%.sld $(CHIBI_DOC_DEPENDENCIES)
 	$(CHIBI_DOC) --html chibi.$* > $@
