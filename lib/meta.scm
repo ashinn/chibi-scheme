@@ -1,5 +1,5 @@
 ;; meta.scm -- meta langauge for describing modules
-;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2014 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -228,11 +228,35 @@
            (tmp (rename 'tmp))
            (this-module (rename '*this-module*))
            (add-module! (rename 'add-module!))
+           (_make-module (rename 'make-module))
            (_define (rename 'meta-define))
+           (_lambda (rename 'lambda))
            (_let (rename 'let))
+           (_map (rename 'map))
            (_if (rename 'if))
            (_cond (rename 'cond))
-           (_set! (rename 'set!)))
+           (_set! (rename 'set!))
+           (_quote (rename 'quote))
+           (_and (rename 'and))
+           (_= (rename '=))
+           (_eq? (rename 'eq?))
+           (_pair? (rename 'pair?))
+           (_null? (rename 'null?))
+           (_reverse (rename 'reverse))
+           (_append (rename 'append))
+           (_assq (rename 'assq))
+           (_=> (rename '=>))
+           (_else (rename 'else))
+           (_length (rename 'length))
+           (_identifier->symbol (rename 'identifier->symbol))
+           (_error (rename 'error))
+           (_cons (rename 'cons))
+           (_car (rename 'car))
+           (_cdr (rename 'cdr))
+           (_caar (rename 'caar))
+           (_cadr (rename 'cadr))
+           (_cdar (rename 'cdar))
+           (_cddr (rename 'cddr)))
        ;; Check for suspicious defines.
        (for-each
         (lambda (x)
@@ -244,52 +268,63 @@
        `(,_let ((,tmp ,this-module))
           (,_define (rewrite-export x)
             (,_if (pair? x)
-                (,_if (and (= 3 (length x))
-                           (eq? 'rename (identifier->symbol (car x))))
-                    (cons (car (cddr x)) (cadr x))
-                    (error "invalid module export" x))
+                (,_if (,_and (,_= 3 (,_length x))
+                             (,_eq? (,_quote rename)
+                                    (,_identifier->symbol (,_car x))))
+                    (,_cons (,_car (,_cddr x)) (,_cadr x))
+                    (,_error "invalid module export" x))
                 x))
           (,_define (extract-exports)
             (,_cond
-             ((assq 'export-all ,this-module)
-              => (lambda (x)
-                   (if (pair? (cdr x))
-                       (error "export-all takes no parameters" x))
-                   #f))
-             (else
-              (,_let lp ((ls ,this-module) (res '()))
+             ((,_assq (,_quote export-all) ,this-module)
+              ,_=> (,_lambda (x)
+                     (,_if (,_pair? (,_cdr x))
+                         (,_error "export-all takes no parameters" x))
+                     #f))
+             (,_else
+              (,_let lp ((ls ,this-module) (res (,_quote ())))
                 (,_cond
-                 ((null? ls) res)
-                 ((and (pair? (car ls)) (eq? 'export (caar ls)))
-                  (lp (cdr ls) (append (map rewrite-export (cdar ls)) res)))
-                 (else (lp (cdr ls) res)))))))
-          (,_set! ,this-module '())
+                 ((,_null? ls) res)
+                 ((,_and (,_pair? (,_car ls))
+                         (,_eq? (,_quote export) (,_caar ls)))
+                  (lp (,_cdr ls)
+                      (,_append (,_map rewrite-export (,_cdar ls)) res)))
+                 (,_else (lp (,_cdr ls) res)))))))
+          (,_set! ,this-module (,_quote ()))
           ,@body
-          (,_set! ,this-module (reverse ,this-module))
-          (,add-module! ',name (make-module (extract-exports) #f ,this-module))
+          (,add-module! (,_quote ,name)
+                        (,_make-module (extract-exports)
+                                       #f
+                                       (,_reverse ,this-module)))
           (,_set! ,this-module ,tmp))))))
 
 (define-syntax define-library define-library-transformer)
 (define-syntax module define-library-transformer)
 
-(define-syntax define-config-primitive
+(define-syntax define-meta-primitive
   (er-macro-transformer
    (lambda (expr rename compare)
-     `(define-syntax ,(cadr expr)
-        (er-macro-transformer
-         (lambda (expr rename compare)
-           (let ((this-module (rename '*this-module*)))
-             `(set! ,this-module (cons ',expr ,this-module)))))))))
+     (let ((name (cadr expr)))
+       `(define-syntax ,name
+          (er-macro-transformer
+           (lambda (expr rename compare)
+             (let ((this-module (rename '*this-module*))
+                   (_set! (rename 'set!))
+                   (_cons (rename 'cons))
+                   (_quote (rename 'syntax-quote)))
+               `(,_set! ,this-module
+                        (,_cons (,_quote ,(cons ',name (cdr expr)))
+                                ,this-module))))))))))
 
-(define-config-primitive import)
-(define-config-primitive import-immutable)
-(define-config-primitive export)
-(define-config-primitive export-all)
-(define-config-primitive include)
-(define-config-primitive include-ci)
-(define-config-primitive include-shared)
-(define-config-primitive body)
-(define-config-primitive begin)
+(define-meta-primitive import)
+(define-meta-primitive import-immutable)
+(define-meta-primitive export)
+(define-meta-primitive export-all)
+(define-meta-primitive include)
+(define-meta-primitive include-ci)
+(define-meta-primitive include-shared)
+(define-meta-primitive body)
+(define-meta-primitive begin)
 
 ;; The `import' binding used by (chibi) and (scheme base), etc.
 (define-syntax repl-import
