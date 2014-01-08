@@ -267,7 +267,7 @@
        ;; Generate the library wrapper.
        `(,_let ((,tmp ,this-module))
           (,_define (rewrite-export x)
-            (,_if (pair? x)
+            (,_if (,_pair? x)
                 (,_if (,_and (,_= 3 (,_length x))
                              (,_eq? (,_quote rename)
                                     (,_identifier->symbol (,_car x))))
