@@ -1661,6 +1661,17 @@
             ((assq 'b condition)))
       (raise (list (cons 'b 23)))))
 
+(test 'caught-d
+    (guard (condition
+            ((assq 'c condition) 'caught-c)
+            ((assq 'd condition) 'caught-d))
+      (list
+       (sqrt 8)
+       (guard (condition
+               ((assq 'a condition) => cdr)
+               ((assq 'b condition)))
+         (raise (list (cons 'd 24)))))))
+
 (test-end)
 
 (test-begin "6.12 Environments and evaluation")
