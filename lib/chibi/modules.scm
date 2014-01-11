@@ -84,7 +84,7 @@
            (lp (cdr ls) res))
           ((include)
            (lp (append (map include-source (cdar ls)) (cdr ls)) res))
-          ((body)
+          ((body begin)
            (let lp2 ((ls2 (cdar ls)) (res res))
              (cond
               ((pair? ls2)
