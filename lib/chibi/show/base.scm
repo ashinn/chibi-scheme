@@ -50,11 +50,6 @@
   (local!: update!)
   (return: return)
   (run: run)
-  ;; These are never used directly, but we must provide the names to
-  ;; preserve hygiene.
-  (ask: ask %ask)
-  (tell: tell %tell)
-  (copy: copy)
   (fields:
    (port env-port env-port-set!)
    (row env-row env-row-set!)
