@@ -55,7 +55,7 @@
       (define (char-digit d)
         (cond ((char? d) d)
               ((< d 10) (integer->char (+ d (char->integer #\0))))
-              (else (integer->char (+ (- d 10) (char->integer #\A))))))
+              (else (integer->char (+ (- d 10) (char->integer #\a))))))
       (define (digit-value ch)
         (let ((res (- (char->integer ch) (char->integer #\0))))
           (if (<= 0 res 9)
