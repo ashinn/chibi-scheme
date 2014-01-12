@@ -193,7 +193,7 @@ static sexp sexp_meta_env (sexp ctx) {
 }
 
 static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
-  sexp res = sexp_env_ref(env, name, SEXP_FALSE);
+  sexp res = sexp_env_ref(ctx, env, name, SEXP_FALSE);
   return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : NULL;
 }
 
@@ -305,7 +305,7 @@ static sexp check_exception (sexp ctx, sexp res) {
         advise = sexp_vector_ref(advise, SEXP_ONE);
         if (sexp_envp(advise)) {
           sym = sexp_intern(ctx, "repl-advise-exception", -1);
-          advise = sexp_env_ref(advise, sym, SEXP_FALSE);
+          advise = sexp_env_ref(ctx, advise, sym, SEXP_FALSE);
           if (sexp_procedurep(advise))
             sexp_apply(ctx, advise, tmp=sexp_list2(ctx, res, err));
         }
@@ -503,7 +503,7 @@ void run_main (int argc, char **argv) {
       if (! sexp_oportp(out))
         out = sexp_eval_string(ctx, "(current-output-port)", -1, env);
       sexp_write_string(ctx, sexp_version_string, out);
-      tmp = sexp_env_ref(env, sym=sexp_intern(ctx, "*features*", -1), SEXP_NULL);
+      tmp = sexp_env_ref(ctx, env, sym=sexp_intern(ctx, "*features*", -1), SEXP_NULL);
       sexp_write(ctx, tmp, out);
       sexp_newline(ctx, out);
       return;
@@ -565,11 +565,11 @@ void run_main (int argc, char **argv) {
                              sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), env);
           sexp_context_env(ctx) = env;
           sym = sexp_intern(ctx, "repl-import", -1);
-          tmp = sexp_env_ref(sexp_meta_env(ctx), sym, SEXP_VOID);
+          tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
           sym = sexp_intern(ctx, "import", -1);
           sexp_env_define(ctx, env, sym, tmp);
           sym = sexp_intern(ctx, "cond-expand", -1);
-          tmp = sexp_env_ref(sexp_meta_env(ctx), sym, SEXP_VOID);
+          tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
           sexp_env_define(ctx, env, sym, tmp);
         }
 #endif
@@ -578,7 +578,7 @@ void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
         /* use scheme load if possible for better stack traces */
         sym = sexp_intern(ctx, "load", -1);
-        tmp = sexp_env_ref(sexp_meta_env(ctx), sym, SEXP_FALSE);
+        tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_FALSE);
         if (sexp_procedurep(tmp)) {
           sym = sexp_c_string(ctx, argv[i], -1);
           sym = sexp_list2(ctx, sym, env);
@@ -593,7 +593,7 @@ void run_main (int argc, char **argv) {
       /* SRFI-22: run main if specified */
       if (main_symbol) {
         sym = sexp_intern(ctx, main_symbol, -1);
-        tmp = sexp_env_ref(env, sym, SEXP_FALSE);
+        tmp = sexp_env_ref(ctx, env, sym, SEXP_FALSE);
         if (sexp_procedurep(tmp)) {
           args = sexp_list1(ctx, args);
           check_exception(ctx, sexp_apply(ctx, tmp, args));

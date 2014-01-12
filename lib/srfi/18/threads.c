@@ -427,7 +427,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
     runner = sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER);
     if (! sexp_contextp(runner)) { /* ensure the runner exists */
       if (sexp_envp(runner)) {
-        tmp = sexp_env_cell(runner, (tmp=sexp_intern(ctx, "signal-runner", -1)), 0);
+        tmp = sexp_env_cell(ctx, runner, (tmp=sexp_intern(ctx, "signal-runner", -1)), 0);
         if (sexp_pairp(tmp) && sexp_procedurep(sexp_cdr(tmp))) {
           runner = sexp_make_thread(ctx, self, 2, sexp_cdr(tmp), SEXP_FALSE);
           sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = runner;
@@ -623,7 +623,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
 /**************************************************************************/
 
 sexp sexp_lookup_named_type (sexp ctx, sexp env, const char *name) {
-  sexp t = sexp_env_ref(env, sexp_intern(ctx, name, -1), SEXP_FALSE);
+  sexp t = sexp_env_ref(ctx, env, sexp_intern(ctx, name, -1), SEXP_FALSE);
   return sexp_make_fixnum((sexp_typep(t)) ? sexp_type_tag(t) : -1);
 }
 

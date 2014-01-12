@@ -683,8 +683,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_symbolp(x)     (sexp_lsymbolp(x))
 #endif
 
-#define sexp_idp(x) \
-  (sexp_symbolp(x) || (sexp_synclop(x) && sexp_symbolp(sexp_synclo_expr(x))))
+SEXP_API int sexp_idp(sexp x);
 
 #define sexp_portp(x) (sexp_check_tag(x, SEXP_IPORT) || sexp_check_tag(x, SEXP_OPORT))
 
@@ -1494,7 +1493,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
                      (sexp_proc2)finalizer)
 #endif
 
-#define sexp_current_error_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE))
+#define sexp_current_error_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(ctx, sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE))
 #define sexp_debug(ctx, msg, obj) (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx)))
 
 /* simplify primitive API interface */

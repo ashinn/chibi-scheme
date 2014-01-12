@@ -42,13 +42,13 @@ static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
 static sexp sexp_get_env_cell (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp id, sexp createp) {
   sexp cell;
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
-  cell = sexp_env_cell(env, id, 0);
+  cell = sexp_env_cell(ctx, env, id, 0);
   if (! cell) {
     if (sexp_synclop(id)) {
       env = sexp_synclo_env(id);
       id = sexp_synclo_expr(id);
     }
-    cell = sexp_env_cell(env, id, 0);
+    cell = sexp_env_cell(ctx, env, id, 0);
     if (!cell && createp)
       cell = sexp_env_cell_define(ctx, env, id, SEXP_UNDEF, NULL);
   }
