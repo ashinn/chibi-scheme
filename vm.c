@@ -214,7 +214,7 @@ static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
   if (loc == lambda && sexp_lambdap(lambda)) {
     /* local ref */
     sexp_emit(ctx, SEXP_OP_LOCAL_REF);
-    sexp_emit_word(ctx, sexp_param_index(lambda, name));
+    sexp_emit_word(ctx, sexp_param_index(ctx, lambda, name));
   } else {
     /* closure ref */
     for (i=0; sexp_pairp(fv); fv=sexp_cdr(fv), i++)
@@ -277,7 +277,7 @@ static void generate_set (sexp ctx, sexp set) {
     } else {
       /* internally defined variable */
       sexp_emit(ctx, SEXP_OP_LOCAL_SET);
-      sexp_emit_word(ctx, sexp_param_index(lambda, sexp_ref_name(ref)));
+      sexp_emit_word(ctx, sexp_param_index(ctx, lambda, sexp_ref_name(ref)));
     }
   }
   sexp_emit_push(ctx, SEXP_VOID);
@@ -476,7 +476,7 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
   }
   for (ls1=ls3; sexp_pairp(ls1); ls1=sexp_cdr(ls1)) {
     sexp_emit(ctx, SEXP_OP_LOCAL_SET);
-    sexp_emit_word(ctx, sexp_param_index(lam, sexp_car(ls1)));
+    sexp_emit_word(ctx, sexp_param_index(ctx, lam, sexp_car(ls1)));
   }
 
   /* drop the current result and jump */
@@ -623,7 +623,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   }
   /* box mutable vars */
   for (ls=sexp_lambda_sv(lambda); sexp_pairp(ls); ls=sexp_cdr(ls)) {
-    k = sexp_param_index(lambda, sexp_car(ls));
+    k = sexp_param_index(ctx, lambda, sexp_car(ls));
     sexp_emit(ctx2, SEXP_OP_LOCAL_REF);
     sexp_emit_word(ctx2, k);
     sexp_emit_push(ctx2, sexp_car(ls));
@@ -736,7 +736,7 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
   } else {
     sexp_context_env(ctx2) = env;
     for (ls=params, refs=SEXP_NULL; sexp_pairp(ls); ls=sexp_cdr(ls)) {
-      ref = sexp_make_ref(ctx2, sexp_car(ls), sexp_env_cell(env, sexp_car(ls), 0));
+      ref = sexp_make_ref(ctx2, sexp_car(ls), sexp_env_cell(ctx, env, sexp_car(ls), 0));
       if (!sexp_exceptionp(ref)) sexp_push(ctx2, refs, ref);
     }
     if (!sexp_exceptionp(refs))

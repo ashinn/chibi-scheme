@@ -57,7 +57,8 @@ static sexp sexp_heap_walk (sexp ctx, int depth, int printp) {
 
   if (printp)
     out = sexp_parameter_ref(ctx,
-                             sexp_env_ref(sexp_context_env(ctx),
+                             sexp_env_ref(ctx,
+                                          sexp_context_env(ctx),
                                           sexp_global(ctx,SEXP_G_CUR_OUT_SYMBOL),
                                           SEXP_FALSE));
 
