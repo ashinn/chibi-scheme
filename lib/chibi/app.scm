@@ -112,7 +112,7 @@
         (lp (cdr val+args)
             (conf-set opts (caar val+args) (cdar val+args))))))))
 
-(define (parse-app prefix spec opt-spec args config . o)
+(define (parse-app prefix spec opt-spec args config init end . o)
   (define (next-prefix prefix name)
     (append (if (null? prefix) '(command) prefix) (list name)))
   (define (prev-prefix prefix)
@@ -137,24 +137,29 @@
                 (cfg+args (parse-options prefix new-opt-spec args new-fail))
                 (config (conf-append (car cfg+args) config))
                 (args (cdr cfg+args)))
-           (parse-app prefix (cdr spec) new-opt-spec args config new-fail)))
+           (parse-app prefix (cdr spec) new-opt-spec args config init end new-fail)))
         ((or)
-         (any (lambda (x) (parse-app prefix x opt-spec args config)) (cdar spec)))
+         (any (lambda (x) (parse-app prefix x opt-spec args config init end))
+              (cdar spec)))
+        ((begin)
+         (parse-app prefix (cdr spec) opt-spec args config (cadr (car spec)) end fail))
+        ((end)
+         (parse-app prefix (cdr spec) opt-spec args config init (cadr (car spec)) fail))
         (else
          (if (procedure? (caar spec))
-             (list (caar spec) config args) ; TODO: verify, apply defaults
-             (parse-app prefix (car spec) opt-spec args config fail)))))
+             (vector (caar spec) config args init end) ; TODO: verify
+             (parse-app prefix (car spec) opt-spec args config init end fail)))))
      ((symbol? (car spec))
       (and (pair? args)
            (eq? (car spec) (string->symbol (car args)))
            (let ((prefix (next-prefix prefix (car spec))))
-             (parse-app prefix (cdr spec) opt-spec (cdr args) config fail))))
+             (parse-app prefix (cdr spec) opt-spec (cdr args) config init end fail))))
      ((procedure? (car spec))
-      (list (car spec) config args))
+      (vector (car spec) config args init end))
      (else
       (if (not (string? (car spec)))
           (error "unknown application spec" (car spec)))
-      (parse-app prefix (cdr spec) opt-spec args config fail)))))
+      (parse-app prefix (cdr spec) opt-spec args config init end fail)))))
 
 (define (print-command-help command out)
   (cond
@@ -241,7 +246,16 @@
 
 (define (run-application spec . o)
   (let ((args (if (pair? o) (car o) (command-line))))
-    (let ((ls (parse-app '() (cdr spec) '() (cdr args) #f)))
-      (if ls
-          (apply (car ls) (cadr ls) spec (car (cddr ls)))
-          (error "Unknown command: " args)))))
+    (cond
+     ((parse-app '() (cdr spec) '() (cdr args) #f #f #f)
+      => (lambda (v)
+           (let ((proc (vector-ref v 0))
+                 (cfg (vector-ref v 1))
+                 (args (vector-ref v 2))
+                 (init (vector-ref v 3))
+                 (end (vector-ref v 4)))
+             (if init (init cfg))
+             (apply proc cfg spec args)
+             (if end (end cfg)))))
+     (else
+      (error "Unknown command: " args)))))
