@@ -112,6 +112,23 @@
 (define (alist? x)
   (and (list? x) (every pair? x)))
 
+;;> \subsubsubsection{\rawcode{(assoc-get alist key [equal? [default]])}}
+
+;;> Utility analogous to \scheme{conf-get} on a pure alist.  Returns
+;;> the value of the cell in \var{alist} whose car is \var{equal?} to
+;;> \var{key}, where the value is determined as the \var{cadr} if the
+;;> cell is a proper list of two elements and the \var{cdr} otherwise.
+;;> If no cell is found, returns \var{default}, or \scheme{#f} if
+;;> unspecified.
+
+(define (assoc-get alist key . o)
+  (cond
+   ((assoc key alist (or (and (pair? o) (car o)) equal?))
+    => (lambda (x)
+         (if (and (pair? (cdr x)) (null? (cddr x))) (cadr x) (cdr x))))
+   (else
+    (and (pair? o) (pair? (cdr o)) (cadr o)))))
+
 ;;> Returns just the base of \var{config} without any parent.
 
 (define (conf-head config)
