@@ -141,9 +141,9 @@
         ((or)
          (any (lambda (x) (parse-app prefix x opt-spec args config init end))
               (cdar spec)))
-        ((begin)
+        ((begin:)
          (parse-app prefix (cdr spec) opt-spec args config (cadr (car spec)) end fail))
-        ((end)
+        ((end:)
          (parse-app prefix (cdr spec) opt-spec args config init (cadr (car spec)) fail))
         (else
          (if (procedure? (caar spec))
