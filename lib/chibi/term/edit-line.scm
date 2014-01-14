@@ -577,13 +577,14 @@
     (vector-set! v 127 command/backward-delete-word)
     keymap))
 
-(define (make-standard-keymap)
+(define (make-standard-keymap . o)
   (let* ((keymap (make-printable-keymap))
-         (v (car keymap)))
+         (v (car keymap))
+         (catch-control-c? (and (pair? o) (car o))))
     (vector-set! v   0 command/enter)   ;; for telnet
     (vector-set! v   1 command/beginning-of-line)
     (vector-set! v   2 command/backward-char)
-    (vector-set! v   3 command/cancel)
+    (vector-set! v   3 (if catch-control-c? command/cancel command/quit))
     (vector-set! v   4 command/forward-delete-char)
     (vector-set! v   5 command/end-of-line)
     (vector-set! v   6 command/forward-char)
@@ -634,6 +635,13 @@
   (newline out)
   (buffer-delete! buf out 0 (buffer-length buf))
   (buffer-draw buf out))
+
+(define (command/quit ch buf out return)
+  (command/end-of-line ch buf out return)
+  (display "^C" out)
+  (newline out)
+  (stty out '(icanon isig echo))
+  (exit))
 
 (define (command/beep ch buf out return)
   (write-char (integer->char 7) out))
@@ -717,6 +725,7 @@
 ;; line-editing
 
 (define standard-keymap (make-standard-keymap))
+(define standard-cancel-keymap (make-standard-keymap #t))
 
 (define (get-key ls key . o)
   (let ((x (memq key ls)))
@@ -737,7 +746,10 @@
          (terminal-width (get-key args 'terminal-width:))
          (single-line? (get-key args 'single-line?: #f))
          (no-stty? (get-key args 'no-stty?: #f))
-         (keymap0 (get-key args 'keymap: standard-keymap))
+         (keymap0 (get-key args 'keymap:
+                           (if (get-key args 'catch-control-c?: #f)
+                               standard-cancel-keymap
+                               standard-keymap)))
          (keymap (if completion
                      (cons (list (cons 9 completion)) keymap0)
                      keymap0))

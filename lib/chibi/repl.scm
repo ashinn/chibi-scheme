@@ -391,7 +391,8 @@
                  'prompt: prompt
                  'history: (repl-history rp)
                  'complete?: buffer-complete-sexp?
-                 'completion: (make-sexp-buffer-completer))))))
+                 'completion: (make-sexp-buffer-completer)
+                 'catch-control-c?: #t)))))
 
 (define repl-commands
   `((import . ,repl/import)

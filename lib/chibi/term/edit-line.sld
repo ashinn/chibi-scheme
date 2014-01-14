@@ -5,6 +5,7 @@
           history-commit! history->list list->history buffer->string
           make-buffer buffer-make-completer
           buffer-clear buffer-refresh buffer-draw
-          buffer-row buffer-col)
-  (import (chibi) (chibi stty) (srfi 9) (srfi 33))
+          buffer-row buffer-col
+          make-keymap make-standard-keymap)
+  (import (chibi) (chibi stty) (chibi process) (srfi 9) (srfi 33))
   (include "edit-line.scm"))
