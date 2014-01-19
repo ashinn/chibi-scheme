@@ -15,7 +15,8 @@
           signal/stop       signal/tty-stop    signal/tty-input
           signal/tty-output wait/no-hang
           call-with-process-io
-          process->string process->string-list process->output+error)
+          process->string process->sexp
+          process->string-list process->output+error)
   (import (chibi) (chibi io) (chibi string) (chibi filesystem))
   (cond-expand (threads (import (srfi 18) (srfi 33))) (else #f))
   (include-shared "process")
