@@ -1864,7 +1864,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #endif
       {
         i = snprintf(numbuf, NUMBUF_LEN, "%.15g", f);
-        if (f == trunc(f) && ! strchr(numbuf, '.')) {
+        if (!strchr(numbuf, '.') && !strchr(numbuf, 'e')) {
           numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
         }
       }
