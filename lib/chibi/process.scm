@@ -113,6 +113,9 @@
        (waitpid pid 0)
        res))))
 
+(define (process->sexp str)
+  (call-with-input-string (process->string str) read))
+
 (define (process->output+error str)
   (call-with-process-io
    str
