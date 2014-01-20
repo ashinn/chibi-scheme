@@ -1474,6 +1474,7 @@ sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
   sexp r=SEXP_VOID;
   sexp_gc_var1(tmp);
+  if (b == SEXP_ONE) return a;
   sexp_gc_preserve1(ctx, tmp);
   switch ((at * SEXP_NUM_NUMBER_TYPES) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
@@ -1548,6 +1549,7 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
   int at=sexp_number_type(a), bt=sexp_number_type(b);
   sexp r=SEXP_VOID;
   sexp_gc_var1(tmp);
+  if (b == SEXP_ONE) return SEXP_ZERO;
   sexp_gc_preserve1(ctx, tmp);
   switch ((at * SEXP_NUM_NUMBER_TYPES) + bt) {
   case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
