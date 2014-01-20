@@ -1212,6 +1212,8 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     /* ... FALLTHROUGH ... */
   case SEXP_NUM_RAT_RAT:
     tmp2 = sexp_make_ratio(ctx, sexp_ratio_numerator(b), sexp_ratio_denominator(b));
+    if (sexp_bignump(sexp_ratio_numerator(tmp2)))
+      sexp_ratio_numerator(tmp2) = sexp_copy_bignum(ctx, NULL, sexp_ratio_numerator(tmp2), 0);
     sexp_negate_exact(sexp_ratio_numerator(tmp2));
     r = sexp_ratio_add(ctx, a, tmp2);
     if (negatep) {
