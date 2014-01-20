@@ -404,6 +404,17 @@
 (be-like-begin sequence)
 (test 4 (sequence 1 2 3 4))
 
+(define-syntax jabberwocky
+  (syntax-rules ()
+    ((_ hatter)
+     (begin
+       (define march-hare 42)
+       (define-syntax hatter
+         (syntax-rules ()
+           ((_) march-hare)))))))
+(jabberwocky mad-hatter)
+(test 42 (mad-hatter))
+
 (test 'ok (let ((=> #f)) (cond (#t => 'ok))))
 
 (test-end)
