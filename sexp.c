@@ -512,7 +512,7 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
   return exn;
 }
 
-sexp sexp_string_cat3 (sexp ctx, char *pre, char *mid, char* suf) {
+sexp sexp_string_cat3 (sexp ctx, const char *pre, const char *mid, const char* suf) {
   int plen=strlen(pre), mlen=strlen(mid), slen=strlen(suf);
   char *s;
   sexp str;
@@ -3145,4 +3145,3 @@ void sexp_init (void) {
 #endif
   }
 }
-

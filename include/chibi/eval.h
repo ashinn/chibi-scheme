@@ -54,7 +54,7 @@ SEXP_API const char** sexp_opcode_names;
 
 /**************************** prototypes ******************************/
 
-SEXP_API void sexp_warn (sexp ctx, char *msg, sexp x);
+SEXP_API void sexp_warn (sexp ctx, const char *msg, sexp x);
 SEXP_API void sexp_scheme_init (void);
 SEXP_API sexp sexp_make_eval_context (sexp context, sexp stack, sexp env, sexp_uint_t size, sexp_uint_t max_size);
 SEXP_API sexp sexp_make_child_context (sexp context, sexp lambda);
