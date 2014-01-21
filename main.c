@@ -363,7 +363,8 @@ void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
   char *impmod;
 #endif
-  char *arg, *prefix=NULL, *suffix=NULL, *main_symbol=NULL, *main_module=NULL;
+  char *arg;
+  const char *prefix=NULL, *suffix=NULL, *main_symbol=NULL, *main_module=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     no_script=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
@@ -439,7 +440,7 @@ void run_main (int argc, char **argv) {
         sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
       break;
     case 'q':
-      argv[i--] = "-xchibi";
+      argv[i--] = (char*)"-xchibi";
       break;
     case 'A':
       init_context();
@@ -491,7 +492,7 @@ void run_main (int argc, char **argv) {
       if (! init_loaded++) {
         init_context();
         env = sexp_load_standard_env(ctx, env, SEXP_SEVEN);
-      } 
+      }
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       if (!sexp_save_image(ctx, arg))
         exit_failure();

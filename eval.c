@@ -33,7 +33,7 @@ sexp sexp_compile_error (sexp ctx, const char *message, sexp o) {
   return exn;
 }
 
-void sexp_warn (sexp ctx, char *msg, sexp x) {
+void sexp_warn (sexp ctx, const char *msg, sexp x) {
   sexp_gc_var1(out);
   int strictp = sexp_truep(sexp_global(ctx, SEXP_G_STRICT_P));
   sexp_gc_preserve1(ctx, out);
@@ -1319,7 +1319,7 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 
 sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
-  char *suffix;
+  const char *suffix;
 #endif
   sexp_gc_var5(ctx2, x, in, res, out);
   if (!env) env = sexp_context_env(ctx);
