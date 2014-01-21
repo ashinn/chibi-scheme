@@ -224,6 +224,10 @@
     (let*-values (((root rem) (exact-integer-sqrt (expt 2 121))))
       (list root rem)))
 
+(test '(31622776601683793319 62545769258890964239)
+    (let*-values (((root rem) (exact-integer-sqrt (expt 10 39))))
+      (list root rem)))
+
 (let*-values (((root rem) (exact-integer-sqrt (expt 2 140))))
   (test 0 rem)
   (test (expt 2 140) (square root)))

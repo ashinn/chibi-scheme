@@ -480,7 +480,8 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
   sexp_bignum_sign(b1) = 1;
   q = SEXP_ZERO;
   x = sexp_make_bignum(ctx, sexp_bignum_length(a));
-  while (sexp_bignum_compare(a1, b1) > 0) {
+  while (sexp_bignum_compare_abs(a1, b1) > 0) {
+    /* guess divisor x */
     alen = sexp_bignum_hi(a1);
     d = sexp_bignum_data(a1)[alen-1] / sexp_bignum_data(b1)[blen-1];
     memset(sexp_bignum_data(x), 0, sexp_bignum_length(x)*sizeof(sexp_uint_t));
@@ -491,13 +492,25 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
     } else {
       sexp_bignum_data(x)[alen - blen] = d;
     }
+    /* update quotient q and remainder a1 estimates */
     y = sexp_bignum_mul(ctx, NULL, b1, x);
-    a1 = sexp_bignum_sub(ctx, NULL, a1, y);
-    q = (sign < 0) ? sexp_sub(ctx, q, x) : sexp_add(ctx, q, x);
-    if (sexp_bignum_sign(a1) < 0) {
-      sexp_bignum_sign(a1) = 1;
+    if (sign < 0) {
+      a1 = sexp_bignum_add(ctx, NULL, a1, y);
+      q = sexp_sub(ctx, q, x);
+    } else {
+      a1 = sexp_bignum_sub(ctx, NULL, a1, y);
+      q = sexp_add(ctx, q, x);
+    }
+    /* flip the sign if we overshot in our estimate */
+    if (sexp_bignum_sign(a1) != sign) {
+      sexp_bignum_sign(a1) = -sign;
       sign *= -1;
     }
+  }
+  /* adjust signs */
+  if (sign < 0) {
+    q = sexp_sub(ctx, q, SEXP_ONE);
+    a1 = sexp_add(ctx, a1, b1);
   }
   if (sexp_bignum_sign(a) * sexp_bignum_sign(b) < 0) {
     sexp_negate_exact(q);
