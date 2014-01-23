@@ -78,61 +78,34 @@ sexp sexp_maybe_wrap_error (sexp ctx, sexp obj) {
 
 /********************** environment utilities ***************************/
 
-/* Look for the first defined instance of the variable.  If not found, */
-/* return the first undefined instance.  */
-static sexp sexp_env_cell_loc1 (sexp env, sexp key, int localp, sexp *varenv,
-                                sexp *undefined, sexp *undefined_env) {
+static sexp sexp_env_cell_loc1 (sexp env, sexp key, int localp, sexp *varenv) {
   sexp ls;
-
   do {
 #if SEXP_USE_RENAME_BINDINGS
     for (ls=sexp_env_renames(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
       if (sexp_car(ls) == key) {
-        /* export-all hack - if this cell is undefined, only use it if */
-        /* there is no other defined cell that matches. */
-        /* TODO: order the environments properly and remove this */
-        if (sexp_pairp(sexp_cdr(ls)) && sexp_cdr(sexp_cdr(ls)) == SEXP_UNDEF) {
-          if (!undefined) {
-            *undefined_env = env;
-            *undefined = sexp_cdr(ls);
-          }
-        } else {
-          if (varenv) *varenv = env;
-          return sexp_cdr(ls);
-        }
+        if (varenv) *varenv = env;
+        return sexp_cdr(ls);
       }
 #endif
     for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
       if (sexp_car(ls) == key) {
-        if (sexp_cdr(ls) == SEXP_UNDEF) {
-          if (!undefined) {
-            *undefined_env = env;
-            *undefined = ls;
-          }
-        } else {
-          if (varenv) *varenv = env;
-          return ls;
-        }
+        if (varenv) *varenv = env;
+        return ls;
       }
     env = (localp ? NULL : sexp_env_parent(env));
   } while (env && sexp_envp(env));
-
   return NULL;
 }
 
 static sexp sexp_env_cell_loc (sexp ctx, sexp env, sexp key, int localp, sexp *varenv) {
-  sexp cell, undefined = NULL, undefined_env = NULL;
-  cell = sexp_env_cell_loc1(env, key, localp, varenv, &undefined, &undefined_env);
+  sexp cell = sexp_env_cell_loc1(env, key, localp, varenv);
   while (!cell && sexp_synclop(key)) {
     if (sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_context_fv(ctx)))
         && sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_synclo_free_vars(key))))
       env = sexp_synclo_env(key);
     key = sexp_synclo_expr(key);
-    cell = sexp_env_cell_loc1(env, key, 0, varenv, &undefined, &undefined_env);
-  }
-  if (!cell && undefined) {
-    if (varenv) *varenv = undefined_env;
-    return undefined;
+    cell = sexp_env_cell_loc1(env, key, 0, varenv);
   }
   return cell;
 }
@@ -2330,20 +2303,32 @@ sexp sexp_make_standard_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version
 #define sexp_same_bindingp(x, y) (sexp_env_value(x) == sexp_env_value(y))
 #endif
 
+/* Rewrite to in place: to => empty->imports->to */
 sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from, sexp ls, sexp immutp) {
   sexp oldname, newname;
-  sexp_gc_var2(value, oldcell);
-  sexp_gc_preserve2(ctx, value, oldcell);
+  sexp_gc_var3(value, oldcell, tmp);
+  sexp_gc_preserve3(ctx, value, oldcell, tmp);
   if (! sexp_envp(to)) to = sexp_context_env(ctx);
   if (! sexp_envp(from)) from = sexp_context_env(ctx);
+  /* create an empty imports env frame */
   value = sexp_make_env(ctx);
   sexp_env_parent(value) = sexp_env_parent(to);
   sexp_env_parent(to) = value;
-  sexp_immutablep(value) = sexp_truep(immutp);
-  if (sexp_not(ls)) {
-    sexp_env_bindings(value) = sexp_env_bindings(from);
+  sexp_env_lambda(value) = sexp_env_lambda(to);
+  sexp_env_lambda(to) = NULL;
+  sexp_env_bindings(value) = sexp_env_bindings(to);
+  sexp_env_bindings(to) = SEXP_NULL;
 #if SEXP_USE_RENAME_BINDINGS
-    sexp_env_renames(value) = sexp_env_renames(from);
+  sexp_env_renames(value) = sexp_env_renames(to);
+  sexp_env_renames(to) = SEXP_NULL;
+#endif
+  sexp_immutablep(value) = sexp_immutablep(to);
+  sexp_immutablep(to) = sexp_truep(immutp);
+  /* import the bindings, one at a time or in bulk */
+  if (sexp_not(ls)) {
+    sexp_env_bindings(to) = sexp_env_bindings(from);
+#if SEXP_USE_RENAME_BINDINGS
+    sexp_env_renames(to) = sexp_env_renames(from);
 #endif
   } else {
     for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
@@ -2358,7 +2343,7 @@ sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from,
 #if SEXP_USE_RENAME_BINDINGS
         sexp_env_rename(ctx, to, newname, value);
 #else
-        sexp_env_define(ctx, to, newname, sexp_cdr(value));
+        sexp_env_push(ctx, to, tmp, newname, sexp_cdr(value));
 #endif
 #if SEXP_USE_WARN_UNDEFS
         if (oldcell
@@ -2371,7 +2356,19 @@ sexp sexp_env_import_op (sexp ctx, sexp self, sexp_sint_t n, sexp to, sexp from,
       }
     }
   }
-  sexp_gc_release2(ctx);
+  /* create a new empty frame for future defines */
+  value = sexp_make_env(ctx);
+  sexp_env_parent(value) = sexp_env_parent(to);
+  sexp_env_lambda(value) = sexp_env_lambda(to);
+  sexp_env_bindings(value) = sexp_env_bindings(to);
+#if SEXP_USE_RENAME_BINDINGS
+  sexp_env_renames(value) = sexp_env_renames(to);
+  sexp_env_renames(to) = SEXP_NULL;
+#endif
+  sexp_env_parent(to) = value;
+  sexp_env_bindings(to) = SEXP_NULL;
+  sexp_immutablep(to) = 0;
+  sexp_gc_release3(ctx);
   return SEXP_VOID;
 }
 
