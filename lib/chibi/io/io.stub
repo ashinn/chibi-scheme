@@ -38,7 +38,7 @@
 (define-c sexp (get-output-bytevector "sexp_get_output_bytevector")
   ((value ctx sexp) (value self sexp) sexp))
 
-(define-c sexp (string-count "sexp_string_count")
+(define-c sexp (string-count-chars "sexp_string_count")
   ((value ctx sexp) (value self sexp) sexp sexp sexp (default NULL sexp)))
 (define-c sexp (%string->utf8 "sexp_string_to_utf8")
   ((value ctx sexp) (value self sexp) sexp))

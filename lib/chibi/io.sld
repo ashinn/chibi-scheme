@@ -8,7 +8,7 @@
           make-null-output-port make-null-input-port
           make-broadcast-port make-concatenated-port
           make-generated-input-port make-filtered-output-port
-          make-filtered-input-port string-count
+          make-filtered-input-port string-count-chars
           open-input-bytevector open-output-bytevector get-output-bytevector
           string->utf8 utf8->string
           write-string write-u8 read-u8 peek-u8 send-file

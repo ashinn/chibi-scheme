@@ -136,7 +136,7 @@
            ((if (pair? res) (= 0 (car res)) #t)
             eof)
            (else
-            (port-line-set! in (+ (string-count #\newline (cadr res) 0)
+            (port-line-set! in (+ (string-count-chars #\newline (cadr res) 0)
                                   (port-line in)))
             (cadr res)))))))
 
@@ -161,7 +161,7 @@
       (error "string to small to read chars" str n))
   (let* ((in (if (pair? o) (car o) (current-input-port)))
          (res (%read-string! str n in)))
-    (port-line-set! in (+ (string-count #\newline str 0 n) (port-line in)))
+    (port-line-set! in (+ (string-count-chars #\newline str 0 n) (port-line in)))
     res))
 
 ;;> Sends the entire contents of a file or input port to an output port.
