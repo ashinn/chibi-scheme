@@ -135,8 +135,7 @@ static sexp sexp_bit_xor (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
 /* should probably split into left and right shifts, that's a better */
 /* interface anyway */
 static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp count) {
-  sexp_uint_t tmp;
-  sexp_sint_t c;
+  sexp_sint_t c, tmp;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, offset, bit_shift, j;
   sexp_gc_var1(res);
@@ -177,6 +176,7 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
         res = sexp_make_fixnum(sexp_bignum_sign(i) > 0 ? 0 : -1);
       } else {
         res = sexp_make_bignum(ctx, len - offset + 1);
+        sexp_bignum_sign(res) = sexp_bignum_sign(i);
         for (j=len-offset, tmp=0; j>=0; j--) {
           sexp_bignum_data(res)[j]
             = (sexp_bignum_data(i)[j+offset] >> bit_shift)+ tmp;
@@ -188,6 +188,7 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
       offset = c / (sizeof(sexp_uint_t)*CHAR_BIT);
       bit_shift = c - offset*(sizeof(sexp_uint_t)*CHAR_BIT);
       res = sexp_make_bignum(ctx, len + offset + 1);
+      sexp_bignum_sign(res) = sexp_bignum_sign(i);
       for (j=tmp=0; j<len; j++) {
         sexp_bignum_data(res)[j+offset]
           = (sexp_bignum_data(i)[j] << bit_shift) + tmp;
