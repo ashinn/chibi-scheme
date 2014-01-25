@@ -146,17 +146,6 @@
         ((>= i end))
       (write-u8 (bytevector-u8-ref vec i) out))))
 
-(define (make-list n . o)
-  (let ((init (and (pair? o) (car o))))
-    (let lp ((i 0) (res '()))
-      (if (>= i n) res (lp (+ i 1) (cons init res))))))
-
-(define (list-copy ls)
-  (let lp ((ls ls) (res '()))
-    (if (pair? ls)
-        (lp (cdr ls) (cons (car ls) res))
-        (append (reverse res) ls))))
-
 (define (list-set! ls k x)
   (cond ((null? ls) (error "invalid list index"))
         ((zero? k) (set-car! ls x))

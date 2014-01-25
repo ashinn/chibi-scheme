@@ -1,6 +1,6 @@
 
 (cond-expand
- (chibi (import (chibi) (chibi test) (srfi 38)))
+ (chibi (import (chibi) (chibi test) (srfi 1) (srfi 38)))
  (chicken (use chicken test srfi-38)))
 
 (test-begin "read/write")
@@ -28,11 +28,6 @@
            (value expr))
        (test str (write-to-string value #t))
        (test str (write-to-string (read-from-string str) #t))))))
-
-(define (circular-list . args)
-  (let ((res (map (lambda (x) x) args)))
-    (set-cdr! (list-tail res (- (length res) 1)) res)
-    res))
 
 (test-io "(1)" (list 1))
 (test-io "(1 2)" (list 1 2))
