@@ -468,30 +468,53 @@ sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
 }
 
 sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
-  sexp_uint_t d;
-  sexp_sint_t alen, blen=sexp_bignum_hi(b), sign=1;
+  sexp_luint_t d;
+  sexp_uint_t dlo, dhi;
+  sexp_sint_t alen, blen=sexp_bignum_hi(b), sign=1, off=0;
   sexp_gc_var5(q, x, y, a1, b1);
   if (blen == 1 && sexp_bignum_data(b)[0] == 0)
     return sexp_xtype_exception(ctx, NULL, "divide by zero", a);
   sexp_gc_preserve5(ctx, q, x, y, a1, b1);
   a1 = sexp_copy_bignum(ctx, NULL, a, 0);
   sexp_bignum_sign(a1) = 1;
+  /* fast path for single bigit divisor */
+  if (blen == 1) {
+    b1 = sexp_make_bignum(ctx, 1);
+    sexp_bignum_data(b1)[0] = sexp_bignum_fxdiv(ctx, a1, sexp_bignum_data(b)[0], 0);
+    *rem = sexp_bignum_normalize(b1);
+    if (sexp_bignum_sign(a) * sexp_bignum_sign(b) < 0) {
+      sexp_negate_exact(a1);
+    }
+    if (sexp_bignum_sign(a) < 0) {
+      sexp_negate_exact(*rem);
+    }
+    sexp_gc_release5(ctx);
+    return a1;
+  }
+  /* general case */
   b1 = sexp_copy_bignum(ctx, NULL, b, 0);
   sexp_bignum_sign(b1) = 1;
   q = SEXP_ZERO;
   x = sexp_make_bignum(ctx, sexp_bignum_length(a));
-  while (sexp_bignum_compare_abs(a1, b1) > 0) {
+  while (sexp_bignum_compare_abs(a1, b1) > 0) { /* a1, b1 at least 2 bigits */
     /* guess divisor x */
     alen = sexp_bignum_hi(a1);
-    d = sexp_bignum_data(a1)[alen-1] / sexp_bignum_data(b1)[blen-1];
-    memset(sexp_bignum_data(x), 0, sexp_bignum_length(x)*sizeof(sexp_uint_t));
+    sexp_bignum_data(x)[off] = 0;
+    if (off > 0) sexp_bignum_data(x)[off-1] = 0;
+    off = alen - blen + 1;
+    d = (((sexp_luint_t)sexp_bignum_data(a1)[alen-1] << (sizeof(sexp_uint_t)*8))
+                       + sexp_bignum_data(a1)[alen-2])
+      / (((sexp_luint_t)sexp_bignum_data(b1)[blen-1] << (sizeof(sexp_uint_t)*8))
+                       + sexp_bignum_data(b1)[blen-2]);
     if (d == 0) {
-      sexp_bignum_data(x)[alen - blen - 1] =
-        (((sexp_luint_t)sexp_bignum_data(a1)[alen-1] << (sizeof(sexp_uint_t)*8))
-         + sexp_bignum_data(a1)[alen-2]) / sexp_bignum_data(b1)[blen-1];
-    } else {
-      sexp_bignum_data(x)[alen - blen] = d;
+      d = ((sexp_luint_t)sexp_bignum_data(a1)[alen-1] << (sizeof(sexp_uint_t)*8)) + (sexp_luint_t)sexp_bignum_data(a1)[alen-2];
+      d /= sexp_bignum_data(b1)[blen-1];
+      off--;
     }
+    dhi = d >> (sizeof(sexp_uint_t)*8);
+    dlo = d & (((sexp_luint_t)1<<(sizeof(sexp_uint_t)*8))-1);
+    sexp_bignum_data(x)[off] = dhi;
+    if (off > 0) sexp_bignum_data(x)[off-1] = dlo;
     /* update quotient q and remainder a1 estimates */
     y = sexp_bignum_mul(ctx, NULL, b1, x);
     if (sign < 0) {
@@ -512,10 +535,10 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
     q = sexp_sub(ctx, q, SEXP_ONE);
     a1 = sexp_add(ctx, a1, b1);
   }
+  *rem = a1;
   if (sexp_bignum_sign(a) * sexp_bignum_sign(b) < 0) {
     sexp_negate_exact(q);
   }
-  *rem = a1;
   if (sexp_bignum_sign(a) < 0) {
     sexp_negate_exact(*rem);
   }
