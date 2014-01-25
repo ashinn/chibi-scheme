@@ -10,16 +10,9 @@
         (append-reverse rev x)
         (lp (cons x rev) (car ls) (cdr ls)))))
 
-(define (make-list n . o)
-  (let ((default (if (pair? o) (car o))))
-    (let lp ((n n) (res '()))
-      (if (<= n 0) res (lp (- n 1) (cons default res))))))
-
 (define (list-tabulate n proc)
   (let lp ((n (- n 1)) (res '()))
     (if (< n 0) res (lp (- n 1) (cons (proc n) res)))))
-
-(define (list-copy ls) (reverse! (reverse ls)))
 
 (define (circular-list x . args)
   (let ((res (cons x args)))

@@ -23,6 +23,8 @@
 
 (define (list . args) args)
 
+(define (list-copy ls) (reverse! (reverse ls)))
+
 (define (list-tail ls k)
   (if (eq? k 0)
       ls
@@ -443,6 +445,11 @@
 (define (string-ci>=? s . ls) (string-cmp-ls >= #t s ls))
 
 ;; list utils
+
+(define (make-list n . o)
+  (let ((default (if (pair? o) (car o))))
+    (let lp ((n n) (res '()))
+      (if (<= n 0) res (lp (- n 1) (cons default res))))))
 
 (define (member obj ls . o)
   (let ((eq (if (pair? o) (car o) equal?)))
