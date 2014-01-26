@@ -87,11 +87,14 @@ sexp sexp_copy_bignum (sexp ctx, sexp dst, sexp a, sexp_uint_t len0) {
     dst = sexp_alloc_tagged(ctx, size, SEXP_BIGNUM);
     sexp_bignum_length(dst) = len;
   }
+  if (sexp_bignum_length(a) < len)
+    len = sexp_bignum_length(a);
+
   sexp_bignum_sign(dst) = sexp_bignum_sign(a);
   memset(sexp_bignum_data(dst), 0,
          sexp_bignum_length(dst)*sizeof(sexp_uint_t));
   memmove(sexp_bignum_data(dst), sexp_bignum_data(a),
-          sexp_bignum_length(a)*sizeof(sexp_uint_t));
+          len*sizeof(sexp_uint_t));
   return dst;
 }
 
@@ -594,6 +597,8 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
   res = sexp_sqrt(ctx, NULL, 1, res);
   if (sexp_flonump(res) &&
       sexp_flonum_value(res) > SEXP_MAX_ACCURATE_FLONUM_SQRT) {
+    if (!isfinite(sexp_flonum_value(res)))
+      res = sexp_make_flonum(ctx, 1e+154);
     res = sexp_double_to_bignum(ctx, sexp_flonum_value(res));
   loop:                           /* until 0 <= a - res*res < 2*res + 1 */
     rem = sexp_mul(ctx, res, res);
