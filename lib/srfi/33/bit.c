@@ -132,12 +132,21 @@ static sexp sexp_bit_xor (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   return sexp_bignum_normalize(res);
 }
 
+static int log2i(sexp_uint_t v) {
+  int i;
+  for (i = 0; i < sizeof(v)*8; i++)
+    if (((sexp_uint_t)1<<(i+1)) > v)
+      break;
+  return i;
+}
+
 /* should probably split into left and right shifts, that's a better */
 /* interface anyway */
 static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp count) {
-  sexp_sint_t c, tmp;
+  sexp_uint_t tmp;
+  sexp_sint_t c;
 #if SEXP_USE_BIGNUMS
-  sexp_sint_t len, offset, bit_shift, j;
+  sexp_sint_t len, offset, bit_shift, tail_shift, j;
   sexp_gc_var1(res);
 #else
   sexp res;
@@ -152,10 +161,10 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
     } else {
       tmp = (sexp_uint_t)sexp_unbox_fixnum(i) << c;
 #if SEXP_USE_BIGNUMS
-      if (((tmp >> c) == sexp_unbox_fixnum(i))
-          && (tmp < SEXP_MAX_FIXNUM) && (tmp > SEXP_MIN_FIXNUM)) {
+      if ((log2i(sexp_unbox_fixnum(i)) + c)
+          < (sizeof(sexp_uint_t)*CHAR_BIT - SEXP_FIXNUM_BITS)) {
 #endif
-        res = sexp_make_fixnum(tmp);
+        res = sexp_make_fixnum(tmp * sexp_fx_sign(i));
 #if SEXP_USE_BIGNUMS
       } else {
         sexp_gc_preserve1(ctx, res);
@@ -187,14 +196,15 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
     } else {
       offset = c / (sizeof(sexp_uint_t)*CHAR_BIT);
       bit_shift = c - offset*(sizeof(sexp_uint_t)*CHAR_BIT);
+      tail_shift = (sizeof(sexp_uint_t)*CHAR_BIT-bit_shift);
       res = sexp_make_bignum(ctx, len + offset + 1);
       sexp_bignum_sign(res) = sexp_bignum_sign(i);
       for (j=tmp=0; j<len; j++) {
         sexp_bignum_data(res)[j+offset]
           = (sexp_bignum_data(i)[j] << bit_shift) + tmp;
-        tmp = sexp_bignum_data(i)[j] >> (sizeof(sexp_uint_t)*CHAR_BIT-bit_shift);
+        tmp = sexp_bignum_data(i)[j] >> tail_shift;
       }
-      sexp_bignum_data(res)[len+offset] = tmp;
+      if (bit_shift != 0) sexp_bignum_data(res)[len+offset] = tmp;
     }
 #endif
   } else {
