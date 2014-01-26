@@ -23,8 +23,6 @@
 
 (define (list . args) args)
 
-(define (list-copy ls) (reverse! (reverse ls)))
-
 (define (list-tail ls k)
   (if (eq? k 0)
       ls
@@ -450,6 +448,12 @@
   (let ((default (if (pair? o) (car o))))
     (let lp ((n n) (res '()))
       (if (<= n 0) res (lp (- n 1) (cons default res))))))
+
+(define (list-copy ls)
+  (let lp ((ls ls) (res '()))
+    (if (pair? ls)
+        (lp (cdr ls) (cons (car ls) res))
+        (append (reverse res) ls))))
 
 (define (member obj ls . o)
   (let ((eq (if (pair? o) (car o) equal?)))
