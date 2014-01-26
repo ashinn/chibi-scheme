@@ -162,6 +162,12 @@ automatically called with the following signature:
                     const char* version, sexp_abi_identifier_t abi);
 }
 
+Note, as R7RS (and earlier reports) states, "in contrast to other
+dialects of Lisp, the order of evaluation is unspecified [...]".
+Chibi is one of the few implementations which use a right-to-left
+evaluation order, which can be surprising to programmers coming from
+other languages.
+
 \subsection{Module System}
 
 Chibi uses the R7RS module system natively, which is a simple static
