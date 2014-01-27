@@ -162,6 +162,8 @@ SEXP_API sexp sexp_asin(sexp ctx, sexp self, sexp_sint_t n, sexp z);
 SEXP_API sexp sexp_acos(sexp ctx, sexp self, sexp_sint_t n, sexp z);
 SEXP_API sexp sexp_atan(sexp ctx, sexp self, sexp_sint_t n, sexp z);
 SEXP_API sexp sexp_sqrt(sexp ctx, sexp self, sexp_sint_t n, sexp z);
+SEXP_API sexp sexp_exact_sqrt(sexp ctx, sexp self, sexp_sint_t n, sexp z);
+SEXP_API sexp sexp_inexact_sqrt(sexp ctx, sexp self, sexp_sint_t n, sexp z);
 SEXP_API sexp sexp_round(sexp ctx, sexp self, sexp_sint_t n, sexp x);
 SEXP_API sexp sexp_trunc(sexp ctx, sexp self, sexp_sint_t n, sexp x);
 SEXP_API sexp sexp_floor(sexp ctx, sexp self, sexp_sint_t n, sexp x);

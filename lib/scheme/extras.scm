@@ -57,14 +57,8 @@
   (values (floor-quotient n m) (floor-remainder n m)))
 
 (define (exact-integer-sqrt x)
-  (let ((res (sqrt x)))
-    (if (exact? res)
-        (values res 0)
-        (let lp ((res (inexact->exact (truncate res))))
-          (let ((rem (- x (* res res))))
-            (if (negative? rem)
-                (lp (quotient (+ res (quotient x res)) 2))
-                (values res rem)))))))
+  (let ((res (exact-sqrt x)))
+    (values (car res) (cdr res))))
 
 ;; Adapted from Bawden's algorithm.
 (define (rationalize x e)
