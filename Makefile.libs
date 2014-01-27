@@ -9,6 +9,7 @@
 # install configuration
 
 CC        ?= cc
+AR        ?= ar
 CD        ?= cd
 RM        ?= rm -f
 LS        ?= ls
