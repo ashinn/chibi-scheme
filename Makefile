@@ -99,6 +99,9 @@ libchibi-sexp$(SO): $(SEXP_OBJS)
 libchibi-scheme$(SO): $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -o $@ $^ $(XLDFLAGS)
 
+libchibi-scheme.a: $(SEXP_OBJS) $(EVAL_OBJS)
+	$(AR) rcs $@ $^
+
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
 
