@@ -806,6 +806,37 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_string_to_number(sexp ctx, sexp str)} - \scheme{string->number}}
 ]
 
+\subsection{Exceptions}
+
+Exceptions can be created with the following:
+
+\itemlist[
+
+\item{\ccode{sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants, sexp procedure, sexp source)}
+\p{Create an exception of the given \var{kind} (a symbol), with the
+string \var{message}, and \var{irritants} list.  \var{procedure} and
+\var{source} provide information about the error location.  From a C
+function, \var{procedure} should generally be \ccode{self}.}}
+
+\item{\ccode{sexp sexp_user_exception (sexp ctx, sexp self, const char *msg, sexp x)}
+\p{Shortcut for an exception of kind \ccode{user}, with the given message and single irritant.}}
+
+\item{\ccode{sexp sexp_type_exception (sexp ctx, sexp self, sexp_uint_t type_id, sexp x)}
+\p{Shortcut for an exception of kind \ccode{type}, where \var{x} was
+expected to be of type \var{type_id} but wasn't.}}
+
+\item{\ccode{sexp sexp_xtype_exception (sexp ctx, sexp self, const char *msg, sexp x)}
+\p{Shortcut for an exception of kind \ccode{type}, for more general
+domain errors, where \var{x} failed to meet the restrictions in \var{msg}.}}
+
+]
+
+Returning an exception from a C function by default \emph{raises} that
+exception in the VM.  If you want to pass an exception as a first
+class value, you have to wrap it first:
+
+\ccode{sexp sexp_maybe_wrap_error (sexp ctx, sexp obj)}
+
 \subsection{Customizing}
 
 You can add your own types and primitives with the following functions.
