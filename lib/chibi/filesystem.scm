@@ -144,7 +144,9 @@
 (define (file-character? x) (file-test-mode S_ISCHR x))
 (define (file-block? x) (file-test-mode S_ISBLK x))
 (define (file-fifo? x) (file-test-mode S_ISFIFO x))
-(define (file-link? x) (file-test-mode S_ISLNK x))
+(define (file-link? x)
+  (let ((st (if (stat? x) x (file-link-status x))))
+    (and st (S_ISLNK (stat-mode st)))))
 (define (file-socket? x) (file-test-mode S_ISSOCK x))
 (define (file-exists? x) (and (if (stat? x) #t (file-status x)) #t))
 
