@@ -583,7 +583,8 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
 
 #define SEXP_MAX_ACCURATE_FLONUM_SQRT 1073741824.0 /* 2^30 */
 
-sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
+/* Babylonian method */
+sexp sexp_bignum_sqrt (sexp ctx, sexp a, sexp* rem_out) {
   sexp_gc_var4(res, rem, tmp, tmpa);
   if (! sexp_bignump(a)) return sexp_type_exception(ctx, NULL, SEXP_BIGNUM, a);
   sexp_gc_preserve4(ctx, res, rem, tmp, tmpa);
@@ -594,10 +595,10 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
     sexp_negate(a);
   }
   res = sexp_make_flonum(ctx, sexp_bignum_to_double(a));
-  res = sexp_sqrt(ctx, NULL, 1, res);
+  res = sexp_inexact_sqrt(ctx, NULL, 1, res);
   if (sexp_flonump(res) &&
       sexp_flonum_value(res) > SEXP_MAX_ACCURATE_FLONUM_SQRT) {
-    if (!isfinite(sexp_flonum_value(res)))
+    if (isinf(sexp_flonum_value(res)))
       res = sexp_make_flonum(ctx, 1e+154);
     res = sexp_double_to_bignum(ctx, sexp_flonum_value(res));
   loop:                           /* until 0 <= a - res*res < 2*res + 1 */
@@ -615,9 +616,7 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a) {  /* Babylonian method */
       goto loop;
     }
     /* convert back to inexact if non-zero remainder */
-    rem = sexp_bignum_normalize(rem);
-    if (rem != SEXP_ZERO)
-      res = sexp_make_flonum(ctx, sexp_fixnump(res) ? sexp_unbox_fixnum(res) : sexp_bignum_to_double(res));
+    *rem_out = sexp_bignum_normalize(rem);
   }
   sexp_gc_release4(ctx);
   return sexp_bignum_normalize(res);

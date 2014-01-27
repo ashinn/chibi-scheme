@@ -1452,50 +1452,78 @@ sexp sexp_log (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
   return sexp_make_flonum(ctx, log(d));
 }
 
-sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
-#if SEXP_USE_COMPLEX || SEXP_USE_BIGNUMS
+sexp sexp_inexact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
+#if SEXP_USE_COMPLEX
   int negativep = 0;
 #endif
   double d, r;
   sexp_gc_var1(res);
-  sexp_gc_preserve1(ctx, res);
-#if SEXP_USE_BIGNUMS
-  if (sexp_bignump(z)) {
-    negativep = sexp_bignum_sign(z) < 0;
-    res = sexp_bignum_sqrt(ctx, z);
-  } else {
-#endif
   if (sexp_flonump(z))
     d = sexp_flonum_value(z);
   else if (sexp_fixnump(z))
     d = (double)sexp_unbox_fixnum(z);
   maybe_convert_ratio(z)        /* XXXX add ratio sqrt */
   maybe_convert_complex(z, sexp_complex_sqrt)
-  else {
-    sexp_gc_release1(ctx);
+  else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
-  }
 #if SEXP_USE_COMPLEX
   if (d < 0) {
     negativep = 1;
     d = -d;
   }
 #endif
+  sexp_gc_preserve1(ctx, res);
   r = sqrt(d);
   if (sexp_fixnump(z)
       && (((sexp_uint_t)r*(sexp_uint_t)r)==abs(sexp_unbox_fixnum(z))))
     res = sexp_make_fixnum(round(r));
   else
     res = sexp_make_flonum(ctx, r);
-#if SEXP_USE_BIGNUMS
-  }  /* !sexp_bignump(z) */
-#endif
 #if SEXP_USE_COMPLEX
   if (negativep)
     res = sexp_make_complex(ctx, SEXP_ZERO, res);
 #endif
   sexp_gc_release1(ctx);
   return res;
+}
+
+#if SEXP_USE_BIGNUMS
+sexp sexp_exact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
+  sexp_gc_var2(res, rem);
+  sexp_gc_preserve2(ctx, res, rem);
+  if (sexp_bignump(z)) {
+    res = sexp_bignum_sqrt(ctx, z, &rem);
+    res = sexp_cons(ctx, res, rem);
+  } else {
+    res = sexp_inexact_sqrt(ctx, self, n, z);
+    if (sexp_flonump(res)) {
+      res = sexp_bignum_normalize(sexp_double_to_bignum(ctx, trunc(sexp_flonum_value(res))));
+    }
+    if (!sexp_exceptionp(res)) {
+      rem = sexp_mul(ctx, res, res);
+      rem = sexp_sub(ctx, z, rem);
+      res = sexp_cons(ctx, res, rem);
+    }
+  }
+  sexp_gc_release2(ctx);
+  return res;
+}
+#endif
+
+sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
+#if SEXP_USE_BIGNUMS
+  sexp_gc_var2(res, rem);
+  if (sexp_bignump(z)) {
+    sexp_gc_preserve2(ctx, res, rem);
+    res = sexp_bignum_sqrt(ctx, z, &rem);
+    rem = sexp_bignum_normalize(rem);
+    if (rem != SEXP_ZERO)
+      res = sexp_make_flonum(ctx, sexp_fixnump(res) ? sexp_unbox_fixnum(res) : sexp_bignum_to_double(res));
+    sexp_gc_release2(ctx);
+    return res;
+  }
+#endif
+  return sexp_inexact_sqrt(ctx, self, n, z);
 }
 
 #endif  /* SEXP_USE_MATH */
