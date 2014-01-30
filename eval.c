@@ -476,9 +476,7 @@ static void sexp_init_eval_context_bytecodes (sexp ctx) {
 
 void sexp_init_eval_context_globals (sexp ctx) {
   const char* user_path;
-  sexp_gc_var1(tmp);
   ctx = sexp_make_child_context(ctx, NULL);
-  sexp_gc_preserve1(ctx, tmp);
 #if ! SEXP_USE_NATIVE_X86
   sexp_init_eval_context_bytecodes(ctx);
 #endif
@@ -496,7 +494,6 @@ void sexp_init_eval_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = SEXP_FALSE;
   sexp_global(ctx, SEXP_G_ATOMIC_P) = SEXP_FALSE;
 #endif
-  sexp_gc_release1(ctx);
 }
 
 sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, sexp_uint_t max_size) {
