@@ -581,6 +581,27 @@ sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
 
 #if SEXP_USE_MATH
 
+/*
+ * a = x * 2^2n, with 0.1 <= x < 1.0 (base 2)  =>  sqrt(a) ~ 2^n
+ */
+sexp sexp_bignum_sqrt_estimate (sexp ctx, sexp a) {
+  sexp_uint_t alen=sexp_bignum_hi(a), adata_hi;
+  int nbits, i;
+  sexp_gc_var1(res);
+
+  adata_hi = sexp_bignum_data(a)[alen - 1];
+  for (i = sizeof(sexp_uint_t)*8-1; i > 0; i--)
+    if (adata_hi & (1ul << i))
+      break;
+  nbits = sizeof(sexp_uint_t) * 8 * (alen - 1) + i + 1;
+
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_fixnum_to_bignum(ctx, SEXP_TWO);
+  res = sexp_bignum_expt(ctx, res, sexp_make_fixnum(nbits / 2));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 #define SEXP_MAX_ACCURATE_FLONUM_SQRT 1073741824.0 /* 2^30 */
 
 /* Babylonian method */
@@ -599,8 +620,9 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a, sexp* rem_out) {
   if (sexp_flonump(res) &&
       sexp_flonum_value(res) > SEXP_MAX_ACCURATE_FLONUM_SQRT) {
     if (isinf(sexp_flonum_value(res)))
-      res = sexp_make_flonum(ctx, 1e+154);
-    res = sexp_double_to_bignum(ctx, sexp_flonum_value(res));
+      res = sexp_bignum_sqrt_estimate(ctx, a);
+    else
+      res = sexp_double_to_bignum(ctx, sexp_flonum_value(res));
   loop:                           /* until 0 <= a - res*res < 2*res + 1 */
     rem = sexp_mul(ctx, res, res);
     tmp = rem = sexp_sub(ctx, a, rem);
