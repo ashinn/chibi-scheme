@@ -62,11 +62,19 @@ sexp sexp_push_op(sexp ctx, sexp* loc, sexp x) {
 #endif
 
 sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_source_param) {
+#if SEXP_USE_TRACK_ALLOC_BACKTRACE
+  int i;
+  void* trace[SEXP_BACKTRACE_SIZE + 1];
+#endif
   sexp res = (sexp) sexp_alloc(ctx, size);
   if (res && ! sexp_exceptionp(res)) {
     sexp_pointer_tag(res) = tag;
 #if SEXP_USE_TRACK_ALLOC_SOURCE
     sexp_pointer_source(res) = source;
+#if SEXP_USE_TRACK_ALLOC_BACKTRACE
+    backtrace(trace, SEXP_BACKTRACE_SIZE + 1);
+    for (i=0; i<SEXP_BACKTRACE_SIZE; i++) res->backtrace[i] = trace[i+1];
+#endif
 #endif
 #if SEXP_USE_HEADER_MAGIC
     sexp_pointer_magic(res) = SEXP_POINTER_MAGIC;

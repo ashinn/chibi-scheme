@@ -75,6 +75,10 @@ typedef unsigned long size_t;
 #endif
 #endif
 
+#if SEXP_USE_TRACK_ALLOC_BACKTRACE
+#include <execinfo.h>
+#endif
+
 #include <ctype.h>
 #include <stdio.h>
 
@@ -294,6 +298,7 @@ struct sexp_struct {
   unsigned int syntacticp:1;
 #if SEXP_USE_TRACK_ALLOC_SOURCE
   const char* source;
+  void* backtrace[SEXP_BACKTRACE_SIZE];
 #endif
 #if SEXP_USE_HEADER_MAGIC
   unsigned int magic;

@@ -87,6 +87,10 @@
 /* uncomment this to track what C source line each object is allocated from */
 /* #define SEXP_USE_TRACK_ALLOC_SOURCE 1 */
 
+/* uncomment this to take a short backtrace of where each object is */
+/* allocated from */
+/* #define SEXP_USE_TRACK_ALLOC_BACKTRACE 1 */
+
 /* uncomment this to add additional native gc checks to verify a magic header */
 /* #define SEXP_USE_HEADER_MAGIC 1 */
 
@@ -370,6 +374,14 @@
 
 #ifndef SEXP_USE_TRACK_ALLOC_SOURCE
 #define SEXP_USE_TRACK_ALLOC_SOURCE SEXP_USE_DEBUG_GC > 2
+#endif
+
+#ifndef SEXP_USE_TRACK_ALLOC_BACKTRACE
+#define SEXP_USE_TRACK_ALLOC_BACKTRACE SEXP_USE_TRACK_ALLOC_SOURCE
+#endif
+
+#ifndef SEXP_BACKTRACE_SIZE
+#define SEXP_BACKTRACE_SIZE 3
 #endif
 
 #ifndef SEXP_USE_HEADER_MAGIC

@@ -223,6 +223,18 @@ int stack_references_pointer_p (sexp ctx, sexp x) {
   return 0;
 }
 
+#if SEXP_USE_TRACK_ALLOC_BACKTRACE
+void sexp_print_gc_trace(sexp ctx, sexp p) {
+  int i;
+  char **debug_text = backtrace_symbols(p->backtrace, SEXP_BACKTRACE_SIZE);
+  for (i=0; i < SEXP_BACKTRACE_SIZE; i++)
+    fprintf(stderr, SEXP_BANNER("    : %s"), debug_text[i]);
+  free(debug_text);
+}
+#else
+#define sexp_print_gc_trace(ctx, p)
+#endif
+
 void sexp_conservative_mark (sexp ctx) {
   sexp_heap h = sexp_context_heap(ctx);
   sexp p, end;
@@ -247,6 +259,7 @@ void sexp_conservative_mark (sexp ctx) {
           if (p && sexp_pointerp(p)) {
             fprintf(stderr, SEXP_BANNER("MISS: %p [%d]: %s"), p,
                     sexp_pointer_tag(p), sexp_pointer_source(p));
+            sexp_print_gc_trace(ctx, p);
             fflush(stderr);
           }
 #endif
