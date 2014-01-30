@@ -307,6 +307,17 @@
   (test 6 (force p))
   (test 6 (begin (set! x 10) (force p))))
 
+(test #t (promise? (delay (+ 2 2))))
+(test #t (promise? (make-promise (+ 2 2))))
+(test #t
+    (let ((x (delay (+ 2 2))))
+      (force x)
+      (promise? x)))
+(test #t
+    (let ((x (make-promise (+ 2 2))))
+      (force x)
+      (promise? x)))
+
 (define radix
   (make-parameter
    10

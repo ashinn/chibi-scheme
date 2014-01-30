@@ -127,6 +127,9 @@ SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, 
 SEXP_API sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags, sexp num_args, sexp bc, sexp vars);
 SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
 SEXP_API sexp sexp_register_optimization(sexp ctx, sexp self, sexp_sint_t n, sexp f, sexp i);
+#if SEXP_USE_AUTO_FORCE
+SEXP_API sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, sexp val);
+#endif
 #if SEXP_USE_UTF8_STRINGS
 SEXP_API sexp sexp_read_utf8_char (sexp ctx, sexp port, int i);
 SEXP_API void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch);
