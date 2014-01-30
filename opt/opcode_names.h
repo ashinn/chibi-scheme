@@ -15,7 +15,7 @@ static const char* sexp_opcode_names_[] =
    "ISA?", "SLOTN-REF", "SLOTN-SET",
    "CAR", "CDR", "SET-CAR", "SET-CDR", "CONS",
    "ADD", "SUB", "MUL", "DIV", "QUOTIENT", "REMAINDER",
-   "LT", "LE", "EQN", "EQ", "EXACT->INEXACT", "INEXACT->EXACT",
+   "LT", "LE", "EQN", "EQ", "INEXACT", "EXACT",
    "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
    "WRITE-CHAR", "WRITE-STRING", "READ-CHAR", "PEEK-CHAR",
    "YIELD", "FORCE", "RET", "DONE",
