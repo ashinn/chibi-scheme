@@ -219,7 +219,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_CONTEXT, sexp_offsetof(context, stack), 12+SEXP_USE_DL, 12+SEXP_USE_DL, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Context", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
   {SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Cpointer", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #if SEXP_USE_AUTO_FORCE
-  {SEXP_PROMISE, sexp_offsetof(promise, thunk), 2, 2, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Promise", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
+  {SEXP_PROMISE, sexp_offsetof(promise, value), 1, 1, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Promise", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #endif
 };
 

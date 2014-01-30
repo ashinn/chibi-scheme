@@ -332,8 +332,10 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       for ( ; sexp_pairp(ls); ls = sexp_cdr(ls)) {
         sexp_generate(ctx, 0, 0, 0, sexp_car(ls));
 #if SEXP_USE_AUTO_FORCE
-        if ((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
-            || sexp_opcode_code(op) == SEXP_OP_MAKE_VECTOR)
+        if (((sexp_opcode_class(op) != SEXP_OPC_CONSTRUCTOR)
+             || sexp_opcode_code(op) == SEXP_OP_MAKE_VECTOR)
+            && !(sexp_opcode_class(op) == SEXP_OPC_TYPE_PREDICATE
+                 && sexp_unbox_fixnum(sexp_opcode_data(op)) == SEXP_PROMISE))
           sexp_emit(ctx, SEXP_OP_FORCE);
 #endif
       }

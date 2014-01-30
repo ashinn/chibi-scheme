@@ -435,7 +435,7 @@ struct sexp_struct {
 #if SEXP_USE_AUTO_FORCE
     struct {
       int donep;
-      sexp thunk, value;
+      sexp value;
     } promise;
 #endif
   } value;
@@ -1024,7 +1024,6 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_stack_data(x)    (sexp_field(x, stack, SEXP_STACK, data))
 
 #define sexp_promise_donep(x) (sexp_field(x, promise, SEXP_PROMISE, donep))
-#define sexp_promise_thunk(x) (sexp_field(x, promise, SEXP_PROMISE, thunk))
 #define sexp_promise_value(x) (sexp_field(x, promise, SEXP_PROMISE, value))
 
 #define sexp_context_env(x)      (sexp_field(x, context, SEXP_CONTEXT, env))
