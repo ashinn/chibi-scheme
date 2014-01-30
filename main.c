@@ -198,8 +198,8 @@ static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
 }
 
 static sexp sexp_load_standard_params (sexp ctx, sexp e) {
-  sexp_gc_var2(p, res);
-  sexp_gc_preserve2(ctx, p, res);
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
   sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
 #if SEXP_USE_GREEN_THREADS
   sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL)));
@@ -210,7 +210,7 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e) {
   sexp_env_parent(res) = e;
   sexp_context_env(ctx) = res;
   sexp_set_parameter(ctx, sexp_meta_env(ctx), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), res);
-  sexp_gc_release3(ctx);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -461,18 +461,18 @@ void run_main (int argc, char **argv) {
         goto done_options;
       }
       sexp_usage(1);
-#if ! SEXP_USE_BOEHM
     case 'h':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('h', arg);
+#if ! SEXP_USE_BOEHM
       heap_size = strtoul(arg, &arg, 0);
       if (sexp_isalpha((unsigned char)*arg)) heap_size *= multiplier(*arg++);
       if (*arg == '/') {
         heap_max_size = strtoul(arg+1, &arg, 0);
         if (sexp_isalpha((unsigned char)*arg)) heap_max_size *= multiplier(*arg++);
       }
-      break;
 #endif
+      break;
 #if SEXP_USE_IMAGE_LOADING
     case 'i':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
