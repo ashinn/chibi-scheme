@@ -98,7 +98,7 @@ sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
   if (!sexp_pointerp(x) || (sexp_pointer_tag(x) >= sexp_context_num_types(ctx)))
     return sexp_heap_align(1);
   t = sexp_object_type(ctx, x);
-  res = sexp_type_size_of_object(t, x);
+  res = sexp_type_size_of_object(t, x) + SEXP_GC_PAD;
 #if SEXP_USE_DEBUG_GC
   if (res == 0) {
     fprintf(stderr, SEXP_BANNER("%p zero-size object: %p"), ctx, x);
@@ -537,7 +537,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
   size_t max_freed, sum_freed, total_size;
   sexp_heap h = sexp_context_heap(ctx);
-  size = sexp_heap_align(size);
+  size = sexp_heap_align(size) + SEXP_GC_PAD;
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
@@ -649,7 +649,7 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
         sexp_dl_handle(p) = NULL;
 #endif
       }
-      p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));
+      p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p))+SEXP_GC_PAD);
     }
   }
 
@@ -688,7 +688,7 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
           }
         }
         t = types[sexp_pointer_tag(p)];
-        p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)));
+        p = (sexp) (((char*)p)+sexp_heap_align(sexp_type_size_of_object(t, p)+SEXP_GC_PAD));
       }
     }
   }

@@ -388,6 +388,10 @@
 #define SEXP_USE_HEADER_MAGIC 0
 #endif
 
+#ifndef SEXP_GC_PAD
+#define SEXP_GC_PAD 0
+#endif
+
 #ifndef SEXP_USE_SAFE_ACCESSORS
 #define SEXP_USE_SAFE_ACCESSORS 0
 #endif
