@@ -133,7 +133,7 @@
            ((f! ("step") ((p param) :::) () . body)
             (lambda (st)
               (let ((p (ask st 'param)) :::)
-                ((begin . body) st))))
+                ((let () . body) st))))
            ((f! params . body)
             (f! ("step") () params . body))))
        ;; fork - run on a copy of the state
