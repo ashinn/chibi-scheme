@@ -133,6 +133,7 @@ sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
     env = sexp_env_parent(env);
   if (varenv) *varenv = env;
 #if SEXP_USE_RENAME_BINDINGS
+  /* remove any existing renamed definition */
   for (ls=sexp_env_renames(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
     if (sexp_car(ls) == key) {
       sexp_car(ls) = SEXP_FALSE;
@@ -594,6 +595,12 @@ sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return res;
 }
 
+#if SEXP_USE_STRICT_TOPLEVEL_BINDINGS
+#define sexp_non_local_cell_p(cell) (!cell)
+#else
+#define sexp_non_local_cell_p(cell) (!cell || !sexp_lambdap(sexp_cdr(cell)))
+#endif
+
 sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell1, cell2;
   cell1 = sexp_env_cell(ctx, e1, id1, 0);
@@ -602,21 +609,17 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
     return SEXP_TRUE;
   else if (!cell1 && !cell2 && (id1 == id2))
     return SEXP_TRUE;
-#if ! SEXP_USE_STRICT_TOPLEVEL_BINDINGS
-  /* If the identifiers are the same and the cells are either unbound *
-   * or bound to top-level variables, consider them the same.  Local  *
-   * (non-toplevel) bindings must still match exactly. */
-  else {
-    while (sexp_synclop(id1))
-      id1 = sexp_synclo_expr(id1);
-    while (sexp_synclop(id2))
-      id2 = sexp_synclo_expr(id2);
-    if ((id1 == id2)
-        && (!cell1 || !sexp_lambdap(sexp_cdr(cell1)))
-        && (!cell2 || !sexp_lambdap(sexp_cdr(cell2))))
-      return SEXP_TRUE;
-  }
-#endif
+  /* If the symbols are the same and the cells are either unbound or
+   * (optionally) bound to top-level variables, consider them the
+   * same.  Local (non-toplevel) bindings must still match exactly.
+   */
+  while (sexp_synclop(id1))
+    id1 = sexp_synclo_expr(id1);
+  while (sexp_synclop(id2))
+    id2 = sexp_synclo_expr(id2);
+  if ((id1 == id2)
+      && sexp_non_local_cell_p(cell1) && sexp_non_local_cell_p(cell2))
+    return SEXP_TRUE;
   return SEXP_FALSE;
 }
 
