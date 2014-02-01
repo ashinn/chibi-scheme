@@ -186,7 +186,7 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
       } else {
         res = sexp_make_bignum(ctx, len - offset + 1);
         sexp_bignum_sign(res) = sexp_bignum_sign(i);
-        for (j=len-offset, tmp=0; j>=0; j--) {
+        for (j=len-offset-1, tmp=0; j>=0; j--) {
           sexp_bignum_data(res)[j]
             = (sexp_bignum_data(i)[j+offset] >> bit_shift)+ tmp;
           tmp = sexp_bignum_data(i)[j+offset]
