@@ -159,11 +159,11 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
     if (c < 0) {
       res = sexp_make_fixnum(sexp_unbox_fixnum(i) >> -c);
     } else {
-      tmp = (sexp_uint_t)sexp_unbox_fixnum(i) << c;
 #if SEXP_USE_BIGNUMS
-      if ((log2i(sexp_unbox_fixnum(i)) + c)
+      if ((log2i(sexp_unbox_fixnum(i)) + c + 1)
           < (sizeof(sexp_uint_t)*CHAR_BIT - SEXP_FIXNUM_BITS)) {
 #endif
+        tmp = (sexp_uint_t)sexp_unbox_fixnum(i) << c;
         res = sexp_make_fixnum(tmp * sexp_fx_sign(i));
 #if SEXP_USE_BIGNUMS
       } else {

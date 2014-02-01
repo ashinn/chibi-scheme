@@ -17,6 +17,7 @@
 (test (expt 2 127) (arithmetic-shift 1 127))
 (test (expt 2 128) (arithmetic-shift 1 128))
 (test (expt 2 129) (arithmetic-shift 1 129))
+(test 3028397001194014464 (arithmetic-shift 11829675785914119 8))
 
 (test -1 (arithmetic-shift -1 0))
 (test -2 (arithmetic-shift -1 1))
