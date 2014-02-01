@@ -254,13 +254,14 @@ install: all
 	$(INSTALL) chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) tools/chibi-doc $(DESTDIR)$(BINDIR)/
-	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/term
+	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
 	$(INSTALL) lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
 	$(INSTALL) lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
+	$(INSTALL) lib/chibi/crypto/*.sld lib/chibi/crypto/*.scm $(DESTDIR)$(MODDIR)/chibi/crypto/
 	$(INSTALL) lib/chibi/io/*.scm $(DESTDIR)$(MODDIR)/chibi/io/
 	$(INSTALL) lib/chibi/iset/*.sld lib/chibi/iset/*.scm $(DESTDIR)$(MODDIR)/chibi/iset/
 	$(INSTALL) lib/chibi/loop/*.scm $(DESTDIR)$(MODDIR)/chibi/loop/
@@ -324,6 +325,8 @@ uninstall:
 	-$(RM) $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
 	-$(CD) $(DESTDIR)$(MODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
 	-$(CD) $(DESTDIR)$(BINMODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(BINMODDIR)/chibi/char-set
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(BINMODDIR)/chibi/crypto
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(BINMODDIR)/chibi/io
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(BINMODDIR)/chibi/loop
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(BINMODDIR)/chibi/match
