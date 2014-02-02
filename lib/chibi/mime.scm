@@ -11,7 +11,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; association lists
 
-;;> \subsubsubsection{\scheme{(assq-ref ls key [default])}}
+;;> \procedure{(assq-ref ls key [default])}
 ;;> Returns the \scheme{cdr} of the cell in \var{ls} whose
 ;;> \scheme{car} is \scheme{eq?} to \var{key}, or \var{default}
 ;;> if not found.  Useful for retrieving values associated with
@@ -73,9 +73,9 @@
   str)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;> \subsubsection{RFC2822 Headers}
+;;> \section{RFC2822 Headers}
 
-;;> \subsubsubsection{\scheme{(mime-header-fold kons knil [source [limit [kons-from]]])}}
+;;> \procedure{(mime-header-fold kons knil [source [limit [kons-from]]])}
 ;;>
 ;;> Performs a fold operation on the MIME headers of source which can be
 ;;> either a string or port, and defaults to current-input-port.  \var{kons}
@@ -139,7 +139,7 @@
      (else
       (out first-line knil 0)))))
 
-;;> \subsubsubsection{\scheme{(mime-headers->list [source])}}
+;;> \procedure{(mime-headers->list [source])}
 ;;> Return an alist of the MIME headers from source with headers all
 ;;> downcased.
 
@@ -163,7 +163,7 @@
                       (substring s (+ i 1) (string-length s)))))
         (cons (string->symbol (string-downcase-ascii (string-trim s))) ""))))
 
-;;> \subsubsubsection{\scheme{(mime-parse-content-type str)}}
+;;> \procedure{(mime-parse-content-type str)}
 ;;> Parses \var{str} as a Content-Type style-value returning the list
 ;;> \scheme{(type (attr . val) ...)}.
 
@@ -179,7 +179,7 @@
         (cons (caar res) (cdr res))
         res)))
 
-;;> \subsubsubsection{\scheme{(mime-decode-header str)}}
+;;> \procedure{(mime-decode-header str)}
 ;;> Replace all occurrences of RFC1522 =?ENC?...?= escapes in \var{str} with
 ;;> the appropriate decoded and charset converted value.
 
@@ -250,9 +250,9 @@
    (lambda (x) (next (mime-convert-part x cte enc)))
    (lambda (x) (final (mime-convert-part x cte enc)))))
 
-;;> \subsubsection{RFC2045 MIME Encoding}
+;;> \section{RFC2045 MIME Encoding}
 
-;;> \subsubsubsection{\scheme{(mime-message-fold src kons knil [down up headers])}}
+;;> \procedure{(mime-message-fold src kons knil [down up headers])}
 ;;> Performs a tree fold operation on the given string or port
 ;;> \var{src} as a MIME body corresponding to the headers give in
 ;;> \var{headers}.  If \var{headers} are false or not provided they
@@ -339,7 +339,7 @@
              (lambda (x) (next (kons parent-headers headers x seed)))
              (lambda (x) (final (kons parent-headers headers x seed)))))))))))
 
-;;> \subsubsubsection{\scheme{(mime-message->sxml [src [headers]])}}
+;;> \procedure{(mime-message->sxml [src [headers]])}
 ;;> 
 ;;> Parse the given source as a MIME message and return
 ;;> the result as an SXML object of the form:

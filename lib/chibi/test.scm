@@ -44,7 +44,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
 
-;;> \subsubsubsection{\scheme{(test [name] expect expr)}}
+;;> \macro{(test [name] expect expr)}
 
 ;;> Evaluate \var{expr} and check that it is \scheme{equal?}
 ;;> to \var{expect}.  \var{name} is used in reporting, and
@@ -68,7 +68,7 @@
     ((test a ...)
      (test-syntax-error 'test "test requires 2 or 3 arguments" (test a ...)))))
 
-;;> \subsubsubsection{\scheme{(test-equal equal [name] expect expr)}}
+;;> \macro{(test-equal equal [name] expect expr)}
 
 ;;> Equivalent to test, using \var{equal} for comparison instead of
 ;;> \scheme{equal?}.
@@ -79,7 +79,7 @@
      (parameterize ((current-test-comparator equal))
        (test . args)))))
 
-;;> \subsubsubsection{\scheme{(test-assert [name] expr)}}
+;;> \macro{(test-assert [name] expr)}
 
 ;;> Like \scheme{test} but evaluates \var{expr} and checks that it's true.
 
@@ -93,7 +93,7 @@
      (test-syntax-error 'test-assert "1 or 2 arguments required"
                         (test a ...)))))
 
-;;> \subsubsubsection{\scheme{(test-not [name] expr)}}
+;;> \macro{(test-not [name] expr)}
 
 ;;> Like \scheme{test} but evaluates \var{expr} and checks that it's false.
 
@@ -102,7 +102,7 @@
     ((_ expr) (test-assert (not expr)))
     ((_ name expr) (test-assert name (not expr)))))
 
-;;> \subsubsubsection{\scheme{(test-values [name] expect expr)}}
+;;> \macro{(test-values [name] expect expr)}
 
 ;;> Like \scheme{test} but \var{expect} and \var{expr} can both
 ;;> return multiple values.
@@ -115,7 +115,7 @@
      (test name (call-with-values (lambda () expect) (lambda results results))
        (call-with-values (lambda () expr) (lambda results results))))))
 
-;;> \subsubsubsection{\scheme{(test-error [name] expr)}}
+;;> \macro{(test-error [name] expr)}
 
 ;;> Like \scheme{test} but evaluates \var{expr} and checks that it
 ;;> raises an error.
@@ -148,7 +148,7 @@
                  (var-values . ,(list vars ...))
                  (key . val) ...)))))
 
-;;> \subsubsubsection{\scheme{(test-exit)}}
+;;> \macro{(test-exit)}
 
 ;;> Exits with a failure status if any tests have failed,
 ;;> and a successful status otherwise.

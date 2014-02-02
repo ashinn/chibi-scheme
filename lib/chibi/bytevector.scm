@@ -1,5 +1,5 @@
 
-;; Additional accessors
+;;> \section{Additional accessors}
 
 (define (bytevector-u16-ref-le str i)
   (+ (bytevector-u8-ref str i)
@@ -21,7 +21,7 @@
      (arithmetic-shift (bytevector-u8-ref str (+ i 2)) 8)
      (bytevector-u8-ref str (+ i 3))))
 
-;; Integer conversion
+;;> \section{Integer conversion}
 
 (define (integer->bytevector n)
   (cond
@@ -49,7 +49,9 @@
               (+ (arithmetic-shift n 8)
                  (bytevector-u8-ref bv i)))))))
 
-;; Hex string conversion (big-endian, guaranteed padded to even length)
+;;> \section{Hex string conversion}
+
+;;> Big-endian conversion, guaranteed padded to even length.
 
 (define (integer->hex-string n)
   (let* ((res (number->string n 16))

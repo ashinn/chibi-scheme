@@ -6,14 +6,14 @@
 ;;> the compiler, and other core types less commonly
 ;;> needed in user code, plus related utilities.
 
-;;> \subsubsection{Analysis and Expansion}
+;;> \section{Analysis and Expansion}
 
-;;> \subsubsubsection{\scheme{(analyze x [env])}}
+;;> \procedure{(analyze x [env])}
 
 ;;> Expands and analyzes the expression \var{x} and returns the
 ;;> resulting AST.
 
-;;> \subsubsubsection{\scheme{(optimize ast)}}
+;;> \procedure{(optimize ast)}
 
 ;;> Runs an optimization pass on \var{ast} and returns the
 ;;> resulting simplified expression.
@@ -109,7 +109,7 @@
        ((opcode? x) (cond ((opcode-name x) => string->symbol) (else x)))
        (else x)))))
 
-;;> \subsubsection{Types}
+;;> \section{Types}
 
 ;;> All objects have an associated type, and types may have parent
 ;;> types.  When using
@@ -169,15 +169,15 @@
 ;;> \item{\scheme{exception?}}
 ;;> ]
 
-;;> \subsubsubsection{\scheme{(type-of x)}}
+;;> \procedure{(type-of x)}
 
 ;;> Returns the type of any object \var{x}.
 
-;;> \subsubsubsection{\scheme{(type-name type)}}
+;;> \procedure{(type-name type)}
 
 ;;> Returns the name of type \var{type}.
 
-;;> \subsubsubsection{\scheme{(type-parent type)}}
+;;> \procedure{(type-parent type)}
 
 ;;> Returns the immediate parent of type \var{type},
 ;;> or \scheme{#f} for a type with no parent.
@@ -188,21 +188,21 @@
          (> (vector-length v) 1)
          (vector-ref v (- (vector-length v) 2)))))
 
-;;> \subsubsubsection{\scheme{(type-cpl type)}}
+;;> \procedure{(type-cpl type)}
 
 ;;> Returns the class precedence list of type \var{type} as a
 ;;> vector, or \scheme{#f} for a type with no parent.
 
-;;> \subsubsubsection{\scheme{(type-slots type)}}
+;;> \procedure{(type-slots type)}
 
 ;;> Returns the slot list of type \var{type}.
 
-;;> \subsubsection{Accessors}
+;;> \section{Accessors}
 
 ;;> This section describes additional accessors on AST and other core
 ;;> types.
 
-;;> \subsubsubsection{Procedures}
+;;> \subsection{Procedures}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(procedure-code f)} - the compiled bytecode object}
@@ -216,7 +216,7 @@
 (define (procedure-name-set! x name)
   (bytecode-name-set! (procedure-code x) name))
 
-;;> \subsubsubsection{Macros}
+;;> \subsection{Macros}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(macro-procedure f)} - the macro procedure}
@@ -224,7 +224,7 @@
 ;;> \item{\scheme{(macro-source f)} - the source location the macro was defined in}
 ;;> ]
 
-;;> \subsubsubsection{Bytecode Objects}
+;;> \subsection{Bytecode Objects}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(bytecode-name bc)} - the macro procedure}
@@ -232,7 +232,7 @@
 ;;> \item{\scheme{(bytecode-source bc)} - the source location the procedure was defined in}
 ;;> ]
 
-;;> \subsubsubsection{Syntactic Closures}
+;;> \subsection{Syntactic Closures}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(syntactic-closure-env sc)}}
@@ -243,7 +243,7 @@
 ;;> Return the environment, free variables, and expression
 ;;> associated with \var{sc} respectively.
 
-;;> \subsubsubsection{Exceptions}
+;;> \subsection{Exceptions}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(exception-kind exn)}}
@@ -254,7 +254,7 @@
 ;;> Return the kind, message, and irritants
 ;;> associated with \var{exn} respectively.
 
-;;> \subsubsubsection{Lambdas}
+;;> \subsection{Lambdas}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(lambda-name lam)} - the name of the lambda, if known}
@@ -281,7 +281,7 @@
 ;;> \item{\scheme{(lambda-source-set! lam x)}}
 ;;> ]
 
-;;> \subsubsubsection{Conditionals}
+;;> \subsection{Conditionals}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(cnd-test cnd)} - the test for the conditional}
@@ -292,14 +292,14 @@
 ;;> \item{\scheme{(cnd-fail-set! cnd x)}}
 ;;> ]
 
-;;> \subsubsubsection{Sequences}
+;;> \subsection{Sequences}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(seq-ls seq)} - the list of sequence expressions}
 ;;> \item{\scheme{(seq-ls-set! seq x)}}
 ;;> ]
 
-;;> \subsubsubsection{References}
+;;> \subsection{References}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(ref-name ref)} - the name of the referenced variable}
@@ -308,7 +308,7 @@
 ;;> \item{\scheme{(ref-cell-set! ref x)}}
 ;;> ]
 
-;;> \subsubsubsection{Mutations}
+;;> \subsection{Mutations}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(set-var set)} - a reference to the mutated variable}
@@ -317,14 +317,14 @@
 ;;> \item{\scheme{(set-value-set! set x)}}
 ;;> ]
 
-;;> \subsubsubsection{Literals}
+;;> \subsection{Literals}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(lit-value lit)} - the literal value}
 ;;> \item{\scheme{(lit-value-set! lit x)}}
 ;;> ]
 
-;;> \subsubsubsection{Pairs}
+;;> \subsection{Pairs}
 
 ;;> \itemlist[
 ;;> \item{\scheme{(pair-source x)}}
@@ -335,28 +335,28 @@
 ;;> Source info is represented as another pair whose \var{car} is
 ;;> the source file name and whose \var{cdr} is the line number.
 
-;;> \subsubsection{Miscellaneous Utilities}
+;;> \section{Miscellaneous Utilities}
 
-;;> \subsubsubsection{\scheme{(gc)}}
+;;> \procedure{(gc)}
 
 ;;> Force a garbage collection.
 
-;;> \subsubsubsection{\scheme{(object-size x)}}
+;;> \procedure{(object-size x)}
 
 ;;> Returns the heap space directly used by \var{x}, not
 ;;> counting any elements of \var{x}.
 
-;;> \subsubsubsection{\scheme{(integer->immediate n)}}
+;;> \procedure{(integer->immediate n)}
 
 ;;> Returns the interpretation of the integer \var{n} as
 ;;> an immediate object, useful for debugging.
 
-;;> \subsubsubsection{\scheme{(string-contains str pat)}}
+;;> \procedure{(string-contains str pat)}
 
 ;;> Returns the first string cursor of \var{pat} in \var{str},
 ;;> of \scheme{#f} if it's not found.
 
-;;> \subsubsubsection{\scheme{(atomically expr)}}
+;;> \procedure{(atomically expr)}
 
 ;;> Run \var{expr} atomically, disabling yields.  Ideally should only be
 ;;> used for brief, deterministic expressions.  If used incorrectly (e.g.

@@ -14,7 +14,7 @@
 ;;> patterns - patterns in which the same identifier occurs multiple
 ;;> times, tail patterns after ellipsis, and the experimental tree patterns.
 
-;;> \subsubsection{Patterns}
+;;> \section{Patterns}
 
 ;;> Patterns are written to look like the printed representation of
 ;;> the objects they match.  The basic usage is
@@ -239,10 +239,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \subsubsection{Syntax}
+;;> \section{Syntax}
 
-;;> \subsubsubsection{\rawcode{(match expr (pattern . body) ...)\br{}
-;;> (match expr (pattern (=> failure) . body) ...)}}
+;;> \macro{(match expr (pattern . body) ...)\br{}
+;;> (match expr (pattern (=> failure) . body) ...)}
 
 ;;> The result of \var{expr} is matched against each \var{pattern} in
 ;;> turn, according to the pattern rules described in the previous
@@ -846,7 +846,7 @@
     ((_ loop (v ...) ((pat expr) . rest) . body)
      (match-named-let loop (v ... (pat expr tmp)) rest . body))))
 
-;;> \subsubsubsection{\rawcode{(match-let* ((var value) ...) body ...)}}
+;;> \macro{(match-let* ((var value) ...) body ...)}
 
 ;;> Similar to \scheme{match-let}, but analogously to \scheme{let*}
 ;;> matches and binds the variables in sequence, with preceding match

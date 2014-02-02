@@ -2,8 +2,7 @@
 ;; Copyright (c) 2004-2014 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Number theoretic utilities
+;;> Prime and number theoretic utilities.
 
 ;;> Returns a pair whose car is the power of 2 in the factorization of
 ;;> n, and whose cdr is the product of all remaining primes.

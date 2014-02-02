@@ -124,7 +124,7 @@
         . rest))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;> \subsubsection{Iterators}
+;;> \section{Iterators}
 
 ;; Each gets passed two lists, those items left of the macro and those to
 ;; the right, followed by a NEXT and REST continuation.
@@ -172,7 +172,7 @@
            ()
            . rest))))
 
-;;> \subsubsubsection{\scheme{(for elts [pairs] (in-lists lol [cdr [done?]]))}}
+;;> \macro{(for elts [pairs] (in-lists lol [cdr [done?]]))}
 
 ;;> Iterator from Taylor R. Campbell.  If you know the number of lists
 ;;> ahead of time it's much more efficient to iterate over each one
@@ -215,12 +215,12 @@
             (%in-idx < (lambda (x i) (- i 1)) (lambda (x) (- (length x) 1)) (lambda (x) 0) ref tmp seq next . rest))))
        ))))
 
-;;> \subsubsubsection{\scheme{(for var [index] (in-vector vec))}}
-;;> \subsubsubsection{\scheme{(for var [index] (in-vector-reverse vec))}}
+;;> \macro{(for var [index] (in-vector vec))}
+;;> \macro{(for var [index] (in-vector-reverse vec))}
 
 (define-in-indexed in-vector in-vector-reverse vector-length vector-ref)
 
-;;> \subsubsubsection{\scheme{(for ch [cursor] (in-string str))}}
+;;> \macro{(for ch [cursor] (in-string str))}
 
 (define-syntax in-string
   (syntax-rules ()
@@ -229,7 +229,7 @@
               string-cursor-start string-cursor-end string-cursor-ref
               tmp s next . rest))))
 
-;;> \subsubsubsection{\scheme{(for ch [cursor] (in-string-reverse str))}}
+;;> \macro{(for ch [cursor] (in-string-reverse str))}
 
 (define-syntax in-string-reverse
   (syntax-rules ()
@@ -258,7 +258,7 @@
        . rest))
     ))
 
-;;> \subsubsubsection{\scheme{(for ch (in-port [input-port [reader [eof?]]]))}}
+;;> \macro{(for ch (in-port [input-port [reader [eof?]]]))}
 
 (define-syntax in-port
   (syntax-rules ()
@@ -278,7 +278,7 @@
            ()
        . rest))))
 
-;;> \subsubsubsection{\scheme{(for ch (in-file [input-port [reader [eof?]]]))}}
+;;> \macro{(for ch (in-file [input-port [reader [eof?]]]))}
 
 (define-syntax in-file
   (syntax-rules ()
@@ -296,7 +296,7 @@
            ((dummy (close-input-port p)))
        . rest))))
 
-;;> \subsubsubsection{\scheme{(for x (up-from [start] [(to limit)] [(by step)]))}}
+;;> \macro{(for x (up-from [start] [(to limit)] [(by step)]))}
 
 (define-syntax up-from
   (syntax-rules (to by)
@@ -322,7 +322,7 @@
      (next ((s start)) ((var s (+ var 1))) () () () . rest))
     ))
 
-;;> \subsubsubsection{\scheme{(for x (down-from [start] [(to limit)] [(by step)]))}}
+;;> \macro{(for x (down-from [start] [(to limit)] [(by step)]))}
 
 (define-syntax down-from
   (syntax-rules (to by)
@@ -371,14 +371,14 @@
         ((var (final cursor)))
         . rest))))
 
-;;> \subsubsubsection{\scheme{(for x [pair] (listing expr))}}
+;;> \macro{(for x [pair] (listing expr))}
 
 (define-syntax listing
   (syntax-rules ()
     ((listing args next . rest)
      (accumulating (cons reverse '()) args next . rest))))
 
-;;> \subsubsubsection{\scheme{(for x [pair] (listing-reverse expr))}}
+;;> \macro{(for x [pair] (listing-reverse expr))}
 
 (define-syntax listing-reverse
   (syntax-rules ()
@@ -388,28 +388,28 @@
 (define (append-reverse rev tail)
   (if (null? rev) tail (append-reverse (cdr rev) (cons (car rev) tail))))
 
-;;> \subsubsubsection{\scheme{(for x [pair] (appending expr))}}
+;;> \macro{(for x [pair] (appending expr))}
 
 (define-syntax appending
   (syntax-rules ()
     ((appending args next . rest)
      (accumulating (append-reverse reverse '()) args next . rest))))
 
-;;> \subsubsubsection{\scheme{(for x [pair] (appending-reverse expr))}}
+;;> \macro{(for x [pair] (appending-reverse expr))}
 
 (define-syntax appending-reverse
   (syntax-rules ()
     ((appending-reverse args next . rest)
      (accumulating (append-reverse (lambda (x) x) '()) args next . rest))))
 
-;;> \subsubsubsection{\scheme{(for x (summing expr))}}
+;;> \macro{(for x (summing expr))}
 
 (define-syntax summing
   (syntax-rules ()
     ((summing args next . rest)
      (accumulating (+ (lambda (x) x) 0) args next . rest))))
 
-;;> \subsubsubsection{\scheme{(for x (multiplying expr))}}
+;;> \macro{(for x (multiplying expr))}
 
 (define-syntax multiplying
   (syntax-rules ()

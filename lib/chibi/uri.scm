@@ -20,7 +20,7 @@
 ;;> Accessors for the URI type.
 ;;/
 
-;;> \subsubsubsection{\scheme{(make-uri scheme [user host port path query fragment])}}
+;;> \procedure{(make-uri scheme [user host port path query fragment])}
 
 (define (make-uri scheme . o)
   (let* ((user (if (pair? o) (car o) #f))
@@ -209,7 +209,7 @@
       res
       (cons (substring-cursor str from to) res)))
 
-;;> \subsubsubsection{\scheme{(uri-encode str [plus?])}}
+;;> \procedure{(uri-encode str [plus?])}
 
 ;;> Return the URI encoded version of the string \var{str},
 ;;> using hex escapes as needed and replacing spaces with "+"
@@ -243,7 +243,7 @@
                 (lp next next (cons (encode-1 ch)
                                     (collect str from to res)))))))))
 
-;;> \subsubsubsection{\scheme{(uri-decode str [plus?])}}
+;;> \procedure{(uri-decode str [plus?])}
 
 ;;> Decodes any URI hex escapes in the given string, and
 ;;> translates any pluses ("+") to space iff the optional
@@ -277,7 +277,7 @@
              (else
               (lp from next res))))))))
 
-;;> \subsubsubsection{\scheme{(uri-query->alist str [plus?])}}
+;;> \procedure{(uri-query->alist str [plus?])}
 
 ;;> Parses the query part of a URI as a delimited list of
 ;;> URI encoded \rawcode{VAR=VALUE} pairs, decodes them and
@@ -299,7 +299,7 @@
                       (cons (uri-decode (substring-cursor str i j) plus?) #f))))
             (lp (+ j 1) (cons cell res)))))))
 
-;;> \subsubsubsection{\scheme{(uri-alist->query ls [plus?])}}
+;;> \procedure{(uri-alist->query ls [plus?])}
 
 ;;> The reverse of the above, formats the alist as a URI
 ;;> query string.
