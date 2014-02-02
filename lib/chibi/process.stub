@@ -44,7 +44,7 @@
 
 (c-include "signal.c")
 
-;;> \subsubsubsection{\rawcode{(set-signal-action! signal handler)}}
+;;> \procedure{(set-signal-action! signal handler)}
 
 ;;> Sets the signal handler for \var{signal} to \var{handler}
 ;;> and returns the old handler.  \var{handler} should be a procedure
@@ -102,7 +102,7 @@
 
 ;;(define-c pid_t wait ((result int)))
 
-;;> \subsubsubsection{\rawcode{(waitpid pid options)}}
+;;> \procedure{(waitpid pid options)}
 
 ;;> Wait on the process \var{pid}, or any child process if \var{pid}
 ;;> is \rawcode{-1}.  \var{options} should be 0, or \var{wait/no-hang}
