@@ -1,45 +1,19 @@
 ;; quoted-printable.scm -- RFC2045 implementation
-;; Copyright (c) 2005-2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2014 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;; Procedure: quoted-printable-encode-string str [start-col max-col]
-;;   Return a quoted-printable encoded representation of string
-;;   according to the official standard as described in RFC2045.
-;;
-;;   ? and _ are always encoded for compatibility with RFC1522 encoding,
-;;   and soft newlines are inserted as necessary to keep each lines
-;;   length less than MAX-COL (default 76).  The starting column may be
-;;   overridden with START-COL (default 0).
+;;> RFC 2045 quoted printable encoding and decoding utilities.  This
+;;> API is backwards compatible with the Gauche library
+;;> rfc.quoted-printable.
 
-;; Procedure: quoted-printable-decode-string str [mime?]
-;;   Return a quoted-printable decoded representation of string.  If
-;;   MIME? is specified and true, _ will be decoded as as space in
-;;   accordance with RFC1522.  No errors will be raised on invalid
-;;   input.
-
-;; Procedure: quoted-printable-encode [port start-col max-col]
-;; Procedure: quoted-printable-decode [port start-col max-col]
-;;   Variations of the above which read and write to ports.
-
-;; Procedure: quoted-printable-encode-header enc str [start-col max-col]
-;;   Return a quoted-printable encoded representation of string as
-;;   above, wrapped in =?ENC?Q?...?= as per RFC1522, split across
-;;   multiple MIME-header lines as needed to keep each lines length less
-;;   than MAX-COL.  The string is encoded as is, and the encoding ENC is
-;;   just used for the prefix, i.e. you are responsible for ensuring STR
-;;   is already encoded according to ENC.
-
-;; Example:
-
-;; (define (mime-encode-header header value charset)
-;;   (let ((prefix (string-append header ": "))
-;;         (str (ces-convert value "UTF8" charset)))
-;;     (string-append
-;;      prefix
-;;      (quoted-printable-encode-header charset str (string-length prefix)))))
-
-;; This API is backwards compatible with the Gauche library
-;; rfc.quoted-printable.
+;;> \schemeblock{
+;;> (define (mime-encode-header header value charset)
+;;>   (let ((prefix (string-append header ": "))
+;;>         (str (ces-convert value "UTF8" charset)))
+;;>     (string-append
+;;>      prefix
+;;>      (quoted-printable-encode-header charset str (string-length prefix)))))
+;;> }
 
 (define *default-max-col* 76)
 
@@ -69,6 +43,14 @@
               (string-set! buf (+ col 2) (hex (bitwise-and c #b1111)))
               (lp (+ i 1) (+ col 3) res)))))))))
 
+;;> Return a quoted-printable encoded representation of the input
+;;> according to the official standard as described in RFC2045.
+;;>
+;;> ? and _ are always encoded for compatibility with RFC1522
+;;> encoding, and soft newlines are inserted as necessary to keep each
+;;> lines length less than \var{max-col} (default 76).  The starting
+;;> column may be overridden with \var{start-col} (default 0).
+
 (define (quoted-printable-encode-string . o)
   (let ((src (if (pair? o) (car o) (current-input-port)))
         (start-col (if (and (pair? o) (pair? (cdr o))) (cadr o) 0))
@@ -78,8 +60,18 @@
     (qp-encode (if (string? src) src (read-string #f src))
                start-col max-col "=\r\n")))
 
+;;> Variation of the above to read and write to ports.
+
 (define (quoted-printable-encode . o)
   (display (apply (quoted-printable-encode-string o))))
+
+;;> Return a quoted-printable encoded representation of string as
+;;> above, wrapped in =?ENC?Q?...?= as per RFC1522, split across
+;;> multiple MIME-header lines as needed to keep each lines length
+;;> less than \var{max-col}.  The string is encoded as is, and the
+;;> encoding \var{enc} is just used for the prefix, i.e. you are
+;;> responsible for ensuring \var{str} is already encoded according to
+;;> \var{enc}.
 
 (define (quoted-printable-encode-header encoding . o)
   (let ((src (if (pair? o) (car o) (current-input-port)))
@@ -98,6 +90,11 @@
                      (qp-encode (if (string? src) src (read-string #f src))
                                 start-col effective-max-col separator)
                      "?="))))
+
+;;> Return a quoted-printable decoded representation of \var{str}.  If
+;;> \var{mime-header?} is specified and true, _ will be decoded as as
+;;> space in accordance with RFC1522.  No errors will be raised on
+;;> invalid input.
 
 (define (quoted-printable-decode-string  . o)
   (define (hex? c) (or (char-numeric? c) (<= 65 (char->integer c) 70)))
@@ -152,6 +149,7 @@
                    (write-char c out)
                    (lp (+ i 1)))))))))))))
 
+;;> Variation of the above to read and write to ports.
+
 (define (quoted-printable-decode . o)
   (display (apply quoted-printable-decode-string o)))
-

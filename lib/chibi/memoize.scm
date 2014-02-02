@@ -2,9 +2,9 @@
 ;; Copyright (c) 2003-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;; Memory and persistent caching with various levels of control, based
-;; on a combination of lru-cache from Hato and an older memoization
-;; library for Gauche.
+;;> Memory and persistent caching with various levels of control, based
+;;> on a combination of lru-cache from Hato and an older memoization
+;;> library for Gauche.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; types

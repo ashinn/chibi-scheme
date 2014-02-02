@@ -92,10 +92,13 @@
   (list (append (map cons vars vals) (car env))))
 
 (define (make-default-doc-env)
-  `(((section . ,(expand-section 'h1))
-     (subsection . ,(expand-section 'h2))
-     (subsubsection . ,(expand-section 'h3))
-     (subsubsubsection . ,(expand-section 'h4))
+  `(((title . ,(expand-section 'h1))
+     (section . ,(expand-section 'h2))
+     (subsection . ,(expand-section 'h3))
+     (subsubsection . ,(expand-section 'h4))
+     (subsubsubsection . ,(expand-section 'h5))
+     (procedure . ,expand-procedure)
+     (macro . ,expand-macro)
      (centered . center)
      (smaller . small)
      (larger . large)
@@ -240,6 +243,12 @@
    (else
     sxml)))
 
+(define (expand-procedure sxml env)
+  ((expand-section 'h3) `(,(car sxml) (rawcode ,@(cdr sxml))) env))
+
+(define (expand-macro sxml env)
+  (expand-procedure sxml env))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; adjustments for html
 
@@ -252,9 +261,18 @@
   (match x
     (('div ('a ('@ ('name . name)) . _)
            ((and h (or 'h1 'h2 'h3 'h4 'h5 'h6)) . section))
-     `((,(header-index h)
-        (a (@ (href . ,(string-append "#" name)))
-           ,(sxml-strip (cons h section))))))
+     (let* ((raw-text (sxml-strip (cons h section)))
+            (text (if (string-prefix? "(" raw-text)
+                      (let ((end (string-find
+                                  raw-text
+                                  (lambda (ch)
+                                    (or (char-whitespace? ch)
+                                        (eqv? ch #\)))))))
+                        (substring raw-text 1 end))
+                      raw-text)))
+       `((,(header-index h)
+          (a (@ (href . ,(string-append "#" name)))
+             ,text)))))
     ((a . b)
      (append (extract-contents a) (extract-contents b)))
     (else
@@ -282,9 +300,9 @@
                (style (@ (type . "text/css"))
                  "
 body {color: #000; background-color: #FFF}
-div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 180px; height: 100%}
-div#main  {position: absolute; top: 0; left: 200px; width: 520px; height: 100%}
-div#notes {position: relative; top: 2em; left: 550px; max-width: 200px; height: 0px; font-size: smaller;}
+div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 190px; height: 100%}
+div#main  {position: absolute; top: 0; left: 200px; width: 540px; height: 100%}
+div#notes {position: relative; top: 2em; left: 570px; max-width: 200px; height: 0px; font-size: smaller;}
 div#footer {padding-bottom: 50px}
 .result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
 .command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
@@ -293,7 +311,11 @@ div#footer {padding-bottom: 50px}
                "\n")
          (body
           (div (@ (id . "menu"))
-               ,(get-contents (extract-contents x)))
+               ,(let ((contents (get-contents (extract-contents x))))
+                  (match contents
+                    (('ol (li y sections ...))
+                     sections)
+                    (else contents))))
           (div (@ (id . "main"))
                ,@(map (lambda (x)
                         (if (and (pair? x) (eq? 'title (car x)))
@@ -469,7 +491,10 @@ div#footer {padding-bottom: 50px}
 
 (define section-number
   (let ((sections '(section subsection subsubsection subsubsubsection)))
-    (lambda (x) (length (or (memq x sections) '())))))
+    (lambda (x)
+      (cond ((memq x sections) => length)
+            ((memq x '(procedure macro)) (section-number 'subsection))
+            (else 0)))))
 
 (define (section>=? x n)
   (and (pair? x)
@@ -479,7 +504,7 @@ div#footer {padding-bottom: 50px}
 
 (define (extract-sxml tag x)
   (and (pair? x)
-       (cond ((eq? tag (car x)) x)
+       (cond ((if (pair? tag) (memq (car x) tag) (eq? tag (car x))) x)
              ((memq (car x) '(div))
               (any (lambda (y) (extract-sxml tag y)) (sxml-body x)))
              (else #f))))
@@ -536,14 +561,15 @@ div#footer {padding-bottom: 50px}
       (let lp ((ls orig-ls) (rev-pre '()))
         (cond
          ((or (null? ls)
-              (section>=? (car ls) (section-number 'subsubsubsection)))
+              (section>=? (car ls) (section-number 'subsection)))
           `(,@(reverse rev-pre)
             ,@(if (and (pair? ls)
                        (section-describes?
-                        (extract-sxml 'subsubsubsection (car ls))
+                        (extract-sxml '(subsection procedure macro)
+                                      (car ls))
                         name))
                   '()
-                  `((subsubsubsection
+                  `((subsection
                      tag: ,(write-to-string name)
                      (rawcode
                       ,@(if (eq? 'const: (caar sig))

@@ -1,30 +1,8 @@
-;; Copyright (c) 2005-2009 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2014 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;; Procedure: base64-encode-string str
-;;   Return a base64 encoded representation of string according to the
-;;   official base64 standard as described in RFC3548.
-
-;; Procedure: base64-decode-string str
-;;   Return a base64 decoded representation of string, also interpreting
-;;   the alternate 62 & 63 valued characters as described in RFC3548.
-;;   Other out-of-band characters are silently stripped, and = signals
-;;   the end of the encoded string.  No errors will be raised.
-
-;; Procedure: base64-encode [port]
-;; Procedure: base64-decode [port]
-;;   Variations of the above which read and write to ports.
-
-;; Procedure: base64-encode-header enc str [start-col max-col nl]
-;;   Return a base64 encoded representation of string as above,
-;;   wrapped in =?ENC?B?...?= as per RFC1522, split across multiple
-;;   MIME-header lines as needed to keep each lines length less than
-;;   MAX-COL.  The string is encoded as is, and the encoding ENC is
-;;   just used for the prefix, i.e. you are responsible for ensuring
-;;   STR is already encoded according to ENC.  The optional argument
-;;   NL is the newline separator, defaulting to CRLF.
-
-;; This API is compatible with the Gauche library rfc.base64.
+;;> RFC 3548 base64 encoding and decoding utilities.
+;;> This API is compatible with the Gauche library rfc.base64.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; string utils
@@ -102,6 +80,11 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; decoding
+
+;;> Return a base64 decoded representation of string, also interpreting
+;;> the alternate 62 & 63 valued characters as described in RFC3548.
+;;> Other out-of-band characters are silently stripped, and = signals
+;;> the end of the encoded string.  No errors will be raised.
 
 ;; Create a result buffer with the maximum possible length for the
 ;; input, and pass it to the internal base64-decode-string! utility.
@@ -199,9 +182,8 @@
                      (extract-bit-field 4 2 b3))))
       (+ j 2))))))
 
-;; General port decoder: work in single blocks at a time to avoid
-;; allocating memory (crucial for Scheme implementations that don't
-;; allow large strings).
+;;>  Variation of the above to read and write to ports.
+
 (define (base64-decode . o)
   (let ((in (if (pair? o) (car o) (current-input-port)))
         (out (if (and (pair? o) (pair? (cdr o)))
@@ -252,6 +234,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; encoding
+
+;;> Return a base64 encoded representation of string according to the
+;;> official base64 standard as described in RFC3548.
 
 (define (base64-encode-string str)
   (let* ((len (string-length str))
@@ -307,6 +292,8 @@
             (string-set! res (+ j 3) (enc (bitwise-and #b111111 b3)))
             (lp (+ i 3) (+ j 4)))))))
 
+;;>  Variation of the above to read and write to ports.
+
 (define (base64-encode . o)
   (let ((in (if (pair? o) (car o) (current-input-port)))
         (out (if (and (pair? o) (pair? (cdr o)))
@@ -321,6 +308,15 @@
           (write-string dst out 0 (* 3 (quotient (+ n 3) 4)))
           (if (= n 2048)
               (lp)))))))
+
+;;> Return a base64 encoded representation of the string \var{str} as
+;;> above, wrapped in =?ENC?B?...?= as per RFC1522, split across
+;;> multiple MIME-header lines as needed to keep each lines length
+;;> less than \var{max-col}.  The string is encoded as is, and the
+;;> encoding \var{enc} is just used for the prefix, i.e. you are
+;;> responsible for ensuring \var{str} is already encoded according to
+;;> \var{enc}.  The optional argument \var{nl} is the newline
+;;> separator, defaulting to \var{crlf}.
 
 (define (base64-encode-header encoding str . o)
   (define (round4 i) (arithmetic-shift (arithmetic-shift i -2) 2))

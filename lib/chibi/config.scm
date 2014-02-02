@@ -11,7 +11,7 @@
 ;;> loading these collections from files while allowing extensions
 ;;> such as configurations from command-line options.
 
-;;> \subsubsection{Background}
+;;> \section{Background}
 ;;>
 ;;> As any application grows to sufficient complexity, it acquires
 ;;> options and behaviors that one may want to modify at startup or
@@ -40,7 +40,7 @@
 ;;> users of a group or whole system are likely to want to share, then
 ;;> it makes sense to cascade multiple config files.
 
-;;> \subsubsection{Syntax}
+;;> \section{Syntax}
 ;;>
 ;;> With any other language there is a question of config file syntax,
 ;;> and a few popular choices exist such as .ini syntax.  With Scheme
@@ -71,7 +71,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \subsubsection{Interface}
+;;> \section{Interface}
 
 ;;> Returns true iff \var{x} is a config object.
 
@@ -112,7 +112,7 @@
 (define (alist? x)
   (and (list? x) (every pair? x)))
 
-;;> \subsubsubsection{\rawcode{(assoc-get alist key [equal? [default]])}}
+;;> \procedure{(assoc-get alist key [equal? [default]])}
 
 ;;> Utility analogous to \scheme{conf-get} on a pure alist.  Returns
 ;;> the value of the cell in \var{alist} whose car is \var{equal?} to
@@ -138,7 +138,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Loading from files.
 
-;;> \subsubsubsection{\rawcode{(conf-load file [conf])}}
+;;> \procedure{(conf-load file [conf])}
 
 ;;> Loads the config file \var{file}, prepending to \var{conf} if
 ;;> provided.
@@ -168,7 +168,7 @@
                 (lp (cdr ls) (conf-load path res))
                 (lp (cdr ls) res))))))))
 
-;;> \subsubsubsection{\rawcode{(conf-load-cascaded config-path file [include-keyword])}}
+;;> \procedure{(conf-load-cascaded config-path file [include-keyword])}
 
 ;;> Similar to conf-load-in-path, but also recursively loads any
 ;;> "include" config files, indicated by a top-level
@@ -230,7 +230,7 @@
            (or (assq key (conf-alist config))
                (search (conf-parent config))))))))
 
-;;> \subsubsubsection{\rawcode{(conf-get config key [default])}}
+;;> \procedure{(conf-get config key [default])}
 
 ;;> Basic config lookup - retrieves the value from \var{config}
 ;;> associated with \var{key}.  If not present, return \var{default}.
@@ -247,7 +247,7 @@
             (cadr cell)
             (cdr cell)))))
 
-;;> \subsubsubsection{\rawcode{(conf-get-list config key [default])}}
+;;> \procedure{(conf-get-list config key [default])}
 
 ;;> Equivalent to \scheme{conf-get} but coerces its result to a list
 ;;> as described in the syntax section.
@@ -338,7 +338,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \subsubsection{Config Verification}
+;;> \section{Config Verification}
 
 (define (conf-default-warn . args)
   (for-each

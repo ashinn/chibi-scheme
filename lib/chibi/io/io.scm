@@ -39,7 +39,7 @@
     (display str out)
     (newline out)))
 
-;;> \subsubsubsection{(write-string str [out [start [end]]])}
+;;> \procedure{(write-string str [out [start [end]]])}
 
 ;;> Writes the characters from \var{start} to \var{end} of string
 ;;> \var{str} to output port \var{out}, where \var{start} defaults
@@ -60,7 +60,7 @@
             (display (substring str start end) out))))
         (display str out))))
 
-;;> \subsubsubsection{(read-line [in [n]])}
+;;> \procedure{(read-line [in [n]])}
 
 ;;> Read a line from the input port \var{in}, defaulting to
 ;;> \scheme{(current-input-port)}, and return the result as
@@ -109,7 +109,7 @@
              (else
               res)))))))
 
-;;> \subsubsubsection{(read-string n [in])}
+;;> \procedure{(read-string n [in])}
 
 ;;> Reads \var{n} characters from input-port \var{in},
 ;;> defaulting to \scheme{(current-input-port)}, and
@@ -140,7 +140,7 @@
                                   (port-line in)))
             (cadr res)))))))
 
-;;> \subsubsubsection{(read-string! str n [in])}
+;;> \procedure{(read-string! str n [in])}
 
 ;;> Reads \var{n} characters from port \var{in}, which
 ;;> defaults to \scheme{(current-input-port)}, and writes
