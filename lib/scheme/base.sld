@@ -26,7 +26,7 @@
    exact exact-integer-sqrt exact-integer?  exact?  expt features
    file-error? floor
    flush-output-port for-each gcd get-output-bytevector get-output-string
-   guard if import include include-ci inexact inexact?  input-port?
+   guard if include include-ci inexact inexact?  input-port?
    integer->char
    integer?  lambda lcm length let let* let*-values let-syntax let-values
    letrec letrec* letrec-syntax list list->string list->vector list-copy
