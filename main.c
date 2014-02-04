@@ -545,6 +545,10 @@ void run_main (int argc, char **argv) {
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
+      sym = sexp_intern(ctx, "repl-import", -1);
+      tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
+      sym = sexp_intern(ctx, "import", -1);
+      sexp_env_define(ctx, env, sym, tmp);
       repl(ctx, env);
     } else {
 #if SEXP_USE_MODULES
