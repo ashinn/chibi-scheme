@@ -946,6 +946,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_bytecode_source(x)   (sexp_field(x, bytecode, SEXP_BYTECODE, source))
 #define sexp_bytecode_data(x)     (sexp_field(x, bytecode, SEXP_BYTECODE, data))
 
+#define sexp_env_cell_syntactic_p(x)   ((x)->syntacticp)
+
 #define sexp_env_syntactic_p(x)   ((x)->syntacticp)
 #define sexp_env_parent(x)        (sexp_field(x, env, SEXP_ENV, parent))
 #define sexp_env_bindings(x)      (sexp_field(x, env, SEXP_ENV, bindings))

@@ -570,8 +570,11 @@ void run_main (int argc, char **argv) {
           sym = sexp_intern(ctx, "import", -1);
           sexp_env_define(ctx, env, sym, tmp);
           sym = sexp_intern(ctx, "cond-expand", -1);
-          tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
-          sexp_env_define(ctx, env, sym, tmp);
+          tmp = sexp_env_cell(ctx, sexp_meta_env(ctx), sym, 0);
+#if SEXP_USE_RENAME_BINDINGS
+          sexp_env_rename(ctx, env, sym, tmp);
+#endif
+          sexp_env_define(ctx, env, sym, sexp_cdr(tmp));
         }
 #endif
         sexp_context_tracep(ctx) = 1;
