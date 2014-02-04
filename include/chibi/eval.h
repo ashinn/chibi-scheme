@@ -121,6 +121,9 @@ SEXP_API sexp sexp_env_define (sexp ctx, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_env_cell (sexp ctx, sexp env, sexp sym, int localp);
 SEXP_API sexp sexp_env_ref (sexp ctx, sexp env, sexp sym, sexp dflt);
 SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param);
+#if SEXP_USE_RENAME_BINDINGS
+SEXP_API sexp sexp_env_rename (sexp ctx, sexp env, sexp key, sexp value);
+#endif
 SEXP_API sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from, sexp to, sexp res);
 SEXP_API sexp sexp_make_lit (sexp ctx, sexp value);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
