@@ -595,13 +595,6 @@ sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return res;
 }
 
-#if SEXP_USE_STRICT_TOPLEVEL_BINDINGS
-#define sexp_non_local_cell_p(cell) (!cell)
-#else
-#define sexp_non_local_cell_p(cell) \
-  (!cell || (!sexp_lambdap(sexp_cdr(cell)) && !sexp_env_cell_syntactic_p(cell)))
-#endif
-
 sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell1, cell2;
   cell1 = sexp_env_cell(ctx, e1, id1, 0);
@@ -619,7 +612,13 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
   while (sexp_synclop(id2))
     id2 = sexp_synclo_expr(id2);
   if ((id1 == id2)
-      && sexp_non_local_cell_p(cell1) && sexp_non_local_cell_p(cell2))
+      && ((!cell1 && !cell2)
+#if !SEXP_USE_STRICT_TOPLEVEL_BINDINGS
+          || ((cell1 && cell2)
+              && (!sexp_lambdap(sexp_cdr(cell1)) && !sexp_env_cell_syntactic_p(cell1))
+              && (!sexp_lambdap(sexp_cdr(cell2)) && !sexp_env_cell_syntactic_p(cell2)))
+#endif
+              ))
     return SEXP_TRUE;
   return SEXP_FALSE;
 }
