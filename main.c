@@ -319,20 +319,24 @@ static sexp check_exception (sexp ctx, sexp res) {
 }
 
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) {
-  sexp_gc_var1(e);
-  sexp_gc_preserve1(ctx, e);
+  sexp_gc_var3(e, sym, tmp);
+  sexp_gc_preserve3(ctx, e, sym, tmp);
   e = sexp_load_standard_env(ctx, env, k);
   if (!sexp_exceptionp(e)) {
 #if SEXP_USE_MODULES
     if (!bootp) {
       e = sexp_eval_string(ctx, sexp_default_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
+      sym = sexp_intern(ctx, "repl-import", -1);
+      tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
+      sym = sexp_intern(ctx, "import", -1);
+      sexp_env_define(ctx, e, sym, tmp);
     }
 #endif
     if (!sexp_exceptionp(e)) {
       e = sexp_load_standard_params(ctx, e);
     }
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release3(ctx);
   return e;
 }
 
@@ -545,10 +549,6 @@ void run_main (int argc, char **argv) {
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
-      sym = sexp_intern(ctx, "repl-import", -1);
-      tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
-      sym = sexp_intern(ctx, "import", -1);
-      sexp_env_define(ctx, env, sym, tmp);
       repl(ctx, env);
     } else {
 #if SEXP_USE_MODULES
