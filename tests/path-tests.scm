@@ -162,10 +162,12 @@
 (test "/a/c/e" (path-normalize "/a/b//..///c//d/../e"))
 (test "/a/b/c/d/e/"
             (path-normalize "/a/b//./../c/d/../../b//c/d/e/f/.."))
+(test "/a/b/c/" (path-normalize "/a/b/c/."))
 
 (test "path-normalize:border" "" (path-normalize ""))
 (test "." (path-normalize "."))
 (test "/" (path-normalize "/"))
+(test "/" (path-normalize "/."))
 
 (test "path-normalize:overflow"
             "/" (path-normalize "/a/b/c/../../../../.."))
