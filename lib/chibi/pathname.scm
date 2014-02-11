@@ -216,12 +216,15 @@
     (substring-cursor s 0 (string-skip-right s #\/)))
   (if (null? args)
       ""
-      (let ((start (trim-trailing-slash (x->string (car args)))))
+      (let* ((args0 (x->string (car args)))
+             (start (trim-trailing-slash args0)))
         (let lp ((ls (cdr args))
                  (res (if (string=? "" start) '() (list start))))
           (cond
            ((null? ls)
-            (string-join (reverse res)))
+            (if (and (null? res) (not (string=? "" args0)))
+                "/"
+                (string-join (reverse res))))
            ((pair? (car ls))
             (lp (append (car ls) (cdr ls)) res))
            (else

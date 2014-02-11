@@ -194,5 +194,11 @@
 (test "a/b/./c" (make-path "a" "b" "." "c"))
 (test "a/b/../c" (make-path "a" "b" ".." "c"))
 (test "a/b/c" (make-path "a" '("b" "c")))
+(test "/" (make-path "/" ""))
+(test "/" (make-path "/" "/"))
+(test "/." (make-path "/" "."))
+(test "/a" (make-path "/a" ""))
+(test "/a" (make-path "/a" "/"))
+(test "/a/." (make-path "/a" "."))
 
 (test-end)
