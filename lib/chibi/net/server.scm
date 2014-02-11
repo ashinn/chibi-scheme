@@ -48,6 +48,7 @@
                         (close-output-port (cdr ports))
                         (close-file-descriptor sock)))
           (handler (car ports) (cdr ports) sock addr)
+          (flush-output (cdr ports))
           (close-input-port (car ports))
           (close-output-port (cdr ports))
           (close-file-descriptor sock)))
