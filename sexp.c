@@ -131,6 +131,14 @@ sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sex
 #define sexp_write_simple_object NULL
 #endif
 
+sexp sexp_finalize_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp fileno) {
+  if (sexp_fileno_openp(fileno) && !sexp_fileno_no_closep(fileno)) {
+    sexp_fileno_openp(fileno) = 0;
+    close(sexp_fileno_fd(fileno));
+  }
+  return SEXP_VOID;
+}
+
 sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp res = SEXP_VOID;
   if (sexp_port_openp(port)) {
@@ -146,6 +154,8 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
         if (sexp_oportp(port))
           shutdown(sexp_port_fileno(port), SHUT_WR);
       }
+      if (!sexp_port_no_closep(port))
+        sexp_finalize_fileno(ctx, self, n, sexp_port_fd(port));
     }
 #endif
     if (sexp_port_stream(port) && ! sexp_port_no_closep(port))
@@ -162,14 +172,6 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
       free(sexp_port_buf(port));
   }
   return res;
-}
-
-sexp sexp_finalize_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp fileno) {
-  if (sexp_fileno_openp(fileno) && !sexp_fileno_no_closep(fileno)) {
-    sexp_fileno_openp(fileno) = 0;
-    close(sexp_fileno_fd(fileno));
-  }
-  return SEXP_VOID;
 }
 
 #if SEXP_USE_DL
@@ -1616,6 +1618,7 @@ sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_c
   res = sexp_alloc_type(ctx, fileno, SEXP_FILENO);
   if (!sexp_exceptionp(res)) {
     sexp_fileno_fd(res) = sexp_unbox_fixnum(fd);
+    sexp_fileno_openp(res) = 1;
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
   }
   return res;
