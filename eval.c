@@ -2108,7 +2108,11 @@ sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
 }
 
 #if SEXP_USE_MODULES
-sexp sexp_current_module_path_op (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_current_module_path_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  if (sexp_pairp(x) && sexp_stringp(sexp_car(x))) {
+    sexp_global(ctx, SEXP_G_MODULE_PATH) = sexp_reverse(ctx, x);
+    sexp_global(ctx, SEXP_G_MODULE_PATH) = sexp_reverse(ctx, sexp_global(ctx, SEXP_G_MODULE_PATH));
+  }
   return sexp_global(ctx, SEXP_G_MODULE_PATH);
 }
 sexp sexp_find_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file) {
