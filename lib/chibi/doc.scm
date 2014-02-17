@@ -140,7 +140,9 @@
 (define (make-module-doc-env mod-name)
   (env-extend (make-default-doc-env)
               '(example-env)
-              (list (environment '(scheme base) mod-name))))
+              (list (environment '(scheme base)
+                                 '(only (chibi) import)
+                                 mod-name))))
 
 (define (section-name tag name)
   (string-strip
