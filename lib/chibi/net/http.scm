@@ -55,7 +55,6 @@
   (define (read-chunk in)
     (let* ((line (read-line in))
            (n (and (string? line) (string->number line 16))))
-      (display "read-chunk ") (write line) (newline)
       (cond
        ((not (and (integer? n) (<= 0 n http-chunked-size-limit)))
         (error "invalid chunked size line" line))
