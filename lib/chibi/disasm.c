@@ -65,7 +65,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     src_off = -1;
   /* if (src) sexp_write(ctx, src, out); */
 #else
-  if (src && sexp_pair(src)) {
+  if (src && sexp_pairp(src)) {
     sexp_write(ctx, sexp_car(src), out);
     sexp_write_string(ctx, ":", out);
     sexp_write(ctx, sexp_cdr(src), out);
