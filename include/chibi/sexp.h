@@ -840,9 +840,15 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 /*************************** field accessors **************************/
 
 #if SEXP_USE_SAFE_ACCESSORS
+#if 0
 #define sexp_field(x, type, id, field) (*(((x) && sexp_check_tag(x, id)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, (int)(sexp_pointerp(x) ? sexp_pointer_tag(x) : -1)), &(((sexp)NULL)->value.type.field))))
 #define sexp_pred_field(x, type, pred, field) (*(((x) && pred(x)) ? &((x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, x, (int)(sexp_pointerp(x) ? sexp_pointer_tag(x) : -1)), &(((sexp)NULL)->value.type.field))))
 #define sexp_cpointer_field(x, field) (*(((x) && sexp_pointerp(x) && sexp_pointer_tag(x) >= SEXP_CPOINTER) ? &((x)->value.cpointer.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a cpointer\n", __FILE__, __LINE__, x, (int)(sexp_pointerp(x) ? sexp_pointer_tag(x) : -1)), &(((sexp)NULL)->value.cpointer.field))))
+#else
+#define sexp_field(x, type, id, field) (*({sexp _x=x; (((_x) && sexp_check_tag(_x, id)) ? &((_x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, _x, (int)(sexp_pointerp(_x) ? sexp_pointer_tag(_x) : -1)), &(((sexp)NULL)->value.type.field)));}))
+#define sexp_pred_field(x, type, pred, field) (*({sexp _x=x; (((_x) && pred(_x)) ? &((_x)->value.type.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a "#type"\n", __FILE__, __LINE__, _x, (int)(sexp_pointerp(_x) ? sexp_pointer_tag(_x) : -1)), &(((sexp)NULL)->value.type.field)));}))
+#define sexp_cpointer_field(x, field) (*({sexp _x=x; (((_x) && sexp_pointerp(_x) && sexp_pointer_tag(_x) >= SEXP_CPOINTER) ? &((_x)->value.cpointer.field) : (fprintf(stderr, "invalid field access in %s line %d: %p (%d) isn't a cpointer\n", __FILE__, __LINE__, _x, (int)(sexp_pointerp(_x) ? sexp_pointer_tag(_x) : -1)), &(((sexp)NULL)->value.cpointer.field)));}))
+#endif
 #else
 #define sexp_field(x, type, id, field) ((x)->value.type.field)
 #define sexp_pred_field(x, type, pred, field) ((x)->value.type.field)
