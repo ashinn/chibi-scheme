@@ -1,0 +1,5 @@
+ERROR: out of memory
+  called from <anonymous> on line 513 of file ./lib/init-7.scm
+  called from <anonymous> on line 11 of file tests/memory/test01-read-symbol.scm
+  called from <anonymous> on line 1000 of file ./lib/init-7.scm
+  called from <anonymous> on line 526 of file ./lib/init-7.scm

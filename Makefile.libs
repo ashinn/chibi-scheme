@@ -1,0 +1,86 @@
+# -*- makefile-gmake -*-
+
+# Include-able makefile for building Chibi libraries - see README.libs
+# for usage.
+
+.PHONY: all all-libs clean clean-libs dist-clean dist-clean-libs install install-libs uninstall uninstall-libs doc doc-libs
+.PRECIOUS: %.c lib/%.c
+
+# install configuration
+
+CC        ?= cc
+AR        ?= ar
+CD        ?= cd
+RM        ?= rm -f
+LS        ?= ls
+INSTALL   ?= install
+MKDIR     ?= $(INSTALL) -d
+RMDIR     ?= rmdir
+TAR       ?= tar
+DIFF      ?= diff
+GREP      ?= grep
+FIND      ?= find
+SYMLINK   ?= ln -s
+
+PREFIX    ?= /usr/local
+BINDIR    ?= $(PREFIX)/bin
+LIBDIR    ?= $(PREFIX)/lib
+SOLIBDIR  ?= $(PREFIX)/lib
+INCDIR    ?= $(PREFIX)/include/chibi
+MODDIR    ?= $(PREFIX)/share/chibi
+BINMODDIR ?= $(PREFIX)/lib/chibi
+MANDIR    ?= $(PREFIX)/share/man/man1
+
+DESTDIR   ?=
+
+########################################################################
+# System configuration - if not using GNU make, set PLATFORM and the
+# flags from Makefile.detect (at least SO, EXE, CLIBFLAGS) as necessary.
+
+include Makefile.detect
+
+########################################################################
+
+all-libs: $(COMPILED_LIBS)
+
+lib/%.c: lib/%.stub $(CHIBI_FFI_DEPENDENCIES)
+	$(CHIBI_FFI) $<
+
+lib/%$(SO): lib/%.c $(INCLUDES)
+	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. $(XLIBS) -lchibi-scheme
+
+doc-libs: $(HTML_LIBS)
+
+doc/lib/%.html: lib/%.sld
+	$(MKDIR) $(dir $@)
+	$(CHIBI_DOC) --html $(subst /,.,$*) > $@
+
+clean-libs:
+	$(RM) $(COMPILED_LIBS)
+	$(RM) -r $(patsubst %,%.dSYM,$(COMPILED_LIBS))
+	$(RM) $(HTML_LIBS)
+
+dist-clean-libs: clean-libs
+	$(RM) $(patsubst %.stub, %.c, $(shell $(FIND) lib -name \*.stub))
+
+install-libs: all-libs
+	for dir in $(dir $(patsubst lib/%,%,$(COMPILED_LIBS))) ; do \
+	$(MKDIR) $(DESTDIR)$(BINMODDIR)/$$dir; \
+	done
+	for file in $(patsubst lib/%,%,$(COMPILED_LIBS)) ; do \
+	$(INSTALL) lib/$$file $(DESTDIR)$(BINMODDIR)/$$file ; \
+	done
+	for dir in $(dir $(patsubst lib/%,%,$(SCM_LIBS))) ; do \
+	$(MKDIR) $(DESTDIR)$(MODDIR)/$$dir; \
+	done
+	for file in $(patsubst lib/%,%,$(SCM_LIBS)) ; do \
+	$(INSTALL) lib/$$file $(DESTDIR)$(MODDIR)/$$file ; \
+	done
+
+uninstall-libs:
+	for file in $(patsubst lib/%,%,$(COMPILED_LIBS)) ; do \
+	$(RM) $(DESTDIR)$(BINMODDIR)/$$file ; \
+	done
+	for file in $(patsubst lib/%,%,$(SCM_LIBS)) ; do \
+	$(RM) $(DESTDIR)$(MODDIR)/$$file ; \
+	done

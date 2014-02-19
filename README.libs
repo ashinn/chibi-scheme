@@ -1,0 +1,110 @@
+Using the Makefile.libs File To Build and Install Libraries
+-----------------------------------------------------------
+
+The Makefile.libs file distributed with the Chibi Scheme sources
+can facilitate building and installing Chibi Scheme libraries written
+in C or Scheme. To use it, follow these instructions:
+
+1. Copy the Makefile.libs and Makefile.detect files from the Chibi
+   Scheme source directory to the library source top-level directory.
+
+2. Place the library source in the subdirectory "lib" of the library
+   source top-level directory. For example,
+
+      lib/foo/bar.c
+      lib/foo/bar.h
+      lib/foo/bar.sld
+      lib/foo/bar.scm
+
+3. In the Makefile in the library source top-level directory, define
+   the following targets:
+
+      all
+      doc
+      install
+      uninstall
+      clean
+      dist-clean
+  
+   These should depend on the corresponding "-libs" target, but
+   can include additional commands. For example:
+
+      all: all-libs
+      install: install-libs
+              cp -r doc $(PREFIX)/share/chibi/
+      uninstall: uninstall-libs
+      doc: doc-libs
+      clean: clean-libs
+      dist-clean: dist-clean-libs
+  
+   The all target should be the first target in the Makefile.
+
+   The all-libs target makes the shared libraries in the library.
+   The doc-libs target generates HTML files for the library. The
+   install-libs and uninstall-libs targets install and uninstall
+   the library under the prefix. The clean-libs target removes the
+   shared libraries and generated HTML files. The dist-clean-libs
+   removes any .c files generated from .stub files and also performs
+   a clean-libs.
+
+4. In the Makefile in the library source top-level directory, define
+   the following variables:
+
+      COMPILED_LIBS: Any shared libraries that should be built and
+      installed. The shared library is build from the corresponding
+      .c or .stub file. The $(SO) variable should be used for the
+      shared-library suffix; in order for this to work COMPILED_LIBS
+      should be defined as a recursively-expanded variable (with
+      =) rather than a simply-expanded variable (with :=).
+
+      INCLUDES: Any other files on which the shared libraries depend.
+
+      SCM_LIBS: Any Scheme source files that should be installed.
+
+      HTML_LIBS: Any HTML files that should be generated. The HTML
+      files are generated from the corresponding .sld files using
+      chibi-doc.
+      
+   For example,
+  
+      COMPILED_LIBS = lib/foo/bar$(SO)
+      INCLUDES = lib/foo/bar.h
+      SCM_LIBS = lib/foo/bar.sld lib/foo/bar.scm
+      HTML_LIBS = doc/lib/foo/bar.html
+
+5. Add additional flags as necessary to XCPPFLAGS, XCFLAGS, and XLIBS.
+   These flags are passed to the compiler and linker when they
+   generate the shared library. These should probably be defined at
+   minimum as:
+
+      XCPPFLAGS += -I$(PREFIX)/include
+      XCFLAGS += -L$(PREFIX)/lib
+      XLIBS +=
+  
+   These additions will ensure that the compiler and linker can
+   find the Chibi Scheme include and library files, even if they
+   are installed under a non-standard prefix.
+
+6. Include the common Makefile using:
+
+   include Makefile.libs
+
+A complete example is:
+
+   all: all-libs
+   install: install-libs
+   uninstall: uninstall-libs
+   doc: doc-libs
+   clean: clean-libs
+   dist-clean: dist-clean-libs
+
+   COMPILED_LIBS = lib/foo/bar$(SO)
+   INCLUDES = lib/foo/bar.h
+   SCM_LIBS = lib/foo/bar.sld lib/foo/bar.scm
+   HTML_LIBS = doc/lib/foo/bar.html
+
+   XCPPFLAGS += -I$(PREFIX)/include
+   XCFLAGS += -L$(PREFIX)/lib
+   XLIBS += -lpthread
+
+   include Makefile.libs
