@@ -1,0 +1,47 @@
+Alex Shinn wrote the initial version of chibi-scheme and all
+distributed modules.
+
+The `dynamic-wind' implementation is adapted from the implementation
+in the appendix to the Scheme48 reference manual, reportedly first
+written by Chris Hanson and John Lamping.
+
+The (scheme time) module includes code for handling leap seconds
+from Alan Watson's Scheme clock library at
+http://code.google.com/p/scheme-clock/ under the same license.
+
+The benchmarks are based on the Racket versions of the classic
+Gabriel benchmarks from
+http://www.cs.utah.edu/~mflatt/benchmarks-20100126/log3/index.html.
+They are not installed or needed but are included for convenience.
+
+Thanks to the following people for patches and bug reports:
+
+  * Alan Watson
+  * Alexander Shendi
+  * Andreas Rottman
+  * Bakul Shah
+  * Ben Mather
+  * Ben Weaver
+  * Bruno Deferrari
+  * Doug Currie
+  * Derrick Eddington
+  * Dmitry Chestnykh
+  * Eduardo Cavazos
+  * Felix Winkelmann
+  * Gregor Klinke
+  * Jeremy Wolff
+  * Jeronimo Pellegrini
+  * John Cowan
+  * John Samsa
+  * Lars J Aas
+  * Lorenzo Campedelli
+  * Michal Kowalski (sladegen)
+  * Rajesh Krishnan
+  * Taylor Venable
+  * Travis Cross
+  * Zhang Meng
+
+If you would prefer not to be listed, or are one of the users listed
+without a full name, please contact me.  If you've made a contribution
+and are not listed, please accept my apologies and contact me
+immediately!
