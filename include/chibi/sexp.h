@@ -346,7 +346,7 @@ struct sexp_struct {
     } port;
     struct {
       char openp, no_closep;
-      sexp_sint_t fd;
+      sexp_sint_t fd, count;
     } fileno;
     struct {
       sexp kind, message, irritants, procedure, source;
@@ -918,6 +918,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_port_fd(p)         (sexp_pred_field(p, port, sexp_portp, fd))
 
 #define sexp_fileno_fd(f)        (sexp_pred_field(f, fileno, sexp_filenop, fd))
+#define sexp_fileno_count(f)     (sexp_pred_field(f, fileno, sexp_filenop, count))
 #define sexp_fileno_openp(f)     (sexp_pred_field(f, fileno, sexp_filenop, openp))
 #define sexp_fileno_socketp(f)   (sexp_pred_field(f, fileno, sexp_filenop, socketp))
 #define sexp_fileno_no_closep(f) (sexp_pred_field(f, fileno, sexp_filenop, no_closep))

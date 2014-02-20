@@ -154,8 +154,10 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
         if (sexp_oportp(port))
           shutdown(sexp_port_fileno(port), SHUT_WR);
       }
-      if (!sexp_port_no_closep(port))
-        sexp_finalize_fileno(ctx, self, n, sexp_port_fd(port));
+      if (!sexp_port_no_closep(port)) {
+        if (--sexp_fileno_count(sexp_port_fd(port)) == 0)
+          sexp_finalize_fileno(ctx, self, n, sexp_port_fd(port));
+      }
     }
 #endif
     if (sexp_port_stream(port) && ! sexp_port_no_closep(port))
@@ -1394,6 +1396,7 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
   if (!sexp_exceptionp(res)) {
     sexp_port_binaryp(res) = 1;
     sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+    sexp_fileno_count(fileno)++;
   }
   return res;
 }
@@ -1405,7 +1408,10 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
   out = fdopen(sexp_fileno_fd(fileno), "w");
   if (!out) return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
   res = sexp_make_output_port(ctx, out, SEXP_FALSE);
-  if (!sexp_exceptionp(res)) sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+  if (!sexp_exceptionp(res)) {
+    sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+    sexp_fileno_count(fileno)++;
+  }
   return res;
 }
 
@@ -1595,6 +1601,7 @@ sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp f
     sexp_port_offset(res) = SEXP_PORT_BUFFER_SIZE;
     sexp_port_binaryp(res) = 1;
     sexp_port_shutdownp(res) = sexp_truep(shutdownp);
+    sexp_fileno_count(fileno)++;
   }
   sexp_gc_release2(ctx);
   return res;
