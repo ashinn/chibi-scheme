@@ -187,9 +187,6 @@ int sexp_valid_object_p (sexp ctx, sexp x) {
 #endif
 
 void sexp_mark (sexp ctx, sexp x) {
-#if SEXP_USE_CONSERVATIVE_CODE_GC
-  unsigned char *ip;
-#endif
   sexp_sint_t len;
   sexp t, *p, *q;
   struct sexp_gc_var_t *saves;
@@ -201,35 +198,6 @@ void sexp_mark (sexp ctx, sexp x) {
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
       if (saves->var) sexp_mark(ctx, *(saves->var));
   }
-#if SEXP_USE_CONSERVATIVE_CODE_GC
-  else if (sexp_bytecodep(x)) {
-    ip = sexp_bytecode_data(x);
-    while (ip - sexp_bytecode_data(x) < sexp_bytecode_length(x)) {
-      switch (*ip++) {
-      case SEXP_OP_GLOBAL_REF:     case SEXP_OP_GLOBAL_KNOWN_REF:
-      case SEXP_OP_PARAMETER_REF:  case SEXP_OP_TAIL_CALL:
-      case SEXP_OP_CALL:           case SEXP_OP_PUSH:
-        sexp_mark(ctx, ((sexp*)ip)[0]);
-        /* ... FALLTHROUGH ... */
-      case SEXP_OP_JUMP:           case SEXP_OP_JUMP_UNLESS:
-      case SEXP_OP_CLOSURE_REF:    case SEXP_OP_STACK_REF:
-      case SEXP_OP_LOCAL_REF:      case SEXP_OP_LOCAL_SET:
-      case SEXP_OP_RESERVE:        case SEXP_OP_TYPEP:
-        ip += sizeof(sexp);
-        break;
-      case SEXP_OP_SLOT_REF: case SEXP_OP_SLOT_SET: case SEXP_OP_MAKE:
-        ip += sizeof(sexp)*2;
-        break;
-      case SEXP_OP_MAKE_PROCEDURE:
-        sexp_mark(ctx, ((sexp*)ip)[2]);
-        ip += sizeof(sexp)*3;
-        break;
-      default:
-        break;
-      }
-    }
-  }
-#endif
   t = sexp_object_type(ctx, x);
   len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
