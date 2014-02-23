@@ -63,7 +63,7 @@
 ;;> Variation of the above to read and write to ports.
 
 (define (quoted-printable-encode . o)
-  (display (apply (quoted-printable-encode-string o))))
+  (display (apply quoted-printable-encode-string o)))
 
 ;;> Return a quoted-printable encoded representation of string as
 ;;> above, wrapped in =?ENC?Q?...?= as per RFC1522, split across
