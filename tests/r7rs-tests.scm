@@ -1633,13 +1633,13 @@
           (else
            (display "condition: " out)
            (write condition out)
-           (newline out)
+           (display #\! out)
            'exception))
          (+ 1 (if (= v 0) (raise 'an-error) (/ 10 v)))))
 (let* ((out (open-output-string))
        (value (test-exception-handler-3 0 out)))
   (test 'exception value)
-  (test "condition: an-error\n" (get-output-string out)))
+  (test "condition: an-error!" (get-output-string out)))
 
 (define (test-exception-handler-4 v out)
   (call-with-current-continuation
@@ -1647,7 +1647,7 @@
      (with-exception-handler
       (lambda (x)
         (display "reraised " out)
-        (write x out) (newline out)
+        (write x out) (display #\! out)
         (k 'zero))
       (lambda ()
         (guard (condition
@@ -1670,7 +1670,7 @@
 ;; From SRFI-34 "Examples" section - #7
 (let* ((out (open-output-string))
        (value (test-exception-handler-4 0 out)))
-  (test "reraised 0\n" (get-output-string out))
+  (test "reraised 0!" (get-output-string out))
   (test 'zero value))
 
 ;; From SRFI-34 "Examples" section - #8
@@ -1780,10 +1780,10 @@
       (display #\c out)
       (get-output-string out)))
 
-(test "\n"
-    (let ((out (open-output-string)))
-      (newline out)
-      (get-output-string out)))
+(test #t
+      (let* ((out (open-output-string))
+             (r (begin (newline out) (get-output-string out))))
+        (or (equal? r "\n") (equal? r "\r\n"))))
 
 (test "abc def"
     (let ((out (open-output-string)))
