@@ -34,4 +34,8 @@
 (test (- (expt 2 128)) (arithmetic-shift -1 128))
 (test (- (expt 2 129)) (arithmetic-shift -1 129))
 
+(test 0 (arithmetic-shift 1 -63))
+(test 0 (arithmetic-shift 1 -64))
+(test 0 (arithmetic-shift 1 -65))
+
 (test-end)

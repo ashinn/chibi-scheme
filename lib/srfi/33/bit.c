@@ -157,7 +157,7 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
   if (c == 0) return i;
   if (sexp_fixnump(i)) {
     if (c < 0) {
-      res = sexp_make_fixnum(sexp_unbox_fixnum(i) >> -c);
+      res = sexp_make_fixnum(c > -sizeof(sexp_sint_t)*CHAR_BIT ? sexp_unbox_fixnum(i) >> -c : 0);
     } else {
 #if SEXP_USE_BIGNUMS
       if ((log2i(sexp_unbox_fixnum(i)) + c + 1)
