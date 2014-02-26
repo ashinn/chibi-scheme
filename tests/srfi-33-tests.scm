@@ -38,4 +38,10 @@
 (test 0 (arithmetic-shift 1 -64))
 (test 0 (arithmetic-shift 1 -65))
 
+(test #x1000000000000000100000000000000000000000000000000
+    (arithmetic-shift #x100000000000000010000000000000000 64))
+
+(test-not (bit-set? 64 1))
+(test-assert (bit-set? 64 #x10000000000000000))
+
 (test-end)
