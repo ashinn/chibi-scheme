@@ -202,7 +202,8 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
       for (j=tmp=0; j<len; j++) {
         sexp_bignum_data(res)[j+offset]
           = (sexp_bignum_data(i)[j] << bit_shift) + tmp;
-        tmp = sexp_bignum_data(i)[j] >> tail_shift;
+        if (bit_shift != 0)
+          tmp = sexp_bignum_data(i)[j] >> tail_shift;
       }
       if (bit_shift != 0) sexp_bignum_data(res)[len+offset] = tmp;
     }
@@ -286,20 +287,24 @@ static sexp sexp_integer_length (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
 }
 
 static sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) {
+  sexp_sint_t pos;
 #if SEXP_USE_BIGNUMS
-  sexp_uint_t pos;
+  sexp_sint_t rem;
 #endif
   if (! sexp_fixnump(i))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, i);
+  pos = sexp_unbox_fixnum(i);
+  if (pos < 0)
+    return sexp_xtype_exception(ctx, self, "index must be non-negative", i);
   if (sexp_fixnump(x)) {
-    return sexp_make_boolean(sexp_unbox_fixnum(x) & (1UL<<sexp_unbox_fixnum(i)));
+    return sexp_make_boolean((pos < sizeof(sexp_uint_t)*CHAR_BIT)
+                             && (sexp_unbox_fixnum(x) & (1UL<<pos)));
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
-    pos = sexp_unbox_fixnum(i) / (sizeof(sexp_uint_t)*CHAR_BIT);
+    pos /= (sizeof(sexp_uint_t)*CHAR_BIT);
+    rem = (sexp_unbox_fixnum(i) - pos*sizeof(sexp_uint_t)*CHAR_BIT);
     return sexp_make_boolean((pos < sexp_bignum_length(x))
-                             && (sexp_bignum_data(x)[pos]
-                                 & (1UL<<(sexp_unbox_fixnum(i)
-                                          - pos*sizeof(sexp_uint_t)*CHAR_BIT))));
+                             && (sexp_bignum_data(x)[pos] & (1UL<<rem)));
 #endif
   } else {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
