@@ -130,92 +130,54 @@
        ;;         aaaa...
        ;; ...bbbb
        ((< b-end a-start)
-        (let ((near-diff (- a-start b-end))
-              (start-diff (- a-start b-start))
-              (far-diff (- a-end b-start)))
-          (if (let* ((left (iset-left a))
-                     (m-end (and left (iset-max-end left))))
-                (and m-end
-                     (or (< b-end m-end)
-                         (< (- b-end m-end) near-diff))))
-              (iset-adjoin-node! (iset-left a) b)
-              (cond
-               ((and (< near-diff bits-thresh)
-                     (< far-diff bits-max))
-                (let ((bits (arithmetic-shift
-                             (or a-bits (range->bits a-start a-end))
-                             start-diff))
-                      (lo-bits (or b-bits (range->bits b-start b-end))))
-                  (iset-start-set! a b-start)
-                  (iset-bits-set! a (bitwise-ior bits lo-bits))
-                  (iset-squash-bits! a)))
-               (else (iset-insert-left! a (iset-copy-node b)))))))
+        (iset-adjoin-node-left! a b))
        ;; ...aaaa
        ;;         bbbb...
        ((> b-start a-end)
-        (let ((near-diff (- b-start a-end))
-              (start-diff (- b-start a-start))
-              (far-diff (- b-end a-start)))
-          (if (let* ((right (iset-right a))
-                     (m-start (and right (iset-min-start right))))
-                (and m-start
-                     (or (> b-start m-start)
-                         (> (- b-start m-start) near-diff))))
-              (iset-adjoin-node! (iset-right a) b)
-              (cond
-               ((and (< near-diff bits-thresh)
-                     (< far-diff bits-max))
-                (iset-end-set! a b-end)
-                (iset-bits-set!
-                 a
-                 (bitwise-ior
-                  (or a-bits (range->bits a-start a-end))
-                  (arithmetic-shift
-                   (or b-bits (range->bits b-start b-end))
-                   start-diff)))
-                (iset-squash-bits! a))
-               (else (iset-insert-right! a (iset-copy-node b)))))))
-       ;; aaaa...
-       ;;   bbbb...
-       ((> b-start a-start)
-        (iset-end-set! a (max a-end b-end))
-        (cond
-         ((or a-bits b-bits)
-          (iset-bits-set!
-           a
-           (bitwise-ior
-            (or a-bits (range->bits a-start a-end))
-            (arithmetic-shift
-             (or b-bits (range->bits b-start b-end))
-             (- b-start a-start))))
-          (iset-squash-bits! a))))
-       ;;   aaaa...
-       ;; bbbb...
-       ((< b-start a-start)
-        (iset-start-set! a b-start)
-        (iset-end-set! a (max a-end b-end))
-        (cond
-         ((or a-bits b-bits)
-          (iset-bits-set!
-           a
-           (bitwise-ior
-            (arithmetic-shift
-             (or a-bits (range->bits a-start a-end))
-             (- a-start b-start))
-            (or b-bits (range->bits b-start b-end))))
-          (iset-squash-bits! a))))
-       ;; aaaa...
-       ;; bbbb...
+        (iset-adjoin-node-right! a b))
+       ;; ...aaaaa...
+       ;;  ...bb...
+       ((and (>= b-start a-start) (<= b-end a-end))
+        (if a-bits
+            (let ((b-bits (arithmetic-shift
+                           (or b-bits (range->bits b-start b-end))
+                           (- b-start a-start))))
+              (iset-bits-set! a (bitwise-ior a-bits b-bits)))))
        (else
-        (iset-end-set! a (max a-end b-end))
-        (cond
-         ((or a-bits b-bits)
-          (iset-bits-set!
-           a
-           (bitwise-ior
-            (or a-bits (range->bits a-start a-end))
-            (or b-bits (range->bits b-start b-end))))
-          (iset-squash-bits! a)))))))))
+        ;; general case: split, recurse, join sides
+        (let ((ls (iset-node-split b a-start a-end)))
+          (if (car ls)
+              (iset-adjoin-node-left! a (car ls)))
+          (iset-adjoin-node! a (cadr ls))
+          (if (car (cddr ls))
+              (iset-adjoin-node-right! a (car (cddr ls)))))))))))
+
+(define (iset-adjoin-node-left! iset node)
+  (if (iset-left iset)
+      (iset-adjoin-node! (iset-left iset) node)
+      (iset-left-set! iset node)))
+
+(define (iset-adjoin-node-right! iset node)
+  (if (iset-right iset)
+      (iset-adjoin-node! (iset-right iset) node)
+      (iset-right-set! iset node)))
+
+;; start and/or end are inside the node, split into:
+;;   1. node before start, if any
+;;   2. node between start and end
+;;   3. node after end, if any
+(define (iset-node-split node start end)
+  (list (and (< (iset-start node) start)
+             (iset-node-extract node (iset-start node) (- start 1)))
+        (iset-node-extract node start end)
+        (and (> (iset-end node) end)
+             (iset-node-extract node (+ end 1) (iset-end node)))))
+
+(define (iset-node-extract node start end)
+  (let ((bits (and (iset-bits node)
+                   (arithmetic-shift (iset-bits node)
+                                     (- (iset-start node) start)))))
+    (%make-iset start end bits #f #f)))
 
 (define (iset-adjoin! iset . ls)
   (list->iset! ls iset))
