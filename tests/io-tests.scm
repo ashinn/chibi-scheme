@@ -19,6 +19,13 @@
   (call-with-input-string "abc\ndef\n"
     (lambda (in) (let ((line (read-line in))) (list line (read-line in))))))
 
+(test "read-line" '("abc" "def" "ghi")
+  (call-with-input-string "abcdef\nghi\n"
+    (lambda (in)
+      (let* ((line1 (read-line in 3))
+             (line2 (read-line in 3)))
+        (list line1 line2 (read-line in 3))))))
+
 (test "read-line-to-eof" '("abc" "def")
   (call-with-input-string "abc\ndef"
     (lambda (in) (let ((line (read-line in))) (list line (read-line in))))))
