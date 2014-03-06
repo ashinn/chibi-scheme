@@ -11,7 +11,7 @@ CHIBI_DOC_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-doc
 
 GENSTATIC ?= ./tools/chibi-genstatic
 
-CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" CHIBI_MODULE_PATH=lib ./chibi-scheme$(EXE)
+CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH=".:$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH=lib ./chibi-scheme$(EXE)
 CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
 
 ########################################################################

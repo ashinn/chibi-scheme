@@ -53,6 +53,7 @@ EXE =
 CLIBFLAGS =
 CLINKFLAGS = -dynamiclib
 STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
+LDFLAGS += -install_name $(DESTDIR)$(SOLIBDIR)/libchibi-scheme.dylib
 else
 ifeq ($(PLATFORM),bsd)
 SO  = .so
