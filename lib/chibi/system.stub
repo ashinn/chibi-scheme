@@ -1,9 +1,10 @@
 
 (c-system-include "unistd.h")
 (c-system-include "pwd.h")
+(c-system-include "grp.h")
 (c-system-include "sys/types.h")
 
-;;> \subsubsubsection{\scheme{(user-information name-or-id)}}
+;;> \section{\scheme{(user-information name-or-id)}}
 
 ;;> Returns the password entry for the given user.  \var{name-or-id}
 ;;> should be a string indicating the user name, or an integer
@@ -62,3 +63,23 @@
           (link string)
           (value (string-size arg2) int)
           (result pointer passwd)))
+
+(define-c-struct group
+  predicate: group?
+  (string  gr_name     group-name)
+  (string  gr_passwd   group-password)
+  (gid_t   gr_gid      group-id)
+  ;;((array string)  gr_mem      group-members)
+  )
+
+(define-c errno getgrgid_r
+  (gid_t (result group)
+         (link string)
+         (value (string-size arg2) int)
+         (result pointer group)))
+
+(define-c errno getgrnam_r
+  (string (result group)
+          (link string)
+          (value (string-size arg2) int)
+          (result pointer group)))
