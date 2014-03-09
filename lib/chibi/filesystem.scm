@@ -55,7 +55,7 @@
         (let ((d (opendir file)))
           (if (not d)
               acc
-              (let lp ((acc acc))
+              (let lp ((acc (down file acc)))
                 (let ((e (readdir d)))
                   (cond
                    (e
@@ -63,7 +63,7 @@
                       (if (member f '("." ".."))
                           (lp acc)
                           (let ((path (string-append file "/" f)))
-                            (lp (fold path (down path acc)))))))
+                            (lp (fold path acc))))))
                    (else
                     (closedir d)
                     (up file acc))))))))
