@@ -162,3 +162,12 @@
 (define (renumber-file-descriptor old new)
   (and (duplicate-file-descriptor-to old new)
        (close-file-descriptor old)))
+
+;;> Returns the path the symbolic link \var{file} points to, or
+;;> \scheme{#f} on error.
+
+(define (read-link file)
+  (let* ((buf (make-string 512))
+         (res (readlink file buf 512)))
+    (and (positive? res)
+         (substring buf 0 res))))
