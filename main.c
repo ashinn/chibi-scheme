@@ -529,6 +529,21 @@ void run_main (int argc, char **argv) {
     case 's':
       init_context(); sexp_global(ctx, SEXP_G_STRICT_P) = SEXP_TRUE;
       break;
+    case 't':
+      mods_loaded = 1;
+      load_init(0);
+      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      suffix = strrchr(arg, '.');
+      sym = sexp_intern(ctx, suffix + 1, -1);
+      *(char*)suffix = '\0';
+      impmod = make_import(sexp_environment_prefix, arg, sexp_environment_suffix);
+      tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, sexp_meta_env(ctx)));
+      free(impmod);
+      sym = sexp_list1(ctx, sexp_env_cell(ctx, tmp, sym, 0));
+      tmp = check_exception(ctx, sexp_eval_string(ctx, "(environment '(chibi trace))", -1, sexp_meta_env(ctx)));
+      tmp = sexp_env_ref(ctx, tmp, sexp_intern(ctx, "trace-cell", -1), 0);
+      check_exception(ctx, sexp_apply(ctx, tmp, sym));
+      break;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
       /* ... FALLTHROUGH ... */
