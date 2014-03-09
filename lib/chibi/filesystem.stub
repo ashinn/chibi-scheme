@@ -66,6 +66,8 @@
 (define-c errno fstat (int (result stat)))
 (define-c errno (file-link-status "lstat") (string (result stat)))
 
+(define-c int readlink (string string int))
+
 ;; Creates a new input-port from the file descriptor \var{int}.
 
 ;; (define-c input-port (open-input-file-descriptor "fdopen")
