@@ -28,6 +28,9 @@ chibi-scheme \- a tiny Scheme interpreter
 [-p
 .I expr
 ]
+[-t
+.I module.id
+]
 [-d
 .I image-file
 ]
@@ -170,6 +173,12 @@ Evaluates the Scheme expression
 Evaluates the Scheme expression
 .I expr
 then prints the result to stdout.
+.TP
+.BI -t module.id
+Enables tracing for the given identifier
+.I id
+in the module
+.I module.
 .TP
 .BI -d image-file
 Dumps the current Scheme heap to
