@@ -587,7 +587,7 @@ void run_main (int argc, char **argv) {
           sym = sexp_intern(ctx, "repl-import", -1);
           tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
           sym = sexp_intern(ctx, "import", -1);
-          sexp_env_define(ctx, env, sym, tmp);
+          check_exception(ctx, sexp_env_define(ctx, env, sym, tmp));
           sym = sexp_intern(ctx, "cond-expand", -1);
           tmp = sexp_env_cell(ctx, sexp_meta_env(ctx), sym, 0);
 #if SEXP_USE_RENAME_BINDINGS

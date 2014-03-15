@@ -1907,6 +1907,22 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write(ctx, sexp_type_name(obj), out);
       sexp_write_string(ctx, ">", out);
       break;
+#if 0
+    case SEXP_ENV:
+      sexp_write_string(ctx, "#<Env ", out);
+      sexp_write(ctx, sexp_make_fixnum(obj), out);
+      sexp_write_string(ctx, " ", out);
+      sexp_write(ctx, sexp_make_fixnum(sexp_env_bindings(obj)), out);
+      sexp_write_string(ctx, " (", out);
+      sexp_write(ctx, sexp_length(ctx, sexp_env_bindings(obj)), out);
+      sexp_write_string(ctx, ")", out);
+      if (sexp_env_parent(obj)) {
+        sexp_write_string(ctx, " ", out);
+        sexp_write(ctx, sexp_env_parent(obj), out);
+      }
+      sexp_write_string(ctx, ">", out);
+      break;
+#endif
     case SEXP_STRING:
       sexp_write_char(ctx, '"', out);
       i = sexp_string_size(obj);

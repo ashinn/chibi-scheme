@@ -354,7 +354,11 @@
 (define *modules*
   (list
    (cons '(chibi)
-         (make-module #f (interaction-environment) '((include "init-7.scm"))))
+         ;; capture a static copy of the current environment to serve
+         ;; as the (chibi) module
+         (let ((env (make-environment)))
+           (%import env (interaction-environment) #f #t)
+           (make-module #f (env-parent env) '((include "init-7.scm")))))
    (cons '(chibi primitive)
          (make-module #f #f (lambda (env) (primitive-environment 7))))
    (cons '(meta)

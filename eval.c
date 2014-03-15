@@ -2294,7 +2294,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
 #endif
   sexp_global(ctx, SEXP_G_ERR_HANDLER)
     = sexp_env_ref(ctx, e, sym=sexp_intern(ctx, "current-exception-handler", -1), SEXP_FALSE);
-  /* load init.scm */
+  /* load init-7.scm */
   len = strlen(sexp_init_file);
   strncpy(init_file, sexp_init_file, len);
   init_file[len] = sexp_unbox_fixnum(version) + '0';
@@ -2302,7 +2302,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   init_file[len + 1 + strlen(sexp_init_file_suffix)] = 0;
   tmp = sexp_load_module_file(ctx, init_file, e);
   sexp_set_parameter(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
-  /* load and bind config env */
+  /* load and bind meta-7.scm env */
 #if SEXP_USE_MODULES
   if (!sexp_exceptionp(tmp)) {
     if (!sexp_envp(tmp=sexp_global(ctx, SEXP_G_META_ENV))) {
@@ -2319,7 +2319,11 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
       sym = sexp_intern(ctx, "repl-import", -1);
       tmp = sexp_env_ref(ctx, tmp, sym, SEXP_VOID);
       sym = sexp_intern(ctx, "import", -1);
-      sexp_env_define(ctx, e, sym, tmp);
+      /* splice import in place to mutate both this env and the */
+      /* frozen version in the meta env) */
+      tmp = sexp_cons(ctx, sym, tmp);
+      sexp_env_next_cell(tmp) = sexp_env_next_cell(sexp_env_bindings(e));
+      sexp_env_next_cell(sexp_env_bindings(e)) = tmp;
     }
   }
 #endif
@@ -2334,6 +2338,11 @@ sexp sexp_make_standard_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version
   if (! sexp_exceptionp(env)) env = sexp_load_standard_env(ctx, env, SEXP_SEVEN);
   sexp_gc_release1(ctx);
   return env;
+}
+
+sexp sexp_env_parent_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
+  return sexp_env_parent(e) ? sexp_env_parent(e) : SEXP_FALSE;
 }
 
 #if SEXP_USE_RENAME_BINDINGS
