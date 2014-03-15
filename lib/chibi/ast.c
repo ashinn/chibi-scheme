@@ -211,11 +211,6 @@ static sexp sexp_type_of (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
     return sexp_type_by_index(ctx, SEXP_OBJECT);
 }
 
-static sexp sexp_env_parent_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
-  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
-  return sexp_env_parent(e) ? sexp_env_parent(e) : SEXP_FALSE;
-}
-
 static sexp sexp_env_parent_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
   return sexp_env_parent(e) ? sexp_env_parent(e) : SEXP_FALSE;
@@ -603,7 +598,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "type-slots", 1, sexp_type_slots_op);
   sexp_define_foreign(ctx, env, "type-num-slots", 1, sexp_type_num_slots_op);
   sexp_define_foreign(ctx, env, "type-printer", 1, sexp_type_printer_op);
-  sexp_define_foreign(ctx, env, "env-parent", 1, sexp_env_parent_op);
   sexp_define_foreign(ctx, env, "env-parent-set!", 2, sexp_env_parent_set_op);
   sexp_define_foreign(ctx, env, "env-lambda", 1, sexp_env_lambda_op);
   sexp_define_foreign(ctx, env, "env-lambda-set!", 2, sexp_env_lambda_set_op);

@@ -120,6 +120,7 @@ SEXP_API sexp sexp_set_port_line_op (sexp ctx, sexp self, sexp_sint_t n, sexp po
 SEXP_API sexp sexp_env_define (sexp ctx, sexp env, sexp sym, sexp val);
 SEXP_API sexp sexp_env_cell (sexp ctx, sexp env, sexp sym, int localp);
 SEXP_API sexp sexp_env_ref (sexp ctx, sexp env, sexp sym, sexp dflt);
+SEXP_API sexp sexp_env_parent_op (sexp ctx, sexp self, sexp_sint_t n, sexp env);
 SEXP_API sexp sexp_parameter_ref (sexp ctx, sexp param);
 #if SEXP_USE_RENAME_BINDINGS
 SEXP_API sexp sexp_env_rename (sexp ctx, sexp env, sexp key, sexp value);

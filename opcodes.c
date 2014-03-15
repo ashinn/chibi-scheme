@@ -165,6 +165,7 @@ _FN1(_I(SEXP_OPORT), _I(SEXP_STRING), "open-binary-output-file", 0, sexp_open_bi
 _FN1(SEXP_VOID, _I(SEXP_IPORT), "close-input-port", 0, sexp_close_port_op),
 _FN1(SEXP_VOID, _I(SEXP_OPORT), "close-output-port", 0, sexp_close_port_op),
 _FN0(_I(SEXP_ENV), "make-environment", 0, sexp_make_env_op),
+_FN1(_I(SEXP_ENV), _I(SEXP_ENV), "env-parent", 0, sexp_env_parent_op),
 _FN1(_I(SEXP_ENV), _I(SEXP_FIXNUM), "null-environment", 0, sexp_make_null_env_op),
 _FN1(_I(SEXP_ENV), _I(SEXP_FIXNUM), "primitive-environment", 0, sexp_make_primitive_env_op),
 _FN1(_I(SEXP_ENV), _I(SEXP_FIXNUM), "scheme-report-environment", 0, sexp_make_standard_env_op),
