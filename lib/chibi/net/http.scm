@@ -100,9 +100,9 @@
                    (let ((enc (assq-ref headers 'transfer-encoding)))
                      (cond
                       ((equal? enc "chunked")
-                       (http-wrap-chunked-input-port in))
+                       (cons headers (http-wrap-chunked-input-port in)))
                       (else
-                       in))))
+                       (cons headers in)))))
                   ((3)
                    (close-input-port in)
                    (close-output-port out)
@@ -115,15 +115,24 @@
                    (close-output-port out)
                    (error "couldn't retrieve url" url resp)))))))))
 
-(define (http-get url . headers)
+(define (http-get/headers url . headers)
   (http-get/raw url
                 (if (pair? headers) (car headers) '())
                 http-redirect-limit))
+
+(define (http-get url . headers)
+  (cdr (apply http-get/headers url headers)))
 
 (define (call-with-input-url url proc)
   (let* ((p (http-get url))
          (res (proc p)))
     (close-input-port p)
+    res))
+
+(define (call-with-input-url/headers url proc)
+  (let* ((h+p (http-get/headers url))
+         (res (proc (car h+p) (cdr h+p))))
+    (close-input-port (cdr h+p))
     res))
 
 (define (with-input-from-url url thunk)
