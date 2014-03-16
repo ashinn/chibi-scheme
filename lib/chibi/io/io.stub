@@ -31,6 +31,12 @@
 (define-c sexp (%make-custom-output-port "sexp_make_custom_output_port")
   ((value ctx sexp) (value self sexp) sexp sexp sexp))
 
+(define-c sexp (%make-custom-binary-input-port "sexp_make_custom_binary_input_port")
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))
+
+(define-c sexp (%make-custom-binary-output-port "sexp_make_custom_binary_output_port")
+  ((value ctx sexp) (value self sexp) sexp sexp sexp))
+
 (define-c sexp (open-input-bytevector "sexp_open_input_bytevector")
   ((value ctx sexp) (value self sexp) sexp))
 (define-c sexp (open-output-bytevector "sexp_open_output_bytevector")

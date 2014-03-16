@@ -228,18 +228,52 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; custom port utilities
 
+;;> \var{read} is a procedure of three arguments:
+;;> \scheme{(lambda (str start end) ...)} which should fill \var{str} from
+;;> \var{start} to \var{end} with bytes, returning the actual number
+;;> of bytes filled.
+
 (define (make-custom-input-port read . o)
   (let ((seek (and (pair? o) (car o)))
         (close (and (pair? o) (pair? (cdr o)) (car (cdr o)))))
     (%make-custom-input-port read seek close)))
+
+;;> \var{write} is a procedure of three arguments:
+;;> \scheme{(lambda (str start end) ...)} which should write the bytes of
+;;> \var{str} from \var{start} to \var{end}, returning the actual
+;;> number of bytes written.
 
 (define (make-custom-output-port write . o)
   (let ((seek (and (pair? o) (car o)))
         (close (and (pair? o) (pair? (cdr o)) (car (cdr o)))))
     (%make-custom-output-port write seek close)))
 
+;;> Similar to \scheme{make-custom-input-port} but returns a binary
+;;> port, and \var{read} receives a bytevector to fill instead of a
+;;> string.
+
+(define (make-custom-binary-input-port read . o)
+  (let ((seek (and (pair? o) (car o)))
+        (close (and (pair? o) (pair? (cdr o)) (car (cdr o)))))
+    (%make-custom-binary-input-port read seek close)))
+
+;;> Similar to \scheme{make-custom-output-port} but returns a binary
+;;> port, and \var{write} receives data from a bytevector instead of a
+;;> string.
+
+(define (make-custom-binary-output-port write . o)
+  (let ((seek (and (pair? o) (car o)))
+        (close (and (pair? o) (pair? (cdr o)) (car (cdr o)))))
+    (%make-custom-binary-output-port write seek close)))
+
+;;> A simple /dev/null port which accepts and does nothing with any
+;;> data written to it.
+
 (define (make-null-output-port)
   (make-custom-output-port (lambda (str start end) 0)))
+
+;;> A port to broadcast everything written to it to multiple output
+;;> ports.
 
 (define (make-broadcast-port . ports)
   (make-custom-output-port
@@ -249,6 +283,9 @@
        (for-each (lambda (p) (%write-string str n p)) ports)
        n))))
 
+;;> An output port which runs all output (in arbitrary string chunks)
+;;> through the \var{filter} procedure.
+
 (define (make-filtered-output-port filter out)
   (make-custom-output-port
    (lambda (str start end)
@@ -257,6 +294,9 @@
             (s2 (filter s1)))
        (if (string? s2)
            (%write-string s2 (string-length s2) out))))))
+
+;;> An input port which acts as all of the \var{ports} concatenated
+;;> together in order.
 
 (define (make-concatenated-port . ports)
   (make-custom-input-port
@@ -281,8 +321,15 @@
                        (string-copy! str i s 0 len))
                    (lp (+ i len)))))))))))))
 
+;;> A /dev/null input port which always returns \scheme{eof-object}.
+
 (define (make-null-input-port)
   (make-concatenated-port))
+
+;;> A utility to represent a port generated in chunks by the thunk
+;;> \var{generator}, which should return a single string representing
+;;> the next input to buffer, or \scheme{#f} when there is no more
+;;> input.
 
 (define (make-generated-input-port generator)
   (let ((buf "")
@@ -317,6 +364,9 @@
                 (else
                  (string-copy! str i buf offset len)
                  (lp (+ i (- len offset)))))))))))))))
+
+;;> An input port which runs all input (in arbitrary string chunks)
+;;> through the \var{filter} procedure.
 
 (define (make-filtered-input-port filter in)
   (make-generated-input-port

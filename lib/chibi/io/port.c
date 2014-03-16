@@ -181,6 +181,8 @@ static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
     res = sexp_make_input_port(ctx, in, SEXP_FALSE);
     sexp_port_cookie(res) = vec;  /* for gc preserving */
   }
+  if (mode && mode[0] == 'w')
+    sexp_pointer_tag(res) = SEXP_OPORT;
   sexp_gc_release1(ctx);
   return res;
 }
@@ -231,6 +233,20 @@ sexp sexp_make_custom_output_port (sexp ctx, sexp self,
   if (!sexp_exceptionp(res))
     sexp_pointer_tag(res) = SEXP_OPORT;
 #endif
+  return res;
+}
+
+sexp sexp_make_custom_binary_input_port (sexp ctx, sexp self,
+                                         sexp read, sexp seek, sexp close) {
+  sexp res = sexp_make_custom_input_port(ctx, self, read, seek, close);
+  sexp_port_binaryp(res) = 1;
+  return res;
+}
+
+sexp sexp_make_custom_binary_output_port (sexp ctx, sexp self,
+                                          sexp write, sexp seek, sexp close) {
+  sexp res = sexp_make_custom_output_port(ctx, self, write, seek, close);
+  sexp_port_binaryp(res) = 1;
   return res;
 }
 
