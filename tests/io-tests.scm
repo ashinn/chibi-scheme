@@ -1,6 +1,9 @@
 
 (cond-expand
- (modules (import (chibi io) (only (chibi test) test-begin test test-end)))
+ (modules
+  (import (chibi io)
+          (only (scheme base) read-bytevector write-bytevector)
+          (only (chibi test) test-begin test test-end)))
  (else #f))
 
 (test-begin "io")
@@ -85,5 +88,32 @@
       (let ((out (make-filtered-output-port string-upcase out)))
         (display "abc" out)
         (close-output-port out)))))
+
+(let ((in (make-custom-binary-input-port
+           (let ((i 0))
+             (lambda (bv start end)
+               (do ((j start (+ j 1)))
+                   ((= j end))
+                 (bytevector-u8-set! bv j (modulo (+ j i) 256)))
+               (if (> end 0)
+                   (set! i (bytevector-u8-ref bv (- end 1))))
+               (- end start))))))
+  (test #u8(0 1 2 3) (read-bytevector 4 in))
+  (test #u8(4 5 6 7) (read-bytevector 4 in))
+  (test 7 (bytevector-u8-ref (read-bytevector 256 in) 255))
+  (test 6 (bytevector-u8-ref (read-bytevector 1024 in) 1022)))
+
+(let* ((sum 0)
+       (out (make-custom-binary-output-port
+             (lambda (bv start end)
+               (do ((i start (+ i 1))
+                    (x 0 (+ x (bytevector-u8-ref bv i))))
+                   ((= i end) (set! sum x)))))))
+  (write-bytevector #u8(0 1 2 3) out)
+  (flush-output out)
+  (test 6 sum)
+  (write-bytevector #u8(100) out)
+  (flush-output out)
+  (test 106 sum))
 
 (test-end)
