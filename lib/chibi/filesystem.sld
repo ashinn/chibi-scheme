@@ -31,6 +31,7 @@
           open/create      open/exclusive         open/truncate
           open/append      open/non-block
           file-lock        file-truncate
+          call-with-locked-file
           lock/shared lock/exclusive lock/non-blocking lock/unlock
           is-a-tty?)
   (import (chibi) (chibi string))
