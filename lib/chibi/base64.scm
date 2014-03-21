@@ -45,24 +45,24 @@
     (vector-set! res (char->integer #\=) *pad-char*)
     res))
 
-(define (base64-decode-char c)
-  (vector-ref *base64-decode-table* (char->integer c)))
+(define (base64-decode-u8 u8)
+  (vector-ref *base64-decode-table* u8))
 
 (define *base64-encode-table*
   (let ((res (make-vector 64)))
     (let lp ((i 0)) ; map letters
       (cond
        ((<= i 25)
-        (vector-set! res i (integer->char (+ i 65)))
-        (vector-set! res (+ i 26) (integer->char (+ i 97)))
+        (vector-set! res i (+ i 65))
+        (vector-set! res (+ i 26) (+ i 97))
         (lp (+ i 1)))))
     (let lp ((i 0)) ; map numbers
       (cond
        ((<= i 9)
-        (vector-set! res (+ i 52) (integer->char (+ i 48)))
+        (vector-set! res (+ i 52) (+ i 48))
         (lp (+ i 1)))))
-    (vector-set! res 62 #\+)
-    (vector-set! res 63 #\/)
+    (vector-set! res 62 (char->integer #\+))
+    (vector-set! res 63 (char->integer #\/))
     res))
 
 (define (enc i)
@@ -90,17 +90,21 @@
 ;; input, and pass it to the internal base64-decode-string! utility.
 ;; If the resulting length used is exact, we can return that buffer,
 ;; otherwise we return the appropriate substring.
-(define (base64-decode-string src)
-  (let* ((len (string-length src))
+
+(define (base64-decode-string str)
+  (utf8->string (base64-decode-bytevector (string->utf8 str))))
+
+(define (base64-decode-bytevector src)
+  (let* ((len (bytevector-length src))
          (dst-len (* 3 (arithmetic-shift (+ 3 len) -2)))
-         (dst (make-string dst-len)))
-    (base64-decode-string!
+         (dst (make-bytevector dst-len)))
+    (base64-decode-bytevector!
      src 0 len dst
      (lambda (src-offset res-len b1 b2 b3)
        (let ((res-len (base64-decode-finish dst res-len b1 b2 b3)))
          (if (= res-len dst-len)
              dst
-             (substring dst 0 res-len)))))))
+             (bytevector-copy dst 0 res-len)))))))
 
 ;; This is a little funky.
 ;;
@@ -112,7 +116,7 @@
 ;;   really bad about optimizing nested loops of primitives, so we
 ;;   flatten this into a single loop, using conditionals to determine
 ;;   which character is currently being read.
-(define (base64-decode-string! src start end dst kont)
+(define (base64-decode-bytevector! src start end dst kont)
   (let lp ((i start)
            (j 0)
            (b1 *outside-char*)
@@ -120,7 +124,7 @@
            (b3 *outside-char*))
     (if (>= i end)
         (kont i j b1 b2 b3)
-        (let ((c (base64-decode-char (string-ref src i))))
+        (let ((c (base64-decode-u8 (bytevector-u8-ref src i))))
           (cond
            ((eqv? c *pad-char*)
             (kont i j b1 b2 b3))
@@ -133,23 +137,23 @@
            ((eqv? b3 *outside-char*)
             (lp (+ i 1) j b1 b2 c))
            (else
-            (string-set! dst
-                         j
-                         (integer->char
-                          (bitwise-ior (arithmetic-shift b1 2)
-                                       (extract-bit-field 2 4 b2))))
-            (string-set! dst
-                         (+ j 1)
-                         (integer->char
-                          (bitwise-ior
-                           (arithmetic-shift (extract-bit-field 4 0 b2) 4)
-                           (extract-bit-field 4 2 b3))))
-            (string-set! dst
-                         (+ j 2)
-                         (integer->char
-                          (bitwise-ior
-                           (arithmetic-shift (extract-bit-field 2 0 b3) 6)
-                           c)))
+            (bytevector-u8-set!
+             dst
+             j
+             (bitwise-ior (arithmetic-shift b1 2)
+                          (extract-bit-field 2 4 b2)))
+            (bytevector-u8-set!
+             dst
+             (+ j 1)
+             (bitwise-ior
+              (arithmetic-shift (extract-bit-field 4 0 b2) 4)
+              (extract-bit-field 4 2 b3)))
+            (bytevector-u8-set!
+             dst
+             (+ j 2)
+             (bitwise-ior
+              (arithmetic-shift (extract-bit-field 2 0 b3) 6)
+              c))
             (lp (+ i 1) (+ j 3)
                 *outside-char* *outside-char* *outside-char*)))))))
 
@@ -162,24 +166,22 @@
    ((eqv? b1 *outside-char*)
     j)
    ((eqv? b2 *outside-char*)
-    (string-set! dst j (integer->char (arithmetic-shift b1 2)))
+    (bytevector-u8-set! dst j (arithmetic-shift b1 2))
     (+ j 1))
    (else
-    (string-set! dst
-                 j
-                 (integer->char
-                  (bitwise-ior (arithmetic-shift b1 2)
-                               (extract-bit-field 2 4 b2))))
+    (bytevector-u8-set! dst
+                        j
+                        (bitwise-ior (arithmetic-shift b1 2)
+                                     (extract-bit-field 2 4 b2)))
     (cond
      ((eqv? b3 *outside-char*)
       (+ j 1))
      (else
-      (string-set! dst
-                   (+ j 1)
-                   (integer->char
-                    (bitwise-ior
-                     (arithmetic-shift (extract-bit-field 4 0 b2) 4)
-                     (extract-bit-field 4 2 b3))))
+      (bytevector-u8-set! dst
+                          (+ j 1)
+                          (bitwise-ior
+                           (arithmetic-shift (extract-bit-field 4 0 b2) 4)
+                           (extract-bit-field 4 2 b3)))
       (+ j 2))))))
 
 ;;>  Variation of the above to read and write to ports.
@@ -189,48 +191,53 @@
         (out (if (and (pair? o) (pair? (cdr o)))
                  (cadr o)
                  (current-output-port))))
-    (let ((src (make-string decode-src-length))
-          (dst (make-string decode-dst-length)))
-      (let lp ((offset 0))
-        (let ((src-len (+ offset
-                          (read-string! decode-src-length src in offset))))
-          (cond
-           ((= src-len decode-src-length)
-            ;; read a full chunk: decode, write and loop
-            (base64-decode-string!
-             src 0 decode-src-length dst
-             (lambda (src-offset dst-len b1 b2 b3)
-               (cond
-                ((and (< src-offset src-len)
-                      (eqv? #\= (string-ref src src-offset)))
-                 ;; done
-                 (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
-                   (write-string dst out 0 dst-len)))
-                ((eqv? b1 *outside-char*)
-                 (write-string dst out 0 dst-len)
-                 (lp 0))
-                (else
-                 (write-string dst out 0 dst-len)
-                 ;; one to three chars left in buffer
-                 (string-set! src 0 (enc b1))
+    (cond
+     ((not (binary-port? in))
+      (write-string (base64-decode-string (port->string in)) out))
+     (else
+      (let ((src (make-bytevector decode-src-length))
+            (dst (make-bytevector decode-dst-length)))
+        (let lp ((offset 0))
+          (let ((src-len
+                 (+ offset
+                    (read-bytevector! decode-src-length src in offset))))
+            (cond
+             ((= src-len decode-src-length)
+              ;; read a full chunk: decode, write and loop
+              (base64-decode-bytevector!
+               src 0 decode-src-length dst
+               (lambda (src-offset dst-len b1 b2 b3)
                  (cond
-                  ((eqv? b2 *outside-char*)
-                   (lp 1))
+                  ((and (< src-offset src-len)
+                        (eqv? #\= (string-ref src src-offset)))
+                   ;; done
+                   (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
+                     (write-bytevector dst out 0 dst-len)))
+                  ((eqv? b1 *outside-char*)
+                   (write-string dst out 0 dst-len)
+                   (lp 0))
                   (else
-                   (string-set! src 1 (enc b2))
+                   (write-bytevector dst out 0 dst-len)
+                   ;; one to three chars left in buffer
+                   (bytevector-u8-set! src 0 (enc b1))
                    (cond
-                    ((eqv? b3 *outside-char*)
-                     (lp 2))
+                    ((eqv? b2 *outside-char*)
+                     (lp 1))
                     (else
-                     (string-set! src 2 (enc b3))
-                     (lp 3))))))))))
-           (else
-            ;; end of source - just decode and write once
-            (base64-decode-string!
-             src 0 src-len dst
-             (lambda (src-offset dst-len b1 b2 b3)
-               (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
-                 (write-string dst out 0 dst-len)))))))))))
+                     (bytevector-u8-set! src 1 (enc b2))
+                     (cond
+                      ((eqv? b3 *outside-char*)
+                       (lp 2))
+                      (else
+                       (bytevector-u8-set! src 2 (enc b3))
+                       (lp 3))))))))))
+             (else
+              ;; end of source - just decode and write once
+              (base64-decode-bytevector!
+               src 0 src-len dst
+               (lambda (src-offset dst-len b1 b2 b3)
+                 (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
+                   (write-string dst out 0 dst-len)))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; encoding
@@ -239,57 +246,65 @@
 ;;> official base64 standard as described in RFC3548.
 
 (define (base64-encode-string str)
-  (let* ((len (string-length str))
+  (utf8->string (base64-encode-bytevector (string->utf8 str))))
+
+(define (base64-encode-bytevector bv)
+  (let* ((len (bytevector-length bv))
          (quot (quotient len 3))
          (rem (- len (* quot 3)))
          (res-len (arithmetic-shift (+ quot (if (zero? rem) 0 1)) 2))
-         (res (make-string res-len)))
-    (base64-encode-string! str 0 len res)
+         (res (make-bytevector res-len)))
+    (base64-encode-bytevector! bv 0 len res)
     res))
 
-(define (base64-encode-string! str start end res)
-  (let* ((res-len (string-length res))
+(define (base64-encode-bytevector! bv start end res)
+  (let* ((res-len (bytevector-length res))
          (limit (- end 2)))
     (let lp ((i start) (j 0))
       (if (>= i limit)
           (case (- end i)
             ((1)
-             (let ((b1 (char->integer (string-ref str i))))
-               (string-set! res j (enc (arithmetic-shift b1 -2)))
-               (string-set! res
-                            (+ j 1)
-                            (enc (arithmetic-shift (bitwise-and #b11 b1) 4)))
-               (string-set! res (+ j 2) #\=)
-               (string-set! res (+ j 3) #\=)))
+             (let ((b1 (bytevector-u8-ref bv i)))
+               (bytevector-u8-set! res j (enc (arithmetic-shift b1 -2)))
+               (bytevector-u8-set!
+                res
+                (+ j 1)
+                (enc (arithmetic-shift (bitwise-and #b11 b1) 4)))
+               (bytevector-u8-set! res (+ j 2) (char->integer #\=))
+               (bytevector-u8-set! res (+ j 3) (char->integer #\=))))
             ((2)
-             (let ((b1 (char->integer (string-ref str i)))
-                   (b2 (char->integer (string-ref str (+ i 1)))))
-               (string-set! res j (enc (arithmetic-shift b1 -2)))
-               (string-set! res
-                            (+ j 1)
-                            (enc (bitwise-ior
-                                  (arithmetic-shift (bitwise-and #b11 b1) 4)
-                                  (extract-bit-field 4 4 b2))))
-               (string-set! res
-                            (+ j 2)
-                            (enc (arithmetic-shift (extract-bit-field 4 0 b2)
-                                                   2)))
-               (string-set! res (+ j 3) #\=))))
-          (let ((b1 (char->integer (string-ref str i)))
-                (b2 (char->integer (string-ref str (+ i 1))))
-                (b3 (char->integer (string-ref str (+ i 2)))))
-            (string-set! res j (enc (arithmetic-shift b1 -2)))
-            (string-set! res
-                         (+ j 1)
-                         (enc (bitwise-ior
-                               (arithmetic-shift (bitwise-and #b11 b1) 4)
-                               (extract-bit-field 4 4 b2))))
-            (string-set! res
-                         (+ j 2)
-                         (enc (bitwise-ior
-                               (arithmetic-shift (extract-bit-field 4 0 b2) 2)
-                               (extract-bit-field 2 6 b3))))
-            (string-set! res (+ j 3) (enc (bitwise-and #b111111 b3)))
+             (let ((b1 (bytevector-u8-ref bv i))
+                   (b2 (bytevector-u8-ref bv (+ i 1))))
+               (bytevector-u8-set! res j (enc (arithmetic-shift b1 -2)))
+               (bytevector-u8-set!
+                res
+                (+ j 1)
+                (enc (bitwise-ior
+                      (arithmetic-shift (bitwise-and #b11 b1) 4)
+                      (extract-bit-field 4 4 b2))))
+               (bytevector-u8-set!
+                res
+                (+ j 2)
+                (enc (arithmetic-shift (extract-bit-field 4 0 b2)
+                                       2)))
+               (bytevector-u8-set! res (+ j 3) (char->integer #\=)))))
+          (let ((b1 (bytevector-u8-ref bv i))
+                (b2 (bytevector-u8-ref bv (+ i 1)))
+                (b3 (bytevector-u8-ref bv (+ i 2))))
+            (bytevector-u8-set! res j (enc (arithmetic-shift b1 -2)))
+            (bytevector-u8-set!
+             res
+             (+ j 1)
+             (enc (bitwise-ior
+                   (arithmetic-shift (bitwise-and #b11 b1) 4)
+                   (extract-bit-field 4 4 b2))))
+            (bytevector-u8-set!
+             res
+             (+ j 2)
+             (enc (bitwise-ior
+                   (arithmetic-shift (extract-bit-field 4 0 b2) 2)
+                   (extract-bit-field 2 6 b3))))
+            (bytevector-u8-set! res (+ j 3) (enc (bitwise-and #b111111 b3)))
             (lp (+ i 3) (+ j 4)))))))
 
 ;;>  Variation of the above to read and write to ports.
@@ -299,15 +314,19 @@
         (out (if (and (pair? o) (pair? (cdr o)))
                  (cadr o)
                  (current-output-port))))
-    (let ((src (make-string encode-src-length))
-          (dst (make-string
-                (arithmetic-shift (quotient encode-src-length 3) 2))))
-      (let lp ()
-        (let ((n (read-string! 2048 src in)))
-          (base64-encode-string! src 0 n dst)
-          (write-string dst out 0 (* 3 (quotient (+ n 3) 4)))
-          (if (= n 2048)
-              (lp)))))))
+    (cond
+     ((not (binary-port? in))
+      (write-string (base64-encode-string (port->string in)) out))
+     (else
+      (let ((src (make-string encode-src-length))
+            (dst (make-string
+                  (arithmetic-shift (quotient encode-src-length 3) 2))))
+        (let lp ()
+          (let ((n (read-bytevector! src in 0 2048)))
+            (base64-encode-bytevector! src 0 n dst)
+            (write-bytevector dst out 0 (* 3 (quotient (+ n 3) 4)))
+            (if (= n 2048)
+                (lp)))))))))
 
 ;;> Return a base64 encoded representation of the string \var{str} as
 ;;> above, wrapped in =?ENC?B?...?= as per RFC1522, split across
