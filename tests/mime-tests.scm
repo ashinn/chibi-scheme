@@ -65,7 +65,9 @@ Content-Type: text/plain
                         . "attachment; filename=\"file2.gif\"")
                        (content-type . "image/gif")
                        (content-transfer-encoding . "binary"))
-                    "  ...contents of file2.gif...")))
+                    #u8(32 32 46 46 46 99 111 110 116 101 110
+                        116 115 32 111 102 32 102 105 108 101
+                        50 46 103 105 102 46 46 46))))
     (call-with-input-string
         "Content-type: multipart/form-data, boundary=AaB03x
 
