@@ -1003,14 +1003,10 @@
             (cond ((not finalized?)
                    (set! finalized? #t)
                    (final))))))
-    (with-exception-handler
-     (lambda (exn)
-       (run-finalize)
-       (raise exn))
-     (lambda ()
-       (let ((res (thunk)))
-         (run-finalize)
-         res)))))
+    (protect (exn (else (run-finalize) (raise exn)))
+      (let ((res (thunk)))
+        (run-finalize)
+        res))))
 
 (define-syntax exception-protect
   (syntax-rules ()
