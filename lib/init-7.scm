@@ -994,6 +994,29 @@
          (begin result1 result2 ...)
          (protect-aux reraise clause1 clause2 ...)))))
 
+;; Similar to unwind-protect, but allows escape via continuations
+;; assuming they'll return, whereas exceptions are assumed to not return.
+(define (with-exception-protect thunk final)
+  (let ((finalized? #f)
+        (run-finalize
+         (lambda ()
+           (cond ((not finalized?)
+                  (set! finalized? #t)
+                  (final))))))
+    (with-exception-handler
+     (lambda (exn)
+       (run-finalize)
+       (raise exn))
+     (lambda ()
+       (let ((res (thunk)))
+         (run-finalize)
+         res)))))
+
+(define-syntax exception-protect
+  (syntax-rules ()
+    ((exception-protect expr final)
+     (with-exception-protect (lambda () expr)  (lambda () final)))))
+
 (define (eval x . o)
   (let ((thunk (compile x (if (pair? o) (car o) (interaction-environment)))))
     (if (procedure? thunk) (thunk) (raise thunk))))
