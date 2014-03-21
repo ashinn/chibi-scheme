@@ -106,15 +106,6 @@
       thunk
       (lambda () (change-directory pwd)))))
 
-;;> Calls \var{proc} on a read/write opened file descriptor for
-;;> \var{path}, locked with \scheme{file-lock}, and automatically
-;;> removes the lock when \var{proc} returns the first time.
-
-(define (call-with-locked-file path proc)
-  (let ((fd (open path open/read-write)))
-    (file-lock fd lock/exclusive)
-    (exception-protect (proc fd) (file-lock fd lock/unlock))))
-
 ;;> Returns the \scheme{status} object for the given \var{file},
 ;;> which should be a string indicating the path or a file
 ;;> descriptor.
