@@ -344,7 +344,7 @@
            (set! offset (+ offset n))
            n)
           (else
-           (string-copy! str start buf offset len)
+           (string-copy! str start buf offset (+ offset len))
            (let lp ((i (+ start (- len offset))))
              (set! buf (generator))
              (cond

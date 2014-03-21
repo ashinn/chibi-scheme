@@ -51,6 +51,40 @@
               n
               (if (>= j len) "" (substring line (+ j 1) len))))))
 
+(define (make-generated-binary-input-port generator)
+  (let ((buf #u8())
+        (len 0)
+        (offset 0))
+    (make-custom-binary-input-port
+     (lambda (bv start end)
+       (let ((n (- end start)))
+         (cond
+          ((>= (- len offset) n)
+           (bytevector-copy! bv start buf offset (+ offset n))
+           (set! offset (+ offset n))
+           n)
+          (else
+           (bytevector-copy! bv start buf offset (+ offset len))
+           (let lp ((i (+ start (- len offset))))
+             (set! buf (generator))
+             (cond
+              ((not (bytevector? buf))
+               (set! buf #u8())
+               (set! len 0)
+               (set! offset 0)
+               (- i start))
+              (else
+               (set! len (bytevector-length buf))
+               (set! offset 0)
+               (cond
+                ((>= (- len offset) (- n i))
+                 (bytevector-copy! bv i buf offset (+ offset (- n i)))
+                 (set! offset (+ offset (- n i)))
+                 n)
+                (else
+                 (bytevector-copy! bv i buf offset len)
+                 (lp (+ i (- len offset)))))))))))))))
+
 (define (http-wrap-chunked-input-port in)
   (define (read-chunk in)
     (let* ((line (read-line in))
@@ -59,8 +93,8 @@
        ((not (and (integer? n) (<= 0 n http-chunked-size-limit)))
         (error "invalid chunked size line" line))
        ((zero? n) "")
-       (else (read-string n in)))))
-  (make-generated-input-port
+       (else (read-bytevector n in)))))
+  (make-generated-binary-input-port
    (lambda () (read-chunk in))))
 
 (define (http-get/raw url in-headers limit)
@@ -91,7 +125,7 @@
                  (display (cdr x) out) (display "\r\n" out))
                in-headers)
               (display "Connection: close\r\n\r\n" out)
-              (flush-output out)
+              (flush-output-port out)
               (let* ((resp (http-parse-response (read-line in)))
                      (headers (mime-headers->list in))
                      (status (quotient (cadr resp) 100)))
