@@ -997,12 +997,12 @@
 ;; Similar to unwind-protect, but allows escape via continuations
 ;; assuming they'll return, whereas exceptions are assumed to not return.
 (define (with-exception-protect thunk final)
-  (let ((finalized? #f)
-        (run-finalize
-         (lambda ()
-           (cond ((not finalized?)
-                  (set! finalized? #t)
-                  (final))))))
+  (let* ((finalized? #f)
+         (run-finalize
+          (lambda ()
+            (cond ((not finalized?)
+                   (set! finalized? #t)
+                   (final))))))
     (with-exception-handler
      (lambda (exn)
        (run-finalize)
