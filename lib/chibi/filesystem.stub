@@ -188,6 +188,11 @@
 ;;> File opening modes.
 ;;/
 
+;;> Truncate the file to the given size.
+
+(define-c int (file-truncate "ftruncate")
+  (port-or-fileno off_t))
+
 ;;> Applies the specified locking operation using flock(2) to the port
 ;;> or file-descriptor.
 
