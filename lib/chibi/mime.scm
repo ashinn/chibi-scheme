@@ -234,21 +234,29 @@
          (else
           (lp (cons line res))))))))
 
-(define (mime-convert-part str cte enc)
-  (let ((str (cond
+(define (mime-convert-part str text? cte enc)
+  (let ((res (cond
               ((and (string? cte) (string-ci=? cte "quoted-printable"))
-               (quoted-printable-decode-string str))
+               (if text?
+                   (quoted-printable-decode-string str)
+                   (quoted-printable-decode-bytevector (string->utf8 str))))
               ((and (string? cte) (string-ci=? cte "base64"))
-               (base64-decode-string str))
+               (if text?
+                   (base64-decode-string str)
+                   (base64-decode-bytevector (string->utf8 str))))
+              (text?
+               str)
               (else
-               str))))
-    (if (string? enc) (ces-convert str enc) str)))
+               (string->utf8 str)))))
+    (if (string? res) (ces-convert res enc) res)))
 
-(define (mime-read-part port cte enc boundary next final)
-  (mime-read-to-boundary
-   port boundary
-   (lambda (x) (next (mime-convert-part x cte enc)))
-   (lambda (x) (final (mime-convert-part x cte enc)))))
+(define (mime-read-part port type cte enc boundary next final)
+  (let ((text? (and (symbol? type)
+                    (string-prefix? "text/" (symbol->string type)))))
+    (mime-read-to-boundary
+     port boundary
+     (lambda (x) (next (mime-convert-part x text? cte enc)))
+     (lambda (x) (final (mime-convert-part x text? cte enc))))))
 
 ;;> \section{RFC2045 MIME Encoding}
 
@@ -335,7 +343,7 @@
                                 (next (kons-up headers seed x)))))))))
            (else
             (mime-read-part
-             port cte enc boundary
+             port type cte enc boundary
              (lambda (x) (next (kons parent-headers headers x seed)))
              (lambda (x) (final (kons parent-headers headers x seed)))))))))))
 
