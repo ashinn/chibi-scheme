@@ -225,6 +225,12 @@
 (define (port->string in)
   (string-concatenate (port->list (lambda (in) (read-string 1024 in)) in)))
 
+(define (port->bytevector in)
+  (let ((out (open-output-bytevector)))
+    (do ((c (read-u8 in) (read-u8 in)))
+        ((eof-object? c) (get-output-bytevector out))
+      (write-u8 c out))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; custom port utilities
 
