@@ -4,5 +4,6 @@
           mime-parse-content-type mime-decode-header
           mime-message-fold mime-message->sxml mime-write-headers)
   (import (chibi) (chibi base64) (chibi quoted-printable)
-          (chibi string) (chibi io))
+          (chibi string) (chibi io)
+          (only (scheme base) bytevector-append write-bytevector))
   (include "mime.scm"))
