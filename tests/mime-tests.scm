@@ -1,5 +1,6 @@
 
-(import (chibi) (chibi mime) (chibi test))
+(import (chibi) (chibi mime) (chibi test)
+        (only (scheme base) string->utf8 open-input-bytevector))
 
 (test-begin "mime")
 
@@ -94,5 +95,52 @@ Content-Transfer-Encoding: binary
 --AaB03x--
 "
       mime-message->sxml))
+
+(test '(mime
+        (@ (content-type . "multipart/form-data, boundary=AaB03x"))
+        (mime (@ (content-disposition . "form-data; name=\"field1\"")
+                 (content-type . "text/plain"))
+              "Joe Blow")
+        (mime (@ (content-disposition . "form-data; name=\"pics\"")
+                 (content-type . "multipart/mixed, boundary=BbC04y"))
+              (mime (@ (content-disposition
+                        . "attachment; filename=\"file1.txt\"")
+                       (content-type . "text/plain"))
+                    "... contents of file1.txt ...")
+              (mime (@ (content-disposition
+                        . "attachment; filename=\"file2.gif\"")
+                       (content-type . "image/gif")
+                       (content-transfer-encoding . "binary"))
+                    #u8(32 32 46 46 46 99 111 110 116 101 110
+                        116 115 32 111 102 32 102 105 108 101
+                        50 46 103 105 102 46 46 46))))
+    (mime-message->sxml
+     (open-input-bytevector
+      (string->utf8
+       "Content-type: multipart/form-data, boundary=AaB03x
+
+--AaB03x
+content-disposition: form-data; name=\"field1\"
+Content-Type: text/plain
+
+Joe Blow
+--AaB03x
+content-disposition: form-data; name=\"pics\"
+Content-type: multipart/mixed, boundary=BbC04y
+
+--BbC04y
+Content-disposition: attachment; filename=\"file1.txt\"
+Content-Type: text/plain
+
+... contents of file1.txt ...
+--BbC04y
+Content-disposition: attachment; filename=\"file2.gif\"
+Content-type: image/gif
+Content-Transfer-Encoding: binary
+
+  ...contents of file2.gif...
+--BbC04y--
+--AaB03x--
+"))))
 
 (test-end)

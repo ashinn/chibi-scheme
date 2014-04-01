@@ -68,9 +68,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; dummy encoder
 
-;; TODO: add conversion routines
-(define (ces-convert str . x)
-  str)
+(define (ces-convert bv . o)
+  (let ((enc (if (pair? o) (car o) "utf8")))
+    ;; TODO: add conversion routines for non-utf8 encodings
+    (utf8->string bv)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;> \section{RFC2822 Headers}
@@ -220,7 +221,45 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; message parsing
 
-(define (mime-read-to-boundary port boundary next final)
+(define (read-line/binary in)
+  (let ((out (open-output-bytevector)))
+    (let lp ()
+      (let ((ch (read-u8 in)))
+        (cond ((eof-object? ch)
+               (let ((res (get-output-bytevector out)))
+                 (if (zero? (bytevector-length res))
+                     ch
+                     res)))
+              ((eqv? ch 10)
+               (get-output-bytevector out))
+              (else
+               (write-u8 ch out)
+               (lp)))))))
+
+(define (mime-read-to-boundary/binary port boundary next final)
+  (let* ((boundary (if (string? boundary) (string->utf8 boundary) boundary))
+         (boundary-cr (and boundary (bytevector-append boundary #u8(13))))
+         (final-boundary
+          (and boundary (bytevector-append boundary #u8(45 45))))
+         (final-boundary-cr
+          (and final-boundary (bytevector-append final-boundary #u8(13))))
+         (out (open-output-bytevector)))
+    (let lp ((first? #t))
+      (let ((line (read-line/binary port)))
+        (cond
+         ((or (eof-object? line)
+              (equal? line final-boundary)
+              (equal? line final-boundary-cr))
+          (final (get-output-bytevector out)))
+         ((or (equal? line boundary) (equal? line boundary-cr))
+          (next (get-output-bytevector out)))
+         (else
+          (if (not first?)
+              (write-u8 10 out))
+          (write-bytevector line out)
+          (lp #f)))))))
+
+(define (mime-read-to-boundary/text port boundary next final)
   (let ((final-boundary (and boundary (string-append boundary "--"))))
     (let lp ((res '()))
       (let ((line (read-line port mime-line-length-limit)))
@@ -234,21 +273,31 @@
          (else
           (lp (cons line res))))))))
 
-(define (mime-convert-part str text? cte enc)
+(define (mime-read-to-boundary port boundary next final)
+  ((if (binary-port? port)
+       mime-read-to-boundary/binary
+       mime-read-to-boundary/text)
+   port boundary next final))
+
+(define (mime-convert-part part text? cte enc)
   (let ((res (cond
               ((and (string? cte) (string-ci=? cte "quoted-printable"))
                (if text?
-                   (quoted-printable-decode-string str)
-                   (quoted-printable-decode-bytevector (string->utf8 str))))
+                   (quoted-printable-decode-string part)
+                   (quoted-printable-decode-bytevector
+                    (if (string? part) (string->utf8 part) part))))
               ((and (string? cte) (string-ci=? cte "base64"))
                (if text?
-                   (base64-decode-string str)
-                   (base64-decode-bytevector (string->utf8 str))))
-              (text?
-               str)
+                   (base64-decode-string part)
+                   (base64-decode-bytevector
+                    (if (string? part) (string->utf8 part) part))))
+              ((and (not text?) (string? part))
+               (string->utf8 part))
               (else
-               (string->utf8 str)))))
-    (if (string? res) (ces-convert res enc) res)))
+               part))))
+    (cond
+     ((and text? (bytevector? res)) (ces-convert res enc))
+     (else res))))
 
 (define (mime-read-part port type cte enc boundary next final)
   (let ((text? (and (symbol? type)
@@ -331,6 +380,7 @@
                    (mime-read-to-boundary port boundary2 (lambda (x) x) (lambda (x) x))
                    (let lp ((part-seed (kons-down headers seed)))
                      (let ((part-headers (mime-headers->list port)))
+                       (flush-output (current-error-port))
                        (tfold headers part-headers
                               part-seed boundary2
                               lp
