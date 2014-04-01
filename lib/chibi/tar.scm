@@ -73,10 +73,12 @@
 
 ;; fundamental iterator
 (define (tar-fold src kons knil)
-  (let ((in (if (string? src) (open-binary-input-file src) src)))
+  (let ((in (cond ((string? src) (open-binary-input-file src))
+                  ((bytevector? src) (open-input-bytevector src))
+                  (else src))))
     (let lp ((acc knil))
       (cond
-       ((eof-object? (peek-char in))
+       ((eof-object? (peek-u8 in))
         (close-input-port in)
         acc)
        (else
