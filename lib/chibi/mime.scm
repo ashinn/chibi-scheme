@@ -232,6 +232,9 @@
                      res)))
               ((eqv? ch 10)
                (get-output-bytevector out))
+              ((and (eqv? ch 13) (eqv? (peek-u8 in) 10))
+               (read-u8 in)
+               (get-output-bytevector out))
               (else
                (write-u8 ch out)
                (lp)))))))
