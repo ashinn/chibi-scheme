@@ -113,7 +113,7 @@ libchibi-scheme.a: $(SEXP_OBJS) $(EVAL_OBJS)
 	$(AR) rcs $@ $^
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
-	$(CC) $(XCPPFLAGS) $(XCFLAGS) -o $@ $< -L. -lchibi-scheme
+	$(CC) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
