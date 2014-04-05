@@ -3,6 +3,8 @@
 .PHONY: dist mips-dist cleaner test test-all test-dist checkdefs
 .DEFAULT_GOAL := all
 
+VERSION ?= $(shell cat VERSION)
+
 CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
 CHIBI_FFI_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-ffi
 
@@ -68,7 +70,7 @@ endif
 
 ########################################################################
 
-all: chibi-scheme$(EXE) all-libs
+all: chibi-scheme$(EXE) all-libs chibi-scheme.pc
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
@@ -113,6 +115,16 @@ chibi-scheme-ulimit$(EXE): main.o $(SEXP_ULIMIT_OBJS) $(EVAL_OBJS)
 
 clibs.c: $(GENSTATIC) chibi-scheme$(EXE)
 	$(FIND) lib -name \*.sld | $(CHIBI) $(GENSTATIC) > $@
+
+chibi-scheme.pc: chibi-scheme.pc.in
+	echo "# pkg-config" > chibi-scheme.pc
+	echo "prefix=$(PREFIX)" >> chibi-scheme.pc
+	echo "exec_prefix=\$${prefix}" >> chibi-scheme.pc
+	echo "libdir=$(LIBDIR)" >> chibi-scheme.pc
+	echo "includedir=\$${prefix}/include" >> chibi-scheme.pc
+	echo "version=$(VERSION)" >> chibi-scheme.pc
+	echo "" >> chibi-scheme.pc
+	cat chibi-scheme.pc.in >> chibi-scheme.pc
 
 # A special case, this needs to be linked with the LDFLAGS in case
 # we're using Boehm.
@@ -244,7 +256,7 @@ clean: clean-libs
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
-	    libchibi-scheme$(SO) *.a include/chibi/install.h \
+	    libchibi-scheme$(SO) *.a *.pc include/chibi/install.h \
 	    $(shell $(FIND) lib -name \*.o)
 
 dist-clean: dist-clean-libs cleaner
@@ -307,6 +319,8 @@ install: all
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
 	$(INSTALL) -m0644 libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
 	-$(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
+	$(MKDIR) $(DESTDIR)$(SOLIBDIR)/pkgconfig
+	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(SOLIBDIR)/pkgconfig/
 	$(MKDIR) $(DESTDIR)$(MANDIR)
 	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
 	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
@@ -320,6 +334,7 @@ uninstall:
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-doc
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
 	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.{sld,scm}
 	-$(RM) $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
