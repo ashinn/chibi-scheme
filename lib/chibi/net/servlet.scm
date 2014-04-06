@@ -21,15 +21,36 @@
 (define (upload-headers upload)
   (cadr (upload-sxml upload)))
 
-(define (upload->string upload)
+(define (upload-content upload)
   (car (cddr (upload-sxml upload))))
+
+(define (upload->string upload)
+  (let ((x (upload-content upload)))
+    (if (bytevector? x) (utf8->string x) x)))
+
+(define (upload->bytevector upload)
+  (let ((x (upload-content upload)))
+    (if (string? x) (string->utf8 x) x)))
+
+(define (upload->sexp upload)
+  (let* ((in (upload-input-port upload))
+         (res (read in)))
+    (close-input-port in)
+    res))
 
 (define (upload-input-port upload)
   (open-input-string (upload->string upload)))
 
+(define (upload-binary-input-port upload)
+  (open-input-bytevector (upload->bytevector upload)))
+
 (define (upload-save upload path)
-  (call-with-output-file path
-    (lambda (out) (display (upload->string upload) out))))
+  (let ((content (upload-content upload)))
+    (call-with-output-file path
+      (lambda (out)
+        (if (string? content)
+            (display content out)
+            (write-bytevector content out))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Requests.
@@ -147,21 +168,22 @@
                   ,@headers))))))
       (mime-write-headers headers out)
       (display "\r\n" out)
-      (flush-output out)))))
+      (flush-output-port out)))))
 
 ;;> Write the contents of a string to the request.  If no status has
 ;;> been sent, assume a default of 200.
 
-(define (servlet-write request str)
+(define (servlet-write request str . o)
   (if (not (request-status request))
-      (servlet-respond request 200 "OK"))
+      (apply servlet-respond request 200 "OK" o))
   (display str (request-out request)))
 
 (define (extract-form-data sxml)
   (define (form-data x)
     (and (pair? x) (eq? 'mime (car x))
          (pair? (cdr x)) (pair? (cadr x)) (eq? '@ (car (cadr x)))
-         (string? (car (cddr x)))
+         (or (string? (car (cddr x)))
+             (bytevector? (car (cddr x))))
          (assq 'content-disposition (cdr (cadr x)))))
   (let lp ((ls sxml) (res '()) (files '()))
     (cond

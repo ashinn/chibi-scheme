@@ -4,8 +4,9 @@
    ;; uploads
    upload? upload-name upload-filename
    upload-headers upload->string upload-input-port upload-save
+   upload->bytevector upload->sexp upload-binary-input-port
    ;; requests
-   request? request-method request-host
+   request? request-method request-host request-uploads
    request-uri request-version request-headers request-body request-params
    request-in request-out request-sock request-addr request-param
    request-method-set! request-host-set! request-uri-set!
@@ -20,7 +21,8 @@
    make-status-servlet servlet-handler servlet-run
    servlet-bad-request)
   (import
-   (chibi) (srfi 9) (srfi 39) (srfi 69) (srfi 98)
+   (scheme base) (scheme read) (scheme write) (scheme file)
+   (srfi 9) (srfi 39) (srfi 69) (srfi 98)
    (chibi ast) (chibi io) (chibi uri) (chibi mime) (chibi log) (chibi config)
    (chibi filesystem) (chibi net) (chibi net server-util))
   (include "servlet.scm"))
