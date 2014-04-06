@@ -23,8 +23,12 @@
                  (make-request command (car ls) (cadr ls) in out sock addr)))
             (log-info `(request: ,command ,(car ls) ,(cadr ls)
                                  ,(request-headers request)))
-            (let restart ((request request))
-              (servlet cfg request servlet-bad-request restart))))
+            (protect (exn
+                      (else
+                       (log-error "internal error: " exn)
+                       (servlet-respond request 500 "Internal server error")))
+              (let restart ((request request))
+                (servlet cfg request servlet-bad-request restart)))))
          (else
           (let ((request (make-request command #f #f in out sock addr)))
             (servlet-respond request 400 "bad request")))))))))
@@ -230,7 +234,7 @@
              ((negative? (car status))
               (servlet-respond request 500 "Internal server error"))
              (else
-              (display "HTTP/1.1 200 OK\r\n" (request-out request))
+              (display "HTTP/1.0 200 OK\r\n" (request-out request))
               (flush-output (request-out request))
               (send-file temp-file (request-out request))
               (close-output-port out))))))))))
@@ -288,10 +292,7 @@
      virtual-dir local-dir index-rx
      (lambda (cfg request script-path next restart)
        (let ((servlet (load-scheme-script/memoized script-path local-dir)))
-         (protect (exn
-                   (else
-                    (servlet-respond request 500 "Internal server error")))
-           (servlet cfg request next restart)))))))
+         (servlet cfg request next restart))))))
 
 (define (http-scheme-script-ext-servlet cfg request local-path next restart)
   ((load-scheme-script/memoized local-path) cfg request next restart))
