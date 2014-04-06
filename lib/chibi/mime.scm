@@ -232,12 +232,15 @@
                      res)))
               ((eqv? ch 10)
                (get-output-bytevector out))
-              ((and (eqv? ch 13) (eqv? (peek-u8 in) 10))
-               (read-u8 in)
-               (get-output-bytevector out))
               (else
                (write-u8 ch out)
                (lp)))))))
+
+(define (bv-length-before-cr bv)
+  (let ((len (bytevector-length bv)))
+    (if (and (> len 0) (= 13 (bytevector-u8-ref bv (- len 1))))
+        (- len 1)
+        len)))
 
 (define (mime-read-to-boundary/binary port boundary next final)
   (let* ((boundary (if (string? boundary) (string->utf8 boundary) boundary))
@@ -247,20 +250,24 @@
          (final-boundary-cr
           (and final-boundary (bytevector-append final-boundary #u8(13))))
          (out (open-output-bytevector)))
-    (let lp ((first? #t))
+    (let lp ((prev #f))
       (let ((line (read-line/binary port)))
         (cond
          ((or (eof-object? line)
               (equal? line final-boundary)
               (equal? line final-boundary-cr))
+          (if prev
+              (write-bytevector prev out 0 (bv-length-before-cr prev)))
           (final (get-output-bytevector out)))
          ((or (equal? line boundary) (equal? line boundary-cr))
+          (if prev
+              (write-bytevector prev out 0 (bv-length-before-cr prev)))
           (next (get-output-bytevector out)))
          (else
-          (if (not first?)
-              (write-u8 10 out))
-          (write-bytevector line out)
-          (lp #f)))))))
+          (cond (prev
+                 (write-bytevector prev out)
+                 (write-u8 10 out)))
+          (lp line)))))))
 
 (define (mime-read-to-boundary/text port boundary next final)
   (let ((final-boundary (and boundary (string-append boundary "--"))))
