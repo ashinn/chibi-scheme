@@ -175,17 +175,18 @@
          (out (if (pair? o) (car o) (current-output-port)))
          (fd (if (port? in) (port-fileno in) in))
          (sock (if (port? out) (port-fileno out) out)))
+    (define (copy-bytes)
+      (let ((b (read-u8 in)))
+        (cond ((not (eof-object? b))
+               (write-u8 b out)
+               (copy-bytes)))))
     (if (and fd sock (is-a-socket? sock))
         (let lp ((start 0))
           (let ((res (%send-file fd sock start)))
             (cond
-             ((not res) (lp start))
+             ((not res) (copy-bytes))
              ((not (zero? res)) (lp (+ start res))))))
-        (let lp ()
-          (let ((str (read-string 8192 in)))
-            (cond ((not (eof-object? str))
-                   (display str out)
-                   (lp))))))))
+        (copy-bytes))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; higher order port operations
