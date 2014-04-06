@@ -93,7 +93,6 @@
   (define (path-top path)
     (substring path 0 (string-find path #\/)))
   (let ((files (map path-normalize (tar-files tarball))))
-    (log-error "files: " files)
     (and (every path-relative? files)
          (or (< (length files) 2)
              (let ((dir (path-top (car files))))
