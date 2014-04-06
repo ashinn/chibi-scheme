@@ -30,7 +30,13 @@
 
 (define (run-net-server listener-or-addr handler . o)
   (let ((listener-thunk (make-listener-thunk listener-or-addr))
-        (max-requests (if (pair? o) (car o) default-max-requests)))
+        (max-requests
+         (or
+          (cond ((pair? o) (car o))
+                ((get-environment-variable "CHIBI_NET_SERVER_MAX_THREADS")
+                 => string->number)
+                (else #f))
+          default-max-requests)))
     (define (run sock addr count)
       (log-debug "net-server: accepting request:" count)
       (let ((ports
@@ -61,6 +67,9 @@
               (cond
                ((not sock+addr)
                 (serve count))
+               ((= 1 max-requests)
+                (run (car sock+addr) (cadr sock+addr) count)
+                (serve (+ 1 count)))
                (else
                 (thread-start!
                  (make-thread
