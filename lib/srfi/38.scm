@@ -144,6 +144,20 @@
               (error "unterminated #| comment")
               (skip-comment in depth)))))
 
+;; returns #f if a trailing # was consumed
+(define (skip-whitespace-and-sexp-comments in read)
+  (skip-whitespace in)
+  (cond
+   ((eqv? #\# (peek-char in))
+    (read-char in)
+    (cond ((eqv? #\; (peek-char in))
+           (read-char in)
+           (read in)
+           (skip-whitespace-and-sexp-comments in read))
+          (else #f)))
+   (else
+    #t)))
+
 (define delimiters
   '(#\; #\" #\| #\( #\) #\{ #\} #\space #\tab #\newline #\return))
 
@@ -338,10 +352,16 @@
                     (cond
                      ((memv (peek-char in) delimiters)
                       (let ((tail (read-one)))
-                        (skip-whitespace in)
-                        (if (eqv? #\) (peek-char in))
-                            (begin (read-char in) (append (reverse res) tail))
-                            (error "expected end of list after dot"))))
+                        (cond
+                         ((and (skip-whitespace-and-sexp-comments
+                                in (lambda (in) (read-one)))
+                               (eqv? #\) (peek-char in)))
+                          (read-char in)
+                          (append (reverse res) tail))
+                         ((eof-object? (peek-char in))
+                          (error "unterminated dotted list"))
+                         (else
+                          (error "expected end of list after dot")))))
                      ((char-numeric? (peek-char in))
                       (lp (cons (read-float-tail in) res)))
                      (else (lp (cons (string->symbol (read-name #\. in)) res)))))

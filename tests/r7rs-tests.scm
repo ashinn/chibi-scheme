@@ -1940,6 +1940,24 @@
 (test 'def (read (open-input-string "#| abc |# def")))
 (test 'ghi (read (open-input-string "#| abc #| def |# |# ghi")))
 (test 'ghi (read (open-input-string "#; ; abc\n def ghi")))
+(test '(abs -16) (read (open-input-string "(#;sqrt abs -16)")))
+(test '(a d) (read (open-input-string "(a #; #;b c d)")))
+(test '(a e) (read (open-input-string "(a #;(b #;c d) e)")))
+(test '(a . c) (read (open-input-string "(a . #;b c)")))
+(test '(a . b) (read (open-input-string "(a . b #;c)")))
+
+(define (test-read-error str)
+  (test-assert
+      (guard (exn (else #t))
+        (read (open-input-string str))
+        #f)))
+
+(test-read-error "(#;a . b)")
+(test-read-error "(a . #;b)")
+(test-read-error "(a #;. b)")
+(test-read-error "(#;x #;y . z)")
+(test-read-error "(#; #;x #;y . z)")
+(test-read-error "(#; #;x . z)")
 
 (test #\a (read (open-input-string "#\\a")))
 (test #\space (read (open-input-string "#\\space")))
