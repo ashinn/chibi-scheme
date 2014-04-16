@@ -137,39 +137,25 @@
                                      s1)))))
         ;; Compression function main loop:
         (let lp ((j 0)
-                 (a h0)
-                 (b h1)
-                 (c h2)
-                 (d h3)
-                 (e h4)
-                 (f h5)
-                 (g h6)
-                 (h h7))
+                 (a h0) (b h1)
+                 (c h2) (d h3)
+                 (e h4) (f h5)
+                 (g h6) (h h7))
           (cond
            ((= j 64)
-            ;; Repeat on next block.
-            (cond
-             ((< n 64)
-              (if (>= n 56)
-                  (chunk (+ i n) 0
-                         (u32+ h0 a) (u32+ h1 b) (u32+ h2 c) (u32+ h3 d)
-                         (u32+ h4 e) (u32+ h5 f) (u32+ h6 g) (u32+ h7 h))
-                  ;; Done - add back in the has inits and serialize.
-                  (string-append
-                   (hex (u32+ a (vector-ref inits 0)))
-                   (hex (u32+ b (vector-ref inits 1)))
-                   (hex (u32+ c (vector-ref inits 2)))
-                   (hex (u32+ d (vector-ref inits 3)))
-                   (hex (u32+ e (vector-ref inits 4)))
-                   (hex (u32+ f (vector-ref inits 5)))
-                   (hex (u32+ g (vector-ref inits 6)))
-                   (if full?
-                       (hex (u32+ h #x5be0cd19))
-                       ""))))
-             (else
-              (chunk (+ i 64) pad
-                     (u32+ h0 a) (u32+ h1 b) (u32+ h2 c) (u32+ h3 d)
-                     (u32+ h4 e) (u32+ h5 f) (u32+ h6 g) (u32+ h7 h)))))
+            (let ((a (u32+ h0 a)) (b (u32+ h1 b))
+                  (c (u32+ h2 c)) (d (u32+ h3 d))
+                  (e (u32+ h4 e)) (f (u32+ h5 f))
+                  (g (u32+ h6 g)) (h (u32+ h7 h)))
+              (cond
+               ((< n 64)
+                (if (>= n 56)
+                    (chunk (+ i n) 0 a b c d e f g h)
+                    (string-append
+                     (hex a) (hex b) (hex c) (hex d)
+                     (hex e) (hex f) (hex g) (if full? (hex h) ""))))
+               (else
+                (chunk (+ i 64) pad a b c d e f g h)))))
            (else
             ;; Step - compute the two sigmas and recurse on the new a-h.
             (let* ((s1 (bitwise-xor (bitwise-rot-u32 e 6)

@@ -16,5 +16,9 @@
     (sha-256 "abc"))
 (test "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"
     (sha-256 "The quick brown fox jumps over the lazy dog"))
+(test "61f8fe4c4cdc8b3e10673933fcd0c5b1f6b46d3392550e42b265daefc7bc0d31"
+    (sha-256 "abcdbcdecdefdefgefghfghighijhijkijkljklmklm"))
+(test "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+    (sha-256 "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"))
 
 (test-end)
