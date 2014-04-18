@@ -53,7 +53,7 @@ EXE =
 CLIBFLAGS =
 CLINKFLAGS = -dynamiclib
 STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
-LDFLAGS += -install_name $(DESTDIR)$(SOLIBDIR)/libchibi-scheme.dylib
+LIBCHIBI_FLAGS = -install_name $(DESTDIR)$(SOLIBDIR)/libchibi-scheme.dylib.$(SOVERSION)
 else
 ifeq ($(PLATFORM),bsd)
 SO  = .so
@@ -69,7 +69,7 @@ CC = gcc
 CLIBFLAGS =
 CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL
-LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
 STATICFLAGS = -DSEXP_USE_DL=0
 LIBDL = 
 else
@@ -80,13 +80,14 @@ CC = gcc
 CLIBFLAGS =
 CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
-LDFLAGS += -Wl,--out-implib,libchibi-scheme$(SO).a
+LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
 else
 SO  = .so
 EXE =
 CLIBFLAGS = -fPIC
 CLINKFLAGS = -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
+LIBCHIBI_FLAGS = -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR)
 ifeq ($(PLATFORM),BSD)
 LIBDL=
 RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
