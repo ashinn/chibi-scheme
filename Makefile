@@ -3,8 +3,7 @@
 .PHONY: dist mips-dist cleaner test test-all test-dist checkdefs
 .DEFAULT_GOAL := all
 
-VERSION ?= $(shell cat VERSION)
-SOVERSION ?= $(shell echo "$(VERSION)" | sed "s/^\(\(\.\?[0-9]\+\)*\).*$$/\1/")
+SOVERSION ?= $(shell cat VERSION)
 SOVERSION_MAJOR ?= $(shell echo "$(SOVERSION)" | sed "s/\..*//")
 
 CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
@@ -101,7 +100,7 @@ libchibi-sexp$(SO): $(SEXP_OBJS)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -o $@ $^ $(XLDFLAGS)
 
 libchibi-scheme$(SO).$(SOVERSION): $(SEXP_OBJS) $(EVAL_OBJS)
-	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR) -o $@ $^ $(XLDFLAGS)
+	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(LIBCHIBI_FLAGS) -o $@ $^ $(XLDFLAGS)
 
 libchibi-scheme$(SO).$(SOVERSION_MAJOR): libchibi-scheme$(SO).$(SOVERSION)
 	$(LN) -sf $< $@
