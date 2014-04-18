@@ -65,53 +65,8 @@
     (if (and bits (= bits (range->bits (iset-start iset) (iset-end iset))))
         (iset-bits-set! iset #f))))
 
-(define (iset-adjoin1! iset n)
-  (cond
-   ((iset-empty? iset)
-    (iset-start-set! iset n)
-    (iset-end-set! iset n)
-    (iset-bits-set! iset #f))
-   (else
-    (let ((start (iset-start iset))
-          (end (iset-end iset))
-          (bits (iset-bits iset)))
-      (cond
-       ((< n start)
-        (let ((s-diff (- start n)))
-          (if (let* ((left (iset-left iset))
-                     (m-end (and left (iset-max-end left))))
-                (and m-end
-                     (or (<= n m-end)
-                         (< (- n m-end) s-diff))))
-              (iset-adjoin1! (iset-left iset) n)
-              (cond
-               ((and (< s-diff bits-thresh)
-                     (< (- end n) bits-max))
-                (iset-start-set! iset n)
-                (let ((bits2 (arithmetic-shift (or bits (range->bits start end))
-                                               s-diff)))
-                  (iset-bits-set! iset (+ bits2 1))
-                  (iset-squash-bits! iset)))
-               (else (iset-insert-left! iset (make-iset n)))))))
-       ((> n end)
-        (let ((e-diff (- n end)))
-          (if (let* ((right (iset-right iset))
-                     (m-start (and right (iset-min-start right))))
-                (and m-start
-                     (or (>= n m-start)
-                         (> (- n m-start) e-diff))))
-              (iset-adjoin1! (iset-right iset) n)
-              (cond
-               ((and (< e-diff bits-thresh)
-                     (< (- n start) bits-max))
-                (iset-end-set! iset n)
-                (iset-bits-set! iset (bit-set (or bits (range->bits start end))
-                                              (- n start)))
-                (iset-squash-bits! iset))
-               (else (iset-insert-right! iset (make-iset n)))))))
-       (bits
-        (iset-bits-set! iset (bit-set (iset-bits iset) (- n start)))
-        (iset-squash-bits! iset)))))))
+(define (iset-adjoin1! is n)
+  (iset-adjoin-node! is (%make-iset n n #f #f #f)))
 
 (define (iset-adjoin-node! a b)
   (cond
