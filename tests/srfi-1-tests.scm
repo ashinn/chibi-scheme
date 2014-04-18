@@ -106,6 +106,9 @@
 ;(test-error (find even? (circular-list 1 3))) ; divergent
 ;(test-error (any even? (circular-list 1 3))) ; divergent
 (test '4 (find even? '(3 1 4 1 5 9)))
+(test '#f (every odd? '(1 2 3)))
+(test '#t (every < '(1 2 3) '(4 5 6)))
+(test-error (every odd? '(1 3 . x)))
 (test '(-8 -5 0 0) (find-tail even? '(3 1 37 -8 -5 0 0)))
 (test '#f (find-tail even? '(3 1 37 -5)))
 (test '(2 18) (take-while even? '(2 18 3 10 22 9)))

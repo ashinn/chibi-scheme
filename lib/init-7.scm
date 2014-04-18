@@ -89,7 +89,7 @@
         (if (pred (car ls)) (every1 pred (cdr ls)) #f)))
   (if (null? lol)
       (if (pair? ls) (every1 pred ls) #t)
-      (not (apply any (lambda (x) (not (pred x))) ls lol))))
+      (not (apply any (lambda xs (not (apply pred xs))) ls lol))))
 
 (define (error msg . args)
   (raise (make-exception 'user msg args #f #f)))
