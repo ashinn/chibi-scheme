@@ -349,9 +349,10 @@
           ((>= (- len offset) n)
            (string-copy! str start buf offset (+ offset n))
            (set! offset (+ offset n))
-           n)
+           (- (string-index->offset str end)
+              (string-index->offset str start)))
           (else
-           (string-copy! str start buf offset (+ offset len))
+           (string-copy! str start buf offset len)
            (let lp ((i (+ start (- len offset))))
              (set! buf (generator))
              (cond
@@ -359,15 +360,17 @@
                (set! buf "")
                (set! len 0)
                (set! offset 0)
-               (- i start))
+               (- (string-index->offset str i)
+                  (string-index->offset str start)))
               (else
                (set! len (string-length buf))
                (set! offset 0)
                (cond
                 ((>= (- len offset) (- n i))
-                 (string-copy! str i buf offset (+ offset (- n i)))
-                 (set! offset (+ offset (- n i)))
-                 n)
+                 (string-copy! str i buf 0 (- n i))
+                 (set! offset (- n i))
+                 (- (string-index->offset str end)
+                    (string-index->offset str start)))
                 (else
                  (string-copy! str i buf offset len)
                  (lp (+ i (- len offset)))))))))))))))

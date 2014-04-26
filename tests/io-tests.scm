@@ -89,6 +89,30 @@
         (display "abc" out)
         (close-output-port out)))))
 
+(define (strings->input-port str-ls)
+  (make-generated-input-port
+   (lambda ()
+     (and (pair? str-ls)
+          (let ((res (car str-ls)))
+            (set! str-ls (cdr str-ls))
+            res)))))
+
+(test "abcdef" (read-line (strings->input-port '("abcdef"))))
+(test "abcdef" (read-line (strings->input-port '("abc" "def"))))
+(test "abcdef" (read-line (strings->input-port '("a" "b" "c" "d" "e" "f"))))
+(test "日本語" (read-line (strings->input-port '("日本語"))))
+(test "日本語" (read-line (strings->input-port '("日" "本" "語"))))
+(test "abc"
+    (let ((in (strings->input-port
+               (list "日本語" (make-string 4087 #\-) "abc"))))
+      (read-string 4090 in)
+      (read-line in)))
+(test "abc"
+    (let ((in (strings->input-port
+               (list "日本語" (make-string 4093 #\-) "abc"))))
+      (read-string 4096 in)
+      (read-line in)))
+
 (let ((in (make-custom-binary-input-port
            (let ((i 0))
              (lambda (bv start end)
