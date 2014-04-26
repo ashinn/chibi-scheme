@@ -1755,7 +1755,7 @@ sexp sexp_read_utf8_char (sexp ctx, sexp port, int i) {
       i = ((i&0x1F)<<12) + ((sexp_read_char(ctx, port)&0x3F)<<6);
       i += sexp_read_char(ctx, port)&0x3F;
     } else {
-      i = ((i&0x0F)<<16) + ((sexp_read_char(ctx, port)&0x3F)<<12);
+      i = ((i&0x0F)<<18) + ((sexp_read_char(ctx, port)&0x3F)<<12);
       i += (sexp_read_char(ctx, port)&0x3F)<<6;
       i += sexp_read_char(ctx, port)&0x3F;
     }
