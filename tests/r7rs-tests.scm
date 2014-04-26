@@ -1101,6 +1101,11 @@
 
 (test "a-c" (let ((str (string #\a #\b #\c))) (string-set! str 1 #\-) str))
 
+(test (string #\a #\x1F700 #\c)
+    (let ((s (string #\a #\b #\c)))
+      (string-set! s 1 #\x1F700)
+      s))
+
 (test #t (string=? "" ""))
 (test #t (string=? "abc" "abc" "abc"))
 (test #f (string=? "" "abc"))
@@ -1763,17 +1768,18 @@
 (test "abc" (read-string 3 (open-input-string "abcd")))
 (test "abc" (read-string 3 (open-input-string "abc\ndef\n")))
 
-(let* ((s (string #\x1F700 #\x1F701 #\x1F702))
-       (in (open-input-string s)))
-  (test #\x1F700 (string-ref s 0))
-  (test #\x1F701 (string-ref s 1))
-  (test #\x1F702 (string-ref s 2))
+(let ((in (open-input-string (string #\x10F700 #\x10F701 #\x10F702))))
   (let* ((c1 (read-char in))
          (c2 (read-char in))
          (c3 (read-char in)))
-    (test #\x1F700 c1)
-    (test #\x1F701 c2)
-    (test #\x1F702 c3)))
+    (test #\x10F700 c1)
+    (test #\x10F701 c2)
+    (test #\x10F702 c3)))
+
+(test (string #\x10F700)
+    (let ((out (open-output-string)))
+      (write-char #\x10F700 out)
+      (get-output-string out)))
 
 (test "abc"
     (let ((out (open-output-string)))
