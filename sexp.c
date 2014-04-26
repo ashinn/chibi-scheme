@@ -960,7 +960,7 @@ sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
   else if (*p < 0xF0)
     return sexp_make_character(((p[0]&0x1F)<<12) + ((p[1]&0x3F)<<6) + (p[2]&0x3F));
   else
-    return sexp_make_character(((p[0]&0x0F)<<16) + ((p[1]&0x3F)<<6) + ((p[2]&0x3F)<<6) + (p[2]&0x3F));
+    return sexp_make_character(((p[0]&0x0F)<<18) + ((p[1]&0x3F)<<12) + ((p[2]&0x3F)<<6) + (p[3]&0x3F));
 }
 
 void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
