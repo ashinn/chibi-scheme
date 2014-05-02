@@ -227,7 +227,8 @@
       (cond
        ((null? ls)
         (print-help (car spec) docs commands options out))
-       ((string? (car ls))
+       ((or (string? (car ls))
+            (and (pair? (car ls)) (memq (caar ls) '(begin: end:) )))
         (lp (cdr ls) (car ls) commands options))
        ((and (pair? (car ls)) (eq? '@ (caar ls)))
         (lp (cdr ls) docs commands (append options (cadr (car ls)))))
