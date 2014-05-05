@@ -325,8 +325,8 @@ install: all
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
 	$(INSTALL) -m0644 libchibi-scheme$(SO).$(SOVERSION) $(DESTDIR)$(SOLIBDIR)/
-	$(CP) -d libchibi-scheme$(SO).$(SOVERSION_MAJOR) $(DESTDIR)$(SOLIBDIR)/
-	$(CP) -d libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
+	$(INSTALL) -m0644 libchibi-scheme$(SO).$(SOVERSION_MAJOR) $(DESTDIR)$(SOLIBDIR)/
+	$(INSTALL) -m0644 libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
 	-$(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)/pkgconfig
 	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(SOLIBDIR)/pkgconfig/
@@ -379,6 +379,7 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi $(DESTDIR)$(BINMODDIR)/srfi
 	-$(RMDIR) $(DESTDIR)$(MODDIR) $(DESTDIR)$(BINMODDIR)
 	-$(RM) $(DESTDIR)$(MANDIR)/chibi-scheme.1 $(DESTDIR)$(MANDIR)/chibi-ffi.1 $(DESTDIR)$(MANDIR)/chibi-doc.1
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
 
 dist: dist-clean
 	$(RM) chibi-scheme-`cat VERSION`.tgz
