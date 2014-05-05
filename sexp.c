@@ -688,6 +688,16 @@ sexp sexp_read_error (sexp ctx, const char *msg, sexp ir, sexp port) {
   return res;
 }
 
+sexp sexp_read_incomplete_error (sexp ctx, const char *msg, sexp ir, sexp port) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_read_error(ctx, msg, ir, port);
+  if (sexp_exceptionp(res))
+    sexp_exception_kind(res) = sexp_intern(ctx, "read-incomplete", -1);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 /*************************** list utilities ***************************/
 
 sexp sexp_cons_op (sexp ctx, sexp self, sexp_sint_t n, sexp head, sexp tail) {

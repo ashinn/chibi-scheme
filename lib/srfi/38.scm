@@ -3,6 +3,11 @@
 ;; This code was written by Alex Shinn in 2009 and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
+(define (raise-typed-error type)
+  (lambda (msg . args) (raise (make-exception type msg args #f #f))))
+(define read-error (raise-typed-error 'read))
+(define read-incomplete-error (raise-typed-error 'read-incomplete))
+
 (define (extract-shared-objects x cyclic-only?)
   (let ((seen (make-hash-table eq?)))
     ;; find shared references
@@ -141,7 +146,7 @@
                (if (zero? depth) (read-char in) (skip-comment in (- depth 1)))
                (skip-comment in depth)))
     (else (if (eof-object? (peek-char in))
-              (error "unterminated #| comment")
+              (read-incomplete-error "unterminated #| comment")
               (skip-comment in depth)))))
 
 ;; returns #f if a trailing # was consumed
@@ -194,7 +199,7 @@
                  (n (string->number str base))
                  (c (peek-char in)))
             (if (or (not n) (not (or (eof-object? c) (memv c delimiters))))
-                (error "read error: invalid number syntax" str c)
+                (read-error "read error: invalid number syntax" str c)
                 n)))
         (define (read-float-tail in) ;; called only after a leading period
           (let lp ((res 0.0) (k 0.1))
@@ -203,7 +208,7 @@
                ((char-numeric? c)
                 (lp (+ res (* (- (char->integer (read-char in)) (char->integer #\0)) k)) (* k 0.1)))
                ((or (eof-object? c) (memv c delimiters)) res)
-               (else (error "invalid char in float syntax" c))))))
+               (else (read-error "invalid char in float syntax" c))))))
         (define (read-name c in)
           (let lp ((ls (if (char? c) (list c) '())))
             (let ((c (peek-char in)))
@@ -217,7 +222,7 @@
                         (string->number (substring name 1 (string-length name))
                                         16))
                    => integer->char)
-                  (else (error "unknown char name" name)))))
+                  (else (read-error "unknown char name" name)))))
         (define (read-type-id in)
           (let ((ch (peek-char in)))
             (cond
@@ -226,11 +231,11 @@
               (let ((id (read in)))
                 (cond ((eq? id 't) #t)
                       ((integer? id) id)
-                      (else (error "invalid type identifier" id)))))
+                      (else (read-error "invalid type identifier" id)))))
              ((eqv? ch #\")
               (read in))
              (else
-              (error "invalid type identifier syntax" ch)))))
+              (read-error "invalid type identifier syntax" ch)))))
         (define (read-object)
           (let ((name (read-name #f in)))
             (skip-whitespace in)
@@ -240,7 +245,7 @@
                 (skip-whitespace in)
                 (cond
                  ((eof-object? (peek-char in))
-                  (error "missing closing }"))
+                  (read-error "missing closing }"))
                  ((eqv? #\} (peek-char in))
                   (read-char in)
                   (let ((res ((make-constructor #f type))))
@@ -258,12 +263,12 @@
             ((#\#)
              (read-char in)
              (if (eof-object? (peek-char in))
-                 (error "read error: incomplete # found at end of input"))
+                 (read-error "read error: incomplete # found at end of input"))
              (case (char-downcase (peek-char in))
                ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
                 (let* ((str (read-label '()))
                        (n (string->number str)))
-                  (if (not n) (error "read error: invalid reference" str))
+                  (if (not n) (read-error "read error: invalid reference" str))
                   (cond
                    ((eqv? #\= (peek-char in))
                     (read-char in)
@@ -276,9 +281,9 @@
                    ((eqv? #\# (peek-char in))
                     (read-char in)
                     (cond ((assv n shared) => cdr)
-                          (else (error "read error: unknown reference" n))))
+                          (else (read-error "read error: unknown reference" n))))
                    (else
-                    (error "read error: expected # after #n" (read-char in))))))
+                    (read-error "read error: expected # after #n" (read-char in))))))
                ((#\;)
                 (read-char in)
                 (read-one) ;; discard
@@ -301,18 +306,18 @@
                        ((string-ci=? name "no-fold-case")
                         (set-port-fold-case! in #f))
                        (else            ;; assume a #!/bin/bash line
-                        (error "unknown #! symbol" name)))
+                        (read-error "unknown #! symbol" name)))
                       (read-one))))))
                ((#\() (list->vector (read-one)))
                ((#\') (read-char in) (list 'syntax (read-one)))
                ((#\`) (read-char in) (list 'quasisyntax (read-one)))
                ((#\t) (let ((s (read-name #f in)))
                         (or (string-ci=? s "t") (string-ci=? s "true")
-                            (error "bad # syntax" s))))
+                            (read-error "bad # syntax" s))))
                ((#\f) (let ((s (read-name #f in)))
                         (if (or (string-ci=? s "f") (string-ci=? s "false"))
                             #f
-                            (error "bad # syntax" s))))
+                            (read-error "bad # syntax" s))))
                ((#\d) (read-char in) (read in))
                ((#\x) (read-char in) (read-number 16))
                ((#\o) (read-char in) (read-number 8))
@@ -324,11 +329,11 @@
                     (read-char in))
                 (read-char in)
                 (if (not (eqv? #\8 (peek-char in)))
-                    (error "invalid syntax #u" (peek-char in)))
+                    (read-error "invalid syntax #u" (peek-char in)))
                 (read-char in)
                 (let ((ls (read-one)))
                   (if (not (list? ls))
-                      (error "invalid bytevector syntax" ls))
+                      (read-error "invalid bytevector syntax" ls))
                   (let* ((len (length ls))
                          (bv (make-bytevector len)))
                     (do ((i 0 (+ i 1)) (ls ls (cdr ls)))
@@ -342,7 +347,7 @@
                       c1
                       (read-named-char c1 in))))
                (else
-                (error "unknown # syntax: " (peek-char in)))))
+                (read-error "unknown # syntax: " (peek-char in)))))
             ((#\()
              (read-char in)
              (let lp ((res '()))
@@ -364,15 +369,15 @@
                           (read-char in)
                           (append (reverse res) tail))
                          ((eof-object? (peek-char in))
-                          (error "unterminated dotted list"))
+                          (read-incomplete-error "unterminated dotted list"))
                          (else
-                          (error "expected end of list after dot")))))
+                          (read-error "expected end of list after dot")))))
                      ((char-numeric? (peek-char in))
                       (lp (cons (read-float-tail in) res)))
                      (else (lp (cons (string->symbol (read-name #\. in)) res)))))
                    (else
                     (if (eof-object? c)
-                        (error "unterminated list")
+                        (read-incomplete-error "unterminated list")
                         (lp (cons (read-one) res))))))))
             ((#\{)
              (read-char in)
