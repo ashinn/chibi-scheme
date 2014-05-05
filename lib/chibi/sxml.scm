@@ -9,7 +9,7 @@
         ((char? x) (string x))
         ((symbol? x) (symbol->string x))
         ((number? x) (number->string x))
-        (else (error "don't know how to display" x))))
+        (else (error "don't know how to display as sxml" x))))
 
 (define (html-display-escaped-attr str . o)
   (let ((start 0)
