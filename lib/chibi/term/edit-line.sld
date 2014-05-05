@@ -7,5 +7,5 @@
           buffer-clear buffer-refresh buffer-draw
           buffer-row buffer-col
           make-keymap make-standard-keymap)
-  (import (chibi) (chibi stty) (chibi process) (srfi 9) (srfi 33))
+  (import (chibi) (chibi ast) (chibi stty) (chibi process) (srfi 9) (srfi 33))
   (include "edit-line.scm"))

@@ -622,10 +622,14 @@
   (buffer-insert! buf out ch))
 
 (define (command/enter ch buf out return)
-  (protect (exn (else
-                 (buffer-clear buf out)
-                 (print-exception exn out)
-                 (buffer-draw buf out)))
+  (protect (exn
+            ((and (exception? exn)
+                  (eq? 'read-incomplete (exception-kind exn)))
+             (command/self-insert ch buf out return))
+            (else
+             (buffer-clear buf out)
+             (print-exception exn out)
+             (buffer-draw buf out)))
     (cond
      (((buffer-complete? buf) buf)
       (command/end-of-line ch buf out return)
