@@ -11,14 +11,19 @@
     (string (value 1 size_t) size_t (default (current-input-port) input-port)))
   ))
 
+(c-include "port.c")
+
 (define-c-const int (seek/set "SEEK_SET"))
 (define-c-const int (seek/cur "SEEK_CUR"))
 (define-c-const int (seek/end "SEEK_END"))
 
-(define-c long (file-position "ftell") (port))
-(define-c long (set-file-position! "fseek") (port long int))
+;; (define-c off_t (file-position "ftell") (port))
+;; (define-c off_t (set-file-position! "fseek") (port off_t int))
 
-(c-include "port.c")
+(define-c sexp (file-position "sexp_tell")
+  ((value ctx sexp) (value self sexp) sexp))
+(define-c sexp (set-file-position! "sexp_seek")
+  ((value ctx sexp) (value self sexp) sexp off_t int))
 
 (define-c boolean (is-a-socket? "sexp_is_a_socket_p") (fileno))
 

@@ -402,6 +402,22 @@ int sexp_is_a_socket_p (int fd) {
 #endif
 }
 
+sexp sexp_seek (sexp ctx, sexp self, sexp x, off_t offset, int whence) {
+  if (! (sexp_portp(x) || sexp_filenop(x)))
+    return sexp_type_exception(ctx, self, SEXP_IPORT, x);
+  if (sexp_filenop(x))
+    return sexp_make_integer(ctx, lseek(sexp_fileno_fd(x), offset, whence));
+  if (sexp_filenop(sexp_port_fd(x)))
+    return sexp_make_integer(ctx, lseek(sexp_fileno_fd(sexp_port_fd(x)), offset, whence));
+  if (sexp_stream_portp(x))
+    return sexp_make_integer(ctx, fseek(sexp_port_stream(x), offset, whence));
+  return sexp_xtype_exception(ctx, self, "not a seekable port", x);
+}
+
+sexp sexp_tell (sexp ctx, sexp self, sexp x) {
+  return sexp_seek(ctx, self, x, 0, SEEK_CUR);
+}
+
 int sexp_send_file (int fd, int s, off_t offset, off_t len, off_t* res) {
 #if SEXP_USE_SEND_FILE
   *res = len;
