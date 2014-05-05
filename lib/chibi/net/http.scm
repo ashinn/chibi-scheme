@@ -97,7 +97,57 @@
   (make-generated-binary-input-port
    (lambda () (read-chunk in))))
 
-(define (http-get/raw url in-headers limit)
+(define (http-generate-boundary)
+  (string-append "chibi-boundary-"
+                 (number->string (random-integer 1000000000))))
+
+;; A body can be a raw string or bytevector, or an alist of name/value
+;; pairs.
+(define (http-send-body body boundary out)
+  (cond
+   ((string? body)
+    (display body out))
+   ((bytevector? body)
+    (write-bytevector body out))
+   ((pair? body)
+    (for-each
+     (lambda (x)
+       (display "\r\n--" out)
+       (display boundary out)
+       (let* ((content
+               (if (pair? (cdr x))
+                   (cond ((assq 'value (cdr x)) => cdr)
+                         ((assq 'file (cdr x)) =>
+                          (lambda (x)
+                            (port->bytevector
+                             (open-binary-input-file (cdr x)))))
+                         (else (error "")))
+                   (cdr x)))
+              (content-type
+               (cond ((and (pair? (cdr x))
+                           (or (assq 'content-type (cdr x))
+                               (assq 'Content-Type (cdr x))))
+                      => cdr)
+                     ((string? content) "text/plain")
+                     (else "application/octet-stream"))))
+         (display "\r\nContent-Disposition: form-data; name=\"" out)
+         (display (car x) out)
+         (display "\"" out)
+         (cond ((and (pair? (cdr x)) (assq 'file (cdr x)))
+                => (lambda (x)
+                     (display "; filename=\"" out)
+                     (display (cdr x) out)
+                     (display "\"" out))))
+         (display "\r\nContent-Type: " out)
+         (display content-type out)
+         (display "\r\n\r\n" out)
+         (http-send-body content boundary out)))
+     body)
+    (display "\r\n--" out)
+    (display boundary out)
+    (display "--\r\n" out))))
+
+(define (http-call-method method url in-headers body limit)
   (if (<= limit 0)
       (error "http-get: redirect limit reached" url)
       (let* ((uri (if (uri? url) url (string->uri url)))
@@ -110,7 +160,8 @@
                             (if (eq? 'https (uri-scheme uri)) 443 80))))
                    (in (cadr io))
                    (out (car (cddr io))))
-              (display "GET " out)
+              (display method out)
+              (display " " out)
               (display (or (uri-path uri) "/") out)
               (display " HTTP/1.0\r\n" out)
               (display "Host: " out) (display host out) (display "\r\n" out)
@@ -125,6 +176,13 @@
                  (display (cdr x) out) (display "\r\n" out))
                in-headers)
               (display "Connection: close\r\n\r\n" out)
+              (let* ((ctype (cond ((or (assq 'Content-Type in-headers)
+                                       (assq 'content-type in-headers))
+                                   => (lambda (x)
+                                        (mime-parse-content-type (cdr x))))
+                                  (else #f)))
+                     (boundary (and ctype (assq-ref (cdr ctype) 'boundary))))
+                (http-send-body body boundary out))
               (flush-output-port out)
               (let* ((resp (http-parse-response (read-line in)))
                      (headers (mime-headers->list in))
@@ -149,6 +207,9 @@
                    (close-output-port out)
                    (error "couldn't retrieve url" url resp)))))))))
 
+(define (http-get/raw url headers limit)
+  (http-call-method 'GET url headers #f limit))
+
 (define (http-get/headers url . headers)
   (http-get/raw url
                 (if (pair? headers) (car headers) '())
@@ -156,6 +217,34 @@
 
 (define (http-get url . headers)
   (cdr (apply http-get/headers url headers)))
+
+(define (http-head url . headers)
+  (car (http-call-method 'HEAD url
+                         (if (pair? headers) (car headers) '()) #f
+                         http-redirect-limit)))
+
+(define (http-post url body . o)
+  (let* ((headers (if (pair? o) (car o) '()))
+         (headers
+          (if (or (assq headers 'content-type)
+                  (assq headers 'Content-Type))
+              headers
+              (let ((boundary (http-generate-boundary)))
+                (cons `(Content-Type . ,(string-append
+                                         "multipart/form-data; boundary="
+                                         boundary))
+                      headers)))))
+    (cdr (http-call-method 'POST url headers body http-redirect-limit))))
+
+(define (http-put url body . headers)
+  (cdr (http-call-method 'PUT url
+                         (if (pair? headers) (car headers) '()) body
+                         http-redirect-limit)))
+
+(define (http-delete url . headers)
+  (cdr (http-call-method 'DELETE url
+                         (if (pair? headers) (car headers) '()) #f
+                         http-redirect-limit)))
 
 (define (call-with-input-url url proc)
   (let* ((p (http-get url))
