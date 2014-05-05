@@ -287,17 +287,22 @@
                 (skip-comment in 0)
                 (read-one))
                ((#\!)
-                (let ((name (read-name #f in)))
+                (read-char in)
+                (let ((c (peek-char in)))
                   (cond
-                   ((string-ci=? name "!fold-case")
-                    (set-port-fold-case! in #t))
-                   ((string-ci=? name "!no-fold-case")
-                    (set-port-fold-case! in #f))
-                   (else ;; assume a #!/bin/bash line
-                    (skip-line in)))
-                  (let ((res (read-one)))
-                    (if (not (eof-object? res))
-                        res))))
+                   ((or (char-whitespace? c) (eqv? c #\/))
+                    (skip-line in)
+                    (read-one))
+                   (else
+                    (let ((name (read-name #f in)))
+                      (cond
+                       ((string-ci=? name "fold-case")
+                        (set-port-fold-case! in #t))
+                       ((string-ci=? name "no-fold-case")
+                        (set-port-fold-case! in #f))
+                       (else            ;; assume a #!/bin/bash line
+                        (error "unknown #! symbol" name)))
+                      (read-one))))))
                ((#\() (list->vector (read-one)))
                ((#\') (read-char in) (list 'syntax (read-one)))
                ((#\`) (read-char in) (list 'quasisyntax (read-one)))
