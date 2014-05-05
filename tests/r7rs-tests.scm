@@ -759,20 +759,20 @@
 (test 1/3 (rationalize (exact .3) 1/10))
 (test #i1/3 (rationalize .3 1/10))
 
-(test 1.0 (exp 0))
+(test 1.0 (inexact (exp 0))) ;; may return exact number
 (test 20.0855369231877 (exp 3))
 
-(test 0.0 (log 1))
+(test 0.0 (inexact (log 1))) ;; may return exact number
 (test 1.0 (log (exp 1)))
 (test 42.0 (log (exp 42)))
 (test 2.0 (log 100 10))
 (test 12.0 (log 4096 2))
 
-(test 0.0 (sin 0))
+(test 0.0 (inexact (sin 0))) ;; may return exact number
 (test 1.0 (sin 1.5707963267949))
-(test 1.0 (cos 0))
+(test 1.0 (inexact (cos 0))) ;; may return exact number
 (test -1.0 (cos 3.14159265358979))
-(test 0.0 (tan 0))
+(test 0.0 (inexact (tan 0))) ;; may return exact number
 (test 1.5574077246549 (tan 1))
 
 (test 0.0 (asin 0))
@@ -1714,8 +1714,10 @@
       (f + 10)))
 
 (test 1024 (eval '(expt 2 10) (environment '(scheme base))))
-(test 0.0 (eval '(sin 0) (environment '(scheme inexact))))
-(test 1024.0 (eval '(+ (expt 2 10) (sin 0))
+;; (sin 0) may return exact number
+(test 0.0 (inexact (eval '(sin 0) (environment '(scheme inexact)))))
+;; ditto
+(test 1024.0 (eval '(+ (expt 2 10) (inexact (sin 0)))
                    (environment '(scheme base) '(scheme inexact))))
 
 (test-end)
