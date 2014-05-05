@@ -126,10 +126,11 @@
 ;; buffers
 
 (define-record-type Buffer
-  (%make-buffer refresh? min pos row max-row col gap start width string
-                history complete? single-line?)
+  (%make-buffer refresh? cleared? min pos row max-row col gap start width
+                string history complete? single-line?)
   buffer?
   (refresh? buffer-refresh? buffer-refresh?-set!)
+  (cleared? buffer-cleared? buffer-cleared?-set!)
   (min buffer-min buffer-min-set!)
   (pos buffer-pos buffer-pos-set!)
   (row buffer-row buffer-row-set!)
@@ -148,7 +149,7 @@
 (define default-buffer-width 80)
 
 (define (make-buffer)
-  (%make-buffer #f 0 0 0 0 0 default-buffer-size 0 default-buffer-width
+  (%make-buffer #f #f 0 0 0 0 0 default-buffer-size 0 default-buffer-width
                 (make-string default-buffer-size) '() #f #f))
 
 (define (buffer->string buf)
@@ -362,12 +363,15 @@
                      (lp (+ i 1) row (+ col off)))))))))))
 
 (define (buffer-clear buf out)
-  ;; goto start of input
-  (terminal-goto-col out 0)
-  (if (positive? (buffer-row buf))
-      (terminal-up out (buffer-row buf)))
-  ;; clear below
-  (terminal-clear-below out))
+  (cond
+   ((not (buffer-cleared? buf))
+    ;; goto start of input
+    (terminal-goto-col out 0)
+    (if (positive? (buffer-row buf))
+        (terminal-up out (buffer-row buf)))
+    ;; clear below
+    (terminal-clear-below out)
+    (buffer-cleared?-set! buf #t))))
 
 (define (buffer-draw buf out)
   (let* ((gap (buffer-gap buf))
@@ -398,7 +402,8 @@
       (if (< (buffer-row buf) (buffer-max-row buf))
           (terminal-up out (- (buffer-max-row buf) (buffer-row buf))))))
     (terminal-goto-col out (buffer-col buf))
-    (flush-output out)))
+    (flush-output out)
+    (buffer-cleared?-set! buf #f)))
 
 (define (buffer-refresh buf out)
   (cond ((buffer-refresh? buf)
@@ -449,7 +454,8 @@
       ;; fast path - append to end of buffer w/o wrapping to next line
       (display x out)
       (flush-output out)
-      (buffer-col-set! buf (+ (buffer-col buf) len)))
+      (buffer-col-set! buf (+ (buffer-col buf) len))
+      (buffer-cleared?-set! buf #f))
      (else
       (buffer-refresh?-set! buf #t)))))
 
