@@ -2891,24 +2891,29 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         goto scan_loop;
       break;
     case '!':
-#if SEXP_USE_FOLD_CASE_SYMS
-      res = sexp_read_symbol(ctx, in, '!', 0);
-      if (sexp_stringp(res)
-          && strcmp("!fold-case", sexp_string_data(res)) == 0) {
-        sexp_port_fold_casep(in) = 1;
-      } else if (sexp_stringp(res)
-                 && strcmp("!no-fold-case", sexp_string_data(res)) == 0) {
-        sexp_port_fold_casep(in) = 0;
-      } else {
-#endif
+      c1 = sexp_read_char(ctx, in);
+      if (isspace(c1) || c1 == '/') {
         while ((c1 = sexp_read_char(ctx, in)) != EOF)
           if (c1 == '\n')
             break;
         sexp_port_line(in)++;
-#if SEXP_USE_FOLD_CASE_SYMS
+        res = SEXP_VOID;
+      } else {
+        sexp_push_char(ctx, c1, in);
+        res = sexp_read_symbol(ctx, in, '!', 0);
+        if (SEXP_USE_FOLD_CASE_SYMS && sexp_stringp(res)
+            && strcmp("!fold-case", sexp_string_data(res)) == 0) {
+          sexp_port_fold_casep(in) = 1;
+        } else if (SEXP_USE_FOLD_CASE_SYMS && sexp_stringp(res)
+                   && strcmp("!no-fold-case", sexp_string_data(res)) == 0) {
+          sexp_port_fold_casep(in) = 0;
+        } else {
+          res = sexp_read_error(ctx, "unknown #! symbol", res, in);
+        }
       }
-#endif
-      goto scan_loop;
+      if (!sexp_exceptionp(res))
+        goto scan_loop;
+      break;
     case '\\':
       c1 = sexp_read_char(ctx, in);
       c2 = sexp_read_char(ctx, in);
