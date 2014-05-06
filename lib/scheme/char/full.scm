@@ -77,7 +77,7 @@
     (proc out)
     (get-output-string out)))
 
-(define (string-downcase str)
+(define (string-down-or-fold-case str fold?)
   (call-with-output-string
     (lambda (out)
       (let ((in (open-input-string str)))
@@ -86,7 +86,7 @@
             (cond
              ((not (eof-object? ch))
               (display
-               (if (eqv? ch #\x03A3)
+               (if (and (not fold?) (eqv? ch #\x03A3))
                    (let ((ch2 (peek-char in)))
                      (if (or (eof-object? ch2)
                              (not (char-set-contains? char-set:letter ch2)))
@@ -96,7 +96,8 @@
                out)
               (lp)))))))))
 
-(define string-foldcase string-downcase)
+(define (string-downcase str) (string-down-or-fold-case str #f))
+(define (string-foldcase str) (string-down-or-fold-case str #t))
 
 (define (string-upcase str)
   (call-with-output-string
