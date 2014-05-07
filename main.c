@@ -533,6 +533,7 @@ void run_main (int argc, char **argv) {
       mods_loaded = 1;
       load_init(0);
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+#if SEXP_USE_MODULES
       suffix = strrchr(arg, '.');
       sym = sexp_intern(ctx, suffix + 1, -1);
       *(char*)suffix = '\0';
@@ -543,6 +544,7 @@ void run_main (int argc, char **argv) {
       tmp = check_exception(ctx, sexp_eval_string(ctx, "(environment '(chibi trace))", -1, sexp_meta_env(ctx)));
       tmp = sexp_env_ref(ctx, tmp, sexp_intern(ctx, "trace-cell", -1), 0);
       check_exception(ctx, sexp_apply(ctx, tmp, sym));
+#endif
       break;
     default:
       fprintf(stderr, "unknown option: %s\n", argv[i]);
