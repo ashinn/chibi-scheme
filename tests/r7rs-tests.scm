@@ -1193,9 +1193,11 @@
 (test "γλώσσα" (string-downcase "ΓΛΏΣΣΑ"))
 (test "γλώσσα" (string-foldcase "ΓΛΏΣΣΑ"))
 (test "ΜΈΛΟΣ" (string-upcase "μέλος"))
-(test "μέλος" (string-downcase "ΜΈΛΟΣ"))
+(test #t (and (member (string-downcase "ΜΈΛΟΣ") '("μέλος" "μέλοσ")) #t))
 (test "μέλοσ" (string-foldcase "ΜΈΛΟΣ"))
-(test "μέλος ενός" (string-downcase "ΜΈΛΟΣ ΕΝΌΣ"))
+(test #t (and (member (string-downcase "ΜΈΛΟΣ ΕΝΌΣ")
+                      '("μέλος ενός" "μέλοσ ενόσ"))
+              #t))
 
 (test "" (substring "" 0 0))
 (test "" (substring "a" 0 0))
