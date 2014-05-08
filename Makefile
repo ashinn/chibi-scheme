@@ -322,8 +322,10 @@ install: all
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
 	$(INSTALL) -m0644 libchibi-scheme$(SO).$(SOVERSION) $(DESTDIR)$(SOLIBDIR)/
-	$(INSTALL) -m0644 libchibi-scheme$(SO).$(SOVERSION_MAJOR) $(DESTDIR)$(SOLIBDIR)/
-	$(INSTALL) -m0644 libchibi-scheme$(SO) $(DESTDIR)$(SOLIBDIR)/
+	$(LN) -s -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION)
+$(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION_MAJOR)
+	$(LN) -s -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION)
+$(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-$(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)/pkgconfig
 	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(SOLIBDIR)/pkgconfig/
