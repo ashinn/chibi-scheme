@@ -102,8 +102,14 @@
   (vector-length (regexp-match-matches md)))
 
 (define (regexp-match-name-offset md name)
-  (cond ((assq name (regexp-match-names md)) => cdr)
-        (else (error "unknown match name" md name))))
+  (let lp ((ls (regexp-match-names md)) (first #f))
+    (cond
+     ((null? ls) (or first (error "unknown match name" md name)))
+     ((eq? name (caar ls))
+      (if (regexp-match-submatch-start+end md (cdar ls))
+          (cdar ls)
+          (lp (cdr ls) (or first (cdar ls)))))
+     (else (lp (cdr ls) first)))))
 
 (define (regexp-match-ref md n)
   (vector-ref (regexp-match-matches md)

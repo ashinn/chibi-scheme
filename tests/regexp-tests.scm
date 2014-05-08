@@ -62,6 +62,16 @@
          '(: (* (*$ (or "ab" "cd"))) "c")
          "abcdc")
 
+(test "ab"
+    (regexp-match-submatch
+     (regexp-matches '(or (-> foo "ab") (-> foo "cd")) "ab")
+     'foo))
+
+(test "cd"
+    (regexp-match-submatch
+     (regexp-matches '(or (-> foo "ab") (-> foo "cd")) "cd")
+     'foo))
+
 (test-re '("ababc" "abab")
          '(: bos ($ (* "ab")) "c")
          "ababc")
