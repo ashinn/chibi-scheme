@@ -880,6 +880,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_string_size(x)   (sexp_field(x, string, SEXP_STRING, length))
 #if SEXP_USE_PACKED_STRINGS
 #define sexp_string_data(x)   (sexp_field(x, string, SEXP_STRING, data))
+#define sexp_string_bytes(x)  (x)
 #else
 #define sexp_string_bytes(x)  (sexp_field(x, string, SEXP_STRING, bytes))
 #define sexp_string_offset(x) (sexp_field(x, string, SEXP_STRING, offset))
