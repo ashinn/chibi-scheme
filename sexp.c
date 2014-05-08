@@ -1451,15 +1451,16 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
   } else if (sexp_port_customp(p)) {
     sexp_gc_preserve2(ctx, tmp, origbytes);
     tmp = sexp_list2(ctx, SEXP_ZERO, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE));
-    origbytes = sexp_port_binaryp(p) ? sexp_string_bytes(sexp_port_buffer(p)) : sexp_port_buffer(p);
+    origbytes = sexp_port_binaryp(p) && !SEXP_USE_PACKED_STRINGS ? sexp_string_bytes(sexp_port_buffer(p)) : sexp_port_buffer(p);
     tmp = sexp_cons(ctx, origbytes, tmp);
     tmp = sexp_apply(ctx, sexp_port_reader(p), tmp);
     if (sexp_fixnump(tmp) && sexp_unbox_fixnum(tmp) > 0) {
       sexp_port_offset(p) = 0;
       sexp_port_size(p) = sexp_unbox_fixnum(tmp);
-      if (!sexp_port_binaryp(p) && origbytes != sexp_string_bytes(sexp_port_buffer(p))) {
+      if (!sexp_port_binaryp(p) && !SEXP_USE_PACKED_STRINGS
+          && origbytes != sexp_string_bytes(sexp_port_buffer(p))) {
         /* handle resize */
-        memcpy(sexp_port_buf(p), sexp_bytes_data(sexp_string_bytes(sexp_port_buffer(p))), sexp_port_size(p));
+        memcpy(sexp_port_buf(p), sexp_string_data(sexp_port_buffer(p)), sexp_port_size(p));
       }
       res = ((sexp_port_offset(p) < sexp_port_size(p))
              ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
