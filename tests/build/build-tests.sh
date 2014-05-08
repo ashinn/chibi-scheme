@@ -29,6 +29,7 @@ for opts in $(cat ${BUILDDIR}/build-opts.txt); do
     # Try to build then run tests.
     opts=$(echo ${opts} | tr ';' ' ')
     $MAKE cleaner 2>&1 >/dev/null
+    sync
     if $MAKE -j 8 "$vars" $opts chibi-scheme 2>&1 >${BUILDDIR}/build${i}-make.out; then
         sync
         if $MAKE test-r5rs 2>&1 | tee ${BUILDDIR}/build${i}-test.out \
