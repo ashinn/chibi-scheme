@@ -48,12 +48,12 @@ all-libs: $(COMPILED_LIBS)
 lib/%.c: lib/%.stub $(CHIBI_FFI_DEPENDENCIES)
 	$(CHIBI_FFI) $<
 
-lib/%$(SO): lib/%.c $(INCLUDES)
+lib/%$(SO): lib/%.c $(INCLUDES) libchibi-scheme$(SO)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. $(XLIBS) -lchibi-scheme
 
 doc-libs: $(HTML_LIBS)
 
-doc/lib/%.html: lib/%.sld
+doc/lib/%.html: lib/%.sld $(CHIBI_DOC_DEPENDENCIES)
 	$(MKDIR) $(dir $@)
 	$(CHIBI_DOC) --html $(subst /,.,$*) > $@
 
