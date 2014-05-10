@@ -1,6 +1,6 @@
 
 (define-library (chibi tar)
-  (import (scheme base) (scheme file) (srfi 1) (srfi 33) (scheme write)
+  (import (scheme base) (scheme file) (scheme time) (srfi 1) (srfi 33)
           (chibi string) (chibi binary-record)
           (chibi pathname) (chibi filesystem) (chibi system))
   (export
