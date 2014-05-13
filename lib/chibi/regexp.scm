@@ -60,11 +60,11 @@
 
 (define (char-set-ci cset)
   (let ((res (char-set)))
-    (for-each
+    (char-set-for-each
      (lambda (ch)
        (char-set-adjoin! res (char-upcase ch))
        (char-set-adjoin! res (char-downcase ch)))
-     (char-set->list cset))
+     cset)
     res))
 
 (define (make-char-state ch flags next)
