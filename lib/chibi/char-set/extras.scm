@@ -10,6 +10,12 @@
 
 (define char-set-size iset-size)
 
+(define (char-set-fold kons knil cset)
+  (iset-fold (lambda (i acc) (kons (integer->char i) acc)) knil cset))
+
+(define (char-set-for-each proc cset)
+  (iset-for-each (lambda (i) (proc (integer->char i))) cset))
+
 (define (list->char-set ls)
   (list->iset (map char->integer ls)))
 (define (char-set->list cset)
