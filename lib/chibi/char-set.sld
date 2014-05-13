@@ -4,6 +4,7 @@
   (export
    Char-Set char-set? char-set-contains?
    char-set ucs-range->char-set char-set-copy char-set-size
+   char-set-fold char-set-for-each
    list->char-set char-set->list string->char-set char-set->string
    char-set-adjoin! char-set-adjoin char-set-union char-set-union!
    char-set-intersection char-set-intersection!
