@@ -3,7 +3,7 @@
 ;; Utilities for constructing and joining isets.
 
 (define bits-thresh 128)  ; within 128 we join into a bitmap
-(define bits-max 512)     ; don't make bitmaps larger than this
+;;(define bits-max 512)     ; don't make bitmaps larger than this
 
 (define (bit-set n index)
   (bitwise-ior n (arithmetic-shift 1 index)))
@@ -65,9 +65,46 @@
     (if (and bits (= bits (range->bits (iset-start iset) (iset-end iset))))
         (iset-bits-set! iset #f))))
 
+(define (iset-should-merge-left? a b)
+  (and (< (- (iset-start a) (iset-end b))
+          bits-thresh)
+       (or (not (iset-left a))
+           (> (iset-start b) (iset-max-end (iset-left a))))))
+
+(define (iset-should-merge-right? a b)
+  (and (< (- (iset-start b) (iset-end a))
+          bits-thresh)
+       (or (not (iset-right a))
+           (< (iset-end b) (iset-min-start (iset-right a))))))
+
+(define (iset-merge-left! a b)
+  (if (or (iset-bits a) (iset-bits b)
+          (< (+ 1 (iset-end b)) (iset-start a)))
+      (let* ((a-bits (or (iset-bits a)
+                         (range->bits (iset-start a) (iset-end a))))
+             (b-bits (or (iset-bits b)
+                         (range->bits (iset-start b) (iset-end b))))
+             (shift (- (iset-start a) (iset-start b)))
+             (bits (bitwise-ior b-bits (arithmetic-shift a-bits shift))))
+        (iset-bits-set! a bits)))
+  (iset-start-set! a (iset-start b)))
+
+(define (iset-merge-right! a b)
+  (if (or (iset-bits a) (iset-bits b)
+          (< (+ 1 (iset-end a)) (iset-start b)))
+      (let* ((a-bits (or (iset-bits a)
+                         (range->bits (iset-start a) (iset-end a))))
+             (b-bits (or (iset-bits b)
+                         (range->bits (iset-start b) (iset-end b))))
+             (shift (- (iset-start b) (iset-start a)))
+             (bits (bitwise-ior a-bits (arithmetic-shift b-bits shift))))
+        (iset-bits-set! a bits)))
+  (iset-end-set! a (iset-end b)))
+
 (define (iset-adjoin1! is n)
   (iset-adjoin-node! is (%make-iset n n #f #f #f)))
 
+;; adjoin just the node b (ignoring left/right) to the full iset a
 (define (iset-adjoin-node! a b)
   (cond
    ((iset-empty? a)
@@ -85,11 +122,15 @@
        ;;         aaaa...
        ;; ...bbbb
        ((< b-end a-start)
-        (iset-adjoin-node-left! a b))
+        (if (iset-should-merge-left? a b)
+            (iset-merge-left! a b)
+            (iset-adjoin-node-left! a b)))
        ;; ...aaaa
        ;;         bbbb...
        ((> b-start a-end)
-        (iset-adjoin-node-right! a b))
+        (if (iset-should-merge-right? a b)
+            (iset-merge-right! a b)
+            (iset-adjoin-node-right! a b)))
        ;; ...aaaaa...
        ;;  ...bb...
        ((and (>= b-start a-start) (<= b-end a-end))
@@ -97,7 +138,8 @@
             (let ((b-bits (arithmetic-shift
                            (or b-bits (range->bits b-start b-end))
                            (- b-start a-start))))
-              (iset-bits-set! a (bitwise-ior a-bits b-bits)))))
+              (iset-bits-set! a (bitwise-ior a-bits b-bits))
+              (iset-squash-bits! a))))
        (else
         ;; general case: split, recurse, join sides
         (let ((ls (iset-node-split b a-start a-end)))
