@@ -12,7 +12,7 @@
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
 #endif
 
-static void sexp_define_type_predicate (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
+static void sexp_define_type_predicate (sexp ctx, sexp env, const char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
   name = sexp_c_string(ctx, cname, -1);
@@ -22,7 +22,8 @@ static void sexp_define_type_predicate (sexp ctx, sexp env, char *cname, sexp_ui
 }
 
 static void sexp_define_accessors (sexp ctx, sexp env, sexp_uint_t ctype,
-                                   sexp_uint_t cindex, char* get, char *set) {
+                                   sexp_uint_t cindex,
+                                   const char* get, const char *set) {
   sexp type, index;
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
@@ -480,7 +481,7 @@ static sexp sexp_unsetenv (sexp ctx, sexp self, sexp_sint_t n, sexp name) {
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
-sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
