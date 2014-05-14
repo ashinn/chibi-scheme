@@ -311,7 +311,7 @@ static sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) 
   }
 }
 
-sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, sexp_abi_identifier_t abi) {
+sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;

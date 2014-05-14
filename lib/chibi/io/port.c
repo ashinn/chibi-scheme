@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <chibi/eval.h>
 
+#if SEXP_USE_SEND_FILE
+#include <sys/sendfile.h>
+#endif
+
 #define SEXP_LAST_CONTEXT_CHECK_LIMIT 256
 
 #define sexp_cookie_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
@@ -144,7 +148,7 @@ static cookie_io_functions_t sexp_cookie_no_seek = {
 
 #endif  /* !SEXP_BSD */
 
-static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
+static sexp sexp_make_custom_port (sexp ctx, sexp self, const char *mode,
                                    sexp read, sexp write,
                                    sexp seek, sexp close) {
   FILE *in;
@@ -190,7 +194,7 @@ static sexp sexp_make_custom_port (sexp ctx, sexp self, char *mode,
 #else  /* ! SEXP_USE_STRING_STREAMS */
 
 static sexp sexp_make_custom_port (sexp ctx, sexp self,
-                                   char *mode, sexp read, sexp write,
+                                   const char *mode, sexp read, sexp write,
                                    sexp seek, sexp close) {
   sexp vec;
   sexp_gc_var2(res, str);
