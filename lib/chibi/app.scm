@@ -5,6 +5,20 @@
 ;;> Parses command-line options into a config object.
 
 (define (parse-option prefix conf-spec args fail)
+  (define (parse-value type str)
+    (cond
+     ((not (string? str))
+      str)
+     ((and (pair? type) (eq? 'list (car type)))
+      (map (lambda (x) (parse-value (cadr type) x))
+           (string-split str #\,)))
+     (else
+      (case type
+        ((boolean) (not (member str '("#f" "#false" "#F" "#FALSE"))))
+        ((number) (string->number str))
+        ((symbol) (string->symbol str))
+        ((char) (string-ref str 0))
+        (else str)))))
   (define (lookup-conf-spec conf-spec syms strs)
     (let ((sym (car syms))
           (str (car strs)))
@@ -55,12 +69,13 @@
        ((null? args)
         (error "missing argument to option " str))
        (else
-        (cons (cons (append prefix syms) (car args)) (cdr args))))))
+        (cons (cons (append prefix syms) (parse-value (cadr spec) (car args)))
+              (cdr args))))))
   (define (parse-long-option str args)
     (let* ((str+val (string-split str #\= 2))
            (str (car str+val))
-           (args (if (pair? (cdr str+val)) (cons (cadr str+val) args) args)))
-      (or (parse-conf-spec str args)
+           (args2 (if (pair? (cdr str+val)) (cons (cadr str+val) args) args)))
+      (or (parse-conf-spec str args2)
           (and (string-prefix? "no-" str)
                (let ((res (parse-long-option (substring str 3) args)))
                  (cond
@@ -88,7 +103,9 @@
                   args
                   (cons (string-append "-" (substring str 1)) args))))
        ((> (string-length str) 1)
-        (cons (cons (append prefix (list (car x))) (substring str 1)) args))
+        (cons (cons (append prefix (list (car x)))
+                    (parse-value (cadr x) (substring str 1)))
+              args))
        ((null? args)
         (error "missing argument to option " x))
        (else
