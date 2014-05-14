@@ -158,12 +158,14 @@ static sexp sexp_random_source_randomize (sexp ctx, sexp self, sexp_sint_t n, se
   return SEXP_VOID;
 }
 
-static sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp seed) {
+static sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp seed1, sexp seed2) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
-  if (! sexp_fixnump(seed))
-    return sexp_type_exception(ctx, self, rs_type_id, seed);
-  sexp_seed_random(sexp_unbox_fixnum(seed), rs);
+  if (! sexp_fixnump(seed1))
+    return sexp_type_exception(ctx, self, rs_type_id, seed1);
+  if (! sexp_fixnump(seed2))
+    return sexp_type_exception(ctx, self, rs_type_id, seed2);
+  sexp_seed_random(sexp_unbox_fixnum(seed1) ^ sexp_unbox_fixnum(seed2), rs);
   return SEXP_VOID;
 }
 
@@ -197,7 +199,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "random-source-state-ref", 1, sexp_random_source_state_ref);
   sexp_define_foreign(ctx, env, "random-source-state-set!", 2, sexp_random_source_state_set);
   sexp_define_foreign(ctx, env, "random-source-randomize!", 1, sexp_random_source_randomize);
-  sexp_define_foreign(ctx, env, "random-source-pseudo-randomize!", 2, sexp_random_source_pseudo_randomize);
+  sexp_define_foreign(ctx, env, "random-source-pseudo-randomize!", 3, sexp_random_source_pseudo_randomize);
 
   default_random_source = op = sexp_make_random_source(ctx, NULL, 0);
   name = sexp_intern(ctx, "default-random-source", -1);
