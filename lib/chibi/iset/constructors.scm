@@ -220,7 +220,7 @@
   (apply iset-delete! (iset-copy iset) args))
 
 (define (iset-map proc iset)
-  (iset-fold (lambda (i is) (iset-adjoin! is i)) (make-iset) iset))
+  (iset-fold (lambda (i is) (iset-adjoin! is (proc i))) (make-iset) iset))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; High-level set operations.
