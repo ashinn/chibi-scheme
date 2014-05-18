@@ -97,4 +97,7 @@
 (test '(2 3 4)
     (iset->list (iset-map (lambda (i) (+ i 1)) (iset 1 2 3))))
 
+(test-assert (iset<= (iset 97) (iset 97 117)))
+(test-assert (iset<= (iset 117) (iset 97 117)))
+
 (test-end)

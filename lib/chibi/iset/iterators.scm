@@ -103,12 +103,13 @@
           (else
            (let ((i1 (iset-ref is1 cur1))
                  (i2 (iset-ref is1 cur2)))
-             (cond ((< i1 i2)
-                    (lp (iset-cursor-next is1 cur1) cur2))
+             (cond ((> i1 i2)
+                    (lp cur1 (iset-cursor-next is2 cur2)))
                    ((= i1 i2)
                     (lp (iset-cursor-next is1 cur1)
                         (iset-cursor-next is2 cur2)))
                    (else
+                    ;; (< i1 i2) - i1 won't occur in is2
                     #f)))))))
 
 (define (iset= . o)
