@@ -152,6 +152,10 @@
 
 (test-re #f '(* lower) "abcD")
 (test-re '("abcD") '(w/nocase (* lower)) "abcD")
+(test-re '("σζ") '(* lower) "σζ")
+(test-re '("Σ") '(* upper) "Σ")
+(test-re '("\x01C5;") '(* title) "\x01C5;")
+(test-re '("σζ\x01C5;") '(w/nocase (* lower)) "σζ\x01C5;")
 
 (test-re '("кириллица") '(* alpha) "кириллица")
 (test-re #f '(w/ascii (* alpha)) "кириллица")

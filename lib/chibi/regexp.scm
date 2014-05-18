@@ -492,6 +492,21 @@
   (char-set-union %char-set:letter %char-set:digit (char-set #\_)))
 (define (char-word-constituent? ch)
   (char-set-contains? char-set:word-constituent ch))
+(define char-set:title-case
+  (char-set-union
+   (ucs-range->char-set #x1F88 #x1F90)
+   (ucs-range->char-set #x1F98 #x1FA0)
+   (ucs-range->char-set #x1FA8 #x1FB0)
+   (char-set #\x01C5 #\x01C8 #\x01CB #\x01F2 #\x1FBC #\x1FCC #\x1FFC)))
+(define get-char-set:cased
+  (let ((char-set:cased #f))
+    (lambda ()
+      (if (not char-set:cased)
+          (set! char-set:cased
+                (char-set-union char-set:upper-case
+                                char-set:lower-case
+                                char-set:title-case)))
+      char-set:cased)))
 
 (define (match/bos str i ch start end matches)
   (string-cursor=? i start))
@@ -537,6 +552,8 @@
        (if (flag-set? flags ~ci?) %char-set:letter %char-set:lower-case))
       ((upper-case upper)
        (if (flag-set? flags ~ci?) %char-set:letter %char-set:upper-case))
+      ((title-case title)
+       (if (flag-set? flags ~ci?) %char-set:letter (char-set)))
       ((alphabetic alpha) %char-set:letter)
       ((numeric num digit) %char-set:digit)
       ((alphanumeric alphanum alnum) %char-set:letter+digit)
@@ -554,9 +571,11 @@
       ((any) char-set:full)
       ((nonl) char-set:nonl)
       ((lower-case lower)
-       (if (flag-set? flags ~ci?) char-set:letter char-set:lower-case))
+       (if (flag-set? flags ~ci?) (get-char-set:cased) char-set:lower-case))
       ((upper-case upper)
-       (if (flag-set? flags ~ci?) char-set:letter char-set:upper-case))
+       (if (flag-set? flags ~ci?) (get-char-set:cased) char-set:upper-case))
+      ((title-case title)
+       (if (flag-set? flags ~ci?) (get-char-set:cased) char-set:title-case))
       ((alphabetic alpha) char-set:letter)
       ((numeric num digit) char-set:digit)
       ((alphanumeric alphanum alnum) char-set:letter+digit)
