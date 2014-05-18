@@ -121,13 +121,13 @@
       (cond
        ;;         aaaa...
        ;; ...bbbb
-       ((< b-end a-start)
+       ((<= b-end a-start)
         (if (iset-should-merge-left? a b)
             (iset-merge-left! a b)
             (iset-adjoin-node-left! a b)))
        ;; ...aaaa
        ;;         bbbb...
-       ((> b-start a-end)
+       ((>= b-start a-end)
         (if (iset-should-merge-right? a b)
             (iset-merge-right! a b)
             (iset-adjoin-node-right! a b)))

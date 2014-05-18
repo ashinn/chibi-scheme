@@ -100,4 +100,7 @@
 (test-assert (iset<= (iset 97) (iset 97 117)))
 (test-assert (iset<= (iset 117) (iset 97 117)))
 
+(test-assert (iset= (iset-union (iset 1 3) (iset 3 4)) (iset 1 3 4)))
+(test-assert (iset= (iset-union (iset 3) (iset 1 3)) (iset 1 3)))
+
 (test-end)
