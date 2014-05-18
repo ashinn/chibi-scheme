@@ -599,29 +599,7 @@
                     (every char-set-sre? (cdr sre)))))))
 
 (define (valid-sre? x)
-  (or (regexp? x)
-      (string? x)
-      (char-set-sre? x)
-      (and (pair? x)
-           (memq (car x)
-                 '(|\|| or : seq $ submatch *$ submatch-list ? optional
-                   * zero-or-more + one-or-more ?? non-greedy-optional
-                   *? non-greedy-zero-or-more +? non-greedy-one-or-more
-                   look-ahead neg-look-ahead look-behind neg-look-behind
-                   w/case w/nocase w/unicode w/ascii word word+))
-           (every valid-sre? (cdr x)))
-      (and (pair? x)
-           (memq (car x)
-                 '(>= -> => submatch-named *-> *=> submatch-named-list))
-           (pair? (cdr x))
-           (every valid-sre? (cddr x)))
-      (and (pair? x)
-           (memq (car x) '(** repeated **? non-greedy-repeated))
-           (pair? (cdr x))
-           (pair? (cddr x))
-           (or (not (cadr x)) (integer? (cadr x)))
-           (or (not (car (cddr x))) (integer? (car (cddr x))))
-           (every valid-sre? (cdr (cddr x))))))
+  (guard (exn (else #f)) (regexp x) #t))
 
 (define (sre->char-set sre . o)
   (let ((flags (if (pair? o) (car o) ~none)))

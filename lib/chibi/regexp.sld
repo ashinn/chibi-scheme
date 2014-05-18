@@ -11,7 +11,8 @@
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
    (chibi
-    (import (chibi) (srfi 9) (chibi char-set)
+    (import (rename (chibi) (protect guard))
+            (srfi 9) (chibi char-set)
             (chibi char-set full)
             (prefix (chibi char-set ascii) %)))
    (else
