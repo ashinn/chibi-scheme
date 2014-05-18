@@ -94,4 +94,7 @@
   (test-assert (iset-contains? (iset-union a b) 119))
   (test-assert (iset-contains? (iset-union b a) 119))) 
 
+(test '(2 3 4)
+    (iset->list (iset-map (lambda (i) (+ i 1)) (iset 1 2 3))))
+
 (test-end)
