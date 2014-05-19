@@ -146,6 +146,18 @@
          '(: (* digit) ($ (* (/"af"))))
          "12345beef")
 
+(let ((number '($ (+ digit))))
+  (test '("555" "867" "5309")
+      (cdr
+       (regexp-match->list
+        (regexp-search `(: ,number "-" ,number "-" ,number)
+                       "555-867-5309"))))
+  (test '("555" "5309")
+      (cdr
+       (regexp-match->list
+        (regexp-search `(: ,number "-" (w/nocapture ,number) "-" ,number)
+                       "555-867-5309")))))
+
 (test-re '("12345BeeF" "BeeF")
          '(: (* digit) (w/nocase ($ (* (/"af")))))
          "12345BeeF")

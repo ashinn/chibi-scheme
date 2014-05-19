@@ -53,6 +53,7 @@
 (define ~none 0)
 (define ~ci? 1)
 (define ~ascii? 2)
+(define ~nocapture? 4)
 
 (define (flag-set? flags i) (= i (bitwise-and flags i)))
 (define (flag-join a b) (if b (bitwise-ior a b) a))
@@ -803,35 +804,51 @@
         ((-> => submatch-named)
          ;; Named submatches just record the name for the current
          ;; match and rewrite as a non-named submatch.
-         (set! match-names
-               (cons (cons (cadr sre) (+ 1 current-match)) match-names))
-         (->rx (cons 'submatch (cddr sre)) flags next))
+         (cond
+          ((flag-set? flags ~nocapture?)
+           (->rx (cons 'seq (cddr sre)) flags next))
+          (else
+           (set! match-names
+                 (cons (cons (cadr sre) (+ 1 current-match)) match-names))
+           (->rx (cons 'submatch (cddr sre)) flags next))))
         ((*-> *=> submatch-named-list)
-         (set! match-names (cons (cons (cadr sre) current-match) match-names))
-         (->rx (cons 'submatch-list (cddr sre)) flags next))
+         (cond
+          ((flag-set? flags ~nocapture?)
+           (->rx (cons 'seq (cddr sre)) flags next))
+          (else
+           (set! match-names (cons (cons (cadr sre) current-match) match-names))
+           (->rx (cons 'submatch-list (cddr sre)) flags next))))
         (($ submatch)
          ;; A submatch wraps next with an epsilon transition before
          ;; next, setting the start and end index on the result and
          ;; wrapped next respectively.
-         (let ((num current-match)
-               (index current-index))
-           (set! current-match (+ current-match 1))
-           (set! current-index (+ current-index 2))
-           (set! match-rules `((,index . ,(+ index 1)) ,@match-rules))
-           (make-submatch-state (cons 'seq (cdr sre)) flags next index)))
+         (cond
+          ((flag-set? flags ~nocapture?)
+           (->rx (cons 'seq (cdr sre)) flags next))
+          (else
+           (let ((num current-match)
+                 (index current-index))
+             (set! current-match (+ current-match 1))
+             (set! current-index (+ current-index 2))
+             (set! match-rules `((,index . ,(+ index 1)) ,@match-rules))
+             (make-submatch-state (cons 'seq (cdr sre)) flags next index)))))
         ((*$ submatch-list)
          ;; A submatch-list wraps a range of submatch results into a
          ;; single match value.
-         (let* ((num current-match)
-                (index current-index))
-           (set! current-match (+ current-match 1))
-           (set! current-index (+ current-index 1))
-           (set! match-rules `(,index ,@match-rules))
-           (let* ((n2 (make-epsilon-state next))
-                  (n1 (->rx (cons 'submatch (cdr sre)) flags n2)))
-             (state-match-set! n2 (list index num current-match))
-             (state-match-rule-set! n2 'list)
-             n1)))
+         (cond
+          ((flag-set? flags ~nocapture?)
+           (->rx (cons 'seq (cdr sre)) flags next))
+          (else
+           (let* ((num current-match)
+                  (index current-index))
+             (set! current-match (+ current-match 1))
+             (set! current-index (+ current-index 1))
+             (set! match-rules `(,index ,@match-rules))
+             (let* ((n2 (make-epsilon-state next))
+                    (n1 (->rx (cons 'submatch (cdr sre)) flags n2)))
+               (state-match-set! n2 (list index num current-match))
+               (state-match-rule-set! n2 'list)
+               n1)))))
         ((~ - & / complement difference and char-range char-set)
          (make-char-state (sre->char-set sre flags) ~none next))
         ((word)
@@ -852,6 +869,8 @@
          (->rx `(: ,@(cdr sre)) (flag-clear flags ~ascii?) next))
         ((w/ascii)
          (->rx `(: ,@(cdr sre)) (flag-join flags ~ascii?) next))
+        ((w/nocapture)
+         (->rx `(: ,@(cdr sre)) (flag-join flags ~nocapture?) next))
         (else
          (if (string? (car sre))
              (make-char-state (sre->char-set sre flags) ~none next)
