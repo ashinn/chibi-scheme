@@ -171,10 +171,19 @@
              (iset-node-extract node (+ end 1) (iset-end node)))))
 
 (define (iset-node-extract node start end)
-  (let ((bits (and (iset-bits node)
-                   (arithmetic-shift (iset-bits node)
-                                     (- (iset-start node) start)))))
-    (%make-iset start end bits #f #f)))
+  (cond
+   ((iset-bits node)
+    => (lambda (node-bits)
+         (let* ((bits
+                 (bitwise-and
+                  (arithmetic-shift node-bits (- (iset-start node) start))
+                  (range->bits start end)))
+                (new-end (min end (+ start (integer-length bits)))))
+           (%make-iset start new-end bits #f #f))))
+   (else
+    (%make-iset (max start (iset-start node))
+                (min end (iset-end node))
+                #f #f #f))))
 
 (define (iset-adjoin! iset . ls)
   (list->iset! ls iset))
