@@ -122,12 +122,26 @@
 ;;> unspecified.
 
 (define (assoc-get alist key . o)
-  (cond
-   ((assoc key alist (or (and (pair? o) (car o)) equal?))
-    => (lambda (x)
-         (if (and (pair? (cdr x)) (null? (cddr x))) (cadr x) (cdr x))))
-   (else
-    (and (pair? o) (pair? (cdr o)) (cadr o)))))
+  (let ((equal (or (and (pair? o) (car o)) equal?)))
+    (let lp ((ls alist))
+      (cond
+       ((not (pair? ls)) (and (pair? o) (pair? (cdr o)) (cadr o)))
+       ((and (pair? (car ls)) (equal key (caar ls)))
+        (if (and (pair? (cdar ls)) (null? (cdr (cdar ls))))
+            (car (cdar ls))
+            (cdar ls)))
+       (else (lp (cdr ls)))))))
+
+;;> \procedure{(assoc-get-list alist key [default])}
+
+;;> Equivalent to \scheme{assoc-get} but coerces its result to a list
+;;> as described in the syntax section.
+
+(define (assoc-get-list alist key . o)
+  (let ((res (assoc-get alist key)))
+    (if res
+        (if (or (pair? res) (null? res)) res (list res))
+        (if (pair? o) (car o) '()))))
 
 ;;> Returns just the base of \var{config} without any parent.
 
@@ -325,16 +339,15 @@
 ;;> Lift specialized sections to the top-level of a config.
 
 (define (conf-specialize config key name)
-  (let lp ((ls config) (res '()))
-    (cond
-     ((null? ls) (reverse res))
-     ((assq key (car ls))
-      => (lambda (specialized)
-           (let ((named (assq name (cdr specialized))))
-             (if named
-                 (lp (cdr ls) (cons (car ls) (cons (cdr named) res)))
-                 (lp (cdr ls) (cons (car ls) res))))))
-     (else (lp (cdr ls) (cons (car ls) res))))))
+  (let lp ((cfg config) (res '()))
+    (if (not cfg)
+        (make-conf (reverse res) config #f (current-second))
+        (let* ((specialized (assq key (conf-alist cfg)))
+               (named (and specialized (assq name (cdr specialized))))
+               (next (conf-parent cfg)))
+          (if named
+              (lp next (cons (cdr named) res))
+              (lp next res))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
