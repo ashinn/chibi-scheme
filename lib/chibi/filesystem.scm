@@ -8,7 +8,8 @@
 
 (define (create-directory* dir . o)
   (let ((mode (if (pair? o) (car o) #o755)))
-    (or (create-directory dir mode)
+    (or (file-directory? dir)
+        (create-directory dir mode)
         (let ((slash
                (string-find-right dir #\/ 0 (string-skip-right dir #\/))))
           (and (> slash 0)
