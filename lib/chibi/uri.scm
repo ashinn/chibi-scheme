@@ -170,7 +170,7 @@
 (define (string->uri str . o)
   (apply string->path-uri #f str o))
 
-;;> Convert a URI object to a string.
+;;> Convert a URI object to a string.  Returns #f if the uri has no scheme.
 
 (define (uri->string uri . o)
   (define encode? (and (pair? o) (car o)))
@@ -193,6 +193,14 @@
          (if query "?" "")
          (if (pair? query) (uri-alist->query query) (or query ""))
          (if fragment "#" "") (if fragment (encode fragment) "")))))
+
+;;> Returns true iff the given URI string has a scheme.
+
+(define uri-has-scheme?
+  (let ((no-scheme (list 'no-scheme)))
+    (lambda (url)
+      (and url
+           (eq? no-scheme (uri-scheme (string->path-uri no-scheme url)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; query encoding and decoding
