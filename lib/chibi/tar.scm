@@ -40,8 +40,15 @@
 (define (tar-path tar)
   (string-append (tar-path-prefix tar) (tar-path-raw tar)))
 
+(define (tar-normalize-path tar path)
+  (cond ((string-suffix? "/." path) (string-trim-right path #\.))
+        ((and (not (string-suffix? "/" path)) (equal? "5" (tar-type tar)))
+         (string-append path "/"))
+        (else path)))
+
 (define (tar-path-set! tar path)
-  (let ((len (string-length path)))
+  (let* ((path (tar-normalize-path tar path))
+         (len (string-length path)))
     (cond ((< len 100)
            (tar-path-raw-set! tar path))
           ((< len 255)
@@ -184,14 +191,16 @@
 ;; create an archive for a given file list
 (define (tar-create tarball files . o)
   (let* ((rename (if (pair? o) (car o) (lambda (f) f)))
+         (no-recurse? (and (pair? o) (pair? (cdr o)) (cadr o)))
          (get-src
           (lambda (x) (if (pair? x) (and (eq? 'rename (car x)) (cadr x)) x)))
          (get-dest
-          (lambda (x) (rename (if (pair? x)
-                              (if (eq? 'rename (car x))
-                                  (car (cddr x))
-                                  (cadr x))
-                              x))))
+          (lambda (x)
+            (rename (if (pair? x)
+                        (if (eq? 'rename (car x))
+                            (car (cddr x))
+                            (cadr x))
+                        x))))
          (get-content
           (lambda (x) (and (pair? x) (eq? 'inline (car x))
                        (let ((c (car (cddr x))))
@@ -222,7 +231,7 @@
                      (if (positive? rem)
                          (write-bytevector
                           (make-bytevector (- 512 rem) 0) out))))))))
-           (if src0
+           (if (and src0 (not no-recurse?))
                (directory-fold-tree src0 kons #f kons)
                (kons src0 #f))))
        files)
