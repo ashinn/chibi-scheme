@@ -199,8 +199,7 @@
 (define uri-has-scheme?
   (let ((no-scheme (list 'no-scheme)))
     (lambda (url)
-      (and url
-           (eq? no-scheme (uri-scheme (string->path-uri no-scheme url)))))))
+      (not (eq? no-scheme (uri-scheme (string->path-uri no-scheme url)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; query encoding and decoding
