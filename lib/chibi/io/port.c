@@ -419,6 +419,8 @@ sexp sexp_seek (sexp ctx, sexp self, sexp x, off_t offset, int whence) {
 }
 
 sexp sexp_tell (sexp ctx, sexp self, sexp x) {
+  if (sexp_portp(x) && sexp_stream_portp(x))
+    return sexp_make_integer(ctx, ftell(sexp_port_stream(x)));
   return sexp_seek(ctx, self, x, 0, SEEK_CUR);
 }
 

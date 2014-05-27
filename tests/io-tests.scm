@@ -140,4 +140,15 @@
   (flush-output out)
   (test 106 sum))
 
+(test "file-position"
+    '(0 1 2)
+  (let* ((p (open-input-file "tests/io-tests.scm"))
+         (t0 (file-position p)))
+    (read-char p)
+    (let ((t1 (file-position p)))
+      (read-char p)
+      (let ((t2 (file-position p)))
+        (close-input-port p)
+        (list t0 t1 t2)))))
+
 (test-end)
