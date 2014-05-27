@@ -58,10 +58,9 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs,
       sexp_call_random(rs, m);
       data[i] = m;
     }
-    sexp_call_random(rs, m);
-    mod = sexp_bignum_data(bound)[hi-1] * sizeof(int32_t) / sizeof(sexp_uint_t);
-    if (mod)
-      data[i] = m % mod;
+    mod = sexp_bignum_data(bound)[hi-1];
+    if (mod && sexp_bignum_data(res)[hi-1] > 0)
+      sexp_bignum_data(res)[hi-1] %= mod;
 #endif
   } else {
     res = sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
