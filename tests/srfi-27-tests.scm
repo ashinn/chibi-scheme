@@ -15,6 +15,13 @@
     (do ((k 0 (+ k 5))
          (n 1 (* n 2)))
         ((> k 1024))
-      (test-random rand n))))
+      (test-random rand n))
+    (let* ((state (random-source-state-ref rs))
+           (x (rand 1000000)))
+      ;; the next int won't be the same, but it will be after
+      ;; resetting the state
+      (test-not (= x (rand 1000000)))
+      (random-source-state-set! rs state)
+      (test x (rand 1000000)))))
 
 (test-end)

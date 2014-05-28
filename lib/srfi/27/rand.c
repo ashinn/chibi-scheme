@@ -15,7 +15,7 @@
 
 #define sexp_random_init(x, seed)                                       \
   initstate_r(seed,                                                     \
-              sexp_string_data(sexp_random_state(x)),                   \
+              sexp_bytes_data(sexp_random_state(x)),                    \
               SEXP_RANDOM_STATE_SIZE,                                   \
               sexp_random_data(x))
 
@@ -121,7 +121,7 @@ static sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res;
   sexp_gc_var1(state);
   sexp_gc_preserve1(ctx, state);
-  state = sexp_make_string(ctx, STATE_SIZE, SEXP_UNDEF);
+  state = sexp_make_bytes(ctx, STATE_SIZE, SEXP_UNDEF);
   res = sexp_alloc_tagged(ctx, sexp_sizeof_random, rs_type_id);
   if (sexp_exceptionp(res)) return res;
   sexp_random_state(res) = state;
@@ -134,16 +134,16 @@ static sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, se
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else
-    return sexp_substring(ctx, sexp_random_state(rs), ZERO, STATE_SIZE);
+    return sexp_subbytes(ctx, sexp_random_state(rs), ZERO, STATE_SIZE);
 }
 
 static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
-  else if (! (sexp_stringp(state)
-              && (sexp_string_size(state) == SEXP_RANDOM_STATE_SIZE)))
-    return sexp_type_exception(ctx, self, SEXP_STRING, state);
-  sexp_random_state(rs) = state;
+  else if (! (sexp_bytesp(state)
+              && (sexp_bytes_length(state) == SEXP_RANDOM_STATE_SIZE)))
+    return sexp_type_exception(ctx, self, SEXP_BYTES, state);
+  sexp_random_state(rs) = sexp_subbytes(ctx, state, ZERO, STATE_SIZE);
   sexp_random_init(rs, 1);
   return SEXP_VOID;
 }
