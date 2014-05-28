@@ -407,12 +407,17 @@ int sexp_is_a_socket_p (int fd) {
 }
 
 sexp sexp_seek (sexp ctx, sexp self, sexp x, off_t offset, int whence) {
+  off_t res;
   if (! (sexp_portp(x) || sexp_filenop(x)))
     return sexp_type_exception(ctx, self, SEXP_IPORT, x);
   if (sexp_filenop(x))
     return sexp_make_integer(ctx, lseek(sexp_fileno_fd(x), offset, whence));
-  if (sexp_filenop(sexp_port_fd(x)))
-    return sexp_make_integer(ctx, lseek(sexp_fileno_fd(sexp_port_fd(x)), offset, whence));
+  if (sexp_filenop(sexp_port_fd(x))) {
+    res = lseek(sexp_fileno_fd(sexp_port_fd(x)), offset, whence);
+    if (res >= 0 && !(whence == SEEK_CUR && offset == 0))
+      sexp_port_offset(x) = 0;
+    return sexp_make_integer(ctx, res);
+  }
   if (sexp_stream_portp(x))
     return sexp_make_integer(ctx, fseek(sexp_port_stream(x), offset, whence));
   return sexp_xtype_exception(ctx, self, "not a seekable port", x);
