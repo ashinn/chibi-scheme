@@ -3,21 +3,22 @@
 
 (test-begin "weak pointers")
 
-(test "preserved key and value" '("key" "value" #f)
-  (let ((key (string-append "key"))
-        (value (string-append "value")))
+(test "preserved key and value" '("key1" "value1" #f)
+  (let ((key (string-append "key" "1"))
+        (value (string-append "value" "1")))
     (let ((eph (make-ephemeron key value)))
       (gc)
       (list key (ephemeron-value eph) (ephemeron-broken? eph)))))
 
 (test "unpreserved key and value" '(#f #f #t)
-  (let ((eph (make-ephemeron (string-append "key") (string-append "value"))))
+  (let ((eph (make-ephemeron (string-append "key" "2")
+                             (string-append "value" "2"))))
     (gc)
     (list (ephemeron-key eph) (ephemeron-value eph) (ephemeron-broken? eph))))
 
-(test "unpreserved key and preserved value" '(#f "value" #t)
-  (let ((value (string-append "value")))
-    (let ((eph (make-ephemeron (string-append "key") value)))
+(test "unpreserved key and preserved value" '(#f "value3" #t)
+  (let ((value (string-append "value" "3")))
+    (let ((eph (make-ephemeron (string-append "key" "3") value)))
       (gc)
       (list (ephemeron-key eph) value (ephemeron-broken? eph)))))
 
