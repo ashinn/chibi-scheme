@@ -4,25 +4,14 @@
 
 #include <chibi/eval.h>
 
-#define sexp_ephemeron_key(x) sexp_slot_ref(x, 0)
-#define sexp_ephemeron_value(x) sexp_slot_ref(x, 1)
-
-#define sexp_weak_vector_p(x) sexp_check_tag(x, sexp_weak_vector_id)
-
-sexp sexp_make_ephemeron (sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
-  sexp res = sexp_alloc_type(ctx, pair, sexp_unbox_fixnum(sexp_opcode_return_type(self)));
-  if (! sexp_exceptionp(res)) {
-    sexp_ephemeron_key(res) = key;
-    sexp_ephemeron_value(res) = value;
-  }
-  return res;
-}
-
 sexp sexp_ephemeron_brokenp_op (sexp ctx, sexp self, sexp_sint_t n, sexp eph) {
   if (! (sexp_pointerp(eph) && (sexp_pointer_tag(eph) == sexp_unbox_fixnum(sexp_opcode_arg1_type(self)))))
     return sexp_type_exception(ctx, self, sexp_unbox_fixnum(sexp_opcode_arg1_type(self)), eph);
   return sexp_make_boolean(sexp_brokenp(eph));
 }
+
+#if 0
+#define sexp_weak_vector_p(x) sexp_check_tag(x, sexp_weak_vector_id)
 
 sexp sexp_make_weak_vector (sexp ctx, sexp self, sexp_sint_t n, sexp len) {
   sexp vec, *x;
@@ -58,41 +47,34 @@ sexp sexp_weak_vector_set (sexp ctx, sexp self, sexp_sint_t n, sexp v, sexp k, s
   sexp_vector_set(v, k, x);
   return SEXP_VOID;
 }
+#endif
 
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
 #if 0
   sexp v;
   int sexp_weak_vector_id;
 #endif
-  int sexp_ephemeron_id;
   sexp_gc_var3(name, t, op);
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
   sexp_gc_preserve3(ctx, name, t, op);
 
-  name = sexp_c_string(ctx, "Ephemeron", -1);
-  t = sexp_register_simple_type(ctx, name, SEXP_FALSE, SEXP_TWO);
-  sexp_ephemeron_id = sexp_type_tag(t);
-  sexp_type_field_len_base(t) = 0;
-  sexp_type_weak_base(t) = sexp_type_field_base(t);
-  sexp_type_weak_len_base(t) = 1;
-  sexp_type_weak_len_extra(t) = 1;
-
+  t = sexp_make_fixnum(SEXP_EPHEMERON);
   op = sexp_make_type_predicate(ctx, name=sexp_c_string(ctx,"ephemeron?",-1), t);
   sexp_env_define(ctx, env, name=sexp_intern(ctx, "ephemeron?", -1), op);
   op = sexp_make_getter(ctx, name=sexp_c_string(ctx, "ephemeron-key", -1), t, SEXP_ZERO);
   sexp_env_define(ctx, env, name=sexp_intern(ctx, "ephemeron-key", -1), op);
   op = sexp_make_getter(ctx, name=sexp_c_string(ctx, "ephemeron-value", -1), t, SEXP_ONE);
   sexp_env_define(ctx, env, name=sexp_intern(ctx, "ephemeron-value", -1), op);
-  op = sexp_define_foreign(ctx, env, "make-ephemeron", 2, sexp_make_ephemeron);
+  op = sexp_define_foreign(ctx, env, "make-ephemeron", 2, sexp_make_ephemeron_op);
   if (sexp_opcodep(op)) {
-    sexp_opcode_return_type(op) = sexp_make_fixnum(sexp_ephemeron_id);
+    sexp_opcode_return_type(op) = sexp_make_fixnum(SEXP_EPHEMERON);
   }
   op = sexp_define_foreign(ctx, env, "ephemeron-broken?", 1, sexp_ephemeron_brokenp_op);
   if (sexp_opcodep(op)) {
     sexp_opcode_return_type(op) = sexp_make_fixnum(SEXP_OBJECT);
-    sexp_opcode_arg1_type(op) = sexp_make_fixnum(sexp_ephemeron_id);
+    sexp_opcode_arg1_type(op) = sexp_make_fixnum(SEXP_EPHEMERON);
   }
 
 #if 0

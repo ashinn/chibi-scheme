@@ -162,6 +162,9 @@ enum sexp_types {
 #if SEXP_USE_AUTO_FORCE
   SEXP_PROMISE,
 #endif
+#if SEXP_USE_WEAK_REFERENCES
+  SEXP_EPHEMERON,
+#endif
   SEXP_NUM_CORE_TYPES
 };
 
@@ -679,6 +682,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_contextp(x)    (sexp_check_tag(x, SEXP_CONTEXT))
 #define sexp_promisep(x)    (sexp_check_tag(x, SEXP_PROMISE))
+#define sexp_ephemeronp(x)  (sexp_check_tag(x, SEXP_EPHEMERON))
 
 #define sexp_applicablep(x) (sexp_procedurep(x) || sexp_opcodep(x))
 
@@ -1041,6 +1045,9 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_promise_donep(x) (sexp_field(x, promise, SEXP_PROMISE, donep))
 #define sexp_promise_value(x) (sexp_field(x, promise, SEXP_PROMISE, value))
 
+#define sexp_ephemeron_key(x)   (sexp_field(x, pair, SEXP_EPHEMERON, car))
+#define sexp_ephemeron_value(x) (sexp_field(x, pair, SEXP_EPHEMERON, cdr))
+
 #define sexp_context_env(x)      (sexp_field(x, context, SEXP_CONTEXT, env))
 #define sexp_context_stack(x)    (sexp_field(x, context, SEXP_CONTEXT, stack))
 #define sexp_context_parent(x)   (sexp_field(x, context, SEXP_CONTEXT, parent))
@@ -1196,7 +1203,6 @@ enum sexp_context_globals {
   SEXP_G_ABI_ERROR,             /* incompatible ABI loading library */
   SEXP_G_OPTIMIZATIONS,
   SEXP_G_SIGNAL_HANDLERS,
-  SEXP_G_FILE_DESCRIPTORS,
   SEXP_G_META_ENV,
   SEXP_G_MODULE_PATH,
   SEXP_G_QUOTE_SYMBOL,
@@ -1217,7 +1223,8 @@ enum sexp_context_globals {
   SEXP_G_FOLD_CASE_P,
 #endif
 #if SEXP_USE_WEAK_REFERENCES
-  SEXP_G_WEAK_REFERENCE_CACHE,
+  SEXP_G_FILE_DESCRIPTORS,
+  SEXP_G_NUM_FILE_DESCRIPTORS,
 #endif
 #if ! SEXP_USE_BOEHM
   SEXP_G_PRESERVATIVES,
@@ -1341,6 +1348,7 @@ SEXP_API sexp sexp_memq_op(sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp ls);
 SEXP_API sexp sexp_assq_op(sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp ls);
 SEXP_API sexp sexp_length_op(sexp ctx, sexp self, sexp_sint_t n, sexp ls);
 SEXP_API sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen);
+SEXP_API sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value);
 SEXP_API sexp sexp_make_bytes_op(sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp i);
 SEXP_API sexp sexp_make_string_op(sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch);
 SEXP_API sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
@@ -1533,6 +1541,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_string_to_symbol(ctx, s) sexp_string_to_symbol_op(ctx, NULL, 1, s)
 #define sexp_string_to_number(ctx, s, b) sexp_string_to_number_op(ctx, NULL, 2, s, b)
 #define sexp_symbol_to_string(ctx, s) sexp_symbol_to_string_op(ctx, NULL, 1, s)
+#define sexp_make_ephemeron(ctx, k, v) sexp_make_ephemeron_op(ctx, NULL, 2, k, v)
 #define sexp_make_bytes(ctx, l, i) sexp_make_bytes_op(ctx, NULL, 2, l, i)
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx, NULL, 2, l, c)
 #define sexp_subbytes(ctx, a, b, c) sexp_subbytes_op(ctx, NULL, 3, a, b, c)

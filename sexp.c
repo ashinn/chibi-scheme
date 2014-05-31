@@ -233,6 +233,9 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #if SEXP_USE_AUTO_FORCE
   {SEXP_PROMISE, sexp_offsetof(promise, value), 1, 1, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Promise", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
 #endif
+#if SEXP_USE_WEAK_REFERENCES
+  {SEXP_EPHEMERON, sexp_offsetof(lit, value), 0, 0, 0, 0, sizeof(sexp), 0, 0, sexp_offsetof(lit, value), 1, 0, 0, 1, 0, (sexp)"Ephemeron", SEXP_FALSE, SEXP_FALSE, NULL, SEXP_FALSE, NULL, NULL},
+#endif
 };
 
 #define SEXP_INIT_NUM_TYPES (SEXP_NUM_CORE_TYPES*2)
@@ -394,6 +397,10 @@ void sexp_init_context_globals (sexp ctx) {
 #endif
 #if ! SEXP_USE_BOEHM
   sexp_global(ctx, SEXP_G_PRESERVATIVES) = SEXP_NULL;
+#endif
+#if SEXP_USE_WEAK_REFERENCES
+  sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS) = SEXP_FALSE;
+  sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS) = SEXP_ZERO;
 #endif
   sexp_global(ctx, SEXP_G_OOM_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of memory", SEXP_NULL);
   sexp_global(ctx, SEXP_G_OOS_ERROR) = sexp_user_exception(ctx, SEXP_FALSE, "out of stack space", SEXP_NULL);
@@ -1634,16 +1641,81 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
 
 #endif  /* ! SEXP_USE_STRING_STREAMS */
 
+#if SEXP_USE_WEAK_REFERENCES
+sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
+  sexp res = sexp_alloc_type(ctx, pair, SEXP_EPHEMERON);
+  if (!sexp_exceptionp(res)) {
+    sexp_ephemeron_key(res) = key;
+    sexp_ephemeron_value(res) = value;
+  }
+  return res;
+}
+
+/* TODO: use a faster lookup */
+static sexp sexp_lookup_fileno(sexp ctx, int fd) {
+  sexp *data, x, vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS);
+  sexp_sint_t i, n = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS));
+  if (!sexp_vectorp(vec))
+    return SEXP_FALSE;
+  data = sexp_vector_data(vec);
+  for (i = 0; i < n; i++) {
+    if (sexp_ephemeronp(data[i])) {
+      x = sexp_ephemeron_key(data[i]);
+      if (sexp_filenop(x) && sexp_fileno_fd(x) == fd)
+        return x;
+    }
+  }
+  return SEXP_FALSE;
+}
+
+static void sexp_insert_fileno(sexp ctx, sexp fileno) {
+  sexp *data, *data2, tmp, vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS);
+  sexp_sint_t i, n2, n = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS));
+  if (!sexp_vectorp(vec)) {
+    vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
+        = sexp_make_vector(ctx, sexp_make_fixnum(128), SEXP_VOID);
+  } else if (n >= sexp_vector_length(vec)) {
+    data = sexp_vector_data(vec);
+    for (i = n2 = 0; i < sexp_vector_length(vec); i++)
+      if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i]))
+        n2++;
+    if (n2 * 2 >= n)
+      n2 = n * 2;
+    tmp = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
+        = sexp_make_vector(ctx, sexp_make_fixnum(n2), SEXP_VOID);
+    data2 = sexp_vector_data(tmp);
+    for (i = n = 0; i < sexp_vector_length(vec); i++)
+      if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i]))
+        data2[n++] = data[i];
+    vec = tmp;
+  }
+  sexp_vector_data(vec)[n] = sexp_make_ephemeron(ctx, fileno, SEXP_FALSE);
+  sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS) = sexp_make_fixnum(n + 1);
+}
+#endif
+
 sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_closep) {
-  sexp res;
+  sexp_gc_var1(res);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, fd);
   if (sexp_unbox_fixnum(fd) < 0) return SEXP_FALSE;
+#if SEXP_USE_WEAK_REFERENCES
+  res = sexp_lookup_fileno(ctx, sexp_unbox_fixnum(fd));
+  if (sexp_filenop(res)) {
+    sexp_fileno_no_closep(res) = sexp_truep(no_closep);
+    return res;
+  }
+#endif
+  sexp_gc_preserve1(ctx, res);
   res = sexp_alloc_type(ctx, fileno, SEXP_FILENO);
   if (!sexp_exceptionp(res)) {
     sexp_fileno_fd(res) = sexp_unbox_fixnum(fd);
     sexp_fileno_openp(res) = 1;
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
+#if SEXP_USE_WEAK_REFERENCES
+    sexp_insert_fileno(ctx, res);
+#endif
   }
+  sexp_gc_release1(ctx);
   return res;
 }
 
