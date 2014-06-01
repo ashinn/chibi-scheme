@@ -934,21 +934,28 @@
      end)))
 
 (define (regexp-replace rx str subst . o)
-  (let* ((start (if (pair? o) (car o) 0))
-         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str)))
-         (m (regexp-search rx str start end)))
-    (if m
-        (string-concatenate
-         (cons
-          (substring-cursor str
-                            (string-index->offset str start)
-                            (regexp-match-submatch-start m 0))
-          (append
-           (reverse (regexp-apply-match m str subst))
-           (list (substring-cursor str
-                                   (regexp-match-submatch-end m 0)
-                                   (string-index->offset str end))))))
-        str)))
+  (let* ((start (if (and (pair? o) (car o)) (car o) 0))
+         (o (if (pair? o) (cdr o) '()))
+         (end (if (and (pair? o) (car o)) (car o) (string-length str)))
+         (o (if (pair? o) (cdr o) '()))
+         (count (if (pair? o) (car o) 0)))
+    (let lp ((i start) (count count))
+      (let ((m (regexp-search rx str i end)))
+        (cond
+         ((not m) str)
+         ((positive? count)
+          (lp (regexp-match-submatch-end m 0) (- count 1)))
+         (else
+          (string-concatenate
+           (cons
+            (substring-cursor str
+                              (string-index->offset str start)
+                              (regexp-match-submatch-start m 0))
+            (append
+             (reverse (regexp-apply-match m str subst))
+             (list (substring-cursor str
+                                     (regexp-match-submatch-end m 0)
+                                     (string-index->offset str end))))))))))))
 
 (define (regexp-replace-all rx str subst . o)
   (regexp-fold

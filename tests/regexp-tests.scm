@@ -199,6 +199,18 @@
 (test "  abc-  abc"
     (regexp-replace '(: ($ (+ alpha)) ":" (* space)) "  abc: " '(1 "-" pre 1)))
 
+(test "-abc \t\n d ef  "
+    (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0))
+(test "-abc \t\n d ef  "
+    (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 0))
+(test "  abc-d ef  "
+    (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 1))
+(test "  abc \t\n d-ef  "
+    (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 2))
+(test "  abc \t\n d ef-"
+    (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 3))
+(test "  abc \t\n d ef  "
+    (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 4))
 (test " abc d ef " (regexp-replace-all '(+ space) "  abc \t\n d ef  " " "))
 
 (define (subst-matches matches input subst)

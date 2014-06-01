@@ -68,6 +68,7 @@
       (define substring-cursor substring)
       (define (string-offset->index str off) off)
       (define (string-index->offset str i) i)
+      (define (string-concatenate ls) (apply string-append ls))
       (define (string-concatenate-reverse ls)
-        (apply string-append (reverse ls))))))
+        (string-concatenate (reverse ls))))))
   (include "regexp.scm"))
