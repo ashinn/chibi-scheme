@@ -1651,21 +1651,33 @@ sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp v
   return res;
 }
 
-/* TODO: use a faster lookup */
-static sexp sexp_lookup_fileno(sexp ctx, int fd) {
-  sexp *data, x, vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS);
-  sexp_sint_t i, n = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS));
+static sexp* sexp_fileno_cell(sexp ctx, sexp vec, int fd) {
+  sexp *data;
+  sexp_sint_t i, cell, len;
   if (!sexp_vectorp(vec))
-    return SEXP_FALSE;
+    return NULL;
+  len = sexp_vector_length(vec);
   data = sexp_vector_data(vec);
-  for (i = 0; i < n; i++) {
-    if (sexp_ephemeronp(data[i])) {
-      x = sexp_ephemeron_key(data[i]);
-      if (sexp_filenop(x) && sexp_fileno_fd(x) == fd)
-        return x;
-    }
-  }
+  for (i = 0, cell = (fd * FNV_PRIME) % len; i < len; i++, cell=(cell+1)%len)
+    if (!sexp_ephemeronp(data[cell])
+        || (sexp_filenop(sexp_ephemeron_key(data[cell]))
+            && sexp_fileno_fd(sexp_ephemeron_key(data[cell])) == fd))
+        return &(data[cell]);
+  return NULL;
+}
+
+static sexp sexp_lookup_fileno(sexp ctx, int fd) {
+  sexp* cell = sexp_fileno_cell(ctx, sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS), fd);
+  if (cell && sexp_ephemeronp(*cell)
+      && sexp_fileno_fd(sexp_ephemeron_key(*cell)) == fd)
+    return sexp_ephemeron_key(*cell);
   return SEXP_FALSE;
+}
+
+static sexp* sexp_insert_fileno_ephemeron(sexp ctx, sexp vec, sexp eph) {
+  sexp *data = sexp_fileno_cell(ctx, vec, sexp_fileno_fd(sexp_ephemeron_key(eph)));
+  if (data) *data = eph;
+  return data;
 }
 
 static void sexp_insert_fileno(sexp ctx, sexp fileno) {
@@ -1673,7 +1685,7 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
   sexp_sint_t i, n2, n = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS));
   if (!sexp_vectorp(vec)) {
     vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
-        = sexp_make_vector(ctx, sexp_make_fixnum(128), SEXP_VOID);
+        = sexp_make_vector(ctx, sexp_make_fixnum(128), SEXP_FALSE);
   } else if (n >= sexp_vector_length(vec)) {
     data = sexp_vector_data(vec);
     for (i = n2 = 0; i < sexp_vector_length(vec); i++)
@@ -1682,15 +1694,17 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
     if (n2 * 2 >= n)
       n2 = n * 2;
     tmp = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
-        = sexp_make_vector(ctx, sexp_make_fixnum(n2), SEXP_VOID);
+        = sexp_make_vector(ctx, sexp_make_fixnum(n2), SEXP_FALSE);
     data2 = sexp_vector_data(tmp);
     for (i = n = 0; i < sexp_vector_length(vec); i++)
-      if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i]))
-        data2[n++] = data[i];
+      if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i])
+          && sexp_insert_fileno_ephemeron(ctx, tmp, data[i]))
+        n++;
     vec = tmp;
   }
-  sexp_vector_data(vec)[n] = sexp_make_ephemeron(ctx, fileno, SEXP_FALSE);
-  sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS) = sexp_make_fixnum(n + 1);
+  if (sexp_insert_fileno_ephemeron(ctx, sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS), sexp_make_ephemeron(ctx, fileno, SEXP_FALSE)))
+    n++;
+  sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS) = sexp_make_fixnum(n);
 }
 #endif
 
