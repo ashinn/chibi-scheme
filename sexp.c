@@ -1716,6 +1716,7 @@ sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_c
   res = sexp_lookup_fileno(ctx, sexp_unbox_fixnum(fd));
   if (sexp_filenop(res)) {
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
+    sexp_fileno_openp(res) = 1;  /* not necessarily */
     return res;
   }
 #endif
