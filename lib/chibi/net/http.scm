@@ -264,6 +264,16 @@
       (close-input-port p)
       res)))
 
+(define (http-get-to-file url path)
+  (call-with-input-url url
+    (lambda (in)
+      (let ((out (open-binary-output-file path)))
+        (let lp ()
+          (let ((c (read-u8 in)))
+            (cond ((not (eof-object? c))
+                   (write-u8 c out)
+                   (lp)))))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; server utils
 
