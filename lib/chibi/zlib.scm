@@ -35,3 +35,13 @@
 
 (define (gunzip bvec)
   (process-pipe-bytevector '("gzip" "-c" "-d") bvec))
+
+;;> Gunzip decompress a bytevector in memory if it has been
+;;> compressed, or return as-is otherwise.
+
+(define (maybe-gunzip bvec)
+  (if (and (>= (bytevector-length bvec) 10)
+           (eqv? #x1f (bytevector-u8-ref bvec 0))
+           (eqv? #x8b (bytevector-u8-ref bvec 1)))
+      (gunzip bvec)
+      bvec))
