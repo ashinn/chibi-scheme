@@ -4,7 +4,7 @@
           regexp-matches regexp-matches? regexp-search
           regexp-replace regexp-replace-all
           regexp-fold regexp-extract regexp-split
-          regexp-match? regexp-match-num-matches
+          regexp-match? regexp-match-count
           regexp-match-submatch regexp-match-submatch/list
           regexp-match->list regexp-match->sexp)
   (import (srfi 33) (srfi 69))

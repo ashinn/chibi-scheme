@@ -99,8 +99,8 @@
   (%make-regexp-match (make-vector len #f) rx str))
 (define (make-regexp-match-for-rx rx str)
   (make-regexp-match (rx-num-save-indexes rx) rx str))
-(define (regexp-match-num-matches md)
-  (vector-length (regexp-match-matches md)))
+(define (regexp-match-count md)
+  (- (quotient (vector-length (regexp-match-matches md)) 2) 1))
 
 (define (regexp-match-name-offset md name)
   (let lp ((ls (regexp-match-names md)) (first #f))
