@@ -1,6 +1,6 @@
 
 (define-library (chibi net http)
-  (export http-get http-get/headers
+  (export http-get http-get/headers http-get-to-file
           http-head http-post http-put http-delete
           call-with-input-url call-with-input-url/headers
           with-input-from-url
