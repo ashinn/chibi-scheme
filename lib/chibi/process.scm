@@ -47,6 +47,13 @@
              (not (car o))
              (equal? (car o) (car cmdline))))))
 
+(define (execute cmd args)
+  (define (->string x)
+    (cond ((symbol? x) (symbol->string x))
+          ((number? x) (number->string x))
+          (else x)))
+  (execvp (->string cmd) (map ->string args)))
+
 (define (system cmd . args)
   (let ((pid (fork)))
     (cond
