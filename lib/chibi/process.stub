@@ -127,7 +127,7 @@
 ;;> Replace the current process with the given command.  Finalizers
 ;;> are not run.
 
-(define-c int (execute execvp) (string (array string)))
+(define-c int (execvp execvp) (string (array string)))
 
 ;;> Returns the current process id.
 
