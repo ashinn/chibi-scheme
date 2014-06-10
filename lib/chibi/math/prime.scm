@@ -205,15 +205,19 @@
             ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
             (else (lp (+ i 1) count))))))
 
+;;> The aliquot sum s(n), equal to the sum of proper divisors of an
+;;> integer n.
+(define (aliquot n)
+  (let ((limit (+ 1 (quotient n 2))))
+    (let lp ((i 2) (sum 1))
+      (cond ((> i limit) sum)
+            ((zero? (remainder n i)) (lp (+ i 1) (+ sum i)))
+            (else (lp (+ i 1) sum))))))
+
 ;;> Returns true iff \var{n} is a perfect number, i.e. the sum of its
 ;;> divisors other than itself equals itself.
 (define (perfect? n)
-  (and (> n 1)
-       (let ((limit (+ 1 (quotient n 2))))
-         (let lp ((i 2) (sum 1))
-           (cond ((> i limit) (= n sum))
-                 ((zero? (remainder n i)) (lp (+ i 1) (+ sum i)))
-                 (else (lp (+ i 1) sum)))))))
+  (and (> n 1) (= n (aliquot n))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Random prime generation
