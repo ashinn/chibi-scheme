@@ -135,7 +135,7 @@
               (close-output-port out)))
            ((#\1) (link-file (rename (tar-link-name tar)) path))
            ((#\2) (symbolic-link-file (rename (tar-link-name tar)) path))
-           ((#\5) (create-directory path (tar-mode tar)))
+           ((#\5) (create-directory* path (tar-mode tar)))
            ((#\g #\x))                   ;; meta data
            ((#\3 #\4 #\6) (error "devices not supported" (tar-type tar)))
            (else (error "invalid tar type" (tar-type tar)))))))))
