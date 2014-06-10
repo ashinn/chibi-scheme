@@ -70,6 +70,8 @@
 (test '(2 2 3) (factor 12))
 (test '(3 3 3 5 7) (factor 945))
 
+(test 975 (aliquot 945))
+
 (do ((i 3 (+ i 2)))
     ((>= i 101))
   (test (number->string i) (prime? i)
