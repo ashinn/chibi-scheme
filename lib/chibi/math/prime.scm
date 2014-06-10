@@ -181,10 +181,12 @@
        (else
         (let lp ((i 3) (n n) (limit limit) (res res))
           (cond
+           ((= n 1)
+            (reverse res))
            ((> i limit)
             (reverse (cons n res)))
            ((zero? (remainder n i))
-            (lp i (quotient n i) (quotient limit i) (cons i res)))
+            (lp i (quotient n i) limit (cons i res)))
            (else
             (lp (+ i 2) n limit res))))))))))
 
