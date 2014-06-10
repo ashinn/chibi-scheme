@@ -68,6 +68,7 @@
 (test '(2 5) (factor 10))
 (test '(11) (factor 11))
 (test '(2 2 3) (factor 12))
+(test '(3 3 3 5 7) (factor 945))
 
 (do ((i 3 (+ i 2)))
     ((>= i 101))
