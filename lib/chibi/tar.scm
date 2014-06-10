@@ -208,19 +208,30 @@
     (let ((out (cond ((eq? #t tarball) (current-output-port))
                      ((eq? #f tarball) (open-output-bytevector))
                      (else (open-binary-output-file tarball)))))
-      (for-each
-       (lambda (file)
+      (fold
+       (lambda (file acc)
          (let ((src0 (get-src file))
                (dest0 (get-dest file))
                (content0 (get-content file)))
            (define (kons x acc)
-             (let ((src (get-src x))
-                   (dest (if (equal? x src0) dest0 (get-dest x)))
-                   (content (if (equal? x src0) content0 (get-content x))))
-               (let ((tar (if content
-                              (inline->tar dest content)
-                              (file->tar src))))
-                 (tar-path-set! tar dest)
+             (let* ((src (get-src x))
+                    (dest (if (equal? x src0) dest0 (get-dest x)))
+                    (content (if (equal? x src0) content0 (get-content x)))
+                    (tar (if content
+                                (inline->tar dest content)
+                                (file->tar src))))
+               (tar-path-set! tar dest)
+               (cond
+                ((assoc (tar-path tar) acc)
+                 => (lambda (prev)
+                      (if (not (and (file-directory? src)
+                                    (file-directory? (cdr prev))))
+                          (write-string
+                           (string-append "tar-create: duplicate file: "
+                                          dest "\n")
+                           (current-error-port)))
+                      acc))
+                (else
                  (write-tar tar out)
                  (cond
                   ((and (string? src) (equal? "0" (tar-type tar)))
@@ -230,11 +241,12 @@
                    (let ((rem (modulo (bytevector-length content) 512)))
                      (if (positive? rem)
                          (write-bytevector
-                          (make-bytevector (- 512 rem) 0) out))))))))
+                          (make-bytevector (- 512 rem) 0) out)))))
+                 (cons (cons (tar-path tar) src) acc)))))
            (if (and src0 (not no-recurse?))
-               (directory-fold-tree src0 kons #f kons)
-               (kons src0 #f))))
-       files)
+               (directory-fold-tree src0 kons acc kons)
+               (kons src0 acc))))
+       '() files)
       (write-bytevector (make-bytevector 1024 0) out)
       (let ((res (if (eq? #f tarball) (get-output-bytevector out))))
         (close-output-port out)
