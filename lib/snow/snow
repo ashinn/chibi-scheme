@@ -1,0 +1,183 @@
+#!/usr/bin/env chibi-scheme
+
+;; This code was written by Alex Shinn in 2013 and placed in the
+;; Public Domain.  All warranties are disclaimed.
+
+(import (scheme base) (scheme char) (scheme read) (scheme write)
+        (scheme file) (scheme process-context) (srfi 1)
+        (snow commands) (snow library) (snow utils) (snow interface)
+        (chibi app) (chibi config) (chibi match) (chibi string)
+        (chibi pathname) (chibi filesystem) (chibi process))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define repo-spec
+  '((repository
+     (conf
+      (sibling
+       (conf
+        (name string)
+        (url string)))
+      (package
+       (conf
+        (name (list (or symbol integer)))
+        (url string)
+        (size integer)
+        (checksums (alist symbol string))
+        (signature (alist symbol string))
+        (library
+         (conf
+          (name (list (or symbol integer)))
+          (path string)
+          (depends
+           (list (list (or symbol integer string
+                           (list (member < > <= >=) string)))))
+          (provides (list (list (or symbol string))))
+          (platforms (list (or symbol (list symbol))))
+          (features (list symbol))
+          (authors (list string))
+          (maintainers (list string))
+          (description string)
+          (created string)
+          (updated string)
+          (version string)
+          (licenses
+           (list
+            (or (member gpl2 gpl3 lgpl mit bsd artistic apache public-domain)
+                (list 'license
+                      (conf (name string)
+                            (url string)
+                            (checksums (alist symbol string)))))))))))))))
+
+(define conf-spec
+  ;; name type aliases doc
+  '((verbose? boolean (#\v "verbose") "...")
+    (silent? boolean (#\s "silent") "...")
+    (action? boolean ((not #\n) "action") "...")
+    (keep-files? boolean (#\k "keep-files") "...")
+    (force-build? boolean (#\f "force-build") "...")
+    (always-yes? boolean (#\y "always-yes") "...")
+    (test? boolean)
+    (implementation string)
+    (repository string)
+    (config filename)
+    (admin-dir dirname)
+    (temp-dir dirname)
+    (install-dir dirname)
+    (host string)
+    (local-root-repository dirname)
+    (local-user-repository dirname)
+    (install-prefix string)
+    (install-source-dir dirname)
+    (install-library-dir dirname)
+    (install-binary-dir dirname)
+    (install-doc-dir dirname)
+    (install-meta-dir dirname)
+    (library-extension string)
+    (installer symbol)
+    (implementations (list symbol))
+    ))
+
+(define (conf-default-path name)
+  (make-path (get-environment-variable "HOME")
+             (string-append "." name)
+             "config.scm"))
+
+;; We need to support:
+;;
+;;  <prog> [<options>...] <command> [<command-options>...] <args>...
+;;
+;; up to arbitrarily nested sub-commands and with option parsing and
+;; argument count verification.
+;;
+;; Furthermore, it should be possible to build this programmatically,
+;; for example by searching a directory for extensions/plugins.  Thus
+;; even if a convenience syntax is provided it should be a thin layer
+;; over a procedural interface.
+
+(define search-spec '())
+(define show-spec '())
+(define install-spec '())
+(define upgrade-spec '())
+(define remove-spec '())
+(define status-spec '())
+(define gen-key-spec
+  '((bits integer)
+    (validity-period string)
+    (name string)
+    (library-prefix (list symbol))
+    (email string)))
+(define reg-key-spec
+  '((email string)))
+(define sign-spec
+  '((output filename #\o)
+    (digest symbol #\d)
+    (email string)))
+(define verify-spec
+  '())
+(define package-spec
+  '((author string)
+    (recursive? boolean (#\r "recursive") "...")
+    (version string)
+    (version-file existing-filename)
+    (doc existing-filename)
+    (test existing-filename)
+    (sig-file existing-filename)
+    ))
+(define upload-spec
+  package-spec)
+(define update-spec
+  '())
+
+(define app-spec
+  `(snow
+    "Snow package management"
+    (@ ,conf-spec)
+    (begin: ,(lambda (cfg) (restore-history cfg)))
+    (end: ,(lambda (cfg) (save-history cfg)))
+    (or
+     (search
+      "search for packages"
+      (@ ,search-spec) (,command/search terms ...))
+     (show
+      "show package descriptions"
+      (@ ,show-spec) (,command/show names ...))
+     (install
+      "install packages"
+      (@ ,install-spec) (,command/install names ...))
+     (upgrade
+      "upgrade installed packages"
+      (@ ,upgrade-spec) (,command/upgrade names ...))
+     (remove
+      "remove packages"
+      (@ ,remove-spec) (,command/remove names ...))
+     (status
+      "print package status"
+      (@ ,status-spec) (,command/status names ...))
+     (package
+      "create a package"
+      (@ ,package-spec) (,command/package files ...))
+     (gen-key
+      "create an RSA key pair"
+      (@ ,gen-key-spec) (,command/gen-key))
+     (reg-key
+      "register an RSA key pair"
+      (@ ,reg-key-spec) (,command/reg-key))
+     (sign
+      "sign a package"
+      (@ ,sign-spec) (,command/sign file))
+     (verify
+      "verify a signature"
+      (@ ,verify-spec) (,command/verify file))
+     (upload
+      "upload a package"
+      (@ ,upload-spec) (,command/upload files ...))
+     (update
+      "update available package status"
+      (@ ,update-spec) (,command/update))
+     (help
+      "print help"
+      (,app-help-command args ...))
+     )))
+
+(run-application app-spec)
