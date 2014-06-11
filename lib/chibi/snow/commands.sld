@@ -18,6 +18,7 @@
           (scheme file)
           (scheme process-context)
           (scheme time)
+          (scheme read)
           (scheme write)
           (srfi 1)
           (srfi 27)
