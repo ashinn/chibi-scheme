@@ -37,6 +37,11 @@
 (define (conf-for-implementation cfg impl)
   (conf-specialize cfg 'implementation impl))
 
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (get-output-string out)))
+
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))
 
@@ -116,10 +121,10 @@
                    (equal? "." (path-directory (path-directory x)))))
             (tar-files unzipped-file))))
      (and package-file
-          (guard (exn (else (print-exception exn) #f))
+          (guard (exn (else #f))
             (let* ((str (utf8->string
                          (tar-extract-file unzipped-file package-file)))
-                   (package (call-with-input-string str read)))
+                   (package (read (open-input-string str))))
               (and (pair? package)
                    (eq? 'package (car package))
                    package)))))))
@@ -219,7 +224,7 @@
       (let lp ((ls (if version (append (cadr name) (list version)) (cadr name)))
                (res '()))
         (if (null? ls)
-            (string-concatenate (reverse (cons ".tgz" res)))
+            (string-join (reverse (cons ".tgz" res)))
             (lp (cdr ls)
                 (cons (x->string (car ls))
                       (if (null? res) res (cons "-" res))))))))))
@@ -663,7 +668,7 @@
          (repo-uri (remote-uri cfg "/s/repo.scm"))
          (repo-str (call-with-input-url repo-uri port->string))
          (repo (guard (exn (else #f))
-                 (let ((repo (call-with-input-string repo-str read)))
+                 (let ((repo (read (open-input-string repo-str))))
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
     (cond
      ((not (valid-repository? repo))
@@ -725,7 +730,7 @@
       (process->sexp `(guile -c ,(write-to-string `(write ,expr))))))
   (case impl
     ((chibi)
-     (let* ((dirs (reverse (current-module-path)))
+     (let* ((dirs (reverse (fast-eval '(current-module-path) '((chibi)))))
             (share-dir (find (lambda (d) (string-contains d "/share/")) dirs)))
        (if share-dir
            (cons share-dir (delete share-dir dirs))
