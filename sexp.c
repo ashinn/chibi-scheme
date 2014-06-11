@@ -1753,6 +1753,15 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
 #if SEXP_USE_FOLD_CASE_SYMS
   sexp_port_fold_casep(p) = sexp_truep(sexp_global(ctx, SEXP_G_FOLD_CASE_P));
 #endif
+#if SEXP_USE_WEAK_REFERENCES
+  /* if the fd was previously opened by a non-stream port, preserve it */
+  /* here to avoid gc timing issues */
+  if (in && fileno(in) >= 0) {
+    sexp_port_fd(p) = sexp_lookup_fileno(ctx, fileno(in));
+    if (sexp_filenop(sexp_port_fd(p)))
+      sexp_fileno_openp(sexp_port_fd(p)) = 1;
+  }
+#endif
   sexp_port_cookie(p) = SEXP_VOID;
   return p;
 }
