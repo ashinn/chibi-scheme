@@ -3,7 +3,7 @@
   (export
    string-cursor-start string-cursor-end string-cursor-ref
    string-cursor<? string-cursor<=? string-cursor>? string-cursor>=?
-   string-cursor=? string-cursor-next substring-cursor
+   string-cursor=? string-cursor-next string-cursor-prev substring-cursor
    string-null? string-every string-any
    string-join string-split string-count
    string-trim string-trim-left string-trim-right
