@@ -201,14 +201,6 @@
    (else (map (lambda (x) (or (string->number x) (string->symbol x)))
               (string-split str #\.)))))
 
-(define (library-name->path name)
-  (and (pair? name)
-       (let lp ((ls (cdr name)) (res (list (car name))))
-         (if (null? ls)
-             (apply string-append
-                    (map display-to-string (reverse (cons ".sld" res))))
-             (lp (cdr ls) (cons (car ls) (cons "/" res)))))))
-
 (define (check-cond-expand config test)
   (define (library-installed? config name)
     ;; assume it could be installed for now
