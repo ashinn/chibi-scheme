@@ -1,17 +1,13 @@
 
-(define (file-sha256 file)
-  ;; openssl dgst -sha256 file
-  (let ((ls (string-split (process->string `("shasum" "-a" "256" ,file)))))
-    (and (pair? ls) (car ls))))
+;;> Copies the file \var{from} to \var{to}.
 
-(define (copy-file src dst)
-  (system "cp" src dst))
-
-(define (move-file src dst)
-  (system "mv" src dst))
-
-;; TODO: check if the upstream has been modified
-(define http-get-to-file/cached http-get-to-file)
+(define (copy-file from to)
+  (let ((in (open-binary-input-file from))
+        (out (open-binary-output-file to)))
+    (let lp ()
+      (let ((n (read-u8 in)))
+        (cond ((eof-object? n) (close-input-port in) (close-output-port out))
+              (else (write-u8 n out) (lp)))))))
 
 (define (call-with-temp-file template proc)
   (let ((base (string-append
@@ -53,15 +49,5 @@
           (lp (+ i 1)))
          ((create-directory path #o700)
           (let ((res (proc path)))
-            ;;(delete-file-hierarchy path)
+            (delete-file-hierarchy path)
             res)))))))
-
-(define (system-from-dir dir . cmd)
-  ;; alternately fork+cd+exec, or run a subshell with cd
-  (with-directory dir (lambda () (apply system cmd))))
-
-(define (gzip-file src)
-  (system "gzip" "-c" src))
-
-(define (gunzip-file src)
-  (system "gzip" "-d" "-c" src))

@@ -270,7 +270,8 @@ install: all
 	$(INSTALL) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-doc $(DESTDIR)$(BINDIR)/
-	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/term
+	$(INSTALL) -m0755 tools/snow-chibi $(DESTDIR)$(BINDIR)/
+	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/snow $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
@@ -288,6 +289,7 @@ install: all
 	$(INSTALL) -m0644 lib/chibi/optimize/*.sld lib/chibi/optimize/*.scm $(DESTDIR)$(MODDIR)/chibi/optimize/
 	$(INSTALL) -m0644 lib/chibi/parse/*.sld lib/chibi/parse/*.scm $(DESTDIR)$(MODDIR)/chibi/parse/
 	$(INSTALL) -m0644 lib/chibi/show/*.sld lib/chibi/show/*.scm $(DESTDIR)$(MODDIR)/chibi/show/
+	$(INSTALL) -m0644 lib/chibi/snow/*.sld lib/chibi/snow/*.scm $(DESTDIR)$(MODDIR)/chibi/snow/
 	$(INSTALL) -m0644 lib/chibi/term/*.sld lib/chibi/term/*.scm $(DESTDIR)$(MODDIR)/chibi/term/
 	$(INSTALL) -m0644 lib/scheme/*.sld lib/scheme/*.scm $(DESTDIR)$(MODDIR)/scheme/
 	$(INSTALL) -m0644 lib/scheme/char/*.sld lib/scheme/char/*.scm $(DESTDIR)$(MODDIR)/scheme/char/
@@ -338,6 +340,7 @@ uninstall:
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme-static$(EXE)
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-ffi
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-doc
+	-$(RM) $(DESTDIR)$(BINDIR)/snow-chibi
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION)
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION_MAJOR)

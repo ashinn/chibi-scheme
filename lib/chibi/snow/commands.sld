@@ -1,35 +1,31 @@
 
-(define-library (snow commands)
-  (export
-   command/package
-   command/gen-key
-   command/reg-key
-   command/sign
-   command/verify
-   command/upload
-   command/install
-   command/remove
-   command/search
-   command/show
-   command/status
-   command/update
-   command/upgrade
-   die
-   installed-libraries)
-  (import (except (chibi) equal? write display)
-          (scheme base)
+(define-library (chibi snow commands)
+  (export command/package
+          command/gen-key
+          command/reg-key
+          command/sign
+          command/verify
+          command/upload
+          command/install
+          command/remove
+          command/search
+          command/show
+          command/status
+          command/update
+          command/upgrade)
+  (import (scheme base)
           (scheme eval)
-          (scheme write)
           (scheme file)
+          (scheme process-context)
           (scheme time)
+          (scheme write)
           (srfi 1)
           (srfi 27)
           (srfi 33)
           (srfi 95)
-          (srfi 98)
-          (snow interface)
-          (snow package)
-          (snow utils)
+          (chibi snow interface)
+          (chibi snow package)
+          (chibi snow utils)
           (chibi bytevector)
           (chibi config)
           (chibi crypto md5)
