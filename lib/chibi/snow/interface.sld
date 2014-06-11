@@ -1,5 +1,5 @@
 
-(define-library (snow interface)
+(define-library (chibi snow interface)
   (export warn info message die input input-number yes-or-no?
           restore-history save-history)
   (import (scheme base) (scheme char) (scheme read) (scheme write)

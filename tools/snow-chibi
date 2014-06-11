@@ -3,11 +3,14 @@
 ;; This code was written by Alex Shinn in 2013 and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
-(import (scheme base) (scheme char) (scheme read) (scheme write)
-        (scheme file) (scheme process-context) (srfi 1)
-        (snow commands) (snow library) (snow utils) (snow interface)
-        (chibi app) (chibi config) (chibi match) (chibi string)
-        (chibi pathname) (chibi filesystem) (chibi process))
+(import (scheme base)
+        (scheme process-context)
+        (chibi snow commands)
+        (chibi snow interface)
+        (chibi app)
+        (chibi config)
+        (chibi pathname)
+        (chibi process))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

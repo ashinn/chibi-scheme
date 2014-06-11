@@ -1,5 +1,5 @@
 
-(define-library (snow package)
+(define-library (chibi snow package)
   (export package? library?
           package-name package-email package-url package-version
           package-libraries package-provides? package-dependencies
@@ -16,7 +16,7 @@
           extract-rsa-private-key extract-rsa-public-key)
   (import (chibi)
           (srfi 1)
-          (snow interface)
+          (chibi snow interface)
           (chibi config)
           (chibi crypto md5)
           (chibi crypto rsa)
