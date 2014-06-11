@@ -906,7 +906,10 @@
                    (package-libraries pkg))))
              (install-package-meta-info
               impl cfg
-              `(,@pkg (installed-files ,@installed-files)))))))))))
+              `(,@(remove (lambda (x)
+                            (and (pair? x) (eq? 'installed-files (car x))))
+                          pkg)
+                (installed-files ,@installed-files)))))))))))
 
 (define (install-for-implementation repo impl cfg pkgs)
   (for-each (lambda (pkg) (install-package repo impl cfg pkg)) pkgs))
