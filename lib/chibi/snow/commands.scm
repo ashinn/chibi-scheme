@@ -597,24 +597,56 @@
 ;; Search - search for libraries matching keywords.
 ;;
 ;; Prints a list of libraries whose meta-info contain any of the given
-;; keywords.  Returns in sorted order or match score, with highest
-;; rank given to matches in the library name, followed by title,
-;; followed by full description other fields, with seconday sorting on
-;; rating and tertiary sorting on lexicographic order.
+;; keywords.  Returns in sorted order for how well the package matches.
 
 (define (summarize-libraries cfg lib-names+pkgs)
   (for-each describe-library
             (map car lib-names+pkgs)
             (map cdr lib-names+pkgs)))
 
-(define (extract-sorted-libraries cfg keywords)
-  '())
+;; faster than (length (regexp-extract re str))
+(define (regexp-count re str)
+  (regexp-fold re (lambda (from md str acc) (+ acc 1)) 0 str))
 
-(define (command/search cfg spec keywords)
-  (maybe-update-repository cfg)
-  (let ((libraries (extract-sorted-libraries cfg keywords)))
-    (if (pair? libraries)
-        (summarize-libraries cfg libraries)
+(define (count-in-sexp x keywords)
+  (regexp-count `(word (or ,@keywords)) (write-to-string x)))
+
+(define (extract-matching-libraries cfg repo keywords)
+  (define (library-score lib)
+    (+ (* 10 (count-in-sexp (library-name lib) keywords))
+       (count-in-sexp lib keywords)))
+  (append-map
+   (lambda (x)
+     (cond
+      ((not (package? x)) '())
+      (else
+       (let ((pkg-score (count-in-sexp x keywords))
+             (libs (package-libraries x)))
+         (if (or (zero? pkg-score) (null? libs))
+             '()
+             (let lp ((libs (cdr libs))
+                      (best-score (library-score (car libs)))
+                      (best-lib (car libs)))
+               (cond
+                ((null? libs)
+                 (list (cons (+ best-score pkg-score)
+                             (cons (library-name best-lib) x))))
+                (else
+                 (let ((score (library-score (car libs))))
+                   (if (> score best-score)
+                       (lp (cdr libs) score (car libs))
+                       (lp (cdr libs) best-score best-lib)))))))))))
+   repo))
+
+(define (extract-sorted-packages cfg repo keywords)
+  (let ((ls (extract-matching-libraries cfg repo keywords)))
+    (map cdr (sort ls > car))))
+
+(define (command/search cfg spec . keywords)
+  (let* ((repo (maybe-update-repository cfg))
+         (lib-names+pkgs (extract-sorted-packages cfg repo keywords)))
+    (if (pair? lib-names+pkgs)
+        (summarize-libraries cfg lib-names+pkgs)
         (display "No libraries matched your query."))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -706,10 +738,12 @@
      #f)))
 
 (define (maybe-update-repository cfg)
-  (if (should-update-repository? cfg)
-      (update-repository cfg)
-      (call-with-input-file (make-path (repository-dir cfg) "repo.scm")
-        read)))
+  (or (guard (exn (else #f))
+        (and (should-update-repository? cfg)
+             (update-repository cfg)))
+      (guard (exn (else '(repository)))
+        (call-with-input-file (make-path (repository-dir cfg) "repo.scm")
+          read))))
 
 (define (command/update cfg spec)
   (update-repository cfg))

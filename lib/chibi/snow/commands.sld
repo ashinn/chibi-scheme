@@ -38,6 +38,7 @@
           (chibi net http)
           (chibi process)
           (chibi pathname)
+          (chibi regexp)
           (chibi show)
           (chibi show pretty)
           (chibi string)
