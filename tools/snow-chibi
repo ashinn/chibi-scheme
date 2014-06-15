@@ -124,6 +124,7 @@
     (version string)
     (version-file existing-filename)
     (doc existing-filename)
+    (doc-from-scribble boolean)
     (test existing-filename)
     (sig-file existing-filename)
     ))
