@@ -32,6 +32,7 @@
           (chibi crypto md5)
           (chibi crypto rsa)
           (chibi crypto sha2)
+          (chibi doc)
           (chibi filesystem)
           (chibi io)
           (chibi match)

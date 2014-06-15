@@ -275,9 +275,21 @@
               (dep-file (make-path dir (library-name->path dep))))
          (and (file-exists? dep-file) dep-file))))
 
-(define (package-doc cfg)
-  ;; TODO: Add scribble extraction.
-  (conf-get cfg '(command package doc)))
+(define (package-docs cfg spec libs)
+  (cond
+   ((conf-get cfg '(command package doc)) => list)
+   ((conf-get cfg '(command package doc-from-scribble))
+    (map
+     (lambda (lib)
+       (let* ((lib+files (extract-library cfg lib))
+              (lib-name (library-name (car lib+files))))
+         `(inline
+           ,(string-append (library-name->path lib-name) ".html")
+           ,(call-with-output-string
+              (lambda (out)
+                (print-module-docs lib-name out sxml-display-as-html))))))
+     libs))
+   (else '())))
 
 (define (package-test cfg)
   (conf-get cfg '(command package test)))
@@ -300,16 +312,22 @@
 
 (define (package-spec+files cfg spec libs)
   (let ((recursive? (conf-get cfg '(command package recursive?)))
-        (doc (package-doc cfg))
+        (docs (package-docs cfg spec libs))
         (test (package-test cfg))
         (version (package-output-version cfg)))
     (let lp ((ls (map (lambda (x) (cons x #f)) libs))
              (res
-              `(,@(if doc `((doc ,(path-strip-leading-parents doc))) '())
+              `(,@(if (pair? docs)
+                      `((doc ,@(map
+                                (lambda (x)
+                                  (path-strip-leading-parents
+                                   (if (pair? x) (cadr x) x)))
+                                docs)))
+                      '())
                 ,@(if test `((test ,(path-strip-leading-parents test))) '())
                 ,@(if version `((version ,version)) '())))
              (files
-              `(,@(if doc (list doc) '())
+              `(,@docs
                 ,@(if test (list test) '()))))
       (cond
        ((and (null? ls) (null? res))
