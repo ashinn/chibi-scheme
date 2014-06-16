@@ -75,10 +75,19 @@
              (and lib (library-name lib))))))
 
 (define (package-email pkg)
-  (and (pair? pkg)
+  (and (package? pkg)
        (let ((sig (assq 'signature (cdr pkg))))
          (and (pair? sig)
               (assoc-get (cdr sig) 'email eq?)))))
+
+(define (package-author repo pkg)
+  (and (package? pkg)
+       (let ((email (package-email pkg)))
+         (or (cond
+              ((repo-find-publisher repo email)
+               => (lambda (pub) (assoc-get pub 'name)))
+              (else #f))
+             email))))
 
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))

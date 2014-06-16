@@ -3,7 +3,7 @@
   (export package? library?
           package-name package-email package-url package-version
           package-libraries package-provides? package-dependencies
-          package-installed-files
+          package-installed-files package-author
           package-digest-mismatches package-signature-mismatches
           package-digest-ok? package-signature-ok?
           package->path package-name->meta-file
