@@ -1209,6 +1209,10 @@ namespace.
 
 \item{\hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
+\item{\hyperlink["lib/chibi/show.html"]{(chibi show) - A combinator formatting library}}
+
+\item{\hyperlink["lib/chibi/show/base.scm"]{(chibi show base) - Base combinator formatting}}
+
 \item{\hyperlink["lib/chibi/stty.html"]{(chibi stty) - A high-level interface to ioctl}}
 
 \item{\hyperlink["lib/chibi/system.html"]{(chibi system) - Access to the host system and current user information}}
