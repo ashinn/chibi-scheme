@@ -2,50 +2,63 @@
 ;; Copyright (c) 2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> A Scheme take on the environment monad, focusing more on being
-;;> efficient and convenient than pure.  In addition, we use syntax to
-;;> hide the implementation, allowing the use of records, dynamic
-;;> parameters, or explicit value passing.
+;;> \macro{(define-environment-monad name keyword: value ...)}
 ;;>
-;;> The following obey the definition of a monad:
+;;> A Scheme take on the environment (reader) monad, focusing more on
+;;> being efficient and convenient than pure.  In addition, we use
+;;> syntax to hide the implementation, allowing the use of records,
+;;> dynamic parameters, or explicit value passing.
+;;>
+;;> The \var{name} is used for description and may or may not be bound
+;;> to a value representing the monad.  All other parameters are
+;;> keywords, and with the exception of \scheme{fields} simply provide
+;;> binding names for the monad operators described below.
+;;>
+;;> The \scheme{fields:} keyword takes a list of field name
+;;> identifiers known to be used by the monad.  This is an
+;;> optimization hint, as the monad can be used to store and query
+;;> values for any identifier at runtime.
+;;>
+;;> The following keywords obey the definition of a monad:
 ;;>
 ;;> sequence: sequence (>>) - Essentially a semi-colon, this joins two
 ;;>  operations together.
 ;;>
-;;> fn: bind (>>=) - Runs a normal function.  As a syntactic
-;;>  convenience, `fn' behaves like a lambda, but the parameters of the
-;;>  fn are bound as Scheme variables with the values of the
-;;>  corresponding environment variables.  Thus you fetch the values of
-;;>  foo and bar with:
+;;> bind: (>>=) - Runs a normal function.  As a syntactic convenience,
+;;>  \scheme{bind} looks and behaves like a lambda, but the parameters
+;;>  of the \scheme{bind} are bound as Scheme variables with the
+;;>  values of the corresponding environment variables.  Thus you
+;;>  fetch the values of foo and bar with:
 ;;>
-;;>    (fn (foo bar) ...)
+;;>    \scheme{(bind (foo bar) ...)}
 ;;>
-;;>  hiding the need for an explicit `ask'.  If you want to bind the
-;;>  values to some other name, you can use it like a `let':
+;;>  hiding the need for an explicit \scheme{ask}.  If you want to
+;;>  bind the values to some other name, you can use it like a
+;;>  \scheme{let}:
 ;;>
-;;>    (fn ((my-foo foo) (my-bar bar)) ...)
+;;>    \scheme{(bind ((my-foo foo) (my-bar bar)) ...)}
 ;;>
-;;> return: return - Returns a pure (non-monadic) value.
+;;> return: Returns a pure (non-monadic) value.
 ;;>
 ;;> run: Start the monad.
 ;;>
 ;;> The following are specific to the environment monad:
 ;;>
 ;;> ask: Ask the current value of an environment variable.  This is not
-;;>  meant to be used directly - use the `fn' syntax to query bindings.
+;;>  meant to be used directly - use the `bind' syntax to query bindings.
 ;;>
 ;;> local: Shadow the value one or more environment variables,
 ;;>  analogous to `let'.
 ;;>
 ;;> In addition, support for optional mutation is provided:
 ;;>
-;;> update!: (update! (var val) ...) will update the environment with
+;;> local!: (local! (var val) ...) will update the environment with
 ;;>  the corresponding variable bindings.  In a sequence, successive
 ;;>  operations will see the result of the update, unlike with `local'.
 ;;>  This is allowed, but not required, to perform mutation.
 ;;>
-;;> fn-fork: (fn-fork a b) runs `a' followed by `b', passing `b' the
-;;>  original state before `a' was run.
+;;> bind-fork: \scheme{(bind-fork a b)} runs `a' followed by `b',
+;;>   passing `b' the original state before `a' was run.
 
 (define-syntax define-environment-monad
   (syntax-rules ()
