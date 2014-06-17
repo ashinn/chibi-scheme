@@ -3,7 +3,8 @@
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; string utils
+
+;;> \section{String utilities}
 
 (define (write-to-string x)
   (let ((out (open-output-string)))
