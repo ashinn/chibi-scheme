@@ -41,6 +41,8 @@ MODULE_DOCS := ast config disasm equiv filesystem generic heap-stats io \
 
 HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
+META_FILES = lib/.chibi.meta lib/.srfi.meta lib/.scheme.meta
+
 ########################################################################
 
 include Makefile.libs
@@ -71,7 +73,7 @@ endif
 
 ########################################################################
 
-all: chibi-scheme$(EXE) all-libs chibi-scheme.pc
+all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
@@ -142,6 +144,10 @@ doc: doc/chibi.html doc-libs
 
 %.html: %.scrbl $(CHIBI_DOC_DEPENDENCIES)
 	$(CHIBI_DOC) --html $< > $@
+
+lib/.%.meta: lib/%/ tools/generate-install-meta.scm
+	-$(FIND) $< -name \*.sld | \
+	 $(CHIBI) tools/generate-install-meta.scm `cat VERSION` > $@
 
 ########################################################################
 # Dist builds - rules to build generated files included in distribution
@@ -260,7 +266,7 @@ clean: clean-libs
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
-	    libchibi-scheme$(SO) *.a *.pc include/chibi/install.h \
+	    libchibi-scheme$(SO) *.a *.pc include/chibi/install.h lib/.*.meta \
 	    $(shell $(FIND) lib -name \*.o)
 
 dist-clean: dist-clean-libs cleaner
@@ -275,6 +281,7 @@ install: all
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
+	$(INSTALL) -m0644 $(META_FILES) $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
 	$(INSTALL) -m0644 lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
@@ -348,12 +355,14 @@ uninstall:
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
 	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.{sld,scm}
+	-$(RM) $(DESTDIR)$(MODDIR)/.*.meta
 	-$(RM) $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
 	-$(CD) $(DESTDIR)$(MODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
 	-$(CD) $(DESTDIR)$(BINMODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(BINMODDIR)/chibi/char-set
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(BINMODDIR)/chibi/crypto
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(BINMODDIR)/chibi/io
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(BINMODDIR)/chibi/iset
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(BINMODDIR)/chibi/loop
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(BINMODDIR)/chibi/match
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(BINMODDIR)/chibi/math
@@ -362,9 +371,11 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(BINMODDIR)/chibi/optimize
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(BINMODDIR)/chibi/parse
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(BINMODDIR)/chibi/show
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/snow $(DESTDIR)$(BINMODDIR)/chibi/snow
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/term $(DESTDIR)$(BINMODDIR)/chibi/term
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi $(DESTDIR)$(BINMODDIR)/chibi
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/scheme/char $(DESTDIR)$(BINMODDIR)/scheme/char
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/scheme/time $(DESTDIR)$(BINMODDIR)/scheme/time
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/scheme $(DESTDIR)$(BINMODDIR)/scheme
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(BINMODDIR)/srfi/1
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(BINMODDIR)/srfi/18
