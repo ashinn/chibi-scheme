@@ -447,6 +447,8 @@ div#footer {padding-bottom: 50px}
      (list (cons name args)))
     (('define (name . args) . body)
      (list (cons name (get-optionals args body))))
+    (('define name value)
+     (list name))
     (('define-syntax name ('syntax-rules () (clause . body) ...))
      ;; TODO: smarter summary
      (map (lambda (x) (cons name (cdr x)))
@@ -558,8 +560,11 @@ div#footer {padding-bottom: 50px}
     orig-ls)
    (else
     (let ((name
-           (or name
-               (if (eq? 'const: (caar sig)) (cadr (cdar sig)) (caar sig)))))
+           (cond
+            (name)
+            ((not (pair? (car sig))) (car sig))
+            ((eq? 'const: (caar sig)) (cadr (cdar sig)))
+            (else (caar sig)))))
       (let lp ((ls orig-ls) (rev-pre '()))
         (cond
          ((or (null? ls)
@@ -574,7 +579,7 @@ div#footer {padding-bottom: 50px}
                   `((subsection
                      tag: ,(write-to-string name)
                      (rawcode
-                      ,@(if (eq? 'const: (caar sig))
+                      ,@(if (and (pair? (car sig)) (eq? 'const: (caar sig)))
                             `((i ,(write-to-string (car (cdar sig))) ": ")
                               ,(write-to-string (cadr (cdar sig))))
                             (intersperse (map write-signature sig) '(br)))))))
@@ -676,6 +681,17 @@ div#footer {padding-bottom: 50px}
                 (lp '() '() (append (insert-signature cur (caar procs) sigs)
                                     res)
                     line))
+               ((and (null? procs)
+                     (assq (match form
+                             (('define (name . x) . y) name)
+                             (((or 'define 'define-syntax) name . x) name)
+                             (((or 'define-c 'define-c-const) t (name . x) . y)
+                              name)
+                             (((or 'define-c 'define-c-const) t name . x)
+                              name)
+                             (else #f))
+                           all-defs))
+                (lp '() '() (append (insert-signature cur #f sigs) res) line))
                (else
                 (lp '() '() (append cur res) line)))))))))))
 
