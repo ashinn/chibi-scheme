@@ -664,7 +664,7 @@ div#footer {padding-bottom: 50px}
                       (filter
                        (lambda (x)
                          (assq (if (eq? 'const: (car x)) (third x) (car x))
-                               defs))
+                               all-defs))
                        (get-ffi-signatures form)))
                      ((= 1 (length procs))
                       (get-signature (caar procs) (cdar procs) form))
