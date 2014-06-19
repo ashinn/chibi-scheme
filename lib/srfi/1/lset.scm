@@ -11,7 +11,7 @@
             (let ((set2 (car sets)))
               (let lp2 ((ls set1))
                 (if (pair? ls)
-                    (and (member (car set1) set2 eq) (lp2 (cdr ls)))
+                    (and (member (car ls) set2 eq) (lp2 (cdr ls)))
                     (lp1 set2 (cdr sets)))))))))
 
 (define (lset= eq . sets)
