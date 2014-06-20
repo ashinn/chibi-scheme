@@ -611,6 +611,7 @@
 (test #f (<= 1 2 1))
 (test #t (>= 2 1 1))
 (test #f (>= 1 2 1))
+(test '(#t #f) (list (<= 1 1 2) (<= 2 1 3)))
 
 ;; From R7RS 6.2.6 Numerical operations:
 ;;

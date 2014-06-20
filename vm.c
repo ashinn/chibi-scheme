@@ -359,6 +359,8 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       sexp_emit(ctx, sexp_opcode_code(op));
     break;
   case SEXP_OPC_ARITHMETIC_CMP:
+    /* With [<true-value>, x] on the stack, and x boolean, */
+    /* AND is equivalent to ROT+DROP.  Note one AND for every STACK_REF. */
     if (num_args > 2) {
       sexp_emit(ctx, SEXP_OP_STACK_REF);
       sexp_emit_word(ctx, 2);
@@ -375,6 +377,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
         sexp_emit(ctx, SEXP_OP_AND);
         sexp_emit(ctx, SEXP_OP_AND);
       }
+      sexp_emit(ctx, SEXP_OP_AND);
     } else
       sexp_emit(ctx, sexp_opcode_code(op));
     break;
