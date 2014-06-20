@@ -23,7 +23,9 @@
 
 (define (available-implementations cfg)
   (define (find prog name) (if (find-in-path prog) (list name) '()))
-  (append (find "chibi-scheme" 'chibi)
+  (append (cond-expand
+           (chibi (list 'chibi))
+           (else (find "chibi-scheme" 'chibi)))
           (find "foment" 'foment)
           (find "sagittarius" 'sagittarius)))
 
@@ -403,7 +405,7 @@
              (hi (expt 2 bits))
              (p (fast-eval `(random-prime ,lo ,hi)
                            '((chibi math prime))))
-             (q (fast-eval `(random-prime-distinct-from ,p ,lo ,hi)
+             (q (fast-eval `(random-prime-distinct-from ,lo ,hi ,p)
                            '((chibi math prime)))))
         (rsa-key-gen-from-primes bits p q))))
 
@@ -438,7 +440,8 @@
                     new-keys
                     "\n ")
             ")" nl)
-      (close-output-port out))))
+      (close-output-port out)
+      (show #t "Saved key to " key-file ".\n"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Reg-key - register an RSA key pair with a repository.
@@ -966,11 +969,24 @@
 (define (install-for-implementation repo impl cfg pkgs)
   (for-each (lambda (pkg) (install-package repo impl cfg pkg)) pkgs))
 
-(define (select-best-candidate impl cfg candidates)
-  (if (null? (cdr candidates))
-      (car candidates)
-      ;; TODO: prompt if multiple candidates
-      (car candidates)))
+(define (select-best-candidate impl cfg repo candidates)
+  (cond
+   ((null? (cdr candidates))
+    (car candidates))
+   (else
+    (display "Select a package:\n")
+    (let lp ((ls candidates) (i 1))
+      (if (pair? ls)
+          (let ((pkg (car ls)))
+            (display "  ") (display i)
+            (display "  ") (display (package-name pkg))
+            (display " ") (display (package-version pkg))
+            (display " (") (display (package-author repo pkg))
+            (display ")\n")
+            (lp (cdr ls) (+ i 1)))))
+    (let ((n (input-number cfg 'candidate-number "Candidate number: "
+                           1 1 (length candidates))))
+      (list-ref candidates (- n 1))))))
 
 ;; Choose packages for the corresponding libraries, and recursively
 ;; select uninstalled packages.  Verifies and records preferences for
@@ -1008,7 +1024,7 @@
                 (lp (cdr ls) res)
                 (exit 2)))
            (else
-            (let ((pkg (select-best-candidate impl cfg candidates)))
+            (let ((pkg (select-best-candidate impl cfg repo candidates)))
               (lp (append (package-dependencies pkg) (cdr ls))
                   (cons pkg res)))))))))))
 
