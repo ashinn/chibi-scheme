@@ -27,10 +27,12 @@
            (chibi (list 'chibi))
            (else (find "chibi-scheme" 'chibi)))
           (find "foment" 'foment)
+          (find "gosh" 'gauche)
+          (find "guile" 'guile)
           (find "sagittarius" 'sagittarius)))
 
 (define (conf-selected-implementations cfg)
-  (let ((requested (conf-get-list cfg 'implementations '(all)))
+  (let ((requested (conf-get-list cfg 'implementations '(chibi)))
         (available (available-implementations cfg)))
     (if (memq 'all requested)
         available
@@ -790,6 +792,11 @@
        (if share-dir
            (cons share-dir (delete share-dir dirs))
            dirs)))
+    ((gauche)
+     (let ((dir (process->string '(gauche-config "--sitelibdir"))))
+       (and (string? dir) (> 0 (string-length dir))
+            (eqv? #\/ (string-ref dir 0))
+            dir)))
     ((guile)
      (let ((path
             (guile-eval
