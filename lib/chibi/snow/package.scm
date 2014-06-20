@@ -85,7 +85,9 @@
        (let ((email (package-email pkg)))
          (or (cond
               ((repo-find-publisher repo email)
-               => (lambda (pub) (assoc-get pub 'name)))
+               => (lambda (pub)
+                    (string-append (or (assoc-get pub 'name) "")
+                                   " <" (or email "") ">")))
               (else #f))
              email))))
 
