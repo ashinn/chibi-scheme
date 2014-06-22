@@ -49,6 +49,12 @@
               (+ (arithmetic-shift n 8)
                  (bytevector-u8-ref bv i)))))))
 
+(define (bytevector-pad-left bv len)
+  (let ((diff (- len (bytevector-length bv))))
+    (if (positive? diff)
+        (bytevector-append bv (make-bytevector diff 0))
+        bv)))
+
 ;;> \section{Hex string conversion}
 
 ;;> Big-endian conversion, guaranteed padded to even length.
