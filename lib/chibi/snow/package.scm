@@ -11,7 +11,7 @@
         (else (call-with-output-string (lambda (out) (display x out))))))
 
 (define (maybe-parse-hex x)
-  (if (string? x) (string->number x 16) x))
+  (if (string? x) (hex-string->bytevector x) x))
 
 ;; rsa key utils
 
@@ -134,7 +134,7 @@
                         (maybe-parse-hex digest)
                         (maybe-parse-hex sig)))
       `(sign: rsa-signature-invalid: digest: ,digest sig: ,sig
-              actual: ,(rsa-encrypt rsa-key digest)))
+              actual: ,(rsa-verify rsa-key (maybe-parse-hex digest))))
      (else #f))))
 
 (define (package-signature-ok? cfg pkg raw)

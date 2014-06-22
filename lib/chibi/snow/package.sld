@@ -17,6 +17,7 @@
   (import (chibi)
           (srfi 1)
           (chibi snow interface)
+          (chibi bytevector)
           (chibi config)
           (chibi crypto md5)
           (chibi crypto rsa)
