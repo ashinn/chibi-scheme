@@ -496,11 +496,12 @@
                                                   ,(rsa-key-n rsa-key)
                                                   #f
                                                   ,(rsa-key-d rsa-key))
-                                    ,(hex-string->integer digest))
+                                    ;;,(hex-string->integer digest)
+                                    ,(hex-string->bytevector digest))
                          '((chibi crypto rsa))))
-         (hex-sig (integer->hex-string sig)))
-    (if (not (equal? sig (hex-string->integer hex-sig)))
-        (error "hex-string conversion invalid" sig hex-sig))
+         (hex-sig (if (bytevector? sig)
+                      (bytevector->hex-string sig)
+                      (integer->hex-string sig))))
     `(signature
       (email ,email)
       (digest ,digest-name)
@@ -531,14 +532,11 @@
                                 (find (rsa-identity=? email) keys))
                            (car keys)))
          (rsa-key (extract-rsa-public-key rsa-key-sexp))
-         (cipher (rsa-encrypt rsa-key (hex-string->integer sig))))
-    ;; (rsa-verify? rsa-key
-    ;;              (hex-string->integer digest)
-    ;;              (hex-string->integer sig))
-    (if (equal? cipher (hex-string->integer digest))
+         (cipher (rsa-verify rsa-key (hex-string->bytevector sig)))
+         (digest-bv (hex-string->bytevector digest)))
+    (if (equal? cipher digest-bv)
         (show #t "signature valid " nl)
-        (show #t "signature invalid "
-              cipher " " (hex-string->integer digest) nl))))
+        (show #t "signature invalid " cipher " != " digest-bv nl))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Upload - upload a package.

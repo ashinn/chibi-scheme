@@ -1,5 +1,8 @@
 
-(import (scheme base) (scheme write) (chibi crypto rsa) (chibi test))
+(import (scheme base)
+        (chibi crypto rsa)
+        (chibi crypto sha2)
+        (chibi test))
 
 (test-begin "rsa")
 
@@ -52,5 +55,27 @@
 ;; (test-key (rsa-key-gen 256))   ; 0.4s
 ;; (test-key (rsa-key-gen 512))   ; 4s
 ;; (test-key (rsa-key-gen 1024))  ; 92s
+
+;; padding
+
+(test #u8(8 8 8 8 8 8 8 8) (pkcs1-pad #u8()))
+(test #u8(1 7 7 7 7 7 7 7) (pkcs1-pad #u8(1)))
+(test #u8(1 2 6 6 6 6 6 6) (pkcs1-pad #u8(1 2)))
+(test #u8(1 2 3 5 5 5 5 5) (pkcs1-pad #u8(1 2 3)))
+(test #u8(1 2 3 4 4 4 4 4) (pkcs1-pad #u8(1 2 3 4)))
+(test #u8(1 2 3 4 5 3 3 3) (pkcs1-pad #u8(1 2 3 4 5)))
+(test #u8(1 2 3 4 5 6 2 2) (pkcs1-pad #u8(1 2 3 4 5 6)))
+(test #u8(1 2 3 4 5 6 7 1) (pkcs1-pad #u8(1 2 3 4 5 6 7)))
+(test #u8(1 2 3 4 5 6 7 8 8 8 8 8 8 8 8 8) (pkcs1-pad #u8(1 2 3 4 5 6 7 8)))
+
+(test #u8() (pkcs1-unpad #u8(8 8 8 8 8 8 8 8)))
+(test #u8(1) (pkcs1-unpad #u8(1 7 7 7 7 7 7 7)))
+(test #u8(1 2) (pkcs1-unpad #u8(1 2 6 6 6 6 6 6)))
+(test #u8(1 2 3) (pkcs1-unpad #u8(1 2 3 5 5 5 5 5)))
+(test #u8(1 2 3 4) (pkcs1-unpad #u8(1 2 3 4 4 4 4 4)))
+(test #u8(1 2 3 4 5) (pkcs1-unpad #u8(1 2 3 4 5 3 3 3)))
+(test #u8(1 2 3 4 5 6) (pkcs1-unpad #u8(1 2 3 4 5 6 2 2)))
+(test #u8(1 2 3 4 5 6 7) (pkcs1-unpad #u8(1 2 3 4 5 6 7 1)))
+(test #u8(1 2 3 4 5 6 7 8) (pkcs1-unpad #u8(1 2 3 4 5 6 7 8 8 8 8 8 8 8 8 8)))
 
 (test-end)

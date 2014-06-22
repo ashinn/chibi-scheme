@@ -58,7 +58,7 @@
 
 (define (rsa-encrypt-integer pub-key msg)
   (if (>= msg (rsa-key-n pub-key))
-      (error "message larger than modulus"))
+      (error "message larger than modulus" msg (rsa-key-n pub-key)))
   (modular-expt msg (rsa-key-e pub-key) (rsa-key-n pub-key)))
 
 (define (rsa-decrypt-integer priv-key cipher)
@@ -66,9 +66,9 @@
       (error "cipher larger than modulus"))
   (modular-expt cipher (rsa-key-d priv-key) (rsa-key-n priv-key)))
 
-;; Arbitrary messages are encrypted by converting padded bytevectors
+;; Arbitrary messages are encrypted by converting encoded bytevectors
 ;; to and from integers.
-;; TODO: user better padding
+;; TODO: user emsa-pss encoding
 
 (define (convert-plain f key msg)
   (cond
@@ -115,10 +115,14 @@
       (error "can't sign without a private key" priv-key)
       (convert-plain rsa-decrypt-integer priv-key msg)))
 
+;;> Returns the verified (decrypted) message for the signature \var{sig}.
+(define (rsa-verify pub-key sig)
+  (if (not (rsa-key-e pub-key))
+      (error "can't verify without a public key" pub-key)
+      (convert-cipher rsa-encrypt-integer pub-key sig)))
+
 ;;> Returns true iff \var{sig} is a valid signature of \var{msg} for
 ;;> the given public key \var{pub-key}.
 (define (rsa-verify? pub-key msg sig)
-  (if (not (rsa-key-e pub-key))
-      (error "can't verify without a public key" pub-key)
-      (equal? (if (string? msg) (string->utf8 msg) msg)
-              (convert-cipher rsa-encrypt-integer pub-key sig))))
+  (equal? (if (string? msg) (string->utf8 msg) msg)
+          (rsa-verify pub-key sig)))
