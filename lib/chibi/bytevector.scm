@@ -70,7 +70,15 @@
   (string->number str 16))
 
 (define (bytevector->hex-string bv)
-  (integer->hex-string (bytevector->integer bv)))
+  (let ((out (open-output-string))
+        (len (bytevector-length bv)))
+    (let lp ((i 0))
+      (cond
+       ((>= i len)
+        (get-output-string out))
+       (else
+        (write-string (integer->hex-string (bytevector-u8-ref bv i)) out)
+        (lp (+ i 1)))))))
 
 (define (hex-string->bytevector str)
   (integer->bytevector (hex-string->integer str)))
