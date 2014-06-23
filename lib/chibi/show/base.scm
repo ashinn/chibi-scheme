@@ -2,47 +2,7 @@
 ;; Copyright (c) 2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> A library of procedures for formatting Scheme objects to text in
-;;> various ways, and for easily concatenating, composing and
-;;> extending these formatters efficiently without resorting to
-;;> capturing and manipulating intermediate strings.
-
-;;> \section{Background}
-;;>
-;;> There are several approaches to text formatting.  Building strings
-;;> to \scheme{display} is not acceptable, since it doesn't scale to
-;;> very large output.  The simplest realistic idea, and what people
-;;> resort to in typical portable Scheme, is to interleave
-;;> \scheme{display} and \scheme{write} and manual loops, but this is
-;;> both extremely verbose and doesn't compose well.  A simple concept
-;;> such as padding space can't be achieved directly without somehow
-;;> capturing intermediate output.
-;;>
-;;> The traditional approach is to use templates - typically strings,
-;;> though in theory any object could be used and indeed Emacs'
-;;> mode-line format templates allow arbitrary sexps.  Templates can
-;;> use either escape sequences (as in C's \cfun{printf} and
-;;> \hyperlink["http://en.wikipedia.org/wiki/Format_(Common_Lisp)"]{CL's}
-;;> \scheme{format}) or pattern matching (as in Visual Basic's
-;;> \cfun{Format},
-;;> \hyperlink["http://search.cpan.org/~dconway/Perl6-Form-0.04/Form.pm"}{Perl6's}
-;;> \cfun{form}, and SQL date formats).  The primary disadvantage of
-;;> templates is the relative difficulty (usually impossibility) of
-;;> extending them, their opaqueness, and the unreadability that
-;;> arises with complex formats.  Templates are not without their
-;;> advantages, but they are already addressed by other libraries such
-;;> as
-;;> \hyperlink["http://srfi.schemers.org/srfi-28/srfi-28.html"]{SRFI-28}
-;;> and
-;;> \hyperlink["http://srfi.schemers.org/srfi-48/srfi-48.html"]{SRFI-48}.
-;;>
-;;> This library takes a combinator approach.  Formats are nested chains
-;;> of closures, which are called to produce their output as needed.
-;;> The primary goal of this library is to have, first and foremost, a
-;;> maximally expressive and extensible formatting library.  The next
-;;> most important goal is scalability - to be able to handle
-;;> arbitrarily large output and not build intermediate results except
-;;> where necessary.  The third goal is brevity and ease of use.
+;;> The minimal base formatting combinators and show interface.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -88,17 +48,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \section{Interface}
-
 ;;> \procedure{(show out [args ...])}
 ;;>
-;;> The primary interface.  Analogous to CL's \scheme{format}, the first
-;;> argument is either an output port or a boolean, with \scheme{#t}
-;;> indicating \scheme{current-output-port} and \scheme{#f} indicating a
-;;> string port.  The remaining arguments are formatters, combined as with
-;;> \scheme{each}, run with output to the given destination.  If \var{out}
-;;> is \scheme{#f} then the accumulated output is returned, otherwise
-;;> the result is unspecified.
+;;> Run the combinators \var{args}, accumulating the output to
+;;> \var{out}, which is either an output port or a boolean, with
+;;> \scheme{#t} indicating \scheme{current-output-port} and
+;;> \scheme{#f} to collect the output as a string.
 (define (show out . args)
   (let ((proc (each-in-list args)))
     (cond

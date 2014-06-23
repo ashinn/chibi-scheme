@@ -5,6 +5,8 @@
 
 ;;> \example-import[(srfi 9)]
 
+;;> A portable hygienic pattern matcher.
+
 ;;> This is a full superset of the popular \hyperlink[
 ;;> "http://www.cs.indiana.edu/scheme-repository/code.match.html"]{match}
 ;;> package by Andrew Wright, written in fully portable \scheme{syntax-rules}
