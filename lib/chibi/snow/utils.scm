@@ -14,7 +14,7 @@
                "/tmp/" (path-strip-extension template)
                "-" (number->string (current-process-id)) "-"
                (number->string (exact (round (current-second)))) "-"))
-        (ext (path-extension template)))
+        (ext (or (path-extension template) "tmp")))
     (let lp ((i 0))
       (let ((path (string-append base (number->string i) "." ext)))
         (cond

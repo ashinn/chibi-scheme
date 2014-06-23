@@ -862,13 +862,51 @@
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
    (else (car (get-install-dirs impl cfg)))))
 
+(define (install-with-sudo? cfg path)
+  (case (conf-get cfg '(command install use-sudo?))
+    ((always) #t)
+    ((never) #f)
+    (else
+     (let lp ((path path))
+       (let ((dir (path-directory path)))
+         (and (not (file-is-writable? path))
+              (or (file-exists? path)
+                  (lp dir))))))))
+
+(define (install-file cfg source dest)
+  (if (install-with-sudo? cfg dest)
+      (system "sudo" "cp" source dest)
+      (copy-file source dest)))
+
+(define (install-sexp-file cfg obj dest)
+  (if (install-with-sudo? cfg dest)
+      (call-with-temp-file "sexp"
+        (lambda (tmp-path out)
+          (write-simple-pretty obj out)
+          (close-output-port out)
+          (system "sudo" "cp" tmp-path dest)))
+      (call-with-output-file dest
+        (lambda (out) (write-simple-pretty obj out)))))
+
+(define (install-symbolic-link cfg source dest)
+  (if (install-with-sudo? cfg dest)
+      (system "sudo" "ln" "-s" source dest)
+      (symbolic-link-file source dest)))
+
+(define (install-directory cfg dir)
+  (cond
+   ((file-directory? dir))
+   ((install-with-sudo? cfg dir)
+    (system "sudo" "mkdir" "-p" dir))
+   (else
+    (create-directory* dir))))
+
 (define (install-package-meta-info impl cfg pkg)
   (let* ((meta-file (get-package-meta-file cfg pkg))
          (install-dir (get-install-source-dir impl cfg))
          (path (make-path install-dir meta-file)))
     ;; write the package name
-    (call-with-output-file path
-      (lambda (out) (write-simple-pretty pkg out)))
+    (install-sexp-file cfg pkg path)
     ;; symlink utility libraries for which the package can't be inferred
     (let ((pkg-name (package-name pkg)))
       (for-each
@@ -876,7 +914,7 @@
          (let ((lib-name (library-name lib)))
            (if (not (equal? pkg-name (take lib-name (length pkg-name))))
                (let ((lib-meta (get-library-meta-file cfg lib)))
-                 (symbolic-link-file path (make-path install-dir lib-meta))))))
+                 (install-symbolic-link path (make-path install-dir lib-meta))))))
        (package-libraries pkg)))))
 
 ;; The default installer just copies the library file and any included
@@ -901,13 +939,13 @@
          (install-dir (get-install-source-dir impl cfg)))
     ;; install the library file
     (let ((path (make-path install-dir dest-library-file)))
-      (create-directory* (path-directory path))
+      (install-directory cfg (path-directory path))
       (if (any pair? rewrite-include-files)
-          (call-with-output-file path
-            (lambda (out)
-              (write (library-rewrite-includes library rewrite-include-files)
-                     out)))
-          (copy-file (make-path dir library-file) path))
+          (install-sexp-file
+           cfg
+           (library-rewrite-includes library rewrite-include-files)
+           path)
+          (install-file cfg (make-path dir library-file) path))
       ;; install any includes
       (cons
        path
@@ -916,8 +954,8 @@
           (let ((dest-file
                  (make-path install-dir
                             (path-relative (if (pair? x) (cdr x) x) dir))))
-            (create-directory* (path-directory dest-file))
-            (copy-file (if (pair? x) (car x) x) dest-file)
+            (install-directory cfg (path-directory dest-file))
+            (install-file cfg (if (pair? x) (car x) x) dest-file)
             dest-file))
         rewrite-include-files)))))
 
