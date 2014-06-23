@@ -80,14 +80,17 @@
          (and (pair? sig)
               (assoc-get (cdr sig) 'email eq?)))))
 
-(define (package-author repo pkg)
+(define (package-author repo pkg . o)
   (and (package? pkg)
-       (let ((email (package-email pkg)))
+       (let ((email (package-email pkg))
+             (show-email? (and (pair? o) (car o))))
          (or (cond
               ((repo-find-publisher repo email)
                => (lambda (pub)
-                    (string-append (or (assoc-get pub 'name) "")
-                                   " <" (or email "") ">")))
+                    (let ((name (assoc-get pub 'name)))
+                      (if (and name show-email?)
+                          (string-append name " <" (or email "") ">")
+                          (or name email "")))))
               (else #f))
              email))))
 
