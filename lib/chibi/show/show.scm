@@ -4,8 +4,7 @@
 
 ;;> A library of procedures for formatting Scheme objects to text in
 ;;> various ways, and for easily concatenating, composing and
-;;> extending these formatters efficiently without resorting to
-;;> capturing and manipulating intermediate strings.
+;;> extending these formatters.
 
 ;;> \section{Background}
 ;;>
