@@ -276,7 +276,9 @@
        (equal? base (take dep (length base)))
        ;; TODO: find-library(-relative)
        (let* ((dir (library-path-base file lib))
-              (dep-file (make-path dir (library-name->path dep))))
+              (dep-file (make-path dir (string-append
+                                        (library-name->path dep)
+                                        ".sld"))))
          (and (file-exists? dep-file) dep-file))))
 
 (define (package-docs cfg spec libs)
@@ -294,6 +296,27 @@
                 (print-module-docs lib-name out sxml-display-as-html))))))
      libs))
    (else '())))
+
+(define (package-description cfg spec libs docs)
+  (cond
+   ((conf-get cfg '(command package description)))
+   ;; Crazy hack, make this more robust, probably opt-in.
+   ((and (pair? docs) (pair? (car docs)) (eq? 'inline (caar docs))
+         (regexp-search
+          '(: "<p>" (* "\n") (* space) ($ (* (~ ("."))) "."))
+          (third (car docs))))
+    => (lambda (m)
+         (let ((s (regexp-match-submatch m 1)))
+           (and s
+                (regexp-replace-all
+                 '(>= 2 space)
+                 (regexp-replace-all
+                  "\n"
+                  (regexp-replace-all '(: "<" (? "/") (* (~ ("<>"))) ">")
+                                      s "")
+                  " ")
+                 " ")))))
+   (else #f)))
 
 (define (package-test cfg)
   (conf-get cfg '(command package test)))
@@ -315,19 +338,21 @@
        (package-output-version cfg))))
 
 (define (package-spec+files cfg spec libs)
-  (let ((recursive? (conf-get cfg '(command package recursive?)))
-        (docs (package-docs cfg spec libs))
-        (test (package-test cfg))
-        (version (package-output-version cfg)))
+  (let* ((recursive? (conf-get cfg '(command package recursive?)))
+         (docs (package-docs cfg spec libs))
+         (desc (package-description cfg spec libs docs))
+         (test (package-test cfg))
+         (version (package-output-version cfg)))
     (let lp ((ls (map (lambda (x) (cons x #f)) libs))
              (res
               `(,@(if (pair? docs)
-                      `((doc ,@(map
-                                (lambda (x)
-                                  (path-strip-leading-parents
-                                   (if (pair? x) (cadr x) x)))
-                                docs)))
+                      `((manual ,@(map
+                                   (lambda (x)
+                                     (path-strip-leading-parents
+                                      (if (pair? x) (cadr x) x)))
+                                   docs)))
                       '())
+                ,@(if desc `((description ,desc)) '())
                 ,@(if test `((test ,(path-strip-leading-parents test))) '())
                 ,@(if version `((version ,version)) '())))
              (files
