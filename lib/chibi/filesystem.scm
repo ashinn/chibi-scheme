@@ -157,6 +157,15 @@
 ;;> is satisfied, and \scheme{#f} otherwise.
 ;;/
 
+(define (file-is-readable? path) (zero? (file-access path access/read)))
+(define (file-is-writable? path) (zero? (file-access path access/write)))
+(define (file-is-executable? path) (zero? (file-access path access/execute)))
+
+;;> File access tests.  Returns true iff the current real UID and GID
+;;> have the corresponding permissions on path.  Equivalent to the
+;;> test -r, -w, -x operators in sh.
+;;/
+
 ;;> Equivalent to duplicating the file descriptor \var{old} to
 ;;> \var{new} and closing \var{old}.
 
