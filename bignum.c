@@ -636,9 +636,13 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a, sexp* rem_out) {
       res = sexp_quotient(ctx, res, SEXP_TWO);
       goto loop;
     }
-    /* convert back to inexact if non-zero remainder */
-    *rem_out = sexp_bignum_normalize(rem);
+  } else {
+    if (sexp_flonump(res))
+      res = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(res)));
+    tmp = sexp_mul(ctx, res, res);
+    rem = sexp_sub(ctx, a, tmp);
   }
+  *rem_out = sexp_bignum_normalize(rem);
   sexp_gc_release4(ctx);
   return sexp_bignum_normalize(res);
 }
