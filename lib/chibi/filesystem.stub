@@ -193,6 +193,12 @@
 (define-c int (file-truncate "ftruncate")
   (port-or-fileno off_t))
 
+;; Used for file-is-readable?, file-is-writable?, file-is-executable?.
+(define-c-const int (access/read "R_OK"))
+(define-c-const int (access/write "W_OK"))
+(define-c-const int (access/execute "X_OK"))
+(define-c int (file-access "access") (string int))
+
 ;;> Applies the specified locking operation using flock(2) to the port
 ;;> or file-descriptor.
 
