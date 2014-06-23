@@ -2,12 +2,14 @@
 ;; Copyright (c) 2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+;;> A Scheme take on the environment (reader) monad, focusing more on
+;;> being efficient and convenient than pure.
+
 ;;> \macro{(define-environment-monad name keyword: value ...)}
 ;;>
-;;> A Scheme take on the environment (reader) monad, focusing more on
-;;> being efficient and convenient than pure.  In addition, we use
-;;> syntax to hide the implementation, allowing the use of records,
-;;> dynamic parameters, or explicit value passing.
+;;> Define a new environment monad.  This syntax hides the
+;;> implementation, allowing the use of records, dynamic parameters,
+;;> or explicit value passing.
 ;;>
 ;;> The \var{name} is used for description and may or may not be bound
 ;;> to a value representing the monad.  All other parameters are
