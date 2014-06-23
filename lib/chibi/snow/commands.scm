@@ -914,7 +914,8 @@
          (let ((lib-name (library-name lib)))
            (if (not (equal? pkg-name (take lib-name (length pkg-name))))
                (let ((lib-meta (get-library-meta-file cfg lib)))
-                 (install-symbolic-link path (make-path install-dir lib-meta))))))
+                 (install-symbolic-link
+                  cfg path (make-path install-dir lib-meta))))))
        (package-libraries pkg)))))
 
 ;; The default installer just copies the library file and any included
