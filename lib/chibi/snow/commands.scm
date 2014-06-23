@@ -1050,7 +1050,7 @@
             (display "  ") (display i)
             (display "  ") (display (package-name pkg))
             (display " ") (display (package-version pkg))
-            (display " (") (display (package-author repo pkg))
+            (display " (") (display (package-author repo pkg #t))
             (display ")\n")
             (lp (cdr ls) (+ i 1)))))
     (let ((n (input-number cfg 'candidate-number "Candidate number: "
