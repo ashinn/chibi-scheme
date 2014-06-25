@@ -342,8 +342,16 @@ sexp sexp_bignum_sub_digits (sexp ctx, sexp dst, sexp a, sexp b) {
   bdata = sexp_bignum_data(b);
   cdata = sexp_bignum_data(c);
   for (i=0; i<blen; i++) {
-    cdata[i] = adata[i] - bdata[i] - borrow;
-    borrow = (adata[i] < bdata[i] ? 1 : 0);
+    if (adata[i] > bdata[i] || (adata[i] == bdata[i] && !borrow)) {
+      cdata[i] = adata[i] - bdata[i] - borrow;
+      borrow = 0;
+    } else {
+      cdata[i] = (SEXP_UINT_T_MAX - bdata[i]);
+      cdata[i] += 1;
+      cdata[i] -= borrow;
+      cdata[i] += adata[i];
+      borrow = 1;
+    }
   }
   for ( ; borrow && (i<alen); i++) {
     borrow = (cdata[i] == 0 ? 1 : 0);
@@ -470,7 +478,7 @@ sexp sexp_bignum_mul (sexp ctx, sexp dst, sexp a, sexp b) {
 }
 
 sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
-  sexp_luint_t d;
+  sexp_luint_t d, dn, dd;
   sexp_uint_t dlo, dhi;
   sexp_sint_t alen, blen=sexp_bignum_hi(b), sign=1, off=0;
   sexp_gc_var5(q, x, y, a1, b1);
@@ -504,13 +512,34 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
     sexp_bignum_data(x)[off] = 0;
     if (off > 0) sexp_bignum_data(x)[off-1] = 0;
     off = alen - blen + 1;
-    d = (((sexp_luint_t)sexp_bignum_data(a1)[alen-1] << (sizeof(sexp_uint_t)*8))
-                       + sexp_bignum_data(a1)[alen-2])
-      / (((sexp_luint_t)sexp_bignum_data(b1)[blen-1] << (sizeof(sexp_uint_t)*8))
-                       + sexp_bignum_data(b1)[blen-2]);
+    dn = (((sexp_luint_t)sexp_bignum_data(a1)[alen-1]
+           << (sizeof(sexp_uint_t)*8))
+          + sexp_bignum_data(a1)[alen-2]);
+    dd = (((sexp_luint_t)sexp_bignum_data(b1)[blen-1]
+           << (sizeof(sexp_uint_t)*8))
+          + sexp_bignum_data(b1)[blen-2]);
+    if (alen > 2 && blen > 2 &&
+        sexp_bignum_data(a1)[alen-1] < (1uL<<(sizeof(sexp_uint_t)*4)) &&
+        sexp_bignum_data(b1)[blen-1] < (1uL<<(sizeof(sexp_uint_t)*4))) {
+      dn = (dn << (sizeof(sexp_uint_t)*4))
+        + (sexp_bignum_data(a1)[alen-3] >> (sizeof(sexp_uint_t)*4));
+      dd = (dd << (sizeof(sexp_uint_t)*4))
+        + (sexp_bignum_data(b1)[blen-3] >> (sizeof(sexp_uint_t)*4));
+    }
+    d = dn / dd;
     if (d == 0) {
-      d = ((sexp_luint_t)sexp_bignum_data(a1)[alen-1] << (sizeof(sexp_uint_t)*8)) + (sexp_luint_t)sexp_bignum_data(a1)[alen-2];
-      d /= sexp_bignum_data(b1)[blen-1];
+      dn = (((sexp_luint_t)sexp_bignum_data(a1)[alen-1]
+             << (sizeof(sexp_uint_t)*8))
+            + sexp_bignum_data(a1)[alen-2]);
+      dd = sexp_bignum_data(b1)[blen-1];
+      if (sexp_bignum_data(a1)[alen-1] < (1uL<<(sizeof(sexp_uint_t)*4)) &&
+          sexp_bignum_data(b1)[blen-1] < (1uL<<(sizeof(sexp_uint_t)*4))) {
+        dn = (dn << (sizeof(sexp_uint_t)*4))
+          + (sexp_bignum_data(a1)[alen-3] >> (sizeof(sexp_uint_t)*4));
+        dd = (dd << (sizeof(sexp_uint_t)*4))
+          + (sexp_bignum_data(b1)[blen-2] >> (sizeof(sexp_uint_t)*4));
+      }
+      d = dn / dd;
       off--;
     }
     dhi = d >> (sizeof(sexp_uint_t)*8);
