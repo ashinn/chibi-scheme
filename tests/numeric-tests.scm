@@ -167,6 +167,9 @@
 (test #f (>= -inf.0 +inf.0))
 (test #f (> -inf.0 +inf.0))
 
+(test 88962710306127702866241727433142015
+    (string->number "#x00112233445566778899aabbccddeeff"))
+
 (test (expt 10 154) (sqrt (expt 10 308)))
 
 (test 36893488147419103231

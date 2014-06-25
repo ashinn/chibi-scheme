@@ -2621,7 +2621,8 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
       break;
     tmp = val * base + digit;
 #if SEXP_USE_BIGNUMS
-    if ((tmp < val) || (tmp > SEXP_MAX_FIXNUM)) {
+    if ((SEXP_MAX_FIXNUM / base < val) ||
+        (tmp < val) || (tmp > SEXP_MAX_FIXNUM)) {
       sexp_push_char(ctx, c, in);
       return sexp_read_bignum(ctx, in, val, (negativep ? -1 : 1), base);
     }
