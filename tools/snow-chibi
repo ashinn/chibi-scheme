@@ -14,49 +14,49 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define repo-spec
-  '((repository
-     (conf
-      (sibling
-       (conf
-        (name string)
-        (url string)))
-      (package
-       (conf
-        (name (list (or symbol integer)))
-        (url string)
-        (size integer)
-        (checksums (alist symbol string))
-        (signature (alist symbol string))
-        (library
-         (conf
-          (name (list (or symbol integer)))
-          (path string)
-          (depends
-           (list (list (or symbol integer string
-                           (list (member < > <= >=) string)))))
-          (provides (list (list (or symbol string))))
-          (platforms (list (or symbol (list symbol))))
-          (features (list symbol))
-          (authors (list string))
-          (maintainers (list string))
-          (description string)
-          (created string)
-          (updated string)
-          (version string)
-          (licenses
-           (list
-            (or (member gpl2 gpl3 lgpl mit bsd artistic apache public-domain)
-                (list 'license
-                      (conf (name string)
-                            (url string)
-                            (checksums (alist symbol string)))))))))))))))
+;; (define repo-spec
+;;   '((repository
+;;      (conf
+;;       (sibling
+;;        (conf
+;;         (name string)
+;;         (url string)))
+;;       (package
+;;        (conf
+;;         (name (list (or symbol integer)))
+;;         (url string)
+;;         (size integer)
+;;         (checksums (alist symbol string))
+;;         (signature (alist symbol string))
+;;         (library
+;;          (conf
+;;           (name (list (or symbol integer)))
+;;           (path string)
+;;           (depends
+;;            (list (list (or symbol integer string
+;;                            (list (member < > <= >=) string)))))
+;;           (provides (list (list (or symbol string))))
+;;           (platforms (list (or symbol (list symbol))))
+;;           (features (list symbol))
+;;           (authors (list string))
+;;           (maintainers (list string))
+;;           (description string)
+;;           (created string)
+;;           (updated string)
+;;           (version string)
+;;           (licenses
+;;            (list
+;;             (or (member gpl2 gpl3 lgpl mit bsd artistic apache public-domain)
+;;                 (list 'license
+;;                       (conf (name string)
+;;                             (url string)
+;;                             (checksums (alist symbol string)))))))))))))))
 
 (define conf-spec
   ;; name type aliases doc
   '((verbose? boolean (#\v "verbose") "print additional informative messages")
     (always-yes? boolean (#\y "always-yes") "answer all questions with yes")
-    (config filename "path to configuration file")
+    ;;(config filename "path to configuration file")
     (host string "base uri of snow repository")
     (local-root-repository dirname "repository cache dir for root")
     (local-user-repository dirname "repository cache dir for non-root users")
@@ -68,21 +68,9 @@
     ))
 
 (define (conf-default-path name)
-  (make-path (get-environment-variable "HOME")
+  (make-path (or (get-environment-variable "HOME") ".")
              (string-append "." name)
              "config.scm"))
-
-;; We need to support:
-;;
-;;  <prog> [<options>...] <command> [<command-options>...] <args>...
-;;
-;; up to arbitrarily nested sub-commands and with option parsing and
-;; argument count verification.
-;;
-;; Furthermore, it should be possible to build this programmatically,
-;; for example by searching a directory for extensions/plugins.  Thus
-;; even if a convenience syntax is provided it should be a thin layer
-;; over a procedural interface.
 
 (define search-spec '())
 (define show-spec '())
@@ -170,4 +158,6 @@
       (,app-help-command args ...))
      )))
 
-(run-application app-spec)
+(run-application app-spec
+                 (command-line)
+                 (conf-load (conf-default-path "snow")))

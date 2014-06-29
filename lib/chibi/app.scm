@@ -263,9 +263,10 @@
   (app-help spec args (current-output-port)))
 
 (define (run-application spec . o)
-  (let ((args (if (pair? o) (car o) (command-line))))
+  (let ((args (or (and (pair? o) (car o)) (command-line)))
+        (config (and (pair? o) (pair? (cdr o)) (cadr o))))
     (cond
-     ((parse-app '() (cdr spec) '() (cdr args) #f #f #f)
+     ((parse-app '() (cdr spec) '() (cdr args) config #f #f)
       => (lambda (v)
            (let ((proc (vector-ref v 0))
                  (cfg (vector-ref v 1))
