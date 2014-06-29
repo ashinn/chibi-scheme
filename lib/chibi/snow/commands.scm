@@ -444,7 +444,7 @@
   (let* ((name (input cfg '(gen-key name) "Name: "))
          (email (input cfg '(gen-key email) "Email: "))
          (bits (input-number cfg '(gen-key bits)
-                             "RSA key size in bits: " 1024 64 20148))
+                             "RSA key size in bits: " 512 64 20148))
          (key (conf-gen-key cfg bits))
          (snow-dir (conf-get-snow-dir cfg))
          (key-file (or (conf-get cfg 'key-file)
