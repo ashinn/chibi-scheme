@@ -3,6 +3,20 @@
 
 (test-begin "srfi-33")
 
+(test 0 (bitwise-and #b0 #b1))
+(test 1 (bitwise-and #b1 #b1))
+(test 0 (bitwise-and #b1 #b10))
+(test #b10 (bitwise-and #b11 #b10))
+(test #b101 (bitwise-and #b101 #b111))
+(test #b111 (bitwise-and -1 #b111))
+(test #b110 (bitwise-and -2 #b111))
+(test 3769478 (bitwise-and -4290775858 1694076839))
+(test 1680869008 (bitwise-and -193073517 1689392892))
+;; (test -2600468497 (bitwise-ior 1694076839 -4290775858))
+;; (test -184549633 (bitwise-ior -193073517 1689392892))
+;; (test -2604237975 (bitwise-xor 1694076839 -4290775858))
+;; (test -1865418641 (bitwise-xor -193073517 1689392892))
+
 (test 1 (arithmetic-shift 1 0))
 (test 2 (arithmetic-shift 1 1))
 (test 4 (arithmetic-shift 1 2))

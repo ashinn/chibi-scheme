@@ -16,40 +16,70 @@
 #define sexp_bignum_normalize(x) x
 #endif
 
+static sexp sexp_twos_complement (sexp ctx, sexp x) {
+  int i;
+  sexp_gc_var1(res);
+  if (sexp_bignump(x) && sexp_bignum_sign(x) < 0) {
+    sexp_gc_preserve1(ctx, res);
+    res = sexp_copy_bignum(ctx, NULL, x, 0);
+    sexp_bignum_sign(res) = 1;
+    for (i = sexp_bignum_length(res)-1; i >= 0; i--)
+      sexp_bignum_data(res)[i] = ~sexp_bignum_data(res)[i];
+    res = sexp_bignum_fxadd(ctx, res, 1);
+    sexp_gc_release1(ctx);
+    return res;
+  }
+  return x;
+}
+
+static sexp sexp_fixnum_to_twos_complement (sexp ctx, sexp x, int len) {
+  int i;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_bignum(ctx, len);
+  for (i = len-1; i > 0; i--)
+    sexp_bignum_data(res)[i] = (sexp_uint_t)((sexp_sint_t)-1);
+  sexp_bignum_data(res)[0] = ~(-(sexp_unbox_fixnum(x)));
+  res = sexp_bignum_fxadd(ctx, res, 1);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 static sexp sexp_bit_and (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
-  sexp res;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
 #endif
-  if (sexp_fixnump(x)) {
-    if (sexp_fixnump(y))
-      res = (sexp) ((sexp_uint_t)x & (sexp_uint_t)y);
+  sexp_gc_var3(res, x2, y2);
+  if (sexp_fixnump(x) && sexp_fixnump(y)) {
+    return (sexp) ((sexp_uint_t)x & (sexp_uint_t)y);  /* safe to AND tags */
 #if SEXP_USE_BIGNUMS
-    else if (sexp_bignump(y))
-      res = sexp_bit_and(ctx, self, n, y, x);
-#endif
-    else
-      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
-#if SEXP_USE_BIGNUMS
+  } else if (sexp_fixnump(x) && sexp_bignump(y)) {
+    return sexp_bit_and(ctx, self, n, y, x);
   } else if (sexp_bignump(x)) {
-    if (sexp_fixnump(y)) {
-      res = sexp_make_fixnum(sexp_unbox_fixnum(y) & sexp_bignum_data(x)[0]);
-    } else if (sexp_bignump(y)) {
-      if (sexp_bignum_length(x) < sexp_bignum_length(y))
-        res = sexp_copy_bignum(ctx, NULL, x, 0);
+    sexp_gc_preserve3(ctx, res, x2, y2);
+    x2 = sexp_twos_complement(ctx, x);
+    y2 = sexp_twos_complement(ctx, y);
+    if (sexp_fixnump(y2) && sexp_negativep(y2))
+      y2 = sexp_fixnum_to_twos_complement(ctx, y2, sexp_bignum_length(x2));
+    if (sexp_fixnump(y2)) {
+      res = sexp_make_fixnum(sexp_unbox_fixnum(y2) & sexp_bignum_data(x2)[0]);
+    } else if (sexp_bignump(y2)) {
+      if (sexp_bignum_length(x2) < sexp_bignum_length(y2))
+        res = sexp_copy_bignum(ctx, NULL, x2, 0);
       else
-        res = sexp_copy_bignum(ctx, NULL, y, 0);
+        res = sexp_copy_bignum(ctx, NULL, y2, 0);
       for (i=0, len=sexp_bignum_length(res); i<len; i++)
         sexp_bignum_data(res)[i]
-          = sexp_bignum_data(x)[i] & sexp_bignum_data(y)[i];
+          = sexp_bignum_data(x2)[i] & sexp_bignum_data(y2)[i];
     } else {
-      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
+      res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y2);
     }
+    sexp_gc_release3(ctx);
+    return sexp_bignum_normalize(res);
 #endif
   } else {
-    res = sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);
   }
-  return sexp_bignum_normalize(res);
 }
 
 static sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
