@@ -8,10 +8,11 @@
 
 \section{Introduction}
 
-Chibi-Scheme is a very small library intended for use as an extension
-and scripting language in C programs.  In addition to support for
-lightweight VM-based threads, each VM itself runs in an isolated heap
-allowing multiple VMs to run simultaneously in different OS threads.
+Chibi-Scheme is a very small library with no external dependencies,
+intended for use as an extension and scripting language in C programs.
+In addition to support for lightweight VM-based threads, each VM
+itself runs in an isolated heap allowing multiple VMs to run
+simultaneously in different OS threads.
 
 The default language is the R7RS (scheme base) library, with support
 for all libraries from the small language.  Support for additional
@@ -191,6 +192,7 @@ where \var{<library-declarations>} can be any of
   (import <import-spec> ...)           ;; specify one or more imports
   (begin <expr> ...)                   ;; inline Scheme code
   (include <file> ...)                 ;; load one or more files
+  (include-ci <file> ...)              ;; as include, with case-folding
   (include-shared <file> ...)          ;; dynamic load a library
 }
 
@@ -645,6 +647,7 @@ need to check manually before applying the predicate.
 \item{\ccode{sexp_numberp(obj)} - \var{obj} is any kind of number}
 \item{\ccode{sexp_charp(obj)} - \var{obj} is a character}
 \item{\ccode{sexp_stringp(obj)} - \var{obj} is a string}
+\item{\ccode{sexp_bytesp(obj)} - \var{obj} is a bytevector}
 \item{\ccode{sexp_symbolp(obj)} - \var{obj} is a symbol}
 \item{\ccode{sexp_idp(obj)} - \var{obj} is a symbol or hygienic identifier}
 \item{\ccode{sexp_nullp(obj)} - \var{obj} is the null value}
@@ -678,6 +681,7 @@ The following shortcuts for various immediate values are available.
 \item{\ccode{SEXP_EOF} - the end-of-file object}
 \item{\ccode{SEXP_VOID} - an undefined value often returned by mutators}
 \item{\ccode{SEXP_ZERO} - shortcut for sexp_make_fixnum(0)}
+\item{\ccode{SEXP_ONE} - shortcut for sexp_make_fixnum(1)}
 \item{...}
 \item{\ccode{SEXP_TEN} - shortcut for sexp_make_fixnum(10)}
 \item{\ccode{SEXP_NEG_ONE} - shortcut for sexp_make_fixnum(-1)}
@@ -695,7 +699,9 @@ the following macros:
 ]
 
 Currently all Scheme strings also happen to be NULL-terminated, but
-you should not rely on this and be sure to use the size as a bounds check.
+you should not rely on this and be sure to use the size as a bounds
+check.  The runtime does not prevent embedded NULLs inside strings,
+however data after the NULL may be ignored.
 
 By default (unless you compile with -DSEXP_USE_UTF8_STRING=0), strings
 are interpreted as utf8 encoded on the Scheme side, as describe in
@@ -743,6 +749,8 @@ once.
 \item{\ccode{sexp_string_length(str)} - the byte length of \var{str} as an int}
 \item{\ccode{sexp_string_ref(str, i)} - the \var{i}'th byte of string \var{str}}
 \item{\ccode{sexp_string_set(str, i, ch)} - set the \var{i}'th byte of string \var{str}}
+\item{\ccode{sexp_bytes_length(bv)} - the length of \var{bv} as an int}
+\item{\ccode{sexp_bytes_data(bv)} - the raw char* data of \var{bv}}
 \item{\ccode{sexp_vector_length(vec)} - the length of \var{vec} as an int}
 \item{\ccode{sexp_vector_ref(vec, i)} - the \var{i}'th object of vector \var{vec}}
 \item{\ccode{sexp_vector_set(vec, i, obj)} - set the \var{i}'th object of vector \var{vec}}
@@ -763,6 +771,7 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_make_string(sexp ctx, sexp len, sexp ch)} - create a new Scheme string of \var{len} characters, all initialized to \var{ch}}
 \item{\ccode{sexp_c_string(sexp ctx, const char* str, int len)} - create a new Scheme string copying the first \var{len} characters of the C string \var{str}.  If \var{len} is -1, uses strlen(\var{str}).}
 \item{\ccode{sexp_intern(sexp ctx, const char* str, int len)} - interns a symbol from the first \var{len} characters of the C string \var{str}.  If \var{len} is -1, uses strlen(\var{str}).}
+\item{\ccode{sexp_make_bytes(sexp ctx, sexp len, sexp i)} - create a new Scheme bytevector of \var{len} bytes, all initialized to \var{i}}
 \item{\ccode{sexp_make_vector(sexp ctx, sexp len, sexp obj)} - create a new vector of \var{len} elements, all initialized to \var{obj}}
 \item{\ccode{sexp_make_integer(sexp ctx, sexp_sint_t n)} - create an integer, heap allocating as a bignum if needed}
 \item{\ccode{sexp_make_unsigned_integer(sexp ctx, sexp_uint_t n)} - create an unsigned integer, heap allocating as a bignum if needed}
