@@ -267,7 +267,7 @@ clean: clean-libs
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
-	    libchibi-scheme$(SO) *.a *.pc include/chibi/install.h lib/.*.meta \
+	    libchibi-scheme$(SO)* *.a *.pc include/chibi/install.h lib/.*.meta \
 	    $(shell $(FIND) lib -name \*.o)
 
 dist-clean: dist-clean-libs cleaner
