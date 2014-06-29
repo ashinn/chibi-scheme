@@ -1239,3 +1239,71 @@ namespace.
 \item{\hyperlink["lib/chibi/weak.html"]{(chibi weak) - Data structures with weak references}}
 
 ]
+
+\section{Snow Package Manager}
+
+Beyond the distributed modules, Chibi comes with a package manager
+based on \hyperlink["http://trac.sacrideo.us/wg/wiki/Snow"]{Snow2}
+which can be used to share R7RS libraries.  Packages are distributed
+as tar gzipped files called "snowballs," and may contain multiple
+libraries.  The program is installed as \scheme{snow-chibi} and takes
+the following subcommands:
+
+\subsubsection{Querying Packages}
+
+\itemlist[
+
+\item{search terms ... - search for packages
+\p{Prints a list of available packages matching the given keywords.}}
+
+\item{show names ... - show package descriptions
+\p{Show detailed information for the listed packages, which can
+be sexp library names or the dotted shorthand used by chibi.}}
+
+\item{status names ... - print package status
+\p{Print the installed version of the given packages.}}
+
+]
+
+\subsubsection{Managing Packages}
+
+\itemlist[
+
+\item{install names ... - install packages
+\p{Install the given packages.}}
+
+\item{upgrade names ... - upgrade installed packages
+\p{Upgrade the packages if new versions are available.
+If no names are given, upgrades all eligible packages.}}
+
+\item{remove names ... - remove packages
+\p{Uninstalls the given packages.}}
+
+]
+
+\subsubsection{Creating Packages}
+
+\itemlist[
+
+\item{package files ... - create a package
+\p{Create a package snowball from the given files, which should
+be R7RS library files containing \scheme{define-library} forms.
+Include files are inferred and packaged automatically.}}
+
+\item{gen-key - create an RSA key pair
+\p{Create a new private key pair.}}
+
+\item{sign file - sign a package
+\p{Sign a file with your private key and write it to the .sig file.}}
+
+\item{verify file - verify a signature
+\p{Print a message verifying if a signature is valid.}}
+
+\item{reg-key - register an RSA key pair
+\p{Register your key on the default snow host.}}
+
+\item{upload files ... - upload a package
+\p{Sign and upload to the default snow host.
+A private key must be generated first.}}
+
+]
