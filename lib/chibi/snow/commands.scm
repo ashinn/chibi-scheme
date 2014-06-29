@@ -693,7 +693,7 @@
          (lib-names+pkgs (extract-sorted-packages cfg repo keywords)))
     (if (pair? lib-names+pkgs)
         (summarize-libraries cfg lib-names+pkgs)
-        (display "No libraries matched your query."))))
+        (display "No libraries matched your query.\n"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Show - show detailed information for the given libraries
