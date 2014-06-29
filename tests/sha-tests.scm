@@ -1,5 +1,5 @@
 
-(import (scheme base) (chibi crypto sha2) (chibi test))
+(import (chibi crypto sha2) (chibi test))
 
 (test-begin "sha2")
 

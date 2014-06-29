@@ -1,5 +1,5 @@
 
-(import (scheme base) (chibi crypto md5) (chibi test))
+(import (chibi crypto md5) (chibi test))
 
 (test-begin "md5")
 

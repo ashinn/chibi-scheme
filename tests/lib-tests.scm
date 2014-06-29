@@ -9,6 +9,7 @@
 (load "tests/srfi-1-tests.scm")
 (load "tests/srfi-2-tests.scm")
 (load "tests/srfi-16-tests.scm")
+(load "tests/srfi-27-tests.scm")
 (load "tests/srfi-38-tests.scm")
 (load "tests/flonum-tests.scm")
 (load "tests/numeric-tests.scm")
@@ -20,6 +21,11 @@
 (load "tests/uri-tests.scm")
 (load "tests/mime-tests.scm")
 (load "tests/regexp-tests.scm")
+(load "tests/prime-tests.scm")
+(load "tests/md5-tests.scm")
+(load "tests/sha-tests.scm")
+;; (load "tests/rsa-tests.scm")
+(load "tests/tar-tests.scm")
 (cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
 (cond-expand
