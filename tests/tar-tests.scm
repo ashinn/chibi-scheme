@@ -1,5 +1,16 @@
 
-(import (scheme base) (scheme write) (chibi tar) (chibi test))
+(import (chibi)
+        (only (scheme base)
+              bytevector-append
+              make-bytevector
+              string->utf8
+              bytevector
+              open-input-bytevector
+              open-output-bytevector
+              get-output-bytevector
+              )
+        (chibi tar)
+        (chibi test))
 
 (test-begin "tar")
 

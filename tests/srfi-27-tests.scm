@@ -1,5 +1,5 @@
 
-(import (scheme base)
+(import (chibi)
         (srfi 27)
         (chibi test))
 
