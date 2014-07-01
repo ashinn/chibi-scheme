@@ -185,7 +185,7 @@
                           (path ,lib-file)
                           (name ,name)))
                   (files `((rename ,file ,lib-file)))
-                  (dirs '()))
+                  (dirs '("")))
            (cond
             ((null? ls)
              (cons `(library ,@(reverse info))
