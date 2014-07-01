@@ -58,6 +58,7 @@
     (always-yes? boolean (#\y "always-yes") "answer all questions with yes")
     ;;(config filename "path to configuration file")
     (host string "base uri of snow repository")
+    (repository-uri string "uri of snow repository file")
     (local-root-repository dirname "repository cache dir for root")
     (local-user-repository dirname "repository cache dir for non-root users")
     (install-prefix string "prefix directory for installation")
@@ -85,7 +86,8 @@
     (library-prefix (list symbol))
     (email string)))
 (define reg-key-spec
-  '((email string)))
+  '((uri string)
+    (email string)))
 (define sign-spec
   '((output filename #\o)
     (digest symbol #\d)
@@ -99,11 +101,13 @@
     (version-file existing-filename)
     (doc existing-filename)
     (doc-from-scribble boolean)
+    (description string)
     (test existing-filename)
     (sig-file existing-filename)
     ))
 (define upload-spec
-  package-spec)
+  `((uri string)
+    ,@package-spec))
 (define update-spec
   '())
 

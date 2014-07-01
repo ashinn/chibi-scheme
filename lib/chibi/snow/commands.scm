@@ -300,6 +300,7 @@
 (define (package-description cfg spec libs docs)
   (cond
    ((conf-get cfg '(command package description)))
+   ((conf-get cfg '(command upload description)))
    ;; Crazy hack, make this more robust, probably opt-in.
    ((and (pair? docs) (pair? (car docs)) (eq? 'inline (caar docs))
          (regexp-search
@@ -473,12 +474,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Reg-key - register an RSA key pair with a repository.
 
-(define (remote-uri cfg path)
-  (make-path (or (conf-get cfg 'host) "http://snow-fort.org")
-             path))
+(define (remote-uri cfg name path)
+  (or (conf-get cfg name)
+      (make-path (or (conf-get cfg 'host) "http://snow-fort.org")
+                 path)))
 
-(define (remote-command cfg path params)
-  (let ((uri (remote-uri cfg path)))
+(define (remote-command cfg name path params)
+  (let ((uri (remote-uri cfg name path)))
     (sxml-display-as-text (read (http-post uri (cons '(fmt . "sexp") params))))
     (newline)))
 
@@ -496,6 +498,7 @@
          (rsa-pub-key-str
           (write-to-string (rsa-key->sexp rsa-pub-key name email))))
     (remote-command cfg
+                    '(command reg-key uri)
                     "/pkg/reg"
                     `((u (file . "pub-key.scm")
                          (value . ,rsa-pub-key-str))))))
@@ -579,7 +582,7 @@
            `(sig (file . "package.sig")
                  (value . ,(write-to-string
                             (generate-signature cfg package))))))))
-    (remote-command cfg "/pkg/put" (list pkg sig))))
+    (remote-command cfg '(command package uri) "/pkg/put" (list pkg sig))))
 
 (define (command/upload cfg spec . o)
   (define (non-homogeneous)
@@ -743,7 +746,7 @@
          (local-path (make-path local-dir "repo.scm"))
          (local-tmp (string-append local-path ".tmp."
                                    (number->string (current-second))))
-         (repo-uri (remote-uri cfg "/s/repo.scm"))
+         (repo-uri (remote-uri cfg 'repository-uri "/s/repo.scm"))
          (repo-str (call-with-input-url repo-uri port->string))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
