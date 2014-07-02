@@ -82,6 +82,14 @@ chibi-scheme.  Then you can make the static executable with:
 make -B chibi-scheme-static SEXP_USE_DL=0 CPPFLAGS=-DSEXP_USE_STATIC_LIBS
 }
 
+By default files are installed in /usr/local.  You can optionally
+specify a PREFIX for the installation directory:
+
+\command{
+make PREFIX=/path/to/install/
+sudo make PREFIX=/path/to/install/ install
+}
+
 \subsection{Compile-Time Options}
 
 The include file \ccode{"chibi/features.h"} describes a number of
