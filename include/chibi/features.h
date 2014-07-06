@@ -112,6 +112,10 @@
 /*   may be very slow and using CFLAGS=-O0 is recommended. */
 /* #define SEXP_USE_SAFE_ACCESSORS 1 */
 
+/* uncomment to install a default signal handler in main() for segfaults */
+/*   This will print a helpful backtrace. */
+/* #define SEXP_USE_PRINT_BACKTRACE_ON_SEGFAULT 1 */
+
 /* uncomment this to make the heap common to all contexts */
 /*   By default separate contexts can have separate heaps, */
 /*   and are thus thread-safe and independant. */
