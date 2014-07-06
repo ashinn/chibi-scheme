@@ -102,13 +102,13 @@ EVAL_OBJS = opcodes.o vm.o eval.o simplify.o
 libchibi-sexp$(SO): $(SEXP_OBJS)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -o $@ $^ $(XLDFLAGS)
 
-libchibi-scheme$(SO).$(SOVERSION): $(SEXP_OBJS) $(EVAL_OBJS)
+libchibi-scheme$(SO_VERSIONED_SUFFIX): $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(LIBCHIBI_FLAGS) -o $@ $^ $(XLDFLAGS)
 
-libchibi-scheme$(SO).$(SOVERSION_MAJOR): libchibi-scheme$(SO).$(SOVERSION)
+libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX): libchibi-scheme$(SO_VERSIONED_SUFFIX)
 	$(LN) -sf $< $@
 
-libchibi-scheme$(SO): libchibi-scheme$(SO).$(SOVERSION_MAJOR)
+libchibi-scheme$(SO): libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
 	$(LN) -sf $< $@
 
 libchibi-scheme.a: $(SEXP_OBJS) $(EVAL_OBJS)
@@ -331,9 +331,9 @@ install: all
 	$(INSTALL) -m0644 $(INCLUDES) $(DESTDIR)$(INCDIR)/
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
-	$(INSTALL) -m0755 libchibi-scheme$(SO).$(SOVERSION) $(DESTDIR)$(SOLIBDIR)/
-	$(LN) -s -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION_MAJOR)
-	$(LN) -s -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
+	$(INSTALL) -m0755 libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/
+	$(LN) -s -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
+	$(LN) -s -f $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-$(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)/pkgconfig
 	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(SOLIBDIR)/pkgconfig/
@@ -350,8 +350,8 @@ uninstall:
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-doc
 	-$(RM) $(DESTDIR)$(BINDIR)/snow-chibi
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
-	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION)
-	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO).$(SOVERSION_MAJOR)
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX)
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
 	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
