@@ -57,6 +57,21 @@ void sexp_usage(int err) {
 #define sexp_usage(err) (err ? exit_failure() : exit_success())
 #endif
 
+#if SEXP_USE_PRINT_BACKTRACE_ON_SEGFAULT
+#include <execinfo.h>
+#include <signal.h>
+void sexp_segfault_handler(int sig) {
+  void *array[10];
+  size_t size;
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
+#endif
+
 #if SEXP_USE_IMAGE_LOADING
 
 #include <sys/types.h>
@@ -634,6 +649,9 @@ void run_main (int argc, char **argv) {
 }
 
 int main (int argc, char **argv) {
+#if SEXP_USE_PRINT_BACKTRACE_ON_SEGFAULT
+  signal(SIGSEGV, sexp_segfault_handler); 
+#endif
   sexp_scheme_init();
   run_main(argc, argv);
   exit_success();
