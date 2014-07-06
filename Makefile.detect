@@ -46,14 +46,18 @@ endif
 # Set default variables for the platform.
 
 LIBDL = -ldl
+SO_VERSIONED_SUFFIX = $(SO).$(SOVERSION)
+SO_MAJOR_VERSIONED_SUFFIX = $(SO).$(SOVERSION_MAJOR)
 
 ifeq ($(PLATFORM),macosx)
 SO  = .dylib
+SO_VERSIONED_SUFFIX = .$(SOVERSION)$(SO)
+SO_MAJOR_VERSIONED_SUFFIX = .$(SOVERSION_MAJOR)$(SO)
 EXE =
 CLIBFLAGS =
 CLINKFLAGS = -dynamiclib
 STATICFLAGS = -static-libgcc -DSEXP_USE_DL=0
-LIBCHIBI_FLAGS = -install_name $(DESTDIR)$(SOLIBDIR)/libchibi-scheme.dylib.$(SOVERSION)
+LIBCHIBI_FLAGS = -install_name $(DESTDIR)$(SOLIBDIR)/libchibi-scheme.$(SOVERSION).dylib
 else
 ifeq ($(PLATFORM),bsd)
 SO  = .so
