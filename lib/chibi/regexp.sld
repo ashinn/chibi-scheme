@@ -6,6 +6,7 @@
           regexp-fold regexp-extract regexp-split
           regexp-match? regexp-match-count
           regexp-match-submatch regexp-match-submatch/list
+          regexp-match-submatch-start regexp-match-submatch-end
           regexp-match->list regexp-match->sexp)
   (import (srfi 33) (srfi 69))
   ;; Chibi's char-set library is more factored than SRFI-14.
