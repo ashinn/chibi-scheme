@@ -121,6 +121,12 @@
      (else
       #f))))
 
+;;> Resolve \var{path} relative to the given directory.  Returns
+;;> \var{path} unchanged if already absolute.
+
+(define (path-resolve path dir)
+  (if (path-absolute? path) path (make-path dir path)))
+
 ;; This looks big and hairy, but it's mutation-free and guarantees:
 ;;   (string=? s (path-normalize s))  <=>  (eq? s (path-normalize s))
 ;; i.e. fast and simple for already normalized paths.
