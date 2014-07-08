@@ -1010,13 +1010,29 @@
         (substring-cursor file (string-cursor-next file pos))
         file)))
 
+(define (package-maybe-digest-mismatches impl cfg pkg raw)
+  (and (not (conf-get cfg 'ignore-digests?))
+       (let ((res (package-digest-mismatches cfg pkg raw)))
+         (and res
+              (not (yes-or-no? cfg "Package checksum mismatches: " res
+                               "\nProceed anyway?"))
+              res))))
+
+(define (package-maybe-signature-mismatches repo impl cfg pkg raw)
+  (and (not (conf-get cfg 'ignore-signature?))
+       (let ((res (package-signature-mismatches repo cfg pkg raw)))
+         (and res
+              (not (yes-or-no? cfg "Package signature mismatches: " res
+                               "\nProceed anyway?"))
+              res))))
+
 (define (install-package repo impl cfg pkg)
   (let* ((url (package-url repo pkg))
          (raw (fetch-package cfg url)))
     (cond
-     ((package-digest-mismatches cfg pkg raw)
+     ((package-maybe-digest-mismatches impl cfg pkg raw)
       => (lambda (x) (die 2 "package checksum didn't match: " x)))
-     ((package-signature-mismatches repo cfg pkg raw)
+     ((package-maybe-signature-mismatches repo impl cfg pkg raw)
       => (lambda (x) (die 2 "package signature didn't match: " x)))
      (else
       (let ((snowball (maybe-gunzip raw)))

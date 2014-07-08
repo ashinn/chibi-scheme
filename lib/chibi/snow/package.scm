@@ -96,9 +96,8 @@
 
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))
-    (if (and url (uri-has-scheme? url))
-        url
-        (uri-with-path (string->path-uri 'http (repo-url repo)) url))))
+    (and url
+         (uri-resolve url (string->path-uri 'http (repo-url repo))))))
 
 (define (package-version pkg)
   (and (pair? pkg) (assoc-get (cdr pkg) 'version eq?)))
@@ -161,13 +160,15 @@
   (or (and (pair? pkg) (assoc-get-list (cdr pkg) 'installed-files)) '()))
 
 (define (library-name->path name)
-  (call-with-output-string
-    (lambda (out)
-      (let lp ((name name))
-        (display (car name) out)
-        (cond ((pair? (cdr name))
-               (write-char #\/ out)
-               (lp (cdr name))))))))
+  (if (null? name)
+      ""
+      (call-with-output-string
+        (lambda (out)
+          (let lp ((name name))
+            (display (car name) out)
+            (cond ((pair? (cdr name))
+                   (write-char #\/ out)
+                   (lp (cdr name)))))))))
 
 ;; map a library to the path name it would be found in (sans extension)
 (define (library->path library)
@@ -205,7 +206,8 @@
   (and (pair? lib) (assoc-get (cdr lib) 'url eq?)))
 
 (define (library-dependencies lib)
-  (assoc-get-list (cdr lib) 'depends))
+  (cond ((assq 'depends (cdr lib)) => cdr)
+        (else '())))
 
 (define (parse-library-name str)
   (cond
