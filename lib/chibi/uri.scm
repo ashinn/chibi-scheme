@@ -323,3 +323,19 @@
           (if (null? ls)
               (string-concatenate (reverse res))
               (lp (car ls) (cdr ls) (cons "&" res)))))))
+
+;;> Returns a new URI from \var{path}, a string or URI object, as
+;;> would be interpreted from as a reference from \var{uri}.  Thus if
+;;> any components of \var{path} are missing, or if \var{path} is a
+;;> raw path, it is taken relative to \var{uri}.
+
+(define (uri-resolve path uri)
+  (or (string->uri path)
+      (let ((uri (string->uri uri)))
+        (and uri
+             (uri-with-path
+              (uri-with-fragment (uri-with-query uri #f) #f)
+              (path-resolve path
+                            (if (string-suffix? (uri-path uri) "/")
+                                (uri-path uri)
+                                (path-directory (uri-path uri)))))))))
