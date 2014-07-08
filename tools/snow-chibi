@@ -56,6 +56,8 @@
   ;; name type aliases doc
   '((verbose? boolean (#\v "verbose") "print additional informative messages")
     (always-yes? boolean (#\y "always-yes") "answer all questions with yes")
+    (ignore-signature? boolean ("ignore-sig") "don't verify package signatures")
+    (ignore-digest? boolean ("ignore-digest") "don't verify package checksums")
     ;;(config filename "path to configuration file")
     (host string "base uri of snow repository")
     (repository-uri string "uri of snow repository file")
