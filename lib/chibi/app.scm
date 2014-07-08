@@ -276,5 +276,8 @@
              (if init (init cfg))
              (apply proc cfg spec args)
              (if end (end cfg)))))
+     ((null? (cdr args))
+      (apply app-help-command config spec args)
+      (error "Expected a command"))
      (else
-      (error "Unknown command: " args)))))
+      (error "Unknown command: " (cdr args))))))
