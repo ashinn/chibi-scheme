@@ -127,7 +127,7 @@
                             (lambda (x)
                               (port->bytevector
                                (open-binary-input-file (cdr x)))))
-                           (else (error "")))
+                           (else (error "unknown content: " x)))
                      (cdr x)))
                 (content-type
                  (cond ((and (pair? (cdr x))
@@ -157,7 +157,7 @@
 
 (define (http-call-method method url in-headers body limit)
   (if (<= limit 0)
-      (error "http-get: redirect limit reached" url)
+      (error "http-get: redirect limit reached" (uri->string url))
       (let* ((uri (if (uri? url) url (string->uri url)))
              (host (and uri (uri-host uri))))
         (if (not host)
@@ -203,11 +203,11 @@
                    (let ((url2 (assq-ref headers 'location)))
                      (if url2
                          (http-get/raw url2 in-headers (- limit 1))
-                         (error "redirect with no location header"))))
+                         (error "redirect with no location header" url url2))))
                   (else
                    (close-input-port in)
                    (close-output-port out)
-                   (error "couldn't retrieve url" url resp)))))))))
+                   (error "couldn't retrieve url" (uri->string url) resp)))))))))
 
 (define (http-get/raw url headers limit)
   (http-call-method 'GET url headers #f limit))
