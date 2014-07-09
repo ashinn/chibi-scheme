@@ -69,7 +69,9 @@
 (define (package-name package)
   (and (pair? package)
        (eq? 'package (car package))
-       (or (assoc-get (cdr package) 'name)
+       (or (cond ((assoc-get (cdr package) 'name)
+                  => (lambda (x) (and (pair? x) x)))
+                 (else #f))
            ;; TODO: longest common prefix
            (let ((lib (assq 'library (cdr package))))
              (and lib (library-name lib))))))
@@ -141,6 +143,44 @@
 
 (define (package-signature-ok? cfg pkg raw)
   (not (package-signature-mismatches cfg pkg raw)))
+
+(define (failure str . args)
+  (let ((out (open-output-string)))
+    (display str out)
+    (cond
+     ((pair? args)
+      (display ":" out)
+      (for-each (lambda (x) (display " " out) (write x out)) args)))
+    (get-output-string out)))
+
+(define (invalid-library-reason lib)
+  (cond
+   ((not (list? lib)) "library must be a list")
+   ((not (list? (library-name lib)))
+    (failure "library name must be a list" (library-name lib)))
+   ((not (every (lambda (x) (or (symbol? x) (integer? x))) (library-name lib)))
+    (failure "library name must contain only symbols or integers"
+             (library-name lib)))
+   (else #f)))
+
+(define (valid-library? lib)
+  (not (invalid-library-reason lib)))
+
+(define (invalid-package-reason pkg)
+  (cond
+   ((not (list? pkg))
+    "package must be a list")
+   ((not (string? (package-version pkg)))
+    (failure "package-version is not a string" (package-version pkg)))
+   (else
+    (let ((libs (package-libraries pkg)))
+      (cond
+       ((not (pair? libs)) "package must contain at least one library")
+       ((any invalid-library-reason libs))
+       (else #f))))))
+
+(define (valid-package? pkg)
+  (not (invalid-package-reason pkg)))
 
 (define (package-libraries package)
   (and (package? package) (filter library? (cdr package))))

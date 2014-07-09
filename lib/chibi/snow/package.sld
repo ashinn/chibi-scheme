@@ -12,6 +12,8 @@
           library-url library-name parse-library-name library-name->path
           library-analyze library-include-files library-dependencies
           library-rewrite-includes
+          invalid-package-reason valid-package?
+          invalid-library-reason valid-library?
           repo-find-publisher lookup-digest rsa-identity=?
           extract-rsa-private-key extract-rsa-public-key)
   (import (chibi)

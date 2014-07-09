@@ -509,9 +509,11 @@
 (define (generate-signature cfg package)
   (let* ((digest-name (conf-get cfg 'digest 'sha-256))
          (digest-func (lookup-digest digest-name))
-         (digest (if (string? package)
-                     (call-with-input-file package digest-func)
-                     (digest-func package)))
+         (raw-data (if (string? package)
+                       (call-with-input-file package port->bytevector)
+                       package))
+         (snowball (maybe-gunzip raw-data))
+         (digest (digest-func snowball))
          (keys (call-with-input-file
                    (or (conf-get cfg 'key-file)
                        (string-append (conf-get-snow-dir cfg) "/priv-key.scm"))
@@ -1010,6 +1012,12 @@
         (substring-cursor file (string-cursor-next file pos))
         file)))
 
+(define (maybe-invalid-package-reason impl cfg pkg)
+  (let ((res (invalid-package-reason pkg)))
+    (and res
+         (not (yes-or-no? cfg "Package invalid: " res "\nProceed anyway?"))
+         res)))
+
 (define (package-maybe-digest-mismatches impl cfg pkg raw)
   (and (not (conf-get cfg 'ignore-digests?))
        (let ((res (package-digest-mismatches cfg pkg raw)))
@@ -1019,23 +1027,36 @@
               res))))
 
 (define (package-maybe-signature-mismatches repo impl cfg pkg raw)
-  (and (not (conf-get cfg 'ignore-signature?))
-       (let ((res (package-signature-mismatches repo cfg pkg raw)))
-         (and res
-              (not (yes-or-no? cfg "Package signature mismatches: " res
-                               "\nProceed anyway?"))
-              res))))
+  (cond
+   ((conf-get cfg 'ignore-signature?) #f)
+   ((not (assq 'signature (cdr pkg)))
+    (if (yes-or-no? cfg "Package signature missing.\nProceed anyway?")
+        #f
+        '(package-signature-missing)))
+   (else
+    (let ((res (package-signature-mismatches repo cfg pkg raw)))
+      (and res
+           (not (yes-or-no? cfg "Package signature mismatches: " res
+                            "\nProceed anyway?"))
+           res)))))
 
 (define (install-package repo impl cfg pkg)
-  (let* ((url (package-url repo pkg))
-         (raw (fetch-package cfg url)))
-    (cond
-     ((package-maybe-digest-mismatches impl cfg pkg raw)
-      => (lambda (x) (die 2 "package checksum didn't match: " x)))
-     ((package-maybe-signature-mismatches repo impl cfg pkg raw)
-      => (lambda (x) (die 2 "package signature didn't match: " x)))
-     (else
-      (let ((snowball (maybe-gunzip raw)))
+  (cond
+   ((maybe-invalid-package-reason impl cfg pkg)
+    => (lambda (x) (die 2 "package invalid: " x)))
+   (else
+    (let* ((url (package-url repo pkg))
+           (raw (fetch-package cfg url))
+           (snowball (maybe-gunzip raw)))
+      (cond
+       ((not (tar-safe? snowball))
+        (die 2 "package tarball should contain a single relative directory: "
+             (tar-files snowball)))
+       ((package-maybe-digest-mismatches impl cfg pkg snowball)
+        => (lambda (x) (die 2 "package checksum didn't match: " x)))
+       ((package-maybe-signature-mismatches repo impl cfg pkg snowball)
+        => (lambda (x) (die 2 "package signature didn't match: " x)))
+       (else
         (call-with-temp-dir
          "pkg"
          (lambda (dir)
@@ -1052,10 +1073,12 @@
               `(,@(remove (lambda (x)
                             (and (pair? x) (eq? 'installed-files (car x))))
                           pkg)
-                (installed-files ,@installed-files)))))))))))
+                (installed-files ,@installed-files))))))))))))
 
 (define (install-for-implementation repo impl cfg pkgs)
-  (for-each (lambda (pkg) (install-package repo impl cfg pkg)) pkgs))
+  (for-each
+   (lambda (pkg) (install-package repo impl cfg pkg))
+   pkgs))
 
 (define (select-best-candidate impl cfg repo candidates)
   (cond
@@ -1081,11 +1104,11 @@
 ;; trusting publishers for different library prefixes.
 (define (expand-package-dependencies repo impl cfg lib-names)
   (let ((current (installed-libraries impl cfg)))
-    (let lp ((ls lib-names) (res '()))
+    (let lp ((ls lib-names) (res '()) (ignored '()))
       (cond
        ((null? ls) res)
        ((find (lambda (pkg) (package-provides? pkg (car ls))) res)
-        (lp (cdr ls) res))
+        (lp (cdr ls) res ignored))
        (else
         (let* ((current-version
                 (cond ((assoc (car ls) current)
@@ -1100,21 +1123,24 @@
                                        current-version))))
                  (cdr repo))))
           (cond
+           ((member (car ls) ignored)
+            (lp (cdr ls) res ignored))
            ((and (null? candidates) (assoc (car ls) current))
             (if (member (car ls) lib-names)
                 (warn "skipping already installed library" (car ls)))
-            (lp (cdr ls) res))
+            (lp (cdr ls) res (cons (car ls) ignored)))
            ((and (null? candidates) (member (car ls) lib-names))
             (die 2 "Can't find package: " (car ls)))
            ((null? candidates)
             (if (yes-or-no? cfg "Can't find package: " (car ls)
                             ".  Proceed anyway?")
-                (lp (cdr ls) res)
+                (lp (cdr ls) res (cons (car ls) ignored))
                 (exit 2)))
            (else
             (let ((pkg (select-best-candidate impl cfg repo candidates)))
               (lp (append (package-dependencies pkg) (cdr ls))
-                  (cons pkg res)))))))))))
+                  (cons pkg res)
+                  ignored))))))))))
 
 ;; First lookup dependencies for all implementations so we can
 ;; download in a single batch.  Then perform the installations a
