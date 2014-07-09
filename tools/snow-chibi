@@ -97,10 +97,12 @@
 (define verify-spec
   '())
 (define package-spec
-  '((author string)
+  '((authors (list string))
+    (maintainers (list string))
     (recursive? boolean (#\r "recursive") "...")
     (version string)
     (version-file existing-filename)
+    (license symbol)
     (doc existing-filename)
     (doc-from-scribble boolean)
     (description string)

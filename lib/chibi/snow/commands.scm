@@ -190,7 +190,8 @@
             ((null? ls)
              (cons `(library ,@(reverse info))
                    (cons `(rename ,dir "")
-                         (append (map resolve (delete-duplicates dirs equal?))
+                         (append (map resolve
+                                      (sort (delete-duplicates dirs equal?)))
                                  files))))
             (else
              (match (car ls)
@@ -322,11 +323,14 @@
 (define (package-test cfg)
   (conf-get cfg '(command package test)))
 
+(define (package-license cfg)
+  (conf-get cfg '(command package license)))
+
 (define (package-output-version cfg)
   (cond ((conf-get cfg '(command package version)))
+        ((conf-get cfg '(command upload version)))
         ((conf-get cfg '(command package version-file))
          => (lambda (file) (call-with-input-file file read-line)))
-        ((conf-get cfg '(command upload version)))
         ((conf-get cfg '(command upload version-file))
          => (lambda (file) (call-with-input-file file read-line)))
         (else #f)))
@@ -343,10 +347,14 @@
          (docs (package-docs cfg spec libs))
          (desc (package-description cfg spec libs docs))
          (test (package-test cfg))
-         (version (package-output-version cfg)))
+         (authors (conf-get-list cfg '(command package authors)))
+         (maintainers (conf-get-list cfg '(command package maintainers)))
+         (version (package-output-version cfg))
+         (license (package-license cfg)))
     (let lp ((ls (map (lambda (x) (cons x #f)) libs))
              (res
-              `(,@(if (pair? docs)
+              `(,@(if license `((license ,license)) '())
+                ,@(if (pair? docs)
                       `((manual ,@(map
                                    (lambda (x)
                                      (path-strip-leading-parents
@@ -355,7 +363,9 @@
                       '())
                 ,@(if desc `((description ,desc)) '())
                 ,@(if test `((test ,(path-strip-leading-parents test))) '())
-                ,@(if version `((version ,version)) '())))
+                ,@(if version `((version ,version)) '())
+                ,@(if (pair? authors) `((authors ,@authors)) '())
+                ,@(if (pair? maintainers) `((maintainers ,@maintainers)) '())))
              (files
               `(,@docs
                 ,@(if test (list test) '()))))
