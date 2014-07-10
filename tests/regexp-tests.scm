@@ -142,6 +142,9 @@
 (test-re #f
          '(: (* space) bow ($ (* alpha)) eow (* space))
          " abc.  ")
+(test-re-search '("foo") '(: "foo") " foo ")
+(test-re-search #f '(: nwb "foo" nwb) " foo ")
+(test-re-search '("foo") '(: nwb "foo" nwb) "xfoox")
 
 (test-re '("beef")
          '(* (/"af"))
