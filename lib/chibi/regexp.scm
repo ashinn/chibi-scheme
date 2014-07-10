@@ -532,6 +532,9 @@
        (string-cursor>? i start)
        (char-word-constituent?
         (string-cursor-ref str (string-cursor-prev str i)))))
+(define (match/nwb str i ch start end matches)
+  (and (not (match/bow str i ch start end matches))
+       (not (match/eow str i ch start end matches))))
 (define (match/bog str i ch start end matches)
   (and (string-cursor<? i end)
        (or (string-cursor=? i start)
@@ -718,6 +721,7 @@
         ((eol) (make-char-state match/eol flags next))
         ((bow) (make-char-state match/bow flags next))
         ((eow) (make-char-state match/eow flags next))
+        ((nwb) (make-char-state match/nwb flags next))
         ((bog) (make-char-state match/bog flags next))
         ((eog) (make-char-state match/eog flags next))
         ((grapheme)
