@@ -72,6 +72,11 @@
      (regexp-matches '(or (-> foo "ab") (-> foo "cd")) "cd")
      'foo))
 
+;; non-deterministic case from issue #229
+(let* ((elapsed '(: (** 1 2 num) ":" num num (? ":" num num)))
+       (span (rx ,elapsed "-" ,elapsed)))
+  (test-re-search '("1:45:02-2:06:13") span " 1:45:02-2:06:13 "))
+
 (test-re '("ababc" "abab")
          '(: bos ($ (* "ab")) "c")
          "ababc")
