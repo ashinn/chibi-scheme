@@ -168,21 +168,34 @@
              (else
               (lp res)))))))))
 
-(define (available-modules-in-directory dir)
-  (directory-fold-tree
-   dir #f #f
-   (lambda (file res)
-     (if (module-file? file)
-         (append (read-static-modules file) res)
-         res))
-   '()))
+(define no-module-depth-limit 2)
+
+(define (available-modules-in-directory dir depth res)
+  (call-with-values
+      (lambda ()
+        (partition file-directory?
+                   (map (lambda (f) (string-append dir "/" f))
+                        (remove (lambda (f) (member f '("." "..")))
+                                (directory-files dir)))))
+    (lambda (dirs files)
+      (let ((mods (append-map read-static-modules
+                              (filter module-file? files))))
+        (if (and (null? mods) (>= depth no-module-depth-limit))
+            res
+            (let ((depth (if (pair? mods) 0 (+ 1 depth))))
+              (let lp ((ls dirs) (res (append mods res)))
+                (if (null? ls)
+                    res
+                    (lp (cdr ls)
+                        (available-modules-in-directory (car ls) depth res)
+                        )))))))))
 
 (define (available-modules)
-  (reverse
-   (apply append
-          *modules*
-          (map available-modules-in-directory
-               (current-module-path)))))
+  (let lp ((ls (current-module-path)) (res *modules*))
+    (if (null? ls)
+        res
+        (lp (cdr ls)
+            (available-modules-in-directory (car ls) 0 res)))))
 
 (define (modules-exporting-identifier name)
   (let lp ((ls (available-modules))

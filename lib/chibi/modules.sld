@@ -6,5 +6,5 @@
           module-name->file procedure-analysis find-module
           available-modules-in-directory available-modules
           modules-exporting-identifier)
-  (import (chibi) (meta) (chibi ast) (chibi filesystem))
+  (import (chibi) (meta) (srfi 1) (chibi ast) (chibi filesystem))
   (include "modules.scm"))
