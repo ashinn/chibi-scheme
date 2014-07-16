@@ -4,7 +4,20 @@
           let-keywords let-keywords* keyword-ref keyword-ref*)
   (cond-expand
    (chibi
-    (import (chibi)))
+    (import (chibi))
+    (begin
+      (define-syntax symbol->keyword*
+        (er-macro-transformer
+         (lambda (expr rename compare)
+           (if (and (pair? (cdr expr)) (pair? (cadr expr))
+                    (compare 'quote (car (cadr expr))))
+               `(,(rename 'quote)
+                 ,(string->symbol
+                   (string-append
+                    (symbol->string
+                     (identifier->symbol (cadr (cadr expr)))) ":")))
+               `(string->symbol
+                 (string-append (symbol->string ,(cadr expr)) ":"))))))))
    (else
     (import (scheme base))
     (begin
@@ -20,5 +33,10 @@
                  (tmp2 (if (pair? tmp) (cdr tmp) '())))
              (let-optionals* tmp2 rest . body)))
           ((let-optionals* tmp tail . body)
-           (let ((tail tmp)) . body)))))))
+           (let ((tail tmp)) . body))))
+      (define-syntax symbol->keyword*
+        (syntax-rules ()
+          ((symbol->keyword* sym)
+           (string->symbol (string-append (symbol->string sym) ":")))
+          )))))
   (include "optional.scm"))

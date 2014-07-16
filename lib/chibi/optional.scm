@@ -101,11 +101,6 @@
 (define (symbol->keyword sym)
   (string->symbol (string-append (symbol->string sym) ":")))
 
-(define-syntax symbol->keyword*
-  (syntax-rules ()
-    ((symbol->keyword* sym)
-     (string->symbol (string-append (symbol->string sym) ":")))))
-
 (define-syntax let-key*-to-let
   (syntax-rules ()
     ((let-key*-to-let ls (vars ...) ((v d) . rest) . body)
@@ -182,6 +177,13 @@
 ;;> \scheme{let*} equivalent to \scheme{let-keywords*}.  Any required
 ;;> \var{default} values are evaluated in left-to-right order, with
 ;;> all preceding \var{var}s in scope.
+;;>
+;;> \emph{Example:}
+;;> \example{
+;;> (let-keywords* '(b: 5)
+;;>     ((a 1) (b (* a 2)) (c (* b 3)))
+;;>   (list a b c))
+;;> }
 
 (define-syntax let-keywords*
   (syntax-rules ()
