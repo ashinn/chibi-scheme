@@ -44,6 +44,7 @@
 ;;>              (eof-object? b)))
 ;;>       (write-u8 b out)))}
 ;;>
+;;> \emph{Example:}
 ;;> \example{
 ;;> (let-optionals '(0) ((a 10) (b 11) (c 12))
 ;;>   (list a b c))}
@@ -126,9 +127,13 @@
 ;;> is not found, \var{var} is bound to \var{default}, even if unused
 ;;> names remain in \var{ls}.
 ;;>
-;;> Note Chibi does not have any automatically quoted keywords, so
-;;> when passing keyword arguments they must be quoted (or otherwise
-;;> evaluated).
+;;> If an optional trailing identifier \var{rest} is provided, it is
+;;> bound to the list of unused arguments not bound to any \var{var}.
+;;>
+;;> Note R7RS does not have a disjoint keyword type or auto-quoting
+;;> syntax for keywords - they are simply identifiers.  Thus when
+;;> passing keyword arguments they must be quoted (or otherwise
+;;> dynamically evaluated).
 ;;>
 ;;> \emph{Example:}
 ;;> \example{
@@ -142,13 +147,37 @@
 ;;>       (make-person 'name: "Methuselah" 'age: 969)
 ;;>       (make-person 'name: "Dr. Who" 'job: 'time-lord 'age: 1500))
 ;;> }
+;;>
+;;> \emph{Example:}
+;;> \example{
+;;> (let-keywords '(b: 2 a: 1 other: 9)
+;;>     ((a 0) (b 0) (c 0) rest)
+;;>   (list a b c rest))
+;;> }
 
 (define-syntax let-keywords
   (syntax-rules ()
     ((let-keywords ls vars . body)
      (let-key*-to-let ls () vars . body))))
 
-;;> \macro{(let-keywords* ls ((var default) ... [rest]) body ...)}
+(define (remove-keywords ls keywords)
+  (let lp ((ls ls) (res '()))
+    (if (and (pair? ls) (pair? (cdr ls)))
+        (if (memq (car ls) keywords)
+            (lp (cddr ls) res)
+            (lp (cddr ls) (cons (cadr ls) (cons (car ls) res))))
+        (reverse res))))
+
+(define-syntax remove-keywords*
+  (syntax-rules ()
+    ((remove-keywords* opt-ls (keys ...) ((var key default) . rest))
+     (remove-keywords* opt-ls (keys ... key) rest))
+    ((remove-keywords* opt-ls (keys ...) ((var default) . rest))
+     (remove-keywords* opt-ls (keys ... ,(symbol->keyword* 'var)) rest))
+    ((remove-keywords* opt-ls (keys ...) ())
+     (remove-keywords opt-ls `(keys ...)))))
+
+;;> \macro{(let-keywords* ls ((var [keyword] default) ... [rest]) body ...)}
 ;;>
 ;;> \scheme{let*} equivalent to \scheme{let-keywords*}.  Any required
 ;;> \var{default} values are evaluated in left-to-right order, with
@@ -161,13 +190,14 @@
     ((let-keywords* (op . args) vars . body)
      (let ((tmp (op . args)))
        (let-keywords* tmp vars . body)))
-    ((let-keywords* opt-ls ((var) . rest) . body)
-     (let-keywords* opt-ls ((var #f) . rest) . body))
-    ((let-keywords* opt-ls ((var default) . rest) . body)
+    ((let-keywords* opt-ls ((var) (vars . x) ...) . body)
+     (let-keywords* opt-ls ((var #f) (vars . x) ...) . body))
+    ((let-keywords* opt-ls ((var default) (vars . x) ...) . body)
      (let ((var (keyword-ref* opt-ls (symbol->keyword* 'var) default)))
-       (let-keywords* opt-ls rest . body)))
-    ((let-keywords* opt-ls ((var key default) . rest) . body)
+       (let-keywords* opt-ls ((vars . x) ...) . body)))
+    ((let-keywords* opt-ls ((var key default) (vars . x) ...) . body)
      (let ((var (keyword-ref* opt-ls `key default)))
-       (let-keywords* opt-ls rest . body)))
-    ((let-keywords* opt-ls tail . body)
-     (let ((tail opt-ls)) . body))))
+       (let-keywords* opt-ls ((vars . x) ...) . body)))
+    ((let-keywords* opt-ls ((vars . x) ... tail) . body)
+     (let ((tail (remove-keywords* opt-ls () ((vars . x) ...))))
+       (let-keywords* opt-ls ((vars . x) ...) . body)))))
