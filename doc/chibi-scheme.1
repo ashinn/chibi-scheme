@@ -72,8 +72,9 @@ program.  Signals aren't caught either - to enable handling keyboard
 interrupts you can use the (chibi process) module.  For a more
 sophisticated REPL with readline support, signal handling, module
 management and smarter read/write you may want to use the (chibi repl)
-module.  For example,
-.I chibi-scheme -mchibi.repl -e'(repl)'
+module.  This can be launched automatically with:
+.I chibi-scheme -R
+\[char46]
 
 The default language the R7RS
 (scheme base) module.  To get a mostly R5RS-compatible language, use
@@ -82,11 +83,30 @@ or to get just the core language used for bootstrapping, use
 .I chibi-scheme -xchibi
 or its shortcut
 .I chibi-scheme -q
+\[char46]
 
 .SH OPTIONS
 
-Space is optional between options and their arguments.
-Options without arguments may not be chained together.
+Space is optional between options and their arguments, with the
+exception of
+.I
+-R
+for which the argument is optional, and therefore if present must
+occur without a space.  Options without arguments may not be chained
+together.
+
+To reduce the need for shell escapes, options with module arguments
+(
+.I -m
+,
+.I -x
+and
+.I -R
+) are written in a dot notation, so that the module
+.I (foo bar)
+is written as
+.I foo.bar
+\[char46]
 
 .TP 5
 .BI -V
@@ -114,6 +134,10 @@ Loads the given module and runs the "main" procedure it defines (which
 need not be exported) with a single argument of the list of command-line
 arguments as in SRFI-22.  The name "main" can be overridden with the -r
 option.
+.I [module]
+may be omitted, in which case it default to chibi.repl.  Thus
+.I chibi-scheme -R
+is the recommended means to obtain the advanced REPL.
 .TP
 .BI -s
 Strict mode, escalating warnings to fatal errors.
@@ -149,11 +173,7 @@ Imports
 .I module
 as though "(import
 .I module
-)" were evaluated.  However, to reduce the need for shell
-escapes, modules are written in a dot notation, so that the module
-.I (foo bar)
-is written as
-.I foo.bar
+)" were evaluated.
 If the
 .BI -x
 version is used, then
