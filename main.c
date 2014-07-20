@@ -590,6 +590,11 @@ void run_main (int argc, char **argv) {
         env = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, sexp_meta_env(ctx)));
         if (sexp_vectorp(env)) env = sexp_vector_ref(env, SEXP_ONE);
         free(impmod);
+        check_exception(ctx, env);
+        if (!sexp_envp(env)) {
+          fprintf(stderr, "couldn't find module: %s\n", main_module);
+          exit_failure();
+        }
       } else
 #endif
       if (i < argc && !no_script) {   /* script usage */
