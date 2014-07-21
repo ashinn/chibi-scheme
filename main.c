@@ -542,7 +542,8 @@ void run_main (int argc, char **argv) {
       break;
 #endif
     case 'R':
-      main_module = argv[i][2] == '\0' ? "chibi.repl" : argv[i]+2;
+      main_module = argv[i][2] != '\0' ? argv[i]+2 :
+        (i+1 < argc && argv[i+1][0] != '-') ? argv[++i] : "chibi.repl";
       if (main_symbol == NULL) main_symbol = "main";
       break;
     case 'r':
