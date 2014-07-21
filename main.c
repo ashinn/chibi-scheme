@@ -368,6 +368,11 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
   *env = sexp_context_env(*ctx);
 }
 
+#define handle_noarg() if (argv[i][2] != '\0') { \
+    fprintf(stderr, "option %c doesn't take any argument but got: %s\n", argv[i][1], argv[i]); \
+    exit_failure();                                                     \
+  }
+
 #define init_context() if (! ctx) do {                                  \
       do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case); \
       sexp_gc_preserve4(ctx, tmp, sym, args, env);                      \
@@ -457,6 +462,7 @@ void run_main (int argc, char **argv) {
       mods_loaded = 1;
       if (! init_loaded++)
         sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
+      handle_noarg();
       break;
     case 'q':
       argv[i--] = (char*)"-xchibi";
@@ -532,6 +538,7 @@ void run_main (int argc, char **argv) {
       fold_case = 1;
       init_context();
       sexp_global(ctx, SEXP_G_FOLD_CASE_P) = SEXP_TRUE;
+      handle_noarg();
       break;
 #endif
     case 'R':
@@ -543,6 +550,7 @@ void run_main (int argc, char **argv) {
       break;
     case 's':
       init_context(); sexp_global(ctx, SEXP_G_STRICT_P) = SEXP_TRUE;
+      handle_noarg();
       break;
     case 't':
       mods_loaded = 1;
