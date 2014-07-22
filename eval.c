@@ -201,7 +201,8 @@ sexp sexp_env_exports_op (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
     sexp_push(ctx, res, sexp_cadr(ls));
 #endif
   for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
-    sexp_push(ctx, res, sexp_car(ls));
+    if (sexp_env_value(ls) != SEXP_UNDEF)
+      sexp_push(ctx, res, sexp_car(ls));
   sexp_gc_release1(ctx);
   return res;
 }
