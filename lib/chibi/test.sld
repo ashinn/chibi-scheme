@@ -12,7 +12,8 @@
   (import (scheme write)
           (scheme complex)
           (scheme process-context)
-          (scheme time))
+          (scheme time)
+          (chibi term ansi))
   (cond-expand
    (chibi
     (import (except (scheme base) guard)

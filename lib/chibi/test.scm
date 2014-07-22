@@ -1,4 +1,4 @@
-;; Copyright (c) 2010-2013 Alex Shinn. All rights reserved.
+;; Copyright (c) 2010-2014 Alex Shinn. All rights reserved. 
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Simple testing framework adapted from the Chicken \scheme{test}
@@ -86,7 +86,7 @@
 (define-syntax test-assert
   (syntax-rules ()
     ((_ expr)
-    (test-assert #f expr))
+     (test-assert #f expr))
     ((_ name expr)
      (test-propagate-info name #f expr ((assertion . #t))))
     ((test a ...)
@@ -110,7 +110,7 @@
 (define-syntax test-values
   (syntax-rules ()
     ((_ expect expr)
-    (test-values #f expect expr))
+     (test-values #f expect expr))
     ((_ name expect expr)
      (test name (call-with-values (lambda () expect) (lambda results results))
        (call-with-values (lambda () expr) (lambda results results))))))
@@ -171,13 +171,13 @@
            (error "a name is required, got " 'name-expr name))
        (test-begin name)
        (guard
-        (exn
-         (else
-           (warning "error in group outside of tests")
-           (print-exception exn (current-error-port))
-           (test-group-inc! (current-test-group) 'count)
-           (test-group-inc! (current-test-group) 'ERROR)))
-        body ...)
+           (exn
+            (else
+             (warning "error in group outside of tests")
+             (print-exception exn (current-error-port))
+             (test-group-inc! (current-test-group) 'count)
+             (test-group-inc! (current-test-group) 'ERROR)))
+         body ...)
        (test-end name)
        (current-test-group old-group)))))
 
@@ -266,24 +266,27 @@
       (let wr ((x x))
         (if (pair? x)
             (cond
-              ((and (symbol? (car x)) (pair? (cdr x)) (null? (cddr x))
-                    (assq (car x)
-                          '((quote . "'") (quasiquote . "`")
-                            (unquote . ",") (unquote-splicing . ",@"))))
-               => (lambda (s) (display (cdr s) out) (wr (cadr x))))
-              (else
-               (display "(" out)
-               (wr (car x))
-               (let lp ((ls (cdr x)))
-                 (cond ((pair? ls)
-                        (display " " out)
-                        (wr (car ls))
-                        (lp (cdr ls)))
-                       ((not (null? ls))
-                        (display " . " out)
-                        (write ls out))))
-               (display ")" out)))
+             ((and (symbol? (car x)) (pair? (cdr x)) (null? (cddr x))
+                   (assq (car x)
+                         '((quote . "'") (quasiquote . "`")
+                           (unquote . ",") (unquote-splicing . ",@"))))
+              => (lambda (s) (display (cdr s) out) (wr (cadr x))))
+             (else
+              (display "(" out)
+              (wr (car x))
+              (let lp ((ls (cdr x)))
+                (cond ((pair? ls)
+                       (display " " out)
+                       (wr (car ls))
+                       (lp (cdr ls)))
+                      ((not (null? ls))
+                       (display " . " out)
+                       (write ls out))))
+              (display ")" out)))
             (write x out))))))
+
+(define (display-to-string x)
+  (if (string? x) x (call-with-output-string (lambda (out) (display x out)))))
 
 ;; if we need to truncate, try first dropping let's to get at the
 ;; heart of the expression
@@ -291,27 +294,27 @@
   (let* ((str (write-to-string x))
          (len (string-length str)))
     (cond
-      ((<= len width)
-       str)
-      ((and (pair? x) (eq? 'let (car x)))
-       (if (and (pair? o) (car o))
-           (truncate-source (car (reverse x)) width #t)
-           (string-append "..."
-                          (truncate-source (car (reverse x)) (- width 3) #t))))
-      ((and (pair? x) (eq? 'call-with-current-continuation (car x)))
-       (truncate-source (cons 'call/cc (cdr x)) width (and (pair? o) (car o))))
-      ((and (pair? x) (eq? 'call-with-values (car x)))
-       (string-append
-        "..."
-        (truncate-source (if (and (pair? (cadr x)) (eq? 'lambda (car (cadr x))))
-                             (car (reverse (cadr x)))
-                             (cadr x))
-                         (- width 3)
-                         #t)))
-      (else
-       (string-append
-        (substring str 0 (min (max 0 (- width 3)) (string-length str)))
-        "...")))))
+     ((<= len width)
+      str)
+     ((and (pair? x) (eq? 'let (car x)))
+      (if (and (pair? o) (car o))
+          (truncate-source (car (reverse x)) width #t)
+          (string-append "..."
+                         (truncate-source (car (reverse x)) (- width 3) #t))))
+     ((and (pair? x) (eq? 'call-with-current-continuation (car x)))
+      (truncate-source (cons 'call/cc (cdr x)) width (and (pair? o) (car o))))
+     ((and (pair? x) (eq? 'call-with-values (car x)))
+      (string-append
+       "..."
+       (truncate-source (if (and (pair? (cadr x)) (eq? 'lambda (car (cadr x))))
+                            (car (reverse (cadr x)))
+                            (cadr x))
+                        (- width 3)
+                        #t)))
+     (else
+      (string-append
+       (substring str 0 (min (max 0 (- width 3)) (string-length str)))
+       "...")))))
 
 (define (test-get-name! info)
   (or
@@ -319,18 +322,18 @@
    (assq-ref info 'gen-name)
    (let ((name
           (cond
-            ((assq-ref info 'source)
-             => (lambda (src)
-                  (truncate-source src (- (current-column-width) 12))))
-            ((current-test-group)
-             => (lambda (g)
-                  (display "no source in: " (current-error-port))
-                  (write info (current-error-port))
-                  (display "\n" (current-error-port))
-                  (string-append
-                   "test-"
-                   (number->string (test-group-ref g 'count 0)))))
-            (else ""))))
+           ((assq-ref info 'source)
+            => (lambda (src)
+                 (truncate-source src (- (current-column-width) 12))))
+           ((current-test-group)
+            => (lambda (g)
+                 (display "no source in: " (current-error-port))
+                 (write info (current-error-port))
+                 (display "\n" (current-error-port))
+                 (string-append
+                  "test-"
+                  (number->string (test-group-ref g 'count 0)))))
+           (else ""))))
      (if (pair? info)
          (set-cdr! info (cons (cons 'gen-name name) (cdr info))))
      name)))
@@ -352,22 +355,6 @@
   (let ((level (max 0 (+ 1 (- (test-group-ref group 'level 0)
                               (test-first-indentation))))))
     (* 4 (min level (test-max-indentation)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ansi tools
-
-(define (display-to-string x)
-  (if (string? x) x (call-with-output-string (lambda (out) (display x out)))))
-
-(define (ansi-color code)
-  (lambda (x)
-    (string-append "\x1B;[" (number->string code) "m"
-                   (display-to-string x) "\x1B;[0m")))
-(define red (ansi-color 31))
-(define green (ansi-color 32))
-(define yellow (ansi-color 33))
-(define bold (ansi-color 1))
-(define underline (ansi-color 4))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -400,40 +387,38 @@
       (test-print-name info indent)))
     (let ((expect-val
            (guard
-            (exn
-             (else
-               (warning "bad expect value")
-               (print-exception exn (current-error-port))
-               #f))
-            (expect))))
+               (exn
+                (else
+                 (warning "bad expect value")
+                 (print-exception exn (current-error-port))
+                 #f))
+             (expect))))
       (guard
-       (exn
-        (else
-         ((current-test-handler)
-          (if (assq-ref info 'expect-error) 'PASS 'ERROR)
-          (append `((exception . ,exn)) info))))
-       (let ((res (expr)))
-         (let ((status
-                (if (and (not (assq-ref info 'expect-error))
-                         (if (assq-ref info 'assertion)
-                             res
-                             ((current-test-comparator) expect-val res)))
-                    'PASS
-                    'FAIL))
-               (info `((result . ,res) (expected . ,expect-val) ,@info)))
-           ((current-test-handler) status info)))))))
+          (exn
+           (else
+            ((current-test-handler)
+             (if (assq-ref info 'expect-error) 'PASS 'ERROR)
+             (append `((exception . ,exn)) info))))
+        (let ((res (expr)))
+          (let ((status
+                 (if (and (not (assq-ref info 'expect-error))
+                          (if (assq-ref info 'assertion)
+                              res
+                              ((current-test-comparator) expect-val res)))
+                     'PASS
+                     'FAIL))
+                (info `((result . ,res) (expected . ,expect-val) ,@info)))
+            ((current-test-handler) status info)))))))
 
 (define (test-default-skipper info)
   ((current-test-handler) 'SKIP info))
 
 (define (test-status-color status)
-  (if (test-ansi?)
-      (case status
-        ((ERROR) (lambda (x) (underline (red x))))
-        ((FAIL) red)
-        ((SKIP) yellow)
-        (else (lambda (x) x)))
-      (lambda (x) x)))
+  (case status
+    ((ERROR) (lambda (x) (underline (red x))))
+    ((FAIL) red)
+    ((SKIP) yellow)
+    (else (lambda (x) x))))
 
 (define (test-status-message status)
   ((test-status-color status) status))
@@ -520,9 +505,9 @@
                   (make-string (if (pair? indent) (car indent) 0) #\space)
                   "-- " str " "))
          (len (string-length header)))
-      (display (if (test-ansi?) (bold header) header))
-      (display (make-string (max 0 (- (current-column-width) len)) #\-))
-      (newline)))
+    (display (bold header))
+    (display (make-string (max 0 (- (current-column-width) len)) #\-))
+    (newline)))
 
 (define (test-default-handler status info)
   (define indent
@@ -607,7 +592,7 @@
        ((positive? count)
         (display indent)
         (display
-         ((if (and (test-ansi?) (= pass count)) green (lambda (x) x))
+         ((if (= pass count) green (lambda (x) x))
           (string-append
            (number->string pass) " out of " (number->string count)
            (percent pass count))))
@@ -623,14 +608,14 @@
       (cond ((positive? fail)
              (display indent)
              (display
-              ((if (test-ansi?) red (lambda (x) x))
+              (red
                (string-append
                 (number->string fail) (plural " failure" fail)
                 (percent fail count) ".\n")))))
       (cond ((positive? err)
              (display indent)
              (display
-              ((if (test-ansi?) (lambda (x) (underline (red x))) (lambda (x) x))
+              ((lambda (x) (underline (red x)))
                (string-append
                 (number->string err) (plural " error" err)
                 (percent err count) ".\n")))))
@@ -639,7 +624,7 @@
         (for-each
          (lambda (failure)
            (display indent)
-           (display ((if (test-ansi?) red (lambda (x) x))
+           (display (red
                      (string-append (display-to-string (cadr failure)) ": ")))
            (display (test-get-name! (car (cddr failure))))
            (newline)
@@ -649,7 +634,7 @@
        ((positive? subgroups-count)
         (display indent)
         (display
-         ((if (and (test-ansi?) (= subgroups-pass subgroups-count))
+         ((if (= subgroups-pass subgroups-count)
               green (lambda (x) x))
           (string-append
            (number->string subgroups-pass) " out of "
@@ -777,21 +762,21 @@
 
 (define (getenv-filter-list proc name . o)
   (cond
-    ((get-environment-variable name)
-     => (lambda (s)
-          (guard
-           (exn
-            (else
-             (warning
-              (string-append "invalid filter '" s
-                             "' from environment variable: " name))
-             (print-exception exn (current-error-port))
-             '()))
+   ((get-environment-variable name)
+    => (lambda (s)
+         (guard
+             (exn
+              (else
+               (warning
+                (string-append "invalid filter '" s
+                               "' from environment variable: " name))
+               (print-exception exn (current-error-port))
+               '()))
            (let ((f (proc s)))
              (list (if (and (pair? o) (car o))
                        (lambda (x) (not (f x)))
                        f))))))
-    (else '())))
+   (else '())))
 
 (define current-test-filters
   (make-parameter
@@ -809,13 +794,3 @@
               => string->number)
              (else #f))
        78)))
-
-(define test-ansi?
-  (make-parameter
-   (cond
-    ((get-environment-variable "TEST_USE_ANSI")
-     => (lambda (s) (not (equal? s "0"))))
-    (else
-     (member (get-environment-variable "TERM")
-             '("xterm" "xterm-color" "xterm-256color" "rxvt" "kterm"
-               "linux" "screen" "screen-256color" "vt100"))))))
