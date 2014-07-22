@@ -284,21 +284,24 @@
          (equal? "undefined variable" (exception-message exn))
          (pair? (exception-irritants exn)))
     (let ((name (car (exception-irritants exn))))
-      (display "Searching for modules exporting " out)
-      (display name out)
-      (display " ...\n" out)
-      (let ((mods (and (identifier? name)
-                       (modules-exporting-identifier name))))
-        (cond
-         ((pair? mods)
-          (display name out)
-          (display " is exported by:\n")
-          (for-each
-           (lambda (m)
-             (display "  " out) (write m out) (newline out))
-           (sort (map car mods)
-                 (lambda (a b)
-                   (string<? (write-to-string a) (write-to-string b))))))))))))
+      (cond
+       ((identifier? name)
+        (display "Searching for modules exporting " out)
+        (display name out)
+        (display " ...\n" out)
+        (let ((mods (modules-exporting-identifier name)))
+          (cond
+           ((pair? mods)
+            (display name out)
+            (display " is exported by:\n")
+            (for-each
+             (lambda (m)
+               (display "  " out) (write m out) (newline out))
+             (sort (map car mods)
+                   (lambda (a b)
+                     (string<? (write-to-string a) (write-to-string b))))))
+           (else
+            (display "... none found.\n"))))))))))
 
 (define (repl/eval rp expr-list)
   (let ((out (repl-out rp)))
