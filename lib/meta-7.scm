@@ -6,6 +6,7 @@
 ;; modules
 
 (define *this-module* '())
+(define *this-path* '())
 
 (define (make-module exports env meta) (vector exports env meta #f))
 (define (%module-exports mod) (vector-ref mod 0))
@@ -265,6 +266,10 @@
               (warn "suspicious use of define in library declarations - did you forget to wrap it in begin?" x)))
         (cdr expr))
        ;; Generate the library wrapper.
+       (set! *this-path*
+             (cons (string-concatenate
+                    (module-name->strings (reverse (cdr (reverse name))) '()))
+                   *this-path*))
        `(,_let ((,tmp ,this-module))
           (,_define (rewrite-export x)
             (,_if (,_pair? x)
@@ -296,10 +301,44 @@
                         (,_make-module (extract-exports)
                                        #f
                                        (,_reverse ,this-module)))
-          (,_set! ,this-module ,tmp))))))
+          (,_set! ,this-module ,tmp)
+          (,(rename 'pop-this-path)))))))
 
 (define-syntax define-library define-library-transformer)
 (define-syntax module define-library-transformer)
+
+(define-syntax pop-this-path
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (if (pair? *this-path*)
+         (set! *this-path* (cdr *this-path*)))
+     #f)))
+
+(define-syntax include-library-declarations
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let lp1 ((ls (cdr expr)) (res '()))
+       (cond
+        ((pair? ls)
+         (let* ((file (car ls))
+                (rel-path (if (pair? *this-path*)
+                              (string-append (car *this-path*) "/" file)
+                              file)))
+           (cond
+            ((find-module-file rel-path)
+             => (lambda (path)
+                  (call-with-input-file path
+                    (lambda (in)
+                      (let lp2 ((res res))
+                        (let ((x (read in)))
+                          (if (eof-object? x)
+                              (lp1 (cdr ls) res)
+                              (lp2 (cons x res)))))))))
+            (else
+             (error "couldn't find include-library-declarations file" file)))))
+        (else
+         `(,(rename 'meta-begin)
+           ,@(reverse res))))))))
 
 (define-syntax define-meta-primitive
   (er-macro-transformer
