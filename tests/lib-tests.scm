@@ -26,6 +26,7 @@
 (load "tests/sha-tests.scm")
 ;; (load "tests/rsa-tests.scm")
 (load "tests/tar-tests.scm")
+(load "tests/term-ansi-tests.scm")
 (cond-expand (full-unicode (load "tests/unicode-tests.scm")) (else #f))
 
 (cond-expand
