@@ -88,6 +88,70 @@
 ;;>
 ;;/ If ANSI escapes are not enabled, return \var{str}.
 
+;;> Returns the 256-color ANSI escape string for text color in the
+;;> given red, green, blue values, where each is in the range [0, 5].
+
+(define (rgb-code red green blue)
+  (if (not (and (<= 0 red 5) (<= 0 green 5) (<= 0 blue 5)))
+      (error "invalid rgb, must be in the range 0-5"))
+  (string-append
+   "\x1B[38;5;" (number->string (+ (* 36 red) (* 6 green) blue 16)) "m"))
+
+;;> Returns the 256-color ANSI escape string for background color in
+;;> the given red, green, blue values, where each is in the range [0,
+;;> 5].
+
+(define (rgb-background-code red green blue)
+  (if (not (and (<= 0 red 5) (<= 0 green 5) (<= 0 blue 5)))
+      (error "invalid rgb, must be in the range 0-5"))
+  (string-append
+   "\x1B[48;5;" (number->string (+ (* 36 red) (* 6 green) blue 16)) "m"))
+
+;;> Returns a procedure which takes a single argument, a string, and
+;;> if ANSI escapes are enabled returns the same string with the given
+;;> text color.  The caller is resonsible for veriyfing if the
+;;> terminal supports 256 colors.
+
+(define (rgb red green blue)
+  (let ((code (rgb-code red green blue)))
+    (lambda (str)
+      (if (ansi-escapes-enabled?)
+          (string-append code str "\x1B;[39m")
+          str))))
+
+;;> Returns a procedure which takes a single argument, a string, and
+;;> if ANSI escapes are enabled returns the same string with the given
+;;> background color.
+
+(define (rgb-background red green blue)
+  (let ((code (rgb-background-code red green blue)))
+    (lambda (str)
+      (if (ansi-escapes-enabled?)
+          (string-append code str "\x1B;[49m")
+          str))))
+
+;;> Returns a procedure which takes a single argument, a string, and
+;;> if ANSI escapes are enabled returns the same string with text in
+;;> the given grey color, where \var{scale} is in the range [0, 23].
+
+(define (grey scale)
+  (let ((code (string-append "\x1B[38;5;" (number->string (+ scale 232)) "m")))
+    (lambda (str)
+      (if (ansi-escapes-enabled?)
+          (string-append code str "\x1B;[39m")
+          str))))
+
+;;> Returns a procedure which takes a single argument, a string, and
+;;> if ANSI escapes are enabled returns the same string with the given
+;;> grey color background, where \var{scale} is in the range [0, 23].
+
+(define (grey-background scale)
+  (let ((code (string-append "\x1B[48;5;" (number->string (+ scale 232)) "m")))
+    (lambda (str)
+      (if (ansi-escapes-enabled?)
+          (string-append code str "\x1B;[49m")
+          str))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;> If ANSI escapes are enabled, return a string consisting of the
