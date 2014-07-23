@@ -400,7 +400,8 @@
                  'history: (repl-history rp)
                  'complete?: buffer-complete-sexp?
                  'completion: (make-sexp-buffer-completer)
-                 'catch-control-c?: #t)))))
+                 'catch-control-c?: #t
+                 'fresh-line: " \x1B;[33m\\\x1B;[0m")))))
 
 (define repl-commands
   `((import . ,repl/import)
