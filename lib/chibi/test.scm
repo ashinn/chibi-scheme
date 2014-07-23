@@ -322,9 +322,9 @@
    (assq-ref info 'gen-name)
    (let ((name
           (cond
-           ((assq-ref info 'source)
+           ((assq 'source info)
             => (lambda (src)
-                 (truncate-source src (- (current-column-width) 12))))
+                 (truncate-source (cdr src) (- (current-column-width) 12))))
            ((current-test-group)
             => (lambda (g)
                  (display "no source in: " (current-error-port))
