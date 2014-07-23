@@ -7,6 +7,8 @@
    bold 
    underline
    negative
+   rgb rgb-background grey grey-background
+   rgb-code rgb-background-code
    ansi-escapes-enabled?)
   (import (scheme base)
           (scheme write)
