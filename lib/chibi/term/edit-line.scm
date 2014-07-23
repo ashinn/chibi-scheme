@@ -10,7 +10,8 @@
   (write-char (integer->char 27) out)
   (write-char #\[ out)
   (if arg (display arg out))
-  (write-char ch out))
+  (write-char ch out)
+  (flush-output out))
 
 ;; we use zero-based columns
 (define (terminal-goto-col out n)  (terminal-escape out #\G (+ n 1)))
@@ -18,6 +19,33 @@
 (define (terminal-down out n)      (terminal-escape out #\B n))
 (define (terminal-clear-below out) (terminal-escape out #\J #f))
 (define (terminal-clear-right out) (terminal-escape out #\K #f))
+
+(define (read-numeric-sequence in)
+  (let lp ((c (peek-char in)) (acc '()))
+    (case c
+      ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
+       (read-char in)  ;; skip peeked char
+       (lp (peek-char in) (cons c acc)))
+      (else
+       (string->number (apply string (reverse acc)))))))
+
+(define (terminal-current-position in out)
+  (with-stty '(not icanon isig echo)
+    (lambda ()
+      (terminal-escape out #\n 6)
+      (read-char in)
+      (and (eqv? #\[ (read-char in))
+           (let ((y (read-numeric-sequence in)))
+             (and y
+                  (eqv? #\; (read-char in))
+                  (let ((x (read-numeric-sequence in)))
+                    (and x
+                         (eqv? #\R (read-char in))
+                         (list (- y 1) (- x 1))))))))))
+
+(define (at-first-column? in out)
+  (let ((pos (terminal-current-position in out)))
+    (and pos (zero? (cadr pos)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; history
@@ -755,6 +783,7 @@
          (completion (get-key args 'completion: #f))
          (terminal-width (get-key args 'terminal-width:))
          (single-line? (get-key args 'single-line?: #f))
+         (fresh-line (get-key args 'fresh-line: #f))
          (no-stty? (get-key args 'no-stty?: #f))
          (keymap0 (get-key args 'keymap:
                            (if (get-key args 'catch-control-c?: #f)
@@ -769,6 +798,11 @@
              (prompt (if (procedure? prompter) (prompter) prompter))
              (done? #f)
              (return (lambda o (set! done? (if (pair? o) (car o) #t)))))
+        ;; Maybe start at a fresh line.
+        (cond
+         ((and fresh-line (not (at-first-column? in out)))
+          (if (string? fresh-line) (display fresh-line out))
+          (newline out)))
         ;; Clear buffer and reset prompt.
         (buffer-refresh?-set! buf #t)
         (buffer-min-set! buf 0)
