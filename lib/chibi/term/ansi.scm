@@ -6,189 +6,423 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Code to bracket string str with ANSI escape codes to set the select
-;; graphic rendition (SGR) parameters first to start-code and then to
-;; end-code. This is a macro rather than, say, a procedure returning a
-;; procedure to allow us to write the procedure definitions below such
-;; that they are recognised by scribble.
+(define (make-simple-escape-procedure parameter)
+  (let ((code (string-append "\x1B;[" (number->string parameter) "m")))
+    (lambda () code)))
 
-(define-syntax bracket-with-sgr-parameters-body
-  (syntax-rules ()
-    ((bracket-with-sgr-parameters-body start-code str end-code)
-     (begin
-       (if (not (string? str))
-         (error "argument must be a string" str))
-       (if (ansi-escapes-enabled?)
-         (string-append "\x1B;[" (number->string start-code) "m"
-                        str
-                        "\x1B;[" (number->string end-code) "m")
-         str)))))
+(define (make-wrap-procedure start-escape end-escape)
+  (lambda (str)
+    (if (not (string? str))
+      (error "argument must be a string" str))
+    (if (ansi-escapes-enabled?)
+      (string-append start-escape str end-escape)
+      str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (black str)
-  (bracket-with-sgr-parameters-body 30 str 39))
+;; Some definitions are wrapped in begin in order to avoid Scribble
+;; generating duplicate signatures.
 
-(define (red str)
-  (bracket-with-sgr-parameters-body 31 str 39))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (green str)
-  (bracket-with-sgr-parameters-body 32 str 39))
+;;> \procedure{(black-escape)}
+;;> \procedure{(red-escape)}
+;;> \procedure{(green-escape)}
+;;> \procedure{(yellow-escape)}
+;;> \procedure{(blue-escape)}
+;;> \procedure{(magenta-escape)}
+;;> \procedure{(cyan-escape)}
+;;> \procedure{(white-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select the
+;;> specified text color.
 
-(define (yellow str)
-  (bracket-with-sgr-parameters-body 33 str 39))
+(define black-escape
+  (make-simple-escape-procedure 30))
+(define red-escape
+  (make-simple-escape-procedure 31))
+(define green-escape
+  (make-simple-escape-procedure 32))
+(define yellow-escape
+  (make-simple-escape-procedure 33))
+(define blue-escape
+  (make-simple-escape-procedure 34))
+(define magenta-escape
+  (make-simple-escape-procedure 35))
+(define cyan-escape
+  (make-simple-escape-procedure 36))
+(define white-escape
+  (make-simple-escape-procedure 37))
 
-(define (blue str)
-  (bracket-with-sgr-parameters-body 34 str 39))
+;;> Return a string consisting of an ANSI escape code to select the
+;;> text color specified by the \var{red-level}, \var{green-level},
+;;> and \var{blue-level} arguments, each of which must be an exact
+;;> integer in the range [0, 5].
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
 
-(define (magenta str)
-  (bracket-with-sgr-parameters-body 35 str 39))
+(define (rgb-escape red-level green-level blue-level)
+  (when (not (and (exact-integer? red-level) (<= 0 red-level 5)))
+    (error "invalid red-level value" red-level))
+  (when (not (and (exact-integer? green-level) (<= 0 green-level 5)))
+    (error "invalid green-level value" green-level))
+  (when (not (and (exact-integer? blue-level) (<= 0 blue-level 5)))
+    (error "invalid blue-level value" blue-level))
+  (string-append
+   "\x1B[38;5;"
+   (number->string (+ (* 36 red-level) (* 6 green-level) blue-level 16))
+   "m"))
 
-(define (cyan str)
-  (bracket-with-sgr-parameters-body 36 str 39))
+;;> Return a string consisting of an ANSI escape code to select the
+;;> text color specified by the \var{gray-level} argument, which must
+;;> be an exact integer in the range [0, 23].
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
 
-(define (white str)
-  (bracket-with-sgr-parameters-body 37 str 39))
+(define (gray-escape gray-level)
+  (when (not (and (exact-integer? gray-level) (<= 0 gray-level 23)))
+    (error "invalid gray-level value" gray-level))
+  (string-append "\x1B[38;5;"
+                 (number->string (+ gray-level 232))
+                 "m"))
 
+;;> \procedure{(reset-color-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select the
+;;> default text color.
+
+(define reset-color-escape
+  (make-simple-escape-procedure 39))
+
+;;> \procedure{(black str)}
+;;> \procedure{(red str)}
+;;> \procedure{(green str)}
+;;> \procedure{(yellow str)}
+;;> \procedure{(blue str)}
+;;> \procedure{(magenta str)}
+;;> \procedure{(cyan str)}
+;;> \procedure{(white str)}
+;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
 ;;> string \var{str} with a prefix that selects specified text color
 ;;> and a suffix that selects the default text color.
 ;;>
-;;/ If ANSI escapes are not enabled, return \var{str}.
+;;> If ANSI escapes are not enabled, return \var{str}.
+
+(define black
+  (make-wrap-procedure (black-escape)
+                       (reset-color-escape)))
+(define red
+  (make-wrap-procedure (red-escape)
+                       (reset-color-escape)))
+(define green
+  (make-wrap-procedure (green-escape)
+                       (reset-color-escape)))
+(define yellow
+  (make-wrap-procedure (yellow-escape)
+                       (reset-color-escape)))
+(define blue
+  (make-wrap-procedure (blue-escape)
+                       (reset-color-escape)))
+(define magenta
+  (make-wrap-procedure (magenta-escape)
+                       (reset-color-escape)))
+(define cyan
+  (make-wrap-procedure (cyan-escape)
+                       (reset-color-escape)))
+(define white
+  (make-wrap-procedure (white-escape)
+                       (reset-color-escape)))
+
+;;> Returns a procedure which takes a single argument, a string, and
+;;> which when called behaves as follows.
+;;>
+;;> If ANSI escapes are enabled, the procedure returns a string
+;;> consisting of its argument with a prefix that selects specified
+;;> text color (obtained by calling the \scheme{rgb-escape} procedure
+;;> with the values of the \var{red-level}, \var{green-level}, and
+;;> \var{blue-level} arguments) and a suffix that selects the default
+;;> text color.
+;;>
+;;> If ANSI escapes are not enabled, the procedure returns its argument.
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
+
+(define (rgb red-level green-level blue-level)
+  (make-wrap-procedure (rgb-escape red-level green-level blue-level)
+                       (reset-color-escape)))
+
+;;> Returns a procedure which takes a single argument, a string, and
+;;> which when called behaves as follows.
+;;>
+;;> If ANSI escapes are enabled, the procedure returns a string
+;;> consisting of its argument with a prefix that selects specified
+;;> text color (obtained by calling the \scheme{gray-escape} procedure
+;;> with the values of the \var{gray-level} argument) and a suffix
+;;> that selects the default text color.
+;;>
+;;> If ANSI escapes are not enabled, the procedure returns its argument.
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
+
+(define (gray gray-level)
+  (make-wrap-procedure (gray-escape gray-level)
+                       (reset-color-escape)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (background-black str)
-  (bracket-with-sgr-parameters-body 40 str 49))
+;;> \procedure{(black-background-escape)}
+;;> \procedure{(red-background-escape)}
+;;> \procedure{(green-background-escape)}
+;;> \procedure{(yellow-background-escape)}
+;;> \procedure{(blue-background-escape)}
+;;> \procedure{(magenta-background-escape)}
+;;> \procedure{(cyan-background-escape)}
+;;> \procedure{(white-background-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select the
+;;> specified background color.
 
-(define (background-red str)
-  (bracket-with-sgr-parameters-body 41 str 49))
+(define black-background-escape
+  (make-simple-escape-procedure 40))
+(define red-background-escape
+  (make-simple-escape-procedure 41))
+(define green-background-escape
+  (make-simple-escape-procedure 42))
+(define yellow-background-escape
+  (make-simple-escape-procedure 43))
+(define blue-background-escape
+  (make-simple-escape-procedure 44))
+(define magenta-background-escape
+  (make-simple-escape-procedure 45))
+(define cyan-background-escape
+  (make-simple-escape-procedure 46))
+(define white-background-escape
+  (make-simple-escape-procedure 47))
 
-(define (background-green str)
-  (bracket-with-sgr-parameters-body 42 str 49))
+;;> Return a string consisting of an ANSI escape code to select the
+;;> background color specified by the \var{red-level}, \var{green-level},
+;;> and \var{blue-level} arguments, each of which must be an exact
+;;> integer in the range [0, 5].
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
 
-(define (background-yellow str)
-  (bracket-with-sgr-parameters-body 43 str 49))
+(define (rgb-background-escape red-level green-level blue-level)
+  (when (not (and (exact-integer? red-level) (<= 0 red-level 5)))
+    (error "invalid red-level value" red-level))
+  (when (not (and (exact-integer? green-level) (<= 0 green-level 5)))
+    (error "invalid green-level value" green-level))
+  (when (not (and (exact-integer? blue-level) (<= 0 blue-level 5)))
+    (error "invalid blue-level value" blue-level))
+  (string-append
+   "\x1B[48;5;"
+   (number->string (+ (* 36 red-level) (* 6 green-level) blue-level 16))
+   "m"))
 
-(define (background-blue str)
-  (bracket-with-sgr-parameters-body 44 str 49))
+;;> Return a string consisting of an ANSI escape code to select the
+;;> background color specified by the \var{gray-level} argument, which
+;;> must be an exact integer in the range [0, 23].
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
 
-(define (background-magenta str)
-  (bracket-with-sgr-parameters-body 45 str 49))
+(define (gray-background-escape gray-level)
+  (when (not (and (exact-integer? gray-level) (<= 0 gray-level 23)))
+    (error "invalid gray-level value" gray-level))
+  (string-append "\x1B[48;5;"
+                 (number->string (+ gray-level 232))
+                 "m"))
 
-(define (background-cyan str)
-  (bracket-with-sgr-parameters-body 46 str 49))
+;;> \procedure{(reset-background-color-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select the
+;;> default background color.
 
-(define (background-white str)
-  (bracket-with-sgr-parameters-body 47 str 49))
+(define reset-background-color-escape
+  (make-simple-escape-procedure 49))
 
+;;> \procedure{(black-background str)}
+;;> \procedure{(red-background str)}
+;;> \procedure{(green-background str)}
+;;> \procedure{(yellow-background str)}
+;;> \procedure{(blue-background str)}
+;;> \procedure{(magenta-background str)}
+;;> \procedure{(cyan-background str)}
+;;> \procedure{(white-background str)}
+;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
 ;;> string \var{str} with a prefix that selects specified background
 ;;> color and a suffix that selects the default background color.
 ;;>
-;;/ If ANSI escapes are not enabled, return \var{str}.
+;;> If ANSI escapes are not enabled, return \var{str}.
 
-;;> Returns the 256-color ANSI escape string for text color in the
-;;> given red, green, blue values, where each is in the range [0, 5].
-
-(define (rgb-code red green blue)
-  (if (not (and (<= 0 red 5) (<= 0 green 5) (<= 0 blue 5)))
-      (error "invalid rgb, must be in the range 0-5"))
-  (string-append
-   "\x1B[38;5;" (number->string (+ (* 36 red) (* 6 green) blue 16)) "m"))
-
-;;> Returns the 256-color ANSI escape string for background color in
-;;> the given red, green, blue values, where each is in the range [0,
-;;> 5].
-
-(define (rgb-background-code red green blue)
-  (if (not (and (<= 0 red 5) (<= 0 green 5) (<= 0 blue 5)))
-      (error "invalid rgb, must be in the range 0-5"))
-  (string-append
-   "\x1B[48;5;" (number->string (+ (* 36 red) (* 6 green) blue 16)) "m"))
-
-;;> Returns a procedure which takes a single argument, a string, and
-;;> if ANSI escapes are enabled returns the same string with the given
-;;> text color.  The caller is resonsible for veriyfing if the
-;;> terminal supports 256 colors.
-
-(define (rgb red green blue)
-  (let ((code (rgb-code red green blue)))
-    (lambda (str)
-      (if (ansi-escapes-enabled?)
-          (string-append code str "\x1B;[39m")
-          str))))
+(define black-background
+  (make-wrap-procedure (black-background-escape)
+                       (reset-background-color-escape)))
+(define red-background
+  (make-wrap-procedure (red-background-escape)
+                       (reset-background-color-escape)))
+(define green-background
+  (make-wrap-procedure (green-background-escape)
+                       (reset-background-color-escape)))
+(define yellow-background
+  (make-wrap-procedure (yellow-background-escape)
+                       (reset-background-color-escape)))
+(define blue-background
+  (make-wrap-procedure (blue-background-escape)
+                       (reset-background-color-escape)))
+(define magenta-background
+  (make-wrap-procedure (magenta-background-escape)
+                       (reset-background-color-escape)))
+(define cyan-background
+  (make-wrap-procedure (cyan-background-escape)
+                       (reset-background-color-escape)))
+(define white-background
+  (make-wrap-procedure (white-background-escape)
+                       (reset-background-color-escape)))
 
 ;;> Returns a procedure which takes a single argument, a string, and
-;;> if ANSI escapes are enabled returns the same string with the given
-;;> background color.
+;;> which when called behaves as follows.
+;;>
+;;> If ANSI escapes are enabled, the procedure returns a string
+;;> consisting of its argument with a prefix that selects specified
+;;> background color (obtained by calling the \scheme{rgb-background-escape}
+;;> procedure with the values of the \var{red-level}, \var{green-level},
+;;> and \var{blue-level} arguments) and a suffix that selects the
+;;> default background color.
+;;>
+;;> If ANSI escapes are not enabled, the procedure returns its argument.
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
 
-(define (rgb-background red green blue)
-  (let ((code (rgb-background-code red green blue)))
-    (lambda (str)
-      (if (ansi-escapes-enabled?)
-          (string-append code str "\x1B;[49m")
-          str))))
-
-;;> Returns a procedure which takes a single argument, a string, and
-;;> if ANSI escapes are enabled returns the same string with text in
-;;> the given grey color, where \var{scale} is in the range [0, 23].
-
-(define (grey scale)
-  (let ((code (string-append "\x1B[38;5;" (number->string (+ scale 232)) "m")))
-    (lambda (str)
-      (if (ansi-escapes-enabled?)
-          (string-append code str "\x1B;[39m")
-          str))))
+(define (rgb-background red-level green-level blue-level)
+  (make-wrap-procedure (rgb-background-escape red-level green-level blue-level)
+                       (reset-background-color-escape)))
 
 ;;> Returns a procedure which takes a single argument, a string, and
-;;> if ANSI escapes are enabled returns the same string with the given
-;;> grey color background, where \var{scale} is in the range [0, 23].
+;;> which when called behaves as follows.
+;;>
+;;> If ANSI escapes are enabled, the procedure returns a string
+;;> consisting of its argument with a prefix that selects specified
+;;> background color (obtained by calling the \scheme{gray-background-escape}
+;;> procedure with the values of the \var{gray-level} argument) and a
+;;> suffix that selects the default background color.
+;;>
+;;> If ANSI escapes are not enabled, the procedure returns its argument.
+;;>
+;;> The caller is resonsible for verifying that the terminal supports
+;;> 256 colors.
 
-(define (grey-background scale)
-  (let ((code (string-append "\x1B[48;5;" (number->string (+ scale 232)) "m")))
-    (lambda (str)
-      (if (ansi-escapes-enabled?)
-          (string-append code str "\x1B;[49m")
-          str))))
+(define (gray-background gray-level)
+  (make-wrap-procedure (gray-background-escape gray-level)
+                       (reset-background-color-escape)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;> \procedure{(bold-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select bold
+;;> style.
+
+(define bold-escape
+  (make-simple-escape-procedure 1))
+
+;;> \procedure{(reset-bold-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select non-bold
+;;> style.
+
+(define reset-bold-escape
+  (make-simple-escape-procedure 22))
+
+;;> \procedure{(bold str)}
+;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
-;;> string \var{str} with a prefix that selects bold style
-;;> and a suffix that selects non-bold style.
+;;> string \var{str} with a prefix that selects bold style and a suffix
+;;> that selects non-bold style.
 ;;>
 ;;> If ANSI escapes are not enabled, return \var{str}.
 
-(define (bold str)
-  (bracket-with-sgr-parameters-body 1 str 22))
+(define bold (make-wrap-procedure (bold-escape)
+                                  (reset-bold-escape)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;> \procedure{(underline-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select
+;;> underlined style.
+
+(define underline-escape
+  (make-simple-escape-procedure 4))
+
+;;> \procedure{(reset-underline-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select
+;;> non-underlined style.
+
+(define reset-underline-escape
+  (make-simple-escape-procedure 24))
+
+;;> \procedure{(underline str)}
+;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
-;;> string \var{str} with a prefix that selects underlined
-;;> style and a suffix that selects non-underlined style.
+;;> string \var{str} with a prefix that selects underlined style and
+;;> a suffix that selects non-underlined style.
 ;;>
 ;;> If ANSI escapes are not enabled, return \var{str}.
 
-(define (underline str)
-  (bracket-with-sgr-parameters-body 4 str 24))
+(define underline (make-wrap-procedure (underline-escape)
+                                       (reset-underline-escape)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;> \procedure{(negative-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select negative
+;;> style (text in the background color and background in the text
+;;> color).
+
+(define negative-escape
+  (make-simple-escape-procedure 7))
+
+;;> \procedure{(reset-negative-escape)}
+;;>
+;;> Return a string consisting of an ANSI escape code to select positive
+;;> style (text in the text color and background in the background
+;;> color).
+
+(define reset-negative-escape
+  (make-simple-escape-procedure 27))
+
+;;> \procedure{(negative str)}
+;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
-;;> string \var{str} with a prefix that selects negative style (text in the background color and background in the text color)
-;;> and a suffix that selects positive style.
+;;> string \var{str} with a prefix that selects negative style (text
+;;> in the background color and background in the text color) and a
+;;> suffix that selects positive style (text in the text color and
+;;> background in the background color).
 ;;>
 ;;> If ANSI escapes are not enabled, return \var{str}.
 
-(define (negative str)
-  (bracket-with-sgr-parameters-body 7 str 27))
+(define negative (make-wrap-procedure (negative-escape)
+                                      (reset-negative-escape)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;> A parameter object that determines whether ANSI escapes are enabled
-;;> in the preceding procedures. They are disabled if \scheme{(ansi-escapes-enabled?)}
-;;> returns \scheme{#f}, and otherwise they are enabled.
+;;> in some of the preceding procedures. They are disabled if
+;;> \scheme{(ansi-escapes-enabled?)} returns \scheme{#f}, and otherwise
+;;> they are enabled.
 ;;>
-;;> The initial value returned by \scheme{(ansi-escapes-enabled?)} is determined by the
-;;> environment.
+;;> The initial value returned by \scheme{(ansi-escapes-enabled?)} is
+;;> determined by the environment.
 ;;>
 ;;> If the environment variable \scheme{ANSI_ESCAPES_ENABLED} is set,
 ;;> its value determines the initial value returned by
@@ -199,8 +433,8 @@
 ;;> If the environment variable \scheme{ANSI_ESCAPES_ENABLED} is not
 ;;> set, but the environment variable \scheme{TERM} is set, the value
 ;;> of the latter determines the initial value returned by
-;;> \scheme{(ansi-escapes-enabled?)}. If the value of \scheme{TERM} is
-;;> \scheme{"xterm"}, \scheme{"xterm-color"}, \scheme{"xterm-256color"},
+;;> \scheme{(ansi-escapes-enabled?)}. If the value of \scheme{TERM}
+;;> is \scheme{"xterm"}, \scheme{"xterm-color"}, \scheme{"xterm-256color"},
 ;;> \scheme{"rxvt"}, \scheme{"kterm"}, \scheme{"linux"}, \scheme{"screen"},
 ;;> \scheme{"screen-256color"}, or \scheme{"vt100"}, the initial value
 ;;> is \scheme{#t}, otherwise the initial value is \scheme{#f}.

@@ -1,14 +1,33 @@
 (define-library (chibi term ansi)
   (export
-   black red yellow green 
+
+   black-escape red-escape yellow-escape green-escape
+   blue-escape cyan-escape magenta-escape white-escape
+   rgb-escape 
+   gray-escape
+   reset-color-escape
+
+   black-background-escape red-background-escape
+   yellow-background-escape green-background-escape
+   blue-background-escape cyan-background-escape
+   magenta-background-escape white-background-escape
+   rgb-background-escape
+   gray-background-escape
+   reset-background-color-escape
+
+   black red yellow green
    blue cyan magenta white
-   background-black background-red background-yellow background-green 
-   background-blue background-cyan background-magenta background-white
-   bold 
+   black-background red-background yellow-background green-background
+   blue-background cyan-background magenta-background white-background
+   bold
    underline
    negative
-   rgb rgb-background grey grey-background
-   rgb-code rgb-background-code
+   rgb rgb-background
+   gray gray-background
+   bold-escape reset-bold-escape
+   underline-escape reset-underline-escape
+   negative-escape reset-negative-escape
+
    ansi-escapes-enabled?)
   (import (scheme base)
           (scheme write)
