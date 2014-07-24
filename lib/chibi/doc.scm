@@ -614,7 +614,7 @@ div#footer {padding-bottom: 50px}
                              ;; (name value line)
                              `(,(car x) ,(cadr x) ,line))))
                     all-defs)))
-        (let lp ((lines '()) (cur '()) (res '()) (last-line 0))
+        (let lp ((lines '()) (cur '()) (res '()) (ids '()) (last-line 0))
           (define (collect)
             (if (pair? lines)
                 (append
@@ -624,13 +624,22 @@ div#footer {padding-bottom: 50px}
                     scribble-parse))
                  cur)
                 cur))
+          (define (get-ids sxml)
+            (match sxml
+              (((or 'procedure 'macro) str)
+               (list
+                (string->symbol
+                 (string-trim (car (string-split str))
+                              (lambda (ch) (or (eq? ch #\() (eq? ch #\))))))))
+              ((x ...) (append-map get-ids x))
+              (else '())))
           (skip-horizontal-whitespace in)
           (cond
            ((eof-object? (peek-char in))
             (append (collect) res))
            ((eqv? #\newline (peek-char in))
             (read-char in)
-            (lp lines cur res last-line))
+            (lp lines cur res ids last-line))
            ((eqv? #\; (peek-char in))
             (read-char in)
             (cond
@@ -638,20 +647,22 @@ div#footer {padding-bottom: 50px}
                    (begin (read-char in) (eqv? #\> (peek-char in))))
               (read-char in)
               (if (eqv? #\space (peek-char in)) (read-char in))
-              (lp (cons (read-line in) lines) cur res last-line))
+              (lp (cons (read-line in) lines) cur res ids last-line))
              (else
               (let lp ()
                 (cond ((eqv? #\; (peek-char in))
                        (read-char in)
                        (lp))))
-              (let ((line (read-line in))
-                    (cur (collect)))
+              (let* ((line (read-line in))
+                     (cur (collect))
+                     (ids (append (get-ids cur) ids)))
                 ;; ";;/" attaches the docs to the preceding form
                 (if (equal? line "/")
-                    (lp '() '() (append cur res) last-line)
-                    (lp '() cur res last-line))))))
+                    (lp '() '() (append cur res) ids last-line)
+                    (lp '() cur res ids last-line))))))
            (else  ;; found a top-level expression
             (let* ((cur (collect))
+                   (ids (append (get-ids cur) ids))
                    (form (read in))
                    (line (port-line in))
                    ;; find all procedures defined by form
@@ -674,26 +685,30 @@ div#footer {padding-bottom: 50px}
                ((and strict?
                      (or (not (pair? sigs)) (not (assq (caar sigs) defs))))
                 ;; drop unrelated docs in strict mode
-                (lp '() '() res line))
+                (lp '() '() res ids line))
                ((and (eq? lang 'ffi) (pair? sigs))
-                (lp '() '() (append (insert-signature cur #f sigs) res) line))
+                (lp '() '() (append (insert-signature cur #f sigs) res)
+                    ids line))
                ((and (eq? lang 'scheme) (= 1 (length procs)))
                 (lp '() '() (append (insert-signature cur (caar procs) sigs)
                                     res)
-                    line))
+                    ids line))
                ((and (null? procs)
-                     (assq (match form
-                             (('define (name . x) . y) name)
-                             (((or 'define 'define-syntax) name . x) name)
-                             (((or 'define-c 'define-c-const) t (name . x) . y)
-                              name)
-                             (((or 'define-c 'define-c-const) t name . x)
-                              name)
-                             (else #f))
-                           all-defs))
-                (lp '() '() (append (insert-signature cur #f sigs) res) line))
+                     (let ((id (match form
+                               (('define (name . x) . y) name)
+                               (((or 'define 'define-syntax) name . x) name)
+                               (((or 'define-c 'define-c-const)
+                                 t (name . x) . y)
+                                name)
+                               (((or 'define-c 'define-c-const) t name . x)
+                                name)
+                               (else #f))))
+                       (and (not (memq id ids))
+                            (assq id all-defs))))
+                (lp '() '() (append (insert-signature cur #f sigs) res)
+                    ids line))
                (else
-                (lp '() '() (append cur res) line)))))))))))
+                (lp '() '() (append cur res) ids line)))))))))))
 
 ;; utility to get the source position of an object
 (define (object-source x)
