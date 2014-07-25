@@ -316,17 +316,17 @@ install: all
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/scheme/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/srfi/18 $(DESTDIR)$(BINMODDIR)/srfi/27 $(DESTDIR)$(BINMODDIR)/srfi/33 $(DESTDIR)$(BINMODDIR)/srfi/39 $(DESTDIR)$(BINMODDIR)/srfi/69 $(DESTDIR)$(BINMODDIR)/srfi/95 $(DESTDIR)$(BINMODDIR)/srfi/98
-	$(INSTALL) -m0644 $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
-	$(INSTALL) -m0644 $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
-	$(INSTALL) -m0644 $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
-	$(INSTALL) -m0644 lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
-	$(INSTALL) -m0644 lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
-	$(INSTALL) -m0644 lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
-	$(INSTALL) -m0644 lib/srfi/33/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/33
-	$(INSTALL) -m0644 lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
-	$(INSTALL) -m0644 lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
-	$(INSTALL) -m0644 lib/srfi/95/qsort$(SO) $(DESTDIR)$(BINMODDIR)/srfi/95
-	$(INSTALL) -m0644 lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
+	$(INSTALL) -m0755 $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
+	$(INSTALL) -m0755 $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
+	$(INSTALL) -m0755 $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
+	$(INSTALL) -m0755 lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
+	$(INSTALL) -m0755 lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
+	$(INSTALL) -m0755 lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
+	$(INSTALL) -m0755 lib/srfi/33/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/33
+	$(INSTALL) -m0755 lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
+	$(INSTALL) -m0755 lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
+	$(INSTALL) -m0755 lib/srfi/95/qsort$(SO) $(DESTDIR)$(BINMODDIR)/srfi/95
+	$(INSTALL) -m0755 lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
 	$(MKDIR) $(DESTDIR)$(INCDIR)
 	$(INSTALL) -m0644 $(INCLUDES) $(DESTDIR)$(INCDIR)/
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
