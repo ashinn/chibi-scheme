@@ -43,12 +43,18 @@
         (lp (cdr ls) (append (reverse (cdar ls)) res)))
        (else (lp (cdr ls) res))))))
 
-(define (module-includes mod)
+(define (module-extract-declaration-files mod decls)
   (let* ((mod (if (module? mod) mod (find-module mod)))
          (dir (module-dir mod)))
     (define (module-file f)
       (find-module-file (string-append dir f)))
-    (map module-file (reverse (module-metas mod '(include))))))
+    (map module-file (reverse (module-metas mod decls)))))
+
+(define (module-includes mod)
+  (module-extract-declaration-files mod '(include)))
+
+(define (module-include-library-declarations mod)
+  (module-extract-declaration-files mod '(include-library-declarations)))
 
 (define (module-shared-includes mod)
   (let* ((mod (if (module? mod) mod (find-module mod)))

@@ -268,7 +268,7 @@
        ;; Generate the library wrapper.
        (set! *this-path*
              (cons (string-concatenate
-                    (module-name->strings (reverse (cdr (reverse name))) '()))
+                    (module-name->strings (cdr (reverse name)) '()))
                    *this-path*))
        `(,_let ((,tmp ,this-module))
           (,_define (rewrite-export x)
@@ -338,7 +338,11 @@
              (error "couldn't find include-library-declarations file" file)))))
         (else
          `(,(rename 'meta-begin)
-           ,@(reverse res))))))))
+           ,@(reverse res)
+           (,(rename 'set!) ,(rename '*this-module*)
+            (,(rename 'cons) (,(rename 'quote)
+                              ,(cons 'include-library-declarations (cdr expr)))
+             ,(rename '*this-module*))))))))))
 
 (define-syntax define-meta-primitive
   (er-macro-transformer
