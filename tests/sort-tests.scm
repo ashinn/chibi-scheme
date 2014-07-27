@@ -45,6 +45,13 @@
   (sort '("elephant" "CaT" "DOG" "ape" "GoAt" "Fox" "HAWK" "Bear")
           string-ci<?))
 
+(test "sort lists"
+    '((chibi) (scheme r5rs) (scheme write))
+  (sort '((chibi) (scheme r5rs) (scheme write))
+        (lambda (a b)
+          (string<? (call-with-output-string (lambda (out) (write a out)))
+                    (call-with-output-string (lambda (out) (write b out)))))))
+
 (test "sort numeric inexact vector <" '#(1.1 2.2 3.3 4.4 5.5 6.6 7.7 8.8 9.9)
   (sort '#(7.7 5.5 2.2 8.8 1.1 6.6 4.4 9.9 3.3) <))
 (test "sort numeric signed inexact vector <"
