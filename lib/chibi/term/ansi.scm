@@ -13,10 +13,10 @@
 (define (make-wrap-procedure start-escape end-escape)
   (lambda (str)
     (if (not (string? str))
-      (error "argument must be a string" str))
+        (error "argument must be a string" str))
     (if (ansi-escapes-enabled?)
-      (string-append start-escape str end-escape)
-      str)))
+        (string-append start-escape str end-escape)
+        str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -38,7 +38,7 @@
 ;;> specified text color.
 
 (define black-escape
-  (make-simple-escape-procedure 30))
+   (make-simple-escape-procedure 30))
 (define red-escape
   (make-simple-escape-procedure 31))
 (define green-escape
