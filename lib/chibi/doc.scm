@@ -441,6 +441,22 @@ div#footer {padding-bottom: 50px}
                         (else
                          (list opts)))))))))))))
 
+(define (get-procedure-signature proc)
+  (cond ((and (procedure? proc) (procedure-signature proc)) => list)
+        (else '())))
+
+(define (get-value-signature proc name value)
+  (match value
+    (('(or let let* letrec letrec*) vars body0 ... body)
+     (get-value-signature proc name body))
+    (('lambda args . body) (list (cons name (get-optionals args body))))
+    ((('lambda args body0 ... body) vals ...)
+     (get-value-signature proc name body))
+    (('begin body0 ... body) (get-value-signature proc name body))
+    (else (get-procedure-signature proc))))
+
+;; TODO: analyze and match on AST instead of making assumptions about
+;; bindings
 (define (get-signature proc source form)
   (match form
     (('define (name args ...) . body)
@@ -448,15 +464,13 @@ div#footer {padding-bottom: 50px}
     (('define (name . args) . body)
      (list (cons name (get-optionals args body))))
     (('define name value)
-     (list name))
+     (get-value-signature proc name value))
     (('define-syntax name ('syntax-rules () (clause . body) ...))
-     ;; TODO: smarter summary
+     ;; TODO: smarter summary merging forms
      (map (lambda (x) (cons name (cdr x)))
           (filter external-clause? clause)))
-    ((procedure? proc)
-     (cond ((procedure-signature proc) => list) (else '())))
     (else
-     '())))
+     (get-procedure-signature proc))))
 
 (define (get-ffi-signatures form)
   (match form
@@ -603,6 +617,20 @@ div#footer {padding-bottom: 50px}
                   (pair? (cdr source))
                   (equal? file (cadr source))
                   (cddr source)))))
+  (define (read-to-paren in)
+    (let lp1 ((res '()))
+      (let ((ch (peek-char in)))
+        (cond
+         ((or (eof-object? ch) (eqv? #\) ch)) (read-char in) (reverse res))
+         ((char-whitespace? ch) (read-char in) (lp1 res))
+         ((eq? ch #\;)
+          (let lp2 ()
+            (let ((ch2 (read-char in)))
+              (if (or (eof-object? ch2) (eqv? #\newline ch2))
+                  (lp1 res)
+                  (lp2)))))
+         ;; TODO: support #; and #| comments at end of list
+         (else (lp1 (cons (read in) res)))))))
   (call-with-input-file file
     (lambda (in)
       (let* ((lang (or (and (pair? o) (car o)) 'scheme))
@@ -614,7 +642,12 @@ div#footer {padding-bottom: 50px}
                              ;; (name value line)
                              `(,(car x) ,(cadr x) ,line))))
                     all-defs)))
-        (let lp ((lines '()) (cur '()) (res '()) (ids '()) (last-line 0))
+        (let lp ((lines '())
+                 (cur '())
+                 (res '())
+                 (ids '())
+                 (depth 0)
+                 (last-line 0))
           (define (collect)
             (if (pair? lines)
                 (append
@@ -639,7 +672,7 @@ div#footer {padding-bottom: 50px}
             (append (collect) res))
            ((eqv? #\newline (peek-char in))
             (read-char in)
-            (lp lines cur res ids last-line))
+            (lp lines cur res ids depth last-line))
            ((eqv? #\; (peek-char in))
             (read-char in)
             (cond
@@ -647,7 +680,7 @@ div#footer {padding-bottom: 50px}
                    (begin (read-char in) (eqv? #\> (peek-char in))))
               (read-char in)
               (if (eqv? #\space (peek-char in)) (read-char in))
-              (lp (cons (read-line in) lines) cur res ids last-line))
+              (lp (cons (read-line in) lines) cur res ids depth last-line))
              (else
               (let lp ()
                 (cond ((eqv? #\; (peek-char in))
@@ -658,57 +691,76 @@ div#footer {padding-bottom: 50px}
                      (ids (append (get-ids cur) ids)))
                 ;; ";;/" attaches the docs to the preceding form
                 (if (equal? line "/")
-                    (lp '() '() (append cur res) ids last-line)
-                    (lp '() cur res ids last-line))))))
+                    (lp '() '() (append cur res) ids depth last-line)
+                    (lp '() cur res ids depth last-line))))))
+           ((eqv? #\) (peek-char in))
+            (read-char in)
+            (if (zero? depth)
+                (error "unexpected ) at line" last-line)
+                (lp lines cur res ids (- depth 1) last-line)))
+           ((not (eqv? #\( (peek-char in)))
+            ;; ignore non-list top-level expression
+            (read in)
+            (lp lines cur res ids depth (port-line in)))
            (else  ;; found a top-level expression
-            (let* ((cur (collect))
-                   (ids (append (get-ids cur) ids))
-                   (form (read in))
-                   (line (port-line in))
-                   ;; find all procedures defined by form
-                   (procs (filter (lambda (x) (<= last-line (third x) line))
-                                  (filter third defs)))
-                   ;; the the signature for the form
-                   (sigs
-                    (cond
-                     ((eq? lang 'ffi)
-                      (filter
-                       (lambda (x)
-                         (assq (if (eq? 'const: (car x)) (third x) (car x))
-                               all-defs))
-                       (get-ffi-signatures form)))
-                     ((= 1 (length procs))
-                      (get-signature (caar procs) (cdar procs) form))
-                     (else
-                      (get-signature #f #f form)))))
-              (cond
-               ((and strict?
-                     (or (not (pair? sigs)) (not (assq (caar sigs) defs))))
-                ;; drop unrelated docs in strict mode
-                (lp '() '() res ids line))
-               ((and (eq? lang 'ffi) (pair? sigs))
-                (lp '() '() (append (insert-signature cur #f sigs) res)
-                    ids line))
-               ((and (eq? lang 'scheme) (= 1 (length procs)))
-                (lp '() '() (append (insert-signature cur (caar procs) sigs)
-                                    res)
-                    ids line))
-               ((and (null? procs)
-                     (let ((id (match form
-                               (('define (name . x) . y) name)
-                               (((or 'define 'define-syntax) name . x) name)
-                               (((or 'define-c 'define-c-const)
-                                 t (name . x) . y)
-                                name)
-                               (((or 'define-c 'define-c-const) t name . x)
-                                name)
-                               (else #f))))
-                       (and (not (memq id ids))
-                            (assq id all-defs))))
-                (lp '() '() (append (insert-signature cur #f sigs) res)
-                    ids line))
-               (else
-                (lp '() '() (append cur res) ids line)))))))))))
+            (read-char in)
+            (let ((op (read in)))
+              (case op
+                ((begin define-library)
+                 ;; allowed nested docs in these forms
+                 (lp lines cur res ids (+ depth 1) (port-line in)))
+                (else
+                 ;; read until closing paren
+                 (let* ((cur (collect))
+                        (ids (append (get-ids cur) ids))
+                        (form (cons op (read-to-paren in)))
+                        (line (port-line in))
+                        ;; find all procedures defined by form
+                        (procs (filter (lambda (x) (<= last-line (third x) line))
+                                       (filter third defs)))
+                        ;; the the signature for the form
+                        (sigs
+                         (cond
+                          ((eq? lang 'ffi)
+                           (filter
+                            (lambda (x)
+                              (assq (if (eq? 'const: (car x)) (third x) (car x))
+                                    all-defs))
+                            (get-ffi-signatures form)))
+                          ((= 1 (length procs))
+                           (get-signature (caar procs) (cdar procs) form))
+                          (else
+                           (get-signature #f #f form)))))
+                   (cond
+                    ((and strict?
+                          (or (not (pair? sigs)) (not (assq (caar sigs) defs))))
+                     ;; drop unrelated docs in strict mode
+                     (lp '() '() res ids depth line))
+                    ((and (eq? lang 'ffi) (pair? sigs))
+                     (lp '() '() (append (insert-signature cur #f sigs) res)
+                         ids depth line))
+                    ((and (eq? lang 'scheme) (= 1 (length procs)))
+                     (lp '() '()
+                         (append (insert-signature cur (caar procs) sigs) res)
+                         ids depth line))
+                    ((and (null? procs)
+                          (let ((id (match form
+                                      (('define (name . x) . y) name)
+                                      (((or 'define 'define-syntax) name . x)
+                                       name)
+                                      (((or 'define-c 'define-c-const)
+                                        t (name . x) . y)
+                                       name)
+                                      (((or 'define-c 'define-c-const)
+                                        t name . x)
+                                       name)
+                                      (else #f))))
+                            (and (not (memq id ids))
+                                 (assq id all-defs))))
+                     (lp '() '() (append (insert-signature cur #f sigs) res)
+                         ids depth line))
+                    (else
+                     (lp '() '() (append cur res) ids depth line))))))))))))))
 
 ;; utility to get the source position of an object
 (define (object-source x)
