@@ -25,6 +25,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;> \section{Library}
+
 ;;> \procedure{(black-escape)}
 ;;> \procedure{(red-escape)}
 ;;> \procedure{(green-escape)}
