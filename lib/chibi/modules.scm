@@ -22,11 +22,13 @@
 (define (module-ast-set! mod x) (vector-set! mod 3 x))
 
 (define (module-name mod)
-  (let lp ((ls *modules*))
-    (and (pair? ls)
-         (if (eq? mod (cdar ls))
-             (caar ls)
-             (lp (cdr ls))))))
+  (if (pair? mod)
+      (car mod)
+      (let lp ((ls *modules*))
+        (and (pair? ls)
+             (if (eq? mod (cdar ls))
+                 (caar ls)
+                 (lp (cdr ls)))))))
 
 (define (module-dir mod)
   (let ((name (module-name mod)))
@@ -140,10 +142,10 @@
                        (car ls)
                        (lp2 (cdr e-ls))))))))))
 
-(define (procedure-analysis x)
-  (let ((mod (containing-module x)))
+(define (procedure-analysis x . o)
+  (let ((mod (or (and (pair? o) (car o)) (containing-module x))))
     (and mod
-         (let lp ((ls (module-ast (analyze-module (car mod)))))
+         (let lp ((ls (module-ast (analyze-module (module-name mod)))))
            (and (pair? ls)
                 (if (and (set? (car ls))
                          (eq? (procedure-name x) (ref-name (set-var (car ls)))))
