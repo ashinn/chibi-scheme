@@ -259,6 +259,7 @@
          (len (length headers)))
     (lambda (h) (- len (length (memq h headers))))))
 
+;; return a list of (index . link-to-header) for all headers
 (define (extract-contents x)
   (match x
     (('div ('a ('@ ('name . name)) . _)
@@ -280,6 +281,7 @@
     (else
      '())))
 
+;; nest the (index . link-to-header)s into ol
 (define (get-contents x)
   (if (null? x)
       '()
@@ -287,6 +289,7 @@
         (let lp ((ls (cdr x)) (parent (car (cdar x))) (kids '()) (res '()))
           (define (collect)
             (cons `(li ,parent ,(get-contents (reverse kids))) res))
+          ;; take a span of all sub-headers, recurse and repeat on next span
           (cond
            ((null? ls)
             `(ol ,@(reverse (collect))))
@@ -315,6 +318,7 @@ div#footer {padding-bottom: 50px}
           (div (@ (id . "menu"))
                ,(let ((contents (get-contents (extract-contents x))))
                   (match contents
+                    ;; flatten if we have only a single heading
                     (('ol (li y sections ...))
                      sections)
                     (else contents))))
