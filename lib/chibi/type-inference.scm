@@ -304,7 +304,15 @@
 ;;> a list whose first element is the return type and whose
 ;;> remaining arguments are the parameter types.
 
-(define (procedure-signature x)
+(define (procedure-signature x . o)
+  (define (ast-sig x)
+    (cond
+     ((lambda? x) (cdr (lambda-type x)))
+     ((seq? x) (ast-sig (last (seq-ls x))))
+     ((and (pair? x) (lambda? (car x))) (ast-sig (lambda-body x)))
+     ;; ((and (pair? x) (ref? (car x)) (lambda? (cdr (ref-cell (car x)))))
+     ;;  (ast-sig (lambda-body (cdr (ref-cell (car x))))))
+     (else #f)))
   (cond
    ((opcode? x)
     (cdr (opcode-type x)))
@@ -312,14 +320,12 @@
     (procedure-signature (macro-procedure x)))
    (else
     (let lp ((count 0))
-      (let ((lam (procedure-analysis x)))
+      (let ((lam (apply procedure-analysis x o)))
         (cond
          ((and lam (not (typed? lam)) (zero? count)
                (containing-module x))
           => (lambda (mod)
                (and (type-analyze-module (car mod))
                     (lp (+ count 1)))))
-         ((lambda? lam)
-          (cdr (lambda-type lam)))
          (else
-          #f)))))))
+          (ast-sig lam))))))))

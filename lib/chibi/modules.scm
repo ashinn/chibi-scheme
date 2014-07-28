@@ -143,14 +143,19 @@
                        (lp2 (cdr e-ls))))))))))
 
 (define (procedure-analysis x . o)
-  (let ((mod (or (and (pair? o) (car o)) (containing-module x))))
+  (let ((name (if (procedure? x) (procedure-name x) x))
+        (mod (or (and (pair? o) (car o)) (containing-module x))))
     (and mod
          (let lp ((ls (module-ast (analyze-module (module-name mod)))))
            (and (pair? ls)
-                (if (and (set? (car ls))
-                         (eq? (procedure-name x) (ref-name (set-var (car ls)))))
-                    (set-value (car ls))
-                    (lp (cdr ls))))))))
+                (cond
+                 ((and (set? (car ls))
+                       (eq? name (ref-name (set-var (car ls)))))
+                  (set-value (car ls)))
+                 ((seq? (car ls))
+                  (lp (append (seq-ls (car ls)) (cdr ls))))
+                 (else
+                  (lp (cdr ls)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; finding all available modules

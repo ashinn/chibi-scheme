@@ -385,6 +385,19 @@ div#footer {padding-bottom: 50px}
            (or (contains? (car tree) x)
                (contains? (cdr tree) x)))))
 
+(define (form-defined-name form)
+  (match form
+    (('define (name . x) . y) name)
+    (((or 'define 'define-syntax) name . x)
+     name)
+    (((or 'define-c 'define-c-const)
+      t (name . x) . y)
+     name)
+    (((or 'define-c 'define-c-const)
+      t name . x)
+     name)
+    (else #f)))
+
 ;; Try to determine the names of optional parameters checking common
 ;; patterns.
 (define (get-optionals ls body)
@@ -445,36 +458,38 @@ div#footer {padding-bottom: 50px}
                         (else
                          (list opts)))))))))))))
 
-(define (get-procedure-signature proc)
-  (cond ((and (procedure? proc) (procedure-signature proc)) => list)
+(define (get-procedure-signature mod id proc)
+  (cond ((and (procedure? proc) (procedure-signature id mod))
+         => (lambda (sig)
+              (list (cons (or id (procedure-name proc)) (cdr sig)))))
         (else '())))
 
-(define (get-value-signature proc name value)
+(define (get-value-signature mod id proc name value)
   (match value
     (('(or let let* letrec letrec*) vars body0 ... body)
-     (get-value-signature proc name body))
+     (get-value-signature mod id proc name body))
     (('lambda args . body) (list (cons name (get-optionals args body))))
     ((('lambda args body0 ... body) vals ...)
-     (get-value-signature proc name body))
-    (('begin body0 ... body) (get-value-signature proc name body))
-    (else (get-procedure-signature proc))))
+     (get-value-signature mod id proc name body))
+    (('begin body0 ... body) (get-value-signature mod id proc name body))
+    (else (get-procedure-signature mod id proc))))
 
 ;; TODO: analyze and match on AST instead of making assumptions about
 ;; bindings
-(define (get-signature proc source form)
+(define (get-signature mod id proc source form)
   (match form
     (('define (name args ...) . body)
      (list (cons name args)))
     (('define (name . args) . body)
      (list (cons name (get-optionals args body))))
     (('define name value)
-     (get-value-signature proc name value))
+     (get-value-signature mod id proc name value))
     (('define-syntax name ('syntax-rules () (clause . body) ...))
      ;; TODO: smarter summary merging forms
      (map (lambda (x) (cons name (cdr x)))
           (filter external-clause? clause)))
     (else
-     (get-procedure-signature proc))))
+     (get-procedure-signature mod id proc))))
 
 (define (get-ffi-signatures form)
   (match form
@@ -608,7 +623,7 @@ div#footer {padding-bottom: 50px}
 ;; Extract inline scribble documentation (with the ;;> prefix) from a
 ;; source file, associating any signatures from the provided defs when
 ;; available and not overridden in the docs.
-(define (extract-file-docs file all-defs strict? . o)
+(define (extract-file-docs mod file all-defs strict? . o)
   ;; extract (<file> . <line>) macro source or
   ;; (<offset> <file . <line>>) procedure source
   (define (source-line source)
@@ -718,6 +733,7 @@ div#footer {padding-bottom: 50px}
                  (let* ((cur (collect))
                         (ids (append (get-ids cur) ids))
                         (form (cons op (read-to-paren in)))
+                        (id (form-defined-name form))
                         (line (port-line in))
                         ;; find all procedures defined by form
                         (procs (filter (lambda (x) (<= last-line (third x) line))
@@ -732,9 +748,10 @@ div#footer {padding-bottom: 50px}
                                     all-defs))
                             (get-ffi-signatures form)))
                           ((= 1 (length procs))
-                           (get-signature (caar procs) (cdar procs) form))
+                           (get-signature mod id (caar procs) (cdar procs) form))
                           (else
-                           (get-signature #f #f form)))))
+                           (get-signature
+                            mod id (and id (module-ref mod id)) #f form)))))
                    (cond
                     ((and strict?
                           (or (not (pair? sigs)) (not (assq (caar sigs) defs))))
@@ -748,21 +765,12 @@ div#footer {padding-bottom: 50px}
                          (append (insert-signature cur (caar procs) sigs) res)
                          ids depth line))
                     ((and (null? procs)
-                          (let ((id (match form
-                                      (('define (name . x) . y) name)
-                                      (((or 'define 'define-syntax) name . x)
-                                       name)
-                                      (((or 'define-c 'define-c-const)
-                                        t (name . x) . y)
-                                       name)
-                                      (((or 'define-c 'define-c-const)
-                                        t name . x)
-                                       name)
-                                      (else #f))))
-                            (and (not (memq id ids))
-                                 (assq id all-defs))))
-                     (lp '() '() (append (insert-signature cur #f sigs) res)
-                         ids depth line))
+                          (and (not (memq id ids)) (assq id all-defs)))
+                     (let ((sigs (if (and (null? sigs) id)
+                                     (list id)
+                                     sigs)))
+                       (lp '() '() (append (insert-signature cur #f sigs) res)
+                           ids depth line)))
                     (else
                      (lp '() '() (append cur res) ids depth line))))))))))))))
 
@@ -792,15 +800,19 @@ div#footer {padding-bottom: 50px}
           (append
            (cond
             ((find-module-file (module-name->file mod-name))
-             => (lambda (f) (reverse (extract-file-docs f defs strict? 'module))))
+             => (lambda (f)
+                  (reverse (extract-file-docs mod f defs strict? 'module))))
             (else '()))
-           (reverse (append-map (lambda (x)
-                                  (extract-file-docs x defs strict? 'module))
-                                (module-include-library-declarations mod)))
-           (reverse (append-map (lambda (x) (extract-file-docs x defs strict?))
-                                (module-includes mod)))
-           (reverse (append-map (lambda (x) (extract-file-docs x defs strict? 'ffi))
-                                (module-shared-includes mod))))))))
+           (reverse
+            (append-map (lambda (x)
+                          (extract-file-docs mod x defs strict? 'module))
+                        (module-include-library-declarations mod)))
+           (reverse
+            (append-map (lambda (x) (extract-file-docs mod x defs strict?))
+                        (module-includes mod)))
+           (reverse
+            (append-map (lambda (x) (extract-file-docs mod x defs strict? 'ffi))
+                        (module-shared-includes mod))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
