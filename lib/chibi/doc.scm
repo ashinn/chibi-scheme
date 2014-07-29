@@ -1,4 +1,7 @@
 
+;;> A library for generating SXML docs from Scribble, directly or
+;;> extracted from literate docs.
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; utils
 
@@ -566,7 +569,7 @@ div#footer {padding-bottom: 50px}
         (lambda (out)
           (display "(" out)
           (write (car sig) out)
-          (let lp ((ls sig))
+          (let lp ((ls (cdr sig)))
             (cond
              ((pair? (car ls))
               (display " [" out)
@@ -620,9 +623,10 @@ div#footer {padding-bottom: 50px}
          (else
           (lp (cdr ls) (cons (car ls) rev-pre)))))))))
 
-;; Extract inline scribble documentation (with the ;;> prefix) from a
-;; source file, associating any signatures from the provided defs when
-;; available and not overridden in the docs.
+;;> Extract inline Scribble documentation (with the ;;> prefix) from
+;;> the source file \var{file}, associating any signatures from the
+;;> provided defs when available and not overridden in the docs.
+
 (define (extract-file-docs mod file all-defs strict? . o)
   ;; extract (<file> . <line>) macro source or
   ;; (<offset> <file . <line>>) procedure source
@@ -796,7 +800,11 @@ div#footer {padding-bottom: 50px}
         ((macro? x) (macro-source x))
         (else #f)))
 
-;; extract documentation from a module
+;;> Extract the literate Scribble docs from module \var{mod-name} and
+;;> return them as sxml.  If \var{strict?} is true ignore docs for
+;;> unexported values, defined by the optional \var{exports} which
+;;> defaults to all the module exports.
+
 (define (extract-module-docs mod-name strict? . o)
   (let ((mod (load-module mod-name)))
     (if (not mod)
@@ -826,6 +834,10 @@ div#footer {padding-bottom: 50px}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;> Extract the literate Scribble docs for module \var{mod-name} and
+;;> print them to \var{out}, rendered with \var{render} which defaults
+;;> to \scheme{sxml-display-as-text}.
+
 (define (print-module-docs mod-name . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
         (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
@@ -836,6 +848,10 @@ div#footer {padding-bottom: 50px}
         ,@(extract-module-docs mod-name #f))
       (make-module-doc-env mod-name))
      out)))
+
+;;> Extract the literate Scribble docs for just the binding for
+;;> \var{var} in module \var{mod-name}, and print them as in
+;;> \scheme{print-module-docs}.
 
 (define (print-module-binding-docs mod-name var . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
@@ -849,12 +865,18 @@ div#footer {padding-bottom: 50px}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;> Extract the literate Scribble docs for \var{proc} which should be
+;;> a procedure and return them as sxml.
+
 (define (procedure-docs proc)
   (let ((mod (and (procedure? proc) (containing-module proc))))
     (and mod
          (generate-docs
           (extract-module-docs (car mod) #t (list (procedure-name proc)))
           (make-module-doc-env (car mod))))))
+
+;;> Extract the literate Scribble docs for \var{proc} which should be
+;;> a procedure and render them as in \scheme{print-module-docs}.
 
 (define (print-procedure-docs proc . o)
   (let ((out (if (pair? o) (car o) (current-output-port)))
