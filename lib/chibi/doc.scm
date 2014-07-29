@@ -709,9 +709,19 @@ div#footer {padding-bottom: 50px}
                      (cur (collect))
                      (ids (append (get-ids cur) ids)))
                 ;; ";;/" attaches the docs to the preceding form
-                (if (equal? line "/")
-                    (lp '() '() (append cur res) ids depth last-line)
-                    (lp '() cur res ids depth last-line))))))
+                ;; rather than the next
+                (cond
+                 ((equal? line "/")
+                  (lp '() '() (append cur res) ids depth last-line))
+                 (else
+                  (cond
+                   ((and (not (equal? line ""))
+                         (eqv? #\/ (string-ref line 0)))
+                    (display "WARNING: ;;/ line should be empty"
+                             (current-error-port))
+                    (write line (current-error-port))
+                    (newline (current-error-port))))
+                  (lp '() cur res ids depth last-line)))))))
            ((eqv? #\) (peek-char in))
             (read-char in)
             (if (zero? depth)
