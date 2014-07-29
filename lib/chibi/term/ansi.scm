@@ -27,18 +27,6 @@
 
 ;;> \section{Library}
 
-;;> \procedure{(black-escape)}
-;;> \procedure{(red-escape)}
-;;> \procedure{(green-escape)}
-;;> \procedure{(yellow-escape)}
-;;> \procedure{(blue-escape)}
-;;> \procedure{(magenta-escape)}
-;;> \procedure{(cyan-escape)}
-;;> \procedure{(white-escape)}
-;;>
-;;> Return a string consisting of an ANSI escape code to select the
-;;> specified text color.
-
 (define black-escape
    (make-simple-escape-procedure 30))
 (define red-escape
@@ -55,6 +43,10 @@
   (make-simple-escape-procedure 36))
 (define white-escape
   (make-simple-escape-procedure 37))
+
+;;> Return a string consisting of an ANSI escape code to select the
+;;> specified text color.
+;;/
 
 ;;> Return a string consisting of an ANSI escape code to select the
 ;;> text color specified by the \var{red-level}, \var{green-level},
@@ -90,28 +82,11 @@
                  (number->string (+ gray-level 232))
                  "m"))
 
-;;> \procedure{(reset-color-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select the
 ;;> default text color.
 
 (define reset-color-escape
   (make-simple-escape-procedure 39))
-
-;;> \procedure{(black str)}
-;;> \procedure{(red str)}
-;;> \procedure{(green str)}
-;;> \procedure{(yellow str)}
-;;> \procedure{(blue str)}
-;;> \procedure{(magenta str)}
-;;> \procedure{(cyan str)}
-;;> \procedure{(white str)}
-;;>
-;;> If ANSI escapes are enabled, return a string consisting of the
-;;> string \var{str} with a prefix that selects specified text color
-;;> and a suffix that selects the default text color.
-;;>
-;;> If ANSI escapes are not enabled, return \var{str}.
 
 (define black
   (make-wrap-procedure (black-escape)
@@ -137,6 +112,13 @@
 (define white
   (make-wrap-procedure (white-escape)
                        (reset-color-escape)))
+
+;;> If ANSI escapes are enabled, return a string consisting of the
+;;> string \var{str} with a prefix that selects specified text color
+;;> and a suffix that selects the default text color.
+;;>
+;;> If ANSI escapes are not enabled, return \var{str}.
+;;/
 
 ;;> Returns a procedure which takes a single argument, a string, and
 ;;> which when called behaves as follows.
@@ -177,18 +159,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \procedure{(black-background-escape)}
-;;> \procedure{(red-background-escape)}
-;;> \procedure{(green-background-escape)}
-;;> \procedure{(yellow-background-escape)}
-;;> \procedure{(blue-background-escape)}
-;;> \procedure{(magenta-background-escape)}
-;;> \procedure{(cyan-background-escape)}
-;;> \procedure{(white-background-escape)}
-;;>
-;;> Return a string consisting of an ANSI escape code to select the
-;;> specified background color.
-
 (define black-background-escape
   (make-simple-escape-procedure 40))
 (define red-background-escape
@@ -205,6 +175,10 @@
   (make-simple-escape-procedure 46))
 (define white-background-escape
   (make-simple-escape-procedure 47))
+
+;;> Return a string consisting of an ANSI escape code to select the
+;;> specified background color.
+;;/
 
 ;;> Return a string consisting of an ANSI escape code to select the
 ;;> background color specified by the \var{red-level}, \var{green-level},
@@ -248,21 +222,6 @@
 (define reset-background-color-escape
   (make-simple-escape-procedure 49))
 
-;;> \procedure{(black-background str)}
-;;> \procedure{(red-background str)}
-;;> \procedure{(green-background str)}
-;;> \procedure{(yellow-background str)}
-;;> \procedure{(blue-background str)}
-;;> \procedure{(magenta-background str)}
-;;> \procedure{(cyan-background str)}
-;;> \procedure{(white-background str)}
-;;>
-;;> If ANSI escapes are enabled, return a string consisting of the
-;;> string \var{str} with a prefix that selects specified background
-;;> color and a suffix that selects the default background color.
-;;>
-;;> If ANSI escapes are not enabled, return \var{str}.
-
 (define black-background
   (make-wrap-procedure (black-background-escape)
                        (reset-background-color-escape)))
@@ -287,6 +246,13 @@
 (define white-background
   (make-wrap-procedure (white-background-escape)
                        (reset-background-color-escape)))
+
+;;> If ANSI escapes are enabled, return a string consisting of the
+;;> string \var{str} with a prefix that selects specified background
+;;> color and a suffix that selects the default background color.
+;;>
+;;> If ANSI escapes are not enabled, return \var{str}.
+;;/
 
 ;;> Returns a procedure which takes a single argument, a string, and
 ;;> which when called behaves as follows.
@@ -327,24 +293,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \procedure{(bold-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select bold
 ;;> style.
 
 (define bold-escape
   (make-simple-escape-procedure 1))
 
-;;> \procedure{(reset-bold-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select non-bold
 ;;> style.
 
 (define reset-bold-escape
   (make-simple-escape-procedure 22))
 
-;;> \procedure{(bold str)}
-;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
 ;;> string \var{str} with a prefix that selects bold style and a suffix
 ;;> that selects non-bold style.
@@ -356,24 +316,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \procedure{(underline-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select
 ;;> underlined style.
 
 (define underline-escape
   (make-simple-escape-procedure 4))
 
-;;> \procedure{(reset-underline-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select
 ;;> non-underlined style.
 
 (define reset-underline-escape
   (make-simple-escape-procedure 24))
 
-;;> \procedure{(underline str)}
-;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
 ;;> string \var{str} with a prefix that selects underlined style and
 ;;> a suffix that selects non-underlined style.
@@ -385,8 +339,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \procedure{(negative-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select negative
 ;;> style (text in the background color and background in the text
 ;;> color).
@@ -394,8 +346,6 @@
 (define negative-escape
   (make-simple-escape-procedure 7))
 
-;;> \procedure{(reset-negative-escape)}
-;;>
 ;;> Return a string consisting of an ANSI escape code to select positive
 ;;> style (text in the text color and background in the background
 ;;> color).
@@ -403,8 +353,6 @@
 (define reset-negative-escape
   (make-simple-escape-procedure 27))
 
-;;> \procedure{(negative str)}
-;;>
 ;;> If ANSI escapes are enabled, return a string consisting of the
 ;;> string \var{str} with a prefix that selects negative style (text
 ;;> in the background color and background in the text color) and a
