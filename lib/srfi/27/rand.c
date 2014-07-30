@@ -19,14 +19,14 @@
               SEXP_RANDOM_STATE_SIZE,                                   \
               sexp_random_data(x))
 
-#if SEXP_BSD || defined(__CYGWIN__)
-typedef unsigned int sexp_random_t;
-#define sexp_call_random(rs, dst) ((dst) = rand_r(sexp_random_data(rs)))
-#define sexp_seed_random(n, rs) *sexp_random_data(rs) = (n)
-#else
+#ifdef __GNU_LIBRARY__
 typedef struct random_data sexp_random_t;
 #define sexp_call_random(rs, dst) random_r(sexp_random_data(rs), &dst)
 #define sexp_seed_random(n, rs) srandom_r(n, sexp_random_data(rs))
+#else
+typedef unsigned int sexp_random_t;
+#define sexp_call_random(rs, dst) ((dst) = rand_r(sexp_random_data(rs)))
+#define sexp_seed_random(n, rs) *sexp_random_data(rs) = (n)
 #endif
 
 #define sexp_random_state(x) (sexp_slot_ref((x), 0))
