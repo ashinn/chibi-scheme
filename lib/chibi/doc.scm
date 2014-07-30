@@ -80,6 +80,59 @@
   (call-with-input-string (sxml-strip x) port->sexp-list))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;> Extract the literate Scribble docs for module \var{mod-name} and
+;;> print them to \var{out}, rendered with \var{render} which defaults
+;;> to \scheme{sxml-display-as-text}.
+
+(define (print-module-docs mod-name . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
+                    sxml-display-as-text)))
+    (render
+     (generate-docs
+      `((title ,(write-to-string mod-name))
+        ,@(extract-module-docs mod-name #f))
+      (make-module-doc-env mod-name))
+     out)))
+
+;;> Extract the literate Scribble docs for just the binding for
+;;> \var{var} in module \var{mod-name}, and print them as in
+;;> \scheme{print-module-docs}.
+
+(define (print-module-binding-docs mod-name var . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
+                    sxml-display-as-text)))
+    (render
+     (generate-docs
+      (extract-module-docs mod-name #t (list var))
+      (make-module-doc-env mod-name))
+     out)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;> Extract the literate Scribble docs for \var{proc} which should be
+;;> a procedure and return them as sxml.
+
+(define (procedure-docs proc)
+  (let ((mod (and (procedure? proc) (containing-module proc))))
+    (and mod
+         (generate-docs
+          (extract-module-docs (car mod) #t (list (procedure-name proc)))
+          (make-module-doc-env (car mod))))))
+
+;;> Extract the literate Scribble docs for \var{proc} which should be
+;;> a procedure and render them as in \scheme{print-module-docs}.
+
+(define (print-procedure-docs proc . o)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
+                    sxml-display-as-text))
+        (docs (procedure-docs proc)))
+    (if docs (render docs out))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; doc environments
 
 (define (env-ref env name . o)
@@ -93,6 +146,10 @@
 
 (define (env-extend env vars vals)
   (list (append (map cons vars vals) (car env))))
+
+;;> Return a new document environment suitable for passing to
+;;> \scheme{expand-docs}, with default rules for sections, code
+;;> blocks, procedure and macro signatures, etc.
 
 (define (make-default-doc-env)
   `(((title . ,(expand-section 'h1))
@@ -139,6 +196,12 @@
      (example . ,expand-example)
      (example-import . ,expand-example-import)
      )))
+
+;;> Return a new document environment as in
+;;> \scheme{make-default-doc-env}, with an \scheme{example-env}
+;;> binding mapped to an environment importing \scheme{(scheme base)}
+;;> and the module \var{mod-name}.  This binding is used when
+;;> expanding examples in the docs.
 
 (define (make-module-doc-env mod-name)
   (env-extend (make-default-doc-env)
@@ -229,6 +292,9 @@
 
 (define (expand-tagged tag ls env)
   (cons tag (map (lambda (x) (expand-docs x env)) ls)))
+
+;;> Given the sxml document \var{sxml}, expands macros defined in the
+;;> document environment \var{env} into standard html tags.
 
 (define (expand-docs sxml env)
   (cond
@@ -364,12 +430,17 @@ div#footer {padding-bottom: 50px}
 (define (fix-begins x)
   x)
 
+;;> Resolves paragraphs and adds a header to convert \var{sxml} to a
+;;> standalone document renderable in html.
+
 (define (fixup-docs sxml)
   (fix-header (fix-paragraphs (fix-begins sxml))))
 
+;;> Composes \scheme{expand-docs} and \scheme{fixup-docs}.
+
 (define (generate-docs sxml . o)
-  (fixup-docs
-   (expand-docs sxml (if (pair? o) (car o) (make-default-doc-env)))))
+  (let ((env (if (pair? o) (car o) (make-default-doc-env))))
+    (fixup-docs (expand-docs sxml env))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; extraction
@@ -762,7 +833,8 @@ div#footer {padding-bottom: 50px}
                                     all-defs))
                             (get-ffi-signatures form)))
                           ((= 1 (length procs))
-                           (get-signature mod id (caar procs) (cdar procs) form))
+                           (get-signature
+                            mod id (caar procs) (cdar procs) form))
                           (else
                            (get-signature
                             mod id (and id (module-ref mod id)) #f form)))))
@@ -831,56 +903,3 @@ div#footer {padding-bottom: 50px}
            (reverse
             (append-map (lambda (x) (extract-file-docs mod x defs strict? 'ffi))
                         (module-shared-includes mod))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;> Extract the literate Scribble docs for module \var{mod-name} and
-;;> print them to \var{out}, rendered with \var{render} which defaults
-;;> to \scheme{sxml-display-as-text}.
-
-(define (print-module-docs mod-name . o)
-  (let ((out (if (pair? o) (car o) (current-output-port)))
-        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
-                    sxml-display-as-text)))
-    (render
-     (generate-docs
-      `((title ,(write-to-string mod-name))
-        ,@(extract-module-docs mod-name #f))
-      (make-module-doc-env mod-name))
-     out)))
-
-;;> Extract the literate Scribble docs for just the binding for
-;;> \var{var} in module \var{mod-name}, and print them as in
-;;> \scheme{print-module-docs}.
-
-(define (print-module-binding-docs mod-name var . o)
-  (let ((out (if (pair? o) (car o) (current-output-port)))
-        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
-                    sxml-display-as-text)))
-    (render
-     (generate-docs
-      (extract-module-docs mod-name #t (list var))
-      (make-module-doc-env mod-name))
-     out)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;> Extract the literate Scribble docs for \var{proc} which should be
-;;> a procedure and return them as sxml.
-
-(define (procedure-docs proc)
-  (let ((mod (and (procedure? proc) (containing-module proc))))
-    (and mod
-         (generate-docs
-          (extract-module-docs (car mod) #t (list (procedure-name proc)))
-          (make-module-doc-env (car mod))))))
-
-;;> Extract the literate Scribble docs for \var{proc} which should be
-;;> a procedure and render them as in \scheme{print-module-docs}.
-
-(define (print-procedure-docs proc . o)
-  (let ((out (if (pair? o) (car o) (current-output-port)))
-        (render (or (and (pair? o) (pair? (cdr o)) (cadr o))
-                    sxml-display-as-text))
-        (docs (procedure-docs proc)))
-    (if docs (render docs out))))
