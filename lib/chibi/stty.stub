@@ -10,8 +10,14 @@
   (unsigned-long c_cflag term-attrs-cflag term-attrs-cflag-set!)
   (unsigned-long c_lflag term-attrs-lflag term-attrs-lflag-set!)
   ;;(unsigned-char (c_cc 22) term-attrs-cc term-attrs-cc-set!)
-  (unsigned-long c_ispeed term-attrs-ispeed term-attrs-ispeed-set!)
-  (unsigned-long c_ospeed term-attrs-ospeed term-attrs-ospeed-set!))
+  ;;(unsigned-long c_ispeed term-attrs-ispeed term-attrs-ispeed-set!)
+  ;;(unsigned-long c_ospeed term-attrs-ospeed term-attrs-ospeed-set!)
+  )
+
+(define-c unsigned-long (term-attrs-ispeed cfgetispeed) (termios))
+(define-c unsigned-long (term-attrs-ospeed cfgetospeed) (termios))
+(define-c errno (term-attrs-ispeed-set! cfsetispeed) (termios unsigned-long))
+(define-c errno (term-attrs-ospeed-set! cfsetospeed) (termios unsigned-long))
 
 (define-c-struct winsize
   predicate: winsize?
