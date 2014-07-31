@@ -163,6 +163,7 @@ static void generate_lit (sexp ctx, sexp value) {
 }
 
 static void generate_drop_prev (sexp ctx, sexp prev) {
+#if ! SEXP_USE_ALIGNED_BYTECODE
   if ((sexp_pairp(prev) && sexp_opcodep(sexp_car(prev))
        && ((sexp_opcode_return_type(sexp_car(prev)) == SEXP_VOID
             && sexp_opcode_class(sexp_car(prev)) != SEXP_OPC_FOREIGN)
@@ -170,6 +171,7 @@ static void generate_drop_prev (sexp ctx, sexp prev) {
       || sexp_setp(prev) || sexp_litp(prev) || prev == SEXP_VOID)
     sexp_inc_context_pos(ctx, -(1 + sizeof(sexp)));
   else
+#endif
     sexp_emit(ctx, SEXP_OP_DROP);
 }
 
@@ -486,6 +488,7 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
 
   /* drop the current result and jump */
   sexp_emit(ctx, SEXP_OP_JUMP);
+  sexp_context_align_pos(ctx);
   sexp_emit_word(ctx, (sexp_uint_t) (-sexp_unbox_fixnum(sexp_context_pos(ctx)) +
 				     (sexp_pairp(sexp_lambda_locals(lam))
 				      ? 1 + sizeof(sexp) : 0)));
