@@ -1,5 +1,5 @@
 /*  rand.c -- rand_r/random_r interface                       */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2014 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <time.h>
@@ -13,22 +13,6 @@
 
 #define sexp_random_source_p(x) sexp_check_tag(x, rs_type_id)
 
-#define sexp_random_init(x, seed)                                       \
-  initstate_r(seed,                                                     \
-              sexp_bytes_data(sexp_random_state(x)),                    \
-              SEXP_RANDOM_STATE_SIZE,                                   \
-              sexp_random_data(x))
-
-#ifdef __GNU_LIBRARY__
-typedef struct random_data sexp_random_t;
-#define sexp_call_random(rs, dst) random_r(sexp_random_data(rs), &dst)
-#define sexp_seed_random(n, rs) srandom_r(n, sexp_random_data(rs))
-#else
-typedef unsigned int sexp_random_t;
-#define sexp_call_random(rs, dst) ((dst) = rand_r(sexp_random_data(rs)))
-#define sexp_seed_random(n, rs) *sexp_random_data(rs) = (n)
-#endif
-
 #define sexp_random_state(x) (sexp_slot_ref((x), 0))
 #define sexp_random_data(x)  ((sexp_random_t*)(&sexp_slot_ref((x), 1)))
 
@@ -36,6 +20,30 @@ typedef unsigned int sexp_random_t;
 
 static sexp_uint_t rs_type_id = 0;
 static sexp default_random_source;
+
+#ifdef __GNU_LIBRARY__
+
+typedef struct random_data sexp_random_t;
+
+#define sexp_random_init(rs, seed)                                      \
+  initstate_r(seed,                                                     \
+              sexp_bytes_data(sexp_random_state(rs)),                   \
+              SEXP_RANDOM_STATE_SIZE,                                   \
+              sexp_random_data(rs))
+
+#define sexp_call_random(rs, dst) random_r(sexp_random_data(rs), &dst)
+#define sexp_seed_random(n, rs) srandom_r(n, sexp_random_data(rs))
+
+#else
+
+typedef unsigned int sexp_random_t;
+
+#define sexp_random_init(rs, seed) *sexp_random_data(rs) = (seed)
+
+#define sexp_call_random(rs, dst) ((dst) = rand_r(sexp_random_data(rs)))
+#define sexp_seed_random(n, rs) *sexp_random_data(rs) = (n)
+
+#endif
 
 static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
   sexp res;
