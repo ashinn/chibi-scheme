@@ -19,15 +19,19 @@ static int hex_digit (int n) {
 sexp sexp_make_bignum (sexp ctx, sexp_uint_t len) {
   sexp_uint_t size = sexp_sizeof(bignum) + len*sizeof(sexp_uint_t);
   sexp res = sexp_alloc_tagged(ctx, size, SEXP_BIGNUM);
-  sexp_bignum_length(res) = len;
-  sexp_bignum_sign(res) = 1;
+  if (!sexp_exceptionp(res)) {
+    sexp_bignum_length(res) = len;
+    sexp_bignum_sign(res) = 1;
+  }
   return res;
 }
 
 sexp sexp_fixnum_to_bignum (sexp ctx, sexp a) {
   sexp res = sexp_make_bignum(ctx, 1);
-  sexp_bignum_data(res)[0] = sexp_unbox_fixnum(sexp_fx_abs(a));
-  sexp_bignum_sign(res) = sexp_fx_sign(a);
+  if (!sexp_exceptionp(res)) {
+    sexp_bignum_data(res)[0] = sexp_unbox_fixnum(sexp_fx_abs(a));
+    sexp_bignum_sign(res) = sexp_fx_sign(a);
+  }
   return res;
 }
 
