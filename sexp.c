@@ -1874,7 +1874,7 @@ void sexp_maybe_unblock_port (sexp ctx, sexp port) {
 #if SEXP_USE_GREEN_THREADS
 static int sexp_fileno_ready_p (int fd) {
   struct pollfd pfd;
-  if (fd < 0) return -1;
+  if (fd < 0) return 0;
   pfd.fd = fd;
   pfd.events = POLLIN;
   return poll(&pfd, 1, 0) == 1;
@@ -1885,7 +1885,12 @@ static int sexp_stream_ready_p (FILE* in) {
   if (! (flags & O_NONBLOCK)) fcntl(fileno(in), F_SETFL, flags & O_NONBLOCK);
   res = getc(in);
   if (! (flags & O_NONBLOCK)) fcntl(fileno(in), F_SETFL, flags);
-  return (res == EOF) ? feof(in) : 1;
+  if (res == EOF || ferror(in)) {
+    clearerr(in);
+    return 0;
+  }
+  ungetc(res, in);
+  return 1;
 }
 #endif
 
