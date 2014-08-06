@@ -2303,7 +2303,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
       case 'r': c = '\r'; break; 
       case 't': c = '\t'; break;
       case 'x':
-        res = sexp_read_number(ctx, in, 16);
+        res = sexp_read_number(ctx, in, 16, 0);
         if (sexp_fixnump(res)) {
           c = sexp_read_char(ctx, in);
           if (c != ';') {
@@ -2454,7 +2454,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
       sexp_push_char(ctx, c2, in);
       /* read imaginary part */
       if (c=='-') sexp_push_char(ctx, c, in);
-      res = sexp_read_number(ctx, in, 10);
+      res = sexp_read_number(ctx, in, 10, 0);
       if (sexp_complexp(res)) {
         if (sexp_complex_real(res) == SEXP_ZERO)
           sexp_complex_real(res) = real;
@@ -2477,7 +2477,7 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
 sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
   sexp_gc_var2(res, theta);
   sexp_gc_preserve2(ctx, res, theta);
-  theta = sexp_read_number(ctx, in, 10);
+  theta = sexp_read_number(ctx, in, 10, 0);
   if (sexp_exceptionp(theta)) {
     res = theta;
   } else if (sexp_complexp(theta) || !sexp_numberp(theta)) {
@@ -2513,7 +2513,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   if (is_precision_indicator(c)) {
     c2 = sexp_read_char(ctx, in);
     if (c2 != '+') sexp_push_char(ctx, c2, in);
-    exponent = sexp_read_number(ctx, in, 10);
+    exponent = sexp_read_number(ctx, in, 10, 0);
     if (sexp_exceptionp(exponent)) {
       sexp_gc_release1(ctx);
       return exponent;
@@ -2602,7 +2602,7 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
 }
 #endif
 
-sexp sexp_read_number (sexp ctx, sexp in, int base) {
+sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
   sexp_sint_t val = 0, tmp = -1;
   int c, digit, negativep = 0;
 #if SEXP_USE_PLACEHOLDER_DIGITS
@@ -2658,14 +2658,23 @@ sexp sexp_read_number (sexp ctx, sexp in, int base) {
   }
 #endif
 
-  if (c=='.' || is_precision_indicator(c)) {
+  if (exactp && is_precision_indicator(c)) {
+    sexp_gc_preserve2(ctx, res, den);
+    res = sexp_make_fixnum(negativep ? -val : val);
+    den = sexp_read_number(ctx, in, base, 0);
+    if (sexp_flonump(den)) den = sexp_make_fixnum(sexp_flonum_value(den));
+    den = sexp_expt(ctx, SEXP_TEN, den);
+    res = sexp_mul(ctx, res, den);
+    sexp_gc_release2(ctx);
+    return res;
+  } else if (c=='.' || is_precision_indicator(c)) {
     if (base != 10)
       return sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
     if (c!='.') sexp_push_char(ctx, c, in);
     return sexp_read_float_tail(ctx, in, val, negativep);
   } else if (c=='/') {
     sexp_gc_preserve2(ctx, res, den);
-    den = sexp_read_number(ctx, in, base);
+    den = sexp_read_number(ctx, in, base, exactp);
     if (! (sexp_fixnump(den) || sexp_bignump(den) || sexp_complexp(den)))
       res = (sexp_exceptionp(den)
              ? den : sexp_read_error(ctx, "invalid rational syntax", den, in));
@@ -2889,15 +2898,15 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '#':
     switch (c1=sexp_read_char(ctx, in)) {
     case 'b': case 'B':
-      res = sexp_read_number(ctx, in, 2); break;
+      res = sexp_read_number(ctx, in, 2, 0); break;
     case 'o': case 'O':
-      res = sexp_read_number(ctx, in, 8); break;
+      res = sexp_read_number(ctx, in, 8, 0); break;
     case 'd': case 'D':
-      res = sexp_read_number(ctx, in, 10); break;
+      res = sexp_read_number(ctx, in, 10, 0); break;
     case 'x': case 'X':
-      res = sexp_read_number(ctx, in, 16); break;
+      res = sexp_read_number(ctx, in, 16, 0); break;
     case 'e': case 'E':
-      res = sexp_read(ctx, in);
+      res = sexp_read_number(ctx, in, 10, 1);
 #if SEXP_USE_INFINITIES
       if (sexp_flonump(res)
           && (isnan(sexp_flonum_value(res)) || isinf(sexp_flonum_value(res))))
@@ -3032,7 +3041,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       c2 = sexp_read_char(ctx, in);
       sexp_push_char(ctx, c2, in);
       if ((c1 == 'x' || c1 == 'X') && (sexp_isxdigit(c2))) {
-        res = sexp_read_number(ctx, in, 16);
+        res = sexp_read_number(ctx, in, 16, 0);
         if (sexp_fixnump(res) && sexp_unbox_fixnum(res) >= 0 && sexp_unbox_fixnum(res) <= 0x10FFFF)
           res = sexp_make_character(sexp_unbox_fixnum(res));
         else if (!sexp_exceptionp(res))
@@ -3116,7 +3125,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
     c2 = sexp_read_char(ctx, in);
     if (c2 == '.' || sexp_isdigit(c2)) {
       sexp_push_char(ctx, c2, in);
-      res = sexp_read_number(ctx, in, 10);
+      res = sexp_read_number(ctx, in, 10, 0);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
 #if SEXP_USE_FLONUMS
         if (sexp_flonump(res))
@@ -3198,7 +3207,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '0': case '1': case '2': case '3': case '4':
   case '5': case '6': case '7': case '8': case '9':
     sexp_push_char(ctx, c1, in);
-    res = sexp_read_number(ctx, in, 10);
+    res = sexp_read_number(ctx, in, 10, 0);
     break;
   default:
     res = sexp_read_symbol(ctx, in, c1, 1);
@@ -3256,7 +3265,7 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
       sexp_read_char(ctx, in);
   }
   in = ((sexp_string_data(str)[0] == '#') || base == 10 ?
-        sexp_read(ctx, in) : sexp_read_number(ctx, in, base));
+        sexp_read(ctx, in) : sexp_read_number(ctx, in, base, 0));
   sexp_gc_release1(ctx);
   return sexp_numberp(in) ? in : SEXP_FALSE;
 }
