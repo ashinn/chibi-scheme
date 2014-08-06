@@ -10,7 +10,7 @@
 #define sexp_import_suffix "))"
 #define sexp_environment_prefix "(environment '("
 #define sexp_environment_suffix "))"
-#define sexp_default_environment "(environment '(scheme base))"
+#define sexp_default_environment "(environment '(scheme small))"
 #define sexp_advice_environment "(load-module '(chibi repl))"
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
@@ -431,7 +431,7 @@ void run_main (int argc, char **argv) {
       if (c == 'x') {
         if (strcmp(arg, "chibi.primitive") == 0) {
           goto load_primitive;
-        } else if (strcmp(arg, "scheme.base") == 0) {
+        } else if (strcmp(arg, "scheme.small") == 0) {
           load_init(0);
           break;
         }
