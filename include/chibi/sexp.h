@@ -1368,7 +1368,7 @@ SEXP_API sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sex
 SEXP_API sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_read_string (sexp ctx, sexp in, int sentinel);
 SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
-SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base);
+SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp);
 #if SEXP_USE_BIGNUMS
 SEXP_API sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
 				signed char sign, sexp_uint_t base);

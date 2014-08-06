@@ -269,7 +269,7 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   } else if (c=='/') {
     res = sexp_bignum_normalize(res);
     res = sexp_make_ratio(ctx, res, SEXP_ONE);
-    sexp_ratio_denominator(res) = sexp_read_number(ctx, in, 10);
+    sexp_ratio_denominator(res) = sexp_read_number(ctx, in, 10, 0);
     res = sexp_ratio_normalize(ctx, res, in);
 #endif
 #if SEXP_USE_COMPLEX
