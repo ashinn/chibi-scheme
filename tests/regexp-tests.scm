@@ -179,6 +179,7 @@
 
 (test-re '("кириллица") '(* alpha) "кириллица")
 (test-re #f '(w/ascii (* alpha)) "кириллица")
+(test-re '("кириллица") '(w/nocase "КИРИЛЛИЦА") "кириллица")
 
 (test-re '("１２３４５") '(* digit) "１２３４５")
 (test-re #f '(w/ascii (* digit)) "１２３４５")

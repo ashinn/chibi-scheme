@@ -494,12 +494,6 @@
   (char-set-union %char-set:letter %char-set:digit (char-set #\_)))
 (define (char-word-constituent? ch)
   (char-set-contains? char-set:word-constituent ch))
-(define char-set:title-case
-  (char-set-union
-   (ucs-range->char-set #x1F88 #x1F90)
-   (ucs-range->char-set #x1F98 #x1FA0)
-   (ucs-range->char-set #x1FA8 #x1FB0)
-   (char-set #\x01C5 #\x01C8 #\x01CB #\x01F2 #\x1FBC #\x1FCC #\x1FFC)))
 (define get-char-set:cased
   (let ((char-set:cased #f))
     (lambda ()
