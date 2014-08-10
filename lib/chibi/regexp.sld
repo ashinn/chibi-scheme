@@ -12,12 +12,24 @@
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
    (chibi
-    (import (rename (chibi) (protect guard))
-            (srfi 9) (chibi char-set)
+    (import (rename (chibi)
+                    (protect guard)
+                    (char-downcase %char-downcase)
+                    (char-upcase %char-upcase))
+            (only (scheme char) char-downcase char-upcase)
+            (srfi 9)
+            (chibi char-set)
             (chibi char-set full)
-            (prefix (chibi char-set ascii) %)))
+            (prefix (chibi char-set ascii) %))
+    (begin
+      (define char-set:title-case
+        (char-set-union
+         (ucs-range->char-set #x1F88 #x1F90)
+         (ucs-range->char-set #x1F98 #x1FA0)
+         (ucs-range->char-set #x1FA8 #x1FB0)
+         (char-set #\x01C5 #\x01C8 #\x01CB #\x01F2 #\x1FBC #\x1FCC #\x1FFC)))))
    (else
-    (import (scheme base) (srfi 14))
+    (import (scheme base) (scheme char) (srfi 14))
     (begin
       (define %char-set:letter
         (char-set-intersection char-set:ascii char-set:letter))
