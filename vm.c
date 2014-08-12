@@ -165,9 +165,7 @@ static void generate_lit (sexp ctx, sexp value) {
 static void generate_drop_prev (sexp ctx, sexp prev) {
 #if ! SEXP_USE_ALIGNED_BYTECODE
   if ((sexp_pairp(prev) && sexp_opcodep(sexp_car(prev))
-       && ((sexp_opcode_return_type(sexp_car(prev)) == SEXP_VOID
-            && sexp_opcode_class(sexp_car(prev)) != SEXP_OPC_FOREIGN)
-           || (sexp_opcode_code(sexp_car(prev)) == SEXP_OP_PUSH)))
+       && (sexp_opcode_code(sexp_car(prev)) == SEXP_OP_PUSH))
       || sexp_setp(prev) || sexp_litp(prev) || prev == SEXP_VOID)
     sexp_inc_context_pos(ctx, -(1 + sizeof(sexp)));
   else
