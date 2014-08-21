@@ -514,6 +514,7 @@
      ((int-type? base) "sexp_exact_integerp")
      ((float-type? base) "sexp_flonump")
      ((string-type? base) "sexp_stringp")
+     ((eq? base 'bytevector) "sexp_bytesp")
      ((eq? base 'char) "sexp_charp")
      ((eq? base 'boolean) "sexp_booleanp")
      ((eq? base 'port) "sexp_portp")
@@ -537,6 +538,7 @@
      ((int-type? base) "SEXP_FIXNUM")
      ((float-type? base) "SEXP_FLONUM")
      ((string-type? base) "SEXP_STRING")
+     ((eq? base 'bytevector) "SEXP_BYTES")
      ((eq? base 'char) "SEXP_CHAR")
      ((eq? base 'boolean) "SEXP_BOOLEAN")
      ((eq? base 'string) "SEXP_STRING")
@@ -587,6 +589,11 @@
       "sexp_unbox_fixnum(res)"
       "-1"))
 
+(define (c-bytes-length type val)
+  (if (memq 'result (type-array type))
+      "res"
+      (lambda () (cat "sexp_make_fixnum(sexp_bytes_length(" val "))"))))
+
 (define (c->scheme-converter type val . o)
   (let ((base (type-base type)))
     (cond
@@ -615,6 +622,9 @@
            " : sexp_cons(ctx, str=" val ", SEXP_FALSE)"))
      ((string-type? base)
       (cat "sexp_c_string(ctx, " val ", " (c-array-length type) ")"))
+     ((eq? 'bytevector base)
+      (cat "sexp_string_to_bytes(ctx, sexp_c_string(ctx, " val ", "
+           (c-bytes-length type val) "))"))
      ((eq? 'input-port base)
       (cat "sexp_make_non_null_input_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'output-port base)
@@ -668,6 +678,11 @@
             "sexp_string_maybe_null_data"
             "sexp_string_data")
            "(" val ")"))
+     ((eq? base 'bytevector)
+      (cat (if (type-null? type)
+            "sexp_bytes_maybe_null_data"
+            "sexp_bytes_data")
+           "(" val ")"))
      ((eq? base 'port-or-fileno)
       (cat "(sexp_portp(" val ") ? sexp_port_fileno(" val ")"
            " : sexp_filenop(" val ") ? sexp_fileno_fd(" val ")"
@@ -692,7 +707,8 @@
 
 (define (base-type-c-name base)
   (case base
-    ((string env-string non-null-string) (if *c++?* "string" "char*"))
+    ((string env-string non-null-string bytevector)
+     (if *c++?* "string" "char*"))
     ((fileno fileno-nonblock) "int")
     (else (string-replace (symbol->string base) #\- " "))))
 
@@ -738,7 +754,7 @@
        (if (type-null? type) "(" "")
        (type-predicate type) "(" arg ")"
        (lambda () (if (type-null? type) (cat " || sexp_not(" arg "))")))))
-     ((or (eq? base 'char) (int-type? base)
+     ((or (eq? base 'char) (eq? base 'bytevector) (int-type? base)
           (float-type? base) (port-type? base))
       (cat (type-predicate type) "(" arg ")"))
      ((or (lookup-type base) (void-pointer-type? type))
@@ -781,7 +797,7 @@
           (float-type? base-type)
           (string-type? base-type)
           (port-type? base-type)
-          (memq base-type '(fileno fileno-nonblock))
+          (memq base-type '(bytevector fileno fileno-nonblock))
           (and (not array) (eq? 'char base-type)))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"
@@ -972,6 +988,7 @@
   (cond
    ((eq? name 'string-length) 'sexp_string_length)
    ((eq? name 'string-size) 'sexp_string_size)
+   ((eq? name 'bytevector-length) 'sexp_bytes_length)
    (else name)))
 
 (define (write-value func val)
