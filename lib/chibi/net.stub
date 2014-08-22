@@ -103,7 +103,7 @@
 
 ;;> Set an option for the given socket.  For example, to make the
 ;;> address reusable:
-;;> @scheme{(set-socket-option! sock level/socket socket-opt/reuseaddr 1)}
+;;> \scheme{(set-socket-option! sock level/socket socket-opt/reuseaddr 1)}
 
 (define-c errno (set-socket-option! "setsockopt")
   (fileno int int (pointer int) (value (sizeof int) socklen_t)))
@@ -121,6 +121,6 @@
 (define-c-const int (socket-opt/rcvlowat "SO_RCVLOWAT"))
 (define-c-const int (socket-opt/sndlowat "SO_SNDLOWAT"))
 
-;;> The constants for the @scheme{get-socket-option} and
-;;> @scheme{set-socket-option!}.
+;;> The constants for the \scheme{get-socket-option} and
+;;> \scheme{set-socket-option!}.
 ;;/
