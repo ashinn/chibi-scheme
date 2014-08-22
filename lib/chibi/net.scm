@@ -1,12 +1,12 @@
 ;; Copyright (c) 2010-2012 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> \subsubsubsection{\scheme{(make-address-info family socktype proto [hints])}}
+;;> \procedure{(make-address-info family socktype proto [hints])}
 
 (define (make-address-info family socktype proto . o)
   (%make-address-info family socktype proto (if (pair? o) (car o) 0)))
 
-;;> \subsubsubsection{\scheme{(get-address-info host service [addrinfo])}}
+;;> \procedure{(get-address-info host service [addrinfo])}
 
 ;;> Create and return a new addrinfo structure for the given host
 ;;> and service.  \var{host} should be a string and \var{service} a
@@ -106,3 +106,38 @@
 (define (get-socket-option socket level name)
   (let ((res (getsockopt socket level name)))
     (and (pair? res) (car res))))
+
+;;> Sends the bytevector \var{bv} to \var{socket} with sendto and
+;;> returns the number of bytes sent, or a negative value on error.
+;;> If \var{addrinfo} is unspecified, \var{socket} must previously
+;;> have had a default address specified with \scheme{connect}.
+
+(define (send socket bv . o)
+  (let* ((flags (if (pair? o) (car o) 0))
+         (addrinfo (and (pair? o) (pair? (cdr o)) (cadr o)))
+         (sockaddr (and addrinfo (address-info-address addrinfo)))
+         (sockaddr-len (if addrinfo (address-info-address-length addrinfo) 0)))
+    (%send socket bv flags sockaddr sockaddr-len)))
+
+;;> Recieves data from \var{socket} to fill the bytevector \var{bv} by
+;;> calling recvfrom.  Returns the number of bytes read, or a negative
+;;> value on error.  If \var{addrinfo} is unspecified, \var{socket}
+;;> must previously have had a default address specified with
+;;> \scheme{connect}.
+
+(define (receive! socket bv . o)
+  (let* ((flags (if (pair? o) (car o) 0))
+         (addrinfo (and (pair? o) (pair? (cdr o)) (cadr o)))
+         (sockaddr (and addrinfo (address-info-address addrinfo)))
+         (sockaddr-len (if addrinfo (address-info-address-length addrinfo) 0)))
+    (%receive! socket bv flags sockaddr sockaddr-len)))
+
+;;> Shortcut for \scheme{receive}, returning a newly created
+;;> bytevector of length \var{n} on success and \scheme{#f} on
+;;> failure.
+
+(define (receive socket n . o)
+  (let* ((bv (make-bytevector n))
+         (m (apply receive! socket bv o)))
+    (and (>= m 0)
+         (subbytes bv 0 m))))
