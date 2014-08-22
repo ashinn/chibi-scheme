@@ -69,7 +69,7 @@
           (close-file-descriptor (car io))
           res))))
 
-;;> \subsubsubsection{\scheme{(make-listener-socket addrinfo [max-conn])}}
+;;> \procedure{(make-listener-socket addrinfo [max-conn])}
 
 ;;> Convenience wrapper to call socket, bind and listen to return
 ;;> a socket suitable for accepting connections on the given
