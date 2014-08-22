@@ -24,6 +24,44 @@ sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_
   return sexp_make_fileno(ctx, sexp_make_fixnum(res), SEXP_FALSE);
 }
 
+/* likewise sendto and recvfrom should suspend the thread gracefully */
+
+sexp sexp_sendto (sexp ctx, sexp self, int sock, const void* buffer, size_t len, int flags, struct sockaddr* addr, socklen_t addr_len) {
+#if SEXP_USE_GREEN_THREADS
+  sexp f;
+#endif
+  ssize_t res;
+  res = sendto(sock, buffer, len, flags, addr, addr_len);
+#if SEXP_USE_GREEN_THREADS
+  if (res < 0 && errno == EWOULDBLOCK) {
+    f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
+    if (sexp_opcodep(f)) {
+      ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, sexp_make_fixnum(sock));
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+    }
+  }
+#endif
+  return sexp_make_fixnum(res);
+}
+
+sexp sexp_recvfrom (sexp ctx, sexp self, int sock, void* buffer, size_t len, int flags, struct sockaddr* addr, socklen_t addr_len) {
+#if SEXP_USE_GREEN_THREADS
+  sexp f;
+#endif
+  ssize_t res;
+  res = recvfrom(sock, buffer, len, flags, addr, &addr_len);
+#if SEXP_USE_GREEN_THREADS
+  if (res < 0 && errno == EWOULDBLOCK) {
+    f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
+    if (sexp_opcodep(f)) {
+      ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, sexp_make_fixnum(sock));
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+    }
+  }
+#endif
+  return sexp_make_fixnum(res);
+}
+
 /* If we're listening on a socket from Scheme, we most likely want it */
 /* to be non-blocking. */
 

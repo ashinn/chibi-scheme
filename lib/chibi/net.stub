@@ -51,6 +51,16 @@
 
 (define-c int connect (fileno sockaddr int))
 
+(define-c sexp (%send "sexp_sendto")
+  ((value ctx sexp) (value self sexp)
+   fileno bytevector (value (bytevector-length arg3) size_t) int
+   (maybe-null sockaddr) socklen_t))
+
+(define-c sexp (%receive! "sexp_recvfrom")
+  ((value ctx sexp) (value self sexp)
+   fileno bytevector (value (bytevector-length arg3) size_t) int
+   (maybe-null sockaddr) socklen_t))
+
 ;;> Returns a list of 2 new sockets, the input and output end of a new
 ;;> pipe, respectively.
 
