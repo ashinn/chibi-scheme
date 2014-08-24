@@ -1,4 +1,3 @@
-
 (define-binary-record-type tar
   (make (make-tar))
   (write write-tar-raw)
@@ -193,6 +192,29 @@
     (tar-size-set! tar (bytevector-length content))
     tar))
 
+(define (tar-add-directories tar out acc)
+  (let lp ((dir (path-directory (tar-path tar))) (acc acc))
+    (let ((dir/ (if (string-suffix? "/" dir) dir (string-append dir "/"))))
+      (cond
+       ((member dir '("" "." "/")) acc)
+       ((assoc dir/ acc) (lp (path-directory dir) acc))
+       (else
+        (let ((acc (lp (path-directory dir) (cons (cons dir/ #f) acc))))
+          (let ((tar2 (make-tar)))
+            (tar-path-set! tar2 dir/)
+            (tar-ustar-set! tar2 "ustar")
+            (tar-ustar-version-set! tar2 "00")
+            (tar-mode-set! tar2 (bitwise-ior #o111 (tar-mode tar) ))
+            (tar-uid-set! tar2 (tar-uid tar))
+            (tar-gid-set! tar2 (tar-gid tar))
+            (tar-owner-set! tar2 (tar-owner tar))
+            (tar-group-set! tar2 (tar-group tar))
+            (tar-time-set! tar2 (tar-time tar))
+            (tar-type-set! tar2 "5")
+            (tar-size-set! tar2 0)
+            (write-tar tar2 out)
+            acc)))))))
+
 ;; create an archive for a given file list
 (define (tar-create tarball files . o)
   (let* ((rename (if (pair? o) (car o) (lambda (f) f)))
@@ -223,8 +245,8 @@
                     (dest (if (equal? x src0) dest0 (get-dest x)))
                     (content (if (equal? x src0) content0 (get-content x)))
                     (tar (if content
-                                (inline->tar dest content)
-                                (file->tar src))))
+                             (inline->tar dest content)
+                             (file->tar src))))
                (tar-path-set! tar dest)
                (cond
                 ((assoc (tar-path tar) acc)
@@ -237,17 +259,18 @@
                            (current-error-port)))
                       acc))
                 (else
-                 (write-tar tar out)
-                 (cond
-                  ((and (string? src) (equal? "0" (tar-type tar)))
-                   (write-modulo-file out src 512))
-                  (content
-                   (write-bytevector content out)
-                   (let ((rem (modulo (bytevector-length content) 512)))
-                     (if (positive? rem)
-                         (write-bytevector
-                          (make-bytevector (- 512 rem) 0) out)))))
-                 (cons (cons (tar-path tar) src) acc)))))
+                 (let ((acc (tar-add-directories tar out acc)))
+                   (write-tar tar out)
+                   (cond
+                    ((and (string? src) (equal? "0" (tar-type tar)))
+                     (write-modulo-file out src 512))
+                    (content
+                     (write-bytevector content out)
+                     (let ((rem (modulo (bytevector-length content) 512)))
+                       (if (positive? rem)
+                           (write-bytevector
+                            (make-bytevector (- 512 rem) 0) out)))))
+                   (cons (cons (tar-path tar) src) acc))))))
            (if (and src0 (not no-recurse?))
                (directory-fold-tree src0 kons acc kons)
                (kons src0 acc))))
