@@ -148,6 +148,11 @@
       (lambda (tar bv) (if (equal? (tar-path tar) file) (return bv))))
      #f)))
 
+(define (file-owner-or-nobody st)
+  (or (user-name (user-information (file-owner st))) "nobody"))
+(define (file-group-or-nobody st)
+  (or (group-name (group-information (file-group st))) "nobody"))
+
 (define (file->tar file)
   (let ((tar (make-tar))
         (st (file-link-status file)))
@@ -159,8 +164,8 @@
       (tar-mode-set! tar (file-mode st))
       (tar-uid-set! tar (file-owner st))
       (tar-gid-set! tar (file-group st))
-      (tar-owner-set! tar (user-name (user-information (file-owner st))))
-      (tar-group-set! tar (group-name (group-information (file-group st))))
+      (tar-owner-set! tar (file-owner-or-nobody st))
+      (tar-group-set! tar (file-group-or-nobody st))
       (tar-time-set! tar (+ 1262271600 (file-modification-time st)))
       (tar-type-set! tar (cond ((file-link? st) "2")
                                ((file-character? st) "3")
