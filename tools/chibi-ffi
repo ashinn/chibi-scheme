@@ -186,7 +186,7 @@
 (define (parse-func func . o)
   (if (not (and (= 3 (length func))
                 (or (identifier? (cadr func))
-                    (and (list (cadr func))
+                    (and (list? (cadr func))
                          (<= 1 (length (cadr func)) 3)
                          (every (lambda (x) (or (identifier? x) (not x) (string? x)))
                                 (cadr func))))
@@ -1581,7 +1581,7 @@
                 "}\n\n")
            ;; make the finalizer available
            (set! *funcs*
-                 (cons (parse-func `(void ,(cadr x) (,name))) *funcs*))))))
+                 (cons (parse-func `(void ,y (,name))) *funcs*))))))
   ;; maybe write constructor
   (cond
    ((memq 'constructor: type)
