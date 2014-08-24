@@ -1045,8 +1045,11 @@ sexp sexp_make_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch)
 }
 
 sexp sexp_c_string (sexp ctx, const char *str, sexp_sint_t slen) {
-  sexp_sint_t len = ((slen >= 0) ? slen : strlen(str));
-  sexp s = sexp_make_string(ctx, sexp_make_fixnum(len), SEXP_VOID);
+  sexp_sint_t len;
+  sexp s;
+  if (str == NULL) return SEXP_FALSE;
+  len = ((slen >= 0) ? slen : strlen(str));
+  s = sexp_make_string(ctx, sexp_make_fixnum(len), SEXP_VOID);
   if (sexp_exceptionp(s)) return s;
   memcpy(sexp_string_data(s), str, len);
   sexp_string_data(s)[len] = '\0';
