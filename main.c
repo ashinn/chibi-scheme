@@ -390,7 +390,7 @@ void run_main (int argc, char **argv) {
   char *arg;
   const char *prefix=NULL, *suffix=NULL, *main_symbol=NULL, *main_module=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
-    no_script=0, fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
+    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp out=SEXP_FALSE, ctx=NULL;
   sexp_gc_var4(tmp, sym, args, env);
@@ -482,7 +482,6 @@ void run_main (int argc, char **argv) {
     case '-':
       if (argv[i][2] == '\0') {
         i++;
-        no_script = 1;
         goto done_options;
       }
       sexp_usage(1);
@@ -585,7 +584,7 @@ void run_main (int argc, char **argv) {
     if (i < argc)
       for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    if (i >= argc || no_script)
+    if (i >= argc)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
@@ -606,7 +605,7 @@ void run_main (int argc, char **argv) {
         }
       } else
 #endif
-      if (i < argc && !no_script) {   /* script usage */
+      if (i < argc) {   /* script usage */
 #if SEXP_USE_MODULES
         /* reset the environment to have only the `import' and */
         /* `cond-expand' bindings */
