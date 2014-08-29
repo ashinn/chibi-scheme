@@ -80,4 +80,6 @@
    interaction-environment
    ;; time
    current-second current-jiffy jiffies-per-second
+   ;; write
+   display write write-shared write-simple
    ))
