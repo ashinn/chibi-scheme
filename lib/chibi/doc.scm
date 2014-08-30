@@ -821,8 +821,11 @@ div#footer {padding-bottom: 50px}
                         (id (form-defined-name form))
                         (line (port-line in))
                         ;; find all procedures defined by form
-                        (procs (filter (lambda (x) (<= last-line (third x) line))
-                                       (filter third defs)))
+                        (procs2 (filter (lambda (x) (<= last-line (third x) line))
+                                        (filter third defs)))
+                        (procs (if (= 2 (length procs2))
+                                   (cdr procs2)
+                                   procs2))
                         ;; the the signature for the form
                         (sigs
                          (cond
@@ -846,7 +849,7 @@ div#footer {padding-bottom: 50px}
                     ((and (eq? lang 'ffi) (pair? sigs))
                      (lp '() '() (append (insert-signature cur #f sigs) res)
                          ids depth line))
-                    ((and (eq? lang 'scheme) (= 1 (length procs)))
+                    ((and (memq lang '(scheme module)) (= 1 (length procs)))
                      (lp '() '()
                          (append (insert-signature cur (caar procs) sigs) res)
                          ids depth line))
