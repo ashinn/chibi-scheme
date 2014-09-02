@@ -409,15 +409,35 @@
            (if y)
            y))))
 
-(define-syntax be-like-begin
+(define-syntax be-like-begin1
   (syntax-rules ()
-    ((be-like-begin name)
+    ((be-like-begin1 name)
      (define-syntax name
        (syntax-rules ()
          ((name expr (... ...))
           (begin expr (... ...))))))))
-(be-like-begin sequence)
-(test 4 (sequence 1 2 3 4))
+(be-like-begin1 sequence1)
+(test 3 (sequence1 0 1 2 3))
+
+(define-syntax be-like-begin2
+  (syntax-rules ()
+    ((be-like-begin2 name)
+     (define-syntax name
+       (... (syntax-rules ()
+              ((name expr ...)
+               (begin expr ...))))))))
+(be-like-begin1 sequence2)
+(test 4 (sequence2 1 2 3 4))
+
+(define-syntax be-like-begin3
+  (syntax-rules ()
+    ((be-like-begin3 name)
+     (define-syntax name
+       (syntax-rules dots ()
+         ((name expr dots)
+          (begin expr dots)))))))
+(be-like-begin3 sequence3)
+(test 5 (sequence3 2 3 4 5))
 
 (define-syntax jabberwocky
   (syntax-rules ()
