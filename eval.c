@@ -957,10 +957,11 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
 
  loop:
   if (sexp_pairp(x)) {
-    if (sexp_not(sexp_listp(ctx, x))) {
+    cell = sexp_idp(sexp_car(x)) ? sexp_env_cell(ctx, sexp_context_env(ctx), sexp_car(x), 0) : NULL;
+    if (sexp_not(sexp_listp(ctx, x))
+        && !(cell && sexp_macrop(sexp_cdr(cell)))) {
       res = sexp_compile_error(ctx, "dotted list in source", x);
     } else if (sexp_idp(sexp_car(x))) {
-      cell = sexp_env_cell(ctx, sexp_context_env(ctx), sexp_car(x), 0);
       if (! cell) {
         res = analyze_app(ctx, x, depth);
         if (sexp_exceptionp(res))
