@@ -72,9 +72,9 @@
 
 (define (any pred ls . lol)
   (define (any1 pred ls)
-    (if (null? (cdr ls))
-        (pred (car ls))
-        ((lambda (x) (if x x (any1 pred (cdr ls)))) (pred (car ls)))))
+    (if (pair? (cdr ls))
+        ((lambda (x) (if x x (any1 pred (cdr ls)))) (pred (car ls)))
+        (pred (car ls))))
   (define (anyn pred lol)
     (if (every pair? lol)
         ((lambda (x) (if x x (anyn pred (map cdr lol))))
