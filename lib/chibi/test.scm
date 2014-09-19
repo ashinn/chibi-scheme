@@ -249,8 +249,8 @@
   (cond
    ((> (abs a) (abs b))
     (approx-equal? b a epsilon))
-   ((zero? b)
-    (< (abs a) epsilon))
+   ((zero? a)
+    (< (abs b) epsilon))
    (else
     (< (abs (/ (- a b) b)) epsilon))))
 
