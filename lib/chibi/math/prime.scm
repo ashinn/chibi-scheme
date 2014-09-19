@@ -171,15 +171,14 @@
     (list n))
    (else
     (let lp ((n n)
-             (limit (exact (ceiling (sqrt n))))
              (res (list)))
       (cond
        ((even? n)
-        (lp (quotient n 2) (quotient limit 2) (cons 2 res)))
+        (lp (quotient n 2) (cons 2 res)))
        ((= n 1)
         (reverse res))
        (else
-        (let lp ((i 3) (n n) (limit limit) (res res))
+        (let lp ((i 3) (n n) (limit (exact (ceiling (sqrt n)))) (res res))
           (cond
            ((= n 1)
             (reverse res))
