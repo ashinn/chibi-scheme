@@ -68,6 +68,8 @@
 (test '(2 5) (factor 10))
 (test '(11) (factor 11))
 (test '(2 2 3) (factor 12))
+(test '(2 3 3) (factor 18))
+(test '(2 2 2 3 3) (factor 72))
 (test '(3 3 3 5 7) (factor 945))
 
 (test 975 (aliquot 945))
