@@ -1,4 +1,18 @@
 
+(define (read-u16/be in)
+  (let* ((i (read-u8 in))
+         (j (read-u8 in)))
+    (if (eof-object? j)
+        (error "end of input")
+        (+ (arithmetic-shift i 8) j))))
+
+(define (read-u16/le in)
+  (let* ((i (read-u8 in))
+         (j (read-u8 in)))
+    (if (eof-object? j)
+        (error "end of input")
+        (+ (arithmetic-shift j 8) i))))
+
 ;; Record types with user-specified binary formats.
 ;; A work in progress, but sufficient for tar files.
 
@@ -44,6 +58,12 @@
              ((string? val) `(,(rename 'assert-read-string) ,in ,val))
              ((bytevector? val) `(,(rename 'assert-read-bytevector) ,in ,val))
              (else (error "unknown binary literal: " val)))))
+    ((u8)
+     `(,(rename 'read-u8) ,in))
+    ((u16/be)
+     `(,(rename 'read-u16/be) ,in))
+    ((u16/le)
+     `(,(rename 'read-u16/le) ,in))
     ((octal)
      `(,(rename 'assert-read-integer) ,in ,(cadr spec) 8))
     ((decimal)
@@ -83,6 +103,14 @@
       (write-string s out)
       (write-char right-pad-ch out)))))
 
+(define (write-u16/be n out)
+  (write-u8 (arithmetic-shift n -8) out)
+  (write-u8 (bitwise-and n #xFF) out))
+
+(define (write-u16/le n out)
+  (write-u8 (bitwise-and n #xFF) out)
+  (write-u8 (arithmetic-shift n -8) out))
+
 (define (expand-write rename out val spec)
   (let ((_if (rename 'if))
         (_not (rename 'not))
@@ -101,6 +129,12 @@
                ((string? val) `(,_write-string ,val ,out))
                ((bytevector? val) `(,_write-bytevector ,val ,out))
                (else (error "unknown binary literal: " val)))))
+      ((u8)
+       `(,(rename 'write-u8) ,val ,out))
+      ((u16/be)
+       `(,(rename 'write-u16/be) ,val ,out))
+      ((u16/le)
+       `(,(rename 'write-u16/le) ,val ,out))
       ((octal)
        `(,(rename 'write-padded-integer) ,out ,val 8 ,(cadr spec) #\0 #\null))
       ((decimal)
@@ -133,7 +167,7 @@
         (_> (rename '>)))
     (case (car spec)
       ((literal) #t)
-      ((octal decimal hexadecimal)
+      ((u8 u16/be u16/le octal decimal hexadecimal)
        `(,_if (,_not (,_integer? ,v))
             (,_error "expected an integer" ,v)))
       ((fixed-string padded-string)
@@ -147,7 +181,7 @@
 (define (expand-default rename spec)
   (case (car spec)
     ((literal) (cadr spec))
-    ((octal decimal hexadecimal) 0)
+    ((u8 u16/be u16/le octal decimal hexadecimal) 0)
     ((fixed-string) (make-string (cadr spec) #\space))
     ((padded-string) "")
     (else (error "unknown binary format: " spec))))
@@ -184,7 +218,8 @@
                            (symbol-append (symbol-append type '-)
                                           (symbol-append name '-set!)))))
              (raw-set (and set (symbol-append '% set)))
-             (spec (cadr (car ls))))
+             (spec0 (cadr (car ls)))
+             (spec (if (pair? spec0) spec0 (list spec0))))
         (lp (cdr ls) (cons (make-field name get set raw-set spec) res)))))))
 
 (define-syntax define-binary-record-type
