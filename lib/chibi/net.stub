@@ -1,4 +1,5 @@
 
+(c-system-include "arpa/inet.h")
 (c-system-include "sys/types.h")
 (c-system-include "sys/socket.h")
 (c-system-include "netinet/in.h")
