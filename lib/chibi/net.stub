@@ -80,6 +80,7 @@
 (define-c-const int (address-family/unspecified "AF_UNSPEC"))
 (define-c-const int (address-family/unix "AF_UNIX"))
 (define-c-const int (address-family/inet "AF_INET"))
+(define-c-const int (address-family/inet6 "AF_INET6"))
 (define-c-const int (socket-type/stream "SOCK_STREAM"))
 (define-c-const int (socket-type/datagram "SOCK_DGRAM"))
 (define-c-const int (socket-type/raw "SOCK_RAW"))

@@ -7,7 +7,8 @@
           send receive! receive
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next
-          address-family/unix address-family/inet address-family/unspecified
+          address-family/unix address-family/inet address-family/inet6
+          address-family/unspecified
           socket-type/stream socket-type/datagram socket-type/raw
           ip-proto/ip ip-proto/tcp ip-proto/udp
           ai/passive ai/canonname ai/numeric-host
