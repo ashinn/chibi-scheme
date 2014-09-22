@@ -81,10 +81,15 @@ sexp sexp_listen (sexp ctx, sexp self, sexp fileno, sexp backlog) {
 /* Additional utilities. */
 
 sexp sexp_sockaddr_name (sexp ctx, sexp self, struct sockaddr* addr) {
-  char buf[20];
-  struct sockaddr_in *sa = (struct sockaddr_in *)addr;
-  unsigned char *ptr = (unsigned char *)&(sa->sin_addr);
-  sprintf(buf, "%d.%d.%d.%d", ptr[0], ptr[1], ptr[2], ptr[3]);
+  char buf[24];
+  /* struct sockaddr_in *sa = (struct sockaddr_in *)addr; */
+  /* unsigned char *ptr = (unsigned char *)&(sa->sin_addr); */
+  /* sprintf(buf, "%d.%d.%d.%d", ptr[0], ptr[1], ptr[2], ptr[3]); */
+  inet_ntop(addr->sa_family,
+            (addr->sa_family == AF_INET6 ?
+             (void*)(&(((struct sockaddr_in6 *)addr)->sin6_addr)) :
+             (void*)(&(((struct sockaddr_in *)addr)->sin_addr))),
+            buf, 24);
   return sexp_c_string(ctx, buf, -1);
 }
 
