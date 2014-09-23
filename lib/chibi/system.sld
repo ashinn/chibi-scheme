@@ -1,6 +1,7 @@
 
 (define-library (chibi system)
-  (export user-information user? user-name user-password
+  (export get-host-name
+          user-information user? user-name user-password
           user-id user-group-id user-gecos user-home user-shell
           group-information group-name group-password group-id
           current-user-id current-group-id
