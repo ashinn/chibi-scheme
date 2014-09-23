@@ -4,6 +4,11 @@
 (c-system-include "grp.h")
 (c-system-include "sys/types.h")
 
+;;> Returns the standard hostname of the current processor.
+
+(define-c errno (get-host-name "gethostname")
+  ((result (array char (auto-expand arg1))) (value 256 int)))
+
 ;;> \section{\scheme{(user-information name-or-id)}}
 
 ;;> Returns the password entry for the given user.  \var{name-or-id}
