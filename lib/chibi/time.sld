@@ -7,5 +7,11 @@
           time-second time-minute time-hour time-day time-month time-year
           time-day-of-week time-day-of-year time-dst?
           tm? timeval? timezone?)
+  (cond-expand
+   ((or bsd linux)
+    (export rusage? resource-usage-time resource-usage-system-time
+            resource-usage-max-rss resource-usage/self
+            resource-usage/children get-resource-usage))
+   (else))
   (import (chibi))
   (include-shared "time"))
