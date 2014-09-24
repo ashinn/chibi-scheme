@@ -76,3 +76,24 @@
 (define-c non-null-string (time->string "asctime_r")
   (tm (result (array char 64))))
 
+(cond-expand
+ ((or bsd linux)
+  (define-c-struct rusage
+    predicate: rusage?
+    ((struct timeval) ru_utime  resource-usage-time)
+    ((struct timeval) ru_stime  resource-usage-system-time)
+    (long             ru_maxrss resource-usage-max-rss))
+
+;;> Accessors for the \scheme{rusage} struct.
+;;/
+
+  (define-c-const int (resource-usage/self RUSAGE_SELF))
+  (define-c-const int (resource-usage/children RUSAGE_CHILDREN))
+
+;;> Returns a struct describing the resources used by the current
+;;> process.
+
+  (define-c errno (get-resource-usage "getrusage")
+    ((default RUSAGE_SELF int) (result rusage))))
+ (else
+  ))
