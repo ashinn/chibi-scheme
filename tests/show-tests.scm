@@ -33,15 +33,15 @@
 (test "10" (show #f (numeric 10)))
 (test "100" (show #f (numeric 100)))
 (test "57005" (show #f #xDEAD))
-(test "#xDEAD" (show #f (with ((radix 16)) #xDEAD)))
-(test "#xDEAD1234" (show #f (with ((radix 16)) #xDEAD) 1234))
-(test "DE.AD"
+(test "#xdead" (show #f (with ((radix 16)) #xDEAD)))
+(test "#xdead1234" (show #f (with ((radix 16)) #xDEAD) 1234))
+(test "de.ad"
     (show #f (with ((radix 16) (precision 2)) (numeric (/ #xDEAD #x100)))))
-(test "D.EAD"
+(test "d.ead"
     (show #f (with ((radix 16) (precision 3)) (numeric (/ #xDEAD #x1000)))))
-(test "0.DEAD"
+(test "0.dead"
     (show #f (with ((radix 16) (precision 4)) (numeric (/ #xDEAD #x10000)))))
-(test "1G"
+(test "1g"
     (show #f (with ((radix 17)) (numeric 33))))
 
 (test "3.14159" (show #f 3.14159))
@@ -347,6 +347,15 @@
       (let loop ((res '()))
         (let ((line (read port)))
           (if (eof-object? line) (reverse res) (loop (cons line res))))))))\n")
+
+(test-pretty
+ "(design
+ (module (name \"\\\\testshiftregister\")
+         (attributes
+          (attribute (name \"\\\\src\") (value \"testshiftregister.v:10\"))))
+ (wire (name \"\\\\shreg\")
+       (attributes
+        (attribute (name \"\\\\src\") (value \"testshiftregister.v:15\")))))\n")
 
 (test "(let ((ones '#0=(1 . #0#))) ones)\n"
     (show #f (pretty (let ((ones (list 1)))

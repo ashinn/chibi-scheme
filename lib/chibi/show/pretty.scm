@@ -173,7 +173,7 @@
              (tail (drop* (cdr ls) (or indent-rule 1)))
              (default
                (let ((sep (make-nl-space (+ col1 1))))
-                 (each sep (joined/shares pp (cdr ls) shares sep) ")")))
+                 (each sep (joined/shares pp (cdr ls) shares sep))))
              ;; reset in case we don't fit on the first line
              (reset-shares (with-reset-shares shares nothing)))
          (call-with-output
