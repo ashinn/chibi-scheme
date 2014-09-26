@@ -78,6 +78,7 @@
 
 (cond-expand
  ((or bsd linux)
+  (c-system-include "sys/resource.h")
   (define-c-struct rusage
     predicate: rusage?
     ((struct timeval) ru_utime  resource-usage-time)
