@@ -356,6 +356,19 @@
 ;;> Returns the first string cursor of \var{pat} in \var{str},
 ;;> of \scheme{#f} if it's not found.
 
+;;> \procedure{(safe-setenv name value)}
+
+;;> Equivalent to \scheme{setenv} but does nothing and returns
+;;> \scheme{#f} if \var{value} is a function definition.  Used to
+;;> circumvent the vulnerability of the shellshock bug.
+
+(define (safe-setenv name value)
+  (define (function-def? str)
+    (and (> (string-size value) 5)
+         (equal? "() {" (substring value 0 4))))
+  (and (not (function-def? value))
+       (setenv name value)))
+
 ;;> \procedure{(atomically expr)}
 
 ;;> Run \var{expr} atomically, disabling yields.  Ideally should only be
