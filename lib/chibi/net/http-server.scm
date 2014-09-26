@@ -215,12 +215,12 @@
           (duplicate-file-descriptor-to
            (port-fileno (request-in request)) 0)
           (duplicate-file-descriptor-to (port-fileno out) 1)
-          (setenv "HTTP_HOST" (request-host request))
-          (setenv "REQUEST_URI" (uri->string (request-uri request)))
-          (setenv "REQUEST_METHOD"
-                  (symbol->string (request-method request)))
-          (setenv "QUERY_STRING"
-                  (or (uri-query (request-uri request)) ""))
+          (safe-setenv "HTTP_HOST" (request-host request))
+          (safe-setenv "REQUEST_URI" (uri->string (request-uri request)))
+          (safe-setenv "REQUEST_METHOD"
+                       (symbol->string (request-method request)))
+          (safe-setenv "QUERY_STRING"
+                       (or (uri-query (request-uri request)) ""))
           (let ((res (execute local-path (list local-path))))
             (display "failed to execute program: " (current-error-port))
             (write local-path (current-error-port))
