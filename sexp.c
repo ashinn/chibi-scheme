@@ -1840,8 +1840,8 @@ int sexp_maybe_block_port (sexp ctx, sexp in, int forcep) {
         if (sexp_port_stream(in))
           clearerr(sexp_port_stream(in));
         f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
-        if (sexp_opcodep(f)) {
-          ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, in);
+        if (sexp_applicablep(f)) {
+          sexp_apply2(ctx, f, in, SEXP_FALSE);
           return 1;
         }
       }

@@ -113,11 +113,17 @@
 ;;> have had a default address specified with \scheme{connect}.
 
 (define (send socket bv . o)
+  (apply send/non-blocking socket bv #f o))
+
+;;> Equivalent to \scheme{send} but gives up and returns false if the
+;;> packet can't be sent within \var{timeout} seconds.
+
+(define (send/non-blocking socket bv timeout . o)
   (let* ((flags (if (pair? o) (car o) 0))
          (addrinfo (and (pair? o) (pair? (cdr o)) (cadr o)))
          (sockaddr (and addrinfo (address-info-address addrinfo)))
          (sockaddr-len (if addrinfo (address-info-address-length addrinfo) 0)))
-    (%send socket bv flags sockaddr sockaddr-len)))
+    (%send socket bv flags sockaddr sockaddr-len timeout)))
 
 ;;> Recieves data from \var{socket} to fill the bytevector \var{bv} by
 ;;> calling recvfrom.  Returns the number of bytes read, or a negative
@@ -126,11 +132,17 @@
 ;;> \scheme{connect}.
 
 (define (receive! socket bv . o)
+  (apply receive!/non-blocking socket bv #f o))
+
+;;> Equivalent to \scheme{receive!} but gives up and returns false if
+;;> no packets are received within \var{timeout} seconds.
+
+(define (receive!/non-blocking socket bv timeout . o)
   (let* ((flags (if (pair? o) (car o) 0))
          (addrinfo (and (pair? o) (pair? (cdr o)) (cadr o)))
          (sockaddr (and addrinfo (address-info-address addrinfo)))
          (sockaddr-len (if addrinfo (address-info-address-length addrinfo) 0)))
-    (%receive! socket bv flags sockaddr sockaddr-len)))
+    (%receive! socket bv flags sockaddr sockaddr-len timeout)))
 
 ;;> Shortcut for \scheme{receive}, returning a newly created
 ;;> bytevector of length \var{n} on success and \scheme{#f} on
@@ -139,5 +151,14 @@
 (define (receive socket n . o)
   (let* ((bv (make-bytevector n))
          (m (apply receive! socket bv o)))
+    (and (>= m 0)
+         (subbytes bv 0 m))))
+
+;;> Equivalent to \scheme{receive} but gives up and returns false if
+;;> no packets are received within \var{timeout} seconds.
+
+(define (receive/non-blocking socket n timeout . o)
+  (let* ((bv (make-bytevector n))
+         (m (apply receive!/non-blocking socket bv timeout o)))
     (and (>= m 0)
          (subbytes bv 0 m))))

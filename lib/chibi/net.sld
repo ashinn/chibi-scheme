@@ -5,6 +5,7 @@
           sockaddr-name sockaddr-port make-sockaddr
           with-net-io open-net-io make-listener-socket
           send receive! receive
+          send/non-blocking receive!/non-blocking receive/non-blocking
           address-info-family address-info-socket-type address-info-protocol
           address-info-address address-info-address-length address-info-next
           address-family/unix address-family/inet address-family/inet6
