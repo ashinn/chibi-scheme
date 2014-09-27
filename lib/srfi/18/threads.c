@@ -390,7 +390,7 @@ static sexp sexp_insert_pollfd (sexp ctx, int fd, int events) {
 }
 
 /* block the current thread on the specified port */
-static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd) {
+static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd, sexp timeout) {
   int fd;
   /* register the fd */
   if (sexp_portp(portorfd))
@@ -406,7 +406,7 @@ static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd) {
   /* pause the current thread */
   sexp_context_waitp(ctx) = 1;
   sexp_context_event(ctx) = portorfd;
-  sexp_insert_timed(ctx, ctx, SEXP_FALSE);
+  sexp_insert_timed(ctx, ctx, timeout);
   return SEXP_VOID;
 }
 
@@ -676,7 +676,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_global(ctx, SEXP_G_THREADS_SCHEDULER)
     = sexp_make_foreign(ctx, "scheduler", 1, 0, (sexp_proc1)sexp_scheduler, SEXP_FALSE);
   sexp_global(ctx, SEXP_G_THREADS_BLOCKER)
-    = sexp_make_foreign(ctx, "blocker", 1, 0, (sexp_proc1)sexp_blocker, SEXP_FALSE);
+    = sexp_make_foreign(ctx, "blocker", 2, 0, (sexp_proc1)sexp_blocker, SEXP_FALSE);
 
   /* remember the env to lookup the runner later */
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = env;

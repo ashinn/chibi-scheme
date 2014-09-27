@@ -1906,7 +1906,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
           && (errno == EAGAIN)) {
         if (sexp_port_stream(_ARG2)) clearerr(sexp_port_stream(_ARG2));
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
-          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2);
+          sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2, SEXP_FALSE);
         else               /* no scheduler but output full, wait 5ms */
           usleep(5*1000);
         fuel = 0;
@@ -1959,7 +1959,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       /* yield if threads are enabled (otherwise busy loop) */
       /* TODO: the wait seems necessary on OS X to stop a print loop to ptys */
       if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
-        sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3);
+        sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3, SEXP_FALSE);
       else               /* no scheduler but output full, wait 5ms */
         usleep(5*1000);
       fuel = 0;
@@ -1991,7 +1991,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
         /* TODO: block and unblock */
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
-          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
+          sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1, SEXP_FALSE);
         fuel = 0;
         ip--;      /* try again */
       } else
@@ -2017,7 +2017,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
           && (errno == EAGAIN)) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
-          sexp_apply1(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1);
+          sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1, SEXP_FALSE);
         fuel = 0;
         ip--;      /* try again */
       } else
@@ -2115,6 +2115,19 @@ sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
   } else {
     sexp_gc_preserve1(ctx, args);
     res = sexp_apply(ctx, f, args=sexp_list1(ctx, x));
+    sexp_gc_release1(ctx);
+  }
+  return res;
+}
+
+sexp sexp_apply2 (sexp ctx, sexp f, sexp x, sexp y) {
+  sexp res;
+  sexp_gc_var1(args);
+  if (sexp_opcodep(f) && sexp_opcode_func(f)) {
+    res = ((sexp_proc3)sexp_opcode_func(f))(ctx, f, 2, x, y);
+  } else {
+    sexp_gc_preserve1(ctx, args);
+    res = sexp_apply(ctx, f, args=sexp_list2(ctx, x, y));
     sexp_gc_release1(ctx);
   }
   return res;
