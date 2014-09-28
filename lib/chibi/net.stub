@@ -87,6 +87,7 @@
 (define-c-const int (socket-type/datagram "SOCK_DGRAM"))
 (define-c-const int (socket-type/raw "SOCK_RAW"))
 (define-c-const int (ip-proto/ip "IPPROTO_IP"))
+(define-c-const int (ip-proto/icmp "IPPROTO_ICMP"))
 (define-c-const int (ip-proto/tcp "IPPROTO_TCP"))
 (define-c-const int (ip-proto/udp "IPPROTO_UDP"))
 (define-c-const int (ai/passive "AI_PASSIVE"))
