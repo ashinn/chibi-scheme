@@ -883,6 +883,9 @@ static int sexp_check_type(sexp ctx, sexp a, sexp b) {
   if (sexp_exceptionp(x)) {                                 \
     if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)) {     \
       fuel = 0; ip--; goto loop;                            \
+    } else if (x == sexp_global(ctx, SEXP_G_IO_BLOCK_ONCE_ERROR)) { \
+      stack[top-i+1] = SEXP_ZERO;                                   \
+      fuel = 0; ip--; goto loop;                            \
     } else {                                                \
       top -= i;                                             \
       _ARG1 = x;                                            \

@@ -32,7 +32,8 @@
 
 ;;> Bind a name to a socket.
 
-(define-c errno bind (fileno sockaddr int))
+(define-c sexp (bind "sexp_bind")
+  ((value ctx sexp) (value self sexp) fileno sockaddr int))
 
 ;;> Listen on a socket.
 
