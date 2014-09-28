@@ -11,7 +11,7 @@
           address-family/unix address-family/inet address-family/inet6
           address-family/unspecified
           socket-type/stream socket-type/datagram socket-type/raw
-          ip-proto/ip ip-proto/tcp ip-proto/udp
+          ip-proto/ip ip-proto/icmp ip-proto/tcp ip-proto/udp
           ai/passive ai/canonname ai/numeric-host
           get-socket-option set-socket-option! level/socket
           socket-opt/debug socket-opt/broadcast socket-opt/reuseaddr
