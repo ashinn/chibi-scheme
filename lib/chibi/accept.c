@@ -39,7 +39,7 @@ sexp sexp_sendto (sexp ctx, sexp self, int sock, const void* buffer, size_t len,
     f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
     if (sexp_applicablep(f)) {
       sexp_apply2(ctx, f, sexp_make_fixnum(sock), timeout);
-      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ONCE_ERROR);
     }
   }
 #endif
@@ -57,15 +57,24 @@ sexp sexp_recvfrom (sexp ctx, sexp self, int sock, void* buffer, size_t len, int
     f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
     if (sexp_applicablep(f)) {
       sexp_apply2(ctx, f, sexp_make_fixnum(sock), timeout);
-      return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
+      return sexp_global(ctx, SEXP_G_IO_BLOCK_ONCE_ERROR);
     }
   }
 #endif
   return sexp_make_fixnum(res);
 }
 
-/* If we're listening on a socket from Scheme, we most likely want it */
-/* to be non-blocking. */
+/* If we're binding or listening on a socket from Scheme, we most */
+/* likely want it to be non-blocking. */
+
+sexp sexp_bind (sexp ctx, sexp self, int fd, struct sockaddr* addr, socklen_t addr_len) {
+  int res = bind(fd, addr, addr_len);
+#if SEXP_USE_GREEN_THREADS
+  if (res >= 0)
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+#endif
+  return (res == 0) ? SEXP_TRUE : SEXP_FALSE;
+}
 
 sexp sexp_listen (sexp ctx, sexp self, sexp fileno, sexp backlog) {
   int fd, res;
