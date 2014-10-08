@@ -83,7 +83,7 @@
 (define (keyword-ref ls key . o)
   (let lp ((ls ls))
     (if (and (pair? ls) (pair? (cdr ls)))
-        (if (eq? key (caar ls))
+        (if (eq? key (car ls))
             (cadr ls)
             (lp (cddr ls)))
         (and (pair? o) (car o)))))
