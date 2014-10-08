@@ -17,7 +17,9 @@
   (int     tm_year   time-year)
   (int     tm_wday   time-day-of-week)
   (int     tm_yday   time-day-of-year)
-  (int     tm_isdst  time-dst?))
+  (int     tm_isdst  time-dst?)
+  (string  tm_zone   time-timezone-name)
+  (int     tm_gmtoff time-offset))
 
 ;;> Accessors for the \scheme{tm} struct.
 ;;/
