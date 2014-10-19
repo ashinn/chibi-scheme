@@ -26,7 +26,7 @@
       (set-cdr! rear new))
      (else  ; sending to empty channel
       (channel-front-set! chan new)
-      (condition-variable-signal! (channel-condvar chan)))))
+      (condition-variable-broadcast! (channel-condvar chan)))))
   (mutex-unlock! (channel-mutex chan)))
 
 (define (channel-receive! chan)
