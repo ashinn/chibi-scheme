@@ -16,7 +16,7 @@
        ((%cut #t (params ...) (args ...) x . rest)
         (let ((tmp x)) (%cut #t (params ...) (args ... tmp) . rest)))
        ((%cut #f (params ...) (args ...) x . rest)
-        (%cut #t (params ...) (args ... x) . rest))))
+        (%cut #f (params ...) (args ... x) . rest))))
    (define-syntax cut
      (syntax-rules () ((cut args ...) (%cut #f () () args ...))))
    (define-syntax cute
