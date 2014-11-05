@@ -469,7 +469,7 @@
             ((eq obj (caar ls)) (car ls))
             (else (assoc (cdr ls)))))))
 
-(define assv assoc)
+(define (assv obj ls) (assoc obj ls eqv?))
 
 (define (find-tail pred ls)
   (and (pair? ls) (if (pred (car ls)) ls (find-tail pred (cdr ls)))))
