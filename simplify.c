@@ -51,7 +51,7 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
             tmp = sexp_make_vector(ctx2, 0, SEXP_VOID);
             tmp = sexp_make_procedure(ctx2, SEXP_ZERO, SEXP_ZERO, res, tmp);
             if (! sexp_exceptionp(tmp)) {
-              tmp = sexp_apply(ctx2, tmp, SEXP_NULL);
+              tmp = sexp_apply_no_err_handler(ctx2, tmp, SEXP_NULL);
               if (! sexp_exceptionp(tmp))
                 app = sexp_make_lit(ctx2, tmp);
             }

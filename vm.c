@@ -2136,4 +2136,25 @@ sexp sexp_apply2 (sexp ctx, sexp f, sexp x, sexp y) {
   return res;
 }
 
+sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args) {
+  sexp res, err_cell;
+  sexp_gc_var2(handler, params);
+  sexp_gc_preserve2(ctx, handler, params);
+#if SEXP_USE_GREEN_THREADS
+  params = sexp_context_params(ctx);
+  sexp_context_params(ctx) = SEXP_NULL;
+#endif
+  err_cell = sexp_global(ctx, SEXP_G_ERR_HANDLER);
+  err_cell = sexp_opcodep(err_cell) ? sexp_opcode_data(err_cell) : SEXP_FALSE;
+  handler = sexp_pairp(err_cell) ? sexp_cdr(err_cell) : SEXP_FALSE;
+  if (sexp_pairp(err_cell)) sexp_cdr(err_cell) = SEXP_FALSE;
+  res = sexp_apply(ctx, proc, args);
+  if (sexp_pairp(err_cell)) sexp_cdr(err_cell) = handler;
+#if SEXP_USE_GREEN_THREADS
+  sexp_context_params(ctx) = params;
+#endif
+  sexp_gc_release2(ctx);
+  return res;
+}
+
 #endif
