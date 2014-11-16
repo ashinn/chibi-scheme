@@ -2143,6 +2143,7 @@ sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
   params = sexp_context_params(ctx);
   sexp_context_params(ctx) = SEXP_NULL;
+  ++sexp_context_refuel(ctx);
 #endif
   err_cell = sexp_global(ctx, SEXP_G_ERR_HANDLER);
   err_cell = sexp_opcodep(err_cell) ? sexp_opcode_data(err_cell) : SEXP_FALSE;
