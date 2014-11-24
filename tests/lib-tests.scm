@@ -9,6 +9,7 @@
 (load "tests/srfi-1-tests.scm")
 (load "tests/srfi-2-tests.scm")
 (load "tests/srfi-16-tests.scm")
+(load "tests/srfi-26-tests.scm")
 (load "tests/srfi-27-tests.scm")
 (load "tests/srfi-38-tests.scm")
 (load "tests/flonum-tests.scm")
