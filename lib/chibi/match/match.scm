@@ -164,6 +164,21 @@
 ;;>     (($ employee n t) (list t n))))
 ;;> }
 
+;;> For records with more fields it can be helpful to match them by
+;;> name rather than position.  For this you can use the \scheme{@}
+;;> operator, originally a Gauche extension:
+
+;;> \example{
+;;> (let ()
+;;>   (define-record-type employee
+;;>     (make-employee name title)
+;;>     employee?
+;;>     (name get-name)
+;;>     (title get-title))
+;;>   (match (make-employee "Bob" "Doctor")
+;;>     ((@ employee (title t) (name n)) (list t n))))
+;;> }
+
 ;;> The \scheme{set!} and \scheme{get!} operators are used to bind an
 ;;> identifier to the setter and getter of a field, respectively.  The
 ;;> setter is a procedure of one argument, which mutates the field to
@@ -212,6 +227,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2014/11/24 - adding Gauche's `@' pattern for named record field matching
 ;; 2012/12/26 - wrapping match-let&co body in lexical closure
 ;; 2012/11/28 - fixing typo s/vetor/vector in largely unused set! code
 ;; 2012/05/23 - fixing combinatorial explosion of code in certain or patterns
@@ -333,7 +349,7 @@
 ;; pattern so far.
 
 (define-syntax match-two
-  (syntax-rules (_ ___ ..1 *** quote quasiquote ? $ = and or not set! get!)
+  (syntax-rules (_ ___ ..1 *** quote quasiquote ? $ struct @ object = and or not set! get!)
     ((match-two v () g+s (sk ...) fk i)
      (if (null? v) (sk ... i) fk))
     ((match-two v (quote p) g+s (sk ...) fk i)
@@ -376,6 +392,18 @@
     ((match-two v ($ rec p ...) g+s sk fk i)
      (if (is-a? v rec)
          (match-record-refs v rec 0 (p ...) g+s sk fk i)
+         fk))
+    ((match-two v (struct rec p ...) g+s sk fk i)
+     (if (is-a? v rec)
+         (match-record-refs v rec 0 (p ...) g+s sk fk i)
+         fk))
+    ((match-two v (@ rec p ...) g+s sk fk i)
+     (if (is-a? v rec)
+         (match-record-named-refs v rec (p ...) g+s sk fk i)
+         fk))
+    ((match-two v (object rec p ...) g+s sk fk i)
+     (if (is-a? v rec)
+         (match-record-named-refs v rec (p ...) g+s sk fk i)
          fk))
     ((match-two v (p . q) g+s sk fk i)
      (if (pair? v)
@@ -688,6 +716,15 @@
     ((_ v rec n () g+s (sk ...) fk i)
      (sk ... i))))
 
+(define-syntax match-record-named-refs
+  (syntax-rules ()
+    ((_ v rec ((f p) . q) g+s sk fk i)
+     (let ((w (slot-ref rec v 'f)))
+       (match-one w p ((slot-ref rec v 'f) (slot-set! rec v 'f))
+                  (match-record-named-refs v rec q g+s sk fk) fk i)))
+    ((_ v rec () g+s (sk ...) fk i)
+     (sk ... i))))
+
 ;; Extract all identifiers in a pattern.  A little more complicated
 ;; than just looking for symbols, we need to ignore special keywords
 ;; and non-pattern forms (such as the predicate expression in ?
@@ -701,11 +738,17 @@
 ;; (match-extract-vars pattern continuation (ids ...) (new-vars ...))
 
 (define-syntax match-extract-vars
-  (syntax-rules (_ ___ ..1 *** ? $ = quote quasiquote and or not get! set!)
+  (syntax-rules (_ ___ ..1 *** ? $ struct @ object = quote quasiquote and or not get! set!)
     ((match-extract-vars (? pred . p) . x)
      (match-extract-vars p . x))
     ((match-extract-vars ($ rec . p) . x)
      (match-extract-vars p . x))
+    ((match-extract-vars (struct rec . p) . x)
+     (match-extract-vars p . x))
+    ((match-extract-vars (@ rec (f p) ...) . x)
+     (match-extract-vars (p ...) . x))
+    ((match-extract-vars (object rec (f p) ...) . x)
+     (match-extract-vars (p ...) . x))
     ((match-extract-vars (= proc p) . x)
      (match-extract-vars p . x))
     ((match-extract-vars (quote x) (k ...) i v)
