@@ -2614,6 +2614,15 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
   sexp_gc_var2(res, den);
 
   c = sexp_read_char(ctx, in);
+  if (c == '#') {
+    switch ((c = sexp_tolower(sexp_read_char(ctx, in)))) {
+      case 'b': base = 2; break;   case 'o': base = 8; break;
+      case 'd': base = 10; break;  case 'x': base = 16; break;
+      case 'i': exactp = 0; break; case 'e': exactp = 1; break;
+      default: return sexp_read_error(ctx, "unexpected numeric # code", sexp_make_character(c), in);
+    }
+    c = sexp_read_char(ctx, in);
+  }
   if (c == '-') {
     negativep = 1;
     c = sexp_read_char(ctx, in);

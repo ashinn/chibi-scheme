@@ -77,6 +77,11 @@
 (test 99 (read-from-string "#d99"))
 (test 63 (read-from-string "#o77"))
 (test 3 (read-from-string "#b11"))
+(test 5 (read-from-string "#e5.0"))
+(test 5.0 (read-from-string "#i5"))
+(test 15 (read-from-string "#e#xf"))
+(test 15.0 (read-from-string "#i#xf"))
+(test (expt 10 100) (read-from-string "#e1e100"))
 
 (cond-expand
  (chicken

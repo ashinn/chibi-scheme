@@ -328,7 +328,7 @@
                ((#\o) (read-char in) (read-number 8))
                ((#\b) (read-char in) (read-number 2))
                ((#\i) (read-char in) (exact->inexact (read-one)))
-               ((#\e) (read-char in) (inexact->exact (read-one)))
+               ((#\e) (string->number (read-name #\# in)))
                ((#\u #\v)
                 (if (eqv? #\v (peek-char in))
                     (read-char in))
