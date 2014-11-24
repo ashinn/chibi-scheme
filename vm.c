@@ -1532,7 +1532,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_raise("slotn-ref: not a record type", sexp_list1(ctx, _ARG1));
     else if (! sexp_check_type(ctx, _ARG2, _ARG1))
       sexp_raise("slotn-ref: bad type", sexp_list1(ctx, _ARG2));
-    else if (! sexp_fixnump(_ARG3))
+    if (! sexp_fixnump(_ARG3))
+      for (i = 0, tmp1 = sexp_type_slots(_ARG1); sexp_pairp(tmp1); tmp1 = sexp_cdr(tmp1), ++i)
+        if (sexp_car(tmp1) == _ARG3) { _ARG3 = sexp_make_fixnum(i); break; }
+    if (! sexp_fixnump(_ARG3))
       sexp_raise("slotn-ref: not an integer", sexp_list1(ctx, _ARG3));
     _ARG3 = sexp_slot_ref(_ARG2, sexp_unbox_fixnum(_ARG3));
     top-=2;
@@ -1545,7 +1548,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_raise("slotn-set!: bad type", sexp_list1(ctx, _ARG2));
     else if (sexp_immutablep(_ARG2))
       sexp_raise("slotn-set!: immutable object", sexp_list1(ctx, _ARG2));
-    else if (! sexp_fixnump(_ARG3))
+    if (! sexp_fixnump(_ARG3))
+      for (i = 0, tmp1 = sexp_type_slots(_ARG1); sexp_pairp(tmp1); tmp1 = sexp_cdr(tmp1), ++i)
+        if (sexp_car(tmp1) == _ARG3) { _ARG3 = sexp_make_fixnum(i); break; }
+    if (! sexp_fixnump(_ARG3))
       sexp_raise("slotn-set!: not an integer", sexp_list1(ctx, _ARG3));
     sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
     top-=4;
