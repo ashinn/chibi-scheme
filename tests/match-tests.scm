@@ -1,6 +1,6 @@
 
 (cond-expand
- (modules (import (chibi match) (only (chibi test) test-begin test test-end)))
+ (modules (import (chibi match) (srfi 9) (only (chibi test) test-begin test test-end)))
  (else (load "lib/chibi/match/match.scm")))
 
 (test-begin "match")
@@ -165,5 +165,21 @@
     (match '(a b 3)
       (((and x (? symbol?)) ..1) x)
       (else #f)))
+
+(define-record-type Point
+  (make-point x y)
+  point?
+  (x point-x point-x-set!)
+  (y point-y point-y-set!))
+
+(test "record positional"
+    '(1 0)
+  (match (make-point 0 1)
+    (($ Point x y) (list y x))))
+
+(test "record named"
+    '(1 0)
+  (match (make-point 0 1)
+    ((@ Point (x x) (y y)) (list y x))))
 
 (test-end)
