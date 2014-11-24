@@ -206,7 +206,10 @@
             (let ((c (peek-char in)))
               (cond
                ((char-numeric? c)
-                (lp (+ res (* (- (char->integer (read-char in)) (char->integer #\0)) k)) (* k 0.1)))
+                (lp (+ res (* (- (char->integer (read-char in))
+                                 (char->integer #\0))
+                              k))
+                    (* k 0.1)))
                ((or (eof-object? c) (memv c delimiters)) res)
                (else (read-error "invalid char in float syntax" c))))))
         (define (read-name c in)
@@ -280,10 +283,12 @@
                         x)))
                    ((eqv? #\# (peek-char in))
                     (read-char in)
-                    (cond ((assv n shared) => cdr)
-                          (else (read-error "read error: unknown reference" n))))
+                    (cond
+                     ((assv n shared) => cdr)
+                     (else (read-error "read error: unknown reference" n))))
                    (else
-                    (read-error "read error: expected # after #n" (read-char in))))))
+                    (read-error "read error: expected # after #n"
+                                (read-char in))))))
                ((#\;)
                 (read-char in)
                 (read-one) ;; discard
@@ -374,7 +379,8 @@
                           (read-error "expected end of list after dot")))))
                      ((char-numeric? (peek-char in))
                       (lp (cons (read-float-tail in) res)))
-                     (else (lp (cons (string->symbol (read-name #\. in)) res)))))
+                     (else
+                      (lp (cons (string->symbol (read-name #\. in)) res)))))
                    (else
                     (if (eof-object? c)
                         (read-incomplete-error "unterminated list")
