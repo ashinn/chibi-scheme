@@ -276,7 +276,7 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  sexp name, cpl, slots, dl, id, print;
+  sexp name, cpl, slots, getters, setters, dl, id, print;
   sexp_proc2 finalize;
 };
 
@@ -1159,6 +1159,8 @@ SEXP_API sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 #define sexp_type_name(x)              (sexp_field(x, type, SEXP_TYPE, name))
 #define sexp_type_cpl(x)               (sexp_field(x, type, SEXP_TYPE, cpl))
 #define sexp_type_slots(x)             (sexp_field(x, type, SEXP_TYPE, slots))
+#define sexp_type_getters(x)           (sexp_field(x, type, SEXP_TYPE, getters))
+#define sexp_type_setters(x)           (sexp_field(x, type, SEXP_TYPE, setters))
 #define sexp_type_finalize(x)          (sexp_field(x, type, SEXP_TYPE, finalize))
 #define sexp_type_print(x)             (sexp_field(x, type, SEXP_TYPE, print))
 #define sexp_type_dl(x)                (sexp_field(x, type, SEXP_TYPE, dl))
