@@ -1507,14 +1507,19 @@
            "  tmp = sexp_string_to_symbol(ctx, name);\n"
            "  sexp_env_define(ctx, env, tmp, " (type-id-name name) ");\n")
       (if (pair? (struct-fields type))
-          (let ((len (make-integer (length (struct-fields type))))
-                (getters (string-append "sexp_type_getters("
-                                        (x->string (type-id-name name)) ")"))
-                (setters (string-append "sexp_type_setters("
-                                        (x->string (type-id-name name)) ")")))
-            (cat "  " getters
+          (let ((len (make-integer (length (struct-fields type)))))
+            (cat "  sexp_type_slots(" (type-id-name name) ") = SEXP_NULL;\n"
+                 (lambda ()
+                   (do ((ls (reverse (struct-fields type)) (cdr ls)))
+                       ((not (pair? ls)))
+                     (cat "  sexp_push(ctx, sexp_type_slots("
+                          (type-id-name name) "), "
+                          "sexp_intern(ctx, "
+                          (lambda () (write (x->string (cadr (car ls)))))
+                          ", -1));\n")))
+                 "  sexp_type_getters(" (type-id-name name) ")"
                  " = sexp_make_vector(ctx, " len ", SEXP_FALSE);\n"
-                 "  " setters
+                 "  sexp_type_setters(" (type-id-name name) ")"
                  " = sexp_make_vector(ctx, " len ", SEXP_FALSE);\n")))
       (cond
        ((memq 'predicate: type)
