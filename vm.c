@@ -1537,9 +1537,17 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         if (sexp_car(tmp1) == _ARG3) { _ARG3 = sexp_make_fixnum(i); break; }
     if (! sexp_fixnump(_ARG3))
       sexp_raise("slotn-ref: not an integer", sexp_list1(ctx, _ARG3));
-    _ARG3 = sexp_slot_ref(_ARG2, sexp_unbox_fixnum(_ARG3));
+    if (sexp_vectorp(sexp_type_getters(_ARG1))) {
+      tmp1 = sexp_vector_ref(sexp_type_getters(_ARG1), _ARG3);
+      if (sexp_opcodep(tmp1))
+        _ARG3 = ((sexp_proc2)sexp_opcode_func(tmp1))(ctx, tmp1, 1, _ARG2);
+      else
+        sexp_raise("slotn-ref: no getter defined", sexp_list1(ctx, _ARG3));
+    } else
+      _ARG3 = sexp_slot_ref(_ARG2, sexp_unbox_fixnum(_ARG3));
     top-=2;
     if (!_ARG1) _ARG1 = SEXP_VOID;
+    else sexp_check_exception();
     break;
   case SEXP_OP_SLOTN_SET:
     if (! sexp_typep(_ARG1))
@@ -1553,8 +1561,16 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         if (sexp_car(tmp1) == _ARG3) { _ARG3 = sexp_make_fixnum(i); break; }
     if (! sexp_fixnump(_ARG3))
       sexp_raise("slotn-set!: not an integer", sexp_list1(ctx, _ARG3));
-    sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
+    if (sexp_vectorp(sexp_type_setters(_ARG1))) {
+      tmp1 = sexp_vector_ref(sexp_type_setters(_ARG1), _ARG3);
+      if (sexp_opcodep(tmp1))
+        _ARG4 = ((sexp_proc3)sexp_opcode_func(tmp1))(ctx, tmp1, 2, _ARG2, _ARG4);
+      else
+        sexp_raise("slotn-ref: no setter defined", sexp_list1(ctx, _ARG3));
+    } else
+      sexp_slot_set(_ARG2, sexp_unbox_fixnum(_ARG3), _ARG4);
     top-=4;
+    sexp_check_exception();
     break;
   case SEXP_OP_CAR:
     if (! sexp_pairp(_ARG1))
