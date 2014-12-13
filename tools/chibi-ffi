@@ -31,8 +31,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; globals
 
-(define *ffi-version* "0.2")
+(define *ffi-version* "0.3")
 (define *types* '())
+(define *type-getters* '())
+(define *type-setters* '())
 (define *typedefs* '())
 (define *funcs* '())
 (define *methods* '())
@@ -108,8 +110,8 @@
 
 (define (struct-fields ls)
   (let lp ((ls ls) (res '()))
-    (cond ((null? ls) (reverse res))
-          ((symbol? (car ls)) (lp (cddr ls) res))
+    (cond ((not (pair? ls)) (reverse res))
+          ((symbol? (car ls)) (lp (if (pair? (cdr ls)) (cddr ls) (cdr ls)) res))
           (else (lp (cdr ls) (cons (car ls) res))))))
 
 (define (lookup-type type)
@@ -1439,7 +1441,24 @@
                 (type-id-init-value (car ls)) ");\n")))))
      ;; "  } else {\n"
      ;; "    sexp_warn(ctx, \"couldn't generated opcode\", " var ");\n"
-     "  }\n"))))
+     "  }\n")))
+  (cond
+   ((assq (func-scheme-name func) *type-getters*)
+    => (lambda (x)
+         (let ((name (cadr x))
+               (i (car (cddr x))))
+           (cat "  if (sexp_vectorp(sexp_type_getters(" (type-id-name name)
+                "))) sexp_vector_set(sexp_type_getters("
+                (type-id-name name) "), "
+                (make-integer i) ", " var ");\n"))))
+   ((assq (func-scheme-name func) *type-setters*)
+    => (lambda (x)
+         (let ((name (cadr x))
+               (i (car (cddr x))))
+           (cat "  if (sexp_vectorp(sexp_type_setters(" (type-id-name name)
+                "))) sexp_vector_set(sexp_type_setters("
+                (type-id-name name) "), "
+                (make-integer i) ", " var ");\n"))))))
 
 (define (write-func-binding func . o)
   (let ((var (if (pair? o) (car o) "op")))
@@ -1463,9 +1482,9 @@
              (write-func-types var (car ls)))))
        "  }\n"))
 
-(define (write-type type)
-  (let* ((name (car type))
-         (type (cdr type))
+(define (write-type orig-type)
+  (let* ((name (car orig-type))
+         (type (cdr orig-type))
          (imported? (cond ((member 'imported?: type) => cadr) (else #f))))
     (cond
      (imported?
@@ -1487,6 +1506,16 @@
            ");\n"
            "  tmp = sexp_string_to_symbol(ctx, name);\n"
            "  sexp_env_define(ctx, env, tmp, " (type-id-name name) ");\n")
+      (if (pair? (struct-fields type))
+          (let ((len (make-integer (length (struct-fields type))))
+                (getters (string-append "sexp_type_getters("
+                                        (x->string (type-id-name name)) ")"))
+                (setters (string-append "sexp_type_setters("
+                                        (x->string (type-id-name name)) ")")))
+            (cat "  " getters
+                 " = sexp_make_vector(ctx, " len ", SEXP_FALSE);\n"
+                 "  " setters
+                 " = sexp_make_vector(ctx, " len ", SEXP_FALSE);\n")))
       (cond
        ((memq 'predicate: type)
         => (lambda (x)
@@ -1649,35 +1678,45 @@
                                       args)))
                        *funcs*))))))
   ;; write field accessors
-  (for-each
-   (lambda (field)
-     (cond
-      ((and (pair? field) (pair? (cdr field)))
-       (cond
-        ((and (pair? (cddr field)) (car (cddr field)))
-         (write-type-getter type name field)
-         (set! *funcs*
-               (cons (parse-func
-                      `(,(car field)
-                        (,(car (cddr field))
-                         #f
-                         ,(type-getter-name type name field))
-                        (,name)))
-                     *funcs*))))
-       (cond
-        ((and (pair? (cddr field))
-              (pair? (cdr (cddr field)))
-              (cadr (cddr field)))
-         (write-type-setter type name field)
-         (set! *funcs*
-               (cons (parse-func
-                      `(,(car field)
-                        (,(cadr (cddr field))
-                         #f
-                         ,(type-setter-name type name field))
-                        (,name ,(car field))))
-                     *funcs*)))))))
-   (struct-fields type)))
+  (let lp ((ls (struct-fields type))
+           (i 0))
+    (cond
+     ((not (pair? ls)))
+     ((and (pair? (car ls)) (pair? (cdar ls)))
+      (let* ((field (car ls))
+             (get+set (cddr field)))
+        (cond
+         ((and (pair? get+set) (car get+set))
+          (write-type-getter type name field)
+          (set! *funcs*
+                (cons (parse-func
+                       `(,(car field)
+                         (,(car get+set)
+                          #f
+                          ,(type-getter-name type name field))
+                         (,name)))
+                      *funcs*))
+          (if (type-struct-type name)
+              (set! *type-getters*
+                    (cons `(,(car get+set) ,name ,i) *type-getters*))))
+         (else "SEXP_FALSE"))
+        (cond
+         ((and (pair? get+set)
+               (pair? (cdr get+set))
+               (cadr get+set))
+          (write-type-setter type name field)
+          (set! *funcs*
+                (cons (parse-func
+                       `(,(car field)
+                         (,(cadr get+set)
+                          #f
+                          ,(type-setter-name type name field))
+                         (,name ,(car field))))
+                      *funcs*))
+          (if (type-struct-type name)
+              (set! *type-setters*
+                    (cons `(,(cadr get+set) ,name ,i) *type-setters*))))))
+      (lp (cdr ls) (+ i 1))))))
 
 (define (write-type-funcs orig-type)
   (let* ((name (car orig-type))
