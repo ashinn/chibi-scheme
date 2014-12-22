@@ -1,5 +1,6 @@
 
-(import (chibi) (chibi ast) (chibi process) (chibi filesystem) (chibi test))
+(import (chibi) (chibi ast) (chibi match)
+        (chibi process) (chibi filesystem) (chibi test))
 
 (test-begin "ffi")
 
@@ -8,6 +9,7 @@
     ((test-ffi name-expr decls tests ...)
      (let* ((name name-expr)
             (stub-file (string-append "tests/ffi/" name ".stub"))
+            (c-file (string-append "tests/ffi/" name ".c"))
             (lib-file
              (string-append "tests/ffi/" name *shared-object-extension*)))
        (call-with-output-file stub-file
@@ -24,10 +26,15 @@
                    stub-file)))
          (cond
           ((zero? (cadr res))
-           (load lib-file)
-           tests ...
-           ;; cleanup but leave the stub file for reference
-           (delete-file lib-file))
+           (let ((orig-failures (test-failure-count)))
+             (load lib-file)
+             tests ...
+             ;; on any failure leave the stub and c file for reference
+             (cond
+              ((= orig-failures (test-failure-count))
+               (delete-file stub-file)
+               (delete-file c-file)))
+             (delete-file lib-file)))
           (else
            (test-assert (string-append "couldn't compile " name)
              #f))))))))
@@ -369,6 +376,35 @@ int getpwnam_x(char* name, struct password* pwd, char* buf,
  (test "joe" (user-name (car (getpwnam_x "joe" (make-string 1024)))))
  (test "joe" (user-password (car (getpwnam_x "joe" (make-string 1024)))))
  (test-not (getpwnam_x "hacker" (make-string 1024)))
+ )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Field introspection and matching.
+
+(test-ffi
+ "introspection"
+ (begin
+   (c-declare "
+struct point3d {
+  int x, y, z;
+};
+")
+   (define-c-struct point3d
+     predicate: point3d?
+     constructor: (make-point3d x y z)
+     (int x point3d-x point3d-x-set!)
+     (int y point3d-y point3d-y-set!)
+     (int z point3d-z point3d-z-set!)))
+ (test-assert (point3d? (make-point3d 1 2 3)))
+ (test '(4 5 6)
+     (let ((pt (make-point3d 4 5 6)))
+       (list (point3d-x pt) (point3d-y pt) (point3d-z pt))))
+ (test '(7 8 9)
+     (match (make-point3d 7 8 9)
+       (($ point3d a b c) (list a b c))))
+ (test '(12 11 10)
+     (match (make-point3d 10 11 12)
+       ((@ point3d (z a) (y b) (x c)) (list a b c))))
  )
 
 (test-end)
