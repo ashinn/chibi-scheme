@@ -1241,7 +1241,7 @@ static struct sexp_library_entry_t *sexp_find_static_library(const char *file)
       return entry;
   return NULL;
 }
-static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
+static sexp sexp_load_builtin (sexp ctx, sexp file, sexp env) {
   struct sexp_library_entry_t *entry = sexp_find_static_library(sexp_string_data(file));
   if (! entry)
     return sexp_compile_error(ctx, "couldn't find builtin library", file);
@@ -1249,6 +1249,9 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 }
 #else
 #define sexp_find_static_library(path) NULL
+#define sexp_load_builtin(ctx, file, env) SEXP_UNDEF
+#endif
+
 #if SEXP_USE_DL
 #ifdef __MINGW32__
 #include <windows.h>
@@ -1256,10 +1259,10 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp res;
   sexp_init_proc init;
   HINSTANCE handle = LoadLibraryA(sexp_string_data(file));
-  if(!handle)
+  if (!handle)
     return sexp_compile_error(ctx, "couldn't load dynamic library", file);
   init = (sexp_init_proc) GetProcAddress(handle, "sexp_init_library");
-  if(!init) {
+  if (!init) {
     FreeLibrary(handle);
     return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
   }
@@ -1278,8 +1281,9 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp_init_proc init;
   sexp_gc_var2(res, old_dl);
   void *handle = dlopen(sexp_string_data(file), RTLD_LAZY);
-  if (! handle)
+  if (! handle) {
     return sexp_compile_error(ctx, "couldn't load dynamic library", file);
+  }
   init = dlsym(handle, "sexp_init_library");
   if (! init) {
     dlclose(handle);
@@ -1298,7 +1302,17 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   return res;
 }
 #endif
+#else
+#define sexp_load_dl(ctx, file, env) SEXP_UNDEF
 #endif
+
+#if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
+static sexp sexp_load_binary(sexp ctx, sexp source, sexp env) {
+  sexp res = sexp_load_dl(ctx, source, env);
+  if (res == SEXP_UNDEF || sexp_exceptionp(res))
+    res = sexp_load_builtin(ctx, source, env);
+  return res;
+}
 #endif
 
 sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
@@ -1312,7 +1326,7 @@ sexp sexp_load_op (sexp ctx, sexp self, sexp_sint_t n, sexp source, sexp env) {
   suffix = sexp_stringp(source) ? sexp_string_data(source)
     + sexp_string_size(source) - strlen(sexp_so_extension) : "...";
   if (strcmp(suffix, sexp_so_extension) == 0) {
-    res = sexp_load_dl(ctx, source, env);
+    res = sexp_load_binary(ctx, source, env);
   } else {
 #endif
   res = SEXP_VOID;
