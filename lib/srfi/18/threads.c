@@ -39,7 +39,7 @@ struct sexp_pollfds_t {
 
 #if SEXP_USE_GREEN_THREADS
 
-static void sexp_define_type_predicate_by_tag (sexp ctx, sexp env, char *cname, sexp_uint_t type) {
+static void sexp_define_type_predicate_by_tag (sexp ctx, sexp env, const char *cname, sexp_uint_t type) {
   sexp_gc_var2(name, op);
   sexp_gc_preserve2(ctx, name, op);
   name = sexp_c_string(ctx, cname, -1);
