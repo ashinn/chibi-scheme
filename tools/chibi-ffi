@@ -54,35 +54,37 @@
    (else
     (let lp ((type type) (free? #f) (const? #f) (null-ptr? #f)
              (ptr? #f) (ref? #f) (struct? #f) (link? #f) (result? #f) (array #f)
-             (value #f) (default? #f) (template #f))
+             (value #f) (default? #f) (template #f) (new? #f))
       (define (next) (if (null? (cddr type)) (cadr type) (cdr type)))
       (case (and (pair? type) (car type))
         ((free)
-         (lp (next) #t const? null-ptr? ptr? ref? struct? link? result? array value default? template))
+         (lp (next) #t const? null-ptr? ptr? ref? struct? link? result? array value default? template new?))
         ((const)
-         (lp (next) free? #t null-ptr? ptr? ref? struct? link? result? array value default? template))
+         (lp (next) free? #t null-ptr? ptr? ref? struct? link? result? array value default? template new?))
         ((maybe-null)
-         (lp (next) free? const? #t ptr? ref? struct? link? result? array value default? template))
+         (lp (next) free? const? #t ptr? ref? struct? link? result? array value default? template new?))
         ((pointer)
-         (lp (next) free? const? null-ptr? #t ref? struct? link? result? array value default? template))
+         (lp (next) free? const? null-ptr? #t ref? struct? link? result? array value default? template new?))
         ((reference)
-         (lp (next) free? const? null-ptr? ptr? #t struct? link? result? array value default? template))
+         (lp (next) free? const? null-ptr? ptr? #t struct? link? result? array value default? template new?))
         ((struct)
-         (lp (next) free? const? null-ptr? ptr? ref? #t link? result? array value default? template))
+         (lp (next) free? const? null-ptr? ptr? ref? #t link? result? array value default? template new?))
         ((link)
-         (lp (next) free? const? null-ptr? ptr? ref? struct? #t result? array value default? template))
+         (lp (next) free? const? null-ptr? ptr? ref? struct? #t result? array value default? template new?))
         ((result)
-         (lp (next) free? const? null-ptr? ptr? ref? struct? link? #t array value default? template))
+         (lp (next) free? const? null-ptr? ptr? ref? struct? link? #t array value default? template new?))
         ((array)
-         (lp (cadr type) free? const? null-ptr? ref? ptr? struct? link? result? (if (pair? (cddr type)) (car (cddr type)) #t) value default? template))
+         (lp (cadr type) free? const? null-ptr? ref? ptr? struct? link? result? (if (pair? (cddr type)) (car (cddr type)) #t) value default? template new?))
         ((value)
-         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) default? template))
+         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) default? template new?))
         ((default)
-         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) #t template))
+         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) #t template new?))
         ((template)
-         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) default? (cadr type)))
+         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array value default? (cadr type) new?))
+        ((new)
+         (lp (next) free? const? null-ptr? ref? ptr? struct? link? result? array value default? template #t))
         (else
-         (vector (if (and (pair? type) (null? (cdr type))) (car type) type) free? const? null-ptr? ptr? ref? struct? link? result? array value default? template (and (pair? o) (car o)))))))))
+         (vector (if (and (pair? type) (null? (cdr type))) (car type) type) free? const? null-ptr? ptr? ref? struct? link? result? array value default? template new? (and (pair? o) (car o)))))))))
 
 (define (type-base type) (vector-ref type 0))
 (define (type-free? type) (vector-ref type 1))
@@ -97,7 +99,8 @@
 (define (type-value type) (vector-ref type 10))
 (define (type-default? type) (vector-ref type 11))
 (define (type-template type) (vector-ref type 12))
-(define (type-index type) (vector-ref type 13))
+(define (type-new? type) (vector-ref type 13))
+(define (type-index type) (vector-ref type 14))
 
 (define (type-auto-expand? type)
   (and (pair? (type-array type))
@@ -134,16 +137,37 @@
 ;; type predicates
 
 (define *c-int-types* '())
+(define *c-enum-types* '())
 
 (define-syntax define-c-int-type
   (syntax-rules ()
     ((define-c-int-type type)
      (if (not (memq 'type *c-int-types*))
-         (set! *c-int-types* (cons 'type *c-int-types*))))))
+         (set! *c-int-types* (cons 'type *c-int-types*)))
+     #f)))
+
+(define-syntax define-c-enum
+  ;; TODO: support conversion to/from symbolic names
+  (syntax-rules ()
+    ((define-c-enum (scheme-name c-name) . args)
+     (if (not (assq 'scheme-name *c-enum-types*))
+         (set! *c-enum-types*
+               `((scheme-name . c-name) ,@*c-enum-types*)))
+     #f)
+    ((define-c-enum scheme-name . args)
+     (let ((c-name (mangle 'scheme-name)))
+       (if (not (assq 'scheme-name *c-enum-types*))
+           (set! *c-enum-types*
+                 `((scheme-name . ,c-name) ,@*c-enum-types*)))
+       #f))))
+
+(define (enum-type? type)
+  (assq type *c-enum-types*))
 
 (define (signed-int-type? type)
   (or (memq type '(signed-char short int long))
-      (memq type *c-int-types*)))
+      (memq type *c-int-types*)
+      (enum-type? type)))
 
 (define (unsigned-int-type? type)
   (memq type '(unsigned-char unsigned-short unsigned unsigned-int unsigned-long
@@ -167,7 +191,7 @@
   (memq type '(port input-port output-port input-output-port)))
 
 (define (error-type? type)
-  (memq type '(errno non-null-string non-null-pointer)))
+  (memq type '(errno status-bool non-null-string non-null-pointer)))
 
 (define (array-type? type)
   (and (type-array type) (not (eq? 'char (type-base type)))))
@@ -247,7 +271,8 @@
         (let lp ((ls ls))
           (if (pair? (cdr ls))
               (cat (car ls) sep (lambda () (lp (cdr ls))))
-              (cat (car ls)))))))
+              (cat (car ls)))))
+      ""))
 
 (define (x->string x)
   (cond ((string? x) x)
@@ -333,7 +358,10 @@
       (define (collect) (if (= i from) res (cons (substring str from i) res)))
       (cond
        ((>= i len) (string-concatenate-reverse (collect)))
-       ((not (c-char? (string-ref str i))) (lp (+ i 1) (+ i 1) (cons "_" (cons (number->string (char->integer (string-ref str i)) 16) (collect)))))
+       ((not (c-char? (string-ref str i)))
+        (lp (+ i 1) (+ i 1)
+            `("_" ,(number->string (char->integer (string-ref str i)) 16)
+              ,@(collect))))
        (else (lp from (+ i 1) res))))))
 
 (define (mangle x)
@@ -468,7 +496,7 @@
        (cond
         ((null? (cddr expr))
          (set! *open-namespaces* (cons namespace *open-namespaces*))
-         `(,(rename 'cat) "namespace " ',namespace " {\n"))
+         `(,(rename 'cat) "namespace " ',namespace ";\n"))
         (else
          `(,(rename 'begin)
            (,(rename 'cat) "namespace " ',namespace " {\n")
@@ -493,19 +521,18 @@
                         (cddr (cddr expr)))))
        (set! *methods* (cons (cons name meths) *methods*))))))
 
-;; (define-syntax define-c++-constructor
-;;   (er-macro-transformer
-;;    (lambda (expr rename compare)
-;;      (ensure-c++ 'define-c++-constructor)
-;;      (set! *funcs* (cons (parse-func (cdr expr)) *funcs*))
-;;      (let* ((meth (parse-func (cdr expr) #t))
-;;             (name (func-scheme-name meth)))
-;;        (cond
-;;         ((assq name *methods*)
-;;          => (lambda (x) (set-cdr! x (cons meth (cdr x)))))
-;;         (else
-;;          (set! *methods* (cons (list name meth) *methods*)))) 
-;;        #f))))
+(define-syntax define-c++-constructor
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (ensure-c++ 'define-c++-constructor)
+     (set! *funcs*
+           (cons (parse-func `((new ,(if (pair? (cadr expr))
+                                         (cadr (cadr expr))
+                                         (cadr expr)))
+                               ,(cadr expr)
+                               ,@(cddr expr)))
+                 *funcs*))
+     #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; C code generation
@@ -518,7 +545,7 @@
      ((string-type? base) "sexp_stringp")
      ((eq? base 'bytevector) "sexp_bytesp")
      ((eq? base 'char) "sexp_charp")
-     ((eq? base 'boolean) "sexp_booleanp")
+     ((memq base '(bool boolean status-bool)) "sexp_booleanp")
      ((eq? base 'port) "sexp_portp")
      ((eq? base 'input-port) "sexp_iportp")
      ((eq? base 'output-port) "sexp_oportp")
@@ -531,7 +558,7 @@
     (cond
      ((int-type? base) "integer")
      ((float-type? base) "flonum")
-     ((eq? 'boolean base) "int")
+     ((memq base '(bool boolean status-bool)) (if *c++?* "bool" "int"))
      (else base))))
 
 (define (type-id-number type . o)
@@ -542,7 +569,7 @@
      ((string-type? base) "SEXP_STRING")
      ((eq? base 'bytevector) "SEXP_BYTES")
      ((eq? base 'char) "SEXP_CHAR")
-     ((eq? base 'boolean) "SEXP_BOOLEAN")
+     ((memq base '(bool boolean status-bool)) "SEXP_BOOLEAN")
      ((eq? base 'string) "SEXP_STRING")
      ((eq? base 'symbol) "SEXP_SYMBOL")
      ((eq? base 'pair) "SEXP_PAIR")
@@ -591,11 +618,6 @@
       "sexp_unbox_fixnum(res)"
       "-1"))
 
-(define (c-bytes-length type val)
-  (if (memq 'result (type-array type))
-      "res"
-      (lambda () (cat "sexp_make_fixnum(sexp_bytes_length(" val "))"))))
-
 (define (c->scheme-converter type val . o)
   (let ((base (type-base type)))
     (cond
@@ -603,7 +625,7 @@
       (cat "((" val "), SEXP_VOID)"))
      ((or (eq? base 'sexp) (error-type? base))
       (cat val))
-     ((eq? base 'boolean)
+     ((memq base '(bool boolean status-bool))
       (cat "sexp_make_boolean(" val ")"))
      ((eq? base 'time_t)
       (cat "sexp_make_integer(ctx, sexp_shift_epoch(" val "))"))
@@ -623,10 +645,15 @@
            ", p - " val "), str=sexp_c_string(ctx, p, -1))"
            " : sexp_cons(ctx, str=" val ", SEXP_FALSE)"))
      ((string-type? base)
-      (cat "sexp_c_string(ctx, " val ", " (c-array-length type) ")"))
+      (if (and *c++?* (eq? 'string base))
+          (cat "sexp_c_string(ctx, " val ".c_str(), " val ".size())")
+          (cat "sexp_c_string(ctx, " val ", " (c-array-length type) ")")))
      ((eq? 'bytevector base)
-      (cat "sexp_string_to_bytes(ctx, sexp_c_string(ctx, " val ", "
-           (c-bytes-length type val) "))"))
+      (if *c++?*
+          (cat "sexp_string_to_bytes(ctx, sexp_c_string(ctx, "
+               val ".data(), " val ".size()))")
+          (cat "sexp_string_to_bytes(ctx, sexp_c_string(ctx, " val ", "
+               (c-array-length type val) "))")))
      ((eq? 'input-port base)
       (cat "sexp_make_non_null_input_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'output-port base)
@@ -648,6 +675,7 @@
                ", "
                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
                (if (or (type-free? type)
+                       (type-new? type)
                        (and (type-result? type) (not (basic-type? type))))
                    1
                    0)
@@ -661,10 +689,12 @@
     (cond
      ((eq? base 'sexp)
       (cat val))
-     ((eq? base 'boolean)
+     ((memq base '(bool boolean status-bool))
       (cat "sexp_truep(" val ")"))
      ((eq? base 'time_t)
       (cat "sexp_unshift_epoch(sexp_uint_value(" val "))"))
+     ((enum-type? base)
+      => (lambda (x) (cat "((" (cdr x) ")sexp_sint_value(" val "))")))
      ((signed-int-type? base)
       (cat "sexp_sint_value(" val ")"))
      ((unsigned-int-type? base)
@@ -699,7 +729,8 @@
             (void*? (void-pointer-type? type)))
         (cond
          ((or ctype void*?)
-          (cat "(" (type-c-name type) ")"
+          (cat (if (type-reference? type) "*" "")
+               "(" (type-c-name type) ")"
                (if (type-null? type)
                    "sexp_cpointer_maybe_null_value"
                    "sexp_cpointer_value")
@@ -726,7 +757,9 @@
          (struct-type (type-struct-type type)))
     (string-append
      (if (type-const? type) "const " "")
-     (if struct-type (string-append (symbol->string struct-type) " ") "")
+     (if (and struct-type (not *c++?*))
+         (string-append (symbol->string struct-type) " ")
+         "")
      (base-type-c-name base)
      (if (type-template type)
          (string-append
@@ -741,6 +774,10 @@
      (type-c-name-derefed type)
      (if (type-struct-type type) "*" "")
      (if (type-pointer? type) "*" ""))))
+
+(define (type-finalizer-name type)
+  (let ((name (type-c-name-derefed type)))
+    (string-append "sexp_finalize_" (string-replace name #\: "_"))))
 
 (define (check-type arg type)
   (let* ((type (parse-type type))
@@ -813,7 +850,7 @@
      ((eq? 'sexp base-type))
      ((string-type? type)
       (write-validator arg 'string))
-     ((eq? 'boolean base-type))
+     ((memq base-type '(bool boolean status-bool)))
      (else
       (warn "don't know how to validate" type)))))
 
@@ -904,7 +941,7 @@
          (sexps (if preserve-res? '() '("res")))
          (ints (if (or return-res?
                        (memq (type-base ret-type)
-                             '(non-null-string non-null-pointer)))
+                             '(status-bool non-null-string non-null-pointer)))
                    '()
                    '("err")))
          (ints (if (or (array-type? ret-type)
@@ -913,6 +950,7 @@
                    (cons "i" ints)
                    ints)))
     (case (type-base ret-type)
+      ((status-bool) (cat "  bool err;\n"))
       ((non-null-string) (cat "  char *err;\n"))
       ((non-null-pointer) (cat "  void *err;\n")))
     (cond
@@ -1046,10 +1084,13 @@
        (cond
         ((and (not (type-result? a)) (type-array a) (not (string-type? a)))
          (if (not (number? (type-array a)))
-             (cat "  tmp" (type-index a)
-                  " = (" (type-c-name (type-base a)) "*) calloc("
-                  "(sexp_unbox_fixnum(sexp_length(ctx, arg" (type-index a)
-                  "))+1), sizeof(tmp" (type-index a) "[0]));\n"))
+             (if (and *c++?* (type-new? a))
+                 (cat "  tmp" (type-index a)
+                      " = new " (type-c-name-derefed (type-base a)) "();\n")
+                 (cat "  tmp" (type-index a)
+                      " = (" (type-c-name (type-base a)) "*) calloc("
+                      "(sexp_unbox_fixnum(sexp_length(ctx, arg" (type-index a)
+                      "))+1), sizeof(tmp" (type-index a) "[0]));\n")))
          (cat "  for (i=0, res=arg" (type-index a)
               "; sexp_pairp(res); res=sexp_cdr(res), i++) {\n"
               "    tmp" (type-index a) "[i] = "
@@ -1064,16 +1105,20 @@
               (not (type-auto-expand? a))
               (or (not (type-array a))
                   (not (integer? len))))
-         (cat "  tmp" (type-index a) " = calloc(1, 1 + "
-              (if (and (symbol? len) (not (eq? len 'null)))
-                  (lambda () (cat (lambda () (scheme->c-converter 'unsigned-int len))
-                              "*sizeof(tmp" (type-index a) "[0])"))
-                  (lambda () (cat "sizeof(tmp" (type-index a) "[0])")))
-              ");\n"
-              (lambda ()
-                (if (and (symbol? len) (not (eq? len 'null)))
-                    (cat "  tmp" (type-index a) "[" (lambda () (scheme->c-converter 'unsigned-int len))
-                         "*sizeof(tmp" (type-index a) "[0])] = 0;\n")))))
+         (if (and *c++?* (type-new? a))
+             (cat "  tmp" (type-index a)
+                  " = new " (type-c-name-derefed (type-base a)) "();\n")
+             (cat "  tmp" (type-index a) " = calloc(1, 1 + "
+                  (if (and (symbol? len) (not (eq? len 'null)))
+                      (lambda () (cat (lambda () (scheme->c-converter 'unsigned-int len))
+                                 "*sizeof(tmp" (type-index a) "[0])"))
+                      (lambda () (cat "sizeof(tmp" (type-index a) "[0])")))
+                  ");\n"
+                  (lambda ()
+                    (if (and (symbol? len) (not (eq? len 'null)))
+                        (cat "  tmp" (type-index a) "["
+                             (lambda () (scheme->c-converter 'unsigned-int len))
+                             "*sizeof(tmp" (type-index a) "[0])] = 0;\n"))))))
         ((and (type-result? a) (type-value a))
          (cat "  tmp" (type-index a) " = "
               (lambda () (write-value func (type-value a))) ";\n"))
@@ -1100,6 +1145,8 @@
          c->scheme-converter)
      ret-type
      (lambda ()
+       (if (and *c++?* (type-new? ret-type))
+           (cat "new "))
        (if (func-method? func)
            (cat "(" (lambda () (write-actual-parameter func (car c-args)))
                 ")->" c-name)
@@ -1189,7 +1236,7 @@
     (if error-res?
         (cat "  if ("
              (if (memq (type-base (func-ret-type func))
-                       '(non-null-string non-null-pointer))
+                       '(status-bool non-null-string non-null-pointer))
                  "!"
                  "")
              "err) {\n"
@@ -1207,6 +1254,7 @@
                              " = calloc(len" i ", sizeof(tmp" i "[0]));\n"
                              "  goto loop;\n")))))
               (else
+               ;; TODO: free other results
                "  res = SEXP_FALSE;\n"))
              "  } else {\n"))
     (if (null? results)
@@ -1355,8 +1403,10 @@
          (func-stub-name-set! (cadr meth) orig-stub-name))))))
 
 (define (write-method meth)
-  (if (not (apply = (map length (map func-scheme-args (cdr meth)))))
-      (error "methods must have the same arity"))
+  (let ((args (map func-scheme-args (cdr meth))))
+    (if (and (> (length args) 1)
+             (not (apply = (map length args))))
+        (error "methods must have the same arity")))
   (write-fixed-arity-method meth))
 
 (define (parameter-default? x)
@@ -1467,7 +1517,6 @@
 
 (define (write-method-binding meth)
   (write-func-binding (cadr meth))
-  (adjust-method-name! (cadr meth) 0)
   (cat "  if (sexp_opcodep(op)) {\n"
        (lambda ()
          (cat "    sexp_opcode_methods(op) = "
@@ -1497,12 +1546,16 @@
       (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
            "  " (type-id-name name)
            " = sexp_register_c_type(ctx, name, "
-           (cond ((memq 'finalizer: type)
+           (cond ((or (memq 'finalizer: type)
+                      (memq 'finalizer-method: type))
                   => (lambda (x)
                        (let ((name (cadr x)))
                          (generate-stub-name
                           (if (pair? name) (car name) name)))))
-                 (else "sexp_finalize_c_type"))
+                 (*c++?*
+                  (type-finalizer-name name))
+                 (else
+                  "sexp_finalize_c_type"))
            ");\n"
            "  tmp = sexp_string_to_symbol(ctx, name);\n"
            "  sexp_env_define(ctx, env, tmp, " (type-id-name name) ");\n")
@@ -1601,15 +1654,20 @@
 (define (write-type-funcs-helper orig-type name type)
   ;; maybe write finalizer
   (cond
-   ((memq 'finalizer: type)
+   ((or (memq 'finalizer: type) (memq 'finalizer-method: type))
     => (lambda (x)
          (let* ((y (cadr x))
                 (scheme-name (if (pair? y) (car y) y))
-                (cname (if (pair? y) (cadr y) y)))
+                (cname (if (pair? y) (cadr y) y))
+                (method? (not (memq 'finalizer: type))))
            (cat "static sexp " (generate-stub-name scheme-name)
                 " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
                 "  if (sexp_cpointer_freep(x)) {\n"
-                "    " cname "(sexp_cpointer_value(x));\n"
+                "    " (if method? "" cname) "("
+                (if method? (string-append "((" (mangle name) "*)") "")
+                "sexp_cpointer_value(x)"
+                (if method? (string-append ")->" (x->string cname) "()") "")
+                ");\n"
                 ;; TODO: keep track of open/close separately from ownership
                 "    sexp_cpointer_freep(x) = 0;\n"
                 "  }\n"
@@ -1746,6 +1804,26 @@
   (define (input-env-string? x)
     (and (eq? 'env-string (type-base x)) (not (type-result? x))))
   (cond
+   (*c++?*
+    (for-each
+     (lambda (t)
+       (cond
+        ((and (not (memq 'finalizer: (cdr t)))
+              (not (memq 'finalizer-method: (cdr t)))
+              (type-struct-type (car t)))
+         (let ((name (type-c-name-derefed (car t)))
+               (finalizer-name (type-finalizer-name (car t))))
+           (cat
+            "static sexp " finalizer-name " ("
+            "sexp ctx, sexp self, sexp_sint_t n, sexp obj) {\n"
+            "  if (sexp_cpointer_freep(obj))\n"
+            "    delete static_cast<" name "*>"
+            "(sexp_cpointer_value(obj));\n"
+            "  sexp_cpointer_value(obj) = NULL;\n"
+            "  return SEXP_VOID;\n"
+            "}\n\n")))))
+     *types*)))
+  (cond
    ((any (lambda (f)
            (or (any input-env-string? (func-results f))
                (any input-env-string? (func-scheme-args f))))
@@ -1769,7 +1847,7 @@
   (for-each (lambda (n) (cat "}  // " n "\n")) *open-namespaces*)
   (newline)
   (if *c++?*
-      (cat "extern \"C\" "))
+      (cat "extern \"C\"\n"))
   (cat "sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {\n"
        (lambda ()
          (for-each
@@ -1794,6 +1872,7 @@
        *ffi-version* " */\n")
   (c-system-include "chibi/eval.h")
   (load file (current-environment))
+  (cat "/*\ntypes: " (map car *types*) "\nenums: " *c-enum-types* "\n*/\n")
   (write-init))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
