@@ -336,6 +336,11 @@
 #define SEXP_USE_STATIC_LIBS 0
 #endif
 
+/* don't include clibs.c - include separately or link */
+#ifndef SEXP_USE_STATIC_LIBS_NO_INCLUDE
+#define SEXP_USE_STATIC_LIBS_NO_INCLUDE defined(PLAN9)
+#endif
+
 #ifndef SEXP_USE_FULL_SOURCE_INFO
 #define SEXP_USE_FULL_SOURCE_INFO ! SEXP_USE_NO_FEATURES
 #endif

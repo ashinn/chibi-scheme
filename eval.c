@@ -1221,10 +1221,10 @@ sexp sexp_get_port_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 #endif
 
 #if SEXP_USE_STATIC_LIBS
-#ifndef PLAN9
-#include "clibs.c"
-#else
+#if SEXP_USE_STATIC_LIBS_NO_INCLUDE
 struct sexp_library_entry_t sexp_static_libraries[];
+#else
+#include "clibs.c"
 #endif
 static struct sexp_library_entry_t *sexp_find_static_library(const char *file)
 {
