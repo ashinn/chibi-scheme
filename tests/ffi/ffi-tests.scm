@@ -405,6 +405,65 @@ struct point3d {
  (test '(12 11 10)
      (match (make-point3d 10 11 12)
        ((@ point3d (z a) (y b) (x c)) (list a b c))))
+ (test '(13 14 15 42)
+     (let ((pt (make-point3d 13 14 15)))
+       (match pt
+         ((@ point3d (y b) (z (and (set! set-z!) orig-z)) (x c))
+          (set-z! 42)
+          (list c b orig-z (point3d-z pt))))))
  )
+
+(test-ffi
+ "virtual accessors"
+ (begin
+   (c-declare "
+struct VirtComplex {
+  double r, phi;
+};
+double complex_real(struct VirtComplex* c) {
+  return c->r * cos(c->phi);
+}
+double complex_imag(struct VirtComplex* c) {
+  return c->r * sin(c->phi);
+}
+void complex_set(struct VirtComplex* c, double x, double y) {
+  c->r = sqrt(x*x + y*y);
+  c->phi = atan2(y, x);
+}
+void complex_real_set(struct VirtComplex* c, double x) {
+  complex_set(c, x, complex_imag(c));
+}
+void complex_imag_set(struct VirtComplex* c, double y) {
+  complex_set(c, complex_real(c), y);
+}
+")
+   (define-c-struct VirtComplex
+     predicate: virt-complex?
+     constructor: (make-virt-complex real imag)
+     (double real
+             (virt-complex-real function: "complex_real")
+             (virt-complex-real-set! function: "complex_real_set"))
+     (double imag
+             (virt-complex-imag function: "complex_imag")
+             (virt-complex-imag-set! function: "complex_imag_set"))
+     ))
+ (test-assert (virt-complex? (make-virt-complex 1.0 2.0)))
+ (test 1.0 (virt-complex-real (make-virt-complex 1.0 2.0)))
+ (test 2.0 (virt-complex-imag (make-virt-complex 1.0 2.0)))
+ (let ((c (make-virt-complex 1.0 2.0)))
+   (test 1.0 (virt-complex-real c))
+   (virt-complex-real-set! c 3.0)
+   (test 3.0 (virt-complex-real c))
+   (test 2.0 (virt-complex-imag c)))
+ (test '(5 6 7)
+     (let ((c (make-virt-complex 5.0 6.0)))
+       (match c
+         ((@ VirtComplex (real r) (imag (and (set! set-imag!) orig-i)))
+          (set-imag! 7.0)
+          (map inexact->exact
+               (map round (list r orig-i (virt-complex-imag c))))))))
+ )
+
+;; TODO: virtual method accessors
 
 (test-end)
