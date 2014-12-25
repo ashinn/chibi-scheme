@@ -42,7 +42,7 @@
 (define-c-const int (signal/tty-input "SIGTTIN"))
 (define-c-const int (signal/tty-output "SIGTTOU"))
 
-(c-include "signal.c")
+(c-include-verbatim "signal.c")
 
 ;;> \procedure{(set-signal-action! signal handler)}
 

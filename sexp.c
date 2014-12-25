@@ -11,9 +11,9 @@ struct sexp_huff_entry {
 };
 
 #if SEXP_USE_HUFF_SYMS
-#include "opt/sexp-hufftabs.c"
+#include "chibi/sexp-hufftabs.c"
 static struct sexp_huff_entry huff_table[] = {
-#include "opt/sexp-huff.c"
+#include "chibi/sexp-huff.c"
 };
 #endif
 
@@ -2218,7 +2218,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     if (sexp_isymbolp(obj)) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
-#include "opt/sexp-unhuff.c"
+#include "chibi/sexp-unhuff.c"
         sexp_write_char(ctx, res, out);
       }
     }

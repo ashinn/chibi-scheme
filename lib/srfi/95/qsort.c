@@ -6,9 +6,9 @@
 
 #if SEXP_USE_HUFF_SYMS
 #if SEXP_USE_STATIC_LIBS
-#include "../../../opt/sexp-hufftabdefs.h"
+#include "chibi/sexp-hufftabdefs.h"
 #else
-#include "../../../opt/sexp-hufftabs.c"
+#include "chibi/sexp-hufftabs.c"
 #endif
 #endif
 
@@ -45,10 +45,10 @@ static int sexp_isymbol_compare (sexp ctx, sexp a, sexp b) {
   int res, res2, tmp;
   sexp_uint_t c = ((sexp_uint_t)a)>>3, d = ((sexp_uint_t)b)>>3;
   while (c && d) {
-#include "../../../opt/sexp-unhuff.c"
+#include "chibi/sexp-unhuff.c"
 #define c d
 #define res res2
-#include "../../../opt/sexp-unhuff.c"
+#include "chibi/sexp-unhuff.c"
 #undef c
 #undef res
     if ((tmp=res-res2) != 0)
