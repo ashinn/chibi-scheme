@@ -97,7 +97,7 @@
 ;;> The constants for the addrinfo struct.
 ;;/
 
-(c-include "accept.c")
+(c-include-verbatim "accept.c")
 
 (define-c errno (get-peer-name getpeername)
   (fileno sockaddr (result (value (sizeof sockaddr) socklen_t))))

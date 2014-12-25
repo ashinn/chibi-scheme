@@ -11,7 +11,7 @@
     (string (value 1 size_t) size_t (default (current-input-port) input-port)))
   ))
 
-(c-include "port.c")
+(c-include-verbatim "port.c")
 
 (define-c-const int (seek/set "SEEK_SET"))
 (define-c-const int (seek/cur "SEEK_CUR"))

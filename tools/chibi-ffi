@@ -43,6 +43,7 @@
 (define *tags* '())
 (define *open-namespaces* '())
 (define *c++?* #f)
+(define wdir ".")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
@@ -395,6 +396,18 @@
 
 (define (c-system-include header)
   (cat "\n#include <" header ">\n"))
+
+(define (c-include-verbatim file)
+  (call-with-input-file (if (eqv? #\/ (string-ref file 0))
+                            file
+                            (string-append wdir "/" file))
+    (lambda (in)
+      (let lp ()
+        (let ((c (read-char in)))
+          (cond
+           ((not (eof-object? c))
+            (write-char c)
+            (lp))))))))
 
 (define (c-init x)
   (set! *inits* (cons x *inits*)))
@@ -1589,10 +1602,7 @@
 (define (type-getter-name type name field)
   (let ((c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field))))
     (string-append "sexp_" (x->string (type-name (parse-type name)))
-                   "_get_" (x->string c-name)))
-  ;; (string-append "sexp_" (x->string (type-name (parse-type name)))
-  ;;                "_get_" (x->string (type-base (parse-type (cadr field)))))
-  )
+                   "_get_" (x->string c-name))))
 
 (define (verify-accessor field)
   (if (and (pair? field)
@@ -1927,36 +1937,49 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; main
 
-(let ((args (command-line)))
-  (let* ((args (if (pair? args) (cdr args) args))
-         (compile? (and (pair? args) (member (car args) '("-c" "--compile"))))
-         (args (if compile? (cdr args) args))
-         (cflags (if (and (pair? args) (member (car args) '("-f" "--flags")))
-                     (string-split (cadr args) #\space)
-                     #f))
-         (args (if cflags (cddr args) args))
-         (src (if (pair? args) (car args) "/dev/stdin"))
-         (dest
-          (case (length args)
-            ((0) "-")
-            ((1) (string-append (strip-extension src) ".c"))
-            ((2) (cadr args))
-            (else (error "usage: chibi-ffi [-c] <file.stub> [<output.c>]")))))
-    (if (equal? "-" dest)
-        (generate src)
-        (with-output-to-file dest (lambda () (generate src))))
-    (cond
-     ((and compile? (not (equal? "-" dest)))
-      ;; This has to use `eval' for bootstrapping, since we need
-      ;; chibi-ffi to compile to (chibi process) module.
-      (let* ((so (string-append (strip-extension src)
-                                *shared-object-extension*))
-             (execute (begin (eval '(import (chibi process)))
-                             (eval 'execute)))
-             (base-args (append (or cflags '())
-                                `("-o" ,so ,dest "-lchibi-scheme")))
-             (args (cond-expand
-                    (macosx (append '("-dynamiclib" "-Oz") base-args))
-                    (else (append '("-fPIC" "-shared" "-Os") base-args))))
-             (cc (if *c++?* "c++" "cc")))
-        (execute cc (cons cc args)))))))
+(define (string-scan-right str ch)
+  (let lp ((i (string-cursor-end str)))
+    (let ((i2 (string-cursor-prev str i)))
+      (cond ((string-cursor<? i2 0) 0)
+            ((eqv? ch (string-cursor-ref str i2)) i)
+            (else (lp i2))))))
+
+(let* ((args (command-line))
+       (args (if (pair? args) (cdr args) args))
+       (compile? (and (pair? args) (member (car args) '("-c" "--compile"))))
+       (args (if compile? (cdr args) args))
+       (cflags (if (and (pair? args) (member (car args) '("-f" "--flags")))
+                   (string-split (cadr args) #\space)
+                   #f))
+       (args (if cflags (cddr args) args))
+       (src (if (or (not (pair? args)) (equal? "-" (car args)))
+                "/dev/stdin"
+                (car args)))
+       (dest
+        (case (length args)
+          ((0) "-")
+          ((1) (string-append (strip-extension src) ".c"))
+          ((2) (cadr args))
+          (else (error "usage: chibi-ffi [-c] <file.stub> [<output.c>]")))))
+  (if (not (equal? "/dev/stdin" src))
+      (let ((slash (string-scan-right src #\/)))
+        (if (> slash 0)
+            (set! wdir (substring-cursor src 0 slash)))))
+  (if (equal? "-" dest)
+      (generate src)
+      (with-output-to-file dest (lambda () (generate src))))
+  (cond
+   ((and compile? (not (equal? "-" dest)))
+    ;; This has to use `eval' for bootstrapping, since we need
+    ;; chibi-ffi to compile to (chibi process) module.
+    (let* ((so (string-append (strip-extension src)
+                              *shared-object-extension*))
+           (execute (begin (eval '(import (chibi process)))
+                           (eval 'execute)))
+           (base-args (append (or cflags '())
+                              `("-o" ,so ,dest "-lchibi-scheme")))
+           (args (cond-expand
+                  (macosx (append '("-dynamiclib" "-Oz") base-args))
+                  (else (append '("-fPIC" "-shared" "-Os") base-args))))
+           (cc (if *c++?* "c++" "cc")))
+      (execute cc (cons cc args))))))
