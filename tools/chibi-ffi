@@ -1587,67 +1587,107 @@
                     "  sexp_env_define(ctx, env, name, tmp);\n")))))))))
 
 (define (type-getter-name type name field)
-  (string-append "sexp_" (x->string (type-name (parse-type name)))
-                 "_get_" (x->string (type-base (parse-type (cadr field))))))
+  (let ((c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field))))
+    (string-append "sexp_" (x->string (type-name (parse-type name)))
+                   "_get_" (x->string c-name)))
+  ;; (string-append "sexp_" (x->string (type-name (parse-type name)))
+  ;;                "_get_" (x->string (type-base (parse-type (cadr field)))))
+  )
+
+(define (verify-accessor field)
+  (if (and (pair? field)
+           (not (and (= 3 (length field))
+                     (memq (cadr field) '(function: method:)))))
+      (error "accessor should be a single symbol or (scheme-name function:|method: c-name) but got" field)))
 
 (define (write-type-getter type name field)
-  (cat "static sexp " (type-getter-name type name field)
-       " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
-       (lambda () (write-validator "x" (parse-type name 0)))
-       "  return "
-       (lambda ()
-         (c->scheme-converter
-          (car field)
-          (string-append (if (type-struct? (car field)) "&" "")
-                         "((" (x->string (or (type-struct-type name) ""))
-                         " " (mangle name) "*)"
-                         "sexp_cpointer_value(x))" "->"
-                         (x->string (cadr field)))
-          (and (or (type-struct? (car field)) (type-link? (car field))) "x")))
-       ";\n"
-       "}\n\n"))
+  (let* ((get (car (cddr field)))
+         (_ (verify-accessor get))
+         (c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field)))
+         (ptr (string-append
+               "((" (x->string (or (type-struct-type name) ""))
+               " " (mangle name) "*)"
+               "sexp_cpointer_value(x))")))
+    (cat "static sexp " (type-getter-name type name field)
+         " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
+         (lambda () (write-validator "x" (parse-type name 0)))
+         "  return "
+         (lambda ()
+           (c->scheme-converter
+            (car field)
+            (cond
+             ((and (pair? get) (eq? 'function: (cadr get)))
+              (string-append (car (cddr get)) "(" ptr ")"))
+             ((and (pair? get) (eq? 'method: (cadr get)))
+              (string-append ptr "->" (car (cddr get)) "()"))
+             ((pair? get)
+              (error "invalid getter" get))
+             (else
+              (string-append
+               (if (type-struct? (car field)) "&" "")
+               ptr "->" (x->string c-name))))
+            (and (or (type-struct? (car field)) (type-link? (car field)))
+                 "x")))
+         ";\n"
+         "}\n\n")))
 
 (define (type-setter-name type name field)
-  (string-append "sexp_" (x->string (type-name (parse-type name)))
-                 "_set_" (x->string (type-base (parse-type (cadr field))))))
+  (let ((c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field))))
+    (string-append "sexp_" (x->string (type-name (parse-type name)))
+                   "_set_" (x->string c-name))))
 
 (define (write-type-setter-assignment type name field dst val)
-  (cond
-   ((type-struct? (car field))
-    ;; assign to a nested struct - copy field-by-field
-    (let ((field-type
-           (cond ((lookup-type (type-name (car field)))
-                  => (lambda (x) (cddr (cdr x))))
-                 (else (cdr field)))))
+  (let* ((set (cadr (cddr field)))
+         (_ (verify-accessor set))
+         (c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field)))
+         (ptr (string-append
+               "((" (x->string (or (type-struct-type name) ""))
+               " " (mangle name) "*)"
+               "sexp_cpointer_value(" (x->string dst) "))")))
+    (cond
+     ((and (pair? set) (eq? 'function: (cadr set)))
       (lambda ()
-        (for-each
-         (lambda (subfield)
-           (let ((subname (x->string (cadr subfield))))
-             (cat
-              "  "
-              (string-append dst "." (x->string (cadr subfield)))
-              " = "
-              (string-append
-               "((" (x->string (or (type-struct-type (type-name (car field))) ""))
-               " " (mangle (type-name (car field))) "*)" "sexp_cpointer_value(" val "))"
-               "->" (x->string (cadr subfield)))
-              ";\n")))
-         (struct-fields field-type)))))
-   (else
-    (lambda ()
-      (cat "  " dst " = " (lambda () (scheme->c-converter (car field) val)) ";\n")))))
+        (cat (car (cddr set)) "(" ptr ", "
+             (lambda () (scheme->c-converter (car field) val)) ");\n")))
+     ((and (pair? set) (eq? 'method: (cadr set)))
+      (lambda ()
+        (cat ptr "->" (car (cddr set)) "("
+             (lambda () (scheme->c-converter (car field) val)) ");\n")))
+     ((pair? set)
+      (error "invalid setter" set))
+     ((type-struct? (car field))
+      ;; assign to a nested struct - copy field-by-field
+      (let ((field-type
+             (cond ((lookup-type (type-name (car field)))
+                    => (lambda (x) (cddr (cdr x))))
+                   (else (cdr field)))))
+        (lambda ()
+          (for-each
+           (lambda (subfield)
+             (let ((subname (x->string (cadr subfield))))
+               (cat
+                "  "
+                (string-append dst "." (x->string (cadr subfield)))
+                " = "
+                (string-append
+                 "((" (x->string (or (type-struct-type (type-name (car field)))
+                                     ""))
+                 " " (mangle (type-name (car field))) "*)"
+                 "sexp_cpointer_value(" val "))"
+                 "->" (x->string (cadr subfield)))
+                ";\n")))
+           (struct-fields field-type)))))
+     (else
+      (lambda ()
+        (cat "  " ptr "->" c-name " = "
+             (lambda () (scheme->c-converter (car field) val)) ";\n"))))))
 
 (define (write-type-setter type name field)
   (cat "static sexp " (type-setter-name type name field)
        " (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp v) {\n"
        (lambda () (write-validator "x" (parse-type name 0)))
        (lambda () (write-validator "v" (parse-type (car field) 1)))
-       (write-type-setter-assignment
-        type name field
-        (string-append "((" (x->string (or (type-struct-type name) ""))
-                       " " (mangle name) "*)" "sexp_cpointer_value(x))"
-                        "->" (x->string (cadr field)))
-        "v")
+       (write-type-setter-assignment type name field "x" "v")
        "  return SEXP_VOID;\n"
        "}\n\n"))
 
@@ -1718,15 +1758,18 @@
                       (let* ((a (car ls))
                              (field
                               (find (lambda (f) (and (pair? f) (eq? a (cadr f))))
-                                    (cddr x))))
-                        (if field
-                            (cat "  r->" (cadr field) " = "
-                                 (lambda ()
-                                   (scheme->c-converter
-                                    (car field)
-                                    (string-append "arg"
-                                                   (number->string i))))
-                                 ";\n"))
+                                    (cddr x)))
+                             (arg (string-append "arg" (number->string i))))
+                        (cond
+                         ((and field (>= (length field) 4))
+                          (cat
+                           (write-type-setter-assignment
+                            type name field "res" arg)))
+                         (field
+                          (cat "  r->" (cadr field) " = "
+                               (lambda ()
+                                 (scheme->c-converter (car field) arg))
+                               ";\n")))
                         (lp (cdr ls) (+ i 1)))))))
                 "  sexp_gc_release1(ctx);\n"
                 "  return res;\n"
@@ -1752,35 +1795,41 @@
              (get+set (cddr field)))
         (cond
          ((and (pair? get+set) (car get+set))
-          (write-type-getter type name field)
-          (set! *funcs*
-                (cons (parse-func
-                       `(,(car field)
-                         (,(car get+set)
-                          #f
-                          ,(type-getter-name type name field))
-                         (,name)))
-                      *funcs*))
-          (if (type-struct-type name)
-              (set! *type-getters*
-                    (cons `(,(car get+set) ,name ,i) *type-getters*))))
+          (let ((get-name (if (pair? (car get+set))
+                              (caar get+set)
+                              (car get+set))))
+            (write-type-getter type name field)
+            (set! *funcs*
+                  (cons (parse-func
+                         `(,(car field)
+                           (,get-name
+                            #f
+                            ,(type-getter-name type name field))
+                           (,name)))
+                        *funcs*))
+            (if (type-struct-type name)
+                (set! *type-getters*
+                      (cons `(,get-name ,name ,i) *type-getters*)))))
          (else "SEXP_FALSE"))
         (cond
          ((and (pair? get+set)
                (pair? (cdr get+set))
                (cadr get+set))
-          (write-type-setter type name field)
-          (set! *funcs*
-                (cons (parse-func
-                       `(,(car field)
-                         (,(cadr get+set)
-                          #f
-                          ,(type-setter-name type name field))
-                         (,name ,(car field))))
-                      *funcs*))
-          (if (type-struct-type name)
-              (set! *type-setters*
-                    (cons `(,(cadr get+set) ,name ,i) *type-setters*))))))
+          (let ((set-name (if (pair? (cadr get+set))
+                              (car (cadr get+set))
+                              (cadr get+set))))
+            (write-type-setter type name field)
+            (set! *funcs*
+                  (cons (parse-func
+                         `(,(car field)
+                           (,set-name
+                            #f
+                            ,(type-setter-name type name field))
+                           (,name ,(car field))))
+                        *funcs*))
+            (if (type-struct-type name)
+                (set! *type-setters*
+                      (cons `(,set-name ,name ,i) *type-setters*)))))))
       (lp (cdr ls) (+ i 1))))))
 
 (define (write-type-funcs orig-type)
