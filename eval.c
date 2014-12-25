@@ -1222,7 +1222,7 @@ sexp sexp_get_port_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 
 #if SEXP_USE_STATIC_LIBS
 #if SEXP_USE_STATIC_LIBS_NO_INCLUDE
-struct sexp_library_entry_t* sexp_static_libraries;
+extern struct sexp_library_entry_t* sexp_static_libraries;
 #else
 #include "clibs.c"
 #endif
