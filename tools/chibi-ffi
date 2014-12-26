@@ -384,6 +384,21 @@
     ((8) "SEXP_EIGHT")     ((9) "SEXP_NINE")   ((10) "SEXP_TEN")
     (else (string-append "sexp_make_fixnum(" (x->string x) ")"))))
 
+(define (string-scan-right str ch)
+  (let lp ((i (string-cursor-end str)))
+    (let ((i2 (string-cursor-prev str i)))
+      (cond ((string-cursor<? i2 0) 0)
+            ((eqv? ch (string-cursor-ref str i2)) i)
+            (else (lp i2))))))
+
+(define (strip-namespace x)
+  (string->symbol
+   (let* ((x (x->string x))
+          (i (string-scan-right x #\:)))
+     (if (> i 0)
+         (substring-cursor x i)
+         x))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; .stub file interface
 
@@ -1546,17 +1561,18 @@
 
 (define (write-type orig-type)
   (let* ((name (car orig-type))
+         (scheme-name (strip-namespace (type-name name)))
          (type (cdr orig-type))
          (imported? (cond ((member 'imported?: type) => cadr) (else #f))))
     (cond
      (imported?
-      (cat "  name = sexp_intern(ctx, \"" (type-name name) "\", -1);\n"
+      (cat "  name = sexp_intern(ctx, \"" scheme-name "\", -1);\n"
            "  " (type-id-name name) " = sexp_env_ref(env, name, SEXP_FALSE);\n"
            "  if (sexp_not(" (type-id-name name) ")) {\n"
            "    sexp_warn(ctx, \"couldn't import declared type: \", name);\n"
            "  }\n"))
      (else
-      (cat "  name = sexp_c_string(ctx, \"" (type-name name) "\", -1);\n"
+      (cat "  name = sexp_c_string(ctx, \"" scheme-name "\", -1);\n"
            "  " (type-id-name name)
            " = sexp_register_c_type(ctx, name, "
            (cond ((or (memq 'finalizer: type)
@@ -1601,8 +1617,10 @@
 
 (define (type-getter-name type name field)
   (let ((c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field))))
-    (string-append "sexp_" (x->string (type-name (parse-type name)))
-                   "_get_" (x->string c-name))))
+    (string-replace
+     (string-append "sexp_" (x->string (type-name (parse-type name)))
+                    "_get_" (x->string c-name))
+     #\: "_")))
 
 (define (verify-accessor field)
   (if (and (pair? field)
@@ -1616,7 +1634,7 @@
          (c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field)))
          (ptr (string-append
                "((" (x->string (or (type-struct-type name) ""))
-               " " (mangle name) "*)"
+               " " (x->string name) "*)"
                "sexp_cpointer_value(x))")))
     (cat "static sexp " (type-getter-name type name field)
          " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
@@ -1643,8 +1661,10 @@
 
 (define (type-setter-name type name field)
   (let ((c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field))))
-    (string-append "sexp_" (x->string (type-name (parse-type name)))
-                   "_set_" (x->string c-name))))
+    (string-replace
+     (string-append "sexp_" (x->string (type-name (parse-type name)))
+                    "_set_" (x->string c-name))
+     #\: "_")))
 
 (define (write-type-setter-assignment type name field dst val)
   (let* ((set (cadr (cddr field)))
@@ -1652,7 +1672,7 @@
          (c-name (if (pair? (cadr field)) (cadr (cadr field)) (cadr field)))
          (ptr (string-append
                "((" (x->string (or (type-struct-type name) ""))
-               " " (mangle name) "*)"
+               " " (x->string name) "*)"
                "sexp_cpointer_value(" (x->string dst) "))")))
     (cond
      ((and (pair? set) (eq? 'function: (cadr set)))
@@ -1936,13 +1956,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; main
-
-(define (string-scan-right str ch)
-  (let lp ((i (string-cursor-end str)))
-    (let ((i2 (string-cursor-prev str i)))
-      (cond ((string-cursor<? i2 0) 0)
-            ((eqv? ch (string-cursor-ref str i2)) i)
-            (else (lp i2))))))
 
 (let* ((args (command-line))
        (args (if (pair? args) (cdr args) args))
