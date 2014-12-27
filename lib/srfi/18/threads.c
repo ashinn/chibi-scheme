@@ -142,11 +142,13 @@ sexp sexp_thread_terminate (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   /* terminate the thread and all children */
   for ( ; thread && sexp_contextp(thread); thread=sexp_context_child(thread)) {
     /* if not already terminated set an exception status */
-    sexp_context_errorp(thread) = 1;
-    sexp_context_result(thread) =
-      sexp_global(ctx, SEXP_G_THREAD_TERMINATE_ERROR);
-    /* zero the refuel - this tells the scheduler the thread is terminated */
-    sexp_context_refuel(thread) = 0;
+    if (sexp_context_refuel(ctx) > 0) {
+      sexp_context_errorp(thread) = 1;
+      sexp_context_result(thread) =
+        sexp_global(ctx, SEXP_G_THREAD_TERMINATE_ERROR);
+      /* zero the refuel - this tells the scheduler the thread is terminated */
+      sexp_context_refuel(thread) = 0;
+    }
     /* unblock the thread if needed so it can be scheduled and terminated */
     if (sexp_delete_list(ctx, SEXP_G_THREADS_PAUSED, thread))
       sexp_thread_start(ctx, self, 1, thread);
