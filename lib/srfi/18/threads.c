@@ -138,8 +138,13 @@ static int sexp_delete_list (sexp ctx, int global, sexp x) {
 
 sexp sexp_thread_terminate (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp res = sexp_make_boolean(ctx == thread);
+  sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   /* terminate the thread and all children */
   for ( ; thread && sexp_contextp(thread); thread=sexp_context_child(thread)) {
+    /* if not already terminated set an exception status */
+    sexp_context_errorp(thread) = 1;
+    sexp_context_result(thread) =
+      sexp_global(ctx, SEXP_G_THREAD_TERMINATE_ERROR);
     /* zero the refuel - this tells the scheduler the thread is terminated */
     sexp_context_refuel(thread) = 0;
     /* unblock the thread if needed so it can be scheduled and terminated */

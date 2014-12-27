@@ -492,6 +492,8 @@ void sexp_init_eval_context_globals (sexp ctx) {
     = sexp_user_exception(ctx, SEXP_FALSE, "I/O would block", SEXP_NULL);
   sexp_global(ctx, SEXP_G_IO_BLOCK_ONCE_ERROR)
     = sexp_user_exception(ctx, SEXP_FALSE, "I/O would block once", SEXP_NULL);
+  sexp_global(ctx, SEXP_G_THREAD_TERMINATE_ERROR)
+    = sexp_user_exception(ctx, SEXP_FALSE, "thread terminated", SEXP_NULL);
   sexp_global(ctx, SEXP_G_THREADS_FRONT) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_BACK) = SEXP_NULL;
   sexp_global(ctx, SEXP_G_THREADS_SIGNALS) = SEXP_ZERO;
