@@ -1591,8 +1591,6 @@
       (if (pair? (struct-fields type))
           (let ((len (make-integer (length (struct-fields type)))))
             (cat "  sexp_type_slots(" (type-id-name name) ") = SEXP_NULL;\n"
-                 "  sexp_type_field_len_base(" (type-id-name name) ")"
-                 " = " (length (struct-fields type)) ";\n"
                  (lambda ()
                    (do ((ls (reverse (struct-fields type)) (cdr ls)))
                        ((not (pair? ls)))
