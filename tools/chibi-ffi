@@ -1971,7 +1971,7 @@
              (error "--flags requires an argument"))
          (lp (cddr args)
              compile?
-             (append cflag (string-split (cadr args) #\space))
+             (append cflags (string-split (cadr args) #\space))
              features))
         ((--features)
          (if (null? (cdr args))
@@ -2013,8 +2013,8 @@
                  (base-args (append cflags `("-o" ,so ,dest "-lchibi-scheme")))
                  (args
                   (eval
-                   '(cond-expand
-                     (macosx (append '("-dynamiclib" "-Oz") base-args))
-                     (else (append '("-fPIC" "-shared" "-Os") base-args)))))
+                   `(cond-expand
+                     (macosx (append '("-dynamiclib" "-Oz") ',base-args))
+                     (else (append '("-fPIC" "-shared" "-Os") ',base-args)))))
                  (cc (if *c++?* "c++" "cc")))
             (execute cc (cons cc args))))))))))
