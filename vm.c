@@ -1965,12 +1965,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       tmp1 = _ARG1;
     else
       sexp_raise("write-string: not a string or bytes", sexp_list1(ctx, _ARG1));
-    if (! sexp_fixnump(_ARG2)) {
-      if (_ARG2 == SEXP_TRUE)
-        _ARG2 = sexp_make_fixnum(sexp_bytes_length(tmp1));
-      else
-        sexp_raise("write-string: not an integer", sexp_list1(ctx, _ARG2));
-    }
+    if (_ARG2 == SEXP_TRUE)
+      _ARG2 = sexp_make_fixnum(sexp_bytes_length(tmp1));
+    else if (! sexp_fixnump(_ARG2))
+      sexp_raise("write-string: not an integer", sexp_list1(ctx, _ARG2));
     if (sexp_unbox_fixnum(_ARG2) < 0 || sexp_unbox_fixnum(_ARG2) > sexp_bytes_length(tmp1))
       sexp_raise("write-string: not a valid string count", sexp_list2(ctx, tmp1, _ARG2));
     if (! sexp_oportp(_ARG3))
@@ -1985,10 +1983,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       if (sexp_port_stream(_ARG3)) clearerr(sexp_port_stream(_ARG3));
       /* modify stack in-place so we continue where we left off next time */
       if (i > 0) {
-        if (sexp_stringp(_ARG1))
-          _ARG1 = sexp_substring(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
-        else
-          _ARG1 = sexp_subbytes(ctx, _ARG1, sexp_make_fixnum(i), SEXP_FALSE);
+        _ARG1 = sexp_subbytes(ctx, tmp1, sexp_make_fixnum(i), SEXP_FALSE);
         _ARG2 = sexp_make_fixnum(sexp_unbox_fixnum(_ARG2) - i);
       }
       /* yield if threads are enabled (otherwise busy loop) */
