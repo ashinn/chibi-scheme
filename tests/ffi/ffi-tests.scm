@@ -66,10 +66,12 @@ int sub(int x, int y) {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; More detailed tests on integer conversions and overflow.
 
-(test-ffi
- "integers"
- (begin
-   (c-declare "
+(cond
+ ((fixnum? (expt 2 60))
+  (test-ffi
+   "integers"
+   (begin
+     (c-declare "
 unsigned hoge(unsigned x) {
   return x;
 }
@@ -89,24 +91,24 @@ enum suuji tasu(enum suuji a, enum suuji b) {
   return a + b;
 }
 ")
-   (define-c unsigned hoge (unsigned))
-   (define-c long poge (long))
-   (define-c unsigned-long piyo (unsigned-long))
-   (define-c boolean ponyo (boolean))
-   (define-c-int-type suuji)
-   (define-c suuji tasu (suuji suuji)))
- ;; static cast
- (test 4294967295 (hoge -1))
- ;; pass and return a signed bignum
- (test -9223372036854775808 (poge (- (expt 2 63))))
- ;; pass and return an unsigned bignum
- (test 4611686018427387904 (piyo (expt 2 62)))
- ;; booleans
- (test #f (ponyo 'blah))
- (test #t (ponyo #f))
- ;; int types
- (test 5 (tasu 2 3))
- )
+     (define-c unsigned hoge (unsigned))
+     (define-c long poge (long))
+     (define-c unsigned-long piyo (unsigned-long))
+     (define-c boolean ponyo (boolean))
+     (define-c-int-type suuji)
+     (define-c suuji tasu (suuji suuji)))
+   ;; static cast
+   (test 4294967295 (hoge -1))
+   ;; pass and return a signed bignum
+   (test -9223372036854775808 (poge (- (expt 2 63))))
+   ;; pass and return an unsigned bignum
+   (test 4611686018427387904 (piyo (expt 2 62)))
+   ;; booleans
+   (test #f (ponyo 'blah))
+   (test #t (ponyo #f))
+   ;; int types
+   (test 5 (tasu 2 3))
+   )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String passing, returning and mutation.
