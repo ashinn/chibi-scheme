@@ -41,6 +41,10 @@
   (call-with-input-string "abcde"
     (lambda (in) (let ((str (read-string 3 in))) (list str (read-string 3 in))))))
 
+(test "read-string" '("ab日" "本語f")
+  (call-with-input-string "ab日本語f"
+    (lambda (in) (let ((str (read-string 3 in))) (list str (read-string 3 in))))))
+
 (test "read-string!" '("abc" "def")
   (call-with-input-string "abcdef"
     (lambda (in)
