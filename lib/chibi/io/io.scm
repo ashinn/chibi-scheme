@@ -9,10 +9,17 @@
   (call-with-input-string " "
     (lambda (in) (read-char in) (read-char in))))
 
-(define (string-copy! dst start src from to)
-  (do ((i from (+ i 1)) (j start (+ j 1)))
-      ((>= i to))
-    (string-set! dst j (string-ref src i))))
+;; Copy whole characters from the given cursor positions.
+;; Return the src cursor position of the next unwritten char,
+;; which may be before `to' if the char would overflow.
+(define (string-cursor-copy! dst start src from to)
+  (let lp ((i from)
+           (j (string-offset->index dst start)))
+    (let ((i2 (string-cursor-next src i)))
+      (cond ((> i2 to) i)
+            (else
+             (string-set! dst j (string-cursor-ref src i))
+             (lp i2 (+ j 1)))))))
 
 (define (utf8->string vec . o)
   (if (pair? o)
@@ -325,7 +332,7 @@
                  (let* ((s (read-string (- n i) (car ports)))
                         (len (if (string? s) (string-length s) 0)))
                    (if (and (string? str) (> len 0))
-                       (string-copy! str i s 0 len))
+                       (string-cursor-copy! str i s 0 len))
                    (lp (+ i len)))))))))))))
 
 ;;> A /dev/null input port which always returns \scheme{eof-object}.
@@ -347,12 +354,13 @@
        (let ((n (- end start)))
          (cond
           ((>= (- len offset) n)
-           (string-copy! str start buf offset (+ offset n))
-           (set! offset (+ offset n))
-           (- (string-index->offset str end)
-              (string-index->offset str start)))
+           (let* ((offset2
+                   (string-cursor-copy! str start buf offset (+ offset n)))
+                  (end2 (+ (- offset2 offset) start)))
+             (set! offset offset2)
+             end2))
           (else
-           (string-copy! str start buf offset len)
+           (string-cursor-copy! str start buf offset len)
            (let lp ((i (+ start (- len offset))))
              (set! buf (generator))
              (cond
@@ -360,20 +368,19 @@
                (set! buf "")
                (set! len 0)
                (set! offset 0)
-               (- (string-index->offset str i)
-                  (string-index->offset str start)))
+               (+ i start))
               (else
-               (set! len (string-length buf))
+               (set! len (string-size buf))
                (set! offset 0)
                (cond
                 ((>= (- len offset) (- n i))
-                 (string-copy! str i buf 0 (- n i))
-                 (set! offset (- n i))
-                 (- (string-index->offset str end)
-                    (string-index->offset str start)))
+                 (let* ((offset2 (string-cursor-copy! str i buf 0 (- n i)))
+                        (end2 (+ (- offset2 offset) start)))
+                   (set! offset offset2)
+                   end2))
                 (else
-                 (string-copy! str i buf offset len)
-                 (lp (+ i (- len offset)))))))))))))))
+                 (let ((offset2 (string-cursor-copy! str i buf offset len)))
+                   (lp (+ i (- offset2 offset))))))))))))))))
 
 ;;> An input port which runs all input (in arbitrary string chunks)
 ;;> through the \var{filter} procedure.
