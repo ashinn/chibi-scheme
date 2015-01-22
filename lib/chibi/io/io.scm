@@ -354,13 +354,16 @@
        (let ((n (- end start)))
          (cond
           ((>= (- len offset) n)
+           ;; buf contains enough to fill str
            (let* ((offset2
                    (string-cursor-copy! str start buf offset (+ offset n)))
                   (end2 (+ (- offset2 offset) start)))
              (set! offset offset2)
              end2))
           (else
+           ;; copy the rest of buf into str
            (string-cursor-copy! str start buf offset len)
+           ;; i is the position to copy into str, from start to end
            (let lp ((i (+ start (- len offset))))
              (set! buf (generator))
              (cond
@@ -371,16 +374,15 @@
                (+ i start))
               (else
                (set! len (string-size buf))
-               (set! offset 0)
                (cond
-                ((>= (- len offset) (- n i))
+                ((>= len (- n i))
                  (let* ((offset2 (string-cursor-copy! str i buf 0 (- n i)))
-                        (end2 (+ (- offset2 offset) start)))
+                        (end2 (+ i offset2)))
                    (set! offset offset2)
                    end2))
                 (else
-                 (let ((offset2 (string-cursor-copy! str i buf offset len)))
-                   (lp (+ i (- offset2 offset))))))))))))))))
+                 (let ((offset2 (string-cursor-copy! str i buf 0 len)))
+                   (lp (+ i offset2)))))))))))))))
 
 ;;> An input port which runs all input (in arbitrary string chunks)
 ;;> through the \var{filter} procedure.
