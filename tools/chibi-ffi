@@ -288,8 +288,8 @@
 
 (define (remove pred ls)
   (cond ((null? ls) '())
-        ((pred (car ls)) (filter pred (cdr ls)))
-        (else (cons (car ls) (filter pred (cdr ls))))))
+        ((pred (car ls)) (remove pred (cdr ls)))
+        (else (cons (car ls) (remove pred (cdr ls))))))
 
 (define (strip-extension path)
   (let lp ((i (- (string-length path) 1)))
