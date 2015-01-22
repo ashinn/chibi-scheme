@@ -113,6 +113,11 @@
       (read-line in)))
 (test "abc"
     (let ((in (strings->input-port
+               (list "日本語" (make-string 4087 #\本) "abc"))))
+      (read-string 4090 in)
+      (read-line in)))
+(test "abc"
+    (let ((in (strings->input-port
                (list "日本語" (make-string 4093 #\-) "abc"))))
       (read-string 4096 in)
       (read-line in)))
