@@ -1936,6 +1936,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     i = sexp_write_char(ctx, sexp_unbox_character(_ARG1), _ARG2);
     if (i == EOF) {
+      if (!sexp_port_openp(_ARG2))
+        sexp_raise("write-char: port is closed", _ARG2);
+      else
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG2) ? ferror(sexp_port_stream(_ARG2)) : 1)
           && (errno == EAGAIN)) {
@@ -1973,6 +1976,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       sexp_raise("write-string: not a valid string count", sexp_list2(ctx, tmp1, _ARG2));
     if (! sexp_oportp(_ARG3))
       sexp_raise("write-string: not an output-port", sexp_list1(ctx, _ARG3));
+    if (!sexp_port_openp(_ARG3))
+      sexp_raise("write-string: port is closed", _ARG3);
     sexp_context_top(ctx) = top;
 #if SEXP_USE_GREEN_THREADS
     errno = 0;
@@ -2015,6 +2020,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else
 #endif
     if (i == EOF) {
+      if (!sexp_port_openp(_ARG1))
+        sexp_raise("peek-char: port is closed", _ARG1);
+      else
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
           && (errno == EAGAIN)) {
@@ -2042,6 +2050,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     i = sexp_read_char(ctx, _ARG1);
     if (i == EOF) {
+      if (!sexp_port_openp(_ARG1))
+        sexp_raise("read-char: port is closed", _ARG1);
+      else
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
           && (errno == EAGAIN)) {

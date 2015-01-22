@@ -172,6 +172,8 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 #endif
         )
       free(sexp_port_buf(port));
+    sexp_port_offset(port) = 0;
+    sexp_port_size(port) = 0;
   }
   return res;
 }
@@ -1444,6 +1446,8 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
   int res = 0;
   if (sexp_port_offset(p) < sexp_port_size(p)) {
     return ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++];
+  } else if (!sexp_port_openp(p)) {
+    return EOF;
   } else if (sexp_port_stream(p)) {
     res = fread(sexp_port_buf(p), 1, SEXP_PORT_BUFFER_SIZE, sexp_port_stream(p));
     if (res >= 0) {
