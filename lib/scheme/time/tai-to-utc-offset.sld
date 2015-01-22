@@ -21,7 +21,7 @@
     (import (srfi 18)))
    (else
     (begin
-      (define (make-thread thunk) #f)
+      (define (make-thread thunk name) #f)
       (define (thread-start! th) #f)
       (define (thread-sleep! secs) #f))))
   
@@ -162,7 +162,8 @@
         (let loop ()
           (thread-sleep! *cache-lifetime*)
           (update-cache! (open-leap-seconds-list-port))
-          (loop)))))
+          (loop)))
+      "leap-second-update-poll"))
     
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     
