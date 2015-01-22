@@ -1359,6 +1359,8 @@ sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
 sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp cookie;
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
+  if (!sexp_port_openp(port))
+    return sexp_xtype_exception(ctx, self, "output port is closed", port);
   cookie = sexp_port_cookie(port);
   if (!sexp_streamp(cookie))
     return sexp_xtype_exception(ctx, self, "not a string port", port);
@@ -1404,6 +1406,8 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
   if (sexp_port_cookie(port) != SEXP_STRING_OPORT)
     return sexp_xtype_exception(ctx, self, "not an output string port", port);
+  if (!sexp_openp(port))
+    return sexp_xtype_exception(ctx, self, "output port is closed", port);
   fflush(sexp_port_stream(port));
   return sexp_c_string(ctx, sexp_port_buf(port), sexp_port_size(port));
 }
@@ -1600,6 +1604,8 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp res;
   sexp_gc_var3(ls, rev, tmp);
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
+  if (!sexp_port_openp(out))
+    return sexp_xtype_exception(ctx, self, "output port is closed", out);
   sexp_gc_preserve3(ctx, ls, rev, tmp);
   if (sexp_port_offset(out) > 0) {
     tmp = sexp_c_string(ctx, sexp_port_buf(out), sexp_port_offset(out));
