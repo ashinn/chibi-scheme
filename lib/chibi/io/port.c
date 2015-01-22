@@ -291,7 +291,8 @@ sexp sexp_get_output_bytevector (sexp ctx, sexp self, sexp port) {
     return sexp_xtype_exception(ctx, self, "not a binary port", port);
   sexp_gc_preserve1(ctx, res);
   res = sexp_get_output_string(ctx, port);
-  res = sexp_string_to_bytes(ctx, res);
+  if (!sexp_exceptionp(res))
+    res = sexp_string_to_bytes(ctx, res);
   sexp_gc_release1(ctx);
   return res;
 }
