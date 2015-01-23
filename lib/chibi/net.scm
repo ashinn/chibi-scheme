@@ -46,7 +46,7 @@
                 (lp (address-info-next addr)))
                (else
                 (cond-expand
-                 (threads (set-file-descriptor-flags! sock open/non-block))
+                 (threads (set-file-descriptor-status! sock open/non-block))
                  (else #f))
                 (list sock
                       (open-input-file-descriptor sock #t)
