@@ -12,14 +12,15 @@
 ;; Copy whole characters from the given cursor positions.
 ;; Return the src cursor position of the next unwritten char,
 ;; which may be before `to' if the char would overflow.
-(define (string-cursor-copy! dst start src from to)
-  (let lp ((i from)
-           (j (string-offset->index dst start)))
-    (let ((i2 (string-cursor-next src i)))
-      (cond ((> i2 to) i)
-            (else
-             (string-set! dst j (string-cursor-ref src i))
-             (lp i2 (+ j 1)))))))
+;; Now provided as a primitive from (chibi ast).
+;; (define (string-cursor-copy! dst start src from to)
+;;   (let lp ((i from)
+;;            (j (string-offset->index dst start)))
+;;     (let ((i2 (string-cursor-next src i)))
+;;       (cond ((> i2 to) i)
+;;             (else
+;;              (string-set! dst j (string-cursor-ref src i))
+;;              (lp i2 (+ j 1)))))))
 
 (define (utf8->string vec . o)
   (if (pair? o)

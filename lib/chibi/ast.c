@@ -440,6 +440,37 @@ static sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, se
   return res ? sexp_make_fixnum(res-sexp_string_data(x)) : SEXP_FALSE;
 }
 
+static sexp sexp_string_cursor_copy (sexp ctx, sexp self, sexp_sint_t n, sexp dst, sexp sfrom, sexp src, sexp sstart, sexp send) {
+  unsigned char *pfrom, *pto, *pstart, *pend, *prev, *p;
+  sexp_sint_t from = sexp_unbox_fixnum(sfrom), to = sexp_string_size(dst),
+    start = sexp_unbox_fixnum(sstart), end = sexp_unbox_fixnum(send);
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, dst);
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, src);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, sfrom);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, sstart);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, send);
+  if (from < 0 || from > to)
+    return sexp_user_exception(ctx, self, "string-cursor-copy!: from out of range", sfrom);
+  if (start < 0 || start > sexp_string_size(src))
+    return sexp_user_exception(ctx, self, "string-cursor-copy!: start out of range", sstart);
+  if (end < start || end > sexp_string_size(src))
+    return sexp_user_exception(ctx, self, "string-cursor-copy!: end out of range", send);
+  pfrom = (unsigned char*)sexp_string_data(dst) + from;
+  pto = (unsigned char*)sexp_string_data(dst) + to;
+  pstart = (unsigned char*)sexp_string_data(src) + start;
+  pend = (unsigned char*)sexp_string_data(src) + end;
+  for ( ; pfrom < pto && pstart < pend; ++pfrom, ++pstart)
+    *pfrom = *pstart;
+  /* adjust for incomplete trailing chars */
+  prev = (unsigned char*)sexp_string_utf8_prev(pfrom);
+  if (sexp_utf8_initial_byte_count(*prev) > pfrom - prev) {
+    for (p = prev; p < pfrom; ++p)
+      *p = '\0';
+    pstart -= pfrom - prev;
+  }
+  return sexp_make_fixnum(pstart - (unsigned char*)sexp_string_data(src));
+}
+
 static sexp sexp_errno (sexp ctx, sexp self, sexp_sint_t n) {
 #ifdef PLAN9
   return SEXP_FALSE;
@@ -615,6 +646,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
 #endif
   sexp_define_foreign(ctx, env, "thread-list", 0, sexp_thread_list);
   sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
+  sexp_define_foreign(ctx, env, "string-cursor-copy!", 5, sexp_string_cursor_copy);
   sexp_define_foreign(ctx, env, "errno", 0, sexp_errno);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);
