@@ -1009,6 +1009,15 @@ sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   return sexp_make_fixnum(j);
 }
 
+sexp sexp_string_offset_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp offset) {
+  sexp_sint_t off = sexp_unbox_fixnum(offset);
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
+  if (off < 0 || off > sexp_string_size(str))
+    return sexp_user_exception(ctx, self, "string-offset->index: offset out of range", offset);
+  return sexp_make_fixnum(sexp_string_utf8_length((unsigned char*)sexp_string_data(str), off));
+}
+
 #endif
 
 sexp sexp_make_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch)

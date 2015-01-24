@@ -1436,6 +1436,7 @@ SEXP_API char* sexp_string_utf8_prev (unsigned char *p);
 SEXP_API sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i);
 SEXP_API sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i);
 SEXP_API sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
+SEXP_API sexp sexp_string_offset_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp offset);
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
 SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
