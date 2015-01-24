@@ -159,6 +159,15 @@
          file)
      #\/)))
 
+;; remove import qualifiers
+(define (import-name import)
+  (cond
+   ((and (pair? import)
+         (memq (car import) '(only except prefix drop-prefix rename))
+         (pair? (cadr import)))
+    (import-name (cadr import)))
+   (else import)))
+
 (define (extract-library cfg file)
   (let ((lib (read-from-file file)))
     (match lib
@@ -170,13 +179,6 @@
          (define (resolve file)
            (let ((dest-path (make-path lib-dir file)))
              (list 'rename (make-path dir dest-path) dest-path)))
-         (define (import-name import)
-           (cond
-            ((and (pair? import)
-                  (memq (car import) '(only except prefix drop-prefix rename))
-                  (pair? (cadr import)))
-             (import-name (cadr import)))
-            (else import)))
          (let lp ((ls declarations)
                   (info `(,@(cond
                              ((conf-get cfg '(command package author))
@@ -184,49 +186,53 @@
                              (else '()))
                           (path ,lib-file)
                           (name ,name)))
-                  (files `((rename ,file ,lib-file)))
-                  (dirs '("")))
+                  (files `((rename ,file ,lib-file))))
            (cond
             ((null? ls)
              (cons `(library ,@(reverse info))
-                   (cons `(rename ,dir "")
-                         (append (map resolve
-                                      (sort (delete-duplicates dirs equal?)))
-                                 files))))
+                   files))
             (else
              (match (car ls)
                (((or 'include 'include-ci) includes ...)
                 (lp (cdr ls)
                     info
-                    (append (map resolve includes) files)
-                    (append (map path-directory includes) dirs)))
+                    (append (map resolve includes) files)))
                (('include-library-declarations includes ...)
                 (lp (append (append-map file->sexp-list includes) (cdr ls))
                     info
-                    (append (map resolve includes) files)
-                    dirs))
+                    (append (map resolve includes) files)))
                (('import libs ...)
                 (lp (cdr ls)
                     (cons (cons 'depends (map import-name libs)) info)
-                    files
-                    dirs))
+                    files))
                (('cond-expand clauses ...)
-                (lp (append (append-map cdr clauses) (cdr ls)) info files dirs))
+                (lp (append (append-map cdr clauses) (cdr ls)) info files))
                (else
-                (lp (cdr ls) info files dirs))))))))
+                (lp (cdr ls) info files))))))))
       (else
        (die 2 "not a valid library declaration " lib " in file " file)))))
 
+(define (extract-program-imports file)
+  (let lp ((ls (guard (exn (else '())) (file->sexp-list file)))
+           (deps '()))
+    (cond
+     ((and (pair? ls) (pair? (car ls)) (eq? 'import (caar ls)))
+      (lp (cdr ls) (append (reverse (map import-name (cdar ls))) deps)))
+     (else
+      (reverse deps)))))
+
 (define (make-package-name cfg libs . o)
-  (let ((name (assq 'name (car libs)))
+  (let ((name (any (lambda (x) (or (library-name x) (program-name x))) libs))
         (version (and (pair? o) (car o))))
     (cond
-     ((not (and (pair? name) (pair? (cdr name))))
-      (die 2 "Unnamed library"))
-     ((not (and (pair? (cadr name)) (list? (cadr name))))
-      (die 2 "Invalid library name" (cadr name)))
+     ((not (and (pair? name) (list? name)))
+      (die 2 "Invalid library name: " name))
+     ((not name)
+      (die 2 "Couldn't determine package name from libs: " libs))
      (else
-      (let lp ((ls (if version (append (cadr name) (list version)) (cadr name)))
+      (let lp ((ls (if version
+                       (append name (list version))
+                       name))
                (res '()))
         (if (null? ls)
             (string-join (reverse (cons ".tgz" res)))
@@ -339,11 +345,13 @@
   (or (conf-get cfg 'output)
       (make-package-name
        cfg
-       (filter (lambda (x) (and (pair? x) (eq? 'library (car x)))) package-spec)
+       (filter (lambda (x) (and (pair? x) (memq (car x) '(library program))))
+               package-spec)
        (package-output-version cfg))))
 
 (define (package-spec+files cfg spec libs)
   (let* ((recursive? (conf-get cfg '(command package recursive?)))
+         (programs (conf-get-list cfg '(command package programs)))
          (docs (package-docs cfg spec libs))
          (desc (package-description cfg spec libs docs))
          (test (package-test cfg))
@@ -352,6 +360,7 @@
          (version (package-output-version cfg))
          (license (package-license cfg)))
     (let lp ((ls (map (lambda (x) (cons x #f)) libs))
+             (progs programs)
              (res
               `(,@(if license `((license ,license)) '())
                 ,@(if (pair? docs)
@@ -367,14 +376,10 @@
                 ,@(if (pair? authors) `((authors ,@authors)) '())
                 ,@(if (pair? maintainers) `((maintainers ,@maintainers)) '())))
              (files
-              `(,@docs
-                ,@(if test (list test) '()))))
+              `(,@(if test (list test) '())
+                ,@docs)))
       (cond
-       ((and (null? ls) (null? res))
-        (die 2 "No packages generated"))
-       ((null? ls)
-        (cons (cons 'package (reverse res)) files))
-       (else
+       ((pair? ls)
         (let* ((lib+files (extract-library cfg (caar ls)))
                (lib (car lib+files))
                (name (library-name lib))
@@ -387,8 +392,21 @@
                                    (else '())))
                             '())))
           (lp (append (map (lambda (x) (cons x base)) subdeps) (cdr ls))
+              progs
               (cons lib res)
-              (append (cdr lib+files) files))))))))
+              (append (reverse (cdr lib+files)) files))))
+       ((pair? progs)
+        (lp ls
+            (cdr progs)
+            (cons `(program
+                    (path ,(path-strip-leading-parents (car progs)))
+                    (depends ,@(extract-program-imports (car progs))))
+                  res)
+            (cons (car progs) files)))
+       ((null? res)
+        (die 2 "No packages generated"))
+       (else
+        (cons (cons 'package (reverse res)) (reverse files)))))))
 
 (define (create-package spec files path)
   (gzip
@@ -670,12 +688,18 @@
   (regexp-fold re (lambda (from md str acc) (+ acc 1)) 0 str))
 
 (define (count-in-sexp x keywords)
-  (regexp-count `(word (or ,@keywords)) (write-to-string x)))
+  (regexp-count `(word (w/nocase (or ,@keywords)))
+                (write-to-string x)))
 
 (define (extract-matching-libraries cfg repo keywords)
   (define (library-score lib)
     (+ (* 10 (count-in-sexp (library-name lib) keywords))
-       (count-in-sexp lib keywords)))
+       (count-in-sexp lib keywords)
+       (let ((use-for (assoc-get lib 'use-for)))
+         (case (if (pair? use-for) (car use-for) use-for)
+           ((test) 0)
+           ((build) 10)
+           (else 100)))))
   (append-map
    (lambda (x)
      (cond
@@ -902,6 +926,13 @@
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
    (else (car (get-install-dirs impl cfg)))))
 
+(define (get-install-binary-dir impl cfg)
+  (cond
+   ((conf-get cfg 'install-binary-dir))
+   ((conf-get cfg 'install-prefix)
+    => (lambda (prefix) (make-path prefix "bin")))
+   (else "/usr/local/bin")))
+
 (define (install-with-sudo? cfg path)
   (case (conf-get cfg '(command install use-sudo?))
     ((always) #t)
@@ -1000,6 +1031,14 @@
             dest-file))
         rewrite-include-files)))))
 
+(define (default-program-installer impl cfg prog dir)
+  (let* ((program-file (get-program-file cfg prog))
+         (dest-program-file (program-install-name prog))
+         (install-dir (get-install-binary-dir impl cfg)))
+    (let ((path (make-path install-dir dest-program-file)))
+      (install-directory cfg (path-directory path))
+      (install-file cfg (make-path dir program-file) path))))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
@@ -1012,6 +1051,18 @@
 (define (build-library impl cfg library dir)
   ;; the currently supported implementations don't require building
   #t)
+
+(define (build-program impl cfg prog dir)
+  #t)
+
+(define (lookup-program-installer installer)
+  (case installer
+    (else default-program-installer)))
+
+(define (install-program impl cfg prog dir)
+  (let ((installer (lookup-program-installer
+                    (conf-get cfg 'program-installer))))
+    (installer impl cfg prog dir)))
 
 (define (fetch-package cfg url)
   (call-with-input-url url port->bytevector))
@@ -1072,12 +1123,18 @@
          (lambda (dir)
            (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
            (let ((installed-files
-                  (append-map
-                   (lambda (lib)
-                     (build-library impl cfg lib dir)
-                     (test-library impl cfg lib dir)
-                     (install-library impl cfg lib dir))
-                   (package-libraries pkg))))
+                  (append
+                   (append-map
+                    (lambda (lib)
+                      (build-library impl cfg lib dir)
+                      (test-library impl cfg lib dir)
+                      (install-library impl cfg lib dir))
+                    (package-libraries pkg))
+                   (append-map
+                    (lambda (prog)
+                      (build-program impl cfg prog dir)
+                      (install-program impl cfg prog dir))
+                    (package-programs pkg)))))
              (install-package-meta-info
               impl cfg
               `(,@(remove (lambda (x)
