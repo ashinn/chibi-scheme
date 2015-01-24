@@ -1817,6 +1817,16 @@
       (close-port out)
       (output-port-open? out)))
 
+(test 'error
+    (let ((in (open-input-string "abc")))
+      (close-input-port in)
+      (guard (exn (else 'error)) (read-char in))))
+
+(test 'error
+    (let ((out (open-output-string)))
+      (close-output-port out)
+      (guard (exn (else 'error)) (write-char #\c out))))
+
 (test #t (eof-object? (eof-object)))
 (test #t (eof-object? (read (open-input-string ""))))
 (test #t (char-ready? (open-input-string "42")))
