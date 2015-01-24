@@ -213,6 +213,7 @@ _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "ceiling", 0, sexp_ceiling),
 _FN2(_I(SEXP_NUMBER), _I(SEXP_NUMBER), _I(SEXP_NUMBER), "expt", 0, sexp_expt_op),
 #if SEXP_USE_UTF8_STRINGS
 _FN2(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-index->offset", 0, sexp_string_index_to_offset),
+_FN2(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-offset->index", 0, sexp_string_offset_to_index),
 _FN2(_I(SEXP_CHAR), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-ref", 0, sexp_string_utf8_index_ref),
 #if SEXP_USE_MUTABLE_STRINGS
 _FN3(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "string-set!", 0, sexp_string_utf8_index_set),

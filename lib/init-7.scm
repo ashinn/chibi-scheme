@@ -1239,9 +1239,7 @@
 
 (cond-expand
  (full-unicode
-  (define string-cursor-end string-size)
-  (define (string-offset->index str off)
-    (string-length (substring-cursor str 0 off))))
+  (define string-cursor-end string-size))
  (else
   (define (string-index->offset str i) i)
   (define (string-offset->index str off) off)
