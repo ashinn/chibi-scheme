@@ -1,0 +1,119 @@
+# -*- makefile-gmake -*-
+
+########################################################################
+# Detect the PLATFORM with uname.
+
+ifndef PLATFORM
+ifeq ($(shell uname),Darwin)
+PLATFORM=macosx
+else
+ifeq ($(shell uname),FreeBSD)
+PLATFORM=bsd
+else
+ifeq ($(shell uname),NetBSD)
+PLATFORM=bsd
+else
+ifeq ($(shell uname),OpenBSD)
+PLATFORM=bsd
+else
+ifeq ($(shell uname),DragonFly)
+PLATFORM=bsd
+else
+ifeq ($(shell uname -o),Msys)
+PLATFORM=mingw
+SOLIBDIR = $(BINDIR)
+DIFFOPTS = -b
+else
+ifeq ($(shell uname -o),Cygwin)
+PLATFORM=cygwin
+SOLIBDIR = $(BINDIR)
+DIFFOPTS = -b
+else
+ifeq ($(shell uname -o),GNU/Linux)
+PLATFORM=linux
+else
+PLATFORM=unix
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+
+########################################################################
+# Set default variables for the platform.
+
+LIBDL = -ldl
+SO_VERSIONED_SUFFIX = $(SO).$(SOVERSION)
+SO_MAJOR_VERSIONED_SUFFIX = $(SO).$(SOVERSION_MAJOR)
+
+ifeq ($(PLATFORM),macosx)
+SO  = .dylib
+SO_VERSIONED_SUFFIX = .$(SOVERSION)$(SO)
+SO_MAJOR_VERSIONED_SUFFIX = .$(SOVERSION_MAJOR)$(SO)
+EXE =
+CLIBFLAGS =
+CLINKFLAGS = -dynamiclib
+STATICFLAGS = -DSEXP_USE_DL=0  # -static-libgcc
+LIBCHIBI_FLAGS = -install_name $(DESTDIR)$(SOLIBDIR)/libchibi-scheme.$(SOVERSION).dylib
+else
+ifeq ($(PLATFORM),bsd)
+SO  = .so
+EXE =
+CLIBFLAGS = -fPIC
+CLINKFLAGS = -shared
+LIBDL = 
+else
+ifeq ($(PLATFORM),mingw)
+SO  = .dll
+EXE = .exe
+CC = gcc
+CLIBFLAGS =
+CLINKFLAGS = -shared
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DBUILDING_DLL
+LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
+STATICFLAGS = -DSEXP_USE_DL=0
+LIBDL = 
+else
+ifeq ($(PLATFORM),cygwin)
+SO  = .dll
+EXE = .exe
+CC = gcc
+CLIBFLAGS =
+CLINKFLAGS = -shared
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
+LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
+else
+SO  = .so
+EXE =
+CLIBFLAGS = -fPIC
+CLINKFLAGS = -shared
+STATICFLAGS = -static -DSEXP_USE_DL=0
+LIBCHIBI_FLAGS = -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR)
+ifeq ($(PLATFORM),BSD)
+LIBDL=
+RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
+endif
+endif
+endif
+endif
+endif
+
+ifeq ($(PLATFORM),unix)
+#RLDFLAGS=-rpath $(LIBDIR)
+RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
+
+########################################################################
+# Check for NTP (who needs autoconf?)
+
+ifndef $(SEXP_USE_NTP_GETTIME)
+SEXP_USE_NTP_GETTIME := $(shell echo "main(){struct ntptimeval n; ntp_gettime(&n);}" | gcc -fsyntax-only -include sys/timex.h -xc - >/dev/null 2>/dev/null && echo 1 || echo 0)
+endif
+
+ifeq ($(SEXP_USE_NTP_GETTIME),1)
+CPPFLAGS += -DSEXP_USE_NTPGETTIME
+endif

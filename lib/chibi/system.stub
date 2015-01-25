@@ -1,0 +1,90 @@
+
+(c-system-include "unistd.h")
+(c-system-include "pwd.h")
+(c-system-include "grp.h")
+(c-system-include "sys/types.h")
+
+;;> Returns the standard hostname of the current processor.
+
+(define-c errno (get-host-name "gethostname")
+  ((result (array char (auto-expand arg1))) (value 256 int)))
+
+;;> \section{\scheme{(user-information name-or-id)}}
+
+;;> Returns the password entry for the given user.  \var{name-or-id}
+;;> should be a string indicating the user name, or an integer
+;;> for the user id.
+
+(define-c-struct passwd
+  predicate: user?
+  (string  pw_name     user-name)
+  (string  pw_passwd   user-password)
+  (uid_t   pw_uid      user-id)
+  (gid_t   pw_gid      user-group-id)
+  (string  pw_gecos    user-gecos)
+  (string  pw_dir      user-home)
+  (string  pw_shell    user-shell))
+
+;;> Accessors for the password entry structure returned by
+;;> \scheme{user-information}.
+;;/
+
+(define-c uid_t (current-user-id "getuid") ())
+(define-c gid_t (current-group-id "getgid") ())
+(define-c uid_t (current-effective-user-id "geteuid") ())
+(define-c gid_t (current-effective-group-id "getegid") ())
+
+(define-c errno (set-current-user-id! "setuid") (uid_t))
+(define-c errno (set-current-effective-user-id! "seteuid") (uid_t))
+(define-c errno (set-current-group-id! "setgid") (gid_t))
+(define-c errno (set-current-effective-group-id! "setegid") (gid_t))
+
+;;> Accessors for the current user credentials.
+;;/
+
+;;> Returns the session id of the specified process,
+;;> defaulting to the current process.
+
+(define-c pid_t (current-session-id "getsid") ((default 0 pid_t)))
+
+;;> Creates a new session.
+
+(define-c pid_t (create-session "setsid") ())
+
+;;> Set \var{string} to be the new root directory, so that
+;;> paths beginning with "/" are resolved relative to the
+;;> new root.
+
+(define-c errno (set-root-directory! "chroot") (string))
+
+(define-c errno getpwuid_r
+  (uid_t (result passwd)
+         (link string)
+         (value (string-size arg2) int)
+         (result pointer passwd)))
+
+(define-c errno getpwnam_r
+  (string (result passwd)
+          (link string)
+          (value (string-size arg2) int)
+          (result pointer passwd)))
+
+(define-c-struct group
+  predicate: group?
+  (string  gr_name     group-name)
+  (string  gr_passwd   group-password)
+  (gid_t   gr_gid      group-id)
+  ;;((array string)  gr_mem      group-members)
+  )
+
+(define-c errno getgrgid_r
+  (gid_t (result group)
+         (link string)
+         (value (string-size arg2) int)
+         (result pointer group)))
+
+(define-c errno getgrnam_r
+  (string (result group)
+          (link string)
+          (value (string-size arg2) int)
+          (result pointer group)))

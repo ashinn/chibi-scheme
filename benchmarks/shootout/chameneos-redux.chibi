@@ -1,0 +1,107 @@
+#! /usr/bin/env chibi-scheme
+
+;;; The Computer Language Benchmarks Game
+;;; http://shootout.alioth.debian.org/
+
+;;; based on Racket version by Matthew Flatt
+
+(import (chibi)
+        (srfi 18)
+        (chibi match))
+
+(define (print . args)
+  (for-each display args)
+  (newline))
+
+(define (change c1 c2)
+  (case c1
+    ((red)
+     (case c2 ((blue) 'yellow) ((yellow) 'blue) (else c1)))
+    ((yellow)
+     (case c2 ((blue) 'red) ((red) 'blue) (else c1)))
+    ((blue)
+     (case c2 ((yellow) 'red) ((red) 'yellow) (else c1)))))
+
+(let ((colors '(blue red yellow)))
+  (for-each
+   (lambda (a)
+     (for-each
+      (lambda (b)
+        (print a " + " b " -> " (change a b)))
+      colors))
+   colors))
+
+(define (place meeting-ch n)
+  (thread-start!
+   (make-thread
+    (lambda ()
+      (let loop ((n n))
+        (if (<= n 0)
+            ;; Fade all:
+            (let loop ()
+              (let ((c (channel-get meeting-ch)))
+                (channel-put (car c) #f)
+                (loop)))
+            ;; Let two meet:
+            (match-let (((ch1 . v1) (channel-get meeting-ch))
+                        ((ch2 . v2) (channel-get meeting-ch)))
+                       (channel-put ch1 v2)
+                       (channel-put ch2 v1)
+                       (loop (- n 1)))))))))
+
+(define (creature color meeting-ch result-ch)
+  (thread-start!
+   (make-thread
+    (lambda ()
+      (let ((ch (make-channel))
+            (name (gensym)))
+        (let loop ((color color) (met 0) (same 0))
+          (channel-put meeting-ch (cons ch (cons color name)))
+          (match (channel-get ch)
+                 ((other-color . other-name)
+                  ;; Meet:
+                  (sleep)         ; avoid imbalance from weak fairness
+                  (loop (change color other-color)
+                        (add1 met)
+                        (+ same (if (eq? name other-name)
+                                    1
+                                    0))))
+                 (#f
+                  ;; Done:
+                  (channel-put result-ch (cons met same))))))))))
+
+(define (spell n)
+  (for-each
+   (lambda (i)
+     (display " ")
+     (display (vector-ref digits (- (char->integer i) (char->integer #\0)))))
+   (string->list (number->string n))))
+
+(define digits
+  '#("zero" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine"))
+
+(define (go n inits)
+  (let ((result-ch (make-channel))
+        (meeting-ch (make-channel)))
+    (place meeting-ch n)
+    (newline)
+    (for-each
+     (lambda (init)
+       (print " " init)
+       (creature init meeting-ch result-ch))
+     inits)
+    (newline)
+    (let ((results (map (lambda (i) (channel-get result-ch)) inits)))
+      (for-each
+       (lambda (r)
+         (display (car r))
+         (spell (cdr r))
+         (newline))
+       results)
+      (spell (apply + (map car results)))
+      (newline))))
+
+(let ((n (string->number (cadr (command-line)))))
+  (go n '(blue red yellow))
+  (go n '(blue red yellow red yellow blue red yellow red blue))
+  (newline))

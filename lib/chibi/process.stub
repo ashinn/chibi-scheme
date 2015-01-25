@@ -1,0 +1,146 @@
+
+;;> An interface to spawning processes and sending and
+;;> receiving signals between processes.
+
+(c-system-include "sys/types.h")
+(c-system-include "sys/wait.h")
+(c-system-include "signal.h")
+(c-system-include "unistd.h")
+
+;;> The siginfo_t struct is used to return info about the status,
+;;> process and user info of a called signal handler.
+
+(define-c-type siginfo_t
+  predicate: signal-info?
+  (int      si_signo    signal-number)
+  (int      si_errno    signal-error-number)
+  (int      si_code     signal-code)
+  (pid_t    si_pid      signal-pid)
+  (uid_t    si_uid      signal-uid)
+  (int      si_status   signal-status)
+  ;;(clock_t  si_utime    signal-user-time)
+  ;;(clock_t  si_stime    signal-system-time)
+  )
+
+(define-c-const int (signal/hang-up "SIGHUP"))
+(define-c-const int (signal/interrupt "SIGINT"))
+(define-c-const int (signal/quit "SIGQUIT"))
+(define-c-const int (signal/illegal "SIGILL"))
+(define-c-const int (signal/abort "SIGABRT"))
+(define-c-const int (signal/fpe "SIGFPE"))
+(define-c-const int (signal/kill "SIGKILL"))
+(define-c-const int (signal/segv "SIGSEGV"))
+(define-c-const int (signal/pipe "SIGPIPE"))
+(define-c-const int (signal/alarm "SIGALRM"))
+(define-c-const int (signal/term "SIGTERM"))
+(define-c-const int (signal/user1"SIGUSR1"))
+(define-c-const int (signal/user2 "SIGUSR2"))
+(define-c-const int (signal/child "SIGCHLD"))
+(define-c-const int (signal/continue "SIGCONT"))
+(define-c-const int (signal/stop "SIGSTOP"))
+(define-c-const int (signal/tty-stop "SIGTSTP"))
+(define-c-const int (signal/tty-input "SIGTTIN"))
+(define-c-const int (signal/tty-output "SIGTTOU"))
+
+(c-include-verbatim "signal.c")
+
+;;> \procedure{(set-signal-action! signal handler)}
+
+;;> Sets the signal handler for \var{signal} to \var{handler}
+;;> and returns the old handler.  \var{handler} should be a procedure
+;;> of one argument, the signal number, the value \scheme{#t} for
+;;> the default signal handler, or \scheme{#f} for no handler.
+
+;;> Signal handlers are queued run in a dedicated thread after the
+;;> system handler has returned.
+
+(define-c sexp (set-signal-action! "sexp_set_signal_action")
+  ((value ctx sexp) (value self sexp) sexp sexp))
+
+;;> The sigset_t struct represents a set of signals for masking.
+
+(define-c-type sigset_t
+  predicate: signal-set?)
+
+(define-c errno (make-signal-set "sigemptyset") ((pointer result sigset_t)))
+(define-c errno (signal-set-fill! "sigfillset") ((pointer sigset_t)))
+(define-c errno (signal-set-add! "sigaddset") ((pointer sigset_t) int))
+(define-c errno (signal-set-delete! "sigdelset") ((pointer sigset_t) int))
+(define-c boolean (signal-set-contains? "sigismember") ((pointer sigset_t) int))
+
+(define-c errno (signal-mask-block! "sigprocmask")
+  ((value SIG_BLOCK int) (pointer sigset_t) (pointer value NULL sigset_t)))
+(define-c errno (signal-mask-unblock! "sigprocmask")
+  ((value SIG_UNBLOCK int) (pointer sigset_t) (pointer value NULL sigset_t)))
+(define-c errno (signal-mask-set! "sigprocmask")
+  ((value SIG_SETMASK int) (pointer sigset_t) (pointer value NULL sigset_t)))
+(define-c errno (current-signal-mask "sigprocmask")
+  ((value SIG_BLOCK int) (pointer value NULL sigset_t) (pointer result sigset_t)))
+
+;;> Send a \var{signal/alarm} signal to the current process
+;;> after \var{unsigned-int} seconds have elapsed.
+
+(define-c unsigned-int alarm (unsigned-int))
+
+;;> Suspend the current process for \var{unsigned-int} seconds.
+;;> See \hyperlink["http://srfi.schemers.org/srfi-18/srfi-18.html"]{SRFI-18}
+;;> \scheme{thread-sleep!} for a light-weight sleep for only the
+;;> current thread.
+
+(define-c unsigned-int sleep (unsigned-int))
+
+;;> Fork the current process.  Returns \rawcode{0} for the newly
+;;> created process, and the process id of the new process for the
+;;> parent.  If multiple threads are active, they are forked as well.
+;;> Use \scheme{fork} to also kill all other threads.
+
+(define-c pid_t (%fork fork) ())
+
+(define-c pid_t (fork sexp_fork_and_kill_threads) ((value ctx sexp)))
+
+(define-c-const int (wait/no-hang "WNOHANG"))
+
+;;(define-c pid_t wait ((result int)))
+
+;;> \procedure{(waitpid pid options)}
+
+;;> Wait on the process \var{pid}, or any child process if \var{pid}
+;;> is \rawcode{-1}.  \var{options} should be 0, or \var{wait/no-hang}
+;;> to return immediately if no processes have reported status.  Returns
+;;> a list whose first element is the actual \var{pid} reporting, and
+;;> the second element is the integer status.
+
+(define-c pid_t waitpid (int (result int) int))
+
+;;> Send a signal to the given process.
+
+(define-c errno kill (int int))
+
+;;(define-c errno raise (int))
+
+;;> Exits the current process immediately.  Finalizers are not run.
+
+(cond-expand
+ (plan9 (define-c void (%exit exits) (string)))
+ (else (define-c void (%exit exit) (int))))
+
+;;> Replace the current process with the given command.  Finalizers
+;;> are not run.
+
+(define-c int (execvp execvp) (string (array string)))
+
+;;> Returns the current process id.
+
+(define-c pid_t (current-process-id getpid) ())
+
+;;> Returns the parent process id.
+
+(define-c pid_t (parent-process-id getppid) ())
+
+(cond-expand
+ (bsd
+  (define-c sexp (%process-command-line sexp_pid_cmdline)
+    ((value ctx sexp) int)))
+ (else #f))
+
+(c-init "sexp_init_signals(ctx, env);")

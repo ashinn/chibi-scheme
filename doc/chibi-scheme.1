@@ -1,0 +1,239 @@
+.TH "chibi-scheme" "1" "" ""
+.UC 4
+.SH NAME
+.PP
+chibi-scheme \- a tiny Scheme interpreter
+
+.SH SYNOPSIS
+.B chibi-scheme
+[-qQrRfV]
+[-I
+.I path
+]
+[-A
+.I path
+]
+[-m
+.I module
+]
+[-x
+.I module
+]
+[-l
+.I file
+]
+[-e
+.I expr
+]
+[-p
+.I expr
+]
+[-t
+.I module.id
+]
+[-d
+.I image-file
+]
+[-i
+.I image-file
+]
+[--]
+[
+.I script argument ...
+]
+.br
+.sp 0.4
+
+.SH DESCRIPTION
+.I chibi-scheme
+is a sample interactive Scheme interpreter for the
+.I chibi-scheme
+library.  It serves as an example of how to embed
+.I chibi-scheme
+in applications, and can be useful on its own for writing
+scripts and interactive development.
+
+When
+.I script
+is given, the script will be loaded with SRFI-22 semantics,
+calling the procedure
+.I main
+(if defined) with a single parameter as a list of the
+command-line arguments beginning with the script name.  This
+works as expected with shell #! semantics.
+
+Otherwise, if no script is given and no -e or -p options
+are given an interactive repl is entered, reading, evaluating,
+then printing expressions until EOF is reached.  The repl
+provided is very minimal - if you want readline
+completion you may want to wrap it with the
+.I rlwrap(1)
+program.  Signals aren't caught either - to enable handling keyboard
+interrupts you can use the (chibi process) module.  For a more
+sophisticated REPL with readline support, signal handling, module
+management and smarter read/write you may want to use the (chibi repl)
+module.  This can be launched automatically with:
+.I chibi-scheme -R
+\[char46]
+
+The default language the R7RS
+(scheme base) module.  To get a mostly R5RS-compatible language, use
+.I chibi-scheme -xscheme.r5rs
+or to get just the core language used for bootstrapping, use
+.I chibi-scheme -xchibi
+or its shortcut
+.I chibi-scheme -q
+\[char46]
+
+.SH OPTIONS
+
+Space is optional between options and their arguments.  Options
+without arguments may not be chained together.
+
+To reduce the need for shell escapes, options with module arguments
+(
+.I -m
+,
+.I -x
+and
+.I -R
+) are written in a dot notation, so that the module
+.I (foo bar)
+is written as
+.I foo.bar
+\[char46]
+
+.TP 5
+.BI -V
+Prints the version information and exits.
+.TP
+.BI -q
+"Quick" load, shortcut for
+.I chibi-scheme -xchibi
+This is a slightly different language from (scheme base),
+which may load faster, and is guaranteed not to load any
+additional shared libraries.
+.TP
+.BI -Q
+Extra "quick" load, shortcut for
+.I chibi-scheme -xchibi.primitive
+The resulting environment will only contain the core syntactic
+forms and primitives coded in C.  This is very fast and guaranteed
+not to load any external files, but is also very limited.
+.TP
+.BI -r [main]
+Run the "main" procedure when the script finishes loading as in SRFI-22.
+.TP
+.BI -R [module]
+Loads the given module and runs the "main" procedure it defines (which
+need not be exported) with a single argument of the list of command-line
+arguments as in SRFI-22.  The name "main" can be overridden with the -r
+option.
+.I [module]
+may be omitted, in which case it default to chibi.repl.  Thus
+.I chibi-scheme -R
+is the recommended means to obtain the advanced REPL.
+.TP
+.BI -s
+Strict mode, escalating warnings to fatal errors.
+.TP
+.BI -f
+Change the reader to case-fold symbols as in R5RS.
+.TP
+.BI -h size[/max_size]
+Specifies the initial size of the heap, in bytes,
+optionally followed by the maximum size the heap can
+grow to.
+.I size
+can be any integer value, optionally suffixed by
+"K", for kilobytes, "M" for megabytes, or "G" for gigabytes.
+.I -h
+must be specified before any options which load or
+evaluate Scheme code.
+.TP
+.BI -I path
+Inserts
+.I path
+on front of the load path list.  
+.TP
+.BI -A path
+Appends
+.I path
+to the load path list.  
+.TP
+.BI -m module
+.TP
+.BI -x module
+Imports
+.I module
+as though "(import
+.I module
+)" were evaluated.
+If the
+.BI -x
+version is used, then
+.I module
+replaces the current environment instead of being added to it.
+.TP
+.BI -l file
+Loads the Scheme source from the file
+.I file
+searched for in the default load path.
+.TP
+.BI -e expr
+Evaluates the Scheme expression
+.I expr.
+.TP
+.BI -p expr
+Evaluates the Scheme expression
+.I expr
+then prints the result to stdout.
+.TP
+.BI -t module.id
+Enables tracing for the given identifier
+.I id
+in the module
+.I module.
+.TP
+.BI -d image-file
+Dumps the current Scheme heap to
+.I image-file
+and exits.  This feature is still experimental.
+.TP
+.BI -i image-file
+Loads the Scheme heap from
+.I image-file
+instead of compiling the init file on the fly.
+This feature is still experimental.
+
+.SH ENVIRONMENT
+.TP
+.B CHIBI_MODULE_PATH
+A colon separated list of directories to search for module
+files, inserted before the system default load paths.  chibi-scheme
+searchs for modules in directories in the following order:
+
+.TP
+          directories included with the -I path option
+.TP
+          directories included from CHIBI_MODULE_PATH
+.TP
+          system directories 
+.TP
+          directories included with -A path option
+
+If CHIBI_MODULE_PATH is unset, the directoriese "./lib", and "." are
+search in order.
+
+.SH AUTHORS
+.PP
+Alex Shinn (alexshinn @ gmail . com)
+
+.SH SEE ALSO
+.PP
+More detailed information can be found in the manuale included in
+doc/chibi.scrbl included in the distribution.
+
+The chibi-scheme home-page:
+.br
+http://code.google.com/p/chibi-scheme/

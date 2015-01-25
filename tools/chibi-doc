@@ -1,0 +1,69 @@
+#! /usr/bin/env chibi-scheme
+
+(import (scheme base)
+        (scheme write)
+        (scheme file)
+        (scheme process-context)
+        (chibi string)
+        (chibi scribble)
+        (chibi doc)
+        (chibi sxml))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; print an error and exit without a stack trace
+(define (die . args)
+  (for-each display args)
+  (newline)
+  (exit 1))
+
+;; convert directly from scribble to the output format
+(define (convert-scribble render in)
+  ((or render sxml-display-as-html)
+   (generate-docs (scribble-parse in))))
+
+;; utility to convert from "foo.bar" to (foo bar)
+(define (split-module-name str)
+  (map (lambda (x) (or (string->number x) (string->symbol x)))
+       (string-split str #\.)))
+
+;; main
+(define (run args render)
+  (case (length args)
+    ((0)
+     (convert-scribble render (current-input-port)))
+    ((1)
+     (let ((name (car args)))
+       (cond
+        ((equal? "-" name)
+         (convert-scribble render (current-input-port)))
+        ((file-exists? name)
+         (call-with-input-file name
+           (lambda (in) (convert-scribble render in))))
+        (else
+         ;; load the module so that examples work
+         (let ((mod-name (split-module-name name)))
+           (print-module-docs mod-name (current-output-port) render))))))
+    ((2)
+     (let* ((name (car args))
+            (var (cadr args))
+            (mod-name (split-module-name name)))
+       (print-module-binding-docs
+        mod-name (string->symbol var) (current-output-port) render)))
+    (else
+     (die "usage: chibi-doc [<scribble-file> | <module-name> [<var>]]"))))
+
+;; parse the command-line
+(let lp ((args (cdr (command-line)))
+         (render #f))
+  (cond
+   ((and (pair? args) (not (equal? "" (car args)))
+         (eqv? #\- (string-ref (car args) 0)))
+    (case (string->symbol (substring (car args) 1))
+      ((h -html) (lp (cdr args) sxml-display-as-html))
+      ((s -sxml) (lp (cdr args) write))
+      ((t -text) (lp (cdr args) sxml-display-as-text))
+      ((-) (run (cdr args) render))
+      (else (die "unknown option: " (car args)))))
+   (else
+    (run args render))))
