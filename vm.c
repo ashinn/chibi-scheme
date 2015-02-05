@@ -1064,6 +1064,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (sexp_trampolinep(_ARG1)) {
       tmp1 = sexp_trampoline_procedure(_ARG1);
       tmp2 = sexp_trampoline_args(_ARG1);
+      if (sexp_trampoline_abortp(_ARG1)) {      /* abort - do not catch */
+        _ARG1 = tmp2;
+        goto end_loop;
+      }
       top--;
       if (sexp_not(tmp1) && sexp_pairp(tmp2)) { /* noop trampoline is */
         _PUSH(sexp_car(tmp2));                  /* a wrapped exception */

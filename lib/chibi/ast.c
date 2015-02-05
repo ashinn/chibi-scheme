@@ -509,6 +509,12 @@ static sexp sexp_unsetenv (sexp ctx, sexp self, sexp_sint_t n, sexp name) {
   return sexp_make_boolean(unsetenv(sexp_string_data(name)));
 }
 
+static sexp sexp_abort (sexp ctx, sexp self, sexp_sint_t n, sexp value) {
+  sexp res = sexp_make_trampoline(ctx, SEXP_FALSE, value);
+  sexp_exception_message(res) = SEXP_TRAMPOLINE;
+  return res;
+}
+
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
@@ -652,5 +658,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "update-free-vars!", 1, sexp_update_free_vars);
   sexp_define_foreign(ctx, env, "setenv", 2, sexp_setenv);
   sexp_define_foreign(ctx, env, "unsetenv", 1, sexp_unsetenv);
+  sexp_define_foreign(ctx, env, "abort", 1, sexp_abort);
   return SEXP_VOID;
 }

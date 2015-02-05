@@ -34,7 +34,7 @@
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!
    env-define! env-push! env-syntactic? env-syntactic?-set! core-code
    type-name type-cpl type-parent type-slots type-num-slots type-printer
-   object-size integer->immediate gc atomically thread-list
+   object-size integer->immediate gc atomically thread-list abort
    string-contains string-cursor-copy! errno integer->error-string
    flatten-dot update-free-vars! setenv unsetenv safe-setenv)
   (import (chibi))
