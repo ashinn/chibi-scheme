@@ -944,6 +944,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_trampolinep(x) (sexp_exceptionp(x) && sexp_exception_kind(x) == SEXP_TRAMPOLINE)
 #define sexp_trampoline_procedure(x) sexp_exception_procedure(x)
 #define sexp_trampoline_args(x) sexp_exception_irritants(x)
+#define sexp_trampoline_abortp(x) (sexp_exception_message(x) == SEXP_TRAMPOLINE)
 
 #define sexp_cpointer_freep(x)      (sexp_freep(x))
 #define sexp_cpointer_length(x)     (sexp_cpointer_field(x, length))
