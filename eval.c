@@ -1502,7 +1502,7 @@ sexp sexp_inexact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
   sexp_gc_preserve1(ctx, res);
   r = sqrt(d);
   if (sexp_fixnump(z)
-      && (((sexp_uint_t)r*(sexp_uint_t)r)==abs(sexp_unbox_fixnum(z))))
+      && (((sexp_uint_t)r*(sexp_uint_t)r)==labs(sexp_unbox_fixnum(z))))
     res = sexp_make_fixnum(round(r));
   else
     res = sexp_make_flonum(ctx, r);
