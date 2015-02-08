@@ -584,7 +584,7 @@ void run_main (int argc, char **argv) {
     if (i < argc)
       for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    if (i >= argc)
+    if (i >= argc || main_symbol != NULL)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
