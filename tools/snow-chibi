@@ -97,7 +97,8 @@
 (define verify-spec
   '())
 (define package-spec
-  '((authors (list string))
+  '((programs (list existing-filename))
+    (authors (list string))
     (maintainers (list string))
     (recursive? boolean (#\r "recursive") "...")
     (version string)

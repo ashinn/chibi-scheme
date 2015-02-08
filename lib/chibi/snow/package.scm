@@ -69,12 +69,13 @@
 (define (package-name package)
   (and (pair? package)
        (eq? 'package (car package))
-       (or (cond ((assoc-get (cdr package) 'name)
-                  => (lambda (x) (and (pair? x) x)))
-                 (else #f))
-           ;; TODO: longest common prefix
-           (let ((lib (assq 'library (cdr package))))
-             (and lib (library-name lib))))))
+       (cond ((assoc-get (cdr package) 'name)
+              => (lambda (x) (and (pair? x) x)))
+             ((assq 'library (cdr package))
+              => (lambda (x) (library-name (cdr x))))
+             ((assq 'progam (cdr package))
+              => (lambda (x) (program-name (cdr x))))
+             (else #f))))
 
 (define (package-email pkg)
   (and (package? pkg)
@@ -184,6 +185,9 @@
 
 (define (package-libraries package)
   (and (package? package) (filter library? (cdr package))))
+
+(define (package-programs package)
+  (and (package? package) (filter program? (cdr package))))
 
 (define (package-provides? package name)
   (and (pair? package)
@@ -320,3 +324,27 @@
        (cons (car x) (map recurse (cdr x))))
       (else x)))
    (else x)))
+
+;; programs
+
+(define (program? x)
+  (and (pair? x) (eq? 'program (car x)) (every pair? (cdr x))))
+
+(define (program-name prog)
+  (and (pair? prog)
+       (cond ((assoc-get (cdr prog) 'name eq?))
+             ((assoc-get (cdr prog) 'path eq?)
+              => (lambda (p) (list (string->symbol (path-strip-directory p)))))
+             (else #f))))
+
+(define (get-program-file cfg prog)
+  (cond ((assoc-get prog 'path))
+        ((assoc-get prog 'name)
+         => (lambda (name) (library-name->path (last name))))
+        (else (error "program missing path: " prog))))
+
+(define (program-install-name prog)
+  (or (assoc-get (cdr prog) 'install-name eq?)
+      (path-strip-extension
+       (path-strip-directory
+        (assoc-get (cdr prog) 'path eq?)))))
