@@ -1,8 +1,9 @@
 
 (define-library (chibi snow package)
-  (export package? library?
+  (export package? library? program?
           package-name package-email package-url package-version
-          package-libraries package-provides? package-dependencies
+          package-libraries package-programs
+          package-provides? package-dependencies
           package-installed-files package-author
           package-digest-mismatches package-signature-mismatches
           package-digest-ok? package-signature-ok?
@@ -12,6 +13,7 @@
           library-url library-name parse-library-name library-name->path
           library-analyze library-include-files library-dependencies
           library-rewrite-includes
+          get-program-file program-name program-install-name
           invalid-package-reason valid-package?
           invalid-library-reason valid-library?
           repo-find-publisher lookup-digest rsa-identity=?
