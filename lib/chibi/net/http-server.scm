@@ -166,7 +166,7 @@
               (cond
                ((equal? uri uri2)
                 (lp (cdr ls)))
-               ((string->path-uri uri2)
+               ((string->path-uri "http" uri2)
                 => (lambda (uri)
                      (helper (request-with-uri request uri) next restart)))
                (else
