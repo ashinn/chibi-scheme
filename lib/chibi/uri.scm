@@ -184,7 +184,9 @@
             (host (uri-host uri))
             (user (uri-user uri)))
         (string-append
-         (symbol->string (uri-scheme uri)) ":"
+         (if (and (not host) (memq (uri-scheme uri) '(http https)))
+             ""
+             (string-append (symbol->string (uri-scheme uri)) ":"))
          (if (or user host port) "//" "")
          (if user (encode user) "") (if user "@" "")
          (or host "")                   ; host shouldn't need encoding
