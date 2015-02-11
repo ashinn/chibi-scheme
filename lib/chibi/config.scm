@@ -287,7 +287,7 @@
 (define (conf-get-multi config key)
   (if (not config)
       '()
-      (append (conf-get-list (conf-head config))
+      (append (conf-get-list (conf-head config) key)
               (conf-get-multi (conf-parent config) key))))
 
 ;;> Extends the config with anadditional alist.
