@@ -240,6 +240,12 @@
         ((eof-object? c) (get-output-bytevector out))
       (write-u8 c out))))
 
+(define (file->string path)
+  (call-with-input-file path port->string))
+
+(define (file->bytevector path)
+  (call-with-input-file path port->bytevector))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; custom port utilities
 
