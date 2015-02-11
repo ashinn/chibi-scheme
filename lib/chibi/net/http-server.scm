@@ -167,9 +167,9 @@
               (cond
                ((equal? uri uri2)
                 (lp (cdr ls)))
-               ((string->path-uri "http" uri2)
+               ((string->path-uri 'http uri2)
                 => (lambda (uri)
-                     (helper (request-with-uri request uri) next restart)))
+                     (helper cfg (request-with-uri request uri) next restart)))
                (else
                 (log-warn "invalid rewritten uri: " uri2)
                 (lp (cdr ls))))))))))
