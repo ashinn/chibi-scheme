@@ -4,6 +4,7 @@
           port-fold port-fold-right port-map
           port->list port->string-list port->sexp-list
           port->string port->bytevector
+          file->string file->bytevector
           file-position set-file-position! seek/set seek/cur seek/end
           make-custom-input-port make-custom-output-port
           make-custom-binary-input-port make-custom-binary-output-port
