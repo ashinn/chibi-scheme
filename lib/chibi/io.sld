@@ -15,7 +15,8 @@
           open-input-bytevector open-output-bytevector get-output-bytevector
           string->utf8 utf8->string
           write-string write-u8 read-u8 peek-u8 send-file
-          is-a-socket?)
+          is-a-socket?
+          call-with-input-file call-with-output-file)
   (import (chibi) (chibi ast))
   (include-shared "io/io")
   (include "io/io.scm"))
