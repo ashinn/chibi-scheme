@@ -94,7 +94,8 @@
     => (lambda (index-file)
          ;; Generate and restart a new request with explicit index file.
          (let* ((uri (request-uri request))
-                (path2 (make-path (uri-path uri) index-file)))
+                (path2 (make-path (uri-path uri)
+                                  (path-strip-directory index-file))))
            (restart
             (request-with-uri request (uri-with-path uri path2))))))
    (else
