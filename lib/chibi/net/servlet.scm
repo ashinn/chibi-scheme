@@ -87,8 +87,11 @@
    (request-status r)))
 
 (define (request-with-uri request uri)
-  (let ((request2 (copy-request request)))
-    (request-uri-set! request2 (string->path-uri 'http uri))
+  (let ((request2 (copy-request request))
+        (uri (string->path-uri 'http uri)))
+    (request-uri-set! request2 uri)
+    ;; NOTE: this looses form parameters
+    (request-params-set! request2 (uri-query->alist (or (uri-query uri) "")))
     request2))
 
 (define (request-param request name . o)
