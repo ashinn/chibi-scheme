@@ -2008,8 +2008,9 @@
           ;; chibi-ffi to compile to (chibi process) module.
           (let* ((so (string-append (strip-extension src)
                                     *shared-object-extension*))
-                 (execute (begin (eval '(import (chibi process)))
-                                 (eval 'execute)))
+                 (execute (begin (eval '(import (chibi process))
+                                       (current-environment))
+                                 (eval 'execute (current-environment))))
                  (base-args (append cflags `("-o" ,so ,dest "-lchibi-scheme")))
                  (args
                   (eval
