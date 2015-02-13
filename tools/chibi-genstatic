@@ -270,42 +270,11 @@
        (else
         (lp modules))))))
 
-(define (find-c-libs args)
-  (define (split-mod-names str)
-    (map (lambda (m)
-           (map (lambda (x) (or (string->number x) (string->symbol x)))
-                (string-split m #\.)))
-         (string-split str #\,)))
-  (let lp ((ls args)
-           (includes #f)
-           (excludes '())
-           (cfiles '()))
-    (cond
-     ((null? ls)
-      (cons
-       (if includes
-           (find-c-libs-from-module-names includes)
-           (find-c-libs-from-file-names excludes))
-       cfiles))
-     (else
-      (cond
-       ((member (car ls) '("-i" "--include"))
-        (lp (cddr ls)
-            (append (or includes '()) (split-mod-names (cadr ls)))
-            excludes
-            cfiles))
-       ((member (car ls) '("-x" "--exclude"))
-        (lp (cddr ls)
-            includes
-            (append excludes (split-mod-names (cadr ls)))
-            cfiles))
-       ((member (car ls) '("-c" "--cfiles"))
-        (lp (cddr ls)
-            includes
-            excludes
-            (append cfiles (string-split (cadr ls) #\,))))
-       (else
-        (error "unknown arg" (car ls))))))))
+(define (find-c-libs includes excludes cfiles)
+  (cons (if includes
+            (find-c-libs-from-module-names includes)
+            (find-c-libs-from-file-names excludes))
+        cfiles))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -358,11 +327,20 @@
   (display (init-name (cdr lib)))
   (display " },\n"))
 
+(define (split-mod-names str)
+  (map (lambda (m)
+         (map (lambda (x) (or (string->number x) (string->symbol x)))
+              (string-split m #\.)))
+       (string-split str #\,)))
+
 (let ((args (command-line)))
   (if (pair? args)
       (set! wdir (path-directory (path-directory (car args)))))
   (let lp ((args (if (pair? args) (cdr args) args))
-           (features '()))
+           (features '())
+           (includes #f)
+           (excludes '())
+           (cfiles '()))
     (cond
      ((and (pair? args) (not (equal? "" (car args)))
            (eqv? #\- (string-ref (car args) 0)))
@@ -370,13 +348,25 @@
         ((--features)
          (if (null? (cdr args))
              (error "--features requires an argument"))
-         (lp (cddr args) (append features (string-split (cadr args) #\,))))
+         (lp (cddr args) (append features (string-split (cadr args) #\,))
+             includes excludes cfiles))
+        ((-i --include)
+         (lp (cddr args) features
+             (append (or includes '()) (split-mod-names (cadr args)))
+             excludes cfiles))
+        ((-x --exclude)
+         (lp (cddr args) features includes
+             (append excludes (split-mod-names (cadr args)))
+             cfiles))
+        ((-c --cfiles)
+         (lp (cddr args) features includes excludes
+             (append cfiles (string-split (cadr args) #\,))))
         (else
          (error "unknown option" (car args)))))
      (else
       (if (pair? features)
           (set! *features* features))
-      (let* ((c-libs+c-files (find-c-libs (if (pair? args) (cdr args) args)))
+      (let* ((c-libs+c-files (find-c-libs includes excludes cfiles))
              (c-libs (car c-libs+c-files))
              (c-files (cdr c-libs+c-files))
              (inline? #t))
