@@ -1,5 +1,5 @@
 ;; app.scm -- unified option parsing and config
-;; Copyright (c) 2012-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012-2015 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Parses command-line options into a config object.
@@ -8,17 +8,33 @@
   (define (parse-value type str)
     (cond
      ((not (string? str))
-      str)
+      (list str #f))
      ((and (pair? type) (eq? 'list (car type)))
-      (map (lambda (x) (parse-value (cadr type) x))
-           (string-split str #\,)))
+      (let ((res (map (lambda (x) (parse-value (cadr type) x))
+                      (string-split str #\,))))
+        (list (map car res) (any string? (map cdr res)))))
      (else
       (case type
-        ((boolean) (not (member str '("#f" "#false" "#F" "#FALSE"))))
-        ((number) (string->number str))
-        ((symbol) (string->symbol str))
-        ((char) (string-ref str 0))
-        (else str)))))
+        ((boolean)
+         (list (not (member str '("#f" "#false" "#F" "#FALSE" "false" "FALSE")))
+               #f))
+        ((number integer real)
+         (let ((n (string->number str)))
+           (cond
+            ((and (eq? type 'integer) (not (integer? n)))
+             (list n "expected an integer"))
+            ((and (eq? type 'real) (not (real? n)))
+             (list n "expected a real number"))
+            (else
+             (list n #f)))))
+        ((symbol)
+         (list (string->symbol str) #f))
+        ((char)
+         (if (not (= 1 (string-length str)))
+             (list #f "expected a single character")
+             (list (string-ref str 0) #f)))
+        (else
+         (list str #f))))))
   (define (lookup-conf-spec conf-spec syms strs)
     (let ((sym (car syms))
           (str (car strs)))
@@ -55,43 +71,44 @@
               ((and (pair? (cddr x)) (member `(not ,ch) (car (cddr x))))
                `(not ,x))
               (else (lp (cdr ls))))))))
-  (define (parse-conf-spec str args)
-    (let* ((strs (string-split str #\.))
+  (define (parse-long-option str args fail)
+    (let* ((str+val (string-split str #\= 2))
+           (str (car str+val))
+           (args (if (pair? (cdr str+val)) (cons (cadr str+val) args) args))
+           (strs (string-split str #\.))
            (syms (map string->symbol strs))
            (spec (lookup-conf-spec conf-spec syms strs)))
       (cond
        ((not spec)
-        #f)
+        ;; check for 'no' prefix on boolean
+        (if (not (string-prefix? "no" str))
+            (fail prefix conf-spec (car args) args "unknown option")
+            (let ((res (parse-long-option (substring str 2) args (lambda args #f))))
+              (cond
+               ((not res)
+                (fail prefix conf-spec (car args) args "unknown option"))
+               ((not (boolean? (cdar res)))
+                (error "'no' prefix only valid on boolean options"))
+               (else
+                `((,(caar res) . #f) ,@(cdr res)))))))
        ((and (pair? spec) (eq? 'not (car spec)))
         (cons (cons (append prefix (list (car spec))) #f) args))
-       ((eq? 'boolean (cadr spec))
+       ((and (eq? 'boolean (cadr spec)) (null? (cdr str+val)))
         (cons (cons (append prefix (list (car spec))) #t) args))
        ((null? args)
-        (error "missing argument to option " str))
+        (fail prefix conf-spec (car args) args "missing argument to option"))
        (else
-        (cons (cons (append prefix syms) (parse-value (cadr spec) (car args)))
-              (cdr args))))))
-  (define (parse-long-option str args)
-    (let* ((str+val (string-split str #\= 2))
-           (str (car str+val))
-           (args2 (if (pair? (cdr str+val)) (cons (cadr str+val) args) args)))
-      (or (parse-conf-spec str args2)
-          (and (string-prefix? "no-" str)
-               (let ((res (parse-long-option (substring str 3) args)))
-                 (cond
-                  ((not res)
-                   #f)
-                  ((not (boolean? (cdar res)))
-                   (error "'no-' prefix only valid on boolean options"))
-                  (else
-                   `(((,@prefix ,(caar res)) . ,(not (cdar res)))
-                     ,@(cdr res)))))))))
-  (define (parse-short-option str args)
+        (let ((val+err (parse-value (cadr spec) (car args))))
+          (if (cadr val+err)
+              (fail prefix conf-spec (car args) args (cadr val+err))
+              (cons (cons (append prefix syms) (car val+err))
+                    (cdr args))))))))
+  (define (parse-short-option str args fail)
     (let* ((ch (string-ref str 0))
            (x (lookup-short-option ch conf-spec)))
       (cond
        ((not x)
-        #f)
+        (fail prefix conf-spec (car args) args "unknown option"))
        ((and (pair? x) (eq? 'not (car x)))
         (cons (cons (append prefix (list (car (cadr x)))) #f)
               (if (= 1 (string-length str))
@@ -103,17 +120,18 @@
                   args
                   (cons (string-append "-" (substring str 1)) args))))
        ((> (string-length str) 1)
-        (cons (cons (append prefix (list (car x)))
-                    (parse-value (cadr x) (substring str 1)))
-              args))
+        (let ((val+err (parse-value (cadr x) (substring str 1))))
+          (if (cadr val+err)
+              (fail prefix conf-spec (car args) args (cadr val+err))
+              (cons (cons (append prefix (list (car x))) (car val+err))
+                    args))))
        ((null? args)
-        (error "missing argument to option " x))
+        (fail prefix conf-spec (car args) args "missing argument to option"))
        (else
         (cons (cons (append prefix (list (car x))) (car args)) (cdr args))))))
-  (or (if (eqv? #\- (string-ref (car args) 1))
-          (parse-long-option (substring (car args) 2) (cdr args))
-          (parse-short-option (substring (car args) 1) (cdr args)))
-      (fail prefix conf-spec (car args) args)))
+  (if (eqv? #\- (string-ref (car args) 1))
+      (parse-long-option (substring (car args) 2) (cdr args) fail)
+      (parse-short-option (substring (car args) 1) (cdr args) fail)))
 
 (define (parse-options prefix conf-spec orig-args fail)
   (let lp ((args orig-args)
@@ -138,9 +156,9 @@
           (else (reverse (cdr (reverse  prefix))))))
   (let ((fail (if (pair? o)
                   (car o)
-                  (lambda (prefix spec opt args)
-                    ;; TODO: search for closest option
-                    (error "unknown option: " opt)))))
+                  (lambda (prefix spec opt args reason)
+                    ;; TODO: search for closest option in "unknown" case
+                    (error reason opt)))))
     (cond
      ((null? spec)
       (error "no procedure in application spec"))
@@ -149,7 +167,7 @@
         ((@)
          (let* ((new-opt-spec (cadr (car spec)))
                 (new-fail
-                 (lambda (new-prefix new-spec opt args)
+                 (lambda (new-prefix new-spec opt args reason)
                    (parse-option (prev-prefix prefix) opt-spec args fail)))
                 (cfg+args (parse-options prefix new-opt-spec args new-fail))
                 (config (conf-append (car cfg+args) config))
