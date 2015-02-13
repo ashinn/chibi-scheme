@@ -141,7 +141,7 @@
   (let ((env (if (pair? o) (car o) (make-environment)))
         (meta (module-meta-data mod))
         (dir (module-name-prefix name)))
-    (define (load-modules files extension fold?)
+    (define (load-modules files extension fold? . o)
       (for-each
        (lambda (f)
          (let ((f (string-append dir f extension)))
@@ -154,6 +154,7 @@
                            (load in env)))
                         (else
                          (load path env)))))
+            ((and (pair? o) (car o)) ((car o)))
             (else (error "couldn't find include" f)))))
        files))
     ;; catch cyclic references
@@ -193,6 +194,9 @@
               (load-modules (cdr x) "" #t))
              ((include-shared)
               (load-modules (cdr x) *shared-object-extension* #f))
+             ((include-shared-optionally)
+              (load-modules (list (cadr x)) *shared-object-extension* #f
+                            (lambda () (load-modules (cddr x) "" #f))))
              ((body begin)
               (for-each (lambda (expr) (eval expr env)) (cdr x)))
              ((error)
@@ -366,6 +370,7 @@
 (define-meta-primitive include)
 (define-meta-primitive include-ci)
 (define-meta-primitive include-shared)
+(define-meta-primitive include-shared-optionally)
 (define-meta-primitive body)
 (define-meta-primitive begin)
 
