@@ -1539,6 +1539,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_equalp(ctx, a, b) sexp_equalp_op(ctx, NULL, 2, a, b)
 #define sexp_listp(ctx, x) sexp_listp_op(ctx, NULL, 1, x)
 #define sexp_length(ctx, x) sexp_length_op(ctx, NULL, 1, x)
+#define sexp_length_unboxed(x) sexp_unbox_fixnum(sexp_length(NULL, x))
 #define sexp_reverse(ctx, x) sexp_reverse_op(ctx, NULL, 1, x)
 #define sexp_nreverse(ctx, x) sexp_nreverse_op(ctx, NULL, 1, x)
 #define sexp_copy_list(ctx, x) sexp_copy_list_op(ctx, NULL, 1, x)

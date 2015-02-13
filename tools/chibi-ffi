@@ -402,6 +402,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; .stub file interface
 
+(define (ffi-include file)
+  (load file (current-environment)))
+
 (define (c-declare . args)
   (apply cat args)
   (newline))
@@ -1054,6 +1057,7 @@
 
 (define (scheme-procedure->c name)
   (cond
+   ((eq? name 'length) 'sexp_length_unboxed)
    ((eq? name 'string-length) 'sexp_string_length)
    ((eq? name 'string-size) 'sexp_string_size)
    ((eq? name 'bytevector-length) 'sexp_bytes_length)
@@ -1136,7 +1140,13 @@
          (if (and *c++?* (type-new? a))
              (cat "  tmp" (type-index a)
                   " = new " (type-c-name-derefed (type-base a)) "();\n")
-             (cat "  tmp" (type-index a) " = calloc(1, 1 + "
+             (cat "  tmp" (type-index a) " = "
+                  (if (type-struct-type a)
+                      (lambda () (cat "(" (type-c-name (type-base a))
+                                 (if (type-pointer? a) "*" "")
+                                 ")"))
+                      "")
+                  " calloc(1, 1 + "
                   (if (and (symbol? len) (not (eq? len 'null)))
                       (lambda () (cat (lambda () (scheme->c-converter 'unsigned-int len))
                                  "*sizeof(tmp" (type-index a) "[0])"))
