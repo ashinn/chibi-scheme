@@ -4,7 +4,7 @@
 \author{Alex Shinn}
 
 \centered{\smaller{Minimal Scheme Implementation for use as an Extension Language}}
-\centered{\url{http://synthcode.com/wiki/chibi-scheme/}}
+\centered{\url{http://synthcode.com/wiki/chibi-scheme}}
 
 \section{Introduction}
 
