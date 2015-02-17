@@ -123,7 +123,7 @@ chibi-scheme-static$(EXE): main.o $(SEXP_OBJS) $(EVAL_OBJS)
 chibi-scheme-ulimit$(EXE): main.o $(SEXP_ULIMIT_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
-clibs.c: $(GENSTATIC) chibi-scheme$(EXE)
+clibs.c: $(GENSTATIC) $(CHIBI_DEPENDENCIES)
 	$(FIND) lib -name \*.sld | $(CHIBI) -q $(GENSTATIC) > $@
 
 chibi-scheme.pc: chibi-scheme.pc.in
