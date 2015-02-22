@@ -2,6 +2,10 @@
 /* Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #include "chibi/eval.h"
 
 #define sexp_argv_symbol "command-line"
@@ -383,6 +387,12 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
       check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN, bootp)); \
     } while (0)
 
+/* static globals for the sake of resuming from within emscripten */
+#ifdef EMSCRIPTEN
+static sexp sexp_resume_ctx = SEXP_FALSE;
+static sexp sexp_resume_proc = SEXP_FALSE;
+#endif
+
 void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
   char *impmod;
@@ -635,12 +645,20 @@ void run_main (int argc, char **argv) {
         if (sexp_procedurep(tmp)) {
           sym = sexp_c_string(ctx, argv[i], -1);
           sym = sexp_list2(ctx, sym, env);
-          check_exception(ctx, sexp_apply(ctx, tmp, sym));
+          tmp = check_exception(ctx, sexp_apply(ctx, tmp, sym));
         } else
 #endif
-          check_exception(ctx, sexp_load(ctx, sym=sexp_c_string(ctx, argv[i], -1), env));
+          tmp = check_exception(ctx, sexp_load(ctx, sym=sexp_c_string(ctx, argv[i], -1), env));
 #if SEXP_USE_WARN_UNDEFS
         sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
+#endif
+#ifdef EMSCRIPTEN
+        if (sexp_applicablep(tmp)) {
+          sexp_resume_ctx = ctx;
+          sexp_resume_proc = tmp;
+          sexp_preserve_object(ctx, sexp_resume_proc);
+          emscripten_exit_with_live_runtime();
+        }
 #endif
       }
       /* SRFI-22: run main if specified */
@@ -660,6 +678,18 @@ void run_main (int argc, char **argv) {
   sexp_gc_release4(ctx);
   sexp_destroy_context(ctx);
 }
+
+#ifdef EMSCRIPTEN
+void sexp_resume() {
+  sexp_gc_var1(tmp);
+  sexp_gc_preserve(sexp_resume_ctx, tmp);
+  tmp = sexp_list1(sexp_resume_ctx, SEXP_VOID);
+  if (sexp_applicablep(sexp_resume_proc)) {
+    sexp_resume_proc = check_exception(sexp_resume_ctx, sexp_apply(sexp_resume_ctx, sexp_resume_proc, tmp));
+  }
+  sexp_gc_release1(sexp_resume_ctx);
+}
+#endif
 
 int main (int argc, char **argv) {
 #if SEXP_USE_PRINT_BACKTRACE_ON_SEGFAULT

@@ -22,7 +22,7 @@ CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
 CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
 	lib/chibi/time$(SO) lib/chibi/system$(SO) lib/chibi/stty$(SO) \
 	lib/chibi/weak$(SO) lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) \
-	lib/chibi/net$(SO) lib/chibi/ast$(SO)
+	lib/chibi/net$(SO) lib/chibi/ast$(SO) lib/chibi/emscripten$(SO)
 CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
 CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
 	lib/chibi/optimize/profile$(SO)

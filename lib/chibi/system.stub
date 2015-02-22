@@ -57,17 +57,20 @@
 
 (define-c errno (set-root-directory! "chroot") (string))
 
-(define-c errno getpwuid_r
-  (uid_t (result passwd)
-         (link string)
-         (value (string-size arg2) int)
-         (result pointer passwd)))
+(cond-expand
+  (emscripten)
+  (else
+    (define-c errno getpwuid_r
+      (uid_t (result passwd)
+             (link string)
+             (value (string-size arg2) int)
+             (result pointer passwd)))
 
-(define-c errno getpwnam_r
-  (string (result passwd)
-          (link string)
-          (value (string-size arg2) int)
-          (result pointer passwd)))
+    (define-c errno getpwnam_r
+      (string (result passwd)
+              (link string)
+              (value (string-size arg2) int)
+              (result pointer passwd)))))
 
 (define-c-struct group
   predicate: group?
@@ -77,14 +80,18 @@
   ;;((array string)  gr_mem      group-members)
   )
 
-(define-c errno getgrgid_r
-  (gid_t (result group)
-         (link string)
-         (value (string-size arg2) int)
-         (result pointer group)))
+(cond-expand
+  (emscripten)
+  (else
+    (define-c errno getgrgid_r
+      (gid_t (result group)
+             (link string)
+             (value (string-size arg2) int)
+             (result pointer group)))
 
-(define-c errno getgrnam_r
-  (string (result group)
-          (link string)
-          (value (string-size arg2) int)
-          (result pointer group)))
+    (define-c errno getgrnam_r
+      (string (result group)
+              (link string)
+              (value (string-size arg2) int)
+              (result pointer group)))))
+              
