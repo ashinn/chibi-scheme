@@ -212,6 +212,7 @@
           ((and) (every check-cond-expand (cdr x)))
           ((or) (any check-cond-expand (cdr x)))
           ((not) (not (check-cond-expand (cadr x))))
+          ((library) (eval `(find-module ',(cadr x)) (%meta-env)))
           (else (error "cond-expand: bad feature" x)))
         (memq (identifier->symbol x) *features*)))
   (define (extract-module-name file)
