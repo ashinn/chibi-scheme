@@ -55,8 +55,11 @@
 ;;> Set the current time from a timeval struct and
 ;;> and optional timezone.
 
-(define-c errno (set-time-of-day! "settimeofday")
-  (timeval (maybe-null default NULL timezone)))
+(cond-expand
+  (emscripten)
+  (else
+    (define-c errno (set-time-of-day! "settimeofday")
+      (timeval (maybe-null default NULL timezone)))))
 
 ;;> Convert an integer number of epoch seconds to a broken-down tm struct.
 

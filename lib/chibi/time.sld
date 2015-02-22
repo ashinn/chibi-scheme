@@ -1,6 +1,6 @@
 
 (define-library (chibi time)
-  (export current-seconds get-time-of-day set-time-of-day!
+  (export current-seconds get-time-of-day
           seconds->time seconds->string time->seconds time->string
           make-timeval make-tm timeval-seconds timeval-microseconds
           timezone-offset timezone-dst-time
@@ -8,6 +8,10 @@
           time-day-of-week time-day-of-year time-dst? time-timezone-name
           time-offset
           tm? timeval? timezone?)
+  (cond-expand
+    (emscripten)
+    (else
+      (export set-time-of-day!)))
   (cond-expand
    ((or bsd linux)
     (export rusage? resource-usage-time resource-usage-system-time
