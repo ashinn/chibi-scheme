@@ -1,0 +1,7 @@
+(cond-expand
+  (emscripten
+    (c-system-include "emscripten.h")
+
+    (define-c void (eval-script! "emscripten_run_script") (string))
+    (define-c int (integer-eval-script "emscripten_run_script_int") (string))
+    (define-c string (string-eval-script "emscripten_run_script_string") (string))))
