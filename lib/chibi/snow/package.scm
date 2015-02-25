@@ -72,9 +72,9 @@
        (cond ((assoc-get (cdr package) 'name)
               => (lambda (x) (and (pair? x) x)))
              ((assq 'library (cdr package))
-              => (lambda (x) (library-name (cdr x))))
+              => (lambda (x) (library-name x)))
              ((assq 'progam (cdr package))
-              => (lambda (x) (program-name (cdr x))))
+              => (lambda (x) (program-name x)))
              (else #f))))
 
 (define (package-email pkg)
