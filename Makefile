@@ -26,11 +26,12 @@ CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
 CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
 CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
 	lib/chibi/optimize/profile$(SO)
+EXTRA_COMPILED_LIBS ?=
 COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
-	$(CHIBI_OPT_COMPILED_LIBS) lib/srfi/18/threads$(SO) \
-	lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) lib/srfi/39/param$(SO) \
-	lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) lib/srfi/98/env$(SO) \
-	lib/scheme/time$(SO)
+	$(CHIBI_OPT_COMPILED_LIBS) $(EXTRA_COMPILED_LIBS) \
+	lib/srfi/18/threads$(SO) lib/srfi/27/rand$(SO) lib/srfi/33/bit$(SO) \
+	lib/srfi/39/param$(SO) lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) \
+	lib/srfi/98/env$(SO) lib/scheme/time$(SO)
 
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
