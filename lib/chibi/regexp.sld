@@ -43,7 +43,7 @@
         (char-set-intersection char-set:ascii char-set:letter+digit))
       (define %char-set:punctuation
         (char-set-intersection char-set:ascii char-set:punctuation))
-      (define %char-set:punctuation
+      (define %char-set:symbol
         (char-set-intersection char-set:ascii char-set:symbol))
       (define %char-set:graphic
         (char-set-intersection char-set:ascii char-set:graphic))
