@@ -682,7 +682,7 @@ void run_main (int argc, char **argv) {
 #ifdef EMSCRIPTEN
 void sexp_resume() {
   sexp_gc_var1(tmp);
-  sexp_gc_preserve(sexp_resume_ctx, tmp);
+  sexp_gc_preserve1(sexp_resume_ctx, tmp);
   tmp = sexp_list1(sexp_resume_ctx, SEXP_VOID);
   if (sexp_applicablep(sexp_resume_proc)) {
     sexp_resume_proc = check_exception(sexp_resume_ctx, sexp_apply(sexp_resume_ctx, sexp_resume_proc, tmp));
