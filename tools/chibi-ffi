@@ -1141,7 +1141,7 @@
              (cat "  tmp" (type-index a)
                   " = new " (type-c-name-derefed (type-base a)) "();\n")
              (cat "  tmp" (type-index a) " = "
-                  (if (type-struct-type a)
+                  (if #t ;(type-struct-type a)
                       (lambda () (cat "(" (type-c-name (type-base a))
                                  (if (type-pointer? a) "*" "")
                                  ")"))
@@ -1288,8 +1288,15 @@
                             (cat "  if (len" i " != " len ")\n"
                                  "    free(tmp" i ");\n"))
                         (cat "  len" i " *= 2;\n"
-                             "  tmp" i
-                             " = calloc(len" i ", sizeof(tmp" i "[0]));\n"
+                             "  tmp" i " = "
+                             (lambda () (cat "(" (type-c-name (type-base a))
+                                        (if (or (type-pointer? a)
+                                                (and (not *c++?*)
+                                                     (string-type? a)))
+                                            "*"
+                                            "")
+                                        ")"))
+                             " calloc(len" i ", sizeof(tmp" i "[0]));\n"
                              "  goto loop;\n")))))
               (else
                ;; TODO: free other results
@@ -1742,7 +1749,10 @@
                 " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
                 "  if (sexp_cpointer_freep(x)) {\n"
                 "    " (if method? "" cname) "("
-                (if method? (string-append "((" (mangle name) "*)") "")
+                (if method? "(" "")
+                "\n#ifdef __cplusplus\n"
+                "(" (mangle name) "*)"
+                "\n#endif\n"
                 "sexp_cpointer_value(x)"
                 (if method? (string-append ")->" (x->string cname) "()") "")
                 ");\n"
