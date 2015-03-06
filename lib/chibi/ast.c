@@ -409,9 +409,9 @@ static sexp sexp_gc_op (sexp ctx, sexp self, sexp_sint_t n) {
 }
 
 #if SEXP_USE_GREEN_THREADS
-static sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new) {
+static sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new_val) {
   sexp res = sexp_global(ctx, SEXP_G_ATOMIC_P);
-  sexp_global(ctx, SEXP_G_ATOMIC_P) = new;
+  sexp_global(ctx, SEXP_G_ATOMIC_P) = new_val;
   return res;
 }
 #endif
