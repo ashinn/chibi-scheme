@@ -9,7 +9,26 @@
 #if ! SEXP_USE_BOEHM
 
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
+
+#ifdef __cplusplus
+sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x) {
+  sexp_uint_t res;
+  sexp t;
+  if (!sexp_pointerp(x) || (sexp_pointer_tag(x) >= sexp_context_num_types(ctx)))
+    return sexp_heap_align(1);
+  t = sexp_object_type(ctx, x);
+  res = sexp_type_size_of_object(t, x) + SEXP_GC_PAD;
+#if SEXP_USE_DEBUG_GC
+  if (res == 0) {
+    fprintf(stderr, SEXP_BANNER("%p zero-size object: %p"), ctx, x);
+    return 1;
+  }
+#endif
+  return res;
+}
+#else
 extern sexp_uint_t sexp_allocated_bytes (sexp ctx, sexp x);
+#endif
 
 static void sexp_print_simple (sexp ctx, sexp x, sexp out, int depth) {
   int i;
