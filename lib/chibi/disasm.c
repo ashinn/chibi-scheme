@@ -74,7 +74,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp_newline(ctx, out);
 
   /* build a table of labels that are jumped to */
-  labels = calloc(sexp_bytecode_length(bc), sizeof(sexp_sint_t));
+  labels = (sexp_sint_t*)calloc(sexp_bytecode_length(bc), sizeof(sexp_sint_t));
   ip = sexp_bytecode_data(bc);
   while (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc)) {
     switch (*ip++) {

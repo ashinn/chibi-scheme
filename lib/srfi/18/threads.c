@@ -352,7 +352,7 @@ static sexp sexp_get_signal_handler (sexp ctx, sexp self, sexp_sint_t n, sexp si
 
 static sexp sexp_make_pollfds (sexp ctx) {
   sexp res = sexp_alloc_tagged(ctx, sexp_sizeof_pollfds, sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_THREADS_POLLFDS_ID)));
-  sexp_pollfds_fds(res) = malloc(SEXP_INIT_POLLFDS_MAX_FDS * sizeof(struct pollfd));
+  sexp_pollfds_fds(res) = (struct pollfd*)malloc(SEXP_INIT_POLLFDS_MAX_FDS * sizeof(struct pollfd));
   sexp_pollfds_num_fds(res) = 0;
   sexp_pollfds_max_fds(res) = SEXP_INIT_POLLFDS_MAX_FDS;
   return res;
@@ -385,7 +385,7 @@ static sexp sexp_insert_pollfd (sexp ctx, int fd, int events) {
   if (sexp_pollfds_num_fds(pollfds) == sexp_pollfds_max_fds(pollfds)) {
     sexp_pollfds_max_fds(pollfds) = i*2;
     pfd = sexp_pollfds_fds(pollfds);
-    sexp_pollfds_fds(pollfds) = malloc(i*2*sizeof(struct pollfd));
+    sexp_pollfds_fds(pollfds) = (struct pollfd*)malloc(i*2*sizeof(struct pollfd));
     if (sexp_pollfds_fds(pollfds))
       memcpy(sexp_pollfds_fds(pollfds), pfd, i*2*sizeof(struct pollfd));
     free(pfd);
