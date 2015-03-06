@@ -90,6 +90,12 @@
 (define (string-skip-right str x . o)
   (apply string-find-right str (complement (make-char-predicate x)) o))
 
+(define (string-suffix? suffix str)
+  (let ((suf-len (string-length suffix))
+        (str-len (string-length str)))
+    (and (>= str-len suf-len)
+         (equal? suffix (substring str (- str-len suf-len))))))
+
 (define (path-strip-directory path)
   (substring-cursor path (string-find-right path #\/)))
 
@@ -106,6 +112,29 @@
                     (if (zero? start2)
                         "/"
                         (substring-cursor path 0 start2)))))))))
+
+(define (path-extension-pos path)
+  (let ((end (string-cursor-end path)))
+    (let lp ((i end) (dot #f))
+      (if (<= i 0)
+          #f
+          (let* ((i2 (string-cursor-prev path i))
+                 (ch (string-cursor-ref path i2)))
+            (cond ((eqv? #\. ch) (and (< i end) (lp i2 (or dot i))))
+                  ((eqv? #\/ ch) #f)
+                  (dot)
+                  (else (lp i2 #f))))))))
+
+(define (path-extension path)
+  (let ((i (path-extension-pos path)))
+    (and i
+         (substring-cursor path i))))
+
+(define (path-strip-extension path)
+  (let ((i (path-extension-pos path)))
+    (if i
+        (substring-cursor path 0 (string-cursor-prev path i))
+        path)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -218,16 +247,18 @@
   (define (extract-module-name file)
     (call-with-input-file file
       (lambda (in)
-        (let lp ()
-          (let ((expr (read in)))
-            (cond
-             ((eof-object? expr) #f)
-             ((and (pair? expr)
-                   (pair? (cdr expr))
-                   (memq (car expr)
-                         '(define-library define-module library module)))
-              (cadr expr))
-             (else (lp))))))))
+        (protect
+         (exn (else #f))
+         (let lp ()
+           (let ((expr (read in)))
+             (cond
+              ((eof-object? expr) #f)
+              ((and (pair? expr)
+                    (pair? (cdr expr))
+                    (memq (car expr)
+                          '(define-library define-module library module)))
+               (cadr expr))
+              (else (lp)))))))))
   (define (extract-module-shares mod-name file)
     (call-with-input-file file
       (lambda (in)
@@ -249,7 +280,6 @@
                                   mod-name)
                             c-libs)))
                  ((eq? 'cond-expand (caar ls))
-                  ;;(lp (append (cdar ls) (cdr ls)) c-libs)
                   (let expand ((ls2 (cdar ls)) (res (cdr ls)))
                     (cond
                      ((null? ls2) (lp res c-libs))
@@ -291,18 +321,34 @@
   (newline)
   (cond
    ((and (pair? o) (car o))  ; inline
-    (let* ((base (string-append (car lib) ".c"))
+    (let* ((mod-strings (cdr (module-name->strings (cdr lib) '())))
+           (share-file (path-strip-directory (car lib)))
+           ;; ugly hack allowing include-shared of files only up to
+           ;; one subdirectory beneath
+           (base0 (string-concatenate
+                   (reverse (cons share-file (cons "/" mod-strings)))))
+           (base1 (string-concatenate
+                   (reverse (cons share-file (cdr mod-strings)))))
            (in (protect
                 (exn
                  (else
                   (let lp ((ls c-files))
                     (cond
-                     ((null? ls) (error "couldn't find c file" base c-files))
-                     ((equal? (path-strip-directory (car ls))
-                              (path-strip-directory base))
+                     ((null? ls)
+                      (error "couldn't find c file" base0 base1 c-files))
+                     ((and (member (path-extension (car ls)) '("c" "cc"))
+                           (let ((f (path-strip-extension (car ls))))
+                             (or (string-suffix? base0 f)
+                                 (string-suffix? base1 f))))
                       (open-input-file (car ls)))
                      (else (lp (cdr ls)))))))
-                (open-input-file base))))
+                (protect
+                 (exn
+                  (else
+                   (protect
+                    (exn (else (open-input-file (string-append base1 ".c"))))
+                    (open-input-file (string-append base0 ".c")))))
+                 (open-input-file (string-append (car lib) ".c"))))))
       (let lp ()
         (let ((line (read-line in)))
           (cond
@@ -341,27 +387,32 @@
            (features '())
            (includes #f)
            (excludes '())
-           (cfiles '()))
+           (cfiles '())
+           (inline? #f))
     (cond
      ((and (pair? args) (not (equal? "" (car args)))
            (eqv? #\- (string-ref (car args) 0)))
       (case (string->symbol (car args))
+        ((--inline)
+         (lp (cdr args) features includes excludes cfiles #t))
         ((--features)
          (if (null? (cdr args))
              (error "--features requires an argument"))
          (lp (cddr args) (append features (string-split (cadr args) #\,))
-             includes excludes cfiles))
+             includes excludes cfiles inline?))
         ((-i --include)
          (lp (cddr args) features
              (append (or includes '()) (split-mod-names (cadr args)))
-             excludes cfiles))
+             excludes cfiles inline?))
         ((-x --exclude)
          (lp (cddr args) features includes
              (append excludes (split-mod-names (cadr args)))
-             cfiles))
+             cfiles inline?))
         ((-c --cfiles)
          (lp (cddr args) features includes excludes
-             (append cfiles (string-split (cadr args) #\,))))
+             (append cfiles (string-split (cadr args) #\,)) inline?))
+        ((-C --all-cfiles)
+         (lp '() features includes excludes (append cfiles (cdr args)) inline?))
         (else
          (error "unknown option" (car args)))))
      (else
@@ -371,14 +422,10 @@
              (c-libs (car c-libs+c-files))
              (c-files (cdr c-libs+c-files))
              (inline? #t))
+        (display "#include \"chibi/eval.h\"\n")
         (newline)
         (for-each (lambda (x) (include-c-lib x c-files inline?)) c-libs)
         (newline)
-        ;; (display "typedef struct {\n")
-        ;; (display "  const char *name;\n")
-        ;; (display "  sexp_init_proc init;\n")
-        ;; (display "} sexp_library_entry_t;\n")
-        ;; (newline)
         (display "struct sexp_library_entry_t sexp_static_libraries_array[] = {\n")
         (for-each init-c-lib c-libs)
         (display "  { NULL, NULL }\n")
