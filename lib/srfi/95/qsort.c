@@ -4,12 +4,20 @@
 
 #include "chibi/eval.h"
 
+#ifdef __cplusplus
+namespace {
+#endif
+
 #if SEXP_USE_HUFF_SYMS
 #if SEXP_USE_STATIC_LIBS
 #include "chibi/sexp-hufftabdefs.h"
 #else
 #include "chibi/sexp-hufftabs.h"
 #endif
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #define swap(tmp_var, a, b) (tmp_var=a, a=b, b=tmp_var)
