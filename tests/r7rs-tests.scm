@@ -426,7 +426,7 @@
        (... (syntax-rules ()
               ((name expr ...)
                (begin expr ...))))))))
-(be-like-begin1 sequence2)
+(be-like-begin2 sequence2)
 (test 4 (sequence2 1 2 3 4))
 
 (define-syntax be-like-begin3
