@@ -111,6 +111,7 @@
 
 (define (hash-table-copy table)
   (assert-hash-table "hash-table-copy" table)
-  (let ((res (make-hash-table (hash-table-equivalence-function table))))
+  (let ((res (make-hash-table (hash-table-equivalence-function table)
+                              (hash-table-hash-function table))))
     (hash-table-merge! res table)
     res))
