@@ -278,7 +278,7 @@ install: all
 	$(INSTALL) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-doc $(DESTDIR)$(BINDIR)/
-	$(INSTALL) -m0755 tools/snow-chibi $(DESTDIR)$(BINDIR)/
+	$(INSTALL) -m0755 lib/chibi/snow/snow-chibi $(DESTDIR)$(BINDIR)/
 	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/regexp $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/snow $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
