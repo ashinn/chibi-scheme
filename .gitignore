@@ -1,0 +1,48 @@
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+
+# Snow Meta files
+lib/.*.meta
+
+# Generated files
+chibi-scheme
+chibi-scheme.pc
+include/chibi/install.h
+lib/chibi/emscripten.c
+lib/chibi/filesystem.c
+lib/chibi/io/io.c
+lib/chibi/net.c
+lib/chibi/process.c
+lib/chibi/stty.c
+lib/chibi/system.c
+lib/chibi/time.c
