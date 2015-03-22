@@ -295,6 +295,9 @@
       sr1
       sr2))
 
+(define (searcher-start-match sr)
+  (regexp-match-ref (searcher-matches sr) 0))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; A posse is a group of searchers.
 
@@ -312,6 +315,8 @@
   (hash-table-walk posse (lambda (key val) (hash-table-delete! posse key))))
 (define (posse-for-each proc posse)
   (hash-table-walk posse (lambda (key val) (proc val))))
+(define (posse-every pred posse)
+  (hash-table-fold posse (lambda (key val acc) (and acc (pred val))) #t))
 
 (define (posse->list posse)
   (hash-table-values posse))
@@ -422,7 +427,14 @@
         (posse-clear! epsilons))) 
       (cond
        ((or (string-cursor>=? i end)
-            (and (or (not search?) (searcher? (cdr accept)))
+            (and search?
+                 (searcher? (cdr accept))
+                 (let ((accept-start (searcher-start-match (cdr accept))))
+                   (posse-every
+                    (lambda (searcher)
+                      (> (searcher-start-match searcher) accept-start))
+                    searchers1)))
+            (and (not search?)
                  (posse-empty? searchers1)))
         ;; Terminate when the string is done or there are no more
         ;; searchers.  If we terminate prematurely and are not
