@@ -46,3 +46,7 @@ lib/chibi/process.c
 lib/chibi/stty.c
 lib/chibi/system.c
 lib/chibi/time.c
+*.tgz
+
+examples/snow-fort
+examples/synthcode
