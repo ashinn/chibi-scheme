@@ -29,7 +29,7 @@ sexp sexp_make_bignum (sexp ctx, sexp_uint_t len) {
 sexp sexp_fixnum_to_bignum (sexp ctx, sexp a) {
   sexp res = sexp_make_bignum(ctx, 1);
   if (!sexp_exceptionp(res)) {
-    sexp_bignum_data(res)[0] = sexp_unbox_fixnum(sexp_fx_abs(a));
+    sexp_bignum_data(res)[0] = sexp_unbox_fx_abs(a);
     sexp_bignum_sign(res) = sexp_fx_sign(a);
   }
   return res;
@@ -326,9 +326,9 @@ sexp sexp_bignum_add_fixnum (sexp ctx, sexp a, sexp b) {
   sexp_gc_preserve1(ctx, c);
   c = sexp_copy_bignum(ctx, NULL, a, 0);
   if (sexp_bignum_sign(c) == sexp_fx_sign(b))
-    c = sexp_bignum_fxadd(ctx, c, sexp_unbox_fixnum(sexp_fx_abs(b)));
+    c = sexp_bignum_fxadd(ctx, c, sexp_unbox_fx_abs(b));
   else
-    c = sexp_bignum_fxsub(ctx, c, sexp_unbox_fixnum(sexp_fx_abs(b)));
+    c = sexp_bignum_fxsub(ctx, c, sexp_unbox_fx_abs(b));
   sexp_gc_release1(ctx);
   return c;
 }
@@ -599,7 +599,7 @@ sexp sexp_bignum_remainder (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
-  sexp_sint_t e = sexp_unbox_fixnum(sexp_fx_abs(b));
+  sexp_sint_t e = sexp_unbox_fx_abs(b);
   sexp_gc_var2(res, acc);
   sexp_gc_preserve2(ctx, res, acc);
   res = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
@@ -1390,7 +1390,7 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
     r = (a==SEXP_ZERO ? a : sexp_make_flonum(ctx, sexp_fixnum_to_double(a)*sexp_flonum_value(b)));
     break;
   case SEXP_NUM_FIX_BIG:
-    r = sexp_bignum_fxmul(ctx, NULL, b, sexp_unbox_fixnum(sexp_fx_abs(a)), 0);
+    r = sexp_bignum_fxmul(ctx, NULL, b, sexp_unbox_fx_abs(a), 0);
     sexp_bignum_sign(r) = sexp_fx_sign(a) * sexp_bignum_sign(b);
     r = sexp_bignum_normalize(r);
     break;
@@ -1473,7 +1473,7 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     tmp = sexp_make_ratio(ctx, a, b);
     r = sexp_ratio_normalize(ctx, tmp, SEXP_FALSE);
 #else
-    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b)); 
+    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b));
 #endif
     break;
   case SEXP_NUM_FLO_FIX:
