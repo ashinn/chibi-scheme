@@ -367,7 +367,7 @@ sexp sexp_bignum_sub_digits (sexp ctx, sexp dst, sexp a, sexp b) {
 
 sexp sexp_bignum_add_digits (sexp ctx, sexp dst, sexp a, sexp b) {
   sexp_uint_t alen=sexp_bignum_hi(a), blen=sexp_bignum_hi(b),
-    carry=0, i, n, *adata, *bdata, *cdata;
+    carry=0, i, old_a, p_sum, *adata, *bdata, *cdata;
   sexp_gc_var1(c);
   if (alen < blen) return sexp_bignum_add_digits(ctx, dst, b, a);
   sexp_gc_preserve1(ctx, c);
@@ -377,9 +377,11 @@ sexp sexp_bignum_add_digits (sexp ctx, sexp dst, sexp a, sexp b) {
   bdata = sexp_bignum_data(b);
   cdata = sexp_bignum_data(c);
   for (i=0; i<blen; i++) {
-    n = adata[i];
-    cdata[i] = n + bdata[i] + carry;
-    carry = (n > (SEXP_UINT_T_MAX - bdata[i] - carry) ? 1 : 0);
+    old_a = adata[i]; /* adata may alias cdata */
+    p_sum = adata[i] + bdata[i];
+    cdata[i] = p_sum + carry;
+    carry = (old_a > (SEXP_UINT_T_MAX - bdata[i]) ? 1 : 0)
+          + (p_sum > (SEXP_UINT_T_MAX - carry) ? 1 : 0);
   }
   for ( ; carry && (i<alen); i++) {
     carry = (cdata[i] == SEXP_UINT_T_MAX ? 1 : 0);
