@@ -111,31 +111,35 @@
                    (open-input-file-descriptor (car out-pipe))
                    (open-input-file-descriptor (car err-pipe)))))))))
 
-(define (process->string str)
+(define (process->string command)
   (call-with-process-io
-   str
+   command
    (lambda (pid in out err)
      (close-output-port in)
      (let ((res (port->string out)))
        (waitpid pid 0)
        res))))
 
-(define (process->sexp str)
-  (call-with-input-string (process->string str) read))
+(define (process->sexp command)
+  (call-with-input-string (process->string command) read))
 
-(define (process->output+error str)
+(define (process->output+error+status command)
   (call-with-process-io
-   str
+   command
    (lambda (pid in out err)
      (close-output-port in)
-     (let ((out (port->string out))
-           (err (port->string err)))
-       (waitpid pid 0)
-       (list out err)))))
+     (let* ((out (port->string out))
+            (err (port->string err))
+            (res (waitpid pid 0)))
+       (list out err (cadr res))))))
 
-(define (process->string-list str)
+(define (process->output+error command)
+  (let ((res (process->output+error+status command)))
+    (list (car res) (cadr res))))
+
+(define (process->string-list command)
   (call-with-process-io
-   str
+   command
    (lambda (pid in out err)
      (close-output-port in)
      (let ((res (port->string-list out)))
