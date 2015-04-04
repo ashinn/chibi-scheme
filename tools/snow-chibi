@@ -1,0 +1,174 @@
+#!/usr/bin/env chibi-scheme
+
+;; This code was written by Alex Shinn in 2013 and placed in the
+;; Public Domain.  All warranties are disclaimed.
+
+(import (scheme base)
+        (scheme process-context)
+        (chibi snow commands)
+        (chibi snow interface)
+        (chibi app)
+        (chibi config)
+        (chibi pathname)
+        (chibi process))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (define repo-spec
+;;   '((repository
+;;      (conf
+;;       (sibling
+;;        (conf
+;;         (name string)
+;;         (url string)))
+;;       (package
+;;        (conf
+;;         (name (list (or symbol integer)))
+;;         (url string)
+;;         (size integer)
+;;         (checksums (alist symbol string))
+;;         (signature (alist symbol string))
+;;         (library
+;;          (conf
+;;           (name (list (or symbol integer)))
+;;           (path string)
+;;           (depends
+;;            (list (list (or symbol integer string
+;;                            (list (member < > <= >=) string)))))
+;;           (provides (list (list (or symbol string))))
+;;           (platforms (list (or symbol (list symbol))))
+;;           (features (list symbol))
+;;           (authors (list string))
+;;           (maintainers (list string))
+;;           (description string)
+;;           (created string)
+;;           (updated string)
+;;           (version string)
+;;           (licenses
+;;            (list
+;;             (or (member gpl2 gpl3 lgpl mit bsd artistic apache public-domain)
+;;                 (list 'license
+;;                       (conf (name string)
+;;                             (url string)
+;;                             (checksums (alist symbol string)))))))))))))))
+
+(define conf-spec
+  ;; name type aliases doc
+  '((verbose? boolean (#\v "verbose") "print additional informative messages")
+    (always-yes? boolean (#\y "always-yes") "answer all questions with yes")
+    (ignore-signature? boolean ("ignore-sig") "don't verify package signatures")
+    (ignore-digest? boolean ("ignore-digest") "don't verify package checksums")
+    ;;(config filename "path to configuration file")
+    (host string "base uri of snow repository")
+    (repository-uri string "uri of snow repository file")
+    (local-root-repository dirname "repository cache dir for root")
+    (local-user-repository dirname "repository cache dir for non-root users")
+    (install-prefix string "prefix directory for installation")
+    (install-source-dir dirname "directory to install library source in")
+    (library-extension string "the extension to use for library files")
+    (installer symbol "name of installer to use")
+    (implementations (list symbol) "impls to install for, or 'all'")
+    (chibi-path filename "path to chibi-scheme executable")
+    ))
+
+(define (conf-default-path name)
+  (make-path (or (get-environment-variable "HOME") ".")
+             (string-append "." name)
+             "config.scm"))
+
+(define search-spec '())
+(define show-spec '())
+(define install-spec
+  '((show-tests? boolean ("show-tests") "show test output even on success")))
+(define upgrade-spec '())
+(define remove-spec '())
+(define status-spec '())
+(define gen-key-spec
+  '((bits integer)
+    (validity-period string)
+    (name string)
+    (library-prefix (list symbol))
+    (email string)))
+(define reg-key-spec
+  '((uri string)
+    (email string)))
+(define sign-spec
+  '((output filename #\o)
+    (digest symbol #\d)
+    (email string)))
+(define verify-spec
+  '())
+(define package-spec
+  '((programs (list existing-filename))
+    (authors (list string))
+    (maintainers (list string))
+    (recursive? boolean (#\r "recursive") "...")
+    (version string)
+    (version-file existing-filename)
+    (license symbol)
+    (doc existing-filename)
+    (doc-from-scribble boolean)
+    (description string)
+    (test existing-filename)
+    (sig-file existing-filename)
+    ))
+(define upload-spec
+  `((uri string)
+    ,@package-spec))
+(define update-spec
+  '())
+
+(define app-spec
+  `(snow
+    "Snow package management"
+    (@ ,conf-spec)
+    (begin: ,(lambda (cfg) (restore-history cfg)))
+    (end: ,(lambda (cfg) (save-history cfg)))
+    (or
+     (search
+      "search for packages"
+      (@ ,search-spec) (,command/search terms ...))
+     (show
+      "show package descriptions"
+      (@ ,show-spec) (,command/show names ...))
+     (install
+      "install packages"
+      (@ ,install-spec) (,command/install names ...))
+     (upgrade
+      "upgrade installed packages"
+      (@ ,upgrade-spec) (,command/upgrade names ...))
+     (remove
+      "remove packages"
+      (@ ,remove-spec) (,command/remove names ...))
+     (status
+      "print package status"
+      (@ ,status-spec) (,command/status names ...))
+     (package
+      "create a package"
+      (@ ,package-spec) (,command/package files ...))
+     (gen-key
+      "create an RSA key pair"
+      (@ ,gen-key-spec) (,command/gen-key))
+     (reg-key
+      "register an RSA key pair"
+      (@ ,reg-key-spec) (,command/reg-key))
+     (sign
+      "sign a package"
+      (@ ,sign-spec) (,command/sign file))
+     (verify
+      "verify a signature"
+      (@ ,verify-spec) (,command/verify file))
+     (upload
+      "upload a package"
+      (@ ,upload-spec) (,command/upload files ...))
+     (update
+      "update available package status"
+      (@ ,update-spec) (,command/update))
+     (help
+      "print help"
+      (,app-help-command args ...))
+     )))
+
+(run-application app-spec
+                 (command-line)
+                 (conf-load (conf-default-path "snow")))
