@@ -200,50 +200,17 @@ test-build:
 test-ffi: chibi-scheme$(EXE)
 	$(CHIBI) tests/ffi/ffi-tests.scm
 
-test-threads: chibi-scheme$(EXE) lib/srfi/18/threads$(SO) lib/srfi/39/param$(SO) lib/srfi/98/env$(SO) lib/chibi/ast$(SO) lib/chibi/time$(SO)
-	$(CHIBI) -xchibi tests/thread-tests.scm
-
 test-numbers: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/numeric-tests.scm
 
 test-flonums: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/flonum-tests.scm
 
-test-hash: chibi-scheme$(EXE) lib/srfi/69/hash$(SO)
-	$(CHIBI) -xchibi tests/hash-tests.scm
-
-test-io: chibi-scheme$(EXE) lib/chibi/io/io$(SO)
-	$(CHIBI) -xchibi tests/io-tests.scm
-
-test-match: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/match-tests.scm
-
-test-loop: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/loop-tests.scm
-
-test-sort: chibi-scheme$(EXE) lib/srfi/33/bit$(SO)
-	$(CHIBI) -xchibi tests/sort-tests.scm
-
-test-srfi-1: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/srfi-1-tests.scm
-
-test-records: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/record-tests.scm
-
-test-weak: chibi-scheme$(EXE) lib/chibi/weak$(SO)
-	$(CHIBI) -xchibi tests/weak-tests.scm
-
 test-unicode: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/unicode-tests.scm
 
-test-process: chibi-scheme$(EXE) lib/chibi/process$(SO)
-	$(CHIBI) -xchibi tests/process-tests.scm
-
-test-system: chibi-scheme$(EXE) lib/chibi/system$(SO)
-	$(CHIBI) -xchibi tests/system-tests.scm
-
 test-libs: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/lib-tests.scm
+	$(CHIBI) tests/lib-tests.scm
 
 test-r5rs: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/r5rs-tests.scm
