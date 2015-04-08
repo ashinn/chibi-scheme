@@ -1,3 +1,5 @@
+;; This code is written by Alex Shinn and placed in the
+;; Public Domain.  All warranties are disclaimed.
 
 (define char-set:letter+digit
   (immutable-char-set (char-set-union char-set:letter char-set:digit)))
