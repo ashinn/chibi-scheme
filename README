@@ -11,7 +11,8 @@ and scripting language in C programs.  In addition to support for
 lightweight VM-based threads, each VM itself runs in an isolated heap
 allowing multiple VMs to run simultaneously in different OS threads.
 
-The default language is the R7RS (scheme base) library.
+The default repl language contains all bindings from R7RS small,
+available explicitly as the (scheme small) library.
 
 Support for additional languages such as JavaScript, Go, Lua and Bash
 are planned for future releases.  Scheme is chosen as a substrate
