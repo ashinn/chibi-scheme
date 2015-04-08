@@ -118,5 +118,8 @@
 
 (define (yes-or-no? cfg . prompt)
   (define (is-true? str)
-    (and (member (string-downcase str) '("#t" "y" "yes")) #t))
-  (input cfg 'always-yes? (each (each-in-list prompt) " [y/n]: ") is-true?))
+    (and (string? str) (member (string-downcase str) '("#t" "y" "yes")) #t))
+  (if (conf-get cfg 'always-no?)
+      #f
+      (input cfg 'always-yes? (each (each-in-list prompt) " [y/n]: ")
+             is-true?)))

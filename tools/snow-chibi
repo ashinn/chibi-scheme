@@ -56,9 +56,12 @@
   ;; name type aliases doc
   '((verbose? boolean (#\v "verbose") "print additional informative messages")
     (always-yes? boolean (#\y "always-yes") "answer all questions with yes")
-    (ignore-signature? boolean ("ignore-sig") "don't verify package signatures")
+    (always-no? boolean (#\n "always-no") "answer all questions with no")
+    (require-signature? boolean ("require-sig" "require-signature")
+                        "require signature on installation")
+    (ignore-signature? boolean ("ignore-sig" "ignore-signature")
+                       "don't verify package signatures")
     (ignore-digest? boolean ("ignore-digest") "don't verify package checksums")
-    ;;(config filename "path to configuration file")
     (host string "base uri of snow repository")
     (repository-uri string "uri of snow repository file")
     (local-root-repository dirname "repository cache dir for root")
@@ -69,18 +72,22 @@
     (installer symbol "name of installer to use")
     (implementations (list symbol) "impls to install for, or 'all'")
     (chibi-path filename "path to chibi-scheme executable")
+    (sexp? boolean ("sexp") "output information in sexp format")
     ))
 
 (define (conf-default-path name)
-  (make-path (or (get-environment-variable "HOME") ".")
-             (string-append "." name)
-             "config.scm"))
+  (or (get-environment-variable "SNOW_CHIBI_CONFIG")
+      (make-path (or (get-environment-variable "HOME") ".")
+                 (string-append "." name)
+                 "config.scm")))
 
 (define search-spec '())
 (define show-spec '())
 (define install-spec
-  '((show-tests? boolean ("show-tests") "show test output even on success")))
-(define upgrade-spec '())
+  '((skip-tests? boolean ("skip-tests") "don't run tests even if present")
+    (show-tests? boolean ("show-tests") "show test output even on success")))
+(define upgrade-spec
+  install-spec)
 (define remove-spec '())
 (define status-spec '())
 (define gen-key-spec
@@ -111,10 +118,14 @@
     (description string)
     (test existing-filename)
     (sig-file existing-filename)
+    (output filename)
+    (output-dir dirname)
     ))
 (define upload-spec
   `((uri string)
     ,@package-spec))
+(define index-spec
+  '())
 (define update-spec
   '())
 
@@ -159,10 +170,13 @@
       "verify a signature"
       (@ ,verify-spec) (,command/verify file))
      (upload
-      "upload a package"
+      "upload a package to a remote repository"
       (@ ,upload-spec) (,command/upload files ...))
+     (index
+      "add a package to a local repository file"
+      (@ ,index-spec) (,command/index files ...))
      (update
-      "update available package status"
+      "force an update of available package status"
       (@ ,update-spec) (,command/update))
      (help
       "print help"

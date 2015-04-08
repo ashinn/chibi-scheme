@@ -6,6 +6,7 @@
           command/sign
           command/verify
           command/upload
+          command/index
           command/install
           command/remove
           command/search
@@ -46,5 +47,6 @@
           (chibi sxml)
           (chibi system)
           (chibi tar)
+          (chibi uri)
           (chibi zlib))
   (include "commands.scm"))

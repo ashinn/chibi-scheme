@@ -183,6 +183,21 @@
 (define (valid-package? pkg)
   (not (invalid-package-reason pkg)))
 
+(define (package-for-impl impl cfg pkg)
+  (append
+   pkg
+   (append-map
+    (lambda (x)
+      (or (and (pair? x) (eq? 'cond-expand (car x))
+               (cond
+                ((find
+                  (lambda (clause) (check-cond-expand impl cfg (car clause)))
+                  (cdr x))
+                 => cdr)
+                (else #f)))
+          '()))
+    (cdr pkg))))
+
 (define (package-libraries package)
   (and (package? package) (filter library? (cdr package))))
 
@@ -199,6 +214,14 @@
 (define (package-dependencies impl cfg package)
   (append-map (lambda (lib) (library-dependencies cfg impl lib))
               (package-libraries package)))
+
+(define (package-test-dependencies impl cfg package)
+  (let ((pkg (package-for-impl impl cfg package)))
+    (if (or (conf-get cfg '(command install skip-tests?))
+            (conf-get cfg '(command upgrade skip-tests?)))
+        '()
+        (or (assoc-get (cdr pkg) 'test-depends)
+            '()))))
 
 (define (package-installed-files pkg)
   (or (and (pair? pkg) (assoc-get-list (cdr pkg) 'installed-files)) '()))
@@ -329,7 +352,7 @@
 (define (library-rewrite-includes x rules)
   (define (recurse x) (library-rewrite-includes x rules))
   (define (rewrite x)
-    (cond ((any (lambda (r) (and (pair? r) (equal? x (car r)))) rules) => cdr)
+    (cond ((find (lambda (r) (and (pair? r) (equal? x (car r)))) rules) => cadr)
           (else x)))
   (cond
    ((pair? x)
@@ -341,6 +364,8 @@
              (map (lambda (y) (cons (car y) (map recurse (cdr y)))) (cdr x))))
       ((define-library library)
        (cons (car x) (map recurse (cdr x))))
+      ;; support define-library as well as the package format
+      ((path) (cons (car x) (map rewrite (cdr x))))
       (else x)))
    (else x)))
 
