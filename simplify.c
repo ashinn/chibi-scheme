@@ -1,5 +1,5 @@
 /*  simplify.c -- basic simplification pass                   */
-/*  Copyright (c) 2010-2013 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2010-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"

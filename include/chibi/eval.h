@@ -1,5 +1,5 @@
 /*  eval.h -- headers for eval library                        */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_EVAL_H

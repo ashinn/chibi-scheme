@@ -1,5 +1,5 @@
 /*  features.h -- general feature configuration               */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 /* uncomment this to disable most features */

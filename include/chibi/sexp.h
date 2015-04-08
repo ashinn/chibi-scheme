@@ -1,5 +1,5 @@
 /*  sexp.h -- header for sexp library                         */
-/*  Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_H

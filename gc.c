@@ -1,5 +1,5 @@
 /*  gc.c -- simple mark&sweep garbage collector               */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #if ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC

@@ -1,5 +1,5 @@
 /*  plan9.c -- extended Plan 9 system utils                   */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"

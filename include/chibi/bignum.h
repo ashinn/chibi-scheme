@@ -1,5 +1,5 @@
 /*  bignum.h -- header for bignum utilities                   */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_BIGNUM_H

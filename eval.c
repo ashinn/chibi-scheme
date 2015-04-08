@@ -1,5 +1,5 @@
 /*  eval.c -- evaluator library implementation                */
-/*  Copyright (c) 2009-2013 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
