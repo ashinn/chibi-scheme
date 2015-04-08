@@ -331,13 +331,14 @@
 ;;> any components of \var{path} are missing, or if \var{path} is a
 ;;> raw path, it is taken relative to \var{uri}.
 
-(define (uri-resolve path uri)
+(define (uri-resolve path orig-uri)
   (or (string->uri path)
-      (let ((uri (string->uri uri)))
-        (and uri
-             (uri-with-path
-              (uri-with-fragment (uri-with-query uri #f) #f)
-              (path-resolve path
-                            (if (string-suffix? (uri-path uri) "/")
-                                (uri-path uri)
-                                (path-directory (uri-path uri)))))))))
+      (let ((uri (string->uri orig-uri)))
+        (if uri
+            (uri-with-path
+             (uri-with-fragment (uri-with-query uri #f) #f)
+             (path-resolve path
+                           (if (string-suffix? (uri-path uri) "/")
+                               (uri-path uri)
+                               (path-directory (uri-path uri)))))
+            (path-resolve path orig-uri)))))
