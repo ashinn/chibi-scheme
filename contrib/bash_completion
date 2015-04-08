@@ -26,6 +26,9 @@ _chibi-scheme() {
     -x*)
       COMPREPLY=( $( compgen -W "$(_chibi-modules | sed 's!^!-x!')" -- "$cur") )
       return 0;;
+    -R*)
+      COMPREPLY=( $( compgen -W "$(_chibi-modules | sed 's!^!-R!')" -- "$cur") )
+      return 0;;
     -l*)
       compopt -o nospace
       _filedir
@@ -42,7 +45,7 @@ _chibi-scheme() {
       COMPREPLY=( $( compgen -W "$(echo $sizes | tr ' ' '\n' | sed 's!^!-h!')" -- "${cur}" ) )
       return 0;;
     -)
-      COMPREPLY=( $( compgen -W '-d -e -f -h -i -l -m -p -q -x -A -I -V' \
+      COMPREPLY=( $( compgen -W '-d -e -f -h -i -l -m -p -q -x -A -I -R -V' \
         -- "$cur") )
       return 0;;
     -*)
