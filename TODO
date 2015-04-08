@@ -157,11 +157,15 @@
    - State "DONE"       [2009-12-16 Wed 18:58]
 ** DONE uri library
    - State "DONE"       [2009-12-16 Wed 18:58]
-** TODO http library
-** TODO show (formatting) library
+** DONE http library
+   - State "DONE"       from "TODO"       [2015-04-09 Thu 01:22]
+** DONE show (formatting) library
+   - State "DONE"       from "TODO"       [2015-04-09 Thu 01:22]
 ** TODO zip library
-** TODO tar library
-** TODO md5sum library
+** DONE tar library
+   - State "DONE"       from "TODO"       [2015-04-09 Thu 01:22]
+** DONE md5sum library
+   - State "DONE"       from "TODO"       [2015-04-09 Thu 01:22]
 
 * ports
 ** DONE basic mingw support
@@ -181,7 +185,9 @@
 ** TODO thorough source documentation
 
 * distribution
-** TODO packaging format (Snow2)
-** TODO code repository with fetch+install tool
+** DONE packaging format (Snow2)
+   - State "DONE"       from "TODO"       [2015-04-09 Thu 01:22]
+** DONE code repository with fetch+install tool
+   - State "DONE"       from "TODO"       [2015-04-09 Thu 01:22]
 ** TODO translator to/from other implementations
 
