@@ -200,6 +200,9 @@ test-build:
 test-ffi: chibi-scheme$(EXE)
 	$(CHIBI) tests/ffi/ffi-tests.scm
 
+test-snow: chibi-scheme$(EXE)
+	$(CHIBI) tests/snow/snow-tests.scm
+
 test-numbers: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/numeric-tests.scm
 
