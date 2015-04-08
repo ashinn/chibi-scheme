@@ -50,3 +50,7 @@ lib/chibi/time.c
 
 examples/snow-fort
 examples/synthcode
+tests/snow/repo-cache
+tests/snow/repo*/repo.scm
+tests/snow/tmp-root
+tmp
