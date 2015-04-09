@@ -25,6 +25,7 @@
         (err (current-error-port)))
     (for-each (lambda (x) (display x err)) args)
     (newline err)
+    (flush-output-port err)
     (exit n)))
 
 (define input-history #f)

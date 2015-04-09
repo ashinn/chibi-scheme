@@ -30,11 +30,13 @@
     ((snow args ...)
      (match (process->output+error+status (apply snow-command `(args ...)))
        ((output error (? zero?))
-        ;;(display output)
-        ;;(display error)
+        ;; (display output)
+        ;; (display error)
         )
        ((output error status)
-        (display "Snow failed:\n")
+        (display "Snow failed: ")
+        (display status)
+        (newline)
         (display output)
         (display error)
         (newline))
@@ -53,8 +55,10 @@
     ((snow->sexp args ...)
      (process->sexp (apply snow-command `(--sexp args ...))))))
 
-(define (snow-status)
-  (snow->sexp status))
+(define-syntax snow-status
+  (syntax-rules ()
+    ((snow-status args ...)
+     (snow->sexp args ... status))))
 
 (define (installed-status status lib-name . o)
   (let* ((impl (if (pair? o) (car o) 'chibi))
@@ -132,5 +136,39 @@
 (let ((status (snow-status)))
   (test-assert (installed-version status '(pingala binomial)))
   (test-assert (installed-version status '(pingala factorial))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; other implementations
+
+(snow ,@repo2 update)
+(snow ,@repo2 --implementations "foment" install leonardo.fibonacci)
+(test "1.1" (installed-version (snow-status  --implementations "foment")
+                               '(leonardo fibonacci)
+                               'foment))
+
+(snow ,@repo3 update)
+(snow ,@repo3 --implementations "foment" install pingala.binomial)
+(let ((status (snow-status --implementations "foment")))
+  (test-assert (installed-version status '(pingala binomial) 'foment))
+  (test-assert (installed-version status '(pingala factorial) 'foment)))
+
+(snow ,@repo2 update)
+(snow ,@repo2 --implementations "gauche,guile,larceny"
+      install leonardo.fibonacci)
+(let ((status (snow-status  --implementations "gauche,guile,larceny")))
+  (test "1.1" (installed-version status '(leonardo fibonacci) 'gauche))
+  (test "1.1" (installed-version status '(leonardo fibonacci) 'guile))
+  (test "1.1" (installed-version status '(leonardo fibonacci) 'larceny)))
+
+(snow ,@repo3 update)
+(snow ,@repo3 --implementations "gauche,guile,larceny"
+      install pingala.binomial)
+(let ((status (snow-status --implementations "gauche,guile,larceny")))
+  (test-assert (installed-version status '(pingala binomial) 'gauche))
+  (test-assert (installed-version status '(pingala factorial) 'gauche))
+  (test-assert (installed-version status '(pingala binomial) 'guile))
+  (test-assert (installed-version status '(pingala factorial) 'guile))
+  (test-assert (installed-version status '(pingala binomial) 'larceny))
+  (test-assert (installed-version status '(pingala factorial) 'larceny)))
 
 (test-end)

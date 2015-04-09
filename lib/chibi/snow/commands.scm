@@ -29,6 +29,7 @@
           (find "foment" 'foment)
           (find "gosh" 'gauche)
           (find "guile" 'guile)
+          (find "kawa" 'kawa)
           (find "larceny" 'larceny)
           (find "sagittarius" 'sagittarius)))
 
@@ -995,25 +996,32 @@
      (list (make-path "/usr/local/share/snow" impl)))))
 
 (define (scheme-program-command impl cfg file . o)
-  (let ((lib-path (and (pair? o) (car o))))
+  (let ((lib-path (and (pair? o) (car o)))
+        (install-dir (car (get-install-dirs impl cfg))))
     (case impl
       ((chibi)
        (let ((chibi (string-split (conf-get cfg 'chibi-path "chibi-scheme"))))
          (if lib-path
-             `(,@chibi -A ,lib-path ,file)
-             `(,@chibi ,file))))
+             `(,@chibi -A ,install-dir -A ,lib-path ,file)
+             `(,@chibi -A ,install-dir ,file))))
+      ((foment)
+       (if lib-path
+           `(foment -A ,install-dir -A ,lib-path ,file)
+           `(foment -A ,install-dir ,file)))
       ((gauche)
        (if lib-path
-           `(gosh -A ,lib-path ,file)
-           `(gosh ,file)))
+           `(gosh -A ,install-dir -A ,lib-path ,file)
+           `(gosh -A ,install-dir ,file)))
       ((guile)
        (if lib-path
-           `(guile -L ,lib-path ,file)
-           `(guile ,file)))
+           `(guile -L ,install-dir -L ,lib-path ,file)
+           `(guile -L ,install-dir ,file)))
+      ((kawa)
+       `(kawa --script ,file))
       ((larceny)
        (if lib-path
-           `(larceny -r7rs -path ,lib-path -program ,file)
-           `(larceny -r7rs -program ,file)))
+           `(larceny -r7rs -path ,install-dir -path ,lib-path -program ,file)
+           `(larceny -r7rs -path ,install-dir -program ,file)))
       (else
        #f))))
 
@@ -1433,18 +1441,20 @@
                  (pair? (car ls))
                  (or (equal? (car ls) (list impl))
                      (case impl
-                       ((chibi) (eq? 'scheme (caar ls)))
-                       ((gauche) (eq? 'gauche (caar ls)))
-                       (else #f))))
+                       ((foment gauche)
+                        (memq (caar ls) (cons impl '(scheme))))
+                       (else (eq? (caar ls) 'scheme)))))
             ;; assume certain core libraries already installed
             (lp (cdr ls) res ignored))
            ((and (null? candidates) (member (car ls) lib-names))
             (die 2 "Can't find package: " (car ls)))
            ((null? candidates)
-            (if (yes-or-no? cfg "Can't find package: " (car ls)
-                            ".  Proceed anyway?")
-                (lp (cdr ls) res (cons (car ls) ignored))
-                (exit 2)))
+            (cond
+             ((yes-or-no? cfg "Can't find package: " (car ls)
+                          ".  Proceed anyway?")
+              (lp (cdr ls) res (cons (car ls) ignored)))
+             (else
+              (die 2 "No candidates, not installing: " (car ls)))))
            (else
             (let ((pkg (select-best-candidate impl cfg repo candidates)))
               (lp (append (package-dependencies impl cfg pkg)
