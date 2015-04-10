@@ -17,7 +17,7 @@
 ;; run snow-chibi command as a separate process with test defaults
 (define chibi-path "./chibi-scheme")
 (define (snow-command . args)
-  `(,chibi-path "tools/snow-chibi"
+  `(,chibi-path -A ,install-libdir "tools/snow-chibi"
                 --always-no
                 --implementations "chibi"
                 --chibi-path ,(string-append chibi-path " -A " install-libdir)
@@ -101,6 +101,7 @@
 (snow package --output-dir tests/snow/repo1/
       --version 1.0 --authors "Leonardo Fibonacci"
       --description "Fibonacci recurrence relation"
+      --test tests/snow/repo1/leonardo/fibonacci-test.scm
       tests/snow/repo1/leonardo/fibonacci.sld)
 (snow index ,(cadr repo1) tests/snow/repo1/leonardo-fibonacci-1.0.tgz)
 (snow ,@repo1 update)
@@ -111,6 +112,7 @@
 (snow package --output-dir tests/snow/repo2/
       --version 1.1 --authors "Leonardo Fibonacci"
       --description "Fibonacci recurrence relation"
+      --test tests/snow/repo2/leonardo/fibonacci-test.scm
       tests/snow/repo2/leonardo/fibonacci.sld)
 (snow index ,(cadr repo2))
 (snow ,@repo2 update)
@@ -125,6 +127,7 @@
 (snow package --output-dir tests/snow/repo3/
       --version 1.0 --authors "Pingala"
       --description "Binomial Coefficients"
+      --test tests/snow/repo3/pingala/binomial-test.scm
       tests/snow/repo3/pingala/binomial.scm)
 (snow package --output-dir tests/snow/repo3/
       --version 1.0 --authors "Pingala"
@@ -140,12 +143,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
 
-(snow ,@repo2 update)
-(snow ,@repo2 --implementations "foment" install leonardo.fibonacci)
-(test "1.1" (installed-version (snow-status  --implementations "foment")
-                               '(leonardo fibonacci)
-                               'foment))
-
 (snow ,@repo3 update)
 (snow ,@repo3 --implementations "foment" install pingala.binomial)
 (let ((status (snow-status --implementations "foment")))
@@ -153,21 +150,18 @@
   (test-assert (installed-version status '(pingala factorial) 'foment)))
 
 (snow ,@repo2 update)
-(snow ,@repo2 --implementations "gauche,guile,larceny"
+(snow ,@repo2 --implementations "gauche,larceny"
       install leonardo.fibonacci)
-(let ((status (snow-status  --implementations "gauche,guile,larceny")))
+(let ((status (snow-status  --implementations "gauche,larceny")))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'gauche))
-  (test "1.1" (installed-version status '(leonardo fibonacci) 'guile))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'larceny)))
 
 (snow ,@repo3 update)
-(snow ,@repo3 --implementations "gauche,guile,larceny"
+(snow ,@repo3 --implementations "gauche,larceny"
       install pingala.binomial)
-(let ((status (snow-status --implementations "gauche,guile,larceny")))
+(let ((status (snow-status --implementations "gauche,larceny")))
   (test-assert (installed-version status '(pingala binomial) 'gauche))
   (test-assert (installed-version status '(pingala factorial) 'gauche))
-  (test-assert (installed-version status '(pingala binomial) 'guile))
-  (test-assert (installed-version status '(pingala factorial) 'guile))
   (test-assert (installed-version status '(pingala binomial) 'larceny))
   (test-assert (installed-version status '(pingala factorial) 'larceny)))
 

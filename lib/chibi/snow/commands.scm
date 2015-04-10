@@ -229,13 +229,15 @@
        (die 2 "not a valid library declaration " lib " in file " file)))))
 
 (define (extract-program-dependencies file . o)
-  (let ((depends (or (and (pair? o) (car o) 'depends))))
+  (let ((depends (or (and (pair? o) (car o)) 'depends)))
     (let lp ((ls (guard (exn (else '())) (file->sexp-list file)))
              (deps '())
              (cond-deps '()))
       (cond
        ((and (pair? ls) (pair? (car ls)) (eq? 'import (caar ls)))
-        (lp (cdr ls) (append (reverse (map import-name (cdar ls))) deps)))
+        (lp (cdr ls)
+            (append (reverse (map import-name (cdar ls))) deps)
+            cond-deps))
        ((and (pair? ls) (pair? (car ls)) (eq? 'cond-expand (caar ls)))
         ;; flatten all imports, but maintain cond-expand's separately
         (let ((res (filter-map
@@ -251,7 +253,7 @@
               (lp (cdr ls) deps `((cond-expand ,@res) ,@cond-deps))
               (lp deps cond-deps))))
        (else
-        (append (if (pair? deps) (cons depends (reverse deps)) '())
+        (append (if (pair? deps) (list (cons depends (reverse deps))) '())
                 (if (pair? cond-deps) (reverse cond-deps) '())))))))
 
 (define (make-package-name cfg libs . o)
@@ -964,7 +966,12 @@
       (process->sexp `(guile -c ,(write-to-string `(write ,expr))))))
   (case impl
     ((chibi)
-     (let* ((dirs (reverse (fast-eval '(current-module-path) '((chibi)))))
+     (let* ((dirs
+             (reverse
+              (cond-expand
+               (chibi (eval '(current-module-path) (environment '(chibi))))
+               (else (process->sexp
+                      '(chibi-scheme -q -p "(current-module-path)"))))))
             (share-dir (find (lambda (d) (string-contains d "/share/")) dirs)))
        (if share-dir
            (cons share-dir (delete share-dir dirs))
@@ -972,9 +979,10 @@
     ((gauche)
      (list
       (let ((dir (process->string '(gauche-config "--sitelibdir"))))
-        (and (string? dir) (> 0 (string-length dir))
-             (eqv? #\/ (string-ref dir 0))
-             dir))))
+        (or (and (string? dir) (> (string-length dir) 0)
+                 (eqv? #\/ (string-ref dir 0))
+                 dir)
+            "/usr/local/share/gauche/"))))
     ((guile)
      (let ((path
             (guile-eval
@@ -997,7 +1005,7 @@
 
 (define (scheme-program-command impl cfg file . o)
   (let ((lib-path (and (pair? o) (car o)))
-        (install-dir (car (get-install-dirs impl cfg))))
+        (install-dir (get-install-source-dir impl cfg)))
     (case impl
       ((chibi)
        (let ((chibi (string-split (conf-get cfg 'chibi-path "chibi-scheme"))))
@@ -1020,7 +1028,8 @@
        `(kawa --script ,file))
       ((larceny)
        (if lib-path
-           `(larceny -r7rs -path ,install-dir -path ,lib-path -program ,file)
+           `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
+                     -program ,file)
            `(larceny -r7rs -path ,install-dir -program ,file)))
       (else
        #f))))
@@ -1234,6 +1243,7 @@
   (let* ((library-file (get-library-file cfg library))
          (ext (get-library-extension impl cfg))
          (src-library-file (make-path dir library-file))
+         (library-dir (path-directory src-library-file))
          (dest-library-file (path-replace-extension library-file ext))
          (include-files
           (library-include-files impl cfg (make-path dir library-file)))
@@ -1246,27 +1256,35 @@
           ;; For now we assume libraries with the same prefix cooperate.
           (filter-map
            (lambda (x)
-             (and (equal? x dest-library-file)
-                  (list x (string-append x ".mv.scm"))))
-           include-files)))
+             (and (equal? x (make-path dir dest-library-file))
+                  (list x (string-append x ".renamed.scm"))))
+           include-files))
+         (relative-rewrite-include-files
+          (map (lambda (x)
+                 (list (path-relative-to (car x) library-dir)
+                       (path-relative-to (cadr x) library-dir)))
+               rewrite-include-files)))
     ;; rename
     (for-each
      (lambda (x)
-       (rename-file (make-path dir (car x)) (make-path dir (cadr x))))
+       (rename-file (car x) (cadr x)))
      rewrite-include-files)
     (cond
      ((pair? rewrite-include-files)
-      (info `(rewrite: ,library-file -> ,dest-library-file))
+      ;; TODO: rewrite with a structural editor to preserve formatting
       (let ((library
-             (library-rewrite-includes (car (file->sexp-list src-library-file))
-                                       rewrite-include-files)))
-        (install-sexp-file cfg library (make-path dir dest-library-file))))
+             (library-rewrite-includes
+              (car (file->sexp-list src-library-file))
+              relative-rewrite-include-files)))
+        (install-sexp-file cfg library (make-path dir dest-library-file))
+        (if (not (equal? library-file dest-library-file))
+            (delete-file src-library-file))))
      ((not (equal? library-file dest-library-file))
       (rename-file src-library-file (make-path dir dest-library-file))))
     ;; return the rewritten library
     (library-rewrite-includes
      library
-     (append rewrite-include-files
+     (append relative-rewrite-include-files
              (if (equal? library-file dest-library-file)
                  '()
                  (list (list library-file dest-library-file)))))))

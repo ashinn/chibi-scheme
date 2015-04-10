@@ -1,6 +1,10 @@
-(import (scheme base) (chibi test) (leonardo fibonacci))
+(import (scheme base) (scheme process-context) (leonardo fibonacci))
 
-(test-begin "fibonacci")
+(define (test expect expr)
+  (cond
+   ((not (equal? expect expr))
+    (write-string "FAIL\n")
+    (exit 1))))
 
 (test 1 (fib 0))
 (test 1 (fib 1))
@@ -9,6 +13,3 @@
 (test 5 (fib 4))
 (test 8 (fib 5))
 (test 13 (fib 6))
-
-(test-end)
-(test-exit)
