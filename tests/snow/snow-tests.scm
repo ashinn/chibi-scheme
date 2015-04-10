@@ -150,18 +150,21 @@
   (test-assert (installed-version status '(pingala factorial) 'foment)))
 
 (snow ,@repo2 update)
-(snow ,@repo2 --implementations "gauche,larceny"
+(snow ,@repo2 --implementations "gauche,kawa,larceny"
       install leonardo.fibonacci)
-(let ((status (snow-status  --implementations "gauche,larceny")))
+(let ((status (snow-status  --implementations "gauche,kawa,larceny")))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'gauche))
+  (test "1.1" (installed-version status '(leonardo fibonacci) 'kawa))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'larceny)))
 
 (snow ,@repo3 update)
-(snow ,@repo3 --implementations "gauche,larceny"
+(snow ,@repo3 --implementations "gauche,kawa,larceny"
       install pingala.binomial)
-(let ((status (snow-status --implementations "gauche,larceny")))
+(let ((status (snow-status --implementations "gauche,kawa,larceny")))
   (test-assert (installed-version status '(pingala binomial) 'gauche))
   (test-assert (installed-version status '(pingala factorial) 'gauche))
+  (test-assert (installed-version status '(pingala binomial) 'kawa))
+  (test-assert (installed-version status '(pingala factorial) 'kawa))
   (test-assert (installed-version status '(pingala binomial) 'larceny))
   (test-assert (installed-version status '(pingala factorial) 'larceny)))
 

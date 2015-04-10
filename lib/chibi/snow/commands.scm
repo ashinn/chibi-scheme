@@ -1025,7 +1025,12 @@
            `(guile -L ,install-dir -L ,lib-path ,file)
            `(guile -L ,install-dir ,file)))
       ((kawa)
-       `(kawa --script ,file))
+       (if lib-path
+           `(kawa
+             ,(string-append "-Dkawa.import.path=" install-dir ":" lib-path)
+             --r7rs --script ,file)
+           `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
+                  --r7rs --script ,file)))
       ((larceny)
        (if lib-path
            `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
@@ -1136,7 +1141,7 @@
 (define (get-library-extension impl cfg)
   (or (conf-get cfg 'library-extension)
       (case impl
-        ((gauche) "scm")
+        ((gauche kawa) "scm")
         (else "sld"))))
 
 (define (install-with-sudo? cfg path)
