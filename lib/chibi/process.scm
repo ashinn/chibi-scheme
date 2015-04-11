@@ -111,6 +111,37 @@
                    (open-input-file-descriptor (car out-pipe))
                    (open-input-file-descriptor (car err-pipe)))))))))
 
+;;> Executes \var{command} with its input stream fed from \var{in-port}
+;;> and its output and error streams forwarded into \var{out-port} and
+;;> \var{err-port}. Returns the integer exit status of \var{command}.
+;;>
+;;> \var{command} must be a space-separated command string or a list of
+;;> strings for the command and its arguments. \var{in-port} must be an
+;;> open input port, \var{out-port} and \var{err-port} must be ports open
+;;> for output. Any port arugment can also be specified as \scheme{#f}
+;;> which connects the respective stream with /dev/null, providing no
+;;> input for the command or ignoring its output.
+
+(define (process-pipe command in-port out-port err-port)
+  (define (set-non-blocking! fd)
+    (set-file-descriptor-status! fd
+      (bitwise-ior open/non-block (get-file-descriptor-status fd))))
+  (let ((in-port  (or in-port  (make-null-input-port)))
+        (out-port (or out-port (make-null-output-port)))
+        (err-port (or err-port (make-null-output-port))))
+    (call-with-process-io
+      command
+      (lambda (pid in-pipe out-pipe err-pipe)
+        (set-non-blocking! in-pipe)
+        (set-non-blocking! out-pipe)
+        (set-non-blocking! err-pipe)
+        (let loop ((in-done #f) (out-done #f) (err-done #f))
+          (if (and in-done out-done err-done)
+              (cadr (waitpid pid 0))
+              (loop (or in-done  (feed-pipe in-port  in-pipe  #f #t))
+                    (or out-done (feed-pipe out-pipe out-port #t #f))
+                    (or err-done (feed-pipe err-pipe err-port #t #f)))))))))
+
 (define (process->string command)
   (call-with-process-io
    command
