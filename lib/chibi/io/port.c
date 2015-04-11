@@ -439,3 +439,46 @@ int sexp_send_file (int fd, int s, off_t offset, off_t len, off_t* res) {
   return 22; /* EINVAL */
 #endif
 }
+
+#define sexp_clearerr(ctx, x) if (sexp_port_stream(x)) clearerr(sexp_port_stream(x))
+
+sexp sexp_feed_pipe (sexp ctx, sexp self, sexp port_from, sexp port_to, sexp close_from, sexp close_to) {
+  sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, port_from);
+  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port_to);
+  for (;;) {
+    int cr, cw;
+    errno = 0;
+    cr = sexp_read_char(ctx, port_from);
+    if (cr == EOF) {
+      if (errno == EAGAIN)
+        goto will_block;
+      else if (sexp_flush(ctx, port_to))
+        goto will_block;
+      else
+        goto done_piping;
+    }
+    cw = sexp_write_char(ctx, cr, port_to);
+    if (cw == EOF) {
+      sexp_push_char(ctx, cr, port_from);
+      goto will_block;
+    }
+  }
+will_block:
+  sexp_clearerr(ctx, port_from);
+  sexp_clearerr(ctx, port_to);
+  return SEXP_FALSE;
+done_piping:
+  sexp_clearerr(ctx, port_from);
+  sexp_clearerr(ctx, port_to);
+  if (sexp_truep(close_from)) {
+    sexp res = sexp_close_port(ctx, port_from);
+    if (sexp_exceptionp(res))
+      return res;
+  }
+  if (sexp_truep(close_to)) {
+    sexp res = sexp_close_port(ctx, port_to);
+    if (sexp_exceptionp(res))
+      return res;
+  }
+  return SEXP_TRUE;
+}

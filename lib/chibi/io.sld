@@ -14,7 +14,7 @@
           make-filtered-input-port string-count-chars
           open-input-bytevector open-output-bytevector get-output-bytevector
           string->utf8 utf8->string
-          write-string write-u8 read-u8 peek-u8 send-file
+          write-string write-u8 read-u8 peek-u8 send-file feed-pipe
           is-a-socket?
           call-with-input-file call-with-output-file)
   (import (chibi) (chibi ast))

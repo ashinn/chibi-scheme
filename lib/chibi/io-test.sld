@@ -2,7 +2,8 @@
   (export run-tests)
   (import (chibi)
           (chibi io)
-          (only (scheme base) read-bytevector write-bytevector)
+          (only (scheme base) read-bytevector write-bytevector
+            input-port-open? output-port-open?)
           (only (chibi test) test-begin test test-end))
   (begin
     (define (run-tests)
@@ -163,5 +164,31 @@
             (let ((t2 (file-position p)))
               (close-input-port p)
               (list t0 t1 t2)))))
+
+      (let ((str-in (open-input-string "example"))
+            (str-out (open-output-string)))
+        (test #t (feed-pipe str-in str-out #f #f))
+        (test #t (input-port-open? str-in))
+        (test #t (output-port-open? str-out))
+        (test "example" (get-output-string str-out)))
+
+      (let ((vec-in (open-input-bytevector #u8(0 1 2 9 42)))
+            (vec-out (open-output-bytevector)))
+        (test #t (feed-pipe vec-in vec-out #f #f))
+        (test #t (input-port-open? vec-in))
+        (test #t (output-port-open? vec-out))
+        (test #u8(0 1 2 9 42) (get-output-bytevector vec-out)))
+
+      (let ((str-in (open-input-string "example"))
+            (str-out (open-output-string)))
+        (feed-pipe str-in str-out #t #t)
+        (test #f (input-port-open? str-in))
+        (test #f (output-port-open? str-out)))
+
+      (let ((vec-in (open-input-bytevector #u8(1 2 3)))
+            (vec-out (open-output-bytevector)))
+        (feed-pipe vec-in vec-out #t #t)
+        (test #f (input-port-open? vec-in))
+        (test #f (output-port-open? vec-out)))
 
       (test-end))))
