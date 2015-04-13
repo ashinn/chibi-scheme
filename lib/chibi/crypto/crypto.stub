@@ -1,0 +1,19 @@
+(c-include-verbatim "sha2.c")
+
+;;> \procedure{(sha-224 source)}
+;;>
+;;> Computes SHA-224 digest of the \var{source} which can be a string,
+;;> a bytevector, or an input port. Returns a string with hexadecimal
+;;> representation of the digest.
+
+(define-c sexp (sha-224 "sexp_sha_224")
+  ((value ctx sexp) (value self sexp) sexp))
+
+;;> \procedure{(sha-256 source)}
+;;>
+;;> Computes SHA-256 digest of the \var{source} which can be a string,
+;;> a bytevector, or an input port. Returns a string with hexadecimal
+;;> representation of the digest.
+
+(define-c sexp (sha-256 "sexp_sha_256")
+  ((value ctx sexp) (value self sexp) sexp))
