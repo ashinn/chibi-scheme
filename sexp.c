@@ -1505,12 +1505,11 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
 }
 
 int sexp_buffered_write_char (sexp ctx, int c, sexp p) {
-  int res;
   if (sexp_port_offset(p)+1 >= sexp_port_size(p))
-    if ((res = sexp_buffered_flush(ctx, p, 0)))
-      return res;
+    if (sexp_buffered_flush(ctx, p, 0))
+      return EOF;
   sexp_port_buf(p)[sexp_port_offset(p)++] = c;
-  return 0;
+  return c;
 }
 
 int sexp_buffered_write_string_n (sexp ctx, const char *str,

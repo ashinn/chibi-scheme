@@ -14,15 +14,10 @@
 ;; Utility to filter a bytevector to a process and return the
 ;; accumulated output as a new bytevector.
 (define (process-pipe-bytevector cmd bvec)
-  (call-with-process-io
-   cmd
-   (lambda (pid proc-in proc-out proc-err)
-     ;; This could overflow the pipe.
-     (write-bytevector bvec proc-in)
-     (close-output-port proc-in)
-     (let ((res (port->bytevector proc-out)))
-       (waitpid pid 0)
-       res))))
+  (let ((input (open-input-bytevector bvec))
+        (output (open-output-bytevector)))
+    (process-pipe cmd input output #f)
+    (get-output-bytevector output)))
 
 ;;> Gzip compress a string or bytevector in memory.
 

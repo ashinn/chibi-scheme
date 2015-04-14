@@ -62,3 +62,25 @@
   ((value ctx sexp) (value self sexp) (default (current-input-port) sexp)))
 (define-c sexp (peek-u8 "sexp_peek_u8")
   ((value ctx sexp) (value self sexp) (default (current-input-port) sexp)))
+
+;;> \procedure{(feed-pipe from to close-from close-to)}
+;;>
+;;> Feeds data between two \italic{pipe-like} ports (\var{from} and
+;;> \var{to}) until one of them is going to be blocked.
+;;>
+;;> The ports are assumed to be non-blocking; i.e., they must be either
+;;> 'virtual ports' opened by procedures like \scheme{open-input-string},
+;;> or the actual files opened in non-blocking mode.
+;;>
+;;> \scheme{#t} is returned if \var{from} was exhausted; i.e., the input
+;;> pipe was closed and no more data can be transferred between the pipes
+;;> at all. \scheme{#f} is returned if either of the pipes is going to be
+;;> blocked; i.e., no more data is currently available in \var{from}, or
+;;> \var{to} cannot accept any more data at the moment.
+;;>
+;;> Boolean arguments \var{close-from} and \var{close-to} control whether
+;;> the respective ports should be closed when the transfer is complete
+;;> (i.e., when \scheme{#t} is returned).
+
+(define-c sexp (feed-pipe "sexp_feed_pipe")
+  ((value ctx sexp) (value self exp) sexp sexp sexp sexp))
