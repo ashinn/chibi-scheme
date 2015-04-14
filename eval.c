@@ -100,7 +100,7 @@ static sexp sexp_env_cell_loc1 (sexp env, sexp key, int localp, sexp *varenv) {
 
 static sexp sexp_env_cell_loc (sexp ctx, sexp env, sexp key, int localp, sexp *varenv) {
   sexp cell = sexp_env_cell_loc1(env, key, localp, varenv);
-  while (!cell && sexp_synclop(key)) {
+  while (!cell && key && sexp_synclop(key)) {
     if (sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_context_fv(ctx)))
         && sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_synclo_free_vars(key))))
       env = sexp_synclo_env(key);
