@@ -17,12 +17,29 @@
   (call-with-process-io
    cmd
    (lambda (pid proc-in proc-out proc-err)
-     ;; This could overflow the pipe.
-     (write-bytevector bvec proc-in)
-     (close-output-port proc-in)
-     (let ((res (port->bytevector proc-out)))
-       (waitpid pid 0)
-       res))))
+     (let ((len (bytevector-length bvec))
+           (out (open-output-bytevector)))
+       (let lp ((i 0))
+         (cond
+          ((u8-ready? proc-out)
+           (let ((u8 (read-u8 proc-out)))
+             (cond
+              ((eof-object? u8)
+               (get-output-bytevector out))
+              (else
+               (write-u8 u8 out)
+               (lp i)))))
+          ((< i len)
+           (write-u8 (bytevector-u8-ref bvec i) proc-in)
+           (if (= len (+ i 1))
+               (close-output-port proc-in))
+           (lp (+ i 1)))
+          (else
+           ;; Once we've completed sending the input we busy wait
+           ;; until all output has been read.  We can't just waitpid
+           ;; here because the remaining output may still overflow the
+           ;; pipe buffer.
+           (lp i))))))))
 
 ;;> Gzip compress a string or bytevector in memory.
 
