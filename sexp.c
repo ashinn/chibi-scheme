@@ -1705,7 +1705,7 @@ static sexp* sexp_insert_fileno_ephemeron(sexp ctx, sexp vec, sexp eph) {
 }
 
 static void sexp_insert_fileno(sexp ctx, sexp fileno) {
-  sexp *data, *data2, tmp, vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS);
+  sexp *data, tmp, vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS);
   sexp_sint_t i, n2, n = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS));
   if (!sexp_vectorp(vec)) {
     vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
@@ -1719,7 +1719,6 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
       n2 = n * 2;
     tmp = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
         = sexp_make_vector(ctx, sexp_make_fixnum(n2), SEXP_FALSE);
-    data2 = sexp_vector_data(tmp);
     for (i = n = 0; i < sexp_vector_length(vec); i++)
       if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i])
           && sexp_insert_fileno_ephemeron(ctx, tmp, data[i]))
