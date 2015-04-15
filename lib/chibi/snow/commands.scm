@@ -21,24 +21,46 @@
                       (and (pred x) x))))))
          dirs)))
 
-(define (available-implementations cfg)
-  (define (find prog name) (if (find-in-path prog) (list name) '()))
-  (append (cond-expand
-           (chibi (list 'chibi))
-           (else (find "chibi-scheme" 'chibi)))
-          (find "foment" 'foment)
-          (find "gosh" 'gauche)
-          (find "guile" 'guile)
-          (find "kawa" 'kawa)
-          (find "larceny" 'larceny)
-          (find "sagittarius" 'sagittarius)))
+(define known-implementations
+  '((chibi "chibi-scheme")
+    (chicken "chicken")
+    (foment "foment")
+    (gauche "gosh")
+    (guile "guile")
+    (kawa "kawa")
+    (larceny "larceny")
+    (sagittarius "sagittarius")))
 
 (define (conf-selected-implementations cfg)
-  (let ((requested (conf-get-list cfg 'implementations '(chibi)))
-        (available (available-implementations cfg)))
-    (if (memq 'all requested)
-        available
-        (lset-intersection eq? requested available))))
+  (let ((requested (conf-get-list cfg 'implementations '(chibi))))
+    (let lp ((ls (if (memq 'all requested)
+                     (append (map car known-implementations) requested)
+                     requested))
+             (res '()))
+      (cond
+       ((null? ls)
+        (if (null? res)
+            (warn "no implementations available"))
+        (reverse res))
+       ((memq (car ls) res)
+        (lp (cdr ls) res))
+       ((assq (car ls) known-implementations)
+        => (lambda (x)
+             (cond
+              ((or (cond-expand (chibi (eq? 'chibi (car ls))) (else #f))
+                   (find-in-path (cadr x))
+                   (yes-or-no? cfg "Implementation " (car ls) " does not "
+                               " seem to be available, install anyway?"))
+               (lp (cdr ls) (cons (car ls) res)))
+              (else
+               (warn "ignoring unavailable implementation: " (car ls))
+               (lp (cdr ls) res)))))
+       ((yes-or-no? cfg "Unknown implementation: " (car ls)
+                    " - try to install anyway?")
+        (lp (cdr ls) (cons (car ls) res)))
+       (else
+        (warn "ignoring unknown implementation: " (car ls))
+        (lp (cdr ls) res))))))
 
 (define (conf-for-implementation cfg impl)
   (conf-specialize cfg 'implementation impl))
@@ -1012,6 +1034,10 @@
          (if lib-path
              `(,@chibi -A ,install-dir -A ,lib-path ,file)
              `(,@chibi -A ,install-dir ,file))))
+      ((chicken)
+       (if lib-path
+           `(csi -R r7rs -I ,install-dir -I ,lib-path -s ,file)
+           `(csi -R r7rs -I ,install-dir -s ,file)))
       ((foment)
        (if lib-path
            `(foment -A ,install-dir -A ,lib-path ,file)
@@ -1065,7 +1091,13 @@
      ((and test-file command
            (not (or (conf-get cfg '(command install skip-tests?))
                     (conf-get cfg '(command upgrade skip-tests?)))))
-      (or (match (process->output+error+status command)
+      ;; For chicken we need to run the tests from within the package
+      ;; directory to be able to locate the libraries (see chicken
+      ;; trac #736).
+      (or (match ((if (eq? impl 'chicken)
+                      (lambda (f) (with-directory dir f))
+                      (lambda (f) (f)))
+                  (lambda () (process->output+error+status command)))
             ((output error status)
              (cond
               ((or (not (zero? status))
@@ -1130,6 +1162,14 @@
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
    (else (car (get-install-dirs impl cfg)))))
+
+(define (get-install-library-dir impl cfg)
+  (cond
+   ((conf-get cfg 'install-library-dir))
+   ((conf-get cfg 'install-prefix)
+    => (lambda (prefix) (make-path prefix "share/snow" impl)))
+   ((eq? impl 'chicken) (make-path "/usr/local/lib" impl 7))
+   (else (make-path "/usr/local/lib" impl))))
 
 (define (get-install-binary-dir impl cfg)
   (cond
@@ -1225,6 +1265,23 @@
             dest-file))
         include-files)))))
 
+(define (chicken-installer impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (library-base (string-join (map x->string (library-name library)) "."))
+         (install-dir (get-install-library-dir impl cfg))
+         (so-path (string-append library-base ".so"))
+         (imp-path (string-append library-base ".import.scm"))
+         (dest-so-path (make-path install-dir so-path))
+         (dest-imp-path (make-path install-dir imp-path)))
+    (install-directory cfg install-dir)
+    (let ((meta-dir
+           (string-join (map x->string (drop-right (library-name library) 1))
+                        "/")))
+      (install-directory cfg (make-path install-dir meta-dir)))
+    (install-file cfg (make-path dir so-path) dest-so-path)
+    (install-file cfg (make-path dir imp-path) dest-imp-path)
+    (list dest-so-path dest-imp-path)))
+
 (define (default-program-installer impl cfg prog dir)
   (let* ((program-file (get-program-file cfg prog))
          (dest-program-file (program-install-name prog))
@@ -1236,10 +1293,18 @@
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
+    ((chicken) chicken-installer)
     (else default-installer)))
 
+(define (installer-for-implementation impl cfg)
+  (case impl
+    ((chicken) 'chicken)
+    (else 'default)))
+
 (define (install-library impl cfg library dir)
-  (let ((installer (lookup-installer (conf-get cfg 'installer))))
+  (let ((installer
+         (lookup-installer (or (conf-get cfg 'installer)
+                               (installer-for-implementation impl cfg)))))
     (installer impl cfg library dir)))
 
 ;; The default builder just renames files per implementation.
@@ -1294,12 +1359,36 @@
                  '()
                  (list (list library-file dest-library-file)))))))
 
+(define (chicken-builder impl cfg library dir)
+  (let* ((library-file (make-path dir (get-library-file cfg library)))
+         (library-base (string-join (map x->string (library-name library)) "."))
+         (module-name (string-join (map x->string (library-name library)) "."))
+         (so-path (make-path dir (string-append library-base ".so")))
+         (imp-path (string-append library-base ".import.scm")))
+    (with-directory
+     dir
+     (lambda ()
+       (let ((res (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
+                          '-I (path-directory library-file) library-file)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg "chicken failed to build: "
+                              (library-name library-name)
+                              " - install anyway?"))
+              library))))))
+
 (define (lookup-builder builder)
   (case builder
+    ((chicken) chicken-builder)
     (else default-builder)))
 
+(define (builder-for-implementation impl cfg)
+  (case impl
+    ((chicken) 'chicken)
+    (else 'default)))
+
 (define (build-library impl cfg library dir)
-  (let ((builder (lookup-builder (conf-get cfg 'builder))))
+  (let ((builder (lookup-builder (or (conf-get cfg 'builder)
+                                     (builder-for-implementation impl cfg)))))
     (builder impl cfg library dir)))
 
 (define (build-program impl cfg prog dir)
@@ -1366,8 +1455,8 @@
      "pkg"
      (lambda (dir)
        (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
-       (let ((libs (map (lambda (lib) (build-library impl cfg lib dir))
-                        (package-libraries pkg))))
+       (let ((libs (filter-map (lambda (lib) (build-library impl cfg lib dir))
+                               (package-libraries pkg))))
          (if (test-package impl cfg pkg dir)
              (let ((installed-files
                     (append
@@ -1409,10 +1498,14 @@
    (lambda (pkg) (install-package repo impl cfg pkg))
    pkgs))
 
+;; --always-yes implies first candidate, --always-no implies none
 (define (select-best-candidate impl cfg repo candidates)
   (cond
-   ((null? (cdr candidates))
+   ((or (null? (cdr candidates))
+        (conf-get cfg 'always-yes?))
     (car candidates))
+   ((conf-get cfg 'always-no?)
+    #f)
    (else
     (display "Select a package:\n")
     (let lp ((ls candidates) (i 1))
@@ -1457,7 +1550,7 @@
             (lp (cdr ls) res ignored))
            ((and (null? candidates) (assoc (car ls) current))
             (if (member (car ls) lib-names)
-                (warn "skipping already installed library" (car ls)))
+                (warn "skipping already installed library: " (car ls)))
             (lp (cdr ls) res (cons (car ls) ignored)))
            ((and (null? candidates)
                  (not (assoc (car ls) current))
@@ -1468,7 +1561,8 @@
                         (memq (caar ls) (cons impl '(scheme))))
                        (else (eq? (caar ls) 'scheme)))))
             ;; assume certain core libraries already installed
-            (lp (cdr ls) res ignored))
+            ;; (info "assuming core library installed: " (car ls))
+            (lp (cdr ls) res (cons (car ls) ignored)))
            ((and (null? candidates) (member (car ls) lib-names))
             (die 2 "Can't find package: " (car ls)))
            ((null? candidates)
@@ -1478,13 +1572,16 @@
               (lp (cdr ls) res (cons (car ls) ignored)))
              (else
               (die 2 "No candidates, not installing: " (car ls)))))
+           ((select-best-candidate impl cfg repo candidates)
+            => (lambda (pkg)
+                 (lp (append (package-dependencies impl cfg pkg)
+                             (package-test-dependencies impl cfg pkg)
+                             (cdr ls))
+                     (cons pkg res)
+                     ignored)))
            (else
-            (let ((pkg (select-best-candidate impl cfg repo candidates)))
-              (lp (append (package-dependencies impl cfg pkg)
-                          (package-test-dependencies impl cfg pkg)
-                          (cdr ls))
-                  (cons pkg res)
-                  ignored))))))))))
+            (warn "no candidate selected")
+            (lp (cdr ls) res ignored)))))))))
 
 ;; First lookup dependencies for all implementations so we can
 ;; download in a single batch.  Then perform the installations a

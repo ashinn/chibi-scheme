@@ -68,6 +68,8 @@
     (local-user-repository dirname "repository cache dir for non-root users")
     (install-prefix string "prefix directory for installation")
     (install-source-dir dirname "directory to install library source in")
+    (install-library-dir dirname "directory to install shared libraries in")
+    (install-binary-dir dirname "directory to install programs in")
     (library-extension string "the extension to use for library files")
     (installer symbol "name of installer to use")
     (implementations (list symbol) "impls to install for, or 'all'")

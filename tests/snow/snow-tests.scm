@@ -1,15 +1,36 @@
 (import (scheme base) (scheme write) (scheme process-context) (srfi 1)
         (chibi ast) (chibi filesystem) (chibi match) (chibi pathname)
-        (chibi process) (chibi string) (chibi test))
+        (chibi process) (chibi regexp) (chibi string) (chibi test))
 
 (test-begin "snow")
 
 ;; setup a temp root to install packages
-(define install-prefix "tests/snow/tmp-root")
+(define install-prefix (make-path (current-directory) "tests/snow/tmp-root"))
 (define install-libdir (make-path install-prefix "/share/snow/chibi"))
 (if (file-exists? install-prefix)
     (delete-file-hierarchy install-prefix))
 (create-directory install-prefix)
+
+;; setup chicken install directory with minimum required modules
+(define chicken-lib-dir "/usr/local/lib/chicken/7")
+(define chicken-install-dir (make-path install-prefix "/share/snow/chicken"))
+(create-directory* chicken-install-dir)
+(if (file-exists? chicken-lib-dir)
+    (let ((rx-required
+           '(: (or "chicken" "csi" "data-structures" "extras" "files"
+                   "foreign" "irregex" "lolevel" "make" "matchable"
+                   "modules" "numbers" "ports" "posix" "r7rs" "scheme"
+                   "srfi" "tcp" "types" "utils")
+               (or "." "-")
+               (* any))))
+      (for-each
+      (lambda (file)
+        (if (regexp-matches? rx-required file)
+            (system 'cp
+                    (make-path chicken-lib-dir file)
+                    chicken-install-dir)))
+      (directory-files chicken-lib-dir))))
+(setenv "CHICKEN_REPOSITORY" chicken-install-dir)
 
 ;; ignore any personal config settings
 (setenv "SNOW_CHIBI_CONFIG" "no-such-file")
@@ -142,6 +163,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
+
+(snow ,@repo3 update)
+(snow ,@repo3 --implementations "chicken" install pingala.binomial)
+(let ((status (snow-status --implementations "chicken")))
+  (test-assert (installed-version status '(pingala binomial) 'chicken))
+  (test-assert (installed-version status '(pingala factorial) 'chicken)))
 
 (snow ,@repo3 update)
 (snow ,@repo3 --implementations "foment" install pingala.binomial)
