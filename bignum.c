@@ -29,7 +29,7 @@ sexp sexp_make_bignum (sexp ctx, sexp_uint_t len) {
 sexp sexp_fixnum_to_bignum (sexp ctx, sexp a) {
   sexp res = sexp_make_bignum(ctx, 1);
   if (!sexp_exceptionp(res)) {
-    sexp_bignum_data(res)[0] = sexp_unbox_fixnum(sexp_fx_abs(a));
+    sexp_bignum_data(res)[0] = sexp_unbox_fx_abs(a);
     sexp_bignum_sign(res) = sexp_fx_sign(a);
   }
   return res;
@@ -326,9 +326,9 @@ sexp sexp_bignum_add_fixnum (sexp ctx, sexp a, sexp b) {
   sexp_gc_preserve1(ctx, c);
   c = sexp_copy_bignum(ctx, NULL, a, 0);
   if (sexp_bignum_sign(c) == sexp_fx_sign(b))
-    c = sexp_bignum_fxadd(ctx, c, sexp_unbox_fixnum(sexp_fx_abs(b)));
+    c = sexp_bignum_fxadd(ctx, c, sexp_unbox_fx_abs(b));
   else
-    c = sexp_bignum_fxsub(ctx, c, sexp_unbox_fixnum(sexp_fx_abs(b)));
+    c = sexp_bignum_fxsub(ctx, c, sexp_unbox_fx_abs(b));
   sexp_gc_release1(ctx);
   return c;
 }
@@ -367,7 +367,7 @@ sexp sexp_bignum_sub_digits (sexp ctx, sexp dst, sexp a, sexp b) {
 
 sexp sexp_bignum_add_digits (sexp ctx, sexp dst, sexp a, sexp b) {
   sexp_uint_t alen=sexp_bignum_hi(a), blen=sexp_bignum_hi(b),
-    carry=0, i, n, *adata, *bdata, *cdata;
+    carry=0, i, old_a, p_sum, *adata, *bdata, *cdata;
   sexp_gc_var1(c);
   if (alen < blen) return sexp_bignum_add_digits(ctx, dst, b, a);
   sexp_gc_preserve1(ctx, c);
@@ -377,9 +377,11 @@ sexp sexp_bignum_add_digits (sexp ctx, sexp dst, sexp a, sexp b) {
   bdata = sexp_bignum_data(b);
   cdata = sexp_bignum_data(c);
   for (i=0; i<blen; i++) {
-    n = adata[i];
-    cdata[i] = n + bdata[i] + carry;
-    carry = (n > (SEXP_UINT_T_MAX - bdata[i] - carry) ? 1 : 0);
+    old_a = adata[i]; /* adata may alias cdata */
+    p_sum = adata[i] + bdata[i];
+    cdata[i] = p_sum + carry;
+    carry = (old_a > (SEXP_UINT_T_MAX - bdata[i]) ? 1 : 0)
+          + (p_sum > (SEXP_UINT_T_MAX - carry) ? 1 : 0);
   }
   for ( ; carry && (i<alen); i++) {
     carry = (cdata[i] == SEXP_UINT_T_MAX ? 1 : 0);
@@ -599,7 +601,7 @@ sexp sexp_bignum_remainder (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
-  sexp_sint_t e = sexp_unbox_fixnum(sexp_fx_abs(b));
+  sexp_sint_t e = sexp_unbox_fx_abs(b);
   sexp_gc_var2(res, acc);
   sexp_gc_preserve2(ctx, res, acc);
   res = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
@@ -1390,7 +1392,7 @@ sexp sexp_mul (sexp ctx, sexp a, sexp b) {
     r = (a==SEXP_ZERO ? a : sexp_make_flonum(ctx, sexp_fixnum_to_double(a)*sexp_flonum_value(b)));
     break;
   case SEXP_NUM_FIX_BIG:
-    r = sexp_bignum_fxmul(ctx, NULL, b, sexp_unbox_fixnum(sexp_fx_abs(a)), 0);
+    r = sexp_bignum_fxmul(ctx, NULL, b, sexp_unbox_fx_abs(a), 0);
     sexp_bignum_sign(r) = sexp_fx_sign(a) * sexp_bignum_sign(b);
     r = sexp_bignum_normalize(r);
     break;
@@ -1473,7 +1475,7 @@ sexp sexp_div (sexp ctx, sexp a, sexp b) {
     tmp = sexp_make_ratio(ctx, a, b);
     r = sexp_ratio_normalize(ctx, tmp, SEXP_FALSE);
 #else
-    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b)); 
+    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)/sexp_bignum_to_double(b));
 #endif
     break;
   case SEXP_NUM_FLO_FIX:
