@@ -1,5 +1,5 @@
 
 (define-library (chibi crypto sha2)
-  (import (scheme base) (srfi 33) (chibi bytevector))
+  (import (chibi io))
   (export sha-224 sha-256)
-  (include "sha2.scm"))
+  (include-shared "crypto"))
