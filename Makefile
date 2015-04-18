@@ -39,7 +39,7 @@ INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
 MODULE_DOCS := ast config disasm equiv filesystem generic heap-stats io \
 	loop match mime modules net pathname process repl scribble stty \
 	system test time trace type-inference uri weak monad/environment \
-	show show/base
+	show show/base crypto/sha2
 
 HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
