@@ -195,6 +195,34 @@ typedef int sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 4)
 #endif
 
+#ifdef SEXP_USE_INTTYPES
+# include <inttypes.h>
+# ifdef UINT8_MAX
+#  define SEXP_UINT8_DEFINED 1
+typedef uint8_t  sexp_uint8_t;
+# endif
+# ifdef UINT32_MAX
+#  define SEXP_UINT32_DEFINED 1
+typedef uint32_t sexp_uint32_t;
+# endif
+#else
+# include <limits.h>
+# if UCHAR_MAX == 255
+#  define SEXP_UINT8_DEFINED 1
+typedef unsigned char sexp_uint8_t;
+# endif
+# if UINT_MAX == 4294967295U
+#  define SEXP_UINT32_DEFINED 1
+typedef unsigned int sexp_uint32_t;
+# elif ULONG_MAX == 4294967295UL
+#  define SEXP_UINT32_DEFINED 1
+typedef unsigned long sexp_uint32_t;
+# elif USHRT_MAX == 4294967295U
+#  define SEXP_UINT32_DEFINED 1
+typedef unsigned short sexp_uint32_t;
+# endif
+#endif
+
 #if SEXP_USE_LONG_PROCEDURE_ARGS
 typedef int sexp_proc_num_args_t;
 #else

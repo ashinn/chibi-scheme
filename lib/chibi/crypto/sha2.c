@@ -2,7 +2,9 @@
 /* Copyright (c) 2015 Alexei Lozovsky.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
-#include "integers.h"
+#if !(SEXP_UINT8_DEFINED && SEXP_UINT32_DEFINED)
+# error SHA-2 requires exact 8-bit and 32-bit integers to be available
+#endif
 
 /*
  * SHA-2 algorithms are described in RFC 6234:
