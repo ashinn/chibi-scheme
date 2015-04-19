@@ -133,39 +133,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Package - generate a package from one or more libraries.
 
-(define (tar-file? file)
-  (or (equal? (path-extension file) "tgz")
-      (and (member (path-extension file) '("gz" "bz2"))
-           (equal? (path-extension (path-strip-extension file)) "tar"))))
-
-(define (package-file-meta file)
-  (and
-   (tar-file? file)
-   (let* ((unzipped-file
-           (if (member (path-extension file) '("tgz" "gz"))
-               (gunzip (let* ((in (open-binary-input-file file))
-                              (res (port->bytevector in)))
-                         (close-input-port in)
-                         res))
-               file))
-          (package-file
-           (find
-            (lambda (x)
-              (and (equal? "package.scm" (path-strip-directory x))
-                   (equal? "." (path-directory (path-directory x)))))
-            (tar-files unzipped-file))))
-     (and package-file
-          (guard (exn (else #f))
-            (let* ((str (utf8->string
-                         (tar-extract-file unzipped-file package-file)))
-                   (package (read (open-input-string str))))
-              (and (pair? package)
-                   (eq? 'package (car package))
-                   package)))))))
-
-(define (package-file? file)
-  (and (package-file-meta file) #t))
-
 (define (x->string x)
   (cond ((string? x) x)
         ((symbol? x) (symbol->string x))
@@ -252,7 +219,10 @@
 
 (define (extract-program-dependencies file . o)
   (let ((depends (or (and (pair? o) (car o)) 'depends)))
-    (let lp ((ls (guard (exn (else '())) (file->sexp-list file)))
+    (let lp ((ls (guard (exn (else '()))
+                   (if (and (pair? file) (eq? 'inline (car file)))
+                       (port->sexp-list (open-input-string (cadr file)))
+                       (file->sexp-list file))))
              (deps '())
              (cond-deps '()))
       (cond
@@ -336,38 +306,59 @@
 
 ;; We want to automatically bundle (foo bar *) when packaging (foo bar)
 ;; if it's already in the same directory.
-(define (submodule->path base file lib dep)
+(define (submodule->path cfg base file lib dep)
   (and base
        (> (length dep) (length base))
        (equal? base (take dep (length base)))
        ;; TODO: find-library(-relative)
        (let* ((dir (library-path-base file lib))
               (dep-file (make-path dir (string-append
-                                        (library-name->path dep)
+                                        (library-name->path cfg dep)
                                         ".sld"))))
          (and (file-exists? dep-file) dep-file))))
 
-(define (package-docs cfg spec libs)
-  (guard (exn (else '()))
+(define (extract-module-file-docs cfg path)
+  (define (object-source x)
+    (cond ((bytecode? x)
+           (let ((src (bytecode-source x)))
+             (if (and (vector? src) (positive? (vector-length src)))
+                 (vector-ref src 0)
+                 src)))
+          ((procedure? x) (object-source (procedure-code x)))
+          ((macro? x) (macro-source x))
+          (else #f)))
+  (let* ((lib+files (extract-library cfg path))
+         (lib-name (library-name (car lib+files)))
+         (exports (cond ((assq 'export (cdar lib+files)) => cdr) (else '())))
+         (mod (guard (exn (else #f))
+                #f))
+         (defs (map (lambda (x)
+                      (let ((val (and mod (module-ref mod x))))
+                        `(,x ,val ,(object-source val))))
+                    exports)))
+    (reverse (extract-file-docs mod path defs #f 'module))))
+
+(define (package-docs cfg spec libs lib-dirs)
+  (guard (exn (else (warn "package-docs failed" exn)
+                    '()))
     (cond
      ((conf-get cfg '(command package doc)) => list)
      ((conf-get cfg '(command package doc-from-scribble))
       (filter-map
        (lambda (lib)
-         (let* ((lib+files (extract-library cfg lib))
-                (lib-name (library-name (car lib+files)))
-                ;; TODO: load ignoring path and use extract-file-docs
-                (docs (extract-module-docs lib-name #f)))
+         (let ((lib-name (library-file-name lib))
+               (docs (extract-module-file-docs cfg lib)))
            (and (pair? docs)
                 (not (and (= 1 (length docs)) (eq? 'subsection (caar docs))))
                 `(inline
-                  ,(string-append (library-name->path lib-name) ".html")
+                  ,(string-append (library-name->path cfg lib-name) ".html")
                   ,(call-with-output-string
                      (lambda (out)
                        (sxml-display-as-html
                         (generate-docs
                          `((title ,(write-to-string lib-name)) ,docs)
-                         (make-module-doc-env lib-name))
+                         (guard (exn (else (make-default-doc-env)))
+                           (make-module-doc-env lib-name)))
                         out)))))))
        libs))
      (else '()))))
@@ -418,38 +409,70 @@
                 package-spec)
         (package-output-version cfg)))))
 
+(define (replace-library-pattern pat base-lib)
+  (case (and (pair? pat) (car pat))
+    ((append-to-last)
+     (append (drop-right base-lib 1)
+             (list
+              (string->symbol
+               (string-append (x->string (last base-lib))
+                              (x->string (cadr pat)))))))
+    ((append) (append base-lib (cdr pat)))
+    ((quote) (cadr pat))
+    (else pat)))
+
+(define (find-library-from-pattern cfg pat lib . o)
+  (and pat
+       (if (and (pair? pat) (eq? 'or (car pat)))
+           (any (lambda (pat) (find-library-from-pattern pat lib)) (cdr pat))
+           (let ((lib-name (replace-library-pattern pat lib)))
+             (apply find-library-file cfg lib-name o)))))
+
+(define (tests-from-libraries cfg libs lib-dirs)
+  (let ((pat (conf-get cfg '(command package test-library))))
+    (filter-map
+     (lambda (lib) (find-library-from-pattern cfg pat lib lib-dirs))
+     libs)))
+
+(define (test-program-from-libraries lib-files)
+  (call-with-output-string
+    (lambda (out)
+      (let* ((lib-names (filter-map library-file-name lib-files))
+             (run-names
+              (map (lambda (lib)
+                     (string->symbol
+                      (string-append "run-"
+                                     (string-join (map x->string lib) "-")
+                                     "-tests")))
+                   lib-names)))
+        (for-each
+         (lambda (lib run)
+           (write `(import (rename ,lib run-tests ,run)) out)
+           (newline out))
+         lib-names
+         run-names)
+        (newline out)
+        (for-each (lambda (run) (write `(,run) out) (newline out)) run-names)))))
+
 (define (package-spec+files cfg spec libs)
   (let* ((recursive? (conf-get cfg '(command package recursive?)))
          (programs (conf-get-list cfg '(command package programs)))
-         (docs (package-docs cfg spec libs))
-         (desc (package-description cfg spec libs docs))
-         (test (package-test cfg))
-         (test-depends
-          (if test (extract-program-dependencies test 'test-depends) '()))
          (authors (conf-get-list cfg '(command package authors)))
-         (maintainers (conf-get-list cfg '(command package maintainers)))
+         (test (package-test cfg))
          (version (package-output-version cfg))
+         (maintainers (conf-get-list cfg '(command package maintainers)))
          (license (package-license cfg)))
     (let lp ((ls (map (lambda (x) (cons x #f)) libs))
              (progs programs)
              (res
               `(,@(if license `((license ,license)) '())
-                ,@(if (pair? docs)
-                      `((manual ,@(map
-                                   (lambda (x)
-                                     (path-strip-leading-parents
-                                      (if (pair? x) (cadr x) x)))
-                                   docs)))
-                      '())
-                ,@(if desc `((description ,desc)) '())
-                ,@(if test `((test ,(path-strip-leading-parents test))) '())
-                ,@test-depends
                 ,@(if version `((version ,version)) '())
                 ,@(if (pair? authors) `((authors ,@authors)) '())
                 ,@(if (pair? maintainers) `((maintainers ,@maintainers)) '())))
-             (files
-              `(,@(if test (list test) '())
-                ,@docs)))
+             (files '())
+             (lib-dirs '())
+             (test test)
+             (extracted-tests? #f))
       (cond
        ((pair? ls)
         (let* ((lib+files (extract-library cfg (caar ls)))
@@ -459,14 +482,18 @@
                (subdeps (if recursive?
                             (filter-map
                              (lambda (x)
-                               (submodule->path base (caar ls) name x))
+                               (submodule->path cfg base (caar ls) name x))
                              (cond ((assq 'depends (cdr lib)) => cdr)
                                    (else '())))
                             '())))
           (lp (append (map (lambda (x) (cons x base)) subdeps) (cdr ls))
               progs
               (cons lib res)
-              (append (reverse (cdr lib+files)) files))))
+              (append (reverse (cdr lib+files)) files)
+              (delete-duplicates
+               (cons (library-path-base (caar ls) name) lib-dirs))
+              test
+              extracted-tests?)))
        ((pair? progs)
         (lp ls
             (cdr progs)
@@ -474,11 +501,55 @@
                     (path ,(path-strip-leading-parents (car progs)))
                     ,@(extract-program-dependencies (car progs)))
                   res)
-            (cons (car progs) files)))
+            (cons (car progs) files)
+            lib-dirs
+            test
+            extracted-tests?))
        ((null? res)
         (die 2 "No packages generated"))
+       ((and (not test)
+             (not extracted-tests?)
+             (tests-from-libraries
+              cfg
+              (filter-map (lambda (x) (and (library? x) (library-name x)))
+                          res)
+              lib-dirs))
+        => (lambda (tests-from-libraries)
+             (if (pair? tests-from-libraries)
+                 (lp (append (map (lambda (x) (cons x #f)) tests-from-libraries)
+                             ls)
+                     progs
+                     res
+                     files
+                     lib-dirs
+                     `(inline
+                       "run-tests.scm"
+                       ,(test-program-from-libraries tests-from-libraries))
+                     #t)
+                 (lp ls progs res files lib-dirs test #t))))
        (else
-        (cons (cons 'package (reverse res)) (reverse files)))))))
+        (let* ((docs (package-docs cfg spec libs lib-dirs))
+               (desc (package-description cfg spec libs docs))
+               (test-depends
+                (if test
+                    (extract-program-dependencies test 'test-depends)
+                    '())))
+          (cons `(package
+                  ,@(reverse res)
+                  ,@(if (pair? docs)
+                        `((manual ,@(map
+                                     (lambda (x)
+                                       (path-strip-leading-parents
+                                        (if (pair? x) (cadr x) x)))
+                                     docs)))
+                        '())
+                  ,@(if desc `((description ,desc)) '())
+                  ,@(if test
+                        `((test ,(path-strip-leading-parents
+                                  (if (pair? test) (cadr test) test))))
+                        '())
+                  ,@test-depends)
+                (reverse (if test (cons test (append docs files)) files)))))))))
 
 (define (create-package spec files path)
   (gzip
@@ -787,7 +858,7 @@
   (warn-delete-file (make-path (get-install-source-dir impl cfg)
                                (get-package-meta-file cfg pkg)))
   (let ((dir (make-path (get-install-source-dir impl cfg)
-                        (package->path pkg))))
+                        (package->path cfg pkg))))
     (if (and (file-directory? dir)
              (= 2 (length (directory-files dir))))
         (delete-directory dir))))

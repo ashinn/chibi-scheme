@@ -1,0 +1,18 @@
+(define-library (euler interest-test)
+  (export run-tests)
+  (import (scheme base) (scheme process-context) (euler interest))
+  (begin
+    (define (test expect expr)
+      (cond
+       ((not (or (equal? expect expr)
+                 (and (or (inexact? expect) (inexact? expr))
+                      (let ((a (min expect expr))
+                            (b (max expect expr)))
+                        (< (abs (/ (- a b) b)) 0.000001)))))
+        (write-string "FAIL\n")
+        (exit 1))))
+    (define (run-tests)
+      (test 2.0 (compound-interest 1 1.0 1 1))
+      (test 2.25 (compound-interest 1 1.0 1 2))
+      (test 2.4414 (compound-interest 1 1.0 1 4))
+      (test 2.71828 (compound-interest 1 1.0 1)))))

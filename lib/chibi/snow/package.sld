@@ -8,17 +8,23 @@
           package-digest-mismatches package-signature-mismatches
           package-digest-ok? package-signature-ok?
           package->path package-name->meta-file
+          package-file-meta package-file? package-file-top-directory
+          package-file-unzipped
           get-package-meta-file get-library-meta-file
-          library-name->path library->path get-library-file
+          library-name->path library->path get-library-file find-library-file
           library-url library-name parse-library-name library-name->path
           library-analyze library-include-files library-dependencies
-          library-rewrite-includes
+          library-rewrite-includes library-file-name
           get-program-file program-name program-install-name
           invalid-package-reason valid-package?
           invalid-library-reason valid-library?
           repo-find-publisher lookup-digest rsa-identity=?
           extract-rsa-private-key extract-rsa-public-key)
-  (import (chibi)
+  (import (scheme base)
+          (scheme char)
+          (scheme file)
+          (scheme read)
+          (scheme write)
           (srfi 1)
           (chibi snow interface)
           (chibi bytevector)
@@ -26,7 +32,11 @@
           (chibi crypto md5)
           (chibi crypto rsa)
           (chibi crypto sha2)
+          (chibi filesystem)
+          (chibi io)
           (chibi pathname)
           (chibi string)
-          (chibi uri))
+          (chibi tar)
+          (chibi uri)
+          (chibi zlib))
   (include "package.scm"))

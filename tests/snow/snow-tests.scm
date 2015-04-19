@@ -1,6 +1,8 @@
 (import (scheme base) (scheme write) (scheme process-context) (srfi 1)
-        (chibi ast) (chibi filesystem) (chibi match) (chibi pathname)
-        (chibi process) (chibi regexp) (chibi string) (chibi test))
+        (chibi ast) (chibi config) (chibi filesystem) (chibi match)
+        (chibi pathname) (chibi process) (chibi regexp) (chibi string)
+        (chibi io) (chibi tar) (chibi test)
+        (chibi snow package))
 
 (test-begin "snow")
 
@@ -90,6 +92,13 @@
 (define (installed-version status lib-name . o)
   (cond ((apply installed-status status lib-name o) => cadr)
         (else #f)))
+
+(define (snowball-test->sexp-list pkg file)
+  (let ((path (make-path (package-file-top-directory file)
+                         (assoc-get pkg 'test))))
+    (call-with-input-string
+        (utf8->string (tar-extract-file (package-file-unzipped file) path))
+      port->sexp-list)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; basics
@@ -194,5 +203,29 @@
   (test-assert (installed-version status '(pingala factorial) 'kawa))
   (test-assert (installed-version status '(pingala binomial) 'larceny))
   (test-assert (installed-version status '(pingala factorial) 'larceny)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; smart packaging
+
+(define repo4 '(--repository-uri tests/snow/repo4/repo.scm))
+(setenv "SNOW_CHIBI_CONFIG" "tests/snow/repo4/config.scm")
+
+(snow ,@repo4 package --output-dir tests/snow/repo4/
+      tests/snow/repo4/euler/interest.sld)
+(let* ((pkg-file "tests/snow/repo4/euler-interest-2.3.tgz")
+       (pkg (package-file-meta pkg-file))
+       (libs (package-libraries pkg)))
+  (test 2 (length libs))
+  (for-each
+   (lambda (lib)
+     (test "Leonhard Euler" (assoc-get lib 'author)))
+   libs)
+  (test 'bsd (assoc-get pkg 'license))
+  (test "Library for computing (optionally continuously) compounded interest."
+      (assoc-get pkg 'description))
+  (test '((import (rename (euler interest-test)
+                          run-tests run-euler-interest-test-tests))
+          (run-euler-interest-test-tests))
+      (snowball-test->sexp-list pkg pkg-file)))
 
 (test-end)

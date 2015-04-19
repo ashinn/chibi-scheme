@@ -405,8 +405,10 @@ div#footer {padding-bottom: 50px}
       (if (pair? p) (cons `(p ,@(reverse p)) res) res))
     (define (inline? x)
       (or (string? x)
-          (and (pair? x) (symbol? (car x))
-               (memq (car x) '(a b i u span code small large sub sup em)))))
+          (and (pair? x)
+               (or (string? (car x))
+                   (memq (car x)
+                         '(a b i u span code small large sub sup em))))))
     (define (enclosing? x)
       (and (pair? x) (symbol? (car x))
            (memq (car x) '(div body))))
@@ -533,7 +535,7 @@ div#footer {padding-bottom: 50px}
                          (list opts)))))))))))))
 
 (define (get-procedure-signature mod id proc)
-  (cond ((and (procedure? proc) (procedure-signature id mod))
+  (cond ((and mod (procedure? proc) (procedure-signature id mod))
          => (lambda (sig)
               (list (cons (or id (procedure-name proc)) (cdr sig)))))
         (else '())))
@@ -840,7 +842,7 @@ div#footer {padding-bottom: 50px}
                             mod id (caar procs) (cdar procs) form))
                           (else
                            (get-signature
-                            mod id (and id (module-ref mod id)) #f form)))))
+                            mod id (and id mod (module-ref mod id)) #f form)))))
                    (cond
                     ((and strict?
                           (or (not (pair? sigs)) (not (assq (caar sigs) defs))))

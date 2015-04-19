@@ -226,7 +226,10 @@
 (define (package-installed-files pkg)
   (or (and (pair? pkg) (assoc-get-list (cdr pkg) 'installed-files)) '()))
 
-(define (library-name->path name)
+(define (library-separator cfg)
+  (conf-get cfg 'library-separator "/"))
+
+(define (library-name->path cfg name)
   (if (null? name)
       ""
       (call-with-output-string
@@ -234,24 +237,24 @@
           (let lp ((name name))
             (display (car name) out)
             (cond ((pair? (cdr name))
-                   (write-char #\/ out)
+                   (display (library-separator cfg) out)
                    (lp (cdr name)))))))))
 
 ;; map a library to the path name it would be found in (sans extension)
-(define (library->path library)
-  (library-name->path (library-name library)))
+(define (library->path cfg library)
+  (library-name->path cfg (library-name library)))
 
 ;; find the library declaration file for the given library
 (define (get-library-file cfg library)
   (or (assoc-get library 'path)
-      (string-append (library->path library) "."
+      (string-append (library->path cfg library) "."
                      (conf-get cfg 'library-extension "sld"))))
 
-(define (package->path pkg)
-  (library-name->path (package-name pkg)))
+(define (package->path cfg pkg)
+  (library-name->path cfg (package-name pkg)))
 
 (define (package-name->meta-file cfg name)
-  (let ((path (library-name->path name)))
+  (let ((path (library-name->path cfg name)))
     (string-append (path-directory path) "/."
                    (path-strip-directory path) ".meta")))
 
@@ -260,6 +263,71 @@
 
 (define (get-library-meta-file cfg lib)
   (package-name->meta-file cfg (library-name lib)))
+
+(define (library-file-name file)
+  (guard (exn (else #f))
+    (let ((x (call-with-input-file file read)))
+      (and (pair? x)
+           (memq (car x) '(define-library library))
+           (list? (cadr x))
+           (cadr x)))))
+
+(define (find-library-file cfg lib-name . o)
+  (let ((base (string-append (library-name->path cfg lib-name)
+                             "."
+                             (conf-get cfg 'library-extension "sld"))))
+    (let lp ((dirs (append (or (and (pair? o) (car o)) '())
+                           (cons "." (conf-get-list cfg 'library-path )))))
+      (and (pair? dirs)
+           (let ((path (make-path (car dirs) base)))
+             (or (and (file-exists? path)
+                      (equal? lib-name (library-file-name path))
+                      path)
+                 (lp (cdr dirs))))))))
+
+(define (tar-file? file)
+  (or (equal? (path-extension file) "tgz")
+      (and (member (path-extension file) '("gz" "bz2"))
+           (equal? (path-extension (path-strip-extension file)) "tar"))))
+
+(define (package-file-unzipped file)
+  (and (tar-file? file)
+       (if (member (path-extension file) '("tgz" "gz"))
+           (gunzip (let* ((in (open-binary-input-file file))
+                          (res (port->bytevector in)))
+                     (close-input-port in)
+                     res))
+           file)))
+
+(define (package-file-meta file)
+  (let* ((unzipped-file (package-file-unzipped file))
+         (package-file
+          (and unzipped-file
+               (find
+                (lambda (x)
+                  (and (equal? "package.scm" (path-strip-directory x))
+                       (equal? "." (path-directory (path-directory x)))))
+                (tar-files unzipped-file)))))
+    (and package-file
+         (guard (exn (else #f))
+           (let* ((str (utf8->string
+                        (tar-extract-file unzipped-file package-file)))
+                  (package (read (open-input-string str))))
+             (and (pair? package)
+                  (eq? 'package (car package))
+                  package))))))
+
+(define (package-file? file)
+  (and (package-file-meta file) #t))
+
+(define (package-file-top-directory file)
+  (let ((unzipped-file (package-file-unzipped file)))
+    (and unzipped-file
+         (let lp ((file (car (tar-files unzipped-file))))
+           (let ((dir (path-directory file)))
+             (if (member dir '("" "." "/"))
+                 file
+                 (lp dir)))))))
 
 ;; libraries
 
@@ -384,7 +452,7 @@
 (define (get-program-file cfg prog)
   (cond ((assoc-get prog 'path))
         ((assoc-get prog 'name)
-         => (lambda (name) (library-name->path (last name))))
+         => (lambda (name) (library-name->path cfg (list (last name)))))
         (else (error "program missing path: " prog))))
 
 (define (program-install-name prog)
