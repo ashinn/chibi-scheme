@@ -331,7 +331,9 @@
          (lib-name (library-name (car lib+files)))
          (exports (cond ((assq 'export (cdar lib+files)) => cdr) (else '())))
          (mod (guard (exn (else #f))
-                #f))
+                (begin
+                  (load path (environment '(meta)))
+                  (load-module lib-name))))
          (defs (map (lambda (x)
                       (let ((val (and mod (module-ref mod x))))
                         `(,x ,val ,(object-source val))))
