@@ -41,10 +41,11 @@
    (arithmetic-shift n (- k))))
 
 (define (hex32 num)
-  (let ((res (make-string 8 #\0))
-        (num (integer->hex-string num)))
-    (string-copy! res (- 8 (string-length num)) num)
-    res))
+  (let* ((res (number->string num 16))
+         (len (string-length res)))
+    (if (>= len 8)
+        res
+        (string-append (make-string (- 8 len) #\0) res))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

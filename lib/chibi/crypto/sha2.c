@@ -54,16 +54,9 @@ struct sha_context {
   enum sha_type type;
   char sealed;
   sexp_uint_t len;
-  union _sha_data {
-    struct _sha_256 {
-      sexp_uint8_t buffer[64];
-      sexp_uint32_t hash[8];
-    } sha_256;
-  } data;
+  sexp_uint32_t hash256[8];
+  sexp_uint8_t buffer[128]; /* enough for all SHA-2 */
 };
-
-#define sha_256_buffer(c) ((c)->data.sha_256.buffer)
-#define sha_256_hash(c) ((c)->data.sha_256.hash)
 
 /* = SHA-224/256 implementation ===================================== */
 
@@ -146,10 +139,10 @@ sexp sexp_start_sha (sexp ctx, sexp self, unsigned type, struct sha_context* v) 
   sha->type = type;
   switch (type) {
   case SHA_TYPE_224:
-    memcpy(sha_256_hash(sha), h224, sizeof(h224));
+    memcpy(sha->hash256, h224, sizeof(h224));
     break;
   case SHA_TYPE_256:
-    memcpy(sha_256_hash(sha), h256, sizeof(h256));
+    memcpy(sha->hash256, h256, sizeof(h256));
     break;
   default:
     break;
@@ -170,20 +163,20 @@ static sexp sha_224_256_add_bytes (struct sha_context *sha,
   sha->len += len;
   if (buf_offset) {
     while ((buf_offset < 64) && (src_offset < len))
-      sha_256_buffer(sha)[buf_offset++] = src[src_offset++];
+      sha->buffer[buf_offset++] = src[src_offset++];
     if (buf_offset == 64)
-      sha_224_256_round(sha_256_buffer(sha), sha_256_hash(sha));
+      sha_224_256_round(sha->buffer, sha->hash256);
     else
       return SEXP_VOID;
   }
   /* Process whole chunks without copying them */
   if (len >= 64) {
     for ( ; src_offset <= (len - 64); src_offset += 64)
-      sha_224_256_round(src + src_offset, sha_256_hash(sha));
+      sha_224_256_round(src + src_offset, sha->hash256);
   }
   /* Copy the remainder into the buffer */
   if (src_offset < len)
-    memcpy(sha_256_buffer(sha) + buf_offset, src + src_offset, len - src_offset);
+    memcpy(sha->buffer + buf_offset, src + src_offset, len - src_offset);
   return SEXP_VOID;
 }
 
@@ -239,8 +232,8 @@ sexp sexp_get_sha (sexp ctx, sexp self, struct sha_context *sha) {
     switch (sha->type) {
     case SHA_TYPE_224:
     case SHA_TYPE_256:
-      sha_224_256_remainder(sha_256_buffer(sha), sha->len % 64,
-                            sha->len * 8, sha_256_hash(sha));
+      sha_224_256_remainder(sha->buffer, sha->len % 64,
+                            sha->len * 8, sha->hash256);
       break;
     default:
       break;
@@ -248,9 +241,9 @@ sexp sexp_get_sha (sexp ctx, sexp self, struct sha_context *sha) {
   }
   switch (sha->type) {
   case SHA_TYPE_224:
-    return sha_224_256_hash_string(ctx, self, sha_256_hash(sha), 7);
+    return sha_224_256_hash_string(ctx, self, sha->hash256, 7);
   case SHA_TYPE_256:
-    return sha_224_256_hash_string(ctx, self, sha_256_hash(sha), 8);
+    return sha_224_256_hash_string(ctx, self, sha->hash256, 8);
   default:
     return sexp_xtype_exception(ctx, self, "unexpected context type",
                                 sexp_make_fixnum(sha->type));

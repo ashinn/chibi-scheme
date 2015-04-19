@@ -2,7 +2,7 @@
 ;; Copyright (c) 2015 Alexei Lozovsky.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-(define (procees-sha-data! context src)
+(define (process-sha-data! context src)
   (cond ((or (bytevector? src) (string? src))
          (add-sha-data! context src))
         ((input-port? src)
@@ -15,10 +15,10 @@
 
 (define (sha-224 src)
   (let ((context (start-sha type-sha-224)))
-    (procees-sha-data! context src)
+    (process-sha-data! context src)
     (get-sha context)))
 
 (define (sha-256 src)
   (let ((context (start-sha type-sha-256)))
-    (procees-sha-data! context src)
+    (process-sha-data! context src)
     (get-sha context)))

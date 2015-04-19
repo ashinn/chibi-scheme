@@ -1,13 +1,13 @@
 
 (define-library (chibi crypto sha2)
+  (import (scheme base))
   (export sha-224 sha-256)
   (cond-expand
    (chibi
-    (import (scheme base))
     (include "sha2-native.scm")
     (include-shared "crypto"))
    (else
-    (import (scheme base) (srfi 33) (chibi bytevector))
+    (import (srfi 33) (chibi bytevector))
     (include "sha2.scm"))))
 
 ;;> \procedure{(sha-224 src)}
