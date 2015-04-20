@@ -1,0 +1,39 @@
+(c-include-verbatim "sha2.c")
+
+;; \procedure{(start-sha type)}
+;;
+;; Allocates a new opaque computation context for a SHA-\var{type}
+;; digest, where \var{type} can be one of the following constants:
+;; \scheme{type-sha-224}, \scheme{type-sha-256}.
+
+(define-c-struct sha_context)
+
+(define-c sexp (start-sha "sexp_start_sha")
+  ((value ctx sexp) (value self sexp) unsigned-int (value NULL sha_context)))
+
+(define-c-const unsigned-int (type-sha-224 "SHA_TYPE_224"))
+(define-c-const unsigned-int (type-sha-256 "SHA_TYPE_256"))
+
+;; \procedure{(add-sha-data! sha-context data)}
+;;
+;; Adds a new piece of data into the given context. \var{data} can be
+;; a bytevector or a string. Bytevectors are added as sequences bytes.
+;; Strings are added as sequences of byte representations of their
+;; chars (which is either UTF-8 or ASCII code point sequence, depending
+;; on whether Chibi was compiled with Unicode support).
+;;
+;; It is an error to add more data into a context that was finalized
+;; by \scheme{get-sha}. This procedure returns an unspecified value.
+
+(define-c sexp (add-sha-data! "sexp_add_sha_data")
+  ((value ctx sexp) (value self sexp) sha_context sexp))
+
+;; \procedure{(get-sha sha-context)}
+;;
+;; Finalizes computation and returns resulting SHA-2 digest as a hex
+;; string (in lowercase). It is not possible to add more data with
+;; \scheme{add-sha-data!} after this call. Though, digest string can
+;; be retrieved multiple times from the same computation context.
+
+(define-c sexp (get-sha "sexp_get_sha")
+  ((value ctx sexp) (value self sexp) sha_context))

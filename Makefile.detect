@@ -108,7 +108,7 @@ RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
 endif
 
 ########################################################################
-# Check for NTP (who needs autoconf?)
+# Check for headers (who needs autoconf?)
 
 ifndef $(SEXP_USE_NTP_GETTIME)
 SEXP_USE_NTP_GETTIME := $(shell echo "main(){struct ntptimeval n; ntp_gettime(&n);}" | gcc -fsyntax-only -include sys/timex.h -xc - >/dev/null 2>/dev/null && echo 1 || echo 0)
@@ -116,4 +116,12 @@ endif
 
 ifeq ($(SEXP_USE_NTP_GETTIME),1)
 CPPFLAGS += -DSEXP_USE_NTPGETTIME
+endif
+
+ifndef $(SEXP_USE_INTTYPES)
+SEXP_USE_INTTYPES := $(shell echo "main(){int_least8_t x;}" | gcc -fsyntax-only -include inttypes.h -xc - >/dev/null 2>/dev/null && echo 1 || echo 0)
+endif
+
+ifeq ($(SEXP_USE_INTTYPES),1)
+CPPFLAGS += -DSEXP_USE_INTTYPES
 endif

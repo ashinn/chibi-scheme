@@ -40,7 +40,12 @@
    (u32 (arithmetic-shift n (- 32 k)))
    (arithmetic-shift n (- k))))
 
-(define hex integer->hex-string)
+(define (hex32 num)
+  (let* ((res (number->string num 16))
+         (len (string-length res)))
+    (if (>= len 8)
+        res
+        (string-append (make-string (- 8 len) #\0) res))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -152,8 +157,8 @@
                 (if (>= n 56)
                     (chunk (+ i n) 0 a b c d e f g h)
                     (string-append
-                     (hex a) (hex b) (hex c) (hex d)
-                     (hex e) (hex f) (hex g) (if full? (hex h) ""))))
+                     (hex32 a) (hex32 b) (hex32 c) (hex32 d)
+                     (hex32 e) (hex32 f) (hex32 g) (if full? (hex32 h) ""))))
                (else
                 (chunk (+ i 64) pad a b c d e f g h)))))
            (else
