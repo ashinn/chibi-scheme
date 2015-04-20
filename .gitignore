@@ -54,3 +54,4 @@ tests/snow/repo-cache
 tests/snow/repo*/repo.scm
 tests/snow/tmp-root
 tmp
+/lib/chibi/crypto/crypto.c
