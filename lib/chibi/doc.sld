@@ -9,6 +9,6 @@
   (export procedure-docs print-procedure-docs
           print-module-docs print-module-binding-docs
           generate-docs expand-docs fixup-docs
-          extract-module-docs extract-file-docs
+          extract-module-docs extract-module-file-docs extract-file-docs
           make-default-doc-env make-module-doc-env)
   (include "doc.scm"))

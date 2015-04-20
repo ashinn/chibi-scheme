@@ -14,7 +14,7 @@
           signal/user2      signal/child       signal/continue
           signal/stop       signal/tty-stop    signal/tty-input
           signal/tty-output wait/no-hang
-          call-with-process-io
+          call-with-process-io process->bytevector
           process->string process->sexp process->string-list
           process->output+error process->output+error+status)
   (import (chibi) (chibi io) (chibi string) (chibi filesystem))

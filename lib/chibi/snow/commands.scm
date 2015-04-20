@@ -317,29 +317,6 @@
                                         ".sld"))))
          (and (file-exists? dep-file) dep-file))))
 
-(define (extract-module-file-docs cfg path)
-  (define (object-source x)
-    (cond ((bytecode? x)
-           (let ((src (bytecode-source x)))
-             (if (and (vector? src) (positive? (vector-length src)))
-                 (vector-ref src 0)
-                 src)))
-          ((procedure? x) (object-source (procedure-code x)))
-          ((macro? x) (macro-source x))
-          (else #f)))
-  (let* ((lib+files (extract-library cfg path))
-         (lib-name (library-name (car lib+files)))
-         (exports (cond ((assq 'export (cdar lib+files)) => cdr) (else '())))
-         (mod (guard (exn (else #f))
-                (begin
-                  (load path (environment '(meta)))
-                  (load-module lib-name))))
-         (defs (map (lambda (x)
-                      (let ((val (and mod (module-ref mod x))))
-                        `(,x ,val ,(object-source val))))
-                    exports)))
-    (reverse (extract-file-docs mod path defs #f 'module))))
-
 (define (package-docs cfg spec libs lib-dirs)
   (guard (exn (else (warn "package-docs failed" exn)
                     '()))
@@ -349,7 +326,7 @@
       (filter-map
        (lambda (lib)
          (let ((lib-name (library-file-name lib))
-               (docs (extract-module-file-docs cfg lib)))
+               (docs (extract-module-file-docs lib #f)))
            (and (pair? docs)
                 (not (and (= 1 (length docs)) (eq? 'subsection (caar docs))))
                 `(inline
@@ -551,7 +528,9 @@
                                   (if (pair? test) (cadr test) test))))
                         '())
                   ,@test-depends)
-                (reverse (if test (cons test (append docs files)) files)))))))))
+                (reverse (if test
+                             (cons test (append docs files))
+                             (append docs files))))))))))
 
 (define (create-package spec files path)
   (gzip

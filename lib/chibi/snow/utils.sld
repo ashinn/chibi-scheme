@@ -1,6 +1,6 @@
 
 (define-library (chibi snow utils)
-  (export copy-file call-with-temp-file call-with-temp-dir)
+  (export copy-file)
   (import (scheme base)
           (scheme file)
           (scheme time)

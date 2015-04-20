@@ -6,6 +6,6 @@
           analyze-module containing-module load-module module-exports
           module-name->file procedure-analysis find-module
           available-modules-in-directory available-modules
-          modules-exporting-identifier)
+          modules-exporting-identifier file->sexp-list)
   (import (chibi) (meta) (srfi 1) (chibi ast) (chibi filesystem))
   (include "modules.scm"))

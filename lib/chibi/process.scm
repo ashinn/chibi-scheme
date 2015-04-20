@@ -111,6 +111,15 @@
                    (open-input-file-descriptor (car out-pipe))
                    (open-input-file-descriptor (car err-pipe)))))))))
 
+(define (process->bytevector command)
+  (call-with-process-io
+   command
+   (lambda (pid in out err)
+     (close-output-port in)
+     (let ((res (port->bytevector out)))
+       (waitpid pid 0)
+       res))))
+
 (define (process->string command)
   (call-with-process-io
    command

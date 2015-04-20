@@ -877,6 +877,24 @@ div#footer {padding-bottom: 50px}
         ((macro? x) (macro-source x))
         (else #f)))
 
+;; helper for below functions
+(define (extract-module-docs-from-files mod srcs includes stubs strict? exports)
+  (let ((defs (map (lambda (x)
+                     (let ((val (and mod (module-ref mod x))))
+                       `(,x ,val ,(object-source val))))
+                   exports)))
+    (append
+     (reverse
+      (append-map (lambda (x)
+                    (extract-file-docs mod x defs strict? 'module))
+                  srcs))
+     (reverse
+      (append-map (lambda (x) (extract-file-docs mod x defs strict?))
+                  includes))
+     (reverse
+      (append-map (lambda (x) (extract-file-docs mod x defs strict? 'ffi))
+                  stubs)))))
+
 ;;> Extract the literate Scribble docs from module \var{mod-name} and
 ;;> return them as sxml.  If \var{strict?} is true ignore docs for
 ;;> unexported values, defined by the optional \var{exports} which
@@ -885,26 +903,44 @@ div#footer {padding-bottom: 50px}
 (define (extract-module-docs mod-name strict? . o)
   (let ((mod (load-module mod-name)))
     (if (not mod)
-        (error "couldn't find module" mod-name)
-        (let* ((exports (if (pair? o) (car o) (module-exports mod)))
-               (defs
-                 (map (lambda (x)
-                        (let ((val (module-ref mod x)))
-                          `(,x ,val ,(object-source val))))
-                      exports)))
-          (append
-           (cond
-            ((find-module-file (module-name->file mod-name))
-             => (lambda (f)
-                  (reverse (extract-file-docs mod f defs strict? 'module))))
-            (else '()))
-           (reverse
-            (append-map (lambda (x)
-                          (extract-file-docs mod x defs strict? 'module))
-                        (module-include-library-declarations mod)))
-           (reverse
-            (append-map (lambda (x) (extract-file-docs mod x defs strict?))
-                        (module-includes mod)))
-           (reverse
-            (append-map (lambda (x) (extract-file-docs mod x defs strict? 'ffi))
-                        (module-shared-includes mod))))))))
+        (error "couldn't find module" mod-name))
+    (let* ((exports (if (pair? o) (car o) (module-exports mod)))
+           (srcs
+            (append
+             (cond ((find-module-file (module-name->file mod-name)) => list)
+                   (else '()))
+             (module-include-library-declarations mod))))
+      (extract-module-docs-from-files
+       mod srcs (module-includes mod) (module-shared-includes mod)
+       strict? exports))))
+
+;;> As above, but extracts docs for the module defined in \var{file},
+;;> which need not be in the search path.
+
+(define (extract-module-file-docs file strict? . o)
+  (let ((forms (file->sexp-list file)))
+    (if (not (and (pair? forms) (pair? (car forms))
+                  (memq (caar forms) '(define-library library))))
+        (error "file doesn't define a library" file))
+    (let* ((mod-form (car forms))
+           (mod-name (cadr mod-form)))
+      (load file (vector-ref (find-module '(meta)) 1))
+      (let ((mod (load-module mod-name)))
+        (define (get-forms name)
+          (append-map
+           (lambda (x) (if (and (pair? x) (eq? name (car x))) (cdr x) '()))
+           (cddr mod-form)))
+        (define (get-exports)
+          (if mod (module-exports mod) (get-forms 'exports)))
+        (define (get-decls)
+          (if mod
+              (module-include-library-declarations mod)
+              (get-forms 'include-library-declarations)))
+        (define (get-includes)
+          (if mod (module-includes mod) (get-forms 'include)))
+        (define (get-shared-includes)
+          (if mod (module-shared-includes mod) (get-forms 'shared-include)))
+        (let* ((exports (if (pair? o) (car o) (get-exports)))
+               (srcs (cons file (get-decls))))
+          (extract-module-docs-from-files
+           mod srcs (get-includes) (get-shared-includes) strict? exports))))))
