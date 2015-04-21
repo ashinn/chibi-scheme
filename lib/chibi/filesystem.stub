@@ -212,6 +212,10 @@
 ;;> Locking operations.
 ;;/
 
+;;> Sets the file permissions as in chmod.
+
+(define-c int chmod (string int))
+
 ;;> Returns \scheme{#t} if the given port of file descriptor
 ;;> if backed by a TTY object, and \scheme{#f} otherwise.
 

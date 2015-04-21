@@ -33,8 +33,7 @@
           file-lock        file-truncate
           file-is-readable? file-is-writable? file-is-executable?
           lock/shared lock/exclusive lock/non-blocking lock/unlock
-          is-a-tty?)
+          chmod is-a-tty?)
   (import (chibi) (chibi string))
   (include-shared "filesystem")
   (include "filesystem.scm"))
-
