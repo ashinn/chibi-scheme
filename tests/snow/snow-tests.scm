@@ -43,7 +43,7 @@
   `(,chibi-path -A ,install-libdir "tools/snow-chibi"
                 --always-no
                 --implementations "chibi"
-                --chibi-path ,(string-append chibi-path " -A " install-libdir)
+                --chibi-path ,(string-append chibi-path " -A" install-libdir)
                 --install-prefix ,install-prefix
                 --local-user-repository "tests/snow/repo-cache"
                 ,@args))
@@ -163,6 +163,10 @@
       --version 1.0 --authors "Pingala"
       --description "Pingala's test framework"
       tests/snow/repo3/pingala/test-map.scm)
+(snow package --output-dir tests/snow/repo3/
+      --version 1.0 --authors "Pingala" --name "(pingala triangle)"
+      --description "Program to print a Sierpinski Triangle"
+      --programs tests/snow/repo3/pingala/triangle.scm)
 (snow index ,(cadr repo3))
 (snow ,@repo3 update)
 (snow ,@repo3 install pingala.binomial)
@@ -170,14 +174,37 @@
   (test-assert (installed-version status '(pingala binomial)))
   (test-assert (installed-version status '(pingala factorial))))
 
+(snow ,@repo3 install pingala.triangle)
+(test-assert (file-exists? "tests/snow/tmp-root/bin/triangle"))
+(test "1
+1 1
+1 2 1
+1 3 3 1
+1 4 6 4 1
+1 5 10 10 5 1
+"
+    (process->string "tests/snow/tmp-root/bin/triangle"))
+(test "1
+1 1
+1 2 1
+1 3 3 1
+"
+    (process->string '("tests/snow/tmp-root/bin/triangle" "3")))
+
+(snow ,@repo3 remove pingala.triangle)
+(test-not (file-exists? "tests/snow/tmp-root/bin/triangle"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
 
 (snow ,@repo3 update)
-(snow ,@repo3 --implementations "chicken" install pingala.binomial)
+(snow ,@repo3 --implementations "chicken" --program-implementation "chicken"
+      install pingala.triangle)
 (let ((status (snow-status --implementations "chicken")))
   (test-assert (installed-version status '(pingala binomial) 'chicken))
-  (test-assert (installed-version status '(pingala factorial) 'chicken)))
+  (test-assert (installed-version status '(pingala factorial) 'chicken))
+  (test "1\n1 1\n1 2 1\n1 3 3 1\n"
+      (process->string '("tests/snow/tmp-root/bin/triangle" "3"))))
 
 (snow ,@repo3 update)
 (snow ,@repo3 --implementations "foment" install pingala.binomial)

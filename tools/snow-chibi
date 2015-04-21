@@ -74,7 +74,10 @@
     (library-separator string "the separator to use for library components")
     (library-path (list string) "the path to search for local libraries")
     (installer symbol "name of installer to use")
+    (builder symbol "name of builder to use")
+    (program-builder symbol "name of program builder to use")
     (implementations (list symbol) "impls to install for, or 'all'")
+    (program-implementation symbol "impl to install programs for")
     (chibi-path filename "path to chibi-scheme executable")
     (sexp? boolean ("sexp") "output information in sexp format")
     ))
@@ -110,7 +113,8 @@
 (define verify-spec
   '())
 (define package-spec
-  '((programs (list existing-filename))
+  '((name sexp)
+    (programs (list existing-filename))
     (authors (list string))
     (maintainers (list string))
     (recursive? boolean (#\r "recursive") "...")

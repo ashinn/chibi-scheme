@@ -62,6 +62,13 @@
         (warn "ignoring unknown implementation: " (car ls))
         (lp (cdr ls) res))))))
 
+(define (conf-program-implementation? impl cfg)
+  (cond ((conf-get cfg 'program-implementation)
+         => (lambda (x) (eq? impl x)))
+        (else
+         (let ((ls (conf-selected-implementations cfg)))
+           (or (null? ls) (eq? impl (car ls)))))))
+
 (define (conf-for-implementation cfg impl)
   (conf-specialize cfg 'implementation impl))
 
@@ -248,8 +255,9 @@
         (append (if (pair? deps) (list (cons depends (reverse deps))) '())
                 (if (pair? cond-deps) (reverse cond-deps) '())))))))
 
-(define (make-package-name cfg libs . o)
-  (let ((name (any (lambda (x) (or (library-name x) (program-name x))) libs))
+(define (make-package-name cfg pkg libs . o)
+  (let ((name (or (assoc-get pkg 'name)
+                  (any (lambda (x) (or (library-name x) (program-name x))) libs)))
         (version (and (pair? o) (car o))))
     (cond
      ((not (and (pair? name) (list? name)))
@@ -384,6 +392,7 @@
        (conf-get cfg '(command package output-dir) ".")
        (make-package-name
         cfg
+        package-spec
         (filter (lambda (x) (and (pair? x) (memq (car x) '(library program))))
                 package-spec)
         (package-output-version cfg)))))
@@ -436,6 +445,7 @@
 (define (package-spec+files cfg spec libs)
   (let* ((recursive? (conf-get cfg '(command package recursive?)))
          (programs (conf-get-list cfg '(command package programs)))
+         (name (conf-get cfg '(command package name)))
          (authors (conf-get-list cfg '(command package authors)))
          (test (package-test cfg))
          (version (package-output-version cfg))
@@ -447,7 +457,8 @@
               `(,@(if license `((license ,license)) '())
                 ,@(if version `((version ,version)) '())
                 ,@(if (pair? authors) `((authors ,@authors)) '())
-                ,@(if (pair? maintainers) `((maintainers ,@maintainers)) '())))
+                ,@(if (pair? maintainers) `((maintainers ,@maintainers)) '())
+                ,@(if name `((name ,name)) '())))
              (files '())
              (lib-dirs '())
              (test test)
@@ -838,11 +849,13 @@
   (for-each warn-delete-file (package-installed-files pkg))
   (warn-delete-file (make-path (get-install-source-dir impl cfg)
                                (get-package-meta-file cfg pkg)))
-  (let ((dir (make-path (get-install-source-dir impl cfg)
-                        (package->path cfg pkg))))
-    (if (and (file-directory? dir)
-             (= 2 (length (directory-files dir))))
-        (delete-directory dir))))
+  (cond
+   ((package->path cfg pkg)
+    => (lambda (path)
+         (let ((dir (make-path (get-install-source-dir impl cfg) path)))
+           (if (and (file-directory? dir)
+                    (= 2 (length (directory-files dir))))
+               (delete-directory dir)))))))
 
 (define (command/remove cfg spec . args)
   (let* ((impls (conf-selected-implementations cfg))
@@ -1077,6 +1090,20 @@
     (else
      (list (make-path "/usr/local/share/snow" impl)))))
 
+(define (scheme-script-command impl cfg)
+  (or (and (eq? impl 'chibi) (conf-get cfg 'chibi-path))
+      (let* ((prog (cond ((assq impl known-implementations) => cadr)
+                         (else "scheme-script")))
+             (path (or (find-in-path prog) prog))
+             (arg (case impl
+                    ((chicken) "-s")
+                    ((gauche) "-b")
+                    ((larceny) "-program")
+                    (else #f))))
+        (if (and path arg)
+            (string-append path " " arg)
+            path))))
+
 (define (scheme-program-command impl cfg file . o)
   (let ((lib-path (and (pair? o) (car o)))
         (install-dir (get-install-source-dir impl cfg)))
@@ -1130,8 +1157,11 @@
            dirs
            (lambda (x)
              (and (package? x)
-                  (any (lambda (y) (equal? name (library-name y)))
-                       (package-libraries x)))))
+                  (or (equal? name (package-name x))
+                      (any (lambda (y) (equal? name (library-name y)))
+                           (package-libraries x))
+                      (any (lambda (y) (equal? name (program-name y)))
+                           (package-programs x))))))
           (and (pair? (cdr subname))
                (lp (drop-right subname 1)))))))
 
@@ -1250,7 +1280,7 @@
 (define (install-file cfg source dest)
   (if (install-with-sudo? cfg dest)
       (system "sudo" "cp" source dest)
-      (copy-file source dest)))
+      (system "cp" source dest)))
 
 (define (install-sexp-file cfg obj dest)
   (if (install-with-sudo? cfg dest)
@@ -1333,14 +1363,6 @@
     (install-file cfg (make-path dir so-path) dest-so-path)
     (install-file cfg (make-path dir imp-path) dest-imp-path)
     (list dest-so-path dest-imp-path)))
-
-(define (default-program-installer impl cfg prog dir)
-  (let* ((program-file (get-program-file cfg prog))
-         (dest-program-file (program-install-name prog))
-         (install-dir (get-install-binary-dir impl cfg)))
-    (let ((path (make-path install-dir dest-program-file)))
-      (install-directory cfg (path-directory path))
-      (install-file cfg (make-path dir program-file) path))))
 
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
@@ -1443,8 +1465,65 @@
                                      (builder-for-implementation impl cfg)))))
     (builder impl cfg library dir)))
 
+;; strip extension, add #! if needed, copy and chmod
+(define (default-program-builder impl cfg prog dir)
+  (let* ((path (make-path dir (get-program-file cfg prog)))
+         (dest (path-strip-extension path))
+         (src-lines (call-with-input-file path port->string-list))
+         (script (scheme-script-command impl cfg)))
+    (if (equal? path dest)
+        (system "cp" path (string-append path ".bak")))
+    (call-with-output-file dest
+      (lambda (out)
+        (when script
+          (display "#! " out)
+          (display script out)
+          (newline out)) 
+        (for-each
+         (lambda (line) (display line out) (newline out))
+         (if (and (pair? src-lines) (string-prefix? "#!" (car src-lines)))
+             (cdr src-lines)
+             src-lines))))
+    (chmod dest #o755)
+    (system 'ls '-l dest)
+    prog))
+
+(define (chicken-program-builder impl cfg prog dir)
+  (let ((path (get-program-file cfg prog)))
+    (with-directory
+     dir
+     (lambda ()
+       (let ((res (system 'csc '-R 'r7rs '-X 'r7rs
+                          '-I (path-directory path) path)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg "chicken failed to build: "
+                              path " - install anyway?"))
+              prog))))))
+
+(define (lookup-program-builder builder)
+  (case builder
+    ((chicken) chicken-program-builder)
+    (else default-program-builder)))
+
+(define (program-builder-for-implementation impl cfg)
+  (case impl
+    ((chicken) 'chicken)
+    (else 'default)))
+
 (define (build-program impl cfg prog dir)
-  #t)
+  (let ((builder (lookup-program-builder
+                  (or (conf-get cfg 'program-builder)
+                      (program-builder-for-implementation impl cfg)))))
+    (builder impl cfg prog dir)))
+
+(define (default-program-installer impl cfg prog dir)
+  (let* ((program-file (path-strip-extension (get-program-file cfg prog)))
+         (dest-program-file (program-install-name prog))
+         (install-dir (get-install-binary-dir impl cfg)))
+    (let ((path (make-path install-dir dest-program-file)))
+      (install-directory cfg (path-directory path))
+      (install-file cfg (make-path dir program-file) path)
+      (list path))))
 
 (define (lookup-program-installer installer)
   (case installer
@@ -1516,11 +1595,13 @@
                       (lambda (lib)
                         (install-library impl cfg lib dir))
                       libs)
-                     (append-map
-                      (lambda (prog)
-                        (build-program impl cfg prog dir)
-                        (install-program impl cfg prog dir))
-                      (package-programs pkg)))))
+                     (if (conf-program-implementation? impl cfg)
+                         (append-map
+                          (lambda (prog)
+                            (build-program impl cfg prog dir)
+                            (install-program impl cfg prog dir))
+                          (package-programs pkg))
+                         '()))))
                (install-package-meta-info
                 impl cfg
                 `(,@(remove (lambda (x)

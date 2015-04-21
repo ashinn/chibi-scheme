@@ -167,6 +167,16 @@
 (define (valid-library? lib)
   (not (invalid-library-reason lib)))
 
+(define (invalid-program-reason prog)
+  (cond
+   ((not (list? prog)) "program must be a list")
+   ((not (or (assoc-get prog 'path) (assoc-get prog 'name)))
+    "program must have a path")
+   (else #f)))
+
+(define (valid-program? prog)
+  (not (invalid-program-reason prog)))
+
 (define (invalid-package-reason pkg)
   (cond
    ((not (list? pkg))
@@ -174,10 +184,13 @@
    ((not (string? (package-version pkg)))
     (failure "package-version is not a string" (package-version pkg)))
    (else
-    (let ((libs (package-libraries pkg)))
+    (let ((libs (package-libraries pkg))
+          (progs (package-programs pkg)))
       (cond
-       ((not (pair? libs)) "package must contain at least one library")
+       ((and (not (pair? libs)) (not (pair? progs)))
+        "package must contain at least one library or program")
        ((any invalid-library-reason libs))
+       ((any invalid-program-reason progs))
        (else #f))))))
 
 (define (valid-package? pkg)
@@ -213,7 +226,8 @@
 
 (define (package-dependencies impl cfg package)
   (append-map (lambda (lib) (library-dependencies cfg impl lib))
-              (package-libraries package)))
+              (append (package-libraries package)
+                      (package-programs package))))
 
 (define (package-test-dependencies impl cfg package)
   (let ((pkg (package-for-impl impl cfg package)))
