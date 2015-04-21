@@ -3,6 +3,7 @@
   (export parse-option parse-options parse-app run-application
           app-help app-help-command)
   (import (scheme base)
+          (scheme read)
           (scheme write)
           (scheme process-context)
           (srfi 1)

@@ -33,6 +33,13 @@
          (if (not (= 1 (string-length str)))
              (list #f "expected a single character")
              (list (string-ref str 0) #f)))
+        ((sexp)
+         (list (guard (exn (else str))
+                 (let* ((in (open-input-string str))
+                        (res (read in)))
+                   (close-input-port in)
+                   res))
+               #f))
         (else
          (list str #f))))))
   (define (lookup-conf-spec conf-spec syms strs)
