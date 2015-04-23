@@ -1235,7 +1235,9 @@
       ;; stray output in the pwd, can be useful for accessing data
       ;; files during testing, and is needed for chicken (see chicken
       ;; trac #736).
-      (or (match (with-directory
+      ;; For chibi we run from the current directory anyway for the
+      ;; sake of running snow-tests from an uninstalled chibi-scheme.
+      (or (match ((if (eq? impl 'chibi) (lambda (dir f) (f)) with-directory)
                   dir
                   (lambda () (process->output+error+status command)))
             ((output error status)
