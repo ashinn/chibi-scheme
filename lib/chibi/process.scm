@@ -54,19 +54,22 @@
           (else x)))
   (execvp (->string cmd) (map ->string args)))
 
+(define (execute-returned cmd)
+  ;; we only arrive here if execute fails
+  (let ((err (current-error-port)))
+    (cond
+     ((output-port? err)
+      (display "ERROR: couldn't execute: " (current-error-port))
+      (write cmd (current-error-port))
+      (newline (current-error-port))))
+    (exit 1)))
+
 (define (system cmd . args)
   (let ((pid (fork)))
     (cond
      ((zero? pid)
-      (let* ((res (execute cmd (cons cmd args)))
-             (err (current-error-port)))
-        ;; we only arrive here if execute fails
-        (cond
-         ((output-port? err)
-          (display "ERROR: couldn't execute: " (current-error-port))
-          (write cmd (current-error-port))
-          (newline (current-error-port))))
-        (exit 1)))
+      (execute cmd (cons cmd args))
+      (execute-returned cmd))
      (else
       (waitpid pid 0)))))
 
@@ -98,7 +101,8 @@
              (close-file-descriptor (car in-pipe))
              (close-file-descriptor (cadr out-pipe))
              (close-file-descriptor (cadr err-pipe))
-             (execute (car command-ls) command-ls))
+             (execute (car command-ls) command-ls)
+             (execute-returned command-ls))
             (else         ;; parent
              (close-file-descriptor (car in-pipe))
              (close-file-descriptor (cadr out-pipe))
