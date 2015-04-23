@@ -4,7 +4,7 @@
   (cond
    ((not (equal? expect expr))
     (write-string "FAIL\n")
-    (exit 1))))
+    (exit #f))))
 
 (test 1 (fib 0))
 (test 1 (fib 1))

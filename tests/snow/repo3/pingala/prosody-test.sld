@@ -14,7 +14,7 @@
       (display " but got: ")
       (write res)
       (newline))
-    (define (test-exit) (exit (if failed? 1 0)))
+    (define (test-exit) (exit (not failed?)))
     (define-syntax test
       (syntax-rules ()
         ((test expected expr)

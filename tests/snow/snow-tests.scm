@@ -175,6 +175,11 @@
       --version 1.0 --authors "Pingala" --name "(pingala triangle)"
       --description "Program to print a Sierpinski Triangle"
       --programs tests/snow/repo3/pingala/triangle.scm)
+(snow package --output-dir tests/snow/repo3/
+      --version 1.0 --authors "Robert Recorde"
+      --description "Equality implementation"
+      --test-library "tests/snow/repo3/recorde/equal-test.sld"
+      tests/snow/repo3/recorde/equal.sld)
 (snow index ,(cadr repo3))
 (snow ,@repo3 update)
 (snow ,@repo3 install pingala.binomial)
@@ -211,21 +216,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
 
-(snow ,@repo3 update)
-(snow ,@repo3 --implementations "chicken" --program-implementation "chicken"
-      install pingala.triangle)
-(let ((status (snow-status --implementations "chicken")))
-  (test-assert (installed-version status '(pingala binomial) 'chicken))
-  (test-assert (installed-version status '(pingala factorial) 'chicken))
-  (test "1\n1 1\n1 2 1\n1 3 3 1\n"
-      (process->string '("tests/snow/tmp-root/bin/triangle" "3"))))
-
-(snow ,@repo3 update)
-(snow ,@repo3 --implementations "foment" install pingala.binomial)
-(let ((status (snow-status --implementations "foment")))
-  (test-assert (installed-version status '(pingala binomial) 'foment))
-  (test-assert (installed-version status '(pingala factorial) 'foment)))
-
 (snow ,@repo2 update)
 (snow ,@repo2 --implementations "gauche,kawa,larceny"
       install leonardo.fibonacci)
@@ -235,6 +225,20 @@
   (test "1.1" (installed-version status '(leonardo fibonacci) 'larceny)))
 
 (snow ,@repo3 update)
+
+(snow ,@repo3 --implementations "chicken" --program-implementation "chicken"
+      install pingala.triangle)
+(let ((status (snow-status --implementations "chicken")))
+  (test-assert (installed-version status '(pingala binomial) 'chicken))
+  (test-assert (installed-version status '(pingala factorial) 'chicken))
+  (test "1\n1 1\n1 2 1\n1 3 3 1\n"
+      (process->string '("tests/snow/tmp-root/bin/triangle" "3"))))
+
+(snow ,@repo3 --implementations "foment" install pingala.binomial)
+(let ((status (snow-status --implementations "foment")))
+  (test-assert (installed-version status '(pingala binomial) 'foment))
+  (test-assert (installed-version status '(pingala factorial) 'foment)))
+
 (snow ,@repo3 --implementations "gauche,kawa,larceny"
       install pingala.binomial)
 (let ((status (snow-status --implementations "gauche,kawa,larceny")))
@@ -244,6 +248,17 @@
   (test-assert (installed-version status '(pingala factorial) 'kawa))
   (test-assert (installed-version status '(pingala binomial) 'larceny))
   (test-assert (installed-version status '(pingala factorial) 'larceny)))
+
+;; this library is fine but the test fails, so this should't be installed
+(snow ,@repo3 --implementations "chibi,chicken,gauche,kawa,larceny"
+      install recorde.equal)
+(let ((status
+       (snow-status --implementations "chibi,chicken,gauche,kawa,larceny")))
+  (test-not (installed-version status '(recorde equal) 'chibi))
+  (test-not (installed-version status '(recorde equal) 'chicken))
+  (test-not (installed-version status '(recorde equal) 'gauche))
+  (test-not (installed-version status '(recorde equal) 'kawa))
+  (test-not (installed-version status '(recorde equal) 'larceny)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; smart packaging
