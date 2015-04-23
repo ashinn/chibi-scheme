@@ -70,6 +70,7 @@
     (install-source-dir dirname "directory to install library source in")
     (install-library-dir dirname "directory to install shared libraries in")
     (install-binary-dir dirname "directory to install programs in")
+    (install-data-dir dirname "directory to install data files in")
     (library-extension string "the extension to use for library files")
     (library-separator string "the separator to use for library components")
     (library-path (list string) "the path to search for local libraries")
@@ -115,6 +116,7 @@
 (define package-spec
   '((name sexp)
     (programs (list existing-filename))
+    (data-files (list sexp))
     (authors (list string))
     (maintainers (list string))
     (recursive? boolean (#\r "recursive") "...")

@@ -410,17 +410,24 @@
     (else pat)))
 
 (define (find-library-from-pattern cfg pat lib . o)
-  (and pat
-       (if (and (pair? pat) (eq? 'or (car pat)))
-           (any (lambda (pat) (find-library-from-pattern pat lib)) (cdr pat))
-           (let ((lib-name (replace-library-pattern pat lib)))
-             (apply find-library-file cfg lib-name o)))))
+  (cond ((not pat) #f)
+        ((and (pair? pat) (eq? 'or (car pat)))
+         (any (lambda (pat) (find-library-from-pattern pat lib)) (cdr pat)))
+        (else
+         (let ((lib-name (replace-library-pattern pat lib)))
+           (apply find-library-file cfg lib-name o)))))
 
 (define (tests-from-libraries cfg libs lib-dirs)
   (let ((pat (conf-get cfg '(command package test-library))))
-    (filter-map
-     (lambda (lib) (find-library-from-pattern cfg pat lib lib-dirs))
-     libs)))
+    (cond
+     ((string? pat)
+      (list pat))
+     ((symbol? pat)
+      (list (symbol->string pat)))
+     (else
+      (filter-map
+       (lambda (lib) (find-library-from-pattern cfg pat lib lib-dirs))
+       libs)))))
 
 (define (test-program-from-libraries lib-files)
   (call-with-output-string
@@ -435,7 +442,7 @@
                    lib-names)))
         (for-each
          (lambda (lib run)
-           (write `(import (rename ,lib run-tests ,run)) out)
+           (write `(import (rename ,lib (run-tests ,run))) out)
            (newline out))
          lib-names
          run-names)
@@ -443,8 +450,15 @@
         (for-each (lambda (run) (write `(,run) out) (newline out)) run-names)))))
 
 (define (package-spec+files cfg spec libs)
+  (define (symbols->strings x)
+    (cond
+     ((symbol? x) (symbol->string x))
+     ((pair? x) (cons (symbols->strings (car x)) (symbols->strings (cdr x))))
+     (else x)))
   (let* ((recursive? (conf-get cfg '(command package recursive?)))
          (programs (conf-get-list cfg '(command package programs)))
+         (data-files (symbols->strings
+                      (conf-get-list cfg '(command package data-files))))
          (name (conf-get cfg '(command package name)))
          (authors (conf-get-list cfg '(command package authors)))
          (test (package-test cfg))
@@ -523,9 +537,34 @@
                (test-depends
                 (if test
                     (extract-program-dependencies test 'test-depends)
-                    '())))
+                    '()))
+               ;; cleanup - package data-files relative to the lib-dir
+               (src-data-files
+                (map (lambda (x) (if (pair? x) (cadr x) x)) data-files))
+               (rel-data-files
+                (if (= 1 (length lib-dirs))
+                    (map (lambda (f) (path-relative-to f (car lib-dirs)))
+                         data-files)
+                    src-data-files))
+               (tar-data-files
+                (map (lambda (src rel) `(rename ,src ,rel))
+                     src-data-files
+                     rel-data-files))
+               (pkg-data-files
+                (if (= 1 (length lib-dirs))
+                    (map (lambda (file rel)
+                           (if (pair? file)
+                               `(rename ,rel ,(third file))
+                               rel))
+                         data-files
+                         rel-data-files)
+                    data-files))
+               (tar-files
+                (reverse
+                 (append (if test (list test)) docs tar-data-files files))))
           (cons `(package
                   ,@(reverse res)
+                  ,@(if (pair? data-files) `((data-files ,@pkg-data-files)) '())
                   ,@(if (pair? docs)
                         `((manual ,@(map
                                      (lambda (x)
@@ -539,9 +578,7 @@
                                   (if (pair? test) (cadr test) test))))
                         '())
                   ,@test-depends)
-                (reverse (if test
-                             (cons test (append docs files))
-                             (append docs files))))))))))
+                tar-files)))))))
 
 (define (create-package spec files path)
   (gzip
@@ -1167,18 +1204,39 @@
 
 ;; test the package locally built in dir
 (define (test-package impl cfg pkg dir)
-  (let* ((test-file (assoc-get pkg 'test))
+  (let* ((test-file (cond ((assoc-get pkg 'test)
+                           => (lambda (f) (path-resolve f dir)))
+                          (else #f)))
          (command (scheme-program-command impl cfg test-file dir)))
     (cond
      ((and test-file command
            (not (or (conf-get cfg '(command install skip-tests?))
                     (conf-get cfg '(command upgrade skip-tests?)))))
-      ;; For chicken we need to run the tests from within the package
-      ;; directory to be able to locate the libraries (see chicken
+      ;; install any data files locally in the dir
+      (let ((true-install-dir (get-install-data-dir impl cfg))
+            (test-install-dir
+             (make-path dir (string-append "tmp-data-"
+                                           (number->string
+                                            (current-process-id)))))
+            (data-files (package-data-files pkg)))
+        (for-each
+         (lambda (file)
+           (let* ((src (make-path dir (if (pair? file) (cadr file) file)))
+                  (dest0 (if (pair? file) (third file) file))
+                  (dest (make-path test-install-dir
+                                   (if (path-absolute? dest0)
+                                       (path-relative-to dest0 true-install-dir)
+                                       dest0))))
+             (create-directory* (path-directory dest))
+             (install-file cfg src dest)))
+         (package-data-files pkg))
+        (setenv "SNOW_TEST_DATA_DIR" test-install-dir))
+      ;; Run the tests from within the temp directory.  This reduces
+      ;; stray output in the pwd, can be useful for accessing data
+      ;; files during testing, and is needed for chicken (see chicken
       ;; trac #736).
-      (or (match ((if (eq? impl 'chicken)
-                      (lambda (f) (with-directory dir f))
-                      (lambda (f) (f)))
+      (or (match (with-directory
+                  dir
                   (lambda () (process->output+error+status command)))
             ((output error status)
              (cond
@@ -1241,6 +1299,13 @@
 (define (get-install-source-dir impl cfg)
   (cond
    ((conf-get cfg 'install-source-dir))
+   ((conf-get cfg 'install-prefix)
+    => (lambda (prefix) (make-path prefix "share/snow" impl)))
+   (else (car (get-install-dirs impl cfg)))))
+
+(define (get-install-data-dir impl cfg)
+  (cond
+   ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
    (else (car (get-install-dirs impl cfg)))))
@@ -1317,9 +1382,11 @@
        (lambda (lib)
          (let ((lib-name (library-name lib)))
            (if (not (equal? pkg-name (take lib-name (length pkg-name))))
-               (let ((lib-meta (get-library-meta-file cfg lib)))
-                 (install-symbolic-link
-                  cfg path (make-path install-dir lib-meta))))))
+               (let* ((lib-meta (make-path install-dir
+                                           (get-library-meta-file cfg lib)))
+                      (rel-path
+                       (path-relative-to path (path-directory lib-meta))))
+                 (install-symbolic-link cfg rel-path lib-meta)))))
        (package-libraries pkg)))))
 
 ;; The default installer just copies the library file and any included
@@ -1485,7 +1552,6 @@
              (cdr src-lines)
              src-lines))))
     (chmod dest #o755)
-    (system 'ls '-l dest)
     prog))
 
 (define (chicken-program-builder impl cfg prog dir)
@@ -1533,6 +1599,14 @@
   (let ((installer (lookup-program-installer
                     (conf-get cfg 'program-installer))))
     (installer impl cfg prog dir)))
+
+(define (install-data-file impl cfg file dir)
+  (let* ((src (if (pair? file) (cadr file) file))
+         (dest0 (if (pair? file) (third file) file))
+         (install-dir (get-install-data-dir impl cfg))
+         (dest (path-resolve dest0 install-dir)))
+    (create-directory* (path-directory dest))
+    (install-file cfg (make-path dir src) dest)))
 
 (define (fetch-package cfg url)
   (resource->bytevector url))
@@ -1589,19 +1663,26 @@
        (let ((libs (filter-map (lambda (lib) (build-library impl cfg lib dir))
                                (package-libraries pkg))))
          (if (test-package impl cfg pkg dir)
-             (let ((installed-files
-                    (append
+             (let* ((data-files
+                     (append-map
+                      (lambda (file)
+                        (install-data-file impl cfg file dir))
+                      (package-data-files pkg)))
+                    (lib-files
                      (append-map
                       (lambda (lib)
                         (install-library impl cfg lib dir))
-                      libs)
+                      libs))
+                    (prog-files
                      (if (conf-program-implementation? impl cfg)
                          (append-map
                           (lambda (prog)
                             (build-program impl cfg prog dir)
                             (install-program impl cfg prog dir))
                           (package-programs pkg))
-                         '()))))
+                         '()))
+                    (installed-files
+                     (append data-files lib-files prog-files)))
                (install-package-meta-info
                 impl cfg
                 `(,@(remove (lambda (x)

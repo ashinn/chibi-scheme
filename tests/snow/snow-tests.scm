@@ -150,6 +150,8 @@
 (test "1.1" (installed-version (snow-status) '(leonardo fibonacci)))
 
 (define repo3 '(--repository-uri tests/snow/repo3/repo.scm))
+(setenv "PINGALA_GANAS_PATH"
+        "pingala:tests/snow/tmp-root/share/snow/chibi/pingala")
 (snow package --output-dir tests/snow/repo3/
       --version 1.0 --authors "Pingala"
       --description "Factorial"
@@ -163,6 +165,12 @@
       --version 1.0 --authors "Pingala"
       --description "Pingala's test framework"
       tests/snow/repo3/pingala/test-map.scm)
+(snow package --output-dir tests/snow/repo3/
+      --version 1.0 --authors "Pingala"
+      --description "Library for Sanskrit poetry"
+      --test-library "tests/snow/repo3/pingala/prosody-test.sld"
+      --data-files tests/snow/repo3/pingala/ganas.txt
+      tests/snow/repo3/pingala/prosody.sld)
 (snow package --output-dir tests/snow/repo3/
       --version 1.0 --authors "Pingala" --name "(pingala triangle)"
       --description "Program to print a Sierpinski Triangle"
@@ -193,6 +201,12 @@
 
 (snow ,@repo3 remove pingala.triangle)
 (test-not (file-exists? "tests/snow/tmp-root/bin/triangle"))
+
+;; data files
+(snow ,@repo3 install pingala.prosody)
+(test-assert (installed-version (snow-status) '(pingala prosody)))
+(test-assert
+    (file-exists? "tests/snow/tmp-root/share/snow/chibi/pingala/ganas.txt"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
@@ -251,7 +265,7 @@
   (test "Library for computing (optionally continuously) compounded interest."
       (assoc-get pkg 'description))
   (test '((import (rename (euler interest-test)
-                          run-tests run-euler-interest-test-tests))
+                          (run-tests run-euler-interest-test-tests)))
           (run-euler-interest-test-tests))
       (snowball-test->sexp-list pkg pkg-file)))
 

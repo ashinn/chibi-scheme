@@ -2,7 +2,7 @@
 (define-library (chibi snow package)
   (export package? library? program?
           package-name package-email package-url package-version
-          package-libraries package-programs
+          package-libraries package-programs package-data-files
           package-provides? package-dependencies package-test-dependencies
           package-installed-files package-author
           package-digest-mismatches package-signature-mismatches

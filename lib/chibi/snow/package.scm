@@ -217,6 +217,10 @@
 (define (package-programs package)
   (and (package? package) (filter program? (cdr package))))
 
+(define (package-data-files package)
+  (and (package? package)
+       (append-map cdr (filter data-files? (cdr package)))))
+
 (define (package-provides? package name)
   (and (pair? package)
        (eq? 'package (car package))
@@ -474,3 +478,8 @@
       (path-strip-extension
        (path-strip-directory
         (assoc-get (cdr prog) 'path eq?)))))
+
+;; data files
+
+(define (data-files? x)
+  (and (pair? x) (eq? 'data-files (car x))))
