@@ -1167,12 +1167,14 @@
            `(guile -L ,install-dir -L ,lib-path ,file)
            `(guile -L ,install-dir ,file)))
       ((kawa)
-       (if lib-path
-           `(kawa
-             ,(string-append "-Dkawa.import.path=" install-dir ":" lib-path)
-             --r7rs --script ,file)
-           `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
-                  --r7rs --script ,file)))
+       (let ((install-dir (path-resolve install-dir (current-directory))))
+         (if lib-path
+             `(kawa
+               ,(string-append "-Dkawa.import.path=" install-dir ":"
+                               (path-resolve lib-path (current-directory)))
+               --r7rs --script ,file)
+             `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
+                    --r7rs --script ,file))))
       ((larceny)
        (if lib-path
            `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
