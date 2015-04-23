@@ -26,10 +26,10 @@
                   res)))))))))
 
 (define (call-with-temp-dir template proc)
-  (let ((base (string-append
-               "/tmp/" template
-               "-" (number->string (current-process-id)) "-"
-               (number->string (exact (round (current-second)))) "-")))
+  (let* ((pid (current-process-id))
+         (base (string-append
+                "/tmp/" template "-" (number->string pid) "-"
+                (number->string (exact (round (current-second)))) "-")))
     (let lp ((i 0))
       (let ((path (string-append base (number->string i))))
         (cond
@@ -39,5 +39,9 @@
           (lp (+ i 1)))
          ((create-directory path #o700)
           (let ((res (proc path)))
-            (delete-file-hierarchy path)
-            res)))))))
+            ;; sanity check for host threading issues and broken forks
+            (if (equal? pid (current-process-id))
+                (delete-file-hierarchy path))
+            res))
+         (else
+          (error "failed to create directory" path)))))))
