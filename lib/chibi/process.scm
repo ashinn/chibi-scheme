@@ -68,10 +68,15 @@
   (let ((pid (fork)))
     (cond
      ((zero? pid)
-      (execute cmd (cons cmd args))
-      (execute-returned cmd))
+      (let ((cmd ((if (pair? cmd) append cons) cmd args)))
+        (execute (car cmd) cmd)
+        (execute-returned cmd)))
      (else
       (waitpid pid 0)))))
+
+(define (system? cmd . args)
+  (let ((res (apply system cmd args)))
+    (and (pair? res) (zero? (cadr res)))))
 
 (define (call-with-process-io command proc)
   (define (set-non-blocking! fd)
