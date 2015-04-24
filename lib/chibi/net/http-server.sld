@@ -13,5 +13,6 @@
           (chibi) (chibi mime) (chibi regexp) (chibi pathname) (chibi uri)
           (chibi filesystem) (chibi io) (chibi string) (chibi process)
           (chibi net server) (chibi net server-util) (chibi net servlet)
-          (chibi app) (chibi ast) (chibi config) (chibi log) (chibi memoize))
+          (chibi app) (chibi ast) (chibi config) (chibi log) (chibi memoize)
+          (chibi temp-file))
   (include "http-server.scm"))
