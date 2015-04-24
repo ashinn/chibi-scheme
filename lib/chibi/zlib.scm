@@ -50,7 +50,7 @@
 ;; Use a temp file to avoid dead-lock issues with pipes.
 (define (process-run-bytevector cmd bvec)
   (call-with-temp-file "bvec"
-    (lambda (path out)
+    (lambda (path out preserve)
       (write-bytevector bvec out)
       (close-output-port out)
       (process->bytevector (append cmd (list path))))))

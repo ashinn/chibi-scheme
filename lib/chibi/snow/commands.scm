@@ -1365,7 +1365,7 @@
 (define (install-sexp-file cfg obj dest)
   (if (install-with-sudo? cfg dest)
       (call-with-temp-file "sexp"
-        (lambda (tmp-path out)
+        (lambda (tmp-path out preserve)
           (write-simple-pretty obj out)
           (close-output-port out)
           (system "sudo" "cp" tmp-path dest)))
@@ -1715,7 +1715,7 @@
    (else
     (call-with-temp-dir
      "pkg"
-     (lambda (dir)
+     (lambda (dir preserve)
        (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
        (let ((libs (filter-map (lambda (lib) (build-library impl cfg lib dir))
                                (package-libraries pkg))))
@@ -1745,7 +1745,8 @@
                 `(,@(remove (lambda (x)
                               (and (pair? x) (eq? 'installed-files (car x))))
                             pkg)
-                  (installed-files ,@installed-files)))))))))))
+                  (installed-files ,@installed-files))))
+             (preserve))))))))
 
 (define (install-package-from-file repo impl cfg file)
   (let ((pkg (package-file-meta file))

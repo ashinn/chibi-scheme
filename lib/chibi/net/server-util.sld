@@ -5,5 +5,5 @@
           (chibi temp-file)
           (srfi 33) (srfi 69))
   (export line-handler command-handler parse-command
-          get-host file-mime-type call-with-temp-file)
+          get-host file-mime-type)
   (include "server-util.scm"))

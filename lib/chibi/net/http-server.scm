@@ -209,7 +209,7 @@
 
 (define (http-cgi-bin-servlet request local-path next restart)
   (call-with-temp-file "cgi.out"
-    (lambda (temp-file out)
+    (lambda (temp-file out preserve)
       (let ((pid (fork)))
         (cond
          ((zero? pid)
