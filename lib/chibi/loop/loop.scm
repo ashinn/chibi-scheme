@@ -1,6 +1,6 @@
 ;;;; loop.scm - the chibi loop (aka foof-loop)
 ;;
-;; Copyright (c) 2009-2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2015 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> The loop API is mostly compatible with Taylor Campbell's
@@ -49,7 +49,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \subsubsubsection{\scheme{(loop [name] (vars ...) [=> result] body ...)}}
+;;> \macro{\scheme{(loop [name] (vars ...) [=> result] body ...)}}
 
 (define-syntax loop
   (syntax-rules ()
@@ -122,6 +122,16 @@
                  (checks ... new-checks ...) (refs ... new-refs ...)
                  (finals ... new-finals ...)
         . rest))))
+
+;;> Utility syntax for the common case of a loop which has only
+;;> \scheme{for} clauses.
+
+(define-syntax for
+  (syntax-rules ()
+    ((for ((vars ...) ...) body ...)
+     (loop ((for vars ...) ...) body ...))
+    ((for lp ((vars ...) ...) body ...)
+     (loop lp ((for vars ...) ...) body ...))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;> \section{Iterators}

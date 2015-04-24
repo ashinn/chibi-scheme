@@ -171,4 +171,9 @@
                (for res (listing i)))
           => res))
 
+      (test '(1 4 9)
+          (for ((i (in-list '(1 2 3)))
+                (res (listing (* i i))))
+               => res))
+
       (test-end))))
