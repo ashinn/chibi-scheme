@@ -1,10 +1,50 @@
 
-;;> Copies the file \var{from} to \var{to}.
+(define (find-in-path file . o)
+  (any (lambda (dir)
+         (let ((path (make-path dir file)))
+           (and (file-exists? path) path)))
+       (if (pair? o)
+           (car o)
+           (string-split (get-environment-variable "PATH") #\:))))
 
-(define (copy-file from to)
-  (let ((in (open-binary-input-file from))
-        (out (open-binary-output-file to)))
-    (let lp ()
-      (let ((n (read-u8 in)))
-        (cond ((eof-object? n) (close-input-port in) (close-output-port out))
-              (else (write-u8 n out) (lp)))))))
+(define (find-sexp-in-path file dirs . o)
+  (let ((pred (if (pair? o) (car o) (lambda (x) #t))))
+    (any (lambda (dir)
+           (let ((path (make-path dir file)))
+             (and (file-exists? path)
+                  (guard (exn (else #f))
+                    (let ((x (call-with-input-file path read)))
+                      (and (pred x) x))))))
+         dirs)))
+
+(define (write-to-string x)
+  (call-with-output-string (lambda (out) (write x out))))
+
+(define (resource->bytevector uri)
+  (let ((uri (if (uri? uri) uri (string->path-uri 'http uri))))
+    (if (uri-host uri)
+        (call-with-input-url uri port->bytevector)
+        (file->bytevector (uri-path uri)))))
+
+(define (version-split str)
+  (if str
+      (map (lambda (x) (or (string->number x) x))
+        (string-split str #\.))
+      '()))
+
+(define (version-compare a b)
+  (define (less? x y)
+    (cond ((number? x) (if (number? y) (< x y) 1))
+          ((number? y) -1)
+          (else (string<? x y))))
+  (let lp ((as (version-split a))
+           (bs (version-split b)))
+    (cond
+     ((null? as) (if (null? bs) -1 0))
+     ((null? bs) 1)
+     ((less? (car as) (car bs)) -1)
+     ((less? (car bs) (car as)) 1)
+     (else (lp (cdr as) (cdr bs))))))
+
+(define (version>? a b) (> (version-compare a b) 0))
+(define (version>=? a b) (>= (version-compare a b) 0))

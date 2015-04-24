@@ -1,12 +1,17 @@
 
 (define-library (chibi snow utils)
-  (export copy-file)
+  (export find-in-path find-sexp-in-path
+          write-to-string resource->bytevector
+          version-split version-compare version>? version>=?)
   (import (scheme base)
           (scheme file)
-          (scheme time)
-          (srfi 33)
-          (chibi filesystem)
+          (scheme read)
+          (scheme write)
+          (scheme process-context)
+          (srfi 1)
+          (chibi io)
+          (chibi net http)
           (chibi pathname)
-          (chibi process)
-          (chibi snow interface))
+          (chibi string)
+          (chibi uri))
   (include "utils.scm"))
