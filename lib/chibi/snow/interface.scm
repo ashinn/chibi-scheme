@@ -13,7 +13,7 @@
   (let ((err (current-error-port)))
     (display "WARNING: " err)
     (display msg err)
-    (display ": " err)
+    (if (pair? args) (display ": " err))
     (if (and (pair? args) (null? (cdr args)))
         (write (car args) err)
         (for-each (lambda (x) (display "\n  " err) (write x err)) args))

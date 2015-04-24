@@ -62,6 +62,8 @@
     (ignore-signature? boolean ("ignore-sig" "ignore-signature")
                        "don't verify package signatures")
     (ignore-digest? boolean ("ignore-digest") "don't verify package checksums")
+    (skip-version-checks? boolean ("skip-version-checks")
+                          "don't verify implementation versions")
     (host string "base uri of snow repository")
     (repository-uri string "uri of snow repository file")
     (local-root-repository dirname "repository cache dir for root")
@@ -140,6 +142,8 @@
   '())
 (define update-spec
   '())
+(define implementations-spec
+  '())
 
 (define app-spec
   `(snow
@@ -190,6 +194,9 @@
      (update
       "force an update of available package status"
       (@ ,update-spec) (,command/update))
+     (implementations
+      "print currently available scheme implementations"
+      (@ ,implementations-spec) (,command/implementations))
      (help
       "print help"
       (,app-help-command args ...))

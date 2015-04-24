@@ -6,6 +6,7 @@
           command/sign
           command/verify
           command/upload
+          command/implementations
           command/index
           command/install
           command/remove
@@ -15,6 +16,7 @@
           command/update
           command/upgrade)
   (import (scheme base)
+          (scheme char)
           (scheme eval)
           (scheme file)
           (scheme load)

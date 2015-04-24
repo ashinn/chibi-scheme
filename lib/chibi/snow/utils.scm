@@ -40,7 +40,7 @@
   (let lp ((as (version-split a))
            (bs (version-split b)))
     (cond
-     ((null? as) (if (null? bs) -1 0))
+     ((null? as) (if (null? bs) 0 -1))
      ((null? bs) 1)
      ((less? (car as) (car bs)) -1)
      ((less? (car bs) (car as)) 1)

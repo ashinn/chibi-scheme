@@ -4,19 +4,52 @@
 ;; Public Domain.  All warranties are disclaimed.
 
 (define known-implementations
-  '((chibi "chibi-scheme")
-    (chicken "chicken")
+  '((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3")
+    (chicken "chicken" (csi -p "(chicken-version)") "4.9.0")
     (foment "foment")
-    (gauche "gosh")
-    (guile "guile")
-    (kawa "kawa")
-    (larceny "larceny")
+    (gauche "gosh" (gosh -E "print (gauche-version)" -E exit) "0.9.4")
+    (kawa "kawa" (kawa --version) "2.0")
+    (larceny "larceny" (larceny --version) "v0.98")
     (sagittarius "sagittarius")))
+
+(define (impl->version impl cmd)
+  (let* ((lines (process->string-list cmd))
+         (line (and (pair? lines) (string-split (car lines)))))
+    (and (pair? line)
+         (if (and (pair? (cdr line))
+                  (let ((x (string-downcase (car line)))
+                        (name (symbol->string impl)))
+                    (or (equal? x name)
+                        (equal? x (string-append name "-scheme")))))
+             (cadr line)
+             (car line)))))
+
+(define (impl-available? cfg spec confirm?)
+  (if (find-in-path (cadr spec))
+      (or (null? (cddr spec))
+          (conf-get cfg 'skip-version-checks?)
+          (let ((version (impl->version (car spec) (third spec))))
+            (or (and version (version>=? version (fourth spec)))
+                (let ((msg
+                       (string-append
+                        "Implementation " (symbol->string (car spec))
+                        " is an unsupported version, " version ", but"
+                        " at least " (fourth spec) " is required.")))
+                  (cond
+                   (confirm?
+                    (yes-or-no? cfg msg " Install anyway?"))
+                   (else
+                    (warn msg)
+                    #f))))))
+      (and confirm?
+           (yes-or-no? cfg "Implementation " (car spec) " does not "
+                       " seem to be available, install anyway?"))))
 
 (define (conf-selected-implementations cfg)
   (let ((requested (conf-get-list cfg 'implementations '(chibi))))
     (let lp ((ls (if (memq 'all requested)
-                     (append (map car known-implementations) requested)
+                     (append (map car known-implementations)
+                             (delete 'all requested))
                      requested))
              (res '()))
       (cond
@@ -30,12 +63,10 @@
         => (lambda (x)
              (cond
               ((or (cond-expand (chibi (eq? 'chibi (car ls))) (else #f))
-                   (find-in-path (cadr x))
-                   (yes-or-no? cfg "Implementation " (car ls) " does not "
-                               " seem to be available, install anyway?"))
+                   (impl-available? cfg x #t))
                (lp (cdr ls) (cons (car ls) res)))
               (else
-               (warn "ignoring unavailable implementation: " (car ls))
+               (warn "ignoring unavailable implementation" (car ls))
                (lp (cdr ls) res)))))
        ((yes-or-no? cfg "Unknown implementation: " (car ls)
                     " - try to install anyway?")
@@ -1903,3 +1934,12 @@
      impls
      impl-cfgs)
     (if sexp? (display ")\n"))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Implementations - show the currently available implementations.
+
+(define (command/implementations cfg spec . args)
+  (for-each
+   (lambda (impl) (write (car impl)) (newline))
+   (filter (lambda (x) (impl-available? cfg x #f))
+           known-implementations)))
