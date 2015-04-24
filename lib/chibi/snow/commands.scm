@@ -183,6 +183,28 @@
          (define (resolve file)
            (let ((dest-path (make-path lib-dir file)))
              (list 'rename (make-path dir dest-path) dest-path)))
+         (define (ffi-file-includes file)
+           (let lp ((forms (guard (exn (else '()))
+                             (call-with-input-file file port->sexp-list)))
+                    (res '()))
+             (cond ((null? forms) (reverse res))
+                   ((and (pair? (car forms))
+                         (eq? 'c-include-verbatim (caar forms)))
+                    (lp (cdr forms) (append (cdar forms) res)))
+                   (else (lp (cdr forms) res)))))
+         (define (ffi-files base)
+           (let* ((path (path-resolve base (path-directory file)))
+                  (stub-file (string-append path ".stub"))
+                  (c-file (string-append path ".c")))
+             (cond
+              ((file-exists? stub-file)
+               (cons (string-append base ".stub")
+                     (ffi-file-includes stub-file)))
+              ((file-exists? c-file)
+               (list c-file))
+              (else
+               (warn "couldn't find ffi stub or c source" base)
+               '()))))
          (let lp ((ls declarations)
                   (info `(,@(cond
                              ((conf-get cfg '(command package author))
@@ -191,36 +213,58 @@
                           (path ,lib-file)
                           (name ,name)
                           library))
-                  (files `((rename ,file ,lib-file))))
+                  (deps '())
+                  (files `((rename ,file ,lib-file)))
+                  (chibi-ffi? #f))
            (cond
             ((null? ls)
-             (cons (reverse info) files))
+             ;; Force a fake dependency on (chibi) if the chibi ffi is
+             ;; used so this isn't available to other implementations.
+             (let* ((deps (if (and chibi-ffi? (not (member '(chibi) deps)))
+                              (cons '(chibi) deps)
+                              deps))
+                    (info (reverse (cons `(depends ,@deps) info))))
+               (cons info files)))
             (else
              (match (car ls)
                (((or 'include 'include-ci) includes ...)
                 (lp (cdr ls)
                     info
-                    (append (map resolve includes) files)))
+                    deps
+                    (append (map resolve includes) files)
+                    chibi-ffi?))
                (('include-library-declarations includes ...)
                 (lp (append (append-map file->sexp-list includes) (cdr ls))
                     info
-                    (append (map resolve includes) files)))
+                    deps
+                    (append (map resolve includes) files)
+                    chibi-ffi?))
+               (('include-shared includes ...)
+                (lp (cdr ls)
+                    info
+                    deps
+                    (append (map resolve (append-map ffi-files includes))
+                            files)
+                    #t))
                (('import libs ...)
                 (lp (cdr ls)
-                    (cons (cons 'depends (map import-name libs)) info)
-                    files))
+                    info
+                    (append (map import-name libs) deps)
+                    files
+                    chibi-ffi?))
                (('cond-expand clauses ...)
-                ;;(lp (append (append-map cdr clauses) (cdr ls)) info files)
-                (let ((libs+files (map (lambda (c) (lp c '() '())) clauses)))
+                (let ((libs+files (map (lambda (c) (lp c '() '() '() #f)) clauses)))
                   (lp (cdr ls)
                       (cons (cons 'cond-expand
                                   (map cons
                                        (map car clauses)
                                        (map car libs+files)))
                             info)
-                      (append files (append-map cdr libs+files)))))
+                      deps
+                      (append files (append-map cdr libs+files))
+                      chibi-ffi?)))
                (else
-                (lp (cdr ls) info files))))))))
+                (lp (cdr ls) info deps files chibi-ffi?))))))))
       (else
        (die 2 "not a valid library declaration " lib " in file " file)))))
 
@@ -1504,6 +1548,47 @@
                  '()
                  (list (list library-file dest-library-file)))))))
 
+;; first call the default builder to fix paths, then compile any ffi files
+(define (chibi-builder impl cfg library dir)
+  (let* ((library (default-builder impl cfg library dir))
+         (library-file (make-path dir (get-library-file cfg library)))
+         (shared-includes
+          (library-shared-include-files impl cfg library-file))
+         (local-test? (file-exists? "tools/chibi-ffi"))
+         (chibi-ffi
+          (if local-test?
+              (scheme-program-command impl cfg "tools/chibi-ffi")
+              '("chibi-ffi")))
+         (cc (string-split (or (conf-get cfg 'cc)
+                               (get-environment-variable "CC")
+                               "cc")))
+         (cflags (string-split (or (get-environment-variable "CFLAGS") ""))))
+    (let lp ((ls shared-includes))
+      (if (null? ls)
+          library
+          (let* ((base (car ls))
+                 (stub-file (string-append base ".stub"))
+                 (c-file (string-append base ".c"))
+                 (so-file (string-append base (cond-expand (macosx ".dylib")
+                                                           (else ".so"))))
+                 (so-flags (cond-expand (macosx '("-dynamiclib" "-Oz"))
+                                        (else '("-fPIC" "-shared" "-Os"))))
+                 (cc-cmd (append cc cflags so-flags
+                                 (if local-test? '("-Iinclude" "-L.") '())
+                                 `("-o" ,so-file ,c-file "-lchibi-scheme"))))
+            (and (or (file-exists? c-file)
+                     (and (file-exists? stub-file)
+                          (or (and (system? (append chibi-ffi (list stub-file)))
+                                   (file-exists? c-file))
+                              (yes-or-no? cfg "couldn't generate c from stub: "
+                                          stub-file " - install anyway?")))
+                     (yes-or-no? cfg "can't find ffi stub or c source for: "
+                                 base " - install anyway?"))
+                 (or (system? cc-cmd)
+                     (yes-or-no? cfg "couldn't compile chibi ffi c code: "
+                                 c-file " - install anyway?"))
+                 (lp (cdr ls))))))))
+
 (define (chicken-builder impl cfg library dir)
   (let* ((library-file (make-path dir (get-library-file cfg library)))
          (library-base (string-join (map x->string (library-name library)) "."))
@@ -1523,12 +1608,13 @@
 
 (define (lookup-builder builder)
   (case builder
+    ((chibi) chibi-builder)
     ((chicken) chicken-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chicken) 'chicken)
+    ((chibi chicken) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)

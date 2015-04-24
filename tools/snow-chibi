@@ -80,6 +80,7 @@
     (implementations (list symbol) "impls to install for, or 'all'")
     (program-implementation symbol "impl to install programs for")
     (chibi-path filename "path to chibi-scheme executable")
+    (cc string "path to c compiler")
     (sexp? boolean ("sexp") "output information in sexp format")
     ))
 

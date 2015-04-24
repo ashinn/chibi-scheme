@@ -435,6 +435,14 @@
      (filter (lambda (x) (and (pair? x) (memq (car x) '(include include-ci))))
              lib))))
 
+(define (library-shared-include-files impl config file)
+  (let ((lib (library-analyze impl config file))
+        (dir (path-directory file)))
+    (append-map
+     (lambda (x) (map (lambda (y) (make-path dir y)) (cdr x)))
+     (filter (lambda (x) (and (pair? x) (eq? (car x) 'include-shared)))
+             lib))))
+
 (define (library-rewrite-includes x rules)
   (define (recurse x) (library-rewrite-includes x rules))
   (define (rewrite x)

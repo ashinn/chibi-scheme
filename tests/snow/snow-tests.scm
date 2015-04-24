@@ -180,6 +180,11 @@
       --description "Equality implementation"
       --test-library "tests/snow/repo3/recorde/equal-test.sld"
       tests/snow/repo3/recorde/equal.sld)
+(snow package --output-dir tests/snow/repo3/
+      --version 1.0 --authors "Pythagoras"
+      --description "Pythagoran Theorem"
+      --test "tests/snow/repo3/pythagoras/hypotenuse-test.sch"
+      tests/snow/repo3/pythagoras/hypotenuse.sch)
 (snow index ,(cadr repo3))
 (snow ,@repo3 update)
 (snow ,@repo3 install pingala.binomial)
@@ -187,6 +192,7 @@
   (test-assert (installed-version status '(pingala binomial)))
   (test-assert (installed-version status '(pingala factorial))))
 
+;; programs
 (snow ,@repo3 install pingala.triangle)
 (test-assert (file-exists? "tests/snow/tmp-root/bin/triangle"))
 (test "1
@@ -212,6 +218,10 @@
 (test-assert (installed-version (snow-status) '(pingala prosody)))
 (test-assert
     (file-exists? "tests/snow/tmp-root/share/snow/chibi/pingala/ganas.txt"))
+
+;; chibi ffi
+(snow ,@repo3 install pythagoras.hypotenuse)
+(test-assert (installed-version (snow-status) '(pythagoras hypotenuse)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
