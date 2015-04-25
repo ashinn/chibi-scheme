@@ -69,12 +69,12 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs,
     }
     /* Scan down, modding bigits > bound to < bound, and stop as */
     /* soon as we are sure the result is within bound. */
-    for (i = hi-1; i >= 0; i++) {
-      mod = sexp_bignum_data(bound)[i-1];
-      if (mod && sexp_bignum_data(res)[i-1] > mod) {
-        sexp_bignum_data(res)[i-1] %= mod;
+    for (i = hi-1; i >= 0; i--) {
+      mod = sexp_bignum_data(bound)[i];
+      if (mod && sexp_bignum_data(res)[i] > mod) {
+        sexp_bignum_data(res)[i] %= mod;
       }
-      if (sexp_bignum_data(res)[i-1] != mod) {
+      if (sexp_bignum_data(res)[i] != mod) {
         break;
       }
     }
