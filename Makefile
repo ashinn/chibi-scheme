@@ -373,13 +373,13 @@ uninstall:
 dist: dist-clean
 	$(RM) chibi-scheme-`cat VERSION`.tgz
 	$(MKDIR) chibi-scheme-`cat VERSION`
-	@for f in `hg manifest | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`cat VERSION`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
+	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`cat VERSION`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
 	$(TAR) cphzvf chibi-scheme-`cat VERSION`.tgz chibi-scheme-`cat VERSION`
 	$(RM) -r chibi-scheme-`cat VERSION`
 
 mips-dist: dist-clean
-	$(RM) chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz
-	$(MKDIR) chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
-	@for f in `hg manifest | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`/$$f; done
-	$(TAR) cphzvf chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`.tgz chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
-	$(RM) -r chibi-scheme-`date +%Y%m%d`-`hg tags|head -1|sed -n 's/.* \([0-9]*\):.*/\1/p'`
+	$(RM) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`.tgz
+	$(MKDIR) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
+	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`/$$f; done
+	$(TAR) cphzvf chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`.tgz chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
+	$(RM) -r chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
