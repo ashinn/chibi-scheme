@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs
+.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian
 .DEFAULT_GOAL := all
 
 SOVERSION ?= $(shell cat VERSION)
@@ -383,3 +383,6 @@ mips-dist: dist-clean
 	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`/$$f; done
 	$(TAR) cphzvf chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`.tgz chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
 	$(RM) -r chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
+
+debian:
+	sudo checkinstall -D --pkgname chibi-scheme --pkgversion `cat VERSION` --maintainer "http://groups.google.com/group/chibi-scheme" -y make PREFIX=/usr install
