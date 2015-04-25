@@ -204,6 +204,7 @@ typedef uint8_t  sexp_uint8_t;
 # ifdef UINT32_MAX
 #  define SEXP_UINT32_DEFINED 1
 typedef uint32_t sexp_uint32_t;
+typedef int32_t sexp_int32_t;
 # endif
 #else
 # include <limits.h>
@@ -214,12 +215,15 @@ typedef unsigned char sexp_uint8_t;
 # if UINT_MAX == 4294967295U
 #  define SEXP_UINT32_DEFINED 1
 typedef unsigned int sexp_uint32_t;
+typedef int sexp_int32_t;
 # elif ULONG_MAX == 4294967295UL
 #  define SEXP_UINT32_DEFINED 1
 typedef unsigned long sexp_uint32_t;
+typedef long sexp_int32_t;
 # elif USHRT_MAX == 4294967295U
 #  define SEXP_UINT32_DEFINED 1
 typedef unsigned short sexp_uint32_t;
+typedef short sexp_int32_t;
 # endif
 #endif
 

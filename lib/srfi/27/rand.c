@@ -47,9 +47,10 @@ typedef unsigned int sexp_random_t;
 
 static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
   sexp res;
-  int32_t m;
+  sexp_int32_t m;
 #if SEXP_USE_BIGNUMS
-  int32_t hi, mod, len, i, *data;
+  sexp_uint32_t mod;
+  sexp_int32_t hi, len, i, *data;
 #endif
   if (! sexp_random_source_p(rs))
     res = sexp_type_exception(ctx, self, rs_type_id, rs);
@@ -59,16 +60,24 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs,
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(bound)) {
     hi = sexp_bignum_hi(bound);
-    len = hi * (sizeof(sexp_uint_t) / sizeof(int32_t));
+    len = hi * (sizeof(sexp_uint_t) / sizeof(sexp_int32_t));
     res = sexp_make_bignum(ctx, hi + 1);
-    data = (int32_t*) sexp_bignum_data(res);
+    data = (sexp_int32_t*) sexp_bignum_data(res);
     for (i=0; i<len-1; i++) {
       sexp_call_random(rs, m);
       data[i] = m;
     }
-    mod = sexp_bignum_data(bound)[hi-1];
-    if (mod && sexp_bignum_data(res)[hi-1] > 0)
-      sexp_bignum_data(res)[hi-1] %= mod;
+    /* Scan down, modding bigits > bound to < bound, and stop as */
+    /* soon as we are sure the result is within bound. */
+    for (i = hi-1; i >= 0; i++) {
+      mod = sexp_bignum_data(bound)[i-1];
+      if (mod && sexp_bignum_data(res)[i-1] > mod) {
+        sexp_bignum_data(res)[i-1] %= mod;
+      }
+      if (sexp_bignum_data(res)[i-1] != mod) {
+        break;
+      }
+    }
 #endif
   } else {
     res = sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
@@ -81,7 +90,7 @@ static sexp sexp_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp bound)
 }
 
 static sexp sexp_rs_random_real (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
-  int32_t res;
+  sexp_int32_t res;
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   sexp_call_random(rs, res);
