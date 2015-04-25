@@ -67,6 +67,9 @@
 /* uncomment this to disable weak references */
 /* #define SEXP_USE_WEAK_REFERENCES 0 */
 
+/* uncomment this to enable heap regions for fixed-size chunks */
+/* #define SEXP_USE_FIXED_CHUNK_SIZE_HEAPS 1 */
+
 /* uncomment this to just malloc manually instead of any GC */
 /*   Mostly for debugging purposes, this is the no GC option. */
 /*   You can use just the read/write API and */
@@ -354,6 +357,10 @@
 
 #ifndef SEXP_USE_WEAK_REFERENCES
 #define SEXP_USE_WEAK_REFERENCES ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+#define SEXP_USE_FIXED_CHUNK_SIZE_HEAPS 0
 #endif
 
 #ifndef SEXP_USE_MALLOC

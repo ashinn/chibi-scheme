@@ -279,7 +279,7 @@ struct sexp_free_list_t {
 
 typedef struct sexp_heap_t *sexp_heap;
 struct sexp_heap_t {
-  sexp_uint_t size, max_size;
+  sexp_uint_t size, max_size, chunk_size;
   sexp_free_list free_list;
   sexp_heap next;
   /* note this must be aligned on a proper heap boundary, */
@@ -1518,7 +1518,8 @@ SEXP_API void sexp_maybe_unblock_port (sexp ctx, sexp in);
 
 #if ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC
 SEXP_API void sexp_gc_init (void);
-SEXP_API sexp_heap sexp_make_heap (size_t size, size_t max_size);
+SEXP_API int sexp_grow_heap (sexp ctx, size_t size, size_t chunk_size);
+SEXP_API sexp_heap sexp_make_heap (size_t size, size_t max_size, size_t chunk_size);
 SEXP_API void sexp_mark (sexp ctx, sexp x);
 SEXP_API sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr);
 SEXP_API sexp sexp_finalize (sexp ctx);

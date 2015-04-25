@@ -444,7 +444,7 @@ sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
   sexp_heap heap;
   struct sexp_struct dummy_ctx;
   if (size < SEXP_MINIMUM_HEAP_SIZE) size = SEXP_INITIAL_HEAP_SIZE;
-  heap = sexp_make_heap(sexp_heap_align(size), sexp_heap_align(max_size));
+  heap = sexp_make_heap(sexp_heap_align(size), sexp_heap_align(max_size), 0);
   if (!heap) return 0;
   sexp_pointer_tag(&dummy_ctx) = SEXP_CONTEXT;
   sexp_context_saves(&dummy_ctx) = NULL;
@@ -454,6 +454,10 @@ sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
     sexp_free_heap(heap);
   } else {
     sexp_context_heap(ctx) = heap;
+#if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+    heap->chunk_size = 1<<(4+SEXP_64_BIT);
+    sexp_grow_heap(ctx, sexp_heap_align(size), 0);
+#endif
   }
   return ctx;
 }
