@@ -619,9 +619,10 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
   if ((id1 == id2)
       && ((!cell1 && !cell2)
 #if !SEXP_USE_STRICT_TOPLEVEL_BINDINGS
-          || ((cell1 && cell2)
-              && (!sexp_lambdap(sexp_cdr(cell1)) && !sexp_env_cell_syntactic_p(cell1))
-              && (!sexp_lambdap(sexp_cdr(cell2)) && !sexp_env_cell_syntactic_p(cell2)))
+          || ((!cell1 || (!sexp_lambdap(sexp_cdr(cell1)) &&
+                         !sexp_env_cell_syntactic_p(cell1))) &&
+              (!cell2 || (!sexp_lambdap(sexp_cdr(cell2)) &&
+                          !sexp_env_cell_syntactic_p(cell2))))
 #endif
               ))
     return SEXP_TRUE;
