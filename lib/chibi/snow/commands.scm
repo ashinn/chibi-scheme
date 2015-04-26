@@ -844,7 +844,7 @@
               (sha-256 (string-append email raw-password))))))
 
 (define (upload-package cfg spec package . o)
-  (let ((password `(pw (value ,(get-password cfg))))
+  (let ((password `(pw (value . ,(get-password cfg package))))
         (pkg (if (string? package)
                  `(u (file . ,package))
                  `(u (file . ,(if (pair? o) (car o) "package.tgz"))
