@@ -94,7 +94,7 @@
 (define (resolve-import x)
   (cond
    ((not (and (pair? x) (list? x)))
-    (error "invalid module syntax" x))
+    (error "invalid import syntax" x))
    ((and (memq (car x) '(prefix drop-prefix))
          (symbol? (car (cddr x))) (list? (cadr x)))
     (let ((mod-name+imports (resolve-import (cadr x))))
