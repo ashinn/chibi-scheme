@@ -148,7 +148,9 @@
               (lib-file (path-relative file dir))
               (lib-dir (path-directory lib-file)))
          (define (resolve file)
-           (let ((dest-path (make-path lib-dir file)))
+           (let ((dest-path (if (equal? lib-dir ".")
+                                file
+                                (make-path lib-dir file))))
              (list 'rename (make-path dir dest-path) dest-path)))
          (define (ffi-file-includes file)
            (let lp ((forms (guard (exn (else '()))
