@@ -106,7 +106,9 @@
     (validity-period string)
     (name string)
     (library-prefix (list symbol))
-    (email string)))
+    (email string)
+    (gen-rsa-key? boolean ("gen-rsa-key"))
+    (gen-key-in-process? boolean ("gen-key-in-process"))))
 (define reg-key-spec
   '((uri string)
     (email string)))

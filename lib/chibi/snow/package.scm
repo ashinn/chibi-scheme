@@ -83,19 +83,37 @@
          (and (pair? sig)
               (assoc-get (cdr sig) 'email eq?)))))
 
+(define (strip-email str)
+  (string-trim (regexp-replace '(: "<" (* (~ (">"))) ">") str "")))
+
 (define (package-author repo pkg . o)
-  (and (package? pkg)
-       (let ((email (package-email pkg))
-             (show-email? (and (pair? o) (car o))))
-         (or (cond
-              ((repo-find-publisher repo email)
-               => (lambda (pub)
-                    (let ((name (assoc-get pub 'name)))
-                      (if (and name show-email?)
-                          (string-append name " <" (or email "") ">")
-                          (or name email "")))))
-              (else #f))
-             email))))
+  (let ((show-email? (and (pair? o) (car o))))
+    (cond
+     ((not (package? pkg))
+      #f)
+     ((assoc-get (cdr pkg) 'authors)
+      => (lambda (authors) (if show-email? authors (strip-email authors))))
+     (else
+      (let ((email (package-email pkg)))
+        (or (cond
+             ((repo-find-publisher repo email)
+              => (lambda (pub)
+                   (let ((name (assoc-get pub 'name)))
+                     (if (and name show-email?)
+                         (string-append name " <" (or email "") ">")
+                         (or name email "")))))
+             (else #f))
+            email))))))
+
+(define (package-maintainer repo pkg . o)
+  (let ((show-email? (and (pair? o) (car o))))
+    (cond
+     ((not (package? pkg))
+      #f)
+     ((assoc-get (cdr pkg) 'maintainers)
+      => (lambda (maint) (if show-email? maint (strip-email maint))))
+     (else
+      #f))))
 
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))

@@ -4,7 +4,7 @@
           package-name package-email package-url package-version
           package-libraries package-programs package-data-files
           package-provides? package-dependencies package-test-dependencies
-          package-installed-files package-author
+          package-installed-files package-author package-maintainer
           package-digest-mismatches package-signature-mismatches
           package-digest-ok? package-signature-ok?
           package->path package-name->meta-file
@@ -37,6 +37,7 @@
           (chibi filesystem)
           (chibi io)
           (chibi pathname)
+          (chibi regexp)
           (chibi string)
           (chibi tar)
           (chibi uri)

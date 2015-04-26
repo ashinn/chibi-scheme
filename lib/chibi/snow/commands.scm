@@ -650,28 +650,36 @@
 
 (define (rsa-key->sexp key name email . o)
   (let ((password (and (pair? o) (not (equal? "" (car o))) (car o))))
-    `((name ,name)
-      (email ,email)
-      (bits ,(rsa-key-bits key))
-      ,@(cond (password `((password ,password))) (else '()))
-      ,@(cond
-         ((rsa-key-e key)
-          => (lambda (e)
-               `((public-key
-                  (modulus ,(integer->hex-string (rsa-key-n key)))
-                  (exponent ,e)))))
-         (else '()))
-      ,@(cond
-         ((rsa-key-d key)
-          => (lambda (d)
-               `((private-key
-                  (modulus ,(integer->hex-string (rsa-key-n key)))
-                  (exponent ,d)))))
-         (else '())))))
+    (cond
+     (key
+      `((name ,name)
+        (email ,email)
+        (bits ,(rsa-key-bits key))
+        ,@(cond (password `((password ,password))) (else '()))
+        ,@(cond
+           ((rsa-key-e key)
+            => (lambda (e)
+                 `((public-key
+                    (modulus ,(integer->hex-string (rsa-key-n key)))
+                    (exponent ,e)))))
+           (else '()))
+        ,@(cond
+           ((rsa-key-d key)
+            => (lambda (d)
+                 `((private-key
+                    (modulus ,(integer->hex-string (rsa-key-n key)))
+                    (exponent ,d)))))
+           (else '()))))
+     (password
+      `((name ,name)
+        (email ,email)
+        (password ,password)))
+     (else
+      (error "neither key nor password provided" email)))))
 
 (define (conf-gen-key cfg bits)
   (show #t "Generating a new key, this may take quite a while...\n")
-  (if (conf-get cfg 'gen-key-in-process?)
+  (if (conf-get cfg '(command gen-key gen-key-in-process?))
       (rsa-key-gen bits)
       (let* ((lo (max 3 (expt 2 (- bits 1))))
              (hi (expt 2 bits))
@@ -683,7 +691,7 @@
 
 (define (command/gen-key cfg spec)
   (show #t
-        "Generate a new RSA key for signing packages.\n"
+        "Generate a new key for uploading packages.\n"
         "We need a descriptive name, and an email address to "
         "uniquely identify the key.\n")
   (let* ((name (input cfg '(gen-key name) "Name: "))
@@ -691,9 +699,11 @@
          (passwd (input-password cfg '(gen-key password)
                                  "Password for upload: "
                                  "Password (confirmation): "))
-         (bits (input-number cfg '(gen-key bits)
-                             "RSA key size in bits: " 512 64 20148))
-         (key (conf-gen-key cfg bits))
+         (bits (if (conf-get cfg '(command gen-key gen-rsa-key?))
+                   (input-number cfg '(gen-key bits)
+                                 "RSA key size in bits: " 0 256 2048)
+                   0))
+         (key (and (>= bits 256) (conf-gen-key cfg bits)))
          (snow-dir (conf-get-snow-dir cfg))
          (key-file (or (conf-get cfg 'key-file)
                        (string-append snow-dir "/priv-key.scm")))
@@ -779,7 +789,7 @@
     (append
      `(signature
        (email ,email))
-     (if (conf-get cfg 'sign-uploads?)
+     (if (and rsa-key (conf-get cfg 'sign-uploads?))
          (let* ((sig (fast-eval
                       `(rsa-sign (make-rsa-key ,(rsa-key-bits rsa-key)
                                                ,(rsa-key-n rsa-key)

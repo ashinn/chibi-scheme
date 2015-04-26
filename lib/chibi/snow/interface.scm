@@ -109,6 +109,8 @@
             (cond
              ((not (number? res))
               (fail "not a valid number"))
+             ((equal? res default)
+              res)
              ((and lo (< res lo))
               (fail (each "too low, must be greater than " lo)))
              ((and hi (> res hi))
