@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian
+.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian snowballs
 .DEFAULT_GOAL := all
 
 SOVERSION ?= $(shell cat VERSION)
@@ -16,6 +16,8 @@ GENSTATIC ?= ./tools/chibi-genstatic
 
 CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH=".:$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH=lib ./chibi-scheme$(EXE)
 CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
+
+SNOW_CHIBI ?= $(CHIBI) tools/snow-chibi
 
 ########################################################################
 
@@ -386,3 +388,32 @@ mips-dist: dist-clean
 
 debian:
 	sudo checkinstall -D --pkgname chibi-scheme --pkgversion `cat VERSION` --maintainer "http://groups.google.com/group/chibi-scheme" -y make PREFIX=/usr install
+
+# Libraries in the standard distribution we want to make available to
+# other Scheme implementations.  Note this is run with my own
+# ~/.snow/config.scm, which specifies myself own settings regarding
+# author, license, extracting docs from scribble, etc.
+snowballs:
+	$(SNOW_CHIBI) package --license public-domain lib/chibi/match.sld
+	$(SNOW_CHIBI) package -r lib/chibi/char-set.sld
+	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
+	$(SNOW_CHIBI) package lib/chibi/app.sld
+	$(SNOW_CHIBI) package lib/chibi/bytevector.sld
+	$(SNOW_CHIBI) package lib/chibi/char-set/boundary.sld
+	$(SNOW_CHIBI) package lib/chibi/config.sld
+	$(SNOW_CHIBI) package lib/chibi/crypto/md5.sld
+	$(SNOW_CHIBI) package lib/chibi/crypto/rsa.sld
+	$(SNOW_CHIBI) package lib/chibi/crypto/sha2.sld
+	$(SNOW_CHIBI) package lib/chibi/iset.sld
+	$(SNOW_CHIBI) package lib/chibi/math/prime.sld
+	$(SNOW_CHIBI) package lib/chibi/monad/environment.sld
+	$(SNOW_CHIBI) package lib/chibi/optional.sld
+	$(SNOW_CHIBI) package lib/chibi/parse.sld lib/chibi/parse/common.sld
+	$(SNOW_CHIBI) package lib/chibi/pathname.sld
+	$(SNOW_CHIBI) package lib/chibi/regexp.sld lib/chibi/regexp/pcre.sld
+	$(SNOW_CHIBI) package lib/chibi/scribble.sld
+	$(SNOW_CHIBI) package lib/chibi/string.sld
+	$(SNOW_CHIBI) package lib/chibi/sxml.sld
+	$(SNOW_CHIBI) package lib/chibi/term/ansi.sld
+	$(SNOW_CHIBI) package lib/chibi/test.sld
+	$(SNOW_CHIBI) package lib/chibi/uri.sld
