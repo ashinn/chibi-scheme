@@ -68,7 +68,7 @@
           (chibi iset constructors))
   (export
    %make-iset make-iset iset? iset-contains? Integer-Set
-   iset iset-copy list->iset list->iset! iset-map
+   iset iset-copy list->iset list->iset!
    iset-adjoin iset-adjoin! iset-delete iset-delete!
    iset-union iset-union! iset-intersection iset-intersection!
    iset-difference iset-difference!

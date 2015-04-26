@@ -1,8 +1,10 @@
 (define-library (chibi parse-test)
   (export run-tests)
-  (import (chibi) (chibi test)
-          (chibi char-set) (chibi char-set ascii)
-          (chibi parse) (chibi parse common))
+  (import (scheme base) (scheme char)
+          (chibi test) (chibi parse) (chibi parse common))
+  (cond-expand
+   (chibi (import (chibi char-set) (chibi char-set ascii)))
+   (else (import (srfi 14))))
   (begin
     (define (run-tests)
       (test-begin "parse")
@@ -73,68 +75,73 @@
         ;; partial match (grammar isn't checking end)
         (test 42 (parse term "42*")))
 
-      (define calculator
-        (grammar expr
-          (space ((: ,char-set:whitespace ,space))
-                 (() #f))
-          (digit ((=> d ,char-set:digit) d))
-          (number ((=> n (+ ,digit))
-                   (string->number (list->string n))))
-          (simple ((=> n ,number) n)
-                  ((: "(" (=> e1 ,expr) ")") e1))
-          (term-op ("*" *)
-                   ("/" /)
-                   ("%" modulo))
-          (term ((: (=> e1 ,simple) ,space (=> op ,term-op) ,space (=> e2 ,term))
-                 (op e1 e2))
-                ((=> e1 ,simple)
-                 e1))
-          (expr-op ("+" +) ("-" -))
-          (expr ((: ,space (=> e1 ,term) ,space (=> op ,expr-op) ,space (=> e2 ,expr))
-                 (op e1 e2))
-                ((: ,space (=> e1 ,term))
-                 e1))))
+      (let ()
+        (define calculator
+          (grammar expr
+            (space ((: ,char-set:whitespace ,space))
+                   (() #f))
+            (digit ((=> d ,char-set:digit) d))
+            (number ((=> n (+ ,digit))
+                     (string->number (list->string n))))
+            (simple ((=> n ,number) n)
+                    ((: "(" (=> e1 ,expr) ")") e1))
+            (term-op ("*" *)
+                     ("/" /)
+                     ("%" modulo))
+            (term ((: (=> e1 ,simple) ,space (=> op ,term-op) ,space
+                      (=> e2 ,term))
+                   (op e1 e2))
+                  ((=> e1 ,simple)
+                   e1))
+            (expr-op ("+" +) ("-" -))
+            (expr ((: ,space (=> e1 ,term) ,space (=> op ,expr-op) ,space
+                      (=> e2 ,expr))
+                   (op e1 e2))
+                  ((: ,space (=> e1 ,term))
+                   e1))))
 
-      (test 42 (parse calculator "42"))
-      (test 4 (parse calculator "2 + 2"))
-      (test 23 (parse calculator "2 + 2*10 + 1"))
-      (test 25 (parse calculator "2+2 * 10+1 * 3"))
-      (test 41 (parse calculator "(2 + 2) * 10 + 1"))
+        (test 42 (parse calculator "42"))
+        (test 4 (parse calculator "2 + 2"))
+        (test 23 (parse calculator "2 + 2*10 + 1"))
+        (test 25 (parse calculator "2+2 * 10+1 * 3"))
+        (test 41 (parse calculator "(2 + 2) * 10 + 1")))
 
-      (define prec-calc
-        (grammar expr
-          (simple (,(parse-integer))
-                  ((: "(" (=> e1 ,expr) ")") e1))
-          (op
-           ("+" '+) ("-" '-) ("*" '*) ("/" '/) ("^" '^))
-          (expr
-           (,(parse-binary-op op
-                              `((+ 5) (- 5) (* 3) (/ 3) (^ 1 right))
-                              simple)))))
+      (let ()
+        (define prec-calc
+          (grammar expr
+            (simple (,(parse-integer))
+                    ((: "(" (=> e1 ,expr) ")") e1))
+            (op
+             ("+" '+) ("-" '-) ("*" '*) ("/" '/) ("^" '^))
+            (expr
+             (,(parse-binary-op op
+                                `((+ 5) (- 5) (* 3) (/ 3) (^ 1 right))
+                                simple)))))
 
-      (test 42 (parse prec-calc "42"))
-      (test '(+ 2 2) (parse prec-calc "2 + 2"))
-      (test '(+ (+ 2 2) 2) (parse prec-calc "2 + 2 + 2"))
-      (test '(+ (+ 2 (* 2 10)) 1) (parse prec-calc "2 + 2*10 + 1"))
-      (test '(+ (+ 2 (* 2 10)) (* 1 3)) (parse prec-calc "2+2 * 10+1 * 3"))
-      (test '(+ (* (+ 2 2) 10) 1) (parse prec-calc "(2 + 2) * 10 + 1"))
-      (test '(^ 2 (^ 2 2)) (parse prec-calc "2 ^ 2 ^ 2"))
-      (test '(+ (+ (+ 1 (* (* 2 (^ 3 (^ 4 5))) 6)) (^ 7 8)) 9)
-          (parse prec-calc "1 + 2 * 3 ^ 4 ^ 5 * 6 + 7 ^ 8 + 9"))
+        (test 42 (parse prec-calc "42"))
+        (test '(+ 2 2) (parse prec-calc "2 + 2"))
+        (test '(+ (+ 2 2) 2) (parse prec-calc "2 + 2 + 2"))
+        (test '(+ (+ 2 (* 2 10)) 1) (parse prec-calc "2 + 2*10 + 1"))
+        (test '(+ (+ 2 (* 2 10)) (* 1 3)) (parse prec-calc "2+2 * 10+1 * 3"))
+        (test '(+ (* (+ 2 2) 10) 1) (parse prec-calc "(2 + 2) * 10 + 1"))
+        (test '(^ 2 (^ 2 2)) (parse prec-calc "2 ^ 2 ^ 2"))
+        (test '(+ (+ (+ 1 (* (* 2 (^ 3 (^ 4 5))) 6)) (^ 7 8)) 9)
+            (parse prec-calc "1 + 2 * 3 ^ 4 ^ 5 * 6 + 7 ^ 8 + 9")))
 
       ;; this takes exponential time without memoization
-      (define explode
-        (grammar start
-                 (start ((: ,S eos) #t))
-                 (S ((+ ,A) #t))
-                 (A ((: "a" ,S "b") #t)
-                    ((: "a" ,S "c") #t)
-                    ((: "a") #t))))
+      (let ()
+        (define explode
+          (grammar start
+            (start ((: ,S eos) #t))
+            (S ((+ ,A) #t))
+            (A ((: "a" ,S "b") #t)
+               ((: "a" ,S "c") #t)
+               ((: "a") #t))))
 
-      (test-assert (parse explode "aaabb"))
-      (test-not (parse explode "bbaa"))
-      (test-assert
-          (parse explode
-                 (string-append (make-string 10 #\a) (make-string 8 #\c))))
+        (test-assert (parse explode "aaabb"))
+        (test-not (parse explode "bbaa"))
+        (test-assert
+            (parse explode
+                   (string-append (make-string 10 #\a) (make-string 8 #\c)))))
 
       (test-end))))

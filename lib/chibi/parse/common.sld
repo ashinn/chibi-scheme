@@ -7,5 +7,8 @@
           parse-ipv4-address parse-ipv6-address parse-ip-address
           parse-domain parse-common-domain parse-email parse-uri
           char-hex-digit? char-octal-digit?)
-  (import (chibi) (chibi parse))
+  (cond-expand
+   (chibi (import (chibi)))
+   (else (import (scheme base) (scheme char))))
+  (import (chibi parse))
   (include "common.scm"))

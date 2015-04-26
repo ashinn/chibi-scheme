@@ -1,6 +1,6 @@
 (define-library (chibi pathname-test)
   (export run-tests)
-  (import (chibi) (chibi pathname) (chibi test))
+  (import (scheme base) (chibi pathname) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "pathname")

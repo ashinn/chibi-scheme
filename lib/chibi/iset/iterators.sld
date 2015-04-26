@@ -1,6 +1,12 @@
 
 (define-library (chibi iset iterators)
-  (import (chibi) (srfi 9) (srfi 33) (chibi iset base))
+  (cond-expand
+   (chibi (import (chibi) (srfi 9)))
+   (else (import (scheme base))))
+  (import (chibi iset base))
+  (cond-expand
+   ((library (srfi 60)) (import (srfi 60)))
+   (else (import (srfi 33))))
   (include "iterators.scm")
   (export
    iset-empty? iset-fold iset-fold-node iset-for-each iset-for-each-node

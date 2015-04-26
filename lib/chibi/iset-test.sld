@@ -1,16 +1,19 @@
 (define-library (chibi iset-test)
   (export run-tests)
-  (import (chibi) (chibi iset) (chibi iset optimize) (srfi 1) (chibi test))
+  (import (scheme base) (scheme write)
+          (except (srfi 1) make-list list-copy)
+          (chibi iset) (chibi iset optimize)
+          (chibi test))
   (begin
     (define (run-tests)
       (define (test-name iset op)
-        (call-with-output-string
-          (lambda (out)
-            (let* ((ls (iset->list iset))
-                   (ls (if (> (length ls) 10)
-                           `(,@(take ls 5) ... ,@(take-right ls 5))
-                           ls)))
-              (write `(,(car op) (iset ,@ls) ,@(cdr op)) out)))))
+        (let ((out (open-output-string)))
+          (let* ((ls (iset->list iset))
+                 (ls (if (> (length ls) 10)
+                         `(,@(take ls 5) ... ,@(take-right ls 5))
+                         ls)))
+            (write `(,(car op) (iset ,@ls) ,@(cdr op)) out)
+            (get-output-string out))))
 
       (test-begin "iset")
 
@@ -122,10 +125,10 @@
              ;; initial creation and sanity checks
              (test-assert (lset= equal? ls2 (iset->list is)))
              (test (length ls2) (iset-size is))
-             (test-assert (call-with-output-string
-                            (lambda (out)
-                              (display "init: " out)
-                              (write ls out)))
+             (test-assert (let ((out (open-output-string)))
+                            (display "init: " out)
+                            (write ls out)
+                            (get-output-string out))
                (every
                 (lambda (x) (iset-contains? is x))
                 ls))

@@ -64,7 +64,7 @@
   (when (not (and (exact-integer? blue-level) (<= 0 blue-level 5)))
     (error "invalid blue-level value" blue-level))
   (string-append
-   "\x1B[38;5;"
+   "\x1B;[38;5;"
    (number->string (+ (* 36 red-level) (* 6 green-level) blue-level 16))
    "m"))
 
@@ -78,7 +78,7 @@
 (define (gray-escape gray-level)
   (when (not (and (exact-integer? gray-level) (<= 0 gray-level 23)))
     (error "invalid gray-level value" gray-level))
-  (string-append "\x1B[38;5;"
+  (string-append "\x1B;[38;5;"
                  (number->string (+ gray-level 232))
                  "m"))
 
@@ -196,7 +196,7 @@
   (when (not (and (exact-integer? blue-level) (<= 0 blue-level 5)))
     (error "invalid blue-level value" blue-level))
   (string-append
-   "\x1B[48;5;"
+   "\x1B;[48;5;"
    (number->string (+ (* 36 red-level) (* 6 green-level) blue-level 16))
    "m"))
 
@@ -210,7 +210,7 @@
 (define (gray-background-escape gray-level)
   (when (not (and (exact-integer? gray-level) (<= 0 gray-level 23)))
     (error "invalid gray-level value" gray-level))
-  (string-append "\x1B[48;5;"
+  (string-append "\x1B;[48;5;"
                  (number->string (+ gray-level 232))
                  "m"))
 

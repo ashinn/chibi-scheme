@@ -1,6 +1,6 @@
 (define-library (chibi uri-test)
   (export run-tests)
-  (import (chibi) (chibi test) (chibi uri))
+  (import (scheme base) (chibi test) (chibi uri))
   (begin
     (define (run-tests)
       (test-begin "uri")

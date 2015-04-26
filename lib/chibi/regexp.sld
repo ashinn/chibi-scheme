@@ -8,7 +8,10 @@
           regexp-match-submatch regexp-match-submatch/list
           regexp-match-submatch-start regexp-match-submatch-end
           regexp-match->list regexp-match->sexp)
-  (import (srfi 33) (srfi 69))
+  (import (srfi 69))
+  (cond-expand
+   ((library (srfi 60)) (import (srfi 60)))
+   (else (import (srfi 33))))
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
    (chibi

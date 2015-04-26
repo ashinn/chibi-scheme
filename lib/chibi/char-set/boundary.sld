@@ -4,10 +4,12 @@
 
 (define-library (chibi char-set boundary)
   (cond-expand
-   (chibi
-    (import (chibi) (chibi char-set)))
+   (chibi (import (chibi)))
+   (else (import (scheme base))))
+  (cond-expand
+   ((library (chibi char-set)) (import (chibi char-set)))
    (else
-    (import (scheme base) (srfi 14))
+    (import (srfi 14))
     (begin (define (immutable-char-set cs) cs))))
   (export char-set:regional-indicator
           char-set:extend-or-spacing-mark

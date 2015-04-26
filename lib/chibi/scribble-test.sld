@@ -1,15 +1,21 @@
 (define-library (chibi scribble-test)
   (export run-tests)
-  (import (chibi) (chibi scribble) (only (chibi test) test-begin test test-end))
+  (import (scheme base) (scheme write) (chibi scribble)
+          (only (chibi test) test-begin test test-end))
   (begin
+    (define (call-with-output-string proc)
+      (let ((out (open-output-string)))
+        (proc out)
+        (get-output-string out)))
+    (define (call-with-input-string str proc)
+      (proc (open-input-string str)))
+    (define (test-scribble expect str)
+      (test (call-with-output-string (lambda (out) (write str out)))
+          expect
+        (call-with-input-string str scribble-parse)))
     (define (run-tests)
 
       (test-begin "scribble")
-
-      (define (test-scribble expect str)
-        (test (call-with-output-string (lambda (out) (write str out)))
-            expect
-          (call-with-input-string str scribble-parse)))
 
       (test-scribble '((foo "blah blah blah")) "\\foo{blah blah blah}")
       (test-scribble '((foo "blah \"blah\" (`blah'?)")) "\\foo{blah \"blah\" (`blah'?)}")

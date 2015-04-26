@@ -14,15 +14,13 @@
           parse-string parse-token parse-sre
           parse-beginning parse-end
           parse-beginning-of-line parse-end-of-line
-          parse-beginning-of-line parse-end-of-line
           parse-beginning-of-word parse-end-of-word
           parse-word parse-word+
           parse-with-failure-reason
           make-parse-stream)
-  (import (chibi) (chibi char-set) (srfi 9))
-  (include "parse/parse.scm")
   (cond-expand
    (chibi
+    (import (chibi) (chibi char-set) (srfi 9))
     (begin
       (define-syntax grammar-bind
         (er-macro-transformer
@@ -59,6 +57,7 @@
                      (cons (list name new-tmp) bindings))))
                  (append k (list f bindings)))))))))
    (else
+    (import (scheme base) (scheme char) (scheme file) (srfi 14))
     (begin
       (define-syntax grammar-bind
         (syntax-rules ()
@@ -77,4 +76,5 @@
                         (lambda (r s i fk) (set! new-tmp r) (sk r s i fk))
                         (lambda (s i r) (set! new-tmp save-tmp) (fk s i r)))))
                  ((var tmp) ... (name new-tmp)))
-              (k ... f ((var tmp) ...)))))))))))
+              (k ... f ((var tmp) ...))))))))))
+  (include "parse/parse.scm"))

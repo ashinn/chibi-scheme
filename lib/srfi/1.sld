@@ -18,7 +18,39 @@
    lset<= lset= lset-adjoin lset-union lset-union! lset-intersection
    lset-intersection! lset-difference lset-difference! lset-xor lset-xor!
    lset-diff+intersection lset-diff+intersection!)
-  (import (chibi))
+  (cond-expand
+   (chibi
+    (import (chibi)))
+   (else
+    (import (scheme base))
+    (begin
+      (define reverse! reverse)
+      (define (find-tail pred ls)
+        (and (pair? ls) (if (pred (car ls)) ls (find-tail pred (cdr ls)))))
+      (define (find pred ls)
+        (cond ((find-tail pred ls) => car) (else #f)))
+      (define (any pred ls . lol)
+        (define (any1 pred ls)
+          (if (pair? (cdr ls))
+              ((lambda (x) (if x x (any1 pred (cdr ls)))) (pred (car ls)))
+              (pred (car ls))))
+        (define (anyn pred lol)
+          (if (every pair? lol)
+              ((lambda (x) (if x x (anyn pred (map cdr lol))))
+               (apply pred (map car lol)))
+              #f))
+        (if (null? lol)
+            (if (pair? ls) (any1 pred ls) #f)
+            (anyn pred (cons ls lol))))
+      (define (every pred ls . lol)
+        (define (every1 pred ls)
+          (if (null? (cdr ls))
+              (pred (car ls))
+              (if (pred (car ls)) (every1 pred (cdr ls)) #f)))
+        (if (null? lol)
+            (if (pair? ls) (every1 pred ls) #t)
+            (not (apply any (lambda xs (not (apply pred xs))) ls lol))))
+      )))
   (include "1/predicates.scm"
            "1/selectors.scm"
            "1/search.scm"
@@ -28,4 +60,3 @@
            "1/deletion.scm"
            "1/alists.scm"
            "1/lset.scm"))
-

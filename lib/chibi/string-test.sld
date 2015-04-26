@@ -1,8 +1,13 @@
 (define-library (chibi string-test)
   (export run-tests)
-  (import (only (chibi test) test-begin test test-end)
+  (import (scheme base) (scheme char)
+          (only (chibi test) test-begin test test-end)
           (chibi string))
   (begin
+    (define (digit-value ch)
+      (case ch
+        ((#\0) 0) ((#\1) 1) ((#\2) 2) ((#\3) 3) ((#\4) 4)
+        ((#\5) 5) ((#\6) 6) ((#\7) 7) ((#\8) 8) ((#\9) 9) (else #f)))
     (define (run-tests)
       (test-begin "strings")
 
@@ -13,11 +18,6 @@
       (test #f (string-every char-alphabetic? "abc0"))
       (test #f (string-every char-alphabetic? " abc"))
       (test #f (string-every char-alphabetic? "a.c"))
-
-      (define (digit-value ch)
-        (case ch
-          ((#\0) 0) ((#\1) 1) ((#\2) 2) ((#\3) 3) ((#\4) 4)
-          ((#\5) 5) ((#\6) 6) ((#\7) 7) ((#\8) 8) ((#\9) 9) (else #f)))
 
       (test 3 (string-any digit-value "a3c"))
       (test #f (string-any digit-value "abc"))

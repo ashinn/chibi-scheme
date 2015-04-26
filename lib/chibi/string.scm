@@ -1,5 +1,5 @@
 ;; strings.scm -- cursor-oriented string library
-;; Copyright (c) 2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012-2015 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (string-null? str)
@@ -163,26 +163,6 @@
 (define (string-count str x)
   (let ((pred (make-char-predicate x)))
     (string-fold (lambda (ch count) (if (pred ch) (+ count 1) count)) 0 str)))
-
-(define (string-for-each proc str . los)
-  (if (null? los)
-      (string-fold (lambda (ch a) (proc ch)) #f str)
-      (let ((los (cons str los)))
-	(let lp ((is (map string-cursor-start los)))
-	  (cond
-	   ((any (lambda (str i)
-		   (string-cursor>=? i (string-cursor-end str)))
-		 los is))
-	   (else
-	    (apply proc (map string-cursor-ref los is))
-	    (lp (map string-cursor-next los is))))))))
-
-(define (string-map proc str . los)
-  (call-with-output-string
-    (lambda (out)
-      (apply string-for-each
-	     (lambda args (write-char (apply proc args) out))
-	     str los))))
 
 (define (make-string-searcher needle)
   (lambda (haystack) (string-contains haystack needle)))

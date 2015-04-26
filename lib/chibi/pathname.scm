@@ -80,7 +80,7 @@
 
 (define (path-strip-leading-parents path)
   (if (string-prefix? "../" path)
-      (path-strip-leading-parents (substring path 3))
+      (path-strip-leading-parents (substring-cursor path 3))
       (if (equal? path "..") "" path)))
 
 ;;> Returns \scheme{#t} iff \var{path} is an absolute path,

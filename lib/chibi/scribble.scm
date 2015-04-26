@@ -67,7 +67,7 @@
        ((eqv? #\. ch)
         (read-char in)
         (if (= base 10)
-            (begin (read-char in) (read-float-tail in (exact->inexact acc)))
+            (begin (read-char in) (read-float-tail in (inexact acc)))
             (error "non-base-10 floating point")))
        (else (error "invalid numeric syntax"))))))
 

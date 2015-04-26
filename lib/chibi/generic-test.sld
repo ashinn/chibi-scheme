@@ -1,4 +1,4 @@
-(define-library (chibi filesystem-test)
+(define-library (chibi generic-test)
   (export run-tests)
   (import (chibi) (chibi generic) (chibi test))
   (begin

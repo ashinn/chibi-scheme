@@ -3,12 +3,12 @@
   (import (chibi) (chibi io) (chibi filesystem) (chibi test) (srfi 33))
   (begin
     (define (run-tests)
-      (test-begin "filesystem")
-
       (define tmp-file "/tmp/chibi-fs-test-0123456789")
       (define tmp-file2 "/tmp/chibi-fs-test-0123456789-2")
       (define tmp-link "/tmp/chibi-fs-test-0123456789-link")
       (define tmp-dir "/tmp/chibi-fs-test-0123456789-dir")
+
+      (test-begin "filesystem")
 
       (call-with-output-file tmp-file
         (lambda (out) (display "0123456789" out)))

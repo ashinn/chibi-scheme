@@ -4,5 +4,8 @@
           path-extension path-strip-extension path-replace-extension
           path-absolute? path-relative? path-strip-leading-parents
           path-relative-to path-resolve path-normalize make-path)
-  (import (chibi) (chibi string))
+  (cond-expand
+   (chibi (import (chibi)))
+   (else (import (except (scheme base) string-map string-for-each))))
+  (import (chibi string))
   (include "pathname.scm"))
