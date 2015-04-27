@@ -1422,7 +1422,8 @@
 (define (default-installer impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
          (ext (get-library-extension impl cfg))
-         (dest-library-file (path-replace-extension library-file ext))
+         (dest-library-file
+          (string-append (library->path cfg library) "." ext))
          (include-files
           (library-include-files impl cfg (make-path dir library-file)))
          (install-dir (get-install-source-dir impl cfg)))
@@ -1482,7 +1483,10 @@
          (ext (get-library-extension impl cfg))
          (src-library-file (make-path dir library-file))
          (library-dir (path-directory src-library-file))
-         (dest-library-file (path-replace-extension library-file ext))
+         (dest-library-file
+          (string-append (library->path cfg library) "." ext))
+         (dest-dir
+          (path-directory (make-path dir dest-library-file)))
          (include-files
           (library-include-files impl cfg (make-path dir library-file)))
          (rewrite-include-files
@@ -1502,13 +1506,25 @@
                  (list (path-relative-to (car x) library-dir)
                        (path-relative-to (cadr x) library-dir)))
                rewrite-include-files)))
-    ;; rename
+    ;; ensure the build directory exists
+    (create-directory* dest-dir)
+    ;; rename or copy includes
     (for-each
      (lambda (x)
        (rename-file (car x) (cadr x)))
      rewrite-include-files)
+    (for-each
+     (lambda (x)
+       (let ((dest-file (make-path dest-dir (path-relative x library-dir))))
+         (install-directory cfg (path-directory dest-file))
+         (install-file cfg x dest-file)
+         dest-file))
+     (filter (lambda (f) (not (equal? f dest-library-file))) include-files))
+    ;; install the library declaration file
     (cond
      ((pair? rewrite-include-files)
+      ;; If we needed to rename an include file, we also need to rewrite
+      ;; the library declaration itself to point to the new location.
       ;; TODO: rewrite with a structural editor to preserve formatting
       (let ((library
              (library-rewrite-includes

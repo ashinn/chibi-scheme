@@ -181,6 +181,11 @@
       --test-library "tests/snow/repo3/recorde/equal-test.sld"
       tests/snow/repo3/recorde/equal.sld)
 (snow package --output-dir tests/snow/repo3/
+      --version "2.7.1" --authors "Leonhard Euler"
+      --description "Euler's Totient function"
+      --test "tests/snow/repo3/totient-test.scm"
+      tests/snow/repo3/totient.scm)
+(snow package --output-dir tests/snow/repo3/
       --version 1.0 --authors "Pythagoras"
       --description "Pythagoran Theorem"
       --test "tests/snow/repo3/pythagoras/hypotenuse-test.sch"
@@ -188,9 +193,11 @@
 (snow index ,(cadr repo3))
 (snow ,@repo3 update)
 (snow ,@repo3 install pingala.binomial)
+(snow ,@repo3 install euler.totient)
 (let ((status (snow-status)))
   (test-assert (installed-version status '(pingala binomial)))
-  (test-assert (installed-version status '(pingala factorial))))
+  (test-assert (installed-version status '(pingala factorial)))
+  (test "2.7.1" (installed-version status '(euler totient))))
 
 ;; programs
 (snow ,@repo3 install pingala.triangle)

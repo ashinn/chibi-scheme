@@ -1,0 +1,26 @@
+
+(import (scheme base) (scheme write) (scheme process-context) (euler totient))
+
+(define-syntax test
+  (syntax-rules ()
+    ((test expect expr)
+     (let ((res expr))
+       (unless (equal? expect res)
+         (display "FAIL: ")
+         (write 'expr)
+         (display " - expected ")
+         (write expect)
+         (display " but got ")
+         (write res)
+         (newline)
+         (exit 1))))))
+
+(test 1 (totient 2))
+(test 2 (totient 3))
+(test 2 (totient 4))
+(test 4 (totient 5))
+(test 2 (totient 6))
+(test 6 (totient 7))
+(test 4 (totient 8))
+(test 6 (totient 9))
+(test 4 (totient 10))

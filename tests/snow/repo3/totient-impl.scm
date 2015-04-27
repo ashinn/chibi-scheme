@@ -1,0 +1,12 @@
+(define (totient n)
+  (let ((limit (exact (ceiling (sqrt n)))))
+    (let lp ((i 2) (count 1))
+      (cond ((> i limit)
+             (if (= count (- i 1))
+                 (- n 1)                ; shortcut for prime
+                 (let lp ((i i) (count count))
+                   (cond ((>= i n) count)
+                         ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
+                         (else (lp (+ i 1) count))))))
+            ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
+            (else (lp (+ i 1) count))))))
