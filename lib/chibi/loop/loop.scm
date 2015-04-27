@@ -49,7 +49,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;> \macro{\scheme{(loop [name] (vars ...) [=> result] body ...)}}
+;;> \macro{(loop [name] (vars ...) [=> result] body ...)}
 
 (define-syntax loop
   (syntax-rules ()
@@ -154,7 +154,7 @@
 ;; \item{\var{final-vars} - final variables, bound only in the => result}
 ;; ]
 
-;;> \subsubsubsection{\scheme{(for var [pair] (in-list ls [cdr]))}}
+;;> \macro{(for var [pair] (in-list ls [cdr]))}
 
 ;;> Basic list iterator.
 
@@ -225,10 +225,10 @@
             (%in-idx < (lambda (x i) (- i 1)) (lambda (x) (- (length x) 1)) (lambda (x) 0) ref tmp seq next . rest))))
        ))))
 
+(define-in-indexed in-vector in-vector-reverse vector-length vector-ref)
+
 ;;> \macro{(for var [index] (in-vector vec))}
 ;;> \macro{(for var [index] (in-vector-reverse vec))}
-
-(define-in-indexed in-vector in-vector-reverse vector-length vector-ref)
 
 ;;> \macro{(for ch [cursor] (in-string str))}
 

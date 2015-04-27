@@ -755,11 +755,15 @@ div#footer {padding-bottom: 50px}
                 cur))
           (define (get-ids sxml)
             (match sxml
-              (((or 'procedure 'macro) str)
-               (list
-                (string->symbol
-                 (string-trim (car (string-split str))
-                              (lambda (ch) (or (eq? ch #\() (eq? ch #\))))))))
+              (((or 'procedure 'macro) x)
+               (cond
+                ((string? x)
+                 (list
+                  (string->symbol
+                   (string-trim (car (string-split x))
+                                (lambda (ch) (or (eq? ch #\() (eq? ch #\))))))))
+                (else
+                 '())))
               ((x ...) (append-map get-ids x))
               (else '())))
           (skip-horizontal-whitespace in)
