@@ -47,6 +47,7 @@ lib/chibi/stty.c
 lib/chibi/system.c
 lib/chibi/time.c
 *.tgz
+*.html
 
 examples/snow-fort
 examples/synthcode
