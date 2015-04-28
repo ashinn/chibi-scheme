@@ -1123,6 +1123,12 @@
        (if share-dir
            (cons share-dir (delete share-dir dirs))
            dirs)))
+    ((chicken)
+     (let ((dir (process->string '(csi -p "(repository-path)"))))
+       (list
+        (if (file-exists? dir)  ; repository-path should always exist
+            dir
+            (make-path (or (conf-get cfg 'install-prefix)) "lib" impl 7)))))
     ((gauche)
      (list
       (let ((dir (process->string '(gauche-config "--sitelibdir"))))
@@ -1148,7 +1154,9 @@
                   "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
        "lib/Snow")))
     (else
-     (list (make-path "/usr/local/share/snow" impl)))))
+     (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
+                      "share/snow"
+                      impl)))))
 
 (define (scheme-script-command impl cfg)
   (or (and (eq? impl 'chibi) (conf-get cfg 'chibi-path))
@@ -1323,8 +1331,70 @@
     '())
    (lambda (a b) (equal? (car a) (car b)))))
 
+(define r7rs-small-libraries
+  '(base case-lambda char complex cxr eval file inexact
+    lazy load process-context r5rs read repl time write))
+
+;; chibi is not included because chibi is already installed with full
+;; package information for each builtin library
+(define native-srfi-support
+  '((foment 60)
+    (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
+    (kawa 1 2 13 14 34 37 60 69 95)
+    (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
+             30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
+             66 67 69 71 74 78 86 87 95 96 98)))
+
+(define native-self-support
+  '((kawa base expressions hashtable quaternions reflect regex
+          rotations string-cursors)
+    (gauche array auxsys cgen charconv collection common-macros
+            condutil config defvalues dictionary fileutil hashutil
+            hook interactive interpolate let-opt libutil listener
+            logger logical macroutil modutil net numerical package
+            parameter parseopt portutil procedure process redefutil
+            regexp reload selector sequence serializer signal singleton
+            sortutil stringutil syslog termios test threads time
+            treeutil uvector validator version vport)
+    ))
+
+;; Currently we make assumptions about default installed libraries of
+;; the form (scheme *), (srfi *) and (<impl> *), but don't make any
+;; particular effort to analyze other libraries installed outside of
+;; the snow-chibi command.  When adding support for versioning we can
+;; keep in mind that srfi's are a fixed version, scheme is for the
+;; forseeable future tied to the current standard (R7RS), and all core
+;; <impl> libraries will be tied to the installed implementation
+;; version, although in all cases the actual installed library may
+;; have its own version due to improvements and bugfixes.
+(define (implementation-supports-natively? impl cfg lib-name)
+  (and (pair? lib-name)
+       (or
+        (and (eq? 'scheme (car lib-name))
+             (= 2 (length lib-name))
+             (memq (cadr lib-name) r7rs-small-libraries))
+        (and (eq? 'srfi (car lib-name))
+             (= 2 (length lib-name))
+             (cond ((assq impl native-srfi-support)
+                    => (lambda (x) (memq (cadr lib-name) (cdr x))))
+                   ((eq? impl 'chicken)
+                    (file-exists?
+                     (make-path (get-install-library-dir impl cfg)
+                                (string-append "srfi-"
+                                               (number->string (cadr lib-name))
+                                               ".import.so"))))
+                   (else #f)))
+        (equal? lib-name (list impl))
+        (and (eq? impl (car lib-name))
+             (= 2 (length lib-name))
+             (cond ((assq impl native-self-support)
+                    => (lambda (x) (memq (cadr lib-name) (cdr x))))
+                   (else #f)))
+        )))
+
 (define (get-install-source-dir impl cfg)
   (cond
+   ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1332,6 +1402,7 @@
 
 (define (get-install-data-dir impl cfg)
   (cond
+   ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1340,9 +1411,13 @@
 (define (get-install-library-dir impl cfg)
   (cond
    ((conf-get cfg 'install-library-dir))
+   ((eq? impl 'chicken)
+    (cond ((conf-get cfg 'install-prefix)
+           => (lambda (prefix) (make-path prefix "lib" impl 7)))
+          (else
+           (car (get-install-dirs impl cfg)))))
    ((conf-get cfg 'install-prefix)
-    => (lambda (prefix) (make-path prefix "share/snow" impl)))
-   ((eq? impl 'chicken) (make-path "/usr/local/lib" impl 7))
+    => (lambda (prefix) (make-path prefix "lib" impl)))
    (else (make-path "/usr/local/lib" impl))))
 
 (define (get-install-binary-dir impl cfg)
@@ -1359,7 +1434,8 @@
         (else "sld"))))
 
 (define (install-with-sudo? cfg path)
-  (case (conf-get cfg '(command install use-sudo?))
+  (case (or (conf-get cfg '(command install use-sudo?))
+            (conf-get cfg '(command upgrade use-sudo?)))
     ((always) #t)
     ((never) #f)
     (else
@@ -1855,11 +1931,7 @@
            ((and (null? candidates)
                  (not (assoc (car ls) current))
                  (pair? (car ls))
-                 (or (equal? (car ls) (list impl))
-                     (case impl
-                       ((foment gauche)
-                        (memq (caar ls) (cons impl '(scheme))))
-                       (else (eq? (caar ls) 'scheme)))))
+                 (implementation-supports-natively? impl cfg (car ls)))
             ;; assume certain core libraries already installed
             ;; (info "assuming core library installed: " (car ls))
             (lp (cdr ls) res (cons (car ls) ignored)))

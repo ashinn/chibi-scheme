@@ -15,7 +15,7 @@
 
 ;; setup chicken install directory with minimum required modules
 (define chicken-lib-dir "/usr/local/lib/chicken/7")
-(define chicken-install-dir (make-path install-prefix "/share/snow/chicken"))
+(define chicken-install-dir (make-path install-prefix "lib/chicken/7"))
 (create-directory* chicken-install-dir)
 (if (file-exists? chicken-lib-dir)
     (let ((rx-required

@@ -96,7 +96,8 @@
 (define show-spec '())
 (define install-spec
   '((skip-tests? boolean ("skip-tests") "don't run tests even if present")
-    (show-tests? boolean ("show-tests") "show test output even on success")))
+    (show-tests? boolean ("show-tests") "show test output even on success")
+    (use-sudo? symbol ("use-sudo") "always, never, or as-needed (default)")))
 (define upgrade-spec
   install-spec)
 (define remove-spec '())
