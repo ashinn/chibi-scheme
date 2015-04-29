@@ -10,5 +10,6 @@
           print-module-docs print-module-binding-docs
           generate-docs expand-docs fixup-docs
           extract-module-docs extract-module-file-docs extract-file-docs
-          make-default-doc-env make-module-doc-env)
+          make-default-doc-env make-module-doc-env
+          get-optionals-signature)
   (include "doc.scm"))

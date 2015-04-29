@@ -476,7 +476,7 @@ div#footer {padding-bottom: 50px}
 
 ;; Try to determine the names of optional parameters checking common
 ;; patterns.
-(define (get-optionals ls body)
+(define (get-optionals-signature ls body)
   (let lp ((ls ls) (pre '()))
     (cond
      ((pair? ls) (lp (cdr ls) (cons (car ls) pre)))
@@ -492,30 +492,37 @@ div#footer {padding-bottom: 50px}
              (if (contains? val o)
                  (extract #f vars i)
                  (extract rest vars i)))
-            ((((or 'let 'let* 'letrec 'letrec*) (y ...) . body))
+            (((or 'let 'let* 'letrec 'letrec*) (y ...) . body)
              (let ((ordered? (memq (car x) '(let* letrec*))))
                (let lp ((ls y) (vars vars) (j i))
                  (cond
                   ((pair? ls)
                    (match (car ls)
+                     ;; handle rebinding o
                      (((? o?) ('if ('pair? (? o?)) ('cdr (? o?)) default))
                       (lp (cdr ls) vars (+ j 1)))
                      (((? o?) expr)
                       (extract #f vars i))
+                     ;; binding vars to o
                      ((v ('if ('pair? (? o?)) ('car (? o?)) default))
                       (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
                      ((v ('and ('pair? (? o?)) ('car (? o?))))
+                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                     ((v ('or ('and ('pair? (? o?)) ('car (? o?))) default))
                       (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
                      ((v ('if ('and ('pair? (? o?)) ('pair? ('cdr (? o?))))
                              ('cadr (? o?))
                              default))
                       (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                     ((v ('and ('pair? (? o?)) ('pair? ('cdr (? o?)))
+                               ('cadr (? o?))))
+                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
                      (else
                       (lp (cdr ls) vars j))))
                   (else
                    (extract body vars j))))))
-            ((((or 'let-optionals 'let-optionals*) ls ((var default) ...)
-               . body))
+            (((or 'let-optionals 'let-optionals*) ls ((var default) ...)
+              . body)
              (let lp ((ls var) (vars vars) (i i))
                (cond
                 ((pair? ls)
@@ -524,15 +531,17 @@ div#footer {padding-bottom: 50px}
                  (extract body vars i)))))
             (else
              (let ((opts (map car (sort vars < cdr)))
-                   (dotted? (contains? x o)))
+                   (rest-var? (contains? x o)))
                (append (reverse pre)
                        (cond
-                        ((and (pair? opts) dotted?)
+                        ((and (pair? opts) rest-var?)
                          (list (append opts o)))
-                        (dotted?
+                        (rest-var?
                          o)
+                        ((pair? opts)
+                         (list opts))
                         (else
-                         (list opts)))))))))))))
+                         '()))))))))))))
 
 (define (get-procedure-signature mod id proc)
   (cond ((and mod (procedure? proc) (procedure-signature id mod))
@@ -544,7 +553,8 @@ div#footer {padding-bottom: 50px}
   (match value
     (('(or let let* letrec letrec*) vars body0 ... body)
      (get-value-signature mod id proc name body))
-    (('lambda args . body) (list (cons name (get-optionals args body))))
+    (('lambda args . body)
+     (list (cons name (get-optionals-signature args body))))
     ((('lambda args body0 ... body) vals ...)
      (get-value-signature mod id proc name body))
     (('begin body0 ... body) (get-value-signature mod id proc name body))
@@ -557,7 +567,7 @@ div#footer {padding-bottom: 50px}
     (('define (name args ...) . body)
      (list (cons name args)))
     (('define (name . args) . body)
-     (list (cons name (get-optionals args body))))
+     (list (cons name (get-optionals-signature args body))))
     (('define name value)
      (get-value-signature mod id proc name value))
     (('define-syntax name ('syntax-rules () (clause . body) ...))
