@@ -1257,35 +1257,65 @@ as tar gzipped files called "snowballs," and may contain multiple
 libraries.  The program is installed as \scheme{snow-chibi} and takes
 the following subcommands:
 
-\subsubsection{Querying Packages}
+\subsubsection{Querying Packages and Status}
+
+By default \command{snow-chibi} looks for packages in the public
+repository \hyperlink["http://snow-fort.org/"]{http://snow-fort.org/},
+though you can customize this with the \scheme{--repository-uri} option.
+Packages can be browsed on the site, but you can also search and query
+from the command-line tool.
 
 \itemlist[
 
 \item{search terms ... - search for packages
-\p{Prints a list of available packages matching the given keywords.}}
+\p{Print a list of available packages matching the given keywords.}}
 
 \item{show names ... - show package descriptions
 \p{Show detailed information for the listed packages, which can
-be sexp library names or the dotted shorthand used by chibi.}}
+be sexp library names or the dotted shorthand used by chibi.  For example,
+\command{snow-chibi show "(chibi match)"} can be shortened as
+\command{snow-chibi show chibi.match}.}}
 
 \item{status names ... - print package status
-\p{Print the installed version of the given packages.}}
+\p{Print the installed version of the given packages.  Uninstalled
+packages will not be shown.  If no names are given, prints all
+currently installed packages.}}
+
+\item{implementations - print list of available implementations
+\p{Print the currently installed Scheme implementations supported
+by \scheme{snow-chibi}.  If an implementation is found but has an
+older version, a warning is printed.}}
 
 ]
 
 \subsubsection{Managing Packages}
 
+The basic package management functionality, installing upgrading and
+removing packages.
+
 \itemlist[
 
 \item{install names ... - install packages
-\p{Install the given packages.}}
+\p{Install the given packages.  Package names can be sexp lists or
+use the dotted shorthand.  Explicit names for packages are optional,
+as a package can always be referred to by the name of any library it
+contains.  If multiple packages provide libraries with the same name,
+you will be asked to confirm which implementation to install.}
+\p{You can also bypass the repository and install a manually downloaded
+snowball by giving a path to that file instead of a name.}}
 
 \item{upgrade names ... - upgrade installed packages
 \p{Upgrade the packages if new versions are available.
 If no names are given, upgrades all eligible packages.}}
 
 \item{remove names ... - remove packages
-\p{Uninstalls the given packages.}}
+\p{Uninstalls the given packages.  If the packages were not installed
+with \command{snow-chibi} they cannot be removed.}}
+
+\item{update - update local cache of remote repository
+\p{\command{snow-chibi} keeps a local cache of the remote repository
+and updates only periodically for performance, but you can force an
+update with this command.}}
 
 ]
 
@@ -1296,22 +1326,33 @@ If no names are given, upgrades all eligible packages.}}
 \item{package files ... - create a package
 \p{Create a package snowball from the given files, which should
 be R7RS library files containing \scheme{define-library} forms.
-Include files are inferred and packaged automatically.}}
+Include files are inferred and packaged automatically.  You can
+share packages directly, or upload them to a snow repository for
+easy automated install.}}
 
-\item{gen-key - create an RSA key pair
-\p{Create a new private key pair.}}
+\item{upload files ... - upload packages
+\p{Sign and upload to the default snow host.  The files may either
+be .tgz package files, or files containing define-library forms as
+in the \command{package} command, from which packages are generated
+automatically.  Before you can upload to the default host a key
+must be generated and registered first with the \command{gen-key}
+and \command{reg-key} commands.}}
 
-\item{sign file - sign a package
-\p{Sign a file with your private key and write it to the .sig file.}}
+\item{gen-key - create a new key
+\p{Create a new key, with your name, email address, and optionally
+an RSA public key pair (disabled by default in the current implementation).
+This is saved locally to ~/.snow/priv-key.scm - you need to register it
+with reg-key before it can be used for uploads.}}
 
-\item{verify file - verify a signature
-\p{Print a message verifying if a signature is valid.}}
-
-\item{reg-key - register an RSA key pair
+\item{reg-key - register a key
 \p{Register your key on the default snow host.}}
 
-\item{upload files ... - upload a package
-\p{Sign and upload to the default snow host.
-A private key must be generated first.}}
+\item{sign file - sign a package
+\p{Sign a file with your key and write it to the .sig file.
+This can be used with the verify command for testing, but otherwise
+is not needed as the upload command generates the signature automatically.}}
+
+\item{verify sig-file - verify a signature
+\p{Print a message verifying if a signature is valid.}}
 
 ]
