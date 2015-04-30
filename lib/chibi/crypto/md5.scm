@@ -130,6 +130,10 @@
      #xffef #xf47d #x8584 #x5dd1 #x6fa8 #x7e4f #xfe2c #xe6e0 #xa301 #x4314
      #x4e08 #x11a1 #xf753 #x7e82 #xbd3a #xf235 #x2ad7 #xd2bb #xeb86 #xd391))
 
+;;> Returns the md5 checksum of \var{src} as a lowercase hex-string.
+;;> \var{src} can be any of a string (interpreted as utf8), a
+;;> bytevector, or a binary input port.
+
 (define (md5 src)
   (let ((in (cond ((string? src) (open-input-bytevector (string->utf8 src)))
                   ((bytevector? src) (open-input-bytevector src))

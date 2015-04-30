@@ -1,4 +1,6 @@
 
+;;> RSA public key cryptography implementation.
+
 (define-library (chibi crypto rsa)
   (import (scheme base) (srfi 27)
           (chibi bytevector) (chibi math prime))

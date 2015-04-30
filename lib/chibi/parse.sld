@@ -1,4 +1,7 @@
 
+;;> A parser combinator library with optional memoization and
+;;> convenient syntax.
+
 (define-library (chibi parse)
   (export grammar grammar/unmemoized define-grammar define-grammar/unmemoized
           call-with-parse parse parse-fully parse-fold

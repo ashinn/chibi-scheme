@@ -1,4 +1,6 @@
 
+;;> A minimal character set library.
+
 (define-library (chibi char-set)
   (import (chibi char-set base) (chibi char-set extras))
   (export

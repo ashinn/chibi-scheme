@@ -77,7 +77,7 @@
   (call-with-output-string
     (lambda (out) (html-display-escaped-string str out))))
 
-;; utility to render (valid, expanded) sxml as html
+;;> Render (valid, expanded) \var{sxml} as html.
 (define (sxml-display-as-html sxml . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (let lp ((sxml sxml))
@@ -101,11 +101,12 @@
        ((null? sxml))
        (else (html-display-escaped-string sxml out))))))
 
+;;> Render \var{sxml} as \var{sxml}.
 (define (sxml->xml sxml)
   (call-with-output-string
     (lambda (out) (sxml-display-as-html sxml out))))
 
-;; utility to render sxml as simple text, stripping all tags
+;;> Render \var{sxml} as simple text, stripping all tags.
 (define (sxml-strip sxml)
   (call-with-output-string
     (lambda (out)
@@ -118,7 +119,7 @@
          ((string? x)
           (display x out)))))))
 
-;; utility to render sxml as text for viewing in a terminal
+;;> Render \var{sxml} as text for viewing in a terminal.
 (define (sxml-display-as-text sxml . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (let lp ((sxml sxml))

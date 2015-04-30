@@ -1,4 +1,8 @@
 
+;;> A cursor-oriented string library.  Provides efficient string
+;;> utilities for implementations with or without fast random-access
+;;> strings.
+
 (define-library (chibi string)
   (export
    string-cursor-start string-cursor-end string-cursor-ref

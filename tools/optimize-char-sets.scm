@@ -46,7 +46,7 @@
                                 (do ((cur (iset-cursor value)
                                           (iset-cursor-next value cur))
                                      (res '() (cons (iset-ref value cur) res)))
-                                    ((end-of-iset? cur) (reverse res)))))
+                                    ((end-of-iset? value cur) (reverse res)))))
                    (error "error in iset cursors"))
                (display "  computing intersection\n" (current-error-port))
                (let* ((iset1 (if ascii?

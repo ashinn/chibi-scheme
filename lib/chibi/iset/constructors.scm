@@ -13,15 +13,26 @@
       (- n (arithmetic-shift 1 index))
       n))
 
+;;> Create a new iset composed of each of the integers in \var{args}.
+
 (define (iset . args)
   (list->iset args))
+
+;;> Returns an iset with all integers in the list \var{ls} added to
+;;> \var{iset}, possibly mutating \var{iset} in the process.
 
 (define (list->iset! ls iset)
   (for-each (lambda (i) (iset-adjoin1! iset i)) ls)
   iset)
 
+;;> Returns an iset with all integers in the list \var{ls}.  If the
+;;> optional argument \var{iset} is provided, also includes all
+;;> elements in \var{iset}, leaving \var{iset} unchanged.
+
 (define (list->iset ls . opt)
   (list->iset! ls (if (pair? opt) (iset-copy (car opt)) (make-iset))))
+
+;;> Returns a new copy of \var{iset}.
 
 (define (iset-copy iset)
   (and iset
@@ -185,8 +196,14 @@
                 (min end (iset-end node))
                 #f #f #f))))
 
+;;> Returns an iset with the integers in \var{ls} added to \var{iset},
+;;> possibly mutating \var{iset} in the process.
+
 (define (iset-adjoin! iset . ls)
   (list->iset! ls iset))
+
+;;> Returns an iset with the integers in \var{ls} added to \var{iset},
+;;> without changing \var{iset}.
 
 (define (iset-adjoin iset . ls)
   (list->iset ls iset))
@@ -221,12 +238,21 @@
                   (if right (lp right)))
                 (%iset-delete1! is n)))))))
 
+;;> Returns an iset with the integers in \var{ls} removed (if present)
+;;> from \var{iset}, possibly mutating \var{iset} in the process.
+
 (define (iset-delete! iset . args)
   (for-each (lambda (i) (iset-delete1! iset i)) args)
   iset)
 
+;;> Returns an iset with the integers in \var{ls} removed (if present)
+;;> from \var{iset}, without changing \var{iset}.
+
 (define (iset-delete iset . args)
   (apply iset-delete! (iset-copy iset) args))
+
+;;> Returns an iset composed of the integers resulting from applying
+;;> \var{proc} to every element of \var{iset}.
 
 (define (iset-map proc iset)
   (iset-fold (lambda (i is) (iset-adjoin! is (proc i))) (make-iset) iset))
@@ -255,6 +281,10 @@
      (a a)
      (else (make-iset)))))
 
+;;> Returns an iset containing all integers which occur in any of the
+;;> isets \var{args}.  If no \var{args} are present returns an empty
+;;> iset.
+
 (define (iset-union . args)
   (if (null? args)
     (make-iset)
@@ -270,8 +300,16 @@
       (apply iset-intersection! a (cdr args)))
      (else a))))
 
+;;> Returns an iset containing all integers which occur in \var{a} and
+;;> every of the isets \var{args}.  If no \var{args} are present
+;;> returns \var{a}.
+
 (define (iset-intersection a . args)
   (apply iset-intersection! (iset-copy a) args))
+
+;;> Returns an iset containing all integers which occur in \var{a},
+;;> but removing those which occur in any of the isets \var{args}.  If
+;;> no \var{args} are present returns \var{a}.  May mutate \var{a}.
 
 (define (iset-difference! a . args)
   (if (null? args)
@@ -279,6 +317,8 @@
       (begin
         (iset-for-each (lambda (i) (iset-delete1! a i)) (car args))
         (apply iset-difference! a (cdr args)))))
+
+;;> As above but doesn't change \var{a}.
 
 (define (iset-difference a . args)
   (apply iset-difference! (iset-copy a) args))
