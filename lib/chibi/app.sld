@@ -1,3 +1,4 @@
+;;> Unified command-line option parsing and config management.
 
 (define-library (chibi app)
   (export parse-option parse-options parse-app run-application

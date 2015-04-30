@@ -40,7 +40,7 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
 
-MODULE_DOCS := ast config disasm equiv filesystem generic heap-stats io \
+MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
 	loop match mime modules net pathname process repl scribble stty \
 	system test time trace type-inference uri weak monad/environment \
 	show show/base crypto/sha2

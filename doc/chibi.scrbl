@@ -1192,6 +1192,8 @@ namespace.
 
 \itemlist[
 
+\item{\hyperlink["lib/chibi/app.html"]{(chibi app) - Unified option parsing and config}}
+
 \item{\hyperlink["lib/chibi/ast.html"]{(chibi ast) - Abstract Syntax Tree and other internal data types}}
 
 \item{\hyperlink["lib/chibi/config.html"]{(chibi config) - General configuration management}}
