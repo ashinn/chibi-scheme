@@ -1,4 +1,6 @@
 
+;;> Additional bytevector utilities.
+
 (define-library (chibi bytevector)
   (export
    bytevector-u16-ref-le bytevector-u16-ref-be

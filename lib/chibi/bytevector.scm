@@ -1,27 +1,42 @@
 
 ;;> \section{Additional accessors}
 
-(define (bytevector-u16-ref-le str i)
-  (+ (bytevector-u8-ref str i)
-     (arithmetic-shift (bytevector-u8-ref str (+ i 1)) 8)))
+;;> Retrieve a 16-bit unsigned integer value from the given bytevector
+;;> \var{bv} at offset \var{i}, in little-endian order.
 
-(define (bytevector-u16-ref-be str i)
-  (+ (arithmetic-shift (bytevector-u8-ref str i) 8)
-     (bytevector-u8-ref str (+ i 1))))
+(define (bytevector-u16-ref-le bv i)
+  (+ (bytevector-u8-ref bv i)
+     (arithmetic-shift (bytevector-u8-ref bv (+ i 1)) 8)))
 
-(define (bytevector-u32-ref-le str i)
-  (+ (bytevector-u8-ref str i)
-     (arithmetic-shift (bytevector-u8-ref str (+ i 1)) 8)
-     (arithmetic-shift (bytevector-u8-ref str (+ i 2)) 16)
-     (arithmetic-shift (bytevector-u8-ref str (+ i 3)) 24)))
+;;> Retrieve a 16-bit unsigned integer value from the given bytevector
+;;> \var{bv} at offset \var{i}, in big-endian order.
 
-(define (bytevector-u32-ref-be str i)
-  (+ (arithmetic-shift (bytevector-u8-ref str i) 24)
-     (arithmetic-shift (bytevector-u8-ref str (+ i 1)) 16)
-     (arithmetic-shift (bytevector-u8-ref str (+ i 2)) 8)
-     (bytevector-u8-ref str (+ i 3))))
+(define (bytevector-u16-ref-be bv i)
+  (+ (arithmetic-shift (bytevector-u8-ref bv i) 8)
+     (bytevector-u8-ref bv (+ i 1))))
+
+;;> Retrieve a 32-bit unsigned integer value from the given bytevector
+;;> \var{bv} at offset \var{i}, in little-endian order.
+
+(define (bytevector-u32-ref-le bv i)
+  (+ (bytevector-u8-ref bv i)
+     (arithmetic-shift (bytevector-u8-ref bv (+ i 1)) 8)
+     (arithmetic-shift (bytevector-u8-ref bv (+ i 2)) 16)
+     (arithmetic-shift (bytevector-u8-ref bv (+ i 3)) 24)))
+
+;;> Retrieve a 32-bit unsigned integer value from the given bytevector
+;;> \var{bv} at offset \var{i}, in big-endian order.
+
+(define (bytevector-u32-ref-be bv i)
+  (+ (arithmetic-shift (bytevector-u8-ref bv i) 24)
+     (arithmetic-shift (bytevector-u8-ref bv (+ i 1)) 16)
+     (arithmetic-shift (bytevector-u8-ref bv (+ i 2)) 8)
+     (bytevector-u8-ref bv (+ i 3))))
 
 ;;> \section{Integer conversion}
+
+;;> Convert an unsigned integer \var{n} to a bytevector representing
+;;> the base-256 big-endian form (the zero index holds the MSB).
 
 (define (integer->bytevector n)
   (cond
@@ -40,6 +55,10 @@
               (bytevector-u8-set! bv i (car ls))))
           (lp (quotient n 256) (cons (remainder n 256) res)))))))
 
+;;> The inverse of \scheme{integer->bytevector}.  Convert a bytevector
+;;> representing the base-256 big-endian form (the zero index holds
+;;> the MSB) to the corresponding unsigned integer.
+
 (define (bytevector->integer bv)
   (let ((len (bytevector-length bv)))
     (let lp ((i 0) (n 0))
@@ -48,6 +67,9 @@
           (lp (+ i 1)
               (+ (arithmetic-shift n 8)
                  (bytevector-u8-ref bv i)))))))
+
+;;> Utility to pad a bytevector with zeros.  Padding is added to the
+;;> left so as not to change the big-endian value.
 
 (define (bytevector-pad-left bv len)
   (let ((diff (- len (bytevector-length bv))))
