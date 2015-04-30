@@ -397,6 +397,7 @@ snowballs:
 	$(SNOW_CHIBI) package --licence public-domain lib/chibi/char-set/boundary.sld
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/match.sld
 	$(SNOW_CHIBI) package -r lib/chibi/char-set.sld
+	$(SNOW_CHIBI) package -r lib/chibi/iset.sld
 	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
 	$(SNOW_CHIBI) package lib/chibi/bytevector.sld
@@ -404,7 +405,6 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/crypto/md5.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/rsa.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/sha2.sld
-	$(SNOW_CHIBI) package lib/chibi/iset.sld
 	$(SNOW_CHIBI) package lib/chibi/math/prime.sld
 	$(SNOW_CHIBI) package lib/chibi/monad/environment.sld
 	$(SNOW_CHIBI) package lib/chibi/optional.sld
