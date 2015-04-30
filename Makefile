@@ -394,12 +394,12 @@ debian:
 # ~/.snow/config.scm, which specifies myself own settings regarding
 # author, license, extracting docs from scribble, etc.
 snowballs:
+	$(SNOW_CHIBI) package --licence public-domain lib/chibi/char-set/boundary.sld
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/match.sld
 	$(SNOW_CHIBI) package -r lib/chibi/char-set.sld
 	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
 	$(SNOW_CHIBI) package lib/chibi/bytevector.sld
-	$(SNOW_CHIBI) package lib/chibi/char-set/boundary.sld
 	$(SNOW_CHIBI) package lib/chibi/config.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/md5.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/rsa.sld

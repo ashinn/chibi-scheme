@@ -2,6 +2,10 @@
 ;; This code is written by Alex Shinn and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
+;;> Char-sets used for
+;;> \hyperlink["http://unicode.org/reports/tr29/"]{TR29} word
+;;> boundaries.
+
 (define-library (chibi char-set boundary)
   (cond-expand
    (chibi (import (chibi)))
