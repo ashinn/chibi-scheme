@@ -779,7 +779,7 @@
                        (call-with-input-file package port->bytevector)
                        package))
          (snowball (maybe-gunzip raw-data))
-         (digest (digest-func snowball))
+         (digest (delay (digest-func snowball)))
          (keys (call-with-input-file
                    (or (conf-get cfg 'key-file)
                        (string-append (conf-get-snow-dir cfg) "/priv-key.scm"))
@@ -787,25 +787,29 @@
          (email (or (conf-get cfg 'email)
                     (assoc-get (car keys) 'email)))
          (rsa-key-sexp (find (rsa-identity=? email) keys))
-         (rsa-key (extract-rsa-private-key rsa-key-sexp)))
+         (rsa-key (extract-rsa-private-key rsa-key-sexp))
+         (use-rsa? (and rsa-key (conf-get cfg 'sign-uploads?))))
     (append
      `(signature
        (email ,email))
-     (if (and rsa-key (conf-get cfg 'sign-uploads?))
+     (if (or use-rsa?
+             (not (conf-get cfg 'skip-digest?)))
+         `((digest ,digest-name)
+           (,digest-name ,(force digest)))
+         '())
+     (if use-rsa?
          (let* ((sig (fast-eval
                       `(rsa-sign (make-rsa-key ,(rsa-key-bits rsa-key)
                                                ,(rsa-key-n rsa-key)
                                                #f
                                                ,(rsa-key-d rsa-key))
                                  ;;,(hex-string->integer digest)
-                                 ,(hex-string->bytevector digest))
+                                 ,(hex-string->bytevector (force digest)))
                       '((chibi crypto rsa))))
                 (hex-sig (if (bytevector? sig)
                              (bytevector->hex-string sig)
                              (integer->hex-string sig))))
-           `((digest ,digest-name)
-             (,digest-name ,digest)
-             (rsa ,hex-sig)))
+           `((rsa ,hex-sig)))
          '()))))
 
 (define (command/sign cfg spec package)
