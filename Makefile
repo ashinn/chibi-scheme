@@ -3,7 +3,8 @@
 .PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian snowballs
 .DEFAULT_GOAL := all
 
-SOVERSION ?= $(shell cat VERSION)
+VERSION ?= $(shell cat VERSION)
+SOVERSION ?= $(VERSION)
 SOVERSION_MAJOR ?= $(shell echo "$(SOVERSION)" | sed "s/\..*//")
 
 CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
@@ -85,7 +86,7 @@ include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
 	echo '#define sexp_default_module_path "'$(MODDIR):$(BINMODDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
-	echo '#define sexp_version "'`cat VERSION`'"' >> $@
+	echo '#define sexp_version "'$(VERSION)'"' >> $@
 	echo '#define sexp_release_name "'`cat RELEASE`'"' >> $@
 
 %.o: %.c $(BASE_INCLUDES)
@@ -153,7 +154,7 @@ doc: doc/chibi.html doc-libs
 
 lib/.%.meta: lib/%/ tools/generate-install-meta.scm
 	-$(FIND) $< -name \*.sld | \
-	 $(CHIBI) tools/generate-install-meta.scm `cat VERSION` > $@
+	 $(CHIBI) tools/generate-install-meta.scm $(VERSION) > $@
 
 ########################################################################
 # Dist builds - rules to build generated files included in distribution
@@ -373,11 +374,11 @@ uninstall:
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
 
 dist: dist-clean
-	$(RM) chibi-scheme-`cat VERSION`.tgz
-	$(MKDIR) chibi-scheme-`cat VERSION`
-	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`cat VERSION`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`cat VERSION`/$$f; done
-	$(TAR) cphzvf chibi-scheme-`cat VERSION`.tgz chibi-scheme-`cat VERSION`
-	$(RM) -r chibi-scheme-`cat VERSION`
+	$(RM) chibi-scheme-$(VERSION).tgz
+	$(MKDIR) chibi-scheme-$(VERSION)
+	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-$(VERSION)/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-$(VERSION)/$$f; done
+	$(TAR) cphzvf chibi-scheme-$(VERSION).tgz chibi-scheme-$(VERSION)
+	$(RM) -r chibi-scheme-$(VERSION)
 
 mips-dist: dist-clean
 	$(RM) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`.tgz
@@ -387,7 +388,7 @@ mips-dist: dist-clean
 	$(RM) -r chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
 
 debian:
-	sudo checkinstall -D --pkgname chibi-scheme --pkgversion `cat VERSION` --maintainer "http://groups.google.com/group/chibi-scheme" -y make PREFIX=/usr install
+	sudo checkinstall -D --pkgname chibi-scheme --pkgversion $(VERSION) --maintainer "http://groups.google.com/group/chibi-scheme" -y make PREFIX=/usr install
 
 # Libraries in the standard distribution we want to make available to
 # other Scheme implementations.  Note this is run with my own
