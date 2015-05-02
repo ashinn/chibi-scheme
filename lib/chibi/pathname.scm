@@ -1,8 +1,6 @@
 ;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> A general, non-filesystem-specific pathname library.
-
 ;; POSIX basename
 ;; (define (path-strip-directory path)
 ;;   (if (string=? path "")

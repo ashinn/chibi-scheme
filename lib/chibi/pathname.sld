@@ -1,4 +1,6 @@
 
+;;> A general, non-filesystem-specific pathname library.
+
 (define-library (chibi pathname)
   (export path-strip-directory path-directory
           path-extension path-strip-extension path-replace-extension
