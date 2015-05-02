@@ -1,5 +1,5 @@
 ;; regexp.scm -- simple non-bactracking NFA implementation
-;; Copyright (c) 2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2013-2015 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;; An rx represents a start state and meta-info such as the number
@@ -903,6 +903,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Utilities
 
+;;> The fundamental regexp matching iterator.  Repeatedly searches
+;;> \var{str} for the regexp \var{re} so long as a match can be found.
+;;> On each successful match, applies \scheme{(\var{kons} \var{i}
+;;> \var{regexp-match} \var{str} \var{acc})} where \var{i} is the
+;;> index since the last match (beginning with
+;;> \var{start}),\var{regexp-match} is the resulting match, and
+;;> \var{acc} is the result of the previous \var{kons} application,
+;;> beginning with \var{knil}.  When no more matches can be found,
+;;> calls \var{finish} with the same arguments, except that
+;;> \var{regexp-match} is \scheme{#f}.
+;;>
+;;> By default \var{finish} just returns \var{acc}.
+
 (define (regexp-fold rx kons knil str . o)
   (let* ((rx (regexp rx))
          (finish (if (pair? o) (car o) (lambda (from md str acc) acc)))
@@ -924,6 +937,9 @@
        (else
         (finish (string-offset->index str from) #f str acc))))))
 
+;;> Extracts all non-empty substrings of \var{str} which match
+;;> \var{re} between \var{start} and \var{end} as a list of strings.
+
 (define (regexp-extract rx str . o)
   (apply regexp-fold
          rx
@@ -934,6 +950,9 @@
          str
          (lambda (from md str a) (reverse a))
          o))
+
+;;> Splits \var{str} into a list of strings separated by matches of
+;;> \var{re}.
 
 (define (regexp-split rx str . o)
   ;; start and end in indices passed to regexp-fold
@@ -951,6 +970,17 @@
      start
      end)))
 
+;;> Partitions \var{str} into a list of non-empty strings
+;;> matching \var{re}, interspersed with the unmatched portions
+;;> of the string.  The first and every odd element is an unmatched
+;;> substring, which will be the empty string if \var{re} matches
+;;> at the beginning of the string or end of the previous match.  The
+;;> second and every even element will be a substring matching
+;;> \var{re}.  If the final match ends at the end of the string,
+;;> no trailing empty string will be included.  Thus, in the
+;;> degenerate case where \var{str} is the empty string, the
+;;> result is \scheme{("")}.
+
 (define (regexp-partition rx str . o)
   (let ((start (if (pair? o) (car o) 0))
         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
@@ -962,6 +992,23 @@
           (cons (substring str from end) a)
           a))
     (reverse (regexp-fold rx kons '() str final start end))))
+
+;;> Returns a new string replacing the \var{count}th match of \var{re}
+;;> in \var{str} the \var{subst}, where the zero-indexed \var{count}
+;;> defaults to zero (i.e. the first match).  If there are not
+;;> \var{count} matches, returns the selected substring unmodified.
+
+;;> \var{subst} can be a string, an integer or symbol indicating the
+;;> contents of a numbered or named submatch of \var{re},\scheme{'pre}
+;;> for the substring to the left of the match, or \scheme{'post} for
+;;> the substring to the right of the match.
+
+;;> The optional parameters \var{start} and \var{end} restrict both
+;;> the matching and the substitution, to the given indices, such that
+;;> the result is equivalent to omitting these parameters and
+;;> replacing on \scheme{(substring str start end)}. As a convenience,
+;;> a value of \scheme{#f} for \var{end} is equivalent to
+;;> \scheme{(string-length str)}.
 
 (define (regexp-replace rx str subst . o)
   (let* ((start (if (and (pair? o) (car o)) (car o) 0))
@@ -986,6 +1033,9 @@
              (list (substring-cursor str
                                      (regexp-match-submatch-end m 0)
                                      (string-index->offset str end))))))))))))
+
+;;> Equivalent to \var{regexp-replace}, but replaces all occurrences
+;;> of \var{re} in \var{str}.
 
 (define (regexp-replace-all rx str subst . o)
   (regexp-fold

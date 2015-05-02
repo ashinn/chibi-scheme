@@ -1,4 +1,7 @@
 
+;;> A regular expression engine implementing SRFI 115 using a
+;;> non-backtracking Thompson NFA algorithm.
+
 (define-library (chibi regexp)
   (export regexp regexp? valid-sre? rx regexp->sre char-set->sre
           regexp-matches regexp-matches? regexp-search
