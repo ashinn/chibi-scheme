@@ -96,7 +96,7 @@
 (define (get-user-password cfg email)
   (let* ((user-dir (static-local-path cfg (email->path email)))
          (key-file (make-path user-dir "pub-key"))
-         (key (call-with-input-file key-file read)))
+         (key (guard (exn (else #f)) (call-with-input-file key-file read))))
     (and (pair? key) (assoc-get key 'password))))
 
 (define (package-dir email pkg)
