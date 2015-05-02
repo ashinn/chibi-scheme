@@ -349,7 +349,8 @@
          (let ((lib-name (library-file-name lib))
                (docs (extract-module-file-docs lib #f)))
            (and (pair? docs)
-                (not (and (= 1 (length docs)) (eq? 'subsection (caar docs))))
+                (not (and (= 1 (length docs)) (pair? (car docs))
+                          (eq? 'subsection (caar docs))))
                 `(inline
                   ,(string-append (library-name->path cfg lib-name) ".html")
                   ,(call-with-output-string
