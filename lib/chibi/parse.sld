@@ -4,16 +4,16 @@
 
 (define-library (chibi parse)
   (export grammar grammar/unmemoized define-grammar define-grammar/unmemoized
-          call-with-parse parse parse-fully parse-fold
+          call-with-parse parse parse-fully parse-fold parse-failure
           parse->list parse-fully->list
           file->parse-stream string->parse-stream parse-stream-substring
           parse-stream-start? parse-stream-end? parse-stream-ref
           parse-anything parse-nothing parse-epsilon
-          parse-seq parse-and parse-or parse-not
+          parse-seq parse-and parse-or parse-not list->parse-seq
           parse-repeat parse-repeat+ parse-optional
           parse-map parse-map-substring parse-ignore parse-assert
           parse-atomic parse-commit parse-memoize
-          parse-char parse-not-char parse-char-pred
+          parse-char parse-not-char
           parse-string parse-token parse-sre
           parse-beginning parse-end
           parse-beginning-of-line parse-end-of-line

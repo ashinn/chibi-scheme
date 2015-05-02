@@ -41,7 +41,7 @@ BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/inst
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
 
 MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
-	loop match mime modules net pathname process repl scribble stty \
+	loop match mime modules net parse pathname process repl scribble stty \
 	system test time trace type-inference uri weak monad/environment \
 	show show/base crypto/sha2
 
