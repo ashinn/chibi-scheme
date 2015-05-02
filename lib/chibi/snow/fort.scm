@@ -144,9 +144,10 @@
   (call-with-locked-file
    path
    (lambda (fd)
-     (let* ((str (port->string (open-input-file-descriptor fd)))
-            (res (proc str))
-            (out (open-output-file-descriptor fd)))
+     (let* ((in (open-input-file-descriptor fd))
+            (out (open-output-file-descriptor fd))
+            (str (port->string in))
+            (res (proc str)))
        (set-file-position! out seek/set 0)
        (display res out)
        (file-truncate out (string-size res))
