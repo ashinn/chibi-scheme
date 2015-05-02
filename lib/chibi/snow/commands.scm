@@ -365,7 +365,10 @@
      (else '()))))
 
 (define package-description
-  (let ((sent-re (regexp '(: "<p>" (* "\n") (* space) ($ (* (~ ("."))) "."))))
+  (let ((sent-re (regexp '(: "<p>" (* "\n") (* space)
+                             ($ (* (or (: "<" (* (~ (">"))) ">")
+                                       (~ ("<."))))
+                                "."))))
         (space-re (regexp '(or (: (* space) "\n" (* space)) (>= 2 space))))
         (tag-re (regexp '(: "<" (? "/") (* (~ ("<>"))) ">"))))
     (lambda (cfg spec libs docs)
