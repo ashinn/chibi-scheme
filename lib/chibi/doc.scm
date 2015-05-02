@@ -206,7 +206,7 @@
 (define (make-module-doc-env mod-name)
   (env-extend (make-default-doc-env)
               '(example-env)
-              (list (environment '(scheme base)
+              (list (environment '(scheme small)
                                  '(only (chibi) import)
                                  mod-name))))
 
@@ -492,7 +492,7 @@ div#footer {padding-bottom: 50px}
              (if (contains? val o)
                  (extract #f vars i)
                  (extract rest vars i)))
-            (((or 'let 'let* 'letrec 'letrec*) (y ...) . body)
+            ((((or 'let 'let* 'letrec 'letrec*) (y ...) . body) . rest)
              (let ((ordered? (memq (car x) '(let* letrec*))))
                (let lp ((ls y) (vars vars) (j i))
                  (cond
@@ -521,8 +521,10 @@ div#footer {padding-bottom: 50px}
                       (lp (cdr ls) vars j))))
                   (else
                    (extract body vars j))))))
-            (((or 'let-optionals 'let-optionals*) ls ((var default) ...)
-              . body)
+            ((('let (? symbol?) (y ...) . body) . rest)
+             (extract `((let ,y . ,body) . ,rest) vars i))
+            ((((or 'let-optionals 'let-optionals*) ls ((var default) ...)
+               . body) . rest)
              (let lp ((ls var) (vars vars) (i i))
                (cond
                 ((pair? ls)
