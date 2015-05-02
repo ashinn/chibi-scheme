@@ -834,13 +834,21 @@
          (sig (assoc-get sig-spec 'rsa))
          (rsa-key-sexp (or (and (string? email)
                                 (find (rsa-identity=? email) keys))
-                           (car keys)))
-         (rsa-key (extract-rsa-public-key rsa-key-sexp))
-         (cipher (rsa-verify rsa-key (hex-string->bytevector sig)))
-         (digest-bv (hex-string->bytevector digest)))
-    (if (equal? cipher digest-bv)
-        (show #t "signature valid " nl)
-        (show #t "signature invalid " cipher " != " digest-bv nl))))
+                           (car keys))))
+    (cond
+     ((not email)
+      (show #t "invalid signature - no email: " sig-spec))
+     ((not sig)
+      (show #t "no rsa signature in key for: " email))
+     ((not rsa-key-sexp)
+      (show #t "couldn't find public key in repo for: " email))
+     (else
+      (let* ((rsa-key (extract-rsa-public-key rsa-key-sexp))
+             (cipher (rsa-verify rsa-key (hex-string->bytevector sig)))
+             (digest-bv (hex-string->bytevector digest)))
+        (if (equal? cipher digest-bv)
+            (show #t "signature valid " nl)
+            (show #t "signature invalid " cipher " != " digest-bv nl)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Upload - upload a package.
@@ -1798,7 +1806,7 @@
 
 (define (package-maybe-signature-mismatches repo impl cfg pkg raw)
   (cond
-   ((conf-get cfg 'ignore-signature?) #f)
+   ((conf-get cfg 'ignore-signature? #t) #f)
    ((not (assq 'signature (cdr pkg)))
     (and (conf-get cfg 'require-signature?)
          (not (yes-or-no? cfg "Package signature missing.\nProceed anyway?"))
