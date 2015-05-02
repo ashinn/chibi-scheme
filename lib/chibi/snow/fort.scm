@@ -145,6 +145,7 @@
    path
    (lambda (fd)
      (let* ((str (port->string (open-input-file-descriptor fd)))
+            (str (if (eof-object? str) (if (pair? o) (car o) "") str))
             (res (proc str))
             (out (open-output-file-descriptor fd)))
        (set-file-position! out seek/set 0)
