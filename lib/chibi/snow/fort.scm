@@ -126,36 +126,32 @@
 
 (define (file-lock-loop port-or-fd mode)
   (let lp ()
-    (let ((res (file-lock port-or-fd mode)))
-      (cond
-       (res)
-       ((memv (errno) '(11 35)) (thread-sleep! 0.01) (lp))
-       (else (error "couldn't lock file" (integer->error-string)))))))
+    (cond
+     ((file-lock port-or-fd mode))
+     ((memv (errno) '(11 35)) (thread-sleep! 0.01) (lp))
+     (else (error "couldn't lock file" (integer->error-string))))))
 
 (define (call-with-locked-file path proc . o)
-  (let ((fd (open path open/read-write (if (pair? o) (car o) #o644))))
+  (let ((fd (open path
+                  (+ open/create open/read-write)
+                  (if (pair? o) (car o) #o644))))
     (file-lock-loop fd (+ lock/exclusive lock/non-blocking))
     (exception-protect (proc fd) (file-lock fd lock/unlock))))
 
 ;; Rewrites file in place with the result of (proc orig-contents),
 ;; synchronized with file-lock.
 (define (synchronized-rewrite-text-file path proc . o)
-  (cond
-   ((file-exists? path)
-    (call-with-locked-file
-     path
-     (lambda (fd)
-       (let* ((str (port->string (open-input-file-descriptor fd)))
-              (res (proc str))
-              (out (open-output-file-descriptor fd)))
-         (set-file-position! out seek/set 0)
-         (display res out)
-         (file-truncate out (string-size res))
-         (close-output-port out)
-         res))))
-   (else
-    (call-with-output-file path
-      (lambda (out) (display (proc (if (pair? o) (car o) "")) out))))))
+  (call-with-locked-file
+   path
+   (lambda (fd)
+     (let* ((str (port->string (open-input-file-descriptor fd)))
+            (res (proc str))
+            (out (open-output-file-descriptor fd)))
+       (set-file-position! out seek/set 0)
+       (display res out)
+       (file-truncate out (string-size res))
+       (close-output-port out)
+       res))))
 
 (define (synchronized-rewrite-sexp-file path proc . o)
   (apply synchronized-rewrite-text-file
