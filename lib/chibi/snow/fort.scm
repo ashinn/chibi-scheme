@@ -145,7 +145,6 @@
    path
    (lambda (fd)
      (let* ((str (port->string (open-input-file-descriptor fd)))
-            (str (if (eof-object? str) (if (pair? o) (car o) "") str))
             (res (proc str))
             (out (open-output-file-descriptor fd)))
        (set-file-position! out seek/set 0)
@@ -176,7 +175,8 @@
   (rewrite-repo
    cfg
    (lambda (repo)
-     `(,(car repo) ,value ,@(remove rem-pred (cdr repo))))))
+     (let ((repo (if (pair? repo) repo '(repository))))
+       `(,(car repo) ,value ,@(remove rem-pred (cdr repo)))))))
 
 (define (update-repo-object cfg key-field value)
   (let* ((type (car value))
