@@ -482,7 +482,7 @@
          (version (package-output-version cfg))
          (maintainers (conf-get-list cfg '(command package maintainers)))
          (license (package-license cfg)))
-    (let lp ((ls (map (lambda (x) (cons x #f)) libs))
+    (let lp ((ls (map (lambda (x) (list x #f)) libs))
              (progs programs)
              (res
               `(,@(if license `((license ,license)) '())
@@ -499,7 +499,9 @@
         (let* ((lib+files (extract-library cfg (caar ls)))
                (lib (car lib+files))
                (name (library-name lib))
-               (base (or (cdar ls) name))
+               (base (or (second (car ls)) name))
+               (use-for-test? (and (pair? (cddr (car ls))) (third (car ls))))
+               (lib (if use-for-test? (append lib '((use-for test))) lib))
                (subdeps (if recursive?
                             (filter-map
                              (lambda (x)
@@ -507,7 +509,8 @@
                              (cond ((assq 'depends (cdr lib)) => cdr)
                                    (else '())))
                             '())))
-          (lp (append (map (lambda (x) (cons x base)) subdeps) (cdr ls))
+          (lp (append (map (lambda (x) (list x base use-for-test?)) subdeps)
+                      (cdr ls))
               progs
               (cons lib res)
               (append (reverse (cdr lib+files)) files)
@@ -537,8 +540,9 @@
               lib-dirs))
         => (lambda (tests-from-libraries)
              (if (pair? tests-from-libraries)
-                 (lp (append (map (lambda (x) (cons x #f)) tests-from-libraries)
-                             ls)
+                 (lp (append ls
+                             (map (lambda (x) (list x #f #t))
+                                  tests-from-libraries))
                      progs
                      res
                      files
@@ -1004,11 +1008,16 @@
     (map cdr (sort ls > car))))
 
 (define (command/search cfg spec . keywords)
-  (let* ((repo (maybe-update-repository cfg))
-         (lib-names+pkgs (extract-sorted-packages cfg repo keywords)))
-    (if (pair? lib-names+pkgs)
-        (summarize-libraries cfg lib-names+pkgs)
-        (display "No libraries matched your query.\n"))))
+  (let* ((repo (current-repositories cfg))
+         (lib-names+pkgs (extract-sorted-packages cfg repo keywords))
+         (sexp? (conf-get cfg 'sexp?)))
+    (cond
+     ((or (pair? lib-names+pkgs) sexp?)
+      (if sexp? (display "("))
+      (summarize-libraries cfg lib-names+pkgs)
+      (if sexp? (display ")\n")))
+     (else
+      (display "No libraries matched your query.\n")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Show - show detailed information for the given libraries
@@ -1027,7 +1036,7 @@
     (newline)))
 
 (define (command/show cfg spec . args)
-  (maybe-update-repository cfg)
+  (current-repositories cfg)
   (let* ((impls (conf-selected-implementations cfg))
          (impl-cfgs (map (lambda (impl)
                            (conf-for-implementation cfg impl))
@@ -1056,20 +1065,18 @@
     (or (conf-get cfg 'local-user-repository)
         (make-path (conf-get-snow-dir cfg) "repo")))))
 
-(define (repository-local-path cfg)
-  (let* ((repo-uri (remote-uri cfg 'repository-uri "/s/repo.scm"))
-         (repo-id (substring (sha-224 (string->utf8 repo-uri)) 0 32))
+(define (repository-local-path cfg repo-uri)
+  (let* ((repo-id (substring (sha-224 (string->utf8 repo-uri)) 0 32))
          (local-dir (repository-dir cfg))
          (local-base (string-append "repo-" repo-id ".scm")))
     (make-path local-dir local-base)))
 
-(define (update-repository cfg)
-  (let* ((local-path (repository-local-path cfg))
+(define (update-repository cfg repo-uri)
+  (let* ((local-path (repository-local-path cfg repo-uri))
          (local-dir (path-directory local-path))
          (local-tmp (string-append local-path ".tmp."
                                    (number->string (current-second)) "-"
                                    (number->string (current-process-id))))
-         (repo-uri (remote-uri cfg 'repository-uri "/s/repo.scm"))
          (repo-str (utf8->string (resource->bytevector repo-uri)))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
@@ -1088,38 +1095,114 @@
         (rename-file local-tmp local-path)
         repo)))))
 
-(define (repository-stale? cfg)
-  (let ((local-path (repository-local-path cfg)))
+(define (repository-stale? cfg repo-uri)
+  (let ((local-path (repository-local-path cfg repo-uri)))
     (guard (exn (else #t))
       (> (current-second)
          (+ (file-modification-time local-path)
             ;; by default update once every 3 hours
             (conf-get cfg 'update-refresh (* 3 60 60)))))))
 
-(define (should-update-repository? cfg)
+(define (should-update-repository? cfg repo-uri)
   (case (conf-get cfg 'update-strategy 'cache)
     ((always) #t)
     ((never) #f)
     ((cache)
-     (repository-stale? cfg))
+     (repository-stale? cfg repo-uri))
     ((confirm)
-     (and (repository-stale? cfg)
+     (and (repository-stale? cfg repo-uri)
           (yes-or-no? cfg "Update repository info?")))
     (else
      (warn "unknown update-stategy: " (conf-get cfg 'update-strategy))
      #f)))
 
-;; return the repo sexp
-(define (maybe-update-repository cfg)
+;; returns the single repo as a sexp, updated as needed
+(define (maybe-update-repository cfg repo-uri)
   (or (guard (exn (else #f))
-        (and (should-update-repository? cfg)
-             (update-repository cfg)))
+        (and (should-update-repository? cfg repo-uri)
+             (update-repository cfg repo-uri)))
       (guard (exn (else '(repository)))
-        (call-with-input-file (repository-local-path cfg)
+        (call-with-input-file (repository-local-path cfg repo-uri)
           read))))
 
+;; returns all repos merged as a sexp, updated as needed
+;; not to be confused with the current-repo util in (chibi snow fort)
+;; which returns the single host
+(define (current-repositories cfg)
+  (define (make-loc uri trust depth) (vector uri trust depth))
+  (define (loc-uri loc) (vector-ref loc 0))
+  (define (loc-trust loc) (vector-ref loc 1))
+  (define (loc-depth loc) (vector-ref loc 2))
+  (define (adjust-package-urls ls uri)
+    (map
+     (lambda (x)
+       (cond
+        ((and (pair? x) (eq? 'package (car x)) (assq 'url (cdr x)))
+         => (lambda (y)
+              (set-car! (cdr y)
+                        (uri-resolve (cadr y) (string->path-uri 'http uri))))))
+       x)
+     (remove (lambda (x)
+               (and (pair? x)
+                    (eq? 'url (car x))))
+             ls)))
+  (let lp ((ls (map (lambda (x) (make-loc x 1.0 0))
+                    (conf-get-list cfg 'repository-uri)))
+           (seen '())
+           (res '()))
+    (cond
+     ((null? ls)
+      (cons 'repository (reverse res)))
+     ((> (loc-depth (car ls)) (conf-get cfg 'sibling-depth-limit 1000))
+      (warn "skipping sibling repo at max depth: "
+            (loc-uri (car ls)) (loc-depth (car ls)))
+      (lp (cdr ls)))
+     ((< (loc-trust (car ls)) (conf-get cfg 'sibling-min-trust 0.0))
+      (warn "skipping sibling repo with low trust: "
+            (loc-uri (car ls)) (loc-trust (car ls)) )
+      (lp (cdr ls)))
+     (else
+      (let ((uri (uri-normalize (loc-uri (car ls)))))
+        (if (member uri seen)
+            (lp (cdr ls) seen res)
+            (let* ((repo (maybe-update-repository cfg uri))
+                   (siblings
+                    (if (and repo (conf-get cfg 'follow-siblings? #t))
+                        (let ((uri-base
+                               (if (string-suffix? "/" uri)
+                                   uri
+                                   (uri-directory uri))))
+                          (filter-map
+                           (lambda (x)
+                             (and (pair? x)
+                                  (eq? 'sibling (car x))
+                                  (assoc-get (cdr x) 'url)
+                                  (make-loc
+                                   (uri-resolve (assoc-get (cdr x) 'url)
+                                                uri-base)
+                                   (* (loc-trust (car ls))
+                                      (or (assoc-get (cdr x) 'trust) 1.0))
+                                   (+ (loc-depth (car ls)) 1))))
+                           (cdr repo)))
+                        '()))
+                   (res (if (valid-repository? repo)
+                            (let ((multi? (or (pair? res)
+                                              (pair? siblings)
+                                              (pair? (cdr ls)))))
+                              (append
+                               (reverse
+                                (if multi?
+                                    (adjust-package-urls (cdr repo) uri)
+                                    (cdr repo)))
+                               res))
+                            (begin
+                              (if repo
+                                  (warn "invalid repository for uri: " uri))
+                              res))))
+              (lp (append siblings (cdr ls)) (cons uri seen) res))))))))
+
 (define (command/update cfg spec)
-  (update-repository cfg))
+  (current-repositories (conf-extend cfg '((update-strategy . always)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Install - install one or more libraries.
@@ -1984,7 +2067,7 @@
 ;; single implementation at a time.
 (define (command/install cfg spec . args)
   (let*-values
-      (((repo) (maybe-update-repository cfg))
+      (((repo) (current-repositories cfg))
        ((impls) (conf-selected-implementations cfg))
        ((impl-cfgs) (map (lambda (impl)
                            (conf-for-implementation cfg impl))
@@ -2017,7 +2100,7 @@
 (define (command/upgrade cfg spec . args)
   (if (pair? args)
       (apply command/install cfg spec args)
-      (let* ((repo (maybe-update-repository cfg))
+      (let* ((repo (current-repositories cfg))
              (impls (conf-selected-implementations cfg))
              (impl-cfgs (map (lambda (impl)
                                (conf-for-implementation cfg impl))

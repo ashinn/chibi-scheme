@@ -279,6 +279,7 @@
 
 (snow ,@repo4 package --output-dir tests/snow/repo4/
       tests/snow/repo4/euler/interest.sld)
+(snow index ,(cadr repo4))
 (let* ((pkg-file "tests/snow/repo4/euler-interest-2.3.tgz")
        (pkg (package-file-meta pkg-file))
        (libs (package-libraries pkg)))
@@ -294,5 +295,21 @@
                           (run-tests run-euler-interest-test-tests)))
           (run-euler-interest-test-tests))
       (snowball-test->sexp-list pkg pkg-file)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; multiple repos
+
+(define repo3+4
+  '(--repository-uri "tests/snow/repo3/repo.scm,tests/snow/repo4/repo.scm"))
+
+(let ((ls (snow->sexp ,@repo3+4 search euler)))
+  (test-assert (assoc '(euler interest) ls))
+  (test-assert (assoc '(euler totient) ls)))
+
+(define repo5 '(--repository-uri tests/snow/repo5/repo.scm))
+
+(let ((ls (snow->sexp ,@repo5 search euler)))
+  (test-assert (assoc '(euler interest) ls))
+  (test-assert (assoc '(euler totient) ls)))
 
 (test-end)

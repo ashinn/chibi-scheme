@@ -26,6 +26,29 @@
         (call-with-input-url uri port->bytevector)
         (file->bytevector (uri-path uri)))))
 
+;; path-normalize either a uri or path, and return the result as a string
+(define (uri-normalize x)
+  (cond
+   ((uri? x)
+    (uri->string (uri-with-path x (path-normalize (uri-path x)))))
+   ((not (string? x))
+    (error "not a uri" x))
+   ((string->uri x)
+    => uri-normalize)
+   (else
+    (path-normalize x))))
+
+(define (uri-directory x)
+  (cond
+   ((uri? x)
+    (uri->string (uri-with-path x (path-directory (uri-path x)))))
+   ((not (string? x))
+    (error "not a uri" x))
+   ((string->uri x)
+    => uri-directory)
+   (else
+    (path-directory x))))
+
 (define (version-split str)
   (if str
       (map (lambda (x) (or (string->number x) x))

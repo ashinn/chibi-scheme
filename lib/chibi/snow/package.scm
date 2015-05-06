@@ -118,7 +118,7 @@
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))
     (and url
-         (uri-resolve url (string->path-uri 'http (repo-url repo))))))
+         (uri-resolve url (string->path-uri 'http (or (repo-url repo) ""))))))
 
 (define (package-version pkg)
   (and (pair? pkg) (assoc-get (cdr pkg) 'version eq?)))

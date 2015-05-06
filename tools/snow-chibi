@@ -67,9 +67,11 @@
                           "don't verify implementation versions")
     (sign-uploads? boolean ("sign-uploads") "sign with the rsa key if present")
     (host string "base uri of snow repository")
-    (repository-uri string "uri of snow repository file")
+    (repository-uri (list string) "uris or paths of snow repositories")
     (local-root-repository dirname "repository cache dir for root")
     (local-user-repository dirname "repository cache dir for non-root users")
+    (update-strategy symbol
+                     "when to refresh repo: always, never, cache or confirm")
     (install-prefix string "prefix directory for installation")
     (install-source-dir dirname "directory to install library source in")
     (install-library-dir dirname "directory to install shared libraries in")
