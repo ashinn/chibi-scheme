@@ -1056,9 +1056,16 @@
     (or (conf-get cfg 'local-user-repository)
         (make-path (conf-get-snow-dir cfg) "repo")))))
 
+(define (repository-local-path cfg)
+  (let* ((repo-uri (remote-uri cfg 'repository-uri "/s/repo.scm"))
+         (repo-id (substring (sha-224 (string->utf8 repo-uri)) 0 32))
+         (local-dir (repository-dir cfg))
+         (local-base (string-append "repo-" repo-id ".scm")))
+    (make-path local-dir local-base)))
+
 (define (update-repository cfg)
-  (let* ((local-dir (repository-dir cfg))
-         (local-path (make-path local-dir "repo.scm"))
+  (let* ((local-path (repository-local-path cfg))
+         (local-dir (path-directory local-path))
          (local-tmp (string-append local-path ".tmp."
                                    (number->string (current-second)) "-"
                                    (number->string (current-process-id))))
@@ -1071,7 +1078,7 @@
      ((not (valid-repository? repo))
       (die 2 "not a valid repository: " repo-uri))
      ((not (create-directory* local-dir))
-      (die 2 "can't create directory: " local-dir ))
+      (die 2 "can't create directory: " local-dir))
      (else
       (guard (exn (else (die 2 "couldn't write repository")))
         (call-with-output-file local-tmp
@@ -1082,10 +1089,10 @@
         repo)))))
 
 (define (repository-stale? cfg)
-  (let ((path (make-path (repository-dir cfg) "repo.scm")))
+  (let ((local-path (repository-local-path cfg)))
     (guard (exn (else #t))
       (> (current-second)
-         (+ (file-modification-time path)
+         (+ (file-modification-time local-path)
             ;; by default update once every 3 hours
             (conf-get cfg 'update-refresh (* 3 60 60)))))))
 
@@ -1102,12 +1109,13 @@
      (warn "unknown update-stategy: " (conf-get cfg 'update-strategy))
      #f)))
 
+;; return the repo sexp
 (define (maybe-update-repository cfg)
   (or (guard (exn (else #f))
         (and (should-update-repository? cfg)
              (update-repository cfg)))
       (guard (exn (else '(repository)))
-        (call-with-input-file (make-path (repository-dir cfg) "repo.scm")
+        (call-with-input-file (repository-local-path cfg)
           read))))
 
 (define (command/update cfg spec)

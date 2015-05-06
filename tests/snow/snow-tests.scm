@@ -134,7 +134,6 @@
       --test tests/snow/repo1/leonardo/fibonacci-test.scm
       tests/snow/repo1/leonardo/fibonacci.sld)
 (snow index ,(cadr repo1) tests/snow/repo1/leonardo-fibonacci-1.0.tgz)
-(snow ,@repo1 update)
 (snow ,@repo1 install --show-tests leonardo.fibonacci)
 (test "1.0" (installed-version (snow-status) '(leonardo fibonacci)))
 
@@ -145,7 +144,6 @@
       --test tests/snow/repo2/leonardo/fibonacci-test.scm
       tests/snow/repo2/leonardo/fibonacci.sld)
 (snow index ,(cadr repo2))
-(snow ,@repo2 update)
 (snow ,@repo2 upgrade leonardo.fibonacci)
 (test "1.1" (installed-version (snow-status) '(leonardo fibonacci)))
 
@@ -191,7 +189,6 @@
       --test "tests/snow/repo3/pythagoras/hypotenuse-test.sch"
       tests/snow/repo3/pythagoras/hypotenuse.sch)
 (snow index ,(cadr repo3))
-(snow ,@repo3 update)
 (snow ,@repo3 install pingala.binomial)
 (snow ,@repo3 install euler.totient)
 (let ((status (snow-status)))
@@ -233,15 +230,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
 
-(snow ,@repo2 update)
 (snow ,@repo2 --implementations "gauche,kawa,larceny"
       install leonardo.fibonacci)
 (let ((status (snow-status  --implementations "gauche,kawa,larceny")))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'gauche))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'kawa))
   (test "1.1" (installed-version status '(leonardo fibonacci) 'larceny)))
-
-(snow ,@repo3 update)
 
 (snow ,@repo3 --implementations "chicken" --program-implementation "chicken"
       install pingala.triangle)
