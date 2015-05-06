@@ -76,17 +76,20 @@
          (email (assoc-get (cdr sig-spec) 'email))
          (rsa-key-sexp (find (rsa-identity=? email)
                              (repo-publishers cfg)))
-         (rsa-key (and (pair? rsa-key-sexp)
+         (verify-rsa? (conf-get cfg 'verify-signatures?))
+         (rsa-key (and verify-rsa?
+                       (pair? rsa-key-sexp)
                        (extract-rsa-public-key (cdr rsa-key-sexp)))))
     (cond
      ((not (equal? digest actual-digest))
       (string-append "the " digest-name " digest in the signature <" digest
                      "> didn't match the actual value: <" actual-digest ">"))
-     ((not rsa-key)
+     ((and rsa-key-sexp (not rsa-key))
       (string-append "unknown publisher: " email))
-     ((not (rsa-verify? rsa-key
-                        (maybe-parse-hex digest)
-                        (maybe-parse-hex sig)))
+     ((and verify-rsa?
+           (not (rsa-verify? rsa-key
+                             (maybe-parse-hex digest)
+                             (maybe-parse-hex sig))))
       (log-error "digest: " digest " sig: " (maybe-parse-hex sig)
                  " verify: " (rsa-encrypt rsa-key digest))
       "rsa signature did not match")
