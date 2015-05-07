@@ -1421,23 +1421,26 @@
 
 (define (installed-libraries impl cfg)
   (delete-duplicates
-   (directory-fold-tree
-    (get-install-source-dir impl cfg)
-    #f #f
-    (lambda (file acc)
-      (cond
-       ((and (equal? "meta" (path-extension file))
-             (guard (exn (else #f))
-               (let ((pkg (call-with-input-file file read)))
-                 (and (package? pkg) pkg))))
-        => (lambda (pkg)
-             (append
-              (map
-               (lambda (lib) (cons (library-name lib) pkg))
-               (package-libraries pkg))
-              acc)))
-       (else acc)))
-    '())
+   (append-map
+    (lambda (dir)
+      (directory-fold-tree
+       dir
+       #f #f
+       (lambda (file acc)
+         (cond
+          ((and (equal? "meta" (path-extension file))
+                (guard (exn (else #f))
+                  (let ((pkg (call-with-input-file file read)))
+                    (and (package? pkg) pkg))))
+           => (lambda (pkg)
+                (append
+                 (map
+                  (lambda (lib) (cons (library-name lib) pkg))
+                  (package-libraries pkg))
+                 acc)))
+          (else acc)))
+       '()))
+    (get-install-search-dirs impl cfg))
    (lambda (a b) (equal? (car a) (car b)))))
 
 (define r7rs-small-libraries
@@ -2020,7 +2023,9 @@
 ;; Choose packages for the corresponding libraries, and recursively
 ;; select uninstalled packages.
 (define (expand-package-dependencies repo impl cfg lib-names)
-  (let ((current (installed-libraries impl cfg)))
+  (let ((current (installed-libraries impl cfg))
+        (auto-upgrade-dependencies?
+         (conf-get cfg '(command install auto-upgrade-dependencies?))))
     (let lp ((ls lib-names) (res '()) (ignored '()))
       (cond
        ((null? ls) res)
@@ -2038,8 +2043,10 @@
                 (filter
                  (lambda (pkg)
                    (or (not current-version)
-                       (version>? (package-version pkg)
-                                  current-version)))
+                       (and (or auto-upgrade-dependencies?
+                                (member (car ls) lib-names))
+                            (version>? (package-version pkg)
+                                       current-version))))
                  providers)))
           (cond
            ((member (car ls) ignored)
@@ -2116,7 +2123,10 @@
       (let* ((repo (current-repositories cfg))
              (impls (conf-selected-implementations cfg))
              (impl-cfgs (map (lambda (impl)
-                               (conf-for-implementation cfg impl))
+                               (conf-extend
+                                (conf-for-implementation cfg impl)
+                                '((command install auto-upgrade-dependencies?)
+                                  . #t)))
                              impls)))
         (for-each
          (lambda (impl cfg)
