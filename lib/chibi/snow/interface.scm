@@ -47,6 +47,7 @@
 (define (save-history cfg)
   (let ((history-file (conf-input-history-file cfg)))
     (guard (exn (else (warn "couldn't save history to " history-file)))
+      (create-directory* (path-directory history-file))
       (call-with-output-file history-file
         (lambda (out)
           (write (remove (lambda (x) (equal? x ""))
