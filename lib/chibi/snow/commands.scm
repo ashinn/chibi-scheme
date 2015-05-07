@@ -33,8 +33,11 @@
                 (let ((msg
                        (string-append
                         "Implementation " (symbol->string (car spec))
-                        " is an unsupported version, " version ", but"
-                        " at least " (fourth spec) " is required.")))
+                        (if (string? version)
+                            (string-append " is an unsupported version, "
+                                           version)
+                            " is an unknown version")
+                        ", but at least " (fourth spec) " is required.")))
                   (cond
                    (confirm?
                     (yes-or-no? cfg msg " Install anyway?"))
