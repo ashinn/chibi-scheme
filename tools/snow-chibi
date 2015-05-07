@@ -67,7 +67,7 @@
                           "don't verify implementation versions")
     (sign-uploads? boolean ("sign-uploads") "sign with the rsa key if present")
     (host string "base uri of snow repository")
-    (repository-uri (list string) "uris or paths of snow repositories")
+    (repository-uri (list string) ("repo") "uris or paths of snow repositories")
     (local-root-repository dirname "repository cache dir for root")
     (local-user-repository dirname "repository cache dir for non-root users")
     (update-strategy symbol
@@ -83,7 +83,7 @@
     (installer symbol "name of installer to use")
     (builder symbol "name of builder to use")
     (program-builder symbol "name of program builder to use")
-    (implementations (list symbol) "impls to install for, or 'all'")
+    (implementations (list symbol) ("impls") "impls to install for, or 'all'")
     (program-implementation symbol "impl to install programs for")
     (chibi-path filename "path to chibi-scheme executable")
     (cc string "path to c compiler")
