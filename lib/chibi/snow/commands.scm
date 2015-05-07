@@ -975,11 +975,13 @@
   (define (library-score lib)
     (+ (* 10 (count-in-sexp (library-name lib) keywords))
        (count-in-sexp lib keywords)
-       (let ((use-for (assoc-get lib 'use-for)))
-         (case (if (pair? use-for) (car use-for) use-for)
-           ((test) 0)
-           ((build) 10)
-           (else 100)))))
+       (let ((use-for (assq 'use-for (cdr lib))))
+         (apply
+          max
+          0
+          (map
+           (lambda (x) (case x ((test) 0) ((build) 10) (else 100)))
+           (if (pair? use-for) (cdr use-for) (list use-for)))))))
   (append-map
    (lambda (x)
      (cond
@@ -1580,6 +1582,13 @@
    (else
     (create-directory* dir))))
 
+(define (should-install-library? impl cfg lib)
+  (let ((use-for (assq 'use-for (cdr lib))))
+    (or (not (and (pair? use-for)
+                  (not (or (memq 'build use-for) (memq 'final use-for)))))
+        (conf-get cfg '(command install install-tests?))
+        (conf-get cfg '(command upgrade install-tests?)))))
+
 (define (install-package-meta-info impl cfg pkg)
   (let* ((meta-file (get-package-meta-file cfg pkg))
          (install-dir (get-install-source-dir impl cfg))
@@ -1591,7 +1600,8 @@
       (for-each
        (lambda (lib)
          (let ((lib-name (library-name lib)))
-           (if (not (equal? pkg-name (take lib-name (length pkg-name))))
+           (if (and (not (equal? pkg-name (take lib-name (length pkg-name))))
+                    (should-install-library? impl cfg lib))
                (let* ((lib-meta (make-path install-dir
                                            (get-library-meta-file cfg lib)))
                       (rel-path
@@ -1654,10 +1664,11 @@
     (else 'default)))
 
 (define (install-library impl cfg library dir)
-  (let ((installer
-         (lookup-installer (or (conf-get cfg 'installer)
-                               (installer-for-implementation impl cfg)))))
-    (installer impl cfg library dir)))
+  (if (should-install-library? impl cfg library)
+      (let ((installer
+             (lookup-installer (or (conf-get cfg 'installer)
+                                   (installer-for-implementation impl cfg)))))
+        (installer impl cfg library dir))))
 
 ;; The default builder just renames files per implementation.
 ;; Returns a new library object with any renames.
@@ -1951,12 +1962,14 @@
                          '()))
                     (installed-files
                      (append data-files lib-files prog-files)))
-               (install-package-meta-info
-                impl cfg
-                `(,@(remove (lambda (x)
-                              (and (pair? x) (eq? 'installed-files (car x))))
-                            pkg)
-                  (installed-files ,@installed-files))))
+               (if (pair? installed-files)
+                   (install-package-meta-info
+                    impl cfg
+                    `(,@(remove (lambda (x)
+                                  (and (pair? x)
+                                       (eq? 'installed-files (car x))))
+                                pkg)
+                      (installed-files ,@installed-files)))))
              (preserve))))))))
 
 (define (install-package-from-file repo impl cfg file)

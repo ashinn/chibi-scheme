@@ -101,6 +101,7 @@
 (define install-spec
   '((skip-tests? boolean ("skip-tests") "don't run tests even if present")
     (show-tests? boolean ("show-tests") "show test output even on success")
+    (install-tests? boolean ("install-tests") "install test-only libraries")
     (use-sudo? symbol ("use-sudo") "always, never, or as-needed (default)")))
 (define upgrade-spec
   install-spec)
