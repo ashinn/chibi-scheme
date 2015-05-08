@@ -1925,7 +1925,10 @@
 (define (package-maybe-signature-mismatches repo impl cfg pkg raw)
   (cond
    ((conf-get cfg 'ignore-signature? #t) #f)
-   ((not (assq 'signature (cdr pkg)))
+   ((not (cond
+          ((assq 'signature (cdr pkg))
+           => (lambda (x) (assoc-get (cdr x) 'rsa)))
+          (else #f)))
     (and (conf-get cfg 'require-signature?)
          (not (yes-or-no? cfg "Package signature missing.\nProceed anyway?"))
          '(package-signature-missing)))
