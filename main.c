@@ -14,6 +14,8 @@
 #define sexp_import_suffix "))"
 #define sexp_environment_prefix "(environment '("
 #define sexp_environment_suffix "))"
+#define sexp_trace_prefix "(module-env (load-module '("
+#define sexp_trace_suffix ")))"
 #define sexp_default_environment "(environment '(scheme small))"
 #define sexp_advice_environment "(load-module '(chibi repl))"
 
@@ -564,19 +566,26 @@ void run_main (int argc, char **argv) {
       break;
     case 't':
       mods_loaded = 1;
-      load_init(0);
+      load_init(1);
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
 #if SEXP_USE_MODULES
       suffix = strrchr(arg, '.');
       sym = sexp_intern(ctx, suffix + 1, -1);
       *(char*)suffix = '\0';
-      impmod = make_import(sexp_environment_prefix, arg, sexp_environment_suffix);
+      impmod = make_import(sexp_trace_prefix, arg, sexp_trace_suffix);
       tmp = check_exception(ctx, sexp_eval_string(ctx, impmod, -1, sexp_meta_env(ctx)));
+      if (!(tmp && sexp_envp(tmp))) {
+        fprintf(stderr, "couldn't find library to trace: %s\n", impmod);
+      } else if (!((sym = sexp_env_cell(ctx, tmp, sym, 0)))) {
+        fprintf(stderr, "couldn't find binding to trace: %s in %s\n", suffix + 1, impmod);
+      } else {
+        sym = sexp_list1(ctx, sym);
+        tmp = check_exception(ctx, sexp_eval_string(ctx, "(environment '(chibi trace))", -1, sexp_meta_env(ctx)));
+        tmp = sexp_env_ref(ctx, tmp, sexp_intern(ctx, "trace-cell", -1), 0);
+        if (tmp && sexp_procedurep(tmp))
+          check_exception(ctx, sexp_apply(ctx, tmp, sym));
+      }
       free(impmod);
-      sym = sexp_list1(ctx, sexp_env_cell(ctx, tmp, sym, 0));
-      tmp = check_exception(ctx, sexp_eval_string(ctx, "(environment '(chibi trace))", -1, sexp_meta_env(ctx)));
-      tmp = sexp_env_ref(ctx, tmp, sexp_intern(ctx, "trace-cell", -1), 0);
-      check_exception(ctx, sexp_apply(ctx, tmp, sym));
 #endif
       break;
     default:
