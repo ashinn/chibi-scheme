@@ -1130,6 +1130,12 @@
         (call-with-input-file (repository-local-path cfg repo-uri)
           read))))
 
+(define (get-repository-list cfg)
+  (let ((ls (conf-get-list cfg 'repository-uri)))
+    (if (pair? ls)
+        ls
+        (list (remote-uri cfg 'default-repository "/s/repo.scm")))))
+
 ;; returns all repos merged as a sexp, updated as needed
 ;; not to be confused with the current-repo util in (chibi snow fort)
 ;; which returns the single host
@@ -1152,7 +1158,7 @@
                     (eq? 'url (car x))))
              ls)))
   (let lp ((ls (map (lambda (x) (make-loc x 1.0 0))
-                    (conf-get-list cfg 'repository-uri)))
+                    (get-repository-list cfg)))
            (seen '())
            (res '()))
     (cond
