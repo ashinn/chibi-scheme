@@ -1584,7 +1584,8 @@
         (lambda (tmp-path out preserve)
           (write-simple-pretty obj out)
           (close-output-port out)
-          (system "sudo" "cp" tmp-path dest)))
+          (system "sudo" "cp" tmp-path dest)
+          (system "sudo" "chmod" "644" dest)))
       (call-with-output-file dest
         (lambda (out) (write-simple-pretty obj out)))))
 
