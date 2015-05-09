@@ -1242,14 +1242,18 @@
            (cons share-dir (delete share-dir dirs))
            dirs)))
     ((chicken)
-     (let ((dir (process->string '(csi -p "(repository-path)"))))
+     (let ((dir (string-trim
+                 (process->string '(csi -p "(repository-path)"))
+                 char-whitespace?)))
        (list
         (if (file-exists? dir)  ; repository-path should always exist
             dir
             (make-path (or (conf-get cfg 'install-prefix)) "lib" impl 7)))))
     ((gauche)
      (list
-      (let ((dir (process->string '(gauche-config "--sitelibdir"))))
+      (let ((dir (string-trim
+                  (process->string '(gauche-config "--sitelibdir"))
+                  char-whitespace?)))
         (or (and (string? dir) (> (string-length dir) 0)
                  (eqv? #\/ (string-ref dir 0))
                  dir)
@@ -1267,9 +1271,11 @@
     ((larceny)
      (list
       (make-path
-       (process->string
-        '(larceny -quiet -nobanner -- -e
-                  "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
+       (string-trim
+        (process->string
+         '(larceny -quiet -nobanner -- -e
+                   "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
+        char-whitespace?)
        "lib/Snow")))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
