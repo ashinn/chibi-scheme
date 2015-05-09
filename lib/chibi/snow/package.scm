@@ -245,7 +245,7 @@
                  (package-libraries package)))))
 
 (define (package-dependencies impl cfg package)
-  (append-map (lambda (lib) (library-dependencies cfg impl lib))
+  (append-map (lambda (lib) (library-dependencies impl cfg lib))
               (append (package-libraries package)
                       (package-programs package))))
 
