@@ -1982,6 +1982,7 @@
 (let ((args (command-line)))
   (let lp ((args (if (pair? args) (cdr args) args))
            (compile? #f)
+           (cc #f)
            (cflags '())
            (features '()))
     (cond
@@ -1989,12 +1990,15 @@
            (eqv? #\- (string-ref (car args) 0)))
       (case (string->symbol (car args))
         ((-c --compile)
-         (lp (cdr args) #t cflags features))
+         (lp (cdr args) #t cc cflags features))
+        ((-cc --cc)
+         (lp (cddr args) compile? (cadr args) cflags features))
         ((-f --flags)
          (if (null? (cdr args))
              (error "--flags requires an argument"))
          (lp (cddr args)
              compile?
+             cc
              (append cflags (string-split (cadr args) #\space))
              features))
         ((--features)
@@ -2002,6 +2006,7 @@
              (error "--features requires an argument"))
          (lp (cddr args)
              compile?
+             cc
              cflags
              (append features (string-split (cadr args) #\,))))
         (else
@@ -2043,5 +2048,5 @@
                    `(cond-expand
                      (macosx (append '("-dynamiclib" "-Oz") ',base-args))
                      (else (append '("-fPIC" "-shared" "-Os") ',base-args)))))
-                 (cc (if *c++?* "c++" "cc")))
+                 (cc (or cc (if *c++?* "c++" "cc"))))
             (execute cc (cons cc args))))))))))
