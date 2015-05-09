@@ -1,5 +1,6 @@
 ERROR: out of memory
-  called from <anonymous> on line 513 of file ./lib/init-7.scm
+  called from <anonymous> on line 529 of file ./lib/init-7.scm
   called from <anonymous> on line 15 of file tests/memory/test00-read-string.scm
-  called from <anonymous> on line 1000 of file ./lib/init-7.scm
-  called from <anonymous> on line 526 of file ./lib/init-7.scm
+  called from <anonymous> on line 1039 of file ./lib/init-7.scm
+  called from <anonymous> on line 542 of file ./lib/init-7.scm
+  called from <anonymous> on line 622 of file ./lib/init-7.scm
