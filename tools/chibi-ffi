@@ -40,6 +40,7 @@
 (define *methods* '())
 (define *consts* '())
 (define *inits* '())
+(define *clibs* '())
 (define *tags* '())
 (define *open-namespaces* '())
 (define *c++?* #f)
@@ -404,6 +405,9 @@
 
 (define (ffi-include file)
   (load file (current-environment)))
+
+(define (c-link lib)
+  (set! *clibs* (cons lib *clibs*)))
 
 (define (c-declare . args)
   (apply cat args)
@@ -2031,7 +2035,9 @@
                  (execute (begin (eval '(import (chibi process))
                                        (current-environment))
                                  (eval 'execute (current-environment))))
-                 (base-args (append cflags `("-o" ,so ,dest "-lchibi-scheme")))
+                 (base-args (append cflags `("-o" ,so ,dest "-lchibi-scheme")
+                                    (map (lambda (x) (string-append "-l" x))
+                                         (reverse *clibs*))))
                  (args
                   (eval
                    `(cond-expand
