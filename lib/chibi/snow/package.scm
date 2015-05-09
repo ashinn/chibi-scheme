@@ -394,6 +394,11 @@
    (lambda (x) (or (and (pair? x) (eq? 'depends (car x)) (cdr x)) '()))
    (cdr (library-for-impl impl cfg lib))))
 
+(define (library-foreign-dependencies impl cfg lib)
+  (append-map
+   (lambda (x) (or (and (pair? x) (eq? 'foreign-depends (car x)) (cdr x)) '()))
+   (cdr (library-for-impl impl cfg lib))))
+
 (define (parse-library-name str)
   (cond
    ((pair? str) str)

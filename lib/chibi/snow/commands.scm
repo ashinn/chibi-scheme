@@ -1781,21 +1781,36 @@
                                                            (else ".so"))))
                  (so-flags (cond-expand (macosx '("-dynamiclib" "-Oz"))
                                         (else '("-fPIC" "-shared" "-Os"))))
-                 (cc-cmd (append cc cflags so-flags
-                                 (if local-test? '("-Iinclude" "-L.") '())
-                                 `("-o" ,so-file ,c-file "-lchibi-scheme"))))
-            (and (or (file-exists? c-file)
-                     (and (file-exists? stub-file)
-                          (or (and (system? (append chibi-ffi (list stub-file)))
-                                   (file-exists? c-file))
-                              (yes-or-no? cfg "couldn't generate c from stub: "
-                                          stub-file " - install anyway?")))
-                     (yes-or-no? cfg "can't find ffi stub or c source for: "
-                                 base " - install anyway?"))
-                 (or (system? cc-cmd)
-                     (yes-or-no? cfg "couldn't compile chibi ffi c code: "
-                                 c-file " - install anyway?"))
-                 (lp (cdr ls))))))))
+                 (lib-flags
+                  (map (lambda (lib) (string-append "-l" lib))
+                       (library-foreign-dependencies impl cfg library)))
+                 (ffi-cmd
+                  `(,@chibi-ffi
+                    "-c" "-cc" ,(car cc)
+                    "-f" ,(string-join cflags " ")
+                    "-f" ,(string-join lib-flags " ")
+                    ,@(if local-test? '("-f" "-Iinclude -L.") '())
+                    ,@(if (pair? (cdr cc))
+                          (list "-f" (string-join (cdr cc) " "))
+                          '())
+                    ,stub-file))
+                 (cc-cmd
+                  `(,@cc ,@cflags ,@so-flags
+                         ,@(if local-test? '("-Iinclude" "-L.") '())
+                         "-o" ,so-file ,c-file "-lchibi-scheme"
+                         ,@lib-flags)))
+            (when (or (and (file-exists? c-file)
+                           (or (system? cc-cmd)
+                               (yes-or-no?
+                                cfg "couldn't compile chibi ffi c code: "
+                                c-file " - install anyway?")))
+                      (and (file-exists? stub-file)
+                           (or (system? ffi-cmd)
+                               (yes-or-no? cfg "couldn't compile stub: "
+                                           stub-file " - install anyway?")))
+                      (yes-or-no? cfg "can't find ffi stub or c source for: "
+                                  base " - install anyway?"))
+              (lp (cdr ls))))))))
 
 (define (chicken-builder impl cfg library dir)
   (let* ((library-file (make-path dir (get-library-file cfg library)))

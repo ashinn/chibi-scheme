@@ -14,7 +14,7 @@
           library-name->path library->path get-library-file find-library-file
           library-url library-name parse-library-name library-name->path
           library-analyze library-include-files library-dependencies
-          library-shared-include-files
+          library-shared-include-files library-foreign-dependencies
           library-rewrite-includes library-file-name
           get-program-file program-name program-install-name
           invalid-package-reason valid-package?
