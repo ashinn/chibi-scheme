@@ -1,7 +1,6 @@
 (define-library (chibi term ansi-test)
   (export run-tests)
-  (import (chibi)
-          (only (scheme base) parameterize)
+  (import (scheme base)
           (chibi test)
           (chibi term ansi))
   (begin
