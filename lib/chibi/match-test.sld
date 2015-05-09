@@ -33,6 +33,8 @@
         (match '(ok . ok) ((x . 'bad) x) (('ok . x) x)))
       (test "duplicate symbols bound" 3
         (let ((a '(1 2))) (match a ((and (a 2) (1 b)) (+ a b)) (_ #f))))
+      (test "duplicate quasiquote" 'ok
+        (match '(a b) ((or `(a ,x) `(,x b)) 'ok) (_ #f)))
 
       (test "ellipses" '((a b c) (1 2 3))
         (match '((a . 1) (b . 2) (c . 3))

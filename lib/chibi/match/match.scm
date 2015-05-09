@@ -227,6 +227,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2015/05/09 - fixing bug in var extraction of quasiquote patterns
 ;; 2014/11/24 - adding Gauche's `@' pattern for named record field matching
 ;; 2012/12/26 - wrapping match-let&co body in lexical closure
 ;; 2012/11/28 - fixing typo s/vetor/vector in largely unused set! code
@@ -808,13 +809,13 @@
      (match-extract-vars x k i v))
     ((match-extract-quasiquote-vars (unquote x) k i v (#t . d))
      (match-extract-quasiquote-vars x k i v d))
-    ((match-extract-quasiquote-vars (x . y) k i v (#t . d))
+    ((match-extract-quasiquote-vars (x . y) k i v d)
      (match-extract-quasiquote-vars
       x
-      (match-extract-quasiquote-vars-step y k i v d) i ()))
-    ((match-extract-quasiquote-vars #(x ...) k i v (#t . d))
+      (match-extract-quasiquote-vars-step y k i v d) i () d))
+    ((match-extract-quasiquote-vars #(x ...) k i v d)
      (match-extract-quasiquote-vars (x ...) k i v d))
-    ((match-extract-quasiquote-vars x (k ...) i v (#t . d))
+    ((match-extract-quasiquote-vars x (k ...) i v d)
      (k ... v))
     ))
 
