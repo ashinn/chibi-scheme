@@ -1573,9 +1573,10 @@
                   (lp dir))))))))
 
 (define (install-file cfg source dest)
-  (if (install-with-sudo? cfg dest)
-      (system "sudo" "cp" source dest)
-      (system "cp" source dest)))
+  (if (not (equal? source dest))
+      (if (install-with-sudo? cfg dest)
+          (system "sudo" "cp" source dest)
+          (system "cp" source dest))))
 
 (define (install-sexp-file cfg obj dest)
   (if (install-with-sudo? cfg dest)
