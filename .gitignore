@@ -56,3 +56,5 @@ tests/snow/repo*/repo.scm
 tests/snow/tmp-root
 tmp
 /lib/chibi/crypto/crypto.c
+/chibi-scheme-ulimit
+/clibs.c
