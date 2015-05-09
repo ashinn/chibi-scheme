@@ -1638,7 +1638,8 @@
           (string-append (library->path cfg library) "." ext))
          (include-files
           (library-include-files impl cfg (make-path dir library-file)))
-         (install-dir (get-install-source-dir impl cfg)))
+         (install-dir (get-install-source-dir impl cfg))
+         (install-lib-dir (get-install-library-dir impl cfg)))
     ;; install the library file
     (let ((path (make-path install-dir dest-library-file)))
       (install-directory cfg (path-directory path))
@@ -1646,13 +1647,25 @@
       ;; install any includes
       (cons
        path
-       (map
-        (lambda (x)
-          (let ((dest-file (make-path install-dir (path-relative x dir))))
-            (install-directory cfg (path-directory dest-file))
-            (install-file cfg x dest-file)
-            dest-file))
-        include-files)))))
+       (append
+        (map
+         (lambda (x)
+           (let ((dest-file (make-path install-dir (path-relative x dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg x dest-file)
+             dest-file))
+         include-files)
+        (map
+         (lambda (x)
+           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
+                                                         (else ".so"))))
+                  (dest-file (make-path install-lib-dir
+                                        (path-relative so-file dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg so-file dest-file)
+             dest-file))
+         (library-shared-include-files
+          impl cfg (make-path dir library-file))))))))
 
 (define (chicken-installer impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
@@ -1770,7 +1783,9 @@
          (cc (string-split (or (conf-get cfg 'cc)
                                (get-environment-variable "CC")
                                "cc")))
-         (cflags (string-split (or (get-environment-variable "CFLAGS") ""))))
+         (cflags (string-split (or (conf-get cfg 'cflags)
+                                   (get-environment-variable "CFLAGS")
+                                   ""))))
     (let lp ((ls shared-includes))
       (if (null? ls)
           library
