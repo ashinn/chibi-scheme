@@ -941,7 +941,9 @@ div#footer {padding-bottom: 50px}
     (let* ((mod-form (car forms))
            (mod-name (cadr mod-form)))
       (load file (vector-ref (find-module '(meta)) 1))
-      (let ((mod (load-module mod-name)))
+      (let* ((mod (protect (exn (else #f)) (load-module mod-name)))
+             (dir (path-directory file))
+             (resolve (lambda (f) (make-path dir f))))
         (define (get-forms name)
           (append-map
            (lambda (x) (if (and (pair? x) (eq? name (car x))) (cdr x) '()))
@@ -951,11 +953,15 @@ div#footer {padding-bottom: 50px}
         (define (get-decls)
           (if mod
               (module-include-library-declarations mod)
-              (get-forms 'include-library-declarations)))
+              (map resolve (get-forms 'include-library-declarations))))
         (define (get-includes)
-          (if mod (module-includes mod) (get-forms 'include)))
+          (if mod
+              (module-includes mod)
+              (map resolve (get-forms 'include))))
         (define (get-shared-includes)
-          (if mod (module-shared-includes mod) (get-forms 'shared-include)))
+          (if mod
+              (module-shared-includes mod)
+              (map resolve (get-forms 'shared-include))))
         (let* ((exports (if (pair? o) (car o) (get-exports)))
                (srcs (cons file (get-decls))))
           (extract-module-docs-from-files

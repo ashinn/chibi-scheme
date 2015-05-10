@@ -3,7 +3,7 @@
   (import
    (except (chibi) eval) (scheme eval) (srfi 1) (srfi 95)
    (chibi modules) (chibi ast) (chibi io) (chibi match)
-   (chibi time) (chibi filesystem) (chibi process)
+   (chibi time) (chibi filesystem) (chibi process) (chibi pathname)
    (chibi string) (chibi scribble) (chibi sxml) (chibi highlight)
    (chibi type-inference))
   (export procedure-docs print-procedure-docs
