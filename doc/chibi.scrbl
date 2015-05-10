@@ -1263,7 +1263,7 @@ the following subcommands:
 
 \subsubsection{Querying Packages and Status}
 
-By default \command{snow-chibi} looks for packages in the public
+By default \scheme{snow-chibi} looks for packages in the public
 repository \hyperlink["http://snow-fort.org/"]{http://snow-fort.org/},
 though you can customize this with the \scheme{--repository-uri} option.
 Packages can be browsed on the site, but you can also search and query
@@ -1277,8 +1277,8 @@ from the command-line tool.
 \item{show names ... - show package descriptions
 \p{Show detailed information for the listed packages, which can
 be sexp library names or the dotted shorthand used by chibi.  For example,
-\command{snow-chibi show "(chibi match)"} can be shortened as
-\command{snow-chibi show chibi.match}.}}
+\scheme{snow-chibi show "(chibi match)"} can be shortened as
+\scheme{snow-chibi show chibi.match}.}}
 
 \item{status names ... - print package status
 \p{Print the installed version of the given packages.  Uninstalled
@@ -1314,16 +1314,19 @@ If no names are given, upgrades all eligible packages.}}
 
 \item{remove names ... - remove packages
 \p{Uninstalls the given packages.  If the packages were not installed
-with \command{snow-chibi} they cannot be removed.}}
+with \scheme{snow-chibi} they cannot be removed.}}
 
 \item{update - update local cache of remote repository
-\p{\command{snow-chibi} keeps a local cache of the remote repository
+\p{\scheme{snow-chibi} keeps a local cache of the remote repository
 and updates only periodically for performance, but you can force an
 update with this command.}}
 
 ]
 
-\subsubsection{Creating Packages}
+\subsubsection{Authoring Packages}
+
+Creating packages can be done with the \scheme{package} command,
+though other commands allow for uploading to public repositories.
 
 \itemlist[
 
@@ -1337,10 +1340,10 @@ easy automated install.}}
 \item{upload files ... - upload packages
 \p{Sign and upload to the default snow host.  The files may either
 be .tgz package files, or files containing define-library forms as
-in the \command{package} command, from which packages are generated
+in the \scheme{package} command, from which packages are generated
 automatically.  Before you can upload to the default host a key
-must be generated and registered first with the \command{gen-key}
-and \command{reg-key} commands.}}
+must be generated and registered first with the \scheme{gen-key}
+and \scheme{reg-key} commands.}}
 
 \item{gen-key - create a new key
 \p{Create a new key, with your name, email address, and optionally
@@ -1359,4 +1362,73 @@ is not needed as the upload command generates the signature automatically.}}
 \item{verify sig-file - verify a signature
 \p{Print a message verifying if a signature is valid.}}
 
+]
+
+\subsubsection{Easy Packaging}
+
+To encourage sharing code it's important to make it as easy as
+possible to create packages, while encouraging documentation and
+tests.  In particular, you should never need to duplicate information
+anywhere.  Thus the \scheme{package} command automatically locates
+and packages include files (and data and ffi files) and determines
+dependencies for you.  In addition, it can automatically handle
+versions, docs and tests:
+
+\itemlist[
+\item{version - can come explicitly from the \scheme{--version} option, or the \scheme{--version-file=<file>} option}
+\item{docs - can come explicitly from the \scheme{--doc=<file>} option, or be extracted automatically from literate documentation with \scheme{doc-for-scribble}}
+\item{tests - can come explicitly from the \scheme{--test=<prog-file>} option, or the \scheme{--test-library=<lib-name>} which will generate a program to run just the \scheme{run-tests} thunk in that library}
+]
+
+Other useful meta-info options include:
+
+\itemlist[
+\item{\scheme{--authors} - specify the package authors (comma-delimited)}
+\item{\scheme{--maintainers} - specify the package maintainers (comma-delimited)}
+\item{\scheme{--license} - specify the package licence}
+]
+
+These three are typically always the same, so it's useful to save them
+in your ~/.snow/config.scm file.  This file contains a single sexp and
+can specify any option, for example:
+
+\schemeblock{
+((repository-uri "http://alopeke.gr/repo.scm")
+ (command
+  (package
+   (authors "Socrates <hemlock@aol.com>")
+   (doc-from-scribble #t)
+   (version-file "VERSION")
+   (test-library (append-to-last -test))
+   (license gpl))))
+}
+
+Top-level snow options are represented as a flat alist.  Options
+specific to a command are nested under \scheme{(command (name ...))},
+with most options here being for \scheme{package}.  Here unless
+overridden on the command-line, all packages will use the given author
+and license, try to extract literate docs from the code, look for a
+version in the file "VERSION", and try to find a test with the same
+library name appended with \scheme{-test}, e.g. for the library
+\scheme{(socratic method)}, the test library would be
+\scheme{(socratic method-test)}.  This form is an alternate to using
+an explicit test-library name, and encourages you to keep your tests
+close to the code they test.  In the typical case, if using these
+conventions, you can thus simply run \scheme{snow-chibi package
+<lib-file>} without any other options.
+
+\subsubsection{Other Implementations}
+
+Although the command is called \scheme{snow-chibi}, it supports
+several other R7RS implementations.  The \scheme{implementations}
+command tells you which you currently have installed.  The following
+are currently supported:
+
+\itemlist[
+\item{chibi - native support as of version 0.7.3}
+\item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
+\item{foment - version >= 0.4}
+\item{gauche - version >= 0.9.4}
+\item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
+\item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
 ]
