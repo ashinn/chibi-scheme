@@ -397,16 +397,23 @@
 (define (package-license cfg)
   (conf-get cfg '(command package license)))
 
-(define (package-output-version cfg)
+(define (read-version-file cfg file lib-files)
+  (let ((file (or (find file-exists?
+                        (map (lambda (f) (make-path (path-directory f) file))
+                             lib-files))
+                  file)))
+    (call-with-input-file file read-line)))
+
+(define (package-output-version cfg lib-files)
   (cond ((conf-get cfg '(command package version)))
         ((conf-get cfg '(command upload version)))
         ((conf-get cfg '(command package version-file))
-         => (lambda (file) (call-with-input-file file read-line)))
+         => (lambda (file) (read-version-file cfg file lib-files)))
         ((conf-get cfg '(command upload version-file))
-         => (lambda (file) (call-with-input-file file read-line)))
+         => (lambda (file) (read-version-file cfg file lib-files)))
         (else #f)))
 
-(define (package-output-path cfg package-spec)
+(define (package-output-path cfg package-spec libs)
   (or (conf-get cfg '(command package output))
       (make-path
        (conf-get cfg '(command package output-dir) ".")
@@ -415,7 +422,7 @@
         package-spec
         (filter (lambda (x) (and (pair? x) (memq (car x) '(library program))))
                 package-spec)
-        (package-output-version cfg)))))
+        (package-output-version cfg libs)))))
 
 (define (replace-library-pattern pat base-lib)
   (case (and (pair? pat) (car pat))
@@ -482,7 +489,7 @@
          (name (conf-get cfg '(command package name)))
          (authors (conf-get-list cfg '(command package authors)))
          (test (package-test cfg))
-         (version (package-output-version cfg))
+         (version (package-output-version cfg libs))
          (maintainers (conf-get-list cfg '(command package maintainers)))
          (license (package-license cfg)))
     (let lp ((ls (map (lambda (x) (list x #f)) libs))
@@ -616,7 +623,7 @@
 
 (define (command/package cfg spec . libs)
   (let* ((spec+files (package-spec+files cfg spec libs))
-         (output (package-output-path cfg (car spec+files)))
+         (output (package-output-path cfg (car spec+files) libs))
          (tarball (create-package (car spec+files) (cdr spec+files) output)))
     (check-overwrite cfg output package-file? "package")
     (let ((out (open-binary-output-file output)))
@@ -912,7 +919,7 @@
     (if (any package-file? (cdr o))
         (non-homogeneous))
     (let* ((spec+files (package-spec+files cfg spec o))
-           (package-file (package-output-path cfg (car spec+files)))
+           (package-file (package-output-path cfg (car spec+files) o))
            (package (create-package (car spec+files)
                                     (cdr spec+files)
                                     package-file)))
