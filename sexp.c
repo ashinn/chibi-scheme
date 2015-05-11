@@ -2788,7 +2788,6 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   int c1, c2, line;
   sexp tmp2;
   sexp_gc_var2(res, tmp);
-  sexp_check_block_port(ctx, in, 0);
   sexp_gc_preserve2(ctx, res, tmp);
 
  scan_loop:
@@ -3252,7 +3251,6 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 
   if (sexp_port_sourcep(in) && sexp_pointerp(res))
     sexp_immutablep(res) = 1;
-  sexp_maybe_unblock_port(ctx, in);
   sexp_gc_release2(ctx);
   return res;
 }
@@ -3260,6 +3258,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
   sexp res;
   sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
+  sexp_check_block_port(ctx, in, 0);
   res = sexp_read_raw(ctx, in);
   if (res == SEXP_CLOSE)
     res = sexp_read_error(ctx, "too many ')'s", SEXP_NULL, in);
@@ -3269,6 +3268,7 @@ sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
 #endif
   else if (res == SEXP_RAWDOT)
     res = sexp_read_error(ctx, "unexpected '.'", SEXP_NULL, in);
+  sexp_maybe_unblock_port(ctx, in);
   return res;
 }
 
