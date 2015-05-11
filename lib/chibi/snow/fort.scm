@@ -220,6 +220,7 @@
   `(html
     (head
      (title "Snow")
+     (meta (@ (charset . "utf-8")))
      (link (@ (type . "text/css")
               (rel . "stylesheet")
               (href . "/s/snow.css")))
@@ -255,7 +256,12 @@
   (let ((sexp? (equal? "sexp" (request-param request "fmt"))))
     (servlet-write
      request
-     (if sexp?
-         (call-with-current-continuation proc)
-         (sxml->xml (proc (lambda (x) x)))))
+     (cond
+      (sexp?
+       (call-with-current-continuation proc))
+      (else
+       (let ((res (sxml->xml (proc (lambda (x) x)))))
+         (servlet-respond request 200 "OK"
+                          '((Content-Type . "text/html; charset=utf-8")))
+         res))))
     (if sexp? (servlet-write request "\n"))))
