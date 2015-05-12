@@ -114,11 +114,11 @@ static void bytecode_preserve (sexp ctx, sexp obj) {
 
 static void sexp_emit_word (sexp ctx, sexp_uint_t val)  {
   unsigned char *data;
+  sexp_context_align_pos(ctx);
   sexp_expand_bcode(ctx, sizeof(sexp));
   if (sexp_exceptionp(sexp_context_exception(ctx)))
     return;
   data = sexp_bytecode_data(sexp_context_bc(ctx));
-  sexp_context_align_pos(ctx);
   *((sexp_uint_t*)(&(data[sexp_unbox_fixnum(sexp_context_pos(ctx))]))) = val;
   sexp_inc_context_pos(ctx, sizeof(sexp));
 }
