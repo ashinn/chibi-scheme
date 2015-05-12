@@ -76,7 +76,7 @@ SEXP_API void sexp_bless_bytecode (sexp ctx, sexp bc);
 #endif
 SEXP_API sexp sexp_complete_bytecode (sexp ctx);
 SEXP_API void sexp_shrink_bcode (sexp ctx, sexp_uint_t i);
-SEXP_API void sexp_expand_bcode (sexp ctx, sexp_uint_t size);
+SEXP_API void sexp_expand_bcode (sexp ctx, sexp_sint_t size);
 SEXP_API void sexp_stack_trace (sexp ctx, sexp out);
 SEXP_API sexp sexp_free_vars (sexp context, sexp x, sexp fv);
 SEXP_API int sexp_param_index (sexp ctx, sexp lambda, sexp name);

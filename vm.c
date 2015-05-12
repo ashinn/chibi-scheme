@@ -82,7 +82,19 @@ sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
 
 /************************* code generation ****************************/
 
+#if SEXP_USE_ALIGNED_BYTECODE
+void sexp_context_align_pos(sexp ctx) {
+  sexp_uint_t pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
+  sexp_uint_t new_pos = sexp_word_align(pos);
+  if (new_pos > pos) {
+    sexp_expand_bcode(ctx, (sexp_sint_t)new_pos - pos);
+    sexp_context_pos(ctx) = sexp_make_fixnum(new_pos);
+  }
+}
+#endif
+
 static void sexp_inc_context_pos(sexp ctx, sexp_sint_t off) {
+  sexp_expand_bcode(ctx, off);
   sexp_context_pos(ctx) = sexp_fx_add(sexp_context_pos(ctx), sexp_make_fixnum(off));
 }
 

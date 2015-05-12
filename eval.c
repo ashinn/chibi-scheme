@@ -303,7 +303,7 @@ void sexp_shrink_bcode (sexp ctx, sexp_uint_t i) {
   }
 }
 
-void sexp_expand_bcode (sexp ctx, sexp_uint_t size) {
+void sexp_expand_bcode (sexp ctx, sexp_sint_t size) {
   sexp tmp;
   if (sexp_bytecode_length(sexp_context_bc(ctx))
       < (sexp_unbox_fixnum(sexp_context_pos(ctx)))+size) {
