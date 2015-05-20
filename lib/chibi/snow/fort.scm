@@ -220,7 +220,7 @@
 (define (fail msg . args)
   `(span (@ (style . "background:red")) ,msg ,@args))
 
-(define (page body)
+(define (page body . o)
   `(html
     (head
      (title "Snow")
@@ -229,7 +229,8 @@
               (rel . "stylesheet")
               (href . "/s/snow.css")))
      (link (@ (rel . "shortcut icon")
-              (href . "/s/favicon.ico"))))
+              (href . "/s/favicon.ico")))
+     ,@o)
     (body
      (div (@ (id . "head"))
           (div (@ (id . "head_pic")) "☃")
