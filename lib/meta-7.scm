@@ -1,4 +1,4 @@
-;; meta.scm -- meta langauge for describing modules
+;; meta.scm -- meta language for describing modules
 ;; Copyright (c) 2009-2014 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
