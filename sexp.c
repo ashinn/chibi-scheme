@@ -1419,7 +1419,7 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
   if (sexp_port_cookie(port) != SEXP_STRING_OPORT)
     return sexp_xtype_exception(ctx, self, "not an output string port", port);
-  if (!sexp_openp(port))
+  if (!sexp_port_openp(port))
     return sexp_xtype_exception(ctx, self, "output port is closed", port);
   fflush(sexp_port_stream(port));
   return sexp_c_string(ctx, sexp_port_buf(port), sexp_port_size(port));
