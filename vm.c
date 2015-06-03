@@ -84,10 +84,14 @@ sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
 
 #if SEXP_USE_ALIGNED_BYTECODE
 void sexp_context_align_pos(sexp ctx) {
-  sexp_uint_t pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
+  sexp_uint_t i, pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
   sexp_uint_t new_pos = sexp_word_align(pos);
   if (new_pos > pos) {
     sexp_expand_bcode(ctx, (sexp_sint_t)new_pos - pos);
+    if (pos > 0)
+      for (i=pos; i<new_pos; ++i)
+        sexp_bytecode_data(sexp_context_bc(ctx))[i] =
+          sexp_bytecode_data(sexp_context_bc(ctx))[pos-1];
     sexp_context_pos(ctx) = sexp_make_fixnum(new_pos);
   }
 }
