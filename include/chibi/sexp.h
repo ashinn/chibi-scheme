@@ -308,7 +308,7 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  sexp name, cpl, slots, getters, setters, dl, id, print;
+  sexp name, cpl, slots, getters, setters, id, print, dl;
   sexp_proc2 finalize;
 };
 
