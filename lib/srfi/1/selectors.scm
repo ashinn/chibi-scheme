@@ -9,9 +9,9 @@
 (define (fifth ls)   (car (cdr (cdr (cdr (cdr ls))))))
 (define (sixth ls)   (car (cdr (cdr (cdr (cdr (cdr ls)))))))
 (define (seventh ls) (car (cdr (cdr (cdr (cdr (cdr (cdr ls))))))))
-(define (eighth ls)  (car (cdr (cdr (cdr (cdr (cdr (cdr ls))))))))
-(define (ninth ls)   (car (cdr (cdr (cdr (cdr (cdr (cdr (cdr ls)))))))))
-(define (tenth ls)   (car (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr ls))))))))))
+(define (eighth ls)  (car (cdr (cdr (cdr (cdr (cdr (cdr (cdr ls)))))))))
+(define (ninth ls)   (car (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr ls))))))))))
+(define (tenth ls)   (car (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr ls)))))))))))
 
 (define (car+cdr x) (values (car x) (cdr x)))
 
