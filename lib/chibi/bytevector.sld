@@ -9,8 +9,5 @@
    integer->bytevector bytevector->integer
    integer->hex-string hex-string->integer
    bytevector->hex-string hex-string->bytevector)
-  (import (scheme base))
-  (cond-expand
-   ((library (srfi 60)) (import (srfi 60)))
-   (else (import (srfi 33))))
+  (import (scheme base) (srfi 33))
   (include "bytevector.scm"))
