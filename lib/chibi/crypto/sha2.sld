@@ -10,10 +10,7 @@
     (include "sha2-native.scm")
     (include-shared "crypto"))
    (else
-    (cond-expand
-     ((library (srfi 60)) (import (srfi 60)))
-     (else (import (srfi 33))))
-    (import (chibi bytevector))
+    (import (srfi 33) (chibi bytevector))
     (include "sha2.scm"))))
 
 ;;> \procedure{(sha-224 src)}
