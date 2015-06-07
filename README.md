@@ -1,6 +1,6 @@
-# ![Chibi-Scheme](https://cloud.githubusercontent.com/assets/12776075/8023068/e6204a26-0cf9-11e5-9751-edc07ad2a8b5.png)
+# ![Chibi-Scheme](https://goo.gl/ZDtn4q)
 
-Minimal Scheme Implementation for use as an Extension Language
+**Minimal Scheme Implementation for use as an Extension Language**
 
 http://synthcode.com/wiki/chibi-scheme
 
@@ -19,7 +19,8 @@ because its first class continuations and guaranteed tail-call
 optimization makes implementing other languages easy.
 
 Chibi-Scheme is known to work on **32** and **64-bit** Linux,
-FreeBSD and OS X, Plan9, Windows (using Cygwin), iOS, and Emscripten.
+FreeBSD and OS X, Plan9, Windows (using Cygwin), iOS, and
+[Emscripten](https://kripken.github.io/emscripten-site).
 
 To build on most platforms just run `make && make test`.  This will
 provide a shared library *libchibi-scheme*, as well as a sample
