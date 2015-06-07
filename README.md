@@ -1,4 +1,4 @@
-# ![Chibi-Scheme](http://synthcode.com/images/chibi-scheme-med.png)
+# ![Chibi-Scheme](https://cloud.githubusercontent.com/assets/12776075/8023068/e6204a26-0cf9-11e5-9751-edc07ad2a8b5.png)
 
 Minimal Scheme Implementation for use as an Extension Language
 
@@ -17,6 +17,9 @@ Support for additional languages such as JavaScript, Go, Lua and Bash
 are planned for future releases.  Scheme is chosen as a substrate
 because its first class continuations and guaranteed tail-call
 optimization makes implementing other languages easy.
+
+Chibi-Scheme is known to work on **32** and **64-bit** Linux,
+FreeBSD and OS X, Plan9, Windows (using Cygwin), iOS, and Emscripten.
 
 To build on most platforms just run `make && make test`.  This will
 provide a shared library *libchibi-scheme*, as well as a sample
