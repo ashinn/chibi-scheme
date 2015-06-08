@@ -5,8 +5,8 @@
    (else (import (scheme base))))
   (import (chibi iset base) (chibi iset iterators))
   (cond-expand
-   ((library (srfi 60)) (import (srfi 60)))
-   (else (import (srfi 33))))
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (include "constructors.scm")
   (export
    iset iset-copy list->iset list->iset! iset-map

@@ -5,6 +5,6 @@
           (srfi 1)
           (chibi string) (chibi regexp))
   (cond-expand
-   ((library (srfi 60)) (import (srfi 60)))
-   (else (import (srfi 33))))
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (include "pcre.scm"))

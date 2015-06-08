@@ -5,8 +5,8 @@
    (else (import (scheme base))))
   (import (chibi iset base))
   (cond-expand
-   ((library (srfi 60)) (import (srfi 60)))
-   (else (import (srfi 33))))
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (include "iterators.scm")
   (export
    iset-empty? iset-fold iset-fold-node iset-for-each iset-for-each-node

@@ -5,7 +5,7 @@
           (chibi io) (chibi string)
           (only (chibi) identifier? er-macro-transformer))
   (cond-expand
-   ((library (srfi 60)) (import (srfi 60)))
-   (else (import (srfi 33))))
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (export define-binary-record-type)
   (include "binary-record.scm"))

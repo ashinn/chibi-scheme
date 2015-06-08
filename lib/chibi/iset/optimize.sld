@@ -7,9 +7,9 @@
           (chibi iset iterators)
           (chibi iset constructors))
   (cond-expand
-   ((library (srfi 60)) (import (srfi 60)))
+   ((library (srfi 33)) (import (srfi 33)))
    (else
-    (import (srfi 33))
+    (import (srfi 60))
     (begin
       (define (%mask size) (bitwise-not (arithmetic-shift -1 size)))
       (define (extract-bit-field size position n)
