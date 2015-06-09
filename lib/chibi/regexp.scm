@@ -1025,14 +1025,10 @@
          (else
           (string-concatenate
            (cons
-            (substring-cursor str
-                              (string-index->offset str start)
-                              (regexp-match-submatch-start m 0))
+            (substring str start (regexp-match-submatch-start m 0))
             (append
              (reverse (regexp-apply-match m str subst))
-             (list (substring-cursor str
-                                     (regexp-match-submatch-end m 0)
-                                     (string-index->offset str end))))))))))))
+             (list (substring str (regexp-match-submatch-end m 0) end)))))))))))
 
 ;;> Equivalent to \var{regexp-replace}, but replaces all occurrences
 ;;> of \var{re} in \var{str}.
