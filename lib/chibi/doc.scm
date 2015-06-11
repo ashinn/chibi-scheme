@@ -528,7 +528,7 @@ div#footer {padding-bottom: 50px}
              (let lp ((ls var) (vars vars) (i i))
                (cond
                 ((pair? ls)
-                 (lp (cdr ls) (cons (cons (caar ls) i) vars) (+ i 1)))
+                 (lp (cdr ls) (cons (cons (car ls) i) vars) (+ i 1)))
                 (else
                  (extract body vars i)))))
             (else
