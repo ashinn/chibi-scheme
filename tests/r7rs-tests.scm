@@ -2040,7 +2040,7 @@
 (test '(a . b) (read (open-input-string "(a . b #;c)")))
 
 (define (test-read-error str)
-  (test-assert
+  (test-assert str
       (guard (exn (else #t))
         (read (open-input-string str))
         #f)))
