@@ -266,7 +266,7 @@
                     (cdar ls))))
           (if (pair? res)
               (lp (cdr ls) deps `((cond-expand ,@res) ,@cond-deps))
-              (lp deps cond-deps))))
+              (lp (cdr ls) deps cond-deps))))
        (else
         (append (if (pair? deps) (list (cons depends (reverse deps))) '())
                 (if (pair? cond-deps) (reverse cond-deps) '())))))))
