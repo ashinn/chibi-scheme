@@ -525,10 +525,20 @@ sexp_heap sexp_make_heap (size_t size, size_t max_size, size_t chunk_size) {
 
 int sexp_grow_heap (sexp ctx, size_t size, size_t chunk_size) {
   size_t cur_size, new_size;
-  sexp_heap h = sexp_heap_last(sexp_context_heap(ctx));
+  sexp_heap tmp, h = sexp_heap_last(sexp_context_heap(ctx));
+#if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+  for (tmp=sexp_context_heap(ctx); tmp; tmp=tmp->next)
+    if (tmp->chunk_size == size) {
+      h = tmp;
+      chunk_size = size;
+      break;
+    }
+#endif
   cur_size = h->size;
   new_size = sexp_heap_align(((cur_size > size) ? cur_size : size) * 2);
-  h->next = sexp_make_heap(new_size, h->max_size, chunk_size);
+  tmp = sexp_make_heap(new_size, h->max_size, chunk_size);
+  tmp->next = h->next;
+  h->next = tmp;
   return (h->next != NULL);
 }
 
