@@ -6,6 +6,10 @@
 
 #include "chibi/sexp.h"
 
+#if SEXP_USE_TIME_GC
+#include <sys/resource.h>
+#endif
+
 #if SEXP_USE_MMAP_GC
 #include <sys/mman.h>
 #endif
@@ -462,7 +466,8 @@ void sexp_mark_global_symbols(sexp ctx) {
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp res, finalized SEXP_NO_WARN_UNUSED;
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_TIME_GC
+  sexp_uint_t gc_usecs;
   struct rusage start, end;
   getrusage(RUSAGE_SELF, &start);
   sexp_debug_printf("%p (heap: %p size: %lu)", ctx, sexp_context_heap(ctx),
@@ -474,13 +479,14 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp_reset_weak_references(ctx);
   finalized = sexp_finalize(ctx);
   res = sexp_sweep(ctx, sum_freed);
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_TIME_GC
   getrusage(RUSAGE_SELF, &end);
+  gc_usecs = (end.ru_utime.tv_sec - start.ru_utime.tv_sec) * 1000000 +
+    end.ru_utime.tv_usec - start.ru_utime.tv_usec;
+  sexp_context_gc_usecs(ctx) += gc_usecs;
   sexp_debug_printf("%p (freed: %lu max_freed: %lu finalized: %lu time: %luus)",
                     ctx, (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res),
-                    sexp_unbox_fixnum(finalized),
-                    (end.ru_utime.tv_sec - start.ru_utime.tv_sec) * 1000000 +
-                    end.ru_utime.tv_usec - start.ru_utime.tv_usec);
+                    sexp_unbox_fixnum(finalized), gc_usecs);
 #endif
   return res;
 }

@@ -105,6 +105,9 @@
 /* uncomment this to add very verbose debugging stats to the native GC */
 /* #define SEXP_USE_DEBUG_GC 1 */
 
+/* uncomment this to add instrumentation to the native GC */
+/* #define SEXP_USE_TIME_GC 1 */
+
 /* uncomment this to enable "safe" field accessors for primitive types */
 /*   The sexp union type fields are abstracted away with macros of the */
 /*   form sexp_<type>_<field>(<obj>), however these are just convenience */
@@ -382,6 +385,10 @@
 
 #ifndef SEXP_USE_DEBUG_GC
 #define SEXP_USE_DEBUG_GC 0
+#endif
+
+#ifndef SEXP_USE_TIME_GC
+#define SEXP_USE_TIME_GC SEXP_USE_DEBUG_GC > 0
 #endif
 
 #ifndef SEXP_USE_SAFE_GC_MARK
