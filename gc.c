@@ -322,6 +322,7 @@ void sexp_reset_weak_references(sexp ctx) {
 #define sexp_reset_weak_references(ctx)
 #endif
 
+#if SEXP_USE_FINALIZERS
 sexp sexp_finalize (sexp ctx) {
   size_t size;
   sexp p, t, end;
@@ -368,6 +369,7 @@ sexp sexp_finalize (sexp ctx) {
 #endif
   return sexp_make_fixnum(finalize_count);
 }
+#endif
 
 sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
   size_t freed, max_freed=0, sum_freed=0, size;

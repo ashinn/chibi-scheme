@@ -1522,7 +1522,11 @@ SEXP_API int sexp_grow_heap (sexp ctx, size_t size, size_t chunk_size);
 SEXP_API sexp_heap sexp_make_heap (size_t size, size_t max_size, size_t chunk_size);
 SEXP_API void sexp_mark (sexp ctx, sexp x);
 SEXP_API sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr);
+#if SEXP_USE_FINALIZERS
 SEXP_API sexp sexp_finalize (sexp ctx);
+#else
+#define sexp_finalize(ctx) SEXP_ZERO
+#endif
 #endif
 
 #if SEXP_USE_GLOBAL_HEAP
