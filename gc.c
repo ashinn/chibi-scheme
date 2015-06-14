@@ -277,12 +277,16 @@ void sexp_conservative_mark (sexp ctx) {
 #endif
 
 #if SEXP_USE_WEAK_REFERENCES
-void sexp_reset_weak_references(sexp ctx) {
-  int i, len, all_reset_p;
-  sexp_heap h = sexp_context_heap(ctx);
+int sexp_reset_weak_references(sexp ctx) {
+  int i, len, broke, all_reset_p;
+  sexp_heap h;
   sexp p, t, end, *v;
   sexp_free_list q, r;
-  for ( ; h; h=h->next) {   /* just scan the whole heap */
+  if (sexp_not(sexp_global(ctx, SEXP_G_WEAK_OBJECTS_PRESENT)))
+    return 0;
+  broke = 0;
+  /* just scan the whole heap */
+  for (h = sexp_context_heap(ctx) ; h; h=h->next) {
     p = sexp_heap_first_block(h);
     q = h->free_list;
     end = sexp_heap_end(h);
@@ -309,6 +313,7 @@ void sexp_reset_weak_references(sexp ctx) {
             }
           }
           if (all_reset_p) {      /* ephemerons */
+            broke++;
             len += sexp_type_weak_len_extra(t);
             for ( ; i<len; i++) v[i] = SEXP_FALSE;
           }
@@ -317,9 +322,11 @@ void sexp_reset_weak_references(sexp ctx) {
       p = (sexp) (((char*)p)+sexp_heap_align(sexp_allocated_bytes(ctx, p)));
     }
   }
+  sexp_debug_printf("%p (broke %d weak references)", ctx, broke);
+  return broke;
 }
 #else
-#define sexp_reset_weak_references(ctx)
+#define sexp_reset_weak_references(ctx) 0
 #endif
 
 #if SEXP_USE_FINALIZERS

@@ -403,6 +403,7 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_PRESERVATIVES) = SEXP_NULL;
 #endif
 #if SEXP_USE_WEAK_REFERENCES
+  sexp_global(ctx, SEXP_G_WEAK_OBJECTS_PRESENT) = SEXP_FALSE;
   sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS) = SEXP_FALSE;
   sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS) = SEXP_ZERO;
 #endif
@@ -1673,6 +1674,7 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
 sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
   sexp res = sexp_alloc_type(ctx, pair, SEXP_EPHEMERON);
   if (!sexp_exceptionp(res)) {
+    sexp_global(ctx, SEXP_G_WEAK_OBJECTS_PRESENT) = SEXP_TRUE;
     sexp_ephemeron_key(res) = key;
     sexp_ephemeron_value(res) = value;
   }
