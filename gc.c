@@ -390,7 +390,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_DEBUG_GC > 1
       if (!sexp_valid_object_p(ctx, p))
         fprintf(stderr, SEXP_BANNER("%p sweep: invalid object at %p"), ctx, p);
       if ((char*)q + q->size > (char*)p)
@@ -455,17 +455,26 @@ void sexp_mark_global_symbols(sexp ctx) {
 
 sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   sexp res, finalized SEXP_NO_WARN_UNUSED;
+#if SEXP_USE_DEBUG_GC
+  struct rusage start, end;
+  getrusage(RUSAGE_SELF, &start);
   sexp_debug_printf("%p (heap: %p size: %lu)", ctx, sexp_context_heap(ctx),
                     sexp_heap_total_size(sexp_context_heap(ctx)));
+#endif
   sexp_mark_global_symbols(ctx);
   sexp_mark(ctx, ctx);
   sexp_conservative_mark(ctx);
   sexp_reset_weak_references(ctx);
   finalized = sexp_finalize(ctx);
   res = sexp_sweep(ctx, sum_freed);
-  sexp_debug_printf("%p (freed: %lu max_freed: %lu finalized: %lu)", ctx,
-                    (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res),
-                    sexp_unbox_fixnum(finalized));
+#if SEXP_USE_DEBUG_GC
+  getrusage(RUSAGE_SELF, &end);
+  sexp_debug_printf("%p (freed: %lu max_freed: %lu finalized: %lu time: %luus)",
+                    ctx, (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res),
+                    sexp_unbox_fixnum(finalized),
+                    (end.ru_utime.tv_sec - start.ru_utime.tv_sec) * 1000000 +
+                    end.ru_utime.tv_usec - start.ru_utime.tv_usec);
+#endif
   return res;
 }
 
@@ -520,7 +529,7 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
 #endif
     for (ls1=h->free_list, ls2=ls1->next; ls2; ls1=ls2, ls2=ls2->next) {
       if (ls2->size >= size) {
-#if SEXP_USE_DEBUG_GC
+#if SEXP_USE_DEBUG_GC > 1
         ls3 = (sexp_free_list) sexp_heap_end(h);
         if (ls2 >= ls3)
           fprintf(stderr, "alloced %lu bytes past end of heap: %p (%lu) >= %p"
