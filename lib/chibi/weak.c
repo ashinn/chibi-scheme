@@ -60,6 +60,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
     return SEXP_ABI_ERROR;
   sexp_gc_preserve3(ctx, name, t, op);
 
+#if SEXP_USE_WEAK_REFERENCES
   t = sexp_make_fixnum(SEXP_EPHEMERON);
   op = sexp_make_type_predicate(ctx, name=sexp_c_string(ctx,"ephemeron?",-1), t);
   sexp_env_define(ctx, env, name=sexp_intern(ctx, "ephemeron?", -1), op);
@@ -76,6 +77,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
     sexp_opcode_return_type(op) = sexp_make_fixnum(SEXP_OBJECT);
     sexp_opcode_arg1_type(op) = sexp_make_fixnum(SEXP_EPHEMERON);
   }
+#endif
 
 #if 0
   name = sexp_c_string(ctx, "Weak-Vector", -1);
