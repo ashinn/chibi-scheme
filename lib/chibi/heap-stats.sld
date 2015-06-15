@@ -19,6 +19,6 @@
 ;;> These functions just return \scheme{'()} when using the Boehm GC.
 
 (define-library (chibi heap-stats)
-  (export heap-stats heap-sizes heap-dump)
+  (export heap-stats heap-sizes heap-dump free-sizes)
   (import (chibi))
   (include-shared "heap-stats"))

@@ -151,13 +151,53 @@ static sexp sexp_heap_dump (sexp ctx, sexp self, sexp_sint_t n, sexp depth) {
   return sexp_heap_walk(ctx, sexp_unbox_fixnum(depth), 1);
 }
 
+static sexp sexp_free_sizes (sexp ctx, sexp self, sexp_sint_t n) {
+  size_t freed;
+  sexp_uint_t sizes[256];
+  sexp_sint_t i;
+  sexp_heap h = sexp_context_heap(ctx);
+  sexp_free_list q;
+  sexp_gc_var2(res, tmp);
+
+  /* run gc once to remove unused variables */
+  sexp_gc(ctx, &freed);
+
+  /* initialize stats */
+  for (i=0; i<256; i++)
+    sizes[i]=0;
+
+  /* loop over each free block */
+  for ( ; h; h=h->next)
+    for (q=h->free_list; q; q=q->next)
+      sizes[q->size > 255 ? 255 : q->size]++;
+
+  /* build and return results */
+  sexp_gc_preserve2(ctx, res, tmp);
+  res = SEXP_NULL;
+  for (i=255; i>=0; i--)
+    if (sizes[i]) {
+      tmp = sexp_cons(ctx, sexp_make_fixnum(sexp_heap_chunks(i)), sexp_make_fixnum(sizes[i]));
+      res = sexp_cons(ctx, tmp, res);
+    }
+  sexp_gc_release2(ctx);
+  return res;
+}
+
 #else
 
 static sexp sexp_heap_stats (sexp ctx, sexp self, sexp_sint_t n) {
   return SEXP_NULL;
 }
 
+static sexp sexp_heap_sizes (sexp ctx, sexp self, sexp_sint_t n) {
+  return SEXP_NULL;
+}
+
 static sexp sexp_heap_dump (sexp ctx, sexp self, sexp_sint_t n, sexp depth) {
+  return SEXP_NULL;
+}
+
+static sexp sexp_free_sizes (sexp ctx, sexp self, sexp_sint_t n) {
   return SEXP_NULL;
 }
 
@@ -170,5 +210,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "heap-stats", 0, sexp_heap_stats);
   sexp_define_foreign(ctx, env, "heap-sizes", 0, sexp_heap_sizes);
   sexp_define_foreign_opt(ctx, env, "heap-dump", 1, sexp_heap_dump, SEXP_ONE);
+  sexp_define_foreign(ctx, env, "free-sizes", 0, sexp_free_sizes);
   return SEXP_VOID;
 }
