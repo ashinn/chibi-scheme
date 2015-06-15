@@ -512,7 +512,7 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
   sexp_bignum_sign(b1) = 1;
   q = SEXP_ZERO;
   x = sexp_make_bignum(ctx, sexp_bignum_length(a));
-  while (sexp_bignum_compare_abs(a1, b1) > 0) { /* a1, b1 at least 2 bigits */
+  while (sexp_bignum_compare_abs(a1, b1) >= 0) { /* a1, b1 at least 2 bigits */
     /* guess divisor x */
     alen = sexp_bignum_hi(a1);
     sexp_bignum_data(x)[off] = 0;
