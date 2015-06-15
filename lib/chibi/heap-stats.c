@@ -153,7 +153,7 @@ static sexp sexp_heap_dump (sexp ctx, sexp self, sexp_sint_t n, sexp depth) {
 
 static sexp sexp_free_sizes (sexp ctx, sexp self, sexp_sint_t n) {
   size_t freed;
-  sexp_uint_t sizes[256];
+  sexp_uint_t sizes[512];
   sexp_sint_t i;
   sexp_heap h = sexp_context_heap(ctx);
   sexp_free_list q;
@@ -163,20 +163,20 @@ static sexp sexp_free_sizes (sexp ctx, sexp self, sexp_sint_t n) {
   sexp_gc(ctx, &freed);
 
   /* initialize stats */
-  for (i=0; i<256; i++)
+  for (i=0; i<512; i++)
     sizes[i]=0;
 
   /* loop over each free block */
   for ( ; h; h=h->next)
     for (q=h->free_list; q; q=q->next)
-      sizes[q->size > 255 ? 255 : q->size]++;
+      sizes[sexp_heap_chunks(q->size) > 511 ? 511 : sexp_heap_chunks(q->size)]++;
 
   /* build and return results */
   sexp_gc_preserve2(ctx, res, tmp);
   res = SEXP_NULL;
-  for (i=255; i>=0; i--)
+  for (i=511; i>=0; i--)
     if (sizes[i]) {
-      tmp = sexp_cons(ctx, sexp_make_fixnum(sexp_heap_chunks(i)), sexp_make_fixnum(sizes[i]));
+      tmp = sexp_cons(ctx, sexp_make_fixnum(i), sexp_make_fixnum(sizes[i]));
       res = sexp_cons(ctx, tmp, res);
     }
   sexp_gc_release2(ctx);
