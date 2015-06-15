@@ -592,11 +592,14 @@
                     data-files))
                (tar-files
                 (reverse
-                 (append (if test
-                             `((rename ,test
-                                       ,(path-strip-leading-parents test)))
-                             '())
-                         docs tar-data-files files))))
+                 (append
+                  (cond
+                   ((pair? test) (list test))
+                   (test
+                    `((rename ,test
+                              ,(path-strip-leading-parents test))))
+                   (else '()))
+                  docs tar-data-files files))))
           (cons `(package
                   ,@(reverse res)
                   ,@(if (pair? data-files) `((data-files ,@pkg-data-files)) '())
