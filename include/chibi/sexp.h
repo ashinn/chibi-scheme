@@ -178,21 +178,25 @@ typedef unsigned short sexp_tag_t;
 typedef SIZE_T sexp_uint_t;
 typedef SSIZE_T sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 5)
+#define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
 #elif SEXP_64_BIT
 typedef unsigned int sexp_tag_t;
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 5)
+#define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
 #elif defined(__CYGWIN__)
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 5)
+#define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
 #else
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 4)
+#define sexp_heap_chunks(n) (sexp_heap_align(n)>>4)
 #endif
 
 #ifdef SEXP_USE_INTTYPES
