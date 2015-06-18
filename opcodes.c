@@ -151,7 +151,7 @@ _FN2(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "equal?", 0, sexp_equal
 _FN4(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "equal?/bounded", 0, sexp_equalp_bound),
 _FN1(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "list?", 0, sexp_listp_op),
 _FN1(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "identifier?", 0, sexp_identifierp_op),
-_FN1(_I(SEXP_SYMBOL), _I(SEXP_OBJECT), "identifier->symbol", 0, sexp_syntactic_closure_expr_op),
+_FN1(_I(SEXP_SYMBOL), _I(SEXP_OBJECT), "identifier->symbol", 0, sexp_strip_synclos),
 _FN4(_I(SEXP_BOOLEAN), _I(SEXP_OBJECT), _I(SEXP_ENV), _I(SEXP_OBJECT), "identifier=?", 0, sexp_identifier_eq_op),
 _FN1(_I(SEXP_FIXNUM), SEXP_NULL, "length*", 0, sexp_length_op),
 _FN1(SEXP_NULL, SEXP_NULL, "reverse", 0, sexp_reverse_op),
