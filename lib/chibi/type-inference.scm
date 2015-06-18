@@ -305,13 +305,17 @@
 ;;> remaining arguments are the parameter types.
 
 (define (procedure-signature x . o)
+  (define (map* f ls)
+    (cond ((pair? ls) (cons (f (car ls)) (map* f (cdr ls))))
+          ((null? ls) '())
+          (else (f ls))))
   (define (ast-sig x)
     (cond
      ((lambda? x)
       (cons (lambda-return-type x)
             (if (pair? (lambda-param-types x))
                 (lambda-param-types x)
-                (lambda-params x))))
+                (map* identifier->symbol (lambda-params x)))))
      ((seq? x) (ast-sig (last (seq-ls x))))
      ((and (pair? x) (lambda? (car x))) (ast-sig (lambda-body (car x))))
      ;; TODO: improve the type inference so this isn't needed
