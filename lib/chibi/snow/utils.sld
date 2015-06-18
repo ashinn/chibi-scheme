@@ -1,7 +1,8 @@
 
 (define-library (chibi snow utils)
   (export find-in-path find-sexp-in-path
-          write-to-string resource->bytevector uri-normalize uri-directory
+          write-to-string display-to-string
+          resource->bytevector uri-normalize uri-directory
           version-split version-compare version>? version>=?)
   (import (scheme base)
           (scheme file)

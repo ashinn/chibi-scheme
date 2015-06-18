@@ -20,6 +20,11 @@
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))
 
+(define (display-to-string x)
+  (call-with-output-string
+    (lambda (out)
+      (if (bytevector? x) (write-bytevector x out) (display x out)))))
+
 (define (resource->bytevector uri)
   (let ((uri (if (uri? uri) uri (string->path-uri 'http uri))))
     (if (uri-host uri)
