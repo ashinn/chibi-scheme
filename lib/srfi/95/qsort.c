@@ -66,15 +66,27 @@ static int sexp_isymbol_compare (sexp ctx, sexp a, sexp b) {
 }
 #endif
 
+#if SEXP_USE_RATIOS
+#define sexp_non_immediate_ordered_numberp(x) \
+  (sexp_flonump(x) || sexp_bignump(x) || sexp_ratiop(x))
+#elif SEXP_USE_BIGNUMS && SEXP_USE_FLONUMS
+#define sexp_non_immediate_ordered_numberp(x) \
+  (sexp_flonump(x) || sexp_bignump(x))
+#elif SEXP_USE_BIGNUMS
+#define sexp_non_immediate_ordered_numberp(x) (sexp_bignump(x))
+#elif SEXP_USE_FLONUMS
+#define sexp_non_immediate_ordered_numberp(x) (sexp_flonump(x))
+#else
+#define sexp_non_immediate_ordered_numberp(x) 0
+#endif
+
 static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
   int res;
   if (a == b)
     return 0;
   if (sexp_pointerp(a)) {
     if (sexp_pointerp(b)) {
-      if (sexp_pointer_tag(a) != sexp_pointer_tag(b)) {
-        res = sexp_pointer_tag(a) - sexp_pointer_tag(b);
-      } else {
+      if (sexp_pointer_tag(a) == sexp_pointer_tag(b)) {
         switch (sexp_pointer_tag(a)) {
 #if SEXP_USE_FLONUMS
         case SEXP_FLONUM:
@@ -114,9 +126,18 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
           res = 0;
           break;
         }
+      } else if (sexp_non_immediate_ordered_numberp(a) &&
+                 sexp_non_immediate_ordered_numberp(b)) {
+        res = sexp_unbox_fixnum(sexp_compare(ctx, a, b));
+      } else {
+        res = sexp_pointer_tag(a) - sexp_pointer_tag(b);
       }
+#if SEXP_USE_BIGNUMS || SEXP_USE_FLONUMS
+    } else if (sexp_fixnump(b) && sexp_non_immediate_ordered_numberp(a)) {
+      res = sexp_unbox_fixnum(sexp_compare(ctx, a, b));
+#endif
 #if SEXP_USE_HUFF_SYMS
-    } else if (sexp_lsymbolp(a) && sexp_isymbolp(b)) {
+    } else if (sexp_isymbolp(b) && sexp_lsymbolp(a)) {
       res = strcmp(sexp_lsymbol_data(a),
 		   sexp_string_data(sexp_write_to_string(ctx, b)));
 #endif
@@ -124,6 +145,11 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
       res = 1;
     }
   } else if (sexp_pointerp(b)) {
+#if SEXP_USE_BIGNUMS || SEXP_USE_FLONUMS
+    if (sexp_fixnump(a) && sexp_non_immediate_ordered_numberp(b))
+      res = sexp_unbox_fixnum(sexp_compare(ctx, a, b));
+    else
+#endif
 #if SEXP_USE_HUFF_SYMS
     if (sexp_isymbolp(a) && sexp_lsymbolp(b))
       res = strcmp(sexp_string_data(sexp_write_to_string(ctx, a)),

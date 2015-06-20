@@ -113,4 +113,16 @@
       (test "sort complex" '(1+1i 1+2i 1+3i 2+2i 3+3i 4+4i 5+5i 6+6i 7+7i 8+8i 9+9i)
         (sort '(7+7i 1+2i 5+5i 2+2i 8+8i 1+1i 6+6i 4+4i 9+9i 1+3i 3+3i)))
 
+      (test "sort mixed exactness" '(1 1.5 2 3)
+        (sort '(1 2 3 1.5) <))
+
+      (test "sort integer and rational" '(1 2 5/2 3)
+        (sort '(1 2 3 5/2) <))
+
+      (test "sort various mixed" '(3 3.14 355/113 22/7 4)
+        (sort '(355/113 4 22/7 3 3.14)))
+
+      (test "sort complex" '(3 3.14 355/113 22/7 3.14+0.0i 3.14+3.14i)
+        (sort '(3.14+3.14i 355/113 3 22/7 3.14+0.0i 3.14)))
+
       (test-end))))
