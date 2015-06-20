@@ -236,7 +236,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_PROMISE, sexp_offsetof(promise, value), 1, 1, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Promise", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
 #endif
 #if SEXP_USE_WEAK_REFERENCES
-  {SEXP_EPHEMERON, sexp_offsetof(lit, value), 0, 0, 0, 0, sizeof(sexp), 0, 0, sexp_offsetof(lit, value), 1, 0, 0, 1, 0, (sexp)"Ephemeron", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_EPHEMERON, sexp_offsetof(ephemeron, key), 2, 0, 0, 0, sexp_sizeof(ephemeron), 0, 0, sexp_offsetof(ephemeron, key), 1, 0, 0, 1, 0, (sexp)"Ephemeron", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
 #endif
 };
 

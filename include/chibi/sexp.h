@@ -482,6 +482,11 @@ struct sexp_struct {
       sexp value;
     } promise;
 #endif
+#if SEXP_USE_WEAK_REFERENCES
+    struct {
+      sexp key, value;
+    } ephemeron;
+#endif
   } value;
 };
 
@@ -1083,8 +1088,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_promise_donep(x) (sexp_field(x, promise, SEXP_PROMISE, donep))
 #define sexp_promise_value(x) (sexp_field(x, promise, SEXP_PROMISE, value))
 
-#define sexp_ephemeron_key(x)   (sexp_field(x, pair, SEXP_EPHEMERON, car))
-#define sexp_ephemeron_value(x) (sexp_field(x, pair, SEXP_EPHEMERON, cdr))
+#define sexp_ephemeron_key(x)   (sexp_field(x, ephemeron, SEXP_EPHEMERON, key))
+#define sexp_ephemeron_value(x) (sexp_field(x, ephemeron, SEXP_EPHEMERON, value))
 
 #define sexp_context_env(x)      (sexp_field(x, context, SEXP_CONTEXT, env))
 #define sexp_context_stack(x)    (sexp_field(x, context, SEXP_CONTEXT, stack))

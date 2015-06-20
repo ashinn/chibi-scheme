@@ -1,6 +1,6 @@
 (define-library (chibi weak-test)
   (export run-tests)
-  (import (chibi weak) (chibi ast) (only (chibi test) test-begin test test-end))
+  (import (chibi) (chibi weak) (chibi ast) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "weak pointers")
@@ -16,7 +16,9 @@
         (let ((eph (make-ephemeron (string-append "key" "2")
                                    (string-append "value" "2"))))
           (gc)
-          (list (ephemeron-key eph) (ephemeron-value eph) (ephemeron-broken? eph))))
+          (list (ephemeron-key eph)
+                (ephemeron-value eph)
+                (ephemeron-broken? eph))))
 
       (test "unpreserved key and preserved value" '(#f "value3" #t)
         (let ((value (string-append "value" "3")))
@@ -28,7 +30,9 @@
         (let ((key (string-append "key")))
           (let ((eph (make-ephemeron key (cons (string-append "value") key))))
             (gc)
-            (list (ephemeron-key eph) (ephemeron-value eph) (ephemeron-broken? eph)))))
+            (list (ephemeron-key eph)
+                  (ephemeron-value eph)
+                  (ephemeron-broken? eph)))))
 
       ;; disabled - we support weak keys, but not proper ephemerons
 
