@@ -339,25 +339,31 @@ static sexp check_exception (sexp ctx, sexp res) {
   return res;
 }
 
+static sexp sexp_add_import_binding (sexp ctx, sexp env) {
+  sexp_gc_var2(sym, tmp);
+  sexp_gc_preserve2(ctx, sym, tmp);
+  sym = sexp_intern(ctx, "repl-import", -1);
+  tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
+  sym = sexp_intern(ctx, "import", -1);
+  sexp_env_define(ctx, env, sym, tmp);
+  sexp_gc_release3(ctx);
+  return env;
+}
+
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) {
-  sexp_gc_var3(e, sym, tmp);
-  sexp_gc_preserve3(ctx, e, sym, tmp);
+  sexp_gc_var1(e);
+  sexp_gc_preserve1(ctx, e);
   e = sexp_load_standard_env(ctx, env, k);
   if (!sexp_exceptionp(e)) {
 #if SEXP_USE_MODULES
-    if (!bootp) {
+    if (!bootp)
       e = sexp_eval_string(ctx, sexp_default_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
-      sym = sexp_intern(ctx, "repl-import", -1);
-      tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
-      sym = sexp_intern(ctx, "import", -1);
-      sexp_env_define(ctx, e, sym, tmp);
-    }
+    sexp_add_import_binding(ctx, e);
 #endif
-    if (!sexp_exceptionp(e)) {
+    if (!sexp_exceptionp(e))
       e = sexp_load_standard_params(ctx, e);
-    }
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release1(ctx);
   return e;
 }
 
@@ -452,8 +458,7 @@ void run_main (int argc, char **argv) {
         suffix = sexp_import_suffix;
       }
       mods_loaded = 1;
-      load_init(c == 'x');      /* only load the meta-env if we're */
-                                /* explicitly setting a language   */
+      load_init(c == 'x');
 #if SEXP_USE_MODULES
       check_nonull_arg(c, arg);
       impmod = make_import(prefix, arg, suffix);
@@ -462,9 +467,11 @@ void run_main (int argc, char **argv) {
       if (c == 'x') {
         sexp_set_parameter(ctx, sexp_global(ctx, SEXP_G_META_ENV), sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), tmp);
         sexp_context_env(ctx) = env = tmp;
+        sexp_add_import_binding(ctx, env);
         tmp = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
-        if (tmp != NULL && !sexp_oportp(tmp))
+        if (tmp != NULL && !sexp_oportp(tmp)) {
           sexp_load_standard_ports(ctx, env, stdin, stdout, stderr, 0);
+        }
       }
 #endif
       break;
