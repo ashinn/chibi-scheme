@@ -291,11 +291,11 @@ static sexp_uint_t multiplier (char c) {
 #endif
 
 static char* make_import(const char* prefix, const char* mod, const char* suffix) {
-  int len = strlen(mod) + strlen(prefix) + strlen(suffix);
+  int preflen = strlen(prefix), len = preflen + strlen(mod) + strlen(suffix);
   char *p, *impmod = (char*) malloc(len+1);
   strcpy(impmod, prefix);
-  strcpy(impmod+strlen(prefix), mod);
-  strcpy(impmod+len-+strlen(suffix), suffix);
+  strcpy(impmod+preflen, mod[0] == '(' ? mod + 1 : mod);
+  strcpy(impmod+len-strlen(suffix)-(mod[0] == '(' ? 1 : 0),  suffix);
   impmod[len] = '\0';
   for (p=impmod; *p; p++)
     if (*p == '.') *p=' ';
