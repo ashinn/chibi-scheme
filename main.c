@@ -358,7 +358,8 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) 
 #if SEXP_USE_MODULES
     if (!bootp)
       e = sexp_eval_string(ctx, sexp_default_environment, -1, sexp_global(ctx, SEXP_G_META_ENV));
-    sexp_add_import_binding(ctx, e);
+    if (!sexp_exceptionp(e))
+      sexp_add_import_binding(ctx, e);
 #endif
     if (!sexp_exceptionp(e))
       e = sexp_load_standard_params(ctx, e);
@@ -605,13 +606,14 @@ void run_main (int argc, char **argv) {
 
  done_options:
   if (!quit || main_symbol != NULL) {
-    load_init(0);
+    init_context();
     /* build argument list */
     if (i < argc)
       for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
     if (i >= argc || main_symbol != NULL)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
+    load_init(i < argc || main_symbol != NULL);
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
