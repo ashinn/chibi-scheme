@@ -1,0 +1,8 @@
+> (append-reverse (3 2 1) (4 5))
+| > (append-reverse (2 1) (3 4 5))
+| | > (append-reverse (1) (2 3 4 5))
+| | | > (append-reverse () (1 2 3 4 5))
+| | | (1 2 3 4 5)
+| | (1 2 3 4 5)
+| (1 2 3 4 5)
+(1 2 3 4 5)

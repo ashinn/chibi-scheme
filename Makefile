@@ -202,17 +202,14 @@ test-memory: chibi-scheme-ulimit$(EXE)
 test-build:
 	MAKE=$(MAKE) ./tests/build/build-tests.sh
 
+test-run:
+	./tests/run/command-line-tests.sh
+
 test-ffi: chibi-scheme$(EXE)
 	$(CHIBI) tests/ffi/ffi-tests.scm
 
 test-snow: chibi-scheme$(EXE)
 	$(CHIBI) tests/snow/snow-tests.scm
-
-test-numbers: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/numeric-tests.scm
-
-test-flonums: chibi-scheme$(EXE)
-	$(CHIBI) -xchibi tests/flonum-tests.scm
 
 test-unicode: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/unicode-tests.scm
@@ -239,7 +236,8 @@ bench-gabriel: chibi-scheme$(EXE)
 # Packaging
 
 clean: clean-libs
-	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err
+	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err \
+	    tests/run/*.out tests/run/*.err
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \

@@ -1,0 +1,3 @@
+-msrfi.1
+-tsrfi.1.append-reverse
+-p(append-reverse (quote(3 2 1)) (quote(4 5)))
