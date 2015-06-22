@@ -165,7 +165,8 @@
             (let* ((io (open-net-io
                         host
                         (or (uri-port uri)
-                            (if (eq? 'https (uri-scheme uri)) 443 80))))
+                            (if (eq? 'https (uri-scheme uri)) 443 80))
+                        (assq-ref in-headers 'blocking)))
                    (in (cadr io))
                    (out (car (cddr io))))
               (display method out)
@@ -180,8 +181,10 @@
                 (display "\r\n" out)))
               (for-each
                (lambda (x)
-                 (display (car x) out)  (display ": " out)
-                 (display (cdr x) out) (display "\r\n" out))
+                 (cond
+                  ((not (eq? 'blocking (car x)))
+                   (display (car x) out)  (display ": " out)
+                   (display (cdr x) out) (display "\r\n" out))))
                in-headers)
               (display "Connection: close\r\n\r\n" out)
               (http-send-body in-headers body out)

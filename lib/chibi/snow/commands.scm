@@ -766,29 +766,33 @@
 ;; a subset of http-post functionality that can shell out to curl
 ;; depending on config
 (define (snow-post cfg uri params)
-  (if (conf-get cfg 'use-curl?)
-      (let ((cmd `(curl --silent
-                        ,@(append-map
-                           (lambda (x)
-                             (cond
-                              ((and (pair? (cdr x)) (assq 'value (cdr x)))
-                               => (lambda (y)
-                                    `("-F" ,(string-append
-                                             (display-to-string (car x)) "="
-                                             (display-to-string (cdr y))))))
-                              ((and (pair? (cdr x)) (assq 'file (cdr x)))
-                               => (lambda (y)
-                                    `("-F" ,(string-append
-                                             (display-to-string (car x)) "=@"
-                                             (display-to-string (cdr y))))))
-                              (else
-                               `("-F" ,(string-append
-                                        (display-to-string (car x)) "="
-                                        (display-to-string (cdr x)))))))
-                           params)
-                        ,(uri->string uri))))
-        (open-input-bytevector (process->bytevector cmd)))
-      (http-post uri params)))
+  (cond
+   ((conf-get cfg 'use-curl?)
+    (let ((cmd `(curl --silent
+                      ,@(append-map
+                         (lambda (x)
+                           (cond
+                            ((and (pair? (cdr x)) (assq 'value (cdr x)))
+                             => (lambda (y)
+                                  `("-F" ,(string-append
+                                           (display-to-string (car x)) "="
+                                           (display-to-string (cdr y))))))
+                            ((and (pair? (cdr x)) (assq 'file (cdr x)))
+                             => (lambda (y)
+                                  `("-F" ,(string-append
+                                           (display-to-string (car x)) "=@"
+                                           (display-to-string (cdr y))))))
+                            (else
+                             `("-F" ,(string-append
+                                      (display-to-string (car x)) "="
+                                      (display-to-string (cdr x)))))))
+                         params)
+                      ,(uri->string uri))))
+      (open-input-bytevector (process->bytevector cmd))))
+   ((not (conf-get cfg 'non-blocking-io))
+    (http-post uri params '((blocking . #t))))
+   (else
+    (http-post uri params))))
 
 (define (remote-command cfg name path params)
   (let ((uri (remote-uri cfg name path)))

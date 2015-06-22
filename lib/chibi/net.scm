@@ -29,7 +29,7 @@
 ;;> values on success - the socket, an input port, and an
 ;;> output port - or \scheme{#f} on failure.
 
-(define (open-net-io host service)
+(define (open-net-io host service . o)
   (let lp ((addr (get-address-info host service)))
     (if (not addr)
         (error "couldn't find address" host service)
@@ -46,7 +46,11 @@
                 (lp (address-info-next addr)))
                (else
                 (cond-expand
-                 (threads (set-file-descriptor-status! sock open/non-block))
+                 (threads
+                  (if (not (and (pair? o) (car o)))
+                      (let ((st (bitwise-and (get-file-descriptor-status sock)
+                                             open/non-block)))
+                        (set-file-descriptor-status! sock st))))
                  (else #f))
                 (list sock
                       (open-input-file-descriptor sock #t)
