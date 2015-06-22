@@ -1,5 +1,6 @@
 # Object files
 *.o
+*.bc
 *.ko
 *.obj
 *.elf
@@ -36,6 +37,7 @@ lib/.*.meta
 
 # Generated files
 chibi-scheme
+chibi-scheme-emscripten
 chibi-scheme.pc
 include/chibi/install.h
 lib/chibi/emscripten.c
@@ -48,6 +50,7 @@ lib/chibi/system.c
 lib/chibi/time.c
 *.tgz
 *.html
+!index.html
 
 examples/snow-fort
 examples/synthcode
@@ -58,3 +61,6 @@ tmp
 /lib/chibi/crypto/crypto.c
 /chibi-scheme-ulimit
 /clibs.c
+
+js/chibi.*
+
