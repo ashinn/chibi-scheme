@@ -988,6 +988,9 @@
       ((status-bool) (cat "  bool err;\n"))
       ((non-null-string) (cat "  char *err;\n"))
       ((non-null-pointer) (cat "  void *err;\n")))
+    (if (type-struct? ret-type)
+        (cat "  struct " (type-base ret-type) " struct_res;\n"
+             "  struct " (type-base ret-type) "* ptr_res;\n"))
     (cond
      ((pair? ints)
       (cat "  int " (car ints))
@@ -1181,8 +1184,10 @@
         (cat " loop:\n"))
     (cat (cond ((error-type? (type-base ret-type)) "  err = ")
                ((type-array ret-type) "  tmp = ")
+               ((type-struct? ret-type) "  struct_res = ")
                (else "  res = ")))
-    ((if (type-array ret-type)
+    ((if (or (type-array ret-type)
+             (type-struct? ret-type))
          (lambda (t f x) (f))
          c->scheme-converter)
      ret-type
@@ -1227,7 +1232,15 @@
            "  if (sexp_filenop(" res "))\n"
            "    fcntl(sexp_fileno_fd(" res "), F_SETFL, O_NONBLOCK "
            " | fcntl(sexp_fileno_fd(" res "), F_GETFL));\n"
-           "#endif\n")))))
+           "#endif\n")))
+   ;; non-pointer struct return types need to be copied to the heap
+   ((type-struct? result)
+    (cat
+     "  ptr_res = (" (type-c-name result) ") malloc(sizeof("
+     (type-c-name-derefed result) "));\n"
+     "  memcpy(ptr_res, &struct_res, sizeof(" (type-c-name-derefed result) "));\n"
+     "  res = sexp_make_cpointer(ctx, sexp_unbox_fixnum(sexp_opcode_return_type(self)), ptr_res, SEXP_FALSE, 0);\n"))
+   ))
 
 (define (write-result result . o)
   (let ((res (string-append "res" (type-index-string result)))

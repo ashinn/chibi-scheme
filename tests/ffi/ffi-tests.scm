@@ -219,6 +219,13 @@ typedef struct {
   Color color;
 } ColoredCircle;
 
+struct Point make_point_struct(double x, double y) {
+  struct Point res;
+  res.x = x;
+  res.y = y;
+  return res;
+}
+
 void set_color(short r, short g, short b, Color* res) {
   res->r = r;
   res->g = g;
@@ -255,6 +262,7 @@ double circle_area2(struct Circle circ) {
      constructor: (make-point x y)
      (double x point-x point-x-set!)
      (double y point-y point-y-set!))
+   (define-c (struct Point) make-point-struct (double double))
    (define-c-struct Rectangle
      predicate: rect?
      constructor: (make-rect top_left bottom_right)
@@ -279,6 +287,8 @@ double circle_area2(struct Circle circ) {
  (test 1. (point-x (make-point 1. 2.)))
  (test 2. (point-y (make-point 1. 2.)))
  (test 3. (point-x (let ((pt (make-point 1. 2.))) (point-x-set! pt 3.) pt)))
+ (test 1. (point-x (make-point-struct 1. 2.)))
+ (test 2. (point-y (make-point-struct 1. 2.)))
  ;; need constructor argument checking
  ;;(test-error (rect? (make-rect 1 2)))
  ;; gc miss - we don't preserve the pointers
