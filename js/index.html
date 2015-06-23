@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Chibi-Scheme</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      #program {
+        flex: 1 1 0;
+        padding: 0.5em;
+      }
+      #start {
+        font-size: inherit;
+        padding: 0.5em;
+      }
+      #output {
+        font-family: monospace;
+        padding: 0.5em;
+        white-space: pre;
+        background-color: #000;
+        color: #fff;
+        overflow: auto;
+        flex: 1 1 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <textarea id="program" spellcheck="false">;
+; This is Chibi-Scheme compiled with Emscripten to run in the browser.
+;
+
+(import (scheme base))
+(write-string "Hello, world!\n")
+
+;
+; You can also run arbitrary JavaScript code from scheme and yield control back and forth between Scheme and the browser
+;
+
+(import (chibi emscripten)) ; exports: eval-script!, integer-eval-script, string-eval-script, wait-on-event!
+
+(write-string (number->string (integer-eval-script "6 * 7")))
+(newline)
+
+(eval-script! "window.addEventListener('click', function () {
+  Module['resume'](); // give control back to the Scheme process
+})")
+
+(let loop ()
+  (wait-on-event!) ; yields control back to the browser
+  (write-string "You have clicked me!\n")
+  (loop))
+
+(write-string "Control never reaches this point\n")
+</textarea>
+      <button type="button" id="start" disabled>Start Program</button>
+      <div id="output"></div>
+    </main>
+    <script src="chibi.js"></script>
+    <script>
+      function start(program, args, onOutput, onError) {
+        var firstError = true;
+        Chibi({
+          print: onOutput,
+          printErr: function (text) {
+            if (firstError) {
+              firstError = false;
+              return;
+            }
+            if (onError !== undefined) {
+              onError(text);
+            } else {
+              onOutput(text);
+            }
+          },
+          program: program,
+          arguments: args
+        });
+      }
+    </script>
+    <script>
+      (function () {
+        var programField = document.querySelector('#program');
+        var startButton = document.querySelector('#start');
+        var program = sessionStorage.getItem('program');
+        if (program) {
+          programField.value = program;
+        }
+        programField.addEventListener('input', function() {
+          sessionStorage.setItem('program', programField.value);
+        });
+        startButton.addEventListener('click', function() {
+          var program = programField.value;
+          startButton.disabled = true;
+          start(program, [],
+              function(text) {
+                output.textContent = output.textContent + text + '\n'
+              });
+        });
+        startButton.disabled = false;
+      })();
+    </script>
+  </body>
+</html>

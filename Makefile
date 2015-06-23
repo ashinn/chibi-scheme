@@ -82,6 +82,20 @@ endif
 
 all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
 
+js: js/chibi.js
+
+js/chibi.js: chibi-scheme-emscripten chibi-scheme-static.bc js/pre.js js/post.js js/exported_functions.json
+	emcc -O2 chibi-scheme-static.bc -o $@ -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` --pre-js js/pre.js --post-js js/post.js
+
+chibi-scheme-static.bc:
+	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI=./chibi-scheme-emscripten PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.bc SO=.bc CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1" clibs.c chibi-scheme-static.bc
+
+chibi-scheme-emscripten: VERSION
+	$(MAKE) clean
+	$(MAKE) chibi-scheme-static PLATFORM=emscripten SEXP_USE_DL=0
+	mv chibi-scheme-static$(EXE) chibi-scheme-emscripten
+	$(MAKE) clean
+
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
 	echo '#define sexp_default_module_path "'$(MODDIR):$(BINMODDIR)'"' >> $@
@@ -242,6 +256,8 @@ clean: clean-libs
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
 	    libchibi-scheme$(SO)* *.a *.pc include/chibi/install.h lib/.*.meta \
+	    chibi-scheme-emscripten \
+	    js/chibi.* \
 	    $(shell $(FIND) lib -name \*.o)
 
 dist-clean: dist-clean-libs cleaner
