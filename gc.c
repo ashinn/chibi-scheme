@@ -483,6 +483,7 @@ sexp sexp_gc (sexp ctx, size_t *sum_freed) {
   getrusage(RUSAGE_SELF, &end);
   gc_usecs = (end.ru_utime.tv_sec - start.ru_utime.tv_sec) * 1000000 +
     end.ru_utime.tv_usec - start.ru_utime.tv_usec;
+  ++sexp_context_gc_count(ctx);
   sexp_context_gc_usecs(ctx) += gc_usecs;
   sexp_debug_printf("%p (freed: %lu max_freed: %lu finalized: %lu time: %luus)",
                     ctx, (sum_freed ? *sum_freed : 0), sexp_unbox_fixnum(res),

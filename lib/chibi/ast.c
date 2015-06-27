@@ -408,6 +408,10 @@ static sexp sexp_gc_op (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_unsigned_integer(ctx, sum_freed);
 }
 
+static sexp sexp_gc_count_op (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_make_unsigned_integer(ctx, sexp_context_gc_count(ctx));
+}
+
 static sexp sexp_gc_usecs_op (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_unsigned_integer(ctx, sexp_context_gc_usecs(ctx));
 }
@@ -651,6 +655,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
+  sexp_define_foreign(ctx, env, "gc-count", 0, sexp_gc_count_op);
   sexp_define_foreign(ctx, env, "gc-usecs", 0, sexp_gc_usecs_op);
 #if SEXP_USE_GREEN_THREADS
   sexp_define_foreign(ctx, env, "%set-atomic!", 1, sexp_set_atomic);

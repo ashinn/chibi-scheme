@@ -469,7 +469,10 @@ struct sexp_struct {
       struct timeval tval;
 #endif
       char tailp, tracep, timeoutp, waitp, errorp;
-      sexp_uint_t last_fp, gc_usecs;
+      sexp_uint_t last_fp;
+#if SEXP_USE_TIME_GC
+      sexp_uint_t gc_count, gc_usecs;
+#endif
       sexp stack, env, parent, child,
         globals, dk, params, proc, name, specific, event, result;
 #if SEXP_USE_DL
@@ -1102,7 +1105,13 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_context_dk(x)       (sexp_field(x, context, SEXP_CONTEXT, dk))
 #define sexp_context_params(x)   (sexp_field(x, context, SEXP_CONTEXT, params))
 #define sexp_context_last_fp(x)  (sexp_field(x, context, SEXP_CONTEXT, last_fp))
+#if SEXP_USE_TIME_GC
+#define sexp_context_gc_count(x) (sexp_field(x, context, SEXP_CONTEXT, gc_count))
 #define sexp_context_gc_usecs(x) (sexp_field(x, context, SEXP_CONTEXT, gc_usecs))
+#else
+#define sexp_context_gc_count(x) 0
+#define sexp_context_gc_usecs(x) 0
+#endif
 #define sexp_context_refuel(x)   (sexp_field(x, context, SEXP_CONTEXT, refuel))
 #define sexp_context_ip(x)       (sexp_field(x, context, SEXP_CONTEXT, ip))
 #define sexp_context_proc(x)     (sexp_field(x, context, SEXP_CONTEXT, proc))
