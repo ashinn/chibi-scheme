@@ -188,9 +188,12 @@ int sexp_valid_object_p (sexp ctx, sexp x) {
   return sexp_in_heap_p(ctx, x) && sexp_valid_object_type_p(ctx, x)
     && sexp_valid_header_magic_p(ctx, x);
 }
+#define sexp_gc_pass_ctx(x) (x),
+#else
+#define sexp_gc_pass_ctx(x)
 #endif
 
-void sexp_mark (sexp ctx, sexp x) {
+void sexp_mark_one (sexp_gc_pass_ctx(sexp ctx) sexp* types, sexp x) {
   sexp_sint_t len;
   sexp t, *p, *q;
   struct sexp_gc_var_t *saves;
@@ -200,9 +203,9 @@ void sexp_mark (sexp ctx, sexp x) {
   sexp_markedp(x) = 1;
   if (sexp_contextp(x)) {
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
-      if (saves->var) sexp_mark(ctx, *(saves->var));
+      if (saves->var) sexp_mark_one(sexp_gc_pass_ctx(ctx) types, *(saves->var));
   }
-  t = sexp_object_type(ctx, x);
+  t = types[x->tag];
   len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
     p = (sexp*) (((char*)x) + sexp_type_field_base(t));
@@ -212,10 +215,14 @@ void sexp_mark (sexp ctx, sexp x) {
     while (p < q && *q == q[-1])
       q--;                      /* skip trailing duplicates */
     while (p < q)
-      sexp_mark(ctx, *p++);
+      sexp_mark_one(sexp_gc_pass_ctx(ctx) types, *p++);
     x = *p;
     goto loop;
   }
+}
+
+void sexp_mark (sexp ctx, sexp x) {
+  sexp_mark_one(sexp_gc_pass_ctx(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES)), x);
 }
 
 #if SEXP_USE_CONSERVATIVE_GC
