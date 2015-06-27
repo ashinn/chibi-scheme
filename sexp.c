@@ -485,7 +485,10 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   sexp_context_saves(res) = NULL;
   sexp_context_params(res) = SEXP_NULL;
   sexp_context_last_fp(res) = 0;
+#if SEXP_USE_TIME_GC
+  sexp_context_gc_count(res) = 0;
   sexp_context_gc_usecs(res) = 0;
+#endif
   sexp_context_tracep(res) = 0;
   sexp_context_timeoutp(res) = 0;
   sexp_context_tailp(res) = 1;
