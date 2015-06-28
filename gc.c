@@ -188,7 +188,7 @@ int sexp_valid_object_p (sexp ctx, sexp x) {
   return sexp_in_heap_p(ctx, x) && sexp_valid_object_type_p(ctx, x)
     && sexp_valid_header_magic_p(ctx, x);
 }
-#define sexp_gc_pass_ctx(x) (x),
+#define sexp_gc_pass_ctx(x) x,
 #else
 #define sexp_gc_pass_ctx(x)
 #endif
@@ -205,7 +205,7 @@ void sexp_mark_one (sexp_gc_pass_ctx(sexp ctx) sexp* types, sexp x) {
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
       if (saves->var) sexp_mark_one(sexp_gc_pass_ctx(ctx) types, *(saves->var));
   }
-  t = types[x->tag];
+  t = types[sexp_pointer_tag(x)];
   len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
     p = (sexp*) (((char*)x) + sexp_type_field_base(t));
