@@ -402,6 +402,8 @@ static sexp sexp_resume_ctx = SEXP_FALSE;
 static sexp sexp_resume_proc = SEXP_FALSE;
 #endif
 
+sexp sexp_compact_heap (sexp ctx, sexp dst);
+
 void run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
   char *impmod;
@@ -617,6 +619,11 @@ void run_main (int argc, char **argv) {
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
+#if SEXP_USE_COMPACTING_GC
+      ctx = sexp_compact_heap(ctx, NULL);
+      sexp_context_saves(ctx) = NULL;
+      env = sexp_context_env(ctx);
+#endif
       repl(ctx, env);
     } else {
 #if SEXP_USE_MODULES

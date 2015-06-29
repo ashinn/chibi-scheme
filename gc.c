@@ -775,6 +775,197 @@ sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags) {
 
 #endif
 
+#if SEXP_USE_COMPACTING_GC
+#define sexp_forward_pointer(x) (((sexp*)&((x)->value))[0])
+
+struct sexp_type_gc_info {
+  short field_base, field_len_base, field_len_off;
+  unsigned short field_len_scale;
+  short size_base, size_off;
+  unsigned short size_scale;
+};
+
+struct sexp_type_gc_info* sexp_get_type_gc_info(sexp ctx) {
+  int i;
+  sexp t;
+  struct sexp_type_gc_info* res =
+    malloc(sizeof(struct sexp_type_gc_info) * sexp_context_num_types(ctx));
+  for (i=0; i < sexp_context_num_types(ctx); ++i) {
+    t = sexp_type_by_index(ctx, i);
+    res[i].field_base = sexp_type_field_base(t);
+    res[i].field_len_base = sexp_type_field_len_base(t);
+    res[i].field_len_off = sexp_type_field_len_off(t);
+    res[i].field_len_scale = sexp_type_field_len_scale(t);
+    res[i].size_base = sexp_type_size_base(t);
+    res[i].size_off = sexp_type_size_off(t);
+    res[i].size_scale = sexp_type_size_scale(t);
+  }
+  return res;
+}
+
+static size_t sexp_heap_allocated_bytes(struct sexp_type_gc_info* t, sexp x) {
+  if (!x || !sexp_pointerp(x))
+    return sexp_heap_align(1);
+  return sexp_heap_align((((sexp_uint_t*)((char*)x + t->size_off))[0]
+                          * t->size_scale + t->size_base));
+}
+
+static void sexp_cheney_mark (struct sexp_type_gc_info* type_gc_info, sexp y, char** end) {
+  sexp_sint_t ysize;
+  if (!sexp_markedp(y)) {
+    ysize = sexp_heap_allocated_bytes(&type_gc_info[sexp_pointer_tag(y)], y);
+    memcpy(*end, (char*)y, ysize);
+    sexp_markedp(y) = 1;
+    sexp_forward_pointer(y) = (sexp)*end;
+    *end += ysize;
+  }
+}
+
+#if SEXP_USE_ALIGNED_BYTECODE
+#define sexp_align_index(i) i = sexp_word_align((sexp_uint_t)i)
+#else
+#define sexp_align_index(i) 0
+#endif
+
+/* cheney's algorithm: iterative BFS copy */
+char* sexp_cheney (struct sexp_type_gc_info* type_gc_info, sexp x, char* end) {
+  struct sexp_type_gc_info* t;
+  sexp_sint_t i, len;
+  sexp y, *p, *q;
+  while ((char*)x < end) {
+    /* walk fields */
+    t = &(type_gc_info[sexp_pointer_tag(x)]);
+    len = (((sexp_uint_t*)((char*)x + t->field_len_off))[0]
+           * t->field_len_scale + t->field_len_base);
+    if (len > 0) {
+      p = (sexp*) (((char*)x) + t->field_base);
+      q = p + len;
+      for ( ; p < q; ++p) {
+        y = *p;
+        if (y && sexp_pointerp(y)) {
+          sexp_cheney_mark(type_gc_info, y, &end);
+          *p = sexp_forward_pointer(y);
+        }
+      }
+    }
+    /* walk pointer values in bytecode */
+    if (sexp_bytecodep(x)) {
+      for (i=0; i<sexp_bytecode_length(x); ) {
+        switch (sexp_bytecode_data(x)[i++]) {
+        case SEXP_OP_FCALL0:      case SEXP_OP_FCALL1:
+        case SEXP_OP_FCALL2:      case SEXP_OP_FCALL3:
+        case SEXP_OP_FCALL4:      case SEXP_OP_CALL:
+        case SEXP_OP_TAIL_CALL:   case SEXP_OP_PUSH:
+        case SEXP_OP_GLOBAL_REF:  case SEXP_OP_GLOBAL_KNOWN_REF:
+#if SEXP_USE_GREEN_THREADS
+        case SEXP_OP_PARAMETER_REF:
+#endif
+#if SEXP_USE_EXTENDED_FCALL
+        case SEXP_OP_FCALLN:
+#endif
+          sexp_align_index(i);
+          p = (sexp*)(&(sexp_bytecode_data(x)[i]));
+          y = *p;
+          if (y && sexp_pointerp(y)) {
+            sexp_cheney_mark(type_gc_info, y, &end);
+            *p = sexp_forward_pointer(y);
+          }
+          i += sizeof(sexp);
+          break;
+        case SEXP_OP_JUMP:        case SEXP_OP_JUMP_UNLESS:
+        case SEXP_OP_STACK_REF:   case SEXP_OP_CLOSURE_REF:
+        case SEXP_OP_LOCAL_REF:   case SEXP_OP_LOCAL_SET:
+        case SEXP_OP_TYPEP:
+#if SEXP_USE_RESERVE_OPCODE
+        case SEXP_OP_RESERVE:
+#endif
+          sexp_align_index(i);
+          i += sizeof(sexp);
+          break;
+        case SEXP_OP_MAKE: case SEXP_OP_SLOT_REF: case SEXP_OP_SLOT_SET:
+          sexp_align_index(i);
+          i += 2*sizeof(sexp);
+          break;
+        case SEXP_OP_MAKE_PROCEDURE:
+          sexp_align_index(i);
+          p = (sexp*)(&(sexp_bytecode_data(x)[i]));
+          y = p[2];
+          if (y && sexp_pointerp(y)) {
+            sexp_cheney_mark(type_gc_info, y, &end);
+            p[2] = sexp_forward_pointer(y);
+          }
+          i += 3*sizeof(sexp);
+          break;
+        }
+      }
+    }
+    x = (sexp)((char*)x + sexp_heap_allocated_bytes(t, x));
+  }
+  return end;
+}
+
+/* Compact the ctx heap into the context dst, or a new heap if NULL.    */
+/* ctx may have several heaps, but if specified dst must have a single  */
+/*   heap of sufficient size.  */
+/* Returns the location of ctx in the new heap.  */
+sexp sexp_compact_heap (sexp ctx, sexp dst) {
+  char *end;
+  sexp_free_list free_ls, next;
+  struct sexp_type_gc_info* type_gc_info;
+  sexp_heap to, from = sexp_context_heap(ctx);
+  sexp_sint_t from_size = sexp_heap_total_size(from);
+
+  /* validate input, creating a new heap if needed */
+  if (! dst || sexp_not(dst)) {
+    to = sexp_make_heap(from_size, 0, 0);
+    if (!to) return sexp_global(ctx, SEXP_G_OOM_ERROR);
+    free_ls = to->free_list = (sexp_free_list)to->data;
+    next = (sexp_free_list)
+      (((char*)free_ls)+sexp_heap_align(sexp_free_chunk_size));
+  } else if (!sexp_contextp(dst)) {
+    return sexp_type_exception(ctx, NULL, SEXP_CONTEXT, dst);
+  } else if (sexp_context_heap(dst)->size < from_size) {
+    return sexp_user_exception(ctx, NULL, "destination context too small", dst);
+  } else {
+    to = sexp_context_heap(dst);
+    free_ls = to->free_list = (sexp_free_list)to->data;
+    next = (sexp_free_list)
+      (((char*)free_ls)+sexp_heap_align(sexp_free_chunk_size));
+    free_ls->size = 0;  /* actually sexp_heap_align(sexp_free_chunk_size) */
+    free_ls->next = next;
+    next->size = from->size - sexp_heap_align(sexp_free_chunk_size);
+    next->next = NULL;
+  }
+
+  /* extract the necessary type info outside the heap */
+  /* this simplifies processing (since the types get moved), */
+  /* and helps to keep the info in cache */
+  type_gc_info = sexp_get_type_gc_info(ctx);
+
+  /* recursively copy into the new heap starting with the root context */
+  end = (char*)next;
+  memcpy(end, ctx, sexp_sizeof(context));
+  end += sexp_heap_align(sexp_sizeof(context));
+  /* update forward pointers */
+  sexp_markedp(ctx) = 1;
+  sexp_forward_pointer(ctx) = (sexp)next;
+  ctx = (sexp)next;
+  /* run cheney (this does all the work) */
+  free_ls = to->free_list = (sexp_free_list)sexp_cheney(type_gc_info, ctx, end);
+  /* fixup the new free list */
+  next = (sexp_free_list)
+    (((char*)free_ls)+sexp_heap_align(sexp_free_chunk_size));
+  free_ls->size = 0;
+  free_ls->next = next;
+  next->size = (char*)sexp_heap_end(to) - (char*)next;
+  next->next = NULL;
+
+  /* cleanup and return the new ctx location */
+  free(type_gc_info);
+  return ctx;
+}
+#endif
+
 void sexp_gc_init (void) {
 #if SEXP_USE_GLOBAL_HEAP || SEXP_USE_CONSERVATIVE_GC
   sexp_uint_t size = sexp_heap_align(SEXP_INITIAL_HEAP_SIZE);

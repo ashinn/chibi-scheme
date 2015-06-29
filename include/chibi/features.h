@@ -84,6 +84,9 @@
 /*   go away and you're not working on your own C extension. */
 /* #define SEXP_USE_CONSERVATIVE_GC 1 */
 
+/* uncomment this to enable experimental gc compaction */
+/* #define SEXP_USE_COMPACTING_GC 1 */
+
 /* uncomment this to disable automatic running of finalizers */
 /*   You will need to close ports and file descriptors manually */
 /*   (as you should anyway) and some C extensions may break. */
@@ -397,6 +400,10 @@
 
 #ifndef SEXP_USE_CONSERVATIVE_GC
 #define SEXP_USE_CONSERVATIVE_GC 0
+#endif
+
+#ifndef SEXP_USE_COMPACTING_GC
+#define SEXP_USE_COMPACTING_GC 0
 #endif
 
 #ifndef SEXP_USE_FINALIZERS
