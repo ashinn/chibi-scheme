@@ -90,7 +90,10 @@
      ((not (package? pkg))
       #f)
      ((assoc-get (cdr pkg) 'authors)
-      => (lambda (authors) (if show-email? authors (strip-email authors))))
+      => (lambda (authors)
+           (cond (show-email? authors)
+                 ((pair? authors) (map strip-email authors))
+                 (else (strip-email authors)))))
      (else
       (let ((email (package-email pkg)))
         (or (cond
