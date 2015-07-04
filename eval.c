@@ -2259,9 +2259,6 @@ static const char* sexp_initial_features[] = {
 #if SEXP_USE_BIDIRECTIONAL_PORTS
   "bidir-ports",
 #endif
-#if SEXP_USE_STRING_STREAMS
-  "string-streams",
-#endif
 #if SEXP_USE_MODULES
   "modules",
 #endif

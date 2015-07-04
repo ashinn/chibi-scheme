@@ -205,11 +205,6 @@
 /*   Making them immutable allows for packed UTF-8 strings. */
 /* #define SEXP_USE_MUTABLE_STRINGS 0 */
 
-/* uncomment this to base string ports on C streams */
-/*   This historic option enables string and custom ports backed */
-/*   by FILE* objects using memstreams and funopen/fopencookie. */
-/* #define SEXP_USE_STRING_STREAMS 1 */
-
 /* uncomment this to disable automatic closing of ports */
 /*   If enabled, the underlying FILE* for file ports will be */
 /*   automatically closed when they're garbage collected.  Doesn't */
@@ -612,10 +607,6 @@
 #endif
 #ifndef SEXP_USE_PACKED_STRINGS
 #define SEXP_USE_PACKED_STRINGS 1
-#endif
-
-#ifndef SEXP_USE_STRING_STREAMS
-#define SEXP_USE_STRING_STREAMS 0
 #endif
 
 #ifndef SEXP_USE_AUTOCLOSE_PORTS

@@ -1265,195 +1265,6 @@ sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void *value,
 
 /************************ reading and writing *************************/
 
-#if SEXP_USE_STRING_STREAMS
-
-#define SEXP_INIT_STRING_PORT_SIZE 128
-
-#if SEXP_BSD
-
-#define sexp_streamp(vec) sexp_vectorp(vec)
-
-#define sexp_stream_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
-#define sexp_stream_buf(vec) sexp_vector_ref((sexp)vec, SEXP_ONE)
-#define sexp_stream_size(vec) sexp_vector_ref((sexp)vec, SEXP_TWO)
-#define sexp_stream_pos(vec) sexp_vector_ref((sexp)vec, SEXP_THREE)
-
-#define sexp_stream_ctx_set(vec, x) sexp_vector_set((sexp)vec, SEXP_ZERO, x)
-#define sexp_stream_buf_set(vec, x) sexp_vector_set((sexp)vec, SEXP_ONE, x)
-#define sexp_stream_size_set(vec, x) sexp_vector_set((sexp)vec, SEXP_TWO, x)
-#define sexp_stream_pos_set(vec, x) sexp_vector_set((sexp)vec, SEXP_THREE, x)
-
-static int sstream_read (void *vec, char *dst, int n) {
-  sexp_uint_t len = sexp_unbox_fixnum(sexp_stream_size(vec));
-  sexp_uint_t pos = sexp_unbox_fixnum(sexp_stream_pos(vec));
-  if (pos >= len) return 0;
-  if (n > (len - pos)) n = (len - pos);
-  memcpy(dst, sexp_string_data(sexp_stream_buf(vec))+pos, n);
-  sexp_stream_pos_set(vec, sexp_make_fixnum(pos + n));
-  return n;
-}
-
-static int sstream_write (void *vec, const char *src, int n) {
-  sexp_uint_t len, pos, newpos;
-  sexp newbuf;
-  len = sexp_unbox_fixnum(sexp_stream_size(vec));
-  pos = sexp_unbox_fixnum(sexp_stream_pos(vec));
-  newpos = pos+n;
-  if (newpos >= len) {
-    newbuf = sexp_make_string(sexp_stream_ctx(vec),
-                              sexp_make_fixnum(newpos*2),
-                              SEXP_VOID);
-    memcpy(sexp_string_data(newbuf),
-           sexp_string_data(sexp_stream_buf(vec)),
-           pos);
-    sexp_stream_buf_set(vec, newbuf);
-    sexp_stream_size_set(vec, sexp_make_fixnum(newpos*2));
-  }
-  memcpy(sexp_string_data(sexp_stream_buf(vec))+pos, src, n);
-  sexp_stream_pos_set(vec, sexp_make_fixnum(newpos));
-  return n;
-}
-
-static off_t sstream_seek (void *vec, off_t offset, int whence) {
-  sexp_sint_t pos;
-  if (whence == SEEK_SET) {
-    pos = offset;
-  } else if (whence == SEEK_CUR) {
-    pos = sexp_unbox_fixnum(sexp_stream_pos(vec)) + offset;
-  } else {                      /* SEEK_END */
-    pos = sexp_unbox_fixnum(sexp_stream_size(vec)) + offset;
-  }
-  sexp_stream_pos_set(vec, sexp_make_fixnum(pos));
-  return pos;
-}
-
-sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
-  FILE *in;
-  sexp res;
-  sexp_gc_var1(cookie);
-  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  sexp_gc_preserve1(ctx, cookie);
-  cookie = sexp_make_vector(ctx, sexp_make_fixnum(4), SEXP_VOID);
-  sexp_stream_ctx_set(cookie, ctx);
-  sexp_stream_buf_set(cookie, str);
-  sexp_stream_size_set(cookie, sexp_make_fixnum(sexp_string_size(str)));
-  sexp_stream_pos_set(cookie, SEXP_ZERO);
-  in = funopen(cookie, &sstream_read, NULL, &sstream_seek, NULL);
-  res = sexp_make_input_port(ctx, in, SEXP_FALSE);
-  sexp_port_cookie(res) = cookie;
-  sexp_port_binaryp(res) = 0;
-  sexp_gc_release1(ctx);
-  return res;
-}
-
-sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
-  FILE *out;
-  sexp res, size;
-  sexp_gc_var1(cookie);
-  sexp_gc_preserve1(ctx, cookie);
-  size = sexp_make_fixnum(SEXP_INIT_STRING_PORT_SIZE);
-  cookie = sexp_make_vector(ctx, sexp_make_fixnum(4), SEXP_VOID);
-  sexp_stream_ctx_set(cookie, ctx);
-  sexp_stream_buf_set(cookie, sexp_make_string(ctx, size, SEXP_VOID));
-  sexp_stream_size_set(cookie, size);
-  sexp_stream_pos_set(cookie, SEXP_ZERO);
-  out = funopen(cookie, NULL, &sstream_write, &sstream_seek, NULL);
-  res = sexp_make_output_port(ctx, out, SEXP_FALSE);
-  sexp_port_cookie(res) = cookie;
-  sexp_port_binaryp(res) = 0;
-  sexp_gc_release1(ctx);
-  return res;
-}
-
-sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
-  sexp cookie;
-  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
-  if (!sexp_port_openp(port))
-    return sexp_xtype_exception(ctx, self, "output port is closed", port);
-  cookie = sexp_port_cookie(port);
-  if (!sexp_streamp(cookie))
-    return sexp_xtype_exception(ctx, self, "not a string port", port);
-  fflush(sexp_port_stream(port));
-  return sexp_substring_cursor(ctx,
-                               sexp_stream_buf(cookie),
-                               SEXP_ZERO,
-                               sexp_stream_pos(cookie));
-}
-
-#else  /* SEXP_USE_STRING_STREAMS && ! SEXP_BSD */
-
-sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
-  FILE *in;
-  sexp res;
-  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  if (sexp_string_size(str) == 0)
-    in = fopen("/dev/null", "r");
-  else
-    in = fmemopen(sexp_string_data(str), sexp_string_size(str), "r");
-  if (in) {
-    res = sexp_make_input_port(ctx, in, SEXP_FALSE);
-    if (sexp_string_size(str) == 0)
-      sexp_port_name(res) = sexp_c_string(ctx, "/dev/null", -1);
-    sexp_port_cookie(res) = str;  /* for gc preservation */
-    sexp_port_binaryp(res) = 0;
-  } else {
-    res = sexp_user_exception(ctx, SEXP_FALSE, "couldn't open string", str);
-  }
-  return res;
-}
-
-sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
-  sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
-  sexp_port_stream(res)
-    = open_memstream(&sexp_port_buf(res), &sexp_port_size(res));
-  sexp_port_binaryp(res) = 0;
-  sexp_port_cookie(res) = SEXP_STRING_OPORT;
-  return res;
-}
-
-sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
-  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, port);
-  if (sexp_port_cookie(port) != SEXP_STRING_OPORT)
-    return sexp_xtype_exception(ctx, self, "not an output string port", port);
-  if (!sexp_port_openp(port))
-    return sexp_xtype_exception(ctx, self, "output port is closed", port);
-  fflush(sexp_port_stream(port));
-  return sexp_c_string(ctx, sexp_port_buf(port), sexp_port_size(port));
-}
-
-#endif
-
-sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
-  sexp res;
-  FILE* in;
-  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
-  in = fdopen(sexp_fileno_fd(fileno), "r");
-  if (!in) return sexp_file_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
-  res = sexp_make_input_port(ctx, in, SEXP_FALSE);
-  if (!sexp_exceptionp(res)) {
-    sexp_port_binaryp(res) = 1;
-    sexp_port_shutdownp(res) = sexp_truep(shutdownp);
-    sexp_fileno_count(fileno)++;
-  }
-  return res;
-}
-
-sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp shutdownp) {
-  sexp res;
-  FILE* out;
-  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
-  out = fdopen(sexp_fileno_fd(fileno), "w");
-  if (!out) return sexp_user_exception(ctx, SEXP_FALSE, "couldn't open fileno", fileno);
-  res = sexp_make_output_port(ctx, out, SEXP_FALSE);
-  if (!sexp_exceptionp(res)) {
-    sexp_port_shutdownp(res) = sexp_truep(shutdownp);
-    sexp_fileno_count(fileno)++;
-  }
-  return res;
-}
-
-#else  /* ! SEXP_USE_STRING_STREAMS */
-
 int sexp_buffered_read_char (sexp ctx, sexp p) {
   sexp_gc_var2(tmp, origbytes);
   int res = 0;
@@ -1668,8 +1479,6 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
   }
   return res;
 }
-
-#endif  /* ! SEXP_USE_STRING_STREAMS */
 
 #if SEXP_USE_WEAK_REFERENCES
 sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
@@ -1928,12 +1737,10 @@ sexp sexp_char_ready_p (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
   sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
   if (!sexp_port_openp(in))
     return SEXP_FALSE;
-#if !SEXP_USE_STRING_STREAMS
   if (sexp_port_buf(in))
     if (sexp_port_offset(in) < sexp_port_size(in)
         || (!sexp_filenop(sexp_port_fd(in)) && !sexp_port_stream(in)))
       return SEXP_TRUE;
-#endif
 #if SEXP_USE_GREEN_THREADS     /* maybe not just when threads are enabled */
   if (sexp_filenop(sexp_port_fd(in)))
     return sexp_make_boolean(sexp_fileno_ready_p(sexp_port_fileno(in)));
