@@ -1,5 +1,5 @@
-/*  qsort.c -- quicksort implementation                       */
-/*  Copyright (c) 2009-2011 Alex Shinn.  All rights reserved. */
+/*  qsort.c -- object comparison & sort implementation        */
+/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/eval.h"
@@ -174,83 +174,107 @@ static sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, 
 
 /* fast path when using general object-cmp comparator with no key */
 /* TODO: include another fast path when the key is a fixed offset */
-static void sexp_qsort (sexp ctx, sexp *vec, sexp_sint_t lo, sexp_sint_t hi) {
-  sexp_sint_t mid, i, j, diff;
-  sexp tmp, tmp2;
- loop:
-  if (lo < hi) {
-    mid = lo + (hi-lo)/2;
-    swap(tmp, vec[mid], vec[hi]);
-    /* partition */
-    for (i=j=lo; i < hi; i++) {
-      diff = sexp_object_compare(ctx, vec[i], tmp);
-      if (diff <= 0) {
-        swap(tmp2, vec[i], vec[j]);
-        j++;
+static void sexp_merge_sort (sexp ctx, sexp *vec, sexp *scratch, sexp_sint_t lo, sexp_sint_t hi) {
+  sexp_sint_t mid, i, j, k;
+  sexp tmp;
+  switch (hi - lo) {
+  case 0:
+    scratch[lo] = vec[lo];
+    break;
+  case 2:
+    if (sexp_object_compare(ctx, vec[hi], vec[hi-1]) < 0)
+      swap(tmp, vec[hi], vec[hi-1]);
+    /* ... FALLTHROUGH ... */
+  case 1:
+    if (sexp_object_compare(ctx, vec[lo+1], vec[lo]) < 0) {
+      swap(tmp, vec[lo+1], vec[lo]);
+      if (hi - lo > 1) {
+        if (sexp_object_compare(ctx, vec[lo+2], vec[lo+1]) < 0)
+          swap(tmp, vec[lo+2], vec[lo+1]);
       }
     }
-    swap(tmp, vec[j], vec[hi]);
-    /* recurse */
-    sexp_qsort(ctx, vec, lo, j-1);
-    if (j < hi-1) {
-      lo = j;
-      goto loop; /* tail recurse on right side */
+    break;
+  default:                      /* at least 4 elements */
+    mid = (hi+lo)/2;
+    sexp_merge_sort(ctx, vec, scratch, lo, mid);
+    sexp_merge_sort(ctx, vec, scratch, mid+1, hi);
+    for (k=lo, i = lo, j = mid+1; k <= hi; ++k) {
+      if (i > mid) {
+        scratch[k] = vec[j++];
+      } else if (j > hi) {
+        scratch[k] = vec[i++];
+      } else {
+        if (sexp_object_compare(ctx, vec[j], vec[i]) < 0) {
+          scratch[k] = vec[j++];
+        } else {
+          scratch[k] = vec[i++];
+        }
+      }
     }
+    memcpy(vec + lo, scratch + lo, (hi-lo+1) * sizeof(sexp));
   }
 }
 
-static sexp sexp_qsort_less (sexp ctx, sexp *vec,
-                             sexp_sint_t lo, sexp_sint_t hi,
-                             sexp less, sexp key) {
-  sexp_sint_t mid, i, j;
+#define if_is_less(i, j)                                                \
+  a = (sexp_truep(key) ? (sexp_car(args1) = vec[i], sexp_apply(ctx, key, args1)) : vec[i]);       \
+  if (sexp_exceptionp(a)) {res=a; goto done;}                           \
+  b = (sexp_truep(key) ? (sexp_car(args1) = vec[j], sexp_apply(ctx, key, args1)) : vec[j]); \
+  if (sexp_exceptionp(b)) {res=b; goto done;}                           \
+  sexp_car(args2) = a;                                                  \
+  sexp_car(args1) = b;                                                  \
+  res = sexp_apply(ctx, less, args2);                                   \
+  if (sexp_exceptionp(res)) goto done;                                  \
+  if (sexp_truep(res))
+
+static sexp sexp_merge_sort_less (sexp ctx, sexp *vec, sexp *scratch,
+                                  sexp_sint_t lo, sexp_sint_t hi,
+                                  sexp less, sexp key) {
+  sexp_sint_t mid, i, j, k;
   sexp args1;
   sexp_gc_var5(a, b, tmp, args2, res);
   sexp_gc_preserve5(ctx, a, b, tmp, args2, res);
   args2 = sexp_list2(ctx, SEXP_VOID, SEXP_VOID);
   args1 = sexp_cdr(args2);
- loop:
-  if (lo >= hi) {
+  switch (hi - lo) {
+  case 0:
     res = SEXP_VOID;
-  } else {
-    mid = lo + (hi-lo)/2;
-    swap(tmp, vec[mid], vec[hi]);
-    if (sexp_truep(key)) {
-      sexp_car(args1) = tmp;
-      b = sexp_apply(ctx, key, args1);
-    } else {
-      b = tmp;
-    }
-    /* partition */
-    for (i=j=lo; i < hi; i++) {
-      if (sexp_truep(key)) {
-        sexp_car(args1) = vec[i];
-        a = sexp_apply(ctx, key, args1);
-      } else {
-        a = vec[i];
-      }
-      sexp_car(args2) = b;
-      sexp_car(args1) = a;
-      res = sexp_apply(ctx, less, args2);
-      if (sexp_exceptionp(res)) {
-        goto done;
-      } else if (sexp_not(res)) {
-        swap(res, vec[i], vec[j]), j++;
-      } else {
-        sexp_car(args2) = b;
-        sexp_car(args1) = a;
-        res = sexp_apply(ctx, less, args2);
-        if (sexp_not(res)) j++;  /* equal */
+    scratch[lo] = vec[lo];
+    break;
+  case 2:
+    if_is_less (hi, hi-1)
+      swap(tmp, vec[hi], vec[hi-1]);
+    /* ... FALLTHROUGH ... */
+  case 1:
+    if_is_less (lo+1, lo) {
+      swap(tmp, vec[lo+1], vec[lo]);
+      if (hi - lo > 1) {
+        if_is_less (lo+2, lo+1)
+          swap(tmp, vec[lo+2], vec[lo+1]);
       }
     }
-    swap(tmp, vec[j], vec[hi]);
-    /* recurse */
-    res = sexp_qsort_less(ctx, vec, lo, j-1, less, key);
+    break;
+  default:                      /* at least 4 elements */
+    mid = (hi+lo)/2;
+    res = sexp_merge_sort_less(ctx, vec, scratch, lo, mid, less, key);
     if (sexp_exceptionp(res))
       goto done;
-    if (j < hi-1) {
-      lo = j;
-      goto loop; /* tail recurse on right side */
+    res = sexp_merge_sort_less(ctx, vec, scratch, mid+1, hi, less, key);
+    if (sexp_exceptionp(res))
+      goto done;
+    for (k=lo, i = lo, j = mid+1; k <= hi; ++k) {
+      if (i > mid) {
+        scratch[k] = vec[j++];
+      } else if (j > hi) {
+        scratch[k] = vec[i++];
+      } else {
+        if_is_less (j, i) {
+          scratch[k] = vec[j++];
+        } else {
+          scratch[k] = vec[i++];
+        }
+      }
     }
+    memcpy(vec + lo, scratch + lo, (hi-lo+1) * sizeof(sexp));
   }
  done:
   sexp_gc_release5(ctx);
@@ -260,22 +284,23 @@ static sexp sexp_qsort_less (sexp ctx, sexp *vec,
 static sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
                          sexp less, sexp key) {
   sexp_sint_t len;
-  sexp res, *data;
-  sexp_gc_var1(vec);
+  sexp res;
+  sexp_gc_var2(vec, scratch);
 
   if (sexp_nullp(seq)) return seq;
 
-  sexp_gc_preserve1(ctx, vec);
+  sexp_gc_preserve2(ctx, vec, scratch);
 
   vec = (sexp_truep(sexp_listp(ctx, seq)) ? sexp_list_to_vector(ctx, seq) : seq);
 
   if (! sexp_vectorp(vec)) {
     res = sexp_type_exception(ctx, self, SEXP_VECTOR, vec);
   } else {
-    data = sexp_vector_data(vec);
+    scratch = sexp_make_vector(ctx, sexp_make_fixnum(sexp_vector_length(vec)), SEXP_VOID);
     len = sexp_vector_length(vec);
     if (sexp_not(key) && sexp_basic_comparator(less)) {
-      sexp_qsort(ctx, data, 0, len-1);
+      sexp_merge_sort(ctx, sexp_vector_data(vec), sexp_vector_data(scratch),
+                      0, len-1);
       if (sexp_opcodep(less) && sexp_opcode_inverse(less))
         sexp_vector_nreverse(ctx, vec);
       res = vec;
@@ -284,15 +309,16 @@ static sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
     } else if (! (sexp_procedurep(key) || sexp_opcodep(key) || sexp_not(key))) {
       res = sexp_type_exception(ctx, self, SEXP_PROCEDURE, key);
     } else {
-      res = sexp_qsort_less(ctx, data, 0, len-1, less, key);
-      if (!sexp_exceptionp(res)) res = vec;
+      res = sexp_merge_sort_less(ctx, sexp_vector_data(vec),
+                                 sexp_vector_data(scratch),
+                                 0, len-1, less, key);
     }
   }
 
   if (sexp_pairp(seq) && ! sexp_exceptionp(res))
     res = sexp_vector_copy_to_list(ctx, vec, seq);
 
-  sexp_gc_release1(ctx);
+  sexp_gc_release2(ctx);
   return res;
 }
 
