@@ -163,15 +163,6 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
     if (sexp_port_stream(port) && ! sexp_port_no_closep(port))
       /* close the stream */
       fclose(sexp_port_stream(port));
-      /* free the buffer if allocated */
-    if (sexp_port_buf(port) && sexp_oportp(port)
-        /* output string ports have list cookies */
-        && (sexp_nullp(sexp_port_cookie(port)) || sexp_pairp(sexp_port_cookie(port)))
-#if !SEXP_USE_STRING_STREAMS
-        && !sexp_port_customp(port)
-#endif
-        )
-      free(sexp_port_buf(port));
     sexp_port_offset(port) = 0;
     sexp_port_size(port) = 0;
   }
@@ -1578,7 +1569,7 @@ int sexp_buffered_flush (sexp ctx, sexp p, int forcep) {
     } else {                      /* string port */
       tmp = sexp_c_string(ctx, sexp_port_buf(p), off);
       if (tmp && sexp_stringp(tmp)) {
-        sexp_push(ctx, sexp_port_cookie(p), tmp);
+        sexp_push(ctx, sexp_cdr(sexp_port_cookie(p)), tmp);
         sexp_port_offset(p) = 0;
         res = 0;
       } else {
@@ -1604,17 +1595,23 @@ sexp sexp_open_input_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
 }
 
 sexp sexp_open_output_string_op (sexp ctx, sexp self, sexp_sint_t n) {
-  sexp res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
-  if (sexp_exceptionp(res)) return res;
-  sexp_port_buf(res) = (char*) sexp_malloc(SEXP_PORT_BUFFER_SIZE);
-  if (!sexp_port_buf(res)) {
-    res = sexp_global(ctx, SEXP_G_OOM_ERROR);
-  } else {
-    sexp_port_size(res) = SEXP_PORT_BUFFER_SIZE;
-    sexp_port_offset(res) = 0;
-    sexp_port_cookie(res) = SEXP_NULL;
-    sexp_port_binaryp(res) = 0;
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_output_port(ctx, NULL, SEXP_FALSE);
+  if (!sexp_exceptionp(res)) {
+    sexp_port_cookie(res) = sexp_cons(ctx, SEXP_FALSE, SEXP_NULL);
+    sexp_car(sexp_port_cookie(res)) =
+      sexp_make_bytes(ctx, sexp_make_fixnum(SEXP_PORT_BUFFER_SIZE), SEXP_VOID);
+    if (sexp_exceptionp(sexp_car(sexp_port_cookie(res)))) {
+      res = sexp_car(sexp_port_cookie(res));
+    } else {
+      sexp_port_buf(res) = sexp_bytes_data(sexp_car(sexp_port_cookie(res)));
+      sexp_port_size(res) = SEXP_PORT_BUFFER_SIZE;
+      sexp_port_offset(res) = 0;
+      sexp_port_binaryp(res) = 0;
+    }
   }
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -1627,9 +1624,9 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp_gc_preserve3(ctx, ls, rev, tmp);
   if (sexp_port_offset(out) > 0) {
     tmp = sexp_c_string(ctx, sexp_port_buf(out), sexp_port_offset(out));
-    rev = sexp_cons(ctx, tmp, sexp_port_cookie(out));
+    rev = sexp_cons(ctx, tmp, sexp_cdr(sexp_port_cookie(out)));
   } else {
-    rev = sexp_port_cookie(out);
+    rev = sexp_cdr(sexp_port_cookie(out));
   }
   ls = sexp_reverse(ctx, rev);
   res = SEXP_FALSE;
