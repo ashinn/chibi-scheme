@@ -513,10 +513,14 @@ div#footer {padding-bottom: 50px}
                      ((v ('if ('and ('pair? (? o?)) ('pair? ('cdr (? o?))))
                              ('cadr (? o?))
                              default))
-                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                      (lp (cdr ls)
+                          (cons (cons v (+ 1 (if ordered? j i))) vars)
+                          j))
                      ((v ('and ('pair? (? o?)) ('pair? ('cdr (? o?)))
                                ('cadr (? o?))))
-                      (lp (cdr ls) (cons (cons v (if ordered? j i)) vars) j))
+                      (lp (cdr ls)
+                          (cons (cons v (+ 1 (if ordered? j i))) vars)
+                          j))
                      (else
                       (lp (cdr ls) vars j))))
                   (else
