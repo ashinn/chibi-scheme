@@ -2717,7 +2717,8 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
         tmp = sexp_read_error(ctx, "brace literal missing type identifier", sexp_make_character(c1), in);
       }
       if (!sexp_exceptionp(tmp)) tmp = sexp_lookup_type(ctx, res, tmp);
-      if (tmp && sexp_typep(tmp) && sexp_opcodep(sexp_type_print(tmp))
+      if (tmp && sexp_typep(tmp) && sexp_type_print(tmp)
+          && sexp_opcodep(sexp_type_print(tmp))
           && sexp_opcode_func(sexp_type_print(tmp)) == (sexp_proc1)sexp_write_simple_object) {
         res = sexp_alloc_tagged(ctx, sexp_type_size_base(tmp), sexp_type_tag(tmp));
         for (c1=0; ; c1++) {
