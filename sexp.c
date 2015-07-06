@@ -2593,7 +2593,23 @@ static int sexp_decode_utf8_char(const unsigned char* s) {
 }
 #endif
 
-sexp sexp_read_raw (sexp ctx, sexp in) {
+#if SEXP_USE_READER_LABELS
+static sexp sexp_fill_reader_labels(sexp ctx, sexp x, sexp shares) {
+  sexp t, *p, *q;
+  if (sexp_reader_labelp(x))
+    return sexp_vector_data(shares)[sexp_unbox_reader_label(x)];
+  if (!x || !sexp_pointerp(x))
+    return x;
+  t = sexp_object_type(ctx, x);
+  p = (sexp*) (((char*)x) + sexp_type_field_base(t));
+  q = p + sexp_type_num_slots_of_object(t, x);
+  for ( ; p < q; ++p)
+    *p = sexp_fill_reader_labels(ctx, *p, shares);
+  return x;
+}
+#endif
+
+sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   char *str;
   int c1, c2, line;
   sexp tmp2;
@@ -2646,7 +2662,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
   case '(':
     line = (sexp_port_sourcep(in) ? sexp_port_line(in) : -1);
     res = SEXP_NULL;
-    tmp = sexp_read_raw(ctx, in);
+    tmp = sexp_read_raw(ctx, in, shares);
     while ((tmp != SEXP_EOF) && (tmp != SEXP_CLOSE) && (tmp != SEXP_RAWDOT)) {
       if (sexp_exceptionp(tmp)) {
         res = tmp;
@@ -2656,7 +2672,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       if (sexp_port_sourcep(in) && (line >= 0))
         sexp_pair_source(res)
           = sexp_cons(ctx, sexp_port_name(in), sexp_make_fixnum(line));
-      tmp = sexp_read_raw(ctx, in);
+      tmp = sexp_read_raw(ctx, in, shares);
     }
     if (! sexp_exceptionp(res)) {
       if (tmp == SEXP_RAWDOT) { /* dotted list */
@@ -2664,13 +2680,13 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           res = sexp_read_error(ctx, "dot before any elements in list",
                                 SEXP_NULL, in);
         } else {
-          tmp = sexp_read_raw(ctx, in);
+          tmp = sexp_read_raw(ctx, in, shares);
           if (sexp_exceptionp(tmp)) {
             res = tmp;
           } else if (tmp == SEXP_CLOSE) {
             res = sexp_read_error(ctx, "no final element in list after dot",
                                   SEXP_NULL, in);
-          } else if (sexp_read_raw(ctx, in) != SEXP_CLOSE) {
+          } else if (sexp_read_raw(ctx, in, shares) != SEXP_CLOSE) {
             res = sexp_read_error(ctx, "multiple tokens in dotted tail",
                                   SEXP_NULL, in);
           } else if (tmp == SEXP_RAWDOT) {
@@ -2722,7 +2738,7 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
           && sexp_opcode_func(sexp_type_print(tmp)) == (sexp_proc1)sexp_write_simple_object) {
         res = sexp_alloc_tagged(ctx, sexp_type_size_base(tmp), sexp_type_tag(tmp));
         for (c1=0; ; c1++) {
-          tmp2 = sexp_read_raw(ctx, in);
+          tmp2 = sexp_read_raw(ctx, in, shares);
           if (sexp_exceptionp(tmp2)) {
             res = tmp2;
             break;
@@ -2829,10 +2845,50 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
       }
       break;
 #endif
-/*     case '0': case '1': case '2': case '3': case '4': */
-/*     case '5': case '6': case '7': case '8': case '9': */
+#if SEXP_USE_READER_LABELS
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      c2 = digit_value(c1);
+      while (isdigit(c1=sexp_read_char(ctx, in)))
+        c2 = c2 * 10 + digit_value(c1);
+      tmp = sexp_make_fixnum(c2);
+      if (c1 == '#') {
+        if (!sexp_vectorp(*shares) ||
+            tmp > sexp_vector_data(*shares)[sexp_vector_length(*shares)-1] ||
+            sexp_vector_data(*shares)[c2] == SEXP_VOID)
+          res = sexp_read_error(ctx, "unknown reader label", tmp, in);
+        else
+          res = sexp_vector_data(*shares)[c2];
+      } else if (c1 == '=') {
+        if (!sexp_vectorp(*shares)) {
+          *shares = sexp_make_vector(ctx, sexp_make_fixnum(24), SEXP_VOID);
+          sexp_vector_data(*shares)[23] = SEXP_ZERO;
+        }
+        if (tmp >
+            sexp_fx_add(sexp_vector_data(*shares)[sexp_vector_length(*shares)-1],
+                        sexp_make_fixnum(16))) {
+          fprintf(stderr, "%d - 16 > %ld\n", c2, sexp_unbox_fixnum(sexp_vector_data(*shares)[sexp_vector_length(*shares)-1]));
+          res = sexp_read_error(ctx, "reader label out of order", tmp, in);
+        }
+        else {
+          if (c2 + 1 >= sexp_vector_length(*shares)) {
+            tmp2 = sexp_make_vector(ctx, sexp_make_fixnum(sexp_vector_length(*shares)*2), SEXP_VOID);
+            memcpy(sexp_vector_data(tmp2), sexp_vector_data(*shares), (sexp_vector_length(*shares)-1)*sizeof(sexp));
+            *shares = tmp2;
+          }
+          sexp_vector_data(*shares)[c2] = sexp_make_reader_label(c2);
+          if (tmp > sexp_vector_data(*shares)[sexp_vector_length(*shares)-1])
+            sexp_vector_data(*shares)[sexp_vector_length(*shares)-1] = tmp;
+          res = sexp_read_raw(ctx, in, shares);
+          sexp_vector_data(*shares)[c2] = res;
+        }
+      } else {
+        res = sexp_read_error(ctx, "expected # or = after #<n>", sexp_make_character(c1), in);
+      }
+      break;
+#endif
     case ';':
-      tmp = sexp_read(ctx, in);   /* discard */
+      tmp = sexp_read_raw(ctx, in, shares);   /* discard */
       if (sexp_exceptionp(tmp))
         res = tmp;
       else
@@ -3068,9 +3124,11 @@ sexp sexp_read_raw (sexp ctx, sexp in) {
 
 sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
   sexp res;
+  sexp_gc_var1(shares);
   sexp_assert_type(ctx, sexp_iportp, SEXP_IPORT, in);
   sexp_check_block_port(ctx, in, 0);
-  res = sexp_read_raw(ctx, in);
+  sexp_gc_preserve1(ctx, shares);
+  res = sexp_read_raw(ctx, in, &shares);
   if (res == SEXP_CLOSE)
     res = sexp_read_error(ctx, "too many ')'s", SEXP_NULL, in);
 #if SEXP_USE_OBJECT_BRACE_LITERALS
@@ -3079,7 +3137,12 @@ sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
 #endif
   else if (res == SEXP_RAWDOT)
     res = sexp_read_error(ctx, "unexpected '.'", SEXP_NULL, in);
+#if SEXP_USE_READER_LABELS
+  else if (!sexp_exceptionp(res) && sexp_vectorp(shares))
+    res = sexp_fill_reader_labels(ctx, res, shares);
+#endif
   sexp_maybe_unblock_port(ctx, in);
+  sexp_gc_release1(ctx);
   return res;
 }
 

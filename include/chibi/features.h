@@ -195,6 +195,11 @@
 /* uncomment this to disable extended char names as defined in R7RS */
 /* #define SEXP_USE_EXTENDED_CHAR_NAMES 0 */
 
+/* uncomment this to disable R7RS #<n>= and #<n># reader labels in source */
+/*   The (scheme read) and (scheme write) libraries always support */
+/*   this regardless. */
+/* #define SEXP_USE_READER_LABELS 0 */
+
 /* uncomment this to disable UTF-8 string support */
 /*   The default settings store strings in memory as UTF-8, */
 /*   and assumes strings passed to/from the C FFI are UTF-8.  */
@@ -592,6 +597,10 @@
 
 #ifndef SEXP_USE_EXTENDED_CHAR_NAMES
 #define SEXP_USE_EXTENDED_CHAR_NAMES ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_READER_LABELS
+#define SEXP_USE_READER_LABELS ! SEXP_USE_NO_FEATURES
 #endif
 
 #ifndef SEXP_USE_UTF8_STRINGS

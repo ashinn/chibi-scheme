@@ -88,6 +88,7 @@ typedef unsigned long size_t;
  *                 011:  immediate flonum (optional)
  *                 111:  immediate symbol (optional)
  *              000110:  char
+ *              001010:  reader label (optional)
  *              001110:  unique immediate (NULL, TRUE, FALSE)
  */
 
@@ -104,6 +105,7 @@ typedef unsigned long size_t;
 #define SEXP_ISYMBOL_TAG 7
 #define SEXP_IFLONUM_TAG 3
 #define SEXP_CHAR_TAG 6
+#define SEXP_READER_LABEL_TAG 10
 #define SEXP_EXTENDED_TAG 14
 
 #ifndef SEXP_POINTER_MAGIC
@@ -634,6 +636,7 @@ void* sexp_alloc(sexp ctx, size_t size);
 #define sexp_fixnump(x)  (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_FIXNUM_TAG)
 #define sexp_isymbolp(x) (((sexp_uint_t)(x) & SEXP_IMMEDIATE_MASK) == SEXP_ISYMBOL_TAG)
 #define sexp_charp(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
+#define sexp_reader_labelp(x) (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_READER_LABEL_TAG)
 #define sexp_booleanp(x) (((x) == SEXP_TRUE) || ((x) == SEXP_FALSE))
 
 #define sexp_pointer_tag(x)      ((x)->tag)
@@ -774,6 +777,9 @@ SEXP_API int sexp_idp(sexp x);
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
+
+#define sexp_make_reader_label(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_READER_LABEL_TAG))
+#define sexp_unbox_reader_label(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
 
 #define sexp_fixnum_to_double(x) ((double)sexp_unbox_fixnum(x))
 
@@ -1420,7 +1426,7 @@ SEXP_API sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
 #if SEXP_USE_COMPLEX
 SEXP_API sexp sexp_read_complex_tail(sexp ctx, sexp in, sexp res);
 #endif
-SEXP_API sexp sexp_read_raw (sexp ctx, sexp in);
+SEXP_API sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares);
 SEXP_API sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in);
 SEXP_API sexp sexp_char_ready_p (sexp ctx, sexp self, sexp_sint_t n, sexp in);
 SEXP_API sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len);
