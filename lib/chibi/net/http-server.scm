@@ -1,15 +1,27 @@
 ;; http-server.scm -- combinator-based http server
-;; Copyright (c) 2013-2014 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2013-2015 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Runs an http server listening at the given address, with the given
 ;;> servlet.
 ;;>
-;;> An servlet is a procedure which takes three arguments: an
-;;> \scheme{Http-Request} record, which contains the I/O ports and
-;;> parsed request and headers; a \scheme{next} procedure to call the
-;;> next available servlet if any, and a \scheme{restart} procedure to
-;;> restart the servlets with a new request.
+;;> An servlet is a procedure which takes four arguments: a 
+;;> \scheme{(chibi config)} config object, an \scheme{Http-Request} record,
+;;> which contains the I/O ports and parsed request and headers;
+;;> a \scheme{next} procedure to call the next available servlet if any,
+;;> and a \scheme{restart} procedure to restart the servlets with a new
+;;> request.
+;;>
+;;> A simple page view counter could be run as:
+;;>
+;;> \example{
+;;> (let ((count 0))
+;;>   (run-http-server
+;;>    8000
+;;>    (lambda (cfg request next restart)
+;;>      (set! count (+ 1 count))
+;;>      (servlet-write request (sxml->xml `(html (body (p ,count))))))))
+;;> }
 
 (define (run-http-server listener-or-addr servlet . o)
   (let ((cfg (if (pair? o) (car o) (make-conf '() #f #f #f))))
