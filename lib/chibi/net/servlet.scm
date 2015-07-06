@@ -91,7 +91,7 @@
         (uri (string->path-uri 'http uri)))
     (request-uri-set! request2 uri)
     ;; NOTE: this looses form parameters
-    (request-params-set! request2 (uri-query->alist (or (uri-query uri) "")))
+    (request-params-set! request2 (uri-query->alist (or (uri-query uri) "") #t))
     request2))
 
 (define (request-param request name . o)
@@ -118,7 +118,7 @@
   (let* ((uri (string->path-uri 'http path))
          (headers (mime-headers->list in))
          (host (get-host uri headers))
-         (params (uri-query->alist (or (uri-query uri) ""))))
+         (params (uri-query->alist (or (uri-query uri) "") #t)))
     (%make-request method host uri version headers #f params '()
                    in out sock addr #f)))
 
@@ -126,7 +126,7 @@
   (let* ((method (or (get-environment-variable "REQUEST_METHOD") "GET"))
          (uri (string->path-uri
                'http (or (get-environment-variable "REQUEST_URI") "")))
-         (params (uri-query->alist (or (uri-query uri) "")))
+         (params (uri-query->alist (or (uri-query uri) "") #t))
          (headers `((host . ,(or (get-environment-variable "HTTP_HOST")
                                  ""))))
          (host (get-host uri headers))
@@ -239,7 +239,7 @@
         (if (not (eof-object? line))
             (request-params-set! request
                                  (append (request-params request)
-                                         (uri-query->alist line)))))))))
+                                         (uri-query->alist line #t)))))))))
 
 (define (make-status-servlet status msg . o)
   (lambda (cfg request next restart)
