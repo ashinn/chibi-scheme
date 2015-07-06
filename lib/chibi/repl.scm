@@ -317,7 +317,13 @@
                            (repl-advise-exception exn (current-error-port))))
                   (for-each
                    (lambda (expr)
-                     (call-with-values (lambda () (eval expr (repl-env rp)))
+                     (call-with-values
+                         (lambda ()
+                           (if (or (identifier? expr)
+                                   (pair? expr)
+                                   (null? expr))
+                               (eval expr (repl-env rp))
+                               expr))
                        (lambda res-list
                          (cond
                           ((not (or (null? res-list)
