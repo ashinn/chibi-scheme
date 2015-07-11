@@ -108,8 +108,8 @@ sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sex
     for (i=0; i<len; i++) {
       x = sexp_slot_ref(obj, i);
       if (x) {
-        if (nulls)
-          while (--nulls) sexp_write_string(ctx, " #<null>", out);
+        for ( ; nulls; --nulls)
+          sexp_write_string(ctx, " #f", out);
         sexp_write_char(ctx, ' ', out);
         if (writer && sexp_applicablep(writer)) {
           sexp_car(args) = x;
