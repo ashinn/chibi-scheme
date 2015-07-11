@@ -2594,17 +2594,18 @@ static int sexp_decode_utf8_char(const unsigned char* s) {
 #endif
 
 #if SEXP_USE_READER_LABELS
-static sexp sexp_fill_reader_labels(sexp ctx, sexp x, sexp shares) {
+static sexp sexp_fill_reader_labels(sexp ctx, sexp x, sexp shares, int state) {
   sexp t, *p, *q;
   if (sexp_reader_labelp(x))
     return sexp_vector_data(shares)[sexp_unbox_reader_label(x)];
-  if (!x || !sexp_pointerp(x))
+  if (!x || !sexp_pointerp(x) || sexp_markedp(x) == state)
     return x;
+  sexp_markedp(x) = state;
   t = sexp_object_type(ctx, x);
   p = (sexp*) (((char*)x) + sexp_type_field_base(t));
   q = p + sexp_type_num_slots_of_object(t, x);
   for ( ; p < q; ++p)
-    *p = sexp_fill_reader_labels(ctx, *p, shares);
+    *p = sexp_fill_reader_labels(ctx, *p, shares, state);
   return x;
 }
 #endif
@@ -3138,8 +3139,10 @@ sexp sexp_read_op (sexp ctx, sexp self, sexp_sint_t n, sexp in) {
   else if (res == SEXP_RAWDOT)
     res = sexp_read_error(ctx, "unexpected '.'", SEXP_NULL, in);
 #if SEXP_USE_READER_LABELS
-  else if (!sexp_exceptionp(res) && sexp_vectorp(shares))
-    res = sexp_fill_reader_labels(ctx, res, shares);
+  else if (!sexp_exceptionp(res) && sexp_vectorp(shares)) {
+    res = sexp_fill_reader_labels(ctx, res, shares, 1);  /* mark=1 */
+    res = sexp_fill_reader_labels(ctx, res, shares, 0);  /* mark=0 */
+  }
 #endif
   sexp_maybe_unblock_port(ctx, in);
   sexp_gc_release1(ctx);
