@@ -5,7 +5,7 @@
    Object Input-Port Output-Port Opcode Procedure Bytecode Macro Env
    Number Bignum Flonum Integer Complex Char Boolean
    Symbol String Byte-Vector Vector Pair File-Descriptor
-   Context Lam Cnd Set Ref Seq Lit Sc Exception Core
+   Context Lam Cnd Set Set-Syn Ref Seq Lit Sc Exception Core
    syntactic-closure? lambda? cnd? set? ref? seq? lit? type? core?
    environment? bytecode? exception? macro? context? file-descriptor?
    syntactic-closure-expr syntactic-closure-env syntactic-closure-vars
@@ -34,7 +34,7 @@
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!
    env-define! env-push! env-syntactic? env-syntactic?-set! core-code
    type-name type-cpl type-parent type-slots type-num-slots type-printer
-   object-size integer->immediate gc gc-usecs gc-count
+   object-size object->integer integer->immediate gc gc-usecs gc-count
    atomically thread-list abort
    string-contains string-cursor-copy! errno integer->error-string
    flatten-dot update-free-vars! setenv unsetenv safe-setenv)

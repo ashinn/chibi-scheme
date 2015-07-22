@@ -298,9 +298,13 @@ static sexp sexp_object_size (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
 static sexp sexp_integer_to_immediate (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp dflt) {
   sexp x = (sexp)sexp_unbox_fixnum(i);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
-  if (sexp_pointerp(x))
+  if (!x || sexp_pointerp(x))
     return dflt;
   return x;
+}
+
+static sexp sexp_object_to_integer (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  return sexp_make_integer(ctx, (sexp_uint_t)x);
 }
 
 static sexp sexp_make_lambda_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp params, sexp body, sexp locals) {
@@ -559,6 +563,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type(ctx, "Lam", SEXP_LAMBDA);
   sexp_define_type(ctx, "Cnd", SEXP_CND);
   sexp_define_type(ctx, "Set", SEXP_SET);
+  sexp_define_type(ctx, "Set-Syn", SEXP_SET_SYN);
   sexp_define_type(ctx, "Ref", SEXP_REF);
   sexp_define_type(ctx, "Seq", SEXP_SEQ);
   sexp_define_type(ctx, "Lit", SEXP_LIT);
@@ -654,6 +659,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "core-code", 1, sexp_core_code_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
+  sexp_define_foreign_opt(ctx, env, "object->integer", 1, sexp_object_to_integer, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
   sexp_define_foreign(ctx, env, "gc-count", 0, sexp_gc_count_op);
   sexp_define_foreign(ctx, env, "gc-usecs", 0, sexp_gc_usecs_op);
