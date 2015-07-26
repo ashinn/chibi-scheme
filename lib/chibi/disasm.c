@@ -37,6 +37,10 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   sexp_sint_t src_off=0;
 #endif
 
+  if (sexp_idp(bc))
+    bc = sexp_env_ref(ctx, sexp_context_env(ctx), bc, SEXP_FALSE);
+  if (sexp_macrop(bc))
+    bc = sexp_macro_proc(bc);
   if (sexp_procedurep(bc)) {
     bc = sexp_procedure_code(bc);
   } else if (sexp_opcodep(bc)) {
