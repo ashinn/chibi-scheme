@@ -232,7 +232,7 @@
            (body (cddr expr))
            (tmp (rename 'tmp))
            (this-module (rename '*this-module*))
-           (add-module! (rename 'add-module!))
+           (_add-module! (rename 'add-module!))
            (_make-module (rename 'make-module))
            (_define (rename 'meta-define))
            (_lambda (rename 'lambda))
@@ -301,10 +301,10 @@
                  (,_else (lp (,_cdr ls) res)))))))
           (,_set! ,this-module (,_quote ()))
           ,@body
-          (,add-module! (,_quote ,name)
-                        (,_make-module (extract-exports)
-                                       #f
-                                       (,_reverse ,this-module)))
+          (,_add-module! (,_quote ,name)
+                         (,_make-module (extract-exports)
+                                        #f
+                                        (,_reverse ,this-module)))
           (,_set! ,this-module ,tmp)
           (,(rename 'pop-this-path)))))))
 
@@ -410,7 +410,7 @@
    (cons '(chibi primitive)
          (make-module #f #f (lambda (env) (primitive-environment 7))))
    (cons '(meta)
-         (make-module #f (current-environment) '()))
+         (make-module #f (current-environment) '((include "meta-7.scm"))))
    (cons '(srfi 0)
          (make-module (list 'cond-expand)
                       (current-environment)
