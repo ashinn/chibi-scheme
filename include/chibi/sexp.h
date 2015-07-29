@@ -156,6 +156,7 @@ enum sexp_types {
   SEXP_CND,
   SEXP_REF,
   SEXP_SET,
+  SEXP_SET_SYN,
   SEXP_SEQ,
   SEXP_LIT,
   SEXP_STACK,
@@ -449,6 +450,9 @@ struct sexp_struct {
       sexp var, value, source;
     } set;
     struct {
+      sexp var, value, source;
+    } set_syn;
+    struct {
       sexp name, cell, source;
     } ref;
     struct {
@@ -725,6 +729,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_cndp(x)        (sexp_check_tag(x, SEXP_CND))
 #define sexp_refp(x)        (sexp_check_tag(x, SEXP_REF))
 #define sexp_setp(x)        (sexp_check_tag(x, SEXP_SET))
+#define sexp_set_synp(x)    (sexp_check_tag(x, SEXP_SET_SYN))
 #define sexp_seqp(x)        (sexp_check_tag(x, SEXP_SEQ))
 #define sexp_litp(x)        (sexp_check_tag(x, SEXP_LIT))
 #define sexp_contextp(x)    (sexp_check_tag(x, SEXP_CONTEXT))
@@ -1074,6 +1079,10 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_set_var(x)       (sexp_field(x, set, SEXP_SET, var))
 #define sexp_set_value(x)     (sexp_field(x, set, SEXP_SET, value))
 #define sexp_set_source(x)    (sexp_field(x, set, SEXP_SET, source))
+
+#define sexp_set_syn_var(x)    (sexp_field(x, set, SEXP_SET_SYN, var))
+#define sexp_set_syn_value(x)  (sexp_field(x, set, SEXP_SET_SYN, value))
+#define sexp_set_syn_source(x) (sexp_field(x, set, SEXP_SET_SYN, source))
 
 #define sexp_ref_name(x)      (sexp_field(x, ref, SEXP_REF, name))
 #define sexp_ref_cell(x)      ((x)->value.ref.cell)
