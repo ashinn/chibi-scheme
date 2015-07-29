@@ -1363,8 +1363,10 @@ int sexp_buffered_flush (sexp ctx, sexp p, int forcep) {
       if (res > 0) {
         memmove(sexp_port_buf(p), sexp_port_buf(p) + res, off - res);
         sexp_port_offset(p) = off - res;
+        res = 0;
+      } else {
+        res = -1;
       }
-      res = -1;
     } else {
       sexp_port_offset(p) = 0;
       res = 0;
