@@ -1421,7 +1421,6 @@ SEXP_API sexp sexp_list_to_vector_op (sexp ctx, sexp self, sexp_sint_t n, sexp l
 SEXP_API sexp sexp_make_cpointer (sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep);
 SEXP_API int sexp_is_separator(int c);
 SEXP_API sexp sexp_write_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out);
-SEXP_API sexp sexp_display_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out);
 SEXP_API sexp sexp_flush_output_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_read_string (sexp ctx, sexp in, int sentinel);
 SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
@@ -1589,7 +1588,6 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 
 #define sexp_read(ctx, in) sexp_read_op(ctx, NULL, 1, in)
 #define sexp_write(ctx, obj, out) sexp_write_op(ctx, NULL, 2, obj, out)
-#define sexp_display(ctx, obj, out) sexp_display_op(ctx, NULL, 2, obj, out)
 #define sexp_print_exception(ctx, e, out) sexp_print_exception_op(ctx, NULL, 2, e, out)
 #define sexp_flush_output(ctx, out) sexp_flush_output_op(ctx, NULL, 1, out)
 #define sexp_equalp(ctx, a, b) sexp_equalp_op(ctx, NULL, 2, a, b)
