@@ -791,7 +791,6 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_read(sexp ctx, sexp in)} - read a single datum from port \var{in}}
 \item{\ccode{sexp_write(sexp ctx, sexp obj, sexp out)} - write \var{obj} to port \var{out}}
 \item{\ccode{sexp_write_string(sexp ctx, char* str, sexp out)} - write the characters in \var{str} to port \var{out}}
-\item{\ccode{sexp_display(sexp ctx, sexp obj, sexp out)} - display \var{obj} to port \var{out}}
 \item{\ccode{sexp_newline(sexp ctx, sexp out)} - write a newline to port \var{out}}
 \item{\ccode{sexp_print_exception(sexp ctx, sexp exn, sexp out)} - print an error message for \var{exn} to port \var{out}}
 \item{\ccode{sexp_current_input_port(sexp ctx)} - the \scheme{current-input-port}}
