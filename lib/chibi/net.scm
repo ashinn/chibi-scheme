@@ -48,7 +48,7 @@
                 (cond-expand
                  (threads
                   (if (not (and (pair? o) (car o)))
-                      (let ((st (bitwise-and (get-file-descriptor-status sock)
+                      (let ((st (bitwise-ior (get-file-descriptor-status sock)
                                              open/non-block)))
                         (set-file-descriptor-status! sock st))))
                  (else #f))
