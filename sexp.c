@@ -2386,7 +2386,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
 #endif
   if (!is_precision_indicator(c)) {
 #if SEXP_USE_COMPLEX
-    if (c=='i' || c=='i' || c=='+' || c=='-') {
+    if (c=='i' || c=='+' || c=='-') {
       sexp_push_char(ctx, c, in);
       res = sexp_read_complex_tail(ctx, in, res);
     } else
