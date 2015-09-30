@@ -220,8 +220,9 @@ static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, s
           for (j=len-offset-1, tmp=0; j>=0; j--) {
             sexp_bignum_data(res)[j]
               = (sexp_bignum_data(i)[j+offset] >> bit_shift)+ tmp;
-            tmp = sexp_bignum_data(i)[j+offset]
-              << (sizeof(sexp_uint_t)*CHAR_BIT-bit_shift);
+            if (bit_shift != 0)
+              tmp = sexp_bignum_data(i)[j+offset]
+                << (sizeof(sexp_uint_t)*CHAR_BIT-bit_shift);
           }
         }
       }
