@@ -1243,15 +1243,8 @@ static struct sexp_library_entry_t *sexp_find_static_library(const char *file)
       return entry;
   return NULL;
 }
-static sexp sexp_load_builtin (sexp ctx, sexp file, sexp env) {
-  struct sexp_library_entry_t *entry = sexp_find_static_library(sexp_string_data(file));
-  if (! entry)
-    return sexp_compile_error(ctx, "couldn't find builtin library", file);
-  return entry->init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
-}
 #else
 #define sexp_find_static_library(path) NULL
-#define sexp_load_builtin(ctx, file, env) SEXP_UNDEF
 #endif
 
 #if SEXP_USE_DL
@@ -1310,9 +1303,19 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
 static sexp sexp_load_binary(sexp ctx, sexp source, sexp env) {
+#if SEXP_USE_STATIC_LIBS
+  struct sexp_library_entry_t *entry;
+#endif
   sexp res = sexp_load_dl(ctx, source, env);
-  if (res == SEXP_UNDEF || sexp_exceptionp(res))
-    res = sexp_load_builtin(ctx, source, env);
+#if SEXP_USE_STATIC_LIBS
+  if (res == SEXP_UNDEF || sexp_exceptionp(res)) {
+    entry = sexp_find_static_library(sexp_string_data(file));
+    if (entry == NULL)
+      res = (res == SEXP_UNDEF ? sexp_compile_error(ctx, "couldn't find builtin library", file) : res);
+    else
+      res = entry->init(ctx, NULL, 3, env, sexp_version, SEXP_ABI_IDENTIFIER);
+  }
+#endif
   return res;
 }
 #endif
