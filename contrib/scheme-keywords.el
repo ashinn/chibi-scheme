@@ -19,7 +19,7 @@
 
 ;; Customization:
 
-;; (add-scheme-keywords 'LIST 'FACE) ;; define additional highlights
+;; (scheme-add-keywords 'LIST 'FACE) ;; define additional highlights
 ;; (setq scheme-keywords-completions 'LIST) ;; define additional completions
 
 (require 'company nil t)
