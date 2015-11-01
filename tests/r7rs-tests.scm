@@ -836,9 +836,9 @@
 (test 0.0 (inexact (tan 0))) ;; may return exact number
 (test 1.5574077246549 (tan 1))
 
-(test 0.0 (asin 0))
+(test 0.0 (inexact (asin 0))) ;; may return exact number
 (test 1.5707963267949 (asin 1))
-(test 0.0 (acos 1))
+(test 0.0 (inexact (acos 1))) ;; may return exact number
 (test 3.14159265358979 (acos -1))
 
 (test 0.0 (atan 0.0 1.0))
