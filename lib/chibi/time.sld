@@ -39,6 +39,6 @@
     (define-syntax time
       (syntax-rules ()
         ((time expr)
-         (time (call-with-output-string (lambda (out) (write expr out))) expr))
+         (time (call-with-output-string (lambda (out) (write 'expr out))) expr))
         ((time name expr)
          (time* name (lambda () expr)))))))
