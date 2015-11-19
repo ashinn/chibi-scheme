@@ -8,6 +8,11 @@
 #include <errno.h>
 #endif
 
+#if defined(_WIN32) || defined(__MINGW32__)
+#define setenv(name,value,override) SetEnvironmentVariable(name,value)
+#define unsetenv(name) SetEnvironmentVariable(name,NULL)
+#endif
+
 #if ! SEXP_USE_BOEHM
 extern sexp sexp_gc (sexp ctx, size_t *sum_freed);
 #endif
@@ -429,11 +434,11 @@ static sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new_val) {
 #endif
 
 sexp sexp_thread_list (sexp ctx, sexp self, sexp_sint_t n) {
-  sexp ls;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   res = SEXP_NULL;
 #if SEXP_USE_GREEN_THREADS
+  sexp ls;
   for (ls=sexp_global(ctx, SEXP_G_THREADS_FRONT); sexp_pairp(ls); ls=sexp_cdr(ls))
     sexp_push(ctx, res, sexp_car(ls));
   for (ls=sexp_global(ctx, SEXP_G_THREADS_PAUSED); sexp_pairp(ls); ls=sexp_cdr(ls))
@@ -530,7 +535,7 @@ static sexp sexp_abort (sexp ctx, sexp self, sexp_sint_t n, sexp value) {
 #define sexp_define_type(ctx, name, tag) \
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
-sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
+SEXP_API sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
