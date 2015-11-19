@@ -21,6 +21,13 @@ extern "C" {
 #define sexp_isdigit(x) ((isdigit)((int)(x)))
 #define sexp_tolower(x) ((tolower)((int)(x)))
 #define sexp_toupper(x) ((toupper)((int)(x)))
+#if SEXP_USE_DL
+#define RTLD_DEFAULT 0
+#define RTLD_LAZY    0
+#define dlopen(lib,mode) (void*)LoadLibrary(lib)
+#define dlsym(lib,sym) (void*)GetProcAddress((HMODULE)lib,sym)
+#define dlclose(lib) (int)FreeLibrary((HMODULE)lib)
+#endif
 #else
 #if SEXP_USE_DL
 #include <dlfcn.h>
