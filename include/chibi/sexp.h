@@ -690,7 +690,7 @@ SEXP_API sexp sexp_make_flonum(sexp ctx, float f);
 #define sexp_flonump(x)      (sexp_check_tag(x, SEXP_FLONUM))
 #define sexp_flonum_value(f) ((f)->value.flonum)
 #define sexp_flonum_bits(f) ((f)->value.flonum_bits)
-sexp sexp_make_flonum(sexp ctx, double f);
+SEXP_API sexp sexp_make_flonum(sexp ctx, double f);
 #endif
 
 #define sexp_typep(x)       (sexp_check_tag(x, SEXP_TYPE))
