@@ -739,6 +739,10 @@
 #define isinf(x) (isInf(x,1) || isInf(x,-1))
 #define isnan(x) isNaN(x)
 #elif defined(_WIN32)
+#ifdef __MINGW32__
+#include <shlwapi.h>
+#define strcasestr StrStrI
+#else
 #define snprintf(buf, len, fmt, val) sprintf(buf, fmt, val)
 #define strcasecmp lstrcmpi
 #define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
@@ -746,6 +750,7 @@
 #define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
 #define isnan(x) (x!=x)
 #define isinf(x) (x > DBL_MAX || x < -DBL_MAX)
+#endif
 #endif
 
 #ifdef _WIN32
