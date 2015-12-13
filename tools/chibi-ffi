@@ -1962,7 +1962,7 @@
   (newline)
   (if *c++?*
       (cat "extern \"C\"\n"))
-  (cat "sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {\n"
+  (cat "SEXP_API sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {\n"
        (lambda ()
          (for-each
           (lambda (t) (cat "  sexp " t ";\n"))

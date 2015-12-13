@@ -21,6 +21,13 @@ extern "C" {
 #define sexp_isdigit(x) ((isdigit)((int)(x)))
 #define sexp_tolower(x) ((tolower)((int)(x)))
 #define sexp_toupper(x) ((toupper)((int)(x)))
+#if SEXP_USE_DL
+#define RTLD_DEFAULT 0
+#define RTLD_LAZY    0
+#define dlopen(lib,mode) (void*)LoadLibrary(lib)
+#define dlsym(lib,sym) (void*)GetProcAddress((HMODULE)lib,sym)
+#define dlclose(lib) (int)FreeLibrary((HMODULE)lib)
+#endif
 #else
 #if SEXP_USE_DL
 #include <dlfcn.h>
@@ -685,7 +692,7 @@ SEXP_API sexp sexp_make_flonum(sexp ctx, float f);
 #define sexp_flonump(x)      (sexp_check_tag(x, SEXP_FLONUM))
 #define sexp_flonum_value(f) ((f)->value.flonum)
 #define sexp_flonum_bits(f) ((f)->value.flonum_bits)
-sexp sexp_make_flonum(sexp ctx, double f);
+SEXP_API sexp sexp_make_flonum(sexp ctx, double f);
 #endif
 
 #define sexp_typep(x)       (sexp_check_tag(x, SEXP_TYPE))
