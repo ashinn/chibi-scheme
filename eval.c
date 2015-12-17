@@ -1302,11 +1302,11 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
 #endif
 
 #if SEXP_USE_DL || SEXP_USE_STATIC_LIBS
-static sexp sexp_load_binary(sexp ctx, sexp source, sexp env) {
+static sexp sexp_load_binary(sexp ctx, sexp file, sexp env) {
 #if SEXP_USE_STATIC_LIBS
   struct sexp_library_entry_t *entry;
 #endif
-  sexp res = sexp_load_dl(ctx, source, env);
+  sexp res = sexp_load_dl(ctx, file, env);
 #if SEXP_USE_STATIC_LIBS
   if (res == SEXP_UNDEF || sexp_exceptionp(res)) {
     entry = sexp_find_static_library(sexp_string_data(file));
