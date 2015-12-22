@@ -237,6 +237,10 @@ sexp sexp_bignum_fxrem (sexp ctx, sexp a, sexp_sint_t b) {
   b0 = (b >= 0) ? b : -b;
   for (i=len-1; i>=0; i--) {
     n = (n << sizeof(sexp_uint_t)*8) + data[i];
+    // ISSUE_296 - Division by zero, assigned line 237 if b >= 0
+    if (b0 == 0) {
+      return sexp_read_error(ctx, "division by zero", SEXP_NULL, NULL);
+    }
     q = n / b0;
     n -= (sexp_luint_t)q * b0;
   }
@@ -303,6 +307,10 @@ sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base) {
   sexp_gc_preserve2(ctx, b, str);
   b = sexp_copy_bignum(ctx, NULL, a, 0);
   sexp_bignum_sign(b) = 1;
+  // ISSUE_296 - Division by zero, assigned line 237 if b >= 0
+  if (lg_base == 0) {
+    return sexp_read_error(ctx, "division by zero", SEXP_NULL, NULL);
+  }
   i = str_len = (sexp_bignum_length(b)*sizeof(sexp_uint_t)*8 + lg_base - 1)
     / lg_base + 1;
   str = sexp_make_string(ctx, sexp_make_fixnum(str_len),

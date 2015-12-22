@@ -293,7 +293,8 @@ sexp sexp_register_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
       if (f) sexp_type_dl(type) = sexp_context_dl(ctx);
 #endif
       sexp_type_print(type) = p;
-      if (sexp_typep(parent)) {
+      // ISSUE_296 - Dereference NULL 'parent'
+      if (parent && sexp_typep(parent)) {
         len = sexp_vectorp(sexp_type_cpl(parent)) ? sexp_vector_length(sexp_type_cpl(parent)) : 1;
         sexp_type_cpl(type) = sexp_make_vector(ctx, sexp_make_fixnum(len+1), SEXP_VOID);
         if (sexp_vectorp(sexp_type_cpl(parent)))
@@ -419,6 +420,11 @@ void sexp_init_context_globals (sexp ctx) {
   vec = sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES));
   for (i=0; i<SEXP_NUM_CORE_TYPES; i++) {
     type = sexp_alloc_type(ctx, type, SEXP_TYPE);
+    if (!type) {
+      // ISSUE_296 Null pointer argument, 'type'
+      // TODO - FAIL in some hard way on this case.
+      continue;
+    }
     memcpy(&(type->value), &(_sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
     vec[i] = type;
     sexp_type_name(type) = sexp_c_string(ctx, (char*)sexp_type_name(type), -1);
@@ -1527,7 +1533,8 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
   sexp *data, tmp, vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS);
   sexp_sint_t i, n2, n = sexp_unbox_fixnum(sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS));
   if (!sexp_vectorp(vec)) {
-    vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
+    // ISSUE_296 value stored to 'vec' is never used
+    /*vec =*/ sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
         = sexp_make_vector(ctx, sexp_make_fixnum(128), SEXP_FALSE);
   } else if (n >= sexp_vector_length(vec)) {
     data = sexp_vector_data(vec);
@@ -1542,7 +1549,8 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
       if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i])
           && sexp_insert_fileno_ephemeron(ctx, tmp, data[i]))
         n++;
-    vec = tmp;
+    // ISSUE_296 value stored to 'vec' is never used
+    //vec = tmp;
   }
   if (sexp_insert_fileno_ephemeron(ctx, sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS), sexp_make_ephemeron(ctx, fileno, SEXP_FALSE)))
     n++;

@@ -362,7 +362,8 @@ sexp sexp_finalize (sexp ctx) {
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
       if ((char*)r == (char*)p) { /* this is a free block, skip it */
-        p = (sexp) (((char*)p) + r->size);
+        // ISSUE_296 - Access to 'size' dereference NULL 'r'
+        p = (sexp) (((char*)p) + (r ? r->size : 0));
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
@@ -404,7 +405,8 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
       if ((char*)r == (char*)p) { /* this is a free block, skip it */
-        p = (sexp) (((char*)p) + r->size);
+        // ISSUE_296 - Access to 'size' dereference null 'r'
+        p = (sexp) (((char*)p) + (r ? r->size : 0));
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
@@ -712,7 +714,8 @@ void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types
       for ( ; q && ((char*)q < (char*)p); q=q->next)
         ;
       if ((char*)q == (char*)p) { /* this is a free block, skip it */
-        p = (sexp) (((char*)p) + q->size);
+        // ISSUE_296 - Access to field 'size' dereference NULL 'q'
+        p = (sexp) (((char*)p) + (q ? q->size : 0));
       } else {
 #if SEXP_USE_DL
         if (sexp_opcodep(p) && sexp_opcode_func(p)) {

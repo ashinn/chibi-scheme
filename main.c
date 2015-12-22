@@ -136,6 +136,8 @@ static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_
     return NULL;
   }
   if (read(fd, heap, header.size) != header.size) {
+    // ISSUE_296 - Potential lead of memory pointed to by 'heap'
+    free(heap);
     fprintf(stderr, "error reading image\n");
     return NULL;
   }
