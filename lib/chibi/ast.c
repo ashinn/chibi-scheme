@@ -212,9 +212,11 @@ static sexp sexp_type_of (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
     return sexp_type_by_index(ctx, SEXP_OBJECT);
 }
 
-static sexp sexp_env_parent_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
-  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e);
-  return sexp_env_parent(e) ? sexp_env_parent(e) : SEXP_FALSE;
+static sexp sexp_env_parent_set_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp e2) {
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e1);
+  if (sexp_truep(e2)) sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e2);
+  sexp_env_parent(e1) = e2;
+  return SEXP_VOID;
 }
 
 static sexp sexp_env_lambda_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {
