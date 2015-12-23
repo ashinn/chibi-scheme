@@ -65,7 +65,9 @@ typedef unsigned long size_t;
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#if !(defined _WIN32) || defined(__CYGWIN__)
 #include <sys/socket.h>
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <math.h>
