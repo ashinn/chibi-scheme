@@ -76,7 +76,9 @@
               (lambda (w)
                 (and (>= (string-length w) len)
                      (equal? word (substring w 0 len))))
-              (map symbol->string (all-exports (interaction-environment)))))
+              (map symbol->string
+                   (map identifier->symbol
+                        (all-exports (interaction-environment))))))
             (prefix-len (string-common-prefix-length candidates)))
        (if (> prefix-len len)
            (list (substring (car candidates) 0 prefix-len))
