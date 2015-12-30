@@ -979,6 +979,21 @@ static void* sexp_thread_debug_event(sexp ctx) {
 #define sexp_ensure_stack(n)
 #endif
 
+/* used only when no thread scheduler has been loaded */
+#if SEXP_USE_POLL_PORT
+int sexp_poll_port(sexp ctx, sexp port, int inputp) {
+  fd_set fds;
+  int fd = sexp_port_fileno(port);
+  if (fd < 0) {
+    usleep(SEXP_POLL_SLEEP_TIME);
+    return -1;
+  }
+  FD_ZERO(&fds);
+  FD_SET(fd, &fds);
+  return select(1, (inputp ? &fds : NULL), (inputp ? NULL : &fds), NULL, NULL);
+}
+#endif
+
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   unsigned char *ip;
   sexp bc, cp, *stack = sexp_stack_data(sexp_context_stack(ctx));
@@ -1965,8 +1980,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         if (sexp_port_stream(_ARG2)) clearerr(sexp_port_stream(_ARG2));
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
           sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG2, SEXP_FALSE);
-        else               /* no scheduler but output full, wait 5ms */
-          usleep(5*1000);
+        else
+          sexp_poll_output(ctx, _ARG2);
         fuel = 0;
         ip--;      /* try again */
         goto loop;
@@ -2015,8 +2030,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       /* TODO: the wait seems necessary on OS X to stop a print loop to ptys */
       if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
         sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG3, SEXP_FALSE);
-      else               /* no scheduler but output full, wait 5ms */
-        usleep(5*1000);
+      else
+        sexp_poll_output(ctx, _ARG3);
       fuel = 0;
       ip--;      /* try again */
       goto loop;
@@ -2050,6 +2065,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         /* TODO: block and unblock */
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
           sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1, SEXP_FALSE);
+        else
+          sexp_poll_input(ctx, _ARG1);
         fuel = 0;
         ip--;      /* try again */
       } else
@@ -2079,6 +2096,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
           sexp_apply2(ctx, sexp_global(ctx, SEXP_G_THREADS_BLOCKER), _ARG1, SEXP_FALSE);
+        else
+          sexp_poll_input(ctx, _ARG1);
         fuel = 0;
         ip--;      /* try again */
       } else

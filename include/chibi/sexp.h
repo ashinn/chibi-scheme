@@ -21,6 +21,9 @@ extern "C" {
 #define sexp_isdigit(x) ((isdigit)((int)(x)))
 #define sexp_tolower(x) ((tolower)((int)(x)))
 #define sexp_toupper(x) ((toupper)((int)(x)))
+#define SEXP_USE_POLL_PORT 0
+#define sexp_poll_input(ctx, port) usleep(SEXP_POLL_SLEEP_TIME)
+#define sexp_poll_output(ctx, port) usleep(SEXP_POLL_SLEEP_TIME)
 #else
 #if SEXP_USE_DL
 #include <dlfcn.h>
@@ -31,6 +34,7 @@ extern "C" {
 #endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
+#include <sys/select.h>
 #include <fcntl.h>
 #include <poll.h>
 #endif
@@ -39,6 +43,9 @@ extern "C" {
 #define sexp_isdigit(x) (isdigit(x))
 #define sexp_tolower(x) (tolower(x))
 #define sexp_toupper(x) (toupper(x))
+#define SEXP_USE_POLL_PORT 1
+#define sexp_poll_input(ctx, port) sexp_poll_port(ctx, port, 1)
+#define sexp_poll_output(ctx, port) sexp_poll_port(ctx, port, 0)
 #endif
 
 #if SEXP_USE_GC_FILE_DESCRIPTORS
@@ -1585,6 +1592,10 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
 #define sexp_current_output_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(ctx, sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_OUT_SYMBOL), SEXP_FALSE))
 #define sexp_current_error_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(ctx, sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_ERR_SYMBOL), SEXP_FALSE))
 #define sexp_debug(ctx, msg, obj) (sexp_portp(sexp_current_error_port(ctx)) ? (sexp_write_string(ctx, msg, sexp_current_error_port(ctx)), sexp_write(ctx, obj, sexp_current_error_port(ctx)), sexp_write_char(ctx, '\n', sexp_current_error_port(ctx))) : 0)
+
+#if SEXP_USE_POLL_PORT
+SEXP_API int sexp_poll_port(sexp ctx, sexp port, int inputp);
+#endif
 
 /* simplify primitive API interface */
 
