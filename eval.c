@@ -873,8 +873,8 @@ static sexp analyze_define (sexp ctx, sexp x, int depth) {
 
 static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx, int localp) {
   sexp res = SEXP_VOID, name;
-  sexp_gc_var1(mac);
-  sexp_gc_preserve1(eval_ctx, mac);
+  sexp_gc_var2(mac, tmp);
+  sexp_gc_preserve2(eval_ctx, mac, tmp);
   for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
     if (! (sexp_pairp(sexp_car(ls)) && sexp_pairp(sexp_cdar(ls))
            && sexp_idp(sexp_caar(ls)) && sexp_nullp(sexp_cddar(ls)))) {
@@ -897,13 +897,16 @@ static sexp analyze_bind_syntax (sexp ls, sexp eval_ctx, sexp bind_ctx, int loca
       name = sexp_synclo_expr(name);
     if (sexp_macrop(mac) && sexp_pairp(sexp_cadar(ls)))
       sexp_macro_source(mac) = sexp_pair_source(sexp_cadar(ls));
-    sexp_env_define(eval_ctx, sexp_context_env(bind_ctx), name, mac);
+    if (localp)
+      sexp_env_push(eval_ctx, sexp_context_env(bind_ctx), tmp, name, mac);
+    else
+      sexp_env_define(eval_ctx, sexp_context_env(bind_ctx), name, mac);
 #if !SEXP_USE_STRICT_TOPLEVEL_BINDINGS
     if (localp)
       sexp_env_cell_syntactic_p(sexp_env_cell(eval_ctx, sexp_context_env(bind_ctx), name, 0)) = 1;
 #endif
   }
-  sexp_gc_release1(eval_ctx);
+  sexp_gc_release2(eval_ctx);
   return res;
 }
 
