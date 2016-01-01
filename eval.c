@@ -236,7 +236,8 @@ sexp sexp_extend_synclo_env (sexp ctx, sexp env) {
       sexp_env_renames(e2) = sexp_env_renames(e1);
 #endif
     }
-    sexp_env_parent(e2) = sexp_context_env(ctx);
+    // ISSUE_296 - Dereference of null pointer, stored line 231
+    if (e2) { sexp_env_parent(e2) = sexp_context_env(ctx); }
   }
   sexp_gc_release1(ctx);
   return e;
@@ -259,9 +260,10 @@ static sexp sexp_flatten_dot (sexp ctx, sexp ls) {
 
 int sexp_param_index (sexp ctx, sexp lambda, sexp name) {
   sexp ls;
-  int i;
+  int i = 0;
   while (1) {
-    i = 0;
+    // ISSUE_296 - Value stored to 'i' is never used
+    //i = 0;
     ls = sexp_lambda_params(lambda);
     for (i=0; sexp_pairp(ls); ls=sexp_cdr(ls), i++)
       if (sexp_car(ls) == name)
@@ -1855,7 +1857,8 @@ sexp sexp_type_slot_offset_op (sexp ctx , sexp self, sexp_sint_t n, sexp type, s
     v = &sexp_type_slots(type);
     len = 1;
   }
-  len = sexp_vectorp(cpl) ? sexp_vector_length(cpl) : 1;
+  // ISSUE_296 - len never used (set twice with same thing)
+  //len = sexp_vectorp(cpl) ? sexp_vector_length(cpl) : 1;
   for (i=0; i<len; i++)
     for (slots=sexp_type_slots(v[i]); sexp_pairp(slots); slots=sexp_cdr(slots), offset++)
       if (sexp_car(slots) == slot)
