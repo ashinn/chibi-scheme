@@ -264,7 +264,7 @@ dist-clean: dist-clean-libs cleaner
 
 install: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
-	$(INSTALL) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
+	$(INSTALL_EXE) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-doc $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/snow-chibi $(DESTDIR)$(BINDIR)/
@@ -308,28 +308,28 @@ install: all
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/scheme/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/srfi/18 $(DESTDIR)$(BINMODDIR)/srfi/27 $(DESTDIR)$(BINMODDIR)/srfi/33 $(DESTDIR)$(BINMODDIR)/srfi/39 $(DESTDIR)$(BINMODDIR)/srfi/69 $(DESTDIR)$(BINMODDIR)/srfi/95 $(DESTDIR)$(BINMODDIR)/srfi/98
-	$(INSTALL) -m0755 $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
-	$(INSTALL) -m0755 $(CHIBI_CRYPTO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/crypto/
-	$(INSTALL) -m0755 $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
-	$(INSTALL) -m0755 $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
-	$(INSTALL) -m0755 lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
-	$(INSTALL) -m0755 lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
-	$(INSTALL) -m0755 lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
-	$(INSTALL) -m0755 lib/srfi/33/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/33
-	$(INSTALL) -m0755 lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
-	$(INSTALL) -m0755 lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
-	$(INSTALL) -m0755 lib/srfi/95/qsort$(SO) $(DESTDIR)$(BINMODDIR)/srfi/95
-	$(INSTALL) -m0755 lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
+	$(INSTALL_EXE) -m0755 $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
+	$(INSTALL_EXE) -m0755 $(CHIBI_CRYPTO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/crypto/
+	$(INSTALL_EXE) -m0755 $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
+	$(INSTALL_EXE) -m0755 $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
+	$(INSTALL_EXE) -m0755 lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
+	$(INSTALL_EXE) -m0755 lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
+	$(INSTALL_EXE) -m0755 lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
+	$(INSTALL_EXE) -m0755 lib/srfi/33/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/33
+	$(INSTALL_EXE) -m0755 lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
+	$(INSTALL_EXE) -m0755 lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
+	$(INSTALL_EXE) -m0755 lib/srfi/95/qsort$(SO) $(DESTDIR)$(BINMODDIR)/srfi/95
+	$(INSTALL_EXE) -m0755 lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
 	$(MKDIR) $(DESTDIR)$(INCDIR)
 	$(INSTALL) -m0644 $(INCLUDES) $(DESTDIR)$(INCDIR)/
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
 	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
-	$(INSTALL) -m0755 libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/
+	$(INSTALL_EXE) -m0755 libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/
 	$(LN) -s -f libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
 	$(LN) -s -f libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-if test -f libchibi-scheme.a; then $(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/; fi
-	$(MKDIR) $(DESTDIR)$(SOLIBDIR)/pkgconfig
-	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(SOLIBDIR)/pkgconfig/
+	$(MKDIR) $(DESTDIR)$(PKGCONFDIR)
+	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(PKGCONFDIR)
 	$(MKDIR) $(DESTDIR)$(MANDIR)
 	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
 	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
@@ -346,7 +346,7 @@ uninstall:
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX)
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
 	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
-	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
+	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
 	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.{sld,scm}
 	-$(RM) $(DESTDIR)$(MODDIR)/.*.meta
@@ -385,7 +385,7 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi $(DESTDIR)$(BINMODDIR)/srfi
 	-$(RMDIR) $(DESTDIR)$(MODDIR) $(DESTDIR)$(BINMODDIR)
 	-$(RM) $(DESTDIR)$(MANDIR)/chibi-scheme.1 $(DESTDIR)$(MANDIR)/chibi-ffi.1 $(DESTDIR)$(MANDIR)/chibi-doc.1
-	-$(RM) $(DESTDIR)$(SOLIBDIR)/pkgconfig/chibi-scheme.pc
+	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
 
 dist: dist-clean
 	$(RM) chibi-scheme-$(VERSION).tgz

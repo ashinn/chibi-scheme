@@ -16,6 +16,7 @@ LS        ?= ls
 CP        ?= cp
 LN        ?= ln
 INSTALL   ?= install
+INSTALL_EXE	?=	$(INSTALL)
 MKDIR     ?= $(INSTALL) -d
 RMDIR     ?= rmdir
 TAR       ?= tar
@@ -31,6 +32,7 @@ SOLIBDIR  ?= $(PREFIX)/lib
 INCDIR    ?= $(PREFIX)/include/chibi
 MODDIR    ?= $(PREFIX)/share/chibi
 BINMODDIR ?= $(PREFIX)/lib/chibi
+PKGCONFDIR ?= $(SOLIBDIR)/pkgconfig
 MANDIR    ?= $(PREFIX)/share/man/man1
 
 DESTDIR   ?=
