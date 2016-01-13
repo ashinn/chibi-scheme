@@ -1,8 +1,8 @@
 (define-library (scheme small)
   (import (scheme base) (scheme char) (scheme complex) (scheme cxr)
           (scheme eval) (scheme file) (scheme inexact) (scheme lazy)
-          (scheme load) (scheme read) (scheme repl) (scheme time)
-          (scheme write))
+          (scheme load) (scheme process-context) (scheme read)
+          (scheme repl) (scheme time) (scheme write))
   (export
    ;; base
    * + - ... / < <= = => > >= _ abs and append apply assoc assq assv begin
@@ -74,6 +74,9 @@
    delay force delay-force make-promise promise?
    ;; load
    load
+   ;; process-context
+   get-environment-variable get-environment-variables
+   command-line exit emergency-exit
    ;; read
    read
    ;; repl
