@@ -25,7 +25,7 @@
                                              (raise-continuable condition)))
                                 clause ...))))))))
           (lambda ()
-            (let ((res (begin e1 e2 ...)))
+            (let ((res (let () e1 e2 ...)))
               (guard-k (lambda () res)))))))))))
 
 (define-syntax guard-aux
