@@ -30,11 +30,12 @@
              (load lib-file)
              tests ...
              ;; on any failure leave the stub and c file for reference
-             (cond
-              ((= orig-failures (test-failure-count))
-               (delete-file stub-file)
-               (delete-file c-file)))
-             (delete-file lib-file)))
+             (protect (exn (else #f))
+               (cond
+                ((= orig-failures (test-failure-count))
+                 (delete-file stub-file)
+                 (delete-file c-file)))
+               (delete-file lib-file))))
           (else
            (test-assert (string-append "couldn't compile " name)
              #f))))))))
