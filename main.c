@@ -170,12 +170,16 @@ static int sexp_save_image (sexp ctx, const char* path) {
   sexp_heap heap;
   FILE* file;
   struct sexp_image_header_t header;
+  heap = sexp_context_heap(ctx);
+  if (heap->next) {
+    fprintf(stderr, "can't save image for a chunked heap, try a larger initial heap with -h\n");
+    return 0;
+  }
   file = fopen(path, "w");
   if (!file) {
     fprintf(stderr, "couldn't open image file for writing: %s\n", path);
     return 0;
   }
-  heap = sexp_context_heap(ctx);
   memcpy(&header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic));
   memcpy(&header.abi, SEXP_ABI_IDENTIFIER, sizeof(header.abi));
   header.major = SEXP_IMAGE_MAJOR_VERSION;
