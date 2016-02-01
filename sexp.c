@@ -2871,10 +2871,8 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         if (tmp >
             sexp_fx_add(sexp_vector_data(*shares)[sexp_vector_length(*shares)-1],
                         sexp_make_fixnum(16))) {
-          fprintf(stderr, "%d - 16 > %ld\n", c2, sexp_unbox_fixnum(sexp_vector_data(*shares)[sexp_vector_length(*shares)-1]));
           res = sexp_read_error(ctx, "reader label out of order", tmp, in);
-        }
-        else {
+        } else {
           if (c2 + 1 >= sexp_vector_length(*shares)) {
             tmp2 = sexp_make_vector(ctx, sexp_make_fixnum(sexp_vector_length(*shares)*2), SEXP_VOID);
             memcpy(sexp_vector_data(tmp2), sexp_vector_data(*shares), (sexp_vector_length(*shares)-1)*sizeof(sexp));
@@ -2884,7 +2882,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
           if (tmp > sexp_vector_data(*shares)[sexp_vector_length(*shares)-1])
             sexp_vector_data(*shares)[sexp_vector_length(*shares)-1] = tmp;
           res = sexp_read_raw(ctx, in, shares);
-          sexp_vector_data(*shares)[c2] = res;
+          if (sexp_reader_labelp(res))
+            res = sexp_read_error(ctx, "self reader label reference", tmp, in);
+          else
+            sexp_vector_data(*shares)[c2] = res;
         }
       } else {
         res = sexp_read_error(ctx, "expected # or = after #<n>", sexp_make_character(c1), in);

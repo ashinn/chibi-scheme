@@ -275,6 +275,8 @@
                         (thunk (lambda () (car cell))))
                    (set! shared (cons (cons n thunk) shared))
                    (let ((x (read-one in)))
+                     (if (hole? x)
+                         (read-error "read error: self label reference" n))
                      (set-car! cell x)
                      x)))
                 ((eqv? #\# (peek-char in))
