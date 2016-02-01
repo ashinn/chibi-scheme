@@ -337,5 +337,13 @@
       (let ((r  (/ (expt 2 61) 3)))
         (test 0 (- r r))
         (test 2305843009213693952/3 r))
+      (let ((x (+ (expt 2 32) +2))
+            (y (+ (expt 2 32) -1)))
+        (test 0(remainder (* x y) y))
+        (test 0(remainder (* x y) x)))
+      (let ((x (+ (expt 2 64) +2))
+            (y (+ (expt 2 64) -1)))
+        (test 0(remainder (* x y) y))
+        (test 0(remainder (* x y) x)))
 
       (test-end))))

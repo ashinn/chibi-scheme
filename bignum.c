@@ -568,7 +568,8 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
     }
   }
   /* adjust signs */
-  if (sign < 0) {
+  a1 = sexp_bignum_normalize(a1);
+  if (sign < 0 && a1 != SEXP_ZERO) {
     q = sexp_sub(ctx, q, SEXP_ONE);
     a1 = sexp_add(ctx, a1, b1);
   }
