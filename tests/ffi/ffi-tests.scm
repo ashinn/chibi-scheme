@@ -2,6 +2,15 @@
 (import (chibi) (chibi ast) (chibi match)
         (chibi process) (chibi filesystem) (chibi test))
 
+(define generated-shared-objects '())
+
+(define (trash-shared-object! file)
+  (set! generated-shared-objects (cons file generated-shared-objects)))
+
+(define (cleanup-shared-objects!)
+  (for-each (lambda (file) (protect (exn (else #f)) (delete-file file)))
+            generated-shared-objects))
+
 (test-begin "ffi")
 
 (define-syntax test-ffi
@@ -30,12 +39,12 @@
              (load lib-file)
              tests ...
              ;; on any failure leave the stub and c file for reference
-             (protect (exn (else #f))
-               (cond
-                ((= orig-failures (test-failure-count))
-                 (delete-file stub-file)
-                 (delete-file c-file)))
-               (delete-file lib-file))))
+             (cond
+              ((= orig-failures (test-failure-count))
+               (delete-file stub-file)
+               (delete-file c-file)))
+             (delete-file lib-file)
+             (trash-shared-object! lib-file)))
           (else
            (test-assert (string-append "couldn't compile " name)
              #f))))))))
@@ -479,4 +488,5 @@ void complex_imag_set(struct VirtComplex* c, double y) {
 
 ;; TODO: virtual method accessors
 
+(cleanup-shared-objects!)
 (test-end)
