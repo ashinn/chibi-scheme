@@ -43,7 +43,6 @@
               ((= orig-failures (test-failure-count))
                (delete-file stub-file)
                (delete-file c-file)))
-             (delete-file lib-file)
              (trash-shared-object! lib-file)))
           (else
            (test-assert (string-append "couldn't compile " name)
