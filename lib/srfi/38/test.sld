@@ -73,6 +73,8 @@
                  (vector-set! x 2 x)
                  x))
 
+      (test '+.! (read-from-string "+.!"))
+
       (test 255 (read-from-string "#xff"))
       (test 99 (read-from-string "#d99"))
       (test 63 (read-from-string "#o77"))

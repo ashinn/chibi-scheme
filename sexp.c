@@ -2613,6 +2613,12 @@ static sexp sexp_fill_reader_labels(sexp ctx, sexp x, sexp shares, int state) {
 }
 #endif
 
+static int sexp_peek_char(sexp ctx, sexp in) {
+  int c = sexp_read_char(ctx, in);
+  if (c != EOF) sexp_push_char(ctx, c, in);
+  return c;
+}
+
 sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   char *str;
   int c1, c2, line;
@@ -3030,7 +3036,8 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   case '+':
   case '-':
     c2 = sexp_read_char(ctx, in);
-    if (c2 == '.' || sexp_isdigit(c2)) {
+    if ((c2 == '.' && sexp_isdigit(sexp_peek_char(ctx, in)))
+        || sexp_isdigit(c2)) {
       sexp_push_char(ctx, c2, in);
       res = sexp_read_number(ctx, in, 10, 0);
       if ((c1 == '-') && ! sexp_exceptionp(res)) {
