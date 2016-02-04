@@ -2463,6 +2463,8 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
   if (c == '-') {
     negativep = 1;
     c = sexp_read_char(ctx, in);
+  } else if (c == '+') {
+    c = sexp_read_char(ctx, in);
   }
 
 #if SEXP_USE_COMPLEX
