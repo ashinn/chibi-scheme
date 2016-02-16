@@ -324,7 +324,7 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  sexp name, cpl, slots, getters, setters, id, print, dl;
+  sexp name, cpl, slots, getters, setters, id, print, dl, finalize_name;
   sexp_proc2 finalize;
 };
 
@@ -1234,6 +1234,7 @@ SEXP_API sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 #define sexp_type_getters(x)           (sexp_field(x, type, SEXP_TYPE, getters))
 #define sexp_type_setters(x)           (sexp_field(x, type, SEXP_TYPE, setters))
 #define sexp_type_finalize(x)          (sexp_field(x, type, SEXP_TYPE, finalize))
+#define sexp_type_finalize_name(x)     (sexp_field(x, type, SEXP_TYPE, finalize_name))
 #define sexp_type_print(x)             (sexp_field(x, type, SEXP_TYPE, print))
 #define sexp_type_dl(x)                (sexp_field(x, type, SEXP_TYPE, dl))
 #define sexp_type_id(x)                (sexp_field(x, type, SEXP_TYPE, id))
@@ -1380,17 +1381,23 @@ SEXP_API int sexp_buffered_flush (sexp ctx, sexp p, int forcep);
 
 #if SEXP_USE_AUTOCLOSE_PORTS
 #define SEXP_FINALIZE_PORT sexp_finalize_port
+#define SEXP_FINALIZE_PORTN (sexp)"sexp_finalize_port"
 #define SEXP_FINALIZE_FILENO sexp_finalize_fileno
+#define SEXP_FINALIZE_FILENON (sexp)"sexp_finalize_fileno"
 #else
 #define SEXP_FINALIZE_PORT NULL
+#define SEXP_FINALIZE_PORTN NULL
 #define SEXP_FINALIZE_FILENO NULL
+#define SEXP_FINALIZE_FILENON NULL
 #endif
 
 #if SEXP_USE_DL
 sexp sexp_finalize_dl (sexp ctx, sexp self, sexp_sint_t n, sexp dl);
 #define SEXP_FINALIZE_DL sexp_finalize_dl
+#define SEXP_FINALIZE_DLN (sexp)"sexp_finalize_dl"
 #else
 #define SEXP_FINALIZE_DL NULL
+#define SEXP_FINALIZE_DLN NULL
 #endif
 
 #if SEXP_USE_TRACK_ALLOC_SOURCE
@@ -1485,7 +1492,7 @@ SEXP_API sexp sexp_apply1 (sexp ctx, sexp f, sexp x);
 SEXP_API sexp sexp_apply2 (sexp ctx, sexp f, sexp x, sexp y);
 SEXP_API sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args);
-SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, const char *fname, sexp_proc1 f, sexp data);
 SEXP_API void sexp_init(void);
 
 #if SEXP_USE_UTF8_STRINGS
@@ -1559,7 +1566,7 @@ SEXP_API sexp sexp_finalize (sexp ctx);
 #define sexp_destroy_context(ctx)
 #else
 SEXP_API void sexp_free_heap (sexp_heap heap);
-SEXP_API void sexp_destroy_context (sexp ctx);
+SEXP_API sexp sexp_destroy_context (sexp ctx);
 SEXP_API sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags);
 #endif
 
@@ -1576,7 +1583,7 @@ SEXP_API int sexp_valid_object_p(sexp ctx, sexp x);
 #endif
 
 #if SEXP_USE_TYPE_DEFS
-SEXP_API sexp sexp_register_type_op (sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc2);
+SEXP_API sexp sexp_register_type_op (sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, const char*, sexp_proc2);
 SEXP_API sexp sexp_register_simple_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp parent, sexp slots);
 SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj);
 #define sexp_register_c_type(ctx, name, finalizer)                      \
@@ -1585,7 +1592,7 @@ SEXP_API sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj
                      sexp_make_fixnum(sexp_sizeof(cpointer)),           \
                      SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,        \
                      SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, NULL,             \
-                     (sexp_proc2)finalizer)
+                     #finalizer, (sexp_proc2)finalizer)
 #endif
 
 #define sexp_current_input_port(ctx) sexp_parameter_ref(ctx, sexp_env_ref(ctx, sexp_context_env(ctx), sexp_global(ctx,SEXP_G_CUR_IN_SYMBOL), SEXP_FALSE))
@@ -1630,7 +1637,7 @@ SEXP_API int sexp_poll_port(sexp ctx, sexp port, int inputp);
 #define sexp_get_output_string(ctx, out) sexp_get_output_string_op(ctx, NULL, 1, out)
 #define sexp_expt(ctx, a, b) sexp_expt_op(ctx, NULL, 2, a, b)
 #define sexp_register_simple_type(ctx, a, b, c) sexp_register_simple_type_op(ctx, NULL, 3, a, b, c)
-#define sexp_register_type(ctx, a, b, c, d, e, f, g, h, i, j, k, l, m, o, p, q, r, s) sexp_register_type_op(ctx, NULL, 18, a, b, c, d, e, f, g, h, i, j, k, l, m, o, p, q, r, s)
+#define sexp_register_type(ctx, a, b, c, d, e, f, g, h, i, j, k, l, m, o, p, q, r, sn, s) sexp_register_type_op(ctx, NULL, 18, a, b, c, d, e, f, g, h, i, j, k, l, m, o, p, q, r, sn, s)
 #define sexp_make_type_predicate(ctx, a, b) sexp_make_type_predicate_op(ctx, NULL, 2, a, b)
 #define sexp_make_constructor(ctx, a, b) sexp_make_constructor_op(ctx, NULL, 2, a, b)
 #define sexp_make_getter(ctx, a, b, c) sexp_make_getter_op(ctx, NULL, 3, a, b, c)
@@ -1639,87 +1646,87 @@ SEXP_API int sexp_poll_port(sexp ctx, sexp port, int inputp);
 #define sexp_make_fileno(ctx, fd, no_closep) sexp_make_fileno_op(ctx, NULL, 2, fd, no_closep)
 
 enum sexp_opcode_names {
-  SEXP_OP_NOOP,
-  SEXP_OP_RAISE,
-  SEXP_OP_RESUMECC,
-  SEXP_OP_CALLCC,
-  SEXP_OP_APPLY1,
-  SEXP_OP_TAIL_CALL,
-  SEXP_OP_CALL,
-  SEXP_OP_FCALL0,
-  SEXP_OP_FCALL1,
-  SEXP_OP_FCALL2,
-  SEXP_OP_FCALL3,
-  SEXP_OP_FCALL4,
-  SEXP_OP_FCALLN,
-  SEXP_OP_JUMP_UNLESS,
-  SEXP_OP_JUMP,
-  SEXP_OP_PUSH,
-  SEXP_OP_RESERVE,
-  SEXP_OP_DROP,
-  SEXP_OP_GLOBAL_REF,
-  SEXP_OP_GLOBAL_KNOWN_REF,
-  SEXP_OP_PARAMETER_REF,
-  SEXP_OP_STACK_REF,
-  SEXP_OP_LOCAL_REF,
-  SEXP_OP_LOCAL_SET,
-  SEXP_OP_CLOSURE_REF,
-  SEXP_OP_CLOSURE_VARS,
-  SEXP_OP_VECTOR_REF,
-  SEXP_OP_VECTOR_SET,
-  SEXP_OP_VECTOR_LENGTH,
-  SEXP_OP_BYTES_REF,
-  SEXP_OP_BYTES_SET,
-  SEXP_OP_BYTES_LENGTH,
-  SEXP_OP_STRING_REF,
-  SEXP_OP_STRING_SET,
-  SEXP_OP_STRING_LENGTH,
-  SEXP_OP_STRING_CURSOR_NEXT,
-  SEXP_OP_STRING_CURSOR_PREV,
-  SEXP_OP_STRING_SIZE,
-  SEXP_OP_MAKE_PROCEDURE,
-  SEXP_OP_MAKE_VECTOR,
-  SEXP_OP_MAKE_EXCEPTION,
-  SEXP_OP_AND,
-  SEXP_OP_NULLP,
-  SEXP_OP_FIXNUMP,
-  SEXP_OP_SYMBOLP,
-  SEXP_OP_CHARP,
-  SEXP_OP_EOFP,
-  SEXP_OP_TYPEP,
-  SEXP_OP_MAKE,
-  SEXP_OP_SLOT_REF,
-  SEXP_OP_SLOT_SET,
-  SEXP_OP_ISA,
-  SEXP_OP_SLOTN_REF,
-  SEXP_OP_SLOTN_SET,
-  SEXP_OP_CAR,
-  SEXP_OP_CDR,
-  SEXP_OP_SET_CAR,
-  SEXP_OP_SET_CDR,
-  SEXP_OP_CONS,
-  SEXP_OP_ADD,
-  SEXP_OP_SUB,
-  SEXP_OP_MUL,
-  SEXP_OP_DIV,
-  SEXP_OP_QUOTIENT,
-  SEXP_OP_REMAINDER,
-  SEXP_OP_LT,
-  SEXP_OP_LE,
-  SEXP_OP_EQN,
-  SEXP_OP_EQ,
-  SEXP_OP_CHAR2INT,
-  SEXP_OP_INT2CHAR,
-  SEXP_OP_CHAR_UPCASE,
-  SEXP_OP_CHAR_DOWNCASE,
-  SEXP_OP_WRITE_CHAR,
-  SEXP_OP_WRITE_STRING,
-  SEXP_OP_READ_CHAR,
-  SEXP_OP_PEEK_CHAR,
-  SEXP_OP_YIELD,
-  SEXP_OP_FORCE,
-  SEXP_OP_RET,
-  SEXP_OP_DONE,
+  /*  0 00 */ SEXP_OP_NOOP,
+  /*  1 01 */ SEXP_OP_RAISE,
+  /*  2 02 */ SEXP_OP_RESUMECC,
+  /*  3 03 */ SEXP_OP_CALLCC,
+  /*  4 04 */ SEXP_OP_APPLY1,
+  /*  5 05 */ SEXP_OP_TAIL_CALL,
+  /*  6 06 */ SEXP_OP_CALL,
+  /*  7 07 */ SEXP_OP_FCALL0,
+  /*  8 08 */ SEXP_OP_FCALL1,
+  /*  9 09 */ SEXP_OP_FCALL2,
+  /* 10 0A */ SEXP_OP_FCALL3,
+  /* 11 0B */ SEXP_OP_FCALL4,
+  /* 12 0C */ SEXP_OP_FCALLN,
+  /* 13 0D */ SEXP_OP_JUMP_UNLESS,
+  /* 14 0E */ SEXP_OP_JUMP,
+  /* 15 0F */ SEXP_OP_PUSH,
+  /* 16 10 */ SEXP_OP_RESERVE,
+  /* 17 11 */ SEXP_OP_DROP,
+  /* 18 12 */ SEXP_OP_GLOBAL_REF,
+  /* 19 13 */ SEXP_OP_GLOBAL_KNOWN_REF,
+  /* 20 14 */ SEXP_OP_PARAMETER_REF,
+  /* 21 15 */ SEXP_OP_STACK_REF,
+  /* 22 16 */ SEXP_OP_LOCAL_REF,
+  /* 23 17 */ SEXP_OP_LOCAL_SET,
+  /* 24 18 */ SEXP_OP_CLOSURE_REF,
+  /* 25 19 */ SEXP_OP_CLOSURE_VARS,
+  /* 26 1A */ SEXP_OP_VECTOR_REF,
+  /* 27 1B */ SEXP_OP_VECTOR_SET,
+  /* 28 1C */ SEXP_OP_VECTOR_LENGTH,
+  /* 29 1D */ SEXP_OP_BYTES_REF,
+  /* 30 1E */ SEXP_OP_BYTES_SET,
+  /* 31 1F */ SEXP_OP_BYTES_LENGTH,
+  /* 32 20 */ SEXP_OP_STRING_REF,
+  /* 33 21 */ SEXP_OP_STRING_SET,
+  /* 34 22 */ SEXP_OP_STRING_LENGTH,
+  /* 35 23 */ SEXP_OP_STRING_CURSOR_NEXT,
+  /* 36 24 */ SEXP_OP_STRING_CURSOR_PREV,
+  /* 37 25 */ SEXP_OP_STRING_SIZE,
+  /* 38 26 */ SEXP_OP_MAKE_PROCEDURE,
+  /* 39 27 */ SEXP_OP_MAKE_VECTOR,
+  /* 40 28 */ SEXP_OP_MAKE_EXCEPTION,
+  /* 41 29 */ SEXP_OP_AND,
+  /* 42 2A */ SEXP_OP_NULLP,
+  /* 43 2B */ SEXP_OP_FIXNUMP,
+  /* 44 2C */ SEXP_OP_SYMBOLP,
+  /* 45 2D */ SEXP_OP_CHARP,
+  /* 46 2E */ SEXP_OP_EOFP,
+  /* 47 2F */ SEXP_OP_TYPEP,
+  /* 48 30 */ SEXP_OP_MAKE,
+  /* 49 31 */ SEXP_OP_SLOT_REF,
+  /* 50 32 */ SEXP_OP_SLOT_SET,
+  /* 51 33 */ SEXP_OP_ISA,
+  /* 52 34 */ SEXP_OP_SLOTN_REF,
+  /* 53 35 */ SEXP_OP_SLOTN_SET,
+  /* 54 36 */ SEXP_OP_CAR,
+  /* 55 37 */ SEXP_OP_CDR,
+  /* 56 38 */ SEXP_OP_SET_CAR,
+  /* 57 39 */ SEXP_OP_SET_CDR,
+  /* 58 3A */ SEXP_OP_CONS,
+  /* 59 3B */ SEXP_OP_ADD,
+  /* 60 3C */ SEXP_OP_SUB,
+  /* 61 3D */ SEXP_OP_MUL,
+  /* 62 3E */ SEXP_OP_DIV,
+  /* 63 3F */ SEXP_OP_QUOTIENT,
+  /* 64 40 */ SEXP_OP_REMAINDER,
+  /* 65 41 */ SEXP_OP_LT,
+  /* 66 42 */ SEXP_OP_LE,
+  /* 67 43 */ SEXP_OP_EQN,
+  /* 68 44 */ SEXP_OP_EQ,
+  /* 69 45 */ SEXP_OP_CHAR2INT,
+  /* 70 46 */ SEXP_OP_INT2CHAR,
+  /* 71 47 */ SEXP_OP_CHAR_UPCASE,
+  /* 72 48 */ SEXP_OP_CHAR_DOWNCASE,
+  /* 73 49 */ SEXP_OP_WRITE_CHAR,
+  /* 74 4A */ SEXP_OP_WRITE_STRING,
+  /* 75 4B */ SEXP_OP_READ_CHAR,
+  /* 76 4C */ SEXP_OP_PEEK_CHAR,
+  /* 77 4D */ SEXP_OP_YIELD,
+  /* 78 4E */ SEXP_OP_FORCE,
+  /* 79 4F */ SEXP_OP_RET,
+  /* 80 50 */ SEXP_OP_DONE,
   SEXP_OP_NUM_OPCODES
 };
 

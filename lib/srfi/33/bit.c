@@ -45,7 +45,7 @@ static sexp sexp_fixnum_to_twos_complement (sexp ctx, sexp x, int len) {
   return res;
 }
 
-static sexp sexp_bit_and (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
+sexp sexp_bit_and (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
 #endif
@@ -82,7 +82,7 @@ static sexp sexp_bit_and (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   }
 }
 
-static sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
+sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   sexp res;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
@@ -122,7 +122,7 @@ static sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   return sexp_bignum_normalize(res);
 }
 
-static sexp sexp_bit_xor (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
+sexp sexp_bit_xor (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   sexp res;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t len, i;
@@ -172,7 +172,7 @@ static int log2i(sexp_uint_t v) {
 
 /* should probably split into left and right shifts, that's a better */
 /* interface anyway */
-static sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp count) {
+sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp count) {
   sexp_uint_t tmp;
   sexp_sint_t c;
 #if SEXP_USE_BIGNUMS
@@ -260,7 +260,7 @@ static sexp_uint_t bit_count (sexp_uint_t i) {
           >> (sizeof(i) - 1) * CHAR_BIT);
 }
 
-static sexp sexp_bit_count (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+sexp sexp_bit_count (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   sexp res;
   sexp_sint_t i;
 #if SEXP_USE_BIGNUMS
@@ -271,7 +271,7 @@ static sexp sexp_bit_count (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
     res = sexp_make_fixnum(bit_count(i<0 ? ~i : i));
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
-    for (i=count=0; i<sexp_bignum_length(x); i++)
+    for (i=count=0; i<(sexp_sint_t)sexp_bignum_length(x); i++)
       count += bit_count(sexp_bignum_data(x)[i]);
     res = sexp_make_fixnum(count);
 #endif
@@ -302,7 +302,7 @@ static sexp_uint_t integer_log2 (sexp_uint_t x) {
     return (t = x >> 8) ? 8 + log_table_256[t] : log_table_256[x];
 }
 
-static sexp sexp_integer_length (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+sexp sexp_integer_length (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   sexp_sint_t tmp;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t hi;
@@ -321,7 +321,7 @@ static sexp sexp_integer_length (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   }
 }
 
-static sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) {
+sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) {
   sexp_sint_t pos;
 #if SEXP_USE_BIGNUMS
   sexp_sint_t rem;
@@ -338,7 +338,7 @@ static sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) 
   } else if (sexp_bignump(x)) {
     pos /= (sizeof(sexp_uint_t)*CHAR_BIT);
     rem = (sexp_unbox_fixnum(i) - pos*sizeof(sexp_uint_t)*CHAR_BIT);
-    return sexp_make_boolean((pos < sexp_bignum_length(x))
+    return sexp_make_boolean((pos < (sexp_sint_t)sexp_bignum_length(x))
                              && (sexp_bignum_data(x)[pos] & (1UL<<rem)));
 #endif
   } else {

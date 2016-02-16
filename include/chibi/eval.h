@@ -129,7 +129,7 @@ SEXP_API sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from
 SEXP_API sexp sexp_make_lit (sexp ctx, sexp value);
 SEXP_API sexp sexp_make_opcode (sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp_proc1);
 SEXP_API sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags, sexp num_args, sexp bc, sexp vars);
-SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args, int flags, const char *fname, sexp_proc1 f, sexp data);
 SEXP_API sexp sexp_register_optimization(sexp ctx, sexp self, sexp_sint_t n, sexp f, sexp i);
 #if SEXP_USE_AUTO_FORCE
 SEXP_API sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, sexp val);
@@ -189,10 +189,11 @@ SEXP_API sexp sexp_char_upcase(sexp ctx, sexp self, sexp_sint_t n, sexp ch);
 SEXP_API sexp sexp_char_downcase(sexp ctx, sexp self, sexp_sint_t n, sexp ch);
 #endif
 
-#define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(sexp_proc1)f,NULL)
-#define sexp_define_foreign_opt(c,e,s,n,f,d) sexp_define_foreign_aux(c,e,s,n,1,(sexp_proc1)f,d)
+SEXP_API sexp sexp_define_foreign_param_aux(sexp ctx, sexp env, const char *name, int num_args, const char *fname, sexp_proc1 f, const char *param);
 
-SEXP_API sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name, int num_args, sexp_proc1 f, const char *param);
+#define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(const char*)#f,(sexp_proc1)f,NULL)
+#define sexp_define_foreign_param(c,e,s,n,f,p) sexp_define_foreign_param_aux(c,e,s,n,(const char*)#f,(sexp_proc1)f,p)
+#define sexp_define_foreign_opt(c,e,s,n,f,p) sexp_define_foreign_aux(c,e,s,n,1,(const char*)#f,(sexp_proc1)f,p)
 
 #define sexp_env_key(x) sexp_car(x)
 #define sexp_env_value(x) sexp_cdr(x)

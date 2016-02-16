@@ -743,6 +743,11 @@
 #define isinf(x) (isInf(x,1) || isInf(x,-1))
 #define isnan(x) isNaN(x)
 #elif defined(_WIN32)
+#define _CRT_SECURE_NO_WARNINGS 1
+#define _CRT_NONSTDC_NO_DEPRECATE 1
+#pragma warning(disable:4146) /* unary minus operator to unsigned type */
+#define strcasecmp lstrcmpi
+#define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
 #ifdef __MINGW32__
 #include <shlwapi.h>
 #define strcasestr StrStrI

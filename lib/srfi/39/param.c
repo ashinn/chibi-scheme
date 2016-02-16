@@ -6,7 +6,7 @@
 
 #define _I(x) sexp_make_fixnum(x)
 
-static sexp sexp_make_parameter (sexp ctx, sexp self, sexp_sint_t n, sexp init, sexp conv) {
+sexp sexp_make_parameter (sexp ctx, sexp self, sexp_sint_t n, sexp init, sexp conv) {
   sexp res;
   sexp_gc_var1(cell);
   sexp_gc_preserve1(ctx, cell);
@@ -19,7 +19,7 @@ static sexp sexp_make_parameter (sexp ctx, sexp self, sexp_sint_t n, sexp init, 
   return res;
 }
 
-static sexp sexp_parameter_converter (sexp ctx, sexp self, sexp_sint_t n, sexp param) {
+sexp sexp_parameter_converter (sexp ctx, sexp self, sexp_sint_t n, sexp param) {
   sexp res;
   sexp_assert_type(ctx, sexp_opcodep, SEXP_OPCODE, param);
   res = sexp_opcode_data2(param);

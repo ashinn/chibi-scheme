@@ -1390,7 +1390,7 @@
     (write-gc-release gc-vars)))
 
 (define (write-func-declaration func)
-  (cat "static sexp " (func-stub-name func)
+  (cat "sexp " (func-stub-name func)
        " (sexp ctx, sexp self, sexp_sint_t n"
        (write-parameters (func-scheme-args func)) ")"))
 
@@ -1516,7 +1516,7 @@
                           (else 1))
                     ", "))
              "")
-         "(sexp_proc1)" (func-stub-name func)
+         (func-stub-name func)
          (cond
           (default (lambda () (cat ", " (write-default default))))
           (no-bind? ", SEXP_VOID")
@@ -1668,7 +1668,7 @@
                "((" (x->string (or (type-struct-type name) ""))
                " " (x->string name) "*)"
                "sexp_cpointer_value(x))")))
-    (cat "static sexp " (type-getter-name type name field)
+    (cat "sexp " (type-getter-name type name field)
          " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
          (lambda () (write-validator "x" (parse-type name 0)))
          "  return "
@@ -1745,7 +1745,7 @@
              (lambda () (scheme->c-converter (car field) val)) ";\n"))))))
 
 (define (write-type-setter type name field)
-  (cat "static sexp " (type-setter-name type name field)
+  (cat "sexp " (type-setter-name type name field)
        " (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp v) {\n"
        (lambda () (write-validator "x" (parse-type name 0)))
        (lambda () (write-validator "v" (parse-type (car field) 1)))
@@ -1762,7 +1762,7 @@
                 (scheme-name (if (pair? y) (car y) y))
                 (cname (if (pair? y) (cadr y) y))
                 (method? (not (memq 'finalizer: type))))
-           (cat "static sexp " (generate-stub-name scheme-name)
+           (cat "sexp " (generate-stub-name scheme-name)
                 " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
                 "  if (sexp_cpointer_freep(x)) {\n"
                 "    " (if method? "" cname) "("
@@ -1787,7 +1787,7 @@
     => (lambda (x)
          (let ((make (car (cadr x)))
                (args (cdr (cadr x))))
-           (cat "static sexp " (generate-stub-name make)
+           (cat "sexp " (generate-stub-name make)
                 " (sexp ctx, sexp self, sexp_sint_t n"
                 (lambda ()
                   (let lp ((ls args) (i 0))
@@ -1928,7 +1928,7 @@
          (let ((name (type-c-name-derefed (car t)))
                (finalizer-name (type-finalizer-name (car t))))
            (cat
-            "static sexp " finalizer-name " ("
+            "sexp " finalizer-name " ("
             "sexp ctx, sexp self, sexp_sint_t n, sexp obj) {\n"
             "  if (sexp_cpointer_freep(obj))\n"
             "    delete static_cast<" name "*>"

@@ -212,7 +212,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
                           sexp_make_fixnum(sexp_offsetof_slot0),
                           ONE, ONE, ZERO, ZERO,
                           sexp_make_fixnum(sexp_sizeof_random), ZERO,
-                          ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, NULL, NULL);
+                          ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, NULL, NULL, NULL);
   if (sexp_exceptionp(op))
     return op;
   rs_type_id = sexp_type_tag(op);

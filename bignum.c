@@ -43,10 +43,10 @@ sexp sexp_make_integer (sexp ctx, sexp_lsint_t x) {
     res = sexp_make_bignum(ctx, 1);
     if (x < 0) {
       sexp_bignum_sign(res) = -1;
-      sexp_bignum_data(res)[0] = -x;
+      sexp_bignum_data(res)[0] = (sexp_uint_t)-x;
     } else {
       sexp_bignum_sign(res) = 1;
-      sexp_bignum_data(res)[0] = x;
+      sexp_bignum_data(res)[0] = (sexp_uint_t)x;
     }
   }
   return res;
@@ -59,7 +59,7 @@ sexp sexp_make_unsigned_integer (sexp ctx, sexp_luint_t x) {
   } else {
     res = sexp_make_bignum(ctx, 1);
     sexp_bignum_sign(res) = 1;
-    sexp_bignum_data(res)[0] = x;
+    sexp_bignum_data(res)[0] = (sexp_uint_t)x;
   }
   return res;
 }
@@ -75,7 +75,7 @@ sexp sexp_double_to_bignum (sexp ctx, double f) {
   scale = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   sign = (f < 0 ? -1 : 1);
   for (f=fabs(f); f >= 1.0; f=trunc(f/10)) {
-    tmp = sexp_bignum_fxmul(ctx, NULL, scale, double_10s_digit(f), 0);
+    tmp = sexp_bignum_fxmul(ctx, NULL, scale, (sexp_uint_t)double_10s_digit(f), 0);
     res = sexp_bignum_add(ctx, res, res, tmp);
     scale = sexp_bignum_fxmul(ctx, NULL, scale, 10, 0);
   }
@@ -217,8 +217,8 @@ sexp_uint_t sexp_bignum_fxdiv (sexp ctx, sexp a, sexp_uint_t b, int offset) {
   sexp_luint_t n = 0;
   for (i=len-1; i>=offset; i--) {
     n = (n << sizeof(sexp_uint_t)*8) + data[i];
-    q = n / b;
-    r = n - (sexp_luint_t)q * b;
+    q = (sexp_uint_t)(n / b);
+    r = (sexp_uint_t)(n - (sexp_luint_t)q * b);
     data[i] = q;
     n = r;
   }
@@ -235,9 +235,12 @@ sexp sexp_bignum_fxrem (sexp ctx, sexp a, sexp_sint_t b) {
       return sexp_make_fixnum(sexp_bignum_sign(a) * (data[0] & q));
   }
   b0 = (b >= 0) ? b : -b;
+  if (b0 == 0) {
+    return sexp_xtype_exception(ctx, NULL, "divide by zero", a);
+  }
   for (i=len-1; i>=0; i--) {
     n = (n << sizeof(sexp_uint_t)*8) + data[i];
-    q = n / b0;
+    q = (sexp_uint_t)(n / b0);
     n -= (sexp_luint_t)q * b0;
   }
   return sexp_make_fixnum(sexp_bignum_sign(a) * (sexp_sint_t)n);
@@ -253,7 +256,7 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   sexp_bignum_data(res)[0] = init;
   for (c=sexp_read_char(ctx, in); sexp_isxdigit(c); c=sexp_read_char(ctx, in)) {
     digit = digit_value(c);
-    if ((digit < 0) || (digit >= base))
+    if ((digit < 0) || (digit >= (int)base))
       break;
     res = sexp_bignum_fxmul(ctx, res, res, base, 0);
     res = sexp_bignum_fxadd(ctx, res, digit);
@@ -303,6 +306,9 @@ sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base) {
   sexp_gc_preserve2(ctx, b, str);
   b = sexp_copy_bignum(ctx, NULL, a, 0);
   sexp_bignum_sign(b) = 1;
+  if (lg_base < 1) {
+    return sexp_xtype_exception(ctx, NULL, "number base too small", a);
+  }
   i = str_len = (sexp_bignum_length(b)*sizeof(sexp_uint_t)*8 + lg_base - 1)
     / lg_base + 1;
   str = sexp_make_string(ctx, sexp_make_fixnum(str_len),
@@ -563,7 +569,7 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
     }
     /* flip the sign if we overshot in our estimate */
     if (sexp_bignum_sign(a1) != sign) {
-      sexp_bignum_sign(a1) = -sign;
+      sexp_bignum_sign(a1) = (char)(-sign);
       sign *= -1;
     }
   }
@@ -710,7 +716,7 @@ sexp sexp_double_to_ratio (sexp ctx, double f) {
   for (i=0, f=fabs(f-trunc(f)); f != trunc(f) && i < 15; i++) {
     res = sexp_bignum_fxmul(ctx, NULL, res, 10, 0);
     f = f * 10;
-    res = sexp_bignum_fxadd(ctx, res, double_10s_digit(f));
+    res = sexp_bignum_fxadd(ctx, res, (sexp_uint_t)double_10s_digit(f));
     f = f - trunc(f);
     scale = sexp_mul(ctx, scale, SEXP_TEN);
   }

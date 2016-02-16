@@ -332,7 +332,7 @@ static sexp_uint_t sexp_log2_of_pow2 (sexp_uint_t n) {
   return sexp_log2_lookup[((unsigned)n * 0x077CB531U) >> 27];
 }
 
-static sexp sexp_pop_signal (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_pop_signal (sexp ctx, sexp self, sexp_sint_t n) {
   int allsigs, restsigs, signum;
   if (sexp_global(ctx, SEXP_G_THREADS_SIGNALS) == SEXP_ZERO) {
     return SEXP_FALSE;
@@ -345,7 +345,7 @@ static sexp sexp_pop_signal (sexp ctx, sexp self, sexp_sint_t n) {
   }
 }
 
-static sexp sexp_get_signal_handler (sexp ctx, sexp self, sexp_sint_t n, sexp signum) {
+sexp sexp_get_signal_handler (sexp ctx, sexp self, sexp_sint_t n, sexp signum) {
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, signum);
   return sexp_vector_ref(sexp_global(ctx, SEXP_G_SIGNAL_HANDLERS), signum);
 }
@@ -358,7 +358,7 @@ static sexp sexp_make_pollfds (sexp ctx) {
   return res;
 }
 
-static sexp sexp_free_pollfds (sexp ctx, sexp self, sexp_sint_t n, sexp pollfds) {
+sexp sexp_free_pollfds (sexp ctx, sexp self, sexp_sint_t n, sexp pollfds) {
   if (sexp_pollfds_fds(pollfds)) {
     free(sexp_pollfds_fds(pollfds));
     sexp_pollfds_fds(pollfds) = NULL;
@@ -397,7 +397,7 @@ static sexp sexp_insert_pollfd (sexp ctx, int fd, int events) {
 }
 
 /* block the current thread on the specified port */
-static sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd, sexp timeout) {
+sexp sexp_blocker (sexp ctx, sexp self, sexp_sint_t n, sexp portorfd, sexp timeout) {
   int fd;
   /* register the fd */
   if (sexp_portp(portorfd))
@@ -653,7 +653,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
                          SEXP_ZERO, sexp_make_fixnum(sexp_sizeof_pollfds),
                          SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
-                         SEXP_ZERO, SEXP_ZERO, NULL,
+                         SEXP_ZERO, SEXP_ZERO, NULL, "sexp_free_pollfds",
                          (sexp_proc2)sexp_free_pollfds);
   if (sexp_typep(t)) {
     sexp_global(ctx, SEXP_G_THREADS_POLLFDS_ID) = sexp_make_fixnum(sexp_type_tag(t));
@@ -681,9 +681,9 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "get-signal-handler", 1, sexp_get_signal_handler);
 
   sexp_global(ctx, SEXP_G_THREADS_SCHEDULER)
-    = sexp_make_foreign(ctx, "scheduler", 1, 0, (sexp_proc1)sexp_scheduler, SEXP_FALSE);
+    = sexp_make_foreign(ctx, "scheduler", 1, 0, "sexp_scheduler", (sexp_proc1)sexp_scheduler, SEXP_FALSE);
   sexp_global(ctx, SEXP_G_THREADS_BLOCKER)
-    = sexp_make_foreign(ctx, "blocker", 2, 0, (sexp_proc1)sexp_blocker, SEXP_FALSE);
+    = sexp_make_foreign(ctx, "blocker", 2, 0, "sexp_blocker", (sexp_proc1)sexp_blocker, SEXP_FALSE);
 
   /* remember the env to lookup the runner later */
   sexp_global(ctx, SEXP_G_THREADS_SIGNAL_RUNNER) = env;

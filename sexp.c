@@ -12,9 +12,7 @@ struct sexp_huff_entry {
 
 #if SEXP_USE_HUFF_SYMS
 #include "chibi/sexp-hufftabs.h"
-static struct sexp_huff_entry huff_table[] = {
 #include "chibi/sexp-huff.h"
-};
 #endif
 
 static int sexp_initialized_p = 0;
@@ -177,58 +175,58 @@ sexp sexp_finalize_dl (sexp ctx, sexp self, sexp_sint_t n, sexp dl) {
 #endif
 
 static struct sexp_type_struct _sexp_type_specs[] = {
-  {SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Object", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_TYPE, sexp_offsetof(type, name), 7+SEXP_USE_DL, 7+SEXP_USE_DL, 0, 0, sexp_sizeof(type), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Type", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Integer", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_NUMBER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Number", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Char", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Boolean", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Pair", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_SYMBOL, 0, 0, 0, 0, 0, sexp_sizeof(symbol)+1, sexp_offsetof(symbol, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Symbol", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_BYTES, 0, 0, 0, 0, 0, sexp_sizeof(bytes)+1, sexp_offsetof(bytes, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Byte-Vector", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Object", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_TYPE, sexp_offsetof(type, name), 8+SEXP_USE_DL, 8+SEXP_USE_DL, 0, 0, sexp_sizeof(type), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Type", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_FIXNUM, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Integer", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_NUMBER, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Number", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_CHAR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Char", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_BOOLEAN, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Boolean", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_PAIR, sexp_offsetof(pair, car), 2, 3, 0, 0, sexp_sizeof(pair), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Pair", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_SYMBOL, 0, 0, 0, 0, 0, sexp_sizeof(symbol)+1, sexp_offsetof(symbol, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Symbol", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_BYTES, 0, 0, 0, 0, 0, sexp_sizeof(bytes)+1, sexp_offsetof(bytes, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Byte-Vector", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #if SEXP_USE_PACKED_STRINGS
-  {SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #else
-  {SEXP_STRING, sexp_offsetof(string, bytes), 1, 1, 0, 0, sexp_sizeof(string), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_STRING, sexp_offsetof(string, bytes), 1, 1, 0, 0, sexp_sizeof(string), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
-  {SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Vector", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Flonum", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp_uint_t), 0, 0, 0, 0, 0, 0, (sexp)"Bignum", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Vector", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Flonum", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_BIGNUM, 0, 0, 0, 0, 0, sexp_sizeof(bignum), sexp_offsetof(bignum, length), sizeof(sexp_uint_t), 0, 0, 0, 0, 0, 0, (sexp)"Bignum", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #if SEXP_USE_RATIOS
-  {SEXP_RATIO, sexp_offsetof(ratio, numerator), 2, 2, 0, 0, sexp_sizeof(ratio), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Ratio", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_RATIO, sexp_offsetof(ratio, numerator), 2, 2, 0, 0, sexp_sizeof(ratio), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Ratio", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
 #if SEXP_USE_COMPLEX
-  {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Complex", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Complex", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
-  {SEXP_IPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORT},
-  {SEXP_OPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORT},
-  {SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_FILENO},
-  {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 5, 5, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_MACRO, sexp_offsetof(macro, proc), 3, 3, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Macro", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_ENV, sexp_offsetof(env, parent), 3+SEXP_USE_RENAME_BINDINGS, 3+SEXP_USE_RENAME_BINDINGS, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Environment", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Bytecode", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_CORE, sexp_offsetof(core, name), 1, 1, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Core-Form", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_IPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORTN, SEXP_FINALIZE_PORT},
+  {SEXP_OPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORTN, SEXP_FINALIZE_PORT},
+  {SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_FILENON, SEXP_FINALIZE_FILENO},
+  {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 5, 5, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_MACRO, sexp_offsetof(macro, proc), 3, 3, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Macro", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_ENV, sexp_offsetof(env, parent), 3+SEXP_USE_RENAME_BINDINGS, 3+SEXP_USE_RENAME_BINDINGS, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Environment", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Bytecode", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_CORE, sexp_offsetof(core, name), 1, 1, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Core-Form", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #if SEXP_USE_DL
-  {SEXP_DL, sexp_offsetof(dl, file), 1, 1, 0, 0, sexp_sizeof(dl), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Dynamic-Library", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_DL},
+  {SEXP_DL, sexp_offsetof(dl, file), 1, 1, 0, 0, sexp_sizeof(dl), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Dynamic-Library", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_DLN, SEXP_FINALIZE_DL},
 #endif
-  {SEXP_OPCODE, sexp_offsetof(opcode, name), 11, 11, 0, 0, sexp_sizeof(opcode), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Opcode", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_LAMBDA, sexp_offsetof(lambda, name), 11, 11, 0, 0, sexp_sizeof(lambda), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lambda", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_CND, sexp_offsetof(cnd, test), 4, 4, 0, 0, sexp_sizeof(cnd), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"If", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_REF, sexp_offsetof(ref, name), 3, 3, 0, 0, sexp_sizeof(ref), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Ref", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_SET, sexp_offsetof(set, var), 3, 3, 0, 0, sexp_sizeof(set), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Set!", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_SET_SYN, sexp_offsetof(set_syn, var), 3, 3, 0, 0, sexp_sizeof(set_syn), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Set-Syn!", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Seq", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lit", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL},
-  {SEXP_STACK, sexp_offsetof(stack, data), 0, 0, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Stack", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_CONTEXT, sexp_offsetof(context, stack), 12+SEXP_USE_DL, 12+SEXP_USE_DL, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Context", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
-  {SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Cpointer", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_OPCODE, sexp_offsetof(opcode, name), 11, 11, 0, 0, sexp_sizeof(opcode), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Opcode", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_LAMBDA, sexp_offsetof(lambda, name), 11, 11, 0, 0, sexp_sizeof(lambda), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lambda", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_CND, sexp_offsetof(cnd, test), 4, 4, 0, 0, sexp_sizeof(cnd), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"If", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_REF, sexp_offsetof(ref, name), 3, 3, 0, 0, sexp_sizeof(ref), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Ref", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_SET, sexp_offsetof(set, var), 3, 3, 0, 0, sexp_sizeof(set), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Set!", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_SET_SYN, sexp_offsetof(set_syn, var), 3, 3, 0, 0, sexp_sizeof(set_syn), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Set-Syn!", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Seq", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Lit", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_STACK, sexp_offsetof(stack, data), 0, 0, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Stack", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_CONTEXT, sexp_offsetof(context, stack), 12+SEXP_USE_DL, 12+SEXP_USE_DL, 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Context", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Cpointer", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #if SEXP_USE_AUTO_FORCE
-  {SEXP_PROMISE, sexp_offsetof(promise, value), 1, 1, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Promise", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_PROMISE, sexp_offsetof(promise, value), 1, 1, 0, 0, sexp_sizeof(promise), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Promise", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
 #if SEXP_USE_WEAK_REFERENCES
-  {SEXP_EPHEMERON, sexp_offsetof(ephemeron, key), 2, 0, 0, 0, sexp_sizeof(ephemeron), 0, 0, sexp_offsetof(ephemeron, key), 1, 0, 0, 1, 0, (sexp)"Ephemeron", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL},
+  {SEXP_EPHEMERON, sexp_offsetof(ephemeron, key), 2, 0, 0, 0, sexp_sizeof(ephemeron), 0, 0, sexp_offsetof(ephemeron, key), 1, 0, 0, 1, 0, (sexp)"Ephemeron", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
 };
 
@@ -240,7 +238,7 @@ sexp sexp_register_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
                             sexp parent, sexp slots,
                             sexp fb, sexp felb, sexp flb, sexp flo, sexp fls,
                             sexp sb, sexp so, sexp sc, sexp w, sexp wb, sexp wo,
-                            sexp ws, sexp we, sexp p, sexp_proc2 f) {
+                            sexp ws, sexp we, sexp p, const char* fname, sexp_proc2 f) {
   sexp *v1, *v2;
   sexp_gc_var2(res, type);
   sexp_uint_t i, len, num_types=sexp_context_num_types(ctx),
@@ -271,32 +269,33 @@ sexp sexp_register_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
       sexp_pointer_tag(type) = SEXP_TYPE;
       sexp_type_tag(type) = num_types;
       sexp_type_slots(type) = slots;
-      sexp_type_field_base(type) = sexp_unbox_fixnum(fb);
-      sexp_type_field_eq_len_base(type) = sexp_unbox_fixnum(felb);
-      sexp_type_field_len_base(type) = sexp_unbox_fixnum(flb);
-      sexp_type_field_len_off(type) = sexp_unbox_fixnum(flo);
-      sexp_type_field_len_scale(type) = sexp_unbox_fixnum(fls);
-      sexp_type_size_base(type) = sexp_unbox_fixnum(sb);
-      sexp_type_size_off(type) = sexp_unbox_fixnum(so);
-      sexp_type_size_scale(type) = sexp_unbox_fixnum(sc);
-      sexp_type_weak_base(type) = sexp_unbox_fixnum(w);
-      sexp_type_weak_len_base(type) = sexp_unbox_fixnum(wb);
-      sexp_type_weak_len_off(type) = sexp_unbox_fixnum(wo);
-      sexp_type_weak_len_scale(type) = sexp_unbox_fixnum(ws);
-      sexp_type_weak_len_extra(type) = sexp_unbox_fixnum(we);
+      sexp_type_field_base(type) = (short)sexp_unbox_fixnum(fb);
+      sexp_type_field_eq_len_base(type) = (short)sexp_unbox_fixnum(felb);
+      sexp_type_field_len_base(type) = (short)sexp_unbox_fixnum(flb);
+      sexp_type_field_len_off(type) = (short)sexp_unbox_fixnum(flo);
+      sexp_type_field_len_scale(type) = (unsigned short)sexp_unbox_fixnum(fls);
+      sexp_type_size_base(type) = (short)sexp_unbox_fixnum(sb);
+      sexp_type_size_off(type) = (short)sexp_unbox_fixnum(so);
+      sexp_type_size_scale(type) = (unsigned short)sexp_unbox_fixnum(sc);
+      sexp_type_weak_base(type) = (short)sexp_unbox_fixnum(w);
+      sexp_type_weak_len_base(type) = (short)sexp_unbox_fixnum(wb);
+      sexp_type_weak_len_off(type) = (short)sexp_unbox_fixnum(wo);
+      sexp_type_weak_len_scale(type) = (short)sexp_unbox_fixnum(ws);
+      sexp_type_weak_len_extra(type) = (short)sexp_unbox_fixnum(we);
       sexp_type_name(type) = name;
       sexp_type_getters(type) = SEXP_FALSE;
       sexp_type_setters(type) = SEXP_FALSE;
       sexp_type_finalize(type) = f;
+      sexp_type_finalize_name(type) = (fname) ? sexp_c_string(ctx, fname, -1) : NULL;
       sexp_type_id(type) = SEXP_FALSE;
 #if SEXP_USE_DL
       if (f) sexp_type_dl(type) = sexp_context_dl(ctx);
 #endif
       sexp_type_print(type) = p;
-      if (sexp_typep(parent)) {
+      if (parent && sexp_typep(parent)) {
         len = sexp_vectorp(sexp_type_cpl(parent)) ? sexp_vector_length(sexp_type_cpl(parent)) : 1;
         sexp_type_cpl(type) = sexp_make_vector(ctx, sexp_make_fixnum(len+1), SEXP_VOID);
-        if (sexp_vectorp(sexp_type_cpl(parent)))
+        if (parent && sexp_vectorp(sexp_type_cpl(parent)))
           memcpy(sexp_vector_data(sexp_type_cpl(type)),
                  sexp_vector_data(sexp_type_cpl(parent)),
                  len * sizeof(sexp));
@@ -307,7 +306,7 @@ sexp sexp_register_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
         sexp_type_cpl(type) = sexp_make_vector(ctx, SEXP_ONE, SEXP_VOID);
       }
       sexp_vector_data(sexp_type_cpl(type))[len] = type;
-      sexp_type_depth(type) = len;
+      sexp_type_depth(type) = (short)len;
       sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(num_types + 1);
     }
     res = type;
@@ -317,14 +316,14 @@ sexp sexp_register_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
 }
 
 sexp sexp_register_simple_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp parent, sexp slots) {
-  short i, num_slots = sexp_unbox_fixnum(sexp_length(ctx, slots));
+  short i, num_slots = (short)sexp_unbox_fixnum(sexp_length(ctx, slots));
   sexp type_size, num_slots_obj, cpl, tmp;
   if (parent && sexp_typep(parent)) {
-    num_slots += sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(parent)));
+    num_slots += (short)sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(parent)));
     if (sexp_vectorp((cpl = sexp_type_cpl(parent))))
-      for (i=sexp_vector_length(cpl)-1; i>=0; i--) {
+      for (i=(short)sexp_vector_length(cpl)-1; i>=0; i--) {
         tmp = sexp_vector_ref(cpl, sexp_make_fixnum(i));
-        num_slots += sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(tmp)));
+        num_slots += (short)sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(tmp)));
       }
   }
   num_slots_obj = sexp_make_fixnum(num_slots);
@@ -336,7 +335,7 @@ sexp sexp_register_simple_type_op (sexp ctx, sexp self, sexp_sint_t n, sexp name
                        type_size, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
                        SEXP_ZERO, SEXP_ZERO, SEXP_ZERO,
                        sexp_type_print(sexp_type_by_index(ctx, SEXP_EXCEPTION)),
-                       NULL);
+                       NULL, NULL);
 }
 
 #if SEXP_USE_OBJECT_BRACE_LITERALS
@@ -419,14 +418,20 @@ void sexp_init_context_globals (sexp ctx) {
   vec = sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES));
   for (i=0; i<SEXP_NUM_CORE_TYPES; i++) {
     type = sexp_alloc_type(ctx, type, SEXP_TYPE);
+    if (!type) {
+      return; // TODO - fundamental OOM, what to do here?
+    }
     memcpy(&(type->value), &(_sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
     vec[i] = type;
     sexp_type_name(type) = sexp_c_string(ctx, (char*)sexp_type_name(type), -1);
+    if (sexp_type_finalize_name(type)) {
+      sexp_type_finalize_name(type) = sexp_c_string(ctx, (char*)sexp_type_finalize_name(type), -1);
+    }
     if (sexp_type_print(type)) {
       if (print && ((sexp_proc1)sexp_type_print(type) == sexp_opcode_func(print)))
         sexp_type_print(type) = print;
       else
-        sexp_type_print(type) = print = sexp_make_foreign(ctx, "sexp_write_simple_object", 3, 0, (sexp_proc1)sexp_type_print(type), NULL);
+        sexp_type_print(type) = print = sexp_make_foreign(ctx, "sexp_write_simple_object", 3, 0, NULL, (sexp_proc1)sexp_type_print(type), NULL);
     }
   }
 }
@@ -503,7 +508,7 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
 }
 
 #if ! SEXP_USE_GLOBAL_HEAP
-void sexp_destroy_context (sexp ctx) {
+sexp sexp_destroy_context (sexp ctx) {
   sexp_heap heap, tmp;
   size_t sum_freed;
   if (sexp_context_heap(ctx)) {
@@ -511,15 +516,16 @@ void sexp_destroy_context (sexp ctx) {
     sexp_markedp(ctx) = 1;
     sexp_markedp(sexp_context_globals(ctx)) = 1;
     sexp_mark(ctx, sexp_global(ctx, SEXP_G_TYPES));
-    sexp_finalize(ctx);
+    if (sexp_finalize(ctx) == SEXP_FALSE) { return SEXP_FALSE; }
     sexp_sweep(ctx, &sum_freed);
-    sexp_finalize(ctx);
+    if (sexp_finalize(ctx) == SEXP_FALSE) { return SEXP_FALSE; }
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {
       tmp = heap->next;
       sexp_free_heap(heap);
     }
   }
+  return SEXP_TRUE;
 }
 #endif
 
@@ -1014,7 +1020,7 @@ sexp sexp_string_offset_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   sexp_sint_t off = sexp_unbox_fixnum(offset);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
-  if (off < 0 || off > sexp_string_size(str))
+  if (off < 0 || off > (sexp_sint_t)sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-offset->index: offset out of range", offset);
   return sexp_make_fixnum(sexp_string_utf8_length((unsigned char*)sexp_string_data(str), off));
 }
@@ -1078,9 +1084,9 @@ sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start
     end = sexp_make_fixnum(sexp_string_size(str));
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
   if ((sexp_unbox_fixnum(start) < 0)
-      || (sexp_unbox_fixnum(start) > sexp_string_size(str))
+      || (sexp_unbox_fixnum(start) > (sexp_sint_t)sexp_string_size(str))
       || (sexp_unbox_fixnum(end) < 0)
-      || (sexp_unbox_fixnum(end) > sexp_string_size(str))
+      || (sexp_unbox_fixnum(end) > (sexp_sint_t)sexp_string_size(str))
       || (end < start))
     return sexp_range_exception(ctx, str, start, end);
   res = sexp_make_string(ctx, sexp_fx_sub(end, start), SEXP_VOID);
@@ -1529,16 +1535,16 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
   if (!sexp_vectorp(vec)) {
     vec = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
         = sexp_make_vector(ctx, sexp_make_fixnum(128), SEXP_FALSE);
-  } else if (n >= sexp_vector_length(vec)) {
+  } else if (n >= (sexp_sint_t)sexp_vector_length(vec)) {
     data = sexp_vector_data(vec);
-    for (i = n2 = 0; i < sexp_vector_length(vec); i++)
+    for (i = n2 = 0; i < (sexp_sint_t)sexp_vector_length(vec); i++)
       if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i]))
         n2++;
     if (n2 * 2 >= n)
       n2 = n * 2;
     tmp = sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS)
         = sexp_make_vector(ctx, sexp_make_fixnum(n2), SEXP_FALSE);
-    for (i = n = 0; i < sexp_vector_length(vec); i++)
+    for (i = n = 0; i < (sexp_sint_t)sexp_vector_length(vec); i++)
       if (sexp_ephemeronp(data[i]) && !sexp_brokenp(data[i])
           && sexp_insert_fileno_ephemeron(ctx, tmp, data[i]))
         n++;
@@ -1765,7 +1771,7 @@ static struct {const char* name; char ch;} sexp_char_names[] = {
   {"alarm", '\a'},
   {"backspace", '\b'},
   {"delete", 127},
-  {"escape", '\e'},
+  {"escape", 27},
   {"null", 0},
 #endif
 };
@@ -1820,7 +1826,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       } else {
         sexp_write_string(ctx, "#(", out);
         sexp_write_one(ctx, elts[0], out);
-        for (i=1; i<len; i++) {
+        for (i=1; i<(long)len; i++) {
           sexp_write_char(ctx, ' ', out);
           sexp_write_one(ctx, elts[i], out);
         }
@@ -1953,7 +1959,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write_string(ctx, "#u8(", out);
       str = sexp_bytes_data(obj);
       len = sexp_bytes_length(obj);
-      for (i=0; i<len; i++) {
+      for (i=0; i<(long)len; i++) {
         if (i!=0) sexp_write_char(ctx, ' ', out);
         sexp_write(ctx, sexp_make_fixnum(((unsigned char*)str)[i]), out);
       }
@@ -2881,7 +2887,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
                         sexp_make_fixnum(16))) {
           res = sexp_read_error(ctx, "reader label out of order", tmp, in);
         } else {
-          if (c2 + 1 >= sexp_vector_length(*shares)) {
+          if (c2 + 1 >= (int)sexp_vector_length(*shares)) {
             tmp2 = sexp_make_vector(ctx, sexp_make_fixnum(sexp_vector_length(*shares)*2), SEXP_VOID);
             memcpy(sexp_vector_data(tmp2), sexp_vector_data(*shares), (sexp_vector_length(*shares)-1)*sizeof(sexp));
             *shares = tmp2;
@@ -2890,6 +2896,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
           if (tmp > sexp_vector_data(*shares)[sexp_vector_length(*shares)-1])
             sexp_vector_data(*shares)[sexp_vector_length(*shares)-1] = tmp;
           res = sexp_read_raw(ctx, in, shares);
+          sexp_vector_data(*shares)[c2] = res;
           if (sexp_reader_labelp(res))
             res = sexp_read_error(ctx, "self reader label reference", tmp, in);
           else
