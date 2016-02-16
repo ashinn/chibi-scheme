@@ -43,12 +43,12 @@ sexp sexp_gc_heap_walk(sexp ctx,
       
       /* find the preceding and succeeding free list pointers */
       sexp_free_list r = q->next;
-      while (r && ((char*)r < (char*)p)) {
+      while (r && ((unsigned char*)r < (unsigned char*)p)) {
         q = r;
         r = r->next;
       }
       
-      if ( (char*)r == (char*)p ) {
+      if ( (unsigned char*)r == (unsigned char*)p ) {
         if (free_callback && (res = free_callback(ctx, r, user)) != SEXP_TRUE) {
           return res; }
         size = r ? r->size : 0;
@@ -61,14 +61,14 @@ sexp sexp_gc_heap_walk(sexp ctx,
           goto done;
         }
       }
-      p = (sexp)(((char*)p) + size);
+      p = (sexp)(((unsigned char*)p) + size);
     }
     
     h = h->next;
   }
   res = SEXP_TRUE;
 done:
-  if (!res) res = sexp_user_exception(ctx, NULL, gc_heap_err_str, NULL);
+  if (res != SEXP_TRUE) res = sexp_user_exception(ctx, NULL, gc_heap_err_str, NULL);
   return res;
 }
 
@@ -107,7 +107,7 @@ static sexp sexp_callback_remap(sexp ctx, sexp s, void *user) {
   state->remap[state->index].dstp = state->p;
   if (ctx == s) state->ctx_dst = state->p;
   
-  state->p = (sexp)(((char*)state->p) + size);
+  state->p = (sexp)(((unsigned char*)state->p) + size);
   state->index += 1;
 
   return SEXP_TRUE;
@@ -119,11 +119,11 @@ static sexp sexp_callback_remap(sexp ctx, sexp s, void *user) {
 static sexp sexp_gc_heap_pack_src_to_dst(void* adata, sexp srcp) {
 
   struct sexp_remap_state* state = adata;
-  int imin = 0;
-  int imax = state->sexps_count - 1;
+  sexp_sint_t imin = 0;
+  sexp_sint_t imax = state->sexps_count - 1;
 
   while (imin <= imax) {
-    int imid = ((imax - imin) / 2) + imin;
+    sexp_sint_t imid = ((imax - imin) / 2) + imin;
     sexp midp = state->remap[imid].srcp;
     if (midp == srcp) {
       return state->remap[imid].dstp;
@@ -142,7 +142,7 @@ static sexp sexp_adjust_fields(sexp dstp, sexp* types, sexp (* adjust_fn)(void *
   sexp_tag_t tag           = sexp_pointer_tag(dstp);
   sexp       type_spec     = types[tag];
   size_t     type_sexp_cnt = sexp_type_num_slots_of_object(type_spec, dstp);
-  sexp*      vec           = (sexp*)((char*)dstp + sexp_type_field_base(type_spec));
+  sexp*      vec           = (sexp*)((unsigned char*)dstp + sexp_type_field_base(type_spec));
   int        i;
   
   for (i = 0; i < type_sexp_cnt; i++) {
@@ -150,7 +150,10 @@ static sexp sexp_adjust_fields(sexp dstp, sexp* types, sexp (* adjust_fn)(void *
     sexp dst = src;
     if (src && sexp_pointerp(src)) {
       dst = adjust_fn(adata, src);
-      if (!sexp_pointerp(dst)) { return dstp; }
+      if (!sexp_pointerp(dst)) { 
+        size_t sz = strlen(gc_heap_err_str);
+        snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, " from adjust fields, tag=%lu i=%d", tag, i);
+        return SEXP_FALSE; }
     }
     vec[i] = dst;
   }
@@ -159,7 +162,7 @@ static sexp sexp_adjust_fields(sexp dstp, sexp* types, sexp (* adjust_fn)(void *
 
 
 static sexp sexp_adjust_bytecode(sexp dstp, sexp (*adjust_fn)(void *, sexp), void *adata) {
-  sexp res = NULL;
+  sexp res = SEXP_FALSE;
   sexp   src, dst;
   sexp*  vec;
   int    i;
@@ -181,7 +184,10 @@ static sexp sexp_adjust_bytecode(sexp dstp, sexp (*adjust_fn)(void *, sexp), voi
       src = vec[0];
       if (src && sexp_pointerp(src)) {
         dst = adjust_fn(adata, src);
-        if (!sexp_pointerp(dst)) { res = dst; goto done; }
+        if (!sexp_pointerp(dst)) {
+          size_t sz = strlen(gc_heap_err_str);
+          snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, " from adjust bytecode, FCALLN");
+          goto done; }
         vec[0] = dst;
       }
       /* ... FALLTHROUGH ... */
@@ -200,7 +206,10 @@ static sexp sexp_adjust_bytecode(sexp dstp, sexp (*adjust_fn)(void *, sexp), voi
       src = vec[2];
       if (src && sexp_pointerp(src)) {
         dst = adjust_fn(adata, src);
-        if (!sexp_pointerp(dst)) { res = dst; goto done; }
+        if (!sexp_pointerp(dst)) { 
+          size_t sz = strlen(gc_heap_err_str);
+          snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, " from adjust bytecode, PROCEDURE");
+          goto done; }
         vec[2] = dst;
       }
       i += 3*sizeof(sexp); break;
@@ -236,19 +245,20 @@ static sexp_heap sexp_gc_packed_heap_make(size_t packed_size, size_t free_size) 
     free_size = 2*sexp_free_chunk_size;
   }
   free_size = sexp_heap_align(free_size);
-  sexp_heap heap = sexp_make_heap(sexp_heap_align(packed_size + free_size + sexp_free_chunk_size + 128), 0, 0);
+  size_t req_size = packed_size + free_size + sexp_free_chunk_size + 128;
+  sexp_heap heap = sexp_make_heap(sexp_heap_align(req_size), 0, 0);
   if (!heap) {
     strcpy(gc_heap_err_str, "Could not allocate memory for heap");
     return NULL;
   }
   sexp base = sexp_heap_first_block(heap);
-  size_t pad = (char *)base - (char *)heap->data;
+  size_t pad = (unsigned char *)base - (unsigned char *)heap->data;
   heap->size = packed_size + free_size + pad;
   heap->free_list->size = 0;
   if (free_size == 0) {
     heap->free_list->next = NULL;
   } else {
-    heap->free_list->next = (sexp_free_list)((char *)base + packed_size);
+    heap->free_list->next = (sexp_free_list)((unsigned char *)base + packed_size);
     heap->free_list->next->next = NULL;
     heap->free_list->next->size = free_size;
   }
@@ -282,22 +292,22 @@ sexp sexp_gc_heap_pack(sexp ctx, sexp_uint_t heap_free_size) {
     res = sexp_global(ctx, SEXP_G_OOM_ERROR);
     goto done; }
   
-  if ((res = sexp_gc_heap_walk(ctx, sexp_context_types(ctx), sexp_context_num_types(ctx),
-                               &state, NULL, NULL, sexp_callback_remap)) != SEXP_TRUE) {
-    goto done; }
+  res = sexp_gc_heap_walk(ctx, sexp_context_types(ctx), sexp_context_num_types(ctx),
+                          &state, NULL, NULL, sexp_callback_remap);
+  if (res != SEXP_TRUE) { goto done; }
 
   sexp* types = sexp_context_types(state.ctx_src);
   int idx;
   for (idx = 0; idx < state.sexps_count; idx++) {
     sexp dstp = state.remap[idx].dstp;
-    if ((res = sexp_gc_heap_pack_adjust(dstp, types, &state)) != SEXP_TRUE) {
-      goto done; }
+    res = sexp_gc_heap_pack_adjust(dstp, types, &state);
+    if (res != SEXP_TRUE) { goto done; }
   }
-
-  res = state.ctx_dst;
+  res = SEXP_TRUE;
 done:
-  if (state.remap) free(state.remap);
-  return res;
+  if (state.heap && res != SEXP_TRUE) { sexp_free_heap(state.heap); }
+  if (state.remap) { free(state.remap); }
+  return (res == SEXP_TRUE) ? state.ctx_dst : res;
 }
 
 
@@ -325,13 +335,13 @@ sexp sexp_save_image (sexp ctx_in, const char* filename) {
   }
   
   /* Save ONLY packed, active SEXPs.  No free list structures or padding. */
-  sexp ctx = sexp_gc_heap_pack(ctx_in, 0);
-  if (!ctx || !sexp_contextp(ctx)) {
+  sexp ctx_out = sexp_gc_heap_pack(ctx_in, 0);
+  if (!ctx_out || !sexp_contextp(ctx_out)) {
     goto done;
   }
-  heap = sexp_context_heap(ctx);
+  heap = sexp_context_heap(ctx_out);
   sexp   base = sexp_heap_first_block(heap);
-  size_t pad  = (size_t)((char *)base - (char *)heap->data);
+  size_t pad  = (size_t)((unsigned char *)base - (unsigned char *)heap->data);
   size_t size = heap->size - pad;
   
   struct sexp_image_header_t header;
@@ -341,9 +351,8 @@ sexp sexp_save_image (sexp ctx_in, const char* filename) {
   header.minor   = SEXP_IMAGE_MINOR_VERSION;
   header.size    = size;
   header.base    = base;
-  header.context = ctx;
+  header.context = ctx_out;
 
-  sexp_gc(ctx, NULL);
   if (! (fwrite(&header, sizeof(header), 1, fp) == 1 &&
          fwrite(base, size, 1, fp) == 1)) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "Error writing image file: %s", filename);
@@ -378,7 +387,7 @@ struct load_image_state {
 /* Return a destination (remapped) pointer for a given source pointer */
 static sexp load_image_src_to_dst(void* adata, sexp srcp) {
   struct load_image_state* state = adata;
-  return (sexp)((char *)srcp + state->offset);
+  return (sexp)((unsigned char *)srcp + state->offset);
 }
 
 
@@ -534,7 +543,7 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
   }
   sexp base = sexp_heap_first_block(state.heap);
 
-  if (fread(base, header.size, 1, fp) != 1) {
+  if (fread(base, 1, header.size, fp) != header.size) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "error reading image\n");
     goto done;
   }
@@ -542,7 +551,7 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
   /* Adjust pointers in loaded packed heap. */
   
   state.offset = (sexp_sint_t)((sexp_sint_t)base - (sexp_sint_t)header.base);
-  ctx = (sexp)((char *)header.context + state.offset);
+  ctx = (sexp)((unsigned char *)header.context + state.offset);
   sexp_context_heap(ctx) = state.heap;
 
   /* Type information (specifically, how big types are) is stored as sexps in the
@@ -550,14 +559,14 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
      copy of the type array pointers with correct offsets is applied is created outside
      of the new heap to be used with the pointer adjustment process.
   */
-  sexp* ctx_globals = sexp_vector_data((sexp)((char*)sexp_context_globals(ctx) + state.offset));
-  sexp* ctx_types   = sexp_vector_data((sexp)((char*)(ctx_globals[SEXP_G_TYPES]) + state.offset));
+  sexp* ctx_globals = sexp_vector_data((sexp)((unsigned char*)sexp_context_globals(ctx) + state.offset));
+  sexp* ctx_types   = sexp_vector_data((sexp)((unsigned char*)(ctx_globals[SEXP_G_TYPES]) + state.offset));
   state.types_cnt   = sexp_unbox_fixnum(ctx_globals[SEXP_G_NUM_TYPES]);
   state.types = malloc(sizeof(sexp) * state.types_cnt);
   if (!state.types) goto done;
   int i;
   for (i = 0; i < state.types_cnt; i++) {
-    state.types[i] = (sexp)((char *)ctx_types[i] + state.offset);
+    state.types[i] = (sexp)((unsigned char *)ctx_types[i] + state.offset);
   }
   
   if (sexp_gc_heap_walk(ctx, state.types, state.types_cnt,

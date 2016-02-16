@@ -72,10 +72,10 @@ endif
 
 ifeq ($(SEXP_USE_DL),0)
 XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g -g3 -O3 $(CFLAGS)
+XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g -g3 -O0 $(CFLAGS)
 else
 XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
-XCFLAGS   := -Wall -g -g3 -O3 $(CFLAGS)
+XCFLAGS   := -Wall -g -g3 -O0 $(CFLAGS)
 endif
 
 ########################################################################
