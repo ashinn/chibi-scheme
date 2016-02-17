@@ -279,7 +279,7 @@ static int heaps_compar(const void* v1, const void* v2) {
   sexp_heap h1 = *((sexp_heap*)v1);
   sexp_heap h2 = *((sexp_heap*)v2);
   return 
-    (h1 < h1) ? -1 : 
+    (h1 < h2) ? -1 : 
     (h1 > h2) ?  1 : 0;
 }
 
@@ -315,6 +315,7 @@ sexp sexp_gc_heap_pack(sexp ctx_src, sexp_uint_t heap_free_size) {
     res = sexp_global(ctx_src, SEXP_G_OOM_ERROR);
     goto done; }
   sexp_heap h = sexp_context_heap(ctx_src);
+  for (i = 0; h; i++, h=h->next) { heaps[i] = h; }
   qsort(heaps, state.heaps_count, sizeof(sexp_heap), heaps_compar);
 
   /* 4.  Pack the sexps into the new heap */
@@ -415,7 +416,7 @@ sexp sexp_save_image (sexp ctx_in, const char* filename) {
 done:
   if (fp) fclose(fp);
   if (heap) sexp_free_heap(heap);
-  //if (res != SEXP_TRUE) res = sexp_user_exception(ctx_in, NULL, gc_heap_err_str, NULL);
+  if (res != SEXP_TRUE) res = sexp_user_exception(ctx_in, NULL, gc_heap_err_str, NULL);
   return res;
 }
 
