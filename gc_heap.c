@@ -9,15 +9,18 @@ char gc_heap_err_str[ERR_STR_SIZE];
 
 
 static sexp_uint_t sexp_gc_allocated_bytes (sexp ctx, sexp *types, size_t types_cnt, sexp x) {
-  sexp_uint_t res;
-  if (!sexp_pointerp(x) || (sexp_pointer_tag(x) >= types_cnt))
-    return sexp_heap_align(1);
-  res = sexp_type_size_of_object(types[sexp_pointer_tag(x)], x) + SEXP_GC_PAD;
-  return res;
+  sexp_uint_t res = 0;
+  if (!sexp_pointerp(x) || (sexp_pointer_tag(x) >= types_cnt)) {
+    res = 1;
+  } else {
+    res = sexp_type_size_of_object(types[sexp_pointer_tag(x)], x) + SEXP_GC_PAD;
+  }
+  return sexp_heap_align(res);
 }
 
 
 sexp sexp_gc_heap_walk(sexp ctx,
+                       sexp_heap h,  /* normally set to sexp_context_heap(ctx) */
                        sexp *t,      /* normally set to sexp_context_types(ctx) */
                        size_t t_cnt, /* normally set to sexp_context_num_types(ctx) */
                        void *user,
@@ -26,21 +29,14 @@ sexp sexp_gc_heap_walk(sexp ctx,
                        sexp (*sexp_callback)(sexp ctx, sexp s, void *user))
 {
   sexp res = SEXP_FALSE;
-  if (!ctx || !sexp_contextp(ctx)) return res;
 
   size_t size = 0;
-  sexp_heap h = sexp_context_heap(ctx);
   while (h) {
-
-    if (heap_callback && (res = heap_callback(ctx, h, user)) != SEXP_TRUE) {
-      return res; }
-
     sexp p = sexp_heap_first_block(h);
     sexp_free_list q = h->free_list;
     sexp end = sexp_heap_end(h);
 
     while (p < end) {
-      
       /* find the preceding and succeeding free list pointers */
       sexp_free_list r = q->next;
       while (r && ((unsigned char*)r < (unsigned char*)p)) {
@@ -55,7 +51,7 @@ sexp sexp_gc_heap_walk(sexp ctx,
       } else {
         if (sexp_callback && (res = sexp_callback(ctx, p, user)) != SEXP_TRUE) {
           return res; }
-        size = sexp_heap_align(sexp_gc_allocated_bytes(ctx, t, t_cnt, p));
+        size = sexp_gc_allocated_bytes(ctx, t, t_cnt, p);
         if (size == 0) {
           strcpy(gc_heap_err_str, "Heap element with a zero size detected");
           goto done;
@@ -64,6 +60,8 @@ sexp sexp_gc_heap_walk(sexp ctx,
       p = (sexp)(((unsigned char*)p) + size);
     }
     
+    if (heap_callback && (res = heap_callback(ctx, h, user)) != SEXP_TRUE) {
+      return res; }
     h = h->next;
   }
   res = SEXP_TRUE;
@@ -79,7 +77,7 @@ struct sexp_remap {
 };
 
 struct sexp_remap_state {
-  size_t index, sexps_count, sexps_size;
+  size_t index, heaps_count, sexps_count, sexps_size;
   sexp p, end, ctx_src, ctx_dst;
   sexp_heap heap;
   int mode;
@@ -87,20 +85,32 @@ struct sexp_remap_state {
 };
 
 
+static sexp heap_callback_count(sexp ctx, sexp_heap h, void *user) {
+  struct sexp_remap_state* state = user;
+  state->heaps_count += 1;
+  return SEXP_TRUE;
+}
+
 static sexp sexp_callback_count(sexp ctx, sexp s, void *user) {
   struct sexp_remap_state* state = user;
-  size_t size = sexp_heap_align(sexp_gc_allocated_bytes(ctx, sexp_context_types(ctx),
-                                                        sexp_context_num_types(ctx), s));
+  size_t size = sexp_gc_allocated_bytes(ctx, sexp_context_types(ctx),
+                                        sexp_context_num_types(ctx), s);
   state->sexps_count += 1;
   state->sexps_size  += size;
   return SEXP_TRUE;
 }
 
+static sexp heap_callback_remap(sexp ctx, sexp_heap h, void *user) {
+  return SEXP_NULL;
+}
 
 static sexp sexp_callback_remap(sexp ctx, sexp s, void *user) {
   struct sexp_remap_state* state = user;
-  size_t size = sexp_heap_align(sexp_gc_allocated_bytes(ctx, sexp_context_types(ctx),
-                                                        sexp_context_num_types(ctx), s));
+  size_t size = sexp_gc_allocated_bytes(ctx, sexp_context_types(ctx),
+                                        sexp_context_num_types(ctx), s);
+  if (state->p >= state->end) {
+    snprintf(gc_heap_err_str, ERR_STR_SIZE, "callback_remap i=%zu p>end internal error", state->index);
+    return SEXP_FALSE; }
   memcpy(state->p, s, size);
   
   state->remap[state->index].srcp = s;
@@ -152,7 +162,7 @@ static sexp sexp_adjust_fields(sexp dstp, sexp* types, sexp (* adjust_fn)(void *
       dst = adjust_fn(adata, src);
       if (!sexp_pointerp(dst)) { 
         size_t sz = strlen(gc_heap_err_str);
-        snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, " from adjust fields, tag=%lu i=%d", tag, i);
+        snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, " from adjust fields, tag=%u i=%d", tag, i);
         return SEXP_FALSE; }
     }
     vec[i] = dst;
@@ -265,48 +275,90 @@ static sexp_heap sexp_gc_packed_heap_make(size_t packed_size, size_t free_size) 
   return heap;
 }
 
+static int heaps_compar(const void* v1, const void* v2) {
+  sexp_heap h1 = *((sexp_heap*)v1);
+  sexp_heap h2 = *((sexp_heap*)v2);
+  return 
+    (h1 < h1) ? -1 : 
+    (h1 > h2) ?  1 : 0;
+}
 
-/* Pack the heap.  Return a new context with a unified, packed heap. */
-sexp sexp_gc_heap_pack(sexp ctx, sexp_uint_t heap_free_size) {
+/* Pack the heap.  Return a new context with a unified, packed heap.  No change to original context. */
+sexp sexp_gc_heap_pack(sexp ctx_src, sexp_uint_t heap_free_size) {
 
   sexp res = NULL;
-  sexp_gc(ctx, NULL);
+  sexp_gc(ctx_src, NULL);
+  sexp_heap* heaps = NULL;
+  int i = 0;
+
+  /* 1.  Collect statistics - sexp count, size, heap count */
   
   struct sexp_remap_state state;
   memset(&state, 0, sizeof(struct sexp_remap_state));
-  state.ctx_src = ctx;
-  if ((res = sexp_gc_heap_walk(ctx, sexp_context_types(ctx), sexp_context_num_types(ctx),
-                               &state, NULL, NULL, sexp_callback_count)) != SEXP_TRUE) {
+  state.ctx_src = ctx_src;
+  if ((res = sexp_gc_heap_walk(ctx_src, sexp_context_heap(ctx_src), 
+                               sexp_context_types(ctx_src), sexp_context_num_types(ctx_src),
+                               &state, heap_callback_count, NULL, sexp_callback_count)) != SEXP_TRUE) {
     goto done; }
+
+  /* 2.  Make a new heap of the correct size to hold the sexps from the old heap. */
 
   state.heap = sexp_gc_packed_heap_make(state.sexps_size, heap_free_size);
   if (!state.heap) {
-    res = sexp_global(ctx, SEXP_G_OOM_ERROR);
+    res = sexp_global(ctx_src, SEXP_G_OOM_ERROR);
     goto done; }
+
+  /* 3.  Create a list of heaps sorted by increasing memory address, for srcp search lookup */
+
+  heaps = malloc(sizeof(sexp_heap) * state.heaps_count);
+  if (!heaps) {
+    res = sexp_global(ctx_src, SEXP_G_OOM_ERROR);
+    goto done; }
+  sexp_heap h = sexp_context_heap(ctx_src);
+  qsort(heaps, state.heaps_count, sizeof(sexp_heap), heaps_compar);
+
+  /* 4.  Pack the sexps into the new heap */
 
   state.p     = sexp_heap_first_block(state.heap);
   state.end   = sexp_heap_end(state.heap);
   state.index = 0;
   state.remap = malloc(sizeof(struct sexp_remap) * state.sexps_count);
   if (!state.remap) {
-    res = sexp_global(ctx, SEXP_G_OOM_ERROR);
+    res = sexp_global(ctx_src, SEXP_G_OOM_ERROR);
     goto done; }
   
-  res = sexp_gc_heap_walk(ctx, sexp_context_types(ctx), sexp_context_num_types(ctx),
-                          &state, NULL, NULL, sexp_callback_remap);
-  if (res != SEXP_TRUE) { goto done; }
+  for (i = 0; i < state.heaps_count; i++) {
+    res = sexp_gc_heap_walk(ctx_src, heaps[i],
+                            sexp_context_types(ctx_src), sexp_context_num_types(ctx_src),
+                            &state, heap_callback_remap, NULL, sexp_callback_remap);
+    if (!(res == SEXP_TRUE || res == SEXP_NULL)) { 
+      size_t sz = strlen(gc_heap_err_str);
+      snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, "; remap heap %d %p walk heap_pack", i, heaps[i]);
+      goto done; }
+  }
+
+  /* 5.  Adjust sexp pointers to new locations inside the new heap */
 
   sexp* types = sexp_context_types(state.ctx_src);
   int idx;
   for (idx = 0; idx < state.sexps_count; idx++) {
     sexp dstp = state.remap[idx].dstp;
     res = sexp_gc_heap_pack_adjust(dstp, types, &state);
-    if (res != SEXP_TRUE) { goto done; }
+    if (res != SEXP_TRUE) { 
+      size_t sz = strlen(gc_heap_err_str);
+      snprintf(gc_heap_err_str + sz, ERR_STR_SIZE - sz, "; src->dst idx=%d heap_pack", idx);
+      goto done; }
   }
+
   res = SEXP_TRUE;
+
 done:
+  /* 6. Clean up. */
+
   if (state.heap && res != SEXP_TRUE) { sexp_free_heap(state.heap); }
   if (state.remap) { free(state.remap); }
+  if (heaps) { free(heaps); }
+
   return (res == SEXP_TRUE) ? state.ctx_dst : res;
 }
 
@@ -569,12 +621,12 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
     state.types[i] = (sexp)((unsigned char *)ctx_types[i] + state.offset);
   }
   
-  if (sexp_gc_heap_walk(ctx, state.types, state.types_cnt,
+  if (sexp_gc_heap_walk(ctx, sexp_context_heap(ctx), state.types, state.types_cnt,
                         &state, NULL, NULL, load_image_callback_p1) != SEXP_TRUE) {
     goto done; }
 
   /* Second pass to fix code references */
-  if (sexp_gc_heap_walk(ctx, state.types, state.types_cnt,
+  if (sexp_gc_heap_walk(ctx, sexp_context_heap(ctx), state.types, state.types_cnt,
                         &state, NULL, NULL, load_image_callback_p2) != SEXP_TRUE) {
     goto done; }
 
@@ -641,8 +693,8 @@ static sexp free_stats_callback(sexp ctx, sexp_free_list f, void *user) {
 static sexp sexp_stats_callback(sexp ctx, sexp s, void *user) {
   struct sexp_stats *stats = user;
   int tag = sexp_pointer_tag(s);
-  size_t size = sexp_heap_align(sexp_gc_allocated_bytes(ctx, sexp_context_types(ctx),
-                                                        sexp_context_num_types(ctx), s));
+  size_t size = sexp_gc_allocated_bytes(ctx, sexp_context_types(ctx),
+                                        sexp_context_num_types(ctx), s);
   if (tag > SEXP_CORE_TYPES_MAX) tag = SEXP_CORE_TYPES_MAX;
   sexp_stats_entry_set(&(stats->sexps[tag]), size);
   stats->sexp_count += 1;
@@ -655,7 +707,7 @@ void sexp_gc_heap_stats_print(sexp ctx)
   
   struct sexp_stats stats;
   memset(&stats, 0, sizeof(struct sexp_stats));
-  sexp_gc_heap_walk(ctx, sexp_context_types(ctx), sexp_context_num_types(ctx),
+  sexp_gc_heap_walk(ctx, sexp_context_heap(ctx), sexp_context_types(ctx), sexp_context_num_types(ctx),
                     &stats, heap_stats_callback, free_stats_callback, sexp_stats_callback);
   
   printf("Heap Stats\n    %6zu %7zu\n",

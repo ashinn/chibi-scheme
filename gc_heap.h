@@ -26,6 +26,7 @@
    value indicates an abnormal return condition.
 */
 sexp sexp_gc_heap_walk(sexp ctx,         /* a possibly incomplete context */
+                       sexp_heap h,      /* normally set to sexp_context_heap(ctx) */
                        sexp *types,      /* normally set to sexp_context_types(ctx) */
                        size_t types_cnt, /* normally set to sexp_context_num_types(ctx) */
                        void *user,   /* arbitrary data passed to callbacks */
