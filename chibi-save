@@ -1,0 +1,1 @@
+LD_LIBRARY_PATH=.: DYLD_LIBRARY_PATH=.: CHIBI_MODULE_PATH=lib ./chibi-scheme -m "chibi" -m "(srfi 1)" -m "(srfi 11)" -m "(srfi 16)" -m "(srfi 18)" -m "(srfi 2)" -m "(srfi 26)" -m "(srfi 27)" -m "(srfi 33)" -m "(srfi 38)" -m "(srfi 39)" -m "(srfi 46)" -m "(srfi 55)" -m "(srfi 6)" -m "(srfi 69)" -m "(srfi 8)" -m "(srfi 9)" -m "(srfi 95)" -m "(srfi 98)" -m "(srfi 99)" -d chibi.img

@@ -45,7 +45,7 @@ typedef unsigned int sexp_random_t;
 
 #endif
 
-static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
+sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
   sexp res;
   sexp_int32_t m;
 #if SEXP_USE_BIGNUMS
@@ -100,11 +100,11 @@ static sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs,
   return res;
 }
 
-static sexp sexp_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp bound) {
+sexp sexp_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp bound) {
   return sexp_rs_random_integer(ctx, self, n, default_random_source, bound);
 }
 
-static sexp sexp_rs_random_real (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
+sexp sexp_rs_random_real (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   sexp_int32_t res;
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
@@ -112,27 +112,27 @@ static sexp sexp_rs_random_real (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   return sexp_make_flonum(ctx, (double)res / (double)RAND_MAX);
 }
 
-static sexp sexp_random_real (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_random_real (sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_rs_random_real(ctx, self, n, default_random_source);
 }
 
 #if SEXP_BSD || defined(__CYGWIN__)
 
-static sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res;
   res = sexp_alloc_tagged(ctx, sexp_sizeof_random, rs_type_id);
   *sexp_random_data(res) = 1;
   return res;
 }
 
-static sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
+sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else
     return sexp_make_integer(ctx, *sexp_random_data(rs));
 }
 
-static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
+sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else if (sexp_fixnump(state))
@@ -149,7 +149,7 @@ static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, se
 
 #else
 
-static sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   sexp res;
   sexp_gc_var1(state);
   sexp_gc_preserve1(ctx, state);
@@ -162,14 +162,14 @@ static sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   return res;
 }
 
-static sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
+sexp sexp_random_source_state_ref (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else
     return sexp_subbytes(ctx, sexp_random_state(rs), ZERO, STATE_SIZE);
 }
 
-static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
+sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp state) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   else if (! (sexp_bytesp(state)
@@ -182,14 +182,14 @@ static sexp sexp_random_source_state_set (sexp ctx, sexp self, sexp_sint_t n, se
 
 #endif
 
-static sexp sexp_random_source_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
+sexp sexp_random_source_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   sexp_seed_random(time(NULL), rs);
   return SEXP_VOID;
 }
 
-static sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp seed1, sexp seed2) {
+sexp sexp_random_source_pseudo_randomize (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp seed1, sexp seed2) {
   if (! sexp_random_source_p(rs))
     return sexp_type_exception(ctx, self, rs_type_id, rs);
   if (! sexp_fixnump(seed1))

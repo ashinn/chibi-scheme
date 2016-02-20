@@ -168,7 +168,7 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
   return res;
 }
 
-static sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b) {
+sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b) {
   return sexp_make_fixnum(sexp_object_compare(ctx, a, b));
 }
 
@@ -281,7 +281,7 @@ static sexp sexp_merge_sort_less (sexp ctx, sexp *vec, sexp *scratch,
   return res;
 }
 
-static sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
+sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
                          sexp less, sexp key) {
   sexp_sint_t len;
   sexp res;
