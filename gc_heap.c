@@ -4,6 +4,8 @@
 
 #include "gc_heap.h"
 
+#if SEXP_USE_IMAGE_LOADING
+
 #define ERR_STR_SIZE 256
 char gc_heap_err_str[ERR_STR_SIZE];
 
@@ -729,3 +731,5 @@ void sexp_gc_heap_stats_print(sexp ctx)
   printf(" ========================================\n");
   printf("    %6zu %7zu\n", total_count, total_size);
 }
+
+#endif  /* SEXP_USE_IMAGE_LOADING */
