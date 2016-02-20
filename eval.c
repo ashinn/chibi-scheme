@@ -236,6 +236,7 @@ sexp sexp_extend_synclo_env (sexp ctx, sexp env) {
       sexp_env_renames(e2) = sexp_env_renames(e1);
 #endif
     }
+    if (!e2) { return sexp_global(ctx, SEXP_G_OOM_ERROR); }
     sexp_env_parent(e2) = sexp_context_env(ctx);
   }
   sexp_gc_release1(ctx);
@@ -261,7 +262,6 @@ int sexp_param_index (sexp ctx, sexp lambda, sexp name) {
   sexp ls;
   int i;
   while (1) {
-    i = 0;
     ls = sexp_lambda_params(lambda);
     for (i=0; sexp_pairp(ls); ls=sexp_cdr(ls), i++)
       if (sexp_car(ls) == name)
@@ -304,7 +304,7 @@ void sexp_shrink_bcode (sexp ctx, sexp_uint_t i) {
 
 void sexp_expand_bcode (sexp ctx, sexp_sint_t size) {
   sexp tmp;
-  if (sexp_bytecode_length(sexp_context_bc(ctx))
+  if ((sexp_sint_t)sexp_bytecode_length(sexp_context_bc(ctx))
       < (sexp_unbox_fixnum(sexp_context_pos(ctx)))+size) {
     tmp=sexp_alloc_bytecode(ctx, sexp_bytecode_length(sexp_context_bc(ctx))*2);
     if (sexp_exceptionp(tmp)) {
@@ -1766,7 +1766,7 @@ sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
-  if (sexp_unbox_fixnum(off) >= sexp_string_size(str))
+  if (sexp_unbox_fixnum(off) >= (sexp_sint_t)sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-ref: index out of range", i);
   return sexp_string_utf8_ref(ctx, str, off);
 }
@@ -1821,7 +1821,7 @@ sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
   off = sexp_string_index_to_offset(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
-  if (sexp_unbox_fixnum(off) >= sexp_string_size(str))
+  if (sexp_unbox_fixnum(off) >= (sexp_sint_t)sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-set!: index out of range", i);
   sexp_string_utf8_set(ctx, str, off, ch);
   return SEXP_VOID;
@@ -1937,13 +1937,13 @@ sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
     res = sexp_xtype_exception(ctx, self, "make-opcode: bad opcode", code);
   else {
     res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);
-    sexp_opcode_class(res) = sexp_unbox_fixnum(op_class);
-    sexp_opcode_code(res) = sexp_unbox_fixnum(code);
-    sexp_opcode_num_args(res) = sexp_unbox_fixnum(num_args);
-    sexp_opcode_flags(res) = sexp_unbox_fixnum(flags);
+    sexp_opcode_class(res) = (unsigned char)sexp_unbox_fixnum(op_class);
+    sexp_opcode_code(res) = (unsigned char)sexp_unbox_fixnum(code);
+    sexp_opcode_num_args(res) = (unsigned char)sexp_unbox_fixnum(num_args);
+    sexp_opcode_flags(res) = (unsigned char)sexp_unbox_fixnum(flags);
     sexp_opcode_arg1_type(res) = arg1t;
     sexp_opcode_arg2_type(res) = arg2t;
-    sexp_opcode_inverse(res) = sexp_unbox_fixnum(invp);
+    sexp_opcode_inverse(res) = (unsigned char)sexp_unbox_fixnum(invp);
     sexp_opcode_data(res) = data;
     sexp_opcode_data2(res) = data2;
     sexp_opcode_func(res) = func;
@@ -1956,7 +1956,7 @@ sexp sexp_make_opcode (sexp ctx, sexp self, sexp name, sexp op_class, sexp code,
 }
 
 sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
-                        int flags, sexp_proc1 f, sexp data) {
+                        int flags, const char *fname, sexp_proc1 f, sexp data) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
 #if ! SEXP_USE_EXTENDED_FCALL
@@ -1978,6 +1978,9 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
   sexp_opcode_name(res) = sexp_c_string(ctx, name, -1);
   sexp_opcode_data(res) = data;
   sexp_opcode_func(res) = f;
+  if (fname) {
+    sexp_opcode_data2(res) = sexp_c_string(ctx, fname, -1);
+  }
 #if SEXP_USE_DL
   sexp_opcode_dl(res) = sexp_context_dl(ctx);
 #endif
@@ -1986,25 +1989,25 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
 }
 
 sexp sexp_define_foreign_aux (sexp ctx, sexp env, const char *name, int num_args,
-                              int flags, sexp_proc1 f, sexp data) {
+                              int flags, const char *fname, sexp_proc1 f, sexp data) {
   sexp_gc_var2(sym, res);
   sexp_gc_preserve2(ctx, sym, res);
-  res = sexp_make_foreign(ctx, name, num_args, flags, f, data);
+  res = sexp_make_foreign(ctx, name, num_args, flags, fname, f, data);
   if (!sexp_exceptionp(res))
     sexp_env_define(ctx, env, sym = sexp_intern(ctx, name, -1), res);
   sexp_gc_release2(ctx);
   return res;
 }
 
-sexp sexp_define_foreign_param (sexp ctx, sexp env, const char *name,
-                                int num_args, sexp_proc1 f, const char *param) {
+sexp sexp_define_foreign_param_aux (sexp ctx, sexp env, const char *name,
+                                    int num_args, const char *fname, sexp_proc1 f, const char *param) {
   sexp res = SEXP_FALSE;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
   tmp = sexp_intern(ctx, param, -1);
   tmp = sexp_env_ref(ctx, env, tmp, SEXP_FALSE);
   if (sexp_opcodep(tmp))
-    res = sexp_define_foreign_aux(ctx, env, name, num_args, 3, f, tmp);
+    res = sexp_define_foreign_aux(ctx, env, name, num_args, 3, fname, f, tmp);
   sexp_gc_release1(ctx);
   return res;
 }
@@ -2311,7 +2314,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
 #if SEXP_USE_SIMPLIFY
   op = sexp_make_foreign(ctx, "sexp_simplify", 1, 0,
-                         (sexp_proc1)sexp_simplify, SEXP_VOID);
+                         NULL, (sexp_proc1)sexp_simplify, SEXP_VOID);
   tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
   sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), tmp);
 #endif
@@ -2320,7 +2323,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   /* load init-7.scm */
   len = strlen(sexp_init_file);
   strncpy(init_file, sexp_init_file, len);
-  init_file[len] = sexp_unbox_fixnum(version) + '0';
+  init_file[len] = (char)sexp_unbox_fixnum(version) + '0';
   strncpy(init_file + len + 1, sexp_init_file_suffix, strlen(sexp_init_file_suffix));
   init_file[len + 1 + strlen(sexp_init_file_suffix)] = 0;
   tmp = sexp_load_module_file(ctx, init_file, e);

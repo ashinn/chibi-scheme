@@ -23,7 +23,7 @@ static sexp_uint_t string_hash (char *str, sexp_uint_t bound) {
   return acc % bound;
 }
 
-static sexp sexp_string_hash (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp bound) {
+sexp sexp_string_hash (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp bound) {
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, self, SEXP_STRING, str);
   else if (! sexp_fixnump(bound))
@@ -38,7 +38,7 @@ static sexp_uint_t string_ci_hash (char *str, sexp_uint_t bound) {
   return acc % bound;
 }
 
-static sexp sexp_string_ci_hash (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp bound) {
+sexp sexp_string_ci_hash (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp bound) {
   if (! sexp_stringp(str))
     return sexp_type_exception(ctx, self, SEXP_STRING, str);
   else if (! sexp_fixnump(bound))
@@ -69,7 +69,7 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
         size = sexp_type_size_of_object(t, obj)-offsetof(struct sexp_struct, value);
         p0 = ((char*)p + sexp_type_num_slots_of_object(t,obj)*sizeof(sexp));
         if (((char*)obj + size) > p0)
-          for (i=0; i<size; i++) {acc *= FNV_PRIME; acc ^= p0[i];}
+          for (i=0; i<(sexp_sint_t)size; i++) {acc *= FNV_PRIME; acc ^= p0[i];}
         /* hash eq-object slots */
         len = sexp_type_num_eq_slots_of_object(t, obj);
         if (len > 0) {
@@ -91,13 +91,13 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
   return (bound ? acc % bound : acc);
 }
 
-static sexp sexp_hash (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp bound) {
+sexp sexp_hash (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
   return sexp_make_fixnum(hash_one(ctx, obj, sexp_unbox_fixnum(bound), HASH_DEPTH));
 }
 
-static sexp sexp_hash_by_identity (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp bound) {
+sexp sexp_hash_by_identity (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp bound) {
   if (! sexp_exact_integerp(bound))
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
   return sexp_make_fixnum((sexp_uint_t)obj % sexp_unbox_fixnum(bound));
@@ -119,7 +119,7 @@ static sexp sexp_get_bucket (sexp ctx, sexp buckets, sexp hash_fn, sexp obj) {
       args = sexp_eval_string(ctx, "(current-error-port)", -1, sexp_context_env(ctx));
       sexp_print_exception(ctx, res, args);
       res = SEXP_ZERO;
-    } else if (sexp_unbox_fixnum(res) >= len) {
+    } else if ((sexp_uint_t)sexp_unbox_fixnum(res) >= len) {
       res = SEXP_ZERO;
     }
     sexp_gc_release1(ctx);
@@ -184,7 +184,7 @@ static void sexp_regrow_hash_table (sexp ctx, sexp ht, sexp oldbuckets, sexp has
   sexp_gc_release1(ctx);
 }
 
-static sexp sexp_hash_table_cell (sexp ctx, sexp self, sexp_sint_t n, sexp ht, sexp obj, sexp createp) {
+sexp sexp_hash_table_cell (sexp ctx, sexp self, sexp_sint_t n, sexp ht, sexp obj, sexp createp) {
   sexp buckets, eq_fn, hash_fn, i;
   sexp_uint_t size;
   sexp_gc_var1(res);
@@ -214,7 +214,7 @@ static sexp sexp_hash_table_cell (sexp ctx, sexp self, sexp_sint_t n, sexp ht, s
   return res;
 }
 
-static sexp sexp_hash_table_delete (sexp ctx, sexp self, sexp_sint_t n, sexp ht, sexp obj) {
+sexp sexp_hash_table_delete (sexp ctx, sexp self, sexp_sint_t n, sexp ht, sexp obj) {
   sexp buckets, eq_fn, hash_fn, i, p, res;
   if (!(sexp_pointerp(ht) && strcmp(sexp_string_data(sexp_object_type_name(ctx, ht)), "Hash-Table") == 0))
     return sexp_xtype_exception(ctx, self, "not a Hash-Table", ht);

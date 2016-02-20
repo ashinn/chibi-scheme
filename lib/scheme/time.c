@@ -65,7 +65,7 @@ static void current_ntp_clock_values (double *second, int *leap_second_indicator
   }
 }
 
-static sexp sexp_current_ntp_clock_values (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_current_ntp_clock_values (sexp ctx, sexp self, sexp_sint_t n) {
   double second;
   int leap_second_indicator;
   sexp_gc_var3(res, car, cdr);
@@ -80,7 +80,7 @@ static sexp sexp_current_ntp_clock_values (sexp ctx, sexp self, sexp_sint_t n) {
 
 #endif  /* def SEXP_USE_NTP_GETTIME */
 
-static sexp sexp_current_clock_second (sexp ctx, sexp self, sexp_sint_t n) {
+sexp sexp_current_clock_second (sexp ctx, sexp self, sexp_sint_t n) {
 #ifndef PLAN9
   struct timeval tv;
   struct timezone tz;

@@ -80,12 +80,12 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   /* build a table of labels that are jumped to */
   labels = (sexp_sint_t*)calloc(sexp_bytecode_length(bc), sizeof(sexp_sint_t));
   ip = sexp_bytecode_data(bc);
-  while (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc)) {
+  while (ip - sexp_bytecode_data(bc) < (int)sexp_bytecode_length(bc)) {
     switch (*ip++) {
     case SEXP_OP_JUMP:
     case SEXP_OP_JUMP_UNLESS:
       off = ip - sexp_bytecode_data(bc) + ((sexp_sint_t*)ip)[0];
-      if (off >= 0 && off < sexp_bytecode_length(bc) && labels[off] == 0)
+      if (off >= 0 && off < (int)sexp_bytecode_length(bc) && labels[off] == 0)
         labels[off] = label++;
     case SEXP_OP_CALL:
     case SEXP_OP_CLOSURE_REF:
@@ -134,7 +134,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
           == sexp_unbox_fixnum(
                sexp_car(sexp_vector_ref(src, sexp_make_fixnum(src_off)))))) {
     src_here = sexp_cdr(sexp_vector_ref(src, sexp_make_fixnum(src_off)));
-    src_off = src_off < sexp_vector_length(src)-1 ? src_off + 1 : -1;
+    src_off = src_off < (sexp_sint_t)sexp_vector_length(src)-1 ? src_off + 1 : -1;
   } else {
     src_here = NULL;
   }
@@ -163,7 +163,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_JUMP_UNLESS:
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
     off = ip - sexp_bytecode_data(bc) + ((sexp_sint_t*)ip)[0];
-    if (off >= 0 && off < sexp_bytecode_length(bc) && labels[off] > 0) {
+    if (off >= 0 && off < (sexp_sint_t)sexp_bytecode_length(bc) && labels[off] > 0) {
       sexp_write_string(ctx, " L", out);
       sexp_write_integer(ctx, labels[off], out);
     }
@@ -224,7 +224,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
       && (depth < SEXP_DISASM_MAX_DEPTH)
       && tmp && (sexp_bytecodep(tmp) || sexp_procedurep(tmp)))
     disasm(ctx, self, tmp, out, depth+1);
-  if (ip - sexp_bytecode_data(bc) < sexp_bytecode_length(bc))
+  if (ip - sexp_bytecode_data(bc) < (int)sexp_bytecode_length(bc))
     goto loop;
 
   free(labels);

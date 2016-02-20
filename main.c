@@ -7,6 +7,7 @@
 #endif
 
 #include "chibi/eval.h"
+#include "gc_heap.h"
 
 #define sexp_argv_symbol "command-line"
 
@@ -78,126 +79,6 @@ void sexp_segfault_handler(int sig) {
 }
 #endif
 
-#if SEXP_USE_IMAGE_LOADING
-
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#define SEXP_IMAGE_MAGIC "\a\achibi\n\0"
-#define SEXP_IMAGE_MAJOR_VERSION 1
-#define SEXP_IMAGE_MINOR_VERSION 1
-
-typedef struct sexp_image_header_t* sexp_image_header;
-struct sexp_image_header_t {
-  char magic[8];
-  short major, minor;
-  sexp_abi_identifier_t abi;
-  sexp_uint_t size;
-  sexp_heap base;
-  sexp context;
-};
-
-sexp sexp_gc (sexp ctx, size_t *sum_freed);
-void sexp_offset_heap_pointers (sexp_heap heap, sexp_heap from_heap, sexp* types, sexp flags);
-
-static sexp sexp_load_image (const char* file, sexp_uint_t heap_size, sexp_uint_t heap_max_size) {
-  sexp ctx, flags, *globals, *types;
-  int fd;
-  sexp_sint_t offset;
-  sexp_heap heap;
-  sexp_free_list q;
-  struct sexp_image_header_t header;
-  fd = open(file, O_RDONLY);
-  if (fd < 0) {
-    fprintf(stderr, "can't open image file: %s\n", file);
-    return NULL;
-  }
-  if (read(fd, &header, sizeof(header)) != sizeof(header))
-    return NULL;
-  if (memcmp(header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic)) != 0) {
-    fprintf(stderr, "invalid image file magic for %s: %s\n", file, header.magic);
-    return NULL;
-  } else if (header.major != SEXP_IMAGE_MAJOR_VERSION
-             || header.major < SEXP_IMAGE_MINOR_VERSION) {
-    fprintf(stderr, "unsupported image version: %d.%d\n",
-            header.major, header.minor);
-    return NULL;
-  } else if (!sexp_abi_compatible(NULL, header.abi, SEXP_ABI_IDENTIFIER)) {
-    fprintf(stderr, "unsupported ABI: %s (expected %s)\n",
-            header.abi, SEXP_ABI_IDENTIFIER);
-    return NULL;
-  }
-  if (heap_size < header.size) heap_size = header.size;
-  heap = (sexp_heap)malloc(sexp_heap_pad_size(heap_size));
-  if (!heap) {
-    fprintf(stderr, "couldn't malloc heap\n");
-    return NULL;
-  }
-  if (read(fd, heap, header.size) != header.size) {
-    fprintf(stderr, "error reading image\n");
-    return NULL;
-  }
-  offset = (sexp_sint_t)((char*)heap - (sexp_sint_t)header.base);
-  /* expand the last free chunk if necessary */
-  if (heap->size < heap_size) {
-    for (q=(sexp_free_list)(((char*)heap->free_list) + offset); q->next;
-         q=(sexp_free_list)(((char*)q->next) + offset))
-      ;
-    if ((char*)q + q->size >= (char*)heap->data + heap->size) {
-      /* last free chunk at end of heap */
-      q->size += heap_size - heap->size;
-    } else {
-      /* last free chunk in the middle of the heap */
-      q->next = (sexp_free_list)((char*)heap->data + heap->size);
-      q = (sexp_free_list)(((char*)q->next) + offset);
-      q->size = heap_size - heap->size;
-      q->next = NULL;
-    }
-    heap->size += (heap_size - heap->size);
-  }
-  ctx = (sexp)(((char*)header.context) + offset);
-  globals = sexp_vector_data((sexp)((char*)sexp_context_globals(ctx) + offset));
-  types = sexp_vector_data((sexp)((char*)(globals[SEXP_G_TYPES]) + offset));
-  flags = sexp_fx_add(SEXP_COPY_LOADP, SEXP_COPY_FREEP);
-  sexp_offset_heap_pointers(heap, header.base, types, flags);
-  close(fd);
-  return ctx;
-}
-
-static int sexp_save_image (sexp ctx, const char* path) {
-  sexp_heap heap;
-  FILE* file;
-  struct sexp_image_header_t header;
-  heap = sexp_context_heap(ctx);
-  if (heap->next) {
-    fprintf(stderr, "can't save image for a chunked heap, try a larger initial heap with -h\n");
-    return 0;
-  }
-  file = fopen(path, "w");
-  if (!file) {
-    fprintf(stderr, "couldn't open image file for writing: %s\n", path);
-    return 0;
-  }
-  memcpy(&header.magic, SEXP_IMAGE_MAGIC, sizeof(header.magic));
-  memcpy(&header.abi, SEXP_ABI_IDENTIFIER, sizeof(header.abi));
-  header.major = SEXP_IMAGE_MAJOR_VERSION;
-  header.minor = SEXP_IMAGE_MINOR_VERSION;
-  header.size = heap->size;
-  header.base = heap;
-  header.context = ctx;
-  sexp_gc(ctx, NULL);
-  if (! (fwrite(&header, sizeof(header), 1, file) == 1
-         && fwrite(heap, heap->size, 1, file) == 1)) {
-    fprintf(stderr, "error writing image file\n");
-    return 0;
-  }
-  fclose(file);
-  return 1;
-}
-
-#endif
 
 #if SEXP_USE_GREEN_THREADS
 static void sexp_make_unblocking (sexp ctx, sexp port) {
@@ -406,7 +287,7 @@ static sexp sexp_resume_ctx = SEXP_FALSE;
 static sexp sexp_resume_proc = SEXP_FALSE;
 #endif
 
-void run_main (int argc, char **argv) {
+sexp run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
   char *impmod;
 #endif
@@ -529,8 +410,9 @@ void run_main (int argc, char **argv) {
         exit_failure();
       }
       ctx = sexp_load_image(arg, heap_size, heap_max_size);
-      if (!ctx) {
+      if (!ctx || !sexp_contextp(ctx)) {
         fprintf(stderr, "-:i <file>: couldn't open file for reading: %s\n", arg);
+        fprintf(stderr, "            %s\n", sexp_load_image_err());
         exit_failure();
       }
       env = sexp_load_standard_params(ctx, sexp_context_env(ctx));
@@ -542,8 +424,11 @@ void run_main (int argc, char **argv) {
         env = sexp_load_standard_env(ctx, env, SEXP_SEVEN);
       }
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-      if (!sexp_save_image(ctx, arg))
+      if (sexp_save_image(ctx, arg) != SEXP_TRUE) {
+        fprintf(stderr, "-d <file>: couldn't save image to file: %s\n", arg);
+        fprintf(stderr, "           %s\n", sexp_load_image_err());
         exit_failure();
+      }
       quit = 1;
       break;
 #endif
@@ -555,7 +440,7 @@ void run_main (int argc, char **argv) {
       tmp = sexp_env_ref(ctx, env, sym=sexp_intern(ctx, "*features*", -1), SEXP_NULL);
       sexp_write(ctx, tmp, out);
       sexp_newline(ctx, out);
-      return;
+      return SEXP_TRUE;
 #if SEXP_USE_FOLD_CASE_SYMS
     case 'f':
       fold_case = 1;
@@ -698,7 +583,11 @@ void run_main (int argc, char **argv) {
   }
 
   sexp_gc_release4(ctx);
-  sexp_destroy_context(ctx);
+  if (sexp_destroy_context(ctx) == SEXP_FALSE) {
+    fprintf(stderr, "destroy_context error\n");
+    return SEXP_FALSE;
+  }
+  return SEXP_TRUE;
 }
 
 #ifdef EMSCRIPTEN
@@ -718,7 +607,10 @@ int main (int argc, char **argv) {
   signal(SIGSEGV, sexp_segfault_handler); 
 #endif
   sexp_scheme_init();
-  run_main(argc, argv);
-  exit_success();
+  if (run_main(argc, argv) == SEXP_FALSE) {
+    exit_failure();
+  } else {
+    exit_success();
+  }
   return 0;
 }

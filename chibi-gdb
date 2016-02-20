@@ -1,0 +1,1 @@
+LD_LIBRARY_PATH=.: DYLD_LIBRARY_PATH=.: CHIBI_MODULE_PATH=lib gdb --args ./chibi-scheme "$@"
