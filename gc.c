@@ -356,7 +356,7 @@ sexp sexp_finalize (sexp ctx) {
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
       if ((char*)r == (char*)p) { /* this is a free block, skip it */
-        p = (sexp) (((char*)p) + (r ? r->size : 0));
+        p = (sexp) (((char*)p) + r->size);
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));
@@ -401,7 +401,7 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       for (r=q->next; r && ((char*)r<(char*)p); q=r, r=r->next)
         ;
       if ((char*)r == (char*)p) { /* this is a free block, skip it */
-        p = (sexp) (((char*)p) + (r ? r->size : 0));
+        p = (sexp) (((char*)p) + r->size);
         continue;
       }
       size = sexp_heap_align(sexp_allocated_bytes(ctx, p));

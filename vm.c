@@ -1136,7 +1136,6 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     bc = sexp_procedure_code(self);
     cp = sexp_procedure_vars(self);
     ip = sexp_bytecode_data(bc) + sexp_unbox_fixnum(_ARG3);
-    // TODO - value stored here never read, verify   i = sexp_unbox_fixnum(_ARG4);
     top -= 4;
     _ARG1 = tmp1;
     break;

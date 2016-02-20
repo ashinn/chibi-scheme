@@ -729,5 +729,3 @@ void sexp_gc_heap_stats_print(sexp ctx)
   printf(" ========================================\n");
   printf("    %6zu %7zu\n", total_count, total_size);
 }
-
-
