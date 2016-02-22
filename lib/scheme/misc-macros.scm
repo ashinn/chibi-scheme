@@ -1,4 +1,14 @@
 
+(define-syntax let-syntax
+  (syntax-rules ()
+    ((let-syntax . x)
+     (let () (let-syntax/splicing . x)))))
+
+(define-syntax letrec-syntax
+  (syntax-rules ()
+    ((letrec-syntax . x)
+     (let () (letrec-syntax/splicing . x)))))
+
 (define-syntax when
   (syntax-rules ()
     ((when test . body)

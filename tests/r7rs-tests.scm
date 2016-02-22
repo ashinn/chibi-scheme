@@ -492,6 +492,13 @@
 
 (test 'ok (let ((=> #f)) (cond (#t => 'ok))))
 
+(let ()
+  (define x 1)
+  (let-syntax ()
+    (define x 2)
+    #f)
+  (test 1 x))
+
 (test-end)
 
 (test-begin "5 Program structure")

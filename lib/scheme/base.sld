@@ -1,6 +1,8 @@
 
 (define-library (scheme base)
-  (import (except (chibi) equal?)
+  (import (rename (except (chibi) equal?)
+                  (let-syntax let-syntax/splicing)
+                  (letrec-syntax letrec-syntax/splicing))
           (rename (chibi equiv) (equiv? equal?))
           (only (chibi string) string-map string-for-each)
           (chibi io)
