@@ -169,6 +169,8 @@ sexp sexp_env_define (sexp ctx, sexp env, sexp key, sexp value) {
     return sexp_user_exception(ctx, NULL, "immutable binding", key);
   cell = sexp_env_cell(ctx, env, key, 1);
   if (!cell) {
+    while (sexp_env_syntactic_p(env) && sexp_env_parent(env))
+      env = sexp_env_parent(env);
     sexp_env_push(ctx, env, tmp, key, value);
   } else if (sexp_immutablep(cell)) {
     res = sexp_user_exception(ctx, NULL, "immutable binding", key);
