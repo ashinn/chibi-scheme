@@ -46,6 +46,8 @@ MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
 	system test time trace type-inference uri weak monad/environment \
 	show show/base crypto/sha2
 
+IMAGE_FILES = chibi.img snow.img
+
 HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
 META_FILES = lib/.chibi.meta lib/.srfi.meta lib/.scheme.meta
@@ -80,7 +82,7 @@ endif
 
 ########################################################################
 
-all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
+all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(IMAGE_FILES) $(META_FILES)
 
 js: js/chibi.js
 
@@ -160,6 +162,12 @@ chibi-scheme.pc: chibi-scheme.pc.in
 # we're using Boehm.
 lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES) libchibi-scheme$(SO)
 	-$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
+
+chibi.img: $(CHIBI_DEPENDENCIES) all-libs
+	$(CHIBI) -d $@
+
+snow.img: $(CHIBI_DEPENDENCIES) all-libs
+	$(CHIBI) -mchibi.snow.{commands,interface,package,utils} -d $@
 
 doc: doc/chibi.html doc-libs
 
@@ -255,7 +263,8 @@ clean: clean-libs
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
-	    libchibi-scheme$(SO)* *.a *.pc include/chibi/install.h lib/.*.meta \
+	    $(IMAGE_FILES) libchibi-scheme$(SO)* *.a *.pc \
+	    include/chibi/install.h lib/.*.meta \
 	    chibi-scheme-emscripten \
 	    js/chibi.* \
 	    $(shell $(FIND) lib -name \*.o)
@@ -273,6 +282,7 @@ install: all
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
 	$(INSTALL) -m0644 $(META_FILES) $(DESTDIR)$(MODDIR)/
+	$(INSTALL) -m0644 $(IMAGE_FILES) $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
 	$(INSTALL) -m0644 lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
@@ -350,6 +360,7 @@ uninstall:
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
 	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.{sld,scm}
 	-$(RM) $(DESTDIR)$(MODDIR)/.*.meta
+	-$(RM) $(DESTDIR)$(MODDIR)/*.img
 	-$(RM) $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
 	-$(CD) $(DESTDIR)$(MODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
 	-$(CD) $(DESTDIR)$(BINMODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
