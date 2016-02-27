@@ -753,6 +753,7 @@ sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_symbolp(x)     (sexp_lsymbolp(x))
 #endif
 
+SEXP_API sexp sexp_id_name(sexp x);
 SEXP_API int sexp_idp(sexp x);
 
 #define sexp_portp(x) (sexp_check_tag(x, SEXP_IPORT) || sexp_check_tag(x, SEXP_OPORT))

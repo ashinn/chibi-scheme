@@ -93,19 +93,25 @@ static sexp sexp_env_cell_loc1 (sexp env, sexp key, int localp, sexp *varenv) {
         if (varenv) *varenv = env;
         return ls;
       }
-    env = (localp ? NULL : sexp_env_parent(env));
+    if (localp) break;
+    env = sexp_env_parent(env);
   } while (env && sexp_envp(env));
   return NULL;
 }
 
 static sexp sexp_env_cell_loc (sexp ctx, sexp env, sexp key, int localp, sexp *varenv) {
-  sexp cell = sexp_env_cell_loc1(env, key, localp, varenv);
+  sexp cell, ls = sexp_vectorp(sexp_context_specific(ctx)) ? sexp_memq(ctx, sexp_id_name(key), sexp_context_fv(ctx)) : SEXP_NULL;
+  for ( ; sexp_pairp(ls); ls=sexp_cdr(ls))
+    if (sexp_envp(sexp_car(ls))) {
+      env = sexp_car(ls);
+      break;
+    }
+  cell = sexp_env_cell_loc1(env, key, localp, varenv);
   while (!cell && key && sexp_synclop(key)) {
-    if (sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_context_fv(ctx)))
-        && sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_synclo_free_vars(key))))
+    if (!sexp_pairp(ls) && sexp_not(sexp_memq(ctx, sexp_synclo_expr(key), sexp_synclo_free_vars(key))))
       env = sexp_synclo_env(key);
     key = sexp_synclo_expr(key);
-    cell = sexp_env_cell_loc1(env, key, 0, varenv);
+    cell = sexp_env_cell_loc1(env, key, localp, varenv);
   }
   return cell;
 }
@@ -568,9 +574,13 @@ sexp sexp_make_child_context (sexp ctx, sexp lambda) {
 
 /**************************** identifiers *****************************/
 
-int sexp_idp (sexp x) {
+sexp sexp_id_name (sexp x) {
   while (sexp_synclop(x)) x = sexp_synclo_expr(x);
-  return sexp_symbolp(x);
+  return x;
+}
+
+int sexp_idp (sexp x) {
+  return sexp_symbolp(sexp_id_name(x));
 }
 
 sexp sexp_identifierp_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
@@ -1055,9 +1065,12 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
     res = analyze_var_ref(ctx, x, NULL);
   } else if (sexp_synclop(x)) {
     tmp = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
-    sexp_context_fv(tmp) = sexp_append2(tmp,
-                                        sexp_synclo_free_vars(x),
-                                        sexp_context_fv(tmp));
+    if (sexp_pairp(sexp_synclo_free_vars(x))) {
+      sexp_push(ctx, sexp_context_fv(tmp), sexp_context_env(ctx));
+      sexp_context_fv(tmp) = sexp_append2(tmp,
+                                          sexp_synclo_free_vars(x),
+                                          sexp_context_fv(tmp));
+    }
     sexp_context_env(tmp) = sexp_extend_synclo_env(tmp, sexp_synclo_env(x));
     x = sexp_synclo_expr(x);
     res = analyze(tmp, x, depth, defok);
