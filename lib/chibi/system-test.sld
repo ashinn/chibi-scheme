@@ -27,9 +27,9 @@
       ;; stress test user-name
       (test (user-name (user-information (current-user-id)))
           (user-name (user-information (current-user-id))))
-      (define u (user-information (current-user-id)))
-      (test (user-name u) (user-name (user-information (current-user-id))))
-      (define un (user-name (user-information (current-user-id))))
-      (test un (user-name (user-information (current-user-id))))
+      (let ((u (user-information (current-user-id))))
+        (test (user-name u) (user-name (user-information (current-user-id)))))
+      (let ((un (user-name (user-information (current-user-id)))))
+        (test un (user-name (user-information (current-user-id)))))
 
       (test-end))))

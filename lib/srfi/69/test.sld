@@ -4,8 +4,6 @@
   (begin
     (define (run-tests)
 
-      (test-begin "srfi-69: hash-tables")
-
       (define-syntax test-lset-eq?
         (syntax-rules ()
           ((test-lset= . args)
@@ -15,6 +13,8 @@
         (syntax-rules ()
           ((test-lset-equal? . args)
            (test-equal (lambda (a b) (lset= equal? a b)) . args))))
+
+      (test-begin "srfi-69: hash-tables")
 
       (let ((ht (make-hash-table eq?)))
         ;; 3 initial elements

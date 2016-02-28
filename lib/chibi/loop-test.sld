@@ -2,6 +2,13 @@
   (export run-tests)
   (import (chibi) (chibi loop) (only (chibi test) test-begin test test-end))
   (begin
+    (define (flatten ls)
+      (reverse
+       (loop lp ((for x ls (in-list ls)) (with res '()))
+         => res
+         (if (pair? x)
+             (lp (=> res (lp (=> ls x))))
+             (lp (=> res (cons x res)))))))
     (define (run-tests)
       (test-begin "loops")
 
@@ -54,14 +61,6 @@
         (loop ((for ls (in-lists '((a b c) (1 2 3))))
                (for res (listing ls)))
           => res))
-
-      (define (flatten ls)
-        (reverse
-         (loop lp ((for x ls (in-list ls)) (with res '()))
-           => res
-           (if (pair? x)
-               (lp (=> res (lp (=> ls x))))
-               (lp (=> res (cons x res)))))))
 
       (test
           "flatten (recursion test)"

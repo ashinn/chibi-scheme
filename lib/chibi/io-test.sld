@@ -6,9 +6,20 @@
           (only (chibi test) test-begin test test-end))
   (begin
     (define (run-tests)
-      (test-begin "io")
-
       (define long-string (make-string 2000 #\a))
+
+      (define (string-upcase str)
+        (list->string (map char-upcase (string->list str))))
+
+      (define (strings->input-port str-ls)
+        (make-generated-input-port
+         (lambda ()
+           (and (pair? str-ls)
+                (let ((res (car str-ls)))
+                  (set! str-ls (cdr str-ls))
+                  res)))))
+
+      (test-begin "io")
 
       (test "input-string-port" 1025
         (call-with-input-string (substring long-string 0 1025)
@@ -78,9 +89,6 @@
             (close-input-port in)
             res)))
 
-      (define (string-upcase str)
-        (list->string (map char-upcase (string->list str))))
-
       (test "upcase-input-port" "ABC"
         (call-with-input-string "abc"
           (lambda (in)
@@ -95,14 +103,6 @@
             (let ((out (make-filtered-output-port string-upcase out)))
               (display "abc" out)
               (close-output-port out)))))
-
-      (define (strings->input-port str-ls)
-        (make-generated-input-port
-         (lambda ()
-           (and (pair? str-ls)
-                (let ((res (car str-ls)))
-                  (set! str-ls (cdr str-ls))
-                  res)))))
 
       (test "abcdef" (read-line (strings->input-port '("abcdef"))))
       (test "abcdef" (read-line (strings->input-port '("abc" "def"))))

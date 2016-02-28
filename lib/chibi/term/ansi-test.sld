@@ -4,6 +4,27 @@
           (chibi test)
           (chibi term ansi))
   (begin
+    (define-syntax test-escape-procedure
+      (syntax-rules ()
+        ((test-escape-procedure p s)
+         (begin
+           (test-assert (procedure? p))
+           (test-error (p #f))
+           (test s (p))))))
+    (define-syntax test-wrap-procedure
+      (syntax-rules ()
+        ((test-wrap-procedure p s)
+         (begin
+           (test-assert (procedure? p))
+           (test-error (p))
+           (test-error (p #f))
+           (test-error (p "" #f))
+           (test (p "FOO")
+               "FOO"
+             (parameterize ((ansi-escapes-enabled? #f)) (p "FOO")))
+           (test (p "FOO")
+               s
+             (parameterize ((ansi-escapes-enabled? #t)) (p "FOO")))))))
     (define (run-tests)
       (test-begin "term.ansi")
 
@@ -13,29 +34,6 @@
             (eqv? tag
                   (parameterize ((ansi-escapes-enabled? tag))
                     (ansi-escapes-enabled?)))))
-
-      (define-syntax test-escape-procedure
-        (syntax-rules ()
-          ((test-escape-procedure p s)
-           (begin
-             (test-assert (procedure? p))
-             (test-error (p #f))
-             (test s (p))))))
-
-      (define-syntax test-wrap-procedure
-        (syntax-rules ()
-          ((test-wrap-procedure p s)
-           (begin
-             (test-assert (procedure? p))
-             (test-error (p))
-             (test-error (p #f))
-             (test-error (p "" #f))
-             (test (p "FOO")
-                 "FOO"
-               (parameterize ((ansi-escapes-enabled? #f)) (p "FOO")))
-             (test (p "FOO")
-                 s
-               (parameterize ((ansi-escapes-enabled? #t)) (p "FOO")))))))
 
       (test-escape-procedure black-escape       "\x1b;[30m")
       (test-escape-procedure red-escape         "\x1b;[31m")

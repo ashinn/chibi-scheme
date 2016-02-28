@@ -224,61 +224,62 @@
           (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 4))
       (test " abc d ef " (regexp-replace-all '(+ space) "  abc \t\n d ef  " " "))
 
-      (define (subst-matches matches input subst)
-        (define (submatch n)
-          (regexp-match-submatch matches n))
-        (and
-         matches
-         (call-with-output-string
-           (lambda (out)
-             (call-with-input-string subst
-               (lambda (in)
-                 (let lp ()
-                   (let ((c (read-char in)))
-                     (cond
-                      ((not (eof-object? c))
-                       (case c
-                         ((#\&)
-                          (display (or (submatch 0) "") out))
-                         ((#\\)
-                          (let ((c (read-char in)))
-                            (if (char-numeric? c)
-                                (let lp ((res (list c)))
-                                  (if (and (char? (peek-char in))
-                                           (char-numeric? (peek-char in)))
-                                      (lp (cons (read-char in) res))
-                                      (display
-                                       (or (submatch (string->number
-                                                      (list->string (reverse res))))
-                                           "")
-                                       out)))
-                                (write-char c out))))
-                         (else
-                          (write-char c out)))
-                       (lp)))))))))))
+      (let ()
+        (define (subst-matches matches input subst)
+          (define (submatch n)
+            (regexp-match-submatch matches n))
+          (and
+           matches
+           (call-with-output-string
+             (lambda (out)
+               (call-with-input-string subst
+                 (lambda (in)
+                   (let lp ()
+                     (let ((c (read-char in)))
+                       (cond
+                        ((not (eof-object? c))
+                         (case c
+                           ((#\&)
+                            (display (or (submatch 0) "") out))
+                           ((#\\)
+                            (let ((c (read-char in)))
+                              (if (char-numeric? c)
+                                  (let lp ((res (list c)))
+                                    (if (and (char? (peek-char in))
+                                             (char-numeric? (peek-char in)))
+                                        (lp (cons (read-char in) res))
+                                        (display
+                                         (or (submatch (string->number
+                                                        (list->string (reverse res))))
+                                             "")
+                                         out)))
+                                  (write-char c out))))
+                           (else
+                            (write-char c out)))
+                         (lp)))))))))))
 
-      (define (test-pcre line)
-        (match (string-split line #\tab)
-          ((pattern input result subst output)
-           (let ((name (string-append pattern " " input " " result " " subst)))
-             (cond
-              ((equal? "c" result)
-               (test-error name (regexp-search (pcre->sre pattern) input)))
-              ((equal? "n" result)
-               (test-assert name (not (regexp-search (pcre->sre pattern) input))))
-              (else
-               (test name output
-                 (subst-matches (regexp-search (pcre->sre pattern) input)
-                                input
-                                subst))))))
-          (else
-           (error "invalid regex test line" line))))
+        (define (test-pcre line)
+          (match (string-split line #\tab)
+            ((pattern input result subst output)
+             (let ((name (string-append pattern " " input " " result " " subst)))
+               (cond
+                ((equal? "c" result)
+                 (test-error name (regexp-search (pcre->sre pattern) input)))
+                ((equal? "n" result)
+                 (test-assert name (not (regexp-search (pcre->sre pattern) input))))
+                (else
+                 (test name output
+                   (subst-matches (regexp-search (pcre->sre pattern) input)
+                                  input
+                                  subst))))))
+            (else
+             (error "invalid regex test line" line))))
 
-      (test-group "pcre"
-        (call-with-input-file "tests/re-tests.txt"
-          (lambda (in)
-            (for-each
-             (lambda (line) (test-pcre line))
-             (port->list read-line in)))))
+        (test-group "pcre"
+          (call-with-input-file "tests/re-tests.txt"
+            (lambda (in)
+              (for-each
+               (lambda (line) (test-pcre line))
+               (port->list read-line in))))))
 
       (test-end))))

@@ -3,8 +3,6 @@
   (import (chibi) (chibi test) (srfi 1) (srfi 38))
   (begin
     (define (run-tests)
-      (test-begin "srfi-38: shared read/write")
-
       (define (read-from-string str)
         (call-with-input-string str
           (lambda (in) (read/ss in))))
@@ -28,6 +26,8 @@
                  (value expr))
              (test str (write-to-string value #t))
              (test str (write-to-string (read-from-string str) #t))))))
+
+      (test-begin "srfi-38: shared read/write")
 
       (test-io "(1)" (list 1))
       (test-io "(1 2)" (list 1 2))

@@ -5,9 +5,9 @@
           (chibi test))
   (begin
     (define (run-tests)
-      (test-begin "srfi-27: random")
       (define (test-random rand n)
         (test-assert (<= 0 (rand n) (- n 1))))
+      (test-begin "srfi-27: random")
       (let ((rs (make-random-source)))
         ;; chosen by fair dice roll.  guaranteed to be random
         (random-source-pseudo-randomize! rs 4 4)

@@ -3,6 +3,15 @@
   (import (except (scheme base) equal?)
           (chibi match)
           (only (chibi test) test-begin test test-end))
+  (cond-expand
+   (chibi
+    (begin
+      (define-record-type Point
+       (make-point x y)
+       point?
+       (x point-x point-x-set!)
+       (y point-y point-y-set!))))
+   (else))
   (begin
     (define (run-tests)
       (test-begin "match")
@@ -179,11 +188,6 @@
 
       (cond-expand
        (chibi
-        (define-record-type Point
-          (make-point x y)
-          point?
-          (x point-x point-x-set!)
-          (y point-y point-y-set!))
         (test "record positional"
             '(1 0)
           (match (make-point 0 1)

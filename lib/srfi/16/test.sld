@@ -10,14 +10,6 @@
          ((x y) (+ x y))
          ((x y z) (+ (+ x y) z))
          (args (apply + args))))
-
-      (test-begin "srfi-16: case-lambda")
-
-      (test 0 (plus))
-      (test 1 (plus 1))
-      (test 6 (plus 1 2 3))
-      (test-error ((case-lambda ((a) a) ((a b) (* a b))) 1 2 3))
-
       (define print
         (case-lambda
          (()
@@ -28,7 +20,6 @@
           (display arg)
           (display " ")
           (apply print args))))
-
       (define (print-to-string . args)
         (let ((out (open-output-string))
               (old-out (current-output-port)))
@@ -37,6 +28,13 @@
             (lambda () (apply print args))
             (lambda () (current-output-port old-out)))
           (get-output-string out)))
+
+      (test-begin "srfi-16: case-lambda")
+
+      (test 0 (plus))
+      (test 1 (plus 1))
+      (test 6 (plus 1 2 3))
+      (test-error ((case-lambda ((a) a) ((a b) (* a b))) 1 2 3))
 
       (test "" (print-to-string))
       (test "hi" (print-to-string 'hi))

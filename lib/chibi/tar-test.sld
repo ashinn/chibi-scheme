@@ -12,20 +12,19 @@
           (chibi tar)
           (chibi test))
   (begin
+    ;; Utility to flatten bytevectors, strings and individual bytes
+    ;; (integers) into a single bytevector for generating readable test
+    ;; data.  (<byte> . <repetition>) can be used to repeat a byte.
+    (define (bv . args)
+      (apply bytevector-append
+             (map (lambda (x)
+                    (cond ((string? x) (string->utf8 x))
+                          ((pair? x) (make-bytevector (cdr x) (car x)))
+                          ((integer? x) (bytevector x))
+                          (else x)))
+                  args)))
     (define (run-tests)
       (test-begin "tar")
-
-      ;; Utility to flatten bytevectors, strings and individual bytes
-      ;; (integers) into a single bytevector for generating readable test
-      ;; data.  (<byte> . <repetition>) can be used to repeat a byte.
-      (define (bv . args)
-        (apply bytevector-append
-               (map (lambda (x)
-                      (cond ((string? x) (string->utf8 x))
-                            ((pair? x) (make-bytevector (cdr x) (car x)))
-                            ((integer? x) (bytevector x))
-                            (else x)))
-                    args)))
 
       (let ((b (bv "foo" '(0 . 97)
                    "000644 " 0

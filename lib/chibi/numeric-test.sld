@@ -6,6 +6,13 @@
       (list x (+ 1 x) (+ -1 x) (- x) (- 1 x) (- -1 x)))
     (define (factorial n) (if (= n 0) 1 (* n (factorial (- n 1)))))
     (define (atanh z) (/ (- (log (+ 1 z)) (log (- 1 z))) 2))
+    (define (integer-arithmetic-combinations a b)
+      (list (+ a b) (- a b) (* a b) (quotient a b) (remainder a b)))
+    (define (sign-combinations a b)
+      (list (integer-arithmetic-combinations a b)
+            (integer-arithmetic-combinations (- a) b)
+            (integer-arithmetic-combinations a (- b))
+            (integer-arithmetic-combinations (- a) (- b))))
     (define (run-tests)
       (test-begin "numbers")
 
@@ -61,15 +68,6 @@
           (integer-neighborhoods (expt 2 128)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-      (define (integer-arithmetic-combinations a b)
-        (list (+ a b) (- a b) (* a b) (quotient a b) (remainder a b)))
-
-      (define (sign-combinations a b)
-        (list (integer-arithmetic-combinations a b)
-              (integer-arithmetic-combinations (- a) b)
-              (integer-arithmetic-combinations a (- b))
-              (integer-arithmetic-combinations (- a) (- b))))
 
       ;; fix x fix
       (test '((1 -1 0 0 0) (1 -1 0 0 0) (-1 1 0 0 0) (-1 1 0 0 0))
@@ -136,8 +134,6 @@
                                      4294967296 -1))
           (sign-combinations (+ 1 (expt 2 64)) (expt 2 32)))
 
-      (define M7 (- (expt 2 127) 1))
-
       (test '((170141183460469231750134047789593657344
                170141183460469231713240559642174554110
                3138550867693340382088035895064302439764418281874191810559
@@ -158,7 +154,7 @@
                3138550867693340382088035895064302439764418281874191810559
                9223372036854775807
                -9223372036854775808))
-          (sign-combinations M7 (+ 1 (expt 2 64))))
+          (sign-combinations (- (expt 2 127) 1) (+ 1 (expt 2 64))))
 
       ;; fixnum-bignum boundaries (machine word - 1 bit for sign - 2
       ;; bits for tag)

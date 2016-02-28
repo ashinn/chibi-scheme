@@ -5,8 +5,6 @@
           (only (chibi test) test-begin test-assert test test-end))
   (begin
     (define (run-tests)
-      (test-begin "srfi-99: records")
-
       (define-record-type organism
         (make-organism name)
         organism?
@@ -72,6 +70,8 @@
       (define mickey (make-mouse "Mickey" "cheese" 10))
       (define felix (make-cat "Felix" mickey 8 'mixed '(and black white)))
 
+      (test-begin "srfi-99: records")
+
       (test-assert (organism? mickey))
       (test-assert (animal? mickey))
       (test-assert (chordate? mickey))
@@ -112,57 +112,58 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-      (define-record-type person #t #t (name) (sex) (age))
-      (define-record-type (employee person) #t #t (department) (salary))
+      (let ()
+        (define-record-type person #t #t (name) (sex) (age))
+        (define-record-type (employee person) #t #t (department) (salary))
 
-      (define bob (make-employee "Bob" 'male 28 'hr 50000.0))
-      (define alice (make-employee "Alice" 'female 32 'research 100000.0))
+        (define bob (make-employee "Bob" 'male 28 'hr 50000.0))
+        (define alice (make-employee "Alice" 'female 32 'research 100000.0))
 
-      (test-assert (person? bob))
-      (test-assert (employee? bob))
-      (test "Bob" (person-name bob))
-      (test 'male (person-sex bob))
-      (test 28 (person-age bob))
-      (test 'hr (employee-department bob))
-      (test 50000.0 (employee-salary bob))
+        (test-assert (person? bob))
+        (test-assert (employee? bob))
+        (test "Bob" (person-name bob))
+        (test 'male (person-sex bob))
+        (test 28 (person-age bob))
+        (test 'hr (employee-department bob))
+        (test 50000.0 (employee-salary bob))
 
-      (test-assert (person? alice))
-      (test-assert (employee? alice))
-      (test "Alice" (person-name alice))
-      (test 'female (person-sex alice))
-      (test 32 (person-age alice))
-      (test 'research (employee-department alice))
-      (test 100000.0 (employee-salary alice))
+        (test-assert (person? alice))
+        (test-assert (employee? alice))
+        (test "Alice" (person-name alice))
+        (test 'female (person-sex alice))
+        (test 32 (person-age alice))
+        (test 'research (employee-department alice))
+        (test 100000.0 (employee-salary alice))
 
-      ;; After a trip to Thailand...
-      (person-sex-set! bob 'female)
-      (person-name-set! bob "Roberta")
+        ;; After a trip to Thailand...
+        (person-sex-set! bob 'female)
+        (person-name-set! bob "Roberta")
 
-      ;; Then Roberta quits!
-      (employee-department-set! bob #f)
-      (employee-salary-set! bob 0.0)
+        ;; Then Roberta quits!
+        (employee-department-set! bob #f)
+        (employee-salary-set! bob 0.0)
 
-      (test "Roberta" (person-name bob))
-      (test 'female (person-sex bob))
-      (test 28 (person-age bob))
-      (test #f (employee-department bob))
-      (test 0.0 (employee-salary bob))
+        (test "Roberta" (person-name bob))
+        (test 'female (person-sex bob))
+        (test 28 (person-age bob))
+        (test #f (employee-department bob))
+        (test 0.0 (employee-salary bob))
 
-      ;; SRFI-99 forbids this, but we currently do it anyway.
-      (test-assert (equal? (make-employee "Chuck" 'male 20 'janitorial 50000.0)
-                           (make-employee "Chuck" 'male 20 'janitorial 50000.0)))
+        ;; SRFI-99 forbids this, but we currently do it anyway.
+        (test-assert (equal? (make-employee "Chuck" 'male 20 'janitorial 50000.0)
+                             (make-employee "Chuck" 'male 20 'janitorial 50000.0)))
 
-      (test-assert (record? alice))
-      (test 'person (rtd-name person))
-      (let* ((constructor (rtd-constructor person))
-             (trent (constructor "Trent" 'male 44)))
-        (test "Trent" (person-name trent))
-        (test 'male (person-sex trent))
-        (test 44 ((rtd-accessor person 'age) trent))
-        ((rtd-mutator person 'age) trent 45)
-        (test 45 (person-age trent)))
+        (test-assert (record? alice))
+        (test 'person (rtd-name person))
+        (let* ((constructor (rtd-constructor person))
+               (trent (constructor "Trent" 'male 44)))
+          (test "Trent" (person-name trent))
+          (test 'male (person-sex trent))
+          (test 44 ((rtd-accessor person 'age) trent))
+          ((rtd-mutator person 'age) trent 45)
+          (test 45 (person-age trent)))
 
-      (test-assert (rtd-field-mutable? employee 'department))
+        (test-assert (rtd-field-mutable? employee 'department)))
 
       ;; We do not retain mutability information ATM.
       ;; (define-record-type foo
@@ -172,50 +173,54 @@
       ;;
       ;; (test-assert (not (rtd-field-mutable? foo 'x)))
 
-      (define point (make-rtd "point" #(x y)))
-      (define make-point (rtd-constructor point #(x y)))
-      (define point-x (rtd-accessor point 'x))
-      (test 3 (point-x (make-point 3 2)))
+      (let ()
+        (define point (make-rtd "point" #(x y)))
+        (define make-point (rtd-constructor point #(x y)))
+        (define point-x (rtd-accessor point 'x))
+        (test 3 (point-x (make-point 3 2)))) 
 
       ;; Name conflicts - make sure we rename 
 
-      (define-record-type example make-example #t example)
-      (test-assert (example? (make-example 3)))
-      (test 3 (example-example (make-example 3)))
+      (let ()
+        (define-record-type example make-example #t example)
+        (test-assert (example? (make-example 3)))
+        (test 3 (example-example (make-example 3))))
 
       ;; record types definitions with #f passed as either the constructor or
       ;; predicate argument should not create the corresponding function
 
-      (define-record-type abstract
-        #f #t)
+      (let ()
+        (define-record-type abstract
+          #f #t)
 
-      (test #f (memq 'make-abstract (env-exports (current-environment))))
+        (define-record-type (derived abstract)
+          #t #f)
 
-      (define-record-type (derived abstract)
-        #t #f)
+        (define instance (make-derived))
 
-      (define instance (make-derived))
-      (test-assert (abstract? instance))
-      (test #f (memq 'derived? (env-exports (current-environment))))
+        (test #f (memq 'make-abstract (env-exports (current-environment))))
+        (test-assert (abstract? instance))
+        (test #f (memq 'derived? (env-exports (current-environment)))))
 
-      (define-record-type container
-        #t #t
-        default-immutable
-        (default-mutable)
-        (named-immutable get-container-immutable)
-        (named-mutable get-container-mutable set-container-mutable!))
+      (let ()
+        (define-record-type container
+          #t #t
+          default-immutable
+          (default-mutable)
+          (named-immutable get-container-immutable)
+          (named-mutable get-container-mutable set-container-mutable!))
 
-      (define container-instance (make-container 1 2 3 4))
+        (define container-instance (make-container 1 2 3 4))
 
-      (test 1 (container-default-immutable container-instance))
-      (test 2 (container-default-mutable container-instance))
-      (test 3 (get-container-immutable container-instance))
-      (test 4 (get-container-mutable container-instance))
+        (test 1 (container-default-immutable container-instance))
+        (test 2 (container-default-mutable container-instance))
+        (test 3 (get-container-immutable container-instance))
+        (test 4 (get-container-mutable container-instance))
 
-      (container-default-mutable-set! container-instance #t)
-      (test #t (container-default-mutable container-instance))
+        (container-default-mutable-set! container-instance #t)
+        (test #t (container-default-mutable container-instance))
 
-      (set-container-mutable! container-instance #t)
-      (test #t (get-container-mutable container-instance))
+        (set-container-mutable! container-instance #t)
+        (test #t (get-container-mutable container-instance)))
 
       (test-end))))
