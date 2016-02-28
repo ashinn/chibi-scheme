@@ -417,6 +417,8 @@ sexp sexp_seek (sexp ctx, sexp self, sexp x, off_t offset, int whence) {
     res = lseek(sexp_fileno_fd(sexp_port_fd(x)), offset, whence);
     if (res >= 0 && !(whence == SEEK_CUR && offset == 0))
       sexp_port_offset(x) = 0;
+    else if (sexp_oportp(x))
+      res += sexp_port_offset(x);
     return sexp_make_integer(ctx, res);
   }
   if (sexp_stream_portp(x))
