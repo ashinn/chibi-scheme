@@ -642,6 +642,17 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
 
 /************************* the compiler ***************************/
 
+static int nondefp(sexp x) {
+  sexp ls;
+  if (sexp_pairp(x) || sexp_cndp(x))
+    return 1;
+  if (sexp_seqp(x))
+    for (ls=sexp_seq_ls(x); sexp_pairp(ls); ls=sexp_cdr(ls))
+      if (nondefp(sexp_car(ls)))
+        return 1;
+  return 0;
+}
+
 static sexp analyze_list (sexp ctx, sexp x, int depth, int defok) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
@@ -652,6 +663,7 @@ static sexp analyze_list (sexp ctx, sexp x, int depth, int defok) {
       res = tmp;
       break;
     } else {
+      if (nondefp(tmp)) defok = -1;  /* -1 to warn */
       sexp_pair_source(res) = sexp_pair_source(x);
       sexp_car(res) = tmp;
     }
@@ -990,6 +1002,8 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
         if (sexp_corep(op)) {
           switch (sexp_core_code(op)) {
           case SEXP_CORE_DEFINE:
+            if (defok < 0)
+              sexp_warn(ctx, "out of order define: ", x);
             res = defok ? analyze_define(ctx, x, depth)
               : sexp_compile_error(ctx, "unexpected define", x);
             break;
@@ -1012,6 +1026,8 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
                                   sexp_cadr(x));
             break;
           case SEXP_CORE_DEFINE_SYNTAX:
+            if (defok < 0)
+              sexp_warn(ctx, "out of order define-syntax: ", x);
             res = defok ? analyze_define_syntax(ctx, x)
               : sexp_compile_error(ctx, "unexpected define-syntax", x);
             break;
