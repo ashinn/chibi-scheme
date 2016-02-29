@@ -642,6 +642,14 @@ sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id
 
 /************************* the compiler ***************************/
 
+static int lambda_envp(sexp ctx) {
+  sexp env;
+  for (env=sexp_context_env(ctx); env && sexp_envp(env); env=sexp_env_parent(env))
+    if (sexp_env_lambda(env))
+      return 1;
+  return 0;
+}
+
 static int nondefp(sexp x) {
   sexp ls;
   if (sexp_pairp(x) || sexp_cndp(x))
@@ -663,7 +671,7 @@ static sexp analyze_list (sexp ctx, sexp x, int depth, int defok) {
       res = tmp;
       break;
     } else {
-      if (nondefp(tmp)) defok = -1;  /* -1 to warn */
+      if (lambda_envp(ctx) && nondefp(tmp)) defok = -1;  /* -1 to warn */
       sexp_pair_source(res) = sexp_pair_source(x);
       sexp_car(res) = tmp;
     }
