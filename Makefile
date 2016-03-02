@@ -167,7 +167,7 @@ chibi.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -d $@
 
 snow.img: $(CHIBI_DEPENDENCIES) all-libs
-	$(CHIBI) -mchibi.snow.{commands,interface,package,utils} -d $@
+	$(CHIBI) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $@
 
 doc: doc/chibi.html doc-libs
 
@@ -358,10 +358,12 @@ uninstall:
 	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
 	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
 	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
-	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.{sld,scm}
+	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.sld
+	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.scm
 	-$(RM) $(DESTDIR)$(MODDIR)/.*.meta
 	-$(RM) $(DESTDIR)$(MODDIR)/*.img
-	-$(RM) $(DESTDIR)$(MODDIR)/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*.{sld,scm} $(DESTDIR)$(MODDIR)/*/*/*.{sld,scm}
+	-$(RM) $(DESTDIR)$(MODDIR)/*.sld $(DESTDIR)$(MODDIR)/*/*.sld $(DESTDIR)$(MODDIR)/*/*/*.sld
+	-$(RM) $(DESTDIR)$(MODDIR)/*.scm $(DESTDIR)$(MODDIR)/*/*.scm $(DESTDIR)$(MODDIR)/*/*/*.scm
 	-$(CD) $(DESTDIR)$(MODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
 	-$(CD) $(DESTDIR)$(BINMODDIR) && $(RM) $(COMPILED_LIBS:lib/%=%)
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(BINMODDIR)/chibi/char-set
