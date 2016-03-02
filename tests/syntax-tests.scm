@@ -57,4 +57,15 @@
       ((N y E2) (quote (y E2)))))
   (test '(1 2 3) (N 1 2 3)))
 
+(define-syntax ell
+  (syntax-rules ()
+   ((ell body)
+    (define-syntax emm
+      (syntax-rules ...1 ()
+        ((emm) body))))))
+
+(ell
+ (define-syntax enn
+   (syntax-rules ...1 () ((enn args ...1) (quote (args ...1))))))
+
 (test-end)
