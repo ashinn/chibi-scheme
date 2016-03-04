@@ -68,4 +68,10 @@
  (define-syntax enn
    (syntax-rules ...1 () ((enn args ...1) (quote (args ...1))))))
 
+(let ((... 'local))
+  (define-syntax asd
+    (syntax-rules ()
+      ((asd x ...) (quote (... x)))))
+  (test '(2 1) (asd 1 2)))
+
 (test-end)
