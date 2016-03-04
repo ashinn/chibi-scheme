@@ -591,16 +591,17 @@ sexp sexp_syntactic_closure_expr_op (sexp ctx, sexp self, sexp_sint_t n, sexp x)
   return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
 }
 
-sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
   sexp_gc_var3(res, kar, kdr);
+  if (depth <= 0) return x;
   sexp_gc_preserve3(ctx, res, kar, kdr);
  loop:
   if (sexp_synclop(x)) {
     x = sexp_synclo_expr(x);
     goto loop;
   } else if (sexp_pairp(x) && sexp_truep(sexp_length(ctx, x))) {
-    kar = sexp_strip_synclos(ctx, self, n, sexp_car(x));
-    kdr = sexp_strip_synclos(ctx, self, n, sexp_cdr(x));
+    kar = sexp_strip_synclos_bound(ctx, sexp_car(x), depth-1);
+    kdr = sexp_strip_synclos_bound(ctx, sexp_cdr(x), depth-1);
     res = sexp_cons(ctx, kar, kdr);
     sexp_pair_source(res) = sexp_pair_source(x);
     sexp_immutablep(res) = 1;
@@ -609,6 +610,10 @@ sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   }
   sexp_gc_release3(ctx);
   return res;
+}
+
+sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  return sexp_strip_synclos_bound(ctx, x, SEXP_STRIP_SYNCLOS_BOUND);
 }
 
 sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id1, sexp e2, sexp id2) {
