@@ -388,6 +388,7 @@ static sexp sexp_make_macro (sexp ctx, sexp p, sexp e) {
 
 sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv, sexp expr) {
   sexp res;
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   if (! (sexp_symbolp(expr) || sexp_pairp(expr) || sexp_synclop(expr)))
     return expr;
   res = sexp_alloc_type(ctx, synclo, SEXP_SYNCLO);
