@@ -186,6 +186,14 @@
           (((and x (? symbol?)) ..1) x)
           (else #f)))
 
+      (test "match-named-let" 6
+        (match-let loop (((x . rest) '(1 2 3))
+                         (sum 0))
+          (let ((sum (+ x sum)))
+            (if (null? rest)
+                sum
+                (loop rest sum)))))
+
       (cond-expand
        (chibi
         (test "record positional"

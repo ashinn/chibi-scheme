@@ -227,6 +227,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2016/03/06 - fixing named match-let (thanks to Stefan Israelsson Tampe)
 ;; 2015/05/09 - fixing bug in var extraction of quasiquote patterns
 ;; 2014/11/24 - adding Gauche's `@' pattern for named record field matching
 ;; 2012/12/26 - wrapping match-let&co body in lexical closure
@@ -856,7 +857,7 @@
     ((_ ((var value) ...) . body)
      (match-let/helper let () () ((var value) ...) . body))
     ((_ loop ((var init) ...) . body)
-     (match-named-let loop ((var init) ...) . body))))
+     (match-named-let loop () ((var init) ...) . body))))
 
 ;;> Similar to \scheme{match-let}, but analogously to \scheme{letrec}
 ;;> matches and binds the variables with all match variables in scope.
