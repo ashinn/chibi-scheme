@@ -7,7 +7,7 @@
 #endif
 
 #include "chibi/eval.h"
-#include "gc_heap.h"
+#include "chibi/gc_heap.h"
 
 #define sexp_argv_symbol "command-line"
 

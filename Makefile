@@ -39,7 +39,7 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	lib/srfi/98/env$(SO) lib/scheme/time$(SO)
 
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
-INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h
+INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h include/chibi/gc_heap.h
 
 MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
 	loop match mime modules net parse pathname process repl scribble stty \

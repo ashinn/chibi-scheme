@@ -2,7 +2,7 @@
 /* Copyright (c) 2016 Chris Walsh.  All rights reserved.   */
 /* BSD-style license: http://synthcode.com/license.txt     */
 
-#include "gc_heap.h"
+#include "chibi/gc_heap.h"
 
 #if SEXP_USE_IMAGE_LOADING
 

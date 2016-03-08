@@ -2,8 +2,8 @@
 /* Copyright (c) 2016 Chris Walsh.  All rights reserved.   */
 /* BSD-style license: http://synthcode.com/license.txt     */
 
-#ifndef GC_HEAP_H
-#define GC_HEAP_H
+#ifndef SEXP_GC_HEAP_H
+#define SEXP_GC_HEAP_H
 
 #include "chibi/sexp.h"
 
@@ -25,14 +25,15 @@
    elements of the heap were walked normally.  Any other return 
    value indicates an abnormal return condition.
 */
-sexp sexp_gc_heap_walk(sexp ctx,         /* a possibly incomplete context */
-                       sexp_heap h,      /* normally set to sexp_context_heap(ctx) */
-                       sexp *types,      /* normally set to sexp_context_types(ctx) */
-                       size_t types_cnt, /* normally set to sexp_context_num_types(ctx) */
-                       void *user,   /* arbitrary data passed to callbacks */
-                       sexp (*heap_callback)(sexp ctx, sexp_heap h, void *user),
-                       sexp (*free_callback)(sexp ctx, sexp_free_list f, void *user),
-                       sexp (*sexp_callback)(sexp ctx, sexp s, void *user));
+SEXP_API sexp sexp_gc_heap_walk(
+  sexp ctx,         /* a possibly incomplete context */
+  sexp_heap h,      /* normally set to sexp_context_heap(ctx) */
+  sexp *types,      /* normally set to sexp_context_types(ctx) */
+  size_t types_cnt, /* normally set to sexp_context_num_types(ctx) */
+  void *user,   /* arbitrary data passed to callbacks */
+  sexp (*heap_callback)(sexp ctx, sexp_heap h, void *user),
+  sexp (*free_callback)(sexp ctx, sexp_free_list f, void *user),
+  sexp (*sexp_callback)(sexp ctx, sexp s, void *user));
 
 
 /* Returns a new context which contains a single, packed heap.
@@ -48,7 +49,7 @@ sexp sexp_gc_heap_walk(sexp ctx,         /* a possibly incomplete context */
    single packed heap just large enough to hold all sexps from the
    original heap.
 */
-sexp sexp_gc_heap_pack(sexp ctx, sexp_uint_t heap_free_size);
+SEXP_API sexp sexp_gc_heap_pack(sexp ctx, sexp_uint_t heap_free_size);
 
 
 /* Creates a new packed heap from the provided context, and saves
@@ -63,7 +64,7 @@ sexp sexp_gc_heap_pack(sexp ctx, sexp_uint_t heap_free_size);
    In all cases, upon completion the temporary packed context is deleted 
    and the context provided as an argument is not changed.
 */
-sexp sexp_save_image (sexp ctx, const char* filename);
+SEXP_API sexp sexp_save_image (sexp ctx, const char* filename);
 
 
 /* Loads a previously saved image, and returns the context associated with
@@ -81,19 +82,18 @@ sexp sexp_save_image (sexp ctx, const char* filename);
    to provide a description of the error encountered.  An sexp exception cannot be
    returned because there is not a valid context in which to put the exception.
 */
-sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size);
+SEXP_API sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size);
 
 
 /* In the case that sexp_load_image() returns NULL, this function will return
    a string containing a description of the error condition.
 */
-char* sexp_load_image_err();
+SEXP_API char* sexp_load_image_err();
 
 
 /* Debugging tool.  Prints a summary of the heap structure to stdout.
  */
-void sexp_gc_heap_stats_print(sexp ctx);
+SEXP_API void sexp_gc_heap_stats_print(sexp ctx);
 
 
-#endif
-
+#endif  /* ! SEXP_GC_HEAP_H */
