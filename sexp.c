@@ -1194,7 +1194,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
   if (len == 0) goto normal_intern;
   for ( ; i<len; i++, p++) {
     c = *p;
-    if ((unsigned char)c <= 32 || (unsigned char)c > 127 || c == '\\')
+    if ((unsigned char)c <= 32 || (unsigned char)c > 127 || c == '\\' || c == '.' || sexp_is_separator(c))
       goto normal_intern;
     he = huff_table[(unsigned char)c];
     newbits = he.len;
@@ -1914,9 +1914,10 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     case SEXP_SYMBOL:
       str = sexp_lsymbol_data(obj);
-      c = sexp_lsymbol_length(obj) > 0 ? EOF : '|';
+      c = (sexp_lsymbol_length(obj) > 1 || (sexp_lsymbol_length(obj) == 1 && str[0] != '.')) ? EOF : '|';
       for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
-        if (str[i] <= ' ' || str[i] == '\\' || sexp_is_separator(str[i])) c = '|';
+        if (str[i] <= ' ' || str[i] == '\\' || sexp_is_separator(str[i]))
+          c = '|';
       if (c!=EOF) sexp_write_char(ctx, c, out);
       for (i=sexp_lsymbol_length(obj); i>0; str++, i--) {
         if (str[0] == '\\') sexp_write_char(ctx, '\\', out);
@@ -2053,9 +2054,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, hex_digit(c&0x0F), out);
       }
     }
-  } else if (sexp_symbolp(obj)) {
-
 #if SEXP_USE_HUFF_SYMS
+  } else if (sexp_isymbolp(obj)) {
     if (sexp_isymbolp(obj)) {
       c = ((sexp_uint_t)obj)>>3;
       while (c) {
@@ -2064,7 +2064,6 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       }
     }
 #endif
-
   } else {
     switch ((sexp_uint_t) obj) {
     case (sexp_uint_t) SEXP_NULL:

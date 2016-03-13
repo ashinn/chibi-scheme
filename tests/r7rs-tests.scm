@@ -2091,6 +2091,20 @@
 (test "line 1\n\nline 3\n" (read (open-input-string "\"line 1\\ \t \n \t \n\nline 3\n\"")))
 (test #x03BB (char->integer (string-ref (read (open-input-string "\"\\x03BB;\"")) 0)))
 
+(define-syntax test-write-syntax
+  (syntax-rules ()
+    ((test-write-syntax expect-str obj-expr)
+     (let ((out (open-output-string)))
+       (write obj-expr out)
+       (test expect-str (get-output-string out))))))
+
+(test-write-syntax "|.|" '|.|)
+(test-write-syntax "|a b|" '|a b|)
+(test-write-syntax "|,a|" '|,a|)
+(test-write-syntax "|\"|" '|\"|)
+(test-write-syntax "a" '|a|)
+;; (test-write-syntax "a.b" '|a.b|)
+
 (test-end)
 
 (test-begin "Numeric syntax")
