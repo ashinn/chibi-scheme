@@ -574,9 +574,13 @@ char* sexp_load_image_err() {
   return gc_heap_err_str;
 }
 
+static const char* all_paths[] = {sexp_default_module_path, sexp_default_user_module_path};
+
 sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size) {
   struct load_image_state state;
   struct sexp_image_header_t header;
+  const char *mod_path, *colon, *end;
+  char path[512];
   FILE *fp;
   int i;
   sexp res = NULL, ctx = NULL, base, *ctx_globals, *ctx_types;
@@ -586,6 +590,19 @@ sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_
   memset(&state, 0, sizeof(struct load_image_state));
 
   fp = fopen(filename, "rb");
+  /* fallback to the default search path (can't use sexp_find_module_file */
+  /* since there's no context yet) */
+  for (i=0; !fp && i<sizeof(all_paths)/sizeof(all_paths[0]); ++i) {
+    for (mod_path=all_paths[i]; *mod_path; mod_path=colon+1) {
+      colon = strchr(mod_path, ':');
+      end = colon ? colon : mod_path + strlen(mod_path);
+      strncpy(path, mod_path, end-mod_path);
+      if (end[-1] != '/') path[end-mod_path] = '/';
+      strcpy(path + (end-mod_path) + (end[-1] == '/' ? 0 : 1), filename);
+      fp = fopen(path, "rb");
+      if (fp || !colon) break;
+    }
+  }
   if (!fp) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't open image file for reading: %s\n", filename);
     goto done;
