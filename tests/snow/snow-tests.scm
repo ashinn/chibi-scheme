@@ -40,13 +40,13 @@
 ;; run snow-chibi command as a separate process with test defaults
 (define chibi-path "./chibi-scheme")
 (define (snow-command . args)
-  `(,chibi-path -A ,install-libdir "tools/snow-chibi"
-                --always-no
-                --implementations "chibi"
-                --chibi-path ,(string-append chibi-path " -A" install-libdir)
-                --install-prefix ,install-prefix
-                --local-user-repository "tests/snow/repo-cache"
-                ,@args))
+  `("./tools/snow-chibi"
+    --always-no
+    --implementations "chibi"
+    --chibi-path ,(string-append chibi-path " -A" install-libdir)
+    --install-prefix ,install-prefix
+    --local-user-repository "tests/snow/repo-cache"
+    ,@args))
 
 (define-syntax snow
   (syntax-rules ()

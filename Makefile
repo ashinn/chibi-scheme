@@ -18,7 +18,7 @@ GENSTATIC ?= ./tools/chibi-genstatic
 CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH=".:$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH=lib ./chibi-scheme$(EXE)
 CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
 
-SNOW_CHIBI ?= $(CHIBI) tools/snow-chibi
+SNOW_CHIBI ?= tools/snow-chibi
 
 ########################################################################
 
@@ -46,7 +46,7 @@ MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
 	system test time trace type-inference uri weak monad/environment \
 	show show/base crypto/sha2
 
-IMAGE_FILES = chibi.img snow.img
+IMAGE_FILES = lib/chibi.img lib/snow.img
 
 HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
@@ -163,10 +163,10 @@ chibi-scheme.pc: chibi-scheme.pc.in
 lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES) libchibi-scheme$(SO)
 	-$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
 
-chibi.img: $(CHIBI_DEPENDENCIES) all-libs
+lib/chibi.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -d $@
 
-snow.img: $(CHIBI_DEPENDENCIES) all-libs
+lib/snow.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $@
 
 doc: doc/chibi.html doc-libs
@@ -277,6 +277,7 @@ install: all
 	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-doc $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/snow-chibi $(DESTDIR)$(BINDIR)/
+	$(INSTALL) -m0755 tools/snow-chibi.scm $(DESTDIR)$(BINDIR)/
 	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/regexp $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/snow $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
@@ -352,6 +353,7 @@ uninstall:
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-ffi
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-doc
 	-$(RM) $(DESTDIR)$(BINDIR)/snow-chibi
+	-$(RM) $(DESTDIR)$(BINDIR)/snow-chibi.scm
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX)
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
