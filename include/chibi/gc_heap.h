@@ -82,7 +82,7 @@ SEXP_API sexp sexp_save_image (sexp ctx, const char* filename);
    to provide a description of the error encountered.  An sexp exception cannot be
    returned because there is not a valid context in which to put the exception.
 */
-SEXP_API sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size);
+SEXP_API sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size);
 
 
 /* In the case that sexp_load_image() returns NULL, this function will return

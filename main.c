@@ -409,7 +409,7 @@ sexp run_main (int argc, char **argv) {
         fprintf(stderr, "-:i <file>: image files must be loaded first\n");
         exit_failure();
       }
-      ctx = sexp_load_image(arg, heap_size, heap_max_size);
+      ctx = sexp_load_image(arg, 0, heap_size, heap_max_size);
       if (!ctx || !sexp_contextp(ctx)) {
         fprintf(stderr, "-:i <file>: couldn't open file for reading: %s\n", arg);
         fprintf(stderr, "            %s\n", sexp_load_image_err());

@@ -574,29 +574,35 @@ char* sexp_load_image_err() {
   return gc_heap_err_str;
 }
 
-sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size) {
-  sexp res = NULL;
-  sexp ctx = NULL;
+sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size) {
+  struct load_image_state state;
+  struct sexp_image_header_t header;
+  FILE *fp;
+  int i;
+  sexp res = NULL, ctx = NULL, base, *ctx_globals, *ctx_types;
+
   gc_heap_err_str[0] = 0;
 
-  struct load_image_state state;
   memset(&state, 0, sizeof(struct load_image_state));
-  
-  FILE *fp = fopen(filename, "rb");
+
+  fp = fopen(filename, "rb");
   if (!fp) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't open image file for reading: %s\n", filename);
     goto done;
   }
-  
-  struct sexp_image_header_t header;
+  if (offset > 0 && fseek(fp, offset, SEEK_SET) < 0) {
+    snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't seek to image offset: %s -> %lld: %s\n", filename, offset, strerror(errno));
+    goto done;
+  }
+
   if (!load_image_header(fp, &header)) { goto done; }
-  
+
   state.heap = sexp_gc_packed_heap_make(header.size, heap_free_size);
   if (!state.heap) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't malloc heap\n");
     goto done;
   }
-  sexp base = sexp_heap_first_block(state.heap);
+  base = sexp_heap_first_block(state.heap);
 
   if (fread(base, 1, header.size, fp) != header.size) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "error reading image\n");
@@ -604,7 +610,7 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
   }
 
   /* Adjust pointers in loaded packed heap. */
-  
+
   state.offset = (sexp_sint_t)((sexp_sint_t)base - (sexp_sint_t)header.base);
   ctx = (sexp)((unsigned char *)header.context + state.offset);
   sexp_context_heap(ctx) = state.heap;
@@ -614,29 +620,28 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
      copy of the type array pointers with correct offsets is applied is created outside
      of the new heap to be used with the pointer adjustment process.
   */
-  sexp* ctx_globals = sexp_vector_data((sexp)((unsigned char*)sexp_context_globals(ctx) + state.offset));
-  sexp* ctx_types   = sexp_vector_data((sexp)((unsigned char*)(ctx_globals[SEXP_G_TYPES]) + state.offset));
+  ctx_globals = sexp_vector_data((sexp)((unsigned char*)sexp_context_globals(ctx) + state.offset));
+  ctx_types   = sexp_vector_data((sexp)((unsigned char*)(ctx_globals[SEXP_G_TYPES]) + state.offset));
   state.types_cnt   = sexp_unbox_fixnum(ctx_globals[SEXP_G_NUM_TYPES]);
   state.types = malloc(sizeof(sexp) * state.types_cnt);
   if (!state.types) goto done;
-  int i;
   for (i = 0; i < state.types_cnt; i++) {
     state.types[i] = (sexp)((unsigned char *)ctx_types[i] + state.offset);
   }
-  
+
   if (sexp_gc_heap_walk(ctx, sexp_context_heap(ctx), state.types, state.types_cnt,
-                        &state, NULL, NULL, load_image_callback_p1) != SEXP_TRUE) {
-    goto done; }
+                        &state, NULL, NULL, load_image_callback_p1) != SEXP_TRUE)
+    goto done;
 
   /* Second pass to fix code references */
   if (sexp_gc_heap_walk(ctx, sexp_context_heap(ctx), state.types, state.types_cnt,
-                        &state, NULL, NULL, load_image_callback_p2) != SEXP_TRUE) {
-    goto done; }
+                        &state, NULL, NULL, load_image_callback_p2) != SEXP_TRUE)
+    goto done;
 
   if (heap_max_size > SEXP_INITIAL_HEAP_SIZE) {
     sexp_context_heap(ctx)->max_size = heap_max_size;
   }
-  
+
   res = ctx;
 done:
   if (fp) fclose(fp);
