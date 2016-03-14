@@ -1191,7 +1191,9 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 #if SEXP_USE_HUFF_SYMS
   res = 0;
   space = 3;
-  if (len == 0) goto normal_intern;
+  if (len == 0 || sexp_isdigit(p[0])
+      || ((p[0] == '+' || p[0] == '-') && len > 1 && sexp_isdigit(p[1])))
+    goto normal_intern;
   for ( ; i<len; i++, p++) {
     c = *p;
     if ((unsigned char)c <= 32 || (unsigned char)c > 127 || c == '\\' || c == '.' || sexp_is_separator(c))
@@ -1914,7 +1916,15 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     case SEXP_SYMBOL:
       str = sexp_lsymbol_data(obj);
-      c = (sexp_lsymbol_length(obj) > 1 || (sexp_lsymbol_length(obj) == 1 && str[0] != '.')) ? EOF : '|';
+      c = (sexp_lsymbol_length(obj) == 0 ||
+           (sexp_lsymbol_length(obj) == 1 && str[0] == '.') ||
+           sexp_isdigit(str[0]) ||
+           (sexp_lsymbol_length(obj) > 1 &&
+            (((str[0] == '+' || str[0] == '-')
+              && (sexp_isdigit(str[1]) || str[1] == '.')) ||
+             (str[sexp_lsymbol_length(obj)-1] == '0' &&
+              str[sexp_lsymbol_length(obj)-2] == '.'))))
+        ? '|' : EOF;
       for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
         if (str[i] <= ' ' || str[i] == '\\' || sexp_is_separator(str[i]))
           c = '|';

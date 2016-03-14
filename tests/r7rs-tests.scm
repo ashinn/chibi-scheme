@@ -2104,6 +2104,12 @@
 (test-write-syntax "|\"|" '|\"|)
 (test-write-syntax "a" '|a|)
 ;; (test-write-syntax "a.b" '|a.b|)
+(test-write-syntax "|2|" '|2|)
+(test-write-syntax "|+3|" '|+3|)
+(test-write-syntax "|-.4|" '|-.4|)
+(test-write-syntax "|+inf.0|" '|+inf.0|)
+(test-write-syntax "|-inf.0|" '|-inf.0|)
+(test-write-syntax "|+nan.0|" '|+nan.0|)
 
 (test-end)
 
