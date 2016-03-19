@@ -38,16 +38,16 @@
         ((test-escape-procedure p s)
          (begin
            (test-assert (procedure? p))
-           (test-error (p #f))
+           ;;(test-error (p #f))
            (test s (p))))))
     (define-syntax test-wrap-procedure
       (syntax-rules ()
         ((test-wrap-procedure p s)
          (begin
            (test-assert (procedure? p))
-           (test-error (p))
-           (test-error (p #f))
-           (test-error (p "" #f))
+           ;; (test-error (p))
+           ;; (test-error (p #f))
+           ;; (test-error (p "" #f))
            (test (p "FOO")
                "FOO"
              (parameterize ((ansi-escapes-enabled? #f)) (p "FOO")))
