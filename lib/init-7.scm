@@ -394,12 +394,27 @@
    ((if (null? o) #t (eq? 10 (car o)))
     (%number->string num))
    (else
-    (let lp ((n (abs num)) (d (car o)) (res '()))
-      (if (> n 0)
-          (lp (quotient n d) d (cons (digit-char (remainder n d)) res))
-          (if (null? res)
-              "0"
-              (list->string (if (negative? num) (cons #\- res) res))))))))
+    (let ((d (car o)))
+      (cond
+       ((%complex? num)
+        (let ((real (real-part num))
+              (imag (imag-part num)))
+          (string-append (number->string real d) (if (negative? imag) "-" "+")
+                         (number->string imag d) "i")))
+       ((inexact? num)
+        (string-append "#i" (number->string (inexact->exact num) d)))
+       ((ratio? num)
+        (string-append (number->string (numerator num) d) "/"
+                       (number->string (denominator num) d)))
+       (else
+        (let lp ((n (abs num)) (res '()))
+          (cond
+           ((> n 0)
+            (lp (quotient n d) (cons (digit-char (remainder n d)) res)))
+           ((null? res)
+            "0")
+           (else
+            (list->string (if (negative? num) (cons #\- res) res)))))))))))
 
 (define (list->string ls)
   (call-with-output-string
