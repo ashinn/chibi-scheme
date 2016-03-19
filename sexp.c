@@ -1192,7 +1192,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
   res = 0;
   space = 3;
   if (len == 0 || sexp_isdigit(p[0])
-      || ((p[0] == '+' || p[0] == '-') && len > 1 && sexp_isdigit(p[1])))
+      || ((p[0] == '+' || p[0] == '-') && len > 1))
     goto normal_intern;
   for ( ; i<len; i++, p++) {
     c = *p;
@@ -1920,10 +1920,12 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
            (sexp_lsymbol_length(obj) == 1 && str[0] == '.') ||
            sexp_isdigit(str[0]) ||
            (sexp_lsymbol_length(obj) > 1 &&
-            (((str[0] == '+' || str[0] == '-')
-              && (sexp_isdigit(str[1]) || str[1] == '.')) ||
-             (str[sexp_lsymbol_length(obj)-1] == '0' &&
-              str[sexp_lsymbol_length(obj)-2] == '.'))))
+            ((str[0] == '+' || str[0] == '-')
+             && (sexp_isdigit(str[1]) || str[1] == '.' || str[1] == 'i' ||
+                 ((sexp_lsymbol_length(obj) > 3) &&
+                  sexp_tolower(str[1]) == 'n' &&
+                  sexp_tolower(str[2]) == 'a' &&
+                  sexp_tolower(str[3]) == 'n')))))
         ? '|' : EOF;
       for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
         if (str[i] <= ' ' || str[i] == '\\' || sexp_is_separator(str[i]))
