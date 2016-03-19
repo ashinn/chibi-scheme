@@ -1,9 +1,38 @@
 (define-library (chibi term ansi-test)
   (export run-tests)
   (import (scheme base)
-          (chibi test)
+          (scheme write)
           (chibi term ansi))
   (begin
+    ;; inline (chibi test) to avoid circular dependencies in snow
+    ;; installations
+    (define-syntax test
+      (syntax-rules ()
+        ((test expect expr)
+         (test 'expr expect expr))
+        ((test name expect expr)
+         (guard (exn
+                 (else
+                  (display "!\nERROR: ")
+                  (write name)
+                  (newline)
+                  (write exn)
+                  (newline)))
+           (let* ((res expr)
+                  (pass? (equal? expect expr)))
+             (display (if pass? "." "x"))
+             (cond
+              ((not pass?)
+               (display "\nFAIL: ")
+               (write name)
+               (newline))))))))
+    (define-syntax test-assert
+      (syntax-rules ()
+        ((test-assert expr) (test #t expr))))
+    (define-syntax test-error
+      (syntax-rules ()
+        ((test-error expr)
+         (test-assert (guard (exn (else #t)) expr #f)))))
     (define-syntax test-escape-procedure
       (syntax-rules ()
         ((test-escape-procedure p s)
@@ -25,6 +54,10 @@
            (test (p "FOO")
                s
              (parameterize ((ansi-escapes-enabled? #t)) (p "FOO")))))))
+    (define (test-begin name)
+      (display name))
+    (define (test-end)
+      (newline))
     (define (run-tests)
       (test-begin "term.ansi")
 

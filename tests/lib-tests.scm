@@ -35,7 +35,7 @@
         (rename (chibi string-test) (run-tests run-string-tests))
         (rename (chibi system-test) (run-tests run-system-tests))
         (rename (chibi tar-test) (run-tests run-tar-tests))
-        (rename (chibi term ansi-test) (run-tests run-term-ansi-tests))
+        ;;(rename (chibi term ansi-test) (run-tests run-term-ansi-tests))
         (rename (chibi uri-test) (run-tests run-uri-tests))
         ;;(rename (chibi weak-test) (run-tests run-weak-tests))
         )
@@ -74,7 +74,6 @@
 (run-show-tests)
 (run-system-tests)
 (run-tar-tests)
-(run-term-ansi-tests)
 (run-uri-tests)
 
 (test-end)
