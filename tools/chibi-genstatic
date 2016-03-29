@@ -102,25 +102,28 @@
 (define (path-directory path)
   (if (string=? path "")
       "."
-      (let ((end (string-skip-right path #\/)))
-        (if (zero? end)
+      (let ((zero (string-cursor-start path))
+            (end (string-skip-right path #\/)))
+        (if (string-cursor<=? end zero)
             "/"
-            (let ((start (string-find-right path #\/ 0 end)))
-              (if (zero? start)
+            (let ((start (string-find-right path #\/ zero end)))
+              (if (string-cursor<=? start zero)
                   "."
-                  (let ((start2 (string-skip-right path #\/ 0 start)))
-                    (if (zero? start2)
+                  (let ((start2 (string-skip-right path #\/ zero start)))
+                    (if (string-cursor<=? start2 zero)
                         "/"
-                        (substring-cursor path 0 start2)))))))))
+                        (substring-cursor path zero start2)))))))))
 
 (define (path-extension-pos path)
-  (let ((end (string-cursor-end path)))
+  (let ((start (string-cursor-start path))
+        (end (string-cursor-end path)))
     (let lp ((i end) (dot #f))
-      (if (<= i 0)
+      (if (string-cursor<=? i start)
           #f
           (let* ((i2 (string-cursor-prev path i))
                  (ch (string-cursor-ref path i2)))
-            (cond ((eqv? #\. ch) (and (< i end) (lp i2 (or dot i))))
+            (cond ((eqv? #\. ch)
+                   (and (string-cursor<? i end) (lp i2 (or dot i))))
                   ((eqv? #\/ ch) #f)
                   (dot)
                   (else (lp i2 #f))))))))
@@ -133,7 +136,9 @@
 (define (path-strip-extension path)
   (let ((i (path-extension-pos path)))
     (if i
-        (substring-cursor path 0 (string-cursor-prev path i))
+        (substring-cursor path
+                          (string-cursor-start path)
+                          (string-cursor-prev path i))
         path)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

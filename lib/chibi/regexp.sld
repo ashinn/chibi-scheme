@@ -61,23 +61,22 @@
         (char-set-intersection char-set:ascii char-set:iso-control)))))
   (import (chibi char-set boundary))
   ;; Use string-cursors where available.
-  (begin
-    (define string-cursor? integer?))
   (cond-expand
    (chibi
     (begin
       (define (string-start-arg s o)
-        (if (pair? o) (string-index->offset s (car o)) (string-cursor-start s)))
+        (if (pair? o) (string-index->cursor s (car o)) (string-cursor-start s)))
       (define (string-end-arg s o)
-        (if (pair? o) (string-index->offset s (car o)) (string-cursor-end s)))
+        (if (pair? o) (string-index->cursor s (car o)) (string-cursor-end s)))
       (define (string-concatenate-reverse ls)
         (string-concatenate (reverse ls)))))
    (else
     (begin
       (define (string-start-arg s o)
-        (if (pair? o) (string-index->offset s (car o)) 0))
+        (if (pair? o) (string-index->cursor s (car o)) 0))
       (define (string-end-arg s o)
-        (if (pair? o) (string-index->offset s (car o)) (string-length s)))
+        (if (pair? o) (string-index->cursor s (car o)) (string-length s)))
+      (define string-cursor? integer?)
       (define string-cursor=? =)
       (define string-cursor<? <)
       (define string-cursor<=? <=)
@@ -87,8 +86,8 @@
       (define (string-cursor-next s i) (+ i 1))
       (define (string-cursor-prev s i) (- i 1))
       (define substring-cursor substring)
-      (define (string-offset->index str off) off)
-      (define (string-index->offset str i) i)
+      (define (string-cursor->index str off) off)
+      (define (string-index->cursor str i) i)
       (define (string-concatenate ls) (apply string-append ls))
       (define (string-concatenate-reverse ls)
         (string-concatenate (reverse ls))))))

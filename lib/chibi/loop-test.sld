@@ -75,12 +75,18 @@
       (test
           "in-string with start"
           '(#\l #\o)
-        (loop ((for c (in-string "hello" 3)) (for res (listing c))) => res))
+        (let* ((s "hello")
+               (start (string-index->cursor s 3)))
+          (loop ((for c (in-string s start)) (for res (listing c))) => res)))
 
       (test
           "in-string with start and end"
           '(#\h #\e #\l #\l)
-        (loop ((for c (in-string "hello" 0 4)) (for res (listing c))) => res))
+        (let* ((s "hello")
+               (start (string-index->cursor s 0))
+               (end (string-index->cursor s 4)))
+          (loop ((for c (in-string s start end)) (for res (listing c)))
+            => res)))
 
       (test
           "in-string-reverse"

@@ -5,9 +5,12 @@
 
 (define-library (chibi string)
   (export
+   string-cursor?
    string-cursor-start string-cursor-end string-cursor-ref
    string-cursor<? string-cursor<=? string-cursor>? string-cursor>=?
    string-cursor=? string-cursor-next string-cursor-prev substring-cursor
+   string-cursor->index string-index->cursor
+   string-cursor-forward string-cursor-backward
    string-null? string-every string-any
    string-join string-split string-count
    string-trim string-trim-left string-trim-right
@@ -43,6 +46,9 @@
     (import (scheme base) (scheme char) (srfi 14)
             (except (srfi 1) make-list list-copy))
     (begin
+      (define (string-cursor->index str i) i)
+      (define (string-index->cursor str i) i)
+      (define string-cursor? integer?)
       (define string-cursor<? <)
       (define string-cursor>? >)
       (define string-cursor=? =)

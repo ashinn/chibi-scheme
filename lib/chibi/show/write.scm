@@ -128,26 +128,30 @@
         (cond
          ((and (eqv? radix 10) (or (integer? n) (inexact? n)))
           (let* ((s (number->string n))
-                 (len (string-length s))
+                 (end (string-cursor-end s))
                  (dec (string-find s #\.))
-                 (digits (- len dec)))
+                 (digits (- (string-cursor->index s end)
+                            (string-cursor->index s dec))))
             (cond
-             ((< (string-find s #\e) len)
+             ((string-cursor<? (string-find s #\e) end)
               (gen-general n))
-             ((= dec len)
+             ((string-cursor=? dec end)
               (string-append s "." (make-string precision #\0)))
              ((<= digits precision)
               (string-append s (make-string (- precision digits -1) #\0)))
              (else
-              (let* ((last (- len (- digits precision 1)))
-                     (res (substring s 0 last)))
+              (let* ((last
+                      (string-cursor-backward s end (- digits precision 1)))
+                     (res (substring-cursor s (string-cursor-start s) last)))
                 (if (and
-                     (< last len)
-                     (let ((next (digit-value (string-ref s last))))
+                     (string-cursor<? last end)
+                     (let ((next (digit-value (string-cursor-ref s last))))
                        (or (> next 5)
-                           (and (= next 5) (> last 0)
+                           (and (= next 5)
+                                (string-cursor>? last (string-cursor-start s))
                                 (odd? (digit-value
-                                       (string-ref s (- last 1))))))))
+                                       (string-cursor-ref
+                                        s (string-cursor-prev last 1))))))))
                     (list->string
                      (reverse
                       (map char-digit
@@ -172,8 +176,8 @@
       ;; Insert commas according to the current comma-rule.
       (define (insert-commas str)
         (let* ((dec-pos (string-find str dec-sep))
-               (left (substring str 0 dec-pos))
-               (right (substring str dec-pos))
+               (left (substring-cursor str (string-cursor-start str) dec-pos))
+               (right (substring-cursor str dec-pos))
                (sep (cond ((char? comma-sep) (string comma-sep))
                           ((string? comma-sep) comma-sep)
                           ((eqv? #\, dec-sep) ".")
@@ -207,7 +211,9 @@
       ;; Format a single real number with padding as necessary.
       (define (format n sign-rule)
         (let ((s (wrap-sign n sign-rule)))
-          (let* ((dec-pos (if decimal-align (string-find s dec-sep) 0))
+          (let* ((dec-pos (if decimal-align
+                              (string-cursor->index s (string-find s dec-sep))
+                              0))
                  (diff (- (or decimal-align 0) dec-pos 1)))
             (if (positive? diff)
                 (string-append (make-string diff #\space) s)

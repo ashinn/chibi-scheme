@@ -193,14 +193,16 @@
 ;;> Returns true iff \var{prefix} is a prefix of \var{str}.
 
 (define (string-prefix? prefix str)
-  (= (string-cursor-end prefix) (string-mismatch prefix str)))
+  (string-cursor=? (string-cursor-end prefix) (string-mismatch prefix str)))
 
 ;;> Returns true iff \var{suffix} is a suffix of \var{str}.
 
 (define (string-suffix? suffix str)
-  (= (string-cursor-prev suffix (string-cursor-start suffix))
-     (- (string-mismatch-right suffix str)
-        (- (string-cursor-end str) (string-cursor-end suffix)))))
+  (string-cursor=? (string-cursor-prev suffix (string-cursor-start suffix))
+                   (string-cursor-backward
+                    str
+                    (string-mismatch-right suffix str)
+                    (- (string-size str) (string-size suffix)))))
 
 ;;> The fundamental string iterator.  Calls \var{kons} on each
 ;;> character of \var{str} and an accumulator, starting with
@@ -319,6 +321,16 @@
 ;;>
 ;;> Returns a string cursor to the character in \var{str} just before
 ;;> the cursor \var{i}.
+
+(define (string-cursor-forward str cursor n)
+  (if (zero? n)
+      cursor
+      (string-cursor-forward str (string-cursor-next str cursor) (- n 1))))
+
+(define (string-cursor-backward str cursor n)
+  (if (zero? n)
+      cursor
+      (string-cursor-backward str (string-cursor-prev str cursor) (- n 1))))
 
 ;;> \procedure{(string-cursor<? i j)}
 ;;> \procedure{(string-cursor>? i j)}

@@ -8,7 +8,7 @@ static const char* sexp_opcode_names_[] =
    "VECTOR-REF", "VECTOR-SET", "VECTOR-LENGTH", 
    "BYTES-REF", "BYTES-SET", "BYTES-LENGTH",
    "STRING-REF", "STRING-SET", "STRING-LENGTH",
-   "STRING-CURSOR-NEXT", "STRING-CURSOR-PREV", "STRING-SIZE",
+   "STRING-CURSOR-NEXT", "STRING-CURSOR-PREV", "STRING-CURSOR-END",
    "MAKE-PROCEDURE", "MAKE-VECTOR",
    "MAKE-EXCEPTION", "AND", "NULL?", "FIXNUM?", "SYMBOL?", "CHAR?",
    "EOF?", "TYPEP", "MAKE", "SLOT-REF", "SLOT-SET",
@@ -18,7 +18,7 @@ static const char* sexp_opcode_names_[] =
    "LT", "LE", "EQN", "EQ",
    "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
    "WRITE-CHAR", "WRITE-STRING", "READ-CHAR", "PEEK-CHAR",
-   "YIELD", "FORCE", "RET", "DONE",
+   "YIELD", "FORCE", "RET", "DONE", "SC?", "SC<", "SC<="
   };
 
 const char** sexp_opcode_names = sexp_opcode_names_;

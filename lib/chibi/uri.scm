@@ -110,58 +110,70 @@
                    (make-uri scheme #f #f #f
                              (decode
                               (substring-cursor
-                               str start (if (< quest end) quest pound)))
-                             (and (< quest end)
+                               str start (if (string-cursor<? quest end)
+                                             quest
+                                             pound)))
+                             (and (string-cursor<? quest end)
                                   (decode-query
-                                   (substring-cursor str (+ quest 1) pound)))
-                             (and (< pound end)
+                                   (substring-cursor str (string-cursor-next str quest) pound)))
+                             (and (string-cursor<? pound end)
                                   (decode
-                                   (substring-cursor str (+ pound 1) end))))))
-            (let ((sc1 (+ colon 1))
+                                   (substring-cursor str (string-cursor-next str pound) end))))))
+            (let ((sc1 (string-cursor-next str colon))
                   (scheme (string->symbol
                            (string-downcase-ascii
                             (substring-cursor str start colon)))))
               (if (string-cursor>=? sc1 end)
                   (make-uri scheme)
-                  (if (or (string-cursor>=? (+ sc1 1) end)
+                  (if (or (string-cursor>=? (string-cursor-next str sc1) end)
                           (not
                            (and (eqv? #\/ (string-cursor-ref str sc1))
-                                (eqv? #\/ (string-cursor-ref str (+ sc1 1))))))
+                                (eqv? #\/ (string-cursor-ref str (string-cursor-next str sc1))))))
                       (make-uri scheme #f #f #f (substring-cursor str sc1 end))
-                      (if (string-cursor>=? (+ sc1 2) end)
+                      (if (string-cursor>=? (string-cursor-forward str sc1 2)
+                                            end)
                           (make-uri scheme #f "")
-                          (let* ((sc2 (+ sc1 2))
+                          (let* ((sc2 (string-cursor-forward str sc1 2))
                                  (slash (string-find str #\/ sc2))
                                  (at (string-find-right str #\@ sc2 slash))
                                  (colon3
                                   (string-find
-                                   str #\: (if (> at sc2) at sc2) slash))
+                                   str #\: (if (string-cursor>? at sc2)
+                                               at
+                                               sc2)
+                                   slash))
                                  (quest (string-find str #\? slash))
                                  (pound
                                   (string-find
-                                   str #\# (if (< quest end) quest slash))))
+                                   str #\# (if (string-cursor<? quest end)
+                                               quest
+                                               slash))))
                             (%make-uri
                              scheme
-                             (and (> at sc2)
+                             (and (string-cursor>? at sc2)
                                   (decode (substring-cursor str sc2 at)))
                              (decode
                               (substring-cursor
                                str
-                               (if (> at sc2) (+ at 1) sc2)
-                               (if (< colon3 slash) colon3 slash)))
-                             (and (< colon3 slash)
+                               (if (string-cursor>? at sc2) (string-cursor-next str at) sc2)
+                               (if (string-cursor<? colon3 slash)
+                                   colon3
+                                   slash)))
+                             (and (string-cursor<? colon3 slash)
                                   (string->number
-                                   (substring-cursor str (+ colon3 1) slash)))
-                             (and (< slash end)
+                                   (substring-cursor str (string-cursor-next str colon3) slash)))
+                             (and (string-cursor<? slash end)
                                   (decode
                                    (substring-cursor
-                                    str slash (if (< quest end) quest pound))))
-                             (and (< quest end)
+                                    str slash (if (string-cursor<? quest end)
+                                                  quest
+                                                  pound))))
+                             (and (string-cursor<? quest end)
                                   (decode-query
-                                   (substring-cursor str (+ quest 1) pound)))
-                             (and (< pound end)
+                                   (substring-cursor str (string-cursor-next str quest) pound)))
+                             (and (string-cursor<? pound end)
                                   (decode
-                                   (substring-cursor str (+ pound 1) end)))
+                                   (substring-cursor str (string-cursor-next str pound) end)))
                              ))))))))))
 
 ;;> Parses a string and returns a new URI object.  If the string does
@@ -214,7 +226,7 @@
         (else #f))))
 
 (define (collect str from to res)
-  (if (>= from to)
+  (if (string-cursor>=? from to)
       res
       (cons (substring-cursor str from to) res)))
 
@@ -235,14 +247,14 @@
       (if (< i 16)
           (string-append "%0" hex)
           (string-append "%" hex))))
-  (let ((start 0)
+  (let ((start (string-cursor-start str))
         (end (string-cursor-end str))
         (encode-1 (if (and (pair? o) (car o))
                       encode-1-space
                       encode-1-normal)))
     (let lp ((from start) (to start) (res '()))
       (if (string-cursor>=? to end)
-          (if (zero? from)
+          (if (string-cursor<=? from start)
               str
               (string-concatenate (reverse (collect str from to res))))
           (let* ((ch (string-cursor-ref str to))
@@ -264,7 +276,7 @@
         (end (string-cursor-end str)))
     (let lp ((from start) (to start) (res '()))
       (if (string-cursor>=? to end)
-          (if (zero? from)
+          (if (string-cursor<=? from start)
               str
               (string-concatenate (reverse (collect str from to res))))
           (let* ((ch (string-cursor-ref str to))
@@ -276,7 +288,7 @@
                   (let ((next2 (string-cursor-next str next)))
                     (if (string-cursor>=? next2 end)
                         (lp next2 next2 (collect str from to res))
-                        (let* ((next3 (+ next2 1))
+                        (let* ((next3 (string-cursor-next str next2))
                                (hex (substring-cursor str next next3))
                                (i (string->number hex 16)))
                           (lp next3 next3 (cons (string (integer->char i))
@@ -296,17 +308,17 @@
   (define (split-char? c) (if (eqv? c #\&) #t (eqv? c #\;)))
   (let ((end (string-cursor-end str))
         (plus? (and (pair? o) (car o))))
-    (let lp ((i 0) (res '()))
+    (let lp ((i (string-cursor-start str)) (res '()))
       (if (string-cursor>=? i end)
           (reverse res)
           (let* ((j (string-find str split-char? i))
                  (k (string-find str #\= i j))
                  (cell
-                  (if (< k end)
+                  (if (string-cursor<? k end)
                       (cons (uri-decode (substring-cursor str i k) plus?)
-                            (uri-decode (substring-cursor str (+ k 1) j) plus?))
+                            (uri-decode (substring-cursor str (string-cursor-next str k) j) plus?))
                       (cons (uri-decode (substring-cursor str i j) plus?) #f))))
-            (lp (+ j 1) (cons cell res)))))))
+            (lp (string-cursor-next str j) (cons cell res)))))))
 
 ;;> \procedure{(uri-alist->query ls [plus?])}
 

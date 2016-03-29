@@ -15,7 +15,7 @@
 ;; Now provided as a primitive from (chibi ast).
 ;; (define (string-cursor-copy! dst start src from to)
 ;;   (let lp ((i from)
-;;            (j (string-offset->index dst start)))
+;;            (j (string-cursor->index dst start)))
 ;;     (let ((i2 (string-cursor-next src i)))
 ;;       (cond ((> i2 to) i)
 ;;             (else

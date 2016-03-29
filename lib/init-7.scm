@@ -423,10 +423,11 @@
 (define (string->list str . o)
   (cond
    ((null? o)
-    (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))
-      (if (< i 0)
-          res
-          (lp (string-cursor-prev str i) (cons (string-cursor-ref str i) res)))))
+    (let ((start (string-cursor-start str)))
+      (let lp ((i (string-cursor-prev str (string-cursor-end str))) (res '()))
+        (if (string-cursor<? i start)
+            res
+            (lp (string-cursor-prev str i) (cons (string-cursor-ref str i) res))))))
    (else
     (string->list (apply substring str o)))))
 
@@ -1250,25 +1251,30 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; string cursors
 
-(define string-cursor<? <)
-(define string-cursor<=? <=)
-(define string-cursor>? >)
-(define string-cursor>=? >=)
-(define string-cursor=? =)
-
-(define (string-cursor-start s) 0)
-
 (define (string-copy str . o)
   (apply substring str (if (pair? o) o '(0))))
 
+(define string-cursor=? eq?)
+
 (cond-expand
  (full-unicode
-  (define string-cursor-end string-size))
+  (define string-cursor-start
+    (let ((start (string-index->cursor "" 0)))
+      (lambda (s) start)))
+  (define (string-size s)
+    (string-cursor-offset (string-cursor-end s))))
  (else
-  (define (string-index->offset str i) i)
-  (define (string-offset->index str off) off)
+  (define string-cursor? fixnum?)
+  (define string-cursor<? <)
+  (define string-cursor<=? <=)
+  (define string-cursor>? >)
+  (define string-cursor>=? >=)
+  (define (string-index->cursor str i) i)
+  (define (string-cursor->index str off) off)
+  (define (string-cursor-offset str off) off)
   (define string-size string-length)
   (define substring-cursor substring)
+  (define (string-cursor-start s) 0)
   (define string-cursor-end string-length)
   (define string-cursor-ref string-ref)
   (define (string-cursor-next s i) (+ i 1))

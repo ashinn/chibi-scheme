@@ -92,30 +92,36 @@ typedef unsigned long size_t;
 #include <stdio.h>
 
 /* tagging system
- *   bits end in    00:  pointer
- *                  01:  fixnum
- *                 011:  immediate flonum (optional)
- *                 111:  immediate symbol (optional)
- *              000110:  char
- *              001010:  reader label (optional)
- *              001110:  unique immediate (NULL, TRUE, FALSE)
+ *   bits end in     1:  fixnum
+ *                  00:  pointer
+ *                 010:  string cursor (optional)
+ *                0110:  immediate symbol (optional)
+ *            00001110:  immediate flonum (optional)
+ *            00011110:  char
+ *            00101110:  reader label (optional)
+ *            00111110:  unique immediate (NULL, TRUE, FALSE)
  */
 
-#define SEXP_FIXNUM_BITS 2
-#define SEXP_IMMEDIATE_BITS 3
-#define SEXP_EXTENDED_BITS 6
+#define SEXP_FIXNUM_BITS 1
+#define SEXP_POINTER_BITS 2
+#define SEXP_STRING_CURSOR_BITS 3
+#define SEXP_IMMEDIATE_BITS 4
+#define SEXP_EXTENDED_BITS 8
 
-#define SEXP_FIXNUM_MASK 3
-#define SEXP_IMMEDIATE_MASK 7
-#define SEXP_EXTENDED_MASK 63
+#define SEXP_FIXNUM_MASK ((1<<SEXP_FIXNUM_BITS)-1)
+#define SEXP_POINTER_MASK ((1<<SEXP_POINTER_BITS)-1)
+#define SEXP_STRING_CURSOR_MASK ((1<<SEXP_STRING_CURSOR_BITS)-1)
+#define SEXP_IMMEDIATE_MASK ((1<<SEXP_IMMEDIATE_BITS)-1)
+#define SEXP_EXTENDED_MASK ((1<<SEXP_EXTENDED_BITS)-1)
 
 #define SEXP_POINTER_TAG 0
 #define SEXP_FIXNUM_TAG 1
-#define SEXP_ISYMBOL_TAG 7
-#define SEXP_IFLONUM_TAG 3
-#define SEXP_CHAR_TAG 6
-#define SEXP_READER_LABEL_TAG 10
-#define SEXP_EXTENDED_TAG 14
+#define SEXP_STRING_CURSOR_TAG 2
+#define SEXP_ISYMBOL_TAG 6
+#define SEXP_IFLONUM_TAG 14
+#define SEXP_CHAR_TAG 30
+#define SEXP_READER_LABEL_TAG 46
+#define SEXP_EXTENDED_TAG 62
 
 #ifndef SEXP_POINTER_MAGIC
 #define SEXP_POINTER_MAGIC 0xFDCA9764uL /* arbitrary */
@@ -146,6 +152,9 @@ enum sexp_types {
 #endif
 #if SEXP_USE_COMPLEX
   SEXP_COMPLEX,
+#endif
+#if SEXP_USE_DISJOINT_STRING_CURSORS
+  SEXP_STRING_CURSOR,
 #endif
   SEXP_IPORT,
   SEXP_OPORT,
@@ -179,6 +188,10 @@ enum sexp_types {
 #endif
   SEXP_NUM_CORE_TYPES
 };
+
+#if !SEXP_USE_DISJOINT_STRING_CURSORS
+#define SEXP_STRING_CURSOR SEXP_FIXNUM
+#endif
 
 /* procedure flags */
 #define SEXP_PROC_NONE 0uL
@@ -645,8 +658,13 @@ void* sexp_alloc(sexp ctx, size_t size);
 #define sexp_not(x)      ((x) == SEXP_FALSE)
 
 #define sexp_nullp(x)    ((x) == SEXP_NULL)
-#define sexp_pointerp(x) (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_POINTER_TAG)
+#define sexp_pointerp(x) (((sexp_uint_t)(x) & SEXP_POINTER_MASK) == SEXP_POINTER_TAG)
 #define sexp_fixnump(x)  (((sexp_uint_t)(x) & SEXP_FIXNUM_MASK) == SEXP_FIXNUM_TAG)
+#if SEXP_USE_DISJOINT_STRING_CURSORS
+#define sexp_string_cursorp(x)  (((sexp_uint_t)(x) & SEXP_STRING_CURSOR_MASK) == SEXP_STRING_CURSOR_TAG)
+#else
+#define sexp_string_cursorp(x) sexp_fixnump(x)
+#endif
 #define sexp_isymbolp(x) (((sexp_uint_t)(x) & SEXP_IMMEDIATE_MASK) == SEXP_ISYMBOL_TAG)
 #define sexp_charp(x)    (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_CHAR_TAG)
 #define sexp_reader_labelp(x) (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_READER_LABEL_TAG)
@@ -678,15 +696,15 @@ union sexp_flonum_conv {
   float flonum;
   unsigned int bits;
 };
-#define sexp_flonump(x)      (((sexp_uint_t)(x) & SEXP_IMMEDIATE_MASK) == SEXP_IFLONUM_TAG)
+#define sexp_flonump(x)      (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_IFLONUM_TAG)
 SEXP_API sexp sexp_flonum_predicate (sexp ctx, sexp x);
 #if SEXP_64_BIT
 SEXP_API float sexp_flonum_value (sexp x);
 #define sexp_flonum_bits(f) ((char*)&f)
 SEXP_API sexp sexp_make_flonum(sexp ctx, float f);
 #else
-#define sexp_make_flonum(ctx, x)  ((sexp) ((((union sexp_flonum_conv)((float)(x))).bits & ~SEXP_IMMEDIATE_MASK) + SEXP_IFLONUM_TAG))
-#define sexp_flonum_value(x) (((union sexp_flonum_conv)(((unsigned int)(x)) & ~SEXP_IMMEDIATE_MASK)).flonum)
+#define sexp_make_flonum(ctx, x)  ((sexp) ((((union sexp_flonum_conv)((float)(x))).bits & ~SEXP_EXTENDED_MASK) + SEXP_IFLONUM_TAG))
+#define sexp_flonum_value(x) (((union sexp_flonum_conv)(((unsigned int)(x)) & ~SEXP_EXTENDED_MASK)).flonum)
 #endif
 #else
 #define sexp_flonump(x)      (sexp_check_tag(x, SEXP_FLONUM))
@@ -789,6 +807,18 @@ SEXP_API int sexp_idp(sexp x);
 #define SEXP_EIGHT   sexp_make_fixnum(8)
 #define SEXP_NINE    sexp_make_fixnum(9)
 #define SEXP_TEN     sexp_make_fixnum(10)
+
+#if SEXP_USE_DISJOINT_STRING_CURSORS
+#define sexp_make_string_cursor(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_STRING_CURSOR_BITS) + SEXP_STRING_CURSOR_TAG))
+#define sexp_unbox_string_cursor(n)   (((sexp_sint_t)(n))>>SEXP_STRING_CURSOR_BITS)
+#define sexp_string_cursor_to_fixnum(n) sexp_make_fixnum(sexp_unbox_string_cursor(n))
+#define sexp_fixnum_to_string_cursor(n) sexp_make_string_cursor(sexp_unbox_fixnum(n))
+#else
+#define sexp_make_string_cursor(n)    sexp_make_fixnum(n)
+#define sexp_unbox_string_cursor(n)   sexp_unbox_fixnum(n)
+#define sexp_string_cursor_to_fixnum(n) (n)
+#define sexp_fixnum_to_string_cursor(n) (n)
+#endif
 
 #define sexp_make_character(n)  ((sexp) ((((sexp_sint_t)(n))<<SEXP_EXTENDED_BITS) + SEXP_CHAR_TAG))
 #define sexp_unbox_character(n) ((int) (((sexp_sint_t)(n))>>SEXP_EXTENDED_BITS))
@@ -1503,8 +1533,9 @@ SEXP_API sexp_uint_t sexp_string_utf8_length (unsigned char *p, long len);
 SEXP_API char* sexp_string_utf8_prev (unsigned char *p);
 SEXP_API sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i);
 SEXP_API sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i);
-SEXP_API sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
-SEXP_API sexp sexp_string_offset_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp offset);
+SEXP_API sexp sexp_string_index_to_cursor (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index);
+SEXP_API sexp sexp_string_cursor_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp offset);
+SEXP_API sexp sexp_string_cursor_offset (sexp ctx, sexp self, sexp_sint_t n, sexp cur);
 SEXP_API sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API void sexp_utf8_encode_char (unsigned char* p, int len, int c);
 SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
@@ -1512,8 +1543,8 @@ SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
 #define sexp_string_set(ctx, s, i, ch) (sexp_string_utf8_index_set(ctx, NULL, 3, s, i, ch))
 #define sexp_string_cursor_ref(ctx, s, i)    (sexp_string_utf8_ref(ctx, s, i))
 #define sexp_string_cursor_set(ctx, s, i)    (sexp_string_utf8_set(ctx, s, i))
-#define sexp_string_cursor_next(s, i) sexp_make_fixnum(sexp_unbox_fixnum(i) + sexp_utf8_initial_byte_count(((unsigned char*)sexp_string_data(s))[sexp_unbox_fixnum(i)]))
-#define sexp_string_cursor_prev(s, i) sexp_make_fixnum(sexp_string_utf8_prev((unsigned char*)sexp_string_data(s)+sexp_unbox_fixnum(i)) - sexp_string_data(s))
+#define sexp_string_cursor_next(s, i) sexp_make_string_cursor(sexp_unbox_string_cursor(i) + sexp_utf8_initial_byte_count(((unsigned char*)sexp_string_data(s))[sexp_unbox_string_cursor(i)]))
+#define sexp_string_cursor_prev(s, i) sexp_make_string_cursor(sexp_string_utf8_prev((unsigned char*)sexp_string_data(s)+sexp_unbox_string_cursor(i)) - sexp_string_data(s))
 #define sexp_string_length(s) sexp_string_utf8_length((unsigned char*)sexp_string_data(s), sexp_string_size(s))
 #define sexp_substring(ctx, s, i, j) sexp_utf8_substring_op(ctx, NULL, 3, s, i, j)
 #define sexp_substring_cursor(ctx, s, i, j) sexp_substring_op(ctx, NULL, 3, s, i, j)
@@ -1684,7 +1715,7 @@ enum sexp_opcode_names {
   /* 34 22 */ SEXP_OP_STRING_LENGTH,
   /* 35 23 */ SEXP_OP_STRING_CURSOR_NEXT,
   /* 36 24 */ SEXP_OP_STRING_CURSOR_PREV,
-  /* 37 25 */ SEXP_OP_STRING_SIZE,
+  /* 37 25 */ SEXP_OP_STRING_CURSOR_END,
   /* 38 26 */ SEXP_OP_MAKE_PROCEDURE,
   /* 39 27 */ SEXP_OP_MAKE_VECTOR,
   /* 40 28 */ SEXP_OP_MAKE_EXCEPTION,
@@ -1728,6 +1759,9 @@ enum sexp_opcode_names {
   /* 78 4E */ SEXP_OP_FORCE,
   /* 79 4F */ SEXP_OP_RET,
   /* 80 50 */ SEXP_OP_DONE,
+  SEXP_OP_SCP,
+  SEXP_OP_SC_LT,
+  SEXP_OP_SC_LE,
   SEXP_OP_NUM_OPCODES
 };
 

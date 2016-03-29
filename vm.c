@@ -1410,10 +1410,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
   case SEXP_OP_STRING_REF:
     if (! sexp_stringp(_ARG1))
-      sexp_raise("string-ref: not a string", sexp_list1(ctx, _ARG1));
-    else if (! sexp_fixnump(_ARG2))
-      sexp_raise("string-ref: not an integer", sexp_list1(ctx, _ARG2));
-    i = sexp_unbox_fixnum(_ARG2);
+      sexp_raise("string-cursor-ref: not a string", sexp_list1(ctx, _ARG1));
+    else if (! sexp_string_cursorp(_ARG2))
+      sexp_raise("string-cursor-ref: not a string-cursor", sexp_list1(ctx, _ARG2));
+    i = sexp_unbox_string_cursor(_ARG2);
     if ((i < 0) || (i >= (sexp_sint_t)sexp_string_size(_ARG1)))
       sexp_raise("string-ref: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     _ARG2 = sexp_string_cursor_ref(ctx, _ARG1, _ARG2);
@@ -1439,16 +1439,16 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_MUTABLE_STRINGS
   case SEXP_OP_STRING_SET:
     if (! sexp_stringp(_ARG1))
-      sexp_raise("string-set!: not a string", sexp_list1(ctx, _ARG1));
+      sexp_raise("string-cursor-set!: not a string", sexp_list1(ctx, _ARG1));
     else if (sexp_immutablep(_ARG1))
-      sexp_raise("string-set!: immutable string", sexp_list1(ctx, _ARG1));
-    else if (! sexp_fixnump(_ARG2))
-      sexp_raise("string-set!: not an integer", sexp_list1(ctx, _ARG2));
+      sexp_raise("string-cursor-set!: immutable string", sexp_list1(ctx, _ARG1));
+    else if (! sexp_string_cursorp(_ARG2))
+      sexp_raise("string-cursor-set!: not a string-cursor", sexp_list1(ctx, _ARG2));
     else if (! sexp_charp(_ARG3))
-      sexp_raise("string-set!: not a char", sexp_list1(ctx, _ARG3));
-    i = sexp_unbox_fixnum(_ARG2);
+      sexp_raise("string-cursor-set!: not a char", sexp_list1(ctx, _ARG3));
+    i = sexp_unbox_string_cursor(_ARG2);
     if ((i < 0) || (i >= (sexp_sint_t)sexp_string_size(_ARG1)))
-      sexp_raise("string-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
+      sexp_raise("string-cursor-set!: index out of range", sexp_list2(ctx, _ARG1, _ARG2));
     sexp_context_top(ctx) = top;
     sexp_string_set(ctx, _ARG1, _ARG2, _ARG3);
     top-=3;
@@ -1458,8 +1458,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_STRING_CURSOR_NEXT:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-cursor-next: not a string", sexp_list1(ctx, _ARG1));
-    else if (! sexp_fixnump(_ARG2))
-      sexp_raise("string-cursor-next: not an integer", sexp_list1(ctx, _ARG2));
+    else if (! sexp_string_cursorp(_ARG2))
+      sexp_raise("string-cursor-next: not a string-cursor", sexp_list1(ctx, _ARG2));
     _ARG2 = sexp_string_cursor_next(_ARG1, _ARG2);
     top--;
     sexp_check_exception();
@@ -1467,16 +1467,16 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_STRING_CURSOR_PREV:
     if (! sexp_stringp(_ARG1))
       sexp_raise("string-cursor-prev: not a string", sexp_list1(ctx, _ARG1));
-    else if (! sexp_fixnump(_ARG2))
-      sexp_raise("string-cursor-prev: not an integer", sexp_list1(ctx, _ARG2));
+    else if (! sexp_string_cursorp(_ARG2))
+      sexp_raise("string-cursor-prev: not a string-cursor", sexp_list1(ctx, _ARG2));
     _ARG2 = sexp_string_cursor_prev(_ARG1, _ARG2);
     top--;
     sexp_check_exception();
     break;
-  case SEXP_OP_STRING_SIZE:
+  case SEXP_OP_STRING_CURSOR_END:
     if (! sexp_stringp(_ARG1))
-      sexp_raise("string-size: not a string", sexp_list1(ctx, _ARG1));
-    _ARG1 = sexp_make_fixnum(sexp_string_size(_ARG1));
+      sexp_raise("string-cursor-end: not a string", sexp_list1(ctx, _ARG1));
+    _ARG1 = sexp_make_string_cursor(sexp_string_size(_ARG1));
     break;
 #endif
   case SEXP_OP_BYTES_LENGTH:
@@ -1933,6 +1933,19 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   case SEXP_OP_EQ:
     _ARG2 = sexp_make_boolean(_ARG1 == _ARG2);
     top--;
+    break;
+  case SEXP_OP_SCP:
+    _ARG1 = sexp_make_boolean(sexp_string_cursorp(_ARG1));
+    break;
+  case SEXP_OP_SC_LT:
+    tmp1 = _ARG1, tmp2 = _ARG2;
+    sexp_context_top(ctx) = --top;
+    _ARG1 = sexp_make_boolean((sexp_sint_t)tmp1 < (sexp_sint_t)tmp2);
+    break;
+  case SEXP_OP_SC_LE:
+    tmp1 = _ARG1, tmp2 = _ARG2;
+    sexp_context_top(ctx) = --top;
+    _ARG1 = sexp_make_boolean((sexp_sint_t)tmp1 <= (sexp_sint_t)tmp2);
     break;
   case SEXP_OP_CHAR2INT:
     if (! sexp_charp(_ARG1))

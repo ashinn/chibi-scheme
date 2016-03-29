@@ -160,7 +160,7 @@
     (if (pair? res) (car res) res)))
 
 (define (regexp-match-submatch-start+end md n)
-  (let ((n (if (string-cursor? n) n (regexp-match-name-offset md n))))
+  (let ((n (if (integer? n) n (regexp-match-name-offset md n))))
     (and (< n (vector-length (regexp-match-rules md)))
          (let ((rule (vector-ref (regexp-match-rules md) n)))
            (if (pair? rule)
@@ -168,8 +168,8 @@
                      (end (regexp-match-ref md (cdr rule)))
                      (str (regexp-match-string md)))
                  (and start end
-                      (cons (string-offset->index str start)
-                            (string-offset->index str end))))
+                      (cons (string-cursor->index str start)
+                            (string-cursor->index str end))))
                #f)))))
 
 ;;> Returns the start index for the given named or indexed submatch
@@ -432,7 +432,8 @@
                  (let ((accept-start (searcher-start-match (cdr accept))))
                    (posse-every
                     (lambda (searcher)
-                      (> (searcher-start-match searcher) accept-start))
+                      (string-cursor>? (searcher-start-match searcher)
+                                       accept-start))
                     searchers1)))
             (and (not search?)
                  (posse-empty? searchers1)))
@@ -441,7 +442,8 @@
         ;; searching, return false.
         (and (searcher? (cdr accept))
              (let ((matches (searcher-matches (cdr accept))))
-               (and (or search? (>= (regexp-match-ref matches 1) end))
+               (and (or search? (string-cursor>=? (regexp-match-ref matches 1)
+                                                  end))
                     (searcher-matches (cdr accept))))))
        (else
         ;; Otherwise advance normally.
@@ -548,8 +550,8 @@
   (and (string-cursor>? i start)
        (or (string-cursor>=? i end)
            (let ((m (regexp-search re:grapheme str
-                                   (string-offset->index str i)
-                                   (string-offset->index str end))))
+                                   (string-cursor->index str i)
+                                   (string-cursor->index str end))))
              (and m (string-cursor<=? (regexp-match-submatch-end m 0) i))))))
 
 (define (lookup-char-set name flags)
@@ -933,9 +935,9 @@
                        (string-cursor-next str j)
                        j)
                    j
-                   (kons (string-offset->index str from) md str acc)))))
+                   (kons (string-cursor->index str from) md str acc)))))
        (else
-        (finish (string-offset->index str from) #f str acc))))))
+        (finish (string-cursor->index str from) #f str acc))))))
 
 ;;> Extracts all non-empty substrings of \var{str} which match
 ;;> \var{re} between \var{start} and \var{end} as a list of strings.
@@ -1066,7 +1068,7 @@
       (case (car ls)
         ((pre)
          (lp (cdr ls)
-             (cons (substring-cursor str 0 (regexp-match-submatch-start m 0))
+             (cons (substring str 0 (regexp-match-submatch-start m 0))
                    res)))
         ((post)
          (lp (cdr ls)

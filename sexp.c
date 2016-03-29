@@ -198,6 +198,9 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #if SEXP_USE_COMPLEX
   {SEXP_COMPLEX, sexp_offsetof(complex, real), 2, 2, 0, 0, sexp_sizeof(complex), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Complex", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
+#if SEXP_USE_DISJOINT_STRING_CURSORS
+  {SEXP_STRING_CURSOR, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"String-Cursor", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+#endif
   {SEXP_IPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORTN, SEXP_FINALIZE_PORT},
   {SEXP_OPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORTN, SEXP_FINALIZE_PORT},
   {SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_FILENON, SEXP_FINALIZE_FILENO},
@@ -978,7 +981,7 @@ char* sexp_string_utf8_prev (unsigned char *p) {
 }
 
 sexp sexp_string_utf8_ref (sexp ctx, sexp str, sexp i) {
-  unsigned char *p=(unsigned char*)sexp_string_data(str) + sexp_unbox_fixnum(i);
+  unsigned char *p=(unsigned char*)sexp_string_data(str) + sexp_unbox_string_cursor(i);
   if (*p < 0x80)
     return sexp_make_character(*p);
   else if ((*p < 0xC0) || (*p > 0xF7))
@@ -1002,7 +1005,7 @@ void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
   }
 }
 
-sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index) {
+sexp sexp_string_index_to_cursor (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index) {
   sexp_sint_t i, j, limit;
   unsigned char *p;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
@@ -1012,17 +1015,22 @@ sexp sexp_string_index_to_offset (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
     j += sexp_utf8_initial_byte_count(p[j]);
   if (i != 0)
-    return sexp_user_exception(ctx, self, "string-index->offset: index out of range", index);
-  return sexp_make_fixnum(j);
+    return sexp_user_exception(ctx, self, "string-index->cursor: index out of range", index);
+  return sexp_make_string_cursor(j);
 }
 
-sexp sexp_string_offset_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp offset) {
-  sexp_sint_t off = sexp_unbox_fixnum(offset);
+sexp sexp_string_cursor_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp offset) {
+  sexp_sint_t off = sexp_unbox_string_cursor(offset);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
+  sexp_assert_type(ctx, sexp_string_cursorp, SEXP_STRING_CURSOR, offset);
   if (off < 0 || off > (sexp_sint_t)sexp_string_size(str))
-    return sexp_user_exception(ctx, self, "string-offset->index: offset out of range", offset);
+    return sexp_user_exception(ctx, self, "string-cursor->index: offset out of range", offset);
   return sexp_make_fixnum(sexp_string_utf8_length((unsigned char*)sexp_string_data(str), off));
+}
+
+sexp sexp_string_cursor_offset (sexp ctx, sexp self, sexp_sint_t n, sexp cur) {
+  sexp_assert_type(ctx, sexp_string_cursorp, SEXP_STRING_CURSOR, cur);
+  return sexp_make_fixnum(sexp_unbox_string_cursor(cur));
 }
 
 #endif
@@ -1079,19 +1087,19 @@ sexp sexp_c_string (sexp ctx, const char *str, sexp_sint_t slen) {
 sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end) {
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
+  sexp_assert_type(ctx, sexp_string_cursorp, SEXP_STRING_CURSOR, start);
   if (sexp_not(end))
-    end = sexp_make_fixnum(sexp_string_size(str));
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
-  if ((sexp_unbox_fixnum(start) < 0)
-      || (sexp_unbox_fixnum(start) > (sexp_sint_t)sexp_string_size(str))
-      || (sexp_unbox_fixnum(end) < 0)
-      || (sexp_unbox_fixnum(end) > (sexp_sint_t)sexp_string_size(str))
+    end = sexp_make_string_cursor(sexp_string_size(str));
+  sexp_assert_type(ctx, sexp_string_cursorp, SEXP_STRING_CURSOR, end);
+  if ((sexp_unbox_string_cursor(start) < 0)
+      || (sexp_unbox_string_cursor(start) > (sexp_sint_t)sexp_string_size(str))
+      || (sexp_unbox_string_cursor(end) < 0)
+      || (sexp_unbox_string_cursor(end) > (sexp_sint_t)sexp_string_size(str))
       || (end < start))
     return sexp_range_exception(ctx, str, start, end);
-  res = sexp_make_string(ctx, sexp_fx_sub(end, start), SEXP_VOID);
+  res = sexp_make_string(ctx, sexp_make_fixnum(sexp_unbox_string_cursor(end) - sexp_unbox_string_cursor(start)), SEXP_VOID);
   memcpy(sexp_string_data(res),
-         sexp_string_data(str)+sexp_unbox_fixnum(start),
+         sexp_string_data(str)+sexp_unbox_string_cursor(start),
          sexp_string_size(res));
   sexp_string_data(res)[sexp_string_size(res)] = '\0';
   return res;
@@ -1101,6 +1109,10 @@ sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp vec, sexp start,
   sexp res;
   sexp_gc_var1(str);
   sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, vec);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
+  if (sexp_not(end))
+    end = sexp_make_fixnum(sexp_bytes_length(vec));
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
   sexp_gc_preserve1(ctx, str);
 #if SEXP_USE_PACKED_STRINGS
   str = sexp_c_string(ctx, sexp_bytes_data(vec), sexp_bytes_length(vec));
@@ -1110,7 +1122,7 @@ sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp vec, sexp start,
   sexp_string_offset(str) = 0;
   sexp_string_size(str) = sexp_bytes_length(vec);
 #endif
-  res = sexp_substring_op(ctx, self, n, str, start, end);
+  res = sexp_substring_op(ctx, self, n, str, sexp_fixnum_to_string_cursor(start), sexp_fixnum_to_string_cursor(end));
   if (!sexp_exceptionp(res))
     res = sexp_string_to_bytes(ctx, res);
   sexp_gc_release1(ctx);
@@ -1121,10 +1133,10 @@ sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp vec, sexp start,
 sexp sexp_utf8_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
-  start = sexp_string_index_to_offset(ctx, self, n, str, start);
+  start = sexp_string_index_to_cursor(ctx, self, n, str, start);
   if (sexp_exceptionp(start)) return start;
   if (sexp_fixnump(end)) {
-    end = sexp_string_index_to_offset(ctx, self, n, str, end);
+    end = sexp_string_index_to_cursor(ctx, self, n, str, end);
     if (sexp_exceptionp(end)) return end;
   }
   return sexp_substring_op(ctx, self, n, str, start, end);
@@ -1190,7 +1202,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 
 #if SEXP_USE_HUFF_SYMS
   res = 0;
-  space = 3;
+  space = SEXP_IMMEDIATE_BITS;
   if (len == 0 || sexp_isdigit(p[0])
       || ((p[0] == '+' || p[0] == '-') && len > 1))
     goto normal_intern;
@@ -2039,6 +2051,12 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     }
     sexp_write_string(ctx, numbuf, out);
 #endif
+  } else if (sexp_string_cursorp(obj)) {
+    sexp_write_string(ctx, "{String-Cursor #", out);
+    sexp_write(ctx, sexp_make_fixnum(SEXP_STRING_CURSOR), out);
+    sexp_write_char(ctx, ' ', out);
+    sexp_write(ctx, sexp_make_fixnum(sexp_unbox_string_cursor(obj)), out);
+    sexp_write_char(ctx, '}', out);
   } else if (sexp_charp(obj)) {
     sexp_write_string(ctx, "#\\", out);
     for (i=0; i < sexp_num_char_names; i++) {
@@ -2069,7 +2087,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_HUFF_SYMS
   } else if (sexp_isymbolp(obj)) {
     if (sexp_isymbolp(obj)) {
-      c = ((sexp_uint_t)obj)>>3;
+      c = ((sexp_uint_t)obj)>>SEXP_IMMEDIATE_BITS;
       while (c) {
 #include "chibi/sexp-unhuff.h"
         sexp_write_char(ctx, res, out);
@@ -2764,7 +2782,12 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         tmp = sexp_read_error(ctx, "brace literal missing type identifier", sexp_make_character(c1), in);
       }
       if (!sexp_exceptionp(tmp)) tmp = sexp_lookup_type(ctx, res, tmp);
-      if (tmp && sexp_typep(tmp) && sexp_type_print(tmp)
+      if (tmp && sexp_typep(tmp) && sexp_type_tag(tmp) == SEXP_STRING_CURSOR) {
+        res = sexp_make_string_cursor(sexp_unbox_fixnum(sexp_read_raw(ctx, in, shares)));
+        tmp2 = sexp_read_raw(ctx, in, shares);
+        if (tmp2 != SEXP_CLOSE_BRACE)
+          res = sexp_read_error(ctx, "expected closing brace in string-cursor, got", tmp2, in);
+      } else if (tmp && sexp_typep(tmp) && sexp_type_print(tmp)
           && sexp_opcodep(sexp_type_print(tmp))
           && sexp_opcode_func(sexp_type_print(tmp)) == (sexp_proc1)sexp_write_simple_object) {
         res = sexp_alloc_tagged(ctx, sexp_type_size_base(tmp), sexp_type_tag(tmp));
@@ -3118,11 +3141,11 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
           } else if ((str[6] == 'i' || str[6] == 'I') && str[7] == 0) {
             res = sexp_make_complex(ctx, SEXP_ZERO, tmp);
           } else if (str[6] == '+' || str[6] == '-') {
-            res = sexp_substring_cursor(ctx, res, SEXP_SIX, SEXP_FALSE);
+            res = sexp_substring_cursor(ctx, res, sexp_make_string_cursor(6), SEXP_FALSE);
             res = sexp_string_to_number(ctx, res, SEXP_TEN);
             if (sexp_complexp(res) && (sexp_complex_real(res) == SEXP_ZERO))
               sexp_complex_real(res) = tmp;
-            else
+            else if (!sexp_exceptionp(res))
               res = sexp_read_error(ctx, "invalid complex infinity", res, in);
           } else {
             res = sexp_read_error(ctx, "invalid infinity", res, in);

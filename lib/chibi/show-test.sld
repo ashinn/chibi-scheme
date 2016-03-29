@@ -351,6 +351,11 @@
 
       (test-pretty
        "(design
+ (module (name \"\\\\testshiftregister\") (attributes (attribute (name \"\\\\src\"))))
+ (wire (name \"\\\\shreg\") (attributes (attribute (name \"\\\\src\")))))\n")
+
+      '(test-pretty
+       "(design
  (module (name \"\\\\testshiftregister\")
          (attributes
           (attribute (name \"\\\\src\") (value \"testshiftregister.v:10\"))))

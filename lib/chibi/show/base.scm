@@ -125,9 +125,9 @@
   (fn (port row col string-width)
     (display str port)
     (let ((nl-index (string-find-right str #\newline)))
-      (if (> nl-index 0)
+      (if (string-cursor>? nl-index (string-cursor-start str))
           (update! (row (+ row (string-count str #\newline)))
-                   (col (string-width str nl-index)))
+                   (col (string-width str (string-cursor->index str nl-index))))
           (update! (col (+ col (string-width str))))))))
 
 ;;> Captures the output of \var{producer} and formats the result with

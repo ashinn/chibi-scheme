@@ -27,25 +27,28 @@
 (define (path-directory path)
   (if (string=? path "")
       "."
-      (let ((end (string-skip-right path #\/)))
-        (if (zero? end)
+      (let ((start (string-cursor-start path))
+            (end (string-skip-right path #\/)))
+        (if (string-cursor=? start end)
             "/"
-            (let ((start (string-find-right path #\/ 0 end)))
-              (if (zero? start)
+            (let ((slash (string-find-right path #\/ start end)))
+              (if (string-cursor=? start slash)
                   "."
-                  (let ((start2 (string-skip-right path #\/ 0 start)))
-                    (if (zero? start2)
+                  (let ((start2 (string-skip-right path #\/ start slash)))
+                    (if (string-cursor=? start start2)
                         "/"
-                        (substring-cursor path 0 start2)))))))))
+                        (substring-cursor path start start2)))))))))
 
 (define (path-extension-pos path)
-  (let ((end (string-cursor-end path)))
+  (let ((start (string-cursor-start path))
+        (end (string-cursor-end path)))
     (let lp ((i end) (dot #f))
-      (if (<= i 0)
+      (if (string-cursor<=? i start)
           #f
           (let* ((i2 (string-cursor-prev path i))
                  (ch (string-cursor-ref path i2)))
-            (cond ((eqv? #\. ch) (and (< i end) (lp i2 (or dot i))))
+            (cond ((eqv? #\. ch)
+                   (and (string-cursor<? i end) (lp i2 (or dot i))))
                   ((eqv? #\/ ch) #f)
                   (dot)
                   (else (lp i2 #f))))))))
@@ -65,7 +68,9 @@
 (define (path-strip-extension path)
   (let ((i (path-extension-pos path)))
     (if i
-        (substring-cursor path 0 (string-cursor-prev path i))
+        (substring-cursor path
+                          (string-cursor-start path)
+                          (string-cursor-prev path i))
         path)))
 
 ;;> Returns \var{path} with the extension, if any, replaced
@@ -78,7 +83,10 @@
 
 (define (path-strip-leading-parents path)
   (if (string-prefix? "../" path)
-      (path-strip-leading-parents (substring-cursor path 3))
+      (path-strip-leading-parents
+       (substring-cursor
+        path
+        (string-cursor-forward path (string-cursor-start path) 3)))
       (if (equal? path "..") "" path)))
 
 ;;> Returns \scheme{#t} iff \var{path} is an absolute path,
@@ -103,17 +111,17 @@
          (dir-end (string-cursor-end dir))
          (i (string-mismatch dir path)))
     (cond
-     ((not (<= 1 dir-end i path-end))
+     ((not (string-cursor<=? 1 dir-end i path-end))
       (let ((i2 (string-cursor-next path i)))
-        (and (= i path-end)
-             (= i2 dir-end)
+        (and (string-cursor=? i path-end)
+             (string-cursor=? i2 dir-end)
              (eqv? #\/ (string-cursor-ref dir i))
              ".")))
-     ((= i path-end)
+     ((string-cursor=? i path-end)
       ".")
      ((eqv? #\/ (string-cursor-ref path i))
       (let ((i2 (string-cursor-next path i)))
-        (if (= i2 path-end) "." (substring-cursor path i2))))
+        (if (string-cursor=? i2 path-end) "." (substring-cursor path i2))))
      ((eqv? #\/ (string-cursor-ref path (string-cursor-prev path i)))
       (substring-cursor path i))
      (else
@@ -137,13 +145,15 @@
 ;;> normalized.
 
 (define (path-normalize path)
-  (let* ((len (string-length path)) (len-1 (- len 1)))
+  (let* ((start (string-cursor-start path))
+         (end (string-cursor-end path))
+         (end-1 (string-cursor-prev path end)))
     (define (collect i j res)
-      (if (>= i j) res (cons (substring path i j) res)))
+      (if (string-cursor>=? i j) res (cons (substring-cursor path i j) res)))
     (define (finish i res)
-      (if (zero? i)
+      (if (string-cursor=? start i)
           path
-          (string-join (reverse (collect i len res)))))
+          (string-join (reverse (collect i end res)))))
     ;; loop invariants:
     ;;   - res is a list such that (string-concatenate-reverse res)
     ;;     is always the normalized string up to j
@@ -151,37 +161,47 @@
     ;;     the above value to get a partially normalized path referring
     ;;     to the same location as the original path
     (define (inside i j res)
-      (if (>= j len)
+      (if (string-cursor>=? j end)
           (finish i res)
-          (if (eqv? #\/ (string-ref path j))
-              (boundary i (+ j 1) res)
-              (inside i (+ j 1) res))))
+          (if (eqv? #\/ (string-cursor-ref path j))
+              (boundary i (string-cursor-next path j) res)
+              (inside i (string-cursor-next path j) res))))
     (define (boundary i j res)
-      (if (>= j len)
+      (if (string-cursor>=? j end)
           (finish i res)
-          (case (string-ref path j)
+          (case (string-cursor-ref path j)
             ((#\.)
              (cond
-              ((or (= j len-1) (eqv? #\/ (string-ref path (+ j 1))))
-               (if (= i j)
-                   (boundary (+ j 2) (+ j 2) res)
-                   (let ((s (substring path i j)))
-                     (boundary (+ j 2) (+ j 2) (cons s res)))))
-              ((eqv? #\. (string-ref path (+ j 1)))
-               (if (or (>= j (- len 2))
-                       (eqv? #\/ (string-ref path (+ j 2))))
-                   (if (>= i (- j 1))
+              ((or (string-cursor=? j end-1)
+                   (eqv? #\/ (string-cursor-ref path (string-cursor-next path j))))
+               (if (string-cursor=? i j)
+                   (boundary (string-cursor-forward path j 2)
+                             (string-cursor-forward path j 2)
+                             res)
+                   (let ((s (substring-cursor path i j)))
+                     (boundary (string-cursor-forward path j 2)
+                               (string-cursor-forward path j 2)
+                               (cons s res)))))
+              ((eqv? #\. (string-cursor-ref path (string-cursor-next path j)))
+               (if (or (string-cursor>=? j (string-cursor-backward path end 2))
+                       (eqv? #\/ (string-cursor-ref
+                                  path
+                                  (string-cursor-forward path j 2))))
+                   (if (string-cursor>=? i (string-cursor-prev path j))
                        (if (null? res)
                            (backup j "" '())
                            (backup j (car res) (cdr res)))
-                       (backup j (substring path i j) res))
-                   (inside i (+ j 2) res)))
+                       (backup j (substring-cursor path i j) res))
+                   (inside i (string-cursor-forward path j 2) res)))
               (else
-               (inside i (+ j 1) res))))
-            ((#\/) (boundary (+ j 1) (+ j 1) (collect i j res)))
-            (else (inside i (+ j 1) res)))))
+               (inside i (string-cursor-next path j) res))))
+            ((#\/)
+             (boundary (string-cursor-next path j)
+                       (string-cursor-next path j)
+                       (collect i j res)))
+            (else (inside i (string-cursor-next path j) res)))))
     (define (backup j s res)
-      (let ((pos (+ j 3)))
+      (let ((pos (string-cursor-forward path j 3)))
         (cond
          ;; case 1: we're reduced to accumulating parents of the cwd
          ((or (string=? s "/..") (string=? s ".."))
@@ -201,9 +221,10 @@
               (boundary pos pos res))
              (else (boundary pos pos (cons "/" (cons d res))))))))))
     ;; start with boundary if abs path, otherwise inside
-    (if (zero? len)
+    (if (string-cursor=? start end)
         path
-        ((if (eqv? #\/ (string-ref path 0)) boundary inside) 0 1 '()))))
+        ((if (eqv? #\/ (string-ref path 0)) boundary inside)
+         start (string-cursor-next path start) '()))))
 
 ;;> Return a new string representing the path where each of \var{args}
 ;;> is a path component, separated with the directory separator.
@@ -217,7 +238,7 @@
           ((number? x) (number->string x))
           (else (error "not a valid path component" x))))
   (define (trim-trailing-slash s)
-    (substring-cursor s 0 (string-skip-right s #\/)))
+    (substring-cursor s (string-cursor-start s) (string-skip-right s #\/)))
   (if (null? args)
       ""
       (let* ((args0 (x->string (car args)))

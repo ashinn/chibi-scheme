@@ -1809,9 +1809,9 @@ sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp off;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
-  off = sexp_string_index_to_offset(ctx, self, n, str, i);
+  off = sexp_string_index_to_cursor(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
-  if (sexp_unbox_fixnum(off) >= (sexp_sint_t)sexp_string_size(str))
+  if (sexp_unbox_string_cursor(off) >= (sexp_sint_t)sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-ref: index out of range", i);
   return sexp_string_utf8_ref(ctx, str, off);
 }
@@ -1839,7 +1839,7 @@ sexp sexp_read_utf8_char (sexp ctx, sexp port, int i) {
 void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
   sexp b;
   unsigned char *p, *q;
-  int i = sexp_unbox_fixnum(index), c = sexp_unbox_character(ch),
+  int i = sexp_unbox_string_cursor(index), c = sexp_unbox_character(ch),
     old_len, new_len, len;
   p = (unsigned char*)sexp_string_data(str) + i;
   old_len = sexp_utf8_initial_byte_count(*p);
@@ -1864,9 +1864,9 @@ sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
-  off = sexp_string_index_to_offset(ctx, self, n, str, i);
+  off = sexp_string_index_to_cursor(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
-  if (sexp_unbox_fixnum(off) >= (sexp_sint_t)sexp_string_size(str))
+  if (sexp_unbox_string_cursor(off) >= (sexp_sint_t)sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-set!: index out of range", i);
   sexp_string_utf8_set(ctx, str, off, ch);
   return SEXP_VOID;

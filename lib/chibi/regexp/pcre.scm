@@ -54,6 +54,12 @@
             ((eqv? c #\\) (scan (+ i 2)))
             (else (scan (+ i 1)))))))
 
+(define (string-find/index str ch start . o)
+  (let* ((end (if (pair? o) (car o) (string-length str)))
+         (i (string-find str ch (string-index->cursor str start)
+                         (string-index->cursor str end))))
+    (string-cursor->index str i)))
+
 (define (string-parse-hex-escape str i end)
   (cond
    ((>= i end)
@@ -134,7 +140,7 @@
                 (i2 (if inv? (+ i 2) (+ i 1))))
            (case (string-ref str i2)
              ((#\:)
-              (let ((j (string-find str #\: (+ i2 1) end)))
+              (let ((j (string-find/index str #\: (+ i2 1) end)))
                 (if (or (>= (+ j 1) end)
                         (not (eqv? #\] (string-ref str (+ j 1)))))
                     (error "incomplete character class" str)
@@ -334,7 +340,7 @@
             (else ;; (?...) case
              (case (string-ref str (+ i 2))
                ((#\#)
-                (let ((j (string-find str #\) (+ i 3))))
+                (let ((j (string-find/index str #\) (+ i 3))))
                   (lp (+ j i) (min (+ j 1) end) flags (collect) st)))
                ((#\:)
                 (lp (+ i 3) (+ i 3) (flag-clear flags ~save?) '() (save)))
@@ -359,7 +365,7 @@
                     (else
                      (let ((j (and (char-alphabetic?
                                     (string-ref str (+ i 3)))
-                                   (string-find str #\> (+ i 4)))))
+                                   (string-find/index str #\> (+ i 4)))))
                        (if (< j end)
                            (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
                                `(,(string->symbol (substring str (+ i 3) j))
@@ -378,14 +384,14 @@
                  ((>= (+ i 3) end)
                   (error "unterminated parenthesis in regexp" str))
                  ((char-numeric? (string-ref str (+ i 3)))
-                  (let* ((j (string-find str #\) (+ i 3)))
+                  (let* ((j (string-find/index str #\) (+ i 3)))
                          (n (string->number (substring str (+ i 3) j))))
                     (if (or (= j end) (not n))
                         (error "invalid conditional reference" str)
                         (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
                             `(,n if) (save)))))
                  ((char-alphabetic? (string-ref str (+ i 3)))
-                  (let ((j (string-find str #\) (+ i 3))))
+                  (let ((j (string-find/index str #\) (+ i 3))))
                     (if (= j end)
                         (error "invalid named conditional reference" str)
                         (lp (+ j 1) (+ j 1) (flag-clear flags ~save?)
@@ -450,7 +456,7 @@
                 (else
                  (let* ((x (car res))
                         (tail (cdr res))
-                        (j (string-find str #\} (+ i 1)))
+                        (j (string-find/index str #\} (+ i 1)))
                         (s2 (string-split (substring str (+ i 1) j) #\,))
                         (n (string->number (car s2)))
                         (m (and (pair? (cdr s2))
@@ -521,7 +527,7 @@
                     (if (not (memv c '(#\< #\{ #\')))
                         (error "bad \\k usage, expected \\k<...>" str)
                         (let* ((terminal (char-mirror c))
-                               (j (string-find str terminal (+ i 2)))
+                               (j (string-find/index str terminal (+ i 2)))
                                (s (substring str (+ i 3) j))
                                (backref
                                 (if (flag-set? flags ~case-insensitive?)
@@ -588,7 +594,7 @@
                (lp (+ i 1) from flags res st)))
           ((#\#)
            (if (flag-set? flags ~ignore-space?)
-               (let ((j (string-find str #\newline (+ i 1))))
+               (let ((j (string-find/index str #\newline (+ i 1))))
                  (lp (+ j 1) (min (+ j 1) end) flags (collect) st))
                (lp (+ i 1) from flags res st)))
           (else

@@ -36,6 +36,11 @@
                                            sep))
                 (else (each sep ". " (fmt rest)))))))))))
 
+(define (string-find/index str pred i)
+  (string-cursor->index
+   str
+   (string-find str pred (string-index->cursor str i))))
+
 (define (try-fitted2 proc fail)
   (fn (width string-width output)
     (let ((out (open-output-string)))
@@ -47,7 +52,7 @@
          (define (output* str)
            (fn (col)
              (let lp ((i 0) (col col))
-               (let ((nli (string-find str #\newline i))
+               (let ((nli (string-find/index str #\newline i))
                      (len (string-width str)))
                  (if (< nli len)
                      (if (> (+ (- nli i) col) width)

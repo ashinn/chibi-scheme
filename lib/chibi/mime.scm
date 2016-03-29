@@ -153,15 +153,20 @@
     o)))
 
 (define (mime-split-name+value s)
-  (let ((i (string-find s #\=)))
-    (if i
+  (let ((i (string-find s #\=))
+        (start (string-cursor-start s))
+        (end (string-cursor-end s)))
+    (if (string-cursor<? i end)
         (cons (string->symbol
-               (string-downcase-ascii (string-trim (substring s 0 i))))
-              (if (= i (string-length s))
+               (string-downcase-ascii
+                (string-trim (substring-cursor s start i))))
+              (if (string-cursor=? (string-cursor-next s i) end)
                   ""
-                  (if (eqv? #\" (string-ref s (+ i 1)))
-                      (substring s (+ i 2) (- (string-length s) 1))
-                      (substring s (+ i 1) (string-length s)))))
+                  (if (eqv? #\" (string-cursor-ref s (string-cursor-next s i)))
+                      (substring-cursor s
+                                        (string-cursor-forward s i 2)
+                                        (string-cursor-prev s end))
+                      (substring-cursor s (string-cursor-next s i) end))))
         (cons (string->symbol (string-downcase-ascii (string-trim s))) ""))))
 
 ;;> \procedure{(mime-parse-content-type str)}
@@ -185,29 +190,42 @@
 ;;> the appropriate decoded and charset converted value.
 
 (define (mime-decode-header str)
-  (let* ((len (string-length str))
-         (limit (- len 8))) ; need at least 8 chars: "=?Q?X??="
-    (let lp ((i 0) (from 0) (res '()))
-      (if (>= i limit)
-        (string-join (reverse (cons (substring str from len) res)))
-        (if (and (eqv? #\= (string-ref str i))
-                 (eqv? #\? (string-ref str (+ i 1))))
-          (let* ((j (string-find str #\? (+ i 3)))
-                 (k (string-find str #\? (+ j 3))))
-            (if (and j k (< (+ k 1) len)
-                     (eqv? #\? (string-ref str (+ j 2)))
-                     (memq (string-ref str (+ j 1)) '(#\Q #\B #\q #\b))
-                     (eqv? #\= (string-ref str (+ k 1))))
-              (let ((decode (if (memq (string-ref str (+ j 1)) '(#\Q #\q))
-                               quoted-printable-decode-string
-                               base64-decode-string))
-                    (cset (substring str (+ i 2) j))
-                    (content (substring str (+ j 3) k))
-                    (k2 (+ k 2)))
+  (let* ((end (string-cursor-end str))
+         ;; need at least 8 chars: "=?Q?X??="
+         (limit (string-cursor-backward end 8))
+         (start (string-cursor-start str)))
+    (let lp ((i start) (from start) (res '()))
+      (cond
+       ((string-cursor>=? i limit)
+        (string-join (reverse (cons (substring-cursor str from end) res))))
+       ((and (eqv? #\= (string-cursor-ref str i))
+             (eqv? #\? (string-cursor-ref str (string-cursor-next str i))))
+        (let* ((j (string-find str #\? (string-cursor-forward str i 3)))
+               (k (string-find str #\? (string-cursor-forward str j 3))))
+          (if (and j k (string-cursor<? (string-cursor-next str k) end)
+                   (eqv? #\?
+                         (string-cursor-ref str
+                                            (string-cursor-forward str j 2)))
+                   (memq (string-cursor-ref str (string-cursor-next str j))
+                         '(#\Q #\B #\q #\b))
+                   (eqv? #\=
+                         (string-cursor-ref str (string-cursor-next str k))))
+              (let ((decode
+                     (if (memq (string-cursor-ref str
+                                                  (string-cursor-next str j))
+                               '(#\Q #\q))
+                         quoted-printable-decode-string
+                         base64-decode-string))
+                    (cset
+                     (substring-cursor str (string-cursor-forward str i 2) j))
+                    (content
+                     (substring-cursor str (string-cursor-forward str j 3) k))
+                    (k2 (string-cursor-forward k 2)))
                 (lp k2 k2 (cons (ces-convert (decode content) cset)
-                                (cons (substring str from i) res))))
-              (lp (+ i 2) from res)))
-          (lp (+ i 1) from res))))))
+                                (cons (substring-cursor str from i) res))))
+              (lp (string-cursor-forward str i 2) from res))))
+       (else
+        (lp (string-cursor-forward str i 1) from res))))))
 
 ;;> Write out an alist of headers in mime format.
 

@@ -51,7 +51,7 @@ static int sexp_basic_comparator (sexp op) {
 #if SEXP_USE_HUFF_SYMS
 static int sexp_isymbol_compare (sexp ctx, sexp a, sexp b) {
   int res, res2, tmp;
-  sexp_uint_t c = ((sexp_uint_t)a)>>3, d = ((sexp_uint_t)b)>>3;
+  sexp_uint_t c = ((sexp_uint_t)a)>>SEXP_IMMEDIATE_BITS, d = ((sexp_uint_t)b)>>SEXP_IMMEDIATE_BITS;
   while (c && d) {
 #include "chibi/sexp-unhuff.h"
 #define c d

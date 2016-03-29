@@ -210,6 +210,13 @@
 /*   Making them immutable allows for packed UTF-8 strings. */
 /* #define SEXP_USE_MUTABLE_STRINGS 0 */
 
+/* uncomment this to make string cursors just fixnum offsets */
+/*   The default when using UTF-8 is to have a disjoint string */
+/*   cursor type.  This is an immediate type with no loss in  */
+/*   performance, and prevents confusion mixing indexes and */
+/*   cursors. */
+/* #define SEXP_USE_DISJOINT_STRING_CURSORS 0 */
+
 /* uncomment this to disable automatic closing of ports */
 /*   If enabled, the underlying FILE* for file ports will be */
 /*   automatically closed when they're garbage collected.  Doesn't */
@@ -616,6 +623,10 @@
 #endif
 #ifndef SEXP_USE_PACKED_STRINGS
 #define SEXP_USE_PACKED_STRINGS 1
+#endif
+
+#ifndef SEXP_USE_DISJOINT_STRING_CURSORS
+#define SEXP_USE_DISJOINT_STRING_CURSORS SEXP_USE_UTF8_STRINGS
 #endif
 
 #ifndef SEXP_USE_AUTOCLOSE_PORTS
