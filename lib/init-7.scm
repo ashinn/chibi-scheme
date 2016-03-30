@@ -1097,6 +1097,7 @@
   (define (exact-complex? x)
     (and (%complex? x) (exact? (complex-real x)) (exact? (complex-imag x)))))
  (else
+  (define (%complex? x) #f)
   (define (exact-complex? x) #f)))
 
 (cond-expand
@@ -1122,6 +1123,7 @@
             1.0
             (exact->inexact (denominator (inexact->exact x)))))))
  (else
+  (define (ratio? x) #f)
   (cond-expand
    (complex
     (define (exact? x)
