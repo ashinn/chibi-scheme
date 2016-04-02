@@ -450,14 +450,14 @@
 ;; Syntax pattern with ellipsis in middle of improper list.
 (define-syntax part-2x
   (syntax-rules ()
-    ((_ a b (m n) ... x y . rest)
+    ((_ (a b (m n) ... x y . rest))
      (vector (list a b) (list m ...) (list n ...) (list x y)
              (cons "rest:" 'rest)))
     ((_ . rest) 'error)))
 (test '#((10 43) (31 41 51) (32 42 52) (63 77) ("rest:"))
-    (part-2x 10 (+ 21 22) (31 32) (41 42) (51 52) (+ 61 2) 77))
+    (part-2x (10 (+ 21 22) (31 32) (41 42) (51 52) (+ 61 2) 77)))
 (test '#((10 43) (31 41 51) (32 42 52) (63 77) ("rest:" . "tail"))
-    (part-2x 10 (+ 21 22) (31 32) (41 42) (51 52) (+ 61 2) 77 . "tail"))
+    (part-2x (10 (+ 21 22) (31 32) (41 42) (51 52) (+ 61 2) 77 . "tail")))
 
 ;; underscore
 (define-syntax count-to-2
