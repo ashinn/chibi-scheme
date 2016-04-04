@@ -50,6 +50,8 @@ lib/chibi/system.c
 lib/chibi/time.c
 *.tgz
 *.html
+*.img
+*.fasl
 !index.html
 
 examples/snow-fort
