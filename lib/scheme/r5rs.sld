@@ -17,7 +17,7 @@
    (scheme load)
    (only (chibi) null-environment scheme-report-environment))
   (export
-   - * / + < <= = > >= abs acos and angle append apply asin assoc assq
+   - ... * / + < <= = => > >= _ abs acos and angle append apply asin assoc assq
    assv atan begin boolean?
    caaaar caaadr caadar caaddr
    cadaar cadadr caddar cadddr
@@ -33,8 +33,8 @@
    char-upper-case? char-whitespace? char? char<? char<=? char=? char>?
    char>=? close-input-port close-output-port complex? cond cons cos
    current-input-port current-output-port define define-syntax delay
-   denominator display do dynamic-wind eof-object? eq? equal? eqv? eval
-   even? exact->inexact exact? exp expt floor for-each force gcd if
+   denominator display do dynamic-wind else eof-object? eq? equal? eqv?
+   eval even? exact->inexact exact? exp expt floor for-each force gcd if
    imag-part inexact->exact inexact? input-port? integer->char integer?
    interaction-environment lambda lcm length let let-syntax let* letrec
    letrec-syntax list list->string list->vector list-ref list-tail list?
