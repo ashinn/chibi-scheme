@@ -63,7 +63,7 @@
                (ls (cdr strings)))
         (if (or (null? ls) (zero? len))
             len
-            (lp (min len (string-mismatch prev (car ls)))
+            (lp (min len (string-cursor->index prev (string-mismatch prev (car ls))))
                 (car ls)
                 (cdr ls))))))
 
