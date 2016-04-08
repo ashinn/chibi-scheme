@@ -71,7 +71,7 @@
         (end (if (and (pair? o) (pair? (cdr o)))
                  (cadr o)
                  (string-cursor-end str))))
-    (< (string-find str check start end) end)))
+    (string-cursor<? (string-find str check start end) end)))
 
 ;;> As \scheme{string-find}, but returns the position of the first
 ;;> character from the right of \var{str}.  If no character matches,
