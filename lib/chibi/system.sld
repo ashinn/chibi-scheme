@@ -1,9 +1,9 @@
 
 (define-library (chibi system)
   (export get-host-name
-          user-information user? user-name user-password
+          user? user-name user-password
           user-id user-group-id user-gecos user-home user-shell
-          group-information group-name group-password group-id
+          group-name group-password group-id
           current-user-id current-group-id
           current-effective-user-id current-effective-group-id
           set-current-user-id! set-current-effective-user-id!
