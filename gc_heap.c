@@ -608,7 +608,7 @@ sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_
     goto done;
   }
   if (offset > 0 && fseek(fp, offset, SEEK_SET) < 0) {
-    snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't seek to image offset: %s -> %lld: %s\n", filename, offset, strerror(errno));
+    snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't seek to image offset: %s -> "PRIoff": %s\n", filename, offset, strerror(errno));
     goto done;
   }
 

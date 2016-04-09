@@ -256,6 +256,12 @@ typedef short sexp_int32_t;
 # endif
 #endif
 
+#ifdef __APPLE__
+#define PRIoff "%lld"
+#else
+#define PRIoff "%ld"
+#endif
+
 #if SEXP_USE_LONG_PROCEDURE_ARGS
 typedef int sexp_proc_num_args_t;
 #else
