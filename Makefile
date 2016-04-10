@@ -258,7 +258,7 @@ bench-gabriel: chibi-scheme$(EXE)
 # Packaging
 
 clean: clean-libs
-	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err \
+	-$(RM) *.o *.i *.s *.bc *.8 tests/basic/*.out tests/basic/*.err \
 	    tests/run/*.out tests/run/*.err
 
 cleaner: clean
