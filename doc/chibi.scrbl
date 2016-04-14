@@ -264,8 +264,8 @@ These are just syntactic sugar for the following more primitive type
 constructors:
 
 \schemeblock{
-(register-simple-type <name-string> <parent> <num-fields>)
- => <type>
+(register-simple-type <name-string> <parent> <field-names>)
+ => <type>    ; parent may be #f, field-names should be a list of symbols
 
 (make-type-predicate <opcode-name-string> <type>)
  => <opcode>  ; takes 1 arg, returns #t iff that arg is of the type
@@ -278,6 +278,9 @@ constructors:
 
 (make-setter <setter-name-string> <type> <field-index>)
  => <opcode>  ; takes 2 args, sets the field located at the index
+
+(type-slot-offset <type> <field-name>)
+ => <index>   ; returns the index of the field with the given name
 }
 
 \subsection{Unicode}
