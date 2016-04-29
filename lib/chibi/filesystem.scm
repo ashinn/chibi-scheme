@@ -10,10 +10,11 @@
   (let ((mode (if (pair? o) (car o) #o755)))
     (or (file-directory? dir)
         (create-directory dir mode)
-        (let ((slash
-               (string-find-right dir #\/ 0 (string-skip-right dir #\/))))
-          (and (> slash 0)
-               (let ((parent (substring-cursor dir 0 slash)))
+        (let* ((start (string-cursor-start dir))
+               (slash
+                (string-find-right dir #\/ start (string-skip-right dir #\/))))
+          (and (string-cursor>? slash start)
+               (let ((parent (substring-cursor dir start slash)))
                  (and (not (equal? parent dir))
                       (not (file-exists? parent))
                       (create-directory* parent mode)
@@ -77,7 +78,7 @@
 (define (delete-file file)
   (if (not (%delete-file file))
       (raise-continuable
-       (make-exception 'file "couldn't delete file" file delete-file #f))))
+       (make-exception 'file "couldn't delete file" (list file) delete-file #f))))
 
 ;;> Recursively delete all files and directories under \var{dir}.
 ;;> Unless optional arg \var{ignore-errors?} is true, raises an error
