@@ -126,7 +126,7 @@
        #t))
 
 (define (module-defines? name mod var-name)
-  (let lp ((ls (module-ast mod)))
+  (let lp ((ls (module-ast (analyze-module name))))
     (and (pair? ls)
          (or (and (set? (car ls))
                   (eq? var-name (ref-name (set-var (car ls)))))
