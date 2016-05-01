@@ -11,5 +11,6 @@
           (only (meta)
                 module-env module-meta-data module-exports
                 make-module load-module find-module resolve-import
+                resolve-module-imports
                 module-name-prefix module-name->file *modules*))
   (include "modules.scm"))

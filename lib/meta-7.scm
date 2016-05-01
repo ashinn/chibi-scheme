@@ -137,6 +137,19 @@
    (else
     (error "couldn't find import" x))))
 
+(define (resolve-module-imports env meta)
+  (for-each
+   (lambda (x)
+     (case (and (pair? x) (car x))
+       ((import import-immutable)
+        (for-each
+         (lambda (m)
+           (let* ((mod2-name+imports (resolve-import m))
+                  (mod2 (load-module (car mod2-name+imports))))
+             (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
+         (cdr x)))))
+   meta))
+
 (define (eval-module name mod . o)
   (let ((env (if (pair? o) (car o) (make-environment)))
         (meta (module-meta-data mod))
@@ -165,17 +178,7 @@
       (module-meta-data-set!
        mod
        `((error "module attempted to reference itself while loading" ,name)))
-      (for-each
-       (lambda (x)
-         (case (and (pair? x) (car x))
-           ((import import-immutable)
-            (for-each
-             (lambda (m)
-               (let* ((mod2-name+imports (resolve-import m))
-                      (mod2 (load-module (car mod2-name+imports))))
-                 (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
-             (cdr x)))))
-       meta)
+      (resolve-module-imports env meta)
       (protect
           (exn (else
                 (module-meta-data-set! mod meta)
