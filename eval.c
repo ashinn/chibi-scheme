@@ -1675,9 +1675,9 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, e);
   f = pow(x1, e1);
   if ((f*1000.0 > SEXP_MAX_FIXNUM) || (f*1000.0 < SEXP_MIN_FIXNUM)
-      || (! sexp_fixnump(x)) || (! sexp_fixnump(e))) {
+      || (! sexp_fixnump(x)) || (! sexp_fixnump(e)) || (e1 < 0.0)) {
 #if SEXP_USE_BIGNUMS
-    if (sexp_fixnump(x) && sexp_fixnump(e)) {
+    if (sexp_fixnump(x) && sexp_fixnump(e) && (e1 >= 0.0)) {
       sexp_gc_preserve1(ctx, tmp);
       tmp = sexp_fixnum_to_bignum(ctx, x);
       res = sexp_bignum_expt(ctx, tmp, e);
