@@ -2357,6 +2357,8 @@ sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
     res = theta;
   } else if (sexp_complexp(theta) || !sexp_numberp(theta)) {
     res = sexp_read_error(ctx, "invalid polar numeric syntax", theta, in);
+  } else if (theta == SEXP_ZERO) {
+    res = magnitude;
   } else {
     res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
     sexp_complex_real(res) = sexp_cos(ctx, NULL, 1, theta);
@@ -2827,6 +2829,11 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       if (sexp_flonump(res)
           && (isnan(sexp_flonum_value(res)) || isinf(sexp_flonum_value(res))))
         res = sexp_read_error(ctx, "can't convert non-finite flonum to exact", res, in);
+      else
+#endif
+#if SEXP_USE_COMPLEX
+      if (sexp_complexp(res))
+        res = sexp_inexact_to_exact(ctx, NULL, 1, res);
       else
 #endif
       if (sexp_flonump(res))

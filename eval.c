@@ -1778,6 +1778,8 @@ sexp sexp_inexact_to_exact (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
     sexp_complex_real(res) = sexp_inexact_to_exact(ctx, self, 1, sexp_complex_real(z));
     sexp_complex_imag(res) = sexp_inexact_to_exact(ctx, self, 1, sexp_complex_imag(z));
+    if (sexp_complex_imag(res) == SEXP_ZERO)
+      res = sexp_complex_real(res);
     sexp_gc_release1(ctx);
   }
 #endif
