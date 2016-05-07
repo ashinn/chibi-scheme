@@ -76,8 +76,14 @@ module.  This can be launched automatically with:
 .I chibi-scheme -R
 \[char46]
 
-The default language the R7RS
-(scheme base) module.  To get a mostly R5RS-compatible language, use
+For convenience the default language is the
+(scheme small) module, which includes every library in the R7RS
+small standard, and transitively some other dependencies.  All of this
+together is actually quite large, so for a more minimal startup
+language you'll want to use the
+.I -x module
+option described below.
+To get a mostly R5RS-compatible language, use
 .I chibi-scheme -xscheme.r5rs
 or to get just the core language used for bootstrapping, use
 .I chibi-scheme -xchibi
