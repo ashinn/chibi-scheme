@@ -4,7 +4,7 @@
    ((assq 'host headers)
     => (lambda (x)
          (let ((s (string-trim (cdr x))))
-           (substring-cursor s 0 (string-find s #\:)))))
+           (substring-cursor s (string-cursor-start s) (string-find s #\:)))))
    ((uri-host uri))
    (else "localhost")))
 
@@ -59,7 +59,7 @@
              ((not (eof-object? line))
               (let ((ls (string-split
                          (cond ((string-find line #\#)
-                                => (lambda (i) (substring line 0 i)))
+                                => (lambda (i) (substring-cursor line (string-cursor-start line) i)))
                                (else line)))))
                 (if (and (pair? ls) (pair? (cdr ls)))
                     (for-each
