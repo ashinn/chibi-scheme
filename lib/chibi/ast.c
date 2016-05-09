@@ -468,7 +468,7 @@ sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, x);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, y);
   res = strstr(sexp_string_data(x), sexp_string_data(y));
-  return res ? sexp_make_fixnum(res-sexp_string_data(x)) : SEXP_FALSE;
+  return res ? sexp_make_string_cursor(res-sexp_string_data(x)) : SEXP_FALSE;
 }
 
 sexp sexp_string_cursor_copy (sexp ctx, sexp self, sexp_sint_t n, sexp dst, sexp sfrom, sexp src, sexp sstart, sexp send) {
