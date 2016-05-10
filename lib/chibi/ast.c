@@ -463,11 +463,14 @@ sexp sexp_thread_list (sexp ctx, sexp self, sexp_sint_t n) {
   return res;
 }
 
-sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
+sexp sexp_string_contains (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y, sexp start) {
   const char *res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, x);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, y);
-  res = strstr(sexp_string_data(x), sexp_string_data(y));
+  sexp_assert_type(ctx, sexp_string_cursorp, SEXP_STRING_CURSOR, start);
+  if (sexp_unbox_string_cursor(start) > sexp_string_size(x))
+    return sexp_user_exception(ctx, self, "string-contains: start out of range", start);
+  res = strstr(sexp_string_data(x) + sexp_unbox_string_cursor(start), sexp_string_data(y));
   return res ? sexp_make_string_cursor(res-sexp_string_data(x)) : SEXP_FALSE;
 }
 
@@ -686,7 +689,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "%set-atomic!", 1, sexp_set_atomic);
 #endif
   sexp_define_foreign(ctx, env, "thread-list", 0, sexp_thread_list);
-  sexp_define_foreign(ctx, env, "string-contains", 2, sexp_string_contains);
+  sexp_define_foreign_opt(ctx, env, "string-contains", 3, sexp_string_contains, sexp_make_string_cursor(0));
   sexp_define_foreign(ctx, env, "string-cursor-copy!", 5, sexp_string_cursor_copy);
   sexp_define_foreign(ctx, env, "errno", 0, sexp_errno);
   sexp_define_foreign_opt(ctx, env, "integer->error-string", 1, sexp_error_string, SEXP_FALSE);
