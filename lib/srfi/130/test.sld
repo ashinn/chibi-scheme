@@ -151,6 +151,12 @@
         (string-contains "Ma mere l'oye" "mer"))
       (test "string-contains" #f
         (string-contains "Ma mere l'oye" "Mer"))
+      (let ((s "eek -- it's a geek."))
+        (test 15 (string-cursor->index s (string-contains-right s "ee")))
+        (test 15 (string-cursor->index s (string-contains-right s "ee" 12 18)))
+        (test 19 (string-cursor->index s (string-contains-right s "")))
+        (test 0 (string-cursor->index "" (string-contains-right "" "")))
+        (test #f (string-contains-right s "kee" 12 18)))
 
       (test "string-reverse" "nomel on nolem on"
         (string-reverse "no melon no lemon"))
