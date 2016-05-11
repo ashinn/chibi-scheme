@@ -4,6 +4,8 @@
           (chibi char-set) (chibi char-set full) (chibi test)
           (srfi 130))
   (begin
+    (define (sc str c)
+      (string-index->cursor str c))
     (define (string-index->index str pred . o)
       (string-cursor->index str (apply string-index str pred o)))
     (define (string-index-right->index str pred . o)
@@ -147,10 +149,17 @@
         (string-count "abc def\tghi jkl" char-whitespace? 4))
       (test "string-count #4" 1
         (string-count "abc def\tghi jkl" char-whitespace? 4 9))
-      (test-assert "string-contains"
-        (string-contains "Ma mere l'oye" "mer"))
-      (test "string-contains" #f
-        (string-contains "Ma mere l'oye" "Mer"))
+      (let ((s "Ma mere l'oye"))
+        (test-assert "string-contains"
+          (string-contains s "mer"))
+        (test "string-contains" #f
+          (string-contains s "Mer"))
+        (test-assert "string-contains"
+          (string-contains s "mer" 1 8))
+        (test-not "string-contains"
+          (string-contains s "mer" 4 8))
+        (test-not "string-contains"
+          (string-contains s "mer" 1 5)))
       (let ((s "eek -- it's a geek."))
         (test 15 (string-cursor->index s (string-contains-right s "ee")))
         (test 15 (string-cursor->index s (string-contains-right s "ee" 12 18)))
@@ -331,6 +340,27 @@
                        10))
       (test "string-remove" ""
         (string-remove (lambda (c) (char-lower-case? c)) ""))
+
+      (test "foo:bar:baz"
+          (string-join '("foo" "bar" "baz") ":"))
+      (test "foo:bar:baz:"
+          (string-join '("foo" "bar" "baz") ":" 'suffix))
+      (test "" (string-join '() ":"))
+      (test "" (string-join '("") ":"))
+      (test "" (string-join '() ":" 'suffix))
+      (test ":" (string-join '("") ":" 'suffix))
+
+      (test '("foo" "bar" "baz")
+          (string-split "foo:bar:baz" ":"))
+      (test '("foo" "bar" "baz")
+          (string-split "foo:bar:baz:" ":" 'suffix))
+      (test '("foo" "bar:baz:")
+          (string-split "foo:bar:baz:" ":" 'suffix 1))
+      (test '("foo" "bar" "baz:")
+          (string-split "foo:bar:baz:" ":" 'suffix 2))
+      (test '() (string-split "" ":"))
+      (test '() (string-split "" ":" 'suffix))
+      (test '("") (string-split ":" ":" 'suffix))
 
       ;;; Regression tests: check that reported bugs have been fixed
 
