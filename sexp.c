@@ -2365,6 +2365,8 @@ sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
     sexp_complex_real(res) = sexp_mul(ctx, magnitude, sexp_complex_real(res));
     sexp_complex_imag(res) = sexp_sin(ctx, NULL, 1, theta);
     sexp_complex_imag(res) = sexp_mul(ctx, magnitude, sexp_complex_imag(res));
+    if (sexp_exceptionp(sexp_complex_real(res))) res = sexp_complex_real(res);
+    if (sexp_exceptionp(sexp_complex_imag(res))) res = sexp_complex_imag(res);
   }
   sexp_gc_release2(ctx);
   return sexp_complex_normalize(res);
@@ -2550,9 +2552,21 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
     sexp_gc_preserve2(ctx, res, den);
     res = sexp_make_fixnum(negativep ? -val : val);
     den = sexp_read_number(ctx, in, base, 0);
-    if (sexp_flonump(den)) den = sexp_make_fixnum(sexp_flonum_value(den));
-    den = sexp_expt(ctx, SEXP_TEN, den);
-    res = sexp_mul(ctx, res, den);
+    if (sexp_exceptionp(den)) {
+      res = den;
+    } else {
+      if (sexp_flonump(den)) den = sexp_make_fixnum(sexp_flonum_value(den));
+      if (sexp_complexp(den)) {
+        if (sexp_flonump(sexp_complex_real(den)))
+          sexp_complex_real(den) = sexp_make_fixnum(sexp_flonum_value(sexp_complex_real(den)));
+        sexp_complex_real(den) = sexp_expt(ctx, SEXP_TEN, sexp_complex_real(den));
+        sexp_complex_real(den) = sexp_mul(ctx, res, sexp_complex_real(den));
+        res = den;
+      } else {
+        den = sexp_expt(ctx, SEXP_TEN, den);
+        res = sexp_mul(ctx, res, den);
+      }
+    }
     sexp_gc_release2(ctx);
     return res;
   } else if (c=='.' || is_precision_indicator(c)) {
@@ -3147,6 +3161,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
             res = tmp;
           } else if ((str[6] == 'i' || str[6] == 'I') && str[7] == 0) {
             res = sexp_make_complex(ctx, SEXP_ZERO, tmp);
+          } else if (str[6] == '@') {
+            res = sexp_substring_cursor(ctx, res, sexp_make_string_cursor(6), SEXP_FALSE);
+            res = sexp_open_input_string(ctx, res);
+            res = sexp_read_polar_tail(ctx, res, tmp);
           } else if (str[6] == '+' || str[6] == '-') {
             res = sexp_substring_cursor(ctx, res, sexp_make_string_cursor(6), SEXP_FALSE);
             res = sexp_string_to_number(ctx, res, SEXP_TEN);

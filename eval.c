@@ -1755,7 +1755,7 @@ sexp sexp_inexact_to_exact (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 #if SEXP_USE_FLONUMS
   else if (sexp_flonump(z)) {
     if (isinf(sexp_flonum_value(z)) || isnan(sexp_flonum_value(z))) {
-      res = sexp_xtype_exception(ctx, self, "exact: not an finite number", z);
+      res = sexp_xtype_exception(ctx, self, "exact: not a finite number", z);
     } else if (sexp_flonum_value(z) != trunc(sexp_flonum_value(z))) {
 #if SEXP_USE_RATIOS
       res = sexp_double_to_ratio(ctx, sexp_flonum_value(z));
@@ -1778,7 +1778,11 @@ sexp sexp_inexact_to_exact (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
     sexp_complex_real(res) = sexp_inexact_to_exact(ctx, self, 1, sexp_complex_real(z));
     sexp_complex_imag(res) = sexp_inexact_to_exact(ctx, self, 1, sexp_complex_imag(z));
-    if (sexp_complex_imag(res) == SEXP_ZERO)
+    if (sexp_exceptionp(sexp_complex_real(res)))
+      res = sexp_complex_real(res);
+    else if (sexp_exceptionp(sexp_complex_imag(res)))
+      res = sexp_complex_imag(res);
+    else if (sexp_complex_imag(res) == SEXP_ZERO)
       res = sexp_complex_real(res);
     sexp_gc_release1(ctx);
   }
