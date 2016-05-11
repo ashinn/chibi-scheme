@@ -37,7 +37,7 @@
    string-fold         string-fold-right
    string-for-each-cursor
    string-replicate    string-count
-   string-replace      string-split   string-split-right
+   string-replace      string-split
    string-filter       string-remove)
   (import (scheme base)
           (scheme char) (scheme write)

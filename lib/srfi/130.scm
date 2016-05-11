@@ -267,9 +267,6 @@
        (else
         (lp end i (cons (substring-cursor str sc end) res)))))))
 
-(define (string-split-right str delim . o)
-  #f)
-
 (define (string-filter pred str . o)
   (let ((out (open-output-string)))
     (apply string-fold (lambda (ch acc) (if (pred ch) (write-char ch out))) #f str o)
