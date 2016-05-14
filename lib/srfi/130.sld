@@ -4,7 +4,7 @@
    string-cursor?
    string-cursor-start    string-cursor-end
    string-cursor-next     string-cursor-prev
-   string-cursor-forward  string-cursor-backward
+   string-cursor-forward  string-cursor-back
    string-cursor=?
    string-cursor<?        string-cursor>?
    string-cursor<=?       string-cursor>=?

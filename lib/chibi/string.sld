@@ -10,7 +10,7 @@
    string-cursor<? string-cursor<=? string-cursor>? string-cursor>=?
    string-cursor=? string-cursor-next string-cursor-prev substring-cursor
    string-cursor->index string-index->cursor
-   string-cursor-forward string-cursor-backward
+   string-cursor-forward string-cursor-back
    string-null? string-every string-any
    string-join string-split string-count
    string-trim string-trim-left string-trim-right

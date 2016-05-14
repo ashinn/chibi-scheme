@@ -199,7 +199,7 @@
 
 (define (string-suffix? suffix str)
   (string-cursor=? (string-cursor-prev suffix (string-cursor-start suffix))
-                   (string-cursor-backward
+                   (string-cursor-back
                     str
                     (string-mismatch-right suffix str)
                     (- (string-size str) (string-size suffix)))))
@@ -327,10 +327,10 @@
       cursor
       (string-cursor-forward str (string-cursor-next str cursor) (- n 1))))
 
-(define (string-cursor-backward str cursor n)
+(define (string-cursor-back str cursor n)
   (if (zero? n)
       cursor
-      (string-cursor-backward str (string-cursor-prev str cursor) (- n 1))))
+      (string-cursor-back str (string-cursor-prev str cursor) (- n 1))))
 
 ;;> \procedure{(string-cursor<? i j)}
 ;;> \procedure{(string-cursor>? i j)}
