@@ -155,6 +155,8 @@
         (test "string-contains" #f
           (string-contains s "Mer"))
         (test-assert "string-contains"
+          (string-contains s "mer" 1))
+        (test-assert "string-contains"
           (string-contains s "mer" 1 8))
         (test-not "string-contains"
           (string-contains s "mer" 4 8))
