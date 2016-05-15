@@ -307,6 +307,44 @@
 (define (iset-intersection a . args)
   (apply iset-intersection! (iset-copy a) args))
 
+(define (iset->node-list a)
+  (reverse (iset-fold-node cons '() a)))
+
+(define (iset-difference2! a b)
+  (let lp ((nodes-a (iset->node-list a))
+           (nodes-b (iset->node-list b)))
+    (cond
+     ((null? nodes-a) a)
+     ((null? nodes-b) a)
+     ((> (iset-start (car nodes-b)) (iset-end (car nodes-a)))
+      (lp (cdr nodes-a) nodes-b))
+     ((> (iset-start (car nodes-a)) (iset-end (car nodes-b)))
+      (lp nodes-a (cdr nodes-b)))
+     (else
+      (let* ((a (car nodes-a))
+             (b (car nodes-b))
+             (a-ls (iset-node-split a (iset-start b) (iset-end b)))
+             (left (car a-ls))
+             (overlap (cadr a-ls))
+             (right (car (cddr a-ls)))
+             (b-ls (iset-node-split b (iset-start overlap) (iset-end overlap)))
+             (b-overlap (cadr b-ls))
+             (b-right (car (cddr b-ls))))
+        (if left
+            (iset-insert-left! a left))
+        (iset-start-set! a (iset-start overlap))
+        (iset-end-set! a (iset-end overlap))
+        (if (not (iset-bits b))
+            (iset-bits-set! a 0)
+            (let ((a-bits (or (iset-bits overlap)
+                              (range->bits (iset-start a) (iset-end a))))
+                  (b-bits (bitwise-not (iset-bits b-overlap))))
+              (iset-bits-set! a (bitwise-and a-bits b-bits))))
+        (if right
+            (iset-insert-right! a right))
+        (lp (if right (cons right (cdr nodes-a)) (cdr nodes-a))
+            (if b-right (cons b-right (cdr nodes-b)) (cdr nodes-b))))))))
+
 ;;> Returns an iset containing all integers which occur in \var{a},
 ;;> but removing those which occur in any of the isets \var{args}.  If
 ;;> no \var{args} are present returns \var{a}.  May mutate \var{a}.
@@ -315,7 +353,8 @@
   (if (null? args)
       a
       (begin
-        (iset-for-each (lambda (i) (iset-delete1! a i)) (car args))
+        ;;(iset-for-each (lambda (i) (iset-delete1! a i)) (car args))
+        (iset-difference2! a (car args))
         (apply iset-difference! a (cdr args)))))
 
 ;;> As above but doesn't change \var{a}.
