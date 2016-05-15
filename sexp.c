@@ -3264,8 +3264,11 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
         || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
       sexp_read_char(ctx, in);
   }
-  in = ((sexp_string_data(str)[0] == '#') || base == 10 ?
-        sexp_read(ctx, in) : sexp_read_number(ctx, in, base, 0));
+  in = ((sexp_string_data(str)[0] == '#' &&
+         sexp_tolower(sexp_string_data(str)[1]) != 'e' &&
+         sexp_tolower(sexp_string_data(str)[1]) != 'i')
+        || base == 10 ? sexp_read(ctx, in) :
+        sexp_read_number(ctx, in, base, 0));
   sexp_gc_release1(ctx);
   return sexp_numberp(in) ? in : SEXP_FALSE;
 }
