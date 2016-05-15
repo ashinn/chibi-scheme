@@ -183,7 +183,7 @@
                                (string-cursor-forward path j 2)
                                (cons s res)))))
               ((eqv? #\. (string-cursor-ref path (string-cursor-next path j)))
-               (if (or (string-cursor>=? j (string-cursor-backward path end 2))
+               (if (or (string-cursor>=? j (string-cursor-back path end 2))
                        (eqv? #\/ (string-cursor-ref
                                   path
                                   (string-cursor-forward path j 2))))

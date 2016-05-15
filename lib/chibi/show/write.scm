@@ -141,7 +141,7 @@
               (string-append s (make-string (- precision digits -1) #\0)))
              (else
               (let* ((last
-                      (string-cursor-backward s end (- digits precision 1)))
+                      (string-cursor-back s end (- digits precision 1)))
                      (res (substring-cursor s (string-cursor-start s) last)))
                 (if (and
                      (string-cursor<? last end)

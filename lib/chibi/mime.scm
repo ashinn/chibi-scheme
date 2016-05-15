@@ -192,7 +192,7 @@
 (define (mime-decode-header str)
   (let* ((end (string-cursor-end str))
          ;; need at least 8 chars: "=?Q?X??="
-         (limit (string-cursor-backward end 8))
+         (limit (string-cursor-back end 8))
          (start (string-cursor-start str)))
     (let lp ((i start) (from start) (res '()))
       (cond
