@@ -73,10 +73,10 @@
     (import (only (srfi 13) string-contains)))
    (else
     (begin
-      (define (string-contains a b)
+      (define (string-contains a b . o)  ; really, stupidly slow
        (let ((alen (string-length a))
              (blen (string-length b)))
-         (let lp ((i 0))
+         (let lp ((i (if (pair? o) (car o) 0)))
            (and (<= (+ i blen) alen)
                 (if (string=? b (substring a i (+ i blen)))
                     i
