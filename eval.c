@@ -592,15 +592,37 @@ sexp sexp_syntactic_closure_expr_op (sexp ctx, sexp self, sexp_sint_t n, sexp x)
   return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
 }
 
+#if SEXP_USE_READER_LABELS
+static int sexp_cyclic_synclop(sexp x) {
+  sexp ls1, ls2;
+  if (!sexp_pairp(x))
+    return 0;
+  for (ls1=x, ls2=sexp_id_name(sexp_cdr(ls1));
+       sexp_pairp(ls2) && sexp_pairp(sexp_id_name(sexp_cdr(ls2)));
+       ls1=sexp_id_name(sexp_cdr(ls1)),
+         ls2=sexp_id_name(sexp_cdr(sexp_id_name(sexp_cdr(ls2))))) {
+    if (ls1 == ls2 || ls1 == sexp_id_name(sexp_car(ls2)))
+      return 1;
+  }
+  for (ls1=x, ls2=sexp_id_name(sexp_car(ls1));
+       sexp_pairp(ls2) && sexp_pairp(sexp_id_name(sexp_car(ls2)));
+       ls1=sexp_id_name(sexp_car(ls1)),
+         ls2=sexp_id_name(sexp_car(sexp_id_name(sexp_car(ls2))))) {
+    if (ls1 == ls2 || ls1 == sexp_id_name(sexp_cdr(ls2)))
+      return 1;
+  }
+  return 0;
+}
+#else
+#define sexp_cyclic_synclop(x) 0
+#endif
+
 sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
   sexp_gc_var3(res, kar, kdr);
   if (depth <= 0) return x;
   sexp_gc_preserve3(ctx, res, kar, kdr);
- loop:
-  if (sexp_synclop(x)) {
-    x = sexp_synclo_expr(x);
-    goto loop;
-  } else if (sexp_pairp(x) && sexp_truep(sexp_length(ctx, x))) {
+  x = sexp_id_name(x);
+  if (sexp_pairp(x) && !sexp_cyclic_synclop(x)) {
     kar = sexp_strip_synclos_bound(ctx, sexp_car(x), depth-1);
     kdr = sexp_strip_synclos_bound(ctx, sexp_cdr(x), depth-1);
     res = sexp_cons(ctx, kar, kdr);
