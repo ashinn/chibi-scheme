@@ -320,7 +320,10 @@
             ((#\0 #\1 #\2 #\3 #\4 #\5 #\6 #\7 #\8 #\9)
              (let* ((str (read-label '()))
                     (n (string->number str)))
-               (if (not n) (read-error "read error: invalid reference" str))
+               (if (not n)
+                   (read-error "read error: invalid reference" str))
+               (if (assv n shared)
+                   (read-error "read error: duplicate label" str))
                (cond
                 ((eqv? #\= (peek-char in))
                  (read-char in)
