@@ -322,10 +322,10 @@
                     (n (string->number str)))
                (if (not n)
                    (read-error "read error: invalid reference" str))
-               (if (assv n shared)
-                   (read-error "read error: duplicate label" str))
                (cond
                 ((eqv? #\= (peek-char in))
+                 (if (assv n shared)
+                     (read-error "read error: duplicate label" str))
                  (read-char in)
                  (let* ((cell (list #f))
                         (thunk (lambda () (car cell))))
