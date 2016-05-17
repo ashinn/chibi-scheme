@@ -10,6 +10,7 @@
       (string-cursor->index str (apply string-index str pred o)))
     (define (string-index-right->index str pred . o)
       (string-cursor->index str (apply string-index-right str pred o)))
+    (define char-set:not-letter (char-set-complement char-set:letter))
     (define (run-tests)
       (test-begin "srfi-130: cursor-based string library")
 
@@ -126,23 +127,23 @@
 
       (test "string-index #1" 4
         (string-index->index "abcd:efgh:ijkl" (lambda (ch) (eqv? ch #\:))))
-      ;; (test "string-index #2" 4
-      ;;   (string-index "abcd:efgh;ijkl" (char-set-complement char-set:letter)))
+      (test "string-index #2" 4
+        (string-index->index "abcd:efgh;ijkl" (lambda (ch) (char-set-contains? char-set:not-letter ch))))
       (test "string-index #3" 14
         (string-index->index "abcd:efgh;ijkl" (lambda (ch) (char-set-contains? char-set:digit ch))))
       (test "string-index #4" 9
         (string-index->index "abcd:efgh:ijkl" (lambda (ch) (eqv? ch #\:)) 5))
       (test "string-index-right #1" 5
         (string-index-right->index "abcd:efgh;ijkl" (lambda (ch) (eqv? ch #\:))))
-      ;; (test "string-index-right #2" 9
-      ;;   (string-index-right "abcd:efgh;ijkl" (char-set-complement char-set:letter)))
+      (test "string-index-right #2" 10
+        (string-index-right->index "abcd:efgh;ijkl" (lambda (ch) (char-set-contains? char-set:not-letter ch))))
       (test "string-index-right #3" 14
         (string-index-right->index "abcd:efgh;ijkl" char-alphabetic?))
-      ;; (test "string-index-right #4" 4
-      ;;   (string-index-right "abcd:efgh;ijkl" (char-set-complement char-set:letter) 2 5))
+      (test "string-index-right #4" 10
+        (string-index-right->index "abcd:efgh;ijkl" (lambda (ch) (char-set-contains? char-set:not-letter ch)) 7))
 
-      ;; (test "string-count #1" 2
-      ;;   (string-count "abc def\tghi jkl" #\space))
+      (test "string-count #1" 2
+        (string-count "abc def\tghi jkl" (lambda (ch) (eqv? ch #\space))))
       (test "string-count #2" 3
         (string-count "abc def\tghi jkl" char-whitespace?))
       (test "string-count #3" 2
@@ -306,18 +307,6 @@
         (string-replace "abcdefghi" "XYZ" 4 4 1 1))
       (test "string-replace" "abcdhi"
         (string-replace "abcdefghi" "" 4 7))
-
-      ;; (test "string-tokenize" '("Help" "make" "programs" "run," "run," "RUN!")
-      ;;   (string-tokenize "Help make programs run, run, RUN!"))
-      ;; (test "string-tokenize" '("Help" "make" "programs" "run" "run" "RUN")
-      ;;   (string-tokenize "Help make programs run, run, RUN!"
-      ;;                    char-set:letter))
-      ;; (test "string-tokenize" '("programs" "run" "run" "RUN")
-      ;;   (string-tokenize "Help make programs run, run, RUN!"
-      ;;                    char-set:letter 10))
-      ;; (test "string-tokenize" '("elp" "make" "programs" "run" "run")
-      ;;   (string-tokenize "Help make programs run, run, RUN!"
-      ;;                    char-set:lower-case))
 
       (test "string-filter" "rrrr"
         (string-filter (lambda (ch) (eqv? ch #\r))
