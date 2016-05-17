@@ -32,6 +32,9 @@
 (define (list->iset ls . opt)
   (list->iset! ls (if (pair? opt) (iset-copy (car opt)) (make-iset))))
 
+(define (iset->node-list a)
+  (reverse (iset-fold-node cons '() a)))
+
 ;;> Returns a new copy of \var{iset}.
 
 (define (iset-copy iset)
@@ -290,13 +293,48 @@
     (make-iset)
     (apply iset-union! (iset-copy (car args)) (cdr args))))
 
+(define (iset-intersection2! a b)
+  (let lp ((nodes-a (iset->node-list a))
+           (nodes-b (iset->node-list b)))
+    (cond
+     ((null? nodes-a)
+      a)
+     ((null? nodes-b)
+      (iset-bits-set! (car nodes-a) 0)
+      (iset-right-set! (car nodes-a) #f)
+      a)
+     ((> (iset-start (car nodes-b)) (iset-end (car nodes-a)))
+      (iset-bits-set! (car nodes-a) 0)
+      (lp (cdr nodes-a) nodes-b))
+     ((> (iset-start (car nodes-a)) (iset-end (car nodes-b)))
+      (lp nodes-a (cdr nodes-b)))
+     (else
+      (let* ((a (car nodes-a))
+             (b (car nodes-b))
+             (a-ls (iset-node-split a (iset-start b) (iset-end b)))
+             (overlap (cadr a-ls))
+             (right (car (cddr a-ls)))
+             (b-ls (iset-node-split b (iset-start overlap) (iset-end overlap)))
+             (b-overlap (cadr b-ls))
+             (b-right (car (cddr b-ls))))
+        (iset-start-set! a (iset-start overlap))
+        (iset-end-set! a (iset-end overlap))
+        (if (iset-bits b-overlap)
+            (let ((a-bits (or (iset-bits overlap)
+                              (range->bits (iset-start a) (iset-end a))))
+                  (b-bits (iset-bits b-overlap)))
+              (iset-bits-set! a (bitwise-and a-bits b-bits)))
+            (iset-bits-set! a (iset-bits overlap)))
+        (if right
+            (iset-insert-right! a right))
+        (lp (if right (cons right (cdr nodes-a)) (cdr nodes-a))
+            (if b-right (cons b-right (cdr nodes-b)) (cdr nodes-b))))))))
+
 (define (iset-intersection! a . args)
   (let ((b (and (pair? args) (car args))))
     (cond
      (b
-      (iset-for-each
-       (lambda (i) (if (not (iset-contains? b i)) (iset-delete1! a i)))
-       a)
+      (iset-intersection2! a b)
       (apply iset-intersection! a (cdr args)))
      (else a))))
 
@@ -306,9 +344,6 @@
 
 (define (iset-intersection a . args)
   (apply iset-intersection! (iset-copy a) args))
-
-(define (iset->node-list a)
-  (reverse (iset-fold-node cons '() a)))
 
 (define (iset-difference2! a b)
   (let lp ((nodes-a (iset->node-list a))
@@ -334,7 +369,7 @@
             (iset-insert-left! a left))
         (iset-start-set! a (iset-start overlap))
         (iset-end-set! a (iset-end overlap))
-        (if (not (iset-bits b))
+        (if (not (iset-bits b-overlap))
             (iset-bits-set! a 0)
             (let ((a-bits (or (iset-bits overlap)
                               (range->bits (iset-start a) (iset-end a))))
