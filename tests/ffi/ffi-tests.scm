@@ -284,8 +284,7 @@ double circle_area2(struct Circle circ) {
      ((struct Point) center circle-center)
      (double radius circle-radius))
    (define-c double circle_area1 (Circle))
-   ;; TODO: struct means no pointer
-   ;;(define-c double circle_area2 ((struct Circle)))
+   (define-c double circle_area2 ((struct Circle)))
    (define-c-type Color predicate: color?)
    (define-c void set_color (short short short (result pointer Color)))
    (define-c Color make_color (short short short))

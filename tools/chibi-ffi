@@ -764,7 +764,7 @@
             (void*? (void-pointer-type? type)))
         (cond
          ((or ctype void*?)
-          (cat (if (type-reference? type) "*" "")
+          (cat (if (or (type-struct? type) (type-reference? type)) "*" "")
                "(" (type-c-name type) ")"
                (if (type-null? type)
                    "sexp_cpointer_maybe_null_value"
