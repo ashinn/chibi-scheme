@@ -19,7 +19,7 @@
 
 (define (extract-snowball-package bv)
   (define (path-top path)
-    (substring path 0 (string-find path #\/)))
+    (substring path (string-cursor-start path) (string-find path #\/)))
   (guard (exn
           (else
            (log-error "couldn't extract package.scm: " exn)
