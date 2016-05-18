@@ -14,7 +14,7 @@ CD        ?= cd
 RM        ?= rm -f
 LS        ?= ls
 CP        ?= cp
-LN        ?= ln
+LN        ?= ln -sf
 INSTALL   ?= install
 INSTALL_EXE	?=	$(INSTALL)
 MKDIR     ?= $(INSTALL) -d
@@ -24,6 +24,7 @@ DIFF      ?= diff
 GREP      ?= grep
 FIND      ?= find
 SYMLINK   ?= ln -s
+LDCONFIG  ?= ldconfig
 
 PREFIX    ?= /usr/local
 BINDIR    ?= $(PREFIX)/bin
