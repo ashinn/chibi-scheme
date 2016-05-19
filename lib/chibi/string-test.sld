@@ -79,15 +79,15 @@
       (test "" (string-trim " "))
       (test "" (string-trim "  "))
 
-      ;; (test #t (string-prefix? "abc" "abc"))
-      ;; (test #t (string-prefix? "abc" "abcde"))
-      ;; (test #f (string-prefix? "abcde" "abc"))
+      (test #t (string-prefix? "abc" "abc"))
+      (test #t (string-prefix? "abc" "abcde"))
+      (test #f (string-prefix? "abcde" "abc"))
 
-      ;; (test #t (string-suffix? "abc" "abc"))
-      ;; (test #f (string-suffix? "abc" "abcde"))
-      ;; (test #f (string-suffix? "abcde" "abc"))
-      ;; (test #f (string-suffix? "abcde" "cde"))
-      ;; (test #t (string-suffix? "cde" "abcde"))
+      (test #t (string-suffix? "abc" "abc"))
+      (test #f (string-suffix? "abc" "abcde"))
+      (test #f (string-suffix? "abcde" "abc"))
+      (test #f (string-suffix? "abcde" "cde"))
+      (test #t (string-suffix? "cde" "abcde"))
 
       (test 3 (string-count "!a0 bc /.," char-alphabetic?))
 

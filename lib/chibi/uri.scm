@@ -350,7 +350,7 @@
             (uri-with-path
              (uri-with-fragment (uri-with-query uri #f) #f)
              (path-resolve path
-                           (if (string-suffix? (uri-path uri) "/")
+                           (if (string-suffix? "/" (uri-path uri))
                                (uri-path uri)
                                (path-directory (uri-path uri)))))
             (path-resolve path orig-uri)))))

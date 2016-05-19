@@ -97,7 +97,7 @@
 ;; not a tar-bomb and no absolute paths
 (define (tar-safe? tarball)
   (define (path-top path)
-    (substring path 0 (string-find path #\/)))
+    (substring-cursor path (string-cursor-start path) (string-find path #\/)))
   (let ((files (map path-normalize (tar-files tarball))))
     (and (every path-relative? files)
          (or (< (length files) 2)
