@@ -273,7 +273,7 @@
                 ((#\newline) (skip-horizontal-whitespace in) #f)
                 ((#\space #\tab)
                  (skip-line in) (skip-horizontal-whitespace in) #f)
-                ((#\x)
+                ((#\x #\X)
                  (let* ((n (read-number 16))
                         (ch2 (read-char in)))
                    (if (not (and n (eqv? ch2 #\;)))

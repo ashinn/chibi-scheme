@@ -2177,7 +2177,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
       case 'n': c = '\n'; break;
       case 'r': c = '\r'; break; 
       case 't': c = '\t'; break;
-      case 'x':
+      case 'x': case 'X':
         res = sexp_read_number(ctx, in, 16, 0);
         if (sexp_fixnump(res)) {
           c = sexp_read_char(ctx, in);
