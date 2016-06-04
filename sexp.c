@@ -2207,6 +2207,8 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
           if (c=='\n') {
             sexp_port_line(in)++;
             do {c=sexp_read_char(ctx, in);} while (c==' ' || c=='\t');
+            sexp_push_char(ctx, c, in);
+            continue;
           }
         }
 #endif

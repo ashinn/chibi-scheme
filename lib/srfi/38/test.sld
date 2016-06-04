@@ -85,6 +85,13 @@
       (test 15.0 (read-from-string "#i#xf"))
       (test (expt 10 100) (read-from-string "#e1e100"))
 
+      (test "A\n\nB\n" (read-from-string "\"A\\n\\
+                                            \\n\\
+                                            B\n\""))
+      (test "A\n\n" (read-from-string "\"A\\n\\
+                                         \\n\\
+                                         \""))
+
       (cond-expand
        (chicken
         (test-io "(#0=\"abc\" #0# #0#)"
