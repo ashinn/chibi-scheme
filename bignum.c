@@ -1023,17 +1023,21 @@ sexp sexp_complex_asin (sexp ctx, sexp z) {
   sexp_gc_preserve2(ctx, res, tmp);
   res = sexp_complex_mul(ctx, z, z);
   tmp = sexp_make_complex(ctx, SEXP_ONE, SEXP_ZERO);
-  res = sexp_complex_sub(ctx, tmp, res);
-  res = sexp_complex_sqrt(ctx, res);
+  res = sexp_sub(ctx, tmp, res);
+  res = sexp_sqrt(ctx, NULL, 1, res);
   /* tmp = iz */
   sexp_complex_real(tmp) = sexp_complex_imag(z);
   sexp_negate(sexp_complex_real(tmp));
   sexp_complex_imag(tmp) = sexp_complex_real(z);
-  res = sexp_complex_add(ctx, tmp, res);
-  tmp = sexp_complex_log(ctx, res);
+  res = sexp_add(ctx, tmp, res);
+  tmp = sexp_log(ctx, NULL, 1, res);
   /* res = -i*tmp */
-  res = sexp_complex_copy(ctx, tmp);
-  sexp_negate(sexp_complex_imag(res));
+  if (sexp_complexp(tmp)) {
+    res = sexp_complex_copy(ctx, tmp);
+    sexp_negate(sexp_complex_imag(res));
+  } else {
+    res = tmp;
+  }
   sexp_gc_release2(ctx);
   return res;
 }
