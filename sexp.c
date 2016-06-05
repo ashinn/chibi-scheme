@@ -3006,10 +3006,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         sexp_push_char(ctx, c1, in);
         res = sexp_read_symbol(ctx, in, '!', 0);
         if (SEXP_USE_FOLD_CASE_SYMS && sexp_stringp(res)
-            && strcmp("!fold-case", sexp_string_data(res)) == 0) {
+            && strcasecmp("!fold-case", sexp_string_data(res)) == 0) {
           sexp_port_fold_casep(in) = 1;
         } else if (SEXP_USE_FOLD_CASE_SYMS && sexp_stringp(res)
-                   && strcmp("!no-fold-case", sexp_string_data(res)) == 0) {
+                   && strcasecmp("!no-fold-case", sexp_string_data(res)) == 0) {
           sexp_port_fold_casep(in) = 0;
         } else {
           res = sexp_read_error(ctx, "unknown #! symbol", res, in);
