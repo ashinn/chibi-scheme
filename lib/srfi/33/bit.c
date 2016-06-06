@@ -59,7 +59,7 @@ sexp sexp_bit_and (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
     sexp_gc_preserve3(ctx, res, x2, y2);
     x2 = sexp_twos_complement(ctx, x);
     y2 = sexp_twos_complement(ctx, y);
-    if (sexp_fixnump(y2) && sexp_negativep(y2))
+    if (sexp_fixnump(y2) && sexp_unbox_fixnum(y2) < 0)
       y2 = sexp_fixnum_to_twos_complement(ctx, y2, sexp_bignum_length(x2));
     if (sexp_fixnump(y2)) {
       res = sexp_make_fixnum(sexp_unbox_fixnum(y2) & sexp_bignum_data(x2)[0]);

@@ -888,9 +888,17 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_exact_negativep(x) (sexp_fixnump(x) ? (sexp_unbox_fixnum(x) < 0) \
                                  : ((SEXP_USE_BIGNUMS && sexp_bignump(x)) \
                                     && (sexp_bignum_sign(x) < 0)))
+#define sexp_exact_positivep(x) (sexp_fixnump(x) ? (sexp_unbox_fixnum(x) > 0) \
+                                 : ((SEXP_USE_BIGNUMS && sexp_bignump(x)) \
+                                    && (sexp_bignum_sign(x) > 0)))
 #define sexp_negativep(x) (sexp_exact_negativep(x) ||                   \
                            (sexp_flonump(x) && sexp_flonum_value(x) < 0))
 #define sexp_positivep(x) (!(sexp_negativep(x)))
+#define sexp_pedantic_negativep(x) (sexp_exact_negativep(x) ||          \
+                                    (sexp_flonump(x) &&                 \
+                                     ((sexp_flonum_value(x) < 0) ||     \
+                                      (sexp_flonum_value(x) == 0 && \
+                                       1.0 / sexp_flonum_value(x) < 0))))
 
 #if SEXP_USE_BIGNUMS
 #define sexp_oddp(x) (sexp_fixnump(x) ? sexp_unbox_fixnum(x) & 1 : \

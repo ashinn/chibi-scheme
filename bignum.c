@@ -651,7 +651,7 @@ sexp sexp_bignum_sqrt (sexp ctx, sexp a, sexp* rem_out) {
   if (! sexp_bignump(a)) return sexp_type_exception(ctx, NULL, SEXP_BIGNUM, a);
   sexp_gc_preserve4(ctx, res, rem, tmp, tmpa);
   /* initial estimate via flonum, ignoring signs */
-  if (sexp_negativep(a)) {
+  if (sexp_exact_negativep(a)) {
     tmpa = sexp_copy_bignum(ctx, NULL, a, 0);
     a = tmpa;
     sexp_negate(a);
@@ -780,13 +780,13 @@ sexp sexp_ratio_round (sexp ctx, sexp a) {
   sexp_gc_preserve2(ctx, q, r);
   q = sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
   if ((sexp_ratio_denominator(a) == SEXP_TWO) && sexp_oddp(q)) {
-    q = sexp_add(ctx, q, (sexp_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
+    q = sexp_add(ctx, q, (sexp_exact_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
   } else {
     r = sexp_remainder(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
     r = sexp_mul(ctx, r, SEXP_TWO);
-    if (sexp_negativep(r)) {sexp_negate(r);}
+    if (sexp_exact_negativep(r)) {sexp_negate(r);}
     if (sexp_unbox_fixnum(sexp_compare(ctx, r, sexp_ratio_denominator(a))) > 0)
-      q = sexp_add(ctx, q, (sexp_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
+      q = sexp_add(ctx, q, (sexp_exact_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
   }
   sexp_gc_release2(ctx);
   return q;
@@ -800,7 +800,7 @@ sexp sexp_ratio_floor (sexp ctx, sexp a) {
   sexp_gc_var1(q);
   sexp_gc_preserve1(ctx, q);
   q = sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
-  if (sexp_negativep(sexp_ratio_numerator(a)))
+  if (sexp_exact_negativep(sexp_ratio_numerator(a)))
     q = sexp_add(ctx, q, SEXP_NEG_ONE);
   sexp_gc_release1(ctx);
   return q;
@@ -810,7 +810,7 @@ sexp sexp_ratio_ceiling (sexp ctx, sexp a) {
   sexp_gc_var1(q);
   sexp_gc_preserve1(ctx, q);
   q = sexp_quotient(ctx, sexp_ratio_numerator(a), sexp_ratio_denominator(a));
-  if (sexp_positivep(sexp_ratio_numerator(a)))
+  if (sexp_exact_positivep(sexp_ratio_numerator(a)))
     q = sexp_add(ctx, q, SEXP_ONE);
   sexp_gc_release1(ctx);
   return q;

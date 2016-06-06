@@ -1964,7 +1964,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_COMPLEX
     case SEXP_COMPLEX:
       sexp_write(ctx, sexp_complex_real(obj), out);
-      if (!sexp_negativep(sexp_complex_imag(obj))
+      if (!sexp_pedantic_negativep(sexp_complex_imag(obj))
           && !sexp_infp(sexp_complex_imag(obj)))
         sexp_write_char(ctx, '+', out);
       if (sexp_complex_imag(obj) == SEXP_NEG_ONE)
