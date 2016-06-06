@@ -1487,12 +1487,35 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
     return sexp_make_flonum(ctx, cname(d));                             \
   }
 
+#ifdef SEXP_USE_COMPLEX
+#define define_complex_math_op(name, cname, f, a, b)		\
+  sexp name (sexp ctx, sexp self, sexp_sint_t n, sexp z) {	\
+    double d;                                                           \
+    if (sexp_flonump(z))                                                \
+      d = sexp_flonum_value(z);                                         \
+    else if (sexp_fixnump(z))                                           \
+      d = (double)sexp_unbox_fixnum(z);                                 \
+    maybe_convert_ratio(z)                                              \
+    maybe_convert_bignum(z)                                             \
+    maybe_convert_complex(z, f)                                         \
+    else                                                                \
+      return sexp_type_exception(ctx, self, SEXP_NUMBER, z);            \
+    if (d < a || d > b)							\
+      return sexp_complex_normalize					\
+	(f(ctx, sexp_make_complex(ctx, z, SEXP_ZERO)));			\
+    return sexp_make_flonum(ctx, cname(d));                             \
+  }
+#else
+#define define_complex_math_op(name, cname, f, a, b)	\
+  define_math_op(name, cname, f)
+#endif
+
 define_math_op(sexp_exp, exp, sexp_complex_exp)
 define_math_op(sexp_sin, sin, sexp_complex_sin)
 define_math_op(sexp_cos, cos, sexp_complex_cos)
 define_math_op(sexp_tan, tan, sexp_complex_tan)
-define_math_op(sexp_asin, asin, sexp_complex_asin)
-define_math_op(sexp_acos, acos, sexp_complex_acos)
+define_complex_math_op(sexp_asin, asin, sexp_complex_asin, -1, 1)
+define_complex_math_op(sexp_acos, acos, sexp_complex_acos, -1, 1)
 define_math_op(sexp_atan, atan, sexp_complex_atan)
 
 #if SEXP_USE_RATIOS
