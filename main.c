@@ -466,6 +466,7 @@ sexp run_main (int argc, char **argv) {
       load_init(1);
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
 #if SEXP_USE_MODULES
+      check_nonull_arg('t', arg);
       suffix = strrchr(arg, '.');
       sym = sexp_intern(ctx, suffix + 1, -1);
       *(char*)suffix = '\0';
