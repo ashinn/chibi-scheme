@@ -1019,26 +1019,19 @@ sexp sexp_complex_tan (sexp ctx, sexp z) {
 }
 
 sexp sexp_complex_asin (sexp ctx, sexp z) {
-  sexp_gc_var2(res, tmp);
-  sexp_gc_preserve2(ctx, res, tmp);
+  sexp_gc_var3(res, tmp, tmp2);
+  sexp_gc_preserve3(ctx, res, tmp, tmp2);
   res = sexp_complex_mul(ctx, z, z);
-  tmp = sexp_make_complex(ctx, SEXP_ONE, SEXP_ZERO);
-  res = sexp_sub(ctx, tmp, res);
+  res = sexp_sub(ctx, SEXP_ONE, res);
   res = sexp_sqrt(ctx, NULL, 1, res);
-  /* tmp = iz */
-  sexp_complex_real(tmp) = sexp_complex_imag(z);
-  sexp_negate(sexp_complex_real(tmp));
+  tmp = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
+  sexp_complex_real(tmp) = sexp_mul(ctx, SEXP_NEG_ONE, sexp_complex_imag(z));
   sexp_complex_imag(tmp) = sexp_complex_real(z);
   res = sexp_add(ctx, tmp, res);
-  tmp = sexp_log(ctx, NULL, 1, res);
-  /* res = -i*tmp */
-  if (sexp_complexp(tmp)) {
-    res = sexp_complex_copy(ctx, tmp);
-    sexp_negate(sexp_complex_imag(res));
-  } else {
-    res = tmp;
-  }
-  sexp_gc_release2(ctx);
+  res = sexp_log(ctx, NULL, 1, res);
+  tmp = sexp_make_complex(ctx, SEXP_ZERO, SEXP_NEG_ONE);
+  res = sexp_mul(ctx, res, tmp);
+  sexp_gc_release3(ctx);
   return res;
 }
 
