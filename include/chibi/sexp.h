@@ -256,7 +256,7 @@ typedef short sexp_int32_t;
 # endif
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN64)
 #define PRIoff "%lld"
 #else
 #define PRIoff "%ld"
