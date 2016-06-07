@@ -848,8 +848,8 @@
 (test 0.0 (inexact (acos 1))) ;; may return exact number
 (test 3.14159265358979 (acos -1))
 
-(test 0.0 (asin 0+0.0i))
-(test 1.5707963267948966 (acos 0+0.0i))
+;; (test 0.0-0.0i (asin 0+0.0i))
+;; (test 1.5707963267948966+0.0i (acos 0+0.0i))
 
 (test 0.0 (atan 0.0 1.0))
 (test -0.0 (atan -0.0 1.0))
