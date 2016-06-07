@@ -304,6 +304,18 @@ sexp run_main (int argc, char **argv) {
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
     switch ((c=argv[i][1])) {
+    case 'D':
+      mods_loaded = 1;
+      load_init(1);
+      tmp = sexp_env_ref(ctx, env, sym=sexp_intern(ctx, "*features*", -1), SEXP_NULL);
+      sexp_debug(ctx, "f: ", tmp);
+      if (sexp_pairp(tmp)) {
+        sym = sexp_intern(ctx, ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2), -1);
+        for (; sexp_pairp(sexp_cdr(tmp)); tmp=sexp_cdr(tmp))
+          ;
+        sexp_cdr(tmp) = sexp_cons(ctx, sym, SEXP_NULL);
+      }
+      break;
     case 'e':
     case 'p':
       mods_loaded = 1;
