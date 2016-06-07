@@ -1202,7 +1202,7 @@ sexp sexp_add (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(sum);
     break;
   case SEXP_NUM_FIX_FLO:
-    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)+sexp_flonum_value(b));
+    r = a == SEXP_ZERO ? b : sexp_make_flonum(ctx, sexp_fixnum_to_double(a)+sexp_flonum_value(b));
     break;
   case SEXP_NUM_FIX_BIG:
     r = sexp_bignum_normalize(sexp_bignum_add_fixnum(ctx, b, a));
