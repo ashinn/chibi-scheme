@@ -978,7 +978,7 @@ sexp sexp_complex_sqrt (sexp ctx, sexp z) {
   r = sqrt(x*x + y*y);
   res = sexp_make_complex(ctx, SEXP_ZERO, SEXP_ZERO);
   sexp_complex_real(res) = sexp_make_flonum(ctx, sqrt((x+r)/2));
-  sexp_complex_imag(res) = sexp_make_flonum(ctx, (y<0?-1:1)*sqrt((-x+r)/2));
+  sexp_complex_imag(res) = sexp_make_flonum(ctx, ((y<0||(y==0&&1/y<0))?-1:1)*sqrt((-x+r)/2));
   sexp_gc_release1(ctx);
   return res;
 }
