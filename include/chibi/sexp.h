@@ -256,7 +256,7 @@ typedef short sexp_int32_t;
 # endif
 #endif
 
-#if defined(__APPLE__) || defined(_WIN64)
+#if defined(__APPLE__) || defined(_WIN64) || (defined(__CYGWIN__) && __SIZEOF_POINTER__ == 8)
 #define PRIoff "%lld"
 #else
 #define PRIoff "%ld"
