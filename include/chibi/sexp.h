@@ -1320,6 +1320,7 @@ enum sexp_context_globals {
   SEXP_G_SYMBOLS,
 #endif
   SEXP_G_TYPES,
+  SEXP_G_FEATURES,
   SEXP_G_NUM_TYPES,
   SEXP_G_OOM_ERROR,             /* out of memory exception object */
   SEXP_G_OOS_ERROR,             /* out of stack exception object */

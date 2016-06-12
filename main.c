@@ -236,8 +236,8 @@ static sexp sexp_add_import_binding (sexp ctx, sexp env) {
 }
 
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) {
-  sexp_gc_var1(e);
-  sexp_gc_preserve1(ctx, e);
+  sexp_gc_var3(e, ls, sym);
+  sexp_gc_preserve3(ctx, e, ls, sym);
   e = sexp_load_standard_env(ctx, env, k);
   if (!sexp_exceptionp(e)) {
 #if SEXP_USE_MODULES
@@ -249,7 +249,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) 
     if (!sexp_exceptionp(e))
       e = sexp_load_standard_params(ctx, e);
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release3(ctx);
   return e;
 }
 
@@ -296,7 +296,7 @@ sexp run_main (int argc, char **argv) {
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
-  sexp out=SEXP_FALSE, ctx=NULL;
+  sexp out=SEXP_FALSE, ctx=NULL, ls;
   sexp_gc_var4(tmp, sym, args, env);
   args = SEXP_NULL;
   env = NULL;
@@ -305,14 +305,14 @@ sexp run_main (int argc, char **argv) {
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
     switch ((c=argv[i][1])) {
     case 'D':
-      mods_loaded = 1;
-      load_init(1);
-      tmp = sexp_env_ref(ctx, env, sym=sexp_intern(ctx, "*features*", -1), SEXP_NULL);
-      if (sexp_pairp(tmp)) {
-        sym = sexp_intern(ctx, ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2), -1);
-        for (; sexp_pairp(sexp_cdr(tmp)); tmp=sexp_cdr(tmp))
+      init_context();
+      arg = (argv[i][2] == '\0') ? argv[++i] : argv[i]+2;
+      sym = sexp_intern(ctx, arg, -1);
+      ls = sexp_global(ctx, SEXP_G_FEATURES);
+      if (sexp_pairp(ls)) {
+        for (; sexp_pairp(sexp_cdr(ls)); ls=sexp_cdr(ls))
           ;
-        sexp_cdr(tmp) = sexp_cons(ctx, sym, SEXP_NULL);
+        sexp_cdr(ls) = sexp_cons(ctx, sym, SEXP_NULL);
       }
       break;
     case 'e':

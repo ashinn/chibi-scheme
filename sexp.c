@@ -381,9 +381,53 @@ sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
 
 /****************************** contexts ******************************/
 
+static const char* sexp_initial_features[] = {
+  sexp_platform,
+#if SEXP_BSD
+  "bsd",
+#endif
+#if defined(_WIN32) || defined(__MINGW32__)
+  "windows",
+#endif
+#if SEXP_USE_DL
+  "dynamic-loading",
+#endif
+#if SEXP_USE_BIDIRECTIONAL_PORTS
+  "bidir-ports",
+#endif
+#if SEXP_USE_MODULES
+  "modules",
+#endif
+#if SEXP_USE_BOEHM
+  "boehm-gc",
+#endif
+#if SEXP_USE_UTF8_STRINGS
+  "full-unicode",
+#endif
+#if SEXP_USE_GREEN_THREADS
+  "threads",
+#endif
+#if SEXP_USE_NTP_GETTIME
+  "ntp",
+#endif
+#if SEXP_USE_AUTO_FORCE
+  "auto-force",
+#endif
+#if SEXP_USE_COMPLEX
+  "complex",
+#endif
+#if SEXP_USE_RATIOS
+  "ratios",
+#endif
+  "r7rs",
+  "chibi",
+  NULL,
+};
+
 void sexp_init_context_globals (sexp ctx) {
-  sexp type, *vec, print=NULL;
+  const char** features;
   int i;
+  sexp type, *vec, print=NULL;
   sexp_context_globals(ctx)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
 #if ! SEXP_USE_GLOBAL_SYMBOLS
@@ -415,6 +459,11 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_CONTINUABLE_SYMBOL) = sexp_intern(ctx, "continuable", -1);
   sexp_global(ctx, SEXP_G_EMPTY_VECTOR) = sexp_alloc_type(ctx, vector, SEXP_VECTOR);
   sexp_vector_length(sexp_global(ctx, SEXP_G_EMPTY_VECTOR)) = 0;
+  sexp_global(ctx, SEXP_G_FEATURES) = SEXP_NULL;
+  for (features=sexp_initial_features; *features; features++) {
+    sexp_push(ctx, sexp_global(ctx, SEXP_G_FEATURES), SEXP_FALSE);
+    sexp_car(sexp_global(ctx, SEXP_G_FEATURES)) = sexp_intern(ctx, *features, -1);
+  }
   sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(SEXP_NUM_CORE_TYPES);
   sexp_global(ctx, SEXP_G_TYPES)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_INIT_NUM_TYPES), SEXP_VOID);

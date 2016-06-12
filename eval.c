@@ -2349,53 +2349,9 @@ sexp sexp_load_standard_ports (sexp ctx, sexp env, FILE* in, FILE* out,
   return SEXP_VOID;
 }
 
-static const char* sexp_initial_features[] = {
-  sexp_platform,
-#if SEXP_BSD
-  "bsd",
-#endif
-#if defined(_WIN32) || defined(__MINGW32__)
-  "windows",
-#endif
-#if SEXP_USE_DL
-  "dynamic-loading",
-#endif
-#if SEXP_USE_BIDIRECTIONAL_PORTS
-  "bidir-ports",
-#endif
-#if SEXP_USE_MODULES
-  "modules",
-#endif
-#if SEXP_USE_BOEHM
-  "boehm-gc",
-#endif
-#if SEXP_USE_UTF8_STRINGS
-  "full-unicode",
-#endif
-#if SEXP_USE_GREEN_THREADS
-  "threads",
-#endif
-#if SEXP_USE_NTP_GETTIME
-  "ntp",
-#endif
-#if SEXP_USE_AUTO_FORCE
-  "auto-force",
-#endif
-#if SEXP_USE_COMPLEX
-  "complex",
-#endif
-#if SEXP_USE_RATIOS
-  "ratios",
-#endif
-  "r7rs",
-  "chibi",
-  NULL,
-};
-
 sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   int len;
   char init_file[128];
-  const char** features;
   int endianess_check = 1;
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
@@ -2404,9 +2360,7 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
   tmp = SEXP_NULL;
   sexp_push(ctx, tmp, sym=sexp_intern(ctx, (*(unsigned char*) &endianess_check) ? "little-endian" : "big-endian", -1));
-  for (features=sexp_initial_features; *features; features++)
-    sexp_push(ctx, tmp, sym=sexp_intern(ctx, *features, -1));
-  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), tmp);
+  sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), sexp_global(ctx, SEXP_G_FEATURES));
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
 #if SEXP_USE_SIMPLIFY
   op = sexp_make_foreign(ctx, "sexp_simplify", 1, 0,
