@@ -236,8 +236,8 @@ static sexp sexp_add_import_binding (sexp ctx, sexp env) {
 }
 
 static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) {
-  sexp_gc_var3(e, ls, sym);
-  sexp_gc_preserve3(ctx, e, ls, sym);
+  sexp_gc_var1(e);
+  sexp_gc_preserve1(ctx, e);
   e = sexp_load_standard_env(ctx, env, k);
   if (!sexp_exceptionp(e)) {
 #if SEXP_USE_MODULES
@@ -249,7 +249,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) 
     if (!sexp_exceptionp(e))
       e = sexp_load_standard_params(ctx, e);
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release1(ctx);
   return e;
 }
 

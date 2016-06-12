@@ -2352,14 +2352,11 @@ sexp sexp_load_standard_ports (sexp ctx, sexp env, FILE* in, FILE* out,
 sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   int len;
   char init_file[128];
-  int endianess_check = 1;
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
   if (!e) e = sexp_context_env(ctx);
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*shared-object-extension*", -1),
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
-  tmp = SEXP_NULL;
-  sexp_push(ctx, tmp, sym=sexp_intern(ctx, (*(unsigned char*) &endianess_check) ? "little-endian" : "big-endian", -1));
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), sexp_global(ctx, SEXP_G_FEATURES));
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
 #if SEXP_USE_SIMPLIFY
