@@ -1952,10 +1952,13 @@ sexp sexp_type_slot_offset_op (sexp ctx , sexp self, sexp_sint_t n, sexp type, s
     len = 1;
   }
   len = sexp_vectorp(cpl) ? sexp_vector_length(cpl) : 1;
-  for (i=0; i<len; i++)
+  for (i=len-1; i>=0; --i)
     for (slots=sexp_type_slots(v[i]); sexp_pairp(slots); slots=sexp_cdr(slots), offset++)
-      if (sexp_car(slots) == slot)
+      if (sexp_car(slots) == slot) {
+        while (--i>=0)
+          offset += sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(v[i])));
         return sexp_make_fixnum(offset);
+      }
   return SEXP_FALSE;
 }
 
