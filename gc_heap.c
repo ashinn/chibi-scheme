@@ -480,19 +480,40 @@ done:
   return res;
 }
 
-static void* load_image_fn(sexp dl, sexp name) {
+static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
+  sexp ls;
+  int len;
   void *fn = NULL;
+  char *file_name, *rel_name=NULL, *new_file_name;
   char *handle_name = "<static>";
   char *symbol_name = sexp_string_data(name);
   if (dl && sexp_dlp(dl)) {
     if (!sexp_dl_handle(dl)) {
-      sexp_dl_handle(dl) = dlopen(sexp_string_data(sexp_dl_file(dl)),
-                                  RTLD_LAZY);
+      /* try exact file, then the search path */
+      file_name = sexp_string_data(sexp_dl_file(dl));
+      len = sexp_string_size(sexp_dl_file(dl));
+      sexp_dl_handle(dl) = dlopen(file_name, RTLD_LAZY);
       if (!sexp_dl_handle(dl)) {
-        handle_name = sexp_string_data(sexp_dl_file(dl));
-        snprintf(gc_heap_err_str, ERR_STR_SIZE, "dlopen failure: %s",
-                 handle_name);
-        return NULL;
+        for (ls = sexp_global(ctx, SEXP_G_MODULE_PATH); sexp_pairp(ls); ls=sexp_cdr(ls)) {
+          if (strnstr(file_name, sexp_string_data(sexp_car(ls)), len+1)) {
+            rel_name = file_name + sexp_string_size(sexp_car(ls));
+            while (*rel_name == '/')
+              ++rel_name;
+            new_file_name = sexp_find_module_file_raw(ctx, rel_name);
+            if (new_file_name) {
+              sexp_dl_handle(dl) = dlopen(new_file_name, RTLD_LAZY);
+              free(new_file_name);
+              if (sexp_dl_handle(dl))
+                break;
+            }
+          }
+        }
+        if (!sexp_dl_handle(dl)) {
+          handle_name = sexp_string_data(sexp_dl_file(dl));
+          snprintf(gc_heap_err_str, ERR_STR_SIZE, "dlopen failure: %s",
+                   handle_name);
+          return NULL;
+        }
       }
     }
     fn = dlsym(sexp_dl_handle(dl), symbol_name);
@@ -523,7 +544,7 @@ static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
       return SEXP_FALSE;
     }
     
-    fn = load_image_fn(sexp_opcode_dl(dstp), name);
+    fn = load_image_fn(ctx, sexp_opcode_dl(dstp), name);
     if (!fn) {
       return SEXP_FALSE;
     }
@@ -535,7 +556,7 @@ static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
       snprintf(gc_heap_err_str, ERR_STR_SIZE, "type finalize field missing function name");
       return SEXP_FALSE;
     }
-    fn = load_image_fn(sexp_type_dl(dstp), name);
+    fn = load_image_fn(ctx, sexp_type_dl(dstp), name);
     if (!fn) {
       return SEXP_FALSE;
     }

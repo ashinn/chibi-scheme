@@ -2183,8 +2183,8 @@ sexp sexp_make_primitive_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp versio
   return e;
 }
 
-sexp sexp_find_module_file (sexp ctx, const char *file) {
-  sexp res=SEXP_FALSE, ls;
+char* sexp_find_module_file_raw (sexp ctx, const char *file) {
+  sexp ls;
   char *dir, *path;
   sexp_uint_t slash, dirlen, filelen, len;
 #ifdef PLAN9
@@ -2199,22 +2199,29 @@ sexp sexp_find_module_file (sexp ctx, const char *file) {
   filelen = strlen(file);
 
   ls = sexp_global(ctx, SEXP_G_MODULE_PATH);
-  for ( ; sexp_pairp(ls) && sexp_not(res); ls=sexp_cdr(ls)) {
+  for ( ; sexp_pairp(ls); ls=sexp_cdr(ls)) {
     dir = sexp_string_data(sexp_car(ls));
     dirlen = sexp_string_size(sexp_car(ls));
     slash = dir[dirlen-1] == '/';
     len = dirlen+filelen+2-slash;
     path = (char*) sexp_malloc(len);
-    if (! path) return sexp_global(ctx, SEXP_G_OOM_ERROR);
+    if (! path) return NULL;
     memcpy(path, dir, dirlen);
     if (! slash) path[dirlen] = '/';
     memcpy(path+len-filelen-1, file, filelen);
     path[len-1] = '\0';
     if (sexp_find_static_library(path) || file_exists_p(path, buf))
-      res = sexp_c_string(ctx, path, len-1);
+      return path;
     free(path);
   }
 
+  return NULL;
+}
+
+sexp sexp_find_module_file (sexp ctx, const char *file) {
+  char* path = sexp_find_module_file_raw(ctx, file);
+  sexp res = sexp_c_string(ctx, path, -1);
+  if (path) free(path);
   return res;
 }
 

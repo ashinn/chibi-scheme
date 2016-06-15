@@ -94,6 +94,7 @@ SEXP_API sexp sexp_make_standard_env_op (sexp context, sexp self, sexp_sint_t n,
 SEXP_API void sexp_set_parameter (sexp ctx, sexp env, sexp name, sexp value);
 SEXP_API sexp sexp_load_standard_ports (sexp context, sexp env, FILE* in, FILE* out, FILE* err, int no_close);
 SEXP_API sexp sexp_load_standard_env (sexp context, sexp env, sexp version);
+SEXP_API char* sexp_find_module_file_raw (sexp ctx, const char *file);
 SEXP_API sexp sexp_find_module_file (sexp ctx, const char *file);
 SEXP_API sexp sexp_load_module_file (sexp ctx, const char *file, sexp env);
 SEXP_API sexp sexp_current_module_path_op (sexp ctx, sexp self, sexp_sint_t n, sexp x);
