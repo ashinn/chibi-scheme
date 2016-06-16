@@ -495,7 +495,7 @@ static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
       sexp_dl_handle(dl) = dlopen(file_name, RTLD_LAZY);
       if (!sexp_dl_handle(dl)) {
         for (ls = sexp_global(ctx, SEXP_G_MODULE_PATH); sexp_pairp(ls); ls=sexp_cdr(ls)) {
-          if (strnstr(file_name, sexp_string_data(sexp_car(ls)), len+1)) {
+          if (strstr(file_name, sexp_string_data(sexp_car(ls))) == file_name) {
             rel_name = file_name + sexp_string_size(sexp_car(ls));
             while (*rel_name == '/')
               ++rel_name;
