@@ -1941,7 +1941,7 @@ sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, sexp val)
 
 sexp sexp_type_slot_offset_op (sexp ctx , sexp self, sexp_sint_t n, sexp type, sexp slot) {
   sexp cpl, slots, *v;
-  int i, offset=0, len;
+  int i, offset, len;
   sexp_assert_type(ctx, sexp_typep, SEXP_TYPE, type);
   cpl = sexp_type_cpl(type);
   if (sexp_vectorp(cpl)) {
@@ -1953,7 +1953,7 @@ sexp sexp_type_slot_offset_op (sexp ctx , sexp self, sexp_sint_t n, sexp type, s
   }
   len = sexp_vectorp(cpl) ? sexp_vector_length(cpl) : 1;
   for (i=len-1; i>=0; --i)
-    for (slots=sexp_type_slots(v[i]); sexp_pairp(slots); slots=sexp_cdr(slots), offset++)
+    for (slots=sexp_type_slots(v[i]), offset=0; sexp_pairp(slots); slots=sexp_cdr(slots), ++offset)
       if (sexp_car(slots) == slot) {
         while (--i>=0)
           offset += sexp_unbox_fixnum(sexp_length(ctx, sexp_type_slots(v[i])));
