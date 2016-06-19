@@ -259,8 +259,13 @@ static void generate_ref (sexp ctx, sexp ref, int unboxp) {
       sexp_emit_push(ctx, sexp_ref_cell(ref));
   } else {
     lam = sexp_context_lambda(ctx);
-    generate_non_global_ref(ctx, sexp_ref_name(ref), sexp_ref_cell(ref),
-                            lam, sexp_lambda_fv(lam), unboxp);
+    if (!lam || !sexp_lambdap(lam)) {
+      sexp_warn(ctx, "variable out of phase: ", sexp_ref_name(ref));
+      sexp_emit_push(ctx, SEXP_VOID);
+    } else {
+      generate_non_global_ref(ctx, sexp_ref_name(ref), sexp_ref_cell(ref),
+                              lam, sexp_lambda_fv(lam), unboxp);
+    }
   }
 }
 
