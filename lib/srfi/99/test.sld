@@ -224,4 +224,20 @@
         (set-container-mutable! container-instance #t)
         (test #t (get-container-mutable container-instance)))
 
+      ;; test child constructor sets parent field
+      (let ()
+        (define-record-type <parent>
+          #f
+          parent?
+          (field1 parent-field set-parent-field!))
+        (define-record-type (<child> <parent>)
+          (constructor field1 field2)
+          child?
+          (field2 child-field))
+        (let ((record (constructor 'a 'b)))
+          (test 'a (parent-field record))
+          (test 'b (child-field record))
+          (set-parent-field! record 'c)
+          (test 'c (parent-field record))))
+
       (test-end))))
