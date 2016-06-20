@@ -482,7 +482,6 @@ done:
 
 static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
   sexp ls;
-  int len;
   void *fn = NULL;
   char *file_name, *rel_name=NULL, *new_file_name;
   char *handle_name = "<static>";
@@ -491,7 +490,6 @@ static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
     if (!sexp_dl_handle(dl)) {
       /* try exact file, then the search path */
       file_name = sexp_string_data(sexp_dl_file(dl));
-      len = sexp_string_size(sexp_dl_file(dl));
       sexp_dl_handle(dl) = dlopen(file_name, RTLD_LAZY);
       if (!sexp_dl_handle(dl)) {
         for (ls = sexp_global(ctx, SEXP_G_MODULE_PATH); sexp_pairp(ls); ls=sexp_cdr(ls)) {
