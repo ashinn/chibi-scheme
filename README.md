@@ -9,18 +9,19 @@ and scripting language in C programs.  In addition to support for
 lightweight VM-based threads, each VM itself runs in an isolated heap
 allowing multiple VMs to run simultaneously in different OS threads.
 
+There are no external dependencies so is relatively easy to drop into
+any project.
+
 The default repl language contains all bindings from
 [R7RS small](http://trac.sacrideo.us/wg/wiki/R7RSHomePage),
-available explicitly as the `(scheme small)` library.
-
-Support for additional languages such as JavaScript, Go, Lua and Bash
-are planned for future releases.  Scheme is chosen as a substrate
-because its first class continuations and guaranteed tail-call
-optimization makes implementing other languages easy.
+available explicitly as the `(scheme small)` library.  The
+language is built in layers, however - see the manual for
+instructions on compiling with fewer features or requesting
+a smaller language on startup.
 
 Chibi-Scheme is known to work on **32** and **64-bit** Linux,
-FreeBSD and OS X, Plan9, Windows (using Cygwin), iOS, and
-[Emscripten](https://kripken.github.io/emscripten-site).
+FreeBSD and OS X, Plan9, Windows (using Cygwin), iOS, Android,
+Arm and [Emscripten](https://kripken.github.io/emscripten-site).
 
 To build on most platforms just run `make && make test`.  This will
 provide a shared library *libchibi-scheme*, as well as a sample
