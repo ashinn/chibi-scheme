@@ -82,7 +82,7 @@ endif
 
 ########################################################################
 
-all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(IMAGE_FILES) $(META_FILES)
+all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
 
 js: js/chibi.js
 
@@ -230,7 +230,7 @@ test-run:
 test-ffi: chibi-scheme$(EXE)
 	$(CHIBI) tests/ffi/ffi-tests.scm
 
-test-snow: chibi-scheme$(EXE)
+test-snow: chibi-scheme$(EXE) $(IMAGE_FILES)
 	$(CHIBI) tests/snow/snow-tests.scm
 
 test-unicode: chibi-scheme$(EXE)
@@ -271,7 +271,7 @@ cleaner: clean
 
 dist-clean: dist-clean-libs cleaner
 
-install: all
+install-base: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
 	$(INSTALL_EXE) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
@@ -283,9 +283,6 @@ install: all
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
 	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/33 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records
 	$(INSTALL) -m0644 $(META_FILES) $(DESTDIR)$(MODDIR)/
-ifneq "$(IMAGE_FILES)" ""
-	$(INSTALL) -m0644 $(IMAGE_FILES) $(DESTDIR)$(MODDIR)/
-endif
 	$(INSTALL) -m0644 lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
 	$(INSTALL) -m0644 lib/chibi/char-set/*.sld lib/chibi/char-set/*.scm $(DESTDIR)$(MODDIR)/chibi/char-set/
@@ -348,6 +345,13 @@ endif
 	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
 	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
 	-if type $(LDCONFIG) >/dev/null 2>/dev/null; then $(LDCONFIG); fi
+
+install: install-base
+ifneq "$(IMAGE_FILES)" ""
+	echo "Generating images"
+	-cd / && $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -d $(DESTDIR)$(MODDIR)/chibi.img
+	-cd / && $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
+endif
 
 uninstall:
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
