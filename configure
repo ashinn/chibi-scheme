@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "Autoconf is an evil piece bloatware encouraging cargo-cult programming."
+echo "Make, on the other hand, is a beautiful little prolog for the filesystem."
+echo "Just run 'make'."
