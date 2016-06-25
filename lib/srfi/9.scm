@@ -64,7 +64,7 @@
                   (cond
                    ((null? f)
                     (error "unknown record field in constructor" (car ls) fields))
-                   ((not (compare (car ls) (caar f)))
+                   ((not (eq? (car ls) (caar f)))
                     (lp2 (cdr f)))
                    ((pair? (cddr (car f)))
                     (lp (cdr ls)
