@@ -52,7 +52,11 @@
 (define (parse-type type . o)
   (cond
    ((vector? type)
-    type)
+    (if (and (pair? o) (car o))
+        (let ((res (vector-copy type)))
+          (type-index-set! res (car o))
+          res)
+        type))
    (else
     (let lp ((type type) (free? #f) (const? #f) (null-ptr? #f)
              (ptr? #f) (ref? #f) (struct? #f) (link? #f) (result? #f) (array #f)
@@ -103,6 +107,7 @@
 (define (type-template type) (vector-ref type 12))
 (define (type-new? type) (vector-ref type 13))
 (define (type-index type) (vector-ref type 14))
+(define (type-index-set! type i) (vector-set! type 14 i))
 
 (define (type-auto-expand? type)
   (and (pair? (type-array type))
@@ -1729,7 +1734,8 @@
              (let ((subname (x->string (cadr subfield))))
                (cat
                 "  "
-                (string-append dst "." (x->string (cadr subfield)))
+                ptr "->" (x->string (cadr field))
+                "." (x->string (cadr subfield))
                 " = "
                 (string-append
                  "((" (x->string (or (type-struct-type (type-name (car field)))
