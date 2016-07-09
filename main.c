@@ -154,7 +154,8 @@ static void repl (sexp ctx, sexp env) {
 #endif
       if (res && sexp_exceptionp(res)) {
         sexp_print_exception(ctx, res, err);
-        sexp_stack_trace(ctx, err);
+        if (res != sexp_global(ctx, SEXP_G_OOS_ERROR))
+          sexp_stack_trace(ctx, err);
       } else if (res != SEXP_VOID) {
         sexp_write(ctx, res, out);
         sexp_write_char(ctx, '\n', out);
