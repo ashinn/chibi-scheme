@@ -1666,7 +1666,7 @@ SEXP_API int sexp_poll_port(sexp ctx, sexp port, int inputp);
 #define sexp_copy_list(ctx, x) sexp_copy_list_op(ctx, NULL, 1, x)
 #define sexp_cons(ctx, a, b) sexp_cons_op(ctx, NULL, 2, a, b)
 #define sexp_append2(ctx, a, b) sexp_append2_op(ctx, NULL, 2, a, b)
-#define sexp_make_vector(ctx, a, b) sexp_make_vector_op(ctx, NULL, 2, a, b);
+#define sexp_make_vector(ctx, a, b) sexp_make_vector_op(ctx, NULL, 2, a, b)
 #define sexp_list_to_vector(ctx, x) sexp_list_to_vector_op(ctx, NULL, 1, x)
 #define sexp_exception_type(ctx, x) sexp_exception_type_op(ctx, NULL, 1, x)
 #define sexp_string_to_symbol(ctx, s) sexp_string_to_symbol_op(ctx, NULL, 1, s)
