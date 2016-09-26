@@ -158,9 +158,7 @@
   (if (pair? o)
       (logger-file-set! logger (car o)))
   (if (string? (logger-file logger))
-      (let ((fd (open (logger-file logger)
-                      (+ open/create open/write open/append open/non-block))))
-        (logger-port-set! logger (open-output-file-descriptor fd)))
+      (logger-port-set! logger (open-output-file/append (logger-file logger)))
       (logger-port-set! logger (current-error-port))))
 
 (define (log-close logger)

@@ -120,7 +120,7 @@
 
 (define (memoize-file-loader proc . o)
   (let* ((f (lambda (file . rest)
-              (let ((mtime (file-modification-time file)))
+              (let ((mtime (file-modification-time/safe file)))
                 (cons mtime (apply proc file rest)))))
          (g (apply memoize f o))
          (reloader? (cond ((memq 'reloader?: o) => cdr) (else #f))))
@@ -129,8 +129,10 @@
         (let-syntax ((update!
                       (syntax-rules ()
                         ((update! default)
-                         (let ((mtime (file-modification-time file)))
-                           (if (> mtime (car cell))
+                         (let ((mtime (file-modification-time/safe file)))
+                           (if (and mtime
+                                    (or (not (car cell))
+                                        (> mtime (car cell))))
                                (let ((res (apply proc file rest)))
                                  (set-car! cell mtime)
                                  (set-cdr! cell res)
@@ -144,10 +146,11 @@
 ;; persistent memoization
 
 (define (get-memo-directory proc-name)
-  (let ((uid (current-user-id)))
-    (if (zero? uid)
-        (make-path "/var/run/memo.d" proc-name)
-        (make-path (user-home (user-information uid)) ".memo.d" proc-name))))
+  (or (get-environment-variable "MEMOIZE_DIR")
+      (if (i-am-root?)
+          (make-path "/var/run/memo.d" proc-name)
+          (make-path (or (get-environment-variable "HOME") ".")
+                     ".memo.d" proc-name))))
 
 (define (encode-file-name str)
   (define (file-name-safe-char? ch)
@@ -163,10 +166,11 @@
     (if (>= from to)
         res
         (cons (substring-cursor str from to) res)))
-  (let ((end (string-cursor-end str)))
-    (let lp ((from 0) (to 0) (res '()))
+  (let ((start (string-cursor-start str))
+        (end (string-cursor-end str)))
+    (let lp ((from start) (to start) (res '()))
       (if (string-cursor>=? to end)
-          (if (zero? from)
+          (if (string-cursor=? from start)
               str
               (string-concatenate (reverse (collect str from to res))))
           (let* ((ch (string-cursor-ref str to))
@@ -177,9 +181,9 @@
                                     (collect str from to res)))))))))
 
 (define (default-args-encoder args)
-  (encode-file-name
-   (string-append (call-with-output-string (lambda (out) (write/ss args out)))
-                  ".memo")))
+  (let ((out (open-output-string)))
+    (write/ss args out)
+    (encode-file-name (string-append (get-output-string out) ".memo"))))
 
 ;;> Returns a memoized version of the procedure \var{proc} which
 ;;> stores the memoized results persistently in a file.  Garbage
@@ -235,7 +239,7 @@
                     (init-size init-size: 31)
                     (compute-size compute-size: (lambda (k v) 1))
                     (size-limit size-limit: 1000))
-    (let ((tab (make-hash-table equal hash init-size)))
+    (let ((tab (make-hash-table equal hash))) ; init-size
       (%make-lru-cache tab '() '() 0 size-limit compute-size))))
 
 ;; add entry to the back of the queue

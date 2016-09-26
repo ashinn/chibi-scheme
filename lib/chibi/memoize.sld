@@ -1,13 +1,18 @@
 
 (define-library (chibi memoize)
-  (import (chibi) (chibi optional) (chibi time) (chibi io)
-          (chibi pathname) (chibi filesystem) (chibi system)
-          (srfi 9) (srfi 38) (srfi 69))
+  (import (chibi optional) (chibi pathname) (chibi string)
+          (srfi 9) (srfi 38) (srfi 69) (srfi 98))
   (cond-expand
    (chibi
-    (import (chibi ast)))
-   (else
+    (import (chibi) (chibi ast) (chibi system) (chibi filesystem))
     (begin
+      (define (i-am-root?)
+        (zero? (current-user-id)))))
+   (else
+    (import (scheme base) (scheme char) (scheme file))
+    (begin
+      (define (i-am-root?)
+        (equal? "root" (get-environment-variable "USER")))
       (define (procedure-name x) #f)
       (define (procedure-arity x) #f)
       (define (procedure-variadic? x) #f))))

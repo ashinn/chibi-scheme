@@ -21,7 +21,8 @@
           file-owner                file-group
           file-represented-device   file-size
           file-block-size           file-num-blocks
-          file-access-time file-modification-time file-change-time
+          file-access-time file-change-time
+          file-modification-time  file-modification-time/safe
           file-regular?    file-directory?        file-character?
           file-block?      file-fifo?             file-link?
           file-socket?     file-exists?

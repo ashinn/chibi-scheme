@@ -18,8 +18,31 @@
             resource-usage-max-rss resource-usage/self
             resource-usage/children get-resource-usage))
    (else))
-  (import (chibi))
-  (include-shared "time")
+  (cond-expand
+   (chibi
+    (import (chibi))
+    (include-shared "time"))
+   (else
+    (import (scheme base) (scheme write) (scheme time)
+            (rename (srfi 19) (time-second srfi-19:time-second)))
+    (begin
+      ;; a SRFI-19 `date' is a datetime, which in C is a tm (time) struct
+      (define tm? date?)
+      (define time-second date-second)
+      (define time-minute date-minute)
+      (define time-hour date-hour)
+      (define time-day date-day)
+      (define time-month date-month)
+      (define time-year date-year)
+      (define time-day-of-week date-week-day)
+      (define time-day-of-year date-year-day)
+      (define (seconds->time seconds)
+        (time-tai->date (make-time time-tai 0 (exact (round seconds)))))
+      (define current-seconds current-second)
+      (define (get-time-of-day)
+        (list (current-time) time-utc))
+      (define (timeval-seconds tv) (srfi-19:time-second tv))
+      (define (timeval-microseconds tv) (/ (time-nanosecond tv) 1000)))))
   (begin
     (define (timeval->milliseconds tv)
       (quotient (+ (* 1000000 (timeval-seconds tv))
@@ -39,6 +62,8 @@
     (define-syntax time
       (syntax-rules ()
         ((time expr)
-         (time (call-with-output-string (lambda (out) (write 'expr out))) expr))
+         (let ((out (open-output-string)))
+           (write 'expr out)
+           (time (get-output-string out) expr)))
         ((time name expr)
          (time* name (lambda () expr)))))))

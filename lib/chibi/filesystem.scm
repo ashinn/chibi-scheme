@@ -127,6 +127,9 @@
 (define (file-num-blocks x) (stat-blocks (if (stat? x) x (file-status x))))
 (define (file-access-time x) (stat-atime (if (stat? x) x (file-status x))))
 (define (file-modification-time x) (stat-mtime (if (stat? x) x (file-status x))))
+(define (file-modification-time/safe x)
+  (let ((status (if (stat? x) x (file-status x))))
+    (and status (stat-mtime status))))
 (define (file-change-time x) (stat-ctime (if (stat? x) x (file-status x))))
 
 ;;> File status accessors.  \var{x} should be a string indicating

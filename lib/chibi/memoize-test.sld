@@ -1,26 +1,26 @@
 (define-library (chibi memoize-test)
   (export run-tests)
-  (import (chibi) (chibi memoize) (chibi filesystem) (chibi test))
+  (import (scheme base) (scheme file) (chibi memoize) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "memoize")
 
-      (define-memoized (fib n)
-        (if (<= n 1)
-            1
-            (+ (fib (- n 1)) (fib (- n 2)))))
+      (let ()
+        (define-memoized (fib n)
+          (if (<= n 1)
+              1
+              (+ (fib (- n 1)) (fib (- n 2)))))
+        (test 1 (fib 1))
+        (test 573147844013817084101 (fib 100)))
 
-      (test 1 (fib 1))
-      (test 573147844013817084101 (fib 100))
-
-      (define-memoized (ack m n)
-        (cond
-         ((= m 0) (+ n 1))
-         ((= n 0) (ack (- m 1) 1))
-         (else (ack (- m 1) (ack m (- n 1))))))
-
-      (test 29 (ack 3 2))
-      (test 61 (ack 3 3))
+      (let ()
+        (define-memoized (ack m n)
+          (cond
+           ((= m 0) (+ n 1))
+           ((= n 0) (ack (- m 1) 1))
+           (else (ack (- m 1) (ack m (- n 1))))))
+        (test 29 (ack 3 2))
+        (test 61 (ack 3 3)))
 
       (let ((n 0))
         (let ((f (memoize (lambda (x) (set! n (+ n 1)) (* x x)))))
