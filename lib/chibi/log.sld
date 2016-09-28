@@ -24,16 +24,22 @@
   (import (chibi time) (chibi string) (chibi show base))
   (cond-expand
    (chibi
-    (import (chibi) (chibi filesystem) (chibi process) (chibi system) (srfi 9))
+    (import (chibi) (chibi filesystem) (chibi process) (chibi string)
+            (chibi system) (srfi 9))
     (begin
+      (define write-string display)
       (define (open-output-file/append path)
         (let ((fd (open path
                         (+ open/create open/write open/append open/non-block))))
           (open-output-file-descriptor fd)))))
    (else
-    (import (scheme base))
+    (import (scheme base) (scheme char) (scheme file) (chibi string))
     (begin
+      (define-syntax protect
+        (syntax-rules ()
+          ((protect . x) (guard . x))))
       (define open-output-file/append open-output-file)
+      (define flush-output flush-output-port)
       (define (file-lock port-or-fileno mode) 'unsupported)
       (define lock/exclusive 'unsupported)
       (define lock/unlock 'unsupported)

@@ -63,7 +63,7 @@
 (define (log-normalize-name name)
   (let ((str (symbol->string name)))
     (if (string-prefix? "log-" str)
-        (string->symbol (substring str 4))
+        (string->symbol (substring str 4 (string-length str)))
         name)))
 
 (define (log-level-index logger level)
@@ -115,8 +115,8 @@
         (message (show #f (each-in-list args))))
     (string-append
      prefix
-     (string-concatenate (string-split message #\newline)
-                         (string-append "\n" prefix))
+     (string-join (string-split message #\newline)
+                  (string-append "\n" prefix))
      "\n")))
 
 (define (log-compile-prefix spec)
@@ -148,7 +148,7 @@
       (let ((time (seconds->time (current-seconds))))
         (let lp ((ls procs) (res '()))
           (if (null? ls)
-              (string-concatenate (reverse res))
+              (string-join (reverse res))
               (lp (cdr ls) (cons ((car ls) logger time level) res))))))))
 
 (define log-default-prefix
@@ -162,7 +162,8 @@
       (logger-port-set! logger (current-error-port))))
 
 (define (log-close logger)
-  (if (output-port? (logger-port logger))
+  (if (and (output-port? (logger-port logger))
+           (not (eq? (current-error-port) (logger-port logger))))
       (close-output-port (logger-port logger))))
 
 ;; Use file-locking to let multiple processes write to the same log
@@ -185,13 +186,13 @@
                        (log-open logger)
                        (lp #f))
                       (else    ; fall back to stderr
-                       (display str (current-error-port))))))
+                       (write-string str (current-error-port))))))
             (let ((locked? (and (logger-locked? logger)
                                 (output-port? out)
                                 (file-lock out lock/exclusive))))
               ;; this is redundant with POSIX O_APPEND
               ;; (set-file-position! out 0 seek/end)
-              (display str out)
+              (write-string str out)
               (flush-output out)
               (if locked? (file-lock out lock/unlock))))))))))
 
