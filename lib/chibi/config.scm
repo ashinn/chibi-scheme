@@ -451,7 +451,7 @@
               (every* (lambda (x)
                         (and (pair? x)
                              (conf-verify-match key-def (car x) warn)
-                             (conf-verify-match val-def (cell-value x) warn)))
+                             (conf-verify-match val-def (cell-value) warn)))
                       (cell-list)))))
       ((conf)
        (and (alist? (cell-list))
