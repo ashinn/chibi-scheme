@@ -138,16 +138,16 @@
           (map (lambda (x) (cons (car x) (cdr x))) (get-props st))))
        ;; bind - a function
        (define-syntax f!
-         (syntax-rules ::: ()
-           ((f! ("step") (params :::) ((p param) . rest) . body)
-            (f! ("step") (params ::: (p param)) rest . body))
-           ((f! ("step") (params :::) ((param) . rest) . body)
-            (f! ("step") (params ::: (param param)) rest . body))
-           ((f! ("step") (params :::) (param . rest) . body)
-            (f! ("step") (params ::: (param param)) rest . body))
-           ((f! ("step") ((p param) :::) () . body)
+         (syntax-rules ooo ()
+           ((f! ("step") (params ooo) ((p param) . rest) . body)
+            (f! ("step") (params ooo (p param)) rest . body))
+           ((f! ("step") (params ooo) ((param) . rest) . body)
+            (f! ("step") (params ooo (param param)) rest . body))
+           ((f! ("step") (params ooo) (param . rest) . body)
+            (f! ("step") (params ooo (param param)) rest . body))
+           ((f! ("step") ((p param) ooo) () . body)
             (lambda (st)
-              (let ((p (ask st 'param)) :::)
+              (let ((p (ask st 'param)) ooo)
                 ((let () . body) st))))
            ((f! params . body)
             (f! ("step") () params . body))))
@@ -164,25 +164,25 @@
            ((s f . g) (lambda (st) ((s . g) (f st))))))
        ;; update in place
        (define-syntax u
-         (syntax-rules ::: ()
-           ((u (prop value) :::)
+         (syntax-rules ooo ()
+           ((u (prop value) ooo)
             (lambda (st)
-              (tell st 'prop value) :::
+              (tell st 'prop value) ooo
               st))))
        ;; local binding - update temporarily
        (define-syntax w
-         (syntax-rules ::: ()
-           ((w ("step") ((p tmp v) :::) () . b)
+         (syntax-rules ooo ()
+           ((w ("step") ((p tmp v) ooo) () . b)
             (lambda (st)
-              (let ((tmp (ask st 'p)) :::)
-                (tell st 'p v) :::
+              (let ((tmp (ask st 'p)) ooo)
+                (tell st 'p v) ooo
                 (let ((st ((begin . b) st)))
-                  (tell st 'p tmp) :::
+                  (tell st 'p tmp) ooo
                   st))))
-           ((w ("step") (props :::) ((p v) . rest) . b)
-            (w ("step") (props ::: (p tmp v)) rest . b))
-           ((w ((prop value) :::) . body)
-            (w ("step") () ((prop value) :::) . body))))
+           ((w ("step") (props ooo) ((p v) . rest) . b)
+            (w ("step") (props ooo (p tmp v)) rest . b))
+           ((w ((prop value) ooo) . body)
+            (w ("step") () ((prop value) ooo) . body))))
        ;; run
        (define (r proc)
          (proc (make-state init ... '())))
