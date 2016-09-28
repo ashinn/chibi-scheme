@@ -33,7 +33,7 @@
       (define time-hour date-hour)
       (define time-day date-day)
       (define time-month date-month)
-      (define time-year date-year)
+      (define (time-year x) (- (date-year x) 1900))
       (define time-day-of-week date-week-day)
       (define time-day-of-year date-year-day)
       (define (seconds->time seconds)
