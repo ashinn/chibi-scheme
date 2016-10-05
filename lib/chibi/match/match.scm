@@ -227,6 +227,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2016/10/05 - treat keywords as literals, not identifiers, in Chicken
 ;; 2016/03/06 - fixing named match-let (thanks to Stefan Israelsson Tampe)
 ;; 2015/05/09 - fixing bug in var extraction of quasiquote patterns
 ;; 2014/11/24 - adding Gauche's `@' pattern for named record field matching
@@ -423,14 +424,20 @@
     ;; already bound symbol or some other literal, in which case we
     ;; compare it with EQUAL?.
     ((match-two v x g+s (sk ...) fk (id ...))
-     (let-syntax
-         ((new-sym?
-           (syntax-rules (id ...)
-             ((new-sym? x sk2 fk2) sk2)
-             ((new-sym? y sk2 fk2) fk2))))
-       (new-sym? random-sym-to-match
-                 (let ((x v)) (sk ... (id ... x)))
-                 (if (equal? v x) (sk ... (id ...)) fk))))
+     ;; This extra match-check-identifier is optional in general, but
+     ;; can serve as a fast path, and is needed to distinguish
+     ;; keywords in Chicken.
+     (match-check-identifier
+      x
+      (let-syntax
+          ((new-sym?
+            (syntax-rules (id ...)
+              ((new-sym? x sk2 fk2) sk2)
+              ((new-sym? y sk2 fk2) fk2))))
+        (new-sym? random-sym-to-match
+                  (let ((x v)) (sk ... (id ... x)))
+                  (if (equal? v x) (sk ... (id ...)) fk)))
+      (if (equal? v x) (sk ... (id ...)) fk)))
     ))
 
 ;; QUASIQUOTE patterns
@@ -925,10 +932,26 @@
            (car (cddr expr))
            (cadr (cddr expr)))))))
 
+ (chicken
+  (define-syntax match-check-ellipsis
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (compare '... (cadr expr))
+           (car (cddr expr))
+           (cadr (cddr expr))))))
+  (define-syntax match-check-identifier
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (and (symbol? (cadr expr)) (not (keyword? (cadr expr))))
+           (car (cddr expr))
+           (cadr (cddr expr)))))))
+
  (else
   ;; Portable versions
   ;;
-  ;; This *should* work, but doesn't :(
+  ;; This is the R7RS version.  For other standards, and
+  ;; implementations not yet up-to-spec we have to use some tricks.
+  ;;
   ;;   (define-syntax match-check-ellipsis
   ;;     (syntax-rules (...)
   ;;       ((_ ... sk fk) sk)
