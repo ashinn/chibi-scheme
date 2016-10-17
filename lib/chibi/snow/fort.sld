@@ -15,7 +15,6 @@
           (scheme file)
           (srfi 1)
           (srfi 18)
-          (srfi 33)
           (chibi snow package)
           (chibi bytevector)
           (chibi config)
@@ -29,6 +28,11 @@
           (chibi string)
           (chibi sxml)
           (chibi tar))
+  (cond-expand
+   ((library (srfi 33))
+    (import (srfi 33)))
+   (else
+    (import (srfi 60))))
   (cond-expand
    (chibi
     (import (only (chibi ast)

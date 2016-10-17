@@ -34,7 +34,6 @@
           (chibi crypto md5)
           (chibi crypto rsa)
           (chibi crypto sha2)
-          (chibi filesystem)
           (chibi io)
           (chibi pathname)
           (chibi regexp)

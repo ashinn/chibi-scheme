@@ -1,8 +1,14 @@
 
 (define-library (chibi tar)
-  (import (scheme base) (scheme file) (scheme time) (srfi 1) (srfi 33)
-          (chibi string) (chibi binary-record)
-          (chibi pathname) (chibi filesystem) (chibi system))
+  (import (scheme base) (scheme file) (scheme time) (srfi 1)
+          (chibi string) (chibi binary-record) (chibi pathname)
+          (chibi filesystem)
+          (chibi system))
+  (cond-expand
+   ((library (srfi 33))
+    (import (srfi 33)))
+   (else
+    (import (srfi 60))))
   (export
    ;; basic
    tar make-tar tar? read-tar write-tar
