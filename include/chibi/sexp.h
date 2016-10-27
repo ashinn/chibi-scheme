@@ -7,6 +7,9 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define SEXP_FLEXIBLE_ARRAY [1]
+#else
+#define SEXP_FLEXIBLE_ARRAY []
 #endif
 
 #define SEXP_MODULE_PATH_VAR "CHIBI_MODULE_PATH"
@@ -384,16 +387,16 @@ struct sexp_struct {
     } pair;
     struct {
       sexp_uint_t length;
-      sexp data[];
+      sexp data SEXP_FLEXIBLE_ARRAY;
     } vector;
     struct {
       sexp_uint_t length;
-      char data[];
+      char data SEXP_FLEXIBLE_ARRAY;
     } bytes;
     struct {
 #if SEXP_USE_PACKED_STRINGS
       sexp_uint_t length;
-      char data[];
+      char data SEXP_FLEXIBLE_ARRAY;
 #else
       sexp_uint_t offset, length;
       sexp bytes;
@@ -401,7 +404,7 @@ struct sexp_struct {
     } string;
     struct {
       sexp_uint_t length;
-      char data[];
+      char data SEXP_FLEXIBLE_ARRAY;
     } symbol;
     struct {
       FILE *stream;
@@ -424,7 +427,7 @@ struct sexp_struct {
     struct {
       signed char sign;
       sexp_uint_t length;
-      sexp_uint_t data[];
+      sexp_uint_t data SEXP_FLEXIBLE_ARRAY;
     } bignum;
     struct {
       sexp numerator, denominator;
@@ -436,7 +439,7 @@ struct sexp_struct {
       sexp_uint_t length;
       void *value;
       sexp parent;
-      char body[];
+      char body SEXP_FLEXIBLE_ARRAY;
     } cpointer;
     /* runtime types */
     struct {
@@ -448,7 +451,7 @@ struct sexp_struct {
     struct {
       sexp_uint_t length, max_depth;
       sexp name, literals, source;
-      unsigned char data[];
+      unsigned char data SEXP_FLEXIBLE_ARRAY;
     } bytecode;
     struct {
       char flags;
@@ -492,7 +495,7 @@ struct sexp_struct {
     /* compiler state */
     struct {
       sexp_uint_t length, top;
-      sexp data[];
+      sexp data SEXP_FLEXIBLE_ARRAY;
     } stack;
     struct {
       sexp_heap heap;
