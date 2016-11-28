@@ -349,8 +349,8 @@ install-base: all
 install: install-base
 ifneq "$(IMAGE_FILES)" ""
 	echo "Generating images"
-	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$LD_LIBRARY_PATH" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$DYLD_LIBRARY_PATH" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -d $(DESTDIR)$(MODDIR)/chibi.img
-	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$LD_LIBRARY_PATH" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$DYLD_LIBRARY_PATH" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
+	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -d $(DESTDIR)$(MODDIR)/chibi.img
+	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
 endif
 
 uninstall:
