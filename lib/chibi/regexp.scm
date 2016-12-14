@@ -1,15 +1,17 @@
 ;; regexp.scm -- simple non-bactracking NFA implementation
-;; Copyright (c) 2013-2015 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2013-2016 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;; An rx represents a start state and meta-info such as the number
 ;;; and names of submatches.
 (define-record-type Rx
-  (make-rx start-state num-matches num-save-indexes match-rules match-names sre)
+  (make-rx start-state num-matches num-save-indexes non-greedy-indexes
+           match-rules match-names sre)
   regexp?
   (start-state rx-start-state rx-start-state-set!)
   (num-matches rx-num-matches rx-num-matches-set!)
   (num-save-indexes rx-num-save-indexes rx-num-save-indexes-set!)
+  (non-greedy-indexes rx-non-greedy-indexes rx-non-greedy-indexes-set!)
   (match-rules rx-rules rx-rules-set!)
   (match-names rx-names rx-names-set!)
   (sre regexp->sre))
@@ -22,7 +24,7 @@
 
 ;;; A state is a single nfa state with transition rules.
 (define-record-type State
-  (%make-state accept? chars match match-rule next1 next2)
+  (%make-state accept? chars match match-rule next1 next2 id)
   state?
   ;; A boolean indicating if this is an accepting state.
   (accept? state-accept? state-accept?-set!)
@@ -41,14 +43,16 @@
   ;; The destination if the char match succeeds.
   (next1 state-next1 state-next1-set!)
   ;; An optional additional transition used for forking to two states.
-  (next2 state-next2 state-next2-set!))
+  (next2 state-next2 state-next2-set!)
+  ;; A unique (per regexp) id for debugging.
+  (id state-id))
 
-(define (make-state accept? chars match match-rule next1 next2)
+(define (make-state accept? chars match match-rule next1 next2 id)
   (if (and next1 (not (state? next1)))
       (error "expected a state" next1))
   (if (and next2 (not (state? next2)))
       (error "expected a state" next2))
-  (%make-state accept? chars match match-rule next1 next2))
+  (%make-state accept? chars match match-rule next1 next2 id))
 
 (define ~none 0)
 (define ~ci? 1)
@@ -67,19 +71,19 @@
    (char-set)
    cset))
 
-(define (make-char-state ch flags next)
+(define (make-char-state ch flags next id)
   (if (flag-set? flags ~ci?)
       (let ((cset (cond ((char? ch) (char-set-ci (char-set ch)))
                         ((char-set? ch) (char-set-ci ch))
                         (else ch))))
-        (make-state #f cset #f #f next #f))
-      (make-state #f ch #f #f next #f)))
-(define (make-fork-state next1 next2)
-  (make-state #f #f #f #f next1 next2))
-(define (make-epsilon-state next)
-  (make-fork-state next #f))
-(define (make-accept-state)
-  (make-state #t #f #f #f #f #f))
+        (make-state #f cset #f #f next #f id))
+      (make-state #f ch #f #f next #f id)))
+(define (make-fork-state next1 next2 id)
+  (make-state #f #f #f #f next1 next2 id))
+(define (make-epsilon-state next id)
+  (make-fork-state next #f id))
+(define (make-accept-state id)
+  (make-state #t #f #f #f #f #f id))
 
 ;; A record holding the current match data - essentially a wrapper
 ;; around a vector, plus a reference to the RX for meta-info.
@@ -253,9 +257,10 @@
   (matches searcher-matches searcher-matches-set!))
 
 ;; Merge two regexp-matches, preferring the leftmost-longest of their
-;; matches.
+;; matches, or shortest for non-greedy matches.
 (define (regexp-match>=? m1 m2)
-  (let ((end (- (vector-length (regexp-match-matches m1)) 1)))
+  (let ((non-greedy-indexes (rx-non-greedy-indexes (regexp-match-rx m1)))
+        (end (- (vector-length (regexp-match-matches m1)) 1)))
     (let lp ((i 0))
       (cond
        ((>= i end)
@@ -265,20 +270,25 @@
              (eqv? (regexp-match-ref m1 (+ i 1))
                    (regexp-match-ref m2 (+ i 1))))
         (lp (+ i 2)))
-       ((and (string-cursor? (regexp-match-ref m2 i))
-             (or (not (string-cursor? (regexp-match-ref m1 i)))
-                 (string-cursor<? (regexp-match-ref m2 i)
-                                  (regexp-match-ref m1 i))
-                 (and
-                  (string-cursor=? (regexp-match-ref m2 i)
-                                   (regexp-match-ref m1 i))
-                  (or (not (string-cursor? (regexp-match-ref m2 (+ i 1))))
-                      (and (string-cursor? (regexp-match-ref m1 (+ i 1)))
-                           (string-cursor>? (regexp-match-ref m2 (+ i 1))
-                                            (regexp-match-ref m1 (+ i 1))))))))
-        #f)
        (else
-        #t)))))
+        (not
+         (and (string-cursor? (regexp-match-ref m2 i))
+              (or (not (string-cursor? (regexp-match-ref m1 i)))
+                  (string-cursor<? (regexp-match-ref m2 i)
+                                   (regexp-match-ref m1 i))
+                  ;; sanity check for incompletely advanced epsilons
+                  (and (string-cursor? (regexp-match-ref m1 (+ i 1)))
+                       (string-cursor<? (regexp-match-ref m1 (+ i 1))
+                                        (regexp-match-ref m1 i)))
+                  ((if (memq (+ i 1) non-greedy-indexes) not values)
+                   (and
+                    (string-cursor=? (regexp-match-ref m2 i)
+                                     (regexp-match-ref m1 i))
+                    (or (not (string-cursor? (regexp-match-ref m2 (+ i 1))))
+                        (and (string-cursor? (regexp-match-ref m1 (+ i 1)))
+                             (string-cursor>?
+                              (regexp-match-ref m2 (+ i 1))
+                              (regexp-match-ref m1 (+ i 1)))))))))))))))
 
 (define (regexp-match-max m1 m2)
   (if (regexp-match>=? m1 m2) m1 m2))
@@ -287,7 +297,8 @@
 ;; match in the event of a conflict.
 (define (searcher-merge! sr1 sr2)
   (let ((m (regexp-match-max (searcher-matches sr1) (searcher-matches sr2))))
-    (searcher-matches-set! sr1 m)))
+    (if (not (eq? m (searcher-matches sr1)))
+        (searcher-matches-set! sr1 (copy-regexp-match m)))))
 
 (define (searcher-max sr1 sr2)
   (if (or (not (searcher? sr2))
@@ -365,8 +376,9 @@
       ;; Update match data.
       (cond
        ((state-match st)
-        (let ((index (state-match st))
-              (matches (searcher-matches sr)))
+        (let* ((index (state-match st))
+               (matches (searcher-matches sr))
+               (before (copy-regexp-match matches)))
           (cond
            ((pair? index)
             ;; Submatch list, accumulate and push.
@@ -374,7 +386,10 @@
                    (new (cons (match-collect matches (cdr index))
                               (if (pair? prev) prev '()))))
               (regexp-match-set! matches (car index) new)))
-           (else
+           ((not (and (eq? 'non-greedy-left (state-match-rule st))
+                      (regexp-match-ref matches index)
+                      (string-cursor>=? (regexp-match-ref matches index)
+                                        (regexp-match-ref matches (- index 1)))))
             (regexp-match-set! matches index i))))))
       ;; Follow transitions.
       (cond
@@ -389,17 +404,17 @@
           (cond
            ((state-matches? st str i ch start end (searcher-matches sr))
             (posse-add! seen sr)
-            (let ((next1 (state-next1 st))
-                  (next2 (state-next2 st)))
+            (let* ((next1 (state-next1 st))
+                   (next2 (state-next2 st))
+                   (matches
+                    (and next2 (searcher-matches sr))))
               (cond
                (next1
                 (searcher-state-set! sr next1)
-                (advance! sr))) 
+                (advance! (make-searcher next1 (copy-regexp-match (searcher-matches sr))))))
               (cond
                (next2
-                (let ((sr2 (make-searcher
-                            next2
-                            (copy-regexp-match (searcher-matches sr)))))
+                (let ((sr2 (make-searcher next2 (copy-regexp-match matches))))
                   (advance! sr2)))))))))
        ;; Non-special, non-epsilon searcher, add to posse.
        ((posse-ref new sr)
@@ -407,7 +422,20 @@
         => (lambda (sr-prev) (searcher-merge! sr-prev sr)))
        (else
         ;; Add new searcher.
-        (posse-add! new sr))))))
+        (posse-add! new sr)))
+      (let ((ls (hash-table-values new)))
+        (for-each
+         (lambda (sr1)
+           (for-each
+            (lambda (sr2)
+              (cond
+               ((and (not (eq? sr1 sr2))
+                     (eq? (searcher-matches sr1) (searcher-matches sr2))))
+               ((and (not (eq? sr1 sr2))
+                     (eq? (regexp-match-matches (searcher-matches sr1))
+                          (regexp-match-matches (searcher-matches sr2)))))))
+            ls))
+         ls)))))
 
 ;; Run so long as there is more to match.
 
@@ -424,7 +452,7 @@
        ((or search? (string-cursor=? i start))
         (posse-advance! searchers1 epsilons accept (make-start-searcher rx str)
                         str i start end)
-        (posse-clear! epsilons))) 
+        (posse-clear! epsilons)))
       (cond
        ((or (string-cursor>=? i end)
             (and search?
@@ -632,6 +660,15 @@
                           '(|\|| or w/case w/nocase w/unicode w/ascii))
                     (every char-set-sre? (cdr sre)))))))
 
+(define (non-greedy-sre? sre)
+  (and (pair? sre)
+       (or (memq (car sre) '(?? *? **? non-greedy-optional
+                             non-greedy-zero-or-more non-greedy-repeated))
+           (and (memq (car sre) '(: seq w/case w/nocase w/unicode w/ascii))
+                (non-greedy-sre? (car (reverse sre))))
+           (and (eq? (car sre) 'or)
+                (any non-greedy-sre? (cdr sre))))))
+
 (define (valid-sre? x)
   (guard (exn (else #f)) (regexp x) #t))
 
@@ -705,40 +742,47 @@
 (define (regexp sre . o)
   (define current-index 2)
   (define current-match 0)
+  (define current-id 0)
   (define match-names '())
   (define match-rules (list (cons 0 1)))
+  (define non-greedy-indexes '())
+  (define (next-id)
+    (let ((res current-id)) (set! current-id (+ current-id 1)) res))
   (define (make-submatch-state sre flags next index)
-    (let* ((n3 (make-epsilon-state next))
+    (let* ((n3 (make-epsilon-state next (next-id)))
            (n2 (->rx sre flags n3))
-           (n1 (make-epsilon-state n2)))
+           (n1 (make-epsilon-state n2 (next-id)))
+           (non-greedy? (non-greedy-sre? sre)))
       (state-match-set! n1 index)
       (state-match-rule-set! n1 'left)
       (state-match-set! n3 (+ index 1))
-      (state-match-rule-set! n3 'right)
+      (state-match-rule-set! n3 (if non-greedy? 'non-greedy-left 'right))
+      (if non-greedy?
+          (set! non-greedy-indexes (cons (+ index 1) non-greedy-indexes)))
       n1))
   (define (->rx sre flags next)
     (cond
      ;; The base cases chars and strings match literally.
      ((char? sre)
-      (make-char-state sre flags next))
+      (make-char-state sre flags next (next-id)))
      ((char-set? sre)
-      (make-char-state sre flags next))
+      (make-char-state sre flags next (next-id)))
      ((string? sre)
       (->rx (cons 'seq (string->list sre)) flags next))
      ((and (symbol? sre) (lookup-char-set sre flags))
-      => (lambda (cset) (make-char-state cset ~none next)))
+      => (lambda (cset) (make-char-state cset ~none next (next-id))))
      ((symbol? sre)
       (case sre
         ((epsilon) next)
-        ((bos) (make-char-state match/bos flags next))
-        ((eos) (make-char-state match/eos flags next))
-        ((bol) (make-char-state match/bol flags next))
-        ((eol) (make-char-state match/eol flags next))
-        ((bow) (make-char-state match/bow flags next))
-        ((eow) (make-char-state match/eow flags next))
-        ((nwb) (make-char-state match/nwb flags next))
-        ((bog) (make-char-state match/bog flags next))
-        ((eog) (make-char-state match/eog flags next))
+        ((bos) (make-char-state match/bos flags next (next-id)))
+        ((eos) (make-char-state match/eos flags next (next-id)))
+        ((bol) (make-char-state match/bol flags next (next-id)))
+        ((eol) (make-char-state match/eol flags next (next-id)))
+        ((bow) (make-char-state match/bow flags next (next-id)))
+        ((eow) (make-char-state match/eow flags next (next-id)))
+        ((nwb) (make-char-state match/nwb flags next (next-id)))
+        ((bog) (make-char-state match/bog flags next (next-id)))
+        ((eog) (make-char-state match/eog flags next (next-id)))
         ((grapheme)
          (->rx
           `(or (: (* ,char-set:hangul-l) (+ ,char-set:hangul-v)
@@ -768,7 +812,7 @@
              next
              ;; Make a dummy intermediate to join the states so that
              ;; we can generate n1 first, preserving the submatch order.
-             (let* ((n2 (make-epsilon-state #f))
+             (let* ((n2 (make-epsilon-state #f (next-id)))
                     (n1 (->rx (cadr sre) flags n2))
                     (n3 (->rx (cons 'seq (cddr sre)) flags next)))
                (state-next1-set! n2 n3)
@@ -781,30 +825,32 @@
           ((null? (cdr sre))
            #f)
           ((char-set-sre? sre)
-           (make-char-state (sre->char-set sre) flags next))
+           (make-char-state (sre->char-set sre) flags next (next-id)))
           ((null? (cddr sre))
            (->rx (cadr sre) flags next))
           (else
            (let* ((n1 (->rx (cadr sre) flags next))
                   (n2 (->rx (cons 'or (cddr sre)) flags next)))
-             (make-fork-state n1 n2)))))
-        ((? optional)
+             (make-fork-state n1 n2 (next-id))))))
+        ((? optional ?? non-greedy-optional)
          ;; Optionality.  Either match the body or fork to the next
          ;; state directly.
-         (make-fork-state (->rx (cons 'seq (cdr sre)) flags next) next))
-        ((* zero-or-more)
+         (make-fork-state (->rx (cons 'seq (cdr sre)) flags next)
+                          next (next-id)))
+        ((* zero-or-more *? non-greedy-zero-or-more)
          ;; Repetition.  Introduce two fork states which can jump from
          ;; the end of the loop to the beginning and from the
          ;; beginning to the end (to skip the first iteration).
-         (let* ((n2 (make-fork-state next #f))
-                (n1 (make-fork-state (->rx (cons 'seq (cdr sre)) flags n2) n2)))
+         (let* ((n2 (make-fork-state next #f (next-id)))
+                (n1 (make-fork-state (->rx (cons 'seq (cdr sre)) flags n2)
+                                     n2 (next-id))))
            (state-next2-set! n2 n1)
            n1))
         ((+ one-or-more)
          ;; One-or-more repetition.  Same as above but the first
          ;; transition is required so the rx is simpler - we only
          ;; need one fork from the end of the loop to the beginning.
-         (let* ((n2 (make-fork-state next #f))
+         (let* ((n2 (make-fork-state next #f (next-id)))
                 (n1 (->rx (cons 'seq (cdr sre)) flags n2)))
            (state-next2-set! n2 n1)
            n1))
@@ -816,7 +862,7 @@
          ;; n-or-more repetition.
          (->rx (sre-expand-reps (cadr sre) #f (cons 'seq (cddr sre)))
                flags next))
-        ((** repeated)
+        ((** repeated **? non-greedy-repeated)
          ;; n-to-m repetition.
          (->rx (sre-expand-reps (cadr sre) (car (cddr sre))
                                 (cons 'seq (cdr (cddr sre))))
@@ -864,13 +910,13 @@
              (set! current-match (+ current-match 1))
              (set! current-index (+ current-index 1))
              (set! match-rules `(,index ,@match-rules))
-             (let* ((n2 (make-epsilon-state next))
+             (let* ((n2 (make-epsilon-state next (next-id)))
                     (n1 (->rx (cons 'submatch (cdr sre)) flags n2)))
                (state-match-set! n2 (list index num current-match))
                (state-match-rule-set! n2 'list)
                n1)))))
         ((~ - & / complement difference and char-range char-set)
-         (make-char-state (sre->char-set sre flags) ~none next))
+         (make-char-state (sre->char-set sre flags) ~none next (next-id)))
         ((word)
          (->rx `(: bow ,@(cdr sre) eow) flags next))
         ((word+)
@@ -893,13 +939,50 @@
          (->rx `(: ,@(cdr sre)) (flag-join flags ~nocapture?) next))
         (else
          (if (string? (car sre))
-             (make-char-state (sre->char-set sre flags) ~none next)
+             (make-char-state (sre->char-set sre flags) ~none next (next-id))
              (error "unknown sre" sre)))))))
   (let ((flags (parse-flags (and (pair? o) (car o)))))
     (if (regexp? sre)
         sre
-        (let ((start (make-submatch-state sre flags (make-accept-state) 0)))
-          (make-rx start current-match current-index
+        (let ((start (make-submatch-state
+                      sre flags (make-accept-state (next-id)) 0)))
+          ;; (define (state->list st)
+          ;;   (let ((seen (make-hash-table eq?))
+          ;;         (count 0))
+          ;;     (reverse
+          ;;      (let lp ((st st) (res '()))
+          ;;        (cond
+          ;;         ((not (state? st)) res)
+          ;;         ((hash-table-ref/default seen st #f) res)
+          ;;         (else
+          ;;          (hash-table-set! seen st count)
+          ;;          (let ((orig-count count))
+          ;;            (set! count (+ count 1))
+          ;;            (let* ((next1 (lp (state-next1 st) '()))
+          ;;                   (next2 (lp (state-next2 st) '()))
+          ;;                   (this (append
+          ;;                          (list (state-id st) ;;orig-count
+          ;;                                (cond
+          ;;                                 ((epsilon-state? st)
+          ;;                                  (if (state-chars st) '? '-))
+          ;;                                 ((and (char-set? (state-chars st))
+          ;;                                       (< (char-set-size (state-chars st)) 5))
+          ;;                                  (char-set->string (state-chars st)))
+          ;;                                 ((char? (state-chars st))
+          ;;                                  (string (state-chars st)))
+          ;;                                 (else '+))
+          ;;                                (cond
+          ;;                                 ((state-next1 st) => state-id)
+          ;;                                 (else #f)))
+          ;;                          (if (state-next2 st)
+          ;;                              (list (state-id (state-next2 st)))
+          ;;                              '())
+          ;;                          (if (state-match st)
+          ;;                              (list (list 'm (state-match st)))
+          ;;                              '()))))
+          ;;              (append next2 next1 (cons this res))))))))))
+          ;;(for-each (lambda (x) (write x) (newline)) (state->list start))
+          (make-rx start current-match current-index non-greedy-indexes
                    (list->vector (reverse match-rules)) match-names sre)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
