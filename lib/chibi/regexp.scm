@@ -422,20 +422,7 @@
         => (lambda (sr-prev) (searcher-merge! sr-prev sr)))
        (else
         ;; Add new searcher.
-        (posse-add! new sr)))
-      (let ((ls (hash-table-values new)))
-        (for-each
-         (lambda (sr1)
-           (for-each
-            (lambda (sr2)
-              (cond
-               ((and (not (eq? sr1 sr2))
-                     (eq? (searcher-matches sr1) (searcher-matches sr2))))
-               ((and (not (eq? sr1 sr2))
-                     (eq? (regexp-match-matches (searcher-matches sr1))
-                          (regexp-match-matches (searcher-matches sr2)))))))
-            ls))
-         ls)))))
+        (posse-add! new sr))))))
 
 ;; Run so long as there is more to match.
 
