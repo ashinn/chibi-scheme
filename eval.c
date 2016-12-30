@@ -747,7 +747,6 @@ static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
   sexp_gc_preserve1(ctx, cell);
   cell = sexp_env_cell_loc(ctx, env, x, 0, varenv);
   if (! cell) {
-    while (sexp_synclop(x)) x = sexp_synclo_expr(x);
     cell = sexp_env_cell_create(ctx, env, x, SEXP_UNDEF, varenv);
   }
   if (sexp_macrop(sexp_cdr(cell)) || sexp_corep(sexp_cdr(cell))) {

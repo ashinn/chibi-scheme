@@ -509,6 +509,18 @@
  (foo bar x)
  (test 'x (bar 1)))
 
+(begin
+  (define-syntax ffoo
+    (syntax-rules ()
+      ((ffoo ff)
+       (begin
+         (define (ff x)
+           (gg x))
+         (define (gg x)
+           (* x x))))))
+  (ffoo ff)
+  (test 100 (ff 10)))
+
 (test-end)
 
 (test-begin "5 Program structure")
