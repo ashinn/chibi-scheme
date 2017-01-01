@@ -460,6 +460,11 @@
     (part-2x (10 (+ 21 22) (31 32) (41 42) (51 52) (+ 61 2) 77 . "tail")))
 
 ;; underscore
+(define-syntax underscore
+  (syntax-rules ()
+    ((foo _) '_)))
+(test '_ (underscore foo))
+
 (define-syntax count-to-2
   (syntax-rules ()
     ((_) 0)

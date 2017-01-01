@@ -706,7 +706,8 @@
         (_reverse (rename 'reverse))
         (_vector->list (rename 'vector->list))
         (_list->vector (rename 'list->vector))
-        (_cons3 (rename 'cons-source)))
+        (_cons3 (rename 'cons-source))
+        (_underscore (rename '_)))
     (define ellipsis (if ellipsis-specified? (cadr expr) (rename '...)))
     (define lits (if ellipsis-specified? (car (cddr expr)) (cadr expr)))
     (define forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr)))
@@ -729,7 +730,9 @@
                  (list _and
                        (list _compare v (list _rename (list _quote p)))
                        (k vars))
-                 (list _let (list (list p v)) (k (cons (cons p dim) vars)))))
+                 (if (compare p _underscore)
+                     (k vars)
+                     (list _let (list (list p v)) (k (cons (cons p dim) vars))))))
             ((ellipsis? p)
              (cond
               ((not (null? (cdr (cdr p))))
