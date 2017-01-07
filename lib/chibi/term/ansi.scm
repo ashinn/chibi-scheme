@@ -385,9 +385,10 @@
 ;;> of the latter determines the initial value returned by
 ;;> \scheme{(ansi-escapes-enabled?)}. If the value of \scheme{TERM}
 ;;> is \scheme{"xterm"}, \scheme{"xterm-color"}, \scheme{"xterm-256color"},
-;;> \scheme{"rxvt"}, \scheme{"kterm"}, \scheme{"linux"}, \scheme{"screen"},
-;;> \scheme{"screen-256color"}, or \scheme{"vt100"}, the initial value
-;;> is \scheme{#t}, otherwise the initial value is \scheme{#f}.
+;;> \scheme{"rxvt"}, \scheme{"rxvt-unicode-256color"}, \scheme{"kterm"},
+;;> \scheme{"linux"}, \scheme{"screen"}, \scheme{"screen-256color"},
+;;> or \scheme{"vt100"}, the initial value is \scheme{#t}, otherwise
+;;> the initial value is \scheme{#f}.
 ;;>
 ;;> If neither of the environment variables \scheme{ANSI_ESCAPES_ENABLED}
 ;;> and \scheme{TERM} are set, the initial value returned by
@@ -401,7 +402,8 @@
     (else
      (member (get-environment-variable "TERM")
              '("xterm" "xterm-color" "xterm-256color" "rxvt" "kterm"
-               "linux" "screen" "screen-256color" "vt100"))))))
+               "linux" "screen" "screen-256color" "vt100"
+               "rxvt-unicode-256color"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
