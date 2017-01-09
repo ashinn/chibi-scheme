@@ -93,6 +93,11 @@ sexp sexp_get_procedure_variadic_p (sexp ctx, sexp self, sexp_sint_t n, sexp pro
   return sexp_make_boolean(sexp_procedure_variadic_p(proc));
 }
 
+sexp sexp_get_procedure_flags (sexp ctx, sexp self, sexp_sint_t n, sexp proc) {
+  sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, proc);
+  return sexp_make_fixnum(sexp_procedure_flags(proc));
+}
+
 sexp sexp_get_opcode_name (sexp ctx, sexp self, sexp_sint_t n, sexp op) {
   if (! sexp_opcodep(op))
     return sexp_type_exception(ctx, self, SEXP_OPCODE, op);
@@ -643,6 +648,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "procedure-vars", 1, sexp_get_procedure_vars);
   sexp_define_foreign(ctx, env, "procedure-arity", 1, sexp_get_procedure_arity);
   sexp_define_foreign(ctx, env, "procedure-variadic?", 1, sexp_get_procedure_variadic_p);
+  sexp_define_foreign(ctx, env, "procedure-flags", 1, sexp_get_procedure_flags);
   sexp_define_foreign(ctx, env, "copy-lambda", 1, sexp_copy_lambda);
   sexp_define_foreign_opt(ctx, env, "make-lambda", 4, sexp_make_lambda_op, SEXP_NULL);
   sexp_define_foreign_opt(ctx, env, "make-cnd", 3, sexp_make_cnd_op, SEXP_VOID);
