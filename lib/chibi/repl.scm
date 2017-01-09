@@ -295,7 +295,7 @@
           (cond
            ((pair? mods)
             (display name out)
-            (display " is exported by:\n")
+            (display " is exported by:\n" out)
             (for-each
              (lambda (m)
                (display "  " out) (write m out) (newline out))
@@ -303,7 +303,7 @@
                    (lambda (a b)
                      (string<? (write-to-string a) (write-to-string b))))))
            (else
-            (display "... none found.\n"))))))))))
+            (display "... none found.\n" out))))))))))
 
 (define (repl/eval rp expr-list)
   (let ((out (repl-out rp)))
