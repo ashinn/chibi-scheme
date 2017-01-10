@@ -6,7 +6,7 @@
    (define-syntax let*-values
      (syntax-rules ()
        ((let*-values () . body)
-        (begin . body))
+        (let () . body))
        ((let*-values (((a) expr) . rest) . body)
         (let ((a expr)) (let*-values rest . body)))
        ((let*-values ((params expr) . rest) . body)
@@ -14,6 +14,8 @@
           (lambda params (let*-values rest . body))))))
    (define-syntax let-values
      (syntax-rules ()
+       ((let-values () . body)
+	(let () . body))
        ((let-values ("step") (binds ...) bind expr maps () () . body)
         (let*-values (binds ... (bind expr)) (let maps . body)))
        ((let-values ("step") (binds ...) bind old-expr maps () ((params expr) . rest) . body)
@@ -23,5 +25,4 @@
        ((let-values ("step") binds (bind ...) expr (maps ...) x rest . body)
         (let-values ("step") binds (bind ... . tmp) expr (maps ... (x tmp)) () rest . body))
        ((let-values ((params expr) . rest) . body)
-        (let-values ("step") () () expr () params rest . body))
-       ))))
+        (let-values ("step") () () expr () params rest . body))))))
