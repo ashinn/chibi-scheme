@@ -160,7 +160,7 @@
     (tar-ustar-version-set! tar "00")
     (cond
      (st
-      (tar-mode-set! tar (file-mode st))
+      (tar-mode-set! tar (bitwise-and #o7777 (file-mode st)))
       (tar-uid-set! tar (file-owner st))
       (tar-gid-set! tar (file-group st))
       (tar-owner-set! tar (file-owner-or-nobody st))
