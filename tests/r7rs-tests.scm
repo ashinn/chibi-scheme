@@ -237,6 +237,14 @@
                 ((x y) (values a b)))
     (list a b x y))))
 
+(test 'ok (let-values () 'ok))
+
+(test 1 (let ((x 1))
+	  (let*-values ()
+	    (define x 2)
+	    #f)
+	  x))
+
 (let ()
   (define x 0)
   (set! x 5)
