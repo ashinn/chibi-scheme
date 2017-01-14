@@ -430,38 +430,63 @@
        #f)))
    (else #f)))
 
+(define (library-analyze-body impl config body dir)
+  (let lp ((ls body) (include-decls '()) (res '()))
+    (cond
+     ((null? ls) (values (reverse res) (reverse include-decls)))
+     (else
+      (let ((decl (car ls)))
+        (case (and (pair? decl) (car decl))
+          ((cond-expand)
+           (cond
+            ((find (lambda (x) (check-cond-expand impl config (car x)))
+                   (cdar ls))
+             => (lambda (x) (lp (append (cdr x) (cdr ls)) include-decls res)))
+            (else (lp (cdr ls) include-decls res))))
+          ((include-library-declarations)
+           (let* ((ls (if (pair? (cddr decl))
+                          `((include-library-declarations ,@(cddr decl))
+                            ,@(cdr ls))
+                          (cdr ls)))
+                  (file (make-path dir (cadr decl)))
+                  (dir (path-directory file))
+                  (include-decls (cons file include-decls))
+                  (sexp (call-with-input-file file port->sexp-list)))
+             (if (and (pair? sexp) (list? sexp))
+                 (let-values (((lib sub-include-decls)
+                               (library-analyze-body impl config sexp dir)))
+                   (lp ls
+                       (append (reverse sub-include-decls) include-decls)
+                       (append (reverse lib) res)))
+                 (lp ls include-decls res))))
+          (else
+           (lp (cdr ls)
+               include-decls
+               (if (pair? decl) (cons decl res) res)))))))))
+
 ;; We can't use the native library system introspection since we may
 ;; be analyzing a library which can't be loaded in the native system.
 (define (library-analyze impl config file)
   (let ((sexp (call-with-input-file file read)))
     (and (list? sexp)
          (memq (car sexp) '(define-library library define-module module))
-         (let analyze ((ls (cddr sexp)))
-           (cond
-            ((null? ls) '())
-            (else
-             (append
-              (case (caar ls)
-                ((cond-expand)
-                 (cond
-                  ((find (lambda (x) (check-cond-expand impl config (car x)))
-                         (cdar ls))
-                   => (lambda (x) (analyze (cdr x))))
-                  (else (analyze (cdr ls)))))
-                (else (list (car ls))))
-              (analyze (cdr ls)))))))))
+         (pair? sexp)
+         (pair? (cdr sexp))
+         (library-analyze-body impl config (cddr sexp) (path-directory file)))))
 
 (define (library-include-files impl config file)
-  (let ((lib (library-analyze impl config file))
-        (dir (path-directory file)))
-    (append-map
-     (lambda (x) (map (lambda (y) (make-path dir y)) (cdr x)))
-     (filter (lambda (x) (and (pair? x) (memq (car x) '(include include-ci))))
-             lib))))
+  (let-values (((lib include-decls) (library-analyze impl config file))
+               ((dir) (path-directory file)))
+    (append
+     (append-map
+      (lambda (x) (map (lambda (y) (make-path dir y)) (cdr x)))
+      (filter (lambda (x) (and (pair? x) (memq (car x) '(include include-ci))))
+              lib))
+     include-decls)))
 
 (define (library-shared-include-files impl config file)
-  (let ((lib (library-analyze impl config file))
-        (dir (path-directory file)))
+  (let-values (((lib include-decls) (library-analyze impl config file))
+               ((dir) (path-directory file)))
     (append-map
      (lambda (x) (map (lambda (y) (make-path dir y)) (cdr x)))
      (filter (lambda (x) (and (pair? x) (eq? (car x) 'include-shared)))
