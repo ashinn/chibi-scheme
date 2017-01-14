@@ -41,6 +41,7 @@
 (define chibi-path "./chibi-scheme")
 (define (snow-command . args)
   `("./tools/snow-chibi"
+    --verbose
     --always-no
     --implementations "chibi"
     --chibi-path ,(string-append chibi-path " -A" install-libdir)

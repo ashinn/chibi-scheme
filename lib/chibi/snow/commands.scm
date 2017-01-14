@@ -1294,7 +1294,7 @@
        (list
         (if (file-exists? dir)  ; repository-path should always exist
             dir
-            (make-path (or (conf-get cfg 'install-prefix)) "lib" impl 7)))))
+            (make-path (or (conf-get cfg 'install-prefix)) "lib" impl 8)))))
     ((gauche)
      (list
       (let ((dir (string-trim
@@ -1586,7 +1586,7 @@
    ((conf-get cfg 'install-library-dir))
    ((eq? impl 'chicken)
     (cond ((conf-get cfg 'install-prefix)
-           => (lambda (prefix) (make-path prefix "lib" impl 7)))
+           => (lambda (prefix) (make-path prefix "lib" impl 8)))
           (else
            (car (get-install-dirs impl cfg)))))
    ((conf-get cfg 'install-prefix)
@@ -2197,6 +2197,11 @@
              impl-cfgs)))
     (for-each
      (lambda (impl cfg pkgs)
+       (when (conf-get cfg 'verbose?)
+         (if (pair? pkgs)
+             (info `(installing packages: ,(map package-name pkgs) for ,impl)))
+         (if (pair? package-files)
+             (info `(installing files: ,package-files for ,impl))))
        ;; install by name and dependency
        (install-for-implementation repo impl cfg pkgs)
        ;; install by file
