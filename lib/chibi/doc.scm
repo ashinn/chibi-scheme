@@ -195,6 +195,7 @@
      (margin-note . ,expand-note)
      (example . ,expand-example)
      (example-import . ,expand-example-import)
+     (example-import-only . ,expand-example-import-only)
      )))
 
 ;;> Return a new document environment as in
@@ -206,9 +207,9 @@
 (define (make-module-doc-env mod-name)
   (env-extend (make-default-doc-env)
               '(example-env)
-              (list (environment '(scheme small)
-                                 '(only (chibi) import)
-                                 mod-name))))
+              (list (delay (environment '(scheme small)
+                                        '(only (chibi) import)
+                                        mod-name)))))
 
 (define (section-name tag name)
   (string-strip
@@ -269,7 +270,8 @@
 
 (define (expand-example x env)
   (let ((expr `(begin ,@(sxml->sexp-list x)))
-        (example-env (or (env-ref env 'example-env) (current-environment))))
+        (example-env
+         (force (or (env-ref env 'example-env) (current-environment)))))
     `(div
       ,(expand-codeblock `(,(car x) language: scheme ,@(cdr x)) env)
       (code
@@ -283,7 +285,11 @@
 
 (define (expand-example-import x env)
   (eval `(import ,@(cdr x))
-        (or (env-ref env 'example-env) (current-environment)))
+        (force (or (env-ref env 'example-env) (current-environment))))
+  "")
+
+(define (expand-example-import-only x env)
+  (env-set! env 'example-env (apply environment (cdr x)))
   "")
 
 (define (expand-command sxml env)
