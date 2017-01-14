@@ -1271,6 +1271,11 @@
 ;; If multiple implementations are targeted, we install separately but
 ;; use the same confirmations for each.
 
+(define (get-chicken-binary-version cfg)
+  (or (conf-get cfg 'chicken-binary-version)
+      (string->number (process->string '(csi -p "(##sys#fudge 42)")))
+      8))
+
 (define (get-install-dirs impl cfg)
   (define (guile-eval expr)
     (guard (exn (else #f))
@@ -1294,7 +1299,8 @@
        (list
         (if (file-exists? dir)  ; repository-path should always exist
             dir
-            (make-path (or (conf-get cfg 'install-prefix)) "lib" impl 8)))))
+            (make-path (or (conf-get cfg 'install-prefix)) "lib" impl
+                       (get-chicken-binary-version cfg))))))
     ((gauche)
      (list
       (let ((dir (string-trim
@@ -1586,7 +1592,9 @@
    ((conf-get cfg 'install-library-dir))
    ((eq? impl 'chicken)
     (cond ((conf-get cfg 'install-prefix)
-           => (lambda (prefix) (make-path prefix "lib" impl 8)))
+           => (lambda (prefix)
+                (make-path prefix "lib" impl
+                           (get-chicken-binary-version cfg))))
           (else
            (car (get-install-dirs impl cfg)))))
    ((conf-get cfg 'install-prefix)
