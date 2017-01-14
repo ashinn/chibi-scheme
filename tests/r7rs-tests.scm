@@ -534,6 +534,12 @@
   (ffoo ff)
   (test 100 (ff 10)))
 
+(let-syntax ((vector-lit
+               (syntax-rules ()
+                 ((vector-lit)
+                  '#(b)))))
+  (test '#(b) (vector-lit)))
+
 (test-end)
 
 (test-begin "5 Program structure")

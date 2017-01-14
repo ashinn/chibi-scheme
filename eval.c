@@ -618,6 +618,7 @@ static int sexp_cyclic_synclop(sexp x) {
 #endif
 
 sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
+  int i;
   sexp_gc_var3(res, kar, kdr);
   if (depth <= 0) return x;
   sexp_gc_preserve3(ctx, res, kar, kdr);
@@ -629,6 +630,9 @@ sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
     sexp_pair_source(res) = sexp_pair_source(x);
     sexp_immutablep(res) = 1;
   } else {
+    if (sexp_vectorp(x))
+      for (i = 0; i < sexp_vector_length(x); ++i)
+        sexp_vector_set(x, sexp_make_fixnum(i), sexp_strip_synclos_bound(ctx, sexp_vector_ref(x, sexp_make_fixnum(i)), depth-1));
     res = x;
   }
   sexp_gc_release3(ctx);
