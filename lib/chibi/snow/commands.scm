@@ -206,7 +206,12 @@
                     (append (map resolve includes) files)
                     chibi-ffi?))
                (('include-library-declarations includes ...)
-                (lp (append (append-map file->sexp-list includes) (cdr ls))
+                (lp (append (append-map
+                             (lambda (inc)
+                               (file->sexp-list
+                                (path-resolve inc (path-directory file))))
+                             includes)
+                            (cdr ls))
                     info
                     deps
                     (append (map resolve includes) files)

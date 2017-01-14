@@ -40,6 +40,7 @@
 ;; run snow-chibi command as a separate process with test defaults
 (define chibi-path "./chibi-scheme")
 (define (snow-command . args)
+  ;;(write `(snow ,@args)) (newline)
   `("./tools/snow-chibi"
     --verbose
     --always-no
@@ -189,21 +190,20 @@
       --description "Pythagoran Theorem"
       --test "tests/snow/repo3/pythagoras/hypotenuse-test.sch"
       tests/snow/repo3/pythagoras/hypotenuse.sch)
-;; (snow package --output-dir tests/snow/repo3/
-;;       --version 1.0 --authors "Seki Takakazu"
-;;       --description "Bernoulli Numbers"
-;;       --test "tests/snow/repo3/takakazu/bernoulli-test.scm"
-;;       tests/snow/repo3/takakazu/bernoulli.sld)
+(snow package --output-dir tests/snow/repo3/
+      --version 1.0 --authors "Seki Takakazu"
+      --description "Bernoulli Numbers"
+      --test "tests/snow/repo3/takakazu/bernoulli-test.scm"
+      tests/snow/repo3/takakazu/bernoulli.sld)
 (snow index ,(cadr repo3))
 (snow ,@repo3 install pingala.binomial)
 (snow ,@repo3 install euler.totient)
+(snow ,@repo3 install takakazu.bernoulli)
 (let ((status (snow-status)))
   (test-assert (installed-version status '(pingala binomial)))
   (test-assert (installed-version status '(pingala factorial)))
-  (test "2.7.1" (installed-version status '(euler totient))))
-;; (snow ,@repo3 install takakazu.bernoulli)
-;; (let ((status (snow-status)))
-;;   (test-assert (installed-version status '(takakazu bernoulli))))
+  (test "2.7.1" (installed-version status '(euler totient)))
+  (test-assert (installed-version status '(takakazu bernoulli))))
 
 ;; programs
 (snow ,@repo3 install pingala.triangle)
