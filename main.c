@@ -473,6 +473,10 @@ sexp run_main (int argc, char **argv) {
       init_context(); sexp_global(ctx, SEXP_G_STRICT_P) = SEXP_TRUE;
       handle_noarg();
       break;
+    case 'T':
+      init_context(); sexp_global(ctx, SEXP_G_NO_TAIL_CALLS_P) = SEXP_TRUE;
+      handle_noarg();
+      break;
     case 't':
       mods_loaded = 1;
       load_init(1);

@@ -475,7 +475,7 @@ static void generate_general_app (sexp ctx, sexp app) {
   sexp_generate(ctx, 0, 0, 0, sexp_car(app));
 
   /* maybe overwrite the current frame */
-  sexp_emit(ctx, (tailp ? SEXP_OP_TAIL_CALL : SEXP_OP_CALL));
+  sexp_emit(ctx, ((tailp && sexp_not(sexp_global(ctx, SEXP_G_NO_TAIL_CALLS_P))) ? SEXP_OP_TAIL_CALL : SEXP_OP_CALL));
   sexp_emit_word(ctx, (sexp_uint_t)sexp_make_fixnum(len));
 
   sexp_context_tailp(ctx) = (char)tailp;
