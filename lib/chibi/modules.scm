@@ -36,8 +36,21 @@
         ""
         (module-name-prefix name))))
 
-(define (module-metas mod metas)
-  (let ((mod (if (module? mod) mod (find-module mod))))
+;; assuming mod-name was found in file, resolves to the containing lib dir
+(define (module-lib-dir file mod-name)
+  (let lp ((ls (map (lambda (x)
+                      (if (number? x) (number->string x) (symbol->string x)))
+                    (reverse mod-name)))
+           (path (reverse (string-split (path-strip-extension file) #\/))))
+    (if (and (pair? ls) (pair? path) (equal? (car ls) (car path)))
+        (lp (cdr ls) (cdr path))
+        (if (null? path)
+            "."
+            (string-join (reverse path) "/")))))
+
+(define (module-metas mod metas . o)
+  (let* ((mod (if (module? mod) mod (find-module mod)))
+         (dir (if (pair? o) (car o) (module-dir mod))))
     (let lp ((ls (module-meta-data mod)) (res '()))
       (cond
        ((not (pair? ls)) (reverse res))
@@ -50,7 +63,7 @@
          (dir (module-dir mod)))
     (define (module-file f)
       (find-module-file (string-append dir f)))
-    (map module-file (reverse (module-metas mod decls)))))
+    (map module-file (reverse (module-metas mod decls dir)))))
 
 (define (module-includes mod)
   (module-extract-declaration-files mod '(include)))
@@ -71,8 +84,10 @@
 (define (analyze-module-source name mod recursive?)
   (let ((env (make-environment))
         (dir (module-dir mod)))
+    (define (resolve-file file)
+      (find-module-file (string-append dir file)))
     (define (include-source file)
-      (cond ((find-module-file (string-append dir file))
+      (cond ((resolve-file file)
              => (lambda (x) (cons 'begin (file->sexp-list x))))
             (else (error "couldn't find include" file))))
     (cond
@@ -100,7 +115,7 @@
           ((include include-ci)
            (lp (append (map include-source (cdar ls)) (cdr ls)) res))
           ((include-library-declarations)
-           (lp (append (append-map file->sexp-list (cdar ls)) (cdr ls)) res))
+           (lp (append (append-map file->sexp-list (map resolve-file (cdar ls))) (cdr ls)) res))
           ((begin body)
            (let lp2 ((ls2 (cdar ls)) (res res))
              (cond

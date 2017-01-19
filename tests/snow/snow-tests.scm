@@ -288,6 +288,8 @@
 
 (snow ,@repo4 package --output-dir tests/snow/repo4/
       tests/snow/repo4/euler/interest.sld)
+(snow ,@repo4 package --output-dir tests/snow/repo4/
+      tests/snow/repo4/euler/exponential.sld)
 (snow index ,(cadr repo4))
 (let* ((pkg-file "tests/snow/repo4/euler-interest-2.3.tgz")
        (pkg (package-file-meta pkg-file))
@@ -303,6 +305,21 @@
   (test '((import (rename (euler interest-test)
                           (run-tests run-euler-interest-test-tests)))
           (run-euler-interest-test-tests))
+      (snowball-test->sexp-list pkg pkg-file)))
+(let* ((pkg-file "tests/snow/repo4/euler-exponential-2.3.tgz")
+       (pkg (package-file-meta pkg-file))
+       (libs (package-libraries pkg)))
+  (test 2 (length libs))
+  (for-each
+   (lambda (lib)
+     (test "Leonhard Euler" (assoc-get lib 'author)))
+   libs)
+  (test 'bsd (assoc-get pkg 'license))
+  (test "Library for computing the natural exponential function."
+      (assoc-get pkg 'description))
+  (test '((import (rename (euler exponential-test)
+                          (run-tests run-euler-exponential-test-tests)))
+          (run-euler-exponential-test-tests))
       (snowball-test->sexp-list pkg pkg-file)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
