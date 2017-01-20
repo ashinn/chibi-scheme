@@ -151,7 +151,7 @@ sexp sexp_make_random_source (sexp ctx, sexp self, sexp_sint_t n) {
   sexp_gc_var1(state);
   sexp_gc_preserve1(ctx, state);
   state = sexp_make_bytes(ctx, STATE_SIZE, SEXP_UNDEF);
-  res = sexp_alloc_tagged(ctx, sexp_sizeof_random, sexp_opcode_return_type(self));
+  res = sexp_alloc_tagged(ctx, sexp_sizeof_random, sexp_unbox_fixnum(sexp_opcode_return_type(self)));
   if (sexp_exceptionp(res)) return res;
   sexp_random_state(res) = state;
   sexp_random_init(res, 1);
