@@ -1,6 +1,6 @@
 (define-library (chibi math prime-test)
   (export run-tests)
-  (import (chibi) (chibi math prime) (chibi test))
+  (import (scheme base) (chibi math prime) (chibi test))
   (begin
     (define (run-tests)
 
