@@ -7,5 +7,32 @@
           buffer-clear buffer-refresh buffer-draw
           buffer-row buffer-col
           make-keymap make-standard-keymap)
-  (import (chibi) (chibi ast) (chibi stty) (chibi process) (srfi 9) (srfi 33))
+  (import (scheme base) (scheme char) (scheme write))
+  (cond-expand
+   ((library (srfi 33))
+    (import (srfi 33)))
+   (else
+    (import (srfi 60))))
+  (cond-expand
+   (chibi
+    (import (chibi stty)))
+   (chicken
+    (import stty))
+   (else
+    (define (with-stty spec thunk)
+      (thunk))))
+  (cond-expand
+   (chibi
+    (import (only (chibi) protect print-exception)
+            (chibi ast)))
+   (else
+    (begin
+      (define-syntax protect
+        (syntax-rules () (protect . x) (guard . x)))
+      (define (print-exception exn . o)
+        (let ((out (if (pair? o) (car o) (current-error-port))))
+          (write exn out)
+          (newline out)))
+      (define (exception? x) #f)
+      (define (exception-kind x) #f))))
   (include "edit-line.scm"))

@@ -1,6 +1,6 @@
 ;;;; edit-line.scm - pure scheme line editor
 ;;
-;; Copyright (c) 2011-2012 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2011-2017 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -11,7 +11,7 @@
   (write-char #\[ out)
   (if arg (display arg out))
   (write-char ch out)
-  (flush-output out))
+  (flush-output-port out))
 
 ;; we use zero-based columns
 (define (terminal-goto-col out n)  (terminal-escape out #\G (+ n 1)))
@@ -430,7 +430,7 @@
       (if (< (buffer-row buf) (buffer-max-row buf))
           (terminal-up out (- (buffer-max-row buf) (buffer-row buf))))))
     (terminal-goto-col out (buffer-col buf))
-    (flush-output out)
+    (flush-output-port out)
     (buffer-cleared?-set! buf #f)))
 
 (define (buffer-refresh buf out)
@@ -481,7 +481,7 @@
                (not (string-index #\newline x))))
       ;; fast path - append to end of buffer w/o wrapping to next line
       (display x out)
-      (flush-output out)
+      (flush-output-port out)
       (buffer-col-set! buf (+ (buffer-col buf) len))
       (buffer-cleared?-set! buf #f))
      (else
@@ -662,7 +662,7 @@
      (((buffer-complete? buf) buf)
       (command/end-of-line ch buf out return)
       (display "\r\n" out)
-      (flush-output out)
+      (flush-output-port out)
       (return))
      (else
       (command/self-insert ch buf out return)))))
@@ -679,7 +679,7 @@
   (display "^C" out)
   (newline out)
   (stty out '(icanon isig echo))
-  (exit))
+  (return '^C))
 
 (define (command/beep ch buf out return)
   (write-char (integer->char 7) out))
@@ -785,6 +785,7 @@
          (single-line? (get-key args 'single-line?: #f))
          (fresh-line (get-key args 'fresh-line: #f))
          (no-stty? (get-key args 'no-stty?: #f))
+         (hidden? (get-key args 'hidden?: #f))
          (keymap0 (get-key args 'keymap:
                            (if (get-key args 'catch-control-c?: #f)
                                standard-cancel-keymap
@@ -797,6 +798,7 @@
       (let* ((width (or terminal-width (get-terminal-width out) 80))
              (prompt (if (procedure? prompter) (prompter) prompter))
              (done? #f)
+             (tmp-out (if hidden? (open-output-string) out))
              (return (lambda o (set! done? (if (pair? o) (car o) #t)))))
         ;; Maybe start at a fresh line.
         (cond
@@ -815,7 +817,7 @@
         (buffer-single-line?-set! buf single-line?)
         (if single-line? (buffer-start-set! buf (buffer-min buf)))
         (buffer-refresh buf out)
-        (flush-output out)
+        (flush-output-port out)
         ((if no-stty? (lambda (out f) (f)) with-raw-io)
          out
          (lambda ()
@@ -833,9 +835,9 @@
                                       (buffer-clear buf out)
                                       (print-exception exn out)
                                       (buffer-draw buf out)))
-                         (x ch buf out return))
-                       (flush-output out)
-                       (buffer-refresh buf out)
+                         (x ch buf tmp-out return))
+                       (flush-output-port tmp-out)
+                       (buffer-refresh buf tmp-out)
                        (if done?
                            (and (not (eq? done? 'eof)) (buffer->string buf))
                            (lp keymap)))
