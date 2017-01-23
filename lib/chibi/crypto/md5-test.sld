@@ -1,6 +1,6 @@
 (define-library (chibi crypto md5-test)
   (export run-tests)
-  (import (chibi) (chibi crypto md5) (chibi test))
+  (import (scheme base) (chibi crypto md5) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "md5")
