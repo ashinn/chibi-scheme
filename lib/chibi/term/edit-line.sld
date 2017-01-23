@@ -27,8 +27,11 @@
             (chibi ast)))
    (else
     (begin
+      (define (with-raw-io port thunk)
+        (with-stty '(not icanon isig echo) thunk port))
+      (define (get-terminal-width . x) 80)
       (define-syntax protect
-        (syntax-rules () (protect . x) (guard . x)))
+        (syntax-rules () ((protect . x) (guard . x))))
       (define (print-exception exn . o)
         (let ((out (if (pair? o) (car o) (current-error-port))))
           (write exn out)
