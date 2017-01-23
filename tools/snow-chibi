@@ -1,13 +1,20 @@
 #!/bin/sh
 
 CHIBI=${CHIBI:-chibi-scheme}
+IMG=-isnow.img
 if [ -x ./chibi-scheme ] && ! type $CHIBI 2>/dev/null; then
     # convenience for running from dev, notable "make test-snow"
     CHIBI="./chibi-scheme"
     export LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}"
     export DYLD_LIBRARY_PATH=".:${DYLD_LIBRARY_PATH}"
 fi
+if [ "x$1" = "x--noimage" ]; then
+    shift
+    IMG=""
+elif ! $CHIBI $IMG -e1 >/dev/null 2>/dev/null; then
+    IMG=""
+fi
 SCRIPT_DIR=$(dirname $0)
 SNOW_SCRIPT=${SNOW_SCRIPT:-$SCRIPT_DIR/snow-chibi.scm}
 
-exec "${CHIBI}" -isnow.img "${SNOW_SCRIPT}" "$@"
+exec "${CHIBI}" $IMG "${SNOW_SCRIPT}" "$@"
