@@ -726,7 +726,7 @@
 (define current-test-verbosity
   (make-parameter
    (cond ((get-environment-variable "TEST_VERBOSE")
-          => (lambda (s) (not (member s "" "0"))))
+          => (lambda (s) (not (member s '("" "0")))))
          (else #f))))
 (define current-test-epsilon (make-parameter 1e-5))
 (define current-test-comparator (make-parameter test-equal?))
