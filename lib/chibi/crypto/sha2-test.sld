@@ -1,6 +1,6 @@
 (define-library (chibi crypto sha2-test)
   (export run-tests)
-  (import (chibi) (chibi io) (chibi crypto sha2) (chibi test))
+  (import (scheme base) (chibi crypto sha2) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "sha2")
