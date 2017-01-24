@@ -1132,8 +1132,10 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
   } else if (sexp_nullp(x)) {
     res = sexp_compile_error(ctx, "empty application in source", x);
   } else {
-    if (sexp_pointerp(x))      /* accept vectors and other literals directly, */
+    if (sexp_pointerp(x)) {    /* accept vectors and other literals directly, */
       sexp_immutablep(x) = 1;  /* but they must be immutable */
+      x = sexp_strip_synclos(ctx , NULL, 1, x);
+    }
     res = x;
   }
 
