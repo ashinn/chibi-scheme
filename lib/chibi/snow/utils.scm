@@ -76,3 +76,30 @@
 
 (define (version>? a b) (> (version-compare a b) 0))
 (define (version>=? a b) (>= (version-compare a b) 0))
+
+;; graph is a list of ((vertex dep-vertices ...) ...)
+(define (topological-sort graph . o)
+  (let ((eq (if (pair? o) (car o) equal?)))
+    (cdr
+     (let lp ((ls graph) (seen '()) (res '()))
+       (if (null? ls)
+           (cons seen res)
+           (let ((x (caar ls)))
+             (if (member x seen eq)
+                 (lp (cdr ls) seen res)
+                 (let lp2 ((ls2 (cdar ls))
+                           (seen (cons x seen))
+                           (res res))
+                   (cond
+                    ((null? ls2)
+                     (lp (cdr ls) seen (cons x res)))
+                    ((member (car ls2) seen eq)
+                     (lp2 (cdr ls2) seen res))
+                    ((assoc (car ls2) graph eq)
+                     => (lambda (vertices)
+                          (let ((tmp (lp (list vertices) seen res)))
+                            (lp2 (cdr ls2) (car tmp) (cdr tmp)))))
+                    (else
+                     (lp2 (cdr ls2)
+                          (cons (car ls2) seen)
+                          (cons (car ls2) res))))))))))))

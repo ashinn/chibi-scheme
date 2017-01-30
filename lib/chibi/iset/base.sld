@@ -7,6 +7,9 @@
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (include "base.scm")
+  (cond-expand  ;; workaround for #1342
+   (chicken (begin (define Integer-Set #f)))
+   (else))
   (export
    %make-iset make-iset iset? iset-contains? Integer-Set
    iset-start iset-end iset-bits iset-left iset-right

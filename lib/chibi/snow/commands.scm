@@ -2051,8 +2051,22 @@
      "pkg"
      (lambda (dir preserve)
        (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
-       (let ((libs (filter-map (lambda (lib) (build-library impl cfg lib dir))
-                               (package-libraries pkg))))
+       (let* ((ordered-lib-names
+               (reverse
+                (topological-sort
+                 (map (lambda (lib)
+                        (cons (library-name lib)
+                              (library-dependencies impl cfg lib)))
+                      (package-libraries pkg)))))
+              (ordered-libs
+               (filter-map
+                (lambda (lib-name)
+                  (find (lambda (x) (equal? lib-name (library-name x)))
+                        (package-libraries pkg)))
+                ordered-lib-names))
+              (_ (begin (write `(topo: ,(map library-name (package-libraries pkg)) -> ,ordered-lib-names -> ,ordered-libs)) (newline)))
+              (libs (filter-map (lambda (lib) (build-library impl cfg lib dir))
+                                ordered-libs)))
          (if (test-package impl cfg pkg dir)
              (let* ((data-files
                      (append-map

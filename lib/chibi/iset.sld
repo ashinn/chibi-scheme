@@ -7,7 +7,8 @@
 ;;> found in SRFI-14.
 
 (define-library (chibi iset)
-  (import (chibi iset base)
+  (import (scheme base)
+          (chibi iset base)
           (chibi iset iterators)
           (chibi iset constructors))
   (export

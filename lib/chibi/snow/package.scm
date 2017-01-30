@@ -1,4 +1,43 @@
 
+;; (chibi io) utils
+
+(define (port-fold kons knil . o)
+  (let ((read (if (pair? o) (car o) read))
+        (in (if (and (pair? o) (pair? (cdr o)))
+                (car (cdr o))
+                (current-input-port))))
+    (let lp ((acc knil))
+      (let ((x (read in)))
+        (if (eof-object? x) acc (lp (kons x acc)))))))
+
+(define (port-map fn . o)
+  (reverse (apply port-fold (lambda (x ls) (cons (fn x) ls)) '() o)))
+
+(define (port->list read in)
+  (port-map (lambda (x) x) read in))
+
+(define (port->sexp-list in)
+  (port->list read in))
+
+(define (port->bytevector in)
+  (let ((out (open-output-bytevector)))
+    (do ((c (read-u8 in) (read-u8 in)))
+        ((eof-object? c) (get-output-bytevector out))
+      (write-u8 c out))))
+
+(define (call-with-input-string str proc)
+  (let* ((in (open-input-string str))
+         (res (proc in)))
+    (close-input-port in)
+    res))
+
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (let ((res (get-output-string out)))
+      (close-output-port out)
+      res)))
+
 ;; general utils
 
 (define (read-from-string str)

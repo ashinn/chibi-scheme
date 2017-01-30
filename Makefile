@@ -433,8 +433,9 @@ snowballs:
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/char-set/boundary.sld
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/match.sld
 	$(SNOW_CHIBI) package -r lib/chibi/char-set.sld
-	$(SNOW_CHIBI) package -r lib/chibi/iset.sld
+	$(SNOW_CHIBI) package -r lib/chibi/iset.sld lib/chibi/iset/optimize.sld
 	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
+	$(SNOW_CHIBI) package lib/srfi/115.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
 	$(SNOW_CHIBI) package lib/chibi/bytevector.sld
 	$(SNOW_CHIBI) package lib/chibi/config.sld
@@ -451,5 +452,6 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/string.sld
 	$(SNOW_CHIBI) package lib/chibi/sxml.sld
 	$(SNOW_CHIBI) package lib/chibi/term/ansi.sld
+	$(SNOW_CHIBI) package lib/chibi/term/edit-line.sld
 	$(SNOW_CHIBI) package lib/chibi/test.sld
 	$(SNOW_CHIBI) package lib/chibi/uri.sld

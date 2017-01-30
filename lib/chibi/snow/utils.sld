@@ -3,7 +3,8 @@
   (export find-in-path find-sexp-in-path
           write-to-string display-to-string
           resource->bytevector uri-normalize uri-directory
-          version-split version-compare version>? version>=?)
+          version-split version-compare version>? version>=?
+          topological-sort)
   (import (scheme base)
           (scheme file)
           (scheme read)
