@@ -2064,7 +2064,6 @@
                   (find (lambda (x) (equal? lib-name (library-name x)))
                         (package-libraries pkg)))
                 ordered-lib-names))
-              (_ (begin (write `(topo: ,(map library-name (package-libraries pkg)) -> ,ordered-lib-names -> ,ordered-libs)) (newline)))
               (libs (filter-map (lambda (lib) (build-library impl cfg lib dir))
                                 ordered-libs)))
          (if (test-package impl cfg pkg dir)
