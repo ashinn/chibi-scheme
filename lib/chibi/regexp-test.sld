@@ -1,7 +1,8 @@
 (define-library (chibi regexp-test)
   (export run-tests)
-  (import (chibi) (chibi regexp) (chibi regexp pcre)
-          (chibi string) (chibi io) (chibi match) (chibi test))
+  (import (scheme base) (scheme char) (scheme file) (scheme write)
+          (chibi regexp) (chibi regexp pcre)
+          (chibi string) (chibi match) (chibi test))
   (begin
     (define (run-tests)
       (define (maybe-match->sexp rx str . o)
@@ -237,6 +238,12 @@
       (test " abc d ef " (regexp-replace-all '(+ space) "  abc \t\n d ef  " " "))
 
       (let ()
+        (define (call-with-input-string str proc)
+          (proc (open-input-string str)))
+        (define (call-with-output-string proc)
+          (let ((out (open-output-string)))
+            (proc out)
+            (get-output-string out)))
         (define (subst-matches matches input subst)
           (define (submatch n)
             (regexp-match-submatch matches n))
@@ -288,10 +295,11 @@
              (error "invalid regex test line" line))))
 
         (test-group "pcre"
-          (call-with-input-file "tests/re-tests.txt"
-            (lambda (in)
-              (for-each
-               (lambda (line) (test-pcre line))
-               (port->list read-line in))))))
+          (let ((in (open-input-file "tests/re-tests.txt")))
+            (let lp ()
+              (let ((line (read-line in)))
+                (unless (eof-object? line)
+                  (test-pcre line)
+                  (lp)))))))
 
       (test-end))))
