@@ -6,4 +6,5 @@
           regexp-match? regexp-match-count
           regexp-match-submatch
           regexp-match-submatch-start regexp-match-submatch-end)
+  (cond-expand (chicken (import (scheme base))) (else))
   (import (chibi regexp)))

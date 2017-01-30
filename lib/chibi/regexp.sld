@@ -12,9 +12,6 @@
           regexp-match-submatch-start regexp-match-submatch-end
           regexp-match->list regexp-match->sexp)
   (import (srfi 69))
-  (cond-expand
-   ((library (srfi 33)) (import (srfi 33)))
-   (else (import (srfi 60))))
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
    (chibi
@@ -35,7 +32,7 @@
          (ucs-range->char-set #x1FA8 #x1FB0)
          (char-set #\x01C5 #\x01C8 #\x01CB #\x01F2 #\x1FBC #\x1FCC #\x1FFC)))))
    (else
-    (import (scheme base) (scheme char) (srfi 14))
+    (import (scheme base) (scheme char) (srfi 1) (srfi 14))
     (begin
       (define %char-set:letter
         (char-set-intersection char-set:ascii char-set:letter))
@@ -59,6 +56,9 @@
         (char-set-intersection char-set:ascii char-set:printing))
       (define %char-set:iso-control
         (char-set-intersection char-set:ascii char-set:iso-control)))))
+  (cond-expand
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (import (chibi char-set boundary))
   ;; Use string-cursors where available.
   (cond-expand
