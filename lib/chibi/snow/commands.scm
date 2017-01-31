@@ -1727,9 +1727,15 @@
          (library-shared-include-files
           impl cfg (make-path dir library-file))))))))
 
+(define (chicken-library-base name)
+  (if (and (= 2 (length name)) (eq? 'srfi (car name)) (integer? (cadr name)))
+      (string-append "srfi-" (number->string (cadr name)))
+      (string-join (map x->string name) ".")))
+
 (define (chicken-installer impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
-         (library-base (string-join (map x->string (library-name library)) "."))
+         (name (library-name library))
+         (library-base (chicken-library-base name))
          (install-dir (get-install-library-dir impl cfg))
          (so-path (string-append library-base ".so"))
          (imp-path (string-append library-base ".import.scm"))
@@ -1889,8 +1895,7 @@
 
 (define (chicken-builder impl cfg library dir)
   (let* ((library-file (make-path dir (get-library-file cfg library)))
-         (library-base (string-join (map x->string (library-name library)) "."))
-         (module-name (string-join (map x->string (library-name library)) "."))
+         (library-base (chicken-library-base (library-name library)))
          (so-path (make-path dir (string-append library-base ".so")))
          (imp-path (string-append library-base ".import.scm")))
     (with-directory
