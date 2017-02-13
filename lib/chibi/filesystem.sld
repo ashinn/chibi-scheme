@@ -33,15 +33,18 @@
           open/append      open/non-block
           file-lock        file-truncate
           file-is-readable? file-is-writable? file-is-executable?
-          lock/shared lock/exclusive lock/non-blocking lock/unlock
           chmod is-a-tty?)
-  (import (chibi string))
   (cond-expand
    (chibi
-    (import (chibi))
-    (include-shared "filesystem"))
+    (export lock/shared lock/exclusive lock/non-blocking lock/unlock)
+    (import (chibi) (chibi string))
+    (include-shared "filesystem")
+    (include "filesystem.scm"))
    (chicken
-    (import (scheme base) (library) (posix))
+    (import (scheme base) (srfi 1)
+            (only (chicken) delete-file rename-file file-exists?)
+            (rename (posix) (file-truncate %file-trunc))
+            (chibi string))
     (begin
       (define file-status file-stat)
       (define (file-link-status x) (file-stat x #t))
@@ -58,6 +61,14 @@
       (define (stat-atime x) (vector-ref x 6))
       (define (stat-mtime x) (vector-ref x 7))
       (define (stat-ctime x) (vector-ref x 8))
+      (define (file-mode x) (stat-mode (if (vector? x) x (file-stat x))))
+      (define (file-num-links x) (stat-nlinks (if (vector? x) x (file-stat x))))
+      (define (file-group x) (stat-gid (if (vector? x) x (file-stat x))))
+      (define (file-inode x) (stat-ino (if (vector? x) x (file-stat x))))
+      (define (file-device x) (stat-dev (if (vector? x) x (file-stat x))))
+      (define (file-represented-device x) (if (vector? x) x (file-stat x)))
+      (define (file-block-size x) (stat-blksize (if (vector? x) x (file-stat x))))
+      (define (file-num-blocks x) (stat-blocks (if (vector? x) x (file-stat x))))
       (define duplicate-file-descriptor duplicate-fileno)
       (define duplicate-file-descriptor-to duplicate-fileno)
       (define close-file-descriptor file-close)
@@ -94,6 +105,44 @@
       (define open/non-block open/nonblock)
       (define chmod change-file-mode)
       (define is-a-tty? terminal-port?)
+      (define (file-truncate port len)
+        (%file-trunc (if (integer? port) port (port->fileno port)) len))
+      (define (create-directory* dir)
+        (create-directory dir #t))
+      (define (directory-files dir)
+        (cons "." (cons ".." (directory dir #t))))
+      (define (directory-fold dir kons knil)
+        (fold kons knil (directory-files dir)))
+      (define (directory-fold-tree file down up here . o)
+        (let ((knil (and (pair? o) (car o)))
+              (down (or down (lambda (f acc) acc)))
+              (up (or up (lambda (f acc) acc)))
+              (here (or here (lambda (f acc) acc))))
+          (let fold ((file file) (acc knil))
+            (cond
+             ((file-directory? file)
+              (let lp ((ls (directory-files file)) (acc (down file acc)))
+                (cond
+                 ((null? ls) (up file acc))
+                 ((member (car ls) '("." "..")) (lp (cdr ls) acc))
+                 (else
+                  (lp (cdr ls) (fold (string-append file "/" (car ls)) acc))))))
+             (else
+              (here file acc))))))
+      (define (delete-file-hierarchy dir . o)
+        (delete-directory dir #t))
+      (define (renumber-file-descriptor old new)
+        (and (duplicate-file-descriptor-to old new)
+             (close-file-descriptor old)))
+      (define (with-directory dir thunk)
+        (let ((pwd (current-directory)))
+          (dynamic-wind
+            (lambda () (change-directory dir))
+            thunk
+            (lambda () (change-directory pwd)))))
+      (define (file-modification-time/safe file)
+        (guard (exn (else #f))
+          (file-modification-time file)))
       ))
    (sagittarius
     (import (scheme base) (sagittarius))
@@ -120,5 +169,4 @@
         duplicate-file-descriptor duplicate-file-descriptor-to
         close-file-descriptor open-input-file-descriptor
         open-output-file-descriptor)
-      )))
-  (include "filesystem.scm"))
+      ))))

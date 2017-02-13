@@ -427,7 +427,7 @@ debian:
 
 # Libraries in the standard distribution we want to make available to
 # other Scheme implementations.  Note this is run with my own
-# ~/.snow/config.scm, which specifies myself own settings regarding
+# ~/.snow/config.scm, which specifies my own settings regarding
 # author, license, extracting docs from scribble, etc.
 snowballs:
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/char-set/boundary.sld
@@ -437,11 +437,13 @@ snowballs:
 	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
 	$(SNOW_CHIBI) package lib/srfi/115.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
+	$(SNOW_CHIBI) package lib/chibi/binary-record.sld
 	$(SNOW_CHIBI) package lib/chibi/bytevector.sld
 	$(SNOW_CHIBI) package lib/chibi/config.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/md5.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/rsa.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/sha2.sld
+	$(SNOW_CHIBI) package lib/chibi/filesystem.sld
 	$(SNOW_CHIBI) package lib/chibi/math/prime.sld
 	$(SNOW_CHIBI) package lib/chibi/monad/environment.sld
 	$(SNOW_CHIBI) package lib/chibi/optional.sld
@@ -451,6 +453,7 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/scribble.sld
 	$(SNOW_CHIBI) package lib/chibi/string.sld
 	$(SNOW_CHIBI) package lib/chibi/sxml.sld
+	$(SNOW_CHIBI) package lib/chibi/tar.sld
 	$(SNOW_CHIBI) package lib/chibi/term/ansi.sld
 	$(SNOW_CHIBI) package lib/chibi/term/edit-line.sld
 	$(SNOW_CHIBI) package lib/chibi/test.sld

@@ -1,7 +1,13 @@
 (define-library (chibi filesystem-test)
   (export run-tests)
-  (import (chibi) (chibi io) (chibi filesystem) (chibi test) (srfi 33))
+  (import (scheme base) (scheme file) (scheme write)
+          (chibi filesystem) (chibi test))
+  (cond-expand
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (begin
+    (define (port->string in)
+      (read-string 1024 in))
     (define (run-tests)
       (define tmp-file "/tmp/chibi-fs-test-0123456789")
       (define tmp-file2 "/tmp/chibi-fs-test-0123456789-2")
