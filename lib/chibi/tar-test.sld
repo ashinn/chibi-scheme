@@ -1,14 +1,6 @@
 (define-library (chibi tar-test)
   (export run-tests)
-  (import (chibi)
-          (only (scheme base)
-                bytevector-append
-                make-bytevector
-                string->utf8
-                bytevector
-                open-input-bytevector
-                open-output-bytevector
-                get-output-bytevector)
+  (import (scheme base)
           (chibi tar)
           (chibi test))
   (begin
