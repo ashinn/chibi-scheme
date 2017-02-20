@@ -766,6 +766,9 @@
 #ifdef __MINGW32__
 #include <shlwapi.h>
 #define strcasestr StrStrI
+#define SHUT_RD 0
+#define SHUT_WR 1
+#define SHUT_RDWR 2
 #else
 #define snprintf(buf, len, fmt, val) sprintf(buf, fmt, val)
 #define strcasecmp lstrcmpi
