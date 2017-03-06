@@ -761,10 +761,10 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #define _CRT_NONSTDC_NO_DEPRECATE 1
 #pragma warning(disable:4146) /* unary minus operator to unsigned type */
-#define strcasecmp lstrcmpi
-#define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
 #ifdef __MINGW32__
 #include <shlwapi.h>
+#define strcasecmp lstrcmpi
+#define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
 #define strcasestr StrStrI
 #define SHUT_RD 0
 #define SHUT_WR 1
