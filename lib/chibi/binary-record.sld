@@ -6,16 +6,7 @@
   (cond-expand
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
-  (cond-expand
-   (chibi
-    (import (only (chibi) identifier? er-macro-transformer)))
-   (chicken
-    (import chicken)
-    (begin
-      (define identifier? symbol?)))
-   (sagittarius
-    (import (sagittarius))
-    (begin
-      (define identifier? symbol?))))
-  (export define-binary-record-type)
+  (export define-binary-record-type
+          u8 u16/le u16/be padded-string fixed-string
+          octal decimal hexadecimal)
   (include "binary-record.scm"))
