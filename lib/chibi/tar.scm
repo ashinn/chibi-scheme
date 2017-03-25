@@ -1,10 +1,10 @@
 
 (define-binary-record-type tar
-  (make make-tar/full)
-  (pred tar?)
-  (read read-tar)
-  (write write-tar/raw)
-  (block
+  (make: make-tar/full)
+  (pred: tar?)
+  (read: read-tar)
+  (write: write-tar/raw)
+  (block:
    (path (padded-string 100) tar-path-raw tar-path-raw-set!)
    (mode (octal 8) tar-mode tar-mode-set!)
    (uid (octal 8) tar-uid tar-uid-set!)
@@ -72,7 +72,8 @@
   (let* ((path (tar-normalize-path path (equal? "5" (tar-type tar))))
          (len (string-length path)))
     (cond ((< len 100)
-           (tar-path-raw-set! tar path))
+           (tar-path-raw-set! tar path)
+           (tar-path-prefix-set! tar ""))
           ((< len 255)
            (tar-path-raw-set! tar (substring path (- len 100)))
            (tar-path-prefix-set! tar (substring path 0 (- len 100))))
