@@ -40,8 +40,6 @@
           (test 501 (tar-uid x))
           (test "bob" (tar-owner x)))
         (let ((x (make-tar "bar" #o644 501 502 123 456 "0")))
-          (test "foof" (tar-owner x))
-          (test "nobody" (tar-group x))
           (test "bar" (tar-path x))
           (test "" (tar-path-prefix x))
           (tar-owner-set! x "john")
