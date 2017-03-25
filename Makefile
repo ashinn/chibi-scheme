@@ -454,7 +454,9 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/string.sld
 	$(SNOW_CHIBI) package lib/chibi/sxml.sld
 	$(SNOW_CHIBI) package lib/chibi/tar.sld
+	$(SNOW_CHIBI) package lib/chibi/temp-file.sld
 	$(SNOW_CHIBI) package lib/chibi/term/ansi.sld
 	$(SNOW_CHIBI) package lib/chibi/term/edit-line.sld
 	$(SNOW_CHIBI) package lib/chibi/test.sld
 	$(SNOW_CHIBI) package lib/chibi/uri.sld
+	$(SNOW_CHIBI) package lib/chibi/zlib.sld
