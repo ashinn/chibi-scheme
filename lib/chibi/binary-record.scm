@@ -7,7 +7,7 @@
     ((defrec () n m p r w
        ((field-tmp field-read field-read-expr field-write field-write-expr field-get) ...)
        ((field getter . s) ...)
-       ((def setter val) ...))
+       (def-setter ...))
      (begin
        (define-record-type n (m field ...) p
          (field getter . s) ...)
@@ -20,7 +20,7 @@
          (let ((field-write field-write-expr) ...)
            (lambda (x out)
              (field-write (field-get x) out) ...)))
-       (def setter val) ...)
+       def-setter ...)
      ;; workaround for impls which strip hygiene from top-level defs
      ;; for some reason, works in chicken but not across libraries
      ;;
@@ -55,12 +55,12 @@
        (b ...) (f ...) (s ...))
      (defrec ((block: . fields) . rest) n m p r w
        (b ...
-          (field read-tmp (type read: 'args) write-tmp (type write: 'args) getter))
+          (field read-tmp (type read: args) write-tmp (type write: args) getter))
        (f ...
           (field getter tmp-setter))
        (s ...
           (define setter
-            (let ((pred? (type pred: 'args)))
+            (let ((pred? (type pred: args)))
               (lambda (x val)
                 (if (not (pred? val))
                     (error "invalid val for" 'field val))
@@ -69,7 +69,7 @@
        (b ...) (f ...) s)
      (defrec ((block: . fields) . rest) n m p r w
        (b ...
-          (field read-tmp (type read: 'args) write-tmp (type write: 'args) getter))
+          (field read-tmp (type read: args) write-tmp (type write: args) getter))
        (f ...
           (field getter))
        s))

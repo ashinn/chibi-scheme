@@ -31,7 +31,7 @@
        (b ...) (f ...))
      (defrec ((block: . fields) . rest) n m p r w
        (b ...
-          (field read-tmp (type read: 'args) write-tmp (type write: 'args) getter))
+          (field read-tmp (type read: args) write-tmp (type write: args) getter))
        (f ...
           (field getter . s))))
     ((defrec ((block: (field . x)) . rest) n m p r w b f)

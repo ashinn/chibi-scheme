@@ -16,7 +16,8 @@
    ;; auxiliary syntax
    make: pred: read: write: block:
    ;; indirect exports
-   define-binary-type defrec define-auxiliary-syntax)
+   define-binary-type defrec define-auxiliary-syntax
+   syntax-let-optionals*)
   (include "binary-types.scm")
   (cond-expand
    (chicken
