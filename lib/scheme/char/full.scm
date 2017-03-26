@@ -20,6 +20,8 @@
                   (integer->char (vector-ref char-downcase-map (+ mid 1))))
                  ((< n m)
                   (lp lo (- mid 2)))
+                 ((= (+ mid 2) hi)
+                  ch)
                  (else
                   (lp (+ mid 2) hi)))))))
        ((iset-contains? (caar ls) n)
@@ -43,6 +45,8 @@
                   (integer->char (vector-ref char-upcase-map (+ mid 1))))
                  ((< n m)
                   (lp lo (- mid 2)))
+                 ((= (+ mid 2) hi)
+                  ch)
                  (else
                   (lp (+ mid 2) hi)))))))
        ((iset-contains? (caar ls) (- n (cdar ls)))

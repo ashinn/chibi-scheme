@@ -3,8 +3,7 @@
   (import (scheme base))
   (cond-expand
    (full-unicode
-    (import (scheme write)
-            (chibi char-set full)
+    (import (chibi char-set full)
             (chibi char-set base)
             (chibi iset base))
     (include "char/full.scm")
