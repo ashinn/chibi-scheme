@@ -1341,7 +1341,8 @@
 
 (define (scheme-script-command impl cfg)
   (or (and (eq? impl 'chibi) (conf-get cfg 'chibi-path))
-      (let* ((prog (cond ((assq impl known-implementations) => cadr)
+      (let* ((prog (cond ((conf-get cfg 'scheme-script))
+                         ((assq impl known-implementations) => cadr)
                          (else "scheme-script")))
              (path (or (find-in-path prog) prog))
              (arg (case impl
@@ -1354,46 +1355,49 @@
             path))))
 
 (define (scheme-program-command impl cfg file . o)
-  (let ((lib-path (and (pair? o) (car o)))
-        (install-dir (get-install-source-dir impl cfg)))
-    (case impl
-      ((chibi)
-       (let ((chibi (string-split (conf-get cfg 'chibi-path "chibi-scheme"))))
+  (cond
+   ((conf-get cfg 'scheme-program-command) => string-split)
+   (else
+    (let ((lib-path (and (pair? o) (car o)))
+          (install-dir (get-install-source-dir impl cfg)))
+      (case impl
+        ((chibi)
+         (let ((chibi (string-split (conf-get cfg 'chibi-path "chibi-scheme"))))
+           (if lib-path
+               `(,@chibi -A ,install-dir -A ,lib-path ,file)
+               `(,@chibi -A ,install-dir ,file))))
+        ((chicken)
          (if lib-path
-             `(,@chibi -A ,install-dir -A ,lib-path ,file)
-             `(,@chibi -A ,install-dir ,file))))
-      ((chicken)
-       (if lib-path
-           `(csi -R r7rs -I ,install-dir -I ,lib-path -s ,file)
-           `(csi -R r7rs -I ,install-dir -s ,file)))
-      ((foment)
-       (if lib-path
-           `(foment -A ,install-dir -A ,lib-path ,file)
-           `(foment -A ,install-dir ,file)))
-      ((gauche)
-       (if lib-path
-           `(gosh -A ,install-dir -A ,lib-path ,file)
-           `(gosh -A ,install-dir ,file)))
-      ((guile)
-       (if lib-path
-           `(guile -L ,install-dir -L ,lib-path ,file)
-           `(guile -L ,install-dir ,file)))
-      ((kawa)
-       (let ((install-dir (path-resolve install-dir (current-directory))))
+             `(csi -R r7rs -I ,install-dir -I ,lib-path -s ,file)
+             `(csi -R r7rs -I ,install-dir -s ,file)))
+        ((foment)
          (if lib-path
-             `(kawa
-               ,(string-append "-Dkawa.import.path=" install-dir ":"
-                               (path-resolve lib-path (current-directory)))
-               --r7rs --script ,file)
-             `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
-                    --r7rs --script ,file))))
-      ((larceny)
-       (if lib-path
-           `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
-                     -program ,file)
-           `(larceny -r7rs -path ,install-dir -program ,file)))
-      (else
-       #f))))
+             `(foment -A ,install-dir -A ,lib-path ,file)
+             `(foment -A ,install-dir ,file)))
+        ((gauche)
+         (if lib-path
+             `(gosh -A ,install-dir -A ,lib-path ,file)
+             `(gosh -A ,install-dir ,file)))
+        ((guile)
+         (if lib-path
+             `(guile -L ,install-dir -L ,lib-path ,file)
+             `(guile -L ,install-dir ,file)))
+        ((kawa)
+         (let ((install-dir (path-resolve install-dir (current-directory))))
+           (if lib-path
+               `(kawa
+                 ,(string-append "-Dkawa.import.path=" install-dir ":"
+                                 (path-resolve lib-path (current-directory)))
+                 --r7rs --script ,file)
+               `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
+                      --r7rs --script ,file))))
+        ((larceny)
+         (if lib-path
+             `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
+                       -program ,file)
+             `(larceny -r7rs -path ,install-dir -program ,file)))
+        (else
+         #f))))))
 
 (define (get-install-search-dirs impl cfg)
   (let ((install-dir (get-install-source-dir impl cfg))

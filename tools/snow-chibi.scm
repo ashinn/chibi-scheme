@@ -85,6 +85,8 @@
     (program-builder symbol "name of program builder to use")
     (implementations (list symbol) ("impls") "impls to install for, or 'all'")
     (program-implementation symbol "impl to install programs for")
+    (scheme-script string "shell command to use for running scheme scripts")
+    (scheme-program-command string "shell command to use for running scheme programs")
     (chibi-path filename "path to chibi-scheme executable")
     (cc string "path to c compiler")
     (cflags string "flags for c compiler")
