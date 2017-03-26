@@ -89,7 +89,7 @@
           (let ((ch (read-char in)))
             (cond
              ((not (eof-object? ch))
-              (display
+              (write-string
                (if (and (not fold?) (eqv? ch #\x03A3))
                    (let ((ch2 (peek-char in)))
                      (if (or (eof-object? ch2)
@@ -108,11 +108,11 @@
     (lambda (out)
       (string-for-each
        (lambda (ch)
-         (display (if (memv ch '(#\x03C2 #\x03C3))
-                      #\x03A3
-                      (or (char-get-special-case ch 3)
-                          (char-upcase ch)))
-                  out))
+         (write-string (if (memv ch '(#\x03C2 #\x03C3))
+                           #\x03A3
+                           (or (char-get-special-case ch 3)
+                               (char-upcase ch)))
+                       out))
        str))))
 
 (define (string-cmp-ci op a ls)
