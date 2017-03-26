@@ -38,25 +38,13 @@
     (import (only (chibi ast)
                   errno integer->error-string)
             (only (chibi)
-                  string-size exception-protect
-                  call-with-input-string call-with-output-string)))
+                  string-size exception-protect)))
    (else
     (begin
       (define (errno) 0)
       (define (integer->error-string n)
         (string-append "errno: " (number->string n)))
       (define string-size string-length)
-      (define (call-with-input-string str proc)
-        (let* ((in (open-input-string str))
-               (res (proc in)))
-          (close-input-port in)
-          res))
-      (define (call-with-output-string proc)
-        (let ((out (open-output-string)))
-          (proc out)
-          (let ((res (get-output-string out)))
-            (close-output-port out)
-            res)))
       (define (with-exception-protect thunk final)
         (let* ((finalized? #f)
                (run-finalize

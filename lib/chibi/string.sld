@@ -19,7 +19,8 @@
    string-find string-find-right string-find? string-skip string-skip-right
    string-fold string-fold-right string-map string-for-each
    string-contains make-string-searcher
-   string-downcase-ascii string-upcase-ascii)
+   string-downcase-ascii string-upcase-ascii
+   call-with-input-string call-with-output-string)
   (cond-expand
    (chibi
     (import (chibi) (chibi ast) (chibi char-set base))
@@ -73,10 +74,17 @@
               (lp (cdr ls)))))
           (get-output-string out)))
       (define string-size string-length)
+      (define (call-with-input-string str proc)
+        (let* ((in (open-input-string str))
+               (res (proc in)))
+          (close-input-port in)
+          res))
       (define (call-with-output-string proc)
         (let ((out (open-output-string)))
           (proc out)
-          (get-output-string out))))))
+          (let ((res (get-output-string out)))
+            (close-output-port out)
+            res))))))
   (cond-expand
    (chibi)
    ((library (srfi 13))
@@ -84,11 +92,11 @@
    (else
     (begin
       (define (string-contains a b . o)  ; really, stupidly slow
-       (let ((alen (string-length a))
-             (blen (string-length b)))
-         (let lp ((i (if (pair? o) (car o) 0)))
-           (and (<= (+ i blen) alen)
-                (if (string=? b (substring a i (+ i blen)))
-                    i
-                    (lp (+ i 1))))))))))
+        (let ((alen (string-length a))
+              (blen (string-length b)))
+          (let lp ((i (if (pair? o) (car o) 0)))
+            (and (<= (+ i blen) alen)
+                 (if (string=? b (substring a i (+ i blen)))
+                     i
+                     (lp (+ i 1))))))))))
   (include "string.scm"))

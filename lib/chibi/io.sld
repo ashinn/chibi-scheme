@@ -16,7 +16,6 @@
           string->utf8 utf8->string
           write-string write-u8 read-u8 peek-u8 send-file
           is-a-socket?
-          call-with-input-string call-with-output-string
           call-with-input-file call-with-output-file)
   (import (chibi) (chibi ast))
   (include-shared "io/io")

@@ -1,6 +1,6 @@
 (define-library (chibi base64-test)
   (export run-tests)
-  (import (chibi) (chibi base64) (chibi test))
+  (import (scheme base) (chibi base64) (chibi string) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "base64")

@@ -1,5 +1,5 @@
 ;; http.scm -- http client
-;; Copyright (c) 2009-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2017 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -231,8 +231,8 @@
 (define (http-post url body . o)
   (let* ((headers (if (pair? o) (car o) '()))
          (headers
-          (if (or (assq headers 'content-type)
-                  (assq headers 'Content-Type))
+          (if (or (assq 'content-type headers)
+                  (assq 'Content-Type headers))
               headers
               (let ((boundary (http-generate-boundary)))
                 `((Content-Type . ,(string-append
@@ -244,8 +244,8 @@
             (http-send-body headers body out)
             (get-output-bytevector out)))
          (headers
-          (if (or (assq headers 'content-length)
-                  (assq headers 'Content-Length))
+          (if (or (assq 'content-length headers)
+                  (assq 'Content-Length headers))
               headers
               `((Content-Length . ,(bytevector-length body))
                 ,@headers))))
@@ -292,15 +292,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; server utils
 
-;; read and parse a request line
+;;> Read and parse a request line.
 (define (http-parse-request . o)
   (let ((line (string-split
                (read-line (if (pair? o) (car o) (current-input-port)) 4096))))
     (cons (string->symbol (car line)) (cdr line))))
 
-;; Parse a form body with a given URI and MIME headers (as parsed with
-;; mime-headers->list).  Returns an alist of (name . value) for every
-;; query or form parameter.
+;;> Parse a form body with a given URI and MIME headers (as parsed
+;;> with \scheme{mime-headers->list}).  Returns an alist of
+;;> \scheme{(name . value)} for every query or form parameter.
 (define (http-parse-form uri headers . o)
   (let* ((in (if (pair? o) (car o) (current-input-port)))
          (type (assq-ref headers

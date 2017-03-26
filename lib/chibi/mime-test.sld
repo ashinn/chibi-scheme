@@ -1,7 +1,6 @@
 (define-library (chibi mime-test)
   (export run-tests)
-  (import (chibi) (chibi mime) (chibi test)
-          (only (scheme base) string->utf8 open-input-bytevector))
+  (import (scheme base) (chibi mime) (chibi string) (chibi test))
   (begin
     (define (run-tests)
       (test-begin "mime")

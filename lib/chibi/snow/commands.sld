@@ -27,7 +27,6 @@
           (scheme write)
           (srfi 1)
           (srfi 27)
-          (srfi 33)
           (srfi 95)
           (chibi snow interface)
           (chibi snow package)
@@ -56,4 +55,7 @@
           (chibi temp-file)
           (chibi uri)
           (chibi zlib))
+  (cond-expand
+   ((library (srfi 33)) (import (srfi 33)))
+   (else (import (srfi 60))))
   (include "commands.scm"))

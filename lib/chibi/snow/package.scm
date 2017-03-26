@@ -25,19 +25,6 @@
         ((eof-object? c) (get-output-bytevector out))
       (write-u8 c out))))
 
-(define (call-with-input-string str proc)
-  (let* ((in (open-input-string str))
-         (res (proc in)))
-    (close-input-port in)
-    res))
-
-(define (call-with-output-string proc)
-  (let ((out (open-output-string)))
-    (proc out)
-    (let ((res (get-output-string out)))
-      (close-output-port out)
-      res)))
-
 ;; general utils
 
 (define (read-from-string str)

@@ -97,7 +97,7 @@
            (effective-max-col (- max-col prefix-length)))
       (bytevector-append
        (string->utf8 prefix)
-       (qp-encode (if (string? src) src (read-string #f src))
+       (qp-encode (if (string? src) src (port->string src))
                   start-col effective-max-col separator)
        (string->utf8 "?=")))))
 

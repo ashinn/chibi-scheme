@@ -90,7 +90,7 @@
   (let ((request2 (copy-request request))
         (uri (string->path-uri 'http uri)))
     (request-uri-set! request2 uri)
-    ;; NOTE: this looses form parameters
+    ;; NOTE: this loses form parameters
     (request-params-set! request2 (uri-query->alist (or (uri-query uri) "") #t))
     request2))
 
@@ -218,7 +218,7 @@
      (else
       (lp (cdr ls) res files)))))
 
-(define (servlet-parse-body! request)
+(define (servlet-parse-body! request . o)
   (let* ((headers (request-headers request))
          (ctype
           (mime-parse-content-type

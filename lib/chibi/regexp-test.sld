@@ -238,12 +238,6 @@
       (test " abc d ef " (regexp-replace-all '(+ space) "  abc \t\n d ef  " " "))
 
       (let ()
-        (define (call-with-input-string str proc)
-          (proc (open-input-string str)))
-        (define (call-with-output-string proc)
-          (let ((out (open-output-string)))
-            (proc out)
-            (get-output-string out)))
         (define (subst-matches matches input subst)
           (define (submatch n)
             (regexp-match-submatch matches n))

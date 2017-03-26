@@ -1,8 +1,7 @@
 (define-library (chibi string-test)
   (export run-tests)
   (import (scheme base) (scheme char)
-          (only (chibi test) test-begin test test-end)
-          (chibi string))
+          (chibi test) (chibi string))
   (cond-expand
    (chibi
     (import (only (chibi) string-cursor->index)))

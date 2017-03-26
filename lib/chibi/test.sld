@@ -18,6 +18,11 @@
   (cond-expand
    (chibi
     (import (only (chibi) pair-source print-exception protect)))
+   (chicken
+    (import (only (chicken) print-error-message))
+    (begin
+      (define (pair-source x) #f)
+      (define print-exception print-error-message)))
    (else
     (begin
       (define (pair-source x) #f)

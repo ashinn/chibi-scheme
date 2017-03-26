@@ -193,14 +193,15 @@
                  (current-output-port))))
     (cond
      ((not (binary-port? in))
-      (write-string (base64-decode-string (port->string in)) out))
+      (let ((str (port->string in)))
+        (write-string (base64-decode-string str) out)))
      (else
       (let ((src (make-bytevector decode-src-length))
             (dst (make-bytevector decode-dst-length)))
         (let lp ((offset 0))
           (let ((src-len
                  (+ offset
-                    (read-bytevector! decode-src-length src in offset))))
+                    (read-bytevector! src in offset decode-src-length))))
             (cond
              ((= src-len decode-src-length)
               ;; read a full chunk: decode, write and loop
@@ -209,12 +210,12 @@
                (lambda (src-offset dst-len b1 b2 b3)
                  (cond
                   ((and (< src-offset src-len)
-                        (eqv? #\= (string-ref src src-offset)))
+                        (eqv? #x3D (bytevector-u8-ref src src-offset)))
                    ;; done
                    (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
                      (write-bytevector dst out 0 dst-len)))
                   ((eqv? b1 *outside-char*)
-                   (write-string dst out 0 dst-len)
+                   (write-bytevector dst out 0 dst-len)
                    (lp 0))
                   (else
                    (write-bytevector dst out 0 dst-len)
@@ -237,7 +238,7 @@
                src 0 src-len dst
                (lambda (src-offset dst-len b1 b2 b3)
                  (let ((dst-len (base64-decode-finish dst dst-len b1 b2 b3)))
-                   (write-string dst out 0 dst-len)))))))))))))
+                   (write-bytevector dst out 0 dst-len)))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; encoding
@@ -258,8 +259,7 @@
     res))
 
 (define (base64-encode-bytevector! bv start end res)
-  (let* ((res-len (bytevector-length res))
-         (limit (- end 2)))
+  (let ((limit (- end 2)))
     (let lp ((i start) (j 0))
       (if (>= i limit)
           (case (- end i)
@@ -271,7 +271,8 @@
                 (+ j 1)
                 (enc (arithmetic-shift (bitwise-and #b11 b1) 4)))
                (bytevector-u8-set! res (+ j 2) (char->integer #\=))
-               (bytevector-u8-set! res (+ j 3) (char->integer #\=))))
+               (bytevector-u8-set! res (+ j 3) (char->integer #\=))
+               (+ j 4)))
             ((2)
              (let ((b1 (bytevector-u8-ref bv i))
                    (b2 (bytevector-u8-ref bv (+ i 1))))
@@ -285,9 +286,11 @@
                (bytevector-u8-set!
                 res
                 (+ j 2)
-                (enc (arithmetic-shift (extract-bit-field 4 0 b2)
-                                       2)))
-               (bytevector-u8-set! res (+ j 3) (char->integer #\=)))))
+                (enc (arithmetic-shift (extract-bit-field 4 0 b2) 2)))
+               (bytevector-u8-set! res (+ j 3) (char->integer #\=))
+               (+ j 4)))
+            (else
+             j))
           (let ((b1 (bytevector-u8-ref bv i))
                 (b2 (bytevector-u8-ref bv (+ i 1)))
                 (b3 (bytevector-u8-ref bv (+ i 2))))
@@ -316,17 +319,19 @@
                  (current-output-port))))
     (cond
      ((not (binary-port? in))
-      (write-string (base64-encode-string (port->string in)) out))
+      (let ((str (port->string in)))
+        (write-string (base64-encode-string str) out)))
      (else
-      (let ((src (make-string encode-src-length))
-            (dst (make-string
+      (let ((src (make-bytevector encode-src-length))
+            (dst (make-bytevector
                   (arithmetic-shift (quotient encode-src-length 3) 2))))
         (let lp ()
           (let ((n (read-bytevector! src in 0 2048)))
             (base64-encode-bytevector! src 0 n dst)
-            (write-bytevector dst out 0 (* 3 (quotient (+ n 3) 4)))
+            (write-bytevector dst out 0 (* 4 (quotient (+ n 2) 3)))
             (if (= n 2048)
-                (lp)))))))))
+                (lp)
+                (flush-output-port out)))))))))
 
 ;;> Return a base64 encoded representation of the string \var{str} as
 ;;> above, wrapped in =?ENC?B?...?= as per RFC1522, split across
@@ -359,8 +364,8 @@
                (string-append
                 prefix (substring str 0 first-max-col) "?=" nl "\t" prefix)
                "")
-           (string-concatenate (string-chop (substring str first-max-col len)
-                                            effective-max-col)
-                               (string-append "?=" nl "\t" prefix))
+           (string-join (string-chop (substring str first-max-col len)
+                                     effective-max-col)
+                        (string-append "?=" nl "\t" prefix))
            "?=")))))
 

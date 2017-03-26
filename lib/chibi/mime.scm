@@ -18,7 +18,8 @@
 ;;> MIME headers.
 
 (define (assq-ref ls key . o)
-  (cond ((assq key ls) => cdr) (else (and (pair? o) (car o)))))
+  (cond ((and (pair? ls) (pair? (car ls)) (assq key ls)) => cdr)
+        (else (and (pair? o) (car o)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; simple matching instead of regexps
@@ -232,8 +233,8 @@
 (define (mime-write-headers headers out)
   (for-each
    (lambda (h)
-     (display (car h) out) (display ": " out)
-     (display (cdr h) out) (display "\r\n" out))
+     (write-string (car h) out) (write-string ": " out)
+     (write-string (cdr h) out) (write-string "\r\n" out))
    headers))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -408,7 +409,7 @@
                    (mime-read-to-boundary port boundary2 (lambda (x) x) (lambda (x) x))
                    (let lp ((part-seed (kons-down headers seed)))
                      (let ((part-headers (mime-headers->list port)))
-                       (flush-output (current-error-port))
+                       (flush-output-port (current-error-port))
                        (tfold headers part-headers
                               part-seed boundary2
                               lp

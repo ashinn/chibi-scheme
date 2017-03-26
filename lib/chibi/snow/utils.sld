@@ -11,9 +11,19 @@
           (scheme write)
           (scheme process-context)
           (srfi 1)
-          (chibi io)
           (chibi net http)
           (chibi pathname)
           (chibi string)
           (chibi uri))
+  (cond-expand
+   (chibi (import (chibi io)))
+   (chicken
+    (begin
+      (define (port->bytevector in) (read-bytevector #f in))
+      (define (file->bytevector in)
+        (call-with-input-file in port->bytevector))
+      (define (call-with-output-string proc)
+        (let ((out (open-output-string)))
+          (proc out)
+          (get-output-string out))))))
   (include "utils.scm"))

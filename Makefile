@@ -437,6 +437,7 @@ snowballs:
 	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
 	$(SNOW_CHIBI) package lib/srfi/115.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
+	$(SNOW_CHIBI) package lib/chibi/base64.sld
 	$(SNOW_CHIBI) package lib/chibi/binary-record.sld
 	$(SNOW_CHIBI) package lib/chibi/bytevector.sld
 	$(SNOW_CHIBI) package lib/chibi/config.sld
@@ -445,10 +446,12 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/crypto/sha2.sld
 	$(SNOW_CHIBI) package lib/chibi/filesystem.sld
 	$(SNOW_CHIBI) package lib/chibi/math/prime.sld
+	$(SNOW_CHIBI) package lib/chibi/mime.sld
 	$(SNOW_CHIBI) package lib/chibi/monad/environment.sld
 	$(SNOW_CHIBI) package lib/chibi/optional.sld
 	$(SNOW_CHIBI) package lib/chibi/parse.sld lib/chibi/parse/common.sld
 	$(SNOW_CHIBI) package lib/chibi/pathname.sld
+	$(SNOW_CHIBI) package lib/chibi/quoted-printable.sld
 	$(SNOW_CHIBI) package lib/chibi/regexp.sld lib/chibi/regexp/pcre.sld
 	$(SNOW_CHIBI) package lib/chibi/scribble.sld
 	$(SNOW_CHIBI) package lib/chibi/string.sld
