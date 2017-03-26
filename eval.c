@@ -150,6 +150,15 @@ sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
     if (sexp_car(ls) == key) {
       sexp_cdr(ls) = value;
       return ls;
+    } else if (sexp_cdr(ls) == SEXP_UNDEF &&
+               sexp_synclop(sexp_car(ls)) &&
+               sexp_synclo_env(sexp_car(ls)) == env &&
+               sexp_synclo_expr(sexp_car(ls)) == key) {
+      /* handle an undefined renamed reference that would have */
+      /* resolved to this binding, renamed to what we define here */
+      sexp_car(ls) = key;
+      sexp_cdr(ls) = value;
+      return ls;
     }
   sexp_gc_preserve2(ctx, cell, ls);
   sexp_env_push(ctx, env, cell, key, value);

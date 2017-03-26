@@ -540,6 +540,16 @@
                   '#(b)))))
   (test '#(b) (vector-lit)))
 
+(let ()
+  ;; forward hygienic refs
+  (define-syntax foo399
+    (syntax-rules () ((foo399) (bar399))))
+  (define (quux399)
+    (foo399))
+  (define (bar399)
+    42)
+  (test 42 (quux399)))
+
 (test-end)
 
 (test-begin "5 Program structure")
