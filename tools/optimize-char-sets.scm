@@ -37,12 +37,14 @@
                        (string-split (car ls) #\.)))))
         (for-each
          (lambda (exp)
-           (display ";; ") (write exp) (newline)
            (let ((value (module-ref mod exp)))
              (cond
               ((char-set? value)
+               (display ";; ") (write exp) (newline)
                (write `(optimize ,exp) (current-error-port)) (newline (current-error-port))
-               (if (not (equal? (iset->list value)
+               ;; extremely slow conversion to lists as a sanity check
+               (display "  verifying cursors\n" (current-error-port))
+               '(if (not (equal? (iset->list value)
                                 (do ((cur (iset-cursor value)
                                           (iset-cursor-next value cur))
                                      (res '() (cons (iset-ref value cur) res)))
@@ -56,6 +58,7 @@
                       (iset-opt (iset-optimize iset1))
                       (_ (display "  balancing\n" (current-error-port)))
                       (iset2 (iset-balance iset-opt)))
+                 (display "  comparing\n" (current-error-port))
                  (if (and (not ascii?) (not (iset= iset1 iset2)))
                      (begin
                        (display "  different!\n" (current-error-port))
@@ -78,5 +81,6 @@
                  (write `(define ,exp
                            (immutable-char-set ,(iset->code iset2))))
                  (newline)
-                 (newline))))))
+                 (newline)
+                 (display "  done\n" (current-error-port)))))))
          (module-exports mod)))))))

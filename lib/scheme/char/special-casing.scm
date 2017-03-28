@@ -1,5 +1,5 @@
 
-;; Unconditoinal non-1-to-1 case mappings derived from Unicode data
+;; Unconditional non-1-to-1 case mappings derived from Unicode data
 ;; file SpecialCasing.txt.
 
 (define special-cases

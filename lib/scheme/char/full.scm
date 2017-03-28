@@ -10,7 +10,7 @@
     (let lp ((ls char-downcase-offsets))
       (cond
        ((null? ls)
-        (let lp ((lo 0) (hi (vector-length char-downcase-map)))
+        (let lp ((lo 0) (hi (- (vector-length char-downcase-map) 2)))
           (if (> lo hi)
               ch
               (let* ((mid (+ lo (* (quotient (- hi lo) 4) 2)))
@@ -20,8 +20,6 @@
                   (integer->char (vector-ref char-downcase-map (+ mid 1))))
                  ((< n m)
                   (lp lo (- mid 2)))
-                 ((= (+ mid 2) hi)
-                  ch)
                  (else
                   (lp (+ mid 2) hi)))))))
        ((iset-contains? (caar ls) n)
@@ -35,7 +33,7 @@
     (let lp ((ls char-downcase-offsets))
       (cond
        ((null? ls)
-        (let lp ((lo 0) (hi (vector-length char-upcase-map)))
+        (let lp ((lo 0) (hi (- (vector-length char-upcase-map) 2)))
           (if (> lo hi)
               ch
               (let* ((mid (+ lo (* (quotient (- hi lo) 4) 2)))
@@ -45,8 +43,6 @@
                   (integer->char (vector-ref char-upcase-map (+ mid 1))))
                  ((< n m)
                   (lp lo (- mid 2)))
-                 ((= (+ mid 2) hi)
-                  ch)
                  (else
                   (lp (+ mid 2) hi)))))))
        ((iset-contains? (caar ls) (- n (cdar ls)))

@@ -166,12 +166,12 @@
 (define (iset-adjoin-node-left! iset node)
   (if (iset-left iset)
       (iset-adjoin-node! (iset-left iset) node)
-      (iset-left-set! iset node)))
+      (iset-left-set! iset (iset-copy-node node))))
 
 (define (iset-adjoin-node-right! iset node)
   (if (iset-right iset)
       (iset-adjoin-node! (iset-right iset) node)
-      (iset-right-set! iset node)))
+      (iset-right-set! iset (iset-copy-node node))))
 
 ;; start and/or end are inside the node, split into:
 ;;   1. node before start, if any

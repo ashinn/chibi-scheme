@@ -15,15 +15,15 @@
 ;;                        "char-downcase-offsets"
 ;;   -o <output-file>   - the output file, defaults to stdout
 
-(import (chibi) (srfi 1) (srfi 69) (srfi 95) (chibi io) (chibi string)
-        (chibi iset) (chibi iset optimize))
+(import (chibi) (srfi 1) (srfi 69) (srfi 95) (chibi char-set full)
+        (chibi io) (chibi iset) (chibi iset optimize) (chibi string))
 
 (define (warn . args)
   (let ((err (current-error-port)))
     (for-each (lambda (x) (display x err)) args)
     (newline err)))
 
-(define (write-offsets offset-map out min-count max-char-sets name)
+(define (write-offsets offset-map extras out min-count max-char-sets name)
   (let lp ((ls (sort (hash-table->alist offset-map)
                      (lambda (a b) (> (iset-size (cdr a)) (iset-size (cdr b))))))
            (i 0)
@@ -38,16 +38,20 @@
                        ,(caar ls))
                 res)))
      (else
-      (write `(define ,(string->symbol name) (list ,@(reverse res))) out)
+      (write `(define ,(string->symbol name)
+                (list ,@(reverse res)))
+             out)
       (newline out)
       (newline out)
       (let ((pairs
              (sort
-              (append-map
-               (lambda (x)
-                 (map (lambda (y) (list y (+ y (car x))))
-                      (iset->list (cdr x))))
-               ls)
+              (append
+               extras
+               (append-map
+                (lambda (x)
+                  (map (lambda (y) (list y (+ y (car x))))
+                       (iset->list (cdr x))))
+                ls))
               (lambda (a b) (< (car a) (car b))))))
         (write `(define char-downcase-map
                   ',(list->vector (append-map (lambda (x) x) pairs)))
@@ -57,20 +61,23 @@
         (write `(define char-upcase-map
                   ',(list->vector
                      (append-map (lambda (x) (list (cadr x) (car x)))
-                                 (sort pairs
-                                       (lambda (a b) (< (cadr a) (cadr b)))))))
+                                 (delete-duplicates
+                                  (sort pairs
+                                        (lambda (a b) (< (cadr a) (cadr b))))
+                                  (lambda (a b) (eqv? (cadr a) (cadr b)))))))
                out)
         (newline out))))))
 
 (define (extract-case-folding in out min-count max-char-sets name)
   (define (string-trim-comment str comment-ch)
     (car (string-split str comment-ch 2)))
-  (let ((offset-map (make-hash-table eq?)))
+  (let ((offset-map (make-hash-table eq?))
+        (extras '()))
     (let lp ()
       (let ((line (read-line in)))
         (cond
          ((eof-object? line)
-          (write-offsets offset-map out min-count max-char-sets name))
+          (write-offsets offset-map extras out min-count max-char-sets name))
          ((or (equal? line "") (eqv? #\# (string-ref line 0)))
           (lp))
          (else
@@ -85,15 +92,20 @@
                 (cond
                  ((not upper)
                   (warn "invalid upper char in CaseFolding.txt: " line))
-                 ((eqv? 'C status)
+                 ((memv status '(C S))
                   (let ((lower (string->number (car (cddr ls)) 16)))
-                    (if (not lower)
-                        (warn "invalid lower char in CaseFolding.txt: " line)
-                        (hash-table-update!
-                         offset-map
-                         (- lower upper)
-                         (lambda (is) (iset-adjoin! is upper))
-                         (lambda () (make-iset))))))))))
+                    ;; don't store titlecase mappings
+                    (cond
+                     ((not lower)
+                      (warn "invalid lower char in CaseFolding.txt: " line))
+                     ((iset-contains? char-set:title-case upper)
+                      (set! extras (cons (list upper lower) extras)))
+                     (else
+                      (hash-table-update!
+                       offset-map
+                       (- lower upper)
+                       (lambda (is) (iset-adjoin! is upper))
+                       (lambda () (make-iset)))))))))))
             (lp))))))))
 
 (let ((args (command-line)))
