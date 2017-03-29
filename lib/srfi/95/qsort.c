@@ -287,7 +287,8 @@ sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
   sexp res;
   sexp_gc_var2(vec, scratch);
 
-  if (sexp_nullp(seq)) return seq;
+  if (sexp_nullp(seq) || seq == sexp_global(ctx, SEXP_G_EMPTY_VECTOR))
+    return seq;
 
   sexp_gc_preserve2(ctx, vec, scratch);
 
@@ -312,6 +313,8 @@ sexp sexp_sort_x (sexp ctx, sexp self, sexp_sint_t n, sexp seq,
       res = sexp_merge_sort_less(ctx, sexp_vector_data(vec),
                                  sexp_vector_data(scratch),
                                  0, len-1, less, key);
+      if (!sexp_exceptionp(res))
+        res = scratch;
     }
   }
 
