@@ -22,6 +22,8 @@ namespace {
 
 #define swap(tmp_var, a, b) (tmp_var=a, a=b, b=tmp_var)
 
+#define COMPARE_DEPTH 5
+
 static sexp sexp_vector_copy_to_list (sexp ctx, sexp vec, sexp seq) {
   sexp_sint_t i;
   sexp ls, *data=sexp_vector_data(vec);
@@ -80,13 +82,16 @@ static int sexp_isymbol_compare (sexp ctx, sexp a, sexp b) {
 #define sexp_non_immediate_ordered_numberp(x) 0
 #endif
 
-static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
-  int res;
+static int sexp_object_compare (sexp ctx, sexp a, sexp b, int depth) {
+  sexp ls1, ls2;
+  int i, res, len;
   if (a == b)
     return 0;
   if (sexp_pointerp(a)) {
     if (sexp_pointerp(b)) {
       if (sexp_pointer_tag(a) == sexp_pointer_tag(b)) {
+        if (depth <= 0)
+          return 0;
         switch (sexp_pointer_tag(a)) {
 #if SEXP_USE_FLONUMS
         case SEXP_FLONUM:
@@ -106,8 +111,8 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
 #endif
 #if SEXP_USE_COMPLEX
         case SEXP_COMPLEX:
-          res = sexp_object_compare(ctx, sexp_complex_real(a), sexp_complex_real(b));
-          if (res==0) res = sexp_object_compare(ctx, sexp_complex_imag(a), sexp_complex_imag(b));
+          res = sexp_object_compare(ctx, sexp_complex_real(a), sexp_complex_real(b), depth-1);
+          if (res==0) res = sexp_object_compare(ctx, sexp_complex_imag(a), sexp_complex_imag(b), depth-1);
           break;
 #endif
         case SEXP_STRING:
@@ -116,12 +121,24 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
         case SEXP_SYMBOL:
           res = strcmp(sexp_lsymbol_data(a), sexp_lsymbol_data(b));
           break;
-        /* TODO: consider recursively traversing containers.  requires */
-        /* cycle detection. */
-        /* case SEXP_PAIR: */
-        /*   res = sexp_object_compare(ctx, sexp_car(a), sexp_car(b)); */
-        /*   if (res==0) res = sexp_object_compare(ctx, sexp_cdr(a), sexp_cdr(b)); */
-        /*   break; */
+        case SEXP_PAIR:
+          for (res=0, ls1=a, ls2=sexp_cdr(a); res == 0 && ls1 != ls2 && sexp_pairp(ls1) && sexp_pairp(b) && sexp_pairp(b); ls1=sexp_cdr(ls1), ls2=((sexp_pairp(ls2)&&sexp_pairp(sexp_cdr(ls2)))?sexp_cdr(ls2):SEXP_NULL), b=sexp_cdr(b))
+            res = sexp_object_compare(ctx, sexp_car(ls1), sexp_car(b), depth-1);
+          if (sexp_pairp(ls2) && !sexp_pairp(b))
+            res = 1;
+          else if (sexp_pairp(b) && !sexp_pairp(ls2))
+            res = -1;
+          else if (ls1==SEXP_NULL && b==SEXP_NULL)
+            res = 0;
+          else if (res == 0)
+            res = sexp_object_compare(ctx, ls1, b, depth-1);
+          break;
+        case SEXP_VECTOR:
+          len = sexp_vector_length(a);
+          res = len - sexp_vector_length(b);
+          for (i=0; res == 0 && i < len; ++i)
+            res = sexp_object_compare(ctx, sexp_vector_ref(a, sexp_make_fixnum(i)), sexp_vector_ref(b, sexp_make_fixnum(i)), depth-1);
+          break;
         default:
           res = 0;
           break;
@@ -169,7 +186,7 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_object_compare_op (sexp ctx, sexp self, sexp_sint_t n, sexp a, sexp b) {
-  return sexp_make_fixnum(sexp_object_compare(ctx, a, b));
+  return sexp_make_fixnum(sexp_object_compare(ctx, a, b, COMPARE_DEPTH));
 }
 
 /* fast path when using general object-cmp comparator with no key */
@@ -182,14 +199,14 @@ static void sexp_merge_sort (sexp ctx, sexp *vec, sexp *scratch, sexp_sint_t lo,
     scratch[lo] = vec[lo];
     break;
   case 2:
-    if (sexp_object_compare(ctx, vec[hi], vec[hi-1]) < 0)
+    if (sexp_object_compare(ctx, vec[hi], vec[hi-1], COMPARE_DEPTH) < 0)
       swap(tmp, vec[hi], vec[hi-1]);
     /* ... FALLTHROUGH ... */
   case 1:
-    if (sexp_object_compare(ctx, vec[lo+1], vec[lo]) < 0) {
+    if (sexp_object_compare(ctx, vec[lo+1], vec[lo], COMPARE_DEPTH) < 0) {
       swap(tmp, vec[lo+1], vec[lo]);
       if (hi - lo > 1) {
-        if (sexp_object_compare(ctx, vec[lo+2], vec[lo+1]) < 0)
+        if (sexp_object_compare(ctx, vec[lo+2], vec[lo+1], COMPARE_DEPTH) < 0)
           swap(tmp, vec[lo+2], vec[lo+1]);
       }
     }
@@ -204,7 +221,7 @@ static void sexp_merge_sort (sexp ctx, sexp *vec, sexp *scratch, sexp_sint_t lo,
       } else if (j > hi) {
         scratch[k] = vec[i++];
       } else {
-        if (sexp_object_compare(ctx, vec[j], vec[i]) < 0) {
+        if (sexp_object_compare(ctx, vec[j], vec[i], COMPARE_DEPTH) < 0) {
           scratch[k] = vec[j++];
         } else {
           scratch[k] = vec[i++];
