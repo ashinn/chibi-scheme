@@ -5,13 +5,13 @@
     (define (run-tests)
 
       (test-group "vectors/constructors"
+        (define a2i '#(a b c d e f g h i))
         (test '#(0 1 2 3 4) (vector 0 1 2 3 4))
         (test '#(0 -1 -2 -3 -4 -5 -6 -7 -8 -9)
             (vector-unfold (lambda (i x) (values x (- x 1))) 10 0))
         (test '#(0 1 2 3 4 5 6) (vector-unfold values 7))
         (test '#((0 . 4) (1 . 3) (2 . 2) (3 . 1) (4 . 0))
             (vector-unfold-right (lambda (i x) (values (cons i x) (+ x 1))) 5 0))
-        (define a2i '#(a b c d e f g h i))
         (test a2i (vector-copy a2i))
         (test-assert (not (eqv? a2i (vector-copy a2i))))
         (test '#(g h i) (vector-copy a2i 6))
