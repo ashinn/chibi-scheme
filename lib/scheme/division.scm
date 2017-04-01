@@ -17,24 +17,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; The builtin quotient and remainder implement truncation - the
-;; fractional part is always discarded.
-
-(define truncate-quotient quotient)
-(define truncate-remainder remainder)
-(define (truncate/ n m)
-  (values (truncate-quotient n m) (truncate-remainder n m)))
-
 ;; Floor, ceiling and round just compose their corresponding function
 ;; with division to determine the quotient, and compute the remainder
 ;; from that.
-
-(define (floor-quotient n m)
-  (copy-exactness2 n m (floor (/ n m))))
-(define (floor-remainder n m)
-  (- n (* m (floor-quotient n m))))
-(define (floor/ n m)
-  (values (floor-quotient n m) (floor-remainder n m)))
 
 (define (ceiling-quotient n m)
   (copy-exactness2 n m (ceiling (/ n m))))
@@ -60,16 +45,16 @@
 (define (euclidean/ n m)
   (values (euclidean-quotient n m) (euclidean-remainder n m)))
 
-;; Centered places the remainder in the half-open interval
+;; Balanced places the remainder in the half-open interval
 ;; [-m/2, m/2).
 
-(define (centered-remainder n m)
+(define (balanced-remainder n m)
   (let ((r (euclidean-remainder n m))
         (m/2 (abs (/ m 2))))
     (cond ((< r (- m/2)) (+ r (abs m)))
           ((>= r m/2) (- r (abs m)))
           (else r))))
-(define (centered-quotient n m)
-  (quotient (- n (centered-remainder n m)) m))
-(define (centered/ n m)
-  (values (centered-quotient n m) (centered-remainder n m)))
+(define (balanced-quotient n m)
+  (quotient (- n (balanced-remainder n m)) m))
+(define (balanced/ n m)
+  (values (balanced-quotient n m) (balanced-remainder n m)))
