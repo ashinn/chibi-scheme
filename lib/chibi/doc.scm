@@ -541,19 +541,19 @@ div#footer {padding-bottom: 50px}
                  (lp (cdr ls) (cons (cons (car ls) i) vars) (+ i 1)))
                 (else
                  (extract body vars i)))))
-            (else
-             (let ((opts (map car (sort vars < cdr)))
-                   (rest-var? (contains? x o)))
-               (append (reverse pre)
-                       (cond
-                        ((and (pair? opts) rest-var?)
-                         (list (append opts o)))
-                        (rest-var?
-                         o)
-                        ((pair? opts)
-                         (list opts))
-                        (else
-                         '()))))))))))))
+            (_
+             (let* ((opts (map car (sort vars < cdr)))
+                    (rest-var? (contains? x o))
+                    (tail (cond
+                           ((and (pair? opts) rest-var?)
+                            (list (append opts o)))
+                           (rest-var?
+                            o)
+                           ((pair? opts)
+                            (list opts))
+                           (else
+                            o))))
+               (append (reverse pre) tail))))))))))
 
 (define (get-procedure-signature mod id proc)
   (protect (exn (else '()))
