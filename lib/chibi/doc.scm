@@ -564,7 +564,7 @@ div#footer {padding-bottom: 50px}
 
 (define (get-value-signature mod id proc name value)
   (match value
-    (('(or let let* letrec letrec*) vars body0 ... body)
+    (((or 'let 'let* 'letrec 'letrec*) vars body0 ... body)
      (get-value-signature mod id proc name body))
     (('lambda args . body)
      (list (cons name (get-optionals-signature args body))))
