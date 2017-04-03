@@ -38,7 +38,8 @@
    object-size object->integer integer->immediate gc gc-usecs gc-count
    atomically thread-list abort
    string-contains string-cursor-copy! errno integer->error-string
-   flatten-dot update-free-vars! setenv unsetenv safe-setenv)
+   flatten-dot update-free-vars! setenv unsetenv safe-setenv
+   immutable?)
   (import (chibi))
   (include-shared "ast")
   (include "ast.scm"))

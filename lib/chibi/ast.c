@@ -326,6 +326,10 @@ sexp sexp_object_size (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return sexp_make_fixnum(sexp_type_size_of_object(t, x));
 }
 
+sexp sexp_immutablep_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  return sexp_pointerp(x) ? sexp_make_boolean(sexp_immutablep(x)) : SEXP_TRUE;
+}
+
 sexp sexp_integer_to_immediate (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp dflt) {
   sexp x = (sexp)sexp_unbox_fixnum(i);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
@@ -694,6 +698,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "env-push!", 3, sexp_env_push_op);
   sexp_define_foreign(ctx, env, "core-code", 1, sexp_core_code_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
+  sexp_define_foreign(ctx, env, "immutable?", 1, sexp_immutablep_op);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign_opt(ctx, env, "object->integer", 1, sexp_object_to_integer, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);
