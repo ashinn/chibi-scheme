@@ -1002,7 +1002,8 @@ div#footer {padding-bottom: 50px}
       (define (get-includes)
         (get-forms (cddr mod-form) '(include include-ci) dir #t))
       (define (get-shared-includes)
-        (get-forms (cddr mod-form) '(shared-include) dir #t))
+        (map (lambda (f) (string-append f ".stub"))
+             (get-forms (cddr mod-form) '(include-shared) dir #t)))
       (let* ((exports (if (pair? o) (car o) (get-exports)))
              (srcs (cons file (get-decls))))
         (extract-module-docs-from-files
