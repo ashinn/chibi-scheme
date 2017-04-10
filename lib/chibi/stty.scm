@@ -9,10 +9,7 @@
 (define stty-lookup (make-hash-table eq?))
 
 (for-each
- (lambda (c)
-   (let ((type (cadr c))
-         (value (car (cddr c))))
-     (hash-table-set! stty-lookup (car c) (cdr c))))
+ (lambda (c) (hash-table-set! stty-lookup (car c) (cdr c)))
 
  ;; ripped from the stty man page, then trimmed down to what seemed
  ;; available on most systems
@@ -148,7 +145,7 @@
    ;;(-pass8   combine  #f) ; same as parenb istrip cs7
    (raw      combine  (not ignbrk brkint ignpar parmrk
                            inpck istrip inlcr igncr icrnl))
-   (ixon     combine  (ixoff ixany imaxbel opost isig icanon)) ;; xcase iuclc
+   ;;(ixon     combine  (ixoff ixany imaxbel opost isig icanon)) ;; xcase iuclc
    ;;(time     combine  #f) ; 0
    ;;(-raw     combine  #f) ; same as cooked
    (sane     combine  (cread brkint icrnl imaxbel opost onlcr
