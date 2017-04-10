@@ -58,6 +58,7 @@ sexp sexp_warn_undefs_op (sexp ctx, sexp self, sexp_sint_t n, sexp from, sexp to
   if (sexp_envp(from)) from = sexp_env_bindings(from);
   for (x=from; sexp_pairp(x) && x!=to; x=sexp_env_next_cell(x))
     if (sexp_cdr(x) == SEXP_UNDEF && sexp_car(x) != ignore
+        && !sexp_synclop(sexp_car(x))
         && sexp_not(sexp_memq(ctx, sexp_car(x), ignore)))
       sexp_warn(ctx, "reference to undefined variable: ", sexp_car(x));
   return SEXP_VOID;
@@ -148,15 +149,6 @@ sexp sexp_env_cell_define (sexp ctx, sexp env, sexp key,
 #endif
   for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
     if (sexp_car(ls) == key) {
-      sexp_cdr(ls) = value;
-      return ls;
-    } else if (sexp_cdr(ls) == SEXP_UNDEF &&
-               sexp_synclop(sexp_car(ls)) &&
-               !sexp_synclop(key) &&
-               sexp_identifier_eq(ctx, env, key, sexp_synclo_env(sexp_car(ls)), sexp_synclo_expr(sexp_car(ls)))) {
-      /* handle an undefined renamed reference that would have */
-      /* resolved to this binding, renamed to what we define here */
-      sexp_car(ls) = key;
       sexp_cdr(ls) = value;
       return ls;
     }

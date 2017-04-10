@@ -1326,8 +1326,16 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     break;
   case SEXP_OP_GLOBAL_REF:
     _ALIGN_IP();
-    if (sexp_cdr(_WORD0) == SEXP_UNDEF)
-      sexp_raise("undefined variable", sexp_list1(ctx, sexp_car(_WORD0)));
+    if (sexp_cdr(_WORD0) == SEXP_UNDEF) {
+      /* handle renamed forward references by doing a final delayed */
+      /* lookup before throwing an undefined variable error */
+      if (sexp_synclop(sexp_car(_WORD0))) {
+        tmp1 = sexp_env_cell(ctx, sexp_synclo_env(sexp_car(_WORD0)), sexp_synclo_expr(sexp_car(_WORD0)), 0);
+        if (tmp1 != NULL) _WORD0 = tmp1;
+      }
+      if (sexp_cdr(_WORD0) == SEXP_UNDEF)
+        sexp_raise("undefined variable", sexp_list1(ctx, sexp_car(_WORD0)));
+    }
     /* ... FALLTHROUGH ... */
   case SEXP_OP_GLOBAL_KNOWN_REF:
     _ALIGN_IP();
