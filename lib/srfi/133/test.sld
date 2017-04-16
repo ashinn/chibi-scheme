@@ -3,7 +3,7 @@
   (export run-tests)
   (begin
     (define (run-tests)
-
+      (test-begin "srfi-133: vectors")
       (test-group "vectors/constructors"
         (define a2i '#(a b c d e f g h i))
         (test '#(0 1 2 3 4) (vector 0 1 2 3 4))
@@ -173,4 +173,6 @@
         (test '#(#\a #\b #\c) (string->vector "abc"))
         (test '#(#\b #\c) (string->vector "abc" 1))
         (test '#(#\a #\b) (string->vector "abc" 0 2))
-        ))))
+        )
+
+      (test-end))))

@@ -40,7 +40,7 @@
        (lambda (a b) (string<? (symbol->string a) (symbol->string b)))
        symbol-hash))
     (define (run-tests)
-      (test-group "comparators"
+      (test-group "srfi-128: comparators"
         (test '#(2 3 4) (vector-cdr '#(1 2 3 4)))
         (test '#() (vector-cdr '#(1)))
 

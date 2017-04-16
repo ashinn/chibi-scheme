@@ -3,7 +3,7 @@
   (export run-tests)
   (begin
     (define (run-tests)
-      (test-begin "list-queues")
+      (test-begin "srfi-117: list-queues")
 
       (test-group "list-queues/simple"
         (define x (list-queue 1 2 3))

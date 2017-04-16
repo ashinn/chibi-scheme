@@ -3,7 +3,7 @@
   (export run-tests)
   (begin
     (define (run-tests)
-      (test-begin "sorting")
+      (test-begin "srfi-132: sorting")
       (test '()
           (list-sort > (list)))
       (test '(987)

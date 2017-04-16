@@ -10,7 +10,7 @@
     (define Ljubljana "\x01C8;ub\x01C9;ana")
     (define ljubljana "\x01C9;ub\x01C9;ana")
     (define (run-tests)
-      (test-begin "titlecase")
+      (test-begin "srfi-129: titlecase")
       (test-group "titlecase/predicate"
         (test-assert (char-title-case? #\x01C5))
         (test-assert (char-title-case? #\x1FFC))
