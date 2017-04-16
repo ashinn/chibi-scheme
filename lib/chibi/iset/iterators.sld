@@ -5,6 +5,7 @@
    (else (import (scheme base))))
   (import (chibi iset base))
   (cond-expand
+   ((library (srfi 142)) (import (srfi 142)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (include "iterators.scm")

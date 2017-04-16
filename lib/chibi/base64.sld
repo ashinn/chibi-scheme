@@ -6,14 +6,20 @@
   (import (scheme base)
           (chibi string))
   (cond-expand
+   ((library (srfi 142))
+    (import (srfi 142)))
    ((library (srfi 33))
-    (import (srfi 33)))
+    (import (srfi 33))
+    (begin
+      (define (%mask size) (bitwise-not (arithmetic-shift -1 size)))
+      (define (bit-field n start end)
+        (bitwise-and (arithmetic-shift n (- start)) (mask (- end start))))))
    (else
     (import (srfi 60))
     (begin
       (define (%mask size) (bitwise-not (arithmetic-shift -1 size)))
-      (define (extract-bit-field size position n)
-        (bitwise-and (%mask size) (arithmetic-shift n (- position)))))))
+      (define (bit-field n start end)
+        (bitwise-and (arithmetic-shift n (- start)) (mask (- end start)))))))
   (cond-expand
    (chibi (import (chibi io)))
    (else

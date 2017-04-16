@@ -1,5 +1,5 @@
 /*  bit.c -- bitwise operators                                */
-/*  Copyright (c) 2009-2012 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2017 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>

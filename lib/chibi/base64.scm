@@ -141,18 +141,18 @@
              dst
              j
              (bitwise-ior (arithmetic-shift b1 2)
-                          (extract-bit-field 2 4 b2)))
+                          (bit-field b2 4 6)))
             (bytevector-u8-set!
              dst
              (+ j 1)
              (bitwise-ior
-              (arithmetic-shift (extract-bit-field 4 0 b2) 4)
-              (extract-bit-field 4 2 b3)))
+              (arithmetic-shift (bit-field b2 0 4) 4)
+              (bit-field b3 2 6)))
             (bytevector-u8-set!
              dst
              (+ j 2)
              (bitwise-ior
-              (arithmetic-shift (extract-bit-field 2 0 b3) 6)
+              (arithmetic-shift (bit-field b3 0 2) 6)
               c))
             (lp (+ i 1) (+ j 3)
                 *outside-char* *outside-char* *outside-char*)))))))
@@ -172,7 +172,7 @@
     (bytevector-u8-set! dst
                         j
                         (bitwise-ior (arithmetic-shift b1 2)
-                                     (extract-bit-field 2 4 b2)))
+                                     (bit-field b2 4 6)))
     (cond
      ((eqv? b3 *outside-char*)
       (+ j 1))
@@ -180,8 +180,8 @@
       (bytevector-u8-set! dst
                           (+ j 1)
                           (bitwise-ior
-                           (arithmetic-shift (extract-bit-field 4 0 b2) 4)
-                           (extract-bit-field 4 2 b3)))
+                           (arithmetic-shift (bit-field b2 0 4) 4)
+                           (bit-field b3 2 6)))
       (+ j 2))))))
 
 ;;>  Variation of the above to read and write to ports.
@@ -282,11 +282,11 @@
                 (+ j 1)
                 (enc (bitwise-ior
                       (arithmetic-shift (bitwise-and #b11 b1) 4)
-                      (extract-bit-field 4 4 b2))))
+                      (bit-field b2 4 8))))
                (bytevector-u8-set!
                 res
                 (+ j 2)
-                (enc (arithmetic-shift (extract-bit-field 4 0 b2) 2)))
+                (enc (arithmetic-shift (bit-field b2 0 4) 2)))
                (bytevector-u8-set! res (+ j 3) (char->integer #\=))
                (+ j 4)))
             (else
@@ -300,13 +300,13 @@
              (+ j 1)
              (enc (bitwise-ior
                    (arithmetic-shift (bitwise-and #b11 b1) 4)
-                   (extract-bit-field 4 4 b2))))
+                   (bit-field b2 4 8))))
             (bytevector-u8-set!
              res
              (+ j 2)
              (enc (bitwise-ior
-                   (arithmetic-shift (extract-bit-field 4 0 b2) 2)
-                   (extract-bit-field 2 6 b3))))
+                   (arithmetic-shift (bit-field b2 0 4) 2)
+                   (bit-field b3 6 8))))
             (bytevector-u8-set! res (+ j 3) (enc (bitwise-and #b111111 b3)))
             (lp (+ i 3) (+ j 4)))))))
 

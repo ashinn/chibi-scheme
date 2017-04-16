@@ -81,7 +81,7 @@
                                  (%make-iset
                                   (+ start last)
                                   (+ start lo -1)
-                                  (extract-bit-field (- lo last) last bits)
+                                  (bit-field bits last lo)
                                   #f
                                   #f))
                                 nodes)

@@ -1,6 +1,6 @@
 (define-library (srfi 128)
   (import (scheme base) (scheme char)
-          (srfi 27) (srfi 33) (srfi 69) (srfi 95) (srfi 98)
+          (srfi 27) (srfi 69) (srfi 95) (srfi 98) (srfi 142)
           (only (chibi) fixnum? er-macro-transformer))
   (export
    ;; Predicates:

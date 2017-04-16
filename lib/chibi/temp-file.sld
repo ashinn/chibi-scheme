@@ -3,6 +3,7 @@
   (import (scheme base) (scheme time)
           (chibi filesystem) (chibi pathname))
   (cond-expand
+   ((library (srfi 142)) (import (srfi 142)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (cond-expand

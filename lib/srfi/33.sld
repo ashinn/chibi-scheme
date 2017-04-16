@@ -11,7 +11,22 @@
           bit-set? any-bits-set? all-bits-set?
           first-set-bit
           extract-bit-field test-bit-field? clear-bit-field 
-          replace-bit-field  copy-bit-field)
-  (import (chibi))
-  (include-shared "33/bit")
-  (include "33/bitwise.scm"))
+          replace-bit-field copy-bit-field)
+  (import (scheme base)
+          (rename (srfi 142)
+                  (bitwise-if bitwise-merge)
+                  (any-bit-set? any-bits-set?)
+                  (every-bit-set? all-bits-set?)
+                  (bit-field-any? test-bit-field?)
+                  (bit-field-clear clear-bit-field)))
+  (begin
+    (define (mask len)
+      (- (arithmetic-shift 1 len) 1))
+    (define (extract-bit-field size position n)
+      (bitwise-and (arithmetic-shift n (- position)) (mask size)))
+    (define (replace-bit-field size position newfield n)
+      (bitwise-ior
+       (bitwise-and n (bitwise-not (arithmetic-shift (mask size) position)))
+       (arithmetic-shift newfield position)))
+    (define (copy-bit-field size position from to)
+      (bitwise-merge (arithmetic-shift (mask size) position) to from))))
