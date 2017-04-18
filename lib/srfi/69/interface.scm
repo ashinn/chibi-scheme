@@ -1,5 +1,5 @@
 ;; interface.scm -- hash-table interface
-;; Copyright (c) 2009-2011 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2017 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;; the non-exported hash-table-cell is the heart of the implemenation
@@ -38,7 +38,9 @@
 (define (hash-table-ref table key . o)
   (assert-hash-table "hash-table-ref" table)
   (let ((cell (hash-table-cell table key #f)))
-    (cond (cell (cdr cell))
+    (cond (cell (if (and (pair? o) (pair? (cdr o)))
+                    ((cadr o) (cdr cell))
+                    (cdr cell)))
           ((pair? o) ((car o)))
           (else (error "hash-table-ref: key not found" key)))))
 
@@ -65,7 +67,9 @@
                            (if (pair? o)
                                (func ((car o)))
                                (error "hash-table-update!: key not found" key))
-                           (func (cdr cell))))))))
+                           (func (if (and (pair? o) (pair? (cdr o)))
+                                     ((cadr o) (cdr cell))
+                                     (cdr cell)))))))))
 
 (define hash-table-update!/default
   (let ((not-found (cons 'not-found '())))
@@ -106,7 +110,9 @@
     res))
 
 (define (hash-table-merge! a b)
-  (hash-table-walk b (lambda (k v) (hash-table-set! a k v)))
+  (hash-table-walk b (lambda (k v)
+                       (if (not (hash-table-exists? a k))
+                           (hash-table-set! a k v))))
   a)
 
 (define (hash-table-copy table)

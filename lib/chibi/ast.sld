@@ -39,7 +39,7 @@
    atomically thread-list abort
    string-contains string-cursor-copy! errno integer->error-string
    flatten-dot update-free-vars! setenv unsetenv safe-setenv
-   immutable?)
+   immutable? make-immutable!)
   (import (chibi))
   (include-shared "ast")
   (include "ast.scm"))
