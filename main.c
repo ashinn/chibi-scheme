@@ -90,6 +90,8 @@ static void sexp_make_unblocking (sexp ctx, sexp port) {
     if (fcntl(sexp_port_fileno(port), F_SETFL, sexp_port_flags(port) | O_NONBLOCK) == 0)
       sexp_port_flags(port) |= O_NONBLOCK;
 }
+#else
+#define sexp_make_unblocking(ctx, port) 0
 #endif
 
 static sexp sexp_meta_env (sexp ctx) {
@@ -103,15 +105,15 @@ static sexp sexp_param_ref (sexp ctx, sexp env, sexp name) {
   return sexp_opcodep(res) ? sexp_parameter_ref(ctx, res) : NULL;
 }
 
-static sexp sexp_load_standard_params (sexp ctx, sexp e) {
+static sexp sexp_load_standard_params (sexp ctx, sexp e, int nonblocking) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   sexp_load_standard_ports(ctx, e, stdin, stdout, stderr, 0);
-#if SEXP_USE_GREEN_THREADS
-  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL)));
-  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL)));
-  sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL)));
-#endif
+  if (nonblocking) {
+    sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL)));
+    sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL)));
+    sexp_make_unblocking(ctx, sexp_param_ref(ctx, e, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL)));
+  }
   res = sexp_make_env(ctx);
   sexp_env_parent(res) = e;
   sexp_context_env(ctx) = res;
@@ -236,7 +238,7 @@ static sexp sexp_add_import_binding (sexp ctx, sexp env) {
   return env;
 }
 
-static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) {
+static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp, int nonblocking) {
   sexp_gc_var1(e);
   sexp_gc_preserve1(ctx, e);
   e = sexp_load_standard_env(ctx, env, k);
@@ -248,7 +250,7 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp) 
       sexp_add_import_binding(ctx, e);
 #endif
     if (!sexp_exceptionp(e))
-      e = sexp_load_standard_params(ctx, e);
+      e = sexp_load_standard_params(ctx, e, nonblocking);
   }
   sexp_gc_release1(ctx);
   return e;
@@ -279,7 +281,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 
 #define load_init(bootp) if (! init_loaded++) do {                      \
       init_context();                                                   \
-      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN, bootp)); \
+      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN, bootp, nonblocking)); \
     } while (0)
 
 /* static globals for the sake of resuming from within emscripten */
@@ -295,7 +297,7 @@ sexp run_main (int argc, char **argv) {
   char *arg;
   const char *prefix=NULL, *suffix=NULL, *main_symbol=NULL, *main_module=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
-    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS;
+    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS, nonblocking=0;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp out=SEXP_FALSE, ctx=NULL, ls;
   sexp_gc_var4(tmp, sym, args, env);
@@ -396,6 +398,11 @@ sexp run_main (int argc, char **argv) {
       check_nonull_arg('I', arg);
       sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_FALSE);
       break;
+#if SEXP_USE_GREEN_THREADS
+    case 'b':
+      nonblocking = 1;
+      break;
+#endif
     case '-':
       if (argv[i][2] == '\0') {
         i++;
@@ -427,7 +434,7 @@ sexp run_main (int argc, char **argv) {
         fprintf(stderr, "            %s\n", sexp_load_image_err());
         exit_failure();
       }
-      env = sexp_load_standard_params(ctx, sexp_context_env(ctx));
+      env = sexp_load_standard_params(ctx, sexp_context_env(ctx), nonblocking);
       init_loaded++;
       break;
     case 'd':
