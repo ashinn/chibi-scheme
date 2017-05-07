@@ -131,9 +131,9 @@ sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
         sexp_set_twos_complement(res);
       for (i=0; i<len; i++)
         sexp_bignum_data(res)[i] |= sexp_bignum_data(tmp)[i];
-      if ((sexp_bignum_sign(res) < 0) ^ sexp_fixnump(y))
+      if ((sexp_bignum_sign(x) < 0) ^ (sexp_fixnump(y) || sexp_bignum_sign(y) < 0))
         sexp_set_twos_complement(res);
-      if (sexp_fixnump(y)) {
+      if (sexp_fixnump(y) || sexp_bignum_sign(y) < 0) {
         sexp_negate_exact(res);
       }
     } else {
@@ -188,6 +188,10 @@ sexp sexp_bit_xor (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
           = sexp_bignum_data(res)[i] ^ sexp_bignum_data(tmp)[i];
       if (sexp_bignum_sign(res) < 0)
         sexp_set_twos_complement(res);
+      if  (!((sexp_bignum_sign(x) < 0) ^ (sexp_bignum_sign(y) < 0))) {
+        sexp_set_twos_complement(res);
+        sexp_negate_exact(res);
+      }
     } else {
       res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
     }
