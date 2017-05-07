@@ -18,7 +18,7 @@
     (let lp ((n (string-cursor-start str))
              (prev-caseless? #t)
              (result '()))
-      (if (string-cursor>=? str n end)
+      (if (string-cursor>=? n end)
           (list->string (reverse result))
           (let ((ch (string-cursor-ref str n))
                 (n2 (string-cursor-next str n)))
