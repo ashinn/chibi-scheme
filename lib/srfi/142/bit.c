@@ -47,8 +47,9 @@ static sexp sexp_fixnum_to_twos_complement (sexp ctx, sexp x, int len) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   res = sexp_make_bignum(ctx, len);
-  for (i = len-1; i > 0; i--)
-    sexp_bignum_data(res)[i] = (sexp_uint_t)((sexp_sint_t)-1);
+  if (sexp_unbox_fixnum(x) < 0)
+    for (i = len-1; i > 0; i--)
+      sexp_bignum_data(res)[i] = (sexp_uint_t)((sexp_sint_t)-1);
   sexp_bignum_data(res)[0] = ~(-(sexp_unbox_fixnum(x)));
   res = sexp_bignum_fxadd(ctx, res, 1);
   sexp_gc_release1(ctx);
@@ -109,17 +110,17 @@ sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     sexp_gc_preserve2(ctx, res, tmp);
-    if (sexp_fixnump(y)) {
+    if (sexp_fixnump(y) && sexp_unbox_fixnum(y) >= 0) {
       res = sexp_copy_bignum(ctx, NULL, x, 0);
       if (sexp_bignum_sign(res) < 0)
         sexp_set_twos_complement(res);
       sexp_bignum_data(res)[0] |= (sexp_uint_t)sexp_unbox_fixnum(y);
       if (sexp_bignum_sign(res) < 0)
         sexp_set_twos_complement(res);
-    } else if (sexp_bignump(y)) {
-      if (sexp_bignum_length(x) >= sexp_bignum_length(y)) {
+    } else if (sexp_bignump(y) || sexp_fixnump(y)) {
+      if (sexp_fixnump(y) || sexp_bignum_length(x) >= sexp_bignum_length(y)) {
         res = sexp_copy_bignum(ctx, NULL, x, 0);
-        tmp = sexp_twos_complement(ctx, y);
+        tmp = sexp_fixnump(y) ? sexp_fixnum_to_twos_complement(ctx, y, sexp_bignum_length(x)) : sexp_twos_complement(ctx, y);
         len = sexp_bignum_length(tmp);
       } else {
         res = sexp_copy_bignum(ctx, NULL, y, 0);
@@ -129,10 +130,12 @@ sexp sexp_bit_ior (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp y) {
       if (sexp_bignum_sign(res) < 0)
         sexp_set_twos_complement(res);
       for (i=0; i<len; i++)
-        sexp_bignum_data(res)[i]
-          = sexp_bignum_data(res)[i] | sexp_bignum_data(tmp)[i];
-      if (sexp_bignum_sign(res) < 0)
+        sexp_bignum_data(res)[i] |= sexp_bignum_data(tmp)[i];
+      if ((sexp_bignum_sign(res) < 0) ^ sexp_fixnump(y))
         sexp_set_twos_complement(res);
+      if (sexp_fixnump(y)) {
+        sexp_negate_exact(res);
+      }
     } else {
       res = sexp_type_exception(ctx, self, SEXP_FIXNUM, y);
     }
