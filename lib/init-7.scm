@@ -8,11 +8,12 @@
 (define (cddr x) (cdr (cdr x)))
 
 (define (cons-source kar kdr source)
-  ((lambda (pair)
+  ((lambda (pair source)
      (if (pair? source)
          (pair-source-set! pair (pair-source source)))
      pair)
-   (cons kar kdr)))
+   (cons kar kdr)
+   (strip-syntactic-closures source)))
 
 ;; basic utils
 
@@ -194,7 +195,8 @@
                (cadr (car x))
                (list (rename 'append) (cadr (car x)) (qq (cdr x) d))))
           (else
-           (list (rename 'cons) (qq (car x) d) (qq (cdr x) d)))))
+           (list (rename 'cons-source) (qq (car x) d) (qq (cdr x) d)
+                 (list (rename 'quote) x)))))
         ((vector? x) (list (rename 'list->vector) (qq (vector->list x) d)))
         ((if (identifier? x) #t (null? x)) (list (rename 'quote) x))
         (else x)))
