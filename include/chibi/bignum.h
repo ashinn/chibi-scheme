@@ -27,6 +27,7 @@ SEXP_API sexp sexp_fixnum_to_bignum (sexp ctx, sexp a);
 SEXP_API double sexp_bignum_to_double (sexp a);
 SEXP_API sexp sexp_double_to_bignum (sexp ctx, double f);
 SEXP_API sexp sexp_bignum_fxadd (sexp ctx, sexp a, sexp_uint_t b);
+SEXP_API sexp sexp_bignum_fxsub (sexp ctx, sexp a, sexp_uint_t b);
 SEXP_API sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset);
 SEXP_API sexp_uint_t sexp_bignum_fxdiv (sexp ctx, sexp a, sexp_uint_t b, int offset);
 SEXP_API sexp sexp_bignum_add (sexp ctx, sexp dst, sexp a, sexp b);

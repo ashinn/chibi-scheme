@@ -264,6 +264,8 @@ sexp sexp_arithmetic_shift (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp cou
               tmp = sexp_bignum_data(i)[j+offset]
                 << (sizeof(sexp_uint_t)*CHAR_BIT-bit_shift);
           }
+          if (sexp_bignum_sign(res) < 0)
+            res = sexp_bignum_fxadd(ctx, res, 1);
         }
       }
     } else {
