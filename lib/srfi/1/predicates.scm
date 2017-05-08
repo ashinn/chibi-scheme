@@ -29,7 +29,8 @@
           (if (null? ls1)
               (and (null? ls2)
                    (lp1 (cdr lists)))
-              (and (eq (car ls1) (car ls2))
+              (and (pair? ls2)
+                   (eq (car ls1) (car ls2))
                    (lp2 (cdr ls1) (cdr ls2))))))))
 
 (define (length+ x)

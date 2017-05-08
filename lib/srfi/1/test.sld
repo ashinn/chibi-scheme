@@ -32,6 +32,8 @@
       (test #f (pair? 'a))
       (test #t (list= eq?))
       (test #t (list= eq? '(a)))
+      (test #f (list= = '(1 2) '(1 2 3)))
+      (test #f (list= = '(1 2 3) '(1 2)))
       (test 'a (car '(a b c)))
       (test '(b c)   (cdr '(a b c)))
       (test '(a) (car '((a) b c d)))
