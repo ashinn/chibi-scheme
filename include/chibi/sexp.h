@@ -930,8 +930,8 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
     sexp_negate_exact(x)
 
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
-#define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_data(x)[0]))
-#define sexp_sint_value(x) ((sexp_sint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignum_sign(x)*sexp_bignum_data(x)[0]))
+#define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignump(x) ? sexp_bignum_data(x)[0] : 0))
+#define sexp_sint_value(x) ((sexp_sint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignump(x) ? sexp_bignum_sign(x)*sexp_bignum_data(x)[0] : 0))
 #else
 #define sexp_uint_value(x) ((sexp_uint_t)sexp_unbox_fixnum(x))
 #define sexp_sint_value(x) ((sexp_sint_t)sexp_unbox_fixnum(x))
