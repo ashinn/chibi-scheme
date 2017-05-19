@@ -132,6 +132,14 @@
       (test #b1010111 (bits #t #t #t #f #t #f #t))
       (test #b1010111 (bits #t #t #t #f #t #f #t #f #f))
 
+      (test 0 (first-set-bit 1))
+      (test 1 (first-set-bit 2))
+      (test -1 (first-set-bit 0))
+      (test 3 (first-set-bit 40))
+      (test 2 (first-set-bit -28))
+      (test 99 (first-set-bit (expt  2 99)))
+      (test 99 (first-set-bit (expt -2 99)))
+
       (test '(#t #f #t #f #t #t #t) (bitwise-fold cons '() #b1010111))
 
       (test 5

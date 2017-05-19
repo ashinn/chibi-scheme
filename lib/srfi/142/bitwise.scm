@@ -36,7 +36,7 @@
 (define (first-set-bit i)
   (if (zero? i)
       -1
-      (integer-length (- i (bit-and i (- i 1))))))
+      (- (integer-length (- i (bit-and i (- i 1)))) 1)))
 
 (define (mask len)
   (- (arithmetic-shift 1 len) 1))
