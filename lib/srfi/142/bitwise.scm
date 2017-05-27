@@ -76,30 +76,32 @@
 (define (bit-field-replace-same dst src start end)
   (bitwise-if (range start end) src dst))
 
-(define (bit-rotate i count)
-  (let ((len (integer-length i)))
-    (bit-ior (bit-and (arithmetic-shift i count) (mask len))
-             (arithmetic-shift i (- count len)))))
+(define (bit-field-rotate n count start end)
+  (let* ((width (- end start))
+         (count (modulo count width))
+         (mask (bitwise-not (arithmetic-shift -1 width)))
+         (n^ (bitwise-and mask (arithmetic-shift n (- start)))))
+    (bit-ior (arithmetic-shift
+              (bit-ior (bit-and mask (arithmetic-shift n^ count))
+                       (arithmetic-shift n^ (- count width)))
+              start)
+             (bit-and (bitwise-not (arithmetic-shift mask start)) n))))
 
-(define (bit-field-rotate i count start end)
-  (bitwise-if (range start end)
-              i
-              (arithmetic-shift (bit-rotate (bit-field i start end) count)
-                                start)))
-
-(define (bit-reverse i)
-  (let ((len (integer-length i)))
-    (let lp ((i i) (res 0))
-      (if (zero? i)
-          res
-          (lp (arithmetic-shift i -1)
-              (bit-ior (arithmetic-shift res 1)
-                       (bit-and i 1)))))))
+(define (bit-reverse n len)
+  (let lp ((n n) (i 1) (res 0))
+    (if (> i len)
+        res
+        (lp (arithmetic-shift n -1)
+            (+ i 1)
+            (bit-ior (arithmetic-shift res 1)
+                     (bit-and n 1))))))
 
 (define (bit-field-reverse i start end)
   (bitwise-if (range start end)
-              i
-              (arithmetic-shift (bit-reverse (bit-field i start end)) start)))
+              (arithmetic-shift (bit-reverse (bit-field i start end)
+                                             (- end start))
+                                start)
+              i))
 
 (define (vector->integer vec)
   (let ((len (vector-length vec)))

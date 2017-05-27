@@ -151,4 +151,38 @@
       (test #b101010101
           (bitwise-unfold (lambda (i) (= i 10)) even? (lambda (i) (+ i 1)) 0))
 
+      (test #b110  (bit-field-rotate #b110 1 1 2))
+      (test #b1010 (bit-field-rotate #b110 1 2 4))
+      (test #b1011 (bit-field-rotate #b0111 -1 1 4))
+      (test #b0  (bit-field-rotate #b0 128 0 256))
+      (test #b1  (bit-field-rotate #b1 128 1 256))
+      (test #x100000000000000000000000000000000 
+	    (bit-field-rotate #x100000000000000000000000000000000 128 0 64))
+      (test #x100000000000000000000000000000008 
+	    (bit-field-rotate #x100000000000000000000000000000001 3 0 64))
+      (test #x100000000000000002000000000000000 
+	    (bit-field-rotate #x100000000000000000000000000000001 -3 0 64))
+      (test #b110 (bit-field-rotate #b110 0 0 10))
+      (test #b110 (bit-field-rotate #b110 0 0 256))
+      (test 1 (bit-field-rotate #x100000000000000000000000000000000 1 0 129))
+
+      (test 6 (bit-field-reverse 6 1 3))
+      (test 12 (bit-field-reverse 6 1 4))
+      (test #x80000000 (bit-field-reverse 1 0 32))
+      (test #x40000000 (bit-field-reverse 1 0 31))
+      (test #x20000000 (bit-field-reverse 1 0 30))
+      (test (bitwise-ior (arithmetic-shift -1 32) #xFBFFFFFF) 
+        (bit-field-reverse -2 0 27))
+      (test (bitwise-ior (arithmetic-shift -1 32) #xF7FFFFFF) 
+        (bit-field-reverse -2 0 28))
+      (test (bitwise-ior (arithmetic-shift -1 32) #xEFFFFFFF) 
+        (bit-field-reverse -2 0 29))
+      (test (bitwise-ior (arithmetic-shift -1 32) #xDFFFFFFF) 
+        (bit-field-reverse -2 0 30))
+      (test (bitwise-ior (arithmetic-shift -1 32) #xBFFFFFFF) 
+        (bit-field-reverse -2 0 31))
+      (test (bitwise-ior (arithmetic-shift -1 32) #x7FFFFFFF) 
+        (bit-field-reverse -2 0 32))
+      (test 5 (bit-field-reverse #x140000000000000000000000000000000 0 129))
+
       (test-end))))
