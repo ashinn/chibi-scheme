@@ -163,7 +163,7 @@
           (string-append "%0" hex)
           (string-append "%" hex))))
   (define (collect str from to res)
-    (if (>= from to)
+    (if (string-cursor>=? from to)
         res
         (cons (substring-cursor str from to) res)))
   (let ((start (string-cursor-start str))
@@ -212,7 +212,7 @@
        (read read: read/ss)
        (write write: write/ss))
     (lambda args
-      (let ((file (make-path memo-dir (apply args-encoder args))))
+      (let ((file (make-path memo-dir (args-encoder args))))
         (define (compute)
           (let ((res (apply proc args)))
             (create-directory* (path-directory file))
