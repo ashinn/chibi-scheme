@@ -1,0 +1,151 @@
+
+(c-system-include "math.h")
+
+(define-c-const double
+  (fl-e "M_E")
+  (fl-e-2 "logb(2.0)")
+  (fl-log2-e "M_LOG2E")
+  (fl-log10-e "M_LOG10E")
+  (fl-log-2 "M_LN2")
+  (fl-log-10 "M_LN10")
+  (fl-pi "M_PI")
+  (fl-1/pi "M_1_PI")
+  (fl-2/pi "M_2_PI")
+  (fl-pi/2 "M_PI/2")
+  (fl-pi/4 "M_PI/4")
+  (fl-sqrt-pi "sqrt(M_PI)")
+  (fl-2/sqrt-pi "M_2_SQRTPI")
+  (fl-sqrt-2 "M_SQRT2")
+  (fl-sqrt-3 "sqrt(3.0)")
+  (fl-sqrt-5 "sqrt(5.0)")
+  (fl-sqrt-10 "sqrt(10.0)")
+  (fl-1/sqrt-2 "M_SQRT1_2")
+  (fl-cbrt-2 "cbrt(2.0)")
+  (fl-cbrt-3 "cbrt(3.0)")
+  (fl-4thrt-2 "pow(2.0, 0.25)")
+  (fl-phi "(1.0+sqrt(5.0))/2.0")
+  (fl-log-phi "log((1.0+sqrt(5.0))/2.0)")
+  (fl-1/log-phi "1.0/log((1.0+sqrt(5.0))/2.0)")
+  (fl-euler "0.57721566490153286060651209008240243")
+  (fl-e-euler "exp(0.57721566490153286060651209008240243)")
+  (fl-sin-1 "sin(1.0)")
+  (fl-cos-1 "cos(1.0)")
+  (fl-greatest "DBL_MAX")
+  (fl-least "-DBL_MAX")
+  (fl-integer-exponent-zero "FP_ILOGB0")
+  (fl-integer-exponent-nan "FP_ILOGBNAN"))
+
+(define-c-const int
+  FP_SUBNORMAL)
+
+(c-declare
+ "#ifndef FP_FAST_FMA
+#define FP_FAST_FMA 0
+#endif")
+
+(define-c-const boolean
+  (fl-fast-+* FP_FAST_FMA))
+
+(define-c double (fl+* "fma") (double double double))
+
+;; These aren't any faster than the builtin ops.  It might be
+;; interesting to provide these as a way to get flonum support when
+;; Chibi is compiled without flonums, but we'd want for a little extra
+;; support in this case in the FFI and extending the core read/write.
+;;
+;; (c-declare
+;;  "#define fladd(x, y) ((x)+(y))
+;; #define flsub(x, y) ((x)-(y))
+;; #define flmul(x, y) ((x)*(y))
+;; #define fldiv(x, y) ((x)/(y))
+;; #define flneg(x) (-(x))
+;; #define flrecip(x) (1.0/(x))
+;; #define fleq(x, y) ((x)==(y))
+;; #define fllt(x, y) ((x)<(y))
+;; #define flle(x, y) ((x)<=(y))
+;; #define flgt(x, y) ((x)>(y))
+;; #define flge(x, y) ((x)>=(y))
+;; #define flmax(x, y) ((x)<(y)?(y):(x))
+;; #define flmin(x, y) ((x)>(y)?(y):(x))
+;; ")
+;; (define-c double (fl+ "fladd") (double double))
+;; (define-c double (fl- "flsub") (double double))
+;; (define-c double (fl* "flmul") (double double))
+;; (define-c double (fl/ "fldiv") (double double))
+;; (define-c double flneg (double))
+;; (define-c double flrecip (double))
+;; (define-c boolean (fl= "fleq") (double double))
+;; (define-c boolean (fl< "fllt") (double double))
+;; (define-c boolean (fl<= "flle") (double double))
+;; (define-c boolean (fl> "flgt") (double double))
+;; (define-c boolean (fl>= "flge") (double double))
+;; (define-c double flmax (double double))
+;; (define-c double flmin (double double))
+
+(define-c double (fladjacent "nextafter") (double double))
+
+(define-c double (flcopysign "copysign") (double double))
+
+(define-c double (make-flonum "ldexp") (double int))
+
+(define-c double modf (double (result double)))
+
+(define-c double (flexponent "logb") (double))
+
+(define-c int (flinteger-exponent "ilogb") (double))
+
+(define-c double frexp (double (result int)))
+
+(define-c int (sign-bit "signbit") (double))
+
+(define-c boolean (flfinite? "isfinite") (double))
+(define-c boolean (flinfinite? "isinf") (double))
+(define-c boolean (flnan? "isnan") (double))
+(define-c boolean (flnormalized? "isnormal") (double))
+
+(define-c int fpclassify (double))
+
+(define-c double (flabs "fabs") (double))
+(define-c double (flposdiff "fdim") (double double))
+(define-c double (flfloor "floor") (double))
+(define-c double (flceiling "ceil") (double))
+(define-c double (flround "round") (double))
+(define-c double (fltruncate "trunc") (double))
+
+(define-c double (flexp "exp") (double))
+(define-c double (flexp2 "exp2") (double))
+(define-c double (flexp-1 "expm1") (double))
+(define-c double (flsqrt "sqrt") (double))
+(define-c double (flcbrt "cbrt") (double))
+(define-c double (flhypot "hypot") (double double))
+(define-c double (flexpt "pow") (double double))
+(define-c double (fllog "log") (double))
+(define-c double (fllog1+ "log1p") (double))
+(define-c double (fllog2 "log2") (double))
+(define-c double (fllog10 "log10") (double))
+
+(define-c double (flsin "sin") (double))
+(define-c double (flcos "cos") (double))
+(define-c double (fltan "tan") (double))
+(define-c double (flasin "asin") (double))
+(define-c double (flacos "acos") (double))
+(define-c double (flatan1 "atan") (double))
+(define-c double (flatan2 "atan2") (double double))
+
+(define-c double (flsinh "sinh") (double))
+(define-c double (flcosh "cosh") (double))
+(define-c double (fltanh "tanh") (double))
+(define-c double (flasinh "asinh") (double))
+(define-c double (flacosh "acosh") (double))
+(define-c double (flatanh "atanh") (double))
+
+(define-c double remquo (double double (result int)))
+
+(define-c double (flgamma "tgamma") (double))
+(define-c double lgamma_r (double (result int)))
+
+(define-c double (flfirst-bessel "jn") (double int))
+(define-c double (flsecond-bessel "yn") (double int))
+
+(define-c double (flerf "erf") (double))
+(define-c double (flerfc "erfc") (double))
