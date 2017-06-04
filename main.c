@@ -597,7 +597,7 @@ sexp run_main (int argc, char **argv) {
         sym = sexp_intern(ctx, main_symbol, -1);
         tmp = sexp_env_ref(ctx, env, sym, SEXP_FALSE);
         if (sexp_procedurep(tmp)) {
-          args = sexp_list1(ctx, args);
+          args = sexp_list1(ctx, sexp_cdr(args));
           check_exception(ctx, sexp_apply(ctx, tmp, args));
         } else {
           fprintf(stderr, "couldn't find main binding: %s in %s\n", main_symbol, main_module ? main_module : argv[i]);

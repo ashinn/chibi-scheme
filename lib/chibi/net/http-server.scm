@@ -522,4 +522,4 @@
       (verbose? boolean (#\v "verbose"))))
     ,run-app))
 
-(define (main args) (run-application app-spec args))
+(define (main args) (run-application app-spec))
