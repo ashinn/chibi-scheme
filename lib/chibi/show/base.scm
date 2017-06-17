@@ -80,12 +80,12 @@
                           (string-width substring-length))
                  proc)))
 
-;;> Shortcut syntax for \scheme{(bind (...) (each ...))}.
+;;> Temporarily bind the parameters in the body \var{x}.
 
 (define-syntax with
   (syntax-rules ()
-    ((with params x) (%with params (displayed x)))
-    ((with params . x) (%with params (each . x)))))
+    ((with params x ... y) (%with params x ... (fn () (displayed y))))
+    ))
 
 ;;> The noop formatter.  Generates no output and leaves the state
 ;;> unmodified.
@@ -134,5 +134,5 @@
 ;;> \var{consumer}.
 (define (call-with-output producer consumer)
   (let ((out (open-output-string)))
-    (fn-fork (with ((port out)) producer)
+    (fn-fork (with ((port out) (output output-default)) producer)
              (fn () (consumer (get-output-string out))))))

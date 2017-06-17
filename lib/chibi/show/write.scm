@@ -308,9 +308,13 @@
                   (assv radix '((16 . "#x") (10 . "") (8 . "#o") (2 . "#b"))))
              => (lambda (cell)
                   (lambda (n)
-                    (if (or (exact? n) (eqv? radix 10))
-                        (each (cdr cell) (number->string n (car cell)))
-                        (with ((radix 10)) (numeric n))))))
+                    (cond
+                     ((eqv? radix 10)
+                      (displayed (number->string n (car cell))))
+                     ((exact? n)
+                      (each (cdr cell) (number->string n (car cell))))
+                     (else
+                      (with ((radix 10)) (numeric n)))))))
             (else (lambda (n) (with ((radix 10)) (numeric n)))))))
       ;; `wr' is the recursive writer closing over the shares.
       (let wr ((obj obj))

@@ -175,10 +175,10 @@
            ((w ("step") ((p tmp v) ooo) () . b)
             (lambda (st)
               (let ((tmp (ask st 'p)) ooo)
-                (tell st 'p v) ooo
-                (let ((st ((begin . b) st)))
-                  (tell st 'p tmp) ooo
-                  st))))
+                (dynamic-wind
+                  (lambda () (tell st 'p v) ooo)
+                  (lambda () ((begin . b) st))
+                  (lambda () (tell st 'p tmp) ooo)))))
            ((w ("step") (props ooo) ((p v) . rest) . b)
             (w ("step") (props ooo (p tmp v)) rest . b))
            ((w ((prop value) ooo) . body)
