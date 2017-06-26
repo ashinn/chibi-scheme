@@ -137,6 +137,7 @@ SEXP_API sexp sexp_make_promise (sexp ctx, sexp self, sexp_sint_t n, sexp done, 
 #endif
 #if SEXP_USE_UTF8_STRINGS
 SEXP_API sexp sexp_read_utf8_char (sexp ctx, sexp port, int i);
+SEXP_API void sexp_push_utf8_char (sexp ctx, int i, sexp port);
 SEXP_API void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch);
 SEXP_API sexp sexp_string_utf8_index_ref (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i);
 SEXP_API sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i, sexp ch);

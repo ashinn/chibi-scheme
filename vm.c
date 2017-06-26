@@ -2081,7 +2081,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
     if (i == EOF) {
       if (!sexp_port_openp(_ARG1))
-        sexp_raise("peek-char: port is closed", _ARG1);
+        sexp_raise("read-char: port is closed", _ARG1);
       else
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
@@ -2113,7 +2113,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     i = sexp_read_char(ctx, _ARG1);
     if (i == EOF) {
       if (!sexp_port_openp(_ARG1))
-        sexp_raise("read-char: port is closed", _ARG1);
+        sexp_raise("peek-char: port is closed", _ARG1);
       else
 #if SEXP_USE_GREEN_THREADS
       if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
@@ -2128,6 +2128,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       } else
 #endif
         _ARG1 = SEXP_EOF;
+#if SEXP_USE_UTF8_STRINGS
+    } else if (i >= 0x80) {
+      tmp1 = sexp_read_utf8_char(ctx, _ARG1, i);
+      sexp_push_utf8_char(ctx, sexp_unbox_character(tmp1), _ARG1);
+      _ARG1 = tmp1;
+#endif
     } else {
       sexp_push_char(ctx, i, _ARG1);
       _ARG1 = sexp_make_character(i);

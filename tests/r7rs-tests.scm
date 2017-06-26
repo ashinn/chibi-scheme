@@ -1905,9 +1905,11 @@
 (test "abc" (read-string 3 (open-input-string "abc\ndef\n")))
 
 (let ((in (open-input-string (string #\x10F700 #\x10F701 #\x10F702))))
-  (let* ((c1 (read-char in))
+  (let* ((c0 (peek-char in))
+         (c1 (read-char in))
          (c2 (read-char in))
          (c3 (read-char in)))
+    (test #\x10F700 c0)
     (test #\x10F700 c1)
     (test #\x10F701 c2)
     (test #\x10F702 c3)))

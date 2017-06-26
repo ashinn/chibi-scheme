@@ -131,7 +131,7 @@
                    (lambda (bv start end)
                      (do ((j start (+ j 1)))
                          ((= j end))
-                       (bytevector-u8-set! bv j (modulo (+ j i) 256)))
+                       (bytevector-u8-set! bv j (modulo (- (+ j i) start) 256)))
                      (if (> end 0)
                          (set! i (bytevector-u8-ref bv (- end 1))))
                      (- end start))))))

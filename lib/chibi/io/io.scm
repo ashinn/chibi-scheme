@@ -378,7 +378,7 @@
                (set! buf "")
                (set! len 0)
                (set! offset 0)
-               (+ i start))
+               i)
               (else
                (set! len (string-size buf))
                (cond

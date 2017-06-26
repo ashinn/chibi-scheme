@@ -1891,6 +1891,19 @@ sexp sexp_read_utf8_char (sexp ctx, sexp port, int i) {
   return sexp_make_character(i);
 }
 
+void sexp_push_utf8_char (sexp ctx, int i, sexp port) {
+  unsigned char ch[6];
+  int len = sexp_utf8_char_byte_count(i);
+  sexp_utf8_encode_char(ch, len, i);
+  if (sexp_port_stream(port))  {
+    while (len>0)
+      ungetc(ch[--len], sexp_port_stream(port));
+  } else {
+    while (len>0)
+      sexp_port_buf(port)[--sexp_port_offset(port)] = ch[--len];
+  }
+}
+
 #if SEXP_USE_MUTABLE_STRINGS
 
 void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
