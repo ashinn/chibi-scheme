@@ -62,7 +62,7 @@
           ((>= (- len offset) n)
            (bytevector-copy! bv start buf offset (+ offset n))
            (set! offset (+ offset n))
-           n)
+           end)
           (else
            (bytevector-copy! bv start buf offset (+ offset len))
            (let lp ((i (+ start (- len offset))))
@@ -72,7 +72,7 @@
                (set! buf #u8())
                (set! len 0)
                (set! offset 0)
-               (- i start))
+               i)
               (else
                (set! len (bytevector-length buf))
                (set! offset 0)
@@ -80,7 +80,7 @@
                 ((>= (- len offset) (- n i))
                  (bytevector-copy! bv i buf offset (+ offset (- n i)))
                  (set! offset (+ offset (- n i)))
-                 n)
+                 end)
                 (else
                  (bytevector-copy! bv i buf offset len)
                  (lp (+ i (- len offset)))))))))))))))
@@ -172,6 +172,10 @@
               (display method out)
               (display " " out)
               (display (or (uri-path uri) "/") out)
+              (cond
+               ((uri-query uri)
+                (display "?" out)
+                (display (uri-query uri) out)))
               (display " HTTP/1.0\r\n" out)
               (display "Host: " out) (display host out) (display "\r\n" out)
               (cond
@@ -334,4 +338,3 @@
          query)))
      (else
       query))))
-
