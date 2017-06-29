@@ -1352,7 +1352,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
     res = fread(sexp_port_buf(p) + BUF_START, 1, SEXP_PORT_BUFFER_SIZE - BUF_START, sexp_port_stream(p));
     if (res >= 0) {
       sexp_port_offset(p) = BUF_START;
-      sexp_port_size(p) = res;
+      sexp_port_size(p) = res + BUF_START;
       res = ((sexp_port_offset(p) < sexp_port_size(p))
              ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
     }
@@ -1360,7 +1360,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
     res = read(sexp_port_fileno(p), sexp_port_buf(p) + BUF_START, SEXP_PORT_BUFFER_SIZE - BUF_START);
     if (res >= 0) {
       sexp_port_offset(p) = BUF_START;
-      sexp_port_size(p) = res;
+      sexp_port_size(p) = res + BUF_START;
       res = ((sexp_port_offset(p) < sexp_port_size(p))
              ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
     }
