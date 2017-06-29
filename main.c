@@ -39,6 +39,7 @@ void sexp_usage(int err) {
          "  -q           - \"quick\" load, use the core -xchibi language\n"
          "  -Q           - extra \"quick\" load, -xchibi.primitive\n"
          "  -V           - print version information\n"
+         "  -D <feature> - add <feature> to the list of features\n"
 #if ! SEXP_USE_BOEHM
          "  -h <size>    - specify the initial heap size\n"
 #endif
@@ -52,6 +53,8 @@ void sexp_usage(int err) {
          "  -p <expr>    - evaluate and print an expression\n"
          "  -r[<main>]   - run a SRFI-22 main\n"
          "  -R[<module>] - run main from a module\n"
+         "  -t <module.proc> - trace a procedure\n"
+         "  -T           - disable TCO (dangerous)\n"
 #if SEXP_USE_IMAGE_LOADING
          "  -d <file>    - dump an image file and exit\n"
          "  -i <file>    - load an image file\n"
