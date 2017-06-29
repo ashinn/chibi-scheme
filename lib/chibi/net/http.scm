@@ -51,40 +51,6 @@
               n
               (if (>= j len) "" (substring line (+ j 1) len))))))
 
-(define (make-generated-binary-input-port generator)
-  (let ((buf #u8())
-        (len 0)
-        (offset 0))
-    (make-custom-binary-input-port
-     (lambda (bv start end)
-       (let ((n (- end start)))
-         (cond
-          ((>= (- len offset) n)
-           (bytevector-copy! bv start buf offset (+ offset n))
-           (set! offset (+ offset n))
-           end)
-          (else
-           (bytevector-copy! bv start buf offset (+ offset len))
-           (let lp ((i (+ start (- len offset))))
-             (set! buf (generator))
-             (cond
-              ((not (bytevector? buf))
-               (set! buf #u8())
-               (set! len 0)
-               (set! offset 0)
-               i)
-              (else
-               (set! len (bytevector-length buf))
-               (set! offset 0)
-               (cond
-                ((>= (- len offset) (- n i))
-                 (bytevector-copy! bv i buf offset (+ offset (- n i)))
-                 (set! offset (+ offset (- n i)))
-                 end)
-                (else
-                 (bytevector-copy! bv i buf offset len)
-                 (lp (+ i (- len offset)))))))))))))))
-
 (define (http-wrap-chunked-input-port in)
   (define (read-chunk in)
     (let* ((line (read-line in))

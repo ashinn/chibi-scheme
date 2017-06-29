@@ -391,6 +391,48 @@
                  (let ((offset2 (string-cursor-copy! str i buf 0 len)))
                    (lp (+ i offset2)))))))))))))))
 
+(define (%bytevector-copy! to at from start end) ; simplified
+  (do ((i at (+ i 1)) (j start (+ j 1)))
+      ((>= j end))
+    (bytevector-u8-set! to i (bytevector-u8-ref from j))))
+
+;;> Equivalent to \scheme{make-generated-input-port}, but produces a
+;;> binary port, and \var{generator} should return a bytevector or
+;;> \scheme{#f} when there is no more input.
+
+(define (make-generated-binary-input-port generator)
+  (let ((buf #u8())
+        (len 0)
+        (offset 0))
+    (make-custom-binary-input-port
+     (lambda (bv start end)
+       (let ((n (- end start)))
+         (cond
+          ((>= (- len offset) n)
+           (%bytevector-copy! bv start buf offset (+ offset n))
+           (set! offset (+ offset n))
+           (+ start n))
+          (else
+           (%bytevector-copy! bv start buf offset len)
+           (let lp ((i (+ start (- len offset))))
+             (set! buf (generator))
+             (set! offset 0)
+             (cond
+              ((not (bytevector? buf))
+               (set! buf #u8())
+               (set! len 0)
+               i)
+              (else
+               (set! len (bytevector-length buf))
+               (cond
+                ((>= len (- n i))
+                 (%bytevector-copy! bv i buf 0 (- n i))
+                 (set! offset (- n i))
+                 n)
+                (else
+                 (%bytevector-copy! bv i buf 0 len)
+                 (lp (+ i len))))))))))))))
+
 ;;> An input port which runs all input (in arbitrary string chunks)
 ;;> through the \var{filter} procedure.
 
