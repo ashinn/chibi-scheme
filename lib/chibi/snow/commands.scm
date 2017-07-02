@@ -6,6 +6,7 @@
 (define known-implementations
   '((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3")
     (chicken "chicken" (csi -p "(chicken-version)") "4.9.0")
+    (cyclone "cyclone" (icyc -vn) "0.5.3")
     (foment "foment")
     (gauche "gosh" (gosh -E "print (gauche-version)" -E exit) "0.9.4")
     (kawa "kawa" (kawa --version) "2.0")
@@ -1306,6 +1307,13 @@
             dir
             (make-path (or (conf-get cfg 'install-prefix)) "lib" impl
                        (get-chicken-binary-version cfg))))))
+    ((cyclone)
+     (let ((dir (let ((lib-path (get-environment-variable "CYCLONE_LIBRARY_PATH")))
+                  (if lib-path
+                      (car (string-split lib-path #\:)) ; searches only in the first path set
+                      (string-trim (process->string '(icyc -p "(Cyc-installation-dir 'sld)"))
+                                   char-whitespace?)))))
+       (list (or dir "/usr/local/share/cyclone/"))))
     ((gauche)
      (list
       (let ((dir (string-trim
@@ -1347,6 +1355,7 @@
              (path (or (find-in-path prog) prog))
              (arg (case impl
                     ((chicken) "-s")
+                    ((cyclone) "-s")
                     ((gauche) "-b")
                     ((larceny) "-program")
                     (else #f))))
@@ -1370,6 +1379,10 @@
          (if lib-path
              `(csi -R r7rs -I ,install-dir -I ,lib-path -s ,file)
              `(csi -R r7rs -I ,install-dir -s ,file)))
+        ((cyclone)
+         (if lib-path
+             `(icyc -A ,install-dir -A ,lib-path -s ,file)
+             `(icyc -A ,install-dir -s ,file)))
         ((foment)
          (if lib-path
              `(foment -A ,install-dir -A ,lib-path ,file)
@@ -1583,6 +1596,7 @@
 (define (get-install-source-dir impl cfg)
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
+   ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1591,6 +1605,7 @@
 (define (get-install-data-dir impl cfg)
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
+   ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1606,6 +1621,8 @@
                            (get-chicken-binary-version cfg))))
           (else
            (car (get-install-dirs impl cfg)))))
+   ((eq? impl 'cyclone)
+    (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
    (else (make-path "/usr/local/lib" impl))))
@@ -1754,15 +1771,31 @@
     (install-file cfg (make-path dir imp-path) dest-imp-path)
     (list dest-so-path dest-imp-path)))
 
+(define (cyclone-installer impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (install-dir (get-install-library-dir impl cfg))
+         (so-path (string-append (path-strip-extension library-file) ".so"))
+         (dest-so-path (make-path install-dir so-path))
+         (o-path (string-append (path-strip-extension library-file) ".o"))
+         (dest-o-path (make-path install-dir o-path)))
+    (install-directory cfg (path-directory dest-so-path))
+    (install-file cfg (make-path dir so-path) dest-so-path)
+    (install-file cfg (make-path dir o-path) dest-o-path)
+    (cons dest-o-path
+          (cons dest-so-path
+                (default-installer impl cfg library dir)))))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
+    ((cyclone) cyclone-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
   (case impl
     ((chicken) 'chicken)
+    ((cyclone) 'cyclone)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
@@ -1913,15 +1946,30 @@
                               " - install anyway?"))
               library))))))
 
+(define (cyclone-builder impl cfg library dir)
+  (let* ((library-file (make-path dir (get-library-file cfg library)))
+         (so-path (make-path dir (string-append (path-strip-extension library-file) ".so"))))
+    (with-directory
+     dir
+     (lambda ()
+       (let ((res (system 'cyclone '-o so-path
+                          '-A (path-directory library-file) library-file)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg "cyclone failed to build: "
+                              (library-name library)
+                              " - install anyway?"))
+              library))))))
+
 (define (lookup-builder builder)
   (case builder
     ((chibi) chibi-builder)
     ((chicken) chicken-builder)
+    ((cyclone) cyclone-builder) 
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken) impl)
+    ((chibi chicken cyclone) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
@@ -1963,14 +2011,28 @@
                               path " - install anyway?"))
               prog))))))
 
+(define (cyclone-program-builder impl cfg prog dir)
+  (let ((path (get-program-file cfg prog)))
+    (with-directory
+     dir
+     (lambda ()
+       (let ((res (system 'cyclone
+                          '-A (path-directory path) path)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg "cyclone failed to build: "
+                              path " - install anyway?"))
+              prog))))))
+
 (define (lookup-program-builder builder)
   (case builder
     ((chicken) chicken-program-builder)
+    ((cyclone) cyclone-program-builder)
     (else default-program-builder)))
 
 (define (program-builder-for-implementation impl cfg)
   (case impl
     ((chicken) 'chicken)
+    ((cyclone) 'cyclone)
     (else 'default)))
 
 (define (build-program impl cfg prog dir)
