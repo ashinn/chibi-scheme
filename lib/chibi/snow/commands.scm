@@ -606,8 +606,9 @@
                               ,(path-strip-leading-parents test))))
                    (else '()))
                   (remove (lambda (x)
-                            (or (string-prefix? "http://" x)
-                                (string-prefix? "https://" x)))
+                            (and (string? x)
+                                 (or (string-prefix? "http://" x)
+                                     (string-prefix? "https://" x))))
                           docs)
                   tar-data-files files))))
           (cons `(package
