@@ -829,7 +829,8 @@
     (define (all-vars x dim)
       (let lp ((x x) (dim dim) (vars '()))
         (cond ((identifier? x)
-               (if (any (lambda (lit) (compare x lit)) lits)
+               (if (or (any (lambda (lit) (compare x lit)) lits)
+                       (compare x _underscore))
                    vars
                    (cons (cons x dim) vars)))
               ((ellipsis? x) (lp (car x) (+ dim 1) (lp (cddr x) dim vars)))

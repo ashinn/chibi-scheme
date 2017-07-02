@@ -473,6 +473,12 @@
     ((foo _) '_)))
 (test '_ (underscore foo))
 
+(let ()
+  (define-syntax underscore2
+    (syntax-rules ()
+      ((underscore2 (a _) ...) 42)))
+  (test 42 (underscore2 (1 2))))
+
 (define-syntax count-to-2
   (syntax-rules ()
     ((_) 0)
