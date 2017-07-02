@@ -604,7 +604,11 @@
                     `((rename ,test
                               ,(path-strip-leading-parents test))))
                    (else '()))
-                  docs tar-data-files files))))
+                  (remove (lambda (x)
+                            (or (string-prefix? "http://" x)
+                                (string-prefix? "https://" x)))
+                          docs)
+                  tar-data-files files))))
           (cons `(package
                   ,@(reverse res)
                   ,@(if (pair? data-files) `((data-files ,@pkg-data-files)) '())
