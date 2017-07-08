@@ -355,7 +355,11 @@
 
 /* don't include clibs.c - include separately or link */
 #ifndef SEXP_USE_STATIC_LIBS_NO_INCLUDE
-#define SEXP_USE_STATIC_LIBS_NO_INCLUDE defined(PLAN9)
+#ifdef PLAN9
+#define SEXP_USE_STATIC_LIBS_NO_INCLUDE 0
+#else
+#define SEXP_USE_STATIC_LIBS_NO_INCLUDE 1
+#endif
 #endif
 
 #ifndef SEXP_USE_FULL_SOURCE_INFO
@@ -634,7 +638,11 @@
 #endif
 
 #ifndef SEXP_USE_GC_FILE_DESCRIPTORS
-#define SEXP_USE_GC_FILE_DESCRIPTORS (SEXP_USE_AUTOCLOSE_PORTS &&!SEXP_USE_BOEHM && !defined(PLAN9))
+#ifdef PLAN9
+#define SEXP_USE_GC_FILE_DESCRIPTORS 0
+#else
+#define SEXP_USE_GC_FILE_DESCRIPTORS (SEXP_USE_AUTOCLOSE_PORTS &&!SEXP_USE_BOEHM)
+#endif
 #endif
 
 #ifndef SEXP_USE_BIDIRECTIONAL_PORTS
