@@ -109,7 +109,6 @@
 (define-c double (flposdiff "fdim") (double double))
 (define-c double (flfloor "floor") (double))
 (define-c double (flceiling "ceil") (double))
-(define-c double (flround "round") (double))
 (define-c double (fltruncate "trunc") (double))
 
 (define-c double (flexp "exp") (double))
@@ -144,8 +143,8 @@
 (define-c double (flgamma "tgamma") (double))
 (define-c double lgamma_r (double (result int)))
 
-(define-c double (flfirst-bessel "jn") (double int))
-(define-c double (flsecond-bessel "yn") (double int))
+(define-c double (flfirst-bessel "jn") (int double))
+(define-c double (flsecond-bessel "yn") (int double))
 
 (define-c double (flerf "erf") (double))
 (define-c double (flerfc "erfc") (double))

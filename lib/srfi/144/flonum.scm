@@ -21,6 +21,7 @@
 (define (flabsdiff x y) (abs (- x y)))
 (define flnumerator numerator)
 (define fldenominator denominator)
+(define flround round)
 
 (define (flsquare x) (fl* x x))
 
