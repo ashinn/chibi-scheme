@@ -829,7 +829,7 @@
     (define (all-vars x dim)
       (let lp ((x x) (dim dim) (vars '()))
         (cond ((identifier? x)
-               (if (or (any (lambda (lit) (compare x lit)) lits)
+               (if (or (memq x lits)
                        (compare x _underscore))
                    vars
                    (cons (cons x dim) vars)))
