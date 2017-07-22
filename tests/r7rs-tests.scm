@@ -556,6 +556,15 @@
     42)
   (test 42 (quux399)))
 
+(let-syntax
+    ((m (syntax-rules ()
+          ((m x) (let-syntax
+                     ((n (syntax-rules (k)
+                           ((n x) 'bound-identifier=?)
+                           ((n y) 'free-identifier=?))))
+                   (n z))))))
+  (test 'bound-identifier=? (m k)))
+
 (test-end)
 
 (test-begin "5 Program structure")

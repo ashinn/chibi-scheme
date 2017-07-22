@@ -728,7 +728,7 @@
            _let (list (list v x))
            (cond
             ((identifier? p)
-             (if (any (lambda (l) (compare p l)) lits)
+             (if (memq p lits)
                  (list _and
                        (list _compare v (list _rename (list _quote p)))
                        (k vars))
