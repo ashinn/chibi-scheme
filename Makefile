@@ -20,6 +20,8 @@ CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
 
 SNOW_CHIBI ?= tools/snow-chibi
 
+TEMPFILE := $(shell mktemp -t chibi.XXXXXX)
+
 ########################################################################
 
 CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
@@ -87,16 +89,17 @@ all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
 js: js/chibi.js
 
 js/chibi.js: chibi-scheme-emscripten chibi-scheme-static.bc js/pre.js js/post.js js/exported_functions.json
-	emcc -O2 chibi-scheme-static.bc -o $@ -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` --pre-js js/pre.js --post-js js/post.js
+	emcc -O3 chibi-scheme-static.bc -o $@ -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` --pre-js js/pre.js --post-js js/post.js
 
 chibi-scheme-static.bc:
-	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI=./chibi-scheme-emscripten PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.bc SO=.bc CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1" clibs.c chibi-scheme-static.bc
+	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI=./chibi-scheme-emscripten PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.bc SO=.bc CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1 -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0" clibs.c chibi-scheme-static.bc
 
 chibi-scheme-emscripten: VERSION
-	$(MAKE) clean
+	$(MAKE) dist-clean
 	$(MAKE) chibi-scheme-static PLATFORM=emscripten SEXP_USE_DL=0
-	mv chibi-scheme-static$(EXE) chibi-scheme-emscripten
-	$(MAKE) clean
+	mv chibi-scheme-static$(EXE) $(TEMPFILE)
+	$(MAKE) dist-clean
+	mv $(TEMPFILE) chibi-scheme-emscripten
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@

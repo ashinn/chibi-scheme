@@ -39,14 +39,19 @@
   FP_SUBNORMAL)
 
 (c-declare
- "#ifndef FP_FAST_FMA
+ "#if defined(__EMSCRIPTEN__) || !defined(FP_FAST_FMA)
 #define FP_FAST_FMA 0
 #endif")
 
 (define-c-const boolean
   (fl-fast-+* FP_FAST_FMA))
 
-(define-c double (fl+* "fma") (double double double))
+(cond-expand
+  (emscripten
+    (c-declare "#define flmuladd(x, y, z) ((x) * (y) + (z))")
+    (define-c double (fl+* "flmuladd") (double double double)))
+  (else
+    (define-c double (fl+* "fma") (double double double))))
 
 ;; These aren't any faster than the builtin ops.  It might be
 ;; interesting to provide these as a way to get flonum support when
