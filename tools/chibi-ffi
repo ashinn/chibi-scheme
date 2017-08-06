@@ -41,6 +41,7 @@
 (define *consts* '())
 (define *inits* '())
 (define *clibs* '())
+(define *cflags* '())
 (define *tags* '())
 (define *open-namespaces* '())
 (define *c++?* #f)
@@ -2059,7 +2060,8 @@
                  (execute (begin (eval '(import (chibi process))
                                        (current-environment))
                                  (eval 'execute (current-environment))))
-                 (base-args (append cflags `("-o" ,so ,dest "-lchibi-scheme")
+                 (base-args (append cflags *cflags*
+                                    `("-o" ,so ,dest "-lchibi-scheme")
                                     (map (lambda (x) (string-append "-l" x))
                                          (reverse *clibs*))))
                  (args
