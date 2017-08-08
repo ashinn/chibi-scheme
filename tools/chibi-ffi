@@ -41,6 +41,7 @@
 (define *consts* '())
 (define *inits* '())
 (define *clibs* '())
+(define *cflags* '())
 (define *tags* '())
 (define *open-namespaces* '())
 (define *c++?* #f)
@@ -318,13 +319,17 @@
        (else (lp from (+ i 1) res))))))
 
 (define (string-split str c . o)
-  (let ((start (if (pair? o) (car o) 0))
+  (let ((test?
+         (if (procedure? c)
+             c
+             (lambda (char) (eqv? char c))))
+        (start (if (pair? o) (car o) 0))
         (end (string-length str)))
     (let lp ((from start) (i start) (res '()))
       (define (collect) (if (= i from) res (cons (substring str from i) res)))
       (cond
        ((>= i end) (reverse (collect)))
-       ((eqv? c (string-ref str i)) (lp (+ i 1) (+ i 1) (collect)))
+       ((test? (string-ref str i)) (lp (+ i 1) (+ i 1) (collect)))
        (else (lp from (+ i 1) res))))))
 
 (define (string-scan c str . o)
@@ -413,6 +418,16 @@
 
 (define (c-link lib)
   (set! *clibs* (cons lib *clibs*)))
+
+(define (c-flags-from-script cmd)
+  (eval '(import (chibi process)) (current-environment))
+  (let ((string-null?    (lambda (str) (equal? str "")))
+        (process->string (eval 'process->string (current-environment))))
+    (set! *cflags*
+      (append *cflags*
+              (filter
+               (lambda (x) (not (string-null? x)))
+               (string-split (process->string cmd) char-whitespace?))))))
 
 (define (c-declare . args)
   (apply cat args)
@@ -2059,7 +2074,8 @@
                  (execute (begin (eval '(import (chibi process))
                                        (current-environment))
                                  (eval 'execute (current-environment))))
-                 (base-args (append cflags `("-o" ,so ,dest "-lchibi-scheme")
+                 (base-args (append cflags *cflags*
+                                    `("-o" ,so ,dest "-lchibi-scheme")
                                     (map (lambda (x) (string-append "-l" x))
                                          (reverse *clibs*))))
                  (args
