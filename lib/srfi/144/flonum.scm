@@ -11,6 +11,7 @@
 (define flzero? zero?)
 (define flpositive? positive?)
 (define flnegative? negative?)
+(define flonum exact->inexact)
 
 (define fl+ +)
 (define fl- -)

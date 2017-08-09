@@ -5,6 +5,7 @@
     ;; note default (current-test-epsilon) for (chibi test) test is 1e-5
     (define (run-tests)
       (test-begin "srfi-144: flonums")
+      (test-assert (flonum? (flonum 5)))
       (test 5. (fl+ 2. 3.))
       (test -1. (fl- 2. 3.))
       (test 6. (fl* 2. 3.))
