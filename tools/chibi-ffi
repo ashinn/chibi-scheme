@@ -1676,24 +1676,37 @@
     (cat "sexp " (type-getter-name type name field)
          " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
          (lambda () (write-validator "x" (parse-type name 0)))
-         "  return "
-         (lambda ()
-           (c->scheme-converter
-            (car field)
-            (cond
-             ((and (pair? get) (eq? 'function: (cadr get)))
-              (string-append (car (cddr get)) "(" ptr ")"))
-             ((and (pair? get) (eq? 'method: (cadr get)))
-              (string-append ptr "->" (car (cddr get)) "()"))
-             ((pair? get)
-              (error "invalid getter" get))
-             (else
-              (string-append
-               (if (type-struct? (car field)) "&" "")
-               ptr "->" (x->string c-name))))
-            (and (or (type-struct? (car field)) (type-link? (car field)))
-                 "x")))
-         ";\n"
+        ;; TODO: use lists rather than vectors
+         (cond ((type-array (car field))
+                (lambda ()
+                  (cat "  sexp_gc_var1(res);\n"
+                       "  sexp_gc_preserve1(ctx, res);\n"
+                       "  res = sexp_make_vector(ctx, sexp_make_fixnum(" (type-array (car field)) "), SEXP_ZERO);\n"
+                       "  for(unsigned i = 0; i < " (type-array (car field)) "; i++) {\n"
+                       "    sexp e = " (lambda () (c->scheme-converter (car field) (lambda () (cat ptr "->" (cadr field) "[i]")))) ";\n"
+                       "    sexp_vector_set(res, sexp_make_fixnum(i), e);\n"
+                       "  }\n")))
+               (else
+                 (lambda ()
+                   (cat
+                     "  return "
+                     (lambda ()
+                       (c->scheme-converter
+                         (car field)
+                         (cond
+                           ((and (pair? get) (eq? 'function: (cadr get)))
+                            (string-append (car (cddr get)) "(" ptr ")"))
+                           ((and (pair? get) (eq? 'method: (cadr get)))
+                            (string-append ptr "->" (car (cddr get)) "()"))
+                           ((pair? get)
+                            (error "invalid getter" get))
+                           (else
+                             (string-append
+                               (if (type-struct? (car field)) "&" "")
+                               ptr "->" (x->string c-name))))
+                         (and (or (type-struct? (car field)) (type-link? (car field)))
+                              "x")))
+                     ";\n"))))
          "}\n\n")))
 
 (define (type-setter-name type name field)
@@ -1722,38 +1735,45 @@
              (lambda () (scheme->c-converter (car field) val)) ");\n")))
      ((pair? set)
       (error "invalid setter" set))
+     ((array-type? (car field))
+      (lambda ()
+       (cat
+        "  for(unsigned i = 0; i < " (type-array (car field)) "; i++) {\n"
+        "    " (lambda () (cat ptr "->" (cadr field) "[i]")) " = " (lambda () (scheme->c-converter (car field) (lambda () (cat "sexp_vector_ref(" val ", sexp_make_fixnum(i))")))) ";\n"
+        "  }\n")))
      ((type-struct? (car field))
       ;; assign to a nested struct - copy field-by-field
       (let ((field-type
              (cond ((lookup-type (type-name (car field)))
                     => (lambda (x) (cddr (cdr x))))
-                   (else (cdr field)))))
+              (else (cdr field)))))
+       (lambda ()
+        (for-each
+         (lambda (subfield)
+          (let ((subname (x->string (cadr subfield))))
+           (cat
+            "  "
+            ptr "->" (x->string (cadr field))
+            "." (x->string (cadr subfield))
+            " = "
+            (string-append
+             "((" (x->string (or (type-struct-type (type-name (car field)))
+                     ""))
+             " " (mangle (type-name (car field))) "*)"
+             "sexp_cpointer_value(" val "))"
+             "->" (x->string (cadr subfield)))
+            ";\n")))
+         (struct-fields field-type)))))
+      (else
         (lambda ()
-          (for-each
-           (lambda (subfield)
-             (let ((subname (x->string (cadr subfield))))
-               (cat
-                "  "
-                ptr "->" (x->string (cadr field))
-                "." (x->string (cadr subfield))
-                " = "
-                (string-append
-                 "((" (x->string (or (type-struct-type (type-name (car field)))
-                                     ""))
-                 " " (mangle (type-name (car field))) "*)"
-                 "sexp_cpointer_value(" val "))"
-                 "->" (x->string (cadr subfield)))
-                ";\n")))
-           (struct-fields field-type)))))
-     (else
-      (lambda ()
-        (cat "  " ptr "->" c-name " = "
-             (lambda () (scheme->c-converter (car field) val)) ";\n"))))))
+          (cat "  " ptr "->" c-name " = "
+               (lambda () (scheme->c-converter (car field) val)) ";\n"))))))
 
 (define (write-type-setter type name field)
   (cat "sexp " (type-setter-name type name field)
        " (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp v) {\n"
        (lambda () (write-validator "x" (parse-type name 0)))
+       "sexp res;\n"
        (lambda () (write-validator "v" (parse-type (car field) 1)))
        (write-type-setter-assignment type name field "x" "v")
        "  return SEXP_VOID;\n"
@@ -1991,6 +2011,7 @@
   (cat "/* Automatically generated by chibi-ffi; version: "
        *ffi-version* " */\n")
   (c-system-include "chibi/eval.h")
+  (c-system-include "stdlib.h")
   (load file (current-environment))
   (cat "/*\ntypes: " (map car *types*) "\nenums: " *c-enum-types* "\n*/\n")
   (write-init))

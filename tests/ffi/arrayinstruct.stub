@@ -1,0 +1,1 @@
+(begin (c-declare "\nstruct v2 {\n    float vals[2];\n};") (define-c-struct v2 predicate: v2? constructor: (make-v2 vals) ((array float 2) vals v2-vals v2-vals-set!)))
