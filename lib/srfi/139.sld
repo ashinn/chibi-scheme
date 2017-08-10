@@ -1,0 +1,6 @@
+(define-library (srfi 139)
+  (export (rename define-syntax define-syntax-parameter)
+	  syntax-parameterize)
+  (import (chibi)
+	  (chibi ast))
+  (include "139.scm"))

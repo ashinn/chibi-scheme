@@ -115,15 +115,13 @@
                             (and (not (eq? 'only (car x)))
                                  (module-exports
                                   (find-module (car mod-name+imports)))))))
-          ;; (if (not (eq? 'only (car x)))
-          ;;     (let ((unbound
-          ;;            (id-filter (lambda (i) (not (memq i imp-ids))) (cddr x))))
-          ;;       (if (pair? unbound)
-          ;;           (warn "import excepting unbound identifiers" unbound))))
           (cons (car mod-name+imports)
                 (case (car x)
                   ((only)
-                   (cddr x))
+                   (if imp-ids
+                       (map (lambda (imp) (or (assq imp imp-ids) imp))
+                            (cddr x))
+                       (cddr x)))
                   ((except)
                    (id-filter (lambda (i) (not (memq i (cddr x)))) imp-ids))
                   ((rename)
