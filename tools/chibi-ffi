@@ -873,13 +873,14 @@
      ((and array (not (string-type? type)))
       (cond
        ((number? array)
-        (cat "  if (!sexp_listp(ctx, " arg ")"
-             "      || sexp_unbox_fixnum(sexp_length(ctx, " arg ")) != " array ")\n"
-             "    return sexp_type_exception(ctx, self, SEXP_PAIR, " arg ");\n")))
-      (cat "  for (res=" arg "; sexp_pairp(res); res=sexp_cdr(res))\n"
-           "    if (! " (lambda () (check-type "sexp_car(res)" type)) ")\n"
-           "      return sexp_xtype_exception(ctx, self, \"not a list of "
-           (type-name type) "s\", " arg ");\n")
+        (cat "  if (!sexp_vectorp(" arg ")"
+             "      || (sexp_unbox_fixnum(sexp_vector_length(" arg ")) + 1) != " array ")\n"
+             "    return sexp_type_exception(ctx, self, SEXP_VECTOR, " arg ");\n"))
+       (else
+         (cat "  for (res=" arg "; sexp_pairp(res); res=sexp_cdr(res))\n"
+              "    if (! " (lambda () (check-type "sexp_car(res)" type)) ")\n"
+              "      return sexp_xtype_exception(ctx, self, \"not a list of "
+              (type-name type) "s\", " arg ");\n")))
       (if (not (number? array))
           (cat "  if (! sexp_nullp(res))\n"
                "    return sexp_xtype_exception(ctx, self, \"not a list of "
@@ -1788,8 +1789,8 @@
   (cat "sexp " (type-setter-name type name field)
        " (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp v) {\n"
        (lambda () (write-validator "x" (parse-type name 0)))
-       "sexp res;\n"
        (lambda () (write-validator "v" (parse-type (car field) 1)))
+       "  sexp res;\n"
        (write-type-setter-assignment type name field "x" "v")
        "  return SEXP_VOID;\n"
        "}\n\n"))

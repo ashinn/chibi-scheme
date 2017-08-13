@@ -527,7 +527,7 @@ struct v2 {
  (test #(17.0 23.0) (v2-vals (make-v2 #(17.0 23.0))))
  (test #(18.0 24.0) (let ((v (make-v2 #(17.0 23.0))))
                       (v2-vals-set! v #(18.0 24.0))
-                      v)))
+                      (v2-vals v))))
 
 ;; TODO: virtual method accessors
 
