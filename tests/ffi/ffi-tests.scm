@@ -511,6 +511,24 @@ struct vec2box {
        (list (vec2-x v) (vec2-y v))))
  (test-assert (vec2box? (make-vec2box (make-vec2 17.0 23.0)))))
 
+(test-ffi
+ "arrayinstruct"
+ (begin
+   (c-declare "
+struct v2 {
+    float vals[2];
+};")
+   (define-c-struct v2
+     predicate: v2?
+     constructor: (make-v2 vals)
+     ((array float 2) vals v2-vals v2-vals-set!)))
+
+ (test-assert (v2? (make-v2 #(17.0 23.0))))
+ (test #(17.0 23.0) (v2-vals (make-v2 #(17.0 23.0))))
+ (test #(18.0 24.0) (let ((v (make-v2 #(17.0 23.0))))
+                      (v2-vals-set! v #(18.0 24.0))
+                      (v2-vals v))))
+
 ;; TODO: virtual method accessors
 
 (cleanup-shared-objects!)
