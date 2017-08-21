@@ -2474,7 +2474,8 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
     }
 #endif
   }
-  if (e != 0.0) val *= pow(10, e);
+  if (e != 0.0)
+    val = abs(e) > 300 ? exp(log(val) + e*M_LN10) : val * pow(10, e);
 #if SEXP_USE_FLONUMS
   res = sexp_make_flonum(ctx, val);
 #else
