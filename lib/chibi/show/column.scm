@@ -12,7 +12,6 @@
       (define (output* str)
         (fn (row col string-width)
           (list-queue-add-back! queue str)
-          ;;(set! lines (append lines (list str)))
           (call-with-current-continuation
            (lambda (cc)
              (set! resume cc)
@@ -286,7 +285,7 @@
        (else
         (lp (cdr ls) infinite? width (cons (car ls) res)))))))
 
-;; break lines only, don't fmt-join short lines or justify
+;; break lines only, don't join short lines or justify
 (define (wrapped/char . ls)
   (fn (output width string-width)
     (define (kons-in-line str)
@@ -445,6 +444,6 @@
                 (each line
                       (fn () (lp))))))))))
 
-(define (counted . o)
+(define (line-numbers . o)
   (let ((start (if (pair? o) (car o) 1)))
     (joined/range displayed start #f "\n")))

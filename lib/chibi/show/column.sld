@@ -6,5 +6,5 @@
   (export
    call-with-output-generator call-with-output-generators
    string->line-generator
-   columnar tabular wrapped wrapped/char justified counted from-file)
+   columnar tabular wrapped wrapped/char justified line-numbers from-file)
   (include "column.scm"))
