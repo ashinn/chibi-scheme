@@ -5,7 +5,7 @@
   (import (scheme base) (srfi 27)
           (chibi bytevector) (chibi math prime))
   (cond-expand
-   ((library (srfi 142)) (import (srfi 142)))
+   ((library (srfi 151)) (import (srfi 151)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (export make-rsa-key rsa-key-gen rsa-key-gen-from-primes rsa-pub-key

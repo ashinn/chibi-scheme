@@ -18,6 +18,6 @@
           process->string process->sexp process->string-list
           process->output+error process->output+error+status)
   (import (chibi) (chibi io) (chibi string) (chibi filesystem))
-  (cond-expand (threads (import (srfi 18) (srfi 142))) (else #f))
+  (cond-expand (threads (import (srfi 18) (srfi 151))) (else #f))
   (include-shared "process")
   (include "process.scm"))

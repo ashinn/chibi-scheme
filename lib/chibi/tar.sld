@@ -4,7 +4,7 @@
           (chibi string) (chibi binary-record) (chibi pathname)
           (chibi filesystem))
   (cond-expand
-   ((library (srfi 142)) (import (srfi 142)))
+   ((library (srfi 151)) (import (srfi 151)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (cond-expand

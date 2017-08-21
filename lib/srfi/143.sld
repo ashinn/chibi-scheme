@@ -1,7 +1,7 @@
 (define-library (srfi 143)
   (import (scheme base)
           (srfi 141)
-          (rename (srfi 142)
+          (rename (srfi 151)
                   (bitwise-not fxnot)
                   (bitwise-and fxand)
                   (bitwise-ior fxior)

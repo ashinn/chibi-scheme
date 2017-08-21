@@ -2,7 +2,7 @@
 (define-library (chibi math prime)
   (import (scheme base) (scheme inexact) (srfi 27))
   (cond-expand
-   ((library (srfi 142)) (import (srfi 142)))
+   ((library (srfi 151)) (import (srfi 151)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (export prime? nth-prime prime-above prime-below factor perfect?

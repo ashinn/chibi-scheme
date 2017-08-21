@@ -44,7 +44,7 @@
 (define (range start end)
   (arithmetic-shift (mask (- end start)) start))
 
-(define (bitwise-if mask n m)
+(define (bitwise-if mask m n)
   (bit-ior (bit-and mask n) (bit-and (bitwise-not mask) m)))
 
 (define (bit-field n start end)
@@ -74,7 +74,7 @@
   (bit-field-replace-same dst (arithmetic-shift src start) start end))
 
 (define (bit-field-replace-same dst src start end)
-  (bitwise-if (range start end) src dst))
+  (bitwise-if (range start end) dst src))
 
 (define (bit-field-rotate n count start end)
   (let* ((width (- end start))
@@ -98,12 +98,12 @@
 
 (define (bit-field-reverse i start end)
   (bitwise-if (range start end)
+              i
               (arithmetic-shift (bit-reverse (bit-field i start end)
                                              (- end start))
-                                start)
-              i))
+                                start)))
 
-(define (vector->integer vec)
+(define (vector->bits vec)
   (let ((len (vector-length vec)))
     (let lp ((i 0) (exp 1) (res 0))
       (cond
@@ -111,7 +111,7 @@
        ((vector-ref vec i) (lp (+ i 1) (* exp 2) (+ res exp)))
        (else (lp (+ i 1) (* exp 2) res))))))
 
-(define (integer->vector n . o)
+(define (bits->vector n . o)
   (let* ((len (if (pair? o) (car o) (integer-length n)))
          (res (make-vector len #f)))
     (let lp ((n n) (i 0))
@@ -123,13 +123,13 @@
             (vector-set! res i #t))
         (lp (arithmetic-shift n -1) (+ i 1)))))))
 
-(define (list->integer ls)
-  (vector->integer (list->vector ls)))
+(define (list->bits ls)
+  (vector->bits (list->vector ls)))
 
-(define (integer->list n . o)
-  (vector->list (apply integer->vector n o)))
+(define (bits->list n . o)
+  (vector->list (apply bits->vector n o)))
 
-(define (bits . o) (list->integer o))
+(define (bits . o) (list->bits o))
 
 (define (bitwise-fold kons knil i)
   (let lp ((i i) (acc knil))

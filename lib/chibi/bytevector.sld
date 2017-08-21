@@ -11,7 +11,7 @@
    bytevector->hex-string hex-string->bytevector)
   (import (scheme base))
   (cond-expand
-   ((library (srfi 142)) (import (srfi 142)))
+   ((library (srfi 151)) (import (srfi 151)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
   (include "bytevector.scm"))

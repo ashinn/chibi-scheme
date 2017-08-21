@@ -1,9 +1,9 @@
-(define-library (srfi 142 test)
+(define-library (srfi 151 test)
   (export run-tests)
-  (import (scheme base) (srfi 142) (chibi test))
+  (import (scheme base) (srfi 151) (chibi test))
   (begin
     (define (run-tests)
-      (test-begin "srfi-142: bitwise operations")
+      (test-begin "srfi-151: bitwise operations")
 
       (test 0 (bitwise-and #b0 #b1))
       (test 1 (bitwise-and #b1 #b1))
@@ -107,8 +107,8 @@
       (test #b10110 (bit-field #b1101101010 4 9))
       (test #b110110 (bit-field #b1101101010 4 10))
 
-      (test 3 (bitwise-if 1 1 2))
-      (test #b00110011 (bitwise-if #b00111100 #b11110000 #b00001111))
+      (test 3 (bitwise-if 1 2 1))
+      (test #b00110011 (bitwise-if #b00111100 #b00001111 #b11110000))
 
       (test #b1 (copy-bit 0 0 #t))
       (test #b100 (copy-bit 2 0 #t))
@@ -119,16 +119,16 @@
       (test #b1011 (bit-swap 2 1 #b1101))
       (test #b10000000101 (bit-swap 3 10 #b1101))
 
-      (test '(#t #t #t #f #t #f #t) (integer->list #b1010111))
-      (test '(#t #t #t #f #t) (integer->list #b1010111 5))
-      (test '(#t #t #t #f #t #f #t #f #f) (integer->list #b1010111 9))
-      (test '#(#t #t #t #f #t #f #t) (integer->vector #b1010111))
-      (test '#(#t #t #t #f #t #f #t #f #f) (integer->vector #b1010111 9))
+      (test '(#t #t #t #f #t #f #t) (bits->list #b1010111))
+      (test '(#t #t #t #f #t) (bits->list #b1010111 5))
+      (test '(#t #t #t #f #t #f #t #f #f) (bits->list #b1010111 9))
+      (test '#(#t #t #t #f #t #f #t) (bits->vector #b1010111))
+      (test '#(#t #t #t #f #t #f #t #f #f) (bits->vector #b1010111 9))
 
-      (test #b1010111 (list->integer '(#t #t #t #f #t #f #t)))
-      (test #b1010111 (list->integer '(#t #t #t #f #t #f #t #f #f)))
-      (test #b1010111 (vector->integer '#(#t #t #t #f #t #f #t)))
-      (test #b1010111 (vector->integer '#(#t #t #t #f #t #f #t #f #f)))
+      (test #b1010111 (list->bits '(#t #t #t #f #t #f #t)))
+      (test #b1010111 (list->bits '(#t #t #t #f #t #f #t #f #f)))
+      (test #b1010111 (vector->bits '#(#t #t #t #f #t #f #t)))
+      (test #b1010111 (vector->bits '#(#t #t #t #f #t #f #t #f #f)))
       (test #b1010111 (bits #t #t #t #f #t #f #t))
       (test #b1010111 (bits #t #t #t #f #t #f #t #f #f))
 
