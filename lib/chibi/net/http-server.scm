@@ -38,6 +38,7 @@
             (protect (exn
                       (else
                        (log-error "internal error: " exn)
+                       (print-stack-trace exn)
                        (servlet-respond request 500 "Internal server error")))
               (let restart ((request request))
                 (servlet cfg request servlet-bad-request restart)))))
