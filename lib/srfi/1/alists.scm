@@ -8,7 +8,7 @@
 
 (define (alist-delete key ls . o)
   (let ((eq (if (pair? o) (car o) equal?)))
-    (remove (lambda (x) (eq (car x) key)) ls)))
+    (remove (lambda (x) (eq key (car x))) ls)))
 
 (define alist-delete! alist-delete)
 

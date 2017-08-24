@@ -42,7 +42,7 @@
   (if (null? ls) identity (fold f (car ls) (cdr ls))))
 
 (define (reduce-right f identity ls)
-  (if (null? ls) identity (fold-right f (car ls) (cdr ls))))
+  (if (null? ls) identity (fold-right f identity ls)))
 
 (define (unfold p f g seed . o)
   (let lp ((seed seed))
@@ -77,14 +77,16 @@
 (define map-in-order map)
 
 (define (pair-for-each f ls . lists)
-  (apply pair-fold (lambda (x _) (f x)) #f ls lists))
+  (if (pair? lists)
+      (apply pair-fold (lambda args (apply f (drop-right args 1))) #f ls lists)
+      (pair-fold (lambda (x _) (f x)) #f ls)))
 
 (define (filter-map f ls . lists)
   (if (null? lists)
       (let lp ((ls ls) (res '()))
         (if (pair? ls)
             (let ((x (f (car ls)))) (lp (cdr ls) (if x (cons x res) res)))
-            (reverse! res)))
+            (reverse res)))
       (filter (lambda (x) x) (apply map f ls lists))))
 
 (define (take-up-to-reverse from to init)
@@ -97,7 +99,7 @@
     (let ((tail (find-tail pred ls)))
       (if tail
           (lp (cdr tail) (take-up-to-reverse ls tail rev))
-          (if (pair? rev) (append-reverse! rev ls) ls)))))
+          (if (pair? rev) (append-reverse rev ls) ls)))))
 
 (define (filter pred ls) (remove (lambda (x) (not (pred x))) ls))
 
