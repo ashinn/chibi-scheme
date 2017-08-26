@@ -84,10 +84,10 @@
           (error "cursor reference past end of iset")
           pos)))))
 
-;;> Returns true iff \var{cur} is at the end of \var{iset}, such that
+;;> Returns true iff \var{cur} is at the end of iset, such that
 ;;> \scheme{iset-ref} is no longer valid.
 
-(define (end-of-iset? iset cur)
+(define (end-of-iset? cur)
   (let ((node (iset-cursor-node cur)))
     (and (if (iset-bits node)
              (zero? (iset-cursor-pos cur))
@@ -101,8 +101,8 @@
 (define (iset2= is1 is2)
   (let lp ((cur1 (iset-cursor is1))
            (cur2 (iset-cursor is2)))
-    (cond ((end-of-iset? is1 cur1) (end-of-iset? is2 cur2))
-          ((end-of-iset? is2 cur2) #f)
+    (cond ((end-of-iset? cur1) (end-of-iset? cur2))
+          ((end-of-iset? cur2) #f)
           ((= (iset-ref is1 cur1) (iset-ref is2 cur2))
            (lp (iset-cursor-next is1 cur1) (iset-cursor-next is2 cur2)))
           (else
@@ -111,8 +111,8 @@
 (define (iset2<= is1 is2)
   (let lp ((cur1 (iset-cursor is1))
            (cur2 (iset-cursor is2)))
-    (cond ((end-of-iset? is1 cur1))
-          ((end-of-iset? is2 cur2) #f)
+    (cond ((end-of-iset? cur1))
+          ((end-of-iset? cur2) #f)
           (else
            (let ((i1 (iset-ref is1 cur1))
                  (i2 (iset-ref is1 cur2)))

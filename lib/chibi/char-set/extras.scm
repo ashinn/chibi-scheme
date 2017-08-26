@@ -2,9 +2,11 @@
 (define (char-set . args)
   (list->char-set args))
 
-;; This is a mistake in the SRFI-14 design - end should be inclusive.
-(define (ucs-range->char-set start end)
-  (make-iset start (- end 1)))
+(define (ucs-range->char-set start end . o)
+  (let ((res (make-iset start (- end 1))))
+    (if (and (pair? o) (pair? (cdr o)))
+        (iset-union res (cadr o))
+        res)))
 
 (define char-set-copy iset-copy)
 
@@ -16,8 +18,8 @@
 (define (char-set-for-each proc cset)
   (iset-for-each (lambda (i) (proc (integer->char i))) cset))
 
-(define (list->char-set ls)
-  (list->iset (map char->integer ls)))
+(define (list->char-set ls . o)
+  (apply list->iset (map char->integer ls) o))
 (define (char-set->list cset)
   (map integer->char (iset->list cset)))
 
@@ -26,10 +28,10 @@
 (define (char-set->string cset)
   (list->string (char-set->list cset)))
 
-(define (char-set-adjoin! cset ch)
-  (iset-adjoin! cset (char->integer ch)))
-(define (char-set-adjoin cset ch)
-  (iset-adjoin cset (char->integer ch)))
+(define (char-set-adjoin! cset . o)
+  (apply iset-adjoin! cset (map char->integer o)))
+(define (char-set-adjoin cset . o)
+  (apply iset-adjoin cset (map char->integer o)))
 
 (define char-set-union iset-union)
 (define char-set-union! iset-union!)

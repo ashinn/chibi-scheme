@@ -3,6 +3,7 @@
         (chibi test)
         (rename (srfi 1 test) (run-tests run-srfi-1-tests))
         (rename (srfi 2 test) (run-tests run-srfi-2-tests))
+        (rename (srfi 14 test) (run-tests run-srfi-14-tests))
         (rename (srfi 16 test) (run-tests run-srfi-16-tests))
         (rename (srfi 18 test) (run-tests run-srfi-18-tests))
         (rename (srfi 26 test) (run-tests run-srfi-26-tests))
@@ -54,6 +55,7 @@
 
 (run-srfi-1-tests)
 (run-srfi-2-tests)
+(run-srfi-14-tests)
 (run-srfi-16-tests)
 (run-srfi-18-tests)
 (run-srfi-26-tests)
