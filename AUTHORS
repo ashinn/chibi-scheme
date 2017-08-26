@@ -1,6 +1,11 @@
 Alex Shinn wrote the initial version of chibi-scheme and all
 distributed modules.
 
+The Emscripten build, SRFI 139 implementation, and various other
+patches were contributed by Marc Nieper-Wißkirchen.
+
+The image handling code in gc_heap.c was written by Chris Walsh.
+
 The `dynamic-wind' implementation is adapted from the implementation
 in the appendix to the Scheme48 reference manual, reportedly first
 written by Chris Hanson and John Lamping.
@@ -8,8 +13,6 @@ written by Chris Hanson and John Lamping.
 The (scheme time) module includes code for handling leap seconds
 from Alan Watson's Scheme clock library at
 http://code.google.com/p/scheme-clock/ under the same license.
-
-The image handling code in gc_heap.c was written by Chris Walsh.
 
 The benchmarks are based on the Racket versions of the classic
 Gabriel benchmarks from
