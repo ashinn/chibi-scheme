@@ -29,10 +29,14 @@ PLATFORM=cygwin
 SOLIBDIR = $(BINDIR)
 DIFFOPTS = -b
 else
+ifeq ($(shell uname -o),Android)
+PLATFORM=android
+else
 ifeq ($(shell uname -o),GNU/Linux)
 PLATFORM=linux
 else
 PLATFORM=unix
+endif
 endif
 endif
 endif
