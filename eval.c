@@ -1357,8 +1357,10 @@ static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   }
   init = dlsym(handle, "sexp_init_library");
   if (! init) {
+    res = sexp_c_string(ctx, dlerror(), -1);
+    res = sexp_list2(ctx, file, res);
     dlclose(handle);
-    return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", file);
+    return sexp_compile_error(ctx, "dynamic library has no sexp_init_library", res);
   }
   sexp_gc_preserve2(ctx, res, old_dl);
   old_dl = sexp_context_dl(ctx);
