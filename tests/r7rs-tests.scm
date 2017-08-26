@@ -2344,6 +2344,36 @@
 ;;(test-numeric-syntax "#e1.0+1.0i" (make-rectangular 1 1) "1+1i" "1+i")
 ;;(test-numeric-syntax "#i1.0+1.0i" (make-rectangular 1.0 1.0) "1.0+1.0i" "1.+1.i")
 
+(define-syntax test-precision
+  (syntax-rules ()
+    ((test-round-trip str alt ...)
+     (let* ((n (string->number str))
+            (str2 (number->string n))
+            (accepted (list str alt ...))
+            (ls (member str2 accepted)))
+       (test-assert (string-append "(member? " str2 " "
+                                   (let ((out (open-output-string)))
+                                     (write accepted out)
+                                     (get-output-string out))
+                                   ")")
+         (pair? ls))
+       (when (pair? ls)
+         (test-assert (string-append "(eqv?: " str " " str2 ")")
+           (eqv? n (string->number (car ls)))))))))
+
+;; these all assume double precision, need to add alternatives for single
+(test-precision "-1.7976931348623157e+308")
+(test-precision "4.940656458412465e-324")
+(test-precision "9.881312916824931e-324")
+(test-precision "1.48219693752374e-323")
+(test-precision "1.976262583364986e-323")
+(test-precision "2.470328229206233e-323")
+(test-precision "2.420921664622108e-322")
+(test-precision "2.420921664622108e-320")
+(test-precision "1.4489974452386991")
+(test-precision "0.14285714285714282")
+(test-precision "1.7976931348623157e+308")
+
 (test-end)
 
 (test-end)

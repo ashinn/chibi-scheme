@@ -1865,7 +1865,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
   unsigned long len, c;
   long i=0;
 #if SEXP_USE_FLONUMS
-  double f;
+  double f, ftmp;
 #endif
   sexp x, *elts;
   char *str=NULL, numbuf[NUMBUF_LEN];
@@ -1913,7 +1913,10 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       } else
 #endif
       {
-        i = snprintf(numbuf, NUMBUF_LEN, "%.16g", f);
+        i = snprintf(numbuf, NUMBUF_LEN, "%.16lg", f);
+        if (i >= 16 && sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
+          i = snprintf(numbuf, NUMBUF_LEN, "%.17lg", f);
+        }
         if (!strchr(numbuf, '.') && !strchr(numbuf, 'e')) {
           numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
         }
@@ -2434,7 +2437,7 @@ sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
 sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   int c, c2;
   sexp exponent=SEXP_VOID;
-  double val=0.0, scale=0.1, e=0.0;
+  long double val=0.0, scale=0.1, e=0.0;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   for (c=sexp_read_char(ctx, in); sexp_isdigit(c);
@@ -2475,7 +2478,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
 #endif
   }
   if (e != 0.0)
-    val = abs(e) > 300 ? exp(log(val) + e*M_LN10) : val * pow(10, e);
+    val = abs(e) > 320 ? exp(log(val) + e*M_LN10) : val * pow(10, e);
 #if SEXP_USE_FLONUMS
   res = sexp_make_flonum(ctx, val);
 #else
