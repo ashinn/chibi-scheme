@@ -375,7 +375,7 @@ int main(int argc, char** argv) {
   sexp ctx;
   ctx = sexp_make_eval_context(NULL, NULL, NULL, 0, 0);
   sexp_load_standard_env(ctx, NULL, SEXP_SEVEN);
-  sexp_load_standard_ports(ctx, NULL, stdin, stdout, stderr, 0);
+  sexp_load_standard_ports(ctx, NULL, stdin, stdout, stderr, 1);
   dostuff(ctx);
   sexp_destroy_context(ctx);
 }
@@ -441,6 +441,11 @@ using only the parent.
 
 Otherwise, a new heap is allocated with \var{size} bytes, expandable to a
 maximum of \var{max_size} bytes, using the system defaults if either is 0.
+
+Note this context is not a malloced pointer (it resides inside a
+malloced heap), and therefore can't be passed to \ccode{free()},
+or stored in a C++ smart pointer.  It can only be reclaimed with
+\ccode{sexp_destroy_context}.
 }}
 
 \item{\ccode{sexp_make_eval_context(sexp ctx, sexp stack, sexp env, sexp_uint_t size, sexp_uint_t max_size)}
@@ -472,7 +477,8 @@ the default context environment is used.  Any of the \ctype{FILE*} may
 be \cvar{NULL}, in which case the corresponding port is not set.  If
 \var{leave_open} is true, then the underlying \ctype{FILE*} is left
 open after the Scheme port is closed, otherwise they are both closed
-together.
+together.  If you want to reuse these streams from other vms, or from
+C, you should specify leave_open.
 }}
 
 \item{\ccode{sexp_load(sexp ctx, sexp file, sexp env)}
