@@ -198,7 +198,7 @@ lib/chibi/char-set/ascii.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$
 lib/chibi/char-set/full.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(EXE)
 	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm chibi.char-set.compute > $@
 
-lib/scheme/char/case-offsets.scm: data/CaseFolding.txt chibi-scheme$(EXE) all-libs
+lib/scheme/char/case-offsets.scm: data/UnicodeData.txt chibi-scheme$(EXE) all-libs
 	$(CHIBI) tools/extract-case-offsets.scm $< > $@
 
 ########################################################################

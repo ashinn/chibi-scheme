@@ -22,6 +22,7 @@
 
       (test-group "titlecase/char"
         (test #\x01C5 (char-titlecase #\x01C4))
+        (test #\x01C5 (char-titlecase #\x01C5))
         (test #\x01C5 (char-titlecase #\x01C6))
         (test #\x1F88 (char-titlecase #\x1F80))
         (test #\x01C7 (char-upcase #\x01C7))

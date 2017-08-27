@@ -5,7 +5,8 @@
 
 ;;> Returns the single-character titlecase mapping of argument
 (define (char-titlecase ch)
-  (cond ((assv ch title-single-map) => cadr)
+  (cond ((char-set-contains? char-set:title-case ch) ch)
+        ((assv ch title-single-map) => cadr)
         (else (char-upcase ch))))
 
 ;; Returns #t if a character is caseless, otherwise #f
@@ -29,7 +30,7 @@
                       ;; ch has multiple- or single-character titlecase mapping
                       (lp n2 #f (append-reverse (cdr multi-title) result))
                       ;; ch has single-character uppercase mapping
-                      (lp n2 (char-caseless? ch) (cons (char-upcase ch) result))))
+                      (lp n2 (char-caseless? ch) (cons (char-titlecase ch) result))))
                 ;; ch must be lowercased
                 (let ((multi-downcase (assv ch lower-multiple-map)))
                   (if multi-downcase
