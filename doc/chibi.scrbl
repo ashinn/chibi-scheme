@@ -1289,8 +1289,12 @@ Beyond the distributed modules, Chibi comes with a package manager
 based on \hyperlink["http://trac.sacrideo.us/wg/wiki/Snow"]{Snow2}
 which can be used to share R7RS libraries.  Packages are distributed
 as tar gzipped files called "snowballs," and may contain multiple
-libraries.  The program is installed as \scheme{snow-chibi} and takes
-the following subcommands:
+libraries.  The program is installed as \scheme{snow-chibi}.  The
+"help" subcommand can be used to list all subcommands and options.
+Note by default \scheme{snow-chibi} uses an image file to speed-up
+loading (since it loads many libraries) - if you have any difficulties
+with image files on your platform you can run
+\command{snow-chibi --noimage} to disable this feature.
 
 \subsubsection{Querying Packages and Status}
 
