@@ -433,12 +433,13 @@ sexp run_main (int argc, char **argv) {
       }
       ctx = sexp_load_image(arg, 0, heap_size, heap_max_size);
       if (!ctx || !sexp_contextp(ctx)) {
-        fprintf(stderr, "-:i <file>: couldn't open file for reading: %s\n", arg);
+        fprintf(stderr, "-:i <file>: couldn't open image file for reading: %s\n", arg);
         fprintf(stderr, "            %s\n", sexp_load_image_err());
-        exit_failure();
+        ctx = NULL;
+      } else {
+        env = sexp_load_standard_params(ctx, sexp_context_env(ctx), nonblocking);
+        init_loaded++;
       }
-      env = sexp_load_standard_params(ctx, sexp_context_env(ctx), nonblocking);
-      init_loaded++;
       break;
     case 'd':
       if (! init_loaded++) {
