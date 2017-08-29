@@ -80,6 +80,7 @@ typedef unsigned long size_t;
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
+#define _REENTRANT 1
 #include <math.h>
 #if SEXP_USE_FLONUMS
 #include <float.h>
