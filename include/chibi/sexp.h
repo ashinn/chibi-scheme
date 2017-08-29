@@ -801,8 +801,13 @@ SEXP_API int sexp_idp(sexp x);
 #define sexp_make_boolean(x) ((x) ? SEXP_TRUE : SEXP_FALSE)
 #define sexp_unbox_boolean(x) (((x) == SEXP_FALSE) ? 0 : 1)
 
+#if SEXP_USE_SIGNED_SHIFTS
 #define sexp_make_fixnum(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_FIXNUM_BITS) + SEXP_FIXNUM_TAG))
 #define sexp_unbox_fixnum(n)   (((sexp_sint_t)(n))>>SEXP_FIXNUM_BITS)
+#else
+#define sexp_make_fixnum(n)    ((sexp) ((((sexp_sint_t)(n))*(sexp_sint_t)(1uL<<SEXP_FIXNUM_BITS)) | SEXP_FIXNUM_TAG))
+#define sexp_unbox_fixnum(n)   (((sexp_sint_t)((sexp_uint_t)(n) & ~SEXP_FIXNUM_TAG))/(sexp_sint_t)(1uL<<SEXP_FIXNUM_BITS))
+#endif
 
 #define SEXP_NEG_ONE sexp_make_fixnum(-1)
 #define SEXP_ZERO    sexp_make_fixnum(0)

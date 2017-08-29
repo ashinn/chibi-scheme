@@ -757,6 +757,10 @@
 #endif
 #endif
 
+#ifndef SEXP_USE_SIGNED_SHIFTS
+#define SEXP_USE_SIGNED_SHIFTS 0
+#endif
+
 #ifdef PLAN9
 #define strcasecmp cistrcmp
 #define strncasecmp cistrncmp
