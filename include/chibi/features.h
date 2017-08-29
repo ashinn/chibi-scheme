@@ -285,7 +285,7 @@
 /************************************************************************/
 
 #ifndef SEXP_64_BIT
-#if defined(__amd64) || defined(__x86_64) || defined(_WIN64) || defined(_Wp64) || defined(__LP64__) || defined(__PPC64__)
+#if defined(__amd64) || defined(__x86_64) || defined(_WIN64) || defined(_Wp64) || defined(__LP64__) || defined(__PPC64__) || defined(__mips64__) || defined(__sparc64__)
 #define SEXP_64_BIT 1
 #else
 #define SEXP_64_BIT 0
@@ -750,7 +750,7 @@
 #endif
 
 #ifndef SEXP_USE_ALIGNED_BYTECODE
-#if defined(__arm__)
+#if defined(__arm__) || defined(__sparc__) || defined(__sparc64__) || defined(__mips__) || defined(__mips64__)
 #define SEXP_USE_ALIGNED_BYTECODE 1
 #else
 #define SEXP_USE_ALIGNED_BYTECODE 0
