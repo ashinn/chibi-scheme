@@ -10,7 +10,8 @@
 ** TODO native x86 backend
    API redesign in preparation complete, initial
    tests on native factorial and closures working.
-** TODO fasl/image files
+** DONE fasl/image files
+   - State "DONE"       from "TODO"       [2017-08-30 Wed 23:13]
    sexp_copy_context() can form the basis for images,
    FASL for arbitrary modules will need additional
    help with resolving external references.
@@ -18,7 +19,8 @@
     - State "DONE"       from "TODO"       [2011-11-10 Thu 20:44]
 *** TODO static image compiled into library
     With this you'll be able to run Chibi without any filesystem.
-*** TODO external tool to compact and optimize images
+*** DONE external tool to compact and optimize images
+    - State "DONE"       from "TODO"       [2017-08-30 Wed 23:13]
     The current GC is mark&sweep, which can cause fragmentation,
     but we can at at least compact the initial fixed image.
 *** TODO fasl versions of modules
@@ -125,7 +127,8 @@
    - State "DONE"       [2009-12-08 Tue 14:39]
 ** DONE only/except/rename/prefix modifiers
    - State "DONE"       [2009-12-16 Wed 18:57]
-** TODO scheme-complete.el support
+** DONE scheme-complete.el support
+   - State "DONE"       from "TODO"       [2017-08-30 Wed 23:14]
 ** DONE access individual modules from repl
    - State "DONE"       [2009-12-26 Sat 01:49]
 
@@ -181,7 +184,8 @@
 * miscellaneous
 ** DONE user documentation
    - State "DONE"       from "TODO"       [2011-11-10 Thu 20:45]
-** TODO full test suite for libraries
+** DONE full test suite for libraries
+   - State "DONE"       from "TODO"       [2017-08-30 Wed 23:14]
 ** TODO thorough source documentation
 
 * distribution
