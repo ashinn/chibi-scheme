@@ -6,12 +6,15 @@ chibi-scheme \- a tiny Scheme interpreter
 
 .SH SYNOPSIS
 .B chibi-scheme
-[-qQrRfV]
+[-qQrRfTV]
 [-I
 .I path
 ]
 [-A
 .I path
+]
+[-D
+.I feature
 ]
 [-m
 .I module
@@ -146,6 +149,11 @@ Strict mode, escalating warnings to fatal errors.
 .BI -f
 Change the reader to case-fold symbols as in R5RS.
 .TP
+.BI -T
+Disables tail-call optimization.  This can be useful for
+debugging in some cases, but also makes it very likely to
+overflow the stack.
+.TP
 .BI -h size[/max_size]
 Specifies the initial size of the heap, in bytes,
 optionally followed by the maximum size the heap can
@@ -166,6 +174,12 @@ on front of the load path list.
 Appends
 .I path
 to the load path list.  
+.TP
+.BI -D feature
+Adds
+.I feature
+to the feature list, useful for cond-expanding different
+library code.  
 .TP
 .BI -m module
 .TP
@@ -237,7 +251,7 @@ Alex Shinn (alexshinn @ gmail . com)
 
 .SH SEE ALSO
 .PP
-More detailed information can be found in the manuale included in
+More detailed information can be found in the manual included in
 doc/chibi.scrbl included in the distribution.
 
 The chibi-scheme home-page:
