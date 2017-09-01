@@ -1495,7 +1495,7 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
     return sexp_make_flonum(ctx, cname(d));                             \
   }
 
-#ifdef SEXP_USE_COMPLEX
+#if SEXP_USE_COMPLEX
 #define define_complex_math_op(name, cname, f, a, b)		\
   sexp name (sexp ctx, sexp self, sexp_sint_t n, sexp z) {	\
     double d;                                                           \
