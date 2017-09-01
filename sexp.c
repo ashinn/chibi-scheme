@@ -3222,10 +3222,12 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
             res = tmp;
           } else if ((str[6] == 'i' || str[6] == 'I') && str[7] == 0) {
             res = sexp_make_complex(ctx, SEXP_ZERO, tmp);
+#if SEXP_USE_MATH
           } else if (str[6] == '@') {
             res = sexp_substring_cursor(ctx, res, sexp_make_string_cursor(6), SEXP_FALSE);
             res = sexp_open_input_string(ctx, res);
             res = sexp_read_polar_tail(ctx, res, tmp);
+#endif
           } else if (str[6] == '+' || str[6] == '-') {
             res = sexp_substring_cursor(ctx, res, sexp_make_string_cursor(6), SEXP_FALSE);
             res = sexp_string_to_number(ctx, res, SEXP_TEN);
