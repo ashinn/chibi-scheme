@@ -31,6 +31,16 @@ typedef struct random_data sexp_random_t;
 #define sexp_call_random(rs, dst) random_r(sexp_random_data(rs), &dst)
 #define sexp_seed_random(n, rs) srandom_r(n, sexp_random_data(rs))
 
+#elif defined(_WIN32)
+
+typedef unsigned int sexp_random_t;
+
+/* FIXME: MSVC CRT has rand_s() for "cryptographically secure" random number
+ *        for WinXP or later. */
+#define sexp_random_init(rs, seed) (void)0
+#define sexp_call_random(rs, dst) ((dst) = rand())
+#define sexp_seed_random(n, rs) srand(n)
+
 #else
 
 typedef unsigned int sexp_random_t;
