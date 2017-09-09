@@ -1324,7 +1324,7 @@ static struct sexp_library_entry_t *sexp_find_static_library(const char *file)
 #endif
 
 #if SEXP_USE_DL
-#ifdef __MINGW32__
+#ifdef _WIN32
 #include <windows.h>
 static sexp sexp_load_dl (sexp ctx, sexp file, sexp env) {
   sexp res;
