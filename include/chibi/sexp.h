@@ -824,8 +824,13 @@ SEXP_API int sexp_idp(sexp x);
 #define SEXP_TEN     sexp_make_fixnum(10)
 
 #if SEXP_USE_DISJOINT_STRING_CURSORS
+#if SEXP_USE_SIGNED_SHIFTS
 #define sexp_make_string_cursor(n)    ((sexp) ((((sexp_sint_t)(n))<<SEXP_STRING_CURSOR_BITS) + SEXP_STRING_CURSOR_TAG))
 #define sexp_unbox_string_cursor(n)   (((sexp_sint_t)(n))>>SEXP_STRING_CURSOR_BITS)
+#else
+#define sexp_make_string_cursor(n)    ((sexp) ((((sexp_sint_t)(n))*(sexp_sint_t)(1uL<<SEXP_STRING_CURSOR_BITS)) | SEXP_STRING_CURSOR_TAG))
+#define sexp_unbox_string_cursor(n)   (((sexp_sint_t)((sexp_uint_t)(n) & ~SEXP_STRING_CURSOR_TAG))/(sexp_sint_t)(1uL<<SEXP_STRING_CURSOR_BITS))
+#endif
 #define sexp_string_cursor_to_fixnum(n) sexp_make_fixnum(sexp_unbox_string_cursor(n))
 #define sexp_fixnum_to_string_cursor(n) sexp_make_string_cursor(sexp_unbox_fixnum(n))
 #else
