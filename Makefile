@@ -48,7 +48,7 @@ MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
 	system test time trace type-inference uri weak monad/environment \
 	show show/base crypto/sha2
 
-IMAGE_FILES = lib/chibi.img lib/snow.img
+IMAGE_FILES = lib/chibi.img lib/red.img lib/snow.img
 
 HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 
@@ -168,6 +168,9 @@ lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES) libchibi-scheme$(SO)
 
 lib/chibi.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -d $@
+
+lib/red.img: $(CHIBI_DEPENDENCIES) all-libs
+	$(CHIBI) -xscheme.red -d $@
 
 lib/snow.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $@
@@ -362,6 +365,7 @@ install: install-base
 ifneq "$(IMAGE_FILES)" ""
 	echo "Generating images"
 	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -d $(DESTDIR)$(MODDIR)/chibi.img
+	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -xscheme.red -d $(DESTDIR)$(MODDIR)/red.img
 	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
 endif
 
