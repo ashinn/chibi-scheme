@@ -53,7 +53,7 @@
   (let lp ((env env) (res '()))
     (if (not env)
         res
-        (lp (env-parent env) (append (env-exports env) res)))))
+        (lp (env-parent env) (lset-union eq? (env-exports env) res)))))
 
 (define (string-common-prefix-length strings)
   (if (null? strings)
