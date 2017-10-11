@@ -1034,11 +1034,11 @@
      rx
      (lambda (from md str a)
        (let ((i (regexp-match-submatch-start md 0)))
-         (if (< from i) (cons (substring str from i) a) a)))
+         (if (eqv? i 0) a (cons (substring str from i) a))))
      '()
      str
      (lambda (from md str a)
-       (reverse (if (< from end) (cons (substring str from end) a) a)))
+       (reverse (cons (substring str from end) a)))
      start
      end)))
 

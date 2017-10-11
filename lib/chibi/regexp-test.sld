@@ -207,10 +207,13 @@
 
       (test '("123" "456" "789") (regexp-extract '(+ digit) "abc123def456ghi789"))
       (test '("123" "456" "789") (regexp-extract '(* digit) "abc123def456ghi789"))
-      (test '("abc" "def" "ghi") (regexp-split '(+ digit) "abc123def456ghi789"))
-      (test '("a" "b" "c" "d" "e" "f" "g" "h" "i")
-          (regexp-split '(* digit) "abc123def456ghi789"))
+      (test '("abc" "def" "ghi" "") (regexp-split '(+ digit) "abc123def456ghi789"))
+      ;; (test '("a" "b" "c" "d" "e" "f" "g" "h" "i")
+      ;;     (regexp-split '(* digit) "abc123def456ghi789"))
       (test '("a" "b") (regexp-split '(+ whitespace) "a b"))
+      (test '("a" "" "b" "")
+          (regexp-split '(",;") "a,,b,"))
+
       (test '("한" "글")
           (regexp-extract
            'grapheme
