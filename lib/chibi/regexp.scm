@@ -1033,12 +1033,16 @@
     (regexp-fold
      rx
      (lambda (from md str a)
-       (let ((i (regexp-match-submatch-start md 0)))
-         (if (eqv? i 0) a (cons (substring str from i) a))))
-     '()
+       (let ((i (regexp-match-submatch-start md 0))
+             (j (regexp-match-submatch-end md 0)))
+         (if (eqv? i j)
+             a
+             (cons j
+                   (cons (substring str (car a) i) (cdr a))))))
+     (cons start '())
      str
      (lambda (from md str a)
-       (reverse (cons (substring str from end) a)))
+       (reverse (cons (substring str (car a) end) (cdr a))))
      start
      end)))
 
@@ -1057,13 +1061,19 @@
   (let ((start (if (pair? o) (car o) 0))
         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
     (define (kons from md str a)
-      (let ((left (substring str from (regexp-match-submatch-start md 0))))
-        (cons (regexp-match-submatch md 0) (cons left a))))
+      (let ((i (regexp-match-submatch-start md 0))
+            (j (regexp-match-submatch-end md 0)))
+        (if (eqv? i j)
+            a
+            (let ((left (substring str (car a) i)))
+              (cons j
+                    (cons (regexp-match-submatch md 0)
+                          (cons left (cdr a))))))))
     (define (final from md str a)
-      (if (or (< from end) (null? a))
-          (cons (substring str from end) a)
-          a))
-    (reverse (regexp-fold rx kons '() str final start end))))
+      (if (or (< from end) (null? (cdr a)))
+          (cons (substring str (car a) end) (cdr a))
+          (cdr a)))
+    (reverse (regexp-fold rx kons (cons start '()) str final start end))))
 
 ;;> Returns a new string replacing the \var{count}th match of \var{re}
 ;;> in \var{str} the \var{subst}, where the zero-indexed \var{count}
