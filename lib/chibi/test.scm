@@ -422,7 +422,7 @@
     (else (lambda (x) x))))
 
 (define (test-status-message status)
-  ((test-status-color status) status))
+  ((test-status-color status) (symbol->string status)))
 
 (define (test-status-code status)
   ((test-status-color status)
