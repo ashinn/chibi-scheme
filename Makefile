@@ -310,6 +310,7 @@ install-base: all
 	$(INSTALL) -m0644 lib/scheme/char/*.sld lib/scheme/char/*.scm $(DESTDIR)$(MODDIR)/scheme/char/
 	$(INSTALL) -m0644 lib/scheme/time/*.sld $(DESTDIR)$(MODDIR)/scheme/time/
 	$(INSTALL) -m0644 lib/srfi/*.sld lib/srfi/*.scm $(DESTDIR)$(MODDIR)/srfi/
+	$(INSTALL) -m0644 lib/srfi/1/*.sld $(DESTDIR)$(MODDIR)/srfi/1/
 	$(INSTALL) -m0644 lib/srfi/1/*.scm $(DESTDIR)$(MODDIR)/srfi/1/
 	$(INSTALL) -m0644 lib/srfi/18/*.scm $(DESTDIR)$(MODDIR)/srfi/18/
 	$(INSTALL) -m0644 lib/srfi/27/*.scm $(DESTDIR)$(MODDIR)/srfi/27/
