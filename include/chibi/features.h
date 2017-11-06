@@ -773,16 +773,12 @@
 #define SHUT_RD 0 /* SD_RECEIVE */
 #define SHUT_WR 1 /* SD_SEND */
 #define SHUT_RDWR 2 /* SD_BOTH */
-#if !defined(__MINGW32__) && !defined(__MINGW64__)
-#define strcasecmp lstrcmpi
-#define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
-#endif
-#include <shlwapi.h>
-#define strcasestr StrStrI
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS 1
 #define _CRT_NONSTDC_NO_DEPRECATE 1
 #define _USE_MATH_DEFINES /* For M_LN10 */
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #pragma warning(disable:4146) /* unary minus operator to unsigned type */
 #if _MSC_VER < 1900
 #define snprintf(buf, len, fmt, val) sprintf(buf, fmt, val)
