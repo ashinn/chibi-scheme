@@ -20,7 +20,7 @@ ifeq ($(shell uname),DragonFly)
 PLATFORM=bsd
 else
 ifeq ($(shell uname -o),Msys)
-PLATFORM=mingw
+PLATFORM=windows
 SOLIBDIR = $(BINDIR)
 DIFFOPTS = -b
 else
@@ -70,6 +70,17 @@ CLIBFLAGS = -fPIC
 CLINKFLAGS = -shared
 LIBDL = 
 else
+ifeq ($(PLATFORM),windows)
+SO  = .dll
+EXE = .exe
+CC = gcc
+CLIBFLAGS =
+CLINKFLAGS = -shared
+CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DSEXP_USE_GREEN_THREADS=0 -DSEXP_USE_GC_FILE_DESCRIPTORS=0 -DBUILDING_DLL
+LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
+STATICFLAGS = -DSEXP_USE_DL=0
+LIBDL = -lws2_32
+else
 ifeq ($(PLATFORM),mingw)
 SO  = .dll
 EXE = .exe
@@ -99,6 +110,7 @@ LIBCHIBI_FLAGS = -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR)
 ifeq ($(PLATFORM),BSD)
 LIBDL=
 RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+endif
 endif
 endif
 endif

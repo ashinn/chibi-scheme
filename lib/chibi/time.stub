@@ -1,6 +1,8 @@
 
 (cond-expand
  (plan9)
+ (windows
+  (c-system-include "sys/types.h"))
  (else
   (c-system-include "time.h")
   (c-system-include "sys/time.h")))
