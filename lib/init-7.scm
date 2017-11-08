@@ -1079,8 +1079,11 @@
  (auto-force
   )
  (else
+  (define *promise-tag* (list 'promise))
   (define (promise done? proc)
-    (list (cons done? proc)))
+    (cons (cons done? proc) *promise-tag*))
+  (define (promise? x)
+    (and (pair? x) (eq? *promise-tag* (cdr x))))
   (define (promise-done? x) (car (car x)))
   (define (promise-value x) (cdr (car x)))
   (define (promise-update! new old)
