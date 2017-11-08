@@ -1,7 +1,9 @@
 (define-library (chibi show-test)
   (export run-tests)
-  (import (scheme base) (scheme read) (chibi test)
-          (chibi show) (chibi show base) (chibi show pretty))
+  (import (scheme base) (scheme char) (scheme read)
+          (chibi test)
+          (chibi show) (chibi show base)
+          (chibi show column) (chibi show pretty))
   (begin
     (define-syntax test-pretty
       (syntax-rules ()
@@ -144,6 +146,29 @@
         (test "3.14+2.00i"
             (show #f (with ((precision 2)) (string->number "3.14159+2i"))))))
 
+      (test "608" (show #f (numeric/si 608)))
+      (test "3.9Ki" (show #f (numeric/si 3986)))
+      (test "4kB" (show #f (numeric/si 3986 1000) "B"))
+      (test "1.2Mm" (show #f (numeric/si 1.23e6 1000) "m"))
+      (test "123km" (show #f (numeric/si 1.23e5 1000) "m"))
+      (test "12.3km" (show #f (numeric/si 1.23e4 1000) "m"))
+      (test "1.2km" (show #f (numeric/si 1.23e3 1000) "m"))
+      (test "123m" (show #f (numeric/si 1.23e2 1000) "m"))
+      (test "12.3m" (show #f (numeric/si 1.23e1 1000) "m"))
+      (test "1.2m" (show #f (numeric/si 1.23 1000) "m"))
+      (test "123mm" (show #f (numeric/si 0.123 1000) "m"))
+      (test "12.3mm" (show #f (numeric/si 1.23e-2 1000) "m")) ;?
+      (test "1.2mm" (show #f (numeric/si 1.23e-3 1000) "m"))
+      (test "123µm" (show #f (numeric/si 1.23e-4 1000) "m"))  ;?
+      (test "12.3µm" (show #f (numeric/si 1.23e-5 1000) "m")) ;?
+      (test "1.2µm" (show #f (numeric/si 1.23e-6 1000) "m"))
+
+      (test "1,234,567" (show #f (numeric/comma 1234567)))
+
+      (test "1.23" (show #f (numeric/fitted 4 1.2345 10 2)))
+      (test "1.00" (show #f (numeric/fitted 4 1 10 2)))
+      (test "#.##" (show #f (numeric/fitted 4 12.345 10 2)))
+
       ;; padding/trimming
 
       (test "abc  " (show #f (padded 5 "abc")))
@@ -253,6 +278,14 @@
                     '(lions tigers . bears)
                     ", ")))
 
+      ;; escaping
+
+      (test "hi, bob!" (show #f (escaped "hi, bob!")))
+      (test "hi, \\\"bob!\\\"" (show #f (escaped "hi, \"bob!\"")))
+      (test "bob" (show #f (maybe-escaped "bob" char-whitespace?)))
+      (test "\"hi, bob!\""
+          (show #f (maybe-escaped "hi, bob!" char-whitespace?)))
+
       ;; shared structures
 
       (test "#0=(1 . #0#)"
@@ -317,15 +350,15 @@
              wubbleflubbery)\n")
 
       (test-pretty
-        "#(0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+       "#(0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
   26 27 28 29 30 31 32 33 34 35 36 37)\n")
 
       (test-pretty
-        "(0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
+       "(0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
  26 27 28 29 30 31 32 33 34 35 36 37)\n")
 
       (test-pretty
-        "(#(0 1)   #(2 3)   #(4 5)   #(6 7)   #(8 9)   #(10 11) #(12 13) #(14 15)
+       "(#(0 1)   #(2 3)   #(4 5)   #(6 7)   #(8 9)   #(10 11) #(12 13) #(14 15)
  #(16 17) #(18 19))\n")
 
       (test-pretty
@@ -388,5 +421,164 @@
                        `(let ((zeros '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
                               (ones ',ones))
                           (append zeros ones))))))
+
+      ;; columns
+
+      (test "abc\ndef\n"
+          (show #f (show-columns (list displayed "abc\ndef\n"))))
+      (test "abc123\ndef456\n"
+          (show #f (show-columns (list displayed "abc\ndef\n")
+                                 (list displayed "123\n456\n"))))
+      (test "abc123\ndef456\n"
+          (show #f (show-columns (list displayed "abc\ndef\n")
+                                 (list displayed "123\n456"))))
+      (test "abc123\ndef456\n"
+          (show #f (show-columns (list displayed "abc\ndef")
+                                 (list displayed "123\n456\n"))))
+      (test "abc123\ndef456\nghi789\n"
+          (show #f (show-columns (list displayed "abc\ndef\nghi\n")
+                                 (list displayed "123\n456\n789\n"))))
+      (test "abc123wuv\ndef456xyz\n"
+          (show #f (show-columns (list displayed "abc\ndef\n")
+                                 (list displayed "123\n456\n")
+                                 (list displayed "wuv\nxyz\n"))))
+      (test "abc  123\ndef  456\n"
+          (show #f (show-columns (list (lambda (x) (padded/right 5 x))
+                                       "abc\ndef\n")
+                                 (list displayed "123\n456\n"))))
+      (test "ABC  123\nDEF  456\n"
+          (show #f (show-columns (list (lambda (x) (upcased (padded/right 5 x)))
+                                       "abc\ndef\n")
+                                 (list displayed "123\n456\n"))))
+      (test "ABC  123\nDEF  456\n"
+          (show #f (show-columns (list (lambda (x) (padded/right 5 (upcased x)))
+                                       "abc\ndef\n")
+                                 (list displayed "123\n456\n"))))
+
+      (test "hello\nworld\n"
+          (show #f (with ((width 8)) (wrapped "hello world"))))
+      (test "\n" (show #f (wrapped "    ")))
+
+      (test
+          "The  quick
+brown  fox
+jumped
+over   the
+lazy dog
+"
+          (show #f
+                (with ((width 10))
+                  (justified "The quick brown fox jumped over the lazy dog"))))
+
+      (test
+          "The fundamental list iterator.
+Applies KONS to each element of
+LS and the result of the previous
+application, beginning with KNIL.
+With KONS as CONS and KNIL as '(),
+equivalent to REVERSE.
+"
+          (show #f
+                (with ((width 36))
+                  (wrapped "The fundamental list iterator.  Applies KONS to each element of LS and the result of the previous application, beginning with KNIL.  With KONS as CONS and KNIL as '(), equivalent to REVERSE."))))
+
+      (test
+          "(define (fold kons knil ls)
+  (let lp ((ls ls) (acc knil))
+    (if (null? ls)
+        acc
+        (lp (cdr ls)
+            (kons (car ls) acc)))))
+"
+          (show #f
+                (with ((width 36))
+                  (pretty '(define (fold kons knil ls)
+                             (let lp ((ls ls) (acc knil))
+                               (if (null? ls)
+                                   acc
+                                   (lp (cdr ls)
+                                       (kons (car ls) acc)))))))))
+
+      '(test
+           "(define (fold kons knil ls)          ; The fundamental list iterator.
+  (let lp ((ls ls) (acc knil))       ; Applies KONS to each element of
+    (if (null? ls)                   ; LS and the result of the previous
+        acc                          ; application, beginning with KNIL.
+        (lp (cdr ls)                 ; With KONS as CONS and KNIL as '(),
+            (kons (car ls) acc)))))  ; equivalent to REVERSE.
+"
+           (show #f
+                 (show-columns
+                  (list
+                   (lambda (x) (padded/right 36 x))
+                   (with ((width 36))
+                     (pretty '(define (fold kons knil ls)
+                                (let lp ((ls ls) (acc knil))
+                                  (if (null? ls)
+                                      acc
+                                      (lp (cdr ls)
+                                          (kons (car ls) acc))))))))
+                  (list
+                   (lambda (x) (each " ; " x))
+                   (with ((width 36))
+                     (wrapped "The fundamental list iterator.  Applies KONS to each element of LS and the result of the previous application, beginning with KNIL.  With KONS as CONS and KNIL as '(), equivalent to REVERSE."))))))
+
+      '(test
+           "(define (fold kons knil ls)          ; The fundamental list iterator.
+  (let lp ((ls ls) (acc knil))       ; Applies KONS to each element of
+    (if (null? ls)                   ; LS and the result of the previous
+        acc                          ; application, beginning with KNIL.
+        (lp (cdr ls)                 ; With KONS as CONS and KNIL as '(),
+            (kons (car ls) acc)))))  ; equivalent to REVERSE.
+"
+           (show #f (with ((width 76))
+                      (columnar
+                       (pretty '(define (fold kons knil ls)
+                                  (let lp ((ls ls) (acc knil))
+                                    (if (null? ls)
+                                        acc
+                                        (lp (cdr ls)
+                                            (kons (car ls) acc))))))
+                       " ; "
+                       (wrapped "The fundamental list iterator.  Applies KONS to each element of LS and the result of the previous application, beginning with KNIL.  With KONS as CONS and KNIL as '(), equivalent to REVERSE.")))))
+
+      (test
+          "- Item 1: The text here is
+          indented according
+          to the space \"Item
+          1\" takes, and one
+          does not known what
+          goes here.
+"
+          (show #f (columnar 9 (each "- Item 1:") " " (with ((width 20)) (wrapped "The text here is indented according to the space \"Item 1\" takes, and one does not known what goes here.")))))
+
+      (test
+          "- Item 1: The text here is
+          indented according
+          to the space \"Item
+          1\" takes, and one
+          does not known what
+          goes here.
+"
+          (show #f (columnar 9 (each "- Item 1:\n") " " (with ((width 20)) (wrapped "The text here is indented according to the space \"Item 1\" takes, and one does not known what goes here.")))))
+
+      (test
+          "- Item 1: The-text-here-is----------------------------------------------------
+--------- indented-according--------------------------------------------------
+--------- to-the-space-\"Item--------------------------------------------------
+--------- 1\"-takes,-and-one---------------------------------------------------
+--------- does-not-known-what-------------------------------------------------
+--------- goes-here.----------------------------------------------------------
+"
+          (show #f (with ((pad-char #\-)) (columnar 9 (each "- Item 1:\n") " " (with ((width 20)) (wrapped "The text here is indented according to the space \"Item 1\" takes, and one does not known what goes here."))))))
+
+      (test
+          "a   | 123
+bc  | 45
+def | 6
+"
+          (show #f (with ((width 20))
+                    (tabular (each "a\nbc\ndef\n") " | "
+                             (each "123\n45\n6\n")))))
 
       (test-end))))

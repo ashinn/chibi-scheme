@@ -2,6 +2,20 @@
 ;; Copyright (c) 2006-2017 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
+(define (string-split-words str separator?)
+  (let ((start (string-cursor-start str))
+        (end (string-cursor-end str)))
+    (let lp ((sc start) (res '()))
+      (cond
+       ((string-cursor>=? sc end)
+        (reverse res))
+       (else
+        (let ((sc2 (string-index str separator? sc)))
+          (lp (string-cursor-next str sc2)
+              (if (string-cursor=? sc sc2)
+                  res
+                  (cons (substring/cursors str sc sc2) res)))))))))
+
 (define (call-with-output-generator producer consumer)
   (fn ()
     (let ((out (open-output-string))
@@ -12,10 +26,18 @@
       (define (output* str)
         (fn (row col string-width)
           (list-queue-add-back! queue str)
-          (call-with-current-continuation
-           (lambda (cc)
-             (set! resume cc)
-             (return nothing)))
+          (each
+           (let ((nl-index
+                  (string-index-right str (lambda (ch) (eqv? ch #\newline)))))
+             (if (string-cursor>? nl-index (string-cursor-start str))
+                 (update!
+                  (row (+ row (string-count str (lambda (ch) (eqv? ch #\newline)))))
+                  (col (string-width str (string-cursor->index str nl-index))))
+                 (update! (col (+ col (string-width str))))))
+           (call-with-current-continuation
+            (lambda (cc)
+              (set! resume cc)
+              (return nothing))))
           nothing))
       (define (generate)
         (if (and resume (list-queue-empty? queue))
@@ -27,13 +49,13 @@
             eof
             (list-queue-remove-front! queue)))
       (fn-fork (fn () (with ((port out) (output output*))
-                  (call-with-current-continuation
-                   (lambda (cc)
-                     (set! return cc)
-                     (each producer
-                           (fn (output)
-                             (set! resume #f)
-                             (fn () (return nothing) nothing)))))))
+                        (call-with-current-continuation
+                         (lambda (cc)
+                           (set! return cc)
+                           (each producer
+                                 (fn (output)
+                                   (set! resume #f)
+                                   (fn () (return nothing) nothing)))))))
                (consumer generate)))))
 
 (define (call-with-output-generators producers consumer)
@@ -320,6 +342,10 @@
                        (fn () (lp (string-cursor-next str nli))))))))))))
       (each-in-list ls))))
 
+;; `seq' is a list or vector of pre-tokenized words.  `line' is called
+;; on each wrapped line and the accumulator, starting with `knil'.
+;; The optional `last-line' is used instead on the last line of the
+;; paragraph.
 (define (wrap-fold-words seq knil max-width get-width line . o)
   (let* ((last-line (if (pair? o) (car o) line))
          (vec (if (list? seq) (list->vector seq) seq))
@@ -380,21 +406,21 @@
               (last-line (sub-list i len-1) acc)
               (lp (+ break 1) (line (sub-list i break) acc)))))))))
 
-;; XXXX don't split, traverse the string manually and keep track of
-;; sentence endings so we can insert two spaces
-(define (wrap-fold str . o)
-  (apply wrap-fold-words (string-split str " ") o))
+(define (wrapped/list ls)
+  (fn (width string-width pad-char)
+    (joined/suffix
+     (lambda (ls) (joined displayed ls pad-char))
+     (reverse
+      (wrap-fold-words ls '() width (or string-width string-length) cons))
+     "\n")))
 
 (define (wrapped . ls)
   (call-with-output
    (each-in-list ls)
    (lambda (str)
-     (fn (width string-width pad-char)
-       (joined/suffix
-        (lambda (ls) (joined displayed ls pad-char))
-        (reverse
-         (wrap-fold str '() width (or string-width string-length) cons))
-        "\n")))))
+     (fn (word-separator?)
+       (wrapped/list
+        (string-split-words str (or word-separator? char-whitespace?)))))))
 
 (define (justified . ls)
   (fn (output width string-width)
@@ -427,11 +453,16 @@
     (call-with-output
      (each-in-list ls)
      (lambda (str)
-       (joined/last
-        justify-line
-        justify-last
-        (reverse (wrap-fold str '() width string-width cons))
-        "\n")))))
+       (fn (word-separator?)
+         (joined/last
+          justify-line
+          justify-last
+          (reverse
+           (wrap-fold-words
+            (string-split-words str (or word-separator? char-whitespace?))
+            '() width (or string-width string-length)
+            cons))
+          "\n"))))))
 
 (define (from-file path)
   (fn ()

@@ -42,7 +42,7 @@
    (string-find str pred (string-index->cursor str i))))
 
 (define (try-fitted2 proc fail)
-  (fn (width string-width output)
+  (fn (width output)
     (let ((out (open-output-string)))
       (call-with-current-continuation
        (lambda (abort)
@@ -53,7 +53,7 @@
            (fn (col)
              (let lp ((i 0) (col col))
                (let ((nli (string-find/index str #\newline i))
-                     (len (string-width str)))
+                     (len (string-length str)))
                  (if (< nli len)
                      (if (> (+ (- nli i) col) width)
                          (abort fail)

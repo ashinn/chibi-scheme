@@ -1,5 +1,5 @@
 ;; show.scm -- additional combinator formatters
-;; Copyright (c) 2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2013-2017 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> A library of procedures for formatting Scheme objects to text in

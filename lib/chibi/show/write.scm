@@ -30,6 +30,64 @@
               (if (pair? rule) (cdr rule) rule)
               (cons sep (cons (substring str i2 i) res)))))))
 
+;;> Outputs the string str, escaping any quote or escape characters.
+;;> If esc-ch, which defaults to #\\, is #f, escapes only the
+;;> quote-ch, which defaults to #\", by doubling it, as in SQL strings
+;;> and CSV values.  If renamer is provided, it should be a procedure
+;;> of one character which maps that character to its escape value,
+;;> e.g. #\newline => #\n, or #f if there is no escape value.
+
+(define (escaped fmt . o)
+  (let-optionals* o ((quot #\")
+                     (esc #\\)
+                     (rename (lambda (x) #f)))
+    (let ((quot-str (if (char? quot) (string quot) quot))
+          (esc-str (if (char? esc) (string esc) esc)))
+      (fn (output)
+        (define (output* str)
+          (let ((start (string-cursor-start str))
+                (end (string-cursor-end str)))
+            (let lp ((i start) (j start))
+              (define (collect)
+                (if (eq? i j) "" (substring-cursor str i j)))
+              (if (string-cursor>=? j end)
+                  (output (collect))
+                  (let ((c (string-cursor-ref str j))
+                        (j2 (string-cursor-next str j)))
+                    (cond
+                     ((or (eqv? c quot) (eqv? c esc))
+                      (each (output (collect))
+                            (output esc-str)
+                            (fn () (lp j j2))))
+                     ((rename c)
+                      => (lambda (c2)
+                           (each (output (collect))
+                                 (output esc-str)
+                                 (output (if (char? c2) (string c2) c2))
+                                 (fn () (lp j2 j2)))))
+                     (else
+                      (lp i j2))))))))
+        (with ((output output*))
+          fmt)))))
+
+;;> Only escape if there are special characters, in which case also
+;;> wrap in quotes.  For writing symbols in |...| escapes, or CSV
+;;> fields, etc.  The predicate indicates which characters cause
+;;> slashification - this is in addition to automatic slashifying when
+;;> either the quote or escape char is present.
+
+(define (maybe-escaped fmt pred . o)
+  (let-optionals* o ((quot #\")
+                     (esc #\\)
+                     (rename (lambda (x) #f)))
+    (define (esc? c) (or (eqv? c quot) (eqv? c esc) (rename c) (pred c)))
+    (call-with-output
+     fmt
+     (lambda (str)
+       (if (string-cursor<? (string-find str esc?) (string-cursor-end str))
+           (each quot (escaped str quot esc rename) quot)
+           (displayed str))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; numeric formatting
 
@@ -47,189 +105,265 @@
 ;; special cases, so the below is a simplification which tries to rely
 ;; on number->string for common cases.
 
-(define (numeric n)
-  (fn (radix precision decimal-sep decimal-align comma-rule comma-sep sign-rule)
-    (let ((dec-sep (or decimal-sep (if (eqv? comma-sep #\.) #\, #\.))))
-      ;; General formatting utilities.
-      (define (get-scale q)
-        (expt radix (- (integer-log q radix) 1)))
-      (define (char-digit d)
-        (cond ((char? d) d)
-              ((< d 10) (integer->char (+ d (char->integer #\0))))
-              (else (integer->char (+ (- d 10) (char->integer #\a))))))
-      (define (digit-value ch)
-        (let ((res (- (char->integer ch) (char->integer #\0))))
-          (if (<= 0 res 9)
-              res
-              ch)))
-      (define (round-up ls)
-        (let lp ((ls ls) (res '()))
-          (cond
-           ((null? ls)
-            (cons 1 res))
-           ((not (number? (car ls)))
-            (lp (cdr ls) (cons (car ls) res)))
-           ((= (car ls) (- radix 1))
-            (lp (cdr ls) (cons 0 res)))
-           (else
-            (append (reverse res) (cons (+ 1 (car ls)) (cdr ls)))))))
-      (define (maybe-round n d ls)
-        (let* ((q (quotient n d))
-               (digit (* 2 (if (>= q radix) (quotient q (get-scale q)) q))))
-          (if (or (> digit radix)
-                  (and (= digit radix)
-                       (let ((prev (find integer? ls)))
-                         (and prev (odd? prev)))))
-              (round-up ls)
-              ls)))
-      (define (maybe-trim-zeros i res)
-        (if (and (not precision) (positive? i))
-            (let lp ((res res))
-              (cond
-               ((and (pair? res) (eqv? 0 (car res))) (lp (cdr res)))
-               ((and (pair? res) (eqv? dec-sep (car res))) (cdr res))
-               (else res)))
-            res))
-      ;; General slow loop to generate digits one at a time, for
-      ;; non-standard radixes or writing rationals with a fixed
-      ;; precision.
-      (define (gen-general n)
-        (let* ((p (exact n))
-               (n (numerator p))
-               (d (denominator p)))
-          (let lp ((n n)
-                   (i (- (integer-log p radix)))
-                   (res '()))
+(define unspec (list 'unspecified))
+
+(define-syntax default
+  (syntax-rules ()
+    ((default var dflt) (if (eq? var unspec) dflt var))))
+
+(define (numeric n . o)
+  (let-optionals* o ((rad unspec) (prec unspec) (sgn unspec)
+                     (comma unspec) (commasep unspec) (decsep unspec))
+    (fn (radix precision sign-rule
+               comma-rule comma-sep decimal-sep decimal-align)
+      (let ((radix (default rad radix))
+            (precision (default prec precision))
+            (sign-rule (default sgn sign-rule))
+            (comma-rule (default comma comma-rule))
+            (comma-sep (default comma-sep commasep))
+            (dec-sep (default decsep
+                       (or decimal-sep (if (eqv? comma-sep #\.) #\, #\.)))))
+        ;; General formatting utilities.
+        (define (get-scale q)
+          (expt radix (- (integer-log q radix) 1)))
+        (define (char-digit d)
+          (cond ((char? d) d)
+                ((< d 10) (integer->char (+ d (char->integer #\0))))
+                (else (integer->char (+ (- d 10) (char->integer #\a))))))
+        (define (digit-value ch)
+          (let ((res (- (char->integer ch) (char->integer #\0))))
+            (if (<= 0 res 9)
+                res
+                ch)))
+        (define (round-up ls)
+          (let lp ((ls ls) (res '()))
             (cond
-             ;; Use a fixed precision if specified, otherwise generate
-             ;; 15 decimals.
-             ((if precision (< i precision) (< i 16))
-              (let ((res (if (zero? i)
-                             (cons dec-sep (if (null? res) (cons 0 res) res))
-                             res))
-                    (q (quotient n d)))
+             ((null? ls)
+              (cons 1 res))
+             ((not (number? (car ls)))
+              (lp (cdr ls) (cons (car ls) res)))
+             ((= (car ls) (- radix 1))
+              (lp (cdr ls) (cons 0 res)))
+             (else
+              (append (reverse res) (cons (+ 1 (car ls)) (cdr ls)))))))
+        (define (maybe-round n d ls)
+          (let* ((q (quotient n d))
+                 (digit (* 2 (if (>= q radix) (quotient q (get-scale q)) q))))
+            (if (or (> digit radix)
+                    (and (= digit radix)
+                         (let ((prev (find integer? ls)))
+                           (and prev (odd? prev)))))
+                (round-up ls)
+                ls)))
+        (define (maybe-trim-zeros i res)
+          (if (and (not precision) (positive? i))
+              (let lp ((res res))
                 (cond
-                 ((>= q radix)
-                  (let* ((scale (get-scale q))
-                         (digit (quotient q scale))
-                         (n2 (- n (* d digit scale))))
-                    (lp n2 (+ i 1) (cons digit res))))
-                 (else
-                  (lp (* (remainder n d) radix)
-                      (+ i 1)
-                      (cons q res))))))
-             (else
-              (list->string
-               (map char-digit
-                    (reverse (maybe-round n d (maybe-trim-zeros i res))))))))))
-      ;; Generate a fixed precision decimal result by post-editing the
-      ;; result of string->number.
-      (define (gen-fixed n)
-        (cond
-         ((and (eqv? radix 10) (or (integer? n) (inexact? n)))
-          (let* ((s (number->string n))
-                 (end (string-cursor-end s))
-                 (dec (string-find s #\.))
-                 (digits (- (string-cursor->index s end)
-                            (string-cursor->index s dec))))
-            (cond
-             ((string-cursor<? (string-find s #\e) end)
-              (gen-general n))
-             ((string-cursor=? dec end)
-              (string-append s "." (make-string precision #\0)))
-             ((<= digits precision)
-              (string-append s (make-string (- precision digits -1) #\0)))
-             (else
-              (let* ((last
-                      (string-cursor-back s end (- digits precision 1)))
-                     (res (substring-cursor s (string-cursor-start s) last)))
-                (if (and
-                     (string-cursor<? last end)
-                     (let ((next (digit-value (string-cursor-ref s last))))
-                       (or (> next 5)
-                           (and (= next 5)
-                                (string-cursor>? last (string-cursor-start s))
-                                (odd? (digit-value
-                                       (string-cursor-ref
-                                        s (string-cursor-prev last 1))))))))
-                    (list->string
-                     (reverse
-                      (map char-digit
-                           (round-up
-                            (reverse (map digit-value (string->list res)))))))
-                    res))))))
-         (else
-          (gen-general n))))
-      ;; Generate any unsigned real number.
-      (define (gen-positive-real n)
-        (cond
-         (precision
-          (gen-fixed n))
-         ((and (exact? n) (not (integer? n)))
-          (string-append (number->string (numerator n) radix)
-                         "/"
-                         (number->string (denominator n) radix)))
-         ((memv radix (if (exact? n) '(2 8 10 16) '(10)))
-          (number->string n))
-         (else
-          (gen-general n))))
-      ;; Insert commas according to the current comma-rule.
-      (define (insert-commas str)
-        (let* ((dec-pos (string-find str dec-sep))
-               (left (substring-cursor str (string-cursor-start str) dec-pos))
-               (right (substring-cursor str dec-pos))
-               (sep (cond ((char? comma-sep) (string comma-sep))
-                          ((string? comma-sep) comma-sep)
-                          ((eqv? #\, dec-sep) ".")
-                          (else ","))))
-          (string-append
-           (string-intersperse-right left sep comma-rule)
-           right)))
-      ;; Post-process a positive real number with decimal char fixup
-      ;; and commas as needed.
-      (define (wrap-comma n)
-        (let* ((s0 (gen-positive-real n))
-               (s1 (if (and (char? dec-sep)
-                            (not (eqv? #\. dec-sep)))
-                       (string-replace-all s0 #\. dec-sep)
-                       s0)))
-          (if comma-rule (insert-commas s1) s1)))
-      ;; Wrap the sign of a real number, forcing a + prefix or using
-      ;; parentheses (n) for negatives according to sign-rule.
-      (define (wrap-sign n sign-rule)
-        (cond
-         ((negative? n)
-          (if (char? sign-rule)
-              (string-append (string sign-rule)
-                             (wrap-comma (abs n))
-                             (string (char-mirror sign-rule)))
-              (string-append "-" (wrap-comma (abs n)))))
-         ((eq? #t sign-rule)
-          (string-append "+" (wrap-comma n)))
-         (else
-          (wrap-comma n))))
-      ;; Format a single real number with padding as necessary.
-      (define (format n sign-rule)
-        (let ((s (wrap-sign n sign-rule)))
-          (let* ((dec-pos (if decimal-align
-                              (string-cursor->index s (string-find s dec-sep))
-                              0))
-                 (diff (- (or decimal-align 0) dec-pos 1)))
-            (if (positive? diff)
-                (string-append (make-string diff #\space) s)
-                s))))
-      ;; Write any number.
-      (define (write-complex n)
-        (cond
-         ((and radix (not (and (integer? radix) (<= 2 radix 36))))
-          (error "invalid radix for numeric formatting" radix))
-         ((zero? (imag-part n))
-          (displayed (format (real-part n) sign-rule)))
-         (else
-          (each (format (real-part n) sign-rule)
-                (format (imag-part n) #t)
-                "i"))))
-      (write-complex n))))
+                 ((and (pair? res) (eqv? 0 (car res))) (lp (cdr res)))
+                 ((and (pair? res) (eqv? dec-sep (car res))) (cdr res))
+                 (else res)))
+              res))
+        ;; General slow loop to generate digits one at a time, for
+        ;; non-standard radixes or writing rationals with a fixed
+        ;; precision.
+        (define (gen-general n)
+          (let* ((p (exact n))
+                 (n (numerator p))
+                 (d (denominator p)))
+            (let lp ((n n)
+                     (i (- (integer-log p radix)))
+                     (res '()))
+              (cond
+               ;; Use a fixed precision if specified, otherwise generate
+               ;; 15 decimals.
+               ((if precision (< i precision) (< i 16))
+                (let ((res (if (zero? i)
+                               (cons dec-sep (if (null? res) (cons 0 res) res))
+                               res))
+                      (q (quotient n d)))
+                  (cond
+                   ((>= q radix)
+                    (let* ((scale (get-scale q))
+                           (digit (quotient q scale))
+                           (n2 (- n (* d digit scale))))
+                      (lp n2 (+ i 1) (cons digit res))))
+                   (else
+                    (lp (* (remainder n d) radix)
+                        (+ i 1)
+                        (cons q res))))))
+               (else
+                (list->string
+                 (map char-digit
+                      (reverse (maybe-round n d (maybe-trim-zeros i res))))))))))
+        ;; Generate a fixed precision decimal result by post-editing the
+        ;; result of string->number.
+        (define (gen-fixed n)
+          (cond
+           ((and (eqv? radix 10) (or (integer? n) (inexact? n)))
+            (let* ((s (number->string n))
+                   (end (string-cursor-end s))
+                   (dec (string-find s #\.))
+                   (digits (- (string-cursor->index s end)
+                              (string-cursor->index s dec))))
+              (cond
+               ((string-cursor<? (string-find s #\e) end)
+                (gen-general n))
+               ((string-cursor=? dec end)
+                (string-append s "." (make-string precision #\0)))
+               ((<= digits precision)
+                (string-append s (make-string (- precision digits -1) #\0)))
+               (else
+                (let* ((last
+                        (string-cursor-back s end (- digits precision 1)))
+                       (res (substring-cursor s (string-cursor-start s) last)))
+                  (if (and
+                       (string-cursor<? last end)
+                       (let ((next (digit-value (string-cursor-ref s last))))
+                         (or (> next 5)
+                             (and (= next 5)
+                                  (string-cursor>? last (string-cursor-start s))
+                                  (odd? (digit-value
+                                         (string-cursor-ref
+                                          s (string-cursor-prev s last))))))))
+                      (list->string
+                       (reverse
+                        (map char-digit
+                             (round-up
+                              (reverse (map digit-value (string->list res)))))))
+                      res))))))
+           (else
+            (gen-general n))))
+        ;; Generate any unsigned real number.
+        (define (gen-positive-real n)
+          (cond
+           (precision
+            (gen-fixed n))
+           ((and (exact? n) (not (integer? n)))
+            (string-append (number->string (numerator n) radix)
+                           "/"
+                           (number->string (denominator n) radix)))
+           ((memv radix (if (exact? n) '(2 8 10 16) '(10)))
+            (number->string n))
+           (else
+            (gen-general n))))
+        ;; Insert commas according to the current comma-rule.
+        (define (insert-commas str)
+          (let* ((dec-pos (string-find str dec-sep))
+                 (left (substring-cursor str (string-cursor-start str) dec-pos))
+                 (right (substring-cursor str dec-pos))
+                 (sep (cond ((char? comma-sep) (string comma-sep))
+                            ((string? comma-sep) comma-sep)
+                            ((eqv? #\, dec-sep) ".")
+                            (else ","))))
+            (string-append
+             (string-intersperse-right left sep comma-rule)
+             right)))
+        ;; Post-process a positive real number with decimal char fixup
+        ;; and commas as needed.
+        (define (wrap-comma n)
+          (let* ((s0 (gen-positive-real n))
+                 (s1 (if (and (char? dec-sep)
+                              (not (eqv? #\. dec-sep)))
+                         (string-replace-all s0 #\. dec-sep)
+                         s0)))
+            (if comma-rule (insert-commas s1) s1)))
+        ;; Wrap the sign of a real number, forcing a + prefix or using
+        ;; parentheses (n) for negatives according to sign-rule.
+        (define (wrap-sign n sign-rule)
+          (cond
+           ((negative? n)
+            (if (char? sign-rule)
+                (string-append (string sign-rule)
+                               (wrap-comma (abs n))
+                               (string (char-mirror sign-rule)))
+                (string-append "-" (wrap-comma (abs n)))))
+           ((eq? #t sign-rule)
+            (string-append "+" (wrap-comma n)))
+           (else
+            (wrap-comma n))))
+        ;; Format a single real number with padding as necessary.
+        (define (format n sign-rule)
+          (let ((s (wrap-sign n sign-rule)))
+            (let* ((dec-pos (if decimal-align
+                                (string-cursor->index s (string-find s dec-sep))
+                                0))
+                   (diff (- (or decimal-align 0) dec-pos 1)))
+              (if (positive? diff)
+                  (string-append (make-string diff #\space) s)
+                  s))))
+        ;; Write any number.
+        (define (write-complex n)
+          (cond
+           ((and radix (not (and (integer? radix) (<= 2 radix 36))))
+            (error "invalid radix for numeric formatting" radix))
+           ((zero? (imag-part n))
+            (displayed (format (real-part n) sign-rule)))
+           (else
+            (each (format (real-part n) sign-rule)
+                  (format (imag-part n) #t)
+                  "i"))))
+        (write-complex n)))))
+
+(define numeric/si
+  (let* ((names10 '#("" "k" "M" "G" "T" "E" "P" "Z" "Y"))
+         (names-10 '#("" "m" "µ" "n" "p" "f" "a" "z" "y"))
+         (names2 (list->vector
+                  (cons ""
+                        (cons "Ki" (map (lambda (s) (string-append s "i"))
+                                        (cddr (vector->list names10)))))))
+         (names-2 (list->vector
+                   (cons ""
+                         (map (lambda (s) (string-append s "i"))
+                              (cdr (vector->list names-10)))))))
+    (define (round-to n k)
+      (/ (round (* n k)) k))
+    (lambda (n . o)
+      (let-optionals* o ((base 1024)
+                         (separator ""))
+        (let* ((log-n (log n))
+               (names  (if (negative? log-n)
+                           (if (= base 1024) names-2 names-10)
+                           (if (= base 1024) names2 names10)))
+               (k (min (exact ((if (negative? log-n) ceiling floor)
+                               (/ (abs log-n) (log base))))
+                       (vector-length names)))
+               (n2 (round-to (/ n (expt base (if (negative? log-n) (- k) k)))
+                             10)))
+          (each (if (integer? n2)
+                    (number->string (exact n2))
+                    (inexact n2))
+                (if (zero? k) "" separator)
+                (vector-ref names k)))))))
+
+;; Force a number into a fixed width, print as #'s if doesn't fit.
+;; Needs to be wrapped in PADDED if you want to expand to the width.
+
+(define (numeric/fitted width n . args)
+  (call-with-output
+   (apply numeric n args)
+   (lambda (str)
+     (if (> (string-length str) width)
+         (fn (precision decimal-sep comma-sep)
+           (let ((prec (if (and (pair? args) (pair? (cdr args)))
+                           (cadr args)
+                           precision)))
+             (if prec
+                 (let* ((dec-sep
+                         (or decimal-sep
+                             (if (eqv? #\. comma-sep) #\, #\.)))
+                        (diff (- width (+ prec
+                                          (if (char? dec-sep)
+                                              1
+                                              (string-length dec-sep))))))
+                   (each (if (positive? diff) (make-string diff #\#) "")
+                         dec-sep (make-string prec #\#)))
+                 (displayed (make-string width #\#)))))
+         (displayed str)))))
+
+(define (numeric/comma n . o)
+  (fn (comma-rule)
+    (with ((comma-rule (or comma-rule 3)))
+      (apply numeric n o))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; shared structure utilities
