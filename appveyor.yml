@@ -1,0 +1,19 @@
+environment:
+    matrix:
+        - ARCH: x64
+        - ARCH: x86
+        - ARCH: msys
+
+build_script:
+    - if %ARCH%.==x64. set PATH=c:\msys64\usr\bin;c:\msys64\mingw64\bin;%PATH%
+    - if %ARCH%.==x86. set PATH=c:\msys64\usr\bin;c:\msys64\mingw32\bin;%PATH%
+    - if %ARCH%.==msys. set PATH=c:\msys64\usr\bin;%PATH%
+    - if %ARCH%.==x64. set CC=c:/msys64/mingw64/bin/gcc
+    - if %ARCH%.==x86. set CC=c:/msys64/mingw32/bin/gcc
+    - if %ARCH%.==msys. set CC=gcc
+    - if %ARCH%.==x64. set EXARG=EXCLUDE_POSIX_LIBS=1
+    - if %ARCH%.==x86. set EXARG=EXCLUDE_POSIX_LIBS=1
+    - if %ARCH%.==msys. set EXARG=PLATFORM=msys
+    - make CC=%CC% %EXARG% 
+    - make CC=%CC% %EXARG% test
+
