@@ -5,7 +5,10 @@
 
 #include <chibi/eval.h>
 
-#ifndef PLAN9
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#elif !defined(PLAN9)
 #include <sys/time.h>
 #else
 typedef long time_t;
@@ -81,7 +84,19 @@ sexp sexp_current_ntp_clock_values (sexp ctx, sexp self, sexp_sint_t n) {
 #endif  /* def SEXP_USE_NTP_GETTIME */
 
 sexp sexp_current_clock_second (sexp ctx, sexp self, sexp_sint_t n) {
-#ifndef PLAN9
+#ifdef _WIN32
+  ULONGLONG t;
+  SYSTEMTIME st;
+  FILETIME ft;
+  ULARGE_INTEGER uli;
+  GetLocalTime(&st);
+  (void) SystemTimeToFileTime(&st, &ft);
+  /* Convert Win32 FILETIME to UNIX time */
+  uli.LowPart = ft.dwLowDateTime;
+  uli.HighPart = ft.dwHighDateTime;
+  t = uli.QuadPart - (11644473600LL * 10 * 1000 * 1000);
+  return sexp_make_flonum(ctx, ((double)t / (10 * 1000 * 1000)));
+#elif !defined(PLAN9)
   struct timeval tv;
   struct timezone tz;
   if (gettimeofday(&tv, &tz))
