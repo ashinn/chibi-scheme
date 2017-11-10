@@ -5,6 +5,7 @@
 #include <chibi/eval.h>
 
 #ifndef PLAN9
+#include <stdlib.h>
 #include <errno.h>
 #endif
 
