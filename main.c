@@ -94,7 +94,7 @@ static void sexp_make_unblocking (sexp ctx, sexp port) {
       sexp_port_flags(port) |= O_NONBLOCK;
 }
 #else
-#define sexp_make_unblocking(ctx, port) 0
+#define sexp_make_unblocking(ctx, port) (void)0
 #endif
 
 static sexp sexp_meta_env (sexp ctx) {
