@@ -307,6 +307,7 @@ sexp run_main (int argc, char **argv) {
   args = SEXP_NULL;
   env = NULL;
 
+#ifndef _WIN32
   /* SRFI 22: invoke `main` procedure by default if the interpreter is invoked */
   /* as `scheme-r7rs`. */
   if (strncmp(basename(argv[0]), "scheme-r7rs", strlen("scheme-r7rs")) == 0) {
@@ -317,6 +318,7 @@ sexp run_main (int argc, char **argv) {
     i = 1;
     goto done_options;
   }
+#endif
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {
