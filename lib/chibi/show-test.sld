@@ -2,8 +2,9 @@
   (export run-tests)
   (import (scheme base) (scheme char) (scheme read)
           (chibi test)
-          (chibi show) (chibi show base)
-          (chibi show column) (chibi show pretty))
+          (chibi show) (chibi show base) (chibi show color)
+          (chibi show column) (chibi show pretty)
+          (chibi show unicode))
   (begin
     (define-syntax test-pretty
       (syntax-rules ()
@@ -580,5 +581,16 @@ def | 6
           (show #f (with ((width 20))
                     (tabular (each "a\nbc\ndef\n") " | "
                              (each "123\n45\n6\n")))))
+
+      ;; color
+      (test "\x1B;[31mred\x1B;[0m" (show #f (as-red "red")))
+      (test "\x1B;[31mred\x1B;[34mblue\x1B;[31mred\x1B;[0m"
+          (show #f (as-red "red" (as-blue "blue") "red")))
+
+      ;; unicode
+      (test "〜日本語〜"
+          (show #f (with ((pad-char #\〜)) (padded/both 5 "日本語"))))
+      (test "日本語"
+          (show #f (as-unicode (with ((pad-char #\〜)) (padded/both 5 "日本語")))))
 
       (test-end))))
