@@ -34,6 +34,11 @@ CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
 CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
 	lib/chibi/optimize/profile$(SO)
 EXTRA_COMPILED_LIBS ?=
+
+ifndef EXCLUDE_POSIX_LIBS
+CHIBI_COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS)
+endif
+
 COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	$(CHIBI_OPT_COMPILED_LIBS) $(CHIBI_CRYPTO_COMPILED_LIBS) \
 	$(EXTRA_COMPILED_LIBS) \
@@ -42,7 +47,7 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	lib/srfi/98/env$(SO) lib/srfi/144/math$(SO) lib/scheme/time$(SO)
 
 ifndef EXCLUDE_POSIX_LIBS
-COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS) lib/srfi/18/threads$(SO) 
+COMPILED_LIBS += lib/srfi/18/threads$(SO) 
 endif
 
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
