@@ -480,6 +480,13 @@ done:
   return res;
 }
 
+#ifdef _WIN32
+static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
+  snprintf(gc_heap_err_str, ERR_STR_SIZE,
+           "load_image_fn: Needed to be ported to Win32");
+  return NULL;
+}
+#else
 static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
   sexp ls;
   void *fn = NULL;
@@ -525,6 +532,7 @@ static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
   }
   return fn;
 }
+#endif
 
 static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
   sexp res = NULL;

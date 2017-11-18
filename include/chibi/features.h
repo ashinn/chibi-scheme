@@ -342,7 +342,7 @@
 #endif
 
 #ifndef SEXP_USE_DL
-#if defined(PLAN9) || defined(_WIN32)
+#if defined(PLAN9)
 #define SEXP_USE_DL 0
 #else
 #define SEXP_USE_DL ! SEXP_USE_NO_FEATURES
@@ -770,18 +770,21 @@
 #define isinf(x) (isInf(x,1) || isInf(x,-1))
 #define isnan(x) isNaN(x)
 #elif defined(_WIN32)
-#define _CRT_SECURE_NO_WARNINGS 1
-#define _CRT_NONSTDC_NO_DEPRECATE 1
-#pragma warning(disable:4146) /* unary minus operator to unsigned type */
-#ifdef __MINGW32__
-#include <shlwapi.h>
+#define SHUT_RD 0 /* SD_RECEIVE */
+#define SHUT_WR 1 /* SD_SEND */
+#define SHUT_RDWR 2 /* SD_BOTH */
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
 #define strcasecmp lstrcmpi
 #define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
+#endif
+#include <shlwapi.h>
 #define strcasestr StrStrI
-#define SHUT_RD 0
-#define SHUT_WR 1
-#define SHUT_RDWR 2
-#else
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS 1
+#define _CRT_NONSTDC_NO_DEPRECATE 1
+#define _USE_MATH_DEFINES /* For M_LN10 */
+#pragma warning(disable:4146) /* unary minus operator to unsigned type */
+#if _MSC_VER < 1900
 #define snprintf(buf, len, fmt, val) sprintf(buf, fmt, val)
 #define strcasecmp lstrcmpi
 #define strncasecmp(s1, s2, n) lstrcmpi(s1, s2)
@@ -789,6 +792,9 @@
 #define trunc(x) floor((x)+0.5*(((x)<0)?1:0))
 #define isnan(x) (x!=x)
 #define isinf(x) (x > DBL_MAX || x < -DBL_MAX)
+#endif
+#elif !defined(__MINGW32__)
+#error Unknown Win32 compiler!
 #endif
 #endif
 
@@ -806,7 +812,7 @@
 #define sexp_nan (0.0/0.0)
 #endif
 
-#ifdef __MINGW32__
+#ifdef _WIN32
 #ifdef BUILDING_DLL
 #define SEXP_API    __declspec(dllexport)
 #else
