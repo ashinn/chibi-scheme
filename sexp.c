@@ -3226,7 +3226,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         else if (strcasecmp(str+1, "nan.0") == 0)
           res = sexp_make_flonum(ctx, sexp_nan);
 #if SEXP_USE_COMPLEX
-        else if (strcasestr(str+1, "inf.0") == str+1) {
+        else if (strncasecmp(str+1, "inf.0", 5) == 0) {
           tmp = sexp_make_flonum(ctx, c1 == '+' ? sexp_pos_infinity : sexp_neg_infinity);
           if (str[6] == 0) {
             res = tmp;

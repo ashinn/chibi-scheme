@@ -1,19 +1,46 @@
+image: Visual Studio 2017
+
 environment:
     matrix:
         - ARCH: x64
+          TOOLCHAIN: MinGW
+          BUILDSYSTEM: MSYS2
+        - ARCH: x64
+          TOOLCHAIN: MSYS
+          BUILDSYSTEM: MSYS2
         - ARCH: x86
-        - ARCH: msys
+          TOOLCHAIN: MinGW
+          BUILDSYSTEM: MSYS2
+        - ARCH: x86
+          TOOLCHAIN: MinGW
+          BUILDSYSTEM: CMAKE
+        - ARCH: x86
+          TOOLCHAIN: MSVC
+          BUILDSYSTEM: CMAKE
+
+install:
+    - if %BUILDSYSTEM%.==CMAKE. cinst ninja
+    - if %BUILDSYSTEM%.==CMAKE. set PATH=c:/tools/ninja;%PATH%
+    - if %TOOLCHAIN%.==MSVC. call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+
+before_build:
+    - set BUILDTYPE= %ARCH%%TOOLCHAIN%
+    - if %BUILDTYPE%.==x64MinGW. set PATH=c:\msys64\usr\bin;c:\msys64\mingw64\bin;%PATH%
+    - if %BUILDTYPE%.==x86MinGW. set PATH=c:\msys64\usr\bin;c:\msys64\mingw32\bin;%PATH%
+    - if %BUILDTYPE%.==x64MSYS. set PATH=c:\msys64\usr\bin;%PATH%
+    - if %BUILDTYPE%.==x64MinGW. set CC=c:/msys64/mingw64/bin/gcc
+    - if %BUILDTYPE%.==x86MinGW. set CC=c:/msys64/mingw32/bin/gcc
+    - if %BUILDTYPE%.==x64MSYS. set CC=gcc
+    - if %TOOLCHAIN%.==MSVC. set CC=cl.exe
+    - if %TOOLCHAIN%%BUILDSYSTEM%.==MinGWMSYS2. set EXARG=EXCLUDE_POSIX_LIBS=1
+    - if %TOOLCHAIN%%BUILDSYSTEM%.==MSYSMSYS2. set EXARG=PLATFORM=msys
+    - if %BUILDSYSTEM%.==CMAKE. cmake -G Ninja .
 
 build_script:
-    - if %ARCH%.==x64. set PATH=c:\msys64\usr\bin;c:\msys64\mingw64\bin;%PATH%
-    - if %ARCH%.==x86. set PATH=c:\msys64\usr\bin;c:\msys64\mingw32\bin;%PATH%
-    - if %ARCH%.==msys. set PATH=c:\msys64\usr\bin;%PATH%
-    - if %ARCH%.==x64. set CC=c:/msys64/mingw64/bin/gcc
-    - if %ARCH%.==x86. set CC=c:/msys64/mingw32/bin/gcc
-    - if %ARCH%.==msys. set CC=gcc
-    - if %ARCH%.==x64. set EXARG=EXCLUDE_POSIX_LIBS=1
-    - if %ARCH%.==x86. set EXARG=EXCLUDE_POSIX_LIBS=1
-    - if %ARCH%.==msys. set EXARG=PLATFORM=msys
-    - make CC=%CC% %EXARG% 
-    - make CC=%CC% %EXARG% test
+    - if %BUILDSYSTEM%.==MSYS2. make CC=%CC% %EXARG% 
+    - if %BUILDSYSTEM%.==CMAKE. ninja
+
+test_script:
+    - if %BUILDSYSTEM%.==MSYS2. make CC=%CC% %EXARG% test
+    - if %BUILDSYSTEM%.==CMAKE. ctest --verbose .
 
