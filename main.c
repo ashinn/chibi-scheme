@@ -94,7 +94,7 @@ static void sexp_make_unblocking (sexp ctx, sexp port) {
       sexp_port_flags(port) |= O_NONBLOCK;
 }
 #else
-#define sexp_make_unblocking(ctx, port) 0
+#define sexp_make_unblocking(ctx, port) (void)0
 #endif
 
 static sexp sexp_meta_env (sexp ctx) {
@@ -306,6 +306,17 @@ sexp run_main (int argc, char **argv) {
   sexp_gc_var4(tmp, sym, args, env);
   args = SEXP_NULL;
   env = NULL;
+
+  /* SRFI 22: invoke `main` procedure by default if the interpreter is invoked */
+  /* as `scheme-r7rs`. */
+  if (strncmp(basename(argv[0]), "scheme-r7rs", strlen("scheme-r7rs")) == 0) {
+    main_symbol = "main";
+    /* skip option parsing since we can't pass `--` before the name of script */
+    /* to avoid misinterpret the name as options when the interpreter is */
+    /* executed via `#!/usr/env/bin scheme-r7rs` shebang.  */
+    i = 1;
+    goto done_options;
+  }
 
   /* parse options */
   for (i=1; i < argc && argv[i][0] == '-'; i++) {

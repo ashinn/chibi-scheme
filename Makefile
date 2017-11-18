@@ -24,10 +24,11 @@ TEMPFILE := $(shell mktemp -t chibi.XXXXXX)
 
 ########################################################################
 
-CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/process$(SO) \
-	lib/chibi/time$(SO) lib/chibi/system$(SO) lib/chibi/stty$(SO) \
-	lib/chibi/weak$(SO) lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) \
-	lib/chibi/net$(SO) lib/chibi/ast$(SO) lib/chibi/emscripten$(SO)
+CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/weak$(SO) \
+	lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) lib/chibi/ast$(SO) \
+	lib/chibi/emscripten$(SO)
+CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
+	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/net$(SO) 
 CHIBI_CRYPTO_COMPILED_LIBS = lib/chibi/crypto/crypto$(SO)
 CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
 CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
@@ -36,9 +37,13 @@ EXTRA_COMPILED_LIBS ?=
 COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	$(CHIBI_OPT_COMPILED_LIBS) $(CHIBI_CRYPTO_COMPILED_LIBS) \
 	$(EXTRA_COMPILED_LIBS) \
-	lib/srfi/18/threads$(SO) lib/srfi/27/rand$(SO) lib/srfi/151/bit$(SO) \
+	lib/srfi/27/rand$(SO) lib/srfi/151/bit$(SO) \
 	lib/srfi/39/param$(SO) lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) \
 	lib/srfi/98/env$(SO) lib/srfi/144/math$(SO) lib/scheme/time$(SO)
+
+ifndef EXCLUDE_POSIX_LIBS
+COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS) lib/srfi/18/threads$(SO) 
+endif
 
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h include/chibi/gc_heap.h
@@ -287,7 +292,7 @@ install-base: all
 	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/regexp $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/snow $(DESTDIR)$(MODDIR)/chibi/term
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
-	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/151 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records $(DESTDIR)$(MODDIR)/srfi/121 $(DESTDIR)$(MODDIR)/srfi/125 $(DESTDIR)$(MODDIR)/srfi/128 $(DESTDIR)$(MODDIR)/srfi/129 $(DESTDIR)$(MODDIR)/srfi/132 $(DESTDIR)$(MODDIR)/srfi/133 $(DESTDIR)$(MODDIR)/srfi/143 $(DESTDIR)$(MODDIR)/srfi/144
+	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/151 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records $(DESTDIR)$(MODDIR)/srfi/117 $(DESTDIR)$(MODDIR)/srfi/121 $(DESTDIR)$(MODDIR)/srfi/125 $(DESTDIR)$(MODDIR)/srfi/128 $(DESTDIR)$(MODDIR)/srfi/129 $(DESTDIR)$(MODDIR)/srfi/132 $(DESTDIR)$(MODDIR)/srfi/133 $(DESTDIR)$(MODDIR)/srfi/143 $(DESTDIR)$(MODDIR)/srfi/144
 	$(INSTALL) -m0644 $(META_FILES) $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
@@ -319,6 +324,7 @@ install-base: all
 	$(INSTALL) -m0644 lib/srfi/95/*.scm $(DESTDIR)$(MODDIR)/srfi/95/
 	$(INSTALL) -m0644 lib/srfi/99/*.sld $(DESTDIR)$(MODDIR)/srfi/99/
 	$(INSTALL) -m0644 lib/srfi/99/records/*.sld lib/srfi/99/records/*.scm $(DESTDIR)$(MODDIR)/srfi/99/records/
+	$(INSTALL) -m0644 lib/srfi/117/*.scm $(DESTDIR)$(MODDIR)/srfi/117/
 	$(INSTALL) -m0644 lib/srfi/121/*.scm $(DESTDIR)$(MODDIR)/srfi/121/
 	$(INSTALL) -m0644 lib/srfi/125/*.scm $(DESTDIR)$(MODDIR)/srfi/125/
 	$(INSTALL) -m0644 lib/srfi/128/*.scm $(DESTDIR)$(MODDIR)/srfi/128/

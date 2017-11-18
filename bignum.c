@@ -531,8 +531,8 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
            << (sizeof(sexp_uint_t)*8))
           + sexp_bignum_data(b1)[blen-2]);
     if (alen > 2 && blen > 2 &&
-        sexp_bignum_data(a1)[alen-1] < (1uL<<(sizeof(sexp_uint_t)*4)) &&
-        sexp_bignum_data(b1)[blen-1] < (1uL<<(sizeof(sexp_uint_t)*4))) {
+        sexp_bignum_data(a1)[alen-1] < ((sexp_luint_t)1<<(sizeof(sexp_uint_t)*4)) &&
+        sexp_bignum_data(b1)[blen-1] < ((sexp_luint_t)1<<(sizeof(sexp_uint_t)*4))) {
       dn = (dn << (sizeof(sexp_uint_t)*4))
         + (sexp_bignum_data(a1)[alen-3] >> (sizeof(sexp_uint_t)*4));
       dd = (dd << (sizeof(sexp_uint_t)*4))
@@ -544,8 +544,8 @@ sexp sexp_bignum_quot_rem (sexp ctx, sexp *rem, sexp a, sexp b) {
              << (sizeof(sexp_uint_t)*8))
             + sexp_bignum_data(a1)[alen-2]);
       dd = sexp_bignum_data(b1)[blen-1];
-      if (sexp_bignum_data(a1)[alen-1] < (1uL<<(sizeof(sexp_uint_t)*4)) &&
-          sexp_bignum_data(b1)[blen-1] < (1uL<<(sizeof(sexp_uint_t)*4))) {
+      if (sexp_bignum_data(a1)[alen-1] < ((sexp_luint_t)1<<(sizeof(sexp_uint_t)*4)) &&
+          sexp_bignum_data(b1)[blen-1] < ((sexp_luint_t)1<<(sizeof(sexp_uint_t)*4))) {
         dn = (dn << (sizeof(sexp_uint_t)*4))
           + (sexp_bignum_data(a1)[alen-3] >> (sizeof(sexp_uint_t)*4));
         dd = (dd << (sizeof(sexp_uint_t)*4))
