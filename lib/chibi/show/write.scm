@@ -134,7 +134,7 @@
           (let ((res (- (char->integer ch) (char->integer #\0))))
             (if (<= 0 res 9)
                 res
-                ch)))
+                0)))
         (define (round-up ls)
           (let lp ((ls ls) (res '()))
             (cond
@@ -199,6 +199,8 @@
         ;; result of string->number.
         (define (gen-fixed n)
           (cond
+           ((and (eqv? radix 10) (zero? precision) (inexact? n))
+            (number->string (exact (round n))))
            ((and (eqv? radix 10) (or (integer? n) (inexact? n)))
             (let* ((s (number->string n))
                    (end (string-cursor-end s))
