@@ -134,7 +134,7 @@
           (let ((res (- (char->integer ch) (char->integer #\0))))
             (if (<= 0 res 9)
                 res
-                0)))
+                ch)))
         (define (round-up ls)
           (let lp ((ls ls) (res '()))
             (cond
@@ -224,9 +224,10 @@
                          (or (> next 5)
                              (and (= next 5)
                                   (string-cursor>? last (string-cursor-start s))
-                                  (odd? (digit-value
+                                  (memv (digit-value
                                          (string-cursor-ref
-                                          s (string-cursor-prev s last))))))))
+                                          s (string-cursor-prev s last)))
+                                        '(1 3 5 7 9))))))
                       (list->string
                        (reverse
                         (map char-digit

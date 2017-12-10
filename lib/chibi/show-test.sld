@@ -29,6 +29,9 @@
       (test "abc     def" (show #f "abc" (tab-to) "def"))
       (test "abc  def" (show #f "abc" (tab-to 5) "def"))
       (test "abcdef" (show #f "abc" (tab-to 3) "def"))
+      (test "abc\ndef\n" (show #f "abc" nl "def" nl))
+      (test "abc\ndef\n" (show #f "abc" fl "def" nl fl))
+      (test "abc\ndef\n" (show #f "abc" fl "def" fl fl))
 
       ;; numbers
 
@@ -70,7 +73,7 @@
       (test "1.00" (show #f (with ((precision 2)) .99755)))
       (test "1.00" (show #f (with ((precision 2)) .997)))
       (test "0.99" (show #f (with ((precision 2)) .99)))
-      (test "-15." (show #f (with ((precision 0)) -14.99995999999362)))
+      (test "-15" (show #f (with ((precision 0)) -14.99995999999362)))
 
       (test "   3.14159" (show #f (with ((decimal-align 5)) (numeric 3.14159))))
       (test "  31.4159" (show #f (with ((decimal-align 5)) (numeric 31.4159))))
