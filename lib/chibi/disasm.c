@@ -11,7 +11,11 @@
 #define SEXP_DISASM_PAD_WIDTH 4
 
 #if SEXP_64_BIT
+#ifdef _WIN32
+#define SEXP_PRId "%I64d"
+#else
 #define SEXP_PRId "%ld"
+#endif
 #else
 #define SEXP_PRId "%d"
 #endif
