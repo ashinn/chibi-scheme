@@ -148,11 +148,8 @@
 (define-c double (flgamma "tgamma") (double))
 (cond-expand
   (windows
-   ;; FIXME: Implement this.
-   (c-declare "double lgamma_r(double x, int* sign) { *sign = 9999; __debugbreak(); }")
-    (define-c double lgamma_r (double (result int))))
-   (else
-    (define-c double lgamma_r (double (result int)))))
+   (c-include-verbatim "lgamma_r.c")))
+(define-c double lgamma_r (double (result int)))
 
 (define-c double (flfirst-bessel "jn") (int double))
 (define-c double (flsecond-bessel "yn") (int double))
