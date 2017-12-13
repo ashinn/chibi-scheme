@@ -5,10 +5,8 @@
 #ifdef __APPLE__
 #include <crt_externs.h>
 #define environ (*_NSGetEnviron())
-#else
-#ifndef PLAN9
+#elif !defined(_WIN32) && !defined(PLAN9)
 extern char **environ;
-#endif
 #endif
 
 #include <chibi/eval.h>
