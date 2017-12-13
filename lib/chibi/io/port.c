@@ -6,6 +6,10 @@
 #include <sys/sendfile.h>
 #endif
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 #define SEXP_LAST_CONTEXT_CHECK_LIMIT 256
 
 #define sexp_cookie_ctx(vec) sexp_vector_ref((sexp)vec, SEXP_ZERO)
