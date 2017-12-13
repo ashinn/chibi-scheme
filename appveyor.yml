@@ -32,7 +32,7 @@ before_build:
     - if %BUILDTYPE%.==x86MinGW. set CC=c:/msys64/mingw32/bin/gcc
     - if %BUILDTYPE%.==x64MSYS. set CC=gcc
     - if %TOOLCHAIN%.==MSVC. set CC=cl.exe
-    - if %TOOLCHAIN%%BUILDSYSTEM%.==MinGWMSYS2. set EXARG=EXCLUDE_POSIX_LIBS=1
+    - if %TOOLCHAIN%%BUILDSYSTEM%.==MinGWMSYS2. set EXARG=
     - if %TOOLCHAIN%%BUILDSYSTEM%.==MSYSMSYS2. set EXARG=PLATFORM=msys
     - if %BUILDSYSTEM%.==CMAKE. cmake -G Ninja .
 

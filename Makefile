@@ -24,6 +24,17 @@ TEMPFILE := $(shell mktemp -t chibi.XXXXXX)
 
 ########################################################################
 
+# Choose compiled library on MSYS
+ifeq ($(OS), Windows_NT)
+ifeq ($(PLATFORM),msys)
+EXCLUDE_WIN32_LIBS=1
+else
+EXCLUDE_POSIX_LIBS=1
+endif
+endif
+
+########################################################################
+
 CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/weak$(SO) \
 	lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) lib/chibi/ast$(SO) \
 	lib/chibi/emscripten$(SO)
