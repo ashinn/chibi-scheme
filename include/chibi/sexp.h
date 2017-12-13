@@ -20,11 +20,11 @@ extern "C" {
 #ifdef _WIN32
 #include <windows.h>
 #include <errno.h>
-#define sexp_isalpha(x) ((isalpha)((int)(x)))
-#define sexp_isxdigit(x) ((isxdigit)((int)(x)))
-#define sexp_isdigit(x) ((isdigit)((int)(x)))
-#define sexp_tolower(x) ((tolower)((int)(x)))
-#define sexp_toupper(x) ((toupper)((int)(x)))
+#define sexp_isalpha(x) (isalpha(x))
+#define sexp_isxdigit(x) (isxdigit(x))
+#define sexp_isdigit(x) (isdigit(x))
+#define sexp_tolower(x) (tolower(x))
+#define sexp_toupper(x) (toupper(x))
 #define SEXP_USE_POLL_PORT 0
 #define sexp_poll_input(ctx, port) usleep(SEXP_POLL_SLEEP_TIME)
 #define sexp_poll_output(ctx, port) usleep(SEXP_POLL_SLEEP_TIME)
