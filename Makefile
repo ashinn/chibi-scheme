@@ -29,6 +29,7 @@ CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/weak$(SO) \
 	lib/chibi/emscripten$(SO)
 CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
 	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/net$(SO) 
+CHIBI_WIN32_COMPILED_LIBS = lib/chibi/win32/process-win32$(SO)
 CHIBI_CRYPTO_COMPILED_LIBS = lib/chibi/crypto/crypto$(SO)
 CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
 CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
@@ -37,6 +38,8 @@ EXTRA_COMPILED_LIBS ?=
 
 ifndef EXCLUDE_POSIX_LIBS
 CHIBI_COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS)
+else
+CHIBI_COMPILED_LIBS += $(CHIBI_WIN32_COMPILED_LIBS)
 endif
 
 COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
