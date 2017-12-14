@@ -268,6 +268,7 @@ set(testexcludes
     chibi/doc-test # Depends (chibi time)
     chibi/system-test
     chibi/tar-test # Depends (chibi system)
+    chibi/process-test # Not applicable
     )
 
 set(testlibs)
