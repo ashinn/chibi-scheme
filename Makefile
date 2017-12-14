@@ -29,7 +29,11 @@ ifeq ($(OS), Windows_NT)
 ifeq ($(PLATFORM),msys)
 EXCLUDE_WIN32_LIBS=1
 else
+ifeq ($(shell uname -o),Cygwin)
+EXCLUDE_WIN32_LIBS=1
+else
 EXCLUDE_POSIX_LIBS=1
+endif
 endif
 endif
 
