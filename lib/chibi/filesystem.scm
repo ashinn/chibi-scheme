@@ -123,8 +123,13 @@
 (define (file-group x) (stat-gid (if (stat? x) x (file-status x))))
 (define (file-represented-device x) (stat-rdev (if (stat? x) x (file-status x))))
 (define (file-size x) (stat-size (if (stat? x) x (file-status x))))
-(define (file-block-size x) (stat-blksize (if (stat? x) x (file-status x))))
-(define (file-num-blocks x) (stat-blocks (if (stat? x) x (file-status x))))
+(cond-expand
+  (windows
+    (define (file-block-size x) 1)
+    (define (file-num-blocks x) (file-size x)))
+  (else
+    (define (file-block-size x) (stat-blksize (if (stat? x) x (file-status x))))
+    (define (file-num-blocks x) (stat-blocks (if (stat? x) x (file-status x))))))
 (define (file-access-time x) (stat-atime (if (stat? x) x (file-status x))))
 (define (file-modification-time x) (stat-mtime (if (stat? x) x (file-status x))))
 (define (file-modification-time/safe x)
@@ -149,9 +154,13 @@
 (define (file-character? x) (file-test-mode S_ISCHR x))
 (define (file-block? x) (file-test-mode S_ISBLK x))
 (define (file-fifo? x) (file-test-mode S_ISFIFO x))
-(define (file-link? x)
-  (let ((st (if (stat? x) x (file-link-status x))))
-    (and st (S_ISLNK (stat-mode st)))))
+(cond-expand
+  (windows
+    (define (file-link? x) #f))
+  (else
+    (define (file-link? x)
+      (let ((st (if (stat? x) x (file-link-status x))))
+       (and st (S_ISLNK (stat-mode st)))))))
 (define (file-socket? x) (file-test-mode S_ISSOCK x))
 (define (file-exists? x) (and (if (stat? x) #t (file-status x)) #t))
 
@@ -180,8 +189,12 @@
 ;;> Returns the path the symbolic link \var{file} points to, or
 ;;> \scheme{#f} on error.
 
-(define (read-link file)
-  (let* ((buf (make-string 512))
-         (res (readlink file buf 512)))
-    (and (positive? res)
-         (substring buf 0 res))))
+(cond-expand
+  (windows
+    (define (read-link file) #f))
+  (else
+    (define (read-link file)
+      (let* ((buf (make-string 512))
+             (res (readlink file buf 512)))
+        (and (positive? res)
+             (substring buf 0 res))))))
