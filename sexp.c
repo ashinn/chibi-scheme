@@ -15,6 +15,10 @@ struct sexp_huff_entry {
 #include "chibi/sexp-huff.h"
 #endif
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 static int sexp_initialized_p = 0;
 
 static const char sexp_separators[] = {

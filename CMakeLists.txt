@@ -249,3 +249,44 @@ foreach(e ${chibi-scheme-tests})
         COMMAND chibi-scheme tests/${e}.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
+
+message(STATUS "Detecting library tests")
+
+file(GLOB_RECURSE srfi_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/srfi/*/test.sld)
+
+file(GLOB_RECURSE chibi_scheme_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/chibi/*-test.sld)
+
+set(testexcludes
+    # Excluded tests
+    chibi/filesystem-test
+    chibi/memoize-test
+    chibi/term/ansi-test
+    chibi/weak-test
+
+    # Not ported to Win32
+    srfi/18/test # Threading
+    chibi/doc-test # Depends (chibi time)
+    chibi/system-test
+    chibi/tar-test # Depends (chibi system)
+    )
+
+set(testlibs)
+foreach(e ${srfi_tests} ${chibi_scheme_tests})
+    get_filename_component(pth ${e} PATH)
+    get_filename_component(nam ${e} NAME_WE)
+    list(APPEND testlibs ${pth}/${nam})
+endforeach()
+list(REMOVE_ITEM testlibs ${testexcludes})
+
+foreach(e ${testlibs})
+    string(REGEX REPLACE "/" "_" testname ${e})
+    string(REGEX REPLACE "/" " " form ${e})
+    add_test(NAME "lib_${testname}"
+        COMMAND chibi-scheme -e "(import (${form}))"
+        -e "(run-tests)"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    message(STATUS "Test ${testname}")
+endforeach()
+

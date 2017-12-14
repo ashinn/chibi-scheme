@@ -22,6 +22,8 @@ a smaller language on startup.
 Chibi-Scheme is known to work on **32** and **64-bit** Linux,
 FreeBSD and OS X, Plan 9, Windows (using Cygwin), iOS, Android,
 ARM and [Emscripten](https://kripken.github.io/emscripten-site).
+Basic support for native Windows desktop also exists. See 
+README-win32.md for details and build instructions.
 
 To build on most platforms just run `make && make test`.  This will
 provide a shared library *libchibi-scheme*, as well as a sample

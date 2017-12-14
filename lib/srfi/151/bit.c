@@ -398,13 +398,13 @@ sexp sexp_bit_set_p (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp x) {
     return sexp_xtype_exception(ctx, self, "index must be non-negative", i);
   if (sexp_fixnump(x)) {
     return sexp_make_boolean((pos < sizeof(sexp_uint_t)*CHAR_BIT)
-                             && (sexp_unbox_fixnum(x) & (1UL<<pos)));
+                             && (sexp_unbox_fixnum(x) & ((sexp_uint_t)1<<pos)));
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(x)) {
     pos /= (sizeof(sexp_uint_t)*CHAR_BIT);
     rem = (sexp_unbox_fixnum(i) - pos*sizeof(sexp_uint_t)*CHAR_BIT);
     return sexp_make_boolean((pos < (sexp_sint_t)sexp_bignum_length(x))
-                             && (sexp_bignum_data(x)[pos] & (1UL<<rem)));
+                             && (sexp_bignum_data(x)[pos] & ((sexp_uint_t)1<<rem)));
 #endif
   } else {
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, x);

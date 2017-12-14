@@ -1,0 +1,5 @@
+;;> An interface to Win32 MSVCRT provided process functions and Win32 APIs
+
+(c-system-include "stdlib.h")
+
+(define-c void (%exit exit) (int))

@@ -14,6 +14,7 @@
 
 (cond-expand
   (windows
+   (c-include-verbatim "filesystem_win32_shim.c")
    (define-c-struct stat
     predicate: stat?
     (dev_t      st_dev      stat-dev)
@@ -30,10 +31,6 @@
     (time_t     st_mtime    stat-mtime)
     (time_t     st_ctime    stat-ctime)))
   (else
-   (define-c-type DIR
-    finalizer: closedir)
-   (define-c-struct dirent
-    (string d_name dirent-name))
    (define-c-struct stat
     predicate: stat?
     (dev_t      st_dev      stat-dev)
@@ -51,18 +48,19 @@
     (time_t     st_ctime    stat-ctime))
    ))
 
+(define-c-type DIR
+ finalizer: closedir)
+(define-c-struct dirent
+ (string d_name dirent-name))
 
 
-
-(cond-expand
-  ((not windows)
-   (define-c boolean S_ISREG (mode_t))
-   (define-c boolean S_ISDIR (mode_t))
-   (define-c boolean S_ISCHR (mode_t))
-   (define-c boolean S_ISBLK (mode_t))
-   (define-c boolean S_ISFIFO (mode_t))
-   (define-c boolean S_ISLNK (mode_t))
-   (define-c boolean S_ISSOCK (mode_t))))
+(define-c boolean S_ISREG (mode_t))
+(define-c boolean S_ISDIR (mode_t))
+(define-c boolean S_ISCHR (mode_t))
+(define-c boolean S_ISBLK (mode_t))
+(define-c boolean S_ISFIFO (mode_t))
+(define-c boolean S_ISLNK (mode_t))
+(define-c boolean S_ISSOCK (mode_t))
 
 (cond-expand
  ((not windows)
@@ -152,7 +150,7 @@
   ((not windows)
    (define-c errno (create-directory "mkdir") (string (default #o775 int))))
   (else
-   (define-c errno (create-directory "mkdir") (string))))
+   (define-c errno (create-directory "mkdir_shim") (string (default #o775 int)))))
 
 ;;> Deletes the directory named \var{string} from the filesystem.
 ;;> Does not attempt to delete recursively.
@@ -160,10 +158,8 @@
 
 (define-c errno (delete-directory "rmdir") (string))
 
-(cond-expand
-  ((not windows)
-   (define-c (free DIR) opendir (string))
-   (define-c dirent readdir ((link (pointer DIR))))))
+(define-c (free DIR) opendir (string))
+(define-c dirent readdir ((link (pointer DIR))))
 
 ;;> Duplicates the given file descriptor, returning he new value,
 ;; or -1 on failure.
@@ -248,11 +244,9 @@
     (port-or-fileno off_t))))
 
 ;; Used for file-is-readable?, file-is-writable?, file-is-executable?.
-(cond-expand
-  ((not windows)
-   (define-c-const int (access/read "R_OK"))
-   (define-c-const int (access/write "W_OK"))
-   (define-c-const int (access/execute "X_OK"))))
+(define-c-const int (access/read "R_OK"))
+(define-c-const int (access/write "W_OK"))
+(define-c-const int (access/execute "X_OK"))
 (define-c int (file-access "access") (string int))
 
 ;;> Applies the specified locking operation using flock(2) to the port

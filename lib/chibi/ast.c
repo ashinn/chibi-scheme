@@ -10,6 +10,10 @@
 #endif
 
 #ifdef _WIN32
+#if defined(__MINGW32__) || defined(__MINGW64__)
+/* Workaround MinGW header implementation */
+errno_t getenv_s(size_t*, char*, size_t, const char*);
+#endif
 int setenv(const char *name, const char *value, int overwrite)
 {
   int errcode = 0;
