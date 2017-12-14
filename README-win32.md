@@ -37,7 +37,6 @@ Other issues:
 
 * SRFI-27: Due to C Runtime limitation, the library is not thread-safe
 * `make install` is not supported on Windows platforms
-* On Win64 platforms, case of character values are not handled properly
 * On MSVC, flonum precision is degraded when compared with other compilers
 * Cross compilation is not supported
 
