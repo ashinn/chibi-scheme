@@ -287,7 +287,7 @@
          
          ;; These strings are lines extracted from:
          ;;
-         ;;   ftp://time.nist.gov/pub/leap-seconds.3535228800
+         ;;   ftp://time.nist.gov/pub/leap-seconds.3676924800
          ;;
          ;; The original file contains extensive comments on the format
          ;; and provenance of the data, which have been removed from
@@ -318,7 +318,9 @@
          "3124137600 32  # 1 Jan 1999\n"
          "3345062400 33  # 1 Jan 2006\n"
          "3439756800 34  # 1 Jan 2009\n"
-         "3550089600 35  # 1 Jul 2012\n"))))
+         "3550089600 35  # 1 Jul 2012\n"
+         "3644697600 36  # 1 Jul 2015\n"
+         "3692217600 37  # 1 Jan 2017\n"))))
     
     (update-cache! (open-leap-seconds-list-port))
     
