@@ -565,6 +565,35 @@
                    (n z))))))
   (test 'bound-identifier=? (m k)))
 
+;; literal has priority to ellipsis (R7RS 4.3.2)
+(let ()
+  (define-syntax elli-lit-1
+    (syntax-rules ... (...)
+      ((_ x)
+       '(x ...))))
+  (test '(100 ...) (elli-lit-1 100)))
+
+;; bad ellipsis
+#|
+(test 'error
+      (guard (exn (else 'error))
+        (eval
+         '(define-syntax bad-elli-1
+            (syntax-rules ()
+              ((_ ... x)
+               '(... x))))
+         (interaction-environment))))
+
+(test 'error
+      (guard (exn (else 'error))
+        (eval
+         '(define-syntax bad-elli-2
+            (syntax-rules ()
+              ((_ (... x))
+               '(... x))))
+         (interaction-environment))))
+|#
+
 (test-end)
 
 (test-begin "5 Program structure")
