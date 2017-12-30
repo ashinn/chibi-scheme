@@ -84,8 +84,8 @@
 
 (define-syntax with
   (syntax-rules ()
-    ((with params x ... y) (%with params x ... (fn () (displayed y))))
-    ))
+    ((with params x ... y)
+     (%with params (each x ... y)))))
 
 ;;> The noop formatter.  Generates no output and leaves the state
 ;;> unmodified.
