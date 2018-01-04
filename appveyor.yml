@@ -14,6 +14,9 @@ environment:
         - ARCH: x86
           TOOLCHAIN: MinGW
           BUILDSYSTEM: CMAKE
+        - ARCH: x64
+          TOOLCHAIN: MinGW
+          BUILDSYSTEM: CMAKE
         - ARCH: x86
           TOOLCHAIN: MSVC
           BUILDSYSTEM: CMAKE

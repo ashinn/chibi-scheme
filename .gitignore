@@ -17,6 +17,7 @@
 
 # Shared objects (inc. Windows DLLs)
 *.dll
+*.dll.*
 *.so
 *.so.*
 *.dylib
@@ -48,6 +49,7 @@ lib/chibi/process.c
 lib/chibi/stty.c
 lib/chibi/system.c
 lib/chibi/time.c
+lib/chibi/win32/process-win32.c
 lib/srfi/144/math.c
 *.tgz
 *.html

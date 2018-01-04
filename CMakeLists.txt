@@ -250,8 +250,6 @@ foreach(e ${chibi-scheme-tests})
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
-message(STATUS "Detecting library tests")
-
 file(GLOB_RECURSE srfi_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/srfi/*/test.sld)
 
@@ -270,6 +268,7 @@ set(testexcludes
     chibi/doc-test # Depends (chibi time)
     chibi/system-test
     chibi/tar-test # Depends (chibi system)
+    chibi/process-test # Not applicable
     )
 
 set(testlibs)
@@ -287,6 +286,5 @@ foreach(e ${testlibs})
         COMMAND chibi-scheme -e "(import (${form}))"
         -e "(run-tests)"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    message(STATUS "Test ${testname}")
 endforeach()
 
