@@ -11,7 +11,7 @@
 
 (define-environment-monad Show-Env
   (sequence: sequence)
-  (bind: fn)
+  (bind: %fn)
   (bind-fork: fn-fork)
   (local: %with)
   (local!: update!)
@@ -31,6 +31,11 @@
    (ellipsis env-ellipsis env-ellipsis-set!)
    (writer env-writer env-writer-set!)
    (output env-output env-output-set!)))
+
+(define-syntax fn
+  (syntax-rules ()
+    ((fn vars expr ... fmt)
+     (%fn vars expr ... (displayed fmt)))))
 
 ;; The base formatting handles outputting raw strings and a simple,
 ;; configurable handler for formatting objects.
