@@ -40,11 +40,11 @@
               (return nothing))))
           nothing))
       (define (generate)
-        (if (and resume (list-queue-empty? queue))
-            (call-with-current-continuation
-             (lambda (cc)
-               (set! return cc)
-               (resume nothing))))
+        (when (and resume (list-queue-empty? queue))
+          (call-with-current-continuation
+           (lambda (cc)
+             (set! return cc)
+             (resume nothing))))
         (if (list-queue-empty? queue)
             eof
             (list-queue-remove-front! queue)))

@@ -1,5 +1,5 @@
 ;; pretty.scm -- pretty printing format combinator
-;; Copyright (c) 2006-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2006-2018 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -348,15 +348,21 @@
 
 (define (pretty obj)
   (fn ()
-    (each (pp obj (extract-shared-objects obj #t))
-          fl)))
+    (call-with-output
+     (each (pp obj (extract-shared-objects obj #t))
+           fl)
+     displayed)))
 
 (define (pretty-shared obj)
   (fn ()
-    (each (pp obj (extract-shared-objects obj #f))
-          fl)))
+    (call-with-output
+     (each (pp obj (extract-shared-objects obj #f))
+           fl)
+     displayed)))
 
 (define (pretty-simply obj)
   (fn ()
-    (each (pp obj (extract-shared-objects #f #f))
-          fl)))
+    (call-with-output
+     (each (pp obj (extract-shared-objects #f #f))
+           fl)
+     displayed)))
