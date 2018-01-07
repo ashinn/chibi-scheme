@@ -503,7 +503,7 @@ equivalent to REVERSE.
                                    (lp (cdr ls)
                                        (kons (car ls) acc)))))))))
 
-      '(test
+      (test
            "(define (fold kons knil ls)          ; The fundamental list iterator.
   (let lp ((ls ls) (acc knil))       ; Applies KONS to each element of
     (if (null? ls)                   ; LS and the result of the previous
@@ -527,7 +527,7 @@ equivalent to REVERSE.
                    (with ((width 36))
                      (wrapped "The fundamental list iterator.  Applies KONS to each element of LS and the result of the previous application, beginning with KNIL.  With KONS as CONS and KNIL as '(), equivalent to REVERSE."))))))
 
-      '(test
+      (test
            "(define (fold kons knil ls)          ; The fundamental list iterator.
   (let lp ((ls ls) (acc knil))       ; Applies KONS to each element of
     (if (null? ls)                   ; LS and the result of the previous
