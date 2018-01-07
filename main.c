@@ -440,13 +440,15 @@ sexp run_main (int argc, char **argv) {
     case 'i':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       if (ctx) {
-        fprintf(stderr, "-:i <file>: image files must be loaded first\n");
-        exit_failure();
+        fprintf(stderr, "-i <file>: image files must be loaded before other command-line options are specified: %s\n", arg);
+        if (sexp_truep(sexp_global(ctx, SEXP_G_STRICT_P)))
+          exit_failure();
       }
       ctx = sexp_load_image(arg, 0, heap_size, heap_max_size);
       if (!ctx || !sexp_contextp(ctx)) {
-        fprintf(stderr, "-:i <file>: couldn't open image file for reading: %s\n", arg);
-        fprintf(stderr, "            %s\n", sexp_load_image_err());
+        fprintf(stderr,
+                "-i <file>: image failed to load, ignoring: %s\n"
+                "           %s", arg, sexp_load_image_err());
         ctx = NULL;
       } else {
         env = sexp_load_standard_params(ctx, sexp_context_env(ctx), nonblocking);
