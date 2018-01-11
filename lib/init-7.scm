@@ -728,18 +728,22 @@
            _let (list (list v x))
            (cond
             ((identifier? p)
-             (if (memq p lits)
-                 (list _and
-                       (list _compare v (list _rename (list _quote p)))
-                       (k vars))
-                 (if (compare p _underscore)
-                     (k vars)
-                     (list _let (list (list p v)) (k (cons (cons p dim) vars))))))
+             (cond
+              ((ellipsis-mark? p)
+               (error "bad ellipsis" p))
+              ((memq p lits)
+               (list _and
+                     (list _compare v (list _rename (list _quote p)))
+                     (k vars)))
+              ((compare p _underscore)
+               (k vars))
+              (else
+               (list _let (list (list p v)) (k (cons (cons p dim) vars))))))
             ((ellipsis? p)
              (cond
               ((not (null? (cdr (cdr p))))
                (cond
-                ((any (lambda (x) (and (identifier? x) (compare x ellipsis)))
+                ((any (lambda (x) (and (identifier? x) (ellipsis-mark? x)))
                       (cddr p))
                  (error "multiple ellipses" p))
                 (else
@@ -815,9 +819,17 @@
                    (lp (vector->list p) (list _vector->list v) dim vars k)))
             ((null? p) (list _and (list _null? v) (k vars)))
             (else (list _and (list _equal? v p) (k vars))))))))
-    (define (ellipsis-escape? x) (and (pair? x) (compare ellipsis (car x))))
+    (define ellipsis-mark?
+      (if (if ellipsis-specified?
+              (memq ellipsis lits)
+              (any (lambda (x) (compare ellipsis x)) lits))
+          (lambda (x) #f)
+          (if ellipsis-specified?
+              (lambda (x) (eq? ellipsis x))
+              (lambda (x) (compare ellipsis x)))))
+    (define (ellipsis-escape? x) (and (pair? x) (ellipsis-mark? (car x))))
     (define (ellipsis? x)
-      (and (pair? x) (pair? (cdr x)) (compare ellipsis (cadr x))))
+      (and (pair? x) (pair? (cdr x)) (ellipsis-mark? (cadr x))))
     (define (ellipsis-depth x)
       (if (ellipsis? x)
           (+ 1 (ellipsis-depth (cdr x)))
@@ -915,16 +927,10 @@
                            (list (rename 'strip-syntactic-closures) _expr))
                      #f)))))))))
 
-(define-syntax syntax-rules/aux
-  (er-macro-transformer syntax-rules-transformer))
-
 (define-syntax syntax-rules
   (er-macro-transformer
    (lambda (expr rename compare)
-     (if (identifier? (cadr expr))
-         (list (rename 'let) (list (list (cadr expr) #t))
-               (cons (rename 'syntax-rules/aux) (cdr expr)))
-         (syntax-rules-transformer expr rename compare)))))
+     (syntax-rules-transformer expr rename compare))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; additional syntax
