@@ -38,16 +38,17 @@
                 (else #f))
           default-max-requests)))
     (define (run sock addr count)
-      (log-debug "net-server: accepting request:" count)
+      (log-debug "net-server: accepting request: " count " "
+                 (sockaddr-name (address-info-address addr)))
       (let ((ports
              (protect (exn
                        (else
-                        (log-error "net-server: couldn't create port:" sock)
+                        (log-error "net-server: couldn't create port: " sock)
                         (close-file-descriptor sock)))
                (cons (open-input-file-descriptor sock)
                      (open-output-file-descriptor sock)))))
         (protect (exn
-                  (else (log-error "net-server: error in request:" count)
+                  (else (log-error "net-server: error in request: " count)
                         (print-exception exn)
                         (print-stack-trace exn)
                         (close-input-port (car ports))
