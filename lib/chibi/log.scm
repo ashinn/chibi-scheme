@@ -24,6 +24,16 @@
 (define (logger-current-level-set! logger level)
   (%logger-current-level-set! logger (log-level-index logger level)))
 
+(define-syntax with-log-level
+  (syntax-rules ()
+    ((with-logger-level level expr0 expr1 ...)
+     (let* ((orig-level (logger-current-level default-logger))
+            (new-level (log-level-index default-logger level)))
+       (dynamic-wind
+         (lambda () (%logger-current-level-set! default-logger new-level))
+         (lambda () expr0 expr1 ...)
+         (lambda () (%logger-current-level-set! default-logger orig-level)))))))
+
 (define-syntax define-logger
   (syntax-rules ()
     ((define-logger logger (levels ...))
