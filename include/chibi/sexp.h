@@ -35,6 +35,13 @@ extern "C" {
 #ifndef PLAN9
 #include <errno.h>
 #include <unistd.h>
+#define SEXP_USE_POLL_PORT 1
+#define sexp_poll_input(ctx, port) sexp_poll_port(ctx, port, 1)
+#define sexp_poll_output(ctx, port) sexp_poll_port(ctx, port, 0)
+#else
+#define SEXP_USE_POLL_PORT 0
+#define sexp_poll_input(ctx, port) sleep(SEXP_POLL_SLEEP_TIME_MS)
+#define sexp_poll_output(ctx, port) sleep(SEXP_POLL_SLEEP_TIME_MS)
 #endif
 #if SEXP_USE_GREEN_THREADS
 #include <sys/time.h>
@@ -47,9 +54,6 @@ extern "C" {
 #define sexp_isdigit(x) (isdigit(x))
 #define sexp_tolower(x) (tolower(x))
 #define sexp_toupper(x) (toupper(x))
-#define SEXP_USE_POLL_PORT 1
-#define sexp_poll_input(ctx, port) sexp_poll_port(ctx, port, 1)
-#define sexp_poll_output(ctx, port) sexp_poll_port(ctx, port, 0)
 #endif
 
 #if SEXP_USE_GC_FILE_DESCRIPTORS
@@ -71,6 +75,12 @@ extern "C" {
 #include <thread.h>
 #include <9p.h>
 typedef unsigned long size_t;
+typedef long long off_t;
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define exit(x)           exits(TOSTRING(x))
+#define fabsl          fabs
+#define M_LN10         2.30258509299404568402  /* log_e 10 */
 #else
 #include <stddef.h>
 #include <stdlib.h>
@@ -252,7 +262,7 @@ typedef uint32_t sexp_uint32_t;
 typedef int32_t sexp_int32_t;
 # endif
 #else
-# include <limits.h>
+# include <ape/limits.h>
 # if UCHAR_MAX == 255
 #  define SEXP_UINT8_DEFINED 1
 typedef unsigned char sexp_uint8_t;
