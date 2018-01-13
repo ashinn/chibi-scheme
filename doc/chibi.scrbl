@@ -1187,6 +1187,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-33/srfi-33.html"]{(srfi 33) - bitwise operators}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-38/srfi-38.html"]{(srfi 38) - read/write shared structures}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-39/srfi-39.html"]{(srfi 39) - parameter objects}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-41/srfi-41.html"]{(srfi 41) - streams}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-46/srfi-46.html"]{(srfi 46) - basic syntax-rules extensions}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-55/srfi-55.html"]{(srfi 55) - require-extension}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-62/srfi-62.html"]{(srfi 62) - s-expression comments}}
