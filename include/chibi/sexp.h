@@ -262,7 +262,11 @@ typedef uint32_t sexp_uint32_t;
 typedef int32_t sexp_int32_t;
 # endif
 #else
+# ifdef PLAN9
 # include <ape/limits.h>
+# else
+# include <limits.h>
+# endif
 # if UCHAR_MAX == 255
 #  define SEXP_UINT8_DEFINED 1
 typedef unsigned char sexp_uint8_t;
