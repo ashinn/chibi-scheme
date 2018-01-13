@@ -24,7 +24,6 @@
 
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
-#define exit           exits
 #else
 #define exit_failure() exit(70)
 #endif
