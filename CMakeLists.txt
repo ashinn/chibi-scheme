@@ -266,6 +266,7 @@ set(testexcludes
     # Not ported to Win32
     srfi/18/test # Threading
     chibi/doc-test # Depends (chibi time)
+    chibi/log-test
     chibi/system-test
     chibi/tar-test # Depends (chibi system)
     chibi/process-test # Not applicable
