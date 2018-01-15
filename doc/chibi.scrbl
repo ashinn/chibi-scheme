@@ -1195,6 +1195,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-95/srfi-95.html"]{(srfi 95) - sorting and merging}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-98/srfi-98.html"]{(srfi 98) - environment access}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-99/srfi-99.html"]{(srfi 99) - ERR5RS records}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-101/srfi-101.html"]{(srfi 101) - purely functional random-access pairs and lists}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-111/srfi-111.html"]{(srfi 111) - boxes}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-113/srfi-113.html"]{(srfi 113) - sets and bags}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-115/srfi-115.html"]{(srfi 115) - Scheme regular expressions}}
@@ -1203,6 +1204,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-121/srfi-121.html"]{(srfi 121) - generators}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-124/srfi-124.html"]{(srfi 124) - ephemerons}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-125/srfi-125.html"]{(srfi 125) - intermediate hash tables}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-127/srfi-127.html"]{(srfi 127) - lazy sequences}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-128/srfi-128.html"]{(srfi 128) - comparators (reduced)}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-129/srfi-129.html"]{(srfi 129) - titlecase procedures}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-130/srfi-130.html"]{(srfi 130) - cursor-based string library}}
