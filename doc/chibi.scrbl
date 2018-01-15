@@ -1210,6 +1210,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-130/srfi-130.html"]{(srfi 130) - cursor-based string library}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-132/srfi-132.html"]{(srfi 132) - sort libraries}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-133/srfi-133.html"]{(srfi 133) - vector library}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-134/srfi-134.html"]{(srfi 134) - immutable deques}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-139/srfi-139.html"]{(srfi 139) - syntax parameters}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-141/srfi-141.html"]{(srfi 141) - integer division}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-143/srfi-143.html"]{(srfi 143) - fixnums}}
