@@ -489,6 +489,8 @@ sexp run_main (int argc, char **argv) {
       main_module = argv[i][2] != '\0' ? argv[i]+2 :
         (i+1 < argc && argv[i+1][0] != '-') ? argv[++i] : "chibi.repl";
       if (main_symbol == NULL) main_symbol = "main";
+      if (strcmp(main_module, "chibi.repl") == 0)
+        load_init(0);
       break;
     case 'r':
       main_symbol = argv[i][2] == '\0' ? "main" : argv[i]+2;
