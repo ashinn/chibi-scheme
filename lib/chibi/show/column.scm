@@ -30,10 +30,10 @@
            (let ((nl-index
                   (string-index-right str (lambda (ch) (eqv? ch #\newline)))))
              (if (string-cursor>? nl-index (string-cursor-start str))
-                 (update!
+                 (with!
                   (row (+ row (string-count str (lambda (ch) (eqv? ch #\newline)))))
                   (col (string-width str (string-cursor->index str nl-index))))
-                 (update! (col (+ col (string-width str))))))
+                 (with! (col (+ col (string-width str))))))
            (call-with-current-continuation
             (lambda (cc)
               (set! resume cc)

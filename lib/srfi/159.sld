@@ -4,7 +4,7 @@
           (srfi 159 unicode) (srfi 159 color))
   (export
    ;; base
-   show fn fn-fork with update! each each-in-list call-with-output
+   show fn fn-fork with with! each each-in-list call-with-output
    displayed written written-shared written-simply
    numeric numeric/comma numeric/si numeric/fitted
    nothing nl fl space-to tab-to escaped maybe-escaped

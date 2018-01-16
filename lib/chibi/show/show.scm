@@ -223,7 +223,7 @@
                  (let* ((end (max 0 (- len (- chars-written width))))
                         (s (substring str 0 end)))
                    (each (output s)
-                         (update! (output orig-output))
+                         (with! (output orig-output))
                          (fn () (return nothing))))
                  (output str))))
          (with ((output output*))
