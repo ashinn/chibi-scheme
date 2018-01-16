@@ -1220,6 +1220,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-147/srfi-147.html"]{(srfi 147) - custom macro transformers}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-151/srfi-151.html"]{(srfi 151) - bitwise operators}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-154/srfi-154.html"]{(srfi 154) - first-class dynamic extents}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-159/srfi-159.html"]{(srfi 159) - combinator formatting}}
 
 ]
 
