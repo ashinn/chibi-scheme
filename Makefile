@@ -297,7 +297,7 @@ clean: clean-libs
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
-	    $(IMAGE_FILES) libchibi-scheme$(SO)* *.a *.pc \
+	    $(IMAGE_FILES) libchibi-scheme*$(SO) *.a *.pc \
 	    include/chibi/install.h lib/.*.meta \
 	    chibi-scheme-emscripten \
 	    js/chibi.* \
