@@ -1,6 +1,6 @@
 ERROR: out of memory
-  called from <anonymous> on line 529 of file ./lib/init-7.scm
+  called from <anonymous> on line 230 of file ./lib/init-7.scm
   called from <anonymous> on line 11 of file tests/memory/test01-read-symbol.scm
-  called from <anonymous> on line 1039 of file ./lib/init-7.scm
-  called from <anonymous> on line 542 of file ./lib/init-7.scm
-  called from <anonymous> on line 622 of file ./lib/init-7.scm
+  called from <anonymous> on line 1076 of file ./lib/init-7.scm
+  called from <anonymous> on line 230 of file ./lib/init-7.scm
+  called from <anonymous> on line 640 of file ./lib/init-7.scm
