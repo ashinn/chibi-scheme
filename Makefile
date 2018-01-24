@@ -197,11 +197,11 @@ lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES) libchibi-scheme$(SO)
 lib/chibi.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -d $@
 
-lib/red.img: $(CHIBI_DEPENDENCIES) all-libs
-	$(CHIBI) -xscheme.red -d $@
-
 lib/snow.img: $(CHIBI_DEPENDENCIES) all-libs
-	$(CHIBI) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $@
+	$(CHIBI) -mchibi.snow.commands -d $@
+
+lib/red.img: $(CHIBI_DEPENDENCIES) all-libs
+	$(CHIBI) -xscheme.red -mchibi.repl -d $@
 
 doc: doc/chibi.html doc-libs
 
