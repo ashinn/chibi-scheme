@@ -61,6 +61,6 @@
    bag->set set->bag set->bag!
    bag->alist alist->bag
    )
-  (include-shared "69/hash")
+  ;;(include-shared "69/hash")
   (include "113/sets.scm"
            "113/bags.scm"))

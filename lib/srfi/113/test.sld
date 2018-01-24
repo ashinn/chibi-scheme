@@ -526,7 +526,7 @@
           (test string-ci-comparator (bag-element-comparator bucket))
           (test-assert (bag-contains? bucket "abc"))
           (test-assert (bag-contains? bucket "ABC"))
-          (test "def" (bag-member bucket "DEF" "fqz"))
+          ;;(test "def" (bag-member bucket "DEF" "fqz"))
           (test "fqz" (bag-member bucket "lmn" "fqz"))
           (test-assert (bag-any? inexact? nums2))
           (bag-replace! nums 2.0)

@@ -29,8 +29,11 @@
                               (lambda () #f))))))
 
 (define (bag-member bag element default)
-  (let ((cell (hash-table-cell (bag-table bag) element #f)))
-    (if cell (car cell) default)))
+  ;; (let ((cell (hash-table-cell (bag-table bag) element #f)))
+  ;;   (if cell (car cell) default))
+  (if (hash-table-contains? (bag-table bag) element)
+      element
+      default))
 
 (define (bag-element-comparator bag)
   (bag-comparator bag))
