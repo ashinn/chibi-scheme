@@ -355,7 +355,7 @@ install-base: all
 	$(INSTALL) -m0644 lib/srfi/129/*.scm $(DESTDIR)$(MODDIR)/srfi/129/
 	$(INSTALL) -m0644 lib/srfi/132/*.scm $(DESTDIR)$(MODDIR)/srfi/132/
 	$(INSTALL) -m0644 lib/srfi/133/*.scm $(DESTDIR)$(MODDIR)/srfi/133/
-	$(INSTALL) -m0644 lib/srfi/135/*.scm $(DESTDIR)$(MODDIR)/srfi/135/
+	$(INSTALL) -m0644 lib/srfi/135/*.sld lib/srfi/135/*.scm $(DESTDIR)$(MODDIR)/srfi/135/
 	$(INSTALL) -m0644 lib/srfi/143/*.scm $(DESTDIR)$(MODDIR)/srfi/143/
 	$(INSTALL) -m0644 lib/srfi/144/*.scm $(DESTDIR)$(MODDIR)/srfi/144/
 	$(INSTALL) -m0644 lib/srfi/151/*.scm $(DESTDIR)$(MODDIR)/srfi/151/
