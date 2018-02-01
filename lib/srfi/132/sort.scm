@@ -122,7 +122,7 @@
 
 ;; Permutes vec in-place to move the k smallest elements as ordered by
 ;; < to the beginning of the vector (unsorted).  Returns the nth smallest.
-(define (vector-select! < vec k . o)
+(define (vector-select! less vec k . o)
   (let* ((left (if (pair? o) (car o) 0))
          (k (+ k left)))
     (if (not (<= 0 k (vector-length vec)))
@@ -134,8 +134,8 @@
                            1)))
       (if (>= left right)
           (vector-ref vec left)
-          (let* ((pivot (choose-pivot < vec left right))
-                 (pivot-index (vector-partition! < vec left right pivot)))
+          (let* ((pivot (choose-pivot less vec left right))
+                 (pivot-index (vector-partition! less vec left right pivot)))
             (cond
              ((= k pivot-index)
               (vector-ref vec k))
