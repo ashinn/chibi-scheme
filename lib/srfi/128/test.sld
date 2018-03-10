@@ -155,6 +155,8 @@
           (test-assert (not (<? default-comparator #t #t)))
           (test-assert (=? default-comparator #\a #\a))
           (test-assert (<? default-comparator #\a #\b))
+          (test-assert (=? default-comparator 1 1))
+          (test-assert (=? default-comparator 1 1.0))
 
           (test-assert (comparator-test-type default-comparator '()))
           (test-assert (comparator-test-type default-comparator #t))
