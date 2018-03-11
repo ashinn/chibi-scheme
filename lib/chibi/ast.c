@@ -582,6 +582,7 @@ sexp sexp_abort (sexp ctx, sexp self, sexp_sint_t n, sexp value) {
   sexp_env_define(ctx, env, sexp_intern(ctx, name, -1), sexp_type_by_index(ctx, tag));
 
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
+  sexp_gc_var2(sym, str);
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
@@ -730,5 +731,11 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "setenv", 2, sexp_setenv);
   sexp_define_foreign(ctx, env, "unsetenv", 1, sexp_unsetenv);
   sexp_define_foreign(ctx, env, "abort", 1, sexp_abort);
+  sexp_gc_preserve2(ctx, sym, str);
+  sym = sexp_intern(ctx, "chibi-version", -1);
+  str = sexp_c_string(ctx, sexp_version, -1);
+  sexp_immutablep(str) = 1;
+  sexp_env_define(ctx, env, sym, str);
+  sexp_gc_release2(ctx);
   return SEXP_VOID;
 }
