@@ -270,6 +270,9 @@ test-snow: chibi-scheme$(EXE) $(IMAGE_FILES)
 test-unicode: chibi-scheme$(EXE)
 	$(CHIBI) -xchibi tests/unicode-tests.scm
 
+test-division: chibi-scheme$(EXE)
+	$(CHIBI) tests/division-tests.scm
+
 test-libs: chibi-scheme$(EXE)
 	$(CHIBI) tests/lib-tests.scm
 
@@ -281,7 +284,7 @@ test-r7rs: chibi-scheme$(EXE)
 
 test: test-r7rs
 
-test-all: test test-libs test-ffi
+test-all: test test-libs test-ffi test-division
 
 test-dist: test-all test-memory test-build
 
