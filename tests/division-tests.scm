@@ -464,4 +464,26 @@
 
 (test-end)
 
+(test-begin "remainder infinity")
+
+(test-error (remainder +inf.0 +nan.0))
+(test-error (remainder -inf.0 +nan.0))
+(test-error (remainder +inf.0 2.0))
+(test-error (remainder -inf.0 2.0))
+(test-error (remainder +inf.0 2/1))
+(test-error (remainder -inf.0 2/1))
+(test-error (remainder +inf.0 2))
+(test-error (remainder -inf.0 2))
+
+(test-error (remainder +nan.0 +inf.0))
+(test-error (remainder +nan.0 -inf.0))
+(test-error (remainder 2.0 +inf.0))
+(test-error (remainder 2.0 -inf.0))
+(test-error (remainder 2/1 +inf.0))
+(test-error (remainder 2/1 -inf.0))
+(test-error (remainder 2 +inf.0))
+(test-error (remainder 2 -inf.0))
+
+(test-end "remainder infinity")
+
 (test-end)
