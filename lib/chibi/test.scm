@@ -664,7 +664,9 @@
       (if (real? expect)
           (and (inexact? expect)
                (real? res)
-               (inexact? res)
+               ;; tests which expect an inexact value can
+               ;; accept an equivalent exact value
+               ;; (inexact? res)
                (approx-equal? expect res (current-test-epsilon)))
           (and (complex? res)
                (complex? expect)
