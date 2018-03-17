@@ -1,5 +1,5 @@
 
-(import (chibi test) (scheme division))
+(import (chibi test) (scheme base) (scheme division))
 
 (test-begin "division")
 
@@ -16,13 +16,13 @@
 (test -4.0 (ceiling -4.3))
 (test -4.0 (truncate -4.3))
 (test -4.0 (round -4.3))
-(test 3.0 (floor 3.5)) 
-(test 4.0 (ceiling 3.5)) 
-(test 3.0 (truncate 3.5)) 
+(test 3.0 (floor 3.5))
+(test 4.0 (ceiling 3.5))
+(test 3.0 (truncate 3.5))
 (test 4.0 (round 3.5))
-(test -4.0 (floor -3.5)) 
-(test -3.0 (ceiling -3.5)) 
-(test -3.0 (truncate -3.5)) 
+(test -4.0 (floor -3.5))
+(test -3.0 (ceiling -3.5))
+(test -3.0 (truncate -3.5))
 (test -4.0 (round -3.5))
 (test 3 (floor (/ 1300000000000000000000 400000000000000000000)))
 (test 4 (ceiling (/ 1300000000000000000000 400000000000000000000)))
@@ -87,11 +87,11 @@
 (test 0 (euclidean-remainder 0 4))
 (test 0 (euclidean-remainder 0 -4))
 
-(test 0 (centered-quotient 0 4))
-(test 0 (centered-quotient 0 -4))
+(test 0 (balanced-quotient 0 4))
+(test 0 (balanced-quotient 0 -4))
 
-(test 0 (centered-remainder 0 4))
-(test 0 (centered-remainder 0 -4))
+(test 0 (balanced-remainder 0 4))
+(test 0 (balanced-remainder 0 -4))
 
 (test-end)
 
@@ -129,11 +129,11 @@
 (test 0 (euclidean-remainder 13 1))
 (test 0 (euclidean-remainder -13 1))
 
-(test 13 (centered-quotient 13 1))
-(test -13 (centered-quotient -13 1))
+(test 13 (balanced-quotient 13 1))
+(test -13 (balanced-quotient -13 1))
 
-(test 0 (centered-remainder 13 1))
-(test 0 (centered-remainder -13 1))
+(test 0 (balanced-remainder 13 1))
+(test 0 (balanced-remainder -13 1))
 
 (test-end)
 
@@ -205,18 +205,18 @@
 (test 1 (euclidean-remainder 13 -4))
 (test 3 (euclidean-remainder -13 -4))
 
-;; Centered differs from truncate only in the 0.5 remainder border
+;; Balanced differs from truncate only in the 0.5 remainder border
 ;; case in the next test group.
 
-(test 3 (centered-quotient 13 4))
-(test -3 (centered-quotient -13 4))
-(test -3 (centered-quotient 13 -4))
-(test 3 (centered-quotient -13 -4))
+(test 3 (balanced-quotient 13 4))
+(test -3 (balanced-quotient -13 4))
+(test -3 (balanced-quotient 13 -4))
+(test 3 (balanced-quotient -13 -4))
 
-(test 1 (centered-remainder 13 4))
-(test -1 (centered-remainder -13 4))
-(test 1 (centered-remainder 13 -4))
-(test -1 (centered-remainder -13 -4))
+(test 1 (balanced-remainder 13 4))
+(test -1 (balanced-remainder -13 4))
+(test 1 (balanced-remainder 13 -4))
+(test -1 (balanced-remainder -13 -4))
 
 (test-end)
 
@@ -279,17 +279,17 @@
 (test 1 (round-remainder 13 -2))
 (test -1 (round-remainder -13 -2))
 
-;; Centered rounds up when exactly half-way between two integers.
+;; Balanced rounds up when exactly half-way between two integers.
 
-(test 7 (centered-quotient 13 2))
-(test -6 (centered-quotient -13 2))
-(test -7 (centered-quotient 13 -2))
-(test 6 (centered-quotient -13 -2))
+(test 7 (balanced-quotient 13 2))
+(test -6 (balanced-quotient -13 2))
+(test -7 (balanced-quotient 13 -2))
+(test 6 (balanced-quotient -13 -2))
 
-(test -1 (centered-remainder 13 2))
-(test -1 (centered-remainder -13 2))
-(test -1 (centered-remainder 13 -2))
-(test -1 (centered-remainder -13 -2))
+(test -1 (balanced-remainder 13 2))
+(test -1 (balanced-remainder -13 2))
+(test -1 (balanced-remainder 13 -2))
+(test -1 (balanced-remainder -13 -2))
 
 (test-end)
 
@@ -359,17 +359,17 @@
 (test 1.0 (euclidean-remainder 13 4.0))
 (test 1.0 (euclidean-remainder 13.0 4.0))
 
-(test '(3.0 1.0) (values->list (centered/ 13.0 4)))
-(test '(3.0 1.0) (values->list (centered/ 13 4.0)))
-(test '(3.0 1.0) (values->list (centered/ 13.0 4.0)))
+(test '(3.0 1.0) (values->list (balanced/ 13.0 4)))
+(test '(3.0 1.0) (values->list (balanced/ 13 4.0)))
+(test '(3.0 1.0) (values->list (balanced/ 13.0 4.0)))
 
-(test 3.0 (centered-quotient 13.0 4))
-(test 3.0 (centered-quotient 13 4.0))
-(test 3.0 (centered-quotient 13.0 4.0))
+(test 3.0 (balanced-quotient 13.0 4))
+(test 3.0 (balanced-quotient 13 4.0))
+(test 3.0 (balanced-quotient 13.0 4.0))
 
-(test 1.0 (centered-remainder 13.0 4))
-(test 1.0 (centered-remainder 13 4.0))
-(test 1.0 (centered-remainder 13.0 4.0))
+(test 1.0 (balanced-remainder 13.0 4))
+(test 1.0 (balanced-remainder 13 4.0))
+(test 1.0 (balanced-remainder 13.0 4.0))
 
 (test-end)
 
@@ -448,20 +448,42 @@
 (test 300000000000000000000
       (euclidean-remainder -1300000000000000000000 -400000000000000000000))
 
-(test 3 (centered-quotient 1300000000000000000000 400000000000000000000))
-(test -3 (centered-quotient -1300000000000000000000 400000000000000000000))
-(test -3 (centered-quotient 1300000000000000000000 -400000000000000000000))
-(test 3 (centered-quotient -1300000000000000000000 -400000000000000000000))
+(test 3 (balanced-quotient 1300000000000000000000 400000000000000000000))
+(test -3 (balanced-quotient -1300000000000000000000 400000000000000000000))
+(test -3 (balanced-quotient 1300000000000000000000 -400000000000000000000))
+(test 3 (balanced-quotient -1300000000000000000000 -400000000000000000000))
 
 (test 100000000000000000000
-      (centered-remainder 1300000000000000000000 400000000000000000000))
+      (balanced-remainder 1300000000000000000000 400000000000000000000))
 (test -100000000000000000000
-      (centered-remainder -1300000000000000000000 400000000000000000000))
+      (balanced-remainder -1300000000000000000000 400000000000000000000))
 (test 100000000000000000000
-      (centered-remainder 1300000000000000000000 -400000000000000000000))
+      (balanced-remainder 1300000000000000000000 -400000000000000000000))
 (test -100000000000000000000
-      (centered-remainder -1300000000000000000000 -400000000000000000000))
+      (balanced-remainder -1300000000000000000000 -400000000000000000000))
 
 (test-end)
+
+(test-begin "remainder infinity")
+
+(test-error (remainder +inf.0 +nan.0))
+(test-error (remainder -inf.0 +nan.0))
+(test-error (remainder +inf.0 2.0))
+(test-error (remainder -inf.0 2.0))
+(test-error (remainder +inf.0 2/1))
+(test-error (remainder -inf.0 2/1))
+(test-error (remainder +inf.0 2))
+(test-error (remainder -inf.0 2))
+
+(test-error (remainder +nan.0 +inf.0))
+(test-error (remainder +nan.0 -inf.0))
+(test-error (remainder 2.0 +inf.0))
+(test-error (remainder 2.0 -inf.0))
+(test-error (remainder 2/1 +inf.0))
+(test-error (remainder 2/1 -inf.0))
+(test-error (remainder 2 +inf.0))
+(test-error (remainder 2 -inf.0))
+
+(test-end "remainder infinity")
 
 (test-end)

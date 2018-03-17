@@ -1667,8 +1667,11 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
 #if SEXP_USE_RATIOS
   case SEXP_NUM_FLO_RAT:
 #endif
-    if (sexp_flonum_value(a) != trunc(sexp_flonum_value(a))) {
+    if (isinf(sexp_flonum_value(a)) ||
+        sexp_flonum_value(a) != trunc(sexp_flonum_value(a))) {
       r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, a);
+    } else if (bt == SEXP_NUM_FLO && isinf(sexp_flonum_value(b))) {
+      r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
     } else {
       tmp = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(a)));
       tmp = sexp_remainder(ctx, tmp, b);
@@ -1691,7 +1694,8 @@ sexp sexp_remainder (sexp ctx, sexp a, sexp b) {
 #if SEXP_USE_RATIOS
   case SEXP_NUM_RAT_FLO:
 #endif
-    if (sexp_flonum_value(b) != trunc(sexp_flonum_value(b))) {
+    if (isinf(sexp_flonum_value(b)) ||
+        sexp_flonum_value(b) != trunc(sexp_flonum_value(b))) {
       r = sexp_type_exception(ctx, NULL, SEXP_FIXNUM, b);
     } else {
       tmp = sexp_bignum_normalize(sexp_double_to_bignum(ctx, sexp_flonum_value(b)));
