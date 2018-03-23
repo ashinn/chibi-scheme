@@ -44,6 +44,7 @@ SEXP_API sexp sexp_quotient (sexp ctx, sexp a, sexp b);
 SEXP_API sexp sexp_remainder (sexp ctx, sexp a, sexp b);
 #if SEXP_USE_RATIOS
 SEXP_API sexp sexp_double_to_ratio (sexp ctx, double f);
+SEXP_API sexp sexp_double_to_ratio_2 (sexp ctx, double f);
 SEXP_API double sexp_ratio_to_double (sexp rat);
 SEXP_API sexp sexp_make_ratio (sexp ctx, sexp num, sexp den);
 SEXP_API sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);

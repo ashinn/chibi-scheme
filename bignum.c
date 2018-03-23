@@ -730,6 +730,41 @@ sexp sexp_double_to_ratio (sexp ctx, double f) {
   return res;
 }
 
+//
+// For conversion that does not introduce round-off error,
+// no matter what FLT_RADIX is.
+//
+sexp sexp_double_to_ratio_2 (sexp ctx, double f) {
+  int sign,i;
+  sexp_gc_var3(res, whole, scale);
+  if (f == trunc(f))
+    return sexp_bignum_normalize(sexp_double_to_bignum(ctx, f));
+  sexp_gc_preserve3(ctx, res, whole, scale);
+  whole = sexp_double_to_bignum(ctx, trunc(f));
+  res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
+  scale = SEXP_ONE;
+  sign = (f < 0 ? -1 : 1);
+  f = fabs(f-trunc(f));
+  while(f) {
+    res = sexp_bignum_fxmul(ctx, NULL, res, FLT_RADIX, 0);
+    scale = sexp_mul(ctx, scale, sexp_make_fixnum(FLT_RADIX));
+    f *= FLT_RADIX;
+    i = trunc(f);
+    if (i) {
+      f -= i;
+      res = sexp_bignum_fxadd(ctx, res, i);
+    }
+  }
+  sexp_bignum_sign(res) = sign;
+  res = sexp_bignum_normalize(res);
+  scale = sexp_bignum_normalize(scale);
+  res = sexp_make_ratio(ctx, res, scale);
+  res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
+  res = sexp_add(ctx, res, whole);
+  sexp_gc_release3(ctx);
+  return res;
+}
+
 sexp sexp_ratio_add (sexp ctx, sexp a, sexp b) {
   sexp_gc_var3(res, num, den);
   sexp_gc_preserve3(ctx, res, num, den);
