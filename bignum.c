@@ -67,6 +67,8 @@ sexp sexp_make_unsigned_integer (sexp ctx, sexp_luint_t x) {
 #define double_trunc_10s_digit(f) (trunc((f)/10.0)*10.0)
 #define double_10s_digit(f) ((f)-double_trunc_10s_digit(f))
 
+#define double_16s_digit(f) fmod(f,16.0)
+
 sexp sexp_double_to_bignum (sexp ctx, double f) {
   int sign;
   sexp_gc_var3(res, scale, tmp);
@@ -74,10 +76,10 @@ sexp sexp_double_to_bignum (sexp ctx, double f) {
   res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
   scale = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   sign = (f < 0 ? -1 : 1);
-  for (f=fabs(f); f >= 1.0; f=trunc(f/10)) {
-    tmp = sexp_bignum_fxmul(ctx, NULL, scale, (sexp_uint_t)double_10s_digit(f), 0);
+  for (f=fabs(f); f >= 1.0; f=trunc(f/16)) {
+    tmp = sexp_bignum_fxmul(ctx, NULL, scale, (sexp_uint_t)double_16s_digit(f), 0);
     res = sexp_bignum_add(ctx, res, res, tmp);
-    scale = sexp_bignum_fxmul(ctx, NULL, scale, 10, 0);
+    scale = sexp_bignum_fxmul(ctx, NULL, scale, 16, 0);
   }
   sexp_bignum_sign(res) = sign;
   sexp_gc_release3(ctx);
