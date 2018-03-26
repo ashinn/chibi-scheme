@@ -1,6 +1,7 @@
 (define-library (chibi show-test)
   (export run-tests)
-  (import (scheme base) (scheme char) (scheme read)
+  (import (scheme base) (scheme char) (scheme read) (scheme file)
+          (only (srfi 1) circular-list)
           (chibi test)
           (chibi show) (chibi show base) (chibi show color)
           (chibi show column) (chibi show pretty)
@@ -26,12 +27,17 @@
       (test "ABC" (show #f (upcased "abc")))
       (test "abc" (show #f (downcased "ABC")))
 
+      (test "a    b" (show #f "a" (space-to 5) "b"))
+      (test "ab" (show #f "a" (space-to 0) "b"))
+
       (test "abc     def" (show #f "abc" (tab-to) "def"))
       (test "abc  def" (show #f "abc" (tab-to 5) "def"))
       (test "abcdef" (show #f "abc" (tab-to 3) "def"))
       (test "abc\ndef\n" (show #f "abc" nl "def" nl))
       (test "abc\ndef\n" (show #f "abc" fl "def" nl fl))
       (test "abc\ndef\n" (show #f "abc" fl "def" fl fl))
+
+      (test "ab" (show #f "a" nothing "b"))
 
       ;; numbers
 
@@ -142,6 +148,100 @@
       (test "100,000.00"
           (show #f (with ((comma-rule 3) (precision 2)) (numeric 100000))))
 
+      ;; radix argument:
+      (test "0" (show #f (numeric 0 2)))
+      (test "0" (show #f (numeric 0 10)))
+      (test "0" (show #f (numeric 0 36)))
+
+      (test "0.0" (show #f (numeric 0.0 2)))
+      (test "0.0" (show #f (numeric 0.0 10)))
+      (test "0.0" (show #f (numeric 0.0 36)))
+
+      (test "1" (show #f (numeric 1 2)))
+      (test "1" (show #f (numeric 1 10)))
+      (test "1" (show #f (numeric 1 36)))
+
+      (test "1.0" (show #f (numeric 1.0 2)))
+      (test "1.0" (show #f (numeric 1.0 10)))
+      (test "1.0" (show #f (numeric 1.0 36)))
+
+      (test "0" (show #f (numeric 0.0 10 0)))
+      (test "0" (show #f (numeric 0.0 9 0)))
+      (test "3/4" (show #f (numeric #e.75)))
+
+      (test "0.0000000000000001" (show #f (numeric 1e-25 36)))
+      (test "100000000000000000000000000000000000000000000000000000000000000000000000000000000.0"
+            (show #f (numeric (expt 2.0 80) 2)))
+
+      ;; numeric, radix=2
+      (test "10" (show #f (numeric 2 2)))
+      (test "10.0" (show #f (numeric 2.0 2)))
+      (test "11/10" (show #f (numeric 3/2 2)))
+      (test "1001" (show #f (numeric 9 2)))
+      (test "1001.0" (show #f (numeric 9.0 2)))
+      (test "1001.01" (show #f (numeric 9.25 2)))
+
+      ;; numeric, radix=3
+      (test "11" (show #f (numeric 4 3)))
+      (test "10.0" (show #f (numeric 3.0 3)))
+      (test "11/10" (show #f (numeric 4/3 3)))
+      (test "1001" (show #f (numeric 28 3)))
+      (test "1001.0" (show #f (numeric 28.0 3)))
+      (test "1001.01" (show #f (numeric #i253/9 3 2)))
+
+      ;; radix 36
+      (test "zzz" (show #f (numeric (- (* 36 36 36) 1) 36)))
+
+      ;; Precision:
+      (test "1.1250" (show #f (numeric 9/8 10 4)))
+      (test "1.125" (show #f (numeric 9/8 10 3)))
+      (test "1.12" (show #f (numeric 9/8 10 2)))
+      (test "1.1" (show #f (numeric 9/8 10 1)))
+      (test "1" (show #f (numeric 9/8 10 0)))
+
+      (test "1.1250" (show #f (numeric #i9/8 10 4)))
+      (test "1.125" (show #f (numeric #i9/8 10 3)))
+      (test "1.12" (show #f (numeric #i9/8 10 2)))
+      (test "1.1" (show #f (numeric #i9/8 10 1)))
+      (test "1" (show #f (numeric #i9/8 10 0)))
+
+      ;; precision-show, base-4
+      (test "1.1230" (show #f (numeric 91/64 4 4)))
+      (test "1.123" (show #f (numeric 91/64 4 3)))
+      (test "1.13" (show #f (numeric 91/64 4 2)))
+      (test "1.2" (show #f (numeric 91/64 4 1)))
+      (test "1" (show #f (numeric 91/64 4 0)))
+
+      (test "1.1230" (show #f (numeric #i91/64 4 4)))
+      (test "1.123" (show #f (numeric #i91/64 4 3)))
+      (test "1.13" (show #f (numeric #i91/64 4 2)))
+      (test "1.2" (show #f (numeric #i91/64 4 1)))
+      (test "1" (show #f (numeric #i91/64 4 0)))
+
+      ;; sign
+      (test "+1" (show #f (numeric 1 10 #f #t)))
+      (test "+1" (show #f (with ((sign-rule #t)) (numeric 1))))
+      (test "-0.0" (show #f (with ((sign-rule #t)) (numeric -0.0))))
+      (test "+0.0" (show #f (with ((sign-rule #t)) (numeric +0.0))))
+
+      ;; comma
+      (test "1,234,567" (show #f (numeric 1234567 10 #f #f 3)))
+      (test "567" (show #f (numeric 567 10 #f #f 3)))
+      (test "1,23,45,67" (show #f (numeric 1234567 10 #f #f 2)))
+
+      ;; comma-sep
+      (test "1|234|567" (show #f (numeric 1234567 10 #f #f 3 #\|)))
+      (test "1&234&567" (show #f (with ((comma-sep #\&)) (numeric 1234567 10 #f #f 3))))
+      (test "1*234*567" (show #f (with ((comma-sep #\&)) (numeric 1234567 10 #f #f 3 #\*))))
+      (test "567" (show #f (numeric 567 10 #f #f 3 #\|)))
+      (test "1,23,45,67" (show #f (numeric 1234567 10 #f #f 2)))
+
+      ;; decimal
+      (test "1_5" (show #f (with ((decimal-sep #\_)) (numeric 1.5))))
+      (test "1,5" (show #f (with ((comma-sep #\.)) (numeric 1.5))))
+      (test "1,5" (show #f (numeric 1.5 10 #f #f #f #\.)))
+      (test "1%5" (show #f (numeric 1.5 10 #f #f #f #\. #\%)))
+
       (cond-expand
        (complex
         (test "1+2i" (show #f (string->number "1+2i")))
@@ -151,6 +251,7 @@
             (show #f (with ((precision 2)) (string->number "3.14159+2i"))))))
 
       (test "608" (show #f (numeric/si 608)))
+      (test "608 B" (show #f (numeric/si 608 1000 " ") "B"))
       (test "3.9Ki" (show #f (numeric/si 3986)))
       (test "4kB" (show #f (numeric/si 3986 1000) "B"))
       (test "1.2Mm" (show #f (numeric/si 1.23e6 1000) "m"))
@@ -160,12 +261,14 @@
       (test "123m" (show #f (numeric/si 1.23e2 1000) "m"))
       (test "12.3m" (show #f (numeric/si 1.23e1 1000) "m"))
       (test "1.2m" (show #f (numeric/si 1.23 1000) "m"))
+      (test "1.2 m" (show #f (numeric/si 1.23 1000 " ") "m"))
       (test "123mm" (show #f (numeric/si 0.123 1000) "m"))
       (test "12.3mm" (show #f (numeric/si 1.23e-2 1000) "m")) ;?
       (test "1.2mm" (show #f (numeric/si 1.23e-3 1000) "m"))
       (test "123µm" (show #f (numeric/si 1.23e-4 1000) "m"))  ;?
       (test "12.3µm" (show #f (numeric/si 1.23e-5 1000) "m")) ;?
       (test "1.2µm" (show #f (numeric/si 1.23e-6 1000) "m"))
+      (test "1.2 µm" (show #f (numeric/si 1.23e-6 1000 " ") "m"))
 
       (test "1,234,567" (show #f (numeric/comma 1234567)))
 
@@ -177,7 +280,9 @@
 
       (test "abc  " (show #f (padded 5 "abc")))
       (test "  abc" (show #f (padded/left 5 "abc")))
+      (test "abcdefghi" (show #f (padded/left 5 "abcdefghi")))
       (test " abc " (show #f (padded/both 5 "abc")))
+      (test " abc  " (show #f (padded/both 6 "abc")))
       (test "abcde" (show #f (padded 5 "abcde")))
       (test "abcdef" (show #f (padded 5 "abcdef")))
 
@@ -203,6 +308,9 @@
       (test "bcd :suffix" (show #f (trimmed/both 3 "abcde") " :suffix"))
       (test "abc :suffix" (show #f (trimmed/lazy 3 "abcde") " :suffix"))
       (test "abc :suffix" (show #f (trimmed/lazy 3 "abc\nde") " :suffix"))
+
+      (test "abc" (show #f (trimmed/lazy 10 (trimmed/lazy 3 "abcdefghijklmnopqrstuvwxyz"))))
+      (test "abc" (show #f (trimmed/lazy 3 (trimmed/lazy 10 "abcdefghijklmnopqrstuvwxyz"))))
 
       (test "abcde"
           (show #f (with ((ellipsis "...")) (trimmed 5 "abcde"))))
@@ -286,9 +394,21 @@
 
       (test "hi, bob!" (show #f (escaped "hi, bob!")))
       (test "hi, \\\"bob!\\\"" (show #f (escaped "hi, \"bob!\"")))
+      (test "hi, \\'bob\\'" (show #f (escaped "hi, 'bob'" #\')))
+      (test "hi, ''bob''" (show #f (escaped "hi, 'bob'" #\' #\')))
+      (test "hi, ''bob''" (show #f (escaped "hi, 'bob'" #\' #f)))
+      (test "line1\\nline2\\nkapow\\a\\n"
+            (show #f (escaped "line1\nline2\nkapow\a\n"
+                              #\" #\\
+                              (lambda (c) (case c ((#\newline) #\n) ((#\alarm) #\a) (else #f))))))
+
       (test "bob" (show #f (maybe-escaped "bob" char-whitespace?)))
       (test "\"hi, bob!\""
-          (show #f (maybe-escaped "hi, bob!" char-whitespace?)))
+            (show #f (maybe-escaped "hi, bob!" char-whitespace?)))
+      (test "\"foo\\\"bar\\\"baz\"" (show #f (maybe-escaped "foo\"bar\"baz" char-whitespace?)))
+      (test "'hi, ''bob'''" (show #f (maybe-escaped "hi, 'bob'" (lambda (c) #f) #\' #f)))
+      (test "\\" (show #f (maybe-escaped "\\" (lambda (c) #f) #\' #f)))
+      (test "''''" (show #f (maybe-escaped "'" (lambda (c) #f) #\' #f)))
 
       ;; shared structures
 
@@ -425,6 +545,18 @@
                        `(let ((zeros '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
                               (ones ',ones))
                           (append zeros ones))))))
+
+      ;; pretty-simply
+      (let* ((d (let ((d (list 'a 'b #f)))
+                  (list-set! d 2 d)
+                  (list d)))
+             (ca (circular-list 'a)))
+        (test "((a b (a b (a b" (show #f (trimmed/lazy 15 (pretty-simply '((a b (a b (a b (a b)))))))))
+        (test "((a b\n    (a b\n" (show #f (trimmed/lazy 15 (pretty-simply d))))
+        (test "'(a a\n    a\n   " (show #f (trimmed/lazy 15 (pretty-simply `(quote ,ca)))))
+        (test "(foo\n (a a\n    " (show #f (trimmed/lazy 15 (pretty-simply `(foo ,ca)))))
+        (test "(with-x \n  (a a" (show #f (trimmed/lazy 15 (pretty-simply `(with-x ,ca)))))
+        )
 
       ;; columns
 
@@ -594,6 +726,18 @@ def | 6
       (test "〜日本語〜"
           (show #f (with ((pad-char #\〜)) (padded/both 5 "日本語"))))
       (test "日本語"
-          (show #f (as-unicode (with ((pad-char #\〜)) (padded/both 5 "日本語")))))
+            (show #f (as-unicode (with ((pad-char #\〜)) (padded/both 5 "日本語")))))
+
+      ;; from-file
+      ;; for reference, filesystem-test relies on creating files under /tmp
+      (let* ((tmp-file "/tmp/chibi-show-test-0123456789")
+             (content-string "first line\nsecond line\nthird line"))
+        (with-output-to-file tmp-file (lambda () (write-string content-string)))
+        (test (string-append content-string "\n")
+              (show #f (from-file tmp-file)))
+        (test
+         "   1 first line\n   2 second line\n   3 third line\n"
+         (show #f (columnar 4 'right 'infinite (line-numbers) " " (from-file tmp-file))))
+        (delete-file tmp-file))
 
       (test-end))))
