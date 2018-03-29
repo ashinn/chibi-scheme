@@ -806,6 +806,12 @@ static sexp analyze_lambda (sexp ctx, sexp x, int depth) {
       sexp_return(res, sexp_compile_error(ctx, "non-symbol parameter", x));
     else if (sexp_truep(sexp_memq(ctx, sexp_car(ls), sexp_cdr(ls))))
       sexp_return(res, sexp_compile_error(ctx, "duplicate parameter", x));
+  if (! sexp_nullp(ls)) {
+    if (! sexp_idp(ls))
+      sexp_return(res, sexp_compile_error(ctx, "non-symbol parameter", x));
+    else if (sexp_truep(sexp_memq(ctx, ls, sexp_cadr(x))))
+      sexp_return(res, sexp_compile_error(ctx, "duplicate parameter", x));
+  }
   /* build lambda and analyze body */
   res = sexp_make_lambda(ctx, tmp=sexp_copy_list(ctx, sexp_cadr(x)));
   if (sexp_exceptionp(res)) sexp_return(res, res);
