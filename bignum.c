@@ -67,6 +67,8 @@ sexp sexp_make_unsigned_integer (sexp ctx, sexp_luint_t x) {
 #define double_trunc_10s_digit(f) (trunc((f)/10.0)*10.0)
 #define double_10s_digit(f) ((f)-double_trunc_10s_digit(f))
 
+#define double_16s_digit(f) fmod(f,16.0)
+
 sexp sexp_double_to_bignum (sexp ctx, double f) {
   int sign;
   sexp_gc_var3(res, scale, tmp);
@@ -74,10 +76,10 @@ sexp sexp_double_to_bignum (sexp ctx, double f) {
   res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
   scale = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   sign = (f < 0 ? -1 : 1);
-  for (f=fabs(f); f >= 1.0; f=trunc(f/10)) {
-    tmp = sexp_bignum_fxmul(ctx, NULL, scale, (sexp_uint_t)double_10s_digit(f), 0);
+  for (f=fabs(f); f >= 1.0; f=trunc(f/16)) {
+    tmp = sexp_bignum_fxmul(ctx, NULL, scale, (sexp_uint_t)double_16s_digit(f), 0);
     res = sexp_bignum_add(ctx, res, res, tmp);
-    scale = sexp_bignum_fxmul(ctx, NULL, scale, 10, 0);
+    scale = sexp_bignum_fxmul(ctx, NULL, scale, 16, 0);
   }
   sexp_bignum_sign(res) = sign;
   sexp_gc_release3(ctx);
@@ -719,6 +721,41 @@ sexp sexp_double_to_ratio (sexp ctx, double f) {
     res = sexp_bignum_fxadd(ctx, res, (sexp_uint_t)double_10s_digit(f));
     f = f - trunc(f);
     scale = sexp_mul(ctx, scale, SEXP_TEN);
+  }
+  sexp_bignum_sign(res) = sign;
+  res = sexp_bignum_normalize(res);
+  scale = sexp_bignum_normalize(scale);
+  res = sexp_make_ratio(ctx, res, scale);
+  res = sexp_ratio_normalize(ctx, res, SEXP_FALSE);
+  res = sexp_add(ctx, res, whole);
+  sexp_gc_release3(ctx);
+  return res;
+}
+
+//
+// For conversion that does not introduce round-off error,
+// no matter what FLT_RADIX is.
+//
+sexp sexp_double_to_ratio_2 (sexp ctx, double f) {
+  int sign,i;
+  sexp_gc_var3(res, whole, scale);
+  if (f == trunc(f))
+    return sexp_bignum_normalize(sexp_double_to_bignum(ctx, f));
+  sexp_gc_preserve3(ctx, res, whole, scale);
+  whole = sexp_double_to_bignum(ctx, trunc(f));
+  res = sexp_fixnum_to_bignum(ctx, SEXP_ZERO);
+  scale = SEXP_ONE;
+  sign = (f < 0 ? -1 : 1);
+  f = fabs(f-trunc(f));
+  while(f) {
+    res = sexp_bignum_fxmul(ctx, NULL, res, FLT_RADIX, 0);
+    scale = sexp_mul(ctx, scale, sexp_make_fixnum(FLT_RADIX));
+    f *= FLT_RADIX;
+    i = trunc(f);
+    if (i) {
+      f -= i;
+      res = sexp_bignum_fxadd(ctx, res, i);
+    }
   }
   sexp_bignum_sign(res) = sign;
   res = sexp_bignum_normalize(res);

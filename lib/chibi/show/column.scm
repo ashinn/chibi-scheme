@@ -464,15 +464,15 @@
             cons))
           "\n"))))))
 
-(define (from-file path)
-  (fn ()
-    (call-with-input-file path
-      (lambda (in)
+(define (from-file path . ls)
+  (let-optionals* ls ((sep nl))
+    (fn ()
+      (let ((in (open-input-file path)))
         (let lp ()
           (let ((line (read-line in)))
             (if (eof-object? line)
-                nothing
-                (each line
+                (begin (close-input-port in) nothing)
+                (each line sep
                       (fn () (lp))))))))))
 
 (define (line-numbers . o)

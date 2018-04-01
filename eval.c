@@ -1817,7 +1817,7 @@ sexp sexp_inexact_to_exact (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
       res = sexp_xtype_exception(ctx, self, "exact: not a finite number", z);
     } else if (sexp_flonum_value(z) != trunc(sexp_flonum_value(z))) {
 #if SEXP_USE_RATIOS
-      res = sexp_double_to_ratio(ctx, sexp_flonum_value(z));
+      res = sexp_double_to_ratio_2(ctx, sexp_flonum_value(z));
 #else
       res = sexp_xtype_exception(ctx, self, "exact: not an integer", z);
 #endif

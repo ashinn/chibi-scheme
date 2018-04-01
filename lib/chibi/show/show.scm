@@ -115,7 +115,7 @@
                     (right (if (even? diff)
                                left
                                (make-string (+ 1 diff/2) pad-char))))
-               (each right str left))
+               (each left str right))
              (displayed str)))))))
 
 ;;> As \scheme{padded/both} but only applies padding on the right.
@@ -136,7 +136,7 @@
    (lambda (str)
      (fn (string-width pad-char)
        (let ((diff (- width (string-width str))))
-         (each (make-string diff pad-char) str))))))
+         (each (make-string (max 0 diff) pad-char) str))))))
 
 ;; General buffered trim - capture the output apply a trimmer.
 (define (trimmed/buffered width producer proc)
@@ -211,7 +211,7 @@
 ;;> (e.g. \scheme{write-simple} on an infinite list).  The nature of
 ;;> this procedure means only truncating on the right is meaningful.
 (define (trimmed/lazy width . ls)
-  (fn (orig-output string-width)
+  (fn ((orig-output output) string-width)
     (call-with-current-continuation
      (lambda (return)
        (let ((chars-written 0)

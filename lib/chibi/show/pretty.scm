@@ -63,7 +63,7 @@
                         ((> col width)
                          (abort fail))
                         (else
-                         (output str)))))))))
+                         (output-default str)))))))))
          (fn-fork
           (with ((output output*)
                  (port out))
@@ -151,7 +151,7 @@
            => cdr)
           (else #f))))
     (if (and (number? indent) (negative? indent))
-        (max 0 (- (+ (length+ form) indent) 1))
+        (max 0 (- (+ (or (length+ form) +inf.0) indent) 1))
         indent)))
 
 (define (with-reset-shares shares proc)
@@ -182,9 +182,11 @@
              ;; reset in case we don't fit on the first line
              (reset-shares (with-reset-shares shares nothing)))
          (call-with-output
-          (each " "
-                (joined/shares
-                 (lambda (x) (pp-flat x pp shares)) fixed shares " "))
+          (trimmed/lazy (- width col2)
+                        (each " "
+                              (joined/shares
+                               (lambda (x) (pp-flat x pp shares)) fixed shares " "))
+                        )
           (lambda (first-line)
             (cond
              ((< (+ col2 (string-width first-line)) width)
@@ -195,7 +197,7 @@
                       (cond
                        ((not (or (null? tail) (pair? tail)))
                         (each ". " (pp tail pp shares)))
-                       ((> (length+ (cdr ls)) (or indent-rule 1))
+                       ((> (or (length+ (cdr ls)) +inf.0) (or indent-rule 1))
                         (each sep (joined/shares pp tail shares sep)))
                        (else
                         nothing)))))
@@ -299,7 +301,7 @@
   (cond
    ;; one element list, no lines to break
    ((null? (cdr ls))
-    (each "(" (pretty (car ls)) ")"))
+    (each "(" (pp (car ls)) ")"))
    ;; quote or other abbrev
    ((and (pair? (cdr ls)) (null? (cddr ls))
          (assq (car ls) syntax-abbrevs))
@@ -362,7 +364,5 @@
 
 (define (pretty-simply obj)
   (fn ()
-    (call-with-output
-     (each (pp obj (extract-shared-objects #f #f))
-           fl)
-     displayed)))
+    (each (pp obj (extract-shared-objects #f #f))
+          fl)))

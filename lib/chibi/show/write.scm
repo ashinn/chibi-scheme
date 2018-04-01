@@ -41,8 +41,9 @@
   (let-optionals* o ((quot #\")
                      (esc #\\)
                      (rename (lambda (x) #f)))
-    (let ((quot-str (if (char? quot) (string quot) quot))
-          (esc-str (if (char? esc) (string esc) esc)))
+    (let ((esc-str (cond ((char? esc) (string esc))
+                         ((not esc) (string quot))
+                         (else esc))))
       (fn (output)
         (define (output* str)
           (let ((start (string-cursor-start str))
@@ -97,7 +98,10 @@
 (define (integer-log a base)
   (if (zero? a)
       0
-      (exact (ceiling (/ (log (+ a 1)) (log base))))))
+      ;; (exact (ceiling (/ (log (+ a 1)) (log base))))
+      (do ((ndigits 1 (+ ndigits 1))
+           (p base (* p base)))
+          ((> p a) ndigits))))
 
 ;; The original fmt algorithm was based on "Printing Floating-Point
 ;; Numbers Quickly and Accurately" by Burger and Dybvig
@@ -116,13 +120,13 @@
                      (comma unspec) (commasep unspec) (decsep unspec))
     (fn (radix precision sign-rule
                comma-rule comma-sep decimal-sep decimal-align)
-      (let ((radix (default rad radix))
-            (precision (default prec precision))
-            (sign-rule (default sgn sign-rule))
-            (comma-rule (default comma comma-rule))
-            (comma-sep (default comma-sep commasep))
-            (dec-sep (default decsep
-                       (or decimal-sep (if (eqv? comma-sep #\.) #\, #\.)))))
+      (let* ((radix (default rad radix))
+             (precision (default prec precision))
+             (sign-rule (default sgn sign-rule))
+             (comma-rule (default comma comma-rule))
+             (comma-sep (default commasep comma-sep))
+             (dec-sep (default decsep
+                        (or decimal-sep (if (eqv? comma-sep #\.) #\, #\.)))))
         ;; General formatting utilities.
         (define (get-scale q)
           (expt radix (- (integer-log q radix) 1)))
@@ -155,23 +159,26 @@
                            (and prev (odd? prev)))))
                 (round-up ls)
                 ls)))
-        (define (maybe-trim-zeros i res)
+        (define (maybe-trim-zeros i res inexact?)
           (if (and (not precision) (positive? i))
               (let lp ((res res))
                 (cond
                  ((and (pair? res) (eqv? 0 (car res))) (lp (cdr res)))
-                 ((and (pair? res) (eqv? dec-sep (car res))) (cdr res))
+                 ((and (pair? res) (eqv? dec-sep (car res)))
+                  (if inexact?
+                      (cons 0 res)      ; "1.0"
+                      (cdr res)))       ; "1"
                  (else res)))
               res))
         ;; General slow loop to generate digits one at a time, for
         ;; non-standard radixes or writing rationals with a fixed
         ;; precision.
-        (define (gen-general n)
-          (let* ((p (exact n))
+        (define (gen-general n-orig)
+          (let* ((p (exact n-orig))
                  (n (numerator p))
                  (d (denominator p)))
             (let lp ((n n)
-                     (i (- (integer-log p radix)))
+                     (i (if (zero? p) -1 (- (integer-log p radix))))
                      (res '()))
               (cond
                ;; Use a fixed precision if specified, otherwise generate
@@ -182,8 +189,8 @@
                                res))
                       (q (quotient n d)))
                   (cond
-                   ((>= q radix)
-                    (let* ((scale (get-scale q))
+                   ((< i -1)
+                    (let* ((scale (expt radix (- -1 i)))
                            (digit (quotient q scale))
                            (n2 (- n (* d digit scale))))
                       (lp n2 (+ i 1) (cons digit res))))
@@ -194,7 +201,7 @@
                (else
                 (list->string
                  (map char-digit
-                      (reverse (maybe-round n d (maybe-trim-zeros i res))))))))))
+                      (reverse (maybe-trim-zeros i (maybe-round n d res) (inexact? n-orig))))))))))
         ;; Generate a fixed precision decimal result by post-editing the
         ;; result of string->number.
         (define (gen-fixed n)
@@ -242,11 +249,11 @@
            (precision
             (gen-fixed n))
            ((and (exact? n) (not (integer? n)))
-            (string-append (number->string (numerator n) radix)
+            (string-append (gen-positive-real (numerator n))
                            "/"
-                           (number->string (denominator n) radix)))
+                           (gen-positive-real (denominator n))))
            ((memv radix (if (exact? n) '(2 8 10 16) '(10)))
-            (number->string n))
+            (number->string n radix))
            (else
             (gen-general n))))
         ;; Insert commas according to the current comma-rule.
@@ -272,14 +279,26 @@
             (if comma-rule (insert-commas s1) s1)))
         ;; Wrap the sign of a real number, forcing a + prefix or using
         ;; parentheses (n) for negatives according to sign-rule.
+
+        (define-syntax is-neg-zero?
+          (syntax-rules ()
+            ((_ n)
+             (is-neg-zero? (-0.0) n))
+            ((_ (0.0) n)                ; -0.0 is not distinguished?
+             #f)
+            ((_ (-0.0) n)
+             (eqv? -0.0 n))))
+        (define (negative?* n)
+          (or (negative? n)
+              (is-neg-zero? n)))
         (define (wrap-sign n sign-rule)
           (cond
-           ((negative? n)
+           ((negative?* n)
             (if (char? sign-rule)
                 (string-append (string sign-rule)
-                               (wrap-comma (abs n))
+                               (wrap-comma (- n))
                                (string (char-mirror sign-rule)))
-                (string-append "-" (wrap-comma (abs n)))))
+                (string-append "-" (wrap-comma (- n)))))
            ((eq? #t sign-rule)
             (string-append "+" (wrap-comma n)))
            (else
@@ -335,7 +354,8 @@
           (each (if (integer? n2)
                     (number->string (exact n2))
                     (inexact n2))
-                (if (zero? k) "" separator)
+                ;; (if (zero? k) "" separator)
+                separator
                 (vector-ref names k)))))))
 
 ;; Force a number into a fixed width, print as #'s if doesn't fit.
