@@ -1931,9 +1931,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #endif
       {
         i = snprintf(numbuf, NUMBUF_LEN, "%.15lg", f);
-        if (i >= 15 && sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
+        if (sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
           i = snprintf(numbuf, NUMBUF_LEN, "%.16lg", f);
-          if (i >= 16 && sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
+          if (sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
             i = snprintf(numbuf, NUMBUF_LEN, "%.17lg", f);
           }
         }
