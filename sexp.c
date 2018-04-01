@@ -439,6 +439,7 @@ void sexp_init_context_globals (sexp ctx) {
   const char** features;
   int i, endianess_check = 1;
   sexp type, *vec, print=NULL;
+  sexp_gc_var1(feature);
   sexp_context_globals(ctx)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_G_NUM_GLOBALS), SEXP_VOID);
 #if ! SEXP_USE_GLOBAL_SYMBOLS
@@ -474,10 +475,15 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_FEATURES) = SEXP_NULL;
   sexp_push(ctx, sexp_global(ctx, SEXP_G_FEATURES), SEXP_FALSE);
   sexp_car(sexp_global(ctx, SEXP_G_FEATURES)) = sexp_intern(ctx, (*(unsigned char*) &endianess_check) ? "little-endian" : "big-endian", -1);
+  sexp_gc_preserve1(ctx, feature);
   for (features=sexp_initial_features; *features; features++) {
-    sexp_push(ctx, sexp_global(ctx, SEXP_G_FEATURES), SEXP_FALSE);
-    sexp_car(sexp_global(ctx, SEXP_G_FEATURES)) = sexp_intern(ctx, *features, -1);
+    feature = sexp_intern(ctx, *features, -1);
+    if (sexp_not(sexp_memq(ctx, feature, sexp_global(ctx, SEXP_G_FEATURES)))) {
+      sexp_push(ctx, sexp_global(ctx, SEXP_G_FEATURES), SEXP_FALSE);
+      sexp_car(sexp_global(ctx, SEXP_G_FEATURES)) = feature;
+    }
   }
+  sexp_gc_release1(ctx);
   sexp_global(ctx, SEXP_G_NUM_TYPES) = sexp_make_fixnum(SEXP_NUM_CORE_TYPES);
   sexp_global(ctx, SEXP_G_TYPES)
     = sexp_make_vector(ctx, sexp_make_fixnum(SEXP_INIT_NUM_TYPES), SEXP_VOID);
