@@ -593,30 +593,29 @@ sexp sexp_syntactic_closure_expr_op (sexp ctx, sexp self, sexp_sint_t n, sexp x)
   return (sexp_synclop(x) ? sexp_synclo_expr(x) : x);
 }
 
-#if SEXP_USE_READER_LABELS
-static int sexp_cyclic_synclop(sexp x) {
+static int sexp_contains_syntax_p_bound(sexp x, int depth) {
+  int i;
   sexp ls1, ls2;
-  if (!sexp_pairp(x))
+  if (sexp_synclop(x))
+    return 1;
+  if (depth <= 0)
     return 0;
-  for (ls1=x, ls2=sexp_id_name(sexp_cdr(ls1));
-       sexp_pairp(ls2) && sexp_pairp(sexp_id_name(sexp_cdr(ls2)));
-       ls1=sexp_id_name(sexp_cdr(ls1)),
-         ls2=sexp_id_name(sexp_cdr(sexp_id_name(sexp_cdr(ls2))))) {
-    if (ls1 == ls2 || ls1 == sexp_id_name(sexp_car(ls2)))
-      return 1;
-  }
-  for (ls1=x, ls2=sexp_id_name(sexp_car(ls1));
-       sexp_pairp(ls2) && sexp_pairp(sexp_id_name(sexp_car(ls2)));
-       ls1=sexp_id_name(sexp_car(ls1)),
-         ls2=sexp_id_name(sexp_car(sexp_id_name(sexp_car(ls2))))) {
-    if (ls1 == ls2 || ls1 == sexp_id_name(sexp_cdr(ls2)))
-      return 1;
+  if (sexp_pairp(x)) {
+    for (i=0, ls1=x, ls2=x; sexp_pairp(ls1); ls1=sexp_cdr(ls1), ls2=(i++ & 1 ? sexp_cdr(ls2) : ls2)) {
+      if (sexp_contains_syntax_p_bound(sexp_car(ls1), depth-1))
+        return 1;
+      if (i > 0 && (ls1 == ls2 || ls1 == sexp_car(ls2)))
+        return 0; /* cycle, no synclo found, assume none */
+    }
+    if (sexp_synclop(ls1))
+      return sexp_contains_syntax_p_bound(sexp_id_name(ls1), depth-1);
+  } else if (sexp_vectorp(x)) {
+    for (i = 0; i < sexp_vector_length(x); ++i)
+      if (sexp_contains_syntax_p_bound(sexp_vector_ref(x, sexp_make_fixnum(i)), depth-1))
+        return 1;
   }
   return 0;
 }
-#else
-#define sexp_cyclic_synclop(x) 0
-#endif
 
 sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
   int i;
@@ -624,7 +623,7 @@ sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
   if (depth <= 0) return x;
   sexp_gc_preserve3(ctx, res, kar, kdr);
   x = sexp_id_name(x);
-  if (sexp_pairp(x) && !sexp_cyclic_synclop(x)) {
+  if (sexp_pairp(x)) {
     kar = sexp_strip_synclos_bound(ctx, sexp_car(x), depth-1);
     kdr = sexp_strip_synclos_bound(ctx, sexp_cdr(x), depth-1);
     res = sexp_cons(ctx, kar, kdr);
@@ -641,6 +640,8 @@ sexp sexp_strip_synclos_bound (sexp ctx, sexp x, int depth) {
 }
 
 sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  if (!sexp_contains_syntax_p_bound(x, SEXP_STRIP_SYNCLOS_BOUND))
+    return x;
   return sexp_strip_synclos_bound(ctx, x, SEXP_STRIP_SYNCLOS_BOUND);
 }
 
