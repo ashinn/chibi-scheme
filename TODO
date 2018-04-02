@@ -91,8 +91,6 @@
    - State "DONE"       from "TODO"       [2010-07-11 Sun 15:31]
    VM now supports an optional hook for green threads,
    and a SRFI-18 interface is provided as a separate module.
-   I/O operations will currently block all threads though,
-   this needs to be addressed.
 *** DONE thread-local parameters
     CLOSED: [2010-12-06 Mon 21:52]
 *** TODO efficient priority queues
