@@ -730,7 +730,7 @@ def | 6
 
       ;; from-file
       ;; for reference, filesystem-test relies on creating files under /tmp
-      (let* ((tmp-file "/tmp/chibi-show-test-0123456789")
+      (let* ((tmp-file "chibi-show-test-0123456789")
              (content-string "first line\nsecond line\nthird line"))
         (with-output-to-file tmp-file (lambda () (write-string content-string)))
         (test (string-append content-string "\n")
