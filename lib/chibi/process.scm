@@ -10,7 +10,9 @@
  (else
   (define (exit . o)
     (%exit (if (pair? o)
-               (if (integer? (car o)) (car o) (if (eq? #t (car o)) 0 1))
+               (if (integer? (car o))
+                   (inexact->exact (car o))
+                   (if (eq? #t (car o)) 0 1))
                0)))))
 
 (cond-expand
