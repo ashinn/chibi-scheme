@@ -31,7 +31,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; globals
 
-(define *ffi-version* "0.3")
+(define *ffi-version* "0.4")
 (define *types* '())
 (define *type-getters* '())
 (define *type-setters* '())
@@ -42,6 +42,7 @@
 (define *inits* '())
 (define *clibs* '())
 (define *cflags* '())
+(define *frameworks* '())
 (define *tags* '())
 (define *open-namespaces* '())
 (define *c++?* #f)
@@ -50,48 +51,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
 
-(define (parse-type type . o)
-  (cond
-   ((vector? type)
-    (if (and (pair? o) (car o))
-        (let ((res (vector-copy type)))
-          (type-index-set! res (car o))
-          res)
-        type))
-   (else
-    (let lp ((type type) (free? #f) (const? #f) (null-ptr? #f)
-             (ptr? #f) (ref? #f) (struct? #f) (link? #f) (result? #f) (array #f)
-             (value #f) (default? #f) (template #f) (new? #f))
-      (define (next) (if (null? (cddr type)) (cadr type) (cdr type)))
-      (case (and (pair? type) (car type))
-        ((free)
-         (lp (next) #t const? null-ptr? ptr? ref? struct? link? result? array value default? template new?))
-        ((const)
-         (lp (next) free? #t null-ptr? ptr? ref? struct? link? result? array value default? template new?))
-        ((maybe-null)
-         (lp (next) free? const? #t ptr? ref? struct? link? result? array value default? template new?))
-        ((pointer)
-         (lp (next) free? const? null-ptr? #t ref? struct? link? result? array value default? template new?))
-        ((reference)
-         (lp (next) free? const? null-ptr? ptr? #t struct? link? result? array value default? template new?))
-        ((struct)
-         (lp (next) free? const? null-ptr? ptr? ref? #t link? result? array value default? template new?))
-        ((link)
-         (lp (next) free? const? null-ptr? ptr? ref? struct? #t result? array value default? template new?))
-        ((result)
-         (lp (next) free? const? null-ptr? ptr? ref? struct? link? #t array value default? template new?))
-        ((array)
-         (lp (cadr type) free? const? null-ptr? ref? ptr? struct? link? result? (if (pair? (cddr type)) (car (cddr type)) #t) value default? template new?))
-        ((value)
-         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) default? template new?))
-        ((default)
-         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array (cadr type) #t template new?))
-        ((template)
-         (lp (cddr type) free? const? null-ptr? ref? ptr? struct? link? result? array value default? (cadr type) new?))
-        ((new)
-         (lp (next) free? const? null-ptr? ref? ptr? struct? link? result? array value default? template #t))
-        (else
-         (vector (if (and (pair? type) (null? (cdr type))) (car type) type) free? const? null-ptr? ptr? ref? struct? link? result? array value default? template new? (and (pair? o) (car o)))))))))
+(define (make-type) (make-vector 18 #f))
 
 (define (type-base type) (vector-ref type 0))
 (define (type-free? type) (vector-ref type 1))
@@ -107,8 +67,86 @@
 (define (type-default? type) (vector-ref type 11))
 (define (type-template type) (vector-ref type 12))
 (define (type-new? type) (vector-ref type 13))
-(define (type-index type) (vector-ref type 14))
-(define (type-index-set! type i) (vector-set! type 14 i))
+(define (type-error type) (vector-ref type 14))
+(define (type-address-of? type) (vector-ref type 15))
+(define (type-no-free? type) (vector-ref type 16))
+(define (type-index type) (vector-ref type 17))
+(define (type-index-set! type i) (vector-set! type 17 i))
+
+(define (spec->type type . o)
+  (let ((res (make-type)))
+    (if (pair? o)
+        (type-index-set! res (car o)))
+    (let lp ((type type))
+      (define (next) (if (null? (cddr type)) (cadr type) (cdr type)))
+      (case (and (pair? type) (car type))
+        ((free)
+         (vector-set! res 1 #t)
+         (lp (next)))
+        ((const)
+         (vector-set! res 2 #t)
+         (lp (next)))
+        ((maybe-null)
+         (vector-set! res 3 #t)
+         (lp (next)))
+        ((pointer)
+         (vector-set! res 4 #t)
+         (lp (next)))
+        ((reference)
+         (vector-set! res 5 #t)
+         (lp (next)))
+        ((struct)
+         (vector-set! res 6 #t)
+         (lp (next)))
+        ((link)
+         (vector-set! res 7 #t)
+         (lp (next)))
+        ((result)
+         (vector-set! res 8 #t)
+         (lp (next)))
+        ((array)
+         (vector-set! res 9 (if (pair? (cddr type)) (car (cddr type)) #t))
+         (lp (cadr type)))
+        ((value)
+         (vector-set! res 10 (cadr type))
+         (lp (cddr type)))
+        ((default)
+         (vector-set! res 10 (cadr type))
+         (vector-set! res 11 #t)
+         (lp (cddr type)))
+        ((template)
+         (vector-set! res 12 (cadr type))
+         (lp (cddr type)))
+        ((new)
+         (vector-set! res 13 #t)
+         (lp (next)))
+        ((error)
+         (vector-set! res 8 #t)
+         (vector-set! res 14 (cadr type))
+         (lp (cddr type)))
+        ((address-of)
+         (vector-set! res 15 #t)
+         (lp (next)))
+        ((no-free)
+         (vector-set! res 16 #t)
+         (lp (next)))
+        (else
+         (let ((base (if (and (pair? type) (null? (cdr type)))
+                         (car type)
+                         type)))
+           (vector-set! res 0 base)
+           res))))))
+
+(define (parse-type type . o)
+  (cond
+   ((vector? type)
+    (if (and (pair? o) (car o))
+        (let ((res (vector-copy type)))
+          (type-index-set! res (car o))
+          res)
+        type))
+   (else
+    (apply spec->type type o))))
 
 (define (type-auto-expand? type)
   (and (pair? (type-array type))
@@ -199,7 +237,9 @@
   (memq type '(port input-port output-port input-output-port)))
 
 (define (error-type? type)
-  (memq type '(errno status-bool non-null-string non-null-pointer)))
+  (or (type-error type)
+      (memq (type-base type)
+            '(errno status-bool non-null-string non-null-pointer))))
 
 (define (array-type? type)
   (and (type-array type) (not (eq? 'char (type-base type)))))
@@ -418,6 +458,9 @@
 
 (define (c-link lib)
   (set! *clibs* (cons lib *clibs*)))
+
+(define (c-framework lib)
+  (set! *frameworks* (cons lib *frameworks*)))
 
 (define (c-flags-from-script cmd)
   (eval '(import (chibi process)) (current-environment))
@@ -678,7 +721,7 @@
     (cond
      ((and (eq? base 'void) (not (type-pointer? type)))
       (cat "((" val "), SEXP_VOID)"))
-     ((or (eq? base 'sexp) (error-type? base))
+     ((or (eq? base 'sexp) (error-type? type))
       (cat val))
      ((memq base '(bool boolean status-bool))
       (cat "sexp_make_boolean(" val ")"))
@@ -731,7 +774,9 @@
                val ", " (or (and (pair? o) (car o)) "SEXP_FALSE") ", "
                (if (or (type-free? type)
                        (type-new? type)
-                       (and (type-result? type) (not (basic-type? type))))
+                       (and (type-result? type)
+                            (not (basic-type? type))
+                            (not (type-no-free? type))))
                    1
                    0)
                ")"))
@@ -786,6 +831,7 @@
          ((or ctype void*?)
           (cat (if (or (type-struct? type) (type-reference? type)) "*" "")
                "(" (type-c-name type) ")"
+               (if (type-address-of? type) "&" "")
                (if (type-null? type)
                    "sexp_cpointer_maybe_null_value"
                    "sexp_cpointer_value")
@@ -983,7 +1029,7 @@
   (let* ((ret-type (func-ret-type func))
          (results (func-results func))
          (scheme-args (func-scheme-args func))
-         (return-res? (not (error-type? (type-base ret-type))))
+         (return-res? (not (error-type? ret-type)))
          (preserve-res? (> (+ (length results)) (if return-res? 0 1)))
          (single-res? (and (= 1 (length results)) (not return-res?)))
          (tmp-string? (any (lambda (a)
@@ -1013,9 +1059,10 @@
              "  struct " (type-base ret-type) "* ptr_res;\n"))
     (cond
      ((pair? ints)
-      (cat "  int " (car ints))
-      (for-each (lambda (x) (display ", ") (display x)) (cdr ints))
-      (cat ";\n")))
+      (cat "  int " (car ints) " = 0"
+           (lambda ()
+             (for-each (lambda (x) (cat ", " x " = 0")) (cdr ints)))
+           ";\n")))
     (if (any (lambda (a) (eq? 'env-string (type-base a)))
              (cons ret-type results))
         (cat "  char *p;\n"))
@@ -1029,8 +1076,11 @@
          (cat (if (type-auto-expand? x) "buf" "tmp") (type-index-string x))
          (if (number? len)
              (cat "[" len "]"))
-         (if (type-reference? x)
-             (cat " = NULL"))
+         (cond
+          ((type-reference? x)
+           (cat " = NULL"))
+          ((type-error x)
+           (cat " = 0")))
          (cat ";\n")
          (if (or (vector? len) (type-auto-expand? x))
              (cat "  int len" (type-index x) ";\n"))
@@ -1046,7 +1096,8 @@
      (lambda (arg)
        (cond
         ((and (type-pointer? arg) (basic-type? arg))
-         (cat "  " (type-c-name (type-base arg))
+         (cat "  " (if (type-const? arg) "const " "")
+              (type-c-name (type-base arg))
               " tmp" (type-index arg) ";\n"))))
      scheme-args)
     (cond
@@ -1116,7 +1167,8 @@
 (define (write-actual-parameter func arg)
   (cond
    ((or (type-result? arg) (type-array arg))
-    (cat (if (or (type-free? arg) (type-reference? arg) (basic-type? arg))
+    (cat (if (or (type-free? arg) (type-reference? arg)
+                 (type-address-of? arg) (basic-type? arg))
              "&"
              "")
          "tmp" (type-index arg)))
@@ -1168,15 +1220,17 @@
              (cat "  tmp" (type-index a)
                   " = new " (type-c-name-derefed (type-base a)) "();\n")
              (cat "  tmp" (type-index a) " = "
-                  (if #t ;(type-struct-type a)
-                      (lambda () (cat "(" (type-c-name (type-base a))
-                                 (if (type-pointer? a) "*" "")
-                                 ")"))
-                      "")
+                  (lambda () (cat "(" (type-c-name (type-base a))
+                              (if (or (type-pointer? a)
+                                      (and (not (int-type? a))
+                                           (not (type-struct-type a))))
+                                  "*"
+                                  "")
+                              ")"))
                   " calloc(1, 1 + "
                   (if (and (symbol? len) (not (eq? len 'null)))
                       (lambda () (cat (lambda () (scheme->c-converter 'unsigned-int len))
-                                 "*sizeof(tmp" (type-index a) "[0])"))
+                                  "*sizeof(tmp" (type-index a) "[0])"))
                       (lambda () (cat "sizeof(tmp" (type-index a) "[0])")))
                   ");\n"
                   (lambda ()
@@ -1202,7 +1256,7 @@
         (c-args (func-c-args func)))
     (if (any type-auto-expand? (func-c-args func))
         (cat " loop:\n"))
-    (cat (cond ((error-type? (type-base ret-type)) "  err = ")
+    (cat (cond ((error-type? ret-type) "  err = ")
                ((type-array ret-type) "  tmp = ")
                ((type-struct? ret-type) "  struct_res = ")
                (else "  res = ")))
@@ -1288,7 +1342,14 @@
                "  }\n"
                "  " res " = sexp_nreverse(ctx, " res ");\n"))
          (else
-          (cat "  for (i=" len "-1; i>=0; i--) {\n"
+          (cat "  for (i=" (if (and (symbol? len)
+                                    (equal? "arg"
+                                            (substring (symbol->string len)
+                                                        0 3)))
+                               (string-append
+                                "sexp_unbox_fixnum(" (symbol->string len) ")")
+                               len)
+               "-1; i>=0; i--) {\n"
                "    sexp_push(ctx, " res ", SEXP_VOID);\n"
                "    sexp_car(" res ") = "
                (lambda () (c->scheme-converter result (lambda () (cat tmp "[i]"))))
@@ -1305,16 +1366,23 @@
     (write-result-adjustment result)))
 
 (define (write-results func)
-  (let ((error-res? (error-type? (type-base (func-ret-type func))))
-        (void-res? (eq? 'void (type-base (func-ret-type func))))
-        (results (func-results func)))
-    (if error-res?
+  (let* ((error-res (cond ((error-type? (func-ret-type func))
+                           (func-ret-type func))
+                          ((find type-error (func-c-args func)))
+                          (else #f)))
+         (error-return? (eq? error-res (func-ret-type func)))
+         (void-res? (eq? 'void (type-base (func-ret-type func))))
+         (results (remove type-error (func-results func))))
+    (if error-res
         (cat "  if ("
-             (if (memq (type-base (func-ret-type func))
+             (if (memq (type-base error-res)
                        '(status-bool non-null-string non-null-pointer))
                  "!"
                  "")
-             "err) {\n"
+             (if error-return?
+                 "err"
+                 (string-append "tmp" (type-index-string error-res)))
+             ") {\n"
              (cond
               ((find type-auto-expand? (func-c-args func))
                => (lambda (a)
@@ -1327,20 +1395,26 @@
                         (cat "  len" i " *= 2;\n"
                              "  tmp" i " = "
                              (lambda () (cat "(" (type-c-name (type-base a))
-                                        (if (or (type-pointer? a)
-                                                (and (not *c++?*)
-                                                     (string-type? a)))
-                                            "*"
-                                            "")
-                                        ")"))
+                                         (if (or (type-pointer? a)
+                                                 (and (not *c++?*)
+                                                      (string-type? a)))
+                                             "*"
+                                             "")
+                                         ")"))
                              " calloc(len" i ", sizeof(tmp" i "[0]));\n"
                              "  goto loop;\n")))))
-              (else
+              (error-return?
                ;; TODO: free other results
-               "  res = SEXP_FALSE;\n"))
+               "  res = SEXP_FALSE;\n")
+              (else
+               (lambda ()
+                 (cat "  res = sexp_user_exception(ctx, self, "
+                      (type-error error-res) "(tmp"
+                      (type-index-string error-res)
+                      "), SEXP_NULL);\n"))))
              "  } else {\n"))
     (if (null? results)
-        (if error-res?
+        (if (and error-res error-return?)
             (cat "  res = SEXP_TRUE;\n"))
         (let ((first-result-link
                ;; the `link' modifier applies to the first result when
@@ -1354,20 +1428,20 @@
           (write-result (car results) first-result-link)
           (for-each write-result (cdr results))))
     (cond
-     ((> (length results) (if (or error-res? void-res?) 1 0))
-      (if (or error-res? void-res?)
+     ((> (length results) (if (or error-res void-res?) 1 0))
+      (if (or error-res void-res?)
           (cat "  res = SEXP_NULL;\n")
           (cat "  res = sexp_cons(ctx, res, SEXP_NULL);\n"))
       (for-each
        (lambda (x)
-         (if (or error-res? void-res?)
+         (if (or error-res void-res?)
              (cat "  sexp_push(ctx, res, res" (type-index x) ");\n")
              (cat "  sexp_push(ctx, res, sexp_car(res));\n"
                   "  sexp_cadr(res) = res" (type-index x) ";\n")))
        (reverse results)))
      ((pair? results)
       (cat "  res = res" (type-index (car results)) ";\n")))
-    (if error-res?
+    (if error-res
         (cat "  }\n"))))
 
 (define (write-free type)
@@ -1396,7 +1470,7 @@
        (cat "  free(tmp" (type-index a) ");\n"))))
    (func-c-args func))
   (let* ((results (func-results func))
-         (return-res? (not (error-type? (type-base (func-ret-type func)))))
+         (return-res? (not (error-type? (func-ret-type func))))
          (preserve-res? (> (+ (length results)) (if return-res? 0 1)))
          (single-res? (and (= 1 (length results)) (not return-res?)))
          (tmp-string? (any (lambda (a)
@@ -2077,7 +2151,10 @@
                  (base-args (append cflags *cflags*
                                     `("-o" ,so ,dest "-lchibi-scheme")
                                     (map (lambda (x) (string-append "-l" x))
-                                         (reverse *clibs*))))
+                                         (reverse *clibs*))
+                                    (apply append
+                                           (map (lambda (x) (list "-framework" x))
+                                                (reverse *frameworks*)))))
                  (args
                   (eval
                    `(cond-expand

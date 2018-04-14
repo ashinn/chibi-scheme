@@ -398,6 +398,42 @@ int getpwnam_x(char* name, struct password* pwd, char* buf,
  (test-not (getpwnam_x "hacker" (make-string 1024)))
  )
 
+(test-ffi
+ "error-results"
+ (begin
+   (c-declare "
+char* err2str(int err) {
+  switch (err) {
+    case 0: return NULL;
+    case 1: return \"domain error\";
+    case 2: return \"bad things\";
+  }
+  return \"unknown error\";
+}
+
+int fib(int n, int* status) {
+  if (n < 0)
+    *status = 1;
+  if (n > 5)
+    *status = 2;
+  if (*status)
+    return 0;
+  if (n <= 1)
+    return 1;
+  return fib(n-1, status) + fib(n-2, status);
+}
+")
+   (define-c int fib
+     (int (error err2str int))))
+ (test 1 (fib 0))
+ (test 1 (fib 1))
+ (test 2 (fib 2))
+ (test 8 (fib 5))
+ (test "domain error"
+     (protect (exn (else (exception-message exn))) (fib -1)))
+ (test "bad things"
+     (protect (exn (else (exception-message exn))) (fib 10))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Field introspection and matching.
 
