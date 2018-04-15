@@ -1174,10 +1174,18 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     bc = sexp_procedure_code(self);
     cp = sexp_procedure_vars(self);
     ip = (sexp_bytecode_data(bc)+sexp_unbox_fixnum(stack[fp+1])) - sizeof(sexp);
-    for (top=fp-j+i-1; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
-      stack[top] = sexp_car(tmp2);
-    top = fp+i-j+1;
-    fp = k;
+    {
+      int prev_top = top;
+      for (top=fp-j+i-1; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
+        stack[top] = sexp_car(tmp2);
+      top = fp+i-j+1;
+      fp = k;
+      /* if final cdr of tmp2 isn't null, then args list was improper */
+      if (! sexp_nullp(tmp2)) {
+        top = prev_top;
+        sexp_raise("apply: improper args list", sexp_list1(ctx, stack[prev_top-2]));
+      }
+    }
     goto make_call;
   case SEXP_OP_TAIL_CALL:
     _ALIGN_IP();
