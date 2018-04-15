@@ -43,12 +43,12 @@
          (append-helper (cdr lol) (car lol)))
        (reverse o))))
 
-(define (apply proc . args)
+(define (apply proc arg1 . args)
   (if (null? args)
-      (proc)
+      (apply1 proc arg1)
       ((lambda (lol)
          (apply1 proc (append2 (reverse (cdr lol)) (car lol))))
-       (reverse args))))
+       (reverse (cons arg1 args)))))
 
 ;; map with a fast-path for single lists
 

@@ -1591,6 +1591,12 @@
 (test #t (call-with-current-continuation procedure?))
 
 (test 7 (apply + (list 3 4)))
+(test 7 (apply + 3 4 (list)))
+(test-error (apply +)) ;; not enough args
+(test-error (apply + 3)) ;; final arg not a list
+(test-error (apply + 3 4)) ;; final arg not a list
+(test-error (apply + '(2 3 . 4))) ;; final arg is improper
+
 
 (define compose
   (lambda (f g)
