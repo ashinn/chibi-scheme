@@ -2161,4 +2161,7 @@
                      (macosx (append '("-dynamiclib" "-Oz") ',base-args))
                      (else (append '("-fPIC" "-shared" "-Os") ',base-args)))))
                  (cc (or cc (if *c++?* "c++" "cc"))))
+            (display ";; " (current-error-port))
+            (write (cons cc args) (current-error-port))
+            (newline (current-error-port))
             (execute cc (cons cc args))))))))))
