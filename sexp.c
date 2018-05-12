@@ -3120,7 +3120,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
           } else {
             res = 0;
             for (c2=0; c2 < sexp_num_char_names; c2++) {
-              if (strcasecmp(str, sexp_char_names[c2].name) == 0) {
+              if ((sexp_port_fold_casep(in) ? strcasecmp : strcmp)(str, sexp_char_names[c2].name) == 0) {
                 res = sexp_make_character(sexp_char_names[c2].ch);
                 break;
               }
