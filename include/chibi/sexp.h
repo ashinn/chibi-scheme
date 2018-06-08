@@ -891,8 +891,15 @@ SEXP_API int sexp_idp(sexp x);
 #endif
 
 #if SEXP_USE_BIGNUMS
+SEXP_API sexp sexp_make_integer_from_lsint(sexp ctx, sexp_lsint_t x);
+SEXP_API sexp sexp_make_unsigned_integer_from_luint(sexp ctx, sexp_luint_t x);
+#if SEXP_USE_CUSTOM_LONG_LONGS
+#define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
+#define sexp_make_unsigned_integer(ctx, x) sexp_make_fixnum(x)
+#else
 SEXP_API sexp sexp_make_integer(sexp ctx, sexp_lsint_t x);
 SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
+#endif
 #define sexp_exact_integerp(x) (sexp_fixnump(x) || sexp_bignump(x))
 #else
 #define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
@@ -1532,7 +1539,7 @@ SEXP_API sexp sexp_read_symbol (sexp ctx, sexp in, int init, int internp);
 SEXP_API sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp);
 #if SEXP_USE_BIGNUMS
 SEXP_API sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
-				signed char sign, sexp_uint_t base);
+                                signed char sign, sexp_uint_t base);
 SEXP_API sexp sexp_write_bignum (sexp ctx, sexp a, sexp out, sexp_uint_t base);
 #endif
 SEXP_API sexp sexp_read_float_tail(sexp ctx, sexp in, double whole, int negp);
