@@ -3253,6 +3253,8 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
             res = sexp_string_to_number(ctx, res, SEXP_TEN);
             if (sexp_complexp(res) && (sexp_complex_real(res) == SEXP_ZERO))
               sexp_complex_real(res) = tmp;
+            else if (res == SEXP_ZERO)
+              res = tmp;
             else if (!sexp_exceptionp(res))
               res = sexp_read_error(ctx, "invalid complex infinity", res, in);
           } else {
