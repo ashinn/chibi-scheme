@@ -610,14 +610,21 @@ sexp sexp_bignum_remainder (sexp ctx, sexp a, sexp b) {
 }
 
 sexp sexp_bignum_expt (sexp ctx, sexp a, sexp b) {
-  sexp_sint_t e = sexp_unbox_fx_abs(b);
+  sexp_sint_t e = sexp_unbox_fixnum(b);
+  sexp_sint_t abs_e;
+  if (e < 0)
+    abs_e = -e;
+  else
+    abs_e = e;
   sexp_gc_var2(res, acc);
   sexp_gc_preserve2(ctx, res, acc);
   res = sexp_fixnum_to_bignum(ctx, SEXP_ONE);
   acc = sexp_copy_bignum(ctx, NULL, a, 0);
-  for (; e; e>>=1, acc=sexp_bignum_mul(ctx, NULL, acc, acc))
-    if (e & 1)
+  for (; abs_e; abs_e>>=1, acc=sexp_bignum_mul(ctx, NULL, acc, acc))
+    if (abs_e & 1)
       res = sexp_bignum_mul(ctx, NULL, res, acc);
+  if (e < 0)
+    res = sexp_div(ctx, sexp_fixnum_to_bignum(ctx, SEXP_ONE), res);
   sexp_gc_release2(ctx);
   return sexp_bignum_normalize(res);
 }
