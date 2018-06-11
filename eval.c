@@ -1706,6 +1706,11 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
       res = sexp_make_flonum(ctx, pow(10.0, 1e100));   /* +inf.0 */
   } else if (sexp_bignump(x)) {
     res = sexp_bignum_expt(ctx, x, e);
+  } else if (sexp_fixnump(x)) {
+      sexp_gc_preserve1(ctx, tmp);
+      tmp = sexp_fixnum_to_bignum(ctx, x);
+      res = sexp_bignum_expt(ctx, tmp, e);
+      sexp_gc_release1(ctx);
   } else {
 #endif
   if (sexp_fixnump(x))
