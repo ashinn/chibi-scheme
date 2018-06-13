@@ -592,6 +592,8 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
 
   if (sexp_context_waitp(res)) {
     /* the only thread available was waiting */
+    /* TODO: if another thread is blocked on I/O, wait on that with
+     * the appropriate minimum timeout */
     if (sexp_pairp(paused)
         && sexp_context_before(sexp_car(paused), sexp_context_timeval(res))) {
       tmp = res;
@@ -609,13 +611,14 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
       /* no timeout, wait for default 10ms */
       usecs = 10*1000;
     } else {
-      /* wait until the next timeout */
+      /* wait until the next timeout, or at most 10ms */
       gettimeofday(&tval, NULL);
       if (tval.tv_sec <= sexp_context_timeval(res).tv_sec) {
         usecs = (sexp_context_timeval(res).tv_sec - tval.tv_sec) * 1000000;
         if (tval.tv_usec < sexp_context_timeval(res).tv_usec || usecs > 0)
           usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
       }
+      if (usecs > 10*1000) usecs = 10*1000;
     }
     /* take a nap to avoid busy looping */
     usleep(usecs);
