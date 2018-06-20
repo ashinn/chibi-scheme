@@ -16,8 +16,10 @@
     (define (run-tests)
       (test-begin "numbers")
 
+      (test 0 (expt 0 1))
+      (test 1 (expt 3 0))
       (test 3 (expt 3 1))
-      ;(test 1/3 (expt 3 -1))
+      (test 1/3 (expt 3 -1))
       (test 1/300000000000000000000 (expt 300000000000000000000 -1))
 
       (test '(536870912 536870913 536870911 -536870912 -536870911 -536870913)
