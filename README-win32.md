@@ -12,7 +12,7 @@ Supported Environments
 
 Chibi-scheme can be compiled with following platforms:
 
-* Microsoft Visual Studio 2017 (32bit only)
+* Microsoft Visual Studio 2017
 * MinGW32
 * MinGW64
 * MSYS
@@ -74,8 +74,8 @@ it does not support UNIX/APPLE platforms either.
 
 1. (Make sure CMake was selected with Visual Studio installer)
 2. Open this directory with "Open with Visual Studio"
-3. Choose "x86-Release" or "x86-Debug" configuration
+3. Choose "x86-" or "x64-" configuration
 4. "CMake" => "Build all"
-5. "CMake" => "Run Tests" => "chibi-scheme"
+5. "CMake" => "Tests" => "Run chibi-scheme Tests"
 
 
