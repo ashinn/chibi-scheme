@@ -1729,11 +1729,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     sexp_context_top(ctx) = --top;
 #if SEXP_USE_BIGNUMS
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
-      prod = (sexp_lsint_t)sexp_unbox_fixnum(tmp1) * sexp_unbox_fixnum(tmp2);
-      if ((prod < SEXP_MIN_FIXNUM) || (prod > SEXP_MAX_FIXNUM))
+      prod = lsint_mul_sint(lsint_from_sint(sexp_unbox_fixnum(tmp1)), sexp_unbox_fixnum(tmp2));
+      if (!lsint_is_fixnum(prod))
         _ARG1 = sexp_mul(ctx, tmp1=sexp_fixnum_to_bignum(ctx, tmp1), tmp2);
       else
-        _ARG1 = sexp_make_fixnum(prod);
+        _ARG1 = sexp_make_fixnum(lsint_to_sint(prod));
     }
     else {
       _ARG1 = sexp_mul(ctx, tmp1, tmp2);
