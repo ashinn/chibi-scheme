@@ -209,10 +209,6 @@ enum sexp_types {
 #endif
 
 #ifdef _WIN32
-#if defined(_MSC_VER) && SEXP_64_BIT
-/* On SEXP_64_BIT, 128bits arithmetic is mandatory */
-#error Unsupported configuration
-#endif
 #if SEXP_64_BIT
 typedef unsigned int sexp_tag_t;
 typedef unsigned long long sexp_uint_t;
