@@ -1471,6 +1471,7 @@ int sexp_buffered_flush (sexp ctx, sexp p, int forcep) {
       tmp = sexp_list2(ctx, SEXP_ZERO, sexp_make_fixnum(sexp_port_offset(p)));
       tmp = sexp_cons(ctx, sexp_port_binaryp(p) ? sexp_string_bytes(sexp_port_buffer(p)) : sexp_port_buffer(p), tmp);
       tmp = sexp_apply(ctx, sexp_port_writer(p), tmp);
+      sexp_port_offset(p) = 0;
       res = (sexp_fixnump(tmp) && sexp_unbox_fixnum(tmp) > 0) ? 0 : -1;
     } else {                      /* string port */
       tmp = sexp_c_string(ctx, sexp_port_buf(p), off);

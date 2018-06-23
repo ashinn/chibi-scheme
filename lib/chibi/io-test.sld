@@ -179,13 +179,26 @@
                    (lambda (bv start end)
                      (do ((i start (+ i 1))
                           (x 0 (+ x (bytevector-u8-ref bv i))))
-                         ((= i end) (set! sum x)))))))
+                         ((= i end) (set! sum (+ sum x))))))))
         (write-bytevector #u8(0 1 2 3) out)
         (flush-output out)
         (test 6 sum)
         (write-bytevector #u8(100) out)
         (flush-output out)
         (test 106 sum))
+
+      (let* ((ls '())
+             (out (make-custom-output-port
+                   (lambda (str start end)
+                     (set! ls (cons (substring str start end) ls))
+                     (- end start)))))
+        (display "Test1\n" out)
+        (flush-output out)
+        (display "Test2\n" out)
+        (flush-output out)
+        (display "Test3\n" out)
+        (flush-output out)
+        (test "Test1\nTest2\nTest3\n" (string-concatenate (reverse ls))))
 
       (test "file-position"
           '(0 1 2)
