@@ -283,9 +283,20 @@ typedef short sexp_int32_t;
 #endif
 
 #if defined(__APPLE__) || defined(_WIN64) || (defined(__CYGWIN__) && __SIZEOF_POINTER__ == 8)
-#define PRIoff "%lld"
+#define SEXP_PRIdOFF "lld"
 #else
-#define PRIoff "%ld"
+#define SEXP_PRIdOFF "ld"
+#endif
+
+#if defined(__GNUC__) || defined(_WIN64) || defined(__APPLE__)
+#include <stdint.h>
+#if SEXP_64_BIT
+#define SEXP_PRIdFIXNUM PRId64
+#else
+#define SEXP_PRIdFIXNUM PRId32
+#endif
+#else
+#define SEXP_PRIdFIXNUM "ld"
 #endif
 
 #if SEXP_USE_LONG_PROCEDURE_ARGS

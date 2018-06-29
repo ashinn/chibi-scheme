@@ -2111,7 +2111,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    snprintf(numbuf, NUMBUF_LEN, "%ld", (long)sexp_unbox_fixnum(obj));
+    snprintf(numbuf, NUMBUF_LEN, "%" SEXP_PRIdFIXNUM, (long)sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
