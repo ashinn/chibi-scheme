@@ -820,10 +820,13 @@
             ((null? p) (list _and (list _null? v) (k vars)))
             (else (list _and (list _equal? v p) (k vars))))))))
     (define ellipsis-mark?
-      (let ((cmp (if ellipsis-specified? eq? compare)))
-        (if (any (lambda (x) (cmp ellipsis x)) lits)
-            (lambda (x) #f)
-            (lambda (x) (cmp ellipsis x)))))
+      (if (if ellipsis-specified?
+              (memq ellipsis lits)
+              (any (lambda (x) (compare ellipsis x)) lits))
+          (lambda (x) #f)
+          (if ellipsis-specified?
+              (lambda (x) (eq? ellipsis x))
+              (lambda (x) (compare ellipsis x)))))
     (define (ellipsis-escape? x) (and (pair? x) (ellipsis-mark? (car x))))
     (define (ellipsis? x)
       (and (pair? x) (pair? (cdr x)) (ellipsis-mark? (cadr x))))
@@ -873,11 +876,7 @@
          ((pair? t)
           (cond
            ((and (ellipsis-escape? t) (not ell-esc))
-            (lp (if (pair? (cdr t))
-                    (if (pair? (cddr t)) (cddr t) (cadr t))
-                    (cdr t))
-                dim
-                #t))
+            (lp (if (and (pair? (cdr t)) (null? (cddr t))) (cadr t) (cdr t)) dim #t))
            ((and (ellipsis? t) (not ell-esc))
             (let* ((depth (ellipsis-depth t))
                    (ell-dim (+ dim depth))
