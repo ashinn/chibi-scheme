@@ -862,7 +862,7 @@
          ((vector? x) (lp (vector->list x) free))
          (else free))))
     (define (expand-template tmpl vars)
-      (let lp ((t tmpl) (dim 0))
+      (let lp ((t tmpl) (dim 0) (ell-esc #f))
         (cond
          ((identifier? t)
           (cond
@@ -875,12 +875,9 @@
             (list _rename (list _quote t)))))
          ((pair? t)
           (cond
-           ((ellipsis-escape? t)
-            (list _quote
-                  (if (pair? (cdr t))
-                      (if (pair? (cddr t)) (cddr t) (cadr t))
-                      (cdr t))))
-           ((ellipsis? t)
+           ((and (ellipsis-escape? t) (not ell-esc))
+            (lp (if (and (pair? (cdr t)) (null? (cddr t))) (cadr t) (cdr t)) dim #t))
+           ((and (ellipsis? t) (not ell-esc))
             (let* ((depth (ellipsis-depth t))
                    (ell-dim (+ dim depth))
                    (ell-vars (free-vars (car t) vars ell-dim)))
@@ -889,9 +886,9 @@
                 (error "too many ...'s"))
                ((and (null? (cdr (cdr t))) (identifier? (car t)))
                 ;; shortcut for (var ...)
-                (lp (car t) ell-dim))
+                (lp (car t) ell-dim ell-esc))
                (else
-                (let* ((once (lp (car t) ell-dim))
+                (let* ((once (lp (car t) ell-dim ell-esc))
                        (nest (if (and (null? (cdr ell-vars))
                                       (identifier? once)
                                       (eq? once (car vars)))
@@ -905,9 +902,9 @@
                                  ((= d 1) many))))
                   (if (null? (ellipsis-tail t))
                       many ;; shortcut
-                      (list _append many (lp (ellipsis-tail t) dim))))))))
-           (else (list _cons3 (lp (car t) dim) (lp (cdr t) dim) (list _quote t)))))
-         ((vector? t) (list _list->vector (lp (vector->list t) dim)))
+                      (list _append many (lp (ellipsis-tail t) dim ell-esc))))))))
+           (else (list _cons3 (lp (car t) dim ell-esc) (lp (cdr t) dim ell-esc) (list _quote t)))))
+         ((vector? t) (list _list->vector (lp (vector->list t) dim ell-esc)))
          ((null? t) (list _quote '()))
          (else t))))
     (list
