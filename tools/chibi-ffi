@@ -1233,11 +1233,12 @@
                                   "*sizeof(tmp" (type-index a) "[0])"))
                       (lambda () (cat "sizeof(tmp" (type-index a) "[0])")))
                   ");\n"
-                  (lambda ()
-                    (if (and (symbol? len) (not (eq? len 'null)))
-                        (cat "  tmp" (type-index a) "["
-                             (lambda () (scheme->c-converter 'unsigned-int len))
-                             "*sizeof(tmp" (type-index a) "[0])] = 0;\n"))))))
+                  ;; (lambda ()
+                  ;;   (if (and (symbol? len) (not (eq? len 'null)))
+                  ;;       (cat "  tmp" (type-index a) "["
+                  ;;            (lambda () (scheme->c-converter 'unsigned-int len))
+                  ;;            "*sizeof(tmp" (type-index a) "[0])] = 0;\n")))
+                  )))
         ((and (type-result? a) (type-value a))
          (cat "  tmp" (type-index a) " = "
               (lambda () (write-value func (type-value a))) ";\n"))
