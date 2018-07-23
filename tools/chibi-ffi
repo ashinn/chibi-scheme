@@ -567,6 +567,28 @@
        (for-each (lambda (x) (set! *consts* (cons (list type x) *consts*)))
                  (cddr expr))))))
 
+;; custom strerror which reports constants as their names
+(define-syntax define-c-strerror
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let ((name (cadr expr))
+           (errnos (cddr expr)))
+       `(,(rename 'c-declare)
+         ,(string-concatenate
+           `("\nchar* " ,(x->string name) "(const int err) {
+  static char buf[64];
+  switch (err) {
+"
+             ,@(map (lambda (errno)
+                      (let ((e (x->string errno)))
+                        (string-append "    case " e ": return \"" e "\";\n")))
+                    errnos)
+             
+             "  }
+  sprintf(buf, \"unknown error: %d\", err);
+  return buf;
+}")))))))
+
 (define-syntax c-typedef
   (er-macro-transformer
    (lambda (expr rename compare)
