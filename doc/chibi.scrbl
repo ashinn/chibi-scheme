@@ -523,6 +523,11 @@ Returns the current binding of \var{sym} in \var{env}, or \var{dflt} if there
 is no binding.
 }}
 
+\item{\ccode{sexp_env_import(sexp ctx, sexp to, sexp from, sexp ls, sexp immutp)}
+\p{
+Imports the bindings from environment \var{from} into environment \var{to}.  \var{ls} is the list of bindings to import - if it is \scheme{#f} then import all bindings.  If \var{immutp} is true the imported bindings are immutable and cannot be redefined.
+}}
+
 \item{\ccode{sexp_parameter_ref(sexp ctx, sexp param)}
 \p{
 Returns the current dynamic value of the parameter \var{param} in the
