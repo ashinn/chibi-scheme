@@ -299,7 +299,7 @@ sexp run_main (int argc, char **argv) {
   char *arg;
   const char *prefix=NULL, *suffix=NULL, *main_symbol=NULL, *main_module=NULL;
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
-    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS, nonblocking=0;
+    fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS, nonblocking=0, srfi22=0;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp out=SEXP_FALSE, ctx=NULL, ls;
   sexp_gc_var4(tmp, sym, args, env);
@@ -310,6 +310,7 @@ sexp run_main (int argc, char **argv) {
   /* invoked as `scheme-r7rs`. */
   arg = strrchr(argv[0], '/');
   if (strncmp((arg == NULL ? argv[0] : arg + 1), "scheme-r7rs", strlen("scheme-r7rs")) == 0) {
+    srfi22 = 1;
     main_symbol = "main";
     /* skip option parsing since we can't pass `--` before the name of script */
     /* to avoid misinterpret the name as options when the interpreter is */
@@ -543,7 +544,7 @@ sexp run_main (int argc, char **argv) {
     if (i < argc)
       for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    if (i >= argc || main_symbol != NULL)
+    if (i >= argc || (main_symbol != NULL && srfi22 == 0))
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     load_init(i < argc || main_symbol != NULL);
     sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
