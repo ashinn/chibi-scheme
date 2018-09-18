@@ -783,7 +783,7 @@
                (+ ,char-set:regional-indicator)
                (: "\r\n")
                (: (~ control ("\r\n"))
-                  (+ ,char-set:extend-or-spacing-mark))
+                  (* ,char-set:extend-or-spacing-mark))
                control)
           flags
           next))

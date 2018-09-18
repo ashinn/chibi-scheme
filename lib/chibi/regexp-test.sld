@@ -205,6 +205,13 @@
       (test-re '("한") '(: bog grapheme eog) "한")
       (test-re #f '(: "ᄒ" bog grapheme eog "ᆫ") "한")
 
+      (test '("a" "b" "c") (regexp-extract 'grapheme "abc"))
+      (test '("a" " " "b" " " "c") (regexp-extract 'grapheme "a b c"))
+      (test '("a" "\n" "b" "\r\n" "c") (regexp-extract 'grapheme "a\nb\r\nc"))
+      (test '("a\x0300;" "b\x0301;\x0302;" "c\x0303;\x0304;\x0305;")
+          (regexp-extract 'grapheme "a\x0300;b\x0301;\x0302;c\x0303;\x0304;\x0305;"))
+      (test '("한" "글") (regexp-extract 'grapheme "한글"))
+
       (test '("123" "456" "789") (regexp-extract '(+ digit) "abc123def456ghi789"))
       (test '("123" "456" "789") (regexp-extract '(* digit) "abc123def456ghi789"))
       (test '("abc" "def" "ghi" "") (regexp-split '(+ digit) "abc123def456ghi789"))
