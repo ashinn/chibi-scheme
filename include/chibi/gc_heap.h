@@ -7,6 +7,10 @@
 
 #include "chibi/sexp.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Iterate the heap associated with the context argument 'ctx',
    calling user provided callbacks for the individual heap elements.
    
@@ -95,5 +99,8 @@ SEXP_API char* sexp_load_image_err();
  */
 SEXP_API void sexp_gc_heap_stats_print(sexp ctx);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* ! SEXP_GC_HEAP_H */
