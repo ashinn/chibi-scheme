@@ -165,6 +165,13 @@
 ;;> \item{\scheme|{\exit}| - exit the REPL}
 ;;> ]
 
+;;> The results of the last ten successful evaluations are available
+;;> via a history facility. \var{$0} holds the most recent result
+;;> while \var{$9} holds the tenth-most recent result. Evaluations
+;;> yielding single values are stored as single values while evaluations
+;;> that yield multiple values are stored as lists of values. 
+
+
 (define-record-type Repl
   (make-repl
    in out escape module env meta-env make-prompt history-file history raw?)
