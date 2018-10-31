@@ -305,6 +305,38 @@
            (else
             (display "... none found.\n" out))))))))))
 
+(define undefined-value (if #f #f))
+
+(define $0 undefined-value)
+(define $1 undefined-value)
+(define $2 undefined-value)
+(define $3 undefined-value)
+(define $4 undefined-value)
+(define $5 undefined-value)
+(define $6 undefined-value)
+(define $7 undefined-value)
+(define $8 undefined-value)
+(define $9 undefined-value)
+
+(define (push-history-value! value)
+  (set! $9 $8)
+  (set! $8 $7)
+  (set! $7 $6)
+  (set! $6 $5)
+  (set! $5 $4)
+  (set! $4 $3)
+  (set! $3 $2)
+  (set! $2 $1)
+  (set! $1 $0)
+  (set! $0 value))
+
+(define (push-history-value-maybe! value)
+  (cond ((eq? value undefined-value) undefined-value)
+        ((not (list? value)) (push-history-value! value))
+        ((= (length value) 0) undefined-value)
+        ((= (length value) 1) (push-history-value! (car value)))
+        (else (push-history-value! value))))
+
 (define (repl/eval rp expr-list)
   (let ((out (repl-out rp)))
     (protect (exn (else (print-exception exn out)))
@@ -330,6 +362,7 @@
                          (cond
                           ((not (or (null? res-list)
                                     (equal? res-list (list (if #f #f)))))
+                           (push-history-value-maybe! res-list)
                            (write/ss (car res-list) out)
                            (for-each
                             (lambda (res)
@@ -466,4 +499,5 @@
             (lambda (out) (write (history->list (repl-history rp)) out)))))))
 
 (define (main args)
+  (import (only (chibi repl) $0 $1 $2 $3 $4 $5 $6 $7 $8 $9))
   (repl))
