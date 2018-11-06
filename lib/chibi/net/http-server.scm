@@ -336,7 +336,7 @@
   (case (request-method request)
     ((HEAD)
      (call-with-temp-file "get.out"
-       (lambda (temp-file out)
+       (lambda (temp-file out preserve)
          (let ((request2 (copy-request request)))
            (request-method-set! request2 'GET)
            (request-out-set! request2 out)
