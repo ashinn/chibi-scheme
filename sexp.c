@@ -1885,6 +1885,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_FLONUMS
   double f, ftmp;
 #endif
+#if SEXP_USE_BYTEVECTOR_LITERALS && SEXP_BYTEVECTOR_HEX_LITERALS
+  char buf[5];
+#endif
   sexp x, *elts;
   char *str=NULL, numbuf[NUMBUF_LEN];
 
@@ -2065,7 +2068,12 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       len = sexp_bytes_length(obj);
       for (i=0; i<(sexp_sint_t)len; i++) {
         if (i!=0) sexp_write_char(ctx, ' ', out);
+#if SEXP_BYTEVECTOR_HEX_LITERALS
+	sprintf(buf, "#x%02hhX", ((unsigned char*) str)[i]);
+	sexp_write_string(ctx, buf, out);
+#else
         sexp_write(ctx, sexp_make_fixnum(((unsigned char*)str)[i]), out);
+#endif
       }
       sexp_write_char(ctx, ')', out);
       break;
@@ -2254,7 +2262,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
       case 'a': c = '\a'; break;
       case 'b': c = '\b'; break;
       case 'n': c = '\n'; break;
-      case 'r': c = '\r'; break; 
+      case 'r': c = '\r'; break;
       case 't': c = '\t'; break;
       case 'x': case 'X':
         res = sexp_read_number(ctx, in, 16, 0);
