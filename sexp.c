@@ -2069,8 +2069,12 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       for (i=0; i<(sexp_sint_t)len; i++) {
         if (i!=0) sexp_write_char(ctx, ' ', out);
 #if SEXP_BYTEVECTOR_HEX_LITERALS
-	sprintf(buf, "#x%02hhX", ((unsigned char*) str)[i]);
-	sexp_write_string(ctx, buf, out);
+	if (str[i]) {
+	  sprintf(buf, "#x%02hhX", ((unsigned char*) str)[i]);
+	  sexp_write_string(ctx, buf, out);
+	} else {
+	  sexp_write_char (ctx, '0', out);
+	}
 #else
         sexp_write(ctx, sexp_make_fixnum(((unsigned char*)str)[i]), out);
 #endif
