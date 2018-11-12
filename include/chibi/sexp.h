@@ -497,7 +497,7 @@ struct sexp_struct {
       sexp proc, env, source;
     } macro;
     struct {
-      sexp env, free_vars, expr;
+      sexp env, free_vars, expr, rename;
     } synclo;
     struct {
       sexp file;
@@ -1137,6 +1137,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_synclo_env(x)        (sexp_field(x, synclo, SEXP_SYNCLO, env))
 #define sexp_synclo_free_vars(x)  (sexp_field(x, synclo, SEXP_SYNCLO, free_vars))
 #define sexp_synclo_expr(x)       (sexp_field(x, synclo, SEXP_SYNCLO, expr))
+#define sexp_synclo_rename(x)     (sexp_field(x, synclo, SEXP_SYNCLO, rename))
 
 #define sexp_core_code(x)         (sexp_field(x, core, SEXP_CORE, code))
 #define sexp_core_name(x)         (sexp_field(x, core, SEXP_CORE, name))

@@ -111,18 +111,22 @@
 (define er-macro-transformer
   (lambda (f)
     (lambda (expr use-env mac-env)
-      ((lambda (rename compare) (f expr rename compare))
-       ((lambda (renames)
-          (lambda (identifier)
-            ((lambda (cell)
-               (if cell
-                   (cdr cell)
-                   ((lambda (name)
-                      (set! renames (cons (cons identifier name) renames))
-                      name)
-                    (make-syntactic-closure mac-env '() identifier))))
-             (assq identifier renames))))
-        '())
+      (define rename
+	((lambda (renames)
+	   (lambda (identifier)
+	     ((lambda (cell)
+		(if cell
+		    (cdr cell)
+		    ((lambda (name)
+		       (set! renames (cons (cons identifier name) renames))
+		       name)
+		     ((lambda (id)
+			(syntactic-closure-set-rename! id rename)
+			id)
+		      (make-syntactic-closure mac-env '() identifier)))))
+	      (assq identifier renames))))
+	 '()))
+      ((lambda (compare) (f expr rename compare))
        (lambda (x y) (identifier=? use-env x use-env y))))))
 
 (define-syntax cond
@@ -955,6 +959,31 @@
        (let-optionals* tmp2 rest . body)))
     ((let-optionals* tmp tail . body)
      (let ((tail tmp)) . body))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; datum->syntax
+
+(define (symbol->identifier id symbol)
+  (if (symbol? id)
+      symbol
+      ((syntactic-closure-rename id)
+       symbol)))
+
+;; TODO: Handle cycles in datum.
+(define (datum->syntax id datum)
+  (let loop ((datum datum))
+    (cond ((pair? datum)
+	   (cons (loop (car datum))
+		 (loop (cdr datum))))
+	  ((vector? datum)
+	   (do ((res (make-vector (vector-length datum)))
+		(i 0 (+ i 1)))
+	       ((= i (vector-length datum)) res)
+	     (vector-set! res i (loop (vector-ref datum i)))))
+	  ((symbol? datum)
+	   (symbol->identifier id datum))
+	  (else
+	   datum))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exceptions

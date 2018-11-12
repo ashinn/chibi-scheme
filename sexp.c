@@ -218,7 +218,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 5, 5, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
   {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
   {SEXP_MACRO, sexp_offsetof(macro, proc), 3, 3, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Macro", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
-  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 4, 4, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
   {SEXP_ENV, sexp_offsetof(env, parent), 3+SEXP_USE_RENAME_BINDINGS, 3+SEXP_USE_RENAME_BINDINGS, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Environment", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
   {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Bytecode", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
   {SEXP_CORE, sexp_offsetof(core, name), 1, 1, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Core-Form", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
@@ -2093,6 +2093,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write(ctx, sexp_make_fixnum(obj), out);
       sexp_write_char(ctx, ' ', out);
       sexp_write(ctx, sexp_synclo_expr(obj), out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_synclo_rename(obj), out);
       sexp_write_char(ctx, '>', out);
       break;
     default:

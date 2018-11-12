@@ -397,10 +397,12 @@ sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv,
     sexp_synclo_env(res) = sexp_synclo_env(expr);
     sexp_synclo_free_vars(res) = sexp_synclo_free_vars(expr);
     sexp_synclo_expr(res) = sexp_synclo_expr(expr);
+    sexp_synclo_rename(res) = sexp_synclo_rename(expr);
   } else {
     sexp_synclo_env(res) = env;
     sexp_synclo_free_vars(res) = fv;
     sexp_synclo_expr(res) = expr;
+    sexp_synclo_rename(res) = SEXP_FALSE;
   }
   return res;
 }
