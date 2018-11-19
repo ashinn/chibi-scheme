@@ -112,6 +112,7 @@
            (restart
             (request-with-uri request (uri-with-path uri path2))))))
    (else
+    (servlet-respond request 200 "OK")
     (send-directory path (request-out request)))))
 
 (define (http-send-file request path)
