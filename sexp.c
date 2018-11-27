@@ -1272,7 +1272,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
 #if SEXP_USE_HUFF_SYMS
   res = 0;
   space = SEXP_IMMEDIATE_BITS;
-  if (len == 0 || sexp_isdigit(p[0])
+  if (len == 0 || sexp_isdigit((unsigned char)p[0])
       || ((p[0] == '+' || p[0] == '-') && len > 1))
     goto normal_intern;
   for ( ; i<len; i++, p++) {
@@ -2012,14 +2012,15 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       str = sexp_lsymbol_data(obj);
       c = (sexp_lsymbol_length(obj) == 0 ||
            (sexp_lsymbol_length(obj) == 1 && str[0] == '.') ||
-           sexp_isdigit(str[0]) ||
+           sexp_isdigit((unsigned char)str[0]) ||
            (sexp_lsymbol_length(obj) > 1 &&
             ((str[0] == '+' || str[0] == '-')
-             && (sexp_isdigit(str[1]) || str[1] == '.' || str[1] == 'i' ||
+             && (sexp_isdigit((unsigned char)str[1]) ||
+                 str[1] == '.' || str[1] == 'i' ||
                  ((sexp_lsymbol_length(obj) > 3) &&
-                  sexp_tolower(str[1]) == 'n' &&
-                  sexp_tolower(str[2]) == 'a' &&
-                  sexp_tolower(str[3]) == 'n')))))
+                  sexp_tolower((unsigned char)str[1]) == 'n' &&
+                  sexp_tolower((unsigned char)str[2]) == 'a' &&
+                  sexp_tolower((unsigned char)str[3]) == 'n')))))
         ? '|' : EOF;
       for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
         if (str[i] <= ' ' || str[i] == '\\' || str[i] == '#' || sexp_is_separator(str[i]))
@@ -3363,8 +3364,8 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
       sexp_read_char(ctx, in);
   }
   in = ((sexp_string_data(str)[0] == '#' &&
-         sexp_tolower(sexp_string_data(str)[1]) != 'e' &&
-         sexp_tolower(sexp_string_data(str)[1]) != 'i')
+         sexp_tolower((unsigned char)sexp_string_data(str)[1]) != 'e' &&
+         sexp_tolower((unsigned char)sexp_string_data(str)[1]) != 'i')
         || base == 10 ? sexp_read(ctx, in) :
         sexp_read_number(ctx, in, base, 0));
   sexp_gc_release1(ctx);

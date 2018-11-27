@@ -34,7 +34,7 @@ sexp sexp_string_hash (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp bound)
 
 static sexp_uint_t string_ci_hash (char *str, sexp_uint_t bound) {
   sexp_uint_t acc = FNV_OFFSET_BASIS;
-  while (*str) {acc *= FNV_PRIME; acc ^= sexp_tolower(*str++);}
+  while (*str) {acc *= FNV_PRIME; acc ^= sexp_tolower((unsigned char)*str++);}
   return acc % bound;
 }
 

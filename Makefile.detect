@@ -70,6 +70,7 @@ EXE =
 CLIBFLAGS = -fPIC
 CLINKFLAGS = -shared
 LIBDL = 
+RLDFLAGS=-Wl,-R$(LIBDIR)
 else
 ifeq ($(PLATFORM),windows)
 SO  = .dll
@@ -106,10 +107,6 @@ CLIBFLAGS = -fPIC
 CLINKFLAGS = -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
 LIBCHIBI_FLAGS = -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR)
-ifeq ($(PLATFORM),BSD)
-LIBDL=
-RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
-endif
 endif
 endif
 endif
@@ -118,7 +115,7 @@ endif
 
 ifeq ($(PLATFORM),unix)
 #RLDFLAGS=-rpath $(LIBDIR)
-RLDFLAGS=-Wl,-R$(DESTDIR)$(LIBDIR)
+RLDFLAGS=-Wl,-R$(LIBDIR)
 endif
 
 ########################################################################

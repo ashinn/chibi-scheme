@@ -20,8 +20,6 @@ CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
 
 SNOW_CHIBI ?= tools/snow-chibi
 
-TEMPFILE := $(shell mktemp -t chibi.XXXXXX)
-
 ########################################################################
 
 # Choose compiled library on MSYS
@@ -125,9 +123,10 @@ chibi-scheme-static.bc:
 chibi-scheme-emscripten: VERSION
 	$(MAKE) dist-clean
 	$(MAKE) chibi-scheme-static PLATFORM=emscripten SEXP_USE_DL=0
-	mv chibi-scheme-static$(EXE) $(TEMPFILE)
-	$(MAKE) dist-clean
-	mv $(TEMPFILE) chibi-scheme-emscripten
+	(tempfile="`mktemp -t chibi.XXXXXX`" && \
+	mv chibi-scheme-static$(EXE) "$$tempfile" && \
+	$(MAKE) dist-clean; \
+	mv "$$tempfile" chibi-scheme-emscripten)
 
 include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
@@ -168,7 +167,7 @@ libchibi-scheme.a: $(SEXP_OBJS) $(EVAL_OBJS)
 	$(AR) rcs $@ $^
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
-	$(CC) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. -lchibi-scheme
+	$(CC) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. $(RLDFLAGS) -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
@@ -192,7 +191,14 @@ chibi-scheme.pc: chibi-scheme.pc.in
 # A special case, this needs to be linked with the LDFLAGS in case
 # we're using Boehm.
 lib/chibi/ast$(SO): lib/chibi/ast.c $(INCLUDES) libchibi-scheme$(SO)
-	-$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< $(GCLDFLAGS) -L. -lchibi-scheme
+	-$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< $(GCLDFLAGS) -L. $(RLDFLAGS) -lchibi-scheme
+
+lib/chibi/crypto/crypto.c: lib/chibi/crypto/sha2.c
+lib/chibi/filesystem.c: lib/chibi/filesystem_win32_shim.c
+lib/chibi/io/io.c: lib/chibi/io/port.c
+lib/chibi/net.c: lib/chibi/accept.c
+lib/chibi/process.c: lib/chibi/signal.c
+lib/srfi/144/math.c: lib/srfi/144/lgamma_r.c
 
 lib/chibi.img: $(CHIBI_DEPENDENCIES) all-libs
 	$(CHIBI) -d $@
@@ -208,7 +214,7 @@ doc: doc/chibi.html doc-libs
 %.html: %.scrbl $(CHIBI_DOC_DEPENDENCIES)
 	$(CHIBI_DOC) --html $< > $@
 
-lib/.%.meta: lib/%/ tools/generate-install-meta.scm
+lib/.%.meta: lib/%/ tools/generate-install-meta.scm $(CHIBI_DEPENDENCIES)
 	-$(FIND) $< -name \*.sld | \
 	 $(CHIBI) tools/generate-install-meta.scm $(VERSION) > $@
 
@@ -301,6 +307,8 @@ clean: clean-libs
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
 	    $(IMAGE_FILES) libchibi-scheme*$(SO) *.a *.pc \
+	    libchibi-scheme$(SO_VERSIONED_SUFFIX) \
+	    libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX) \
 	    include/chibi/install.h lib/.*.meta \
 	    chibi-scheme-emscripten \
 	    js/chibi.* \
@@ -400,9 +408,9 @@ install-base: all
 install: install-base
 ifneq "$(IMAGE_FILES)" ""
 	echo "Generating images"
-	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -d $(DESTDIR)$(MODDIR)/chibi.img
-	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -xscheme.red -d $(DESTDIR)$(MODDIR)/red.img
-	-cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
+	cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(DESTDIR)$(MODDIR):$(DESTDIR)$(BINMODDIR)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -d $(DESTDIR)$(MODDIR)/chibi.img
+	cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(DESTDIR)$(MODDIR):$(DESTDIR)$(BINMODDIR)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -xscheme.red -d $(DESTDIR)$(MODDIR)/red.img
+	cd / && LD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(DESTDIR)$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(DESTDIR)$(MODDIR):$(DESTDIR)$(BINMODDIR)" $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
 endif
 
 uninstall:
