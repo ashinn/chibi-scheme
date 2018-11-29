@@ -89,6 +89,17 @@
            (each quot (escaped str quot esc rename) quot)
            (displayed str))))))
 
+;;> Outputs \var{f} as a procedure object using \code{write}
+;;> semantics. This function is necessary to output procedures
+;;> as the combinator type is defined as not necessarily disjoint
+;;> from the procedure type.
+
+(define (procedurally f)
+  (fn ()
+    (let ((p (open-output-string)))
+      (write f p)
+      (get-output-string p))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; numeric formatting
 
