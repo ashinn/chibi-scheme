@@ -223,8 +223,8 @@
         (module-env-set! mod (eval-module name mod)))
     mod))
 
-(define-syntax meta-begin begin)
-(define-syntax meta-define define)
+(%define-syntax meta-begin begin)
+(%define-syntax meta-define define)
 
 (define define-library-transformer
   (er-macro-transformer

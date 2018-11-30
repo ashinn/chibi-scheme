@@ -494,10 +494,10 @@ struct sexp_struct {
       sexp bc, vars;
     } procedure;
     struct {
-      sexp proc, env, source;
+      sexp proc, env, source, aux;
     } macro;
     struct {
-      sexp env, free_vars, expr;
+      sexp env, free_vars, expr, rename;
     } synclo;
     struct {
       sexp file;
@@ -1133,10 +1133,12 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_macro_proc(x)        (sexp_field(x, macro, SEXP_MACRO, proc))
 #define sexp_macro_env(x)         (sexp_field(x, macro, SEXP_MACRO, env))
 #define sexp_macro_source(x)      (sexp_field(x, macro, SEXP_MACRO, source))
+#define sexp_macro_aux(x)         (sexp_field(x, macro, SEXP_MACRO, aux))
 
 #define sexp_synclo_env(x)        (sexp_field(x, synclo, SEXP_SYNCLO, env))
 #define sexp_synclo_free_vars(x)  (sexp_field(x, synclo, SEXP_SYNCLO, free_vars))
 #define sexp_synclo_expr(x)       (sexp_field(x, synclo, SEXP_SYNCLO, expr))
+#define sexp_synclo_rename(x)     (sexp_field(x, synclo, SEXP_SYNCLO, rename))
 
 #define sexp_core_code(x)         (sexp_field(x, core, SEXP_CORE, code))
 #define sexp_core_name(x)         (sexp_field(x, core, SEXP_CORE, name))
@@ -1388,6 +1390,10 @@ enum sexp_context_globals {
   SEXP_G_QUASIQUOTE_SYMBOL,
   SEXP_G_UNQUOTE_SYMBOL,
   SEXP_G_UNQUOTE_SPLICING_SYMBOL,
+  SEXP_G_SYNTAX_SYMBOL,
+  SEXP_G_QUASISYNTAX_SYMBOL,
+  SEXP_G_UNSYNTAX_SYMBOL,
+  SEXP_G_UNSYNTAX_SPLICING_SYMBOL,
   SEXP_G_EMPTY_VECTOR,
   SEXP_G_CUR_IN_SYMBOL,
   SEXP_G_CUR_OUT_SYMBOL,

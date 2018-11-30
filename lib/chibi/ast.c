@@ -72,7 +72,7 @@ sexp sexp_get_env_cell (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp id, s
       id = sexp_synclo_expr(id);
     }
     cell = sexp_env_cell(ctx, env, id, 0);
-    if (!cell && createp)
+    if (!cell && sexp_truep(createp))
       cell = sexp_env_cell_define(ctx, env, id, SEXP_UNDEF, NULL);
   }
   return cell ? cell : SEXP_FALSE;
@@ -669,6 +669,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);
+  sexp_define_accessors(ctx, env, SEXP_MACRO, 3, "macro-aux", "macro-aux-set!");
   sexp_define_foreign(ctx, env, "procedure-code", 1, sexp_get_procedure_code);
   sexp_define_foreign(ctx, env, "procedure-vars", 1, sexp_get_procedure_vars);
   sexp_define_foreign(ctx, env, "procedure-arity", 1, sexp_get_procedure_arity);

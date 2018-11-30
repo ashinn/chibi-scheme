@@ -4,7 +4,7 @@
      (for-each set-cdr! (car (cddr expr)) (cadr (cddr expr)))
      (car (cdr expr)))))
 
-(define-syntax syntax-parameterize
+(%define-syntax syntax-parameterize
   (lambda (expr use-env mac-env)
     (let* ((_let (make-syntactic-closure mac-env '() 'let))
            (_set! (make-syntactic-closure mac-env '() 'set!))
@@ -21,7 +21,9 @@
            (old (map cdr cells))
            (new (map (lambda (transformer)
                        (make-macro
-                        (eval (make-syntactic-closure use-env '() transformer))
+			(make-transformer
+			 (eval
+			  (make-syntactic-closure use-env '() transformer)))
                         use-env))
                      transformers)))
       (for-each set-cdr! cells new)
