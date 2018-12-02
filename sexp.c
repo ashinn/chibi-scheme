@@ -2471,16 +2471,18 @@ sexp sexp_read_polar_tail (sexp ctx, sexp in, sexp magnitude) {
 sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
   int c, c2;
   sexp exponent=SEXP_VOID;
-  long double val=0.0, scale=0.1, e=0.0;
+  long double val=0.0, scale=10, e=0.0;
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   for (c=sexp_read_char(ctx, in); sexp_isdigit(c);
-       c=sexp_read_char(ctx, in), scale*=0.1)
-    val += digit_value(c)*scale;
+       c=sexp_read_char(ctx, in), val*=10, scale*=10)
+    val += digit_value(c);
 #if SEXP_USE_PLACEHOLDER_DIGITS
-  for (; c==SEXP_PLACEHOLDER_DIGIT; c=sexp_read_char(ctx, in), scale*=0.1)
-    val += sexp_placeholder_digit_value(10)*scale;
+  for (; c==SEXP_PLACEHOLDER_DIGIT;
+       c=sexp_read_char(ctx, in), val*=10, scale*=10)
+    val += sexp_placeholder_digit_value(10);
 #endif
+  val /= scale;
   val += whole;
   if (negp) val *= -1;
   if (is_precision_indicator(c)) {
