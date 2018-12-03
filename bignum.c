@@ -260,8 +260,8 @@ sexp sexp_bignum_fxrem (sexp ctx, sexp a, sexp_sint_t b) {
 sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
                        signed char sign, sexp_uint_t base) {
   int c, digit;
-  sexp_gc_var1(res);
-  sexp_gc_preserve1(ctx, res);
+  sexp_gc_var3(res, tmp, imag);
+  sexp_gc_preserve3(ctx, res, tmp, imag);
   res = sexp_make_bignum(ctx, SEXP_INIT_BIGNUM_SIZE);
   sexp_bignum_sign(res) = sign;
   sexp_bignum_data(res)[0] = init;
@@ -275,9 +275,32 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   if (c=='.' || c=='e' || c=='E') {
     if (base != 10) {
       res = sexp_read_error(ctx, "found non-base 10 float", SEXP_NULL, in);
-    } else {
-      if (c!='.') sexp_push_char(ctx, c, in); /* push the e back */
+    } else if (c=='.') {
       res = sexp_read_float_tail(ctx, in, sexp_bignum_to_double(res), (sign==-1));
+    } else {
+      tmp = sexp_read_number(ctx, in, base, 0);
+#if SEXP_USE_COMPLEX
+      if (sexp_complexp(tmp)) {
+        imag = sexp_complex_imag(tmp);
+        tmp = sexp_complex_real(tmp);
+      } else {
+        imag = SEXP_ZERO;
+      }
+#endif
+      if (sexp_exceptionp(tmp)) {
+        res = tmp;
+      } else if (sexp_fixnump(tmp) && labs(sexp_unbox_fixnum(tmp)) < 100*1024*1024) {
+        tmp = sexp_expt(ctx, SEXP_TEN, tmp);
+        res = sexp_mul(ctx, res, tmp);
+      } else {
+        tmp = sexp_exact_to_inexact(ctx, NULL, 2, tmp);
+        tmp = sexp_expt(ctx, SEXP_TEN, tmp);
+        res = sexp_mul(ctx, res, tmp);
+      }
+#if SEXP_USE_COMPLEX
+      if (imag != SEXP_ZERO && !sexp_exceptionp(res))
+        res = sexp_make_complex(ctx, res, imag);
+#endif
     }
 #if SEXP_USE_RATIOS
   } else if (c=='/') {
@@ -298,7 +321,7 @@ sexp sexp_read_bignum (sexp ctx, sexp in, sexp_uint_t init,
   } else {
     sexp_push_char(ctx, c, in);
   }
-  sexp_gc_release1(ctx);
+  sexp_gc_release3(ctx);
   return sexp_bignum_normalize(res);
 }
 
