@@ -46,28 +46,6 @@
 (define (syntax->datum stx)
   (strip-syntactic-closures stx))
 
-(define (symbol->identifier id symbol)
-  (if (symbol? id)
-      symbol
-      ((syntactic-closure-rename id)
-       symbol)))
-
-;; TODO: Handle cycles in datum.
-(define (datum->syntax id datum)
-  (let loop ((datum datum))
-    (cond ((pair? datum)
-	   (cons (loop (car datum))
-		 (loop (cdr datum))))
-	  ((vector? datum)
-	   (do ((res (make-vector (vector-length datum)))
-		(i 0 (+ i 1)))
-	       ((= i (vector-length datum)) res)
-	     (vector-set! res i (loop (vector-ref datum i)))))
-	  ((symbol? datum)
-	   (symbol->identifier id datum))
-	  (else
-	   datum))))
-
 (define-syntax syntax (syntax-transformer #f))
 (define-syntax quasisyntax (syntax-transformer 0))
 (define-auxiliary-syntax unsyntax)

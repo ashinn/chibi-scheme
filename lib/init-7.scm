@@ -976,7 +976,7 @@
      (syntax-rules-transformer expr rename compare))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; let(rec)-syntax
+;; let(rec)-syntax and datum->syntax
 
 (define-syntax let-syntax
   (syntax-rules ()
@@ -987,6 +987,32 @@
   (syntax-rules ()
     ((letrec-syntax ((keyword transformer) ...) . body)
      (%letrec-syntax ((keyword (make-transformer transformer)) ...) . body))))
+
+(define (symbol->identifier id symbol)
+  (cond
+   ((symbol? id)
+    symbol)
+   ((syntactic-closure-rename id)
+    => (lambda (renamer)
+	 (renamer symbol)))
+   (else
+    symbol)))
+
+;; TODO: Handle cycles in datum.
+(define (datum->syntax id datum)
+  (let loop ((datum datum))
+    (cond ((pair? datum)
+	   (cons (loop (car datum))
+		 (loop (cdr datum))))
+	  ((vector? datum)
+	   (do ((res (make-vector (vector-length datum)))
+		(i 0 (+ i 1)))
+	       ((= i (vector-length datum)) res)
+	     (vector-set! res i (loop (vector-ref datum i)))))
+	  ((symbol? datum)
+	   (symbol->identifier id datum))
+	  (else
+	   datum))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; additional syntax
