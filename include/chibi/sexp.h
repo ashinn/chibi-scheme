@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 #define SEXP_MODULE_PATH_VAR "CHIBI_MODULE_PATH"
+#define SEXP_NO_SYSTEM_PATH_VAR "CHIBI_IGNORE_SYSTEM_PATH"
 
 #include "chibi/features.h"
 #include "chibi/install.h"

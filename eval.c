@@ -486,13 +486,16 @@ static void sexp_init_eval_context_bytecodes (sexp ctx) {
 #endif
 
 void sexp_init_eval_context_globals (sexp ctx) {
+  const char* no_sys_path;
   const char* user_path;
   ctx = sexp_make_child_context(ctx, NULL);
 #if ! SEXP_USE_NATIVE_X86
   sexp_init_eval_context_bytecodes(ctx);
 #endif
   sexp_global(ctx, SEXP_G_MODULE_PATH) = SEXP_NULL;
-  sexp_add_path(ctx, sexp_default_module_path);
+  no_sys_path = getenv(SEXP_NO_SYSTEM_PATH_VAR);
+  if (!no_sys_path || strcmp(no_sys_path, "0")==0)
+    sexp_add_path(ctx, sexp_default_module_path);
   user_path = getenv(SEXP_MODULE_PATH_VAR);
   if (!user_path) user_path = sexp_default_user_module_path;
   sexp_add_path(ctx, user_path);
