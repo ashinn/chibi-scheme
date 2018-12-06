@@ -9,12 +9,16 @@
    integer->bytevector bytevector->integer
    integer->hex-string hex-string->integer
    bytevector->hex-string hex-string->bytevector
+   bytevector-ieee-single-ref
    bytevector-ieee-single-native-ref
+   bytevector-ieee-single-set!
    bytevector-ieee-single-native-set!
+   bytevector-ieee-double-ref
    bytevector-ieee-double-native-ref
+   bytevector-ieee-double-set!
    bytevector-ieee-double-native-set!
    )
-  (import (scheme base))
+  (import (scheme base) (scheme inexact))
   (cond-expand
    (big-endian
     (begin
