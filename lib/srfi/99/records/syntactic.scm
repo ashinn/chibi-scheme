@@ -10,11 +10,13 @@
             (procs (cddr expr))
             (make (car procs))
             (make-name (if (eq? make #t)
-                           (string->symbol (string-append "make-" name-str))
+                           (datum->syntax name
+					  (string->symbol (string-append "make-" name-str)))
                            (if (pair? make) (car make) make)))
             (pred (cadr procs))
             (pred-name (if (eq? pred #t)
-                           (string->symbol (string-append name-str "?"))
+			   (datum->syntax name
+					  (string->symbol (string-append name-str "?")))
                            pred))
             (fields (cddr procs))
             (field-names (map (lambda (x) (if (pair? x) (car x) x)) fields))

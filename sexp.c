@@ -217,8 +217,8 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_FILENON, SEXP_FINALIZE_FILENO},
   {SEXP_EXCEPTION, sexp_offsetof(exception, kind), 5, 5, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Exception", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
   {SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
-  {SEXP_MACRO, sexp_offsetof(macro, proc), 3, 3, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Macro", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
-  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 3, 3, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
+  {SEXP_MACRO, sexp_offsetof(macro, proc), 4, 4, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Macro", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_SYNCLO, sexp_offsetof(synclo, env), 4, 4, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, NULL},
   {SEXP_ENV, sexp_offsetof(env, parent), 3+SEXP_USE_RENAME_BINDINGS, 3+SEXP_USE_RENAME_BINDINGS, 0, 0, sexp_sizeof(env), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Environment", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
   {SEXP_BYTECODE, sexp_offsetof(bytecode, name), 3, 3, 0, 0, sexp_sizeof(bytecode), offsetof(struct sexp_struct, value.bytecode.length), 1, 0, 0, 0, 0, 0, 0, (sexp)"Bytecode", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
   {SEXP_CORE, sexp_offsetof(core, name), 1, 1, 0, 0, sexp_sizeof(core), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Core-Form", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
@@ -465,6 +465,10 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_QUASIQUOTE_SYMBOL) = sexp_intern(ctx, "quasiquote", -1);
   sexp_global(ctx, SEXP_G_UNQUOTE_SYMBOL) = sexp_intern(ctx, "unquote", -1);
   sexp_global(ctx, SEXP_G_UNQUOTE_SPLICING_SYMBOL) = sexp_intern(ctx, "unquote-splicing", -1);
+  sexp_global(ctx, SEXP_G_SYNTAX_SYMBOL) = sexp_intern(ctx, "syntax", -1);
+  sexp_global(ctx, SEXP_G_QUASISYNTAX_SYMBOL) = sexp_intern(ctx, "quasisyntax", -1);
+  sexp_global(ctx, SEXP_G_UNSYNTAX_SYMBOL) = sexp_intern(ctx, "unsyntax", -1);
+  sexp_global(ctx, SEXP_G_UNSYNTAX_SPLICING_SYMBOL) = sexp_intern(ctx, "unsyntax-splicing", -1);
   sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL) = sexp_intern(ctx, "current-input-port", -1);
   sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL) = sexp_intern(ctx, "current-output-port", -1);
   sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL) = sexp_intern(ctx, "current-error-port", -1);
@@ -2093,6 +2097,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
       sexp_write(ctx, sexp_make_fixnum(obj), out);
       sexp_write_char(ctx, ' ', out);
       sexp_write(ctx, sexp_synclo_expr(obj), out);
+      sexp_write_char(ctx, ' ', out);
+      sexp_write(ctx, sexp_synclo_rename(obj), out);
       sexp_write_char(ctx, '>', out);
       break;
     default:
@@ -3166,6 +3172,28 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         }
       } else {
         res = sexp_list_to_vector(ctx, res);
+      }
+      break;
+    case '\'':
+      res = sexp_read_one(ctx, in, shares);
+      if (! sexp_exceptionp(res))
+	res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_SYNTAX_SYMBOL), res);
+      break;
+    case '`':
+      res = sexp_read_one(ctx, in, shares);
+      if (! sexp_exceptionp(res))
+	res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_QUASISYNTAX_SYMBOL), res);
+      break;
+    case ',':
+      if ((c1 = sexp_read_char(ctx, in)) == '@') {
+	res = sexp_read_one(ctx, in, shares);
+	if (! sexp_exceptionp(res))
+	  res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_UNSYNTAX_SPLICING_SYMBOL), res);
+      } else {
+	sexp_push_char(ctx, c1, in);
+	res = sexp_read_one(ctx, in, shares);
+	if (! sexp_exceptionp(res))
+	  res = sexp_list2(ctx, sexp_global(ctx, SEXP_G_UNSYNTAX_SYMBOL), res);
       }
       break;
     default:

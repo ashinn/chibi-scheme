@@ -110,6 +110,18 @@
       (test 'mixed (breed-of felix))
       (test '(and black white) (color-of felix))
 
+      ;;; See issue #494.
+      (test-assert
+	  (let-syntax
+	      ((foo
+		(syntax-rules ()
+		  ((foo)
+		   (let ()
+		     (define-record-type record
+		       #t
+		       #t)
+		     (record? (make-record)))))))
+	    (foo)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
       (let ()
@@ -178,9 +190,9 @@
         (define make-point (rtd-constructor point #(x y)))
         (define point-x (rtd-accessor point 'x))
         (test 'point (rtd-name point))
-        (test 3 (point-x (make-point 3 2)))) 
+        (test 3 (point-x (make-point 3 2))))
 
-      ;; Name conflicts - make sure we rename 
+      ;; Name conflicts - make sure we rename
 
       (let ()
         (define-record-type example make-example #t example)

@@ -98,32 +98,78 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax
 
+(current-renamer (lambda (x) x))
+
+(define close-syntax
+  (lambda (form env)
+    (make-syntactic-closure env '() form)))
+
+(define make-renamer
+  (lambda (mac-env)
+    (define rename
+      ((lambda (renames)
+         (lambda (identifier)
+	   ((lambda (cell)
+	      (if cell
+		  (cdr cell)
+	  	  ((lambda (name)
+		     (set! renames (cons (cons identifier name) renames))
+		     name)
+                   ((lambda (id)
+                      (syntactic-closure-set-rename! id rename)
+                      id)
+ 		    (close-syntax identifier mac-env)))))
+	    (assq identifier renames))))
+       '()))
+    rename))
+
+(define make-transformer
+  (lambda (transformer)
+    (lambda (expr use-env mac-env)
+      ((lambda (old-use-env old-mac-env old-renamer)
+	 (current-usage-environment use-env)
+	 (current-transformer-environment mac-env)
+	 (current-renamer (make-renamer mac-env))
+	 ((lambda (result)
+	    (current-usage-environment old-use-env)
+	    (current-transformer-environment old-mac-env)
+	    (current-renamer old-renamer)
+	    result)
+	  (transformer expr)))
+       (current-usage-environment)
+       (current-transformer-environment)
+       (current-renamer)))))
+
+(%define-syntax define-syntax
+  (lambda (expr use-env mac-env)
+    (list (close-syntax '%define-syntax mac-env)
+	  (cadr expr)
+	  (list (close-syntax 'make-transformer mac-env)
+		(car (cddr expr))))))
+
+(define free-identifier=?
+  (lambda (x y)
+    ((lambda (use-env cur-env)
+       (identifier=? (if use-env use-env cur-env) x
+		     (if use-env use-env cur-env) y))
+     (current-usage-environment)
+     (current-environment))))
+
 (define sc-macro-transformer
   (lambda (f)
-    (lambda (expr use-env mac-env)
-      (make-syntactic-closure mac-env '() (f expr use-env)))))
+    (lambda (expr)
+      (close-syntax (f expr (current-usage-environment))
+		    (current-transformer-environment)))))
 
 (define rsc-macro-transformer
   (lambda (f)
-    (lambda (expr use-env mac-env)
-      (f expr mac-env))))
+    (lambda (expr)
+      (f expr (current-transformer-environment)))))
 
 (define er-macro-transformer
   (lambda (f)
-    (lambda (expr use-env mac-env)
-      ((lambda (rename compare) (f expr rename compare))
-       ((lambda (renames)
-          (lambda (identifier)
-            ((lambda (cell)
-               (if cell
-                   (cdr cell)
-                   ((lambda (name)
-                      (set! renames (cons (cons identifier name) renames))
-                      name)
-                    (make-syntactic-closure mac-env '() identifier))))
-             (assq identifier renames))))
-        '())
-       (lambda (x y) (identifier=? use-env x use-env y))))))
+    (lambda (expr)
+      (f expr (current-renamer) free-identifier=?))))
 
 (define-syntax cond
   (er-macro-transformer
@@ -928,6 +974,45 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      (syntax-rules-transformer expr rename compare))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; let(rec)-syntax and datum->syntax
+
+(define-syntax let-syntax
+  (syntax-rules ()
+    ((let-syntax ((keyword transformer) ...) . body)
+     (%let-syntax ((keyword (make-transformer transformer)) ...) . body))))
+
+(define-syntax letrec-syntax
+  (syntax-rules ()
+    ((letrec-syntax ((keyword transformer) ...) . body)
+     (%letrec-syntax ((keyword (make-transformer transformer)) ...) . body))))
+
+(define (symbol->identifier id symbol)
+  (cond
+   ((symbol? id)
+    symbol)
+   ((syntactic-closure-rename id)
+    => (lambda (renamer)
+	 (renamer symbol)))
+   (else
+    symbol)))
+
+;; TODO: Handle cycles in datum.
+(define (datum->syntax id datum)
+  (let loop ((datum datum))
+    (cond ((pair? datum)
+	   (cons (loop (car datum))
+		 (loop (cdr datum))))
+	  ((vector? datum)
+	   (do ((res (make-vector (vector-length datum)))
+		(i 0 (+ i 1)))
+	       ((= i (vector-length datum)) res)
+	     (vector-set! res i (loop (vector-ref datum i)))))
+	  ((symbol? datum)
+	   (symbol->identifier id datum))
+	  (else
+	   datum))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; additional syntax

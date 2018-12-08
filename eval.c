@@ -384,6 +384,7 @@ static sexp sexp_make_macro (sexp ctx, sexp p, sexp e) {
   sexp mac = sexp_alloc_type(ctx, macro, SEXP_MACRO);
   sexp_macro_env(mac) = e;
   sexp_macro_proc(mac) = p;
+  sexp_macro_aux(mac) = SEXP_FALSE;
   return mac;
 }
 
@@ -397,10 +398,12 @@ sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv,
     sexp_synclo_env(res) = sexp_synclo_env(expr);
     sexp_synclo_free_vars(res) = sexp_synclo_free_vars(expr);
     sexp_synclo_expr(res) = sexp_synclo_expr(expr);
+    sexp_synclo_rename(res) = sexp_synclo_rename(expr);
   } else {
     sexp_synclo_env(res) = env;
     sexp_synclo_free_vars(res) = fv;
     sexp_synclo_expr(res) = expr;
+    sexp_synclo_rename(res) = SEXP_FALSE;
   }
   return res;
 }
@@ -2165,9 +2168,9 @@ static struct sexp_core_form_struct core_forms[] = {
   {SEXP_CORE_BEGIN, (sexp)"begin"},
   {SEXP_CORE_QUOTE, (sexp)"quote"},
   {SEXP_CORE_SYNTAX_QUOTE, (sexp)"syntax-quote"},
-  {SEXP_CORE_DEFINE_SYNTAX, (sexp)"define-syntax"},
-  {SEXP_CORE_LET_SYNTAX, (sexp)"let-syntax"},
-  {SEXP_CORE_LETREC_SYNTAX, (sexp)"letrec-syntax"},
+  {SEXP_CORE_DEFINE_SYNTAX, (sexp)"%define-syntax"},
+  {SEXP_CORE_LET_SYNTAX, (sexp)"%let-syntax"},
+  {SEXP_CORE_LETREC_SYNTAX, (sexp)"%letrec-syntax"},
 };
 
 sexp sexp_make_env_op (sexp ctx, sexp self, sexp_sint_t n) {

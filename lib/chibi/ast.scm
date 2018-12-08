@@ -222,6 +222,8 @@
 ;;> \item{\scheme{(macro-procedure f)} - the macro procedure}
 ;;> \item{\scheme{(macro-env f)} - the environment the macro was defined in}
 ;;> \item{\scheme{(macro-source f)} - the source location the macro was defined in}
+;;> \item{\scheme{(macro-aux f)} - custom auxiliary data stored with the macro}
+;;> \item{\scheme{(macro-aux-set! f x)}}
 ;;> ]
 
 ;;> \subsection{Bytecode Objects}
