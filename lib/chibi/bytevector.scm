@@ -33,6 +33,46 @@
      (arithmetic-shift (bytevector-u8-ref bv (+ i 2)) 8)
      (bytevector-u8-ref bv (+ i 3))))
 
+;;> \section{Bignum encodings}
+
+;;> A BER compressed integer (X.209) is an unsigned integer in base 128,
+;;> most significant digit first, where the high bit is set on all but the
+;;> final (least significant) byte.  Thus any size integer can be
+;;> encoded, but the encoding is efficient and small integers don't take
+;;> up any more space than they would in normal char/short/int encodings.
+
+(define (bytevector-ber-ref bv . o)
+  (let ((end (if (and (pair? o) (pair? (cdr o)))
+                 (cadr o)
+                 (bytevector-length bv))))
+    (let lp ((acc 0) (i (if (pair? o) (car o) 0)))
+      (if (>= i end)
+          (error "unterminated ber integer in bytevector" bv)
+          (let ((b (bytevector-u8-ref bv i)))
+            (if (< b 128)
+                (+ acc b)
+                (lp (arithmetic-shift (+ acc (bitwise-and b 127)) 7)
+                    (+ i 1))))))))
+
+(define (bytevector-ber-set! bv n . o)
+  ;;(assert (integer? number) (not (negative? number)))
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o)))
+                 (cadr o)
+                 (bytevector-length bv))))
+    (let lp ((n (arithmetic-shift n -7))
+             (ls (list (bitwise-and n 127))))
+      (if (zero? n)
+          (do ((i start (+ i 1))
+               (ls ls (cdr ls)))
+              ((null? ls))
+            (if (>= i end)
+                (error "integer doesn't fit in bytevector as ber"
+                       bv n start end)
+                (bytevector-u8-set! bv i (car ls))))
+          (lp (arithmetic-shift n -7)
+              (cons (+ 128 (bitwise-and n 127)) ls))))))
+
 ;;> \section{Integer conversion}
 
 ;;> Convert an unsigned integer \var{n} to a bytevector representing

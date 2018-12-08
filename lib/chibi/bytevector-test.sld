@@ -36,7 +36,7 @@
     (define (run-tests)
       (test-begin "bytevector")
 
-      (test-group "reading"
+      (test-group "reading ieee"
 
         (do ((ls floats (cdr ls))
             (i 0 (+ i 4)))
@@ -48,7 +48,7 @@
            ((null? ls))
          (test (car ls) (bytevector-ieee-double-native-ref f64-le i))))
 
-      (test-group "writing"
+      (test-group "writing ieee"
 
         (do ((ls floats (cdr ls))
             (i 0 (+ i 4)))
@@ -63,5 +63,17 @@
          (let ((bv (make-bytevector 8 0)))
            (bytevector-ieee-double-native-set! bv 0 (car ls))
            (test (bytevector-copy f64-le i (+ i 8)) (values bv)))))
+
+      (test-group "ber integers"
+        (do ((ls '(0 1 128 16383 32767
+                   18446744073709551615
+                   340282366920938463463374607431768211456)
+                 (cdr ls)))
+            ((null? ls))
+          (let ((bv (make-bytevector 256)))
+            (do ((offsets '(0 1 27) (cdr offsets)))
+                ((null? offsets))
+              (bytevector-ber-set! bv (car ls) (car offsets))
+              (test (car ls) (bytevector-ber-ref bv (car offsets)))))))
 
       (test-end))))
