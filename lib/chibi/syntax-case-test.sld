@@ -47,4 +47,10 @@
 	    (syntax-case '((a b c) (d e f)) ()
 	      (((x ... y) ...) #'((x ...) ... y ...))))
 
+      (test "with-ellipsis"
+	    '((a b))
+	    (with-ellipsis :::
+	      (syntax-case '(a) ()
+		((... :::) #'((... b) :::)))))   
+
       (test-end))))
