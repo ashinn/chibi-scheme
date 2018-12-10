@@ -29,8 +29,15 @@
 (define (rename id)
   ((current-renamer) id))
 
-(define (ellipsis? id)
-  (free-identifier=? id (rename '...)))
+(define current-ellipsis-id
+  (make-syntactic-closure (current-environment) '() 'current-ellipsis))
+
+(define (ellipsis-identifier? id)
+  (let* ((cell (env-cell (current-usage-environment) current-ellipsis-id))
+	 (ellipsis (if cell
+		       (macro-aux (cdr cell))
+		       (rename '...))))
+    (free-identifier=? id ellipsis)))
 
 (define bound-identifier=?
   (lambda (x y)
@@ -40,7 +47,7 @@
   (er-macro-transformer
    (lambda (expr rename compare)
      (let*-values (((out envs)
-		    (gen-template (cadr expr) '() ellipsis? level)))
+		    (gen-template (cadr expr) '() ellipsis-identifier? level)))
        out))))
 
 (define (syntax->datum stx)
@@ -183,7 +190,7 @@
 	 (cond
 	  ((and (pair? (cdr pattern))
 		(identifier? (cadr pattern))
-		(ellipsis? (cadr pattern)))
+		(ellipsis-identifier? (cadr pattern)))
 	   (let* ((l (length+ (cddr pattern)))
 		  (h (car (generate-temporaries '(#f))))
 		  (t (car (generate-temporaries '(#f)))))
@@ -219,7 +226,7 @@
 				#,(k)
 				(fail)))
 			vars))
-	       ((ellipsis? pattern)
+	       ((ellipsis-identifier? pattern)
 		(error "misplaced ellipsis" pattern))
 	       ((free-identifier=? pattern #'_)
 		(values (lambda (k)
@@ -297,5 +304,19 @@
 (define (syntax-violation who message . form*)
   (apply error message form*))
 
+(define-syntax define-current-ellipsis
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ellipsis)
+       (let ((mac (cdr (env-cell (current-usage-environment) current-ellipsis-id))))
+	 (macro-aux-set! mac #'ellipsis))
+       #'(begin)))))
 
-;; TODO: Move datum->syntax from init-7 here.
+(define-syntax with-ellipsis
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ ellipsis . body)
+       (with-syntax ((current-ellipsis current-ellipsis-id))
+	 #'(let-syntax ((current-ellipsis (syntax-rules ())))
+	     (define-current-ellipsis ellipsis)
+	     . body))))))
