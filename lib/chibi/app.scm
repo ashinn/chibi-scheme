@@ -125,7 +125,7 @@
   (let ((args (or (and (pair? o) (car o)) (command-line)))
         (config (and (pair? o) (pair? (cdr o)) (cadr o))))
     (cond
-     ((parse-app '() (cdr spec) '() (cdr args) config #f #f)
+     ((parse-app '() (cdr spec) '() args config #f #f)
       => (lambda (v)
            (let ((proc (vector-ref v 0))
                  (cfg (vector-ref v 1))
@@ -136,11 +136,11 @@
              (let ((res (apply proc cfg spec args)))
                (if end (end cfg))
                res))))
-     ((null? (cdr args))
+     ((null? args)
       (app-help spec args)
       (error "Expected a command"))
      (else
-      (error "Unknown command" (cdr args))))))
+      (error "Unknown command" args)))))
 
 ;;> Parse a single command-line argument from \var{args} according to
 ;;> \var{conf-spec}, and returns a list of two values: the
