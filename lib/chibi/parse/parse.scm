@@ -307,7 +307,7 @@
 
 (define (parse->list f source . o)
   (let ((index (if (pair? o) (car o) 0)))
-    (reverse (parse-fold cons '() f source index))))
+    (reverse (parse-fold f cons '() source index))))
 
 ;;> As \scheme{parse->list} but requires the entire source be parsed
 ;;> with no left over characters, signalling an error otherwise.
