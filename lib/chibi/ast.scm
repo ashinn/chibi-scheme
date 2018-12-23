@@ -121,32 +121,32 @@
 ;;> used in the \scheme{match} \scheme{($ ...)} syntax.
 
 ;;> \itemlist[
-;;> \item{\scheme{<object>} - the parent of all types}
-;;> \item{\scheme{<number>} - abstract numeric type}
-;;> \item{\scheme{<bignum>} - arbitrary precision exact integers}
-;;> \item{\scheme{<flonum>} - inexact real numbers}
-;;> \item{\scheme{<integer>} - abstract integer type}
-;;> \item{\scheme{<symbol>} - symbols}
-;;> \item{\scheme{<char>} - character}
-;;> \item{\scheme{<boolean>} - \scheme{#t} or \scheme{#f}}
-;;> \item{\scheme{<string>} - strings of characters}
-;;> \item{\scheme{<byte-vector>} - uniform vector of octets}
-;;> \item{\scheme{<pair>} - a \var{car} and \var{cdr}, the basis for lists}
-;;> \item{\scheme{<vector>} - vectors}
-;;> \item{\scheme{<opcode>} - a primitive opcode or C function}
-;;> \item{\scheme{<procedure>} - a closure}
-;;> \item{\scheme{<bytecode>} - the compiled code for a closure}
-;;> \item{\scheme{<env>} - an environment structure}
-;;> \item{\scheme{<macro>} - a macro object, usually not first-class}
-;;> \item{\scheme{<lam>} - a lambda AST type}
-;;> \item{\scheme{<cnd>} - an conditional AST type (i.e. \scheme{if})}
-;;> \item{\scheme{<ref>} - a reference AST type}
-;;> \item{\scheme{<set>} - a mutation AST type (i.e. \scheme{set!})}
-;;> \item{\scheme{<seq>} - a sequence AST type}
-;;> \item{\scheme{<lit>} - a literal AST type}
-;;> \item{\scheme{<sc>} - a syntactic closure}
-;;> \item{\scheme{<context>} - a context object (including threads)}
-;;> \item{\scheme{<exception>} - an exception object}
+;;> \item{\scheme{Object} - the parent of all types}
+;;> \item{\scheme{Number} - abstract numeric type}
+;;> \item{\scheme{Bignum} - arbitrary precision exact integers}
+;;> \item{\scheme{Flonum} - inexact real numbers}
+;;> \item{\scheme{Integer} - abstract integer type}
+;;> \item{\scheme{Symbol} - symbols}
+;;> \item{\scheme{Char} - character}
+;;> \item{\scheme{Boolean} - \scheme{#t} or \scheme{#f}}
+;;> \item{\scheme{String} - strings of characters}
+;;> \item{\scheme{Byte-Vector} - uniform vector of octets}
+;;> \item{\scheme{Pair} - a \var{car} and \var{cdr}, the basis for lists}
+;;> \item{\scheme{Vector} - vectors}
+;;> \item{\scheme{Opcode} - a primitive opcode or C function}
+;;> \item{\scheme{Procedure} - a closure}
+;;> \item{\scheme{Bytecode} - the compiled code for a closure}
+;;> \item{\scheme{Env} - an environment structure}
+;;> \item{\scheme{Macro} - a macro object, usually not first-class}
+;;> \item{\scheme{Lam} - a lambda AST type}
+;;> \item{\scheme{Cnd} - an conditional AST type (i.e. \scheme{if})}
+;;> \item{\scheme{Ref} - a reference AST type}
+;;> \item{\scheme{Set} - a mutation AST type (i.e. \scheme{set!})}
+;;> \item{\scheme{Seq} - a sequence AST type}
+;;> \item{\scheme{Lit} - a literal AST type}
+;;> \item{\scheme{Sc} - a syntactic closure}
+;;> \item{\scheme{Context} - a context object (including threads)}
+;;> \item{\scheme{Exception} - an exception object}
 ;;> ]
 
 ;;> The following extended type predicates may also be used to test
