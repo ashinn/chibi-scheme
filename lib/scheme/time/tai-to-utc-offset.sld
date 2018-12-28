@@ -154,16 +154,18 @@
         (lambda ()
           (let ((port (open-port)))
             (when port
-              (set-cache! (make-cache-from-port port)))))))
+              (set-cache! (make-cache-from-port port))
+              (close-input-port port))))))
     
-    (thread-start!
-     (make-thread
-      (lambda ()
-        (let loop ()
-          (thread-sleep! *cache-lifetime*)
-          (update-cache! (open-leap-seconds-list-port))
-          (loop)))
-      "leap-second-update-poll"))
+    (when (get-environment-variable *file-name-environment-variable*)
+      (thread-start!
+       (make-thread
+        (lambda ()
+          (let loop ()
+            (thread-sleep! *cache-lifetime*)
+            (update-cache! (open-leap-seconds-list-port))
+            (loop)))
+        "leap-second-update-poll")))
     
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     
@@ -242,8 +244,8 @@
            (let ((file-name
                   (get-environment-variable *file-name-environment-variable*)))
              (if file-name
-               (open-input-file file-name)
-               #f))))))
+                 (open-input-file file-name)
+                 #f))))))
     
     (define (open-leap-seconds-list-port)
       (atomic-box-value *open-leap-seconds-list-port*))
