@@ -3,7 +3,7 @@
 	  syntax-case syntax quasisyntax unsyntax unsyntax-splicing
 	  datum->syntax syntax->datum
 	  generate-temporaries with-syntax syntax-violation
-	  with-ellipsis ellipsis-identifier=?)
+	  with-ellipsis ellipsis-identifier?)
   (import (chibi)
 	  (chibi ast)
 	  (meta)
