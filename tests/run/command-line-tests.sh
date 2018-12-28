@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Test chibi-scheme command-line options.
 # Should be run from a standard build.
@@ -12,13 +12,14 @@ run_chibi() {
 }
 
 for t in $TESTDIR/*.args; do
-    IFS=$'\r\n' GLOBIGNORE='*' :; args=($(cat $t))
-    run_chibi ${args[@]} 2> ${t%.args}.err > ${t%.args}.out
+    IFS=$'\n' read -d '' -r -a args < $t
+    run_chibi "${args[@]}" 2> ${t%.args}.err > ${t%.args}.out
     if diff -w -q ${t%.args}.out ${t%.args}.res \
             && ([ ! -e ${t%.args}.err-res ] || \
                     diff -w -q ${t%.args}.err ${t%.args}.err-res); then
         echo "[PASS] $(basename ${t%.args})"
     else
+        echo chibi "${args[@]}"
         echo "[FAIL] $(basename ${t%.args})"
         FAILURES=$((FAILURES + 1))
     fi

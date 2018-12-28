@@ -362,6 +362,7 @@ sexp run_main (int argc, char **argv) {
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       if (c == 'x') {
         if (strcmp(arg, "chibi.primitive") == 0) {
+          argv[i][2] = '\0';
           goto load_primitive;
         } else if (strcmp(arg, "scheme.small") == 0) {
           load_init(0);

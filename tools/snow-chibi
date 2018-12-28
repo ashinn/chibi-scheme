@@ -2,7 +2,7 @@
 
 CHIBI=${CHIBI:-chibi-scheme}
 IMG=-isnow.img
-if [ -x ./chibi-scheme ] && ! type $CHIBI 2>/dev/null; then
+if [ -x ./chibi-scheme ] && ! type $CHIBI >/dev/null 2>/dev/null; then
     # convenience for running from dev, notable "make test-snow"
     CHIBI="./chibi-scheme"
     export LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH}"
