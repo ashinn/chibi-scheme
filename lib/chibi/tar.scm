@@ -280,17 +280,18 @@
         res))))
 
 (define (main args)
-  (cond
-    ((equal? "t" (car args))
-     (for-each (lambda (f) (write-string f) (newline)) (tar-files (cadr args))))
-    ((equal? "x" (car args))
-     (if (tar-safe? (cadr args))
-       (tar-extract (cadr args))
-       (error "tar file not a single relative directory" (cadr args))))
-    ((equal? "c" (car args))
-     (tar-create (cadr args) (cddr args)))
-    ((equal? "f" (car args))
-     (write-string
+  (let ((args (cdr args)))
+    (cond
+     ((equal? "t" (car args))
+      (for-each (lambda (f) (write-string f) (newline)) (tar-files (cadr args))))
+     ((equal? "x" (car args))
+      (if (tar-safe? (cadr args))
+          (tar-extract (cadr args))
+          (error "tar file not a single relative directory" (cadr args))))
+     ((equal? "c" (car args))
+      (tar-create (cadr args) (cddr args)))
+     ((equal? "f" (car args))
+      (write-string
        (utf8->string (tar-extract-file (cadr args) (car (cddr args))))))
-    (else
-     (error "unknown tar command" (car args)))))
+     (else
+      (error "unknown tar command" (car args))))))

@@ -3,9 +3,9 @@
   (begin
     (define (main args)
       (write-string "Hello, ")
-      (write-string (if (pair? args) (car args) "world!"))
+      (write-string (if (pair? (cdr args)) (cadr args) "world!"))
       (newline))
     (define (bye args)
       (write-string "Goodbye, ")
-      (write-string (if (pair? args) (car args) "world!"))
+      (write-string (if (pair? (cdr args)) (cadr args) "world!"))
       (newline))))
