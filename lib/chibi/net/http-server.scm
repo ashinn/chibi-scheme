@@ -1,11 +1,11 @@
 ;; http-server.scm -- combinator-based http server
-;; Copyright (c) 2013-2015 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2013-2019 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Runs an http server listening at the given address, with the given
 ;;> servlet.
 ;;>
-;;> An servlet is a procedure which takes four arguments: a 
+;;> A servlet is a procedure which takes four arguments: a 
 ;;> \scheme{(chibi config)} config object, an \scheme{Http-Request} record,
 ;;> which contains the I/O ports and parsed request and headers;
 ;;> a \scheme{next} procedure to call the next available servlet if any,
@@ -82,17 +82,20 @@
         (next cfg request))))
 
 ;; Generate a simple page listing the linked files in a directory.
-(define (send-directory path out)
-  (display "<html><body bgcolor=white><pre>\n" out)
-  (for-each
-   (lambda (file)
-     (display "<a href=\"/" out)
-     (display (path-normalize (make-path path file)) out)
-     (display "\">" out)
-     (display file out)
-     (display "</a>\n" out))
-   (sort (directory-files path)))
-  (display "</pre></body></html>\n" out))
+(define (send-directory path out . o)
+  (let ((base-dir (if (and (pair? o) (car o))
+                      (path-relative-to path (car o))
+                      path)))
+    (display "<html><body bgcolor=white><pre>\n" out)
+    (for-each
+     (lambda (file)
+       (display "<a href=\"/" out)
+       (display (path-normalize (make-path base-dir file)) out)
+       (display "\">" out)
+       (display file out)
+       (display "</a>\n" out))
+     (sort (directory-files path)))
+    (display "</pre></body></html>\n" out)))
 
 ;; TODO: If the index-rx is a short list of fixed strings, check
 ;; individually to avoid the full directory lookup.
@@ -101,7 +104,7 @@
        (any (lambda (f) (and (regexp-matches? index-rx f) (make-path dir f)))
             (directory-files dir))))
 
-(define (http-send-directory request path index-rx restart)
+(define (http-send-directory request path index-rx restart . o)
   (cond
    ((find-index-file path index-rx)
     => (lambda (index-file)
@@ -113,7 +116,7 @@
             (request-with-uri request (uri-with-path uri path2))))))
    (else
     (servlet-respond request 200 "OK")
-    (send-directory path (request-out request)))))
+    (apply send-directory path (request-out request) o))))
 
 (define (http-send-file request path)
   (cond
@@ -130,7 +133,7 @@
      (lambda (cfg request next restart)
        (let ((path (make-path dir (request-path request))))
          (if (file-directory? path)
-             (http-send-directory request path index-rx restart)
+             (http-send-directory request path index-rx restart dir)
              (http-send-file request path)))))))
 
 (define (http-procedure-servlet path proc)
