@@ -111,7 +111,11 @@
      (else (lp (cdr ls) (cons (car ls) rev))))))
 
 (define (read-from-file file . opt)
-  (guard (exn (else (and (pair? opt) (car opt))))
+  (guard (exn
+          (else
+           (warn "couldn't load config:" file)
+           (print-stack-trace exn)
+           (and (pair? opt) (car opt))))
     (call-with-input-file file read)))
 
 (define (alist? x)
