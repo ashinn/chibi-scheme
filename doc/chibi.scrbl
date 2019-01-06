@@ -1285,6 +1285,8 @@ namespace.
 
 \item{\hyperlink["lib/chibi/net.html"]{(chibi net) - Simple networking interface}}
 
+\item{\hyperlink["lib/chibi/http-net-server.html"]{(chibi net http-server) - Simple http-server with servlet support}}
+
 \item{\hyperlink["lib/chibi/parse.html"]{(chibi parse) - Parser combinators with convenient syntax}}
 
 \item{\hyperlink["lib/chibi/pathname.html"]{(chibi pathname) - Utilities to decompose and manipulate pathnames}}
