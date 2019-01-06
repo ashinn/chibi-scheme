@@ -12,9 +12,17 @@
 ;;> and a \scheme{restart} procedure to restart the servlets with a new
 ;;> request.
 ;;>
+;;> The default config parameters are:
+;;>
+;;> \itemlist[
+;;> \item{\scheme{port}: the port to listen on, default 8000}
+;;> \item{\scheme{doc-root}: the directory to serve files from, default the directory of the config file, or "." if no config}
+;;> \item{\scheme{index-regexp}: an SRE matching index files to serve in place of a directory listing when browsing directories, default "index.html"}
+;;> ]
+;;>
 ;;> A simple page view counter could be run as:
 ;;>
-;;> \example{
+;;> \scheme{
 ;;> (let ((count 0))
 ;;>   (run-http-server
 ;;>    8000
