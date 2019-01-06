@@ -12,11 +12,12 @@
   (cond-expand
    (chibi
     (import (only (meta) warn))
-    (import (only (chibi) print-stack-trace))
+    (import (only (chibi) print-exception print-stack-trace))
     (import (only (chibi filesystem) file-directory?)))
    (else
     (begin
       (define file-directory? file-exists?)
+      (define (print-exception exn) (write exn))
       (define (print-stack-trace . o) #f)
       (define (warn msg . args)
         (let ((err (current-error-port)))

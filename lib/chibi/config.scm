@@ -114,6 +114,7 @@
   (guard (exn
           (else
            (warn "couldn't load config:" file)
+           (print-exception exn)
            (print-stack-trace exn)
            (and (pair? opt) (car opt))))
     (call-with-input-file file read)))
