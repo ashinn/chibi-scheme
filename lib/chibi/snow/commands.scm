@@ -1145,9 +1145,9 @@
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
     (cond
      ((not (valid-repository? repo))
-      (die 2 "not a valid repository: " repo-uri))
+      (warn "not a valid repository: " repo-uri repo))
      ((not (create-directory* local-dir))
-      (die 2 "can't create directory: " local-dir))
+      (warn "can't create directory: " local-dir))
      (else
       (guard (exn (else (die 2 "couldn't write repository")))
         (call-with-output-file local-tmp
