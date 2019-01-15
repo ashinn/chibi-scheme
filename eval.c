@@ -2281,6 +2281,10 @@ sexp sexp_load_module_file (sexp ctx, const char *file, sexp env) {
   return res;
 }
 
+sexp sexp_current_environment (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_context_env(ctx);
+}
+
 #if SEXP_USE_MODULES
 sexp sexp_current_module_path_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   if (sexp_pairp(x) && sexp_stringp(sexp_car(x))) {
@@ -2297,9 +2301,6 @@ sexp sexp_load_module_file_op (sexp ctx, sexp self, sexp_sint_t n, sexp file, se
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, file);
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
   return sexp_load_module_file(ctx, sexp_string_data(file), env);
-}
-sexp sexp_current_environment (sexp ctx, sexp self, sexp_sint_t n) {
-  return sexp_context_env(ctx);
 }
 sexp sexp_set_current_environment (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   sexp oldenv;

@@ -2252,6 +2252,19 @@ sexp sexp_apply2 (sexp ctx, sexp f, sexp x, sexp y) {
   return res;
 }
 
+sexp sexp_apply3 (sexp ctx, sexp f, sexp x, sexp y, sexp z) {
+  sexp res;
+  sexp_gc_var1(args);
+  if (sexp_opcodep(f) && sexp_opcode_func(f)) {
+    res = ((sexp_proc4)sexp_opcode_func(f))(ctx, f, 3, x, y, z);
+  } else {
+    sexp_gc_preserve1(ctx, args);
+    res = sexp_apply(ctx, f, args=sexp_list3(ctx, x, y, z));
+    sexp_gc_release1(ctx);
+  }
+  return res;
+}
+
 sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args) {
   sexp res, err_cell;
   sexp_gc_var2(handler, params);

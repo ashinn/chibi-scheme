@@ -547,6 +547,24 @@ struct vec2box {
        (list (vec2-x v) (vec2-y v))))
  (test-assert (vec2box? (make-vec2box (make-vec2 17.0 23.0)))))
 
+(test-ffi
+ "uniform vectors"
+ (begin
+   (c-declare "
+float f32vector_ref(float* uv, int i) {
+  return uv[i];
+}
+void f32vector_set(float* uv, int i, float v) {
+  uv[i] = v;
+}
+")
+   (define-c float f32vector-ref (f32vector int))
+   (define-c void f32vector-set (f32vector int float)))
+ (let ((uv #f32(0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7)))
+   (test 0.3 (f32vector-ref uv 3))
+   (f32vector-set uv 3 3.14)
+   (test 3.14 (f32vector-ref uv 3))))
+
 ;; TODO: virtual method accessors
 
 (cleanup-shared-objects!)

@@ -894,6 +894,21 @@ sexp sexp_ratio_ceiling (sexp ctx, sexp a) {
 
 #endif
 
+double sexp_to_double (sexp x) {
+  if (sexp_flonump(x))
+    return sexp_flonum_value(x);
+  else if (sexp_fixnump(x))
+    return sexp_fixnum_to_double(x);
+  else if (sexp_bignump(x))
+    return sexp_bignum_to_double(x);
+#if SEXP_USE_RATIOS
+  else if (sexp_ratiop(x))
+    return sexp_ratio_to_double(x);
+#endif
+  else
+    return 0.0;
+}
+
 /************************ complex numbers ****************************/
 
 #if SEXP_USE_COMPLEX
@@ -973,21 +988,6 @@ sexp sexp_complex_div (sexp ctx, sexp a, sexp b) {
   res = sexp_make_complex(ctx, real, imag);
   sexp_gc_release4(ctx);
   return sexp_complex_normalize(res);
-}
-
-static double sexp_to_double (sexp x) {
-  if (sexp_flonump(x))
-    return sexp_flonum_value(x);
-  else if (sexp_fixnump(x))
-    return sexp_fixnum_to_double(x);
-  else if (sexp_bignump(x))
-    return sexp_bignum_to_double(x);
-#if SEXP_USE_RATIOS
-  else if (sexp_ratiop(x))
-    return sexp_ratio_to_double(x);
-#endif
-  else
-    return 0.0;
 }
 
 static sexp sexp_to_complex (sexp ctx, sexp x) {

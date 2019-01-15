@@ -259,8 +259,8 @@ _OP(SEXP_OPC_SETTER, SEXP_OP_SLOTN_SET, 4, 0, SEXP_VOID, _I(SEXP_OBJECT), _I(SEX
 #else
 _FN1(_I(SEXP_OBJECT), _I(SEXP_IPORT), "port-fileno", 0, sexp_get_port_fileno),
 #endif
-#if SEXP_USE_MODULES
 _FN0(_I(SEXP_ENV), "current-environment", 0, sexp_current_environment),
+#if SEXP_USE_MODULES
 _FN1(_I(SEXP_ENV), _I(SEXP_ENV), "set-current-environment!", 0, sexp_set_current_environment),
 _FN0(_I(SEXP_ENV), "%meta-env", 0, sexp_meta_environment),
 _FN1(SEXP_NULL, _I(SEXP_ENV), "env-exports", 0, sexp_env_exports_op),
@@ -283,6 +283,10 @@ _FN0(SEXP_VOID, "print-vm-profile", 0, sexp_print_vm_profile),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_FORCE, 1, 0, _I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "force", 0, NULL),
 _FN2(_I(SEXP_PROMISE), _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), "promise", 0, sexp_make_promise),
 _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 0, _I(SEXP_BOOLEAN), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "promise?", _I(SEXP_PROMISE), 0),
+#endif
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+_FN2(_I(SEXP_UNIFORM_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_OBJECT), "list->uvector", 0, sexp_list_to_uvector_op),
+_FN2(_I(SEXP_UNIFORM_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-uvector", 0, sexp_make_uvector_op),
 #endif
 _OP(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 };
