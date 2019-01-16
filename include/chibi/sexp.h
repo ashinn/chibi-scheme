@@ -1822,7 +1822,11 @@ SEXP_API int sexp_poll_port(sexp ctx, sexp port, int inputp);
 #define sexp_symbol_to_string(ctx, s) sexp_symbol_to_string_op(ctx, NULL, 1, s)
 #define sexp_make_ephemeron(ctx, k, v) sexp_make_ephemeron_op(ctx, NULL, 2, k, v)
 #define sexp_make_bytes(ctx, l, i) sexp_make_bytes_op(ctx, NULL, 2, l, i)
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
 #define sexp_make_uvector(ctx, et, l) sexp_make_uvector_op(ctx, NULL, 2, et, l)
+#else
+#define sexp_make_uvector(ctx, et, l) sexp_make_vector(ctx, l, SEXP_ZERO)
+#endif
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx, NULL, 2, l, c)
 #define sexp_subbytes(ctx, a, b, c) sexp_subbytes_op(ctx, NULL, 3, a, b, c)
 #define sexp_string_concatenate(ctx, ls, s) sexp_string_concatenate_op(ctx, NULL, 2, ls, s)

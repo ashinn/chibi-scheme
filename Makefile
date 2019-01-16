@@ -177,7 +177,7 @@ chibi-scheme-ulimit$(EXE): main.o $(SEXP_ULIMIT_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) -lm
 
 clibs.c: $(GENSTATIC) $(CHIBI_DEPENDENCIES) $(COMPILED_LIBS:%$(SO)=%.c)
-	$(FIND) lib -name \*.sld | $(CHIBI) -q $(GENSTATIC) > $@
+	$(GIT) ls-files lib | $(GREP) .sld | $(CHIBI) -q $(GENSTATIC) > $@
 
 chibi-scheme.pc: chibi-scheme.pc.in
 	echo "# pkg-config" > chibi-scheme.pc
