@@ -391,7 +391,7 @@ install-base: all
 	$(INSTALL_EXE) -m0755 lib/srfi/98/env$(SO) $(DESTDIR)$(BINMODDIR)/srfi/98
 	$(INSTALL_EXE) -m0755 lib/srfi/144/math$(SO) $(DESTDIR)$(BINMODDIR)/srfi/144
 	$(INSTALL_EXE) -m0755 lib/srfi/151/bit$(SO) $(DESTDIR)$(BINMODDIR)/srfi/151
-	$(INSTALL_EXE) -m0755 lib/srfi/160/uvprim$(SO) $(DESTDIR)$(BINMODDIR)/srfi/160
+	$(INSTALL_EXE) -m0755 lib/srfi/160/uvprims$(SO) $(DESTDIR)$(BINMODDIR)/srfi/160
 	$(MKDIR) $(DESTDIR)$(INCDIR)
 	$(INSTALL) -m0644 $(INCLUDES) $(DESTDIR)$(INCDIR)/
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
