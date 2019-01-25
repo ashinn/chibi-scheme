@@ -443,6 +443,9 @@ struct sexp_struct {
 #else
       sexp_uint_t offset, length;
       sexp bytes;
+#if SEXP_USE_STRING_INDEX_TABLE
+      sexp charlens;
+#endif
 #endif
     } string;
     struct {
@@ -1122,7 +1125,8 @@ enum sexp_uniform_vector_type {
 #define sexp_bit_ref(u1v, i)    (((sexp_uvector_data(u1v)[i/8])>>(i%8))&1)
 #define sexp_bit_set(u1v, i, x) (x ? (sexp_uvector_data(u1v)[i/8]|=(1<<(i%8))) : (sexp_uvector_data(u1v)[i/8]&=~(1<<(i%8))))
 
-#define sexp_string_size(x)   (sexp_field(x, string, SEXP_STRING, length))
+#define sexp_string_size(x)     (sexp_field(x, string, SEXP_STRING, length))
+#define sexp_string_charlens(x) (sexp_field(x, string, SEXP_STRING, charlens))
 #if SEXP_USE_PACKED_STRINGS
 #define sexp_string_data(x)   (sexp_field(x, string, SEXP_STRING, data))
 #define sexp_string_bytes(x)  (x)
@@ -1720,6 +1724,12 @@ SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
 #define sexp_string_length(s) sexp_string_size(s)
 #define sexp_substring(ctx, s, i, j) sexp_substring_op(ctx, NULL, 3, s, i, j)
 #define sexp_substring_cursor(ctx, s, i, j) sexp_substring_op(ctx, NULL, 3, s, i, j)
+#endif
+
+#if SEXP_USE_STRING_INDEX_TABLE
+SEXP_API void sexp_update_string_index_lookup(sexp ctx, sexp s);
+#else
+#define sexp_update_string_index_lookup(ctx, s)
 #endif
 
 #if SEXP_USE_GREEN_THREADS

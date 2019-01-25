@@ -262,7 +262,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
 #if SEXP_USE_PACKED_STRINGS
   {SEXP_STRING, 0, 0, 0, 0, 0, sexp_sizeof(string)+1, sexp_offsetof(string, length), 1, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #else
-  {SEXP_STRING, sexp_offsetof(string, bytes), 1, 1, 0, 0, sexp_sizeof(string), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
+  {SEXP_STRING, sexp_offsetof(string, bytes), 1, 1+SEXP_USE_STRING_INDEX_TABLE, 0, 0, sexp_sizeof(string), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"String", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
 #endif
   {SEXP_VECTOR, sexp_offsetof(vector, data), 0, 0, sexp_offsetof(vector, length), 1, sexp_sizeof(vector), sexp_offsetof(vector, length), sizeof(sexp), 0, 0, 0, 0, 0, 0, (sexp)"Vector", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
   {SEXP_FLONUM, 0, 0, 0, 0, 0, sexp_sizeof(flonum), 0, 0, 0, 0, 0, 0, 0, 0, (sexp)"Flonum", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, NULL},
@@ -1198,13 +1198,31 @@ void sexp_utf8_encode_char (unsigned char* p, int len, int c) {
 }
 
 sexp sexp_string_index_to_cursor (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp index) {
+#if SEXP_USE_STRING_INDEX_TABLE
+  sexp charlens;
+  sexp_sint_t* chunklens;
+  sexp_sint_t chunk;
+#endif
   sexp_sint_t i, j, limit;
   unsigned char *p;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, index);
   p = (unsigned char*)sexp_string_data(str);
   limit = sexp_string_size(str);
-  for (j=0, i=sexp_unbox_fixnum(index); i>0 && j<limit; i--)
+  i = sexp_unbox_fixnum(index);
+  j = 0;
+#if SEXP_USE_STRING_INDEX_TABLE
+  if (i > SEXP_STRING_INDEX_TABLE_CHUNK_SIZE) {
+    charlens = sexp_string_charlens(str);
+    if (charlens) {
+      chunklens = (sexp_sint_t*)sexp_bytes_data(charlens);
+      chunk = i / SEXP_STRING_INDEX_TABLE_CHUNK_SIZE - 1;
+      j = chunklens[chunk];
+      i -= (chunk+1) * SEXP_STRING_INDEX_TABLE_CHUNK_SIZE;
+    }
+  }
+#endif
+  for ( ; i>0 && j<limit; i--)
     j += sexp_utf8_initial_byte_count(p[j]);
   if (i != 0)
     return sexp_user_exception(ctx, self, "string-index->cursor: index out of range", index);
@@ -1225,6 +1243,36 @@ sexp sexp_string_cursor_offset (sexp ctx, sexp self, sexp_sint_t n, sexp cur) {
   return sexp_make_fixnum(sexp_unbox_string_cursor(cur));
 }
 
+#endif
+
+#if SEXP_USE_STRING_INDEX_TABLE
+void sexp_update_string_index_lookup(sexp ctx, sexp s) {
+  char *p;
+  sexp_sint_t numchunks, len, i, *chunks;
+  sexp_gc_var1(tmp);
+  if (sexp_string_size(s) < SEXP_STRING_INDEX_TABLE_CHUNK_SIZE*1.2) {
+    sexp_string_charlens(s) = NULL; /* don't build table for just a few chars */
+    return;
+  }
+  sexp_gc_preserve1(ctx, tmp);
+  tmp = s;
+  len = sexp_string_utf8_length((unsigned char*) sexp_string_data(s), sexp_string_size(s));
+  numchunks = ((len + SEXP_STRING_INDEX_TABLE_CHUNK_SIZE - 1) / SEXP_STRING_INDEX_TABLE_CHUNK_SIZE) - 1;
+  sexp_string_charlens(s) =
+    sexp_make_bytes_op(ctx, NULL, 2, sexp_make_fixnum(numchunks * sizeof(sexp_sint_t)), SEXP_VOID);
+  chunks = (sexp_sint_t*)sexp_bytes_data(sexp_string_charlens(s));
+  p = sexp_string_data(s);
+  i = 0;
+  while (1) {
+    p += sexp_utf8_initial_byte_count(*p);
+    if (++i % SEXP_STRING_INDEX_TABLE_CHUNK_SIZE == 0) {
+      chunks[i/SEXP_STRING_INDEX_TABLE_CHUNK_SIZE - 1] = p - sexp_string_data(s);
+      if (i / SEXP_STRING_INDEX_TABLE_CHUNK_SIZE >= numchunks-1)
+        break;
+    }
+  }
+  sexp_gc_release1(ctx);
+}
 #endif
 
 sexp sexp_make_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch)
@@ -1259,6 +1307,7 @@ sexp sexp_make_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch)
   sexp_string_bytes(s) = b;
   sexp_string_offset(s) = 0;
   sexp_string_size(s) = sexp_bytes_length(b);
+  sexp_update_string_index_lookup(ctx, s);
   sexp_gc_release2(ctx);
   return s;
 #endif
@@ -1273,6 +1322,7 @@ sexp sexp_c_string (sexp ctx, const char *str, sexp_sint_t slen) {
   if (sexp_exceptionp(s)) return s;
   memcpy(sexp_string_data(s), str, len);
   sexp_string_data(s)[len] = '\0';
+  sexp_update_string_index_lookup(ctx, s);
   return s;
 }
 
@@ -1294,6 +1344,7 @@ sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start
          sexp_string_data(str)+sexp_unbox_string_cursor(start),
          sexp_string_size(res));
   sexp_string_data(res)[sexp_string_size(res)] = '\0';
+  sexp_update_string_index_lookup(ctx, res);
   return res;
 }
 
@@ -1360,6 +1411,7 @@ sexp sexp_string_concatenate_op (sexp ctx, sexp self, sexp_sint_t n, sexp str_ls
     }
   }
   *p = '\0';
+  sexp_update_string_index_lookup(ctx, res);
   return res;
 }
 

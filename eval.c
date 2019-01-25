@@ -1947,6 +1947,8 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
     sexp_string_size(str) += new_len - old_len;
   }
   sexp_utf8_encode_char(p, new_len, c);
+  if (old_len != new_len)
+    sexp_update_string_index_lookup(ctx, str);
 }
 
 sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i, sexp ch) {

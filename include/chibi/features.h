@@ -210,12 +210,14 @@
 /*   Making them immutable allows for packed UTF-8 strings. */
 /* #define SEXP_USE_MUTABLE_STRINGS 0 */
 
-/* uncomment this to make string cursors just fixnum offsets */
-/*   The default when using UTF-8 is to have a disjoint string */
-/*   cursor type.  This is an immediate type with no loss in  */
-/*   performance, and prevents confusion mixing indexes and */
-/*   cursors. */
-/* #define SEXP_USE_DISJOINT_STRING_CURSORS 0 */
+/* uncomment this to enable precomputed index->cursor tables for strings */
+/*   This makes string-ref faster at the expensive of making string */
+/*   construction (including string-append and I/O) slower. */
+/*   You can configure with SEXP_STRING_INDEX_TABLE_CHUNK_SIZE below, */
+/*   the default is caching every 64th index (<=12.5% string overhead). */
+/*   With a minimum of 1 you'd have up to 8x string overhead, and */
+/*   string-ref would still be slightly slower than string-cursors. */
+/* #define SEXP_USE_STRING_INDEX_TABLE 1 */
 
 /* uncomment this to disable automatic closing of ports */
 /*   If enabled, the underlying FILE* for file ports will be */
@@ -645,6 +647,18 @@
 #endif
 #ifndef SEXP_USE_PACKED_STRINGS
 #define SEXP_USE_PACKED_STRINGS 1
+#endif
+
+#if SEXP_USE_PACKED_STRINGS
+#define SEXP_USE_STRING_INDEX_TABLE 0
+#endif
+#ifndef SEXP_USE_STRING_INDEX_TABLE
+#define SEXP_USE_STRING_INDEX_TABLE 0
+#endif
+
+/* for every chunk_size indexes store the precomputed offset */
+#ifndef SEXP_STRING_INDEX_TABLE_CHUNK_SIZE
+#define SEXP_STRING_INDEX_TABLE_CHUNK_SIZE 64
 #endif
 
 #ifndef SEXP_USE_DISJOINT_STRING_CURSORS
