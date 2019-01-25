@@ -51,6 +51,7 @@ lib/chibi/system.c
 lib/chibi/time.c
 lib/chibi/win32/process-win32.c
 lib/srfi/144/math.c
+lib/srfi/160/uvprims.c
 *.tgz
 *.html
 *.img
