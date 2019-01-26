@@ -1,8 +1,8 @@
 Alex Shinn wrote the initial version of chibi-scheme and all
 distributed modules.
 
-The Emscripten build, SRFI 139 implementation, and various other
-patches were contributed by Marc Nieper-Wißkirchen.
+The Emscripten build, syntax-case and SRFI 139 implementation, and
+various other patches were contributed by Marc Nieper-Wißkirchen.
 
 The image handling code in gc_heap.c was written by Chris Walsh.
 
