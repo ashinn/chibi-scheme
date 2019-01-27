@@ -482,6 +482,9 @@ static const char* sexp_initial_features[] = {
 #if SEXP_USE_UTF8_STRINGS
   "full-unicode",
 #endif
+#if SEXP_USE_STRING_INDEX_TABLE
+  "string-index",
+#endif
 #if SEXP_USE_GREEN_THREADS
   "threads",
 #endif

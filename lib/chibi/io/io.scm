@@ -75,9 +75,11 @@
 ;;> a string not including the newline.  Reads at most \var{n}
 ;;> characters, defaulting to 8192.
 
-(cond-expand
- ((not string-streams)
-  (define (%read-line n in)
+(define (%read-line n in)
+  (cond
+   ((port-fileno in)
+    (%%read-line n in))
+   (else
     (let ((out (open-output-string)))
       (let lp ((i 0))
         (let ((ch (peek-char in)))
@@ -128,9 +130,11 @@
 ;;> than \var{n} characters if the end of file is reached,
 ;;> or the eof-object if no characters are available.
 
-(cond-expand
- ((not string-streams)
-  (define (%read-string n in)
+(define (%read-string n in)
+  (cond
+   ;;((port-fileno in)
+   ;; (%%read-string n in))
+   (else
     (let ((out (open-output-string)))
       (let lp ((i 0))
         (cond ((or (= i n) (eof-object? (peek-char in)))
@@ -159,9 +163,11 @@
 ;;> An error is signalled if the length of \var{str} is smaller
 ;;> than \var{n}.
 
-(cond-expand
- ((not string-streams)
-  (define (%read-string! str n in)
+(define (%read-string! str n in)
+  (cond
+   ;;((port-fileno in)
+   ;; (%%read-string! str n in))
+   (else
     (let lp ((i 0))
       (cond ((or (= i n) (eof-object? (peek-char in))) i)
             (else (string-set! str i (read-char in)) (lp (+ i 1))))))))
