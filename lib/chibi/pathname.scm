@@ -108,24 +108,32 @@
   (let* ((path (path-normalize path))
          (path-end (string-cursor-end path))
          (dir (path-normalize dir))
-         (dir-end (string-cursor-end dir))
-         (i (string-mismatch dir path)))
-    (cond
-     ((not (string-cursor<=? 1 dir-end i path-end))
-      (let ((i2 (string-cursor-next path i)))
-        (and (string-cursor=? i path-end)
-             (string-cursor=? i2 dir-end)
-             (eqv? #\/ (string-cursor-ref dir i))
-             ".")))
-     ((string-cursor=? i path-end)
-      ".")
-     ((eqv? #\/ (string-cursor-ref path i))
-      (let ((i2 (string-cursor-next path i)))
-        (if (string-cursor=? i2 path-end) "." (substring-cursor path i2))))
-     ((eqv? #\/ (string-cursor-ref path (string-cursor-prev path i)))
-      (substring-cursor path i))
-     (else
-      #f))))
+         (dir-end (string-cursor-end dir)))
+    (call-with-values
+        (lambda () (string-mismatch dir path))
+      (lambda (i j)
+        (cond
+         (
+          ;;(not (string-cursor<=?
+          ;;      (string-cursor-next path (string-cursor-start path))
+          ;;      dir-end i path-end))
+          (not (and (string-cursor<=?
+                     (string-cursor-next dir (string-cursor-start dir))
+                     dir-end i)
+                    (string-cursor<=? j path-end)))
+          (and (string-cursor=? j path-end)
+               (string-cursor=? (string-cursor-next dir i) dir-end)
+               (eqv? #\/ (string-cursor-ref dir i))
+               "."))
+         ((string-cursor=? j path-end)
+          ".")
+         ((eqv? #\/ (string-cursor-ref path j))
+          (let ((j2 (string-cursor-next path j)))
+            (if (string-cursor=? j2 path-end) "." (substring-cursor path j2))))
+         ((eqv? #\/ (string-cursor-ref path (string-cursor-prev path j)))
+          (substring-cursor path j))
+         (else
+          #f))))))
 
 ;;> Resolve \var{path} relative to the given directory.  Returns
 ;;> \var{path} unchanged if already absolute.

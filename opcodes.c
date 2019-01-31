@@ -225,13 +225,13 @@ _FN1(_I(SEXP_NUMBER), _I(SEXP_NUMBER), "ceiling", 0, sexp_ceiling),
 #endif
 _FN2(_I(SEXP_NUMBER), _I(SEXP_NUMBER), _I(SEXP_NUMBER), "expt", 0, sexp_expt_op),
 #if SEXP_USE_UTF8_STRINGS
-_FN2(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-index->cursor", 0, sexp_string_index_to_cursor),
-_FN2(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-cursor->index", 0, sexp_string_cursor_to_index),
+_FN2(_I(SEXP_STRING_CURSOR), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-index->cursor", 0, sexp_string_index_to_cursor),
+_FN2(_I(SEXP_FIXNUM), _I(SEXP_STRING), _I(SEXP_STRING_CURSOR), "string-cursor->index", 0, sexp_string_cursor_to_index),
 _FN2(_I(SEXP_CHAR), _I(SEXP_STRING), _I(SEXP_FIXNUM), "string-ref", 0, sexp_string_utf8_index_ref),
 #if SEXP_USE_MUTABLE_STRINGS
 _FN3(SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_CHAR), "string-set!", 0, sexp_string_utf8_index_set),
 #endif
-_FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring-cursor", SEXP_FALSE, sexp_substring_op),
+_FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_STRING_CURSOR), _I(SEXP_STRING_CURSOR), "substring-cursor", SEXP_FALSE, sexp_substring_op),
 _FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring", SEXP_FALSE, sexp_utf8_substring_op),
 #else
 _FN3OPT(_I(SEXP_STRING), _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "substring", SEXP_FALSE, sexp_substring_op),

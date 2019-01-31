@@ -164,6 +164,9 @@
         ""
         (substring-cursor str left right))))
 
+;;> Returns two values: the first cursors from the left in
+;;> \var{prefix} and in \var{str} where the two strings don't match.
+
 (define (string-mismatch prefix str)
   (let ((end1 (string-cursor-end prefix))
         (end2 (string-cursor-end str)))
@@ -172,8 +175,11 @@
       (if (or (string-cursor>=? i end1)
               (string-cursor>=? j end2)
               (not (eq? (string-cursor-ref prefix i) (string-cursor-ref str j))))
-          j
+          (values i j)
           (lp (string-cursor-next prefix i) (string-cursor-next str j))))))
+
+;;> Returns two values: the first cursors from the right in
+;;> \var{prefix} and in \var{str} where the two strings don't match.
 
 (define (string-mismatch-right suffix str)
   (let ((end1 (string-cursor-start suffix))
@@ -183,17 +189,14 @@
       (if (or (string-cursor<? i end1)
               (string-cursor<? j end2)
               (not (eq? (string-cursor-ref suffix i) (string-cursor-ref str j))))
-          j
+          (values i j)
           (lp (string-cursor-prev suffix i) (string-cursor-prev str j))))))
-
-;; TODO: These definitions are specific to the Chibi implementation of
-;; cursors.  Possibly the mismatch API should be modified to allow an
-;; efficient portable definition.
 
 ;;> Returns true iff \var{prefix} is a prefix of \var{str}.
 
 (define (string-prefix? prefix str)
-  (string-cursor=? (string-cursor-end prefix) (string-mismatch prefix str)))
+  (call-with-values (lambda () (string-mismatch prefix str))
+    (lambda (i j) (string-cursor=? (string-cursor-end prefix) i))))
 
 ;;> Returns true iff \var{suffix} is a suffix of \var{str}.
 
@@ -204,7 +207,9 @@
                                               (string-cursor-start suffix))
                           (string-cursor-back
                            str
-                           (string-mismatch-right suffix str)
+                           (call-with-values
+                               (lambda () (string-mismatch-right suffix str))
+                             (lambda (i j) j))
                            diff)))))
 
 ;;> The fundamental string iterator.  Calls \var{kons} on each

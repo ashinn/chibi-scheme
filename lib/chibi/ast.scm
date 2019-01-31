@@ -353,10 +353,28 @@
 ;;> Returns the interpretation of the integer \var{n} as
 ;;> an immediate object, useful for debugging.
 
-;;> \procedure{(string-contains str pat)}
+;;> \procedure{(string-contains str pat [start])}
 
 ;;> Returns the first string cursor of \var{pat} in \var{str},
 ;;> of \scheme{#f} if it's not found.
+
+(cond-expand
+ (safe-string-cursors
+  (define orig-string-contains string-contains)
+  (set! string-contains
+        (lambda (str pat . o)
+          (let ((res
+                 (if (pair? o)
+                     (orig-string-contains str pat (string-cursor-where (car o)))
+                     (orig-string-contains str pat))))
+            (and res (make-string-cursor str res (string-size str)))))))
+ (else
+  ))
+
+;;> \procedure{(string-cursor-copy! dst src from start end)}
+
+;;> Copies the characters from \var{src}[\var{start}..\var{end}]
+;;> to \var{dst} starting at \var{from}.
 
 ;;> \procedure{(safe-setenv name value)}
 

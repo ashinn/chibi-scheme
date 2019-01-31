@@ -564,10 +564,10 @@
 (define (match/eog str i ch start end matches)
   (and (string-cursor>? i start)
        (or (string-cursor>=? i end)
-           (let ((m (regexp-search re:grapheme str
-                                   (string-cursor->index str i)
-                                   (string-cursor->index str end))))
-             (and m (string-cursor<=? (regexp-match-submatch-end m 0) i))))))
+           (let* ((sci (string-cursor->index str i))
+                  (sce (string-cursor->index str end))
+                  (m (regexp-search re:grapheme str sci sce)))
+             (and m (<= (regexp-match-submatch-end m 0) sci))))))
 
 (define (lookup-char-set name flags)
   (cond
