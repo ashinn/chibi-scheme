@@ -201,7 +201,7 @@ where \var{<library-declarations>} can be any of
   (begin <expr> ...)                   ;; inline Scheme code
   (include <file> ...)                 ;; load one or more files
   (include-ci <file> ...)              ;; as include, with case-folding
-  (include-shared <file> ...)          ;; dynamic load a library
+  (include-shared <file> ...)          ;; dynamic load a library (non-R7RS)
 }
 
 \var{<import-spec>} can either be a module name or any of
@@ -210,7 +210,8 @@ where \var{<library-declarations>} can be any of
   (only <import-spec> <id> ...)
   (except <import-spec> <id> ...)
   (rename <import-spec> (<from-id> <to-id>) ...)
-  (prefix <prefix-id> <import-spec>)
+  (prefix <import-spec> <prefix-id>)
+  (drop-prefix <import-spec> <prefix-id>)   ;; non-R7RS
 }
 
 These forms perform basic selection and renaming of individual
@@ -1205,7 +1206,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-8/srfi-8.html"]{(srfi 8)  - receive}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-9/srfi-9.html"]{(srfi 9)  - define-record-type}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-11/srfi-11.html"]{(srfi 11) - let-values/let*-values}}
-\item{\hyperlink["http://srfi.schemers.org/srfi-11/srfi-14.html"]{(srfi 14) - character-set library}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-14/srfi-14.html"]{(srfi 14) - character-set library}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-16/srfi-16.html"]{(srfi 16) - case-lambda}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-18/srfi-18.html"]{(srfi 18) - multi-threading support}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-22/srfi-22.html"]{(srfi 22) - running scheme scripts on Unix}}
