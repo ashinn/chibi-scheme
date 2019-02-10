@@ -179,7 +179,7 @@
     "Punctuation=P"
     "Symbol=S"
     "Blank=Zs,0009"
-    "Whitespace=Zs,Zl,Zp,0009,000A,000B,000C,000D"
+    "Whitespace=Zs,Zl,Zp,0009,000A,000B,000C,000D,0085"
     "Digit=Nd"))
 
 (let ((args (command-line)))
