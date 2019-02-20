@@ -2955,7 +2955,8 @@ static int sexp_resolve_uniform_type(int c, sexp len) {
 #endif
 
 sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sexp ls) {
-  int et, i, min, max;
+  long et, i, min;
+  unsigned long max;
   sexp ls2, tmp;
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, etype);
   sexp_gc_var1(res);
@@ -2967,7 +2968,8 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
     et = sexp_unbox_fixnum(etype);
     res = et == SEXP_U8 ? sexp_make_bytes(ctx, sexp_length(ctx, ls), SEXP_VOID) : sexp_make_uvector(ctx, etype, sexp_length(ctx, ls));
     min = 0;
-    max = (1 << sexp_uvector_element_size(et)) - 1;
+    max = sexp_uvector_element_size(et) == 64 ? -1 :
+      (1uL << sexp_uvector_element_size(et)) - 1;
     if (sexp_uvector_prefix(et) == 's') {
       min = -(max/2) - 1;
       max = (max/2);
