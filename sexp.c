@@ -1108,10 +1108,10 @@ sexp sexp_make_bytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp i) {
 
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
 sexp sexp_make_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp elt_type, sexp len) {
-  sexp_uint_t etype = sexp_unbox_fixnum(elt_type), elen = sexp_unbox_fixnum(len), clen;
+  sexp_sint_t etype = sexp_unbox_fixnum(elt_type), elen = sexp_unbox_fixnum(len), clen;
   sexp_gc_var1(res);
   if (etype == SEXP_U8)
-    return sexp_make_bytes(ctx, len, SEXP_VOID);
+    return sexp_make_bytes(ctx, len, SEXP_ZERO);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, elt_type);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, len);
   if (etype < SEXP_U1 || etype > SEXP_C128)
@@ -1124,24 +1124,11 @@ sexp sexp_make_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp elt_type, sex
     clen = ((elen * sexp_uvector_element_size(etype)) + 7) / 8;
     sexp_uvector_type(res) = etype;
     sexp_uvector_length(res) = elen;
-    sexp_uvector_bytes(res) = sexp_make_bytes(ctx, sexp_make_fixnum(clen), SEXP_VOID);
+    sexp_uvector_bytes(res) = sexp_make_bytes(ctx, sexp_make_fixnum(clen), SEXP_ZERO);
     if (sexp_exceptionp(sexp_uvector_bytes(res)))
       res = sexp_uvector_bytes(res);
-    else
-      sexp_uvector_data(res) = (unsigned char*) sexp_bytes_data(sexp_uvector_bytes(res));
   }
   sexp_gc_release1(ctx);
-  return res;
-}
-
-sexp sexp_make_cuvector(sexp ctx, sexp_uint_t etype, void* cptr, int freep) {
-  sexp res = sexp_alloc_type(ctx, uvector, SEXP_UNIFORM_VECTOR);
-  if (!sexp_exceptionp(res)) {
-    sexp_uvector_type(res) = etype;
-    sexp_uvector_length(res) = -1;
-    sexp_uvector_data(res) = cptr;
-    sexp_uvector_freep(res) = freep;
-  }
   return res;
 }
 #endif

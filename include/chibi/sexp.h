@@ -432,9 +432,8 @@ struct sexp_struct {
     } bytes;
     struct {
       unsigned char element_type;
-      sexp_uint_t length;
+      sexp_sint_t length;
       sexp bytes;
-      unsigned char* data;
     } uvector;
     struct {
 #if SEXP_USE_PACKED_STRINGS
@@ -1118,7 +1117,7 @@ enum sexp_uniform_vector_type {
 
 #define sexp_uvector_length(x) (sexp_field(x, uvector, SEXP_UNIFORM_VECTOR, length))
 #define sexp_uvector_type(x)   (sexp_field(x, uvector, SEXP_UNIFORM_VECTOR, element_type))
-#define sexp_uvector_data(x)   (sexp_field(x, uvector, SEXP_UNIFORM_VECTOR, data))
+#define sexp_uvector_data(x) sexp_bytes_data(sexp_uvector_bytes(x))
 #define sexp_uvector_maybe_null_data(x) (sexp_not(x) ? NULL : sexp_uvector_data(x))
 #define sexp_uvector_bytes(x)  (sexp_field(x, uvector, SEXP_UNIFORM_VECTOR, bytes))
 
