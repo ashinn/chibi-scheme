@@ -2,7 +2,7 @@
 (define-library (srfi 159 base)
   (import (chibi show))
   (export
-   show fn fn-fork with with! each each-in-list call-with-output
+   show fn forked with with! each each-in-list call-with-output
    displayed written written-shared written-simply
    numeric numeric/comma numeric/si numeric/fitted
    nothing nl fl space-to tab-to escaped maybe-escaped

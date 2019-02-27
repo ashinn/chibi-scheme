@@ -64,7 +64,7 @@
                          (abort fail))
                         (else
                          (output-default str)))))))))
-         (fn-fork
+         (forked
           (with ((output output*)
                  (port out))
             proc)

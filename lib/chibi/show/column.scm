@@ -48,14 +48,14 @@
         (if (list-queue-empty? queue)
             eof
             (list-queue-remove-front! queue)))
-      (fn-fork (fn () (with ((port out) (output output*))
-                        (call-with-current-continuation
-                         (lambda (cc)
-                           (set! return cc)
-                           (each producer
-                                 (fn (output)
-                                   (set! resume #f)
-                                   (fn () (return nothing) nothing)))))))
+      (forked (fn () (with ((port out) (output output*))
+                       (call-with-current-continuation
+                        (lambda (cc)
+                          (set! return cc)
+                          (each producer
+                                (fn (output)
+                                  (set! resume #f)
+                                  (fn () (return nothing) nothing)))))))
                (consumer generate)))))
 
 (define (call-with-output-generators producers consumer)

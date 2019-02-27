@@ -12,7 +12,7 @@
 (define-environment-monad Show-Env
   (sequence: sequence)
   (bind: %fn)
-  (bind-fork: fn-fork)
+  (bind-fork: forked)
   (local: %with)
   (local!: with!)
   (return: return)
@@ -139,5 +139,5 @@
 ;;> \var{consumer}.
 (define (call-with-output producer consumer)
   (let ((out (open-output-string)))
-    (fn-fork (with ((port out) (output output-default)) producer)
-             (fn () (consumer (get-output-string out))))))
+    (forked (with ((port out) (output output-default)) producer)
+            (fn () (consumer (get-output-string out))))))

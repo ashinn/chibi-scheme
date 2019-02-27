@@ -14,7 +14,7 @@
 (define (string-replace-all str ch1 ch2)
   (let ((out (open-output-string)))
     (string-for-each
-     (lambda (ch) (write-char (if (eqv? ch ch1) ch2 ch) out))
+     (lambda (ch) (display (if (eqv? ch ch1) ch2 ch) out))
      str)
     (get-output-string out)))
 
@@ -126,7 +126,10 @@
              (comma-rule (default comma comma-rule))
              (comma-sep (default commasep comma-sep))
              (dec-sep (default decsep
-                        (or decimal-sep (if (eqv? comma-sep #\.) #\, #\.)))))
+                        (or decimal-sep (if (eqv? comma-sep #\.) #\, #\.))))
+             (dec-ls (if (char? dec-sep)
+                         (list dec-sep)
+                         (reverse (string->list dec-sep)))))
         ;; General formatting utilities.
         (define (get-scale q)
           (expt radix (- (integer-log q radix) 1)))
@@ -164,7 +167,9 @@
               (let lp ((res res))
                 (cond
                  ((and (pair? res) (eqv? 0 (car res))) (lp (cdr res)))
-                 ((and (pair? res) (eqv? dec-sep (car res)))
+                 ((and (pair? res)
+                       (eqv? (car dec-ls) (car res))
+                       (null? (cdr dec-ls)))
                   (if inexact?
                       (cons 0 res)      ; "1.0"
                       (cdr res)))       ; "1"
@@ -185,7 +190,7 @@
                ;; 15 decimals.
                ((if precision (< i precision) (< i 16))
                 (let ((res (if (zero? i)
-                               (cons dec-sep (if (null? res) (cons 0 res) res))
+                               (append dec-ls (if (null? res) (cons 0 res) res))
                                res))
                       (q (quotient n d)))
                   (cond
@@ -218,7 +223,8 @@
                ((string-cursor<? (string-find s #\e) end)
                 (gen-general n))
                ((string-cursor=? dec end)
-                (string-append s "." (make-string precision #\0)))
+                (string-append s (if (char? dec-sep) (string dec-sep) dec-sep)
+                               (make-string precision #\0)))
                ((<= digits precision)
                 (string-append s (make-string (- precision digits -1) #\0)))
                (else
@@ -258,7 +264,10 @@
             (gen-general n))))
         ;; Insert commas according to the current comma-rule.
         (define (insert-commas str)
-          (let* ((dec-pos (string-find str dec-sep))
+          (let* ((dec-pos (if (string? dec-sep)
+                              (or (string-contains str dec-sep)
+                                  (string-cursor-end str))
+                              (string-find str dec-sep)))
                  (left (substring-cursor str (string-cursor-start str) dec-pos))
                  (right (substring-cursor str dec-pos))
                  (sep (cond ((char? comma-sep) (string comma-sep))
@@ -272,10 +281,10 @@
         ;; and commas as needed.
         (define (wrap-comma n)
           (let* ((s0 (gen-positive-real n))
-                 (s1 (if (and (char? dec-sep)
-                              (not (eqv? #\. dec-sep)))
-                         (string-replace-all s0 #\. dec-sep)
-                         s0)))
+                 (s1 (if (or (eqv? #\. dec-sep)
+                             (equal? "." dec-sep))
+                         s0
+                         (string-replace-all s0 #\. dec-sep))))
             (if comma-rule (insert-commas s1) s1)))
         ;; Wrap the sign of a real number, forcing a + prefix or using
         ;; parentheses (n) for negatives according to sign-rule.
@@ -307,7 +316,12 @@
         (define (format n sign-rule)
           (let ((s (wrap-sign n sign-rule)))
             (let* ((dec-pos (if decimal-align
-                                (string-cursor->index s (string-find s dec-sep))
+                                (string-cursor->index
+                                 s
+                                 (if (char? dec-sep)
+                                     (string-find s dec-sep)
+                                     (or (string-contains s dec-sep)
+                                         (string-cursor-end s))))
                                 0))
                    (diff (- (or decimal-align 0) dec-pos 1)))
               (if (positive? diff)
