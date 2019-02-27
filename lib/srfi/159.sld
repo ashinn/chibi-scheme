@@ -12,7 +12,6 @@
    trimmed trimmed/right trimmed/both trimmed/lazy
    fitted fitted/right fitted/both
    joined joined/prefix joined/suffix joined/last joined/dot joined/range
-   upcased downcased
    ;; columnar
    call-with-output-generator call-with-output-generators
    string->line-generator
