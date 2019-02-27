@@ -254,10 +254,6 @@
           (cond
            (precision
             (gen-fixed n))
-           ((and (exact? n) (not (integer? n)))
-            (string-append (gen-positive-real (numerator n))
-                           "/"
-                           (gen-positive-real (denominator n))))
            ((memv radix (if (exact? n) '(2 8 10 16) '(10)))
             (number->string n radix))
            (else
@@ -280,12 +276,16 @@
         ;; Post-process a positive real number with decimal char fixup
         ;; and commas as needed.
         (define (wrap-comma n)
-          (let* ((s0 (gen-positive-real n))
-                 (s1 (if (or (eqv? #\. dec-sep)
-                             (equal? "." dec-sep))
-                         s0
-                         (string-replace-all s0 #\. dec-sep))))
-            (if comma-rule (insert-commas s1) s1)))
+          (if (and (not precision) (exact? n) (not (integer? n)))
+              (string-append (wrap-comma (numerator n))
+                             "/"
+                             (wrap-comma (denominator n)))
+              (let* ((s0 (gen-positive-real n))
+                     (s1 (if (or (eqv? #\. dec-sep)
+                                 (equal? "." dec-sep))
+                             s0
+                             (string-replace-all s0 #\. dec-sep))))
+                (if comma-rule (insert-commas s1) s1))))
         ;; Wrap the sign of a real number, forcing a + prefix or using
         ;; parentheses (n) for negatives according to sign-rule.
 
