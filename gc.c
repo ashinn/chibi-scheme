@@ -542,7 +542,7 @@ int sexp_grow_heap (sexp ctx, size_t size, size_t chunk_size) {
   cur_size = h->size;
   new_size = sexp_heap_align(((cur_size > size) ? cur_size : size) * 2);
   tmp = sexp_make_heap(new_size, h->max_size, chunk_size);
-  tmp->next = h->next;
+  if (tmp) tmp->next = h->next;
   h->next = tmp;
   return (h->next != NULL);
 }
