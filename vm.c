@@ -1717,9 +1717,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     else if (sexp_flonump(tmp1) && sexp_flonump(tmp2))
       _ARG1 = sexp_fp_sub(ctx, tmp1, tmp2);
     else if (sexp_flonump(tmp1) && sexp_fixnump(tmp2))
-      _ARG1 = sexp_make_flonum(ctx, sexp_flonum_value(tmp1) - (double)sexp_unbox_fixnum(tmp2));
+      _ARG1 = sexp_make_flonum(ctx, sexp_flonum_value(tmp1) - sexp_fixnum_to_double(tmp2));
     else if (sexp_fixnump(tmp1) && sexp_flonump(tmp2))
-      _ARG1 = sexp_make_flonum(ctx, (double)sexp_unbox_fixnum(tmp1) - sexp_flonum_value(tmp2));
+      _ARG1 = sexp_make_flonum(ctx, tmp1==SEXP_ZERO ? -sexp_flonum_value(tmp2) : sexp_fixnum_to_double(tmp1)-sexp_flonum_value(tmp2));
 #endif
     else sexp_raise("-: not a number", sexp_list2(ctx, tmp1, tmp2));
 #endif

@@ -1347,7 +1347,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     r = sexp_fx_sub(a, b);      /* VM catches this case */
     break;
   case SEXP_NUM_FIX_FLO:
-    r = sexp_make_flonum(ctx, sexp_fixnum_to_double(a)-sexp_flonum_value(b));
+    r = sexp_make_flonum(ctx, a==SEXP_ZERO ? -sexp_flonum_value(b) : sexp_fixnum_to_double(a)-sexp_flonum_value(b));
     break;
   case SEXP_NUM_FIX_BIG:
     tmp1 = sexp_fixnum_to_bignum(ctx, a);
