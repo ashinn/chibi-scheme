@@ -817,7 +817,7 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_write_to_string(sexp ctx, sexp obj)} - return a Scheme string representation of \var{obj}}
 \item{\ccode{sexp_open_input_string(sexp ctx, sexp str)} - equivalent to \scheme{open-input-string}}
 \item{\ccode{sexp_open_output_string(sexp ctx)} - equivalent to \scheme{open-output-string}}
-\item{\ccode{sexp_get_output_string(sexp ctx, sexp port)} - equivalent to \scheme{open-output-string}}
+\item{\ccode{sexp_get_output_string(sexp ctx, sexp port)} - equivalent to \scheme{get-output-string}}
 ]
 
 \subsubsection{Utilities}
