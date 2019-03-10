@@ -303,11 +303,17 @@
         (define (wrap-sign n sign-rule)
           (cond
            ((negative?* n)
-            (if (char? sign-rule)
-                (string-append (string sign-rule)
-                               (wrap-comma (- n))
-                               (string (char-mirror sign-rule)))
-                (string-append "-" (wrap-comma (- n)))))
+            (cond
+             ((char? sign-rule)
+              (string-append (string sign-rule)
+                             (wrap-comma (- n))
+                             (string (char-mirror sign-rule))))
+             ((pair? sign-rule)
+              (string-append (car sign-rule)
+                             (wrap-comma (- n))
+                             (cdr sign-rule)))
+             (else
+              (string-append "-" (wrap-comma (- n))))))
            ((eq? #t sign-rule)
             (string-append "+" (wrap-comma n)))
            (else

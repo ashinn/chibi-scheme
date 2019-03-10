@@ -221,6 +221,9 @@
       ;; sign
       (test "+1" (show #f (numeric 1 10 #f #t)))
       (test "+1" (show #f (with ((sign-rule #t)) (numeric 1))))
+      (test "(1)" (show #f (with ((sign-rule '("(" . ")"))) (numeric -1))))
+      (test "-1" (show #f (with ((sign-rule '("-" . ""))) (numeric -1))))
+      (test "−1" (show #f (with ((sign-rule '("−" . ""))) (numeric -1))))
       (test "-0.0" (show #f (with ((sign-rule #t)) (numeric -0.0))))
       (test "+0.0" (show #f (with ((sign-rule #t)) (numeric +0.0))))
 
