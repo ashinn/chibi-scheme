@@ -63,7 +63,6 @@ static sexp sexp_set_signal_action (sexp ctx, sexp self, sexp signum, sexp newac
 #include <sys/time.h>
 #ifndef __DragonFly__
 #include <sys/param.h>
-#include <sys/sysctl.h>
 #include <sys/proc.h>
 #endif
 #include <sys/sysctl.h>
