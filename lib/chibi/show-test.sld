@@ -92,6 +92,13 @@
       (test "-3141.59" (show #f (with ((decimal-align 5)) (numeric -3141.59))))
       (test "-31415.9" (show #f (with ((decimal-align 5)) (numeric -31415.9))))
 
+      (test "+inf.0" (show #f +inf.0))
+      (test "-inf.0" (show #f -inf.0))
+      (test "+nan.0" (show #f +nan.0))
+      (test "+inf.0" (show #f (numeric +inf.0)))
+      (test "-inf.0" (show #f (numeric -inf.0)))
+      (test "+nan.0" (show #f (numeric +nan.0)))
+
       (cond
        ((exact? (/ 1 3)) ;; exact rationals
         (test "333.333333333333333333333333333333"
@@ -279,6 +286,7 @@
       (test "1.23" (show #f (numeric/fitted 4 1.2345 10 2)))
       (test "1.00" (show #f (numeric/fitted 4 1 10 2)))
       (test "#.##" (show #f (numeric/fitted 4 12.345 10 2)))
+      (test "#" (show #f (numeric/fitted 1 12.345 10 0)))
 
       ;; padding/trimming
 

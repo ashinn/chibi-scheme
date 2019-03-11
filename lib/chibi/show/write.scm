@@ -321,8 +321,10 @@
             (wrap-comma n))))
         ;; Format a single real number with padding as necessary.
         (define (format n sign-rule)
-          (let ((s (wrap-sign n sign-rule)))
-            (let* ((dec-pos (if decimal-align
+          (cond
+           ((finite? n)
+            (let* ((s (wrap-sign n sign-rule))
+                   (dec-pos (if decimal-align
                                 (string-cursor->index
                                  s
                                  (if (char? dec-sep)
@@ -333,7 +335,9 @@
                    (diff (- (or decimal-align 0) dec-pos 1)))
               (if (positive? diff)
                   (string-append (make-string diff #\space) s)
-                  s))))
+                  s)))
+           (else
+            (number->string n))))
         ;; Write any number.
         (define (write-complex n)
           (cond
@@ -369,7 +373,7 @@
                            (if (= base 1024) names2 names10)))
                (k (min (exact ((if (negative? log-n) ceiling floor)
                                (/ (abs log-n) (log base))))
-                       (vector-length names)))
+                       (- (vector-length names) 1)))
                (n2 (round-to (/ n (expt base (if (negative? log-n) (- k) k)))
                              10)))
           (each (if (integer? n2)
@@ -391,7 +395,7 @@
            (let ((prec (if (and (pair? args) (pair? (cdr args)))
                            (cadr args)
                            precision)))
-             (if prec
+             (if (and prec (not (zero? prec)))
                  (let* ((dec-sep
                          (or decimal-sep
                              (if (eqv? #\. comma-sep) #\, #\.)))
