@@ -136,7 +136,7 @@
       (test "299792458" (show #f (with ((comma-rule 3)) 299792458)))
       (test "299,792,458" (show #f (with ((comma-rule 3)) (numeric 299792458))))
       (test "-29,97,92,458"
-          (show #f (with ((comma-rule '(3 . 2))) (numeric -299792458))))
+          (show #f (with ((comma-rule '(3 2))) (numeric -299792458))))
       (test "299.792.458"
           (show #f (with ((comma-rule 3) (comma-sep #\.)) (numeric 299792458))))
       (test "299.792.458,0"
@@ -231,6 +231,7 @@
       (test "1,234,567" (show #f (numeric 1234567 10 #f #f 3)))
       (test "567" (show #f (numeric 567 10 #f #f 3)))
       (test "1,23,45,67" (show #f (numeric 1234567 10 #f #f 2)))
+      (test "12,34,567" (show #f (numeric 1234567 10 #f #f '(3 2))))
 
       ;; comma-sep
       (test "1|234|567" (show #f (numeric 1234567 10 #f #f 3 #\|)))

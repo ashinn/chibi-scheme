@@ -1,5 +1,5 @@
 ;; write.scm - written formatting, the default displayed for non-string/chars
-;; Copyright (c) 2006-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2006-2019 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,16 +19,17 @@
     (get-output-string out)))
 
 (define (string-intersperse-right str sep rule)
-  (let lp ((i (string-length str))
-           (rule rule)
-           (res '()))
-    (let* ((offset (if (pair? rule) (car rule) rule))
-           (i2 (if offset (- i offset) 0)))
-      (if (<= i2 0)
-          (apply string-append (cons (substring str 0 i) res))
-          (lp i2
-              (if (pair? rule) (cdr rule) rule)
-              (cons sep (cons (substring str i2 i) res)))))))
+  (let ((start (string-cursor-start str)))
+    (let lp ((i (string-cursor-end str))
+             (rule rule)
+             (res '()))
+      (let* ((offset (if (pair? rule) (car rule) rule))
+             (i2 (if offset (string-cursor-back str i offset) start)))
+        (if (string-cursor<=? i2 start)
+            (apply string-append (cons (substring-cursor str start i) res))
+            (lp i2
+                (if (and (pair? rule) (not (null? (cdr rule)))) (cdr rule) rule)
+                (cons sep (cons (substring-cursor str i2 i) res))))))))
 
 ;;> Outputs the string str, escaping any quote or escape characters.
 ;;> If esc-ch, which defaults to #\\, is #f, escapes only the
