@@ -127,6 +127,7 @@
       (test-wrap-procedure   (rgb 5 5 5) "\x1B;[38;5;231mFOO\x1b;[39m")
       (test-wrap-procedure   (gray 0)    "\x1B;[38;5;232mFOO\x1b;[39m")
       (test-wrap-procedure   (gray 23)   "\x1B;[38;5;255mFOO\x1b;[39m")
+      (test-wrap-procedure   (rgb24 #xA6 #x7B #x5B) "\x1B;[38;2;166;123;91mFOO\x1b;[39m")
 
       (test-escape-procedure black-background-escape       "\x1b;[40m")
       (test-escape-procedure red-background-escape         "\x1b;[41m")

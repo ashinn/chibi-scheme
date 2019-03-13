@@ -82,6 +82,26 @@
                  (number->string (+ gray-level 232))
                  "m"))
 
+;;> The true-color equivalent of \scheme{rgb-escape}. Return a string
+;;> consisting of an ANSI escape code to select the text color
+;;> specified by the \var{red-level}, \var{green-level}, and
+;;> \var{blue-level} arguments, each of which must be an exact integer
+;;> in the range [0, 255].
+
+(define (rgb24-escape red-level green-level blue-level)
+  (when (not (and (exact-integer? red-level) (<= 0 red-level 255)))
+    (error "invalid red-level value" red-level))
+  (when (not (and (exact-integer? green-level) (<= 0 green-level 255)))
+    (error "invalid green-level value" green-level))
+  (when (not (and (exact-integer? blue-level) (<= 0 blue-level 255)))
+    (error "invalid blue-level value" blue-level))
+  (string-append
+   "\x1B;[38;2;"
+   (number->string red-level) ";"
+   (number->string green-level) ";"
+   (number->string blue-level)
+   "m"))
+
 ;;> Return a string consisting of an ANSI escape code to select the
 ;;> default text color.
 
@@ -157,6 +177,13 @@
   (make-wrap-procedure (gray-escape gray-level)
                        (reset-color-escape)))
 
+;;> The true-color equivalent of \scheme{rbg}, extending the ranges
+;;> to [0, 255].
+
+(define (rgb24 red-level green-level blue-level)
+  (make-wrap-procedure (rgb24-escape red-level green-level blue-level)
+                       (reset-color-escape)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define black-background-escape
@@ -213,6 +240,26 @@
   (string-append "\x1B;[48;5;"
                  (number->string (+ gray-level 232))
                  "m"))
+
+;;> The true-color equivalent of \scheme{rgb-background-escape}.
+;;> Return a string consisting of an ANSI escape code to select the
+;;> text color specified by the \var{red-level}, \var{green-level},
+;;> and \var{blue-level} arguments, each of which must be an exact
+;;> integer in the range [0, 255].
+
+(define (rgb24-background-escape red-level green-level blue-level)
+  (when (not (and (exact-integer? red-level) (<= 0 red-level 255)))
+    (error "invalid red-level value" red-level))
+  (when (not (and (exact-integer? green-level) (<= 0 green-level 255)))
+    (error "invalid green-level value" green-level))
+  (when (not (and (exact-integer? blue-level) (<= 0 blue-level 255)))
+    (error "invalid blue-level value" blue-level))
+  (string-append
+   "\x1B;[48;5;"
+   (number->string red-level) ";"
+   (number->string green-level) ";"
+   (number->string blue-level)
+   "m"))
 
 ;;> \procedure{(reset-background-color-escape)}
 ;;>
@@ -290,6 +337,14 @@
 (define (gray-background gray-level)
   (make-wrap-procedure (gray-background-escape gray-level)
                        (reset-background-color-escape)))
+
+;;> The true-color equivalent of \scheme{rbg-background}, extending
+;;> the ranges to [0, 255].
+
+(define (rgb24-background red-level green-level blue-level)
+  (make-wrap-procedure
+   (rgb24-background-escape red-level green-level blue-level)
+   (reset-background-color-escape)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

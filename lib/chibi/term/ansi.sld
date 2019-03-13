@@ -5,6 +5,7 @@
    blue-escape cyan-escape magenta-escape white-escape
    rgb-escape 
    gray-escape
+   rgb24-escape 
    reset-color-escape
 
    black-background-escape red-background-escape
@@ -13,6 +14,7 @@
    magenta-background-escape white-background-escape
    rgb-background-escape
    gray-background-escape
+   rgb24-background-escape
    reset-background-color-escape
 
    black red yellow green
@@ -24,6 +26,7 @@
    negative
    rgb rgb-background
    gray gray-background
+   rgb24 rgb24-background
    bold-escape reset-bold-escape
    underline-escape reset-underline-escape
    negative-escape reset-negative-escape
