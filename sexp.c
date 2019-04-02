@@ -2289,7 +2289,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    snprintf(numbuf, NUMBUF_LEN, "%" SEXP_PRIdFIXNUM, (long)sexp_unbox_fixnum(obj));
+    snprintf(numbuf, NUMBUF_LEN, "%" SEXP_PRIdFIXNUM, (sexp_sint_t)sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
@@ -2965,7 +2965,7 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
     res = et == SEXP_U8 ? sexp_make_bytes(ctx, sexp_length(ctx, ls), SEXP_VOID) : sexp_make_uvector(ctx, etype, sexp_length(ctx, ls));
     min = 0;
     max = sexp_uvector_element_size(et) == 64 ? -1 :
-      (1uL << sexp_uvector_element_size(et)) - 1;
+      (1uLL << sexp_uvector_element_size(et)) - 1;
     if (sexp_uvector_prefix(et) == 's') {
       min = -(max/2) - 1;
       max = (max/2);
