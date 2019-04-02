@@ -2030,7 +2030,7 @@ static struct {const char* name; char ch;} sexp_char_names[] = {
 
 #define sexp_num_char_names (sizeof(sexp_char_names)/sizeof(sexp_char_names[0]))
 
-sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
+sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
 #if SEXP_USE_HUFF_SYMS
   sexp_uint_t res;
 #endif
@@ -2042,23 +2042,32 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
 #if SEXP_USE_BYTEVECTOR_LITERALS && SEXP_BYTEVECTOR_HEX_LITERALS
   char buf[5];
 #endif
-  sexp x, *elts;
+  sexp x, x2, *elts;
   char *str=NULL, numbuf[NUMBUF_LEN];
 
   if (! obj) {
     sexp_write_string(ctx, "#<null>", out); /* shouldn't happen */
   } else if (sexp_pointerp(obj)) {
+    if (bound >= SEXP_DEFAULT_WRITE_BOUND) {
+      sexp_write_string(ctx, "...", out);
+      return SEXP_VOID;
+    }
     switch (sexp_pointer_tag(obj)) {
     case SEXP_PAIR:
       sexp_write_char(ctx, '(', out);
-      sexp_write_one(ctx, sexp_car(obj), out);
-      for (x=sexp_cdr(obj); sexp_pairp(x); x=sexp_cdr(x)) {
+      sexp_write_one(ctx, sexp_car(obj), out, bound+1);
+      x = sexp_cdr(obj);
+      for (x2=sexp_pairp(x)?sexp_cdr(x):SEXP_NULL; sexp_pairp(x); x=sexp_cdr(x), x2=(sexp_pairp(x2)&&sexp_pairp(sexp_cdr(x2))?sexp_cddr(x2):SEXP_NULL)) {
+        if (x == x2) {
+          sexp_write_string(ctx, "...", out);
+          return SEXP_VOID;
+        }
         sexp_write_char(ctx, ' ', out);
-        sexp_write_one(ctx, sexp_car(x), out);
+        sexp_write_one(ctx, sexp_car(x), out, bound+1);
       }
       if (! sexp_nullp(x)) {
         sexp_write_string(ctx, " . ", out);
-        sexp_write_one(ctx, x, out);
+        sexp_write_one(ctx, x, out, bound+1);
       }
       sexp_write_char(ctx, ')', out);
       break;
@@ -2069,10 +2078,10 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         sexp_write_string(ctx, "#()", out);
       } else {
         sexp_write_string(ctx, "#(", out);
-        sexp_write_one(ctx, elts[0], out);
+        sexp_write_one(ctx, elts[0], out, bound+1);
         for (i=1; i<(sexp_sint_t)len; i++) {
           sexp_write_char(ctx, ' ', out);
-          sexp_write_one(ctx, elts[i], out);
+          sexp_write_one(ctx, elts[i], out, bound+1);
         }
         sexp_write_char(ctx, ')', out);
       }
@@ -2106,7 +2115,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
     case SEXP_PROCEDURE:
       sexp_write_string(ctx, "#<procedure ", out);
       x = sexp_bytecode_name(sexp_procedure_code(obj));
-      sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out);
+      sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out, bound+1);
 #if SEXP_USE_DEBUG_VM
       if (sexp_procedure_source(obj)) {
         sexp_write_string(ctx, " ", out);
@@ -2259,7 +2268,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
         sexp_write_char(ctx, '>', out);
       } else {
         x = sexp_type_by_index(ctx, i);
-#if SEXP_USE_TYPE_PRINTERS
+#if 0 && SEXP_USE_TYPE_PRINTERS
         if (sexp_type_print(x)) {
           x = sexp_apply3(ctx, sexp_type_print(x), obj, SEXP_FALSE, out);
           if (sexp_exceptionp(x)) return x;
@@ -2273,7 +2282,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out) {
           sexp_write_char(ctx, ' ', out);
           sexp_write(ctx, sexp_make_fixnum(obj), out);
           sexp_write_char(ctx, '>', out);
-#if SEXP_USE_TYPE_PRINTERS
+#if 0 && SEXP_USE_TYPE_PRINTERS
         }
 #endif
       }
@@ -2370,7 +2379,7 @@ sexp sexp_write_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp out) {
 #if SEXP_USE_GREEN_THREADS
   sexp_maybe_block_output_port(ctx, out);
 #endif
-  res = sexp_write_one(ctx, obj, out);
+  res = sexp_write_one(ctx, obj, out, 0);
 #if SEXP_USE_GREEN_THREADS
   sexp_maybe_unblock_port(ctx, out);
 #endif
