@@ -310,7 +310,29 @@
                    (lambda (a b)
                      (string<? (write-to-string a) (write-to-string b))))))
            (else
-            (display "... none found.\n" out))))))))))
+            (display "... none found.\n" out))))))))
+   ((and (exception? exn)
+         (equal? "couldn't find import" (exception-message exn))
+         (pair? (exception-irritants exn)))
+    (let* ((mod-name (car (exception-irritants exn)))
+           (mod-file (module-name->file mod-name))
+           (scm-file (string-append
+                      (substring mod-file
+                                 0
+                                 (- (string-length mod-file) 4))
+                      ".scm")))
+      (display "Searched module path " out)
+      (display (current-module-path) out)
+      (display " for " out)
+      (write mod-file out)
+      (display ".\n" out)
+      (cond
+       ((find-module-file scm-file)
+        => (lambda (file)
+             (display "But found non-module-definition file " out)
+             (write file out)
+             (display ".\nNote module files must end in \".sld\".\n" out)))))
+    )))
 
 (define undefined-value (if #f #f))
 
