@@ -215,10 +215,12 @@ enum sexp_types {
 typedef unsigned int sexp_tag_t;
 typedef unsigned long long sexp_uint_t;
 typedef long long sexp_sint_t;
+#define SEXP_PRIdFIXNUM "lld"
 #else
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;
+#define SEXP_PRIdFIXNUM "d"
 #endif
 #define sexp_heap_align(n) sexp_align(n, 5)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
@@ -226,18 +228,21 @@ typedef int sexp_sint_t;
 typedef unsigned int sexp_tag_t;
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
+#define SEXP_PRIdFIXNUM "ld"
 #define sexp_heap_align(n) sexp_align(n, 5)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
 #elif defined(__CYGWIN__)
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;
+#define SEXP_PRIdFIXNUM "d"
 #define sexp_heap_align(n) sexp_align(n, 5)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
 #else
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
 typedef int sexp_sint_t;
+#define SEXP_PRIdFIXNUM "d"
 #define sexp_heap_align(n) sexp_align(n, 4)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>4)
 #endif
@@ -288,17 +293,6 @@ typedef short sexp_int32_t;
 #define SEXP_PRIdOFF "lld"
 #else
 #define SEXP_PRIdOFF "ld"
-#endif
-
-#if SEXP_USE_INTTYPES
-#include <inttypes.h>
-#if SEXP_64_BIT
-#define SEXP_PRIdFIXNUM PRId64
-#else
-#define SEXP_PRIdFIXNUM PRId32
-#endif
-#else
-#define SEXP_PRIdFIXNUM "ld"
 #endif
 
 #if SEXP_USE_LONG_PROCEDURE_ARGS
