@@ -1,4 +1,7 @@
 -*- org -*-
+* license
+  Please relicense under a proper license like BSD 2/3 clause, ISC, or APSL.
+  Else, at least consider dual-licensing under existing license as well as APSL.
 
 * compiler
 ** DONE ast rewrite
