@@ -862,7 +862,7 @@ sexp sexp_ratio_round (sexp ctx, sexp a) {
     r = sexp_mul(ctx, r, SEXP_TWO);
     if (sexp_exact_negativep(r)) {sexp_negate(r);}
     if (sexp_unbox_fixnum(sexp_compare(ctx, r, sexp_ratio_denominator(a))) > 0)
-      q = sexp_add(ctx, q, (sexp_exact_positivep(q) ? SEXP_ONE : SEXP_NEG_ONE));
+      q = sexp_add(ctx, q, (sexp_exact_negativep(sexp_ratio_numerator(a)) ? SEXP_NEG_ONE : SEXP_ONE));
   }
   sexp_gc_release2(ctx);
   return q;
