@@ -258,6 +258,7 @@ _OP(SEXP_OPC_SETTER, SEXP_OP_SLOTN_SET, 4, 0, SEXP_VOID, _I(SEXP_OBJECT), _I(SEX
 #include "opt/plan9-opcodes.c"
 #else
 _FN1(_I(SEXP_OBJECT), _I(SEXP_IPORT), "port-fileno", 0, sexp_get_port_fileno),
+_FN1(_I(SEXP_BOOLEAN), _I(SEXP_IPORT), "stream-port?", 0, sexp_stream_portp_op),
 #endif
 _FN0(_I(SEXP_ENV), "current-environment", 0, sexp_current_environment),
 #if SEXP_USE_MODULES

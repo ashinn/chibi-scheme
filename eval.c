@@ -1309,6 +1309,10 @@ sexp sexp_get_port_fileno (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
     return sexp_make_fixnum(fd);
   return SEXP_FALSE;
 }
+sexp sexp_stream_portp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
+  sexp_assert_type(ctx, sexp_portp, SEXP_IPORT, port);
+  return sexp_make_boolean(sexp_stream_portp(port));
+}
 #endif
 
 #if SEXP_USE_STATIC_LIBS

@@ -77,7 +77,8 @@
 
 (define (%read-line n in)
   (cond
-   ((port-fileno in)
+   ((stream-port? in) ;;(port-fileno in)
+    (port-line-set! in (+ 1 (port-line in)))
     (%%read-line n in))
    (else
     (let ((out (open-output-string)))
@@ -105,13 +106,10 @@
   (let ((in (if (pair? o) (car o) (current-input-port)))
         (n (if (and (pair? o) (pair? (cdr o))) (car (cdr o)) 8192)))
     (let ((res (%read-line n in)))
-      (cond-expand
-       (string-streams
-        (port-line-set! in (+ 1 (port-line in)))))
       (if (not res)
           eof
           (let ((len (string-length res)))
-            (cond
+            (cond  ;; strip crlf
              ((and (> len 0) (eqv? #\newline (string-ref res (- len 1))))
               (if (and (> len 1) (eqv? #\return (string-ref res (- len 2))))
                   (substring res 0 (- len 2))
