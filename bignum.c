@@ -146,7 +146,8 @@ sexp_sint_t sexp_bignum_compare_abs (sexp a, sexp b) {
 sexp_sint_t sexp_bignum_compare (sexp a, sexp b) {
   if (sexp_bignum_sign(a) != sexp_bignum_sign(b))
     return sexp_bignum_sign(a);
-  return sexp_bignum_compare_abs(a, b);
+  sexp_sint_t cmp = sexp_bignum_compare_abs(a, b);
+  return sexp_bignum_sign(a) < 0 ? -cmp : cmp;
 }
 
 sexp sexp_bignum_normalize (sexp a) {
