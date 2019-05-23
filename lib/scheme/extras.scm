@@ -24,7 +24,7 @@
         (else (lp (cdr files) (append (read-sexps (car files) #t) res))))))))
 
 (define (read-error? x)
-  (and (error-object? x) (eq? 'read (exception-kind x))))
+  (and (error-object? x) (memq (exception-kind x) '(read read-incomplete)) #t))
 
 (define (file-error? x)
   (and (error-object? x) (eq? 'file (exception-kind x))))
