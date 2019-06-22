@@ -7,6 +7,19 @@ project(chibi-scheme)
 
 include(CheckIncludeFile)
 
+#
+# Version setting
+#
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE release)
+string(STRIP ${release} release)
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION rawversion)
+string(STRIP ${rawversion} rawversion)
+set(version "${rawversion}-cmake")
+
+set(chibischemelib "chibi-scheme-${rawversion}")
+
 if(APPLE)
     message(FATAL_ERROR 
         "DYLD platforms are not supported with this CMakeLists.txt. Use Makefile instead.")
@@ -25,6 +38,11 @@ check_include_file(poll.h HAVE_POLL_H)
 check_include_file(stdint.h HAVE_STDINT_H)
 # option(CHIBI_SCHEME_USE_DL "Use dynamic loading" ON)
 set(CHIBI_SCHEME_USE_DL OFF)
+option(CHIBI_SCHEME_SHARED "Build chibi-scheme as a shared library" ON)
+
+if(NOT CHIBI_SCHEME_SHARED)
+    add_definitions(-DSEXP_STATIC_LIBRARY=1)
+endif()
 
 if(CHIBI_SCHEME_USE_DL)
     add_definitions(-DSEXP_USE_DL=1)
@@ -152,6 +170,38 @@ add_custom_command(OUTPUT ${clibout}
     ${slds})
 
 #
+# Core library
+#
+
+if(CHIBI_SCHEME_SHARED)
+    set(libtype SHARED)
+else()
+    set(libtype STATIC)
+endif()
+
+add_library(${chibischemelib} ${libtype}
+    ${chibi-scheme-srcs}
+    ${clibout})
+
+set_target_properties(${chibischemelib}
+    PROPERTIES 
+    COMPILE_DEFINITIONS "SEXP_USE_STATIC_LIBS=1")
+
+add_dependencies(${chibischemelib} chibi-scheme-stubs)
+
+if(WIN32 AND CHIBI_SCHEME_SHARED)
+    target_link_libraries(${chibischemelib} ws2_32)
+    target_compile_definitions(${chibischemelib} PUBLIC -DBUILDING_DLL=1)
+endif()
+
+function(bless_chibi_scheme_executable tgt)
+    target_link_libraries(${tgt} ${chibischemelib})
+    if(WIN32 AND NOT CHIBI_SCHEME_SHARED)
+        target_link_libraries(${tgt} ws2_32)
+    endif()
+endfunction()
+
+#
 # Interpreter
 #
 
@@ -159,18 +209,9 @@ include_directories(
     .
     ${stuboutdir}/..)
 add_executable(chibi-scheme
-    ${chibi-scheme-srcs}
-    ${clibout}
     main.c)
 
-set_target_properties(chibi-scheme
-    PROPERTIES COMPILE_DEFINITIONS "SEXP_USE_STATIC_LIBS=1")
-
-add_dependencies(chibi-scheme chibi-scheme-stubs)
-
-if(WIN32)
-    target_link_libraries(chibi-scheme ws2_32)
-endif()
+bless_chibi_scheme_executable(chibi-scheme)
 
 #
 # Generate "chibi/install.h" 
@@ -194,12 +235,6 @@ else()
     set(platform "unknown")
 endif()
 
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE release)
-string(STRIP ${release} release)
-
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version)
-string(STRIP ${version} version)
-set(version "${version}-cmake")
 
 set(default_module_path
     ""
@@ -278,3 +313,24 @@ foreach(e ${testlibs})
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
+# 
+# Testing (embedding)
+#
+
+add_executable(test-foreign-apply-loop
+    tests/foreign/apply-loop.c)
+
+bless_chibi_scheme_executable(test-foreign-apply-loop)
+
+add_test(NAME "foreign-apply-loop"
+    COMMAND test-foreign-apply-loop
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+add_executable(test-foreign-typeid
+    tests/foreign/typeid.c)
+
+bless_chibi_scheme_executable(test-foreign-typeid)
+
+add_test(NAME "foreign-typeid"
+    COMMAND test-foreign-typeid
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
