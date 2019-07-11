@@ -41,7 +41,7 @@ CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/weak$(SO) \
 	lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) lib/chibi/ast$(SO) \
 	lib/chibi/emscripten$(SO)
 CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
-	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/net$(SO) 
+	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/net$(SO)
 CHIBI_WIN32_COMPILED_LIBS = lib/chibi/win32/process-win32$(SO)
 CHIBI_CRYPTO_COMPILED_LIBS = lib/chibi/crypto/crypto$(SO)
 CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
@@ -64,7 +64,7 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	lib/scheme/time$(SO)
 
 ifndef EXCLUDE_POSIX_LIBS
-COMPILED_LIBS += lib/srfi/18/threads$(SO) 
+COMPILED_LIBS += lib/srfi/18/threads$(SO)
 endif
 
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
@@ -116,7 +116,7 @@ all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
 js: js/chibi.js
 
 js/chibi.js: chibi-scheme-emscripten chibi-scheme-static.bc js/pre.js js/post.js js/exported_functions.json
-	emcc -O3 chibi-scheme-static.bc -o $@ -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap"]' --pre-js js/pre.js --post-js js/post.js
+	emcc -O3 chibi-scheme-static.bc -o $@ -s ALLOW_MEMORY_GROWTH=1-s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap"]' --pre-js js/pre.js --post-js js/post.js
 
 chibi-scheme-static.bc:
 	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI=./chibi-scheme-emscripten PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.bc SO=.bc CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1 -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0" clibs.c chibi-scheme-static.bc
@@ -148,7 +148,7 @@ sexp-ulimit.o: sexp.c $(BASE_INCLUDES)
 main.o: main.c $(INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) -o $@ $<
 
-SEXP_OBJS = gc.o sexp.o bignum.o gc_heap.o 
+SEXP_OBJS = gc.o sexp.o bignum.o gc_heap.o
 SEXP_ULIMIT_OBJS = gc-ulimit.o sexp-ulimit.o bignum.o gc_heap.o
 EVAL_OBJS = opcodes.o vm.o eval.o simplify.o
 
@@ -245,7 +245,7 @@ lib/scheme/char/case-offsets.scm: data/UnicodeData.txt chibi-scheme$(EXE) all-li
 checkdefs:
 	@for d in $(D); do \
 	    if ! $(GREP) -q " SEXP_USE_$${d%%=*} " include/chibi/features.h; then \
-	        echo "WARNING: unknown definition $$d"; \
+		echo "WARNING: unknown definition $$d"; \
 	    fi; \
 	done
 
@@ -253,9 +253,9 @@ test-basic: chibi-scheme$(EXE)
 	@for f in tests/basic/*.scm; do \
 	    $(CHIBI) -xchibi $$f >$${f%.scm}.out 2>$${f%.scm}.err; \
 	    if $(DIFF) -q $(DIFFOPTS) $${f%.scm}.out $${f%.scm}.res; then \
-	        echo "[PASS] $${f%.scm}"; \
+		echo "[PASS] $${f%.scm}"; \
 	    else \
-	        echo "[FAIL] $${f%.scm}"; \
+		echo "[FAIL] $${f%.scm}"; \
 	    fi; \
 	done
 
