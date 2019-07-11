@@ -846,10 +846,14 @@
 #endif
 
 #ifdef _WIN32
+#ifdef SEXP_STATIC_LIBRARY
+#define SEXP_API    extern
+#else
 #ifdef BUILDING_DLL
 #define SEXP_API    __declspec(dllexport)
 #else
 #define SEXP_API    __declspec(dllimport)
+#endif
 #endif
 #else
 #define SEXP_API    extern
