@@ -875,7 +875,7 @@
         (_quote (rename 'syntax-quote)) (_apply (rename 'apply))
         (_append (rename 'append))      (_map (rename 'map))
         (_vector? (rename 'vector?))    (_list? (rename 'list?))
-        (_len (rename'len))             (_length (rename 'length*))
+        (_len (rename 'len))            (_length (rename 'length*))
         (_- (rename '-))   (_>= (rename '>=))   (_error (rename 'error))
         (_ls (rename 'ls)) (_res (rename 'res)) (_i (rename 'i))
         (_reverse (rename 'reverse))
