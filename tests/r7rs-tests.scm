@@ -1778,6 +1778,8 @@
     (read-error? (guard (exn (else exn)) (error "BOOM!"))))
 (test #t
     (read-error? (guard (exn (else exn)) (read (open-input-string ")")))))
+(test #t
+    (read-error? (guard (exn (else exn)) (read (open-input-string "\"")))))
 
 (define something-went-wrong #f)
 (define (test-exception-handler-1 v)
