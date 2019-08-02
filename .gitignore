@@ -72,3 +72,4 @@ tmp
 js/chibi.*
 
 build-lib/chibi/char-set/derived.scm
+*~
