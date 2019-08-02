@@ -464,16 +464,19 @@ static const char* sexp_initial_features[] = {
 #if SEXP_BSD
   "bsd",
 #endif
-#if defined(__OpenBSD__)
+#if SEXP_DARWIN
+  "darwin",
+#endif
+#if SEXP_OPENBSD
   "openbsd",
 #endif
-#if defined(__FreeBSD__)
+#if SEXP_FREEBSD
   "freebsd",
 #endif
-#if defined(__NetBSD__)
+#if SEXP_NETBSD
   "netbsd",
 #endif
-#if defined(__DragonFly__)
+#if SEXP_DRAGONFLY
   "dragonfly",
 #endif
 #if defined(_WIN32)
