@@ -35,7 +35,11 @@ else
 ifeq ($(shell uname -o),GNU/Linux)
 PLATFORM=linux
 else
+ifeq ($(shell uname),SunOS)
+PLATFORM=solaris
+else
 PLATFORM=unix
+endif
 endif
 endif
 endif
@@ -70,6 +74,14 @@ EXE =
 CLIBFLAGS = -fPIC
 CLINKFLAGS = -shared
 LIBDL = 
+RLDFLAGS=-Wl,-R$(LIBDIR)
+else
+ifeq ($(PLATFORM),solaris)
+SO = .so
+EXE =
+CLIBFLAGS = -fPIC
+CLINKFLAGS = -shared
+LIBDL = -ldl
 RLDFLAGS=-Wl,-R$(LIBDIR)
 else
 ifeq ($(PLATFORM),windows)
@@ -107,6 +119,7 @@ CLIBFLAGS = -fPIC
 CLINKFLAGS = -shared
 STATICFLAGS = -static -DSEXP_USE_DL=0
 LIBCHIBI_FLAGS = -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR)
+endif
 endif
 endif
 endif

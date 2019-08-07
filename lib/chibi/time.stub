@@ -7,21 +7,37 @@
   (c-system-include "time.h")
   (c-system-include "sys/time.h")))
 
-(define-c-struct tm
-  predicate: tm?
-  constructor: (make-tm tm_sec tm_min tm_hour
-                tm_mday tm_mon tm_year tm_isdst)
-  (int     tm_sec    time-second)
-  (int     tm_min    time-minute)
-  (int     tm_hour   time-hour)
-  (int     tm_mday   time-day)
-  (int     tm_mon    time-month)
-  (int     tm_year   time-year)
-  (int     tm_wday   time-day-of-week)
-  (int     tm_yday   time-day-of-year)
-  (int     tm_isdst  time-dst?)
-  (string  tm_zone   time-timezone-name)
-  (int     tm_gmtoff time-offset))
+(cond-expand
+ (solaris
+    (define-c-struct tm
+    predicate: tm?
+    constructor: (make-tm tm_sec tm_min tm_hour
+                          tm_mday tm_mon tm_year tm_isdst)
+    (int     tm_sec    time-second)
+    (int     tm_min    time-minute)
+    (int     tm_hour   time-hour)
+    (int     tm_mday   time-day)
+    (int     tm_mon    time-month)
+    (int     tm_year   time-year)
+    (int     tm_wday   time-day-of-week)
+    (int     tm_yday   time-day-of-year)
+    (int     tm_isdst  time-dst?)))
+ (else
+  (define-c-struct tm
+    predicate: tm?
+    constructor: (make-tm tm_sec tm_min tm_hour
+                          tm_mday tm_mon tm_year tm_isdst)
+    (int     tm_sec    time-second)
+    (int     tm_min    time-minute)
+    (int     tm_hour   time-hour)
+    (int     tm_mday   time-day)
+    (int     tm_mon    time-month)
+    (int     tm_year   time-year)
+    (int     tm_wday   time-day-of-week)
+    (int     tm_yday   time-day-of-year)
+    (int     tm_isdst  time-dst?)
+    (string  tm_zone   time-timezone-name)
+    (int     tm_gmtoff time-offset))))
 
 ;;> Accessors for the \scheme{tm} struct.
 ;;/
