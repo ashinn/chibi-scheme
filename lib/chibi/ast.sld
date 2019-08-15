@@ -20,7 +20,7 @@
    lambda-source-set!
    cnd-test cnd-pass cnd-fail
    cnd-test-set! cnd-pass-set! cnd-fail-set!
-   set-var set-value set-var-set! set-value-set!
+   set-var set-value set-var-set! set-value-set! set-source set-source-set!
    ref-name ref-cell ref-name-set! ref-cell-set!
    seq-ls seq-ls-set! lit-value lit-value-set!
    exception-kind exception-message exception-irritants exception-source

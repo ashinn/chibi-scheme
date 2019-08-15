@@ -657,6 +657,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_CND, 2, "cnd-fail", "cnd-fail-set!");
   sexp_define_accessors(ctx, env, SEXP_SET, 0, "set-var", "set-var-set!");
   sexp_define_accessors(ctx, env, SEXP_SET, 1, "set-value", "set-value-set!");
+  sexp_define_accessors(ctx, env, SEXP_SET, 2, "set-source", "set-source-set!");
   sexp_define_accessors(ctx, env, SEXP_REF, 0, "ref-name", "ref-name-set!");
   sexp_define_accessors(ctx, env, SEXP_REF, 1, "ref-cell", "ref-cell-set!");
   sexp_define_accessors(ctx, env, SEXP_SEQ, 0, "seq-ls", "seq-ls-set!");
