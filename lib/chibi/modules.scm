@@ -7,6 +7,7 @@
 (define (file->sexp-list file)
   (call-with-input-file file
     (lambda (in)
+      (port-source?-set! in #t)
       (let lp ((res '()))
         (let ((x (read in)))
           (if (eof-object? x)

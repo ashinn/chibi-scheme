@@ -30,7 +30,7 @@
    procedure-code procedure-vars procedure-name procedure-name-set!
    procedure-arity procedure-variadic? procedure-flags
    bytecode-name bytecode-literals bytecode-source
-   port-line port-line-set!
+   port-line port-line-set! port-source? port-source?-set!
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!
    env-define! env-push! env-syntactic? env-syntactic?-set! core-code
    type-name type-cpl type-parent type-slots type-num-slots
