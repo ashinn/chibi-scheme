@@ -63,9 +63,11 @@
                (ls (cdr strings)))
         (if (or (null? ls) (zero? len))
             len
-            (lp (min len (string-cursor->index prev (string-mismatch prev (car ls))))
-                (car ls)
-                (cdr ls))))))
+            (call-with-values (lambda () (string-mismatch prev (car ls)))
+              (lambda (i1 i2)
+                (lp (min len (string-cursor->index prev i1))
+                    (car ls)
+                    (cdr ls))))))))
 
 (define (make-sexp-buffer-completer)
   (buffer-make-completer
