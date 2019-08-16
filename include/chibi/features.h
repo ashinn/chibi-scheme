@@ -323,14 +323,12 @@
 #define SEXP_NETBSD 1
 #define SEXP_DRAGONFLY 0
 #define SEXP_OPENBSD 0
-#define SEXP_NETBSD 0
 #elif defined(__DragonFly__)
-#define SEXP_DARWIN 1
+#define SEXP_DARWIN 0
 #define SEXP_FREEBSD 0
 #define SEXP_NETBSD 0
 #define SEXP_DRAGONFLY 1
 #define SEXP_OPENBSD 0
-#define SEXP_DRAGONFLY 0
 #elif defined(__OpenBSD__)
 #define SEXP_DARWIN 0
 #define SEXP_FREEBSD 0
