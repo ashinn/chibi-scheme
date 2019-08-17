@@ -109,6 +109,11 @@ XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
 XCFLAGS   := -Wall -g -g3 -O3 $(CFLAGS)
 endif
 
+ifeq ($(PLATFORM),solaris)
+XLDFLAGS += -lsocket
+XCPPFLAGS += -D_POSIX_PTHREAD_SEMANTICS
+endif
+
 ########################################################################
 
 all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
