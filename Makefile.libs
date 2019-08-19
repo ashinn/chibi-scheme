@@ -52,6 +52,9 @@ all-libs: $(COMPILED_LIBS)
 lib/%.c: lib/%.stub $(CHIBI_FFI_DEPENDENCIES)
 	$(CHIBI_FFI) $<
 
+lib/chibi/pty$(SO): lib/chibi/pty.c $(INCLUDES) libchibi-scheme$(SO)
+	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. $(RLDFLAGS) $(XLIBS) -lchibi-scheme -lutil
+
 lib/%$(SO): lib/%.c $(INCLUDES) libchibi-scheme$(SO)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. $(RLDFLAGS) $(XLIBS) -lchibi-scheme
 

@@ -1,0 +1,14 @@
+
+(c-system-include "pty.h")
+(c-system-include "utmp.h")
+
+(c-link "util")
+
+(declare-c-struct termios)
+(declare-c-struct winsize)
+
+(define-c errno openpty
+  ((result fileno) (result fileno) (result (array char 256)) (maybe-null default NULL termios) (maybe-null default NULL winsize)))
+(define-c pid_t forkpty
+  ((result fileno)  (result (array char 256)) (maybe-null default NULL termios) (maybe-null default NULL winsize)))
+(define-c int (login-tty "login_tty") (fileno))
