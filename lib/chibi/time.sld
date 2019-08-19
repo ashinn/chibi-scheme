@@ -5,9 +5,12 @@
           make-timeval make-tm timeval-seconds timeval-microseconds
           timezone-offset timezone-dst-time
           time-second time-minute time-hour time-day time-month time-year
-          time-day-of-week time-day-of-year time-dst? time-timezone-name
-          time-offset
+          time-day-of-week time-day-of-year time-dst?
           tm? timeval? timezone?)
+  (cond-expand
+   (solaris)
+   (else
+    (export time-offset time-timezone-name)))
   (cond-expand
    (emscripten)
    (else
