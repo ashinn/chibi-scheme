@@ -39,7 +39,7 @@ endif
 
 CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/weak$(SO) \
 	lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) lib/chibi/ast$(SO) \
-	lib/chibi/emscripten$(SO)
+	lib/chibi/json$(SO) lib/chibi/emscripten$(SO)
 CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
 	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/pty$(SO) \
 	lib/chibi/net$(SO)
