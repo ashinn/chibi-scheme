@@ -1,5 +1,7 @@
 
-(c-system-include "pty.h")
+(cond-expand
+ (macosx (c-system-include "util.h"))
+ (else (c-system-include "pty.h")))
 (c-system-include "utmp.h")
 
 (c-link "util")
