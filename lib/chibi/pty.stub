@@ -1,8 +1,10 @@
 
 (cond-expand
- (macosx (c-system-include "util.h"))
+ ((or macosx openbsd netbsd) (c-system-include "util.h"))
+ ((or freebsd dragonfly) (c-system-include "libutil.h"))
  (else (c-system-include "pty.h")))
-(c-system-include "utmp.h")
+(cond-expand
+ ((not bsd) (c-system-include "utmp.h")))
 
 (c-link "util")
 
