@@ -68,7 +68,8 @@ if(WIN32)
         lib/chibi/process.sld
         lib/chibi/stty.sld
         lib/chibi/system.sld
-        lib/chibi/time.sld)
+        lib/chibi/time.sld
+        lib/chibi/pty.sld)
 endif()
 
 #
@@ -294,6 +295,7 @@ set(testexcludes
     chibi/system-test
     chibi/tar-test # Depends (chibi system)
     chibi/process-test # Not applicable
+    chibi/pty-test # Depends (chibi pty)
     )
 
 set(testlibs)
