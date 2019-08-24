@@ -196,7 +196,7 @@
                 (each first-line
                       (cond
                        ((not (or (null? tail) (pair? tail)))
-                        (each ". " (pp tail pp shares)))
+                        (each ". " (pp tail)))
                        ((> (or (length+ (cdr ls)) +inf.0) (or indent-rule 1))
                         (each sep (joined/shares pp tail shares sep)))
                        (else
