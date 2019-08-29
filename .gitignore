@@ -46,6 +46,7 @@ lib/chibi/filesystem.c
 lib/chibi/io/io.c
 lib/chibi/net.c
 lib/chibi/process.c
+lib/chibi/pty.c
 lib/chibi/stty.c
 lib/chibi/system.c
 lib/chibi/time.c
