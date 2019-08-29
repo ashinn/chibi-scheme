@@ -5,7 +5,7 @@
 
 (define known-implementations
   '((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3")
-    (chicken "chicken" (csi -p "(chicken-version)") "4.9.0")
+    (chicken "chicken" (csi -release) "4.9.0")
     (cyclone "cyclone" (icyc -vn) "0.5.3")
     (foment "foment")
     (gauche "gosh" (gosh -E "print (gauche-version)" -E exit) "0.9.4")
