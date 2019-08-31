@@ -5,7 +5,7 @@
 
 (define known-implementations
   '((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3")
-    (chicken "chicken" (csi -p "(chicken-version)") "4.9.0")
+    (chicken "chicken" (csi -release) "4.9.0")
     (cyclone "cyclone" (icyc -vn) "0.5.3")
     (foment "foment")
     (gauche "gosh" (gosh -E "print (gauche-version)" -E exit) "0.9.4")
@@ -1287,6 +1287,16 @@
       (string->number (process->string '(csi -p "(##sys#fudge 42)")))
       8))
 
+(define (get-chicken-repo-path)
+  (let ((release (string-trim (process->string '(csi -release))
+			      char-whitespace?)))
+    (string-trim
+      (if (string-prefix? "4." release)
+	(process->string '(csi -p "(repository-path)"))
+	(process->string
+	  '(csi -R chicken.platform -p "(car (repository-path))")))
+      char-whitespace?)))
+
 (define (get-install-dirs impl cfg)
   (define (guile-eval expr)
     (guard (exn (else #f))
@@ -1304,9 +1314,7 @@
            (cons share-dir (delete share-dir dirs))
            dirs)))
     ((chicken)
-     (let ((dir (string-trim
-                 (process->string '(csi -p "(repository-path)"))
-                 char-whitespace?)))
+     (let ((dir (get-chicken-repo-path)))
        (list
         (if (file-exists? dir)  ; repository-path should always exist
             dir
