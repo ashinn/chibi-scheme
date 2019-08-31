@@ -83,8 +83,14 @@ static sexp sexp_pid_cmdline (sexp ctx, int pid) {
   int id = KERN_PROC;
 #endif
   size_t reslen = sizeof(res);
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+  int name[6] = {CTL_KERN, id, KERN_PROC_PID, pid, reslen, 1};
+  unsigned namelen = 6;
+#else
   int name[4] = {CTL_KERN, id, KERN_PROC_PID, pid};
-  if (sysctl(name, 4, &res, &reslen, NULL, 0) >= 0) {
+  unsigned namelen = 4;
+#endif
+  if (sysctl(name, namelen, &res, &reslen, NULL, 0) >= 0 && reslen > 0) {
 #if defined(__APPLE__)
     return sexp_c_string(ctx, res.kp_proc.p_comm, -1);
 #elif defined(__NetBSD__) || defined(__OpenBSD__)

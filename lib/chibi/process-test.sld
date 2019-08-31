@@ -6,6 +6,7 @@
       (test-begin "processes")
       (test #t (process-running? (current-process-id)))
       (test #t (process-running? (parent-process-id)))
+      (test #f (process-running? -1))
       (test #f (signal-set-contains? (current-signal-mask) signal/alarm))
       (test #t (signal-set? (make-signal-set)))
       (test #t (signal-set? (current-signal-mask)))
