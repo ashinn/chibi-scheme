@@ -63,8 +63,12 @@ sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp b
   if (!sexp_random_source_p(self, rs))
     return sexp_type_exception(ctx, self, sexp_unbox_fixnum(sexp_opcode_arg1_type(self)), rs);
   if (sexp_fixnump(bound)) {
-    sexp_call_random(rs, m);
-    res = sexp_make_fixnum(m % sexp_unbox_fixnum(bound));
+    if (sexp_unbox_fixnum(bound) <= 0) {
+      res = sexp_xtype_exception(ctx, self, "random bound must be positive", bound);
+    } else {
+      sexp_call_random(rs, m);
+      res = sexp_make_fixnum(m % sexp_unbox_fixnum(bound));
+    }
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(bound)) {
     hi = sexp_bignum_hi(bound);
