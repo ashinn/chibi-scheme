@@ -303,6 +303,41 @@
 #endif
 #endif
 
+/* Detect specific BSD */
+#if SEXP_BSD
+#if defined(__APPLE__)
+#define SEXP_DARWIN 1
+#define SEXP_FREEBSD 0
+#define SEXP_NETBSD 0
+#define SEXP_DRAGONFLY 0
+#define SEXP_OPENBSD 0
+#elif defined(__FreeBSD__)
+#define SEXP_DARWIN 0
+#define SEXP_FREEBSD 1
+#define SEXP_NETBSD 0
+#define SEXP_DRAGONFLY 0
+#define SEXP_OPENBSD 0
+#elif defined(__NetBSD__)
+#define SEXP_DARWIN 0
+#define SEXP_FREEBSD 0
+#define SEXP_NETBSD 1
+#define SEXP_DRAGONFLY 0
+#define SEXP_OPENBSD 0
+#elif defined(__DragonFly__)
+#define SEXP_DARWIN 0
+#define SEXP_FREEBSD 0
+#define SEXP_NETBSD 0
+#define SEXP_DRAGONFLY 1
+#define SEXP_OPENBSD 0
+#elif defined(__OpenBSD__)
+#define SEXP_DARWIN 0
+#define SEXP_FREEBSD 0
+#define SEXP_NETBSD 0
+#define SEXP_DRAGONFLY 0
+#define SEXP_OPENBSD 1
+#endif
+#endif
+
 /* for bignum support, need a double long to store long*long */
 /* gcc supports uint128_t, otherwise we need a custom struct */
 #ifndef SEXP_USE_CUSTOM_LONG_LONGS

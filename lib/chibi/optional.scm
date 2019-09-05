@@ -64,14 +64,36 @@
 ;;>
 ;;> Shorthand for
 ;;> \schemeblock{
-;;> (lambda o
+;;> (lambda (required ... . o)
 ;;>   (let-optionals o ((var default) ... [rest])
 ;;>      body ...))}
 
 (define-syntax opt-lambda
   (syntax-rules ()
     ((opt-lambda vars . body)
-     (lambda args (let-optionals args vars . body)))))
+     (opt-lambda/aux () vars . body))))
+
+(define-syntax opt-lambda/aux
+  (syntax-rules ()
+    ((opt-lambda/aux (args ...) ((var . default) . vars) . body)
+     (lambda (args ... . o)
+       (let-optionals o ((var . default) . vars) . body)))
+    ((opt-lambda/aux (args ...) (var . vars) . body)
+     (opt-lambda/aux (args ... var) vars . body))
+    ((opt-lambda/aux (args ...) () . body)
+     (lambda (args ... . o)
+       . body))))
+
+;;> \macro{(define-opt (name (var default) ... [rest]) body ...)}
+;;>
+;;> Shorthand for
+;;> \schemeblock{
+;;> (define name (opt-lambda (var default) ... [rest]) body ...)}
+
+(define-syntax define-opt
+  (syntax-rules ()
+    ((define-opt (name . vars) . body)
+     (define name (opt-lambda vars . body)))))
 
 ;;> \procedure{(keyword-ref ls key [default])}
 ;;>

@@ -24,6 +24,7 @@
 
 (define-c-struct winsize
   predicate: winsize?
+  constructor: (make-winsize ws_row ws_col)
   (unsigned-short ws_row winsize-row)
   (unsigned-short ws_col winsize-col))
 

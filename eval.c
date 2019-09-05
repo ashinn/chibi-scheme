@@ -883,7 +883,9 @@ static sexp analyze_if (sexp ctx, sexp x, int depth) {
   sexp_gc_var3(test, pass, fail);
   sexp_gc_preserve3(ctx, test, pass, fail);
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x)))) {
-    res = sexp_compile_error(ctx, "bad if syntax", x);
+    res = sexp_compile_error(ctx, "not enough args to if", x);
+  } else if (sexp_pairp(sexp_cdddr(x)) && sexp_cdr(sexp_cdddr(x)) != SEXP_NULL) {
+    res = sexp_compile_error(ctx, "too many args to if", x);
   } else {
     test = analyze(ctx, sexp_cadr(x), depth, 0);
     pass = analyze(ctx, sexp_caddr(x), depth, 0);
