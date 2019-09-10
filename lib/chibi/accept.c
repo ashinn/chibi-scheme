@@ -106,5 +106,5 @@ sexp sexp_sockaddr_name (sexp ctx, sexp self, struct sockaddr* addr) {
 
 int sexp_sockaddr_port (sexp ctx, sexp self, struct sockaddr* addr) {
   struct sockaddr_in *sa = (struct sockaddr_in *)addr;
-  return sa->sin_port;
+  return ntohs(sa->sin_port);
 }
