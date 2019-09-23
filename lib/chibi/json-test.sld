@@ -5,6 +5,9 @@
   (begin
     (define (run-tests)
       (test-begin "json")
+      (test 1 (parse-json "1"))
+      (test 1.5 (parse-json "1.5"))
+      (test 1000.0 (parse-json "1e3"))
       (test '((glossary
                (title . "example glossary")
                (GlossDiv
