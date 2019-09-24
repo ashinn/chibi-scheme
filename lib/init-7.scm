@@ -676,7 +676,7 @@
     (let lp ((ls ls))
       (and (pair? ls) (if (eq obj (car ls)) ls (lp (cdr ls)))))))
 
-(define memv member)
+(define (memv obj ls) (member obj ls eqv?))
 
 (define (assoc obj ls . o)
   (let ((eq (if (pair? o) (car o) equal?)))
