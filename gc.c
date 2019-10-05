@@ -500,7 +500,7 @@ sexp_heap sexp_make_heap (size_t size, size_t max_size, size_t chunk_size) {
   sexp_free_list free, next;
   sexp_heap h;
 #if SEXP_USE_MMAP_GC
-  h =  mmap(NULL, sexp_heap_pad_size(size), PROT_READ|PROT_WRITE|PROT_EXEC,
+  h =  mmap(NULL, sexp_heap_pad_size(size), PROT_READ|PROT_WRITE,
             MAP_ANON|MAP_PRIVATE, -1, 0);
   if (h == MAP_FAILED) return NULL;
 #else
