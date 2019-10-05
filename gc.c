@@ -502,10 +502,11 @@ sexp_heap sexp_make_heap (size_t size, size_t max_size, size_t chunk_size) {
 #if SEXP_USE_MMAP_GC
   h =  mmap(NULL, sexp_heap_pad_size(size), PROT_READ|PROT_WRITE|PROT_EXEC,
             MAP_ANON|MAP_PRIVATE, 0, 0);
+  if (h == MAP_FAILED) return NULL;
 #else
   h =  sexp_malloc(sexp_heap_pad_size(size));
-#endif
   if (! h) return NULL;
+#endif
   h->size = size;
   h->max_size = max_size;
   h->chunk_size = chunk_size;
