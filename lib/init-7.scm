@@ -213,7 +213,7 @@
 (define-syntax and
   (er-macro-transformer
    (lambda (expr rename compare)
-     (cond ((null? (cdr expr)))
+     (cond ((null? (cdr expr)) #t)
            ((null? (cddr expr)) (cadr expr))
            (else (list (rename 'if) (cadr expr)
                        (cons (rename 'and) (cddr expr))
