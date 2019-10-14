@@ -51,8 +51,8 @@
 
 (define-syntax let-optionals
   (syntax-rules ()
-    ((let-optionals ls ((var default) ...) body ...)
-     (let*-to-let let-optionals* ls () ((var default) ...) body ...))))
+    ((let-optionals ls ((var default) ... . rest) body ...)
+     (let*-to-let let-optionals* ls () ((var default) ... . rest) body ...))))
 
 ;;> \macro{(let-optionals* ls ((var default) ... [rest]) body ...)}
 ;;>
