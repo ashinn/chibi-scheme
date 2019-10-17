@@ -75,9 +75,9 @@
       (if (not ext-types)
           (let ((ht (make-hash-table eq?)))
             (cond
-             ((any file-exists? '("/etc/mime.types"
-                                  "/etc/httpd/mime.types"
-                                  "/etc/apache2/mime.types"))
+             ((find file-exists? '("/etc/mime.types"
+                                   "/etc/httpd/mime.types"
+                                   "/etc/apache2/mime.types"))
               => (lambda (file) (load-mime-types ht file))))
             (set! ext-types ht)))
       (let* ((ext (path-extension file))

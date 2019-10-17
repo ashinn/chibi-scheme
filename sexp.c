@@ -1457,7 +1457,7 @@ sexp sexp_intern(sexp ctx, const char *str, sexp_sint_t len) {
     goto normal_intern;
   for ( ; i<len; i++, p++) {
     c = *p;
-    if ((unsigned char)c <= 32 || (unsigned char)c > 127 || c == '\\' || c == '.' || c =='#' || sexp_is_separator(c))
+    if ((unsigned char)c <= 32 || (unsigned char)c > 127 || c == '\\' || c == '|' || c == '.' || c =='#' || sexp_is_separator(c))
       goto normal_intern;
     he = huff_table[(unsigned char)c];
     newbits = he.len;
@@ -2201,11 +2201,11 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
                   sexp_tolower((unsigned char)str[3]) == 'n')))))
         ? '|' : EOF;
       for (i=sexp_lsymbol_length(obj)-1; i>=0; i--)
-        if (str[i] <= ' ' || str[i] == '\\' || str[i] == '#' || sexp_is_separator(str[i]))
+        if (str[i] <= ' ' || str[i] == '\\' || str[i] == '|' || str[i] == '#' || sexp_is_separator(str[i]))
           c = '|';
       if (c!=EOF) sexp_write_char(ctx, c, out);
       for (i=sexp_lsymbol_length(obj); i>0; str++, i--) {
-        if (str[0] == '\\') sexp_write_char(ctx, '\\', out);
+        if (str[0] == '\\' || str[0] == '|') sexp_write_char(ctx, '\\', out);
         sexp_write_char(ctx, str[0], out);
       }
       if (c!=EOF) sexp_write_char(ctx, c, out);

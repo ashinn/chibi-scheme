@@ -75,9 +75,65 @@ void sexp_stack_trace (sexp ctx, sexp out) {
   }
 }
 
+
 sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp_stack_trace(ctx, out);
   return SEXP_VOID;
+}
+
+sexp sexp_get_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
+  int i, fp=sexp_context_last_fp(ctx);
+  sexp bc, src, *stack=sexp_stack_data(sexp_context_stack(ctx));
+  char bogus_string[2];
+  sprintf( bogus_string, "\n");
+  char what_I_will_return_to_scheme[16000];
+  strcat(what_I_will_return_to_scheme, "lwf:this_will_be_stack_trace_eventually");
+  strcat(what_I_will_return_to_scheme, bogus_string );
+  
+  // If your stack trace is longer than 16k, I hate you
+  for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
+    self = stack[i+2];
+    if (self && sexp_procedurep(self))
+      {
+	//      sexp_write_string(ctx, "  called from ", out);
+	strcat( what_I_will_return_to_scheme, "  called from ");
+      
+        bc = sexp_procedure_code(self);
+        if (sexp_symbolp(sexp_bytecode_name(bc)))
+          /* sexp_write(ctx, sexp_bytecode_name(bc), out); */
+	  strcat( what_I_will_return_to_scheme, "<todo-getstack@function-name>" );
+        else
+          /* sexp_write_string(ctx, "<anonymous>", out); */
+	  strcat( what_I_will_return_to_scheme, "<anonymous>");
+	
+        src = sexp_bytecode_source(bc);
+#if SEXP_USE_FULL_SOURCE_INFO
+        if (src && sexp_vectorp(src))
+          src = sexp_lookup_source_info(src, sexp_unbox_fixnum(stack[i+3]));
+#endif
+	
+        if (src && sexp_pairp(src))
+	{
+          if (sexp_fixnump(sexp_cdr(src)) && (sexp_cdr(src) >= SEXP_ZERO))
+	  {
+            /* sexp_write_string(ctx, " on line ", out); */
+	    strcat( what_I_will_return_to_scheme, " on line ");
+            /* sexp_write(ctx, sexp_cdr(src), out); */
+	    strcat( what_I_will_return_to_scheme, "todo-getstack@bytecode-cdr");
+          }
+	  if (sexp_stringp(sexp_car(src)))
+	  {
+            /* sexp_write_string(ctx, " of file ", out); */
+	    strcat( what_I_will_return_to_scheme, " of file ");
+	    /* sexp_write_string(ctx, sexp_string_data(sexp_car(src)), out); */
+	    strcat( what_I_will_return_to_scheme, sexp_string_data(sexp_car(src)));
+          }
+        }
+      /* sexp_write_char(ctx, '\n', out); */
+	strcat( what_I_will_return_to_scheme, bogus_string);
+    }
+  }
+  return sexp_c_string(ctx, what_I_will_return_to_scheme, -1);
 }
 
 /************************* code generation ****************************/

@@ -16,12 +16,31 @@ sexp sexp_json_exception (sexp ctx, sexp self, const char* msg, sexp str, const 
 }
 
 sexp parse_json_number (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len) {
-  sexp_sint_t res = 0;
-  int j = *i;
+  double res = 0, scale = 1;
+  int j = *i, sign = 1, inexactp = 0;
+  if (s[j] == '+') {
+    ++j;
+  } else if (s[j] == '-') {
+    ++j;
+    sign = -1;
+  }
   while (j < len && isdigit(s[j]))
     res = res * 10 + s[j++] - '0';
+  if (j < len && s[j] == '.') {
+    inexactp = 1;
+    for (++j; j < len && isdigit(s[j]); scale *= 10)
+      res = res * 10 + s[j++] - '0';
+    res /= scale;
+  } else if (j < len && sexp_tolower(s[j]) == 'e') {
+    inexactp = 1;
+    for (++j, scale=0; j < len && isdigit(s[j]); )
+      scale = scale * 10 + s[j++] - '0';
+    res *= pow(10.0, scale);
+  }
   *i = j;
-  return sexp_make_fixnum(res);
+  return (inexactp || fabs(res) > SEXP_MAX_FIXNUM) ?
+    sexp_make_flonum(ctx, sign * res) :
+    sexp_make_fixnum(sign * res);  /* always return inexact? */
 }
 
 sexp parse_json_literal (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len, const char* name, int namelen, sexp value) {
@@ -206,6 +225,7 @@ sexp parse_json (sexp ctx, sexp self, sexp str, const char* s, int* i, const int
     ++j;
     res = parse_json_string(ctx, self, str, s, &j, len);
     break;
+  case '-': case '+':
   case '0': case '1': case '2': case '3': case '4':
   case '5': case '6': case '7': case '8': case '9':
     res = parse_json_number(ctx, self, str, s, &j, len);

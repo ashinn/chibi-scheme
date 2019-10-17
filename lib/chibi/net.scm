@@ -90,6 +90,7 @@
      ((not sock)
       (error "couldn't create socket for: " addrinfo))
      ((not (set-socket-option! sock level/socket socket-opt/reuseaddr 1))
+      (close-file-descriptor sock)
       (error "couldn't set the socket to be reusable" addrinfo))
      ((not (bind sock
                  (address-info-address addrinfo)
