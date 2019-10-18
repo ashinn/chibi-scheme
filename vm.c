@@ -81,30 +81,45 @@ sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   return SEXP_VOID;
 }
 
+void safely_strcat( char* destination, const char* source, unsigned int maxlen)
+{
+  char ermsg[] = "~buffer-truncated~";
+  if( strlen(destination)+strlen(source) < maxlen)
+  {
+    strcat( destination, source );
+  }
+  else
+  {
+    strncpy(destination + maxlen - strlen( ermsg ),
+	    ermsg,
+	    strlen( ermsg )); 
+  }
+}
 sexp sexp_get_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   int i, fp=sexp_context_last_fp(ctx);
   sexp bc, src, *stack=sexp_stack_data(sexp_context_stack(ctx));
-  char bogus_string[2];
-  sprintf( bogus_string, "\n");
-  char what_I_will_return_to_scheme[16000];
-  strcat(what_I_will_return_to_scheme, "lwf:this_will_be_stack_trace_eventually");
-  strcat(what_I_will_return_to_scheme, bogus_string );
-  
-  // If your stack trace is longer than 16k, I hate you
+  char bogus_string[] = {'\n', '\0'};
+  unsigned int maxlen = 16000;
+  char what_I_will_return_to_scheme[maxlen];
+  sprintf(what_I_will_return_to_scheme, "\n");
+  // If your stack trace is longer than 16k, it's not very good
+  safely_strcat(what_I_will_return_to_scheme, "lwf:this_will_be_stack_trace_eventually", maxlen);
+  safely_strcat(what_I_will_return_to_scheme, bogus_string, maxlen );
   for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
     self = stack[i+2];
     if (self && sexp_procedurep(self))
       {
 	//      sexp_write_string(ctx, "  called from ", out);
-	strcat( what_I_will_return_to_scheme, "  called from ");
+	
+	safely_strcat( what_I_will_return_to_scheme, "  called from ", maxlen );
       
         bc = sexp_procedure_code(self);
         if (sexp_symbolp(sexp_bytecode_name(bc)))
           /* sexp_write(ctx, sexp_bytecode_name(bc), out); */
-	  strcat( what_I_will_return_to_scheme, "<todo-getstack@function-name>" );
+	  safely_strcat( what_I_will_return_to_scheme, "<todo-getstack@function-name>", maxlen );
         else
           /* sexp_write_string(ctx, "<anonymous>", out); */
-	  strcat( what_I_will_return_to_scheme, "<anonymous>");
+	  safely_strcat( what_I_will_return_to_scheme, "<anonymous>", maxlen);
 	
         src = sexp_bytecode_source(bc);
 #if SEXP_USE_FULL_SOURCE_INFO
@@ -117,20 +132,20 @@ sexp sexp_get_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
           if (sexp_fixnump(sexp_cdr(src)) && (sexp_cdr(src) >= SEXP_ZERO))
 	  {
             /* sexp_write_string(ctx, " on line ", out); */
-	    strcat( what_I_will_return_to_scheme, " on line ");
+	    safely_strcat( what_I_will_return_to_scheme, " on line ", maxlen );
             /* sexp_write(ctx, sexp_cdr(src), out); */
-	    strcat( what_I_will_return_to_scheme, "todo-getstack@bytecode-cdr");
+	    safely_strcat( what_I_will_return_to_scheme, "todo-getstack@bytecode-cdr", maxlen );
           }
 	  if (sexp_stringp(sexp_car(src)))
 	  {
             /* sexp_write_string(ctx, " of file ", out); */
-	    strcat( what_I_will_return_to_scheme, " of file ");
+	    safely_strcat( what_I_will_return_to_scheme, " of file ", maxlen );
 	    /* sexp_write_string(ctx, sexp_string_data(sexp_car(src)), out); */
-	    strcat( what_I_will_return_to_scheme, sexp_string_data(sexp_car(src)));
+	    safely_strcat( what_I_will_return_to_scheme, sexp_string_data(sexp_car(src)), maxlen);
           }
         }
       /* sexp_write_char(ctx, '\n', out); */
-	strcat( what_I_will_return_to_scheme, bogus_string);
+	safely_strcat( what_I_will_return_to_scheme, bogus_string, maxlen);
     }
   }
   return sexp_c_string(ctx, what_I_will_return_to_scheme, -1);
