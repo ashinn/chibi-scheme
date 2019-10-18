@@ -1,5 +1,8 @@
 #!/bin/bash -x
 
+set -euo pipefail
+IFS=$'\n\t'
+
 rm -rf /tmp/chibi-scheme
 
 make -j1 \
@@ -21,3 +24,9 @@ make install \
 
 pushd /tmp/chibi-scheme
 makepkg -l y -c y ../chibi-scheme-0.8.0.2git-x86_64-1dirty.tgz
+upgradepkg --reinstall /tmp/chibi-scheme-0.8.0.2git-x86_64-1dirty.tgz
+popd
+
+chown -R lockywolf:users .
+
+
