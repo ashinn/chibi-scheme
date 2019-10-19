@@ -3,7 +3,13 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-rm -rf /tmp/chibi-scheme
+PRGNAM=chibi-scheme
+VERSION="$(cat VERSION)"
+VERSION_SUFFIX="$(time +%s)"
+CODENAME="$(cat RELEASE)"
+
+
+rm -rf /tmp/$PRGNAM
 
 make -j1 \
   CFLAGS="-g -Og" \
@@ -14,7 +20,7 @@ make -j1 \
   MODDIR="/usr/lib64/chibi"
 
 make install \
-  DESTDIR=/tmp/chibi-scheme \
+  DESTDIR=/tmp/$PRGNAM \
   MANDIR="/usr/man/man1" \
   PREFIX="/usr" \
   LIBDIR="/usr/lib64" \
@@ -22,11 +28,8 @@ make install \
   BINMODDIR="/usr/lib64/chibi" \
   MODDIR="/usr/lib64/chibi"
 
-pushd /tmp/chibi-scheme
-makepkg -l y -c y ../chibi-scheme-0.8.0.2git-x86_64-1dirty.tgz
-upgradepkg --reinstall /tmp/chibi-scheme-0.8.0.2git-x86_64-1dirty.tgz
+pushd /tmp/$PRGNAM
+makepkg -l y -c y ../"$PRGNAM"-"$VERSION"."$VERSION_SUFFIX"_"$CODENAME"-x86_64-1_offrepo.tgz
 popd
-
-chown -R lockywolf:users .
 
 
