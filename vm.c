@@ -81,7 +81,7 @@ sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   return SEXP_VOID;
 }
 
-sexp sexp_get_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
+sexp sexp_get_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp str;
   sexp_gc_var1(out1);
   sexp_gc_preserve1(ctx, out1);
