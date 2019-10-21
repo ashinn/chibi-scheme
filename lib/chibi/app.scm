@@ -67,7 +67,7 @@
 ;;>     (or
 ;;>      (feed "feed the animals" () (,feed animals ...))
 ;;>      (wash "wash the animals" (@ (soap boolean)) (,wash animals ...))
-;;>      (help "print help" (,app-help-command)))
+;;>      (help "print help" (,app-help-command))))
 ;;>   (command-line)
 ;;>   (conf-load (string-append (get-environment-variable "HOME") "/.zoo")))
 ;;> }
