@@ -83,11 +83,11 @@ sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
 
 sexp sexp_get_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp str;
-  sexp_gc_var1(out1);
-  sexp_gc_preserve1(ctx, out1);
-  out1 = sexp_open_output_string(ctx);
-  sexp_stack_trace( ctx, out1 );
-  str = sexp_get_output_string(ctx, out1);
+  sexp_gc_var1(out);
+  sexp_gc_preserve1(ctx, out);
+  out = sexp_open_output_string(ctx);
+  sexp_stack_trace( ctx, out );
+  str = sexp_get_output_string(ctx, out);
   sexp_gc_release1(ctx);
   return str;
 }

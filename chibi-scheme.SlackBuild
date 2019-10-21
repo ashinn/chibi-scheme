@@ -5,7 +5,7 @@ IFS=$'\n\t'
 
 PRGNAM=chibi-scheme
 VERSION="$(cat VERSION)"
-VERSION_SUFFIX="$(time +%s)"
+VERSION_SUFFIX="$(date +%s)"
 CODENAME="$(cat RELEASE)"
 
 

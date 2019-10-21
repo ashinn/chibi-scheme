@@ -679,6 +679,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_BYTECODE, 4, "bytecode-source", NULL);
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 1, "exception-message", NULL);
   sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 4, "exception-source", NULL);
+  sexp_define_accessors(ctx, env, SEXP_EXCEPTION, 5, "exception-stack_trace", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 0, "macro-procedure", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);

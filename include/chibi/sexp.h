@@ -461,7 +461,7 @@ struct sexp_struct {
       sexp_sint_t fd, count;
     } fileno;
     struct {
-      sexp kind, message, irritants, procedure, source;
+      sexp kind, message, irritants, procedure, source, stack_trace;
     } exception;
     struct {
       signed char sign;
@@ -1177,6 +1177,7 @@ enum sexp_uniform_vector_type {
 #define sexp_exception_irritants(x) (sexp_field(x, exception, SEXP_EXCEPTION, irritants))
 #define sexp_exception_procedure(x) (sexp_field(x, exception, SEXP_EXCEPTION, procedure))
 #define sexp_exception_source(x)    (sexp_field(x, exception, SEXP_EXCEPTION, source))
+#define sexp_exception_stack_trace(x)    (sexp_field(x, exception, SEXP_EXCEPTION, stack_trace))
 
 #define sexp_trampolinep(x) (sexp_exceptionp(x) && sexp_exception_kind(x) == SEXP_TRAMPOLINE)
 #define sexp_trampoline_procedure(x) sexp_exception_procedure(x)

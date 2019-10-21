@@ -703,6 +703,7 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
   sexp_exception_irritants(exn) = irritants;
   sexp_exception_procedure(exn) = procedure;
   sexp_exception_source(exn) = source;
+  sexp_exception_stack_trace(exn) = sexp_get_stack_trace_op(ctx, (sexp) NULL,  0);
   return exn;
 }
 

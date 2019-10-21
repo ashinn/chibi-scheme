@@ -23,7 +23,7 @@
    set-var set-value set-var-set! set-value-set! set-source set-source-set!
    ref-name ref-cell ref-name-set! ref-cell-set!
    seq-ls seq-ls-set! lit-value lit-value-set!
-   exception-kind exception-message exception-irritants exception-source
+   exception-kind exception-message exception-irritants exception-source exception-stack_trace
    opcode-name opcode-num-params opcode-return-type opcode-param-type
    opcode-class opcode-code opcode-data opcode-variadic?
    macro-procedure macro-env macro-source macro-aux macro-aux-set!
