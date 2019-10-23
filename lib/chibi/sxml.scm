@@ -101,7 +101,7 @@
        ((null? sxml))
        (else (html-display-escaped-string sxml out))))))
 
-;;> Render \var{sxml} as \var{sxml}.
+;;> Render \var{sxml} as \var{xml}.
 (define (sxml->xml sxml)
   (call-with-output-string
     (lambda (out) (sxml-display-as-html sxml out))))
