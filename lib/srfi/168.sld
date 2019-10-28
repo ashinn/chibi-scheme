@@ -39,7 +39,7 @@
 
   (begin
 
-    ;; helper
+    ;; combinatorics helpers
 
     (define (permutations s)
       ;; http://rosettacode.org/wiki/Permutations#Scheme
@@ -71,15 +71,15 @@
                  (v (map (lambda (x) (cons head x)) s)))
             (append s v))))
 
-    ;; make-indices will compute the minimum number of
+    ;; make-indices will compute smallest set of
     ;; indices/tables/subspaces required to bind any pattern in one
     ;; hop. The math behind this computation is explained at:
     ;;
     ;;   https://math.stackexchange.com/q/3146568/23663
     ;;
-    ;; make-indices will return the minimum list of permutations in
-    ;; lexicographic order of the base index ie. (iota n) where n is
-    ;; the length of ITEMS ie. the n in nstore.
+    ;; make-indices will return the smallest set of permutations in
+    ;; lexicographic order of the base index ie. the output of (iota
+    ;; n) where n is the length of ITEMS ie. the n in nstore.
 
     (define (prefix? lst other)
       "Return #t if LST is prefix of OTHER"
@@ -164,10 +164,11 @@
     (define nstore-ask?
       (lambda (transaction nstore items)
         (assume (= (length items) (nstore-n nstore)))
-        ;; indices are sorted in lexicographic order, that is the first
-        ;; index is always (iota n) also known as the base index. So that
-        ;; there is no need to permute ITEMS.  zero in the following
-        ;; cons* is the index of the base index in nstore-indices
+        ;; indices are sorted in lexicographic order, that is the
+        ;; first index is always (iota n) (also known as the base
+        ;; index). So that there is no need to permute ITEMS.  zero in
+        ;; the following `list` is the index of the base subspace in
+        ;; nstore-indices
         (let ((key (apply engine-pack (nstore-engine nstore)
                           (append (nstore-prefix nstore) (list 0) items))))
           (not (not (engine-ref (nstore-engine nstore) transaction key))))))
@@ -179,7 +180,7 @@
         (vector->list tuple)))
 
     (define (permute items index)
-      ;; make-tuple reverse operation
+      ;; inverse of `make-tuple`
       (let ((items (list->vector items)))
         (let loop ((index index)
                    (out '()))
@@ -231,7 +232,7 @@
       (name nstore-var-name))
 
     (define (bind* pattern tuple seed)
-      ;; associate variables of PATTERN to value of TUPLE with SEED.
+      ;; Associate variables of PATTERN to value of TUPLE with SEED.
       (let loop ((tuple tuple)
                  (pattern pattern)
                  (out seed))
@@ -258,10 +259,10 @@
                       (cons index out))))))
 
     (define (pattern->index pattern indices)
-      ;; Retrieve the index that will allow to bind pattern in one
-      ;; hop. This is done by getting all non-variable items of the
-      ;; pattern and looking up the first index that is
-      ;; permutation-prefix
+      ;; Retrieve the index and subspace that will allow to bind
+      ;; PATTERN in one hop. This is done by getting all non-variable
+      ;; items of PATTERN and looking up the first index that is
+      ;; permutation-prefix...
       (let ((combination (pattern->combination pattern)))
         (let loop ((indices indices)
                    (subspace 0))
@@ -311,8 +312,8 @@
          (%from transaction nstore pattern (hashmap comparator) config))))
 
     (define (pattern-bind pattern seed)
-      ;; Return a pattern where variables that have a binding in seed
-      ;; are replaced with the associated value. In pratice, most of
+      ;; Return a pattern where variables that have a binding in SEED
+      ;; are replaced with the associated value. In practice, most of
       ;; the time, it is the same pattern with less variables.
       (map (lambda (item) (or (and (nstore-var? item)
                                    (hashmap-ref/default seed
