@@ -101,10 +101,10 @@
       (let loop3 ((x L)
                   (y '()))
         (if (or (null? x) (null? (cdr x)))
-            (values #f (append (reverse! y) x) #f #f)
+            (values #f (append (reverse y) x) #f #f)
             (if (and (not (cdr (list-ref x 0))) (cdr (list-ref x 1)))
                 (values #t
-                        (append (cddr x) (reverse! y))
+                        (append (cddr x) (reverse y))
                         (car (list-ref x 0))
                         (car (list-ref x 1)))
                 (loop3 (cdr x) (cons (car x) y))))))
@@ -138,7 +138,7 @@
                     (if continue?
                         (loop2 L (cons j a) (cons i b))
                         (loop1 (cdr cx)
-                               (cons (append (reverse! a) (map car L) (reverse! b))
+                               (cons (append (reverse a) (map car L) (reverse b))
                                      out))))))))))
 
     (define-record-type <nstore>
@@ -184,7 +184,7 @@
         (let loop ((index index)
                    (out '()))
           (if (null? index)
-              (reverse! out)
+              (reverse out)
               (loop (cdr index)
                     (cons (vector-ref items (car index)) out))))))
 
@@ -250,7 +250,7 @@
                  (index 0)
                  (out '()))
         (if (null? pattern)
-            (reverse! out)
+            (reverse out)
             (loop (cdr pattern)
                   (+ 1 index)
                   (if (nstore-var? (car pattern))
@@ -279,7 +279,7 @@
                  (out '()))
         (let ((v (list-ref pattern (car index))))
           (if (nstore-var? v)
-              (reverse! out)
+              (reverse out)
               (loop (cdr index) (cons v out))))))
 
     (define (%from transaction nstore pattern seed config)
