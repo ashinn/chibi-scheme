@@ -332,6 +332,36 @@
 ;;> all prefixed by \var{prefix}.  The original \var{spec} is used for
 ;;> \scheme{app-help}.
 
+
+(define (levenshtein s t)
+  (define (%levenshtein s sl t tl)
+    (cond ((zero? sl) tl)
+          ((zero? tl) sl)
+          (else
+            (min (+ (%levenshtein (cdr s) (- sl 1) t tl) 1)
+                 (+ (%levenshtein s sl (cdr t) (- tl 1)) 1)
+                 (+ (%levenshtein (cdr s) (- sl 1) (cdr t) (- tl 1))
+                    (if (char=? (car s) (car t)) 0 1))))))
+  (%levenshtein (string->list s)
+                (string-length s)
+                (string->list t)
+                (string-length t)))
+
+(define (most-similar command possible-commands)
+  (let loop ((commands possible-commands)
+             (candidate (car possible-commands))
+             (distance  (levenshtein (car possible-comands) command)))
+      (if (null? commands)
+          candidate
+          (let ((current-distance (levenshtein (car commands) command)))
+            (if (< current-distance distance))
+            (loop (cdr commands)
+                  (car commands)
+                  current-distance)
+            (loop (cdr commands)
+                  candidate
+                  distance)))))
+
 (define (parse-app prefix spec opt-spec args config init end . o)
   (define (next-prefix prefix name)
     (append (if (null? prefix) '(command) prefix) (list name)))
@@ -343,7 +373,12 @@
                   (car o)
                   (lambda (prefix spec opt args reason)
                     ;; TODO: search for closest option in "unknown" case
-                    (error reason opt)))))
+                    (cond
+                      ((string=? reason "unknown")
+                       (let (similar (most-similar ));TODO: what compare?
+                         (error reason opt "Did you mean: " similar " ?")))
+                      (else
+                        (error reason opt)))))))
     (cond
      ((null? spec)
       (error "no procedure in application spec"))
