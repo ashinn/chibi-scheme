@@ -44,6 +44,7 @@
   (import (srfi 1))
   (import (srfi 125))
   (import (srfi 128))
+  (import (srfi 145))
   (import (srfi 146))
   (import (srfi 158))
   (import (srfi 173))
@@ -137,7 +138,7 @@
                  (make-hook 1)
                  (make-hook 1)))
 
-    (define (okvs-close . args)
+    (define (okvs-close okvs . args)
       (assume (null? args))
       (void))
 
@@ -193,13 +194,21 @@
          (%okvs-in-transaction okvs proc failure success make-state config))))
 
     (define (okvs-ref okvs-or-transaction key)
-      (mapping-ref/default (okvs-transaction-store okvs-or-transaction) key #f))
+      (if (okvs-transaction? okvs-or-transaction)
+          (mapping-ref/default (okvs-transaction-store okvs-or-transaction) key #f)
+          (mapping-ref/default (okvs-store okvs-or-transaction) key #f)))
 
     (define (okvs-set! okvs-or-transaction key value)
-      (okvs-transaction-store! okvs-or-transaction (mapping-set (okvs-transaction-store okvs-or-transaction) key value)))
+      (if (okvs-transaction? okvs-or-transaction)
+          (okvs-transaction-store! okvs-or-transaction (mapping-set (okvs-transaction-store okvs-or-transaction) key value))
+          (okvs-store! okvs-or-transaction
+                       (mapping-set (okvs-store okvs-or-transaction) key value))))
 
     (define (okvs-delete! okvs-or-transaction key)
-      (okvs-transaction-store! okvs-or-transaction (mapping-delete (okvs-transaction-store okvs-or-transaction) key)))
+      (if (okvs-transaction? okvs-or-transaction)
+          (okvs-transaction-store! okvs-or-transaction (mapping-delete (okvs-transaction-store okvs-or-transaction) key))
+          (okvs-set! okvs-or-transaction
+                     (mapping-delete (okvs-store okvs-or-transaction) key))))
 
     (define (okvs-range-remove! okvs-or-transaction start-key start-include? end-key end-include?)
       (let ((generator (okvs-range okvs-or-transaction start-key start-include? end-key end-include?)))
