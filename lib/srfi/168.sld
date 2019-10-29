@@ -24,7 +24,8 @@
 
   (export nstore-engine nstore nstore-ask? nstore-add! nstore-delete!
           nstore-var nstore-var? nstore-var-name
-          nstore-from nstore-where nstore-query)
+          nstore-from nstore-where nstore-query
+          nstore-hook-on-add nstore-hook-on-delete)
 
   (import (scheme base))
   (import (scheme case-lambda))
