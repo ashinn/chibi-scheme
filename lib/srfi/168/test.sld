@@ -132,26 +132,25 @@
               (engine-close engine okvs)
               out))))
 
-      ;;
-      ;; Sample implementation doesn't support it
-      ;;
-      ;; (test "nstore-from limit and offset"
-      ;;   '("hyperdev.fr")
-      ;;   (let ((okvs (okvs #t))
-      ;;         (triplestore (triplestore)))
-      ;;     ;; add!
-      ;;     (nstore-add! okvs triplestore '("P4X432" blog/title "hyper.dev"))
-      ;;     (nstore-add! okvs triplestore '("P4X433" blog/title "hyperdev.fr"))
-      ;;     (nstore-add! okvs triplestore '("P4X434" blog/title "hypermove.net"))
-      ;;     ((engine-transactional engine okvs
-      ;;      (lambda (transaction)
-      ;;        (generator-map->list
-      ;;         (lambda (item) (hashmap-ref item 'title))
-      ;;         (nstore-from transaction triplestore (list (nstore-var 'uid)
-      ;;                                             'blog/title
-      ;;                                             (nstore-var 'title))
-      ;;                      `((limit . 1) (offset . 1))))))
-      ;;      okvs)))
-      ;;
+      (test "nstore-from limit and offset"
+        '("hyperdev.fr")
+        (let ((okvs (engine-open engine #f))
+              (triplestore (triplestore)))
+          ;; add!
+          (nstore-add! okvs triplestore '("P4X432" blog/title "hyper.dev"))
+          (nstore-add! okvs triplestore '("P4X433" blog/title "hyperdev.fr"))
+          (nstore-add! okvs triplestore '("P4X434" blog/title "hypermove.net"))
+          (let ((out (engine-in-transaction
+                      engine okvs
+                      (lambda (transaction)
+                        (generator-map->list
+                         (lambda (item) (hashmap-ref item 'title))
+                         (nstore-from transaction triplestore (list (nstore-var 'uid)
+                                                                    'blog/title
+                                                                    (nstore-var 'title))
+                                      `((limit . 1) (offset . 1))))))))
+            (engine-close engine okvs)
+           out)))
+
 
       )))
