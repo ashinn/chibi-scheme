@@ -223,7 +223,7 @@
                             (okvs-range-init store start-key)
                             '())))
           (if (not key)
-              (list->generator (reverse! out))
+              (list->generator (reverse out))
               (case (lexicographic-compare key end-key)
                 ((-1)
                  (loop (mapping-key-successor store key (const #f))
@@ -246,7 +246,7 @@
               (loop (cdr out))
               (set! bytes out)))
         ;; increment first byte, reverse and return the bytevector
-        (u8-list->bytevector (reverse! (cons (+ 1 (car bytes)) (cdr bytes))))))
+        (u8-list->bytevector (reverse (cons (+ 1 (car bytes)) (cdr bytes))))))
 
     (define (okvs-prefix-range okvs-or-transaction prefix . config)
       (apply okvs-range okvs-or-transaction prefix #t (strinc prefix) #f config))
