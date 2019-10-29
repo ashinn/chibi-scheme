@@ -33,6 +33,7 @@
   (import (srfi 167 memory))
   (import (srfi 167 engine))
   (import (srfi 168))
+  (import (srfi 173))
 
   (begin
 
@@ -152,5 +153,28 @@
             (engine-close engine okvs)
            out)))
 
+      (test "nstore validation add via hooks"
+            #t
+            (let* ((okvs (engine-open engine #f))
+                   (triplestore (triplestore))
+                   (hook (nstore-hook-on-add triplestore)))
+              (hook-add! hook (lambda (nstore items)
+                                (when (string=? (car items) "private")
+                                  (error 'nstore-hook "private is private" items))))
+              (guard (ex (else #t))
+                (nstore-add! okvs triplestore '("private" private "private"))
+                #f)))
+
+      (test "nstore validation delete via hooks"
+            #t
+            (let* ((okvs (engine-open engine #f))
+                   (triplestore (triplestore))
+                   (hook (nstore-hook-on-delete triplestore)))
+              (hook-add! hook (lambda (nstore items)
+                                (when (string=? (car items) "private")
+                                  (error 'nstore-hook "private is private" items))))
+              (guard (ex (else #t))
+                (nstore-delete! okvs triplestore '("private" private "private"))
+                #f)))
 
       )))
