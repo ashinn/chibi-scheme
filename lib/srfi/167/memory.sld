@@ -157,8 +157,7 @@
         transaction))
 
     (define (okvs-transaction-commit transaction . args)
-      (hook-run (okvs-hook-on-transaction-commit
-                 (okvs-transaction-database transaction))
+      (hook-run (okvs-hook-on-transaction-commit (okvs-transaction-database transaction))
                 transaction)
       (okvs-store! (okvs-transaction-database transaction)
                    (okvs-transaction-store transaction)))
