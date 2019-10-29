@@ -44,7 +44,7 @@
 
       (test "ask empty triplestore"
         #f
-        (let ((okvs (engine-open engine #t))
+        (let ((okvs (engine-open engine #f))
               (triplestore (triplestore)))
           ;; ask
           (let ((out (engine-in-transaction
@@ -56,7 +56,7 @@
 
       (test "add and ask triplestore"
         #t
-        (let ((okvs (engine-open engine #t))
+        (let ((okvs (engine-open engine #f))
               (triplestore (triplestore)))
           ;; add
           (engine-in-transaction
@@ -74,7 +74,7 @@
 
       (test "add, rm and ask triplestore"
         #f
-        (let ((okvs (engine-open engine #t))
+        (let ((okvs (engine-open engine #f))
               (triplestore (triplestore)))
 
           (let ((out
@@ -93,7 +93,7 @@
       (test "blog query post titles"
         '("DIY a database" "DIY a full-text search engine")
 
-        (let ((okvs (engine-open engine #t))
+        (let ((okvs (engine-open engine #f))
               (triplestore (triplestore)))
           (engine-in-transaction
            engine okvs
