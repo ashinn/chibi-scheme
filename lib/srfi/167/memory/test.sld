@@ -136,10 +136,10 @@
            out)))
 
       (test
-       '((#vu8(20 16) . #vu8(2))
-         (#vu8(20 16 1) . #vu8(2))
+       '(
          (#vu8(20 17) . #vu8(3))
-         (#vu8(20 17 1) . #vu8(2)))
+         (#vu8(20 16 1) . #vu8(2))
+         )
        (let ((okvs (engine-open engine #f)))
          ;; set
          (engine-in-transaction engine okvs
