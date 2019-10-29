@@ -131,11 +131,14 @@
       (make-comparator bytevector? bytevector=? lexicographic<? vector-hash))
 
     (define (okvs-open home . args)
+      (assume (null? args))
+      (assume (not home))
       (make-okvs (mapping (make-lexicographic-comparator))
                  (make-hook 1)
                  (make-hook 1)))
 
     (define (okvs-close . args)
+      (assume (null? args))
       (void))
 
     (define-record-type <okvs-transaction>
@@ -163,6 +166,7 @@
       (void))
 
     (define (%okvs-in-transaction okvs proc failure success make-state config)
+      (assume (null? config))
       (let ((transaction (okvs-transaction-begin okvs make-state config)))
         (guard (ex
                 (else
@@ -211,7 +215,8 @@
             (list (cons key value))
             '())))
 
-    (define (okvs-range okvs-or-transaction start-key start-include? end-key end-include? . args)
+    (define (okvs-range okvs-or-transaction start-key start-include? end-key end-include? . config)
+      (assume (null? config))
       (let* ((store (okvs-transaction-store okvs-or-transaction)))
         (let loop ((key (mapping-key-successor store start-key (const #f)))
                    (out (if start-include?
