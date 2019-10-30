@@ -78,6 +78,7 @@
     (lambda (out) (html-display-escaped-string str out))))
 
 ;;> Render (valid, expanded) \var{sxml} as html.
+;;> \var{@raw} tag is considered safe text and not processed or escaped.
 (define (sxml-display-as-html sxml . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
     (let lp ((sxml sxml))
@@ -105,6 +106,7 @@
        (else (html-display-escaped-string sxml out))))))
 
 ;;> Render \var{sxml} as \var{xml}.
+;;> \var{@raw} tag is considered safe text and not processed or escaped.
 (define (sxml->xml sxml)
   (call-with-output-string
     (lambda (out) (sxml-display-as-html sxml out))))
