@@ -18,7 +18,7 @@
     (else "0")))
 
 (define (ansi-escape color)
-  (each (integer->char 27) "[" (color->ansi color) "m"))
+  (string-append (string (integer->char 27)) "[" (color->ansi color) "m"))
 
 (define (colored new-color . args)
   (fn (color)
