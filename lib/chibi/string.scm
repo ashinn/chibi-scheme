@@ -267,13 +267,13 @@
   (let ((pred (make-char-predicate check)))
     (string-fold (lambda (ch count) (if (pred ch) (+ count 1) count)) 0 str)))
 
-;;> \procedure{(string-contains s1 s2)}
+;;> \procedure{(string-contains s1 s2 [start])}
 ;;>
 ;;> Returns a cursor pointing to the first position in the string
 ;;> \var{s1} where \var{s2} occurs, or \scheme{#f} if there is no such
 ;;> match.
 
-;;> \procedure{(mamke-string-searcher needle)}
+;;> \procedure{(make-string-searcher needle)}
 ;;>
 ;;> Partial application of \scheme{string-contains}.  Return a
 ;;> procedure of one argument, a string, which runs
