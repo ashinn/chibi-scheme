@@ -213,20 +213,21 @@
   (assq type *c-enum-types*))
 
 (define (signed-int-type? type)
-  (or (memq type '(signed-char short int long))
+  (or (memq type '(signed-char short int long s8 s16 s32 s64))
       (memq type *c-int-types*)
       (enum-type? type)))
 
 (define (unsigned-int-type? type)
   (memq type '(unsigned-char unsigned-short unsigned unsigned-int unsigned-long
                size_t off_t time_t clock_t dev_t ino_t mode_t nlink_t
-               uid_t gid_t pid_t blksize_t blkcnt_t sigval_t)))
+               uid_t gid_t pid_t blksize_t blkcnt_t sigval_t
+               u1 u8 u16 u32 u64)))
 
 (define (int-type? type)
   (or (signed-int-type? type) (unsigned-int-type? type)))
 
 (define (float-type? type)
-  (memq type '(float double long-double long-long-double)))
+  (memq type '(float double long-double long-long-double f32 f64)))
 
 (define (string-type? type)
   (or (memq type '(char* string env-string non-null-string))
@@ -851,7 +852,7 @@
       val)
      ((uniform-vector-type? base)
       (cat "sexp_make_cuvector(ctx, " (uniform-vector-type-code base) ", "
-           val ", " (if (c-type-free? type) 1 0)))
+           val ", " (if (c-type-free? type) 1 0) ")"))
      (else
       (let ((ctype (lookup-type base))
             (void*? (void-pointer-type? type)))
@@ -932,7 +933,16 @@
     ((string env-string non-null-string bytevector u8vector)
      (if *c++?* "string" "char*"))
     ((fileno fileno-nonblock) "int")
-    (else (string-replace (symbol->string base) #\- " "))))
+    ((u1 u8 u16 u32 u64 s8 s16 s32 s64 f32 f64)
+     (let ((a
+            (uniform-vector-ctype
+             (string->symbol
+              (string-append (x->string base) "vector")))))
+       (substring a 0 (- (string-length a) 1))))
+    (else
+     (if (uniform-vector-type? base)
+         (uniform-vector-ctype base)
+         (string-replace (symbol->string base) #\- " ")))))
 
 (define (type-struct-type type)
   (let ((type-spec (lookup-type (if (vector? type) (type-base type) type))))
@@ -1258,7 +1268,11 @@
   (cond
    ((or (type-result? arg) (type-array arg))
     (cat (if (or (type-free? arg) (type-reference? arg)
-                 (type-address-of? arg) (basic-type? arg))
+                 (type-address-of? arg) (basic-type? arg)
+                 ;; a non-pointer, non-basic result needs indirection
+                 (and (type-result? arg) (not (type-pointer? arg))
+                      (not (type-struct-type arg)) (not (basic-type? arg))
+                      (not (type-array arg))))
              "&"
              "")
          "tmp" (type-index arg)))
@@ -1289,8 +1303,10 @@
                  (cat "  tmp" (type-index a)
                       " = new " (type-c-name-derefed (type-base a)) "();\n")
                  (cat "  tmp" (type-index a)
-                      " = (" (type-c-name (type-base a)) "*) calloc("
-                      "(sexp_unbox_fixnum(sexp_length(ctx, arg" (type-index a)
+                      " = (" (if (type-const? a) "const " "")
+                      (type-c-name (type-base a)) "*) "
+                      "calloc((sexp_unbox_fixnum(sexp_length(ctx, arg"
+                      (type-index a)
                       "))+1), sizeof(tmp" (type-index a) "[0]));\n")))
          (cat "  for (i=0, res=arg" (type-index a)
               "; sexp_pairp(res); res=sexp_cdr(res), i++) {\n"
