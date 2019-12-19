@@ -72,6 +72,36 @@ int sub(int x, int y) {
  (test -27 (cube -3))
  (test -3 (sub (zero) 3)))
 
+(test-ffi
+ "params"
+ (begin
+   (c-declare "
+int add4(int a, int b, int c, int d) {
+  return a+b+c+d;
+}
+int add5(int a, int b, int c, int d, int e) {
+  return a+b+c+d+e;
+}
+int add6(int a, int b, int c, int d, int e, int f) {
+  return a+b+c+d+e+f;
+}
+")
+   (define-c int add4 (int int int int))
+   (define-c int add5 (int int int int int))
+   (define-c int add6 (int int int int int int))
+   (define-c int (add3or4 "add4") (int int int (default 0 int)))
+   (define-c int (add4or5 "add5") (int int int int (default 0 int)))
+   (define-c int (add5or6 "add6") (int int int int int (default 0 int))))
+ (test 4321 (add4 1 20 300 4000))
+ (test 54321 (add5 1 20 300 4000 50000))
+ (test 654321 (add6 1 20 300 4000 50000 600000))
+ (test 321 (add3or4 1 20 300))
+ (test 4321 (add3or4 1 20 300 4000))
+ (test 4321 (add4or5 1 20 300 4000))
+ (test 54321 (add4or5 1 20 300 4000 50000))
+ (test 54321 (add5or6 1 20 300 4000 50000))
+ (test 654321 (add5or6 1 20 300 4000 50000 600000)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; More detailed tests on integer conversions and overflow.
 

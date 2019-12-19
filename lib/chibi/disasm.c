@@ -92,6 +92,12 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
       if (off >= 0 && off < (int)sexp_bytecode_length(bc) && labels[off] == 0)
         labels[off] = label++;
     case SEXP_OP_CALL:
+    case SEXP_OP_FCALL0:
+    case SEXP_OP_FCALL1:
+    case SEXP_OP_FCALL2:
+    case SEXP_OP_FCALL3:
+    case SEXP_OP_FCALL4:
+    case SEXP_OP_FCALLN:
     case SEXP_OP_CLOSURE_REF:
     case SEXP_OP_GLOBAL_KNOWN_REF:
     case SEXP_OP_GLOBAL_REF:
@@ -178,6 +184,7 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_FCALL2:
   case SEXP_OP_FCALL3:
   case SEXP_OP_FCALL4:
+  case SEXP_OP_FCALLN:
     sexp_write_pointer(ctx, ((sexp*)ip)[0], out);
     sexp_write_char(ctx, ' ', out);
     sexp_write(ctx, sexp_opcode_name(((sexp*)ip)[0]), out);

@@ -1300,7 +1300,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    i = sexp_opcode_num_args(_WORD0);
+    i = sexp_opcode_num_args(_WORD0) + sexp_opcode_variadic_p(_WORD0);
     tmp1 = sexp_fcall(ctx, self, i, _WORD0);
     sexp_fcall_return(tmp1, i-1)
     break;
