@@ -1066,6 +1066,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     }
     fuel = sexp_context_refuel(ctx);
     if (fuel <= 0) goto end_loop;
+    if (sexp_context_waitp(ctx)) {
+      fuel = 1;
+      goto loop;  /* we were still waiting, try again */
+    }
   }
 #endif
 #if SEXP_USE_DEBUG_VM

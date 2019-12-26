@@ -421,7 +421,7 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
   int i, k;
   struct timeval tval;
   struct pollfd *pfds;
-  useconds_t usecs = 0;
+  suseconds_t usecs = 0;
   sexp res, ls1, ls2, evt, runner, paused, front, pollfds;
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(ctx, tmp);
@@ -618,12 +618,15 @@ sexp sexp_scheduler (sexp ctx, sexp self, sexp_sint_t n, sexp root_thread) {
         if (tval.tv_usec < sexp_context_timeval(res).tv_usec || usecs > 0)
           usecs += sexp_context_timeval(res).tv_usec - tval.tv_usec;
       }
-      if (usecs > 10*1000) usecs = 10*1000;
+      if (usecs > 10*1000) {
+        usecs = 10*1000;
+      } else {
+        sexp_context_waitp(res) = 0;
+        sexp_context_timeoutp(res) = 1;
+      }
     }
     /* take a nap to avoid busy looping */
     usleep(usecs);
-    sexp_context_waitp(res) = 0;
-    sexp_context_timeoutp(res) = 1;
   }
 
   sexp_gc_release1(ctx);
