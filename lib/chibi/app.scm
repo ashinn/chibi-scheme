@@ -15,12 +15,12 @@
 ;;> where clauses can be any of:
 ;;>
 ;;> \itemlist[
-;;> \item[\scheme{(@ <opt-spec>)} - option spec, described below]
-;;> \item[\scheme{(begin: <begin-proc>)} - procedure to run before main]
-;;> \item[\scheme{(end: <end-proc>)} - procedure to run after main]
-;;> \item[\scheme{(<proc> args ...)} - main procedure (args only for documentation)]
-;;> \item[\scheme{<app-spec>} - a subcommand described by the nested spec]
-;;> \item[\scheme{(or <app-spec> ...)} - an alternate list of subcommands]
+;;> \item{\scheme{(@ <opt-spec>)} - option spec, described below}
+;;> \item{\scheme{(begin: <begin-proc>)} - procedure to run before main}
+;;> \item{\scheme{(end: <end-proc>)} - procedure to run after main}
+;;> \item{\scheme{(<proc> args ...)} - main procedure (args only for documentation)}
+;;> \item{\scheme{<app-spec>} - a subcommand described by the nested spec}
+;;> \item{\scheme{(or <app-spec> ...)} - an alternate list of subcommands}
 ;;> ]
 ;;>
 ;;> For subcommands the symbolic command name must match, though it is
@@ -40,7 +40,7 @@
 ;;>
 ;;> \itemlist[
 ;;> \item{\scheme{boolean} - boolean, associated value optional, allowing \scheme{--noname} to indicate \scheme{#false}}
-;;> \item{[\scheme{char} - a single character}
+;;> \item{\scheme{char} - a single character}
 ;;> \item{\scheme{integer} - an exact integer}
 ;;> \item{\scheme{real} - any real number}
 ;;> \item{\scheme{number} - any real or complex number}

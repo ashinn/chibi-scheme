@@ -55,7 +55,7 @@
 
 ;; parse the command-line
 (let lp ((args (cdr (command-line)))
-         (render #f))
+         (render sxml-display-as-text))
   (cond
    ((and (pair? args) (not (equal? "" (car args)))
          (eqv? #\- (string-ref (car args) 0)))
@@ -66,4 +66,5 @@
       ((-) (run (cdr args) render))
       (else (die "unknown option: " (car args)))))
    (else
-    (run args render))))
+    (run args render)))
+  (newline))

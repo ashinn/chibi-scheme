@@ -146,9 +146,9 @@
              (if (and (pair? (cdr sxml)) (eq? '@ (cadr sxml)))
                  (cddr sxml)
                  (cdr sxml)))
-            (if (memq tag '(p br h1 h2 h3 h4 h5 h6))
+            (if (memq tag '(p li br h1 h2 h3 h4 h5 h6))
                 (newline out)))
            (else
             (for-each lp sxml)))))
        ((null? sxml))
-       (else (html-display-escaped-string sxml out))))))
+       (else (display sxml out))))))
