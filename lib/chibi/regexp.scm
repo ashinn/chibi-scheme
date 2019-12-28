@@ -1119,31 +1119,35 @@
            (cons
             (substring str start (regexp-match-submatch-start m 0))
             (append
-             (reverse (regexp-apply-match m str subst))
+             (reverse (regexp-apply-match m str subst start end))
              (list (substring str (regexp-match-submatch-end m 0) end)))))))))))
 
 ;;> Equivalent to \var{regexp-replace}, but replaces all occurrences
 ;;> of \var{re} in \var{str}.
 
 (define (regexp-replace-all rx str subst . o)
-  (regexp-fold
-   rx
-   (lambda (i m str acc)
-     (let ((m-start (regexp-match-submatch-start m 0)))
-       (append (regexp-apply-match m str subst)
-               (if (>= i m-start)
-                   acc
-                   (cons (substring str i m-start) acc)))))
-   '()
-   str
-   (lambda (i m str acc)
-     (let ((end (string-length str)))
-       (string-concatenate-reverse
-        (if (>= i end)
-            acc
-            (cons (substring str i end) acc)))))))
+  (let* ((start (if (and (pair? o) (car o)) (car o) 0))
+         (o (if (pair? o) (cdr o) '()))
+         (end (if (and (pair? o) (car o)) (car o) (string-length str))))
+    (regexp-fold
+     rx
+     (lambda (i m str acc)
+       (let ((m-start (regexp-match-submatch-start m 0)))
+         (append (regexp-apply-match m str subst start end)
+                 (if (>= i m-start)
+                     acc
+                     (cons (substring str i m-start) acc)))))
+     '()
+     str
+     (lambda (i m str acc)
+       (let ((end (string-length str)))
+         (string-concatenate-reverse
+          (if (>= i end)
+              acc
+              (cons (substring str i end) acc)))))
+     start end)))
 
-(define (regexp-apply-match m str ls)
+(define (regexp-apply-match m str ls start end)
   (let lp ((ls ls) (res '()))
     (cond
      ((null? ls)
@@ -1158,13 +1162,11 @@
       (case (car ls)
         ((pre)
          (lp (cdr ls)
-             (cons (substring str 0 (regexp-match-submatch-start m 0))
+             (cons (substring str start (regexp-match-submatch-start m 0))
                    res)))
         ((post)
          (lp (cdr ls)
-             (cons (substring str
-                              (regexp-match-submatch-end m 0)
-                              (string-length str))
+             (cons (substring str (regexp-match-submatch-end m 0) end)
                    res)))
         (else
          (cond

@@ -255,6 +255,13 @@
           (regexp-replace '(+ space) "  abc \t\n d ef  " "-" 0 #f 4))
       (test " abc d ef " (regexp-replace-all '(+ space) "  abc \t\n d ef  " " "))
 
+      (test "bc pre: <<<bc >>> match1: <<<def>>> post: <<<gh>>>gh"
+          (regexp-replace
+           '(: ($ (+ alpha)) ":" (* space))
+           "abc def: ghi"
+           '("pre: <<<" pre ">>> match1: <<<" 1 ">>> post: <<<" post ">>>")
+           1 11))
+
       (let ()
         (define (subst-matches matches input subst)
           (define (submatch n)
