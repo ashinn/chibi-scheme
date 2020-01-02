@@ -1376,6 +1376,7 @@
  (else (define real? number?)))
 (define (rational? x)
   (and (real? x)
+       (= x x)
        (if (or (> x 1) (< x -1))
            (not (= x (/ x 2)))
            (<= -1 x 1))))

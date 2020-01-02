@@ -749,6 +749,7 @@
 (test #t (real? #e1e10))
 (test #t (real? +inf.0))
 (test #f (rational? -inf.0))
+(test #f (rational? +nan.0))
 (test #t (rational? 9007199254740991.0))
 (test #t (rational? 9007199254740992.0))
 (test #t (rational? 1.7976931348623157e308))
