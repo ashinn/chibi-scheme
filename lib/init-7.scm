@@ -1375,7 +1375,10 @@
  (complex (define (real? x) (and (number? x) (not (%complex? x)))))
  (else (define real? number?)))
 (define (rational? x)
-  (and (real? x) (= x x) (not (= x (+ x (if (positive? x) 1 -1))))))
+  (and (real? x)
+       (if (or (> x 1) (< x -1))
+           (not (= x (/ x 2)))
+           (<= -1 x 1))))
 
 (define (eqv? a b) (if (eq? a b) #t (and (number? a) (equal? a b))))
 
