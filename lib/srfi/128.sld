@@ -1,7 +1,8 @@
 (define-library (srfi 128)
   (import (scheme base) (scheme char)
           (srfi 27) (srfi 69) (srfi 95) (srfi 98) (srfi 151)
-          (only (chibi) fixnum? er-macro-transformer))
+          (only (chibi) fixnum? er-macro-transformer)
+          (only (chibi ast) opcode? procedure? procedure-arity procedure-variadic?))
   (export
    ;; Predicates:
    comparator? comparator-ordered? comparator-hashable?
