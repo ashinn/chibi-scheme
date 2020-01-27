@@ -130,6 +130,8 @@
 
       (test 10 (char-set-size
                 (char-set-intersection char-set:ascii char-set:digit)))
+      (test 10 (char-set-size
+                (char-set-intersection char-set:digit char-set:ascii)))
 
       (test 5 (char-set-count vowel? char-set:ascii))
 

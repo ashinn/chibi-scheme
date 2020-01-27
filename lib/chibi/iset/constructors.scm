@@ -262,11 +262,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; High-level set operations.
-;;
-;; Union is optimized to work at the node level.  Intersection and
-;; difference iterate over individual elements and so have a lot of
-;; room for improvement, at the expense of the complexity of
-;; iset-adjoin-node!.
 
 (define (iset-union2! a b)
   (iset-for-each-node
@@ -295,25 +290,23 @@
 
 (define (iset-intersection2! a b)
   (let lp ((nodes-a (iset->node-list a))
-           (nodes-b (iset->node-list b)))
+           (nodes-b (iset->node-list b))
+           (res '()))
     (cond
-     ((null? nodes-a)
-      a)
-     ((null? nodes-b)
-      (iset-bits-set! (car nodes-a) 0)
-      (iset-right-set! (car nodes-a) #f)
-      a)
+     ((or (null? nodes-a) (null? nodes-b))
+      (let ((is (iset)))
+        (for-each (lambda (x) (iset-adjoin-node! is x)) res)
+        is))
      ((> (iset-start (car nodes-b)) (iset-end (car nodes-a)))
-      (iset-bits-set! (car nodes-a) 0)
-      (lp (cdr nodes-a) nodes-b))
+      (lp (cdr nodes-a) nodes-b res))
      ((> (iset-start (car nodes-a)) (iset-end (car nodes-b)))
-      (lp nodes-a (cdr nodes-b)))
+      (lp nodes-a (cdr nodes-b) res))
      (else
       (let* ((a (car nodes-a))
              (b (car nodes-b))
              (a-ls (iset-node-split a (iset-start b) (iset-end b)))
              (overlap (cadr a-ls))
-             (right (car (cddr a-ls)))
+             (a-right (car (cddr a-ls)))
              (b-ls (iset-node-split b (iset-start overlap) (iset-end overlap)))
              (b-overlap (cadr b-ls))
              (b-right (car (cddr b-ls))))
@@ -325,18 +318,16 @@
                   (b-bits (iset-bits b-overlap)))
               (iset-bits-set! a (bitwise-and a-bits b-bits)))
             (iset-bits-set! a (iset-bits overlap)))
-        (if right
-            (iset-insert-right! a right))
-        (lp (if right (cons right (cdr nodes-a)) (cdr nodes-a))
-            (if b-right (cons b-right (cdr nodes-b)) (cdr nodes-b))))))))
+        (lp (if a-right (cons a-right (cdr nodes-a)) (cdr nodes-a))
+            (if b-right (cons b-right (cdr nodes-b)) (cdr nodes-b))
+            (cons a res)))))))
 
 (define (iset-intersection! a . args)
-  (let ((b (and (pair? args) (car args))))
-    (cond
-     (b
-      (iset-intersection2! a b)
-      (apply iset-intersection! a (cdr args)))
-     (else a))))
+  (let lp ((a a) (ls args))
+    (if (null? ls)
+        a
+        (lp (iset-intersection2! a (car ls))
+            (cdr ls)))))
 
 ;;> Returns an iset containing all integers which occur in \var{a} and
 ;;> every of the isets \var{args}.  If no \var{args} are present
