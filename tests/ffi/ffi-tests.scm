@@ -63,14 +63,19 @@ int cube(int x) {
 int sub(int x, int y) {
   return x - y;
 }
+int inc(int x, unsigned char y) {
+  return x + y;
+}
 ")
    (define-c int zero ())
    (define-c int cube (int))
-   (define-c int sub (int int)))
+   (define-c int sub (int int))
+   (define-c int inc (int unsigned-char)))
  (test 0 (zero))
  (test 4 (sub 7 3))
  (test -27 (cube -3))
- (test -3 (sub (zero) 3)))
+ (test -3 (sub (zero) 3))
+ (test 6 (inc 5 1)))
 
 (test-ffi
  "params"
