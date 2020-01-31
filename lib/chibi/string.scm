@@ -14,6 +14,11 @@
 (define (string-null? str)
   (equal? str ""))
 
+(define (->cursor str x)
+  (if (string-cursor? x)
+      x
+      (string-index->cursor str x)))
+
 (define (make-char-predicate x)
   (cond ((procedure? x) x)
         ((char? x) (lambda (ch) (eq? ch x)))
@@ -28,10 +33,14 @@
 ;;> \var{char-set-contains?}).  Always returns false if \var{str} is
 ;;> empty.
 
-(define (string-any check str)
+(define (string-any check str . o)
   (let ((pred (make-char-predicate check))
-        (end (string-cursor-end str)))
-    (and (string-cursor>? end (string-cursor-start str))
+        (end (if (and (pair? o) (pair? (cdr o)))
+                 (->cursor str (cadr o))
+                 (string-cursor-end str))))
+    (and (string-cursor>? end (if (pair? o)
+                                  (->cursor str (car o))
+                                  (string-cursor-start str)))
          (let lp ((i (string-cursor-start str)))
            (let ((i2 (string-cursor-next str i))
                  (ch (string-cursor-ref str i)))
@@ -43,8 +52,8 @@
 ;;> \var{str}.  \var{check} can be a procedure, char or char-set as in
 ;;> \scheme{string-any}.  Always returns true if \var{str} is empty.
 
-(define (string-every check str)
-  (not (string-any (complement (make-char-predicate check)) str)))
+(define (string-every check str . o)
+  (not (apply string-any (complement (make-char-predicate check)) str o)))
 
 ;;> Returns a cursor pointing to the first position from the left in
 ;;> string for which \var{check} is true.  \var{check} can be a
@@ -56,7 +65,7 @@
 (define (string-find str check . o)
   (let ((pred (make-char-predicate check))
         (end (if (and (pair? o) (pair? (cdr o)))
-                 (cadr o)
+                 (->cursor str (cadr o))
                  (string-cursor-end str))))
     (let lp ((i (if (pair? o) (car o) (string-cursor-start str))))
       (cond ((string-cursor>=? i end) end)
@@ -67,9 +76,9 @@
 ;;> character matches.
 
 (define (string-find? str check . o)
-  (let ((start (if (pair? o) (car o) (string-cursor-start str)))
+  (let ((start (if (pair? o) (->cursor str (car o)) (string-cursor-start str)))
         (end (if (and (pair? o) (pair? (cdr o)))
-                 (cadr o)
+                 (->cursor str (cadr o))
                  (string-cursor-end str))))
     (string-cursor<? (string-find str check start end) end)))
 
@@ -79,9 +88,9 @@
 
 (define (string-find-right str check . o)
   (let ((pred (make-char-predicate check))
-        (start (if (pair? o) (car o) (string-cursor-start str))))
+        (start (if (pair? o) (->cursor str (car o)) (string-cursor-start str))))
     (let lp ((i (if (and (pair? o) (pair? (cdr o)))
-                    (cadr o)
+                    (->cursor str (cadr o))
                     (string-cursor-end str))))
       (let ((i2 (string-cursor-prev str i)))
         (cond ((string-cursor<? i2 start) start)
