@@ -101,14 +101,19 @@
 
       (test-not (bit-set? 64 1))
       (test-assert (bit-set? 64 #x10000000000000000))
+      (test-assert (bit-set? 1000000 -1))
+      (test-assert (bit-set? 1000 -1))
 
       (test #b1010 (bit-field #b1101101010 0 4))
       (test #b101101 (bit-field #b1101101010 3 9))
       (test #b10110 (bit-field #b1101101010 4 9))
       (test #b110110 (bit-field #b1101101010 4 10))
 
-      (test 3 (bitwise-if 1 2 1))
-      (test #b00110011 (bitwise-if #b00111100 #b00001111 #b11110000))
+      (test 0 (bitwise-if 1 2 1))
+      (test 3 (bitwise-if 1 1 2))
+      (test 9 (bitwise-if 3 1 8))
+      (test 0 (bitwise-if 3 8 1))
+      (test #b00110011 (bitwise-if #b00111100 #b11110000 #b00001111))
 
       (test #b1 (copy-bit 0 0 #t))
       (test #b100 (copy-bit 2 0 #t))
@@ -184,5 +189,12 @@
       (test (bitwise-ior (arithmetic-shift -1 32) #x7FFFFFFF) 
         (bit-field-reverse -2 0 32))
       (test 5 (bit-field-reverse #x140000000000000000000000000000000 0 129))
+
+      (test-assert (bit-field-any? #b1001001 1 6))
+      (test-not    (bit-field-any? #b1000001 1 6))
+      (test-assert (bit-field-every? 45 2 4))
+      (test-assert (bit-field-every? 45 0 1))
+      (test-assert (bit-field-every? #b1011110 1 5))
+      (test-not    (bit-field-every? #b1011010 1 5))
 
       (test-end))))

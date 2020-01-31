@@ -45,16 +45,20 @@
   (arithmetic-shift (mask (- end start)) start))
 
 (define (bitwise-if mask m n)
-  (bit-ior (bit-and mask n) (bit-and (bitwise-not mask) m)))
+  (bit-ior (bit-and mask m)
+           (bit-and (bitwise-not mask) n)))
 
 (define (bit-field n start end)
   (bit-and (arithmetic-shift n (- start)) (mask (- end start))))
 
 (define (bit-field-any? n start end)
-  (not (zero? (bit-and (arithmetic-shift n (- start)) (mask (- end start))))))
+  (not (zero? (bit-and (arithmetic-shift n (- start))
+                       (mask (- end start))))))
 
 (define (bit-field-every? n start end)
-  (= (arithmetic-shift n (- start)) (mask (- end start))))
+  (let ((lo (mask (- end start))))
+    (= (bit-and lo (arithmetic-shift n (- start)))
+       lo)))
 
 (define (copy-bit index i boolean)
   (bit-field-replace i (if boolean 1 0) index (+ index 1)))
@@ -74,7 +78,7 @@
   (bit-field-replace-same dst (arithmetic-shift src start) start end))
 
 (define (bit-field-replace-same dst src start end)
-  (bitwise-if (range start end) dst src))
+  (bitwise-if (range start end) src dst))
 
 (define (bit-field-rotate n count start end)
   (let* ((width (- end start))
@@ -98,10 +102,10 @@
 
 (define (bit-field-reverse i start end)
   (bitwise-if (range start end)
-              i
               (arithmetic-shift (bit-reverse (bit-field i start end)
                                              (- end start))
-                                start)))
+                                start)
+              i))
 
 (define (vector->bits vec)
   (let ((len (vector-length vec)))
