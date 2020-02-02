@@ -981,21 +981,39 @@
 ;; Provides a summary of the libraries to remove along with any
 ;; dependencies they have which were not explicitly installed.
 
-(define (warn-delete-file file)
+(define (remove-with-sudo? cfg path)
+  (case (or (conf-get cfg '(command remove use-sudo?))
+            (conf-get cfg '(command upgrade use-sudo?)))
+    ((always) #t)
+    ((never) #f)
+    (else
+     (not (file-is-writable? (path-directory path))))))
+
+(define (remove-file cfg file)
+  (if (remove-with-sudo? cfg file)
+      (system "sudo" "rm" file)
+      (delete-file file)))
+
+(define (remove-directory cfg dir)
+  (if (remove-with-sudo? cfg dir)
+      (system "sudo" "rmdir" dir)
+      (delete-directory dir)))
+
+(define (warn-delete-file cfg file)
   (guard (exn (else (warn "couldn't delete file: " file)))
-    (delete-file file)))
+    (remove-file cfg file)))
 
 (define (delete-library-files impl cfg pkg lib-name)
-  (for-each warn-delete-file (package-installed-files pkg))
-  (warn-delete-file (make-path (get-install-source-dir impl cfg)
-                               (get-package-meta-file cfg pkg)))
+  (for-each (lambda (f) (warn-delete-file cfg f)) (package-installed-files pkg))
+  (warn-delete-file cfg (make-path (get-install-source-dir impl cfg)
+                                   (get-package-meta-file cfg pkg)))
   (cond
    ((package->path cfg pkg)
     => (lambda (path)
          (let ((dir (make-path (get-install-source-dir impl cfg) path)))
            (if (and (file-directory? dir)
                     (= 2 (length (directory-files dir))))
-               (delete-directory dir)))))))
+               (remove-directory cfg dir)))))))
 
 (define (command/remove cfg spec . args)
   (let* ((impls (conf-selected-implementations cfg))
