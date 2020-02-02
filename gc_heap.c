@@ -7,7 +7,7 @@
 #if SEXP_USE_IMAGE_LOADING
 
 #define ERR_STR_SIZE 256
-char gc_heap_err_str[ERR_STR_SIZE];
+static char gc_heap_err_str[ERR_STR_SIZE];
 
 
 static sexp_uint_t sexp_gc_allocated_bytes (sexp ctx, sexp *types, size_t types_cnt, sexp x) {
@@ -573,7 +573,7 @@ static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
 }
 
 
-int load_image_header(FILE *fp, struct sexp_image_header_t* header) {
+static int load_image_header(FILE *fp, struct sexp_image_header_t* header) {
   if (!fp || !header) { return 0; }
   
   if (fread(header, sizeof(struct sexp_image_header_t), 1, fp) != 1) {
