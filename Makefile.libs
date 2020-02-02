@@ -30,10 +30,10 @@ LDCONFIG  ?= ldconfig
 PREFIX    ?= /usr/local
 BINDIR    ?= $(PREFIX)/bin
 LIBDIR    ?= $(PREFIX)/lib
-SOLIBDIR  ?= $(PREFIX)/lib
+SOLIBDIR  ?= $(LIBDIR)
 INCDIR    ?= $(PREFIX)/include/chibi
 MODDIR    ?= $(PREFIX)/share/chibi
-BINMODDIR ?= $(PREFIX)/lib/chibi
+BINMODDIR ?= $(SOLIBDIR)/chibi
 PKGCONFDIR ?= $(SOLIBDIR)/pkgconfig
 MANDIR    ?= $(PREFIX)/share/man/man1
 
