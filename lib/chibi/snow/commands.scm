@@ -1360,6 +1360,24 @@
                       "share/snow"
                       impl)))))
 
+(define (get-install-library-dirs impl cfg)
+  (case impl
+    ((chibi)
+     (let* ((dirs
+             (reverse
+              (cond-expand
+               (chibi (eval '(current-module-path) (environment '(chibi))))
+               (else (process->sexp
+                      '(chibi-scheme -q -p "(current-module-path)"))))))
+            (lib-dir (find (lambda (d) (string-contains d "/lib")) dirs)))
+       (if lib-dir
+           (cons lib-dir (delete lib-dir dirs))
+           dirs)))
+    (else
+     (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
+                      "lib"
+                      impl)))))
+
 (define (scheme-script-command impl cfg)
   (or (and (eq? impl 'chibi) (conf-get cfg 'chibi-path))
       (let* ((prog (cond ((conf-get cfg 'scheme-script))
@@ -1638,7 +1656,7 @@
     (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
-   (else (make-path "/usr/local/lib" impl))))
+   (else (car (get-install-library-dirs impl cfg)))))
 
 (define (get-install-binary-dir impl cfg)
   (cond

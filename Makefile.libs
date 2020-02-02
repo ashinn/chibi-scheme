@@ -37,6 +37,12 @@ BINMODDIR ?= $(PREFIX)/lib/chibi
 PKGCONFDIR ?= $(SOLIBDIR)/pkgconfig
 MANDIR    ?= $(PREFIX)/share/man/man1
 
+SNOWPREFIX    ?= /usr/local
+SNOWLIBDIR    ?= $(SNOWPREFIX)/lib
+SNOWSOLIBDIR  ?= $(SNOWLIBDIR)
+SNOWMODDIR    ?= $(SNOWPREFIX)/share/snow
+SNOWBINMODDIR ?= $(SNOWSOLIBDIR)/snow
+
 DESTDIR   ?=
 
 ########################################################################
