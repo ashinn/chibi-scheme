@@ -5,7 +5,7 @@
   (export
    ;; base
    show fn forked with with! each each-in-list call-with-output
-   displayed written written-shared written-simply
+   displayed written written-simply pretty pretty-simply
    numeric numeric/comma numeric/si numeric/fitted
    nothing nl fl space-to tab-to escaped maybe-escaped
    padded padded/right padded/both
