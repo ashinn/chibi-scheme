@@ -297,6 +297,10 @@ test-r7rs: chibi-scheme$(EXE)
 
 test: test-r7rs
 
+test-safe-string-cursors: chibi-scheme$(EXE)
+	$(CHIBI) -Dsafe-string-cursors tests/r7rs-tests.scm
+	$(CHIBI) -Dsafe-string-cursors tests/lib-tests.scm
+
 test-all: test test-libs test-ffi test-division
 
 test-dist: test-all test-memory test-build

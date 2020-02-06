@@ -440,6 +440,12 @@
       (string-cursor-where-set! res where)
       (string-cursor-size-set! res size)
       res))
+  (define (validate-cursor str sc)
+    (cond
+     ((not (eq? str (string-cursor-string sc)))
+      (error "attempt to use string cursor on different string" str sc))
+     ((not (= (string-size str) (string-cursor-size sc)))
+      (error "string has mutated since cursor was created" str sc))))
   (define orig-string-cursor-offset string-cursor-offset)
   (define orig-string-cursor->index string-cursor->index)
   (define orig-string-index->cursor string-index->cursor)
@@ -456,9 +462,13 @@
                               (string-size str))))
   (set! substring-cursor
         (lambda (str start . o)
-          (if (pair? o)
-              (orig-substring-cursor str (string-cursor-where start) (string-cursor-where (car o)))
-              (orig-substring-cursor str (string-cursor-where start)))))
+          (validate-cursor str start)
+          (cond
+           ((pair? o)
+            (validate-cursor str (car o))
+            (orig-substring-cursor str (string-cursor-where start) (string-cursor-where (car o))))
+           (else
+            (orig-substring-cursor str (string-cursor-where start))))))
   (define (string-cursor=? sc1 sc2 . o)
     (and (equal? ((values string-cursor-offset) sc1) ((values string-cursor-offset) sc2))
          (or (null? o) (apply string-cursor=? sc2 o))))
@@ -483,12 +493,6 @@
             (make-string-cursor s end (string-size s)))))
   (define (string-size s)
     (orig-string-cursor-offset (orig-string-cursor-end s)))
-  (define (validate-cursor str sc)
-    (cond
-     ((not (eq? str (string-cursor-string sc)))
-      (error "attempt to use string cursor on different string" str sc))
-     ((not (= (string-size str) (string-cursor-size sc)))
-      (error "string has mutated since cursor was created" str sc))))
   (define orig-string-cursor-ref string-cursor-ref)
   (define orig-string-cursor-next string-cursor-next)
   (define orig-string-cursor-prev string-cursor-prev)
