@@ -17,7 +17,7 @@
           (chibi term ansi))
   (cond-expand
    (chibi
-    (import (only (chibi) pair-source print-exception protect)))
+    (import (only (chibi) pair-source print-exception)))
    (chicken
     (import (only (chicken) print-error-message))
     (begin
