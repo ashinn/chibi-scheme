@@ -1,1 +1,3 @@
-LD_LIBRARY_PATH=.: DYLD_LIBRARY_PATH=.: CHIBI_MODULE_PATH=lib ./chibi-scheme "$@"
+#!/bin/sh
+DIR="$(dirname "$0")/.."
+LD_LIBRARY_PATH="$DIR": DYLD_LIBRARY_PATH="$DIR": CHIBI_MODULE_PATH="$DIR"/lib "$DIR"/chibi-scheme "$@"
