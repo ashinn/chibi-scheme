@@ -1708,6 +1708,8 @@ sexp sexp_get_output_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
   sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
   if (!sexp_port_openp(out))
     return sexp_xtype_exception(ctx, self, "output port is closed", out);
+  if (!sexp_pairp(sexp_port_cookie(out)))
+    return sexp_xtype_exception(ctx, self, "not a string output port", out);
   sexp_gc_preserve3(ctx, ls, rev, tmp);
   if (sexp_port_offset(out) > 0) {
     tmp = sexp_c_string(ctx, sexp_port_buf(out), sexp_port_offset(out));
