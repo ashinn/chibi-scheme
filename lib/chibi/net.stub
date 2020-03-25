@@ -21,6 +21,7 @@
   (int              ai_flags     address-info-flags)
   ((link sockaddr)  ai_addr      address-info-address)
   (size_t           ai_addrlen   address-info-address-length)
+  (string           ai_canonname address-info-canonname)
   ((link addrinfo)  ai_next      address-info-next))
 
 ;;> The addrinfo struct accessors.
