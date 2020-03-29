@@ -171,6 +171,9 @@
            (read-char in)
            (read in)
            (skip-whitespace-and-sexp-comments in read))
+          ((eqv? #\| (peek-char in))
+           (skip-comment in 0)
+           (skip-whitespace-and-sexp-comments in read))
           (else #f)))
    (else
     #t)))
