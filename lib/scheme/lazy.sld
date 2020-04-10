@@ -4,4 +4,4 @@
   (export delay force delay-force make-promise promise?)
   (begin
     (define (make-promise x)
-      (delay x))))
+      (if (promise? x) x (delay x)))))

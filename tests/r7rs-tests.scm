@@ -325,6 +325,8 @@
     (let ((x (make-promise (+ 2 2))))
       (force x)
       (promise? x)))
+(test 4 (force (make-promise (+ 2 2))))
+(test 4 (force (make-promise (make-promise (+ 2 2)))))
 
 (define radix
   (make-parameter

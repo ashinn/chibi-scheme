@@ -53,7 +53,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
 
-(define (make-type) (make-vector 18 #f))
+(define (make-type) (make-vector 19 #f))
 
 (define (type-base type) (vector-ref type 0))
 (define (type-free? type) (vector-ref type 1))
@@ -72,8 +72,9 @@
 (define (type-error type) (vector-ref type 14))
 (define (type-address-of? type) (vector-ref type 15))
 (define (type-no-free? type) (vector-ref type 16))
-(define (type-index type) (vector-ref type 17))
-(define (type-index-set! type i) (vector-set! type 17 i))
+(define (type-as-sexp type) (vector-ref type 17))
+(define (type-index type) (vector-ref type 18))
+(define (type-index-set! type i) (vector-set! type 18 i))
 
 (define (spec->type type . o)
   (let ((res (make-type)))
@@ -131,6 +132,9 @@
          (lp (next)))
         ((no-free)
          (vector-set! res 16 #t)
+         (lp (next)))
+        ((as-sexp)
+         (vector-set! res 17 #t)
          (lp (next)))
         (else
          (let ((base (if (and (pair? type) (null? (cdr type)))
@@ -196,18 +200,15 @@
 
 (define-syntax define-c-enum
   ;; TODO: support conversion to/from symbolic names
-  (syntax-rules ()
-    ((define-c-enum (scheme-name c-name) . args)
-     (if (not (assq 'scheme-name *c-enum-types*))
-         (set! *c-enum-types*
-               `((scheme-name . c-name) ,@*c-enum-types*)))
-     #f)
-    ((define-c-enum scheme-name . args)
-     (let ((c-name (mangle 'scheme-name)))
-       (if (not (assq 'scheme-name *c-enum-types*))
-           (set! *c-enum-types*
-                 `((scheme-name . ,c-name) ,@*c-enum-types*)))
-       #f))))
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let ((name (if (pair? (cadr expr)) (car (cadr expr)) (cadr expr)))
+           (c-name (if (pair? (cadr expr)) (cadr (cadr expr)) (cadr expr))))
+       (set! *c-enum-types*
+             `((,name . ,c-name) ,@*c-enum-types*))
+       `(,(rename 'define-c-const)
+         ,name
+         ,@(cddr expr))))))
 
 (define (enum-type? type)
   (assq type *c-enum-types*))
@@ -252,6 +253,9 @@
     (and (not (type-array type))
          (not (void-pointer-type? type))
          (not (lookup-type (type-base type))))))
+
+(define (void-type? type)
+  (and (eq? 'void (type-base type)) (not (type-pointer? type))))
 
 (define (void-pointer-type? type)
   (or (and (eq? 'void (type-base type)) (type-pointer? type))
@@ -969,10 +973,12 @@
 
 (define (type-c-name type)
   (let ((type (parse-type type)))
-    (string-append
-     (type-c-name-derefed type)
-     (if (type-struct-type type) "*" "")
-     (if (type-pointer? type) "*" ""))))
+    (if (type-as-sexp type)
+        "sexp"
+        (string-append
+         (type-c-name-derefed type)
+         (if (type-struct-type type) "*" "")
+         (if (type-pointer? type) "*" "")))))
 
 (define (type-finalizer-name type)
   (let ((name (type-c-name-derefed type)))
@@ -1363,7 +1369,8 @@
         (c-args (func-c-args func)))
     (if (any type-auto-expand? (func-c-args func))
         (cat " loop:\n"))
-    (cat (cond ((error-type? ret-type) "  err = ")
+    (cat (cond ;;((void-type? ret-type) "")
+               ((error-type? ret-type) "  err = ")
                ((type-array ret-type) "  tmp = ")
                ((type-struct? ret-type) "  struct_res = ")
                (else "  res = ")))
