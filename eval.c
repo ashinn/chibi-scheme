@@ -801,19 +801,20 @@ static sexp analyze_set (sexp ctx, sexp x, int depth) {
 #define sexp_return(res, val) do {res=val; goto cleanup;} while (0)
 
 static sexp analyze_lambda (sexp ctx, sexp x, int depth) {
-  int trailing_non_procs;
+  int trailing_non_procs, verify_duplicates_p;
   sexp name, ls, ctx3;
   sexp_gc_var6(res, body, tmp, value, defs, ctx2);
   sexp_gc_preserve6(ctx, res, body, tmp, value, defs, ctx2);
   /* verify syntax */
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x))))
     sexp_return(res, sexp_compile_error(ctx, "bad lambda syntax", x));
+  verify_duplicates_p = sexp_length_unboxed(sexp_cadr(x)) < 100;
   for (ls=sexp_cadr(x); sexp_pairp(ls); ls=sexp_cdr(ls))
     if (! sexp_idp(sexp_car(ls)))
       sexp_return(res, sexp_compile_error(ctx, "non-symbol parameter", x));
-    else if (sexp_truep(sexp_memq(ctx, sexp_car(ls), sexp_cdr(ls))))
+    else if (verify_duplicates_p && sexp_truep(sexp_memq(ctx, sexp_car(ls), sexp_cdr(ls))))
       sexp_return(res, sexp_compile_error(ctx, "duplicate parameter", x));
-  if (! sexp_nullp(ls)) {
+  if (! sexp_nullp(ls)) { /* verify rest param */
     if (! sexp_idp(ls))
       sexp_return(res, sexp_compile_error(ctx, "non-symbol parameter", x));
     else if (sexp_truep(sexp_memq(ctx, ls, sexp_cadr(x))))
