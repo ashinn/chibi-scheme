@@ -31,7 +31,8 @@
 
 #if SEXP_USE_MAIN_HELP
 void sexp_usage(int err) {
-  printf("usage: chibi-scheme [<options> ...] [<file> <args> ...]\n"
+  FILE *out = err ? stderr : stdout;
+  fprintf(out, "usage: chibi-scheme [<options> ...] [<file> <args> ...]\n"
 #if SEXP_USE_FOLD_CASE_SYMS
          "  -f           - case-fold symbols\n"
 #endif
