@@ -423,7 +423,7 @@ sexp run_main (int argc, char **argv) {
         i++;
         goto done_options;
       }
-      sexp_usage(1);
+      sexp_usage(strcmp(argv[i]+2, "help") != 0);
     case 'h':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('h', arg);
