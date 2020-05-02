@@ -2,11 +2,7 @@
   (export run-tests)
   (import (scheme base) (srfi 128) (chibi test))
   (begin
-    (define default-comparator (make-default-comparator))
-    (define real-comparator (make-comparator real? = < number-hash))
     (define degenerate-comparator (make-comparator (lambda (x) #t) equal? #f #f))
-    (define boolean-comparator
-      (make-comparator boolean? eq? (lambda (x y) (and (not x) y)) boolean-hash))
     (define bool-pair-comparator
       (make-pair-comparator boolean-comparator boolean-comparator))
     (define num-list-comparator
@@ -30,9 +26,6 @@
        vector-cdr))
     (define list-qua-vector-comparator
       (make-vector-comparator default-comparator list? length list-ref))
-    (define eq-comparator (make-eq-comparator))
-    (define eqv-comparator (make-eqv-comparator))
-    (define equal-comparator (make-equal-comparator))
     (define symbol-comparator
       (make-comparator
        symbol?
@@ -279,5 +272,24 @@
           (test-assert (< (hash-salt) (hash-bound)))
           #;  (test (hash-salt) (fake-salt-hash #t))  ; no such thing as fake-salt-hash
           )                              ; end comparators/bound-salt
+
+
+	(test-group "comparators/min-max"
+	  (test 5 (comparator-max real-comparator 1 5 3 2 -2))
+	  (test -2 (comparator-min real-comparator 1 5 3 2 -2))
+	  (test 5 (comparator-max-in-list real-comparator '(1 5 3 2 -2)))
+	  (test -2 (comparator-min-in-list real-comparator '(1 5 3 2 -2)))
+	  ) ; end comparators/min-max
+
+	(test-group "comparators/variables"
+	  ;; Most of the variables have been tested above.
+	  (test-assert (=? char-comparator #\C #\C))
+	  (test-assert (=? char-ci-comparator #\c #\C))
+	  (test-assert (=? string-comparator "ABC" "ABC"))
+	  (test-assert (=? string-ci-comparator "abc" "ABC"))
+	  (test-assert (=? eq-comparator 32 32))
+	  (test-assert (=? eqv-comparator 32 32))
+	  (test-assert (=? equal-comparator "ABC" "ABC"))
+	  ) ; end comparators/variables
 
         ))))                             ; end comparators
