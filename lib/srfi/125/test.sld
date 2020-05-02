@@ -5,15 +5,8 @@
           (chibi test))
   (begin
     (define (run-tests)
-      (define default-comparator (make-default-comparator))
       (define number-comparator
         (make-comparator real? = < (lambda (x . o) (exact (abs (round x))))))
-      (define string-comparator
-        (make-comparator string? string=? string<? string-hash))
-      (define string-ci-comparator
-        (make-comparator string? string-ci=? string-ci<? string-ci-hash))
-      (define eq-comparator (make-eq-comparator))
-      (define eqv-comparator (make-eqv-comparator))
       (define ht-default (make-hash-table default-comparator))
       (define ht-eq (make-hash-table eq-comparator 'random-argument "another"))
       (define ht-eqv (make-hash-table eqv-comparator))
