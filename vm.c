@@ -1001,7 +1001,7 @@ int sexp_poll_port(sexp ctx, sexp port, int inputp) {
 
 sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   unsigned char *ip;
-  sexp bc, cp, *stack = sexp_stack_data(sexp_context_stack(ctx));
+  sexp bc, cp, *stack = sexp_stack_data(sexp_context_stack(ctx)), tmp;
   sexp_sint_t i, j, k, fp, top = sexp_stack_top(sexp_context_stack(ctx));
 #if SEXP_USE_GREEN_THREADS
   sexp root_thread = ctx;
@@ -1170,7 +1170,10 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     tmp1 = _ARG1;
     tmp2 = _ARG2;
   apply1:
-    i = sexp_unbox_fixnum(sexp_length(ctx, tmp2)); /* number of params */
+    tmp = sexp_length(ctx, tmp2);
+    if (sexp_not(tmp))
+      sexp_raise("apply: circular list", sexp_list1(ctx, tmp2));
+    i = sexp_unbox_fixnum(tmp); /* number of params */
     sexp_ensure_stack(i + 64 + (sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0));
     k = sexp_unbox_fixnum(stack[fp+3]);            /* previous fp */
     j = sexp_unbox_fixnum(stack[fp]);              /* previous num params */
