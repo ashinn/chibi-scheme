@@ -1760,9 +1760,11 @@ SEXP_API sexp sexp_finalize (sexp ctx);
 
 #if SEXP_USE_GLOBAL_HEAP
 #define sexp_free_heap(heap)
+#define sexp_debug_heap_stats(heap)
 #define sexp_destroy_context(ctx) SEXP_TRUE
 #else
 SEXP_API void sexp_free_heap (sexp_heap heap);
+SEXP_API void sexp_debug_heap_stats (sexp_heap heap);
 SEXP_API sexp sexp_destroy_context (sexp ctx);
 SEXP_API sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags);
 #endif

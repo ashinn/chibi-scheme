@@ -617,8 +617,16 @@ sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
   } else {
     sexp_context_heap(ctx) = heap;
 #if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
-    heap->chunk_size = 1<<(4+SEXP_64_BIT);
-    sexp_grow_heap(ctx, sexp_heap_align(size), 0);
+    heap->chunk_size = sexp_heap_align(1);
+    heap->next = sexp_make_heap(size, max_size, 0);
+    if (heap->next) {
+      heap->next->chunk_size = sexp_heap_align(1 + sexp_heap_align(1));
+      heap->next->next = sexp_make_heap(size, max_size, 0);
+      if (heap->next->next) {
+        heap->next->next->chunk_size = sexp_heap_align(1 + sexp_heap_align(1 + sexp_heap_align(1)));
+        heap->next->next->next = sexp_make_heap(size, max_size, 0);
+      }
+    }
 #endif
   }
   return ctx;
@@ -677,6 +685,9 @@ sexp sexp_destroy_context (sexp ctx) {
   size_t sum_freed;
   if (sexp_context_heap(ctx)) {
     heap = sexp_context_heap(ctx);
+#if SEXP_USE_DEBUG_GC
+    sexp_debug_heap_stats(heap);
+#endif
     sexp_markedp(ctx) = 1;
     sexp_markedp(sexp_context_globals(ctx)) = 1;
     sexp_mark(ctx, sexp_global(ctx, SEXP_G_TYPES));

@@ -45,6 +45,22 @@ static size_t sexp_heap_total_size (sexp_heap h) {
 }
 
 #if ! SEXP_USE_GLOBAL_HEAP
+#if SEXP_USE_DEBUG_GC
+void sexp_debug_heap_stats (sexp_heap heap) {
+  sexp_free_list ls;
+  size_t available = 0;
+  for (ls=heap->free_list; ls; ls=ls->next)
+    available += ls->size;
+#if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+  sexp_debug_printf("free heap: %p (chunk size: %lu): %ld / %ld used (%.2f%%)", heap, heap->chunk_size, heap->size - available, heap->size, 100*(heap->size - available) / (float)heap->size);
+#else
+  sexp_debug_printf("free heap: %p: %ld / %ld used (%.2f%%)", heap, heap->size - available, heap->size, 100*(heap->size - available) / (float)heap->size);
+#endif
+  if (heap->next)
+    sexp_debug_heap_stats(heap->next);
+}
+#endif
+
 void sexp_free_heap (sexp_heap heap) {
 #if SEXP_USE_MMAP_GC
   munmap(heap, sexp_heap_pad_size(heap->size));
@@ -618,4 +634,4 @@ void sexp_gc_init (void) {
 #endif
 }
 
-#endif
+#endif  /* ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC */
