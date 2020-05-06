@@ -549,6 +549,13 @@ struct sexp_struct {
 #if SEXP_USE_TIME_GC
       sexp_uint_t gc_count, gc_usecs;
 #endif
+#if SEXP_USE_TRACK_ALLOC_TIMES
+      sexp_uint_t alloc_count, alloc_usecs;
+      double alloc_usecs_sq;
+#endif
+#if SEXP_USE_TRACK_ALLOC_SIZES
+      sexp_uint_t alloc_histogram[SEXP_ALLOC_HISTOGRAM_BUCKETS];
+#endif
       sexp stack, env, parent, child,
         globals, dk, params, proc, name, specific, event, result;
 #if SEXP_USE_DL
@@ -1311,6 +1318,14 @@ enum sexp_uniform_vector_type {
 #define sexp_context_gc_count(x) 0
 #define sexp_context_gc_usecs(x) 0
 #endif
+#if SEXP_USE_TRACK_ALLOC_TIMES
+#define sexp_context_alloc_count(x) (sexp_field(x, context, SEXP_CONTEXT, alloc_count))
+#define sexp_context_alloc_usecs(x) (sexp_field(x, context, SEXP_CONTEXT, alloc_usecs))
+#define sexp_context_alloc_usecs_sq(x) (sexp_field(x, context, SEXP_CONTEXT, alloc_usecs_sq))
+#endif
+#if SEXP_USE_TRACK_ALLOC_SIZES
+#define sexp_context_alloc_histogram(x) (sexp_field(x, context, SEXP_CONTEXT, alloc_histogram))
+#endif
 #define sexp_context_refuel(x)   (sexp_field(x, context, SEXP_CONTEXT, refuel))
 #define sexp_context_ip(x)       (sexp_field(x, context, SEXP_CONTEXT, ip))
 #define sexp_context_proc(x)     (sexp_field(x, context, SEXP_CONTEXT, proc))
@@ -1765,6 +1780,8 @@ SEXP_API sexp sexp_finalize (sexp ctx);
 #else
 SEXP_API void sexp_free_heap (sexp_heap heap);
 SEXP_API void sexp_debug_heap_stats (sexp_heap heap);
+SEXP_API void sexp_debug_alloc_times(sexp ctx);
+SEXP_API void sexp_debug_alloc_sizes(sexp ctx);
 SEXP_API sexp sexp_destroy_context (sexp ctx);
 SEXP_API sexp sexp_copy_context (sexp ctx, sexp dst, sexp flags);
 #endif

@@ -61,6 +61,26 @@ void sexp_debug_heap_stats (sexp_heap heap) {
 }
 #endif
 
+#if SEXP_USE_TRACK_ALLOC_TIMES
+void sexp_debug_alloc_times(sexp ctx) {
+  double mean = (double) sexp_context_alloc_usecs(ctx) / sexp_context_alloc_count(ctx);
+  double var = (double) sexp_context_alloc_usecs_sq(ctx) / sexp_context_alloc_count(ctx) - mean*mean;
+  fprintf(stderr, SEXP_BANNER("alloc: mean: %0.3lfμs var: %0.3lfμs (%ld times)"), mean, var, sexp_context_alloc_count(ctx));
+}
+#endif
+
+#if SEXP_USE_TRACK_ALLOC_SIZES
+void sexp_debug_alloc_sizes(sexp ctx) {
+  int i;
+  fprintf(stderr, "alloc size histogram: {");
+  for (i=0; i<SEXP_ALLOC_HISTOGRAM_BUCKETS; ++i) {
+    if ((i+1)*sexp_heap_align(1)<100 || sexp_context_alloc_histogram(ctx)[i]>0)
+      fprintf(stderr, "  %ld:%ld", (i+1)*sexp_heap_align(1), sexp_context_alloc_histogram(ctx)[i]);
+  }
+  fprintf(stderr, "}\n");
+}
+#endif
+
 void sexp_free_heap (sexp_heap heap) {
 #if SEXP_USE_MMAP_GC
   munmap(heap, sexp_heap_pad_size(heap->size));
@@ -601,7 +621,19 @@ void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
   size_t max_freed, sum_freed, total_size;
   sexp_heap h = sexp_context_heap(ctx);
+#if SEXP_USE_TRACK_ALLOC_SIZES
+  size_t size_bucket;
+#endif
+#if SEXP_USE_TRACK_ALLOC_TIMES
+  sexp_uint_t alloc_time;
+  struct timeval start, end;
+  gettimeofday(&start, NULL);
+#endif
   size = sexp_heap_align(size) + SEXP_GC_PAD;
+#if SEXP_USE_TRACK_ALLOC_SIZES
+  size_bucket = (size - SEXP_GC_PAD) / sexp_heap_align(1);
+  ++sexp_context_alloc_histogram(ctx)[size_bucket >= SEXP_ALLOC_HISTOGRAM_BUCKETS ? SEXP_ALLOC_HISTOGRAM_BUCKETS-1 : size_bucket];
+#endif
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
@@ -617,6 +649,13 @@ void* sexp_alloc (sexp ctx, size_t size) {
       sexp_debug_printf("ran out of memory allocating %lu bytes => %p", size, res);
     }
   }
+#if SEXP_USE_TRACK_ALLOC_TIMES
+  gettimeofday(&end, NULL);
+  alloc_time = 1000000*(end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+  sexp_context_alloc_count(ctx) += 1;
+  sexp_context_alloc_usecs(ctx) += alloc_time;
+  sexp_context_alloc_usecs_sq(ctx) += alloc_time*alloc_time;
+#endif
   return res;
 }
 

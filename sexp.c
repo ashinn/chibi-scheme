@@ -658,6 +658,11 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   sexp_context_gc_count(res) = 0;
   sexp_context_gc_usecs(res) = 0;
 #endif
+#if SEXP_USE_TRACK_ALLOC_TIMES
+  sexp_context_alloc_count(res) = 0;
+  sexp_context_alloc_usecs(res) = 0;
+  sexp_context_alloc_usecs_sq(res) = 0;
+#endif
   sexp_context_tracep(res) = 0;
   sexp_context_timeoutp(res) = 0;
   sexp_context_tailp(res) = 1;
@@ -687,6 +692,12 @@ sexp sexp_destroy_context (sexp ctx) {
     heap = sexp_context_heap(ctx);
 #if SEXP_USE_DEBUG_GC
     sexp_debug_heap_stats(heap);
+#endif
+#if SEXP_USE_TRACK_ALLOC_TIMES
+    sexp_debug_alloc_times(ctx);
+#endif
+#if SEXP_USE_TRACK_ALLOC_SIZES
+    sexp_debug_alloc_sizes(ctx);
 #endif
     sexp_markedp(ctx) = 1;
     sexp_markedp(sexp_context_globals(ctx)) = 1;
