@@ -631,7 +631,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
 #endif
   size = sexp_heap_align(size) + SEXP_GC_PAD;
 #if SEXP_USE_TRACK_ALLOC_SIZES
-  size_bucket = (size - SEXP_GC_PAD) / sexp_heap_align(1);
+  size_bucket = (size - SEXP_GC_PAD) / sexp_heap_align(1) - 1;
   ++sexp_context_alloc_histogram(ctx)[size_bucket >= SEXP_ALLOC_HISTOGRAM_BUCKETS ? SEXP_ALLOC_HISTOGRAM_BUCKETS-1 : size_bucket];
 #endif
   res = sexp_try_alloc(ctx, size);
