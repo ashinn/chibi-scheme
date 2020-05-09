@@ -163,12 +163,13 @@
 
 (define (vector-every pred? vec1 . o)
   (let ((len (apply min (vector-length vec1) (map vector-length o))))
-    (let lp ((i 0))
-      (let ((x (apply pred? (vector-ref vec1 i)
-                      (map (lambda (v) (vector-ref v i)) o))))
-        (if (= i (- len 1))
-            x
-            (and x (lp (+ i 1))))))))
+    (or (zero? len)
+        (let lp ((i 0))
+          (let ((x (apply pred? (vector-ref vec1 i)
+                          (map (lambda (v) (vector-ref v i)) o))))
+            (if (= i (- len 1))
+                x
+                (and x (lp (+ i 1)))))))))
 
 (define (vector-swap! vec i j)
   (let ((tmp (vector-ref vec i)))
