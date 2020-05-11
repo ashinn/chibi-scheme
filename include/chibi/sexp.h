@@ -546,8 +546,9 @@ struct sexp_struct {
 #endif
       char tailp, tracep, timeoutp, waitp, errorp;
       sexp_uint_t last_fp;
+      sexp_uint_t gc_count;
 #if SEXP_USE_TIME_GC
-      sexp_uint_t gc_count, gc_usecs;
+      sexp_uint_t gc_usecs;
 #endif
 #if SEXP_USE_TRACK_ALLOC_TIMES
       sexp_uint_t alloc_count, alloc_usecs;
@@ -1311,8 +1312,8 @@ enum sexp_uniform_vector_type {
 #define sexp_context_dk(x)       (sexp_field(x, context, SEXP_CONTEXT, dk))
 #define sexp_context_params(x)   (sexp_field(x, context, SEXP_CONTEXT, params))
 #define sexp_context_last_fp(x)  (sexp_field(x, context, SEXP_CONTEXT, last_fp))
-#if SEXP_USE_TIME_GC
 #define sexp_context_gc_count(x) (sexp_field(x, context, SEXP_CONTEXT, gc_count))
+#if SEXP_USE_TIME_GC
 #define sexp_context_gc_usecs(x) (sexp_field(x, context, SEXP_CONTEXT, gc_usecs))
 #else
 #define sexp_context_gc_count(x) 0

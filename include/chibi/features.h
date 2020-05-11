@@ -273,6 +273,11 @@
 #define SEXP_GROW_HEAP_RATIO 0.75
 #endif
 
+/* how much to expand the heap size by */
+#ifndef SEXP_GROW_HEAP_FACTOR
+#define SEXP_GROW_HEAP_FACTOR 2  /* 1.6180339887498948482 */
+#endif
+
 /* the default number of opcodes to run each thread for */
 #ifndef SEXP_DEFAULT_QUANTUM
 #define SEXP_DEFAULT_QUANTUM 500

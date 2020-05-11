@@ -606,7 +606,9 @@ sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
   sexp_heap heap;
   struct sexp_struct dummy_ctx;
   if (size < SEXP_MINIMUM_HEAP_SIZE) size = SEXP_INITIAL_HEAP_SIZE;
-  heap = sexp_make_heap(sexp_heap_align(size), sexp_heap_align(max_size), 0);
+  size = sexp_heap_align(size);
+  max_size = sexp_heap_align(max_size);
+  heap = sexp_make_heap(size, max_size, 0);
   if (!heap) return 0;
   sexp_pointer_tag(&dummy_ctx) = SEXP_CONTEXT;
   sexp_context_saves(&dummy_ctx) = NULL;

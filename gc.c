@@ -37,12 +37,14 @@ static sexp_heap sexp_heap_last (sexp_heap h) {
   return h;
 }
 
+#if !SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
 static size_t sexp_heap_total_size (sexp_heap h) {
   size_t total_size = 0;
   for (; h; h=h->next)
     total_size += h->size;
   return total_size;
 }
+#endif
 
 #if ! SEXP_USE_GLOBAL_HEAP
 #if SEXP_USE_DEBUG_GC
@@ -571,26 +573,38 @@ int sexp_grow_heap (sexp ctx, size_t size, size_t chunk_size) {
 #if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
   for (tmp=sexp_context_heap(ctx); tmp; tmp=tmp->next)
     if (tmp->chunk_size == size) {
+      while (tmp->next && tmp->next->chunk_size == size)
+        tmp = tmp->next;
       h = tmp;
       chunk_size = size;
       break;
     }
 #endif
   cur_size = h->size;
-  new_size = sexp_heap_align(((cur_size > size) ? cur_size : size) * 2);
+  new_size = (size_t) ceil(SEXP_GROW_HEAP_FACTOR * (double) (sexp_heap_align(((cur_size > size) ? cur_size : size))));
   tmp = sexp_make_heap(new_size, h->max_size, chunk_size);
-  if (tmp) tmp->next = h->next;
-  h->next = tmp;
+  if (tmp) {
+    tmp->next = h->next;
+    h->next = tmp;
+  }
   return (h->next != NULL);
 }
 
 void* sexp_try_alloc (sexp ctx, size_t size) {
   sexp_free_list ls1, ls2, ls3;
   sexp_heap h;
+#if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+  int found_fixed = 0;
+#endif
   for (h=sexp_context_heap(ctx); h; h=h->next) {
 #if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
-    if (h->chunk_size && h->chunk_size != size)
-      continue;
+    if (h->chunk_size) {
+      if (h->chunk_size != size)
+        continue;
+      found_fixed = 1;
+    } else if (found_fixed) {   /* don't use a non-fixed heap */
+      return NULL;
+    }
 #endif
     for (ls1=h->free_list, ls2=ls1->next; ls2; ls1=ls2, ls2=ls2->next) {
       if (ls2->size >= size) {
@@ -617,9 +631,30 @@ void* sexp_try_alloc (sexp ctx, size_t size) {
   return NULL;
 }
 
+#if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+int sexp_find_fixed_chunk_heap_usage(sexp ctx, size_t size, size_t* sum_freed, size_t* total_size) {
+  sexp_heap h;
+  sexp_free_list ls;
+  size_t avail=0, total=0;
+  for (h=sexp_context_heap(ctx); h; h=h->next) {
+    if (h->chunk_size == size || !h->chunk_size) {
+      for (; h && (h->chunk_size == size || !h->chunk_size); h=h->next) {
+        total += h->size;
+        for (ls=h->free_list; ls; ls=ls->next)
+          avail += ls->size;
+      }
+      *sum_freed = avail;
+      *total_size = total;
+      return h && h->chunk_size > 0;
+    }
+  }
+  return 0;
+}
+#endif
+
 void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
-  size_t max_freed, sum_freed, total_size;
+  size_t max_freed, sum_freed, total_size=0;
   sexp_heap h = sexp_context_heap(ctx);
 #if SEXP_USE_TRACK_ALLOC_SIZES
   size_t size_bucket;
@@ -637,7 +672,11 @@ void* sexp_alloc (sexp ctx, size_t size) {
   res = sexp_try_alloc(ctx, size);
   if (! res) {
     max_freed = sexp_unbox_fixnum(sexp_gc(ctx, &sum_freed));
+#if SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+    sexp_find_fixed_chunk_heap_usage(ctx, size, &sum_freed, &total_size);
+#else
     total_size = sexp_heap_total_size(sexp_context_heap(ctx));
+#endif
     if (((max_freed < size)
          || ((total_size > sum_freed)
              && (total_size - sum_freed) > (total_size*SEXP_GROW_HEAP_RATIO)))
