@@ -412,10 +412,10 @@ install-base: all
 	-if test -f libchibi-scheme.a; then $(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/; fi
 	$(MKDIR) $(DESTDIR)$(PKGCONFDIR)
 	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(PKGCONFDIR)
-	$(MKDIR) $(DESTDIR)$(MANDIR)/man1
-	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/man1/
-	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/man1/
-	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/man1/
+	$(MKDIR) $(DESTDIR)$(MANDIR)
+	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
 	-if type $(LDCONFIG) >/dev/null 2>/dev/null; then $(LDCONFIG); fi
 
 install: install-base
@@ -438,7 +438,8 @@ uninstall:
 	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
 	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
 	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
-	-$(CD) $(DESTDIR)$(INCDIR) && $(RM) $(INCLUDES)
+	-$(CD) $(DESTDIR)$(PREFIX) && $(RM) $(INCLUDES)
+	-$(RMDIR) $(DESTDIR)$(INCDIR)
 	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.sld
 	-$(RM) $(DESTDIR)$(MODDIR)/srfi/99/records/*.scm
 	-$(RM) $(DESTDIR)$(MODDIR)/.*.meta
@@ -475,8 +476,19 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/98 $(DESTDIR)$(BINMODDIR)/srfi/98
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/99/records $(DESTDIR)$(BINMODDIR)/srfi/99/records
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(BINMODDIR)/srfi/99
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/113 $(DESTDIR)$(BINMODDIR)/srfi/113
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/117 $(DESTDIR)$(BINMODDIR)/srfi/117
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/121 $(DESTDIR)$(BINMODDIR)/srfi/121
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/125 $(DESTDIR)$(BINMODDIR)/srfi/125
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/128 $(DESTDIR)$(BINMODDIR)/srfi/128
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/129 $(DESTDIR)$(BINMODDIR)/srfi/129
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/132 $(DESTDIR)$(BINMODDIR)/srfi/132
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/133 $(DESTDIR)$(BINMODDIR)/srfi/133
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/135 $(DESTDIR)$(BINMODDIR)/srfi/135
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/143 $(DESTDIR)$(BINMODDIR)/srfi/143
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/151 $(DESTDIR)$(BINMODDIR)/srfi/151
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/144 $(DESTDIR)$(BINMODDIR)/srfi/144
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/159 $(DESTDIR)$(BINMODDIR)/srfi/159
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/160 $(DESTDIR)$(BINMODDIR)/srfi/160
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi $(DESTDIR)$(BINMODDIR)/srfi
 	-$(RMDIR) $(DESTDIR)$(MODDIR) $(DESTDIR)$(BINMODDIR)
