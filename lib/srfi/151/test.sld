@@ -5,6 +5,13 @@
     (define (run-tests)
       (test-begin "srfi-151: bitwise operations")
 
+      (test 0 (integer-length #b0))
+      (test 1 (integer-length #b1))
+      (test 2 (integer-length #b10))
+      (test 3 (integer-length #b100))
+      (test 4 (integer-length #b1000))
+      (test 5 (integer-length #b10000))
+      (test 6 (integer-length #b110000))
       (test 0 (bitwise-and #b0 #b1))
       (test 1 (bitwise-and #b1 #b1))
       (test 0 (bitwise-and #b1 #b10))

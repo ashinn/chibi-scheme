@@ -350,7 +350,7 @@ static const char log_table_256[256] =
 {
 #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
   0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4,
-  LT(5), LT(6), LT(7), LT(7), LT(7), LT(7), LT(7),
+  LT(5), LT(6), LT(6), LT(7), LT(7), LT(7), LT(7),
   LT(8), LT(8), LT(8), LT(8), LT(8), LT(8), LT(8), LT(8)
 };
 
