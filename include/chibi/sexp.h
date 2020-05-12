@@ -1316,7 +1316,6 @@ enum sexp_uniform_vector_type {
 #if SEXP_USE_TIME_GC
 #define sexp_context_gc_usecs(x) (sexp_field(x, context, SEXP_CONTEXT, gc_usecs))
 #else
-#define sexp_context_gc_count(x) 0
 #define sexp_context_gc_usecs(x) 0
 #endif
 #if SEXP_USE_TRACK_ALLOC_TIMES
