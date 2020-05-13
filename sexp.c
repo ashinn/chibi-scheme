@@ -583,7 +583,7 @@ void sexp_init_context_globals (sexp ctx) {
   for (i=0; i<SEXP_NUM_CORE_TYPES; i++) {
     type = sexp_alloc_type(ctx, type, SEXP_TYPE);
     if (!type) {
-      return; // TODO - fundamental OOM, what to do here?
+      return; /* TODO - fundamental OOM, what to do here? */
     }
     memcpy(&(type->value), &(_sexp_type_specs[i]), sizeof(_sexp_type_specs[0]));
     vec[i] = type;

@@ -772,10 +772,10 @@ sexp sexp_double_to_ratio (sexp ctx, double f) {
   return res;
 }
 
-//
-// For conversion that does not introduce round-off error,
-// no matter what FLT_RADIX is.
-//
+/*
+ * For conversion that does not introduce round-off error,
+ * no matter what FLT_RADIX is.
+ */
 sexp sexp_double_to_ratio_2 (sexp ctx, double f) {
   int sign,i;
   sexp_gc_var3(res, whole, scale);
