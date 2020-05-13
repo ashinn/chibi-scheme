@@ -451,7 +451,11 @@
 #endif
 
 #ifndef SEXP_USE_TIME_GC
-#define SEXP_USE_TIME_GC (SEXP_USE_DEBUG_GC > 0 || defined(__linux) || SEXP_BSD)
+#if SEXP_USE_DEBUG_GC > 0 || defined(__linux) || SEXP_BSD
+#define SEXP_USE_TIME_GC 1
+#else
+#define SEXP_USE_TIME_GC 0
+#endif
 #endif
 
 #ifndef SEXP_USE_SAFE_GC_MARK
