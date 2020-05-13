@@ -225,7 +225,35 @@ int sexp_valid_object_p (sexp ctx, sexp x) {
 #define sexp_gc_pass_ctx(x)
 #endif
 
-void sexp_mark_one (sexp_gc_pass_ctx(sexp ctx) sexp* types, sexp x) {
+static void sexp_mark_stack_push (sexp ctx, sexp *start, sexp *end) {
+  struct sexp_mark_stack_ptr_t *stack = sexp_context_mark_stack(ctx);
+  struct sexp_mark_stack_ptr_t **ptr = &sexp_context_mark_stack_ptr(ctx);
+  struct sexp_mark_stack_ptr_t *old = *ptr;
+
+  if (old == NULL) {
+    *ptr = stack;
+  } else if (old >= stack && old + 1 < stack + SEXP_MARK_STACK_COUNT) {
+    (*ptr)++;
+  } else {
+    *ptr = malloc(sizeof(**ptr));
+  }
+
+  (*ptr)->start = start;
+  (*ptr)->end = end;
+  (*ptr)->prev = old;
+}
+
+static void sexp_mark_stack_pop (sexp ctx) {
+  struct sexp_mark_stack_ptr_t *stack = sexp_context_mark_stack(ctx);
+  struct sexp_mark_stack_ptr_t *old = sexp_context_mark_stack_ptr(ctx);
+
+  sexp_context_mark_stack_ptr(ctx) = old->prev;
+  if (!(old >= stack && old < stack + SEXP_MARK_STACK_COUNT)) {
+    free(old);
+  }
+}
+
+static void sexp_mark_one (sexp ctx, sexp* types, sexp x) {
   sexp_sint_t len;
   sexp t, *p, *q;
   struct sexp_gc_var_t *saves;
@@ -235,7 +263,7 @@ void sexp_mark_one (sexp_gc_pass_ctx(sexp ctx) sexp* types, sexp x) {
   sexp_markedp(x) = 1;
   if (sexp_contextp(x)) {
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
-      if (saves->var) sexp_mark_one(sexp_gc_pass_ctx(ctx) types, *(saves->var));
+      if (saves->var) sexp_mark_one(ctx, types, *(saves->var));
   }
   t = types[sexp_pointer_tag(x)];
   len = sexp_type_num_slots_of_object(t, x) - 1;
@@ -246,15 +274,31 @@ void sexp_mark_one (sexp_gc_pass_ctx(sexp ctx) sexp* types, sexp x) {
       q--;                      /* skip trailing immediates */
     while (p < q && *q == q[-1])
       q--;                      /* skip trailing duplicates */
-    while (p < q)
-      sexp_mark_one(sexp_gc_pass_ctx(ctx) types, *p++);
-    x = *p;
+    if (p < q) {
+      sexp_mark_stack_push(ctx, p, q);
+    }
+    x = *q;
     goto loop;
   }
 }
 
+static void sexp_mark_one_start (sexp ctx, sexp* types, sexp x) {
+  struct sexp_mark_stack_ptr_t **ptr = &sexp_context_mark_stack_ptr(ctx);
+  sexp *p, *q;
+  sexp_mark_one(ctx, types, x);
+
+  while (*ptr) {
+    p = (*ptr)->start;
+    q = (*ptr)->end;
+    sexp_mark_stack_pop(ctx);
+    while (p < q) {
+      sexp_mark_one(ctx, types, *p++);
+    }
+  }
+}
+
 void sexp_mark (sexp ctx, sexp x) {
-  sexp_mark_one(sexp_gc_pass_ctx(ctx) sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES)), x);
+  sexp_mark_one_start(ctx, sexp_vector_data(sexp_global(ctx, SEXP_G_TYPES)), x);
 }
 
 #if SEXP_USE_CONSERVATIVE_GC

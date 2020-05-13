@@ -611,6 +611,7 @@ sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
   heap = sexp_make_heap(size, max_size, 0);
   if (!heap) return 0;
   sexp_pointer_tag(&dummy_ctx) = SEXP_CONTEXT;
+  sexp_context_mark_stack_ptr(&dummy_ctx) = NULL;
   sexp_context_saves(&dummy_ctx) = NULL;
   sexp_context_heap(&dummy_ctx) = heap;
   ctx = sexp_alloc_type(&dummy_ctx, context, SEXP_CONTEXT);
@@ -653,6 +654,7 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   if (!res || sexp_exceptionp(res)) return res;
   sexp_context_parent(res) = ctx;
   sexp_context_name(res) = sexp_context_specific(res) = SEXP_FALSE;
+  sexp_context_mark_stack_ptr(res) = NULL;
   sexp_context_saves(res) = NULL;
   sexp_context_params(res) = SEXP_NULL;
   sexp_context_last_fp(res) = 0;
