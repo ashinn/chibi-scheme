@@ -393,6 +393,11 @@ struct sexp_core_form_struct {
   sexp name;
 };
 
+struct sexp_mark_stack_ptr_t {
+  sexp *start, *end;
+  struct sexp_mark_stack_ptr_t *prev; /* TODO: remove for allocations on stack */
+};
+
 struct sexp_struct {
   sexp_tag_t tag;
   char markedp;
@@ -538,6 +543,8 @@ struct sexp_struct {
     } stack;
     struct {
       sexp_heap heap;
+      struct sexp_mark_stack_ptr_t mark_stack[SEXP_MARK_STACK_COUNT];
+      struct sexp_mark_stack_ptr_t *mark_stack_ptr;
       struct sexp_gc_var_t *saves;
 #if SEXP_USE_GREEN_THREADS
       sexp_sint_t refuel;
@@ -1305,6 +1312,8 @@ enum sexp_uniform_vector_type {
 #define sexp_context_stack(x)    (sexp_field(x, context, SEXP_CONTEXT, stack))
 #define sexp_context_parent(x)   (sexp_field(x, context, SEXP_CONTEXT, parent))
 #define sexp_context_child(x)    (sexp_field(x, context, SEXP_CONTEXT, child))
+#define sexp_context_mark_stack(x)     (sexp_field(x, context, SEXP_CONTEXT, mark_stack))
+#define sexp_context_mark_stack_ptr(x) (sexp_field(x, context, SEXP_CONTEXT, mark_stack_ptr))
 #define sexp_context_saves(x)    (sexp_field(x, context, SEXP_CONTEXT, saves))
 #define sexp_context_tailp(x)    (sexp_field(x, context, SEXP_CONTEXT, tailp))
 #define sexp_context_tracep(x)   (sexp_field(x, context, SEXP_CONTEXT, tracep))

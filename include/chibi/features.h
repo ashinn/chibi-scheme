@@ -278,6 +278,10 @@
 #define SEXP_GROW_HEAP_FACTOR 2  /* 1.6180339887498948482 */
 #endif
 
+/* size of per-context stack that is used during gc cycles
+ * increase if you can affort extra unused memory */
+#define SEXP_MARK_STACK_COUNT 1024
+
 /* the default number of opcodes to run each thread for */
 #ifndef SEXP_DEFAULT_QUANTUM
 #define SEXP_DEFAULT_QUANTUM 500
