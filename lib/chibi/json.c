@@ -57,6 +57,7 @@ sexp parse_json_literal (sexp ctx, sexp self, sexp str, const char* s, int* i, c
 sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
+  char utf_tmp[5];
   int from = *i, to = *i;
   res = SEXP_NULL;
   for ( ; s[to] != '"'; ++to) {
@@ -77,6 +78,12 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
         tmp = sexp_c_string(ctx, "\t", -1);
         res = sexp_cons(ctx, tmp, res);
         from = to+1;
+        break;
+      case 'u':
+        strncpy(utf_tmp, s+to+1, 5);
+        tmp = sexp_make_string(ctx, sexp_make_fixnum(1), sexp_make_character(strtoll(utf_tmp, NULL, 16)));
+        res = sexp_cons(ctx, tmp, res);
+        from = to+5;
         break;
       default:
         from = to;
