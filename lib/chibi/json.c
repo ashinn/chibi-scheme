@@ -54,11 +54,24 @@ sexp parse_json_literal (sexp ctx, sexp self, sexp str, const char* s, int* i, c
   return res;
 }
 
+#define USEQ_LEN 4
+
+long decode_useq(const char* s){
+  char utf_tmp[USEQ_LEN+1];
+  for (int iter=0; iter!=USEQ_LEN; iter++){
+    if (!isxdigit(s[iter])){
+      return -1;
+    }
+  }
+  strncpy(utf_tmp, s, USEQ_LEN);
+  return strtol(utf_tmp, NULL, 16);
+}
+
 sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
-  char utf_tmp[5];
   int from = *i, to = *i;
+  long utfchar, utfchar2;
   res = SEXP_NULL;
   for ( ; s[to] != '"'; ++to) {
     if (to+1 >= len) {
@@ -80,10 +93,29 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
         from = to+1;
         break;
       case 'u':
-        strncpy(utf_tmp, s+to+1, 5);
-        tmp = sexp_make_string(ctx, sexp_make_fixnum(1), sexp_make_character(strtoll(utf_tmp, NULL, 16)));
+        utfchar = decode_useq(s+to+1);
+        if (utfchar == -1){
+          res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, *i);
+          goto except;
+        }
+        to = to+USEQ_LEN;
+
+        if ( 0xd800 <= utfchar && utfchar <= 0xdbff && s[to+2] == 'u'){
+          utfchar2 = decode_useq(s+to+3);
+
+          if (utfchar2 == -1){
+            res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, *i);
+            goto except;
+          }
+          if ( 0xdc00 <= utfchar2 && utfchar <=0xdfff ){
+            utfchar = 0x10000 + (((utfchar - 0xd800) << 10) | (utfchar2 - 0xdc00));
+            to = to + USEQ_LEN +2;
+          }
+        }
+
+        tmp = sexp_make_string(ctx, sexp_make_fixnum(1), sexp_make_character(utfchar));
         res = sexp_cons(ctx, tmp, res);
-        from = to+5;
+        from = to + 1;
         break;
       default:
         from = to;
@@ -91,6 +123,7 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
       }
     }
   }
+except:
   if (!sexp_exceptionp(res)) {
     tmp = sexp_c_string(ctx, s+from, to-from);
     if (res == SEXP_NULL) {
