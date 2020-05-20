@@ -308,10 +308,94 @@ sexp sexp_parse_json (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
   return parse_json(ctx, self, str, s, &i, len);
 }
 
+
+sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  res = SEXP_NULL;
+
+  tmp = sexp_c_string(ctx, "\"", -1);
+  res = sexp_cons(ctx, tmp, res);
+
+  char cout[(2+USEQ_LEN)*2 + 1];
+  unsigned long ch, chh, chl;
+
+  sexp_uint_t len = sexp_string_length(obj);
+  for(sexp_uint_t i=0; i!= len; i++){
+    ch = sexp_unbox_character(sexp_string_ref(ctx, obj, sexp_make_fixnum(i)));
+    if(ch < 0x7F){
+      switch(ch){
+        case '\\':
+          sprintf(cout, "\\\\");
+          break;
+        case '/':
+          sprintf(cout, "\\/");
+          break;
+        case '\b':
+          sprintf(cout, "\\b");
+          break;
+        case '\f':
+          sprintf(cout, "\\f");
+          break;
+        case '\n':
+          sprintf(cout, "\\n");
+          break;
+        case '\r':
+          sprintf(cout, "\\r");
+          break;
+        case '\t':
+          sprintf(cout, "\\t");
+          break;
+        default:
+          sprintf(cout, "%c", ch);
+          break;
+      }
+    } else if(ch <= 0xFFFF){
+      sprintf(cout,"\\u%04lX", ch);
+    } else {
+      // Surrogate pair
+      chh = (0xD800 - (0x10000 >> 10) + ((ch) >> 10));
+      chl = (0xDC00 + ((ch) & 0x3FF));
+      if (chh > 0xFFFF || chl > 0xFFFF){
+        res = sexp_json_exception(ctx, self, "unable to encode character at", obj, i);
+        return res;
+      }
+      sprintf(cout, "\\u%04lX\\u%04lX", chh, chl);
+    }
+    tmp = sexp_c_string(ctx, cout, -1);
+    res = sexp_cons(ctx, tmp, res);
+  }
+
+  tmp = sexp_c_string(ctx, "\"", -1);
+  res = sexp_cons(ctx, tmp, res);
+
+  res = sexp_nreverse(ctx, res);
+  res = sexp_string_concatenate(ctx, res, SEXP_FALSE);
+
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+sexp unparse_json (sexp ctx, sexp self, sexp_sint_t n, sexp obj){
+  sexp res = SEXP_NULL;
+
+  // STRING
+  if (sexp_stringp(obj)){
+    res = unparse_json_string(ctx, self, obj);
+  }
+  return res;
+}
+
+sexp sexp_unparse_json (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
+  return unparse_json(ctx, self, n, obj);
+}
+
+
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
   sexp_define_foreign(ctx, env, "parse-json", 1, sexp_parse_json);
+  sexp_define_foreign(ctx, env, "unparse-json", 1, sexp_unparse_json);
   return SEXP_VOID;
 }
