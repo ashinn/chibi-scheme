@@ -8,6 +8,9 @@
       (test 1 (parse-json "1"))
       (test 1.5 (parse-json "1.5"))
       (test 1000.0 (parse-json "1e3"))
+      (test "á" (parse-json "\"\\u00e1\""))
+      (test "𐐷" (parse-json "\"\\uD801\\uDC37\""))
+      (test "😐" (parse-json "\"\\uD83D\\uDE10\""))
       (test '((glossary
                (title . "example glossary")
                (GlossDiv
