@@ -11,10 +11,19 @@ static int digit_value (int c) {
 
 sexp parse_json (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len);
 
-sexp sexp_json_exception (sexp ctx, sexp self, const char* msg, sexp str, const int pos) {
+sexp sexp_json_parse_exception (sexp ctx, sexp self, const char* msg, sexp str, const int pos) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   tmp = sexp_list2(ctx, str, sexp_make_fixnum(pos));
+  res = sexp_user_exception(ctx, self, msg, tmp);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+sexp sexp_json_unparse_exception (sexp ctx, sexp self, const char* msg, sexp obj) {
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  tmp = sexp_list1(ctx, obj);
   res = sexp_user_exception(ctx, self, msg, tmp);
   sexp_gc_release2(ctx);
   return res;
@@ -62,7 +71,7 @@ sexp parse_json_literal (sexp ctx, sexp self, sexp str, const char* s, int* i, c
     res = value;
     *i += namelen;
   } else {
-    res = sexp_json_exception(ctx, self, "unexpected character in json at", str, *i);
+    res = sexp_json_parse_exception(ctx, self, "unexpected character in json at", str, *i);
   }
   return res;
 }
@@ -87,7 +96,7 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
   res = SEXP_NULL;
   for ( ; s[to] != '"' && !sexp_exceptionp(res); ++to) {
     if (to+1 >= len) {
-      res = sexp_json_exception(ctx, self, "unterminated string in json started at", str, *i);
+      res = sexp_json_parse_exception(ctx, self, "unterminated string in json started at", str, *i);
       break;
     }
     if (s[to] == '\\') {
@@ -117,7 +126,7 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
           }
         }
         if (utfchar < 0) {
-          res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, to - USEQ_LEN);
+          res = sexp_json_parse_exception(ctx, self, "invalid \\u sequence at", str, to - USEQ_LEN);
         } else {
           tmp = sexp_make_string(ctx, sexp_make_fixnum(1), sexp_make_character(utfchar));
           res = sexp_cons(ctx, tmp, res);
@@ -153,11 +162,11 @@ sexp parse_json_array (sexp ctx, sexp self, sexp str, const char* s, int* i, con
   res = SEXP_NULL;
   while (1) {
     if (j >= len) {
-      res = sexp_json_exception(ctx, self, "unterminated array in json started at", str, *i);
+      res = sexp_json_parse_exception(ctx, self, "unterminated array in json started at", str, *i);
       break;
     } else if (s[j] == ']') {
       if (comma && res != SEXP_NULL) {
-        res = sexp_json_exception(ctx, self, "missing value after comma in json array at", str, j);
+        res = sexp_json_parse_exception(ctx, self, "missing value after comma in json array at", str, j);
       } else {
         res = sexp_nreverse(ctx, res);
         res = sexp_list_to_vector(ctx, res);
@@ -165,7 +174,7 @@ sexp parse_json_array (sexp ctx, sexp self, sexp str, const char* s, int* i, con
       ++j;
       break;
     } else if (s[j] == ',' && comma) {
-      res = sexp_json_exception(ctx, self, "unexpected comma in json array at", str, j);
+      res = sexp_json_parse_exception(ctx, self, "unexpected comma in json array at", str, j);
       break;
     } else if (s[j] == ',') {
       comma = 1;
@@ -182,7 +191,7 @@ sexp parse_json_array (sexp ctx, sexp self, sexp str, const char* s, int* i, con
         res = sexp_cons(ctx, tmp, res);
         comma = 0;
       } else {
-        res = sexp_json_exception(ctx, self, "unexpected value in json array at", str, j);
+        res = sexp_json_parse_exception(ctx, self, "unexpected value in json array at", str, j);
         break;
       }
     }
@@ -200,18 +209,18 @@ sexp parse_json_object (sexp ctx, sexp self, sexp str, const char* s, int* i, co
   res = SEXP_NULL;
   while (1) {
     if (j >= len) {
-      res = sexp_json_exception(ctx, self, "unterminated object in json started at", str, *i);
+      res = sexp_json_parse_exception(ctx, self, "unterminated object in json started at", str, *i);
       break;
     } else if (s[j] == '}') {
       if (comma && res != SEXP_NULL) {
-        res = sexp_json_exception(ctx, self, "missing value after comma in json object at", str, j);
+        res = sexp_json_parse_exception(ctx, self, "missing value after comma in json object at", str, j);
       } else {
         res = sexp_nreverse(ctx, res);
       }
       ++j;
       break;
     } else if (s[j] == ',' && comma) {
-      res = sexp_json_exception(ctx, self, "unexpected comma in json object at", str, j);
+      res = sexp_json_parse_exception(ctx, self, "unexpected comma in json object at", str, j);
       break;
     } else if (s[j] == ',') {
       comma = 1;
@@ -231,7 +240,7 @@ sexp parse_json_object (sexp ctx, sexp self, sexp str, const char* s, int* i, co
         while (j < len && isspace(s[j]))
           ++j;
         if (s[j] != ':') {
-          res = sexp_json_exception(ctx, self, "missing colon in json object at", str, j);
+          res = sexp_json_parse_exception(ctx, self, "missing colon in json object at", str, j);
           break;
         }
         ++j;
@@ -243,7 +252,7 @@ sexp parse_json_object (sexp ctx, sexp self, sexp str, const char* s, int* i, co
         res = sexp_cons(ctx, tmp, res);
         comma = 0;
       } else {
-        res = sexp_json_exception(ctx, self, "unexpected value in json object at", str, j);
+        res = sexp_json_parse_exception(ctx, self, "unexpected value in json object at", str, j);
         break;
       }
     }
@@ -286,13 +295,13 @@ sexp parse_json (sexp ctx, sexp self, sexp str, const char* s, int* i, const int
     res = parse_json_literal(ctx, self, str, s, &j, len, "false", 5, SEXP_FALSE);
     break;
   case '}':
-    res = sexp_json_exception(ctx, self, "unexpected closing brace in json at", str, j);
+    res = sexp_json_parse_exception(ctx, self, "unexpected closing brace in json at", str, j);
     break;
   case ']':
-    res = sexp_json_exception(ctx, self, "unexpected closing bracket in json at", str, j);
+    res = sexp_json_parse_exception(ctx, self, "unexpected closing bracket in json at", str, j);
     break;
   default:
-    res = sexp_json_exception(ctx, self, "unexpected character in json at", str, j);
+    res = sexp_json_parse_exception(ctx, self, "unexpected character in json at", str, j);
     break;
   }
   *i = j;
@@ -375,8 +384,8 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
       chh = (0xD800 - (0x10000 >> 10) + ((ch) >> 10));
       chl = (0xDC00 + ((ch) & 0x3FF));
       if (chh > 0xFFFF || chl > 0xFFFF){
-        // TODO: Create custom unparse exception
-        res = sexp_json_exception(ctx, self, "unable to encode character at", obj, i);
+        res = sexp_json_unparse_exception(ctx, self, "unable to encode string", obj);
+        sexp_gc_release2(ctx);
         return res;
       }
       sprintf(cout, "\\u%04lX\\u%04lX", chh, chl);
@@ -407,7 +416,8 @@ sexp unparse_json_array(sexp ctx, sexp self, const sexp obj){
   for (int i=0; i!=len; i++){
     tmp = unparse_json(ctx, self, sexp_vector_ref(obj, sexp_make_fixnum(i)));
     if (sexp_exceptionp(tmp)){
-      goto except;
+      sexp_gc_release2(ctx);
+      return tmp;
     }
     res = sexp_cons(ctx, tmp, res);
 
@@ -423,7 +433,6 @@ sexp unparse_json_array(sexp ctx, sexp self, const sexp obj){
   res = sexp_nreverse(ctx, res);
   res = sexp_string_concatenate(ctx, res, SEXP_FALSE);
 
-except:
   sexp_gc_release2(ctx);
   return res;
 }
@@ -442,24 +451,19 @@ sexp unparse_json_object(sexp ctx, sexp self, const sexp obj){
   for (int i=0; i!=len; i++){
     cur = sexp_car(it);
     if (!sexp_pairp(cur)){
-      /*
-       * TODO: Raise exception, must be a pair (key . val)
-      res = exception!
-      */
+      res = sexp_json_unparse_exception(ctx, self, "unable to encode key-value pair: not a pair", obj);
       goto except;
     }
 
     // Key
     key = sexp_car(cur);
     if (!(sexp_symbolp(key) /*|| sexp_stringp(key)*/)){
-      /*
-       * TODO: Raise exception, key must be symbol (or string?)
-      res = exception!
-      */
+      res = sexp_json_unparse_exception(ctx, self, "unable to encode key: not a symbol", key);
       goto except;
     }
     tmp = unparse_json(ctx, self, key);
     if (sexp_exceptionp(tmp)){
+      res = tmp;
       goto except;
     }
     res = sexp_cons(ctx, tmp, res);
@@ -519,7 +523,7 @@ sexp unparse_json (sexp ctx, sexp self, sexp obj){
   } else if (obj == SEXP_NULL){
     res = sexp_c_string(ctx, "null", -1);
   } else {
-    //res = sexp_json_exception(ctx, self, "unable to decode", obj, i);
+    res = sexp_json_unparse_exception(ctx, self, "unable to encode element", obj);
   }
   sexp_gc_release1(ctx);
   return res;
