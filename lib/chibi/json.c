@@ -1,6 +1,7 @@
-/*  json.c -- fast json parser                           */
-/*  Copyright (c) 2019 Alex Shinn.  All rights reserved. */
-/*  BSD-style license: http://synthcode.com/license.txt  */
+/*  json.c -- fast json parser and unparser                  */
+/*  Copyright (c) 2019 Alex Shinn.      All rights reserved. */
+/*  Copyright (c) 2020 Ekaitz Zarraga.  All rights reserved. */
+/*  BSD-style license: http://synthcode.com/license.txt      */
 
 #include <chibi/eval.h>
 
