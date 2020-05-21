@@ -56,10 +56,10 @@ sexp parse_json_literal (sexp ctx, sexp self, sexp str, const char* s, int* i, c
 
 #define USEQ_LEN 4
 
-long decode_useq(const char* s){
+long decode_useq(const char* s) {
   char utf_tmp[USEQ_LEN+1];
-  for (int iter=0; iter!=USEQ_LEN; iter++){
-    if (!isxdigit(s[iter])){
+  for (int iter=0; iter!=USEQ_LEN; iter++) {
+    if (!isxdigit(s[iter])) {
       return -1;
     }
   }
@@ -94,20 +94,20 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
         break;
       case 'u':
         utfchar = decode_useq(s+to+1);
-        if (utfchar == -1){
+        if (utfchar == -1) {
           res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, *i);
           goto except;
         }
         to = to+USEQ_LEN;
 
-        if ( 0xd800 <= utfchar && utfchar <= 0xdbff && s[to+2] == 'u'){
+        if ( 0xd800 <= utfchar && utfchar <= 0xdbff && s[to+2] == 'u') {
           utfchar2 = decode_useq(s+to+3);
 
-          if (utfchar2 == -1){
+          if (utfchar2 == -1) {
             res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, *i);
             goto except;
           }
-          if ( 0xdc00 <= utfchar2 && utfchar <=0xdfff ){
+          if ( 0xdc00 <= utfchar2 && utfchar <=0xdfff ) {
             utfchar = 0x10000 + (((utfchar - 0xd800) << 10) | (utfchar2 - 0xdc00));
             to = to + USEQ_LEN +2;
           }
