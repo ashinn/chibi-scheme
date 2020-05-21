@@ -314,6 +314,19 @@ sexp sexp_parse_json (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
 sexp unparse_json (sexp ctx, sexp self, sexp obj);
 
 
+sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj){
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  res = SEXP_NULL;
+  long num = sexp_unbox_fixnum(obj);
+  char* buff = alloca( num==0 ? 2 : (log10(abs(num))+3) );
+  sprintf(buff, "%ld", num);
+  res = sexp_c_string(ctx, buff, -1);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+
 sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
@@ -495,8 +508,8 @@ sexp unparse_json (sexp ctx, sexp self, sexp obj){
   } else if (sexp_vectorp(obj)){
     // ARRAY
     res = unparse_json_array(ctx, self, obj);
-  } else if(sexp_integerp(obj)){
-    // FIXNUM NUMBER
+  } else if(sexp_fixnump(obj)){
+    res = unparse_json_fixnum(ctx, self, obj);
   } else if (sexp_numberp(obj)){
     // FLONUM or RATIONAL
   } else if (obj == SEXP_FALSE){
