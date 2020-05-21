@@ -323,7 +323,7 @@ sexp sexp_parse_json (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
 sexp unparse_json (sexp ctx, sexp self, sexp obj);
 
 
-sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj){
+sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   res = SEXP_NULL;
@@ -336,7 +336,7 @@ sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj){
 }
 
 
-sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
+sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   res = SEXP_NULL;
@@ -348,10 +348,10 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
   unsigned long ch, chh, chl;
 
   sexp_uint_t len = sexp_string_length(obj);
-  for(sexp_uint_t i=0; i!= len; i++){
+  for(sexp_uint_t i=0; i!= len; i++) {
     ch = sexp_unbox_character(sexp_string_ref(ctx, obj, sexp_make_fixnum(i)));
-    if(ch < 0x7F){
-      switch(ch){
+    if(ch < 0x7F) {
+      switch(ch) {
         case '\\':
           sprintf(cout, "\\\\");
           break;
@@ -377,13 +377,13 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
           sprintf(cout, "%c", ch);
           break;
       }
-    } else if(ch <= 0xFFFF){
+    } else if(ch <= 0xFFFF) {
       sprintf(cout,"\\u%04lX", ch);
     } else {
       // Surrogate pair
       chh = (0xD800 - (0x10000 >> 10) + ((ch) >> 10));
       chl = (0xDC00 + ((ch) & 0x3FF));
-      if (chh > 0xFFFF || chl > 0xFFFF){
+      if (chh > 0xFFFF || chl > 0xFFFF) {
         res = sexp_json_unparse_exception(ctx, self, "unable to encode string", obj);
         sexp_gc_release2(ctx);
         return res;
@@ -404,7 +404,7 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj){
   return res;
 }
 
-sexp unparse_json_array(sexp ctx, sexp self, const sexp obj){
+sexp unparse_json_array(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   res = SEXP_NULL;
@@ -413,15 +413,15 @@ sexp unparse_json_array(sexp ctx, sexp self, const sexp obj){
   res = sexp_cons(ctx, tmp, res);
 
   int len = sexp_vector_length(obj);
-  for (int i=0; i!=len; i++){
+  for (int i=0; i!=len; i++) {
     tmp = unparse_json(ctx, self, sexp_vector_ref(obj, sexp_make_fixnum(i)));
-    if (sexp_exceptionp(tmp)){
+    if (sexp_exceptionp(tmp)) {
       sexp_gc_release2(ctx);
       return tmp;
     }
     res = sexp_cons(ctx, tmp, res);
 
-    if (i != len-1){
+    if (i != len-1) {
       tmp = sexp_c_string(ctx, ",", -1);
       res = sexp_cons(ctx, tmp, res);
     }
@@ -438,7 +438,7 @@ sexp unparse_json_array(sexp ctx, sexp self, const sexp obj){
 }
 
 
-sexp unparse_json_object(sexp ctx, sexp self, const sexp obj){
+sexp unparse_json_object(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var6(res, tmp, it, cur, key, val);
   sexp_gc_preserve6(ctx, res, tmp, it, cur, key, val);
   res = SEXP_NULL;
@@ -448,21 +448,21 @@ sexp unparse_json_object(sexp ctx, sexp self, const sexp obj){
 
   int len = sexp_unbox_fixnum(sexp_length(ctx, obj));
   it = obj;
-  for (int i=0; i!=len; i++){
+  for (int i=0; i!=len; i++) {
     cur = sexp_car(it);
-    if (!sexp_pairp(cur)){
+    if (!sexp_pairp(cur)) {
       res = sexp_json_unparse_exception(ctx, self, "unable to encode key-value pair: not a pair", obj);
       goto except;
     }
 
     // Key
     key = sexp_car(cur);
-    if (!(sexp_symbolp(key) /*|| sexp_stringp(key)*/)){
+    if (!(sexp_symbolp(key) /*|| sexp_stringp(key)*/)) {
       res = sexp_json_unparse_exception(ctx, self, "unable to encode key: not a symbol", key);
       goto except;
     }
     tmp = unparse_json(ctx, self, key);
-    if (sexp_exceptionp(tmp)){
+    if (sexp_exceptionp(tmp)) {
       res = tmp;
       goto except;
     }
@@ -477,7 +477,7 @@ sexp unparse_json_object(sexp ctx, sexp self, const sexp obj){
     tmp = unparse_json(ctx, self, val);
     res = sexp_cons(ctx, tmp, res);
 
-    if (i != len-1){
+    if (i != len-1) {
       tmp = sexp_c_string(ctx, ",", -1);
       res = sexp_cons(ctx, tmp, res);
     }
@@ -494,33 +494,27 @@ except:
   return res;
 }
 
-sexp unparse_json (sexp ctx, sexp self, sexp obj){
+sexp unparse_json (sexp ctx, sexp self, sexp obj) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   res = SEXP_NULL;
 
-  if( sexp_symbolp(obj) ){
-    // SYMBOL
-    obj =  sexp_symbol_to_string(ctx, obj);
+  if( sexp_symbolp(obj) ) {
+    obj = sexp_symbol_to_string(ctx, obj);
     res = unparse_json_string(ctx, self, obj);
-  } else if (sexp_stringp(obj)){
-    // STRING
+  } else if (sexp_stringp(obj)) {
     res = unparse_json_string(ctx, self, obj);
-  } else if (sexp_listp(ctx, obj) == SEXP_TRUE){
-    // OBJECT
+  } else if (sexp_listp(ctx, obj) == SEXP_TRUE) {
     res = unparse_json_object(ctx, self, obj);
-  } else if (sexp_vectorp(obj)){
-    // ARRAY
+  } else if (sexp_vectorp(obj)) {
     res = unparse_json_array(ctx, self, obj);
-  } else if(sexp_fixnump(obj)){
+  } else if(sexp_fixnump(obj)) {
     res = unparse_json_fixnum(ctx, self, obj);
-  } else if (sexp_numberp(obj)){
-    // FLONUM or RATIONAL
-  } else if (obj == SEXP_FALSE){
+  } else if (obj == SEXP_FALSE) {
     res = sexp_c_string(ctx, "false", -1);
-  } else if (obj == SEXP_TRUE){
+  } else if (obj == SEXP_TRUE) {
     res = sexp_c_string(ctx, "true", -1);
-  } else if (obj == SEXP_NULL){
+  } else if (obj == SEXP_NULL) {
     res = sexp_c_string(ctx, "null", -1);
   } else {
     res = sexp_json_unparse_exception(ctx, self, "unable to encode element", obj);
