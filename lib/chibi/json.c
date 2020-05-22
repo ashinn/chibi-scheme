@@ -21,7 +21,7 @@ sexp sexp_json_exception (sexp ctx, sexp self, const char* msg, sexp str, const 
 
 sexp parse_json_number (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len) {
   double res = 0, scale = 1;
-  int j = *i, sign = 1, inexactp = 0;
+  int j = *i, sign = 1, inexactp = 0, scale_sign = 1;
   if (s[j] == '+') {
     ++j;
   } else if (s[j] == '-') {
@@ -37,9 +37,17 @@ sexp parse_json_number (sexp ctx, sexp self, sexp str, const char* s, int* i, co
     res /= scale;
   } else if (j < len && sexp_tolower(s[j]) == 'e') {
     inexactp = 1;
+    if (j+1 < len) {
+      if (s[j+1] == '+') {
+        ++j;
+      } else if (s[j+1] == '-') {
+        ++j;
+        scale_sign = -1;
+      }
+    }
     for (++j, scale=0; j < len && isdigit(s[j]); )
       scale = scale * 10 + s[j++] - '0';
-    res *= pow(10.0, scale);
+    res *= pow(10.0, scale_sign * scale);
   }
   *i = j;
   return (inexactp || fabs(res) > SEXP_MAX_FIXNUM) ?
