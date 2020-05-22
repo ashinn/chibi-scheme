@@ -4,6 +4,10 @@
 
 #include <chibi/eval.h>
 
+static int digit_value (int c) {
+  return (((c)<='9') ? ((c) - '0') : ((sexp_tolower(c) - 'a') + 10));
+}
+
 sexp parse_json (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len);
 
 sexp sexp_json_exception (sexp ctx, sexp self, const char* msg, sexp str, const int pos) {
@@ -57,14 +61,13 @@ sexp parse_json_literal (sexp ctx, sexp self, sexp str, const char* s, int* i, c
 #define USEQ_LEN 4
 
 long decode_useq(const char* s) {
-  char utf_tmp[USEQ_LEN+1];
-  for (int iter=0; iter!=USEQ_LEN; iter++) {
-    if (!isxdigit(s[iter])) {
+  long result = 0, i;
+  for (i=0; i < USEQ_LEN; i++) {
+    if (!isxdigit(s[i]))
       return -1;
-    }
+    result = (result << 4) + digit_value(s[i]);
   }
-  strncpy(utf_tmp, s, USEQ_LEN);
-  return strtol(utf_tmp, NULL, 16);
+  return result;
 }
 
 sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, const int len) {
@@ -73,7 +76,7 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
   int from = *i, to = *i;
   long utfchar, utfchar2;
   res = SEXP_NULL;
-  for ( ; s[to] != '"'; ++to) {
+  for ( ; s[to] != '"' && !sexp_exceptionp(res); ++to) {
     if (to+1 >= len) {
       res = sexp_json_exception(ctx, self, "unterminated string in json started at", str, *i);
       break;
@@ -94,28 +97,23 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
         break;
       case 'u':
         utfchar = decode_useq(s+to+1);
-        if (utfchar == -1) {
-          res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, *i);
-          goto except;
-        }
-        to = to+USEQ_LEN;
-
-        if ( 0xd800 <= utfchar && utfchar <= 0xdbff && s[to+2] == 'u') {
+        to += USEQ_LEN;
+        if (0xd800 <= utfchar && utfchar <= 0xdbff && s[to+1] == '\\' && s[to+2] == 'u') {
+          /* high surrogate followed by another unicode escape */
           utfchar2 = decode_useq(s+to+3);
-
-          if (utfchar2 == -1) {
-            res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, *i);
-            goto except;
-          }
-          if ( 0xdc00 <= utfchar2 && utfchar <=0xdfff ) {
+          if (0xdc00 <= utfchar2 && utfchar2 <= 0xdfff) {
+            /* merge low surrogate (otherwise high is left unpaired) */
             utfchar = 0x10000 + (((utfchar - 0xd800) << 10) | (utfchar2 - 0xdc00));
-            to = to + USEQ_LEN +2;
+            to += USEQ_LEN + 2;
           }
         }
-
-        tmp = sexp_make_string(ctx, sexp_make_fixnum(1), sexp_make_character(utfchar));
-        res = sexp_cons(ctx, tmp, res);
-        from = to + 1;
+        if (utfchar < 0) {
+          res = sexp_json_exception(ctx, self, "invalid \\u sequence at", str, to - USEQ_LEN);
+        } else {
+          tmp = sexp_make_string(ctx, sexp_make_fixnum(1), sexp_make_character(utfchar));
+          res = sexp_cons(ctx, tmp, res);
+          from = to + 1;
+        }
         break;
       default:
         from = to;
@@ -123,7 +121,6 @@ sexp parse_json_string (sexp ctx, sexp self, sexp str, const char* s, int* i, co
       }
     }
   }
-except:
   if (!sexp_exceptionp(res)) {
     tmp = sexp_c_string(ctx, s+from, to-from);
     if (res == SEXP_NULL) {
