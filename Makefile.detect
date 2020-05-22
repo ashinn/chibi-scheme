@@ -132,6 +132,59 @@ RLDFLAGS=-Wl,-R$(LIBDIR)
 endif
 
 ########################################################################
+# Library config.
+#
+# This is to allow "make SEXP_USE_BOEHM=1" and "make SEXP_USE_DL=0" to
+# automatically include the necessary compiler and linker flags in
+# addition to setting those features.  If not using GNU make just
+# comment out the ifs and use the else branches for the defaults.
+
+ifeq ($(SEXP_USE_BOEHM),1)
+GCLDFLAGS := -lgc
+XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%) -DSEXP_USE_BOEHM=1
+else
+GCLDFLAGS :=
+XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%)
+endif
+
+ifeq ($(SEXP_USE_DL),0)
+XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) -lm
+XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g -g3 -O3 $(CFLAGS)
+else
+XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
+XCFLAGS   := -Wall -g -g3 -O3 $(CFLAGS)
+endif
+
+ifeq ($(PLATFORM),solaris)
+XLDFLAGS += -lsocket
+XCPPFLAGS += -D_POSIX_PTHREAD_SEMANTICS
+endif
+
+# Choose compiled library on MSYS
+ifeq ($(OS), Windows_NT)
+ifeq ($(PLATFORM),msys)
+EXCLUDE_WIN32_LIBS=1
+else
+ifeq ($(shell uname -o),Cygwin)
+EXCLUDE_WIN32_LIBS=1
+else
+EXCLUDE_POSIX_LIBS=1
+endif
+endif
+endif
+
+CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
+	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/pty$(SO) \
+	lib/chibi/net$(SO) lib/srfi/18/threads$(SO)
+CHIBI_WIN32_COMPILED_LIBS = lib/chibi/win32/process-win32$(SO)
+
+ifndef EXCLUDE_POSIX_LIBS
+COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS)
+else
+COMPILED_LIBS += $(CHIBI_WIN32_COMPILED_LIBS)
+endif
+
+########################################################################
 # Check for headers (who needs autoconf?)
 
 ifndef SEXP_USE_NTP_GETTIME

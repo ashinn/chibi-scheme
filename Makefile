@@ -22,39 +22,18 @@ SNOW_CHIBI ?= tools/snow-chibi
 
 ########################################################################
 
-# Choose compiled library on MSYS
-ifeq ($(OS), Windows_NT)
-ifeq ($(PLATFORM),msys)
-EXCLUDE_WIN32_LIBS=1
-else
-ifeq ($(shell uname -o),Cygwin)
-EXCLUDE_WIN32_LIBS=1
-else
-EXCLUDE_POSIX_LIBS=1
-endif
-endif
-endif
-
-########################################################################
-
 CHIBI_COMPILED_LIBS = lib/chibi/filesystem$(SO) lib/chibi/weak$(SO) \
 	lib/chibi/heap-stats$(SO) lib/chibi/disasm$(SO) lib/chibi/ast$(SO) \
 	lib/chibi/json$(SO) lib/chibi/emscripten$(SO)
 CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
 	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/pty$(SO) \
-	lib/chibi/net$(SO)
+	lib/chibi/net$(SO) lib/srfi/18/threads$(SO)
 CHIBI_WIN32_COMPILED_LIBS = lib/chibi/win32/process-win32$(SO)
 CHIBI_CRYPTO_COMPILED_LIBS = lib/chibi/crypto/crypto$(SO)
 CHIBI_IO_COMPILED_LIBS = lib/chibi/io/io$(SO)
 CHIBI_OPT_COMPILED_LIBS = lib/chibi/optimize/rest$(SO) \
 	lib/chibi/optimize/profile$(SO)
 EXTRA_COMPILED_LIBS ?=
-
-ifndef EXCLUDE_POSIX_LIBS
-CHIBI_COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS)
-else
-CHIBI_COMPILED_LIBS += $(CHIBI_WIN32_COMPILED_LIBS)
-endif
 
 COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	$(CHIBI_OPT_COMPILED_LIBS) $(CHIBI_CRYPTO_COMPILED_LIBS) \
@@ -63,10 +42,6 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 	lib/srfi/39/param$(SO) lib/srfi/69/hash$(SO) lib/srfi/95/qsort$(SO) \
 	lib/srfi/98/env$(SO) lib/srfi/144/math$(SO) lib/srfi/160/uvprims$(SO) \
 	lib/scheme/time$(SO)
-
-ifndef EXCLUDE_POSIX_LIBS
-COMPILED_LIBS += lib/srfi/18/threads$(SO)
-endif
 
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h include/chibi/gc_heap.h
@@ -83,37 +58,10 @@ HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
 META_FILES = lib/.chibi.meta lib/.srfi.meta lib/.scheme.meta
 
 ########################################################################
+# This includes the rules to build optional libraries.
+# It also pulls in Makefile.detect for platform detection.
 
 include Makefile.libs
-
-########################################################################
-# Library config.
-#
-# This is to allow "make SEXP_USE_BOEHM=1" and "make SEXP_USE_DL=0" to
-# automatically include the necessary compiler and linker flags in
-# addition to setting those features.  If not using GNU make just
-# comment out the ifs and use the else branches for the defaults.
-
-ifeq ($(SEXP_USE_BOEHM),1)
-GCLDFLAGS := -lgc
-XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%) -DSEXP_USE_BOEHM=1
-else
-GCLDFLAGS :=
-XCPPFLAGS := $(CPPFLAGS) -Iinclude $(D:%=-DSEXP_USE_%)
-endif
-
-ifeq ($(SEXP_USE_DL),0)
-XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) -lm
-XCFLAGS   := -Wall -DSEXP_USE_DL=0 -g -g3 -O3 $(CFLAGS)
-else
-XLDFLAGS  := $(LDFLAGS) $(RLDFLAGS) $(GCLDFLAGS) $(LIBDL) -lm
-XCFLAGS   := -Wall -g -g3 -O3 $(CFLAGS)
-endif
-
-ifeq ($(PLATFORM),solaris)
-XLDFLAGS += -lsocket
-XCPPFLAGS += -D_POSIX_PTHREAD_SEMANTICS
-endif
 
 ########################################################################
 

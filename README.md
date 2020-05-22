@@ -12,22 +12,32 @@ allowing multiple VMs to run simultaneously in different OS threads.
 There are no external dependencies so is relatively easy to drop into
 any project.
 
-The default repl language contains all bindings from
-[R7RS small](http://trac.sacrideo.us/wg/wiki/R7RSHomePage),
-available explicitly as the `(scheme small)` library.  The
-language is built in layers, however - see the manual for
-instructions on compiling with fewer features or requesting
-a smaller language on startup.
+Despite the small size, Chibi-Scheme attempts to do The Right Thing.
+The default settings include:
+
+* a full numeric tower, with rational and complex numbers
+* full and seemless Unicode support
+* low-level and high-level hygienic macros
+* an extensible module system
+
+Specifically, the default repl language contains all bindings from
+[R7RS small](https://small.r7rs.org/), available explicitly as the
+`(scheme small)` library.  The language is built in layers, however -
+see the manual for instructions on compiling with fewer features or
+requesting a smaller language on startup.
 
 Chibi-Scheme is known to work on **32** and **64-bit** Linux, FreeBSD,
-NetBSD, OpenBSD and OS X, Plan 9, Windows (using Cygwin), iOS, Android,
+NetBSD, OpenBSD and OS X, Plan 9, Windows, iOS, Android,
 ARM and [Emscripten](https://kripken.github.io/emscripten-site).  Basic
 support for native Windows desktop also exists. See README-win32.md
 for details and build instructions.
 
-To build on most platforms just run `make && make test`.  This will
-provide a shared library *libchibi-scheme*, as well as a sample
-*chibi-scheme* command-line repl.  You can then run
+To build on most platforms just run `make && make test`.  This has a
+few conditionals assuming GNU make.  If using another make, there are
+a few parameters in Makefile.detect you need to set by hand.
+
+This will provide a shared library *libchibi-scheme*, as well as a
+sample *chibi-scheme* command-line repl.  You can then run
 
     sudo make install
 
