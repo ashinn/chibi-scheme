@@ -1524,8 +1524,10 @@ sexp sexp_string_to_symbol_op (sexp ctx, sexp self, sexp_sint_t n, sexp str) {
 
 sexp sexp_make_vector_op (sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp dflt) {
   sexp vec, *x;
-  int i, clen = sexp_unbox_fixnum(len);
+  sexp_sint_t i, clen = sexp_unbox_fixnum(len);
   if (! clen) return sexp_global(ctx, SEXP_G_EMPTY_VECTOR);
+  if (clen < 0 || clen > SEXP_MAX_VECTOR_LENGTH)
+    return sexp_xtype_exception(ctx, self, "vector length out of range", len);
   vec = sexp_alloc_tagged(ctx, sexp_sizeof(vector) + clen*sizeof(sexp),
                           SEXP_VECTOR);
   if (sexp_exceptionp(vec)) return vec;
