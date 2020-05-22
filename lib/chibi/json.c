@@ -516,6 +516,8 @@ sexp unparse_json (sexp ctx, sexp self, sexp obj) {
     res = sexp_c_string(ctx, "true", -1);
   } else if (obj == SEXP_NULL) {
     res = sexp_c_string(ctx, "null", -1);
+  } else if (sexp_pairp(obj)) {
+    res = sexp_json_unparse_exception(ctx, self, "unable to encode elemente: key-value pair out of object", obj);
   } else {
     res = sexp_json_unparse_exception(ctx, self, "unable to encode element", obj);
   }
