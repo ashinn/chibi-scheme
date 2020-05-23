@@ -336,6 +336,28 @@ sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj) {
 }
 
 
+#define FLONUM_SIGNIFICANT_DIGITS 10
+#define FLONUM_EXP_MAX_DIGITS 3
+sexp unparse_json_flonum(sexp ctx, sexp self, const sexp obj) {
+  sexp_gc_var2(res, tmp);
+  sexp_gc_preserve2(ctx, res, tmp);
+  res = SEXP_NULL;
+  char cout[FLONUM_SIGNIFICANT_DIGITS + FLONUM_EXP_MAX_DIGITS + 5];
+    // Extra space for signs (x2), dot, E and \0
+
+  if (sexp_infp(obj) || sexp_nanp(obj)) {
+    res = sexp_json_unparse_exception(ctx, self, "unable to encode number", obj);
+    sexp_gc_release2(ctx);
+    return res;
+  }
+
+  sprintf(cout, "%.*G", FLONUM_SIGNIFICANT_DIGITS, sexp_flonum_value(obj));
+  res = sexp_c_string(ctx, cout, -1);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+
 sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
@@ -510,6 +532,8 @@ sexp unparse_json (sexp ctx, sexp self, sexp obj) {
     res = unparse_json_array(ctx, self, obj);
   } else if(sexp_fixnump(obj)) {
     res = unparse_json_fixnum(ctx, self, obj);
+  } else if (sexp_flonump(obj)) {
+    res = unparse_json_flonum(ctx, self, obj); // OTHER TYPES? bignum etc?
   } else if (obj == SEXP_FALSE) {
     res = sexp_c_string(ctx, "false", -1);
   } else if (obj == SEXP_TRUE) {
