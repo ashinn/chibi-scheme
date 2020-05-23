@@ -327,10 +327,29 @@ sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   res = SEXP_NULL;
+  int sign = 1;
   long num = sexp_unbox_fixnum(obj);
-  char* buff = alloca( num==0 ? 2 : (log10(abs(num))+3) );
-  sprintf(buff, "%ld", num);
-  res = sexp_c_string(ctx, buff, -1);
+  char digit;
+  if (num == 0) {
+    res = sexp_c_string(ctx, "0", -1);
+  } else {
+    if (num < 0) {
+      sign = -1;
+      num = labs(num);
+    }
+    while (num > 0) {
+      digit = '0' + num%10;
+      num /= 10;
+
+      tmp = sexp_c_string(ctx, &digit, 1);
+      res = sexp_cons(ctx, tmp, res);
+    }
+    if (sign==-1) {
+      tmp = sexp_c_string(ctx, "-", -1);
+      res = sexp_cons(ctx, tmp, res);
+    }
+    res = sexp_string_concatenate(ctx, res, SEXP_FALSE);
+  }
   sexp_gc_release2(ctx);
   return res;
 }
