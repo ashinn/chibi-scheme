@@ -179,9 +179,9 @@ CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
 CHIBI_WIN32_COMPILED_LIBS = lib/chibi/win32/process-win32$(SO)
 
 ifndef EXCLUDE_POSIX_LIBS
-COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS)
+CHIBI_COMPILED_LIBS += $(CHIBI_POSIX_COMPILED_LIBS)
 else
-COMPILED_LIBS += $(CHIBI_WIN32_COMPILED_LIBS)
+CHIBI_COMPILED_LIBS += $(CHIBI_WIN32_COMPILED_LIBS)
 endif
 
 ########################################################################
