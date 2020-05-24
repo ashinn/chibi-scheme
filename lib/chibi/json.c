@@ -326,7 +326,7 @@ sexp unparse_json (sexp ctx, sexp self, sexp obj);
 sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
-  res = SEXP_NULL;
+  res = SEXP_VOID;
   int sign = 1;
   long num = sexp_unbox_fixnum(obj);
   char digit;
@@ -360,7 +360,7 @@ sexp unparse_json_fixnum(sexp ctx, sexp self, const sexp obj) {
 sexp unparse_json_flonum(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
-  res = SEXP_NULL;
+  res = SEXP_VOID;
   char cout[FLONUM_SIGNIFICANT_DIGITS + FLONUM_EXP_MAX_DIGITS + 5];
     // Extra space for signs (x2), dot, E and \0
 
@@ -380,7 +380,7 @@ sexp unparse_json_flonum(sexp ctx, sexp self, const sexp obj) {
 sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
-  res = SEXP_NULL;
+  res = SEXP_VOID;
 
   tmp = sexp_c_string(ctx, "\"", -1);
   res = sexp_cons(ctx, tmp, res);
@@ -448,7 +448,7 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
 sexp unparse_json_array(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
-  res = SEXP_NULL;
+  res = SEXP_VOID;
 
   tmp = sexp_c_string(ctx, "[", -1);
   res = sexp_cons(ctx, tmp, res);
@@ -482,7 +482,7 @@ sexp unparse_json_array(sexp ctx, sexp self, const sexp obj) {
 sexp unparse_json_object(sexp ctx, sexp self, const sexp obj) {
   sexp_gc_var6(res, tmp, it, cur, key, val);
   sexp_gc_preserve6(ctx, res, tmp, it, cur, key, val);
-  res = SEXP_NULL;
+  res = SEXP_VOID;
 
   tmp = sexp_c_string(ctx, "{", -1);
   res = sexp_cons(ctx, tmp, res);
@@ -538,7 +538,7 @@ except:
 sexp unparse_json (sexp ctx, sexp self, sexp obj) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
-  res = SEXP_NULL;
+  res = SEXP_VOID;
 
   if( sexp_symbolp(obj) ) {
     obj = sexp_symbol_to_string(ctx, obj);
