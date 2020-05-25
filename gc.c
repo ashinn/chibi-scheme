@@ -270,7 +270,7 @@ static void sexp_mark_one (sexp ctx, sexp* types, sexp x) {
   if (len >= 0) {
     p = (sexp*) (((char*)x) + sexp_type_field_base(t));
     q = p + len;
-    while (p < q && ! (*q && sexp_pointerp(*q)))
+    while (p < q && (*q && sexp_pointerp(*q) ? sexp_markedp(*q) : 1))
       q--;                      /* skip trailing immediates */
     while (p < q && *q == q[-1])
       q--;                      /* skip trailing duplicates */
