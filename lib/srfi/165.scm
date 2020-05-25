@@ -21,7 +21,7 @@
 ;; CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;; SOFTWARE.
 
-(define-record-type <computation-environment-variable>
+(define-record-type Computation-Environment-Variable
   (make-environment-variable name default immutable? id)
   environment-variable?
   (name environment-variable-name)
@@ -40,12 +40,12 @@
 
 (define variable-comparator
   (make-comparator environment-variable?
-		   eq?
-		   (lambda (x y)
-		     (< (environment-variable-id x)
-			(environment-variable-id y)))
-		   (lambda (x . y)
-		     (environment-variable-id x))))
+                   eq?
+                   (lambda (x y)
+                     (< (environment-variable-id x)
+                        (environment-variable-id y)))
+                   (lambda (x . y)
+                     (environment-variable-id x))))
 
 (define default-computation
   (make-computation-environment-variable 'default-computation #f #f))
@@ -81,14 +81,14 @@
        (define var (make-environment-variable 'var e immutable i))
        ...
        (define (make-environment)
-	 (let ((env (make-vector (+ n 2))))
-	   (environment-set-global! env (hash-table variable-comparator))
-	   (environment-set-local! env (mapping variable-comparator))
-	   (vector-set! env (+ i 2) (box e))
-	   ...
-	   env))
+         (let ((env (make-vector (+ n 2))))
+           (environment-set-global! env (hash-table variable-comparator))
+           (environment-set-local! env (mapping variable-comparator))
+           (vector-set! env (+ i 2) (box e))
+           ...
+           env))
        (define (run computation)
-	 (execute computation (make-environment)))))
+         (execute computation (make-environment)))))
     ((_ make-environment run ((v d) . v*) n (p ...))
      (%define-computation-type make-environment run v* (+ n 1) (p ... (v d e #f n))))
     ((_ make-environment run ((v d "immutable") . v*) n (p ...))
@@ -101,58 +101,59 @@
 (define (computation-environment-ref env var)
   (if (predefined? var)
       (unbox (environment-cell env var))
-      (mapping-ref (environment-local env)
-		   var
-		   (lambda ()
-		     (hash-table-ref/default (environment-global env)
-					     var
-					     (environment-variable-default var)))
-		   unbox)))
+      (mapping-ref
+       (environment-local env)
+       var
+       (lambda ()
+         (hash-table-ref/default (environment-global env)
+                                 var
+                                 (environment-variable-default var)))
+       unbox)))
 
 (define (computation-environment-update env . arg*)
   (let ((new-env (vector-copy env)))
     (let loop ((arg* arg*)
-	       (local (environment-local env)))
+               (local (environment-local env)))
       (if (null? arg*)
-	  (begin
-	    (environment-set-local! new-env local)
-	    new-env)
-	  (let ((var (car arg*))
-		(val (cadr arg*)))
-	    (if (predefined? var)
-		(begin
-		  (environment-cell-set! new-env var (box val))
-		  (loop (cddr arg*) local))
-		(loop (cddr arg*) (mapping-set local var (box val)))))))))
+          (begin
+            (environment-set-local! new-env local)
+            new-env)
+          (let ((var (car arg*))
+                (val (cadr arg*)))
+            (if (predefined? var)
+                (begin
+                  (environment-cell-set! new-env var (box val))
+                  (loop (cddr arg*) local))
+                (loop (cddr arg*) (mapping-set local var (box val)))))))))
 
 (define (computation-environment-update! env var val)
   (if (predefined? var)
       (set-box! (environment-cell env var) val)
       (mapping-ref (environment-local env)
-		   var
-		   (lambda ()
-		     (hash-table-set! (environment-global env) var val))
-		   (lambda (cell)
-		     (set-box! cell val)))))
+                   var
+                   (lambda ()
+                     (hash-table-set! (environment-global env) var val))
+                   (lambda (cell)
+                     (set-box! cell val)))))
 
 (define (computation-environment-copy env)
   (let ((global (hash-table-copy (environment-global env) #t)))
     (mapping-for-each (lambda (var cell)
-			(hash-table-set! global var (unbox cell)))
-		      (environment-local env))
+                        (hash-table-set! global var (unbox cell)))
+                      (environment-local env))
     (let ((new-env (make-vector (vector-length env))))
       (environment-set-global! new-env global)
       (environment-set-local! new-env (mapping variable-comparator))
       (do ((i (- (vector-length env) 1) (- i 1)))
-	  ((< i 2)
-	   new-env)
-	(vector-set! new-env i (box (unbox (vector-ref env i))))))))
+          ((< i 2)
+           new-env)
+        (vector-set! new-env i (box (unbox (vector-ref env i))))))))
 
 (define (execute computation env)
   (let ((coerce (if (procedure? computation)
-		    values
-		    (or (computation-environment-ref env default-computation)
-			(error "not a computation" computation)))))
+                    values
+                    (or (computation-environment-ref env default-computation)
+                        (error "not a computation" computation)))))
     ((coerce computation) env)))
 
 (define (make-computation proc)
@@ -168,25 +169,25 @@
   (computation-each-in-list (cons a a*)))
 
 (define (computation-each-in-list a*)
- (make-computation
+  (make-computation
    (lambda (compute)
      (let loop ((a (car a*)) (a* (cdr a*)))
        (if (null? a*)
-	   (compute a)
-	   (begin
-	     (compute a)
-	     (loop (car a*) (cdr a*))))))))
+           (compute a)
+           (begin
+             (compute a)
+             (loop (car a*) (cdr a*))))))))
 
 (define (computation-bind a . f*)
   (make-computation
    (lambda (compute)
      (let loop ((a a) (f* f*))
        (if (null? f*)
-	   (compute a)
-	   (loop (call-with-values
-		     (lambda () (compute a))
-		   (car f*))
-		 (cdr f*)))))))
+           (compute a)
+           (loop (call-with-values
+                     (lambda () (compute a))
+                   (car f*))
+                 (cdr f*)))))))
 
 (define (computation-ask)
   (lambda (env)
@@ -205,11 +206,12 @@
   (syntax-rules ()
     ((_ () ((id var tmp) ...) expr ... computation)
      (let ((tmp var) ...)
-       (computation-bind (computation-ask)
-	 (lambda (env)
-	   (let ((id (computation-environment-ref env tmp)) ...)
-	     expr ...
-	     computation)))))
+       (computation-bind
+        (computation-ask)
+        (lambda (env)
+          (let ((id (computation-environment-ref env tmp)) ...)
+            expr ...
+            computation)))))
     ((_ ((id var) . rest) (p ...) expr ... computation)
      (%fn rest (p ... (id var tmp)) expr ... computation))
     ((_ (id . rest) (p ...) expr ... computation)
@@ -225,9 +227,9 @@
     ((_ () ((x u) ...) ((a b) ...))
      (let ((u x) ... (b a) ...)
        (computation-local
-	   (lambda (env)
-	     (computation-environment-update env u ...) )
-	 (computation-each b ...))))
+        (lambda (env)
+          (computation-environment-update env u ...) )
+        (computation-each b ...))))
     ((_ ((var val) . rest) (p ...) () a* ...)
      (%with rest (p ... (var u) (val v)) () a* ...))
     ((_ () p* (q ...) a . a*)
@@ -242,10 +244,11 @@
   (syntax-rules ()
     ((_ ((var u val v) ...))
      (let ((u var) ... (v val) ...)
-       (computation-bind (computation-ask)
-	 (lambda (env)
-	   (computation-environment-update! env u v) ...
-	   (computation-pure (if #f #f))))))
+       (computation-bind
+        (computation-ask)
+        (lambda (env)
+          (computation-environment-update! env u v) ...
+          (computation-pure (if #f #f))))))
     ((_ (var val) r ... (p ...))
      (%with! r ... (p ... (var u val v))))))
 
@@ -254,24 +257,27 @@
    (lambda (compute)
      (let loop ((a a) (a* a*))
        (if (null? a*)
-	   (compute a)
-	   (begin
-	     (compute (computation-local
-			  (lambda (env)
-			    (computation-environment-copy env))
-			a))
-	     (loop (car a*) (cdr a*))))))))
+           (compute a)
+           (begin
+             (compute (computation-local
+                       (lambda (env)
+                         (computation-environment-copy env))
+                       a))
+             (loop (car a*) (cdr a*))))))))
 
 (define (computation-bind/forked computation . proc*)
   (apply computation-bind
-	 (computation-local computation-environment-copy computation)
-	 proc*))
+         (computation-local computation-environment-copy computation)
+         proc*))
 
 (define (computation-sequence fmt*)
-  (fold-right (lambda (fmt res)
-		(computation-bind res
-		  (lambda (vals)
-		    (computation-bind fmt
-		      (lambda (val)
-			(computation-pure (cons val vals)))))))
-	      (computation-pure '()) fmt*))
+  (fold-right
+   (lambda (fmt res)
+     (computation-bind
+      res
+      (lambda (vals)
+        (computation-bind
+         fmt
+         (lambda (val)
+           (computation-pure (cons val vals)))))))
+   (computation-pure '()) fmt*))
