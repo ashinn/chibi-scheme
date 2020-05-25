@@ -56,7 +56,7 @@
                                 (fn (output)
                                   (set! resume #f)
                                   (fn () (return nothing) nothing)))))))
-               (consumer generate)))))
+              (fn () (consumer generate))))))
 
 (define (call-with-output-generators producers consumer)
   (let lp ((ls producers) (generators '()))
@@ -172,13 +172,13 @@
         (if (proportional-width? col-width)
             (case align
               ((right)
-               (lambda (str) (fn (width) (padded/left (scale-width width) str))))
+               (lambda (str) (fn (width) (padded (scale-width width) str))))
               ((center)
                (lambda (str) (fn (width) (padded/both (scale-width width) str))))
               (else
                (lambda (str) (fn (width) (padded/right (scale-width width) str)))))
             (case align
-              ((right) (lambda (str) (padded/left col-width str)))
+              ((right) (lambda (str) (padded col-width str)))
               ((center) (lambda (str) (padded/both col-width str)))
               (else (lambda (str) (padded/right col-width str))))))
       (define (affix x)
@@ -205,8 +205,8 @@
               pad)))
        ;; generator
        (if (proportional-width? col-width)
-           (fn (width)
-             (with ((width (scale-width width)))
+           (fn ((orig-width width))
+             (with ((width (scale-width orig-width)))
                gen))
            (with ((width col-width)) gen))
        infinite?)))
@@ -309,7 +309,7 @@
 
 ;; break lines only, don't join short lines or justify
 (define (wrapped/char . ls)
-  (fn (output width string-width)
+  (fn ((orig-output output) width string-width)
     (define (kons-in-line str)
       (fn (col)
         (let ((len ((or string-width string-length) str))
@@ -318,13 +318,13 @@
            ((equal? "" str)
             nothing)
            ((or (<= len space) (not (positive? space)))
-            (each (output str) (output "\n")))
+            (each (orig-output str) (orig-output "\n")))
            (else
             (each
              ;; TODO: when splitting by string-width, substring needs
              ;; to be provided
-             (output (substring str 0 space))
-             (output "\n")
+             (orig-output (substring str 0 space))
+             (orig-output "\n")
              (fn () (kons-in-line (substring str space len)))))))))
     (with ((output
             (lambda (str)
@@ -440,12 +440,12 @@
                           diff
                           (remainder diff (- len 1))))
                  (p (open-output-string)))
-            (display (car ls) p)
+            (write-string (car ls) p)
             (let lp ((ls (cdr ls)) (i 1))
               (when (pair? ls)
-                (display sep p)
+                (write-string sep p)
                 (if (<= i rem) (write-char #\space p))
-                (display (car ls) p)
+                (write-string (car ls) p)
                 (lp (cdr ls) (+ i 1))))
             (displayed (get-output-string p)))))
     (define (justify-last ls)

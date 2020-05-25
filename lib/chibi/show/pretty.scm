@@ -1,5 +1,5 @@
 ;; pretty.scm -- pretty printing format combinator
-;; Copyright (c) 2006-2018 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2006-2020 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -32,6 +32,7 @@
                 ((pair? rest)
                  (call-with-shared-ref/cdr rest
                                            shares
+                                           each
                                            (fn () (lp rest))
                                            sep))
                 (else (each sep ". " (fmt rest)))))))))))
@@ -41,8 +42,11 @@
    str
    (string-find str pred (string-index->cursor str i))))
 
+(define (write-to-string x)
+  (call-with-output-string (lambda (out) (write x out))))
+
 (define (try-fitted2 proc fail)
-  (fn (width output)
+  (fn (width (orig-output output))
     (let ((out (open-output-string)))
       (call-with-current-continuation
        (lambda (abort)
@@ -69,21 +73,22 @@
                  (port out))
             proc)
           ;; fitted successfully
-          (output (get-output-string out))))))))
+          (fn () (orig-output (get-output-string out)))))))))
 
 (define (try-fitted proc . fail)
-  (if (null? fail)
-      proc
-      (try-fitted2 proc (apply try-fitted fail))))
+  (let lp ((proc proc) (ls fail))
+    (if (null? ls)
+        proc
+        (try-fitted2 proc (lp (car ls) (cdr ls))))))
 
 (define (fits-in-width width proc)
   (call-with-current-continuation
    (lambda (abort)
      (show
       #f
-      (fn (output)
+      (fn ((orig-output output))
         (define (output* str)
-          (each (output str)
+          (each (orig-output str)
                 (fn (col)
                   (if (>= col width)
                       (abort #f)
@@ -284,6 +289,7 @@
                  (call-with-shared-ref
                   (cadr x)
                   shares
+                  each
                   (pp-flat (cadr x) pp shares)))))
      (else
       (each "("
@@ -336,7 +342,7 @@
             (else (lambda (n) (with ((radix 10)) (numeric n)))))))
       (let pp ((obj obj))
         (call-with-shared-ref
-         obj shares
+         obj shares each
          (fn ()
            (cond
             ((pair? obj)
@@ -346,7 +352,7 @@
             ((number? obj)
              (write-number obj))
             (else
-             (write-with-shares obj shares)))))))))
+             (displayed (write-to-string obj))))))))))
 
 (define (pretty obj)
   (fn ()
@@ -366,3 +372,5 @@
   (fn ()
     (each (pp obj (extract-shared-objects #f #f))
           fl)))
+
+(define pretty-color pretty)

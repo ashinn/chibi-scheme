@@ -7,9 +7,7 @@
 ;;> \section{String utilities}
 
 (define (write-to-string x)
-  (let ((out (open-output-string)))
-    (write x out)
-    (get-output-string out)))
+  (call-with-output-string (lambda (out) (write x out))))
 
 (define (string-replace-all str ch1 ch2)
   (let ((out (open-output-string)))
@@ -45,7 +43,7 @@
     (let ((esc-str (cond ((char? esc) (string esc))
                          ((not esc) (string quot))
                          (else esc))))
-      (fn (output)
+      (fn ((orig-output output))
         (define (output* str)
           (let ((start (string-cursor-start str))
                 (end (string-cursor-end str)))
@@ -53,19 +51,19 @@
               (define (collect)
                 (if (eq? i j) "" (substring-cursor str i j)))
               (if (string-cursor>=? j end)
-                  (output (collect))
+                  (orig-output (collect))
                   (let ((c (string-cursor-ref str j))
                         (j2 (string-cursor-next str j)))
                     (cond
                      ((or (eqv? c quot) (eqv? c esc))
-                      (each (output (collect))
-                            (output esc-str)
+                      (each (orig-output (collect))
+                            (orig-output esc-str)
                             (fn () (lp j j2))))
                      ((rename c)
                       => (lambda (c2)
-                           (each (output (collect))
-                                 (output esc-str)
-                                 (output (if (char? c2) (string c2) c2))
+                           (each (orig-output (collect))
+                                 (orig-output esc-str)
+                                 (orig-output (if (char? c2) (string c2) c2))
                                  (fn () (lp j2 j2)))))
                      (else
                       (lp i j2))))))))
@@ -409,77 +407,15 @@
          (displayed str)))))
 
 (define (numeric/comma n . o)
-  (fn (comma-rule)
-    (with ((comma-rule (or comma-rule 3)))
+  (fn ((orig-comma-rule comma-rule))
+    (with ((comma-rule (or orig-comma-rule 3)))
       (apply numeric n o))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; shared structure utilities
-
-(define (extract-shared-objects x cyclic-only?)
-  (let ((seen (make-hash-table eq?)))
-    ;; find shared references
-    (let find ((x x))
-      (cond ;; only interested in pairs and vectors (and records later)
-       ((or (pair? x) (vector? x))
-        ;; increment the count
-        (hash-table-update!/default seen x (lambda (n) (+ n 1)) 0)
-        ;; walk if this is the first time
-        (cond
-         ((> (hash-table-ref seen x) 1))
-         ((pair? x)
-          (find (car x))
-          (find (cdr x)))
-         ((vector? x)
-          (do ((i 0 (+ i 1)))
-              ((= i (vector-length x)))
-            (find (vector-ref x i)))))
-        ;; delete if this shouldn't count as a shared reference
-        (if (and cyclic-only? (<= (hash-table-ref/default seen x 0) 1))
-            (hash-table-delete! seen x)))))
-    ;; extract shared references
-    (let ((res (make-hash-table eq?))
-          (count 0))
-      (hash-table-walk
-       seen
-       (lambda (k v)
-         (cond
-          ((> v 1)
-           (hash-table-set! res k (cons count #f))
-           (set! count (+ count 1))))))
-      (cons res 0))))
-
-(define (maybe-gen-shared-ref cell shares)
-  (cond
-    ((pair? cell)
-     (set-car! cell (cdr shares))
-     (set-cdr! cell #t)
-     (set-cdr! shares (+ (cdr shares) 1))
-     (each "#" (number->string (car cell)) "="))
-    (else nothing)))
-
-(define (call-with-shared-ref obj shares proc)
-  (let ((cell (hash-table-ref/default (car shares) obj #f)))
-    (if (and (pair? cell) (cdr cell))
-        (each "#" (number->string (car cell)) "#")
-        (each (maybe-gen-shared-ref cell shares) proc))))
-
-(define (call-with-shared-ref/cdr obj shares proc . o)
-  (let ((sep (displayed (if (pair? o) (car o) "")))
-        (cell (hash-table-ref/default (car shares) obj #f)))
-    (cond
-      ((and (pair? cell) (cdr cell))
-       (each sep ". #" (number->string (car cell)) "#"))
-      ((pair? cell)
-       (each sep ". " (maybe-gen-shared-ref cell shares) "(" proc ")"))
-      (else
-       (each sep proc)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; written
 
 (define (write-with-shares obj shares)
-  (fn (radix precision)
+  (fn ((orig-radix radix) precision)
     (let ((write-number
            ;; Shortcut for numeric values.  Try to rely on
            ;; number->string for standard radixes and no precision,
@@ -487,11 +423,12 @@
            ;; radix.
            (cond
             ((and (not precision)
-                  (assv radix '((16 . "#x") (10 . "") (8 . "#o") (2 . "#b"))))
+                  (assv orig-radix
+                        '((16 . "#x") (10 . "") (8 . "#o") (2 . "#b"))))
              => (lambda (cell)
                   (lambda (n)
                     (cond
-                     ((eqv? radix 10)
+                     ((eqv? orig-radix 10)
                       (displayed (number->string n (car cell))))
                      ((exact? n)
                       (each (cdr cell) (number->string n (car cell))))
@@ -501,7 +438,7 @@
       ;; `wr' is the recursive writer closing over the shares.
       (let wr ((obj obj))
         (call-with-shared-ref
-         obj shares
+         obj shares each
          (fn ()
            (cond
             ((pair? obj)
@@ -517,7 +454,7 @@
                                  (each
                                   " "
                                   (call-with-shared-ref/cdr
-                                   rest shares
+                                   rest shares each
                                    (fn () (lp rest)))))
                                 (else
                                  (each " . " (wr rest))))))))

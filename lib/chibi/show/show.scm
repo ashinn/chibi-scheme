@@ -1,5 +1,5 @@
 ;; show.scm -- additional combinator formatters
-;; Copyright (c) 2013-2017 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2013-2020 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> A library of procedures for formatting Scheme objects to text in
@@ -86,9 +86,10 @@
 ;;; String transformations
 
 (define (with-string-transformer proc . ls)
-  (fn (output)
-    (let ((output* (lambda (str) (fn () (output (proc str))))))
-      (with ((output output*)) (each-in-list ls)))))
+  (fn ((orig-output output))
+    (let ((output* (lambda (str) (orig-output (proc str)))))
+      (with ((output output*))
+        (each-in-list ls)))))
 
 ;;> Show each of \var{ls}, uppercasing all generated text.
 (define (upcased . ls) (apply with-string-transformer string-upcase ls))
@@ -215,17 +216,17 @@
     (call-with-current-continuation
      (lambda (return)
        (let ((chars-written 0)
-             (output (or orig-output output-default)))
+             (orig-output (or orig-output output-default)))
          (define (output* str)
            (let ((len (string-width str)))
              (set! chars-written (+ chars-written len))
              (if (> chars-written width)
                  (let* ((end (max 0 (- len (- chars-written width))))
                         (s (substring str 0 end)))
-                   (each (output s)
+                   (each (orig-output s)
                          (with! (output orig-output))
                          (fn () (return nothing))))
-                 (output str))))
+                 (orig-output str))))
          (with ((output output*))
            (each-in-list ls)))))))
 

@@ -1,0 +1,13 @@
+
+(define-library (srfi 166 columnar)
+  (import (scheme base)
+          (scheme char)
+          (scheme file)
+          (srfi 1)
+          (srfi 117)
+          (srfi 130)
+          (srfi 166 base)
+          (chibi optional)
+          )
+  (export-all)
+  (include "../../chibi/show/column.scm"))

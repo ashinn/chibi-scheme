@@ -3,5 +3,6 @@
   (import (scheme base) (chibi show base))
   (export as-red as-blue as-green as-cyan as-yellow
           as-magenta as-white as-black
-          as-bold as-underline)
+          as-bold as-underline
+          as-color as-true-color)
   (include "color.scm"))

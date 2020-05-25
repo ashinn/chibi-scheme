@@ -8,7 +8,8 @@
    output-default extract-shared-objects write-to-string write-with-shares
    call-with-shared-ref call-with-shared-ref/cdr)
   (import (scheme base) (scheme write) (scheme complex) (scheme inexact)
-          (srfi 1) (srfi 69) (chibi string) (chibi monad environment))
+          (srfi 1) (srfi 69) (chibi string) (chibi monad environment)
+          (chibi show shared))
   (cond-expand
    (chibi
     (import (only (chibi) let-optionals*)))

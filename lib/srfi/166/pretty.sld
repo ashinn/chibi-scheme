@@ -1,0 +1,12 @@
+
+(define-library (srfi 166 pretty)
+  (import (scheme base)
+          (scheme char)
+          (scheme write)
+          (chibi show shared)
+          (chibi string)
+          (srfi 1)
+          (srfi 69)
+          (srfi 166 base))
+  (export-all)
+  (include "../../chibi/show/pretty.scm"))
