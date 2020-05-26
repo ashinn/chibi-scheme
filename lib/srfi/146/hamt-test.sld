@@ -1,0 +1,6 @@
+(define-library (srfi 146 hamt-test)
+  (import (scheme base)
+          (chibi test)
+          (only (srfi 146 hamt) fragment->mask))
+  (export run-hamt-core-tests)
+  (include "hamt-test.scm"))

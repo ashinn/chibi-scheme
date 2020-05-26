@@ -20,6 +20,7 @@ The following distributed SRFIs use the reference implementations:
   (srfi 134) is Shiro Kawai's implementation
   (srfi 135) is Will Clinger's implementation
   (srfi 139), (srfi 146), (srfi 154), (srfi 165) are Marc Nieper-Wißkirchen's implementations
+  (srfi 146 hash) is Arthur Gleckler's Hash Array Mapped Trie implementation
 
 The benchmarks are based on the Racket versions of the classic
 Gabriel benchmarks from
