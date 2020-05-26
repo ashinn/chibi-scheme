@@ -312,6 +312,18 @@
 (define-syntax define-library define-library-transformer)
 (define-syntax module define-library-transformer)
 
+(define-syntax define-library-alias
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     ;; we need to load the original module first, not just find it,
+     ;; or else the includes would happen relative to the alias
+     (let ((name (cadr expr))
+           (orig (load-module (car (cddr expr)))))
+       (if (not orig)
+           (error "couldn't find library to alias" (car (cddr expr)))
+           `(,(rename 'add-module!) (,(rename 'quote) ,name)
+             (,(rename 'quote) ,orig)))))))
+
 (define-syntax pop-this-path
   (er-macro-transformer
    (lambda (expr rename compare)
