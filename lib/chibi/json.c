@@ -415,7 +415,7 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
           sprintf(cout, "\\t");
           break;
         default:
-          sprintf(cout, "%c", ch);
+          sprintf(cout, "%c", (int)ch);
           break;
       }
     } else if(ch <= 0xFFFF) {
