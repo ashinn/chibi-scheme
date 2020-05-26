@@ -26,9 +26,9 @@
   (import (scheme base)
           (srfi 1)
           (srfi 8)
-          (srfi 64)
           (srfi 146 hash)
-          (srfi 128))
+          (srfi 128)
+          (chibi test))
   (begin
     (define comparator (make-default-comparator))
 
@@ -68,30 +68,30 @@
       (test-group "Accessors"
         (define hashmap1 (hashmap comparator 'a 1 'b 2 'c 3))
 
-        (test-equal "hashmap-ref: key found"
+        (test "hashmap-ref: key found"
                     2
                     (hashmap-ref hashmap1 'b))
 
-        (test-equal "hashmap-ref: key not found/with failure"
+        (test "hashmap-ref: key not found/with failure"
                     42
                     (hashmap-ref hashmap1 'd (lambda () 42)))
 
         (test-error "hashmap-ref: key not found/without failure"
                     (hashmap-ref hashmap1 'd))
 
-        (test-equal "hashmap-ref: with success procedure"
+        (test "hashmap-ref: with success procedure"
                     (* 2 2)
                     (hashmap-ref hashmap1 'b (lambda () #f) (lambda (x) (* x x))))
 
-        (test-equal "hashmap-ref/default: key found"
+        (test "hashmap-ref/default: key found"
                     3
                     (hashmap-ref/default hashmap1 'c 42))
 
-        (test-equal "hashmap-ref/default: key not found"
+        (test "hashmap-ref/default: key not found"
                     42
                     (hashmap-ref/default hashmap1 'd 42))
 
-        (test-equal "hashmap-key-comparator"
+        (test "hashmap-key-comparator"
                     comparator
                     (hashmap-key-comparator hashmap1)))
 
@@ -103,59 +103,59 @@
         (define hashmap5 (hashmap-adjoin hashmap1 'c 4 'd 4 'd 5))
         (define hashmap0 (hashmap comparator))
 
-        (test-equal "hashmap-adjoin: key already in hashmap"
+        (test "hashmap-adjoin: key already in hashmap"
                     3
                     (hashmap-ref hashmap5 'c))
 
-        (test-equal "hashmap-adjoin: key set earlier"
+        (test "hashmap-adjoin: key set earlier"
                     4
                     (hashmap-ref hashmap5 'd))
 
-        (test-equal "hashmap-set: key already in hashmap"
+        (test "hashmap-set: key already in hashmap"
                     4
                     (hashmap-ref hashmap2 'c))
 
-        (test-equal "hashmap-set: key set earlier"
+        (test "hashmap-set: key set earlier"
                     5
                     (hashmap-ref hashmap2 'd))
 
-        (test-equal "hashmap-replace: key not in hashmap"
+        (test "hashmap-replace: key not in hashmap"
                     #f
                     (hashmap-ref/default (hashmap-replace hashmap1 'd 4) 'd #f))
 
-        (test-equal "hashmap-replace: key in hashmap"
+        (test "hashmap-replace: key in hashmap"
                     6
                     (hashmap-ref (hashmap-replace hashmap1 'c 6) 'c))
 
-        (test-equal "hashmap-delete"
+        (test "hashmap-delete"
                     42
                     (hashmap-ref/default (hashmap-delete hashmap1 'b) 'b 42))
 
-        (test-equal "hashmap-delete-all"
+        (test "hashmap-delete-all"
                     42
                     (hashmap-ref/default (hashmap-delete-all hashmap1 '(a b)) 'b 42))
 
-        (test-equal "hashmap-intern: key in hashmap"
+        (test "hashmap-intern: key in hashmap"
                     (list hashmap1 2)
                     (receive result
                         (hashmap-intern hashmap1 'b (lambda () (error "should not have been invoked")))
                       result))
 
-        (test-equal "hashmap-intern: key not in hashmap"
+        (test "hashmap-intern: key not in hashmap"
                     (list 42 42)
                     (receive (hashmap value)
                         (hashmap-intern hashmap1 'd (lambda () 42))
                       (list value (hashmap-ref hashmap 'd))))
 
-        (test-equal "hashmap-update"
+        (test "hashmap-update"
                     4
                     (hashmap-ref hashmap3 'b))
 
-        (test-equal "hashmap-update/default"
+        (test "hashmap-update/default"
                     16
                     (hashmap-ref hashmap4 'd))
 
-        (test-equal "hashmap-pop: empty hashmap"
+        (test "hashmap-pop: empty hashmap"
                     'empty
                     (hashmap-pop hashmap0 (lambda () 'empty)))
 
@@ -170,15 +170,15 @@
         (define hashmap0 (hashmap comparator))
         (define hashmap1 (hashmap comparator 'a 1 'b 2 'c 3))
 
-        (test-equal "hashmap-size: empty hashmap"
+        (test "hashmap-size: empty hashmap"
                     0
                     (hashmap-size hashmap0))
 
-        (test-equal "hashmap-size: non-empty hashmap"
+        (test "hashmap-size: non-empty hashmap"
                     3
                     (hashmap-size hashmap1))
 
-        (test-equal "hashmap-find: found in hashmap"
+        (test "hashmap-find: found in hashmap"
                     (list 'b 2)
                     (receive result
                         (hashmap-find (lambda (key value)
@@ -188,7 +188,7 @@
                                       (lambda () (error "should not have been called")))
                       result))
 
-        (test-equal "hashmap-find: not found in hashmap"
+        (test "hashmap-find: not found in hashmap"
                     (list 42)
                     (receive result
                         (hashmap-find (lambda (key value)
@@ -198,7 +198,7 @@
                                         42))
                       result))
 
-        (test-equal "hashmap-count"
+        (test "hashmap-count"
                     2
                     (hashmap-count (lambda (key value)
                                      (>= value 2))
@@ -224,15 +224,15 @@
                                  (<= value 2))
                                hashmap1)))
 
-        (test-equal "hashmap-keys"
+        (test "hashmap-keys"
                     3
                     (length (hashmap-keys hashmap1)))
 
-        (test-equal "hashmap-values"
+        (test "hashmap-values"
                     6
                     (fold + 0 (hashmap-values hashmap1)))
 
-        (test-equal "hashmap-entries"
+        (test "hashmap-entries"
                     (list 3 6)
                     (receive (keys values)
                         (hashmap-entries hashmap1)
@@ -246,11 +246,11 @@
                                       comparator
                                       hashmap1))
 
-        (test-equal "hashmap-map"
+        (test "hashmap-map"
                     20
                     (hashmap-ref hashmap2 "b"))
 
-        (test-equal "hashmap-for-each"
+        (test "hashmap-for-each"
                     6
                     (let ((counter 0))
                       (hashmap-for-each (lambda (key value)
@@ -258,32 +258,32 @@
                                         hashmap1)
                       counter))
 
-        (test-equal "hashmap-fold"
+        (test "hashmap-fold"
                     6
                     (hashmap-fold (lambda (key value acc)
                                     (+ value acc))
                                   0
                                   hashmap1))
 
-        (test-equal "hashmap-map->list"
+        (test "hashmap-map->list"
                     (+ (* 1 1) (* 2 2) (* 3 3))
                     (fold + 0 (hashmap-map->list (lambda (key value)
                                                    (* value value))
                                                  hashmap1)))
 
-        (test-equal "hashmap-filter"
+        (test "hashmap-filter"
                     2
                     (hashmap-size (hashmap-filter (lambda (key value)
                                                     (<= value 2))
                                                   hashmap1)))
 
-        (test-equal "hashmap-remove"
+        (test "hashmap-remove"
                     1
                     (hashmap-size (hashmap-remove (lambda (key value)
                                                     (<= value 2))
                                                   hashmap1)))
 
-        (test-equal "hashmap-partition"
+        (test "hashmap-partition"
                     (list 1 2)
                     (receive result
                         (hashmap-partition (lambda (key value)
@@ -296,28 +296,28 @@
           (define hashmap2 (alist->hashmap comparator '((a . 1) (b . 2) (c . 3))))
           (define hashmap3 (alist->hashmap! (hashmap-copy hashmap1) '((d . 4) '(c . 5))))
 
-          (test-equal "hashmap-copy: same size"
+          (test "hashmap-copy: same size"
                       3
                       (hashmap-size (hashmap-copy hashmap1)))
 
-          (test-equal "hashmap-copy: same comparator"
+          (test "hashmap-copy: same comparator"
                       comparator
                       (hashmap-key-comparator (hashmap-copy hashmap1)))
 
-          (test-equal "hashmap->alist"
+          (test "hashmap->alist"
                       (cons 'b 2)
                       (assq 'b (hashmap->alist hashmap1)))
 
-          (test-equal "alist->hashmap"
+          (test "alist->hashmap"
                       2
                       (hashmap-ref hashmap2 'b)
                       )
 
-          (test-equal "alist->hashmap!: new key"
+          (test "alist->hashmap!: new key"
                       4
                       (hashmap-ref hashmap3 'd))
 
-          (test-equal "alist->hashmap!: existing key"
+          (test "alist->hashmap!: existing key"
                       3
                       (hashmap-ref hashmap3 'c)))
 
@@ -378,31 +378,31 @@
           (define hashmap5 (hashmap comparator 'a 1 'c 3))
           (define hashmap6 (hashmap comparator 'd 4 'e 5 'f 6))
 
-          (test-equal "hashmap-union: new association"
+          (test "hashmap-union: new association"
                       4
                       (hashmap-ref (hashmap-union hashmap1 hashmap2) 'd))
 
-          (test-equal "hashmap-union: existing association"
+          (test "hashmap-union: existing association"
                       3
                       (hashmap-ref (hashmap-union hashmap1 hashmap4) 'c))
 
-          (test-equal "hashmap-union: three hashmaps"
+          (test "hashmap-union: three hashmaps"
                       6
                       (hashmap-size (hashmap-union hashmap1 hashmap2 hashmap6)))
 
-          (test-equal "hashmap-intersection: existing association"
+          (test "hashmap-intersection: existing association"
                       3
                       (hashmap-ref (hashmap-intersection hashmap1 hashmap4) 'c))
 
-          (test-equal "hashmap-intersection: removed association"
+          (test "hashmap-intersection: removed association"
                       42
                       (hashmap-ref/default (hashmap-intersection hashmap1 hashmap5) 'b 42))
 
-          (test-equal "hashmap-difference"
+          (test "hashmap-difference"
                       2
                       (hashmap-size (hashmap-difference hashmap2 hashmap6)))
 
-          (test-equal "hashmap-xor"
+          (test "hashmap-xor"
                       4
                       (hashmap-size (hashmap-xor hashmap2 hashmap6))))
 
@@ -422,7 +422,7 @@
           (test-assert "hashmap-comparator"
             (comparator? hashmap-comparator))
 
-          (test-equal "hashmap-keyed hashmap"
+          (test "hashmap-keyed hashmap"
                       (list "a" "a" "c" "d" "e")
                       (list (hashmap-ref hashmap0 hashmap1)
                             (hashmap-ref hashmap0 hashmap2)
