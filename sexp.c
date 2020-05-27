@@ -2138,7 +2138,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
 #if SEXP_USE_INFINITIES
       if (isinf(f) || isnan(f)) {
         numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
-        strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
+        strncpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0", NUMBUF_LEN-1);
       } else
 #endif
       {
@@ -2279,7 +2279,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
         if (i!=0) sexp_write_char(ctx, ' ', out);
 #if SEXP_BYTEVECTOR_HEX_LITERALS
 	if (str[i]) {
-	  sprintf(buf, "#x%02hhX", ((unsigned char*) str)[i]);
+	  snprintf(buf, 5, "#x%02hhX", ((unsigned char*) str)[i]);
 	  sexp_write_string(ctx, buf, out);
 	} else {
 	  sexp_write_char (ctx, '0', out);
@@ -2342,7 +2342,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
 #if SEXP_USE_INFINITIES
     if (isinf(f) || isnan(f)) {
       numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
-      strcpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0");
+      strncpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0", NUMBUF_LEN-1);
     } else
 #endif
     {

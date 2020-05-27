@@ -370,7 +370,7 @@ sexp unparse_json_flonum(sexp ctx, sexp self, const sexp obj) {
     return res;
   }
 
-  sprintf(cout, "%.*G", FLONUM_SIGNIFICANT_DIGITS, sexp_flonum_value(obj));
+  snprintf(cout, sizeof(cout), "%.*G", FLONUM_SIGNIFICANT_DIGITS, sexp_flonum_value(obj));
   res = sexp_c_string(ctx, cout, -1);
   sexp_gc_release2(ctx);
   return res;
@@ -385,7 +385,7 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
   tmp = sexp_c_string(ctx, "\"", -1);
   res = sexp_cons(ctx, tmp, res);
 
-  char cout[(2+USEQ_LEN)*2 + 1];
+  char cout[32];  /* oversized to avoid snprintf warnings */
   unsigned long ch, chh, chl;
 
   sexp_uint_t len = sexp_string_length(obj);
@@ -394,32 +394,32 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
     if(ch < 0x7F) {
       switch(ch) {
         case '\\':
-          sprintf(cout, "\\\\");
+          snprintf(cout, sizeof(cout), "\\\\");
           break;
         case '/':
-          sprintf(cout, "\\/");
+          snprintf(cout, sizeof(cout), "\\/");
           break;
         case '\b':
-          sprintf(cout, "\\b");
+          snprintf(cout, sizeof(cout), "\\b");
           break;
         case '\f':
-          sprintf(cout, "\\f");
+          snprintf(cout, sizeof(cout), "\\f");
           break;
         case '\n':
-          sprintf(cout, "\\n");
+          snprintf(cout, sizeof(cout), "\\n");
           break;
         case '\r':
-          sprintf(cout, "\\r");
+          snprintf(cout, sizeof(cout), "\\r");
           break;
         case '\t':
-          sprintf(cout, "\\t");
+          snprintf(cout, sizeof(cout), "\\t");
           break;
         default:
-          sprintf(cout, "%c", (int)ch);
+          snprintf(cout, sizeof(cout), "%c", (int)ch);
           break;
       }
     } else if(ch <= 0xFFFF) {
-      sprintf(cout,"\\u%04lX", ch);
+      snprintf(cout, sizeof(cout), "\\u%04lX", ch);
     } else {
       // Surrogate pair
       chh = (0xD800 - (0x10000 >> 10) + ((ch) >> 10));
@@ -429,7 +429,7 @@ sexp unparse_json_string(sexp ctx, sexp self, const sexp obj) {
         sexp_gc_release2(ctx);
         return res;
       }
-      sprintf(cout, "\\u%04lX\\u%04lX", chh, chl);
+      snprintf(cout, sizeof(cout), "\\u%04lX\\u%04lX", chh, chl);
     }
     tmp = sexp_c_string(ctx, cout, -1);
     res = sexp_cons(ctx, tmp, res);

@@ -22,13 +22,13 @@
 
 static void sexp_write_pointer (sexp ctx, void *p, sexp out) {
   char buf[32];
-  sprintf(buf, "%p", p);
+  snprintf(buf, 32, "%p", p);
   sexp_write_string(ctx, buf, out);
 }
 
 static void sexp_write_integer (sexp ctx, sexp_sint_t n, sexp out) {
   char buf[32];
-  sprintf(buf, SEXP_PRId, n);
+  snprintf(buf, 32, SEXP_PRId, n);
   sexp_write_string(ctx, buf, out);
 }
 

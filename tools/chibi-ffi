@@ -631,7 +631,7 @@
                     errnos)
              
              "  }
-  sprintf(buf, \"unknown error: %d\", err);
+  snprintf(buf, 64, \"unknown error: %d\", err);
   return buf;
 }")))))))
 

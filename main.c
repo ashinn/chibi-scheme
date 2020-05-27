@@ -182,14 +182,17 @@ static sexp_uint_t multiplier (char c) {
 #endif
 
 static char* make_import(const char* prefix, const char* mod, const char* suffix) {
-  int preflen = strlen(prefix), len = preflen + strlen(mod) + strlen(suffix);
+  int preflen = strlen(prefix), modlen = strlen(mod);
+  int len = preflen + modlen + strlen(suffix);
+  int suflen = strlen(suffix) + (mod[0] == '(' ? 1 : 0);
   char *p, *impmod = (char*) malloc(len+1);
-  strcpy(impmod, prefix);
-  strcpy(impmod+preflen, mod[0] == '(' ? mod + 1 : mod);
-  strcpy(impmod+len-strlen(suffix)-(mod[0] == '(' ? 1 : 0),  suffix);
+  snprintf(impmod, len, "%s", prefix);
+  snprintf(impmod+preflen, len-preflen, "%s", mod[0] == '(' ? mod + 1 : mod);
+  snprintf(impmod+len-suflen, suflen+1, "%s", suffix);
   impmod[len] = '\0';
   for (p=impmod; *p; p++)
     if (*p == '.') *p=' ';
+  /* fprintf(stderr, "make_import => %s\n", impmod); */
   return impmod;
 }
 

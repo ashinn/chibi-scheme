@@ -55,7 +55,7 @@ sexp sexp_gc_heap_walk(sexp ctx,
           return res; }
         size = sexp_gc_allocated_bytes(ctx, t, t_cnt, p);
         if (size == 0) {
-          strcpy(gc_heap_err_str, "Heap element with a zero size detected");
+          snprintf(gc_heap_err_str, ERR_STR_SIZE, "Heap element with a zero size detected");
           goto done;
         }
       }
@@ -145,7 +145,7 @@ static sexp sexp_gc_heap_pack_src_to_dst(void* adata, sexp srcp) {
       imax = imid - 1;
     }
   }
-  strcpy(gc_heap_err_str, "Source SEXP not found in src->dst mapping");
+  snprintf(gc_heap_err_str, ERR_STR_SIZE, "Source SEXP not found in src->dst mapping");
   return SEXP_FALSE;
 }
 
@@ -260,7 +260,7 @@ static sexp_heap sexp_gc_packed_heap_make(size_t packed_size, size_t free_size) 
   size_t req_size = packed_size + free_size + sexp_free_chunk_size + 128;
   sexp_heap heap = sexp_make_heap(sexp_heap_align(req_size), 0, 0);
   if (!heap) {
-    strcpy(gc_heap_err_str, "Could not allocate memory for heap");
+    snprintf(gc_heap_err_str, ERR_STR_SIZE, "Could not allocate memory for heap");
     return NULL;
   }
   sexp base = sexp_heap_first_block(heap);
@@ -577,7 +577,7 @@ static int load_image_header(FILE *fp, struct sexp_image_header_t* header) {
   if (!fp || !header) { return 0; }
   
   if (fread(header, sizeof(struct sexp_image_header_t), 1, fp) != 1) {
-    strcpy(gc_heap_err_str, "couldn't read image header");
+    snprintf(gc_heap_err_str, ERR_STR_SIZE, "couldn't read image header");
     return 0;
   }
   if (memcmp(header->magic, SEXP_IMAGE_MAGIC, sizeof(header->magic)) != 0) {
@@ -609,7 +609,7 @@ sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_
   const char *mod_path, *colon, *end;
   char path[512];
   FILE *fp;
-  int i;
+  int i, len;
   sexp res = NULL, ctx = NULL, base, *ctx_globals, *ctx_types;
 
   gc_heap_err_str[0] = 0;
@@ -623,9 +623,10 @@ sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_
     for (mod_path=all_paths[i]; *mod_path; mod_path=colon+1) {
       colon = strchr(mod_path, ':');
       end = colon ? colon : mod_path + strlen(mod_path);
-      strncpy(path, mod_path, end-mod_path);
+      snprintf(path, end-mod_path, "%s", mod_path);
       if (end[-1] != '/') path[end-mod_path] = '/';
-      strcpy(path + (end-mod_path) + (end[-1] == '/' ? 0 : 1), filename);
+      len = (end-mod_path) + (end[-1] == '/' ? 0 : 1);
+      snprintf(path + len, sizeof(path) - len, "%s", filename);
       fp = fopen(path, "rb");
       if (fp || !colon) break;
     }
@@ -707,6 +708,9 @@ sexp sexp_load_image (const char* filename, sexp_uint_t heap_free_size, sexp_uin
 
 /****************** Debugging ************************/
 
+/* you can use (chibi heap-stats) without debug enabled */
+#if SEXP_USE_DEBUG_GC
+
 #define SEXP_CORE_TYPES_MAX 255
 
 struct sexp_stats_entry {
@@ -780,5 +784,6 @@ void sexp_gc_heap_stats_print(sexp ctx)
   printf(" ========================================\n");
   printf("    %6zu %7zu\n", total_count, total_size);
 }
+#endif
 
 #endif  /* SEXP_USE_IMAGE_LOADING */
