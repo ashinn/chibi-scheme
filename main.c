@@ -192,7 +192,6 @@ static char* make_import(const char* prefix, const char* mod, const char* suffix
   impmod[len] = '\0';
   for (p=impmod; *p; p++)
     if (*p == '.') *p=' ';
-  /* fprintf(stderr, "make_import => %s\n", impmod); */
   return impmod;
 }
 
