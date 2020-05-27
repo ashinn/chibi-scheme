@@ -164,6 +164,8 @@
       (test #f (lset= = '(2 1) '(2 1 0)))
       (test #t (lset<= = '(2 1) '(2 1 0)))
       (test #f (lset<= = '(2 1 0) '(2 1)))
+      ;; order matters
+      (test #t (lset= (lambda (a b) (= (inexact->exact (round a)) b)) '(1.2 0.1 2.3) '(2 1 0)))
       (test '(u o i a b c d c e) (lset-adjoin eq? '(a b c d c e) 'a 'e 'i 'o 'u))
       (test '(u o i a b c d e) (lset-union eq? '(a b c d e) '(a e i o u)))
       (test '(x a a c) (lset-union eq? '(a a c) '(x a x)))

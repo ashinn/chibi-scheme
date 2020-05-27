@@ -15,7 +15,8 @@
                     (lp1 set2 (cdr sets)))))))))
 
 (define (lset= eq . sets)
-  (and (apply lset<= eq sets) (apply lset<= eq (reverse sets))))
+  (and (apply lset<= eq sets)
+       (apply lset<= (lambda (b a) (eq a b)) (reverse sets))))
 
 (define (lset-adjoin eq set . elts)
   (lset-union2 eq set elts))
