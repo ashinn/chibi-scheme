@@ -1,0 +1,23 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+              
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: make # assumes GNUMake
+      - name: Test
+        run: make test-all
+      - name: Setup
+        run: sudo make install
+      - name: Run in PATH
+        run: chibi-scheme r7rs-tests.scm
+        working-directory: tests
