@@ -1829,8 +1829,8 @@
                 (i 1))
          (cond
           ((null? ls))
-          ((type-value (car ls))
-           (lp (cdr ls) i))
+          ;; ((type-value (car ls))
+          ;;  (lp (cdr ls) i))
           ((eq? 'sexp (type-base (car ls)))
            (lp (cdr ls) (+ i 1)))
           ((<= i 3)
