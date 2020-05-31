@@ -567,6 +567,7 @@ void sexp_init_context_globals (sexp ctx) {
   sexp_global(ctx, SEXP_G_FEATURES) = SEXP_NULL;
   sexp_push(ctx, sexp_global(ctx, SEXP_G_FEATURES), SEXP_FALSE);
   sexp_car(sexp_global(ctx, SEXP_G_FEATURES)) = sexp_intern(ctx, (*(unsigned char*) &endianess_check) ? "little-endian" : "big-endian", -1);
+  sexp_global(ctx, SEXP_G_ENDIANNESS) = sexp_intern(ctx, (*(unsigned char*) &endianess_check) ? "little" : "big", -1);
   sexp_gc_preserve1(ctx, feature);
   for (features=sexp_initial_features; *features; features++) {
     feature = sexp_intern(ctx, *features, -1);

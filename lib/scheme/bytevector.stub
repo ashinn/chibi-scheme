@@ -1,0 +1,331 @@
+
+(c-include "stdint.h")
+
+(define-c-int-type int8_t)
+(define-c-int-type int16_t)
+(define-c-int-type int32_t)
+(define-c-int-type int64_t)
+(define-c-int-type uint16_t)
+(define-c-int-type uint32_t)
+(define-c-int-type uint64_t)
+
+(c-declare
+ "
+static int16_t sexp_swap_s16(int16_t n) {
+  return (n << 8) | ((n >> 8) & 0xFF);
+}
+static uint16_t sexp_swap_u16(uint16_t n) {
+  return (n >> 8) | ((n & 0xFF) << 8);
+}
+static int32_t sexp_swap_s32(int32_t n) {
+  n = ((n << 8) & 0xFF00FF00) | ((n >> 8) & 0xFF00FF);
+  return (n << 16) | ((n >> 16) & 0xFFFF);
+}
+static uint32_t sexp_swap_u32(uint32_t n) {
+  return ((n>>24)&0xff)  | ((n<<8)&0xff0000) |
+         ((n>>8)&0xff00) | ((n<<24)&0xff000000);
+}
+static int64_t sexp_swap_s64(int64_t n) {
+  n = ((n << 8) & 0xFF00FF00FF00FF00ULL) | ((n >> 8) & 0x00FF00FF00FF00FFULL);
+  n = ((n << 16) & 0xFFFF0000FFFF0000ULL) | ((n >> 16) & 0x0000FFFF0000FFFFULL);
+  return (n << 32) | ((n >> 32) & 0xFFFFFFFFULL);
+}
+static uint64_t sexp_swap_u64(uint64_t n) {
+  n = ((n << 8) & 0xFF00FF00FF00FF00ULL) | ((n >> 8) & 0x00FF00FF00FF00FFULL);
+  n = ((n << 16) & 0xFFFF0000FFFF0000ULL ) | ((n >> 16) & 0x0000FFFF0000FFFFULL);
+  return (n << 32) | (n >> 32);
+}
+static float sexp_swap_float(const float x) {
+  float y;
+  const uint32_t* xs = (const uint32_t*) &x;
+  uint32_t* ys = (uint32_t*) &y;
+  *ys = sexp_swap_u32(*xs);
+  return y;
+}
+static double sexp_swap_double(const double x) {
+  double y;
+  const uint64_t* xs = (const uint64_t*) &x;
+  uint64_t* ys = (uint64_t*) &y;
+  *ys = sexp_swap_u64(*xs);
+  return y;
+}
+
+sexp_sint_t decode_utf8(unsigned char* p, int ch_len) {
+  if (ch_len <= 1)
+    return *p;
+  else if (ch_len == 2)
+    return ((p[0]&0x3F)<<6) + (p[1]&0x3F);
+  else if (ch_len == 3)
+    return ((p[0]&0x1F)<<12) + ((p[1]&0x3F)<<6) + (p[2]&0x3F);
+  else
+    return ((p[0]&0x0F)<<18) + ((p[1]&0x3F)<<12) + ((p[2]&0x3F)<<6) + (p[3]&0x3F);
+}
+
+sexp str2utf16(sexp ctx, char* s, int len, sexp endianness) {
+  unsigned char *p = (unsigned char*) s, *q;
+  uint16_t *utf16, hi, lo;
+  sexp_sint_t utf16_len, ch_len, ch, i;
+  sexp res;
+  q = p + len;
+  for (utf16_len=0; p<q; ++utf16_len) {
+    ch_len = sexp_utf8_initial_byte_count(*p);
+    if (ch_len == 4) ++utf16_len;   /* surrogate */
+    p += ch_len;
+  }
+  res = sexp_make_bytes(ctx, sexp_make_fixnum(utf16_len*2), SEXP_VOID);
+  if (!sexp_bytesp(res)) return res;
+  utf16 = (uint16_t*)sexp_bytes_data(res);
+  for (p=(unsigned char*)s; p<q; ) {
+    ch_len = sexp_utf8_initial_byte_count(*p);
+    ch = decode_utf8(p, ch_len);
+    if (ch_len == 4) {
+      hi = (0xD800 - (0x10000 >> 10) + ((ch) >> 10));
+      lo = (0xDC00 + ((ch) & 0x3FF));
+      (*utf16++) = hi;
+      (*utf16++) = lo;
+    } else {
+      (*utf16++) = (uint16_t)ch;
+    }
+    p += ch_len;
+  }
+  if (endianness != sexp_global(ctx, SEXP_G_ENDIANNESS)) {
+    utf16 = (uint16_t*)sexp_bytes_data(res);
+    for (i=0; i<utf16_len; ++i) {
+      utf16[i] = sexp_swap_u16(utf16[i]);
+    }
+  }
+  return res;
+}
+
+sexp str2utf32(sexp ctx, char* s, int len, int utf32_len, sexp endianness) {
+  unsigned char *p = (unsigned char*) s, *q;
+  uint32_t *utf32;
+  sexp_sint_t ch_len, i;
+  sexp res;
+  q = p + len;
+  res = sexp_make_bytes(ctx, sexp_make_fixnum(utf32_len*4), SEXP_VOID);
+  if (!sexp_bytesp(res)) return res;
+  utf32 = (uint32_t*)sexp_bytes_data(res);
+  while (p<q) {
+    ch_len = sexp_utf8_initial_byte_count(*p);
+    (*utf32++) = (uint32_t)decode_utf8(p, ch_len);
+    p += ch_len;
+  }
+  if (endianness != sexp_global(ctx, SEXP_G_ENDIANNESS)) {
+    utf32 = (uint32_t*)sexp_bytes_data(res);
+    for (i=0; i<utf32_len; ++i) {
+      utf32[i] = sexp_swap_u32(utf32[i]);
+    }
+  }
+  return res;
+}
+
+static int utf8_char_byte_count(int c) {
+  if (c < 0x80) return 1;
+  if (c < 0x800) return 2;
+  if (c < 0x10000) return 3;
+  return 4;
+}
+
+static void utf8_encode_char(unsigned char* p, int len, int c) {
+  switch (len) {
+  case 4:  *p++ = (0xF0 + ((c)>>18)); *p++ = (0x80 + ((c>>12)&0x3F));
+    *p++ = (0x80 + ((c>>6)&0x3F));    *p = (0x80 + (c&0x3F)); break;
+  case 3:  *p++ = (0xE0 + ((c)>>12)); *p++ = (0x80 + ((c>>6)&0x3F));
+    *p = (0x80 + (c&0x3F)); break;
+  case 2:  *p++ = (0xC0 + ((c)>>6));  *p = (0x80 + (c&0x3F)); break;
+  default: *p = c; break;
+  }
+}
+
+sexp utf16_2_str(sexp ctx, char* bv, int len, sexp endianness, int endianness_mandatory) {
+  int swap = endianness != sexp_global(ctx, SEXP_G_ENDIANNESS);
+  uint16_t ch, ch2;
+  sexp_sint_t i, ch_len, utf8_len=0, start=0;
+  sexp res;
+  unsigned char* dst;
+  if (!endianness_mandatory && len>1) {
+    ch = *(uint16_t*)(bv);
+    if (ch == 0xFFFE) {
+      swap = 1;
+      start = 2;
+    } else if (ch == 0xFEFF) {
+      start = 2;
+    }
+  }
+  for (i=start; i+1<len; i+=2) {
+    ch = swap ? sexp_swap_u16(*((uint16_t*)(bv+i))) : *((uint16_t*)(bv+i));
+    if (0xd800 <= ch && ch <= 0xdbff && i+3<len) {
+      ch2 = swap ? sexp_swap_u16(*((uint16_t*)(bv+i+2))) : *((uint16_t*)(bv+i+2));
+      if (0xdc00 <= ch2 && ch2 <= 0xdfff) {
+        ch = 0x10000 + (((ch - 0xd800) << 10) | (ch2 - 0xdc00));
+        i += 2;
+      }
+    }
+    utf8_len += utf8_char_byte_count(ch);
+  }
+  res = sexp_make_string(ctx, sexp_make_fixnum(utf8_len), SEXP_VOID);
+  if (!(res && sexp_stringp(res))) return res;
+  dst = (unsigned char*) sexp_string_data(res);
+  for (i=start; i+1<len; i+=2) {
+    ch = swap ? sexp_swap_u16(*((uint16_t*)(bv+i))) : *((uint16_t*)(bv+i));
+    if (0xd800 <= ch && ch <= 0xdbff && i+3<len) {
+      ch2 = swap ? sexp_swap_u16(*((uint16_t*)(bv+i+2))) : *((uint16_t*)(bv+i+2));
+      if (0xdc00 <= ch2 && ch2 <= 0xdfff) {
+        ch = 0x10000 + (((ch - 0xd800) << 10) | (ch2 - 0xdc00));
+        i += 2;
+      }
+    }
+    ch_len = utf8_char_byte_count(ch);
+    utf8_encode_char(dst, ch_len, ch);
+    dst += ch_len;
+  }
+  return res;
+}
+
+sexp utf32_2_str(sexp ctx, char* bv, int len, sexp endianness, int endianness_mandatory) {
+  int swap = endianness != sexp_global(ctx, SEXP_G_ENDIANNESS);
+  uint32_t ch;
+  sexp_sint_t i, ch_len, utf8_len=0, start=0;
+  sexp res;
+  unsigned char* dst;
+  if (!endianness_mandatory && len>3) {
+    ch = *(uint32_t*)(bv);
+    if (ch == 0xFFFE0000) {
+      swap = 1;
+      start = 4;
+    } else if (ch == 0xFEFF) {
+      start = 4;
+    }
+  }
+  for (i=start; i+3<len; i+=4) {
+    ch = swap ? sexp_swap_u32(*((uint32_t*)(bv+i))) : *((uint32_t*)(bv+i));
+    utf8_len += utf8_char_byte_count(ch);
+  }
+  res = sexp_make_string(ctx, sexp_make_fixnum(utf8_len), SEXP_VOID);
+  if (!(res && sexp_stringp(res))) return res;
+  dst = (unsigned char*) sexp_string_data(res);
+  for (i=start; i+3<len; i+=4) {
+    ch = swap ? sexp_swap_u32(*((uint32_t*)(bv+i))) : *((uint32_t*)(bv+i));
+    ch_len = utf8_char_byte_count(ch);
+    utf8_encode_char(dst, ch_len, ch);
+    dst += ch_len;
+  }
+  return res;
+}
+")
+
+(define-c int8_t bytevector-s8-ref (bytevector int)
+  (inline "((int8_t*)arg0)[arg1]"))
+(define-c void bytevector-s8-set! (bytevector int int8_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "((int8_t*)arg0)[arg1] = arg2"))
+
+(define-c int16_t bytevector-s16-native-ref (bytevector int)
+  (inline "*((int16_t*)(arg0+arg1))"))
+(define-c void bytevector-s16-native-set! (bytevector int int16_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((int16_t*)(arg0+arg1)) = arg2"))
+
+(define-c int16_t bytevector-s16-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((int16_t*)(arg1+arg2)) : sexp_swap_s16(*((int16_t*)(arg1+arg2))))"))
+(define-c void bytevector-s16-set! ((value ctx sexp) bytevector int int16_t sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((int16_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s16(arg3))"))
+
+(define-c int32_t bytevector-s32-native-ref (bytevector int)
+  (inline "*((int32_t*)(arg0+arg1))"))
+(define-c void bytevector-s32-native-set! (bytevector int int32_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((int32_t*)(arg0+arg1)) = arg2"))
+
+(define-c int32_t bytevector-s32-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((int32_t*)(arg1+arg2)) : sexp_swap_s32(*((int32_t*)(arg1+arg2))))"))
+(define-c void bytevector-s32-set! ((value ctx sexp) bytevector int int32_t sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((int32_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s32(arg3))"))
+
+(define-c int64_t bytevector-s64-native-ref (bytevector int)
+  (inline "*((int64_t*)(arg0+arg1))"))
+(define-c void bytevector-s64-native-set! (bytevector int int64_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((int64_t*)(arg0+arg1)) = arg2"))
+
+(define-c int64_t bytevector-s64-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((int64_t*)(arg1+arg2)) : sexp_swap_s64(*((int64_t*)(arg1+arg2))))"))
+(define-c void bytevector-s64-set! ((value ctx sexp) bytevector int int64_t sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((int64_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s64(arg3))"))
+
+(define-c uint16_t bytevector-u16-native-ref (bytevector int)
+  (inline "*((uint16_t*)(arg0+arg1))"))
+(define-c void bytevector-u16-native-set! (bytevector int uint16_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((uint16_t*)(arg0+arg1)) = arg2"))
+
+(define-c uint16_t bytevector-u16-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((uint16_t*)(arg1+arg2)) : sexp_swap_u16(*((uint16_t*)(arg1+arg2))))"))
+(define-c void bytevector-u16-set! ((value ctx sexp) bytevector int uint16_t sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((uint16_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u16(arg3))"))
+
+(define-c uint32_t bytevector-u32-native-ref (bytevector int)
+  (inline "*((uint32_t*)(arg0+arg1))"))
+(define-c void bytevector-u32-native-set! (bytevector int uint32_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((uint32_t*)(arg0+arg1)) = arg2"))
+
+(define-c uint32_t bytevector-u32-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((uint32_t*)(arg1+arg2)) : sexp_swap_u32(*((uint32_t*)(arg1+arg2))))"))
+(define-c void bytevector-u32-set! ((value ctx sexp) bytevector int uint32_t sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((uint32_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u32(arg3))"))
+
+(define-c uint64_t bytevector-u64-native-ref (bytevector int)
+  (inline "*((uint64_t*)(arg0+arg1))"))
+(define-c void bytevector-u64-native-set! (bytevector int uint64_t)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((uint64_t*)(arg0+arg1)) = arg2"))
+
+(define-c uint64_t bytevector-u64-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((uint64_t*)(arg1+arg2)) : sexp_swap_u64(*((uint64_t*)(arg1+arg2))))"))
+(define-c void bytevector-u64-set! ((value ctx sexp) bytevector int uint64_t sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((uint64_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u64(arg3))"))
+
+
+(define-c float bytevector-ieee-single-native-ref (bytevector int)
+  (inline "*((float*)(arg0+arg1))"))
+(define-c void bytevector-ieee-single-native-set! (bytevector int float)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((float*)(arg0+arg1)) = arg2"))
+
+(define-c float bytevector-ieee-single-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((float*)(arg1+arg2)) : sexp_swap_float(*(float*)(arg1+arg2)))"))
+(define-c void bytevector-ieee-single-set! ((value ctx sexp) bytevector int float sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((float*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_float(arg3))"))
+
+(define-c double bytevector-ieee-double-native-ref (bytevector int)
+  (inline "*((double*)(arg0+arg1))"))
+(define-c void bytevector-ieee-double-native-set! (bytevector int double)
+  (assert (< -1 arg1 (bytevector-length arg0)))
+  (inline "*((double*)(arg0+arg1)) = arg2"))
+
+(define-c double bytevector-ieee-double-ref ((value ctx sexp) bytevector int sexp)
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((double*)(arg1+arg2)) : sexp_swap_double(*(double*)(arg1+arg2)))"))
+(define-c void bytevector-ieee-double-set! ((value ctx sexp) bytevector int double sexp)
+  (assert (< -1 arg2 (bytevector-length arg1)))
+  (inline "*((double*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_double(arg3))"))
+
+(define-c sexp (%string->utf16 "str2utf16")
+  ((value ctx sexp) string (value (string-size arg1) int) (default (native-endianness) sexp)))
+
+(define-c sexp (%string->utf32 "str2utf32")
+  ((value ctx sexp) string (value (string-size arg1) int) (value (string-length arg1) int) (default (native-endianness) sexp)))
+
+(define-c sexp (%utf16->string "utf16_2_str")
+  ((value ctx sexp) bytevector (value (bytevector-length arg1) int) sexp (default SEXP_FALSE boolean)))
+
+(define-c sexp (%utf32->string "utf32_2_str")
+  ((value ctx sexp) bytevector (value (bytevector-length arg1) int) sexp (default SEXP_FALSE boolean)))
