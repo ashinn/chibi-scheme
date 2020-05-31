@@ -304,7 +304,7 @@
 ;; function objects
 
 (define (parse-func func . o)
-  (if (not (and (= 3 (length func))
+  (if (not (and (>= (length func) 3)
                 (or (identifier? (cadr func))
                     (and (list? (cadr func))
                          (<= 1 (length (cadr func)) 3)
@@ -320,7 +320,13 @@
                      (mangle scheme-name)))
          (stub-name (if (and (pair? (cadr func)) (pair? (cddr (cadr func))))
                         (car (cddr (cadr func)))
-                        (generate-stub-name scheme-name))))
+                        (generate-stub-name scheme-name)))
+         (inline (and (> (length func) 3)
+                      (cond ((assq 'inline (cdr (cddr func))) => cadr)
+                            (else #f))))
+         (assert (and (> (length func) 3)
+                      (cond ((assq 'assert (cdr (cddr func))) => cdr)
+                            (else '())))))
     (let lp ((ls (if (equal? (car (cddr func)) '(void)) '() (car (cddr func))))
              (i 0)
              (results '())
@@ -330,7 +336,7 @@
        ((null? ls)
         (vector scheme-name c-name stub-name ret-type
                 (reverse results) (reverse c-args) (reverse s-args)
-                method?))
+                method? inline assert))
        (else
         (let ((type (parse-type (car ls) i)))
           (cond
@@ -350,6 +356,8 @@
 (define (func-c-args func) (vector-ref func 5))
 (define (func-scheme-args func) (vector-ref func 6))
 (define (func-method? func) (vector-ref func 7))
+(define (func-inline func) (vector-ref func 8))
+(define (func-assert func) (vector-ref func 9))
 
 (define (func-stub-name-set! func x) (vector-set! func 2 x))
 
@@ -843,7 +851,7 @@
           (cat "sexp_string_to_bytes(ctx, sexp_c_string(ctx, "
                val ".data(), " val ".size()))")
           (cat "sexp_string_to_bytes(ctx, sexp_c_string(ctx, " val ", "
-               (c-array-length type val) "))")))
+               (c-array-length type) "))")))
      ((eq? 'input-port base)
       (cat "sexp_make_non_null_input_port(ctx, " val ", SEXP_FALSE)"))
      ((eq? 'output-port base)
@@ -1063,6 +1071,18 @@
 (define (write-parameters args)
   (lambda () (for-each (lambda (a) (cat ", sexp arg" (type-index a))) args)))
 
+(define (write-c-parameters args)
+  (lambda ()
+    (let lp ((ls args) (i 0))
+      (cond
+       ((pair? ls)
+        (if (> i 0)
+            (cat ", "))
+        (cat (type-c-name (car ls)))
+        (cat " arg")
+        (cat i)
+        (lp (cdr ls) (+ i 1)))))))
+
 (define (take ls n)
   (let lp ((ls ls) (n n) (res '()))
     (if (zero? n) (reverse res) (lp (cdr ls) (- n 1) (cons (car ls) res)))))
@@ -1215,6 +1235,7 @@
     ;; Shortcut returns should come before preserving.
     (write-validators (func-scheme-args func))
     (write-additional-checks (func-c-args func))
+    (write-assertions func (func-assert func))
     ;; Preserve the gc vars.
     (write-gc-preserves gc-vars)))
 
@@ -1237,6 +1258,54 @@
      (if (eq? 'input-port (type-base a))
          (cat "  sexp_check_block_port(ctx, arg" (type-index a) ", 0);\n")))
    args))
+
+(define (write-scheme->c expr)
+  (define (write-numeric-arg x)
+    (if (symbol? x)
+        (cat "sexp_unbox_fixnum(" x ")")
+        (write-scheme->c x)))
+  (if (pair? expr)
+      (case (car expr)
+        ((+ - * / %)
+         (write-scheme->c (cadr expr))
+         (for-each
+          (lambda (x)
+            (cat " " (car expr) " ")
+            (write-numeric-arg x))
+          (cddr expr)))
+        ((< <= == != >= >)
+         (let lp ((ls (cdr expr)))
+           (cat "(" (lambda () (write-numeric-arg (car ls))) " " (car expr)
+                " " (lambda () (write-numeric-arg (cadr ls)))
+                ")")
+           (cond
+            ((pair? (cddr ls))
+             (display " && ")
+             (lp (cdr ls))))))
+        (else
+         (write (scheme-procedure->c (car expr)))
+         (display "(")
+         (cond
+          ((pair? (cdr expr))
+           (write-scheme->c (cadr expr))
+           (for-each
+            (lambda (x) (cat ", " (lambda () (write-scheme->c x))))
+            (cddr expr))))
+         (display ")")))
+      (write expr)))
+
+(define (write-assertions func asserts)
+  (for-each
+   (lambda (assert)
+     (cat "  if (!(" (lambda () (write-scheme->c assert)) ")) {\n"
+          "    return sexp_user_exception(ctx, self, \"assertion failed: \" "
+          (call-with-output-string
+            (lambda (out)
+              (write (call-with-output-string
+                       (lambda (out) (write assert out))) out)))
+          ", SEXP_NULL);\n"
+          "  }\n"))
+   asserts))
 
 (define (scheme-procedure->c name)
   (cond
@@ -1608,6 +1677,13 @@
        (write-parameters (func-scheme-args func)) ")"))
 
 (define (write-func func)
+  (cond
+   ((func-inline func)
+    (cat "static "(type-c-name (func-ret-type func)) " " (func-c-name func)
+         "(" (write-c-parameters (func-c-args func)) ") {\n"
+         "   " (if (void-type? (func-ret-type func)) "" "return ")
+         (func-inline func) ";\n"
+         "}\n")))
   (write-func-declaration func)
   (cat " {\n")
   (write-locals func)
@@ -1700,6 +1776,8 @@
         (cat "\"current-output-port\""))
        ((equal? value '(current-error-port))
         (cat "\"current-error-port\""))
+       ((equal? value '(native-endianness))
+        (cat "sexp_global(ctx, SEXP_G_ENDIANNESS)"))
        ((equal? value 'NULL)
         (cat "SEXP_FALSE"))
        (else
@@ -1747,14 +1825,18 @@
      "    sexp_opcode_return_type(" var ") = "
      (type-id-init-value (func-ret-type func)) ";\n"
      (lambda ()
-       (do ((ls (func-c-args func) (cdr ls))
-            (i 1 (+ i 1)))
-           ((null? ls))
+       (let lp ((ls (func-c-args func))
+                (i 1))
          (cond
-          ((eq? 'sexp (type-base (car ls))))
+          ((null? ls))
+          ((type-value (car ls))
+           (lp (cdr ls) i))
+          ((eq? 'sexp (type-base (car ls)))
+           (lp (cdr ls) (+ i 1)))
           ((<= i 3)
            (cat "    sexp_opcode_arg" i "_type(" var ") = "
-                (type-id-init-value (car ls)) ";\n"))
+                (type-id-init-value (car ls)) ";\n")
+           (lp (cdr ls) (+ i 1)))
           (else
            (if (= i 4)
                (cat "    sexp_opcode_argn_type(" var ") = "
@@ -1763,7 +1845,8 @@
                     (make-integer "SEXP_OBJECT") ");\n"))
            (cat "    sexp_vector_set(sexp_opcode_argn_type(" var "), "
                 (make-integer (- i 4)) ", "
-                (type-id-init-value (car ls)) ");\n")))))
+                (type-id-init-value (car ls)) ");\n")
+           (lp (cdr ls) (+ i 1))))))
      ;; "  } else {\n"
      ;; "    sexp_warn(ctx, \"couldn't generated opcode\", " var ");\n"
      "  }\n")))
