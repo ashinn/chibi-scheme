@@ -38,6 +38,7 @@
   (output output-default)
   (string-width substring-length)
   (word-separator? char-whitespace?)
+  (ambiguous-is-wide? #f)
   (ellipsis "")
   (decimal-align #f)
   (decimal-sep #f)

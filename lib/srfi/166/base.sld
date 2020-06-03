@@ -48,7 +48,7 @@
    ;; state variables
    port row col width output writer string-width pad-char ellipsis
    radix precision decimal-sep decimal-align sign-rule
-   comma-sep comma-rule word-separator?
+   comma-sep comma-rule word-separator? ambiguous-is-wide?
    )
   (include "base.scm")
   (include "../../chibi/show/write.scm")

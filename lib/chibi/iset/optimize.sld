@@ -17,4 +17,5 @@
         (bitwise-and (%mask size) (arithmetic-shift n (- position)))))))
   (include "optimize.scm")
   (export
-   iset-balance iset-balance! iset-optimize iset-optimize! iset->code))
+   iset-balance iset-balance! iset-optimize iset-optimize!
+   iset->code iset->code/lambda))

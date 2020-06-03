@@ -168,3 +168,23 @@
                     ,(iset-bits iset)
                     ,(iset->code (iset-left iset))
                     ,(iset->code (iset-right iset)))))
+
+;; uses only if, <, <=, >, and SRFI 151 bit-set?
+(define (iset->code/lambda iset)
+  (define (code iset)
+    (and iset
+         (if (and (not (iset-left iset))
+                  (not (iset-right iset))
+                  (not (iset-bits iset)))
+             `(<= ,(iset-start iset) n ,(iset-end iset))
+             `(if (< n ,(iset-start iset))
+               ,(code (iset-left iset))
+               ,(if (and (not (iset-right iset)) (not (iset-bits iset)))
+                    `(<= n ,(iset-end iset))
+                    `(if (> n ,(iset-end iset))
+                         ,(code (iset-right iset))
+                         ,(if (iset-bits iset)
+                              `(bit-set? (- n ,(iset-start iset))
+                                         ,(iset-bits iset))
+                              #t)))))))
+  `(lambda (n) ,(code iset)))

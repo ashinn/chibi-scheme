@@ -741,6 +741,12 @@ def | 6
             (show #f (as-unicode (with ((pad-char #\〜)) (padded/both 5 "日本語")))))
       (test "日本語 col: 6"
             (show #f (as-unicode "日本語" (fn (col) (each " col: " col)))))
+      (test "日本語ΠΜΕ col: 9"
+            (show #f (as-unicode "日本語ΠΜΕ" (fn (col) (each " col: " col)))))
+      (test "日本語ΠΜΕ col: 12"
+          (show #f (with ((ambiguous-is-wide? #t))
+                     (as-unicode "日本語ΠΜΕ"
+                                 (fn (col) (each " col: " col))))))
 
       ;; from-file
       ;; for reference, filesystem-test relies on creating files under /tmp

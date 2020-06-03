@@ -15,6 +15,7 @@
 ;; A value can be any of:
 ;;
 ;;   Property_Name: all unicode characters with the given derived property
+;;   Prop@N: a property matched at a given field (instead of default category)
 ;;   Xx: all unicode characters with the given general category
 ;;   X: all unicode characters with any general category X*
 ;;   NNNN: a single unicode value in hex format
@@ -25,7 +26,7 @@
 ;; Unicode property name.
 ;;
 ;; Assumes the files UnicodeData.txt and DerivedCoreProperties.txt are
-;; in the data/ current directory, unless overridden with the --data or
+;; in the ./data/ directory, unless overridden with the --data or
 ;; --derived options.
 
 (import (chibi) (chibi io) (chibi string))
@@ -35,8 +36,9 @@
     (for-each (lambda (x) (display x err)) args)
     (newline err)))
 
-;; Parse UnicodeData.txt for characters matching a given class.
-(define (extract-char-set-category cat data)
+;; Parse UnicodeData.txt or other semi-colon-delimited TSV file for
+;; characters matching a given class in a given field.
+(define (extract-char-set-category cat field data)
   (define (join-to-range n ls)
     (cond
      ((null? ls)
@@ -62,22 +64,43 @@
            ((or (equal? line "") (eqv? #\# (string-ref line 0)))
             (lp ranges))
            (else
-            (let ((ls (string-split line #\; 4)))
+            (let* ((line (substring-cursor line
+                                           (string-cursor-start line)
+                                           (string-find line #\#)))
+                   (ls (map string-trim (string-split line #\;))))
               (cond
-               ((< (length ls) 3)
+               ((<= (length ls) field)
                 (warn "invalid UnicodeData line: " line)
                 (lp ranges))
                (else
-                (let ((ch (string->number (car ls) 16))
+                (let ((ch (if (string-contains (car ls) "..")
+                              (let* ((sc (string-contains (car ls) "..")))
+                                (cons (string->number
+                                       (substring-cursor
+                                        (car ls)
+                                        (string-cursor-start (car ls))
+                                        sc)
+                                       16)
+                                      (string->number
+                                       (substring-cursor
+                                        (car ls)
+                                        (string-cursor-forward (car ls) sc 2))
+                                       16)))
+                              (string->number (car ls) 16)))
                       (name (cadr ls))
-                      (ch-cat (car (cddr ls))))
+                      (ch-cat (list-ref ls field)))
                   (cond
-                   ((or (not ch) (not (= 2 (string-length ch-cat))))
+                   ((not (or (integer? ch)
+                             (and (pair? ch)
+                                  (integer? (car ch))
+                                  (integer? (cdr ch)))))
                     (warn "invalid UnicodeData line: " line))
                    ((if (char? cat)
                         (eqv? cat (string-ref ch-cat 0))
                         (equal? cat ch-cat))
-                    (lp (join-to-range ch ranges)))
+                    (lp (if (pair? ch)
+                            (cons ch ranges)
+                            (join-to-range ch ranges))))
                    (else
                     (lp ranges))))))))))))))
 
@@ -131,13 +154,19 @@
             (error "invalid character range, expected NNNN-MMMM, got: " def))))
      ((string->number def 16)
       => (lambda (start) `(char-set ,(integer->char start))))
+     ((string-find? def #\@)
+      (let* ((sc (string-find def #\@))
+             (cat (substring-cursor def (string-cursor-start def) sc))
+             (field (string->number
+                     (substring-cursor def (string-cursor-next def sc)))))
+        (extract-char-set-category cat field data)))
      ((and (= 1 (string-length def))
            (char-upper-case? (string-ref def 0)))
-      (extract-char-set-category (string-ref def 0) data))
+      (extract-char-set-category (string-ref def 0) 2 data))
      ((and (= 2 (string-length def))
            (char-upper-case? (string-ref def 0))
            (char-lower-case? (string-ref def 1)))
-      (extract-char-set-category def data))
+      (extract-char-set-category def 2 data))
      ;; derived properties
      ((and (> (string-length def) 1)
            (eqv? #\: (string-ref def 0)))

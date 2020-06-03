@@ -184,11 +184,18 @@ data/%.txt:
 build-lib/chibi/char-set/derived.scm: data/UnicodeData.txt data/DerivedCoreProperties.txt chibi-scheme$(EXE)
 	$(CHIBI) tools/extract-unicode-props.scm --default > $@
 
+build-lib/chibi/char-set/width.scm: data/UnicodeData.txt data/EastAsianWidth.txt chibi-scheme$(EXE)
+	$(CHIBI) tools/extract-unicode-props.scm Zero-Width=Mn > $@
+	$(CHIBI) tools/extract-unicode-props.scm -d data/EastAsianWidth.txt Full-Width=F@1,W@1 Ambiguous-Width=A@1 >> $@
+
 lib/chibi/char-set/ascii.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(EXE)
 	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm --ascii chibi.char-set.compute > $@
 
 lib/chibi/char-set/full.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(EXE)
 	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm chibi.char-set.compute > $@
+
+lib/chibi/show/width.scm: build-lib/chibi/char-set/width.scm chibi-scheme$(EXE)
+	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm --predicate chibi.char-set.width > $@
 
 lib/scheme/char/case-offsets.scm: data/UnicodeData.txt chibi-scheme$(EXE) all-libs
 	$(CHIBI) tools/extract-case-offsets.scm $< > $@

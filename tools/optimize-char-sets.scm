@@ -21,13 +21,15 @@
     (remove (lambda (i) (hash-table-exists? ls2-tab i)) ls1)))
 
 (let ((args (command-line)))
-  (let lp ((ls (cdr args)) (ascii? #f))
+  (let lp ((ls (cdr args)) (ascii? #f) (predicate? #f))
     (cond
      ((and (pair? ls) (not (equal? "" (car ls)))
            (eqv? #\- (string-ref (car ls) 0)))
       (cond
        ((member (car ls) '("-a" "--ascii"))
-        (lp (cdr ls) #t))
+        (lp (cdr ls) #t predicate?))
+       ((member (car ls) '("-p" "--predicate"))
+        (lp (cdr ls) ascii? #t))
        (else (error "unknown option" (car ls)))))
      ((or (null? ls) (pair? (cdr ls)))
       (error "usage: optimize-char-sets.scm [--ascii] module.name"))
@@ -78,8 +80,13 @@
                          (newline (current-error-port))
                          (error "optimized iset is different"))))
                  (display "  writing\n" (current-error-port))
-                 (write `(define ,exp
-                           (immutable-char-set ,(iset->code iset2))))
+                 (write
+                  (if predicate?
+                      `(define ,(string->symbol
+                                 (string-append (symbol->string exp) "?"))
+                         ,(iset->code/lambda iset2))
+                      `(define ,exp
+                         (immutable-char-set ,(iset->code iset2)))))
                  (newline)
                  (newline)
                  (display "  done\n" (current-error-port)))))))

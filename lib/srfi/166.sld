@@ -19,14 +19,14 @@
    ;; state variables
    port row col width output writer string-width pad-char ellipsis
    radix precision decimal-sep decimal-align sign-rule
-   comma-sep comma-rule word-separator?
+   comma-sep comma-rule word-separator? ambiguous-is-wide?
    ;; pretty
    pretty pretty-shared pretty-simply pretty-color
    ;; columnar
    columnar tabular wrapped wrapped/list wrapped/char
    justified from-file line-numbers show-columns
    ;; unicode
-   as-unicode unicode-terminal-width
+   as-unicode unicode-terminal-width unicode-terminal-width/wide
    upcased downcased
    ;; color
    as-red as-blue as-green as-cyan as-yellow
