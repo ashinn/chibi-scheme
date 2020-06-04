@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme bitwise) (srfi 151))
+(define-library (scheme bitwise) (alias-for (srfi 151)))

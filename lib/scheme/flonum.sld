@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme flonum) (srfi 144))
+(define-library (scheme flonum) (alias-for (srfi 144)))

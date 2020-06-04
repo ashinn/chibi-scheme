@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme regex) (srfi 115))
+(define-library (scheme regex) (alias-for (srfi 115)))

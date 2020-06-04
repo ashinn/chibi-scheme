@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme charset) (srfi 14))
+(define-library (scheme charset) (alias-for (srfi 14)))

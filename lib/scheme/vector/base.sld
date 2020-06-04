@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme vector base) (srfi 160 base))
+(define-library (scheme vector base) (alias-for (srfi 160 base)))

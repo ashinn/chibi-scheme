@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme ephemeron) (srfi 124))
+(define-library (scheme ephemeron) (alias-for (srfi 124)))

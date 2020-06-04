@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme generator) (srfi 121))
+(define-library (scheme generator) (alias-for (srfi 121)))

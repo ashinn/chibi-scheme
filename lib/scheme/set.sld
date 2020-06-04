@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme set) (srfi 113))
+(define-library (scheme set) (alias-for (srfi 113)))

@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme sort) (srfi 132))
+(define-library (scheme sort) (alias-for (srfi 132)))

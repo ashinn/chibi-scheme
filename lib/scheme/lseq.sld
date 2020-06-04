@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme lseq) (srfi 127))
+(define-library (scheme lseq) (alias-for (srfi 127)))

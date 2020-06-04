@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme list) (srfi 1))
+(define-library (scheme list) (alias-for (srfi 1)))

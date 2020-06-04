@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme hash-table) (srfi 125))
+(define-library (scheme hash-table) (alias-for (srfi 125)))

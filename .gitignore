@@ -51,15 +51,23 @@ lib/chibi/stty.c
 lib/chibi/system.c
 lib/chibi/time.c
 lib/chibi/win32/process-win32.c
+lib/scheme/bytevector.c
 lib/srfi/144/math.c
 lib/srfi/160/uvprims.c
 *.tgz
+*.bz2
+*.xz
 *.html
 *.img
 *.err
 *.fasl
+*.txt
+*.test
+*.train
+*.h5
 !index.html
 
+benchmarks/gabriel/times.tsv
 examples/snow-fort
 examples/synthcode
 tests/snow/repo-cache
@@ -73,3 +81,4 @@ tmp
 js/chibi.*
 
 build-lib/chibi/char-set/derived.scm
+build-lib/chibi/char-set/width.scm

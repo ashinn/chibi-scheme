@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme mapping) (srfi 146))
+(define-library (scheme mapping) (alias-for (srfi 146)))

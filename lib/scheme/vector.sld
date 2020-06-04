@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme vector) (srfi 133))
+(define-library (scheme vector) (alias-for (srfi 133)))

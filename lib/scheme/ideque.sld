@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme ideque) (srfi 134))
+(define-library (scheme ideque) (alias-for (srfi 134)))

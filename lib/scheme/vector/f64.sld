@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme vector f64) (srfi 160 f64))
+(define-library (scheme vector f64) (alias-for (srfi 160 f64)))

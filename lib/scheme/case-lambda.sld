@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme case-lambda) (srfi 16))
+(define-library (scheme case-lambda) (alias-for (srfi 16)))

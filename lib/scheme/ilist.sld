@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme ilist) (srfi 116))
+(define-library (scheme ilist) (alias-for (srfi 116)))

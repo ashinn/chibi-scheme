@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme comparator) (srfi 128))
+(define-library (scheme comparator) (alias-for (srfi 128)))

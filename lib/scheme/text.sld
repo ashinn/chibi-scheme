@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme text) (srfi 135))
+(define-library (scheme text) (alias-for (srfi 135)))

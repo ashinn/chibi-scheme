@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme stream) (srfi 41))
+(define-library (scheme stream) (alias-for (srfi 41)))

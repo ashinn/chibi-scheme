@@ -1,2 +1,2 @@
 
-(define-library-alias (scheme list-queue) (srfi 117))
+(define-library (scheme list-queue) (alias-for (srfi 117)))
