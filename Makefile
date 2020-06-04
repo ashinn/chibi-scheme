@@ -197,8 +197,11 @@ lib/chibi/char-set/full.scm: build-lib/chibi/char-set/derived.scm chibi-scheme$(
 lib/chibi/show/width.scm: build-lib/chibi/char-set/width.scm chibi-scheme$(EXE)
 	$(CHIBI) -Abuild-lib tools/optimize-char-sets.scm --predicate chibi.char-set.width > $@
 
-lib/scheme/char/case-offsets.scm: data/UnicodeData.txt chibi-scheme$(EXE) all-libs
-	$(CHIBI) tools/extract-case-offsets.scm $< > $@
+lib/scheme/char/case-offsets.scm: data/UnicodeData.txt data/CaseFolding.txt chibi-scheme$(EXE) all-libs
+	$(CHIBI) tools/extract-case-offsets.scm data/UnicodeData.txt data/CaseFolding.txt > $@
+
+lib/scheme/char/special-casing.scm: data/CaseFolding.txt data/SpecialCasing.txt chibi-scheme$(EXE) all-libs
+	$(CHIBI) tools/extract-special-casing.scm data/CaseFolding.txt data/SpecialCasing.txt > $@
 
 ########################################################################
 # Tests

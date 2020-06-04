@@ -44,7 +44,7 @@
 (define (char-foldcase ch)
   (or (bsearch-kv char-foldcase-map (char->integer ch) 0
                   (- (vector-length char-foldcase-map) 2))
-      (char-downcase ch)))
+      ch))
 
 (define (char-cmp-ci op a ls)
   (let lp ((op op) (a (char->integer (char-foldcase a))) (ls ls))
@@ -83,17 +83,20 @@
           (let ((ch (read-char in)))
             (cond
              ((not (eof-object? ch))
-              (write-string
-               (cond
-                ((and (not fold?) (eqv? ch #\x03A3))
-                 (let ((ch2 (peek-char in)))
+              (cond
+               ((and (not fold?) (eqv? ch #\x03A3)) ;; sigma
+                (let ((ch2 (peek-char in)))
+                  (write-char
                    (if (or (eof-object? ch2)
                            (not (char-set-contains? char-set:letter ch2)))
                        #\x03C2
-                       #\x03C3)))
-                ((char-get-special-case ch (if fold? 4 1)))
-                (else (if fold? (char-foldcase ch) (char-downcase ch))))
-               out)
+                       #\x03C3)
+                   out)))
+               ((char-get-special-case ch (if fold? 4 1))
+                => (lambda (s) (write-string s out)))
+               (else
+                (write-char (if fold? (char-foldcase ch) (char-downcase ch))
+                            out)))
               (lp)))))))))
 
 (define (string-downcase str) (string-down-or-fold-case str #f))

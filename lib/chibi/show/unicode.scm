@@ -68,3 +68,18 @@
                              unicode-terminal-width/wide
                              unicode-terminal-width)))
       (each-in-list args))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; String transformations
+
+(define (with-string-transformer proc . ls)
+  (fn ((orig-output output))
+    (let ((output* (lambda (str) (orig-output (proc str)))))
+      (with ((output output*))
+        (each-in-list ls)))))
+
+;;> Show each of \var{ls}, uppercasing all generated text.
+(define (upcased . ls) (apply with-string-transformer string-upcase ls))
+
+;;> Show each of \var{ls}, lowercasing all generated text.
+(define (downcased . ls) (apply with-string-transformer string-downcase ls))

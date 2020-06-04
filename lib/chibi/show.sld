@@ -8,8 +8,7 @@
    padded padded/left padded/right padded/both
    trimmed trimmed/left trimmed/right trimmed/both trimmed/lazy
    fitted fitted/left fitted/right fitted/both
-   joined joined/prefix joined/suffix joined/last joined/dot joined/range
-   upcased downcased)
+   joined joined/prefix joined/suffix joined/last joined/dot joined/range)
   (import (scheme base) (scheme char) (scheme write)
           (chibi show base))
   (include "show/show.scm"))

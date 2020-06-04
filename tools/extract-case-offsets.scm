@@ -3,7 +3,7 @@
 ;; Extract sets of char case offsets.
 ;;
 ;; Usage:
-;;   extract-case-offsets.scm options UnicodeData.txt > out
+;;   extract-case-offsets.scm [options] UnicodeData.txt CaseFolding.txt > out
 ;;
 ;; Recognized options are:
 ;;
@@ -23,7 +23,17 @@
     (for-each (lambda (x) (display x err)) args)
     (newline err)))
 
-(define (write-offsets offset-map title-ups title-downs folds out min-count max-char-sets name)
+(define (write-hex-list hex-ls out)
+  (let lp ((ls hex-ls))
+    (cond
+     ((pair? ls)
+      (if (not (eq? ls hex-ls))
+          (write-char #\space out))
+      (write-string "#x" out)
+      (write-string (number->string (car ls) 16) out)
+      (lp (cdr ls))))))
+
+(define (write-offsets offset-map title-ups title-downs out min-count max-char-sets name)
   (let lp ((ls (sort (hash-table->alist offset-map)
                      (lambda (a b) (> (iset-size (cdr a)) (iset-size (cdr b))))))
            (i 0)
@@ -50,50 +60,61 @@
                 (map (lambda (y) (list y (+ y (car x))))
                      (iset->list (cdr x))))
               ls)))
-        (write `(define char-downcase-map
-                  ',(list->vector
-                     (append-map (lambda (x) x)
-                                 (sort (append pairs title-downs) < car))))
-               out)
-        (newline out)
-        (newline out)
-        (write `(define char-upcase-map
-                  ',(list->vector
-                     (append-map (lambda (x) (list (cadr x) (car x)))
-                                 (delete-duplicates
-                                  (sort (append pairs title-ups) < cadr)
-                                  (lambda (a b) (eqv? (cadr a) (cadr b)))))))
-               out)
-        (newline out)
-        (newline out)
-        (write `(define char-foldcase-map
-                  ',(list->vector
-                     (append-map (lambda (x) x)
-                                 (delete-duplicates
-                                  (sort folds < car)
-                                  (lambda (a b) (eqv? (cadr a) (cadr b)))))))
-               out)
-        (newline out))))))
+        (write-string "(define char-downcase-map\n  '#(" out)
+        (write-hex-list
+         (append-map (lambda (x) x) (sort (append pairs title-downs) < car))
+         out)
+        (write-string "))\n\n" out)
+        (write-string "(define char-upcase-map\n  '#(" out)
+        (write-hex-list
+         (append-map (lambda (x) (list (cadr x) (car x)))
+                     (delete-duplicates
+                      (sort (append pairs title-ups) < cadr)
+                      (lambda (a b) (eqv? (cadr a) (cadr b)))))
+         out)
+        (write-string "))\n\n" out))))))
+
+(define (extract-case-folding in out)
+  (define (write-folds folds out)
+    (write-string "(define char-foldcase-map\n  '#(" out)
+    (write-hex-list
+     (append-map (lambda (x) x) (sort folds < car))
+     out)
+    (write-string "))\n" out))
+  (let lp ((folds '()))
+    (let ((line (read-line in)))
+      (cond
+       ((eof-object? line)
+        (write-folds folds out))
+       ((or (equal? line "") (eqv? #\# (string-ref line 0)))
+        (lp folds))
+       (else
+        (let* ((line (substring-cursor line
+                                       (string-cursor-start line)
+                                       (string-find line #\#)))
+               (ls (map string-trim (string-split line #\;))))
+          (if (and (>= (length ls) 3)
+                   (member (second ls) '("C" "S")))
+              (let ((base (string->number (first ls) 16))
+                    (folded (string->number (third ls) 16)))
+                (if (and base folded)
+                    (lp (cons (list base folded) folds))
+                    (lp folds)))
+              (lp folds))))))))
 
 ;; value;char;name;category;combining_class;bidi_class;decomposition;numeric1;numeric2;numeric3;bidi_mirrored;unicode1_name;ISO_comment;uppercase_mapping;lowercase_mapping;titlecase_mapping
 
 (define (extract-case-mapping in out min-count max-char-sets name)
   (define (string-trim-comment str comment-ch)
     (car (string-split str comment-ch 2)))
-  (define (extract-single-decomposition str)
-    (and (not (equal? "" str))
-         (let ((s (string-trim (last (string-split str #\>)))))
-           (and (not (string-contains s " "))
-                (string->number s 16)))))
   (let ((offset-map (make-hash-table eq?))
         (title-ups '())
-        (title-downs '())
-        (folds '()))
+        (title-downs '()))
     (let lp ()
       (let ((line (read-line in)))
         (cond
          ((eof-object? line)
-          (write-offsets offset-map title-ups title-downs folds out
+          (write-offsets offset-map title-ups title-downs out
                          min-count max-char-sets name))
          ((or (equal? line "") (eqv? #\# (string-ref line 0)))
           (lp))
@@ -106,8 +127,7 @@
              (else
               (let ((base (string->number (list-ref ls 0) 16))
                     (upper (string->number (list-ref ls 12) 16))
-                    (lower (string->number (list-ref ls 13) 16))
-                    (folded (extract-single-decomposition (list-ref ls 5))))
+                    (lower (string->number (list-ref ls 13) 16)))
                 (cond
                  ((or upper lower)
                   (cond
@@ -121,12 +141,7 @@
                      offset-map
                      (- (or lower base) (or upper base))
                      (lambda (is) (iset-adjoin! is (or upper base)))
-                     (lambda () (make-iset)))))))
-                (cond
-                 ((and folded (not (eqv? folded (or lower base))))
-                  ;; (write `(fold: ,line ,base ,folded) (current-error-port))
-                  ;; (newline (current-error-port))
-                  (set! folds (cons (list base folded) folds)))))))
+                     (lambda () (make-iset))))))))))
             (lp))))))))
 
 (let ((args (command-line)))
@@ -150,8 +165,8 @@
             (open-output-file (cadr ls))))
        (else
         (error "unknown option: " (car ls)))))
-     ((null? ls)
-      (error "usage: extract-case-offsets <UnicodeData.txt>"))
+     ((not (= 2 (length ls)))
+      (error "usage: extract-case-offsets <UnicodeData.txt> <CaseFolding.txt>"))
      (else
       (if (equal? "-" (car ls))
           (extract-case-mapping
@@ -159,4 +174,8 @@
           (call-with-input-file (car ls)
             (lambda (in)
               (extract-case-mapping in out min-count max-char-sets name))))
+      (if (equal? "-" (cadr ls))
+          (extract-case-folding (current-input-port) out)
+          (call-with-input-file (cadr ls)
+            (lambda (in) (extract-case-folding in out))))
       (close-output-port out)))))

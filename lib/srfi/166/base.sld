@@ -42,7 +42,6 @@
    joined/range padded padded/right padded/both
    trimmed trimmed/right trimmed/both trimmed/lazy
    fitted fitted/right fitted/both output-default
-   upcased downcased
    ;; computations
    fn with with! forked call-with-output
    ;; state variables
