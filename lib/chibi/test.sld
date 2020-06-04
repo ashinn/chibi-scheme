@@ -14,6 +14,7 @@
           (scheme complex)
           (scheme process-context)
           (scheme time)
+          (chibi diff)
           (chibi term ansi))
   (cond-expand
    (chibi

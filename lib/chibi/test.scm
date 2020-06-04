@@ -432,6 +432,15 @@
      ((SKIP) "-")
      (else "."))))
 
+(define (display-expected/actual expected actual)
+  (let* ((e-str (write-to-string expected))
+         (a-str (write-to-string actual))
+         (diff (diff e-str a-str read-char)))
+    (write-string "expected ")
+    (write-string (edits->string/color (car diff) (car (cddr diff)) 1))
+    (write-string " but got ")
+    (write-string (edits->string/color (cadr diff) (car (cddr diff)) 2))))
+
 (define (test-print-explanation indent status info)
   (cond
    ((eq? status 'ERROR)
@@ -448,8 +457,8 @@
     (write (assq-ref info 'result)) (newline))
    ((eq? status 'FAIL)
     (display indent)
-    (display "expected ") (write (assq-ref info 'expected))
-    (display " but got ") (write (assq-ref info 'result)) (newline)))
+    (display-expected/actual (assq-ref info 'expected) (assq-ref info 'result))
+    (newline)))
   ;; print variables
   (cond
    ((and (memq status '(FAIL ERROR)) (assq-ref info 'var-names))
