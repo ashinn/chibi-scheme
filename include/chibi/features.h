@@ -366,7 +366,11 @@
 #endif
 
 #ifndef SEXP_USE_GREEN_THREADS
+#if defined(_WIN32)
+#define SEXP_USE_GREEN_THREADS 0
+#else
 #define SEXP_USE_GREEN_THREADS ! SEXP_USE_NO_FEATURES
+#endif
 #endif
 
 #ifndef SEXP_USE_DEBUG_THREADS
