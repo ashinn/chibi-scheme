@@ -365,6 +365,12 @@
 #define SEXP_USE_PEDANTIC 0
 #endif
 
+/* this ensures public structs and enums are unchanged by feature toggles. */
+/* should generally be left at 1. */
+#ifndef SEXP_USE_STABLE_ABI
+#define SEXP_USE_STABLE_ABI 1
+#endif
+
 #ifndef SEXP_USE_GREEN_THREADS
 #if defined(_WIN32)
 #define SEXP_USE_GREEN_THREADS 0

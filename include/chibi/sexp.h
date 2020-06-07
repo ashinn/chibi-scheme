@@ -163,13 +163,13 @@ enum sexp_types {
   SEXP_VECTOR,
   SEXP_FLONUM,
   SEXP_BIGNUM,
-#if SEXP_USE_RATIOS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_RATIOS
   SEXP_RATIO,
 #endif
-#if SEXP_USE_COMPLEX
+#if SEXP_USE_STABLE_ABI || SEXP_USE_COMPLEX
   SEXP_COMPLEX,
 #endif
-#if SEXP_USE_DISJOINT_STRING_CURSORS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_DISJOINT_STRING_CURSORS
   SEXP_STRING_CURSOR,
 #endif
   SEXP_IPORT,
@@ -182,7 +182,7 @@ enum sexp_types {
   SEXP_ENV,
   SEXP_BYTECODE,
   SEXP_CORE,
-#if SEXP_USE_DL
+#if SEXP_USE_STABLE_ABI || SEXP_USE_DL
   SEXP_DL,
 #endif
   SEXP_OPCODE,
@@ -197,10 +197,10 @@ enum sexp_types {
   SEXP_CONTEXT,
   SEXP_CPOINTER,
   SEXP_UNIFORM_VECTOR,
-#if SEXP_USE_AUTO_FORCE
+#if SEXP_USE_STABLE_ABI || SEXP_USE_AUTO_FORCE
   SEXP_PROMISE,
 #endif
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_STABLE_ABI || SEXP_USE_WEAK_REFERENCES
   SEXP_EPHEMERON,
 #endif
   SEXP_NUM_CORE_TYPES
@@ -441,9 +441,9 @@ struct sexp_struct {
 #else
       sexp_uint_t offset, length;
       sexp bytes;
+#endif
 #if SEXP_USE_STRING_INDEX_TABLE
       sexp charlens;
-#endif
 #endif
     } string;
     struct {
@@ -488,7 +488,7 @@ struct sexp_struct {
     /* runtime types */
     struct {
       sexp parent, lambda, bindings;
-#if SEXP_USE_RENAME_BINDINGS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_RENAME_BINDINGS
       sexp renames;
 #endif
     } env;
@@ -546,6 +546,9 @@ struct sexp_struct {
       struct sexp_mark_stack_ptr_t mark_stack[SEXP_MARK_STACK_COUNT];
       struct sexp_mark_stack_ptr_t *mark_stack_ptr;
       struct sexp_gc_var_t *saves;
+#if SEXP_USE_STABLE_ABI || SEXP_USE_DL
+      sexp dl;
+#endif
 #if SEXP_USE_GREEN_THREADS
       sexp_sint_t refuel;
       unsigned char* ip;
@@ -566,17 +569,14 @@ struct sexp_struct {
 #endif
       sexp stack, env, parent, child,
         globals, dk, params, proc, name, specific, event, result;
-#if SEXP_USE_DL
-      sexp dl;
-#endif
     } context;
-#if SEXP_USE_AUTO_FORCE
+#if SEXP_USE_STABLE_ABI || SEXP_USE_AUTO_FORCE
     struct {
       int donep;
       sexp value;
     } promise;
 #endif
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_STABLE_ABI || SEXP_USE_WEAK_REFERENCES
     struct {
       sexp key, value;
     } ephemeron;
@@ -1474,9 +1474,10 @@ SEXP_API sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 /****************************** utilities *****************************/
 
 enum sexp_context_globals {
-#if ! SEXP_USE_GLOBAL_SYMBOLS
+#if SEXP_USE_STABLE_ABI || ! SEXP_USE_GLOBAL_SYMBOLS
   SEXP_G_SYMBOLS,
 #endif
+  SEXP_G_ENDIANNESS,
   SEXP_G_TYPES,
   SEXP_G_FEATURES,
   SEXP_G_NUM_TYPES,
@@ -1507,18 +1508,18 @@ enum sexp_context_globals {
   SEXP_G_RANDOM_SOURCE,
   SEXP_G_STRICT_P,
   SEXP_G_NO_TAIL_CALLS_P,
-#if SEXP_USE_FOLD_CASE_SYMS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_FOLD_CASE_SYMS
   SEXP_G_FOLD_CASE_P,
 #endif
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_STABLE_ABI || SEXP_USE_WEAK_REFERENCES
   SEXP_G_WEAK_OBJECTS_PRESENT,
   SEXP_G_FILE_DESCRIPTORS,
   SEXP_G_NUM_FILE_DESCRIPTORS,
 #endif
-#if ! SEXP_USE_BOEHM
+#if SEXP_USE_STABLE_ABI || ! SEXP_USE_BOEHM
   SEXP_G_PRESERVATIVES,
 #endif
-#if SEXP_USE_GREEN_THREADS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_GREEN_THREADS
   SEXP_G_IO_BLOCK_ERROR,
   SEXP_G_IO_BLOCK_ONCE_ERROR,
   SEXP_G_THREAD_TERMINATE_ERROR,
@@ -1535,7 +1536,6 @@ enum sexp_context_globals {
   SEXP_G_THREADS_POLLFDS_ID,
   SEXP_G_ATOMIC_P,
 #endif
-  SEXP_G_ENDIANNESS,
   SEXP_G_NUM_GLOBALS
 };
 
@@ -1858,6 +1858,8 @@ SEXP_API int sexp_poll_port(sexp ctx, sexp port, int inputp);
 #define sexp_make_uvector(ctx, et, l) sexp_make_uvector_op(ctx, NULL, 2, et, l)
 #else
 #define sexp_make_uvector(ctx, et, l) sexp_make_vector(ctx, l, SEXP_ZERO)
+#define sexp_write_uvector NULL
+#define sexp_finalize_uvector NULL
 #endif
 #define sexp_make_string(ctx, l, c) sexp_make_string_op(ctx, NULL, 2, l, c)
 #define sexp_subbytes(ctx, a, b, c) sexp_subbytes_op(ctx, NULL, 3, a, b, c)
