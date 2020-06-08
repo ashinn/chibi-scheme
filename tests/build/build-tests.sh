@@ -18,6 +18,7 @@ i=0
 for opts in $(cat ${BUILDDIR}/build-opts.txt); do
     # If compiling with static libs, we need to bootstrap to build
     # clibs.c.
+    TARGET="chibi-scheme"
     if echo ${opts} | grep -q 'SEXP_USE_STATIC_LIBS=1'; then
         staticopts=$(echo ${opts} | sed 's/-DSEXP_USE_STATIC_LIBS=1;*//')
         staticopts=$(echo ${staticopts} | tr ';' ' ')
@@ -25,12 +26,16 @@ for opts in $(cat ${BUILDDIR}/build-opts.txt); do
         rm -f clibs.c
         $MAKE -j 8 "$vars" $staticopts 2>&1 >${BUILDDIR}/build${i}-bootstrap.out
         $MAKE -j 8 "$vars" $staticopts clibs.c 2>&1 >${BUILDDIR}/build${i}-clibs.out
+        TARGET="chibi-scheme-static"
     fi
     # Try to build then run tests.
     opts=$(echo ${opts} | tr ';' ' ')
     $MAKE cleaner 2>&1 >/dev/null
     sync
-    if $MAKE -j 8 "$vars" $opts chibi-scheme 2>&1 >${BUILDDIR}/build${i}-make.out; then
+    if $MAKE -j 8 "$vars" $opts "$TARGET" 2>&1 >${BUILDDIR}/build${i}-make.out; then
+        if [ "chibi-scheme" != "$TARGET" ]; then
+           cp "$TARGET" chibi-scheme
+        fi
         sync
         if $MAKE test-r5rs 2>&1 | tee ${BUILDDIR}/build${i}-test.out \
             | grep -q -E 'FAIL|ERROR'; then
