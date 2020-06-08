@@ -546,9 +546,6 @@ struct sexp_struct {
       struct sexp_mark_stack_ptr_t mark_stack[SEXP_MARK_STACK_COUNT];
       struct sexp_mark_stack_ptr_t *mark_stack_ptr;
       struct sexp_gc_var_t *saves;
-#if SEXP_USE_STABLE_ABI || SEXP_USE_DL
-      sexp dl;
-#endif
 #if SEXP_USE_GREEN_THREADS
       sexp_sint_t refuel;
       unsigned char* ip;
@@ -569,6 +566,9 @@ struct sexp_struct {
 #endif
       sexp stack, env, parent, child,
         globals, dk, params, proc, name, specific, event, result;
+#if SEXP_USE_STABLE_ABI || SEXP_USE_DL
+      sexp dl;
+#endif
     } context;
 #if SEXP_USE_STABLE_ABI || SEXP_USE_AUTO_FORCE
     struct {
