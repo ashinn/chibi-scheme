@@ -1,6 +1,6 @@
 
 (define-library (srfi 41)
-  (import (scheme base) (srfi 1))
+  (import (scheme base) (scheme lazy) (srfi 1))
   (export
    stream-null stream-cons stream? stream-null? stream-pair?
    stream-car stream-cdr stream-lambda)
