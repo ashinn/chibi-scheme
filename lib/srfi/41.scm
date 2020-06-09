@@ -2,16 +2,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; primitive layer adapted from SRFI 41 reference impl
 
-(define-record-type <stream>
+(define-record-type Stream
   (make-stream promise)
   stream?
   (promise stream-promise))
 
-(define-record-type <stream-null>
+(define-record-type Stream-null
   (make-stream-null)
   %stream-null?)
 
-(define-record-type <stream-pair>
+(define-record-type Stream-pair
   (make-stream-pair head tail)
   %stream-pair?
   (head %stream-car)
