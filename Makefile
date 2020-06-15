@@ -3,8 +3,8 @@
 .PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian snowballs
 .DEFAULT_GOAL := all
 
-VERSION ?= $(shell cat VERSION)
-SOVERSION ?= $(VERSION)
+CHIBI_VERSION ?= $(shell cat VERSION)
+SOVERSION ?= $(CHIBI_VERSION)
 SOVERSION_MAJOR ?= $(shell echo "$(SOVERSION)" | sed "s/\..*//")
 
 CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
@@ -87,7 +87,7 @@ include/chibi/install.h: Makefile
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
 	echo '#define sexp_default_module_path "'$(MODDIR):$(BINMODDIR):$(SNOWMODDIR):$(SNOWBINMODDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
-	echo '#define sexp_version "'$(VERSION)'"' >> $@
+	echo '#define sexp_version "'$(CHIBI_VERSION)'"' >> $@
 	echo '#define sexp_release_name "'`cat RELEASE`'"' >> $@
 
 %.o: %.c $(BASE_INCLUDES)
@@ -139,7 +139,7 @@ chibi-scheme.pc: chibi-scheme.pc.in
 	echo "exec_prefix=\$${prefix}" >> chibi-scheme.pc
 	echo "libdir=$(LIBDIR)" >> chibi-scheme.pc
 	echo "includedir=\$${prefix}/include" >> chibi-scheme.pc
-	echo "version=$(VERSION)" >> chibi-scheme.pc
+	echo "version=$(CHIBI_VERSION)" >> chibi-scheme.pc
 	echo "" >> chibi-scheme.pc
 	cat chibi-scheme.pc.in >> chibi-scheme.pc
 
@@ -171,7 +171,7 @@ doc: doc/chibi.html doc-libs
 
 lib/.%.meta: lib/%/ tools/generate-install-meta.scm $(CHIBI_DEPENDENCIES)
 	-$(FIND) $< -name \*.sld | \
-	 $(CHIBI) tools/generate-install-meta.scm $(VERSION) > $@
+	 $(CHIBI) tools/generate-install-meta.scm $(CHIBI_VERSION) > $@
 
 ########################################################################
 # Dist builds - rules to build generated files included in distribution
@@ -458,11 +458,11 @@ uninstall:
 	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
 
 dist: dist-clean
-	$(RM) chibi-scheme-$(VERSION).tgz
-	$(MKDIR) chibi-scheme-$(VERSION)
-	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-$(VERSION)/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-$(VERSION)/$$f; done
-	$(TAR) cphzvf chibi-scheme-$(VERSION).tgz chibi-scheme-$(VERSION)
-	$(RM) -r chibi-scheme-$(VERSION)
+	$(RM) chibi-scheme-$(CHIBI_VERSION).tgz
+	$(MKDIR) chibi-scheme-$(CHIBI_VERSION)
+	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-$(CHIBI_VERSION)/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-$(CHIBI_VERSION)/$$f; done
+	$(TAR) cphzvf chibi-scheme-$(CHIBI_VERSION).tgz chibi-scheme-$(CHIBI_VERSION)
+	$(RM) -r chibi-scheme-$(CHIBI_VERSION)
 
 mips-dist: dist-clean
 	$(RM) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`.tgz
@@ -472,7 +472,7 @@ mips-dist: dist-clean
 	$(RM) -r chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
 
 debian:
-	sudo checkinstall -D --pkgname chibi-scheme --pkgversion $(VERSION) --maintainer "http://groups.google.com/group/chibi-scheme" -y make PREFIX=/usr install
+	sudo checkinstall -D --pkgname chibi-scheme --pkgversion $(CHIBI_VERSION) --maintainer "http://groups.google.com/group/chibi-scheme" -y make PREFIX=/usr install
 
 # Libraries in the standard distribution we want to make available to
 # other Scheme implementations.  Note this is run with my own
