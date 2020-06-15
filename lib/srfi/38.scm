@@ -94,6 +94,8 @@
                          (display " " out)
                          (wr (car ls))
                          (lp (cdr ls)))))
+                      (shared?  ;; shared dotted tail
+                       (write ls out))
                       (else
                        (display " . " out)
                        (wr ls))))))
