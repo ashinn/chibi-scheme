@@ -5,23 +5,55 @@
         (set-port-fold-case! in #t))
     (let lp ((res '()))
       (let ((x (read in)))
-        (if (eof-object? x) res (lp (cons x res)))))))
+        (if (eof-object? x)
+            (reverse res)
+            (lp (cons x res)))))))
+
+(define current-includes
+  '())
+
+(define-syntax push-includes!
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (set! current-includes (cons (cadr expr) current-includes))
+     #f)))
+
+(define-syntax pop-includes!
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (set! current-includes (cdr current-includes))
+     #f)))
+
+(define-syntax include/aux
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let ((ci? (cadr expr)))
+       (let lp ((files (cddr expr)) (res '()))
+         (cond
+          ((null? files)
+           (cons (rename 'begin) (reverse res)))
+          ((not (string? (car files)))
+           (error "include requires a string"))
+          ((member (car files) current-includes)
+           (error "recursive include" (car files)))
+          (else
+           (let ((includes current-includes))
+             (lp (cdr files)
+                 (cons `(,(rename 'begin)
+                         (,(rename 'push-includes!) ,(car files))
+                         ,@(read-sexps (car files) ci?)
+                         (,(rename 'pop-includes!)))
+                       res))))))))))
 
 (define-syntax include
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (let lp ((files (cdr expr)) (res '()))
-       (cond
-        ((null? files) (cons (rename 'begin) (reverse res)))
-        (else (lp (cdr files) (append (read-sexps (car files)) res))))))))
+  (syntax-rules ()
+    ((include file ...)
+     (include/aux #f file ...))))
 
 (define-syntax include-ci
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (let lp ((files (cdr expr)) (res '()))
-       (cond
-        ((null? files) (cons (rename 'begin) (reverse res)))
-        (else (lp (cdr files) (append (read-sexps (car files) #t) res))))))))
+  (syntax-rules ()
+    ((include file ...)
+     (include/aux #t file ...))))
 
 (define (read-error? x)
   (and (error-object? x) (memq (exception-kind x) '(read read-incomplete)) #t))
