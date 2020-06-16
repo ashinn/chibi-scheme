@@ -66,62 +66,60 @@
                       (set! count (+ count 1))))
                (cont x index)))))
     (let wr ((x x))
-      (check-shared
-       x
-       ""
-       (lambda (x shared?)
-         (cond
-          ((pair? x)
-           (display "(" out)
-           (wr (car x))
-           (let lp ((ls (cdr x)))
-             (check-shared
-              ls
-              " . "
-              (lambda (ls shared?)
-                (cond ((null? ls))
-                      ((pair? ls)
-                       (cond
-                        (shared?
-                         (display "(" out)
-                         (wr (car ls))
-                         (check-shared
-                          (cdr ls)
-                          " . "
-                          (lambda (ls shared?) (lp ls)))
-                         (display ")" out))
-                        (else
-                         (display " " out)
-                         (wr (car ls))
-                         (lp (cdr ls)))))
-                      (shared?  ;; shared dotted tail
-                       (write ls out))
-                      (else
-                       (display " . " out)
-                       (wr ls))))))
-           (display ")" out))
-          ((vector? x)
-           (display "#(" out)
-           (let ((len (vector-length x)))
-             (cond ((> len 0)
-                    (wr (vector-ref x 0))
-                    (do ((i 1 (+ i 1)))
-                        ((= i len))
-                      (display " " out)
-                      (wr (vector-ref x i))))))
-           (display ")" out))
-          ((let ((type (type-of x)))
-             (and (type? type) (type-printer type)))
-           => (lambda (printer) (printer x wr out)))
-          ((null? x) (display "()" out))
-          ((char? x) (display "#\\" out) (write-char x out))
-          ((symbol? x) (write x out))
-          ((number? x) (display (number->string x) out))
-          ((eq? x #t) (display "#t" out))
-          ((eq? x #f) (display "#f" out))
-          (else
-           ;; (display "#<unknown>" out)
-           (write x out))))))))
+      (define (wr-one x shared?)
+        (cond
+         ((pair? x)
+          (display "(" out)
+          (wr (car x))
+          (let lp ((ls (cdr x)))
+            (check-shared
+             ls
+             " . "
+             (lambda (ls shared?)
+               (cond ((null? ls))
+                     ((pair? ls)
+                      (cond
+                       (shared?
+                        (display "(" out)
+                        (wr (car ls))
+                        (check-shared
+                         (cdr ls)
+                         " . "
+                         (lambda (ls shared?) (lp ls)))
+                        (display ")" out))
+                       (else
+                        (display " " out)
+                        (wr (car ls))
+                        (lp (cdr ls)))))
+                     (shared?  ;; shared dotted tail
+                      (wr-one ls #f))
+                     (else
+                      (display " . " out)
+                      (wr ls))))))
+          (display ")" out))
+         ((vector? x)
+          (display "#(" out)
+          (let ((len (vector-length x)))
+            (cond ((> len 0)
+                   (wr (vector-ref x 0))
+                   (do ((i 1 (+ i 1)))
+                       ((= i len))
+                     (display " " out)
+                     (wr (vector-ref x i))))))
+          (display ")" out))
+         ((let ((type (type-of x)))
+            (and (type? type) (type-printer type)))
+          => (lambda (printer) (printer x wr out)))
+         ((null? x) (display "()" out))
+         ((char? x) (display "#\\" out) (write-char x out))
+         ((symbol? x) (write x out))
+         ((number? x) (display (number->string x) out))
+         ((eq? x #t) (display "#t" out))
+         ((eq? x #f) (display "#f" out))
+         (else
+          ;; (display "#<unknown>" out)
+          (write x out))))
+      (check-shared x "" wr-one))))
 
 (define write/ss write-with-shared-structure)
 

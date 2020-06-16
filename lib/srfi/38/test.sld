@@ -21,7 +21,7 @@
 
       (define-syntax test-cyclic-io
         (syntax-rules ()
-          ((test-io str-expr expr)
+          ((test-cyclic-io str-expr expr)
            (let ((str str-expr)
                  (value expr))
              (test str (write-to-string value #t))
@@ -48,6 +48,13 @@
       (test-io "(#0=(1 . 2) #1=(1 . 2) #2=(3 . 4) #0# #1# #2#)"
                (let ((a (cons 1 2)) (b (cons 1 2)) (c (cons 3 4)))
                  (list a b c a b c)))
+      (test-io "((1 . #0=#(2)) #0#)"
+               (let ((vec (vector 2)))
+                 (list (cons 1 vec) vec)))
+      (test-io "((1 . #0=#(2 #0#)) #0#)"
+               (let ((vec (vector 2 #f)))
+                 (vector-set! vec 1 vec)
+                 (list (cons 1 vec) vec)))
       (test-cyclic-io "((1 . 2) (1 . 2) (3 . 4) (1 . 2) (1 . 2) (3 . 4))"
                       (let ((a (cons 1 2)) (b (cons 1 2)) (c (cons 3 4)))
                         (list a b c a b c)))
