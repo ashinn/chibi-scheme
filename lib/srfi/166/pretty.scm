@@ -18,6 +18,13 @@
 (define (make-space n) (make-string n #\space))
 (define (make-nl-space n) (string-append "\n" (make-string n #\space)))
 
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (let ((res (get-output-string out)))
+      (close-output-port out)
+      res)))
+
 (define (joined/shares fmt ls shares . o)
   (let ((sep (displayed (if (pair? o) (car o) " "))))
     (fn ()
@@ -40,7 +47,7 @@
 (define (string-find/index str pred i)
   (string-cursor->index
    str
-   (string-find str pred (string-index->cursor str i))))
+   (string-index str pred (string-index->cursor str i))))
 
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))

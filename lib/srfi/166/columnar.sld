@@ -7,7 +7,8 @@
           (srfi 117)
           (srfi 130)
           (srfi 166 base)
-          (chibi optional)
-          )
-  (export-all)
+          (chibi optional))
+  (export
+   columnar tabular wrapped wrapped/list wrapped/char
+   justified from-file line-numbers show-columns)
   (include "column.scm"))

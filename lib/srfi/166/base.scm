@@ -17,14 +17,21 @@
         (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (string-length str))))
     (- end start)))
 
+(define (call-with-output-string proc)
+  (let ((out (open-output-string)))
+    (proc out)
+    (let ((res (get-output-string out)))
+      (close-output-port out)
+      res)))
+
 ;;> Raw output - displays str to the formatter output port and updates
 ;;> row and col.
 (define (output-default str)
   (fn (port (r row) (c col) string-width)
-    (let ((nl-index (string-find-right str #\newline)))
+    (let ((nl-index (string-index-right str #\newline)))
       (write-string str port)
       (if (string-cursor>? nl-index (string-cursor-start str))
-          (with! (row (+ r (string-count str #\newline)))
+          (with! (row (+ r (string-count str (lambda (ch) (eqv? ch #\newline)))))
                  (col (string-width str (string-cursor->index str nl-index))))
           (with! (col (+ c (string-width str))))))))
 

@@ -7,13 +7,12 @@
           (scheme inexact)
           (srfi 1)
           (srfi 69)
-          (chibi show shared)
-          (chibi string)
+          (srfi 130)
           (rename (srfi 165)
                   (computation-each sequence)
                   (computation-with! with!)
-                  (computation-forked forked)
-                  ))
+                  (computation-forked forked))
+          (chibi show shared))
   (cond-expand
    (chibi
     (import (only (chibi) let-optionals*)))
