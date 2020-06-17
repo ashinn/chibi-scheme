@@ -734,7 +734,7 @@ def | 6
       (test "\x1B;[31mred\x1B;[34mblue\x1B;[31mred\x1B;[0m"
           (show #f (as-red "red" (as-blue "blue") "red")))
       (test "\x1b;[31m1234567\x1b;[0m col: 7"
-            (show #f (as-unicode (as-red "1234567") (fn ((col)) (each " col: " col)))))
+            (show #f (as-unicode (as-red "1234567") (fn (col) (each " col: " col)))))
 
       ;; unicode
       (test "〜日本語〜"

@@ -8,5 +8,5 @@
   (export as-unicode
           unicode-terminal-width unicode-terminal-width/wide
           upcased downcased)
-  (include "../../chibi/show/width.scm"
-           "../../chibi/show/unicode.scm"))
+  (include "width.scm"
+           "unicode.scm"))

@@ -10,4 +10,4 @@
           (chibi optional)
           )
   (export-all)
-  (include "../../chibi/show/column.scm"))
+  (include "column.scm"))

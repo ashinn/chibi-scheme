@@ -8,4 +8,4 @@
   (begin
     (define color
       (make-computation-environment-variable 'color #f #f)))
-  (include "../../chibi/show/color.scm"))
+  (include "color.scm"))

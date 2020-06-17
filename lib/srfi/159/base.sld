@@ -1,12 +1,29 @@
 
 (define-library (srfi 159 base)
-  (import (chibi show) (chibi show pretty))
   (export
    show fn forked with with! each each-in-list call-with-output
-   displayed written written-simply pretty pretty-simply
-   numeric numeric/comma numeric/si numeric/fitted
-   nothing nl fl space-to tab-to escaped maybe-escaped
-   padded padded/right padded/both
-   trimmed trimmed/right trimmed/both trimmed/lazy
-   fitted fitted/right fitted/both
-   joined joined/prefix joined/suffix joined/last joined/dot joined/range))
+   displayed written written-shared written-simply numeric nothing
+   escaped maybe-escaped numeric/si numeric/fitted numeric/comma)
+  (import (scheme base) (scheme write) (scheme complex) (scheme inexact)
+          (srfi 1) (srfi 69) (chibi string) (chibi monad environment)
+          (chibi show shared))
+  (cond-expand
+   (chibi
+    (import (only (chibi) let-optionals*)))
+   (else
+    (begin
+      (define-syntax let-optionals*
+        (syntax-rules ()
+          ((let-optionals* opt-ls () . body)
+           (begin . body))
+          ((let-optionals* (op . args) vars . body)
+           (let ((tmp (op . args)))
+             (let-optionals* tmp vars . body)))
+          ((let-optionals* tmp ((var default) . rest) . body)
+           (let ((var (if (pair? tmp) (car tmp) default))
+                 (tmp2 (if (pair? tmp) (cdr tmp) '())))
+             (let-optionals* tmp2 rest . body)))
+          ((let-optionals* tmp tail . body)
+           (let ((tail tmp)) . body)))))))
+  (include "../166/base.scm")
+  (include "../166/write.scm"))

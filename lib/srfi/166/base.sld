@@ -50,5 +50,5 @@
    comma-sep comma-rule word-separator? ambiguous-is-wide?
    )
   (include "base.scm")
-  (include "../../chibi/show/write.scm")
-  (include "../../chibi/show/show.scm"))
+  (include "write.scm")
+  (include "show.scm"))

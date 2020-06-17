@@ -8,5 +8,5 @@
           (srfi 1)
           (srfi 69)
           (srfi 166 base))
-  (export-all)
-  (include "../../chibi/show/pretty.scm"))
+  (export pretty pretty-shared pretty-simply pretty-color)
+  (include "pretty.scm"))

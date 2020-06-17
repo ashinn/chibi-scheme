@@ -2,10 +2,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; additional state information
 
+(define-syntax define-state-variables
+  (syntax-rules ()
+    ((define-state-variables var ...)
+     (begin
+       (define var
+         (make-computation-environment-variable 'var #f #f))
+       ...))))
+
+(define-state-variables
+  expression? in-cond? in-macro? return? non-spaced-ops?
+  braceless-bodies? newline-before-brace? no-wrap? macro-vars
+  expr-writer switch-indent-space indent-space
+  indent default-type dot op)
+
 (define (c-in-expr proc) (with ((expression? #t)) (c-expr proc)))
 (define (c-in-stmt proc) (with ((expression? #f)) (c-expr proc)))
 (define (c-in-test proc) (with ((in-cond? #t)) (c-in-expr proc)))
-(define (c-with-op op proc) (with ((op op)) proc))
+(define (c-with-op new-op proc) (with ((op new-op)) proc))
 
 (define nl-str (call-with-output-string newline))
 (define (make-nl-space n) (string-append nl-str (make-string n #\space)))
@@ -25,6 +39,11 @@
 
 (define (write-to-string x)
   (call-with-output-string (lambda (out) (write x out))))
+
+(define (string-find/index str pred i)
+  (string-cursor->index
+   str
+   (string-find str pred (string-index->cursor str i))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; be smart about operator precedence
@@ -76,9 +95,9 @@
   (each "(" x ")"))
 
 (define (c-maybe-paren x-op x)
-  (fn (op)
+  (fn ((orig-op op))
     (let ((x (with ((op x-op)) x)))
-      (if (c-op<= op x-op)
+      (if (c-op<= orig-op x-op)
           (c-paren x)
           x))))
 
@@ -244,6 +263,42 @@
    (else
     (c-literal x))))
 
+(define (try-fitted2 proc fail)
+  (fn (width (orig-output output))
+    (let ((out (open-output-string)))
+      (call-with-current-continuation
+       (lambda (abort)
+         ;; Modify output to accumulate to an output string port,
+         ;; and escape immediately with failure if we exceed the
+         ;; column width.
+         (define (output* str)
+           (fn (col)
+             (let lp ((i 0) (col col))
+               (let ((nli (string-find/index str #\newline i))
+                     (len (string-length str)))
+                 (if (< nli len)
+                     (if (> (+ (- nli i) col) width)
+                         (abort fail)
+                         (lp (+ nli 1) 0))
+                     (let ((col (+ (- len i) col)))
+                       (cond
+                        ((> col width)
+                         (abort fail))
+                        (else
+                         (output-default str)))))))))
+         (forked
+          (with ((output output*)
+                 (port out))
+            proc)
+          ;; fitted successfully
+          (fn () (orig-output (get-output-string out)))))))))
+
+(define (try-fitted proc . fail)
+  (let lp ((proc proc) (ls fail))
+    (if (null? ls)
+        proc
+        (try-fitted2 proc (lp (car ls) (cdr ls))))))
+
 (define (c-apply ls)
   (c-wrap-stmt
    (with ((op 'comma))
@@ -261,7 +316,7 @@
                     (joined c-expr (cdr ls) sep))))))))))))
 
 (define (c-expr x)
-  (fn (gen) ((or gen c-expr/sexp) x)))
+  (fn (expr-writer) ((or expr-writer c-expr/sexp) x)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; comments, with Emacs-friendly escaping of nested comments
@@ -291,33 +346,32 @@
              (lp (string-cursor-next str j))))))))))
 
 (define (c-comment . args)
-  (each "/*" (fn (output)
-               (with ((output (make-comment-writer output)))
+  (each "/*" (fn ((orig-output output))
+               (with ((output (make-comment-writer orig-output)))
                  (each-in-list args)))
         "*/"))
 
 (define (make-block-comment-writer)
   (lambda (str)
-    (fn (col output)
-      (with ((output (make-comment-writer output)))
+    (fn (col (orig-output output))
+      (with ((output (make-comment-writer orig-output)))
         (let ((end (string-cursor-end str))
               (indent (string-append (make-nl-space (+ col 1)) "* ")))
           (let lp ((i (string-cursor-start str)))
             (let ((j (string-find str #\newline i)))
-              (output indent)
-              (output (substring-cursor str i j))
+              (each indent (substring-cursor str i j))
               (if (string-cursor<? j end)
                   (lp (string-cursor-next str j))))))))))
 
 (define (c-block-comment . args)
-  (fn (col row)
+  (fn (col (row1 row))
     (let ((indent (c-indent-string col)))
       (each "/* "
             (with ((writer (make-block-comment-writer)))
               (each-in-list args))
             (fn ((row2 row))
               (cond
-               ((= row row2) (displayed " */"))
+               ((= row1 row2) (displayed " */"))
                (else (each fl indent " */"))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -402,7 +456,7 @@
                      (apply cpp-elif (cdr o))
                      (each (cpp-else) (cadr o) endif)))
                 (else endif))))
-    (fn (col)
+    (fn ()
       (each fl "#" name " " (cpp-expr check) fl
             (or pass "")
             tail fl))))
