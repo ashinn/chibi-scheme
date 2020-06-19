@@ -10,7 +10,7 @@
         ((_ binds mv-expr body ...)
          (let-values ((binds mv-expr)) body ...))))
     (define (run-tests)
-      (test-group "ideque"
+      (test-group "srfi-134: ideque"
 
         (test-group "ideque/constructors"
           (test '() (ideque->list (ideque)))

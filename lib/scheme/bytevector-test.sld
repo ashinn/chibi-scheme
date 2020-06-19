@@ -9,7 +9,7 @@
   (export run-tests)
   (begin
     (define (run-tests)
-      (test-begin "bytevector")
+      (test-begin "scheme bytevector")
       ;; (test 258 (bytevector-uint-ref #u8(0 1 2 0) 1 (endianness big) 2))
       ;; (test 513 (bytevector-uint-ref #u8(0 1 2 0) 1 (endianness little) 2))
       ;; (test -65281

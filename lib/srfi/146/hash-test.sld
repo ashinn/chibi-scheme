@@ -33,7 +33,7 @@
     (define comparator (make-default-comparator))
 
     (define (run-tests)
-      (test-begin "SRFI 146: Hashmaps")
+      (test-begin "srfi-146: hashmaps")
 
       (test-group "Predicates"
         (define hashmap0 (hashmap comparator))
@@ -438,4 +438,4 @@
             (test-assert "=?: unequal hashmaps"
               (not (=? comparator hashmap1 hashmap4))))))
 
-      (test-end "SRFI 146: Hashmaps"))))
+      (test-end "srfi-146: hashmaps"))))

@@ -4,7 +4,7 @@
   (export run-tests)
   (begin
     (define (run-tests)
-      (test-group "ilists"
+      (test-group "srfi-116: ilists"
 
         (test-group "ilists/constructors"
           (define abc (ilist 'a 'b 'c))

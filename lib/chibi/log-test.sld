@@ -20,7 +20,7 @@
                (string-split (log->string expr ...) "\n"))
           "\n"))))
     (define (run-tests)
-      (test-begin "(chibi log)")
+      (test-begin "logging")
       (test "D four: 4"
           (log->string/no-dates
            (log-debug "four: " (+ 2 2))))

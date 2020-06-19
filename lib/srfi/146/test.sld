@@ -31,7 +31,7 @@
           (chibi test))
   (begin
     (define (run-tests)
-      (test-begin "SRFI 146")
+      (test-begin "srfi-146: mappings")
 
       (test-group "Predicates"
         (define mapping0 (mapping comparator))
@@ -521,6 +521,6 @@
             (test-assert "<?: case 3"
               (<? comparator mapping1 mapping5)))))
       
-      (test-end "SRFI 146"))
+      (test-end "srfi-146: mappings"))
 
     (define comparator (make-default-comparator))))

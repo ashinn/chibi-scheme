@@ -4,7 +4,7 @@
   (export run-tests)
   (begin
     (define (run-tests)
-      (test-begin "(chibi show c)")
+      (test-begin "show c")
 
       (test "if (1) {
     2;
