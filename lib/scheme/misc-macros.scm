@@ -32,7 +32,10 @@
                  (lambda ()
                    (let ((var condition))      ; clauses may SET! var
                      (guard-aux (handler-k (lambda ()
-                                             (raise condition)))
+                                             ;; must be raise-continuable
+                                             ;; in case the original
+                                             ;; exception was continuable
+                                             (raise-continuable condition)))
                                 clause ...))))))))
           (lambda ()
             (let ((res (let () e1 e2 ...)))
