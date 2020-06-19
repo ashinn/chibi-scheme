@@ -1826,19 +1826,20 @@
      (type-id-init-value (func-ret-type func)) ";\n"
      (lambda ()
        (let lp ((ls (func-c-args func))
-                (i 1))
+                (i 1)
+                (vec? #f))
          (cond
           ((null? ls))
           ;; ((type-value (car ls))
           ;;  (lp (cdr ls) i))
           ((eq? 'sexp (type-base (car ls)))
-           (lp (cdr ls) (+ i 1)))
+           (lp (cdr ls) (+ i 1) vec?))
           ((<= i 3)
            (cat "    sexp_opcode_arg" i "_type(" var ") = "
                 (type-id-init-value (car ls)) ";\n")
-           (lp (cdr ls) (+ i 1)))
+           (lp (cdr ls) (+ i 1) vec?))
           (else
-           (if (= i 4)
+           (if (not vec?)
                (cat "    sexp_opcode_argn_type(" var ") = "
                     "sexp_make_vector(ctx, "
                     (make-integer (- (length (func-c-args func)) 3)) ", "
@@ -1846,7 +1847,7 @@
            (cat "    sexp_vector_set(sexp_opcode_argn_type(" var "), "
                 (make-integer (- i 4)) ", "
                 (type-id-init-value (car ls)) ");\n")
-           (lp (cdr ls) (+ i 1))))))
+           (lp (cdr ls) (+ i 1) #t)))))
      ;; "  } else {\n"
      ;; "    sexp_warn(ctx, \"couldn't generated opcode\", " var ");\n"
      "  }\n")))
