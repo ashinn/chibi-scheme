@@ -623,7 +623,7 @@ sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_
     for (mod_path=all_paths[i]; *mod_path; mod_path=colon+1) {
       colon = strchr(mod_path, ':');
       end = colon ? colon : mod_path + strlen(mod_path);
-      snprintf(path, end-mod_path, "%s", mod_path);
+      snprintf(path, sizeof(path), "%s", mod_path);
       if (end[-1] != '/') path[end-mod_path] = '/';
       len = (end-mod_path) + (end[-1] == '/' ? 0 : 1);
       snprintf(path + len, sizeof(path) - len, "%s", filename);
