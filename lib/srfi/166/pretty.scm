@@ -53,7 +53,7 @@
   (call-with-output-string (lambda (out) (write x out))))
 
 (define (try-fitted2 proc fail)
-  (fn (width (orig-output output))
+  (fn (width string-width (orig-output output))
     (let ((out (open-output-string)))
       (call-with-current-continuation
        (lambda (abort)
@@ -64,7 +64,7 @@
            (fn (col)
              (let lp ((i 0) (col col))
                (let ((nli (string-find/index str #\newline i))
-                     (len (string-length str)))
+                     (len (string-width str)))
                  (if (< nli len)
                      (if (> (+ (- nli i) col) width)
                          (abort fail)
@@ -88,33 +88,40 @@
         proc
         (try-fitted2 proc (lp (car ls) (cdr ls))))))
 
-(define (fits-in-width width proc)
+(define (fits-in-width width proc set-failed!)
   (call-with-current-continuation
    (lambda (abort)
-     (show
-      #f
-      (fn ((orig-output output))
-        (define (output* str)
-          (each (orig-output str)
-                (fn (col)
-                  (if (>= col width)
-                      (abort #f)
-                      nothing))))
-        (with ((output output*))
-          proc))))))
+     (fn ((orig-output output))
+       (define (output* str)
+         (each (orig-output str)
+               (fn (col)
+                 (if (>= col width)
+                     (begin (set-failed! #t) (abort #f))
+                     nothing))))
+       (with ((output output*))
+         proc)))))
 
-(define (fits-in-columns width ls writer)
+(define (fits-in-columns width ls writer set-result!)
   (let ((max-w (quotient width 2)))
-    (let lp ((ls ls) (res '()) (widest 0))
-      (cond
-       ((pair? ls)
-        (let ((str (fits-in-width max-w (writer (car ls)))))
-          (and str
-               (lp (cdr ls)
-                   (cons str res)
-                   (max (string-length str) widest)))))
-       ((null? ls) (cons widest (reverse res)))
-       (else #f)))))
+    (fn (string-width)
+      (let lp ((ls ls) (res '()) (widest 0))
+        (cond
+         ((pair? ls)
+          (let ((failed? #f))
+            (call-with-output
+             (fits-in-width max-w
+                            (writer (car ls))
+                            (lambda (x) (set! failed? x)))
+             (lambda (str)
+               (if failed?
+                   (begin
+                     (set-result! #f)
+                     nothing)
+                   (lp (cdr ls)
+                       (cons str res)
+                       (max (string-width str) widest)))))))
+         ((null? ls) (set-result! (cons widest (reverse res))) nothing)
+         (else (set-result! #f) nothing))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; style
@@ -258,28 +265,36 @@
    (fn (col width string-width)
      (let ((avail (- width col)))
        (cond
-        ((and (pair? (cdr ls)) (pair? (cddr ls)) (pair? (cdr (cddr ls)))
-              (fits-in-columns width ls (lambda (x) (pp-flat x pp shares))))
-         => (lambda (ls)
-              ;; at least four elements which can be broken into columns
-              (let* ((prefix (make-nl-space col))
-                     (widest (+ 1 (car ls)))
-                     (columns (quotient width widest))) ; always >= 2
-                (let lp ((ls (cdr ls)) (i 1))
-                  (cond
-                   ((null? ls)
-                    nothing)
-                   ((null? (cdr ls))
-                    (displayed (car ls)))
-                   ((>= i columns)
-                    (each (car ls)
-                          prefix
-                          (fn () (lp (cdr ls) 1))))
-                   (else
-                    (let ((pad (- widest (string-width (car ls)))))
-                      (each (car ls)
-                            (make-space pad)
-                            (lp (cdr ls) (+ i 1))))))))))
+        ((and (pair? (cdr ls)) (pair? (cddr ls)) (pair? (cdr (cddr ls))))
+         (let ((out (open-output-string))
+               (result #f))
+           (call-with-output
+            (fits-in-columns width ls (lambda (x) (pp-flat x pp shares))
+                             (lambda (res) (set! result res)))
+            (lambda (str)
+              (fn ()
+                (if (not result)
+                    ;; no room, print one per line
+                    (joined/shares pp ls shares (make-nl-space col))
+                    ;; at least four elements which can be broken into columns
+                    (let* ((prefix (make-nl-space col))
+                           (widest (+ 1 (car result)))
+                           (columns (quotient width widest))) ; always >= 2
+                      (let lp ((ls (cdr result)) (i 1))
+                        (cond
+                         ((null? ls)
+                          nothing)
+                         ((null? (cdr ls))
+                          (displayed (car ls)))
+                         ((>= i columns)
+                          (each (car ls)
+                                prefix
+                                (fn () (lp (cdr ls) 1))))
+                         (else
+                          (let ((pad (- widest (string-width (car ls)))))
+                            (each (car ls)
+                                  (make-space pad)
+                                  (lp (cdr ls) (+ i 1))))))))))))))
         (else
          ;; no room, print one per line
          (joined/shares pp ls shares (make-nl-space col))))))
@@ -380,4 +395,5 @@
     (each (pp obj (extract-shared-objects #f #f))
           fl)))
 
-(define pretty-color pretty)
+;; TODO: add colors
+(define pretty-with-color pretty)

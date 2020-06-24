@@ -21,7 +21,7 @@
    radix precision decimal-sep decimal-align sign-rule
    comma-sep comma-rule word-separator? ambiguous-is-wide?
    ;; pretty
-   pretty pretty-shared pretty-simply pretty-color
+   pretty pretty-shared pretty-simply pretty-with-color
    ;; columnar
    columnar tabular wrapped wrapped/list wrapped/char
    justified from-file line-numbers show-columns
