@@ -10,5 +10,5 @@
           (chibi optional))
   (export
    columnar tabular wrapped wrapped/list wrapped/char
-   justified from-file line-numbers show-columns)
+   justified from-file line-numbers)
   (include "column.scm"))

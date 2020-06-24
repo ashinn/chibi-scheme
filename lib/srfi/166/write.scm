@@ -363,7 +363,7 @@
     (define (round-to n k)
       (/ (round (* n k)) k))
     (lambda (n . o)
-      (let-optionals* o ((base 1024)
+      (let-optionals* o ((base 1000)
                          (separator ""))
         (let* ((log-n (log n))
                (names  (if (negative? log-n)

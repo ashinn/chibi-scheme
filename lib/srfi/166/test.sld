@@ -261,7 +261,8 @@
 
       (test "608" (show #f (numeric/si 608)))
       (test "608 B" (show #f (numeric/si 608 1000 " ") "B"))
-      (test "3.9Ki" (show #f (numeric/si 3986)))
+      (test "4k" (show #f (numeric/si 3986)))
+      (test "3.9Ki" (show #f (numeric/si 3986 1024)))
       (test "4kB" (show #f (numeric/si 3986 1000) "B"))
       (test "1.2Mm" (show #f (numeric/si 1.23e6 1000) "m"))
       (test "123km" (show #f (numeric/si 1.23e5 1000) "m"))
@@ -574,33 +575,33 @@
 
       ;; columns
 
-      (test "abc\ndef\n"
+      '(test "abc\ndef\n"
           (show #f (show-columns (list displayed "abc\ndef\n"))))
-      (test "abc123\ndef456\n"
+      '(test "abc123\ndef456\n"
           (show #f (show-columns (list displayed "abc\ndef\n")
                                  (list displayed "123\n456\n"))))
-      (test "abc123\ndef456\n"
+      '(test "abc123\ndef456\n"
           (show #f (show-columns (list displayed "abc\ndef\n")
                                  (list displayed "123\n456"))))
-      (test "abc123\ndef456\n"
+      '(test "abc123\ndef456\n"
           (show #f (show-columns (list displayed "abc\ndef")
                                  (list displayed "123\n456\n"))))
-      (test "abc123\ndef456\nghi789\n"
+      '(test "abc123\ndef456\nghi789\n"
           (show #f (show-columns (list displayed "abc\ndef\nghi\n")
                                  (list displayed "123\n456\n789\n"))))
-      (test "abc123wuv\ndef456xyz\n"
+      '(test "abc123wuv\ndef456xyz\n"
           (show #f (show-columns (list displayed "abc\ndef\n")
                                  (list displayed "123\n456\n")
                                  (list displayed "wuv\nxyz\n"))))
-      (test "abc  123\ndef  456\n"
+      '(test "abc  123\ndef  456\n"
           (show #f (show-columns (list (lambda (x) (padded/right 5 x))
                                        "abc\ndef\n")
                                  (list displayed "123\n456\n"))))
-      (test "ABC  123\nDEF  456\n"
+      '(test "ABC  123\nDEF  456\n"
           (show #f (show-columns (list (lambda (x) (upcased (padded/right 5 x)))
                                        "abc\ndef\n")
                                  (list displayed "123\n456\n"))))
-      (test "ABC  123\nDEF  456\n"
+      '(test "ABC  123\nDEF  456\n"
           (show #f (show-columns (list (lambda (x) (padded/right 5 (upcased x)))
                                        "abc\ndef\n")
                                  (list displayed "123\n456\n"))))
@@ -649,7 +650,7 @@ equivalent to REVERSE.
                                    (lp (cdr ls)
                                        (kons (car ls) acc)))))))))
 
-      (test
+      '(test
            "(define (fold kons knil ls)          ; The fundamental list iterator.
   (let lp ((ls ls) (acc knil))       ; Applies KONS to each element of
     (if (null? ls)                   ; LS and the result of the previous

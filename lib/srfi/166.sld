@@ -24,7 +24,7 @@
    pretty pretty-shared pretty-simply pretty-with-color
    ;; columnar
    columnar tabular wrapped wrapped/list wrapped/char
-   justified from-file line-numbers show-columns
+   justified from-file line-numbers
    ;; unicode
    as-unicode unicode-terminal-width unicode-terminal-width/wide
    upcased downcased
