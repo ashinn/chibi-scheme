@@ -1,6 +1,6 @@
 
 (define-library (srfi 166 unicode)
-  (import (scheme base) (scheme write)
+  (import (scheme base)
           (scheme char)
           (srfi 130)
           (srfi 151)
