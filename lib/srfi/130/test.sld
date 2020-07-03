@@ -160,9 +160,9 @@
         (test-assert "string-contains"
           (string-contains s "mer" 1 8))
         (test-not "string-contains"
-          (string-contains s "mer" 4 8))
+                  (string-contains s "mer" 4 8))
         (test-not "string-contains"
-          (string-contains s "mer" 1 5)))
+                  (string-contains s "mer" 1 5)))
       (let ((s "eek -- it's a geek."))
         (test 15 (string-cursor->index s (string-contains-right s "ee")))
         (test 15 (string-cursor->index s (string-contains-right s "ee" 12 18)))
@@ -384,5 +384,14 @@
 
       (test "string-contains" 0
         (string-cursor->index "ab" (string-contains "ab" "ab")))
+
+      ;; even string-cursor->index/index->cursor are polymorphic :(
+      (let* ((s "abc")
+             (i 1)
+             (sc (string-index->cursor s i)))
+        (test i (string-cursor->index s sc))
+        (test i (string-cursor->index s i))
+        (test sc (string-index->cursor s sc))
+        (test sc (string-index->cursor s i)))
 
       (test-end))))
