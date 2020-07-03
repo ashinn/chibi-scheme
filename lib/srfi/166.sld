@@ -17,7 +17,8 @@
    ;; computations
    fn with with! forked call-with-output
    ;; state variables
-   port row col width output writer string-width pad-char ellipsis
+   port row col width output writer pad-char ellipsis
+   string-width substring/width
    radix precision decimal-sep decimal-align sign-rule
    comma-sep comma-rule word-separator? ambiguous-is-wide?
    ;; pretty
@@ -26,7 +27,10 @@
    columnar tabular wrapped wrapped/list wrapped/char
    justified from-file line-numbers
    ;; unicode
-   as-unicode unicode-terminal-width unicode-terminal-width/wide
+   terminal-aware
+   string-terminal-width string-terminal-width/wide
+   substring-terminal-width substring-terminal-width/wide
+   substring-terminal-width substring-terminal-width/wide
    upcased downcased
    ;; color
    as-red as-blue as-green as-cyan as-yellow

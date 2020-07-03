@@ -737,20 +737,35 @@ def | 6
       (test "\x1B;[31mred\x1B;[34mblue\x1B;[31mred\x1B;[0m"
           (show #f (as-red "red" (as-blue "blue") "red")))
       (test "\x1b;[31m1234567\x1b;[0m col: 7"
-            (show #f (as-unicode (as-red "1234567") (fn (col) (each " col: " col)))))
+            (show #f (terminal-aware (as-red "1234567") (fn (col) (each " col: " col)))))
 
       ;; unicode
       (test "〜日本語〜"
           (show #f (with ((pad-char #\〜)) (padded/both 5 "日本語"))))
       (test "日本語"
-            (show #f (as-unicode (with ((pad-char #\〜)) (padded/both 5 "日本語")))))
+          (show #f (terminal-aware (with ((pad-char #\〜)) (padded/both 5 "日本語")))))
+      (test "本語"
+          (show #f (trimmed 2 "日本語")))
+      (test "語"
+          (show #f (terminal-aware (trimmed 2 "日本語"))))
+      (test "日本"
+          (show #f (trimmed/right 2 "日本語")))
+      (test "日"
+          (show #f (terminal-aware (trimmed/right 2 "日本語"))))
+      (test "\x1B;[31m日\x1B;[46m\x1B;[31m\x1B;[0m"
+          (show #f (terminal-aware
+                    (trimmed/right 2 (as-red "日本語" (on-cyan "!!!!"))))))
+      (test "日本語"
+          (show #f (trimmed/right 3 "日本語")))
+      (test "日"
+          (show #f (terminal-aware (trimmed/right 3 "日本語"))))
       (test "日本語 col: 6"
-            (show #f (as-unicode "日本語" (fn (col) (each " col: " col)))))
+          (show #f (terminal-aware "日本語" (fn (col) (each " col: " col)))))
       (test "日本語ΠΜΕ col: 9"
-            (show #f (as-unicode "日本語ΠΜΕ" (fn (col) (each " col: " col)))))
+          (show #f (terminal-aware "日本語ΠΜΕ" (fn (col) (each " col: " col)))))
       (test "日本語ΠΜΕ col: 12"
           (show #f (with ((ambiguous-is-wide? #t))
-                     (as-unicode "日本語ΠΜΕ"
+                     (terminal-aware "日本語ΠΜΕ"
                                  (fn (col) (each " col: " col))))))
 
       ;; from-file

@@ -146,29 +146,29 @@
    width
    (each-in-list ls)
    (lambda (str str-width diff)
-     (fn (ellipsis string-width col)
+     (fn (ellipsis string-width substring/width)
        (let* ((ell (if (char? ellipsis) (string ellipsis) (or ellipsis "")))
               (ell-len (string-width ell))
               (diff (- (+ str-width ell-len) width)))
          (each (if (negative? diff)
                    nothing
-                   (substring str 0 (- width ell-len)))
+                   (substring/width str 0 (- width ell-len)))
                ell))))))
 
-;;> As \scheme{trimmed} but removes from the left.
+;;> As \scheme{trimmed/right} but removes from the left.
 (define (trimmed/left width . ls)
   (trimmed/buffered
    width
    (each-in-list ls)
    (lambda (str str-width diff)
-     (fn (ellipsis string-width)
+     (fn (ellipsis string-width substring/width)
        (let* ((ell (if (char? ellipsis) (string ellipsis) (or ellipsis "")))
               (ell-len (string-width ell))
               (diff (- (+ str-width ell-len) width)))
          (each ell
                (if (negative? diff)
                    nothing
-                   (substring str diff))))))))
+                   (substring/width str diff str-width))))))))
 
 ;;> An alias for \scheme{trimmed/left}.
 (define trimmed trimmed/left)
@@ -186,7 +186,7 @@
               (ell-len (string-width ell))
               (diff (- (+ str-width ell-len ell-len) width))
               (left (quotient diff 2))
-              (right (- (string-width str) (quotient (+ diff 1) 2))))
+              (right (- str-width (quotient (+ diff 1) 2))))
          (if (negative? diff)
              ell
              (each ell (substring str left right) ell)))))))
@@ -197,7 +197,7 @@
 ;;> (e.g. \scheme{write-simple} on an infinite list).  The nature of
 ;;> this procedure means only truncating on the right is meaningful.
 (define (trimmed/lazy width . ls)
-  (fn ((orig-output output) string-width)
+  (fn ((orig-output output) string-width substring/width)
     (call-with-current-continuation
      (lambda (return)
        (let ((chars-written 0)
@@ -207,7 +207,7 @@
              (set! chars-written (+ chars-written len))
              (if (> chars-written width)
                  (let* ((end (max 0 (- len (- chars-written width))))
-                        (s (substring str 0 end)))
+                        (s (substring/width str 0 end)))
                    (each (orig-output s)
                          (with! (output orig-output))
                          (fn () (return nothing))))

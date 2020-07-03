@@ -44,6 +44,8 @@
   (pad-char #\space)
   (output output-default)
   (string-width substring-length)
+  (string-take-width string-take)
+  (substring/width substring)
   (word-separator? char-whitespace?)
   (ambiguous-is-wide? #f)
   (ellipsis "")

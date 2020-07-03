@@ -44,7 +44,8 @@
    ;; computations
    fn with with! forked call-with-output
    ;; state variables
-   port row col width output writer string-width pad-char ellipsis
+   port row col width output writer pad-char ellipsis
+   string-width substring/width
    radix precision decimal-sep decimal-align sign-rule
    comma-sep comma-rule word-separator? ambiguous-is-wide?
    )
