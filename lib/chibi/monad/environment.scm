@@ -114,7 +114,7 @@
            (else (cond ((assq x (get-props st)) => cdr) (else #f)))))
        (define-syntax ask
          (syntax-rules (quote field ...)
-           ((ask st 'field) (get st)) ...
+           ((ask st (syntax-quote field)) (get st)) ...
            ((ask st x) (%ask st x))))
        (define (%tell st x val)
          (case x
@@ -127,7 +127,7 @@
               (set-props! st (cons (cons x val) (get-props st))))))))
        (define-syntax tell
          (syntax-rules (quote field ...)
-           ((tell st 'field val) (put st val)) ...
+           ((tell st (syntax-quote field) val) (put st val)) ...
            ((tell st x val) (%tell st x val))))
        ;; External API
        ;;
@@ -147,7 +147,7 @@
             (f! ("step") (params ooo (param param)) rest . body))
            ((f! ("step") ((p param) ooo) () . body)
             (lambda (st)
-              (let ((p (ask st 'param)) ooo)
+              (let ((p (ask st (syntax-quote param))) ooo)
                 ((let () . body) st))))
            ((f! params . body)
             (f! ("step") () params . body))))
@@ -161,26 +161,29 @@
        (define-syntax s
          (syntax-rules ()
            ((s f) f)
-           ((s f . g) (lambda (st) ((s . g) (f st))))))
+           ((s f . g)
+            (let ((f-tmp f) (g-tmp (s . g)))
+              (lambda (st) (g-tmp (f-tmp st)))))))
        ;; update in place
        (define-syntax u
          (syntax-rules ooo ()
            ((u (prop value) ooo)
             (lambda (st)
-              (tell st 'prop value) ooo
+              (tell st (syntax-quote prop) value) ooo
               st))))
        ;; local binding - update temporarily
        (define-syntax w
          (syntax-rules ooo ()
-           ((w ("step") ((p tmp v) ooo) () . b)
+           ((w ("step") ((p tmp v tmp-v) ooo) () . b)
             (lambda (st)
-              (let ((tmp (ask st 'p)) ooo)
+              (let ((tmp-v v) ooo
+                    (tmp (ask st (syntax-quote p))) ooo)
                 (dynamic-wind
-                  (lambda () (tell st 'p v) ooo)
+                  (lambda () (tell st (syntax-quote p) tmp-v) ooo)
                   (lambda () ((begin . b) st))
-                  (lambda () (tell st 'p tmp) ooo)))))
+                  (lambda () (tell st (syntax-quote p) tmp) ooo)))))
            ((w ("step") (props ooo) ((p v) . rest) . b)
-            (w ("step") (props ooo (p tmp v)) rest . b))
+            (w ("step") (props ooo (p tmp v tmp-v)) rest . b))
            ((w ((prop value) ooo) . body)
             (w ("step") () ((prop value) ooo) . body))))
        ;; run
