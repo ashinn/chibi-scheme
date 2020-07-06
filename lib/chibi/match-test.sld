@@ -117,6 +117,15 @@
       (test "Riastradh quasiquote" '(2 3)
         (match '(1 2 3) (`(1 ,b ,c) (list b c))))
 
+      (test "unquote-splicing" '(2 3)
+        (match '(1 2 3) (`(1 ,@ls) ls)))
+
+      (test "unquote-splicing tail" '(b c)
+        (match '(a b c d) (`(a ,@ls d) ls)))
+
+      (test "unquote-splicing tail fail" #f
+        (match '(a b c e) (`(a ,@ls d) ls) (else #f)))
+
       (test "trivial tree search" '(1 2 3)
         (match '(1 2 3) ((_ *** (a b c)) (list a b c))))
 

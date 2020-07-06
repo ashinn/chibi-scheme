@@ -235,7 +235,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
-;; 2020/07/06 - adding `..=' and `..*' patterns
+;; 2020/07/06 - adding `..=' and `..*' patterns; fixing ,@ patterns
 ;; 2016/10/05 - treat keywords as literals, not identifiers, in Chicken
 ;; 2016/03/06 - fixing named match-let (thanks to Stefan Israelsson Tampe)
 ;; 2015/05/09 - fixing bug in var extraction of quasiquote patterns
@@ -460,17 +460,15 @@
 ;; QUASIQUOTE patterns
 
 (define-syntax match-quasiquote
-  (syntax-rules (unquote unquote-splicing quasiquote)
+  (syntax-rules (unquote unquote-splicing quasiquote or)
     ((_ v (unquote p) g+s sk fk i)
      (match-one v p g+s sk fk i))
     ((_ v ((unquote-splicing p) . rest) g+s sk fk i)
-     (if (pair? v)
-       (match-one v
-                  (p . tmp)
-                  (match-quasiquote tmp rest g+s sk fk)
-                  fk
-                  i)
-       fk))
+     ;; TODO: it is an error to have another unquote-splicing in rest,
+     ;; check this and signal explicitly
+     (match-extract-vars
+      p
+      (match-gen-ellipsis/qq v p rest g+s sk fk i) i ()))
     ((_ v (quasiquote p) g+s sk fk i . depth)
      (match-quasiquote v p g+s sk fk i #f . depth))
     ((_ v (unquote p) g+s sk fk i x . depth)
@@ -598,6 +596,33 @@
                               i)))
                 (else
                  fk)))))))))
+
+;; Variant of the above where the rest pattern is in a quasiquote.
+
+(define-syntax match-gen-ellipsis/qq
+  (syntax-rules ()
+    ((_ v p r g+s (sk ...) fk i ((id id-ls) ...))
+     (match-verify-no-ellipsis
+      r
+      (let* ((tail-len (length 'r))
+             (ls v)
+             (len (and (list? ls) (length ls))))
+        (if (or (not len) (< len tail-len))
+            fk
+            (let loop ((ls ls) (n len) (id-ls '()) ...)
+              (cond
+               ((= n tail-len)
+                (let ((id (reverse id-ls)) ...)
+                  (match-quasiquote ls r g+s (sk ...) fk i)))
+               ((pair? ls)
+                (let ((w (car ls)))
+                  (match-one w p ((car ls) (set-car! ls))
+                             (match-drop-ids
+                              (loop (cdr ls) (- n 1) (cons id id-ls) ...))
+                             fk
+                             i)))
+               (else
+                fk)))))))))
 
 ;; Variant of above which takes an n/m range for the number of
 ;; repetitions.  At least n elements much match, and up to m elements
