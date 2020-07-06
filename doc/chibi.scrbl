@@ -633,13 +633,15 @@ sexp_release_object(ctx, obj)
 
 Decrement the absolute reference count for \var{obj}.
 
-\subsection{API Index}
+\subsection{C API Index}
 
 The above sections describe most everything you need for embedding in
 a typical application, notably creating environments and evaluating
 code from sexps, strings or files.  The following sections expand on
 additional macros and utilities for inspecting, accessing and creating
-different Scheme types, and for performing port and string I/O.
+different Scheme types, and for performing port and string I/O.  It is
+incomplete - see the macros and SEXP_API annotated functions in the
+include files (sexp.h, eval.h, bignum.h) for more bindings.
 
 Being able to convert from C string to sexp, evaluate it, and convert
 the result back to a C string forms the basis of the C API.  Because
