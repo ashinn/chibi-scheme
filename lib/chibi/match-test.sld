@@ -186,6 +186,34 @@
           (((and x (? symbol?)) ..1) x)
           (else #f)))
 
+      (test "list ..= too few" #f
+        (match (list 1 2) ((a b ..= 2) b) (else #f)))
+      (test "list ..=" '(2 3)
+        (match (list 1 2 3) ((a b ..= 2) b) (else #f)))
+      (test "list ..= too many" #f
+        (match (list 1 2 3 4) ((a b ..= 2) b) (else #f)))
+      (test "list ..= tail" 4
+        (match (list 1 2 3 4) ((a b ..= 2 c) c) (else #f)))
+      (test "list ..= tail fail" #f
+        (match (list 1 2 3 4 5 6) ((a b ..= 2 c) c) (else #f)))
+
+      (test "list ..* too few" #f
+        (match (list 1 2) ((a b ..* 2 4) b) (else #f)))
+      (test "list ..* lo" '(2 3)
+        (match (list 1 2 3) ((a b ..* 2 4) b) (else #f)))
+      (test "list ..* hi" '(2 3 4 5)
+        (match (list 1 2 3 4 5) ((a b ..* 2 4) b) (else #f)))
+      (test "list ..* too many" #f
+        (match (list 1 2 3 4 5 6) ((a b ..* 2 4) b) (else #f)))
+      (test "list ..* tail" 4
+        (match (list 1 2 3 4) ((a b ..* 2 4 c) c) (else #f)))
+      (test "list ..* tail 2" 5
+        (match (list 1 2 3 4 5) ((a b ..* 2 4 c d) d) (else #f)))
+      (test "list ..* tail" 6
+        (match (list 1 2 3 4 5 6) ((a b ..* 2 4 c) c) (else #f)))
+      (test "list ..* tail fail" #f
+        (match (list 1 2 3 4 5 6 7) ((a b ..* 2 4 c) c) (else #f)))
+
       (test "match-named-let" 6
         (match-let loop (((x . rest) '(1 2 3))
                          (sum 0))

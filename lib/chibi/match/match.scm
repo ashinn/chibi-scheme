@@ -92,6 +92,14 @@
 ;;> \example{(match (list 1 2) ((a b c ..1) c))}
 ;;> \example{(match (list 1 2 3) ((a b c ..1) c))}
 
+;;> The \scheme{..=} syntax is like \scheme{...} except that it takes
+;;> a tailing integer \scheme{<n>} and requires the pattern to match
+;;> exactly \scheme{<n>} times.
+
+;;> \example{(match (list 1 2) ((a b ..= 2) b))}
+;;> \example{(match (list 1 2 3) ((a b ..= 2) b))}
+;;> \example{(match (list 1 2 3 4) ((a b ..= 2) b))}
+
 ;;> The boolean operators \scheme{and}, \scheme{or} and \scheme{not}
 ;;> can be used to group and negate patterns analogously to their
 ;;> Scheme counterparts.
@@ -227,6 +235,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2020/07/06 - adding `..=' and `..*' patterns
 ;; 2016/10/05 - treat keywords as literals, not identifiers, in Chicken
 ;; 2016/03/06 - fixing named match-let (thanks to Stefan Israelsson Tampe)
 ;; 2015/05/09 - fixing bug in var extraction of quasiquote patterns
@@ -352,7 +361,7 @@
 ;; pattern so far.
 
 (define-syntax match-two
-  (syntax-rules (_ ___ ..1 *** quote quasiquote ? $ struct @ object = and or not set! get!)
+  (syntax-rules (_ ___ ..1 ..= ..* *** quote quasiquote ? $ struct @ object = and or not set! get!)
     ((match-two v () g+s (sk ...) fk i)
      (if (null? v) (sk ... i) fk))
     ((match-two v (quote p) g+s (sk ...) fk i)
@@ -392,6 +401,14 @@
      (if (pair? v)
          (match-one v (p ___) g+s sk fk i)
          fk))
+    ((match-two v (p ..= n . r) g+s sk fk i)
+     (match-extract-vars
+      p
+      (match-gen-ellipsis/range n n v p r g+s sk fk i) i ()))
+    ((match-two v (p ..* n m . r) g+s sk fk i)
+     (match-extract-vars
+      p
+      (match-gen-ellipsis/range n m v p r g+s sk fk i) i ()))
     ((match-two v ($ rec p ...) g+s sk fk i)
      (if (is-a? v rec)
          (match-record-refs v rec 0 (p ...) g+s sk fk i)
@@ -582,6 +599,39 @@
                 (else
                  fk)))))))))
 
+;; Variant of above which takes an n/m range for the number of
+;; repetitions.  At least n elements much match, and up to m elements
+;; are greedily consumed.
+
+(define-syntax match-gen-ellipsis/range
+  (syntax-rules ()
+    ((_ %lo %hi v p r g+s (sk ...) fk i ((id id-ls) ...))
+     ;; general case, trailing patterns to match, keep track of the
+     ;; remaining list length so we don't need any backtracking
+     (match-verify-no-ellipsis
+      r
+      (let* ((lo %lo)
+             (hi %hi)
+             (tail-len (length 'r))
+             (ls v)
+             (len (and (list? ls) (- (length ls) tail-len))))
+        (if (and len (<= lo len hi))
+            (let loop ((ls ls) (j 0) (id-ls '()) ...)
+              (cond
+                ((= j len)
+                 (let ((id (reverse id-ls)) ...)
+                   (match-one ls r (#f #f) (sk ...) fk i)))
+                ((pair? ls)
+                 (let ((w (car ls)))
+                   (match-one w p ((car ls) (set-car! ls))
+                              (match-drop-ids
+                               (loop (cdr ls) (+ j 1) (cons id id-ls) ...))
+                              fk
+                              i)))
+                (else
+                 fk)))
+            fk))))))
+
 ;; This is just a safety check.  Although unlike syntax-rules we allow
 ;; trailing patterns after an ellipsis, we explicitly disable multiple
 ;; ellipsis at the same level.  This is because in the general case
@@ -747,7 +797,7 @@
 ;; (match-extract-vars pattern continuation (ids ...) (new-vars ...))
 
 (define-syntax match-extract-vars
-  (syntax-rules (_ ___ ..1 *** ? $ struct @ object = quote quasiquote and or not get! set!)
+  (syntax-rules (_ ___ ..1 ..= ..* *** ? $ struct @ object = quote quasiquote and or not get! set!)
     ((match-extract-vars (? pred . p) . x)
      (match-extract-vars p . x))
     ((match-extract-vars ($ rec . p) . x)
@@ -785,6 +835,8 @@
     ((match-extract-vars ___ (k ...) i v)  (k ... v))
     ((match-extract-vars *** (k ...) i v)  (k ... v))
     ((match-extract-vars ..1 (k ...) i v)  (k ... v))
+    ((match-extract-vars ..= (k ...) i v)  (k ... v))
+    ((match-extract-vars ..* (k ...) i v)  (k ... v))
     ;; This is the main part, the only place where we might add a new
     ;; var if it's an unbound symbol.
     ((match-extract-vars p (k ...) (i ...) v)
