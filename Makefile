@@ -483,7 +483,7 @@ snowballs:
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/match.sld
 	$(SNOW_CHIBI) package -r lib/chibi/char-set.sld
 	$(SNOW_CHIBI) package -r lib/chibi/iset.sld lib/chibi/iset/optimize.sld
-	$(SNOW_CHIBI) package -r lib/chibi/show.sld lib/chibi/show/pretty.sld
+	$(SNOW_CHIBI) package -r lib/srfi/166.sld lib/chibi/show/shared.sld
 	$(SNOW_CHIBI) package lib/srfi/115.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
 	$(SNOW_CHIBI) package lib/chibi/base64.sld
