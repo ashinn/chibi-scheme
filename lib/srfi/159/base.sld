@@ -1,11 +1,17 @@
 
 (define-library (srfi 159 base)
   (export
-   show fn forked with with! each each-in-list call-with-output
-   displayed written written-shared written-simply numeric nothing
-   escaped maybe-escaped numeric/si numeric/fitted numeric/comma)
+   show displayed written written-shared written-simply
+   escaped maybe-escaped
+   numeric numeric/comma numeric/si numeric/fitted
+   nl fl space-to tab-to nothing each each-in-list
+   joined joined/prefix joined/suffix joined/last joined/dot
+   joined/range padded padded/right padded/both
+   trimmed trimmed/right trimmed/both trimmed/lazy
+   fitted fitted/right fitted/both output-default
+   fn with with! forked call-with-output)
   (import (scheme base) (scheme write) (scheme complex) (scheme inexact)
-          (srfi 1) (srfi 69) (chibi string) (chibi monad environment)
+          (srfi 1) (srfi 69) (srfi 130) (chibi monad environment)
           (chibi show shared))
   (cond-expand
    (chibi
@@ -25,5 +31,6 @@
              (let-optionals* tmp2 rest . body)))
           ((let-optionals* tmp tail . body)
            (let ((tail tmp)) . body)))))))
-  (include "../166/base.scm")
+  (include "base.scm")
+  (include "../166/show.scm")
   (include "../166/write.scm"))

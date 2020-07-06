@@ -5,5 +5,5 @@
           (chibi show base)
           (srfi 130)
           (srfi 151))
-  (export as-unicode unicode-terminal-width)
+  (export (rename terminal-aware as-unicode))
   (include "../166/width.scm" "../166/unicode.scm"))

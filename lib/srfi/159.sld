@@ -5,7 +5,7 @@
   (export
    ;; base
    show fn forked with with! each each-in-list call-with-output
-   displayed written written-simply pretty pretty-simply
+   displayed written written-simply
    numeric numeric/comma numeric/si numeric/fitted
    nothing nl fl space-to tab-to escaped maybe-escaped
    padded padded/right padded/both
@@ -18,7 +18,7 @@
    tabular columnar show-columns wrapped wrapped/list wrapped/char
    justified line-numbers from-file
    ;; unicode
-   as-unicode unicode-terminal-width
+   as-unicode
    ;; color
    as-red as-blue as-green as-cyan as-yellow
    as-magenta as-white as-black
