@@ -1121,6 +1121,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #if SEXP_USE_GREEN_THREADS
       sexp_context_errorp(ctx) = 1;
 #endif
+      if (!sexp_exceptionp(_ARG1)) {
+        _ARG1 = sexp_make_exception(ctx, SEXP_UNCAUGHT, SEXP_FALSE, _ARG1, self, SEXP_FALSE);
+      }
       goto end_loop;
     }
     stack[top] = SEXP_ONE;

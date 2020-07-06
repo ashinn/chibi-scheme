@@ -811,8 +811,9 @@ sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp
   sexp_gc_var2(ls, tmp);
   /* unwrap continuable exceptions */
   if (sexp_exceptionp(exn)
-      && sexp_exception_kind(exn) == sexp_global(ctx, SEXP_G_CONTINUABLE_SYMBOL)
-      && sexp_exceptionp(sexp_exception_irritants(exn))) {
+      && ((sexp_exception_kind(exn) == sexp_global(ctx, SEXP_G_CONTINUABLE_SYMBOL)
+           && sexp_exceptionp(sexp_exception_irritants(exn)))
+          || sexp_exception_kind(exn) == SEXP_UNCAUGHT)) {
     return sexp_print_exception_op(ctx, self, n, sexp_exception_irritants(exn), out);
   }
   sexp_gc_preserve2(ctx, ls, tmp);
