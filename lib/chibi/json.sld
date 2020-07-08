@@ -1,6 +1,15 @@
 
 (define-library (chibi json)
   (import (scheme base))
-  (export parse-json)
-  (export unparse-json)
-  (include-shared "json"))
+  (export string->json json->string json-read json-write)
+  (include-shared "json")
+  (begin
+    (define (string->json str)
+      (let* ((in (open-input-string str))
+             (res (json-read in)))
+        (close-input-port in)
+        res))
+    (define (json->string json)
+      (let ((out (open-output-string)))
+        (json-write json out)
+        (get-output-string out)))))
