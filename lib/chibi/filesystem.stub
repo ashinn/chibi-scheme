@@ -269,7 +269,9 @@
 
 ;;> Sets the file owner and group as in chown.
 
-(define-c int chown (string uid_t gid_t))
+(cond-expand
+  ((not windows)
+   (define-c int chown (string uid_t gid_t))))
 
 ;;> Returns \scheme{#t} if the given port of file descriptor
 ;;> if backed by a TTY object, and \scheme{#f} otherwise.
