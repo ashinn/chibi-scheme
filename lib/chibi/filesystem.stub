@@ -267,6 +267,12 @@
 
 (define-c int chmod (string int))
 
+;;> Sets the file owner and group as in chown.
+
+(cond-expand
+  ((not windows)
+   (define-c int chown (string uid_t gid_t))))
+
 ;;> Returns \scheme{#t} if the given port of file descriptor
 ;;> if backed by a TTY object, and \scheme{#f} otherwise.
 

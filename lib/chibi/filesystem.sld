@@ -33,7 +33,7 @@
           open/append      open/non-block
           file-lock        file-truncate
           file-is-readable? file-is-writable? file-is-executable?
-          chmod is-a-tty?)
+          chmod chown is-a-tty?)
   (cond-expand
    (chibi
     (export lock/shared lock/exclusive lock/non-blocking lock/unlock)
