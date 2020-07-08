@@ -360,11 +360,15 @@
 (define-syntax delay-force
   (er-macro-transformer
    (lambda (expr rename compare)
+     (if (null? (cdr expr)) (error "not enough args" expr))
+     (if (not (null? (cddr expr))) (error "too many args" expr))
      `(,(rename 'promise) #f (,(rename 'lambda) () ,(cadr expr))))))
 
 (define-syntax delay
   (er-macro-transformer
    (lambda (expr rename compare)
+     (if (null? (cdr expr)) (error "not enough args" expr))
+     (if (not (null? (cddr expr))) (error "too many args" expr))
      `(,(rename 'delay-force) (,(rename 'promise) #t ,(cadr expr))))))
 
 (define-syntax define-auxiliary-syntax
