@@ -793,6 +793,10 @@
 (test #f (<= 1 2 1))
 (test #t (>= 2 1 1))
 (test #f (>= 1 2 1))
+(test #f (< +nan.0 0))
+(test #f (> +nan.0 0))
+(test #f (< +nan.0 0.0))
+(test #f (> +nan.0 0.0))
 (test '(#t #f) (list (<= 1 1 2) (<= 2 1 3)))
 
 ;; From R7RS 6.2.6 Numerical operations:
@@ -843,6 +847,7 @@
 (test #f (positive? -1.0))
 (test #t (positive? +inf.0))
 (test #f (positive? -inf.0))
+(test #f (positive? +nan.0))
 
 (test #f (negative? 0))
 (test #f (negative? 0.0))
@@ -852,6 +857,7 @@
 (test #t (negative? -1.0))
 (test #f (negative? +inf.0))
 (test #t (negative? -inf.0))
+(test #f (negative? +nan.0))
 
 (test #f (odd? 0))
 (test #t (odd? 1))
