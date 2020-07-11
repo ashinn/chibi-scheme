@@ -1833,7 +1833,10 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
     case SEXP_NUM_FIX_FLO:
       f = sexp_fixnum_to_double(a);
       g = sexp_flonum_value(b);
-      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
+      if (isnan(g))
+        r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", b);
+      else
+        r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FIX_BIG:
       if ((sexp_bignum_hi(b) > 1) ||
@@ -1845,7 +1848,12 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
     case SEXP_NUM_FLO_FLO:
       f = sexp_flonum_value(a);
       g = sexp_flonum_value(b);
-      r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
+      if (isnan(f))
+        r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", a);
+      else if (isnan(g))
+        r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", b);
+      else
+        r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
       break;
     case SEXP_NUM_FLO_BIG:
       f = sexp_flonum_value(a);
