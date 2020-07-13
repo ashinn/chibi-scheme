@@ -55,7 +55,8 @@ typedef unsigned int sexp_random_t;
 
 sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
   sexp res;
-  sexp_int32_t m;
+  int64_t m;
+  sexp_int32_t m2;
 #if SEXP_USE_BIGNUMS
   sexp_uint_t mod;
   sexp_uint32_t *data;
@@ -67,7 +68,11 @@ sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp b
     if (sexp_unbox_fixnum(bound) <= 0) {
       res = sexp_xtype_exception(ctx, self, "random bound must be positive", bound);
     } else {
-      sexp_call_random(rs, m);
+      /* ensure we have sufficient bits */
+      for (i=m=0; i <= 1<<(CHAR_BIT*sizeof(m))/RAND_MAX; ++i) {
+        sexp_call_random(rs, m2);
+        m = m * RAND_MAX + m2;
+      }
       res = sexp_make_fixnum(m % sexp_unbox_fixnum(bound));
     }
 #if SEXP_USE_BIGNUMS
