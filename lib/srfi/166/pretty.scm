@@ -131,13 +131,13 @@
     (unquote . ",") (unquote-splicing . ",@")
     ))
 
-(define (pp-let ls pp shares)
+(define (pp-let ls pp shares color?)
   (if (and (pair? (cdr ls)) (symbol? (cadr ls)))
-      (pp-with-indent 2 ls pp shares)
-      (pp-with-indent 1 ls pp shares)))
+      (pp-with-indent 2 ls pp shares color?)
+      (pp-with-indent 1 ls pp shares color?)))
 
 (define indent-rules
-  `((lambda . 1) (define . 1)
+  `((lambda . 1) (define . 1) (define-syntax . 1)
     (let . ,pp-let) (loop . ,pp-let)
     (let* . 1) (letrec . 1) (letrec* . 1) (and-let* . 1) (let1 . 2)
     (let-values . 1) (let*-values . 1) (receive . 2) (parameterize . 1)
@@ -156,6 +156,11 @@
 (define indent-suffix-rules
   `(("-case" . 1))
   )
+
+(define pp-macros
+  (append
+   (map car indent-rules)
+   '(quote quasiquote unquote unquote-splicing set! cond-expand cond )))
 
 (define (pp-indentation form)
   (let ((indent
@@ -187,11 +192,12 @@
           (set-cdr! shares orig-count)))
         proc))))
 
-(define (pp-with-indent indent-rule ls pp shares)
+(define (pp-with-indent indent-rule ls pp shares color?)
   (fn ((col1 col))
     (each
      "("
-     (pp (car ls))
+     ((if (and color? (memq (car ls) pp-macros)) as-blue displayed)
+      (pp (car ls)))
      (fn ((col2 col) width string-width)
        (let ((fixed (take* (cdr ls) (or indent-rule 1)))
              (tail (drop* (cdr ls) (or indent-rule 1)))
@@ -204,8 +210,8 @@
           (trimmed/lazy (- width col2)
                         (each " "
                               (joined/shares
-                               (lambda (x) (pp-flat x pp shares)) fixed shares " "))
-                        )
+                               (lambda (x) (pp-flat x pp shares color?))
+                               fixed shares " ")))
           (lambda (first-line)
             (cond
              ((< (+ col2 (string-width first-line)) width)
@@ -237,11 +243,11 @@
               (each reset-shares default)))))))
      ")")))
 
-(define (pp-app ls pp shares)
+(define (pp-app ls pp shares color?)
   (let ((indent-rule (pp-indentation ls)))
     (if (procedure? indent-rule)
-        (indent-rule ls pp shares)
-        (pp-with-indent indent-rule ls pp shares))))
+        (indent-rule ls pp shares color?)
+        (pp-with-indent indent-rule ls pp shares color?))))
 
 ;; the elements may be shared, just checking the top level list
 ;; structure
@@ -269,7 +275,7 @@
          (let ((out (open-output-string))
                (result #f))
            (call-with-output
-            (fits-in-columns width ls (lambda (x) (pp-flat x pp shares))
+            (fits-in-columns width ls (lambda (x) (pp-flat x pp shares #f))
                              (lambda (res) (set! result res)))
             (lambda (str)
               (fn ()
@@ -300,7 +306,9 @@
          (joined/shares pp ls shares (make-nl-space col))))))
    ")"))
 
-(define (pp-flat x pp shares)
+(define (pp-flat x pp shares color?)
+  (define (ppf x)
+    (pp-flat x pp shares color?))
   (cond
    ((pair? x)
     (cond
@@ -312,20 +320,22 @@
                   (cadr x)
                   shares
                   each
-                  (pp-flat (cadr x) pp shares)))))
+                  (pp-flat (cadr x) pp shares color?)))))
      (else
       (each "("
-            (joined/shares (lambda (x) (pp-flat x pp shares)) x shares " ")
+            ((if (and color? (memq (car x) pp-macros)) as-blue displayed)
+             (pp (car x)))
+            " "
+            (joined/shares ppf (cdr x) shares " ")
             ")"))))
    ((vector? x)
     (each "#("
-          (joined/shares
-           (lambda (x) (pp-flat x pp shares)) (vector->list x) shares " ")
+          (joined/shares ppf (vector->list x) shares " ")
           ")"))
    (else
     (pp x))))
 
-(define (pp-pair ls pp shares)
+(define (pp-pair ls pp shares color?)
   (cond
    ;; one element list, no lines to break
    ((null? (cdr ls))
@@ -337,20 +347,27 @@
          (each (cdr abbrev) (pp (cadr ls)))))
    (else
     (try-fitted
-     (fn () (pp-flat ls pp shares))
+     (pp-flat ls pp shares color?)
+     ;; (fn ()
+     ;;   (each "("
+     ;;         ((if (and color? (memq (car ls) pp-macros)) as-blue displayed)
+     ;;          (pp (car ls)))
+     ;;         " "
+     ;;         (joined/shares (lambda (x) (pp-flat x pp shares)) (cdr ls) shares " ")
+     ;;         ")"))
      (with-reset-shares
       shares
       (fn ()
         (if (and (non-app? ls)
                  (proper-non-shared-list? ls shares))
             (pp-data-list ls pp shares)
-            (pp-app ls pp shares))))))))
+            (pp-app ls pp shares color?))))))))
 
 (define (pp-vector vec pp shares)
   (each "#" (pp-data-list (vector->list vec) pp shares)))
 
 ;; adapted from `write-with-shares'
-(define (pp obj shares)
+(define (pp obj shares color?)
   (fn (radix precision)
     (let ((write-number
            (cond
@@ -368,32 +385,38 @@
          (fn ()
            (cond
             ((pair? obj)
-             (pp-pair obj pp shares))
+             (pp-pair obj pp shares color?))
             ((vector? obj)
              (pp-vector obj pp shares))
             ((number? obj)
              (write-number obj))
+            ((and color? (string? obj))
+             (as-green (write-to-string obj)))
             (else
              (displayed (write-to-string obj))))))))))
 
 (define (pretty obj)
   (fn ()
     (call-with-output
-     (each (pp obj (extract-shared-objects obj #t))
+     (each (pp obj (extract-shared-objects obj #t) #f)
            fl)
      displayed)))
 
 (define (pretty-shared obj)
   (fn ()
     (call-with-output
-     (each (pp obj (extract-shared-objects obj #f))
+     (each (pp obj (extract-shared-objects obj #f) #f)
            fl)
      displayed)))
 
 (define (pretty-simply obj)
   (fn ()
-    (each (pp obj (extract-shared-objects #f #f))
+    (each (pp obj (extract-shared-objects #f #f) #f)
           fl)))
 
-;; TODO: add colors
-(define pretty-with-color pretty)
+(define (pretty-with-color obj)
+  (fn ()
+    (call-with-output
+     (each (pp obj (extract-shared-objects obj #t) #t)
+           fl)
+     displayed)))

@@ -7,6 +7,7 @@
           (srfi 1)
           (srfi 69)
           (srfi 130)
-          (srfi 166 base))
+          (srfi 166 base)
+          (srfi 166 color))
   (export pretty pretty-shared pretty-simply pretty-with-color)
   (include "pretty.scm"))
