@@ -2202,6 +2202,8 @@ sexp sexp_make_null_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version) {
   return e;
 }
 
+struct sexp_opcode_struct* sexp_primitive_opcodes;  /* from opcodes.c */
+
 sexp sexp_make_primitive_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version) {
   int i;
   sexp_gc_var4(e, op, sym, name);
