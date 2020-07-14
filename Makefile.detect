@@ -192,7 +192,7 @@ SEXP_USE_NTP_GETTIME := $(shell echo "int main(){struct ntptimeval n; ntp_gettim
 endif
 
 ifeq ($(SEXP_USE_NTP_GETTIME),1)
-CPPFLAGS += -DSEXP_USE_NTPGETTIME
+XCPPFLAGS += -DSEXP_USE_NTPGETTIME
 endif
 
 ifndef SEXP_USE_INTTYPES
@@ -200,5 +200,5 @@ SEXP_USE_INTTYPES := $(shell echo "int main(){int_least8_t x;}" | $(CC) -fsyntax
 endif
 
 ifeq ($(SEXP_USE_INTTYPES),1)
-CPPFLAGS += -DSEXP_USE_INTTYPES
+XCPPFLAGS += -DSEXP_USE_INTTYPES
 endif
