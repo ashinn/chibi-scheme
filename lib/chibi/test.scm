@@ -549,7 +549,6 @@
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
     (test-failure-count (+ 1 (test-failure-count)))))
   (cond
-   ((eq? status 'SKIP))
    ((test-group-ref (current-test-group) 'verbose)
     ;; display status
     (display "[")
@@ -558,6 +557,7 @@
     (display "]")
     (newline)
     (test-print-failure indent status info))
+   ((eq? status 'SKIP))
    (else
     (display (test-status-code status))
     (cond
