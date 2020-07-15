@@ -1,5 +1,5 @@
 /*  bignum.h -- header for bignum utilities                   */
-/*  Copyright (c) 2009-2018 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2020 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_BIGNUM_H
@@ -369,7 +369,7 @@ SEXP_API sexp_uint_t sexp_bignum_hi (sexp a);
 SEXP_API sexp sexp_fixnum_to_bignum (sexp ctx, sexp a);
 SEXP_API double sexp_bignum_to_double (sexp a);
 SEXP_API sexp sexp_double_to_bignum (sexp ctx, double f);
-SEXP_API double sexp_to_double (sexp x);
+SEXP_API double sexp_to_double (sexp ctx, sexp x);
 SEXP_API sexp sexp_bignum_fxadd (sexp ctx, sexp a, sexp_uint_t b);
 SEXP_API sexp sexp_bignum_fxsub (sexp ctx, sexp a, sexp_uint_t b);
 SEXP_API sexp sexp_bignum_fxmul (sexp ctx, sexp d, sexp a, sexp_uint_t b, int offset);
@@ -389,7 +389,7 @@ SEXP_API sexp sexp_remainder (sexp ctx, sexp a, sexp b);
 #if SEXP_USE_RATIOS
 SEXP_API sexp sexp_double_to_ratio (sexp ctx, double f);
 SEXP_API sexp sexp_double_to_ratio_2 (sexp ctx, double f);
-SEXP_API double sexp_ratio_to_double (sexp rat);
+SEXP_API double sexp_ratio_to_double (sexp ctx, sexp rat);
 SEXP_API sexp sexp_make_ratio (sexp ctx, sexp num, sexp den);
 SEXP_API sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in);
 SEXP_API sexp sexp_ratio_round (sexp ctx, sexp a);

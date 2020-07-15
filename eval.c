@@ -1486,10 +1486,10 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
 #endif
 
 #if SEXP_USE_RATIOS
-#define maybe_convert_ratio(z)                          \
-  else if (sexp_ratiop(z)) d = sexp_ratio_to_double(z);
+#define maybe_convert_ratio(ctx, z)                             \
+  else if (sexp_ratiop(z)) d = sexp_ratio_to_double(ctx, z);
 #else
-#define maybe_convert_ratio(z)
+#define maybe_convert_ratio(ctx, z)
 #endif
 
 #if SEXP_USE_COMPLEX
@@ -1507,7 +1507,7 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
       d = sexp_flonum_value(z);                                         \
     else if (sexp_fixnump(z))                                           \
       d = (double)sexp_unbox_fixnum(z);                                 \
-    maybe_convert_ratio(z)                                              \
+    maybe_convert_ratio(ctx, z)                                         \
     maybe_convert_bignum(z)                                             \
     maybe_convert_complex(z, f)                                         \
     else                                                                \
@@ -1523,7 +1523,7 @@ sexp sexp_register_optimization (sexp ctx, sexp self, sexp_sint_t n, sexp f, sex
       d = sexp_flonum_value(z);                                         \
     else if (sexp_fixnump(z))                                           \
       d = (double)sexp_unbox_fixnum(z);                                 \
-    maybe_convert_ratio(z)                                              \
+    maybe_convert_ratio(ctx, z)                                         \
     maybe_convert_bignum(z)                                             \
     maybe_convert_complex(z, f)                                         \
     else                                                                \
@@ -1586,7 +1586,7 @@ sexp sexp_log (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     d = sexp_flonum_value(z);
   else if (sexp_fixnump(z))
     d = (double)sexp_unbox_fixnum(z);
-  maybe_convert_ratio(z)
+  maybe_convert_ratio(ctx, z)
   maybe_convert_bignum(z)
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
@@ -1613,7 +1613,7 @@ sexp sexp_inexact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     d = sexp_flonum_value(z);
   else if (sexp_fixnump(z))
     d = (double)sexp_unbox_fixnum(z);
-  maybe_convert_ratio(z)        /* XXXX add ratio sqrt */
+  maybe_convert_ratio(ctx, z)        /* XXXX add ratio sqrt */
   maybe_convert_complex(z, sexp_complex_sqrt)
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
@@ -1730,7 +1730,7 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
     if (sexp_fixnump(e)) {
       return sexp_generic_expt(ctx, x, sexp_unbox_fixnum(e));
     } else {
-      x1 = sexp_ratio_to_double(x);
+      x1 = sexp_ratio_to_double(ctx, x);
     }
   }
 #endif
@@ -1742,7 +1742,7 @@ sexp sexp_expt_op (sexp ctx, sexp self, sexp_sint_t n, sexp x, sexp e) {
     e1 = sexp_flonum_value(e);
 #if SEXP_USE_RATIOS
   else if (sexp_ratiop(e))
-    e1 = sexp_ratio_to_double(e);
+    e1 = sexp_ratio_to_double(ctx, e);
 #endif
   else
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, e);
@@ -1804,7 +1804,7 @@ sexp sexp_exact_to_inexact (sexp ctx, sexp self, sexp_sint_t n, sexp i) {
 #endif
 #if SEXP_USE_RATIOS
   else if (sexp_ratiop(i))
-    res = sexp_make_flonum(ctx, sexp_ratio_to_double(i));
+    res = sexp_make_flonum(ctx, sexp_ratio_to_double(ctx, i));
 #endif
 #if SEXP_USE_COMPLEX
   else if (sexp_complexp(i)) {

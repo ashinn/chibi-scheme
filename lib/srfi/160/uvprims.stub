@@ -98,9 +98,9 @@ sexp c64vector_ref(sexp ctx, float* uv, int i) {
   sexp_gc_release3(ctx);
   return res;
 }
-void c64vector_set(float* uv, int i, sexp v) {
-  uv[i*2] = sexp_to_double(sexp_real_part(v));
-  uv[i*2 + 1] = sexp_to_double(sexp_imag_part(v));
+void c64vector_set(sexp ctx, float* uv, int i, sexp v) {
+  uv[i*2] = sexp_to_double(ctx, sexp_real_part(v));
+  uv[i*2 + 1] = sexp_to_double(ctx, sexp_imag_part(v));
 }
 
 sexp c128vector_ref(sexp ctx, double* uv, int i) {
@@ -112,9 +112,9 @@ sexp c128vector_ref(sexp ctx, double* uv, int i) {
   sexp_gc_release3(ctx);
   return res;
 }
-void c128vector_set(double* uv, int i, sexp v) {
-  uv[i*2] = sexp_to_double(sexp_real_part(v));
-  uv[i*2 + 1] = sexp_to_double(sexp_imag_part(v));
+void c128vector_set(sexp ctx, double* uv, int i, sexp v) {
+  uv[i*2] = sexp_to_double(ctx, sexp_real_part(v));
+  uv[i*2 + 1] = sexp_to_double(ctx, sexp_imag_part(v));
 }
 ")
 
@@ -164,7 +164,7 @@ void c128vector_set(double* uv, int i, sexp v) {
 (define-c void (f64vector-set! "f64vector_set") (f64vector int double))
 
 (define-c sexp c64vector-ref ((value ctx sexp) c64vector int))
-(define-c void (c64vector-set! "c64vector_set") (c64vector int sexp))
+(define-c void (c64vector-set! "c64vector_set") ((value ctx sexp) c64vector int sexp))
 
 (define-c sexp c128vector-ref ((value ctx sexp) c128vector int))
-(define-c void (c128vector-set! "c128vector_set") (c128vector int sexp))
+(define-c void (c128vector-set! "c128vector_set") ((value ctx sexp) c128vector int sexp))

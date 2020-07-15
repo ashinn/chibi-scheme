@@ -3073,22 +3073,22 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
           break;
 #if SEXP_USE_FLONUMS
         case SEXP_F32:
-          ((float*)sexp_uvector_data(res))[i] = sexp_to_double(sexp_car(ls)); break;
+          ((float*)sexp_uvector_data(res))[i] = sexp_to_double(ctx, sexp_car(ls)); break;
         case SEXP_F64:
-          ((double*)sexp_uvector_data(res))[i] = sexp_to_double(sexp_car(ls)); break;
+          ((double*)sexp_uvector_data(res))[i] = sexp_to_double(ctx, sexp_car(ls)); break;
 #endif
 #if SEXP_USE_COMPLEX
         case SEXP_C64:
           ((float*)sexp_uvector_data(res))[i*2] =
-            sexp_to_double(sexp_real_part(sexp_car(ls)));
+            sexp_to_double(ctx, sexp_real_part(sexp_car(ls)));
           ((float*)sexp_uvector_data(res))[i*2 + 1] =
-            sexp_to_double(sexp_imag_part(sexp_car(ls)));
+            sexp_to_double(ctx, sexp_imag_part(sexp_car(ls)));
           break;
         case SEXP_C128:
           ((double*)sexp_uvector_data(res))[i*2] =
-            sexp_to_double(sexp_real_part(sexp_car(ls)));
+            sexp_to_double(ctx, sexp_real_part(sexp_car(ls)));
           ((double*)sexp_uvector_data(res))[i*2 + 1] =
-            sexp_to_double(sexp_imag_part(sexp_car(ls)));
+            sexp_to_double(ctx, sexp_imag_part(sexp_car(ls)));
           break;
 #endif
         }
@@ -3293,7 +3293,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         res = sexp_make_flonum(ctx, sexp_unbox_fixnum(res));
 #if SEXP_USE_RATIOS
       else if (sexp_ratiop(res))
-        res = sexp_make_flonum(ctx, sexp_ratio_to_double(res));
+        res = sexp_make_flonum(ctx, sexp_ratio_to_double(ctx, res));
 #endif
       break;
     case 'f': case 'F':

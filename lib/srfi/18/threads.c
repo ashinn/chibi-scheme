@@ -180,7 +180,7 @@ static void sexp_insert_timed (sexp ctx, sexp thread, sexp timeout) {
 #endif
 #if SEXP_USE_RATIOS
   } else if (sexp_ratiop(timeout)) {
-    d = sexp_ratio_to_double(timeout);
+    d = sexp_ratio_to_double(ctx, timeout);
     sexp_context_timeval(thread).tv_sec += trunc(d);
     sexp_context_timeval(thread).tv_usec += (d-trunc(d))*1000000;
     if (sexp_context_timeval(thread).tv_usec > 1000000) {
