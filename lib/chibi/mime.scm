@@ -21,6 +21,20 @@
   (cond ((and (pair? ls) (pair? (car ls)) (assq key ls)) => cdr)
         (else (and (pair? o) (car o)))))
 
+;; most of these are plain text for easier viewing in the browser
+(define (mime-type-from-extension ext)
+  (assq-ref
+   '((htm . "text/html; charset=utf-8")
+     (html . "text/html; charset=utf-8")
+     (scm . "text/plain; charset=utf-8")
+     (sld . "text/plain; charset=utf-8")
+     (c . "text/plain; charset=utf-8")
+     (h . "text/plain; charset=utf-8")
+     (txt . "text/plain; charset=utf-8")
+     (org . "text/plain; charset=utf-8")
+     (md . "text/plain; charset=utf-8"))
+   (and (string? ext) (string->symbol ext))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; simple matching instead of regexps
 

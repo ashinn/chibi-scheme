@@ -129,8 +129,13 @@
 (define (http-send-file request path)
   (cond
    ((file-exists? path)
-    (servlet-respond request 200 "OK")
-    (send-file path (request-out request)))
+    (let ((headers
+           (cond
+            ((mime-type-from-extension (path-extension path))
+             => (lambda (type) `((Content-Type . ,type))))
+            (else '()))))
+      (servlet-respond request 200 "OK" headers)
+      (send-file path (request-out request))))
    (else
     (servlet-respond request 404 "Not Found"))))
 

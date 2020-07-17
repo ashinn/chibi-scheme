@@ -144,5 +144,10 @@ Content-Transfer-Encoding: binary
 --BbC04y--
 --AaB03x--
 "))))
-
+      (test "text/html; charset=utf-8"
+          (mime-type-from-extension "html"))
+      (test "text/plain; charset=utf-8"
+          (mime-type-from-extension "scm"))
+      (test #f
+          (mime-type-from-extension "foo"))
       (test-end))))
