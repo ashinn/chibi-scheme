@@ -237,15 +237,18 @@
            (width #t) (border-width 0) (res '()))
     (cond
      ((null? ls)
-      (if (pair? strs)
-          (finish (cons (cons (caar res)
-                              (cons #t (cons (append (reverse strs)
-                                                     (cadr (cdar res)))
-                                             (cddr (cdar res)))))
-                        (cdr res))
-                  border-width)
-          (finish (cons (cons (caar res) (cons #t (cddr (car res)))) (cdr res))
-                  border-width)))
+      (cond
+       ((null? res) nl)
+       ((pair? strs)
+        (finish (cons (cons (caar res)
+                            (cons #t (cons (append (reverse strs)
+                                                   (cadr (cdar res)))
+                                           (cddr (cdar res)))))
+                      (cdr res))
+                border-width))
+       (else
+        (finish (cons (cons (caar res) (cons #t (cddr (car res)))) (cdr res))
+                border-width))))
      ((char? (car ls))
       (lp (cons (string (car ls)) (cdr ls)) strs align infinite?
           width border-width res))

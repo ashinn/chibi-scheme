@@ -39,20 +39,21 @@
                (set! count (+ count 1))))))
           (cons res 0))))
 
-    (define (maybe-gen-shared-ref cell shares)
-      (cond
-       ((pair? cell)
-        (set-car! cell (cdr shares))
-        (set-cdr! cell #t)
-        (set-cdr! shares (+ (cdr shares) 1))
-        (string-append "#" (number->string (car cell)) "="))
-       (else "")))
+    (define (gen-shared-ref cell shares)
+      (set-car! cell (cdr shares))
+      (set-cdr! cell #t)
+      (set-cdr! shares (+ (cdr shares) 1))
+      (string-append (number->string (car cell))))
 
     (define (call-with-shared-ref obj shares each proc)
       (let ((cell (hash-table-ref/default (car shares) obj #f)))
-        (if (and (pair? cell) (cdr cell))
-            (each "#" (number->string (car cell)) "#")
-            (each (maybe-gen-shared-ref cell shares) proc))))
+        (cond
+         ((and (pair? cell) (cdr cell))
+          (each "#" (number->string (car cell)) "#"))
+         ((pair? cell)
+          (each "#" (gen-shared-ref cell shares) "=" proc))
+         (else
+          (each proc)))))
 
     (define (call-with-shared-ref/cdr obj shares each proc . o)
       (let ((sep (if (pair? o) (car o) ""))
@@ -61,7 +62,7 @@
          ((and (pair? cell) (cdr cell))
           (each sep ". #" (number->string (car cell)) "#"))
          ((pair? cell)
-          (each sep ". " (maybe-gen-shared-ref cell shares) "(" proc ")"))
+          (each sep ". #" (gen-shared-ref cell shares) "=(" proc ")"))
          (else
           (each sep proc)))))
     ))

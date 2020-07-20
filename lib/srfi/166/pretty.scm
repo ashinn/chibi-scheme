@@ -28,8 +28,11 @@
 (define (joined/shares fmt ls shares . o)
   (let ((sep (displayed (if (pair? o) (car o) " "))))
     (fn ()
-      (if (null? ls)
-          nothing
+      (cond
+       ((null? ls)
+        nothing)
+       ((pair? ls)
+        (fn ()
           (let lp ((ls ls))
             (each
              (fmt (car ls))
@@ -42,7 +45,8 @@
                                            each
                                            (fn () (lp rest))
                                            sep))
-                (else (each sep ". " (fmt rest)))))))))))
+                (else (each sep ". " (fmt rest)))))))))
+       (else (fmt ls))))))
 
 (define (string-find/index str pred i)
   (string-cursor->index
@@ -182,14 +186,13 @@
   (let ((orig-count (cdr shares)))
     (fn ()
       (let ((new-count (cdr shares)))
-        (cond
-         ((> new-count orig-count)
+        (when (> new-count orig-count)
           (hash-table-walk
            (car shares)
            (lambda (k v)
              (if (and (cdr v) (>= (car v) orig-count))
                  (set-cdr! v #f))))
-          (set-cdr! shares orig-count)))
+          (set-cdr! shares orig-count))
         proc))))
 
 (define (pp-with-indent indent-rule ls pp shares color?)
@@ -203,12 +206,12 @@
              (tail (drop* (cdr ls) (or indent-rule 1)))
              (default
                (let ((sep (make-nl-space (+ col1 1))))
-                 (each sep (joined/shares pp (cdr ls) shares sep))))
+                 (fn () (each sep (joined/shares pp (cdr ls) shares sep)))))
              ;; reset in case we don't fit on the first line
              (reset-shares (with-reset-shares shares nothing)))
          (call-with-output
           (trimmed/lazy (- width col2)
-                        (each " "
+                        (each (if (or (null? fixed) (pair? fixed)) " " " . ")
                               (joined/shares
                                (lambda (x) (pp-flat x pp shares color?))
                                fixed shares " ")))
@@ -322,12 +325,23 @@
                   each
                   (pp-flat (cadr x) pp shares color?)))))
      (else
-      (each "("
-            ((if (and color? (memq (car x) pp-macros)) as-blue displayed)
-             (pp (car x)))
-            " "
-            (joined/shares ppf (cdr x) shares " ")
-            ")"))))
+      (fn ()
+        (each "("
+              ((if (and color? (memq (car x) pp-macros)) as-blue displayed)
+               (pp (car x)))
+              (if (null? (cdr x))
+                  nothing
+                  (call-with-shared-ref/cdr
+                   (cdr x)
+                   shares
+                   each
+                   (cond
+                    ((pair? (cdr x))
+                     (each "" (joined/shares ppf (cdr x) shares " ")))
+                    (else
+                     (each ". " (joined/shares ppf (cdr x) shares " "))))
+                   " "))
+              ")")))))
    ((vector? x)
     (each "#("
           (joined/shares ppf (vector->list x) shares " ")
@@ -346,22 +360,16 @@
     => (lambda (abbrev)
          (each (cdr abbrev) (pp (cadr ls)))))
    (else
-    (try-fitted
-     (pp-flat ls pp shares color?)
-     ;; (fn ()
-     ;;   (each "("
-     ;;         ((if (and color? (memq (car ls) pp-macros)) as-blue displayed)
-     ;;          (pp (car ls)))
-     ;;         " "
-     ;;         (joined/shares (lambda (x) (pp-flat x pp shares)) (cdr ls) shares " ")
-     ;;         ")"))
-     (with-reset-shares
-      shares
-      (fn ()
-        (if (and (non-app? ls)
-                 (proper-non-shared-list? ls shares))
-            (pp-data-list ls pp shares)
-            (pp-app ls pp shares color?))))))))
+    (let ((reset-shares (with-reset-shares shares nothing)))
+      (try-fitted
+       (pp-flat ls pp shares color?)
+       (each
+        reset-shares
+        (fn ()
+          (if (and (non-app? ls)
+                   (proper-non-shared-list? ls shares))
+              (pp-data-list ls pp shares)
+              (pp-app ls pp shares color?)))))))))
 
 (define (pp-vector vec pp shares)
   (each "#" (pp-data-list (vector->list vec) pp shares)))
