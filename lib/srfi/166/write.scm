@@ -408,8 +408,8 @@
 
 (define (numeric/comma n . o)
   (fn ((orig-comma-rule comma-rule))
-    (with ((comma-rule (or orig-comma-rule 3)))
-      (apply numeric n o))))
+    (with ((comma-rule (if (pair? o) (car o) (or orig-comma-rule 3))))
+      (apply numeric n (if (pair? o) (cdr o) '())))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; written

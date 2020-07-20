@@ -281,6 +281,8 @@
       (test "1.2 µm" (show #f (numeric/si 1.23e-6 1000 " ") "m"))
 
       (test "1,234,567" (show #f (numeric/comma 1234567)))
+      (test "1,234,567" (show #f (numeric/comma 1234567 3)))
+      (test "123,4567" (show #f (numeric/comma 1234567 4)))
 
       (test "1.23" (show #f (numeric/fitted 4 1.2345 10 2)))
       (test "1.00" (show #f (numeric/fitted 4 1 10 2)))
@@ -606,9 +608,9 @@
                                        "abc\ndef\n")
                                  (list displayed "123\n456\n"))))
 
-      (test "hello\nworld\n"
+      (test "hello\nworld"
           (show #f (with ((width 8)) (wrapped "hello world"))))
-      (test "\n" (show #f (wrapped "    ")))
+      (test "" (show #f (wrapped "    ")))
 
       (test
           "The  quick
@@ -627,8 +629,7 @@ Applies KONS to each element of
 LS and the result of the previous
 application, beginning with KNIL.
 With KONS as CONS and KNIL as '(),
-equivalent to REVERSE.
-"
+equivalent to REVERSE."
           (show #f
                 (with ((width 36))
                   (wrapped "The fundamental list iterator.  Applies KONS to each element of LS and the result of the previous application, beginning with KNIL.  With KONS as CONS and KNIL as '(), equivalent to REVERSE."))))
@@ -673,6 +674,12 @@ equivalent to REVERSE.
                    (lambda (x) (each " ; " x))
                    (with ((width 36))
                      (wrapped "The fundamental list iterator.  Applies KONS to each element of LS and the result of the previous application, beginning with KNIL.  With KONS as CONS and KNIL as '(), equivalent to REVERSE."))))))
+
+      (test "\n" (show #f (columnar)))      ; degenerate case
+      (test "\n" (show #f (columnar "*")))  ; only infinite columns
+      (test "*\n" (show #f (columnar (each "*"))))
+
+      (test "foo" (show #f (wrapped "foo")))
 
       (test
            "(define (fold kons knil ls)          ; The fundamental list iterator.

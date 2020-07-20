@@ -312,7 +312,7 @@
 
 ;; break lines only, don't join short lines or justify
 (define (wrapped/char . ls)
-  (fn ((orig-output output) width string-width)
+  (fn ((orig-output output) width string-width substring/width)
     (define (kons-in-line str)
       (fn (col)
         (let ((len ((or string-width string-length) str))
@@ -326,9 +326,9 @@
             (each
              ;; TODO: when splitting by string-width, substring needs
              ;; to be provided
-             (orig-output (substring str 0 space))
+             (orig-output (substring/width str 0 space))
              (orig-output "\n")
-             (fn () (kons-in-line (substring str space len)))))))))
+             (fn () (kons-in-line (substring/width str space len)))))))))
     (with ((output
             (lambda (str)
               (let ((end (string-cursor-end str)))
@@ -411,7 +411,7 @@
 
 (define (wrapped/list ls)
   (fn (width string-width pad-char)
-    (joined/suffix
+    (joined
      (lambda (ls) (joined displayed ls pad-char))
      (reverse
       (wrap-fold-words ls '() width (or string-width string-length) cons))
