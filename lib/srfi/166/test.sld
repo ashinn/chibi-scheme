@@ -766,7 +766,9 @@ def | 6
       (test "日本語ΠΜΕ col: 12"
           (show #f (with ((ambiguous-is-wide? #t))
                      (terminal-aware "日本語ΠΜΕ"
-                                 (fn (col) (each " col: " col))))))
+                                     (fn (col) (each " col: " col))))))
+      (test "ｆｏ" (substring-terminal-width "ｆｏｏ" 1 4))
+      (test "ｏ" (substring-terminal-width "ｆｏｏ" 2 5))
 
       ;; from-file
       ;; for reference, filesystem-test relies on creating files under /tmp
