@@ -68,39 +68,8 @@
   (let ((start (string-cursor-start str))
         (end (string-cursor-end str)))
     (let lp1 ((sc start)
-              (from #f)
-              (width 0)
-              (escapes '()))
-      ;; need to pick up trailing ansi escapes
-      (define (finish res sc)
-        (let ((res (if (pair? escapes)
-                       (string-concatenate-reverse (cons res escapes))
-                       res))
-              (end-1 (string-cursor-prev str end)))
-          (let lp ((sc sc) (right-escapes '()))
-            (define (finish2 right-escapes)
-              (if (pair? right-escapes)
-                  (string-append res
-                                 (string-concatenate-reverse
-                                  right-escapes))
-                  res))
-            (if (string-cursor>=? sc end-1)
-                (finish2 right-escapes)
-                (let ((c (string-ref/cursor str sc))
-                      (sc2 (string-cursor-next str sc)))
-                  (if (and (= 27 (char->integer c))
-                           (eqv? #\[ (string-ref/cursor str sc2)))
-                      (let lp2 ((sc2 (string-cursor-next str sc2)))
-                        (if (string-cursor>=? sc2 end)
-                            (finish2 right-escapes)
-                            (let ((c2 (string-ref/cursor str sc2))
-                                  (sc3 (string-cursor-next str sc2)))
-                              (if (eqv? #\m c2)
-                                  (lp sc3
-                                      (cons (substring/cursors str sc sc3)
-                                            right-escapes))
-                                  (lp2 sc3)))))
-                      (lp sc2 right-escapes)))))))
+              (from (and (negative? lo) start))
+              (width 0))
       (if (string-cursor>=? sc end)
           (if from (substring/cursors str from end) str)
           (let ((c (string-ref/cursor str sc)))
@@ -112,26 +81,22 @@
                               (string-cursor-next str sc))))
               (let lp2 ((sc2 (string-cursor-forward str sc 2)))
                 (cond ((string-cursor>=? sc2 end)
-                       (lp1 sc2 from width escapes))
+                       (lp1 sc2 from width))
                       ((memv (string-ref/cursor str sc2) '(#\m #\newline))
-                       (let* ((sc3 (string-cursor-next str sc2))
-                              (escapes
-                               (if (not from)
-                                   (cons (substring/cursors str sc sc3)
-                                         escapes)
-                                  escapes)))
-                         (lp1 sc3 from width escapes)))
+                       (lp1 (string-cursor-next str sc2) from width))
                       (else (lp2 (string-cursor-next str sc2))))))
              (else
               (let ((width2 (+ width
                                (unicode-char-width c ambiguous-is-wide?))))
                 (cond
                  ((> width2 hi)
-                  (finish (substring/cursors str (or from start) sc) sc))
+                  (if from
+                      (substring/cursors str from sc)
+                      ""))
                  ((and (not from) (> width2 lo))
-                  (lp1 (string-cursor-next str sc) sc width2 escapes))
+                  (lp1 (string-cursor-next str sc) sc width2))
                  (else
-                  (lp1 (string-cursor-next str sc) from width2 escapes)
+                  (lp1 (string-cursor-next str sc) from width2)
                   ))))))))))
 
 (define (substring-terminal-width str lo hi)
@@ -139,6 +104,44 @@
 
 (define (substring-terminal-width/wide str lo hi)
   (substring-terminal-width/aux str lo hi #t))
+
+;; The BiDi control characters - trimming these would result in the
+;; remaining text rendered in the wrong direction.
+;; Other characters for consideration would be language tags or
+;; interlinear annotation, but use of these is discouraged.
+;; Similarly, we might want to preserve the BOM only at the start of
+;; text, but this is a file-level encoding mechanism and not likely
+;; appropriate to formatting in-memory strings.
+(define non-local-controls
+  '(#\x061C #\x200E #\x200F #\x202A #\x202B #\x202C
+    #\x202D #\x202E #\x2066 #\x2067 #\x2068 #\x2069))
+
+(define (substring-terminal-preserve str)
+  (let ((start (string-cursor-start str))
+        (end (string-cursor-end str)))
+    (let lp1 ((sc start) (escapes '()))
+      (if (string-cursor>=? sc end)
+          (string-concatenate-reverse escapes)
+          (let ((c (string-ref/cursor str sc))
+                (sc2 (string-cursor-next str sc)))
+            (cond
+             ((and (= 27 (char->integer c))
+                   (string-cursor<? sc2 end)
+                   (eqv? #\[ (string-ref/cursor str sc2)))
+              (let lp2 ((sc2 (string-cursor-next str sc2)))
+                (if (string-cursor>=? sc2 end)
+                    (string-concatenate-reverse escapes)
+                    (let ((c2 (string-ref/cursor str sc2))
+                          (sc3 (string-cursor-next str sc2)))
+                      (if (eqv? #\m c2)
+                          (lp1 sc3
+                               (cons (substring/cursors str sc sc3)
+                                     escapes))
+                          (lp2 sc3))))))
+             ((and (memv c non-local-controls))
+              (lp1 sc2 (cons (string c) escapes)))
+             (else
+              (lp1 sc2 escapes))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -149,7 +152,8 @@
                              string-terminal-width))
            (substring/width (if ambiguous-is-wide?
                                 substring-terminal-width/wide
-                                substring-terminal-width)))
+                                substring-terminal-width))
+           (substring/preserve substring-terminal-preserve))
       (each-in-list args))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

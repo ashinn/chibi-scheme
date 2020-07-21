@@ -44,8 +44,8 @@
   (pad-char #\space)
   (output output-default)
   (string-width substring-length)
-  (string-take-width string-take)
   (substring/width substring)
+  (substring/preserve #f)
   (word-separator? char-whitespace?)
   (ambiguous-is-wide? #f)
   (ellipsis "")
@@ -56,6 +56,7 @@
   (sign-rule #f)
   (precision #f)
   (writer #f)
+  (pretty-environment (interaction-environment))
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

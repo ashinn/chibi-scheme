@@ -2,9 +2,10 @@
 (define-library (srfi 166 base)
   (import (scheme base)
           (scheme char)
-          (scheme write)
           (scheme complex)
           (scheme inexact)
+          (scheme repl)
+          (scheme write)
           (srfi 1)
           (srfi 69)
           (srfi 130)
@@ -45,9 +46,10 @@
    fn with with! forked call-with-output
    ;; state variables
    port row col width output writer pad-char ellipsis
-   string-width substring/width
+   string-width substring/width substring/preserve
    radix precision decimal-sep decimal-align sign-rule
    comma-sep comma-rule word-separator? ambiguous-is-wide?
+   pretty-environment
    )
   (include "base.scm")
   (include "write.scm")

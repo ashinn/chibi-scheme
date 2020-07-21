@@ -18,9 +18,10 @@
    fn with with! forked call-with-output
    ;; state variables
    port row col width output writer pad-char ellipsis
-   string-width substring/width
+   string-width substring/width substring/preserve
    radix precision decimal-sep decimal-align sign-rule
    comma-sep comma-rule word-separator? ambiguous-is-wide?
+   pretty-environment
    ;; pretty
    pretty pretty-shared pretty-simply pretty-with-color
    ;; columnar
@@ -31,6 +32,7 @@
    string-terminal-width string-terminal-width/wide
    substring-terminal-width substring-terminal-width/wide
    substring-terminal-width substring-terminal-width/wide
+   substring-terminal-preserve
    upcased downcased
    ;; color
    as-red as-blue as-green as-cyan as-yellow

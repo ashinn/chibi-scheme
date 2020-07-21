@@ -304,8 +304,14 @@
       (test "abc" (show #f (trimmed/right 3 "abc")))
       (test "ab" (show #f (trimmed/right 3 "ab")))
       (test "a" (show #f (trimmed/right 3 "a")))
+      (test "abcde" (show #f (trimmed/right 5 "abcdef")))
+      (test "abcde" (show #f (trimmed 5 "abcde")))
       (test "cde" (show #f (trimmed 3 "abcde")))
+      (test "bcdef" (show #f (trimmed 5 "abcdef")))
       (test "bcd" (show #f (trimmed/both 3 "abcde")))
+      (test "abcd" (show #f (trimmed/both 4 "abcde")))
+      (test "abcde" (show #f (trimmed/both 5 "abcdef")))
+      (test "bcde" (show #f (trimmed/both 4 "abcdef")))
       (test "bcdef" (show #f (trimmed/both 5 "abcdefgh")))
       (test "abc" (show #f (trimmed/lazy 3 "abcde")))
       (test "abc" (show #f (trimmed/lazy 3 "abc\nde")))
@@ -608,9 +614,12 @@
                                        "abc\ndef\n")
                                  (list displayed "123\n456\n"))))
 
+      (test "" (show #f (wrapped "    ")))
       (test "hello\nworld"
           (show #f (with ((width 8)) (wrapped "hello world"))))
-      (test "" (show #f (wrapped "    ")))
+      (test "ｈｅｌｌｏ\nｗｏｒｌｄ"
+          (show #f (with ((width 16))
+                     (terminal-aware (wrapped "ｈｅｌｌｏ　ｗｏｒｌｄ")))))
 
       (test
           "The  quick
@@ -774,8 +783,14 @@ def | 6
           (show #f (with ((ambiguous-is-wide? #t))
                      (terminal-aware "日本語ΠΜΕ"
                                      (fn (col) (each " col: " col))))))
-      (test "ｆｏ" (substring-terminal-width "ｆｏｏ" 1 4))
-      (test "ｏ" (substring-terminal-width "ｆｏｏ" 2 5))
+      (test "ａｂｃ" (substring-terminal-width "ａｂｃ" 0 6))
+      (test "ａｂ" (substring-terminal-width "ａｂｃ" 0 4))
+      (test "ｂｃ" (substring-terminal-width "ａｂｃ" 2 6))
+      (test "ａｂ" (substring-terminal-width "ａｂｃ" 1 4))
+      (test "ａｂ" (substring-terminal-width "ａｂｃ" 1 5))
+      (test "ｂ" (substring-terminal-width "ａｂｃ" 2 4))
+      (test "" (substring-terminal-width "ａｂｃ" 2 3))
+      (test "ａ" (substring-terminal-width "ａｂｃ" -1 2))
 
       ;; from-file
       ;; for reference, filesystem-test relies on creating files under /tmp
