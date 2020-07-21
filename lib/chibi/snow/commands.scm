@@ -509,8 +509,11 @@
              (files '())
              (lib-dirs '())
              (test test)
-             (extracted-tests? #f))
+             (extracted-tests? #f)
+             (seen '()))
       (cond
+       ((and (pair? ls) (member (caar ls) seen))
+        (lp (cdr ls) progs res files lib-dirs test extracted-tests? seen))
        ((pair? ls)
         (let* ((lib+files (extract-library cfg (caar ls)))
                (lib (car lib+files))
@@ -533,7 +536,8 @@
               (delete-duplicates
                (cons (library-path-base (caar ls) name) lib-dirs))
               test
-              extracted-tests?)))
+              extracted-tests?
+              (cons (caar ls) seen))))
        ((pair? progs)
         (lp ls
             (cdr progs)
@@ -544,7 +548,8 @@
             (cons (car progs) files)
             lib-dirs
             test
-            extracted-tests?))
+            extracted-tests?
+            seen))
        ((null? res)
         (die 2 "No packages generated"))
        ((and (not test)
@@ -567,7 +572,7 @@
                        "run-tests.scm"
                        ,(test-program-from-libraries tests-from-libraries))
                      #t)
-                 (lp ls progs res files lib-dirs test #t))))
+                 (lp ls progs res files lib-dirs test #t seen))))
        (else
         (let* ((docs (package-docs cfg spec libs lib-dirs))
                (desc (package-description cfg spec libs docs))
