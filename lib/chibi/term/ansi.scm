@@ -389,8 +389,42 @@
 ;;>
 ;;> If ANSI escapes are not enabled, return \var{str}.
 
-(define underline (make-wrap-procedure (underline-escape)
-                                       (reset-underline-escape)))
+(define underline
+  (make-wrap-procedure (underline-escape) (reset-underline-escape)))
+
+;;> Return a string consisting of an ANSI escape code to select
+;;> italic style.
+
+(define italic-escape
+  (make-simple-escape-procedure 3))
+
+;;> Return a string consisting of an ANSI escape code to select
+;;> non-italic style.
+
+(define reset-italic-escape
+  (make-simple-escape-procedure 23))
+
+;;> Returns \var{str} optionally wrapped in italic escapes.
+
+(define italic
+  (make-wrap-procedure (italic-escape) (reset-italic-escape)))
+
+;;> Return a string consisting of an ANSI escape code to select
+;;> strikethrough style.
+
+(define strikethrough-escape
+  (make-simple-escape-procedure 9))
+
+;;> Return a string consisting of an ANSI escape code to select
+;;> non-strikethrough style.
+
+(define reset-strikethrough-escape
+  (make-simple-escape-procedure 29))
+
+;;> Returns \var{str} optionally wrapped in strikethrough escapes.
+
+(define strikethrough
+  (make-wrap-procedure (strikethrough-escape) (reset-strikethrough-escape)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

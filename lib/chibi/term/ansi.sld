@@ -24,12 +24,16 @@
    bold
    underline
    negative
+   italic
+   strikethrough
    rgb rgb-background
    gray gray-background
    rgb24 rgb24-background
    bold-escape reset-bold-escape
    underline-escape reset-underline-escape
    negative-escape reset-negative-escape
+   italic-escape reset-italic-escape
+   strikethrough-escape reset-strikethrough-escape
 
    ansi-escapes-enabled?)
   (import (scheme base)
