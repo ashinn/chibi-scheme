@@ -162,7 +162,8 @@
              syntax-case parameterize module library require
              require-extension use use-modules import import-immutable
              define-module select-module provide autoload export
-             only except rename prefix include include-shared
+             only except rename prefix drop-prefix alias-for
+             include include-ci include-shared
              condition-case guard protect cond-expand for with to by
              in-list in-lists in-string in-string-reverse
              in-vector in-vector-reverse in-file listing appending
