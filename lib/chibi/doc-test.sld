@@ -25,4 +25,15 @@
                       (index (if (pair? o) (car o) 0))
                       (acc knil))
                (f p index fk)))))
+      (test "hello" (ansi->sxml "hello"))
+      (test '(span "[ " (span (@ (style . "color:red")) "FAIL") "]")
+          (ansi->sxml "[ \x1B;[31mFAIL\x1B;[39m]"))
+      (test '(span (u "under " (span (@ (style . "color:red")) "red") " line"))
+          (ansi->sxml "\x1B;[4munder \x1B;[31mred\x1B;[39m line\x1B;[24m"))
+      (test '(span "plain "
+                   (u "under "
+                      (span (@ (style . "color:red")) "red")
+                      " line"))
+          (ansi->sxml
+           "plain \x1B;[4munder \x1B;[31mred\x1B;[39m line\x1B;[24m"))
       (test-end))))

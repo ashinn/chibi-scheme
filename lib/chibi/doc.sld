@@ -1,7 +1,7 @@
 
 (define-library (chibi doc)
   (import
-   (except (chibi) eval) (scheme eval) (srfi 1) (srfi 95)
+   (except (chibi) eval) (scheme eval) (srfi 1) (srfi 39) (srfi 95)
    (chibi modules) (chibi ast) (chibi io) (chibi match)
    (chibi time) (chibi filesystem) (chibi process) (chibi pathname)
    (chibi string) (chibi scribble) (chibi sxml) (chibi highlight)
@@ -11,5 +11,6 @@
           generate-docs expand-docs fixup-docs
           extract-module-docs extract-module-file-docs extract-file-docs
           make-default-doc-env make-module-doc-env
-          get-optionals-signature)
+          get-optionals-signature
+          ansi->sxml)
   (include "doc.scm"))

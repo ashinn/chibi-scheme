@@ -79,6 +79,95 @@
 (define (sxml->sexp-list x)
   (call-with-input-string (sxml-strip x) port->sexp-list))
 
+;;> Replace ansi escape sequences in a \var{str} with the corresponding sxml.
+(define (ansi->sxml str)
+  ;; TODO: ick
+  (let ((start (string-cursor-start str))
+        (end (string-cursor-end str)))
+    (let lp1 ((from start)
+              (to start)
+              (res '()))
+      (define (lookup str)
+        (case (string->number str)
+          ((0) '/) ((1) 'b) ((3) 'i) ((4) 'u) ((9) 's)
+          ((22) '/b) ((23) '/i) ((24) '/u) ((29) '/s)
+          ((30) 'black) ((31) 'red) ((32) 'green) ((33) 'yellow)
+          ((34) 'blue) ((35) 'magenta) ((36) 'cyan) ((37) 'white)
+          ((39) '/color)
+          (else #f)))
+      (define (collect from to res)
+        (if (string-cursor<? from to)
+            (cons (substring-cursor str from to) res)
+            res))
+      (define (finish)
+        (let ((ls (reverse (collect from to res))))
+          (if (and (= 1 (length ls)) (string? (car ls)))
+              (car ls)
+              (let lp1 ((ls ls) (cur '()) (res '()))
+                (define (close to)
+                  (let lp2 ((ls cur) (tmp '()))
+                    (cond
+                     ((null? ls)
+                      (list '() `(,@(reverse tmp) ,@res)))
+                     ((eq? to (car ls))
+                      (list (cdr ls) `((,to ,@tmp) ,@res)))
+                     ((and (eq? to 'color) (memq (car ls) '(b i u s)))
+                      ;; color close came to an open non-color
+                      ;; back off and leave this open
+                      (let ((s `(,(car ls) ,@(take-while string? tmp)))
+                            (tmp (drop-while string? tmp)))
+                        (list `(,@(reverse tmp) ,@(reverse s)) res)))
+                     ((symbol? (car ls))
+                      (lp2 (cdr ls) `((,(car ls) ,@(reverse tmp)))))
+                     ((and (pair? (car ls)) (eq? 'color to))
+                      (lp2 (cdr ls) `((,@(car ls) ,@(reverse tmp)))))
+                     ((pair? (car ls))
+                      (lp2 (cdr ls) `(,(car ls) ,@(reverse tmp))))
+                     (else
+                      (lp2 (cdr ls) `(,(car ls) ,@tmp))))))
+                (cond
+                 ((null? ls)
+                  `(span ,@(reverse (cadr (close #f)))))
+                 ((and (string? (car ls)) (pair? cur))
+                  (lp1 (cdr ls) (cons (car ls) cur) res))
+                 ((string? (car ls))
+                  (lp1 (cdr ls) cur (cons (car ls) res)))
+                 (else
+                  (case (car ls)
+                    ((b i u s) (lp1 (cdr ls) (cons (car ls) cur) res))
+                    ((/b) (apply lp1 (cdr ls) (close 'b)))
+                    ((/i) (apply lp1 (cdr ls) (close 'i)))
+                    ((/u) (apply lp1 (cdr ls) (close 'u)))
+                    ((/s) (apply lp1 (cdr ls) (close 's)))
+                    ((/) (apply lp1 (cdr ls) (close 'all)))
+                    ((/color) (apply lp1 (cdr ls) (close 'color)))
+                    (else
+                     (let ((style (string-append "color:"
+                                                 (symbol->string (car ls)))))
+                       (lp1 (cdr ls)
+                            (cons `(span (@ (style . ,style))) cur)
+                            res))))))))))
+      (if (string-cursor>=? to end)
+          (finish)
+          (let ((c (string-cursor-ref str to))
+                (sc2 (string-cursor-next str to)))
+            (if (and (= 27 (char->integer c))
+                     (string-cursor<? sc2 end)
+                     (eqv? #\[ (string-cursor-ref str sc2)))
+                (let ((sc3 (string-cursor-next str sc2)))
+                  (let lp2 ((sc4 sc3))
+                    (if (string-cursor>=? sc4 end)
+                        (finish)
+                        (let ((c2 (string-cursor-ref str sc4))
+                              (sc5 (string-cursor-next str sc4)))
+                          (if (eqv? #\m c2)
+                              (let ((code (lookup
+                                           (substring-cursor str sc3 sc4)))
+                                    (res (collect from to res)))
+                                (lp1 sc5 sc5 (if code (cons code res) res)))
+                              (lp2 sc5))))))
+                (lp1 from sc2 res)))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;> Extract the literate Scribble docs for module \var{mod-name} and
@@ -274,14 +363,25 @@
          (force (or (env-ref env 'example-env) (current-environment)))))
     `(div
       ,(expand-codeblock `(,(car x) language: scheme ,@(cdr x)) env)
-      (code
-       (div (@ (class . "result"))
-            ,(call-with-output-string
-               (lambda (out)
-                 (protect (exn (#t (print-exception exn out)))
-                   (let ((res (eval expr example-env)))
-                     (display "=> " out)
-                     (write res out))))))))))
+      ,(let* ((res-out (open-output-string))
+              (tmp-out (open-output-string))
+              (tmp-err (open-output-string))
+              (res (parameterize ((current-output-port tmp-out)
+                                  (current-error-port tmp-err))
+                     (protect (exn (#t (print-exception exn tmp-err)))
+                       (eval expr example-env)))))
+         (display "=> " res-out)
+         (write res res-out)
+         (let ((res-str (get-output-string res-out))
+               (out-str (get-output-string tmp-out))
+               (err-str (get-output-string tmp-err)))
+           `(,@(if (string-null? out-str)
+                   '()
+                   `((div (@ (class . "output")) ,(ansi->sxml out-str))))
+             ,@(if (string-null? err-str)
+                   '()
+                   `((div (@ (class . "error")) ,(ansi->sxml err-str))))
+             (div (@ (class . "result")) (code ,res-str))))))))
 
 (define (expand-example-import x env)
   (eval `(import ,@(cdr x))
@@ -385,6 +485,8 @@ div#main  {position: absolute; top: 0; left: 200px; width: 540px; height: 100%}
 div#notes {position: relative; top: 2em; left: 570px; max-width: 200px; height: 0px; font-size: smaller;}
 div#footer {padding-bottom: 50px}
 .result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
+.output { color: #000; background-color: beige; width: 100%; padding: 3px}
+.error { color: #000; background-color: #330000; width: 100%; padding: 3px}
 .command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
 "
                  ,(highlight-style))
