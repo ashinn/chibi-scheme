@@ -5,6 +5,10 @@
   (begin
     (define (run-tests)
       (test-begin "diff")
+      (test '((#\A 1 0) (#\C 2 2))
+          (lcs-with-positions '(#\G #\A #\C) '(#\A #\G #\C #\A #\T)))
+      (test '(#\A #\C)
+          (lcs '(#\G #\A #\C) '(#\A #\G #\C #\A #\T)))
       (test '((#\G #\A #\C) (#\A #\G #\C #\A #\T) ((#\A 1 0) (#\C 2 2)))
           (diff "GAC" "AGCAT" read-char))
       (let ((d (diff "GAC" "AGCAT" read-char)))

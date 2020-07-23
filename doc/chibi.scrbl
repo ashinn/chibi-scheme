@@ -1266,6 +1266,8 @@ namespace.
 
 \item{\hyperlink["lib/chibi/config.html"]{(chibi config) - General configuration management}}
 
+\item{\hyperlink["lib/chibi/disasm.html"]{(chibi diff) - LCS Algorithm and diff utilities}}
+
 \item{\hyperlink["lib/chibi/disasm.html"]{(chibi disasm) - Disassembler for the virtual machine}}
 
 \item{\hyperlink["lib/chibi/equiv.html"]{(chibi equiv) - A version of \scheme{equal?} which is guaranteed to terminate}}
@@ -1301,8 +1303,6 @@ namespace.
 \item{\hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
 \item{\hyperlink["lib/chibi/show.html"]{(chibi show) - A combinator formatting library}}
-
-\item{\hyperlink["lib/chibi/show/base.scm"]{(chibi show base) - Base combinator formatting}}
 
 \item{\hyperlink["lib/chibi/stty.html"]{(chibi stty) - A high-level interface to ioctl}}
 

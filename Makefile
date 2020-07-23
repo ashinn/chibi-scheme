@@ -46,14 +46,14 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h include/chibi/gc_heap.h
 
-MODULE_DOCS := app ast config disasm equiv filesystem generic heap-stats io \
+MODULE_DOCS := app ast config diff disasm equiv filesystem generic heap-stats io \
 	loop match mime modules net net/http-server parse pathname process repl scribble stty \
 	system test time trace type-inference uri weak monad/environment \
-	show show/base crypto/sha2
+	crypto/sha2
 
 IMAGE_FILES = lib/chibi.img lib/red.img lib/snow.img
 
-HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html)
+HTML_LIBS = $(MODULE_DOCS:%=doc/lib/chibi/%.html) doc/lib/srfi/166/base.html
 
 META_FILES = lib/.chibi.meta lib/.srfi.meta lib/.scheme.meta
 
@@ -493,6 +493,7 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/crypto/md5.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/rsa.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/sha2.sld
+	$(SNOW_CHIBI) package lib/chibi/diff.sld
 	$(SNOW_CHIBI) package lib/chibi/filesystem.sld
 	$(SNOW_CHIBI) package lib/chibi/math/prime.sld
 	$(SNOW_CHIBI) package lib/chibi/mime.sld
