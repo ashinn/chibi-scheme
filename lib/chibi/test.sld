@@ -1,14 +1,22 @@
 
 (define-library (chibi test)
   (export
+   ;; basic interface
    test test-equal test-error test-assert test-not test-values
    test-group current-test-group
    test-begin test-end test-syntax-error test-propagate-info
    test-vars test-run test-exit
+   ;; test and group data
+   test-get-name! test-group-name test-group-ref
+   test-group-set! test-group-inc! test-group-push!
+   ;; parameters
    current-test-verbosity
    current-test-applier current-test-handler current-test-skipper
    current-test-group-reporter test-failure-count
-   current-test-epsilon current-test-comparator)
+   current-test-epsilon current-test-comparator
+   current-test-filters current-test-removers
+   current-test-group-filters current-test-group-removers
+   current-column-width)
   (import (scheme base)
           (scheme write)
           (scheme complex)

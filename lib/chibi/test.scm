@@ -1,18 +1,16 @@
-;; Copyright (c) 2010-2014 Alex Shinn. All rights reserved. 
+;; Copyright (c) 2010-2020 Alex Shinn. All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> Simple testing framework adapted from the Chicken \scheme{test}
-;;> module.
+;;> Simple but extensible testing framework with advanced reporting.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; list utilities
 
-;; Simplified version of SRFI-1 every.
-(define (every pred ls)
-  (or (null? ls)
-      (if (null? (cdr ls))
-          (pred (car ls))
-          (if (pred (car ls)) (every pred (cdr ls)) #f))))
+;; Simplified version of SRFI-1 any.
+(define (any pred ls)
+  (and (pair? ls)
+       (or (pred (car ls))
+           (any pred (cdr ls)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exception utilities
@@ -46,9 +44,19 @@
 
 ;;> \macro{(test [name] expect expr)}
 
-;;> Evaluate \var{expr} and check that it is \scheme{equal?}
-;;> to \var{expect}.  \var{name} is used in reporting, and
-;;> defaults to a printed summary of \var{expr}.
+;;> The primary interface to testing.  Evaluate \var{expr} and check
+;;> that it is \scheme{equal?}  to \var{expect}.  \var{name} is used
+;;> in reporting, and defaults to a printed summary of \var{expr}.
+;;> Returns the status of the test (one of the symbols \scheme{'PASS},
+;;> \scheme{'FAIL}, \scheme{'SKIP}, \scheme{'ERROR}).
+;;>
+;;> If used inside a group this will contribute to the overall group
+;;> reporting, but can be used standalone.
+;;>
+;;> \example{(test 4 (+ 2 2))}
+;;> \example{(test "add two and two" 4 (+ 2 2))}
+;;> \example{(test 3 (+ 2 2))}
+;;> \example{(test 4 (+ 2 "2"))}
 
 (define-syntax test
   (syntax-rules (quote)
@@ -148,8 +156,6 @@
                  (var-values . ,(list vars ...))
                  (key . val) ...)))))
 
-;;> \macro{(test-exit)}
-
 ;;> Exits with a failure status if any tests have failed,
 ;;> and a successful status otherwise.
 
@@ -208,16 +214,29 @@
     (test-group-set!
      group
      'skip-group?
-     (or (and parent (test-group-ref parent 'skip-group?))
-         (not (every (lambda (f) (f group)) (current-test-group-filters)))))
+     (and (or (and parent (test-group-ref parent 'skip-group?))
+              (any (lambda (f) (f group)) (current-test-group-removers))
+              (and (null? (current-test-group-removers))
+                   (pair? (current-test-group-filters))))
+          (not (any (lambda (f) (f group)) (current-test-group-filters)))))
     group))
 
+;;> Returns the name of a test group info object.
+
 (define test-group-name car)
+
+;;> Returns the value of a \var{field} in a test var{group} info
+;;> object.  \var{field} should be a symbol, and predefined fields
+;;> include \scheme{parent}, \scheme{verbose}, \scheme{level},
+;;> \scheme{start-time}, \scheme{skip-group?}, \scheme{count},
+;;> \scheme{total-pass}, \scheme{total-fail}, \scheme{total-error}.
 
 (define (test-group-ref group field . o)
   (if group
       (apply assq-ref (cdr group) field o)
       (and (pair? o) (car o))))
+
+;;> Sets the value of a \var{field} in a test \var{group} info object.
 
 (define (test-group-set! group field value)
   (cond
@@ -225,12 +244,18 @@
     => (lambda (x) (set-cdr! x value)))
    (else (set-cdr! group (cons (cons field value) (cdr group))))))
 
+;;> Increments the value of a \var{field} in a test \var{group} info
+;;> object by \var{amount}, defaulting to 1.
+
 (define (test-group-inc! group field . o)
   (let ((amount (if (pair? o) (car o) 1)))
     (cond
      ((assq field (cdr group))
       => (lambda (x) (set-cdr! x (+ amount (cdr x)))))
      (else (set-cdr! group (cons (cons field amount) (cdr group)))))))
+
+;;> Updates a \var{field} in a test group info object by consing
+;;> \var{value} onto it.
 
 (define (test-group-push! group field value)
   (cond
@@ -374,7 +399,10 @@
     (if (and (cond ((current-test-group)
                     => (lambda (g) (not (test-group-ref g 'skip-group?))))
                    (else #t))
-             (every (lambda (f) (f info)) (current-test-filters)))
+             (or (and (not (any (lambda (f) (f info)) (current-test-removers)))
+                      (or (pair? (current-test-removers))
+                          (null? (current-test-filters))))
+                 (any (lambda (f) (f info)) (current-test-filters))))
         ((current-test-applier) expect expr info)
         ((current-test-skipper) info))))
 
@@ -382,7 +410,7 @@
   (let* ((group (current-test-group))
          (indent (and group (test-group-indent-width group))))
     (cond
-     ((test-group-ref group 'verbose)
+     ((or (not group) (test-group-ref group 'verbose))
       (if (and indent (positive? indent))
           (display (make-string indent #\space)))
       (test-print-name info indent)))
@@ -510,14 +538,13 @@
   ;; display line, source and values info
   (test-print-source indent status info))
 
-(define (test-print-header-line str . indent)
+(define (test-header-line str . indent)
   (let* ((header (string-append
                   (make-string (if (pair? indent) (car indent) 0) #\space)
                   "-- " str " "))
          (len (string-length header)))
-    (display (bold header))
-    (display (make-string (max 0 (- (current-column-width) len)) #\-))
-    (newline)))
+    (string-append (bold header)
+                   (make-string (max 0 (- (current-column-width) len)) #\-))))
 
 (define (test-default-handler status info)
   (define indent
@@ -549,7 +576,8 @@
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
     (test-failure-count (+ 1 (test-failure-count)))))
   (cond
-   ((test-group-ref (current-test-group) 'verbose)
+   ((or (not (current-test-group))
+        (test-group-ref (current-test-group) 'verbose))
     ;; display status
     (display "[")
     (if (not (eq? status 'ERROR)) (display " ")) ; pad
@@ -588,6 +616,8 @@
          (err (+ base-err (or (test-group-ref group 'total-error) 0)))
          (count (+ pass fail err))
          (subgroups-count (or (test-group-ref group 'subgroups-count) 0))
+         (subgroups-skip (or (test-group-ref group 'subgroups-skip) 0))
+         (subgroups-run (- subgroups-count subgroups-skip))
          (subgroups-pass (or (test-group-ref group 'subgroups-pass) 0))
          (indent (make-string (or (test-group-indent-width group) 0) #\space)))
     (if (and (not (test-group-ref group 'verbose))
@@ -641,22 +671,23 @@
            (apply test-print-failure failure))
          (reverse (or (test-group-ref group 'failures) '())))))
       (cond
-       ((positive? subgroups-count)
+       ((positive? subgroups-run)
         (display indent)
         (display
-         ((if (= subgroups-pass subgroups-count)
+         ((if (= subgroups-pass subgroups-run)
               green (lambda (x) x))
           (string-append
            (number->string subgroups-pass) " out of "
-           (number->string subgroups-count)
-           (percent subgroups-pass subgroups-count))))
+           (number->string subgroups-run)
+           (percent subgroups-pass subgroups-run))))
         (display (plural " subgroup" subgroups-pass))
         (display " passed.\n")))))
     (cond
      ((test-group-ref group 'verbose)
-      (test-print-header-line
-       (string-append "done testing " (or (test-group-name group) ""))
-       (or (test-group-indent-width group) 0))
+      (display
+       (test-header-line
+        (string-append "done testing " (or (test-group-name group) ""))
+        (or (test-group-indent-width group) 0)))
       (newline)))
     (cond
      ((test-group-ref group 'parent)
@@ -688,21 +719,31 @@
   (let* ((name (if (pair? o) (car o) ""))
          (parent (current-test-group))
          (group (make-test-group name parent)))
+    ;; include a newline if we are directly nested in a parent with no
+    ;; tests yet
     (cond
      ((and parent
-           ;; (zero? (test-group-ref parent 'count 0))
-           (zero? (test-group-ref parent 'subgroups-count 0)))
+           (zero? (test-group-ref parent 'subgroups-count 0))
+           (not (test-group-ref parent 'verbose)))
       (newline)))
+    ;; header
     (cond
+     ((test-group-ref group 'skip-group?)
+      (display (make-string (or (test-group-indent-width group) 0) #\space))
+      (display (strikethrough (bold (string-append name ":"))))
+      (display " SKIP"))
      ((test-group-ref group 'verbose)
-      (test-print-header-line
-       (string-append "testing " name)
-       (or (test-group-indent-width group) 0)))
+      (display
+       (test-header-line
+        (string-append "testing " name)
+        (or (test-group-indent-width group) 0))))
      (else
       (display
-       (make-string (or (test-group-indent-width group) 0)
-                    #\space))
-      (display (bold (string-append name ": ")))))
+       (string-append
+        (make-string (or (test-group-indent-width group) 0)
+                     #\space)
+        (bold (string-append name ": "))))))
+    ;; set the current test group
     (current-test-group group)))
 
 ;;> Ends testing group introduced with \scheme{(test-begin)}, and
@@ -715,19 +756,22 @@
          (if (and (pair? o) (not (equal? (car o) (test-group-name group))))
              (warning "mismatched test-end:" (car o) (test-group-name group)))
          (let ((parent (test-group-ref group 'parent)))
+           (if (and (test-group-ref group 'skip-group?)
+                    (zero? (test-group-ref group 'subgroups-count 0)))
+               (newline))
+           ;; only report if there's something to say
+           ((current-test-group-reporter) group)
            (cond
-            ((not (test-group-ref group 'skip-group?))
-             ;; only report if there's something to say
-             ((current-test-group-reporter) group)
+            (parent
+             (test-group-inc! parent 'subgroups-count)
              (cond
-              (parent
-               (test-group-inc! parent 'subgroups-count)
-               (cond
-                ((and (zero? (test-group-ref group 'FAIL 0))
-                      (zero? (test-group-ref group 'ERROR 0))
-                      (= (test-group-ref group 'subgroups-pass 0)
-                         (test-group-ref group 'subgroups-count 0)))
-                 (test-group-inc! parent 'subgroups-pass)))))))
+              ((test-group-ref group 'skip-group?)
+               (test-group-inc! parent 'subgroups-skip))
+              ((and (zero? (test-group-ref group 'FAIL 0))
+                    (zero? (test-group-ref group 'ERROR 0))
+                    (= (test-group-ref group 'subgroups-pass 0)
+                       (test-group-ref group 'subgroups-count 0)))
+               (test-group-inc! parent 'subgroups-pass)))))
            (current-test-group parent)
            group)))))
 
@@ -770,35 +814,94 @@
           (else #f))))
 
 (define (string->group-matcher str)
-  (lambda (group) (string-search str (car group))))
+  (lambda (group) (string-search str (test-group-name group))))
 
-(define (getenv-filter-list proc name . o)
+;; simplified version from SRFI 130
+(define (string-split str ch)
+  (let ((end (string-length str)))
+    (let lp ((from 0) (to 0) (res '()))
+      (cond
+       ((>= to end)
+        (reverse (if (> to from) (cons (substring str from to) res) res)))
+       ((eqv? ch (string-ref str to))
+        (lp (+ to 1) (+ to 1) (cons (substring str from to) res)))
+       (else
+        (lp from (+ to 1) res))))))
+
+(define (getenv-filter-list proc name)
   (cond
    ((get-environment-variable name)
     => (lambda (s)
-         (guard
-             (exn
-              (else
-               (warning
-                (string-append "invalid filter '" s
-                               "' from environment variable: " name))
-               (print-exception exn (current-error-port))
-               '()))
-           (let ((f (proc s)))
-             (list (if (and (pair? o) (car o))
-                       (lambda (x) (not (f x)))
-                       f))))))
+         (let lp ((ls (string-split s #\,))
+                  (res '()))
+           (cond
+            ((null? ls) (reverse res))
+            (else
+             (let* ((s (car ls))
+                    (f (guard
+                           (exn
+                            (else
+                             (warning
+                              (string-append "invalid filter '" s
+                                             "' from environment variable: "
+                                             name))
+                             (print-exception exn (current-error-port))
+                             #f))
+                         (proc s))))
+               (lp (cdr ls) (if f (cons f res) res))))))))
    (else '())))
-
-(define current-test-filters
-  (make-parameter
-   (append (getenv-filter-list string->info-matcher "TEST_FILTER")
-           (getenv-filter-list string->info-matcher "TEST_REMOVE" #t))))
 
 (define current-test-group-filters
   (make-parameter
-   (append (getenv-filter-list string->group-matcher "TEST_GROUP_FILTER")
-           (getenv-filter-list string->group-matcher "TEST_GROUP_REMOVE" #t))))
+   (getenv-filter-list string->group-matcher "TEST_GROUP_FILTER")))
+
+(define current-test-group-removers
+  (make-parameter
+   (getenv-filter-list string->group-matcher "TEST_GROUP_REMOVE")))
+
+;;> Parameters controlling which test groups are skipped.  Each
+;;> parameter is a list of procedures of one argument, a test group
+;;> info, which can be queried with \var{test-group-name} and
+;;> \var{test-group-ref}.  Analogous to SRFI 1, a filter selects a
+;;> group for inclusion and a removers for exclusion.  The defaults
+;;> are set automatically from the environment variables
+;;> TEST_GROUP_FILTER and TEST_GROUP_REMOVE, which should be
+;;> comma-delimited lists of strings which are checked for a substring
+;;> match in the test group name.  A test group is skipped if it does
+;;> not match any filter and:
+;;> \itemlist[
+;;> \item{its parent group is skipped, or}
+;;> \item{it matches a remover, or}
+;;> \item{no removers are specified but some filters are}
+;;> ]
+;;/
+
+(define current-test-filters
+  (make-parameter (getenv-filter-list string->info-matcher "TEST_FILTER")))
+
+(define current-test-removers
+  (make-parameter (getenv-filter-list string->info-matcher "TEST_REMOVE")))
+
+;;> Parameters controlling which tests are skipped.  Each parameter is
+;;> a list of procedures of one argument, a test info alist, which can
+;;> be queried with \scheme{test-get-name!} or \scheme{assq}.
+;;> Analogous to SRFI 1, a filter selects a test for inclusion and a
+;;> removers for exclusion.  The defaults are set automatically from
+;;> the environment variables TEST_FILTER and TEST_REMOVE, which
+;;> should be comma-delimited lists of strings which are checked for a
+;;> substring match in the test name.  A test is skipped if its group
+;;> is skipped, or if it does not match a filter and:
+;;> \itemlist[
+;;> \item{it matches a remover, or}
+;;> \item{no removers are specified but some filters are}
+;;> ]
+;;/
+
+;;> Parameter controlling the current column width for test output,
+;;> can be set from the environment variable TEST_COLUMN_WIDTH,
+;;> otherwise defaults to 78.  For portability of implementation (and
+;;> resulting output), does not attempt to use termios to determine
+;;> the actual available width.
 
 (define current-column-width
   (make-parameter
