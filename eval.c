@@ -2425,9 +2425,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
     = sexp_env_ref(ctx, e, sym=sexp_intern(ctx, "current-exception-handler", -1), SEXP_FALSE);
   /* load init-7.scm */
   len = strlen(sexp_init_file);
-  strncpy(init_file, sexp_init_file, len);
+  strncpy(init_file, sexp_init_file, len+1);
   init_file[len] = (char)sexp_unbox_fixnum(version) + '0';
-  strncpy(init_file + len + 1, sexp_init_file_suffix, strlen(sexp_init_file_suffix));
+  strncpy(init_file + len + 1, sexp_init_file_suffix, strlen(sexp_init_file_suffix)+1);
   init_file[len + 1 + strlen(sexp_init_file_suffix)] = 0;
   tmp = sexp_load_module_file(ctx, init_file, e);
   sexp_set_parameter(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);

@@ -338,7 +338,7 @@ sexp json_write_flonum(sexp ctx, sexp self, const sexp obj, sexp out) {
 
 sexp json_write_string(sexp ctx, sexp self, const sexp obj, sexp out) {
   char cout[32];  /* oversized to avoid snprintf warnings */
-  sexp_sint_t ch, chh, chl;
+  sexp_uint_t ch, chh, chl;
   sexp i, end = sexp_make_string_cursor(sexp_string_size(obj));
 
   sexp_write_char(ctx, '"', out);
