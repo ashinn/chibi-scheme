@@ -106,7 +106,8 @@
 
 (define (history-commit! h x)
   (history-reset! h)
-  (history-insert! h x))
+  (if (not (and (pair? (history-past h)) (equal? x (car (history-past h)))))
+      (history-insert! h x)))
 
 (define (history-prev! h)
   (let ((past (history-past h)))
