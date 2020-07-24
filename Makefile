@@ -47,11 +47,11 @@ BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/inst
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h include/chibi/gc_heap.h
 
 MODULE_DOCS := app ast base64 bytevector config crypto/md5 crypto/rsa \
-	crypto/sha2 diff disasm doc equiv filesystem generic heap-stats io \
-	iset/base iset/constructors iset/iterators loop match math/prime \
-	memoize mime modules net net/http-server net/servlet parse pathname \
-	process repl scribble string stty sxml system temp-file test time \
-	trace type-inference uri weak monad/environment crypto/sha2
+	crypto/sha2 diff disasm doc edit-distance equiv filesystem generic \
+	heap-stats io iset/base iset/constructors iset/iterators loop \
+	match math/prime memoize mime modules net net/http-server net/servlet \
+	parse pathname process repl scribble string stty sxml system temp-file \
+	test time trace type-inference uri weak monad/environment crypto/sha2
 
 IMAGE_FILES = lib/chibi.img lib/red.img lib/snow.img
 
@@ -496,6 +496,7 @@ snowballs:
 	$(SNOW_CHIBI) package lib/chibi/crypto/rsa.sld
 	$(SNOW_CHIBI) package lib/chibi/crypto/sha2.sld
 	$(SNOW_CHIBI) package lib/chibi/diff.sld
+	$(SNOW_CHIBI) package lib/chibi/edit-distance.sld
 	$(SNOW_CHIBI) package lib/chibi/filesystem.sld
 	$(SNOW_CHIBI) package lib/chibi/math/prime.sld
 	$(SNOW_CHIBI) package lib/chibi/mime.sld

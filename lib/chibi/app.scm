@@ -339,11 +339,30 @@
     (cond ((and (= 2 (length prefix))) '())
           ((null? prefix) '())
           (else (reverse (cdr (reverse  prefix))))))
+  (define (all-opt-names opt-spec)
+    ;; TODO: nested options
+    (let lp ((ls opt-spec) (res '()))
+      (if (null? ls)
+          (map (lambda (x) (if (symbol? x) (symbol->string x) x))
+               (remove char? (reverse res)))
+          (let ((o (car ls)))
+            (lp (cdr ls)
+                (append (if (and (pair? (cddr o)) (pair? (third o)))
+                            (third o)
+                            '())
+                        (cons (car o) res)))))))
   (let ((fail (if (pair? o)
                   (car o)
                   (lambda (prefix spec opt args reason)
-                    ;; TODO: search for closest option in "unknown" case
-                    (error reason opt)))))
+                    (cond
+                     ((and (string=? reason "unknown option")
+                           (find-nearest-edits opt (all-opt-names spec)))
+                      => (lambda (similar)
+                           (if (pair? similar)
+                               (error reason opt "Did you mean: " similar)
+                               (error reason opt))))
+                     (else
+                      (error reason opt)))))))
     (cond
      ((null? spec)
       (error "no procedure in application spec"))

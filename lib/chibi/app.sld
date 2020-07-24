@@ -9,5 +9,6 @@
           (scheme process-context)
           (srfi 1)
           (chibi config)
+          (chibi edit-distance)
           (chibi string))
   (include "app.scm"))

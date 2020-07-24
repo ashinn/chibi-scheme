@@ -1303,6 +1303,8 @@ namespace.
 
 \item{\hyperlink["lib/chibi/doc.html"]{(chibi doc) - Chibi documentation utilities}}
 
+\item{\hyperlink["lib/chibi/edit-distance.html"]{(chibi edit-distance) - A levenshtein distance implementation}}
+
 \item{\hyperlink["lib/chibi/equiv.html"]{(chibi equiv) - A version of \scheme{equal?} which is guaranteed to terminate}}
 
 \item{\hyperlink["lib/chibi/filesystem.html"]{(chibi filesystem) - Interface to the filesystem and file descriptor objects}}
