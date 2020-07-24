@@ -5,13 +5,13 @@
    test test-equal test-error test-assert test-not test-values
    test-group current-test-group
    test-begin test-end test-syntax-error test-propagate-info
-   test-vars test-run test-exit
+   test-run test-exit test-equal?
    ;; test and group data
    test-get-name! test-group-name test-group-ref
    test-group-set! test-group-inc! test-group-push!
    ;; parameters
    current-test-verbosity
-   current-test-applier current-test-handler current-test-skipper
+   current-test-applier current-test-skipper current-test-reporter
    current-test-group-reporter test-failure-count
    current-test-epsilon current-test-comparator
    current-test-filters current-test-removers

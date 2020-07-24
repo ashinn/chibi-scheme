@@ -112,6 +112,7 @@ are listed below.
 \item{\ccode{SEXP_USE_RATIOS} - use exact ratios (enabled by default)}
 \item{\ccode{SEXP_USE_COMPLEX} - use complex numbers (enabled by default)}
 \item{\ccode{SEXP_USE_UTF8_STRINGS} - Unicode support (enabled by default)}
+\item{\ccode{SEXP_USE_STRING_INDEX_TABLE} - precompute offsets for O(1) \scheme{string-ref}}
 \item{\ccode{SEXP_USE_NO_FEATURES} - disable almost all features}
 ]
 
@@ -137,9 +138,10 @@ superset of
 \hyperlink["http://www.schemers.org/Documents/Standards/R5RS/HTML/"]{R5RS}.
 
 The reader defaults to case-sensitive, like R6RS and R7RS but unlike
-R5RS.  The default configuration includes the full numeric tower:
-fixnums, flonums, bignums, exact rationals and complex numbers, though
-this can be customized at compile time.
+R5RS.  You can specify the -f option on the command-line to enable
+case-folding.  The default configuration includes the full numeric
+tower: fixnums, flonums, bignums, exact rationals and complex numbers,
+though this can be customized at compile time.
 
 Full continuations are supported, but currently continuations don't
 take C code into account.  This means that you can call from Scheme to
@@ -179,11 +181,12 @@ other languages.
 
 \subsection{Module System}
 
-Chibi uses the R7RS module system natively, which is a simple static
-module system in the style of the
-\hyperlink["http://s48.org/"]{Scheme48} module system.  As with most
-features this is optional, and can be ignored or completely disabled
-at compile time.
+Chibi supports the R7RS module system natively, which is a simple
+static module system.  The Chibi implementation is actually a
+hierarchy of languages in the style of the
+\hyperlink["http://s48.org/"]{Scheme48} module system, allowing easy
+extension of the module system itself.  As with most features this is
+optional, and can be ignored or completely disabled at compile time.
 
 Modules names are hierarchical lists of symbols or numbers.  A module
 definition uses the following form:
@@ -202,6 +205,7 @@ where \var{<library-declarations>} can be any of
   (include <file> ...)                 ;; load one or more files
   (include-ci <file> ...)              ;; as include, with case-folding
   (include-shared <file> ...)          ;; dynamic load a library (non-R7RS)
+  (alias-for <library>)                ;; a library alias (non-R7RS)
 }
 
 \var{<import-spec>} can either be a module name or any of
@@ -286,23 +290,31 @@ constructors:
 
 \subsection{Unicode}
 
-Chibi supports Unicode strings, encoding them as utf8.  This provides easy
-interoperability with many C libraries, but means that \scheme{string-ref} and
-\scheme{string-set!} are O(n), so they should be avoided in
-performance-sensitive code.
+Chibi supports Unicode strings and I/O natively.  Case mappings and
+comparisons, character properties, formatting and regular expressions
+are all Unicode aware, supporting the latest version 13.0 of the
+Unicode standard.
+
+Internally strings are encoded as UTF-8.  This provides easy
+interoperability with many C libraries, but means that
+\scheme{string-ref} and \scheme{string-set!} are O(n), so they should
+be avoided in performance-sensitive code (unless you compile Chibi
+with SEXP_USE_STRING_INDEX_TABLE).
 
 In general you should use high-level APIs such as \scheme{string-map}
 to ensure fast string iteration.  String ports also provide a simple
-way to efficiently iterate and construct strings, by looping over an
-input string or accumulating characters in an output string.
+and portable way to efficiently iterate and construct strings, by
+looping over an input string or accumulating characters in an output
+string.
 
 The \scheme{in-string} and \scheme{in-string-reverse} iterators in the
 \scheme{(chibi loop)} module will also iterate over strings
 efficiently while hiding the low-level details.
 
 In the event that you do need a low-level interface, such as when
-writing your own iterator protocol, you should use the following
-string cursor API instead of indexes.
+writing your own iterator protocol, you should use string cursors.
+\scheme{(srfi 130)} provides a portable API for this, or you can use
+\scheme{(chibi string)} which builds on the following core procedures:
 
 \itemlist[
 \item{\scheme{(string-cursor-start str)}
@@ -338,9 +350,10 @@ To use Chibi-Scheme in a program you need to link against the
 
 \ccode{#include <chibi/eval.h>}
 
-All definitions begin with a "sexp_" prefix, or "SEXP_" for constants.
-In addition to the prototypes and utility macros, this includes the
-following type definitions:
+All definitions begin with a "sexp_" prefix, or "SEXP_" for constants
+(deliberately chosen not to conflict with other Scheme implementations
+which typically use "scm_").  In addition to the prototypes and
+utility macros, this includes the following type definitions:
 
 \itemlist[
 \item{\ctype{sexp} - an s-expression, used to represent all Scheme objects}
@@ -673,6 +686,7 @@ need to check manually before applying the predicate.
 \item{\ccode{sexp_numberp(obj)} - \var{obj} is any kind of number}
 \item{\ccode{sexp_charp(obj)} - \var{obj} is a character}
 \item{\ccode{sexp_stringp(obj)} - \var{obj} is a string}
+\item{\ccode{sexp_string_cursorp(obj)} - \var{obj} is a string cursor}
 \item{\ccode{sexp_bytesp(obj)} - \var{obj} is a bytevector}
 \item{\ccode{sexp_symbolp(obj)} - \var{obj} is a symbol}
 \item{\ccode{sexp_idp(obj)} - \var{obj} is a symbol or hygienic identifier}
@@ -730,7 +744,7 @@ check.  The runtime does not prevent embedded NULLs inside strings,
 however data after the NULL may be ignored.
 
 By default (unless you compile with -DSEXP_USE_UTF8_STRING=0), strings
-are interpreted as utf8 encoded on the Scheme side, as describe in
+are interpreted as UTF-8 encoded on the Scheme side, as describe in
 section Unicode above.  In many cases you can ignore this on the C
 side and just treat the string as an opaque sequence of bytes.
 However, if you need to you can use the following macros to safely
@@ -748,7 +762,7 @@ compiled with:
 \item{\ccode{sexp sexp_substring_cursor(sexp ctx, sexp s, sexp i, sexp j)} - returns the substring between raw offsets \var{i} and \var{j}}
 ]
 
-When UTF8 support is not compiled in the cursor and non-cursor
+When UTF-8 support is not compiled in the cursor and non-cursor
 variants are equivalent.
 
 \subsubsection{Accessors}
@@ -766,6 +780,8 @@ once.
 \item{\ccode{sexp_unbox_fixnum(obj)} - converts a fixnum to a C integer}
 \item{\ccode{sexp_make_character(ch)} - creates a new character representing char \var{ch}}
 \item{\ccode{sexp_unbox_character(obj)} - converts a character to a C char}
+\item{\ccode{sexp sexp_make_string_cursor(int offset)} - creates a string cursor for the given byte offset}
+\item{\ccode{int sexp_unbox_string_cursor(sexp sc)} - returns the offset for the given string cursor}
 \item{\ccode{sexp_car(pair)} - the car of \var{pair}}
 \item{\ccode{sexp_cdr(pair)} - the cdr of \var{pair}}
 \item{\ccode{sexp_ratio_numerator(q)} - the numerator of the ratio \var{q}}
@@ -1245,13 +1261,18 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-135/srfi-135.html"]{(srfi 135) - immutable texts}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-139/srfi-139.html"]{(srfi 139) - syntax parameters}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-141/srfi-141.html"]{(srfi 141) - integer division}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-143/srfi-142.html"]{(srfi 142) - bitwise operations}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-143/srfi-143.html"]{(srfi 143) - fixnums}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-144/srfi-144.html"]{(srfi 144) - flonums}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-145/srfi-145.html"]{(srfi 145) - assumptions}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-147/srfi-147.html"]{(srfi 147) - custom macro transformers}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-151/srfi-151.html"]{(srfi 151) - bitwise operators}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-154/srfi-154.html"]{(srfi 154) - first-class dynamic extents}}
-\item{\hyperlink["http://srfi.schemers.org/srfi-159/srfi-159.html"]{(srfi 159) - combinator formatting}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-158/srfi-158.html"]{(srfi 158) - generators and accumulators}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-160/srfi-160.html"]{(srfi 160) - homogeneous numeric vector libraries}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-165/srfi-165.html"]{(srfi 165) - the environment Monad}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-166/srfi-166.html"]{(srfi 166) - monadic formatting}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-166/srfi-188.html"]{(srfi 188) - splicing binding constructs for syntactic keywords}}
 
 ]
 
@@ -1264,11 +1285,23 @@ namespace.
 
 \item{\hyperlink["lib/chibi/ast.html"]{(chibi ast) - Abstract Syntax Tree and other internal data types}}
 
+\item{\hyperlink["lib/chibi/base64.html"]{(chibi base64) - Base64 encoding and decoding}}
+
+\item{\hyperlink["lib/chibi/bytevector.html"]{(chibi bytevector) - Bytevector Utilities}}
+
 \item{\hyperlink["lib/chibi/config.html"]{(chibi config) - General configuration management}}
 
-\item{\hyperlink["lib/chibi/disasm.html"]{(chibi diff) - LCS Algorithm and diff utilities}}
+\item{\hyperlink["lib/chibi/crypto/md5.html"]{(chibi crypto md5) - MD5 hash}}
+
+\item{\hyperlink["lib/chibi/crypto/rsa.html"]{(chibi crypto rsa) - RSA public key encryption}}
+
+\item{\hyperlink["lib/chibi/crypto/sha2.html"]{(chibi crypto sha2) - SHA-2 hash}}
+
+\item{\hyperlink["lib/chibi/diff.html"]{(chibi diff) - LCS Algorithm and diff utilities}}
 
 \item{\hyperlink["lib/chibi/disasm.html"]{(chibi disasm) - Disassembler for the virtual machine}}
+
+\item{\hyperlink["lib/chibi/doc.html"]{(chibi doc) - Chibi documentation utilities}}
 
 \item{\hyperlink["lib/chibi/equiv.html"]{(chibi equiv) - A version of \scheme{equal?} which is guaranteed to terminate}}
 
@@ -1280,9 +1313,21 @@ namespace.
 
 \item{\hyperlink["lib/chibi/io.html"]{(chibi io) - Various I/O extensions and custom ports}}
 
+\item{\hyperlink["lib/chibi/iset/base.html"]{(chibi iset base) - Compact integer sets}}
+
+\item{\hyperlink["lib/chibi/iset/base.html"]{(chibi iset base) - Compact integer sets}}
+
+\item{\hyperlink["lib/chibi/iset/constructors.html"]{(chibi iset constructors) - Compact integer set construction}}
+
+\item{\hyperlink["lib/chibi/iset/iterators.html"]{(chibi iset iterators) - Iterating over compact integer sets}}
+
 \item{\hyperlink["lib/chibi/loop.html"]{(chibi loop) - Fast and extensible loop syntax}}
 
 \item{\hyperlink["lib/chibi/match.html"]{(chibi match) - Intuitive and widely supported pattern matching syntax}}
+
+\item{\hyperlink["lib/chibi/math/prime.html"]{(chibi math prime) - Prime number utilities}}
+
+\item{\hyperlink["lib/chibi/memoize.html"]{(chibi memoize) - Procedure memoization}}
 
 \item{\hyperlink["lib/chibi/mime.html"]{(chibi mime) - Parse MIME files into SXML}}
 
@@ -1291,6 +1336,8 @@ namespace.
 \item{\hyperlink["lib/chibi/net.html"]{(chibi net) - Simple networking interface}}
 
 \item{\hyperlink["lib/chibi/net/http-server.html"]{(chibi net http-server) - Simple http-server with servlet support}}
+
+\item{\hyperlink["lib/chibi/net/servlet.html"]{(chibi net servlet) - HTTP servlets for http-server or CGI}}
 
 \item{\hyperlink["lib/chibi/parse.html"]{(chibi parse) - Parser combinators with convenient syntax}}
 
@@ -1302,11 +1349,15 @@ namespace.
 
 \item{\hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
-\item{\hyperlink["lib/chibi/show.html"]{(chibi show) - A combinator formatting library}}
+\item{\hyperlink["lib/chibi/string.html"]{(chibi string) - Cursor-based string library (predecessor to SRFI 130)}}
 
 \item{\hyperlink["lib/chibi/stty.html"]{(chibi stty) - A high-level interface to ioctl}}
 
+\item{\hyperlink["lib/chibi/sxml.html"]{(chibi sxml) - SXML utilities}}
+
 \item{\hyperlink["lib/chibi/system.html"]{(chibi system) - Access to the host system and current user information}}
+
+\item{\hyperlink["lib/chibi/temp-file.html"]{(chibi temp-file) - Temporary file and directory creation}}
 
 \item{\hyperlink["lib/chibi/test.html"]{(chibi test) - A simple unit testing framework}}
 
@@ -1325,7 +1376,7 @@ namespace.
 \section{Snow Package Manager}
 
 Beyond the distributed modules, Chibi comes with a package manager
-based on \hyperlink["http://trac.sacrideo.us/wg/wiki/Snow"]{Snow2}
+based on \hyperlink["https://small.r7rs.org/wiki/Snow/"]{Snow2}
 which can be used to share R7RS libraries.  Packages are distributed
 as tar gzipped files called "snowballs," and may contain multiple
 libraries.  The program is installed as \scheme{snow-chibi}.  The

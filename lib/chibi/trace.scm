@@ -34,10 +34,15 @@
         (show-trace-result cell args res)
         res))))
 
+;;> Write a trace of all calls to the procedure \var{proc} to
+;;> \scheme{(current-error-port)}.
+
 (define-syntax trace
   (syntax-rules ()
     ((trace id)
      (trace-cell (env-cell (interaction-environment) 'id)))))
+
+;;> Remove any active traces on the procedure \var{proc}.
 
 (define-syntax untrace
   (syntax-rules ()
@@ -50,6 +55,8 @@
     (for-each (lambda (x) (display x out)) args)
     (newline out)))
 
+;;> Trace a specific environment cell.
+
 (define (trace-cell cell)
   (let ((tab (all-traces)))
     (cond
@@ -60,6 +67,8 @@
      (else
       (hash-table-set! tab cell (cdr cell))
       (set-cdr! cell (make-tracer cell))))))
+
+;;> Untrace an environment cell.
 
 (define (untrace-cell cell)
   (let ((tab (all-traces)))
@@ -72,6 +81,8 @@
       (let ((proc (hash-table-ref tab cell)))
         (hash-table-delete! tab cell)
         (set-cdr! cell proc))))))
+
+;;> Remove all active procedure traces.
 
 (define (untrace-all)
   (hash-table-walk (all-traces) (lambda (cell proc) (set-cdr! cell proc)))

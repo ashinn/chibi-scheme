@@ -42,21 +42,28 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
 
+;;> \section{Testing}
+
 ;;> \macro{(test [name] expect expr)}
 
 ;;> The primary interface to testing.  Evaluate \var{expr} and check
-;;> that it is \scheme{equal?}  to \var{expect}.  \var{name} is used
-;;> in reporting, and defaults to a printed summary of \var{expr}.
-;;> Returns the status of the test (one of the symbols \scheme{'PASS},
-;;> \scheme{'FAIL}, \scheme{'SKIP}, \scheme{'ERROR}).
+;;> that it is equal to \var{expect}, and report the result, using
+;;> \var{name} or a printed summary of \var{expr}.
 ;;>
 ;;> If used inside a group this will contribute to the overall group
-;;> reporting, but can be used standalone.
+;;> reporting, but can be used standalone:
 ;;>
 ;;> \example{(test 4 (+ 2 2))}
 ;;> \example{(test "add two and two" 4 (+ 2 2))}
 ;;> \example{(test 3 (+ 2 2))}
 ;;> \example{(test 4 (+ 2 "2"))}
+;;>
+;;> The equality comparison is made with
+;;> \scheme{current-test-comparator}, defaulting to
+;;> \scheme{test-equal?}, which is the same as \scheme{equal?} but
+;;> more permissive on floating point comparisons).  Returns the
+;;> status of the test (one of the symbols \scheme{'PASS},
+;;> \scheme{'FAIL}, \scheme{'SKIP}, \scheme{'ERROR}).
 
 (define-syntax test
   (syntax-rules (quote)
@@ -138,10 +145,12 @@
      (test-syntax-error 'test-error "1 or 2 arguments required"
                         (test a ...)))))
 
-;; TODO: Extract interesting variables so we can show their values on
-;; failure.
+;;> Low-level macro to pass alist info to the underlying \var{test-run}.
+
 (define-syntax test-propagate-info
   (syntax-rules ()
+    ;; TODO: Extract interesting variables so we can show their values
+    ;; on failure.  Vars are empty for now.
     ((test-propagate-info name expect expr info)
      (test-vars () name expect expr info))))
 
@@ -156,25 +165,64 @@
                  (var-values . ,(list vars ...))
                  (key . val) ...)))))
 
-;;> Exits with a failure status if any tests have failed,
-;;> and a successful status otherwise.
+;;> The procedural interface to testing.  \var{expect} and \var{expr}
+;;> should be thunks, and \var{info} is an alist of properties used in
+;;> test reporting.
 
-(define (test-exit)
-  (exit (zero? (test-failure-count))))
+(define (test-run expect expr info)
+  (let ((info (test-expand-info info)))
+    (if (and (cond ((current-test-group)
+                    => (lambda (g) (not (test-group-ref g 'skip-group?))))
+                   (else #t))
+             (or (and (not (any (lambda (f) (f info)) (current-test-removers)))
+                      (or (pair? (current-test-removers))
+                          (null? (current-test-filters))))
+                 (any (lambda (f) (f info)) (current-test-filters))))
+        ((current-test-applier) expect expr info)
+        ((current-test-skipper) info))))
+
+;;> Returns true if either \scheme{(equal? expect res)}, or
+;;> \var{expect} is inexact and \var{res} is within
+;;> \scheme{current-test-epsilon} of \var{expect}.
+
+(define (test-equal? expect res)
+  (or (equal? expect res)
+      (if (real? expect)
+          (and (inexact? expect)
+               (real? res)
+               ;; tests which expect an inexact value can
+               ;; accept an equivalent exact value
+               ;; (inexact? res)
+               (approx-equal? expect res (current-test-epsilon)))
+          (and (complex? res)
+               (complex? expect)
+               (test-equal? (real-part expect) (real-part res))
+               (test-equal? (imag-part expect) (imag-part res))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; group interface
 
+;;> \section{Test Groups}
+
+;;> Tests can be collected in groups for
+
 ;;> Wraps \var{body} as a single test group, which can be filtered
 ;;> and summarized separately.
+
+;;> \example{
+;;> (test-group "pi"
+;;>   (test 3.14159 (acos -1))
+;;>   (test 3 (acos -1))
+;;>   (test 3.14159 (acos "-1")))
+;;> }
 
 (define-syntax test-group
   (syntax-rules ()
     ((_ name-expr body ...)
      (let ((name name-expr)
            (old-group (current-test-group)))
-       (if (not (string? name))
-           (error "a name is required, got " 'name-expr name))
+       (when (not (string? name))
+         (error "a name is required, got " 'name-expr name))
        (test-begin name)
        (guard
            (exn
@@ -188,6 +236,78 @@
        (test-end name)
        (current-test-group old-group)))))
 
+;;> Begin testing a new group until the closing \scheme{(test-end)}.
+
+(define (test-begin . o)
+  (let* ((name (if (pair? o) (car o) ""))
+         (parent (current-test-group))
+         (group (make-test-group name parent)))
+    ;; include a newline if we are directly nested in a parent with no
+    ;; tests yet
+    (when (and parent
+               (zero? (test-group-ref parent 'subgroups-count 0))
+               (not (test-group-ref parent 'verbose)))
+      (newline))
+    ;; header
+    (cond
+     ((test-group-ref group 'skip-group?)
+      (display (make-string (or (test-group-indent-width group) 0) #\space))
+      (display (strikethrough (bold (string-append name ":"))))
+      (display " SKIP"))
+     ((test-group-ref group 'verbose)
+      (display
+       (test-header-line
+        (string-append "testing " name)
+        (or (test-group-indent-width group) 0))))
+     (else
+      (display
+       (string-append
+        (make-string (or (test-group-indent-width group) 0)
+                     #\space)
+        (bold (string-append name ": "))))))
+    ;; set the current test group
+    (current-test-group group)))
+
+;;> Ends testing group introduced with \scheme{(test-begin)}, and
+;;> summarizes the results.  The \var{name} is optional, but if
+;;> present should match the corresponding \scheme{test-begin} name,
+;;> or a warning is printed.
+
+(define (test-end . o)
+  (let ((name (and (pair? o) (car o))))
+    (cond
+     ((current-test-group)
+      => (lambda (group)
+           (when (and name (not (equal? name (test-group-name group))))
+             (warning "mismatched test-end:" name (test-group-name group)))
+           (let ((parent (test-group-ref group 'parent)))
+             (when (and (test-group-ref group 'skip-group?)
+                        (zero? (test-group-ref group 'subgroups-count 0)))
+               (newline))
+             ;; only report if there's something to say
+             ((current-test-group-reporter) group)
+             (when parent
+               (test-group-inc! parent 'subgroups-count)
+               (cond
+                ((test-group-ref group 'skip-group?)
+                 (test-group-inc! parent 'subgroups-skip))
+                ((and (zero? (test-group-ref group 'FAIL 0))
+                      (zero? (test-group-ref group 'ERROR 0))
+                      (= (test-group-ref group 'subgroups-pass 0)
+                         (test-group-ref group 'subgroups-count 0)))
+                 (test-group-inc! parent 'subgroups-pass))))
+             (current-test-group parent)
+             group))))))
+
+;;> Exits with a failure status if any tests have failed,
+;;> and a successful status otherwise.
+
+(define (test-exit)
+  (when (current-test-group)
+    (warning "calling test-exit with unfinished test group:"
+             (test-group-name (current-test-group))))
+  (exit (zero? (test-failure-count))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; utilities
 
@@ -197,6 +317,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test-group representation
+
+;;> \section{Accessors}
 
 ;; (name (prop value) ...)
 (define (make-test-group name . o)
@@ -223,7 +345,7 @@
 
 ;;> Returns the name of a test group info object.
 
-(define test-group-name car)
+(define (test-group-name group) (car group))
 
 ;;> Returns the value of a \var{field} in a test var{group} info
 ;;> object.  \var{field} should be a symbol, and predefined fields
@@ -394,18 +516,6 @@
           ,@info)
         info)))
 
-(define (test-run expect expr info)
-  (let ((info (test-expand-info info)))
-    (if (and (cond ((current-test-group)
-                    => (lambda (g) (not (test-group-ref g 'skip-group?))))
-                   (else #t))
-             (or (and (not (any (lambda (f) (f info)) (current-test-removers)))
-                      (or (pair? (current-test-removers))
-                          (null? (current-test-filters))))
-                 (any (lambda (f) (f info)) (current-test-filters))))
-        ((current-test-applier) expect expr info)
-        ((current-test-skipper) info))))
-
 (define (test-default-applier expect expr info)
   (let* ((group (current-test-group))
          (indent (and group (test-group-indent-width group))))
@@ -425,7 +535,7 @@
       (guard
           (exn
            (else
-            ((current-test-handler)
+            ((current-test-reporter)
              (if (assq-ref info 'expect-error) 'PASS 'ERROR)
              (append `((exception . ,exn)) info))))
         (let ((res (expr)))
@@ -437,10 +547,10 @@
                      'PASS
                      'FAIL))
                 (info `((result . ,res) (expected . ,expect-val) ,@info)))
-            ((current-test-handler) status info)))))))
+            ((current-test-reporter) status info)))))))
 
 (define (test-default-skipper info)
-  ((current-test-handler) 'SKIP info))
+  ((current-test-reporter) 'SKIP info))
 
 (define (test-status-color status)
   (case status
@@ -454,6 +564,8 @@
 
 (define (test-status-code status)
   ((test-status-color status)
+   ;; alternatively: ❗, ✗, ‒, ✓
+   ;; unfortunately, these have ambiguous width
    (case status
      ((ERROR) "!")
      ((FAIL) "x")
@@ -698,99 +810,61 @@
            (test-group-inc! parent 'total-error err))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (test-equal? expect res)
-  (or (equal? expect res)
-      (if (real? expect)
-          (and (inexact? expect)
-               (real? res)
-               ;; tests which expect an inexact value can
-               ;; accept an equivalent exact value
-               ;; (inexact? res)
-               (approx-equal? expect res (current-test-epsilon)))
-          (and (complex? res)
-               (complex? expect)
-               (test-equal? (real-part expect) (real-part res))
-               (test-equal? (imag-part expect) (imag-part res))))))
-
-;;> Begin testing a new group until the closing \scheme{(test-end)}.
-
-(define (test-begin . o)
-  (let* ((name (if (pair? o) (car o) ""))
-         (parent (current-test-group))
-         (group (make-test-group name parent)))
-    ;; include a newline if we are directly nested in a parent with no
-    ;; tests yet
-    (cond
-     ((and parent
-           (zero? (test-group-ref parent 'subgroups-count 0))
-           (not (test-group-ref parent 'verbose)))
-      (newline)))
-    ;; header
-    (cond
-     ((test-group-ref group 'skip-group?)
-      (display (make-string (or (test-group-indent-width group) 0) #\space))
-      (display (strikethrough (bold (string-append name ":"))))
-      (display " SKIP"))
-     ((test-group-ref group 'verbose)
-      (display
-       (test-header-line
-        (string-append "testing " name)
-        (or (test-group-indent-width group) 0))))
-     (else
-      (display
-       (string-append
-        (make-string (or (test-group-indent-width group) 0)
-                     #\space)
-        (bold (string-append name ": "))))))
-    ;; set the current test group
-    (current-test-group group)))
-
-;;> Ends testing group introduced with \scheme{(test-begin)}, and
-;;> summarizes the results.
-
-(define (test-end . o)
-  (cond
-   ((current-test-group)
-    => (lambda (group)
-         (if (and (pair? o) (not (equal? (car o) (test-group-name group))))
-             (warning "mismatched test-end:" (car o) (test-group-name group)))
-         (let ((parent (test-group-ref group 'parent)))
-           (if (and (test-group-ref group 'skip-group?)
-                    (zero? (test-group-ref group 'subgroups-count 0)))
-               (newline))
-           ;; only report if there's something to say
-           ((current-test-group-reporter) group)
-           (cond
-            (parent
-             (test-group-inc! parent 'subgroups-count)
-             (cond
-              ((test-group-ref group 'skip-group?)
-               (test-group-inc! parent 'subgroups-skip))
-              ((and (zero? (test-group-ref group 'FAIL 0))
-                    (zero? (test-group-ref group 'ERROR 0))
-                    (= (test-group-ref group 'subgroups-pass 0)
-                       (test-group-ref group 'subgroups-count 0)))
-               (test-group-inc! parent 'subgroups-pass)))))
-           (current-test-group parent)
-           group)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; parameters
 
+;;> \section{Parameters}
+
+;;> The current test group as started by \scheme{test-group} or
+;;> \scheme{test-begin}.
+
 (define current-test-group (make-parameter #f))
+
+;;> If true, show more verbose output per test.  Inferred from the
+;;> environment variable TEST_VERBOSE.
+
 (define current-test-verbosity
   (make-parameter
    (cond ((get-environment-variable "TEST_VERBOSE")
           => (lambda (s) (not (member s '("" "0")))))
          (else #f))))
+
+;;> The epsilon used for floating point comparisons.
+
 (define current-test-epsilon (make-parameter 1e-5))
+
+;;> The underlying comparator used in testing, defaults to
+;;> \scheme{test-equal?}.
+
 (define current-test-comparator (make-parameter test-equal?))
+
+;;> The test applier - what we do with non-skipped tests.  Takes the
+;;> same signature as \scheme{test-run}, should be responsible for
+;;> evaluating the thunks, determining the status of the test, and
+;;> passing this information to \scheme{current-test-reporter}.
+
 (define current-test-applier (make-parameter test-default-applier))
-(define current-test-handler (make-parameter test-default-handler))
+
+;;> The test skipper - what we do with non-skipped tests.  This should
+;;> not evaluate the thunks and simply pass off to
+;;> \scheme{current-test-reporter}.
+
 (define current-test-skipper (make-parameter test-default-skipper))
+
+;;> Takes two arguments, the symbol status of the test and the info
+;;> alist.  Reports the result of the test and updates bookkeeping in
+;;> the current test group for reporting.
+
+(define current-test-reporter (make-parameter test-default-handler))
+
+;;> Takes one argument, a test group, and prints a summary of the test
+;;> results for that group.
+
 (define current-test-group-reporter
   (make-parameter test-default-group-reporter))
+
+;;> A running count of all test failures and errors across all groups
+;;> (and threads).  Used by \scheme{test-exit}.
+
 (define test-failure-count (make-parameter 0))
 
 (define test-first-indentation

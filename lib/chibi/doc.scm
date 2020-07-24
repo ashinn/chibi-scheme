@@ -377,11 +377,15 @@
                (err-str (get-output-string tmp-err)))
            `(,@(if (string-null? out-str)
                    '()
-                   `((div (@ (class . "output")) ,(ansi->sxml out-str))))
+                   `((div (@ (class . "output")) (pre ,(ansi->sxml out-str)))))
              ,@(if (string-null? err-str)
                    '()
-                   `((div (@ (class . "error")) ,(ansi->sxml err-str))))
-             (div (@ (class . "result")) (code ,res-str))))))))
+                   `((div (@ (class . "error")) (pre ,(ansi->sxml err-str)))))
+             ,@(if (and (or (not (string-null? err-str))
+                            (not (string-null? out-str)))
+                        (eq? res (if #f #f)))
+                   '()
+                   `((div (@ (class . "result")) (code ,res-str))))))))))
 
 (define (expand-example-import x env)
   (eval `(import ,@(cdr x))
@@ -486,7 +490,7 @@ div#notes {position: relative; top: 2em; left: 570px; max-width: 200px; height: 
 div#footer {padding-bottom: 50px}
 .result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
 .output { color: #000; background-color: beige; width: 100%; padding: 3px}
-.error { color: #000; background-color: #330000; width: 100%; padding: 3px}
+.error { color: #000; background-color: #F0B0B0; width: 100%; padding: 3px}
 .command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
 "
                  ,(highlight-style))
