@@ -300,6 +300,34 @@ double circle_area1(struct Circle* circ) {
 double circle_area2(struct Circle circ) {
   return circle_area1(&circ);
 }
+
+struct Point* centroid(struct Point** points, int num_points) {
+  struct Point* res;
+  double xsum, ysum;
+  int i;
+  for (i=0; i<num_points; ++i) {
+    xsum += points[i]->x;
+    ysum += points[i]->y;
+  }
+  res = malloc(sizeof(struct Point));
+  res->x = xsum / num_points;
+  res->y = ysum / num_points;
+  return res;
+}
+
+struct Point* centroid_null(struct Point** points) {
+  struct Point* res;
+  double xsum, ysum;
+  int i;
+  for (i=0; points[i]; ++i) {
+    xsum += points[i]->x;
+    ysum += points[i]->y;
+  }
+  res = malloc(sizeof(struct Point));
+  res->x = xsum / i;
+  res->y = ysum / i;
+  return res;
+}
 ")
    (define-c-struct Point
      predicate: point?
@@ -325,6 +353,9 @@ double circle_area2(struct Circle circ) {
    (define-c Color make_color (short short short))
    (define-c short color_red ((pointer Color)))
    ;;(define-c errno draw_rect (Rectangle Color))
+   (define-c Point centroid ((array (pointer Point)) (value (length arg0) int)))
+   (define-c (maybe-null Point) centroid-null
+     ((array (pointer Point) null)))
    )
  (test-assert (point? (make-point 1. 2.)))
  (test 1. (point-x (make-point 1. 2.)))
@@ -361,6 +392,17 @@ double circle_area2(struct Circle circ) {
  (test 1 (color_red (set_color 1 2 3)))
  (test-assert (color? (make_color 1 2 3)))
  (test 1 (color_red (make_color 1 2 3)))
+ ;; array of pointers
+ (let ((c (centroid (list (make-point 1. 1.)
+                          (make-point 2. 2.)
+                          (make-point 3. 3.)))))
+   (test 2. (point-x c))
+   (test 2. (point-y c)))
+ (let ((c (centroid-null (list (make-point 1. 1.)
+                               (make-point 2. 2.)
+                               (make-point 3. 3.)))))
+   (test 2. (point-x c))
+   (test 2. (point-y c)))
  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
