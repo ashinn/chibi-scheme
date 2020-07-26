@@ -1,15 +1,10 @@
 
 (define-library (chibi json)
-  (import (scheme base))
-  (export string->json json->string json-read json-write)
+  (import (scheme base)
+          (except (srfi 99 records) define-record-type)
+          (only (chibi ast) type-name)
+          (only (chibi) make-constructor))
+  (export string->json json->string json-read json-write
+          make-json-reader)
   (include-shared "json")
-  (begin
-    (define (string->json str)
-      (let* ((in (open-input-string str))
-             (res (json-read in)))
-        (close-input-port in)
-        res))
-    (define (json->string json)
-      (let ((out (open-output-string)))
-        (json-write json out)
-        (get-output-string out)))))
+  (include "json.scm"))

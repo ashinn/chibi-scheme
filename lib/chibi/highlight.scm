@@ -124,7 +124,7 @@
      ((eqv? c #\<) (read-escaped in term `(#\; #\t #\l #\& ,@ls)))
      ;;((eqv? c #\>) (read-escaped in term `(#\; #\t #\g #\& ,@ls)))
      ((eqv? c #\&) (read-escaped in term `(#\; #\p #\m #\a #\& ,@ls)))
-     ;;((eqv? c #\\) (read-escaped in term (cons (read-char in) (cons c ls))))
+     ((eqv? c #\\) (read-escaped in term (cons (read-char in) (cons c ls))))
      (else (read-escaped in term (cons c ls))))))
 
 (define (read-to-eol in ls)

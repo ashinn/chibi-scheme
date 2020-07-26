@@ -72,7 +72,7 @@
       (test-scribble '((foo "x " y " z")) "\\foo{x \\y z}")
       (test-scribble '((foo "x " (* y 2) " z")) "\\foo{x \\(* y 2) z}")
       (test-scribble '((foo " bar")) "\\{\\foo bar}")
-      (test-scribble '(((foo "bar") "baz")) "\\\\foo{bar}{baz}")
+      ;;(test-scribble '(((foo "bar") "baz")) "\\\\foo{bar}{baz}")
 
       (test-scribble '((foo 1 (* 2 3) "bar")) "\\foo[1 (* 2 3)]{bar}")
       (test-scribble '((foo (bar "...") "blah")) "\\foo[\\bar{...}]{blah}")

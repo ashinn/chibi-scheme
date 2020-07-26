@@ -69,6 +69,52 @@
   }
 }}"))
       (test-end)
+      (test-begin "make-json-reader")
+      (let ()
+        (define-record-type Employee
+          (make-employee name id title department)
+          employee?
+          (name employee-name)
+          (id employee-id)
+          (title employee-title)
+          (department employee-department))
+        (define-record-type Team
+          (make-team name lead devs)
+          team?
+          (name team-name)
+          (lead team-lead)
+          (devs team-devs))
+        (define read-employee (make-json-reader Employee))
+        (define read-team
+          (make-json-reader
+           `(,Team
+             (lead . ,Employee)
+             (name . ,string?)
+             (devs . #(,Employee)))))
+        (define (string->employee str)
+          (read-employee (open-input-string str)))
+        (define (string->team str)
+          (read-team (open-input-string str)))
+        (let ((emp1 (string->employee
+                     "{\"name\": \"Bob\", \"id\": 3, \"title\": \"CEO\"}")))
+          (test-assert (employee? emp1))
+          (test "Bob" (employee-name emp1))
+          (test 3 (employee-id emp1))
+          (test "CEO" (employee-title emp1)))
+        (test-assert (employee? (string->employee "{\"unknown\": \"foo\"}")))
+        (test-error ((make-json-reader Employee #t)
+                     (open-input-string "{\"unknown\": \"foo\"}")))
+        (test-error (string->team "{\"name\": 3}"))
+        (let ((team1 (string->team
+                      "{\"name\": \"Tiger Cats\", \"lead\": {\"name\": \"House\", \"id\": 321}, \"devs\": [{\"name\": \"Cameron\", \"id\": 7}, {\"name\": \"Thirteen\", \"id\": 13}]}")))
+          (test-assert (team? team1))
+          (test-assert (employee? (team-lead team1)))
+          (test "House" (employee-name (team-lead team1)))
+          (test-assert (vector? (team-devs team1)))
+          (test 2 (vector-length (team-devs team1)))
+          (test "Cameron" (employee-name (vector-ref (team-devs team1) 0)))
+          (test "Thirteen" (employee-name (vector-ref (team-devs team1) 1)))))
+      (test-end)
       (test-begin "json->string")
       (test "1" (json->string 1))
       (test "1.5" (json->string 1.5))
@@ -104,3 +150,4 @@
       (test-end)
       (test-end)
       )))
+

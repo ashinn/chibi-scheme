@@ -1323,6 +1323,8 @@ namespace.
 
 \item{\hyperlink["lib/chibi/iset/iterators.html"]{(chibi iset iterators) - Iterating over compact integer sets}}
 
+\item{\hyperlink["lib/chibi/json.html"]{(chibi json) - JSON reading and writing}}
+
 \item{\hyperlink["lib/chibi/loop.html"]{(chibi loop) - Fast and extensible loop syntax}}
 
 \item{\hyperlink["lib/chibi/match.html"]{(chibi match) - Intuitive and widely supported pattern matching syntax}}
