@@ -269,6 +269,9 @@ typedef int32_t sexp_int32_t;
 # include <ape/limits.h>
 # else
 # include <limits.h>
+# if SEXP_USE_UNIFORM_VECTOR_LITERALS
+# include <stdint.h>
+# endif
 # endif
 # if UCHAR_MAX == 255
 #  define SEXP_UINT8_DEFINED 1
@@ -287,7 +290,7 @@ typedef long sexp_int32_t;
 typedef unsigned short sexp_uint32_t;
 typedef short sexp_int32_t;
 # endif
-#endif
+#endif  /* SEXP_USE_INTTYPES */
 
 #if defined(__APPLE__) || defined(_WIN64) || (defined(__CYGWIN__) && __SIZEOF_POINTER__ == 8)
 #define SEXP_PRIdOFF "lld"
@@ -398,6 +401,9 @@ struct sexp_mark_stack_ptr_t {
   struct sexp_mark_stack_ptr_t *prev; /* TODO: remove for allocations on stack */
 };
 
+/* Note this must be kept in sync with the type registry in sexp.c. */
+/* sexp fields must be placed first if you use slot-ref/set!, as is */
+/* done by write. */
 struct sexp_struct {
   sexp_tag_t tag;
   char markedp;
@@ -430,9 +436,9 @@ struct sexp_struct {
       char data SEXP_FLEXIBLE_ARRAY;
     } bytes;
     struct {
+      sexp bytes;
       unsigned char element_type;
       sexp_sint_t length;
-      sexp bytes;
     } uvector;
     struct {
 #if SEXP_USE_PACKED_STRINGS
@@ -451,15 +457,15 @@ struct sexp_struct {
       char data SEXP_FLEXIBLE_ARRAY;
     } symbol;
     struct {
+      sexp name;
+      sexp cookie;
+      sexp fd;
       FILE *stream;
       char *buf;
       char openp, bidirp, binaryp, shutdownp, no_closep, sourcep,
         blockedp, fold_casep;
       sexp_uint_t offset, line, flags;
       size_t size;
-      sexp name;
-      sexp cookie;
-      sexp fd;
     } port;
     struct {
       char openp, no_closep;
@@ -480,9 +486,9 @@ struct sexp_struct {
       sexp real, imag;
     } complex;
     struct {
+      sexp parent;
       sexp_uint_t length;
       void *value;
-      sexp parent;
       char body SEXP_FLEXIBLE_ARRAY;
     } cpointer;
     /* runtime types */
@@ -493,14 +499,14 @@ struct sexp_struct {
 #endif
     } env;
     struct {
-      sexp_uint_t length, max_depth;
       sexp name, literals, source;
+      sexp_uint_t length, max_depth;
       unsigned char data SEXP_FLEXIBLE_ARRAY;
     } bytecode;
     struct {
+      sexp bc, vars;
       char flags;
       sexp_proc_num_args_t num_args;
-      sexp bc, vars;
     } procedure;
     struct {
       sexp proc, env, source, aux;
@@ -572,8 +578,8 @@ struct sexp_struct {
     } context;
 #if SEXP_USE_STABLE_ABI || SEXP_USE_AUTO_FORCE
     struct {
-      int donep;
       sexp value;
+      int donep;
     } promise;
 #endif
 #if SEXP_USE_STABLE_ABI || SEXP_USE_WEAK_REFERENCES

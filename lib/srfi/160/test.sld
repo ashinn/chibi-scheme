@@ -1,5 +1,7 @@
 (define-library (srfi 160 test)
-  (import (scheme base) (srfi 160 u32) (chibi test))
+  (import (scheme base)
+          (srfi 160 u32) (srfi 160 u64) (srfi 160 s64)
+          (chibi test))
   (export run-tests)
   (begin
     (define (run-tests)
@@ -19,6 +21,8 @@
         (test '#u32(1 2 3 4) (u32vector-reverse-copy '#u32(5 4 3 2 1 0) 1 5))
         (test '#u32(0 1) (u32vector-append '#u32(0) '#u32(1)))
         (test '#u32(0 1 2 3) (u32vector-append '#u32(0) '#u32(1 2 3)))
+        (test '#u64(0 1 2 3) (u64vector-append '#u64(0) '#u64(1 2 3)))
+        (test '#s64(0 -1 2 -3) (s64vector-append '#s64(0) '#s64(-1 2 -3)))
         (test '#u32(0 1 2 3) (u32vector-concatenate '(#u32(0 1) #u32(2 3))))
         (test '#u32(0 1 6 7)
           (u32vector-append-subvectors '#u32(0 1 2 3 4) 0 2 '#u32(4 5 6 7 8) 2 4))

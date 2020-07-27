@@ -153,10 +153,10 @@ sexp sexp_write_uvector(sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp write
     case SEXP_S8: sexp_write(ctx, sexp_make_fixnum(((signed char*)str)[i]), out); break;
     case SEXP_S16: sexp_write(ctx, sexp_make_fixnum(((signed short*)str)[i]), out); break;
     case SEXP_U16: sexp_write(ctx, sexp_make_fixnum(((unsigned short*)str)[i]), out); break;
-    case SEXP_S32: sexp_write(ctx, tmp=sexp_make_integer(ctx, ((signed int*)str)[i]), out); break;
-    case SEXP_U32: sexp_write(ctx, tmp=sexp_make_unsigned_integer(ctx, ((unsigned int*)str)[i]), out); break;
-    case SEXP_S64: sexp_write(ctx, tmp=sexp_make_integer(ctx, ((signed int*)str)[i]), out); break;
-    case SEXP_U64: sexp_write(ctx, tmp=sexp_make_unsigned_integer(ctx, ((unsigned int*)str)[i]), out); break;
+    case SEXP_S32: sexp_write(ctx, tmp=sexp_make_integer(ctx, ((int32_t*)str)[i]), out); break;
+    case SEXP_U32: sexp_write(ctx, tmp=sexp_make_unsigned_integer(ctx, ((uint32_t*)str)[i]), out); break;
+    case SEXP_S64: sexp_write(ctx, tmp=sexp_make_integer(ctx, ((int64_t*)str)[i]), out); break;
+    case SEXP_U64: sexp_write(ctx, tmp=sexp_make_unsigned_integer(ctx, ((uint64_t*)str)[i]), out); break;
 #if SEXP_USE_FLONUMS
     case SEXP_F32: sexp_flonum_value_set(f, ((float*)str)[i]); sexp_write(ctx, f, out); break;
     case SEXP_F64: sexp_flonum_value_set(f, ((double*)str)[i]); sexp_write(ctx, f, out); break;
@@ -243,8 +243,8 @@ sexp sexp_finalize_dl (sexp ctx, sexp self, sexp_sint_t n, sexp dl) {
 
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
 sexp sexp_finalize_uvector (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
-  if (sexp_uvector_freep(obj))
-    free(sexp_uvector_data(obj));
+  /* if (sexp_uvector_freep(obj)) */
+  /*   free(sexp_uvector_data(obj)); */
   return SEXP_VOID;
 }
 #endif
@@ -2998,8 +2998,9 @@ static int sexp_resolve_uniform_type(int c, sexp len) {
 #endif
 
 sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sexp ls) {
-  long et, i, min;
-  unsigned long max;
+  long et, i;
+  long long min;
+  unsigned long long max;
   sexp ls2, tmp;
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, etype);
   sexp_gc_var1(res);
@@ -3010,12 +3011,13 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
     sexp_gc_preserve1(ctx, res);
     et = sexp_unbox_fixnum(etype);
     res = et == SEXP_U8 ? sexp_make_bytes(ctx, sexp_length(ctx, ls), SEXP_VOID) : sexp_make_uvector(ctx, etype, sexp_length(ctx, ls));
-    min = 0;
-    max = sexp_uvector_element_size(et) == 64 ? -1 :
-      (1uLL << sexp_uvector_element_size(et)) - 1;
     if (sexp_uvector_prefix(et) == 's') {
-      min = -(max/2) - 1;
-      max = (max/2);
+      min = (-1LL << (sexp_uvector_element_size(et)-1));
+      max = (1LL << (sexp_uvector_element_size(et)-1)) - 1LL;
+    } else {
+      min = 0;
+      max = sexp_uvector_element_size(et) == 64 ? -1 :
+        (1uLL << sexp_uvector_element_size(et)) - 1LL;
     }
     for (ls2=ls; sexp_pairp(ls2); ls2=sexp_cdr(ls2)) {
       tmp = sexp_car(ls2);
@@ -3023,14 +3025,18 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
           ((sexp_uvector_prefix(et) == 'u') || (sexp_uvector_prefix(et) == 's')) ?
 #endif
-          !(sexp_fixnump(tmp) && sexp_unbox_fixnum(tmp) >= min
-            && sexp_unbox_fixnum(tmp) <= max)
+          !(sexp_exact_integerp(tmp) && sexp_sint_value(tmp) >= min
+            && (sexp_sint_value(tmp) < 0 || sexp_uint_value(tmp) <= max))
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
-          : (sexp_uvector_prefix(et) == 'c') ? !sexp_numberp(tmp) :
-          !(sexp_exact_integerp(tmp) || sexp_realp(tmp))
+          : ((sexp_uvector_prefix(et) == 'c') ? !sexp_numberp(tmp) :
+          !(sexp_exact_integerp(tmp) || sexp_realp(tmp)))
 #endif
           ) {
-        res = sexp_xtype_exception(ctx, self, "invalid uniform vector value", tmp);
+        res = sexp_cons(ctx, SEXP_FALSE, SEXP_FALSE);
+        sexp_car(res) = sexp_make_integer(ctx, min);
+        sexp_cdr(res) = sexp_make_integer(ctx, max);
+        res = sexp_list2(ctx, res, tmp);
+        res = sexp_xtype_exception(ctx, self, "invalid uniform vector value", res);
         break;
       }
     }
@@ -3052,25 +3058,13 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
         case SEXP_U16:
           ((unsigned short*)sexp_uvector_data(res))[i] = sexp_unbox_fixnum(sexp_car(ls)); break;
         case SEXP_S32:
-          ((signed int*)sexp_uvector_data(res))[i] = sexp_unbox_fixnum(sexp_car(ls)); break;
+          ((signed int*)sexp_uvector_data(res))[i] = sexp_sint_value(sexp_car(ls)); break;
         case SEXP_U32:
-          ((unsigned int*)sexp_uvector_data(res))[i] = sexp_unbox_fixnum(sexp_car(ls)); break;
+          ((unsigned int*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
         case SEXP_S64:
-#if SEXP_USE_BIGNUMS
-          if (sexp_bignump(sexp_car(ls)))
-            ((sexp_sint_t*)sexp_uvector_data(res))[i] = sexp_bignum_data(sexp_car(ls))[0] * sexp_bignum_sign(sexp_car(ls));
-          else
-#endif
-            ((sexp_sint_t*)sexp_uvector_data(res))[i] = sexp_unbox_fixnum(sexp_car(ls));
-          break;
+          ((sexp_sint_t*)sexp_uvector_data(res))[i] = sexp_sint_value(sexp_car(ls)); break;
         case SEXP_U64:
-#if SEXP_USE_BIGNUMS
-          if (sexp_bignump(sexp_car(ls)))
-            ((sexp_uint_t*)sexp_uvector_data(res))[i] = sexp_bignum_data(sexp_car(ls))[0];
-          else
-#endif
-          ((sexp_uint_t*)sexp_uvector_data(res))[i] = sexp_unbox_fixnum(sexp_car(ls));
-          break;
+          ((sexp_uint_t*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
 #if SEXP_USE_FLONUMS
         case SEXP_F32:
           ((float*)sexp_uvector_data(res))[i] = sexp_to_double(ctx, sexp_car(ls)); break;
@@ -3095,8 +3089,8 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
 #endif  /* SEXP_USE_UNIFORM_VECTOR_LITERALS */
       }
     }
+    sexp_gc_release1(ctx);
   }
-  sexp_gc_release1(ctx);
   return res;
 }
 

@@ -1,4 +1,6 @@
 
+(c-system-include "stdint.h")
+
 (define-c-const int
   SEXP_U1
   SEXP_S8
@@ -47,31 +49,31 @@ void s16vector_set(short* uv, int i, short v) {
   uv[i] = v;
 }
 
-unsigned int u32vector_ref(unsigned int* uv, int i) {
+uint32_t u32vector_ref(uint32_t* uv, int i) {
   return uv[i];
 }
-void u32vector_set(unsigned int* uv, int i, unsigned int v) {
+void u32vector_set(uint32_t* uv, int i, uint32_t v) {
   uv[i] = v;
 }
 
-int s32vector_ref(int* uv, int i) {
+int32_t s32vector_ref(int32_t* uv, int i) {
   return uv[i];
 }
-void s32vector_set(int* uv, int i, int v) {
+void s32vector_set(int32_t* uv, int i, int32_t v) {
   uv[i] = v;
 }
 
-unsigned long u64vector_ref(unsigned long* uv, int i) {
+uint64_t u64vector_ref(uint64_t* uv, int i) {
   return uv[i];
 }
-void u64vector_set(unsigned long* uv, int i, unsigned long v) {
+void u64vector_set(uint64_t* uv, int i, uint64_t v) {
   uv[i] = v;
 }
 
-long s64vector_ref(long* uv, int i) {
+int64_t s64vector_ref(int64_t* uv, int i) {
   return uv[i];
 }
-void s64vector_set(long* uv, int i, long v) {
+void s64vector_set(int64_t* uv, int i, int64_t v) {
   uv[i] = v;
 }
 
@@ -148,14 +150,14 @@ void c128vector_set(sexp ctx, double* uv, int i, sexp v) {
 (define-c unsigned-int u32vector-ref (u32vector int))
 (define-c void (u32vector-set! "u32vector_set") (u32vector int unsigned-int))
 
-(define-c int s32vector-ref (s32vector int))
-(define-c void (s32vector-set! "s32vector_set") (s32vector int int))
+(define-c int32_t s32vector-ref (s32vector int))
+(define-c void (s32vector-set! "s32vector_set") (s32vector int int32_t))
 
-(define-c unsigned-long u64vector-ref (u64vector int))
-(define-c void (u64vector-set! "u64vector_set") (u64vector int unsigned-long))
+(define-c uint64_t u64vector-ref (u64vector int))
+(define-c void (u64vector-set! "u64vector_set") (u64vector int uint64_t))
 
-(define-c long s64vector-ref (s64vector int))
-(define-c void (s64vector-set! "s64vector_set") (s64vector int long))
+(define-c int64_t s64vector-ref (s64vector int))
+(define-c void (s64vector-set! "s64vector_set") (s64vector int int64_t))
 
 (define-c float f32vector-ref (f32vector int))
 (define-c void (f32vector-set! "f32vector_set") (f32vector int float))
