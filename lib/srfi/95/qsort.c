@@ -156,7 +156,7 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b, int depth) {
 #if SEXP_USE_HUFF_SYMS
     } else if (sexp_isymbolp(b) && sexp_lsymbolp(a)) {
       res = strcmp(sexp_lsymbol_data(a),
-		   sexp_string_data(sexp_write_to_string(ctx, b)));
+                   sexp_string_data(sexp_write_to_string(ctx, b)));
 #endif
     } else {
       res = 1;
@@ -170,7 +170,7 @@ static int sexp_object_compare (sexp ctx, sexp a, sexp b, int depth) {
 #if SEXP_USE_HUFF_SYMS
     if (sexp_isymbolp(a) && sexp_lsymbolp(b))
       res = strcmp(sexp_string_data(sexp_write_to_string(ctx, a)),
-		   sexp_lsymbol_data(b));
+                   sexp_lsymbol_data(b));
     else
 #endif
       res = -1;
