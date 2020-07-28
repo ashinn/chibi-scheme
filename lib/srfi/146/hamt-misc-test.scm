@@ -27,13 +27,13 @@
 
   (test-group "(do-list)"
     (let ((index-accumulator '())
-	  (value-accumulator '())
-	  (all-values '(1 2 3 4 5)))
+      (value-accumulator '())
+      (all-values '(1 2 3 4 5)))
       (do-list (value all-values)
-	(set! value-accumulator (cons value value-accumulator)))
+    (set! value-accumulator (cons value value-accumulator)))
       (test all-values (reverse value-accumulator))
       (do-list (value index all-values)
-	(set! index-accumulator (cons index index-accumulator)))
+    (set! index-accumulator (cons index index-accumulator)))
       (test '(4 3 2 1 0) index-accumulator)))
 
   (test-end))

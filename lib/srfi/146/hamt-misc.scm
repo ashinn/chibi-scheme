@@ -27,8 +27,8 @@
     ((_ (operator argument ...))
      (unless (operator argument ...)
        (error "Assertion failed:"
-	      '(operator argument ...)
-	      (list 'operator argument ...))))
+          '(operator argument ...)
+          (list 'operator argument ...))))
     ((_ expression)
      (unless expression
        (error "Assertion failed:" 'expression)))))
@@ -37,15 +37,15 @@
   (syntax-rules ()
     ((_ (variable list) body ...)
      (do ((remaining list (cdr remaining)))
-	 ((null? remaining))
+     ((null? remaining))
        (let ((variable (car remaining)))
-	 body ...)))
+     body ...)))
     ((_ (element-variable index-variable list) body ...)
      (do ((remaining list (cdr remaining))
-	  (index-variable 0 (+ index-variable 1)))
-	 ((null? remaining))
+      (index-variable 0 (+ index-variable 1)))
+     ((null? remaining))
        (let ((element-variable (car remaining)))
-	 body ...)))))
+     body ...)))))
 
 (define string-comparator
   (make-comparator string? string=? #f string-hash))

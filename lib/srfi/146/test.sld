@@ -144,7 +144,7 @@
                     (receive (mapping value)
                         (mapping-intern mapping1 'd (lambda () 42))
                       (list value (mapping-ref mapping 'd))))
-	    
+        
         (test "mapping-update"
                     4
                     (mapping-ref mapping3 'b))

@@ -26,35 +26,35 @@
 (define (tree-search comparator tree obj failure success)
   (let ((entry (phm/get tree obj)))
     (if entry
-	(success (car entry) (cdr entry)
-		 (lambda (new-key new-datum ret)
-		   (let ((tree (phm/remove tree obj)))
-		     (values (phm/put tree new-key (cons new-key new-datum))
-			     ret)))
-		 (lambda (ret)
-		   (values (phm/remove tree obj) ret)))
-	(failure (lambda (new-key new-datum ret)
-		   (values (phm/put tree new-key (cons new-key new-datum))
-			   ret))
-		 (lambda (ret)
-		   (values tree ret))))))
+    (success (car entry) (cdr entry)
+         (lambda (new-key new-datum ret)
+           (let ((tree (phm/remove tree obj)))
+             (values (phm/put tree new-key (cons new-key new-datum))
+                 ret)))
+         (lambda (ret)
+           (values (phm/remove tree obj) ret)))
+    (failure (lambda (new-key new-datum ret)
+           (values (phm/put tree new-key (cons new-key new-datum))
+               ret))
+         (lambda (ret)
+           (values tree ret))))))
 
 (define (tree-fold proc seed tree)
   (phm/for-each (lambda (key entry)
-		  (set! seed (proc (car entry) (cdr entry) seed)))
-		tree)
+          (set! seed (proc (car entry) (cdr entry) seed)))
+        tree)
   seed)
 
 (define (tree-for-each proc tree)
   (phm/for-each (lambda (key entry)
-		  (proc (car entry) (cdr entry)))
-		tree))
+          (proc (car entry) (cdr entry)))
+        tree))
 
 (define (tree-generator tree)
   (make-coroutine-generator
    (lambda (yield)
      (tree-for-each (lambda item (yield item))
-		    tree))))
+            tree))))
 
 ;;; New types
 
@@ -67,8 +67,8 @@
 (define (make-empty-hashmap comparator)
   (assume (comparator? comparator))
   (%make-hashmap comparator
-		 (make-phm (comparator-hash-function comparator)
-			   (comparator-equality-predicate comparator))))
+         (make-phm (comparator-hash-function comparator)
+               (comparator-equality-predicate comparator))))
 
 ;;; Exported procedures
 
@@ -77,12 +77,12 @@
 (define (hashmap comparator . args)
   (assume (comparator? comparator))
   (hashmap-unfold null?
-	      (lambda (args)
-		(values (car args)
-			(cadr args)))
-	      cddr
-	      args
-	      comparator))
+          (lambda (args)
+        (values (car args)
+            (cadr args)))
+          cddr
+          args
+          comparator))
 
 (define (hashmap-unfold stop? mapper successor seed comparator)
   (assume (procedure? stop?))
@@ -90,13 +90,13 @@
   (assume (procedure? successor))
   (assume (comparator? comparator))
   (let loop ((hashmap (make-empty-hashmap comparator))
-	     (seed seed))
+         (seed seed))
     (if (stop? seed)
-	hashmap
-	(receive (key value)
-	    (mapper seed)
-	  (loop (hashmap-adjoin hashmap key value)
-		(successor seed))))))
+    hashmap
+    (receive (key value)
+        (mapper seed)
+      (loop (hashmap-adjoin hashmap key value)
+        (successor seed))))))
 
 ;; Predicates
 
@@ -109,11 +109,11 @@
   (call/cc
    (lambda (return)
      (hashmap-search hashmap
-		 key
-		 (lambda (insert ignore)
-		   (return #f))
-		 (lambda (key value update remove)
-		   (return #t))))))
+         key
+         (lambda (insert ignore)
+           (return #f))
+         (lambda (key value update remove)
+           (return #t))))))
 
 (define (hashmap-disjoint? hashmap1 hashmap2)
   (assume (hashmap? hashmap1))
@@ -121,9 +121,9 @@
   (call/cc
    (lambda (return)
      (hashmap-for-each (lambda (key value)
-		     (when (hashmap-contains? hashmap2 key)
-		       (return #f)))
-		   hashmap1)
+             (when (hashmap-contains? hashmap2 key)
+               (return #f)))
+           hashmap1)
      #t)))
 
 ;; Accessors
@@ -133,24 +133,24 @@
     ((hashmap key)
      (assume (hashmap? hashmap))
      (hashmap-ref hashmap key (lambda ()
-			(error "hashmap-ref: key not in hashmap" key))))
+            (error "hashmap-ref: key not in hashmap" key))))
     ((hashmap key failure)
      (assume (hashmap? hashmap))
      (assume (procedure? failure))
      (hashmap-ref hashmap key failure (lambda (value)
-				value)))
+                value)))
     ((hashmap key failure success)
      (assume (hashmap? hashmap))
      (assume (procedure? failure))
      (assume (procedure? success))
      ((call/cc
        (lambda (return-thunk)
-	 (hashmap-search hashmap
-			 key
-			 (lambda (insert ignore)
-			   (return-thunk failure))
-			 (lambda (key value update remove)
-			   (return-thunk (lambda () (success value)))))))))))
+     (hashmap-search hashmap
+             key
+             (lambda (insert ignore)
+               (return-thunk failure))
+             (lambda (key value update remove)
+               (return-thunk (lambda () (success value)))))))))))
 
 (define (hashmap-ref/default hashmap key default)
   (assume (hashmap? hashmap))
@@ -161,25 +161,25 @@
 (define (hashmap-adjoin hashmap . args)
   (assume (hashmap? hashmap))
   (let loop ((args args)
-	     (hashmap hashmap))
+         (hashmap hashmap))
     (if (null? args)
-	hashmap
-	(receive (hashmap value)
-	    (hashmap-intern hashmap (car args) (lambda () (cadr args)))
-	  (loop (cddr args) hashmap)))))
+    hashmap
+    (receive (hashmap value)
+        (hashmap-intern hashmap (car args) (lambda () (cadr args)))
+      (loop (cddr args) hashmap)))))
 
 (define hashmap-adjoin! hashmap-adjoin)
 
 (define (hashmap-set hashmap . args)
   (assume (hashmap? hashmap))
   (let loop ((args args)
-	     (hashmap hashmap))
+         (hashmap hashmap))
     (if (null? args)
-	hashmap
-	(receive (hashmap)
-	    (hashmap-update hashmap (car args) (lambda (value) (cadr args)) (lambda () #f))
-	  (loop (cddr args)
-		hashmap)))))
+    hashmap
+    (receive (hashmap)
+        (hashmap-update hashmap (car args) (lambda (value) (cadr args)) (lambda () #f))
+      (loop (cddr args)
+        hashmap)))))
 
 (define hashmap-set! hashmap-set)
 
@@ -187,11 +187,11 @@
   (assume (hashmap? hashmap))
   (receive (hashmap obj)
       (hashmap-search hashmap
-		  key
-		  (lambda (insert ignore)
-		    (ignore #f))
-		  (lambda (old-key old-value update remove)
-		    (update key value #f)))
+          key
+          (lambda (insert ignore)
+            (ignore #f))
+          (lambda (old-key old-value update remove)
+            (update key value #f)))
     hashmap))
 
 (define hashmap-replace! hashmap-replace)
@@ -206,15 +206,15 @@
   (assume (hashmap? hashmap))
   (assume (list? keys))
   (fold (lambda (key hashmap)
-	  (receive (hashmap obj)
-	      (hashmap-search hashmap
-			  key
-			  (lambda (insert ignore)
-			    (ignore #f))
-			  (lambda (old-key old-value update remove)
-			    (remove #f)))
-	    hashmap))
-	hashmap keys))
+      (receive (hashmap obj)
+          (hashmap-search hashmap
+              key
+              (lambda (insert ignore)
+                (ignore #f))
+              (lambda (old-key old-value update remove)
+                (remove #f)))
+        hashmap))
+    hashmap keys))
 
 (define hashmap-delete-all! hashmap-delete-all)
 
@@ -224,13 +224,13 @@
   (call/cc
    (lambda (return)
      (hashmap-search hashmap
-		 key
-		 (lambda (insert ignore)
-		   (receive (value)
-		       (failure)
-		     (insert value value)))
-		 (lambda (old-key old-value update remove)
-		   (return hashmap old-value))))))
+         key
+         (lambda (insert ignore)
+           (receive (value)
+               (failure)
+             (insert value value)))
+         (lambda (old-key old-value update remove)
+           (return hashmap old-value))))))
 
 (define hashmap-intern! hashmap-intern)
 
@@ -238,22 +238,22 @@
   (case-lambda
    ((hashmap key updater)
     (hashmap-update hashmap key updater (lambda ()
-				  (error "hashmap-update: key not found in hashmap" key))))
+                  (error "hashmap-update: key not found in hashmap" key))))
    ((hashmap key updater failure)
     (hashmap-update hashmap key updater failure (lambda (value)
-					  value)))
+                      value)))
    ((hashmap key updater failure success)
     (assume (hashmap? hashmap))
     (assume (procedure? updater))
     (assume (procedure? failure))
     (assume (procedure? success))
     (receive (hashmap obj)
-	(hashmap-search hashmap
-		    key
-		    (lambda (insert ignore)
-		      (insert (updater (failure)) #f))
-		    (lambda (old-key old-value update remove)
-		      (update key (updater (success old-value)) #f)))
+    (hashmap-search hashmap
+            key
+            (lambda (insert ignore)
+              (insert (updater (failure)) #f))
+            (lambda (old-key old-value update remove)
+              (update key (updater (success old-value)) #f)))
       hashmap))))
 
 (define hashmap-update! hashmap-update)
@@ -267,16 +267,16 @@
   (case-lambda
     ((hashmap)
      (hashmap-pop hashmap (lambda ()
-			    (error "hashmap-pop: hashmap has no association"))))
+                (error "hashmap-pop: hashmap has no association"))))
     ((hashmap failure)
      (assume (hashmap? hashmap))
      (assume (procedure? failure))
      ((call/cc
        (lambda (return-thunk)
-	 (receive (key value)
-	     (hashmap-find (lambda (key value) #t) hashmap (lambda () (return-thunk failure)))
-	   (lambda ()
-	     (values (hashmap-delete hashmap key) key value)))))))))
+     (receive (key value)
+         (hashmap-find (lambda (key value) #t) hashmap (lambda () (return-thunk failure)))
+       (lambda ()
+         (values (hashmap-delete hashmap key) key value)))))))))
 
 (define hashmap-pop! hashmap-pop)
 
@@ -287,20 +287,20 @@
   (call/cc
    (lambda (return)
      (let*-values
-	 (((comparator)
-	   (hashmap-key-comparator hashmap))
-	  ((tree obj)
-	   (tree-search comparator
-			(hashmap-tree hashmap)
-			key
-			(lambda (insert ignore)
-			  (failure (lambda (value obj)
-				     (insert key value obj))
-				   (lambda (obj)
-				     (return hashmap obj))))
-			success)))
+     (((comparator)
+       (hashmap-key-comparator hashmap))
+      ((tree obj)
+       (tree-search comparator
+            (hashmap-tree hashmap)
+            key
+            (lambda (insert ignore)
+              (failure (lambda (value obj)
+                     (insert key value obj))
+                   (lambda (obj)
+                     (return hashmap obj))))
+            success)))
        (values (%make-hashmap comparator tree)
-	       obj)))))
+           obj)))))
 
 (define hashmap-search! hashmap-search)
 
@@ -309,8 +309,8 @@
 (define (hashmap-size hashmap)
   (assume (hashmap? hashmap))
   (hashmap-count (lambda (key value)
-	       #t)
-	     hashmap))
+           #t)
+         hashmap))
 
 (define (hashmap-find predicate hashmap failure)
   (assume (procedure? predicate))
@@ -319,19 +319,19 @@
   (call/cc
    (lambda (return)
      (hashmap-for-each (lambda (key value)
-		     (when (predicate key value)
-		       (return key value)))
-		   hashmap)
+             (when (predicate key value)
+               (return key value)))
+           hashmap)
      (failure))))
 
 (define (hashmap-count predicate hashmap)
   (assume (procedure? predicate))
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value count)
-	      (if (predicate key value)
-		  (+ 1 count)
-		  count))
-	    0 hashmap))
+          (if (predicate key value)
+          (+ 1 count)
+          count))
+        0 hashmap))
 
 (define (hashmap-any? predicate hashmap)
   (assume (procedure? predicate))
@@ -339,34 +339,34 @@
   (call/cc
    (lambda (return)
      (hashmap-for-each (lambda (key value)
-		     (when (predicate key value)
-		       (return #t)))
-		   hashmap)
+             (when (predicate key value)
+               (return #t)))
+           hashmap)
      #f)))
 
 (define (hashmap-every? predicate hashmap)
   (assume (procedure? predicate))
   (assume (hashmap? hashmap))
   (not (hashmap-any? (lambda (key value)
-		   (not (predicate key value)))
-		 hashmap)))
+           (not (predicate key value)))
+         hashmap)))
 
 (define (hashmap-keys hashmap)
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value keys)
-		  (cons key keys))
-		'() hashmap))
+          (cons key keys))
+        '() hashmap))
 
 (define (hashmap-values hashmap)
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value values)
-		  (cons value values))
-		'() hashmap))
+          (cons value values))
+        '() hashmap))
 
 (define (hashmap-entries hashmap)
   (assume (hashmap? hashmap))
   (values (hashmap-keys hashmap)
-	  (hashmap-values hashmap)))
+      (hashmap-values hashmap)))
 
 ;; Hashmap and folding
 
@@ -375,11 +375,11 @@
   (assume (comparator? comparator))
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value hashmap)
-	      (receive (key value)
-		  (proc key value)
-		(hashmap-set hashmap key value)))
-	    (make-empty-hashmap comparator)
-	    hashmap))
+          (receive (key value)
+          (proc key value)
+        (hashmap-set hashmap key value)))
+        (make-empty-hashmap comparator)
+        hashmap))
 
 (define (hashmap-for-each proc hashmap)
   (assume (procedure? proc))
@@ -395,19 +395,19 @@
   (assume (procedure? proc))
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value lst)
-		  (cons (proc key value) lst))
-		'()
-		hashmap))
+          (cons (proc key value) lst))
+        '()
+        hashmap))
 
 (define (hashmap-filter predicate hashmap)
   (assume (procedure? predicate))
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value hashmap)
-	      (if (predicate key value)
-		  (hashmap-set hashmap key value)
-		  hashmap))
-	    (make-empty-hashmap (hashmap-key-comparator hashmap))
-	    hashmap))
+          (if (predicate key value)
+          (hashmap-set hashmap key value)
+          hashmap))
+        (make-empty-hashmap (hashmap-key-comparator hashmap))
+        hashmap))
 
 (define hashmap-filter! hashmap-filter)
 
@@ -415,8 +415,8 @@
   (assume (procedure? predicate))
   (assume (hashmap? hashmap))
   (hashmap-filter (lambda (key value)
-		(not (predicate key value)))
-	      hashmap))
+        (not (predicate key value)))
+          hashmap))
 
 (define hashmap-remove! hashmap-remove)
 
@@ -424,7 +424,7 @@
   (assume (procedure? predicate))
   (assume (hashmap? hashmap))
   (values (hashmap-filter predicate hashmap)
-	  (hashmap-remove predicate hashmap)))
+      (hashmap-remove predicate hashmap)))
 
 (define hashmap-partition! hashmap-partition)
 
@@ -437,30 +437,30 @@
 (define (hashmap->alist hashmap)
   (assume (hashmap? hashmap))
   (hashmap-fold (lambda (key value alist)
-		  (cons (cons key value) alist))
-		'() hashmap))
+          (cons (cons key value) alist))
+        '() hashmap))
 
 (define (alist->hashmap comparator alist)
   (assume (comparator? comparator))
   (assume (list? alist))
   (hashmap-unfold null?
-	      (lambda (alist)
-		(let ((key (caar alist))
-		      (value (cdar alist)))
-		  (values key value)))
-	      cdr
-	      alist
-	      comparator))
+          (lambda (alist)
+        (let ((key (caar alist))
+              (value (cdar alist)))
+          (values key value)))
+          cdr
+          alist
+          comparator))
 
 (define (alist->hashmap! hashmap alist)
   (assume (hashmap? hashmap))
   (assume (list? alist))
   (fold (lambda (association hashmap)
-	  (let ((key (car association))
-		(value (cdr association)))
-	    (hashmap-set hashmap key value)))
-	hashmap
-	alist))
+      (let ((key (car association))
+        (value (cdr association)))
+        (hashmap-set hashmap key value)))
+    hashmap
+    alist))
 
 ;; Subhashmaps
 
@@ -500,12 +500,12 @@
   (assume (hashmap? hashmap1))
   (assume (hashmap? hashmap2))
   (hashmap-every? (lambda (key value)
-		    (hashmap-ref hashmap2 key
-				 (lambda ()
-				   #f)
-				 (lambda (stored-value)
-				   (=? comparator value stored-value))))
-		  hashmap1))
+            (hashmap-ref hashmap2 key
+                 (lambda ()
+                   #f)
+                 (lambda (stored-value)
+                   (=? comparator value stored-value))))
+          hashmap1))
 
 (define hashmap>?
   (case-lambda
@@ -580,44 +580,44 @@
 
 (define (%hashmap-union hashmap1 hashmap2)
   (hashmap-fold (lambda (key2 value2 hashmap)
-		  (receive (hashmap obj)
-		      (hashmap-search hashmap
-				      key2
-				      (lambda (insert ignore)
-					(insert value2 #f))
-				      (lambda (key1 value1 update remove)
-					(update key1 value1 #f)))
-		    hashmap))
-		hashmap1 hashmap2))
+          (receive (hashmap obj)
+              (hashmap-search hashmap
+                      key2
+                      (lambda (insert ignore)
+                    (insert value2 #f))
+                      (lambda (key1 value1 update remove)
+                    (update key1 value1 #f)))
+            hashmap))
+        hashmap1 hashmap2))
 
 (define (%hashmap-intersection hashmap1 hashmap2)
   (hashmap-filter (lambda (key1 value1)
-		(hashmap-contains? hashmap2 key1))
-	      hashmap1))
+        (hashmap-contains? hashmap2 key1))
+          hashmap1))
 
 (define (%hashmap-difference hashmap1 hashmap2)
   (hashmap-fold (lambda (key2 value2 hashmap)
-	      (receive (hashmap obj)
-		  (hashmap-search hashmap
-			      key2
-			      (lambda (insert ignore)
-				(ignore #f))
-			      (lambda (key1 value1 update remove)
-				(remove #f)))
-		hashmap))
-	    hashmap1 hashmap2))
+          (receive (hashmap obj)
+          (hashmap-search hashmap
+                  key2
+                  (lambda (insert ignore)
+                (ignore #f))
+                  (lambda (key1 value1 update remove)
+                (remove #f)))
+        hashmap))
+        hashmap1 hashmap2))
 
 (define (%hashmap-xor hashmap1 hashmap2)
   (hashmap-fold (lambda (key2 value2 hashmap)
-	      (receive (hashmap obj)
-		  (hashmap-search hashmap
-			      key2
-			      (lambda (insert ignore)
-				(insert value2 #f))
-			      (lambda (key1 value1 update remove)
-				(remove #f)))
-		hashmap))
-	    hashmap1 hashmap2))
+          (receive (hashmap obj)
+          (hashmap-search hashmap
+                  key2
+                  (lambda (insert ignore)
+                (insert value2 #f))
+                  (lambda (key1 value1 update remove)
+                (remove #f)))
+        hashmap))
+        hashmap1 hashmap2))
 
 (define hashmap-union
   (case-lambda
@@ -695,9 +695,9 @@
 
 (define (make-hashmap-comparator comparator)
   (make-comparator hashmap?
-		   (hashmap-equality comparator)
-		   #f
-		   (hashmap-hash-function comparator)))
+           (hashmap-equality comparator)
+           #f
+           (hashmap-hash-function comparator)))
 
 (define hashmap-comparator (make-hashmap-comparator (make-default-comparator)))
 

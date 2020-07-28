@@ -28,7 +28,7 @@
   (test-group "(vector-without)"
     (define (check expected start end)
       (let ((v #(0 1 2 3 4)))
-	(test expected (vector-without v start end))))
+    (test expected (vector-without v start end))))
     (check #(0 1 2 3 4) 0 0)
     (check #() 0 5)
     (check #(1 2 3 4) 0 1)
@@ -46,24 +46,24 @@
   (test-group "(vector-edit adjacent-adds)"
     (let ((array (vector 0 1 2)))
       (test #(0 1 2 3 4)
-	    (vector-edit array
-			 (add 3 3)
-			 (add 3 4)))))
+        (vector-edit array
+             (add 3 3)
+             (add 3 4)))))
 
   (test-group "(vector-edit adjacent-drops)"
     (let ((array (vector 0 1 2 3 4 5)))
       (test #(0 1 2)
-	    (vector-edit array
-			 (drop 3 1)
-			 (drop 4 2)))))
+        (vector-edit array
+             (drop 3 1)
+             (drop 4 2)))))
 
   (test-group "(vector-edit alternating-add-drop)"
     (let ((array (vector 0 1 2 2 2 3 4 6 6 6 6 7 9)))
       (test #(0 1 2 3 4 5 6 7 8 9)
-	    (vector-edit array
-			 (drop 3 2)
-			 (add 7 5)
-			 (drop 8 3)
-			 (add 12 8)))))
+        (vector-edit array
+             (drop 3 2)
+             (add 7 5)
+             (drop 8 3)
+             (add 12 8)))))
 
   (test-end))

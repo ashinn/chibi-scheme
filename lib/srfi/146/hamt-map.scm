@@ -142,10 +142,10 @@
 (define (make-phm-inner hash = alist)
   (let ((phm (make-hamt = hash #t)))
     (if (null? alist)
-	phm
-	(let ((phm-1 (phm/mutable phm)))
-	  (phm/add-alist! phm-1 alist)
-	  (phm/immutable phm-1)))))
+    phm
+    (let ((phm-1 (phm/mutable phm)))
+      (phm/add-alist! phm-1 alist)
+      (phm/immutable phm-1)))))
 
 (define make-phm
   (case-lambda
@@ -197,8 +197,8 @@
   (assert (phm? phm))
   (let ((result (hamt-fetch phm key)))
     (if (hamt-null? result)
-	default
-	result)))
+    default
+    result)))
 
 (define phm/get
   (case-lambda

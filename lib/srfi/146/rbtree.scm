@@ -57,16 +57,16 @@
     ((compile-patterns (expression* ...) tree (clauses ...) ())
      (call-with-current-continuation
       (lambda (return)
-	(or (and-let* clauses
-	      (call-with-values
-		  (lambda () . expression*)
-		return))
-	    ...
-	    (error "tree does not match any pattern" tree)))))
+    (or (and-let* clauses
+          (call-with-values
+          (lambda () . expression*)
+        return))
+        ...
+        (error "tree does not match any pattern" tree)))))
     
     ((compile-patterns e tree clauses* (pattern . pattern*))
      (compile-pattern tree pattern
-		      (add-pattern e tree clauses* pattern*)))))
+              (add-pattern e tree clauses* pattern*)))))
 
 (define-syntax add-pattern
   (syntax-rules ()
@@ -93,23 +93,23 @@
 
     ((compile-pattern tree (and pt ...) k*)
      (compile-subpatterns () ((t pt) ...)
-			  (compile-and-pattern tree t k*)))
+              (compile-and-pattern tree t k*)))
 
     ((compile-pattern tree (node pc pa px pb) k*)
      (compile-subpatterns () ((c pc) (a pa) (x px) (b pb))
-			  (compile-node-pattern tree c a x b k*)))
+              (compile-node-pattern tree c a x b k*)))
 
     ((compile-pattern tree (red pa px pb) k*)
      (compile-subpatterns () ((a pa) (x px) (b pb))
-			  (compile-color-pattern red? tree a x b k*)))
+              (compile-color-pattern red? tree a x b k*)))
 
     ((compile-pattern tree (black pa px pb) k*)
      (compile-subpatterns () ((a pa) (x px) (b pb))
-			  (compile-color-pattern black? tree a x b k*)))
+              (compile-color-pattern black? tree a x b k*)))
 
     ((compile-pattern tree (white pa px pb) k*)
      (compile-subpatterns () ((a pa) (x px) (b pb))
-			  (compile-color-pattern white? tree a x b k*)))
+              (compile-color-pattern white? tree a x b k*)))
 
     ((compile-pattern tree _ (k ...))
      (k ... ()))
@@ -126,19 +126,19 @@
   (syntax-rules ()
     ((compile-node-pattern tree c a x b (k ...) clauses)
      (k ... (((item tree))
-	     (c (color tree))
-	     (a (left tree))
-	     (x (item tree))
-	     (b (right tree)) . clauses)))))
+         (c (color tree))
+         (a (left tree))
+         (x (item tree))
+         (b (right tree)) . clauses)))))
 
 (define-syntax compile-color-pattern
   (syntax-rules ()
     ((compile-color-pattern pred? tree a x b (k ...) clauses)
      (k ... (((item tree))
-	     ((pred? tree))
-	     (a (left tree))
-	     (x (item tree))
-	     (b (right tree)) . clauses)))))
+         ((pred? tree))
+         (a (left tree))
+         (x (item tree))
+         (b (right tree)) . clauses)))))
 
 (define-syntax compile-subpatterns
   (syntax-rules ()
@@ -186,10 +186,10 @@
        acc)
       ((node _ a x b)
        (let*
-	   ((acc (loop acc a))
-	    (acc (proc (item-key x) (item-value x) acc))
-	    (acc (loop acc b)))
-	 acc)))))
+       ((acc (loop acc a))
+        (acc (proc (item-key x) (item-value x) acc))
+        (acc (loop acc b)))
+     acc)))))
 
 (define (tree-fold/reverse proc seed tree)
   (let loop ((acc seed) (tree tree))
@@ -198,15 +198,15 @@
        acc)
       ((node _ a x b)
        (let*
-	   ((acc (loop acc b))
-	    (acc (proc (item-key x) (item-value x) acc))
-	    (acc (loop acc a)))
-	 acc)))))
+       ((acc (loop acc b))
+        (acc (proc (item-key x) (item-value x) acc))
+        (acc (loop acc a)))
+     acc)))))
 
 (define (tree-for-each proc tree)
   (tree-fold (lambda (key value acc)
-	       (proc key value))
-	     #f tree))
+           (proc key value))
+         #f tree))
 
 (define (tree-generator tree)
   (make-coroutine-generator
@@ -218,51 +218,51 @@
 (define (tree-search comparator tree obj failure success)
   (receive (tree ret op)
       (let search ((tree (redden tree)))
-	(tree-match tree	  
-	  ((black)
-	   (failure
-	    ;; insert
-	    (lambda (new-key new-value ret)
-	      (values (red (black-leaf) (make-item new-key new-value) (black-leaf))
-		      ret
-		      balance))
-	    ;; ignore
-	    (lambda (ret)
-	      (values (black-leaf) ret identity))))
-	  
-	  ((and t (node c a x b))
-	   (let ((key (item-key x)))
-	     (comparator-if<=> comparator obj key
-	       
-	       (receive (a ret op) (search a)
-		 (values (op (node c a x b)) ret op))
-	       
-	       (success
-		key
-		(item-value x)
-		;; update
-		(lambda (new-key new-value ret)
-		  (values (node c a (make-item new-key new-value) b)
-			  ret
-			  identity))
-		;; remove
-		(lambda (ret)
-		  (values
-		   (tree-match t
-		     ((red (black) x (black))
-		      (black-leaf))
-		     ((black (red a x b) _ (black))
-		      (black a x b))
-		     ((black (black) _ (black))
-		      (white-leaf))
-		     (_
-		      (receive (x b) (min+delete b)
-			(rotate (node c a x b)))))
-		   ret
-		   rotate)))
-	       
-	       (receive (b ret op) (search b)
-		 (values (op (node c a x b)) ret op)))))))
+    (tree-match tree      
+      ((black)
+       (failure
+        ;; insert
+        (lambda (new-key new-value ret)
+          (values (red (black-leaf) (make-item new-key new-value) (black-leaf))
+              ret
+              balance))
+        ;; ignore
+        (lambda (ret)
+          (values (black-leaf) ret identity))))
+      
+      ((and t (node c a x b))
+       (let ((key (item-key x)))
+         (comparator-if<=> comparator obj key
+           
+           (receive (a ret op) (search a)
+         (values (op (node c a x b)) ret op))
+           
+           (success
+        key
+        (item-value x)
+        ;; update
+        (lambda (new-key new-value ret)
+          (values (node c a (make-item new-key new-value) b)
+              ret
+              identity))
+        ;; remove
+        (lambda (ret)
+          (values
+           (tree-match t
+             ((red (black) x (black))
+              (black-leaf))
+             ((black (red a x b) _ (black))
+              (black a x b))
+             ((black (black) _ (black))
+              (white-leaf))
+             (_
+              (receive (x b) (min+delete b)
+            (rotate (node c a x b)))))
+           ret
+           rotate)))
+           
+           (receive (b ret op) (search b)
+         (values (op (node c a x b)) ret op)))))))
       
     (values (blacken tree) ret)))
 
@@ -273,10 +273,10 @@
        (return))
       ((node _ a x b)
        (let ((key (item-key x)))
-	 (comparator-if<=> comparator key obj
-			   (loop return b)
-			   (loop return b)
-			   (loop (lambda () key) a)))))))
+     (comparator-if<=> comparator key obj
+               (loop return b)
+               (loop return b)
+               (loop (lambda () key) a)))))))
 
 (define (tree-key-predecessor comparator tree obj failure)
   (let loop ((return failure) (tree tree))
@@ -285,10 +285,10 @@
        (return))
       ((node _ a x b)
        (let ((key (item-key x)))
-	 (comparator-if<=> comparator key obj
-			   (loop (lambda () key) b)
-			   (loop return a)
-			   (loop return a)))))))
+     (comparator-if<=> comparator key obj
+               (loop (lambda () key) b)
+               (loop return a)
+               (loop return a)))))))
 
 (define (tree-map proc tree)
   (let loop ((tree tree))
@@ -297,64 +297,64 @@
        (black-leaf))
       ((node c a x b)
        (receive (key value)
-	   (proc (item-key x) (item-value x))
-	 (node c (loop a) (make-item key value) (loop b)))))))
+       (proc (item-key x) (item-value x))
+     (node c (loop a) (make-item key value) (loop b)))))))
 
 
 (define (tree-catenate tree1 pivot-key pivot-value tree2)
   (let ((pivot (make-item pivot-key pivot-value))
-	(height1 (black-height tree1))
-	(height2 (black-height tree2)))
+    (height1 (black-height tree1))
+    (height2 (black-height tree2)))
     (cond
      ((= height1 height2)
       (black tree1 pivot tree2))
      ((< height1 height2)
       (blacken
        (let loop ((tree tree2) (depth (- height2 height1)))
-	 (if (zero? depth)
-	     (balance (red tree1 pivot tree))
-	     (balance
-	      (node (color tree) (loop (left tree) (- depth 1)) (item tree) (right tree)))))))
+     (if (zero? depth)
+         (balance (red tree1 pivot tree))
+         (balance
+          (node (color tree) (loop (left tree) (- depth 1)) (item tree) (right tree)))))))
      (else
       (blacken
        (let loop ((tree tree1) (depth (- height1 height2)))
-	 (if (zero? depth)
-	     (balance (red tree pivot tree2))
-	     (balance
-	      (node (color tree) (left tree) (item tree) (loop (right tree) (- depth 1)))))))))))
+     (if (zero? depth)
+         (balance (red tree pivot tree2))
+         (balance
+          (node (color tree) (left tree) (item tree) (loop (right tree) (- depth 1)))))))))))
 
 (define (tree-split comparator tree obj)
   (let loop ((tree1 (black-leaf))
-	     (tree2 (black-leaf))
-	     (pivot1 #f)
-	     (pivot2 #f)
-	     (tree tree))
+         (tree2 (black-leaf))
+         (pivot1 #f)
+         (pivot2 #f)
+         (tree tree))
     (tree-match tree
       ((black)
        (let ((tree1 (catenate-left tree1 pivot1 (black-leaf)))
-	     (tree2 (catenate-right (black-leaf) pivot2 tree2)))
-	 (values tree1 tree1 (black-leaf) tree2 tree2)))
+         (tree2 (catenate-right (black-leaf) pivot2 tree2)))
+     (values tree1 tree1 (black-leaf) tree2 tree2)))
       ((node _ a x b)
        (comparator-if<=> comparator obj (item-key x)
-			 (loop tree1
-			       (catenate-right (blacken b) pivot2 tree2)
-			       pivot1
-			       x
-			       (blacken a))
-			 (let* ((tree1 (catenate-left tree1 pivot1 (blacken a)))
-				(tree1+ (catenate-left tree1 x (black-leaf)))
-				(tree2 (catenate-right (blacken b) pivot2 tree2))
-				(tree2+ (catenate-right (black-leaf) x tree2)))
-			   (values tree1
-				   tree1+
-				   (black (black-leaf) x (black-leaf))
-				   tree2+
-				   tree2))
-			 (loop (catenate-left tree1 pivot1 (blacken a))
-			       tree2
-			       x
-			       pivot2
-			       (blacken b)))))))
+             (loop tree1
+                   (catenate-right (blacken b) pivot2 tree2)
+                   pivot1
+                   x
+                   (blacken a))
+             (let* ((tree1 (catenate-left tree1 pivot1 (blacken a)))
+                (tree1+ (catenate-left tree1 x (black-leaf)))
+                (tree2 (catenate-right (blacken b) pivot2 tree2))
+                (tree2+ (catenate-right (black-leaf) x tree2)))
+               (values tree1
+                   tree1+
+                   (black (black-leaf) x (black-leaf))
+                   tree2+
+                   tree2))
+             (loop (catenate-left tree1 pivot1 (blacken a))
+                   tree2
+                   x
+                   pivot2
+                   (blacken b)))))))
 
 (define (catenate-left tree1 item tree2)
   (if item
@@ -379,14 +379,14 @@
 (define (left-tree tree depth)
   (let loop ((parent #f) (tree tree) (depth depth))
     (if (zero? depth)
-	(values parent tree)
-	(loop tree (left tree) (- depth 1)))))
+    (values parent tree)
+    (loop tree (left tree) (- depth 1)))))
 
 (define (right-tree tree depth)
   (let loop ((parent #f) (tree tree) (depth depth))
     (if (zero? depth)
-	(values parent tree)
-	(loop tree (right tree) (- depth 1)))))
+    (values parent tree)
+    (loop tree (right tree) (- depth 1)))))
 
 ;;; Helper procedures for deleting and balancing
 

@@ -31,9 +31,9 @@
 (define (vector-without v start end)
   "Return a copy of vector `v' without the elements with indices [start, end)."
   (let* ((size (vector-length v))
-	 (gap-size (- end start))
-	 (new-size (- size gap-size))
-	 (result (make-vector new-size)))
+     (gap-size (- end start))
+     (new-size (- size gap-size))
+     (result (make-vector new-size)))
     (vector-copy! result 0 v 0 start)
     (vector-copy! result start v end size)
     result))
@@ -63,14 +63,14 @@
        (vector-copy! r (+ o s) v o index)
        (vector-set! r (+ s index) e)
        (let ((skew (+ s 1)))
-	 (vector-edit-code v r index skew . rest))))
+     (vector-edit-code v r index skew . rest))))
     ((_ v r o s (drop i c) . rest)
      (let ((index i))
        (vector-copy! r (+ o s) v o index)
        (let* ((dropped c)
-	      (offset (+ index dropped))
-	      (skew (- s dropped)))
-	 (vector-edit-code v r offset skew . rest))))))
+          (offset (+ index dropped))
+          (skew (- s dropped)))
+     (vector-edit-code v r offset skew . rest))))))
 
 ;; <> Optimize this by allowing one to supply more than one value in
 ;; `add' sub-expressions so that adjacent values can be inserted
@@ -89,5 +89,5 @@
   (syntax-rules ()
     ((_ v . rest)
      (let ((result (make-vector (+ (vector-length v)
-				   (vector-edit-total-skew 0 . rest)))))
+                   (vector-edit-total-skew 0 . rest)))))
        (vector-edit-code v result 0 0 . rest)))))
