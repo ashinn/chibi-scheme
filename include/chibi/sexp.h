@@ -961,8 +961,8 @@ SEXP_API int sexp_idp(sexp x);
 SEXP_API sexp sexp_make_integer_from_lsint(sexp ctx, sexp_lsint_t x);
 SEXP_API sexp sexp_make_unsigned_integer_from_luint(sexp ctx, sexp_luint_t x);
 #if SEXP_USE_CUSTOM_LONG_LONGS
-#define sexp_make_integer(ctx, x) sexp_make_fixnum(x)
-#define sexp_make_unsigned_integer(ctx, x) sexp_make_fixnum(x)
+SEXP_API sexp sexp_make_integer(sexp ctx, long long x);
+SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, unsigned long long x);
 #else
 SEXP_API sexp sexp_make_integer(sexp ctx, sexp_lsint_t x);
 SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
@@ -1046,12 +1046,24 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
     sexp_negate_exact(x)
 
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
-#define sexp_uint_value(x) ((sexp_uint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignump(x) ? sexp_bignum_data(x)[0] : 0))
-#define sexp_sint_value(x) ((sexp_sint_t)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignump(x) ? sexp_bignum_sign(x)*sexp_bignum_data(x)[0] : 0))
+
+#if SEXP_64_BIT
+#define sexp_bignum_to_sint(x) (sexp_bignum_sign(x)*sexp_bignum_data(x)[0])
+#define sexp_bignum_to_uint(x) (sexp_bignum_data(x)[0])
 #else
+SEXP_API long long sexp_bignum_to_sint(sexp x);
+SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
+#endif
+
+#define sexp_uint_value(x) ((unsigned long long)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignump(x) ? sexp_bignum_to_uint(x) : 0))
+#define sexp_sint_value(x) ((long long)(sexp_fixnump(x) ? sexp_unbox_fixnum(x) : sexp_bignump(x) ? sexp_bignum_to_sint(x) : 0))
+
+#else
+
 #define sexp_uint_value(x) ((sexp_uint_t)sexp_unbox_fixnum(x))
 #define sexp_sint_value(x) ((sexp_sint_t)sexp_unbox_fixnum(x))
-#endif
+
+#endif	/* SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS */
 
 #define sexp_shift_epoch(x) ((x)-SEXP_EPOCH_OFFSET)
 #define sexp_unshift_epoch(x) ((x)+SEXP_EPOCH_OFFSET)

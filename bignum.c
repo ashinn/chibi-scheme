@@ -39,7 +39,7 @@ sexp sexp_make_integer_from_lsint (sexp ctx, sexp_lsint_t x) {
   sexp res;
   if (lsint_is_fixnum(x)) {
     res = sexp_make_fixnum(lsint_to_sint(x));
-  } else {
+  } else if (sexp_lsint_fits_sint(x)) {
     res = sexp_make_bignum(ctx, 1);
     if (lsint_lt_0(x)) {
       sexp_bignum_sign(res) = -1;
@@ -47,6 +47,17 @@ sexp sexp_make_integer_from_lsint (sexp ctx, sexp_lsint_t x) {
     } else {
       sexp_bignum_sign(res) = 1;
       sexp_bignum_data(res)[0] = (sexp_uint_t)lsint_to_sint(x);
+    }
+  } else {
+    res = sexp_make_bignum(ctx, 2);
+    if (lsint_lt_0(x)) {
+      sexp_bignum_sign(res) = -1;
+      sexp_bignum_data(res)[0] = (sexp_uint_t)-lsint_to_sint(x);
+      sexp_bignum_data(res)[1] = (sexp_uint_t)~lsint_to_sint_hi(x);
+    } else {
+      sexp_bignum_sign(res) = 1;
+      sexp_bignum_data(res)[0] = (sexp_uint_t)lsint_to_sint(x);
+      sexp_bignum_data(res)[1] = (sexp_uint_t)lsint_to_sint_hi(x);
     }
   }
   return res;
@@ -56,22 +67,53 @@ sexp sexp_make_unsigned_integer_from_luint (sexp ctx, sexp_luint_t x) {
   sexp res;
   if (luint_is_fixnum(x)) {
     res = sexp_make_fixnum(luint_to_uint(x));
-  } else {
+  } else if (sexp_luint_fits_uint(x)) {
     res = sexp_make_bignum(ctx, 1);
     sexp_bignum_sign(res) = 1;
     sexp_bignum_data(res)[0] = luint_to_uint(x);
+  } else {
+    res = sexp_make_bignum(ctx, 2);
+    sexp_bignum_sign(res) = 1;
+    sexp_bignum_data(res)[0] = luint_to_uint(x);
+    sexp_bignum_data(res)[1] = luint_to_uint_hi(x);
   }
   return res;
 }
 
-#if !SEXP_USE_CUSTOM_LONG_LONGS
+#if SEXP_USE_CUSTOM_LONG_LONGS
+sexp sexp_make_integer(sexp ctx, long long x) {
+  return sexp_make_integer_from_lsint(ctx, lsint_from_sint(x));
+}
+sexp sexp_make_unsigned_integer(sexp ctx, unsigned long long x) {
+  return sexp_make_unsigned_integer_from_luint(ctx, luint_from_uint(x));
+}
+#else
 sexp sexp_make_integer (sexp ctx, sexp_lsint_t x) {
   return sexp_make_integer_from_lsint(ctx, x);
 }
 sexp sexp_make_unsigned_integer (sexp ctx, sexp_luint_t x) {
   return sexp_make_unsigned_integer_from_luint(ctx, x);
 }
-#endif  /* !SEXP_USE_CUSTOM_LONG_LONGS */
+#endif
+
+#if !SEXP_64_BIT
+long long sexp_bignum_to_sint(sexp x) {
+  if (!sexp_bignump(x))
+    return 0;
+  if (sexp_bignum_length(x) > 1)
+    return sexp_bignum_sign(x) * (
+      (((long long)(sexp_bignum_data(x)[1]))<<(8*sizeof(sexp_bignum_data(x)[0]))) + sexp_bignum_data(x)[0]);
+  return sexp_bignum_sign(x) * sexp_bignum_data(x)[0];
+}
+
+unsigned long long sexp_bignum_to_uint(sexp x) {
+  if (!sexp_bignump(x))
+    return 0;
+  if (sexp_bignum_length(x) > 1)
+    return (((unsigned long long)(sexp_bignum_data(x)[1]))<<(8*sizeof(sexp_bignum_data(x)[0]))) + sexp_bignum_data(x)[0];
+  return sexp_bignum_data(x)[0];
+}
+#endif
 
 #define double_trunc_10s_digit(f) (trunc((f)/10.0)*10.0)
 #define double_10s_digit(f) ((f)-double_trunc_10s_digit(f))

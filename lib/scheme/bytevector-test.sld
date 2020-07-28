@@ -280,41 +280,33 @@
 
       (test-begin "2.7 Operations on 64-bit Integers")
 
-      (test-assert "bytevector-u64-ref"
-        (let ((b (u8-list->bytevector
-                  '(255 255 255 255 255 255 255 255
-                        255 255 255 255 255 255 255 253))))
-          (and (equal? (bytevector-u64-ref b 8 (endianness little))
-                       #xfdffffffffffffff)
-               (equal? (bytevector-u64-ref b 8 (endianness big))
-                       #xfffffffffffffffd))))
+      (let ((b (u8-list->bytevector
+                '(255 255 255 255 255 255 255 255
+                      255 255 255 255 255 255 255 253))))
+        (test #xfdffffffffffffff
+            (bytevector-u64-ref b 8 (endianness little)))
+        (test #xfffffffffffffffd
+            (bytevector-u64-ref b 8 (endianness big)))
+        (test -144115188075855873
+            (bytevector-s64-ref b 8 (endianness little)))
+        (test -3
+            (bytevector-s64-ref b 8 (endianness big))))
 
-      (test-assert "bytevector-s64-ref"
-        (let ((b (u8-list->bytevector
-                  '(255 255 255 255 255 255 255 255
-                        255 255 255 255 255 255 255 253))))
-          (and (equal? (bytevector-s64-ref b 8 (endianness little))
-                       -144115188075855873)
-               (equal? (bytevector-s64-ref b 8 (endianness big))
-                       -3))))
+      (let ((b (make-bytevector 8))
+            (big 9333333333333333333))
+        (bytevector-u64-set! b 0 big (endianness little))
+        (test big
+            (bytevector-u64-ref b 0 (endianness little)))
+        (test (- big (expt 2 64))
+            (bytevector-s64-ref b 0 (endianness little))))
 
-      (test-assert "bytevector-{u64,s64}-ref"
-        (let ((b (make-bytevector 8))
-              (big 9333333333333333333))
-          (bytevector-u64-set! b 0 big (endianness little))
-          (and (equal? (bytevector-u64-ref b 0 (endianness little))
-                       big)
-               (equal? (bytevector-s64-ref b 0 (endianness little))
-                       (- big (expt 2 64))))))
-
-      (test-assert "bytevector-{u64,s64}-native-{ref,set!}"
-        (let ((b (make-bytevector 8))
-              (big 9333333333333333333))
-          (bytevector-u64-native-set! b 0 big)
-          (and (equal? (bytevector-u64-native-ref b 0)
-                       big)
-               (equal? (bytevector-s64-native-ref b 0)
-                       (- big (expt 2 64))))))
+      (let ((b (make-bytevector 8))
+            (big 9333333333333333333))
+        (bytevector-u64-native-set! b 0 big)
+        (test big
+            (bytevector-u64-native-ref b 0))
+        (test (- big (expt 2 64))
+            (bytevector-s64-native-ref b 0)))
 
       (test-assert "ref/set! with zero"
         (let ((b (make-bytevector 8)))

@@ -62,7 +62,9 @@
            ((null? ls))
          (let ((bv (make-bytevector 8 0)))
            (bytevector-ieee-double-native-set! bv 0 (car ls))
-           (test (bytevector-copy f64-le i (+ i 8)) (values bv)))))
+           ;;(test (bytevector-copy f64-le i (+ i 8)) (values bv))
+           (test (car ls)
+             (bytevector-ieee-double-native-ref bv 0)))))
 
       (test-group "ber integers"
         (do ((ls '(0 1 128 16383 32767

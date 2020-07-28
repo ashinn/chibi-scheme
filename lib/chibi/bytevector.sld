@@ -35,7 +35,7 @@
    (else (import (srfi 60))))
   (include "bytevector.scm")
   (cond-expand
-   ;;(chibi
-   ;; (include-shared "ieee-754-native"))
+   (chibi
+    (import (except (scheme bytevector) bytevector-copy!)))
    (else
     (include "ieee-754.scm"))))

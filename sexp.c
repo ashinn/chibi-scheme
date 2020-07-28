@@ -3058,13 +3058,13 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
         case SEXP_U16:
           ((unsigned short*)sexp_uvector_data(res))[i] = sexp_unbox_fixnum(sexp_car(ls)); break;
         case SEXP_S32:
-          ((signed int*)sexp_uvector_data(res))[i] = sexp_sint_value(sexp_car(ls)); break;
+          ((int32_t*)sexp_uvector_data(res))[i] = sexp_sint_value(sexp_car(ls)); break;
         case SEXP_U32:
-          ((unsigned int*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
+          ((uint32_t*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
         case SEXP_S64:
-          ((sexp_sint_t*)sexp_uvector_data(res))[i] = sexp_sint_value(sexp_car(ls)); break;
+          ((int64_t*)sexp_uvector_data(res))[i] = sexp_sint_value(sexp_car(ls)); break;
         case SEXP_U64:
-          ((sexp_uint_t*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
+          ((uint64_t*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
 #if SEXP_USE_FLONUMS
         case SEXP_F32:
           ((float*)sexp_uvector_data(res))[i] = sexp_to_double(ctx, sexp_car(ls)); break;

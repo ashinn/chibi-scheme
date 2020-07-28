@@ -247,6 +247,7 @@ test-division: chibi-scheme$(EXE)
 	$(CHIBI) tests/division-tests.scm
 
 test-libs: chibi-scheme$(EXE)
+	@echo "\e[1mloading tests first, it may take a while to see output...\e[0m"
 	$(CHIBI) tests/lib-tests.scm
 
 test-r5rs: chibi-scheme$(EXE)
