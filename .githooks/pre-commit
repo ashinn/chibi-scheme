@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# fail if we add any new lines to C or Scheme source containing a tab
+if git diff --name-only | egrep '\.(cpp|h|scm|sld|stub)$' | xargs -d'\n' git diff -U0 -- | grep -q $'^+ *\t'; then
+    echo "Error: Attempting to add a source file using tabs for indentation."
+    echo
+    echo -n "   "
+    git diff --name-only |\
+        egrep '\.(cpp|h|scm|sld|stub)$' |\
+        xargs -d'\n' git diff -U0 -- |\
+        grep $'^+ *\t' | head -1
+    echo
+    cat <<EOF
+It's important for arguments to line up vertically to a precise column.
+Since there is no standard tab width, using tabs for indentation makes
+this impossible in general.  Please use spaces.
+EOF
+    exit 1
+fi
