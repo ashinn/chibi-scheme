@@ -1312,13 +1312,13 @@
 
 (define (get-chicken-repo-path)
   (let ((release (string-trim (process->string '(csi -release))
-			      char-whitespace?)))
+                              char-whitespace?)))
     (string-trim
-      (if (string-prefix? "4." release)
-	(process->string '(csi -p "(repository-path)"))
-	(process->string
-	  '(csi -R chicken.platform -p "(car (repository-path))")))
-      char-whitespace?)))
+     (if (string-prefix? "4." release)
+         (process->string '(csi -p "(repository-path)"))
+         (process->string
+          '(csi -R chicken.platform -p "(car (repository-path))")))
+     char-whitespace?)))
 
 (define (get-install-dirs impl cfg)
   (define (guile-eval expr)

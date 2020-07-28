@@ -9,15 +9,19 @@
             (name-str (id->string name))
             (procs (cddr expr))
             (make (car procs))
-            (make-name (if (eq? make #t)
-                           (datum->syntax name
-					  (string->symbol (string-append "make-" name-str)))
-                           (if (pair? make) (car make) make)))
+            (make-name
+             (if (eq? make #t)
+                 (datum->syntax
+                  name
+                  (string->symbol (string-append "make-" name-str)))
+                 (if (pair? make) (car make) make)))
             (pred (cadr procs))
-            (pred-name (if (eq? pred #t)
-			   (datum->syntax name
-					  (string->symbol (string-append name-str "?")))
-                           pred))
+            (pred-name
+             (if (eq? pred #t)
+                 (datum->syntax
+                  name
+                  (string->symbol (string-append name-str "?")))
+                 pred))
             (fields (cddr procs))
             (field-names (map (lambda (x) (if (pair? x) (car x) x)) fields))
             (make-fields (if (pair? make) (cdr make) (and (not parent) field-names)))

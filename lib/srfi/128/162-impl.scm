@@ -23,7 +23,7 @@
   (comparator-min-in-list comp args))
 
 #;
-(define default-comparator		;Defined in comparators.scm
+(define default-comparator   ;Defined in comparators.scm
   (make-default-comparator))
 
 (define boolean-comparator

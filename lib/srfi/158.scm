@@ -418,16 +418,16 @@
 ;; generator->list
 (define generator->list
   (case-lambda ((gen n)
-		(generator->list (gtake gen n)))
+                (generator->list (gtake gen n)))
                ((gen)
-		(reverse (generator->reverse-list gen)))))
+                (reverse (generator->reverse-list gen)))))
 
 ;; generator->reverse-list
 (define generator->reverse-list
   (case-lambda ((gen n)
-		(generator->reverse-list (gtake gen n)))
+                (generator->reverse-list (gtake gen n)))
                ((gen)
-		(generator-fold cons '() gen))))
+                (generator-fold cons '() gen))))
 
 ;; generator->vector
 (define generator->vector

@@ -112,16 +112,16 @@
 
       ;;; See issue #494.
       (test-assert
-	  (let-syntax
-	      ((foo
-		(syntax-rules ()
-		  ((foo)
-		   (let ()
-		     (define-record-type record
-		       #t
-		       #t)
-		     (record? (make-record)))))))
-	    (foo)))
+          (let-syntax
+              ((foo
+                (syntax-rules ()
+                  ((foo)
+                   (let ()
+                     (define-record-type record
+                       #t
+                       #t)
+                     (record? (make-record)))))))
+            (foo)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
       (let ()
