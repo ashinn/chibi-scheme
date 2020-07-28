@@ -220,7 +220,7 @@ static inline sexp_luint_t luint_add(sexp_luint_t a, sexp_luint_t b) {
 
   uint64_t sumHiHi = (aHiHi + bHiHi) + carry;
   uint64_t resultHiHi = sumHiHi & 0xFFFFFFFF;
-  //carry = sumHiHi >> 32;
+  /* carry = sumHiHi >> 32; */
 
   sexp_luint_t result;
   result.hi = (resultHiHi << 32) | resultHiLo;
@@ -251,7 +251,7 @@ static inline sexp_luint_t luint_add_uint(sexp_luint_t a, sexp_uint_t b) {
 
   uint64_t sumHiHi = aHiHi + carry;
   uint64_t resultHiHi = sumHiHi & 0xFFFFFFFF;
-  //carry = sumHiHi >> 32;
+  /* carry = sumHiHi >> 32; */
 
   sexp_luint_t result;
   result.hi = (resultHiHi << 32) | resultHiLo;
