@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian snowballs
+.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian snowballs init-dev
 .DEFAULT_GOAL := all
 
 CHIBI_VERSION ?= $(shell cat VERSION)
@@ -68,6 +68,10 @@ include Makefile.libs
 ########################################################################
 
 all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
+
+# Please run this if you want to contribute.
+init-dev:
+	git config core.hooksPath .githooks
 
 js: js/chibi.js
 
