@@ -54,11 +54,11 @@ typedef unsigned int sexp_random_t;
 #endif
 
 sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
-  sexp res;
+  sexp_gc_var1(res);
   int64_t m;
   sexp_int32_t m2;
 #if SEXP_USE_BIGNUMS
-  sexp_uint_t mod;
+  /* sexp_uint_t mod; */
   sexp_uint32_t *data;
   sexp_int32_t hi, len, i;
 #endif
@@ -77,39 +77,17 @@ sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp b
     }
 #if SEXP_USE_BIGNUMS
   } else if (sexp_bignump(bound)) {
+    sexp_gc_preserve1(ctx, res);
     hi = sexp_bignum_hi(bound);
     len = hi * (sizeof(sexp_uint_t) / sizeof(sexp_int32_t));
     res = sexp_make_bignum(ctx, hi + 1);
     data = (sexp_uint32_t*) sexp_bignum_data(res);
     for (i=0; i<len; i++) {
-      sexp_call_random(rs, m);
-      data[i] = m;
+      sexp_call_random(rs, m2);
+      data[i] = m2;
     }
-    /* Scan down, modding bigits > bound to < bound, and stop as */
-    /* soon as we are sure the result is within bound. */
-    for (i = hi-1; i >= 0; --i) {
-      mod = sexp_bignum_data(bound)[i];
-      if (mod) {
-        if (i > 0 && mod < SEXP_UINT_T_MAX) {
-          /* allow non-final bigits to be == */
-          ++mod;
-        }
-        if (sexp_bignum_data(res)[i] >= mod)
-          sexp_bignum_data(res)[i] %= mod;
-      } else {
-        sexp_bignum_data(res)[i] = 0;
-      }
-      if (sexp_bignum_data(res)[i] < sexp_bignum_data(bound)[i]) {
-        break;
-      }
-      if (i == 0) {
-        /* handle the case where all bigits are == */
-        if (sexp_bignum_data(res)[i] > 0)
-          --sexp_bignum_data(res)[i];
-        else
-          res = sexp_sub(ctx, res, SEXP_ONE);
-      }
-    }
+    res = sexp_remainder(ctx, res, bound);
+    sexp_gc_release1(ctx);
 #endif
   } else {
     res = sexp_type_exception(ctx, self, SEXP_FIXNUM, bound);
