@@ -1046,13 +1046,18 @@
             (map car lib-names+pkgs)
             (map cdr lib-names+pkgs)))
 
-;; faster than (length (regexp-extract re str))
-(define (regexp-count re str)
-  (regexp-fold re (lambda (from md str acc) (+ acc 1)) 0 str))
+(define (string-count-word str word)
+  (let lp ((sc (string-cursor-start str)) (count 0))
+    (let ((sc2 (string-contains str word sc)))
+      (if sc2
+          (lp (string-cursor-next str sc2) (+ count 1))
+          count))))
 
 (define (count-in-sexp x keywords)
-  (regexp-count `(word (w/nocase (or ,@keywords)))
-                (write-to-string x)))
+  (let ((s (string-downcase (write-to-string x))))
+    (fold (lambda (k sum) (+ sum (string-count-word s k)))
+          0
+          (map string-downcase keywords))))
 
 (define (extract-matching-libraries cfg repo keywords)
   (define (library-score lib)
