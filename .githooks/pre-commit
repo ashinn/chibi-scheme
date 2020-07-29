@@ -8,16 +8,17 @@ else
 fi
 
 # fail if we add any new lines to C or Scheme source containing a tab
-if git diff --name-only "$against" |\
+if git diff --name-only "$against" | egrep -q '\.(cpp|h|scm|sld|stub)$' &&\
+        git diff --name-only "$against" |\
         egrep '\.(cpp|h|scm|sld|stub)$' |\
-        xargs -d'\n' git diff -U0 --no-color  "$against" -- |\
+        xargs -d'\n' git diff -U0 --no-color "$against" -- |\
         grep -q $'^+ *\t'; then
     echo "Error: Attempting to add a source file using tabs for indentation."
     echo
     echo -n "   "
     git diff --name-only "$against" |\
         egrep '\.(cpp|h|scm|sld|stub)$' |\
-        xargs -d'\n' git diff -U0  "$against" -- |\
+        xargs -d'\n' git diff -U0 "$against" -- |\
         grep $'^+ *\t' | head -1
     echo
     cat <<EOF
