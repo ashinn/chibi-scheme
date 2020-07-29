@@ -9,9 +9,9 @@ static sexp sexp_num_parameters (sexp ctx, sexp self, sexp_sint_t n) {
 }
 
 struct sexp_opcode_struct local_ref_op =
-  {SEXP_OPC_GENERIC, SEXP_OP_LOCAL_REF, 1, 8, 0, (sexp)"local-ref", SEXP_VOID,
+  {(sexp)"local-ref", SEXP_VOID,
    NULL, NULL, sexp_make_fixnum(SEXP_OBJECT), sexp_make_fixnum(SEXP_FIXNUM),
-   0, 0, NULL};
+   0, 0, 0, 0, 0, SEXP_OPC_GENERIC, SEXP_OP_LOCAL_REF, 1, 8, 0, NULL};
 
 static sexp copy_opcode (sexp ctx, struct sexp_opcode_struct *op) {
   sexp res = sexp_alloc_type(ctx, opcode, SEXP_OPCODE);

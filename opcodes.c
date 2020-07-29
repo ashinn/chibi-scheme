@@ -4,18 +4,18 @@
 #define _I(n) sexp_make_fixnum(n)
 
 #define _OP(c,o,n,m,rt,a1,a2,a3,i,s,d,f) \
- {c, o, n, m, i, (sexp)s, d, NULL, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, f}
+ {(sexp)s, d, NULL, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, c, o, n, m, i, f}
 
 #define _GETTER(name, type, index) \
-  {SEXP_OPC_GETTER, SEXP_OP_SLOT_REF, 1, 0, 0, (sexp)name, _I(type), _I(index), NULL, _I(SEXP_OBJECT), _I(type), NULL, NULL, NULL, NULL, SEXP_FALSE, NULL}
+  {(sexp)name, _I(type), _I(index), NULL, _I(SEXP_OBJECT), _I(type), NULL, NULL, NULL, NULL, SEXP_FALSE, SEXP_OPC_GETTER, SEXP_OP_SLOT_REF, 1, 0, 0, NULL}
 #define _SETTER(name, type, index) \
-  {SEXP_OPC_SETTER, SEXP_OP_SLOT_SET, 2, 0, 0, (sexp)name, _I(type), _I(index), NULL, SEXP_VOID, _I(type), _I(SEXP_OBJECT), NULL, NULL, NULL, SEXP_FALSE, NULL}
+  {(sexp)name, _I(type), _I(index), NULL, SEXP_VOID, _I(type), _I(SEXP_OBJECT), NULL, NULL, NULL, SEXP_FALSE, SEXP_OPC_SETTER, SEXP_OP_SLOT_SET, 2, 0, 0, NULL}
 
 #define _PARAM(n, t) \
   _OP(SEXP_OPC_PARAMETER, SEXP_OP_PARAMETER_REF, 0, 1, t, t, SEXP_FALSE, SEXP_FALSE, 0, n, SEXP_FALSE, 0)
 
 #if SEXP_USE_IMAGE_LOADING
-#define _FN(o,n,m,rt,a1,a2,a3,s,d,f) {SEXP_OPC_FOREIGN, o, n, m, 0, (sexp)s, d, (sexp)#f, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, (sexp_proc1)f}
+#define _FN(o,n,m,rt,a1,a2,a3,s,d,f) {(sexp)s, d, (sexp)#f, NULL, rt, a1, a2, a3, NULL, NULL, SEXP_FALSE, SEXP_OPC_FOREIGN, o, n, m, 0, (sexp_proc1)f}
 #else
 #define _FN(o,n,m,rt,a1,a2,a3,s,d,f) _OP(SEXP_OPC_FOREIGN, o, n, m, rt, a1, a2, a3, 0, s, d, (sexp_proc1)f)
 #endif

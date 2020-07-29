@@ -373,6 +373,7 @@ struct sexp_library_entry_t {   /* for static builds */
 };
 
 struct sexp_type_struct {
+  sexp name, cpl, slots, getters, setters, id, print, dl, finalize_name;
   sexp_tag_t tag;
   short field_base, field_eq_len_base, field_len_base, field_len_off;
   unsigned short field_len_scale;
@@ -380,14 +381,13 @@ struct sexp_type_struct {
   unsigned short size_scale;
   short weak_base, weak_len_base, weak_len_off, weak_len_scale, weak_len_extra;
   short depth;
-  sexp name, cpl, slots, getters, setters, id, print, dl, finalize_name;
   sexp_proc2 finalize;
 };
 
 struct sexp_opcode_struct {
-  unsigned char op_class, code, num_args, flags, inverse;
   sexp name, data, data2, proc, ret_type, arg1_type, arg2_type, arg3_type,
     argn_type, methods, dl;
+  unsigned char op_class, code, num_args, flags, inverse;
   sexp_proc1 func;
 };
 
@@ -401,9 +401,12 @@ struct sexp_mark_stack_ptr_t {
   struct sexp_mark_stack_ptr_t *prev; /* TODO: remove for allocations on stack */
 };
 
-/* Note this must be kept in sync with the type registry in sexp.c. */
-/* sexp fields must be placed first if you use slot-ref/set!, as is */
-/* done by write. */
+/* Note this must be kept in sync with the _sexp_type_specs type            */
+/* registry in sexp.c.  The structure of a sexp type is:                    */
+/*   [ HEADER [[EQ_FIELDS... ] GC_FIELDS...] [WEAK_FIELDS...] [OTHER...] ]  */
+/* Thus all sexp's must be contiguous and align at the start of the type.   */
+/* This is used by the gc, equal? and slot-ref (although only the latter    */
+/* expects the alignment at the start of the type). */
 struct sexp_struct {
   sexp_tag_t tag;
   char markedp;
@@ -442,14 +445,17 @@ struct sexp_struct {
     } uvector;
     struct {
 #if SEXP_USE_PACKED_STRINGS
+#if SEXP_USE_STRING_INDEX_TABLE
+      sexp charlens;
+#endif
       sexp_uint_t length;
       char data SEXP_FLEXIBLE_ARRAY;
 #else
-      sexp_uint_t offset, length;
       sexp bytes;
-#endif
 #if SEXP_USE_STRING_INDEX_TABLE
       sexp charlens;
+#endif
+      sexp_uint_t offset, length;
 #endif
     } string;
     struct {
@@ -548,6 +554,11 @@ struct sexp_struct {
       sexp data SEXP_FLEXIBLE_ARRAY;
     } stack;
     struct {
+      sexp stack, env, parent, child,
+        globals, dk, params, proc, name, specific, event, result;
+#if SEXP_USE_STABLE_ABI || SEXP_USE_DL
+      sexp dl;
+#endif
       sexp_heap heap;
       struct sexp_mark_stack_ptr_t mark_stack[SEXP_MARK_STACK_COUNT];
       struct sexp_mark_stack_ptr_t *mark_stack_ptr;
@@ -569,11 +580,6 @@ struct sexp_struct {
 #endif
 #if SEXP_USE_TRACK_ALLOC_SIZES
       sexp_uint_t alloc_histogram[SEXP_ALLOC_HISTOGRAM_BUCKETS];
-#endif
-      sexp stack, env, parent, child,
-        globals, dk, params, proc, name, specific, event, result;
-#if SEXP_USE_STABLE_ABI || SEXP_USE_DL
-      sexp dl;
 #endif
     } context;
 #if SEXP_USE_STABLE_ABI || SEXP_USE_AUTO_FORCE
