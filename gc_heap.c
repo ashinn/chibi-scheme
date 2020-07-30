@@ -68,7 +68,7 @@ sexp sexp_gc_heap_walk(sexp ctx,
   }
   res = SEXP_TRUE;
 done:
-  if (res != SEXP_TRUE) res = sexp_user_exception(ctx, NULL, gc_heap_err_str, NULL);
+  if (res != SEXP_TRUE) res = sexp_user_exception(ctx, NULL, gc_heap_err_str, SEXP_NULL);
   return res;
 }
 
@@ -233,7 +233,7 @@ done:
 }
 
 static sexp sexp_gc_heap_pack_adjust(sexp dstp, sexp* types, struct sexp_remap_state* state) {
-  sexp res = NULL;
+  sexp res = SEXP_FALSE;
   /* Adjust internal types which contain fields of sexp pointer(s)
      within in the heap */
   if ((res = sexp_adjust_fields(dstp, types, sexp_gc_heap_pack_src_to_dst, state)) != SEXP_TRUE) {
@@ -418,7 +418,7 @@ sexp sexp_save_image (sexp ctx_in, const char* filename) {
 done:
   if (fp) fclose(fp);
   if (heap) sexp_free_heap(heap);
-  if (res != SEXP_TRUE) res = sexp_user_exception(ctx_in, NULL, gc_heap_err_str, NULL);
+  if (res != SEXP_TRUE) res = sexp_user_exception(ctx_in, NULL, gc_heap_err_str, SEXP_NULL);
   return res;
 }
 
