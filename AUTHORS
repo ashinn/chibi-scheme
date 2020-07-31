@@ -14,6 +14,9 @@ The (scheme time) module includes code for handling leap seconds
 from Alan Watson's Scheme clock library at
 http://code.google.com/p/scheme-clock/ under the same license.
 
+The lgamma_r implementation for Windows builds is based on code by
+Haruhiko Okumura via Ruby.
+
 The following distributed SRFIs use the reference implementations:
 
   (srfi 101) is adapted from David van Horn's implementation
