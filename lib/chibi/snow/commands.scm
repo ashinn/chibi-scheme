@@ -571,7 +571,8 @@
                      `(inline
                        "run-tests.scm"
                        ,(test-program-from-libraries tests-from-libraries))
-                     #t)
+                     #t
+                     seen)
                  (lp ls progs res files lib-dirs test #t seen))))
        (else
         (let* ((docs (package-docs cfg spec libs lib-dirs))
