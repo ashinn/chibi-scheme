@@ -31,12 +31,12 @@
       (test-group "uvectors/predicates"
         (test #f (u32vector-empty? '#u32(0)))
         (test-assert (u32vector-empty? '#u32()))
-        (test-assert (u32vector= eq? '#u32(0 1 2 3) '#u32(0 1 2 3)))
-        (test #t (u32vector= eq? '#u32(0 1 2 3) '#u32(0 1 2 3)))
-        (test #f (u32vector= = '#u32(1 2 3 4 5) '#u32(1 2 3 4)))
-        (test-assert (u32vector= eq?))
-        (test-assert (u32vector= eq? '#u32(0)))
-        (test-assert (u32vector= equal? (u32vector 0) (u32vector 0)))
+        (test-assert (u32vector= '#u32(0 1 2 3) '#u32(0 1 2 3)))
+        (test #t (u32vector= '#u32(0 1 2 3) '#u32(0 1 2 3)))
+        (test #f (u32vector= '#u32(1 2 3 4 5) '#u32(1 2 3 4)))
+        (test-assert (u32vector=))
+        (test-assert (u32vector= '#u32(0)))
+        (test-assert (u32vector= (u32vector 0) (u32vector 0)))
         )
 
       (test-group "uvectors/iteration"
