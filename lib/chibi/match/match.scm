@@ -943,14 +943,6 @@
     ((_ loop ((var init) ...) . body)
      (match-named-let loop () ((var init) ...) . body))))
 
-;;> Similar to \scheme{match-let}, but analogously to \scheme{letrec}
-;;> matches and binds the variables with all match variables in scope.
-
-(define-syntax match-letrec
-  (syntax-rules ()
-    ((_ ((var value) ...) . body)
-     (match-let/helper letrec () () ((var value) ...) . body))))
-
 (define-syntax match-let/helper
   (syntax-rules ()
     ((_ let ((var expr) ...) () () . body)
@@ -990,6 +982,145 @@
     ((_ ((pat expr) . rest) . body)
      (match expr (pat (match-let* rest . body))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Challenge stage - unhygienic insertion.
+
+(define-syntax extract?
+  (syntax-rules ()
+    ((_ symb body _cont-t _cont-f)
+     (letrec-syntax
+         ((tr
+           (syntax-rules (symb); Found our ’symb’ -- exit to the continuation cont-t
+             ((_ x symb tail (cont-head symb-l . cont-args) cont-false)
+              (cont-head (x . symb-l) . cont-args))
+             ((_ d (x . y) tail . rest)   ; if body is a composite form,
+              (tr x x (y . tail) . rest)) ; look inside
+             ((_ d1 d2 () cont-t (cont-head  symb-l . cont-args)) ; ’symb’ had not occurred -- exit to cont-f
+              (cont-head (symb . symb-l) . cont-args))
+             ((_ d1 d2 (x . y) . rest)
+              (tr x x y . rest)))))
+       (tr body body () _cont-t _cont-f)))))
+
+(define-syntax extract
+  (syntax-rules ()
+    ((_ symb body cont)
+     (extract? symb body cont cont))))
+
+(define-syntax extract*
+  (syntax-rules ()
+    ((_ (symb) body cont)       ; only one id: use extract to do the job
+     (extract symb body cont))
+    ((_ _symbs _body _cont)
+     (letrec-syntax
+         ((ex-aux               ; extract id-by-id
+           (syntax-rules ()
+             ((_ found-symbs () body cont)
+              (reverse () found-symbs cont))
+             ((_ found-symbs (symb . symb-others) body cont)
+              (extract symb body (ex-aux found-symbs symb-others body cont)))))
+          (reverse              ; reverse the list of extracted ids
+           (syntax-rules ()     ; to match the order of SYMB-L
+             ((_ res () (cont-head () . cont-args))
+              (cont-head res . cont-args))
+             ((_ res (x . tail) cont)
+              (reverse (x . res) tail cont)))))
+       (ex-aux () _symbs _body _cont)))))
+
+(define-syntax mylet
+  (syntax-rules ()
+    ((_ ((_var _init)) _body)
+     (letrec-syntax
+         ((doit
+           (syntax-rules ()
+             ((_ (mylet-symb mfoo-symb foo-symb) ((var init)) body)
+              (let ((var init))
+                (make-mfoo mfoo-symb foo-symb
+                           (letrec-syntax
+                               ((mylet-symb
+                                 (syntax-rules ()
+                                   ((_ ((var_ init_)) body_)
+                                    (extract* (mylet-symb mfoo-symb foo-symb)
+                                              (var_ body_)
+                                              (doit () ((var_ init_)) body_)))
+                                   )))
+                             body)))))))
+       (extract* (mylet mfoo foo) (_var _body)
+                 (doit () ((_var _init)) _body))))))
+
+;;> Similar to \scheme{match-let}, but analogously to \scheme{letrec}
+;;> matches and binds the variables with all match variables in scope.
+
+(define-syntax match-letrec
+  (syntax-rules ()
+    ((_ ((pat val) ...) . body)
+     (match-letrec-one (pat ...) (((pat val) ...) . body) ()))))
+
+;; 1: extract all ids
+(define-syntax match-letrec-one
+  (syntax-rules ()
+    ((_ (pat . rest) expr ((id tmp) ...))
+     (match-extract-vars pat (match-letrec-one rest expr) (id ...) ((id tmp) ...)))
+    ((_ () expr ((id tmp) ...))
+     (let () ; (tmp '??) ...
+       (match-letrec-two expr () ((id tmp) ...))))))
+
+;; 2: rewrite ids
+(define-syntax match-letrec-two
+  (syntax-rules ()
+    ((_ (() . body) ((var2 val2) ...) ((id tmp) ...))
+     ;; we know the ids, their tmp names, and the renamed patterns
+     ;; with the tmp names - expand to the classic letrec pattern of
+     ;; let+set!:
+     (let ((id '?) ...)
+       (match-let ((var2 val2) ...)
+                  (set! id tmp) ...
+                  . body)))
+    ((_ (((var val) . rest) . body) ((var2 val2) ...) ids)
+     (match-rewrite
+      var
+      ids
+      (match-letrec-two-step (rest . body) ((var2 val2) ...) ids val)))))
+
+(define-syntax match-letrec-two-step
+  (syntax-rules ()
+    ((_ next (rewrites ...) ids val var)
+     (match-letrec-two next (rewrites ... (var val)) ids))))
+
+;; rewrite a list of vars in a nested structure
+;; calls k on the rewritten structure
+(define-syntax match-rewrite
+  (syntax-rules ()
+    ((match-rewrite var () (k ...))
+     (k ... var))
+    ((match-rewrite var ((id tmp) . rest) k)
+     (mylet ((id tmp)) ))))
+
+'(define-syntax match-rewrite
+  (syntax-rules ()
+    ((match-rewrite (p . q) ids k)
+     (match-rewrite p ids (match-rewrite2 q ids (match-cons k))))
+    ((match-rewrite () ids (k ...))
+     (k ... ()))
+    ((match-rewrite p ((id tmp) ...) (k ...))
+     (letrec-syntax
+         ((k2
+           (syntax-rules ()
+             ((k2 res) (k ... res))))
+          (rewrite
+            (syntax-rules (id ...)
+              ((rewrite id) (k2 tmp)) ...
+              ((rewrite other) (k2 p)))))
+       (rewrite p)))))
+
+(define-syntax match-rewrite2
+  (syntax-rules ()
+    ((match-rewrite2 q ids (k ...) p)
+     (match-rewrite q ids (k ... p)))))
+
+(define-syntax match-cons
+  (syntax-rules ()
+    ((match-cons (k ...) p q)
+     (k ... (p . q)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Otherwise COND-EXPANDed bits.

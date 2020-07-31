@@ -69,9 +69,12 @@
 
 (define (get-rename id lam renames)
   (let ((ls (assq lam renames)))
-    (if (not ls)
-        (identifier->symbol id)
-        (cond ((assq id (cdr ls)) => cdr) (else (identifier->symbol id))))))
+    (let ((res (if (not ls)
+               (identifier->symbol id)
+               (cond ((assq id (cdr ls)) => cdr) (else (identifier->symbol id))))))
+      (if (eq? 'p-ls (identifier->symbol id))
+          (begin (write `(rename ,id => ,res)) (newline)))
+      res)))
 
 (define (map* f ls)
   (cond ((pair? ls) (cons (f (car ls)) (map* f (cdr ls))))
