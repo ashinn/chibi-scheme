@@ -439,9 +439,9 @@ sexp run_main (int argc, char **argv) {
       }
 #endif
       break;
+#if SEXP_USE_IMAGE_LOADING
     case 'i':
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-#if SEXP_USE_IMAGE_LOADING
       if (ctx) {
         fprintf(stderr, "-i <file>: image files must be loaded before other command-line options are specified: %s\n", arg);
         if (sexp_truep(sexp_global(ctx, SEXP_G_STRICT_P)))
@@ -457,7 +457,6 @@ sexp run_main (int argc, char **argv) {
         env = sexp_load_standard_params(ctx, sexp_context_env(ctx), nonblocking);
         init_loaded++;
       }
-#endif
       break;
     case 'd':
       if (! init_loaded++) {
@@ -465,15 +464,14 @@ sexp run_main (int argc, char **argv) {
         env = sexp_load_standard_env(ctx, env, SEXP_SEVEN);
       }
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
-#if SEXP_USE_IMAGE_LOADING
       if (sexp_save_image(ctx, arg) != SEXP_TRUE) {
         fprintf(stderr, "-d <file>: couldn't save image to file: %s\n", arg);
         fprintf(stderr, "           %s\n", sexp_load_image_err());
         exit_failure();
       }
-#endif
       quit = 1;
       break;
+#endif
     case 'V':
       load_init(1);
       if (! sexp_oportp(out))
