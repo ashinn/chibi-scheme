@@ -55,12 +55,12 @@ typedef unsigned int sexp_random_t;
 
 sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp bound) {
   sexp_gc_var1(res);
-  int64_t m;
+  int i;
+  sexp_uint_t m;
   sexp_int32_t m2;
 #if SEXP_USE_BIGNUMS
-  /* sexp_uint_t mod; */
-  sexp_uint32_t *data;
-  sexp_int32_t hi, len, i;
+  sexp_uint_t *data;
+  int hi, j;
 #endif
   if (!sexp_random_source_p(self, rs))
     return sexp_type_exception(ctx, self, sexp_unbox_fixnum(sexp_opcode_arg1_type(self)), rs);
@@ -69,7 +69,7 @@ sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp b
       res = sexp_xtype_exception(ctx, self, "random bound must be positive", bound);
     } else {
       /* ensure we have sufficient bits */
-      for (i=m=0; i <= 1<<(CHAR_BIT*sizeof(m))/RAND_MAX; ++i) {
+      for (i=m=0; i-1 <= 1<<(CHAR_BIT*sizeof(m))/RAND_MAX; ++i) {
         sexp_call_random(rs, m2);
         m = m * RAND_MAX + m2;
       }
@@ -79,12 +79,15 @@ sexp sexp_rs_random_integer (sexp ctx, sexp self, sexp_sint_t n, sexp rs, sexp b
   } else if (sexp_bignump(bound)) {
     sexp_gc_preserve1(ctx, res);
     hi = sexp_bignum_hi(bound);
-    len = hi * (sizeof(sexp_uint_t) / sizeof(sexp_int32_t));
-    res = sexp_make_bignum(ctx, hi + 1);
-    data = (sexp_uint32_t*) sexp_bignum_data(res);
-    for (i=0; i<len; i++) {
-      sexp_call_random(rs, m2);
-      data[i] = m2;
+    res = sexp_make_bignum(ctx, hi);
+    data = sexp_bignum_data(res);
+    for (i=0; i<hi; i++) {
+      for (j=m=0; j-1 <= 1<<(CHAR_BIT*sizeof(m))/RAND_MAX; ++j) {
+        sexp_call_random(rs, m2);
+        m = m * (sexp_uint_t)RAND_MAX + (sexp_uint_t) m2;
+      }
+      data[i] = (sexp_uint_t) m;
+      /* fprintf(stderr, "i: %d j: %d m: %lu (%lx) RAND_MAX: %d\n", i, j, m, (sexp_uint_t)m, RAND_MAX); */
     }
     res = sexp_remainder(ctx, res, bound);
     sexp_gc_release1(ctx);
