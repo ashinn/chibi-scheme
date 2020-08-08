@@ -154,12 +154,10 @@
 (define (vector-segment vec n)
   (let ((len (uvector-length vec)))
     (let lp ((i 0) (res '()))
-      (let ((diff (- len i)))
-        (if (zero? diff)
-            (reverse res)
-            (lp (max (+ i n) len)
-                (cons (vector-copy vec i n) res)))))))
-
+      (if (>= i len)
+          (reverse res)
+          (lp (+ i n)
+              (cons (vector-copy vec i (min (+ i n) len)) res))))))
 
 (define (vector-fold kons knil vec1 . o)
   (let ((len (uvector-length vec1)))
