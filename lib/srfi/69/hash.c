@@ -67,7 +67,7 @@ static sexp_uint_t hash_one (sexp ctx, sexp obj, sexp_uint_t bound, sexp_sint_t 
         /* if the field_base is 0, skip to the value */
         if ((sexp)p == obj) p=(sexp*)p0;
         /* hash uvector data (otherwise strings all hash to the same value) */
-        if (sexp_bytesp(obj) || sexp_uvectorp(obj)) {
+        if (sexp_bytesp(obj) || sexp_uvectorp(obj) || sexp_bignump(obj)) {
           p_right = ((char*)p + sexp_type_num_slots_of_object(t, obj)*sizeof(sexp));
           right_size = ((char*)obj + sexp_type_size_of_object(t, obj)) - p_right;
           for (i=0; i<right_size; i++) {acc *= FNV_PRIME; acc ^= p_right[i];}
