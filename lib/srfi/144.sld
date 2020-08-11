@@ -27,7 +27,7 @@
    fl-euler fl-e-euler fl-sin-1 fl-cos-1 fl-greatest fl-least
    fl-integer-exponent-zero fl-integer-exponent-nan fl-fast-+*
 
-   flonum flonum? fl= fl< fl> fl<= fl>= flodd? fleven?
+   flonum flonum? fl=? fl<? fl>? fl<=? fl>=? flodd? fleven?
    flunordered? flinteger? flzero? flpositive? flnegative?
 
    fl+ fl- fl* fl/ fl+* flmax flmin flabsdiff

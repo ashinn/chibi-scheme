@@ -89,7 +89,7 @@
       (test 24. (flgamma 5.))
       (call-with-values (lambda () (flloggamma 0.1))
         (lambda (res sign)
-          (test 64. res)
+          (test 2.252713 res)
           (test 1 sign)))
       (test 0.440050586 (flfirst-bessel 1 1.))
       (test -0.781212821 (flsecond-bessel 1 1.))
