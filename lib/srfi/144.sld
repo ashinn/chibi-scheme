@@ -25,7 +25,8 @@
    fl-sqrt-2 fl-sqrt-3 fl-sqrt-5 fl-sqrt-10 fl-1/sqrt-2
    fl-cbrt-2 fl-cbrt-3 fl-4thrt-2 fl-phi fl-log-phi fl-1/log-phi
    fl-euler fl-e-euler fl-sin-1 fl-cos-1 fl-greatest fl-least
-   fl-integer-exponent-zero fl-integer-exponent-nan fl-fast-+*
+   fl-epsilon fl-integer-exponent-zero fl-integer-exponent-nan 
+   fl-fast-+*
 
    flonum flonum? fl=? fl<? fl>? fl<=? fl>=? flodd? fleven?
    flunordered? flinteger? flzero? flpositive? flnegative?

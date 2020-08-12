@@ -33,7 +33,8 @@
   (fl-greatest "DBL_MAX")
   (fl-least "-DBL_MAX")
   (fl-integer-exponent-zero "FP_ILOGB0")
-  (fl-integer-exponent-nan "FP_ILOGBNAN"))
+  (fl-integer-exponent-nan "FP_ILOGBNAN")
+  (fl-epsilon "DBL_EPSILON"))
 
 (define-c-const int
   FP_SUBNORMAL)
