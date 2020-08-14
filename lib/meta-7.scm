@@ -91,13 +91,13 @@
         ((pred (to-id (car ls))) (cons (car ls) (id-filter pred (cdr ls))))
         (else (id-filter pred (cdr ls)))))
 
-(define (resolve-import x)
+(define (%resolve-import x)
   (cond
    ((not (and (pair? x) (list? x)))
     (error "invalid import syntax" x))
    ((and (memq (car x) '(prefix drop-prefix))
          (symbol? (car (cddr x))) (list? (cadr x)))
-    (let ((mod-name+imports (resolve-import (cadr x))))
+    (let ((mod-name+imports (%resolve-import (cadr x))))
       (cons (car mod-name+imports)
             (map (lambda (i)
                    (cons ((if (eq? (car x) 'drop-prefix)
@@ -110,7 +110,7 @@
                      (module-exports (find-module (car mod-name+imports))))))))
    ((and (pair? (cdr x)) (pair? (cadr x)))
     (if (memq (car x) '(only except rename))
-        (let* ((mod-name+imports (resolve-import (cadr x)))
+        (let* ((mod-name+imports (%resolve-import (cadr x)))
                (imp-ids (or (cdr mod-name+imports)
                             (and (not (eq? 'only (car x)))
                                  (module-exports
@@ -134,6 +134,29 @@
     => (lambda (mod) (cons x (%module-exports mod))))
    (else
     (error "couldn't find import" x))))
+
+;; slightly roundabout, using eval since we don't have env-define! here
+(define (auto-generate-bindings ls)
+  (let ((bound (env-exports *auto-env*))
+        (def-aux
+          (make-syntactic-closure *chibi-env* '() 'define-auxiliary-syntax)))
+    (let lp ((ls ls) (new '()))
+      (cond
+       ((null? ls)
+        (if (pair? new)
+            (eval `(,(make-syntactic-closure *chibi-env* '() 'begin) ,@new)
+                  *auto-env*)))
+       (else
+        (let ((from-id (if (pair? (car ls)) (cdar ls) (car ls))))
+          (if (memq from-id bound)
+              (lp (cdr ls) new)
+              (lp (cdr ls) `((,def-aux ,from-id) ,@new)))))))))
+
+(define (resolve-import x)
+  (let ((x (%resolve-import x)))
+    (if (equal? '(auto) (car x))
+        (auto-generate-bindings (cdr x)))
+    x))
 
 (define (resolve-module-imports env meta)
   (for-each
@@ -415,18 +438,29 @@
               (else
                (error "couldn't find module" (car ls))))))))))))
 
+;; capture a static copy of the current environment to serve
+;; as the (chibi) module
+(define *chibi-env*
+  (let ((env (make-environment)))
+    (%import env (interaction-environment) #f #t)
+    (env-parent env)))
+
+(define *auto-env*
+  (let ((env (make-environment)))
+    (%import env (interaction-environment)
+             '(_ => ... else unquote unquote-splicing) #t)
+    (env-parent env)))
+
 (define *modules*
   (list
    (cons '(chibi)
-         ;; capture a static copy of the current environment to serve
-         ;; as the (chibi) module
-         (let ((env (make-environment)))
-           (%import env (interaction-environment) #f #t)
-           (make-module #f (env-parent env) '((include "init-7.scm")))))
+         (make-module #f *chibi-env* '((include "init-7.scm"))))
    (cons '(chibi primitive)
          (make-module #f #f (lambda (env) (primitive-environment 7))))
    (cons '(meta)
          (make-module #f (current-environment) '((include "meta-7.scm"))))
+   (cons '(auto)
+         (make-module #f *auto-env* '()))
    (cons '(srfi 0)
          (make-module (list 'cond-expand)
                       (current-environment)
