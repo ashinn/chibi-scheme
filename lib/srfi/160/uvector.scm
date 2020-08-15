@@ -318,11 +318,11 @@
 (define (uvector->list vec . o)
   (reverse (apply reverse-vector->list vec o)))
 
-(define (uvector->vector vec)
-  (list->vector (uvector->list vec)))
+(define (uvector->vector vec . o)
+  (list->vector (apply uvector->list vec o)))
 
-(define (vector->uvector vec)
-  (list->uvector (vector->list vec)))
+(define (vector->uvector vec . o)
+  (list->uvector (apply vector->list vec o)))
 
 (define make-vector-generator
   (let ((eof (read-char (open-input-string ""))))

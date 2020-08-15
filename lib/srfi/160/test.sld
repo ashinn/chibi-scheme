@@ -27,6 +27,10 @@
         (test '#u32(0 1 2 3) (u32vector-concatenate '(#u32(0 1) #u32(2 3))))
         (test '#u32(0 1 6 7)
           (u32vector-append-subvectors '#u32(0 1 2 3 4) 0 2 '#u32(4 5 6 7 8) 2 4))
+        (test '#u32(1 2)
+          (vector->u32vector '#(0 1 2 3) 1 3))
+        (test '#(1 2)
+          (u32vector->vector '#u32(0 1 2 3) 1 3))
         )
 
       (test-group "uvectors/predicates"
