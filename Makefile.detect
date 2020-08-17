@@ -57,6 +57,7 @@ endif
 LIBDL = -ldl
 SO_VERSIONED_SUFFIX = $(SO).$(SOVERSION)
 SO_MAJOR_VERSIONED_SUFFIX = $(SO).$(SOVERSION_MAJOR)
+STATIC_LDFLAGS = -lm -ldl -lutil
 
 ifeq ($(PLATFORM),macosx)
 SO  = .dylib
@@ -93,6 +94,7 @@ CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0 -DSEXP_USE_GREEN_THREADS=0 -DSEXP_USE_GC_FILE_DESCRIPTORS=0 -DBUILDING_DLL
 LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
 STATICFLAGS =
+STATIC_LDFLAGS = -lm -ldl
 LIBDL = -lws2_32
 else
 ifeq ($(PLATFORM),msys)
@@ -103,6 +105,7 @@ CLIBFLAGS =
 CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
 LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
+STATIC_LDFLAGS = -lm -ldl
 else
 ifeq ($(PLATFORM),cygwin)
 SO  = .dll
@@ -112,6 +115,7 @@ CLIBFLAGS =
 CLINKFLAGS = -shared
 CPPFLAGS += -DSEXP_USE_STRING_STREAMS=0
 LIBCHIBI_FLAGS = -Wl,--out-implib,libchibi-scheme$(SO).a
+STATIC_LDFLAGS = -lm -ldl
 else
 SO  = .so
 EXE =
@@ -124,6 +128,10 @@ endif
 endif
 endif
 endif
+endif
+
+ifeq ($(PLATFORM),emscripten)
+STATIC_LDFLAGS = -lm -ldl
 endif
 
 ifeq ($(PLATFORM),unix)
