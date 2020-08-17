@@ -7,7 +7,7 @@
     ((define-state-variables var ...)
      (begin
        (define var
-         (make-computation-environment-variable 'var #f #f))
+         (make-state-variable 'var #f #f))
        ...))))
 
 (define-state-variables

@@ -12,7 +12,8 @@
           (rename (srfi 165)
                   (computation-each sequence)
                   (computation-with! with!)
-                  (computation-forked forked))
+                  (computation-forked forked)
+                  (make-computation-environment-variable make-state-variable))
           (chibi show shared))
   (cond-expand
    (chibi
@@ -45,6 +46,7 @@
    ;; computations
    fn with with! forked call-with-output
    ;; state variables
+   make-state-variable
    port row col width output writer pad-char ellipsis
    string-width substring/width substring/preserve
    radix precision decimal-sep decimal-align sign-rule

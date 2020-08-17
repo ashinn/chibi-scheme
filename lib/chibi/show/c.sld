@@ -21,5 +21,5 @@
    cpp-error cpp-warning cpp-stringify cpp-sym-cat
    c-comment c-block-comment c-attribute)
   (import (chibi) (chibi string) (chibi show) (chibi show pretty)
-          (srfi 1) (srfi 165) (scheme cxr))
+          (srfi 1) (scheme cxr))
   (include "c.scm"))

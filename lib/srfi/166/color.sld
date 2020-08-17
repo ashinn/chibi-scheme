@@ -1,6 +1,6 @@
 
 (define-library (srfi 166 color)
-  (import (scheme base) (srfi 130) (srfi 165) (srfi 166 base))
+  (import (scheme base) (srfi 130) (srfi 166 base))
   (export
    ;; foreground
    as-red as-blue as-green as-cyan as-yellow
@@ -14,5 +14,5 @@
    )
   (begin
     (define color
-      (make-computation-environment-variable 'color #f #f)))
+      (make-state-variable 'color #f #f)))
   (include "color.scm"))
