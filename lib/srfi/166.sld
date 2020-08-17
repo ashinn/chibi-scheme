@@ -17,6 +17,7 @@
    ;; computations
    fn with with! forked call-with-output
    ;; state variables
+   make-state-variable
    port row col width output writer pad-char ellipsis
    string-width substring/width substring/preserve
    radix precision decimal-sep decimal-align sign-rule
