@@ -2800,6 +2800,9 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
 #if SEXP_USE_PLACEHOLDER_DIGITS
   double whole = 0.0, scale = 0.1;
 #endif
+#if SEXP_USE_COMPLEX && SEXP_USE_MATH
+  double rho, theta;
+#endif
   sexp_gc_var2(res, den);
 
   c = sexp_read_char(ctx, in);
@@ -2902,6 +2905,18 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
         res = sexp_make_ratio(ctx, res, sexp_complex_imag(den));
         res = sexp_ratio_normalize(ctx, res, in);
         sexp_complex_imag(den) = res;
+#if SEXP_USE_MATH
+      } else if (sexp_flonump(sexp_complex_real(den))) { /* assume polar */
+        rho = sqrt(sexp_flonum_value(sexp_complex_real(den)) *
+                   sexp_flonum_value(sexp_complex_real(den)) +
+                   sexp_to_double(ctx, sexp_complex_imag(den)) +
+                   sexp_to_double(ctx, sexp_complex_imag(den)));
+        theta = atan(sexp_to_double(ctx, sexp_complex_imag(den)) /
+                     sexp_flonum_value(sexp_complex_real(den)));
+        rho = sexp_to_double(ctx, sexp_div(ctx, res, sexp_make_fixnum((sexp_sint_t)round(rho))));
+        sexp_complex_real(den) = sexp_make_flonum(ctx, rho * cos(theta));
+        sexp_complex_imag(den) = sexp_make_flonum(ctx, rho * sin(theta));
+#endif
       } else {
         res = sexp_make_ratio(ctx, res, sexp_complex_real(den));
         res = sexp_ratio_normalize(ctx, res, in);
