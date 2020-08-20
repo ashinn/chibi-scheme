@@ -2737,6 +2737,10 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
     if (c=='i' || c=='I' || c=='+' || c=='-') {
       sexp_push_char(ctx, c, in);
       res = sexp_read_complex_tail(ctx, in, res);
+#if SEXP_USE_MATH
+    } else if (c=='@') {
+      return sexp_read_polar_tail(ctx, in, res);
+#endif
     } else
 #endif
     if ((c!=EOF) && ! sexp_is_separator(c))
