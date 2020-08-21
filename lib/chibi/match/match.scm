@@ -92,9 +92,16 @@
 ;;> \example{(match (list 1 2) ((a b c ..1) c))}
 ;;> \example{(match (list 1 2 3) ((a b c ..1) c))}
 
-;;> The \scheme{..=} syntax is like \scheme{...} except that it takes
-;;> a tailing integer \scheme{<n>} and requires the pattern to match
-;;> exactly \scheme{<n>} times.
+;;> The \scheme{..*} syntax is like \scheme{...} except that it takes
+;;> two trailing integers \scheme{<n>} and \scheme{<m>}, and requires
+;;> the pattern to match from \scheme{<n>} times.
+
+;;> \example{(match (list 1 2 3) ((a b ..* 2 4) b))}
+;;> \example{(match (list 1 2 3 4 5 6) ((a b ..* 2 4) b))}
+;;> \example{(match (list 1 2 3 4) ((a b ..* 2 4 c) c))}
+
+;;> The \scheme{(<expr> ..= <n>)} syntax is a shorthand for
+;;> \scheme{(<expr> ..* <n> <n>)}.
 
 ;;> \example{(match (list 1 2) ((a b ..= 2) b))}
 ;;> \example{(match (list 1 2 3) ((a b ..= 2) b))}
@@ -235,6 +242,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2020/08/21 - fixing match-letrec with unhygienic insertion
 ;; 2020/07/06 - adding `..=' and `..*' patterns; fixing ,@ patterns
 ;; 2016/10/05 - treat keywords as literals, not identifiers, in Chicken
 ;; 2016/03/06 - fixing named match-let (thanks to Stefan Israelsson Tampe)
@@ -939,34 +947,24 @@
 (define-syntax match-let
   (syntax-rules ()
     ((_ ((var value) ...) . body)
-     (match-let/helper let () () ((var value) ...) . body))
+     (match-let/aux () () ((var value) ...) . body))
     ((_ loop ((var init) ...) . body)
      (match-named-let loop () ((var init) ...) . body))))
 
-;;> Similar to \scheme{match-let}, but analogously to \scheme{letrec}
-;;> matches and binds the variables with all match variables in scope.
-
-(define-syntax match-letrec
+(define-syntax match-let/aux
   (syntax-rules ()
-    ((_ ((var value) ...) . body)
-     (match-let/helper letrec () () ((var value) ...) . body))))
-
-(define-syntax match-let/helper
-  (syntax-rules ()
-    ((_ let ((var expr) ...) () () . body)
+    ((_ ((var expr) ...) () () . body)
      (let ((var expr) ...) . body))
-    ((_ let ((var expr) ...) ((pat tmp) ...) () . body)
+    ((_ ((var expr) ...) ((pat tmp) ...) () . body)
      (let ((var expr) ...)
        (match-let* ((pat tmp) ...)
          . body)))
-    ((_ let (v ...) (p ...) (((a . b) expr) . rest) . body)
-     (match-let/helper
-      let (v ... (tmp expr)) (p ... ((a . b) tmp)) rest . body))
-    ((_ let (v ...) (p ...) ((#(a ...) expr) . rest) . body)
-     (match-let/helper
-      let (v ... (tmp expr)) (p ... (#(a ...) tmp)) rest . body))
-    ((_ let (v ...) (p ...) ((a expr) . rest) . body)
-     (match-let/helper let (v ... (a expr)) (p ...) rest . body))))
+    ((_ (v ...) (p ...) (((a . b) expr) . rest) . body)
+     (match-let/aux (v ... (tmp expr)) (p ... ((a . b) tmp)) rest . body))
+    ((_ (v ...) (p ...) ((#(a ...) expr) . rest) . body)
+     (match-let/aux (v ... (tmp expr)) (p ... (#(a ...) tmp)) rest . body))
+    ((_ (v ...) (p ...) ((a expr) . rest) . body)
+     (match-let/aux (v ... (a expr)) (p ...) rest . body))))
 
 (define-syntax match-named-let
   (syntax-rules ()
@@ -990,6 +988,85 @@
     ((_ ((pat expr) . rest) . body)
      (match expr (pat (match-let* rest . body))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Challenge stage - unhygienic insertion.
+;;
+;; It's possible to implement match-letrec without unhygienic
+;; insertion by building the let+set! logic directly into the match
+;; code above (passing a parameter to distinguish let vs letrec).
+;; However, it makes the code much more complicated, so we religate
+;; the complexity here.
+
+;;> Similar to \scheme{match-let}, but analogously to \scheme{letrec}
+;;> matches and binds the variables with all match variables in scope.
+
+(define-syntax match-letrec
+  (syntax-rules ()
+    ((_ ((pat val) ...) . body)
+     (match-letrec-one (pat ...) (((pat val) ...) . body) ()))))
+
+;; 1: extract all ids in all patterns
+(define-syntax match-letrec-one
+  (syntax-rules ()
+    ((_ (pat . rest) expr ((id tmp) ...))
+     (match-extract-vars
+      pat (match-letrec-one rest expr) (id ...) ((id tmp) ...)))
+    ((_ () expr ((id tmp) ...))
+     (match-letrec-two expr () ((id tmp) ...)))))
+
+;; 2: rewrite ids
+(define-syntax match-letrec-two
+  (syntax-rules ()
+    ((_ (() . body) ((var2 val2) ...) ((id tmp) ...))
+     ;; We know the ids, their tmp names, and the renamed patterns
+     ;; with the tmp names - expand to the classic letrec pattern of
+     ;; let+set!.  That is, we bind the original identifiers written
+     ;; in the source with let, run match on their renamed versions,
+     ;; then set! the originals to the matched values.
+     (let ((id (if #f #f)) ...)
+       (match-let ((var2 val2) ...)
+          (set! id tmp) ...
+          . body)))
+    ((_ (((var val) . rest) . body) ((var2 val2) ...) ids)
+     (match-rewrite
+      var
+      ids
+      (match-letrec-two-step (rest . body) ((var2 val2) ...) ids val)))))
+
+(define-syntax match-letrec-two-step
+  (syntax-rules ()
+    ((_ next (rewrites ...) ids val var)
+     (match-letrec-two next (rewrites ... (var val)) ids))))
+
+;; This is where the work is done.  To rewrite all occurrences of any
+;; id with its tmp, we need to walk the expression, using CPS to
+;; restore the original structure.  We also need to be careful to pass
+;; the tmp directly to the macro doing the insertion so that it
+;; doesn't get renamed.  This trick was originally found by Al*
+;; Petrofsky in a message titled "How to write seemingly unhygienic
+;; macros using syntax-rules" sent to comp.lang.scheme in Nov 2001.
+
+(define-syntax match-rewrite
+  (syntax-rules ()
+    ((match-rewrite (p . q) ids k)
+     (match-rewrite p ids (match-rewrite2 q ids (match-cons k))))
+    ((match-rewrite () ids (k ...))
+     (k ... ()))
+    ((match-rewrite p () (k ...))
+     (k ... p))
+    ((match-rewrite p ((id tmp) . rest) (k ...))
+     (match-identifier=? p id (k ... tmp) (match-rewrite p rest (k ...))))
+    ))
+
+(define-syntax match-rewrite2
+  (syntax-rules ()
+    ((match-rewrite2 q ids (k ...) p)
+     (match-rewrite q ids (k ... p)))))
+
+(define-syntax match-cons
+  (syntax-rules ()
+    ((match-cons (k ...) p q)
+     (k ... (p . q)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Otherwise COND-EXPANDed bits.
@@ -1007,7 +1084,13 @@
      (lambda (expr rename compare)
        (if (identifier? (cadr expr))
            (car (cddr expr))
-           (cadr (cddr expr)))))))
+           (cadr (cddr expr))))))
+  (define-syntax match-identifier=?
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (compare (cadr expr) (car (cddr expr)))
+           (cadr (cddr expr))
+           (car (cddr (cddr expr))))))))
 
  (chicken
   (define-syntax match-check-ellipsis
@@ -1021,7 +1104,13 @@
      (lambda (expr rename compare)
        (if (and (symbol? (cadr expr)) (not (keyword? (cadr expr))))
            (car (cddr expr))
-           (cadr (cddr expr)))))))
+           (cadr (cddr expr))))))
+  (define-syntax match-identifier=?
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (compare (cadr expr) (car (cddr expr)))
+           (cadr (cddr expr))
+           (car (cddr (cddr expr))))))))
 
  (else
   ;; Portable versions
@@ -1070,4 +1159,15 @@
                ((sym? x sk fk) sk)
                ;; otherwise x is a non-symbol datum
                ((sym? y sk fk) fk))))
-         (sym? abracadabra success-k failure-k)))))))
+         (sym? abracadabra success-k failure-k)))))
+
+  ;; This check is inlined in some cases above, but included here for
+  ;; the convenience of match-rewrite.
+  (define-syntax match-identifier=?
+    (syntax-rules ()
+      ((match-identifier=? a b sk fk)
+       (let-syntax ((eq (syntax-rules (b)
+                          ((eq b) sk)
+                          ((eq _) fk))))
+         (eq a)))))
+  ))

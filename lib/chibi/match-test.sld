@@ -231,7 +231,7 @@
                 sum
                 (loop rest sum)))))
 
-      '(test "match-letrec" '(2 1 1 2)
+      (test "match-letrec" '(2 1 1 2)
           (match-letrec (((x y) (list 1 (lambda () (list a x))))
                          ((a b) (list 2 (lambda () (list x a)))))
                         (append (y) (b))))
