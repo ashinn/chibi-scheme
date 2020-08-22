@@ -206,7 +206,7 @@ sexp sexp_env_exports_op (sexp ctx, sexp self, sexp_sint_t n, sexp env) {
   res = SEXP_NULL;
 #if SEXP_USE_RENAME_BINDINGS
   for (ls=sexp_env_renames(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
-    sexp_push(ctx, res, sexp_cadr(ls));
+    sexp_push(ctx, res, sexp_car(ls));
 #endif
   for (ls=sexp_env_bindings(env); sexp_pairp(ls); ls=sexp_env_next_cell(ls))
     if (sexp_env_value(ls) != SEXP_UNDEF)
