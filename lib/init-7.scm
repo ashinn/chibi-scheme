@@ -1273,7 +1273,7 @@
 
 (define (load file . o)
   (let* ((env (if (pair? o) (car o) (interaction-environment)))
-         (len (string-length file))
+         (len (if (port? file) 0 (string-length file)))
          (ext *shared-object-extension*)
          (ext-len (string-length ext)))
     (cond
@@ -1284,15 +1284,16 @@
         (dynamic-wind
           (lambda () (set-current-environment! env))
           (lambda ()
-            (call-with-input-file file
-              (lambda (in)
-                (set-port-line! in 1)
-                (let lp ()
-                  (let ((x (read in)))
-                    (cond
-                     ((not (eof-object? x))
-                      (eval x env)
-                      (lp))))))))
+            (let ((in (if (port? file) file (open-input-file file))))
+              (set-port-line! in 1)
+              (let lp ((res (if #f #f)))
+                (let ((x (read in)))
+                  (cond
+                   ((eof-object? x)
+                    (if (not (port? file))
+                        (close-input-port in)))
+                   (else
+                    (lp (eval x env))))))))
           (lambda () (set-current-environment! old-env))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
