@@ -749,11 +749,15 @@ def | 6
                              (each "123\n45\n6\n")))))
 
       ;; color
-      (test "\x1B;[31mred\x1B;[0m" (show #f (as-red "red")))
-      (test "\x1B;[31mred\x1B;[34mblue\x1B;[31mred\x1B;[0m"
+      (test "\x1B;[31mred\x1B;[39m" (show #f (as-red "red")))
+      (test "\x1B;[31mred\x1B;[34mblue\x1B;[31mred\x1B;[39m"
           (show #f (as-red "red" (as-blue "blue") "red")))
-      (test "\x1b;[31m1234567\x1b;[0m col: 7"
+      (test "\x1b;[31m1234567\x1b;[39m col: 7"
             (show #f (terminal-aware (as-red "1234567") (fn (col) (each " col: " col)))))
+      (test "\x1b;[31m\x1b;[4m\x1b;[1mabc\x1b;[22mdef\x1b;[24mghi\x1b;[39m"
+            (show #f (as-red (each (as-underline (as-bold "abc") "def") "ghi"))))
+      (test "\x1b;[44m\x1b;[33mabc\x1b;[39mdef\x1b;[49m"
+            (show #f (on-blue (each (as-yellow "abc") "def"))))
 
       ;; unicode
       (test "〜日本語〜"
@@ -768,7 +772,7 @@ def | 6
           (show #f (trimmed/right 2 "日本語")))
       (test "日"
           (show #f (terminal-aware (trimmed/right 2 "日本語"))))
-      (test "\x1B;[31m日\x1B;[46m\x1B;[31m\x1B;[0m"
+      (test "\x1B;[31m日\x1B;[46m\x1B;[49m\x1B;[39m"
           (show #f (terminal-aware
                     (trimmed/right 2 (as-red "日本語" (on-cyan "!!!!"))))))
       (test "日本語"
