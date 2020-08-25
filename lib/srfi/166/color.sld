@@ -12,7 +12,4 @@
    on-magenta on-white on-black
    on-color on-true-color
    )
-  (begin
-    (define color
-      (make-state-variable 'color #f #f)))
   (include "color.scm"))

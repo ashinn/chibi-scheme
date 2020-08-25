@@ -12,6 +12,7 @@
           (scheme process-context)
           (srfi 1)
           (chibi config)
+          (chibi char-set)
           (chibi net http)
           (chibi pathname)
           (chibi process)
