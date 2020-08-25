@@ -11,6 +11,7 @@
           (scheme write)
           (scheme process-context)
           (srfi 1)
+          (chibi char-set)
           (chibi net http)
           (chibi pathname)
           (chibi string)

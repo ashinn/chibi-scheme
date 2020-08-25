@@ -57,7 +57,7 @@
 (define (version-split str)
   (if str
       (map (lambda (x) (or (string->number x) x))
-        (string-split str #\.))
+        (string-split str (string->char-set "._")))
       '()))
 
 (define (version-compare a b)
