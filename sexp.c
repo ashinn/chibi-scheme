@@ -1865,6 +1865,7 @@ sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_c
   if (sexp_filenop(res)) {
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
     sexp_fileno_openp(res) = 1;  /* not necessarily */
+    sexp_fileno_count(res) = 0;
     return res;
   }
 #endif
@@ -1873,6 +1874,7 @@ sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_c
   if (!sexp_exceptionp(res)) {
     sexp_fileno_fd(res) = sexp_unbox_fixnum(fd);
     sexp_fileno_openp(res) = 1;
+    sexp_fileno_count(res) = 0;
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
 #if SEXP_USE_WEAK_REFERENCES
     sexp_insert_fileno(ctx, res);
