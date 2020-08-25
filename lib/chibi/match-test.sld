@@ -235,6 +235,8 @@
           (match-letrec (((x y) (list 1 (lambda () (list a x))))
                          ((a b) (list 2 (lambda () (list x a)))))
                         (append (y) (b))))
+      (test "match-letrec quote" #t
+        (match-letrec (((x 'x) (list #t 'x))) x))
 
       (cond-expand
        (chibi

@@ -1047,7 +1047,9 @@
 ;; macros using syntax-rules" sent to comp.lang.scheme in Nov 2001.
 
 (define-syntax match-rewrite
-  (syntax-rules ()
+  (syntax-rules (quote)
+    ((match-rewrite (quote x) ids (k ...))
+     (k ... (quote x)))
     ((match-rewrite (p . q) ids k)
      (match-rewrite p ids (match-rewrite2 q ids (match-cons k))))
     ((match-rewrite () ids (k ...))
