@@ -401,48 +401,38 @@
         (else (push-history-value! value))))
 
 (define (repl/eval rp expr-list)
-  (let ((out (repl-out rp)))
-    (protect (exn (else (print-exception exn out)))
-      (let ((thread
-             (make-thread
-              (lambda ()
-                ;; The inner protect in the child thread catches errors
-                ;; from eval.
-                (protect (exn
-                          (else
-                           (print-exception exn out)
-                           (repl-advise-exception exn (current-error-port))))
+  (let ((thread (current-thread))
+        (out (repl-out rp)))
+    (with-signal-handler
+     signal/interrupt
+     (lambda (n) (thread-interrupt! thread))
+     (lambda ()
+       (protect (exn
+                 (else
+                  (print-exception exn out)
+                  (repl-advise-exception exn (current-error-port))))
+         (for-each
+          (lambda (expr)
+            (call-with-values
+                (lambda ()
+                  (if (or (identifier? expr)
+                          (pair? expr)
+                          (null? expr))
+                      (eval expr (repl-env rp))
+                      expr))
+              (lambda res-list
+                (cond
+                 ((not (or (null? res-list)
+                           (equal? res-list (list (if #f #f)))))
+                  (push-history-value-maybe! res-list)
+                  (write/ss (car res-list) out)
                   (for-each
-                   (lambda (expr)
-                     (call-with-values
-                         (lambda ()
-                           (if (or (identifier? expr)
-                                   (pair? expr)
-                                   (null? expr))
-                               (eval expr (repl-env rp))
-                               expr))
-                       (lambda res-list
-                         (cond
-                          ((not (or (null? res-list)
-                                    (equal? res-list (list (if #f #f)))))
-                           (push-history-value-maybe! res-list)
-                           (write/ss (car res-list) out)
-                           (for-each
-                            (lambda (res)
-                              (write-char #\space out)
-                              (write/ss res out))
-                            (cdr res-list))
-                           (newline out))))))
-                   expr-list))))))
-        ;; If an interrupt occurs while the child thread is
-        ;; still running, terminate it, otherwise wait for it
-        ;; to complete.
-        (with-signal-handler
-         signal/interrupt
-         (lambda (n)
-           (display "\nInterrupt\n" out)
-           (thread-terminate! thread))
-         (lambda () (thread-join! (thread-start! thread))))))))
+                   (lambda (res)
+                     (write-char #\space out)
+                     (write/ss res out))
+                   (cdr res-list))
+                  (newline out))))))
+          expr-list))))))
 
 (define (repl/eval-string rp str)
   (repl/eval

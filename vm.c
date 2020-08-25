@@ -1031,6 +1031,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
  loop:
 #if SEXP_USE_GREEN_THREADS
   if (--fuel <= 0) {
+    if (sexp_context_interruptp(ctx)) {
+      fuel = sexp_context_refuel(ctx);
+      sexp_context_interruptp(ctx) = 0;
+      _ARG1 = sexp_global(ctx, SEXP_G_INTERRUPT_ERROR);
+      goto call_error_handler;
+    }
     tmp1 = sexp_global(ctx, SEXP_G_THREADS_SCHEDULER);
     if (sexp_applicablep(tmp1) && sexp_not(sexp_global(ctx, SEXP_G_ATOMIC_P))) {
       /* save thread */

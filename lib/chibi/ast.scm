@@ -408,3 +408,7 @@
  (else
   (define-syntax atomically
     (syntax-rules () ((atomically . body) (begin . body))))))
+
+(define (thread-interrupt! thread)
+  (if (%thread-interrupt! thread)
+      (yield!)))
