@@ -11,8 +11,10 @@
           (scheme write)
           (scheme process-context)
           (srfi 1)
+          (chibi config)
           (chibi net http)
           (chibi pathname)
+          (chibi process)
           (chibi string)
           (chibi uri))
   (cond-expand

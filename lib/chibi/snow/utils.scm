@@ -25,10 +25,12 @@
     (lambda (out)
       (if (bytevector? x) (write-bytevector x out) (display x out)))))
 
-(define (resource->bytevector uri)
+(define (resource->bytevector cfg uri)
   (let ((uri (if (uri? uri) uri (string->path-uri 'http uri))))
     (if (uri-host uri)
-        (call-with-input-url uri port->bytevector)
+        (if (conf-get cfg 'use-curl?)
+            (process->bytevector `(curl --silent ,(uri->string uri)))
+            (call-with-input-url uri port->bytevector))
         (file->bytevector (uri-path uri)))))
 
 ;; path-normalize either a uri or path, and return the result as a string

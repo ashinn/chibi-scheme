@@ -1168,7 +1168,7 @@
          (local-tmp (string-append local-path ".tmp."
                                    (number->string (current-second)) "-"
                                    (number->string (current-process-id))))
-         (repo-str (utf8->string (resource->bytevector repo-uri)))
+         (repo-str (utf8->string (resource->bytevector cfg repo-uri)))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
@@ -2128,7 +2128,7 @@
     (install-file cfg (make-path dir src) dest)))
 
 (define (fetch-package cfg url)
-  (resource->bytevector url))
+  (resource->bytevector cfg url))
 
 (define (path-strip-top file)
   (let ((pos (string-find file #\/)))
