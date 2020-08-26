@@ -581,7 +581,7 @@
                          fk i)))
            (else
             fk)))))
-    ((_ v p r g+s (sk ...) fk i ((id id-ls) ...))
+    ((_ v p r g+s sk fk (i ...) ((id id-ls) ...))
      ;; general case, trailing patterns to match, keep track of the
      ;; remaining list length so we don't need any backtracking
      (match-verify-no-ellipsis
@@ -595,14 +595,14 @@
               (cond
                 ((= n tail-len)
                  (let ((id (reverse id-ls)) ...)
-                   (match-one ls r (#f #f) (sk ...) fk i)))
+                   (match-one ls r (#f #f) sk fk (i ... id ...))))
                 ((pair? ls)
                  (let ((w (car ls)))
                    (match-one w p ((car ls) (set-car! ls))
                               (match-drop-ids
                                (loop (cdr ls) (- n 1) (cons id id-ls) ...))
                               fk
-                              i)))
+                              (i ...))))
                 (else
                  fk)))))))))
 
@@ -610,7 +610,7 @@
 
 (define-syntax match-gen-ellipsis/qq
   (syntax-rules ()
-    ((_ v p r g+s (sk ...) fk i ((id id-ls) ...))
+    ((_ v p r g+s (sk ...) fk (i ...) ((id id-ls) ...))
      (match-verify-no-ellipsis
       r
       (let* ((tail-len (length 'r))
@@ -622,14 +622,14 @@
               (cond
                ((= n tail-len)
                 (let ((id (reverse id-ls)) ...)
-                  (match-quasiquote ls r g+s (sk ...) fk i)))
+                  (match-quasiquote ls r g+s (sk ...) fk (i ... id ...))))
                ((pair? ls)
                 (let ((w (car ls)))
                   (match-one w p ((car ls) (set-car! ls))
                              (match-drop-ids
                               (loop (cdr ls) (- n 1) (cons id id-ls) ...))
                              fk
-                             i)))
+                             (i ...))))
                (else
                 fk)))))))))
 
@@ -639,7 +639,7 @@
 
 (define-syntax match-gen-ellipsis/range
   (syntax-rules ()
-    ((_ %lo %hi v p r g+s (sk ...) fk i ((id id-ls) ...))
+    ((_ %lo %hi v p r g+s (sk ...) fk (i ...) ((id id-ls) ...))
      ;; general case, trailing patterns to match, keep track of the
      ;; remaining list length so we don't need any backtracking
      (match-verify-no-ellipsis
@@ -654,14 +654,14 @@
               (cond
                 ((= j len)
                  (let ((id (reverse id-ls)) ...)
-                   (match-one ls r (#f #f) (sk ...) fk i)))
+                   (match-one ls r (#f #f) (sk ...) fk (i ... id ...))))
                 ((pair? ls)
                  (let ((w (car ls)))
                    (match-one w p ((car ls) (set-car! ls))
                               (match-drop-ids
                                (loop (cdr ls) (+ j 1) (cons id id-ls) ...))
                               fk
-                              i)))
+                              (i ...))))
                 (else
                  fk)))
             fk))))))

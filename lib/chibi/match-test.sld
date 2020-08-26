@@ -39,6 +39,8 @@
       (test "duplicate symbols pass" 'ok (match '(ok . ok) ((x . x) x)))
       (test "duplicate symbols fail" 'ok
         (match '(ok . bad) ((x . x) 'bad) (else 'ok)))
+      (test "duplicate symbols fail 2" 'ok
+        (match '(ok bad) ((x x) 'bad) (else 'ok)))
       (test "duplicate symbols samth" 'ok
         (match '(ok . ok) ((x . 'bad) x) (('ok . x) x)))
       (test "duplicate symbols bound" 3
@@ -105,6 +107,9 @@
       (test "single tail 2" '((a b) (1 2) 3)
         (match '((a . 1) (b . 2) 3)
           (((x . y) ... last) (list x y last))))
+
+      (test "single duplicate tail" #f
+        (match '(1 2) ((foo ... foo) foo) (_ #f)))
 
       (test "multiple tail" '((a b) (1 2) (c . 3) (d . 4) (e . 5))
         (match '((a . 1) (b . 2) (c . 3) (d . 4) (e . 5))
