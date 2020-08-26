@@ -443,8 +443,10 @@
     #t)
   (cond
    ((symbol? test)
-    (or (eq? 'else test) (eq? impl test)
-        (memq test (conf-get-list config 'features))))
+    (or (eq? test 'else)
+        (eq? test impl)
+        (memq test (conf-get-list config 'features))
+        (memq test (impl->features impl))))
    ((pair? test)
     (case (car test)
       ((not) (not (check-cond-expand impl config (cadr test))))
