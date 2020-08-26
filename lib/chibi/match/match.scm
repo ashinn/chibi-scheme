@@ -531,7 +531,8 @@
 (define-syntax match-gen-or
   (syntax-rules ()
     ((_ v p g+s (sk ...) fk (i ...) ((id id-ls) ...))
-     (let ((sk2 (lambda (id ...) (sk ... (i ... id ...)))))
+     (let ((sk2 (lambda (id ...) (sk ... (i ... id ...))))
+           (id (if #f #f)) ...)
        (match-gen-or-step v p g+s (match-drop-ids (sk2 id ...)) fk (i ...))))))
 
 (define-syntax match-gen-or-step

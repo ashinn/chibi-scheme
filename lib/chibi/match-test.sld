@@ -31,6 +31,7 @@
       (test "or empty" 'ok (match '(o k) ((or) 'fail) (else 'ok)))
       (test "or single" 'ok (match 'ok ((or x) 'ok)))
       (test "or double" 'ok (match 'ok ((or (? symbol? y) y) y)))
+      (test "or unbalanced" 1  (match 1 ((or (and 1 x) (and 2 y)) x)))
       (test "not" 'ok (match 28 ((not (a . b)) 'ok)))
       (test "pred" 'ok (match 28 ((? number?) 'ok)))
       (test "named pred" 29 (match 28 ((? number? x) (+ x 1))))
