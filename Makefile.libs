@@ -27,16 +27,28 @@ FIND      ?= find
 SYMLINK   ?= ln -s
 LDCONFIG  ?= ldconfig
 
-PREFIX    ?= /usr/local
-BINDIR    ?= $(PREFIX)/bin
-LIBDIR    ?= $(PREFIX)/lib
-SOLIBDIR  ?= $(LIBDIR)
-INCDIR    ?= $(PREFIX)/include/chibi
-MODDIR    ?= $(PREFIX)/share/chibi
-BINMODDIR ?= $(SOLIBDIR)/chibi
-PKGCONFDIR ?= $(SOLIBDIR)/pkgconfig
-MANDIR    ?= $(PREFIX)/share/man/man1
+# gnu coding standards
+prefix      ?= /usr/local
+exec_prefix ?= $(prefix)
+bindir      ?= $(exec_prefix)/bin
+libdir      ?= $(exec_prefix)/lib
+includedir  ?= $(prefix)/include
+datarootdir ?= $(prefix)/share
+datadir     ?= $(datarootdir)
+mandir      ?= $(datarootdir)/man
+man1dir     ?= $(mandir)/man1
 
+# hysterical raisins
+BINDIR      ?= $(bindir)
+LIBDIR      ?= $(libdir)
+SOLIBDIR    ?= $(libdir)
+INCDIR      ?= $(includedir)/chibi
+MODDIR      ?= $(datadir)/chibi
+BINMODDIR   ?= $(SOLIBDIR)/chibi
+PKGCONFDIR  ?= $(SOLIBDIR)/pkgconfig
+MANDIR      ?= $(man1dir)
+
+# allow snow to be configured separately
 SNOWPREFIX    ?= /usr/local
 SNOWLIBDIR    ?= $(SNOWPREFIX)/lib
 SNOWSOLIBDIR  ?= $(SNOWLIBDIR)
