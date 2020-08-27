@@ -1058,7 +1058,7 @@
     ((match-rewrite p () (k ...))
      (k ... p))
     ((match-rewrite p ((id tmp) . rest) (k ...))
-     (match-identifier=? p id (k ... tmp) (match-rewrite p rest (k ...))))
+     (match-bound-identifier=? p id (k ... tmp) (match-rewrite p rest (k ...))))
     ))
 
 (define-syntax match-rewrite2
@@ -1088,10 +1088,10 @@
        (if (identifier? (cadr expr))
            (car (cddr expr))
            (cadr (cddr expr))))))
-  (define-syntax match-identifier=?
+  (define-syntax match-bound-identifier=?
     (er-macro-transformer
      (lambda (expr rename compare)
-       (if (compare (cadr expr) (car (cddr expr)))
+       (if (eq? (cadr expr) (car (cddr expr)))
            (cadr (cddr expr))
            (car (cddr (cddr expr))))))))
 
@@ -1108,10 +1108,10 @@
        (if (and (symbol? (cadr expr)) (not (keyword? (cadr expr))))
            (car (cddr expr))
            (cadr (cddr expr))))))
-  (define-syntax match-identifier=?
+  (define-syntax match-bound-identifier=?
     (er-macro-transformer
      (lambda (expr rename compare)
-       (if (compare (cadr expr) (car (cddr expr)))
+       (if (eq? (cadr expr) (car (cddr expr)))
            (cadr (cddr expr))
            (car (cddr (cddr expr))))))))
 
@@ -1166,11 +1166,12 @@
 
   ;; This check is inlined in some cases above, but included here for
   ;; the convenience of match-rewrite.
-  (define-syntax match-identifier=?
+  (define-syntax match-bound-identifier=?
     (syntax-rules ()
-      ((match-identifier=? a b sk fk)
-       (let-syntax ((eq (syntax-rules (b)
-                          ((eq b) sk)
-                          ((eq _) fk))))
-         (eq a)))))
+      ((match-bound-identifier=? a b sk fk)
+       (let-syntax ((b (syntax-rules ())))
+         (let-syntax ((eq (syntax-rules (b)
+                            ((eq b) sk)
+                            ((eq _) fk))))
+           (eq a))))))
   ))

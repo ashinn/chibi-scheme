@@ -243,6 +243,14 @@
                         (append (y) (b))))
       (test "match-letrec quote" #t
         (match-letrec (((x 'x) (list #t 'x))) x))
+      (let-syntax
+        ((foo
+          (syntax-rules ()
+            ((foo x)
+             (match-letrec (((x y) (list 1 (lambda () (list a x))))
+                            ((a b) (list 2 (lambda () (list x a)))))
+                           (append (y) (b)))))))
+        (test "match-letrec mnieper" '(2 1 1 2) (foo a)))
 
       (cond-expand
        (chibi
