@@ -1906,8 +1906,10 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
   /* here to avoid gc timing issues */
   if (in && fileno(in) >= 0) {
     sexp_port_fd(p) = sexp_lookup_fileno(ctx, fileno(in));
-    if (sexp_filenop(sexp_port_fd(p)))
+    if (sexp_filenop(sexp_port_fd(p))) {
       sexp_fileno_openp(sexp_port_fd(p)) = 1;
+      ++sexp_fileno_count(sexp_port_fd(p));
+    }
   }
 #endif
   sexp_port_cookie(p) = SEXP_VOID;
