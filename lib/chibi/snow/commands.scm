@@ -3,31 +3,10 @@
 ;; This code was written by Alex Shinn in 2014 and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
-(define known-implementations
-  '((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3")
-    (chicken "chicken" (csi -release) "4.9.0")
-    (cyclone "cyclone" (icyc -vn) "0.5.3")
-    (foment "foment")
-    (gauche "gosh" (gosh -E "print (gauche-version)" -E exit) "0.9.4")
-    (kawa "kawa" (kawa --version) "2.0")
-    (larceny "larceny" (larceny --version) "v0.98")
-    (sagittarius "sagittarius")))
-
-(define (impl->version impl cmd)
-  (let* ((lines (process->string-list cmd))
-         (line (and (pair? lines) (string-split (car lines)))))
-    (and (pair? line)
-         (if (and (pair? (cdr line))
-                  (let ((x (string-downcase (car line)))
-                        (name (symbol->string impl)))
-                    (or (equal? x name)
-                        (equal? x (string-append name "-scheme")))))
-             (cadr line)
-             (car line)))))
-
 (define (impl-available? cfg spec confirm?)
   (if (find-in-path (cadr spec))
       (or (null? (cddr spec))
+          (not (third spec))
           (conf-get cfg 'skip-version-checks?)
           (let ((version (impl->version (car spec) (third spec))))
             (or (and version (version>=? version (fourth spec)))
