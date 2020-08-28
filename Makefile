@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: dist mips-dist cleaner test test-all test-dist checkdefs debian snowballs init-dev
+.PHONY: dist mips-dist cleaner distclean dist-clean test test-all test-dist checkdefs debian snowballs init-dev
 .DEFAULT_GOAL := all
 
 CHIBI_VERSION ?= $(shell cat VERSION)
@@ -82,11 +82,11 @@ chibi-scheme-static.bc:
 	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI=./chibi-scheme-emscripten PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.bc SO=.bc CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1 -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0" clibs.c chibi-scheme-static.bc
 
 chibi-scheme-emscripten: VERSION
-	$(MAKE) dist-clean
+	$(MAKE) distclean
 	$(MAKE) chibi-scheme-static PLATFORM=emscripten SEXP_USE_DL=0
 	(tempfile="`mktemp -t chibi.XXXXXX`" && \
 	mv chibi-scheme-static$(EXE) "$$tempfile" && \
-	$(MAKE) dist-clean; \
+	$(MAKE) distclean; \
 	mv "$$tempfile" chibi-scheme-emscripten)
 
 include/chibi/install.h: Makefile
@@ -290,7 +290,8 @@ cleaner: clean
 	    js/chibi.* \
 	    $(shell $(FIND) lib -name \*.o)
 
-dist-clean: dist-clean-libs cleaner
+distclean: dist-clean-libs cleaner
+dist-clean: distclean
 
 install-base: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
@@ -466,14 +467,14 @@ uninstall:
 	-$(RM) $(DESTDIR)$(MANDIR)/chibi-scheme.1 $(DESTDIR)$(MANDIR)/chibi-ffi.1 $(DESTDIR)$(MANDIR)/chibi-doc.1
 	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
 
-dist: dist-clean
+dist: distclean
 	$(RM) chibi-scheme-$(CHIBI_VERSION).tgz
 	$(MKDIR) chibi-scheme-$(CHIBI_VERSION)
 	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-$(CHIBI_VERSION)/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-$(CHIBI_VERSION)/$$f; done
 	$(TAR) cphzvf chibi-scheme-$(CHIBI_VERSION).tgz chibi-scheme-$(CHIBI_VERSION)
 	$(RM) -r chibi-scheme-$(CHIBI_VERSION)
 
-mips-dist: dist-clean
+mips-dist: distclean
 	$(RM) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`.tgz
 	$(MKDIR) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`
 	@for f in `git ls-files | grep -v ^benchmarks/`; do $(MKDIR) chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`/`dirname $$f`; $(SYMLINK) `pwd`/$$f chibi-scheme-`date +%Y%m%d`-`git log HEAD^..HEAD | head -1 | cut -c8-`/$$f; done
