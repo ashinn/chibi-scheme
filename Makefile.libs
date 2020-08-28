@@ -29,11 +29,12 @@ LDCONFIG  ?= ldconfig
 
 # gnu coding standards
 prefix      ?= /usr/local
-exec_prefix ?= $(prefix)
+PREFIX      ?= $(prefix)
+exec_prefix ?= $(PREFIX)
 bindir      ?= $(exec_prefix)/bin
 libdir      ?= $(exec_prefix)/lib
-includedir  ?= $(prefix)/include
-datarootdir ?= $(prefix)/share
+includedir  ?= $(PREFIX)/include
+datarootdir ?= $(PREFIX)/share
 datadir     ?= $(datarootdir)
 mandir      ?= $(datarootdir)/man
 man1dir     ?= $(mandir)/man1
@@ -55,7 +56,8 @@ SNOWSOLIBDIR  ?= $(SNOWLIBDIR)
 SNOWMODDIR    ?= $(SNOWPREFIX)/share/snow
 SNOWBINMODDIR ?= $(SNOWSOLIBDIR)/snow
 
-DESTDIR   ?=
+# for packaging tools
+DESTDIR       ?=
 
 ########################################################################
 # System configuration - if not using GNU make, set PLATFORM and the
