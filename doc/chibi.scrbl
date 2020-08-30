@@ -1343,6 +1343,8 @@ namespace.
 
 \item{\hyperlink["lib/chibi/net/servlet.html"]{(chibi net servlet) - HTTP servlets for http-server or CGI}}
 
+\item{\hyperlink["lib/chibi/optional.html"]{(chibi optional) - Syntax to support optional and named keyword arguments}}
+
 \item{\hyperlink["lib/chibi/parse.html"]{(chibi parse) - Parser combinators with convenient syntax}}
 
 \item{\hyperlink["lib/chibi/pathname.html"]{(chibi pathname) - Utilities to decompose and manipulate pathnames}}
