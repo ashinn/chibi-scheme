@@ -34,7 +34,7 @@
         (show-trace-result cell args res)
         res))))
 
-;;> Write a trace of all calls to the procedure \var{proc} to
+;;> Write a trace of all calls to the procedure \var{id} to
 ;;> \scheme{(current-error-port)}.
 
 (define-syntax trace
@@ -42,7 +42,7 @@
     ((trace id)
      (trace-cell (env-cell (interaction-environment) 'id)))))
 
-;;> Remove any active traces on the procedure \var{proc}.
+;;> Remove any active traces on the procedure \var{id}.
 
 (define-syntax untrace
   (syntax-rules ()
