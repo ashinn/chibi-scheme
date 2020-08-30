@@ -1272,7 +1272,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-160/srfi-160.html"]{(srfi 160) - homogeneous numeric vector libraries}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-165/srfi-165.html"]{(srfi 165) - the environment Monad}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-166/srfi-166.html"]{(srfi 166) - monadic formatting}}
-\item{\hyperlink["http://srfi.schemers.org/srfi-166/srfi-188.html"]{(srfi 188) - splicing binding constructs for syntactic keywords}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-188/srfi-188.html"]{(srfi 188) - splicing binding constructs for syntactic keywords}}
 
 ]
 
@@ -1342,6 +1342,8 @@ namespace.
 \item{\hyperlink["lib/chibi/net/http-server.html"]{(chibi net http-server) - Simple http-server with servlet support}}
 
 \item{\hyperlink["lib/chibi/net/servlet.html"]{(chibi net servlet) - HTTP servlets for http-server or CGI}}
+
+\item{\hyperlink["lib/chibi/optional.html"]{(chibi optional) - Syntax to support optional and named keyword arguments}}
 
 \item{\hyperlink["lib/chibi/parse.html"]{(chibi parse) - Parser combinators with convenient syntax}}
 
