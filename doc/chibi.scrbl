@@ -1396,7 +1396,9 @@ with image files on your platform you can run
 
 By default \scheme{snow-chibi} looks for packages in the public
 repository \hyperlink["http://snow-fort.org/"]{http://snow-fort.org/},
-though you can customize this with the \scheme{--repository-uri} option.
+though you can customize this with the \scheme{--repository-uri} or
+\scheme{--repo} option (e.g. "http://snow-fort.org/s/repo.scm").
+
 Packages can be browsed on the site, but you can also search and query
 from the command-line tool.
 
@@ -1428,6 +1430,11 @@ older version, a warning is printed.}}
 The basic package management functionality, installing upgrading and
 removing packages.
 
+By default the packages will be managed for Chibi. You can specify
+what Scheme implementation to install, upgrade... with
+\scheme{--implementations} or \scheme{--impls} option. Specify "all"
+to manage all supported implementations.
+
 \itemlist[
 
 \item{install names ... - install packages
@@ -1436,8 +1443,10 @@ use the dotted shorthand.  Explicit names for packages are optional,
 as a package can always be referred to by the name of any library it
 contains.  If multiple packages provide libraries with the same name,
 you will be asked to confirm which implementation to install.}
+
 \p{You can also bypass the repository and install a manually downloaded
-snowball by giving a path to that file instead of a name.}}
+snowball by giving a path to that file instead of a name. No package
+dependencies will be checked for install in this case}}
 
 \item{upgrade names ... - upgrade installed packages
 \p{Upgrade the packages if new versions are available.
@@ -1458,6 +1467,10 @@ update with this command.}}
 
 Creating packages can be done with the \scheme{package} command,
 though other commands allow for uploading to public repositories.
+
+By default the public repository is
+\hyperlink["http://snow-fort.org/"]{http://snow-fort.org/} but you can
+customize this with the \scheme{--host} option.
 
 \itemlist[
 
@@ -1558,8 +1571,10 @@ are currently supported:
 \itemlist[
 \item{chibi - native support as of version 0.7.3}
 \item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
+\item{cyclone - version >= 0.5.3}
 \item{foment - version >= 0.4}
 \item{gauche - version >= 0.9.4}
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
+\item{sagittarius - version >= 0.98}
 ]
