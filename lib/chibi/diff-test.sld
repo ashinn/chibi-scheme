@@ -2,6 +2,12 @@
 (define-library (chibi diff-test)
   (import (scheme base) (chibi diff) (chibi test))
   (export run-tests)
+  (cond-expand
+   (chibi (import (chibi test)))
+   (else
+    ;; avoid cyclic test deps in snow
+    (import (srfi 64))
+    (begin (define test test-equal))))
   (begin
     (define (run-tests)
       (test-begin "diff")

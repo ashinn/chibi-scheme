@@ -1,6 +1,12 @@
 
 (define-library (chibi optional-test)
   (import (scheme base) (chibi optional) (chibi test))
+  (cond-expand
+   (chibi (import (chibi test)))
+   (else
+    ;; avoid cyclic test deps in snow
+    (import (srfi 64))
+    (begin (define test test-equal))))
   (export run-tests)
   (begin
     (define (run-tests)
