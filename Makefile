@@ -50,8 +50,9 @@ MODULE_DOCS := app ast base64 bytevector config crypto/md5 crypto/rsa \
 	crypto/sha2 diff disasm doc edit-distance equiv filesystem generic \
 	heap-stats io iset/base iset/constructors iset/iterators json loop \
 	match math/prime memoize mime modules net net/http-server net/servlet \
-	parse pathname process repl scribble string stty sxml system temp-file \
-	test time trace type-inference uri weak monad/environment crypto/sha2
+	optional parse pathname process repl scribble string stty sxml system \
+	temp-file test time trace type-inference uri weak monad/environment \
+	crypto/sha2
 
 IMAGE_FILES = lib/chibi.img lib/red.img lib/snow.img
 
