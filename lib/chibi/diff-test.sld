@@ -1,10 +1,11 @@
 
 (define-library (chibi diff-test)
-  (import (scheme base) (chibi diff) (chibi test))
+  (import (scheme base) (chibi diff))
   (export run-tests)
   (cond-expand
    (chibi (import (chibi test)))
    (else
+    (import (scheme write))
     ;; inline (chibi test) to avoid circular dependencies in snow
     ;; installations
     (begin

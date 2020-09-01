@@ -1,9 +1,10 @@
 
 (define-library (chibi optional-test)
-  (import (scheme base) (chibi optional) (chibi test))
+  (import (scheme base) (chibi optional))
   (cond-expand
    (chibi (import (chibi test)))
    (else
+    (import (scheme write))
     ;; inline (chibi test) to avoid circular dependencies in snow
     ;; installations
     (begin
@@ -52,13 +53,18 @@
       (test '(0 1 (2 3 4))
           (let-optionals '(0 1 2 3 4) ((a 10) (b 11) . c)
             (list a b c)))
-      (test-error '(0 11 12)
-          ((opt-lambda (a (b 11) (c 12))
-             (list a b c))))
+      (cond-expand
+       (gauche)     ; gauche detects this at compile-time, can't catch
+       (else (test-error '(0 11 12)
+                         ((opt-lambda (a (b 11) (c 12))
+                            (list a b c))))))
       (let ()
         (define-opt (f a (b 11) (c 12))
           (list a b c))
-        (test-error (f))
+        (cond-expand
+         (gauche)
+         (else
+          (test-error (f))))
         (test '(0 11 12) (f 0))
         (test '(0 1 12) (f 0 1))
         (test '(0 1 2) (f 0 1 2))
