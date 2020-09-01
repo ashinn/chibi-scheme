@@ -488,15 +488,18 @@
                "\n"
                (style (@ (type . "text/css"))
                  "
-body {color: #000; background-color: #FFF}
+body {color: #000; background-color: #FFFFF8;}
 div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 250px; height: 100%}
 div#menu a:link {text-decoration: none}
-div#main  {font-size: large; position: absolute; top: 0; left: 260px; width: 590px; height: 100%}
-div#notes {position: relative; top: 2em; left: 620px; max-width: 200px; height: 0px; font-size: smaller;}
+div#main  {font-size: large; position: absolute; top: 0; left: 260px; max-width: 590px; height: 100%}
+div#notes {position: relative; top: 2em; left: 620px; width: 200px; height: 0px; font-size: smaller;}
 div#footer {padding-bottom: 50px}
 div#menu ol {list-style-position:inside; padding-left: 5px; margin-left: 5px}
 div#menu ol ol {list-style: lower-alpha; padding-left: 15px; margin-left: 15px}
 div#menu ol ol ol {list-style: decimal; padding-left: 5px; margin-left: 5px}
+h2 { color: #888888; border-top: 3px solid #4588ba; }
+h3 { color: #666666; border-top: 2px solid #4588ba; }
+h4 { color: #222288; border-top: 1px solid #4588ba; }
 .result { color: #000; background-color: #FFEADF; width: 100%; padding: 3px}
 .output { color: #000; background-color: beige; width: 100%; padding: 3px}
 .error { color: #000; background-color: #F0B0B0; width: 100%; padding: 3px}
