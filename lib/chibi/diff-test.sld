@@ -5,9 +5,25 @@
   (cond-expand
    (chibi (import (chibi test)))
    (else
-    ;; avoid cyclic test deps in snow
-    (import (srfi 64))
-    (begin (define test test-equal))))
+    ;; inline (chibi test) to avoid circular dependencies in snow
+    ;; installations
+    (define-syntax test
+      (syntax-rules ()
+        ((test expect expr)
+         (test 'expr expect expr))
+        ((test name expect expr)
+         (guard (exn (else (display "!\nERROR: ") (write name) (newline)
+                           (write exn) (newline)))
+           (let* ((res expr)
+                  (pass? (equal? expect expr)))
+             (display (if pass? "." "x"))
+             (cond
+              ((not pass?)
+               (display "\nFAIL: ") (write name) (newline))))))))
+    (define (test-begin name)
+      (display name))
+    (define (test-end)
+      (newline))))
   (begin
     (define (run-tests)
       (test-begin "diff")
