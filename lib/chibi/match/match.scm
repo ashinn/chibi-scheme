@@ -273,7 +273,7 @@
 
 (define-syntax match-syntax-error
   (syntax-rules ()
-    ((_) (match-syntax-error "invalid match-syntax-error usage"))))
+    ((_) (syntax-error "invalid match-syntax-error usage"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
