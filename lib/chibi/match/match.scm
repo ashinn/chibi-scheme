@@ -385,7 +385,7 @@
     ((match-two v (or p ...) g+s sk fk i)
      (match-extract-vars (or p ...) (match-gen-or v (p ...) g+s sk fk i) i ()))
     ((match-two v (not p) g+s (sk ...) fk i)
-     (let ((fk2 (lambda () (sk ...))))
+     (let ((fk2 (lambda () (sk ... i))))
        (match-one v p g+s (match-drop-ids fk) (fk2) i)))
     ((match-two v (get! getter) (g s) (sk ...) fk i)
      (let ((getter (lambda () g))) (sk ... i)))

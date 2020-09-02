@@ -34,6 +34,7 @@
       (test "or unbalanced" 1  (match 1 ((or (and 1 x) (and 2 y)) x)))
       (test "not" 'ok (match 28 ((not (a . b)) 'ok)))
       (test "not fail" 'bad (match 28 ((not a) 'ok) (else 'bad)))
+      (test "not and" #t (match 1 ((and (not 2)) #t)))
       (test "pred" 'ok (match 28 ((? number?) 'ok)))
       (test "named pred" 29 (match 28 ((? number? x) (+ x 1))))
 
