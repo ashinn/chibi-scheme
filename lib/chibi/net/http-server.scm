@@ -40,16 +40,28 @@
         (cond
          ((= 2 (length ls))
           (let ((request
-                 (make-request command (car ls) (cadr ls) in out sock addr)))
-            (log-info `(request: ,command ,(car ls) ,(cadr ls)
-                                 ,(request-headers request)))
-            (protect (exn
+                 (protect
+                     (exn
                       (else
-                       (log-error "internal error: " exn)
-                       (print-stack-trace exn)
-                       (servlet-respond request 500 "Internal server error")))
-              (let restart ((request request))
-                (servlet cfg request servlet-bad-request restart)))))
+                       ;; error parsing headers, can't use servlet-respond
+                       (log-error "request error: " exn ls
+                                  (sockaddr-name (address-info-address addr)))
+                       (servlet-write-status out 500 "Internal server error")
+                       (mime-write-headers `((Status . "500")) out)
+                       (display "\r\n" out)
+                       #f))
+                   (make-request command (car ls) (cadr ls) in out sock addr))))
+            (cond
+             (request
+              (log-info `(request: ,command ,(car ls) ,(cadr ls)
+                                   ,(request-headers request)))
+              (protect (exn
+                        (else
+                         (log-error "internal error: " exn)
+                         (print-stack-trace exn)
+                         (servlet-respond request 500 "Internal server error")))
+                (let restart ((request request))
+                  (servlet cfg request servlet-bad-request restart)))))))
          (else
           (let ((request (make-request command #f #f in out sock addr)))
             (servlet-respond request 400 "bad request")))))))))

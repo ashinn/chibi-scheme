@@ -17,7 +17,7 @@
    request-uri-string request-with-uri request-path
    copy-request make-request make-cgi-request
    ;; servlets
-   servlet-write servlet-respond servlet-parse-body!
+   servlet-write servlet-write-status servlet-respond servlet-parse-body!
    make-status-servlet servlet-handler servlet-run
    servlet-bad-request)
   (import
