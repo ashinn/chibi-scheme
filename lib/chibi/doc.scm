@@ -483,11 +483,13 @@
           (lp (cdr ls) (caar ls) (cadr (car ls)) '() (collect)))))))
 
 (define (fix-header x)
-  `(html (head ,@(cond ((assq 'title x) => (lambda (x) (list x)))
-                       (else '()))
-               "\n"
-               (style (@ (type . "text/css"))
-                 "
+  `((!DOCTYPE html)
+    (html (head ,@(cond ((assq 'title x) => (lambda (x) (list x)))
+                        (else '()))
+                "\n"
+                (meta (@ (charset . "UTF-8")))
+                (style (@ (type . "text/css"))
+                  "
 body {color: #000; background-color: #FFFFF8;}
 div#menu  {font-size: smaller; position: absolute; top: 50px; left: 0; width: 250px; height: 100%}
 div#menu a:link {text-decoration: none}
@@ -505,23 +507,23 @@ h4 { color: #222288; border-top: 1px solid #4588ba; }
 .error { color: #000; background-color: #F0B0B0; width: 100%; padding: 3px}
 .command { color: #000; background-color: #FFEADF; width: 100%; padding: 5px}
 "
-                 ,(highlight-style))
-               "\n")
-         (body
-          (div (@ (id . "menu"))
-               ,(let ((contents (get-contents (extract-contents x))))
-                  (match contents
-                    ;; flatten if we have only a single heading
-                    (('ol (li y sections ...))
-                     sections)
-                    (else contents))))
-          (div (@ (id . "main"))
-               ,@(map (lambda (x)
-                        (if (and (pair? x) (eq? 'title (car x)))
-                            (cons 'h1 (cdr x))
-                            x))
-                      x)
-               (div (@ (id . "footer")))))))
+                  ,(highlight-style))
+                "\n")
+          (body
+           (div (@ (id . "menu"))
+                ,(let ((contents (get-contents (extract-contents x))))
+                   (match contents
+                     ;; flatten if we have only a single heading
+                     (('ol (li y sections ...))
+                      sections)
+                     (else contents))))
+           (div (@ (id . "main"))
+                ,@(map (lambda (x)
+                         (if (and (pair? x) (eq? 'title (car x)))
+                             (cons 'h1 (cdr x))
+                             x))
+                       x)
+                (div (@ (id . "footer"))))))))
 
 (define (fix-paragraphs x)
   (let lp ((ls x) (p '()) (res '()))

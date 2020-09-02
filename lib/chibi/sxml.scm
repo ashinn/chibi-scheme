@@ -52,6 +52,9 @@
         (apply string-append (reverse (cons ">" res)))
         (lp (cdr ls) (cons (html-attr->string (car ls)) (cons " " res))))))
 
+(define void-elements
+  '(area base br col embed hr img input keygen link meta param source track wbr))
+
 (define (html-display-escaped-string x . o)
   (let* ((str (display-to-string x))
          (start 0)
@@ -81,27 +84,39 @@
 ;;> \var{@raw} tag is considered safe text and not processed or escaped.
 (define (sxml-display-as-html sxml . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
-    (let lp ((sxml sxml))
+    (let lp ((sxml (if (and (pair? sxml) (eq? '*TOP* (car sxml)))
+                       (cdr sxml)
+                       sxml)))
       (cond
        ((pair? sxml)
-        (let ((tag (car sxml)))
-          (if (symbol? tag)
-              (let ((rest (cdr sxml)))
-                (cond
-                 ((and (pair? rest)
-                       (pair? (car rest))
-                       (eq? '@ (caar rest)))
-                  (display (html-tag->string tag (cdar rest)) out)
-                  (for-each lp (cdr rest))
-                  (display "</" out) (display tag out) (display ">" out))
-                 ((and (eq? '@raw tag)
-                       (string? (car rest)))
-                  (display (car rest) out))
-                 (else
-                  (display (html-tag->string tag '()) out)
-                  (for-each lp rest)
-                  (display "</" out) (display tag out) (display ">" out))))
-              (for-each lp sxml))))
+        (let ((tag (car sxml))
+              (rest (cdr sxml)))
+          (cond
+           ((symbol? tag)
+            (cond
+             ((eqv? #\! (string-ref (symbol->string tag) 0))
+              (display "<" out) (display tag out)
+              (for-each (lambda (x) (display " " out) (display x out)) rest)
+              (display ">\n" out))
+             ((and (eq? '@raw tag)
+                   (string? (car rest)))
+              (if (not (null? (cdr rest)))
+                  (error "@raw takes only one value" sxml))
+              (display (car rest) out))
+             ((and (pair? rest)
+                   (pair? (car rest))
+                   (eq? '@ (caar rest)))
+              (display (html-tag->string tag (cdar rest)) out)
+              (for-each lp (cdr rest))
+              (unless (and (null? (cdr rest)) (memq tag void-elements))
+                (display "</" out) (display tag out) (display ">" out)))
+             (else
+              (display (html-tag->string tag '()) out)
+              (for-each lp rest)
+              (unless (and (null? rest) (memq tag void-elements))
+                (display "</" out) (display tag out) (display ">" out)))))
+           (else
+            (for-each lp sxml)))))
        ((null? sxml))
        (else (html-display-escaped-string sxml out))))))
 
@@ -127,7 +142,9 @@
 ;;> Render \var{sxml} as text for viewing in a terminal.
 (define (sxml-display-as-text sxml . o)
   (let ((out (if (pair? o) (car o) (current-output-port))))
-    (let lp ((sxml sxml))
+    (let lp ((sxml (if (and (pair? sxml) (eq? '*TOP* (car sxml)))
+                       (cdr sxml)
+                       sxml)))
       (cond
        ((pair? sxml)
         (let ((tag (car sxml)))
