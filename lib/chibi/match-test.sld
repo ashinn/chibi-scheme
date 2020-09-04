@@ -186,50 +186,50 @@
       (test "joined tail" '(1 2)
         (match '(1 2 3) ((and (a ... b) x) a)))
 
-      (test "list ..1" '(a b c)
-        (match '(a b c) ((x ..1) x)))
+      (test "list **1" '(a b c)
+        (match '(a b c) ((x **1) x)))
 
-      (test "list ..1 failed" #f
+      (test "list **1 failed" #f
         (match '()
-          ((x ..1) x)
+          ((x **1) x)
           (else #f)))
 
-      (test "list ..1 with predicate" '(a b c)
+      (test "list **1 with predicate" '(a b c)
         (match '(a b c)
-          (((and x (? symbol?)) ..1) x)))
+          (((and x (? symbol?)) **1) x)))
 
-      (test "list ..1 with failed predicate" #f
+      (test "list **1 with failed predicate" #f
         (match '(a b 3)
-          (((and x (? symbol?)) ..1) x)
+          (((and x (? symbol?)) **1) x)
           (else #f)))
 
-      (test "list ..= too few" #f
-        (match (list 1 2) ((a b ..= 2) b) (else #f)))
-      (test "list ..=" '(2 3)
-        (match (list 1 2 3) ((a b ..= 2) b) (else #f)))
-      (test "list ..= too many" #f
-        (match (list 1 2 3 4) ((a b ..= 2) b) (else #f)))
-      (test "list ..= tail" 4
-        (match (list 1 2 3 4) ((a b ..= 2 c) c) (else #f)))
-      (test "list ..= tail fail" #f
-        (match (list 1 2 3 4 5 6) ((a b ..= 2 c) c) (else #f)))
+      (test "list =.. too few" #f
+        (match (list 1 2) ((a b =.. 2) b) (else #f)))
+      (test "list =.." '(2 3)
+        (match (list 1 2 3) ((a b =.. 2) b) (else #f)))
+      (test "list =.. too many" #f
+        (match (list 1 2 3 4) ((a b =.. 2) b) (else #f)))
+      (test "list =.. tail" 4
+        (match (list 1 2 3 4) ((a b =.. 2 c) c) (else #f)))
+      (test "list =.. tail fail" #f
+        (match (list 1 2 3 4 5 6) ((a b =.. 2 c) c) (else #f)))
 
-      (test "list ..* too few" #f
-        (match (list 1 2) ((a b ..* 2 4) b) (else #f)))
-      (test "list ..* lo" '(2 3)
-        (match (list 1 2 3) ((a b ..* 2 4) b) (else #f)))
-      (test "list ..* hi" '(2 3 4 5)
-        (match (list 1 2 3 4 5) ((a b ..* 2 4) b) (else #f)))
-      (test "list ..* too many" #f
-        (match (list 1 2 3 4 5 6) ((a b ..* 2 4) b) (else #f)))
-      (test "list ..* tail" 4
-        (match (list 1 2 3 4) ((a b ..* 2 4 c) c) (else #f)))
-      (test "list ..* tail 2" 5
-        (match (list 1 2 3 4 5) ((a b ..* 2 4 c d) d) (else #f)))
-      (test "list ..* tail" 6
-        (match (list 1 2 3 4 5 6) ((a b ..* 2 4 c) c) (else #f)))
-      (test "list ..* tail fail" #f
-        (match (list 1 2 3 4 5 6 7) ((a b ..* 2 4 c) c) (else #f)))
+      (test "list *.. too few" #f
+        (match (list 1 2) ((a b *.. 2 4) b) (else #f)))
+      (test "list *.. lo" '(2 3)
+        (match (list 1 2 3) ((a b *.. 2 4) b) (else #f)))
+      (test "list *.. hi" '(2 3 4 5)
+        (match (list 1 2 3 4 5) ((a b *.. 2 4) b) (else #f)))
+      (test "list *.. too many" #f
+        (match (list 1 2 3 4 5 6) ((a b *.. 2 4) b) (else #f)))
+      (test "list *.. tail" 4
+        (match (list 1 2 3 4) ((a b *.. 2 4 c) c) (else #f)))
+      (test "list *.. tail 2" 5
+        (match (list 1 2 3 4 5) ((a b *.. 2 4 c d) d) (else #f)))
+      (test "list *.. tail" 6
+        (match (list 1 2 3 4 5 6) ((a b *.. 2 4 c) c) (else #f)))
+      (test "list *.. tail fail" #f
+        (match (list 1 2 3 4 5 6 7) ((a b *.. 2 4 c) c) (else #f)))
 
       (test "match-named-let" 6
         (match-let loop (((x . rest) '(1 2 3))

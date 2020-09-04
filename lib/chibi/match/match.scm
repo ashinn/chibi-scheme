@@ -86,26 +86,26 @@
 ;;> \scheme{___} is provided as an alias for \scheme{...} when it is
 ;;> inconvenient to use the ellipsis (as in a syntax-rules template).
 
-;;> The \scheme{..1} syntax is exactly like the \scheme{...} except
+;;> The \scheme{**1} syntax is exactly like the \scheme{...} except
 ;;> that it matches one or more repetitions (like a regexp "+").
 
-;;> \example{(match (list 1 2) ((a b c ..1) c))}
-;;> \example{(match (list 1 2 3) ((a b c ..1) c))}
+;;> \example{(match (list 1 2) ((a b c **1) c))}
+;;> \example{(match (list 1 2 3) ((a b c **1) c))}
 
-;;> The \scheme{..*} syntax is like \scheme{...} except that it takes
+;;> The \scheme{*..} syntax is like \scheme{...} except that it takes
 ;;> two trailing integers \scheme{<n>} and \scheme{<m>}, and requires
 ;;> the pattern to match from \scheme{<n>} times.
 
-;;> \example{(match (list 1 2 3) ((a b ..* 2 4) b))}
-;;> \example{(match (list 1 2 3 4 5 6) ((a b ..* 2 4) b))}
-;;> \example{(match (list 1 2 3 4) ((a b ..* 2 4 c) c))}
+;;> \example{(match (list 1 2 3) ((a b *.. 2 4) b))}
+;;> \example{(match (list 1 2 3 4 5 6) ((a b *.. 2 4) b))}
+;;> \example{(match (list 1 2 3 4) ((a b *.. 2 4 c) c))}
 
-;;> The \scheme{(<expr> ..= <n>)} syntax is a shorthand for
-;;> \scheme{(<expr> ..* <n> <n>)}.
+;;> The \scheme{(<expr> =.. <n>)} syntax is a shorthand for
+;;> \scheme{(<expr> *.. <n> <n>)}.
 
-;;> \example{(match (list 1 2) ((a b ..= 2) b))}
-;;> \example{(match (list 1 2 3) ((a b ..= 2) b))}
-;;> \example{(match (list 1 2 3 4) ((a b ..= 2) b))}
+;;> \example{(match (list 1 2) ((a b =.. 2) b))}
+;;> \example{(match (list 1 2 3) ((a b =.. 2) b))}
+;;> \example{(match (list 1 2 3 4) ((a b =.. 2) b))}
 
 ;;> The boolean operators \scheme{and}, \scheme{or} and \scheme{not}
 ;;> can be used to group and negate patterns analogously to their
@@ -242,8 +242,9 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2020/09/04 - perf fix for `not`; rename `..=', `..=', `..1' per SRFI 204
 ;; 2020/08/21 - fixing match-letrec with unhygienic insertion
-;; 2020/07/06 - adding `..=' and `..*' patterns; fixing ,@ patterns
+;; 2020/07/06 - adding `..=' and `..=' patterns; fixing ,@ patterns
 ;; 2016/10/05 - treat keywords as literals, not identifiers, in Chicken
 ;; 2016/03/06 - fixing named match-let (thanks to Stefan Israelsson Tampe)
 ;; 2015/05/09 - fixing bug in var extraction of quasiquote patterns
@@ -369,7 +370,7 @@
 ;; pattern so far.
 
 (define-syntax match-two
-  (syntax-rules (_ ___ ..1 ..= ..* *** quote quasiquote ? $ struct @ object = and or not set! get!)
+  (syntax-rules (_ ___ **1 =.. *.. *** quote quasiquote ? $ struct @ object = and or not set! get!)
     ((match-two v () g+s (sk ...) fk i)
      (if (null? v) (sk ... i) fk))
     ((match-two v (quote p) g+s (sk ...) fk i)
@@ -406,15 +407,15 @@
      (match-extract-vars p (match-gen-search v p q g+s sk fk i) i ()))
     ((match-two v (p *** . q) g+s sk fk i)
      (match-syntax-error "invalid use of ***" (p *** . q)))
-    ((match-two v (p ..1) g+s sk fk i)
+    ((match-two v (p **1) g+s sk fk i)
      (if (pair? v)
          (match-one v (p ___) g+s sk fk i)
          fk))
-    ((match-two v (p ..= n . r) g+s sk fk i)
+    ((match-two v (p =.. n . r) g+s sk fk i)
      (match-extract-vars
       p
       (match-gen-ellipsis/range n n v p r g+s sk fk i) i ()))
-    ((match-two v (p ..* n m . r) g+s sk fk i)
+    ((match-two v (p *.. n m . r) g+s sk fk i)
      (match-extract-vars
       p
       (match-gen-ellipsis/range n m v p r g+s sk fk i) i ()))
@@ -832,7 +833,7 @@
 ;; (match-extract-vars pattern continuation (ids ...) (new-vars ...))
 
 (define-syntax match-extract-vars
-  (syntax-rules (_ ___ ..1 ..= ..* *** ? $ struct @ object = quote quasiquote and or not get! set!)
+  (syntax-rules (_ ___ **1 =.. *.. *** ? $ struct @ object = quote quasiquote and or not get! set!)
     ((match-extract-vars (? pred . p) . x)
      (match-extract-vars p . x))
     ((match-extract-vars ($ rec . p) . x)
@@ -869,9 +870,9 @@
     ((match-extract-vars _ (k ...) i v)    (k ... v))
     ((match-extract-vars ___ (k ...) i v)  (k ... v))
     ((match-extract-vars *** (k ...) i v)  (k ... v))
-    ((match-extract-vars ..1 (k ...) i v)  (k ... v))
-    ((match-extract-vars ..= (k ...) i v)  (k ... v))
-    ((match-extract-vars ..* (k ...) i v)  (k ... v))
+    ((match-extract-vars **1 (k ...) i v)  (k ... v))
+    ((match-extract-vars =.. (k ...) i v)  (k ... v))
+    ((match-extract-vars *.. (k ...) i v)  (k ... v))
     ;; This is the main part, the only place where we might add a new
     ;; var if it's an unbound symbol.
     ((match-extract-vars p (k ...) (i ...) v)
