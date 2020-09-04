@@ -1559,7 +1559,9 @@
           ((and (equal? "meta" (path-extension file))
                 (guard (exn (else #f))
                   (let ((pkg (call-with-input-file file read)))
-                    (and (package? pkg) pkg))))
+                    (and (package? pkg)
+                         (every file-exists? (package-installed-files pkg))
+                         pkg))))
            => (lambda (pkg)
                 (append
                  (map
