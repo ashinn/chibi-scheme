@@ -947,9 +947,11 @@
    ((package-file? (car o))
     (if (not (every package-file? (cdr o)))
         (non-homogeneous))
-    (for-each
-     (lambda (package) (upload-package cfg spec package))
-     o))
+    (if (yes-or-no? cfg "Upload " o " to "
+                    (remote-uri cfg '(command package uri) "/?"))
+      (for-each
+       (lambda (package) (upload-package cfg spec package))
+       o)))
    (else
     (if (any package-file? (cdr o))
         (non-homogeneous))
@@ -958,7 +960,9 @@
            (package (create-package (car spec+files)
                                     (cdr spec+files)
                                     package-file)))
-      (upload-package cfg spec package package-file)))))
+      (if (yes-or-no? cfg "Upload " o " to "
+                      (remote-uri cfg '(command package uri) "/?"))
+        (upload-package cfg spec package package-file))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Remove - removes the listed libraries.
