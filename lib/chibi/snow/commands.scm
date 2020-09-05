@@ -947,6 +947,7 @@
    ((package-file? (car o))
     (if (not (every package-file? (cdr o)))
         (non-homogeneous))
+    ;; TODO: include a summary (version, file size, etc.)
     (if (yes-or-no? cfg "Upload " o " to "
                     (remote-uri cfg '(command package uri) "/?"))
       (for-each
@@ -960,6 +961,7 @@
            (package (create-package (car spec+files)
                                     (cdr spec+files)
                                     package-file)))
+      ;; TODO: include a summary (version, file size, etc.)
       (if (yes-or-no? cfg "Upload " o " to "
                       (remote-uri cfg '(command package uri) "/?"))
         (upload-package cfg spec package package-file))))))
