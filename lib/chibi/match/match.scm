@@ -564,25 +564,26 @@
 
 (define-syntax match-gen-ellipsis
   (syntax-rules ()
-    ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
-     (match-check-identifier p
-       ;; simplest case equivalent to (p ...), just bind the list
-       (let ((p v))
-         (if (list? p)
-             (sk ... i)
-             fk))
-       ;; simple case, match all elements of the list
-       (let loop ((ls v) (id-ls '()) ...)
-         (cond
-           ((null? ls)
-            (let ((id (reverse id-ls)) ...) (sk ... i)))
-           ((pair? ls)
-            (let ((w (car ls)))
-              (match-one w p ((car ls) (set-car! ls))
-                         (match-drop-ids (loop (cdr ls) (cons id id-ls) ...))
-                         fk i)))
-           (else
-            fk)))))
+    ;; TODO: restore fast path when p is not already bound
+    ;; ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
+    ;;  (match-check-identifier p
+    ;;    ;; simplest case equivalent to (p ...), just bind the list
+    ;;    (let ((p v))
+    ;;      (if (list? p)
+    ;;          (sk ... i)
+    ;;          fk))
+    ;;    ;; simple case, match all elements of the list
+    ;;    (let loop ((ls v) (id-ls '()) ...)
+    ;;      (cond
+    ;;        ((null? ls)
+    ;;         (let ((id (reverse id-ls)) ...) (sk ... i)))
+    ;;        ((pair? ls)
+    ;;         (let ((w (car ls)))
+    ;;           (match-one w p ((car ls) (set-car! ls))
+    ;;                      (match-drop-ids (loop (cdr ls) (cons id id-ls) ...))
+    ;;                      fk i)))
+    ;;        (else
+    ;;         fk)))))
     ((_ v p r g+s sk fk (i ...) ((id id-ls) ...))
      ;; general case, trailing patterns to match, keep track of the
      ;; remaining list length so we don't need any backtracking
