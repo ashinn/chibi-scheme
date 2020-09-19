@@ -1806,6 +1806,8 @@ static sexp* sexp_fileno_cell(sexp ctx, sexp vec, int fd) {
   if (!sexp_vectorp(vec))
     return NULL;
   len = sexp_vector_length(vec);
+  if (len == 0)
+    return NULL;
   data = sexp_vector_data(vec);
   for (i = 0, cell = (fd * FNV_PRIME) % len; i < len; i++, cell=(cell+1)%len)
     if (!sexp_ephemeronp(data[cell])
