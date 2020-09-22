@@ -2799,7 +2799,7 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
 
 sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
   sexp_sint_t val = 0, tmp = -1;
-  int c, digit, negativep = 0;
+  int c, digit, negativep = 0, inexactp = 0;
 #if SEXP_USE_PLACEHOLDER_DIGITS
   double whole = 0.0, scale = 0.1;
 #endif
@@ -2813,7 +2813,7 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
     switch ((c = sexp_tolower(sexp_read_char(ctx, in)))) {
       case 'b': base = 2; break;   case 'o': base = 8; break;
       case 'd': base = 10; break;  case 'x': base = 16; break;
-      case 'i': exactp = 0; break; case 'e': exactp = 1; break;
+      case 'i': inexactp = 1; break; case 'e': exactp = 1; break;
       default: return sexp_read_error(ctx, "unexpected numeric # code", sexp_make_character(c), in);
     }
     c = sexp_read_char(ctx, in);
@@ -2939,6 +2939,8 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
                              / (double)sexp_unbox_fixnum(den));
 #endif
     }
+    if (inexactp)
+      res = sexp_exact_to_inexact(ctx, NULL, 2, res);
     sexp_gc_release2(ctx);
     return res;
 #if SEXP_USE_COMPLEX
@@ -2961,7 +2963,8 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
     sexp_push_char(ctx, c, in);
   }
 
-  return sexp_make_fixnum(negativep ? -val : val);
+  return inexactp ? sexp_make_flonum(ctx, negativep ? -val : val)
+    : sexp_make_fixnum(negativep ? -val : val);
 }
 
 #if SEXP_USE_UTF8_STRINGS
