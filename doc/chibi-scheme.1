@@ -243,7 +243,13 @@ searches for modules in directories in the following order:
           directories included with -A path option
 
 If CHIBI_MODULE_PATH is unset, the directories "./lib", and "." are
-search in order.
+searched in order. Set to empty to only consider -I, system
+directories and -A.
+
+.TP
+.B CHIBI_IGNORE_SYSTEM_PATH
+If set to anything but "0", system directories (as listed above) are
+not included in the search paths.
 
 .SH AUTHORS
 .PP
