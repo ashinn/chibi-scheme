@@ -82,6 +82,12 @@ typedef long long off_t;
 #define exit(x)           exits(TOSTRING(x))
 #define fabsl          fabs
 #define M_LN10         2.30258509299404568402  /* log_e 10 */
+#define FLT_RADIX 2
+#define isfinite(x) !(isNaN(x) || isInf(x,0))
+typedef u32int uint32_t;
+typedef s32int int32_t;
+typedef u64int uint64_t;
+typedef s64int int64_t;
 #else
 #include <stddef.h>
 #include <stdlib.h>
