@@ -11,7 +11,7 @@ CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
 CHIBI_FFI_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-ffi
 
 CHIBI_DOC ?= $(CHIBI) tools/chibi-doc
-CHIBI_DOC_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-doc
+CHIBI_DOC_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-doc $(COMPILED_LIBS)
 
 GENSTATIC ?= ./tools/chibi-genstatic
 
