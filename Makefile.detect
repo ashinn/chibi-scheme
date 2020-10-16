@@ -9,6 +9,7 @@ PLATFORM=macosx
 else
 ifeq ($(shell uname),FreeBSD)
 PLATFORM=bsd
+LIBCHIBI_FLAGS = -Wl,-soname,libchibi-scheme$(SO).$(SOVERSION_MAJOR)
 else
 ifeq ($(shell uname),NetBSD)
 PLATFORM=bsd
