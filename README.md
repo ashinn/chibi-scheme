@@ -16,7 +16,7 @@ Despite the small size, Chibi-Scheme attempts to do The Right Thing.
 The default settings include:
 
 * a full numeric tower, with rational and complex numbers
-* full and seemless Unicode support
+* full and seamless Unicode support
 * low-level and high-level hygienic macros
 * an extensible module system
 
