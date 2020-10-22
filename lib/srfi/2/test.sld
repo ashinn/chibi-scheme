@@ -42,4 +42,6 @@
           (let ((x #f)) (and-let* (x (y (- x 1)) ((positive? y))) (/ x y))))
       (test 3/2
           (let ((x 3)) (and-let* (x (y (- x 1)) ((positive? y))) (/ x y))))
+      (test 5 (and-let* () (define x 5) x))
+      (test 6 (and-let* ((x 6)) (define y x) y))
       (test-end))))
