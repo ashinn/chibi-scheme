@@ -1662,14 +1662,30 @@ sexp sexp_exact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
 #endif
 
 sexp sexp_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
-#if SEXP_USE_BIGNUMS
+#if SEXP_USE_BIGNUMS || SEXP_USE_RATIOS
   sexp_gc_var2(res, rem);
+#endif
+#if SEXP_USE_BIGNUMS
   if (sexp_bignump(z)) {
     sexp_gc_preserve2(ctx, res, rem);
     res = sexp_bignum_sqrt(ctx, z, &rem);
     rem = sexp_bignum_normalize(rem);
     if (rem != SEXP_ZERO)
       res = sexp_make_flonum(ctx, sexp_fixnump(res) ? sexp_unbox_fixnum(res) : sexp_bignum_to_double(res));
+    sexp_gc_release2(ctx);
+    return res;
+  }
+#endif
+#if SEXP_USE_RATIOS
+  if (sexp_ratiop(z)) {
+    sexp_gc_preserve2(ctx, res, rem);
+    res = sexp_sqrt(ctx, self, n, sexp_ratio_numerator(z));
+    rem = sexp_sqrt(ctx, self, n, sexp_ratio_denominator(z));
+    if (sexp_exactp(res) && sexp_exactp(rem)) {
+      res = sexp_make_ratio(ctx, res, rem);
+    } else {
+      res = sexp_inexact_sqrt(ctx, self, n, z);
+    }
     sexp_gc_release2(ctx);
     return res;
   }
