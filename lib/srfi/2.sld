@@ -5,8 +5,10 @@
   (begin
    (define-syntax and-let*
      (syntax-rules ()
+       ((and-let* ())
+        #t)
        ((and-let* () . body)
-        (begin #t . body))
+        (let () . body))
        ((and-let* ((var expr)))
         expr)
        ((and-let* ((expr)))
