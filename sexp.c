@@ -440,7 +440,7 @@ sexp sexp_lookup_type_op(sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp id)
       if (sexp_stringp(id)
           && !(sexp_stringp(sexp_type_id(res))
                && strcmp(sexp_string_data(id), sexp_string_data(sexp_type_id(res))) == 0))
-        return SEXP_FALSE;
+        continue;
       return res;
     }
   return SEXP_FALSE;

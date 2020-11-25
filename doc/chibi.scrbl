@@ -938,16 +938,27 @@ NULL in which case the pointers are never freed, or otherwise a
 procedure of one argument which should release any resources.
 }}
 
-\item{\ccode{sexp sexp_make_cpointer(sexp ctx, sexp_uint_t type_id, void* value, sexp parent, int freep)}
+\item{\ccode{sexp sexp_make_cpointer(sexp ctx, sexp_uint_t type_tag, void* value, sexp parent, int freep)}
 \p{
-Creates a new instance of the type indicated by type_id wrapping
+Creates a new instance of the type indicated by type_tag wrapping
 value. If parent is provided, references to the child will also
 preserve the parent, important e.g. to preserve an enclosing struct
 when wrapped references to nested structs are still in use.  If freep
 is true, then when reclaimed by the GC the finalizer for this type,
 if any, will be called on the instance.
 
-You can retrieve the id from a type object with sexp_type_tag(type).
+You can retrieve the tag from a type object with sexp_type_tag(type).
+}}
+
+\item{\ccode{sexp sexp_lookup_type(sexp ctx, sexp name, sexp tag_or_id)}
+\p{
+Returns the type whose name matches the string \var{name}.  If
+\var{tag_or_id} is an integer, it is taken as the tag and requires the
+numeric type tag (as from sexp_type_tag) to also match.
+}
+\p{If \var{tag_or_id} is a string, it is taken as the unique id of the
+type, and must match sexp_type_id(type).  However, currently
+sexp_type_id(type) is never set.
 }}
 
 ]
