@@ -7,6 +7,8 @@
 
 #include "chibi/sexp.h"
 
+#if SEXP_USE_IMAGE_LOADING
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -97,5 +99,7 @@ SEXP_API char* sexp_load_image_err();
 #ifdef __cplusplus
 }
 #endif
+
+#endif  /* SEXP_USE_IMAGE_LOADING */
 
 #endif  /* ! SEXP_GC_HEAP_H */
