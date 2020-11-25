@@ -8,7 +8,7 @@
        ((and-let* ())
         #t)
        ((and-let* () . body)
-        (let* () . body))
+        (let () . body))
        ((and-let* ((var expr)))
         expr)
        ((and-let* ((expr)))
