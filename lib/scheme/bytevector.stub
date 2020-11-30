@@ -50,6 +50,76 @@ static double sexp_swap_double(const double x) {
   return y;
 }
 
+/* 16-bit integers */
+static inline int16_t ref_s16(const void* p) {
+  int16_t v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline uint16_t ref_u16(const void* p) {
+  uint16_t v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline void set_s16(void* p, int16_t v) {
+  memcpy(p, &v, sizeof(v));
+}
+static inline void set_u16(void* p, uint16_t v) {
+  memcpy(p, &v, sizeof(v));
+}
+/* 32-bit integers */
+static inline int32_t ref_s32(const void* p) {
+  int32_t v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline uint32_t ref_u32(const void* p) {
+  uint32_t v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline void set_s32(void* p, int32_t v) {
+  memcpy(p, &v, sizeof(v));
+}
+static inline void set_u32(void* p, uint32_t v) {
+  memcpy(p, &v, sizeof(v));
+}
+/* 64-bit integers */
+static inline int64_t ref_s64(const void* p) {
+  int64_t v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline uint64_t ref_u64(const void* p) {
+  uint64_t v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline void set_s64(void* p, int64_t v) {
+  memcpy(p, &v, sizeof(v));
+}
+static inline void set_u64(void* p, uint64_t v) {
+  memcpy(p, &v, sizeof(v));
+}
+/* 32-bit floats */
+static inline float ref_f32(const void* p) {
+  float v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline void set_f32(void* p, float v) {
+  memcpy(p, &v, sizeof(v));
+}
+/* 64-bit floats */
+static inline double ref_f64(const void* p) {
+  double v;
+  memcpy(&v, p, sizeof(v));
+  return v;
+}
+static inline void set_f64(void* p, double v) {
+  memcpy(p, &v, sizeof(v));
+}
+
 sexp_sint_t decode_utf8(unsigned char* p, int ch_len) {
   if (ch_len <= 1)
     return *p;
@@ -222,101 +292,101 @@ sexp utf32_2_str(sexp ctx, char* bv, int len, sexp endianness, int endianness_ma
   (inline "((int8_t*)arg0)[arg1] = arg2"))
 
 (define-c int16_t bytevector-s16-native-ref (bytevector int)
-  (inline "*((int16_t*)(arg0+arg1))"))
+  (inline "ref_s16(arg0+arg1)"))
 (define-c void bytevector-s16-native-set! (bytevector int int16_t)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((int16_t*)(arg0+arg1)) = arg2"))
+  (inline "set_s16(arg0+arg1, arg2)"))
 
 (define-c int16_t bytevector-s16-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((int16_t*)(arg1+arg2)) : sexp_swap_s16(*((int16_t*)(arg1+arg2))))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_s16(arg1+arg2) : sexp_swap_s16(ref_s16(arg1+arg2)))"))
 (define-c void bytevector-s16-set! ((value ctx sexp) bytevector int int16_t sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((int16_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s16(arg3))"))
+  (inline "set_s16(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s16(arg3)))"))
 
 (define-c int32_t bytevector-s32-native-ref (bytevector int)
-  (inline "*((int32_t*)(arg0+arg1))"))
+  (inline "ref_s32(arg0+arg1)"))
 (define-c void bytevector-s32-native-set! (bytevector int int32_t)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((int32_t*)(arg0+arg1)) = arg2"))
+  (inline "set_s32(arg0+arg1, arg2)"))
 
 (define-c int32_t bytevector-s32-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((int32_t*)(arg1+arg2)) : sexp_swap_s32(*((int32_t*)(arg1+arg2))))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_s32(arg1+arg2) : sexp_swap_s32(ref_s32(arg1+arg2)))"))
 (define-c void bytevector-s32-set! ((value ctx sexp) bytevector int int32_t sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((int32_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s32(arg3))"))
+  (inline "set_s32(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s32(arg3)))"))
 
 (define-c int64_t bytevector-s64-native-ref (bytevector int)
-  (inline "*((int64_t*)(arg0+arg1))"))
+  (inline "ref_s64(arg0+arg1)"))
 (define-c void bytevector-s64-native-set! (bytevector int int64_t)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((int64_t*)(arg0+arg1)) = arg2"))
+  (inline "set_s64(arg0+arg1, arg2)"))
 
 (define-c int64_t bytevector-s64-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((int64_t*)(arg1+arg2)) : sexp_swap_s64(*((int64_t*)(arg1+arg2))))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_s64(arg1+arg2) : sexp_swap_s64(ref_s64(arg1+arg2)))"))
 (define-c void bytevector-s64-set! ((value ctx sexp) bytevector int int64_t sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((int64_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s64(arg3))"))
+  (inline "set_s64(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_s64(arg3)))"))
 
 (define-c uint16_t bytevector-u16-native-ref (bytevector int)
-  (inline "*((uint16_t*)(arg0+arg1))"))
+  (inline "ref_u16(arg0+arg1)"))
 (define-c void bytevector-u16-native-set! (bytevector int uint16_t)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((uint16_t*)(arg0+arg1)) = arg2"))
+  (inline "set_u16(arg0+arg1, arg2)"))
 
 (define-c uint16_t bytevector-u16-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((uint16_t*)(arg1+arg2)) : sexp_swap_u16(*((uint16_t*)(arg1+arg2))))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_u16(arg1+arg2) : sexp_swap_u16(ref_u16(arg1+arg2)))"))
 (define-c void bytevector-u16-set! ((value ctx sexp) bytevector int uint16_t sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((uint16_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u16(arg3))"))
+  (inline "set_u16(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u16(arg3)))"))
 
 (define-c uint32_t bytevector-u32-native-ref (bytevector int)
-  (inline "*((uint32_t*)(arg0+arg1))"))
+  (inline "ref_u32(arg0+arg1)"))
 (define-c void bytevector-u32-native-set! (bytevector int uint32_t)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((uint32_t*)(arg0+arg1)) = arg2"))
+  (inline "set_u32(arg0+arg1, arg2)"))
 
 (define-c uint32_t bytevector-u32-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((uint32_t*)(arg1+arg2)) : sexp_swap_u32(*((uint32_t*)(arg1+arg2))))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_u32(arg1+arg2) : sexp_swap_u32(ref_u32(arg1+arg2)))"))
 (define-c void bytevector-u32-set! ((value ctx sexp) bytevector int uint32_t sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((uint32_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u32(arg3))"))
+  (inline "set_u32(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u32(arg3)))"))
 
 (define-c uint64_t bytevector-u64-native-ref (bytevector int)
-  (inline "*((uint64_t*)(arg0+arg1))"))
+  (inline "ref_u64(arg0+arg1)"))
 (define-c void bytevector-u64-native-set! (bytevector int uint64_t)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((uint64_t*)(arg0+arg1)) = arg2"))
+  (inline "set_u64(arg0+arg1, arg2)"))
 
 (define-c uint64_t bytevector-u64-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((uint64_t*)(arg1+arg2)) : sexp_swap_u64(*((uint64_t*)(arg1+arg2))))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_u64(arg1+arg2) : sexp_swap_u64(ref_u64(arg1+arg2)))"))
 (define-c void bytevector-u64-set! ((value ctx sexp) bytevector int uint64_t sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((uint64_t*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u64(arg3))"))
+  (inline "set_u64(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_u64(arg3)))"))
 
 
 (define-c float bytevector-ieee-single-native-ref (bytevector int)
-  (inline "*((float*)(arg0+arg1))"))
+  (inline "ref_f32(arg0+arg1)"))
 (define-c void bytevector-ieee-single-native-set! (bytevector int float)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((float*)(arg0+arg1)) = arg2"))
+  (inline "set_f32(arg0+arg1, arg2)"))
 
 (define-c float bytevector-ieee-single-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((float*)(arg1+arg2)) : sexp_swap_float(*(float*)(arg1+arg2)))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_f32(arg1+arg2) : sexp_swap_float(ref_f32(arg1+arg2)))"))
 (define-c void bytevector-ieee-single-set! ((value ctx sexp) bytevector int float sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((float*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_float(arg3))"))
+  (inline "set_f32(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_float(arg3)))"))
 
 (define-c double bytevector-ieee-double-native-ref (bytevector int)
-  (inline "*((double*)(arg0+arg1))"))
+  (inline "ref_f64(arg0+arg1)"))
 (define-c void bytevector-ieee-double-native-set! (bytevector int double)
   (assert (< -1 arg1 (bytevector-length arg0)))
-  (inline "*((double*)(arg0+arg1)) = arg2"))
+  (inline "set_f64(arg0+arg1, arg2)"))
 
 (define-c double bytevector-ieee-double-ref ((value ctx sexp) bytevector int sexp)
-  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? *((double*)(arg1+arg2)) : sexp_swap_double(*(double*)(arg1+arg2)))"))
+  (inline "(arg3 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? ref_f64(arg1+arg2) : sexp_swap_double(ref_f64(arg1+arg2)))"))
 (define-c void bytevector-ieee-double-set! ((value ctx sexp) bytevector int double sexp)
   (assert (< -1 arg2 (bytevector-length arg1)))
-  (inline "*((double*)(arg1+arg2)) = (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_double(arg3))"))
+  (inline "set_f64(arg1+arg2, (arg4 == sexp_global(arg0, SEXP_G_ENDIANNESS) ? arg3 : sexp_swap_double(arg3)))"))
 
 (define-c sexp (%string->utf16 "str2utf16")
   ((value ctx sexp) string (value (string-size arg1) int) (default (native-endianness) sexp)))
