@@ -234,11 +234,18 @@
                (equal? (bytevector-s16-native-ref b 0)
                        (- 44444 65536)))))
 
-      (test-assert "bytevector-s16-{ref,set!} [unaligned]"
-        (let ((b (make-bytevector 3)))
+      (test-assert "bytevector-{u16,s16}-{ref,set!} [unaligned]"
+        (let ((b (make-bytevector 5)))
           (bytevector-s16-set! b 1 -77 (endianness little))
-          (equal? (bytevector-s16-ref b 1 (endianness little))
-                  -77)))
+          (bytevector-s16-set! b 3 -77 (endianness big))
+          (and (equal? (bytevector-s16-ref b 1 (endianness little))
+                       -77)
+               (equal? (bytevector-u16-ref b 1 (endianness little))
+                       (- 65536 77))
+               (equal? (bytevector-s16-ref b 3 (endianness big))
+                       -77)
+               (equal? (bytevector-u16-ref b 3 (endianness big))
+                       (- 65536 77)))))
       (test-end)
 
       (test-begin "2.6 Operations on 32-bit Integers")
@@ -276,6 +283,19 @@
                        2222222222)
                (equal? (bytevector-s32-native-ref b 0)
                        (- 2222222222 (expt 2 32))))))
+
+      (test-assert "bytevector-{u32,s32}-{ref,set!} [unaligned]"
+        (let ((b (make-bytevector 9)))
+          (bytevector-s32-set! b 1 -77777 (endianness little))
+          (bytevector-s32-set! b 5 -77777 (endianness big))
+          (and (equal? (bytevector-s32-ref b 1 (endianness little))
+                       -77777)
+               (equal? (bytevector-u32-ref b 1 (endianness little))
+                       (- (expt 2 32) 77777))
+               (equal? (bytevector-s32-ref b 5 (endianness big))
+                       -77777)
+               (equal? (bytevector-u32-ref b 5 (endianness big))
+                       (- (expt 2 32) 77777)))))
       (test-end)
 
       (test-begin "2.7 Operations on 64-bit Integers")
@@ -314,6 +334,18 @@
           (bytevector-u64-set! b 0  0 (endianness big))
           (= 0 (bytevector-u64-ref b 0 (endianness big)))))
 
+      (test-assert "bytevector-{u64,s64}-{ref,set!} [unaligned]"
+        (let ((b (make-bytevector 17)))
+          (bytevector-s64-set! b 1 -7777777777 (endianness little))
+          (bytevector-s64-set! b 9 -7777777777 (endianness big))
+          (and (equal? (bytevector-s64-ref b 1 (endianness little))
+                       -7777777777)
+               (equal? (bytevector-u64-ref b 1 (endianness little))
+                       (- (expt 2 64) 7777777777))
+               (equal? (bytevector-s64-ref b 9 (endianness big))
+                       -7777777777)
+               (equal? (bytevector-u64-ref b 9 (endianness big))
+                       (- (expt 2 64) 7777777777)))))
       (test-end)
 
       (test-begin "2.8 Operations on IEEE-754 Representations")
@@ -375,6 +407,14 @@
           (bytevector-ieee-double-set! b 8 number (endianness big))
           (equal? (bytevector-ieee-double-ref b 0 (endianness little))
                   (bytevector-ieee-double-ref b 8 (endianness big)))))
+
+      (test-assert "bytevector-ieee-double-{ref,set!} [unaligned]"
+        (let ((b (make-bytevector 17))
+              (number 3.14))
+          (bytevector-ieee-double-set! b 1 number (endianness little))
+          (bytevector-ieee-double-set! b 9 number (endianness big))
+          (equal? (bytevector-ieee-double-ref b 1 (endianness little))
+                  (bytevector-ieee-double-ref b 9 (endianness big)))))
       (test-end)
 
 
