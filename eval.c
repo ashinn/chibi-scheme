@@ -221,7 +221,7 @@ sexp sexp_extend_env (sexp ctx, sexp env, sexp vars, sexp value) {
   e = sexp_alloc_type(ctx, env, SEXP_ENV);
   sexp_env_parent(e) = env;
   sexp_env_bindings(e) = SEXP_NULL;
-#if SEXP_USE_RENAME_BINDINGS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_RENAME_BINDINGS
   sexp_env_renames(e) = SEXP_NULL;
 #endif
   for ( ; sexp_pairp(vars); vars = sexp_cdr(vars))
@@ -241,7 +241,7 @@ sexp sexp_extend_synclo_env (sexp ctx, sexp env) {
       e2 = e2 ? (sexp_env_parent(e2) = sexp_alloc_type(ctx, env, SEXP_ENV)) : e;
       sexp_env_bindings(e2) = sexp_env_bindings(e1);
       sexp_env_syntactic_p(e2) = 1;
-#if SEXP_USE_RENAME_BINDINGS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_RENAME_BINDINGS
       sexp_env_renames(e2) = sexp_env_renames(e1);
 #endif
     }
@@ -1011,7 +1011,7 @@ static sexp analyze_let_syntax_aux (sexp ctx, sexp x, int recp, int depth) {
     sexp_env_syntactic_p(env) = 1;
     sexp_env_parent(env) = sexp_context_env(ctx);
     sexp_env_bindings(env) = SEXP_NULL;
-#if SEXP_USE_RENAME_BINDINGS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_RENAME_BINDINGS
     sexp_env_renames(env) = SEXP_NULL;
 #endif
     ctx2 = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
@@ -2198,7 +2198,7 @@ sexp sexp_make_env_op (sexp ctx, sexp self, sexp_sint_t n) {
   sexp_env_lambda(e) = NULL;
   sexp_env_parent(e) = NULL;
   sexp_env_bindings(e) = SEXP_NULL;
-#if SEXP_USE_RENAME_BINDINGS
+#if SEXP_USE_STABLE_ABI || SEXP_USE_RENAME_BINDINGS
   sexp_env_renames(e) = SEXP_NULL;
 #endif
   return e;
