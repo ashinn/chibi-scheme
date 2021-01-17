@@ -91,7 +91,7 @@
      (define-syntax name
        (syntax-rules ()
          ((name . x)
-          (syntax-error "invalid use of auxilliary syntax" (name . x))))))))
+          (syntax-error "invalid use of auxiliary syntax" (name . x))))))))
 
 (define-auxiliary-syntax make:)
 (define-auxiliary-syntax pred:)
