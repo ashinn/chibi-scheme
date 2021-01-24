@@ -9,7 +9,8 @@
 #include "chibi/eval.h"
 #include "chibi/gc_heap.h"
 
-#define sexp_argv_symbol "command-line"
+#define sexp_command_line_symbol "command-line"
+#define sexp_raw_script_file_symbol "raw-script-file"
 
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
@@ -282,6 +283,14 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 #define init_context() if (! ctx) do {                                  \
       do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case); \
       sexp_gc_preserve4(ctx, tmp, sym, args, env);                      \
+      sexp_set_parameter(                                               \
+          ctx, sexp_meta_env(ctx),                                      \
+          sym=sexp_intern(ctx, sexp_command_line_symbol, -1),           \
+          args=sexp_cons(ctx, sexp_c_string(ctx,"",-1), SEXP_NULL));    \
+      sexp_env_define(                                                  \
+          ctx, sexp_meta_env(ctx),                                      \
+          sym=sexp_intern(ctx, sexp_raw_script_file_symbol, -1),        \
+          SEXP_FALSE);                                                  \
     } while (0)
 
 #define load_init(bootp) if (! init_loaded++) do {                      \
@@ -306,7 +315,7 @@ sexp run_main (int argc, char **argv) {
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
   sexp out=SEXP_FALSE, ctx=NULL, ls;
   sexp_gc_var4(tmp, sym, args, env);
-  args = SEXP_NULL;
+  args = NULL;
   env = NULL;
 
   /* SRFI 22: invoke `main` procedure by default if the interpreter is */
@@ -545,15 +554,22 @@ sexp run_main (int argc, char **argv) {
  done_options:
   if (!quit || main_symbol != NULL) {
     init_context();
+    load_init(i < argc || main_symbol != NULL);
     /* build argument list */
-    if (i < argc)
+    if (i < argc) {
+      args = SEXP_NULL;
       for (j=argc-1; j>=i; j--)
         args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    /* if no script name, use interpreter name */
-    if (i >= argc || main_module != NULL)
-      args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
-    load_init(i < argc || main_symbol != NULL);
-    sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
+      sexp_set_parameter(
+        ctx, sexp_meta_env(ctx),
+        sym=sexp_intern(ctx, sexp_command_line_symbol, -1),
+        args);
+      sexp_env_define(
+        ctx, sexp_meta_env(ctx),
+        sym=sexp_intern(ctx, sexp_raw_script_file_symbol, -1),
+        sexp_c_string(ctx,argv[i],-1));
+    }
+
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
       repl(ctx, env);
