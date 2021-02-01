@@ -9,7 +9,8 @@
 #include "chibi/eval.h"
 #include "chibi/gc_heap.h"
 
-#define sexp_argv_symbol "command-line"
+#define sexp_command_line_symbol "command-line"
+#define sexp_raw_script_file_symbol "raw-script-file"
 
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
@@ -545,15 +546,22 @@ sexp run_main (int argc, char **argv) {
  done_options:
   if (!quit || main_symbol != NULL) {
     init_context();
-    /* build argument list */
-    if (i < argc)
-      for (j=argc-1; j>=i; j--)
-        args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    /* if no script name, use interpreter name */
-    if (i >= argc || main_module != NULL)
-      args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[0],-1), args);
     load_init(i < argc || main_symbol != NULL);
-    sexp_set_parameter(ctx, sexp_meta_env(ctx), sym=sexp_intern(ctx, sexp_argv_symbol, -1), args);
+    tmp = SEXP_FALSE;
+    if ((i < argc) && !main_symbol)
+      tmp = sexp_c_string(ctx,argv[i],-1);
+    sexp_env_define(
+      ctx, sexp_meta_env(ctx),
+      sym=sexp_intern(ctx, sexp_raw_script_file_symbol, -1), tmp);
+    for (j=argc-1; j>=i; j--)
+      args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
+    if (main_symbol)
+      args = sexp_cons(ctx, tmp=sexp_c_string(ctx,main_symbol,-1), args);
+    if (args == SEXP_NULL)
+      args = sexp_cons(ctx, tmp=sexp_c_string(ctx,"",-1), args);
+    sexp_set_parameter(
+      ctx, sexp_meta_env(ctx),
+      sym=sexp_intern(ctx, sexp_command_line_symbol, -1), args);
     if (i >= argc && main_symbol == NULL) {
       /* no script or main, run interactively */
       repl(ctx, env);
