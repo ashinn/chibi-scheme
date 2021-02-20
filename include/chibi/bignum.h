@@ -8,7 +8,11 @@
 #include "chibi/eval.h"
 
 #if SEXP_USE_CUSTOM_LONG_LONGS
+#ifdef PLAN9
+#include <ape/stdint.h>
+#else
 #include <stdint.h>
+#endif
 typedef struct
 {
   uint64_t hi;

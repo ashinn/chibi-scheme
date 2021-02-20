@@ -231,9 +231,15 @@ typedef int sexp_sint_t;
 #define sexp_heap_align(n) sexp_align(n, 5)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
 #elif SEXP_64_BIT
+#if PLAN9
+typedef uintptr sexp_tag_t;
+typedef uintptr sexp_uint_t;
+typedef intptr sexp_sint_t;
+#else
 typedef unsigned int sexp_tag_t;
 typedef unsigned long sexp_uint_t;
 typedef long sexp_sint_t;
+#endif
 #define SEXP_PRIdFIXNUM "ld"
 #define sexp_heap_align(n) sexp_align(n, 5)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
@@ -244,6 +250,13 @@ typedef int sexp_sint_t;
 #define SEXP_PRIdFIXNUM "d"
 #define sexp_heap_align(n) sexp_align(n, 5)
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>5)
+#elif PLAN9
+typedef uintptr sexp_tag_t;
+typedef unsigned int sexp_uint_t;
+typedef int sexp_sint_t;
+#define SEXP_PRIdFIXNUM "d"
+#define sexp_heap_align(n) sexp_align(n, 4)
+#define sexp_heap_chunks(n) (sexp_heap_align(n)>>4)
 #else
 typedef unsigned short sexp_tag_t;
 typedef unsigned int sexp_uint_t;
@@ -260,7 +273,11 @@ typedef int sexp_sint_t;
 
 
 #ifdef SEXP_USE_INTTYPES
+#ifdef PLAN9
+#include <ape/stdint.h>
+#else
 #include <stdint.h>
+#endif
 # ifdef UINT8_MAX
 #  define SEXP_UINT8_DEFINED 1
 typedef uint8_t  sexp_uint8_t;
@@ -276,7 +293,11 @@ typedef int32_t sexp_int32_t;
 # else
 # include <limits.h>
 # if SEXP_USE_UNIFORM_VECTOR_LITERALS
+# ifdef PLAN9
+# include <ape/stdint.h>
+# else
 # include <stdint.h>
+# endif
 # endif
 # endif
 # if UCHAR_MAX == 255
