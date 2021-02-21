@@ -7,7 +7,7 @@ MODDIR=/sys/lib/chibi-scheme
 CHIBI=./$O.out
 GENSTATIC=./tools/chibi-genstatic
 
-CPPFLAGS= -Iinclude -DPLAN9 -DSEXP_USE_GREEN_THREADS=0
+CPPFLAGS= -Iinclude -DPLAN9 -DSEXP_USE_GREEN_THREADS=0 -D__$objtype
 CFLAGS= -p $CPPFLAGS
 CFLAGS_STATIC=$CFLAGS -DSEXP_USE_STATIC_LIBS
 
@@ -35,7 +35,7 @@ COMPILED_LIBS = $CHIBI_COMPILED_LIBS $CHIBI_IO_COMPILED_LIBS \
 </sys/src/cmd/mkone
 
 clean:
-	rm -f $CLEANFILES
+	rm -f $CLEANFILES *.[$OS] [$OS].out
 
 clibs.$O: clibs.c
 
