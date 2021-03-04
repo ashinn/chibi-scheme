@@ -230,7 +230,7 @@ module \scheme{(foo bar baz)} is searched for in the file
 installed directories, \scheme{"."} and \scheme{"./lib"}.  Additional
 directories can be specified with the command-line options \ccode{-I}
 and \ccode{-A} (see the command-line options below) or with the
-\scheme{add-modue-directory} procedure at runtime.  You can search for
+\scheme{add-module-directory} procedure at runtime.  You can search for
 a module file with \scheme{(find-module-file <file>)}, or load it with
 \scheme{(load-module-file <file> <env>)}.
 
