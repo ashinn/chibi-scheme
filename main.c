@@ -517,6 +517,10 @@ sexp run_main (int argc, char **argv) {
 #if SEXP_USE_MODULES
       check_nonull_arg('t', arg);
       suffix = strrchr(arg, '.');
+      if (suffix == NULL) {
+        fprintf(stderr, "trace expected: -t module.name.binding, e.g. srfi.1.iota, but got %s\n", arg);
+        break;
+      }
       sym = sexp_intern(ctx, suffix + 1, -1);
       *(char*)suffix = '\0';
       impmod = make_import(sexp_trace_prefix, arg, sexp_trace_suffix);
