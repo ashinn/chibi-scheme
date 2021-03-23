@@ -52,5 +52,12 @@ By default files are installed in **/usr/local**.
 If you want to try out chibi-scheme without installing, be sure to set
 `LD_LIBRARY_PATH` so it can find the shared libraries.
 
+If you want to install the package into a dedicated directory for packaging or
+exploration purposes, you still need to supply the PREFIX variable containing the
+final location of the executables.
+
+    make PREFIX=/path/to/install/
+    sudo make PREFIX=/path/to/install/ DESTDIR=/tmp/dir install
+
 For more detailed documentation, run `make doc` and see the generated
 *doc/chibi.html*.
