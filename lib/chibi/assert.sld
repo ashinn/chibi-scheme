@@ -27,7 +27,7 @@
              (sym? abracadabra success-k failure-k))))))))
   (begin
     (define-syntax report-vars
-      (syntax-rules ()
+      (syntax-rules (quote quasiquote)
         ((report-vars 'x (next ...) res)
          (next ... res))
         ((report-vars `x (next ...) res)
