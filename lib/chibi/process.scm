@@ -175,6 +175,8 @@
      (close-output-port in)
      (let ((res (port->bytevector out)))
        (waitpid pid 0)
+       (close-input-port out)
+       (close-input-port err)
        res))))
 
 ;;> Utility to run \var{command} and return the accumulated output as
@@ -186,6 +188,8 @@
      (close-output-port in)
      (let ((res (port->string out)))
        (waitpid pid 0)
+       (close-input-port out)
+       (close-input-port err)
        res))))
 
 ;;> Utility to run \var{command} and return the accumulated output as
@@ -204,6 +208,8 @@
      (let* ((out (port->string out))
             (err (port->string err))
             (res (waitpid pid 0)))
+       (close-input-port out)
+       (close-input-port err)
        (list out err (cadr res))))))
 
 ;;> Utility to run \var{command} and return a list of two values:
@@ -221,4 +227,6 @@
      (close-output-port in)
      (let ((res (port->string-list out)))
        (waitpid pid 0)
+       (close-input-port out)
+       (close-input-port err)
        res))))
