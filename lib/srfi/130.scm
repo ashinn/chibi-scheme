@@ -264,7 +264,7 @@
     (let lp ((sc start) (i 0) (res '()))
       (cond
        ((string-cursor>=? sc end)
-        (reverse res))
+        (reverse (if (< (length res) (+ i 1)) (cons "" res) res)))
        ((and (< i limit) (string-contains str delim sc end))
         => (lambda (sc2)
              (lp (string-cursor-forward str sc2 delim-len)
