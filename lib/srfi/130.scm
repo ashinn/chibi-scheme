@@ -252,6 +252,8 @@
   (let* ((delim-len (string-length delim))
          (grammar (if (pair? o) (car o) 'infix))
          (o (if (pair? o) (cdr o) '()))
+         ;; default to an arbitrary limit guaranteed to be more than
+         ;; the maximum number of matches
          (limit (or (and (pair? o) (car o)) (string-length str)))
          (o (if (pair? o) (cdr o) '()))
          (start (cursor-arg str
@@ -261,17 +263,37 @@
                                   (string-cursor-end str)))))
     (if (and (eq? grammar 'strict-infix) (string-cursor>=? start end))
         (error "string-split 'strict-infix called on an empty string"))
-    (let lp ((sc start) (i 0) (res '()))
+    (let lp ((sc start) (found? #f) (i 1) (res '()))
       (cond
        ((string-cursor>=? sc end)
-        (reverse res))
-       ((and (< i limit) (string-contains str delim sc end))
+        (if (and found? (not (eq? 'suffix grammar)))
+            (reverse (cons "" res))
+            (reverse res)))
+       ((string-contains str delim sc end)
         => (lambda (sc2)
-             (lp (string-cursor-forward str sc2 delim-len)
-                 (+ i 1)
-                 (cons (substring-cursor str sc sc2) res))))
+             (let ((sc3 (string-cursor-forward str sc2 delim-len)))
+               (cond
+                ((>= i limit)
+                 (let* ((res (if (equal? "" delim)
+                                 res
+                                 (cons (substring-cursor str sc sc2) res)))
+                        (res (if (and (string-cursor=? sc3 end)
+                                      (eq? 'suffix grammar))
+                                 res
+                                 (cons (substring-cursor str sc3 end) res))))
+                   (lp end #f i res)))
+                ((equal? "" delim)
+                 (lp (string-cursor-forward str sc2 1)
+                     #f
+                     (+ i 1)
+                     (cons (string (string-cursor-ref str sc2)) res)))
+                ((and (string-cursor=? sc2 start) (eq? 'prefix grammar))
+                 (lp sc3 #t (+ i 1) res))
+                (else
+                 (lp sc3 #t (+ i 1)
+                     (cons (substring-cursor str sc sc2) res)))))))
        (else
-        (lp end i (cons (substring-cursor str sc end) res)))))))
+        (lp end #f i (cons (substring-cursor str sc end) res)))))))
 
 (define (string-filter pred str . o)
   (let ((out (open-output-string)))
