@@ -141,16 +141,17 @@
 
 ;;> Render \var{sxml} as text for viewing in a terminal.
 (define (sxml-display-as-text sxml . o)
-  (let ((out (if (pair? o) (car o) (current-output-port))))
-    (let lp ((sxml (if (and (pair? sxml) (eq? '*TOP* (car sxml)))
-                       (cdr sxml)
+  (let ((out (if (pair? o) (car o) (current-output-port)))
+        (sxml (if (and (pair? sxml) (null? (cddr sxml)) (eq? '*TOP* (car sxml)))
+                       (cadr sxml)
                        sxml)))
+    (let lp ((sxml sxml))
       (cond
        ((pair? sxml)
         (let ((tag (car sxml)))
           (cond
            ;; skip headers and the menu
-           ((or (memq tag '(head style script))
+           ((or (memq tag '(head style script !DOCTYPE))
                 (and (eq? 'div tag)
                      (pair? (cdr sxml))
                      (pair? (cadr sxml))
@@ -158,6 +159,8 @@
                      (equal? '(id . "menu") (assq 'id (cdr (cadr sxml)))))))
            ;; recurse other tags, appending newlines for new sections
            ((symbol? tag)
+            (if (memq tag '(h1 h2 h3 h4 h5 h6))
+                (newline out))
             (for-each
              lp
              (if (and (pair? (cdr sxml)) (eq? '@ (cadr sxml)))
