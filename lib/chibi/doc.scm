@@ -693,8 +693,6 @@ h4 { color: #222288; border-top: 1px solid #4588ba; }
     (('begin body0 ... body) (get-value-signature mod id proc name body))
     (else (get-procedure-signature mod id proc))))
 
-;; TODO: analyze and match on AST instead of making assumptions about
-;; bindings
 (define (get-signature mod id proc source form)
   (match form
     (('define (name args ...) . body)
@@ -708,7 +706,11 @@ h4 { color: #222288; border-top: 1px solid #4588ba; }
      (map (lambda (x) (cons name (cdr x)))
           (filter external-clause? clause)))
     (else
-     (get-procedure-signature mod id proc))))
+     (cond
+      ((procedure-analysis proc mod)
+       => (lambda (lam) (list (cons (lambda-name lam) (lambda-params lam)))))
+      (else
+       (get-procedure-signature mod id proc))))))
 
 (define (get-ffi-signatures form)
   (match form
@@ -846,17 +848,22 @@ h4 { color: #222288; border-top: 1px solid #4588ba; }
 
 (define (extract-file-docs mod file all-defs strict? . o)
   ;; extract (<file> . <line>) macro source or
-  ;; (<offset> <file . <line>>) procedure source
+  ;; (<offset> <file . <line>) procedure source or
+  ;; ((<offset> <file . <line>) ...) bytecode sources
   (define (source-line source)
     (and (pair? source)
-         (if (string? (car source))
-             (and (equal? file (car source))
-                  (number? (cdr source))
-                  (cdr source))
-             (and (number? (car source))
-                  (pair? (cdr source))
-                  (equal? file (cadr source))
-                  (cddr source)))))
+         (cond
+          ((string? (car source))
+           (and (equal? file (car source))
+                (number? (cdr source))
+                (cdr source)))
+          ((pair? (car source))
+           (source-line (car source)))
+          (else
+           (and (number? (car source))
+                (pair? (cdr source))
+                (equal? file (cadr source))
+                (cddr source))))))
   (define (read-to-paren in)
     (let lp1 ((res '()))
       (let ((ch (peek-char in)))
