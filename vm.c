@@ -678,9 +678,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_context_exception(ctx) = bc;
   } else {
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
-#if ! SEXP_USE_FULL_SOURCE_INFO
   sexp_bytecode_source(bc) = sexp_lambda_source(lambda);
-#endif
   if (sexp_nullp(fv)) {
     /* shortcut, no free vars */
     tmp = sexp_make_vector(ctx2, SEXP_ZERO, SEXP_VOID);
