@@ -16,22 +16,23 @@
       (syntax-rules ()
         ((log->string/no-dates expr ...)
          (string-join
-          (map (lambda (line) (substring line 20))
+          (map (lambda (line)
+                 (if (string-null? line) line (substring line 20)))
                (string-split (log->string expr ...) "\n"))
           "\n"))))
     (define (run-tests)
       (test-begin "logging")
-      (test "D four: 4"
+      (test "D four: 4\n"
           (log->string/no-dates
            (log-debug "four: " (+ 2 2))))
-      (test "I pi: 3.14"
+      (test "I pi: 3.14\n"
           (log->string/no-dates
            (log-info "pi: " (with ((precision 2)) (acos -1)))))
       (test-assert
         (string-prefix? "E "
                         (log->string/no-dates
                          (with-logged-errors (/ 1 0)))))
-      (test "W warn\nE error"
+      (test "W warn\nE error\n"
           (log->string/no-dates
            (with-log-level
             'warn
