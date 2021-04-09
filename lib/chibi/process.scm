@@ -205,12 +205,12 @@
    command
    (lambda (pid in out err)
      (close-output-port in)
-     (let* ((out (port->string out))
-            (err (port->string err))
+     (let* ((outs (port->string out))
+            (errs (port->string err))
             (res (waitpid pid 0)))
        (close-input-port out)
        (close-input-port err)
-       (list out err (cadr res))))))
+       (list outs errs (cadr res))))))
 
 ;;> Utility to run \var{command} and return a list of two values:
 ;;> the accumulated output as a string, the error output as a string.
