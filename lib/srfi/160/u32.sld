@@ -7,7 +7,6 @@
    u32vector-ref
    u32vector-set!
    u32vector-length
-   (rename vector u32vector)
    (rename uvector-unfold u32vector-unfold)
    (rename uvector-unfold-right u32vector-unfold-right)
    (rename vector-copy u32vector-copy)
@@ -48,9 +47,7 @@
    (rename vector-reverse! u32vector-reverse!)
    (rename vector-copy! u32vector-copy!)
    (rename vector-reverse-copy! u32vector-reverse-copy!)
-   (rename uvector->list u32vector->list)
    (rename reverse-vector->list reverse-u32vector->list)
-   (rename list->uvector list->u32vector)
    (rename reverse-list->vector reverse-list->u32vector)
    (rename uvector->vector u32vector->vector)
    (rename vector->uvector vector->u32vector)
@@ -64,6 +61,9 @@
   (begin
     (define uvector? u32vector?)
     (define make-uvector make-u32vector)
+    (define vector u32vector)
+    (define uvector->list u32vector->list)
+    (define list->uvector list->u32vector)
     (define uvector-length u32vector-length)
     (define uvector-ref u32vector-ref)
     (define uvector-set! u32vector-set!))

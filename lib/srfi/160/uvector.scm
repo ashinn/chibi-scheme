@@ -17,18 +17,8 @@
                           (lp2 (+ i 1)))))
                (lp1 (cdr ls)))))))
 
-(define (list->uvector ls)
-  (let ((res (make-uvector (length ls))))
-    (do ((ls ls (cdr ls))
-         (i 0 (+ i 1)))
-        ((null? ls) res)
-      (uvector-set! res i (car ls)))))
-
 (define (reverse-list->uvector ls)
   (list->uvector (reverse ls)))
-
-(define (vector . ls)
-  (list->uvector ls))
 
 (define (uvector-unfold f len seed)
   (let ((res (make-uvector len)))
@@ -314,9 +304,6 @@
 
 (define (reverse-list->vector ls)
   (list->uvector (reverse ls)))
-
-(define (uvector->list vec . o)
-  (reverse (apply reverse-vector->list vec o)))
 
 (define (uvector->vector vec . o)
   (list->vector (apply uvector->list vec o)))

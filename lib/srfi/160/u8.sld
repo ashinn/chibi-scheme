@@ -7,7 +7,6 @@
    u8vector-ref
    u8vector-set!
    u8vector-length
-   (rename vector u8vector)
    (rename uvector-unfold u8vector-unfold)
    (rename uvector-unfold-right u8vector-unfold-right)
    (rename vector-copy u8vector-copy)
@@ -48,9 +47,7 @@
    (rename vector-reverse! u8vector-reverse!)
    (rename vector-copy! u8vector-copy!)
    (rename vector-reverse-copy! u8vector-reverse-copy!)
-   (rename uvector->list u8vector->list)
    (rename reverse-vector->list reverse-u8vector->list)
-   (rename list->uvector list->u8vector)
    (rename reverse-list->vector reverse-list->u8vector)
    (rename uvector->vector u8vector->vector)
    (rename vector->uvector vector->u8vector)
@@ -64,6 +61,9 @@
   (begin
     (define uvector? u8vector?)
     (define make-uvector make-u8vector)
+    (define vector u8vector)
+    (define uvector->list u8vector->list)
+    (define list->uvector list->u8vector)
     (define uvector-length u8vector-length)
     (define uvector-ref u8vector-ref)
     (define uvector-set! u8vector-set!))

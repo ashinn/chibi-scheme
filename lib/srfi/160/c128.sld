@@ -7,7 +7,6 @@
    c128vector-ref
    c128vector-set!
    c128vector-length
-   (rename vector c128vector)
    (rename uvector-unfold c128vector-unfold)
    (rename uvector-unfold-right c128vector-unfold-right)
    (rename vector-copy c128vector-copy)
@@ -48,9 +47,7 @@
    (rename vector-reverse! c128vector-reverse!)
    (rename vector-copy! c128vector-copy!)
    (rename vector-reverse-copy! c128vector-reverse-copy!)
-   (rename uvector->list c128vector->list)
    (rename reverse-vector->list reverse-c128vector->list)
-   (rename list->uvector list->c128vector)
    (rename reverse-list->vector reverse-list->c128vector)
    (rename uvector->vector c128vector->vector)
    (rename vector->uvector vector->c128vector)
@@ -64,6 +61,9 @@
   (begin
     (define uvector? c128vector?)
     (define make-uvector make-c128vector)
+    (define vector c128vector)
+    (define uvector->list c128vector->list)
+    (define list->uvector list->c128vector)
     (define uvector-length c128vector-length)
     (define uvector-ref c128vector-ref)
     (define uvector-set! c128vector-set!))

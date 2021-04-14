@@ -7,7 +7,6 @@
    c64vector-ref
    c64vector-set!
    c64vector-length
-   (rename vector c64vector)
    (rename uvector-unfold c64vector-unfold)
    (rename uvector-unfold-right c64vector-unfold-right)
    (rename vector-copy c64vector-copy)
@@ -48,9 +47,7 @@
    (rename vector-reverse! c64vector-reverse!)
    (rename vector-copy! c64vector-copy!)
    (rename vector-reverse-copy! c64vector-reverse-copy!)
-   (rename uvector->list c64vector->list)
    (rename reverse-vector->list reverse-c64vector->list)
-   (rename list->uvector list->c64vector)
    (rename reverse-list->vector reverse-list->c64vector)
    (rename uvector->vector c64vector->vector)
    (rename vector->uvector vector->c64vector)
@@ -64,6 +61,9 @@
   (begin
     (define uvector? c64vector?)
     (define make-uvector make-c64vector)
+    (define vector c64vector)
+    (define uvector->list c64vector->list)
+    (define list->uvector list->c64vector)
     (define uvector-length c64vector-length)
     (define uvector-ref c64vector-ref)
     (define uvector-set! c64vector-set!))
