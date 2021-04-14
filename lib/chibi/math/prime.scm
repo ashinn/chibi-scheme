@@ -146,20 +146,34 @@
 ;;> Returns the first prime less than or equal to \var{n}, or #f if
 ;;> there are no such primes.
 (define (prime-below n)
-  (and (>= n 3)
-       (let lp ((n (if (even? n) (- n 1) n)))
-         (if (prime? n) n (lp (- n 2))))))
+  (cond
+   ((> n 3)
+    (let lp ((n (if (even? n) (- n 1) (- n 2))))
+      (if (prime? n) n (lp (- n 2)))))
+   ((= n 3)
+    2)
+   (else
+    #f)))
 
 ;;> Returns the first prime greater than or equal to \var{n}.  If the
 ;;> optional \var{limit} is given and not false, returns \scheme{#f}
 ;;> if no such primes exist below \var{limit}.
 (define (prime-above n . o)
   (let ((limit (and (pair? o) (car o))))
-    (let lp ((n (if (even? n) (+ n 1) n)))
-      (cond
-       ((and limit (>= n limit)) #f)
-       ((prime? n) n)
-       (else (lp (+ n 2)))))))
+    (cond
+     ((< n 2)
+      2)
+     (limit
+      (let lp ((n (if (even? n) (+ n 1) (+ n 2))))
+        (cond
+         ((>= n limit) #f)
+         ((prime? n) n)
+         (else (lp (+ n 2))))))
+     (else
+      (let lp ((n (if (even? n) (+ n 1) (+ n 2))))
+        (cond
+         ((prime? n) n)
+         (else (lp (+ n 2)))))))))
 
 ;;> Returns the factorization of \var{n} as a monotonically
 ;;> increasing list of primes.
