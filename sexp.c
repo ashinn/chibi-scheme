@@ -758,6 +758,22 @@ sexp sexp_user_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   return res;
 }
 
+sexp sexp_user_exception_ls (sexp ctx, sexp self, const char *msg, int n, ...) {
+  int i;
+  va_list ap;
+  sexp_gc_var2(res, ir);
+  sexp_gc_preserve2(ctx, res, ir);
+  va_start(ap, n);
+  for (i=0, ir=SEXP_NULL; i < n; ++i) {
+    ir = sexp_cons(ctx, va_arg(ap, sexp), ir);
+  }
+  ir = sexp_nreverse(ctx, ir);
+  res = sexp_user_exception(ctx, self, msg, ir);
+  sexp_gc_release2(ctx);
+  va_end(ap);
+  return res;
+}
+
 sexp sexp_file_exception (sexp ctx, sexp self, const char *ms, sexp ir) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
