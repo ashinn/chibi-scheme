@@ -1263,18 +1263,24 @@
 
 (define (write-scheme->c expr)
   (define (write-numeric-arg x)
+    ;; TODO: check when we can assume a fixnum
     (if (symbol? x)
-        (cat "sexp_unbox_fixnum(" x ")")
+        (cat "sexp_sint_value(" x ")")
         (write-scheme->c x)))
   (if (pair? expr)
       (case (car expr)
         ((+ - * / %)
-         (write-scheme->c (cadr expr))
-         (for-each
-          (lambda (x)
-            (cat " " (car expr) " ")
-            (write-numeric-arg x))
-          (cddr expr)))
+         (let ((expr (if (and (null? (cddr expr)) (memq (car expr) '(- /)))
+                         `(,(car expr)
+                           ,(if (eq? '- (car expr)) 0 1)
+                           ,@(cdr expr))
+                         expr)))
+           (write-scheme->c (cadr expr))
+           (for-each
+            (lambda (x)
+              (cat " " (car expr) " ")
+              (write-numeric-arg x))
+            (cddr expr))))
         ((< <= == != >= >)
          (let lp ((ls (cdr expr)))
            (cat "(" (lambda () (write-numeric-arg (car ls))) " " (car expr)
@@ -1284,6 +1290,15 @@
             ((pair? (cddr ls))
              (display " && ")
              (lp (cdr ls))))))
+        ((expt)
+         (if (and (integer? (cadr expr))
+                  (integer? (car (cddr expr))))
+             (write-scheme->c (expt (cadr expr) (car (cddr expr))))
+             (cat "pow("
+                  (lambda () (write-numeric-arg (cadr expr)))
+                  ", "
+                  (lambda () (write-numeric-arg (car (cddr expr))))
+                  ")")))
         (else
          (write (scheme-procedure->c (car expr)))
          (display "(")
@@ -1296,17 +1311,47 @@
          (display ")")))
       (write expr)))
 
+(define (extract-irritants expr)
+  (reverse
+   (let lp ((args (cdr expr))
+            (irr '()))
+     (cond
+      ((null? args) irr)
+      ((identifier? (car args)) (lp (cdr args) (cons (car args) irr)))
+      ((pair? (car args))
+       ;; pass length rather than vector objects to avoid huge error messages
+       (if (and (memq (caar args)
+                      '(length bytevector-length u8vector-length uvector-length))
+                (pair? (cdar args))
+                (identifier? (car (cdar args))))
+           (lp (cdr args)
+               ;; sexp_length returns sexp, the others int
+               (cons (if (eq? 'length (caar args))
+                         (car args)
+                         (list 'sexp_make_fixnum (car args)))
+                     irr))
+           (lp (cdr args) (lp (cdar args) irr))))
+      (else (lp (cdr args) irr))))))
+
 (define (write-assertions func asserts)
   (for-each
    (lambda (assert)
-     (cat "  if (!(" (lambda () (write-scheme->c assert)) ")) {\n"
-          "    return sexp_user_exception(ctx, self, \"assertion failed: \" "
-          (call-with-output-string
-            (lambda (out)
-              (write (call-with-output-string
-                       (lambda (out) (write assert out))) out)))
-          ", SEXP_NULL);\n"
-          "  }\n"))
+     (let ((irr-ls (extract-irritants assert)))
+       (cat "  if (!(" (lambda () (write-scheme->c assert)) ")) {\n"
+            "    return sexp_user_exception_ls(ctx, self, \"assertion failed: \" "
+            (call-with-output-string
+              (lambda (out)
+                (write (call-with-output-string
+                         (lambda (out) (write assert out))) out)))
+            ", " (length irr-ls)
+            (lambda ()
+              (for-each
+               (lambda (irr)
+                 (cat ", ")
+                 (write-scheme->c irr))
+               irr-ls))
+            ");\n"
+            "  }\n")))
    asserts))
 
 (define (scheme-procedure->c name)
