@@ -647,7 +647,6 @@
 (define (array-fold-right kons knil array)
   (fold-right kons knil (array->list array)))
 
-;; note this is a reduce-right
 (define (array-reduce op array)
   ;; (let* ((domain (array-domain array))
   ;;        (init-index (interval-lower-bounds->list domain))
@@ -662,8 +661,7 @@
   ;;              domain
   ;;              init-index)
   ;;       knil))
-  ;; TODO: rewrite with reverse indexing
-  (reduce op 'never-used (reverse (array->list array))))
+  (reduce (lambda (elt acc) (op acc elt)) 'never-used (array->list array)))
 
 (define (array-any pred array . arrays)
   (assert (all-equal? (map array-dimension (cons array arrays))))
