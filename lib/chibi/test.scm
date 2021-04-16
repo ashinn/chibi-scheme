@@ -204,10 +204,14 @@
 
 ;;> \section{Test Groups}
 
-;;> Tests can be collected in groups for
+;;> Tests can be collected in groups for separate reporting, filtering
+;;> and for catching exceptions outside of a test case.
 
-;;> Wraps \var{body} as a single test group, which can be filtered
-;;> and summarized separately.
+;;> Wraps \var{body} as a single test group, which can be filtered and
+;;> summarized separately.  The \var{body} is arbitrary Scheme code,
+;;> and tests run within its dynamic extent will be associated with
+;;> the group.  If an uncaught exception is raised outside of a test
+;;> case, it will cause the whole group to fail with an error status.
 
 ;;> \example{
 ;;> (test-group "pi"
