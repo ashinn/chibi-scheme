@@ -1838,8 +1838,11 @@ static sexp* sexp_fileno_cell(sexp ctx, sexp vec, int fd) {
 static sexp sexp_lookup_fileno(sexp ctx, int fd) {
   sexp* cell = sexp_fileno_cell(ctx, sexp_global(ctx, SEXP_G_FILE_DESCRIPTORS), fd);
   if (cell && sexp_ephemeronp(*cell)
-      && sexp_fileno_fd(sexp_ephemeron_key(*cell)) == fd)
-    return sexp_ephemeron_key(*cell);
+      && sexp_filenop(sexp_ephemeron_key(*cell))
+      && sexp_fileno_fd(sexp_ephemeron_key(*cell)) == fd) {
+    if (sexp_fileno_openp(sexp_ephemeron_key(*cell)))
+      return sexp_ephemeron_key(*cell);
+  }
   return SEXP_FALSE;
 }
 
