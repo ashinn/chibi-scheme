@@ -1,5 +1,5 @@
 /*  features.h -- general feature configuration               */
-/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2021 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 /* uncomment this to disable most features */
@@ -172,6 +172,18 @@
 /*   This includes the trigonometric and expt functions. */
 /*   Automatically disabled if you've disabled flonums. */
 /* #define SEXP_USE_MATH 0 */
+
+/* uncomment this to enable lenient matching of top-level bindings */
+/*   Historically, to match behavior with some other Schemes and in */
+/*   hopes of making it easier to use macros and modules, Chibi allowed */
+/*   top-level bindings with the same underlying symbol name to match */
+/*   with identifier=?.  In particular, there still isn't a good way */
+/*   to handle the case where auxiliary syntax conflicts with some other */
+/*   binding without renaming one or the other (though SRFI 206 helps). */
+/*   However, if people make use of this you can write Chibi programs */
+/*   which don't work portably in other implementations, which has been */
+/*   a source of confusion, so the default has reverted to strict R7RS. */
+/* #define SEXP_USE_STRICT_TOPLEVEL_BINDINGS 0 */
 
 /* uncomment this to disable warning about references to undefined variables */
 /*   This is something of a hack, but can be quite useful. */
@@ -553,7 +565,7 @@
 #endif
 
 #ifndef SEXP_USE_STRICT_TOPLEVEL_BINDINGS
-#define SEXP_USE_STRICT_TOPLEVEL_BINDINGS 0
+#define SEXP_USE_STRICT_TOPLEVEL_BINDINGS 1
 #endif
 
 #if SEXP_USE_STRICT_TOPLEVEL_BINDINGS
