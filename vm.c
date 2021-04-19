@@ -2101,18 +2101,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     errno = 0;
 #endif
     i = sexp_read_char(ctx, _ARG1);
-#if SEXP_USE_UTF8_STRINGS
-    if (i >= 0x80)
-      _ARG1 = sexp_read_utf8_char(ctx, _ARG1, i);
-    else
-#endif
     if (i == EOF) {
-      if (!sexp_port_openp(_ARG1))
+      if (!sexp_port_openp(_ARG1)) {
         sexp_raise("read-char: port is closed", _ARG1);
-      else
 #if SEXP_USE_GREEN_THREADS
-      if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
-          && (errno == EAGAIN)) {
+      } else if ((sexp_port_stream(_ARG1) ? ferror(sexp_port_stream(_ARG1)) : 1)
+                 && (errno == EAGAIN)) {
         if (sexp_port_stream(_ARG1)) clearerr(sexp_port_stream(_ARG1));
         /* TODO: block and unblock */
         if (sexp_applicablep(sexp_global(ctx, SEXP_G_THREADS_BLOCKER)))
@@ -2121,9 +2115,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
           sexp_poll_input(ctx, _ARG1);
         fuel = 0;
         ip--;      /* try again */
-      } else
+      } else {
 #endif
         _ARG1 = SEXP_EOF;
+      }
+#if SEXP_USE_UTF8_STRINGS
+    } else if (i >= 0x80) {
+      _ARG1 = sexp_read_utf8_char(ctx, _ARG1, i);
+#endif
     } else {
       if (i == '\n') sexp_port_line(_ARG1)++;
       _ARG1 = sexp_make_character(i);
