@@ -361,6 +361,17 @@ sexp sexp_complete_bytecode (sexp ctx) {
 #if SEXP_USE_FULL_SOURCE_INFO
   if (sexp_bytecode_source(bc) && sexp_pairp(sexp_bytecode_source(bc))) {
     sexp_bytecode_source(bc) = sexp_nreverse(ctx, sexp_bytecode_source(bc));
+    /* omit the leading -1 source marker for the bytecode if the next */
+    /* entry is in the same file */
+    if (sexp_pairp(sexp_cdr(sexp_bytecode_source(bc))) &&
+        sexp_pairp(sexp_car(sexp_bytecode_source(bc))) &&
+        sexp_pairp(sexp_cdar(sexp_bytecode_source(bc))) &&
+        sexp_pairp(sexp_cadr(sexp_bytecode_source(bc))) &&
+        sexp_pairp(sexp_cdr(sexp_cadr(sexp_bytecode_source(bc)))) &&
+        sexp_cadr(sexp_car(sexp_bytecode_source(bc)))
+        == sexp_cadr(sexp_cadr(sexp_bytecode_source(bc)))) {
+      sexp_bytecode_source(bc) = sexp_cdr(sexp_bytecode_source(bc));
+    }
     sexp_bytecode_source(bc) = sexp_list_to_vector(ctx, sexp_bytecode_source(bc));
   }
 #endif

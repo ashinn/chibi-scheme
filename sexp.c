@@ -279,7 +279,7 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {(sexp)"Input-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORTN, SEXP_IPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, SEXP_FINALIZE_PORT},
   {(sexp)"Output-Port", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_PORTN, SEXP_OPORT, sexp_offsetof(port, name), 3, 3, 0, 0, sexp_sizeof(port), 0, 0, 0, 0, 0, 0, 0, 0, SEXP_FINALIZE_PORT},
   {(sexp)"File-Descriptor", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, SEXP_FINALIZE_FILENON, SEXP_FILENO, 0, 0, 0, 0, 0, sexp_sizeof(fileno), 0, 0, 0, 0, 0, 0, 0, 0, SEXP_FINALIZE_FILENO},
-  {(sexp)"Exception", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, SEXP_EXCEPTION, sexp_offsetof(exception, kind), 5, 5, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
+  {(sexp)"Exception", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, SEXP_EXCEPTION, sexp_offsetof(exception, kind), 6, 6, 0, 0, sexp_sizeof(exception), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
   {(sexp)"Procedure", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_PROCEDURE, sexp_offsetof(procedure, bc), 2, 2, 0, 0, sexp_sizeof(procedure), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
   {(sexp)"Macro", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_MACRO, sexp_offsetof(macro, proc), 4, 4, 0, 0, sexp_sizeof(macro), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
   {(sexp)"Sc", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, SEXP_SYNCLO, sexp_offsetof(synclo, env), 4, 4, 0, 0, sexp_sizeof(synclo), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
@@ -731,6 +731,7 @@ sexp sexp_make_exception (sexp ctx, sexp kind, sexp message, sexp irritants,
   sexp_exception_irritants(exn) = irritants;
   sexp_exception_procedure(exn) = procedure;
   sexp_exception_source(exn) = source;
+  sexp_exception_stack_trace(exn) = SEXP_FALSE;
   return exn;
 }
 

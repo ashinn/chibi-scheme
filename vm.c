@@ -41,38 +41,78 @@ static sexp sexp_lookup_source_info (sexp src, int ip) {
 }
 #endif
 
-void sexp_stack_trace (sexp ctx, sexp out) {
-  int i, fp=sexp_context_last_fp(ctx);
-  sexp self, bc, src, *stack=sexp_stack_data(sexp_context_stack(ctx));
-  if (! sexp_oportp(out))
-    out = sexp_current_error_port(ctx);
+sexp sexp_get_stack_trace (sexp ctx) {
+  sexp_sint_t i, fp=sexp_context_last_fp(ctx);
+  sexp self, bc, src, *stack = sexp_stack_data(sexp_context_stack(ctx));
+  sexp_gc_var2(res, cell);
+  sexp_gc_preserve2(ctx, res, cell);
+  res = SEXP_NULL;
   for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
     self = stack[i+2];
     if (self && sexp_procedurep(self)) {
-      sexp_write_string(ctx, "  called from ", out);
       bc = sexp_procedure_code(self);
-      if (sexp_symbolp(sexp_bytecode_name(bc)))
-        sexp_write(ctx, sexp_bytecode_name(bc), out);
-      else
-        sexp_write_string(ctx, "<anonymous>", out);
       src = sexp_bytecode_source(bc);
 #if SEXP_USE_FULL_SOURCE_INFO
       if (src && sexp_vectorp(src))
         src = sexp_lookup_source_info(src, sexp_unbox_fixnum(stack[i+3]));
 #endif
-      if (src && sexp_pairp(src)) {
-        if (sexp_fixnump(sexp_cdr(src)) && (sexp_cdr(src) >= SEXP_ZERO)) {
-          sexp_write_string(ctx, " on line ", out);
-          sexp_write(ctx, sexp_cdr(src), out);
-        }
-        if (sexp_stringp(sexp_car(src))) {
-          sexp_write_string(ctx, " of file ", out);
-          sexp_write_string(ctx, sexp_string_data(sexp_car(src)), out);
-        }
-      }
-      sexp_write_char(ctx, '\n', out);
+      cell = sexp_cons(ctx, self, src ? src : SEXP_FALSE);
+      res = sexp_cons(ctx, cell, res);
     }
   }
+  res = sexp_nreverse(ctx, res);
+  sexp_gc_release2(ctx);
+  return res;
+}
+
+void sexp_print_extracted_stack_trace (sexp ctx, sexp trace, sexp out) {
+  sexp self, bc, src, ls;
+  if (! sexp_oportp(out))
+    out = sexp_current_error_port(ctx);
+  for (ls = trace; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+    self = sexp_caar(ls);
+    bc = sexp_procedure_code(self);
+    src = sexp_cdar(ls);
+    sexp_write_string(ctx, "  called from ", out);
+    if (sexp_symbolp(sexp_bytecode_name(bc)))
+      sexp_write(ctx, sexp_bytecode_name(bc), out);
+    else
+      sexp_write_string(ctx, "<anonymous>", out);
+    if (sexp_pairp(src)) {
+      if (sexp_fixnump(sexp_cdr(src)) && (sexp_cdr(src) >= SEXP_ZERO)) {
+        sexp_write_string(ctx, " on line ", out);
+        sexp_write(ctx, sexp_cdr(src), out);
+      } else {
+        sexp_write_string(ctx, " bad source line: ", out);
+        sexp_write(ctx, src, out);
+      }
+      if (sexp_stringp(sexp_car(src))) {
+        sexp_write_string(ctx, " of file ", out);
+        sexp_write_string(ctx, sexp_string_data(sexp_car(src)), out);
+      } else {
+        sexp_write_string(ctx, " bad source file: ", out);
+        sexp_write(ctx, src, out);
+      }
+    }
+    sexp_write_char(ctx, '\n', out);
+  }
+}
+
+sexp sexp_print_exception_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp out) {
+  sexp_assert_type(ctx, sexp_exceptionp, SEXP_EXCEPTION, exn);
+  sexp_assert_type(ctx, sexp_oportp, SEXP_OPORT, out);
+  if (sexp_pairp(sexp_exception_stack_trace(exn))) {
+    sexp_print_extracted_stack_trace(ctx, sexp_exception_stack_trace(exn), out);
+  }
+  return SEXP_VOID;
+}
+
+void sexp_stack_trace (sexp ctx, sexp out) {
+  sexp_gc_var1(trace);
+  sexp_gc_preserve1(ctx, trace);
+  trace = sexp_get_stack_trace(ctx);
+  sexp_print_extracted_stack_trace(ctx, trace, out);
+  sexp_gc_release1(ctx);
 }
 
 sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out) {
@@ -637,6 +677,13 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   }
   sexp_context_lambda(ctx2) = lambda;
   sexp_gc_preserve2(ctx, tmp, bc);
+#if SEXP_USE_FULL_SOURCE_INFO
+  tmp = sexp_cons(ctx, SEXP_NEG_ONE, sexp_lambda_source(lambda));
+  tmp = sexp_cons(ctx, tmp, SEXP_NULL);
+#else
+  tmp = sexp_lambda_source(lambda);
+#endif
+  sexp_bytecode_source(sexp_context_bc(ctx2)) = tmp;
   tmp = sexp_cons(ctx2, SEXP_ZERO, sexp_lambda_source(lambda));
   /* allocate space for local vars */
   k = sexp_unbox_fixnum(sexp_length(ctx, sexp_lambda_locals(lambda)));
@@ -678,12 +725,6 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_context_exception(ctx) = bc;
   } else {
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
-#if SEXP_USE_FULL_SOURCE_INFO
-  sexp_bytecode_source(bc) = sexp_cons(ctx, SEXP_NEG_ONE, sexp_lambda_source(lambda));
-  sexp_bytecode_source(bc) = sexp_cons(ctx, sexp_bytecode_source(bc), SEXP_NULL);
-#else
-  sexp_bytecode_source(bc) = sexp_lambda_source(lambda);
-#endif
   if (sexp_nullp(fv)) {
     /* shortcut, no free vars */
     tmp = sexp_make_vector(ctx2, SEXP_ZERO, SEXP_VOID);
@@ -1133,6 +1174,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       if (!sexp_exceptionp(_ARG1)) {
         _ARG1 = sexp_make_exception(ctx, SEXP_UNCAUGHT, SEXP_FALSE, _ARG1, self, SEXP_FALSE);
       }
+      sexp_context_top(ctx) = top;
+      sexp_exception_stack_trace(_ARG1) = sexp_get_stack_trace(ctx);
       goto end_loop;
     }
     stack[top] = SEXP_ONE;
