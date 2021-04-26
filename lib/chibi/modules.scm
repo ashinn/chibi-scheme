@@ -117,6 +117,12 @@
            (lp (append (map include-source (cdar ls)) (cdr ls)) res))
           ((include-library-declarations)
            (lp (append (append-map file->sexp-list (map resolve-file (cdar ls))) (cdr ls)) res))
+          ((include-shared include-shared-optionally)
+           (for-each
+            (lambda (file)
+              (let ((f (string-append file *shared-object-extension*)))
+                (cond ((find-module-file f) => (lambda (path) (load path env))))))
+            (cdar ls)))
           ((begin body)
            (let lp2 ((ls2 (cdar ls)) (res res))
              (cond
