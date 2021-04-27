@@ -64,6 +64,15 @@
 /*   if you suspect a bug in the native GC. */
 /* #define SEXP_USE_BOEHM 1 */
 
+/* uncomment this to enable automatic file descriptor unification */
+/*   File descriptors as returned by C functions are raw integers, */
+/*   which are convereted to GC'ed first-class objects on the Scheme */
+/*   side.  By default we assume that each fd is new, however if this */
+/*   option is enabled and an fd is returned which matches an existing */
+/*   open fd, they are assumed to refer to the same descriptor and */
+/*   unified. */
+/* #define SEXP_USE_UNIFY_FILENOS_BY_NUMBER 1 */
+
 /* uncomment this to disable weak references */
 /* #define SEXP_USE_WEAK_REFERENCES 0 */
 
@@ -464,8 +473,16 @@
 #define SEXP_USE_BOEHM 0
 #endif
 
+#ifdef SEXP_USE_UNIFY_FILENOS_BY_NUMBER
+#define SEXP_USE_UNIFY_FILENOS_BY_NUMBER 0
+#endif
+
 #ifndef SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
+#define SEXP_USE_WEAK_REFERENCES 1
+#else
 #define SEXP_USE_WEAK_REFERENCES ! SEXP_USE_NO_FEATURES
+#endif
 #endif
 
 #ifndef SEXP_USE_FIXED_CHUNK_SIZE_HEAPS

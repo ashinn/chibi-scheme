@@ -1806,7 +1806,7 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
   return res;
 }
 
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
 sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
   sexp res = sexp_alloc_type(ctx, pair, SEXP_EPHEMERON);
   if (!sexp_exceptionp(res)) {
@@ -1878,13 +1878,13 @@ static void sexp_insert_fileno(sexp ctx, sexp fileno) {
     n++;
   sexp_global(ctx, SEXP_G_NUM_FILE_DESCRIPTORS) = sexp_make_fixnum(n);
 }
-#endif
+#endif  /* SEXP_USE_UNIFY_FILENOS_BY_NUMBER */
 
 sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_closep) {
   sexp_gc_var1(res);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, fd);
   if (sexp_unbox_fixnum(fd) < 0) return SEXP_FALSE;
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
   res = sexp_lookup_fileno(ctx, sexp_unbox_fixnum(fd));
   if (sexp_filenop(res)) {
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
@@ -1898,7 +1898,7 @@ sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_c
     sexp_fileno_fd(res) = sexp_unbox_fixnum(fd);
     sexp_fileno_openp(res) = 1;
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
     sexp_insert_fileno(ctx, res);
 #endif
   }
@@ -1925,7 +1925,7 @@ sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name) {
 #if SEXP_USE_FOLD_CASE_SYMS
   sexp_port_fold_casep(p) = sexp_truep(sexp_global(ctx, SEXP_G_FOLD_CASE_P));
 #endif
-#if SEXP_USE_WEAK_REFERENCES
+#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
   /* if the fd was previously opened by a non-stream port, preserve it */
   /* here to avoid gc timing issues */
   if (in && fileno(in) >= 0) {
