@@ -1806,7 +1806,7 @@ sexp sexp_open_output_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp 
   return res;
 }
 
-#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
+#if SEXP_USE_WEAK_REFERENCES
 sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value) {
   sexp res = sexp_alloc_type(ctx, pair, SEXP_EPHEMERON);
   if (!sexp_exceptionp(res)) {
@@ -1816,7 +1816,9 @@ sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp v
   }
   return res;
 }
+#endif /* SEXP_USE_WEAK_REFERENCES */
 
+#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
 static sexp* sexp_fileno_cell(sexp ctx, sexp vec, int fd) {
   sexp *data;
   sexp_sint_t i, cell, len;
