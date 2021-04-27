@@ -126,19 +126,6 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e, int nonblocking) {
   return res;
 }
 
-static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
-  int i;
-  if (! sexp_oportp(out)) out = sexp_current_error_port(ctx);
-  for (i=0; i<top; i++) {
-    sexp_write_char(ctx, ((i==fp) ? '*' : ' '), out);
-    if (i < 10) sexp_write_char(ctx, '0', out);
-    sexp_write(ctx, sexp_make_fixnum(i), out);
-    sexp_write_string(ctx, ": ", out);
-    sexp_write(ctx, stack[i], out);
-    sexp_newline(ctx, out);
-  }
-}
-
 static void repl (sexp ctx, sexp env) {
   sexp_gc_var6(obj, tmp, res, in, out, err);
   sexp_gc_preserve6(ctx, obj, tmp, res, in, out, err);
