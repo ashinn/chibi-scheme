@@ -3,7 +3,6 @@
           (scheme list)
           (scheme vector)
           (scheme sort)
-          (scheme write) ;
           (srfi 160 base)
           (chibi assert))
   (export

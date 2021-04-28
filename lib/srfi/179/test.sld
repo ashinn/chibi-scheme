@@ -3434,23 +3434,23 @@ OTHER DEALINGS IN THE SOFTWARE.
         ;;    '#(#f #f #t #t))
         ;;   (make-interval '#(3 2))))
 
-        ;; (test-error
-        ;;  (specialized-array-reshape
-        ;;   (array-sample
-        ;;    (array-reverse
-        ;;     (array-copy (make-array (make-interval '#(2 1 3 1)) list))
-        ;;     '#(#f #f #f #t))
-        ;;    '#(1 1 2 1))
-        ;;   (make-interval '#(4))))
+        (test-error
+         (specialized-array-reshape
+          (array-sample
+           (array-reverse
+            (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+            '#(#f #f #f #t))
+           '#(1 1 2 1))
+          (make-interval '#(4))))
 
-        ;; (test-error
-        ;;  (specialized-array-reshape
-        ;;   (array-sample
-        ;;    (array-reverse
-        ;;     (array-copy (make-array (make-interval '#(2 1 4 1)) list))
-        ;;     '#(#f #f #t #t))
-        ;;    '#(1 1 2 1))
-        ;;   (make-interval '#(4))))
+        (test-error
+         (specialized-array-reshape
+          (array-sample
+           (array-reverse
+            (array-copy (make-array (make-interval '#(2 1 4 1)) list))
+            '#(#f #f #t #t))
+           '#(1 1 2 1))
+          (make-interval '#(4))))
         )
 
       (test-group "curry tests"

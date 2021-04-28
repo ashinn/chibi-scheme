@@ -261,26 +261,27 @@
 ;; Arrays
 
 (define-record-type Array
-  (%%make-array domain getter setter storage body indexer safe?)
+  (%%make-array domain getter setter storage body coeffs indexer safe?)
   array?
   (domain array-domain)
   (getter array-getter)
   (setter array-setter)
   (storage array-storage-class)
   (body array-body)
+  (coeffs array-coeffs)
   (indexer array-indexer)
   (safe? array-safe?))
 
-(define (%make-array domain getter setter storage body indexer safe?)
+(define (%make-array domain getter setter storage body coeffs indexer safe?)
   (assert (interval? domain)
           (procedure? getter)
           (or (not setter) (procedure? setter))
           (or (not storage) (storage-class? storage)))
-  (%%make-array domain getter setter storage body indexer safe?))
+  (%%make-array domain getter setter storage body coeffs indexer safe?))
 
 (define (make-array domain getter . o)
   (assert (interval? domain) (procedure? getter))
-  (%make-array domain getter (and (pair? o) (car o)) #f #f #f #f))
+  (%make-array domain getter (and (pair? o) (car o)) #f #f #f #f #f))
 
 (define (array-dimension a)
   (interval-dimension (array-domain a)))
@@ -308,25 +309,92 @@
   (lambda (val . multi-index)
     (setter body (apply indexer multi-index) val)))
 
+;; Indexing
+
+(define (indexer->coeffs indexer domain . o)
+  (let* ((verify? (and (pair? o) (car o)))
+         (res (make-vector (+ 1 (interval-dimension domain)) 0))
+         (multi-index (interval-lower-bounds->list domain))
+         (base (apply indexer multi-index)))
+    (vector-set! res 0 base)
+    (let lp ((i 1)
+             (ls multi-index)
+             (offset base)
+             (count 0))
+      (cond
+       ((null? ls)
+        (if (and verify? (zero? count))
+            (lp 1 multi-index offset (+ count 1))
+            res))
+       ((= (+ 1 (car ls)) (interval-upper-bound domain (- i 1)))
+        (lp (+ i 1) (cdr ls) offset count))
+       (else
+        (set-car! ls (+ 1 (car ls)))
+        (let* ((offset2 (apply indexer multi-index))
+               (coeff (- offset2 offset)))
+          (cond
+           ((> count 0)
+            (and (= coeff (vector-ref res i))
+                 (lp (+ i 1) (cdr ls) offset2 count)))
+           (else
+            (vector-set! res i coeff)
+            (lp (+ i 1) (cdr ls) offset2 count)))))))))
+
+(define (coeffs->indexer coeffs domain)
+  (case (vector-length coeffs)
+    ((2)
+     (let ((a (vector-ref coeffs 0))
+           (b (vector-ref coeffs 1))
+           (lo-x (interval-lower-bound domain 0)))
+       (lambda (x) (+ a (* b (- x lo-x))))))
+    ((3)
+     (let ((a (vector-ref coeffs 0))
+           (b (vector-ref coeffs 1))
+           (c (vector-ref coeffs 2))
+           (lo-x (interval-lower-bound domain 0))
+           (lo-y (interval-lower-bound domain 1)))
+       (lambda (x y) (+ a (* b (- x lo-x)) (* c (- y lo-y))))))
+    (else
+     (lambda multi-index
+       (let ((lim (vector-length coeffs)))
+         (let lp ((ls multi-index)
+                  (i 1)
+                  (res (vector-ref coeffs 0)))
+           (cond
+            ((null? ls)
+             (if (< i lim)
+                 (error "multi-index too short for domain" multi-index domain)
+                 res))
+            ((>= i lim)
+             (error "multi-index too long for domain" multi-index domain))
+            (else
+             (lp (cdr ls)
+                 (+ i 1)
+                 (+ res (* (- (car ls) (interval-lower-bound domain (- i 1)))
+                           (vector-ref coeffs i))))))))))))
+
+(define (default-coeffs domain)
+  (let* ((dim (interval-dimension domain))
+         (res (make-vector (+ 1 dim))))
+    (vector-set! res 0 0)
+    (vector-set! res dim 1)
+    (let lp ((i (- dim 1))
+             (scale 1))
+      (cond
+       ((< i 0)
+        res)
+       ((= (+ 1 (interval-lower-bound domain i))
+           (interval-upper-bound domain i))
+        (vector-set! res (+ i 1) 0)
+        (lp (- i 1) scale))
+       (else
+        (let ((coeff (* scale  (- (interval-upper-bound domain i)
+                                  (interval-lower-bound domain i)))))
+          (vector-set! res (+ i 1) scale)
+          (lp (- i 1) coeff)))))))
+
 (define (default-indexer domain)
-  (lambda multi-index
-    (let ((dim (interval-dimension domain)))
-      (let lp ((ls multi-index)
-               (i 0)
-               (res 0))
-        (cond
-         ((null? ls)
-          (if (< i dim)
-              (error "multi-index too short for domain" multi-index domain)
-              res))
-         ((>= i dim)
-          (error "multi-index too long for domain" multi-index domain))
-         (else
-          (lp (cdr ls)
-              (+ i 1)
-              (+ (- (car ls) (interval-lower-bound domain i))
-                 (* res (- (interval-upper-bound domain i)
-                           (interval-lower-bound domain i)))))))))))
+  (coeffs->indexer (default-coeffs domain) domain))
 
 ;; converts the raw integer index to the multi-index in domain that
 ;; would map to it using the default indexer.
@@ -345,6 +413,8 @@
               (* scale width)
               (cons (+ elt (interval-lower-bound domain i)) res))))))
 
+;; Specialized arrays
+
 (define (make-specialized-array domain . o)
   (let* ((storage (if (pair? o) (car o) generic-storage-class))
          (safe? (if (and (pair? o) (pair? (cdr o)))
@@ -353,7 +423,8 @@
          (body ((storage-class-maker storage)
                 (interval-volume domain)
                 (storage-class-default storage)))
-         (indexer (default-indexer domain)))
+         (coeffs (default-coeffs domain))
+         (indexer (coeffs->indexer coeffs domain)))
     (assert (boolean? safe?))
     (%make-array
      domain
@@ -361,6 +432,7 @@
      (specialized-setter body indexer (storage-class-setter storage))
      storage
      body
+     coeffs
      indexer
      safe?)))
 
@@ -385,20 +457,28 @@
 
 (define (specialized-array-share array new-domain project)
   (assert (specialized-array? array) (interval? new-domain))
-  (let ((body (array-body array))
-        (indexer (lambda multi-index
-                   (call-with-values
-                       (lambda () (apply project multi-index))
-                     (array-indexer array))))
-        (storage (array-storage-class array)))
+  (let* ((body (array-body array))
+         (coeffs
+          (indexer->coeffs
+           (lambda multi-index
+             (call-with-values
+                 (lambda () (apply project multi-index))
+               (array-indexer array)))
+           new-domain))
+         (indexer
+          (coeffs->indexer coeffs new-domain))
+         (storage (array-storage-class array)))
     (%make-array
      new-domain
      (specialized-getter body indexer (storage-class-getter storage))
      (specialized-setter body indexer (storage-class-setter storage))
      storage
      body
+     coeffs
      indexer
      (array-safe? array))))
+
+;; Array transformations
 
 (define (array-copy array . o)
   (assert (array? array))
@@ -414,13 +494,14 @@
     (let* ((body ((storage-class-maker storage)
                     (interval-volume new-domain)
                     (storage-class-default storage)))
-             (indexer (default-indexer new-domain))
-             (getter (specialized-getter body indexer
-                                         (storage-class-getter storage)))
-             (setter (specialized-setter body indexer
-                                         (storage-class-setter storage)))
-             (res (%make-array new-domain getter setter
-                               storage body indexer safe?)))
+           (coeffs (default-coeffs new-domain))
+           (indexer (coeffs->indexer coeffs new-domain))
+           (getter (specialized-getter body indexer
+                                       (storage-class-getter storage)))
+           (setter (specialized-setter body indexer
+                                       (storage-class-setter storage)))
+           (res (%make-array new-domain getter setter
+                             storage body coeffs indexer safe?)))
         (array-assign! res array))))
 
 (define (array-curry array inner-dimension)
@@ -736,10 +817,13 @@
 (define (reshape-indexer array new-domain)
   (let ((orig-indexer (array-indexer array))
         (tmp-indexer (default-indexer new-domain)))
-    (lambda multi-index
-      (apply orig-indexer
-             (invert-default-index (array-domain array)
-                                   (apply tmp-indexer multi-index))))))
+    (indexer->coeffs
+     (lambda multi-index
+       (apply orig-indexer
+              (invert-default-index (array-domain array)
+                                    (apply tmp-indexer multi-index))))
+     new-domain
+     #t)))
 
 (define (specialized-array-reshape array new-domain . o)
   (assert (specialized-array? array)
@@ -748,9 +832,10 @@
   (let ((copy-on-failure? (and (pair? o) (car o))))
     (cond
      ((reshape-indexer array new-domain)
-      => (lambda (new-indexer)
-           (let ((body (array-body array))
-                 (storage (array-storage-class array)))
+      => (lambda (new-coeffs)
+           (let* ((new-indexer (coeffs->indexer new-coeffs new-domain))
+                  (body (array-body array))
+                  (storage (array-storage-class array)))
              (%make-array
               new-domain
               (specialized-getter body
@@ -761,6 +846,7 @@
                                   (storage-class-setter storage))
               storage
               body
+              new-coeffs
               new-indexer
               (array-safe? array)))))
      (copy-on-failure?
