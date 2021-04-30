@@ -3406,33 +3406,33 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (specialized-array-reshape array (make-interval '#(4))))
               (array->list array)))
 
-        ;; (test-error
-        ;;  (specialized-array-reshape
-        ;;   (array-reverse
-        ;;    (array-copy (make-array (make-interval '#(2 1 3 1)) list))
-        ;;    '#(#t #f #f #f))
-        ;;   (make-interval '#(6))))
+        (test-error
+         (specialized-array-reshape
+          (array-reverse
+           (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+           '#(#t #f #f #f))
+          (make-interval '#(6))))
 
-        ;; (test-error
-        ;;  (specialized-array-reshape
-        ;;   (array-reverse
-        ;;    (array-copy (make-array (make-interval '#(2 1 3 1)) list))
-        ;;    '#(#t #f #f #f))
-        ;;   (make-interval '#(3 2))))
+        (test-error
+         (specialized-array-reshape
+          (array-reverse
+           (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+           '#(#t #f #f #f))
+          (make-interval '#(3 2))))
 
-        ;; (test-error
-        ;;  (specialized-array-reshape
-        ;;   (array-reverse
-        ;;    (array-copy (make-array (make-interval '#(2 1 3 1)) list))
-        ;;    '#(#f #f #t #f))
-        ;;   (make-interval '#(6))))
+        (test-error
+         (specialized-array-reshape
+          (array-reverse
+           (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+           '#(#f #f #t #f))
+          (make-interval '#(6))))
 
-        ;; (test-error
-        ;;  (specialized-array-reshape
-        ;;   (array-reverse
-        ;;    (array-copy (make-array (make-interval '#(2 1 3 1)) list))
-        ;;    '#(#f #f #t #t))
-        ;;   (make-interval '#(3 2))))
+        (test-error
+         (specialized-array-reshape
+          (array-reverse
+           (array-copy (make-array (make-interval '#(2 1 3 1)) list))
+           '#(#f #f #t #t))
+          (make-interval '#(3 2))))
 
         (test-error
          (specialized-array-reshape
