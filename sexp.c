@@ -3076,7 +3076,7 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
           ((sexp_uvector_prefix(et) == 'u') || (sexp_uvector_prefix(et) == 's')) ?
 #endif
-          !(sexp_exact_integerp(tmp) && sexp_sint_value(tmp) >= min
+          !((min == 0 && sexp_bignump(tmp) ? sexp_bignum_sign(tmp) > 0 : sexp_exact_integerp(tmp) && sexp_sint_value(tmp) >= min)
             && (sexp_sint_value(tmp) < 0 || sexp_uint_value(tmp) <= max))
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
           : ((sexp_uvector_prefix(et) == 'c') ? !sexp_numberp(tmp) :

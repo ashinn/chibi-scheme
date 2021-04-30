@@ -151,7 +151,7 @@ void c128vector_set(sexp ctx, double* uv, int i, sexp v) {
   (assert (< -1 arg1 (uvector-length arg0))))
 (define-c void (u16vector-set! "u16vector_set") (u16vector int unsigned-short)
   (assert (< -1 arg1 (uvector-length arg0))
-          (< -1 arg2 (expt 2 16))))
+          (<= 0 arg2 (expt 2 16))))
 
 (define-c short s16vector-ref (s16vector int)
   (assert (< -1 arg1 (uvector-length arg0))))
@@ -163,7 +163,7 @@ void c128vector_set(sexp ctx, double* uv, int i, sexp v) {
   (assert (< -1 arg1 (uvector-length arg0))))
 (define-c void (u32vector-set! "u32vector_set") (u32vector int unsigned-int)
   (assert (< -1 arg1 (uvector-length arg0))
-          (< -1 arg2 (expt 2 32))))
+          (<= 0 arg2 (expt 2 32))))
 
 (define-c int32_t s32vector-ref (s32vector int)
   (assert (< -1 arg1 (uvector-length arg0))))
@@ -175,7 +175,7 @@ void c128vector_set(sexp ctx, double* uv, int i, sexp v) {
   (assert (< -1 arg1 (uvector-length arg0))))
 (define-c void (u64vector-set! "u64vector_set") (u64vector int uint64_t)
   (assert (< -1 arg1 (uvector-length arg0))
-          (< -1 arg2)))
+          (<= 0 arg2)))
 
 (define-c int64_t s64vector-ref (s64vector int)
   (assert (< -1 arg1 (uvector-length arg0))))

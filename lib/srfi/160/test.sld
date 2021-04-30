@@ -141,6 +141,9 @@
         (test '#u32(1 40 30 20 10) (u32vector-copy vrc1))
         (u32vector-reverse-copy! vrc2 1 '#u32(0 10 20 30 40) 1 4)
         (test '#u32(1 30 20 10 5) (u32vector-copy vrc2))
+        (let ((uv (make-u64vector 2 0)))
+          (u64vector-set! uv 0 10631884467263188874)
+          (test '#u64(10631884467263188874 0) uv))
         )
 
       (test-group "uvectors/conversion"

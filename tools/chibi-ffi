@@ -1261,11 +1261,24 @@
          (cat "  sexp_check_block_port(ctx, arg" (type-index a) ", 0);\n")))
    args))
 
-(define (write-scheme->c expr)
+(define (string-has-prefix? str prefix)
+  (let ((prefix-len (string-length prefix)))
+    (and (>= (string-length str) prefix-len)
+         (equal? (substring str 0 prefix-len) prefix))))
+
+(define (write-scheme->c expr . o)
   (define (write-numeric-arg x)
-    ;; TODO: check when we can assume a fixnum
     (if (symbol? x)
-        (cat "sexp_sint_value(" x ")")
+        (let ((func (and (pair? o) (car o)))
+              (sym-name (symbol->string x)))
+          (if (and func
+                   (string-has-prefix? sym-name "arg")
+                   (unsigned-int-type?
+                    (type-base
+                     (list-ref (func-c-args func)
+                               (string->number (substring sym-name 3))))))
+              (cat "sexp_uint_value(" x ")")
+              (cat "sexp_sint_value(" x ")")))
         (write-scheme->c x)))
   (if (pair? expr)
       (case (car expr)
@@ -1337,7 +1350,7 @@
   (for-each
    (lambda (assert)
      (let ((irr-ls (extract-irritants assert)))
-       (cat "  if (!(" (lambda () (write-scheme->c assert)) ")) {\n"
+       (cat "  if (!(" (lambda () (write-scheme->c assert func)) ")) {\n"
             "    return sexp_user_exception_ls(ctx, self, \"assertion failed: \" "
             (call-with-output-string
               (lambda (out)
