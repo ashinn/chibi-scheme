@@ -344,22 +344,28 @@
                    (lp (+ i 1) (cdr ls) offset2 count)))
              (else
               (vector-set! res i coeff)
+              (vector-set! res 0 (- (vector-ref res 0)
+                                    (* coeff
+                                       (interval-lower-bound domain (- i 1)))))
               (lp (+ i 1) (cdr ls) offset2 count))))))))))
 
 (define (coeffs->indexer coeffs domain)
   (case (vector-length coeffs)
     ((2)
      (let ((a (vector-ref coeffs 0))
-           (b (vector-ref coeffs 1))
-           (lo-x (interval-lower-bound domain 0)))
-       (lambda (x) (+ a (* b (- x lo-x))))))
+           (b (vector-ref coeffs 1)))
+       (lambda (x) (+ a (* b x)))))
     ((3)
      (let ((a (vector-ref coeffs 0))
            (b (vector-ref coeffs 1))
+           (c (vector-ref coeffs 2)))
+       (lambda (x y) (+ a (* b x) (* c y)))))
+    ((4)
+     (let ((a (vector-ref coeffs 0))
+           (b (vector-ref coeffs 1))
            (c (vector-ref coeffs 2))
-           (lo-x (interval-lower-bound domain 0))
-           (lo-y (interval-lower-bound domain 1)))
-       (lambda (x y) (+ a (* b (- x lo-x)) (* c (- y lo-y))))))
+           (d (vector-ref coeffs 3)))
+       (lambda (x y z) (+ a (* b x) (* c y) (* d z)))))
     (else
      (lambda multi-index
        (let ((lim (vector-length coeffs)))
@@ -376,8 +382,7 @@
             (else
              (lp (cdr ls)
                  (+ i 1)
-                 (+ res (* (- (car ls) (interval-lower-bound domain (- i 1)))
-                           (vector-ref coeffs i))))))))))))
+                 (+ res (* (car ls) (vector-ref coeffs i))))))))))))
 
 (define (default-coeffs domain)
   (let* ((dim (interval-dimension domain))
@@ -397,6 +402,8 @@
         (let ((coeff (* scale  (- (interval-upper-bound domain i)
                                   (interval-lower-bound domain i)))))
           (vector-set! res (+ i 1) scale)
+          (vector-set! res 0 (- (vector-ref res 0)
+                                (* scale (interval-lower-bound domain i))))
           (lp (- i 1) coeff)))))))
 
 (define (default-indexer domain)
