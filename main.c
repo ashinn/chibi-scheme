@@ -317,7 +317,7 @@ sexp run_main (int argc, char **argv) {
     main_symbol = "main";
     /* skip option parsing since we can't pass `--` before the name of script */
     /* to avoid misinterpret the name as options when the interpreter is */
-    /* executed via `#!/usr/env/bin scheme-r7rs` shebang.  */
+    /* executed via `#!/usr/bin/env scheme-r7rs` shebang.  */
     i = 1;
     goto done_options;
   }
