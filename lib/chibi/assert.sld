@@ -43,15 +43,15 @@
              (memq? random-symbol-to-match sk fk))))))))
   (begin
     (define-syntax report-vars
-      (syntax-rules (quote quasiquote lambda)
-        ((report-vars (lambda . x) (next ...) res)
-         (next ... res))
-        ((report-vars 'x (next ...) res)
-         (next ... res))
-        ((report-vars `x (next ...) res)
-         (next ... res))
-        ((report-vars (op arg0 arg1 ...) next res)
-         (report-vars arg0 (report-vars (op arg1 ...) next) res))
+      (syntax-rules ()
+        ((report-vars (op arg0 arg1 ...) (next ...) res)
+         (syntax-memq? op (quote quasiquote lambda let let* letrec letrec*
+                           let-syntax letrec-syntax let-values let*-values
+                           receive match case define define-syntax do)
+                       (next ... res)
+                       (report-vars arg0
+                                    (report-vars (op arg1 ...) (next ...))
+                                    res)))
         ((report-vars (op . x) (next ...) res)
          (next ... res))
         ((report-vars x (next ...) (res ...))
