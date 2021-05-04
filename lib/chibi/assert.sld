@@ -4,17 +4,24 @@
    (chibi
     (import (chibi))
     (begin
-      (define-syntax check-identifier
+      (define-syntax syntax-identifier?
         (er-macro-transformer
          (lambda (expr rename compare)
            (if (identifier? (cadr expr))
                (car (cddr expr))
-               (cadr (cddr expr))))))))
+               (cadr (cddr expr))))))
+      (define-syntax syntax-memq?
+        (er-macro-transformer
+         (lambda (expr rename compare)
+           (let ((expr (cdr expr)))
+             (if (memq (car expr) (cadr expr))
+                 (car (cddr expr))
+                 (cadr (cddr expr)))))))))
    (else
     (import (scheme base))
     (begin
       ;; from match.scm
-      (define-syntax check-identifier
+      (define-syntax syntax-identifier?
         (syntax-rules ()
           ((_ (x . y) success-k failure-k) failure-k)
           ((_ #(x ...) success-k failure-k) failure-k)
@@ -24,10 +31,21 @@
                  (syntax-rules ()
                    ((sym? x sk fk) sk)
                    ((sym? y sk fk) fk))))
-             (sym? abracadabra success-k failure-k))))))))
+             (sym? abracadabra success-k failure-k)))))
+      (define-syntax syntax-memq?
+        (syntax-rules ()
+          ((syntax-memq? id (ids ...) sk fk)
+           (let-syntax
+               ((memq?
+                 (syntax-rules (ids ...)
+                   ((memq? id sk2 fk2) fk2)
+                   ((memq? any-other sk2 fk2) sk2))))
+             (memq? random-symbol-to-match sk fk))))))))
   (begin
     (define-syntax report-vars
-      (syntax-rules (quote quasiquote)
+      (syntax-rules (quote quasiquote lambda)
+        ((report-vars (lambda . x) (next ...) res)
+         (next ... res))
         ((report-vars 'x (next ...) res)
          (next ... res))
         ((report-vars `x (next ...) res)
@@ -37,15 +55,20 @@
         ((report-vars (op . x) (next ...) res)
          (next ... res))
         ((report-vars x (next ...) (res ...))
-         (check-identifier x
-                           (next ... (res ... (x ,x)))
-                           (next ... (res ...))))))
+         (syntax-identifier? x
+                             (syntax-memq? x (res ...)
+                                           (next ... (res ...))
+                                           (next ... (res ... x)))
+                             (next ... (res ...))))))
     (define-syntax report-final
       (syntax-rules ()
-        ((report-final expr (vars ...))
-         (error "assertion failed" 'expr `vars ...))))
+        ((report-final expr (var ...))
+         (error "assertion failed" 'expr `(var ,var) ...))))
     (define-syntax assert
-      (syntax-rules ()
+      (syntax-rules (report:)
+        ((assert test report: msg ...)
+         (unless test
+           (error msg ...)))
         ((assert test0 test1 ...)
          (if test0
              (assert test1 ...)
