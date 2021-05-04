@@ -60,6 +60,9 @@ void sexp_usage(int err) {
          "  -d <file>    - dump an image file and exit\n"
          "  -i <file>    - load an image file\n"
 #endif
+#if SEXP_USE_GREEN_THREADS
+         "  -b           - Make stdio nonblocking\n"
+#endif
          );
   if (err == 0) exit_success();
   else exit_failure();
