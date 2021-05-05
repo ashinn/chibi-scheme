@@ -2158,8 +2158,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
           sexp_poll_input(ctx, _ARG1);
         fuel = 0;
         ip--;      /* try again */
-      } else {
 #endif
+      } else {
         _ARG1 = SEXP_EOF;
       }
 #if SEXP_USE_UTF8_STRINGS
