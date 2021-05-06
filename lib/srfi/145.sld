@@ -1,6 +1,6 @@
 (define-library (srfi 145)
   (export assume)
-  (import (scheme base))
+  (import (scheme base) (chibi assert))
   (cond-expand
     ((or elide-assumptions
          (and (not assumptions)
@@ -17,7 +17,6 @@
        (define-syntax assume
          (syntax-rules ()
            ((assume expression objs ...)
-            (or expression
-                (error "invalid assumption" 'expression objs ...)))
+            (assert expression objs ...))
            ((assume)
             (syntax-error "assume requires an expression"))))))))

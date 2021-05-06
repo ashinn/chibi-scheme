@@ -30,12 +30,12 @@
   (ub interval-ub))
 
 (define (%make-interval lo hi)
-  (assert (translation? lo)
-          (translation? hi)
-          (not (vector-empty? lo))
-          (not (vector-empty? hi))
-          (= (vector-length lo) (vector-length hi))
-          (vector-every < lo hi))
+  (assert (and (translation? lo)
+               (translation? hi)
+               (not (vector-empty? lo))
+               (not (vector-empty? hi))
+               (= (vector-length lo) (vector-length hi))
+               (vector-every < lo hi)))
   (%%make-interval lo hi))
 
 (define (make-interval x . o)
@@ -54,7 +54,7 @@
 (define (interval-upper-bounds->vector iv) (vector-copy (interval-ub iv)))
 
 (define (interval= iv1 iv2)
-  (assert (interval? iv1) (interval? iv2))
+  (assert (and (interval? iv1) (interval? iv2)))
   (equal? iv1 iv2))
 
 (define (interval-volume iv)
@@ -63,16 +63,16 @@
                (interval-lb iv) (interval-ub iv)))
 
 (define (interval-subset? iv1 iv2)
-  (assert (interval? iv1) (interval? iv2)
-          (= (interval-dimension iv1) (interval-dimension iv2)))
+  (assert (and (interval? iv1) (interval? iv2)
+               (= (interval-dimension iv1) (interval-dimension iv2))))
   (and (vector-every >= (interval-lb iv1) (interval-lb iv2))
        (vector-every <= (interval-ub iv1) (interval-ub iv2))))
 
 (define (interval-contains-multi-index? iv i0 . o)
   (assert (interval? iv))
   (let ((i (list->vector (cons i0 o))))
-    (assert (= (interval-dimension iv) (vector-length i))
-            (vector-every integer? i))
+    (assert (and (= (interval-dimension iv) (vector-length i))
+                 (vector-every integer? i)))
     (and (vector-every >= i (interval-lb iv))
          (vector-every < i (interval-ub iv)))))
 
@@ -136,8 +136,8 @@
 
 (define (interval-intersect iv0 . o)
   (let ((ls (cons iv0 o)))
-    (assert (every interval? ls)
-            (or (null? o) (apply = (map interval-dimension ls))))
+    (assert (and (every interval? ls)
+                 (or (null? o) (apply = (map interval-dimension ls)))))
     (let ((lower (apply vector-map max (map interval-lb ls)))
           (upper (apply vector-map min (map interval-ub ls))))
       (and (vector-every < lower upper)
@@ -148,7 +148,7 @@
   (interval-dilate iv translation translation))
 
 (define (interval-permute iv perm)
-  (assert (interval? iv) (permutation? perm))
+  (assert (and (interval? iv) (permutation? perm)))
   (let* ((len (interval-dimension iv))
          (lower (make-vector len))
          (upper (make-vector len)))
@@ -167,11 +167,11 @@
                                   (vector-copy upper 0 dim)))))
 
 (define (interval-scale iv scales)
-  (assert (interval? iv)
-          (vector? scales)
-          (= (interval-dimension iv) (vector-length scales))
-          (vector-every exact-integer? scales)
-          (vector-every positive? scales))
+  (assert (and (interval? iv)
+               (vector? scales)
+               (= (interval-dimension iv) (vector-length scales))
+               (vector-every exact-integer? scales)
+               (vector-every positive? scales)))
   (make-interval
    (vector-map (lambda (u s) (exact (ceiling (/ u s))))
                (interval-ub iv)
@@ -273,14 +273,14 @@
   (safe? array-safe?))
 
 (define (%make-array domain getter setter storage body coeffs indexer safe?)
-  (assert (interval? domain)
-          (procedure? getter)
-          (or (not setter) (procedure? setter))
-          (or (not storage) (storage-class? storage)))
+  (assert (and (interval? domain)
+               (procedure? getter)
+               (or (not setter) (procedure? setter))
+               (or (not storage) (storage-class? storage))))
   (%%make-array domain getter setter storage body coeffs indexer safe?))
 
 (define (make-array domain getter . o)
-  (assert (interval? domain) (procedure? getter))
+  (assert (and (interval? domain) (procedure? getter)))
   (%make-array domain getter (and (pair? o) (car o)) #f #f #f #f #f))
 
 (define (array-dimension a)
@@ -483,7 +483,7 @@
        #t))))
 
 (define (specialized-array-share array new-domain project)
-  (assert (specialized-array? array) (interval? new-domain))
+  (assert (and (specialized-array? array) (interval? new-domain)))
   (let* ((body (array-body array))
          (coeffs
           (indexer->coeffs
@@ -509,8 +509,8 @@
          (mutable? (if (pair? o) (car o) (specialized-array-default-mutable?)))
          (o (if (pair? o) (cdr o) '()))
          (safe? (if (pair? o) (car o) (specialized-array-default-safe?))))
-    (assert (storage-class? storage) (interval? new-domain)
-            (boolean? mutable?) (boolean? safe?))
+    (assert (and (storage-class? storage) (interval? new-domain)
+                 (boolean? mutable?) (boolean? safe?)))
     (let* ((body ((storage-class-maker storage)
                     (interval-volume new-domain)
                     (storage-class-default storage)))
@@ -556,9 +556,9 @@
                ))))))))))
 
 (define (array-extract array new-domain)
-  (assert (array? array)
-          (interval? new-domain)
-          (interval-subset? new-domain (array-domain array)))
+  (assert (and (array? array)
+               (interval? new-domain)
+               (interval-subset? new-domain (array-domain array))))
   (if (specialized-array? array)
       (specialized-array-share array new-domain values)
       (make-array new-domain
@@ -566,14 +566,14 @@
                   (array-setter array))))
 
 (define (array-tile array sizes)
-  (assert (array? array)
-          (vector? sizes)
-          (= (array-dimension array) (vector-length sizes))
-          (vector-every exact-integer? sizes)
-          (vector-every >= sizes (interval-lower-bounds->vector
-                                  (array-domain array)))
-          (vector-every < sizes (interval-upper-bounds->vector
-                                 (array-domain array))))
+  (assert (and (array? array)
+               (vector? sizes)
+               (= (array-dimension array) (vector-length sizes))
+               (vector-every exact-integer? sizes)
+               (vector-every >= sizes (interval-lower-bounds->vector
+                                       (array-domain array)))
+               (vector-every < sizes (interval-upper-bounds->vector
+                                      (array-domain array)))))
   (let ((domain (make-interval
                  (vector-map
                   (lambda (lo hi s) (exact (ceiling (/ (- hi lo) s))))
@@ -662,9 +662,9 @@
 (define (array-reverse array . o)
   (assert (array? array))
   (let ((flip? (if (pair? o) (car o) (make-vector (array-dimension array) #t))))
-    (assert (vector? flip?)
-            (= (array-dimension array) (vector-length flip?))
-            (vector-every boolean? flip?))
+    (assert (and (vector? flip?)
+                 (= (array-dimension array) (vector-length flip?))
+                 (vector-every boolean? flip?)))
     (let* ((flips (vector->list flip?))
            (domain (array-domain array))
            (lowers (interval-lower-bounds->list domain))
@@ -715,7 +715,7 @@
             (apply array-set! array val (map * multi-index scales-ls))))))))
 
 (define (array-outer-product op array1 array2)
-  (assert (procedure? op) (array? array1) (array? array2))
+  (assert (and (procedure? op) (array? array1) (array? array2)))
   (make-array (interval-cartesian-product (array-domain array1)
                                           (array-domain array2))
               (let ((getter1 (array-getter array1))
@@ -800,8 +800,8 @@
                     (car (cddr o))
                     (specialized-array-default-safe?)))
          (res (make-specialized-array domain storage safe?)))
-    (assert (interval? domain) (storage-class? storage)
-            (boolean? mutable?) (boolean? safe?))
+    (assert (and (interval? domain) (storage-class? storage)
+                 (boolean? mutable?) (boolean? safe?)))
     (interval-fold
      (lambda (ls . multi-index)
        (apply array-set! res (car ls) multi-index)
@@ -811,13 +811,14 @@
     res))
 
 (define (array-assign! destination source)
-  (assert (array? destination)
-          (mutable-array? destination)
-          (array? source)
-          (or (equal? (array-domain destination) (array-domain source))
-              (and (array-elements-in-order? destination)
-                   (equal? (interval-volume (array-domain destination))
-                           (interval-volume (array-domain source))))))
+  (assert
+   (and  (array? destination)
+         (mutable-array? destination)
+         (array? source)
+         (or (equal? (array-domain destination) (array-domain source))
+             (and (array-elements-in-order? destination)
+                  (equal? (interval-volume (array-domain destination))
+                          (interval-volume (array-domain source)))))))
   (let ((getter (array-getter source))
         (setter (array-setter destination)))
     (if (equal? (array-domain destination) (array-domain source))
@@ -878,9 +879,9 @@
             (lp (+ i 1) (cdr ls)))))))))
 
 (define (specialized-array-reshape array new-domain . o)
-  (assert (specialized-array? array)
-          (= (interval-volume (array-domain array))
-             (interval-volume new-domain)))
+  (assert (and (specialized-array? array)
+               (= (interval-volume (array-domain array))
+                  (interval-volume new-domain))))
   (let ((copy-on-failure? (and (pair? o) (car o))))
     (cond
      ((reshape-without-copy array new-domain))
