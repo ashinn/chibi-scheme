@@ -26,13 +26,25 @@
 
 (define (make-tracer cell)
   (let ((proc (cdr cell)))
-    (lambda args
-      (show-trace cell args)
-      (active-trace-depth (+ (active-trace-depth) 1))
-      (let ((res (apply proc args)))
-        (active-trace-depth (- (active-trace-depth) 1))
-        (show-trace-result cell args res)
-        res))))
+    (if (macro? proc)
+        (make-macro
+         (lambda (expr use-env mac-env)
+           (show-trace cell (strip-syntactic-closures (cdr expr)))
+           (active-trace-depth (+ (active-trace-depth) 1))
+           (let ((res ((macro-procedure proc) expr use-env mac-env)))
+             (active-trace-depth (- (active-trace-depth) 1))
+             (show-trace-result cell
+                                (strip-syntactic-closures (cdr expr))
+                                (strip-syntactic-closures res))
+             res))
+         (macro-env proc))
+        (lambda args
+          (show-trace cell args)
+          (active-trace-depth (+ (active-trace-depth) 1))
+          (let ((res (apply proc args)))
+            (active-trace-depth (- (active-trace-depth) 1))
+            (show-trace-result cell args res)
+            res)))))
 
 ;;> Write a trace of all calls to the procedure \var{id} to
 ;;> \scheme{(current-error-port)}.
