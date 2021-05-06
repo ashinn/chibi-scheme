@@ -52,5 +52,7 @@ By default files are installed in **/usr/local**.
 If you want to try out chibi-scheme without installing, be sure to set
 `LD_LIBRARY_PATH` so it can find the shared libraries.
 
+To make the emscripten build run `make js`.
+
 For more detailed documentation, run `make doc` and see the generated
 *doc/chibi.html*.
