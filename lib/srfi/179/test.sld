@@ -890,6 +890,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 
     (define (run-tests)
 
+      (random-source-pseudo-randomize! default-random-source 7 23)
+
       (test-begin "srfi-179: nonempty intervals and generalized arrays")
 
       (test-group "interval tests"
