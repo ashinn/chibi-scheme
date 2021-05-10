@@ -46,7 +46,7 @@ COMPILED_LIBS = $(CHIBI_COMPILED_LIBS) $(CHIBI_IO_COMPILED_LIBS) \
 BASE_INCLUDES = include/chibi/sexp.h include/chibi/features.h include/chibi/install.h include/chibi/bignum.h
 INCLUDES = $(BASE_INCLUDES) include/chibi/eval.h include/chibi/gc_heap.h
 
-MODULE_DOCS := app ast base64 bytevector config crypto/md5 crypto/rsa \
+MODULE_DOCS := app assert ast base64 bytevector config crypto/md5 crypto/rsa \
 	crypto/sha2 diff disasm doc edit-distance equiv filesystem generic \
 	heap-stats io iset/base iset/constructors iset/iterators json loop \
 	match math/prime memoize mime modules net net/http-server net/servlet \
