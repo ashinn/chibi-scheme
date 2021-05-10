@@ -33,7 +33,7 @@
    mutable-array? array-setter specialized-array-default-safe?
    specialized-array-default-mutable? make-specialized-array
    specialized-array? array-storage-class array-indexer array-body
-   array-safe? array-adjacent? array-elements-in-order?
+   array-safe? array-coeffs array-adjacent? array-elements-in-order?
    specialized-array-share array-ref array-set!
    %make-specialized %array-setter-set!
    specialized-getter specialized-setter
