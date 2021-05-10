@@ -723,6 +723,8 @@ h4 { color: #222288; border-top: 1px solid #4588ba; }
                               args)))))
     (('define-c-const type (or (name _) name))
      (list (list 'const: type name)))
+    (('cond-expand (test . clauses) . rest)
+     (append-map get-ffi-signatures clauses))
     (((or 'define-c-struct 'define-c-class 'define-c-type) name . rest)
      (let lp ((ls rest) (res '()))
        (cond
@@ -809,38 +811,39 @@ h4 { color: #222288; border-top: 1px solid #4588ba; }
       (write-to-string sig)))
 
 (define (insert-signature orig-ls name sig)
-  (cond
-   ((not (pair? sig))
-    orig-ls)
-   (else
-    (let ((name
-           (cond
-            (name)
-            ((not (pair? (car sig))) (car sig))
-            ((eq? 'const: (caar sig)) (cadr (cdar sig)))
-            (else (caar sig)))))
-      (let lp ((ls orig-ls) (rev-pre '()))
-        (cond
-         ((or (null? ls)
-              (section>=? (car ls) (section-number 'subsubsection)))
-          `(,@(reverse rev-pre)
-            ,@(if (and (pair? ls)
-                       (section-describes?
-                        (extract-sxml
-                         '(subsubsection procedure macro)
-                         (car ls))
-                        name))
-                  '()
-                  `((subsubsection
-                     tag: ,(write-to-string name)
-                     (rawcode
-                      ,@(if (and (pair? (car sig)) (eq? 'const: (caar sig)))
-                            `((i ,(write-to-string (car (cdar sig))) ": ")
-                              ,(write-to-string (cadr (cdar sig))))
-                            (intersperse (map write-signature sig) '(br)))))))
-            ,@ls))
-         (else
-          (lp (cdr ls) (cons (car ls) rev-pre)))))))))
+  (let ((sig (if (pair? sig) sig (and name (list name)))))
+    (cond
+    ((not (pair? sig))
+     '())
+    (else
+     (let ((name
+            (cond
+             (name)
+             ((not (pair? (car sig))) (car sig))
+             ((eq? 'const: (caar sig)) (cadr (cdar sig)))
+             (else (caar sig)))))
+       (let lp ((ls orig-ls) (rev-pre '()))
+         (cond
+          ((or (null? ls)
+               (section>=? (car ls) (section-number 'subsubsection)))
+           `(,@(reverse rev-pre)
+             ,@(if (and (pair? ls)
+                        (section-describes?
+                         (extract-sxml
+                          '(subsubsection procedure macro)
+                          (car ls))
+                         name))
+                   '()
+                   `((subsubsection
+                      tag: ,(write-to-string name)
+                      (rawcode
+                       ,@(if (and (pair? (car sig)) (eq? 'const: (caar sig)))
+                             `((i ,(write-to-string (car (cdar sig))) ": ")
+                               ,(write-to-string (cadr (cdar sig))))
+                             (intersperse (map write-signature sig) '(br)))))))
+             ,@ls))
+          (else
+           (lp (cdr ls) (cons (car ls) rev-pre))))))))))
 
 ;;> Extract inline Scribble documentation (with the ;;> prefix) from
 ;;> the source file \var{file}, associating any signatures from the
