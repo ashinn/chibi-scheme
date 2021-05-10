@@ -496,9 +496,9 @@ snowballs:
 	$(SNOW_CHIBI) package --license public-domain lib/chibi/match.sld
 	$(SNOW_CHIBI) package -r lib/chibi/char-set.sld
 	$(SNOW_CHIBI) package -r lib/chibi/iset.sld lib/chibi/iset/optimize.sld
-	$(SNOW_CHIBI) package --doc https://srfi.schemers.org/srfi-115/srfi-115.html lib/srfi/115.sld
-	$(SNOW_CHIBI) package -r --doc https://srfi.schemers.org/srfi-166/srfi-166.html lib/srfi/166.sld lib/chibi/show/shared.sld
-	$(SNOW_CHIBI) package -r --doc https://srfi.schemers.org/srfi-179/srfi-179.html lib/srfi/179.sld
+	$(SNOW_CHIBI) package --doc https://srfi.schemers.org/srfi-115/srfi-115.html --test-library lib/srfi/115.sld
+	$(SNOW_CHIBI) package -r --doc https://srfi.schemers.org/srfi-166/srfi-166.html --test-library lib/srfi/166/test.sld lib/srfi/166.sld lib/chibi/show/shared.sld
+	$(SNOW_CHIBI) package -r --doc https://srfi.schemers.org/srfi-179/srfi-179.html --test-library lib/srfi/179/test.sld lib/srfi/179.sld
 	$(SNOW_CHIBI) package lib/chibi/app.sld
 	$(SNOW_CHIBI) package lib/chibi/assert.sld
 	$(SNOW_CHIBI) package lib/chibi/base64.sld
