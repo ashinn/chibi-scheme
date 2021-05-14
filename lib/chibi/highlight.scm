@@ -121,10 +121,6 @@
     (cond
      ((eof-object? c) (reverse-list->string ls))
      ((eqv? c term) (reverse-list->string (cons c ls)))
-     ((eqv? c #\<) (read-escaped in term `(#\; #\t #\l #\& ,@ls)))
-     ;;((eqv? c #\>) (read-escaped in term `(#\; #\t #\g #\& ,@ls)))
-     ((eqv? c #\&) (read-escaped in term `(#\; #\p #\m #\a #\& ,@ls)))
-     ((eqv? c #\\) (read-escaped in term (cons (read-char in) (cons c ls))))
      (else (read-escaped in term (cons c ls))))))
 
 (define (read-to-eol in ls)
@@ -133,9 +129,6 @@
      ((eof-object? c) (reverse-list->string ls))
      ((eqv? c #\newline) (reverse-list->string (cons c ls)))
      (else (read-to-eol in (cons c ls))))))
-
-(define (html-escape str)
-  (call-with-input-string str (lambda (in) (read-escaped in #f '()))))
 
 (define (collect str res)
   (if (pair? str) (cons (reverse-list->string str) res) res))

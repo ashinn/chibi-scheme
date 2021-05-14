@@ -36,4 +36,14 @@
                       " line"))
           (ansi->sxml
            "plain \x1B;[4munder \x1B;[31mred\x1B;[39m line\x1B;[24m"))
+      (test '(code "(" "string?" " "
+                   (span (@ (class . "string")) "\"hello\"")
+                   ")")
+          (expand-docs '(scheme "(string? \"hello\")")
+                       (make-default-doc-env)))
+      (test '(code "(" "string?" " "
+                   (span (@ (class . "string")) "\"<hello>\"")
+                   ")")
+          (expand-docs '(scheme "(string? \"<hello>\")")
+                       (make-default-doc-env)))
       (test-end))))

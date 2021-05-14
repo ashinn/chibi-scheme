@@ -267,6 +267,8 @@
      (url . ,expand-url)
      (hyperlink . ,expand-hyperlink)
      (rawcode . code)
+     (pre . pre)
+     (bibitem . ,(lambda (x env) '()))  ;; TODO: bibtex
      (code . ,expand-code)
      (codeblock . ,expand-codeblock)
      (ccode
