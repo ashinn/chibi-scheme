@@ -79,7 +79,8 @@ or edited manually.  Be sure to run this with a non-static
 chibi-scheme.  Then you can make the static executable with:
 
 \command{
-make -B chibi-scheme-static SEXP_USE_DL=0 CPPFLAGS=-DSEXP_USE_STATIC_LIBS
+make -B chibi-scheme-static SEXP_USE_DL=0 \
+  CPPFLAGS="-DSEXP_USE_STATIC_LIBS -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0"
 }
 
 By default files are installed in /usr/local.  You can optionally
