@@ -172,23 +172,23 @@ add_custom_command(OUTPUT ${clibout}
 # Core library
 #
 
-add_library(lib-chibi-scheme
+add_library(libchibi-scheme
     ${chibi-scheme-srcs}
     ${clibout})
 
-set_target_properties(lib-chibi-scheme
+set_target_properties(libchibi-scheme
     PROPERTIES 
     COMPILE_DEFINITIONS "SEXP_USE_STATIC_LIBS=1")
 
-add_dependencies(lib-chibi-scheme chibi-scheme-stubs)
+add_dependencies(libchibi-scheme chibi-scheme-stubs)
 
 if(WIN32 AND ${BUILD_SHARED_LIBS})
-    target_link_libraries(lib-chibi-scheme ws2_32)
-    target_compile_definitions(lib-chibi-scheme PUBLIC -DBUILDING_DLL=1)
+    target_link_libraries(libchibi-scheme ws2_32)
+    target_compile_definitions(libchibi-scheme PUBLIC -DBUILDING_DLL=1)
 endif()
 
 function(bless_chibi_scheme_executable tgt)
-    target_link_libraries(${tgt} lib-chibi-scheme)
+    target_link_libraries(${tgt} libchibi-scheme)
     if(WIN32 AND NOT ${BUILD_SHARED_LIBS})
         target_link_libraries(${tgt} ws2_32)
     endif()
