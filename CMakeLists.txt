@@ -18,8 +18,6 @@ file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION rawversion)
 string(STRIP ${rawversion} rawversion)
 set(version "${rawversion}-cmake")
 
-set(chibischemelib "chibi-scheme-${rawversion}")
-
 if(APPLE)
     message(FATAL_ERROR 
         "DYLD platforms are not supported with this CMakeLists.txt. Use Makefile instead.")
@@ -180,23 +178,23 @@ else()
     set(libtype STATIC)
 endif()
 
-add_library(${chibischemelib} ${libtype}
+add_library(lib-chibi-scheme ${libtype}
     ${chibi-scheme-srcs}
     ${clibout})
 
-set_target_properties(${chibischemelib}
+set_target_properties(lib-chibi-scheme
     PROPERTIES 
     COMPILE_DEFINITIONS "SEXP_USE_STATIC_LIBS=1")
 
-add_dependencies(${chibischemelib} chibi-scheme-stubs)
+add_dependencies(lib-chibi-scheme chibi-scheme-stubs)
 
 if(WIN32 AND CHIBI_SCHEME_SHARED)
-    target_link_libraries(${chibischemelib} ws2_32)
-    target_compile_definitions(${chibischemelib} PUBLIC -DBUILDING_DLL=1)
+    target_link_libraries(lib-chibi-scheme ws2_32)
+    target_compile_definitions(lib-chibi-scheme PUBLIC -DBUILDING_DLL=1)
 endif()
 
 function(bless_chibi_scheme_executable tgt)
-    target_link_libraries(${tgt} ${chibischemelib})
+    target_link_libraries(${tgt} lib-chibi-scheme)
     if(WIN32 AND NOT CHIBI_SCHEME_SHARED)
         target_link_libraries(${tgt} ws2_32)
     endif()
