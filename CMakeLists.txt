@@ -2,7 +2,7 @@
 # FIXME: This CMakeLists.txt is only for Win32 platforms for now
 #
 
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.12)
 project(chibi-scheme)
 
 include(CheckIncludeFile)
