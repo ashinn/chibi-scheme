@@ -62,6 +62,7 @@ lib/srfi/160/uvprims.c
 *.err
 *.fasl
 *.txt
+!CMakeLists.txt
 *.test
 *.train
 *.h5
