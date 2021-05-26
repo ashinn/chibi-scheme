@@ -3,20 +3,17 @@
 #
 
 cmake_minimum_required(VERSION 3.12)
-project(chibi-scheme)
 
-include(CheckIncludeFile)
-
-#
-# Version setting
-#
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version)
+string(STRIP ${version} version)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE release)
 string(STRIP ${release} release)
 
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION rawversion)
-string(STRIP ${rawversion} rawversion)
-set(version "${rawversion}-cmake")
+project(chibi-scheme LANGUAGES C VERSION ${version}
+    DESCRIPTION "Chibi-Scheme: minimal r7rs implementation, release: ${release}")
+
+include(CheckIncludeFile)
 
 if(APPLE)
     message(FATAL_ERROR 
@@ -178,6 +175,8 @@ add_library(libchibi-scheme
 
 set_target_properties(libchibi-scheme
     PROPERTIES 
+    SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
+    VERSION ${CMAKE_PROJECT_VERSION}
     COMPILE_DEFINITIONS "SEXP_USE_STATIC_LIBS=1")
 
 add_dependencies(libchibi-scheme chibi-scheme-stubs)
