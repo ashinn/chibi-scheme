@@ -113,11 +113,12 @@ add_executable(chibi-scheme-bootstrap
     ${chibi-scheme-srcs}
     main.c)
 
-target_link_libraries(chibi-scheme-bootstrap
-    PRIVATE libchibi-common)
-
 if(WIN32)
-    target_link_libraries(chibi-scheme-bootstrap ws2_32)
+    target_link_libraries(chibi-scheme-bootstrap
+        PRIVATE ws2_32 libchibi-common)
+else()
+    target_link_libraries(chibi-scheme-bootstrap
+        PRIVATE libchibi-common)
 endif()
 
 if(CYGWIN OR WIN32)
