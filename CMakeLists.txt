@@ -95,6 +95,7 @@ include_directories(
 #
 
 add_executable(chibi-scheme-bootstrap
+    EXCLUDE_FROM_ALL
     ${chibi-scheme-srcs}
     main.c)
 
