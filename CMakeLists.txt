@@ -35,7 +35,14 @@ check_include_file(poll.h HAVE_POLL_H)
 check_include_file(stdint.h HAVE_STDINT_H)
 # option(CHIBI_SCHEME_USE_DL "Use dynamic loading" ON)
 set(CHIBI_SCHEME_USE_DL OFF)
-option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ON)
+
+if (WIN32 AND NOT CYGWIN)
+    set(DEFAULT_SHARED_LIBS OFF)
+else()
+    set(DEFAULT_SHARED_LIBS ON)
+endif()
+
+option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ${DEFAULT_SHARED_LIBS})
 
 if(NOT ${BUILD_SHARED_LIBS})
     add_definitions(-DSEXP_STATIC_LIBRARY=1)
