@@ -114,11 +114,11 @@ endif()
 #
 
 # FIXME: Currently, it depends on GLOB thus we have to re-run CMake
-#        when we've gotten additional/removed library 
+#        when we've gotten additional/removed library
 
-file(GLOB_RECURSE stubs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib 
+file(GLOB_RECURSE stubs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.stub)
-file(GLOB_RECURSE slds RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
+file(GLOB_RECURSE slds RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.sld)
 list(REMOVE_ITEM slds ${chibi-scheme-exclude-modules})
 
@@ -209,7 +209,7 @@ add_executable(chibi-scheme
 bless_chibi_scheme_executable(chibi-scheme)
 
 #
-# Generate "chibi/install.h" 
+# Generate "chibi/install.h"
 #
 
 if(CYGWIN OR WIN32)
@@ -246,7 +246,7 @@ file(WRITE
 #define sexp_version \"\"
 #define sexp_release_name \"${release}\"")
 
-# 
+#
 # Testing
 #
 
@@ -309,7 +309,7 @@ foreach(e ${testlibs})
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
-# 
+#
 # Testing (embedding)
 #
 
