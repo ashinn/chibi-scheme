@@ -33,8 +33,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 check_include_file(poll.h HAVE_POLL_H)
 check_include_file(stdint.h HAVE_STDINT_H)
-# option(CHIBI_SCHEME_USE_DL "Use dynamic loading" ON)
-set(CHIBI_SCHEME_USE_DL OFF)
 
 if (WIN32 AND NOT CYGWIN)
     set(DEFAULT_SHARED_LIBS OFF)
@@ -44,28 +42,8 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ${DEFAULT_SHARED_LIBS})
 
-if(NOT ${BUILD_SHARED_LIBS})
-    add_definitions(-DSEXP_STATIC_LIBRARY=1)
-endif()
-
-if(CHIBI_SCHEME_USE_DL)
-    add_definitions(-DSEXP_USE_DL=1)
-else()
-    add_definitions(-DSEXP_USE_DL=0)
-endif()
-
-if(HAVE_STDINT_H)
-    add_definitions(-DSEXP_USE_INTTYPES=1)
-endif()
-
-if(NOT HAVE_POLL_H)
-    # Disable green threads: It depends on non-blocking I/O
-    add_definitions(-DSEXP_USE_GREEN_THREADS=0)
-endif()
-
 set(chibi-scheme-exclude-modules)
 if(WIN32)
-    add_definitions(-DBUILDING_DLL)
     set(chibi-scheme-exclude-modules
         # Following modules are not compatible with Win32
         lib/chibi/net.sld
@@ -74,6 +52,39 @@ if(WIN32)
         lib/chibi/system.sld
         lib/chibi/time.sld
         lib/chibi/pty.sld)
+endif()
+
+#
+# Default settings for all targets. We use an interface library here to not
+# pollute/mutate global settings.
+#
+
+add_library(libchibi-common
+    INTERFACE)
+
+target_include_directories(libchibi-common
+    INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+if (NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_DL=0)
+else()
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_DL=1)
+endif()
+
+if(NOT ${BUILD_SHARED_LIBS})
+    add_definitions(-DSEXP_STATIC_LIBRARY=1)
+endif()
+
+if(HAVE_STDINT_H)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_INTTYPES=1)
+endif()
+
+if(NOT HAVE_POLL_H)
+    # Disable green threads: It depends on non-blocking I/O
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_GREEN_THREADS=0)
 endif()
 
 #
@@ -93,10 +104,6 @@ set(chibi-scheme-srcs
     eval.c
     simplify.c)
 
-include_directories(
-    include
-    ${CMAKE_CURRENT_BINARY_DIR}/include)
-
 #
 # Bootstrap
 #
@@ -105,6 +112,9 @@ add_executable(chibi-scheme-bootstrap
     EXCLUDE_FROM_ALL
     ${chibi-scheme-srcs}
     main.c)
+
+target_link_libraries(chibi-scheme-bootstrap
+    PRIVATE libchibi-common)
 
 if(WIN32)
     target_link_libraries(chibi-scheme-bootstrap ws2_32)
@@ -156,6 +166,9 @@ add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
 add_library(libchibi-scheme
     ${chibi-scheme-srcs})
 
+target_link_libraries(libchibi-scheme
+    PUBLIC libchibi-common)
+
 set_target_properties(libchibi-scheme
     PROPERTIES
     SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
@@ -174,7 +187,6 @@ if (NOT BUILD_SHARED_LIBS)
     set(genstatic-helper
         ${CMAKE_CURRENT_LIST_DIR}/contrib/chibi-genstatic-helper.cmake)
     file(WRITE ${clibin} "${genstatic-input}")
-
 
     add_custom_command(OUTPUT ${clibout}
         COMMAND
@@ -198,6 +210,11 @@ if (NOT BUILD_SHARED_LIBS)
     target_sources(libchibi-scheme
         PUBLIC
         ${clibout})
+
+    target_include_directories(libchibi-common
+        INTERFACE
+        $<BUILD_INTERFACE:${stuboutdir}/..>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 elseif(WIN32)
     target_link_libraries(libchibi-scheme ws2_32)
     target_compile_definitions(libchibi-scheme PUBLIC BUILDING_DLL=1)
@@ -214,9 +231,6 @@ endfunction()
 # Interpreter
 #
 
-include_directories(
-    .
-    ${stuboutdir}/..)
 add_executable(chibi-scheme
     main.c)
 
