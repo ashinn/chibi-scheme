@@ -143,50 +143,57 @@ endforeach()
 add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
 
 #
-# Generate clib.c for SEXP_USE_STATIC_LIBS
-#
-
-string(REPLACE ";" "\n" genstatic-input "${slds}")
-set(clibin ${CMAKE_CURRENT_BINARY_DIR}/clib-in.txt)
-set(clibout ${CMAKE_CURRENT_BINARY_DIR}/clib.c)
-set(genstatic-helper 
-    ${CMAKE_CURRENT_LIST_DIR}/contrib/chibi-genstatic-helper.cmake)
-file(WRITE ${clibin} "${genstatic-input}")
-
-add_custom_command(OUTPUT ${clibout}
-    COMMAND 
-    ${CMAKE_COMMAND} 
-    -DEXEC=$<TARGET_FILE:chibi-scheme-bootstrap>
-    -DGENSTATIC=${chibi-genstatic}
-    -DSTUBS=${clibin}
-    -DOUT=${clibout}
-    -P ${genstatic-helper}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS 
-    chibi-scheme-bootstrap
-    ${chibi-genstatic}
-    ${genstatic-helper}
-    ${slds})
-
-#
 # Core library
 #
 
 add_library(libchibi-scheme
-    ${chibi-scheme-srcs}
-    ${clibout})
+    ${chibi-scheme-srcs})
 
 set_target_properties(libchibi-scheme
-    PROPERTIES 
+    PROPERTIES
     SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
-    VERSION ${CMAKE_PROJECT_VERSION}
-    COMPILE_DEFINITIONS "SEXP_USE_STATIC_LIBS=1")
+    VERSION ${CMAKE_PROJECT_VERSION})
 
 add_dependencies(libchibi-scheme chibi-scheme-stubs)
 
-if(WIN32 AND ${BUILD_SHARED_LIBS})
+#
+# Generate clib.c for SEXP_USE_STATIC_LIBS
+#
+
+if (NOT BUILD_SHARED_LIBS)
+    string(REPLACE ";" "\n" genstatic-input "${slds}")
+    set(clibin ${CMAKE_CURRENT_BINARY_DIR}/clib-in.txt)
+    set(clibout ${CMAKE_CURRENT_BINARY_DIR}/clib.c)
+    set(genstatic-helper
+        ${CMAKE_CURRENT_LIST_DIR}/contrib/chibi-genstatic-helper.cmake)
+    file(WRITE ${clibin} "${genstatic-input}")
+
+
+    add_custom_command(OUTPUT ${clibout}
+        COMMAND
+        ${CMAKE_COMMAND}
+        -DEXEC=$<TARGET_FILE:chibi-scheme-bootstrap>
+        -DGENSTATIC=${chibi-genstatic}
+        -DSTUBS=${clibin}
+        -DOUT=${clibout}
+        -P ${genstatic-helper}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS
+        chibi-scheme-bootstrap
+        ${chibi-genstatic}
+        ${genstatic-helper}
+        ${slds})
+
+    target_compile_definitions(libchibi-scheme
+        PUBLIC
+        SEXP_USE_STATIC_LIBS=1)
+
+    target_sources(libchibi-scheme
+        PUBLIC
+        ${clibout})
+elseif(WIN32)
     target_link_libraries(libchibi-scheme ws2_32)
-    target_compile_definitions(libchibi-scheme PUBLIC -DBUILDING_DLL=1)
+    target_compile_definitions(libchibi-scheme PUBLIC BUILDING_DLL=1)
 endif()
 
 function(bless_chibi_scheme_executable tgt)
