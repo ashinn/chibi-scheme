@@ -25,6 +25,8 @@ if(UNIX)
         "UNIX platforms are not supported with this CMakeLists.txt. Use Makefile instead.")
 endif()
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #
 # Features
 #
