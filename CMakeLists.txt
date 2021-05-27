@@ -260,15 +260,7 @@ set(default_module_path
     #"${CMAKE_INSTALL_PREFIX}/${thePrefix}${pathsep}${CMAKE_INSTALL_PREFIX}/bin"
     )
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/chibi)
-
-file(WRITE
-    ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/install.h
-    "#define sexp_so_extension \"${CMAKE_SHARED_LIBRARY_SUFFIX}\"
-#define sexp_default_module_path \"${default_module_path}\"
-#define sexp_platform \"${platform}\"
-#define sexp_version \"\"
-#define sexp_release_name \"${release}\"")
+configure_file(include/chibi/install.h.in include/chibi/install.h)
 
 #
 # Testing
