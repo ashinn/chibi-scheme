@@ -121,11 +121,6 @@ else()
         PRIVATE libchibi-common)
 endif()
 
-if(CYGWIN OR WIN32)
-    set(soext ".dll")
-else()
-    set(soext ".so")
-endif()
 
 #
 # Generate modules
@@ -269,7 +264,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/chibi)
 
 file(WRITE
     ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/install.h
-    "#define sexp_so_extension \"${soext}\"
+    "#define sexp_so_extension \"${CMAKE_SHARED_LIBRARY_SUFFIX}\"
 #define sexp_default_module_path \"${default_module_path}\"
 #define sexp_platform \"${platform}\"
 #define sexp_version \"\"
