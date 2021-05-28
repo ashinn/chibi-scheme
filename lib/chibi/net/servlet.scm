@@ -158,6 +158,10 @@
     (request-status-set! request status)
     (let* ((out (request-out request))
            (headers (if (pair? o) (car o) '()))
+           (headers (if (assq 'Content-Type headers)
+                        headers
+                        `((Content-Type . "text/html; charset=UTF-8")
+                          ,@headers)))
            (headers
             (cond
              ;; Socket bound, not CGI, send normal status.
