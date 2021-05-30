@@ -74,12 +74,12 @@ else()
     target_compile_definitions(libchibi-common INTERFACE SEXP_USE_DL=1)
 endif()
 
-if(NOT ${BUILD_SHARED_LIBS})
-    add_definitions(-DSEXP_STATIC_LIBRARY=1)
+if(HAVE_STDINT_H)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_INTTYPES)
 endif()
 
-if(HAVE_STDINT_H)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_INTTYPES=1)
+if(HAVE_NTP_GETTIME)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_NTPGETTIME)
 endif()
 
 if(NOT HAVE_POLL_H)
@@ -123,9 +123,28 @@ endif()
 
 
 #
-# Generate modules
+# Core library
 #
 
+add_library(libchibi-scheme
+    ${chibi-scheme-srcs})
+
+target_link_libraries(libchibi-scheme
+    PUBLIC libchibi-common)
+
+set_target_properties(libchibi-scheme
+    PROPERTIES
+    SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
+    VERSION ${CMAKE_PROJECT_VERSION})
+
+if (NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(libchibi-scheme PUBLIC SEXP_STATIC_LIBRARY=1)
+endif()
+
+
+#
+# Generate modules
+#
 # FIXME: Currently, it depends on GLOB thus we have to re-run CMake
 #        when we've gotten additional/removed library
 
@@ -155,20 +174,8 @@ foreach(e ${stubs})
 endforeach()
 add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
 
-#
-# Core library
-#
 
-add_library(libchibi-scheme
-    ${chibi-scheme-srcs})
 
-target_link_libraries(libchibi-scheme
-    PUBLIC libchibi-common)
-
-set_target_properties(libchibi-scheme
-    PROPERTIES
-    SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
-    VERSION ${CMAKE_PROJECT_VERSION})
 
 add_dependencies(libchibi-scheme chibi-scheme-stubs)
 
