@@ -212,6 +212,55 @@ add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
 
 add_dependencies(libchibi-scheme chibi-scheme-stubs)
 
+function(add_compiled_library cfile)
+    get_filename_component(basename ${cfile} NAME_WE)
+    get_filename_component(libdir ${cfile} DIRECTORY)
+    string(REPLACE "/" "-" libname ${libdir}/${basename})
+    set(outputdir ${CMAKE_CURRENT_BINARY_DIR}/${libdir})
+
+    if (NOT BUILD_SHARED_LIBS)
+        return()
+    endif()
+    add_library(${libname} ${cfile})
+    target_link_libraries(${libname}
+        PRIVATE
+        libchibi-scheme)
+
+    set_target_properties(${libname} PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${outputdir}
+        LIBRARY_OUTPUT_NAME ${basename}
+        PREFIX "")
+endfunction()
+
+add_compiled_library(lib/chibi/filesystem.c)
+add_compiled_library(lib/chibi/weak.c)
+add_compiled_library(lib/chibi/heap-stats.c)
+add_compiled_library(lib/chibi/disasm.c)
+add_compiled_library(lib/chibi/ast.c)
+add_compiled_library(lib/chibi/json.c)
+add_compiled_library(lib/chibi/emscripten.c)
+add_compiled_library(lib/chibi/process.c)
+add_compiled_library(lib/chibi/time.c)
+add_compiled_library(lib/chibi/system.c)
+add_compiled_library(lib/chibi/stty.c)
+add_compiled_library(lib/chibi/pty.c)
+add_compiled_library(lib/chibi/net.c)
+add_compiled_library(lib/srfi/18/threads.c)
+add_compiled_library(lib/chibi/io/io.c)
+add_compiled_library(lib/chibi/optimize/rest.c)
+add_compiled_library(lib/chibi/optimize/profile.c)
+add_compiled_library(lib/chibi/crypto/crypto.c)
+add_compiled_library(lib/srfi/27/rand.c)
+add_compiled_library(lib/srfi/151/bit.c)
+add_compiled_library(lib/srfi/39/param.c)
+add_compiled_library(lib/srfi/69/hash.c)
+add_compiled_library(lib/srfi/95/qsort.c)
+add_compiled_library(lib/srfi/98/env.c)
+add_compiled_library(lib/srfi/144/math.c)
+add_compiled_library(lib/srfi/160/uvprims.c)
+add_compiled_library(lib/scheme/bytevector.c)
+add_compiled_library(lib/scheme/time.c)
+
 #
 # Generate clib.c for SEXP_USE_STATIC_LIBS
 #
