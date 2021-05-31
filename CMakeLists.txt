@@ -190,26 +190,40 @@ endif()
 set(chibi-ffi ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-ffi)
 set(chibi-genstatic ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-genstatic)
 
-set(stuboutdir ${CMAKE_CURRENT_BINARY_DIR}/stubs/lib)
-foreach(e ${stubs})
-    get_filename_component(stubdir ${e} PATH)
-    get_filename_component(basename ${e} NAME_WE)
-    set(stubfile ${CMAKE_CURRENT_SOURCE_DIR}/lib/${e})
-    set(stubdir ${stuboutdir}/${stubdir})
+function(add_stubs_library stub stubc)
+    get_filename_component(stubdir ${stub} PATH)
+    get_filename_component(basename ${stub} NAME_WE)
+    set(stubfile ${CMAKE_CURRENT_SOURCE_DIR}/lib/${stub})
+    set(stubdir ${CMAKE_CURRENT_BINARY_DIR}/lib/${stubdir})
     set(stubout ${stubdir}/${basename}.c)
+    set(${stubc} ${stubout} PARENT_SCOPE)
+
     file(MAKE_DIRECTORY ${stubdir})
     add_custom_command(OUTPUT ${stubout}
-        COMMAND chibi-scheme-bootstrap
-        ${chibi-ffi} ${stubfile} ${stubout}
+        COMMAND chibi-scheme-bootstrap ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    list(APPEND stubouts ${stubout})
+
+    if (BUILD_SHARED_LIBS)
+        add_library(${basename}
+            ${stubout})
+
+        target_link_libraries(${basename}
+            PRIVATE
+            libchibi-scheme)
+
+        set_target_properties(${basename} PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${stubdir}
+            LIBRARY_OUTPUT_NAME ${basename}
+            PREFIX "")
+    endif()
+endfunction()
+
+foreach(stub ${stubs})
+    add_stubs_library(${stub} stubc)
+    list(APPEND stubouts ${stubc})
 endforeach()
 add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
-
-
-
-
 add_dependencies(libchibi-scheme chibi-scheme-stubs)
 
 function(add_compiled_library cfile)
