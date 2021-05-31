@@ -15,6 +15,7 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
 
 include(CheckIncludeFile)
 include(CheckSymbolExists)
+include(GNUInstallDirs)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -339,18 +340,6 @@ bless_chibi_scheme_executable(chibi-scheme)
 # Generate "chibi/install.h"
 #
 
-if(CYGWIN OR WIN32)
-    set(thePrefix "bin")
-else()
-    set(thePrefix "lib")
-endif()
-
-if(WIN32)
-    set(pathsep "\\;")
-else()
-    set(pathsep ":")
-endif()
-
 if(WIN32)
     set(platform "windows")
 elseif(CYGWIN)
@@ -370,10 +359,11 @@ else()
 endif()
 
 
-set(default_module_path
-    ""
-    #"${CMAKE_INSTALL_PREFIX}/${thePrefix}${pathsep}${CMAKE_INSTALL_PREFIX}/bin"
-    )
+string(JOIN ":" default_module_path
+    ${CMAKE_INSTALL_FULL_DATAROOTDIR}/chibi
+    ${CMAKE_INSTALL_FULL_LIBDIR}/chibi
+    ${CMAKE_INSTALL_FULL_DATAROOTDIR}/snow
+    ${CMAKE_INSTALL_FULL_LIBDIR}/snow)
 
 configure_file(include/chibi/install.h.in include/chibi/install.h)
 
