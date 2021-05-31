@@ -14,6 +14,7 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
     DESCRIPTION "Chibi-Scheme: minimal r7rs implementation, release: ${release}")
 
 include(CheckIncludeFile)
+include(CheckSymbolExists)
 
 
 endif()
@@ -25,7 +26,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #
 
 check_include_file(poll.h HAVE_POLL_H)
-check_include_file(stdint.h HAVE_STDINT_H)
+check_symbol_exists(ntp_gettime sys/timex.h HAVE_NTP_GETTIME)
+check_symbol_exists(int_least8_t inttypes.h HAVE_STDINT_H)
 
 if (WIN32 AND NOT CYGWIN)
     set(DEFAULT_SHARED_LIBS OFF)
