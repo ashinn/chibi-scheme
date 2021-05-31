@@ -159,7 +159,11 @@ file(GLOB_RECURSE stubs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.stub)
 file(GLOB_RECURSE slds RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.sld)
-list(REMOVE_ITEM slds ${chibi-scheme-exclude-modules})
+if (chibi-scheme-exclude-modules)
+    # CMake doesn't complain anymore about an empty 2nd argument, but 3.12 does. When we require a
+    # more recent version, the if-guard should go.
+    list(REMOVE_ITEM slds ${chibi-scheme-exclude-modules})
+endif()
 
 set(chibi-ffi ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-ffi)
 set(chibi-genstatic ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-genstatic)
