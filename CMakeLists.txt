@@ -15,14 +15,7 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
 
 include(CheckIncludeFile)
 
-if(APPLE)
-    message(FATAL_ERROR 
-        "DYLD platforms are not supported with this CMakeLists.txt. Use Makefile instead.")
-endif()
 
-if(UNIX)
-    message(FATAL_ERROR 
-        "UNIX platforms are not supported with this CMakeLists.txt. Use Makefile instead.")
 endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -257,8 +250,20 @@ endif()
 
 if(WIN32)
     set(platform "windows")
+elseif(CYGWIN)
+    set(platform "cygwin")
+elseif(APPLE)
+    set(platform "macosx")
+elseif(CMAKE_SYSTEM MATCHES "[Bb][Ss][Dd]")
+    set(platform "bsd")
+elseif(CMAKE_SYSTEM MATCHES "[Aa]ndroid")
+    set(platform "android")
+elseif(CMAKE_SYSTEM MATCHES "[Ss]un[Oo][Ss]")
+    set(platform "solaris")
+elseif (CMAKE_SYSTEM MATCHES "[Ll]inux")
+    set(platform "linux")
 else()
-    set(platform "unknown")
+    set(platform "unix")
 endif()
 
 
