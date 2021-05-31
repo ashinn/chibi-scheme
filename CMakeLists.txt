@@ -67,6 +67,11 @@ if (NOT BUILD_SHARED_LIBS)
     target_compile_definitions(libchibi-common INTERFACE SEXP_STATIC_LIBRARY=1)
 endif()
 
+target_compile_options(libchibi-common
+    INTERFACE
+    $<$<C_COMPILER_ID:GNU>:-Wall>
+    $<$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>:-Wall>)
+
 target_include_directories(libchibi-common
     INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
