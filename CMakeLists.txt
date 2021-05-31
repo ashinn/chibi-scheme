@@ -62,6 +62,10 @@ endif()
 add_library(libchibi-common
     INTERFACE)
 
+if (NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_STATIC_LIBRARY=1)
+endif()
+
 target_include_directories(libchibi-common
     INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -136,10 +140,6 @@ set_target_properties(libchibi-scheme
     PROPERTIES
     SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
     VERSION ${CMAKE_PROJECT_VERSION})
-
-if (NOT BUILD_SHARED_LIBS)
-    target_compile_definitions(libchibi-scheme PUBLIC SEXP_STATIC_LIBRARY=1)
-endif()
 
 
 #
