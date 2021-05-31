@@ -175,13 +175,9 @@ set_target_properties(libchibi-scheme
 #
 # Generate modules
 #
-# FIXME: Currently, it depends on GLOB thus we have to re-run CMake
-#        when we've gotten additional/removed library
 
-file(GLOB_RECURSE stubs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.stub)
 file(GLOB_RECURSE slds RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.sld)
+    CONFIGURE_DEPENDS lib/*.sld)
 if (chibi-scheme-exclude-modules)
     # CMake doesn't complain anymore about an empty 2nd argument, but 3.12 does. When we require a
     # more recent version, the if-guard should go.
@@ -191,13 +187,37 @@ endif()
 set(chibi-ffi ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-ffi)
 set(chibi-genstatic ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-genstatic)
 
-function(add_stubs_library stub stubc)
+function(add_compiled_library cfile)
+    if (NOT BUILD_SHARED_LIBS)
+        return()
+    endif()
+
+    get_filename_component(basename ${cfile} NAME_WE)
+    get_filename_component(libdir ${cfile} DIRECTORY)
+
+    if(NOT IS_ABSOLUTE ${libdir})
+        set(libdir ${CMAKE_CURRENT_BINARY_DIR}/${libdir})
+    endif()
+
+    file(RELATIVE_PATH libname ${CMAKE_CURRENT_BINARY_DIR} ${libdir}/${basename})
+    string(REPLACE "/" "-" libname ${libname})
+
+    add_library(${libname} ${cfile})
+    target_link_libraries(${libname} PRIVATE libchibi-scheme)
+
+    set_target_properties(${libname} PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${libdir}
+        LIBRARY_OUTPUT_NAME ${basename}
+        PREFIX "")
+endfunction()
+
+function(add_stubs_library stub)
     get_filename_component(stubdir ${stub} PATH)
     get_filename_component(basename ${stub} NAME_WE)
-    set(stubfile ${CMAKE_CURRENT_SOURCE_DIR}/lib/${stub})
-    set(stubdir ${CMAKE_CURRENT_BINARY_DIR}/lib/${stubdir})
+    set(stubfile ${CMAKE_CURRENT_SOURCE_DIR}/${stub})
+    set(stubdir ${CMAKE_CURRENT_BINARY_DIR}/${stubdir})
     set(stubout ${stubdir}/${basename}.c)
-    set(${stubc} ${stubout} PARENT_SCOPE)
+    set(stubouts ${stubouts} ${stubout} PARENT_SCOPE)
 
     file(MAKE_DIRECTORY ${stubdir})
     add_custom_command(OUTPUT ${stubout}
@@ -205,75 +225,45 @@ function(add_stubs_library stub stubc)
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-    if (BUILD_SHARED_LIBS)
-        add_library(${basename}
-            ${stubout})
-
-        target_link_libraries(${basename}
-            PRIVATE
-            libchibi-scheme)
-
-        set_target_properties(${basename} PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${stubdir}
-            LIBRARY_OUTPUT_NAME ${basename}
-            PREFIX "")
-    endif()
+    add_compiled_library(${stubout})
 endfunction()
 
-foreach(stub ${stubs})
-    add_stubs_library(${stub} stubc)
-    list(APPEND stubouts ${stubc})
-endforeach()
+add_stubs_library(lib/chibi/crypto/crypto.stub)
+add_stubs_library(lib/chibi/emscripten.stub)
+add_stubs_library(lib/chibi/filesystem.stub)
+add_stubs_library(lib/chibi/io/io.stub)
+add_stubs_library(lib/scheme/bytevector.stub)
+add_stubs_library(lib/srfi/144/math.stub)
+add_stubs_library(lib/srfi/160/uvprims.stub)
+
+if(NOT WIN32)
+    add_stubs_library(lib/chibi/net.stub)
+    add_stubs_library(lib/chibi/process.stub)
+    add_stubs_library(lib/chibi/pty.stub)
+    add_stubs_library(lib/chibi/stty.stub)
+    add_stubs_library(lib/chibi/system.stub)
+    add_stubs_library(lib/chibi/time.stub)
+else()
+    add_stubs_library(lib/chibi/win32/process-win32.stub)
+endif()
+
 add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
 add_dependencies(libchibi-scheme chibi-scheme-stubs)
 
-function(add_compiled_library cfile)
-    get_filename_component(basename ${cfile} NAME_WE)
-    get_filename_component(libdir ${cfile} DIRECTORY)
-    string(REPLACE "/" "-" libname ${libdir}/${basename})
-    set(outputdir ${CMAKE_CURRENT_BINARY_DIR}/${libdir})
-
-    if (NOT BUILD_SHARED_LIBS)
-        return()
-    endif()
-    add_library(${libname} ${cfile})
-    target_link_libraries(${libname}
-        PRIVATE
-        libchibi-scheme)
-
-    set_target_properties(${libname} PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY ${outputdir}
-        LIBRARY_OUTPUT_NAME ${basename}
-        PREFIX "")
-endfunction()
-
-add_compiled_library(lib/chibi/filesystem.c)
 add_compiled_library(lib/chibi/weak.c)
 add_compiled_library(lib/chibi/heap-stats.c)
 add_compiled_library(lib/chibi/disasm.c)
 add_compiled_library(lib/chibi/ast.c)
 add_compiled_library(lib/chibi/json.c)
-add_compiled_library(lib/chibi/emscripten.c)
-add_compiled_library(lib/chibi/process.c)
-add_compiled_library(lib/chibi/time.c)
-add_compiled_library(lib/chibi/system.c)
-add_compiled_library(lib/chibi/stty.c)
-add_compiled_library(lib/chibi/pty.c)
-add_compiled_library(lib/chibi/net.c)
 add_compiled_library(lib/srfi/18/threads.c)
-add_compiled_library(lib/chibi/io/io.c)
 add_compiled_library(lib/chibi/optimize/rest.c)
 add_compiled_library(lib/chibi/optimize/profile.c)
-add_compiled_library(lib/chibi/crypto/crypto.c)
 add_compiled_library(lib/srfi/27/rand.c)
 add_compiled_library(lib/srfi/151/bit.c)
 add_compiled_library(lib/srfi/39/param.c)
 add_compiled_library(lib/srfi/69/hash.c)
 add_compiled_library(lib/srfi/95/qsort.c)
 add_compiled_library(lib/srfi/98/env.c)
-add_compiled_library(lib/srfi/144/math.c)
-add_compiled_library(lib/srfi/160/uvprims.c)
-add_compiled_library(lib/scheme/bytevector.c)
 add_compiled_library(lib/scheme/time.c)
 
 #
