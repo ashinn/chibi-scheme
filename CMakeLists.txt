@@ -16,10 +16,16 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+SET(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
+    "Build type: None, Debug, Release, RelWithDebInfo, MinSizeRel, or Sanitizer." FORCE)
+
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt AND NOT CMAKE_BUILD_TYPE)
+    # CMake doesn't have a default build type, so set one manually
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "" FORCE)
 endif()
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 #
 # Features
@@ -85,6 +91,12 @@ if(NOT HAVE_POLL_H)
     # Disable green threads: It depends on non-blocking I/O
     target_compile_definitions(libchibi-common INTERFACE SEXP_USE_GREEN_THREADS=0)
 endif()
+
+target_compile_options(libchibi-common
+    INTERFACE
+    $<$<CONFIG:SANITIZER>:-g
+    -fsanitize=address,undefined,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,return
+    -fno-omit-frame-pointer>)
 
 #
 # Sources
