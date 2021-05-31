@@ -97,6 +97,10 @@ if(NOT HAVE_POLL_H)
     target_compile_definitions(libchibi-common INTERFACE SEXP_USE_GREEN_THREADS=0)
 endif()
 
+if(CYGWIN)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_STRING_STREAMS=0)
+endif()
+
 target_compile_options(libchibi-common
     INTERFACE
     $<$<CONFIG:SANITIZER>:-g
