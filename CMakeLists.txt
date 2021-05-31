@@ -42,6 +42,7 @@ else()
 endif()
 
 option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ${DEFAULT_SHARED_LIBS})
+option(SEXP_USE_BOEHM "Use Boehm garbage collection library" OFF)
 
 set(chibi-scheme-exclude-modules)
 if(WIN32)
@@ -99,6 +100,18 @@ endif()
 
 if(CYGWIN)
     target_compile_definitions(libchibi-common INTERFACE SEXP_USE_STRING_STREAMS=0)
+endif()
+
+if(SEXP_USE_BOEHM)
+    find_library(BOEHMGC gc REQUIRED)
+    find_path(BOEHMGC_INCLUDE NAMES gc/gc.h)
+    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_BOEHM=1)
+    target_include_directories(libchibi-common INTERFACE ${BOEHMGC_INCLUDE})
+    target_link_libraries(libchibi-common INTERFACE ${BOEHMGC}
+        $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>)
+else()
+    target_link_libraries(libchibi-common INTERFACE
+        $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>)
 endif()
 
 target_compile_options(libchibi-common
