@@ -370,7 +370,7 @@ set(chibi-scheme-tests
 
 foreach(e ${chibi-scheme-tests})
     add_test(NAME "${e}"
-        COMMAND chibi-scheme tests/${e}.scm
+        COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib tests/${e}.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
@@ -409,7 +409,8 @@ foreach(e ${testlibs})
     string(REGEX REPLACE "/" "_" testname ${e})
     string(REGEX REPLACE "/" " " form ${e})
     add_test(NAME "lib_${testname}"
-        COMMAND chibi-scheme -e "(import (${form}))"
+        COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        -e "(import (${form}))"
         -e "(run-tests)"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
