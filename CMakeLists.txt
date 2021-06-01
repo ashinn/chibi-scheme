@@ -310,13 +310,6 @@ elseif(WIN32)
     target_compile_definitions(libchibi-scheme PUBLIC BUILDING_DLL=1)
 endif()
 
-function(bless_chibi_scheme_executable tgt)
-    target_link_libraries(${tgt} libchibi-scheme)
-    if(WIN32 AND NOT ${BUILD_SHARED_LIBS})
-        target_link_libraries(${tgt} ws2_32)
-    endif()
-endfunction()
-
 #
 # Interpreter
 #
@@ -324,7 +317,8 @@ endfunction()
 add_executable(chibi-scheme
     main.c)
 
-bless_chibi_scheme_executable(chibi-scheme)
+target_link_libraries(chibi-scheme
+    PRIVATE libchibi-scheme)
 
 #
 # Generate "chibi/install.h"
@@ -427,7 +421,8 @@ endforeach()
 add_executable(test-foreign-apply-loop
     tests/foreign/apply-loop.c)
 
-bless_chibi_scheme_executable(test-foreign-apply-loop)
+target_link_libraries(test-foreign-apply-loop
+    PRIVATE libchibi-scheme)
 
 add_test(NAME "foreign-apply-loop"
     COMMAND test-foreign-apply-loop
@@ -436,7 +431,8 @@ add_test(NAME "foreign-apply-loop"
 add_executable(test-foreign-typeid
     tests/foreign/typeid.c)
 
-bless_chibi_scheme_executable(test-foreign-typeid)
+target_link_libraries(test-foreign-typeid
+    PRIVATE libchibi-scheme)
 
 add_test(NAME "foreign-typeid"
     COMMAND test-foreign-typeid
