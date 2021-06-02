@@ -70,16 +70,24 @@ endif()
 add_library(libchibi-common
     INTERFACE)
 
-if (NOT BUILD_SHARED_LIBS)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_STATIC_LIBRARY=1)
-elseif(WIN32)
-    target_compile_definitions(libchibi-common INTERFACE BUILDING_DLL=1)
-endif()
+target_compile_definitions(libchibi-common
+    INTERFACE
+    SEXP_STATIC_LIBRARY=$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>
+    BUILDING_DLL=$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${BUILD_SHARED_LIBS}>>
+    SEXP_USE_DL=$<BOOL:${BUILD_SHARED_LIBS}>
+    SEXP_USE_INTTYPES=$<BOOL:${HAVE_STDINT_H}>
+    SEXP_USE_NTPGETTIME=$<BOOL:HAVE_NTP_GETTIME>
+    SEXP_USE_GREEN_THREADS=$<BOOL:HAVE_POLL_H>
+    SEXP_USE_STRING_STREAMS=$<NOT:$<BOOL:${CYGWIN}>>
+    SEXP_USE_BOEHM=$<BOOL:${SEXP_USE_BOEHM}>)
 
 target_compile_options(libchibi-common
     INTERFACE
     $<$<C_COMPILER_ID:GNU>:-Wall>
-    $<$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>:-Wall>)
+    $<$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>:-Wall>
+    $<$<CONFIG:SANITIZER>:-g
+    -fsanitize=address,undefined,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,return
+    -fno-omit-frame-pointer>)
 
 target_include_directories(libchibi-common
     INTERFACE
@@ -88,43 +96,10 @@ target_include_directories(libchibi-common
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-if (NOT BUILD_SHARED_LIBS)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_DL=0)
-else()
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_DL=1)
-endif()
-
-if(HAVE_STDINT_H)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_INTTYPES)
-endif()
-
-if(HAVE_NTP_GETTIME)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_NTPGETTIME)
-endif()
-
-if(NOT HAVE_POLL_H)
-    # Disable green threads: It depends on non-blocking I/O
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_GREEN_THREADS=0)
-endif()
-
-if(CYGWIN)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_STRING_STREAMS=0)
-endif()
-
-if(SEXP_USE_BOEHM)
-    target_compile_definitions(libchibi-common INTERFACE SEXP_USE_BOEHM=1)
-endif()
-
 target_link_libraries(libchibi-common INTERFACE
     ${BOEHMGC}
     $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>
     $<$<PLATFORM_ID:Windows>:ws2_32>)
-
-target_compile_options(libchibi-common
-    INTERFACE
-    $<$<CONFIG:SANITIZER>:-g
-    -fsanitize=address,undefined,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,return
-    -fno-omit-frame-pointer>)
 
 #
 # Sources
