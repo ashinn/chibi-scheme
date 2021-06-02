@@ -194,8 +194,13 @@ function(add_stubs_library stub)
     set(stubouts ${stubouts} ${stubout} PARENT_SCOPE)
 
     file(MAKE_DIRECTORY ${stubdir})
+
+
     add_custom_command(OUTPUT ${stubout}
-        COMMAND chibi-scheme-bootstrap ${chibi-ffi} ${stubfile} ${stubout}
+        # This makes sure we only use the separate bootstrap executable for static
+        # builds. With dynamic linking, the default executable is fine.
+        COMMAND $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,chibi-scheme,chibi-scheme-bootstrap>
+            ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -222,7 +227,10 @@ else()
 endif()
 
 add_custom_target(chibi-scheme-stubs DEPENDS ${stubouts})
-add_dependencies(libchibi-scheme chibi-scheme-stubs)
+
+if (NOT BUILD_SHARED_LIBS)
+    add_dependencies(libchibi-scheme chibi-scheme-stubs)
+endif()
 
 add_compiled_library(lib/chibi/weak.c)
 add_compiled_library(lib/chibi/heap-stats.c)
