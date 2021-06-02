@@ -86,7 +86,7 @@ target_compile_options(libchibi-common
     $<$<C_COMPILER_ID:GNU>:-Wall>
     $<$<OR:$<C_COMPILER_ID:AppleClang>,$<C_COMPILER_ID:Clang>>:-Wall>
     $<$<CONFIG:SANITIZER>:-g
-    -fsanitize=address,undefined,integer-divide-by-zero,float-divide-by-zero,float-cast-overflow,return
+    -fsanitize=address,undefined,integer,float-divide-by-zero,float-cast-overflow,return
     -fno-omit-frame-pointer>)
 
 target_include_directories(libchibi-common
