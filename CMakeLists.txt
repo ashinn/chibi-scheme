@@ -45,6 +45,11 @@ endif()
 option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ${DEFAULT_SHARED_LIBS})
 option(SEXP_USE_BOEHM "Use Boehm garbage collection library" OFF)
 
+if(SEXP_USE_BOEHM)
+    find_library(BOEHMGC gc REQUIRED)
+    find_path(BOEHMGC_INCLUDE NAMES gc/gc.h)
+endif()
+
 set(chibi-scheme-exclude-modules)
 if(WIN32)
     set(chibi-scheme-exclude-modules
@@ -67,6 +72,8 @@ add_library(libchibi-common
 
 if (NOT BUILD_SHARED_LIBS)
     target_compile_definitions(libchibi-common INTERFACE SEXP_STATIC_LIBRARY=1)
+elseif(WIN32)
+    target_compile_definitions(libchibi-common INTERFACE BUILDING_DLL=1)
 endif()
 
 target_compile_options(libchibi-common
@@ -76,6 +83,7 @@ target_compile_options(libchibi-common
 
 target_include_directories(libchibi-common
     INTERFACE
+    ${BOEHMGC_INCLUDE}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
@@ -104,16 +112,13 @@ if(CYGWIN)
 endif()
 
 if(SEXP_USE_BOEHM)
-    find_library(BOEHMGC gc REQUIRED)
-    find_path(BOEHMGC_INCLUDE NAMES gc/gc.h)
     target_compile_definitions(libchibi-common INTERFACE SEXP_USE_BOEHM=1)
-    target_include_directories(libchibi-common INTERFACE ${BOEHMGC_INCLUDE})
-    target_link_libraries(libchibi-common INTERFACE ${BOEHMGC}
-        $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>)
-else()
-    target_link_libraries(libchibi-common INTERFACE
-        $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>)
 endif()
+
+target_link_libraries(libchibi-common INTERFACE
+    ${BOEHMGC}
+    $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>
+    $<$<PLATFORM_ID:Windows>:ws2_32>)
 
 target_compile_options(libchibi-common
     INTERFACE
@@ -147,13 +152,7 @@ add_executable(chibi-scheme-bootstrap
     ${chibi-scheme-srcs}
     main.c)
 
-if(WIN32)
-    target_link_libraries(chibi-scheme-bootstrap
-        PRIVATE ws2_32 libchibi-common)
-else()
-    target_link_libraries(chibi-scheme-bootstrap
-        PRIVATE libchibi-common)
-endif()
+target_link_libraries(chibi-scheme-bootstrap PRIVATE libchibi-common)
 
 
 #
@@ -305,9 +304,6 @@ if (NOT BUILD_SHARED_LIBS)
         INTERFACE
         $<BUILD_INTERFACE:${stuboutdir}/..>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
-elseif(WIN32)
-    target_link_libraries(libchibi-scheme ws2_32)
-    target_compile_definitions(libchibi-scheme PUBLIC BUILDING_DLL=1)
 endif()
 
 #
