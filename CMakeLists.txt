@@ -78,7 +78,7 @@ target_compile_definitions(libchibi-common
     SEXP_USE_INTTYPES=$<BOOL:${HAVE_STDINT_H}>
     SEXP_USE_NTPGETTIME=$<BOOL:${HAVE_NTP_GETTIME}>
     SEXP_USE_GREEN_THREADS=$<BOOL:${HAVE_POLL_H}>
-    SEXP_USE_STRING_STREAMS=$<NOT:$<BOOL:${CYGWIN}>>
+    SEXP_USE_STRING_STREAMS=$<NOT:$<PLATFORM_ID:Windows>>
     SEXP_USE_BOEHM=$<BOOL:${SEXP_USE_BOEHM}>)
 
 target_compile_options(libchibi-common
