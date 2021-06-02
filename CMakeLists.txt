@@ -185,6 +185,17 @@ function(add_compiled_library cfile)
         PREFIX "")
 endfunction()
 
+if(BUILD_SHARED_LIBS)
+    # This makes sure we only use the separate bootstrap executable for static
+    # builds. With dynamic linking, the default executable is fine. The dispatch
+    # is not a generator expression within the actual custom command to process
+    # the stubs, as older CMake versions fail to properly construct the dependency
+    # on the bootstrap executable from the generator expression.
+    set(bootstrap chibi-scheme)
+else()
+    set(bootstrap chibi-scheme-bootstrap)
+endif()
+
 function(add_stubs_library stub)
     get_filename_component(stubdir ${stub} PATH)
     get_filename_component(basename ${stub} NAME_WE)
@@ -197,10 +208,7 @@ function(add_stubs_library stub)
 
 
     add_custom_command(OUTPUT ${stubout}
-        # This makes sure we only use the separate bootstrap executable for static
-        # builds. With dynamic linking, the default executable is fine.
-        COMMAND $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,chibi-scheme,chibi-scheme-bootstrap>
-            ${chibi-ffi} ${stubfile} ${stubout}
+        COMMAND ${bootstrap} ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
