@@ -346,14 +346,9 @@ enable_testing()
 
 set(chibi-scheme-tests
     r7rs-tests
-    ## Not connected
-    #division-tests
-    #r5rs-tests
-    #syntax-tests
-    #unicode-tests
-    ## Require threads
-    # lib-tests
-    )
+    division-tests
+    syntax-tests
+    unicode-tests)
 
 foreach(e ${chibi-scheme-tests})
     add_test(NAME "${e}"
@@ -361,13 +356,20 @@ foreach(e ${chibi-scheme-tests})
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
+add_test(NAME r5rs-test
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xchibi tests/r5rs-tests.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 file(GLOB_RECURSE srfi_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/srfi/*/test.sld)
+    CONFIGURE_DEPENDS lib/srfi/*/test.sld)
 
 file(GLOB_RECURSE chibi_scheme_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/chibi/*-test.sld)
+    CONFIGURE_DEPENDS lib/chibi/*-test.sld)
 
 set(testexcludes
+    chibi/weak-test)
+
+set(win32testexcludes
     # Excluded tests
     chibi/filesystem-test
     chibi/memoize-test
@@ -384,13 +386,17 @@ set(testexcludes
     chibi/pty-test # Depends (chibi pty)
     )
 
-set(testlibs)
 foreach(e ${srfi_tests} ${chibi_scheme_tests})
     get_filename_component(pth ${e} PATH)
     get_filename_component(nam ${e} NAME_WE)
     list(APPEND testlibs ${pth}/${nam})
 endforeach()
+
 list(REMOVE_ITEM testlibs ${testexcludes})
+
+if(WIN32)
+    list(REMOVE_ITEM testlibs ${win32testexcludes})
+endif()
 
 foreach(e ${testlibs})
     string(REGEX REPLACE "/" "_" testname ${e})
