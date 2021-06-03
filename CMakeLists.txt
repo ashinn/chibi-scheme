@@ -64,7 +64,8 @@ endif()
 
 #
 # Default settings for all targets. We use an interface library here to not
-# pollute/mutate global settings.
+# pollute/mutate global settings. Any configuration applied to this library
+# is propagated to its client targets.
 #
 
 add_library(libchibi-common
@@ -336,6 +337,16 @@ string(JOIN ":" default_module_path
     ${CMAKE_INSTALL_FULL_DATAROOTDIR}/snow
     ${CMAKE_INSTALL_FULL_LIBDIR}/snow)
 
+# This file will only be used during an installation (and renamed to install.h)
+configure_file(include/chibi/install.h.in include/chibi/to-install.h)
+
+# This configuration is for development purpose: a chibi executable shall find
+# both compiled libraries in its own build directory and scheme source libraries
+# in the source directory.
+string(JOIN ":" default_module_path
+    ${CMAKE_CURRENT_BINARY_DIR}/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+
 configure_file(include/chibi/install.h.in include/chibi/install.h)
 
 #
@@ -352,12 +363,12 @@ set(chibi-scheme-tests
 
 foreach(e ${chibi-scheme-tests})
     add_test(NAME "${e}"
-        COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib tests/${e}.scm
+        COMMAND chibi-scheme tests/${e}.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
 add_test(NAME r5rs-test
-    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xchibi tests/r5rs-tests.scm
+    COMMAND chibi-scheme -xchibi tests/r5rs-tests.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 file(GLOB_RECURSE srfi_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
@@ -402,9 +413,7 @@ foreach(e ${testlibs})
     string(REGEX REPLACE "/" "_" testname ${e})
     string(REGEX REPLACE "/" " " form ${e})
     add_test(NAME "lib_${testname}"
-        COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
-        -e "(import (${form}))"
-        -e "(run-tests)"
+        COMMAND chibi-scheme -e "(import (${form}))" -e "(run-tests)"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
@@ -431,3 +440,23 @@ target_link_libraries(test-foreign-typeid
 add_test(NAME "foreign-typeid"
     COMMAND test-foreign-typeid
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+#
+# Installation
+#
+
+install(DIRECTORY include/chibi
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    USE_SOURCE_PERMISSIONS
+    PATTERN "sexp-*.[hc]" EXCLUDE
+    PATTERN "*.h.in" EXCLUDE)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/to-install.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/chibi
+    RENAME install.h)
+
+add_library(chibi::chibi ALIAS libchibi-scheme)
+
+install(TARGETS libchibi-scheme
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
