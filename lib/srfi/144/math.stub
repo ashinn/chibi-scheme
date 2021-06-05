@@ -102,7 +102,8 @@
 
 (define-c double frexp (double (result int)))
 
-(define-c int (sign-bit "signbit") (double))
+(c-declare "#define sign_bit(v) (!!signbit(v))")
+(define-c int sign-bit (double))
 
 (define-c boolean (flfinite? "isfinite") (double))
 (define-c boolean (flinfinite? "isinf") (double))
