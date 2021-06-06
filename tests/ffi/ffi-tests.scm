@@ -303,7 +303,7 @@ double circle_area2(struct Circle circ) {
 
 struct Point* centroid(struct Point** points, int num_points) {
   struct Point* res;
-  double xsum, ysum;
+  double xsum=0, ysum=0;
   int i;
   for (i=0; i<num_points; ++i) {
     xsum += points[i]->x;
@@ -317,7 +317,7 @@ struct Point* centroid(struct Point** points, int num_points) {
 
 struct Point* centroid_null(struct Point** points) {
   struct Point* res;
-  double xsum, ysum;
+  double xsum=0, ysum=0;
   int i;
   for (i=0; points[i]; ++i) {
     xsum += points[i]->x;
