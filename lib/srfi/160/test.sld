@@ -8,6 +8,7 @@
       (test-begin "srfi-160: uniform vectors")
       (test-group "uvectors/constructors"
         (define a2i '#u32(0 1 2 3 4 5 6 7 8))
+        (test '#u8(0 1 2 3 4) (u8vector 0 1 2 3 4))
         (test '#u32(0 1 2 3 4) (u32vector 0 1 2 3 4))
         (test '#u32(0 1 2 3 4 5 6 7 8 9)
           (u32vector-unfold (lambda (i x) (values x (+ x 1))) 10 0))
