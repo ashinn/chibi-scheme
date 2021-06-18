@@ -299,7 +299,7 @@ if (NOT BUILD_SHARED_LIBS)
         SEXP_USE_STATIC_LIBS=1)
 
     target_sources(libchibi-scheme
-        PUBLIC
+        PRIVATE
         ${clibout})
 endif()
 
