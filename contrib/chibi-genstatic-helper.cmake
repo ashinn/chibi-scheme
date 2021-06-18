@@ -16,7 +16,7 @@ if(NOT OUT)
 endif()
 
 execute_process(
-    COMMAND ${EXEC} ${GENSTATIC} --no-inline
+    COMMAND ${EXEC} -q -I ./lib ${GENSTATIC} --no-inline
     INPUT_FILE ${STUBS}
     OUTPUT_FILE ${OUT}
     RESULT_VARIABLE rr
