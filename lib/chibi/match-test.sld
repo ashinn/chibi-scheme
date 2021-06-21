@@ -50,7 +50,17 @@
       (test "duplicate quasiquote" 'ok
         (match '(a b) ((or `(a ,x) `(,x b)) 'ok) (_ #f)))
       (test "duplicate before ellipsis" #f
-          (match '(1 2) ((a a ...) a) (else #f)))
+        (match '(1 2) ((a a ...) a) (else #f)))
+      (test "duplicate ellipsis pass" '(1 2)
+        (match '((1 2) (1 2)) (((x ...) (x ...)) x) (else #f)))
+      (test "duplicate ellipsis fail" #f
+        (match '((1 2) (1 2 3)) (((x ...) (x ...)) x) (else #f)))
+      (test "duplicate ellipsis trailing" '(1 2)
+        (match '((1 2 3) (1 2 3)) (((x ... 3) (x ... 3)) x) (else #f)))
+      (test "duplicate ellipsis trailing fail" #f
+        (match '((1 2 3) (1 1 3)) (((x ... 3) (x ... 3)) x) (else #f)))
+      (test "duplicate ellipsis fail trailing" #f
+        (match '((1 2 3) (1 2 4)) (((x ... 3) (x ... 3)) x) (else #f)))
 
       (test "ellipses" '((a b c) (1 2 3))
         (match '((a . 1) (b . 2) (c . 3))
@@ -68,6 +78,9 @@
         (match '(1 2 3)
           (((? odd? n) ___) n)
           (((? number? n) ___) n)))
+
+      (test "ellipsis trailing" '(3 1 2)
+        (match '(1 2 3) ((x ... y) (cons y x)) (else #f)))
 
       (test "failure continuation" 'ok
         (match '(1 2)

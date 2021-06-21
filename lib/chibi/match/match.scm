@@ -242,6 +242,8 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2021/06/21 - fix for `(a ...)' patterns where `a' is already bound
+;;              (thanks to Andy Wingo)
 ;; 2020/09/04 - perf fix for `not`; rename `..=', `..=', `..1' per SRFI 204
 ;; 2020/08/21 - fixing match-letrec with unhygienic insertion
 ;; 2020/07/06 - adding `..=' and `..=' patterns; fixing ,@ patterns
@@ -565,37 +567,54 @@
 (define-syntax match-gen-ellipsis
   (syntax-rules ()
     ;; TODO: restore fast path when p is not already bound
-    ;; ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
-    ;;  (match-check-identifier p
-    ;;    ;; simplest case equivalent to (p ...), just bind the list
-    ;;    (let ((p v))
-    ;;      (if (list? p)
-    ;;          (sk ... i)
-    ;;          fk))
-    ;;    ;; simple case, match all elements of the list
-    ;;    (let loop ((ls v) (id-ls '()) ...)
-    ;;      (cond
-    ;;        ((null? ls)
-    ;;         (let ((id (reverse id-ls)) ...) (sk ... i)))
-    ;;        ((pair? ls)
-    ;;         (let ((w (car ls)))
-    ;;           (match-one w p ((car ls) (set-car! ls))
-    ;;                      (match-drop-ids (loop (cdr ls) (cons id id-ls) ...))
-    ;;                      fk i)))
-    ;;        (else
-    ;;         fk)))))
+    ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
+     (match-check-identifier p
+       ;; simplest case equivalent to (p ...), just match the list
+       (let ((w v))
+         (if (list? w)
+             (match-one w p g+s (sk ...) fk i)
+             fk))
+       ;; simple case, match all elements of the list
+       (let loop ((ls v) (id-ls '()) ...)
+         (cond
+           ((null? ls)
+            (let ((id (reverse id-ls)) ...) (sk ... i)))
+           ((pair? ls)
+            (let ((w (car ls)))
+              (match-one w p ((car ls) (set-car! ls))
+                         (match-drop-ids (loop (cdr ls) (cons id id-ls) ...))
+                         fk i)))
+           (else
+            fk)))))
     ((_ v p r g+s sk fk (i ...) ((id id-ls) ...))
-     ;; general case, trailing patterns to match, keep track of the
-     ;; remaining list length so we don't need any backtracking
      (match-verify-no-ellipsis
       r
-      (let* ((tail-len (length 'r))
-             (ls v)
-             (len (and (list? ls) (length ls))))
-        (if (or (not len) (< len tail-len))
-            fk
-            (let loop ((ls ls) (n len) (id-ls '()) ...)
-              (cond
+      (match-bound-identifier-memv
+       p
+       (i ...)
+       ;; p is bound, match the list up to the known length, then
+       ;; match the trailing patterns
+       (let loop ((ls v) (expect p))
+         (cond
+          ((null? expect)
+           (match-one ls r (#f #f) sk fk (i ...)))
+          ((pair? ls)
+           (let ((w (car ls))
+                 (e (car expect)))
+             (if (equal? (car ls) (car expect))
+                 (match-drop-ids (loop (cdr ls) (cdr expect)))
+                 fk)))
+          (else
+           fk)))
+       ;; general case, trailing patterns to match, keep track of
+       ;; the remaining list length so we don't need any backtracking
+       (let* ((tail-len (length 'r))
+              (ls v)
+              (len (and (list? ls) (length ls))))
+         (if (or (not len) (< len tail-len))
+             fk
+             (let loop ((ls ls) (n len) (id-ls '()) ...)
+               (cond
                 ((= n tail-len)
                  (let ((id (reverse id-ls)) ...)
                    (match-one ls r (#f #f) sk fk (i ... id ...))))
@@ -607,7 +626,8 @@
                               fk
                               (i ...))))
                 (else
-                 fk)))))))))
+                 fk)))
+           )))))))
 
 ;; Variant of the above where the rest pattern is in a quasiquote.
 
@@ -1096,6 +1116,12 @@
      (lambda (expr rename compare)
        (if (eq? (cadr expr) (car (cddr expr)))
            (cadr (cddr expr))
+           (car (cddr (cddr expr)))))))
+  (define-syntax match-bound-identifier-memv
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (memv (cadr expr) (car (cddr expr)))
+           (cadr (cddr expr))
            (car (cddr (cddr expr))))))))
 
  (chicken
@@ -1115,6 +1141,12 @@
     (er-macro-transformer
      (lambda (expr rename compare)
        (if (eq? (cadr expr) (car (cddr expr)))
+           (cadr (cddr expr))
+           (car (cddr (cddr expr)))))))
+  (define-syntax match-bound-identifier-memv
+    (er-macro-transformer
+     (lambda (expr rename compare)
+       (if (memv (cadr expr) (car (cddr expr)))
            (cadr (cddr expr))
            (car (cddr (cddr expr))))))))
 
@@ -1177,4 +1209,18 @@
                             ((eq b) sk)
                             ((eq _) fk))))
            (eq a))))))
+
+  ;; Variant of above for a list of ids.
+  (define-syntax match-bound-identifier-memv
+    (syntax-rules ()
+      ((match-bound-identifier-memv a (id ...) sk fk)
+       (match-check-identifier
+        a
+        (let-syntax
+            ((memv?
+              (syntax-rules (id ...)
+                ((memv? a sk2 fk2) fk2)
+                ((memv? anything-else sk2 fk2) sk2))))
+          (memv? random-sym-to-match sk fk))
+        fk))))
   ))
