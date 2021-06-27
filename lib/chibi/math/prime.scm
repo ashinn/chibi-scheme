@@ -4,12 +4,13 @@
 
 ;;> Prime and number theoretic utilities.
 
-;;> Returns a pair whose car is the power of 2 in the factorization of
-;;> n, and whose cdr is the product of all remaining primes.
-(define (factor-twos n)
-  (do ((p 0 (+ p 1))
-       (r n (arithmetic-shift r -1)))
-      ((odd? r) (cons p r))))
+;; Given \var{n} and a continuation \var{return},
+;; returns (\var{return} \var{k2} \var{n2}) where
+;; \var{k2} is the power of 2 in the factorization of \var{n}, and
+;; \var{n2} is product of all other prime powers dividing \var{n}
+(define (factor-twos n return)
+  (let ((b (first-set-bit n)))
+    (return b (arithmetic-shift n (- b)))))
 
 ;;> Returns the multiplicative inverse of \var{a} modulo \var{b}.
 (define (modular-inverse a b)
@@ -85,23 +86,22 @@
 ;;> Returns true if we can show \var{n} to be composite by finding an
 ;;> exception to the Miller Rabin lemma.
 (define (miller-rabin-composite? n)
-  (let* ((neg1 (- n 1))
-         (factors (factor-twos neg1))
-         (twos (car factors))
-         (odd (cdr factors))
-         ;; Each iteration of Miller Rabin reduces the odds by 1/4, so
-         ;; this is a 1 in 2^40 probability of false positive,
-         ;; assuming good randomness from SRFI 27 and no bugs, further
-         ;; reduced by preliminary sieving.
-         (fixed-limit 16)
-         (rand-limit (if (< n 341550071728321) fixed-limit 20)))
-    (let try ((i 0))
-      (and (< i rand-limit)
-           (let ((a (if (< i fixed-limit)
-                        (vector-ref prime-table i)
-                        (+ (random-integer (- n 3)) 2))))
-             (or (not (modular-root-of-one? twos odd a n neg1))
-                 (try (+ i 1))))))))
+  (let ((neg1 (- n 1)))
+    (factor-twos neg1
+     (lambda (twos odd)
+       ;; Each iteration of Miller Rabin reduces the odds by 1/4, so
+       ;; this is a 1 in 2^40 probability of false positive,
+       ;; assuming good randomness from SRFI 27 and no bugs, further
+       ;; reduced by preliminary sieving.
+       (let* ((fixed-limit 16)
+              (rand-limit (if (< n 341550071728321) fixed-limit 20)))
+         (let try ((i 0))
+           (and (< i rand-limit)
+                (let ((a (if (< i fixed-limit)
+                             (vector-ref prime-table i)
+                             (+ (random-integer (- n 3)) 2))))
+                  (or (not (modular-root-of-one? twos odd a n neg1))
+                      (try (+ i 1)))))))))))
 
 ;;> Returns true if \var{n} has a very high probability (enough that
 ;;> you can assume a false positive will never occur in your lifetime)
