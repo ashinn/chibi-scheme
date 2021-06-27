@@ -47,6 +47,7 @@
       (test 5 (prime-below 7))
       (test 797 (prime-below 808))
 
+      (test 1 (totient 1))
       (test 1 (totient 2))
       (test 2 (totient 3))
       (test 2 (totient 4))
@@ -56,6 +57,7 @@
       (test 4 (totient 8))
       (test 6 (totient 9))
       (test 4 (totient 10))
+      (test-error (totient 0))
 
       (test #f (perfect? 1))
       (test #f (perfect? 2))
@@ -88,7 +90,9 @@
       (test '(3 3 3 5 7) (factor 945))
       (test-error (factor 0))
 
+      (test 0 (aliquot 1))
       (test 975 (aliquot 945))
+      (test-error (aliquot 0))
 
       (do ((i 3 (+ i 2)))
           ((>= i 101))

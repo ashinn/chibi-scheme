@@ -189,6 +189,43 @@
          ((prime? n) n)
          (else (lp (+ n 2)))))))))
 
+;; Given an initial value \var{r1} representing the (empty)
+;; factorization of 1 and a procedure \var{put}
+;; (called as \scheme{(\var{put} \var{r} \var{p} \var{k})})
+;; that, given prior representation \var{r},
+;; adds a prime factor \var{p} of multiplicity \var{k},
+;; returns a factorization function which returns the factorization
+;; of its non-zero integer argument \var{n} in this representation.
+;; The optional 3rd and 4th arguments, if provided, specialize \var{put}
+;; for particular primes:
+;; \var{put2}  for \var{p}=2,  called as \scheme{(\var{put2} \var{r} \var{k})})
+;; \var{put-1} for \var{p}=-1, called as \scheme{(\var{put-1} \var{r})}).
+(define (make-factorizer r1 put . o)
+  (let-optionals o ((put2  (lambda (r k) (put r  2 k)))
+                    (put-1 (lambda (r)   (put r -1 1))))
+    (lambda (n)
+      (when (zero? n)
+        (error "cannot factor 0"))
+      (factor-twos
+       n
+       (lambda (k2 n)
+         (let lp ((i 3) (ii 9)
+                  (n (abs n))
+                  (res (let ((res (if (negative? n) (put-1 r1) r1)))
+                         (if (zero? k2) res (put2 res k2)))))
+           (let next-i ((i i) (ii ii))
+             (cond ((> ii n)
+                    (if (= n 1) res (put res n 1)))
+                   ((not (zero? (remainder n i)))
+                    (next-i (+ i 2) (+ ii (* (+ i 1) 4))))
+                   (else
+                    (let rest ((n (quotient n i))
+                               (k 1))
+                      (if (zero? (remainder n i))
+                          (rest (quotient n i) (+ k 1))
+                          (lp (+ i 2) (+ ii (* (+ i 1) 4))
+                              n (put res i k)))))))))))))
+
 ;;> Returns the factorization of \var{n} as a monotonically
 ;;> increasing list of primes.
 (define (factor n)
@@ -210,30 +247,38 @@
              (+ ii (* (+ i 1) 4))
              n
              res)))))))
+;; this version is slightly slower
+;;(define factor
+;;  (let ((rfactor (make-factorizer '()
+;;                  (lambda (l p k) (cons (make-list k p) l)))))
+;;    (lambda (n) (apply append! (reverse (rfactor n))))))
 
-;;> Returns the Euler totient function, the number of positive
-;;> integers less than \var{n} that are relatively prime to \var{n}.
-(define (totient n)
-  (let ((limit (exact (ceiling (sqrt n)))))
-    (let lp ((i 2) (count 1))
-      (cond ((> i limit)
-             (if (= count (- i 1))
-                 (- n 1)                ; shortcut for prime
-                 (let lp ((i i) (count count))
-                   (cond ((>= i n) count)
-                         ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
-                         (else (lp (+ i 1) count))))))
-            ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
-            (else (lp (+ i 1) count))))))
 
-;;> The aliquot sum s(n), equal to the sum of proper divisors of an
-;;> integer n.
-(define (aliquot n)
-  (let ((limit (+ 1 (quotient n 2))))
-    (let lp ((i 2) (sum 1))
-      (cond ((> i limit) sum)
-            ((zero? (remainder n i)) (lp (+ i 1) (+ sum i)))
-            (else (lp (+ i 1) sum))))))
+;;> The Euler totient φ(\var{n}) is the number of positive
+;;> integers less than or equal to \var{n} that are
+;;> relatively prime to \var{n}.
+(define totient
+  (make-factorizer 1
+   (lambda (tot p k)
+     (* tot (- p 1) (expt p (- k 1))))
+   (lambda (tot k)
+     (arithmetic-shift tot (- k 1)))
+   (lambda (_)
+     (error "totient of negative number?"))))
+
+;;> The aliquot sum s(\var{n}) is
+;;> the sum of proper divisors of a positive integer \var{n}.
+(define aliquot
+  (let ((aliquot+n
+         (make-factorizer 1
+          (lambda (aliq p k)
+            (* aliq (quotient (- (expt p (+ k 1)) 1) (- p 1))))
+          (lambda (aliq k)
+            (- (arithmetic-shift aliq (+ k 1)) aliq))
+          (lambda (_)
+            (error "aliquot of negative number?")))))
+    (lambda (n) (- (aliquot+n n) n))))
+
 
 ;;> Returns true iff \var{n} is a perfect number, i.e. the sum of its
 ;;> divisors other than itself equals itself.
