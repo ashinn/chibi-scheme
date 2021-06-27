@@ -71,7 +71,7 @@
       (test #t (perfect? 496))
       (test #t (perfect? 8128))
 
-      (test '(1) (factor 1))
+      (test '() (factor 1))
       (test '(2) (factor 2))
       (test '(3) (factor 3))
       (test '(2 2) (factor 4))
@@ -86,6 +86,7 @@
       (test '(2 3 3) (factor 18))
       (test '(2 2 2 3 3) (factor 72))
       (test '(3 3 3 5 7) (factor 945))
+      (test-error (factor 0))
 
       (test 975 (aliquot 945))
 

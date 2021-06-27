@@ -192,30 +192,24 @@
 ;;> Returns the factorization of \var{n} as a monotonically
 ;;> increasing list of primes.
 (define (factor n)
-  (cond
-   ((negative? n)
-    (cons -1 (factor (- n))))
-   ((<= n 2)
-    (list n))
-   (else
-    (let lp ((n n)
-             (res (list)))
-      (cond
-       ((even? n)
-        (lp (quotient n 2) (cons 2 res)))
-       ((= n 1)
-        (reverse res))
-       (else
-        (let lp ((i 3) (n n) (limit (exact (ceiling (sqrt n)))) (res res))
-          (cond
-           ((= n 1)
-            (reverse res))
-           ((> i limit)
-            (reverse (cons n res)))
-           ((zero? (remainder n i))
-            (lp i (quotient n i) limit (cons i res)))
-           (else
-            (lp (+ i 2) n limit res))))))))))
+  (when (zero? n)
+    (error "cannot factor 0"))
+  (factor-twos
+   n
+   (lambda (b n)
+     (let lp ((i 3) (ii 9) (n (abs n))
+              (res (append (make-list b 2)
+                           (if (negative? n) (list -1) '()))))
+       (cond
+        ((> ii n)
+         (reverse (if (= n 1) res (cons n res))))
+        ((zero? (remainder n i))
+         (lp i ii (quotient n i) (cons i res)))
+        (else
+         (lp (+ i 2)
+             (+ ii (* (+ i 1) 4))
+             n
+             res)))))))
 
 ;;> Returns the Euler totient function, the number of positive
 ;;> integers less than \var{n} that are relatively prime to \var{n}.
