@@ -74,34 +74,48 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Probable primes.
 
-(define (modular-root-of-one? twos odd a n neg1)
-  ;; Returns true iff any (modular-expt a odd*2^i n) for i=0..twos-1
-  ;; returns 1 modulo n.
-  (let ((b (modular-expt a odd n)))
-    (let lp ((i 0) (b b))
-      (cond ((or (= b 1) (= b neg1))) ; in (= b 1) case we could factor
-            ((>= i twos) #f)
-            (else (lp (+ i 1) (remainder (* b b) n)))))))
-
-;;> Returns true if we can show \var{n} to be composite by finding an
-;;> exception to the Miller Rabin lemma.
-(define (miller-rabin-composite? n)
+;; Given \var{n}, return a predicate that tests whether
+;; its argument \var{a} is a witness for \var{n} not being prime,
+;; either (1) because \var{a}^(\var{n}-1)≠1 mod \var{n}
+;; \em{or} (2) because \var{a}'s powers include
+;; a third square root of 1 beyond {1, -1}
+(define (miller-rabin-witnesser n)
   (let ((neg1 (- n 1)))
     (factor-twos neg1
      (lambda (twos odd)
-       ;; Each iteration of Miller Rabin reduces the odds by 1/4, so
-       ;; this is a 1 in 2^40 probability of false positive,
-       ;; assuming good randomness from SRFI 27 and no bugs, further
-       ;; reduced by preliminary sieving.
-       (let* ((fixed-limit 16)
-              (rand-limit (if (< n 341550071728321) fixed-limit 20)))
-         (let try ((i 0))
-           (and (< i rand-limit)
-                (let ((a (if (< i fixed-limit)
+       (lambda (a)
+         (let ((b (modular-expt a odd n)))
+           (let lp ((i 0) (b b))
+             (cond ((= b neg1)
+                    ;; found -1 (expected sqrt(1))
+                    #f)
+                   ((= b 1)
+                    ;; !! (previous b)^2=1 and was not 1 or -1
+                    (not (zero? i)))
+                   ((>= i twos)
+                    ;; !! a^(n-1)!=1 mod n
+                    )
+                   (else
+                    (lp (+ i 1) (remainder (* b b) n)))))))))))
+
+;;> Returns true if we can show \var{n} to be composite
+;;> using the Miller-Rabin test (i.e., finding a witness \var{a}
+;;> where \var{a}^(\var{n}-1)≠1 mod \var{n} or \var{a} reveals
+;;> the existence of a 3rd square root of 1 in \b{Z}/(n))
+(define (miller-rabin-composite? n)
+  (let* ((witness? (miller-rabin-witnesser n))
+         ;; Each iteration of Miller Rabin reduces the odds by 1/4, so
+         ;; this is a 1 in 2^40 probability of false positive,
+         ;; assuming good randomness from SRFI 27 and no bugs, further
+         ;; reduced by preliminary sieving.
+         (fixed-limit 16)
+         (rand-limit (if (< n 341550071728321) fixed-limit 20)))
+    (let try ((i 0))
+      (and (< i rand-limit)
+           (or (witness? (if (< i fixed-limit)
                              (vector-ref prime-table i)
-                             (+ (random-integer (- n 3)) 2))))
-                  (or (not (modular-root-of-one? twos odd a n neg1))
-                      (try (+ i 1)))))))))))
+                             (+ (random-integer (- n 3)) 2)))
+               (try (+ i 1)))))))
 
 ;;> Returns true if \var{n} has a very high probability (enough that
 ;;> you can assume a false positive will never occur in your lifetime)

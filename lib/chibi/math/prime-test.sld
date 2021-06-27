@@ -107,4 +107,7 @@
                         5772301760555853353
                         (* 2936546443 3213384203)))
 
+      (test "Miller-Rabin vs. Carmichael prime"
+            #t (miller-rabin-composite? 118901521))
+
       (test-end))))
