@@ -5,7 +5,8 @@
    ((library (srfi 151)) (import (srfi 151)))
    ((library (srfi 33)) (import (srfi 33)))
    (else (import (srfi 60))))
-  (export prime? nth-prime prime-above prime-below factor perfect?
+  (export prime? nth-prime prime-above prime-below
+          factor factor-alist perfect?
           totient aliquot
           provable-prime? probable-prime?
           random-prime random-prime-distinct-from

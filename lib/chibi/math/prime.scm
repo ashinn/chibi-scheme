@@ -226,6 +226,15 @@
                           (lp (+ i 2) (+ ii (* (+ i 1) 4))
                               n (put res i k)))))))))))))
 
+;;> Returns the factorization of \var{n} as a list of
+;;> elements of the form \scheme{(\var{p} . \var{k})},
+;;> where \var{p} is a prime factor
+;;> and \var{k} is its multiplicity.
+(define factor-alist
+  (let ((rfactor (make-factorizer '()
+                  (lambda (l p k) (cons (cons p k) l)))))
+    (lambda (n) (reverse (rfactor n)))))
+
 ;;> Returns the factorization of \var{n} as a monotonically
 ;;> increasing list of primes.
 (define (factor n)

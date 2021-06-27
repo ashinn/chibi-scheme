@@ -90,6 +90,11 @@
       (test '(3 3 3 5 7) (factor 945))
       (test-error (factor 0))
 
+      (test '() (factor-alist 1))
+      (test '((2 . 3) (3 . 2)) (factor-alist 72))
+      (test '((3 . 3) (5 . 1) (7 . 1)) (factor-alist 945))
+      (test-error (factor-alist 0))
+
       (test 0 (aliquot 1))
       (test 975 (aliquot 945))
       (test-error (aliquot 0))
