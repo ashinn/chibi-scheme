@@ -53,6 +53,8 @@
       (test '(0 1 (2 3 4))
           (let-optionals '(0 1 2 3 4) ((a 10) (b 11) . c)
             (list a b c)))
+      (test 5 (keyword-ref '(a: b: b: 5) 'b: #f))
+      (test 5 (keyword-ref* '(a: b: b: 5) 'b: #f))
       (cond-expand
        (gauche)     ; gauche detects this at compile-time, can't catch
        (else (test-error '(0 11 12)

@@ -156,13 +156,14 @@ currently unspecified.
 In R7RS (and R6RS) semantics it is impossible to use two macros from
 different modules which both use the same auxiliary keywords (like
 \scheme{else} in \scheme{cond} forms) without renaming one of the
-keywords.  By default Chibi considers all top-level bindings
-effectively unbound when matching auxiliary keywords, so this case
-will "just work".  This decision was made because the chance of
-different modules using the same keywords seems more likely than user
-code unintentionally matching a top-level keyword with a different
-binding, however if you want to use R7RS semantics you can compile
-with \ccode{SEXP_USE_STRICT_TOPLEVEL_BINDINGS=1}.
+keywords.  To minimize conflicts Chibi offers a special module named
+\scheme{(auto)} which can export any identifier requested with
+\scheme{only}, e.g. \scheme{(import (only (auto) foo))} will import
+an auxiliary syntax \scheme{foo} binding.  Separate modules can use
+this to get the same binding without needing to know about each other
+in advance.  This is a Chibi-specific extension so is non-portable, but
+you can always define a static \scheme{(auto)} module exporting a list
+of all known bindings for other implementations.
 
 \scheme{load} is extended to accept an optional environment argument, like
 \scheme{eval}.  You can also \scheme{load} shared libraries in addition to
@@ -1584,7 +1585,7 @@ command tells you which you currently have installed.  The following
 are currently supported:
 
 \itemlist[
-\item{chibi - native support as of version 0.7.3}
+\item{chibi - version >= 0.7.3}
 \item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
 \item{cyclone - version >= 0.5.3}
 \item{foment - version >= 0.4}

@@ -95,6 +95,13 @@
     ((define-opt (name . vars) . body)
      (define name (opt-lambda vars . body)))))
 
+(define (mem-key key ls)
+  (and (pair? ls)
+       (pair? (cdr ls))
+       (if (eq? key (car ls))
+           ls
+           (mem-key key (cddr ls)))))
+
 ;;> \procedure{(keyword-ref ls key [default])}
 ;;>
 ;;> Search for the identifier \var{key} in the list \var{ls}, treating
@@ -103,12 +110,8 @@
 ;;> \var{default}, or \scheme{#f}.
 
 (define (keyword-ref ls key . o)
-  (let lp ((ls ls))
-    (if (and (pair? ls) (pair? (cdr ls)))
-        (if (eq? key (car ls))
-            (cadr ls)
-            (lp (cddr ls)))
-        (and (pair? o) (car o)))))
+  (cond ((mem-key key ls) => (lambda (cell) (cadr cell)))
+        (else (and (pair? o) (car o)))))
 
 ;;> \macro{(keyword-ref* ls key default)}
 ;;>
@@ -118,7 +121,7 @@
 (define-syntax keyword-ref*
   (syntax-rules ()
     ((keyword-ref* ls key default)
-     (cond ((memq key ls) => cadr) (else default)))))
+     (cond ((mem-key key ls) => cadr) (else default)))))
 
 (define (symbol->keyword sym)
   (string->symbol (string-append (symbol->string sym) ":")))

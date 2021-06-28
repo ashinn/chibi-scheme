@@ -78,7 +78,7 @@
   ;; returns 1 modulo n.
   (let ((b (modular-expt a odd n)))
     (let lp ((i 0) (b b))
-      (cond ((or (= b 1) (= b neg1)))  ; in (= b 1) case we could factor
+      (cond ((or (= b 1) (= b neg1))) ; in (= b 1) case we could factor
             ((>= i twos) #f)
             (else (lp (+ i 1) (remainder (* b b) n)))))))
 

@@ -10,5 +10,6 @@
           provable-prime? probable-prime?
           random-prime random-prime-distinct-from
           coprime? random-coprime modular-inverse modular-expt
-          miller-rabin-composite?)
+          miller-rabin-composite?
+          modular-root-of-one?)
   (include "prime.scm"))
