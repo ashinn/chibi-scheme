@@ -71,16 +71,26 @@
 (define-syntax opt-lambda
   (syntax-rules ()
     ((opt-lambda vars . body)
-     (opt-lambda/aux () vars . body))))
+     (opt-lambda/aux let-optionals () vars . body))))
+
+;;> \macro{(opt-lambda* ((var default) ... [rest]) body ...)}
+;;>
+;;> Variant of \scheme{opt-lambda} which binds using
+;;> \scheme{let-optionals*}.
+
+(define-syntax opt-lambda*
+  (syntax-rules ()
+    ((opt-lambda* vars . body)
+     (opt-lambda/aux let-optionals* () vars . body))))
 
 (define-syntax opt-lambda/aux
   (syntax-rules ()
-    ((opt-lambda/aux (args ...) ((var . default) . vars) . body)
+    ((opt-lambda/aux let-opt (args ...) ((var . default) . vars) . body)
      (lambda (args ... . o)
-       (let-optionals o ((var . default) . vars) . body)))
-    ((opt-lambda/aux (args ...) (var . vars) . body)
-     (opt-lambda/aux (args ... var) vars . body))
-    ((opt-lambda/aux (args ...) () . body)
+       (let-opt o ((var . default) . vars) . body)))
+    ((opt-lambda/aux let-opt (args ...) (var . vars) . body)
+     (opt-lambda/aux let-opt (args ... var) vars . body))
+    ((opt-lambda/aux let-op (args ...) () . body)
      (lambda (args ... . o)
        . body))))
 
@@ -94,6 +104,17 @@
   (syntax-rules ()
     ((define-opt (name . vars) . body)
      (define name (opt-lambda vars . body)))))
+
+;;> \macro{(define-opt* (name (var default) ... [rest]) body ...)}
+;;>
+;;> Shorthand for
+;;> \schemeblock{
+;;> (define name (opt-lambda* (var default) ... [rest]) body ...)}
+
+(define-syntax define-opt*
+  (syntax-rules ()
+    ((define-opt* (name . vars) . body)
+     (define name (opt-lambda* vars . body)))))
 
 (define (mem-key key ls)
   (and (pair? ls)

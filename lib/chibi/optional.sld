@@ -1,7 +1,10 @@
 
 (define-library (chibi optional)
-  (export let-optionals let-optionals* opt-lambda define-opt
-          let-keywords let-keywords* keyword-ref keyword-ref*)
+  (export let-optionals let-optionals*
+          opt-lambda opt-lambda*
+          define-opt define-opt*
+          let-keywords let-keywords*
+          keyword-ref keyword-ref*)
   (cond-expand
    (chibi
     (import (chibi))
