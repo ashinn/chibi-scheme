@@ -683,4 +683,6 @@
       (test 21
           (let ((v (vector 8 22 19 19 13 9 21 13 3 23)))
             (vector-select! < v 3 4 8)))
+      (test 17.0
+          (vector-find-median < '#(18. 11. 20. 15. 16. 9. 24. 15. 21. 20.) 0))
       (test-end))))

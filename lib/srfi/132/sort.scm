@@ -158,6 +158,14 @@
      ((odd? len) (vector-ref vec mid))
      (else (mean (vector-ref vec (- mid 1)) (vector-ref vec mid))))))
 
+(define (vector-max less vec lo hi largest)
+  (cond
+   ((>= lo hi) largest)
+   ((less largest (vector-ref vec lo))
+    (vector-max less vec (+ lo 1) hi (vector-ref vec lo)))
+   (else
+    (vector-max less vec (+ lo 1) hi largest))))
+
 (define (vector-find-median < vec knil . o)
   (let* ((vec (vector-copy vec))
          (len (vector-length vec))
@@ -166,7 +174,9 @@
     (cond
      ((zero? len) knil)
      (else
-      (vector-separate! < vec mid)
-      (cond
-       ((odd? len) (vector-ref vec mid))
-       (else (mean (vector-ref vec (- mid 1)) (vector-ref vec mid))))))))
+      (let ((mid-elt (vector-select! < vec mid)))
+        (cond
+         ((odd? len) mid-elt)
+         (else
+          (mean (vector-max < vec 0 (- mid 1) (vector-ref vec (- mid 1)))
+                mid-elt))))))))
