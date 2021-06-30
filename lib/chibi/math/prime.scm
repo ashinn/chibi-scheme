@@ -237,31 +237,10 @@
 
 ;;> Returns the factorization of \var{n} as a monotonically
 ;;> increasing list of primes.
-(define (factor n)
-  (when (zero? n)
-    (error "cannot factor 0"))
-  (factor-twos
-   n
-   (lambda (b n)
-     (let lp ((i 3) (ii 9) (n (abs n))
-              (res (append (make-list b 2)
-                           (if (negative? n) (list -1) '()))))
-       (cond
-        ((> ii n)
-         (reverse (if (= n 1) res (cons n res))))
-        ((zero? (remainder n i))
-         (lp i ii (quotient n i) (cons i res)))
-        (else
-         (lp (+ i 2)
-             (+ ii (* (+ i 1) 4))
-             n
-             res)))))))
-;; this version is slightly slower
-;;(define factor
-;;  (let ((rfactor (make-factorizer '()
-;;                  (lambda (l p k) (cons (make-list k p) l)))))
-;;    (lambda (n) (apply append! (reverse (rfactor n))))))
-
+(define factor
+  (let ((rfactor (make-factorizer '()
+                  (lambda (l p k) (cons (make-list k p) l)))))
+    (lambda (n) (concatenate! (reverse (rfactor n))))))
 
 ;;> The Euler totient φ(\var{n}) is the number of positive
 ;;> integers less than or equal to \var{n} that are

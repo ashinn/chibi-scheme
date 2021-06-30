@@ -1,6 +1,6 @@
 
 (define-library (chibi math prime)
-  (import (scheme base) (scheme inexact) (chibi optional) (srfi 27))
+  (import (scheme base) (scheme inexact) (chibi optional) (srfi 1) (srfi 27))
   (cond-expand
    ((library (srfi 151)) (import (srfi 151)))
    ((library (srfi 33)) (import (srfi 33)))
