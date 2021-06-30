@@ -47,6 +47,7 @@
       (test 5 (prime-below 7))
       (test 797 (prime-below 808))
 
+      (test 1 (totient 1))
       (test 1 (totient 2))
       (test 2 (totient 3))
       (test 2 (totient 4))
@@ -56,6 +57,7 @@
       (test 4 (totient 8))
       (test 6 (totient 9))
       (test 4 (totient 10))
+      (test-error (totient 0))
 
       (test #f (perfect? 1))
       (test #f (perfect? 2))
@@ -71,7 +73,7 @@
       (test #t (perfect? 496))
       (test #t (perfect? 8128))
 
-      (test '(1) (factor 1))
+      (test '() (factor 1))
       (test '(2) (factor 2))
       (test '(3) (factor 3))
       (test '(2 2) (factor 4))
@@ -86,8 +88,16 @@
       (test '(2 3 3) (factor 18))
       (test '(2 2 2 3 3) (factor 72))
       (test '(3 3 3 5 7) (factor 945))
+      (test-error (factor 0))
 
+      (test '() (factor-alist 1))
+      (test '((2 . 3) (3 . 2)) (factor-alist 72))
+      (test '((3 . 3) (5 . 1) (7 . 1)) (factor-alist 945))
+      (test-error (factor-alist 0))
+
+      (test 0 (aliquot 1))
       (test 975 (aliquot 945))
+      (test-error (aliquot 0))
 
       (do ((i 3 (+ i 2)))
           ((>= i 101))
@@ -106,5 +116,8 @@
           (modular-expt 7670626353261554806
                         5772301760555853353
                         (* 2936546443 3213384203)))
+
+      (test "Miller-Rabin vs. Carmichael prime"
+            #t (miller-rabin-composite? 118901521))
 
       (test-end))))

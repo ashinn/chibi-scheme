@@ -4,12 +4,13 @@
 
 ;;> Prime and number theoretic utilities.
 
-;;> Returns a pair whose car is the power of 2 in the factorization of
-;;> n, and whose cdr is the product of all remaining primes.
-(define (factor-twos n)
-  (do ((p 0 (+ p 1))
-       (r n (arithmetic-shift r -1)))
-      ((odd? r) (cons p r))))
+;; Given \var{n} and a continuation \var{return},
+;; returns (\var{return} \var{k2} \var{n2}) where
+;; \var{k2} is the power of 2 in the factorization of \var{n}, and
+;; \var{n2} is product of all other prime powers dividing \var{n}
+(define (factor-twos n return)
+  (let ((b (first-set-bit n)))
+    (return b (arithmetic-shift n (- b)))))
 
 ;;> Returns the multiplicative inverse of \var{a} modulo \var{b}.
 (define (modular-inverse a b)
@@ -73,22 +74,36 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Probable primes.
 
-(define (modular-root-of-one? twos odd a n neg1)
-  ;; Returns true iff any (modular-expt a odd*2^i n) for i=0..twos-1
-  ;; returns 1 modulo n.
-  (let ((b (modular-expt a odd n)))
-    (let lp ((i 0) (b b))
-      (cond ((or (= b 1) (= b neg1))) ; in (= b 1) case we could factor
-            ((>= i twos) #f)
-            (else (lp (+ i 1) (remainder (* b b) n)))))))
+;; Given \var{n}, return a predicate that tests whether
+;; its argument \var{a} is a witness for \var{n} not being prime,
+;; either (1) because \var{a}^(\var{n}-1)≠1 mod \var{n}
+;; \em{or} (2) because \var{a}'s powers include
+;; a third square root of 1 beyond {1, -1}
+(define (miller-rabin-witnesser n)
+  (let ((neg1 (- n 1)))
+    (factor-twos neg1
+     (lambda (twos odd)
+       (lambda (a)
+         (let ((b (modular-expt a odd n)))
+           (let lp ((i 0) (b b))
+             (cond ((= b neg1)
+                    ;; found -1 (expected sqrt(1))
+                    #f)
+                   ((= b 1)
+                    ;; !! (previous b)^2=1 and was not 1 or -1
+                    (not (zero? i)))
+                   ((>= i twos)
+                    ;; !! a^(n-1)!=1 mod n
+                    )
+                   (else
+                    (lp (+ i 1) (remainder (* b b) n)))))))))))
 
-;;> Returns true if we can show \var{n} to be composite by finding an
-;;> exception to the Miller Rabin lemma.
+;;> Returns true if we can show \var{n} to be composite
+;;> using the Miller-Rabin test (i.e., finding a witness \var{a}
+;;> where \var{a}^(\var{n}-1)≠1 mod \var{n} or \var{a} reveals
+;;> the existence of a 3rd square root of 1 in \b{Z}/(n))
 (define (miller-rabin-composite? n)
-  (let* ((neg1 (- n 1))
-         (factors (factor-twos neg1))
-         (twos (car factors))
-         (odd (cdr factors))
+  (let* ((witness? (miller-rabin-witnesser n))
          ;; Each iteration of Miller Rabin reduces the odds by 1/4, so
          ;; this is a 1 in 2^40 probability of false positive,
          ;; assuming good randomness from SRFI 27 and no bugs, further
@@ -97,11 +112,10 @@
          (rand-limit (if (< n 341550071728321) fixed-limit 20)))
     (let try ((i 0))
       (and (< i rand-limit)
-           (let ((a (if (< i fixed-limit)
-                        (vector-ref prime-table i)
-                        (+ (random-integer (- n 3)) 2))))
-             (or (not (modular-root-of-one? twos odd a n neg1))
-                 (try (+ i 1))))))))
+           (or (witness? (if (< i fixed-limit)
+                             (vector-ref prime-table i)
+                             (+ (random-integer (- n 3)) 2)))
+               (try (+ i 1)))))))
 
 ;;> Returns true if \var{n} has a very high probability (enough that
 ;;> you can assume a false positive will never occur in your lifetime)
@@ -175,57 +189,84 @@
          ((prime? n) n)
          (else (lp (+ n 2)))))))))
 
+;; Given an initial value \var{r1} representing the (empty)
+;; factorization of 1 and a procedure \var{put}
+;; (called as \scheme{(\var{put} \var{r} \var{p} \var{k})})
+;; that, given prior representation \var{r},
+;; adds a prime factor \var{p} of multiplicity \var{k},
+;; returns a factorization function which returns the factorization
+;; of its non-zero integer argument \var{n} in this representation.
+;; The optional 3rd and 4th arguments, if provided, specialize \var{put}
+;; for particular primes:
+;; \var{put2}  for \var{p}=2,  called as \scheme{(\var{put2} \var{r} \var{k})})
+;; \var{put-1} for \var{p}=-1, called as \scheme{(\var{put-1} \var{r})}).
+(define (make-factorizer r1 put . o)
+  (let-optionals o ((put2  (lambda (r k) (put r  2 k)))
+                    (put-1 (lambda (r)   (put r -1 1))))
+    (lambda (n)
+      (when (zero? n)
+        (error "cannot factor 0"))
+      (factor-twos
+       n
+       (lambda (k2 n)
+         (let lp ((i 3) (ii 9)
+                  (n (abs n))
+                  (res (let ((res (if (negative? n) (put-1 r1) r1)))
+                         (if (zero? k2) res (put2 res k2)))))
+           (let next-i ((i i) (ii ii))
+             (cond ((> ii n)
+                    (if (= n 1) res (put res n 1)))
+                   ((not (zero? (remainder n i)))
+                    (next-i (+ i 2) (+ ii (* (+ i 1) 4))))
+                   (else
+                    (let rest ((n (quotient n i))
+                               (k 1))
+                      (if (zero? (remainder n i))
+                          (rest (quotient n i) (+ k 1))
+                          (lp (+ i 2) (+ ii (* (+ i 1) 4))
+                              n (put res i k)))))))))))))
+
+;;> Returns the factorization of \var{n} as a list of
+;;> elements of the form \scheme{(\var{p} . \var{k})},
+;;> where \var{p} is a prime factor
+;;> and \var{k} is its multiplicity.
+(define factor-alist
+  (let ((rfactor (make-factorizer '()
+                  (lambda (l p k) (cons (cons p k) l)))))
+    (lambda (n) (reverse (rfactor n)))))
+
 ;;> Returns the factorization of \var{n} as a monotonically
 ;;> increasing list of primes.
-(define (factor n)
-  (cond
-   ((negative? n)
-    (cons -1 (factor (- n))))
-   ((<= n 2)
-    (list n))
-   (else
-    (let lp ((n n)
-             (res (list)))
-      (cond
-       ((even? n)
-        (lp (quotient n 2) (cons 2 res)))
-       ((= n 1)
-        (reverse res))
-       (else
-        (let lp ((i 3) (n n) (limit (exact (ceiling (sqrt n)))) (res res))
-          (cond
-           ((= n 1)
-            (reverse res))
-           ((> i limit)
-            (reverse (cons n res)))
-           ((zero? (remainder n i))
-            (lp i (quotient n i) limit (cons i res)))
-           (else
-            (lp (+ i 2) n limit res))))))))))
+(define factor
+  (let ((rfactor (make-factorizer '()
+                  (lambda (l p k) (cons (make-list k p) l)))))
+    (lambda (n) (concatenate! (reverse (rfactor n))))))
 
-;;> Returns the Euler totient function, the number of positive
-;;> integers less than \var{n} that are relatively prime to \var{n}.
-(define (totient n)
-  (let ((limit (exact (ceiling (sqrt n)))))
-    (let lp ((i 2) (count 1))
-      (cond ((> i limit)
-             (if (= count (- i 1))
-                 (- n 1)                ; shortcut for prime
-                 (let lp ((i i) (count count))
-                   (cond ((>= i n) count)
-                         ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
-                         (else (lp (+ i 1) count))))))
-            ((= 1 (gcd n i)) (lp (+ i 1) (+ count 1)))
-            (else (lp (+ i 1) count))))))
+;;> The Euler totient φ(\var{n}) is the number of positive
+;;> integers less than or equal to \var{n} that are
+;;> relatively prime to \var{n}.
+(define totient
+  (make-factorizer 1
+   (lambda (tot p k)
+     (* tot (- p 1) (expt p (- k 1))))
+   (lambda (tot k)
+     (arithmetic-shift tot (- k 1)))
+   (lambda (_)
+     (error "totient of negative number?"))))
 
-;;> The aliquot sum s(n), equal to the sum of proper divisors of an
-;;> integer n.
-(define (aliquot n)
-  (let ((limit (+ 1 (quotient n 2))))
-    (let lp ((i 2) (sum 1))
-      (cond ((> i limit) sum)
-            ((zero? (remainder n i)) (lp (+ i 1) (+ sum i)))
-            (else (lp (+ i 1) sum))))))
+;;> The aliquot sum s(\var{n}) is
+;;> the sum of proper divisors of a positive integer \var{n}.
+(define aliquot
+  (let ((aliquot+n
+         (make-factorizer 1
+          (lambda (aliq p k)
+            (* aliq (quotient (- (expt p (+ k 1)) 1) (- p 1))))
+          (lambda (aliq k)
+            (- (arithmetic-shift aliq (+ k 1)) aliq))
+          (lambda (_)
+            (error "aliquot of negative number?")))))
+    (lambda (n) (- (aliquot+n n) n))))
+
 
 ;;> Returns true iff \var{n} is a perfect number, i.e. the sum of its
 ;;> divisors other than itself equals itself.
