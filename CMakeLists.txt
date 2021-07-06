@@ -342,16 +342,6 @@ string(JOIN ":" default_module_path
     ${CMAKE_INSTALL_FULL_DATAROOTDIR}/snow
     ${CMAKE_INSTALL_FULL_LIBDIR}/snow)
 
-# This file will only be used during an installation (and renamed to install.h)
-configure_file(include/chibi/install.h.in include/chibi/to-install.h)
-
-# This configuration is for development purpose: a chibi executable shall find
-# both compiled libraries in its own build directory and scheme source libraries
-# in the source directory.
-string(JOIN ":" default_module_path
-    ${CMAKE_CURRENT_BINARY_DIR}/lib
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-
 configure_file(include/chibi/install.h.in include/chibi/install.h)
 
 #
@@ -368,12 +358,12 @@ set(chibi-scheme-tests
 
 foreach(e ${chibi-scheme-tests})
     add_test(NAME "${e}"
-        COMMAND chibi-scheme tests/${e}.scm
+        COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib tests/${e}.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
 add_test(NAME r5rs-test
-    COMMAND chibi-scheme -xchibi tests/r5rs-tests.scm
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xchibi tests/r5rs-tests.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 file(GLOB_RECURSE srfi_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
@@ -418,7 +408,9 @@ foreach(e ${testlibs})
     string(REGEX REPLACE "/" "_" testname ${e})
     string(REGEX REPLACE "/" " " form ${e})
     add_test(NAME "lib_${testname}"
-        COMMAND chibi-scheme -e "(import (${form}))" -e "(run-tests)"
+        COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        -e "(import (${form}))"
+        -e "(run-tests)"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
@@ -456,9 +448,8 @@ install(DIRECTORY include/chibi
     PATTERN "sexp-*.[hc]" EXCLUDE
     PATTERN "*.h.in" EXCLUDE)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/to-install.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/chibi
-    RENAME install.h)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/install.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/chibi)
 
 add_library(chibi::chibi ALIAS libchibi-scheme)
 
