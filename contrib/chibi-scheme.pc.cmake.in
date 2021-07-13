@@ -1,0 +1,14 @@
+# pkg-config
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=@CMAKE_INSTALL_FULL_BINDIR@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+version=@CMAKE_PROJECT_VERSION@
+
+Name: chibi-scheme
+URL: http://synthcode.com/scheme/chibi/
+Description: Minimal Scheme Implementation for use as an Extension Language
+Version: ${version}
+Libs: -L${libdir} -lchibi-scheme
+Libs.private: -dl -lm
+Cflags: -I${includedir}
