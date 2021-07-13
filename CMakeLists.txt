@@ -142,6 +142,7 @@ target_link_libraries(libchibi-scheme
 
 set_target_properties(libchibi-scheme
     PROPERTIES
+    PREFIX "" # It's liblibchibi-scheme otherwise
     SOVERSION ${CMAKE_PROJECT_VERSION_MAJOR}
     VERSION ${CMAKE_PROJECT_VERSION})
 
