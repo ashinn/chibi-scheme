@@ -494,6 +494,9 @@ install(DIRECTORY include/chibi
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/install.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/chibi)
 
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 add_library(chibi::libchibi-scheme ALIAS libchibi-scheme)
 
 install(TARGETS libchibi-scheme chibi-scheme
