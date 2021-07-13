@@ -13,6 +13,7 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -499,7 +500,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme.pc
 
 add_library(chibi::libchibi-scheme ALIAS libchibi-scheme)
 
-install(TARGETS libchibi-scheme chibi-scheme
+install(TARGETS libchibi-scheme libchibi-common chibi-scheme
+    EXPORT chibi-scheme-targets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
@@ -551,3 +553,17 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/.scheme.meta
     ${CMAKE_CURRENT_BINARY_DIR}/.srfi.meta
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi)
+
+install(EXPORT chibi-scheme-targets
+    FILE chibi-scheme-targets.cmake
+    NAMESPACE chibi::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/chibi)
+
+write_basic_package_version_file(chibi-scheme-config-version.cmake
+    VERSION ${CMAKE_PROJECT_VERSION}
+    COMPATIBILITY ExactVersion)
+
+install(FILES
+    contrib/chibi-scheme-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/chibi)
