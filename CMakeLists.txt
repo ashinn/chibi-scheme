@@ -181,6 +181,10 @@ function(add_compiled_library cfile)
         LIBRARY_OUTPUT_DIRECTORY ${libdir}
         LIBRARY_OUTPUT_NAME ${basename}
         PREFIX "")
+
+    file(RELATIVE_PATH installsubdir ${CMAKE_CURRENT_BINARY_DIR}/lib ${libdir})
+    install(TARGETS ${libname}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/chibi/${installsubdir})
 endfunction()
 
 if(BUILD_SHARED_LIBS)
@@ -493,6 +497,55 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/install.h
 
 add_library(chibi::libchibi-scheme ALIAS libchibi-scheme)
 
-install(TARGETS libchibi-scheme
+install(TARGETS libchibi-scheme chibi-scheme
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+install(FILES
+    tools/chibi-ffi
+    tools/chibi-doc
+    tools/snow-chibi
+    tools/snow-chibi.scm
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(FILES
+    doc/chibi-scheme.1
+    doc/chibi-ffi.1
+    doc/chibi-doc.1
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+
+if(BUILD_SHARED_LIBS)
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+        ${CMAKE_CURRENT_BINARY_DIR}/red.img
+        ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi)
+endif()
+
+install(DIRECTORY
+    lib/
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi
+    PATTERN "*win32" EXCLUDE
+    PATTERN "*test.sld" EXCLUDE
+    PATTERN "*.c" EXCLUDE
+    PATTERN "*.stub" EXCLUDE)
+
+# This is to revert the above exclusion pattern
+install(FILES lib/chibi/test.sld
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi/chibi)
+
+if(WIN32)
+    install(DIRECTORY
+        lib/
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi
+        FILES_MATCHING
+        PATTERN "*win32/*.scm"
+        PATTERN "*win32/*.sld")
+endif()
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/.chibi.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.scheme.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.srfi.meta
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi)
