@@ -436,6 +436,48 @@ add_test(NAME "foreign-typeid"
     COMMAND test-foreign-typeid
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+
+#
+# Image, pkgconfig and meta file generation
+#
+
+add_custom_target(chibi-images
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        -mchibi.repl -d ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        -xscheme.red -mchibi.repl -d ${CMAKE_CURRENT_BINARY_DIR}/red.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils
+        -d ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+configure_file(contrib/chibi-scheme.pc.cmake.in chibi-scheme.pc @ONLY)
+
+function(generate_package_list libdir output)
+    add_custom_command(OUTPUT ${output}
+        COMMAND
+        ${CMAKE_COMMAND}
+        -DEXEC=$<TARGET_FILE:chibi-scheme>
+        -DLIBDIR=${libdir}
+        -DGENMETA=tools/generate-install-meta.scm
+        -DVERSION=${CMAKE_PROJECT_VERSION}
+        -DOUT=${CMAKE_CURRENT_BINARY_DIR}/${output}
+        -P contrib/chibi-generate-install-meta-helper.cmake
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS chibi-scheme)
+endfunction()
+
+generate_package_list(lib/chibi .chibi.meta)
+generate_package_list(lib/scheme .scheme.meta)
+generate_package_list(lib/srfi .srfi.meta)
+
+add_custom_target(meta-lists
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/.chibi.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.scheme.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.srfi.meta)
+
+
 #
 # Installation
 #
