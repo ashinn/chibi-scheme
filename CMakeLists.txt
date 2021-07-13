@@ -488,7 +488,6 @@ add_custom_target(meta-lists
 
 install(DIRECTORY include/chibi
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    USE_SOURCE_PERMISSIONS
     PATTERN "sexp-*.[hc]" EXCLUDE
     PATTERN "*.h.in" EXCLUDE)
 
