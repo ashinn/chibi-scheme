@@ -1,0 +1,5 @@
+#define sexp_so_extension "@CMAKE_SHARED_LIBRARY_SUFFIX@"
+#define sexp_default_module_path "@default_module_path@"
+#define sexp_platform "@platform@"
+#define sexp_version "@CMAKE_PROJECT_VERSION@"
+#define sexp_release_name "@release@"
