@@ -399,7 +399,9 @@
    ((null? (cdr o))
     (let ((f (car o)))
       (lambda (s i sk fk)
-        (f s i (lambda (r s i fk) (sk (list r) s i fk)) fk))))
+        (f s i (lambda (r s i fk)
+                 (sk (if (eq? r ignored-value) '() (list r)) s i fk))
+           fk))))
    (else
     (let* ((f (car o))
            (o (cdr o))
@@ -408,7 +410,10 @@
            (g (if (pair? o)
                   (apply parse-seq g o)
                   (lambda (s i sk fk)
-                    (g s i (lambda (r s i fk) (sk (list r) s i fk)) fk)))))
+                    (g s i (lambda (r s i fk)
+                             (sk (if (eq? r ignored-value) '() (list r))
+                                 s i fk))
+                       fk)))))
       (lambda (source index sk fk)
         (f source
            index

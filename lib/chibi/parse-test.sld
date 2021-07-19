@@ -53,6 +53,15 @@
         (test-assert (parse f "aab"))
         (test-error (parse-fully f "aab")))
 
+      (let ((f (parse-seq (parse-char #\a)
+                          (parse-ignore (parse-char #\b)))))
+        (test '(#\a) (parse f "ab")))
+
+      (let ((f (parse-seq (parse-char #\a)
+                          (parse-ignore (parse-char #\b))
+                          (parse-char #\c))))
+        (test '(#\a #\c) (parse f "abc")))
+
       ;; grammars
 
       (let ()
