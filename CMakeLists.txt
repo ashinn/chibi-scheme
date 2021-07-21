@@ -333,12 +333,17 @@ else()
     set(platform "unix")
 endif()
 
-
-string(JOIN ":" default_module_path
-    ${CMAKE_INSTALL_FULL_DATAROOTDIR}/chibi
-    ${CMAKE_INSTALL_FULL_LIBDIR}/chibi
-    ${CMAKE_INSTALL_FULL_DATAROOTDIR}/snow
-    ${CMAKE_INSTALL_FULL_LIBDIR}/snow)
+if(WIN32)
+    # Leave this empty for now, as the default GNU install directories won't
+    # help on Windows.
+    set(default_module_path "")
+else()
+    string(JOIN ":" default_module_path
+        ${CMAKE_INSTALL_FULL_DATAROOTDIR}/chibi
+        ${CMAKE_INSTALL_FULL_LIBDIR}/chibi
+        ${CMAKE_INSTALL_FULL_DATAROOTDIR}/snow
+        ${CMAKE_INSTALL_FULL_LIBDIR}/snow)
+endif()
 
 configure_file(include/chibi/install.h.in include/chibi/install.h)
 
