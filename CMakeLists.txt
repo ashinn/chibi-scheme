@@ -469,7 +469,10 @@ function(generate_package_list libdir output)
         -DOUT=${CMAKE_CURRENT_BINARY_DIR}/${output}
         -P contrib/chibi-generate-install-meta-helper.cmake
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        DEPENDS chibi-scheme)
+        DEPENDS
+        chibi-scheme
+        tools/generate-install-meta.scm
+        contrib/chibi-generate-install-meta-helper.cmake)
 endfunction()
 
 generate_package_list(lib/chibi .chibi.meta)
