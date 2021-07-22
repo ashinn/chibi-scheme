@@ -790,7 +790,7 @@ static sexp analyze_set (sexp ctx, sexp x, int depth) {
     res = sexp_compile_error(ctx, "bad set! syntax", x);
   } else {
     ref = analyze_var_ref(ctx, sexp_cadr(x), &varenv);
-    if (sexp_lambdap(sexp_ref_loc(ref)))
+    if (sexp_refp(ref) && sexp_lambdap(sexp_ref_loc(ref)))
       sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
     value = analyze(ctx, sexp_caddr(x), depth, 0);
     if (sexp_exceptionp(ref)) {
