@@ -160,6 +160,8 @@ endif()
 set(chibi-ffi ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-ffi)
 set(chibi-genstatic ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-genstatic)
 
+add_custom_target(chibi-compiled-libs)
+
 function(add_compiled_library cfile)
     if (NOT BUILD_SHARED_LIBS)
         return()
@@ -177,6 +179,7 @@ function(add_compiled_library cfile)
 
     add_library(${libname} ${cfile})
     target_link_libraries(${libname} PRIVATE libchibi-scheme)
+    add_dependencies(chibi-compiled-libs ${libname})
 
     set_target_properties(${libname} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${libdir}
@@ -446,15 +449,27 @@ add_test(NAME "foreign-typeid"
 # Image, pkgconfig and meta file generation
 #
 
-add_custom_target(chibi-images
-    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
-        -mchibi.repl -d ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
-    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
-        -xscheme.red -mchibi.repl -d ${CMAKE_CURRENT_BINARY_DIR}/red.img
+add_custom_command(OUTPUT chibi.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -mchibi.repl
+    -d ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_command(OUTPUT red.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xscheme.red -mchibi.repl
+    -d ${CMAKE_CURRENT_BINARY_DIR}/red.img
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_command(OUTPUT snow.img
     COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
         -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils
         -d ${CMAKE_CURRENT_BINARY_DIR}/snow.img
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_custom_target(chibi-images ALL
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+    ${CMAKE_CURRENT_BINARY_DIR}/red.img
+    ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+    # The dependency on libchibi-scheme is crucial here:
+    chibi-compiled-libs)
 
 configure_file(contrib/chibi-scheme.pc.cmake.in chibi-scheme.pc @ONLY)
 
@@ -479,7 +494,7 @@ generate_package_list(lib/chibi .chibi.meta)
 generate_package_list(lib/scheme .scheme.meta)
 generate_package_list(lib/srfi .srfi.meta)
 
-add_custom_target(meta-lists
+add_custom_target(chibi-meta-lists ALL
     DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/.chibi.meta
     ${CMAKE_CURRENT_BINARY_DIR}/.scheme.meta
