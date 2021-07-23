@@ -463,13 +463,16 @@ add_custom_command(OUTPUT snow.img
         -d ${CMAKE_CURRENT_BINARY_DIR}/snow.img
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_custom_target(chibi-images ALL
-    DEPENDS
-    ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
-    ${CMAKE_CURRENT_BINARY_DIR}/red.img
-    ${CMAKE_CURRENT_BINARY_DIR}/snow.img
-    # The dependency on libchibi-scheme is crucial here:
-    chibi-compiled-libs)
+if(BUILD_SHARED_LIBS)
+    # Currently, image dumps only work with shared library builds, which includes Windows
+    add_custom_target(chibi-images ALL
+        DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+        ${CMAKE_CURRENT_BINARY_DIR}/red.img
+        ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+        # The dependency on libchibi-scheme is crucial here:
+        chibi-compiled-libs)
+endif()
 
 configure_file(contrib/chibi-scheme.pc.cmake.in chibi-scheme.pc @ONLY)
 
