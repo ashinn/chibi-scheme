@@ -17,7 +17,7 @@ sexp sexp_apply_times_to_pi(sexp ctx, sexp self, sexp_sint_t n,
 }
 
 int main (int argc, char **argv) {
-  sexp ctx, res;
+  sexp ctx;
 
   /* Create a context and load two modules with C types. */
   ctx = sexp_make_eval_context(NULL, NULL, NULL, 0, 0);
