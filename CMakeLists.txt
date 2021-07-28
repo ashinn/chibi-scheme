@@ -13,6 +13,7 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
 include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -159,6 +160,8 @@ endif()
 set(chibi-ffi ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-ffi)
 set(chibi-genstatic ${CMAKE_CURRENT_SOURCE_DIR}/tools/chibi-genstatic)
 
+add_custom_target(chibi-compiled-libs)
+
 function(add_compiled_library cfile)
     if (NOT BUILD_SHARED_LIBS)
         return()
@@ -176,11 +179,16 @@ function(add_compiled_library cfile)
 
     add_library(${libname} ${cfile})
     target_link_libraries(${libname} PRIVATE libchibi-scheme)
+    add_dependencies(chibi-compiled-libs ${libname})
 
     set_target_properties(${libname} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${libdir}
         LIBRARY_OUTPUT_NAME ${basename}
         PREFIX "")
+
+    file(RELATIVE_PATH installsubdir ${CMAKE_CURRENT_BINARY_DIR}/lib ${libdir})
+    install(TARGETS ${libname}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/chibi/${installsubdir})
 endfunction()
 
 if(BUILD_SHARED_LIBS)
@@ -436,21 +444,147 @@ add_test(NAME "foreign-typeid"
     COMMAND test-foreign-typeid
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+
+#
+# Image, pkgconfig and meta file generation
+#
+
+add_custom_command(OUTPUT chibi.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -mchibi.repl
+    -d ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_command(OUTPUT red.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xscheme.red -mchibi.repl
+    -d ${CMAKE_CURRENT_BINARY_DIR}/red.img
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_command(OUTPUT snow.img
+    COMMAND chibi-scheme -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils
+        -d ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(BUILD_SHARED_LIBS)
+    # Currently, image dumps only work with shared library builds, which includes Windows
+    add_custom_target(chibi-images ALL
+        DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+        ${CMAKE_CURRENT_BINARY_DIR}/red.img
+        ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+        # The dependency on libchibi-scheme is crucial here:
+        chibi-compiled-libs)
+endif()
+
+configure_file(contrib/chibi-scheme.pc.cmake.in chibi-scheme.pc @ONLY)
+
+function(generate_package_list libdir output)
+    add_custom_command(OUTPUT ${output}
+        COMMAND
+        ${CMAKE_COMMAND}
+        -DEXEC=$<TARGET_FILE:chibi-scheme>
+        -DLIBDIR=${libdir}
+        -DGENMETA=tools/generate-install-meta.scm
+        -DVERSION=${CMAKE_PROJECT_VERSION}
+        -DOUT=${CMAKE_CURRENT_BINARY_DIR}/${output}
+        -P contrib/chibi-generate-install-meta-helper.cmake
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS
+        chibi-scheme
+        tools/generate-install-meta.scm
+        contrib/chibi-generate-install-meta-helper.cmake)
+endfunction()
+
+generate_package_list(lib/chibi .chibi.meta)
+generate_package_list(lib/scheme .scheme.meta)
+generate_package_list(lib/srfi .srfi.meta)
+
+add_custom_target(chibi-meta-lists ALL
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/.chibi.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.scheme.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.srfi.meta)
+
+
 #
 # Installation
 #
 
 install(DIRECTORY include/chibi
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    USE_SOURCE_PERMISSIONS
     PATTERN "sexp-*.[hc]" EXCLUDE
     PATTERN "*.h.in" EXCLUDE)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/chibi/install.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/chibi)
 
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 add_library(chibi::libchibi-scheme ALIAS libchibi-scheme)
 
-install(TARGETS libchibi-scheme
+install(TARGETS libchibi-scheme libchibi-common chibi-scheme
+    EXPORT chibi-scheme-targets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+install(FILES
+    tools/chibi-ffi
+    tools/chibi-doc
+    tools/snow-chibi
+    tools/snow-chibi.scm
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(FILES
+    doc/chibi-scheme.1
+    doc/chibi-ffi.1
+    doc/chibi-doc.1
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+
+if(BUILD_SHARED_LIBS)
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
+        ${CMAKE_CURRENT_BINARY_DIR}/red.img
+        ${CMAKE_CURRENT_BINARY_DIR}/snow.img
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi)
+endif()
+
+install(DIRECTORY
+    lib/
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi
+    PATTERN "*win32" EXCLUDE
+    PATTERN "*test.sld" EXCLUDE
+    PATTERN "*.c" EXCLUDE
+    PATTERN "*.stub" EXCLUDE)
+
+# This is to revert the above exclusion pattern
+install(FILES lib/chibi/test.sld
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi/chibi)
+
+if(WIN32)
+    install(DIRECTORY
+        lib/
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi
+        FILES_MATCHING
+        PATTERN "*win32/*.scm"
+        PATTERN "*win32/*.sld")
+endif()
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/.chibi.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.scheme.meta
+    ${CMAKE_CURRENT_BINARY_DIR}/.srfi.meta
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/chibi)
+
+install(EXPORT chibi-scheme-targets
+    FILE chibi-scheme-targets.cmake
+    NAMESPACE chibi::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/chibi)
+
+write_basic_package_version_file(chibi-scheme-config-version.cmake
+    VERSION ${CMAKE_PROJECT_VERSION}
+    COMPATIBILITY ExactVersion)
+
+install(FILES
+    contrib/chibi-scheme-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/chibi)
