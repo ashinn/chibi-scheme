@@ -398,6 +398,11 @@
         ((null? x) #f)
         (else x)))
 
+(define (list-without-dot x)
+  (let lp ((ls x) (res '()))
+    (cond ((pair? ls) (lp (cdr ls) (cons (car ls) res)))
+          (else (reverse res)))))
+
 (define (replace-tree from to x)
   (let replace ((x x))
     (cond ((eq? x from) to)
@@ -422,7 +427,9 @@
                                (in-macro? (pair? x))
                                (macro-vars
                                 (map (lambda (v) (if (pair? v) (cadr v) v))
-                                     (if (pair? x) x (list x))))
+                                     (if (pair? x)
+                                         (list-without-dot x)
+                                         (list x))))
                                (op 'zero))
                           (c-in-expr (apply c-begin body)))))
                 "")))
