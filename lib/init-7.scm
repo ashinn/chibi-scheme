@@ -1105,7 +1105,11 @@
              _or
              (append
               (map
-               (lambda (clause) (expand-pattern (car clause) (cadr clause)))
+               (lambda (clause)
+                 (if (and (list? clause) (= (length clause) 2))
+                     (expand-pattern (car clause) (cadr clause))
+                     (error "invalid syntax-rules clause, which must be of the form (pattern template) (note fenders are not supported)"
+                            clause)))
                forms)
               (list
                (list _cons

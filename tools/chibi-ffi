@@ -195,8 +195,7 @@
   (syntax-rules ()
     ((define-c-int-type type)
      (if (not (memq 'type *c-int-types*))
-         (set! *c-int-types* (cons 'type *c-int-types*)))
-     #f)))
+         (set! *c-int-types* (cons 'type *c-int-types*))))))
 
 (define-syntax define-c-enum
   ;; TODO: support conversion to/from symbolic names
@@ -640,7 +639,7 @@
                       (let ((e (x->string errno)))
                         (string-append "    case " e ": return \"" e "\";\n")))
                     errnos)
-             
+
              "  }
   snprintf(buf, 64, \"unknown error: %d\", err);
   return buf;
