@@ -214,15 +214,16 @@
 
 (define (signed-int-type? type)
   (or (memq type '(signed-char short int long s8 s16 s32 s64
-                   int8_t int16_t int32_t int64_t))
+                   int8_t int16_t int32_t int64_t
+                   pid_t off_t ssize_t blkcnt_t blksize_t))
       (memq type *c-int-types*)
       (enum-type? type)))
 
 (define (unsigned-int-type? type)
   (memq type '(unsigned-char unsigned-short unsigned unsigned-int unsigned-long
-               size_t off_t time_t clock_t dev_t ino_t mode_t nlink_t
+               size_t time_t clock_t dev_t ino_t mode_t nlink_t
                uint8_t uint16_t uint32_t uint64_t
-               uid_t gid_t pid_t blksize_t blkcnt_t sigval_t
+               uid_t gid_t sigval_t
                u1 u8 u16 u32 u64)))
 
 (define (int-type? type)
