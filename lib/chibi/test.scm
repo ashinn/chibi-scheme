@@ -24,11 +24,11 @@
   (newline (current-error-port)))
 
 (define (exception-message exc)
-  (let* ((s (parameterize
-               ((current-output-port (open-output-string)))
-             (print-exception exc (current-output-port))
-             (get-output-string (current-output-port))))
+  (let* ((s (let ((p (open-output-string)))
+              (print-exception exc p)
+              (get-output-string p)))
          (n (- (string-length s) 1)))
+    ;; Strip the “ERROR: ” prefix if present
     (let loop ((i 0))
       (if (>= (+ i 2) n)
           (substring s 0 n)
@@ -185,6 +185,7 @@
 
 (define (test-run expect expr info)
   (let ((info (test-expand-info info)))
+    ((current-test-reporter) 'BEGIN info)
     (if (and (cond ((current-test-group)
                     => (lambda (g) (not (test-group-ref g 'skip-group?))))
                    (else #t))
@@ -256,43 +257,35 @@
 
 ;;> Begin testing a new group until the closing \scheme{(test-end)}.
 
-(define test-begin
-  (case-lambda
-   (()
-    (test-begin ""))
-   ((name)
-    (let* ((parent (current-test-group))
-           (group (make-test-group name parent)))
-      ((current-test-group-reporter) group parent)
-      (current-test-group group)))))
+(define-opt (test-begin (name ""))
+  (let* ((parent (current-test-group))
+         (group (make-test-group name parent)))
+    ((current-test-group-reporter) group parent)
+    (current-test-group group)))
 
 ;;> Ends testing group introduced with \scheme{(test-begin)}, and
 ;;> summarizes the results.  The \var{name} is optional, but if
 ;;> present should match the corresponding \scheme{test-begin} name,
 ;;> or a warning is printed.
 
-(define test-end
-  (case-lambda
-   (()
-    (test-end #f))
-   ((name)
-    (let ((group (current-test-group)))
-      (when group
-        (when (and name (not (equal? name (test-group-name group))))
-          (warning "mismatched test-end:" name (test-group-name group)))
-        ((current-test-group-reporter) group)
-        (let ((parent (test-group-ref group 'parent)))
-          (when parent
-            (test-group-inc! parent 'subgroups-count)
-            (cond
-             ((test-group-ref group 'skip-group?)
-              (test-group-inc! parent 'subgroups-skip))
-             ((and (zero? (test-group-ref group 'FAIL 0))
-                   (zero? (test-group-ref group 'ERROR 0))
-                   (= (test-group-ref group 'subgroups-pass 0)
-                      (test-group-ref group 'subgroups-count 0)))
-              (test-group-inc! parent 'subgroups-pass))))
-          (current-test-group parent)))))))
+(define-opt (test-end (name #f))
+  (let ((group (current-test-group)))
+    (when group
+      (when (and name (not (equal? name (test-group-name group))))
+        (warning "mismatched test-end:" name (test-group-name group)))
+      ((current-test-group-reporter) group)
+      (let ((parent (test-group-ref group 'parent)))
+        (when parent
+          (test-group-inc! parent 'subgroups-count)
+          (cond
+           ((test-group-ref group 'skip-group?)
+            (test-group-inc! parent 'subgroups-skip))
+           ((and (zero? (test-group-ref group 'FAIL 0))
+                 (zero? (test-group-ref group 'ERROR 0))
+                 (= (test-group-ref group 'subgroups-pass 0)
+                    (test-group-ref group 'subgroups-count 0)))
+            (test-group-inc! parent 'subgroups-pass))))
+        (current-test-group parent)))))
 
 ;;> Exits with a failure status if any tests have failed,
 ;;> and a successful status otherwise.
@@ -527,7 +520,6 @@
         info)))
 
 (define (test-default-applier expect expr info)
-  ((current-test-reporter) #f info)
   (let ((expect-val
          (guard
              (exn
@@ -554,7 +546,6 @@
           ((current-test-reporter) status info))))))
 
 (define (test-default-skipper info)
-  ((current-test-reporter) #f info)
   ((current-test-reporter) 'SKIP info))
 
 (define (test-status-color status)
@@ -737,10 +728,11 @@
            => (lambda (group) (test-group-set! group 'trailing #t))))))
   (flush-output-port)
   status)
+
 (define (test-default-reporter status info)
-  (if (symbol? status)
-      (stop-test status info)
-      (start-test info)))
+  (if (eq? status 'BEGIN)
+      (start-test info)
+      (stop-test status info)))
 
 (define (close-group group)
   (define (plural word n)
@@ -831,6 +823,7 @@
      (else
       (when (zero? (test-group-ref group 'level))
         (newline))))))
+
 (define test-default-group-reporter
   (case-lambda
    ((group)        (close-group group))
@@ -878,8 +871,13 @@
 (define current-test-skipper (make-parameter test-default-skipper))
 
 ;;> Takes two arguments, the symbol status of the test and the info
-;;> alist.  Reports the result of the test and updates bookkeeping in
-;;> the current test group for reporting.
+;;> alist.  The status is one of \scheme{'BEGIN}, \scheme{'PASS},
+;;> \scheme{'FAIL}, \scheme{'ERROR}, or \scheme{'SKIP}.  For each test
+;;> a reporter is called twice: once with symbol \scheme{'BEGIN} to
+;;> indicate that handling of the test begins and a second time when
+;;> the result was determined.  A test reporter returns the test’s
+;;> result and updates bookkeeping in the current test group for
+;;> reporting.
 
 (define current-test-reporter (make-parameter test-default-reporter))
 
