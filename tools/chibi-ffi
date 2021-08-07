@@ -642,7 +642,7 @@
                     errnos)
 
              "  }
-  snprintf(buf, 64, \"unknown error: %d\", err);
+  snprintf(buf, sizeof(buf), \"unknown error: %d\", err);
   return buf;
 }")))))))
 

@@ -2173,11 +2173,11 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
       } else
 #endif
       {
-        i = snprintf(numbuf, NUMBUF_LEN, "%.15lg", f);
+        i = snprintf(numbuf, sizeof(numbuf), "%.15lg", f);
         if (sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
-          i = snprintf(numbuf, NUMBUF_LEN, "%.16lg", f);
+          i = snprintf(numbuf, sizeof(numbuf), "%.16lg", f);
           if (sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
-            i = snprintf(numbuf, NUMBUF_LEN, "%.17lg", f);
+            i = snprintf(numbuf, sizeof(numbuf), "%.17lg", f);
           }
         }
         if (!strchr(numbuf, '.') && !strchr(numbuf, 'e')) {
@@ -2310,7 +2310,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
         if (i!=0) sexp_write_char(ctx, ' ', out);
 #if SEXP_BYTEVECTOR_HEX_LITERALS
 	if (str[i]) {
-	  snprintf(buf, 5, "#x%02hhX", ((unsigned char*) str)[i]);
+          snprintf(buf, sizeof(buf), "#x%02hhX", ((unsigned char*) str)[i]);
 	  sexp_write_string(ctx, buf, out);
 	} else {
 	  sexp_write_char (ctx, '0', out);
@@ -2365,7 +2365,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
       break;
     }
   } else if (sexp_fixnump(obj)) {
-    snprintf(numbuf, NUMBUF_LEN, "%" SEXP_PRIdFIXNUM, (sexp_sint_t)sexp_unbox_fixnum(obj));
+    snprintf(numbuf, sizeof(numbuf), "%" SEXP_PRIdFIXNUM, (sexp_sint_t)sexp_unbox_fixnum(obj));
     sexp_write_string(ctx, numbuf, out);
 #if SEXP_USE_IMMEDIATE_FLONUMS
   } else if (sexp_flonump(obj)) {
@@ -2377,7 +2377,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
     } else
 #endif
     {
-      i = snprintf(numbuf, NUMBUF_LEN, "%.8g", f);
+      i = snprintf(numbuf, sizeof(numbuf), "%.8g", f);
       if (f == trunc(f) && ! strchr(numbuf, '.')) {
         numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
       }
