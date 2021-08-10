@@ -9,14 +9,63 @@
 
 ;; TODO: Write many more tests.
 
+(define current-renamer (make-parameter (lambda (x) x)))
+(define current-usage-environment (make-parameter (current-environment)))
+
+(define (free-identifier=? x y)
+  (let ((env (or (current-usage-environment) (current-environment))))
+    (identifier=? env x env y)))
+
+(define (make-transformer transformer)
+  (cond
+   ((and (= 1 (procedure-arity transformer))
+         (not (procedure-variadic? transformer)))
+    (lambda (expr use-env mac-env)
+      (let ((old-use-env (current-usage-environment))
+            (old-renamer (current-renamer)))
+        (current-usage-environment use-env)
+        (current-renamer (make-renamer mac-env))
+        (let ((result (transformer expr)))
+          (current-usage-environment old-use-env)
+          (current-renamer old-renamer)
+          result))))
+   (else
+    (lambda (expr use-env mac-env)
+      (let ((old-use-env (current-usage-environment))
+            (old-renamer (current-renamer)))
+        (current-usage-environment use-env)
+        (current-renamer (make-renamer mac-env))
+        (let ((result (transformer expr use-env mac-env)))
+          (current-usage-environment old-use-env)
+          (current-renamer old-renamer)
+          result))))))
+
+(%define-syntax define-syntax
+  (lambda (expr use-env mac-env)
+    (list (close-syntax '%define-syntax mac-env)
+          (cadr expr)
+          (list (close-syntax 'make-transformer mac-env)
+                (car (cddr expr))))))
+
+(define-syntax let-syntax
+  (syntax-rules ()
+    ((let-syntax ((keyword transformer) ...) . body)
+     (%let-syntax ((keyword (make-transformer transformer)) ...) . body))))
+
+(define-syntax letrec-syntax
+  (syntax-rules ()
+    ((letrec-syntax ((keyword transformer) ...) . body)
+     (%letrec-syntax ((keyword (make-transformer transformer)) ...) . body))))
+
 (define-syntax define-pattern-variable
   (er-macro-transformer
    (lambda (expr rename compare)
      (let ((id (cadr expr))
            (binding (cddr expr)))
-       (let ((mac (cdr (env-cell (current-usage-environment) id))))
-         (macro-aux-set! mac binding))
-       `(,(rename 'begin))))))
+       (let ((cell (env-cell (current-usage-environment) id)))
+         (if cell
+             (macro-aux-set! (cdr cell) binding)))
+       (rename '(begin))))))
 
 (define (make-pattern-variable pvar)
   (lambda (expr)
@@ -327,3 +376,7 @@
          #'(let-syntax ((current-ellipsis (syntax-rules ())))
              (define-current-ellipsis ellipsis)
              . body))))))
+
+;; Local variables:
+;; eval: (put '%define-syntax 'scheme-indent-function 1)
+;; End:

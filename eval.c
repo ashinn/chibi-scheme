@@ -2199,9 +2199,9 @@ static struct sexp_core_form_struct core_forms[] = {
   {SEXP_CORE_BEGIN, (sexp)"begin"},
   {SEXP_CORE_QUOTE, (sexp)"quote"},
   {SEXP_CORE_SYNTAX_QUOTE, (sexp)"syntax-quote"},
-  {SEXP_CORE_DEFINE_SYNTAX, (sexp)"%define-syntax"},
-  {SEXP_CORE_LET_SYNTAX, (sexp)"%let-syntax"},
-  {SEXP_CORE_LETREC_SYNTAX, (sexp)"%letrec-syntax"},
+  {SEXP_CORE_DEFINE_SYNTAX, (sexp)"define-syntax"},
+  {SEXP_CORE_LET_SYNTAX, (sexp)"let-syntax"},
+  {SEXP_CORE_LETREC_SYNTAX, (sexp)"letrec-syntax"},
 };
 
 sexp sexp_make_env_op (sexp ctx, sexp self, sexp_sint_t n) {

@@ -1,6 +1,6 @@
 (define-library (chibi syntax-case-test)
   (export run-tests)
-  (import (chibi)
+  (import (except (chibi) define-syntax let-syntax letrec-syntax)
           (chibi syntax-case)
           (chibi test))
   (begin

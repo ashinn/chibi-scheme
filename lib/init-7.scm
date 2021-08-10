@@ -1,5 +1,5 @@
 ;; init-7.scm -- core library procedures for R7RS
-;; Copyright (c) 2009-2019 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2009-2021 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define (caar x) (car (car x)))
@@ -110,8 +110,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax
 
-(current-renamer (lambda (x) x))
-
 (define close-syntax
   (lambda (form env)
     (make-syntactic-closure env '() form)))
@@ -135,53 +133,22 @@
        '()))
     rename))
 
-(define make-transformer
-  (lambda (transformer)
-    (lambda (expr use-env mac-env)
-      ((lambda (old-use-env old-mac-env old-renamer)
-         (current-usage-environment use-env)
-         (current-transformer-environment mac-env)
-         (current-renamer (make-renamer mac-env))
-         ((lambda (result)
-            (current-usage-environment old-use-env)
-            (current-transformer-environment old-mac-env)
-            (current-renamer old-renamer)
-            result)
-          (transformer expr)))
-       (current-usage-environment)
-       (current-transformer-environment)
-       (current-renamer)))))
-
-(%define-syntax define-syntax
-  (lambda (expr use-env mac-env)
-    (list (close-syntax '%define-syntax mac-env)
-          (cadr expr)
-          (list (close-syntax 'make-transformer mac-env)
-                (car (cddr expr))))))
-
-(define free-identifier=?
-  (lambda (x y)
-    ((lambda (use-env cur-env)
-       (identifier=? (if use-env use-env cur-env) x
-                     (if use-env use-env cur-env) y))
-     (current-usage-environment)
-     (current-environment))))
-
 (define sc-macro-transformer
   (lambda (f)
-    (lambda (expr)
-      (close-syntax (f expr (current-usage-environment))
-                    (current-transformer-environment)))))
+    (lambda (expr use-env mac-env)
+      (close-syntax (f expr use-env) mac-env))))
 
 (define rsc-macro-transformer
   (lambda (f)
-    (lambda (expr)
-      (f expr (current-transformer-environment)))))
+    (lambda (expr use-env mac-env)
+      (f expr mac-env))))
 
 (define er-macro-transformer
   (lambda (f)
-    (lambda (expr)
-      (f expr (current-renamer) free-identifier=?))))
+    (lambda (expr use-env mac-env)
+      (f expr
+         (make-renamer mac-env)
+         (lambda (x y) (identifier=? use-env x use-env y))))))
 
 (define-syntax cond
   (er-macro-transformer
@@ -1124,16 +1091,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; let(rec)-syntax and datum->syntax
-
-(define-syntax let-syntax
-  (syntax-rules ()
-    ((let-syntax ((keyword transformer) ...) . body)
-     (%let-syntax ((keyword (make-transformer transformer)) ...) . body))))
-
-(define-syntax letrec-syntax
-  (syntax-rules ()
-    ((letrec-syntax ((keyword transformer) ...) . body)
-     (%letrec-syntax ((keyword (make-transformer transformer)) ...) . body))))
 
 (define (symbol->identifier id symbol)
   (cond
