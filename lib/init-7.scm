@@ -301,7 +301,7 @@
                           (,(rename 'quote) ,(caar ls)))
            ,(body (cdar ls))
            ,(clause (cdr ls))))))
-     `(let ((,(rename 'tmp) ,(cadr expr)))
+     `(,(rename 'let) ((,(rename 'tmp) ,(cadr expr)))
         ,(clause (cddr expr))))))
 
 (define-syntax do
