@@ -291,6 +291,12 @@
       (and (equal? (array-dimension (car ls)) (array-dimension (cadr ls)))
            (same-dimensions? (cdr ls)))))
 
+(define (same-domains? ls)
+  (or (null? ls)
+      (null? (cdr ls))
+      (and (interval= (array-domain (car ls)) (array-domain (cadr ls)))
+           (same-domains? (cdr ls)))))
+
 (define (array-map f array . arrays)
   (make-array (array-domain array)
               (let* ((ls (cons array arrays))
@@ -300,13 +306,32 @@
                   (apply f (map (lambda (g) (apply g multi-index)) getters))))))
 
 (define (array-for-each f array . arrays)
-  (interval-for-each
-   (let* ((ls (cons array arrays))
-          (getters (map array-getter ls)))
-     (assert (same-dimensions? ls))
-     (lambda multi-index
-       (apply f (map (lambda (g) (apply g multi-index)) getters))))
-   (array-domain array)))
+  (if (null? arrays)
+      (interval-for-each
+       (let ((g (array-getter array)))
+         (case (array-dimension array)
+           ((1)
+            (lambda (i) (f (g i))))
+           ((2)
+            (lambda (i j) (f (g i j))))
+           (else
+            (lambda multi-index
+              (f (apply g multi-index))))))
+       (array-domain array))
+      (interval-for-each
+       (let* ((lower (interval-lower-bounds->list (array-domain array)))
+              (ls (cons array arrays))
+              (getters
+               (cons (array-getter (car ls))
+                     (map (lambda (ar)
+                            (let ((getter (array-getter ar)))
+                              (lambda multi-index
+                                (apply getter multi-index))))
+                          (cdr ls)))))
+         (assert (same-domains? ls))
+         (lambda multi-index
+           (apply f (map (lambda (g) (apply g multi-index)) getters))))
+       (array-domain array))))
 
 (define (array-fold kons knil array)
   (interval-fold (lambda (acc . multi-index)
