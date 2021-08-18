@@ -2302,12 +2302,13 @@
                (any input-env-string? (func-scheme-args f))))
          *funcs*)
     (cat "static char* sexp_concat_env_string (sexp x) {\n"
+         "  char *k=sexp_string_data(sexp_car(x)), *v=sexp_string_data(sexp_cdr(x));\n"
          "  int klen=sexp_string_size(sexp_car(x)), vlen=sexp_string_size(sexp_cdr(x));\n"
-         "  char *res = (char*) calloc(1, klen+vlen+2);\n"
-         "  strncpy(res, sexp_string_data(sexp_car(x)), klen);\n"
-         "  res[sexp_string_size(sexp_car(x))] = '=';\n"
-         "  strncpy(res+sexp_string_size(sexp_car(x)), sexp_string_data(sexp_cdr(x)), vlen);\n"
-         "  res[len-1] = '\\0';\n"
+         "  int ressize=klen+1+vlen+1;\n"
+         "  char *res = (char*) calloc(1, ressize);\n"
+         "  memcpy(res, k, klen);\n"
+         "  res[klen] = '=';\n"
+         "  memcpy(res+klen+1, v, vlen);\n"
          "  return res;\n"
          "}\n\n"))))
 

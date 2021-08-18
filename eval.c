@@ -2433,7 +2433,6 @@ sexp sexp_load_standard_ports (sexp ctx, sexp env, FILE* in, FILE* out,
 }
 
 sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
-  int len;
   char init_file[128];
   sexp_gc_var3(op, tmp, sym);
   sexp_gc_preserve3(ctx, op, tmp, sym);
@@ -2451,11 +2450,11 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_global(ctx, SEXP_G_ERR_HANDLER)
     = sexp_env_ref(ctx, e, sym=sexp_intern(ctx, "current-exception-handler", -1), SEXP_FALSE);
   /* load init-7.scm */
-  len = strlen(sexp_init_file);
-  strncpy(init_file, sexp_init_file, len+1);
-  init_file[len] = (char)sexp_unbox_fixnum(version) + '0';
-  strncpy(init_file + len + 1, sexp_init_file_suffix, strlen(sexp_init_file_suffix)+1);
-  init_file[len + 1 + strlen(sexp_init_file_suffix)] = 0;
+  snprintf(init_file, sizeof(init_file),
+           "%s%d%s",
+           sexp_init_file,
+           (int)(sexp_unbox_fixnum(version)),
+           sexp_init_file_suffix);
   tmp = sexp_load_module_file(ctx, init_file, e);
   sexp_set_parameter(ctx, e, sexp_global(ctx, SEXP_G_INTERACTION_ENV_SYMBOL), e);
   /* load and bind meta-7.scm env */

@@ -190,7 +190,7 @@ char* my_getcwd(char* buf, int len) {
   char* res = test_cwd;
   int needed = strlen(res);
   if (needed >= len) return NULL;
-  strncpy(buf, res, needed+1);
+  memcpy(buf, res, needed+1);
   return res;
 }
 ")
@@ -443,8 +443,7 @@ int getpwnam_x(char* name, struct password* pwd, char* buf,
   for (i=0; i < sizeof(etc_passwd) / sizeof(etc_passwd[0]); i++) {
     entry = etc_passwd[i];
     if (strstr(entry, name) == entry && entry[strlen(name)] == ':') {
-      strncpy(buf, entry, bufsize);
-      buf[strlen(entry)] = 0;
+      snprintf(buf, bufsize, \"%s\", entry);
       buf[strlen(name)] = 0;
       pwd->pw_name = buf;
       pwd->pw_passwd = buf + strlen(name) + 1;

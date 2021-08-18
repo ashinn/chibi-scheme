@@ -2168,8 +2168,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
       f = sexp_flonum_value(obj);
 #if SEXP_USE_INFINITIES
       if (isinf(f) || isnan(f)) {
-        numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
-        strncpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0", NUMBUF_LEN-1);
+        snprintf(numbuf, sizeof(numbuf), "%c%s",
+                 (isinf(f) && f < 0 ? '-' : '+'),
+                 (isinf(f) ? "inf.0" : "nan.0"));
       } else
 #endif
       {
@@ -2372,8 +2373,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
     f = sexp_flonum_value(obj);
 #if SEXP_USE_INFINITIES
     if (isinf(f) || isnan(f)) {
-      numbuf[0] = (isinf(f) && f < 0 ? '-' : '+');
-      strncpy(numbuf+1, isinf(f) ? "inf.0" : "nan.0", NUMBUF_LEN-1);
+      snprintf(numbuf, sizeof(numbuf), "%c%s",
+               (isinf(f) && f < 0 ? '-' : '+'),
+               (isinf(f) ? "inf.0" : "nan.0"));
     } else
 #endif
     {
