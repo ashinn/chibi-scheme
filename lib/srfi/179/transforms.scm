@@ -132,15 +132,12 @@
                (vector? sizes)
                (= (array-dimension array) (vector-length sizes))
                (vector-every exact-integer? sizes)
-               (vector-every >= sizes (interval-lower-bounds->vector
-                                       (array-domain array)))
-               (vector-every < sizes (interval-upper-bounds->vector
-                                      (array-domain array)))))
+               (vector-every <= sizes (interval-ub (array-domain array)))))
   (let ((domain (make-interval
                  (vector-map
                   (lambda (lo hi s) (exact (ceiling (/ (- hi lo) s))))
-                  (interval-lower-bounds->vector (array-domain array))
-                  (interval-upper-bounds->vector (array-domain array))
+                  (interval-lb (array-domain array))
+                  (interval-ub (array-domain array))
                   sizes))))
     (make-array
      domain
@@ -150,13 +147,13 @@
         (make-interval
          (vector-map
           (lambda (i lo s) (+ lo (* i s)))
-          multi-index
-          (interval-lower-bound (array-domain array))
+          (list->vector multi-index)
+          (interval-lb (array-domain array))
           sizes)
          (vector-map
           (lambda (i lo hi s)
             (min hi (+ lo (* (+ i 1) s))))
-          multi-index
+          (list->vector multi-index)
           (interval-lb (array-domain array))
           (interval-ub (array-domain array))
           sizes)))))))

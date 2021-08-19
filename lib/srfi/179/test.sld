@@ -2865,61 +2865,62 @@ OTHER DEALINGS IN THE SOFTWARE.
                  (index (make-list d 12)))
             (test-error (apply (array-getter B) index))))
 
-        ;; (do ((i 0 (fx+ i 1)))
-        ;;     ((fx=? i tests))
-        ;;   (let* ((domain
-        ;;           (random-interval))
-        ;;          (array
-        ;;           (let ((res (make-array domain list)))
-        ;;             (case (random-integer 3)
-        ;;               ;; immutable
-        ;;               ((0) res)
-        ;;               ;; specialized
-        ;;               ((1) (array-copy res))
-        ;;               (else
-        ;;                ;; mutable, but not specialized
-        ;;                (let ((res (array-copy res)))
-        ;;                  (make-array domain
-        ;;                              (array-getter res)
-        ;;                              (array-setter res)))))))
-        ;;          (lowers
-        ;;           (%%interval-lower-bounds domain))
-        ;;          (uppers
-        ;;           (%%interval-upper-bounds domain))
-        ;;          (sidelengths
-        ;;           (vector-map (lambda (l u)
-        ;;                         (let ((dim (- u l)))
-        ;;                           (random 1 (ceiling-quotient (* dim 7) 5))))
-        ;;                       lowers uppers))
-        ;;          (result
-        ;;           (array-tile array sidelengths))
-        ;;          (test-result
-        ;;           (my-array-tile array sidelengths)))
+        (do ((i 0 (fx+ i 1)))
+            ((fx=? i tests))
+          (let* ((domain
+                  (random-interval))
+                 (array
+                  (let ((res (make-array domain list)))
+                    (case (random-integer 3)
+                      ;; immutable
+                      ((0) res)
+                      ;; specialized
+                      ((1) (array-copy res))
+                      (else
+                       ;; mutable, but not specialized
+                       (let ((res (array-copy res)))
+                         (make-array domain
+                                     (array-getter res)
+                                     (array-setter res)))))))
+                 (lowers
+                  (interval-lower-bounds->vector domain))
+                 (uppers
+                  (interval-upper-bounds->vector domain))
+                 (sidelengths
+                  (vector-map (lambda (l u)
+                                (let ((dim (- u l)))
+                                  (random 1 (ceiling-quotient (* dim 7) 5))))
+                              lowers uppers))
+                 (result
+                  (array-tile array sidelengths))
+                 (test-result
+                  (my-array-tile array sidelengths)))
 
-        ;;     ;; extract-array is tested independently, so we just make a few tests.
+            ;; extract-array is tested independently, so we just make
+            ;; a few tests.
 
-        ;;     ;; test all the subdomain tiles are the same
-        ;;     (test-assert
-        ;;         (array-every (lambda (r t)
-        ;;                        (equal? (array-domain r) (array-domain t)))
-        ;;                      result test-result))
-        ;;     ;; test that the subarrays are the same type
-        ;;     (test-assert
-        ;;         (array-every
-        ;;          (lambda (r t)
-        ;;            (and
-        ;;             (eq? (mutable-array? r) (mutable-array? t))
-        ;;             (eq? (mutable-array? r) (mutable-array? array))
-        ;;             (eq? (specialized-array? r) (specialized-array? t))
-        ;;             (eq? (specialized-array? r) (specialized-array? array))))
-        ;;          result test-result))
-        ;;     ;; test that the first tile has the right values
-        ;;     (test-assert
-        ;;         (myarray= (apply (array-getter result)
-        ;;                          (make-list (vector-length lowers) 0))
-        ;;                   (apply (array-getter test-result)
-        ;;                          (make-list (vector-length lowers) 0))))
-        ;;     ))
+            ;; test all the subdomain tiles are the same
+            (test-assert
+                (array-every (lambda (r t)
+                               (equal? (array-domain r) (array-domain t)))
+                             result test-result))
+            ;; test that the subarrays are the same type
+            (test-assert
+                (array-every
+                 (lambda (r t)
+                   (and
+                    (eq? (mutable-array? r) (mutable-array? t))
+                    (eq? (mutable-array? r) (mutable-array? array))
+                    (eq? (specialized-array? r) (specialized-array? t))
+                    (eq? (specialized-array? r) (specialized-array? array))))
+                 result test-result))
+            ;; test that the first tile has the right values
+            (test-assert
+                (myarray= (apply (array-getter result)
+                                 (make-list (vector-length lowers) 0))
+                          (apply (array-getter test-result)
+                                 (make-list (vector-length lowers) 0))))
+            ))
 
         (test-error (array-reverse 'a 'a))
         (test-error
