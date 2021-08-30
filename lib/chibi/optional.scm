@@ -29,7 +29,7 @@
 ;;> extra values are unused.
 ;;>
 ;;> \var{ls} is evaluated only once.  It is an error if any
-;;> \var{default} mutates \var{ls}.
+;;> \var{default} mutates or set!s \var{ls}.
 ;;>
 ;;> Typically used on the dotted rest list at the start of a lambda,
 ;;> \scheme{let-optionals} is more concise and more efficient than
