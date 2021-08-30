@@ -28,6 +28,9 @@
 ;;> elements of \var{ls} beyond the length of \var{ls}, otherwise any
 ;;> extra values are unused.
 ;;>
+;;> \var{ls} is evaluated only once.  It is an error if any
+;;> \var{default} mutates \var{ls}.
+;;>
 ;;> Typically used on the dotted rest list at the start of a lambda,
 ;;> \scheme{let-optionals} is more concise and more efficient than
 ;;> \scheme{case-lambda} for simple optional argument uses.
