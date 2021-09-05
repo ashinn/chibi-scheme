@@ -497,6 +497,10 @@
                               (test-first-indentation))))))
     (* (current-group-indent) (min level (test-max-indentation)))))
 
+;; Terminate the current and indent the next line with the given number
+;; of spaces.  The very first string does not terminate a line.  There
+;; should be a way to reset first? when creating more than one report
+;; in a session.
 (define indent-string
   (let ((first? #t))
     (lambda (indent)

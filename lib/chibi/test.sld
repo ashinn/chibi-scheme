@@ -24,11 +24,11 @@
           (scheme process-context)
           (scheme time)
           (chibi diff)
-          (chibi term ansi))
+          (chibi term ansi)
+          (chibi optional))
   (cond-expand
    (chibi
-    (import (only (chibi) pair-source print-exception)
-            (chibi optional)))
+    (import (only (chibi) pair-source print-exception)))
    (chicken
     (import (only (chicken) print-error-message))
     (begin
