@@ -16,14 +16,16 @@
    current-test-epsilon current-test-comparator
    current-test-filters current-test-removers
    current-test-group-filters current-test-group-removers
-   current-column-width)
+   current-column-width current-group-indent)
   (import (scheme base)
+          (scheme case-lambda)
           (scheme write)
           (scheme complex)
           (scheme process-context)
           (scheme time)
           (chibi diff)
-          (chibi term ansi))
+          (chibi term ansi)
+          (chibi optional))
   (cond-expand
    (chibi
     (import (only (chibi) pair-source print-exception)))
