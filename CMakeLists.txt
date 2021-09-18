@@ -97,7 +97,9 @@ target_include_directories(libchibi-common
 target_link_libraries(libchibi-common INTERFACE
     ${BOEHMGC}
     $<$<CONFIG:SANITIZER>:-fsanitize=address,undefined>
-    $<$<PLATFORM_ID:Windows>:ws2_32>)
+    $<$<PLATFORM_ID:Windows>:ws2_32>
+    $<$<AND:$<PLATFORM_ID:Linux>,$<BOOL:${BUILD_SHARED_LIBS}>>:${CMAKE_DL_LIBS}>
+    $<$<PLATFORM_ID:Linux>:m>)
 
 #
 # Sources
@@ -167,6 +169,9 @@ function(add_compiled_library cfile)
         return()
     endif()
 
+    set(link-libraries LINK_LIBRARIES)
+    cmake_parse_arguments(compiledlib-options "" "" "${link-libraries}" ${ARGN})
+
     get_filename_component(basename ${cfile} NAME_WE)
     get_filename_component(libdir ${cfile} DIRECTORY)
 
@@ -178,7 +183,7 @@ function(add_compiled_library cfile)
     string(REPLACE "/" "-" libname ${libname})
 
     add_library(${libname} ${cfile})
-    target_link_libraries(${libname} PRIVATE libchibi-scheme)
+    target_link_libraries(${libname} PRIVATE libchibi-scheme ${compiledlib-options_LINK_LIBRARIES})
     add_dependencies(chibi-compiled-libs ${libname})
 
     set_target_properties(${libname} PROPERTIES
@@ -203,22 +208,25 @@ else()
 endif()
 
 function(add_stubs_library stub)
+    set(link-libraries LINK_LIBRARIES)
+    cmake_parse_arguments(stubs-options "" "" "${link-libraries}" ${ARGN})
+
     get_filename_component(stubdir ${stub} PATH)
     get_filename_component(basename ${stub} NAME_WE)
     set(stubfile ${CMAKE_CURRENT_SOURCE_DIR}/${stub})
     set(stubdir ${CMAKE_CURRENT_BINARY_DIR}/${stubdir})
     set(stubout ${stubdir}/${basename}.c)
     set(stubouts ${stubouts} ${stubout} PARENT_SCOPE)
+    set(stublinkedlibs ${stublinkedlibs} ${stubs-options_LINK_LIBRARIES} PARENT_SCOPE)
 
     file(MAKE_DIRECTORY ${stubdir})
-
 
     add_custom_command(OUTPUT ${stubout}
         COMMAND ${bootstrap} ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-    add_compiled_library(${stubout})
+    add_compiled_library(${stubout} LINK_LIBRARIES ${stubs-options_LINK_LIBRARIES})
 endfunction()
 
 add_stubs_library(lib/chibi/crypto/crypto.stub)
@@ -232,7 +240,7 @@ add_stubs_library(lib/srfi/160/uvprims.stub)
 if(NOT WIN32)
     add_stubs_library(lib/chibi/net.stub)
     add_stubs_library(lib/chibi/process.stub)
-    add_stubs_library(lib/chibi/pty.stub)
+    add_stubs_library(lib/chibi/pty.stub LINK_LIBRARIES util)
     add_stubs_library(lib/chibi/stty.stub)
     add_stubs_library(lib/chibi/system.stub)
     add_stubs_library(lib/chibi/time.stub)
@@ -307,6 +315,10 @@ if (NOT BUILD_SHARED_LIBS)
     target_sources(libchibi-scheme
         PRIVATE
         ${clibout})
+
+    target_link_libraries(libchibi-scheme
+        PRIVATE
+        ${stublinkedlibs})
 endif()
 
 #
