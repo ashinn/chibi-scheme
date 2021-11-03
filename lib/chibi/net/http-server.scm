@@ -524,7 +524,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Sample main.  In chibi-scheme you can run:
 ;;
-;; chibi-scheme -Rchibi.net.http-config-server -- [<cfg-file-or-directory>]
+;; chibi-scheme -Rchibi.net.http-server -- [<cfg-file-or-directory>]
 ;;
 ;; which defaults to serving the current directory on port 8000.
 
