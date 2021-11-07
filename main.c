@@ -306,7 +306,7 @@ sexp run_main (int argc, char **argv) {
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS, nonblocking=0;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
-  sexp out=SEXP_FALSE, ctx=NULL, ls;
+  sexp out=SEXP_FALSE, ctx=NULL, ls, res=SEXP_ZERO;
   sexp_gc_var4(tmp, sym, args, env);
   args = SEXP_NULL;
   env = NULL;
@@ -637,7 +637,7 @@ sexp run_main (int argc, char **argv) {
         tmp = sexp_env_ref(ctx, env, sym, SEXP_FALSE);
         if (sexp_procedurep(tmp)) {
           args = sexp_list1(ctx, args);
-          check_exception(ctx, sexp_apply(ctx, tmp, args));
+          res = check_exception(ctx, sexp_apply(ctx, tmp, args));
         } else {
           fprintf(stderr, "couldn't find main binding: %s in %s\n", main_symbol, main_module ? main_module : argv[i]);
         }
@@ -650,7 +650,7 @@ sexp run_main (int argc, char **argv) {
     fprintf(stderr, "destroy_context error\n");
     return SEXP_FALSE;
   }
-  return SEXP_TRUE;
+  return res;
 }
 
 #ifdef EMSCRIPTEN
@@ -666,11 +666,15 @@ void sexp_resume() {
 #endif
 
 int main (int argc, char **argv) {
+  sexp res;
 #if SEXP_USE_PRINT_BACKTRACE_ON_SEGFAULT
   signal(SIGSEGV, sexp_segfault_handler); 
 #endif
   sexp_scheme_init();
-  if (run_main(argc, argv) == SEXP_FALSE) {
+  res = run_main(argc, argv);
+  if (sexp_fixnump(res)) {
+    return sexp_unbox_fixnum(res);
+  } else if (res == SEXP_FALSE) {
     exit_failure();
   } else {
     exit_success();
