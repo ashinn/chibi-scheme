@@ -994,6 +994,7 @@
 (test 3.0 (inexact (sqrt 9)))
 (test 1.4142135623731 (sqrt 2))
 (test 0.0+1.0i (inexact (sqrt -1)))
+(test 0.0+1.0i (sqrt -1.0-0.0i))
 
 (test '(2 0) (call-with-values (lambda () (exact-integer-sqrt 4)) list))
 (test '(2 1) (call-with-values (lambda () (exact-integer-sqrt 5)) list))
