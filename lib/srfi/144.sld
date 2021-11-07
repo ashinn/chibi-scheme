@@ -20,13 +20,14 @@
                   (balanced-quotient flbalanced-quotient)
                   (balanced-remainder flbalanced-remainder)))
   (export
-   fl-e fl-e-2 fl-log2-e fl-log10-e fl-log-2 fl-log-10 fl-pi
-   fl-1/pi fl-2/pi fl-pi/2 fl-pi/4 fl-sqrt-pi fl-2/sqrt-pi
-   fl-sqrt-2 fl-sqrt-3 fl-sqrt-5 fl-sqrt-10 fl-1/sqrt-2
-   fl-cbrt-2 fl-cbrt-3 fl-4thrt-2 fl-phi fl-log-phi fl-1/log-phi
-   fl-euler fl-e-euler fl-sin-1 fl-cos-1 fl-greatest fl-least
-   fl-epsilon fl-integer-exponent-zero fl-integer-exponent-nan 
-   fl-fast-+*
+   fl-e fl-1/e fl-e-2 fl-e-pi/4 fl-log2-e fl-log10-e fl-log-2
+   fl-1/log-2 fl-log-3 fl-log-pi fl-log-10 fl-1/log-10 fl-pi
+   fl-1/pi fl-2pi fl-2/pi fl-pi/2 fl-pi/4 fl-pi-squared fl-degree
+   fl-sqrt-pi fl-2/sqrt-pi fl-sqrt-2 fl-sqrt-3 fl-sqrt-5 fl-sqrt-10
+   fl-1/sqrt-2 fl-cbrt-2 fl-cbrt-3 fl-4thrt-2 fl-phi fl-log-phi
+   fl-1/log-phi fl-euler fl-e-euler fl-sin-1 fl-cos-1 fl-gamma-1/2
+   fl-gamma-1/3 fl-gamma-2/3 fl-greatest fl-least fl-epsilon
+   fl-integer-exponent-zero fl-integer-exponent-nan fl-fast-+*
 
    flonum flonum? fl=? fl<? fl>? fl<=? fl>=? flodd? fleven?
    flunordered? flinteger? flzero? flpositive? flnegative?
