@@ -1623,8 +1623,8 @@ sexp sexp_inexact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
   if (sexp_flonump(z))
     d = sexp_flonum_value(z);
   else if (sexp_fixnump(z))
-    d = (double)sexp_unbox_fixnum(z);
-  maybe_convert_ratio(ctx, z)        /* XXXX add ratio sqrt */
+    d = (double)sexp_unbox_fixnum(z); /* may be larger or smaller than z */
+  maybe_convert_ratio(ctx, z)         /* TODO: add ratio sqrt */
   maybe_convert_complex(z, sexp_complex_sqrt)
   else
     return sexp_type_exception(ctx, self, SEXP_NUMBER, z);
@@ -1664,6 +1664,11 @@ sexp sexp_exact_sqrt (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
     if (!sexp_exceptionp(res)) {
       rem = sexp_mul(ctx, res, res);
       rem = sexp_sub(ctx, z, rem);
+      if (sexp_negativep(rem)) {
+        res = sexp_sub(ctx, res, SEXP_ONE);
+        rem = sexp_mul(ctx, res, res);
+        rem = sexp_sub(ctx, z, rem);
+      }
       res = sexp_cons(ctx, res, rem);
     }
   }
