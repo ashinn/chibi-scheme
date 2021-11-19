@@ -33,6 +33,7 @@
 
 (define (run-http-server listener-or-addr servlet . o)
   (let ((cfg (if (pair? o) (car o) (make-conf '() #f #f #f))))
+    (set-signal-action! signal/pipe #f)
     (run-net-server
      listener-or-addr
      (command-handler
