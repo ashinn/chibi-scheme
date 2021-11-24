@@ -9,9 +9,11 @@
 (define-syntax let*-to-let
   (syntax-rules ()
     ((let*-to-let letstar ls (vars ...) ((v . d) . rest) . body)
-     (let*-to-let letstar ls (vars ... (v tmp . d)) rest . body))
-    ((let*-to-let letstar ls ((var tmp . d) ...) rest . body)
-     (letstar ls ((tmp . d) ... . rest)
+     (let*-to-let letstar ls (vars ... (v tmp (tmp . d))) rest . body))
+    ((let*-to-let letstar ls (vars ...) (v . rest) . body)
+     (let*-to-let letstar ls (vars ... (v tmp tmp)) rest . body))
+    ((let*-to-let letstar ls ((var tmp bind) ...) rest . body)
+     (letstar ls (bind ... . rest)
        (let ((var tmp) ...) . body)))))
 
 ;;> \macro{(let-optionals ls ((var default) ... [rest]) body ...)}
@@ -54,8 +56,8 @@
 
 (define-syntax let-optionals
   (syntax-rules ()
-    ((let-optionals ls ((var default) ... . rest) body ...)
-     (let*-to-let let-optionals* ls () ((var default) ... . rest) body ...))))
+    ((let-optionals ls (var&default ... . rest) body ...)
+     (let*-to-let let-optionals* ls () (var&default ... . rest) body ...))))
 
 ;;> \macro{(let-optionals* ls ((var default) ... [rest]) body ...)}
 ;;>

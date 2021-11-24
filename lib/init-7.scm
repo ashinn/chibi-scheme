@@ -1142,6 +1142,9 @@
      (let ((var (if (pair? tmp) (car tmp) default))
            (tmp2 (if (pair? tmp) (cdr tmp) '())))
        (let-optionals* tmp2 rest . body)))
+    ((let-optionals* tmp (var . rest) . body)
+     (let ((var (car tmp)))
+       (let-optionals* (cdr tmp) rest . body)))
     ((let-optionals* tmp tail . body)
      (let ((tail tmp)) . body))))
 
