@@ -73,6 +73,11 @@
         (let-optionals* ls ((a (begin (set! ls '(a b)) 'default-a))
                             (b 'default-b))
           (test '(default-a default-b) (list a b))))
+      (let ((ls (list 0 1 2)))
+        (let-optionals ls (a . b)
+          (set-car! (cdr ls) 3)
+          (test '(0 3 2) ls)
+          (test '(0 1 2) (cons a b))))
       (test 5 (keyword-ref '(a: b: b: 5) 'b: #f))
       (test 5 (keyword-ref* '(a: b: b: 5) 'b: #f))
       (cond-expand

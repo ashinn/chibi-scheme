@@ -36,7 +36,7 @@
                   (var (if (pair? tmp) (car tmp) default)))
              (let-optionals* tmp2 rest . body)))
           ((let-optionals* tmp tail . body)
-           (let ((tail tmp)) . body))))
+           (let ((tail (list-copy tmp))) . body))))
       (define-syntax symbol->keyword*
         (syntax-rules ()
           ((symbol->keyword* sym)

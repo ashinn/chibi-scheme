@@ -1146,7 +1146,7 @@
      (let ((var (car tmp)))
        (let-optionals* (cdr tmp) rest . body)))
     ((let-optionals* tmp tail . body)
-     (let ((tail tmp)) . body))))
+     (let ((tail (list-copy tmp))) . body))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exceptions
