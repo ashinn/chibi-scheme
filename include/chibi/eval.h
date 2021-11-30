@@ -29,6 +29,9 @@ enum sexp_core_form_names {
   SEXP_CORE_DEFINE_SYNTAX,
   SEXP_CORE_LET_SYNTAX,
   SEXP_CORE_LETREC_SYNTAX
+#ifdef SEXP_USE_TAGGED_PROCEDURES
+  , SEXP_CORE_GENERATIVE_LAMBDA
+#endif
 };
 
 enum sexp_opcode_classes {

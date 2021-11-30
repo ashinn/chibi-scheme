@@ -29,6 +29,7 @@
    macro-procedure macro-env macro-source macro-aux macro-aux-set!
    procedure-code procedure-vars procedure-name procedure-name-set!
    procedure-arity procedure-variadic? procedure-flags
+   procedure-tagged? procedure-tag procedure-tag-set!
    bytecode-name bytecode-literals bytecode-source
    port-line port-line-set! port-source? port-source?-set!
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!

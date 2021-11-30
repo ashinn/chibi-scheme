@@ -388,6 +388,9 @@ sexp sexp_make_procedure_op (sexp ctx, sexp self, sexp_sint_t n, sexp flags,
   sexp_procedure_num_args(proc) = sexp_unbox_fixnum(num_args);
   sexp_procedure_code(proc) = bc;
   sexp_procedure_vars(proc) = vars;
+#if SEXP_USE_TAGGED_PROCEDURES
+  sexp_procedure_tag(proc) = SEXP_VOID;
+#endif
   return proc;
 }
 
@@ -431,6 +434,7 @@ sexp sexp_make_lambda (sexp ctx, sexp params) {
   sexp_lambda_defs(res) = SEXP_NULL;
   sexp_lambda_return_type(res) = SEXP_FALSE;
   sexp_lambda_param_types(res) = SEXP_NULL;
+  sexp_lambda_flags(res) = (char) (sexp_uint_t) 0;
   return res;
 }
 
@@ -811,7 +815,7 @@ static sexp analyze_set (sexp ctx, sexp x, int depth) {
 
 #define sexp_return(res, val) do {res=val; goto cleanup;} while (0)
 
-static sexp analyze_lambda (sexp ctx, sexp x, int depth) {
+static sexp analyze_lambda (sexp ctx, sexp x, int depth, int generative) {
   int trailing_non_procs, verify_duplicates_p;
   sexp name, ls, ctx3;
   sexp_gc_var6(res, body, tmp, value, defs, ctx2);
@@ -834,6 +838,10 @@ static sexp analyze_lambda (sexp ctx, sexp x, int depth) {
   /* build lambda and analyze body */
   res = sexp_make_lambda(ctx, tmp=sexp_copy_list(ctx, sexp_cadr(x)));
   if (sexp_exceptionp(res)) sexp_return(res, res);
+#ifdef SEXP_USE_TAGGED_PROCEDURES
+  if (generative)
+    sexp_lambda_flags(res) = sexp_make_fixnum(SEXP_LAMBDA_GENERATIVE);
+#endif
   sexp_lambda_source(res) = sexp_pair_source(x);
   if (! (sexp_lambda_source(res) && sexp_pairp(sexp_lambda_source(res))))
     sexp_lambda_source(res) = sexp_pair_source(sexp_cdr(x));
@@ -858,7 +866,7 @@ static sexp analyze_lambda (sexp ctx, sexp x, int depth) {
       tmp = sexp_cons(ctx3, sexp_cdaar(tmp), sexp_cdar(tmp));
       tmp = sexp_cons(ctx3, SEXP_VOID, tmp);
       sexp_pair_source(tmp) = sexp_pair_source(sexp_caar(ls));
-      value = analyze_lambda(ctx3, tmp, depth);
+      value = analyze_lambda(ctx3, tmp, depth, 0);
     } else {
       name = sexp_caar(tmp);
       value = analyze(ctx3, sexp_cadar(tmp), depth, 0);
@@ -940,7 +948,7 @@ static sexp analyze_define (sexp ctx, sexp x, int depth) {
         tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
         tmp = sexp_cons(ctx, SEXP_VOID, tmp);
         sexp_pair_source(tmp) = sexp_pair_source(x);
-        value = analyze_lambda(ctx, tmp, depth);
+        value = analyze_lambda(ctx, tmp, depth, 0);
       } else
         value = analyze(ctx, sexp_caddr(x), depth, 0);
       tmp = sexp_env_cell_loc(ctx, env, name, 0, &varenv);
@@ -1077,7 +1085,11 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
           case SEXP_CORE_SET:
             res = analyze_set(ctx, x, depth); break;
           case SEXP_CORE_LAMBDA:
-            res = analyze_lambda(ctx, x, depth); break;
+            res = analyze_lambda(ctx, x, depth, 0); break;
+#ifdef SEXP_USE_TAGGED_PROCEDURES
+          case SEXP_CORE_GENERATIVE_LAMBDA:
+            res = analyze_lambda(ctx, x, depth, 1); break;
+#endif
           case SEXP_CORE_IF:
             res = analyze_if(ctx, x, depth); break;
           case SEXP_CORE_BEGIN:
@@ -2206,7 +2218,11 @@ static struct sexp_core_form_struct core_forms[] = {
   {SEXP_CORE_SYNTAX_QUOTE, (sexp)"syntax-quote"},
   {SEXP_CORE_DEFINE_SYNTAX, (sexp)"define-syntax"},
   {SEXP_CORE_LET_SYNTAX, (sexp)"let-syntax"},
-  {SEXP_CORE_LETREC_SYNTAX, (sexp)"letrec-syntax"},
+  {SEXP_CORE_LETREC_SYNTAX, (sexp)"letrec-syntax"}
+#ifdef SEXP_USE_TAGGED_PROCEDURES
+  , {SEXP_CORE_GENERATIVE_LAMBDA, (sexp)"lambda/generative"}
+#else
+#endif
 };
 
 sexp sexp_make_env_op (sexp ctx, sexp self, sexp_sint_t n) {

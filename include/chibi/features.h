@@ -213,6 +213,9 @@
 /*   non-immediate symbols in a single list. */
 /* #define SEXP_USE_HASH_SYMS 0 */
 
+/* uncomment this to disable procedure tags as defined in SRFI 229 */
+/* #define SEXP_USE_TAGGED_PROCEDURES 0 */
+
 /* uncomment this to disable extended char names as defined in R7RS */
 /* #define SEXP_USE_EXTENDED_CHAR_NAMES 0 */
 
@@ -727,6 +730,10 @@
 #ifndef SEXP_USE_UNBOXED_LOCALS
 /* #define SEXP_USE_UNBOXED_LOCALS ! SEXP_USE_NO_FEATURES */
 #define SEXP_USE_UNBOXED_LOCALS 0
+#endif
+
+#ifndef SEXP_USE_TAGGED_PROCEDURES
+#define SEXP_USE_TAGGED_PROCEDURES 1
 #endif
 
 #ifndef SEXP_USE_DEBUG_VM

@@ -266,11 +266,14 @@ typedef int sexp_sint_t;
 #define sexp_heap_chunks(n) (sexp_heap_align(n)>>4)
 #endif
 
+/* lambda flags */
+#define SEXP_LAMBDA_GENERATIVE ((sexp_uint_t)1)
+
 /* procedure flags */
 #define SEXP_PROC_NONE ((sexp_uint_t)0)
 #define SEXP_PROC_VARIADIC ((sexp_uint_t)1)
 #define SEXP_PROC_UNUSED_REST ((sexp_uint_t)2)
-
+#define SEXP_PROC_TAGGED ((sexp_uint_t)4)
 
 #ifdef SEXP_USE_INTTYPES
 #ifdef PLAN9
@@ -538,6 +541,9 @@ struct sexp_struct {
     } bytecode;
     struct {
       sexp bc, vars;
+#if SEXP_USE_TAGGED_PROCEDURES
+      sexp tag;
+#endif
       char flags;
       sexp_proc_num_args_t num_args;
     } procedure;
@@ -1146,8 +1152,10 @@ SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
 #define sexp_procedure_flags(x)      (sexp_field(x, procedure, SEXP_PROCEDURE, flags))
 #define sexp_procedure_variadic_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_VARIADIC)
 #define sexp_procedure_unused_rest_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_UNUSED_REST)
+#define sexp_procedure_tagged_p(x)   (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_TAGGED)
 #define sexp_procedure_code(x)       (sexp_field(x, procedure, SEXP_PROCEDURE, bc))
 #define sexp_procedure_vars(x)       (sexp_field(x, procedure, SEXP_PROCEDURE, vars))
+#define sexp_procedure_tag(x)        (sexp_field(x, procedure, SEXP_PROCEDURE, tag))
 #define sexp_procedure_source(x)     sexp_bytecode_source(sexp_procedure_code(x))
 
 #define sexp_bytes_length(x)  (sexp_field(x, bytes, SEXP_BYTES, length))
@@ -1329,6 +1337,7 @@ enum sexp_uniform_vector_type {
 #define sexp_lambda_return_type(x) (sexp_field(x, lambda, SEXP_LAMBDA, ret))
 #define sexp_lambda_param_types(x) (sexp_field(x, lambda, SEXP_LAMBDA, types))
 #define sexp_lambda_source(x)      (sexp_field(x, lambda, SEXP_LAMBDA, source))
+#define sexp_lambda_generative_p(x) (sexp_unbox_fixnum(sexp_lambda_flags(x)) & SEXP_LAMBDA_GENERATIVE)
 
 #define sexp_cnd_test(x)      (sexp_field(x, cnd, SEXP_CND, test))
 #define sexp_cnd_pass(x)      (sexp_field(x, cnd, SEXP_CND, pass))

@@ -292,7 +292,7 @@ static void generate_ref (sexp ctx, sexp ref, int unboxp) {
     /* global ref */
     if (unboxp) {
       sexp_emit(ctx, (sexp_cdr(sexp_ref_cell(ref)) == SEXP_UNDEF)
-		? SEXP_OP_GLOBAL_REF : SEXP_OP_GLOBAL_KNOWN_REF);
+               ? SEXP_OP_GLOBAL_REF : SEXP_OP_GLOBAL_KNOWN_REF);
       sexp_emit_word(ctx, (sexp_uint_t)sexp_ref_cell(ref));
       bytecode_preserve(ctx, sexp_ref_cell(ref));
     } else
@@ -489,8 +489,8 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   if (sexp_opcode_static_param_p(op))
     for (ls=sexp_cdr(app); sexp_pairp(ls); ls=sexp_cdr(ls))
       sexp_emit_word(ctx, sexp_unbox_fixnum(sexp_litp(sexp_car(ls)) ?
-					    sexp_lit_value(sexp_car(ls)) :
-					    sexp_car(ls)));
+                                            sexp_lit_value(sexp_car(ls)) :
+                                            sexp_car(ls)));
 
   if (sexp_opcode_return_type(op) == SEXP_VOID
       && sexp_opcode_class(op) != SEXP_OPC_FOREIGN)
@@ -549,8 +549,8 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
   sexp_emit(ctx, SEXP_OP_JUMP);
   sexp_context_align_pos(ctx);
   sexp_emit_word(ctx, (sexp_uint_t) (-sexp_unbox_fixnum(sexp_context_pos(ctx)) +
-				     (sexp_pairp(sexp_lambda_locals(lam))
-				      ? 1 + sizeof(sexp) : 0)));
+                                    (sexp_pairp(sexp_lambda_locals(lam))
+                                     ? 1 + sizeof(sexp) : 0)));
 
   sexp_context_tailp(ctx) = 1;
   sexp_gc_release3(ctx);
@@ -725,7 +725,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_context_exception(ctx) = bc;
   } else {
   sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
-  if (sexp_nullp(fv)) {
+  if (sexp_nullp(fv) && !sexp_lambda_generative_p(lambda)) {
     /* shortcut, no free vars */
     tmp = sexp_make_vector(ctx2, SEXP_ZERO, SEXP_VOID);
     tmp = sexp_make_procedure(ctx2, flags, len, bc, tmp);
@@ -1915,7 +1915,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     } else if (sexp_flonump(tmp1) && sexp_flonump(tmp2)) {
       i = sexp_flonum_value(tmp1) < sexp_flonum_value(tmp2);
     } else if (sexp_flonump(tmp1) && sexp_fixnump(tmp2)) {
-      i = sexp_flonum_value(tmp1) < (double)sexp_unbox_fixnum(tmp2); 
+      i = sexp_flonum_value(tmp1) < (double)sexp_unbox_fixnum(tmp2);
     } else if (sexp_fixnump(tmp1) && sexp_flonump(tmp2)) {
       i = (double)sexp_unbox_fixnum(tmp1) < sexp_flonum_value(tmp2);
 #endif
