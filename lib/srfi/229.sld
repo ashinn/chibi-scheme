@@ -22,6 +22,7 @@
       (and (procedure? f)
            (let ((vars (procedure-vars f)))
              (and (vector? vars)
+                  (> (vector-length vars) 1)
                   (eq? procedure-tag-object
                        (vector-ref vars (- (vector-length vars) 1)))))))
     (define (procedure-tag f)
