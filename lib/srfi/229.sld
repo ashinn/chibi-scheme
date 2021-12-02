@@ -1,6 +1,6 @@
 
 (define-library (srfi 229)
-  (import (scheme base) (scheme case-lambda) (chibi ast))
+  (import (scheme base) (scheme case-lambda) (chibi ast) (only (chibi) opcode?))
   (export case-lambda/tag lambda/tag procedure/tag? procedure-tag)
   (begin
     (define procedure-tag-object (list 'procedure-tag))
@@ -20,6 +20,7 @@
          (procedure->tagged (case-lambda . clauses) tag-expr))))
     (define (procedure/tag? f)
       (and (procedure? f)
+           (not (opcode? f))
            (let ((vars (procedure-vars f)))
              (and (vector? vars)
                   (> (vector-length vars) 1)

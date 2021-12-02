@@ -16,6 +16,7 @@
                       (* x x)))
         (test-assert (procedure/tag? f))
         (test-not (procedure/tag? (lambda (x) (* x x))))
+        (test-not (procedure/tag? +))
         (test 9 (f 3))
         (test 42 (procedure-tag f))
         (test-not (eqv? f f*))
