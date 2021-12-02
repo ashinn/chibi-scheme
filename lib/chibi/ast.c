@@ -689,6 +689,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_accessors(ctx, env, SEXP_MACRO, 1, "macro-env", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 2, "macro-source", NULL);
   sexp_define_accessors(ctx, env, SEXP_MACRO, 3, "macro-aux", "macro-aux-set!");
+  sexp_define_foreign(ctx, env, "make-procedure", 4, sexp_make_procedure_op);
   sexp_define_foreign(ctx, env, "procedure-code", 1, sexp_get_procedure_code);
   sexp_define_foreign(ctx, env, "procedure-vars", 1, sexp_get_procedure_vars);
   sexp_define_foreign(ctx, env, "procedure-arity", 1, sexp_get_procedure_arity);
