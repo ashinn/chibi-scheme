@@ -900,11 +900,18 @@ static sexp analyze_if (sexp ctx, sexp x, int depth) {
     res = sexp_compile_error(ctx, "too many args to if", x);
   } else {
     test = analyze(ctx, sexp_cadr(x), depth, 0);
-    pass = analyze(ctx, sexp_caddr(x), depth, 0);
-    fail_expr = sexp_pairp(sexp_cdddr(x)) ? sexp_cadddr(x) : SEXP_VOID;
-    fail = analyze(ctx, fail_expr, depth, 0);
-    res = (sexp_exceptionp(test) ? test : sexp_exceptionp(pass) ? pass :
-           sexp_exceptionp(fail) ? fail : sexp_make_cnd(ctx, test, pass, fail));
+    if (sexp_exceptionp(test)) {
+      res = test;
+    } else {
+      pass = analyze(ctx, sexp_caddr(x), depth, 0);
+      if (sexp_exceptionp(pass)) {
+        res = pass;
+      } else {
+        fail_expr = sexp_pairp(sexp_cdddr(x)) ? sexp_cadddr(x) : SEXP_VOID;
+        fail = analyze(ctx, fail_expr, depth, 0);
+        res = sexp_exceptionp(fail) ? fail : sexp_make_cnd(ctx, test, pass, fail);
+      }
+    }
     if (sexp_cndp(res)) sexp_cnd_source(res) = sexp_pair_source(x);
   }
   sexp_gc_release3(ctx);
