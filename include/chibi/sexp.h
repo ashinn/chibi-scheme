@@ -481,6 +481,9 @@ struct sexp_struct {
       sexp bytes;
 #if SEXP_USE_STRING_INDEX_TABLE
       sexp charlens;
+#elif SEXP_USE_STRING_REF_CACHE
+      sexp_uint_t cached_char_idx;
+      sexp cached_cursor;
 #endif
       sexp_uint_t offset, length;
 #endif
@@ -1197,6 +1200,10 @@ enum sexp_uniform_vector_type {
 #define sexp_string_bytes(x)  (sexp_field(x, string, SEXP_STRING, bytes))
 #define sexp_string_offset(x) (sexp_field(x, string, SEXP_STRING, offset))
 #define sexp_string_data(x)   (sexp_bytes_data(sexp_string_bytes(x))+sexp_string_offset(x))
+#endif
+#if SEXP_USE_STRING_REF_CACHE
+#define sexp_cached_char_idx(x) (sexp_field(x, string, SEXP_STRING, cached_char_idx))
+#define sexp_cached_cursor(x) (sexp_field(x, string, SEXP_STRING, cached_cursor))
 #endif
 #define sexp_string_maybe_null_data(x) (sexp_not(x) ? NULL : sexp_string_data(x))
 

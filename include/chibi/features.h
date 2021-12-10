@@ -252,6 +252,12 @@
 /*                                                                  */
 /* #define SEXP_USE_STRING_INDEX_TABLE 1 */
 
+/* uncomment this to cache a string cursor for string-ref calls */
+/*   The default is not to use a cache. The goal of caching is to   */
+/*   soften the performance impact of repeated O(n) string-ref      */
+/*   operations on the same string. */
+/* #define SEXP_USE_STRING_REF_CACHE 1 */
+
 /* uncomment this to disable automatic closing of ports */
 /*   If enabled, the underlying FILE* for file ports will be */
 /*   automatically closed when they're garbage collected.  Doesn't */
