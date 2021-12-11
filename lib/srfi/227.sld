@@ -2,7 +2,5 @@
   (export opt-lambda
           (rename opt-lambda* opt*-lambda)
           let-optionals
-          let-optionals*
-          (rename define-opt define-optionals)
-          (rename define-opt* define-optionals*))
+          let-optionals*)
   (import (chibi optional)))
