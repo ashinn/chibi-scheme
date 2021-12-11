@@ -1260,6 +1260,9 @@ sexp sexp_string_index_to_cursor (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   sexp cursor;
   sexp_sint_t i, j, limit;
   unsigned char *p;
+#if SEXP_USE_STRING_REF_CACHE
+  unsigned char *q;
+#endif
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, index);
   p = (unsigned char*)sexp_string_data(str);
@@ -1277,13 +1280,28 @@ sexp sexp_string_index_to_cursor (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
     }
   }
 #elif SEXP_USE_STRING_REF_CACHE
-  if (i >= sexp_cached_char_idx(str)) {
+  if (i > (sexp_cached_char_idx(str) + ((sexp_string_length(str) - sexp_cached_char_idx(str)) >> 1))) {
+    j = sexp_string_size(str);
+    i = -(sexp_string_length(str) - i);
+    } else if (i > (sexp_cached_char_idx(str) >> 1)) {
     j = sexp_unbox_string_cursor(sexp_cached_cursor(str));
     i -= sexp_cached_char_idx(str);
   }
 #endif
-  for ( ; i>0 && j<limit; i--)
-    j += sexp_utf8_initial_byte_count(p[j]);
+
+#if SEXP_USE_STRING_REF_CACHE
+  if (i >= 0) {
+#endif
+    for ( ; i>0 && j<limit; i--)
+      j += sexp_utf8_initial_byte_count(p[j]);
+#if SEXP_USE_STRING_REF_CACHE
+  } else {
+    for (q=p+j; i<0 && q>=p; i++)
+      q = (unsigned char*)sexp_string_utf8_prev(q);
+    j = q - p;
+  }
+#endif
+
   if (i != 0)
     return sexp_user_exception(ctx, self, "string-index->cursor: index out of range", index);
   cursor = sexp_make_string_cursor(j);
