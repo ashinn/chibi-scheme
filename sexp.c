@@ -1300,7 +1300,24 @@ sexp sexp_string_cursor_to_index (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   sexp_assert_type(ctx, sexp_string_cursorp, SEXP_STRING_CURSOR, offset);
   if (off < 0 || off > (sexp_sint_t)sexp_string_size(str))
     return sexp_user_exception(ctx, self, "string-cursor->index: offset out of range", offset);
+#if SEXP_USE_STRING_REF_CACHE
+  sexp_uint_t cached_idx = sexp_cached_char_idx(str);
+  sexp_sint_t cached_off = sexp_unbox_string_cursor(sexp_cached_cursor(str));
+  unsigned char* string_data = (unsigned char*)sexp_string_data(str);
+  sexp_sint_t idx_delta;
+  if (off >= cached_off) {
+    idx_delta = sexp_string_utf8_length(string_data+cached_off, off-cached_off);
+  } else {
+    idx_delta = 0 - sexp_string_utf8_length(string_data+off, cached_off-off);
+  }
+
+  sexp_uint_t new_idx = cached_idx + idx_delta;
+  sexp_cached_char_idx(str) = new_idx;
+  sexp_cached_cursor(str) = offset;
+  return sexp_make_fixnum(new_idx);
+#else
   return sexp_make_fixnum(sexp_string_utf8_length((unsigned char*)sexp_string_data(str), off));
+#endif
 }
 
 sexp sexp_string_cursor_offset (sexp ctx, sexp self, sexp_sint_t n, sexp cur) {
