@@ -279,6 +279,9 @@
       (test "12.3µm" (show #f (numeric/si 1.23e-5 1000) "m")) ;?
       (test "1.2µm" (show #f (numeric/si 1.23e-6 1000) "m"))
       (test "1.2 µm" (show #f (numeric/si 1.23e-6 1000 " ") "m"))
+      (test "0" (show #f (numeric/si 0)))
+      (test "-608" (show #f (numeric/si -608)))
+      (test "-4k" (show #f (numeric/si -3986)))
 
       (test "1,234,567" (show #f (numeric/comma 1234567)))
       (test "1,234,567" (show #f (numeric/comma 1234567 3)))
