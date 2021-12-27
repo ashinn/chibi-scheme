@@ -664,6 +664,8 @@ sexp sexp_strip_synclos (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
 
 sexp sexp_identifier_eq_op (sexp ctx, sexp self, sexp_sint_t n, sexp e1, sexp id1, sexp e2, sexp id2) {
   sexp cell1, cell2;
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e1);
+  sexp_assert_type(ctx, sexp_envp, SEXP_ENV, e2);
   cell1 = sexp_env_cell(ctx, e1, id1, 0);
   cell2 = sexp_env_cell(ctx, e2, id2, 0);
   if (cell1 && (cell1 == cell2))
