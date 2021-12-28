@@ -70,7 +70,7 @@
               (cons (apply proc (map1 car lol '())) res))
         (if (every (lambda (x) (if (null? x) #t (pair? x))) lol)
             (reverse res)
-            (error "map: improper list" ls))))
+            (error "map: improper list in list" lol))))
   (if (null? lol)
       (map1 proc ls '())
       (mapn proc (cons ls lol) '())))
