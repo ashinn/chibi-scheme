@@ -192,6 +192,7 @@ SEXP_API sexp sexp_char_downcase(sexp ctx, sexp self, sexp_sint_t n, sexp ch);
 SEXP_API sexp sexp_define_foreign_param_aux(sexp ctx, sexp env, const char *name, int num_args, const char *fname, sexp_proc1 f, const char *param);
 
 #define sexp_define_foreign(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,0,(const char*)#f,(sexp_proc1)f,NULL)
+#define sexp_define_foreign_rest(c,e,s,n,f) sexp_define_foreign_aux(c,e,s,n,33,(const char*)#f,(sexp_proc1)f,NULL)
 #define sexp_define_foreign_param(c,e,s,n,f,p) sexp_define_foreign_param_aux(c,e,s,n,(const char*)#f,(sexp_proc1)f,p)
 #define sexp_define_foreign_opt(c,e,s,n,f,p) sexp_define_foreign_aux(c,e,s,n,1,(const char*)#f,(sexp_proc1)f,p)
 

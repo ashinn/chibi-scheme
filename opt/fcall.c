@@ -35,3 +35,25 @@ sexp sexp_fcall (sexp ctx, sexp self, sexp_sint_t n, sexp f) {
   default: return sexp_user_exception(ctx, self, "too many FFI arguments", f);
   }
 }
+
+sexp sexp_fcall_with_rest (sexp ctx, sexp self, sexp_sint_t n, sexp f, sexp t) {
+  sexp *stack = sexp_stack_data(sexp_context_stack(ctx));
+  sexp_sint_t top = sexp_context_top(ctx);
+  switch (n) {
+  case 4: return ((sexp_proc6)sexp_opcode_func(f))(ctx, f, 4, _A(1), _A(2), _A(3), _A(4), t);
+  case 5: return ((sexp_proc7)sexp_opcode_func(f))(ctx, f, 5, _A(1), _A(2), _A(3), _A(4), _A(5), t);
+  case 6: return ((sexp_proc8)sexp_opcode_func(f))(ctx, f, 6, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), t);
+  case 7: return ((sexp_proc9)sexp_opcode_func(f))(ctx, f, 7, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), t);
+  case 8: return ((sexp_proc10)sexp_opcode_func(f))(ctx, f, 8, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), t);
+  case 9: return ((sexp_proc11)sexp_opcode_func(f))(ctx, f, 9, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), t);
+  case 10: return ((sexp_proc12)sexp_opcode_func(f))(ctx, f, 10, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), t);
+  case 11: return ((sexp_proc13)sexp_opcode_func(f))(ctx, f, 11, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), t);
+  case 12: return ((sexp_proc14)sexp_opcode_func(f))(ctx, f, 12, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), t);
+  case 13: return ((sexp_proc15)sexp_opcode_func(f))(ctx, f, 13, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), t);
+  case 14: return ((sexp_proc16)sexp_opcode_func(f))(ctx, f, 14, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), t);
+  case 15: return ((sexp_proc17)sexp_opcode_func(f))(ctx, f, 15, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15), t);
+  case 16: return ((sexp_proc18)sexp_opcode_func(f))(ctx, f, 16, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15), _A(16), t);
+  case 17: return ((sexp_proc19)sexp_opcode_func(f))(ctx, f, 17, _A(1), _A(2), _A(3), _A(4), _A(5), _A(6), _A(7), _A(8), _A(9), _A(10), _A(11), _A(12), _A(13), _A(14), _A(15), _A(16), _A(17), t);
+  default: return sexp_user_exception(ctx, self, "too many FFI arguments", f);
+  }
+}

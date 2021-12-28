@@ -1326,44 +1326,87 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    tmp1 = ((sexp_proc1)sexp_opcode_func(_WORD0))(ctx, _WORD0, 0);
+    if (sexp_opcode_with_rest_p(_WORD0)) {
+      tmp2 = SEXP_NULL;
+      for (j = fp + 4; top - j > 0; j++) {
+        tmp2 = sexp_cons(ctx, stack[j], tmp2);
+      }
+      tmp1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _WORD0, 0, tmp2);
+    } else {
+      tmp1 = ((sexp_proc1)sexp_opcode_func(_WORD0))(ctx, _WORD0, 0);
+    }
     sexp_fcall_return(tmp1, -1)
     break;
   case SEXP_OP_FCALL1:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    tmp1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _WORD0, 1, _ARG1);
+    if (sexp_opcode_with_rest_p(_WORD0)) {
+      tmp2 = SEXP_NULL;
+      for (j = fp + 4; top - j > 1; j++) {
+        tmp2 = sexp_cons(ctx, stack[j], tmp2);
+      }
+      tmp1 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _WORD0, 1, _ARG1, tmp2);
+    } else {
+      tmp1 = ((sexp_proc2)sexp_opcode_func(_WORD0))(ctx, _WORD0, 1, _ARG1);
+    }
     sexp_fcall_return(tmp1, 0)
     break;
   case SEXP_OP_FCALL2:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    tmp1 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _WORD0, 2, _ARG1, _ARG2);
+    if (sexp_opcode_with_rest_p(_WORD0)) {
+      tmp2 = SEXP_NULL;
+      for (j = fp + 4; top - j > 2; j++) {
+        tmp2 = sexp_cons(ctx, stack[j], tmp2);
+      }
+      tmp1 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _WORD0, 2, _ARG1, _ARG2, tmp2);
+    } else {
+      tmp1 = ((sexp_proc3)sexp_opcode_func(_WORD0))(ctx, _WORD0, 2, _ARG1, _ARG2);
+    }
     sexp_fcall_return(tmp1, 1)
     break;
   case SEXP_OP_FCALL3:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    tmp1 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _WORD0, 3, _ARG1, _ARG2, _ARG3);
+    if (sexp_opcode_with_rest_p(_WORD0)) {
+      tmp2 = SEXP_NULL;
+      for (j = fp + 4; top - j > 3; j++) {
+        tmp2 = sexp_cons(ctx, stack[j], tmp2);
+      }
+      tmp1 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _WORD0, 3, _ARG1, _ARG2, _ARG3, tmp2);
+    } else {
+      tmp1 = ((sexp_proc4)sexp_opcode_func(_WORD0))(ctx, _WORD0, 3, _ARG1, _ARG2, _ARG3);
+    }
     sexp_fcall_return(tmp1, 2)
     break;
   case SEXP_OP_FCALL4:
-    _ALIGN_IP();
-    sexp_context_top(ctx) = top;
-    sexp_context_last_fp(ctx) = fp;
-    tmp1 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _WORD0, 4, _ARG1, _ARG2, _ARG3, _ARG4);
-    sexp_fcall_return(tmp1, 3)
-    break;
+    if (!sexp_opcode_with_rest_p(_WORD0)) {
+      _ALIGN_IP();
+      sexp_context_top(ctx) = top;
+      sexp_context_last_fp(ctx) = fp;
+      tmp1 = ((sexp_proc5)sexp_opcode_func(_WORD0))(ctx, _WORD0, 4, _ARG1, _ARG2, _ARG3, _ARG4);
+      sexp_fcall_return(tmp1, 3)
+        break;
+    }
 #if SEXP_USE_EXTENDED_FCALL
   case SEXP_OP_FCALLN:
     _ALIGN_IP();
     sexp_context_top(ctx) = top;
     sexp_context_last_fp(ctx) = fp;
-    i = sexp_opcode_num_args(_WORD0) + sexp_opcode_variadic_p(_WORD0);
-    tmp1 = sexp_fcall(ctx, self, i, _WORD0);
+    if (sexp_opcode_with_rest_p(_WORD0)) {
+      i = sexp_opcode_num_args(_WORD0);
+      tmp2 = SEXP_NULL;
+      for (j = fp + 4; top - j > i; j++) {
+        tmp2 = sexp_cons(ctx, stack[j], tmp2);
+      }
+      tmp1 = sexp_fcall_with_rest(ctx, self, i, _WORD0, tmp2);
+    } else {
+      i = sexp_opcode_num_args(_WORD0) + sexp_opcode_variadic_p(_WORD0);
+      tmp1 = sexp_fcall(ctx, self, i, _WORD0);
+    }
     sexp_fcall_return(tmp1, i-1)
     break;
 #endif

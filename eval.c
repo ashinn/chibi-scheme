@@ -2143,7 +2143,7 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
 #if ! SEXP_USE_EXTENDED_FCALL
-  if (num_args > 4)
+  if (num_args > (3 + !(flags & 32))))
     return sexp_user_exception(ctx, NULL, "make-foreign: exceeded foreign arg limit",
                                sexp_make_fixnum(num_args));
 #endif
@@ -2155,7 +2155,7 @@ sexp sexp_make_foreign (sexp ctx, const char *name, int num_args,
   else
 #endif
     sexp_opcode_code(res) = SEXP_OP_FCALL1+num_args-1;
-  if (flags & 1) num_args--;
+  if ((flags & 33) == 1) num_args--;
   sexp_opcode_num_args(res) = num_args;
   sexp_opcode_flags(res) = flags;
   sexp_opcode_name(res) = sexp_c_string(ctx, name, -1);

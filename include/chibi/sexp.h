@@ -1317,6 +1317,7 @@ enum sexp_uniform_vector_type {
 #define sexp_opcode_ref_trans_p(x) (sexp_opcode_flags(x) & 4)
 #define sexp_opcode_static_param_p(x) (sexp_opcode_flags(x) & 8)
 #define sexp_opcode_tail_call_p(x) (sexp_opcode_flags(x) & 16)
+#define sexp_opcode_with_rest_p(x) (sexp_opcode_flags(x) & 32)
 
 #define sexp_lambda_name(x)        (sexp_field(x, lambda, SEXP_LAMBDA, name))
 #define sexp_lambda_params(x)      (sexp_field(x, lambda, SEXP_LAMBDA, params))
