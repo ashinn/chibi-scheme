@@ -67,13 +67,53 @@
 ;;> ports, which are tokenized into a sequence by calling \var{reader}
 ;;> until \var{eof-object} is found.  Returns a list of three values,
 ;;> the sequences read from \var{a} and \var{b}, and the \scheme{lcs}
-;;> result.
+;;> result.  Unless \var{minimal?} is set, we trim common
+;;> prefixes/suffixes before computing the lcs.
 (define (diff a b . o)
   (let-optionals o ((reader read-line)
-                    (eq equal?))
+                    (eq equal?)
+                    (optimal? #f))
     (let ((a-ls (source->list a reader))
           (b-ls (source->list b reader)))
-      (list a-ls b-ls (lcs-with-positions a-ls b-ls eq)))))
+      (if optimal?
+          (list a-ls b-ls (lcs-with-positions a-ls b-ls eq))
+          (let lp1 ((i 0) (a a-ls) (b b-ls))
+            (cond
+             ((or (null? a) (null? b))  ;; prefix or equal
+              (if (and (null? a) (null? b))
+                  (let ((n-ls (iota (length a-ls))))  ;; equal
+                    (list a-ls b-ls (map list a-ls n-ls n-ls)))
+                  (list a-ls b-ls (lcs-with-positions a-ls b-ls eq))))
+             ((eq (car a) (car b))
+              (lp1 (+ i 1) (cdr a) (cdr b)))
+             (else
+              (let lp2 ((j 0) (ra (reverse a)) (rb (reverse b)))
+                (cond
+                 ((or (null? ra) (null? rb))  ;; can't happen
+                  (list a-ls b-ls (lcs-with-positions a-ls b-ls eq)))
+                 ((eq (car ra) (car rb))
+                  (lp2 (+ j 1) (cdr ra) (cdr rb)))
+                 (else
+                  (let* ((a-ls2 (reverse ra))
+                         (b-ls2 (reverse rb))
+                         (a-left-len (+ i (length a-ls2)))
+                         (b-left-len (+ i (length b-ls2))))
+                    (list a-ls
+                          b-ls
+                          (append
+                           (map (lambda (x i) (list x i i))
+                                (take a-ls i)
+                                (iota i))
+                           (map (lambda (x)
+                                  (list (car x)
+                                        (+ i (cadr x))
+                                        (+ i (car (cddr x)))))
+                                (lcs-with-positions a-ls2 b-ls2 eq))
+                           (map (lambda (x i)
+                                  (list x (+ i a-left-len) (+ i b-left-len)))
+                                (take-right a j)
+                                (iota j))))))
+                 )))))))))
 
 ;;> Utility to format the result of a \var{diff} to output port
 ;;> \var{out} (default \scheme{(current-output-port)}).  Applies
