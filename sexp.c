@@ -1298,7 +1298,7 @@ sexp sexp_string_cursor_offset (sexp ctx, sexp self, sexp_sint_t n, sexp cur) {
 
 #if SEXP_USE_STRING_INDEX_TABLE
 void sexp_update_string_index_lookup(sexp ctx, sexp s) {
-  char *p;
+  unsigned char *p;
   sexp_sint_t numchunks, len, i, *chunks;
   sexp_gc_var1(tmp);
   if (sexp_string_size(s) < SEXP_STRING_INDEX_TABLE_CHUNK_SIZE*1.2) {
@@ -1312,12 +1312,12 @@ void sexp_update_string_index_lookup(sexp ctx, sexp s) {
   sexp_string_charlens(s) =
     sexp_make_bytes_op(ctx, NULL, 2, sexp_make_fixnum(numchunks * sizeof(sexp_sint_t)), SEXP_VOID);
   chunks = (sexp_sint_t*)sexp_bytes_data(sexp_string_charlens(s));
-  p = sexp_string_data(s);
+  p = (unsigned char*) sexp_string_data(s);
   i = 0;
   while (1) {
     p += sexp_utf8_initial_byte_count(*p);
     if (++i % SEXP_STRING_INDEX_TABLE_CHUNK_SIZE == 0) {
-      chunks[i/SEXP_STRING_INDEX_TABLE_CHUNK_SIZE - 1] = p - sexp_string_data(s);
+      chunks[i/SEXP_STRING_INDEX_TABLE_CHUNK_SIZE - 1] = p - (unsigned char*) sexp_string_data(s);
       if (i / SEXP_STRING_INDEX_TABLE_CHUNK_SIZE >= numchunks-1)
         break;
     }

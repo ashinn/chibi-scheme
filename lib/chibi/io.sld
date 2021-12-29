@@ -1,6 +1,6 @@
 
 (define-library (chibi io)
-  (export read-string read-string! read-line write-line
+  (export read-string read-string! read-line write-line %%read-line
           port-fold port-fold-right port-map
           port->list port->string-list port->sexp-list
           port->string port->bytevector

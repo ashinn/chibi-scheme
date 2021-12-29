@@ -1,5 +1,5 @@
 
-(define-c non-null-string (%%read-line "fgets")
+(define-c non-null-string (%%read-line "fgets_unlocked")
   ((result (array char arg1)) int (default (current-input-port) input-port)))
 
 ;;(define-c size_t (%%read-string "fread")
