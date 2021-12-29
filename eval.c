@@ -1051,6 +1051,22 @@ static sexp analyze_letrec_syntax (sexp ctx, sexp x, int depth) {
   return analyze_let_syntax_aux(ctx, x, 1, depth);
 }
 
+static sexp analyze_macro_once (sexp ctx, sexp x, sexp op, int depth) {
+  sexp res;
+  sexp_gc_var1(tmp);
+  sexp_gc_preserve1(ctx, tmp);
+  tmp = sexp_cons(ctx, sexp_macro_env(op), SEXP_NULL);
+  tmp = sexp_cons(ctx, sexp_context_env(ctx), tmp);
+  tmp = sexp_cons(ctx, x, tmp);
+  res = sexp_exceptionp(tmp) ? tmp : sexp_make_child_context(ctx, sexp_context_lambda(ctx));
+  if (!sexp_exceptionp(res) && !sexp_exceptionp(sexp_context_exception(ctx)))
+    res = sexp_apply(res, sexp_macro_proc(op), tmp);
+  if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(x)))
+    sexp_exception_source(res) = sexp_pair_source(sexp_car(tmp));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
   sexp op;
   sexp_gc_var4(res, tmp, x, cell);
@@ -1115,14 +1131,7 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
             res = sexp_compile_error(ctx, "unknown core form", op); break;
           }
         } else if (sexp_macrop(op)) {
-          tmp = sexp_cons(ctx, sexp_macro_env(op), SEXP_NULL);
-          tmp = sexp_cons(ctx, sexp_context_env(ctx), tmp);
-          tmp = sexp_cons(ctx, x, tmp);
-          x = sexp_exceptionp(tmp) ? tmp : sexp_make_child_context(ctx, sexp_context_lambda(ctx));
-          if (!sexp_exceptionp(x) && !sexp_exceptionp(sexp_context_exception(ctx)))
-            x = sexp_apply(x, sexp_macro_proc(op), tmp);
-          if (sexp_exceptionp(x) && sexp_not(sexp_exception_source(x)))
-            sexp_exception_source(x) = sexp_pair_source(sexp_car(tmp));
+          x = analyze_macro_once(ctx, x, op, depth);
           goto loop;
         } else if (sexp_opcodep(op)) {
           res = sexp_length(ctx, sexp_cdr(x));
@@ -1154,7 +1163,14 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
         sexp_warn(ctx, "invalid operator in application: ", x);
     }
   } else if (sexp_idp(x)) {
-    res = analyze_var_ref(ctx, x, NULL);
+    cell = sexp_env_cell(ctx, sexp_context_env(ctx), x, 0);
+    op = cell ? sexp_cdr(cell) : NULL;
+    if (op && sexp_macrop(op)) {
+      x = analyze_macro_once(ctx, x, op, depth);
+      goto loop;
+    } else {
+      res = analyze_var_ref(ctx, x, NULL);
+    }
   } else if (sexp_synclop(x)) {
     tmp = sexp_make_child_context(ctx, sexp_context_lambda(ctx));
     if (sexp_pairp(sexp_synclo_free_vars(x))) {
