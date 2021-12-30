@@ -261,6 +261,15 @@ introduction to syntactic-closures can be found at
 \scheme{make-syntactic-closure} and \scheme{strip-syntactic-closures} are
 also available.
 
+Variable transformers and identifier macros are also supported: macros
+created with \scheme{sc-macro-transformer} and \scheme{rsc-macro-transformer}
+can match an identifier outside of operator position, and a special
+\scheme{er-macro-transformer*} form is provided, otherwise identical
+to the usual \scheme{er-macro-transformer}, which can do the same.
+\scheme{make-variable-transformer} can be used to create transformer
+procedures which expand an instance of \scheme{set!} with their syntax
+keywords as their first argument.
+
 \subsection{Types}
 
 You can define new record types with
