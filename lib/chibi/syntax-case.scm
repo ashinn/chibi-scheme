@@ -1,7 +1,5 @@
 ;; Written by Marc Nieper-Wißkirchen
 
-;; TODO: make-variable-transformer and identifier-syntax.
-
 ;; TODO: make-synthetic-identifier should return a truly unique (that
 ;; is not free-identifier=? to any other) identifier.
 
@@ -16,7 +14,7 @@
   (let ((env (or (current-usage-environment) (current-environment))))
     (identifier=? env x env y)))
 
-(define (make-transformer transformer)
+(define (%make-transformer transformer)
   (cond
    ((and (= 1 (procedure-arity transformer))
          (not (procedure-variadic? transformer)))
@@ -39,6 +37,12 @@
           (current-usage-environment old-use-env)
           (current-renamer old-renamer)
           result))))))
+
+(define (make-transformer base-transformer)
+  (let ((wrapped-transformer (%make-transformer base-transformer)))
+    (if (procedure-variable-transformer? base-transformer)
+        (make-variable-transformer wrapped-transformer)
+        wrapped-transformer)))
 
 (%define-syntax define-syntax
   (lambda (expr use-env mac-env)
@@ -376,6 +380,23 @@
          #'(let-syntax ((current-ellipsis (syntax-rules ())))
              (define-current-ellipsis ellipsis)
              . body))))))
+
+;; identifier-syntax definition from R6RS Libraries section 12.9
+(define-syntax identifier-syntax
+  (syntax-rules (set!)
+    ((_ e)
+     (lambda (x)
+       (syntax-case x ()
+         (id (identifier? #'id) #'e)
+         ((_ x (... ...)) #'(e x (... ...))))))
+    ((_ (id exp1) ((set! var val) exp2))
+     #;(and (identifier? #'id) (identifier? #'var))
+     (make-variable-transformer
+       (lambda (x)
+         (syntax-case x (set!)
+           ((set! var val) #'exp2)
+           ((id x (... ...)) #'(exp1 x (... ...)))
+           (id (identifier? #'id) #'exp1)))))))
 
 ;; Local variables:
 ;; eval: (put '%define-syntax 'scheme-indent-function 1)
