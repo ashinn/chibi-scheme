@@ -2190,6 +2190,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
 #endif
     case SEXP_PROCEDURE:
       sexp_write_string(ctx, "#<procedure ", out);
+      if (sexp_procedure_variable_transformer_p(obj))
+        sexp_write_string(ctx, "(variable-transformer) ", out);
       x = sexp_bytecode_name(sexp_procedure_code(obj));
       sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out, bound+1);
       sexp_write_string(ctx, " ", out);

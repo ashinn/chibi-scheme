@@ -399,6 +399,18 @@ static sexp sexp_make_macro (sexp ctx, sexp p, sexp e) {
   return mac;
 }
 
+sexp sexp_make_variable_transformer_op (sexp ctx, sexp self, sexp_sint_t n, sexp base_proc) {
+  sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, base_proc);
+  if (sexp_procedure_variable_transformer_p(base_proc))
+    return base_proc;
+  sexp vt_proc = sexp_alloc_type(ctx, procedure, SEXP_PROCEDURE);
+  sexp_procedure_flags(vt_proc) = (char) (sexp_uint_t) sexp_make_fixnum (sexp_unbox_fixnum(sexp_procedure_flags(base_proc)) | SEXP_PROC_VARIABLE_TRANSFORMER);
+  sexp_procedure_num_args(vt_proc) = sexp_procedure_num_args(base_proc);
+  sexp_procedure_code(vt_proc) =  sexp_procedure_code(base_proc);
+  sexp_procedure_vars(vt_proc) = sexp_procedure_vars(base_proc);
+  return vt_proc;
+}
+
 sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv, sexp expr) {
   sexp res;
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
@@ -766,6 +778,22 @@ static sexp analyze_seq (sexp ctx, sexp ls, int depth, int defok) {
   return res;
 }
 
+static sexp analyze_macro_once (sexp ctx, sexp x, sexp op, int depth) {
+  sexp res;
+  sexp_gc_var1(tmp);
+  sexp_gc_preserve1(ctx, tmp);
+  tmp = sexp_cons(ctx, sexp_macro_env(op), SEXP_NULL);
+  tmp = sexp_cons(ctx, sexp_context_env(ctx), tmp);
+  tmp = sexp_cons(ctx, x, tmp);
+  res = sexp_exceptionp(tmp) ? tmp : sexp_make_child_context(ctx, sexp_context_lambda(ctx));
+  if (!sexp_exceptionp(res) && !sexp_exceptionp(sexp_context_exception(ctx)))
+    res = sexp_apply(res, sexp_macro_proc(op), tmp);
+  if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(x)))
+    sexp_exception_source(res) = sexp_pair_source(sexp_car(tmp));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
   sexp env = sexp_context_env(ctx), res;
   sexp_gc_var1(cell);
@@ -783,31 +811,43 @@ static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
   return res;
 }
 
-static sexp analyze_set (sexp ctx, sexp x, int depth) {
+static sexp analyze_set (sexp ctx, sexp x, int depth, int defok) {
   sexp res, varenv;
-  sexp_gc_var2(ref, value);
-  sexp_gc_preserve2(ctx, ref, value);
+  sexp_gc_var4(ref, value, cell, op);
+  sexp_gc_preserve4(ctx, ref, value, cell, op);
   if (! (sexp_pairp(sexp_cdr(x)) && sexp_pairp(sexp_cddr(x))
          && sexp_nullp(sexp_cdddr(x)) && sexp_idp(sexp_cadr(x)))) {
     res = sexp_compile_error(ctx, "bad set! syntax", x);
   } else {
-    ref = analyze_var_ref(ctx, sexp_cadr(x), &varenv);
-    if (sexp_refp(ref) && sexp_lambdap(sexp_ref_loc(ref)))
-      sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
-    value = analyze(ctx, sexp_caddr(x), depth, 0);
-    if (sexp_exceptionp(ref)) {
-      res = ref;
-    } else if (sexp_exceptionp(value)) {
-      res = value;
-    } else if (sexp_immutablep(sexp_ref_cell(ref))
-               || (varenv && sexp_immutablep(varenv))) {
-      res = sexp_compile_error(ctx, "immutable binding", sexp_cadr(x));
+    cell = sexp_env_cell(ctx, sexp_context_env(ctx), sexp_cadr(x), 0);
+    op = cell ? sexp_cdr(cell) : NULL;
+    if (op && sexp_macrop(op)) {
+      if (!sexp_procedure_variable_transformer_p(sexp_macro_proc(op))) {
+        res = sexp_compile_error(ctx, "can't mutate a syntax keyword", sexp_cadr(x));
+      } else {
+        res = analyze_macro_once(ctx, x, op, depth);
+        if (!sexp_exceptionp(res))
+          res = analyze(ctx, res, depth, defok);
+      }
     } else {
-      res = sexp_make_set(ctx, ref, value);
-      sexp_set_source(res) = sexp_pair_source(x);
+      ref = analyze_var_ref(ctx, sexp_cadr(x), &varenv);
+      if (sexp_refp(ref) && sexp_lambdap(sexp_ref_loc(ref)))
+        sexp_insert(ctx, sexp_lambda_sv(sexp_ref_loc(ref)), sexp_ref_name(ref));
+      value = analyze(ctx, sexp_caddr(x), depth, 0);
+      if (sexp_exceptionp(ref)) {
+        res = ref;
+      } else if (sexp_exceptionp(value)) {
+        res = value;
+      } else if (sexp_immutablep(sexp_ref_cell(ref))
+                 || (varenv && sexp_immutablep(varenv))) {
+        res = sexp_compile_error(ctx, "immutable binding", sexp_cadr(x));
+      } else {
+        res = sexp_make_set(ctx, ref, value);
+        sexp_set_source(res) = sexp_pair_source(x);
+      }
     }
   }
-  sexp_gc_release2(ctx);
+  sexp_gc_release4(ctx);
   return res;
 }
 
@@ -1051,22 +1091,6 @@ static sexp analyze_letrec_syntax (sexp ctx, sexp x, int depth) {
   return analyze_let_syntax_aux(ctx, x, 1, depth);
 }
 
-static sexp analyze_macro_once (sexp ctx, sexp x, sexp op, int depth) {
-  sexp res;
-  sexp_gc_var1(tmp);
-  sexp_gc_preserve1(ctx, tmp);
-  tmp = sexp_cons(ctx, sexp_macro_env(op), SEXP_NULL);
-  tmp = sexp_cons(ctx, sexp_context_env(ctx), tmp);
-  tmp = sexp_cons(ctx, x, tmp);
-  res = sexp_exceptionp(tmp) ? tmp : sexp_make_child_context(ctx, sexp_context_lambda(ctx));
-  if (!sexp_exceptionp(res) && !sexp_exceptionp(sexp_context_exception(ctx)))
-    res = sexp_apply(res, sexp_macro_proc(op), tmp);
-  if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(x)))
-    sexp_exception_source(res) = sexp_pair_source(sexp_car(tmp));
-  sexp_gc_release1(ctx);
-  return res;
-}
-
 static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
   sexp op;
   sexp_gc_var4(res, tmp, x, cell);
@@ -1100,7 +1124,7 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
               : sexp_compile_error(ctx, "unexpected define", x);
             break;
           case SEXP_CORE_SET:
-            res = analyze_set(ctx, x, depth); break;
+            res = analyze_set(ctx, x, depth, defok); break;
           case SEXP_CORE_LAMBDA:
             res = analyze_lambda(ctx, x, depth); break;
           case SEXP_CORE_IF:
