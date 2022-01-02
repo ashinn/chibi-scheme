@@ -155,7 +155,7 @@
     (er-macro-transformer*
      (lambda (expr rename compare)
        (if (not (pair? expr))
-           (error "invalid use of non-identifier macro outside operator postion" expr)
+           (error "invalid use of non-identifier macro outside operator position" expr)
            (f expr rename compare))))))
 
 (define-syntax cond
