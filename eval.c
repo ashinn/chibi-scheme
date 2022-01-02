@@ -811,7 +811,7 @@ static sexp analyze_var_ref (sexp ctx, sexp x, sexp *varenv) {
   return res;
 }
 
-static sexp analyze_set (sexp ctx, sexp x, int depth, int defok) {
+static sexp analyze_set (sexp ctx, sexp x, int depth) {
   sexp res, varenv;
   sexp_gc_var4(ref, value, cell, op);
   sexp_gc_preserve4(ctx, ref, value, cell, op);
@@ -826,8 +826,6 @@ static sexp analyze_set (sexp ctx, sexp x, int depth, int defok) {
         res = sexp_compile_error(ctx, "can't mutate a syntax keyword", sexp_cadr(x));
       } else {
         res = analyze_macro_once(ctx, x, op, depth);
-        if (!sexp_exceptionp(res))
-          res = analyze(ctx, res, depth, defok);
       }
     } else {
       ref = analyze_var_ref(ctx, sexp_cadr(x), &varenv);
@@ -1124,7 +1122,12 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
               : sexp_compile_error(ctx, "unexpected define", x);
             break;
           case SEXP_CORE_SET:
-            res = analyze_set(ctx, x, depth, defok); break;
+            x = analyze_set(ctx, x, depth);
+            if (!sexp_exceptionp(x) && !sexp_setp(x))
+              goto loop;
+            else
+              res = x;
+            break;
           case SEXP_CORE_LAMBDA:
             res = analyze_lambda(ctx, x, depth); break;
           case SEXP_CORE_IF:
