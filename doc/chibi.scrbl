@@ -684,7 +684,9 @@ need to check manually before applying the predicate.
 \item{\ccode{sexp_fixnump(obj)} - \var{obj} is an immediate integer}
 \item{\ccode{sexp_flonump(obj)} - \var{obj} is an inexact real}
 \item{\ccode{sexp_bignump(obj)} - \var{obj} is a heap-allocated integer}
-\item{\ccode{sexp_integerp(obj)} - \var{obj} is an integer}
+\item{\ccode{sexp_integerp(obj)} - \var{obj} is an integer (or flonum truncating without loss)}
+\item{\ccode{sexp_ratiop(obj)} - \var{obj} is an exact rational (with SEXP_USE_RATIOS)}
+\item{\ccode{sexp_complexp(obj)} - \var{obj} is a complex number (with SEXP_USE_COMPLEX)}
 \item{\ccode{sexp_numberp(obj)} - \var{obj} is any kind of number}
 \item{\ccode{sexp_charp(obj)} - \var{obj} is a character}
 \item{\ccode{sexp_stringp(obj)} - \var{obj} is a string}
@@ -780,6 +782,8 @@ once.
 \item{\ccode{sexp_unbox_boolean(obj)} - 1 if \var{obj} is \scheme{#t}, 0 otherwise}
 \item{\ccode{sexp_make_fixnum(n)} - creates a new fixnum representing int \var{n}}
 \item{\ccode{sexp_unbox_fixnum(obj)} - converts a fixnum to a C integer}
+\item{\ccode{sexp_make_flonum(sexp ctx, float f)} - creates a new floating point value}
+\item{\ccode{sexp_flonum_value(obj)} - converts a flonum to a C float}
 \item{\ccode{sexp_make_character(ch)} - creates a new character representing char \var{ch}}
 \item{\ccode{sexp_unbox_character(obj)} - converts a character to a C char}
 \item{\ccode{sexp sexp_make_string_cursor(int offset)} - creates a string cursor for the given byte offset}
@@ -812,6 +816,7 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_cons(sexp ctx, sexp obj1, sexp obj2)} - create a new pair whose car is \var{obj1} and whose cdr is \var{obj2}}
 \item{\ccode{sexp_list1(sexp ctx, sexp obj)} - alias for sexp_cons(ctx, obj, SEXP_NULL)}
 \item{\ccode{sexp_list2(sexp ctx, sexp obj1, sexp obj2)} - create a list of two elements}
+\item{\ccode{sexp_list3(sexp ctx, sexp obj1, sexp obj2, sexp obj3)} - create a list of three elements}
 \item{\ccode{sexp_make_string(sexp ctx, sexp len, sexp ch)} - create a new Scheme string of \var{len} characters, all initialized to \var{ch}}
 \item{\ccode{sexp_c_string(sexp ctx, const char* str, int len)} - create a new Scheme string copying the first \var{len} characters of the C string \var{str}.  If \var{len} is -1, uses strlen(\var{str}).}
 \item{\ccode{sexp_intern(sexp ctx, const char* str, int len)} - interns a symbol from the first \var{len} characters of the C string \var{str}.  If \var{len} is -1, uses strlen(\var{str}).}
@@ -850,7 +855,7 @@ Any of these may fail and return the OOM exception object.
 \item{\ccode{sexp_assq(sexp ctx, sexp x, sexp ls)} - \scheme{assq}}
 \item{\ccode{sexp_reverse(sexp ctx, sexp ls)} - \scheme{reverse}}
 \item{\ccode{sexp_nreverse(sexp ctx, sexp ls)} - \scheme{reverse!}}
-\item{\ccode{sexp_append2(sexp ctx, sexp ls)} - \scheme{append} for two arguments}
+\item{\ccode{sexp_append2(sexp ctx, sexp ls1, sexp ls2)} - \scheme{append} for two arguments}
 \item{\ccode{sexp_copy_list(sexp ctx, sexp ls)} - return a shallow copy of \var{ls}}
 \item{\ccode{sexp_list_to_vector(sexp ctx, sexp ls)} - \scheme{list->vector}}
 \item{\ccode{sexp_symbol_to_string(sexp ctx, sexp sym)} - \scheme{symbol->string}}
