@@ -522,7 +522,6 @@ struct sexp_struct {
       sexp parent;
       sexp_uint_t length;
       void *value;
-      char body SEXP_FLEXIBLE_ARRAY;
     } cpointer;
     /* runtime types */
     struct {
@@ -1256,7 +1255,6 @@ enum sexp_uniform_vector_type {
 
 #define sexp_cpointer_freep(x)      (sexp_freep(x))
 #define sexp_cpointer_length(x)     (sexp_cpointer_field(x, length))
-#define sexp_cpointer_body(x)       (sexp_cpointer_field(x, body))
 #define sexp_cpointer_parent(x)     (sexp_cpointer_field(x, parent))
 #define sexp_cpointer_value(x)      (sexp_cpointer_field(x, value))
 #define sexp_cpointer_maybe_null_value(x) (sexp_not(x) ? NULL : sexp_cpointer_value(x))
