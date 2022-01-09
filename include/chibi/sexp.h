@@ -1,5 +1,5 @@
 /*  sexp.h -- header for sexp library                         */
-/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2022 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_H
@@ -7,7 +7,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#define SEXP_FLEXIBLE_ARRAY [1]
+#define SEXP_FLEXIBLE_ARRAY [SEXP_FLEXIBLE_ARRAY_SIZE]
 #else
 #define SEXP_FLEXIBLE_ARRAY []
 #endif

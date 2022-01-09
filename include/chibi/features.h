@@ -324,6 +324,15 @@
 #define SEXP_MAX_ANALYZE_DEPTH 8192
 #endif
 
+/* The size of flexible arrays (empty arrays at the end of a struct */
+/* representing the trailing data), when compiled with C++.  Technically */
+/* 0 is an illegal value here, and the C++ idiom is to use 1, but this */
+/* breaks compatibility with C when computing the size of structs, and */
+/* in practice all of the major C++ compilers support 0. */
+#ifndef SEXP_FLEXIBLE_ARRAY_SIZE
+#define SEXP_FLEXIBLE_ARRAY_SIZE 0
+#endif
+
 /************************************************************************/
 /*         DEFAULTS - DO NOT MODIFY ANYTHING BELOW THIS LINE            */
 /************************************************************************/
