@@ -1137,7 +1137,7 @@
                       rename compare
                       #t
                       ellipsis ellipsis-specified?
-                      (list _set!)
+                      (list (caar (cadr forms)))
                       (list (cadr forms)
                             (list
                              (cons (caar forms) _o)
