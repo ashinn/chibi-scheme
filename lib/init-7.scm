@@ -1080,7 +1080,7 @@
                (lambda (clause)
                  (if (and (list? clause) (= (length clause) 2))
                      (expand-pattern (car clause) (cadr clause))
-                     (error "invalid syntax template clause, which must be of the form (pattern template) (note fenders are not supported)"
+                     (error "invalid syntax rule, which must be of the form (pattern template) (note fenders are not supported)"
                             clause)))
                forms)
               (list
