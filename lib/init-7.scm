@@ -849,12 +849,12 @@
       (lambda () (current-output-port old-out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; syntax-rules
+;; syntax-rules and identifier-syntax
 
-(define (syntax-rules-transformer expr rename compare)
-  (let ((ellipsis-specified? (identifier? (cadr expr)))
-        (count 0)
+(define (syntax-template-transformer rename compare id-syntax? ellipsis ellipsis-specified? lits forms)
+  (let ((count 0)
         (_er-macro-transformer (rename 'er-macro-transformer))
+        (_er-macro-transformer* (rename 'er-macro-transformer*))
         (_lambda (rename 'lambda))      (_let (rename 'let))
         (_begin (rename 'begin))        (_if (rename 'if))
         (_and (rename 'and))            (_or (rename 'or))
@@ -874,15 +874,12 @@
         (_list->vector (rename 'list->vector))
         (_cons3 (rename 'cons-source))
         (_underscore (rename '_)))
-    (define ellipsis (if ellipsis-specified? (cadr expr) (rename '...)))
-    (define lits (if ellipsis-specified? (car (cddr expr)) (cadr expr)))
-    (define forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr)))
     (define (next-symbol s)
       (set! count (+ count 1))
       (rename (string->symbol (string-append s (%number->string count)))))
     (define (expand-pattern pat tmpl)
-      (let lp ((p (cdr pat))
-               (x (list _cdr _expr))
+      (let lp ((p (if id-syntax? pat (cdr pat)))
+               (x (if id-syntax? _expr (list _cdr _expr)))
                (dim 0)
                (vars '())
                (k (lambda (vars)
@@ -1072,7 +1069,7 @@
          ((null? t) (list _quote '()))
          (else t))))
     (list
-     _er-macro-transformer
+     (if id-syntax? _er-macro-transformer* _er-macro-transformer)
      (list _lambda (list _expr _rename _compare)
            (list
             _car
@@ -1083,7 +1080,7 @@
                (lambda (clause)
                  (if (and (list? clause) (= (length clause) 2))
                      (expand-pattern (car clause) (cadr clause))
-                     (error "invalid syntax-rules clause, which must be of the form (pattern template) (note fenders are not supported)"
+                     (error "invalid syntax template clause, which must be of the form (pattern template) (note fenders are not supported)"
                             clause)))
                forms)
               (list
@@ -1095,7 +1092,57 @@
 (define-syntax syntax-rules
   (er-macro-transformer
    (lambda (expr rename compare)
-     (syntax-rules-transformer expr rename compare))))
+     (let ((ellipsis-specified? (identifier? (cadr expr))))
+       (let ((ellipsis (if ellipsis-specified? (cadr expr) (rename '...)))
+             (lits (if ellipsis-specified? (car (cddr expr)) (cadr expr)))
+             (forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr))))
+         (syntax-template-transformer rename compare
+                                      #f
+                                      ellipsis ellipsis-specified?
+                                      lits forms))))))
+
+(define-syntax identifier-syntax
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (let ((template (cadr expr))
+           (_er-macro-transformer* (rename 'er-macro-transformer*))
+           (_lambda (rename 'lambda)) (_expr (rename 'expr))
+           (_rename (rename 'rename)) (_compare (rename 'compare))
+           (_if (rename 'if))         (_pair? (rename 'pair?))
+           (_cons (rename 'cons))     (_cdr (rename 'cdr))
+           (_quote (rename 'syntax-quote))
+           (_make-variable-transformer (rename 'make-variable-transformer))
+           (_set! (rename 'set!))     (_o (rename 'o)))
+       (cond ((= (length expr) 2)
+              (list
+               _er-macro-transformer*
+               (list _lambda (list _expr _rename _compare)
+                     (list _if (list _pair? _expr)
+                           (list _cons
+                                 (list _quote template)
+                                 (list _cdr _expr))
+                           (list _quote template)))))
+             (else
+              (let* ((ellipsis-specified? (identifier? (cadr expr)))
+                     (ellipsis (if ellipsis-specified? (cadr expr) (rename '...)))
+                     (forms (if ellipsis-specified? (cddr expr) (cdr expr))))
+                (if (not (and (= (length forms) 2)
+                              (identifier? (caar forms))
+                              (compare (caar (cadr forms)) _set!)
+                              (identifier? (car (cdar (cadr forms))))))
+                    (error "invalid identifier-syntax clauses" forms)
+                    (list
+                     _make-variable-transformer
+                     (syntax-template-transformer
+                      rename compare
+                      #t
+                      ellipsis ellipsis-specified?
+                      (list _set!)
+                      (list (cadr forms)
+                            (list
+                             (cons (caar forms) _o)
+                             (cons (cadr (car forms)) _o))
+                            (car forms))))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; let(rec)-syntax and datum->syntax
