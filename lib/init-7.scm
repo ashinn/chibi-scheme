@@ -1097,7 +1097,7 @@
              (lits (if ellipsis-specified? (car (cddr expr)) (cadr expr)))
              (forms (if ellipsis-specified? (cdr (cddr expr)) (cddr expr))))
          (syntax-template-transformer rename compare
-                                      #f
+                                      #f  ; not id-syntax?
                                       ellipsis ellipsis-specified?
                                       lits forms))))))
 
@@ -1135,14 +1135,17 @@
                      _make-variable-transformer
                      (syntax-template-transformer
                       rename compare
-                      #t
+                      #t     ; id-syntax?
                       ellipsis ellipsis-specified?
-                      (list (caar (cadr forms)))
-                      (list (cadr forms)
-                            (list
-                             (cons (caar forms) _o)
-                             (cons (cadr (car forms)) _o))
-                            (car forms))))))))))))
+                      (list  ; lits, i.e. (set!)
+                       (caar (cadr forms))) 
+                      (list  ; forms
+                       (cadr forms)  ; set! form
+                       (list         ; application form
+                        (cons (caar forms) _o)
+                        (cons (cadr (car forms)) _o))
+                       (car forms))  ; bare identifier form
+                      ))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; let(rec)-syntax and datum->syntax
