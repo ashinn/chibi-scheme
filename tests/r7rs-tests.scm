@@ -1025,6 +1025,7 @@
 (test 100 (string->number "100"))
 (test 256 (string->number "100" 16))
 (test 100.0 (string->number "1e2"))
+(test #f (string->number "1 2"))
 
 (test-end)
 

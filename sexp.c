@@ -3751,7 +3751,7 @@ sexp sexp_read_from_string (sexp ctx, const char *str, sexp_sint_t len) {
 
 sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp b) {
   int base;
-  sexp_gc_var1(in);
+  sexp_gc_var2(in, res);
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, b);
   if (((base=sexp_unbox_fixnum(b)) < 2) || (base > 36))
@@ -3759,20 +3759,22 @@ sexp sexp_string_to_number_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sex
   if (sexp_string_data(str)[0]=='\0'
       || (sexp_string_data(str)[1]=='\0' && !sexp_isxdigit((unsigned char)(sexp_string_data(str)[0]))))
     return SEXP_FALSE;
-  sexp_gc_preserve1(ctx, in);
+  sexp_gc_preserve2(ctx, in, res);
   in = sexp_open_input_string(ctx, str);
   if (sexp_string_data(str)[0] == '+') {
     if (sexp_isdigit((unsigned char)(sexp_string_data(str)[1]))
         || sexp_string_data(str)[1] == '.' || sexp_string_data(str)[1] == '#')
       sexp_read_char(ctx, in);
   }
-  in = ((sexp_string_data(str)[0] == '#' &&
-         sexp_tolower((unsigned char)sexp_string_data(str)[1]) != 'e' &&
-         sexp_tolower((unsigned char)sexp_string_data(str)[1]) != 'i')
-        || base == 10 ? sexp_read(ctx, in) :
-        sexp_read_number(ctx, in, base, 0));
-  sexp_gc_release1(ctx);
-  return sexp_numberp(in) ? in : SEXP_FALSE;
+  res = ((sexp_string_data(str)[0] == '#' &&
+          sexp_tolower((unsigned char)sexp_string_data(str)[1]) != 'e' &&
+          sexp_tolower((unsigned char)sexp_string_data(str)[1]) != 'i')
+         || base == 10 ? sexp_read(ctx, in) :
+         sexp_read_number(ctx, in, base, 0));
+  if (!sexp_numberp(res) || sexp_peek_char(ctx, in) != EOF)
+    res = SEXP_FALSE;
+  sexp_gc_release2(ctx);
+  return res;
 }
 
 sexp sexp_write_to_string (sexp ctx, sexp obj) {
