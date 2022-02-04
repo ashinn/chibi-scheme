@@ -37,7 +37,7 @@ static sexp_heap sexp_heap_last (sexp_heap h) {
   return h;
 }
 
-#if !SEXP_USE_FIXED_CHUNK_SIZE_HEAPS
+#if !SEXP_USE_FIXED_CHUNK_SIZE_HEAPS && !SEXP_USE_MALLOC
 static size_t sexp_heap_total_size (sexp_heap h) {
   size_t total_size = 0;
   for (; h; h=h->next)
@@ -696,6 +696,7 @@ int sexp_find_fixed_chunk_heap_usage(sexp ctx, size_t size, size_t* sum_freed, s
 }
 #endif
 
+#if ! SEXP_USE_MALLOC
 void* sexp_alloc (sexp ctx, size_t size) {
   void *res;
   size_t max_freed, sum_freed, total_size=0;
@@ -741,6 +742,7 @@ void* sexp_alloc (sexp ctx, size_t size) {
 #endif
   return res;
 }
+#endif
 
 
 void sexp_gc_init (void) {
