@@ -4,8 +4,7 @@
           datum->syntax syntax->datum
           generate-temporaries with-syntax syntax-violation
           with-ellipsis ellipsis-identifier?
-          define-syntax let-syntax letrec-syntax
-          make-variable-transformer identifier-syntax)
+          define-syntax let-syntax letrec-syntax)
   (import (rename (chibi)
                   (define-syntax %define-syntax)
                   (let-syntax %let-syntax)

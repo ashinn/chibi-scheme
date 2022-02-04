@@ -381,29 +381,6 @@
              (define-current-ellipsis ellipsis)
              . body))))))
 
-;; identifier-syntax adapted from R6RS Libraries section 12.9
-;; (changes: use only round brackets; can't use fenders in Chibi
-;; syntax-rules; wrap the transformer procedures in make-transformer
-;; so they can be used in Chibi anywhere a syntax transformer is
-;; used, not just in {define,let,letrec}-syntax)
-(define-syntax identifier-syntax
-  (syntax-rules (set!)
-    ((_ e)
-     (make-transformer
-      (lambda (x)
-        (syntax-case x ()
-          (id (identifier? #'id) #'e)
-          ((_ x (... ...)) #'(e x (... ...)))))))
-    ((_ (id exp1) ((set! var val) exp2))
-     #;(and (identifier? #'id) (identifier? #'var))
-     (make-transformer
-      (make-variable-transformer
-       (lambda (x)
-         (syntax-case x (set!)
-           ((set! var val) #'exp2)
-           ((id x (... ...)) #'(exp1 x (... ...)))
-           (id (identifier? #'id) #'exp1))))))))
-
 ;; Local variables:
 ;; eval: (put '%define-syntax 'scheme-indent-function 1)
 ;; End:
