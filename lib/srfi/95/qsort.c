@@ -82,9 +82,9 @@ static int sexp_isymbol_compare (sexp ctx, sexp a, sexp b) {
 #define sexp_non_immediate_ordered_numberp(x) 0
 #endif
 
-static int sexp_object_compare (sexp ctx, sexp a, sexp b, int depth) {
+static sexp_sint_t sexp_object_compare (sexp ctx, sexp a, sexp b, int depth) {
   sexp ls1, ls2;
-  int i, res, len;
+  sexp_sint_t i, res, len;
   if (a == b)
     return 0;
   if (sexp_pointerp(a)) {
