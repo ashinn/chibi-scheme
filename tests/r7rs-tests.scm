@@ -798,6 +798,7 @@
 (test #f (< +nan.0 0.0))
 (test #f (> +nan.0 0.0))
 (test '(#t #f) (list (<= 1 1 2) (<= 2 1 3)))
+(test #f (= 9007199254740992.0 9007199254740993))
 
 ;; From R7RS 6.2.6 Numerical operations:
 ;;

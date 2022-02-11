@@ -1886,12 +1886,13 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_make_fixnum(sexp_unbox_fixnum(a) - sexp_unbox_fixnum(b));
       break;
     case SEXP_NUM_FIX_FLO:
-      f = sexp_fixnum_to_double(a);
-      g = sexp_flonum_value(b);
-      if (isnan(g))
+      if (isinf(sexp_flonum_value(b))) {
+        r = sexp_flonum_value(b) > 0 ? SEXP_NEG_ONE : SEXP_ONE;
+      } else if (isnan(sexp_flonum_value(b))) {
         r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", b);
-      else
-        r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
+      } else {
+        r = sexp_compare(ctx, a, tmp=sexp_inexact_to_exact(ctx, NULL, 1, b));
+      }
       break;
     case SEXP_NUM_FIX_BIG:
       if ((sexp_bignum_hi(b) > 1) ||
@@ -1933,8 +1934,7 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       } else if (isnan(f)) {
         r = sexp_xtype_exception(ctx, NULL, "can't compare NaN", a);
       } else {
-        g = sexp_ratio_to_double(ctx, b);
-        r = sexp_make_fixnum(f < g ? -1 : f == g ? 0 : 1);
+        r = sexp_compare(ctx, tmp=sexp_inexact_to_exact(ctx, NULL, 1, a), b);
       }
       break;
     case SEXP_NUM_FIX_RAT:
