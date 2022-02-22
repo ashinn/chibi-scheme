@@ -999,8 +999,8 @@ sexp sexp_complex_sub (sexp ctx, sexp a, sexp b) {
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
   tmp = sexp_complex_copy(ctx, b);
-  sexp_negate(sexp_complex_real(tmp));
-  sexp_negate(sexp_complex_imag(tmp));
+  sexp_negate_maybe_ratio(sexp_complex_real(tmp));
+  sexp_negate_maybe_ratio(sexp_complex_imag(tmp));
   res = sexp_complex_add(ctx, a, tmp);
   sexp_gc_release2(ctx);
   return res;
@@ -1453,11 +1453,7 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     sexp_negate_exact(sexp_ratio_numerator(tmp2));
     r = sexp_ratio_add(ctx, a, tmp2);
     if (negatep) {
-      if (sexp_ratiop(r)) {
-        sexp_negate_exact(sexp_ratio_numerator(r));
-      } else {
-        sexp_negate_exact(r);
-      }
+      sexp_negate_maybe_ratio(r);
     }
     break;
 #endif
@@ -1489,10 +1485,10 @@ sexp sexp_sub (sexp ctx, sexp a, sexp b) {
     if (negatep) {
       if (sexp_complexp(r)) {
         r = sexp_complex_copy(ctx, r);
-        sexp_negate(sexp_complex_real(r));
-        sexp_negate(sexp_complex_imag(r));
+        sexp_negate_maybe_ratio(sexp_complex_real(r));
+        sexp_negate_maybe_ratio(sexp_complex_imag(r));
       } else {
-        sexp_negate(r);
+        sexp_negate_maybe_ratio(r);
       }
     }
     break;

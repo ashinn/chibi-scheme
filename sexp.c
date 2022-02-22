@@ -3632,9 +3632,9 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
 #if SEXP_USE_COMPLEX
           if (sexp_complexp(res)) {
             if (sexp_complex_real(res) == SEXP_ZERO) {
-              sexp_negate(sexp_complex_imag(res));
+              sexp_negate_maybe_ratio(sexp_complex_imag(res));
             } else {
-              sexp_negate(sexp_complex_real(res));
+              sexp_negate_maybe_ratio(sexp_complex_real(res));
             }
           } else
 #endif
