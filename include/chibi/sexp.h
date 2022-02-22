@@ -1080,6 +1080,13 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
   else                                                  \
     sexp_negate_exact(x)
 
+#define sexp_negate_maybe_ratio(x)                      \
+  if (sexp_ratiop(x)) {                                 \
+    sexp_negate_exact(sexp_ratio_numerator(x));         \
+  } else {                                              \
+    sexp_negate(x);                                     \
+  }
+
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
 
 #if SEXP_64_BIT
