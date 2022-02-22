@@ -560,7 +560,7 @@ sexp run_main (int argc, char **argv) {
       sym=sexp_intern(ctx, sexp_raw_script_file_symbol, -1), tmp);
     for (j=argc-1; j>=i; j--)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,argv[j],-1), args);
-    if (main_symbol)
+    if (main_module)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,main_symbol,-1), args);
     if (args == SEXP_NULL)
       args = sexp_cons(ctx, tmp=sexp_c_string(ctx,"",-1), args);
