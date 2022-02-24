@@ -689,25 +689,6 @@
         (cond ((current-test-group)
                => test-group-indent-width)
               (else 0)))))
-  ;; update group info
-  (cond
-   ((current-test-group)
-    => (lambda (group)
-         (if (not (eq? 'SKIP status))
-             (test-group-inc! group 'count))
-         (test-group-inc! group status)
-         ;; maybe wrap long status lines
-         (let ((width (max (- (current-column-width)
-                              (test-group-indent-width group))
-                           (current-group-indent)))
-               (column
-                (+ (string-length (test-group-name group))
-                   (test-group-ref group 'count 0)
-                   1)))
-           (if (and (zero? (modulo column width))
-                    (not (test-group-ref group 'verbose)))
-               (display
-                (string-copy indent (current-group-indent))))))))
   ;; update global failure count for exit status
   (cond
    ((or (eq? status 'FAIL) (eq? status 'ERROR))
@@ -730,6 +711,25 @@
            (test-group-push! group 'failures (list indent status info)))))
     (cond ((current-test-group)
            => (lambda (group) (test-group-set! group 'trailing #t))))))
+  ;; update group info
+  (cond
+   ((current-test-group)
+    => (lambda (group)
+         (if (not (eq? 'SKIP status))
+             (test-group-inc! group 'count))
+         (test-group-inc! group status)
+         ;; maybe wrap long status lines
+         (let ((width (max (- (current-column-width)
+                              (test-group-indent-width group))
+                           (current-group-indent)))
+               (column
+                (+ (string-length (test-group-name group))
+                   (test-group-ref group 'count 0)
+                   1)))
+           (when (and (zero? (modulo column width))
+                      (not (test-group-ref group 'verbose)))
+             (newline)
+             (display (string-copy indent (current-group-indent))))))))
   (flush-output-port)
   status)
 
