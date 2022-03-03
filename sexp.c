@@ -1283,7 +1283,7 @@ sexp sexp_string_index_to_cursor (sexp ctx, sexp self, sexp_sint_t n, sexp str, 
   if (i > (sexp_cached_char_idx(str) + ((sexp_string_length(str) - sexp_cached_char_idx(str)) >> 1))) {
     j = sexp_string_size(str);
     i = -(sexp_string_length(str) - i);
-    } else if (i > (sexp_cached_char_idx(str) >> 1)) {
+  } else if (i > (sexp_cached_char_idx(str) >> 1)) {
     j = sexp_unbox_string_cursor(sexp_cached_cursor(str));
     i -= sexp_cached_char_idx(str);
   }
