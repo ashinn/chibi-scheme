@@ -787,18 +787,19 @@ static sexp make_param_list (sexp ctx, sexp_uint_t i) {
   return res;
 }
 
-static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
+static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i, sexp_sint_t flags) {
+  int j = i+(flags & SEXP_PROC_VARIADIC);
   sexp ls, res, env;
   sexp_gc_var6(bc, params, ref, refs, lambda, ctx2);
-  if (i == sexp_opcode_num_args(op)) { /* return before preserving */
+  if (j == sexp_opcode_num_args(op)) { /* return before preserving */
     if (sexp_opcode_proc(op)) return sexp_opcode_proc(op);
-  } else if (i < sexp_opcode_num_args(op)) {
+  } else if (j < sexp_opcode_num_args(op)) {
     return sexp_compile_error(ctx, "not enough args for opcode", op);
   } else if (! sexp_opcode_variadic_p(op)) { /* i > num_args */
     return sexp_compile_error(ctx, "too many args for opcode", op);
   }
   sexp_gc_preserve6(ctx, bc, params, ref, refs, lambda, ctx2);
-  params = make_param_list(ctx, i);
+  params = make_param_list(ctx, j);
   lambda = sexp_make_lambda(ctx, params);
   ctx2 = sexp_make_child_context(ctx, lambda);
   env = sexp_extend_env(ctx2, sexp_context_env(ctx), params, lambda);
@@ -819,12 +820,34 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i) {
       generate_opcode_app(ctx2, refs);
       bc = sexp_complete_bytecode(ctx2);
       sexp_bytecode_name(bc) = sexp_opcode_name(op);
-      res=sexp_make_procedure(ctx2, SEXP_ZERO, sexp_make_fixnum(i), bc, SEXP_VOID);
-      if (i == sexp_opcode_num_args(op))
+      res=sexp_make_procedure(ctx2, sexp_make_fixnum(flags), sexp_make_fixnum(i), bc, SEXP_VOID);
+      if (j == sexp_opcode_num_args(op))
         sexp_opcode_proc(op) = res;
     }
   }
   sexp_gc_release6(ctx);
+  return res;
+}
+
+sexp sexp_make_foreign_proc(sexp ctx, const char *name, int num_args, int flags,
+                            const char *fname, sexp_proc1 f) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_make_foreign (ctx, name, num_args+((flags & SEXP_PROC_VARIADIC)>0), 0, fname, f, NULL);
+  if (!sexp_exceptionp(res))
+    res = make_opcode_procedure (ctx, res, num_args, flags);
+  sexp_gc_release1(ctx);
+  return res;
+}
+
+sexp sexp_define_foreign_proc_aux (sexp ctx, sexp env, const char *name,int num_args,
+                                   int flags, const char *fname, sexp_proc1 f, sexp data) {
+  sexp_gc_var2(sym, res);
+  sexp_gc_preserve2(ctx, sym, res);
+  res = sexp_make_foreign_proc(ctx, name, num_args, flags, fname, f);
+  if (!sexp_exceptionp(res))
+    sexp_env_define(ctx, env, sym = sexp_intern(ctx, name, -1), res);
+  sexp_gc_release2(ctx);
   return res;
 }
 
@@ -1274,7 +1297,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     sexp_context_top(ctx) = top;
     if (sexp_opcodep(tmp1)) {
       /* compile non-inlined opcode applications on the fly */
-      tmp1 = make_opcode_procedure(ctx, tmp1, i);
+      tmp1 = make_opcode_procedure(ctx, tmp1, i, SEXP_PROC_NONE);
       if (sexp_exceptionp(tmp1)) {
         _ARG1 = tmp1;
         goto call_error_handler;
