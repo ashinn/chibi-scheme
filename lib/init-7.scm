@@ -143,20 +143,12 @@
     (lambda (expr use-env mac-env)
       (f expr mac-env))))
 
-(define er-macro-transformer*
+(define er-macro-transformer
   (lambda (f)
     (lambda (expr use-env mac-env)
       (f expr
          (make-renamer mac-env)
          (lambda (x y) (identifier=? use-env x use-env y))))))
-
-(define er-macro-transformer
-  (lambda (f)
-    (er-macro-transformer*
-     (lambda (expr rename compare)
-       (if (not (pair? expr))
-           (error "invalid use of non-identifier macro outside operator position" expr)
-           (f expr rename compare))))))
 
 (define-syntax cond
   (er-macro-transformer
@@ -881,8 +873,8 @@
       (set! count (+ count 1))
       (rename (string->symbol (string-append s (%number->string count)))))
     (define (expand-pattern pat tmpl)
-      (let lp ((p (cdr pat))
-               (x (list _cdr _expr))
+      (let lp ((p pat)
+               (x _expr)
                (dim 0)
                (vars '())
                (k (lambda (vars)
