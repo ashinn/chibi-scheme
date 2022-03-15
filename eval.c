@@ -399,18 +399,6 @@ static sexp sexp_make_macro (sexp ctx, sexp p, sexp e) {
   return mac;
 }
 
-sexp sexp_make_variable_transformer_op (sexp ctx, sexp self, sexp_sint_t n, sexp base_proc) {
-  sexp flags;
-  sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, base_proc);
-  if (sexp_procedure_variable_transformer_p(base_proc))
-    return base_proc;
-  flags = sexp_make_fixnum(sexp_unbox_fixnum(sexp_procedure_flags(base_proc)) | SEXP_PROC_VARIABLE_TRANSFORMER);
-  return sexp_make_procedure(ctx, flags,
-                             sexp_make_fixnum(sexp_procedure_num_args(base_proc)),
-                             sexp_procedure_code(base_proc),
-                             sexp_procedure_vars(base_proc));
-}
-
 sexp sexp_make_synclo_op (sexp ctx, sexp self, sexp_sint_t n, sexp env, sexp fv, sexp expr) {
   sexp res;
   sexp_assert_type(ctx, sexp_envp, SEXP_ENV, env);
