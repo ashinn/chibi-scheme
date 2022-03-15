@@ -1,5 +1,5 @@
 /*  sexp.h -- header for sexp library                         */
-/*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
+/*  Copyright (c) 2009-2022 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #ifndef SEXP_H
@@ -7,7 +7,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#define SEXP_FLEXIBLE_ARRAY [1]
+#define SEXP_FLEXIBLE_ARRAY [SEXP_FLEXIBLE_ARRAY_SIZE]
 #else
 #define SEXP_FLEXIBLE_ARRAY []
 #endif
@@ -523,7 +523,6 @@ struct sexp_struct {
       sexp parent;
       sexp_uint_t length;
       void *value;
-      char body SEXP_FLEXIBLE_ARRAY;
     } cpointer;
     /* runtime types */
     struct {
@@ -1082,6 +1081,13 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
   else                                                  \
     sexp_negate_exact(x)
 
+#define sexp_negate_maybe_ratio(x)                      \
+  if (sexp_ratiop(x)) {                                 \
+    sexp_negate_exact(sexp_ratio_numerator(x));         \
+  } else {                                              \
+    sexp_negate(x);                                     \
+  }
+
 #if SEXP_USE_FLONUMS || SEXP_USE_BIGNUMS
 
 #if SEXP_64_BIT
@@ -1258,7 +1264,6 @@ enum sexp_uniform_vector_type {
 
 #define sexp_cpointer_freep(x)      (sexp_freep(x))
 #define sexp_cpointer_length(x)     (sexp_cpointer_field(x, length))
-#define sexp_cpointer_body(x)       (sexp_cpointer_field(x, body))
 #define sexp_cpointer_parent(x)     (sexp_cpointer_field(x, parent))
 #define sexp_cpointer_value(x)      (sexp_cpointer_field(x, value))
 #define sexp_cpointer_maybe_null_value(x) (sexp_not(x) ? NULL : sexp_cpointer_value(x))
@@ -1760,6 +1765,7 @@ SEXP_API sexp sexp_file_exception (sexp ctx, sexp self, const char *msg, sexp x)
 SEXP_API sexp sexp_type_exception (sexp ctx, sexp self, sexp_uint_t type_id, sexp x);
 SEXP_API sexp sexp_xtype_exception (sexp ctx, sexp self, const char *msg, sexp x);
 SEXP_API sexp sexp_range_exception (sexp ctx, sexp obj, sexp start, sexp end);
+SEXP_API sexp sexp_get_stack_trace (sexp ctx);
 SEXP_API sexp sexp_print_exception_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp out);
 SEXP_API sexp sexp_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_print_exception_stack_trace_op (sexp ctx, sexp self, sexp_sint_t n, sexp exn, sexp out);
