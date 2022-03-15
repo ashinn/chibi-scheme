@@ -1,7 +1,5 @@
 ;; Written by Marc Nieper-Wißkirchen
 
-;; TODO: make-variable-transformer and identifier-syntax.
-
 ;; TODO: make-synthetic-identifier should return a truly unique (that
 ;; is not free-identifier=? to any other) identifier.
 
@@ -16,7 +14,7 @@
   (let ((env (or (current-usage-environment) (current-environment))))
     (identifier=? env x env y)))
 
-(define (make-transformer transformer)
+(define (%make-transformer transformer)
   (cond
    ((and (= 1 (procedure-arity transformer))
          (not (procedure-variadic? transformer)))
@@ -39,6 +37,12 @@
           (current-usage-environment old-use-env)
           (current-renamer old-renamer)
           result))))))
+
+(define (make-transformer base-transformer)
+  (let ((wrapped-transformer (%make-transformer base-transformer)))
+    (if (procedure-variable-transformer? base-transformer)
+        (make-variable-transformer wrapped-transformer)
+        wrapped-transformer)))
 
 (%define-syntax define-syntax
   (lambda (expr use-env mac-env)

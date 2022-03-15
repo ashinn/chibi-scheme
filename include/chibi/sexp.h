@@ -270,6 +270,7 @@ typedef int sexp_sint_t;
 #define SEXP_PROC_NONE ((sexp_uint_t)0)
 #define SEXP_PROC_VARIADIC ((sexp_uint_t)1)
 #define SEXP_PROC_UNUSED_REST ((sexp_uint_t)2)
+#define SEXP_PROC_VARIABLE_TRANSFORMER ((sexp_uint_t)4)
 
 
 #ifdef SEXP_USE_INTTYPES
@@ -1152,6 +1153,7 @@ SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
 #define sexp_procedure_flags(x)      (sexp_field(x, procedure, SEXP_PROCEDURE, flags))
 #define sexp_procedure_variadic_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_VARIADIC)
 #define sexp_procedure_unused_rest_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_UNUSED_REST)
+#define sexp_procedure_variable_transformer_p(x) (sexp_unbox_fixnum(sexp_procedure_flags(x)) & SEXP_PROC_VARIABLE_TRANSFORMER)
 #define sexp_procedure_code(x)       (sexp_field(x, procedure, SEXP_PROCEDURE, bc))
 #define sexp_procedure_vars(x)       (sexp_field(x, procedure, SEXP_PROCEDURE, vars))
 #define sexp_procedure_source(x)     sexp_bytecode_source(sexp_procedure_code(x))

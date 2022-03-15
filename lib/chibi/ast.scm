@@ -109,6 +109,34 @@
        ((opcode? x) (cond ((opcode-name x) => string->symbol) (else x)))
        (else x)))))
 
+;;> \section{Identifier Macros}
+
+;;> \procedure{(make-variable-transformer proc)}
+
+;;> Returns a new procedure wrapping the input procedure \var{proc}.
+;;> The returned procedure, if used as a macro transformer procedure,
+;;> can expand an instance of \scheme{set!} with its keyword on the
+;;> left hand side.
+
+;;> \macro{(identifier-syntax clauses ...)}
+
+;;> A high-level form for creating identifier macros. See
+;;> \hyperlink["http://www.r6rs.org/final/html/r6rs/r6rs-Z-H-14.html#node_idx_796"]{the R6RS specification.}
+
+(define-syntax identifier-syntax
+  (syntax-rules (set!)
+    ((_ template)
+     (syntax-rules ()
+       ((_ xs (... ...))
+        (template xs (... ...)))
+       (x template)))
+    ((_ (id_1 template_1) ((set! id_2 pattern) template_2))
+     (make-variable-transformer
+      (syntax-rules (set!)
+        ((set! id_2 pattern) template_2)
+        ((id_1 xs (... ...)) (template_1 xs (... ...)))
+        (id_1 template_1))))))
+
 ;;> \section{Types}
 
 ;;> All objects have an associated type, and types may have parent

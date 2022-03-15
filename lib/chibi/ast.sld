@@ -1,7 +1,8 @@
 
 (define-library (chibi ast)
   (export
-   analyze optimize env-cell ast->sexp macroexpand type-of
+   analyze optimize env-cell ast->sexp macroexpand identifier-syntax
+   type-of
    Object Input-Port Output-Port Opcode Procedure Bytecode Macro Env
    Number Bignum Flonum Integer Complex Char Boolean
    Symbol String Byte-Vector Vector Pair File-Descriptor
@@ -28,7 +29,8 @@
    opcode-class opcode-code opcode-data opcode-variadic?
    macro-procedure macro-env macro-source macro-aux macro-aux-set!
    procedure-code procedure-vars procedure-name procedure-name-set!
-   procedure-arity procedure-variadic? procedure-flags make-procedure
+   procedure-arity procedure-variadic? procedure-variable-transformer?
+   procedure-flags make-variable-transformer make-procedure
    bytecode-name bytecode-literals bytecode-source
    port-line port-line-set! port-source? port-source?-set!
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!
