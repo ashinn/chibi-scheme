@@ -84,11 +84,11 @@
  ;; this could be fixed in theory)
  (modules
   (test-begin "identifier syntax")
-  (define syntax-test-env (environment '(chibi)))
+  (define syntax-test-env (environment '(chibi) '(chibi ast)))
 
   (eval
    '(define-syntax low-level-id-macro
-      (er-macro-transformer*
+      (er-macro-transformer
        (lambda (expr rename compare)
          (if (pair? expr)
              (list (rename 'quote) 'operator)
@@ -102,7 +102,7 @@
   (eval
    '(define-syntax low-level-vt
     (make-variable-transformer
-     (er-macro-transformer*
+     (er-macro-transformer
       (lambda (expr rename compare)
         (list (rename 'quote)
               (if (pair? expr)
