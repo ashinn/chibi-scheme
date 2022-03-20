@@ -288,7 +288,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 
 #define load_init(bootp) if (! init_loaded++) do {                      \
       init_context();                                                   \
-      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, SEXP_SEVEN, bootp, nonblocking)); \
+      check_exception(ctx, env=sexp_load_standard_repl_env(ctx, env, standard, bootp, nonblocking)); \
     } while (0)
 
 /* static globals for the sake of resuming from within emscripten */
@@ -306,7 +306,7 @@ sexp run_main (int argc, char **argv) {
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS, nonblocking=0;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
-  sexp out=SEXP_FALSE, ctx=NULL, ls, res=SEXP_ZERO;
+  sexp out=SEXP_FALSE, ctx=NULL, ls, res=SEXP_ZERO, standard=SEXP_SEVEN;
   sexp_gc_var4(tmp, sym, args, env);
   args = SEXP_NULL;
   env = NULL;
@@ -502,6 +502,15 @@ sexp run_main (int argc, char **argv) {
       break;
     case 'r':
       main_symbol = argv[i][2] == '\0' ? "main" : argv[i]+2;
+      break;
+    case 'S':
+      arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
+      j = atoi(arg);
+      if (0 < j && j <= 1000) {
+        standard = sexp_make_fixnum(j);
+      } else {
+        fprintf(stderr, "-S<standard> should be an integer in [1, 1000] but got %s\n", arg);
+      }
       break;
     case 's':
       init_context(); sexp_global(ctx, SEXP_G_STRICT_P) = SEXP_TRUE;
