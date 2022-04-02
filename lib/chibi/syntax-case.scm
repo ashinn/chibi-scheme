@@ -23,7 +23,7 @@
             (old-renamer (current-renamer)))
         (current-usage-environment use-env)
         (current-renamer (make-renamer mac-env))
-        (let ((result (transformer expr)))
+        (let ((result (capture-lookup-wrap use-env (transformer expr))))
           (current-usage-environment old-use-env)
           (current-renamer old-renamer)
           result))))

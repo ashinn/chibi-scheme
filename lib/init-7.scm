@@ -133,22 +133,32 @@
        '()))
     rename))
 
+(define capture-lookup-wrap
+  (lambda (use-env expansion)
+    (if (procedure? expansion)
+        (expansion use-env)
+        expansion)))
+
 (define sc-macro-transformer
   (lambda (f)
     (lambda (expr use-env mac-env)
-      (close-syntax (f expr use-env) mac-env))))
+      (close-syntax
+       (capture-lookup-wrap use-env (f expr use-env))
+       mac-env))))
 
 (define rsc-macro-transformer
   (lambda (f)
     (lambda (expr use-env mac-env)
-      (f expr mac-env))))
+      (capture-lookup-wrap use-env (f expr mac-env)))))
 
 (define er-macro-transformer
   (lambda (f)
     (lambda (expr use-env mac-env)
-      (f expr
-         (make-renamer mac-env)
-         (lambda (x y) (identifier=? use-env x use-env y))))))
+      (capture-lookup-wrap
+       use-env
+       (f expr
+          (make-renamer mac-env)
+          (lambda (x y) (identifier=? use-env x use-env y)))))))
 
 (define-syntax cond
   (er-macro-transformer
