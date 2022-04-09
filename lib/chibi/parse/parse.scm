@@ -663,7 +663,7 @@
 (define (parse-string str)
   (parse-map (parse-with-failure-reason
               (parse-seq-list (map parse-char (string->list str)))
-              `(expected ,str))
+              (string-append "expected '" str "'"))
              list->string))
 
 ;;> Parse a sequence of characters matching \var{x} as with
