@@ -520,10 +520,15 @@
 
 ;;> Parse with \var{f} once, keep the first result, and commit to the
 ;;> current parse path, discarding any prior backtracking options.
+;;> Since prior backtracking options are discarded, prior failure
+;;> continuations are also not used. By default, \scheme{#f} is
+;;> returned on failure, a custom failure continuation can be passed
+;;> as the second argument.
 
-(define (parse-commit f)
-  (lambda (source index sk fk)
-    (f source index (lambda (res s i fk) (sk res s i (lambda (s i r) #f))) fk)))
+(define (parse-commit f . o)
+  (let ((commit-fk (if (pair? o) (car o) (lambda (s i r) #f))))
+    (lambda (source index sk fk)
+      (f source index (lambda (res s i fk) (sk res s i commit-fk)) fk))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
