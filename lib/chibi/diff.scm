@@ -186,7 +186,7 @@
         (write-string (green line) out))
        ((remove)
         (write-string (red "-") out)
-        (write-string (red line out)))
+        (write-string (red line) out))
        ((same)
         (write-char #\space out)
         (write-string line out))
