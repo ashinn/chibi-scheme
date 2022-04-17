@@ -21,6 +21,7 @@
 
       (test-not (parse parse-nothing ""))
       (test-not (parse parse-nothing "a"))
+      (test-error (parse-fully parse-nothing ""))
 
       (test-not (parse (parse-char #\a) ""))
       (test-assert (parse-fully (parse-char #\a) "a"))
