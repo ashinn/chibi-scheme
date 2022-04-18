@@ -354,32 +354,42 @@
 (test '(list 3 4) (quasiquote (list (unquote (+ 1 2)) 4)) )
 (test `(list ,(+ 1 2) 4) (quasiquote (list (unquote (+ 1 2)) 4)))
 
-(define plus
+(define any-arity
   (case-lambda 
-   (() 0)
-   ((x) x)
-   ((x y) (+ x y))
-   ((x y z) (+ (+ x y) z))
-   (args (apply + args))))
+    (() 'zero)
+    ((x) x)
+    ((x y) (cons x y))
+    ((x y z) (list x y z))
+    (args (cons 'many args))))
 
-(test 0 (plus))
-(test 1 (plus 1))
-(test 3 (plus 1 2))
-(test 6 (plus 1 2 3))
-(test 10 (plus 1 2 3 4))
+(test 'zero (any-arity))
+(test 1 (any-arity 1))
+(test '(1 . 2) (any-arity 1 2))
+(test '(1 2 3) (any-arity 1 2 3))
+(test '(many 1 2 3 4) (any-arity 1 2 3 4))
 
-(define mult
+(define rest-arity
   (case-lambda 
-   (() 1)
-   ((x) x)
-   ((x y) (* x y))
-   ((x y . z) (apply mult (* x y) z))))
+    (() '(zero))
+    ((x) (list 'one x))
+    ((x y) (list 'two x y))
+    ((x y . z) (list 'more x y z))))
 
-(test 1 (mult))
-(test 1 (mult 1))
-(test 2 (mult 1 2))
-(test 6 (mult 1 2 3))
-(test 24 (mult 1 2 3 4))
+(test '(zero) (rest-arity))
+(test '(one 1) (rest-arity 1))
+(test '(two 1 2) (rest-arity 1 2))
+(test '(more 1 2 (3)) (rest-arity 1 2 3))
+
+(define dead-clause
+  (case-lambda
+    ((x . y) 'many)
+    (() 'none)
+    (foo 'unreachable)))
+
+(test 'none (dead-clause))
+(test 'many (dead-clause 1))
+(test 'many (dead-clause 1 2))
+(test 'many (dead-clause 1 2 3))
 
 (test-end)
 
