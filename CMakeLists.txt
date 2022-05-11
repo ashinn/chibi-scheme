@@ -207,7 +207,7 @@ else()
     set(bootstrap chibi-scheme-bootstrap)
 endif()
 
-# when cross-compiling, we may nee
+# when cross-compiling, we need to use a separately built chibi-scheme executable:
 set(BOOTSTRAP ${bootstrap} CACHE FILEPATH "chibi-scheme path for bootstrapping")
 
 function(add_stubs_library stub)
