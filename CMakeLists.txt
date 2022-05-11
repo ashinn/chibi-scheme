@@ -207,6 +207,9 @@ else()
     set(bootstrap chibi-scheme-bootstrap)
 endif()
 
+# when cross-compiling, we may nee
+set(BOOTSTRAP ${bootstrap} CACHE FILEPATH "chibi-scheme path for bootstrapping")
+
 function(add_stubs_library stub)
     set(link-libraries LINK_LIBRARIES)
     cmake_parse_arguments(stubs-options "" "" "${link-libraries}" ${ARGN})
@@ -222,7 +225,7 @@ function(add_stubs_library stub)
     file(MAKE_DIRECTORY ${stubdir})
 
     add_custom_command(OUTPUT ${stubout}
-        COMMAND ${bootstrap} ${chibi-ffi} ${stubfile} ${stubout}
+        COMMAND ${BOOTSTRAP} ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
