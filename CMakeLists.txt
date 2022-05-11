@@ -208,7 +208,7 @@ else()
 endif()
 
 # when cross-compiling, we need to use a separately built chibi-scheme executable:
-set(BOOTSTRAP ${bootstrap} CACHE FILEPATH "chibi-scheme path for bootstrapping")
+set(CHIBI ${bootstrap} CACHE FILEPATH "chibi-scheme path for bootstrapping")
 
 function(add_stubs_library stub)
     set(link-libraries LINK_LIBRARIES)
@@ -225,7 +225,7 @@ function(add_stubs_library stub)
     file(MAKE_DIRECTORY ${stubdir})
 
     add_custom_command(OUTPUT ${stubout}
-        COMMAND ${BOOTSTRAP} ${chibi-ffi} ${stubfile} ${stubout}
+        COMMAND ${CHIBI} ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -384,12 +384,12 @@ set(chibi-scheme-tests
 
 foreach(e ${chibi-scheme-tests})
     add_test(NAME "${e}"
-        COMMAND ${BOOTSTRAP} -I ${CMAKE_CURRENT_BINARY_DIR}/lib tests/${e}.scm
+        COMMAND ${CHIBI} -I ${CMAKE_CURRENT_BINARY_DIR}/lib tests/${e}.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endforeach()
 
 add_test(NAME r5rs-test
-    COMMAND ${BOOTSTRAP} -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xchibi tests/r5rs-tests.scm
+    COMMAND ${CHIBI} -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xchibi tests/r5rs-tests.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 file(GLOB_RECURSE srfi_tests RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/lib
@@ -429,7 +429,7 @@ foreach(e ${testlibs})
     string(REGEX REPLACE "/" "_" testname ${e})
     string(REGEX REPLACE "/" " " form ${e})
     add_test(NAME "lib_${testname}"
-        COMMAND ${BOOTSTRAP} -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+        COMMAND ${CHIBI} -I ${CMAKE_CURRENT_BINARY_DIR}/lib
         -e "(import (${form}))"
         -e "(run-tests)"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -465,15 +465,15 @@ add_test(NAME "foreign-typeid"
 #
 
 add_custom_command(OUTPUT chibi.img
-    COMMAND ${BOOTSTRAP} -I ${CMAKE_CURRENT_BINARY_DIR}/lib -mchibi.repl
+    COMMAND ${CHIBI} -I ${CMAKE_CURRENT_BINARY_DIR}/lib -mchibi.repl
     -d ${CMAKE_CURRENT_BINARY_DIR}/chibi.img
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(OUTPUT red.img
-    COMMAND ${BOOTSTRAP} -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xscheme.red -mchibi.repl
+    COMMAND ${CHIBI} -I ${CMAKE_CURRENT_BINARY_DIR}/lib -xscheme.red -mchibi.repl
     -d ${CMAKE_CURRENT_BINARY_DIR}/red.img
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(OUTPUT snow.img
-    COMMAND ${BOOTSTRAP} -I ${CMAKE_CURRENT_BINARY_DIR}/lib
+    COMMAND ${CHIBI} -I ${CMAKE_CURRENT_BINARY_DIR}/lib
         -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils
         -d ${CMAKE_CURRENT_BINARY_DIR}/snow.img
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
