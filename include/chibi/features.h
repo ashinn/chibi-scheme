@@ -177,6 +177,10 @@
 /* uncomment this if you don't want 1## style approximate digits */
 /* #define SEXP_USE_PLACEHOLDER_DIGITS 0 */
 
+/* uncomment this to disable a workaround for numeric formatting, */
+/* to fix numbers in locales which don't use the '.' decimal sep */
+/* #define SEXP_USE_PATCH_NON_DECIMAL_NUMERIC_FORMATS 0 */
+
 /* uncomment this if you don't need extended math operations */
 /*   This includes the trigonometric and expt functions. */
 /*   Automatically disabled if you've disabled flonums. */
@@ -663,6 +667,10 @@
 
 #ifndef SEXP_PLACEHOLDER_DIGIT
 #define SEXP_PLACEHOLDER_DIGIT '#'
+#endif
+
+#ifndef SEXP_USE_PATCH_NON_DECIMAL_NUMERIC_FORMATS
+#define SEXP_USE_PATCH_NON_DECIMAL_NUMERIC_FORMATS 1
 #endif
 
 #ifndef SEXP_USE_MATH

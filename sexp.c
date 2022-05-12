@@ -2111,7 +2111,7 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
   sexp_uint_t res;
 #endif
   sexp_uint_t len, c;
-  sexp_sint_t i=0;
+  sexp_sint_t i=0, j, k;
 #if SEXP_USE_FLONUMS
   double f, ftmp;
 #endif
@@ -2173,6 +2173,9 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
       } else
 #endif
       {
+        /* snprintf doesn't guarantee the shortest accurate */
+        /* representation, so we try successively longer formats until */
+        /* we find the one that scans back as the original number */
         i = snprintf(numbuf, sizeof(numbuf), "%.15lg", f);
         if (sscanf(numbuf, "%lg", &ftmp) == 1 && ftmp != f) {
           i = snprintf(numbuf, sizeof(numbuf), "%.16lg", f);
@@ -2180,7 +2183,28 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
             i = snprintf(numbuf, sizeof(numbuf), "%.17lg", f);
           }
         }
-        if (!strchr(numbuf, '.') && !strchr(numbuf, 'e')) {
+        for (j = 0; j < i; ++j) {
+          if (numbuf[j] == '.' || numbuf[j] == 'e') {
+            break;
+#if SEXP_USE_PATCH_NON_DECIMAL_NUMERIC_FORMATS
+          } else if (!sexp_isdigit(numbuf[j]) && numbuf[j] != '-') {
+            /* handle the case where we're embedded in an app which has */
+            /* called setlocale to something which doesn't use a decimal */
+            /* separator (e.g. a comma), by replacing any */
+            /* non-digit/decimal char with a decimal */
+            for (k = j+1; k < i && !sexp_isdigit(numbuf[k]); ++k)
+              ;
+            numbuf[j++] = '.';
+            while (k < i)
+              numbuf[j++] = numbuf[k++];
+            numbuf[j++] = '\0';
+            j = 0;
+            break;
+          }
+#endif
+        }
+        /* regardless, append a decimal if there wasn't any */
+        if (j >= i) {
           numbuf[i++] = '.'; numbuf[i++] = '0'; numbuf[i++] = '\0';
         }
       }
