@@ -1,6 +1,15 @@
 
 (c-system-include "math.h")
 
+(c-declare "
+double sexp_compute_least_double(double f) {
+  for (double g = f/2; g < f && g > 0; g /= 2) {
+    f = g;
+  }
+  return f;
+}
+")
+
 (define-c-const double
   (fl-e "M_E")
   (fl-1/e "1.0/M_E")
@@ -43,7 +52,7 @@
   (fl-gamma-1/3 "tgamma(1.0/3.0)")
   (fl-gamma-2/3 "tgamma(2.0/3.0)")
   (fl-greatest "DBL_MAX")
-  (fl-least "-DBL_MAX")
+  (fl-least "sexp_compute_least_double(DBL_MIN)")
   (fl-integer-exponent-zero "FP_ILOGB0")
   (fl-integer-exponent-nan "FP_ILOGBNAN")
   (fl-epsilon "DBL_EPSILON"))
