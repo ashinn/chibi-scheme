@@ -95,4 +95,13 @@
       (test -0.781212821 (flsecond-bessel 1 1.))
       (test 0.842700793 (flerf 1.))
       (test 0.157299207 (flerfc 1.))
+      (test #t (< 0.0
+                  fl-least
+                  fl-epsilon
+                  1.0
+                  (+ 1.0 fl-epsilon)
+                  fl-greatest
+                  +inf.0))
+      (test +inf.0 (flmin))
+      (test -inf.0 (flmax))
       (test-end))))
