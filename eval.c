@@ -776,8 +776,12 @@ static sexp analyze_macro_once (sexp ctx, sexp x, sexp op, int depth) {
   res = sexp_exceptionp(tmp) ? tmp : sexp_make_child_context(ctx, sexp_context_lambda(ctx));
   if (!sexp_exceptionp(res) && !sexp_exceptionp(sexp_context_exception(ctx)))
     res = sexp_apply(res, sexp_macro_proc(op), tmp);
-  if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(x)))
-    sexp_exception_source(res) = sexp_pair_source(sexp_car(tmp));
+  if (sexp_pairp(sexp_car(tmp)) && sexp_pair_source(sexp_car(tmp))) {
+    if (sexp_pairp(res))
+      sexp_pair_source(res) = sexp_pair_source(sexp_car(tmp));
+    else if (sexp_exceptionp(res) && sexp_not(sexp_exception_source(x)))
+      sexp_exception_source(res) = sexp_pair_source(sexp_car(tmp));
+  }
   sexp_gc_release1(ctx);
   return res;
 }
