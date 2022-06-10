@@ -102,7 +102,7 @@ static inline sexp_luint_t luint_from_uint(sexp_uint_t v) {
 }
 
 static inline sexp_sint_t lsint_to_sint(sexp_lsint_t v) {
-  return lsint_lt_0(v) ? -v.lo : v.lo;
+  return v.lo;
 }
 
 static inline sexp_uint_t luint_to_uint(sexp_luint_t v) {
@@ -134,7 +134,7 @@ static inline sexp_lsint_t lsint_negate(sexp_lsint_t v) {
   uint64_t aLoHi = a.lo >> 32;
   uint64_t aHiLo = a.hi & 0xFFFFFFFF;
   uint64_t aHiHi = a.hi >> 32;
- 
+
   uint64_t carry;
   uint64_t sumLoLo = aLoLo + 1;
   carry = sumLoLo >> 32;
@@ -320,7 +320,7 @@ static inline sexp_luint_t luint_mul_uint(sexp_luint_t a, sexp_uint_t b) {
   }
 
   sexp_luint_t result = luint_add(resultBLo, luint_shl(resultBHi, 32));
-  
+
   return result;
 }
 
