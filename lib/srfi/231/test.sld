@@ -2496,8 +2496,8 @@ OTHER DEALINGS IN THE SOFTWARE.
             (array->list* (make-array (make-interval '#(0 0)) error)))
         (test '(() ())
             (array->list* (make-array (make-interval '#(2 0)) error)))
-        ;; (test '(())
-        ;;     (array->list* (make-array (make-interval '#(0 2)) error)))
+        (test '()
+            (array->list* (make-array (make-interval '#(0 2)) error)))
 
         (test 2 ;; no vector
             (array->vector* (make-array (make-interval '#()) (lambda () 2))))
