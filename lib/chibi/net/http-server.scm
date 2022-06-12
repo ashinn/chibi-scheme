@@ -146,7 +146,7 @@
            (cond
             ((mime-type-from-extension (path-extension path))
              => (lambda (type) `((Content-Type . ,type))))
-            (else '()))))
+            (else '((Content-Type . "application/octet-stream"))))))
       (servlet-respond request 200 "OK" headers)
       (send-file path (request-out request))))
    (else
