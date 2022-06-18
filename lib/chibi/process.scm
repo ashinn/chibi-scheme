@@ -123,8 +123,11 @@
 ;;> \var{stdout} and \var{stderr} of the subprocess.  \var{command}
 ;;> should be a list beginning with the program name followed by any
 ;;> args, which may be symbols or numbers for convenience as with
-;;> \scheme{system}, or a string which is split on white-space.
-(define (call-with-process-io command proc)
+;;> \scheme{system}, or a string which is split on white-space.  If
+;;> provided, the optional \var{child-proc} is called in the child
+;;> process, after ports have been duplicated but before the command
+;;> is executed, to allow for actions such as port remapping.
+(define (call-with-process-io command proc . o)
   (define (set-non-blocking! fd)
     (cond-expand
      (threads
@@ -133,7 +136,8 @@
        (bitwise-ior open/non-block (get-file-descriptor-status fd))))
      (else
       #f)))
-  (let ((command-ls (if (string? command) (string-split command) command))
+  (let ((child-proc (and (pair? o) (car o)))
+        (command-ls (if (string? command) (string-split command) command))
         (in-pipe (open-pipe))
         (out-pipe (open-pipe))
         (err-pipe (open-pipe)))
@@ -152,6 +156,7 @@
              (close-file-descriptor (car in-pipe))
              (close-file-descriptor (cadr out-pipe))
              (close-file-descriptor (cadr err-pipe))
+             (if child-proc (child-proc))
              (execute (car command-ls) command-ls)
              (execute-returned command-ls))
             (else         ;; parent
