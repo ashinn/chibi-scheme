@@ -460,11 +460,9 @@ struct sexp_struct {
     } pair;
     struct {
       sexp_uint_t length;
-      sexp data SEXP_FLEXIBLE_ARRAY;
     } vector;
     struct {
       sexp_uint_t length;
-      char data SEXP_FLEXIBLE_ARRAY;
     } bytes;
     struct {
       sexp bytes;
@@ -477,7 +475,6 @@ struct sexp_struct {
       sexp charlens;
 #endif
       sexp_uint_t length;
-      char data SEXP_FLEXIBLE_ARRAY;
 #else
       sexp bytes;
 #if SEXP_USE_STRING_INDEX_TABLE
@@ -488,7 +485,6 @@ struct sexp_struct {
     } string;
     struct {
       sexp_uint_t length;
-      char data SEXP_FLEXIBLE_ARRAY;
     } symbol;
     struct {
       sexp name;
@@ -511,7 +507,6 @@ struct sexp_struct {
     struct {
       signed char sign;
       sexp_uint_t length;
-      sexp_uint_t data SEXP_FLEXIBLE_ARRAY;
     } bignum;
     struct {
       sexp numerator, denominator;
@@ -534,7 +529,6 @@ struct sexp_struct {
     struct {
       sexp name, literals, source;
       sexp_uint_t length, max_depth;
-      unsigned char data SEXP_FLEXIBLE_ARRAY;
     } bytecode;
     struct {
       sexp bc, vars;
@@ -578,7 +572,6 @@ struct sexp_struct {
     /* compiler state */
     struct {
       sexp_uint_t length, top;
-      sexp data SEXP_FLEXIBLE_ARRAY;
     } stack;
     struct {
       sexp stack, env, parent, child,
@@ -1138,8 +1131,11 @@ SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
 #define sexp_cpointer_field(x, field) ((x)->value.cpointer.field)
 #endif
 
+#define sexp_flexible_array_field(x, type, field_type) \
+  ((field_type*)((char*)(x)+sexp_sizeof(type)))
+
 #define sexp_vector_length(x) (sexp_field(x, vector, SEXP_VECTOR, length))
-#define sexp_vector_data(x)   (sexp_field(x, vector, SEXP_VECTOR, data))
+#define sexp_vector_data(x)   sexp_flexible_array_field(x, vector, sexp)
 
 #if SEXP_USE_SAFE_VECTOR_ACCESSORS
 #define sexp_vector_ref(x,i)   (sexp_unbox_fixnum(i)>=0 && sexp_unbox_fixnum(i)<sexp_vector_length(x) ? sexp_vector_data(x)[sexp_unbox_fixnum(i)] : (fprintf(stderr, "vector-ref length out of range %s on line %d: vector %p (length %lu): %ld\n", __FILE__, __LINE__, x, sexp_vector_length(x), sexp_unbox_fixnum(i)), SEXP_VOID))
@@ -1159,7 +1155,7 @@ SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
 #define sexp_procedure_source(x)     sexp_bytecode_source(sexp_procedure_code(x))
 
 #define sexp_bytes_length(x)  (sexp_field(x, bytes, SEXP_BYTES, length))
-#define sexp_bytes_data(x)    (sexp_field(x, bytes, SEXP_BYTES, data))
+#define sexp_bytes_data(x)   sexp_flexible_array_field(x, bytes, char)
 #define sexp_bytes_maybe_null_data(x) (sexp_not(x) ? NULL : sexp_bytes_data(x))
 
 static const unsigned char sexp_uvector_sizes[] = {
@@ -1199,7 +1195,7 @@ enum sexp_uniform_vector_type {
 #define sexp_string_size(x)     (sexp_field(x, string, SEXP_STRING, length))
 #define sexp_string_charlens(x) (sexp_field(x, string, SEXP_STRING, charlens))
 #if SEXP_USE_PACKED_STRINGS
-#define sexp_string_data(x)   (sexp_field(x, string, SEXP_STRING, data))
+#define sexp_string_data(x)   sexp_flexible_array_field(x, string, char)
 #define sexp_string_bytes(x)  (x)
 #else
 #define sexp_string_bytes(x)  (sexp_field(x, string, SEXP_STRING, bytes))
@@ -1217,7 +1213,7 @@ enum sexp_uniform_vector_type {
 #define sexp_bytes_ref(x, i)    (sexp_make_fixnum((unsigned char)sexp_bytes_data(x)[sexp_unbox_fixnum(i)]))
 #define sexp_bytes_set(x, i, v) (sexp_bytes_data(x)[sexp_unbox_fixnum(i)] = sexp_unbox_fixnum(v))
 
-#define sexp_lsymbol_data(x)   (sexp_field(x, symbol, SEXP_SYMBOL, data))
+#define sexp_lsymbol_data(x)   sexp_flexible_array_field(x, symbol, char)
 #define sexp_lsymbol_length(x) (sexp_field(x, symbol, SEXP_SYMBOL, length))
 
 #define sexp_port_stream(p)     (sexp_pred_field(p, port, sexp_portp, stream))
@@ -1273,7 +1269,7 @@ enum sexp_uniform_vector_type {
 #define sexp_bytecode_name(x)     (sexp_field(x, bytecode, SEXP_BYTECODE, name))
 #define sexp_bytecode_literals(x) (sexp_field(x, bytecode, SEXP_BYTECODE, literals))
 #define sexp_bytecode_source(x)   (sexp_field(x, bytecode, SEXP_BYTECODE, source))
-#define sexp_bytecode_data(x)     (sexp_field(x, bytecode, SEXP_BYTECODE, data))
+#define sexp_bytecode_data(x)     sexp_flexible_array_field(x, bytecode, unsigned char)
 
 #define sexp_env_cell_syntactic_p(x)   ((x)->syntacticp)
 
@@ -1363,7 +1359,7 @@ enum sexp_uniform_vector_type {
 
 #define sexp_stack_length(x)  (sexp_field(x, stack, SEXP_STACK, length))
 #define sexp_stack_top(x)     (sexp_field(x, stack, SEXP_STACK, top))
-#define sexp_stack_data(x)    (sexp_field(x, stack, SEXP_STACK, data))
+#define sexp_stack_data(x)    sexp_flexible_array_field(x, stack, sexp)
 
 #define sexp_promise_donep(x) (sexp_field(x, promise, SEXP_PROMISE, donep))
 #define sexp_promise_value(x) (sexp_field(x, promise, SEXP_PROMISE, value))
@@ -1508,7 +1504,7 @@ SEXP_API sexp sexp_symbol_table[SEXP_SYMBOL_TABLE_SIZE];
 
 #define sexp_bignum_sign(x)            (sexp_field(x, bignum, SEXP_BIGNUM, sign))
 #define sexp_bignum_length(x)          (sexp_field(x, bignum, SEXP_BIGNUM, length))
-#define sexp_bignum_data(x)            (sexp_field(x, bignum, SEXP_BIGNUM, data))
+#define sexp_bignum_data(x)            sexp_flexible_array_field(x, bignum, sexp_uint_t)
 
 /****************************** arithmetic ****************************/
 
