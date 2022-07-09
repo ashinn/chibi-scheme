@@ -18,6 +18,7 @@
 ;;> \item{\scheme{(@ <opt-spec>)} - option spec, described below}
 ;;> \item{\scheme{(begin: <begin-proc>)} - procedure to run before main}
 ;;> \item{\scheme{(end: <end-proc>)} - procedure to run after main}
+;;> \item{\scheme{(types: (<type-name> <parser>) ...)} - additional types that can be used in argument parsing}
 ;;> \item{\scheme{(<proc> args ...)} - main procedure (args only for documentation)}
 ;;> \item{\scheme{<app-spec>} - a subcommand described by the nested spec}
 ;;> \item{\scheme{(or <app-spec> ...)} - an alternate list of subcommands}
@@ -125,7 +126,7 @@
   (let ((args (or (and (pair? o) (car o)) (command-line)))
         (config (and (pair? o) (pair? (cdr o)) (cadr o))))
     (cond
-     ((parse-app '() (cdr spec) '() (cdr args) config #f #f)
+     ((parse-app '() (cdr spec) '() (cdr args) config #f #f '())
       => (lambda (v)
            (let ((proc (vector-ref v 0))
                  (cfg (vector-ref v 1))
@@ -150,7 +151,7 @@
 ;;> \var{fail} with a single string argument describing the error,
 ;;> returning that result.
 
-(define (parse-option prefix conf-spec args fail)
+(define (parse-option prefix conf-spec args types fail)
   (define (parse-value type str)
     (cond
      ((not (string? str))
@@ -187,7 +188,10 @@
                    res))
                #f))
         (else
-         (list str #f))))))
+         (cond
+          ((assq type types)
+           => (lambda (cell) (list ((cadr cell) str) #f)))
+          (else (list str #f))))))))
   (define (lookup-conf-spec conf-spec syms strs)
     (let ((sym (car syms))
           (str (car strs)))
@@ -302,7 +306,7 @@
 ;;> is the list of remaining non-option arguments.  Calls fail on
 ;;> error and tries to continue processing from the result.
 
-(define (parse-options prefix conf-spec orig-args fail)
+(define (parse-options prefix conf-spec orig-args types fail)
   (let lp ((args orig-args)
            (opts (make-conf '() #f (cons 'options orig-args) #f)))
     (cond
@@ -312,7 +316,7 @@
           (not (eqv? #\- (string-ref (car args) 0))))
       (cons opts (if (equal? (car args) "--") (cdr args) args)))
      (else
-      (let ((val+args (parse-option prefix conf-spec args fail)))
+      (let ((val+args (parse-option prefix conf-spec args types fail)))
         (lp (cdr val+args)
             (conf-set opts (caar val+args) (cdar val+args))))))))
 
@@ -332,7 +336,7 @@
 ;;> all prefixed by \var{prefix}.  The original \var{spec} is used for
 ;;> \scheme{app-help}.
 
-(define (parse-app prefix spec opt-spec args config init end . o)
+(define (parse-app prefix spec opt-spec args config init end types . o)
   (define (next-prefix prefix name)
     (append (if (null? prefix) '(command) prefix) (list name)))
   (define (prev-prefix prefix)
@@ -367,7 +371,7 @@
      ((null? spec)
       (error "no procedure in application spec"))
      ((or (null? (car spec)) (equal? '(@) (car spec)))
-      (parse-app prefix (cdr spec) opt-spec args config init end fail))
+      (parse-app prefix (cdr spec) opt-spec args config init end types fail))
      ((pair? (car spec))
       (case (caar spec)
         ((@)
@@ -383,38 +387,41 @@
                    (car tail))))
                 (new-fail
                  (lambda (new-prefix new-spec new-opt new-args reason)
-                   (parse-option (prev-prefix prefix) opt-spec new-args fail)))
-                (cfg+args (parse-options prefix new-opt-spec args new-fail))
+                   (parse-option (prev-prefix prefix) opt-spec new-args types fail)))
+                (cfg+args (parse-options prefix new-opt-spec args types new-fail))
                 (config (conf-append (car cfg+args) config))
                 (args (cdr cfg+args)))
            (parse-app prefix (cdr spec) new-opt-spec args config
-                      init end new-fail)))
+                      init end types new-fail)))
         ((or)
-         (any (lambda (x) (parse-app prefix x opt-spec args config init end))
+         (any (lambda (x) (parse-app prefix x opt-spec args config init end types))
               (cdar spec)))
         ((begin:)
          (parse-app prefix (cdr spec) opt-spec args config
-                    (cadr (car spec)) end fail))
+                    (cadr (car spec)) end types fail))
         ((end:)
          (parse-app prefix (cdr spec) opt-spec args config
-                    init (cadr (car spec)) fail))
+                    init (cadr (car spec)) types fail))
+        ((types:)
+         (parse-app prefix (cdr spec) opt-spec args config
+                    init end (cdr (car spec)) fail))
         (else
          (if (procedure? (caar spec))
              (vector (caar spec) config args init end) ; TODO: verify
              (parse-app prefix (car spec) opt-spec args config
-                        init end fail)))))
+                        init end types fail)))))
      ((symbol? (car spec))
       (and (pair? args)
            (eq? (car spec) (string->symbol (car args)))
            (let ((prefix (next-prefix prefix (car spec))))
              (parse-app prefix (cdr spec) opt-spec (cdr args) config
-                        init end fail))))
+                        init end types fail))))
      ((procedure? (car spec))
       (vector (car spec) config args init end))
      (else
       (if (not (string? (car spec)))
           (error "unknown application spec" (car spec)))
-      (parse-app prefix (cdr spec) opt-spec args config init end fail)))))
+      (parse-app prefix (cdr spec) opt-spec args config init end types fail)))))
 
 (define (print-command-help command out)
   (cond
