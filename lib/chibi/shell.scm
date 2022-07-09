@@ -103,8 +103,10 @@
 ;;> tr, outputting "HELLO" to stdout:
 ;;>
 ;;> \schemeblock{
-;;> ((shell-pipe '(echo "hello") '(tr "a-z" "A-Z")) (lambda () #t)  (lambda () #t))
-;;> }
+;;> ((shell-pipe (shell-command '(echo "hello"))
+;;>              (shell-command '(tr "a-z" "A-Z")))
+;;>  (lambda () #t)
+;;>  (lambda () #t))}
 ;;>
 ;;> We can continue to build on these combinators, but for practical
 ;;> use a concise syntax is handy.  We provide the syntax
