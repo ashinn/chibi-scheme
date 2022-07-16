@@ -4,7 +4,9 @@
           (scheme list) (scheme write) (srfi 130)
           (chibi io) (chibi filesystem) (chibi process)
           (only (chibi) port-fileno))
-  (export shell shell& shell-pipe shell->string
+  (export shell shell& shell-pipe call-with-shell-io
+          shell->string shell->string-list
+          shell->sexp shell->sexp-list
           shell-if shell-and shell-or shell-do)
   (begin
     (define shell-fork fork)

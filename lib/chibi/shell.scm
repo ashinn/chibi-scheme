@@ -75,6 +75,20 @@
 ;;> ((shell-command '("grep" "define"))
 ;;>  (lambda () (in< "shell.scm")) (lambda () #t))}
 ;;>
+;;> We can use these combinators for more than I/O redirection.  For
+;;> example, we can change the current working directory.  The
+;;> semantics of many commands depends on the current working
+;;> directory, so much so that some commands provide options to change
+;;> the directory on startup (e.g. -C for git and make).  For commands
+;;> which don't offer this convenience we can use process combinators
+;;> to change directory only in the child without invoking extra
+;;> processes:
+;;>
+;;> \schemeblock{
+;;> ((shell-command '("cmake"))
+;;>  (lambda () (change-directory project-dir))
+;;>  (lambda () #t))}
+;;>
 ;;> Another resource we may want to change is the user, e.g. via
 ;;> setuid.  Since we control the order of resource changes we can do
 ;;> things like the following example.  Here we run as root, providing
@@ -162,10 +176,17 @@
     (duplicate-file-descriptor-to (cdr pipe) fileno)
     (close-file-descriptor (cdr pipe))))
 
-(define (shell-stdin-from-pipe pipe)
-  (close-file-descriptor (cdr pipe))
-  (duplicate-file-descriptor-to (car pipe) 0)
-  (close-file-descriptor (car pipe)))
+(define (shell-stderr-to-pipe pipe . o)
+  (let ((fileno (if (pair? o) (car o) 2)))
+    (close-file-descriptor (car pipe))
+    (duplicate-file-descriptor-to (cdr pipe) fileno)
+    (close-file-descriptor (cdr pipe))))
+
+(define (shell-stdin-from-pipe pipe . o)
+  (let ((fileno (if (pair? o) (car o) 0)))
+    (close-file-descriptor (cdr pipe))
+    (duplicate-file-descriptor-to (car pipe) fileno)
+    (close-file-descriptor (car pipe))))
 
 (define (shell-pipe cmd . cmds)
   (let ((cmd1 (shell-command cmd)))
@@ -276,24 +297,34 @@
 (define (shell&* cmd)
   ((shell-command cmd) (lambda () #f) (lambda () #f)))
 
-(define (shell* cmd)
-  (for-each shell-wait (shell& cmd)))
-
-(define (shell->string* cmd)
+(define (call-with-shell-io cmd proc)
   (let ((cmd (if (procedure? cmd) cmd (apply shell-command cmd)))
-        (pipe (shell-create-pipe)))
+        (in-pipe (shell-create-pipe))
+        (out-pipe (shell-create-pipe))
+        (err-pipe (shell-create-pipe)))
     (let ((pids
-           (cmd (lambda () #f)
-                (lambda () (shell-stdout-to-pipe pipe)))))
-      (close-file-descriptor (cdr pipe))
-      (let ((res (port->string (open-input-file-descriptor (car pipe)))))
+           (cmd (lambda ()
+                  (shell-stdin-from-pipe in-pipe))
+                (lambda ()
+                  (shell-stdout-to-pipe out-pipe)
+                  (shell-stderr-to-pipe err-pipe)))))
+      (close-file-descriptor (car in-pipe))
+      (close-file-descriptor (cdr out-pipe))
+      (close-file-descriptor (cdr err-pipe))
+      (let ((res (proc pids
+                       (open-output-file-descriptor (cdr in-pipe))
+                       (open-input-file-descriptor (car out-pipe))
+                       (open-input-file-descriptor (car err-pipe)))))
         (for-each shell-wait pids)
         res))))
+
+(define (shell-with-output cmd proc)
+  (call-with-shell-io cmd (lambda (pids in out err) (proc out))))
 
 (define-syntax shell
   (syntax-rules ()
     ((shell cmd ...)
-     (shell* (shell-pipe `cmd ...)))))
+     (for-each shell-wait (shell& cmd ...)))))
 
 (define-syntax shell&
   (syntax-rules ()
@@ -303,7 +334,22 @@
 (define-syntax shell->string
   (syntax-rules ()
     ((shell->string cmd ...)
-     (shell->string* (shell-pipe `cmd ...)))))
+     (shell-with-output (shell-pipe `cmd ...) port->string))))
+
+(define-syntax shell->string-list
+  (syntax-rules ()
+    ((shell->string cmd ...)
+     (shell-with-output (shell-pipe `cmd ...) port->string-list))))
+
+(define-syntax shell->sexp
+  (syntax-rules ()
+    ((shell->string cmd ...)
+     (shell-with-output (shell-pipe `cmd ...) read))))
+
+(define-syntax shell->sexp-list
+  (syntax-rules ()
+    ((shell->string cmd ...)
+     (shell-with-output (shell-pipe `cmd ...) port->sexp-list))))
 
 (define (close-file-descriptors-in-range lo hi)
   (cond

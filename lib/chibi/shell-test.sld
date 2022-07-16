@@ -36,4 +36,8 @@
            ,(shell-or 'false '(echo "hello") '(echo "world"))))
       (test "hello\n"
           (shell->string (or false (echo "hello") (echo "world"))))
+      (test '("hello" "world")
+          (shell->string-list (do (echo "hello") (echo "world"))))
+      (test '(hello world)
+          (shell->sexp-list (do (echo "hello") (echo "world"))))
       (test-end))))
