@@ -139,6 +139,18 @@
     (proc out)
     (get-output-string out)))
 
+(define (close-file-descriptors-in-range lo hi)
+  (cond
+   ((find file-directory? '("/proc/self/fd" "/dev/df"))
+    => (lambda (dir)
+         (for-each
+          (lambda (file)
+            (cond ((string->number file)
+                   => (lambda (fd)
+                        (when (<= lo fd hi)
+                          (close-file-descriptor fd))))))
+          (directory-files dir))))))
+
 (define (shell-object->string x)
   (if (string? x) x (call-with-output-string (lambda (out) (display x out)))))
 
@@ -149,26 +161,19 @@
    ((not (pair? cmd))
     (shell-command (list cmd)))
    (else
-    (case (car cmd)
-      ((shell) (apply shell-pipe (cdr cmd)))
-      ((if) (apply shell-if (cdr cmd)))
-      ((and) (apply shell-and (cdr cmd)))
-      ((or) (apply shell-or (cdr cmd)))
-      ((do) (apply shell-do (cdr cmd)))
-      (else
-       (lambda (child-in child-out)
-         (let ((pid (shell-fork)))
-           (cond
-            ((not pid)
-             (error "couldn't fork"))
-            ((zero? pid)                ; child
-             (child-in)
-             (child-out)
-             (let ((ls (map shell-object->string cmd)))
-               (shell-exec (car ls) ls)
-               (exit 0)))
-            (else                       ; parent
-             (list pid))))))))))
+    (lambda (child-in child-out)
+      (let ((pid (shell-fork)))
+        (cond
+         ((not pid)
+          (error "couldn't fork"))
+         ((zero? pid)                   ; child
+          (child-in)
+          (child-out)
+          (let ((ls (map shell-object->string cmd)))
+            (shell-exec (car ls) ls)
+            (exit 0)))
+         (else                          ; parent
+          (list pid))))))))
 
 (define (shell-stdout-to-pipe pipe . o)
   (let ((fileno (if (pair? o) (car o) 1)))
@@ -294,6 +299,16 @@
 (define (err> file)
   (redirect file (bitwise-ior open/write open/create open/truncate) 2))
 
+(define (with-in< file cmd)
+  (lambda (in out)
+    (cmd (lambda () (in) (in< file)) out)))
+(define (with-out> file cmd)
+  (lambda (in out)
+    (cmd in (lambda () (out) (out> file)))))
+(define (with-err> file cmd)
+  (lambda (in out)
+    (cmd in (lambda () (out) (err> file)))))
+
 (define (shell&* cmd)
   ((shell-command cmd) (lambda () #f) (lambda () #f)))
 
@@ -321,44 +336,80 @@
 (define (shell-with-output cmd proc)
   (call-with-shell-io cmd (lambda (pids in out err) (proc out))))
 
-(define-syntax shell
-  (syntax-rules ()
-    ((shell cmd ...)
-     (for-each shell-wait (shell& cmd ...)))))
+(define-syntax shell-analyze
+  (syntax-rules (< << > >> err> err>>)
+    ((shell-analyze join ((< file) . rest) () (cur ...))
+     (shell-analyze join rest () (cur ... (< file))))
+    ((shell-analyze join ((> file) . rest) () (cur ...))
+     (shell-analyze join rest () (cur ... (> file))))
+
+    ((shell-analyze join ((< file) . rest) (cmds ... (cmd ...)) x)
+     (shell-analyze join rest (cmds ... (cmd ... (< file))) x))
+    ((shell-analyze join ((> file) . rest) (cmds ... (cmd ...)) x)
+     (shell-analyze join rest (cmds ... (cmd ... (> file))) x))
+
+    ((shell-analyze join (cmd . rest) (cmds ...) (cur ...))
+     (shell-analyze join rest (cmds ... (cmd cur ...)) ()))
+
+    ((shell-analyze join () ((cmd . ops) ...) x)
+     (join (shell-analyze-io (shell-analyze-one cmd) ops) ...))
+    ))
+
+(define-syntax shell-analyze-one
+  (syntax-rules (>< do and or if)
+    ((shell-analyze-one (do cmds ...))
+     (shell-analyze shell-do (cmds ...) () ()))
+    ((shell-analyze-one (if cmds ...))
+     (shell-analyze shell-if (cmds ...) () ()))
+    ((shell-analyze-one (and cmds ...))
+     (shell-analyze shell-and (cmds ...) () ()))
+    ((shell-analyze-one (or cmds ...))
+     (shell-analyze shell-or (cmds ...) () ()))
+    ((shell-analyze-one (>< cmds ...))
+     (shell-analyze shell-pipe (cmds ...) () ()))
+    ((shell-analyze-one cmd)
+     (shell-command `cmd))
+    ))
+
+(define-syntax shell-analyze-io
+  (syntax-rules (< << > >> err> err>>)
+    ((shell-analyze-io cmd ((< file) . rest))
+     (shell-analyze-io (with-in< (shell-object->string `file) cmd) rest))
+    ((shell-analyze-io cmd ((> file) . rest))
+     (shell-analyze-io (with-out> (shell-object->string `file) cmd) rest))
+    ((shell-analyze-io cmd ())
+     cmd)))
 
 (define-syntax shell&
   (syntax-rules ()
     ((shell& cmd ...)
      (shell&* (shell-pipe `cmd ...)))))
 
+(define-syntax shell
+  (syntax-rules ()
+    ((shell cmd ...)
+     (for-each shell-wait (shell& cmd ...)))))
+
 (define-syntax shell->string
   (syntax-rules ()
     ((shell->string cmd ...)
-     (shell-with-output (shell-pipe `cmd ...) port->string))))
+     (shell-with-output (shell-analyze shell-pipe (cmd ...) () ())
+                        port->string))))
 
 (define-syntax shell->string-list
   (syntax-rules ()
     ((shell->string cmd ...)
-     (shell-with-output (shell-pipe `cmd ...) port->string-list))))
+     (shell-with-output (shell-analyze shell-pipe (cmd ...) () ())
+                        port->string-list))))
 
 (define-syntax shell->sexp
   (syntax-rules ()
     ((shell->string cmd ...)
-     (shell-with-output (shell-pipe `cmd ...) read))))
+     (shell-with-output (shell-analyze shell-pipe (cmd ...) () ())
+                        read))))
 
 (define-syntax shell->sexp-list
   (syntax-rules ()
     ((shell->string cmd ...)
-     (shell-with-output (shell-pipe `cmd ...) port->sexp-list))))
-
-(define (close-file-descriptors-in-range lo hi)
-  (cond
-   ((find file-directory? '("/proc/self/fd" "/dev/df"))
-    => (lambda (dir)
-         (for-each
-          (lambda (file)
-            (cond ((string->number file)
-                   => (lambda (fd)
-                        (when (<= lo fd hi)
-                          (close-file-descriptor fd))))))
-          (directory-files dir))))))
+     (shell-with-output (shell-analyze shell-pipe (cmd ...) () ())
+                        port->sexp-list))))
