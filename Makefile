@@ -52,7 +52,7 @@ MODULE_DOCS := app assert ast base64 bytevector config crypto/md5 crypto/rsa \
 	match math/prime memoize mime modules net net/http-server net/servlet \
 	optional parse pathname process repl scribble string stty sxml system \
 	temp-file test time trace type-inference uri weak monad/environment \
-	crypto/sha2
+	crypto/sha2 shell
 
 IMAGE_FILES = lib/chibi.img lib/red.img lib/snow.img
 

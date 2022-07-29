@@ -1374,6 +1374,8 @@ namespace.
 
 \item{\hyperlink["lib/chibi/repl.html"]{(chibi repl) - A full-featured Read/Eval/Print Loop}}
 
+\item{\hyperlink["lib/chibi/shell.html"]{(chibi shell) - Binding to the most necessary POSIX system calls.}}
+
 \item{\hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
 \item{\hyperlink["lib/chibi/string.html"]{(chibi string) - Cursor-based string library (predecessor to SRFI 130)}}
