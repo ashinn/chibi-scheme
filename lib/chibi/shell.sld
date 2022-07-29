@@ -3,11 +3,12 @@
   (import (scheme base) (scheme bitwise) (scheme char) (scheme cxr)
           (scheme list) (scheme write) (srfi 130)
           (chibi io) (chibi filesystem) (chibi process)
-          (only (chibi) port-fileno))
+          (only (chibi) port-fileno define-auxiliary-syntax))
   (export shell shell& shell-pipe call-with-shell-io
           shell->string shell->string-list
           shell->sexp shell->sexp-list
-          shell-if shell-and shell-or shell-do)
+          shell-if shell-and shell-or shell-do
+          in< out> err> out>> err>> >< >> <<)
   (begin
     (define shell-fork fork)
     (define shell-exec execute)

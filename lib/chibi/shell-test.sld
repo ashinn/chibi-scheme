@@ -40,4 +40,8 @@
           (shell->string-list (do (echo "hello") (echo "world"))))
       (test '(hello world)
           (shell->sexp-list (do (echo "hello") (echo "world"))))
+      (test "HELLO"
+          (shell->string (cat) (<< hello) (tr "a-z" "A-Z")))
+      (test "HELLO"
+          (shell->string (>< (cat) (tr "a-z" "A-Z")) (<< hello)))
       (test-end))))

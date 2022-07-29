@@ -129,10 +129,59 @@
 ;;>
 ;;> \schemeblock{(shell (echo "hello") (tr "a-z" "A-Z"))}
 ;;>
+;;> A command without any arguments can be written as a single symbol
+;;> without a list:
+;;>
+;;> \schemeblock{(shell (echo "hello") rev)} => "olleh\n"
+;;>
+;;> You can chain together any number of commands, implicitly joined
+;;> in a pipe.  I/O redirection works by putting the redirection
+;;> operator after the command it modifies:
+;;>
+;;> \schemeblock{(shell cat (< "input.txt") (tr "a-z" "A-Z") (> "out"))}
+;;>
+;;> for the following operators:
+;;>
+;;> \scheme{(< input)}: redirect stdin from the file input
+;;> \scheme{(<< obj)}: redirect stdin from the displayed output of obj
+;;> \scheme{(> output)}: redirect stdout to the file output
+;;> \scheme{(>> output)}: append stdout to the file output
+;;> \scheme{(err> output)}: redirect stderr to the file output
+;;> \scheme{(err>> output)}: append stderr to the file output
+;;>
+;;> Commands can also be combined logically with several operators:
+;;>
+;;> \scheme{(do cmd1 cmd2 ...)}: run the commands in sequence
+;;> \scheme{(and cmd1 cmd2 ...)}: run the commands in sequence until the first fails
+;;> \scheme{(or cmd1 cmd2 ...)}: run the commands in sequence until the first succeeds
+;;> \scheme{(>< cmd1 cmd2 ...)}: pipe the output of each command to the input of the next
+;;> \scheme{(if test pass fail)}: if test succeeds run pass, else fail
+;;>
+;;> Note although piping is implicit in the \scheme{shell} syntax
+;;> itself, the \scheme{><} operator can be useful for nested
+;;> pipelines, or to structure a pipeline in one expression so you can
+;;> group all I/O modifiers for it as a whole, e.g.
+;;>
+;;> \schemeblock{(shell (< x) cat rev (> y))}
+;;>
+;;> could also be written as
+;;>
+;;> \schemeblock{(shell (>< cat rev) (< x) (> y))}
+;;>
 ;;> As a convenience, to collect the output to a string we have
 ;;> \scheme{shell->string};
 ;;>
 ;;> \schemeblock{(shell->string (echo "hello") (tr "a-z" "A-Z")) => "HELLO"}
+;;>
+;;> Similarly, the following variants are provided:
+;;>
+;;> \scheme{shell->string-list}: returns a list of one string per line
+;;> \scheme{shell->sexp}: returns the output parsed as a sexp
+;;> \scheme{shell->sexp-list}: returns a list of one sexp per line
+
+(define-auxiliary-syntax ><)
+(define-auxiliary-syntax <<)
+(define-auxiliary-syntax >>)
 
 (define (call-with-output-string proc)
   (let ((out (open-output-string)))
@@ -174,6 +223,20 @@
             (exit 0)))
          (else                          ; parent
           (list pid))))))))
+
+(define (shell-scheme-command proc)
+  (lambda (child-in child-out)
+    (let ((pid (shell-fork)))
+      (cond
+       ((not pid)
+        (error "couldn't fork"))
+       ((zero? pid)                     ; child
+        (child-in)
+        (child-out)
+        (proc)
+        (exit 0))
+       (else                            ; parent
+        (list pid))))))
 
 (define (shell-stdout-to-pipe pipe . o)
   (let ((fileno (if (pair? o) (car o) 1)))
@@ -296,8 +359,12 @@
 (define (in< file) (redirect file open/read 0))
 (define (out> file)
   (redirect file (bitwise-ior open/write open/create open/truncate) 1))
+(define (out>> file)
+  (redirect file (bitwise-ior open/write open/create open/append) 1))
 (define (err> file)
   (redirect file (bitwise-ior open/write open/create open/truncate) 2))
+(define (err>> file)
+  (redirect file (bitwise-ior open/write open/create open/append) 2))
 
 (define (with-in< file cmd)
   (lambda (in out)
@@ -305,9 +372,15 @@
 (define (with-out> file cmd)
   (lambda (in out)
     (cmd in (lambda () (out) (out> file)))))
+(define (with-out>> file cmd)
+  (lambda (in out)
+    (cmd in (lambda () (out) (out>> file)))))
 (define (with-err> file cmd)
   (lambda (in out)
     (cmd in (lambda () (out) (err> file)))))
+(define (with-err>> file cmd)
+  (lambda (in out)
+    (cmd in (lambda () (out) (err>> file)))))
 
 (define (shell&* cmd)
   ((shell-command cmd) (lambda () #f) (lambda () #f)))
@@ -338,25 +411,45 @@
 
 (define-syntax shell-analyze
   (syntax-rules (< << > >> err> err>>)
+    ;; I/O operators before any commands - accumulate in cur.
     ((shell-analyze join ((< file) . rest) () (cur ...))
      (shell-analyze join rest () (cur ... (< file))))
+    ((shell-analyze join ((<< str) . rest) () (cur ...))
+     (shell-analyze join rest () (cur ... (<< str))))
     ((shell-analyze join ((> file) . rest) () (cur ...))
      (shell-analyze join rest () (cur ... (> file))))
+    ((shell-analyze join ((>> file) . rest) () (cur ...))
+     (shell-analyze join rest () (cur ... (>> file))))
+    ((shell-analyze join ((err> file) . rest) () (cur ...))
+     (shell-analyze join rest () (cur ... (err> file))))
+    ((shell-analyze join ((err>> file) . rest) () (cur ...))
+     (shell-analyze join rest () (cur ... (err>> file))))
 
+    ;; I/O operators after a command - append to the last command.
     ((shell-analyze join ((< file) . rest) (cmds ... (cmd ...)) x)
      (shell-analyze join rest (cmds ... (cmd ... (< file))) x))
+    ((shell-analyze join ((<< str) . rest) (cmds ... cmd) x)
+     (shell-analyze join rest (cmds ... ((apply (lambda () (display `str)))) cmd) x))
     ((shell-analyze join ((> file) . rest) (cmds ... (cmd ...)) x)
      (shell-analyze join rest (cmds ... (cmd ... (> file))) x))
+    ((shell-analyze join ((>> file) . rest) (cmds ... (cmd ...)) x)
+     (shell-analyze join rest (cmds ... (cmd ... (>> file))) x))
+    ((shell-analyze join ((err> file) . rest) (cmds ... (cmd ...)) x)
+     (shell-analyze join rest (cmds ... (cmd ... (err> file))) x))
+    ((shell-analyze join ((err>> file) . rest) (cmds ... (cmd ...)) x)
+     (shell-analyze join rest (cmds ... (cmd ... (err>> file))) x))
 
+    ;; Anything but an I/O operator is a normal command.
     ((shell-analyze join (cmd . rest) (cmds ...) (cur ...))
      (shell-analyze join rest (cmds ... (cmd cur ...)) ()))
 
+    ;; Join the analyzed results.
     ((shell-analyze join () ((cmd . ops) ...) x)
      (join (shell-analyze-io (shell-analyze-one cmd) ops) ...))
     ))
 
 (define-syntax shell-analyze-one
-  (syntax-rules (>< do and or if)
+  (syntax-rules (>< do and or if apply)
     ((shell-analyze-one (do cmds ...))
      (shell-analyze shell-do (cmds ...) () ()))
     ((shell-analyze-one (if cmds ...))
@@ -367,23 +460,33 @@
      (shell-analyze shell-or (cmds ...) () ()))
     ((shell-analyze-one (>< cmds ...))
      (shell-analyze shell-pipe (cmds ...) () ()))
+    ((shell-analyze-one (apply proc))
+     (shell-scheme-command proc))
     ((shell-analyze-one cmd)
      (shell-command `cmd))
     ))
 
 (define-syntax shell-analyze-io
-  (syntax-rules (< << > >> err> err>>)
+  (syntax-rules (< > >> err> err>>)
     ((shell-analyze-io cmd ((< file) . rest))
      (shell-analyze-io (with-in< (shell-object->string `file) cmd) rest))
     ((shell-analyze-io cmd ((> file) . rest))
      (shell-analyze-io (with-out> (shell-object->string `file) cmd) rest))
+    ((shell-analyze-io cmd ((>> file) . rest))
+     (shell-analyze-io (with-out>> (shell-object->string `file) cmd) rest))
+    ((shell-analyze-io cmd ((err> file) . rest))
+     (shell-analyze-io (with-err> (shell-object->string `file) cmd) rest))
+    ((shell-analyze-io cmd ((err>> file) . rest))
+     (shell-analyze-io (with-err>> (shell-object->string `file) cmd) rest))
     ((shell-analyze-io cmd ())
      cmd)))
 
 (define-syntax shell&
   (syntax-rules ()
     ((shell& cmd ...)
-     (shell&* (shell-pipe `cmd ...)))))
+     ((shell-analyze shell-pipe (cmd ...) () ())
+      (lambda () #f)
+      (lambda () #f)))))
 
 (define-syntax shell
   (syntax-rules ()
