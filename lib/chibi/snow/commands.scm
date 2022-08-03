@@ -1563,7 +1563,7 @@
        (lambda (file acc)
          (cond
           ((and (equal? "meta" (path-extension file))
-                (guard (exn (else #f))
+                (guard (exn (else (warn "read meta failed" exn) #f))
                   (let ((pkg (call-with-input-file file read)))
                     (and (package? pkg)
                          (every file-exists? (package-installed-files pkg))
@@ -2112,7 +2112,8 @@
          (install-dir (get-install-data-dir impl cfg))
          (dest (path-resolve dest0 install-dir)))
     (create-directory* (path-directory dest))
-    (install-file cfg (make-path dir src) dest)))
+    (install-file cfg (make-path dir src) dest)
+    dest))
 
 (define (fetch-package cfg url)
   (resource->bytevector cfg url))
