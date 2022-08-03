@@ -105,6 +105,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; basics
 
+(define lucas-sld-path
+  (make-path install-libdir "edouard/lucas.sld"))
+
+(test-group "basics"
+
 ;; package
 (snow package --output-dir tests/snow --authors "Édouard Lucas"
       --description "Lucas recurrence relation"
@@ -113,8 +118,6 @@
 
 ;; install
 (snow install tests/snow/edouard-lucas.tgz)
-(define lucas-sld-path
-  (make-path install-libdir "edouard/lucas.sld"))
 (test-assert (file-exists? lucas-sld-path))
 (delete-file "tests/snow/edouard-lucas.tgz")
 
@@ -126,10 +129,17 @@
 (test-not (file-exists? lucas-sld-path))
 (test-not (installed-version (snow-status) '(edouard lucas)))
 
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; install/upgrade via local repos
 
 (define repo1 '(--repository-uri tests/snow/repo1/repo.scm))
+(define repo2 '(--repository-uri tests/snow/repo2/repo.scm))
+(define repo3 '(--repository-uri tests/snow/repo3/repo.scm))
+
+(test-group "local repo"
+
 (snow package --output-dir tests/snow/repo1/
       --version 1.0 --authors "Leonardo Fibonacci"
       --description "Fibonacci recurrence relation"
@@ -139,7 +149,6 @@
 (snow ,@repo1 install --show-tests leonardo.fibonacci)
 (test "1.0" (installed-version (snow-status) '(leonardo fibonacci)))
 
-(define repo2 '(--repository-uri tests/snow/repo2/repo.scm))
 (snow package --output-dir tests/snow/repo2/
       --version 1.1 --authors "Leonardo Fibonacci"
       --description "Fibonacci recurrence relation"
@@ -149,7 +158,6 @@
 (snow ,@repo2 upgrade leonardo.fibonacci)
 (test "1.1" (installed-version (snow-status) '(leonardo fibonacci)))
 
-(define repo3 '(--repository-uri tests/snow/repo3/repo.scm))
 (setenv "PINGALA_GANAS_PATH"
         "pingala:tests/snow/tmp-root/share/snow/chibi/pingala")
 (snow package --output-dir tests/snow/repo3/
@@ -236,8 +244,12 @@
 (snow ,@repo3 install pythagoras.hypotenuse)
 (test-assert (installed-version (snow-status) '(pythagoras hypotenuse)))
 
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; other implementations
+
+(test-group "other impls"
 
 (snow ,@repo2 --implementations "gauche,kawa,larceny"
       install leonardo.fibonacci)
@@ -280,10 +292,15 @@
   (test-not (installed-version status '(recorde equal) 'kawa))
   (test-not (installed-version status '(recorde equal) 'larceny)))
 
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; smart packaging
 
 (define repo4 '(--repository-uri tests/snow/repo4/repo.scm))
+
+(test-group "packaging"
+
 (setenv "SNOW_CHIBI_CONFIG" "tests/snow/repo4/config.scm")
 
 (snow ,@repo4 package --output-dir tests/snow/repo4/
@@ -322,20 +339,26 @@
           (run-euler-exponential-test-tests))
       (snowball-test->sexp-list pkg pkg-file)))
 
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; multiple repos
 
 (define repo3+4
   '(--repository-uri "tests/snow/repo3/repo.scm,tests/snow/repo4/repo.scm"))
 
+(define repo5 '(--repository-uri tests/snow/repo5/repo.scm))
+
+(test-group "multiple repos"
+
 (let ((ls (snow->sexp ,@repo3+4 search euler)))
   (test-assert (assoc '(euler interest) ls))
   (test-assert (assoc '(euler totient) ls)))
 
-(define repo5 '(--repository-uri tests/snow/repo5/repo.scm))
-
 (let ((ls (snow->sexp ,@repo5 search euler)))
   (test-assert (assoc '(euler interest) ls))
   (test-assert (assoc '(euler totient) ls)))
+
+)
 
 (test-end)
