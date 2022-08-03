@@ -388,9 +388,9 @@ install-base: all
 	$(MKDIR) $(DESTDIR)$(PKGCONFDIR)
 	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(PKGCONFDIR)
 	$(MKDIR) $(DESTDIR)$(MANDIR)
-	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
-	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
-	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
+	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/man1
+	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/man1
 	-if type $(LDCONFIG) >/dev/null 2>/dev/null; then $(LDCONFIG); fi
 
 install: install-base
