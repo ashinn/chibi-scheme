@@ -1383,7 +1383,9 @@
                (chibi (eval '(current-module-path) (environment '(chibi))))
                (else (process->sexp
                       '(chibi-scheme -q -p "(current-module-path)"))))))
-            (lib-dir (find (lambda (d) (string-contains d "/lib")) dirs)))
+            (lib-dir (find (lambda (d) (and (equal? (string-ref d 0) #\/)
+                                           (string-contains d "/lib")))
+                           dirs)))
        (if lib-dir
            (cons lib-dir (delete lib-dir dirs))
            dirs)))
