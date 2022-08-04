@@ -8,15 +8,17 @@
 ;;> of the subprocess may be configured before the command is executed,
 ;;> including:
 ;;>
-;;> * fileno configuration
-;;> * environment variables
-;;> * signal masks
-;;> * running user
-;;> * process groups
-;;> * resource limits (CPU, memory, disk I/O, network)
-;;> * prioritization
-;;> * namespace isolation
-;;> * virtual filesystems
+;;> \itemlist[
+;;> \item{fileno configuration }
+;;> \item{environment variables }
+;;> \item{signal masks }
+;;> \item{running user }
+;;> \item{process groups }
+;;> \item{resource limits (CPU, memory, disk I/O, network) }
+;;> \item{prioritization }
+;;> \item{namespace isolation }
+;;> \item{virtual filesystems }
+;;> ]
 ;;>
 ;;> Some of these can be specified by posix_spawn(3), but the more
 ;;> general features come from cgroups.
@@ -142,20 +144,24 @@
 ;;>
 ;;> for the following operators:
 ;;>
-;;> \scheme{(< input)}: redirect stdin from the file input
-;;> \scheme{(<< obj)}: redirect stdin from the displayed output of obj
-;;> \scheme{(> output)}: redirect stdout to the file output
-;;> \scheme{(>> output)}: append stdout to the file output
-;;> \scheme{(err> output)}: redirect stderr to the file output
-;;> \scheme{(err>> output)}: append stderr to the file output
+;;> \itemlist[
+;;> \item{ \scheme{(< input)}: redirect stdin from the file input }
+;;> \item{ \scheme{(<< obj)}: redirect stdin from the displayed output of obj }
+;;> \item{ \scheme{(> output)}: redirect stdout to the file output }
+;;> \item{ \scheme{(>> output)}: append stdout to the file output }
+;;> \item{ \scheme{(err> output)}: redirect stderr to the file output }
+;;> \item{ \scheme{(err>> output)}: append stderr to the file output }
+;;>  ]
 ;;>
 ;;> Commands can also be combined logically with several operators:
 ;;>
-;;> \scheme{(do cmd1 cmd2 ...)}: run the commands in sequence
-;;> \scheme{(and cmd1 cmd2 ...)}: run the commands in sequence until the first fails
-;;> \scheme{(or cmd1 cmd2 ...)}: run the commands in sequence until the first succeeds
-;;> \scheme{(>< cmd1 cmd2 ...)}: pipe the output of each command to the input of the next
-;;> \scheme{(if test pass fail)}: if test succeeds run pass, else fail
+;;> \itemlist[
+;;> \item{ \scheme{(do cmd1 cmd2 ...)}: run the commands in sequence }
+;;> \item{ \scheme{(and cmd1 cmd2 ...)}: run the commands in sequence until the first fails }
+;;> \item{ \scheme{(or cmd1 cmd2 ...)}: run the commands in sequence until the first succeeds }
+;;> \item{ \scheme{(>< cmd1 cmd2 ...)}: pipe the output of each command to the input of the next }
+;;> \item{ \scheme{(if test pass fail)}: if test succeeds run pass, else fail }
+;;>  ]
 ;;>
 ;;> Note although piping is implicit in the \scheme{shell} syntax
 ;;> itself, the \scheme{><} operator can be useful for nested
