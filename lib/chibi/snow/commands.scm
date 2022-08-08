@@ -1159,9 +1159,9 @@
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
     (cond
      ((not (valid-repository? repo))
-      (warn "not a valid repository: " repo-uri repo))
+      (warn "not a valid repository" repo-uri repo))
      ((not (create-directory* local-dir))
-      (warn "can't create directory: " local-dir))
+      (warn "can't create directory" local-dir))
      (else
       (guard (exn (else (die 2 "couldn't write repository")))
         (call-with-output-file local-tmp
@@ -1194,10 +1194,17 @@
 
 ;; returns the single repo as a sexp, updated as needed
 (define (maybe-update-repository cfg repo-uri)
-  (or (guard (exn (else #f))
+  (or (guard (exn
+              (else
+               (warn "error updating remote repository: "
+                     repo-uri " error: " exn)
+               #f))
         (and (should-update-repository? cfg repo-uri)
              (update-repository cfg repo-uri)))
-      (guard (exn (else '(repository)))
+      (guard (exn
+              (else
+               (warn "error reading local repository: " exn)
+               '(repository)))
         (call-with-input-file (repository-local-path cfg repo-uri)
           read))))
 
@@ -1249,7 +1256,8 @@
             (lp (cdr ls) seen res)
             (let* ((repo (maybe-update-repository cfg uri))
                    (siblings
-                    (if (and repo (conf-get cfg 'follow-siblings? #t))
+                    (if (and (valid-repository? repo)
+                             (conf-get cfg 'follow-siblings? #t))
                         (let ((uri-base
                                (if (string-suffix? "/" uri)
                                    uri
