@@ -90,12 +90,20 @@ chibi-scheme-emscripten: VERSION
 	$(MAKE) distclean; \
 	mv "$$tempfile" chibi-scheme-emscripten)
 
-include/chibi/install.h: Makefile
+include/chibi/install.h: Makefile.libs Makefile.detect
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
 	echo '#define sexp_default_module_path "'$(MODDIR):$(BINMODDIR):$(SNOWMODDIR):$(SNOWBINMODDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
 	echo '#define sexp_version "'$(CHIBI_VERSION)'"' >> $@
 	echo '#define sexp_release_name "'`cat RELEASE`'"' >> $@
+
+lib/chibi/snow/install.sld: Makefile.libs Makefile.detect
+	echo '(define-library (chibi snow install)' > $@
+	echo '  (import (scheme base))' >> $@
+	echo '  (export snow-module-directory snow-binary-module-directory)' >> $@
+	echo '  (begin' >> $@
+	echo '   (define snow-module-directory "'$(SNOWMODDIR)'")' >> $@
+	echo '   (define snow-binary-module-directory "'$(SNOWBINMODDIR)'")))' >> $@
 
 %.o: %.c $(BASE_INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<

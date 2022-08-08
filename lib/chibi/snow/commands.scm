@@ -1650,7 +1650,7 @@
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
-   (else (car (get-install-dirs impl cfg)))))
+   (else snow-module-directory)))
 
 (define (get-install-data-dir impl cfg)
   (cond
@@ -1659,7 +1659,7 @@
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
-   (else (car (get-install-dirs impl cfg)))))
+   (else snow-module-directory)))
 
 (define (get-install-library-dir impl cfg)
   (cond
@@ -1675,7 +1675,7 @@
     (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
-   (else (car (get-install-library-dirs impl cfg)))))
+   (else snow-binary-module-directory)))
 
 (define (get-install-binary-dir impl cfg)
   (cond

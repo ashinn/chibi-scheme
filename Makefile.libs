@@ -67,7 +67,7 @@ include Makefile.detect
 
 ########################################################################
 
-all-libs: $(COMPILED_LIBS)
+all-libs: $(COMPILED_LIBS) lib/chibi/snow/install.sld
 
 lib/%.c: lib/%.stub $(CHIBI_FFI_DEPENDENCIES)
 	$(CHIBI_FFI) $<
