@@ -772,7 +772,9 @@
                              => (lambda (y)
                                   `("-F" ,(string-append
                                            (display-to-string (car x)) "="
-                                           (display-to-string (cdr y))))))
+                                           (write-to-string
+                                            (display-to-string (cdr y)))
+                                           "\""))))
                             ((and (pair? (cdr x)) (assq 'file (cdr x)))
                              => (lambda (y)
                                   `("-F" ,(string-append
@@ -781,7 +783,8 @@
                             (else
                              `("-F" ,(string-append
                                       (display-to-string (car x)) "="
-                                      (display-to-string (cdr x)))))))
+                                      (write-to-string
+                                       (display-to-string (cdr x))))))))
                          params)
                       ,(uri->string uri))))
       (open-input-bytevector (process->bytevector cmd))))
