@@ -64,7 +64,7 @@
                 (let restart ((request request))
                   (servlet cfg request servlet-bad-request restart)))))))
          (else
-          (let ((request (make-request command #f #f in out sock addr)))
+          (let ((request (make-request command "" #f in out sock addr)))
             (servlet-respond request 400 "bad request")))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
