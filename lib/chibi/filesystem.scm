@@ -104,7 +104,9 @@
 (define (with-directory dir thunk)
   (let ((pwd (current-directory)))
     (dynamic-wind
-      (lambda () (change-directory dir))
+      (lambda ()
+        (if (not (change-directory dir))
+            (error "couldn't change directory" dir)))
       thunk
       (lambda () (change-directory pwd)))))
 
