@@ -494,10 +494,11 @@
       (lambda () #f)
       (lambda () #f)))))
 
+;;> Returns the exit status of the last command in the pipeline.
 (define-syntax shell
   (syntax-rules ()
     ((shell cmd ...)
-     (for-each shell-wait (shell& cmd ...)))))
+     (map shell-wait (shell& cmd ...)))))
 
 (define-syntax shell->string
   (syntax-rules ()
