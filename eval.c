@@ -2034,6 +2034,8 @@ sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, s
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
   sexp_assert_type(ctx, sexp_charp, SEXP_CHAR, ch);
+  if (sexp_immutablep(str))
+    return sexp_xtype_exception(ctx, self, "string-set!: immutable string", str);
   off = sexp_string_index_to_cursor(ctx, self, n, str, i);
   if (sexp_exceptionp(off)) return off;
   if (sexp_unbox_string_cursor(off) >= (sexp_sint_t)sexp_string_size(str))
