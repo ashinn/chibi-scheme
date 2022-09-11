@@ -410,6 +410,7 @@ set(win32testexcludes
     chibi/tar-test # Depends (chibi system)
     chibi/process-test # Not applicable
     chibi/pty-test # Depends (chibi pty)
+    chibi/shell-test # Depends Linux procfs
     )
 
 foreach(e ${srfi_tests} ${chibi_scheme_tests})
