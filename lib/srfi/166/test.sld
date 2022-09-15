@@ -210,6 +210,15 @@
       (test "1.1" (show #f (numeric #i9/8 10 1)))
       (test "1" (show #f (numeric #i9/8 10 0)))
 
+      (test "1.0"
+          (show #f (with ((precision 1)) 0.999999999999876)))
+      (test "10.0"
+          (show #f (with ((precision 1)) 9.999999999999876)))
+      (test "10.0"
+          (show #f (numeric 9.999999999999876 10 1)))
+      (test "10.00"
+          (show #f (numeric 9.999999999999876 10 2)))
+
       ;; precision-show, base-4
       (test "1.1230" (show #f (numeric 91/64 4 4)))
       (test "1.123" (show #f (numeric 91/64 4 3)))

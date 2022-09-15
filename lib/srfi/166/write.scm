@@ -145,7 +145,7 @@
           (let lp ((ls ls) (res '()))
             (cond
              ((null? ls)
-              (cons 1 res))
+              (append (reverse res) '(1)))
              ((not (number? (car ls)))
               (lp (cdr ls) (cons (car ls) res)))
              ((= (car ls) (- radix 1))
@@ -203,9 +203,9 @@
                         (+ i 1)
                         (cons q res))))))
                (else
-                (list->string
+                (reverse-list->string
                  (map char-digit
-                      (reverse (maybe-trim-zeros i (maybe-round n d res) (inexact? n-orig))))))))))
+                      (maybe-trim-zeros i (maybe-round n d res) (inexact? n-orig)))))))))
         ;; Generate a fixed precision decimal result by post-editing the
         ;; result of string->number.
         (define (gen-fixed n)
@@ -240,11 +240,11 @@
                                          (string-ref/cursor
                                           s (string-cursor-prev s last)))
                                         '(1 3 5 7 9))))))
-                      (list->string
-                       (reverse
-                        (map char-digit
-                             (round-up
-                              (reverse (map digit-value (string->list res)))))))
+                      (reverse-list->string
+                       (map char-digit
+                            (round-up
+                             (reverse
+                              (map digit-value (string->list res))))))
                       res))))))
            (else
             (gen-general n))))
