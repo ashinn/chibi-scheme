@@ -2012,7 +2012,7 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
   p = (unsigned char*)sexp_string_data(str) + i;
   old_len = sexp_utf8_initial_byte_count(*p);
   new_len = sexp_utf8_char_byte_count(c);
-  if (old_len != new_len) { /* resize bytes if needed */
+  if (sexp_copy_on_writep(str) || old_len != new_len) { /* resize bytes if needed */
     len = sexp_string_size(str)+(new_len-old_len);
     b = sexp_make_bytes(ctx, sexp_make_fixnum(len), SEXP_VOID);
     if (! sexp_exceptionp(b)) {
@@ -2023,6 +2023,7 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
       p = q + i;
     }
     sexp_string_size(str) += new_len - old_len;
+    sexp_copy_on_writep(str) = 0;
   }
   sexp_utf8_encode_char(p, new_len, c);
   if (old_len != new_len)

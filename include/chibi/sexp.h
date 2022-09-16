@@ -442,6 +442,7 @@ struct sexp_struct {
   unsigned int freep:1;
   unsigned int brokenp:1;
   unsigned int syntacticp:1;
+  unsigned int copyonwritep:1;
 #if SEXP_USE_TRACK_ALLOC_SOURCE
   const char* source;
   void* backtrace[SEXP_BACKTRACE_SIZE];
@@ -773,6 +774,7 @@ void* sexp_alloc(sexp ctx, size_t size);
 #define sexp_freep(x)            ((x)->freep)
 #define sexp_brokenp(x)          ((x)->brokenp)
 #define sexp_pointer_magic(x)    ((x)->magic)
+#define sexp_copy_on_writep(x)   ((x)->copyonwritep)
 
 #if SEXP_USE_TRACK_ALLOC_SOURCE
 #define sexp_pointer_source(x)   ((x)->source)

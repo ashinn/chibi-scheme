@@ -372,6 +372,23 @@ sexp sexp_make_immutable_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return SEXP_FALSE;
 }
 
+sexp sexp_immutable_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp s) {
+  sexp res;
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, s);
+#if SEXP_USE_PACKED_STRINGS
+  /* no sharing with packed strings */
+  res = sexp_c_string(ctx, sexp_string_data(s), sexp_string_size(s));
+#else
+  res = sexp_alloc_type(ctx, string, SEXP_STRING);
+  sexp_string_bytes(res) = sexp_string_bytes(s);
+  sexp_string_offset(res) = sexp_string_offset(s);
+  sexp_string_size(res) = sexp_string_size(s);
+  sexp_copy_on_writep(s) = 1;
+#endif
+  sexp_immutablep(res) = 1;
+  return res;
+}
+
 sexp sexp_integer_to_immediate (sexp ctx, sexp self, sexp_sint_t n, sexp i, sexp dflt) {
   sexp x = (sexp)sexp_unbox_fixnum(i);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, i);
@@ -756,6 +773,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign(ctx, env, "immutable?", 1, sexp_immutablep_op);
   sexp_define_foreign(ctx, env, "make-immutable!", 1, sexp_make_immutable_op);
+  sexp_define_foreign(ctx, env, "immutable-string", 1, sexp_immutable_string_op);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign_opt(ctx, env, "object->integer", 1, sexp_object_to_integer, SEXP_FALSE);
   sexp_define_foreign(ctx, env, "gc", 0, sexp_gc_op);

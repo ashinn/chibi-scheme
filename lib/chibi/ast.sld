@@ -41,7 +41,7 @@
    atomically thread-list abort
    string-contains string-cursor-copy! errno integer->error-string
    flatten-dot update-free-vars! setenv unsetenv safe-setenv
-   immutable? make-immutable!
+   immutable? immutable-string make-immutable!
    thread-interrupt!
    chibi-version)
   (import (chibi))
