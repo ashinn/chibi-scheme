@@ -196,7 +196,7 @@
 
 (define (close-file-descriptors-in-range lo hi)
   (cond
-   ((find file-directory? '("/proc/self/fd" "/dev/df"))
+   ((find file-directory? '("/proc/self/fd" "/dev/fd"))
     => (lambda (dir)
          (for-each
           (lambda (file)
