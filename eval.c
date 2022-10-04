@@ -1374,24 +1374,53 @@ sexp sexp_stream_portp_op (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
 #endif
 
 #if SEXP_USE_STATIC_LIBS
-#if SEXP_USE_STATIC_LIBS_NO_INCLUDE
+#if SEXP_USE_STATIC_LIBS_EMPTY
+struct sexp_library_entry_t* sexp_static_libraries = NULL;
+#elif SEXP_USE_STATIC_LIBS_NO_INCLUDE
 extern struct sexp_library_entry_t* sexp_static_libraries;
 #else
 #include "clibs.c"
 #endif
+
+void sexp_add_static_libraries(struct sexp_library_entry_t* libraries)
+{
+  struct sexp_library_entry_t *entry, *table;
+
+  if (!sexp_static_libraries) {
+    sexp_static_libraries = libraries;
+    return;
+  }
+
+  for (table = sexp_static_libraries; ;
+       table = (struct sexp_library_entry_t*)entry->init) {
+    for (entry = &table[0]; entry->name; entry++)
+       ;
+    if (!entry->init) {
+      entry->init = (sexp_init_proc)libraries;
+      return;
+    }
+  }
+}
+
 static struct sexp_library_entry_t *sexp_find_static_library(const char *file)
 {
   size_t base_len;
-  struct sexp_library_entry_t *entry;
+  struct sexp_library_entry_t *entry, *table;
 
+  if(!sexp_static_libraries)
+    return NULL;
   if (file[0] == '.' && file[1] == '/')
     file += 2;
   base_len = strlen(file) - strlen(sexp_so_extension);
   if (strcmp(file + base_len, sexp_so_extension))
     return NULL;
-  for (entry = &sexp_static_libraries[0]; entry->name; entry++)
-    if (! strncmp(file, entry->name, base_len))
-      return entry;
+  for (table = sexp_static_libraries;
+       table;
+       table = (struct sexp_library_entry_t*)entry->init) {
+    for (entry = &table[0]; entry->name; entry++)
+      if (! strncmp(file, entry->name, base_len))
+        return entry;
+  }
   return NULL;
 }
 #else
