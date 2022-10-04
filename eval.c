@@ -2544,8 +2544,17 @@ sexp sexp_make_standard_env_op (sexp ctx, sexp self, sexp_sint_t n, sexp version
   sexp_gc_preserve1(ctx, env);
   env = sexp_make_primitive_env(ctx, version);
   if (! sexp_exceptionp(env)) env = sexp_load_standard_env(ctx, env, SEXP_SEVEN);
+  if (sexp_envp(env)) sexp_immutablep(env) = 1;
   sexp_gc_release1(ctx);
   return env;
+}
+
+sexp sexp_make_immutable_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
+  if (sexp_pointerp(x)) {
+    sexp_immutablep(x) = 1;
+    return SEXP_TRUE;
+  }
+  return SEXP_FALSE;
 }
 
 sexp sexp_env_parent_op (sexp ctx, sexp self, sexp_sint_t n, sexp e) {

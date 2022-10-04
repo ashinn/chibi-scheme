@@ -364,14 +364,6 @@ sexp sexp_immutablep_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
   return sexp_pointerp(x) ? sexp_make_boolean(sexp_immutablep(x)) : SEXP_TRUE;
 }
 
-sexp sexp_make_immutable_op (sexp ctx, sexp self, sexp_sint_t n, sexp x) {
-  if (sexp_pointerp(x)) {
-    sexp_immutablep(x) = 1;
-    return SEXP_TRUE;
-  }
-  return SEXP_FALSE;
-}
-
 sexp sexp_immutable_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp s) {
   sexp res;
   sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, s);
@@ -772,7 +764,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_foreign(ctx, env, "core-code", 1, sexp_core_code_op);
   sexp_define_foreign(ctx, env, "object-size", 1, sexp_object_size);
   sexp_define_foreign(ctx, env, "immutable?", 1, sexp_immutablep_op);
-  sexp_define_foreign(ctx, env, "make-immutable!", 1, sexp_make_immutable_op);
   sexp_define_foreign(ctx, env, "immutable-string", 1, sexp_immutable_string_op);
   sexp_define_foreign_opt(ctx, env, "integer->immediate", 2, sexp_integer_to_immediate, SEXP_FALSE);
   sexp_define_foreign_opt(ctx, env, "object->integer", 1, sexp_object_to_integer, SEXP_FALSE);

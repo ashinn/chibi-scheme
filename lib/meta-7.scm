@@ -230,7 +230,7 @@
       (warn-undefs env #f)
       env))))
 
-(define (environment . ls)
+(define (mutable-environment . ls)
   (let ((env (make-environment)))
     (for-each
      (lambda (m)
@@ -238,6 +238,11 @@
               (mod2 (load-module (car mod2-name+imports))))
          (%import env (module-env mod2) (cdr mod2-name+imports) #t)))
      ls)
+    env))
+
+(define (environment . ls)
+  (let ((env (apply mutable-environment ls)))
+    (make-immutable! env)
     env))
 
 (define (load-module name)

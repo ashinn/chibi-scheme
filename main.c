@@ -14,11 +14,11 @@
 
 #define sexp_import_prefix "(import ("
 #define sexp_import_suffix "))"
-#define sexp_environment_prefix "(environment '("
+#define sexp_environment_prefix "(mutable-environment '("
 #define sexp_environment_suffix "))"
 #define sexp_trace_prefix "(module-env (load-module '("
 #define sexp_trace_suffix ")))"
-#define sexp_default_environment "(environment '(scheme small))"
+#define sexp_default_environment "(mutable-environment '(scheme small))"
 #define sexp_advice_environment "(load-module '(chibi repl))"
 
 #define sexp_version_string "chibi-scheme "sexp_version" \""sexp_release_name"\" "
