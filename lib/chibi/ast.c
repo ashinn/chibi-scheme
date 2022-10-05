@@ -105,7 +105,7 @@ sexp sexp_get_procedure_variable_transformer_p (sexp ctx, sexp self, sexp_sint_t
 
 sexp sexp_get_procedure_flags (sexp ctx, sexp self, sexp_sint_t n, sexp proc) {
   sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, proc);
-  return sexp_make_fixnum(sexp_procedure_flags(proc));
+  return (sexp) (sexp_uint_t) sexp_procedure_flags(proc);
 }
 
 sexp sexp_make_variable_transformer_op (sexp ctx, sexp self, sexp_sint_t n, sexp base_proc) {

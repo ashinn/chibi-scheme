@@ -533,7 +533,7 @@ struct sexp_struct {
     } bytecode;
     struct {
       sexp bc, vars;
-      char flags;
+      char flags;  /* a boxed fixnum truncated to char */
       sexp_proc_num_args_t num_args;
     } procedure;
     struct {
