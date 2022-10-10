@@ -80,13 +80,24 @@
   (call-with-output-string
     (lambda (out) (html-display-escaped-string str out))))
 
+(define indentable-elements
+  '(address article aside base blockquote body dd details dialog
+    div dl dt fieldset figcaption figure footer form h1 h2 h3 h4
+    h5 h6 head header hgroup hr li link main meta nav ol p pre
+    script section style table title ul))
+
+(define (indent i out)
+  (do ((j (* 2 i) (- j 1))) ((= j 0)) (write-char #\space out)))
+
 ;;> Render (valid, expanded) \var{sxml} as html.
 ;;> \var{@raw} tag is considered safe text and not processed or escaped.
 (define (sxml-display-as-html sxml . o)
-  (let ((out (if (pair? o) (car o) (current-output-port))))
+  (let-optionals o ((out (current-output-port))
+		    (indent? #false))
     (let lp ((sxml (if (and (pair? sxml) (eq? '*TOP* (car sxml)))
                        (cdr sxml)
-                       sxml)))
+                       sxml))
+	     (i 0))
       (cond
        ((pair? sxml)
         (let ((tag (car sxml))
@@ -106,17 +117,23 @@
              ((and (pair? rest)
                    (pair? (car rest))
                    (eq? '@ (caar rest)))
-              (display (html-tag->string tag (cdar rest)) out)
-              (for-each lp (cdr rest))
-              (unless (and (null? (cdr rest)) (memq tag void-elements))
+	      (when (and indent? (memq tag indentable-elements))
+		(newline out)
+		(indent i out))
+	      (display (html-tag->string tag (cdar rest)) out)
+	      (for-each (lambda (x) (lp x (+ 1 i))) (cdr rest))
+	      (unless (and (null? (cdr rest)) (memq tag void-elements))
                 (display "</" out) (display tag out) (display ">" out)))
              (else
-              (display (html-tag->string tag '()) out)
-              (for-each lp rest)
-              (unless (and (null? rest) (memq tag void-elements))
+	      (when (and indent? (memq tag indentable-elements))
+		(newline out)
+		(indent i out))
+	      (display (html-tag->string tag '()) out)
+	      (for-each (lambda (x) (lp x (+ 1 i))) rest)
+	      (unless (and (null? rest) (memq tag void-elements))
                 (display "</" out) (display tag out) (display ">" out)))))
            (else
-            (for-each lp sxml)))))
+            (for-each (lambda (x) (lp x (+ 1 i))) sxml)))))
        ((null? sxml))
        (else (html-display-escaped-string sxml out))))))
 
