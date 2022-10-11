@@ -80,6 +80,22 @@
           (test '(0 1 2) (cons a b))))
       (test 5 (keyword-ref '(a: b: b: 5) 'b: #f))
       (test 5 (keyword-ref* '(a: b: b: 5) 'b: #f))
+      (test '(1 2 0 (other: 9))
+          (let-keywords '(b: 2 a: 1 other: 9)
+              ((a 0) (b 0) (c 0) rest)
+            (list a b c rest)))
+      ;; a: is not in a keyword position, and the 3 is dropped
+      (test '(1 (2 a:))
+          (let-keywords '(2 a: 3) ((a a: 1) rest) (list a rest)))
+      ;; a: is in a keyword position, and the 3 is dropped
+      (test '(2 ())
+          (let-keywords '(a: 2 3) ((a a: 1) rest) (list a rest)))
+      ;; a: is in a keyword position, 3->5 is a kv, 4 is dropped
+      (test '(2 (3 5))
+          (let-keywords '(3 5 a: 2 4) ((a a: 1) rest) (list a rest)))
+      ;; a: is in a keyword position, 3->5 and 4->6 are kvs
+      (test '(2 (3 5 4 6))
+          (let-keywords '(3 5 a: 2 4 6) ((a a: 1) rest) (list a rest)))
       (cond-expand
        (gauche)     ; gauche detects this at compile-time, can't catch
        (else (test-error '(0 11 12)

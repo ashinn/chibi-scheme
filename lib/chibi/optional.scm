@@ -162,13 +162,21 @@
 ;;> is not found, \var{var} is bound to \var{default}, even if unused
 ;;> names remain in \var{ls}.
 ;;>
+;;> Keyword arguments have precedence in CommonLisp, DSSSL, and SRFI
+;;> 89.  However, unlike these systems you cannot mix optional and
+;;> keyword arguments.
+;;>
 ;;> If an optional trailing identifier \var{rest} is provided, it is
 ;;> bound to the list of unused arguments not bound to any \var{var}.
+;;> This is useful for chaining together keyword argument procedures -
+;;> you can extract just the arguments you need and pass on the rest
+;;> to another procedure.  The \var{rest} usage is similar to Python's
+;;> \code{**args} (again predated by CommonLisp and DSSSL).
 ;;>
 ;;> Note R7RS does not have a disjoint keyword type or auto-quoting
-;;> syntax for keywords - they are simply identifiers.  Thus when
-;;> passing keyword arguments they must be quoted (or otherwise
-;;> dynamically evaluated).
+;;> syntax for keywords - they are simply identifiers (though no type
+;;> checking is performed).  Thus when passing keyword arguments they
+;;> must be quoted (or otherwise dynamically evaluated).
 ;;>
 ;;> \emph{Example:}
 ;;> \example{
@@ -189,12 +197,27 @@
 ;;>     ((a 0) (b 0) (c 0) rest)
 ;;>   (list a b c rest))
 ;;> }
+;;>
+;;> \emph{Example:}
+;;> \example{
+;;> (define (auth-wrapper proc)
+;;>   (lambda o
+;;>     (let-keywords o ((user #f)
+;;>                      (password #f)
+;;>                      rest)
+;;>       (if (authenticate? user password)
+;;>           (apply proc rest)
+;;>           (error "access denied")))))
+;;>
+;;> ((auth-wrapper make-payment) 'user: "bob" 'password: "5ecret" 'amount: 50)
+;;> }
 
 (define-syntax let-keywords
   (syntax-rules ()
     ((let-keywords ls vars . body)
      (let-key*-to-let ls () vars . body))))
 
+;; Returns the plist ls filtering out key-values found in keywords.
 (define (remove-keywords ls keywords)
   (let lp ((ls ls) (res '()))
     (if (and (pair? ls) (pair? (cdr ls)))
@@ -203,6 +226,8 @@
             (lp (cddr ls) (cons (cadr ls) (cons (car ls) res))))
         (reverse res))))
 
+;; Extracts the known keywords from a let-keyword spec and removes
+;; them from the opt-ls.
 (define-syntax remove-keywords*
   (syntax-rules ()
     ((remove-keywords* opt-ls (keys ...) ((var key default) . rest))
@@ -214,7 +239,7 @@
 
 ;;> \macro{(let-keywords* ls ((var [keyword] default) ... [rest]) body ...)}
 ;;>
-;;> \scheme{let*} equivalent to \scheme{let-keywords*}.  Any required
+;;> \scheme{let*} equivalent to \scheme{let-keywords}.  Any required
 ;;> \var{default} values are evaluated in left-to-right order, with
 ;;> all preceding \var{var}s in scope.
 ;;>
