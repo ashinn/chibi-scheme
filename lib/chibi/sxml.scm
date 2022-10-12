@@ -40,11 +40,11 @@
     (lambda (out) (html-display-escaped-attr (display-to-string str) out))))
 
 (define (html-attr->string attr)
-  (if (cdr attr)
+  (if (null? (cdr attr))
+      (symbol->string (car attr))
       (let ((val (if (pair? (cdr attr)) (cadr attr) (cdr attr))))
         (string-append (symbol->string (car attr))
-                       "=\"" (html-escape-attr val) "\""))
-      (symbol->string (car attr))))
+                       "=\"" (html-escape-attr val) "\""))))
 
 (define (html-tag->string tag attrs)
   (let lp ((ls attrs) (res (list (symbol->string tag) "<")))
