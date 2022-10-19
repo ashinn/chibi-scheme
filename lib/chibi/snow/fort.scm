@@ -102,11 +102,11 @@
          (key (guard (exn (else #f)) (call-with-input-file key-file read))))
     (and (pair? key) (assoc-get key 'password))))
 
-(define (package-dir email pkg)
+(define (package-dir email pkg . o)
   (make-path
    (email->path email)
    (string-join (map escape-path (map x->string (package-name pkg))) "/")
-   (escape-path (package-version pkg))))
+   (escape-path (if (pair? o) (car o) (package-version pkg)))))
 
 ;; Simplistic pretty printing for package/repository/config declarations.
 (define (write-simple-pretty pkg out)
@@ -256,6 +256,76 @@
                            (name . "search")
                            (value . "Search Libraries"))))))
      ,body)))
+
+(define (dependency-url cfg dep . o)
+  (if (and (eq? 'srfi (car dep))
+           (pair? (cdr dep))
+           (integer? (cadr dep))
+           (null? (cddr dep)))
+      (string-append "https://srfi.schemers.org/srfi-"
+                     (number->string (cadr dep))
+                     "/")
+      ;; TODO: alternative impls
+      (let* ((repo (if (pair? o) (car o) (current-repo cfg)))
+             (pkg (find (lambda (p)
+                          (and (package? p)
+                               (any (lambda (m) (equal? dep (library-name m)))
+                                    (package-libraries p))))
+                        (cdr repo))))
+        (and pkg
+             (make-path "/s" (package-dir (package-email pkg) pkg "latest"))))))
+
+(define (package-page pkg files . o)
+  (let* ((cfg (if (pair? o) (car o) (make-conf '() #f #f 0)))
+         (repo (if (and (pair? o) (pair? (cdr o)))
+                   (cadr o)
+                   (current-repo cfg))))
+    `(div
+      (div "☃ " (b ,(package-name pkg)) " - " (i ,(package-version pkg)))
+      (div ,(or (assoc-get pkg 'description) ""))
+      ,(let ((auth (package-author '() pkg))
+             (maint (package-maintainer '() pkg)))
+         `(div ,auth
+               ,@(if (and maint (not (equal? maint auth)))
+                     `((" (" ,maint ")"))
+                     '())
+               ,(cond ((assoc-get pkg 'license)
+                       => (lambda (x)
+                            (string-append " - " (write-to-string x))))
+                      (else ""))))
+      ,@(cond
+         ((assq 'manual (cdr pkg))
+          => (lambda (ls)
+               (if (and (pair? ls) (pair? (cdr ls)))
+                   (if (or (string-prefix? "http:" (cadr ls))
+                           (string-prefix? "https:" (cadr ls)))
+                       `((a (@ (href . ,(cadr ls))) "doc"))
+                       `((a (@ (href . ,(make-path "files" (cadr ls))))
+                            "Documentation")))
+                   '())))
+         (else '()))
+      (div
+       (b "Dependencies")
+       (ul
+        ,@(map
+           (lambda (dep)
+             `(li (a (@ (href . ,(dependency-url cfg dep repo)))
+                     ,(write-to-string dep))))
+           (filter
+            (lambda (dep)
+              (and (pair? dep) (not (eq? 'scheme (car dep)))))
+            (package-dependencies 'chibi cfg pkg)))))
+      (div
+       (b "Files")
+       (ul
+        ,@(map
+           (lambda (file) `(li (a (@ (href . ,(make-path "files" file))) ,file)))
+           (filter
+            (lambda (file)
+              (and (string? file)
+                   (not (equal? "" file))
+                   (not (string-prefix? "." file))))
+            files)))))))
 
 (define (respond cfg request proc)
   (let ((sexp? (equal? "sexp" (request-param request "fmt"))))

@@ -8,7 +8,8 @@
           invalid-signature-reason
           rewrite-repo update-repo
           update-repo-package update-repo-object
-          repo-publishers current-repo get-user-password)
+          repo-publishers current-repo get-user-password
+          dependency-url package-page)
   (import (scheme base)
           (scheme read)
           (scheme write)
@@ -16,6 +17,7 @@
           (srfi 1)
           (srfi 18)
           (chibi snow package)
+          (chibi snow utils)
           (chibi bytevector)
           (chibi config)
           (chibi crypto rsa)
