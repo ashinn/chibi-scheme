@@ -2026,8 +2026,14 @@ void sexp_string_utf8_set (sexp ctx, sexp str, sexp index, sexp ch) {
     sexp_copy_on_writep(str) = 0;
   }
   sexp_utf8_encode_char(p, new_len, c);
-  if (old_len != new_len)
+  if (old_len != new_len) {
+#if SEXP_USE_STRING_INDEX_TABLE
     sexp_update_string_index_lookup(ctx, str);
+#elif SEXP_USE_STRING_REF_CACHE
+  sexp_cached_char_idx(str) = 0;
+  sexp_cached_cursor(str) = sexp_make_string_cursor(0);
+#endif
+  }
 }
 
 sexp sexp_string_utf8_index_set (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp i, sexp ch) {
