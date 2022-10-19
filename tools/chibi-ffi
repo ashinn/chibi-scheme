@@ -31,7 +31,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; globals
 
-(define *ffi-version* "0.4")
+(define *ffi-version* "0.5")
 (define *types* '())
 (define *type-getters* '())
 (define *type-setters* '())
@@ -53,7 +53,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; type objects
 
-(define (make-type) (make-vector 19 #f))
+(define (make-type) (make-vector 20 #f))
 
 (define (type-base type) (vector-ref type 0))
 (define (type-free? type) (vector-ref type 1))
@@ -73,8 +73,9 @@
 (define (type-address-of? type) (vector-ref type 15))
 (define (type-no-free? type) (vector-ref type 16))
 (define (type-as-sexp type) (vector-ref type 17))
-(define (type-index type) (vector-ref type 18))
-(define (type-index-set! type i) (vector-set! type 18 i))
+(define (type-move? type) (vector-ref type 18))
+(define (type-index type) (vector-ref type 19))
+(define (type-index-set! type i) (vector-set! type 19 i))
 
 (define (spec->type type . o)
   (let ((res (make-type)))
@@ -135,6 +136,9 @@
          (lp (next)))
         ((as-sexp)
          (vector-set! res 17 #t)
+         (lp (next)))
+        ((move)
+         (vector-set! res 18 #t)
          (lp (next)))
         (else
          (let ((base (if (and (pair? type) (null? (cdr type)))
@@ -685,6 +689,12 @@
    (lambda (expr rename compare)
      (ensure-c++ 'c++-using)
      `(,(rename 'cat) "using " ',(cadr expr) ";\n"))))
+
+(define-syntax c++-using-namespace
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (ensure-c++ 'c++-using-namespace)
+     `(,(rename 'cat) "using namespace " ',(cadr expr) ";\n"))))
 
 (define-syntax define-c++-method
   (er-macro-transformer
@@ -1496,7 +1506,8 @@
 (define (write-call func)
   (let ((ret-type (func-ret-type func))
         (c-name (func-c-name func))
-        (c-args (func-c-args func)))
+        (c-args (func-c-args func))
+        (link (find type-link? (func-c-args func))))
     (if (any type-auto-expand? (func-c-args func))
         (cat " loop:\n"))
     (cat (cond ;;((void-type? ret-type) "")
@@ -1523,11 +1534,10 @@
           (write-actual-parameter func arg))
         (if (func-method? func) (cdr c-args) c-args))
        (cat ")"))
-     (cond
-      ((find type-link? (func-c-args func))
-       => (lambda (a) (string-append "arg" (type-index-string a))))
-      (else #f)))
+     (and link (string-append "arg" (type-index-string link))))
     (cat ";\n")
+    ;; (if (and *c++?* (type-new? ret-type) link)
+    ;;     (cat "  sexp_preserve_object(ctx, arg" (type-index-string link) ");\n"))
     (if (type-array ret-type)
         (write-result ret-type)
         (write-result-adjustment ret-type))))
@@ -1716,7 +1726,10 @@
             (or (not (type-array a))
                 (not (integer? (get-array-length func a)))))
        ;; the above is hairy - basically this frees temporary strings
-       (cat "  free(tmp" (type-index a) ");\n"))))
+       (cat "  free(tmp" (type-index a) ");\n"))
+      ((and (type-move? a) (or (type-pointer? a) (not (basic-type? a))))
+       (cat "  sexp_cpointer_value(arg" (type-index a) ") = NULL;  /* moved */\n"
+            "  sexp_cpointer_freep(arg" (type-index a) ") = 0;\n"))))
    (func-c-args func))
   (let* ((results (func-results func))
          (return-res? (not (error-type? (func-ret-type func))))
@@ -1866,8 +1879,9 @@
                (cat (cond ((not default) 0)
                           ((parameter-default? (type-value default)) 3)
                           (else 1))
-                    ", "))
+                    ", \"" (func-stub-name func) "\", "))
              "")
+         "(sexp_proc1)"
          (func-stub-name func)
          (cond
           (default (lambda () (cat ", " (write-default default))))
@@ -1971,8 +1985,10 @@
                       (memq 'finalizer-method: type))
                   => (lambda (x)
                        (let ((name (cadr x)))
-                         (generate-stub-name
-                          (if (pair? name) (car name) name)))))
+                         (if name
+                             (generate-stub-name
+                              (if (pair? name) (car name) name))
+                             'NULL))))
                  (*c++?*
                   (type-finalizer-name name))
                  (else
@@ -2121,25 +2137,27 @@
                 (scheme-name (if (pair? y) (car y) y))
                 (cname (if (pair? y) (cadr y) y))
                 (method? (not (memq 'finalizer: type))))
-           (cat "sexp " (generate-stub-name scheme-name)
-                " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
-                "  if (sexp_cpointer_freep(x)) {\n"
-                "    " (if method? "" cname) "("
-                (if method? "(" "")
-                "\n#ifdef __cplusplus\n"
-                "(" (mangle name) "*)"
-                "\n#endif\n"
-                "sexp_cpointer_value(x)"
-                (if method? (string-append ")->" (x->string cname) "()") "")
-                ");\n"
-                ;; TODO: keep track of open/close separately from ownership
-                "    sexp_cpointer_freep(x) = 0;\n"
-                "  }\n"
-                "  return SEXP_VOID;\n"
-                "}\n\n")
-           ;; make the finalizer available
-           (set! *funcs*
-                 (cons (parse-func `(void ,y (,name))) *funcs*))))))
+           (cond
+            (y
+             (cat "sexp " (generate-stub-name scheme-name)
+                  " (sexp ctx, sexp self, sexp_sint_t n, sexp x) {\n"
+                  "  if (sexp_cpointer_freep(x)) {\n"
+                  "    " (if method? "" cname) "("
+                  (if method? "(" "")
+                  "\n#ifdef __cplusplus\n"
+                  "(" (mangle name) "*)"
+                  "\n#endif\n"
+                  "sexp_cpointer_value(x)"
+                  (if method? (string-append ")->" (x->string cname) "()") "")
+                  ");\n"
+                  ;; TODO: keep track of open/close separately from ownership
+                  "    sexp_cpointer_freep(x) = 0;\n"
+                  "  }\n"
+                  "  return SEXP_VOID;\n"
+                  "}\n\n")
+             ;; make the finalizer available
+             (set! *funcs*
+                   (cons (parse-func `(void ,y (,name))) *funcs*))))))))
   ;; maybe write constructor
   (cond
    ((memq 'constructor: type)
@@ -2289,10 +2307,12 @@
            (cat
             "sexp " finalizer-name " ("
             "sexp ctx, sexp self, sexp_sint_t n, sexp obj) {\n"
-            "  if (sexp_cpointer_freep(obj))\n"
+            "  if (sexp_cpointer_value(obj) && sexp_cpointer_freep(obj))\n"
             "    delete static_cast<" name "*>"
             "(sexp_cpointer_value(obj));\n"
             "  sexp_cpointer_value(obj) = NULL;\n"
+            ;; "  if (sexp_cpointer_parent(obj) && sexp_pointerp(sexp_cpointer_parent(obj)))\n"
+            ;; "    sexp_release_object(ctx, sexp_cpointer_parent(obj));\n"
             "  return SEXP_VOID;\n"
             "}\n\n")))))
      *types*)))
