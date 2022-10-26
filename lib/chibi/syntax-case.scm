@@ -61,6 +61,10 @@
     ((letrec-syntax ((keyword transformer) ...) . body)
      (%letrec-syntax ((keyword (make-transformer transformer)) ...) . body))))
 
+(define-record-type Pattern-Cell
+  (make-pattern-cell val) pattern-cell?
+  (val pattern-cell-value))
+
 (define-syntax define-pattern-variable
   (er-macro-transformer
    (lambda (expr rename compare)
@@ -68,7 +72,7 @@
            (binding (cddr expr)))
        (let ((cell (env-cell (current-usage-environment) id)))
          (if cell
-             (macro-aux-set! (cdr cell) binding)))
+             (macro-aux-set! (cdr cell) (make-pattern-cell binding))))
        (rename '(begin))))))
 
 (define (make-pattern-variable pvar)
@@ -76,8 +80,13 @@
     (error "reference to pattern variable outside syntax" pvar)))
 
 (define (pattern-variable x)
-  (let ((cell (env-cell (current-usage-environment) x)))
-    (and cell (macro? (cdr cell)) (macro-aux (cdr cell)))))
+  (and-let*
+      ((cell (env-cell (current-usage-environment) x))
+       (cell-ref (cdr cell))
+       ((macro? cell-ref))
+       (aux (macro-aux cell-ref))
+       ((pattern-cell? aux)))
+    (pattern-cell-value aux)))
 
 (define (rename id)
   ((current-renamer) id))
