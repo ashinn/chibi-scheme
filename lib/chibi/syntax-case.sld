@@ -16,6 +16,8 @@
                 make-variable-transformer)
           (only (meta) environment)
           (srfi 1)
+          (srfi 2)
+          (srfi 9)
           (srfi 11)
           (srfi 39))
   (include "syntax-case.scm"))
