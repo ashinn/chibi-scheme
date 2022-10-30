@@ -3,7 +3,7 @@
  (modules
   (import (chibi)
           (only (chibi test) test-begin test test-error test-end)
-          (only (meta) environment)))
+          (only (meta) mutable-environment)))
  (else #f))
 
 (test-begin "syntax")
@@ -84,7 +84,7 @@
  ;; this could be fixed in theory)
  (modules
   (test-begin "identifier syntax")
-  (define syntax-test-env (environment '(chibi) '(chibi ast)))
+  (define syntax-test-env (mutable-environment '(chibi) '(chibi ast)))
 
   (eval
    '(define-syntax low-level-id-macro
