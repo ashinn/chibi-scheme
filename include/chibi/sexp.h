@@ -395,8 +395,8 @@ struct sexp_gc_var_t {
   struct sexp_gc_var_t *next;
 };
 
-struct sexp_library_entry_t {   /* for static builds */
-  const char *name;
+struct sexp_library_entry_t {   /* for static builds and user exported C */
+  const char *name;             /* libaries */
   sexp_init_proc init;
 };
 
@@ -1686,6 +1686,16 @@ sexp sexp_finalize_dl (sexp ctx, sexp self, sexp_sint_t n, sexp dl);
 #else
 #define sexp_current_source_param
 #endif
+
+/* To export a library from the embedding C program to Scheme, so    */
+/* that it can be included into Scheme library foo/qux.sld as        */
+/* (include-shared "bar"), libraries should contain the entry        */
+/* {"foo/bar", init_bar}.  The signature and function of init_bar is */
+/* the same as that of sexp_init_library in shared libraries.  The   */
+/* array libraries must be terminated with {NULL, NULL} and must     */
+/* remain valid throughout its use by Chibi.                         */
+
+SEXP_API void sexp_add_static_libraries(struct sexp_library_entry_t* libraries);
 
 SEXP_API sexp sexp_alloc_tagged_aux(sexp ctx, size_t size, sexp_uint_t tag sexp_current_source_param);
 SEXP_API sexp sexp_make_context(sexp ctx, size_t size, size_t max_size);
