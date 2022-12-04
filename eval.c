@@ -624,8 +624,7 @@ static int sexp_contains_syntax_p_bound(sexp x, int depth) {
       if (i > 0 && (ls1 == ls2 || ls1 == sexp_car(ls2)))
         return 0; /* cycle, no synclo found, assume none */
     }
-    if (sexp_synclop(ls1))
-      return sexp_contains_syntax_p_bound(sexp_id_name(ls1), depth-1);
+    return sexp_contains_syntax_p_bound(ls1, depth-1);
   } else if (sexp_vectorp(x)) {
     for (i = 0; i < sexp_vector_length(x); ++i)
       if (sexp_contains_syntax_p_bound(sexp_vector_ref(x, sexp_make_fixnum(i)), depth-1))
