@@ -23,15 +23,26 @@
 /*   sexp_init_library(ctx, env) function provided. */
 /* #define SEXP_USE_DL 0 */
 
-/* uncomment this to statically compile all C libs */
-/*   If set, this will statically include the clibs.c file */
-/*   into the standard environment, so that you can have */
-/*   access to a predefined set of C libraries without */
-/*   needing dynamic loading.  The clibs.c file is generated */
-/*   automatically by searching the lib directory for */
-/*   modules with include-shared, but can be hand-tailored */
-/*   to your needs. */
+/* uncomment this to support statically compiled C libs */
+/*   Unless SEXP_USE_STATIC_LIBS_EMPTY is set (see below), this */
+/*   will statically include the clibs.c file into the standard */
+/*   environment, so that you can have access to a predefined set */
+/*   of C libraries without needing dynamic loading.  The clibs.c */
+/*   file is generated automatically by searching the lib directory */
+/*   for modules with include-shared, but can be hand-tailored to */
+/*   your needs.  You can also register your own C libraries using */
+/*   sexp_add_static_libraries (see below). */
 /* #define SEXP_USE_STATIC_LIBS 1 */
+
+/* uncomment this to enable user exported C libs */
+/*   You can register your own C libraries using */
+/*   sexp_add_static_libraries.  Each entry in the supplied table, */
+/*   is a name/entry point pair.  These work as if they were */
+/*   dynamically loaded libraries, so naming follows the same */
+/*   conventions.  An entry {"foo", init_foo} will register a */
+/*   library that can be loaded with (load "foo"), or */
+/*   (include-shared "foo"), both of which will call init_foo. */
+/* #define SEXP_USE_STATIC_LIBS_EMPTY 1 */
 
 /* uncomment this to disable detailed source info for debugging */
 /*   By default Chibi will associate source info with every */
@@ -467,13 +478,17 @@
 #endif
 #endif
 
+#ifndef SEXP_USE_STATIC_LIBS_EMPTY
+#define SEXP_USE_STATIC_LIBS_EMPTY 0
+#endif
+
 #ifndef SEXP_USE_STATIC_LIBS
-#define SEXP_USE_STATIC_LIBS 0
+#define SEXP_USE_STATIC_LIBS SEXP_USE_STATIC_LIBS_EMPTY
 #endif
 
 /* don't include clibs.c - include separately or link */
 #ifndef SEXP_USE_STATIC_LIBS_NO_INCLUDE
-#ifdef PLAN9
+#if defined(PLAN9) || SEXP_USE_STATIC_LIBS_EMPTY
 #define SEXP_USE_STATIC_LIBS_NO_INCLUDE 0
 #else
 #define SEXP_USE_STATIC_LIBS_NO_INCLUDE 1
