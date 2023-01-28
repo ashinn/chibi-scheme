@@ -112,19 +112,19 @@
     (if (memq (car x) '(only except rename))
         (let* ((mod-name+imports (%resolve-import (cadr x)))
                (imp-ids (or (cdr mod-name+imports)
-                            (and (not (eq? 'only (car x)))
-                                 (module-exports
-                                  (find-module (car mod-name+imports)))))))
+                            (module-exports (find-module (car mod-name+imports))))))
           (cons (car mod-name+imports)
                 (case (car x)
                   ((only)
-                   (if imp-ids
-                       (map (lambda (imp) (or (assq imp imp-ids) imp))
-                            (cddr x))
-                       (cddr x)))
+                   (map (lambda (imp)
+                          (if (or (boolean? imp-ids) (memq imp imp-ids))
+                              imp
+                              (error "importing unknown binding" imp imp-ids)))
+                        (cddr x)))
                   ((except)
                    (id-filter (lambda (i) (not (memq i (cddr x)))) imp-ids))
                   ((rename)
+                   ;; TODO: warn about renaming an unimported id
                    (map (lambda (i)
                           (let ((rename (assq (to-id i) (cddr x))))
                             (if rename (cons (cadr rename) (from-id i)) i)))

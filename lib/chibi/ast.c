@@ -677,7 +677,6 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp_define_type_predicate(ctx, env, "ref?", SEXP_REF);
   sexp_define_type_predicate(ctx, env, "seq?", SEXP_SEQ);
   sexp_define_type_predicate(ctx, env, "lit?", SEXP_LIT);
-  sexp_define_type_predicate(ctx, env, "opcode?", SEXP_OPCODE);
   sexp_define_type_predicate(ctx, env, "type?", SEXP_TYPE);
   sexp_define_type_predicate(ctx, env, "core?", SEXP_CORE);
   sexp_define_type_predicate(ctx, env, "context?", SEXP_CONTEXT);

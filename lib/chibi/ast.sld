@@ -26,11 +26,11 @@
    seq-ls seq-ls-set! lit-value lit-value-set!
    exception-kind exception-message exception-irritants exception-source
    opcode-name opcode-num-params opcode-return-type opcode-param-type
-   opcode-class opcode-code opcode-data opcode-variadic?
+   opcode-class opcode-code opcode-data opcode-variadic? opcode?
    macro-procedure macro-env macro-source macro-aux macro-aux-set!
    procedure-code procedure-vars procedure-name procedure-name-set!
    procedure-arity procedure-variadic? procedure-variable-transformer?
-   procedure-flags make-variable-transformer make-procedure
+   procedure-flags make-variable-transformer make-procedure procedure?
    bytecode-name bytecode-literals bytecode-source
    port-line port-line-set! port-source? port-source?-set!
    extend-env env-parent env-parent-set! env-lambda env-lambda-set!
