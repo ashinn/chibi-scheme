@@ -771,62 +771,458 @@
         (consumer res))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; dynamic-wind
+;; continuations
 
-(define %make-point vector)
-(define (%point-depth point) (vector-ref point 0))
-(define (%point-in point) (vector-ref point 1))
-(define (%point-out point) (vector-ref point 2))
-(define (%point-parent point) (vector-ref point 3))
+(define %sentinel (list #f))
+(define (%sentinel? obj) (eq? obj %sentinel))
 
-(define root-point  ; Shared among all state spaces
-  (%make-point 0
-               (lambda () (error "winding in to root!"))
-               (lambda () (error "winding out of root!"))
-               #f))
+;; Primitives
 
-(cond-expand
- (threads)
- (else
-  (define %dk
-    (let ((dk root-point))
-      (lambda o (if (pair? o) (set! dk (car o)) dk))))))
+(define (%call-with-current-continuation proc)
+  (%call/cc
+   (lambda (k)
+     ((%call/cc
+       (lambda (abort-k)
+         (lambda ()
+           (proc (%continuation k abort-k)))))))))
 
-(%dk root-point)
+(define (%continuation k abort-k)
+  (lambda arg*
+    (if (and (pair? arg*)
+             (%sentinel? (car arg*)))
+        (abort-k (cadr arg*))
+        (apply k arg*))))
 
-(define (dynamic-wind in body out)
-  (in)
-  (let ((here (%dk)))
-    (%dk (%make-point (+ (%point-depth here) 1)
-                     in
-                     out
-                     here))
-    (let ((res (body)))
-      (%dk here)
-      (out)
-      res)))
+(define (%call-in-continuation k thunk)
+  (k %sentinel thunk))
 
-(define (travel-to-point! here target)
-  (cond
-   ((eq? here target)
-    'done)
-   ((< (%point-depth here) (%point-depth target))
-    (travel-to-point! here (%point-parent target))
-    ((%point-in target)))
-   (else
-    ((%point-out here))
-    (travel-to-point! (%point-parent here) target))))
+;; Continuation prompt tags
 
-(define (continuation->procedure cont point)
-  (lambda res
-    (travel-to-point! (%dk) point)
-    (%dk point)
-    (cont (%values res))))
+(define %default-continuation-prompt-tag
+  (list 0 'default))
+
+(define %continuation-barrier-tag
+  (list 1 'barrier))
+
+(define (default-continuation-prompt-tag)
+  %default-continuation-prompt-tag)
+
+(define make-continuation-prompt-tag
+  (let ((counter 1))
+    (lambda name*
+      (set! counter (+ counter 1))
+      (cons counter name*))))
+
+(define (continuation-prompt-tag? obj) #t)
+
+;; Continuation infos
+
+(define (%make-continuation mk k winders prompt-tag resume-k non-composable?)
+  (define info (vector mk prompt-tag resume-k non-composable?))
+  (lambda arg*
+    (if (and (pair? arg*)
+             (%sentinel? (car arg*)))
+        info
+        (resume-k (lambda () (apply values arg*))))))
+
+(define (%continuation->continuation-info k)
+  (k %sentinel))
+
+(define (%continuation-metacontinuation k)
+  (vector-ref (%continuation->continuation-info k) 0))
+
+(define (%continuation-prompt-tag k)
+  (vector-ref (%continuation->continuation-info k) 1))
+
+(define (%continuation-resume-k k)
+  (vector-ref (%continuation->continuation-info k) 2))
+
+(define (%continuation-non-composable? k)
+  (vector-ref (%continuation->continuation-info k) 3))
+
+;; Winders
+
+(define (%make-winder height k pre-thunk post-thunk)
+  (vector height k pre-thunk post-thunk))
+
+(define (%winder-height winder)
+  (vector-ref winder 0))
+(define (%winder-continuation winder)
+  (vector-ref winder 1))
+(define (%winder-pre-thunk winder)
+  (vector-ref winder 2))
+(define (%winder-post-thunk winder)
+  (vector-ref winder 3))
+
+(define (%winders-height winders)
+  (if (null? winders)
+      0
+      (+ (%winder-height (car winders)) 1)))
+
+;; Metacontinuations
+
+(define (%make-metacontinuation-frame tag k handler winders)
+  (vector tag k handler winders))
+
+(define (%metacontinuation-frame-tag mf) (vector-ref mf 0))
+(define (%metacontinuation-frame-continuation mf) (vector-ref mf 1))
+(define (%metacontinuation-frame-handler mf) (vector-ref mf 2))
+(define (%metacontinuation-frame-winders mf) (vector-ref mf 3))
+
+(define (%push-continuation k winders)
+  (%push-metacontinuation-frame!
+   (%make-metacontinuation-frame #f k #f winders)))
+
+(define (%push-metacontinuation-frame! mf)
+  (%current-metacontinuation (cons mf (%current-metacontinuation))))
+
+(define (%pop-metacontinuation-frame!)
+  (let ((mk (%current-metacontinuation)))
+    (and (pair? mk)
+         (let ((mf (car mk)))
+           (%current-metacontinuation (cdr mk))
+           (%current-winders (%metacontinuation-frame-winders mf))
+           mf))))
+
+(define (%append-metacontinuation! mk)
+  (%current-metacontinuation (append mk (%current-metacontinuation))))
+
+(define (%take-metacontinuation prompt-tag barrier?)
+  (let f ((mk (%current-metacontinuation)))
+    (if (null? mk)
+        (error "continuation includes no prompt with the given tag" prompt-tag))
+    (let ((frame (car mk)) (mk (cdr mk)))
+      (let ((tag (%metacontinuation-frame-tag frame)))
+        (cond
+         ((eq? tag prompt-tag)
+          '())
+         ((and barrier? (eq? tag %continuation-barrier-tag))
+          (error "applying the composable continuation would introduce a continuation barrier"
+                 prompt-tag))
+         (else
+          (cons frame (f mk))))))))
+
+;; Trampoline
+
+(define (%abort thunk)
+  (let ((val (thunk)))
+    (cond
+     ((%pop-metacontinuation-frame!)
+      => (lambda (mf)
+           (call-with-values (lambda () val)
+             (%metacontinuation-frame-continuation mf))
+           12))
+     (else val))))
+
+(define (%call-in-empty-continuation thunk)
+  (%call-with-current-continuation
+   (lambda (k)
+     (%push-metacontinuation-frame!
+      (%make-metacontinuation-frame #f k #f (%current-winders)))
+     (%current-winders '())
+     (%abort thunk))))
+
+(define (%call-in-empty-marks arg . arg*)
+  (let ((thunk (if (null? arg*)
+                   arg
+                   (cadr arg*)))
+        (tag (and (pair? arg*)
+                  arg))
+        (handler (and (pair? arg*)
+                      (car arg*))))
+    (%call-with-current-continuation
+     (lambda (k)
+       (%push-metacontinuation-frame!
+        (%make-metacontinuation-frame tag k handler (%current-winders)))
+       (%current-winders '())
+       (%abort thunk)))))
+
+(define (%abort-to k winders thunk)
+  (%call-in-continuation
+   k
+   (lambda ()
+     (%current-winders winders)
+     (thunk))))
+
+;; Continuation prompts
+
+(define (call-with-continuation-prompt thunk . arg*)
+  (let* ((prompt-tag (if (pair? arg*)
+                         (car arg*)
+                         %default-continuation-prompt-tag))
+         (handler (or (and (pair? arg*) (pair? (cdr arg*))
+                           (cadr arg*))
+                      (%make-default-handler prompt-tag))))
+    (%call-in-empty-marks prompt-tag handler thunk)))
+
+(define (%make-default-handler prompt-tag)
+  (lambda (thunk)
+    (call-with-continuation-prompt thunk prompt-tag)))
+
+(define (abort-current-continuation prompt-tag . arg*)
+  (if (not (%metacontinuation-contains-prompt?
+            (%current-metacontinuation)
+            prompt-tag))
+      (error "abort-current-continuation: no prompt with the given tag in current continuation"
+             prompt-tag))
+  (let f ()
+    (if (null? (%current-winders))
+        (let ((mf (car (%current-metacontinuation))))
+          (if (eq? (%metacontinuation-frame-tag mf) prompt-tag)
+              (let ((handler (%metacontinuation-frame-handler mf)))
+                (%pop-metacontinuation-frame!)
+                (%abort-to
+                 (%metacontinuation-frame-continuation mf)
+                 (%metacontinuation-frame-winders mf)
+                 (lambda ()
+                   (apply handler arg*))))
+              (begin
+                (%pop-metacontinuation-frame!)
+                (f))))
+        (%wind-to
+         '()
+         f
+         (lambda ()
+           (if (not (%metacontinuation-contains-prompt?
+                     (%current-metacontinuation)
+                     prompt-tag))
+               (error
+                "abort-current-continuation: lost prompt with the given tag during abort of the current continuation"
+                prompt-tag))
+           (f))))))
+
+;; Continuations
+
+(define (%make-composable-continuation mk k winders prompt-tag)
+  (%make-continuation
+   mk
+   k
+   winders
+   prompt-tag
+   (lambda (thunk)
+     (%call-in-composable-continuation mk k winders thunk))
+   #f))
+
+(define (%make-non-composable-continuation mk k winders prompt-tag)
+  (%make-continuation
+   mk
+   k
+   winders
+   prompt-tag
+   (lambda (thunk)
+     (%call-in-non-composable-continuation mk k winders prompt-tag thunk))
+   #t))
+
+(define (%call-in-composable-continuation mk k winders thunk)
+  (%call-in-empty-marks
+   (lambda ()
+     (%abort-to-composition (reverse mk) k winders thunk #f))))
+
+(define (%call-in-non-composable-continuation mk k winders prompt-tag thunk)
+  (let retry ()
+    (call-with-values
+        (lambda () (%common-metacontinuation mk (%current-metacontinuation) prompt-tag))
+      (lambda (dest-mf* base-mk)
+        (let f ()
+          (if (eq? (%current-metacontinuation) base-mk)
+              (%abort-to-composition dest-mf* k winders thunk retry)
+              (%wind-to
+               '()
+               (lambda ()
+                 (%pop-metacontinuation-frame!)
+                 (f))
+               retry)))))))
+
+(define (%abort-to-composition mf* k winders thunk maybe-again-thunk)
+  (let f ((mf* mf*))
+    (if (null? mf*)
+        (%wind-to
+         winders
+         (lambda ()
+           (%abort-to k winders thunk))
+         maybe-again-thunk)
+        (let ((mf (car mf*)))
+          (%wind-to
+           (%metacontinuation-frame-winders mf)
+           (lambda ()
+             (%current-metacontinuation (cons mf (%current-metacontinuation)))
+             (%current-winders '())
+             (f (cdr mf*)))
+           maybe-again-thunk)))))
+
+(define (call-with-non-composable-continuation proc . tag*)
+  (let ((prompt-tag (if (null? tag*)
+                        %default-continuation-prompt-tag
+                        (car tag*))))
+    (%call-with-current-continuation
+     (lambda (k)
+       (proc (%make-non-composable-continuation
+              (%take-metacontinuation prompt-tag #f)
+              k
+              (%current-winders)
+              prompt-tag))))))
 
 (define (call-with-current-continuation proc)
-  (%call/cc
-   (lambda (cont)
-     (proc (continuation->procedure cont (%dk))))))
+  (call-with-non-composable-continuation proc))
+
+(define (call-with-composable-continuation proc . tag*)
+  (let ((prompt-tag (if (null? tag*)
+                        %default-continuation-prompt-tag
+                        (car tag*))))
+    (%call-with-current-continuation
+     (lambda (k)
+       (proc
+        (%make-composable-continuation
+         (%take-metacontinuation prompt-tag #t)
+         k
+         (%current-winders)
+         prompt-tag))))))
+
+(define (%common-metacontinuation dest-mk current-mk tag)
+  (let ((base-mk*
+         (let f ((current-mk current-mk) (base-mk* '()))
+           (if (null? current-mk)
+               (error "current continuation includes no prompt with the given tag" tag))
+           (if (eq? (%metacontinuation-frame-tag (car current-mk)) tag)
+               (cons current-mk base-mk*)
+               (f (cdr current-mk) (cons current-mk base-mk*))))))
+    (let f ((dest-mf* (reverse dest-mk))
+            (base-mk* (cdr base-mk*))
+            (base-mk (car base-mk*)))
+      (cond
+       ((null? dest-mf*)
+        (values '() base-mk))
+       ((null? base-mk*)
+        (%check-for-barriers dest-mf* tag)
+        (values dest-mf* base-mk))
+       ((eq? (car dest-mf*) (caar base-mk*))
+        (f (cdr dest-mf*) (cdr base-mk*) (car base-mk*)))
+       (else
+        (%check-for-barriers dest-mf* tag)
+        (values dest-mf* base-mk))))))
+
+(define (%check-for-barriers dest-mf* tag)
+  (do ((dest-mf* dest-mf* (cdr dest-mf*)))
+      ((null? dest-mf*))
+    (if (eq? (%metacontinuation-frame-tag (car dest-mf*)) %continuation-barrier-tag)
+        (error "applying the continuation would introduce a continuation barrier" tag))))
+
+(define (call-in-continuation k proc . args)
+  ((%continuation-resume-k k) (lambda () (apply proc args))))
+
+(define (call-in k proc . args)
+  ((%continuation-resume-k k) (lambda () (apply proc args))))
+
+(define (return-to k . args)
+  (lambda (k args)
+    ((%continuation-resume-k k) (lambda () (apply values args)))))
+
+(define (continuation-prompt-available? tag . k*)
+  (if (null? k*)
+      (%metacontinuation-contains-prompt? (%current-metacontinuation) tag)
+      (let ((k (car k*)))
+        (or (and (%continuation-non-composable? k)
+                 (eq? (%continuation-prompt-tag k) tag))
+            (%metacontinuation-contains-prompt? (%continuation-metacontinuation k) tag)))))
+
+(define (%metacontinuation-contains-prompt? mk tag)
+  (let f ((mk mk))
+    (and (not (null? mk))
+         (or (eq? (%metacontinuation-frame-tag (car mk)) tag)
+             (f (cdr mk))))))
+
+(define (call-with-continuation-barrier thunk)
+  (%call-in-empty-marks %continuation-barrier-tag #f thunk))
+
+;; Dynamic-wind
+
+(define (dynamic-wind pre-thunk thunk post-thunk)
+  (%call-with-current-continuation
+   (lambda (k)
+     (let* ((winders (%current-winders))
+            (winder (%make-winder (%winders-height winders)
+                                  k
+                                  pre-thunk post-thunk)))
+       (pre-thunk)
+       (%current-winders (cons winder winders))
+       (call-with-values thunk
+         (lambda val*
+           (%current-winders winders)
+           (post-thunk)
+           (apply values val*)))))))
+
+(define (%wind-to dest-winders then-thunk maybe-again-thunk)
+  (let ((saved-mk (%current-metacontinuation)))
+    (let f ((winder* '()) (dest-winders dest-winders))
+      (if (and maybe-again-thunk (not (eq? saved-mk (%current-metacontinuation))))
+          (maybe-again-thunk)
+          (let ((winders (%current-winders)))
+            (cond
+             ((%winders=? dest-winders winders)
+              (if (null? winder*)
+                  (then-thunk)
+                  (let ((winders (cons (car winder*) winders))
+                        (winder* (cdr winder*)))
+                    (%rewind winders
+                             (lambda ()
+                               (%current-winders winders)
+                               (f winder* winders))))))
+             ((or (null? dest-winders)
+                  (and (not (null? winders))
+                       (> (%winder-height (car winders))
+                          (%winder-height (car dest-winders)))))
+              (%unwind winders
+                       (lambda ()
+                         (f winder* dest-winders))))
+             (else
+              (f (cons (car dest-winders) winder*) (cdr dest-winders)))))))))
+
+(define (%wind winders ref then-thunk)
+  (let ((winder (car winders))
+        (winders (cdr winders)))
+    (let ((winder-thunk (ref winder)))
+      (%abort-to
+       (%winder-continuation winder)
+       winders
+       (lambda ()
+         (winder-thunk)
+         (then-thunk))))))
+
+(define (%unwind winders thunk)
+  (%wind winders %winder-post-thunk thunk))
+
+(define (%rewind winders thunk)
+  (%wind winders %winder-pre-thunk thunk))
+
+(define (%winders=? w1 w2)
+  (= (%winders-height w1) (%winders-height w2)))
+
+;; Dynamic environment
+
+(define %metacontinuation
+  (list (%make-metacontinuation-frame
+         %default-continuation-prompt-tag
+         (lambda (thunk)
+           (thunk))
+         (%make-default-handler %default-continuation-prompt-tag)
+         '())))
+
+(define %winders '())
+
+(define %current-metacontinuation
+  (lambda arg*
+    (if (null? arg*)
+        %metacontinuation
+        (set! %metacontinuation (car arg*)))))
+
+(define %current-winders
+  (lambda arg*
+    (if (null? arg*)
+        %winders
+        (set! %winders (car arg*)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; with-i/o-from-file
 
 (define (with-input-from-file file thunk)
   (let ((old-in (current-input-port))
