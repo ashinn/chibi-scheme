@@ -779,19 +779,17 @@
 ;; Primitives
 
 (define (%call-with-current-continuation proc)
-  (%call/cc
-   (lambda (k)
-     ((%call/cc
-       (lambda (abort-k)
-         (lambda ()
-           (proc (%continuation k abort-k)))))))))
+  ((%call/cc
+    (lambda (abort-k)
+      (lambda ()
+        (proc (%continuation abort-k)))))))
 
-(define (%continuation k abort-k)
+(define (%continuation abort-k)
   (lambda arg*
     (if (and (pair? arg*)
              (%sentinel? (car arg*)))
         (abort-k (cadr arg*))
-        (apply k arg*))))
+        (abort-k (lambda () (%values arg*))))))
 
 (define (%call-in-continuation k thunk)
   (k %sentinel thunk))
