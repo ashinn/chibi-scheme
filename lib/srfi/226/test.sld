@@ -36,7 +36,7 @@
 
     (define (run-tests)
 
-      (test-begin "SRFI 226")
+      (test-begin "srfi-226")
 
       (test #t (continuation-prompt-tag? (default-continuation-prompt-tag)))
 
