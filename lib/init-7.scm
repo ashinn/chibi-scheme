@@ -802,17 +802,6 @@
 (define %continuation-barrier-tag
   (list 1 'barrier))
 
-(define (default-continuation-prompt-tag)
-  %default-continuation-prompt-tag)
-
-(define make-continuation-prompt-tag
-  (let ((counter 1))
-    (lambda name*
-      (set! counter (+ counter 1))
-      (cons counter name*))))
-
-(define (continuation-prompt-tag? obj) #t)
-
 ;; Continuation infos
 
 (define (%make-continuation mk k winders prompt-tag resume-k non-composable?)
@@ -957,49 +946,7 @@
   (lambda (thunk)
     (call-with-continuation-prompt thunk prompt-tag)))
 
-(define (abort-current-continuation prompt-tag . arg*)
-  (if (not (%metacontinuation-contains-prompt?
-            (%current-metacontinuation)
-            prompt-tag))
-      (error "abort-current-continuation: no prompt with the given tag in current continuation"
-             prompt-tag))
-  (let f ()
-    (if (null? (%current-winders))
-        (let ((mf (car (%current-metacontinuation))))
-          (if (eq? (%metacontinuation-frame-tag mf) prompt-tag)
-              (let ((handler (%metacontinuation-frame-handler mf)))
-                (%pop-metacontinuation-frame!)
-                (%abort-to
-                 (%metacontinuation-frame-continuation mf)
-                 (%metacontinuation-frame-winders mf)
-                 (lambda ()
-                   (apply handler arg*))))
-              (begin
-                (%pop-metacontinuation-frame!)
-                (f))))
-        (%wind-to
-         '()
-         f
-         (lambda ()
-           (if (not (%metacontinuation-contains-prompt?
-                     (%current-metacontinuation)
-                     prompt-tag))
-               (error
-                "abort-current-continuation: lost prompt with the given tag during abort of the current continuation"
-                prompt-tag))
-           (f))))))
-
 ;; Continuations
-
-(define (%make-composable-continuation mk k winders prompt-tag)
-  (%make-continuation
-   mk
-   k
-   winders
-   prompt-tag
-   (lambda (thunk)
-     (%call-in-composable-continuation mk k winders thunk))
-   #f))
 
 (define (%make-non-composable-continuation mk k winders prompt-tag)
   (%make-continuation
@@ -1010,11 +957,6 @@
    (lambda (thunk)
      (%call-in-non-composable-continuation mk k winders prompt-tag thunk))
    #t))
-
-(define (%call-in-composable-continuation mk k winders thunk)
-  (%call-in-empty-marks
-   (lambda ()
-     (%abort-to-composition (reverse mk) k winders thunk #f))))
 
 (define (%call-in-non-composable-continuation mk k winders prompt-tag thunk)
   (let retry ()
@@ -1063,19 +1005,6 @@
 (define (call-with-current-continuation proc)
   (call-with-non-composable-continuation proc))
 
-(define (call-with-composable-continuation proc . tag*)
-  (let ((prompt-tag (if (null? tag*)
-                        %default-continuation-prompt-tag
-                        (car tag*))))
-    (%call-with-current-continuation
-     (lambda (k)
-       (proc
-        (%make-composable-continuation
-         (%take-metacontinuation prompt-tag #t)
-         k
-         (%current-winders)
-         prompt-tag))))))
-
 (define (%common-metacontinuation dest-mk current-mk tag)
   (let ((base-mk*
          (let f ((current-mk current-mk) (base-mk* '()))
@@ -1105,32 +1034,11 @@
     (if (eq? (%metacontinuation-frame-tag (car dest-mf*)) %continuation-barrier-tag)
         (error "applying the continuation would introduce a continuation barrier" tag))))
 
-(define (call-in-continuation k proc . args)
-  ((%continuation-resume-k k) (lambda () (apply proc args))))
-
-(define (call-in k proc . args)
-  ((%continuation-resume-k k) (lambda () (apply proc args))))
-
-(define (return-to k . args)
-  (lambda (k args)
-    ((%continuation-resume-k k) (lambda () (apply values args)))))
-
-(define (continuation-prompt-available? tag . k*)
-  (if (null? k*)
-      (%metacontinuation-contains-prompt? (%current-metacontinuation) tag)
-      (let ((k (car k*)))
-        (or (and (%continuation-non-composable? k)
-                 (eq? (%continuation-prompt-tag k) tag))
-            (%metacontinuation-contains-prompt? (%continuation-metacontinuation k) tag)))))
-
 (define (%metacontinuation-contains-prompt? mk tag)
   (let f ((mk mk))
     (and (not (null? mk))
          (or (eq? (%metacontinuation-frame-tag (car mk)) tag)
              (f (cdr mk))))))
-
-(define (call-with-continuation-barrier thunk)
-  (%call-in-empty-marks %continuation-barrier-tag #f thunk))
 
 ;; Dynamic-wind
 
