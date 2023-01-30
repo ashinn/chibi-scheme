@@ -96,8 +96,7 @@ sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name
   stack[2] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
   sexp_context_top(res) = 4;
   sexp_context_last_fp(res) = 0;
-  sexp_context_dk(res) = sexp_make_vector(res, SEXP_FOUR, SEXP_FALSE);
-  sexp_vector_set(sexp_context_dk(res), SEXP_ZERO, SEXP_ZERO);
+  sexp_context_dk(res) = sexp_make_vector(res, SEXP_TWO, SEXP_FALSE);
   /* reset parameters */
   sexp_context_params(res) = SEXP_NULL;
   /* alternately reset only the current exception handler */
@@ -323,7 +322,7 @@ sexp sexp_condition_variable_broadcast (sexp ctx, sexp self, sexp_sint_t n, sexp
 /**************************** the scheduler *******************************/
 
 static const sexp_uint_t sexp_log2_lookup[32] = {
-  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
+  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
   31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
 };
 

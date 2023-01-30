@@ -10,5 +10,6 @@
           (only (srfi 18) current-thread)
           (srfi 38)
           (srfi 95)
-          (srfi 98))
+          (srfi 98)
+          (srfi 226 continuation))
   (include "repl.scm"))

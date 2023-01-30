@@ -2046,6 +2046,7 @@ enum sexp_opcode_names {
   /* 78 4E */ SEXP_OP_FORCE,
   /* 79 4F */ SEXP_OP_RET,
   /* 80 50 */ SEXP_OP_DONE,
+  /* 81 51 */ SEXP_OP_ABORT,
   SEXP_OP_SCP,
   SEXP_OP_SC_LT,
   SEXP_OP_SC_LE,

@@ -796,11 +796,13 @@
 
 ;; Continuation prompt tags
 
+(define *prompt-tag* (list 'prompt))
+
 (define %default-continuation-prompt-tag
-  (list 0 'default))
+  (list *prompt-tag* 0 'default))
 
 (define %continuation-barrier-tag
-  (list 1 'barrier))
+  (list *prompt-tag* 1 'barrier))
 
 ;; Continuation infos
 
@@ -891,15 +893,16 @@
 
 ;; Trampoline
 
-(define (%abort thunk)
-  (let ((val (thunk)))
-    (cond
-     ((%pop-metacontinuation-frame!)
-      => (lambda (mf)
-           (call-with-values (lambda () val)
-             (%metacontinuation-frame-continuation mf))
-           12))
-     (else val))))
+(define (%abort/mk thunk)
+  (%abort
+   (lambda ()
+     (let ((val (thunk)))
+       (cond
+        ((%pop-metacontinuation-frame!)
+         => (lambda (mf)
+              (call-with-values (lambda () val)
+                (%metacontinuation-frame-continuation mf))))
+        (else (error "empty metacontinuation!")))))))
 
 (define (%call-in-empty-continuation thunk)
   (%call-with-current-continuation
@@ -907,7 +910,7 @@
      (%push-metacontinuation-frame!
       (%make-metacontinuation-frame #f k #f (%current-winders)))
      (%current-winders '())
-     (%abort thunk))))
+     (%abort/mk thunk))))
 
 (define (%call-in-empty-marks arg . arg*)
   (let ((thunk (if (null? arg*)
@@ -922,7 +925,7 @@
        (%push-metacontinuation-frame!
         (%make-metacontinuation-frame tag k handler (%current-winders)))
        (%current-winders '())
-       (%abort thunk)))))
+       (%abort/mk thunk)))))
 
 (define (%abort-to k winders thunk)
   (%call-in-continuation
@@ -1105,27 +1108,41 @@
 
 ;; Dynamic environment
 
-(define %metacontinuation
+(cond-expand
+ (threads)
+ (else
+  (define %dk
+    (let ((dk (vector #f #f)))
+      (lambda () dk)))))
+
+(define (%make-initial-metacontinuation)
   (list (%make-metacontinuation-frame
          %default-continuation-prompt-tag
-         (lambda (thunk)
-           (thunk))
+         (lambda (sentinel thunk)
+           (%current-metacontinuation #f)
+           (%abort thunk))
          (%make-default-handler %default-continuation-prompt-tag)
          '())))
 
-(define %winders '())
-
 (define %current-metacontinuation
   (lambda arg*
-    (if (null? arg*)
-        %metacontinuation
-        (set! %metacontinuation (car arg*)))))
+    (let ((dk (%dk)))
+      (if (null? arg*)
+          (or (vector-ref dk 0)
+              (let ((mk (%make-initial-metacontinuation)))
+                (vector-set! dk 0 mk)
+                mk))
+          (vector-set! dk 0 (car arg*))))))
 
 (define %current-winders
   (lambda arg*
-    (if (null? arg*)
-        %winders
-        (set! %winders (car arg*)))))
+    (let ((dk (%dk)))
+      (if (null? arg*)
+          (or (vector-ref dk 1)
+              (let ((winders '()))
+                (vector-set! dk 1 winders)
+                winders))
+          (vector-set! dk 1 (car arg*))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; with-i/o-from-file

@@ -14,9 +14,11 @@
       (let ((counter 1))
         (lambda name*
           (set! counter (+ counter 1))
-          (cons counter name*))))
+          (cons *prompt-tag* (cons counter name*)))))
 
-    (define (continuation-prompt-tag? obj) #t)))
+    (define (continuation-prompt-tag? obj)
+      (and (pair? obj)
+           (eq? (car obj) *prompt-tag*)))))
 
 ;; Local Variables:
 ;; mode: scheme
