@@ -25,10 +25,11 @@
 
 #ifdef PLAN9
 #define exit_failure() exits("ERROR")
+#define exit_success() exits(nil)
 #else
 #define exit_failure() exit(70)
-#endif
 #define exit_success() exit(0)
+#endif
 
 #if SEXP_USE_MAIN_HELP
 void sexp_usage(int err) {
@@ -682,7 +683,12 @@ int main (int argc, char **argv) {
   sexp_scheme_init();
   res = run_main(argc, argv);
   if (sexp_fixnump(res)) {
-    return sexp_unbox_fixnum(res);
+    int code = sexp_unbox_fixnum(res);
+    if (code == 0) {
+      exit_success();
+    } else {
+      exit_failure();
+    }
   } else if (res == SEXP_FALSE) {
     exit_failure();
   } else {
