@@ -684,11 +684,15 @@ int main (int argc, char **argv) {
   res = run_main(argc, argv);
   if (sexp_fixnump(res)) {
     int code = sexp_unbox_fixnum(res);
+#ifdef PLAN9
     if (code == 0) {
       exit_success();
     } else {
       exit_failure();
     }
+#else
+    return code;
+#endif
   } else if (res == SEXP_FALSE) {
     exit_failure();
   } else {
