@@ -569,8 +569,7 @@ sexp sexp_make_eval_context (sexp ctx, sexp stack, sexp env, sexp_uint_t size, s
       sexp_gc_release1(ctx);
     } else {
       /* TODO: make the root a global (with friendly error in/out) */
-      sexp_context_dk(res) = sexp_make_vector(res, SEXP_FOUR, SEXP_FALSE);
-      sexp_vector_set(sexp_context_dk(res), SEXP_ZERO, SEXP_ZERO);
+      sexp_context_dk(res) = sexp_make_vector(res, SEXP_TWO, SEXP_FALSE);
     }
   }
   return res;

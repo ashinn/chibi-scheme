@@ -1244,6 +1244,17 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     top++;
     ip -= sizeof(sexp);
     goto make_call;
+  case SEXP_OP_ABORT:
+    tmp1 = _ARG1;
+    i = 0;
+    top = sexp_context_top(ctx) = 0;
+    fp = top - 4;
+    self = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
+    bc = sexp_procedure_code(self);
+    cp = sexp_procedure_vars(self);
+    ip = sexp_bytecode_data(bc) - sizeof(sexp);
+    top += 1;
+    goto make_call;
   case SEXP_OP_APPLY1:
     tmp1 = _ARG1;
     tmp2 = _ARG2;
@@ -1938,7 +1949,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     } else if (sexp_flonump(tmp1) && sexp_flonump(tmp2)) {
       i = sexp_flonum_value(tmp1) < sexp_flonum_value(tmp2);
     } else if (sexp_flonump(tmp1) && sexp_fixnump(tmp2)) {
-      i = sexp_flonum_value(tmp1) < (double)sexp_unbox_fixnum(tmp2); 
+      i = sexp_flonum_value(tmp1) < (double)sexp_unbox_fixnum(tmp2);
     } else if (sexp_fixnump(tmp1) && sexp_flonump(tmp2)) {
       i = (double)sexp_unbox_fixnum(tmp1) < sexp_flonum_value(tmp2);
 #endif

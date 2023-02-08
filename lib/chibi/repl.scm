@@ -171,7 +171,7 @@
 ;;> via a history facility. \var{$0} holds the most recent result
 ;;> while \var{$9} holds the tenth-most recent result. Evaluations
 ;;> yielding single values are stored as single values while evaluations
-;;> that yield multiple values are stored as lists of values. 
+;;> that yield multiple values are stored as lists of values.
 
 
 (define-record-type Repl
@@ -418,7 +418,9 @@
                   (if (or (identifier? expr)
                           (pair? expr)
                           (null? expr))
-                      (eval expr (repl-env rp))
+                      (call-with-continuation-prompt
+                       (lambda ()
+                         (eval expr (repl-env rp))))
                       expr))
               (lambda res-list
                 (cond
