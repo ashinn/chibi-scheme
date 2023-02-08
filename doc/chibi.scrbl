@@ -69,6 +69,13 @@ To compile a static executable, use
 
 \command{make chibi-scheme-static SEXP_USE_DL=0}
 
+Note this static executable has none of the external binary libraries
+included, which means among other things you can't load the
+\scheme{(scheme base)} default language.  You need to specify the
+\scheme{(chibi)} or other Scheme-only language to run:
+
+\command{./chibi-scheme-static -q}
+
 To compile a static executable with all C libraries statically
 included, first you need to create a clibs.c file, which can be done
 with:
