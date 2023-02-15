@@ -458,7 +458,7 @@ sexp json_write (sexp ctx, sexp self, const sexp obj, sexp out) {
     sexp_write_string(ctx, "false", out);
   } else if (obj == SEXP_TRUE) {
     sexp_write_string(ctx, "true", out);
-  } else if (obj == SEXP_NULL) {
+  } else if (obj == SEXP_VOID) {
     sexp_write_string(ctx, "null", out);
   } else if (sexp_pairp(obj)) {
     res = sexp_json_write_exception(ctx, self, "unable to encode elemente: key-value pair out of object", obj);
