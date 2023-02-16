@@ -657,12 +657,21 @@
         res))))
 
 (define (array-decurry a . o)
-  (let ((storage (if (pair? o) (car o) generic-storage-class))
-        (mutable? (if (and (pair? o) (pair? (cdr o)))
-                      (cadr o)
-                      (specialized-array-default-mutable?)))
-        (safe? (if (and (pair? o) (pair? (cdr o)) (pair? (cddr o)))
-                   (car (cddr o))
-                   (specialized-array-default-safe?))))
-    (error "TODO: array-decurry unimplemented")))
-
+  (let* ((storage (if (pair? o) (car o) generic-storage-class))
+         (mutable? (if (and (pair? o) (pair? (cdr o)))
+                       (cadr o)
+                       (specialized-array-default-mutable?)))
+         (safe? (if (and (pair? o) (pair? (cdr o)) (pair? (cddr o)))
+                    (car (cddr o))
+                    (specialized-array-default-safe?)))
+         (a-domain (array-domain a))
+         (elt0 (apply array-ref a (interval-lower-bounds->list a-domain)))
+         (elt-domain (array-domain elt0))
+         (domain (interval-cartesian-product a-domain elt-domain))
+         (res (make-specialized-array domain storage mutable? safe?))
+         (curried-res (array-curry res (interval-dimension elt-domain))))
+    ;; Prepare a res with the flattened domain, create a new curried
+    ;; view of the res with the same domain as a, and assign each
+    ;; curried view from a to the res.
+    (array-for-each array-assign! curried-res a)
+    res))

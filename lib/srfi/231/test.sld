@@ -3512,7 +3512,9 @@ OTHER DEALINGS IN THE SOFTWARE.
               ((array-getter a) 3 4))
           (let ((curried-a (array-curry a 1)))
             (test '(3 4)
-                ((array-getter ((array-getter curried-a) 3)) 4))))
+                ((array-getter ((array-getter curried-a) 3)) 4))
+            (test (array->list a)
+                (array->list (array-decurry curried-a)))))
 
         (test 0.
             ((array-getter sparse-array) 12345 6789))
