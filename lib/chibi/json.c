@@ -293,7 +293,7 @@ sexp json_read (sexp ctx, sexp self, sexp in) {
     res = json_read_number(ctx, self, in);
     break;
   case 'n': case 'N':
-    res = json_read_literal(ctx, self, in, "null", SEXP_VOID);
+    res = json_read_literal(ctx, self, in, "null", sexp_intern(ctx, "null", -1));
     break;
   case 't': case 'T':
     res = json_read_literal(ctx, self, in, "true", SEXP_TRUE);
@@ -406,30 +406,43 @@ sexp json_write_array(sexp ctx, sexp self, const sexp obj, sexp out) {
 }
 
 sexp json_write_object(sexp ctx, sexp self, const sexp obj, sexp out) {
-  sexp ls, cur, key, val, tmp;
+  sexp ls, cur, key, val;
+  sexp_gc_var2(tmp, res);
   if (sexp_length(ctx, obj) == SEXP_FALSE)
-    return sexp_json_write_exception(ctx, self, "unable to encode circular list", obj);
+     sexp_json_write_exception(ctx, self, "unable to encode circular list", obj);
+  sexp_gc_preserve2(ctx, tmp, res);
+  res = SEXP_VOID;
   sexp_write_char(ctx, '{', out);
   for (ls = obj; sexp_pairp(ls); ls = sexp_cdr(ls)) {
     if (ls != obj)
       sexp_write_char(ctx, ',', out);
     cur = sexp_car(ls);
-    if (!sexp_pairp(cur))
-      return sexp_json_write_exception(ctx, self, "unable to encode key-value pair: not a pair", obj);
+    if (!sexp_pairp(cur)) {
+      res = sexp_json_write_exception(ctx, self, "unable to encode key-value pair: not a pair", obj);
+      break;
+    }
     key = sexp_car(cur);
-    if (!sexp_symbolp(key))
-      return sexp_json_write_exception(ctx, self, "unable to encode key: not a symbol", key);
-    tmp = json_write(ctx, self, key, out);
-    if (sexp_exceptionp(tmp))
-      return tmp;
+    if (!sexp_symbolp(key)) {
+      res = sexp_json_write_exception(ctx, self, "unable to encode key: not a symbol", key);
+      break;
+    }
+    tmp = sexp_symbol_to_string(ctx, key);
+    tmp = json_write(ctx, self, tmp, out);
+    if (sexp_exceptionp(tmp)) {
+      res = tmp;
+      break;
+    }
     sexp_write_char(ctx, ':', out);
     val = sexp_cdr(cur);
     tmp = json_write(ctx, self, val, out);
-    if (sexp_exceptionp(tmp))
-      return tmp;
+    if (sexp_exceptionp(tmp)) {
+      res = tmp;
+      break;
+    }
   }
   sexp_write_char(ctx, '}', out);
-  return SEXP_VOID;
+  sexp_gc_release2(ctx);
+  return res;
 }
 
 sexp json_write (sexp ctx, sexp self, const sexp obj, sexp out) {
@@ -437,8 +450,7 @@ sexp json_write (sexp ctx, sexp self, const sexp obj, sexp out) {
   sexp_gc_preserve1(ctx, res);
   res = SEXP_VOID;
   if (sexp_symbolp(obj)) {
-    res = sexp_symbol_to_string(ctx, obj);
-    res = json_write_string(ctx, self, res, out);
+    res = sexp_write(ctx, obj, out);
   } else if (sexp_stringp(obj)) {
     res = json_write_string(ctx, self, obj, out);
   } else if (sexp_listp(ctx, obj) == SEXP_TRUE) {
