@@ -1881,7 +1881,6 @@
                           (else 1))
                     ", \"" (func-stub-name func) "\", "))
              "")
-         "(sexp_proc1)"
          (func-stub-name func)
          (cond
           (default (lambda () (cat ", " (write-default default))))
