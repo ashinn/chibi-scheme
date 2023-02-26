@@ -3020,12 +3020,15 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
         sexp_complex_imag(den) = res;
 #if SEXP_USE_MATH
       } else if (sexp_flonump(sexp_complex_real(den))) { /* assume polar */
-        rho = sqrt(sexp_flonum_value(sexp_complex_real(den)) *
-                   sexp_flonum_value(sexp_complex_real(den)) +
-                   sexp_to_double(ctx, sexp_complex_imag(den)) +
+        double real = sexp_flonum_value(sexp_complex_real(den));
+        rho = sqrt(real * real +
+                   sexp_to_double(ctx, sexp_complex_imag(den)) *
                    sexp_to_double(ctx, sexp_complex_imag(den)));
         theta = atan(sexp_to_double(ctx, sexp_complex_imag(den)) /
                      sexp_flonum_value(sexp_complex_real(den)));
+        if (real < 0) {
+          theta += M_PI;
+        }
         rho = sexp_to_double(ctx, sexp_div(ctx, res, sexp_make_fixnum((sexp_sint_t)round(rho))));
         sexp_complex_real(den) = sexp_make_flonum(ctx, rho * cos(theta));
         sexp_complex_imag(den) = sexp_make_flonum(ctx, rho * sin(theta));
