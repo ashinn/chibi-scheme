@@ -1055,6 +1055,7 @@ static void* sexp_thread_debug_event(sexp ctx) {
 #if SEXP_USE_POLL_PORT
 int sexp_poll_port(sexp ctx, sexp port, int inputp) {
   fd_set fds;
+  struct timeval timeout;
   int fd = sexp_port_fileno(port);
   if (fd < 0) {
     usleep(SEXP_POLL_SLEEP_TIME);
@@ -1062,7 +1063,9 @@ int sexp_poll_port(sexp ctx, sexp port, int inputp) {
   }
   FD_ZERO(&fds);
   FD_SET(fd, &fds);
-  return select(1, (inputp ? &fds : NULL), (inputp ? NULL : &fds), NULL, NULL);
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 10000;  /* 10millis */
+  return select(1, (inputp ? &fds : NULL), (inputp ? NULL : &fds), NULL, &timeout);
 }
 #endif
 
