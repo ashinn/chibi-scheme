@@ -16,6 +16,7 @@
    interval-upper-bounds->list interval-lower-bounds->vector
    interval-upper-bounds->vector interval= interval-volume
    interval-subset? interval-contains-multi-index? interval-projections
+   interval-fold-left interval-fold-right
    interval-for-each interval-dilate interval-intersect
    interval-translate interval-permute
    interval-scale interval-cartesian-product

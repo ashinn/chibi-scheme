@@ -1,35 +1,33 @@
-#|
-Adapted from original SRFI reference test suite:
+;; Adapted from original SRFI reference test suite:
 
-SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
+;; SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
 
-Copyright 2016, 2018, 2020 Bradley J Lucier.
-All Rights Reserved.
+;; Copyright 2016, 2018, 2020 Bradley J Lucier.
+;; All Rights Reserved.
 
-Permission is hereby granted, free of charge,
-to any person obtaining a copy of this software
-and associated documentation files (the "Software"),
-to deal in the Software without restriction,
-including without limitation the rights to use, copy,
-modify, merge, publish, distribute, sublicense,
-and/or sell copies of the Software, and to permit
-persons to whom the Software is furnished to do so,
-subject to the following conditions:
+;; Permission is hereby granted, free of charge,
+;; to any person obtaining a copy of this software
+;; and associated documentation files (the "Software"),
+;; to deal in the Software without restriction,
+;; including without limitation the rights to use, copy,
+;; modify, merge, publish, distribute, sublicense,
+;; and/or sell copies of the Software, and to permit
+;; persons to whom the Software is furnished to do so,
+;; subject to the following conditions:
 
-The above copyright notice and this permission notice
-(including the next paragraph) shall be included in
-all copies or substantial portions of the Software.
+;; The above copyright notice and this permission notice
+;; (including the next paragraph) shall be included in
+;; all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
-LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
-EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
-FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
-|#
+;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+;; ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+;; LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+;; FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+;; EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+;; FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+;; AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+;; OTHER DEALINGS IN THE SOFTWARE.
 
 ;;; A test program for SRFI 179:
 ;;; Nonempty Intervals and Generalized Arrays (Updated)
@@ -3050,6 +3048,40 @@ OTHER DEALINGS IN THE SOFTWARE.
                                                  list ))
                          1)
                         (make-array (make-interval '#(2 3)) list)))
+        )
+
+      (test-group "stack/block"
+        (let* ((a
+                (make-array (make-interval '#(4 10)) list))
+               (a-column
+                (array-getter ;; the getter of ...
+                 (array-curry ;; a 1-D array of the columns of A
+                  (array-permute a '#(1 0))
+                  1))))
+          (test '(((0 1)   (0 2)   (0 5)   (0 8))
+                  ((1 1)   (1 2)   (1 5)   (1 8))
+                  ((2 1)   (2 2)   (2 5)   (2 8))
+                  ((3 1)   (3 2)   (3 5)   (3 8)))
+              (array->list*
+               (array-stack ;; stack into a new 2-D array ...
+                1           ;; along axis 1 (i.e., columns) ...
+                (map a-column '(1 2 5 8)))) ;; the columns of A you want
+            ))
+        '(test '((0 1 4 6 7 8)
+                (2 3 5 9 10 11)
+                (12 13 14 15 16 17))
+            (array->list*
+             (array-block (list*->array
+                           2
+                           (list (list (list*->array 2 '((0 1)
+                                                         (2 3)))
+                                       (list*->array 2 '((4)
+                                                         (5)))
+                                       (list*->array 2 '((6 7 8)
+                                                         (9 10 11))))
+                                 (list (list*->array 2 '((12 13)))
+                                       (list*->array 2 '((14)))
+                                       (list*->array 2 '((15 16 17)))))))))
         )
 
       (test-group "assign/product"

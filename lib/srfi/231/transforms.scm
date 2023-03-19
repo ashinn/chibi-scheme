@@ -102,6 +102,8 @@
           (%array-setter-set! res #f))
         res))))
 
+(define array-copy! array-copy)
+
 (define (array-curry array inner-dimension)
   (call-with-values
       (lambda () (interval-projections (array-domain array) inner-dimension))
@@ -492,14 +494,15 @@
       (append-map flatten ls)
       ls))
 
-(define (list*->array nested-ls . o)
-  (let lp ((ls nested-ls) (lens '()))
+(define (list*->array dimension nested-ls . o)
+  (let lp ((ls nested-ls) (lens '()) (d dimension))
     (cond
-     ((pair? ls) (lp (car ls) (cons (length ls) lens)))
+     ((positive? d)
+      (lp (car ls) (cons (length ls) lens) (- d 1)))
      (else
       (apply list->array
-             (flatten nested-ls)
              (make-interval (list->vector (reverse lens)))
+             (flatten nested-ls)
              o)))))
 
 (define (array->list* a)
@@ -543,14 +546,15 @@
       (append-map flatten-vec vec)
       (vector->list vec)))
 
-(define (vector*->array nested-vec . o)
-  (let lp ((vec nested-vec) (lens '()))
+(define (vector*->array dimension nested-vec . o)
+  (let lp ((vec nested-vec) (lens '()) (d dimension))
     (cond
-     ((vector? vec) (lp (vector-ref vec 0) (cons (vector-length vec) lens)))
+     ((positive? d)
+      (lp (vector-ref vec 0) (cons (vector-length vec) lens) (- d 1)))
      (else
       (apply list->array
-             (flatten-vec nested-vec)
              (make-interval (list->vector (reverse lens)))
+             (flatten-vec nested-vec)
              o)))))
 
 (define (dimensions-compatible? a-domain b-domain axis)
@@ -609,31 +613,46 @@
                   (array-assign! view b)
                   (lp (cdr arrays) b-offset2)))))))))
 
-(define (array-stack axis a . o)
+(define array-append! array-append)
+
+(define (array-stack axis arrays . o)
   (assert (and (exact-integer? axis)
-               (array? a)
-               (< -1 axis (array-dimension a))
-               (every array? o)
-               (every (lambda (b) (interval= (array-domain a) (array-domain b))) o)))
-  (let* ((a-lbs (interval-lower-bounds->list (array-domain a)))
-         (a-ubs (interval-upper-bounds->list (array-domain a)))
-         (domain
-          (make-interval
-           `#(,@(take a-lbs axis) 0 ,@(drop a-lbs axis))
-           `#(,@(take a-ubs axis) ,(+ 1 (length o)) ,@(drop a-ubs axis))))
-         (res (make-specialized-array domain
-                                      (or (array-storage-class a)
-                                          generic-storage-class)))
-         (perm `#(,axis ,@(delete axis (iota (+ 1 (array-dimension a))))))
-         (permed (if (zero? axis) res (array-permute res perm)))
-         (curried (array-curry permed 1))
-         (get-view (array-getter curried)))
-    (let lp ((ls (cons a o)) (i 0))
-      (cond
-       ((null? ls) res)
-       (else
-        (array-assign! (get-view i) (car ls))
-        (lp (cdr ls) (+ i 1)))))))
+               (pair? arrays)
+               (every array? arrays)
+               (<= 0 axis (array-dimension (car arrays)))))
+  (let ((a (car arrays))
+        (storage (if (pair? o) (car o) generic-storage-class))
+        (mutable? (if (and (pair? o) (pair? (cdr o)))
+                      (cadr o)
+                      (specialized-array-default-mutable?)))
+        (safe? (if (and (pair? o) (pair? (cdr o)) (pair? (cddr o)))
+                   (car (cddr o))
+                   (specialized-array-default-safe?))))
+    (assert (every (lambda (b)
+                     (interval= (array-domain a)
+                                (array-domain b)))
+                   (cdr arrays)))
+    (let* ((a-lbs (interval-lower-bounds->list (array-domain a)))
+           (a-ubs (interval-upper-bounds->list (array-domain a)))
+           (domain
+            (make-interval
+             `#(,@(take a-lbs axis) 0 ,@(drop a-lbs axis))
+             `#(,@(take a-ubs axis) ,(length arrays) ,@(drop a-ubs axis))))
+           (res (make-specialized-array domain
+                                        (or (array-storage-class a)
+                                            generic-storage-class)))
+           (perm `#(,axis ,@(delete axis (iota (+ 1 (array-dimension a))))))
+           (permed (if (zero? axis) res (array-permute res perm)))
+           (curried (array-curry permed 1))
+           (get-view (array-getter curried)))
+      (let lp ((ls arrays) (i 0))
+        (cond
+         ((null? ls) res)
+         (else
+          (array-assign! (get-view i) (car ls))
+          (lp (cdr ls) (+ i 1))))))))
+
+(define array-stack! array-stack)
 
 (define (array-block a . o)
   (let ((storage (if (pair? o) (car o) generic-storage-class))
@@ -656,6 +675,8 @@
         (error "TODO: array-block copy data unimplemented")
         res))))
 
+(define array-block! array-block)
+
 (define (array-decurry a . o)
   (let* ((storage (if (pair? o) (car o) generic-storage-class))
          (mutable? (if (and (pair? o) (pair? (cdr o)))
@@ -675,3 +696,5 @@
     ;; curried view from a to the res.
     (array-for-each array-assign! curried-res a)
     res))
+
+(define array-decurry! array-decurry)

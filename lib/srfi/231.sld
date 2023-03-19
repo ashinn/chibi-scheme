@@ -17,6 +17,7 @@
    interval-upper-bounds->list interval-lower-bounds->vector
    interval-upper-bounds->vector interval= interval-volume
    interval-subset? interval-contains-multi-index? interval-projections
+   interval-fold-left interval-fold-right
    interval-for-each interval-dilate interval-intersect
    interval-translate interval-permute
    interval-scale interval-cartesian-product
@@ -49,5 +50,6 @@
    array->list* list*->array array->vector* vector*->array
    array-assign! array-ref array-set! array-decurry
    specialized-array-reshape
+   array-copy! array-stack! array-decurry! array-append! array-block!
    )
   (include "231/transforms.scm"))
