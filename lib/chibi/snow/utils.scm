@@ -29,6 +29,10 @@
             ,(delay
                (process->sexp
                 '(gosh -uscheme.base -e "(write (features))"))))
+    (guile "guile" (guile -e "(display (version))") "3.0.8"
+           ,(delay
+              (process->sexp
+               '(guile --r7rs -c "(import (scheme base)) (display (features))"))))
     (kawa "kawa" (kawa --version) "2.0"
           ,(delay
              (process->sexp
