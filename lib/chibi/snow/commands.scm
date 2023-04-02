@@ -1007,7 +1007,11 @@
          (let ((dir (make-path (get-install-source-dir impl cfg) path)))
            (if (and (file-directory? dir)
                     (= 2 (length (directory-files dir))))
-               (remove-directory cfg dir)))))))
+               (remove-directory cfg dir)))
+         (when (eq? impl 'guile)
+           (let ((go-file (string-append (make-path (get-install-library-dir impl cfg) path)
+                                         ".go")))
+             (warn-delete-file cfg go-file)))))))
 
 (define (command/remove cfg spec . args)
   (let* ((impls (conf-selected-implementations cfg))
@@ -1322,6 +1326,12 @@
           '(csi -R chicken.platform -p "(car (repository-path))")))
      char-whitespace?)))
 
+(define (get-guile-site-dir)
+  (process->string '(guile -c "(display (%site-dir))")))
+
+(define (get-guile-site-ccache-dir)
+  (process->string '(guile -c "(display (%site-ccache-dir))")))
+
 (define (get-install-dirs impl cfg)
   (define (guile-eval expr)
     (guard (exn (else #f))
@@ -1602,6 +1612,9 @@
 (define native-srfi-support
   '((foment 60)
     (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
+    (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
+           35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
+           98 105 111 171)
     (kawa 1 2 13 14 34 37 60 69 95)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
@@ -1658,6 +1671,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'guile) (get-guile-site-dir))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1684,6 +1698,8 @@
            (car (get-install-dirs impl cfg)))))
    ((eq? impl 'cyclone)
     (car (get-install-dirs impl cfg)))
+   ((eq? impl 'guile)
+    (get-guile-site-ccache-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
    (else snow-binary-module-directory)))
@@ -1846,17 +1862,60 @@
           (cons dest-so-path
                 (default-installer impl cfg library dir)))))
 
+(define (guile-installer impl cfg library dir)
+  (let* ((source-scm-file (get-library-file cfg library))
+         (source-go-file (string-append
+                          (library->path cfg library) ".go"))
+         (dest-scm-file
+          (string-append (library->path cfg library) ".scm"))
+         (dest-go-file
+          (string-append (library->path cfg library) ".go"))
+         (include-files
+          (library-include-files impl cfg (make-path dir source-scm-file)))
+         (install-dir (get-install-source-dir impl cfg))
+         (install-lib-dir (get-install-library-dir impl cfg)))
+    (let ((scm-path (make-path install-dir dest-scm-file))
+          (go-path (make-path install-lib-dir dest-go-file)))
+      (install-directory cfg (path-directory scm-path))
+      (install-directory cfg (path-directory go-path))
+      (install-file cfg (make-path dir source-scm-file) scm-path)
+      (install-file cfg (make-path dir source-go-file) go-path)
+      ;; install any includes
+      (cons
+       scm-path
+       (append
+        (map
+         (lambda (x)
+           (let ((dest-file (make-path install-dir (path-relative x dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg x dest-file)
+             dest-file))
+         include-files)
+        (map
+         (lambda (x)
+           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
+                                                         (else ".so"))))
+                  (dest-file (make-path install-lib-dir
+                                        (path-relative so-file dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg so-file dest-file)
+             dest-file))
+         (library-shared-include-files
+          impl cfg (make-path dir source-scm-file))))))))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
+    ((guile) guile-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
   (case impl
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
+    ((guile) 'guile)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
@@ -2021,16 +2080,33 @@
                               " - install anyway?"))
               library))))))
 
+(define (guile-builder impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (src-library-file (make-path dir library-file))
+         (library-dir (path-directory src-library-file))
+         (dest-library-file
+          (string-append (library->path cfg library) ".go"))
+         (dest-dir
+          (path-directory (make-path dir dest-library-file))))
+    ;; ensure the build directory exists
+    (create-directory* dest-dir)
+    (with-directory
+     dir
+     (lambda ()
+       (and (system 'guild 'compile '-O0 '--r7rs '-o dest-library-file src-library-file)
+            library)))))
+
 (define (lookup-builder builder)
   (case builder
     ((chibi) chibi-builder)
     ((chicken) chicken-builder)
-    ((cyclone) cyclone-builder) 
+    ((cyclone) cyclone-builder)
+    ((guile) guile-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone) impl)
+    ((chibi chicken cyclone guile) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
