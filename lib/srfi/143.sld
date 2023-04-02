@@ -23,7 +23,7 @@
    fxzero? fxpositive? fxnegative? fxodd? fxeven? fxmax fxmin
    fx+ fx- fxneg fx* fxabs fxsquare fxsqrt
    fxquotient fxremainder
-   fx+/carry fx-/carry fx+*/carry
+   fx+/carry fx-/carry fx*/carry
    fxnot fxand fxior fxxor
    fxarithmetic-shift fxarithmetic-shift-left
    fxarithmetic-shift-right

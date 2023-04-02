@@ -41,7 +41,7 @@
     (call-with-values (lambda () (balanced/ d (expt 2 fx-width)))
       (lambda (q r) (values r q)))))
 
-(define (fx+*/carry i j k)
+(define (fx*/carry i j k)
   (let ((s (+ (* i j) k)))
     (call-with-values (lambda () (balanced/ s (expt 2 fx-width)))
       (lambda (q r) (values r q)))))
