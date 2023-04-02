@@ -44,6 +44,7 @@
           (rename ra:list list)
           (rename ra:make-list make-list)
           (rename ra:length length)
+          (rename ra:length<=? length<=?)
           (rename ra:append append)
           (rename ra:reverse reverse)
           (rename ra:list-tail list-tail)

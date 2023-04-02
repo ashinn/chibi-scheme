@@ -338,6 +338,13 @@
         (+ (kons-size ls) (recr (kons-rest ls)))
         0)))
 
+(define (ra:length<=? ls k)
+  (let lp ((ls ls) (k k))
+    (if (positive? k)
+        (and (ra:pair? ls)
+             (lp (ra:cdr ls) (- k 1)))
+        #t)))
+
 (define (make-foldl empty? first rest)
   (letrec ((f (lambda (cons empty ls)
                 (if (empty? ls) 

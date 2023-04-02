@@ -39,6 +39,7 @@
           (rename list rlist)
           (rename make-list make-rlist)
           (rename length rlength)
+          (rename length<=? rlength<=?)
           (rename append rappend)
           (rename reverse rreverse)
           (rename list-tail rlist-tail)

@@ -79,6 +79,10 @@
       (test 3 (length (list 'a 'b 'c)))
       (test 3 (length (list 'a (list 'b) (list 'c))))
       (test 0 (length '()))
+      (test #t (length<=? 'not-a-list 0))
+      (test #t (length<=? '(a . b) 0))
+      (test #t (length<=? '(a . b) 1))
+      (test #f (length<=? '(a . b) 2))
 
       ;; append
       (test (list 'x 'y) (append (list 'x) (list 'y)))
