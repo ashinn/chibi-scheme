@@ -91,9 +91,12 @@
 
 ;;> Render (valid, expanded) \var{sxml} as html.
 ;;> \var{@raw} tag is considered safe text and not processed or escaped.
-(define (sxml-display-as-html sxml . o)
-  (let-optionals o ((out (current-output-port))
-		    (indent? #false))
+(define (sxml-display-as-html sxml . args)
+  (let* ((out (if (null? args) (current-output-port) (car args)))
+         (args (if (null? args) args (cdr args)))
+	 (indent? (if (null? args) #f (car args)))
+         (args (if (null? args) args (cdr args))))
+    (unless (null? args) (error "too many args"))
     (let lp ((sxml (if (and (pair? sxml) (eq? '*TOP* (car sxml)))
                        (cdr sxml)
                        sxml))
