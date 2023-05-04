@@ -2,7 +2,8 @@
 (define-library (srfi 193)
   (export command-line command-name command-args script-file script-directory)
   (import (scheme base) (chibi filesystem) (chibi pathname)
-          (only (meta) command-line raw-script-file))
+          (only (chibi) command-line)
+          (only (meta) raw-script-file))
   (begin
 
     (define (command-name)
