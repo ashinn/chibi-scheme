@@ -443,6 +443,9 @@
               (else
                (error "couldn't find module" (car ls))))))))))))
 
+;; This will be redefined in main.c.
+(define raw-script-file #f)
+
 ;; capture a static copy of the current environment to serve
 ;; as the (chibi) module
 (define *chibi-env*
