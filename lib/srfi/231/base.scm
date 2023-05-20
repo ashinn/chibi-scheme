@@ -61,7 +61,7 @@
 (define (interval-width iv i)
   (- (interval-upper-bound iv i) (interval-lower-bound iv i)))
 (define (interval-widths iv)
-  (vector-map - (interval-lb iv) (interval-ub iv)))
+  (vector-map - (interval-ub iv) (interval-lb iv)))
 
 (define (interval= iv1 iv2)
   (assert (and (interval? iv1) (interval? iv2)))
