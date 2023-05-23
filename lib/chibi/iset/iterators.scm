@@ -96,6 +96,75 @@
          (null? (iset-cursor-stack cur)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Rank/Select operations, acting directly on isets without an
+;; optimized data structure.
+
+(define (iset-node-size iset)
+  (if (iset-bits iset)
+      (bit-count (iset-bits iset))
+      (+ 1 (- (iset-end iset) (iset-start iset)))))
+
+;; Number of bits set in i below index n.
+(define (bit-rank i n)
+  (bit-count (bitwise-and i (- (arithmetic-shift 1 n) 1))))
+
+;;> Returns the rank (i.e. index within the iset) of the given
+;;> element, a number in [0, size).  This can be used to compress an
+;;> integer set to a minimal consecutive set of integets.  Can also be
+;;> thought of as the number of elements in iset smaller than element.
+(define (iset-rank iset element)
+  (let lp ((iset iset) (count 0))
+    (cond
+     ((< element (iset-start iset))
+      (if (iset-left iset)
+          (lp (iset-left iset) count)
+          (error "integer not in iset" iset element)))
+     ((> element (iset-end iset))
+      (if (iset-right iset)
+          (lp (iset-right iset)
+              (+ count
+                 (cond ((iset-left iset) => iset-size) (else 0))
+                 (iset-node-size iset)))
+          (error "integer not in iset" iset element)))
+     ((iset-bits iset)
+      (+ count
+         (cond ((iset-left iset) => iset-size) (else 0))
+         (bit-rank (iset-bits iset)
+                   (- element (iset-start iset)))))
+     (else
+      (+ count
+         (cond ((iset-left iset) => iset-size) (else 0))
+         (integer-length (- element (iset-start iset))))))))
+
+(define (nth-set-bit i n)
+  ;; TODO: optimize
+  (if (zero? n)
+      (first-set-bit i)
+      (nth-set-bit (bitwise-and i (- i 1)) (- n 1))))
+
+;;> Selects the index-th element of iset starting at 0.  The inverse
+;;> operation of \scheme{iset-rank}.
+(define (iset-select iset index)
+  (let lp ((iset iset) (index index) (stack '()))
+    (if (and iset (iset-left iset))
+        (lp (iset-left iset) index (cons iset stack))
+        (let ((iset (if iset iset (car stack)))
+              (stack (if iset stack (cdr stack))))
+          (let ((node-size (iset-node-size iset)))
+            (cond
+             ((and (< index node-size) (iset-bits iset))
+              (+ (iset-start iset)
+                 (nth-set-bit (iset-bits iset) index)))
+             ((< index node-size)
+              (+ (iset-start iset) index))
+             ((iset-right iset)
+              (lp (iset-right iset) (- index node-size) stack))
+             ((pair? stack)
+              (lp #f  (- index node-size) stack))
+             (else
+              (error "iset index out of range" iset index))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Equality
 
 (define (iset2= is1 is2)
@@ -201,10 +270,6 @@
 
 (define (iset-size iset)
   (iset-fold-node
-   (lambda (is acc)
-     (let ((bits (iset-bits is)))
-       (+ acc (if bits
-                  (bit-count bits)
-                  (+ 1 (- (iset-end is) (iset-start is)))))))
+   (lambda (is acc) (+ acc (iset-node-size is)))
    0
    iset))

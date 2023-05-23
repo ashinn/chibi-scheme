@@ -268,6 +268,26 @@
        . rest))
     ))
 
+;;> \macro{(for substr (in-substrings k str))}
+
+(define (string-cursor-forward str cursor n)
+  (if (positive? n)
+      (string-cursor-forward str (string-cursor-next str cursor) (- n 1))
+      cursor))
+
+(define-syntax in-substrings
+  (syntax-rules ()
+    ((in-substrings ((ch) (k str)) next . rest)
+     (next ((tmp str) (end (string-cursor-end tmp)))
+           ((sc1 (string-cursor-start tmp)
+                 (string-cursor-next tmp sc1))
+            (sc2 (string-cursor-forward tmp (string-cursor-start tmp) k)
+                 (string-cursor-next tmp sc2)))
+           ((string-cursor>? sc2 end))
+           ((ch (substring-cursor tmp sc1 sc2)))
+           ()
+       . rest))))
+
 ;;> \macro{(for ch (in-port [input-port [reader [eof?]]]))}
 
 (define-syntax in-port

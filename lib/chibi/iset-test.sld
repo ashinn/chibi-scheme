@@ -241,6 +241,19 @@
       (let ((a (%make-iset 65 90 #f #f (%make-iset 97 122 #f #f #f)))
             (b (list->iset '(45 46 95 126))))
         (test-assert (iset-contains? (iset-union a b) 119))
-        (test-assert (iset-contains? (iset-union b a) 119))) 
+        (test-assert (iset-contains? (iset-union b a) 119)))
+
+      (let* ((elts '(0 1 5 27 42 113 114 256))
+             (is (list->iset elts)))
+        (test (iota (length elts))
+            (map (lambda (elt) (iset-rank is elt)) elts))
+        (test elts
+            (map (lambda (i) (iset-select is i)) (iota (length elts)))))
+
+      (let* ((elts '(903 595 694 581 91 628 648 152 188 29 347 876 381 945 508 890 816 654 871 228 200 397 116 952 60 878 361 205 691 318 87 998 35 886 580 787 856 535 964 133 245 314 711 598 180 984 458 235 599 692 568 1 740 514 995 930 625 638 881 997 412 151 195 512 857 948 956 750 896 813 988 40 85 426 740 83 294 249 235 45 20 784 837 640 56 519 211 780 771 684 408 510 677 773 574 114 537 934 477 136))
+             (is (list->iset elts)))
+        (test elts
+            (map (lambda (i) (iset-select is i))
+                 (map (lambda (elt) (iset-rank is elt)) elts))))
 
       (test-end))))
