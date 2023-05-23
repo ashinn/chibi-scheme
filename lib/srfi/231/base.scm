@@ -28,6 +28,12 @@
                         (iota (- n (+ k 1)) (+ k 1))
                         (list k))))
 
+(define (index-swap n i j)
+  (let ((result (vector-iota n 0)))
+    (vector-set! result i j)
+    (vector-set! result j i)
+    result))
+
 ;; Intervals
 
 (define-record-type Interval
