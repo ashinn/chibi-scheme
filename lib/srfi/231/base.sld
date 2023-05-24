@@ -23,7 +23,7 @@
    interval-width interval-widths
    interval-empty?
    ;; Indexing
-   index-rotate index-first index-last
+   index-rotate index-first index-last index-swap
    indexer->coeffs coeffs->indexer default-indexer default-coeffs
    invert-default-index interval-cursor interval-cursor-next!
    interval-cursor-next interval-cursor-get interval-fold

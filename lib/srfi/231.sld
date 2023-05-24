@@ -10,7 +10,7 @@
    ;; Miscellaneous Functions
    translation? permutation?
    ;; Indexes
-   index-rotate index-first index-last
+   index-rotate index-first index-last index-swap
    ;; Intervals
    make-interval interval? interval-dimension interval-lower-bound
    interval-upper-bound interval-lower-bounds->list
