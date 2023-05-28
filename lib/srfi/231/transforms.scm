@@ -520,12 +520,6 @@
             (iota (interval-width domain 0)
                   (interval-lower-bound domain 0)))))))
 
-(define (vector-iota len start)
-  (let ((res (make-vector len)))
-    (do ((i 0 (+ i 1)))
-        ((= i len) res)
-      (vector-set! res i (+ i start)))))
-
 (define (array->vector* a)
   (case (array-dimension a)
     ((0) (array-ref a))
