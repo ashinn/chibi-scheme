@@ -9,6 +9,7 @@
           (chibi assert))
   (export
    ;; Miscellaneous Functions
+   vector-iota
    translation? permutation?
    ;; Intervals
    make-interval interval? interval-dimension interval-lb interval-ub

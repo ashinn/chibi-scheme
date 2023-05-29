@@ -1,5 +1,11 @@
 ;; Miscellaneous Functions
 
+(define (vector-iota len start)
+  (let ((res (make-vector len)))
+    (do ((i 0 (+ i 1)))
+        ((= i len) res)
+      (vector-set! res i (+ i start)))))
+
 (define (translation? x)
   (and (vector? x) (vector-every exact-integer? x)))
 
