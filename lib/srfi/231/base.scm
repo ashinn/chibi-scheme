@@ -22,19 +22,33 @@
                       (lp (+ i 1)))))))))
 
 (define (index-rotate n k)
+  (assert (and (exact-integer? n)
+               (exact-integer? k)
+               (< -1 k n)))
   (list->vector (append (iota (- n k) k) (iota k))))
 
 (define (index-first n k)
+  (assert (and (exact-integer? n)
+               (exact-integer? k)
+               (< -1 k n)))
   (list->vector (cons k
                       (append (iota k)
                               (iota (- n (+ k 1)) (+ k 1))))))
 
 (define (index-last n k)
+  (assert (and (exact-integer? n)
+               (exact-integer? k)
+               (< -1 k n)))
   (list->vector (append (iota k)
                         (iota (- n (+ k 1)) (+ k 1))
                         (list k))))
 
 (define (index-swap n i j)
+  (assert (and (exact-integer? n)
+               (exact-integer? i)
+               (exact-integer? j)
+               (< -1 i n)
+               (< -1 j n)))
   (let ((result (vector-iota n 0)))
     (vector-set! result i j)
     (vector-set! result j i)

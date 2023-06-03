@@ -1,6 +1,6 @@
 ;; Adapted from original SRFI reference test suite:
 
-;; SRFI 179: Nonempty Intervals and Generalized Arrays (Updated)
+;; SRFI 231: Intervals and Generalized Arrays
 
 ;; Copyright 2016, 2018, 2020 Bradley J Lucier.
 ;; All Rights Reserved.
@@ -29,8 +29,8 @@
 ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 ;; OTHER DEALINGS IN THE SOFTWARE.
 
-;;; A test program for SRFI 179:
-;;; Nonempty Intervals and Generalized Arrays (Updated)
+;;; A test program for SRFI 231:
+;;; Intervals and Generalized Arrays
 
 (define-library (srfi 231 test)
   (import (scheme base) (scheme cxr) (scheme complex)
@@ -189,10 +189,10 @@
       (zero? (random 2)))
 
     (define (array-display A)
-  
+
       (define (display-item x)
         (display x) (display "\t"))
-  
+
       (newline)
       (case (array-dimension A)
         ((1) (array-for-each display-item A) (newline))
@@ -903,7 +903,38 @@
 
       (random-source-pseudo-randomize! default-random-source 7 23)
 
-      (test-begin "srfi-179: nonempty intervals and generalized arrays")
+      (test-begin "srfi-231: nonempty intervals and generalized arrays")
+
+      (test-group "index-* and miscellaneous tests"
+        (test-error (index-first 'a 3))
+        (test-error (index-first 5 'a))
+        (test-error (index-first -1 5))
+        (test-error (index-first 0 -2))
+        (test-error (index-first 3 5))
+        (test '#(3 0 1 2 4) (index-first 5 3))
+
+        (test-error (index-last 'a 3))
+        (test-error (index-last 5 'a))
+        (test-error (index-last -1 5))
+        (test-error (index-last 0 -2))
+        (test-error (index-last 3 5))
+        (test '#(0 1 2 4 3) (index-last 5 3))
+
+        (test-error (index-rotate 'a 3))
+        (test-error (index-rotate 5 'a))
+        (test-error (index-rotate -1 5))
+        (test-error (index-rotate 0 -2))
+        (test-error (index-rotate 3 5))
+        (test '#(3 4 0 1 2) (index-rotate 5 3))
+
+        (test-error (index-swap 'a 3 0))
+        (test-error (index-swap 5 'a 0))
+        (test-error (index-swap -1 5 0))
+        (test-error (index-swap 0 -2 0))
+        (test-error (index-swap 3 5 0))
+        (test '#(3 1 2 0 4) (index-swap 5 3 0))
+
+                  )
 
       (test-group "interval tests"
         (test-error (make-interval 1 '#(3 4)))
@@ -1456,7 +1487,7 @@
         ;;            (%%array-domain curried-sampled-array)
         ;;            (%%array-indexer curried-sampled-array))
         ;;         (array-packed? curried-sampled-array))))
-         
+
         ;; FIXME: array-reshape tests.
 
         ;; error tests
@@ -3579,7 +3610,7 @@
           ;; (array-for-each (lambda (row)
           ;;                   (pretty-print (array->list row)))
           ;;                 (array-curry b 1))
-  
+
           ;; which prints
           ;; ((0 0) (0 1) (0 2) (0 3) (0 4))
           ;; ((1 1) (1 2) (1 3) (1 4) (1 5))
@@ -3650,7 +3681,7 @@
         ;;                edge-array))
         ;;    "edge-test.pgm"))
 
-      
+
         (let ((m
                (array-copy (make-array (make-interval '#(0 0) '#(40 30))
                                        (lambda (i j) (inexact (+ i j)))))))
