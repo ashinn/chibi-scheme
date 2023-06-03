@@ -328,6 +328,9 @@
             res))
        ((= (+ 1 (interval-lower-bound domain (- i 1)))
            (interval-upper-bound domain (- i 1)))
+        (vector-set! res i (if (< i (interval-dimension domain))
+                               (interval-width domain i)
+                               1))
         (lp (+ i 1) (cdr ls) offset count))
        (else
         (let ((dir (if (and (> count 0)
@@ -396,7 +399,9 @@
         res)
        ((= (+ 1 (interval-lower-bound domain i))
            (interval-upper-bound domain i))
-        (vector-set! res (+ i 1) 0)
+        (vector-set! res (+ i 1) (if (< (+ i 1) dim)
+                                     (interval-width domain (+ i 1))
+                                     1))
         (lp (- i 1) scale))
        (else
         (let ((coeff (* scale  (- (interval-upper-bound domain i)
