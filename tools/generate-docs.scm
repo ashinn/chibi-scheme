@@ -59,7 +59,9 @@
      (thread-join! thread))
     (begin)))
 
-(fork-map
+; fork-map is broken. The HTML files produced are empty
+
+(map
  process
  (filter filename-filter (walk-directory "lib")))
 
