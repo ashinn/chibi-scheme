@@ -31,6 +31,7 @@
 
 (define (filename-filter filename)
  (and
+  (string-contains filename "chibi/")
   (string-suffix? ".sld" filename)
   (not (string-contains filename "-test"))))
 
@@ -46,6 +47,8 @@
      (substring x 0 (- (string-length x) strlen-ext))
      ".html"))
   (define doc-mod-name (string-map (char-replacer #\/ #\.) (substring x (string-length "lib/") (- (string-length x) strlen-ext))))
+  (display `("Started" ,doc-mod-name ,x ,outfile))
+  (newline)
   (let ((output (process->string `("./chibi-scheme" "tools/chibi-doc" "--html" ,doc-mod-name))))
     (create-directory* (path-directory outfile))
     (call-with-output-file
@@ -68,6 +71,11 @@
 
 ; fork-map is naive
 ; BUG: some files like chibi.show are broken
+; BUG: editing this script when running breaks it
+; example error:
+; ERROR: undefined variable: k-map
+;   called from <anonymous> on line 1268 of file lib/init-7.scm
+;   called from <anonymous> on line 800 of file lib/init-7.scm
 
 (define (main)
   (define CHIBI_MODULE_PATH (get-environment-variable "CHIBI_MODULE_PATH"))
