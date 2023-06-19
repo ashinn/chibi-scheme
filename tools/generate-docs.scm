@@ -5,7 +5,7 @@
  (chibi process)
  (chibi filesystem)
  (chibi pathname)
- (srfi 18))
+ (srfi 98))
 
 (define (walk-directory path)
   #;(write (cons "visiting: " path))
@@ -34,34 +34,50 @@
   (string-suffix? ".sld" filename)
   (not (string-contains filename "-test"))))
 
+(define (char-replacer from to)
+  (lambda (c)
+    (if (eq? from c) to c)))
 
 (define (process x)
+  (define strlen-ext (string-length ".sdl"))
   (define outfile
     (string-append
      "doc/"
-     (substring x 0 (- (string-length x) 4))
+     (substring x 0 (- (string-length x) strlen-ext))
      ".html"))
-  (display `("Processing" ,x ,outfile))
-  (newline)
-  (let ((output (process->string `("./chibi-scheme" "tools/chibi-doc" "--html" ,x))))
+  (define doc-mod-name (string-map (char-replacer #\/ #\.) (substring x (string-length "lib/") (- (string-length x) strlen-ext))))
+  (let ((output (process->string `("./chibi-scheme" "tools/chibi-doc" "--html" ,doc-mod-name))))
     (create-directory* (path-directory outfile))
     (call-with-output-file
      outfile
      (lambda (port)
-       (display output port)))))
+       (display output port))))
+  (display `("Processed" ,doc-mod-name ,x ,outfile))
+  (newline))
 
 (define (fork-map f xs)
   (if (pair? xs)
-    (let* ((x (car xs))
-           (thread (make-thread (lambda () (f x)))))
-     (thread-start! thread)
-     (fork-map f (cdr xs))
-     (thread-join! thread))
-    (begin)))
+    (let ((pid (fork)))
+      (if (= 0 pid)
+       (begin
+        (f (car xs))
+        (exit))
+       (begin
+        (fork-map f (cdr xs))
+        (waitpid pid 0))))))
 
-; fork-map is broken. The HTML files produced are empty
+; fork-map is naive
+; BUG: some files like chibi.show are broken
 
-(map
- process
- (filter filename-filter (walk-directory "lib")))
+(define (main)
+  (define CHIBI_MODULE_PATH (get-environment-variable "CHIBI_MODULE_PATH"))
+  (cond
+   ((not CHIBI_MODULE_PATH) (begin
+                             (display "USAGE: CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib ./chibi-scheme tools/generate-docs.scm")
+                             (newline)))
+   (else
+    (fork-map
+     process
+     (filter filename-filter (walk-directory CHIBI_MODULE_PATH))))))
 
+(main)
