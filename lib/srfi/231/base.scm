@@ -368,6 +368,9 @@
 
 (define (coeffs->indexer coeffs domain)
   (case (vector-length coeffs)
+    ((1)
+     (let ((a (vector-ref coeffs 0)))
+       (lambda () a)))
     ((2)
      (let ((a (vector-ref coeffs 0))
            (b (vector-ref coeffs 1)))
@@ -404,8 +407,8 @@
 (define (default-coeffs domain)
   (let* ((dim (interval-dimension domain))
          (res (make-vector (+ 1 dim))))
-    (vector-set! res 0 0)
     (vector-set! res dim 1)
+    (vector-set! res 0 0)
     (let lp ((i (- dim 1))
              (scale 1))
       (cond
@@ -472,6 +475,7 @@
    adjacent?))
 
 (define (make-specialized-array domain . o)
+  ;; TODO: init value
   (let* ((storage (if (pair? o) (car o) generic-storage-class))
          (safe? (if (and (pair? o) (pair? (cdr o)))
                     (cadr o)
