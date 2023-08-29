@@ -117,10 +117,12 @@
          (vector-every < i (interval-ub iv)))))
 
 (define (interval-projections iv rd)
-  (values (make-interval (vector-copy (interval-lb iv) 0 rd)
-                         (vector-copy (interval-ub iv) 0 rd))
-          (make-interval (vector-copy (interval-lb iv) rd)
-                         (vector-copy (interval-ub iv) rd))))
+  (assert (interval? iv))
+  (let ((n (vector-length (interval-lb iv))))
+    (values (make-interval (vector-copy (interval-lb iv) 0 (- n rd))
+                           (vector-copy (interval-ub iv) 0 (- n rd)))
+            (make-interval (vector-copy (interval-lb iv) (- n rd))
+                           (vector-copy (interval-ub iv) (- n rd))))))
 
 (define (rev-index-next! rev-index rev-lowers rev-uppers)
   (cond

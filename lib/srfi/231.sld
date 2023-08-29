@@ -33,6 +33,7 @@
    u64-storage-class f8-storage-class f16-storage-class
    f32-storage-class f64-storage-class
    c64-storage-class c128-storage-class
+   char-storage-class
    storage-class-data? storage-class-data->body
    ;; Arrays
    make-array array? array-domain array-getter array-dimension
