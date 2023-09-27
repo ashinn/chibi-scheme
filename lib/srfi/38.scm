@@ -3,6 +3,17 @@
 ;; This code was written by Alex Shinn in 2009 and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
+(define escaped-chars
+  '((#\alarm . "alarm")
+    (#\backspace . "backspace")
+    (#\delete . "delete")
+    (#\escape . "escape")
+    (#\newline . "newline")
+    (#\null . "null")
+    (#\return . "return")
+    (#\space . "space")
+    (#\tab . "tab")))
+
 (define (raise-typed-error type)
   (lambda (msg . args) (raise (make-exception type msg args #f #f))))
 (define read-error (raise-typed-error 'read))
@@ -111,7 +122,12 @@
             (and (type? type) (type-printer type)))
           => (lambda (printer) (printer x wr out)))
          ((null? x) (display "()" out))
-         ((char? x) (display "#\\" out) (write-char x out))
+         ((char? x)
+          (display "#\\" out)
+          (let ((pair (assv x escaped-chars)))
+            (if pair
+              (display (cdr pair) out)
+              (write-char x out))))
          ((symbol? x) (write x out))
          ((number? x) (display (number->string x) out))
          ((eq? x #t) (display "#t" out))

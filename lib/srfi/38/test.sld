@@ -80,6 +80,8 @@
                  (vector-set! x 2 x)
                  x))
 
+      (test "#\newline" #\newline)
+
       (test '+.! (read-from-string "+.!"))
 
       (test 255 (read-from-string "#xff"))
