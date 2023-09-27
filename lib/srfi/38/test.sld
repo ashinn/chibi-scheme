@@ -80,7 +80,7 @@
                  (vector-set! x 2 x)
                  x))
 
-      (test "#\newline" #\newline)
+      (test-io "#\\newline" #\newline)
 
       (test '+.! (read-from-string "+.!"))
 
