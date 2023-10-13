@@ -1,8 +1,8 @@
 
 (define-library (scheme process-context)
   (import (chibi) (only (scheme base) call/cc) (srfi 98))
-  (cond-expand (windows (import (rename (chibi win32 process-win32) (exit emergency-exit))))
-               (else (import (prefix (chibi process) process-))))
+  (cond-expand (windows (import (prefix (only (chibi win32 process-win32) exit) process-)))
+               (else (import (prefix (only (chibi process) exit) process-))))
   (export get-environment-variable get-environment-variables
           command-line exit emergency-exit)
 
