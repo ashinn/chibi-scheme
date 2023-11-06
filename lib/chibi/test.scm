@@ -701,7 +701,8 @@
     (if (not (eq? status 'ERROR)) (display " ")) ; pad
     (display (test-status-message status))
     (display "]")
-    (test-print-failure indent status info))
+    (test-print-failure indent status info)
+    (newline))
    ((eq? status 'SKIP))
    (else
     (display (test-status-code status))
@@ -816,7 +817,8 @@
         (display (plural " subgroup" subgroups-pass))
         (display " passed.")))
     (when (test-group-ref group 'verbose)
-      (display (test-group-line group #f)))
+      (display (test-group-line group #f))
+      (newline))
     (cond
      ((test-group-ref group 'parent)
       => (lambda (parent)
@@ -830,8 +832,11 @@
 
 (define test-default-group-reporter
   (case-lambda
-   ((group)        (close-group group))
-   ((group parent) (display (test-group-line group 'open)))))
+    ((group)
+     (close-group group))
+    ((group parent)
+     (display (test-group-line group 'open))
+     (newline))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; parameters
