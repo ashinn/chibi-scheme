@@ -1263,6 +1263,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-46/srfi-46.html"]{(srfi 46) - basic syntax-rules extensions}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-55/srfi-55.html"]{(srfi 55) - require-extension}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-62/srfi-62.html"]{(srfi 62) - s-expression comments}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-64/srfi-64.html"]{(srfi 64) - a scheme API for test suites}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-69/srfi-69.html"]{(srfi 69) - basic hash tables}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-95/srfi-95.html"]{(srfi 95) - sorting and merging}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-98/srfi-98.html"]{(srfi 98) - environment access}}
