@@ -45,7 +45,9 @@ void sexp_warn (sexp ctx, const char *msg, sexp x) {
   if (sexp_oportp(out)) {
     sexp_write_string(ctx, strictp ? "ERROR: " : "WARNING: ", out);
     sexp_write_string(ctx, msg, out);
-    sexp_write(ctx, x, out);
+    if (x != SEXP_UNDEF) {
+      sexp_write(ctx, x, out);
+    }
     sexp_write_char(ctx, '\n', out);
     if (strictp) sexp_stack_trace(ctx, out);
   }
@@ -1100,8 +1102,13 @@ static sexp analyze (sexp ctx, sexp object, int depth, int defok) {
     } else if (sexp_idp(sexp_car(x))) {
       if (! cell) {
         res = analyze_app(ctx, x, depth);
-        if (sexp_exceptionp(res))
+        if (sexp_exceptionp(res)) {
           sexp_warn(ctx, "exception inside undefined operator: ", sexp_car(x));
+          /* the common case of no imports */
+          if (!sexp_env_parent(sexp_context_env(ctx))) {
+            sexp_warn(ctx, "did you forget to import a language? e.g. (import (scheme base))", SEXP_UNDEF);
+          }
+        }
       } else {
         op = sexp_cdr(cell);
         if (sexp_corep(op)) {

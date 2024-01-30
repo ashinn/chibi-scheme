@@ -136,6 +136,8 @@ documentation system described in
 build this manual.  \ccode{chibi-ffi} is a tool to build wrappers for
 C libraries, described in the FFI section below.
 
+See the examples directory for some sample programs.
+
 \section{Default Language}
 
 \subsection{Scheme Standard}
@@ -230,6 +232,15 @@ where \var{<library-declarations>} can be any of
 These forms perform basic selection and renaming of individual
 identifiers from the given module. They may be composed to perform
 combined selection and renaming.
+
+Note while the repl provides default bindings as a convenience,
+programs have strict semantics as in R7RS and must start with at least
+one import, e.g.
+
+\schemeblock{
+(import (scheme base))
+(write-string "Hello world!\n")
+}
 
 Some modules can be statically included in the initial configuration,
 and even more may be included in image files, however in general
