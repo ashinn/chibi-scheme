@@ -1762,6 +1762,9 @@ sexp sexp_quotient (sexp ctx, sexp a, sexp b) {
     break;
   case SEXP_NUM_FIX_FIX:
     r = sexp_fx_div(a, b);
+    if ((sexp_sint_t)a < 0 && (sexp_sint_t)b < 0 && (sexp_sint_t)r < 0) {
+      r = sexp_quotient(ctx, tmp=sexp_fixnum_to_bignum(ctx, a), b);
+    }
     break;
   case SEXP_NUM_FIX_BIG:
     r = SEXP_ZERO;
