@@ -17,11 +17,12 @@
    (else
     (export user-information group-information)
     (body
+     (define (safe-car x) (and (pair? x) (car x)))
      (define (user-information user)
-       (car (if (string? user)
-                (getpwnam_r user (make-string 1024))
-                (getpwuid_r user (make-string 1024)))))
+       (safe-car (if (string? user)
+                     (getpwnam_r user (make-string 1024))
+                     (getpwuid_r user (make-string 1024)))))
      (define (group-information group)
-       (car (if (string? group)
-                (getgrnam_r group (make-string 1024))
-                (getgrgid_r group (make-string 1024)))))))))
+       (safe-car (if (string? group)
+                     (getgrnam_r group (make-string 1024))
+                     (getgrgid_r group (make-string 1024)))))))))

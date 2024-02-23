@@ -24,9 +24,9 @@
    #u8(0 0 0 0 0 0 0 0 0 0 0 0)))
 
 (define (file-owner-or-nobody uid)
-  (or (user-name (user-information uid)) "nobody"))
+  (or (cond ((user-information uid) => user-name) (else #f)) "nobody"))
 (define (file-group-or-nobody gid)
-  (or (group-name (group-information gid)) "nobody"))
+  (or (cond ((group-information gid) => group-name) (else #f)) "nobody"))
 
 (define (make-tar file mode uid gid size mod-time type . o)
   (let* ((link (if (pair? o) (car o) ""))
