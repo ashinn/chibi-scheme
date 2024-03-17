@@ -682,6 +682,7 @@
         (when (and indent (positive? indent))
           (display (indent-string indent)))
         (test-print-name info (or indent 4))))))
+
 (define (stop-test status info)
   (define indent
     (indent-string
@@ -720,13 +721,10 @@
              (test-group-inc! group 'count))
          (test-group-inc! group status)
          ;; maybe wrap long status lines
-         (let ((width (max (- (current-column-width)
-                              (test-group-indent-width group))
-                           (current-group-indent)))
-               (column
-                (+ (string-length (test-group-name group))
-                   (test-group-ref group 'count 0)
-                   1)))
+         (let* ((width (max (- (current-column-width)
+                               (test-group-indent-width group))
+                            (current-group-indent)))
+                (column (test-group-ref group 'count 0)))
            (when (and (zero? (modulo column width))
                       (not (test-group-ref group 'verbose)))
              (newline)
@@ -836,7 +834,10 @@
      (close-group group))
     ((group parent)
      (display (test-group-line group 'open))
-     (newline))))
+     (if (test-group-ref group 'verbose)
+         (newline)
+         (display (indent-string (+ 1 (test-group-indent-width group)))))
+     )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; parameters
