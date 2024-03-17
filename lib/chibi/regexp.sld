@@ -10,7 +10,13 @@
           regexp-match? regexp-match-count
           regexp-match-submatch regexp-match-submatch/list
           regexp-match-submatch-start regexp-match-submatch-end
-          regexp-match->list regexp-match->sexp)
+          regexp-match->list regexp-match->sexp
+          ;; low-level
+          regexp-advance! regexp-state?
+          make-regexp-state regexp-state-accept
+          regexp-state-searchers regexp-state-matches
+          regexp-match-ref
+          )
   (import (srfi 69))
   ;; Chibi's char-set library is more factored than SRFI-14.
   (cond-expand
