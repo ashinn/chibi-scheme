@@ -138,8 +138,8 @@
              (vec (make-bytevector n))
              (res (read-bytevector! vec in)))
         (cond ((eof-object? res) res)
-              ((< res n) (subbytes vec 0 i))
-              (else res)))))
+              ((< res n) (subbytes vec 0 res))
+              (else vec)))))
 
 (define (read-bytevector! vec . o)
   (let* ((in (if (pair? o) (car o) (current-input-port)))
