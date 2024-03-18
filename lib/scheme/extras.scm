@@ -134,17 +134,12 @@
 (define (read-bytevector n . o)
   (if (zero? n)
       #u8()
-      (let ((in (if (pair? o) (car o) (current-input-port)))
-            (res (make-bytevector n)))
-        (let lp ((i 0))
-          (if (>= i n)
-              res
-              (let ((x (read-u8 in)))
-                (cond ((eof-object? x)
-                       (if (zero? i) x (subbytes res 0 i)))
-                      (else
-                       (bytevector-u8-set! res i x)
-                       (lp (+ i 1))))))))))
+      (let* ((in (if (pair? o) (car o) (current-input-port)))
+             (vec (make-bytevector n))
+             (res (read-bytevector! vec in)))
+        (cond ((eof-object? res) res)
+              ((< res n) (subbytes vec 0 res))
+              (else vec)))))
 
 (define (read-bytevector! vec . o)
   (let* ((in (if (pair? o) (car o) (current-input-port)))
@@ -152,19 +147,19 @@
          (start (if (pair? o) (car o) 0))
          (end (if (and (pair? o) (pair? (cdr o)))
                   (cadr o)
-                  (bytevector-length vec))))
+                  (bytevector-length vec)))
+         (n (- end start)))
     (if (>= start end)
         0
-        (let ((res (read-bytevector (- end start) in)))
-          (cond
-           ((eof-object? res)
-            res)
-           (else
-            (let ((len (bytevector-length res)))
-              (do ((i 0 (+ i 1)))
-                  ((>= i len) len)
-                (bytevector-u8-set! vec (+ i start) (bytevector-u8-ref res i))
-                ))))))))
+        (let lp ((i 0))
+          (if (>= i n)
+              i
+              (let ((x (read-u8 in)))
+                (cond ((eof-object? x)
+                       (if (zero? i) x i))
+                      (else
+                       (bytevector-u8-set! vec (+ i start) x)
+                       (lp (+ i 1))))))))))
 
 (define (write-bytevector vec . o)
   (let* ((out (if (pair? o) (car o) (current-output-port)))
