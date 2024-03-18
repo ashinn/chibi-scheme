@@ -14,7 +14,8 @@
           make-filtered-output-port make-filtered-input-port
           string-count-chars
           open-input-bytevector open-output-bytevector get-output-bytevector
-          string->utf8 utf8->string
+          string->utf8 string->utf8! string-offset utf8->string utf8->string!
+          utf8-ref utf8-next utf8-prev
           write-string write-u8 read-u8 peek-u8 send-file
           is-a-socket?
           call-with-input-file call-with-output-file)

@@ -9,25 +9,10 @@
   (call-with-input-string " "
     (lambda (in) (read-char in) (read-char in))))
 
-;; Copy whole characters from the given cursor positions.
-;; Return the src cursor position of the next unwritten char,
-;; which may be before `to' if the char would overflow.
-;; Now provided as a primitive from (chibi ast).
-;; (define (string-cursor-copy! dst start src from to)
-;;   (let lp ((i from)
-;;            (j (string-cursor->index dst start)))
-;;     (let ((i2 (string-cursor-next src i)))
-;;       (cond ((> i2 to) i)
-;;             (else
-;;              (string-set! dst j (string-cursor-ref src i))
-;;              (lp i2 (+ j 1)))))))
-
 (define (utf8->string vec . o)
-  (if (pair? o)
-      (let ((start (car o))
-            (end (if (pair? (cdr o)) (cadr o) (bytevector-length vec))))
-        (utf8->string (subbytes vec start end)))
-      (string-copy (utf8->string! vec))))
+  (let ((start (if (pair? o) (car o) 0))
+        (end (if (and (pair? o) (pair? (cdr o))) (cadr o) (bytevector-length vec))))
+    (string-copy (utf8->string! vec start end))))
 
 (define (string->utf8 str . o)
   (if (pair? o)

@@ -258,15 +258,15 @@ sexp sexp_make_custom_binary_output_port (sexp ctx, sexp self,
   return res;
 }
 
-sexp sexp_bytes_to_string (sexp ctx, sexp vec) {
+sexp sexp_bytes_to_string (sexp ctx, sexp vec, sexp_uint_t offset, sexp_uint_t size) {
   sexp res;
 #if SEXP_USE_PACKED_STRINGS
-  res = sexp_c_string(ctx, sexp_bytes_data(vec), sexp_bytes_length(vec));
+  res = sexp_c_string(ctx, sexp_bytes_data(vec) + offset, size);
 #else
   res = sexp_alloc_type(ctx, string, SEXP_STRING);
   sexp_string_bytes(res) = vec;
-  sexp_string_offset(res) = 0;
-  sexp_string_size(res) = sexp_bytes_length(vec);
+  sexp_string_offset(res) = offset;
+  sexp_string_size(res) = size - offset;
 #endif
   return res;
 }
@@ -275,7 +275,7 @@ sexp sexp_open_input_bytevector (sexp ctx, sexp self, sexp vec) {
   sexp_gc_var2(str, res);
   sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, vec);
   sexp_gc_preserve2(ctx, str, res);
-  str = sexp_bytes_to_string(ctx, vec);
+  str = sexp_bytes_to_string(ctx, vec, 0, sexp_bytes_length(vec));
   res = sexp_open_input_string(ctx, str);
   sexp_port_binaryp(res) = 1;
   sexp_gc_release2(ctx);
@@ -341,10 +341,72 @@ sexp sexp_string_to_utf8 (sexp ctx, sexp self, sexp str) {
   return sexp_string_to_bytes(ctx, res);
 }
 
-/* TODO: add validation */
-sexp sexp_utf8_to_string_x (sexp ctx, sexp self, sexp vec) {
+sexp sexp_string_to_utf8_x (sexp ctx, sexp self, sexp str) {
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+#if SEXP_USE_PACKED_STRINGS
+  return sexp_string_to_utf8(ctx, self, str);
+#else
+  return sexp_string_bytes(str);
+#endif
+}
+
+sexp sexp_string_offset_op (sexp ctx, sexp self, sexp str) {
+  sexp_assert_type(ctx, sexp_stringp, SEXP_STRING, str);
+#if SEXP_USE_PACKED_STRINGS
+  return SEXP_ZERO;
+#else
+  return sexp_make_fixnum(sexp_string_offset(str));
+#endif
+}
+
+sexp sexp_utf8_ref (sexp ctx, sexp self, sexp bv, sexp offset) {
+  sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, bv);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
+  unsigned char *p=(unsigned char*)sexp_bytes_data(bv) + sexp_unbox_fixnum(offset);
+  if (*p < 0x80)
+    return sexp_make_character(*p);
+  else if ((*p < 0xC0) || (*p > 0xF7))
+    return sexp_user_exception(ctx, NULL, "utf8-ref: invalid utf8 byte", offset);
+  else if (*p < 0xE0)
+    return sexp_make_character(((p[0]&0x3F)<<6) + (p[1]&0x3F));
+  else if (*p < 0xF0)
+    return sexp_make_character(((p[0]&0x1F)<<12) + ((p[1]&0x3F)<<6) + (p[2]&0x3F));
+  else
+    return sexp_make_character(((p[0]&0x0F)<<18) + ((p[1]&0x3F)<<12) + ((p[2]&0x3F)<<6) + (p[3]&0x3F));
+}
+
+/* computes length, consider scanning permissively */
+sexp sexp_utf8_next (sexp ctx, sexp self, sexp bv, sexp offset, sexp end) {
+  sexp_sint_t initial, res;
+  sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, bv);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, end);
+  if (sexp_unbox_fixnum(offset) >= sexp_unbox_fixnum(end)) return SEXP_FALSE;
+  initial = ((unsigned char*)sexp_bytes_data(bv) + sexp_unbox_fixnum(offset))[0];
+  res = sexp_unbox_fixnum(offset) + (initial < 0xC0 ? 1 : initial < 0xE0 ? 2 : 3 + ((initial>>4)&1));
+  return res > sexp_unbox_fixnum(end) ? SEXP_FALSE : sexp_make_fixnum(res);
+}
+
+/* scans backwards permissively */
+sexp sexp_utf8_prev (sexp ctx, sexp self, sexp bv, sexp offset, sexp start) {
+  sexp_sint_t i, limit;
+  sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, bv);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, start);
+  unsigned char *p=(unsigned char*)sexp_bytes_data(bv);
+  i = sexp_unbox_fixnum(offset) - 1;
+  limit = sexp_unbox_fixnum(start);
+  while (i >= limit && ((p[i]>>6) == 2))
+    --i;
+  return i < limit ? SEXP_FALSE : sexp_make_fixnum(i);
+}
+
+/* TODO: add optional encoding validation */
+sexp sexp_utf8_to_string_x (sexp ctx, sexp self, sexp vec, sexp offset, sexp size) {
   sexp_assert_type(ctx, sexp_bytesp, SEXP_BYTES, vec);
-  return sexp_bytes_to_string(ctx, vec);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, offset);
+  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, size);
+  return sexp_bytes_to_string(ctx, vec, sexp_unbox_fixnum(offset), sexp_unbox_fixnum(size));
 }
 
 sexp sexp_write_u8 (sexp ctx, sexp self, sexp u8, sexp out) {
