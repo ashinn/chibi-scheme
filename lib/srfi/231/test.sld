@@ -1042,23 +1042,32 @@
         (test-assert (interval-projections (make-interval '#(0 0) '#(1 1)) 0))
         (test-assert (interval-projections (make-interval '#(0 0) '#(1 1)) 2))
 
+        (let ((A (make-interval '#(2 3 1 5 4))))
+          (call-with-values
+              (lambda ()
+                (interval-projections A 2))
+            (lambda (left right)
+              (test-assert (interval= (make-interval '#(2 3 1)) left))
+              (test-assert (interval= (make-interval '#(5 4)) right)))))
+
         (do ((i 0 (+ i 1)))
             ((= i tests))
           (let* ((lower (map (lambda (x) (random 10))
                              (vector->list (make-vector (random 3 11)))))
                  (upper (map (lambda (x) (+ (random 1 11) x))
                              lower))
-                 (left-dimension (random 1 (- (length lower) 1)))
-                 (right-dimension (- (length lower) left-dimension)))
+                 (interval (make-interval (list->vector lower)
+                                          (list->vector upper)))
+                 (right-dimension (random 1 (- (length lower) 1)))
+                 (left-dimension (- (interval-dimension interval)
+                                    right-dimension)))
             (test-values
-             (interval-projections (make-interval (list->vector lower)
-                                                  (list->vector upper))
-                                   right-dimension)
+             (interval-projections interval right-dimension)
              (values
-              (make-interval (list->vector (take lower right-dimension))
-                             (list->vector (take upper right-dimension)))
-              (make-interval (list->vector (drop lower right-dimension))
-                             (list->vector (drop upper right-dimension))))
+              (make-interval (list->vector (take lower left-dimension))
+                             (list->vector (take upper left-dimension)))
+              (make-interval (list->vector (drop lower left-dimension))
+                             (list->vector (drop upper left-dimension))))
              )))
 
         (test-error (interval-volume #f))
@@ -1280,7 +1289,7 @@
 
         (test-error (make-specialized-array  'a))
         (test-error (make-specialized-array (make-interval '#(0) '#(10)) 'a))
-        (test-error (make-specialized-array
+        '(test-error (make-specialized-array
                      (make-interval '#(0) '#(10))
                      generic-storage-class
                      'a))
@@ -2843,6 +2852,35 @@
         (test-error
          (array-extract (make-array (make-interval '#(0 0) '#(1 1)) list)
                         (make-interval '#(0 0) '#(1 3))))
+
+        (let* ((A (make-array (make-interval '#(3 3)) list))
+               (B (array-extract A (make-interval '#(1 0) '#(3 2)))))
+          (test '(((0 0) (0 1) (0 2)) ((1 0) (1 1) (1 2)) ((2 0) (2 1) (2 2)))
+              (array->list* A))
+          (test '(((1 0) (1 1)) ((2 0) (2 1)))
+              (array->list* B)))
+
+        (let* ((A (list*->array 2
+                                '((0 1 2) (10 11 12) (20 21 22))
+                                u8-storage-class))
+               (B (array-extract A (make-interval '#(1 0) '#(3 2)))))
+          (array-set! A 76 1 0)
+          (array-set! B 77 1 1)
+          (array-set! B 86 2 0)
+          (array-set! B 87 2 1)
+          (test '((0 1 2) (76 77 12) (86 87 22))
+              (array->list* A))
+          (test 76 (array-ref A 1 0))
+          (test 77 (array-ref A 1 1))
+          (test 12 (array-ref A 1 2))
+          (test '((76 77) (86 87))
+              (array->list* B))
+          (test 76 (array-ref B 1 0))
+          (test 77 (array-ref B 1 1))
+          (test 86 (array-ref B 2 0))
+          (test 87 (array-ref B 2 1))
+          )
+
         (do ((i 0 (fx+ i 1)))
             ((fx=? i tests))
           (let* ((domain (random-interval))
@@ -2865,29 +2903,30 @@
                                       (array-getter B-prime)
                                       (array-setter B-prime))))
                  (mut-B-extract (array-extract mut-B subdomain)))
-            ;; test that the extracts are the same kind of arrays as the original
-            (if (not (and (specialized-array? spec-A)
-                          (specialized-array? spec-A-extract)
-                          (mutable-array? mut-A)
-                          (mutable-array? mut-A-extract)
-                          (not (specialized-array? mut-A))
-                          (not (specialized-array? mut-A-extract))
-                          (array? immutable-A)
-                          (array? immutable-A-extract)
-                          (not (mutable-array? immutable-A))
-                          (not (mutable-array? immutable-A-extract))
-                          (equal? (array-domain spec-A-extract) subdomain)
-                          (equal? (array-domain mut-A-extract) subdomain)
-                          (equal? (array-domain immutable-A-extract) subdomain)))
-                (error "extract: Aargh!"))
+            ;; test that the extracts are the same kind of arrays as
+            ;; the original
+            (test-assert
+                (and (specialized-array? spec-A)
+                      (specialized-array? spec-A-extract)
+                      (mutable-array? mut-A)
+                      (mutable-array? mut-A-extract)
+                      (not (specialized-array? mut-A))
+                      (not (specialized-array? mut-A-extract))
+                      (array? immutable-A)
+                      (array? immutable-A-extract)
+                      (not (mutable-array? immutable-A))
+                      (not (mutable-array? immutable-A-extract))
+                      (equal? (array-domain spec-A-extract) subdomain)
+                      (equal? (array-domain mut-A-extract) subdomain)
+                      (equal? (array-domain immutable-A-extract) subdomain)))
             ;; test that applying the original setter to arguments in
             ;; the subdomain gives the same answer as applying the
             ;; setter of the extracted array to the same arguments.
             (for-each (lambda (A B A-extract B-extract)
                         (let ((A-setter (array-setter A))
                               (B-extract-setter (array-setter B-extract)))
-                          (do ((i 0 (fx+ i 1)))
-                              ((fx=? i 100)
+                          (do ((i 0 (+ i 1)))
+                              ((= i 100)
                                (test-assert (myarray= spec-A spec-B))
                                (test-assert
                                    (myarray= spec-A-extract spec-B-extract)))
@@ -2919,6 +2958,38 @@
          (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list)
                      '#(10)))
 
+        (let* ((TA '(( 1  2  3  4  5  6)
+                     ( 7  8  9 10 11 12)
+                     (13 14 15 16 17 18)
+                     (19 20 21 22 23 24)
+                     (25 26 27 28 29 30)
+                     (31 32 33 34 35 36)))
+               (T (list*->array 2 TA)))
+          (test TA (array->list* T))
+          (let ((TE (array-extract T (make-interval '#(3 0) '#(4 3)))))
+            (test 19 (array-ref T 3 0))
+            (test 19 (array-ref TE 3 0))
+            (test '((19 20 21)) (array->list* TE)))
+          (test '((22 23 24))
+              (array->list*
+               (array-extract T (make-interval '#(3 3) '#(4 6)))))
+          (test '((((1 2 3) ;; upper left corner
+                    (7 8 9)
+                    (13 14 15))
+                   ((4 5 6) ;; upper right corner
+                    (10 11 12)
+                    (16 17 18)))
+                  (((19 20 21)) ;; left middle row
+                   ((22 23 24))) ;; right middle row
+                  (((25 26 27)   ;; lower left corner
+                    (31 32 33))
+                   ((28 29 30) ;; lower right corner
+                    (34 35 36))))
+              (array->list*
+               (array-map array->list*
+                          (array-tile T '#(#(3 1 2)
+                                           3))))))
+
         (do ((d 1 (fx+ d 1)))
             ((fx=? d 6))
           (let* ((A (make-array (make-interval (make-vector d 100)) list))
@@ -2926,7 +2997,7 @@
                  (index (make-list d 12)))
             (test-error (apply (array-getter B) index))))
 
-        (do ((i 0 (fx+ i 1)))
+        '(do ((i 0 (fx+ i 1)))
             ((fx=? i tests))
           (let* ((domain
                   (random-interval))
@@ -2994,7 +3065,7 @@
          (array-reverse (make-array (make-interval '#(0 0) '#(2 2)) list)
                         '#(#t)))
 
-        (do ((i 0 (+ i 1)))
+        '(do ((i 0 (+ i 1)))
             ((= i tests))
           (let* ((domain (random-interval))
                  (Array (let ((temp (make-array domain list)))
@@ -3115,7 +3186,7 @@
                                        (list*->array 2 '((15 16 17)))))))))
         )
 
-      (test-group "assign/product"
+      '(test-group "assign/product"
         (do ((d 1 (fx+ d 1)))
             ((= d 6))
           (let* ((unsafe-specialized-destination

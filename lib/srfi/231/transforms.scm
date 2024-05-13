@@ -140,36 +140,59 @@
       (specialized-array-share array new-domain values)
       (make-array new-domain (array-getter array) (array-setter array))))
 
+(define (vector-sum-to vec i)  ;; inclusize
+  (let lp ((j 0) (sum 0))
+    (if (> j i)
+        sum
+        (lp (+ j 1) (+ sum (vector-ref vec j))))))
+
 (define (array-tile array sizes)
   (assert (and (array? array)
                (vector? sizes)
                (= (array-dimension array) (vector-length sizes))
-               (vector-every exact-integer? sizes)
-               (vector-every <= sizes (interval-ub (array-domain array)))))
+               (vector-every (lambda (s) (or (exact-integer? s) (vector? s)))
+                             sizes)))
+  (assert
+   (vector-every (lambda (s len)
+                   (if (exact-integer? s)
+                       (<= s len)
+                       (= (vector-fold + 0 s) len)))
+                 sizes
+                 (interval-widths (array-domain array))))
   (let ((domain (make-interval
                  (vector-map
-                  (lambda (lo hi s) (exact (ceiling (/ (- hi lo) s))))
+                  (lambda (lo hi s)
+                    (if (exact-integer? s)
+                        (exact (ceiling (/ (- hi lo) s)))
+                        (vector-length s)))
                   (interval-lb (array-domain array))
                   (interval-ub (array-domain array))
                   sizes))))
     (make-array
      domain
      (lambda multi-index
-       (array-extract
-        array
-        (make-interval
-         (vector-map
-          (lambda (i lo s) (+ lo (* i s)))
-          (list->vector multi-index)
-          (interval-lb (array-domain array))
-          sizes)
-         (vector-map
-          (lambda (i lo hi s)
-            (min hi (+ lo (* (+ i 1) s))))
-          (list->vector multi-index)
-          (interval-lb (array-domain array))
-          (interval-ub (array-domain array))
-          sizes)))))))
+       (let ((lower
+              (vector-map
+               (lambda (i lo s)
+                 (if (exact-integer? s)
+                     (+ lo (* i s))
+                     (if (zero? i)
+                         lo
+                         (+ lo (vector-sum-to s (- i 1))))))
+               (list->vector multi-index)
+               (interval-lb (array-domain array))
+               sizes))
+             (upper
+              (vector-map
+               (lambda (i lo hi s)
+                 (if (exact-integer? s)
+                     (min hi (+ lo (* (+ i 1) s)))
+                     (+ lo (vector-sum-to s i))))
+               (list->vector multi-index)
+               (interval-lb (array-domain array))
+               (interval-ub (array-domain array))
+               sizes)))
+         (array-extract array (make-interval lower upper)))))))
 
 (define (array-translate array translation)
   (let ((new-domain (interval-translate (array-domain array) translation))
