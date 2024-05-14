@@ -2101,6 +2101,19 @@
         (test-error (array-curry 'a 1))
         (test-error
          (array-curry (make-array (make-interval '#(0) '#(1)) list)  'a))
+        (let ((A (make-array (make-interval '#(10 10)) list)))
+          (test (array-ref A 3 4)
+              (array-ref (array-ref (array-curry A 1) 3) 4)))
+        (let ((A (make-array (make-interval '#(10 10 10)) list)))
+          (test (array-ref A 3 4 5)
+              (array-ref (array-ref (array-curry A 1) 3 4) 5)))
+        (test '((4 7) (2 6))
+            (array->list*
+             (array-ref
+              (array-curry (list*->array 3 '(((4 7) (2 6)) ((1 0) (0 1))))
+                           2)
+              0)))
+
         ;; (test-error
         ;;  (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  0))
         ;; (test-error
@@ -3169,6 +3182,11 @@
                 1           ;; along axis 1 (i.e., columns) ...
                 (map a-column '(1 2 5 8)))) ;; the columns of A you want
             ))
+        (test '(((4 7) (2 6))
+                ((1 0) (0 1)))
+            (array->list*
+             (array-stack 0 (list (list*->array 2 '((4 7) (2 6)))
+                                  (list*->array 2 '((1 0) (0 1)))))))
         '(test '((0 1 4 6 7 8)
                 (2 3 5 9 10 11)
                 (12 13 14 15 16 17))
