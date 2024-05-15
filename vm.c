@@ -1095,7 +1095,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   sexp_ensure_stack(i + 64 + (sexp_procedurep(tmp1) ? sexp_bytecode_max_depth(sexp_procedure_code(tmp1)) : 0));
   for (top += i; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
     _ARG1 = sexp_car(tmp2);
-  top += i+1;
+  top += i;
+  /* restore the make_call invariant */
+  _PUSH(tmp1);
   goto make_call;
 
  loop:
@@ -1266,7 +1268,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       int prev_top = top;
       for (top=fp-j+i-1; sexp_pairp(tmp2); tmp2=sexp_cdr(tmp2), top--)
         stack[top] = sexp_car(tmp2);
-      top = fp+i-j+1;
+      top = fp+i-j;
+      /* restore the make_call invariant */
+      _PUSH(tmp1);
       fp = k;
       /* if final cdr of tmp2 isn't null, then args list was improper */
       if (! sexp_nullp(tmp2)) {
@@ -1289,7 +1293,9 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     /* copy new args into place */
     for (k=0; k<i; k++)
       stack[fp-j+k] = stack[top-1-i+k];
-    top = fp+i-j+1;
+    top = fp+i-j;
+    /* restore the make_call invariant */
+    _PUSH(tmp1);
     fp = sexp_unbox_fixnum(tmp2);
     goto make_call;
   case SEXP_OP_CALL:
