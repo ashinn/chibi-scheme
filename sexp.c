@@ -460,6 +460,7 @@ sexp sexp_finalize_c_type (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
 /****************************** contexts ******************************/
 
 static const char* sexp_initial_features[] = {
+  sexp_architecture,
   sexp_platform,
 #if SEXP_BSD
   "bsd",

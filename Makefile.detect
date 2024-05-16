@@ -52,6 +52,10 @@ endif
 endif
 endif
 
+ifndef ARCH
+ARCH = $(shell uname -m)
+endif
+
 ########################################################################
 # Set default variables for the platform.
 
