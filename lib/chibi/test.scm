@@ -174,6 +174,7 @@
      (test-run (lambda () expect)
                (lambda () expr)
                `((name . ,n)
+                 (expect-source . expect)
                  (source . expr)
                  (var-names . (vars ...))
                  (var-values . ,(list vars ...))
@@ -528,7 +529,7 @@
          (guard
              (exn
               (else
-               (warning "bad expect value")
+               (warning "bad expect value" (assq-ref info 'expect-source))
                (print-exception exn (current-error-port))
                #f))
            (expect))))
