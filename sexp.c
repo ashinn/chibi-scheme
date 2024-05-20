@@ -527,6 +527,7 @@ static const char* sexp_initial_features[] = {
   "ratios",
 #endif
   "r7rs",
+  "chibi-" sexp_version,
   "chibi",
   NULL,
 };
