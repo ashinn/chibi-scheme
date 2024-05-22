@@ -683,6 +683,15 @@
 
 (define array-stack! array-stack)
 
+(define (list-set ls i v)
+  (let lp ((ls ls) (rev '()) (i i) (v v))
+    (if (zero? i)
+        (append (reverse rev) (cons v (cdr ls)))
+        (lp (cdr ls) (cons (car ls) rev) (- i 1) v))))
+
+(define (vector-last vec)
+  (vector-ref vec (- (vector-length vec) 1)))
+
 (define (array-block a . o)
   (let ((storage (if (pair? o) (car o) generic-storage-class))
         (mutable? (if (and (pair? o) (pair? (cdr o)))
@@ -694,14 +703,51 @@
     (assert (and (array? a) (not (interval-empty? (array-domain a)))))
     (let* ((a-domain (array-domain a))
            (get (array-getter a))
-           (tile0 (apply get (interval-lower-bounds->list a-domain))))
-      (assert (array? tile0))
-      (let* ((domain (make-interval
-                      (vector-append (interval-widths a-domain)
-                                     (interval-widths (array-domain tile0)))))
-             (scales (vector->list (interval-widths a-domain)))
-             (res (make-specialized-array domain (storage-class-default storage) safe?)))
-        (error "TODO: array-block copy data unimplemented")
+           (index0 (interval-lower-bounds->list a-domain)))
+      (assert (array? (apply get index0)))
+      (let* ((tile-offsets
+              (vector-map
+               (lambda (d)
+                 (reverse-list->vector
+                  (vector-fold
+                   (lambda (ls i)
+                     (cons (+ (car ls)
+                              (interval-width
+                               (array-domain
+                                (apply get (list-set index0 d i)))
+                               d))
+                           ls))
+                   '(0)
+                   (vector-iota (interval-width a-domain d)
+                                (interval-lower-bound a-domain d)))))
+               (vector-iota (array-dimension a) 0)))
+             (domain
+              (make-interval (vector-map vector-last tile-offsets)))
+             (res (make-specialized-array domain storage (storage-class-default storage) safe?)))
+        (interval-for-each
+         (lambda multi-index
+           (let* ((multi-index/0 (list->vector (map - multi-index index0)))
+                  (lb (vector-map
+                       (lambda (i)
+                         (vector-ref (vector-ref tile-offsets i)
+                                     (vector-ref multi-index/0 i)))
+                       (vector-iota (array-dimension a) 0)))
+                  (ub (vector-map
+                       (lambda (i)
+                         (vector-ref (vector-ref tile-offsets i)
+                                     (+ 1 (vector-ref multi-index/0 i))))
+                       (vector-iota (array-dimension a) 0)))
+                  (subdomain (make-interval lb ub))
+                  (subarray (apply get multi-index)))
+             (array-assign!
+              (array-extract res subdomain)
+              (array-translate
+               subarray
+               (vector-map -
+                           lb
+                           (interval-lower-bounds->vector
+                            (array-domain subarray)))))))
+         a-domain)
         res))))
 
 (define array-block! array-block)

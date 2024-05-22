@@ -3187,7 +3187,7 @@
             (array->list*
              (array-stack 0 (list (list*->array 2 '((4 7) (2 6)))
                                   (list*->array 2 '((1 0) (0 1)))))))
-        '(test '((0 1 4 6 7 8)
+        (test '((0 1 4 6 7 8)
                 (2 3 5 9 10 11)
                 (12 13 14 15 16 17))
             (array->list*
