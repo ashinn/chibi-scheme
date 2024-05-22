@@ -416,16 +416,14 @@
       (cond
        ((< i 0)
         res)
-       ((= (+ 1 (interval-lower-bound domain i))
-           (interval-upper-bound domain i))
-        ;; (vector-set! res (+ i 1) (if (< (+ i 1) dim)
-        ;;                              (interval-width domain (+ i 1))
-        ;;                              1))
-        (lp (- i 1) scale))
        (else
-        (let ((coeff (* scale  (- (interval-upper-bound domain i)
-                                  (interval-lower-bound domain i)))))
+        (let* ((width (interval-width domain i))
+               (coeff (* scale width)))
+          ;; The coefficient for stepping over each element is the
+          ;; volume (product of widths) of all higher dimensions.
           (vector-set! res (+ i 1) scale)
+          ;; Offset the constant bias by the lower bound of this
+          ;; dimension (typically but not necessarily 0).
           (vector-set! res 0 (- (vector-ref res 0)
                                 (* scale (interval-lower-bound domain i))))
           (lp (- i 1) coeff)))))))
