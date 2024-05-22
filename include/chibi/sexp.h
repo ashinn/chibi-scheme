@@ -1810,7 +1810,7 @@ SEXP_API int sexp_write_utf8_char (sexp ctx, int c, sexp out);
 #define sexp_string_ref(ctx, s, i)    (sexp_string_utf8_index_ref(ctx, NULL, 2, s, i))
 #define sexp_string_set(ctx, s, i, ch) (sexp_string_utf8_index_set(ctx, NULL, 3, s, i, ch))
 #define sexp_string_cursor_ref(ctx, s, i)    (sexp_string_utf8_ref(ctx, s, i))
-#define sexp_string_cursor_set(ctx, s, i)    (sexp_string_utf8_set(ctx, s, i))
+#define sexp_string_cursor_set(ctx, s, i, ch)    (sexp_string_utf8_set(ctx, s, i, ch))
 #define sexp_string_cursor_next(s, i) sexp_make_string_cursor(sexp_unbox_string_cursor(i) + sexp_utf8_initial_byte_count(((unsigned char*)sexp_string_data(s))[sexp_unbox_string_cursor(i)]))
 #define sexp_string_cursor_prev(s, i) sexp_make_string_cursor(sexp_string_utf8_prev((unsigned char*)sexp_string_data(s)+sexp_unbox_string_cursor(i)) - sexp_string_data(s))
 #define sexp_string_length(s) sexp_string_utf8_length((unsigned char*)sexp_string_data(s), sexp_string_size(s))
