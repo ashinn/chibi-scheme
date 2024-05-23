@@ -61,7 +61,10 @@
 (define-storage-class char-storage-class
   (lambda (vec i) (integer->char (u32vector-ref vec i)))
   (lambda (vec i ch) (u32vector-set! vec i (char->integer ch)))
-  char? make-u32vector u32vector-length 0)
+  char?
+  (lambda (len init) (make-u32vector len (char->integer init)))
+  u32vector-length
+  #\space)
 
 ;; TODO: implement
 (define f8-storage-class #f)

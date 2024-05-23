@@ -1303,6 +1303,15 @@
         (test-error (array-packed?
                      (make-array (make-interval '#(1 2)) list list)))
 
+        (test #\a
+            (let ((a (make-specialized-array (make-interval '#())
+                                             char-storage-class)))
+              (array-set! a #\a)
+              (array-ref a)))
+        (test #\a
+            (array-ref (make-specialized-array (make-interval '#())
+                                               char-storage-class #\a)))
+
         ;; all these are true, we'll have to see how to screw it up later.
         ;; (do ((i 0 (+ i 1)))
         ;;     ((= i tests))
