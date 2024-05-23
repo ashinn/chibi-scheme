@@ -2558,6 +2558,9 @@
             (array->vector* (make-array (make-interval '#(0 0)) error)))
         (test '#(#() #())
             (array->vector* (make-array (make-interval '#(2 0)) error)))
+
+        (test (list->array (make-interval '#(2 3)) '(a b c 1 2 3))
+            (vector*->array 2 '#(#(a b c) #(1 2 3))))
         )
 
       (test-group "permutation tests"

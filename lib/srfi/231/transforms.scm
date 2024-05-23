@@ -559,9 +559,9 @@
                    (vector-iota (interval-width domain 0)
                                 (interval-lower-bound domain 0)))))))
 
-(define (flatten-vec vec)
+(define (flatten-vector->list vec)
   (if (vector? (vector-ref vec 0))
-      (append-map flatten-vec vec)
+      (append-map flatten-vector->list (vector->list vec))
       (vector->list vec)))
 
 (define (vector*->array dimension nested-vec . o)
@@ -571,8 +571,8 @@
       (lp (vector-ref vec 0) (cons (vector-length vec) lens) (- d 1)))
      (else
       (apply list->array
-             (make-interval (list->vector (reverse lens)))
-             (flatten-vec nested-vec)
+             (make-interval (reverse-list->vector lens))
+             (flatten-vector->list nested-vec)
              o)))))
 
 (define (dimensions-compatible? a-domain b-domain axis)
