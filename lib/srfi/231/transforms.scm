@@ -64,7 +64,7 @@
   char?
   (lambda (len init) (make-u32vector len (char->integer init)))
   u32vector-length
-  #\space)
+  #\null)
 
 ;; TODO: implement
 (define f8-storage-class #f)
