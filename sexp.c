@@ -158,6 +158,10 @@ sexp sexp_write_uvector(sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp write
     case SEXP_S64: sexp_write(ctx, tmp=sexp_make_integer(ctx, ((int64_t*)str)[i]), out); break;
     case SEXP_U64: sexp_write(ctx, tmp=sexp_make_unsigned_integer(ctx, ((uint64_t*)str)[i]), out); break;
 #if SEXP_USE_FLONUMS
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+    case SEXP_F8: sexp_flonum_value_set(f, sexp_quarter_to_double(((unsigned char*)str)[i])); sexp_write(ctx, f, out); break;
+    case SEXP_F16: sexp_flonum_value_set(f, sexp_half_to_double(((unsigned short*)str)[i])); sexp_write(ctx, f, out); break;
+#endif
     case SEXP_F32: sexp_flonum_value_set(f, ((float*)str)[i]); sexp_write(ctx, f, out); break;
     case SEXP_F64: sexp_flonum_value_set(f, ((double*)str)[i]); sexp_write(ctx, f, out); break;
 #endif
@@ -519,6 +523,9 @@ static const char* sexp_initial_features[] = {
 #endif
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
   "uvector",
+#endif
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+  "mini-float",
 #endif
 #if SEXP_USE_COMPLEX
   "complex",
@@ -1184,7 +1191,7 @@ sexp sexp_make_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp elt_type, sex
     return sexp_make_bytes(ctx, len, SEXP_ZERO);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, elt_type);
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, len);
-  if (etype < SEXP_U1 || etype > SEXP_C128)
+  if (etype < SEXP_U1 || etype >= SEXP_END_OF_UNIFORM_TYPES)
     return sexp_xtype_exception(ctx, self, "unknown uniform vector type", elt_type);
   if (elen < 0)
     return sexp_xtype_exception(ctx, self, "negative length", len);
@@ -3119,6 +3126,99 @@ static sexp sexp_fill_reader_labels(sexp ctx, sexp x, sexp shares, int state) {
 }
 #endif
 
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+/* Pre-computed 1.5.2 mini-float table (CUDA __NV_E5M2). */
+/* We prefer a larger exponent for wider range. */
+/* Note 9 is the first natural number that can't be represented exactly. */
+/* Technically the implementation allows any hand-picked set of values. */
+static const double sexp_quarters[] = {
+              0.0,  1.52587890625e-05,  3.0517578125e-05,  4.57763671875e-05,
+  6.103515625e-05,  7.62939453125e-05,  9.1552734375e-05, 0.0001068115234375,
+  0.0001220703125,  0.000152587890625,  0.00018310546875,  0.000213623046875,
+   0.000244140625,   0.00030517578125,   0.0003662109375,   0.00042724609375,
+    0.00048828125,    0.0006103515625,    0.000732421875,    0.0008544921875,
+     0.0009765625,     0.001220703125,     0.00146484375,     0.001708984375,
+      0.001953125,      0.00244140625,      0.0029296875,      0.00341796875,
+       0.00390625,       0.0048828125,       0.005859375,       0.0068359375,
+        0.0078125,        0.009765625,        0.01171875,        0.013671875,
+         0.015625,         0.01953125,         0.0234375,         0.02734375,
+          0.03125,          0.0390625,          0.046875,          0.0546875,
+           0.0625,           0.078125,           0.09375,           0.109375,
+            0.125,            0.15625,            0.1875,            0.21875,
+             0.25,             0.3125,             0.375,             0.4375,
+              0.5,              0.625,              0.75,              0.875,
+              1.0,               1.25,               1.5,               1.75,
+              2.0,                2.5,               3.0,                3.5,
+              4.0,                5.0,               6.0,                7.0,
+              8.0,               10.0,              12.0,               14.0,
+             16.0,               20.0,              24.0,               28.0,
+             32.0,               40.0,              48.0,               56.0,
+             64.0,               80.0,              96.0,              112.0,
+            128.0,              160.0,             192.0,              224.0,
+            256.0,              320.0,             384.0,              448.0,
+            512.0,              640.0,             768.0,              896.0,
+           1024.0,             1280.0,            1536.0,             1792.0,
+           2048.0,             2560.0,            3072.0,             3584.0,
+           4096.0,             5120.0,            6144.0,             7168.0,
+           8192.0,            10240.0,           12288.0,            14336.0,
+          16384.0,            20480.0,           24576.0,            28672.0,
+          32768.0,            40960.0,           49152.0,            57344.0,
+         INFINITY,                NAN,               NAN,                NAN
+};
+
+#define SEXP_QUARTERS_INFINITY_INDEX 124
+#define SEXP_QUARTERS_NAN_INDEX 127
+
+double sexp_quarter_to_double(unsigned char q) {
+  return q < 128 ? sexp_quarters[q] : -sexp_quarters[q-128];
+}
+
+unsigned char sexp_double_to_quarter(double f) {
+  int lo = 0, hi = SEXP_QUARTERS_INFINITY_INDEX - 1, mid;
+  if (isnan(f)) return SEXP_QUARTERS_NAN_INDEX;
+  if (f < 0) return 128 + sexp_double_to_quarter(-f);
+  if (isinf(f)) return SEXP_QUARTERS_INFINITY_INDEX;
+  while (lo <= hi) {
+    mid = (lo + hi) / 2;
+    if (sexp_quarters[mid] < f) {
+      lo = mid + 1;
+    } else if (sexp_quarters[mid] > f) {
+      hi = mid - 1;
+    } else {
+      return mid;
+    }
+  }
+  /* TODO: overflow to infinity? */
+  return (sexp_quarters[lo] - f) < (f - sexp_quarters[hi]) ? lo : hi;
+}
+
+static unsigned int float_as_int(const float f) {
+  union sexp_flonum_conv x;
+  x.flonum = f;
+  return x.bits;
+}
+
+static float int_as_float(const unsigned int n) {
+  union sexp_flonum_conv x;
+  x.bits = n;
+  return x.flonum;
+}
+
+double sexp_half_to_double(unsigned short x) {
+  unsigned int e = (x&0x7C00)>>10,
+    m = (x&0x03FF)<<13,
+    v = float_as_int((float)m)>>23;
+  return int_as_float((x&0x8000)<<16 | (e!=0)*((e+112)<<23|m) | ((e==0)&(m!=0))*((v-37)<<23|((m<<(150-v))&0x007FE000)));
+}
+
+unsigned short sexp_double_to_half(double x) {
+  unsigned int b = float_as_int(x)+0x00001000,
+    e = (b&0x7F800000)>>23,
+    m = b&0x007FFFFF;
+  return (b&0x80000000)>>16 | (e>112)*((((e-112)<<10)&0x7C00)|m>>13) | ((e<113)&(e>101))*((((0x007FF000+m)>>(125-e))+1)>>1) | (e>143)*0x7FFF;
+}
+#endif
+
 static int sexp_peek_char(sexp ctx, sexp in) {
   int c = sexp_read_char(ctx, in);
   if (c != EOF) sexp_push_char(ctx, c, in);
@@ -3129,8 +3229,16 @@ static int sexp_peek_char(sexp ctx, sexp in) {
 static int sexp_resolve_uniform_type(int c, sexp len) {
   switch (sexp_fixnump(len) ? sexp_unbox_fixnum(len) : 0) {
     case 1: if (c=='u') return SEXP_U1; break;
-    case 8: if (c=='u') return SEXP_U8; if (c=='s') return SEXP_S8; break;
-    case 16: if (c=='u') return SEXP_U16; if (c=='s') return SEXP_S16; break;
+    case 8: if (c=='u') return SEXP_U8; if (c=='s') return SEXP_S8;
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+      if (c=='f') return SEXP_F8;
+#endif
+      break;
+    case 16: if (c=='u') return SEXP_U16; if (c=='s') return SEXP_S16;
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+      if (c=='f') return SEXP_F16;
+#endif
+      break;
     case 32: if (c=='u') return SEXP_U32; if (c=='s') return SEXP_S32; if (c=='f') return SEXP_F32; break;
     case 64: if (c=='u') return SEXP_U64; if (c=='s') return SEXP_S64; if (c=='f') return SEXP_F64; if (c=='c') return SEXP_C64; break;
     case 128: if (c=='c') return SEXP_C128; break;
@@ -3210,6 +3318,12 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
         case SEXP_U64:
           ((uint64_t*)sexp_uvector_data(res))[i] = sexp_uint_value(sexp_car(ls)); break;
 #if SEXP_USE_FLONUMS
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+        case SEXP_F8:
+          ((unsigned char*)sexp_uvector_data(res))[i] = sexp_double_to_quarter(sexp_to_double(ctx, sexp_car(ls))); break;
+        case SEXP_F16:
+          ((unsigned short*)sexp_uvector_data(res))[i] = sexp_double_to_half(sexp_to_double(ctx, sexp_car(ls))); break;
+#endif
         case SEXP_F32:
           ((float*)sexp_uvector_data(res))[i] = sexp_to_double(ctx, sexp_car(ls)); break;
         case SEXP_F64:
@@ -3478,6 +3592,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       } else if (c2 != SEXP_NOT_A_UNIFORM_TYPE) {
         tmp = sexp_read_one(ctx, in, shares);
         res = sexp_list_to_uvector(ctx, sexp_make_fixnum(c2), tmp);
+        if (!sexp_exceptionp(res)) sexp_immutablep(res) = 1;
       } else {
         tmp = sexp_list2(ctx, sexp_make_character(c1), res);
         res = sexp_read_error(ctx, "invalid uniform vector syntax #%c%c", tmp, in);

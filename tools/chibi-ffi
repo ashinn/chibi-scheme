@@ -234,7 +234,7 @@
   (or (signed-int-type? type) (unsigned-int-type? type)))
 
 (define (float-type? type)
-  (memq type '(float double long-double long-long-double f32 f64)))
+  (memq type '(float double long-double long-long-double f8 f16 f32 f64)))
 
 (define (string-type? type)
   (or (memq type '(char* string env-string non-null-string))
@@ -278,6 +278,8 @@
     ((s32vector) 'SEXP_S32)
     ((u64vector) 'SEXP_U64)
     ((s64vector) 'SEXP_S64)
+    ((f8vector) 'SEXP_F8)
+    ((f16vector) 'SEXP_F16)
     ((f32vector) 'SEXP_F32)
     ((f64vector) 'SEXP_F64)
     ((c64vector) 'SEXP_C64)
@@ -300,6 +302,8 @@
     ((s32vector) "int32_t*")
     ((u64vector) "uint64_t*")
     ((s64vector) "int64_t*")
+    ((f8vector) "unsigned char*")
+    ((f16vector) "unsigned short*")
     ((f32vector) "float*")
     ((f64vector) "double*")
     ((c64vector) "float*")
@@ -749,6 +753,8 @@
         ((s32vector) "sexp_s32vectorp")
         ((u64vector) "sexp_u64vectorp")
         ((s64vector) "sexp_s64vectorp")
+        ((f8vector) "sexp_f8vectorp")
+        ((f16vector) "sexp_f16vectorp")
         ((f32vector) "sexp_f32vectorp")
         ((f64vector) "sexp_f64vectorp")
         ((c64vector) "sexp_c64vectorp")
@@ -958,7 +964,7 @@
     ((string env-string non-null-string bytevector u8vector)
      (if *c++?* "string" "char*"))
     ((fileno fileno-nonblock) "int")
-    ((u1 u8 u16 u32 u64 s8 s16 s32 s64 f32 f64)
+    ((u1 u8 u16 u32 u64 s8 s16 s32 s64 f8 f16 f32 f64)
      (let ((a
             (uniform-vector-ctype
              (string->symbol
@@ -1385,6 +1391,8 @@
    ((eq? name 'string-size) 'sexp_string_size)
    ((memq name '(bytevector-length u8vector-length)) 'sexp_bytes_length)
    ((eq? name 'uvector-length) 'sexp_uvector_length)
+   ((eq? name 'immutable?) 'sexp_immutablep)
+   ((eq? name 'mutable?) 'sexp_mutablep)
    (else name)))
 
 (define (write-value func val)

@@ -66,10 +66,6 @@
   u32vector-length
   #\null)
 
-;; TODO: implement
-(define f8-storage-class #f)
-(define f16-storage-class #f)
-
 ;; Array transformations
 
 (define (array-copy array . o)

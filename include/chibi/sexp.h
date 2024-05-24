@@ -774,6 +774,7 @@ void* sexp_alloc(sexp ctx, size_t size);
 #define sexp_markedp(x)          ((x)->markedp)
 #define sexp_flags(x)            ((x)->flags)
 #define sexp_immutablep(x)       ((x)->immutablep)
+#define sexp_mutablep(x)         (!(x)->immutablep)
 #define sexp_freep(x)            ((x)->freep)
 #define sexp_brokenp(x)          ((x)->brokenp)
 #define sexp_pointer_magic(x)    ((x)->magic)
@@ -792,11 +793,12 @@ void* sexp_alloc(sexp ctx, size_t size);
 
 #define sexp_isa(a, b) (sexp_pointerp(a) && sexp_typep(b) && (sexp_pointer_tag(a) == sexp_type_tag(b)))
 
-#if SEXP_USE_IMMEDIATE_FLONUMS
 union sexp_flonum_conv {
   float flonum;
   unsigned int bits;
 };
+
+#if SEXP_USE_IMMEDIATE_FLONUMS
 #define sexp_flonump(x)      (((sexp_uint_t)(x) & SEXP_EXTENDED_MASK) == SEXP_IFLONUM_TAG)
 SEXP_API sexp sexp_flonum_predicate (sexp ctx, sexp x);
 #if SEXP_64_BIT
@@ -877,6 +879,8 @@ SEXP_API sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_s32vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_S32)
 #define sexp_u64vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_U64)
 #define sexp_s64vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_S64)
+#define sexp_f8vectorp(x)   (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_F8)
+#define sexp_f16vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_F16)
 #define sexp_f32vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_F32)
 #define sexp_f64vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_F64)
 #define sexp_c64vectorp(x)  (sexp_uvectorp(x) && sexp_uvector_type(x)==SEXP_C64)
@@ -892,6 +896,8 @@ SEXP_API sexp sexp_make_flonum(sexp ctx, double f);
 #define sexp_s32vectorp(x)  (sexp_vectorp(x))
 #define sexp_u64vectorp(x)  (sexp_vectorp(x))
 #define sexp_s64vectorp(x)  (sexp_vectorp(x))
+#define sexp_f8vectorp(x)   (sexp_vectorp(x))
+#define sexp_f16vectorp(x)  (sexp_vectorp(x))
 #define sexp_f32vectorp(x)  (sexp_vectorp(x))
 #define sexp_f64vectorp(x)  (sexp_vectorp(x))
 #define sexp_c64vectorp(x)  (sexp_vectorp(x))
@@ -1118,6 +1124,13 @@ SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
 #define sexp_flonum_eqv(x, y) (sexp_flonum_value(x) == sexp_flonum_value(y))
 #endif
 
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+SEXP_API double sexp_quarter_to_double(unsigned char q);
+SEXP_API unsigned char sexp_double_to_quarter(double f);
+SEXP_API double sexp_half_to_double(unsigned short x);
+SEXP_API unsigned short sexp_double_to_half(double x);
+#endif
+
 /*************************** field accessors **************************/
 
 #if SEXP_USE_SAFE_ACCESSORS
@@ -1164,8 +1177,8 @@ SEXP_API unsigned long long sexp_bignum_to_uint(sexp x);
 #define sexp_bytes_maybe_null_data(x) (sexp_not(x) ? NULL : sexp_bytes_data(x))
 
 static const unsigned char sexp_uvector_sizes[] = {
-  0, 1, 8, 8, 16, 16, 32, 32, 64, 64, 32, 64, 64, 128};
-static const unsigned char sexp_uvector_chars[] = "#ususususuffcc";
+  0, 1, 8, 8, 16, 16, 32, 32, 64, 64, 32, 64, 64, 128, 8, 16};
+static const unsigned char sexp_uvector_chars[] = "#ususususuffccff";
 
 enum sexp_uniform_vector_type {
   SEXP_NOT_A_UNIFORM_TYPE,
@@ -1181,7 +1194,10 @@ enum sexp_uniform_vector_type {
   SEXP_F32,
   SEXP_F64,
   SEXP_C64,
-  SEXP_C128
+  SEXP_C128,
+  SEXP_F8,
+  SEXP_F16,
+  SEXP_END_OF_UNIFORM_TYPES
 };
 
 #define sexp_uvector_freep(x) (sexp_freep(x))

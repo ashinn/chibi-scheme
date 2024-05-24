@@ -221,13 +221,15 @@
 (define F64 11)
 (define C64 12)
 (define C128 13)
+(define F8 14)
+(define F16 15)
 
 (define (resolve-uniform-type c prec)
   (or
    (case prec
      ((1) (and (eqv? c #\u) U1))
-     ((8) (case c ((#\u) U8) ((#\s) S8) (else #f)))
-     ((16) (case c ((#\u) U16) ((#\s) S16) (else #f)))
+     ((8) (case c ((#\u) U8) ((#\s) S8) ((#\f) F8) (else #f)))
+     ((16) (case c ((#\u) U16) ((#\s) S16) ((#\f) F16) (else #f)))
      ((32) (case c ((#\u) U32) ((#\s) S32) ((#\f) F32) (else #f)))
      ((64) (case c ((#\u) U64) ((#\s) S64) ((#\f) F64) ((#\c) C64) (else #f)))
      ((128) (case c ((#\c) C128) (else #f)))
@@ -429,6 +431,10 @@
                (cond
                 ((or (string-ci=? s "f") (string-ci=? s "false"))
                  #f)
+                ((member s '("f8" "F8"))
+                 (list->uvector F8 (read in)))
+                ((member s '("f16" "F16"))
+                 (list->uvector F16 (read in)))
                 ((member s '("f32" "F32"))
                  (list->uvector F32 (read in)))
                 ((member s '("f64" "F64"))

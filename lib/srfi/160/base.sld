@@ -1,7 +1,8 @@
 
 (define-library (srfi 160 base)
   (import (scheme base)
-          (only (chibi) list->uvector make-uvector))
+          (only (chibi) list->uvector make-uvector)
+          (srfi 160 prims))
   (export
    ;;
    make-u1vector u1vector u1? u1vector?
@@ -40,6 +41,14 @@
    s64vector-ref s64vector-set! s64vector-length
    s64vector->list list->s64vector
    ;;
+   ;; make-f8vector f8vector f8? f8vector?
+   ;; f8vector-ref f8vector-set! f8vector-length
+   ;; f8vector->list list->f8vector
+   ;;
+   ;; make-f16vector f16vector f16? f16vector?
+   ;; f16vector-ref f16vector-set! f16vector-length
+   ;; f16vector->list list->f16vector
+   ;;
    make-f32vector f32vector f32? f32vector?
    f32vector-ref f32vector-set! f32vector-length
    f32vector->list list->f32vector
@@ -56,12 +65,6 @@
    c128vector-ref c128vector-set! c128vector-length
    c128vector->list list->c128vector
    )
-  (cond-expand
-   (uvector
-    (include-shared "uvprims"))
-   (else
-    (begin
-      )))
   (begin
     (define u8vector? bytevector?)
     (define u8vector-ref bytevector-u8-ref)
