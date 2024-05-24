@@ -160,7 +160,7 @@
   (assert
    (vector-every (lambda (s len)
                    (if (exact-integer? s)
-                       (<= s len)
+                       (positive? s)
                        (= (vector-fold + 0 s) len)))
                  sizes
                  (interval-widths (array-domain array))))
