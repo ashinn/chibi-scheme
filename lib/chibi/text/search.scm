@@ -7,7 +7,7 @@
     (let lp ((tx (mark-text mk)))
       (and tx
            ;; Note string size is mis-named, it's actually the end offset.
-           (let* ((bv (text-source tx))
+           (let* ((bv (text-bytes tx))
                   (start (if (eqv? tx (mark-text mk)) (mark-offset mk) (text-start tx)))
                   (end (text-end tx))
                   (str (utf8->string! bv start end))

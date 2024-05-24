@@ -1311,14 +1311,21 @@
         (test #\a
             (array-ref (make-specialized-array (make-interval '#())
                                                char-storage-class #\a)))
+        (test-assert
+            (array-packed? (make-specialized-array (make-interval '#())
+                                                   f32-storage-class)))
+        (test-assert
+            (array-packed? (make-specialized-array (make-interval '#(1 2 3)
+                                                                  '#(1 2 3))
+                                                   f32-storage-class)))
 
         ;; all these are true, we'll have to see how to screw it up later.
-        ;; (do ((i 0 (+ i 1)))
-        ;;     ((= i tests))
-        ;;   (let ((array
-        ;;          (make-specialized-array (random-interval)
-        ;;                                  u1-storage-class)))
-        ;;     (test-assert (array-packed? array))))
+        (do ((i 0 (+ i 1)))
+            ((= i tests))
+          (let ((array
+                 (make-specialized-array (random-interval)
+                                         u1-storage-class)))
+            (test-assert (array-packed? array))))
 
         (let ((array
                (make-specialized-array (make-interval '#(0 0) '#(2 3)))))

@@ -7,8 +7,8 @@
   (cond
    ((< (mark-offset mark) (text-end (mark-text mark)))
     ;; there was space in the current piece
-    (let ((ch (utf8-ref (text-source (mark-text mark)) (mark-offset mark)))
-          (offset2 (utf8-next (text-source (mark-text mark))
+    (let ((ch (utf8-ref (text-bytes (mark-text mark)) (mark-offset mark)))
+          (offset2 (utf8-next (text-bytes (mark-text mark))
                               (mark-offset mark)
                               (text-end (mark-text mark)))))
       (mark-offset-set! mark offset2)
@@ -18,8 +18,8 @@
       (and text
            (if (< (text-start text) (text-end text))
                ;; advanced to a new piece, need to also move the mark
-               (let ((ch (utf8-ref (text-source text) (text-start text)))
-                     (offset2 (utf8-next (text-source text)
+               (let ((ch (utf8-ref (text-bytes text) (text-start text)))
+                     (offset2 (utf8-next (text-bytes text)
                                          (text-start text)
                                          (text-end text))))
                  (mark-offset-set! mark offset2)
@@ -38,7 +38,7 @@
   (cond
    ((> (mark-offset mark) (text-start (mark-text mark)))
     (cond
-     ((utf8-prev (text-source (mark-text mark))
+     ((utf8-prev (text-bytes (mark-text mark))
                  (mark-offset mark)
                  (text-start (mark-text mark)))
       => (lambda (offset) (mark-offset-set! mark offset) (text-ref mark)))
@@ -49,7 +49,7 @@
            (if (< (text-start text) (text-end text))
                ;; advanced to a new piece, need to also move the mark
                (cond
-                ((utf8-prev (text-source text) (text-end text) (text-start text))
+                ((utf8-prev (text-bytes text) (text-end text) (text-start text))
                  => (lambda (offset)
                       (mark-offset-set! mark offset)
                       (text-marks-set! (mark-text mark)

@@ -5,7 +5,7 @@
     (if text
         (lp (text-next text)
             (+ sum
-               (string-length (utf8->string! (text-source text)
+               (string-length (utf8->string! (text-bytes text)
                                              (text-start text)
                                              (text-end text)))))
         sum)))
@@ -34,19 +34,19 @@
     (make-text bv start end #f #f '() #f)))
 
 (define (text-string text)
-  (utf8->string (text-source text) (text-start text) (text-end text)))
+  (utf8->string (text-bytes text) (text-start text) (text-end text)))
 
 ;;> Returns the utf8 representation of the codepoints in \var{text}.
 (define (text->utf8 text)
   (if (and (not (text-prev text)) (not (text-next text)))
-      (bytevector-copy (text-source text) (text-start text) (text-end text))
+      (bytevector-copy (text-bytes text) (text-start text) (text-end text))
       (let ((out (open-output-bytevector)))
         (let lp ((piece (text-first text)))
           (cond
            ((not piece)
             (get-output-bytevector out))
            (else
-            (write-bytevector (text-source piece) out (text-start piece) (text-end piece))
+            (write-bytevector (text-bytes piece) out (text-start piece) (text-end piece))
             (lp (text-next piece))))))))
 
 ;;> Returns a string representing the same codepoints as \var{text}.
@@ -61,25 +61,25 @@
     (let lp ((text (text-prev (mark-text mark))))
       (and text
            (if (< (text-start text) (text-end text))
-               (utf8-ref (text-source text) (- (text-end text) 1))
+               (utf8-ref (text-bytes text) (- (text-end text) 1))
                (lp (text-prev text))))))
    ((>= (mark-offset mark) (text-end (mark-text mark)))
     (let lp ((text (text-next (mark-text mark))))
       (and text
            (if (< (text-start text) (text-end text))
-               (utf8-ref (text-source text) (text-start text))
+               (utf8-ref (text-bytes text) (text-start text))
                (lp (text-next text))))))
    (else
-    (utf8-ref (text-source (mark-text mark)) (mark-offset mark)))))
+    (utf8-ref (text-bytes (mark-text mark)) (mark-offset mark)))))
 
 (define (text-piece-copy text)
-  (let ((res (make-text (bytevector-copy (text-source text))
+  (let ((res (make-text (bytevector-copy (text-bytes text))
                         (text-start text)
                         (text-end text)
                         (text-prev text)
                         (text-next text)
                         '()
-                        (text-data text))))
+                        (text-source text))))
     (text-marks-set! res
                      (map (lambda (mk)
                             (make-mark res (mark-offset mk) (mark-data mk)))
@@ -144,9 +144,9 @@
            (size (max (- at-offset (text-start text))
                       (if (pair? o) (car o) 64)))
            (right (text-new-right! text size)))
-      (bytevector-copy! (text-source right)
+      (bytevector-copy! (text-bytes right)
                         0
-                        (text-source text)
+                        (text-bytes text)
                         at-offset
                         (text-end text))
       (text-end-set! right (- (text-end text) at-offset))
@@ -170,7 +170,7 @@
    (let* ((at-offset (mark-offset at-mark))
           (src (string->utf8 str))
           (size (bytevector-length src))
-          (dst (text-source text))
+          (dst (text-bytes text))
           (dst-size (bytevector-length dst)))
      (cond
       ((= at-offset (text-end text))
@@ -189,7 +189,7 @@
              ;; TODO: better sizing?
              (let ((right (text-new-right! text (* 2 size)))
                    (right-size (- size copy-size)))
-               (bytevector-copy! (text-source right) 0 src copy-size size)
+               (bytevector-copy! (text-bytes right) 0 src copy-size size)
                (text-end-set! right right-size)))
          text))
       ;; ((= at-offset (text-start text))
@@ -244,11 +244,7 @@
         (let lp ((text (text-next from-text)) (marks '()))
           (cond
            ((and text (not (eq? text to-text)))
-            ;; TODO: splice out the nodes themselves
-            (let ((new-marks (text-marks text)))
-              (text-start-set! text (text-end text))
-              (text-marks-set! text '())
-              (lp (text-next text) (cons new-marks marks))))
+            (lp (text-next text) (cons (text-splice! text) marks)))
            (else
             (text-marks-set! to-text
                              (append
