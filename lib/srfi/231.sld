@@ -52,6 +52,7 @@
    array-assign! array-ref array-set! array-decurry
    specialized-array-reshape
    array-copy! array-stack! array-decurry! array-append! array-block!
+   array-freeze!
    )
   (include "231/transforms.scm")
   (cond-expand

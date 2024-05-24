@@ -324,6 +324,9 @@
   (lambda (val . multi-index)
     (setter body (apply indexer multi-index) val)))
 
+(define (array-freeze! array)
+  (%array-setter-set! array #f)
+  array)
 
 ;; Indexing
 

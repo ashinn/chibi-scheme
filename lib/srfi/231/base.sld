@@ -44,5 +44,6 @@
    specialized-array-share array-ref array-set!
    %make-specialized %array-setter-set!
    specialized-getter specialized-setter
+   array-freeze!
    )
   (include "base.scm"))
