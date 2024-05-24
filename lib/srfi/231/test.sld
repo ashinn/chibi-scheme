@@ -1142,6 +1142,13 @@
         (test-error (interval-for-each (lambda (x) x) 1))
         (test-error (interval-for-each 1 (make-interval '#(3) '#(4))))
 
+        (test '()
+            (let ((result '()))
+              (interval-for-each
+               (lambda i (set! result (cons i result)))
+               (make-interval '#(1 2 3) '#(2 2 4)))
+              result))
+
         (do ((i 0 (+ i 1)))
             ((= i tests))
           (let* ((lower (map (lambda (x) (random 10))
@@ -1317,6 +1324,10 @@
         (test-assert
             (array-packed? (make-specialized-array (make-interval '#(1 2 3)
                                                                   '#(1 2 3))
+                                                   f32-storage-class)))
+        (test-assert
+            (array-packed? (make-specialized-array (make-interval '#(1 2 3)
+                                                                  '#(2 2 4))
                                                    f32-storage-class)))
 
         ;; all these are true, we'll have to see how to screw it up later.
