@@ -400,7 +400,6 @@
    (lambda (return)
      (apply array-for-each
             (lambda args (cond ((apply pred args) => return)))
-            #f
             array
             arrays)
      #f)))

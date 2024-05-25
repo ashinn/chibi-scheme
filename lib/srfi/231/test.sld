@@ -1814,6 +1814,15 @@
                                            list)
                                (make-array (make-interval '#(3 4) '#(4 5))
                                            list)))
+        (test-assert (array-any list?
+                                (make-array (make-interval '#(3) '#(4))
+                                            list)))
+        (test-assert (array-any (lambda (x) (odd? (car x)))
+                                (make-array (make-interval '#(3) '#(4))
+                                            list)))
+        (test-not (array-any (lambda (x) (even? (car x)))
+                                (make-array (make-interval '#(3) '#(4))
+                                            list)))
 
         ;; (do ((i 0 (+ i 1)))
         ;;     ((= i tests))
