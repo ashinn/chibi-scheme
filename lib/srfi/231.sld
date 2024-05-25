@@ -56,21 +56,15 @@
    )
   (include "231/transforms.scm")
   (cond-expand
-   ((and chibi (library (srfi 160 f8)))
-    (import (srfi 160 f8))
+   ((and chibi (library (srfi 160 mini)))
+    (import (srfi 160 mini))
     (begin
       (define-storage-class f8-storage-class
-        f8vector-ref f8vector-set! f8? make-f8vector f8vector-length 0)))
-   (else
-    (begin
-      (define f8-storage-class f32-storage-class))))
-  (cond-expand
-   ((and chibi (library (srfi 160 f16)))
-    (import (srfi 160 f16))
-    (begin
+        f8vector-ref f8vector-set! f8? make-f8vector f8vector-length 0)
       (define-storage-class f16-storage-class
         f16vector-ref f16vector-set! f16? make-f16vector f16vector-length 0)))
    (else
     (begin
+      (define f8-storage-class f32-storage-class)
       (define f16-storage-class f32-storage-class))))
   )
