@@ -50,7 +50,8 @@ to install the binaries and libraries.  You can optionally specify a
 By default files are installed in **/usr/local**.
 
 If you want to try out chibi-scheme without installing, be sure to set
-`LD_LIBRARY_PATH` so it can find the shared libraries.
+`LD_LIBRARY_PATH` (`DYLD_LIBRARY_PATH` on macOS) so it can find the
+shared libraries.
 
 To make the emscripten build run `make js` (_not_ `emmake make js`).
 
