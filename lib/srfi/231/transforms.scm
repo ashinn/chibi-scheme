@@ -516,9 +516,9 @@
      (else
       (error "can't reshape" array new-domain)))))
 
-(define (flatten ls)
-  (if (pair? (car ls))
-      (append-map flatten ls)
+(define (flatten ls d)
+  (if (and (positive? d) (pair? (car ls)))
+      (append-map (lambda (x) (flatten x (- d 1))) ls)
       ls))
 
 (define (list*->array dimension nested-ls . o)
@@ -529,7 +529,7 @@
      (else
       (apply list->array
              (make-interval (list->vector (reverse lens)))
-             (flatten nested-ls)
+             (flatten nested-ls (- dimension 1))
              o)))))
 
 (define (array->list* a)
@@ -562,9 +562,10 @@
                    (vector-iota (interval-width domain 0)
                                 (interval-lower-bound domain 0)))))))
 
-(define (flatten-vector->list vec)
-  (if (vector? (vector-ref vec 0))
-      (append-map flatten-vector->list (vector->list vec))
+(define (flatten-vector->list vec d)
+  (if (and (positive? d) (vector? (vector-ref vec 0)))
+      (append-map (lambda (x) (flatten-vector->list x (- d 1)))
+                  (vector->list vec))
       (vector->list vec)))
 
 (define (vector*->array dimension nested-vec . o)
@@ -575,7 +576,7 @@
      (else
       (apply list->array
              (make-interval (reverse-list->vector lens))
-             (flatten-vector->list nested-vec)
+             (flatten-vector->list nested-vec (- dimension 1))
              o)))))
 
 (define (dimensions-compatible? a-domain b-domain axis)

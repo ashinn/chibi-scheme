@@ -1803,6 +1803,23 @@
                                              list)
                                  (make-array (make-interval '#(3 4) '#(4 5))
                                              list)))
+        (test-assert (array-every equal?
+                                  (list*->array 1 '(a b c))
+                                  (list->array (make-interval '#(3))
+                                               '(a b c))))
+        (test-assert (array-every equal?
+                                  (list*->array 2 '((a b c) (1 2 3)))
+                                  (list->array (make-interval '#(2 3))
+                                               '(a b c 1 2 3))))
+        (test-assert
+            (array-every equal?
+                         (list*->array 2 '(((a b c) (1 2))))
+                         (list->array (make-interval '#(1 2))
+                                      '((a b c) (1 2)))))
+        ;; (test-assert
+        ;;     (array-every equal?
+        ;;                  (list*->array 0 '())
+        ;;                  (make-array (make-interval '#()) (lambda () '()))))
         (test-error (array-any 1 2))
         (test-error (array-any list 1))
         (test-error (array-any list
