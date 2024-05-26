@@ -3038,6 +3038,12 @@
         (test-error
          (array-tile (make-array (make-interval '#(0 0) '#(10 10)) list)
                      '#(-10 20)))
+        (test-error
+         (array-tile (make-array (make-interval '#(4)) list) '#(#(0 3 0 -1 2))))
+        (test-error
+         (array-tile (make-array (make-interval '#(0)) list) '#(2)))
+        (test-error
+         (array-tile (make-array (make-interval '#(0)) list) '#(#())))
 
         (let* ((TA '(( 1  2  3  4  5  6)
                      ( 7  8  9 10 11 12)

@@ -159,9 +159,15 @@
                              sizes)))
   (assert
    (vector-every (lambda (s len)
-                   (if (exact-integer? s)
-                       (positive? s)
-                       (= (vector-fold + 0 s) len)))
+                   (if (zero? len)
+                       (and (vector? s)
+                            (not (zero? (vector-length s)))
+                            (vector-every zero? s))
+                       (or (and (exact-integer? s)
+                                (positive? s))
+                           (and (vector? s)
+                                (not (vector-any negative? s))
+                                (= (vector-fold + 0 s) len)))))
                  sizes
                  (interval-widths (array-domain array))))
   (let ((domain (make-interval
