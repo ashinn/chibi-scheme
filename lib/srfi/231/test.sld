@@ -926,6 +926,7 @@
         (test-error (index-rotate 0 -2))
         (test-error (index-rotate 3 5))
         (test '#(3 4 0 1 2) (index-rotate 5 3))
+        (test '#(0 1 2 3 4) (index-rotate 5 5))
 
         (test-error (index-swap 'a 3 0))
         (test-error (index-swap 5 'a 0))

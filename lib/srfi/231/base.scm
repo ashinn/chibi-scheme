@@ -24,7 +24,7 @@
 (define (index-rotate n k)
   (assert (and (exact-integer? n)
                (exact-integer? k)
-               (< -1 k n)))
+               (<= 0 k n)))
   (list->vector (append (iota (- n k) k) (iota k))))
 
 (define (index-first n k)
