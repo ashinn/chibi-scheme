@@ -2083,6 +2083,7 @@
         ;;                                    result-array-2)
         ;;                                   result))))))))
 
+        (test-error (array-reduce + (make-array (make-interval '#(0)) list)))
         (test-error (array-reduce 'a 'a))
         (test-error (array-reduce 'a (make-array (make-interval '#(1) '#(3))
                                                  list)))

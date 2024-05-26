@@ -386,6 +386,7 @@
   (let* ((domain (array-domain array))
          (init-index (interval-lower-bounds->list domain))
          (knil (list 'first-element)))
+    (assert (not (interval-empty? domain)))
     (interval-fold
      (lambda (acc . multi-index)
        (if (eq? acc knil)
