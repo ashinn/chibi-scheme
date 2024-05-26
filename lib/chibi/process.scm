@@ -1,19 +1,28 @@
+(define unwind #f)
+
+((call/cc
+    (lambda (k)
+      (set! unwind k)
+      (lambda () #f))))
 
 (cond-expand
  (plan9
-  (define (exit . o)
+  (define (emergency-exit . o)
     (%exit (if (pair? o)
                (if (string? (car o))
                    (car o)
                    (if (eq? #t (car o)) "" "chibi error"))
                ""))))
  (else
-  (define (exit . o)
+  (define (emergency-exit . o)
     (%exit (if (pair? o)
                (if (integer? (car o))
                    (inexact->exact (car o))
                    (if (eq? #t (car o)) 0 1))
                0)))))
+
+(define (exit . o)
+  (unwind (lambda () (apply emergency-exit o))))
 
 (cond-expand
  (bsd

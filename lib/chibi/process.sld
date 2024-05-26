@@ -1,7 +1,8 @@
 
 (define-library (chibi process)
-  (export exit sleep alarm %fork fork kill execute waitpid system system?
-          process-command-line  process-running?
+  (export exit emergency-exit sleep alarm
+          %fork fork kill execute waitpid system system?
+          process-command-line process-running?
           set-signal-action! make-signal-set
           signal-set? signal-set-contains?
           signal-set-fill! signal-set-add! signal-set-delete!
@@ -17,7 +18,7 @@
           call-with-process-io process->bytevector
           process->string process->sexp process->string-list
           process->output+error process->output+error+status)
-  (import (chibi) (chibi io) (chibi string) (chibi filesystem))
+  (import (chibi) (chibi io) (chibi string) (chibi filesystem) (only (scheme base) call/cc))
   (cond-expand (threads (import (srfi 18) (srfi 151))) (else #f))
   (cond-expand ((not windows) (include-shared "process")))
   (include "process.scm"))
