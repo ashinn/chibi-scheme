@@ -1816,10 +1816,14 @@
                          (list*->array 2 '(((a b c) (1 2))))
                          (list->array (make-interval '#(1 2))
                                       '((a b c) (1 2)))))
-        ;; (test-assert
-        ;;     (array-every equal?
-        ;;                  (list*->array 0 '())
-        ;;                  (make-array (make-interval '#()) (lambda () '()))))
+        (test-assert
+            (array-every equal?
+                         (list*->array 0 '())
+                         (make-array (make-interval '#()) (lambda () '()))))
+        (test-assert
+            (array-every equal?
+                         (vector*->array 0 '())
+                         (make-array (make-interval '#()) (lambda () '()))))
         (test-error (array-any 1 2))
         (test-error (array-any list 1))
         (test-error (array-any list

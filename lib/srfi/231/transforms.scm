@@ -529,7 +529,9 @@
      (else
       (apply list->array
              (make-interval (list->vector (reverse lens)))
-             (flatten nested-ls (- dimension 1))
+             (if (zero? dimension)
+                 (list nested-ls)
+                 (flatten nested-ls (- dimension 1)))
              o)))))
 
 (define (array->list* a)
@@ -576,7 +578,9 @@
      (else
       (apply list->array
              (make-interval (reverse-list->vector lens))
-             (flatten-vector->list nested-vec (- dimension 1))
+             (if (zero? dimension)
+                 (list nested-vec)
+                 (flatten-vector->list nested-vec (- dimension 1)))
              o)))))
 
 (define (dimensions-compatible? a-domain b-domain axis)
