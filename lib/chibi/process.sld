@@ -18,7 +18,7 @@
           call-with-process-io process->bytevector
           process->string process->sexp process->string-list
           process->output+error process->output+error+status)
-  (import (chibi) (chibi io) (chibi string) (chibi filesystem))
+  (import (chibi) (chibi io) (chibi string) (chibi filesystem) (only (scheme base) call/cc))
   (cond-expand (threads (import (srfi 18) (srfi 151))) (else #f))
   (cond-expand ((not windows) (include-shared "process")))
   (include "process.scm"))
