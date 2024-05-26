@@ -1,7 +1,8 @@
 
 (define-library (chibi process)
-  (export exit sleep alarm %fork fork kill execute waitpid system system?
-          process-command-line  process-running?
+  (export exit emergency-exit sleep alarm
+          %fork fork kill execute waitpid system system?
+          process-command-line process-running?
           set-signal-action! make-signal-set
           signal-set? signal-set-contains?
           signal-set-fill! signal-set-add! signal-set-delete!
