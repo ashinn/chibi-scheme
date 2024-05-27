@@ -67,7 +67,7 @@
                (translation? hi)
                (= (vector-length lo) (vector-length hi))
                (vector-every <= lo hi)))
-  (%%make-interval lo hi))
+  (%%make-interval (vector-copy lo) (vector-copy hi)))
 
 (define (make-interval x . o)
   (if (pair? o)
