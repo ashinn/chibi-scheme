@@ -683,10 +683,7 @@
             (make-interval
              `#(,@(take a-lbs axis) 0 ,@(drop a-lbs axis))
              `#(,@(take a-ubs axis) ,(length arrays) ,@(drop a-ubs axis))))
-           (res (make-specialized-array/default domain
-                                                (or (array-storage-class a)
-                                                    generic-storage-class)
-                                                safe?))
+           (res (make-specialized-array/default domain storage safe?))
            ;; Stack by permuting the desired axis to the first
            ;; dimension and currying on that, assigning the
            ;; corresponding array argument to each element.

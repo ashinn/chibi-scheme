@@ -3277,6 +3277,29 @@
             (array->list*
              (array-stack 0 (list (list*->array 2 '((4 7) (2 6)))
                                   (list*->array 2 '((1 0) (0 1)))))))
+        (test-error
+         (array-stack 0
+                      (list (make-array (make-interval '#(2 2)) list)
+                            (make-array (make-interval '#(2 2)) list))
+                      'a))
+        (test-error
+         (array-stack 0
+                      (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                      u1-storage-class
+                      'a))
+        (test-error
+         (array-stack 0
+                      (list (make-array (make-interval '#(2 2)) list) (make-array (make-interval '#(2 2)) list))
+                      u1-storage-class))
+        (test
+            generic-storage-class
+            (array-storage-class
+             (array-stack
+              1
+              (list (array-copy (make-array (make-interval '#(10)) (lambda (i) 42))
+                                u8-storage-class)
+                    (array-copy (make-array (make-interval '#(10)) (lambda (i) 5000))
+                                u16-storage-class)))))
         (test '((0 1 4 6 7 8)
                 (2 3 5 9 10 11)
                 (12 13 14 15 16 17))
