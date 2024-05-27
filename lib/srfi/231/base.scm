@@ -311,6 +311,9 @@
 (define (array-dimension a)
   (interval-dimension (array-domain a)))
 
+(define (array-empty? a)
+  (interval-empty? (array-domain a)))
+
 (define (mutable-array? x)
   (and (array? x) (array-setter x) #t))
 

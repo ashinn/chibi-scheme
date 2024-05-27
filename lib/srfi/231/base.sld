@@ -37,7 +37,7 @@
    ;; Arrays
    make-array array? array-domain array-getter array-dimension
    mutable-array? array-setter specialized-array-default-safe?
-   specialized-array-default-mutable?
+   specialized-array-default-mutable? array-empty?
    make-specialized-array make-specialized-array-from-data
    specialized-array? array-storage-class array-indexer array-body
    array-safe? array-coeffs array-adjacent? array-packed?

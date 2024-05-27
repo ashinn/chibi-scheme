@@ -37,6 +37,7 @@
    storage-class-data? storage-class-data->body
    ;; Arrays
    make-array array? array-domain array-getter array-dimension
+   array-empty?
    mutable-array? array-setter specialized-array-default-safe?
    specialized-array-default-mutable? make-specialized-array
    make-specialized-array-from-data
