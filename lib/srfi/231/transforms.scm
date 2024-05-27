@@ -449,7 +449,7 @@
   (list->vector (array->list array)))
 
 (define (vector->array domain vec . o)
-  (apply list->array domain (vector->list vec o)))
+  (apply list->array domain (vector->list vec) o))
 
 (define (array-assign! destination source)
   (assert (and (mutable-array? destination) (array? source)
