@@ -585,7 +585,7 @@
   (let lp ((vec nested-vec) (lens '()) (d dimension))
     (cond
      ((positive? d)
-      (if (vector? vec)
+      (if (and (vector? vec) (not (vector-empty? vec)))
           (lp (vector-ref vec 0) (cons (vector-length vec) lens) (- d 1))
           (lp vec (cons 0 lens) (- d 1))))
      (else
