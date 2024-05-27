@@ -108,9 +108,9 @@
   (and (vector-every >= (interval-lb iv1) (interval-lb iv2))
        (vector-every <= (interval-ub iv1) (interval-ub iv2))))
 
-(define (interval-contains-multi-index? iv i0 . o)
+(define (interval-contains-multi-index? iv . o)
   (assert (interval? iv))
-  (let ((i (list->vector (cons i0 o))))
+  (let ((i (list->vector o)))
     (assert (and (= (interval-dimension iv) (vector-length i))
                  (vector-every integer? i)))
     (and (vector-every >= i (interval-lb iv))
