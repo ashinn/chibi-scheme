@@ -578,7 +578,9 @@
 (define (flatten-vector->list vec d)
   (cond
    ((not (vector? vec)) '())
-   ((and (positive? d) (vector? (vector-ref vec 0)))
+   ((and (positive? d)
+         (positive? (vector-length vec))
+         (vector? (vector-ref vec 0)))
     (append-map (lambda (x) (flatten-vector->list x (- d 1)))
                 (vector->list vec)))
    (else (vector->list vec))))
