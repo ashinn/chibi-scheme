@@ -524,7 +524,7 @@
       (error "can't reshape" array new-domain)))))
 
 (define (flatten ls d)
-  (if (and (positive? d) (pair? (car ls)))
+  (if (and (positive? d) (pair? ls) (pair? (car ls)))
       (append-map (lambda (x) (flatten x (- d 1))) ls)
       ls))
 
@@ -532,7 +532,9 @@
   (let lp ((ls nested-ls) (lens '()) (d dimension))
     (cond
      ((positive? d)
-      (lp (car ls) (cons (length ls) lens) (- d 1)))
+      (if (null? ls)
+          (lp '() (cons 0 lens) (- d 1))
+          (lp (car ls) (cons (length ls) lens) (- d 1))))
      (else
       (apply list->array
              (make-interval (list->vector (reverse lens)))
@@ -572,16 +574,20 @@
                                 (interval-lower-bound domain 0)))))))
 
 (define (flatten-vector->list vec d)
-  (if (and (positive? d) (vector? (vector-ref vec 0)))
-      (append-map (lambda (x) (flatten-vector->list x (- d 1)))
-                  (vector->list vec))
-      (vector->list vec)))
+  (cond
+   ((not (vector? vec)) '())
+   ((and (positive? d) (vector? (vector-ref vec 0)))
+    (append-map (lambda (x) (flatten-vector->list x (- d 1)))
+                (vector->list vec)))
+   (else (vector->list vec))))
 
 (define (vector*->array dimension nested-vec . o)
   (let lp ((vec nested-vec) (lens '()) (d dimension))
     (cond
      ((positive? d)
-      (lp (vector-ref vec 0) (cons (vector-length vec) lens) (- d 1)))
+      (if (vector? vec)
+          (lp (vector-ref vec 0) (cons (vector-length vec) lens) (- d 1))
+          (lp vec (cons 0 lens) (- d 1))))
      (else
       (apply list->array
              (make-interval (reverse-list->vector lens))

@@ -1823,8 +1823,24 @@
                          (make-array (make-interval '#()) (lambda () '()))))
         (test-assert
             (array-every equal?
+                         (list*->array 1 '())
+                         (make-array (make-interval '#(0)) (lambda () '()))))
+        (test-assert
+            (array-every equal?
+                         (list*->array 2 '())
+                         (make-array (make-interval '#(0 0)) (lambda () '()))))
+        (test-assert
+            (array-every equal?
                          (vector*->array 0 '())
                          (make-array (make-interval '#()) (lambda () '()))))
+        (test-assert
+            (array-every equal?
+                         (vector*->array 1 '())
+                         (make-array (make-interval '#(0)) (lambda () '()))))
+        (test-assert
+            (array-every equal?
+                         (vector*->array 2 '())
+                         (make-array (make-interval '#(0 0)) (lambda () '()))))
         (test-error (array-any 1 2))
         (test-error (array-any list 1))
         (test-error (array-any list
