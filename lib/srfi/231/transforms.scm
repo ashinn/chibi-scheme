@@ -393,7 +393,7 @@
                (array? array)
                (every array? arrays)
                (every (lambda (a) (interval= (array-domain array) a)) arrays)))
-  (if (null? array)
+  (if (null? arrays)
       (interval-fold-left (array-getter array)
                           (lambda (accumulator array-element)
                             (operator accumulator array-element))
