@@ -93,8 +93,8 @@
 ;;>   `(ls
 ;;>     "list directory contents"
 ;;>     (@
-;;>      (long boolean (#\l) "use a long listing format")
-;;>      (all boolean (#\a) "do not ignore entries starting with ."))
+;;>      (long boolean (#\\l) "use a long listing format")
+;;>      (all boolean (#\\a) "do not ignore entries starting with ."))
 ;;>     (,ls files ...))
 ;;>   (command-line))
 ;;> }
