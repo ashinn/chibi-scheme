@@ -45,8 +45,8 @@
    array-safe? array-packed? specialized-array-share
    array-copy array-curry array-extract array-tile array-translate
    array-permute array-reverse array-sample
-   array-outer-product array-map array-for-each array-foldl
-   array-foldr array-reduce array-any array-every
+   array-outer-product array-map array-for-each array-fold-left
+   array-fold-right array-reduce array-any array-every
    array-inner-product array-stack array-append array-block
    array->list list->array array->vector vector->array
    array->list* list*->array array->vector* vector*->array

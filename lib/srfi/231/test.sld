@@ -204,12 +204,12 @@
          (error "array-display can't handle > 2 dimensions: " A))))
 
     (define (myindexer= indexer1 indexer2 interval)
-      (array-foldl (lambda (x y) (and x y))
-                   #t
-                   (make-array interval
-                               (lambda args
-                                 (= (apply indexer1 args)
-                                    (apply indexer2 args))))))
+      (array-fold-left (lambda (x y) (and x y))
+                       #t
+                       (make-array interval
+                                   (lambda args
+                                     (= (apply indexer1 args)
+                                        (apply indexer2 args))))))
 
     (define (my-indexer base lower-bounds increments)
       (lambda indices
@@ -221,12 +221,12 @@
     (define (myarray= array1 array2)
       (and (interval= (array-domain array1)
                       (array-domain array2))
-           (array-foldl (lambda (vs result)
-                          (and (equal? (car vs)
-                                       (cadr vs))
-                               result))
-                        #t
-                        (array-map list array1 array2))))
+           (array-fold-left (lambda (result vs)
+                              (and (equal? (car vs)
+                                           (cadr vs))
+                                   result))
+                            #t
+                            (array-map list array1 array2))))
 
     (define random-storage-class-and-initializer
       (let* ((storage-classes
@@ -677,13 +677,13 @@
     ;;(define test-pgm (read-pgm "girl.pgm"))
 
     (define (array-dot-product a b)
-      (array-foldl (lambda (x y)
-                     (+ x y))
-                   0
-                   (array-map
-                    (lambda (x y)
-                      (* x y))
-                    a b)))
+      (array-fold-left (lambda (x y)
+                         (+ x y))
+                       0
+                       (array-map
+                        (lambda (x y)
+                          (* x y))
+                        a b)))
 
     (define (array-convolve source filter)
       (let* ((source-domain
@@ -708,7 +708,7 @@
         (make-array
          result-domain
          (lambda (i j)
-           (array-foldl
+           (array-fold-left
             (lambda (p q)
               (+ p q))
             0
@@ -737,9 +737,9 @@
       (max 0 (min (exact (round pixel)) max-grey)))
 
     (define (array-sum a)
-      (array-foldl + 0 a))
+      (array-fold-left + 0 a))
     (define (array-max a)
-      (array-foldl max -inf.0 a))
+      (array-fold-left max -inf.0 a))
 
     (define (max-norm a)
       (array-max (array-map abs a)))
@@ -1921,10 +1921,10 @@
         ;;     (test-assert (indices-in-proper-order (reverse arguments-2)))
         ;;     ))
 
-        (test-error (array-foldl 1 1 1))
-        (test-error (array-foldl list 1 1))
-        (test-error (array-foldr 1 1 1))
-        (test-error (array-foldr list 1 1))
+        (test-error (array-fold-left 1 1 1))
+        (test-error (array-fold-left list 1 1))
+        (test-error (array-fold-right 1 1 1))
+        (test-error (array-fold-right list 1 1))
         (test-error (array-for-each 1 #f))
         (test-error (array-for-each list 1 (make-array (make-interval '#(3) '#(4))
                                                        list)))
@@ -2112,10 +2112,10 @@
                                            0 1)
                                    (matrix 1 0
                                            i 1))))))
-          (test (array-foldr x2x2-multiply (matrix 1 0 0 1) A)
+          (test (array-fold-right x2x2-multiply (matrix 1 0 0 1) A)
               (array-reduce x2x2-multiply A))
-          (test-not (equal? (array-reduce x2x2-multiply A)
-                            (array-foldl x2x2-multiply (matrix 1 0 0 1) A))))
+          (test (array-reduce x2x2-multiply A)
+              (array-fold-left x2x2-multiply (matrix 1 0 0 1) A)))
 
         (let ((A_2 (make-array (make-interval '#(1 1) '#(3 7))
                                (lambda (i j)
@@ -2124,10 +2124,10 @@
                                              j 1)
                                      (matrix 1 j
                                              i -1))))))
-          (test (array-foldr x2x2-multiply (matrix 1 0 0 1) A_2)
+          (test (array-fold-right x2x2-multiply (matrix 1 0 0 1) A_2)
               (array-reduce x2x2-multiply A_2))
-          (test-not (equal? (array-reduce x2x2-multiply A_2)
-                            (array-foldl x2x2-multiply (matrix 1 0 0 1) A_2)))
+          (test (array-reduce x2x2-multiply A_2)
+              (array-fold-left x2x2-multiply (matrix 1 0 0 1) A_2))
           (test-not (equal? (array-reduce x2x2-multiply A_2)
                             (array-reduce x2x2-multiply (array-rotate A_2 1)))))
 
@@ -2138,10 +2138,10 @@
                                              j k)
                                      (matrix k j
                                              i -1))))))
-          (test (array-foldr x2x2-multiply (matrix 1 0 0 1) A_3)
+          (test (array-fold-right x2x2-multiply (matrix 1 0 0 1) A_3)
               (array-reduce x2x2-multiply A_3))
-          (test-not (equal? (array-reduce x2x2-multiply A_3)
-                            (array-foldl x2x2-multiply (matrix 1 0 0 1) A_3)))
+          (test (array-reduce x2x2-multiply A_3)
+              (array-fold-right x2x2-multiply (matrix 1 0 0 1) A_3))
           (test-not (equal? (array-reduce x2x2-multiply A_3)
                             (array-reduce x2x2-multiply (array-rotate A_3 1)))))
 
@@ -2152,10 +2152,10 @@
                                              j k)
                                      (matrix l k
                                              i j))))))
-          (test (array-foldr x2x2-multiply (matrix 1 0 0 1) A_4)
+          (test (array-fold-right x2x2-multiply (matrix 1 0 0 1) A_4)
               (array-reduce x2x2-multiply A_4))
-          (test-not (equal? (array-reduce x2x2-multiply A_4)
-                            (array-foldl x2x2-multiply (matrix 1 0 0 1) A_4)))
+          (test (array-reduce x2x2-multiply A_4)
+              (array-fold-left x2x2-multiply (matrix 1 0 0 1) A_4))
           (test-not (equal? (array-reduce x2x2-multiply A_4)
                             (array-reduce x2x2-multiply (array-rotate A_4 1)))))
 
@@ -2166,10 +2166,10 @@
                                              j k)
                                      (matrix (- l m) k
                                              i j))))))
-          (test (array-foldr x2x2-multiply (matrix 1 0 0 1) A_5)
+          (test (array-fold-right x2x2-multiply (matrix 1 0 0 1) A_5)
               (array-reduce x2x2-multiply A_5))
-          (test-not (equal? (array-reduce x2x2-multiply A_5)
-                            (array-foldl x2x2-multiply (matrix 1 0 0 1) A_5)))
+          (test (array-reduce x2x2-multiply A_5)
+              (array-fold-left x2x2-multiply (matrix 1 0 0 1) A_5))
           (test-not (equal? (array-reduce x2x2-multiply A_5)
                             (array-reduce x2x2-multiply (array-rotate A_5 1)))))
 

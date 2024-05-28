@@ -379,14 +379,46 @@
            (apply f (map (lambda (g) (apply g multi-index)) getters))))
        (array-domain array))))
 
-(define (array-foldl kons knil array)
-  (interval-fold (lambda (acc . multi-index)
-                   (kons (apply array-ref array multi-index) acc))
-                 knil
-                 (array-domain array)))
+(define (array-fold-left operator identity array . arrays)
+  (assert (and (procedure? operator)
+               (array? array)
+               (every array? arrays)
+               (every (lambda (a)
+                        (interval= (array-domain array)
+                                   (array-domain a)))
+                      arrays)))
+  (if (null? arrays)
+      (interval-fold-left (array-getter array)
+                          (lambda (accumulator array-element)
+                            (operator accumulator array-element))
+                          identity
+                          (array-domain array))
+      (interval-fold-left (array-getter (apply array-map list array arrays))
+                          (lambda (accumulator array-elements)
+                            (apply operator accumulator array-elements))
+                          identity
+                          (array-domain array))))
 
-(define (array-foldr kons knil array)
-  (fold-right kons knil (array->list array)))
+(define (array-fold-right operator identity array . arrays)
+  (assert (and (procedure? operator)
+               (array? array)
+               (every array? arrays)
+               (every (lambda (a)
+                        (interval= (array-domain array)
+                                   (array-domain a)))
+                      arrays)))
+  (if (null? arrays)
+      (interval-fold-right (array-getter array)
+                           (lambda (array-element accumulator)
+                             (operator array-element accumulator))
+                           identity
+                           (array-domain array))
+      (interval-fold-right
+       (array-getter (apply array-map list array arrays))
+       (lambda (array-elements accumulator)
+         (apply operator (append array-elements (list accumulator))))
+       identity
+       (array-domain array))))
 
 (define (array-reduce op array)
   (let* ((domain (array-domain array))
@@ -424,7 +456,7 @@
       (array-domain array)))))
 
 (define (array->list array)
-  (reverse (array-foldl cons '() array)))
+  (reverse (array-fold-left xcons '() array)))
 
 (define (list->array domain ls . o)
   (let* ((storage (if (pair? o) (car o) generic-storage-class))
