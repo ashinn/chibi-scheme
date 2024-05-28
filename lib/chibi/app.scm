@@ -1,12 +1,19 @@
 ;; app.scm -- unified option parsing and config
-;; Copyright (c) 2012-2015 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012-2024 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
-;;> The high-level interface.  Given an application spec \var{spec},
-;;> parses the given command-line arguments \var{args} into a config
-;;> object, prepended to the existing object \var{config} if given.
-;;> Then runs the corresponding command (or sub-command) procedure
-;;> from \var{spec}.
+;;> The high-level interface.  Parses a command-line with optional
+;;> and/or positional arguments, with arbitrarily nested subcommands
+;;> (optionally having their own arguments), and calls the
+;;> corresponding main procedure on the parsed config.
+;;>
+;;> Given an application spec \var{spec}, parses the given
+;;> command-line arguments \var{args} into a config object (from
+;;> \scheme{(chibi config)}), prepended to the existing object
+;;> \var{config} if given.  Then runs the corresponding command (or
+;;> sub-command) procedure from \var{spec} on the following arguments:
+;;>
+;;> \scheme{(<proc> <config> <spec> <positional args> ...)}
 ;;>
 ;;> The app spec should be a list of the form:
 ;;>
@@ -56,7 +63,43 @@
 ;;> files, whereas the app specs include embedded procedure objects so
 ;;> are typically written with \scheme{quasiquote}.
 ;;>
-;;> Complete Example:
+;;> Complete Example - stripped down ls(1):
+;;>
+;;> \schemeblock{
+;;> (import (scheme base)
+;;>         (scheme process-context)
+;;>         (scheme write)
+;;>         (srfi 130)
+;;>         (chibi app)
+;;>         (chibi config)
+;;>         (chibi filesystem))
+;;>
+;;> (define (ls cfg spec . files)
+;;>   (for-each
+;;>     (lambda (x)
+;;>       (for-each
+;;>         (lambda (file)
+;;>           (unless (and (string-prefix? "." file)
+;;>                        (not (conf-get cfg 'all)))
+;;>             (write-string file)
+;;>             (when (conf-get cfg 'long)
+;;>               (write-string " ")
+;;>               (write (file-modification-time file)))
+;;>             (newline)))
+;;>         (if (file-directory? x) (directory-files x) (list x))))
+;;>     files))
+;;>
+;;> (run-application
+;;>   `(ls
+;;>     "list directory contents"
+;;>     (@
+;;>      (long boolean (#\l) "use a long listing format")
+;;>      (all boolean (#\a) "do not ignore entries starting with ."))
+;;>     (,ls files ...))
+;;>   (command-line))
+;;> }
+;;>
+;;> Subcommand Skeleton Example:
 ;;>
 ;;> \schemeblock{
 ;;> (run-application
