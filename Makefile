@@ -410,7 +410,7 @@ install-base: all
 	$(INSTALL) -m0644 doc/chibi-scheme.1 $(DESTDIR)$(MANDIR)/
 	$(INSTALL) -m0644 doc/chibi-ffi.1 $(DESTDIR)$(MANDIR)/
 	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
-	-if type $(LDCONFIG) >/dev/null 2>/dev/null; then $(LDCONFIG); fi
+	-if type $(LDCONFIG) >/dev/null 2>/dev/null; then $(LDCONFIG) >/dev/null 2>/dev/null; fi
 
 install: install-base
 ifneq "$(IMAGE_FILES)" ""
