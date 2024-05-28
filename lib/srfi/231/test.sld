@@ -3335,6 +3335,12 @@
                (make-interval (quote #(1 -6 -1 3))
                               (quote #(5 -5 5 8)))
                '(3 1 6 2 8 0 8 1 2 6 7 2 9 4 6 5 2 4 5 4 5 2 6 6 0 6 4 2 1 3 4 6 9 6 7 2 4 8 4 3 5 5 8 0 6 4 6 3 7 6 3 4 1 6 2 3 1 9 1 0 3 1 5 0 3 5 8 1 8 0 2 3 1 5 0 4 9 5 3 2 0 7 6 5 5 9 4 8 5 3 2 5 1 4 8 4 5 7 4 6 1 5 8 2 0 1 5 0 8 3 0 4 6 1 7 1 7 1 6 9)))))
+        (test-assert
+            (array-append
+             0
+             (list 
+              (make-array (make-interval '#(0)) list)
+              (make-array (make-interval '#(0)) list))))
         )
 
       '(test-group "assign/product"
