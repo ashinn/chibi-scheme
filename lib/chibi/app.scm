@@ -64,7 +64,7 @@
 ;;>     "Zookeeper Application"
 ;;>     (@
 ;;>      (animals (list symbol) "list of animals to act on (default all)")
-;;>      (lions boolean (#\l) "also apply the action to lions"))
+;;>      (lions boolean (#\\l) "also apply the action to lions"))
 ;;>     (or
 ;;>      (feed "feed the animals" () (,feed animals ...))
 ;;>      (wash "wash the animals" (@ (soap boolean)) (,wash animals ...))
