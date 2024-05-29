@@ -30,8 +30,9 @@
   (accept? state-accept? state-accept?-set!)
   ;; A char or char-set indicating when we can transition.
   ;; Alternately, #f indicates an epsilon transition, while a
-  ;; procedure of the form (lambda (ch i matches) ...) is a predicate
-  ;; which should return #t if the char matches.
+  ;; procedure is a guarded epsilon transition which advances
+  ;; only if the procedure returns a true value.  The signature
+  ;; is of the form (proc str i ch start end matches).
   (chars state-chars state-chars-set!)
   ;; A single integer indicating the match position to record.
   (match state-match state-match-set!)
@@ -427,8 +428,7 @@
             (posse-add! seen sr)
             (let* ((next1 (state-next1 st))
                    (next2 (state-next2 st))
-                   (matches
-                    (and next2 (searcher-matches sr))))
+                   (matches (and next2 (searcher-matches sr))))
               (cond
                (next1
                 (searcher-state-set! sr next1)
@@ -596,6 +596,28 @@
                   (sce (string-cursor->index str end))
                   (m (regexp-search re:grapheme str sci sce)))
              (and m (<= (regexp-match-submatch-end m 0) sci))))))
+
+(define (match/look-ahead sres)
+  (let ((rx (regexp `(seq bos ,@sres))))
+    (lambda (str i ch start end matches)
+      (and (regexp-run-offsets #t rx str i end)
+           #t))))
+
+(define (match/look-behind sres)
+  (let ((rx (regexp `(seq ,@sres eos))))
+    (lambda (str i ch start end matches)
+      (and (regexp-run-offsets #t rx str start i)
+           #t))))
+
+(define (match/neg-look-ahead sres)
+  (let ((rx (regexp `(seq bos ,@sres))))
+    (lambda (str i ch start end matches)
+      (not (regexp-run-offsets #t rx str i end)))))
+
+(define (match/neg-look-behind sres)
+  (let ((rx (regexp `(seq ,@sres eos))))
+    (lambda (str i ch start end matches)
+      (not (regexp-run-offsets #t rx str start i)))))
 
 (define (lookup-char-set name flags)
   (cond
@@ -952,6 +974,24 @@
                                (sre->char-set `(or ,@(cdr sre)) flags)))))
                flags
                next))
+        ;; TODO: The look-around assertions are O(n^d) where d is the
+        ;; nesting depth of the assertions, i.e. quadratic for one
+        ;; look-ahead, cubic for a look-behind inside a look-ahead,
+        ;; etc.  We could consider instead advancing the look-aheads
+        ;; together from the current position (and advancing the
+        ;; look-behinds from the beginning) and checking if the
+        ;; corresponding state matches.  The trick is the look-aheads
+        ;; don't necessarily have the same length - we have to keep
+        ;; advancing until they resolve and keep or prune the
+        ;; corresponding non-look-ahead states accordingly.
+        ((look-ahead)
+         (make-char-state (match/look-ahead (cdr sre)) flags next (next-id)))
+        ((look-behind)
+         (make-char-state (match/look-behind (cdr sre)) flags next (next-id)))
+        ((neg-look-ahead)
+         (make-char-state (match/neg-look-ahead (cdr sre)) flags next (next-id)))
+        ((neg-look-behind)
+         (make-char-state (match/neg-look-behind (cdr sre)) flags next (next-id)))
         ((w/case)
          (->rx `(: ,@(cdr sre)) (flag-clear flags ~ci?) next))
         ((w/nocase)

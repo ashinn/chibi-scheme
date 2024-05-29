@@ -161,6 +161,32 @@
       (test-re-search #f '(: nwb "foo" nwb) " foo ")
       (test-re-search '("foo") '(: nwb "foo" nwb) "xfoox")
 
+      (test-re '("regular expression" "expression")
+               '(: "regular" (look-ahead " expression") (* space ) ($ word))
+               "regular expression")
+      (test-re #f
+               '(: "regular" (look-ahead "expression") (* space ) ($ word))
+               "regular expression")
+      (test-re '("regular expression" "regular")
+               '(: ($ word) (* space ) (look-behind "regular ") "expression")
+               "regular expression")
+      (test-re #f
+               '(: ($ word) (* space ) (look-behind "regular") "expression")
+               "regular expression")
+
+      (test-re #f
+               '(: "regular" (neg-look-ahead " expression") (* space ) ($ word))
+               "regular expression")
+      (test-re '("regular expression" "expression")
+               '(: "regular" (neg-look-ahead "expression") (* space ) ($ word))
+               "regular expression")
+      (test-re #f
+               '(: ($ word) (* space ) (neg-look-behind "regular ") "expression")
+               "regular expression")
+      (test-re '("regular expression" "regular")
+               '(: ($ word) (* space ) (neg-look-behind "regular") "expression")
+               "regular expression")
+
       (test-re '("beef")
                '(* (/"af"))
                "beef")
