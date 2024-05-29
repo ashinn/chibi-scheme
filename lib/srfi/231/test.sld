@@ -2864,7 +2864,10 @@
               (c (make-interval '#(10 10) '#(20 20))))
           (test-error (interval-intersect 'a))
           (test-error (interval-intersect  a 'a))
-          (test-error (interval-intersect a b)))
+          (test-error (interval-intersect a b))
+          (test-assert (interval-intersect a))
+          (test-assert
+              (interval-intersect (make-interval '#(6 -9 -6) '#(6 -5 -3)))))
 
         (do ((i 0 (+ i 1)))
             ((= i tests))

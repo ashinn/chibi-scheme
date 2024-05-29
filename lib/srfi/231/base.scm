@@ -218,7 +218,7 @@
                  (or (null? o) (apply = (map interval-dimension ls)))))
     (let ((lower (apply vector-map max (map interval-lb ls)))
           (upper (apply vector-map min (map interval-ub ls))))
-      (and (vector-every < lower upper)
+      (and (vector-every <= lower upper)
            (make-interval lower upper)))))
 
 (define (interval-translate iv translation)
