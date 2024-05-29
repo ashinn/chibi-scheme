@@ -325,11 +325,23 @@
                       (apply getter2 (drop multi-index dim1)))))))
 
 (define (array-inner-product A f g B)
+  (assert (and (array? A) (array? B)
+               (procedure? f) (procedure? g)
+               (positive? (array-dimension A))
+               (positive? (array-dimension B))
+               (let ((A-dim (array-dimension A))
+                     (A-dom (array-domain A))
+                     (B-dom (array-domain B)))
+                 (and (not (zero? (interval-width B-dom 0)))
+                      (eqv? (interval-lower-bound A-dom (- A-dim 1))
+                            (interval-lower-bound B-dom 0))
+                      (eqv? (interval-upper-bound A-dom (- A-dim 1))
+                            (interval-upper-bound B-dom 0))))))
   (array-outer-product
    (lambda (a b) (array-reduce f (array-map g a b)))
    (array-copy (array-curry A 1))
    (array-copy
-    (array-curry (array-permute B (index-rotate (array-dimension B) 1))))))
+    (array-curry (array-permute B (index-rotate (array-dimension B) 1)) 1))))
 
 (define (same-dimensions? ls)
   (or (null? ls)

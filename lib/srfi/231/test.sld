@@ -3583,7 +3583,23 @@
                 (myarray= (apply array-outer-product append arrays)
                           (make-array (apply my-interval-cartesian-product
                                              (map array-domain arrays))
-                                      list))))))
+                                      list)))))
+
+        (test '((((0 0) (0 0)) ((0 0) (0 1)) ((0 0) (0 2)) ((0 0) (0 3)))
+                (((1 0) (0 0)) ((1 0) (0 1)) ((1 0) (0 2)) ((1 0) (0 3)))
+                (((2 0) (0 0)) ((2 0) (0 1)) ((2 0) (0 2)) ((2 0) (0 3)))
+                (((3 0) (0 0)) ((3 0) (0 1)) ((3 0) (0 2)) ((3 0) (0 3))))
+            (array->list*
+             (array-inner-product (make-array (make-interval '#(4 1)) list)
+                                  list
+                                  list
+                                  (make-array (make-interval '#(1 4)) list))))
+
+        (test-error
+            (array-inner-product (make-array (make-interval '#(4 0)) list)
+                                 list
+                                 list
+                                 (make-array (make-interval '#(0 4)) list))))
 
       (test-group "reshape tests"
         (specialized-array-default-safe? #t)
