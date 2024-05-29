@@ -8,7 +8,8 @@
    http-file-servlet http-procedure-servlet http-ext-servlet
    http-regexp-servlet http-path-regexp-servlet http-uri-regexp-servlet
    http-host-regexp-servlet http-redirect-servlet http-rewrite-servlet
-   http-cgi-bin-dir-servlet http-scheme-script-dir-servlet)
+   http-cgi-bin-dir-servlet http-scheme-script-dir-servlet
+   http-send-file)
   (import
    (scheme time) (srfi 39) (srfi 95)
    (chibi) (chibi mime) (chibi regexp) (chibi pathname) (chibi uri)
