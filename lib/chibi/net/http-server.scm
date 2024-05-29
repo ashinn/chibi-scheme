@@ -54,8 +54,9 @@
                    (make-request command (car ls) (cadr ls) in out sock addr))))
             (cond
              (request
-              (log-info `(request: ,command ,(car ls) ,(cadr ls)
-                                   ,(request-headers request)))
+              (if (not (conf-get cfg 'quiet?))
+                  (log-info `(request: ,command ,(car ls) ,(cadr ls)
+                                       ,(request-headers request))))
               (protect (exn
                         (else
                          (log-error "internal error: " exn)
@@ -550,7 +551,8 @@
     (@
      ((port integer)
       (doc-root string)
-      (verbose? boolean (#\v "verbose"))))
+      (verbose? boolean (#\v "verbose"))
+      (quiet? boolean (#\q "quiet"))))
     ,run-app))
 
 (define (main args) (run-application app-spec))
