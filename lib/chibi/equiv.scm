@@ -45,5 +45,5 @@
                              (lp (- i 1))))))))))
        (else
         (equal? a b))))
-    (let ((res (equal?/bounded a b 100000 100000)))
+    (let ((res (equal?/bounded a b 10000 10000)))
       (and res (or (> res 0) (equiv? a b)) #t))))
