@@ -1867,16 +1867,16 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
   sexp_gc_preserve1(ctx, tmp);
   if (at > bt) {
     r = sexp_compare(ctx, b, a);
-    sexp_negate(r);
+    if (!sexp_exceptionp(r)) { sexp_negate(r); }
   } else {
     switch ((at * SEXP_NUM_NUMBER_TYPES) + bt) {
     case SEXP_NUM_NOT_NOT: case SEXP_NUM_NOT_FIX:
     case SEXP_NUM_NOT_FLO: case SEXP_NUM_NOT_BIG:
 #if SEXP_USE_COMPLEX
-    case SEXP_NUM_CPX_CPX: case SEXP_NUM_CPX_FIX:
-    case SEXP_NUM_CPX_FLO: case SEXP_NUM_CPX_BIG:
+    case SEXP_NUM_CPX_CPX: case SEXP_NUM_FIX_CPX:
+    case SEXP_NUM_FLO_CPX: case SEXP_NUM_BIG_CPX:
 #if SEXP_USE_RATIOS
-    case SEXP_NUM_CPX_RAT:
+    case SEXP_NUM_RAT_CPX:
 #endif
 #endif
       r = sexp_type_exception(ctx, NULL, SEXP_NUMBER, a);
@@ -1944,6 +1944,9 @@ sexp sexp_compare (sexp ctx, sexp a, sexp b) {
       r = sexp_ratio_compare(ctx, a, b);
       break;
 #endif
+    default:
+      r = sexp_xtype_exception(ctx, NULL, "unknown comparison", a);
+      break;
     }
   }
   sexp_gc_release1(ctx);
