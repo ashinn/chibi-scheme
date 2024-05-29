@@ -247,9 +247,10 @@
                (interval-ub iv)
                scales)))
 
-(define (interval-cartesian-product iv0 . o)
-  (make-interval (apply vector-append (map interval-lb (cons iv0 o)))
-                 (apply vector-append (map interval-ub (cons iv0 o)))))
+(define (interval-cartesian-product . o)
+  (assert (every interval? o))
+  (make-interval (apply vector-append (map interval-lb o))
+                 (apply vector-append (map interval-ub o))))
 
 ;; Storage Classes
 

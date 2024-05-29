@@ -3346,27 +3346,7 @@
               (make-array (make-interval '#(0)) list))))
         )
 
-      '(test-group "assign/product"
-        (do ((d 1 (fx+ d 1)))
-            ((= d 6))
-          (let* ((unsafe-specialized-destination
-                  (make-specialized-array (make-interval (make-vector d 10))
-                                          u1-storage-class))
-                 (safe-specialized-destination
-                  (make-specialized-array (make-interval (make-vector d 10))
-                                          u1-storage-class
-                                          #t))
-                 (mutable-destination
-                  (make-array (array-domain safe-specialized-destination)
-                              (array-getter safe-specialized-destination)
-                              (array-setter safe-specialized-destination)))
-                 (source
-                  (make-array (array-domain safe-specialized-destination)
-                              (lambda args 100)))) ;; not 0 or 1
-            (test-error (array-assign! unsafe-specialized-destination source))
-            (test-error (array-assign! safe-specialized-destination source))
-            (test-error (array-assign! mutable-destination source))))
-
+      (test-group "assign/product"
         (do ((i 0 (fx+ i 1)))
             ((fx=? i tests))
           (let* ((interval
@@ -3577,6 +3557,7 @@
 
         (test-error (interval-cartesian-product 'a))
         (test-error (interval-cartesian-product (make-interval '#(0) '#(1)) 'a))
+        (test (make-interval '#()) (interval-cartesian-product))
 
         (do ((i 0 (+ i 1)))
             ((= i tests))
