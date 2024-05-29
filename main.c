@@ -242,7 +242,7 @@ static sexp sexp_add_import_binding (sexp ctx, sexp env) {
   tmp = sexp_env_ref(ctx, sexp_meta_env(ctx), sym, SEXP_VOID);
   sym = sexp_intern(ctx, "import", -1);
   sexp_env_define(ctx, env, sym, tmp);
-  sexp_gc_release3(ctx);
+  sexp_gc_release2(ctx);
   return env;
 }
 
