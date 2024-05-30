@@ -3766,6 +3766,26 @@
             '#(#f #f #t #t))
            '#(1 1 2 1))
           (make-interval '#(4))))
+
+        '(test #t
+            (specialized-array-reshape
+             (array-sample (array-copy (make-array (make-interval '#(3 4)) list))
+                           '#(2 1))
+             (make-interval '#(8))
+             #t))
+        (test '(() ())
+            (array->list*
+             (specialized-array-reshape
+              (make-specialized-array (make-interval '#(1 2 0 4)))
+              (make-interval '#(2 0 4)))))
+        (test 'foo
+            (array->list*
+             (specialized-array-reshape ;; Reshape to a zero-dimensional array
+              (array-extract            ;; Restrict to the first element
+               (make-specialized-array-from-data  ;; One-dimensional array
+                (vector 'foo 'bar 'baz))
+               (make-interval '#(1)))
+              (make-interval '#()))))
         )
 
       (test-group "curry tests"

@@ -525,33 +525,36 @@
                                          (apply tmp-indexer multi-index)))))
          (new-coeffs (indexer->coeffs new-indexer new-domain #t))
          (flat-indexer (coeffs->indexer new-coeffs new-domain))
-         (new-indexer (coeffs->indexer new-coeffs new-domain))
          (body (array-body array))
          (storage (array-storage-class array))
          (res
           (%make-specialized new-domain storage body new-coeffs flat-indexer
                              (array-safe? array) (array-setter array)
                              (array-adjacent? array))))
-    (let ((multi-index (interval-lower-bounds->list domain))
-          (orig-default-indexer (default-indexer domain)))
-      (let lp ((i 0)
-               (ls multi-index))
-        (let ((reshaped-index
-               (invert-default-index
-                new-domain
-                (apply orig-default-indexer multi-index))))
-          (cond
-           ((not (equal? (apply flat-indexer reshaped-index)
-                         (apply orig-indexer multi-index)))
-            #f)
-           ((null? ls)
-            res)
-           ((= (+ 1 (interval-lower-bound domain i))
-               (interval-upper-bound domain i))
-            (lp (+ i 1) (cdr ls)))
-           (else
-            (set-car! ls (+ 1 (car ls)))
-            (lp (+ i 1) (cdr ls)))))))))
+    (cond
+     ((interval-empty? new-domain)
+      (and (interval-empty? domain) res))
+     (else
+      (let ((multi-index (interval-lower-bounds->list domain))
+            (orig-default-indexer (default-indexer domain)))
+        (let lp ((i 0)
+                 (ls multi-index))
+          (let ((reshaped-index
+                 (invert-default-index
+                  new-domain
+                  (apply orig-default-indexer multi-index))))
+            (cond
+             ((not (equal? (apply flat-indexer reshaped-index)
+                           (apply orig-indexer multi-index)))
+              #f)
+             ((null? ls)
+              res)
+             ((= (+ 1 (interval-lower-bound domain i))
+                 (interval-upper-bound domain i))
+              (lp (+ i 1) (cdr ls)))
+             (else
+              (set-car! ls (+ 1 (car ls)))
+              (lp (+ i 1) (cdr ls)))))))))))
 
 (define (specialized-array-reshape array new-domain . o)
   (assert (and (specialized-array? array)

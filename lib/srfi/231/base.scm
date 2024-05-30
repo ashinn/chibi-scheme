@@ -447,27 +447,27 @@
 ;; possible multi-indices in domain in lexicographic order would
 ;; produce 0 through volume-1).
 (define (invert-default-index domain raw-index)
-  (let lp ((index raw-index)
-           (i 0)
-           (scale (/ (interval-volume domain)
-                     (max 1
-                          (- (interval-upper-bound domain 0)
-                             (interval-lower-bound domain 0)))))
-           (res '()))
-    (cond
-     ((>= (+ i 1) (interval-dimension domain))
-      (reverse (cons (+ index (interval-lower-bound domain i)) res)))
-     (else
-      (let ((digit (quotient index scale)))
-        (lp (- index (* digit scale))
-            (+ i 1)
-            (/ scale
-               (max 1
-                    (- (interval-upper-bound domain (+ i 1))
-                       (interval-lower-bound domain (+ i 1)))))
-            (cons (+ digit
-                     (interval-lower-bound domain i))
-                  res)))))))
+  (cond
+   ((or (zero? (interval-dimension domain)) (interval-empty? domain))
+    (interval-lower-bounds->list domain))
+   (else
+    (let lp ((index raw-index)
+             (i 0)
+             (scale (/ (interval-volume domain)
+                       (max 1 (interval-width domain 0))))
+             (res '()))
+      (cond
+       ((>= (+ i 1) (interval-dimension domain))
+        (reverse (cons (+ index (interval-lower-bound domain i)) res)))
+       (else
+        (let ((digit (quotient index scale)))
+          (lp (- index (* digit scale))
+              (+ i 1)
+              (/ scale
+                 (max 1 (interval-width domain (+ i 1))))
+              (cons (+ digit
+                       (interval-lower-bound domain i))
+                    res)))))))))
 
 ;; Specialized arrays
 
