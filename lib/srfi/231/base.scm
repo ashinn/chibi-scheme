@@ -270,7 +270,7 @@
 (define generic-storage-class
   (make-storage-class
    vector-ref vector-set! (lambda (x) #t) make-vector
-   vector-copy! vector-length #f (lambda (data) #t) (lambda (data) data)))
+   vector-copy! vector-length #f vector? (lambda (data) (assert (vector? data)) data)))
 
 ;; Parameters
 
