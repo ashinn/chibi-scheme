@@ -4,7 +4,7 @@
 ;; Define a storage class with an optimized -copy!
 (define-syntax define-storage-class
   (syntax-rules ()
-    ((define-storage-class name ref set elt? make len default)
+    ((define-storage-class name ref set elt? data? make len default)
      (define name
        (make-storage-class
         ref set elt? make
@@ -17,51 +17,52 @@
                 (do ((i (+ at (- end start 1)) (- i 1)) (j (- limit 1) (- j 1)))
                     ((< j start))
                   (set to i (ref from j))))))
-        len default (lambda (data) #t) (lambda (data) data))))))
+        len default data? (lambda (data) (assert (data? data)) data))))))
 
 (define-storage-class s8-storage-class
-  s8vector-ref s8vector-set! s8? make-s8vector s8vector-length 0)
+  s8vector-ref s8vector-set! s8? s8vector? make-s8vector s8vector-length 0)
 
 (define-storage-class s16-storage-class
-  s16vector-ref s16vector-set! s16? make-s16vector s16vector-length 0)
+  s16vector-ref s16vector-set! s16? s16vector? make-s16vector s16vector-length 0)
 
 (define-storage-class s32-storage-class
-  s32vector-ref s32vector-set! s32? make-s32vector s32vector-length 0)
+  s32vector-ref s32vector-set! s32? s32vector? make-s32vector s32vector-length 0)
 
 (define-storage-class s64-storage-class
-  s64vector-ref s64vector-set! s64? make-s64vector s64vector-length 0)
+  s64vector-ref s64vector-set! s64? s64vector? make-s64vector s64vector-length 0)
 
 (define-storage-class u1-storage-class
-  u1vector-ref u1vector-set! u1? make-u1vector u1vector-length 0)
+  u1vector-ref u1vector-set! u1? u1vector? make-u1vector u1vector-length 0)
 
 (define-storage-class u8-storage-class
-  u8vector-ref u8vector-set! u8? make-u8vector u8vector-length 0)
+  u8vector-ref u8vector-set! u8? u8vector? make-u8vector u8vector-length 0)
 
 (define-storage-class u16-storage-class
-  u16vector-ref u16vector-set! u16? make-u16vector u16vector-length 0)
+  u16vector-ref u16vector-set! u16? u16vector? make-u16vector u16vector-length 0)
 
 (define-storage-class u32-storage-class
-  u32vector-ref u32vector-set! u32? make-u32vector u32vector-length 0)
+  u32vector-ref u32vector-set! u32? u32vector? make-u32vector u32vector-length 0)
 
 (define-storage-class u64-storage-class
-  u64vector-ref u64vector-set! u64? make-u64vector u64vector-length 0)
+  u64vector-ref u64vector-set! u64? u64vector? make-u64vector u64vector-length 0)
 
 (define-storage-class f32-storage-class
-  f32vector-ref f32vector-set! f32? make-f32vector f32vector-length 0)
+  f32vector-ref f32vector-set! f32? f32vector? make-f32vector f32vector-length 0)
 
 (define-storage-class f64-storage-class
-  f64vector-ref f64vector-set! f64? make-f64vector f64vector-length 0)
+  f64vector-ref f64vector-set! f64? f64vector? make-f64vector f64vector-length 0)
 
 (define-storage-class c64-storage-class
-  c64vector-ref c64vector-set! c64? make-c64vector c64vector-length 0)
+  c64vector-ref c64vector-set! c64? c64vector? make-c64vector c64vector-length 0)
 
 (define-storage-class c128-storage-class
-  c128vector-ref c128vector-set! c128? make-c128vector c128vector-length 0)
+  c128vector-ref c128vector-set! c128? c128vector? make-c128vector c128vector-length 0)
 
 (define-storage-class char-storage-class
   (lambda (vec i) (integer->char (u32vector-ref vec i)))
   (lambda (vec i ch) (u32vector-set! vec i (char->integer ch)))
   char?
+  u32vector?
   (lambda (len init) (make-u32vector len (char->integer init)))
   u32vector-length
   #\null)
