@@ -5,6 +5,7 @@
           (only (chibi) command-line)
           (only (meta) raw-script-file))
   (begin
+    (define start-directory (current-directory))
 
     (define (command-name)
       (let ((filename (car (command-line))))
@@ -17,7 +18,7 @@
     (define (script-file)
       (and raw-script-file
            (path-normalize
-            (path-resolve raw-script-file (current-directory)))))
+            (path-resolve raw-script-file start-directory))))
 
     (define (script-directory)
       (let ((filename (script-file)))
