@@ -85,20 +85,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syntax
 
-(define-syntax define-auxiliary-syntax
-  (syntax-rules ()
-    ((define-auxiliary-syntax name)
-     (define-syntax name
-       (syntax-rules ()
-         ((name . x)
-          (syntax-error "invalid use of auxiliary syntax" (name . x))))))))
-
-(define-auxiliary-syntax make:)
-(define-auxiliary-syntax pred:)
-(define-auxiliary-syntax read:)
-(define-auxiliary-syntax write:)
-(define-auxiliary-syntax block:)
-
 (define-syntax syntax-let-optionals*
   (syntax-rules ()
     ((syntax-let-optionals* () type-args expr)

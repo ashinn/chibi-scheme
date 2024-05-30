@@ -1,0 +1,31 @@
+
+(define-library (chibi binary-record-test)
+  (export run-tests)
+  (import (scheme base) (chibi binary-record) (chibi test))
+  (begin
+    (define-binary-record-type gif-header
+      (make: make-gif-header)
+      (pred: gif-header?)
+      (read: read-gif-header)
+      (write: write-gif-header)
+      (block:
+       "GIF89a"
+       (width (u16/le) gif-header-width)
+       (height (u16/le) gif-header-height)
+       (gct (u8) gif-header-gct)
+       (bgcolor (u8) gif-header-gbcolor)
+       (aspect-ratio (u8) gif-header-aspect-ratio)
+       ))
+    (define (gif->bytevector gif)
+      (let ((out (open-output-bytevector)))
+        (write-gif-header gif out)
+        (get-output-bytevector out)))
+    (define (bytevector->gif bv)
+      (read-gif-header (open-input-bytevector bv)))
+    (define (run-tests)
+      (test-begin "(chibi binary-record)")
+      (let ((gif (make-gif-header 4096 2160 #xF7 1 2)))
+        (test #u8(#x47 #x49 #x46 #x38 #x39 #x61 0 #x10 #x70 #x08 #xF7 #x01 #x02)
+          (gif->bytevector gif))
+        (test gif (bytevector->gif (gif->bytevector gif))))
+      (test-end))))

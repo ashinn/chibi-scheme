@@ -1,6 +1,80 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; binary records
+;; Binary Records
+
+;;> \macro{(define-binary-record-type <name> [<bindings> ...] (block: <fields> ...))}
+;;>
+;;> Defines a new record type that supports serializing to and from
+;;> binary ports.  The generated procedures accept keyword-style
+;;> arguments:
+;;>
+;;> \itemlist[
+;;> \item{\scheme{(make: <constructor-name>)}}
+;;> \item{\scheme{(pred: <predicate-name>)}}
+;;> \item{\scheme{(read: <reader-name>)}}
+;;> \item{\scheme{(write: <writer-name>)}}
+;;> \item{\scheme{(block: <fields> ...)}}
+;;> ]
+;;>
+;;> The fields are also similar to \scheme{define-record-type} but
+;;> with an additional type:
+;;>
+;;> \scheme{(field (type args ...) getter setter)}
+;;>
+;;> Built-in types include:
+;;>
+;;> \itemlist[
+;;> \item{\scheme{(u8)} - a single byte in [0, 255]}
+;;> \item{\scheme{(u16/le)} - a little-endian short integer}
+;;> \item{\scheme{(u16/be)} - a big-endian short integer}
+;;> \item{\scheme{(fixed-string <length>)} - a fixed-length utf-8 string}
+;;> \item{\scheme{(padded-string <length> (pad <pad-char>))} - a utf-8 string padded to a given length}
+;;> \item{\scheme{(octal <length>)} - an integer in octal string format}
+;;> \item{\scheme{(decimal <length>)} - an integer in decimal string format}
+;;> \item{\scheme{(hexadecimal <length>)} - an integer in hexadecimal string format}
+;;> ]
+;;>
+;;> In addition, the field can be a literal (char, string or
+;;> bytevector), for instance as a file magic sequence or fixed
+;;> separator.  The fields (and any constants) are serialized in the
+;;> order they appear in the block.  For example, the header of a GIF
+;;> file could be defined as:
+;;>
+;;> \example{
+;;>  (define-binary-record-type gif-header
+;;>    (make: make-gif-header)
+;;>    (pred: gif-header?)
+;;>    (read: read-gif-header)
+;;>    (write: write-gif-header)
+;;>    (block:
+;;>     "GIF89a"
+;;>     (width (u16/le) gif-header-width)
+;;>     (height (u16/le) gif-header-height)
+;;>     (gct (u8) gif-header-gct)
+;;>     (bgcolor (u8) gif-header-gbcolor)
+;;>     (aspect-ratio (u8) gif-header-aspect-ratio)
+;;>     ))
+;;> }
+;;>
+;;> For a more complex example see the \scheme{(chibi tar)}
+;;> implementation.
+;;>
+;;> The binary type itself is a macro used to expand to a predicate
+;;> and reader/writer procedures, which can be defined with
+;;> \scheme{define-binary-type}.  For example,
+;;>
+;;> \example{
+;;>  (define-binary-type (u8)
+;;>    (lambda (x) (and (exact-integer? x) (<= 0 x 255)))
+;;>    read-u8
+;;>    write-u8)
+;;> }
+
+(define-syntax define-binary-record-type
+  (syntax-rules ()
+    ((define-binary-record-type name x ...)
+     (defrec (x ...) name hidden-make hidden-pred hidden-read hidden-write
+       () () ()))))
 
 (define-syntax defrec
   (syntax-rules (make: pred: read: write: block:)
@@ -84,9 +158,3 @@
     ((defrec ((block:) . rest) n m p r w b f s)
      (defrec rest n m p r w b f s))
     ))
-
-(define-syntax define-binary-record-type
-  (syntax-rules ()
-    ((define-binary-record-type name x ...)
-     (defrec (x ...) name hidden-make hidden-pred hidden-read hidden-write
-       () () ()))))
