@@ -1311,6 +1311,12 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-166/srfi-166.html"]{(srfi 166) - monadic formatting}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-179/srfi-179.html"]{(srfi 179) - nonempty intervals and generalized arrays}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-188/srfi-188.html"]{(srfi 188) - splicing binding constructs for syntactic keywords}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-193/srfi-193.html"]{(srfi 193) - command-line}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-211/srfi-211.html"]{(srfi 211) - scheme macro libaries}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-219/srfi-219.html"]{(srfi 219) - define higher-order lambda}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-227/srfi-227.html"]{(srfi 227) - optional arguments}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-229/srfi-229.html"]{(srfi 229) - tagged procedures}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-231/srfi-231.html"]{(srfi 231) - intervals and generalized arrays}}
 
 ]
 
@@ -1326,6 +1332,8 @@ namespace.
 \item{\hyperlink["lib/chibi/assert.html"]{(chibi assert) - A nicer assert macro}}
 
 \item{\hyperlink["lib/chibi/base64.html"]{(chibi base64) - Base64 encoding and decoding}}
+
+\item{\hyperlink["lib/chibi/binary-record.html"]{(chibi binary-record) - Record types with binary serialization}}
 
 \item{\hyperlink["lib/chibi/bytevector.html"]{(chibi bytevector) - Bytevector Utilities}}
 
@@ -1394,6 +1402,8 @@ namespace.
 \item{\hyperlink["lib/chibi/repl.html"]{(chibi repl) - A full-featured Read/Eval/Print Loop}}
 
 \item{\hyperlink["lib/chibi/shell.html"]{(chibi shell) - Process combinators with high-level pipeline syntax in the spirit of SCSH.}}
+
+\item{\hyperlink["lib/chibi/show.html"]{(chibi show) - Monadic formattinga.}}
 
 \item{\hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
