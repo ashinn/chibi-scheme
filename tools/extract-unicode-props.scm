@@ -119,16 +119,17 @@
            ((or (equal? line "") (eqv? #\# (string-ref line 0)))
             (lp ranges))
            (else
-            (let ((ls (string-split (string-trim-comment line #\#) #\;)))
+            (let ((ls (map string-trim
+                           (string-split (string-trim-comment line #\#) #\;))))
               (cond
                ((< (length ls) 2)
                 (warn "invalid DerivedCoreProperties line: " line)
                 (lp ranges))
-               ((string-ci=? prop (string-trim (cadr ls)))
+               ((string-ci=? prop (cadr ls))
                 (cond
                  ((string-contains (car ls) "..")
                   => (lambda (i)
-                       (let* ((str (string-trim (car ls)))
+                       (let* ((str (car ls))
                               (start (string->number (substring-cursor str (string-cursor-start str) i) 16))
                               (end (string->number (substring-cursor str (string-cursor-forward str i 2)) 16)))
                          (if (and start end (<= 0 start end #x110000))
