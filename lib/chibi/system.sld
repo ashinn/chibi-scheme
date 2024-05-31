@@ -24,5 +24,5 @@
                      (getpwuid_r user (make-string 1024)))))
      (define (group-information group)
        (safe-car (if (string? group)
-                     (getgrnam_r group (make-string 1024))
-                     (getgrgid_r group (make-string 1024)))))))))
+                     (getgrnam-safe group (make-string 1024))
+                     (getgrgid-safe group (make-string 1024)))))))))
