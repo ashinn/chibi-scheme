@@ -32,40 +32,57 @@ They are not installed or needed but are included for convenience.
 
 Thanks to the following people for patches and bug reports:
 
+  * Adam Feuer
   * Alan Watson
   * Alexei Lozovsky
   * Alexander Shendi
   * Andreas Rottman
+  * Arthur Gleckler
   * Bakul Shah
+  * Ben Davenport-Ray
   * Ben Mather
   * Ben Weaver
   * Bertrand Augereau
   * Bradley Lucier
   * Bruno Deferrari
+  * Damien Diederen
+  * Daphne Preston-Kendal
   * Doug Currie
   * Derrick Eddington
   * Dmitry Chestnykh
   * Eduardo Cavazos
+  * Ekaitz Zarraga
   * Felix Winkelmann
   * Gregor Klinke
   * Jeremy Wolff
   * Jeronimo Pellegrini
   * John Cowan
   * John Samsa
+  * Jonas Rinke
   * Kris Katterjohn
   * Lars J Aas
+  * Lassi Kortela
   * Lorenzo Campedelli
+  * Lukas Böger
   * Marc Nieper-Wißkirchen
+  * McKay Marston
   * Meng Zhang
   * Michal Kowalski (sladegen)
   * Miroslav Urbanek
+  * Naoki Koguro
+  * Nguyễn Thái Ngọc Duy
   * Petteri Piiroinen
   * Rajesh Krishnan
+  * Ricardo G. Herdt
+  * Roger Crew
   * Seth Alves
+  * Sören Tempel
   * Stephen Lewis
   * Taylor Venable
   * Travis Cross
+  * Vasilij Schneidermann
   * Vitaliy Mysak
+  * Yota Toyama
   * Yuki Okumura
 
 If you would prefer not to be listed, or are one of the users listed
