@@ -2,7 +2,7 @@
 
 **Minimal Scheme Implementation for use as an Extension Language**
 
-http://synthcode.com/wiki/chibi-scheme
+https://github.com/ashinn/chibi-scheme
 
 Chibi-Scheme is a very small library intended for use as an extension
 and scripting language in C programs.  In addition to support for
