@@ -3787,6 +3787,7 @@
                 (vector 'foo 'bar 'baz))
                (make-interval '#(1)))
               (make-interval '#()))))
+        (test-error (specialized-array-reshape A-ref (make-interval '#(100)) 'a))
         )
 
       (test-group "curry tests"

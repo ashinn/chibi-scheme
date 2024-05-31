@@ -579,6 +579,7 @@
                (= (interval-volume (array-domain array))
                   (interval-volume new-domain))))
   (let ((copy-on-failure? (and (pair? o) (car o))))
+    (assert (boolean? copy-on-failure?))
     (cond
      ((reshape-without-copy array new-domain))
      (copy-on-failure?
