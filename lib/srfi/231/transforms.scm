@@ -514,6 +514,24 @@
        (array-domain source))
       destination)))
 
+(define (array-assign/reshape! destination source)
+  (let ((dest-domain (array-domain destination))
+        (source-domain (array-domain source)))
+    (assert (and (mutable-array? destination) (array? source)
+                 (= (interval-volume dest-domain)
+                    (interval-volume source-domain))))
+    (let ((getter (array-getter source))
+          (setter (array-setter destination)))
+      (let lp ((source-ivc (interval-cursor source-domain))
+               (dest-ivc (interval-cursor dest-domain)))
+        (apply setter
+               (apply getter (interval-cursor-get source-ivc))
+               (interval-cursor-get dest-ivc))
+        (when (and (interval-cursor-next! source-ivc)
+                   (interval-cursor-next! dest-ivc))
+          (lp source-ivc dest-ivc)))
+      destination)))
+
 (define (reshape-without-copy array new-domain)
   (let* ((domain (array-domain array))
          (orig-indexer (array-indexer array))
@@ -568,7 +586,7 @@
                   new-domain
                   (array-storage-class array)
                   (array-safe? array))))
-        (array-assign! res array)
+        (array-assign/reshape! res array)
         res))
      (else
       (error "can't reshape" array new-domain)))))

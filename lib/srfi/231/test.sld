@@ -3767,12 +3767,13 @@
            '#(1 1 2 1))
           (make-interval '#(4))))
 
-        '(test #t
-            (specialized-array-reshape
-             (array-sample (array-copy (make-array (make-interval '#(3 4)) list))
-                           '#(2 1))
-             (make-interval '#(8))
-             #t))
+        (test '((0 0) (0 1) (0 2) (0 3) (2 0) (2 1) (2 2) (2 3))
+            (array->list*
+             (specialized-array-reshape
+              (array-sample (array-copy (make-array (make-interval '#(3 4)) list))
+                            '#(2 1))
+              (make-interval '#(8))
+              #t)))
         (test '(() ())
             (array->list*
              (specialized-array-reshape
