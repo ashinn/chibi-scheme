@@ -3204,6 +3204,7 @@ static float int_as_float(const unsigned int n) {
   return x.flonum;
 }
 
+/* https://arxiv.org/abs/2112.08926 */
 double sexp_half_to_double(unsigned short x) {
   unsigned int e = (x&0x7C00)>>10,
     m = (x&0x03FF)<<13,
