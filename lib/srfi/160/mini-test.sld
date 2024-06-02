@@ -1,6 +1,6 @@
 
 (define-library (srfi 160 mini-test)
-  (import (scheme base)
+  (import (scheme base) (scheme inexact)
           (srfi 160 base) (srfi 160 f8) (srfi 160 f16)
           (chibi test))
   (export run-tests)
@@ -82,7 +82,11 @@
         (test '#f16(1 2)
           (vector->f16vector '#(0 1 2 3) 1 3))
         (test '#(1.0 2.0)
-          (f16vector->vector '#f16(0 1 2 3) 1 3))
+            (f16vector->vector '#f16(0 1 2 3) 1 3))
+        (test '(-inf.0 -1.0 -0.0 0.0 1.0 +inf.0)
+            (f16vector->list
+             '#f16(-inf.0 -1.0 -0.0 0.0 1.0 +inf.0)))
+        (test-assert (nan? (f16vector-ref '#f16(+nan.0) 0)))
         )
 
       (test-end))))

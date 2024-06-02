@@ -3206,16 +3206,23 @@ static float int_as_float(const unsigned int n) {
 
 /* https://arxiv.org/abs/2112.08926 */
 double sexp_half_to_double(unsigned short x) {
-  unsigned int e = (x&0x7C00)>>10,
-    m = (x&0x03FF)<<13,
-    v = float_as_int((float)m)>>23;
+  unsigned int e, m, v;
+  if (x == 31744) return INFINITY;
+  if (x == 32767) return NAN;
+  if (x == 64512) return -INFINITY;
+  e = (x&0x7C00)>>10;
+  m = (x&0x03FF)<<13;
+  v = float_as_int((float)m)>>23;
   return int_as_float((x&0x8000)<<16 | (e!=0)*((e+112)<<23|m) | ((e==0)&(m!=0))*((v-37)<<23|((m<<(150-v))&0x007FE000)));
 }
 
 unsigned short sexp_double_to_half(double x) {
-  unsigned int b = float_as_int(x)+0x00001000,
-    e = (b&0x7F800000)>>23,
-    m = b&0x007FFFFF;
+  unsigned int b, e, m;
+  if (isnan(x)) return 32767;
+  if (isinf(x)) return x < 0 ? 64512 : 31744;
+  b = float_as_int(x)+0x00001000;
+  e = (b&0x7F800000)>>23;
+  m = b&0x007FFFFF;
   return (b&0x80000000)>>16 | (e>112)*((((e-112)<<10)&0x7C00)|m>>13) | ((e<113)&(e>101))*((((0x007FF000+m)>>(125-e))+1)>>1) | (e>143)*0x7FFF;
 }
 #endif
