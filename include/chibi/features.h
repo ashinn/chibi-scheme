@@ -301,7 +301,7 @@
 
 /* uncomment this to make the VM adhere to alignment rules */
 /*   This is required on some platforms, e.g. ARM */
-/* #define SEXP_USE_ALIGNED_BYTECODE */
+/* #define SEXP_USE_ALIGNED_BYTECODE 1 */
 
 /************************************************************************/
 /* These settings are configurable but only recommended for */
