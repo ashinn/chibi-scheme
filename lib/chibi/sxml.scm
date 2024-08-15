@@ -167,7 +167,7 @@
                        sxml)))
     (let lp ((sxml sxml))
       (cond
-       ((pair? sxml)
+       ((proper-list? sxml)
         (let ((tag (car sxml)))
           (cond
            ;; skip headers and the menu
@@ -176,16 +176,18 @@
                      (pair? (cdr sxml))
                      (pair? (cadr sxml))
                      (eq? '@ (car (cadr sxml)))
-                     (equal? '(id . "menu") (assq 'id (cdr (cadr sxml)))))))
+                     (equal? '(id . "menu") (assq 'id (cdr (cadr sxml))))))
+            )
            ;; recurse other tags, appending newlines for new sections
            ((symbol? tag)
             (if (memq tag '(h1 h2 h3 h4 h5 h6))
                 (newline out))
-            (for-each
-             lp
-             (if (and (pair? (cdr sxml)) (eq? '@ (cadr sxml)))
-                 (cddr sxml)
-                 (cdr sxml)))
+            (let ((ls (if (and (pair? (cdr sxml))
+                               (pair? (cadr sxml))
+                               (eq? '@ (car (cadr sxml))))
+                          (cddr sxml)
+                          (cdr sxml))))
+              (for-each lp ls))
             (if (memq tag '(p li br h1 h2 h3 h4 h5 h6))
                 (newline out)))
            (else
