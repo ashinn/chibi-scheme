@@ -538,7 +538,7 @@
             (and (pair? (car ls)) (memq (caar ls) '(begin: end:) )))
         (lp (cdr ls) (car ls) commands options))
        ((and (pair? (car ls)) (eq? '@ (caar ls)))
-        (lp (cdr ls) docs commands (append options (cadr (car ls)))))
+        (lp (cdr ls) docs commands (append options (cdar ls))))
        ((and (pair? (car ls)) (symbol? (caar ls)))
         ;; don't print nested commands
         (if (pair? commands)

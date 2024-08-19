@@ -40,5 +40,10 @@
       (test 'error
           (guard (exn (else 'error))
             (run-application zoo-app-spec
-                           '("zoo" "--soap" "wash" "--animals" "rhino"))))
+                             '("zoo" "--soap" "wash" "--animals" "rhino"))))
+      (let ((out (open-output-string)))
+        (parameterize ((current-output-port out))
+          (run-application zoo-app-spec '("zoo" "help"))
+          (test "Usage: zoo [options] <command>\nCommands:\n  feed animals ... - feed the animals\n  wash animals ... - wash the animals\n  help - print help\nOptions:\n      --animals - list of animals to act on (default all)\n  -l, --lions - also apply the action to lions\n"
+              (get-output-string out))))
       (test-end))))
