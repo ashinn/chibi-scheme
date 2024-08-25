@@ -144,10 +144,11 @@
      (test name (call-with-values (lambda () expect) (lambda results results))
        (call-with-values (lambda () expr) (lambda results results))))))
 
-;;> \macro{(test-error [name] expr)}
+;;> \macro{(test-error [name [pred]] expr)}
 
 ;;> Like \scheme{test} but evaluates \var{expr} and checks that it
-;;> raises an error.
+;;> raises an error. If \var{pred} is provided, the raised error
+;;> object must additionally satisfy the given type test.
 
 (define-syntax test-error
   (syntax-rules ()
@@ -155,8 +156,12 @@
      (test-error #f expr))
     ((_ name expr)
      (test-propagate-info name #f expr ((expect-error . #t))))
+    ((_ name pred expr)
+     (test-propagate-info name #f expr ((expect-error . #t)
+                                        (error-type-test . ,pred)
+                                        (error-type-test-expr . pred))))
     ((test a ...)
-     (test-syntax-error 'test-error "1 or 2 arguments required"
+     (test-syntax-error 'test-error "1, 2, or 3 arguments required"
                         (test a ...)))))
 
 ;;> Low-level macro to pass alist info to the underlying \var{test-run}.
@@ -535,6 +540,12 @@
            (expect))))
     (guard
         (exn
+         ((and (assq-ref info 'expect-error)
+               (assq-ref info 'error-type-test))
+          => (lambda (pred)
+               ((current-test-reporter)
+                (if (pred exn) 'PASS 'FAIL)
+                (append `((exception . ,exn)) info))))
          (else
           ((current-test-reporter)
            (if (assq-ref info 'expect-error) 'PASS 'ERROR)
@@ -595,8 +606,15 @@
     (display "assertion failed"))
    ((and (eq? status 'FAIL) (assq-ref info 'expect-error))
     (display indent)
-    (display "expected an error but got ")
-    (write (assq-ref info 'result)))
+    (if (assq-ref info 'exception)
+        (begin
+          (display "error should satisfy ")
+          (write (assq-ref info 'error-type-test-expr))
+          (display " but raised ")
+          (write (assq-ref info 'exception)))
+        (begin
+          (display "expected an error but got ")
+          (write (assq-ref info 'result)))))
    ((eq? status 'FAIL)
     (display indent)
     (display-expected/actual
