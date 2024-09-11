@@ -2188,6 +2188,19 @@
               (array-curry (list*->array 3 '(((4 7) (2 6)) ((1 0) (0 1))))
                            2)
               0)))
+        (let* ((A (array-copy
+                   (make-array (make-interval '#(0 0) '#(10 10))
+                               (lambda (i j) (inexact (+ (* i 10.) j))))
+                   f32-storage-class))
+               (A3 (array-ref (array-curry A 1) 3)))
+          (test 37. (array-ref A 3 7))
+          (test 37. (array-ref A3 7))
+          (array-set! A 0. 3 7)
+          (test 0. (array-ref A 3 7))
+          (test 0. (array-ref A3 7))
+          (array-freeze! A)
+          (test-error (array-set! A 1. 3 7))
+          (test-error (array-set! A3 1. 7)))
 
         ;; (test-error
         ;;  (array-curry (make-array (make-interval '#(0 0) '#(1 1)) list)  0))

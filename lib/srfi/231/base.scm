@@ -334,6 +334,7 @@
 
 (define (array-freeze! array)
   (%array-setter-set! array #f)
+  (make-immutable! (array-body array))
   array)
 
 ;; Indexing

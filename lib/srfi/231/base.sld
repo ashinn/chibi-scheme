@@ -46,4 +46,9 @@
    specialized-getter specialized-setter
    array-freeze!
    )
+  (cond-expand
+   (chibi
+    (import (only (chibi) make-immutable!)))
+   (else
+    (begin (define-syntax make-immutable! (syntax-rules () ((_ x) #f))))))
   (include "base.scm"))
