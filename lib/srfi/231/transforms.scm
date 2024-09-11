@@ -53,10 +53,10 @@
   f64vector-ref f64vector-set! f64? f64vector? make-f64vector f64vector-length 0.)
 
 (define-storage-class c64-storage-class
-  c64vector-ref c64vector-set! c64? c64vector? make-c64vector c64vector-length 0.)
+  c64vector-ref c64vector-set! c64? c64vector? make-c64vector c64vector-length 0.+0.i)
 
 (define-storage-class c128-storage-class
-  c128vector-ref c128vector-set! c128? c128vector? make-c128vector c128vector-length 0.)
+  c128vector-ref c128vector-set! c128? c128vector? make-c128vector c128vector-length 0.+0.i)
 
 (define-storage-class char-storage-class
   (lambda (vec i) (integer->char (u32vector-ref vec i)))
