@@ -10,7 +10,7 @@
    test-get-name! test-group-name test-group-ref
    test-group-set! test-group-inc! test-group-push!
    ;; parameters
-   current-test-verbosity
+   current-test-value-formatter current-test-verbosity
    current-test-applier current-test-skipper current-test-reporter
    current-test-group-reporter test-failure-count
    current-test-epsilon current-test-comparator

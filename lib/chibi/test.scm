@@ -526,6 +526,7 @@
              (not (assq-ref info 'line-number)))
         `((file-name . ,(car (pair-source expr)))
           (line-number . ,(cdr (pair-source expr)))
+          (format . ,(current-test-value-formatter))
           ,@info)
         info)))
 
@@ -584,14 +585,20 @@
      ((SKIP) "-")
      (else "."))))
 
-(define (display-expected/actual expected actual)
-  (let* ((e-str (write-to-string expected))
-         (a-str (write-to-string actual))
-         (diff (diff e-str a-str read-char)))
-    (write-string "expected ")
-    (write-string (edits->string/color (car diff) (car (cddr diff)) 1))
-    (write-string " but got ")
-    (write-string (edits->string/color (cadr diff) (car (cddr diff)) 2))))
+(define (display-expected/actual expected actual format)
+  (let ((e-str (format expected))
+        (a-str (format actual)))
+    (if (and (equal? e-str a-str)
+             (not (eqv? format write-to-string)))
+        ;; If the formatter can't display any difference, fall back to
+        ;; write-to-string.
+        (display-expected/actual expected actual write-to-string)
+        (let ((diff (diff e-str a-str read-char)))
+          (write-string "expected ")
+          (write-string (edits->string/color (car diff) (car (cddr diff)) 1))
+          (write-string " but got ")
+          (write-string (edits->string/color (cadr diff) (car (cddr diff)) 2))
+          ))))
 
 (define (test-print-explanation indent status info)
   (cond
@@ -617,8 +624,9 @@
           (write (assq-ref info 'result)))))
    ((eq? status 'FAIL)
     (display indent)
-    (display-expected/actual
-     (assq-ref info 'expected) (assq-ref info 'result))))
+    (display-expected/actual (assq-ref info 'expected)
+                             (assq-ref info 'result)
+                             (or (assq-ref info 'format) write-to-string))))
   ;; print variables
   (cond
    ((and (memq status '(FAIL ERROR)) (assq-ref info 'var-names))
@@ -862,6 +870,11 @@
 ;; parameters
 
 ;;> \section{Parameters}
+
+;;> If specified, takes a single object as input (the expected or
+;;> actual value of a test) and returns the string representation
+;;> (default \scheme{write-to-string}).
+(define current-test-value-formatter (make-parameter #f))
 
 ;;> The current test group as started by \scheme{test-group} or
 ;;> \scheme{test-begin}.
