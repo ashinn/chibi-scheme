@@ -296,6 +296,8 @@
          (pair? (exception-irritants exn)))
     (let ((name (car (exception-irritants exn))))
       (cond
+       ((and (identifier? name) (not (env-parent (current-environment))))
+        (display "Did you forget to import a language? e.g. (import (scheme base))\n" out))
        ((identifier? name)
         (display "Searching for modules exporting " out)
         (display name out)
