@@ -355,6 +355,71 @@
 (define-syntax define-library define-library-transformer)
 (define-syntax module define-library-transformer)
 
+(define r6rs-library-transformer
+  (er-macro-transformer
+   (lambda (expr rename compare)
+     (define (symbolic-id=? id_1 id_2)
+       (eq? (strip-syntactic-closures id_1)
+            (strip-syntactic-closures id_2)))
+     (define (clean-up-r6rs-library-name name)
+       (define (srfi-number->exact-integer component)
+         (if (symbol? component)
+             (let* ((symbol-name (symbol->string component))
+                    (maybe-number-as-string (substring symbol-name 1)))
+               (if (and (char=? (string-ref symbol-name 0) #\:)
+                        (every char-numeric?
+                               (string->list maybe-number-as-string)))
+                   (string->number maybe-number-as-string)
+                   #f))
+             #f))
+       (apply append
+              (map
+               (lambda (component)
+                 (cond ((list? component) ; ignore version numbers
+                        '())
+                       ((srfi-number->exact-integer component) => list)
+                       (else (list component))))
+               name)))
+     (define (clean-up-r6rs-import import-spec)
+       (cond ((identifier? import-spec) import-spec)
+             ((member (car import-spec)
+                      '(only except prefix rename)
+                      symbolic-id=?)
+              (cons (car import-spec)
+                    (cons (clean-up-r6rs-library-name (cadr import-spec))
+                          (cddr import-spec))))
+             ((member (car import-spec)
+                      '(library for)
+                      symbolic-id=?)
+              (clean-up-r6rs-library-name (cadr import-spec)))
+             (else (clean-up-r6rs-library-name import-spec))))
+
+     (if (not (symbolic-id=? (car expr) 'library))
+       (error "r6rs-library-transformer: I expect to process declarations called library, but this was a new one to me" (car expr) 'library))
+     (if (not (and (list? expr)
+                   (>= (length expr) 3)
+                   (list? (list-ref expr 1))
+                   (list? (list-ref expr 2))
+                   (symbolic-id=? (car (list-ref expr 2)) 'export)
+                   (list? (list-ref expr 3))
+                   (symbolic-id=? (car (list-ref expr 3)) 'import)))
+       (error "r6rs-library-transformer: the form of a library declaration is (library <name> (export <export-spec> ...) (import <import-spec> ...) <defexpr> ...)" expr))
+     (let ((library-name (clean-up-r6rs-library-name (list-ref expr 1)))
+           (exports (cdr (list-ref expr 2)))
+           (imports (map clean-up-r6rs-import (cdr (list-ref expr 3))))
+           (body (cddr (cddr expr)))
+
+           (_define-library (rename 'define-library))
+           (_export (rename 'export))
+           (_import (rename 'import))
+           (_begin (rename 'begin)))
+       `(,_define-library ,library-name
+          (,_export ,@exports)
+          (,_import ,@imports)
+          (,_begin ,@body))))))
+
+(define-syntax library r6rs-library-transformer)
+
 (define-syntax pop-this-path
   (er-macro-transformer
    (lambda (expr rename compare)
