@@ -1403,7 +1403,7 @@ namespace.
 
 \item{\hyperlink["lib/chibi/shell.html"]{(chibi shell) - Process combinators with high-level pipeline syntax in the spirit of SCSH.}}
 
-\item{\hyperlink["lib/chibi/show.html"]{(chibi show) - Monadic formattinga.}}
+\item{\hyperlink["lib/chibi/show.html"]{(chibi show) - Monadic formatting.}}
 
 \item{\hyperlink["lib/chibi/scribble.html"]{(chibi scribble) - A parser for the scribble syntax used to write this manual}}
 
