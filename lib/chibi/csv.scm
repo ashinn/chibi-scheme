@@ -24,12 +24,21 @@
 ;;> to values.  The following options are supported:
 ;;>
 ;;> \itemlist[
-;;> \item{\scheme{'separator-chars} - A non-empty list of characters used to delimit fields, by default \scheme{'(#\,)} (comma-separated).}
-;;> \item{\scheme{'quote-char} - A single character used to quote fields containing special characters, or \scheme{#f} to disable quoting, by default \scheme{#\"} (a double-quote).}
-;;> \item{\scheme{'escape-char} - A single character used to escape characters within quoted fields, or \scheme{#f} to disable escapes, by default \scheme{#\"} (a double-quote).  If this is the same character as the \scheme{quote-char}, then the quote char can be doubled to escape, but no other characters can be escaped.}
+;;> \item{\scheme{'separator-chars} - A non-empty list of characters used to delimit fields, by default \scheme{'(#\\,)} (comma-separated).}
+;;> \item{\scheme{'quote-char} - A single character used to quote fields containing special characters, or \scheme{#f} to disable quoting, by default \scheme{#\\"} (a double-quote).}
+;;> \item{\scheme{'escape-char} - A single character used to escape characters within quoted fields, or \scheme{#f} to disable escapes, by default \scheme{#\\"} (a double-quote).  If this is the same character as the \scheme{quote-char}, then the quote char can be doubled to escape, but no other characters can be escaped.}
 ;;> \item{\scheme{'record-separator} - A single character used to delimit the record (row), or one of the symbols \scheme{'cr}, \scheme{'crlf}, \scheme{'lf} or \scheme{'lax}.  These correspond to sequences of carriage return and line feed, or in the case of \scheme{'lax} any of the other three sequences.  Defaults to \scheme{'lax}.}
 ;;> \item{\scheme{'comment-chars} - A list of characters which if found at the start of a record indicate it is a comment, discarding all characters through to the next record-separator. Defaults to the empty list (no comments).}
 ;;> ]
+;;>
+;;> Example Gecos grammar:
+;;>
+;;> \example{
+;;> (csv-grammar
+;;>   '((separator-chars #\\:)
+;;>     (quote-char . #f)
+;;>     (escape-char . #f)))
+;;> }
 (define (csv-grammar spec)
   (let ((grammar (make-csv-grammar '(#\,) #\" #\" 'lax '())))
     (for-each
@@ -86,7 +95,15 @@
 ;;> along with its zero-based \scheme{index} and the accumulated
 ;;> result of the last call, starting with \scheme{knil}.
 
-;;> Returns a new CSV parser for the given \var{grammar}.
+;;> Returns a new CSV parser for the given \var{grammar}.  The parser
+;;> by itself can be used to parse a record at a time.
+;;>
+;;> \example{
+;;> (let ((parse (csv-parser)))
+;;>   (parse (lambda (vec i field) (vector-set! vec i (string->number field)) vec)
+;;>          (make-vector 3)
+;;>          (open-input-string "1,2,3")))
+;;> }
 (define csv-parser
   (opt-lambda ((grammar default-csv-grammar))
     (lambda (kons knil in)
@@ -185,6 +202,10 @@
 
 ;;> The simplest reader, simply returns the field string values in
 ;;> order as a list.
+;;>
+;;> \example{
+;;> ((csv-read->list) (open-input-string "foo,bar,baz"))
+;;> }
 (define csv-read->list
   (opt-lambda ((parser (csv-parser)))
     (opt-lambda ((in (current-input-port)))
@@ -194,6 +215,10 @@
             res)))))
 
 ;;> The equivalent of \scheme{csv-read->list} but returns a vector.
+;;>
+;;> \example{
+;;> ((csv-read->vector) (open-input-string "foo,bar,baz"))
+;;> }
 (define csv-read->vector
   (opt-lambda ((parser (csv-parser)))
     (let ((reader (csv-read->list parser)))
@@ -205,6 +230,10 @@
 
 ;;> The same as \scheme{csv-read->vector} but requires the vector to
 ;;> be of a fixed size, and may be more efficient.
+;;>
+;;> \example{
+;;> ((csv-read->fixed-vector 3) (open-input-string "foo,bar,baz"))
+;;> }
 (define csv-read->fixed-vector
   (opt-lambda (size (parser (csv-parser)))
     (opt-lambda ((in (current-input-port)))
@@ -218,6 +247,11 @@
 
 ;;> Returns an SXML representation of the record, as a row with
 ;;> multiple named columns.
+;;>
+;;> \example{
+;;> ((csv-read->sxml 'city '(name latitude longitude))
+;;>  (open-input-string "Tokyo,35°41′23″N,139°41′32″E"))
+;;> }
 (define csv-read->sxml
   (opt-lambda ((row-name 'row)
                (column-names
@@ -241,6 +275,16 @@
 
 ;;> A folding operation on records.  \var{proc} is called successively
 ;;> on each row and the accumulated result.
+;;>
+;;> \example{
+;;> (csv-fold
+;;>  (lambda (row acc) (cons (cadr (assq 'name (cdr row))) acc))
+;;>  '()
+;;>  (csv-read->sxml 'city '(name latitude longitude))
+;;>  (open-input-string
+;;>   "Tokyo,35°41′23″N,139°41′32″E
+;;> Paris,48°51′24″N,2°21′03″E"))
+;;> }
 (define csv-fold
   (opt-lambda (proc
                knil
@@ -254,6 +298,16 @@
 
 ;;> An iterator which simply calls \var{proc} on each record in the
 ;;> input in order.
+;;>
+;;> \example{
+;;> (let ((count 0))
+;;>   (csv-for-each
+;;>    (lambda (row) (if (string->number (car row)) (set! count (+ 1 count))))
+;;>    (csv-read->list)
+;;>    (open-input-string
+;;>      "1,foo\\n2,bar\\nthree,baz\\n4,qux"))
+;;>    count)
+;;> }
 (define csv-for-each
   (opt-lambda (proc
                (reader (csv-read->list))
@@ -262,6 +316,14 @@
 
 ;;> Returns a list containing the result of calling \var{proc} on each
 ;;> element in the input.
+;;>
+;;> \example{
+;;> (csv-map
+;;>  (lambda (row) (string->symbol (cadr row)))
+;;>  (csv-read->list)
+;;>  (open-input-string
+;;>    "1,foo\\n2,bar\\nthree,baz\\n4,qux"))
+;;> }
 (define csv-map
   (opt-lambda (proc
                (reader (csv-read->list))
@@ -269,12 +331,26 @@
     (reverse (csv-fold (lambda (row acc) (cons (proc row) acc)) '() reader in))))
 
 ;;> Returns a list of all of the read records in the input.
+;;>
+;;> \example{
+;;> (csv->list
+;;>  (csv-read->list)
+;;>  (open-input-string
+;;>    "1,foo\\n2,bar\\nthree,baz\\n4,qux"))
+;;> }
 (define csv->list
   (opt-lambda ((reader (csv-read->list))
                (in (current-input-port)))
     (csv-map (lambda (row) row) reader in)))
 
 ;;> Returns an SXML representation of the CSV.
+;;>
+;;> \example{
+;;> ((csv->sxml 'city '(name latitude longitude))
+;;>  (open-input-string
+;;>   "Tokyo,35°41′23″N,139°41′32″E
+;;> Paris,48°51′24″N,2°21′03″E"))
+;;> }
 (define csv->sxml
   (opt-lambda ((row-name 'row)
                (column-names
