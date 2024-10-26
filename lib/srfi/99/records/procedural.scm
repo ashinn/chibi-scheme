@@ -9,7 +9,13 @@
   (type? x))
 
 (define (rtd-constructor rtd . o)
-  (let ((fields (vector->list (if (pair? o) (car o) (rtd-all-field-names rtd))))
+  (let ((fields
+         (if (pair? o)
+             (map
+              (lambda (field)
+                (rtd-field-offset rtd field))
+              (vector->list (car o)))
+             (iota (vector-length (rtd-all-field-names rtd)))))
         (make (make-constructor (type-name rtd) rtd)))
     (lambda args
       (let ((res (make)))
@@ -18,7 +24,7 @@
            ((null? a) (if (null? p) res (error "not enough args" p)))
            ((null? p) (error "too many args" a))
            (else
-            (slot-set! rtd res (rtd-field-offset rtd (car p)) (car a))
+            (slot-set! rtd res (car p) (car a))
             (lp (cdr a) (cdr p)))))))))
 
 (define (rtd-predicate rtd)
@@ -35,13 +41,13 @@
 
 (define (rtd-field-offset rtd field)
   (let ((p (type-parent rtd)))
-    (or (and (type? p)
-             (rtd-field-offset p field))
-        (let ((i (field-index-of (type-slots rtd) field)))
+    (or (let ((i (field-index-of (type-slots rtd) field)))
           (and i
                (if (type? p)
                    (+ i (vector-length (rtd-all-field-names p)))
-                   i))))))
+                   i)))
+        (and (type? p)
+             (rtd-field-offset p field)))))
 
 (define (rtd-accessor rtd field)
   (make-getter (type-name rtd) rtd (rtd-field-offset rtd field)))

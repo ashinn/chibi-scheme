@@ -9,6 +9,7 @@
           (srfi 1)
           (srfi 9)
           (only (srfi 18) current-thread)
+          (srfi 35 internal)
           (srfi 38)
           (srfi 95)
           (srfi 98))
