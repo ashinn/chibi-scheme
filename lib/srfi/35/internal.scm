@@ -129,43 +129,19 @@
                        c ct)))))
 
 (define-syntax define-condition-type/constructor
-  (er-macro-transformer
-   (lambda (expr rename compare)
-     (let* ((name (list-ref expr 1))
-            (parent (list-ref expr 2))
-            (constructor (list-ref expr 3))
-            (predicate (list-ref expr 4))
-            (field-specs (drop expr 5))
-            (field-names (map first field-specs))
-            (field-accessors (map second field-specs)))
-       (define _begin (rename 'begin))
-       (define _define (rename 'define))
-       (define _make-condition-type (rename 'make-condition-type))
-       (define _compound-condition? (rename 'compound-condition?))
-       (define _condition-predicate (rename 'condition-predicate))
-       (define _condition-accessor (rename 'condition-accessor))
-       (define _rtd-constructor (rename 'rtd-constructor))
-       (define _rtd-accessor (rename 'rtd-accessor))
-       (define _and (rename 'and))
-       (define _if (rename 'if))
-       (define _ct (rename 'ct))
-       (define _x (rename 'x))
-       `(,_begin
-         (,_define ,_ct
-           (,_make-condition-type ',name
-                                  ,parent
-                                  ',field-names))
-         (,_define ,name ,_ct)
-         (,_define ,constructor (,_rtd-constructor ,_ct))
-         (,_define ,predicate (,_condition-predicate ,_ct))
-         ,@(map
-            (lambda (field-name field-accessor)
-              `(,_define ,field-accessor
-                 (,_condition-accessor
-                  ,_ct
-                  (,_rtd-accessor ,_ct ',field-name))))
-            field-names
-            field-accessors))))))
+  (syntax-rules ()
+    ((_ name parent constructor predicate
+        (field-name field-accessor) ...)
+     (begin
+       (define ct (make-condition-type 'name
+                                       parent
+                                       '(field-name ...)))
+       (define name ct)
+       (define constructor (rtd-constructor ct))
+       (define predicate (condition-predicate ct))
+       (define field-accessor
+         (condition-accessor ct
+                             (rtd-accessor ct 'field-name))) ...))))
 
 (define-syntax define-condition-type
   (syntax-rules ()
