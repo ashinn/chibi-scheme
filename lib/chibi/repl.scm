@@ -402,6 +402,11 @@
         ((= (length value) 1) (push-history-value! (car value)))
         (else (push-history-value! value))))
 
+(define-generic repl-print)
+
+(define-method (repl-print obj (out output-port?))
+  (write/ss obj out))
+
 (define (repl/eval rp expr-list)
   (let ((thread (current-thread))
         (out (repl-out rp)))
@@ -422,17 +427,17 @@
                           (null? expr))
                       (eval expr (repl-env rp))
                       expr))
-              (lambda res-list
+              (lambda res-values
                 (cond
-                 ((not (or (null? res-list)
-                           (equal? res-list (list (if #f #f)))))
-                  (push-history-value-maybe! res-list)
-                  (write/ss (car res-list) out)
+                 ((not (or (null? res-values)
+                           (equal? res-values (list undefined-value))))
+                  (push-history-value-maybe! res-values)
+                  (repl-print (car res-values) out)
                   (for-each
                    (lambda (res)
                      (write-char #\space out)
-                     (write/ss res out))
-                   (cdr res-list))
+                     (repl-print res out))
+                   (cdr res-values))
                   (newline out))))))
           expr-list))))))
 

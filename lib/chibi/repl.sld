@@ -1,8 +1,8 @@
 
 (define-library (chibi repl)
-  (export repl $0 $1 $2 $3 $4 $5 $6 $7 $8 $9)
+  (export repl repl-print $0 $1 $2 $3 $4 $5 $6 $7 $8 $9)
   (import (chibi) (only (meta) load-module module-name->file)
-          (chibi ast) (chibi modules) (chibi doc)
+          (chibi ast) (chibi modules) (chibi doc) (chibi generic)
           (chibi string) (chibi io) (chibi optional)
           (chibi process) (chibi term edit-line)
           (srfi 1)
