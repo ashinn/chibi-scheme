@@ -1,5 +1,5 @@
 ;; repl.scm - friendlier repl with line editing and signal handling
-;; Copyright (c) 2012-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012-2024 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> A user-friendly REPL with line editing and signal handling.  The
@@ -407,6 +407,11 @@
 (define-method (repl-print obj (out output-port?))
   (write/ss obj out))
 
+(define-generic repl-print-exception)
+
+(define-method (repl-print-exception obj (out output-port?))
+  (print-exception obj out))
+
 (define (repl/eval rp expr-list)
   (let ((thread (current-thread))
         (out (repl-out rp)))
@@ -416,7 +421,7 @@
      (lambda ()
        (protect (exn
                  (else
-                  (print-exception exn out)
+                  (repl-print-exception exn out)
                   (repl-advise-exception exn (current-error-port))))
          (for-each
           (lambda (expr)
