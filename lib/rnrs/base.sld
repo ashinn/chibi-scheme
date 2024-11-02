@@ -190,12 +190,16 @@
           vector-set!
           vector?
           zero?)
-  (import (rename (scheme base)
-                  (error r7rs:error))
+  (import (except (scheme base)
+                  define-syntax
+                  let-syntax
+                  letrec-syntax
+                  syntax-rules)
           (scheme cxr)
           (scheme inexact)
           (scheme complex)
           (rnrs conditions)
+          (only (srfi 1) every)
           (rename (srfi 141)
                   (euclidean-quotient div)
                   (euclidean-remainder mod)
@@ -203,8 +207,37 @@
                   (balanced-quotient div0)
                   (balanced-remainder mod0)
                   (balanced/ div0-and-mod0))
+          (rename (chibi syntax-case)
+                  (splicing-let-syntax let-syntax)
+                  (splicing-letrec-syntax letrec-syntax))
           (except (chibi ast) error)
           (chibi show))
+
+  (define-syntax syntax-rules
+    (lambda (x)
+      (syntax-case x ()
+        ((_ (lit ...) ((k . p) t) ...)
+         (every identifier? #'(lit ... k ...))
+         #'(lambda (x)
+             (syntax-case x (lit ...)
+               ((_ . p) #'t) ...))))))
+
+  (define-syntax identifier-syntax
+    (lambda (x)
+      (syntax-case x (set!)
+        ((_ e)
+         #'(lambda (x)
+             (syntax-case x ()
+               (id (identifier? #'id) #'e)
+               ((_ x (... ...)) #'(e x (... ...))))))
+        ((_ (id exp1) ((set! var val) exp2))
+         (and (identifier? #'id) (identifier? #'var))
+         #'(make-variable-transformer
+            (lambda (x)
+              (syntax-case x (set!)
+                ((set! var val) #'exp2)
+                ((id x (... ...)) #'(exp1 x (... ...)))
+                (id (identifier? #'id) #'exp1))))))))
 
   (define-syntax assert
     (syntax-rules ()
