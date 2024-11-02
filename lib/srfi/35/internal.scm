@@ -204,3 +204,46 @@
 (define-condition-type/constructor &error &serious
   make-error error?)
 
+;; (chibi repl) support
+(define-method (repl-print-exception (exn condition?) (out output-port?))
+  (define components (simple-conditions exn))
+  (define n-components (length components))
+  (display "CONDITION: " out)
+  (display n-components out)
+  (display " component" out)
+  (if (not (=  n-components 1)) (display "s" out))
+  (display "\n" out)
+  (for-each
+   (lambda (component idx)
+     (define component-type (record-rtd component))
+     (display " " out)
+     (display idx out)
+     (display ". " out)
+     (display (rtd-name component-type) out)
+     (display "\n" out)
+     (let loop ((as (reverse
+                     (condition-type-ancestors component-type)))
+                (idx 0))
+       (if (not (null? as))
+           (let ((a (car as)))
+             (let a-loop ((fields (vector->list (rtd-field-names a)))
+                          (idx idx))
+               (if (null? fields)
+                   (loop (cdr as) idx)
+                   (begin
+                     (display "    " out)
+                     (display (if (pair? (car fields))
+                                  (car (cdar fields))
+                                  (car fields))
+                              out)
+                     (if (not (eqv? a component-type))
+                         (begin
+                           (display " (" out)
+                           (display (rtd-name a) out)
+                           (display ")" out)))
+                     (display ": " out)
+                     (write (slot-ref component-type component idx) out)
+                     (display "\n" out)
+                     (a-loop (cdr fields) (+ idx 1)))))))))
+   components
+   (iota n-components 1)))
