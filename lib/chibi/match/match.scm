@@ -32,6 +32,11 @@
 
 ;;> If no patterns match an error is signalled.
 
+;;> Note there is no \scheme{else} clause.  \scheme{else} is sometimes
+;;> used descriptively for the last pattern, since an identifier used
+;;> only once matches anything, but it's preferred to use \scheme{_}
+;;> described below.
+
 ;;> Identifiers will match anything, and make the corresponding
 ;;> binding available in the body.
 
@@ -128,7 +133,7 @@
 ;;> are bound if the \scheme{or} operator matches, but the binding is
 ;;> only defined for identifiers from the subpattern which matched.
 
-;;> \example{(match 1 ((or) #t) (else #f))}
+;;> \example{(match 1 ((or) #t) (_ #f))}
 ;;> \example{(match 1 ((or x) x))}
 ;;> \example{(match 1 ((or x 2) x))}
 

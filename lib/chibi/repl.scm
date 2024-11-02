@@ -1,5 +1,5 @@
 ;; repl.scm - friendlier repl with line editing and signal handling
-;; Copyright (c) 2012-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2012-2024 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> A user-friendly REPL with line editing and signal handling.  The
@@ -296,6 +296,8 @@
          (pair? (exception-irritants exn)))
     (let ((name (car (exception-irritants exn))))
       (cond
+       ((and (identifier? name) (not (env-parent (current-environment))))
+        (display "Did you forget to import a language? e.g. (import (scheme base))\n" out))
        ((identifier? name)
         (display "Searching for modules exporting " out)
         (display name out)
@@ -400,6 +402,16 @@
         ((= (length value) 1) (push-history-value! (car value)))
         (else (push-history-value! value))))
 
+(define-generic repl-print)
+
+(define-method (repl-print obj (out output-port?))
+  (write/ss obj out))
+
+(define-generic repl-print-exception)
+
+(define-method (repl-print-exception obj (out output-port?))
+  (print-exception obj out))
+
 (define (repl/eval rp expr-list)
   (let ((thread (current-thread))
         (out (repl-out rp)))
@@ -409,7 +421,7 @@
      (lambda ()
        (protect (exn
                  (else
-                  (print-exception exn out)
+                  (repl-print-exception exn out)
                   (repl-advise-exception exn (current-error-port))))
          (for-each
           (lambda (expr)
@@ -420,17 +432,17 @@
                           (null? expr))
                       (eval expr (repl-env rp))
                       expr))
-              (lambda res-list
+              (lambda res-values
                 (cond
-                 ((not (or (null? res-list)
-                           (equal? res-list (list (if #f #f)))))
-                  (push-history-value-maybe! res-list)
-                  (write/ss (car res-list) out)
+                 ((not (or (null? res-values)
+                           (equal? res-values (list undefined-value))))
+                  (push-history-value-maybe! res-values)
+                  (repl-print (car res-values) out)
                   (for-each
                    (lambda (res)
                      (write-char #\space out)
-                     (write/ss res out))
-                   (cdr res-list))
+                     (repl-print res out))
+                   (cdr res-values))
                   (newline out))))))
           expr-list))))))
 
