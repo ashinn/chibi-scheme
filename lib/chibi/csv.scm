@@ -84,6 +84,8 @@
 (define default-tsv-grammar
   (csv-grammar '((separator-chars #\tab) (quote-char . #f))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;> \section{CSV Parsers}
 
 ;;> Parsers are low-level utilities to perform operations on records a
@@ -375,3 +377,76 @@
     (opt-lambda ((in (current-input-port)))
       (cons '*TOP*
             (csv->list (csv-read->sxml row-name column-names parser) in)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;> \section{CSV Writers}
+
+(define (write->string obj)
+  (let ((out (open-output-string)))
+    (write obj out)
+    (get-output-string out)))
+
+(define (csv-grammar-char-needs-quoting? grammar ch)
+  (or (eqv? ch (csv-grammar-quote-char grammar))
+      (eqv? ch (csv-grammar-escape-char grammar))
+      (memv ch (csv-grammar-separator-chars grammar))
+      (eqv? ch (csv-grammar-record-separator grammar))
+      (memv ch '(#\newline #\return))))
+
+(define (csv-write-quoted obj out grammar)
+  (let ((in (open-input-string (if (string? obj) obj (write->string obj)))))
+    (write-char (csv-grammar-quote-char grammar) out)
+    (let lp ()
+      (let ((ch (read-char in)))
+        (cond
+         ((eof-object? ch))
+         ((or (eqv? ch (csv-grammar-quote-char grammar))
+              (eqv? ch (csv-grammar-escape-char grammar)))
+          (cond
+           ((and (csv-grammar-quote-doubling-escapes? grammar)
+                 (eqv? ch (csv-grammar-quote-char grammar)))
+            (write-char ch out))
+           ((csv-grammar-escape-char grammar)
+            => (lambda (esc) (write-char esc out)))
+           (else (error "no quote defined for" ch grammar)))
+          (write-char ch out)
+          (lp))
+         (else
+          (write-char ch out)
+          (lp)))))
+    (write-char (csv-grammar-quote-char grammar) out)))
+
+(define csv-writer
+  (opt-lambda ((grammar default-csv-grammar))
+    (opt-lambda (row (out (current-output-port)))
+      (let lp ((ls row) (first? #t))
+        (when (pair? ls)
+          (unless first?
+            (write-char (car (csv-grammar-separator-chars grammar)) out))
+          (if (or (and (csv-grammar-quote-non-numeric? grammar)
+                       (not (number? (car ls))))
+                  (and (string? (car ls))
+                       (string-any
+                        (lambda (ch) (csv-grammar-char-needs-quoting? grammar ch))
+                        (car ls)))
+                  (and (not (string? (car ls)))
+                       (not (number? (car ls)))
+                       (not (symbol? (car ls)))))
+              (csv-write-quoted (car ls) out grammar)
+              (display (car ls) out))
+          (lp (cdr ls) #f)))
+      (write-string
+       (case (csv-grammar-record-separator grammar)
+         ((crlf) "\r\n")
+         ((lf lax) "\n")
+         ((cr) "\r")
+         (else (string (csv-grammar-record-separator grammar))))
+       out))))
+
+(define csv-write
+  (opt-lambda ((writer (csv-writer)))
+    (opt-lambda (rows (out (current-output-port)))
+      (for-each
+       (lambda (row) (writer row out))
+       rows))))

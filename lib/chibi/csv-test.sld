@@ -9,6 +9,11 @@
     (define string->csv
       (opt-lambda (str (reader (csv-read->list)))
         (reader (open-input-string str))))
+    (define csv->string
+      (opt-lambda (row (writer (csv-writer)))
+        (let ((out (open-output-string)))
+          (writer row out)
+          (get-output-string out))))
     (define (run-tests)
       (test-begin "(chibi csv)")
       (test-assert (eof-object? (string->csv "")))
@@ -73,4 +78,18 @@ Paris,48°51′24″N,2°21′03″E"))
                      (longitude "2°21′03″E")))
            ((csv->sxml 'city '(name latitude longitude))
             (open-input-string city-csv))))
+      (test "1997,Ford,E350\n"
+          (csv->string '("1997" "Ford" "E350")))
+      (test "1997,Ford,E350,\"Super, luxurious truck\"\n"
+          (csv->string '("1997" "Ford" "E350" "Super, luxurious truck")))
+      (test "1997,Ford,E350,\"Super, \"\"luxurious\"\" truck\"\n"
+          (csv->string '("1997" "Ford" "E350" "Super, \"luxurious\" truck")))
+      (test "1997,Ford,E350,\"Go get one now\nthey are going fast\"\n"
+          (csv->string
+           '("1997" "Ford" "E350" "Go get one now\nthey are going fast")))
+      (test "1997,Ford,E350\n"
+          (csv->string '(1997 "Ford" E350)))
+      (test "1997,\"Ford\",\"E350\"\n"
+          (csv->string '(1997 "Ford" E350)
+                       (csv-writer (csv-grammar '((quote-non-numeric? . #t))))))
       (test-end))))
