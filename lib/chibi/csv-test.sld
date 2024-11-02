@@ -34,6 +34,10 @@ they are going fast\""))
            "# this is a comment\n1997,Ford,E350"
            (csv-read->list
             (csv-parser (csv-grammar '((comment-chars #\#)))))))
+      (let ((parser (csv-parser (csv-grammar '((quote-non-numeric? . #t))))))
+        (test-error (string->csv "1997,\"Ford\",E350" (csv-read->list parser)))
+        (test '(1997 "Ford" "E350")
+            (string->csv "1997,\"Ford\",\"E350\"" (csv-read->list parser))))
       (test '("1997" "Fo\"rd" "E3\"50")
           (string->csv "1997\tFo\"rd\tE3\"50"
                             (csv-read->list (csv-parser default-tsv-grammar))))

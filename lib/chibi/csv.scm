@@ -7,18 +7,19 @@
 ;;> requiring a grammar to specify all of the different options.
 
 (define-record-type Csv-Grammar
-  (make-csv-grammar separator-chars quote-char escape-char record-separator comment-chars)
+  (make-csv-grammar separator-chars quote-char quote-doubling-escapes? escape-char record-separator comment-chars quote-non-numeric?)
   csv-grammar?
   (separator-chars csv-grammar-separator-chars csv-grammar-separator-chars-set!)
   (quote-char csv-grammar-quote-char csv-grammar-quote-char-set!)
+  (quote-doubling-escapes? csv-grammar-quote-doubling-escapes? csv-grammar-quote-doubling-escapes?-set!)
   (escape-char csv-grammar-escape-char csv-grammar-escape-char-set!)
   (record-separator csv-grammar-record-separator csv-grammar-record-separator-set!)
-  (comment-chars csv-grammar-comment-chars csv-grammar-comment-chars-set!))
+  (comment-chars csv-grammar-comment-chars csv-grammar-comment-chars-set!)
+  (quote-non-numeric? csv-grammar-quote-non-numeric? csv-grammar-quote-non-numeric?-set!))
 
-;; TODO: Consider some minimal low-level parsing options.  In general
-;; this is intended to be performed by the parser, but if we can skip
-;; intermediate string generation (e.g. parsing numbers directly) it
-;; can save a considerable amount of garbage when parsing large files.
+;; TODO: Other options to consider:
+;; - strip-leading/trailing-whitespace?
+;; - newlines-in-quotes?
 
 ;;> Creates a new CSV grammar from the given spec, an alist of symbols
 ;;> to values.  The following options are supported:
@@ -26,7 +27,8 @@
 ;;> \itemlist[
 ;;> \item{\scheme{'separator-chars} - A non-empty list of characters used to delimit fields, by default \scheme{'(#\\,)} (comma-separated).}
 ;;> \item{\scheme{'quote-char} - A single character used to quote fields containing special characters, or \scheme{#f} to disable quoting, by default \scheme{#\\"} (a double-quote).}
-;;> \item{\scheme{'escape-char} - A single character used to escape characters within quoted fields, or \scheme{#f} to disable escapes, by default \scheme{#\\"} (a double-quote).  If this is the same character as the \scheme{quote-char}, then the quote char can be doubled to escape, but no other characters can be escaped.}
+;;> \item{\scheme{'quote-doubling-escapes?} - If true, two successive \scheme{quote-char}s within quotes are treated as a single escaped \scheme{quote-char} (default true).}
+;;> \item{\scheme{'escape-char} - A single character used to escape characters within quoted fields, or \scheme{#f} to disable escapes, by default \scheme{#f} (no explicit escape, use quote doubling).}
 ;;> \item{\scheme{'record-separator} - A single character used to delimit the record (row), or one of the symbols \scheme{'cr}, \scheme{'crlf}, \scheme{'lf} or \scheme{'lax}.  These correspond to sequences of carriage return and line feed, or in the case of \scheme{'lax} any of the other three sequences.  Defaults to \scheme{'lax}.}
 ;;> \item{\scheme{'comment-chars} - A list of characters which if found at the start of a record indicate it is a comment, discarding all characters through to the next record-separator. Defaults to the empty list (no comments).}
 ;;> ]
@@ -36,11 +38,10 @@
 ;;> \example{
 ;;> (csv-grammar
 ;;>   '((separator-chars #\\:)
-;;>     (quote-char . #f)
-;;>     (escape-char . #f)))
+;;>     (quote-char . #f)))
 ;;> }
 (define (csv-grammar spec)
-  (let ((grammar (make-csv-grammar '(#\,) #\" #\" 'lax '())))
+  (let ((grammar (make-csv-grammar '(#\,) #\" #t #f 'lax '() #f)))
     (for-each
      (lambda (x)
        (case (car x)
@@ -48,6 +49,8 @@
           (csv-grammar-separator-chars-set! grammar (cdr x)))
          ((quote-char)
           (csv-grammar-quote-char-set! grammar (cdr x)))
+         ((quote-doubling-escapes?)
+          (csv-grammar-quote-doubling-escapes?-set! grammar (cdr x)))
          ((escape-char)
           (csv-grammar-escape-char-set! grammar (cdr x)))
          ((record-separator newline-type)
@@ -63,6 +66,8 @@
             (csv-grammar-escape-char-set! grammar (cdr x))))
          ((comment-chars)
           (csv-grammar-comment-chars-set! grammar (cdr x)))
+         ((quote-non-numeric?)
+          (csv-grammar-quote-non-numeric?-set! grammar (cdr x)))
          (else
           (error "unknown csv-grammar spec" x))))
      spec)
@@ -77,7 +82,7 @@
 ;;> The default TSV grammar for convenience, splitting fields only on
 ;;> tabs, with no quoting or escaping.
 (define default-tsv-grammar
-  (csv-grammar '((separator-chars #\tab) (quote-char . #f) (escape-char . #f))))
+  (csv-grammar '((separator-chars #\tab) (quote-char . #f))))
 
 ;;> \section{CSV Parsers}
 
@@ -114,30 +119,40 @@
             (lp))))
       (let lp ((acc knil)
                (index 0)
+               (quoted? #f)
                (out (open-output-string)))
-        (define (finish-row)
+        (define (get-field)
           (let ((field (get-output-string out)))
+            (cond
+             ((and (zero? index) (equal? field "")) field)
+             ((and (csv-grammar-quote-non-numeric? grammar) (not quoted?))
+              (or (string->number field)
+                  (error "unquoted field is not numeric" field)))
+             (else field))))
+        (define (finish-row)
+          (let ((field (get-field)))
             (if (and (zero? index) (equal? field ""))
                 ;; empty row, read again
-                (lp acc index out)
+                (lp acc index #f out)
                 (kons acc index field))))
         (let ((ch (read-char in)))
           (cond
            ((eof-object? ch)
-            (let ((field (get-output-string out)))
+            (let ((field (get-field)))
               (if (and (zero? index) (equal? field ""))
                   ;; no data
                   ch
                   (kons acc index field))))
            ((memv ch (csv-grammar-separator-chars grammar))
-            (lp (kons acc index (get-output-string out))
+            (lp (kons acc index (get-field))
                 (+ index 1)
+                #f
                 (open-output-string)))
            ((eqv? ch (csv-grammar-quote-char grammar))
             ;; TODO: Consider a strict mode to enforce no text
             ;; before/after the quoted text.
             (csv-read-quoted in out grammar)
-            (lp acc index out))
+            (lp acc index #t out))
            ((eqv? ch (csv-grammar-record-separator grammar))
             (finish-row))
            ((and (eqv? ch #\return)
@@ -150,13 +165,13 @@
               (finish-row))
              (else
               (write-char ch out)
-              (lp acc (+ index 1) out))))
+              (lp acc (+ index 1) quoted? out))))
            ((and (eqv? ch #\newline)
                  (eq? (csv-grammar-record-separator grammar) 'lax))
             (finish-row))
            (else
             (write-char ch out)
-            (lp acc index out))))))))
+            (lp acc index quoted? out))))))))
 
 (define (csv-skip-line in grammar)
   (let lp ()
@@ -181,7 +196,7 @@
        ((eof-object? ch)
         (error "unterminated csv quote" (get-output-string out)))
        ((eqv? ch (csv-grammar-quote-char grammar))
-        (when (and (eqv? ch (csv-grammar-escape-char grammar))
+        (when (and (csv-grammar-quote-doubling-escapes? grammar)
                    (eqv? ch (peek-char in)))
           (write-char (read-char in) out)
           (lp)))
