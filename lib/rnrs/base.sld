@@ -195,6 +195,7 @@
           (scheme cxr)
           (scheme inexact)
           (scheme complex)
+          (rnrs conditions)
           (rename (srfi 141)
                   (euclidean-quotient div)
                   (euclidean-remainder mod)
@@ -211,15 +212,17 @@
          (if (not expr)
              (assertion-violation #f "assertion failed" (quote expr))))))
 
-  ;; for now, errors and assertion violations are the same until we
-  ;; work out what to do about SRFI 35/(rnrs conditions) support
+  (define (%error make-base who message irritants)
+    (assert (or (not who) (symbol? who) (string? who)))
+    (assert (string? message))
+    (raise (condition (make-base)
+                      (if who (make-who-condition who) (condition))
+                      (make-message-condition message)
+                      (make-irritants-condition irritants))))
   (define (error who message . irritants)
-    (define full-message
-      (if who
-          (show #f (written who) ": " message)
-          message))
-    (apply r7rs:error full-message irritants))
-  (define assertion-violation error)
+    (%error make-error who message irritants))
+  (define (assertion-violation who message . irritants)
+    (%error make-assertion-violation who message irritants))
 
   (define (real-valued? n) (zero? (imag-part n)))
   (define (rational-valued? n)
