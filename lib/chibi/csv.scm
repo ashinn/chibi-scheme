@@ -231,30 +231,30 @@
 (define csv-num-rows
   (opt-lambda ((grammar default-csv-grammar)
                (in (current-input-port)))
-    (let lp ((num-rows 0))
+    (let lp ((num-rows 0) (start? #t))
       (let ((ch (read-char in)))
         (cond
-         ((eof-object? ch) num-rows)
+         ((eof-object? ch) (if start? num-rows (+ num-rows 1)))
          ((eqv? ch (csv-grammar-quote-char grammar))
           (csv-skip-quoted in grammar)
-          (lp num-rows))
+          (lp num-rows #f))
          ((eqv? ch (csv-grammar-record-separator grammar))
-          (lp (+ num-rows 1)))
+          (lp (+ num-rows 1) #f))
          ((and (eqv? ch #\return)
                (memq (csv-grammar-record-separator grammar) '(crlf lax)))
           (cond
            ((eqv? (peek-char in) #\newline)
             (read-char in)
-            (lp (+ num-rows 1)))
+            (lp (+ num-rows 1) #t))
            ((eq? (csv-grammar-record-separator grammar) 'lax)
-            (lp (+ num-rows 1)))
+            (lp (+ num-rows 1) #t))
            (else
-            (lp num-rows))))
+            (lp num-rows #f))))
          ((and (eqv? ch #\newline)
                (eq? (csv-grammar-record-separator grammar) 'lax))
-          (lp (+ num-rows 1)))
+          (lp (+ num-rows 1) #t))
          (else
-          (lp num-rows)))))))
+          (lp num-rows #f)))))))
 
 ;;> \section{CSV Readers}
 
