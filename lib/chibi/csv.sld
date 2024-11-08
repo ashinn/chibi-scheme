@@ -4,7 +4,8 @@
   (export csv-grammar csv-parser csv-grammar?
           default-csv-grammar default-tsv-grammar
           csv-read->list csv-read->vector  csv-read->fixed-vector
-          csv-read->sxml
+          csv-read->sxml csv-num-rows
           csv-fold csv-map csv->list csv-for-each csv->sxml
-          csv-writer csv-write)
+          csv-writer csv-write
+          csv-skip-line)
   (include "csv.scm"))

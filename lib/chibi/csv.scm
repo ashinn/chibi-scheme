@@ -210,6 +210,52 @@
         (write-char ch out)
         (lp))))))
 
+(define (csv-skip-quoted in grammar)
+  (let lp ()
+    (let ((ch (read-char in)))
+      (cond
+       ((eof-object? ch)
+        (error "unterminated csv quote"))
+       ((eqv? ch (csv-grammar-quote-char grammar))
+        (when (and (csv-grammar-quote-doubling-escapes? grammar)
+                   (eqv? ch (peek-char in)))
+          (read-char in)
+          (lp)))
+       ((eqv? ch (csv-grammar-escape-char grammar))
+        (read-char in)
+        (lp))
+       (else
+        (lp))))))
+
+;;> Returns the number of rows in the input.
+(define csv-num-rows
+  (opt-lambda ((grammar default-csv-grammar)
+               (in (current-input-port)))
+    (let lp ((num-rows 0))
+      (let ((ch (read-char in)))
+        (cond
+         ((eof-object? ch) num-rows)
+         ((eqv? ch (csv-grammar-quote-char grammar))
+          (csv-skip-quoted in grammar)
+          (lp num-rows))
+         ((eqv? ch (csv-grammar-record-separator grammar))
+          (lp (+ num-rows 1)))
+         ((and (eqv? ch #\return)
+               (memq (csv-grammar-record-separator grammar) '(crlf lax)))
+          (cond
+           ((eqv? (peek-char in) #\newline)
+            (read-char in)
+            (lp (+ num-rows 1)))
+           ((eq? (csv-grammar-record-separator grammar) 'lax)
+            (lp (+ num-rows 1)))
+           (else
+            (lp num-rows))))
+         ((and (eqv? ch #\newline)
+               (eq? (csv-grammar-record-separator grammar) 'lax))
+          (lp (+ num-rows 1)))
+         (else
+          (lp num-rows)))))))
+
 ;;> \section{CSV Readers}
 
 ;;> A CSV reader reads a single record, returning some representation

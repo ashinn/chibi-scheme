@@ -77,7 +77,10 @@ Paris,48°51′24″N,2°21′03″E"))
                      (latitude "48°51′24″N")
                      (longitude "2°21′03″E")))
            ((csv->sxml 'city '(name latitude longitude))
-            (open-input-string city-csv))))
+            (open-input-string city-csv)))
+       (test 3 (csv-num-rows default-csv-grammar (open-input-string city-csv)))
+       (test 0 (csv-num-rows default-csv-grammar (open-input-string "")))
+       (test 1 (csv-num-rows default-csv-grammar (open-input-string "x"))))
       (test "1997,Ford,E350\n"
           (csv->string '("1997" "Ford" "E350")))
       (test "1997,Ford,E350,\"Super, luxurious truck\"\n"
