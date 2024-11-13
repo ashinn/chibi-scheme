@@ -187,12 +187,22 @@
             (lp (cdr ls) (+ i v-len)))))))
 
 (define (vector-map proc vec . lov)
-  (if (null? lov)
+  (cond
+   ((null? lov)
+    (let lp ((i (vector-length vec)) (res '()))
+      (if (zero? i)
+          (list->vector res)
+          (lp (- i 1) (cons (proc (vector-ref vec (- i 1))) res)))))
+   ((null? (cdr lov))
+    (let ((vec2 (car lov)))
       (let lp ((i (vector-length vec)) (res '()))
         (if (zero? i)
             (list->vector res)
-            (lp (- i 1) (cons (proc (vector-ref vec (- i 1))) res))))
-      (list->vector (apply map proc (map vector->list (cons vec lov))))))
+            (lp (- i 1)
+                (cons (proc (vector-ref vec (- i 1)) (vector-ref vec2 (- i 1)))
+                      res))))))
+   (else
+    (list->vector (apply map proc (map vector->list (cons vec lov)))))))
 
 (define (vector-for-each proc vec . lov)
   (if (null? lov)
