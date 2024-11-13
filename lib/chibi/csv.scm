@@ -305,7 +305,7 @@
                            0
                            in)))
           (if (zero? len)
-              eof-object
+              (eof-object)
               res))))))
 
 ;;> Returns an SXML representation of the record, as a row with
