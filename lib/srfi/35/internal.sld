@@ -6,7 +6,9 @@
           (scheme write)
           (only (chibi)
                 slot-ref
-                is-a?)
+                is-a?
+                register-non-serious-exception-predicate!
+                register-serious-exception-predicate!)
           (only (chibi repl) repl-print-exception)
           (only (chibi generic) define-method)
           ;; don’t let people go messing with a compound condition

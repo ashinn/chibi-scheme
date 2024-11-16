@@ -204,6 +204,9 @@
 (define-condition-type/constructor &error &serious
   make-error error?)
 
+(register-non-serious-exception-predicate! condition?)
+(register-serious-exception-predicate! serious-condition?)
+
 ;; (chibi repl) support
 (define-method (repl-print-exception (exn condition?) (out output-port?))
   (define components (simple-conditions exn))
