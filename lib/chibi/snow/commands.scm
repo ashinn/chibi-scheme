@@ -794,10 +794,18 @@
     (http-post uri params))))
 
 (define (remote-command cfg name path params)
-  (let ((uri (remote-uri cfg name path)))
-    (sxml-display-as-text
-     (read (snow-post cfg uri (cons '(fmt . "sexp") params))))
-    (newline)))
+  (let* ((uri (remote-uri cfg name path))
+         (response
+          (port->string (snow-post cfg uri (cons '(fmt . "sexp") params)))))
+    (guard (exn (else
+                 (display "ERROR: couldn't display sxml response: ")
+                 (write response)
+                 (newline)))
+      (let ((sxml (call-with-input-string response read)))
+        (if (null? sxml)
+            (display "WARN: () response from server")
+            (sxml-display-as-text sxml))
+        (newline)))))
 
 (define (command/reg-key cfg spec)
   (let* ((keys (call-with-input-file
