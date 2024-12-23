@@ -28,7 +28,7 @@ standard modules.  You can choose whichever layer suits your needs
 best and customize the rest.  Adding your own primitives or wrappers
 around existing C libraries is easy with the C FFI.
 
-Chibi is known to build and run on 32 and 64-bit Linux, FreeBSD,
+Chibi is known to build and run on 32 and 64-bit Linux, OpenBSD, FreeBSD,
 DragonFly, OS X, iOS, Windows (under Cygwin) and Plan9.
 
 \section{Installation}
