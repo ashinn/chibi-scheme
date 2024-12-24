@@ -27,7 +27,7 @@ see the manual for instructions on compiling with fewer features or
 requesting a smaller language on startup.
 
 Chibi-Scheme is known to work on **32** and **64-bit** Linux, FreeBSD,
-NetBSD, OpenBSD and OS X, Plan 9, Windows, iOS, Android,
+NetBSD, OpenBSD, DragonFlyBSD, OS X, Plan 9, Windows, iOS, Android,
 ARM and [Emscripten](https://kripken.github.io/emscripten-site).  Basic
 support for native Windows desktop also exists. See README-win32.md
 for details and build instructions.
