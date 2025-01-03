@@ -3019,7 +3019,8 @@ sexp sexp_read_number (sexp ctx, sexp in, int base, int exactp) {
   } else if (c=='/') {
     sexp_gc_preserve2(ctx, res, den);
     den = sexp_read_number(ctx, in, base, exactp);
-    if (! (sexp_fixnump(den) || sexp_bignump(den) || sexp_complexp(den)))
+    if (! (sexp_fixnump(den) || sexp_bignump(den) ||
+           (sexp_complexp(den) && sexp_exactp(sexp_complex_real(den)) && sexp_exactp(sexp_complex_imag(den)))))
       res = (sexp_exceptionp(den)
              ? den : sexp_read_error(ctx, "invalid rational syntax", den, in));
     else {
