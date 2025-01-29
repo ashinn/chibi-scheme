@@ -912,12 +912,12 @@ static sexp sexp_restore_stack (sexp ctx, sexp saved) {
   return SEXP_VOID;
 }
 
-#define _ARG1 stack[top-1]
-#define _ARG2 stack[top-2]
-#define _ARG3 stack[top-3]
-#define _ARG4 stack[top-4]
-#define _ARG5 stack[top-5]
-#define _ARG6 stack[top-6]
+#define _ARG1 (stack[top-1])
+#define _ARG2 (stack[top-2])
+#define _ARG3 (stack[top-3])
+#define _ARG4 (stack[top-4])
+#define _ARG5 (stack[top-5])
+#define _ARG6 (stack[top-6])
 #define _PUSH(x) (stack[top++]=(x))
 #define _POP() (stack[--top])
 
@@ -1896,8 +1896,8 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       if (tmp2 == SEXP_ZERO)
         sexp_raise("divide by zero", SEXP_NULL);
-      _ARG1 = sexp_fx_div(tmp1, tmp2);
-      if ((sexp_sint_t)tmp1 < 0 && (sexp_sint_t)tmp2 < 0 && (sexp_sint_t)_ARG1 < 0) {
+      tmp = _ARG1 = sexp_fx_div(tmp1, tmp2);
+      if ((sexp_sint_t)tmp1 < 0 && (sexp_sint_t)tmp2 < 0 && (sexp_sint_t)tmp < 0) {
         _ARG1 = sexp_quotient(ctx, tmp1=sexp_fixnum_to_bignum(ctx, tmp1), tmp2);
       }
     }
