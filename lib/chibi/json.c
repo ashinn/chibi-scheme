@@ -65,7 +65,7 @@ sexp json_read_number (sexp ctx, sexp self, sexp in) {
     res *= pow(10.0, scale_sign * scale);
   }
   if (ch != EOF) sexp_push_char(ctx, ch, in);
-  return (inexactp || fabs(res) > SEXP_MAX_FIXNUM) ?
+  return (inexactp || fabs(res) > (double)SEXP_MAX_FIXNUM) ?
     sexp_make_flonum(ctx, sign * res) :
     sexp_make_fixnum(sign * res);  /* always return inexact? */
 }

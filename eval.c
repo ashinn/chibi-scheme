@@ -1947,8 +1947,8 @@ sexp sexp_inexact_to_exact (sexp ctx, sexp self, sexp_sint_t n, sexp z) {
       res = sexp_xtype_exception(ctx, self, "exact: not an integer", z);
 #endif
 #if SEXP_USE_BIGNUMS
-    } else if ((sexp_flonum_value(z) > SEXP_MAX_FIXNUM)
-               || sexp_flonum_value(z) < SEXP_MIN_FIXNUM) {
+    } else if ((sexp_flonum_value(z) > (double)SEXP_MAX_FIXNUM)
+               || sexp_flonum_value(z) < (double)SEXP_MIN_FIXNUM) {
       res = sexp_double_to_bignum(ctx, sexp_flonum_value(z));
 #endif
     } else {

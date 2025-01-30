@@ -1079,6 +1079,7 @@ SEXP_API sexp sexp_make_unsigned_integer(sexp ctx, sexp_luint_t x);
 #define sexp_negate_flonum(x) sexp_flonum_value(x) = -(sexp_flonum_value(x))
 #endif
 
+/* TODO: Doesn't support x == SEXP_MIN_FIXNUM. */
 #define sexp_negate(x)                                  \
   if (sexp_flonump(x))                                  \
     sexp_negate_flonum(x);                              \

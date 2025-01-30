@@ -1869,7 +1869,12 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
       if (sexp_flonum_value(_ARG1) == trunc(sexp_flonum_value(_ARG1)))
         _ARG1 = sexp_make_fixnum(sexp_flonum_value(_ARG1));
 #else
-      _ARG1 = sexp_fx_div(tmp1, tmp2);
+      if (tmp1 == sexp_make_fixnum(SEXP_MIN_FIXNUM) && tmp2 == SEXP_NEG_ONE) {
+        _ARG1 = sexp_fixnum_to_bignum(ctx, tmp1);
+        sexp_negate_exact(_ARG1);
+      } else {
+        _ARG1 = sexp_fx_div(tmp1, tmp2);
+      }
 #endif
 #endif
     }
@@ -1896,9 +1901,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     if (sexp_fixnump(tmp1) && sexp_fixnump(tmp2)) {
       if (tmp2 == SEXP_ZERO)
         sexp_raise("divide by zero", SEXP_NULL);
-      tmp = _ARG1 = sexp_fx_div(tmp1, tmp2);
-      if ((sexp_sint_t)tmp1 < 0 && (sexp_sint_t)tmp2 < 0 && (sexp_sint_t)tmp < 0) {
-        _ARG1 = sexp_quotient(ctx, tmp1=sexp_fixnum_to_bignum(ctx, tmp1), tmp2);
+      if (tmp1 == sexp_make_fixnum(SEXP_MIN_FIXNUM) && tmp2 == SEXP_NEG_ONE) {
+        _ARG1 = sexp_fixnum_to_bignum(ctx, tmp1);
+        sexp_negate_exact(_ARG1);
+      } else {
+        _ARG1 = sexp_fx_div(tmp1, tmp2);
       }
     }
 #if SEXP_USE_BIGNUMS
