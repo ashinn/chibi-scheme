@@ -171,7 +171,8 @@ double sexp_compute_least_double(double f) {
 (define-c double (flgamma "tgamma") (double))
 (cond-expand
   (windows
-   (c-include-verbatim "lgamma_r.c")))
+   (c-include-verbatim "lgamma_r.c"))
+  (else))
 (define-c double lgamma_r (double (result int)))
 
 (define-c double (flfirst-bessel "jn") (int double))
