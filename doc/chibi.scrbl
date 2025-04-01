@@ -435,7 +435,7 @@ temporary values we may generate, which is what the
 \cmacro{sexp_gc_var2}, \cmacro{sexp_gc_preserve2} and
 \cmacro{sexp_gc_release2} macros do (there are similar macros for
 values 1-6).  Precise GCs prevent a class of memory leaks (and
-potential attackes based thereon), but if you prefer convenience then
+potential attacks based thereon), but if you prefer convenience then
 Chibi can be compiled with a conservative GC and you can ignore these.
 
 The interesting part is then the calls to \cfun{sexp_load},
