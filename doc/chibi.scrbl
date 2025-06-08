@@ -1444,6 +1444,26 @@ loading (since it loads many libraries) - if you have any difficulties
 with image files on your platform you can run
 \command{snow-chibi --noimage} to disable this feature.
 
+\subsection{Snow Configuration}
+
+Snow is configured in the file $HOME/.snow/config.scm, requiring at the
+bare minimum an empty alist:
+\schemeblock{
+()
+;; (()) would also work
+}
+
+Note that the empty list is \emph{not} quoted! This file is not evaluated,
+but is simply read as an alist of configurations. A more common example,
+for use with packaging your own code, may look like this:
+
+\schemeblock{
+((authors "Alysssa P. Hacker <aphacker@mit.edu>")
+ (maintainers "Alyssa P. Hacker <aphacker@mit.edu>, Eva Luator <eluator@mit.edu")
+ (license agpl)) ;; or gpl mit bsd etc.
+}
+
+
 \subsubsection{Querying Packages and Status}
 
 By default \scheme{snow-chibi} looks for packages in the public
