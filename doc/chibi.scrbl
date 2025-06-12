@@ -1446,17 +1446,11 @@ with image files on your platform you can run
 
 \subsection{Snow Configuration}
 
-Snow is configured in the file $HOME/.snow/config.scm, requiring at the
-bare minimum an empty alist:
-\schemeblock{
-()
-;; (()) would also work
-}
-
-Note that the empty list is \emph{not} quoted! This file is not evaluated,
-but is simply read as an alist of configurations. A more common example,
-for use with packaging your own code, may look like this:
-
+Snow is configured in the file $HOME/.snow/config.scm. A common example,
+for use with packaging your own code, may look like the one below:
+(Note that the empty list is \emph{not} quoted! This file is not evaluated,
+but is simply read as an alist of configurations. See
+https://snow-fort.org/doc/author/ for more details.)
 \schemeblock{
 ((authors "Alysssa P. Hacker <aphacker@mit.edu>")
  (maintainers "Alyssa P. Hacker <aphacker@mit.edu>, Eva Luator <eluator@mit.edu")
