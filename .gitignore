@@ -84,3 +84,6 @@ js/chibi.*
 
 build-lib/chibi/char-set/derived.scm
 build-lib/chibi/char-set/width.scm
+
+# vim swapfiles
+*.swp
