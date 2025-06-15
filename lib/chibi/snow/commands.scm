@@ -24,10 +24,10 @@
                    (else
                     (warn msg)
                     #f))))))
+      (or (equal? (car spec) 'generic)
       (and confirm?
-           (or (equal? (car spec) 'generic)
-               (yes-or-no? cfg "Implementation " (car spec) " does not "
-                " seem to be available, install anyway?")))))
+           (yes-or-no? cfg "Implementation " (car spec) " does not "
+            " seem to be available, install anyway?")))))
 
 (define (conf-selected-implementations cfg)
   (let ((requested (conf-get-list cfg 'implementations '(chibi))))
