@@ -497,7 +497,6 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR) $(DESTDIR)$(BINMODDIR)
 	-$(RM) $(DESTDIR)$(MANDIR)/chibi-scheme.1 $(DESTDIR)$(MANDIR)/chibi-ffi.1 $(DESTDIR)$(MANDIR)/chibi-doc.1
 	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
-	-$(RM) /etc/bash_completion.d/snow-chibi
 
 dist: distclean
 	$(RM) chibi-scheme-$(CHIBI_VERSION).tgz
