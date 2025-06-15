@@ -1372,9 +1372,10 @@
                                    char-whitespace?)))))
        (list (or dir "/usr/local/share/cyclone/"))))
     ((generic)
-     (list (make-path (string-append (or (conf-get cfg 'install-prefix)
-                                         "/usr/local")
-                                     "/lib/snow"))))
+     (list (make-path (or (conf-get cfg 'install-prefix)
+                          (cond-expand (windows (get-environment-variable "LOCALAPPDATA"))
+                                       (else "/usr/local"))
+                          "/lib/snow"))))
     ((gauche)
      (list
       (let ((dir (string-trim

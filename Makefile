@@ -415,12 +415,7 @@ install-base: all
 	$(INSTALL) -m0644 doc/chibi-doc.1 $(DESTDIR)$(MANDIR)/
 	-if type $(LDCONFIG) >/dev/null 2>/dev/null; then $(LDCONFIG) >/dev/null 2>/dev/null; fi
 
-install-bash-completion:
-	if [ -d "/etc/bash_completion.d" ]; then \
-			cp tools/snow-chibi-completion.bash /etc/bash_completion.d/snow-chibi; \
-		fi
-
-install: install-base install-bash-completion
+install: install-base
 ifneq "$(IMAGE_FILES)" ""
 	echo "Generating images"
 	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(EXE) -mchibi.repl -d $(MODDIR)/chibi.img
