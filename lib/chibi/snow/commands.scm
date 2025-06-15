@@ -25,8 +25,9 @@
                     (warn msg)
                     #f))))))
       (and confirm?
-           (yes-or-no? cfg "Implementation " (car spec) " does not "
-                       " seem to be available, install anyway?"))))
+           (or (equal? (car spec) 'generic)
+               (yes-or-no? cfg "Implementation " (car spec) " does not "
+                " seem to be available, install anyway?")))))
 
 (define (conf-selected-implementations cfg)
   (let ((requested (conf-get-list cfg 'implementations '(chibi))))
@@ -1370,6 +1371,10 @@
                       (string-trim (process->string '(icyc -p "(Cyc-installation-dir 'sld)"))
                                    char-whitespace?)))))
        (list (or dir "/usr/local/share/cyclone/"))))
+    ((generic)
+     (list (make-path (string-append (or (conf-get cfg 'install-prefix)
+                                         "/usr/local")
+                                     "/lib/snow"))))
     ((gauche)
      (list
       (let ((dir (string-trim
@@ -1679,6 +1684,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1689,6 +1695,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1704,6 +1711,8 @@
                            (get-chicken-binary-version cfg))))
           (else
            (car (get-install-dirs impl cfg)))))
+   ((eq? impl 'generic)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'cyclone)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
