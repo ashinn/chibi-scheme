@@ -27,8 +27,7 @@
                 '(foment -e "(write (features))"))))
     (generic "generic" #f #f
             ,(delay
-               (process->sexp
-                '(echo "generic"))))
+                '(write-string "generic\n")))
     (gauche "gosh" (gosh -E "print (gauche-version)") "0.9.4"
             ,(delay
                (process->sexp
