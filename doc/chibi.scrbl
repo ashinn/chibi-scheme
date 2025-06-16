@@ -1643,4 +1643,5 @@ are currently supported:
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
 \item{sagittarius - version >= 0.98}
+\item{stklos - version > 2.10}
 ]

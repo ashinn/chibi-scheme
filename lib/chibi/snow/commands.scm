@@ -1399,6 +1399,10 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+    ((stklos)
+     (list (make-path
+            (process->string
+             '(stklos -e "(display (install-path #:libdir))")))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1487,6 +1491,10 @@
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
                        -program ,file)
              `(larceny -r7rs -path ,install-dir -program ,file)))
+        ((stklos)
+         (if lib-path
+             `(stklos -A ,install-dir -A ,lib-path ,file)
+             `(stklos -A ,install-dir ,file)))
         (else
          #f))))))
 
@@ -1627,7 +1635,14 @@
     (kawa 1 2 13 14 34 37 60 69 95)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
-             66 67 69 71 74 78 86 87 95 96 98)))
+             66 67 69 71 74 78 86 87 95 96 98)
+    (stklos 0 1 2 4 5 6 7 8 9 10 11 13 14 15 16 17 18 19 22 23 25 26 27 28 29
+            30 31 34 35 36 37 38 39 41 43 45 46 48 51 54 55 59 60 61 62 64 66
+            69 70 74 87 88 89 94 95 96 98 100 111 112 113 115 116 117 118 125
+            127 128 129 130 132 133 134 135 137 138 141 143 144 145 151 152 154
+            156 158 160 161 162 169 170 171 173 174 175 176 178 180 185 189 190
+            192 193 195 196 207 208 214 215 216 217 219 221 222 223 224 227 228
+            229 230 232 233 234 235 236 238 244 253 258 260)))
 
 (define native-self-support
   '((kawa base expressions hashtable quaternions reflect regex
@@ -1639,8 +1654,7 @@
             parameter parseopt portutil procedure process redefutil
             regexp reload selector sequence serializer signal singleton
             sortutil stringutil syslog termios test threads time
-            treeutil uvector validator version vport)
-    ))
+            treeutil uvector validator version vport)))
 
 ;; Currently we make assumptions about default installed libraries of
 ;; the form (scheme *), (srfi *) and (<impl> *), but don't make any
@@ -1681,6 +1695,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1690,6 +1705,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1709,6 +1725,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'stklos)
+    (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
    (else snow-binary-module-directory)))
