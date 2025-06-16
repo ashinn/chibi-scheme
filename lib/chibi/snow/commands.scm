@@ -1390,6 +1390,17 @@
         (if (string? path)
             path
             "/usr/local/share/guile/"))))
+    ((mosh)
+     (with-output-to-file
+      (string-append (cond-expand (windows (get-environment-variable "TMP"))
+                                  (else "/tmp"))
+                      "/snowmosh")
+      (lambda ()
+       (display "(import (scheme base) (scheme write) (mosh config))")
+       (newline)
+       (display "(display (get-config \"library-path\"))")))
+     (list (string-append (symbol->string (process->sexp '(mosh /tmp/snowmosh)))
+                          "/lib")))
     ((larceny)
      (list
       (make-path
@@ -1482,6 +1493,10 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
+        ((mosh)
+         (if lib-path
+             `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
+             `(mosh --loadpath= ,install-dir ,file)))
         ((larceny)
          (if lib-path
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
@@ -1625,6 +1640,7 @@
            35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
            98 105 111 171)
     (kawa 1 2 13 14 34 37 60 69 95)
+    (mosh)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
              66 67 69 71 74 78 86 87 95 96 98)))
@@ -1681,6 +1697,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1690,6 +1707,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1709,6 +1727,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'mosh)
+    (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
    (else snow-binary-module-directory)))

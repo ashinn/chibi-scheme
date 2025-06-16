@@ -37,6 +37,10 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
+    (mosh "mosh" (mosh -v) #f
+          ,(delay
+             (process->sexp
+               '(echo "(import (scheme base) (scheme write) (mosh config)) (display (features))" > /tmp/snowmosh && mosh /tmp/snowmosh))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
     (sagittarius "sagittarius" #f #f
