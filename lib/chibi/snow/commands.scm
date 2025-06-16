@@ -1361,7 +1361,8 @@
        (list
         (if (file-exists? dir)  ; repository-path should always exist
             dir
-            (make-path (or (conf-get cfg 'install-prefix)) "lib" impl
+            (make-path (or (conf-get cfg 'install-prefix) "lib")
+                       impl
                        (get-chicken-binary-version cfg))))))
     ((cyclone)
      (let ((dir (let ((lib-path (get-environment-variable "CYCLONE_LIBRARY_PATH")))
