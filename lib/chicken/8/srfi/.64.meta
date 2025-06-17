@@ -1,0 +1,36 @@
+(package
+  (url "/s/fisher.cx/robert/srfi/64/0.1.0/srfi-64-0.1.0.tgz")
+  (size 83968)
+  (updated "2019-09-24T13:12:36+00:00")
+  (created "2019-09-24T13:12:36+00:00")
+  (signature
+    (email "robert@fisher.cx")
+    (digest sha-256)
+    (sha-256 "4cf1376ed8f674b7eb66079437c944afb3753113849acf51cde47efd17656658"))
+  (maintainers "Robert Fisher")
+  (authors "Per Bothner" "Alex Shinn" "Álvaro Castro-Castilla" "Mark H Weaver" "Donovan Kolby")
+  (version "0.1.0")
+  (library
+    (name
+      (srfi 64))
+    (path "srfi/64.sld")
+    (depends
+      (scheme base)
+      (scheme char)
+      (scheme complex)
+      (scheme eval)
+      (scheme file)
+      (scheme read)
+      (scheme write)))
+  (library
+    (name
+      (srfi 64 test))
+    (path "srfi/64/test.sld")
+    (depends
+      (scheme base)
+      (srfi 64))
+    (use-for test))
+  (manual "srfi/64.html")
+  (description "Reference implementation of SRFI-54: A Scheme API for test suites")
+  (test "run-tests.scm")
+  (installed-files "lib/chicken/8/srfi-64.so" "lib/chicken/8/srfi-64.import.scm"))
