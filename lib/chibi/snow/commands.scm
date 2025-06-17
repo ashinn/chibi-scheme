@@ -1399,6 +1399,11 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+     ((racket)
+      (list
+       (make-path
+        (process->string
+         '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1487,6 +1492,10 @@
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
                        -program ,file)
              `(larceny -r7rs -path ,install-dir -program ,file)))
+        ((racket)
+         (if lib-path
+             `(racket -I r7rs -S ,install-dir -S ,lib-path --script ,file)
+             `(racket -S ,install-dir --script ,file)))
         (else
          #f))))))
 
@@ -1627,7 +1636,8 @@
     (kawa 1 2 13 14 34 37 60 69 95)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
-             66 67 69 71 74 78 86 87 95 96 98)))
+             66 67 69 71 74 78 86 87 95 96 98)
+    (racket)))
 
 (define native-self-support
   '((kawa base expressions hashtable quaternions reflect regex
@@ -1681,6 +1691,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1690,6 +1701,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1709,6 +1721,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'racket)
+    (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
    (else snow-binary-module-directory)))
@@ -1912,12 +1926,31 @@
          (library-shared-include-files
           impl cfg (make-path dir source-scm-file))))))))
 
+;; Racket can only load files with .rkt suffix. So for each library we create
+;; a file that sets language to r7rs and includes the .sld file
+(define (racket-installer impl cfg library dir)
+  (for-each
+    (lambda (path)
+      (let* ((path-length (string-length path))
+             (suffix (string-copy path (- path-length 3))))
+        (when (string=? suffix "sld")
+          (let ((path-without-suffix (string-copy path 0 (- path-length 3))))
+            (with-output-to-file
+              (string-append path-without-suffix "rkt")
+              (lambda ()
+                (map display
+                     (list "#lang r7rs" #\newline
+                           "(import (scheme base))" #\newline
+                           "(include \"" (path-strip-directory path) "\")"))))))))
+    (default-installer impl cfg library dir)))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
     ((guile) guile-installer)
+    ((racket) racket-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
@@ -1925,6 +1958,7 @@
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
     ((guile) 'guile)
+    ((racket) 'racket)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
