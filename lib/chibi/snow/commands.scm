@@ -1939,9 +1939,12 @@
               (string-append path-without-suffix "rkt")
               (lambda ()
                 (map display
-                     (list "#lang r7rs" #\newline
-                           "(import (scheme base))" #\newline
-                           "(include \"" (path-strip-directory path) "\")"))))))))
+                     (list "#lang r7rs"
+                           #\newline
+                           "(import (scheme base))"
+                           #\newline
+                           "(include \"" (path-strip-directory path) "\")"
+                           #\newline))))))))
     (default-installer impl cfg library dir)))
 
 ;; installers should return the list of installed files
