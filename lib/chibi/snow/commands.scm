@@ -212,8 +212,7 @@
                     files
                     chibi-ffi?))
                (('cond-expand clauses ...)
-                (let ((libs+files (map (lambda (c)
-                                         (lp c '() '() '() #f)) clauses)))
+                (let ((libs+files (map (lambda (c) (lp c '() '() '() #f)) clauses)))
                   (lp (cdr ls)
                       (cons (cons 'cond-expand
                                   (map cons
@@ -2048,10 +2047,9 @@
                  (so-file (string-append base (cond-expand (macosx ".dylib")
                                                            (else ".so"))))
                  (so-flags (cond-expand (macosx '("-dynamiclib" "-Oz"))
-                                        (else '("-fPIC" "-shared""-Os"))))
+                                        (else '("-fPIC" "-shared" "-Os"))))
                  (lib-flags
-                  (map (lambda (lib)
-                         (string-append "-l" lib))
+                  (map (lambda (lib) (string-append "-l" lib))
                        (library-foreign-dependencies impl cfg library)))
                  (ffi-cmd `(,@chibi-ffi ,stub-file))
                  (cc-cmd
