@@ -129,7 +129,8 @@
          declarations ...)
        (let* ((dir (library-path-base file name))
               (lib-file (path-relative file dir))
-              (lib-dir (path-directory lib-file)))
+              (lib-dir (path-directory lib-file))
+              (foreign-depends (conf-get-list cfg 'foreign-depends)))
          (define (resolve file)
            (let ((dest-path (if (equal? lib-dir ".")
                                 file
@@ -158,7 +159,8 @@
                (warn "couldn't find ffi stub or c source" base)
                '()))))
          (let lp ((ls declarations)
-                  (info `(,@(cond
+                  (info `((foreign-depends ,@foreign-depends)
+                          ,@(cond
                              ((conf-get cfg '(command package author))
                               => (lambda (x) (list (list 'author x))))
                              (else '()))
@@ -210,7 +212,8 @@
                     files
                     chibi-ffi?))
                (('cond-expand clauses ...)
-                (let ((libs+files (map (lambda (c) (lp c '() '() '() #f)) clauses)))
+                (let ((libs+files (map (lambda (c)
+                                         (lp c '() '() '() #f)) clauses)))
                   (lp (cdr ls)
                       (cons (cons 'cond-expand
                                   (map cons
@@ -2045,34 +2048,26 @@
                  (so-file (string-append base (cond-expand (macosx ".dylib")
                                                            (else ".so"))))
                  (so-flags (cond-expand (macosx '("-dynamiclib" "-Oz"))
-                                        (else '("-fPIC" "-shared" "-Os"))))
+                                        (else '("-fPIC" "-shared""-Os"))))
                  (lib-flags
-                  (map (lambda (lib) (string-append "-l" lib))
+                  (map (lambda (lib)
+                         (string-append "-l" lib))
                        (library-foreign-dependencies impl cfg library)))
-                 (ffi-cmd
-                  `(,@chibi-ffi
-                    "-c" "-cc" ,(car cc)
-                    "-f" ,(string-join cflags " ")
-                    "-f" ,(string-join lib-flags " ")
-                    ,@(if local-test? '("-f" "-Iinclude -L.") '())
-                    ,@(if (pair? (cdr cc))
-                          (list "-f" (string-join (cdr cc) " "))
-                          '())
-                    ,stub-file))
+                 (ffi-cmd `(,@chibi-ffi ,stub-file))
                  (cc-cmd
                   `(,@cc ,@cflags ,@so-flags
                          ,@(if local-test? '("-Iinclude" "-L.") '())
                          "-o" ,so-file ,c-file "-lchibi-scheme"
                          ,@lib-flags)))
-            (when (or (and (file-exists? c-file)
+            (when (or (and (file-exists? stub-file)
+                           (or (system? ffi-cmd)
+                               (yes-or-no? cfg "couldn't compile stub: "
+                                           stub-file " - install anyway?")))
+                      (and (file-exists? c-file)
                            (or (system? cc-cmd)
                                (yes-or-no?
                                 cfg "couldn't compile chibi ffi c code: "
                                 c-file " - install anyway?")))
-                      (and (file-exists? stub-file)
-                           (or (system? ffi-cmd)
-                               (yes-or-no? cfg "couldn't compile stub: "
-                                           stub-file " - install anyway?")))
                       (yes-or-no? cfg "can't find ffi stub or c source for: "
                                   base " - install anyway?"))
               (lp (cdr ls))))))))
