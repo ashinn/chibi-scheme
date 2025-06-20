@@ -1613,6 +1613,11 @@ can specify any option, for example:
    (license gpl))))
 }
 
+\itemlist[
+\item{\scheme{--foreign-depends} - specify foreign libraries the library
+depends on (comma-delimited) (for example ffi,sqlite3 for -lffi -lsqlite3)}
+]
+
 Top-level snow options are represented as a flat alist.  Options
 specific to a command are nested under \scheme{(command (name ...))},
 with most options here being for \scheme{package}.  Here unless
