@@ -2057,7 +2057,8 @@
                          ,@(if local-test? '("-Iinclude" "-L.") '())
                          "-o" ,so-file ,c-file "-lchibi-scheme"
                          ,@lib-flags)))
-            (when (or (and (file-exists? stub-file)
+            (when (or (and (not (file-exists? c-file))
+                           (file-exists? stub-file)
                            (or (system? ffi-cmd)
                                (yes-or-no? cfg "couldn't compile stub: "
                                            stub-file " - install anyway?")))
