@@ -24,9 +24,10 @@
                    (else
                     (warn msg)
                     #f))))))
-      (and confirm?
-           (yes-or-no? cfg "Implementation " (car spec) " does not "
-                       " seem to be available, install anyway?"))))
+      (or (equal? (car spec) 'generic)
+          (and confirm?
+               (yes-or-no? cfg "Implementation " (car spec) " does not "
+                           " seem to be available, install anyway?")))))
 
 (define (conf-selected-implementations cfg)
   (let ((requested (conf-get-list cfg 'implementations '(chibi))))
@@ -1373,6 +1374,11 @@
                       (string-trim (process->string '(icyc -p "(Cyc-installation-dir 'sld)"))
                                    char-whitespace?)))))
        (list (or dir "/usr/local/share/cyclone/"))))
+    ((generic)
+     (list (make-path (or (conf-get cfg 'install-prefix)
+                          (cond-expand (windows (get-environment-variable "LOCALAPPDATA"))
+                                       (else "/usr/local"))
+                          "/lib/snow"))))
     ((gauche)
      (list
       (let ((dir (string-trim
@@ -1696,6 +1702,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
@@ -1707,6 +1714,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1723,6 +1731,8 @@
                            (get-chicken-binary-version cfg))))
           (else
            (car (get-install-dirs impl cfg)))))
+   ((eq? impl 'generic)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'cyclone)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)

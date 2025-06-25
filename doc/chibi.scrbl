@@ -1635,15 +1635,16 @@ conventions, you can thus simply run \scheme{snow-chibi package
 \subsubsection{Other Implementations}
 
 Although the command is called \scheme{snow-chibi}, it supports
-several other R7RS implementations.  The \scheme{implementations}
-command tells you which you currently have installed.  The following
-are currently supported:
+several other R7RS implementations and generic installation of libraries.
+The \scheme{implementations} command tells you which you currently have
+installed. The following are currently supported:
 
 \itemlist[
 \item{chibi - version >= 0.7.3}
 \item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
 \item{cyclone - version >= 0.5.3}
 \item{foment - version >= 0.4}
+\item{generic; By default libraries are installed into /usr/local/lib/snow or %LOCALAPPDATA%/lib/snow on windows}
 \item{gauche - version >= 0.9.4}
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
