@@ -129,7 +129,8 @@
          declarations ...)
        (let* ((dir (library-path-base file name))
               (lib-file (path-relative file dir))
-              (lib-dir (path-directory lib-file)))
+              (lib-dir (path-directory lib-file))
+              (foreign-depends (conf-get-list cfg 'foreign-depends)))
          (define (resolve file)
            (let ((dest-path (if (equal? lib-dir ".")
                                 file
@@ -158,7 +159,8 @@
                (warn "couldn't find ffi stub or c source" base)
                '()))))
          (let lp ((ls declarations)
-                  (info `(,@(cond
+                  (info `((foreign-depends ,@foreign-depends)
+                          ,@(cond
                              ((conf-get cfg '(command package author))
                               => (lambda (x) (list (list 'author x))))
                              (else '()))
