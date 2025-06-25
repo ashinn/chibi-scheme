@@ -2439,8 +2439,8 @@
                  (execute (begin (eval '(import (chibi process))
                                        (current-environment))
                                  (eval 'execute (current-environment))))
-                 (base-args (append cflags *cflags*
-                                    `("-o" ,so ,dest "-lchibi-scheme")
+                 (base-args (append `("-o" ,so ,dest "-lchibi-scheme")
+                                    cflags *cflags*
                                     (map (lambda (x) (string-append "-l" x))
                                          (reverse *clibs*))
                                     (apply append
