@@ -1613,6 +1613,11 @@ can specify any option, for example:
    (license gpl))))
 }
 
+\itemlist[
+\item{\scheme{--foreign-depends} - specify foreign libraries the library
+depends on (comma-delimited) (for example ffi,sqlite3 for -lffi -lsqlite3)}
+]
+
 Top-level snow options are represented as a flat alist.  Options
 specific to a command are nested under \scheme{(command (name ...))},
 with most options here being for \scheme{package}.  Here unless
@@ -1644,4 +1649,5 @@ installed. The following are currently supported:
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
 \item{sagittarius - version >= 0.98}
+\item{stklos - version > 2.10}
 ]

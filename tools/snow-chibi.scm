@@ -90,6 +90,7 @@
     (chibi-path filename "path to chibi-scheme executable")
     (cc string "path to c compiler")
     (cflags string "flags for c compiler")
+    (foreign-depends (list string) "foreign libraries library depends on")
     (use-curl? boolean ("use-curl") "use curl for file uploads")
     (sexp? boolean ("sexp") "output information in sexp format")
     ))
