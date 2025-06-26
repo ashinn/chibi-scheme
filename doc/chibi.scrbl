@@ -1008,12 +1008,28 @@ your platform) and the generated .so file can be loaded directly with
 \scheme{load}, or portably using \scheme{(include-shared "file")} in a
 module definition (note that include-shared uses no suffix).
 
+You can do this in one step with the \scheme{-c} flag (described
+below), and it will compile for you automatically:
+
+\command{
+chibi-ffi -c file.stub
+}
+
 The goal of this interface is to make access to C types and functions
 easy, without requiring the user to write any C code.  That means the
 stubber needs to be intelligent about various C calling conventions
 and idioms, such as return values passed in actual parameters.
 Writing C by hand is still possible, and several of the core modules
 provide C interfaces directly without using the stubber.
+
+\subsection{Options}
+
+\itemlist[
+\item{\command{-c/--compile} - automatically compile a shared library}
+\item{\command{--cc <compiler>} - specify the c compiler executable, default cc}
+\item{\command{-f/--flags <flag>} - add a flag to pass to the c compiler, can be used multiple times}
+\item{\command{--features <feature>} - comma-delimited list of features to set before loading the stub file, e.g. debug}
+]
 
 \subsection{Includes and Initializations}
 
@@ -1022,6 +1038,7 @@ provide C interfaces directly without using the stubber.
 \item{\scheme{(c-system-include header)} - includes the system file \var{header}}
 \item{\scheme{(c-declare args ...)} - outputs \var{args} directly in the top-level C source}
 \item{\scheme{(c-init args ...)} - evaluates \var{args} as C code after all other library initializations have been performed, with \cvar{ctx} and \cvar{env} in scope}
+\item{\scheme{(c-link lib)} - when automatically compiling with the -c flag, link the given library with -llib}
 ]
 
 \subsection{Struct Interface}
@@ -1054,7 +1071,7 @@ The remaining slots are similar to the
 except they are prefixed with a C type (described below).  The
 \var{c_field_name} should be a field name of \var{struct_name}.
 \var{getter-name} will then be bound to a procedure of one argument, a
-\{struct_name} type, which returns the given field.  If provided,
+\var{struct_name} type, which returns the given field.  If provided,
 \var{setter-name} will be bound to a procedure of two arguments to
 mutate the given field.
 
