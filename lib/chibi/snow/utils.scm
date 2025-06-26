@@ -41,6 +41,10 @@
               '(kawa -e "(write (features))"))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
+    (racket "racket" (racket --version) #f
+          ,(delay
+             (process->sexp
+              '(racket -I r7rs -e "(import (scheme base) (scheme write)) (display (features))"))))
     (sagittarius "sagittarius" #f #f
                  ,(delay
                     (process->sexp

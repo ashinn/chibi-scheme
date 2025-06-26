@@ -1407,6 +1407,9 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+    ((racket)
+     (list (process->string
+            '(racket -e "(display (find-system-path 'collects-dir))"))))
     ((stklos)
      (list (make-path
             (process->string
@@ -1499,6 +1502,10 @@
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
                        -program ,file)
              `(larceny -r7rs -path ,install-dir -program ,file)))
+        ((racket)
+         (if lib-path
+             `(racket -I r7rs -S ,install-dir -S ,lib-path --script ,file)
+             `(racket -I r7rs -S ,install-dir --script ,file)))
         ((stklos)
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
@@ -1704,6 +1711,7 @@
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1715,6 +1723,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1737,6 +1746,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'racket)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
@@ -1942,12 +1953,68 @@
          (library-shared-include-files
           impl cfg (make-path dir source-scm-file))))))))
 
+(define (racket-installer impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (rkt-file (path-replace-extension library-file "rkt"))
+         (library-file-name (path-strip-directory library-file))
+         (ext (get-library-extension impl cfg))
+         (dest-library-file
+          (string-append (library->path cfg library) "." ext))
+         (dest-rkt-file (path-replace-extension dest-library-file "rkt"))
+         (include-files
+          (library-include-files impl cfg (make-path dir library-file)))
+         (install-dir (get-install-source-dir impl cfg))
+         (install-lib-dir (get-install-library-dir impl cfg)))
+    (display "HERE: ")
+    (display dir)
+    (newline)
+    (display "HERE1: ")
+    (display rkt-file)
+    (newline)
+    ;; Create .rkt file
+    (with-output-to-file
+      (string-append dir "/" rkt-file)
+      (lambda ()
+        (map display
+             `("#lang r7rs" #\newline
+              "(import (scheme base))" #\newline
+              "(include \"" ,library-file-name "\")" #\newline))))
+    ;; install the library file
+    (let ((path (make-path install-dir dest-library-file))
+          (rkt-path (make-path install-dir dest-rkt-file)))
+      (install-directory cfg (path-directory path))
+      (install-file cfg (make-path dir library-file) path)
+      (install-file cfg (make-path dir rkt-file) rkt-path)
+      ;; install any includes
+      (cons
+       path
+       (append
+        (map
+         (lambda (x)
+           (let ((dest-file (make-path install-dir (path-relative x dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg x dest-file)
+             dest-file))
+         include-files)
+        (map
+         (lambda (x)
+           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
+                                                         (else ".so"))))
+                  (dest-file (make-path install-lib-dir
+                                        (path-relative so-file dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg so-file dest-file)
+             dest-file))
+         (library-shared-include-files
+          impl cfg (make-path dir library-file))))))))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
     ((guile) guile-installer)
+    ((racket) racket-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
@@ -1955,6 +2022,7 @@
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
     ((guile) 'guile)
+    ((racket) 'racket)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
