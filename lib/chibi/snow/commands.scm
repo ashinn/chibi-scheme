@@ -1913,6 +1913,47 @@
           (cons dest-so-path
                 (default-installer impl cfg library dir)))))
 
+(define (gambit-installer impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (o-file (path-replace-extension library-file "so"))
+         (ext (get-library-extension impl cfg))
+         (dest-library-file
+          (string-append (library->path cfg library) "." ext))
+         (dest-o-file
+          (string-append (library->path cfg library) ".so"))
+         (include-files
+          (library-include-files impl cfg (make-path dir library-file)))
+         (install-dir (get-install-source-dir impl cfg))
+         (install-lib-dir (get-install-library-dir impl cfg)))
+    ;; install the library file
+    (let ((path (make-path install-dir dest-library-file))
+          (o-path (make-path install-dir dest-o-file)))
+      (install-directory cfg (path-directory path))
+      (install-file cfg (make-path dir library-file) path)
+      (install-file cfg (make-path dir o-file) o-path)
+      ;; install any includes
+      (cons
+       path
+       (append
+        (map
+         (lambda (x)
+           (let ((dest-file (make-path install-dir (path-relative x dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg x dest-file)
+             dest-file))
+         include-files)
+        (map
+         (lambda (x)
+           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
+                                                         (else ".so"))))
+                  (dest-file (make-path install-lib-dir
+                                        (path-relative so-file dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg so-file dest-file)
+             dest-file))
+         (library-shared-include-files
+          impl cfg (make-path dir library-file))))))))
+
 (define (guile-installer impl cfg library dir)
   (let* ((source-scm-file (get-library-file cfg library))
          (source-go-file (string-append
@@ -1959,6 +2000,7 @@
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
+    ((gambit) gambit-installer)
     ((guile) guile-installer)
     (else default-installer)))
 
@@ -1966,6 +2008,7 @@
   (case impl
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
+    ((gambit) 'gambit)
     ((guile) 'guile)
     (else 'default)))
 
@@ -2135,17 +2178,22 @@
   (let* ((library-file (get-library-file cfg library))
          (src-library-file (make-path dir library-file))
          (library-dir (path-directory src-library-file))
-         (dest-library-file
-          (string-append (library->path cfg library) ".o"))
-         (dest-dir
-          (path-directory (make-path dir dest-library-file))))
+         (dest-library-file (string-append (library->path cfg library) ".so"))
+         (dest-dir (path-directory (make-path dir dest-library-file))))
     ;; ensure the build directory exists
     (create-directory* dest-dir)
     (with-directory
      dir
      (lambda ()
-       (and (system 'gsc src-library-file)
-            library)))))
+      (let ((res (system 'gsc
+                         '-o dest-library-file
+                         '-dynamic
+                         src-library-file)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg "gambit failed to build: "
+                              (library-name library)
+                              " - install anyway?"))
+              library))))))
 
 (define (guile-builder impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))

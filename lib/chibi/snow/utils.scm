@@ -25,10 +25,10 @@
             ,(delay
                (process->sexp
                 '(foment -e "(write (features))"))))
-    (gambit "gsc" (gsc -v) #f #f
+    (gambit "gsc" (gsc -v) #f
             ,(delay
                (process->sexp
-                '(gsc -e "(write (features))"))))
+                '(gsc -e "(display (features))"))))
     (generic "generic" #f #f
             ,(delay (write-string "generic\n")))
     (gauche "gosh" (gosh -E "print (gauche-version)") "0.9.4"
