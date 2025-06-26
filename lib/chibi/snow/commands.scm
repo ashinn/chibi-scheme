@@ -1398,6 +1398,8 @@
         (if (string? path)
             path
             "/usr/local/share/guile/"))))
+    ((kawa)
+     (list "/usr/local/share/kawa/lib"))
     ((larceny)
      (list
       (make-path
@@ -1704,6 +1706,7 @@
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1715,6 +1718,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
+   ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1737,6 +1741,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'kawa)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
@@ -1942,12 +1948,54 @@
          (library-shared-include-files
           impl cfg (make-path dir source-scm-file))))))))
 
+(define (kawa-installer impl cfg library dir)
+  (let* ((source-scm-file (get-library-file cfg library))
+         (source-class-file (string-append
+                          (library->path cfg library) ".class"))
+         (dest-scm-file
+          (string-append (library->path cfg library) ".scm"))
+         (dest-class-file
+          (string-append (library->path cfg library) ".class"))
+         (include-files
+          (library-include-files impl cfg (make-path dir source-scm-file)))
+         (install-dir (get-install-source-dir impl cfg))
+         (install-lib-dir (get-install-library-dir impl cfg)))
+    (let ((scm-path (make-path install-dir dest-scm-file))
+          (class-path (make-path install-lib-dir dest-class-file)))
+      (install-directory cfg (path-directory scm-path))
+      (install-directory cfg (path-directory class-path))
+      (install-file cfg (make-path dir source-scm-file) scm-path)
+      (install-file cfg (make-path dir source-class-file) class-path)
+      ;; install any includes
+      (cons
+       scm-path
+       (append
+        (map
+         (lambda (x)
+           (let ((dest-file (make-path install-dir (path-relative x dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg x dest-file)
+             dest-file))
+         include-files)
+        (map
+         (lambda (x)
+           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
+                                                         (else ".so"))))
+                  (dest-file (make-path install-lib-dir
+                                        (path-relative so-file dir))))
+             (install-directory cfg (path-directory dest-file))
+             (install-file cfg so-file dest-file)
+             dest-file))
+         (library-shared-include-files
+          impl cfg (make-path dir source-scm-file))))))))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
     ((guile) guile-installer)
+    ((kawa) kawa-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
@@ -1955,6 +2003,7 @@
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
     ((guile) 'guile)
+    ((kawa) 'kawa)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
@@ -2135,17 +2184,38 @@
        (and (system 'guild 'compile '-O0 '--r7rs '-o dest-library-file src-library-file)
             library)))))
 
+(define (kawa-builder impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (src-library-file (make-path dir library-file))
+         (library-dir (path-directory src-library-file))
+         (dest-library-file
+          (string-append (library->path cfg library) ".class"))
+         (dest-dir
+          (path-directory (make-path dir dest-library-file))))
+    ;; ensure the build directory exists
+    (create-directory* dest-dir)
+    (with-directory
+     dir
+     (lambda ()
+       (let ((res (system 'kawa '-d dir '-C src-library-file)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg ".class file failed to build: "
+                              (library-name library)
+                              " - install anyway?"))
+              library))))))
+
 (define (lookup-builder builder)
   (case builder
     ((chibi) chibi-builder)
     ((chicken) chicken-builder)
     ((cyclone) cyclone-builder)
     ((guile) guile-builder)
+    ((kawa) kawa-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone guile) impl)
+    ((chibi chicken cyclone guile kawa) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
