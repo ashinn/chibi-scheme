@@ -39,6 +39,8 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
+    (mosh "mosh" #f #f
+          ,(delay (write-string "mosh\n")))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
     (sagittarius "sagittarius" #f #f
