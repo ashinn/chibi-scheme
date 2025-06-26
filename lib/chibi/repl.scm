@@ -176,12 +176,15 @@
 
 (define-record-type Repl
   (make-repl
-   in out escape module env meta-env make-prompt history-file history raw?)
+   in out escape module reader eval printer env meta-env make-prompt history-file history raw?)
   repl?
   (in repl-in repl-in-set!)
   (out repl-out repl-out-set!)
   (escape repl-escape repl-escape-set!)
   (module repl-module repl-module-set!)
+  (reader repl-reader repl-reader-set!)
+  (eval repl-eval repl-eval-set!)
+  (printer repl-printer repl-printer-set!)
   (env repl-env repl-env-set!)
   (meta-env repl-meta-env  repl-meta-env-set!)
   (make-prompt repl-make-prompt repl-make-prompt-set!)
@@ -429,27 +432,26 @@
                 (lambda ()
                   (if (or (identifier? expr)
                           (pair? expr)
-                          (null? expr))
-                      (eval expr (repl-env rp))
+                          (null? expr)
+                          (not (eq? eval (repl-eval rp))))
+                      ((or (repl-eval rp) eval) expr (repl-env rp))
                       expr))
               (lambda res-values
                 (cond
                  ((not (or (null? res-values)
                            (equal? res-values (list undefined-value))))
                   (push-history-value-maybe! res-values)
-                  (repl-print (car res-values) out)
+                  ((or (repl-printer rp) repl-print) (car res-values) out)
                   (for-each
                    (lambda (res)
                      (write-char #\space out)
-                     (repl-print res out))
+                     ((or (repl-printer rp) repl-print) res out))
                    (cdr res-values))
                   (newline out))))))
           expr-list))))))
 
-(define (repl/eval-string rp str)
-  (repl/eval
-   rp
-   (protect (exn (else (print-exception exn (current-error-port))))
+(define (repl-string->sexps rp str)
+  (protect (exn (else (print-exception exn (current-error-port))))
      ;; Ugly wrapper to account for the implicit state mutation
      ;; implied by the #!fold-case read syntax.
      (let ((in (repl-in rp))
@@ -458,7 +460,10 @@
        (set-port-line! in2 (port-line in))
        (let ((expr-list (read/ss/all in2)))
          (set-port-fold-case! in (port-fold-case? in2))
-         expr-list)))))
+         expr-list))))
+
+(define (repl/eval-string rp str)
+  (repl/eval rp ((repl-reader rp) rp str)))
 
 (define (keywords->repl ls)
   (let-keywords* ls
@@ -466,6 +471,9 @@
        (out out: (current-output-port))
        (escape escape: #\@)
        (module module: #f)
+       (reader reader: repl-string->sexps)
+       (eval eval: eval)
+       (printer printer: repl-print)
        (env
         environment:
         (if module
@@ -489,7 +497,8 @@
              (member (get-environment-variable "TERM") '("emacs" "dumb")))
        (meta-env meta-env: (module-env (load-module '(meta)))))
     (make-repl
-     in out escape module env meta-env make-prompt history-file history raw?)))
+     in out escape module reader eval printer env meta-env
+     make-prompt history-file history raw?)))
 
 (define (repl/edit-line rp)
   (let ((prompt ((repl-make-prompt rp) (repl-module rp)))

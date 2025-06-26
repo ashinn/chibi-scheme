@@ -29,6 +29,8 @@
             ,(delay
                (process->sexp
                 '(gsc -e "(write (features))"))))
+    (generic "generic" #f #f
+            ,(delay (write-string "generic\n")))
     (gauche "gosh" (gosh -E "print (gauche-version)") "0.9.4"
             ,(delay
                (process->sexp
@@ -46,7 +48,11 @@
     (sagittarius "sagittarius" #f #f
                  ,(delay
                     (process->sexp
-                     '(sagittarius -I "(scheme base)" -e "(write (features))"))))))
+                     '(sagittarius -I "(scheme base)" -e "(write (features))"))))
+    (stklos "stklos" (stklos --version) #f
+                 ,(delay
+                    (process->sexp
+                     '(stklos -e "(write (features))"))))))
 
 (define (impl->version impl cmd)
   (let* ((lines (process->string-list cmd))
@@ -66,6 +72,7 @@
     ((gambit) (cond-expand (gambit #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
+    ((stklos) (cond-expand (stklos #t) (else #f)))
     (else #f)))
 
 (define (impl->features impl)

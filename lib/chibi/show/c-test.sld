@@ -413,6 +413,12 @@ default:
                                     (%attribute packed)
                                     ))))
 
+      (test "struct foo {\n    int a;\n    struct bar b;\n};\n"
+          (show #f (c-expr
+                    '(struct foo
+                             ((int a)
+                              ((struct bar) b))))))
+
       (test "class employee {
     short age;
     char *name;

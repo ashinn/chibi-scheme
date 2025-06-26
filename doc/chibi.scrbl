@@ -1008,12 +1008,28 @@ your platform) and the generated .so file can be loaded directly with
 \scheme{load}, or portably using \scheme{(include-shared "file")} in a
 module definition (note that include-shared uses no suffix).
 
+You can do this in one step with the \scheme{-c} flag (described
+below), and it will compile for you automatically:
+
+\command{
+chibi-ffi -c file.stub
+}
+
 The goal of this interface is to make access to C types and functions
 easy, without requiring the user to write any C code.  That means the
 stubber needs to be intelligent about various C calling conventions
 and idioms, such as return values passed in actual parameters.
 Writing C by hand is still possible, and several of the core modules
 provide C interfaces directly without using the stubber.
+
+\subsection{Options}
+
+\itemlist[
+\item{\command{-c/--compile} - automatically compile a shared library}
+\item{\command{--cc <compiler>} - specify the c compiler executable, default cc}
+\item{\command{-f/--flags <flag>} - add a flag to pass to the c compiler, can be used multiple times}
+\item{\command{--features <feature>} - comma-delimited list of features to set before loading the stub file, e.g. debug}
+]
 
 \subsection{Includes and Initializations}
 
@@ -1022,6 +1038,7 @@ provide C interfaces directly without using the stubber.
 \item{\scheme{(c-system-include header)} - includes the system file \var{header}}
 \item{\scheme{(c-declare args ...)} - outputs \var{args} directly in the top-level C source}
 \item{\scheme{(c-init args ...)} - evaluates \var{args} as C code after all other library initializations have been performed, with \cvar{ctx} and \cvar{env} in scope}
+\item{\scheme{(c-link lib)} - when automatically compiling with the -c flag, link the given library with -llib}
 ]
 
 \subsection{Struct Interface}
@@ -1054,7 +1071,7 @@ The remaining slots are similar to the
 except they are prefixed with a C type (described below).  The
 \var{c_field_name} should be a field name of \var{struct_name}.
 \var{getter-name} will then be bound to a procedure of one argument, a
-\{struct_name} type, which returns the given field.  If provided,
+\var{struct_name} type, which returns the given field.  If provided,
 \var{setter-name} will be bound to a procedure of two arguments to
 mutate the given field.
 
@@ -1613,6 +1630,11 @@ can specify any option, for example:
    (license gpl))))
 }
 
+\itemlist[
+\item{\scheme{--foreign-depends} - specify foreign libraries the library
+depends on (comma-delimited) (for example ffi,sqlite3 for -lffi -lsqlite3)}
+]
+
 Top-level snow options are represented as a flat alist.  Options
 specific to a command are nested under \scheme{(command (name ...))},
 with most options here being for \scheme{package}.  Here unless
@@ -1630,18 +1652,20 @@ conventions, you can thus simply run \scheme{snow-chibi package
 \subsubsection{Other Implementations}
 
 Although the command is called \scheme{snow-chibi}, it supports
-several other R7RS implementations.  The \scheme{implementations}
-command tells you which you currently have installed.  The following
-are currently supported:
+several other R7RS implementations and generic installation of libraries.
+The \scheme{implementations} command tells you which you currently have
+installed. The following are currently supported:
 
 \itemlist[
 \item{chibi - version >= 0.7.3}
 \item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
 \item{cyclone - version >= 0.5.3}
 \item{foment - version >= 0.4}
-\item{gambit}
+\item{gambit - version >= 4.9.3}
+\item{generic; By default libraries are installed into /usr/local/lib/snow or %LOCALAPPDATA%/lib/snow on windows}
 \item{gauche - version >= 0.9.4}
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
 \item{sagittarius - version >= 0.98}
+\item{stklos - version > 2.10}
 ]
