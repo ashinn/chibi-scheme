@@ -1949,45 +1949,23 @@
           impl cfg (make-path dir source-scm-file))))))))
 
 (define (kawa-installer impl cfg library dir)
-  (let* ((source-scm-file (get-library-file cfg library))
-         (source-class-file (string-append
-                          (library->path cfg library) ".class"))
-         (dest-scm-file
-          (string-append (library->path cfg library) ".scm"))
-         (dest-class-file
-          (string-append (library->path cfg library) ".class"))
-         (include-files
-          (library-include-files impl cfg (make-path dir source-scm-file)))
+  (let* ((source-class-file
+           (string-append dir
+                          "/"
+                          (path-strip-extension (get-library-file cfg library))
+                          ".class"))
          (install-dir (get-install-source-dir impl cfg))
-         (install-lib-dir (get-install-library-dir impl cfg)))
-    (let ((scm-path (make-path install-dir dest-scm-file))
-          (class-path (make-path install-lib-dir dest-class-file)))
-      (install-directory cfg (path-directory scm-path))
-      (install-directory cfg (path-directory class-path))
-      (install-file cfg (make-path dir source-scm-file) scm-path)
-      (install-file cfg (make-path dir source-class-file) class-path)
-      ;; install any includes
-      (cons
-       scm-path
-       (append
-        (map
-         (lambda (x)
-           (let ((dest-file (make-path install-dir (path-relative x dir))))
-             (install-directory cfg (path-directory dest-file))
-             (install-file cfg x dest-file)
-             dest-file))
-         include-files)
-        (map
-         (lambda (x)
-           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
-                                                         (else ".so"))))
-                  (dest-file (make-path install-lib-dir
-                                        (path-relative so-file dir))))
-             (install-directory cfg (path-directory dest-file))
-             (install-file cfg so-file dest-file)
-             dest-file))
-         (library-shared-include-files
-          impl cfg (make-path dir source-scm-file))))))))
+         (dest-class-file
+           (string-append install-dir
+                          "/"
+                          (library->path cfg library) ".class"))
+         (path (make-path install-dir dest-class-file))
+         (include-filename (string-append
+                             (path-strip-directory
+                               (path-strip-extension path))
+                             ".sld")))
+    (default-installer impl cfg library dir)
+    (install-file cfg source-class-file dest-class-file)))
 
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
