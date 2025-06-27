@@ -1955,9 +1955,9 @@
          (install-dir (get-install-source-dir impl cfg))
          (dest-class-file (make-path install-dir class-file))
          (path (make-path install-dir dest-class-file)))
+    (default-installer impl cfg library dir)
     (when (file-exists? source-class-file)
-      (default-installer impl cfg library dir))
-    (install-file cfg source-class-file dest-class-file)))
+      (install-file cfg source-class-file dest-class-file))))
 
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
