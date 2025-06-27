@@ -1954,10 +1954,12 @@
          (source-class-file (make-path dir class-file))
          (install-dir (get-install-source-dir impl cfg))
          (dest-class-file (make-path install-dir class-file))
-         (path (make-path install-dir dest-class-file)))
-    (default-installer impl cfg library dir)
-    (when (file-exists? source-class-file)
-      (install-file cfg source-class-file dest-class-file))))
+         (path (make-path install-dir dest-class-file))
+         (installed-files (default-installer impl cfg library dir)))
+    (cond ((file-exists? source-class-file)
+           (install-file cfg source-class-file dest-class-file)
+           (cons dest-class-file installed-files))
+          (else installed-files))))
 
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
