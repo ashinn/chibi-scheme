@@ -1964,7 +1964,8 @@
                              (path-strip-directory
                                (path-strip-extension path))
                              ".sld")))
-    (default-installer impl cfg library dir)
+    (when (file-exists? source-class-file)
+      (default-installer impl cfg library dir))
     (install-file cfg source-class-file dest-class-file)))
 
 ;; installers should return the list of installed files
