@@ -1949,21 +1949,12 @@
           impl cfg (make-path dir source-scm-file))))))))
 
 (define (kawa-installer impl cfg library dir)
-  (let* ((source-class-file
-           (string-append dir
-                          "/"
-                          (path-strip-extension (get-library-file cfg library))
-                          ".class"))
+  (let* ((class-file (path-replace-extension
+                       (get-library-file cfg library) "class"))
+         (source-class-file (make-path dir class-file))
          (install-dir (get-install-source-dir impl cfg))
-         (dest-class-file
-           (string-append install-dir
-                          "/"
-                          (library->path cfg library) ".class"))
-         (path (make-path install-dir dest-class-file))
-         (include-filename (string-append
-                             (path-strip-directory
-                               (path-strip-extension path))
-                             ".sld")))
+         (dest-class-file (make-path install-dir class-file))
+         (path (make-path install-dir dest-class-file)))
     (when (file-exists? source-class-file)
       (default-installer impl cfg library dir))
     (install-file cfg source-class-file dest-class-file)))
