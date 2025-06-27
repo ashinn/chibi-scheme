@@ -39,8 +39,17 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
-    (mosh "mosh" #f #f
-          ,(delay (write-string "mosh\n")))
+    (mosh "mosh" (mosh -v) #f
+          ,(delay
+             (let ((tmpfile (string-append (cond-expand (windows (get-environment-variable "TMP"))
+                                                        (else "/tmp"))
+                                           "/snowmosh")))
+               (with-output-to-file
+                 tmpfile
+                 (lambda ()
+                   (display "(import (scheme base) (scheme write) (mosh config)) (display (features))")))
+               (process->sexp
+                 `(mosh ,tmpfile)))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
     (sagittarius "sagittarius" #f #f

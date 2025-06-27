@@ -1400,15 +1400,15 @@
             "/usr/local/share/guile/"))))
     ((mosh)
      (with-output-to-file
-      "/tmp/mosh-helper"
+      (string-append (cond-expand (windows (get-environment-variable "TMP"))
+                                  (else "/tmp"))
+                      "/snowmosh")
       (lambda ()
-       (display "(import (scheme base) (scheme write) (mosh config)) (display (get-config \"library-path\")) (newline)")
-       (newline)))
-     (list
-      (string-append
-       (string-trim (process->string '(mosh "/tmp/mosh-helper"))
-                      char-whitespace?)
-         "/lib")))
+       (display "(import (scheme base) (scheme write) (mosh config))")
+       (newline)
+       (display "(display (get-config \"library-path\"))")))
+     (list (string-append (symbol->string (process->sexp '(mosh /tmp/snowmosh)))
+                          "/lib")))
     ((larceny)
      (list
       (make-path
@@ -1505,10 +1505,10 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
-       ((mosh)
+        ((mosh)
          (if lib-path
              `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
-             `(guile --loadpath= ,install-dir ,file)))
+             `(mosh --loadpath= ,install-dir ,file)))
         ((larceny)
          (if lib-path
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
