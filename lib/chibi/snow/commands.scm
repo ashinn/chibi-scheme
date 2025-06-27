@@ -2157,24 +2157,15 @@
             library)))))
 
 (define (kawa-builder impl cfg library dir)
-  (let* ((library-file (get-library-file cfg library))
-         (src-library-file (make-path dir library-file))
-         (library-dir (path-directory src-library-file))
-         (dest-library-file
-          (string-append (library->path cfg library) ".class"))
-         (dest-dir
-          (path-directory (make-path dir dest-library-file))))
-    ;; ensure the build directory exists
-    (create-directory* dest-dir)
-    (with-directory
-     dir
-     (lambda ()
-       (let ((res (system 'kawa '-d dir '-C src-library-file)))
-         (and (or (and (pair? res) (zero? (cadr res)))
-                  (yes-or-no? cfg ".class file failed to build: "
-                              (library-name library)
-                              " - install anyway?"))
-              library))))))
+  (let* ((src-library-file (make-path dir (get-library-file cfg library)))
+         (res (system 'kawa
+                      '-d dir
+                      '-C src-library-file)))
+    (and (or (and (pair? res) (zero? (cadr res)))
+             (yes-or-no? cfg ".class file failed to build: "
+                         (library-name library)
+                         " - install anyway?"))
+         library)))
 
 (define (lookup-builder builder)
   (case builder
