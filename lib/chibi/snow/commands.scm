@@ -1969,12 +1969,6 @@
                              (path-strip-directory
                                (path-strip-extension path))
                              ".sld")))
-    (display "HERE: ")
-    (display source-rkt-file)
-    (newline)
-    (display dest-rkt-file)
-    (newline)
-
     (with-output-to-file
       source-rkt-file
       (lambda ()
