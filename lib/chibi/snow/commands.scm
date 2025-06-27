@@ -1407,13 +1407,11 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
-    ((racket)
-     (list (process->string
-            '(racket -e "(display (find-system-path 'collects-dir))"))))
-    ((stklos)
-     (list (make-path
-            (process->string
-             '(stklos -e "(display (install-path #:libdir))")))))
+     ((racket)
+      (list
+       (make-path
+        (process->string
+         '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1953,60 +1951,42 @@
          (library-shared-include-files
           impl cfg (make-path dir source-scm-file))))))))
 
+;; Racket can only load files with .rkt suffix. So for each library we create
+;; a file that sets language to r7rs and includes the .sld file
 (define (racket-installer impl cfg library dir)
-  (let* ((library-file (get-library-file cfg library))
-         (rkt-file (path-replace-extension library-file "rkt"))
-         (library-file-name (path-strip-directory library-file))
-         (ext (get-library-extension impl cfg))
-         (dest-library-file
-          (string-append (library->path cfg library) "." ext))
-         (dest-rkt-file (path-replace-extension dest-library-file "rkt"))
-         (include-files
-          (library-include-files impl cfg (make-path dir library-file)))
+  (let* ((source-rkt-file
+           (string-append dir
+                          "/"
+                          (path-strip-extension (get-library-file cfg library))
+                          ".rkt"))
          (install-dir (get-install-source-dir impl cfg))
-         (install-lib-dir (get-install-library-dir impl cfg)))
+         (dest-rkt-file
+           (string-append install-dir
+                          "/"
+                          (library->path cfg library) ".rkt"))
+         (path (make-path install-dir dest-rkt-file))
+         (include-filename (string-append
+                             (path-strip-directory
+                               (path-strip-extension path))
+                             ".sld")))
     (display "HERE: ")
-    (display dir)
+    (display source-rkt-file)
     (newline)
-    (display "HERE1: ")
-    (display rkt-file)
+    (display dest-rkt-file)
     (newline)
-    ;; Create .rkt file
+
     (with-output-to-file
-      (string-append dir "/" rkt-file)
+      source-rkt-file
       (lambda ()
         (map display
-             `("#lang r7rs" #\newline
-              "(import (scheme base))" #\newline
-              "(include \"" ,library-file-name "\")" #\newline))))
-    ;; install the library file
-    (let ((path (make-path install-dir dest-library-file))
-          (rkt-path (make-path install-dir dest-rkt-file)))
-      (install-directory cfg (path-directory path))
-      (install-file cfg (make-path dir library-file) path)
-      (install-file cfg (make-path dir rkt-file) rkt-path)
-      ;; install any includes
-      (cons
-       path
-       (append
-        (map
-         (lambda (x)
-           (let ((dest-file (make-path install-dir (path-relative x dir))))
-             (install-directory cfg (path-directory dest-file))
-             (install-file cfg x dest-file)
-             dest-file))
-         include-files)
-        (map
-         (lambda (x)
-           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
-                                                         (else ".so"))))
-                  (dest-file (make-path install-lib-dir
-                                        (path-relative so-file dir))))
-             (install-directory cfg (path-directory dest-file))
-             (install-file cfg so-file dest-file)
-             dest-file))
-         (library-shared-include-files
-          impl cfg (make-path dir library-file))))))))
+             (list "#lang r7rs"
+                   #\newline
+                   "(import (scheme base))"
+                   #\newline
+                   "(include \"" include-filename "\")"
+                   #\newline))))
+    (default-installer impl cfg library dir)
+    (install-file cfg source-rkt-file dest-rkt-file)))
 
 ;; installers should return the list of installed files
 (define (lookup-installer installer)

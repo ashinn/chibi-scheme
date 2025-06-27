@@ -70,6 +70,7 @@
   (case impl
     ((chibi) (cond-expand (chibi #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
+    ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))
     (else #f)))
