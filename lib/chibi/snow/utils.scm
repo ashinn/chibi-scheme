@@ -41,10 +41,10 @@
               '(kawa -e "(write (features))"))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
-    (sagittarius "sagittarius" #f #f
+    (sagittarius "sagittarius" (sagittarius --version) #f
                  ,(delay
                     (process->sexp
-                     '(sagittarius -I "(scheme base)" -e "(write (features))"))))
+                     '(sagittarius -I "(scheme base)" -e "(write (features)) (exit)"))))
     (stklos "stklos" (stklos --version) #f
                  ,(delay
                     (process->sexp
