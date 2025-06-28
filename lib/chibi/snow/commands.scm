@@ -1407,6 +1407,10 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+    ((stklos)
+     (list (make-path
+            (process->string
+             '(stklos -e "(display (install-path #:libdir))")))))
      ((racket)
       (list
        (make-path
