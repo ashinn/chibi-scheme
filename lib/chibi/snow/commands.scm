@@ -1375,8 +1375,8 @@
                                    char-whitespace?)))))
        (list (or dir "/usr/local/share/cyclone/"))))
     ((gambit)
-     (list (string-append (get-environment-variable "HOME")
-                          "/.gambit_userlib")))
+     (list (make-path (get-environment-variable "HOME")
+                      ".gambit_userlib")))
     ((generic)
      (list (make-path (or (conf-get cfg 'install-prefix)
                           (cond-expand (windows (get-environment-variable "LOCALAPPDATA"))
@@ -1915,44 +1915,17 @@
 
 (define (gambit-installer impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
-         (o-file (path-replace-extension library-file "so"))
-         (ext (get-library-extension impl cfg))
-         (dest-library-file
-          (string-append (library->path cfg library) "." ext))
-         (dest-o-file
-          (string-append (library->path cfg library) ".so"))
-         (include-files
-          (library-include-files impl cfg (make-path dir library-file)))
-         (install-dir (get-install-source-dir impl cfg))
-         (install-lib-dir (get-install-library-dir impl cfg)))
-    ;; install the library file
-    (let ((path (make-path install-dir dest-library-file))
-          (o-path (make-path install-dir dest-o-file)))
-      (install-directory cfg (path-directory path))
-      (install-file cfg (make-path dir library-file) path)
-      (install-file cfg (make-path dir o-file) o-path)
-      ;; install any includes
-      (cons
-       path
-       (append
-        (map
-         (lambda (x)
-           (let ((dest-file (make-path install-dir (path-relative x dir))))
-             (install-directory cfg (path-directory dest-file))
-             (install-file cfg x dest-file)
-             dest-file))
-         include-files)
-        (map
-         (lambda (x)
-           (let* ((so-file (string-append x (cond-expand (macosx ".dylib")
-                                                         (else ".so"))))
-                  (dest-file (make-path install-lib-dir
-                                        (path-relative so-file dir))))
-             (install-directory cfg (path-directory dest-file))
-             (install-file cfg so-file dest-file)
-             dest-file))
-         (library-shared-include-files
-          impl cfg (make-path dir library-file))))))))
+         (install-dir (get-install-library-dir impl cfg))
+         (so-path (string-append (path-strip-extension library-file) ".so"))
+         (dest-so-path (make-path install-dir so-path))
+         (o-path (string-append (path-strip-extension library-file) ".o"))
+         (dest-o-path (make-path install-dir o-path)))
+    (install-directory cfg (path-directory dest-so-path))
+    (install-file cfg (make-path dir so-path) dest-so-path)
+    (install-file cfg (make-path dir o-path) dest-o-path)
+    (cons dest-o-path
+          (cons dest-so-path
+                (default-installer impl cfg library dir)))))
 
 (define (guile-installer impl cfg library dir)
   (let* ((source-scm-file (get-library-file cfg library))
@@ -2178,22 +2151,25 @@
   (let* ((library-file (get-library-file cfg library))
          (src-library-file (make-path dir library-file))
          (library-dir (path-directory src-library-file))
-         (dest-library-file (string-append (library->path cfg library) ".so"))
-         (dest-dir (path-directory (make-path dir dest-library-file))))
+         (dest-so-file (string-append (library->path cfg library) ".so"))
+         (dest-o-file (string-append (library->path cfg library) ".o"))
+         (dest-dir (path-directory (make-path dir dest-so-file))))
     ;; ensure the build directory exists
     (create-directory* dest-dir)
     (with-directory
-     dir
-     (lambda ()
-      (let ((res (system 'gsc
-                         '-o dest-library-file
-                         '-dynamic
-                         src-library-file)))
-         (and (or (and (pair? res) (zero? (cadr res)))
-                  (yes-or-no? cfg "gambit failed to build: "
-                              (library-name library)
-                              " - install anyway?"))
-              library))))))
+      dir
+      (lambda ()
+        (let ((res (system 'gsc '-o dest-so-file '-dynamic src-library-file)))
+          (and (or (and (pair? res) (zero? (cadr res)))
+                   (yes-or-no? cfg "gambit failed to build .so file: "
+                               (library-name library)
+                               " - install anyway?"))
+               (let ((res (system 'gsc '-o dest-o-file '-obj src-library-file)))
+                 (and (or (and (pair? res) (zero? (cadr res)))
+                          (yes-or-no? cfg "gambit failed to build .o file: "
+                                      (library-name library)
+                                      " - install anyway?"))
+                      library))))))))
 
 (define (guile-builder impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
