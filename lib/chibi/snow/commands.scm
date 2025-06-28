@@ -1919,13 +1919,16 @@
          (so-path (string-append (path-strip-extension library-file) ".so"))
          (dest-so-path (make-path install-dir so-path))
          (o-path (string-append (path-strip-extension library-file) ".o"))
-         (dest-o-path (make-path install-dir o-path)))
+         (dest-o-path (make-path install-dir o-path))
+         (installed-files (default-installer impl cfg library dir)))
     (install-directory cfg (path-directory dest-so-path))
-    (install-file cfg (make-path dir so-path) dest-so-path)
-    (install-file cfg (make-path dir o-path) dest-o-path)
-    (cons dest-o-path
-          (cons dest-so-path
-                (default-installer impl cfg library dir)))))
+    (when (file-exists? so-path)
+      (install-file cfg (make-path dir so-path) dest-so-path)
+      (set! installed-files (cons so-path installed-files)))
+    (when (file-exists? o-path)
+      (install-file cfg (make-path dir o-path) dest-o-path)
+      (set! installed-files (cons o-path installed-files)))
+    installed-files))
 
 (define (guile-installer impl cfg library dir)
   (let* ((source-scm-file (get-library-file cfg library))
