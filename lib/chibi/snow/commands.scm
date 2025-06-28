@@ -1955,20 +1955,18 @@
 ;; a file that sets language to r7rs and includes the .sld file
 (define (racket-installer impl cfg library dir)
   (let* ((source-rkt-file
-           (string-append dir
-                          "/"
-                          (path-strip-extension (get-library-file cfg library))
-                          ".rkt"))
+           (make-path dir
+           (string-append (path-strip-extension (get-library-file cfg library))
+                          ".rkt")))
          (install-dir (get-install-source-dir impl cfg))
          (dest-rkt-file
-           (string-append install-dir
-                          "/"
-                          (library->path cfg library) ".rkt"))
+           (make-path install-dir
+                      (string-append (library->path cfg library) ".rkt")))
          (path (make-path install-dir dest-rkt-file))
          (include-filename (string-append
-                             (path-strip-directory
-                               (path-strip-extension path))
-                             ".sld")))
+                             (path-strip-directory (path-strip-extension path))
+                             ".sld"))
+         (installed-files (default-installer impl cfg library dir)))
     (with-output-to-file
       source-rkt-file
       (lambda ()
@@ -1979,8 +1977,8 @@
                    #\newline
                    "(include \"" include-filename "\")"
                    #\newline))))
-    (default-installer impl cfg library dir)
-    (install-file cfg source-rkt-file dest-rkt-file)))
+    (install-file cfg source-rkt-file dest-rkt-file)
+    (cons dest-rkt-file installed-files)))
 
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
