@@ -1398,6 +1398,16 @@
         (if (string? path)
             path
             "/usr/local/share/guile/"))))
+    ((mosh)
+     (with-output-to-file
+      (make-path (cond-expand (windows (get-environment-variable "TMP"))
+                              (else "/tmp"))
+                 "snowmosh")
+      (lambda ()
+       (display "(import (scheme base) (scheme write) (mosh config))")
+       (newline)
+       (display "(display (get-config \"library-path\"))")))
+     (list (make-path (process->sexp '(mosh /tmp/snowmosh)) "lib")))
     ((larceny)
      (list
       (make-path
@@ -1494,6 +1504,10 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
+        ((mosh)
+         (if lib-path
+             `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
+             `(mosh --loadpath= ,install-dir ,file)))
         ((larceny)
          (if lib-path
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
@@ -1704,6 +1718,7 @@
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1715,6 +1730,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
+   ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1737,6 +1753,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'mosh)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
