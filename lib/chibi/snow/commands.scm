@@ -1401,8 +1401,8 @@
     ((mosh)
      (with-output-to-file
       (make-path (cond-expand (windows (get-environment-variable "TMP"))
-                                  (else "/tmp"))
-                      "snowmosh")
+                              (else "/tmp"))
+                 "snowmosh")
       (lambda ()
        (display "(import (scheme base) (scheme write) (mosh config))")
        (newline)
