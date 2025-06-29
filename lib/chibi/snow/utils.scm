@@ -41,6 +41,10 @@
               '(kawa -e "(write (features))"))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
+    (racket "racket" (racket --version) #f
+          ,(delay
+             (process->sexp
+              '(racket -I r7rs -e "(import (scheme base) (scheme write)) (display (features))"))))
     (sagittarius "sagittarius" (sagittarius --version) #f
                  ,(delay
                     (process->sexp
@@ -66,6 +70,7 @@
   (case impl
     ((chibi) (cond-expand (chibi #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
+    ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))
     (else #f)))

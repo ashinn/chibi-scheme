@@ -1415,6 +1415,11 @@
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
+     ((racket)
+      (list
+       (make-path
+        (process->string
+         '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1507,6 +1512,10 @@
          (if lib-path
              `(sagittarius -A ,install-dir -A ,lib-path ,file)
              `(sagittarius -A ,install-dir ,file)))
+        ((racket)
+         (if lib-path
+             `(racket -I r7rs -S ,install-dir -S ,lib-path --script ,file)
+             `(racket -I r7rs -S ,install-dir --script ,file)))
         ((stklos)
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
@@ -1718,6 +1727,7 @@
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1730,6 +1740,7 @@
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1753,6 +1764,7 @@
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
    ((eq? impl 'sagittarius)
+   ((eq? impl 'racket)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
@@ -1961,12 +1973,39 @@
          (library-shared-include-files
           impl cfg (make-path dir source-scm-file))))))))
 
+;; Racket can only load files with .rkt suffix. So for each library we create
+;; a file that sets language to r7rs and includes the .sld file
+(define (racket-installer impl cfg library dir)
+  (let* ((source-rkt-file
+           (make-path dir
+           (string-append (path-strip-extension (get-library-file cfg library))
+                          ".rkt")))
+         (install-dir (get-install-source-dir impl cfg))
+         (dest-rkt-file
+           (make-path install-dir
+                      (string-append (library->path cfg library) ".rkt")))
+         (path (make-path install-dir dest-rkt-file))
+         (include-filename (string-append
+                             (path-strip-directory (path-strip-extension path))
+                             ".sld"))
+         (installed-files (default-installer impl cfg library dir)))
+    (with-output-to-file
+      source-rkt-file
+      (lambda ()
+        (map display
+             (list "#lang r7rs" #\newline
+                   "(import (scheme base))" #\newline
+                   "(include \"" include-filename "\")" #\newline))))
+    (install-file cfg source-rkt-file dest-rkt-file)
+    (cons dest-rkt-file installed-files)))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
     ((guile) guile-installer)
+    ((racket) racket-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
@@ -1974,6 +2013,7 @@
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
     ((guile) 'guile)
+    ((racket) 'racket)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
