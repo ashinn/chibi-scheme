@@ -1399,15 +1399,14 @@
             path
             "/usr/local/share/guile/"))))
     ((mosh)
-     (with-output-to-file
-      (make-path (cond-expand (windows (get-environment-variable "TMP"))
-                              (else "/tmp"))
-                 "snowmosh")
-      (lambda ()
-       (display "(import (scheme base) (scheme write) (mosh config))")
-       (newline)
-       (display "(display (get-config \"library-path\"))")))
-     (list (make-path (process->sexp '(mosh /tmp/snowmosh)) "lib")))
+     (call-with-temp-file "snow-mosh.scm"
+      (lambda (tmp-path out preserve)
+       (with-output-to-file tmp-path
+        (lambda ()
+         (display "(import (scheme base) (scheme write) (mosh config))")
+         (newline)
+         (display "(display (get-config \"library-path\"))")))
+       (list (make-path (process->string `(mosh ,tmp-path)) "lib")))))
     ((larceny)
      (list
       (make-path
