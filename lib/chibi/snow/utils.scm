@@ -25,6 +25,10 @@
             ,(delay
                (process->sexp
                 '(foment -e "(write (features))"))))
+    (gambit "gsc" (gsc -v) #f
+            ,(delay
+               (process->sexp
+                '(gsc -e "(display (features))"))))
     (generic "generic" #f #f
             ,(delay (write-string "generic\n")))
     (gauche "gosh" (gosh -E "print (gauche-version)") "0.9.4"
@@ -69,6 +73,7 @@
 (define (target-is-host? impl)
   (case impl
     ((chibi) (cond-expand (chibi #t) (else #f)))
+    ((gambit) (cond-expand (gambit #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
     ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))

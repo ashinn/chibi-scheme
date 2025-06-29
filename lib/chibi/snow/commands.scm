@@ -1374,6 +1374,9 @@
                       (string-trim (process->string '(icyc -p "(Cyc-installation-dir 'sld)"))
                                    char-whitespace?)))))
        (list (or dir "/usr/local/share/cyclone/"))))
+    ((gambit)
+     (list (make-path (get-environment-variable "HOME")
+                      ".gambit_userlib")))
     ((generic)
      (list (make-path (or (conf-get cfg 'install-prefix)
                           (cond-expand (windows (get-environment-variable "LOCALAPPDATA"))
@@ -1482,6 +1485,10 @@
          (if lib-path
              `(foment -A ,install-dir -A ,lib-path ,file)
              `(foment -A ,install-dir ,file)))
+        ((gambit)
+         (if lib-path
+             `(gsi -s:search=,install-dir ,lib-path ,file)
+             `(gsi -s:search=,install-dir ,file)))
         ((gauche)
          (if lib-path
              `(gosh -A ,install-dir -A ,lib-path ,file)
@@ -1645,6 +1652,7 @@
 ;; package information for each builtin library
 (define native-srfi-support
   '((foment 60)
+    (gambit 0 4 6 8 9 16 18 21 22 23 27 30 39 62 88 193)
     (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
     (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
            35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
@@ -1711,6 +1719,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
@@ -1724,6 +1733,7 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
@@ -1745,6 +1755,8 @@
    ((eq? impl 'generic)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'cyclone)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'gambit)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
@@ -1914,6 +1926,23 @@
           (cons dest-so-path
                 (default-installer impl cfg library dir)))))
 
+(define (gambit-installer impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (install-dir (get-install-library-dir impl cfg))
+         (so-path (string-append (path-strip-extension library-file) ".so"))
+         (dest-so-path (make-path install-dir so-path))
+         (o-path (string-append (path-strip-extension library-file) ".o"))
+         (dest-o-path (make-path install-dir o-path))
+         (installed-files (default-installer impl cfg library dir)))
+    (install-directory cfg (path-directory dest-so-path))
+    (when (file-exists? so-path)
+      (install-file cfg (make-path dir so-path) dest-so-path)
+      (set! installed-files (cons so-path installed-files)))
+    (when (file-exists? o-path)
+      (install-file cfg (make-path dir o-path) dest-o-path)
+      (set! installed-files (cons o-path installed-files)))
+    installed-files))
+
 (define (guile-installer impl cfg library dir)
   (let* ((source-scm-file (get-library-file cfg library))
          (source-go-file (string-append
@@ -1986,6 +2015,7 @@
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
+    ((gambit) gambit-installer)
     ((guile) guile-installer)
     ((racket) racket-installer)
     (else default-installer)))
@@ -1994,6 +2024,7 @@
   (case impl
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
+    ((gambit) 'gambit)
     ((guile) 'guile)
     ((racket) 'racket)
     (else 'default)))
@@ -2160,6 +2191,30 @@
                               " - install anyway?"))
               library))))))
 
+(define (gambit-builder impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (src-library-file (make-path dir library-file))
+         (library-dir (path-directory src-library-file))
+         (dest-so-file (string-append (library->path cfg library) ".so"))
+         (dest-o-file (string-append (library->path cfg library) ".o"))
+         (dest-dir (path-directory (make-path dir dest-so-file))))
+    ;; ensure the build directory exists
+    (create-directory* dest-dir)
+    (with-directory
+      dir
+      (lambda ()
+        (let ((res (system 'gsc '-o dest-so-file '-dynamic src-library-file)))
+          (and (or (and (pair? res) (zero? (cadr res)))
+                   (yes-or-no? cfg "gambit failed to build .so file: "
+                               (library-name library)
+                               " - install anyway?"))
+               (let ((res (system 'gsc '-o dest-o-file '-obj src-library-file)))
+                 (and (or (and (pair? res) (zero? (cadr res)))
+                          (yes-or-no? cfg "gambit failed to build .o file: "
+                                      (library-name library)
+                                      " - install anyway?"))
+                      library))))))))
+
 (define (guile-builder impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
          (src-library-file (make-path dir library-file))
@@ -2181,12 +2236,13 @@
     ((chibi) chibi-builder)
     ((chicken) chicken-builder)
     ((cyclone) cyclone-builder)
+    ((gambit) gambit-builder)
     ((guile) guile-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone guile) impl)
+    ((chibi chicken cyclone gambit guile) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
