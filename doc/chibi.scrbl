@@ -1666,6 +1666,7 @@ installed. The following are currently supported:
 \item{gauche - version >= 0.9.4}
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa}}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
+\item{sagittarius - version >= 0.9.13}
 \item{racket - version >= 8.16 with the \scheme{r7rs} pkg}
 \item{sagittarius - version >= 0.98}
 \item{stklos - version > 2.10}

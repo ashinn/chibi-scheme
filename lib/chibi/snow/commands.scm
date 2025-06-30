@@ -1410,6 +1410,10 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+    ((sagittarius)
+     (list (make-path
+            (process->string
+             '(sagittarius -I "(sagittarius)" -e "(display (car (load-path))) (exit)")))))
     ((stklos)
      (list (make-path
             (process->string
@@ -1511,6 +1515,10 @@
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
                        -program ,file)
              `(larceny -r7rs -path ,install-dir -program ,file)))
+        ((sagittarius)
+         (if lib-path
+             `(sagittarius -A ,install-dir -A ,lib-path ,file)
+             `(sagittarius -A ,install-dir ,file)))
         ((racket)
          (if lib-path
              `(racket -I r7rs -S ,install-dir -S ,lib-path --script ,file)
@@ -1661,6 +1669,11 @@
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
              66 67 69 71 74 78 86 87 95 96 98)
+    (sagittarius 0 1 2 4 6 8 11 13 14 16 17 18 19 22 23 25 26 27 29 31 37 38 39
+                 41 42 43 45 49 57 60 61 64 69 78 86 87 98 99 100 101 105 106
+                 110 111 112 113 114 115 116 117 120 121 123 124 125 126 127
+                 128 129 130 131 132 133 134 135 139 141 142 143 144 145 146
+                 151 152 154 156 158 159 160 193 195 197 210 219 230)
     (stklos 0 1 2 4 5 6 7 8 9 10 11 13 14 15 16 17 18 19 22 23 25 26 27 28 29
             30 31 34 35 36 37 38 39 41 43 45 46 48 51 54 55 59 60 61 62 64 66
             69 70 74 87 88 89 94 95 96 98 100 111 112 113 115 116 117 118 125
@@ -1722,6 +1735,7 @@
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
@@ -1735,6 +1749,7 @@
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
+   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
@@ -1760,6 +1775,7 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'sagittarius)
    ((eq? impl 'racket)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
@@ -1862,6 +1878,8 @@
           (library-include-files impl cfg (make-path dir library-file)))
          (install-dir (get-install-source-dir impl cfg))
          (install-lib-dir (get-install-library-dir impl cfg)))
+    ;; ensure the install directory exists
+    (create-directory* install-dir)
     ;; install the library file
     (let ((path (make-path install-dir dest-library-file)))
       (install-directory cfg (path-directory path))
