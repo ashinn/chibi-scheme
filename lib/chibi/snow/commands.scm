@@ -1776,6 +1776,7 @@
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
    ((eq? impl 'sagittarius)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'racket)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
