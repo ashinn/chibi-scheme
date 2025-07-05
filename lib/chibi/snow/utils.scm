@@ -25,6 +25,10 @@
             ,(delay
                (process->sexp
                 '(foment -e "(write (features))"))))
+    (gambit "gsc" (gsc -v) #f
+            ,(delay
+               (process->sexp
+                '(gsc -e "(display (features))"))))
     (generic "generic" #f #f
             ,(delay (write-string "generic\n")))
     (gauche "gosh" (gosh -E "print (gauche-version)") "0.9.4"
@@ -41,10 +45,14 @@
               '(kawa -e "(write (features))"))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
-    (sagittarius "sagittarius" #f #f
+    (racket "racket" (racket --version) #f
+          ,(delay
+             (process->sexp
+              '(racket -I r7rs -e "(import (scheme base) (scheme write)) (display (features))"))))
+    (sagittarius "sagittarius" (sagittarius --version) #f
                  ,(delay
                     (process->sexp
-                     '(sagittarius -I "(scheme base)" -e "(write (features))"))))
+                     '(sagittarius -I "(scheme base)" -e "(write (features)) (exit)"))))
     (stklos "stklos" (stklos --version) #f
                  ,(delay
                     (process->sexp
@@ -65,7 +73,9 @@
 (define (target-is-host? impl)
   (case impl
     ((chibi) (cond-expand (chibi #t) (else #f)))
+    ((gambit) (cond-expand (gambit #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
+    ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))
     (else #f)))

@@ -1374,6 +1374,9 @@
                       (string-trim (process->string '(icyc -p "(Cyc-installation-dir 'sld)"))
                                    char-whitespace?)))))
        (list (or dir "/usr/local/share/cyclone/"))))
+    ((gambit)
+     (list (make-path (get-environment-variable "HOME")
+                      ".gambit_userlib")))
     ((generic)
      (list (make-path (or (conf-get cfg 'install-prefix)
                           (cond-expand (windows (get-environment-variable "LOCALAPPDATA"))
@@ -1409,10 +1412,19 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+    ((sagittarius)
+     (list (make-path
+            (process->string
+             '(sagittarius -I "(sagittarius)" -e "(display (car (load-path))) (exit)")))))
     ((stklos)
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
+     ((racket)
+      (list
+       (make-path
+        (process->string
+         '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1479,6 +1491,10 @@
          (if lib-path
              `(foment -A ,install-dir -A ,lib-path ,file)
              `(foment -A ,install-dir ,file)))
+        ((gambit)
+         (if lib-path
+             `(gsi -s:search=,install-dir ,lib-path ,file)
+             `(gsi -s:search=,install-dir ,file)))
         ((gauche)
          (if lib-path
              `(gosh -A ,install-dir -A ,lib-path ,file)
@@ -1501,6 +1517,14 @@
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
                        -program ,file)
              `(larceny -r7rs -path ,install-dir -program ,file)))
+        ((sagittarius)
+         (if lib-path
+             `(sagittarius -A ,install-dir -A ,lib-path ,file)
+             `(sagittarius -A ,install-dir ,file)))
+        ((racket)
+         (if lib-path
+             `(racket -I r7rs -S ,install-dir -S ,lib-path --script ,file)
+             `(racket -I r7rs -S ,install-dir --script ,file)))
         ((stklos)
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
@@ -1638,6 +1662,7 @@
 ;; package information for each builtin library
 (define native-srfi-support
   '((foment 60)
+    (gambit 0 4 6 8 9 16 18 21 22 23 27 30 39 62 88 193)
     (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
     (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
            35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
@@ -1646,6 +1671,11 @@
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
              66 67 69 71 74 78 86 87 95 96 98)
+    (sagittarius 0 1 2 4 6 8 11 13 14 16 17 18 19 22 23 25 26 27 29 31 37 38 39
+                 41 42 43 45 49 57 60 61 64 69 78 86 87 98 99 100 101 105 106
+                 110 111 112 113 114 115 116 117 120 121 123 124 125 126 127
+                 128 129 130 131 132 133 134 135 139 141 142 143 144 145 146
+                 151 152 154 156 158 159 160 193 195 197 210 219 230)
     (stklos 0 1 2 4 5 6 7 8 9 10 11 13 14 15 16 17 18 19 22 23 25 26 27 28 29
             30 31 34 35 36 37 38 39 41 43 45 46 48 51 54 55 59 60 61 62 64 66
             69 70 74 87 88 89 94 95 96 98 100 111 112 113 115 116 117 118 125
@@ -1704,9 +1734,12 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1717,8 +1750,11 @@
   (cond
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
+   ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
+   ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1739,9 +1775,15 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'cyclone)
     (car (get-install-dirs impl cfg)))
+   ((eq? impl 'gambit)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
    ((eq? impl 'kawa)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'sagittarius)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'racket)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
@@ -1843,6 +1885,8 @@
           (library-include-files impl cfg (make-path dir library-file)))
          (install-dir (get-install-source-dir impl cfg))
          (install-lib-dir (get-install-library-dir impl cfg)))
+    ;; ensure the install directory exists
+    (create-directory* install-dir)
     ;; install the library file
     (let ((path (make-path install-dir dest-library-file)))
       (install-directory cfg (path-directory path))
@@ -1907,6 +1951,23 @@
           (cons dest-so-path
                 (default-installer impl cfg library dir)))))
 
+(define (gambit-installer impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (install-dir (get-install-library-dir impl cfg))
+         (so-path (string-append (path-strip-extension library-file) ".so"))
+         (dest-so-path (make-path install-dir so-path))
+         (o-path (string-append (path-strip-extension library-file) ".o"))
+         (dest-o-path (make-path install-dir o-path))
+         (installed-files (default-installer impl cfg library dir)))
+    (install-directory cfg (path-directory dest-so-path))
+    (when (file-exists? so-path)
+      (install-file cfg (make-path dir so-path) dest-so-path)
+      (set! installed-files (cons so-path installed-files)))
+    (when (file-exists? o-path)
+      (install-file cfg (make-path dir o-path) dest-o-path)
+      (set! installed-files (cons o-path installed-files)))
+    installed-files))
+
 (define (guile-installer impl cfg library dir)
   (let* ((source-scm-file (get-library-file cfg library))
          (source-go-file (string-append
@@ -1961,21 +2022,51 @@
            (cons dest-class-file installed-files))
           (else installed-files))))
 
+;; Racket can only load files with .rkt suffix. So for each library we create
+;; a file that sets language to r7rs and includes the .sld file
+(define (racket-installer impl cfg library dir)
+  (let* ((source-rkt-file
+           (make-path dir
+           (string-append (path-strip-extension (get-library-file cfg library))
+                          ".rkt")))
+         (install-dir (get-install-source-dir impl cfg))
+         (dest-rkt-file
+           (make-path install-dir
+                      (string-append (library->path cfg library) ".rkt")))
+         (path (make-path install-dir dest-rkt-file))
+         (include-filename (string-append
+                             (path-strip-directory (path-strip-extension path))
+                             ".sld"))
+         (installed-files (default-installer impl cfg library dir)))
+    (with-output-to-file
+      source-rkt-file
+      (lambda ()
+        (map display
+             (list "#lang r7rs" #\newline
+                   "(import (scheme base))" #\newline
+                   "(include \"" include-filename "\")" #\newline))))
+    (install-file cfg source-rkt-file dest-rkt-file)
+    (cons dest-rkt-file installed-files)))
+
 ;; installers should return the list of installed files
 (define (lookup-installer installer)
   (case installer
     ((chicken) chicken-installer)
     ((cyclone) cyclone-installer)
+    ((gambit) gambit-installer)
     ((guile) guile-installer)
     ((kawa) kawa-installer)
+    ((racket) racket-installer)
     (else default-installer)))
 
 (define (installer-for-implementation impl cfg)
   (case impl
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
+    ((gambit) 'gambit)
     ((guile) 'guile)
     ((kawa) 'kawa)
+    ((racket) 'racket)
     (else 'default)))
 
 (define (install-library impl cfg library dir)
@@ -2140,6 +2231,30 @@
                               " - install anyway?"))
               library))))))
 
+(define (gambit-builder impl cfg library dir)
+  (let* ((library-file (get-library-file cfg library))
+         (src-library-file (make-path dir library-file))
+         (library-dir (path-directory src-library-file))
+         (dest-so-file (string-append (library->path cfg library) ".so"))
+         (dest-o-file (string-append (library->path cfg library) ".o"))
+         (dest-dir (path-directory (make-path dir dest-so-file))))
+    ;; ensure the build directory exists
+    (create-directory* dest-dir)
+    (with-directory
+      dir
+      (lambda ()
+        (let ((res (system 'gsc '-o dest-so-file '-dynamic src-library-file)))
+          (and (or (and (pair? res) (zero? (cadr res)))
+                   (yes-or-no? cfg "gambit failed to build .so file: "
+                               (library-name library)
+                               " - install anyway?"))
+               (let ((res (system 'gsc '-o dest-o-file '-obj src-library-file)))
+                 (and (or (and (pair? res) (zero? (cadr res)))
+                          (yes-or-no? cfg "gambit failed to build .o file: "
+                                      (library-name library)
+                                      " - install anyway?"))
+                      library))))))))
+
 (define (guile-builder impl cfg library dir)
   (let* ((library-file (get-library-file cfg library))
          (src-library-file (make-path dir library-file))
@@ -2172,13 +2287,14 @@
     ((chibi) chibi-builder)
     ((chicken) chicken-builder)
     ((cyclone) cyclone-builder)
+    ((gambit) gambit-builder)
     ((guile) guile-builder)
     ((kawa) kawa-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone guile kawa) impl)
+    ((chibi chicken cyclone gambit guile kawa) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
