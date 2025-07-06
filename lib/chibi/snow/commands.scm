@@ -1801,7 +1801,7 @@
 (define (get-library-extension impl cfg)
   (or (conf-get cfg 'library-extension)
       (case impl
-        ((gauche kawa) "scm")
+        ((gauche) "scm")
         (else "sld"))))
 
 (define (install-with-sudo? cfg path)
