@@ -56,7 +56,18 @@
     (stklos "stklos" (stklos --version) #f
                  ,(delay
                     (process->sexp
-                     '(stklos -e "(write (features))"))))))
+                     '(stklos -e "(write (features))"))))
+    (ypsilon "ypsilon" (ypsilon --version) #f
+             ,(delay
+                (call-with-temp-file "snow-ypsilon"
+                 (lambda (tmp-path out preserve)
+                  (with-output-to-file tmp-path
+                                       (lambda ()
+                                        (display "(import (scheme base) (scheme write) (mosh config))")
+                                        (newline)
+                                        (display "(display (features))")))
+                   (process->sexp
+                    `(ypsilon --r7rs ,tmp-path))))))))
 
 (define (impl->version impl cmd)
   (let* ((lines (process->string-list cmd))

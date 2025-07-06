@@ -1670,4 +1670,5 @@ installed. The following are currently supported:
 \item{racket - version >= 8.16 with the \scheme{r7rs} pkg}
 \item{sagittarius - version >= 0.98}
 \item{stklos - version > 2.10}
+\item{ypsilon - version > 2.0.8}
 ]

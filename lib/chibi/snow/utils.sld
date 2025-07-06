@@ -20,6 +20,7 @@
           (chibi pathname)
           (chibi process)
           (chibi string)
+          (chibi temp-file)
           (chibi uri))
   (cond-expand
    (chibi (import (chibi io)))
