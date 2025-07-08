@@ -1401,6 +1401,8 @@
         (if (string? path)
             path
             "/usr/local/share/guile/"))))
+    ((kawa)
+     (list "/usr/local/share/kawa/lib"))
     ((larceny)
      (list
       (make-path
@@ -1735,6 +1737,7 @@
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
+   ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
@@ -1749,6 +1752,7 @@
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
+   ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
@@ -1775,6 +1779,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
+   ((eq? impl 'kawa)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'sagittarius)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'racket)
@@ -1795,7 +1801,7 @@
 (define (get-library-extension impl cfg)
   (or (conf-get cfg 'library-extension)
       (case impl
-        ((gauche kawa) "scm")
+        ((gauche) "scm")
         (else "sld"))))
 
 (define (install-with-sudo? cfg path)
@@ -2003,6 +2009,19 @@
          (library-shared-include-files
           impl cfg (make-path dir source-scm-file))))))))
 
+(define (kawa-installer impl cfg library dir)
+  (let* ((class-file (path-replace-extension
+                       (get-library-file cfg library) "class"))
+         (source-class-file (make-path dir class-file))
+         (install-dir (get-install-source-dir impl cfg))
+         (dest-class-file (make-path install-dir class-file))
+         (path (make-path install-dir dest-class-file))
+         (installed-files (default-installer impl cfg library dir)))
+    (cond ((file-exists? source-class-file)
+           (install-file cfg source-class-file dest-class-file)
+           (cons dest-class-file installed-files))
+          (else installed-files))))
+
 ;; Racket can only load files with .rkt suffix. So for each library we create
 ;; a file that sets language to r7rs and includes the .sld file
 (define (racket-installer impl cfg library dir)
@@ -2036,6 +2055,7 @@
     ((cyclone) cyclone-installer)
     ((gambit) gambit-installer)
     ((guile) guile-installer)
+    ((kawa) kawa-installer)
     ((racket) racket-installer)
     (else default-installer)))
 
@@ -2045,6 +2065,7 @@
     ((cyclone) 'cyclone)
     ((gambit) 'gambit)
     ((guile) 'guile)
+    ((kawa) 'kawa)
     ((racket) 'racket)
     (else 'default)))
 
@@ -2250,6 +2271,17 @@
        (and (system 'guild 'compile '-O0 '--r7rs '-o dest-library-file src-library-file)
             library)))))
 
+(define (kawa-builder impl cfg library dir)
+  (let* ((src-library-file (make-path dir (get-library-file cfg library)))
+         (res (system 'kawa
+                      '-d dir
+                      '-C src-library-file)))
+    (and (or (and (pair? res) (zero? (cadr res)))
+             (yes-or-no? cfg ".class file failed to build: "
+                         (library-name library)
+                         " - install anyway?"))
+         library)))
+
 (define (lookup-builder builder)
   (case builder
     ((chibi) chibi-builder)
@@ -2257,11 +2289,12 @@
     ((cyclone) cyclone-builder)
     ((gambit) gambit-builder)
     ((guile) guile-builder)
+    ((kawa) kawa-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone gambit guile) impl)
+    ((chibi chicken cyclone gambit guile kawa) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
