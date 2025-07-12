@@ -43,6 +43,17 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
+    (mosh "mosh" (mosh -v) #f
+          ,(delay
+           (call-with-temp-file "snow-mosh.scm"
+            (lambda (tmp-path out preserve)
+             (with-output-to-file tmp-path
+              (lambda ()
+               (display "(import (scheme base) (scheme write) (mosh config))")
+               (newline)
+               (display "(display (features))")))
+             (process->sexp
+              `(mosh ,tmp-path))))))
     (larceny "larceny" (larceny --version) "v0.98"
              ,(delay '()))
     (racket "racket" (racket --version) #f

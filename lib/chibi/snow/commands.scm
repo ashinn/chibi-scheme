@@ -1412,6 +1412,20 @@
                    "(begin (display (getenv \"LARCENY_ROOT\")) (exit))"))
         char-whitespace?)
        "lib/Snow")))
+    ((mosh)
+     (call-with-temp-file "snow-mosh.scm"
+      (lambda (tmp-path out preserve)
+       (with-output-to-file tmp-path
+        (lambda ()
+         (display "(import (scheme base) (scheme write) (mosh config))")
+         (newline)
+         (display "(display (get-config \"library-path\"))")))
+       (list (make-path (process->string `(mosh ,tmp-path)) "lib")))))
+    ((racket)
+     (list
+      (make-path
+       (process->string
+        '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
     ((sagittarius)
      (list (make-path
             (process->string
@@ -1420,11 +1434,6 @@
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
-     ((racket)
-      (list
-       (make-path
-        (process->string
-         '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1512,6 +1521,10 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
+        ((mosh)
+         (if lib-path
+             `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
+             `(mosh --loadpath= ,install-dir ,file)))
         ((larceny)
          (if lib-path
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
@@ -1738,8 +1751,9 @@
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
-   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
+   ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
+   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1753,8 +1767,9 @@
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
-   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
+   ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
+   ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1781,9 +1796,11 @@
     (get-guile-site-ccache-dir))
    ((eq? impl 'kawa)
     (car (get-install-dirs impl cfg)))
-   ((eq? impl 'sagittarius)
+   ((eq? impl 'mosh)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'racket)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'sagittarius)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
