@@ -1434,6 +1434,15 @@
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
+     ((ypsilon)
+      (call-with-temp-file "snow-ypsilon.scm"
+       (lambda (tmp-path out preserve)
+         (with-output-to-file tmp-path
+                              (lambda ()
+                                (display "(import (core))")
+                                (newline)
+                                (display "(display (car (scheme-library-paths)))")))
+         (list (make-path (process->string `(ypsilon --r7rs ,tmp-path)))))))
     (else
      (list (make-path (or (conf-get cfg 'install-prefix) "/usr/local")
                       "share/snow"
@@ -1542,6 +1551,10 @@
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
              `(stklos -A ,install-dir ,file)))
+        ((ypsilon)
+         (if lib-path
+             `(ypsilon --sitelib ,install-dir --sitelib ,lib-path ,file)
+             `(ypsilon --sitelib ,install-dir ,file)))
         (else
          #f))))))
 
@@ -1755,6 +1768,7 @@
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
+   ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1771,6 +1785,7 @@
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
+   ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "share/snow" impl)))
@@ -1803,6 +1818,8 @@
    ((eq? impl 'sagittarius)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'ypsilon)
     (car (get-install-dirs impl cfg)))
    ((conf-get cfg 'install-prefix)
     => (lambda (prefix) (make-path prefix "lib" impl)))
