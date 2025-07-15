@@ -74,7 +74,7 @@
                  (lambda (tmp-path out preserve)
                   (with-output-to-file tmp-path
                                        (lambda ()
-                                        (display "(import (scheme base) (scheme write) (mosh config))")
+                                        (display "(import (scheme base) (scheme write))")
                                         (newline)
                                         (display "(display (features))")))
                    (process->sexp
