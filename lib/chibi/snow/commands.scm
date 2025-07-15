@@ -1434,11 +1434,6 @@
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
-     ((racket)
-      (list
-       (make-path
-        (process->string
-         '(racket -I racket/base -e "(display (find-system-path 'collects-dir))")))))
      ((ypsilon)
       (call-with-temp-file "snow-ypsilon.scm"
        (lambda (tmp-path out preserve)
