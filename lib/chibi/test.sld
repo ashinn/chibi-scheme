@@ -38,4 +38,22 @@
     (begin
       (define (pair-source x) #f)
       (define print-exception write))))
+  (cond-expand
+   ((library (srfi 13))
+    (import (only (srfi 13) string-contains)))
+   ((library (srfi 130))
+    (import (only (srfi 130) string-contains)))
+   (else
+    (define (string-contains str pat)
+      (let* ((pat-len (string-length pat))
+             (limit (- (string-length str) pat-len)))
+        (let lp1 ((i 0))
+          (cond
+           ((> i limit) #f)
+           (else
+            (let lp2 ((j i) (k 0))
+              (cond ((>= k pat-len) #t)
+                    ((not (eqv? (string-ref str j) (string-ref pat k)))
+                     (lp1 (+ i 1)))
+                    (else (lp2 (+ j 1) (+ k 1))))))))))))
   (include "test.scm"))
