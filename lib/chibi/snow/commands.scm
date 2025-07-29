@@ -1952,13 +1952,14 @@
          (dest-so-path (make-path install-dir so-path))
          (dest-imp-path (make-path install-dir imp-path)))
     (install-directory cfg install-dir)
-    (let ((meta-dir
+    #;(let ((meta-dir
            (string-join (map x->string (drop-right (library-name library) 1))
                         "/")))
     (install-directory cfg (make-path install-dir meta-dir)))
-    (install-file cfg (make-path dir o-path) dest-o-path)
+    ;(install-file cfg (make-path dir o-path) dest-o-path)
     (install-file cfg (make-path dir a-path) dest-a-path)
     (install-file cfg (make-path dir so-path) dest-so-path)
+    (install-file cfg (make-path dir link-path) dest-link-path)
     (install-file cfg (make-path dir imp-path) dest-imp-path)
     (list dest-so-path dest-imp-path)))
 
@@ -2236,20 +2237,19 @@
     (with-directory
       dir
       (lambda ()
-        (let
-          ((res-static
-             (let* ((result (system 'csc '-R 'r7rs '-X 'r7rs
-                                    '-unit library-base
-                                    '-static '-c '-J '-o o-path
-                                    '-I (path-directory library-file)
-                                    library-file))
-                    (ar-result (system 'ar 'rcs a-path o-path)))
-               (and (pair? result)
-                    (zero? (cadr result))
-                    (pair? ar-result)
-                    (zero? (cadr ar-result)))))
-           (res (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
-                        '-I (path-directory library-file) library-file)))
+        (let ((res (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
+                           '-I (path-directory library-file) library-file))
+              (res-static
+                (let* ((result (system 'csc '-R 'r7rs '-X 'r7rs
+                                       '-unit library-base
+                                       '-static '-c '-J '-o o-path
+                                       '-I (path-directory library-file)
+                                       library-file))
+                       (ar-result (system 'ar 'rcs a-path o-path)))
+                  (and (pair? result)
+                       (zero? (cadr result))
+                       (pair? ar-result)
+                       (zero? (cadr ar-result))))))
           (and (or res-static
                    (yes-or-no? cfg "chicken failed to build static library: "
                                (library-name library-name)
