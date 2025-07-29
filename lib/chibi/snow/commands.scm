@@ -1952,7 +1952,7 @@
          (dest-so-path (make-path install-dir so-path))
          (dest-imp-path (make-path install-dir imp-path)))
     (install-directory cfg install-dir)
-    #;(let ((meta-dir
+    (let ((meta-dir
            (string-join (map x->string (drop-right (library-name library) 1))
                         "/")))
     (install-directory cfg (make-path install-dir meta-dir)))
