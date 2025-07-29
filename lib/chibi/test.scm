@@ -1,4 +1,4 @@
-;; Copyright (c) 2010-2020 Alex Shinn. All rights reserved.
+;; Copyright (c) 2010-2025 Alex Shinn. All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;;> Simple but extensible testing framework with advanced reporting.
@@ -11,6 +11,15 @@
   (and (pair? ls)
        (or (pred (car ls))
            (any pred (cdr ls)))))
+
+(define (safe-any pred ls . o)
+  (let ((desc (or (and (pair? o) (car o)) "error in any")))
+    (guard (exn
+            (else
+             (warning desc)
+             (print-exception exn (current-error-port))
+             #f))
+      (any pred ls))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; exception utilities
@@ -36,22 +45,6 @@
                    (char=? (string-ref s (+ i 1)) #\space))
               (substring s (+ i 2) n)
               (loop (+ i 1)))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; string utilities
-
-(define (string-search pat str)
-  (let* ((pat-len (string-length pat))
-         (limit (- (string-length str) pat-len)))
-    (let lp1 ((i 0))
-      (cond
-       ((>= i limit) #f)
-       (else
-        (let lp2 ((j i) (k 0))
-          (cond ((>= k pat-len) #t)
-                ((not (eqv? (string-ref str j) (string-ref pat k)))
-                 (lp1 (+ i 1)))
-                (else (lp2 (+ j 1) (+ k 1))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; test interface
@@ -195,10 +188,10 @@
     (if (and (cond ((current-test-group)
                     => (lambda (g) (not (test-group-ref g 'skip-group?))))
                    (else #t))
-             (or (and (not (any (lambda (f) (f info)) (current-test-removers)))
+             (or (and (not (safe-any (lambda (f) (f info)) (current-test-removers)))
                       (or (pair? (current-test-removers))
                           (null? (current-test-filters))))
-                 (any (lambda (f) (f info)) (current-test-filters))))
+                 (safe-any (lambda (f) (f info)) (current-test-filters))))
         ((current-test-applier) expect expr info)
         ((current-test-skipper) info))))
 
@@ -331,12 +324,12 @@
     (! 'skip-group?
        (and (or (and parent
                      (test-group-ref parent 'skip-group?))
-                (any (lambda (f) (f g))
-                     (current-test-group-removers))
+                (safe-any (lambda (f) (f g))
+                          (current-test-group-removers))
                 (and (null? (current-test-group-removers))
                      (pair? (current-test-group-filters))))
-            (not (any (lambda (f) (f g))
-                      (current-test-group-filters)))))
+            (not (safe-any (lambda (f) (f g))
+                           (current-test-group-filters)))))
     g))
 
 ;;> Returns the name of a test group info object.
@@ -731,7 +724,7 @@
     (display "]")
     (test-print-failure indent status info)
     (newline))
-   ((eq? status 'SKIP))
+   ;; ((eq? status 'SKIP))
    (else
     (display (test-status-code status))
     (cond
@@ -744,8 +737,7 @@
   (cond
    ((current-test-group)
     => (lambda (group)
-         (if (not (eq? 'SKIP status))
-             (test-group-inc! group 'count))
+         (test-group-inc! group 'count)
          (test-group-inc! group status)
          ;; maybe wrap long status lines
          (let* ((width (max (- (current-column-width)
@@ -773,11 +765,11 @@
   (let* ((end-time (current-second))
          (start-time (test-group-ref group 'start-time))
          (duration (- end-time start-time))
-         (base-count (test-group-ref group 'count 0))
+         (skip (test-group-ref group 'SKIP 0))
+         (base-count (- (test-group-ref group 'count 0) skip))
          (base-pass (test-group-ref group 'PASS 0))
          (base-fail (test-group-ref group 'FAIL 0))
          (base-err (test-group-ref group 'ERROR 0))
-         (skip (test-group-ref group 'SKIP 0))
          (pass (+ base-pass (test-group-ref group 'total-pass 0)))
          (fail (+ base-fail (test-group-ref group 'total-fail 0)))
          (err (+ base-err (test-group-ref group 'total-error 0)))
@@ -951,11 +943,15 @@
 (define (string->info-matcher str)
   (lambda (info)
     (cond ((test-get-name! info)
-           => (lambda (n) (string-search str n)))
+           => (lambda (name) (and (string? name) (string-contains name str))))
           (else #f))))
 
 (define (string->group-matcher str)
-  (lambda (group) (string-search str (test-group-name group))))
+  (lambda (group)
+    (cond ((test-group-name group)
+           => (lambda (name)
+                (and (string? name) (string-contains name str))))
+          (else #f))))
 
 ;; simplified version from SRFI 130
 (define (string-split str ch)
