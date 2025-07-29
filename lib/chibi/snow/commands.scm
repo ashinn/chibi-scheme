@@ -1970,7 +1970,7 @@
     (let ((meta-dir
            (string-join (map x->string (drop-right (library-name library) 1))
                         "/")))
-    (install-directory cfg (make-path install-dir meta-dir)))
+      (install-directory cfg (make-path install-dir meta-dir)))
     (install-file cfg (make-path dir a-path) dest-a-path)
     (install-file cfg (make-path dir so-path) dest-so-path)
     (install-file cfg (make-path dir link-path) dest-link-path)
