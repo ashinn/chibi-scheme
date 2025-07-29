@@ -1958,8 +1958,12 @@
          (name (library-name library))
          (library-base (chicken-library-base name))
          (install-dir (get-install-library-dir impl cfg))
-         (so-path (string-append library-base ".so"))
+         (a-path (string-append library-base ".a"))
+         (dest-a-path (make-path install-dir a-path))
+         (link-path (string-append library-base ".link"))
+         (dest-link-path (make-path install-dir link-path))
          (imp-path (string-append library-base ".import.scm"))
+         (so-path (string-append library-base ".so"))
          (dest-so-path (make-path install-dir so-path))
          (dest-imp-path (make-path install-dir imp-path)))
     (install-directory cfg install-dir)
@@ -1967,7 +1971,9 @@
            (string-join (map x->string (drop-right (library-name library) 1))
                         "/")))
       (install-directory cfg (make-path install-dir meta-dir)))
+    (install-file cfg (make-path dir a-path) dest-a-path)
     (install-file cfg (make-path dir so-path) dest-so-path)
+    (install-file cfg (make-path dir link-path) dest-link-path)
     (install-file cfg (make-path dir imp-path) dest-imp-path)
     (list dest-so-path dest-imp-path)))
 
@@ -2239,17 +2245,35 @@
   (let* ((library-file (make-path dir (get-library-file cfg library)))
          (library-base (chicken-library-base (library-name library)))
          (so-path (make-path dir (string-append library-base ".so")))
+         (o-path (make-path dir (string-append library-base ".o")))
+         (a-path (make-path dir (string-append library-base ".a")))
          (imp-path (string-append library-base ".import.scm")))
     (with-directory
-     dir
-     (lambda ()
-       (let ((res (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
-                          '-I (path-directory library-file) library-file)))
-         (and (or (and (pair? res) (zero? (cadr res)))
-                  (yes-or-no? cfg "chicken failed to build: "
-                              (library-name library-name)
-                              " - install anyway?"))
-              library))))))
+      dir
+      (lambda ()
+        (let ((res (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
+                           '-I (path-directory library-file) library-file))
+              (res-static
+                (let* ((result (system 'csc '-R 'r7rs '-X 'r7rs
+                                       '-unit library-base
+                                       '-static '-c '-J '-o o-path
+                                       '-I (path-directory library-file)
+                                       library-file))
+                       (ar-result (system 'ar 'rcs a-path o-path)))
+                  (and (pair? result)
+                       (zero? (cadr result))
+                       (pair? ar-result)
+                       (zero? (cadr ar-result))))))
+          (and (or res-static
+                   (yes-or-no? cfg "chicken failed to build static library: "
+                               (library-name library-name)
+                               " - install anyway?"))
+               library)
+          (and (or (and (pair? res) (zero? (cadr res)))
+                   (yes-or-no? cfg "chicken failed to build: "
+                               (library-name library-name)
+                               " - install anyway?"))
+               library))))))
 
 (define (cyclone-builder impl cfg library dir)
   (let* ((library-file (make-path dir (get-library-file cfg library)))
