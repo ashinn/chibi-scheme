@@ -68,18 +68,19 @@
 ;;> \scheme{#t} indicating \scheme{current-output-port} and
 ;;> \scheme{#f} to collect the output as a string.
 (define (show out . args)
-  (let ((proc (each-in-list args)))
-    (cond
-     ((output-port? out)
-      (show-run (sequence (with! (port out)) proc)))
-     ((eq? #t out)
-      (show-run (sequence (with! (port (current-output-port))) proc)))
-     ((eq? #f out)
-      (call-with-output-string
-        (lambda (out)
-          (show-run (sequence (with! (port out)) proc)))))
-     (else
-      (error "unknown output to show" out)))))
+  (cond
+   ((output-port? out)
+    (if (any procedure? args)
+        (show-run (sequence (with! (port out)) (each-in-list args)))
+        (for-each (lambda (arg) (display arg out)) args)))
+   ((eq? #t out)
+    (apply show (current-output-port) args))
+   ((eq? #f out)
+    (call-with-output-string
+      (lambda (out)
+        (apply show out args))))
+   (else
+    (error "unknown output to show, expected a port or #t/#f" out))))
 
 
 ;;> Temporarily bind the parameters in the body \var{x}.
