@@ -1,5 +1,5 @@
 ;; log.scm -- customizable logging with levels
-;; Copyright (c) 2005-2013 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2005-2025 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 (define-record-type Logger
@@ -35,15 +35,17 @@
          (lambda () (%logger-current-level-set! default-logger orig-level)))))))
 
 (define-syntax define-logger
-  (syntax-rules ()
+  (syntax-rules (initial-level:)
     ((define-logger logger (levels ...))
-     (def-logger logger (levels ...) log-default-prefix 0 () ()))))
+     (define-logger logger (levels ...) #f))
+    ((define-logger logger (levels ...) (initial-level: init-level))
+     (def-logger logger (levels ...) log-default-prefix 0 () () init-level))))
 
 (define-syntax def-logger
   (syntax-rules ()
-    ((def-logger logger ((#f name) . rest) prefix n (names ...) defs)
-     (def-logger logger rest prefix (+ n 1) (names ... name) defs))
-    ((def-logger logger ((level name) . rest) prefix n (names ...) (defs ...))
+    ((def-logger logger ((#f name) . rest) prefix n (names ...) defs init-level)
+     (def-logger logger rest prefix (+ n 1) (names ... name) defs init-level))
+    ((def-logger logger ((level name) . rest) prefix n (names ...) (defs ...) init-level)
      (def-logger logger rest prefix (+ n 1)
        (names ... name)
        (defs ...
@@ -51,13 +53,14 @@
            (syntax-rules ()
              ((level . args)
               (if (<= n (logger-current-level logger))
-                  (log-show logger n . args))))))))
+                  (log-show logger n . args))))))
+       init-level))
     ((def-logger logger ((level name . x) . rest) . y)
      (syntax-error "bad logger level: " (level name . x)))
-    ((def-logger logger (level . rest) prefix n names defs)
+    ((def-logger logger (level . rest) prefix n names defs init-level)
      (def-logger logger ((level (log-normalize-name 'level)) . rest)
-       prefix n names defs))
-    ((def-logger logger () prefix n (names ...) (defs ...))
+       prefix n names defs init-level))
+    ((def-logger logger () prefix n (names ...) (defs ...) init-level)
      (begin
        defs ...
        (define logger
@@ -65,10 +68,14 @@
            (make-logger
             names-vec
             (log-generate-abbrevs names-vec)
-            n
+            (or init-level n)
             (log-compile-prefix prefix)
             prefix
-            '() #f (current-error-port) #f #f)))))))
+            '() #f (current-error-port) #f #f)))
+       (define dummy
+         (logger-current-level-set!
+          logger
+          (log-level-index logger (or init-level n))))))))
 
 (define (log-normalize-name name)
   (let ((str (symbol->string name)))
@@ -226,7 +233,8 @@
    log-warn      ; invalid smtp command; relay failed 
    log-notice    ; saved to file/relayed to address   
    log-info      ; loaded alias file                  
-   log-debug))   ; spam-probability: 0.5
+   log-debug)    ; spam-probability: 0.5
+  (initial-level: default-initial-level))
 
 (define-syntax with-logged-errors
   (syntax-rules ()

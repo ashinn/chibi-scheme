@@ -47,4 +47,20 @@
       (define (current-process-id) -1)
       (define (current-user-id) -1)
       (define (current-group-id) -1))))
+  (cond-expand
+   (debug
+    (begin (define default-initial-level 'debug)))
+   ((library (srfi 98))
+    (import (srfi 98))
+    (begin
+      (define default-initial-level
+        (or (cond ((get-environment-variable "SCHEME_LOG_LEVEL") =>
+                   (lambda (level)
+                     (or (string->number level)
+                         (and (not (equal? level ""))
+                              (string->symbol level)))))
+                  (else #f))
+            'info))))
+   (else
+    (begin (define default-initial-level 'info))))
   (include "log.scm"))
