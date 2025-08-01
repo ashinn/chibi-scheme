@@ -20,7 +20,7 @@
    log-level-index log-level-name log-level-abbrev
    ;; the default logger
    default-logger log-emergency log-alert log-critical log-error
-   log-warn log-notice log-info log-debug
+   log-warn log-notice log-info log-debug log-trace
    with-log-level)
   (import (chibi time) (chibi string) (chibi show base))
   (cond-expand

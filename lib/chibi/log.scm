@@ -233,7 +233,8 @@
    log-warn      ; invalid smtp command; relay failed 
    log-notice    ; saved to file/relayed to address   
    log-info      ; loaded alias file                  
-   log-debug)    ; spam-probability: 0.5
+   log-debug     ; spam-probability: 0.5
+   log-trace)    ; iter 1: x=0.567, y=0.314, z=0.922
   (initial-level: default-initial-level))
 
 (define-syntax with-logged-errors
