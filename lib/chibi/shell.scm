@@ -506,6 +506,14 @@
      (shell-with-output (shell-analyze shell-pipe (cmd ...) () ())
                         port->string))))
 
+(define-syntax shell->output&error
+  (syntax-rules ()
+    ((shell->string cmd ...)
+     (call-with-shell-io (shell-analyze shell-pipe (cmd ...) () ())
+                         (lambda (pids in out err)
+                           (values (port->string out)
+                                   (port->string err)))))))
+
 (define-syntax shell->string-list
   (syntax-rules ()
     ((shell->string cmd ...)
