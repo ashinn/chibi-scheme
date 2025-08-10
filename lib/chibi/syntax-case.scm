@@ -77,7 +77,7 @@
 
 (define (make-pattern-variable pvar)
   (lambda (expr)
-    (error "reference to pattern variable outside syntax" pvar)))
+    (syntax-violation #f "reference to pattern variable outside syntax" pvar)))
 
 (define (pattern-variable x)
   (and-let*
@@ -163,7 +163,9 @@
                     ((out envs)
                      (gen-template (car tmpl) (cons '() envs) ell? level)))
         (if (null? (car envs))
-            (error "too many ellipses following syntax template" (car tmpl)))
+            (syntax-violation 'syntax
+                              "too many ellipses following syntax template"
+                              (car tmpl)))
         (values `(,(rename 'fold-right) (,(rename 'lambda) (,@(car envs) ,(rename 'stx))
                                          (,(rename 'cons) ,out ,(rename 'stx)))
                   ,out* ,@(car envs))
@@ -180,7 +182,9 @@
       (values `(,(rename 'list->vector) ,out) envs)))
    ((identifier? tmpl)
     (cond ((ell? tmpl)
-           (error "misplaced ellipsis in syntax template" tmpl))
+           (syntax-violation 'syntax
+                             "misplaced ellipsis in syntax template"
+                             tmpl))
           ((pattern-variable tmpl) =>
            (lambda (binding)
              (values (car binding)
@@ -199,7 +203,7 @@
     (cond ((zero? level)
            envs)
           ((null? envs)
-           (error "too few ellipses following syntax template" id))
+           (syntax-violation #f "too few ellipses following syntax template" id))
           (else
            (let ((outer-envs (loop (- level 1) (cdr envs))))
              (cond ((member x (car envs) bound-identifier=?)
@@ -214,7 +218,7 @@
      (let ((expr (cadr expr))
            (lit* (car (cddr expr)))
            (clause* (reverse (cdr (cddr expr))))
-           (error #'(error "syntax error" e)))
+           (error #`(syntax-violation #f "syntax error" e)))
        #`(let ((e #,expr))
            #,(if (null? clause*)
                  error
@@ -294,7 +298,7 @@
                            (fail)))
                    vars))
           ((ellipsis-identifier? pattern)
-           (error "misplaced ellipsis" pattern))
+           (syntax-violation #f "misplaced ellipsis" pattern))
           ((free-identifier=? pattern #'_)
            (values (lambda (k)
                      (k))
@@ -370,8 +374,19 @@
        #'(syntax-case (list e0 ...) ()
            ((p ...) (let () e1 e2 ...)))))))
 
-(define (syntax-violation who message . form*)
-  (apply error message form*))
+(define (syntax-violation who message form . maybe-subform)
+  (raise (condition (make-syntax-violation form
+                                           (if (null? maybe-subform)
+                                               #f
+                                               (car maybe-subform)))
+                    (cond (who => make-who-condition)
+                          ((identifier? form)
+                           (make-who-condition (syntax->datum form)))
+                          ((and (pair? form)
+                                (identifier? (car form)))
+                           (make-who-condition (syntax->datum (car form))))
+                          (else (condition)))
+                    (make-message-condition message))))
 
 (define-syntax define-current-ellipsis
   (lambda (stx)
