@@ -18,5 +18,5 @@
       (define (procedure-variadic? x) #f))))
   (export define-memoized memoize memoize-to-file memoize-file-loader
           make-lru-cache lru-cache? lru-ref lru-ref! lru-set!
-          hash-table-ref!)
+          hash-table-ref! make-memoizer)
   (include "memoize.scm"))
