@@ -22,9 +22,9 @@
           "\n"))))
     (define (run-tests)
       (test-begin "logging")
-      (test "D four: 4\n"
+      (test "W four: 4\n"
           (log->string/no-dates
-           (log-debug "four: " (+ 2 2))))
+           (log-warn "four: " (+ 2 2))))
       (test "I pi: 3.14\n"
           (log->string/no-dates
            (log-info "pi: " (with ((precision 2)) (acos -1)))))

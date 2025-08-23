@@ -51,7 +51,8 @@ sexp json_read_number (sexp ctx, sexp self, sexp in) {
     for (ch = sexp_read_char(ctx, in); isdigit(ch); scale *= 10, ch = sexp_read_char(ctx, in))
       res = res * 10 + ch - '0';
     res /= scale;
-  } else if (ch == 'e') {
+  }
+  if (ch == 'e' || ch == 'E') {
     inexactp = 1;
     ch = sexp_read_char(ctx, in);
     if (ch == '+') {
@@ -262,7 +263,7 @@ sexp json_read_object (sexp ctx, sexp self, sexp in) {
         res = sexp_cons(ctx, tmp, res);
         comma = 0;
       } else {
-        res = sexp_json_read_exception(ctx, self, "unexpected value in json object", in, SEXP_NULL);
+        res = sexp_json_read_exception(ctx, self, "unexpected value in json object", in, tmp=sexp_list3(ctx, res, sexp_make_character(ch), sexp_make_fixnum(sexp_port_offset(in))));
         break;
       }
     }

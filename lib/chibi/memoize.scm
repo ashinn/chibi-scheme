@@ -44,8 +44,11 @@
      (define proc
        (make-memoizer (lambda x . body) #f (make-lru-cache ))))))
 
-(define (make-memoizer proc arity cache)
-  (let ((ref! (if (lru-cache? cache) lru-ref! hash-table-ref!)))
+(define (make-memoizer proc arity cache . o)
+  (let ((ref! (cond ((and (pair? o) (car o)))
+                    ((lru-cache? cache) lru-ref!)
+                    ((hash-table? cache) hash-table-ref!)
+                    (else (error "don't know how to use cache" cache)))))
     (case arity
       ((0)
        proc)
@@ -93,7 +96,8 @@
        (init-size init-size: 31)
        (limit size-limit: 1000)
        (compute-size compute-size: (lambda (k v) 1))
-       (cache-init cache: '()))
+       (cache-init cache: '())
+       (ref! cache-ref!: #f))
     (let ((cache (cond ((lru-cache? cache-init)
                         cache-init)
                        (limit
@@ -108,7 +112,7 @@
       (if (pair? cache-init)
           (for-each (lambda (x) (lru-add! cache (car x) (cdr x)))
                     cache-init))
-      (make-memoizer proc arity cache))))
+      (make-memoizer proc arity cache ref!))))
 
 ;;> Equivalent to memoize except that the procedure's first argument
 ;;> must be a pathname.  If the corresponding file has been modified
@@ -194,7 +198,7 @@
 ;;>
 ;;> \items[
 ;;> \item{args-encoder: procedure which takes the arguments as a single list, and returns a string representation suitable for use as a (base) file name}
-;;> \item{proc-name: the name of the procedure, to use a a subdir of memo-dir to distinguish from other memoized procedures}
+;;> \item{proc-name: the name of the procedure, to use a subdir of memo-dir to distinguish from other memoized procedures}
 ;;> \item{memo-dir: the directory to store results in, defaulting to ~/.memo/}
 ;;> \item{file-validator: validator to run on the existing file - if it returns false, the file is considered bad and the result recomputed}
 ;;> \item{validator: validator to run on the result of reading the file}

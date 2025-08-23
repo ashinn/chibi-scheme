@@ -6,7 +6,7 @@
           (only (chibi) port-fileno define-auxiliary-syntax))
   (export shell shell& shell-pipe call-with-shell-io
           shell->string shell->string-list
-          shell->sexp shell->sexp-list
+          shell->sexp shell->sexp-list shell->output&error
           shell-if shell-and shell-or shell-do
           in< out> err> out>> err>> >< >> <<)
   (begin

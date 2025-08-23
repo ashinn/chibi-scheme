@@ -9,6 +9,7 @@
       (test 1 (string->json "1"))
       (test 1.5 (string->json "1.5"))
       (test 1000.0 (string->json "1e3"))
+      (test 1500.0 (string->json "1.5E3"))
       (test 'null (string->json "null"))
       (test '((null . 3)) (string->json "{\"null\": 3}"))
       (test "á" (string->json "\"\\u00e1\""))

@@ -214,13 +214,27 @@
             (number->string (exact (round n))))
            ((and (eqv? radix 10) (or (integer? n) (inexact? n)))
             (let* ((s (number->string n))
+                   (start (string-cursor-start s))
                    (end (string-cursor-end s))
                    (dec (string-index s #\.))
+                   (e (string-index s #\e))
                    (digits (- (string-cursor->index s end)
                               (string-cursor->index s dec))))
               (cond
-               ((string-cursor<? (string-index s #\e) end)
-                (gen-general n))
+               ((string-cursor<? e end)
+                (if (positive? precision)
+                    (let* ((e2 (string-cursor-next s e))
+                           (exp (string->number (substring/cursors s e2 end))))
+                      (if (<= (- exp) precision)
+                          (gen-general n)
+                          ;; Experimental, prefer to retain the
+                          ;; exponent instead of just rounding to 0.
+                          (let ((n2 (string->number
+                                     (substring/cursors s start e))))
+                            (string-append
+                             (gen-fixed n2)
+                             (substring/cursors s e end)))))
+                    (gen-general n)))
                ((string-cursor=? dec end)
                 (string-append s (if (char? dec-sep) (string dec-sep) dec-sep)
                                (make-string precision #\0)))
@@ -229,13 +243,13 @@
                (else
                 (let* ((last
                         (string-cursor-back s end (- digits precision 1)))
-                       (res (substring/cursors s (string-cursor-start s) last)))
+                       (res (substring/cursors s start last)))
                   (if (and
                        (string-cursor<? last end)
                        (let ((next (digit-value (string-ref/cursor s last))))
                          (or (> next 5)
                              (and (= next 5)
-                                  (string-cursor>? last (string-cursor-start s))
+                                  (string-cursor>? last start)
                                   (memv (digit-value
                                          (string-ref/cursor
                                           s (string-cursor-prev s last)))
