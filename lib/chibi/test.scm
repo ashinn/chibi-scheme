@@ -195,6 +195,15 @@
         ((current-test-applier) expect expr info)
         ((current-test-skipper) info))))
 
+;;> Convenience form to skip all enclosed tests.
+
+(define-syntax test-skip
+  (syntax-rules ()
+    ((test-skip reason body ...)
+     (parameterize ((current-test-removers (lambda (info) #t))
+                    (current-test-filters (lambda (info) #f)))
+       body ...))))
+
 ;;> Returns true if either \scheme{(equal? expect res)}, or
 ;;> \var{expect} is inexact and \var{res} is within
 ;;> \scheme{current-test-epsilon} of \var{expect}.

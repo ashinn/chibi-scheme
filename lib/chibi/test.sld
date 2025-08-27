@@ -5,7 +5,7 @@
    test test-equal test-error test-assert test-not test-values
    test-group current-test-group
    test-begin test-end test-syntax-error test-propagate-info
-   test-run test-exit test-equal?
+   test-run test-skip test-exit test-equal?
    ;; test and group data
    test-get-name! test-group-name test-group-ref
    test-group-set! test-group-inc! test-group-push!
