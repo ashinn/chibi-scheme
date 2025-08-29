@@ -142,6 +142,13 @@
      (else
       #f))))
 
+(define (package-git-url pkg)
+  (cond ((and (pair? pkg)
+              (assoc 'git (cdr pkg))
+              (assoc 'url (cdr (assoc 'git (cdr pkg)))))
+         (car (cdr (assoc 'url (cdr (assoc 'git (cdr pkg)))))))
+        (else #f)))
+
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))
     (and url

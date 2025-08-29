@@ -628,6 +628,9 @@
                #t)))
 
 (define (command/package cfg spec . libs)
+  (display "HERE 631: ")
+  (write libs)
+  (newline)
   (let* ((spec+files (package-spec+files cfg spec libs))
          (output (package-output-path cfg (car spec+files) libs))
          (tarball (create-package (car spec+files) (cdr spec+files) output)))
@@ -2533,10 +2536,31 @@
         (snowball (maybe-gunzip (file->bytevector file))))
     (install-package-from-snowball repo impl cfg pkg snowball)))
 
+(define (git-fetch-package cfg pkg)
+  (call-with-temp-dir
+    "pkg-git-clone"
+    (lambda (dir preserve)
+      (let* ((git-command `(git clone ,(package-git-url pkg) ,dir --depth=1))
+             (libs (list (string-append dir "/" (package->path cfg pkg) ".sld")))
+             (spec '((output-dir ,dir))))
+        (let* ((spec+files (package-spec+files cfg spec libs))
+               (output (string-append dir "/package.tgz"))
+               (tarball (create-package (car spec+files) (cdr spec+files) output)))
+          (let ((out (open-binary-output-file output)))
+            (write-bytevector tarball out)
+            (close-output-port out))
+          (write (process->string `(ls ,dir)))
+          tarball)))))
+
 (define (install-package repo impl cfg pkg)
   (cond
    ((maybe-invalid-package-reason impl cfg pkg)
     => (lambda (x) (die 2 "package invalid: " x)))
+   ((package-git-url pkg)
+    => (lambda (url)
+         (let* ((raw (git-fetch-package cfg pkg))
+                (snowball (maybe-gunzip raw)))
+           (install-package-from-snowball repo impl cfg pkg snowball))))
    ((package-url repo pkg)
     => (lambda (url)
          (let* ((raw (fetch-package cfg url))
