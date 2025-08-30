@@ -628,9 +628,6 @@
                #t)))
 
 (define (command/package cfg spec . libs)
-  (display "HERE 631: ")
-  (write libs)
-  (newline)
   (let* ((spec+files (package-spec+files cfg spec libs))
          (output (package-output-path cfg (car spec+files) libs))
          (tarball (create-package (car spec+files) (cdr spec+files) output)))
@@ -2446,7 +2443,7 @@
          res)))
 
 (define (package-maybe-digest-mismatches impl cfg pkg raw)
-  (and (not (conf-get cfg 'ignore-digests?))
+  (and (not (conf-get cfg 'ignore-digest?))
        (let ((res (package-digest-mismatches cfg pkg raw)))
          (and res
               (not (yes-or-no? cfg "Package checksum mismatches: " res
@@ -2528,7 +2525,8 @@
                                   (and (pair? x)
                                        (eq? 'installed-files (car x))))
                                 pkg)
-                      (installed-files ,@installed-files)))))
+                      (installed-files ,@installed-files)))
+                   ))
              (preserve))))))))
 
 (define (install-package-from-file repo impl cfg file)
@@ -2536,21 +2534,50 @@
         (snowball (maybe-gunzip (file->bytevector file))))
     (install-package-from-snowball repo impl cfg pkg snowball)))
 
-(define (git-fetch-package cfg pkg)
+(define (git-fetch-package repo cfg pkg)
   (call-with-temp-dir
     "pkg-git-clone"
     (lambda (dir preserve)
-      (let* ((git-command `(git clone ,(package-git-url pkg) ,dir --depth=1))
-             (libs (list (string-append dir "/" (package->path cfg pkg) ".sld")))
-             (spec '((output-dir ,dir))))
-        (let* ((spec+files (package-spec+files cfg spec libs))
-               (output (string-append dir "/package.tgz"))
-               (tarball (create-package (car spec+files) (cdr spec+files) output)))
-          (let ((out (open-binary-output-file output)))
-            (write-bytevector tarball out)
-            (close-output-port out))
-          (write (process->string `(ls ,dir)))
-          tarball)))))
+      (let* ((git-tag (package-git-tag pkg))
+             (git-branch (cond ((equal? git-tag 'HEAD) `())
+                               (git-tag `(--branch ,git-tag))
+                               (else `())))
+             (git-hash (package-git-hash pkg))
+             (git-command `(git clone
+                                ,(package-git-url pkg)
+                                ,dir
+                                ,@git-branch
+                                --depth=1))
+             (git-output (process->output+error+status git-command))
+             (cloned-hash (read-line
+                            (open-input-string
+                              (process->string `(git -C ,dir rev-parse HEAD)))))
+             (libs
+               (map (lambda (lib)
+                      (make-path dir
+                                 (string-append (library->path cfg lib) ".sld")))
+                    (package-libraries pkg)))
+             (new-cfg
+               (conf-extend cfg `((version . ,(package-version pkg))
+                                  (author . ,(package-author repo pkg))
+                                  (maintainer . ,(package-maintainer repo pkg)))))
+             (spec '())
+             (spec+files (package-spec+files new-cfg spec libs)))
+        (when (not (= (list-ref git-output 2) 0))
+          (error "Git clone failed" git-output))
+        (when (and (not git-hash)
+                   (not (yes-or-no? new-cfg "Git hash missing.\nProceed anyway?")))
+          (die 2 "Git hash missing" pkg))
+        (when (and git-hash
+                   (not (string=? cloned-hash git-hash))
+                   (not (yes-or-no? new-cfg
+                                    "Package git hash did not match.\n"
+                                    "Proceed anyway?")))
+          (die 2 "Git hash did not match" pkg))
+        (call-with-temp-file
+          "pkg"
+          (lambda (tmp-path out preserve)
+            (create-package (car spec+files) (cdr spec+files) tmp-path)))))))
 
 (define (install-package repo impl cfg pkg)
   (cond
@@ -2558,9 +2585,14 @@
     => (lambda (x) (die 2 "package invalid: " x)))
    ((package-git-url pkg)
     => (lambda (url)
-         (let* ((raw (git-fetch-package cfg pkg))
+         (let* ((raw (git-fetch-package repo cfg pkg))
                 (snowball (maybe-gunzip raw)))
-           (install-package-from-snowball repo impl cfg pkg snowball))))
+           (install-package-from-snowball repo
+                                          impl
+                                          (conf-extend cfg
+                                                       '((ignore-digest? . #t)))
+                                          pkg
+                                          snowball))))
    ((package-url repo pkg)
     => (lambda (url)
          (let* ((raw (fetch-package cfg url))

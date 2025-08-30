@@ -149,6 +149,20 @@
          (car (cdr (assoc 'url (cdr (assoc 'git (cdr pkg)))))))
         (else #f)))
 
+(define (package-git-tag pkg)
+  (cond ((and (pair? pkg)
+              (assoc 'git (cdr pkg))
+              (assoc 'tag (cdr (assoc 'git (cdr pkg)))))
+         (car (cdr (assoc 'tag (cdr (assoc 'git (cdr pkg)))))))
+        (else #f)))
+
+(define (package-git-hash pkg)
+  (cond ((and (pair? pkg)
+              (assoc 'git (cdr pkg))
+              (assoc 'hash (cdr (assoc 'git (cdr pkg)))))
+         (car (cdr (assoc 'hash (cdr (assoc 'git (cdr pkg)))))))
+        (else #f)))
+
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))
     (and url
