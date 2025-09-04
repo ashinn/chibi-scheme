@@ -80,6 +80,11 @@
                    (process->sexp
                     `(ypsilon --r7rs ,tmp-path))))))))
 
+(define (assq-ref ls key . o)
+  (cond ((assq key ls) => cdr)
+        ((pair? o) (car o))
+        (else #f)))
+
 (define (impl->version impl cmd)
   (let* ((lines (process->string-list cmd))
          (line (and (pair? lines) (string-split (car lines)))))

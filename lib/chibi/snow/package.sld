@@ -29,6 +29,7 @@
           (scheme read)
           (scheme write)
           (srfi 1)
+          (srfi 2)
           (srfi 115)
           (chibi snow interface)
           (chibi snow utils)

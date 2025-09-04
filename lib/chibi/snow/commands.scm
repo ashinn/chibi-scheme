@@ -2543,26 +2543,40 @@
                                (git-tag `(--branch ,git-tag))
                                (else `())))
              (git-hash (package-git-hash pkg))
-             (git-command `(git clone
-                                ,(package-git-url pkg)
-                                ,dir
-                                ,@git-branch
-                                --depth=1))
-             (git-output (process->output+error+status git-command))
-             (cloned-hash (read-line
-                            (open-input-string
-                              (process->string `(git -C ,dir rev-parse HEAD)))))
-             (libs
-               (map (lambda (lib)
-                      (make-path dir
-                                 (string-append (library->path cfg lib) ".sld")))
-                    (package-libraries pkg)))
-             (new-cfg
-               (conf-extend cfg `((version . ,(package-version pkg))
-                                  (author . ,(package-author repo pkg))
-                                  (maintainer . ,(package-maintainer repo pkg)))))
-             (spec '())
-             (spec+files (package-spec+files new-cfg spec libs)))
+             (git-command
+               (cond (git-tag `(git clone
+                                    ,(package-git-url pkg)
+                                    ,dir
+                                    ,@git-branch
+                                    --depth=1))
+                     (git-hash
+                       `(git clone
+                             ,(package-git-url pkg)
+                             ,dir
+                             " && "
+                             git -C
+                             ,dir
+                             checkout
+                             ,git-hash))
+                     (else
+                       `(git clone
+                             ,(package-git-url pkg)
+                             ,dir))))
+               (git-output (process->output+error+status git-command))
+               (cloned-hash (read-line
+                              (open-input-string
+                                (process->string `(git -C ,dir rev-parse HEAD)))))
+               (libs
+                 (map (lambda (lib)
+                        (make-path dir
+                                   (string-append (library->path cfg lib) ".sld")))
+                      (package-libraries pkg)))
+               (new-cfg
+                 (conf-extend cfg `((version . ,(package-version pkg))
+                                    (author . ,(package-author repo pkg))
+                                    (maintainer . ,(package-maintainer repo pkg)))))
+               (spec '())
+               (spec+files (package-spec+files new-cfg spec libs)))
         (when (not (= (list-ref git-output 2) 0))
           (error "Git clone failed" git-output))
         (when (and (not git-hash)
