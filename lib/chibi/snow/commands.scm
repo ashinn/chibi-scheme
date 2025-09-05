@@ -2543,26 +2543,25 @@
                                (git-tag `(--branch ,git-tag))
                                (else `())))
              (git-hash (package-git-hash pkg))
-             (git-command
-               (cond (git-tag `(git clone
-                                    ,(package-git-url pkg)
-                                    ,dir
-                                    ,@git-branch
-                                    --depth=1))
+             (git-commands
+               (cond (git-tag `((git clone
+                                     ,(package-git-url pkg)
+                                     ,dir
+                                     ,@git-branch
+                                     --depth=1)))
                      (git-hash
-                       `(git clone
-                             ,(package-git-url pkg)
-                             ,dir
-                             " && "
-                             git -C
-                             ,dir
-                             checkout
-                             ,git-hash))
+                       `((git clone
+                              ,(package-git-url pkg)
+                              ,dir)
+                         (git -C
+                              ,dir
+                              checkout
+                              ,git-hash)))
                      (else
-                       `(git clone
-                             ,(package-git-url pkg)
-                             ,dir))))
-               (git-output (process->output+error+status git-command))
+                       `((git clone
+                              ,(package-git-url pkg)
+                              ,dir)))))
+               (git-outputs (map process->output+error+status git-commands))
                (cloned-hash (read-line
                               (open-input-string
                                 (process->string `(git -C ,dir rev-parse HEAD)))))
@@ -2577,8 +2576,8 @@
                                     (maintainer . ,(package-maintainer repo pkg)))))
                (spec '())
                (spec+files (package-spec+files new-cfg spec libs)))
-        (when (not (= (list-ref git-output 2) 0))
-          (error "Git clone failed" git-output))
+        (when (not (= (list-ref (list-ref git-outputs 0) 2) 0))
+          (error "Git clone failed" (list-ref git-outputs 0)))
         (when (and (not git-hash)
                    (not (yes-or-no? new-cfg "Git hash missing.\nProceed anyway?")))
           (die 2 "Git hash missing" pkg))
