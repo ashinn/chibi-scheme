@@ -142,6 +142,15 @@
      (else
       #f))))
 
+(define (package-git-url pkg)
+  (car (assq-ref (assq-ref pkg 'git '()) 'url '(#f))))
+
+(define (package-git-tag pkg)
+  (car (assq-ref (assq-ref pkg 'git '()) 'tag '(#f))))
+
+(define (package-git-hash pkg)
+  (car (assq-ref (assq-ref pkg 'git '()) 'hash '(#f))))
+
 (define (package-url repo pkg)
   (let ((url (and (pair? pkg) (assoc-get (cdr pkg) 'url eq?))))
     (and url

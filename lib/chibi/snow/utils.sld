@@ -4,7 +4,7 @@
           write-to-string display-to-string
           resource->bytevector uri-normalize uri-directory
           version-split version-compare version>? version>=?
-          topological-sort
+          topological-sort assq-ref
           known-implementations impl->version impl->features)
   (import (scheme base)
           (scheme char)
