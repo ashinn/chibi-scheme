@@ -1761,6 +1761,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
+   ((eq? impl 'gauche) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
@@ -1779,6 +1780,7 @@
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
+   ((eq? impl 'gauche) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
@@ -1801,6 +1803,8 @@
                            (get-chicken-binary-version cfg))))
           (else
            (car (get-install-dirs impl cfg)))))
+   ((eq? impl 'gauche)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'generic)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'cyclone)
@@ -1835,7 +1839,6 @@
 (define (get-library-extension impl cfg)
   (or (conf-get cfg 'library-extension)
       (case impl
-        ((gauche) "scm")
         (else "sld"))))
 
 (define (install-with-sudo? cfg path)
