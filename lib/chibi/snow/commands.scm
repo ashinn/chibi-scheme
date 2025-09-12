@@ -636,6 +636,12 @@
       (write-bytevector tarball out)
       (close-output-port out))))
 
+(define (command/install-dependencies cfg spec scm-file)
+  (let* ((dependencies
+           (map (lambda (dependency) (write-to-string dependency))
+                (cdar (extract-program-dependencies scm-file)))))
+    (apply command/install `(,cfg ,spec ,@dependencies))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Index - add packages to a local repository file.
 
