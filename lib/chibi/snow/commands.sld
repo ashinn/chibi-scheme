@@ -9,6 +9,7 @@
           command/implementations
           command/index
           command/install
+          command/install-dependencies
           command/remove
           command/search
           command/show
