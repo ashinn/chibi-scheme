@@ -111,14 +111,7 @@
      boolean ("auto-upgrade-dependencies")
      "upgrade install dependencies when newer versions are available")
     (use-sudo? symbol ("use-sudo") "always, never, or as-needed (default)")))
-(define install-dependencies-spec
-  '((skip-tests? boolean ("skip-tests") "don't run tests even if present")
-    (show-tests? boolean ("show-tests") "show test output even on success")
-    (install-tests? boolean ("install-tests") "install test-only libraries")
-    (auto-upgrade-dependencies?
-     boolean ("auto-upgrade-dependencies")
-     "upgrade install dependencies when newer versions are available")
-    (use-sudo? symbol ("use-sudo") "always, never, or as-needed (default)")))
+(define install-dependencies-spec install-spec)
 (define upgrade-spec
   install-spec)
 (define remove-spec '())
