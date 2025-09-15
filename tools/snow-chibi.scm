@@ -111,6 +111,7 @@
      boolean ("auto-upgrade-dependencies")
      "upgrade install dependencies when newer versions are available")
     (use-sudo? symbol ("use-sudo") "always, never, or as-needed (default)")))
+(define install-dependencies-spec install-spec)
 (define upgrade-spec
   install-spec)
 (define remove-spec '())
@@ -177,6 +178,9 @@
      (install
       "install packages"
       (@ ,install-spec) (,command/install names ...))
+     (install-dependencies
+      "install program dependencies"
+      (@ ,install-dependencies-spec) (,command/install-dependencies files ...))
      (upgrade
       "upgrade installed packages"
       (@ ,upgrade-spec) (,command/upgrade names ...))
