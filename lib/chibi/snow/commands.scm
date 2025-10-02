@@ -2017,14 +2017,24 @@
       (set! installed-files (cons o-path installed-files)))
     installed-files))
 
+(define (guile-srfi-fix dest-file)
+  ;; If library is (srfi N) it needs to be (srfi srfi-N) on Guile
+  (if (string=? (string-copy dest-file 0 5) "srfi/")
+    (string-append (string-copy dest-file 0 5)
+                   "srfi-"
+                   (string-copy dest-file 5))
+    dest-file))
+
 (define (guile-installer impl cfg library dir)
   (let* ((source-scm-file (get-library-file cfg library))
          (source-go-file (string-append
                           (library->path cfg library) ".go"))
          (dest-scm-file
-          (string-append (library->path cfg library) ".scm"))
+           (guile-srfi-fix
+             (string-append (library->path cfg library) ".scm")))
          (dest-go-file
-          (string-append (library->path cfg library) ".go"))
+           (guile-srfi-fix
+             (string-append (library->path cfg library) ".go")))
          (include-files
           (library-include-files impl cfg (make-path dir source-scm-file)))
          (install-dir (get-install-source-dir impl cfg))
