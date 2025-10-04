@@ -2647,7 +2647,7 @@ sexp sexp_read_string (sexp ctx, sexp in, int sentinel) {
     } else if (c == '\n') {
       sexp_port_line(in)++;
     } else if (c == EOF) {
-      res = sexp_read_error(ctx, "premature end of string", SEXP_NULL, in);
+      res = sexp_read_incomplete_error(ctx, "premature end of string", SEXP_NULL, in);
       break;
     }
     buf[i++] = c;
@@ -3445,7 +3445,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
                                 SEXP_NULL, in);
         } else {
           tmp = sexp_read_raw(ctx, in, shares);
-          if (sexp_exceptionp(tmp)) {
+          if (tmp == SEXP_EOF) {
+            res = sexp_read_incomplete_error(ctx, "no input after dot",
+                                             SEXP_NULL, in);
+          } else if (sexp_exceptionp(tmp)) {
             res = tmp;
           } else if (tmp == SEXP_CLOSE) {
             res = sexp_read_error(ctx, "no final element in list after dot",
@@ -3465,8 +3468,8 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       } else if (tmp == SEXP_CLOSE) {
         res = (sexp_pairp(res) ? sexp_nreverse(ctx, res) : res);
       } else {
-        res = sexp_read_error(ctx, "missing trailing ')' started on line",
-                              sexp_make_fixnum(line), in);
+        res = sexp_read_incomplete_error(ctx, "missing trailing ')' started on line",
+                                         sexp_make_fixnum(line), in);
       }
     }
     if ((line >= 0) && sexp_pairp(res)) {
@@ -3686,7 +3689,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         }
       }
       if (c1 == EOF)
-        res = sexp_read_error(ctx, "unterminated #| comment", SEXP_NULL, in);
+        res = sexp_read_incomplete_error(ctx, "unterminated #| comment", SEXP_NULL, in);
       else
         goto scan_loop;
       break;
