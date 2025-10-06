@@ -2019,7 +2019,7 @@
 
 (define (guile-srfi-fix dest-file)
   ;; If library is (srfi N) it needs to be (srfi srfi-N) on Guile
-  (if (string=? (string-copy dest-file 0 5) "srfi/")
+  (if (string-prefix? "srfi/" dest-file)
     (string-append (string-copy dest-file 0 5)
                    "srfi-"
                    (string-copy dest-file 5))
