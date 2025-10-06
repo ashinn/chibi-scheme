@@ -12,6 +12,7 @@
       (test 1500.0 (string->json "1.5E3"))
       (test 'null (string->json "null"))
       (test '((null . 3)) (string->json "{\"null\": 3}"))
+      (test '((foo . "a \"b\" c")) (string->json "{\"foo\": \"a \\\"b\\\" c\"}"))
       (test "á" (string->json "\"\\u00e1\""))
       (test "𐐷" (string->json "\"\\uD801\\uDC37\""))
       (test "😐" (string->json "\"\\uD83D\\uDE10\""))
@@ -124,6 +125,8 @@
       (test "1000" (json->string 1E3))
       (test "null" (json->string 'null))
       (test "{\"null\":3}" (json->string  '((null . 3))))
+      (test "{\"foo\":\"a \\\"b\\\" c\"}"
+          (json->string '((foo . "a \"b\" c"))))
       (test  "\"\\u00E1\"" (json->string "á"))
       (test  "\"\\uD801\\uDC37\"" (json->string "𐐷"))
       (test  "\"\\uD83D\\uDE10\"" (json->string "😐"))

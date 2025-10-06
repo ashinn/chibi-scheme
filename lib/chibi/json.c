@@ -351,6 +351,9 @@ sexp json_write_string(sexp ctx, sexp self, const sexp obj, sexp out) {
         case '\\':
           sexp_write_string(ctx, "\\\\", out);
           break;
+        case '"':
+          sexp_write_string(ctx, "\\\"", out);
+          break;
         case '\b':
           sexp_write_string(ctx, "\\b", out);
           break;
