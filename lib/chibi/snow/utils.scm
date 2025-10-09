@@ -43,7 +43,18 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
-    (mit-scheme "mit-scheme" (mit-scheme --version) #f
+    (loko "loko" #f #f
+          ,(delay
+           (call-with-temp-file "snow-loko.scm"
+            (lambda (tmp-path out preserve)
+             (with-output-to-file tmp-path
+              (lambda ()
+               (display "(import (scheme base) (scheme write))")
+               (newline)
+               (display "(display (features))")))
+             (process->sexp
+              `(loko -std=r7rs --program ,tmp-path))))))
+     (mit-scheme "mit-scheme" (mit-scheme --version) #f
           ,(delay
              (process->sexp
               '(mit-scheme --batch-mode --eval "(display (features))" --eval "(exit 0)"))))

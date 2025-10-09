@@ -1409,6 +1409,8 @@
             "/usr/local/share/guile/"))))
     ((kawa)
      (list "/usr/local/share/kawa/lib"))
+    ((loko)
+     (list "/usr/local/share/r6rs"))
     ((mit-scheme)
      (list
       (make-path
@@ -1552,6 +1554,11 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
+        ((loko)
+         (let ((install-dir (path-resolve install-dir (current-directory))))
+           (if lib-path
+               `(loko -std=r7rs --program ,file)
+               `(loko -std=r7rs --program ,file))))
         ((mit-scheme)
          (let ((install-dir (path-resolve install-dir (current-directory))))
            (if lib-path
@@ -1720,12 +1727,13 @@
     (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
            35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
            98 105 111 171)
-    (mit-scheme 0 1 2 6 8 9 14 23 27 30 39 62 69 112 115 124 125 128 129 131
-                133 143 158 162 180 219 228)
     (kawa 1 2 13 14 34 37 60 69 95)
+    (loko 19 38 98 170 215)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
              66 67 69 71 74 78 86 87 95 96 98)
+    (mit-scheme 0 1 2 6 8 9 14 23 27 30 39 62 69 112 115 124 125 128 129 131
+                133 143 158 162 180 219 228)
     (sagittarius 0 1 2 4 6 8 11 13 14 16 17 18 19 22 23 25 26 27 29 31 37 38 39
                  41 42 43 45 49 57 60 61 64 69 78 86 87 98 99 100 101 105 106
                  110 111 112 113 114 115 116 117 120 121 123 124 125 126 127
@@ -1794,6 +1802,7 @@
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'loko) (get-install-library-dir impl cfg))
    ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
@@ -1813,6 +1822,7 @@
    ((eq? impl 'gauche) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'loko) (get-install-library-dir impl cfg))
    ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
@@ -1845,6 +1855,8 @@
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
    ((eq? impl 'kawa)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'loko)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'mit-scheme)
     (car (get-install-dirs impl cfg)))
@@ -2404,7 +2416,7 @@
   (let* ((src-library-file (make-path dir (get-library-file cfg library)))
          (res (system 'mit-scheme
                       '--batch-mode
-                      '--eval (string-append "(cf \"" src-library-file "\")")
+                      '--eval (string-append "(sf \"" src-library-file "\")")
                       '--eval "(exit 0)")))
     (and (or (and (pair? res) (zero? (cadr res)))
              (yes-or-no? cfg "native-code files failed to build: "
