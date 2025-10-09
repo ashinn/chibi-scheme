@@ -1409,6 +1409,22 @@
             "/usr/local/share/guile/"))))
     ((kawa)
      (list "/usr/local/share/kawa/lib"))
+    ((mit-scheme)
+     (list
+      (make-path
+      (string-trim
+        ;; Get the last line of output because there might be warnings and such
+         (car
+           (reverse
+             (string-split
+               (process->string
+                 '(mit-scheme
+                    --batch-mode --eval
+                    "(display (->namestring (system-library-directory-pathname)))"
+                    --eval "(exit 0)"))
+               #\newline)))
+       char-whitespace?)
+       "libraries")))
     ((larceny)
      (list
       (make-path
@@ -1536,6 +1552,11 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
+        ((mit-scheme)
+         (let ((install-dir (path-resolve install-dir (current-directory))))
+           (if lib-path
+               `(mit-scheme --batch-mode --load ,file --eval "(exit 0)")
+               `(mit-scheme --batch-mode --load ,file --eval "(exit 0)"))))
         ((mosh)
          (if lib-path
              `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
@@ -1699,6 +1720,8 @@
     (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
            35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
            98 105 111 171)
+    (mit-scheme 0 1 2 6 8 9 14 23 27 30 39 62 69 112 115 124 125 128 129 131
+                133 143 158 162 180 219 228)
     (kawa 1 2 13 14 34 37 60 69 95)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
@@ -1771,6 +1794,7 @@
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
@@ -1789,6 +1813,7 @@
    ((eq? impl 'gauche) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
@@ -1820,6 +1845,8 @@
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
    ((eq? impl 'kawa)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'mit-scheme)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'mosh)
     (car (get-install-dirs impl cfg)))
@@ -2081,6 +2108,18 @@
            (cons dest-class-file installed-files))
           (else installed-files))))
 
+(define (mit-scheme-installer impl cfg library dir)
+  (let* ((binld-file (path-replace-extension
+                       (get-library-file cfg library) "binld"))
+         (source-binld-file (make-path dir binld-file))
+         (install-dir (get-install-source-dir impl cfg))
+         (dest-binld-file (make-path install-dir binld-file))
+         (installed-files (default-installer impl cfg library dir)))
+    (cond ((file-exists? source-binld-file)
+           (install-file cfg source-binld-file dest-binld-file)
+           (cons binld-file installed-files))
+          (else installed-files))))
+
 ;; Racket can only load files with .rkt suffix. So for each library we create
 ;; a file that sets language to r7rs and includes the .sld file
 (define (racket-installer impl cfg library dir)
@@ -2115,6 +2154,7 @@
     ((gambit) gambit-installer)
     ((guile) guile-installer)
     ((kawa) kawa-installer)
+    ((mit-scheme) mit-scheme-installer)
     ((racket) racket-installer)
     (else default-installer)))
 
@@ -2125,6 +2165,7 @@
     ((gambit) 'gambit)
     ((guile) 'guile)
     ((kawa) 'kawa)
+    ((mit-scheme) 'mit-scheme)
     ((racket) 'racket)
     (else 'default)))
 
@@ -2359,6 +2400,18 @@
                          " - install anyway?"))
          library)))
 
+(define (mit-scheme-builder impl cfg library dir)
+  (let* ((src-library-file (make-path dir (get-library-file cfg library)))
+         (res (system 'mit-scheme
+                      '--batch-mode
+                      '--eval (string-append "(cf \"" src-library-file "\")")
+                      '--eval "(exit 0)")))
+    (and (or (and (pair? res) (zero? (cadr res)))
+             (yes-or-no? cfg "native-code files failed to build: "
+                         (library-name library)
+                         " - install anyway?"))
+         library)))
+
 (define (lookup-builder builder)
   (case builder
     ((chibi) chibi-builder)
@@ -2367,11 +2420,12 @@
     ((gambit) gambit-builder)
     ((guile) guile-builder)
     ((kawa) kawa-builder)
+    ((mit-scheme) mit-scheme-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone gambit guile kawa) impl)
+    ((chibi chicken cyclone gambit guile kawa mit-scheme) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)

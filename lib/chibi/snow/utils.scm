@@ -43,6 +43,10 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
+    (mit-scheme "mit-scheme" (mit-scheme --version) #f
+          ,(delay
+             (process->sexp
+              '(mit-scheme --batch-mode --eval "(display (features))" --eval "(exit 0)"))))
     (mosh "mosh" (mosh -v) #f
           ,(delay
            (call-with-temp-file "snow-mosh.scm"
