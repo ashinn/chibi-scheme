@@ -1409,6 +1409,8 @@
             "/usr/local/share/guile/"))))
     ((kawa)
      (list "/usr/local/share/kawa/lib"))
+    ((loko)
+     (list "/usr/local/share/r6rs"))
     ((larceny)
      (list
       (make-path
@@ -1536,6 +1538,11 @@
                  --r7rs --script ,file)
                `(kawa ,(string-append "-Dkawa.import.path=" install-dir)
                       --r7rs --script ,file))))
+        ((loko)
+         (let ((install-dir (path-resolve install-dir (current-directory))))
+           (if lib-path
+               `(loko -std=r7rs --program ,file)
+               `(loko -std=r7rs --program ,file))))
         ((mosh)
          (if lib-path
              `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
@@ -1700,6 +1707,7 @@
            35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
            98 105 111 171)
     (kawa 1 2 13 14 34 37 60 69 95)
+    (loko 19 38 98 170 215)
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
              66 67 69 71 74 78 86 87 95 96 98)
@@ -1771,6 +1779,7 @@
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'loko) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
@@ -1789,6 +1798,7 @@
    ((eq? impl 'gauche) (get-install-library-dir impl cfg))
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
+   ((eq? impl 'loko) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
@@ -1820,6 +1830,8 @@
    ((eq? impl 'guile)
     (get-guile-site-ccache-dir))
    ((eq? impl 'kawa)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'loko)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'mosh)
     (car (get-install-dirs impl cfg)))

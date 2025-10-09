@@ -43,6 +43,17 @@
           ,(delay
              (process->sexp
               '(kawa -e "(write (features))"))))
+    (loko "loko" #f #f
+          ,(delay
+           (call-with-temp-file "snow-loko.scm"
+            (lambda (tmp-path out preserve)
+             (with-output-to-file tmp-path
+              (lambda ()
+               (display "(import (scheme base) (scheme write))")
+               (newline)
+               (display "(display (features))")))
+             (process->sexp
+              `(loko -std=r7rs --program ,tmp-path))))))
     (mosh "mosh" (mosh -v) #f
           ,(delay
            (call-with-temp-file "snow-mosh.scm"
