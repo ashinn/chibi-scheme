@@ -305,6 +305,8 @@ cleaner: clean
 	    libchibi-scheme$(SO_VERSIONED_SUFFIX) \
 	    libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX) \
 	    include/chibi/install.h lib/.*.meta \
+	    lib/chibi/snow/install.sld \
+	    clibs.c \
 	    chibi-scheme-emscripten \
 	    js/chibi.* \
 	    $(shell $(FIND) lib -name \*.o)
