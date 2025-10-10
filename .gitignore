@@ -38,6 +38,7 @@ lib/.*.meta
 
 # Generated files
 chibi-scheme
+chibi-scheme-static
 chibi-scheme-emscripten
 chibi-scheme.pc
 include/chibi/install.h
