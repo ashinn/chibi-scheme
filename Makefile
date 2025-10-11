@@ -78,7 +78,7 @@ init-dev:
 js: js/chibi.js
 
 js/chibi.js: chibi-scheme-emscripten chibi-scheme-static.bc js/pre.js js/post.js js/exported_functions.json
-	emcc -O0 chibi-scheme-static.bc -o $@ -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap"]' --pre-js js/pre.js --post-js js/post.js
+	emcc -O0 chibi-scheme-static.bc -o $@ -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) -printf " --preload-file %p"` -s 'EXPORTED_RUNTIME_METHODS=["ccall", "cwrap"]' --pre-js js/pre.js --post-js js/post.js
 
 chibi-scheme-static.bc:
 	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI="CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib ./chibi-scheme-emscripten" PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.bc SO=.bc STATICFLAGS=-shared CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1 -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0" clibs.c chibi-scheme-static.bc VERBOSE=1
