@@ -253,7 +253,9 @@ function(add_stubs_library stub)
     file(MAKE_DIRECTORY ${stubdir})
 
     add_custom_command(OUTPUT ${stubout}
-        COMMAND ${bootstrap} ${chibi-ffi} ${stubfile} ${stubout}
+        COMMAND ${CMAKE_COMMAND}
+            -E env CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib
+            $<TARGET_FILE:${bootstrap}> ${chibi-ffi} ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
