@@ -1,6 +1,10 @@
 
 cmake_minimum_required(VERSION 3.12)
 
+# Don't set compiler environment variables on first run, as this can break
+# generation of chibi-scheme-bootstrap when cross-compiling
+cmake_policy(SET CMP0132 NEW)
+
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version)
 string(STRIP ${version} version)
 
@@ -122,12 +126,39 @@ set(chibi-scheme-srcs
 # Bootstrap
 #
 
-add_executable(chibi-scheme-bootstrap
-    EXCLUDE_FROM_ALL
-    ${chibi-scheme-srcs}
-    main.c)
+if(NOT CMAKE_CROSSCOMPILING)
+    add_executable(chibi-scheme-bootstrap
+        EXCLUDE_FROM_ALL
+        ${chibi-scheme-srcs}
+        main.c)
 
-target_link_libraries(chibi-scheme-bootstrap PRIVATE libchibi-common)
+    target_link_libraries(chibi-scheme-bootstrap PRIVATE libchibi-common)
+
+    export(TARGETS chibi-scheme-bootstrap
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme-bootstrap-config.cmake")
+else()
+    #
+    # When cross-compiling, we need to build chibi-scheme-bootstrap for the
+    # host system
+    #
+
+    set(bootstrap-build-dir "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-build")
+
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}"
+            -B "${bootstrap-build-dir}"
+            -S "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMAND_ECHO STDERR
+        COMMAND_ERROR_IS_FATAL ANY)
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}"
+            --build "${bootstrap-build-dir}"
+            --target chibi-scheme-bootstrap
+        COMMAND_ECHO STDERR
+        COMMAND_ERROR_IS_FATAL ANY)
+
+    include("${bootstrap-build-dir}/chibi-scheme-bootstrap-config.cmake")
+endif()
 
 
 #
@@ -196,7 +227,7 @@ function(add_compiled_library cfile)
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/chibi/${installsubdir})
 endfunction()
 
-if(BUILD_SHARED_LIBS)
+if(BUILD_SHARED_LIBS AND NOT CMAKE_CROSSCOMPILING)
     # This makes sure we only use the separate bootstrap executable for static
     # builds. With dynamic linking, the default executable is fine. The dispatch
     # is not a generator expression within the actual custom command to process
@@ -495,7 +526,7 @@ function(generate_package_list libdir output)
     add_custom_command(OUTPUT ${output}
         COMMAND
         ${CMAKE_COMMAND}
-        -DEXEC=$<TARGET_FILE:chibi-scheme>
+        -DEXEC=$<IF:$<BOOL:CMAKE_CROSSCOMPILING>,$<TARGET_FILE:chibi-scheme-bootstrap>,$<TARGET_FILE:chibi-scheme>>
         -DLIBDIR=${libdir}
         -DGENMETA=tools/generate-install-meta.scm
         -DVERSION=${CMAKE_PROJECT_VERSION}
