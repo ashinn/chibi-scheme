@@ -15,6 +15,9 @@ if(NOT OUT)
     message(FATAL_ERROR "huh?")
 endif()
 
+set(ENV{CHIBI_IGNORE_SYSTEM_PATH} 1)
+set(ENV{CHIBI_MODULE_PATH} lib)
+
 execute_process(
     COMMAND ${EXEC} ${GENSTATIC} --no-inline
     INPUT_FILE ${STUBS}
