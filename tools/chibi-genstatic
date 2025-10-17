@@ -405,7 +405,7 @@
         ((--features)
          (if (null? (cdr args))
              (error "--features requires an argument"))
-         (lp (cddr args) (append features (string-split (cadr args) #\,))
+         (lp (cddr args) (append features (map string->symbol (string-split (cadr args) #\,)))
              includes excludes cfiles inline?))
         ((-i --include)
          (lp (cddr args) features
