@@ -1,9 +1,5 @@
 
-cmake_minimum_required(VERSION 3.12)
-
-# Don't set compiler environment variables on first run, as this can break
-# generation of chibi-scheme-bootstrap when cross-compiling
-cmake_policy(SET CMP0132 NEW)
+cmake_minimum_required(VERSION 3.25)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version)
 string(STRIP ${version} version)
@@ -39,7 +35,7 @@ check_symbol_exists(ntp_gettime sys/timex.h HAVE_NTP_GETTIME)
 check_symbol_exists(int_least8_t inttypes.h HAVE_STDINT_H)
 check_library_exists(util openpty "" HAVE_LIBRARY_UTIL)
 
-if((NOT EMSCRIPTEN) AND (CMAKE_SYSTEM MATCHES "[Ee]mscripten"))
+if((NOT EMSCRIPTEN) AND (CMAKE_SYSTEM_NAME STREQUAL "Emscripten"))
     set(EMSCRIPTEN 1)
 endif()
 
@@ -244,6 +240,76 @@ else()
     set(bootstrap chibi-scheme-bootstrap)
 endif()
 
+if(WIN32)
+    set(platform "windows")
+elseif(CYGWIN)
+    set(platform "cygwin")
+elseif(APPLE)
+    set(platform "macosx")
+elseif(BSD)
+    set(platform "bsd")
+elseif(ANDROID)
+    set(platform "android")
+elseif(CMAKE_SYSTEM MATCHES "[Ss]un[Oo][Ss]")
+    set(platform "solaris")
+elseif (LINUX)
+    set(platform "linux")
+elseif (EMSCRIPTEN)
+    set(platform "emscripten")
+else()
+    set(platform "unix")
+endif()
+
+if(EMSCRIPTEN)
+    # Emscripten's toolchain file sets CMAKE_SYSTEM_PROCESSOR to "x86", which
+    # is neither accurate nor helpful as the value of sexp_platform
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(architecture "wasm64")
+    else()
+        set(architecture "wasm32")
+    endif()
+else()
+    set(architecture "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
+set(features "")
+
+if(CMAKE_CROSSCOMPILING)
+    #
+    # When cross-compiling, chibi-ffi and chibi-genstatic can't rely on the
+    # feature list built in to chibi-scheme-bootstrap, as it reports the
+    # features of the host, not the target.  Instead, we construct the list of
+    # relevant features ourselves and pass it to the tools via their
+    # --features option.
+    #
+
+    if(CMAKE_C_BYTE_ORDER STREQUAL "BIG_ENDIAN")
+        list(PREPEND features "big-endian")
+    else()
+        list(PREPEND features "little-endian")
+    endif()
+
+    list(PREPEND features ${platform} ${architecture})
+
+    if(APPLE)
+        list(PREPEND features "darwin" "bsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+        list(PREPEND features "openbsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        list(PREPEND features "freebsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
+        list(PREPEND features "netbsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "DragonFly")
+        list(PREPEND features "dragonfly")
+    endif()
+
+    if(HAVE_POLL_H)
+        list(PREPEND features "threads")
+    endif()
+
+    list(PREPEND features "chibi")
+endif()
+
 function(add_stubs_library stub)
     set(link-libraries LINK_LIBRARIES)
     cmake_parse_arguments(stubs-options "" "" "${link-libraries}" ${ARGN})
@@ -261,9 +327,13 @@ function(add_stubs_library stub)
     add_custom_command(OUTPUT ${stubout}
         COMMAND ${CMAKE_COMMAND}
             -E env CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib
-            $<TARGET_FILE:${bootstrap}> ${chibi-ffi} ${stubfile} ${stubout}
+            $<TARGET_FILE:${bootstrap}> ${chibi-ffi}
+            "$<$<BOOL:${features}>:--features;$<JOIN:${features},$<COMMA>>>"
+            ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        VERBATIM
+        COMMAND_EXPAND_LISTS)
 
     add_compiled_library(${stubout} LINK_LIBRARIES ${stubs-options_LINK_LIBRARIES})
 endfunction()
@@ -330,6 +400,7 @@ if (NOT BUILD_SHARED_LIBS)
         ${CMAKE_COMMAND}
         -DEXEC=$<TARGET_FILE:chibi-scheme-bootstrap>
         -DGENSTATIC=${chibi-genstatic}
+        "-DFEATURES=$<JOIN:${features},$<COMMA>>"
         -DSTUBS=${clibin}
         -DOUT=${clibout}
         -P ${genstatic-helper}
@@ -377,26 +448,6 @@ target_link_libraries(chibi-scheme
 #
 # Generate "chibi/install.h"
 #
-
-if(WIN32)
-    set(platform "windows")
-elseif(CYGWIN)
-    set(platform "cygwin")
-elseif(APPLE)
-    set(platform "macosx")
-elseif(CMAKE_SYSTEM MATCHES "[Bb][Ss][Dd]")
-    set(platform "bsd")
-elseif(CMAKE_SYSTEM MATCHES "[Aa]ndroid")
-    set(platform "android")
-elseif(CMAKE_SYSTEM MATCHES "[Ss]un[Oo][Ss]")
-    set(platform "solaris")
-elseif (CMAKE_SYSTEM MATCHES "[Ll]inux")
-    set(platform "linux")
-elseif (EMSCRIPTEN)
-    set(platform "emscripten")
-else()
-    set(platform "unix")
-endif()
 
 if(WIN32)
     # Leave this empty for now, as the default GNU install directories won't
