@@ -85,7 +85,7 @@ chibi-scheme-static.o:
 
 chibi-scheme-emscripten: VERSION
 	$(MAKE) distclean
-	$(MAKE) chibi-scheme-static PLATFORM=emscripten SEXP_USE_DL=0
+	$(MAKE) chibi-scheme-static SEXP_USE_DL=0
 	(tempfile="`mktemp -t chibi.XXXXXX`" && \
 	mv chibi-scheme-static$(EXE) "$$tempfile" && \
 	$(MAKE) distclean; \
