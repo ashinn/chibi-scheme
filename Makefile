@@ -7,13 +7,16 @@ CHIBI_VERSION ?= $(shell cat VERSION)
 SOVERSION ?= $(CHIBI_VERSION)
 SOVERSION_MAJOR ?= $(shell echo "$(SOVERSION)" | sed "s/\..*//")
 
-CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi
+FEATURES ?=
+
+CHIBI_FFI ?= $(CHIBI) -q tools/chibi-ffi $(FEATURES)
 CHIBI_FFI_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-ffi
 
 CHIBI_DOC ?= $(CHIBI) tools/chibi-doc
 CHIBI_DOC_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-doc $(COMPILED_LIBS)
 
-GENSTATIC ?= ./tools/chibi-genstatic
+CHIBI_GENSTATIC ?= $(CHIBI) -q tools/chibi-genstatic $(FEATURES)
+CHIBI_GENSTATIC_DEPENDENCIES ?= $(CHIBI_DEPENDENCIES) tools/chibi-genstatic
 
 CHIBI ?= LD_LIBRARY_PATH=".:$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH=".:$(DYLD_LIBRARY_PATH)" CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib ./chibi-scheme$(EXE)
 CHIBI_DEPENDENCIES = ./chibi-scheme$(EXE)
@@ -81,7 +84,7 @@ js/chibi.js: chibi-scheme-emscripten chibi-scheme-static.o js/pre.js js/post.js 
 	emcc -O0 chibi-scheme-static.o -o $@ -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME=\"Chibi\" -s EXPORTED_FUNCTIONS=@js/exported_functions.json `find  lib -type f \( -name "*.scm" -or -name "*.sld" \) | awk '{ printf " --preload-file %s", $$1 }'` -s 'EXPORTED_RUNTIME_METHODS=["ccall", "cwrap"]' --pre-js js/pre.js --post-js js/post.js
 
 chibi-scheme-static.o:
-	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI="CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib ./chibi-scheme-emscripten" PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.o SO=.o STATICFLAGS=-shared CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1 -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0" clibs.c chibi-scheme-static.o VERBOSE=1
+	emmake $(MAKE) PLATFORM=emscripten CHIBI_DEPENDENCIES= CHIBI="CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib ./chibi-scheme-emscripten" FEATURES="--features chibi,threads,emscripten,wasm32,little-endian" PREFIX= CFLAGS=-O2 SEXP_USE_DL=0 EXE=.o SO=.o STATICFLAGS=-shared CPPFLAGS="-DSEXP_USE_STRICT_TOPLEVEL_BINDINGS=1 -DSEXP_USE_ALIGNED_BYTECODE=1 -DSEXP_USE_STATIC_LIBS=1 -DSEXP_USE_STATIC_LIBS_NO_INCLUDE=0" clibs.c chibi-scheme-static.o VERBOSE=1
 
 chibi-scheme-emscripten: VERSION
 	$(MAKE) distclean
@@ -147,11 +150,11 @@ chibi-scheme-static$(EXE): main.o $(SEXP_OBJS) $(EVAL_OBJS)
 chibi-scheme-ulimit$(EXE): main.o $(SEXP_ULIMIT_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) $(STATIC_LDFLAGS)
 
-clibs.c: $(GENSTATIC) $(CHIBI_DEPENDENCIES) $(COMPILED_LIBS:%$(SO)=%.c)
+clibs.c: $(CHIBI_GENSTATIC_DEPENDENCIES) $(COMPILED_LIBS:%$(SO)=%.c)
 	if [ -d .git ]; then \
-		$(GIT) ls-files lib | $(GREP) .sld | $(CHIBI) -q $(GENSTATIC) > $@; \
+		$(GIT) ls-files lib | $(GREP) .sld | $(CHIBI_GENSTATIC) > $@; \
 	else \
-		$(FIND) lib -name \*.sld | $(CHIBI) -q $(GENSTATIC) > $@; \
+		$(FIND) lib -name \*.sld | $(CHIBI_GENSTATIC) > $@; \
 	fi
 
 chibi-scheme.pc: chibi-scheme.pc.in
