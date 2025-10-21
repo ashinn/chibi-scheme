@@ -47,6 +47,9 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ${DEFAULT_SHARED_LIBS})
 option(SEXP_USE_BOEHM "Use Boehm garbage collection library" OFF)
+if(EMSCRIPTEN)
+    option(EMBED_MODULES "Embed all modules in chibi-scheme.js" ON)
+endif()
 
 if(SEXP_USE_BOEHM)
     find_library(BOEHMGC gc REQUIRED)
@@ -444,6 +447,35 @@ add_executable(chibi-scheme
 
 target_link_libraries(chibi-scheme
     PRIVATE libchibi-scheme)
+
+if(EMSCRIPTEN AND EMBED_MODULES AND (DEFINED ENV{EMSDK}))
+    #
+    # Embed all modules in the chibi-scheme executable.  If nothing else, this
+    # lets you confirm the build was successful by running something like
+    #
+    #   node chibi-scheme.js -e '(display "Hello, world!\n")'
+    #
+
+    set(modules-embed-obj "${CMAKE_CURRENT_BINARY_DIR}/modules-embed.o")
+    set(modules-embed-dep "${CMAKE_CURRENT_BINARY_DIR}/modules-embed.d")
+
+    add_custom_command(
+        OUTPUT "${modules-embed-obj}"
+        COMMAND
+            "$ENV{EMSDK}/upstream/emscripten/tools/file_packager"
+            ignored
+            --embed lib
+            --exclude *.c *.stub
+            "--obj-output=${modules-embed-obj}"
+            "--depfile=${modules-embed-dep}"
+            --quiet
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        DEPFILE "${modules-embed-dep}")
+
+    target_sources(chibi-scheme
+        PRIVATE
+        "${modules-embed-obj}")
+endif()
 
 #
 # Generate "chibi/install.h"
