@@ -2407,7 +2407,7 @@
              compile?
              cc
              cflags
-             (append features (string-split (cadr args) #\,))))
+             (append features (map string->symbol (string-split (cadr args) #\,)))))
         (else
          (error "unknown option" (car args)))))
      (else
