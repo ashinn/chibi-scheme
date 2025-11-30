@@ -1,6 +1,7 @@
 (define-library (chibi crypto rsa-test)
   (export run-tests)
   (import (scheme base)
+          (srfi 151)
           (chibi crypto rsa)
           (chibi crypto sha2)
           (chibi test))
@@ -49,6 +50,7 @@
       (test-key (rsa-key-gen 16))
       (test-key (rsa-key-gen 32))
       (test-key (rsa-key-gen-from-primes 32 2936546443 3213384203))
+      (test 16 (integer-length (rsa-key-n (rsa-key-gen 16))))
 
       ;; These are expensive to test.  Times with -h1G:
       ;; (test-key (rsa-key-gen 128))   ; 0.04s
