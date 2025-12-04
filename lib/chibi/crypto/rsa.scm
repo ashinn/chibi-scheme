@@ -1,5 +1,5 @@
 ;; rsa.scm -- RSA public key cryptography library
-;; Copyright (c) 2014 Alex Shinn.  All rights reserved.
+;; Copyright (c) 2014-2025 Alex Shinn.  All rights reserved.
 ;; BSD-style license: http://synthcode.com/license.txt
 
 ;; The RSA key type.  The public fields are always present, but the
@@ -29,8 +29,9 @@
 
 (define (rsa-key-gen . o)
   (let* ((bit-length (if (pair? o) (car o) 128))
-         (lo (max 3 (expt 2 (- bit-length 1))))
-         (hi (expt 2 bit-length))
+         (factor-bit-length (quotient bit-length 2))
+         (lo (max 3 (expt 2 (- factor-bit-length 1))))
+         (hi (expt 2 factor-bit-length))
          (p (random-prime lo hi))
          (q (random-prime-distinct-from lo hi p)))
     (rsa-key-gen-from-primes bit-length p q)))
