@@ -1354,6 +1354,11 @@
     (guard (exn (else #f))
       (process->sexp `(guile -c ,(write-to-string `(write ,expr))))))
   (case impl
+    ((capyscheme)
+     (list
+       (make-path
+         (process->string
+           '(capy -c "(printf \"~a\" (car %load-path))")))))
     ((chibi)
      (let* ((dirs
              (reverse
@@ -1516,6 +1521,10 @@
     (let ((lib-path (and (pair? o) (car o)))
           (install-dir (get-install-source-dir impl cfg)))
       (case impl
+        ((capyscheme)
+         (if lib-path
+             `(capy -L ,install-dir -L ,lib-path --script ,file)
+             `(capy -L ,install-dir --script ,file)))
         ((chibi)
          (let ((chibi (string-split (conf-get cfg 'chibi-path "chibi-scheme"))))
            (if lib-path
@@ -1795,6 +1804,7 @@
 
 (define (get-install-source-dir impl cfg)
   (cond
+   ((eq? impl 'capyscheme) (get-install-library-dir impl cfg))
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
@@ -1816,6 +1826,7 @@
 
 (define (get-install-data-dir impl cfg)
   (cond
+   ((eq? impl 'capyscheme) (get-install-library-dir impl cfg))
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
@@ -1837,6 +1848,8 @@
 (define (get-install-library-dir impl cfg)
   (cond
    ((conf-get cfg 'install-library-dir))
+   ((eq? impl 'capyscheme)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'chicken)
     (cond ((conf-get cfg 'install-prefix)
            => (lambda (prefix)
