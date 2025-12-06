@@ -83,6 +83,10 @@
                  ,(delay
                     (process->sexp
                      '(stklos -e "(write (features))"))))
+    (tr7 "tr7i" (tr7i --version) #f
+                 ,(delay
+                    (process->sexp
+                     '(tr7i -c "(write (features))"))))
     (ypsilon "ypsilon" (ypsilon --version) #f
              ,(delay
                 (call-with-temp-file "snow-ypsilon"
@@ -120,6 +124,7 @@
     ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))
+    ((tr7) (cond-expand (tr7 #t) (else #f)))
     (else #f)))
 
 (define (impl->features impl)

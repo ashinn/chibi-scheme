@@ -1458,7 +1458,11 @@
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
-     ((ypsilon)
+    ((tr7)
+     (list (make-path
+            (process->string
+             '(tr7i -c "(import (tr7 misc)) (display (car (scheme-paths)))")))))
+    ((ypsilon)
       (call-with-temp-file "snow-ypsilon.scm"
        (lambda (tmp-path out preserve)
          (with-output-to-file tmp-path
@@ -1585,6 +1589,10 @@
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
              `(stklos -A ,install-dir ,file)))
+        ((tr7)
+         (if lib-path
+             `(TR7_LIB_PATH=,lib-path tr7i ,file)
+             `(tr7i ,file)))
         ((ypsilon)
          (if lib-path
              `(ypsilon --sitelib ,install-dir --sitelib ,lib-path ,file)
@@ -1745,7 +1753,8 @@
             127 128 129 130 132 133 134 135 137 138 141 143 144 145 151 152 154
             156 158 160 161 162 169 170 171 173 174 175 176 178 180 185 189 190
             192 193 195 196 207 208 214 215 216 217 219 221 222 223 224 227 228
-            229 230 232 233 234 235 236 238 244 253 258 260)))
+            229 230 232 233 234 235 236 238 244 253 258 260)
+    (tr7 1 69 111 141 232 259)))
 
 (define native-self-support
   '((kawa base expressions hashtable quaternions reflect regex
@@ -1808,6 +1817,7 @@
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
+   ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1828,6 +1838,7 @@
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
+   ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1867,6 +1878,8 @@
    ((eq? impl 'sagittarius)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'tr7)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'ypsilon)
     (car (get-install-dirs impl cfg)))
