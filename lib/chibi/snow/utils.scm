@@ -90,7 +90,7 @@
     (tr7 "tr7i" (tr7i -c "(import (scheme base) (scheme write) (tr7 misc)) (display (tr7-version))") #f
                  ,(delay
                     (process->sexp
-                     '(tr7i -c "(write (features))"))))
+                     '(tr7i -c "(import (scheme base)) (write (features))"))))
     (ypsilon "ypsilon" (ypsilon --version) #f
              ,(delay
                 (call-with-temp-file "snow-ypsilon"
