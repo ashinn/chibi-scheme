@@ -2,7 +2,11 @@
   (call-with-output-string (lambda (out) (write x out))))
 
 (define known-implementations
-  `((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3"
+  `((capyscheme "capy" #f #f
+                ,(delay
+                   (process->sexp
+                     '(capy --command="(features)"))))
+    (chibi "chibi-scheme" (chibi-scheme -V) "0.7.3"
            ,(delay
               (process->sexp
                '(chibi-scheme -p "(features)"))))
