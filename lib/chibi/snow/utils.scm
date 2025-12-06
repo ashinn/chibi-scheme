@@ -122,9 +122,11 @@
 
 (define (target-is-host? impl)
   (case impl
+    ((capyscheme) (cond-expand (capyscheme #t) (else #f)))
     ((chibi) (cond-expand (chibi #t) (else #f)))
     ((gambit) (cond-expand (gambit #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
+    ((mit) (cond-expand (mit #t) (else #f)))
     ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))

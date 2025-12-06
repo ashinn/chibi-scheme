@@ -1738,7 +1738,8 @@
 ;; chibi is not included because chibi is already installed with full
 ;; package information for each builtin library
 (define native-srfi-support
-  '((foment 60)
+  '((capyscheme 1 8 13 14 39 64 124 157 180 226 259)
+    (foment 60)
     (gambit 0 4 6 8 9 16 18 21 22 23 27 30 39 62 88 193)
     (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
     (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
