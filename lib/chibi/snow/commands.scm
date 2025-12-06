@@ -1461,7 +1461,7 @@
     ((tr7)
      (list (make-path
             (process->string
-             '(tr7i -c "(import (tr7 misc)) (display (car (scheme-paths)))")))))
+             '(tr7i -c "(import (scheme base) (scheme write) (tr7 misc)) (display (car (scheme-paths)))")))))
     ((ypsilon)
       (call-with-temp-file "snow-ypsilon.scm"
        (lambda (tmp-path out preserve)
