@@ -642,36 +642,48 @@
                 ,@(map write-to-string
                        (cdar (extract-program-dependencies scm-file))))))
 
+(define (command/srfi-list cfg spec)
+  (let ((implementations (conf-get cfg 'implementations)))
+    (cond
+      ((and (symbol? implementations))
+       (display (cdr (native-srfi-support implementations cfg))))
+      (else
+        (display
+          (map (lambda (impl)
+                 (native-srfi-support impl cfg))
+               implementations))))
+    (newline)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Index - add packages to a local repository file.
 
 (define (command/index cfg spec repo-path . pkg-files)
   (let* ((dir (path-directory repo-path))
          (pkgs (filter-map
-                (lambda (pkg-file)
-                  (let ((pkg (package-file-meta pkg-file)))
-                    (and pkg
-                         `(,(car pkg)
-                           (url ,(path-relative-to pkg-file dir))
-                           ,@(cdr pkg)))))
-                (if (pair? pkg-files)
-                    pkg-files
-                    (filter package-file?
-                            (map
+                 (lambda (pkg-file)
+                   (let ((pkg (package-file-meta pkg-file)))
+                     (and pkg
+                          `(,(car pkg)
+                             (url ,(path-relative-to pkg-file dir))
+                             ,@(cdr pkg)))))
+                 (if (pair? pkg-files)
+                   pkg-files
+                   (filter package-file?
+                           (map
                              (lambda (f) (make-path dir f))
                              (directory-files dir))))))
          (repo (fold (lambda (pkg repo)
                        (let ((name (package-name pkg)))
                          `(,(car repo)
-                           ,pkg
-                           ,@(remove
-                              (lambda (x) (equal? name (package-name x)))
-                              (cdr repo)))))
+                            ,pkg
+                            ,@(remove
+                                (lambda (x) (equal? name (package-name x)))
+                                (cdr repo)))))
                      (guard (exn (else (list 'repository)))
                        (car (file->sexp-list repo-path)))
                      pkgs)))
     (call-with-output-file repo-path
-      (lambda (out) (write-simple-pretty repo out)))))
+                           (lambda (out) (write-simple-pretty repo out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Gen-key - generate a new RSA key pair.
@@ -1548,8 +1560,11 @@
              `(foment -A ,install-dir ,file)))
         ((gambit)
          (if lib-path
-             `(gsi -s:search=,install-dir ,lib-path ,file)
-             `(gsi -s:search=,install-dir ,file)))
+           `(gsi ,(string->symbol
+                    (string-append "-:r7rs,search=" install-dir "," lib-path))
+                 ,file)
+           `(gsi ,(string->symbol (string-append "-:r7rs,search=" install-dir))
+                 ,file)))
         ((gauche)
          (if lib-path
              `(gosh -A ,install-dir -A ,lib-path ,file)
@@ -1579,8 +1594,8 @@
                `(mit-scheme --batch-mode --load ,file --eval "(exit 0)"))))
         ((mosh)
          (if lib-path
-             `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
-             `(mosh --loadpath= ,install-dir ,file)))
+             `(mosh ,(string-append "--loadpath=" install-dir) --loadpath= ,lib-path ,file)
+             `(mosh ,(string-append "--loadpath=" install-dir) ,file)))
         ((larceny)
          (if lib-path
              `(larceny -r7rs -path ,(string-append install-dir ":" lib-path)
@@ -1737,34 +1752,69 @@
 
 ;; chibi is not included because chibi is already installed with full
 ;; package information for each builtin library
-(define native-srfi-support
-  '((capyscheme 1 8 13 14 39 64 124 157 180 226 259)
-    (foment 60)
-    (gambit 0 4 6 8 9 16 18 21 22 23 27 30 39 62 88 193)
-    (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
-    (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
-           35 37 38 39 41 42 43 45 46 55 60 61 62 64 67 69 71 87 88
-           98 105 111 171)
-    (kawa 1 2 13 14 34 37 60 69 95)
-    (loko 19 38 98 170 215)
-    (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
-             30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
-             66 67 69 71 74 78 86 87 95 96 98)
-    (mit-scheme 0 1 2 6 8 9 14 23 27 30 39 62 69 112 115 124 125 128 129 131
-                133 143 158 162 180 219 228)
-    (sagittarius 0 1 2 4 6 8 11 13 14 16 17 18 19 22 23 25 26 27 29 31 37 38 39
-                 41 42 43 45 49 57 60 61 64 69 78 86 87 98 99 100 101 105 106
-                 110 111 112 113 114 115 116 117 120 121 123 124 125 126 127
-                 128 129 130 131 132 133 134 135 139 141 142 143 144 145 146
-                 151 152 154 156 158 159 160 193 195 197 210 219 230)
-    (stklos 0 1 2 4 5 6 7 8 9 10 11 13 14 15 16 17 18 19 22 23 25 26 27 28 29
-            30 31 34 35 36 37 38 39 41 43 45 46 48 51 54 55 59 60 61 62 64 66
-            69 70 74 87 88 89 94 95 96 98 100 111 112 113 115 116 117 118 125
-            127 128 129 130 132 133 134 135 137 138 141 143 144 145 151 152 154
-            156 158 160 161 162 169 170 171 173 174 175 176 178 180 185 189 190
-            192 193 195 196 207 208 214 215 216 217 219 221 222 223 224 227 228
-            229 230 232 233 234 235 236 238 244 253 258 260)
-    (tr7 1 69 111 141 232 259)))
+(define (native-srfi-support impl cfg)
+  (letrec*
+    ((max-srfis 500)
+     (gen-srfis-conds
+       (lambda (count)
+         (when (< count max-srfis)
+           (display "  ")
+           ;; STklos has bugs on 61 and 175 but it has them,
+           ;; so on stklos and 61 or 175 just print the number
+           (if (and (equal? impl 'stklos)
+                    (or (= count 61)
+                        (= count 175)))
+             (display count)
+             (display
+               (string-append "(cond-expand "
+                              (cond ((or (equal? impl 'gambit)
+                                         (equal? impl 'guile)
+                                         (equal? impl 'capyscheme)
+                                         (equal? impl 'stklos))
+                                     (string-append
+                                       "(srfi-"
+                                       (number->string count)
+                                       " "
+                                       (number->string count)
+                                       ") "))
+                                    (else
+                                      (string-append
+                                        "((library (srfi "
+                                        (number->string count)
+                                        ")) "
+                                        (number->string count)
+                                        ") ")))
+                              "(else #f))")))
+           (newline)
+           (gen-srfis-conds (+ count 1))))))
+    (call-with-temp-file
+      "srfi-list.scm"
+      (lambda (tmp-path out preserve)
+        (with-output-to-file
+          tmp-path
+          (lambda ()
+            (display "(import (scheme base) (scheme write))")
+            (newline)
+            (newline)
+            (display "(define srfis (list")
+            (newline)
+            (gen-srfis-conds 0)
+            (display "))")
+            (newline)
+            (display "(write srfis)")
+            (newline)
+            (display "(newline)")))
+        (let* ((cmd (scheme-program-command impl cfg tmp-path))
+               (debug
+                 (begin
+                   (display "HERE: ")
+                   (write cmd)
+                   (newline)
+                   (preserve)))
+               (srfis (filter (lambda (item) item) (process->sexp cmd))))
+          (if (eof-object? srfis)
+            `(,impl)
+            `(,impl ,@srfis)))))))
 
 (define native-self-support
   '((kawa base expressions hashtable quaternions reflect regex
@@ -1795,7 +1845,7 @@
              (memq (cadr lib-name) r7rs-small-libraries))
         (and (eq? 'srfi (car lib-name))
              (= 2 (length lib-name))
-             (cond ((assq impl native-srfi-support)
+             (cond ((native-srfi-support impl cfg)
                     => (lambda (x) (memq (cadr lib-name) (cdr x))))
                    ((eq? impl 'chicken)
                     (file-exists?
