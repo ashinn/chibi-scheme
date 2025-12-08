@@ -2,7 +2,11 @@
   (call-with-output-string (lambda (out) (write x out))))
 
 (define known-implementations
-  `((chibi "chibi-scheme" (chibi-scheme -V) "0.7.3"
+  `((capyscheme "capy" #f #f
+                ,(delay
+                   (process->sexp
+                     '(capy --command="(features)"))))
+    (chibi "chibi-scheme" (chibi-scheme -V) "0.7.3"
            ,(delay
               (process->sexp
                '(chibi-scheme -p "(features)"))))
@@ -54,6 +58,10 @@
                (display "(display (features))")))
              (process->sexp
               `(loko -std=r7rs --program ,tmp-path))))))
+     (mit-scheme "mit-scheme" (mit-scheme --version) #f
+          ,(delay
+             (process->sexp
+              '(mit-scheme --batch-mode --eval "(display (features))" --eval "(exit 0)"))))
     (mosh "mosh" (mosh -v) #f
           ,(delay
            (call-with-temp-file "snow-mosh.scm"
@@ -79,6 +87,10 @@
                  ,(delay
                     (process->sexp
                      '(stklos -e "(write (features))"))))
+    (tr7 "tr7i" (tr7i -c "(import (scheme base) (scheme write) (tr7 misc)) (display (tr7-version))") #f
+                 ,(delay
+                    (process->sexp
+                     '(tr7i -c "(import (scheme base)) (write (features))"))))
     (ypsilon "ypsilon" (ypsilon --version) #f
              ,(delay
                 (call-with-temp-file "snow-ypsilon"
@@ -110,12 +122,15 @@
 
 (define (target-is-host? impl)
   (case impl
+    ((capyscheme) (cond-expand (capyscheme #t) (else #f)))
     ((chibi) (cond-expand (chibi #t) (else #f)))
     ((gambit) (cond-expand (gambit #t) (else #f)))
     ((gauche) (cond-expand (gauche #t) (else #f)))
+    ((mit) (cond-expand (mit #t) (else #f)))
     ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))
+    ((tr7) (cond-expand (tr7 #t) (else #f)))
     (else #f)))
 
 (define (impl->features impl)

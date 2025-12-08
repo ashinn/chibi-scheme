@@ -1354,6 +1354,11 @@
     (guard (exn (else #f))
       (process->sexp `(guile -c ,(write-to-string `(write ,expr))))))
   (case impl
+    ((capyscheme)
+     (list
+       (make-path
+         (process->string
+           '(capy -c "(printf \"~a\" (car %load-path))")))))
     ((chibi)
      (let* ((dirs
              (reverse
@@ -1411,6 +1416,22 @@
      (list "/usr/local/share/kawa/lib"))
     ((loko)
      (list "/usr/local/share/r6rs"))
+    ((mit-scheme)
+     (list
+      (make-path
+      (string-trim
+        ;; Get the last line of output because there might be warnings and such
+         (car
+           (reverse
+             (string-split
+               (process->string
+                 '(mit-scheme
+                    --batch-mode --eval
+                    "(display (->namestring (system-library-directory-pathname)))"
+                    --eval "(exit 0)"))
+               #\newline)))
+       char-whitespace?)
+       "libraries")))
     ((larceny)
      (list
       (make-path
@@ -1442,7 +1463,11 @@
      (list (make-path
             (process->string
              '(stklos -e "(display (install-path #:libdir))")))))
-     ((ypsilon)
+    ((tr7)
+     (list (make-path
+            (process->string
+             '(tr7i -c "(import (scheme base) (scheme write) (tr7 misc)) (display (car (scheme-paths)))")))))
+    ((ypsilon)
       (call-with-temp-file "snow-ypsilon.scm"
        (lambda (tmp-path out preserve)
          (with-output-to-file tmp-path
@@ -1500,6 +1525,10 @@
     (let ((lib-path (and (pair? o) (car o)))
           (install-dir (get-install-source-dir impl cfg)))
       (case impl
+        ((capyscheme)
+         (if lib-path
+             `(capy -L ,install-dir -L ,lib-path --script ,file)
+             `(capy -L ,install-dir --script ,file)))
         ((chibi)
          (let ((chibi (string-split (conf-get cfg 'chibi-path "chibi-scheme"))))
            (if lib-path
@@ -1543,6 +1572,11 @@
            (if lib-path
                `(loko -std=r7rs --program ,file)
                `(loko -std=r7rs --program ,file))))
+        ((mit-scheme)
+         (let ((install-dir (path-resolve install-dir (current-directory))))
+           (if lib-path
+               `(mit-scheme --batch-mode --load ,file --eval "(exit 0)")
+               `(mit-scheme --batch-mode --load ,file --eval "(exit 0)"))))
         ((mosh)
          (if lib-path
              `(mosh --loadpath= ,install-dir --loadpath= ,lib-path ,file)
@@ -1564,6 +1598,10 @@
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
              `(stklos -A ,install-dir ,file)))
+        ((tr7)
+         (if lib-path
+             `(sh -c ,(string-append "TR7_LIB_PATH=" lib-path " tr7i " file))
+             `(tr7i ,file)))
         ((ypsilon)
          (if lib-path
              `(ypsilon --sitelib ,install-dir --sitelib ,lib-path ,file)
@@ -1700,7 +1738,8 @@
 ;; chibi is not included because chibi is already installed with full
 ;; package information for each builtin library
 (define native-srfi-support
-  '((foment 60)
+  '((capyscheme 1 8 13 14 39 64 124 157 180 226 259)
+    (foment 60)
     (gambit 0 4 6 8 9 16 18 21 22 23 27 30 39 62 88 193)
     (gauche 0 1 4 5 7 9 11 13 14 19 26 27 29 31 37 42 43 55)
     (guile 0 1 2 4 6 8 9 10 11 13 14 16 17 18 19 23 26 27 28 30 31 34
@@ -1711,6 +1750,8 @@
     (larceny 0 1 2 4 5 6 7 8 9 11 13 14 16 17 19 22 23 25 26 27 28 29
              30 31 37 38 39 41 42 43 45 48 51 54 56 59 60 61 62 63 64
              66 67 69 71 74 78 86 87 95 96 98)
+    (mit-scheme 0 1 2 6 8 9 14 23 27 30 39 62 69 112 115 124 125 128 129 131
+                133 143 158 162 180 219 228)
     (sagittarius 0 1 2 4 6 8 11 13 14 16 17 18 19 22 23 25 26 27 29 31 37 38 39
                  41 42 43 45 49 57 60 61 64 69 78 86 87 98 99 100 101 105 106
                  110 111 112 113 114 115 116 117 120 121 123 124 125 126 127
@@ -1722,7 +1763,8 @@
             127 128 129 130 132 133 134 135 137 138 141 143 144 145 151 152 154
             156 158 160 161 162 169 170 171 173 174 175 176 178 180 185 189 190
             192 193 195 196 207 208 214 215 216 217 219 221 222 223 224 227 228
-            229 230 232 233 234 235 236 238 244 253 258 260)))
+            229 230 232 233 234 235 236 238 244 253 258 260)
+    (tr7 1 69 111 141 232 259)))
 
 (define native-self-support
   '((kawa base expressions hashtable quaternions reflect regex
@@ -1772,6 +1814,7 @@
 
 (define (get-install-source-dir impl cfg)
   (cond
+   ((eq? impl 'capyscheme) (get-install-library-dir impl cfg))
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
@@ -1780,10 +1823,12 @@
    ((eq? impl 'guile) (get-guile-site-dir))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'loko) (get-install-library-dir impl cfg))
+   ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
+   ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-source-dir))
    ((conf-get cfg 'install-prefix)
@@ -1792,6 +1837,7 @@
 
 (define (get-install-data-dir impl cfg)
   (cond
+   ((eq? impl 'capyscheme) (get-install-library-dir impl cfg))
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
    ((eq? impl 'gambit) (get-install-library-dir impl cfg))
@@ -1799,10 +1845,12 @@
    ((eq? impl 'generic) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'loko) (get-install-library-dir impl cfg))
+   ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
+   ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
    ((conf-get cfg 'install-data-dir))
    ((conf-get cfg 'install-prefix)
@@ -1812,6 +1860,8 @@
 (define (get-install-library-dir impl cfg)
   (cond
    ((conf-get cfg 'install-library-dir))
+   ((eq? impl 'capyscheme)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'chicken)
     (cond ((conf-get cfg 'install-prefix)
            => (lambda (prefix)
@@ -1833,6 +1883,8 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'loko)
     (car (get-install-dirs impl cfg)))
+   ((eq? impl 'mit-scheme)
+    (car (get-install-dirs impl cfg)))
    ((eq? impl 'mosh)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'racket)
@@ -1840,6 +1892,8 @@
    ((eq? impl 'sagittarius)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'tr7)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'ypsilon)
     (car (get-install-dirs impl cfg)))
@@ -2093,6 +2147,18 @@
            (cons dest-class-file installed-files))
           (else installed-files))))
 
+(define (mit-scheme-installer impl cfg library dir)
+  (let* ((binld-file (path-replace-extension
+                       (get-library-file cfg library) "binld"))
+         (source-binld-file (make-path dir binld-file))
+         (install-dir (get-install-source-dir impl cfg))
+         (dest-binld-file (make-path install-dir binld-file))
+         (installed-files (default-installer impl cfg library dir)))
+    (cond ((file-exists? source-binld-file)
+           (install-file cfg source-binld-file dest-binld-file)
+           (cons binld-file installed-files))
+          (else installed-files))))
+
 ;; Racket can only load files with .rkt suffix. So for each library we create
 ;; a file that sets language to r7rs and includes the .sld file
 (define (racket-installer impl cfg library dir)
@@ -2127,6 +2193,7 @@
     ((gambit) gambit-installer)
     ((guile) guile-installer)
     ((kawa) kawa-installer)
+    ((mit-scheme) mit-scheme-installer)
     ((racket) racket-installer)
     (else default-installer)))
 
@@ -2137,6 +2204,7 @@
     ((gambit) 'gambit)
     ((guile) 'guile)
     ((kawa) 'kawa)
+    ((mit-scheme) 'mit-scheme)
     ((racket) 'racket)
     (else 'default)))
 
@@ -2371,6 +2439,18 @@
                          " - install anyway?"))
          library)))
 
+(define (mit-scheme-builder impl cfg library dir)
+  (let* ((src-library-file (make-path dir (get-library-file cfg library)))
+         (res (system 'mit-scheme
+                      '--batch-mode
+                      '--eval (string-append "(sf \"" src-library-file "\")")
+                      '--eval "(exit 0)")))
+    (and (or (and (pair? res) (zero? (cadr res)))
+             (yes-or-no? cfg "native-code files failed to build: "
+                         (library-name library)
+                         " - install anyway?"))
+         library)))
+
 (define (lookup-builder builder)
   (case builder
     ((chibi) chibi-builder)
@@ -2379,11 +2459,12 @@
     ((gambit) gambit-builder)
     ((guile) guile-builder)
     ((kawa) kawa-builder)
+    ((mit-scheme) mit-scheme-builder)
     (else default-builder)))
 
 (define (builder-for-implementation impl cfg)
   (case impl
-    ((chibi chicken cyclone gambit guile kawa) impl)
+    ((chibi chicken cyclone gambit guile kawa mit-scheme) impl)
     (else 'default)))
 
 (define (build-library impl cfg library dir)
