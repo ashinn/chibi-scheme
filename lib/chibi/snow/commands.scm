@@ -1805,12 +1805,6 @@
             (newline)
             (display "(newline)")))
         (let* ((cmd (scheme-program-command impl cfg tmp-path))
-               (debug
-                 (begin
-                   (display "HERE: ")
-                   (write cmd)
-                   (newline)
-                   (preserve)))
                (srfis (filter (lambda (item) item) (process->sexp cmd))))
           (if (eof-object? srfis)
             `(,impl)
