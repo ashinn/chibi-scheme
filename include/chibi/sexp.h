@@ -81,8 +81,11 @@ typedef long long off_t;
 #define TOSTRING(x) STRINGIFY(x)
 #define exit(x)           exits(TOSTRING(x))
 #define fabsl          fabs
+#define M_PI           3.141592653589793
 #define M_LN10         2.30258509299404568402  /* log_e 10 */
 #define FLT_RADIX 2
+#define NAN NaN()
+#define INFINITY Inf(1)
 #define isfinite(x) !(isNaN(x) || isInf(x,0))
 typedef u32int uint32_t;
 typedef s32int int32_t;
