@@ -1,5 +1,11 @@
 
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.16)
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+    # Don't set compiler environment variables on first run, as this can break
+    # generation of chibi-scheme-bootstrap when cross-compiling
+    cmake_policy(SET CMP0132 NEW)
+endif()
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version)
 string(STRIP ${version} version)
@@ -35,7 +41,11 @@ check_symbol_exists(ntp_gettime sys/timex.h HAVE_NTP_GETTIME)
 check_symbol_exists(int_least8_t inttypes.h HAVE_STDINT_H)
 check_library_exists(util openpty "" HAVE_LIBRARY_UTIL)
 
-if((NOT EMSCRIPTEN) AND (CMAKE_SYSTEM_NAME STREQUAL "Emscripten"))
+if((NOT BSD) AND (CMAKE_SYSTEM MATCHES "[Bb][Ss][Dd]"))
+    set(BSD 1)
+elseif((NOT LINUX) AND (CMAKE_SYSTEM MATCHES "[Ll]inux"))
+    set(LINUX 1)
+elseif((NOT EMSCRIPTEN) AND (CMAKE_SYSTEM MATCHES "[Ee]mscripten"))
     set(EMSCRIPTEN 1)
 endif()
 
