@@ -1,5 +1,11 @@
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
+
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+    # Don't set compiler environment variables on first run, as this can break
+    # generation of chibi-scheme-bootstrap when cross-compiling
+    cmake_policy(SET CMP0132 NEW)
+endif()
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION version)
 string(STRIP ${version} version)
@@ -11,6 +17,7 @@ project(chibi-scheme LANGUAGES C VERSION ${version}
     DESCRIPTION "Chibi-Scheme: minimal r7rs implementation, release: ${release}")
 
 include(CheckIncludeFile)
+include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -32,8 +39,17 @@ endif()
 check_include_file(poll.h HAVE_POLL_H)
 check_symbol_exists(ntp_gettime sys/timex.h HAVE_NTP_GETTIME)
 check_symbol_exists(int_least8_t inttypes.h HAVE_STDINT_H)
+check_library_exists(util openpty "" HAVE_LIBRARY_UTIL)
 
-if (WIN32 AND NOT CYGWIN)
+if((NOT BSD) AND (CMAKE_SYSTEM MATCHES "[Bb][Ss][Dd]"))
+    set(BSD 1)
+elseif((NOT LINUX) AND (CMAKE_SYSTEM MATCHES "[Ll]inux"))
+    set(LINUX 1)
+elseif((NOT EMSCRIPTEN) AND (CMAKE_SYSTEM MATCHES "[Ee]mscripten"))
+    set(EMSCRIPTEN 1)
+endif()
+
+if ((WIN32 AND NOT CYGWIN) OR EMSCRIPTEN)
     set(DEFAULT_SHARED_LIBS OFF)
 else()
     set(DEFAULT_SHARED_LIBS ON)
@@ -41,6 +57,9 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build chibi-scheme as a shared library" ${DEFAULT_SHARED_LIBS})
 option(SEXP_USE_BOEHM "Use Boehm garbage collection library" OFF)
+if(EMSCRIPTEN)
+    option(EMBED_MODULES "Embed all modules in chibi-scheme.js" ON)
+endif()
 
 if(SEXP_USE_BOEHM)
     find_library(BOEHMGC gc REQUIRED)
@@ -122,12 +141,39 @@ set(chibi-scheme-srcs
 # Bootstrap
 #
 
-add_executable(chibi-scheme-bootstrap
-    EXCLUDE_FROM_ALL
-    ${chibi-scheme-srcs}
-    main.c)
+if(NOT CMAKE_CROSSCOMPILING)
+    add_executable(chibi-scheme-bootstrap
+        EXCLUDE_FROM_ALL
+        ${chibi-scheme-srcs}
+        main.c)
 
-target_link_libraries(chibi-scheme-bootstrap PRIVATE libchibi-common)
+    target_link_libraries(chibi-scheme-bootstrap PRIVATE libchibi-common)
+
+    export(TARGETS chibi-scheme-bootstrap
+        FILE "${CMAKE_CURRENT_BINARY_DIR}/chibi-scheme-bootstrap-config.cmake")
+else()
+    #
+    # When cross-compiling, we need to build chibi-scheme-bootstrap for the
+    # host system
+    #
+
+    set(bootstrap-build-dir "${CMAKE_CURRENT_BINARY_DIR}/bootstrap-build")
+
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}"
+            -B "${bootstrap-build-dir}"
+            -S "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMAND_ECHO STDERR
+        COMMAND_ERROR_IS_FATAL ANY)
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}"
+            --build "${bootstrap-build-dir}"
+            --target chibi-scheme-bootstrap
+        COMMAND_ECHO STDERR
+        COMMAND_ERROR_IS_FATAL ANY)
+
+    include("${bootstrap-build-dir}/chibi-scheme-bootstrap-config.cmake")
+endif()
 
 
 #
@@ -196,7 +242,7 @@ function(add_compiled_library cfile)
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/chibi/${installsubdir})
 endfunction()
 
-if(BUILD_SHARED_LIBS)
+if(BUILD_SHARED_LIBS AND NOT CMAKE_CROSSCOMPILING)
     # This makes sure we only use the separate bootstrap executable for static
     # builds. With dynamic linking, the default executable is fine. The dispatch
     # is not a generator expression within the actual custom command to process
@@ -205,6 +251,76 @@ if(BUILD_SHARED_LIBS)
     set(bootstrap chibi-scheme)
 else()
     set(bootstrap chibi-scheme-bootstrap)
+endif()
+
+if(WIN32)
+    set(platform "windows")
+elseif(CYGWIN)
+    set(platform "cygwin")
+elseif(APPLE)
+    set(platform "macosx")
+elseif(BSD)
+    set(platform "bsd")
+elseif(ANDROID)
+    set(platform "android")
+elseif(CMAKE_SYSTEM MATCHES "[Ss]un[Oo][Ss]")
+    set(platform "solaris")
+elseif (LINUX)
+    set(platform "linux")
+elseif (EMSCRIPTEN)
+    set(platform "emscripten")
+else()
+    set(platform "unix")
+endif()
+
+if(EMSCRIPTEN)
+    # Emscripten's toolchain file sets CMAKE_SYSTEM_PROCESSOR to "x86", which
+    # is neither accurate nor helpful as the value of sexp_platform
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(architecture "wasm64")
+    else()
+        set(architecture "wasm32")
+    endif()
+else()
+    set(architecture "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
+set(features "")
+
+if(CMAKE_CROSSCOMPILING)
+    #
+    # When cross-compiling, chibi-ffi and chibi-genstatic can't rely on the
+    # feature list built in to chibi-scheme-bootstrap, as it reports the
+    # features of the host, not the target.  Instead, we construct the list of
+    # relevant features ourselves and pass it to the tools via their
+    # --features option.
+    #
+
+    if(CMAKE_C_BYTE_ORDER STREQUAL "BIG_ENDIAN")
+        list(PREPEND features "big-endian")
+    else()
+        list(PREPEND features "little-endian")
+    endif()
+
+    list(PREPEND features ${platform} ${architecture})
+
+    if(APPLE)
+        list(PREPEND features "darwin" "bsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+        list(PREPEND features "openbsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+        list(PREPEND features "freebsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
+        list(PREPEND features "netbsd")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "DragonFly")
+        list(PREPEND features "dragonfly")
+    endif()
+
+    if(HAVE_POLL_H)
+        list(PREPEND features "threads")
+    endif()
+
+    list(PREPEND features "chibi")
 endif()
 
 function(add_stubs_library stub)
@@ -222,9 +338,15 @@ function(add_stubs_library stub)
     file(MAKE_DIRECTORY ${stubdir})
 
     add_custom_command(OUTPUT ${stubout}
-        COMMAND ${bootstrap} ${chibi-ffi} ${stubfile} ${stubout}
+        COMMAND ${CMAKE_COMMAND}
+            -E env CHIBI_IGNORE_SYSTEM_PATH=1 CHIBI_MODULE_PATH=lib
+            $<TARGET_FILE:${bootstrap}> ${chibi-ffi}
+            "$<$<BOOL:${features}>:--features;$<JOIN:${features},$<COMMA>>>"
+            ${stubfile} ${stubout}
         DEPENDS ${stubfile} ${chibi-ffi}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        VERBATIM
+        COMMAND_EXPAND_LISTS)
 
     add_compiled_library(${stubout} LINK_LIBRARIES ${stubs-options_LINK_LIBRARIES})
 endfunction()
@@ -240,7 +362,11 @@ add_stubs_library(lib/srfi/160/uvprims.stub)
 if(NOT WIN32)
     add_stubs_library(lib/chibi/net.stub)
     add_stubs_library(lib/chibi/process.stub)
-    add_stubs_library(lib/chibi/pty.stub LINK_LIBRARIES util)
+    if(HAVE_LIBRARY_UTIL)
+        add_stubs_library(lib/chibi/pty.stub LINK_LIBRARIES util)
+    else()
+        add_stubs_library(lib/chibi/pty.stub)
+    endif()
     add_stubs_library(lib/chibi/stty.stub)
     add_stubs_library(lib/chibi/system.stub)
     add_stubs_library(lib/chibi/time.stub)
@@ -287,6 +413,7 @@ if (NOT BUILD_SHARED_LIBS)
         ${CMAKE_COMMAND}
         -DEXEC=$<TARGET_FILE:chibi-scheme-bootstrap>
         -DGENSTATIC=${chibi-genstatic}
+        "-DFEATURES=$<JOIN:${features},$<COMMA>>"
         -DSTUBS=${clibin}
         -DOUT=${clibout}
         -P ${genstatic-helper}
@@ -331,27 +458,38 @@ add_executable(chibi-scheme
 target_link_libraries(chibi-scheme
     PRIVATE libchibi-scheme)
 
+if(EMSCRIPTEN AND EMBED_MODULES AND (DEFINED ENV{EMSDK}))
+    #
+    # Embed all modules in the chibi-scheme executable.  If nothing else, this
+    # lets you confirm the build was successful by running something like
+    #
+    #   node chibi-scheme.js -e '(display "Hello, world!\n")'
+    #
+
+    set(modules-embed-obj "${CMAKE_CURRENT_BINARY_DIR}/modules-embed.o")
+    set(modules-embed-dep "${CMAKE_CURRENT_BINARY_DIR}/modules-embed.d")
+
+    add_custom_command(
+        OUTPUT "${modules-embed-obj}"
+        COMMAND
+            "$ENV{EMSDK}/upstream/emscripten/tools/file_packager"
+            ignored
+            --embed lib
+            --exclude *.c *.stub
+            "--obj-output=${modules-embed-obj}"
+            "--depfile=${modules-embed-dep}"
+            --quiet
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        DEPFILE "${modules-embed-dep}")
+
+    target_sources(chibi-scheme
+        PRIVATE
+        "${modules-embed-obj}")
+endif()
+
 #
 # Generate "chibi/install.h"
 #
-
-if(WIN32)
-    set(platform "windows")
-elseif(CYGWIN)
-    set(platform "cygwin")
-elseif(APPLE)
-    set(platform "macosx")
-elseif(CMAKE_SYSTEM MATCHES "[Bb][Ss][Dd]")
-    set(platform "bsd")
-elseif(CMAKE_SYSTEM MATCHES "[Aa]ndroid")
-    set(platform "android")
-elseif(CMAKE_SYSTEM MATCHES "[Ss]un[Oo][Ss]")
-    set(platform "solaris")
-elseif (CMAKE_SYSTEM MATCHES "[Ll]inux")
-    set(platform "linux")
-else()
-    set(platform "unix")
-endif()
 
 if(WIN32)
     # Leave this empty for now, as the default GNU install directories won't
@@ -493,7 +631,7 @@ function(generate_package_list libdir output)
     add_custom_command(OUTPUT ${output}
         COMMAND
         ${CMAKE_COMMAND}
-        -DEXEC=$<TARGET_FILE:chibi-scheme>
+        -DEXEC=$<IF:$<BOOL:CMAKE_CROSSCOMPILING>,$<TARGET_FILE:chibi-scheme-bootstrap>,$<TARGET_FILE:chibi-scheme>>
         -DLIBDIR=${libdir}
         -DGENMETA=tools/generate-install-meta.scm
         -DVERSION=${CMAKE_PROJECT_VERSION}
