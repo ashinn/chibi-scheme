@@ -651,7 +651,14 @@
         (display
           (map (lambda (impl)
                  (native-srfi-support impl cfg))
-               implementations))))
+               (if implementations
+                 implementations
+                 (map
+                   car
+                   (filter
+                     (lambda (x)
+                       (impl-available? cfg x #f))
+                     known-implementations)))))))
     (newline)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1759,32 +1766,20 @@
        (lambda (count)
          (when (< count max-srfis)
            (display "  ")
-           ;; STklos has bugs on 61 and 175 but it has them,
-           ;; so on stklos and 61 or 175 just print the number
-           (if (and (equal? impl 'stklos)
-                    (or (= count 61)
-                        (= count 175)))
-             (display count)
-             (display
-               (string-append "(cond-expand "
-                              (cond ((or (equal? impl 'gambit)
-                                         (equal? impl 'guile)
-                                         (equal? impl 'capyscheme)
-                                         (equal? impl 'stklos))
-                                     (string-append
-                                       "(srfi-"
-                                       (number->string count)
-                                       " "
-                                       (number->string count)
-                                       ") "))
-                                    (else
-                                      (string-append
-                                        "((library (srfi "
-                                        (number->string count)
-                                        ")) "
-                                        (number->string count)
-                                        ") ")))
-                              "(else #f))")))
+           (display
+             (string-append
+               "(cond-expand ((or "
+               (if (or ;; Capyscheme errors if (library ...) form is there
+                       (equal? impl 'capyscheme)
+                       ;; Guile errors if library name has a number
+                       (equal? impl 'guile)
+                       ;; STklos errors if (library ...) form is there
+                       (equal? impl 'stklos))
+                 ""
+                 (string-append "(library (srfi " (number->string count) ")) "))
+               "srfi-" (number->string count) ") "
+               (number->string count)
+               ") (else #f))"))
            (newline)
            (gen-srfis-conds (+ count 1))))))
     (call-with-temp-file
@@ -1793,7 +1788,7 @@
         (with-output-to-file
           tmp-path
           (lambda ()
-            (display "(import (scheme base) (scheme write))")
+            (display "(import (scheme base) (scheme write) (scheme process-context))")
             (newline)
             (newline)
             (display "(define srfis (list")
@@ -1803,7 +1798,9 @@
             (newline)
             (display "(write srfis)")
             (newline)
-            (display "(newline)")))
+            (display "(newline)")
+            (newline)
+            (display "(exit 0)")))
         (let* ((cmd (scheme-program-command impl cfg tmp-path))
                (srfis (filter (lambda (item) item) (process->sexp cmd))))
           (if (eof-object? srfis)
