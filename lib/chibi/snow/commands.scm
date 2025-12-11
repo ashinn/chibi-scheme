@@ -2472,6 +2472,8 @@
 (define (kawa-builder impl cfg library dir)
   (let* ((src-library-file (make-path dir (get-library-file cfg library)))
          (res (system 'kawa
+                      (string-append "-Dkawa.import.path="
+                                     (car (get-install-dirs impl cfg)))
                       '-d dir
                       '-C src-library-file)))
     (and (or (and (pair? res) (zero? (cadr res)))
