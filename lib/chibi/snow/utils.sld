@@ -2,7 +2,8 @@
 (define-library (chibi snow utils)
   (export find-in-path find-sexp-in-path
           write-to-string display-to-string
-          resource->bytevector uri-normalize uri-directory
+          resource->bytevector git-resource->bytevector
+          uri-normalize uri-directory
           version-split version-compare version>? version>=?
           topological-sort assq-ref
           known-implementations impl->version impl->features)

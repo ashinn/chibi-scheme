@@ -674,6 +674,66 @@
       (lambda (out) (write-simple-pretty repo out)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Git Index - add packages to a local repository file.
+
+(define (process->pair-or-null key cmd)
+  (let ((out (process->string cmd)))
+    (if (string=? out "")
+      '()
+      `(,key ,(read-line (open-input-string out))))))
+
+(define (handle-git-url cfg url-pair)
+  (let ((url (cadr url-pair))
+        (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url))))
+    (cond
+      ((and (string-prefix? "git@" url) use-ssh-url?) url-pair)
+      ((and (string-prefix? "https://" url) (not use-ssh-url?)) url-pair)
+      (else
+        (let ((base (car (string-split (list-ref (string-split url #\@) 1) #\:)))
+              (path (list-ref (string-split url #\:) 1)))
+          `(url ,(string-append "https://" base "/" path)))))))
+
+(define (command/git-index cfg spec . pkg-files)
+  (when (null? pkg-files)
+    (error "Give atleast one package .tgz file as argument"))
+  (when (not (file-directory? "snow")) (create-directory "snow"))
+  (let* ((repo-path "./snow/repo.scm")
+         (dir (path-directory repo-path))
+         (pkgs (filter-map
+                 (lambda (pkg-file)
+                   (let* ((pkg (package-file-meta pkg-file))
+                          (hash (process->pair-or-null 'hash "git rev-parse HEAD"))
+                          (tag (process->pair-or-null 'tag "git describe --exact-match --tags --abbrev=0"))
+                          (url (handle-git-url cfg (process->pair-or-null 'url "git config --get remote.origin.url")))
+                          (git (cons 'git (remove null? (list hash tag url)))))
+                     (when (null? hash)
+                       (error "Directory is not a git repository"))
+                     (and pkg
+                          `(,(car pkg)
+                             ,git
+                             ,@(cdr pkg)))))
+                 (if (pair? pkg-files)
+                   pkg-files
+                   (filter package-file?
+                           (map
+                             (lambda (f) (make-path dir f))
+                             (directory-files dir))))))
+         (repo (fold (lambda (pkg repo)
+                       (let ((name (package-name pkg)))
+                         `(,(car repo)
+                            ,pkg
+                            ,@(remove
+                                (lambda (x) (equal? name (package-name x)))
+                                (cdr repo)))))
+                     (guard (exn (else (list 'repository)))
+                       (car (file->sexp-list repo-path)))
+                     pkgs)))
+    (call-with-output-file repo-path
+                           (lambda (out) (write-simple-pretty repo out)))
+    (display "Updated snow/repo.scm")
+    (newline)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Gen-key - generate a new RSA key pair.
 
 (define (conf-get-snow-dir cfg)
@@ -1171,13 +1231,20 @@
          (local-base (string-append "repo-" repo-id ".scm")))
     (make-path local-dir local-base)))
 
-(define (update-repository cfg repo-uri)
+(define (update-repository cfg repo-uri uri-type)
   (let* ((local-path (repository-local-path cfg repo-uri))
          (local-dir (path-directory local-path))
          (local-tmp (string-append local-path ".tmp."
                                    (number->string (current-second)) "-"
                                    (number->string (current-process-id))))
-         (repo-str (utf8->string (resource->bytevector cfg repo-uri)))
+         (repo-str
+           (cond
+             ((equal? uri-type 'http)
+              (utf8->string (resource->bytevector cfg repo-uri)))
+             ((equal? uri-type 'git)
+              (utf8->string (git-resource->bytevector cfg
+                                                      repo-uri
+                                                      "snow/repo.scm")))))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
@@ -1217,14 +1284,14 @@
      #f)))
 
 ;; returns the single repo as a sexp, updated as needed
-(define (maybe-update-repository cfg repo-uri)
+(define (maybe-update-repository cfg repo-uri uri-type)
   (or (guard (exn
               (else
                (warn "error updating remote repository: "
                      repo-uri " error: " exn)
                #f))
         (and (should-update-repository? cfg repo-uri)
-             (update-repository cfg repo-uri)))
+             (update-repository cfg repo-uri uri-type)))
       (guard (exn
               (else
                (warn "error reading local repository: " exn)
@@ -1242,10 +1309,11 @@
 ;; not to be confused with the current-repo util in (chibi snow fort)
 ;; which returns the single host
 (define (current-repositories cfg)
-  (define (make-loc uri trust depth) (vector uri trust depth))
+  (define (make-loc uri uri-type trust depth) (vector uri uri-type trust depth))
   (define (loc-uri loc) (vector-ref loc 0))
-  (define (loc-trust loc) (vector-ref loc 1))
-  (define (loc-depth loc) (vector-ref loc 2))
+  (define (loc-uri-type loc) (vector-ref loc 1))
+  (define (loc-trust loc) (vector-ref loc 2))
+  (define (loc-depth loc) (vector-ref loc 3))
   (define (adjust-package-urls ls uri)
     (map
      (lambda (x)
@@ -1259,7 +1327,7 @@
                (and (pair? x)
                     (eq? 'url (car x))))
              ls)))
-  (let lp ((ls (map (lambda (x) (make-loc x 1.0 0))
+  (let lp ((ls (map (lambda (x) (make-loc x 'http 1.0 0))
                     (get-repository-list cfg)))
            (seen '())
            (res '()))
@@ -1275,10 +1343,13 @@
             (loc-uri (car ls)) (loc-trust (car ls)) )
       (lp (cdr ls)))
      (else
-      (let ((uri (uri-normalize (loc-uri (car ls)))))
+      (let* ((uri-type (loc-uri-type (car ls)))
+             (uri (if (equal? uri-type 'http)
+                    (uri-normalize (loc-uri (car ls)))
+                    (loc-uri (car ls)))))
         (if (member uri seen)
             (lp (cdr ls) seen res)
-            (let* ((repo (maybe-update-repository cfg uri))
+            (let* ((repo (maybe-update-repository cfg uri uri-type))
                    (siblings
                     (if (and (valid-repository? repo)
                              (conf-get cfg 'follow-siblings? #t))
@@ -1290,13 +1361,16 @@
                            (lambda (x)
                              (and (pair? x)
                                   (eq? 'sibling (car x))
-                                  (assoc-get (cdr x) 'url)
+                                  (or (assoc-get (cdr x) 'url)
+                                      (assoc-get (cdr x) 'git))
                                   (make-loc
-                                   (uri-resolve (assoc-get (cdr x) 'url)
-                                                uri-base)
-                                   (* (loc-trust (car ls))
-                                      (or (assoc-get (cdr x) 'trust) 1.0))
-                                   (+ (loc-depth (car ls)) 1))))
+                                    (if (assq 'git (cdr x))
+                                      (assoc-get (cdr (assoc 'git (cdr x))) 'url)
+                                      (uri-resolve (assoc-get (cdr x) 'url) uri-base))
+                                    (if (assq 'git (cdr x)) 'git 'http)
+                                    (* (loc-trust (car ls))
+                                       (or (assoc-get (cdr x) 'trust) 1.0))
+                                    (+ (loc-depth (car ls)) 1))))
                            (cdr repo)))
                         '()))
                    (res (if (valid-repository? repo)
@@ -2697,21 +2771,21 @@
                        `((git clone
                               ,(package-git-url pkg)
                               ,dir)))))
-               (git-outputs (map process->output+error+status git-commands))
-               (cloned-hash (read-line
-                              (open-input-string
-                                (process->string `(git -C ,dir rev-parse HEAD)))))
-               (libs
-                 (map (lambda (lib)
-                        (make-path dir
-                                   (string-append (library->path cfg lib) ".sld")))
-                      (package-libraries pkg)))
-               (new-cfg
-                 (conf-extend cfg `((version . ,(package-version pkg))
-                                    (author . ,(package-author repo pkg))
-                                    (maintainer . ,(package-maintainer repo pkg)))))
-               (spec '())
-               (spec+files (package-spec+files new-cfg spec libs)))
+             (git-outputs (map process->output+error+status git-commands))
+             (cloned-hash (read-line
+                            (open-input-string
+                              (process->string `(git -C ,dir rev-parse HEAD)))))
+             (libs
+               (map (lambda (lib)
+                      (make-path dir
+                                 (string-append (library->path cfg lib) ".sld")))
+                    (package-libraries pkg)))
+             (new-cfg
+               (conf-extend cfg `((version . ,(package-version pkg))
+                                  (author . ,(package-author repo pkg))
+                                  (maintainer . ,(package-maintainer repo pkg)))))
+             (spec '())
+             (spec+files (package-spec+files new-cfg spec libs)))
         (when (not (= (list-ref (list-ref git-outputs 0) 2) 0))
           (error "Git clone failed" (list-ref git-outputs 0)))
         (when (and (not git-hash)
@@ -2723,10 +2797,7 @@
                                     "Package git hash did not match.\n"
                                     "Proceed anyway?")))
           (die 2 "Git hash did not match" pkg))
-        (call-with-temp-file
-          "pkg"
-          (lambda (tmp-path out preserve)
-            (create-package (car spec+files) (cdr spec+files) tmp-path)))))))
+        (create-package (car spec+files) (cdr spec+files) dir)))))
 
 (define (install-package repo impl cfg pkg)
   (cond
