@@ -47,7 +47,7 @@
 	 (define (runner? obj)
 	   (and (vector? obj)
 		(> (vector-length obj) 1)
-		(eq (vector-ref obj 0) %test-runner-cookie)))
+		(eq? (vector-ref obj 0) %test-runner-cookie)))
 	 (define (alloc)
 	   (let ((runner (make-vector 23)))
 	     (vector-set! runner 0 %test-runner-cookie)
@@ -652,13 +652,19 @@
       ((%test-error r etype expr)
        (%test-comp1body r (guard (ex (else #t)) expr #f))))))
  (else
-  (define-syntax %test-error
-    (syntax-rules ()
-      ((%test-error r etype expr)
-       (begin
-	 ((test-runner-on-test-begin r) r)
-	 (test-result-set! r 'result-kind 'skip)
-	 (%test-report-result)))))))
+   (define-syntax %test-error
+     (syntax-rules ()
+       ((%test-error r etype expr)
+        (begin
+          ((test-runner-on-test-begin r) r)
+          (call-with-current-continuation
+            (lambda (k)
+              (with-exception-handler
+                (lambda (x) (k (test-result-set! r 'result-kind 'pass)))
+                (lambda () expr (k (test-result-set! r 'result-kind 'fail))))))
+          (%test-report-result)))))))
+
+
 
 (define-syntax test-error
   (syntax-rules ()
