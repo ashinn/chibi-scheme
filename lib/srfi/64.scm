@@ -47,7 +47,7 @@
 	 (define (runner? obj)
 	   (and (vector? obj)
 		(> (vector-length obj) 1)
-		(eq (vector-ref obj 0) %test-runner-cookie)))
+		(eq? (vector-ref obj 0) %test-runner-cookie)))
 	 (define (alloc)
 	   (let ((runner (make-vector 23)))
 	     (vector-set! runner 0 %test-runner-cookie)
