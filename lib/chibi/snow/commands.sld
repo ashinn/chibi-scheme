@@ -15,6 +15,7 @@
           command/search
           command/show
           command/status
+          command/srfi-list
           command/update
           command/upgrade)
   (import (scheme base)

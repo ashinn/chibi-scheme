@@ -116,6 +116,7 @@
   install-spec)
 (define remove-spec '())
 (define status-spec '())
+(define srfi-list-spec '())
 (define gen-key-spec
   '((bits integer)
     (validity-period string)
@@ -192,6 +193,9 @@
      (status
       "print package status"
       (@ ,status-spec) (,command/status names ...))
+     (srfi-list
+      "print implementations supported srfi-list"
+      (@ ,srfi-list-spec) (,command/srfi-list ...))
      (package
       "create a package"
       (@ ,package-spec) (,command/package files ...))
