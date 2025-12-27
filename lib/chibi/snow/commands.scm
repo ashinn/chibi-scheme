@@ -701,16 +701,24 @@
       '()
       `(,key ,(read-line (open-input-string out))))))
 
-(define (handle-git-url cfg url-pair)
-  (let ((url (cadr url-pair))
-        (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url))))
-    (cond
-      ((and (string-prefix? "git@" url) use-ssh-url?) url-pair)
-      ((and (string-prefix? "https://" url) (not use-ssh-url?)) url-pair)
-      (else
-        (let ((base (car (string-split (list-ref (string-split url #\@) 1) #\:)))
-              (path (list-ref (string-split url #\:) 1)))
-          `(url ,(string-append "https://" base "/" path)))))))
+;; If git repo url is ssh, switch it to https except if requested not to
+(define (fix-git-url cfg url-pair)
+  (let* ((url (cadr url-pair))
+         (uri (string->uri url))
+         (url-type (if (and (uri-has-scheme? uri)
+                            (equal? (uri-scheme uri) 'https))
+                     'https
+                     'ssh))
+         (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url)))
+         (fixed-url
+           (cond
+             ((and (equal? url-type 'ssh) use-ssh-url?)
+              url)
+             ((and (equal? url-type 'ssh) (uri-has-scheme? uri))
+              (string-append "https://" (string-copy url (string-length "ssh://"))))
+             (else
+               (string-append "https://" url)))))
+    `(url ,fixed-url)))
 
 (define (command/git-index cfg spec . pkg-files)
   (when (null? pkg-files)
@@ -727,7 +735,7 @@
                    (let* ((pkg (package-file-meta pkg-file))
                           (hash (process->pair-or-null 'hash "git rev-parse HEAD"))
                           (tag (process->pair-or-null 'tag "git describe --exact-match --tags --abbrev=0"))
-                          (url (handle-git-url cfg (process->pair-or-null 'url "git config --get remote.origin.url")))
+                          (url (fix-git-url cfg (process->pair-or-null 'url "git config --get remote.origin.url")))
                           (git (cons 'git (remove null? (list hash tag url)))))
                      (when (null? hash)
                        (error "Directory is not a git repository"))
@@ -2782,8 +2790,7 @@
                                   (and (pair? x)
                                        (eq? 'installed-files (car x))))
                                 pkg)
-                      (installed-files ,@installed-files)))
-                   ))
+                      (installed-files ,@installed-files)))))
              (preserve))))))))
 
 (define (install-package-from-file repo impl cfg file)
@@ -2793,13 +2800,24 @@
 
 (define (git-fetch-package repo cfg pkg)
   (call-with-temp-dir
-    "pkg-git-clone"
+    "snow-fort-pkg-git-clone"
     (lambda (dir preserve)
       (let* ((git-tag (package-git-tag pkg))
              (git-branch (cond ((equal? git-tag 'HEAD) `())
                                (git-tag `(--branch ,git-tag))
                                (else `())))
-             (git-hash (package-git-hash pkg))
+             (new-cfg
+               (conf-extend cfg `((version . ,(package-version pkg))
+                                  (author . ,(package-author repo pkg))
+                                  (maintainer . ,(package-maintainer repo pkg)))))
+             (git-hash
+               (let ((hash (package-git-hash pkg)))
+                 (when
+                   (and (not hash)
+                        (not (yes-or-no? new-cfg
+                                         "Git hash missing.\nProceed anyway?")))
+                   (die 2 "Git hash missing" pkg))
+                 hash))
              (git-commands
                (cond (git-tag `((git clone
                                      ,(package-git-url pkg)
@@ -2818,7 +2836,10 @@
                        `((git clone
                               ,(package-git-url pkg)
                               ,dir)))))
-             (git-outputs (map process->output+error+status git-commands))
+             (git-outputs
+               (let ((outputs (map process->output+error+status git-commands)))
+                 (when (not (= (list-ref (list-ref outputs 0) 2) 0))
+                   (error "Git clone failed" outputs))))
              (cloned-hash (read-line
                             (open-input-string
                               (process->string `(git -C ,dir rev-parse HEAD)))))
@@ -2827,17 +2848,8 @@
                       (make-path dir
                                  (string-append (library->path cfg lib) ".sld")))
                     (package-libraries pkg)))
-             (new-cfg
-               (conf-extend cfg `((version . ,(package-version pkg))
-                                  (author . ,(package-author repo pkg))
-                                  (maintainer . ,(package-maintainer repo pkg)))))
              (spec '())
              (spec+files (package-spec+files new-cfg spec libs)))
-        (when (not (= (list-ref (list-ref git-outputs 0) 2) 0))
-          (error "Git clone failed" (list-ref git-outputs 0)))
-        (when (and (not git-hash)
-                   (not (yes-or-no? new-cfg "Git hash missing.\nProceed anyway?")))
-          (die 2 "Git hash missing" pkg))
         (when (and git-hash
                    (not (string=? cloned-hash git-hash))
                    (not (yes-or-no? new-cfg
