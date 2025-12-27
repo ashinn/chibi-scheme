@@ -218,7 +218,7 @@
       "add a package to a local repository file"
       (@ ,index-spec) (,command/index ...))
      (git-index
-      "add a git package to a repository file"
+      "add a package to snow-fort-repo.scm file in git repo"
       (@ ,git-index-spec) (,command/git-index files ...))
      (update
       "force an update of available package status"
