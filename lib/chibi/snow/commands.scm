@@ -714,9 +714,13 @@
 
 (define (command/git-index cfg spec . pkg-files)
   (when (null? pkg-files)
-    (error "Give atleast one package .tgz file as argument"))
-  (when (not (file-directory? "snow")) (create-directory "snow"))
-  (let* ((repo-path "./snow/repo.scm")
+    (error "Give at least one package .tgz file as argument"))
+  (for-each
+    (lambda (pkg-file)
+      (when (not (string-suffix? ".tgz" pkg-file))
+        (error "All packages must be .tgz files. Use snow-chibi package command")))
+    pkg-files)
+  (let* ((repo-path "./snow-fort-repo.scm")
          (dir (path-directory repo-path))
          (pkgs (filter-map
                  (lambda (pkg-file)
@@ -749,7 +753,7 @@
                      pkgs)))
     (call-with-output-file repo-path
                            (lambda (out) (write-simple-pretty repo out)))
-    (display "Updated snow/repo.scm")
+    (display "Updated snow-fort-repo.scm")
     (newline)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1263,7 +1267,7 @@
              ((equal? uri-type 'git)
               (utf8->string (git-resource->bytevector cfg
                                                       repo-uri
-                                                      "snow/repo.scm")))))
+                                                      "snow-fort-repo.scm")))))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
