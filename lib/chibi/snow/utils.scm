@@ -175,7 +175,7 @@
 
 (define (git-resource->bytevector cfg uri file-path)
   (call-with-temp-dir
-    "repo-git-clone"
+    "snow-fort-repo-git-clone"
     (lambda (dir preserve)
       (let* ((git-commands `((git clone ,uri ,dir --depth=1)))
              (git-outputs (map process->output+error+status git-commands)))
