@@ -151,11 +151,12 @@
                             (%make-uri
                              scheme
                              (and (string-cursor>? at sc2)
-                                  (decode (substring-cursor str sc2 at)))
+                                  (decode
+                                   (substring-cursor str sc2 (string-cursor-prev str at))))
                              (decode
                               (substring-cursor
                                str
-                               (if (string-cursor>? at sc2) (string-cursor-next str at) sc2)
+                               (if (string-cursor>? at sc2) at sc2)
                                (if (string-cursor<? colon3 slash)
                                    colon3
                                    slash)))

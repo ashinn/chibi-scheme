@@ -44,6 +44,17 @@
         (test "q=cats" (uri-query (string->uri str)))
         (test "recent" (uri-fragment (string->uri str))))
 
+      (let ((str "ssh://git@codeberg.org/retropikzel/snow-chibi-testing.git"))
+        (test-assert (uri? (string->uri str)))
+        (test 'ssh (uri-scheme (string->uri str)))
+        (test "git" (uri-user (string->uri str)))
+        (test "codeberg.org" (uri-host (string->uri str)))
+        (test #f (uri-port (string->uri str)))
+        (test "/retropikzel/snow-chibi-testing.git"
+            (uri-path (string->uri str)))
+        (test #f (uri-query (string->uri str)))
+        (test #f (uri-fragment (string->uri str))))
+
       (test "/%73" (uri-path (string->uri "http://google.com/%73")))
       (test "/s" (uri-path (string->uri "http://google.com/%73" #t)))
       (test "a=1&b=2;c=3"
