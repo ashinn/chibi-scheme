@@ -701,25 +701,6 @@
       '()
       `(,key ,(read-line (open-input-string out))))))
 
-;; If git repo url is ssh, switch it to https except if requested not to
-(define (fix-git-url cfg url-pair)
-  (let* ((url (cadr url-pair))
-         (uri (string->uri url))
-         (url-type (if (and (uri-has-scheme? uri)
-                            (equal? (uri-scheme uri) 'https))
-                     'https
-                     'ssh))
-         (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url)))
-         (fixed-url
-           (cond
-             ((and (equal? url-type 'ssh) use-ssh-url?)
-              url)
-             ((and (equal? url-type 'ssh) (uri-has-scheme? uri))
-              (string-append "https://" (string-copy url (string-length "ssh://"))))
-             (else
-               (string-append "https://" url)))))
-    `(url ,fixed-url)))
-
 (define (command/git-index cfg spec . pkg-files)
   (when (null? pkg-files)
     (error "Give at least one package .tgz file as argument"))
@@ -730,6 +711,14 @@
     pkg-files)
   (let* ((repo-path "./snow-fort-repo.scm")
          (dir (path-directory repo-path))
+         ;; If git repo url is ssh, switch it to https except if requested not to
+         (fix-git-url
+           (lambda (cfg url-pair)
+             (let* ((uri (string->uri (cadr url-pair)))
+                    (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url))))
+               `(url ,(uri->string
+                        (uri-with-scheme uri
+                                         (if use-ssh-url? 'ssh 'https)))))))
          (pkgs (filter-map
                  (lambda (pkg-file)
                    (let* ((pkg (package-file-meta pkg-file))
