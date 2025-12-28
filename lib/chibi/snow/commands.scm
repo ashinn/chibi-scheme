@@ -725,13 +725,14 @@
                           (hash (process->pair-or-null 'hash "git rev-parse HEAD"))
                           (tag (process->pair-or-null 'tag "git describe --exact-match --tags --abbrev=0"))
                           (url (fix-git-url cfg (process->pair-or-null 'url "git config --get remote.origin.url")))
-                          (git (cons 'git (remove null? (list hash tag url)))))
+                          (git (cons 'git (remove null? (list hash tag url))))
+                          (updated (tai->rfc-3339 (current-second))))
                      (when (null? hash)
                        (error "Directory is not a git repository"))
                      (and pkg
                           `(,(car pkg)
                              ,git
-                             ,@(cdr pkg)))))
+                             ,@(cdr pkg) (updated ,updated)))))
                  (if (pair? pkg-files)
                    pkg-files
                    (filter package-file?

@@ -6,7 +6,7 @@
           uri-normalize uri-directory
           version-split version-compare version>? version>=?
           topological-sort assq-ref
-          known-implementations impl->version impl->features)
+          known-implementations impl->version impl->features tai->rfc-3339)
   (import (scheme base)
           (scheme char)
           (scheme file)
@@ -22,7 +22,8 @@
           (chibi process)
           (chibi string)
           (chibi temp-file)
-          (chibi uri))
+          (chibi uri)
+          (chibi time))
   (cond-expand
    (chibi (import (chibi io)))
    (chicken

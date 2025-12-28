@@ -255,3 +255,17 @@
                      (lp2 (cdr ls2)
                           (cons (car ls2) seen)
                           (cons (car ls2) res))))))))))))
+
+(define (tai->rfc-3339 seconds)
+  (define (pad2 n)
+    (if (< n 10)
+        (string-append "0" (number->string n))
+        (number->string n)))
+  (let ((tm (seconds->time (exact (round seconds)))))
+    (string-append
+     (number->string (+ 1900 (time-year tm))) "-"
+     (pad2 (+ 1 (time-month tm))) "-"
+     (pad2 (time-day tm)) "T"
+     (pad2 (time-hour tm)) ":"
+     (pad2 (time-minute tm)) ":"
+     (pad2 (time-second tm)) "+00:00")))
