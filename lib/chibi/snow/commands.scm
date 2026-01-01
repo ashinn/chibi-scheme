@@ -3,6 +3,8 @@
 ;; This code was written by Alex Shinn in 2014 and placed in the
 ;; Public Domain.  All warranties are disclaimed.
 
+(define git-repo-path ".snow-repo.scm")
+
 (define (impl-available? cfg spec confirm?)
   (if (find-in-path (cadr spec))
       (or (null? (cddr spec))
@@ -709,7 +711,7 @@
       (when (not (string-suffix? ".tgz" pkg-file))
         (error "All packages must be .tgz files. Use snow-chibi package command")))
     pkg-files)
-  (let* ((repo-path ".snow-repo.scm")
+  (let* ((repo-path git-repo-path)
          (dir (path-directory repo-path))
          ;; If git repo url is ssh, switch it to https except if requested not to
          (fix-git-url
@@ -757,7 +759,7 @@
                      pkgs)))
     (call-with-output-file repo-path
                            (lambda (out) (write-simple-pretty repo out)))
-    (display "Updated .snow-repo.scm")
+    (display (string-append "Updated " git-repo-path))
     (newline)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1271,7 +1273,7 @@
              ((equal? uri-type 'git)
               (utf8->string (git-resource->bytevector cfg
                                                       repo-uri
-                                                      ".snow-repo.scm")))))
+                                                      git-repo-path)))))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
