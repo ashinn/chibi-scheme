@@ -709,7 +709,7 @@
       (when (not (string-suffix? ".tgz" pkg-file))
         (error "All packages must be .tgz files. Use snow-chibi package command")))
     pkg-files)
-  (let* ((repo-path "./snow-fort-repo.scm")
+  (let* ((repo-path ".snow-repo.scm")
          (dir (path-directory repo-path))
          ;; If git repo url is ssh, switch it to https except if requested not to
          (fix-git-url
@@ -757,7 +757,7 @@
                      pkgs)))
     (call-with-output-file repo-path
                            (lambda (out) (write-simple-pretty repo out)))
-    (display "Updated snow-fort-repo.scm")
+    (display "Updated .snow-repo.scm")
     (newline)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1271,7 +1271,7 @@
              ((equal? uri-type 'git)
               (utf8->string (git-resource->bytevector cfg
                                                       repo-uri
-                                                      "snow-fort-repo.scm")))))
+                                                      ".snow-repo.scm")))))
          (repo (guard (exn (else #f))
                  (let ((repo (read (open-input-string repo-str))))
                    `(,(car repo) (url ,repo-uri) ,@(cdr repo))))))
