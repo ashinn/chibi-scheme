@@ -173,6 +173,16 @@
             (call-with-input-url uri port->bytevector))
         (file->bytevector (uri-path uri)))))
 
+(define (git-resource->bytevector cfg uri file-path)
+  (call-with-temp-dir
+    "snow-fort-repo-git-clone"
+    (lambda (dir preserve)
+      (let* ((git-commands `((git clone ,uri ,dir --depth=1)))
+             (git-outputs (map process->output+error+status git-commands)))
+        (when (not (= (list-ref (list-ref git-outputs 0) 2) 0))
+          (error "Git clone failed" (list-ref git-outputs 0)))
+        (file->bytevector (make-path dir file-path))))))
+
 ;; path-normalize either a uri or path, and return the result as a string
 (define (uri-normalize x)
   (cond
@@ -245,3 +255,17 @@
                      (lp2 (cdr ls2)
                           (cons (car ls2) seen)
                           (cons (car ls2) res))))))))))))
+
+(define (tai->rfc-3339 seconds)
+  (define (pad2 n)
+    (if (< n 10)
+        (string-append "0" (number->string n))
+        (number->string n)))
+  (let ((tm (seconds->time (exact (round seconds)))))
+    (string-append
+     (number->string (+ 1900 (time-year tm))) "-"
+     (pad2 (+ 1 (time-month tm))) "-"
+     (pad2 (time-day tm)) "T"
+     (pad2 (time-hour tm)) ":"
+     (pad2 (time-minute tm)) ":"
+     (pad2 (time-second tm)) "+00:00")))

@@ -158,6 +158,8 @@
     ,@package-spec))
 (define index-spec
   '())
+(define git-index-spec
+  '(use-ssh-url boolean))
 (define update-spec
   '())
 (define implementations-spec
@@ -214,7 +216,10 @@
       (@ ,upload-spec) (,command/upload files ...))
      (index
       "add a package to a local repository file"
-      (@ ,index-spec) (,command/index files ...))
+      (@ ,index-spec) (,command/index ...))
+     (git-index
+      "add a package to repository file in git repo"
+      (@ ,git-index-spec) (,command/git-index files ...))
      (update
       "force an update of available package status"
       (@ ,update-spec) (,command/update))

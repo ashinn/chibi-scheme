@@ -8,6 +8,7 @@
           command/upload
           command/implementations
           command/index
+          command/git-index
           command/install
           command/install-dependencies
           command/remove
