@@ -168,64 +168,64 @@
 (define app-spec
   `(snow
     "Snow package management"
-    (@ ,conf-spec)
+    (@ ,@conf-spec)
     (begin: ,(lambda (cfg) (restore-history cfg)))
     (end: ,(lambda (cfg) (save-history cfg)))
     (or
      (search
       "search for packages"
-      (@ ,search-spec) (,command/search terms ...))
+      (@ ,@search-spec) (,command/search terms ...))
      (show
       "show package descriptions"
-      (@ ,show-spec) (,command/show names ...))
+      (@ ,@show-spec) (,command/show names ...))
      (install
       "install packages"
-      (@ ,install-spec) (,command/install names ...))
+      (@ ,@install-spec) (,command/install names ...))
      (install-dependencies
       "install program dependencies"
-      (@ ,install-dependencies-spec) (,command/install-dependencies files ...))
+      (@ ,@install-dependencies-spec) (,command/install-dependencies files ...))
      (upgrade
       "upgrade installed packages"
-      (@ ,upgrade-spec) (,command/upgrade names ...))
+      (@ ,@upgrade-spec) (,command/upgrade names ...))
      (remove
       "remove packages"
-      (@ ,remove-spec) (,command/remove names ...))
+      (@ ,@remove-spec) (,command/remove names ...))
      (status
       "print package status"
-      (@ ,status-spec) (,command/status names ...))
+      (@ ,@status-spec) (,command/status names ...))
      (srfi-list
       "print implementations supported srfi-list"
-      (@ ,srfi-list-spec) (,command/srfi-list ...))
+      (@ ,@srfi-list-spec) (,command/srfi-list ...))
      (package
       "create a package"
-      (@ ,package-spec) (,command/package files ...))
+      (@ ,@package-spec) (,command/package files ...))
      (gen-key
       "create an RSA key pair"
-      (@ ,gen-key-spec) (,command/gen-key))
+      (@ ,@gen-key-spec) (,command/gen-key))
      (reg-key
       "register an RSA key pair"
-      (@ ,reg-key-spec) (,command/reg-key))
+      (@ ,@reg-key-spec) (,command/reg-key))
      (sign
       "sign a package"
-      (@ ,sign-spec) (,command/sign file))
+      (@ ,@sign-spec) (,command/sign file))
      (verify
       "verify a signature"
-      (@ ,verify-spec) (,command/verify file))
+      (@ ,@verify-spec) (,command/verify file))
      (upload
       "upload a package to a remote repository"
-      (@ ,upload-spec) (,command/upload files ...))
+      (@ ,@upload-spec) (,command/upload files ...))
      (index
       "add a package to a local repository file"
-      (@ ,index-spec) (,command/index ...))
+      (@ ,@index-spec) (,command/index ...))
      (git-index
       "add a package to repository file in git repo"
-      (@ ,git-index-spec) (,command/git-index files ...))
+      (@ ,@git-index-spec) (,command/git-index files ...))
      (update
       "force an update of available package status"
-      (@ ,update-spec) (,command/update))
+      (@ ,@update-spec) (,command/update))
      (implementations
       "print currently available scheme implementations"
-      (@ ,implementations-spec) (,command/implementations))
+      (@ ,@implementations-spec) (,command/implementations))
      (help
       "print help"
       (,app-help-command args ...))
