@@ -363,6 +363,20 @@
         (lp (cdr val+args)
             (conf-set opts (caar val+args) (cdar val+args))))))))
 
+(define (get-options-tail options-spec)
+  (unless (and (pair? options-spec) (eq? '@ (car options-spec)))
+    (error "not an options spec" options-spec))
+  (let ((tail (cdr options-spec)))
+    ;; to be safe, support both (@ ,spec) and (@ ,@spec)
+    (cond
+     ((not (pair? tail))
+      '())
+     ((or (pair? (cdr tail))
+          (and (pair? (car tail)) (symbol? (caar tail))))
+      tail)
+     (else
+      (car tail)))))
+
 ;;> Parses a list of command-line arguments \var{args} according to
 ;;> the application spec \var{opt-spec}.  Returns a vector of five
 ;;> elements:
@@ -418,16 +432,7 @@
      ((pair? (car spec))
       (case (caar spec)
         ((@)
-         (let* ((tail (cdar spec))
-                (new-opt-spec
-                 (cond
-                  ((not (pair? tail))
-                   '())
-                  ((or (pair? (cdr tail))
-                       (and (pair? (car tail)) (symbol? (caar tail))))
-                   tail)
-                  (else
-                   (car tail))))
+         (let* ((new-opt-spec (get-options-tail (car spec)))
                 (new-fail
                  (lambda (new-prefix new-spec new-opt new-args reason)
                    (parse-option (prev-prefix prefix) opt-spec new-args types fail)))
@@ -538,7 +543,7 @@
             (and (pair? (car ls)) (memq (caar ls) '(begin: end:) )))
         (lp (cdr ls) (car ls) commands options))
        ((and (pair? (car ls)) (eq? '@ (caar ls)))
-        (lp (cdr ls) docs commands (append options (cdar ls))))
+        (lp (cdr ls) docs commands (append options (get-options-tail (car ls)))))
        ((and (pair? (car ls)) (symbol? (caar ls)))
         ;; don't print nested commands
         (if (pair? commands)
@@ -554,4 +559,5 @@
 ;;> \schemeblock{(help "print help" (,app-help-command args ...))}
 
 (define (app-help-command config spec . args)
+  ;; TODO: subcommand help
   (app-help spec args (current-output-port)))

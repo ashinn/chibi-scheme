@@ -549,10 +549,10 @@
   `(http-config-server
     "Config-based HTTP server"
     (@
-     ((port integer)
-      (doc-root string)
-      (verbose? boolean (#\v "verbose"))
-      (quiet? boolean (#\q "quiet"))))
+     (port integer)
+     (doc-root string)
+     (verbose? boolean (#\v "verbose"))
+     (quiet? boolean (#\q "quiet")))
     ,run-app))
 
 (define (main args) (run-application app-spec))
