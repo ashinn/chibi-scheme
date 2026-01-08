@@ -713,10 +713,16 @@
     pkg-files)
   (let* ((repo-path git-repo-path)
          (dir (path-directory repo-path))
-         ;; If git repo url is ssh, switch it to https except if requested not to
          (fix-git-url
+           ;; If git repo url starts with git@, switch it to ssh
+           ;; If git repo url is ssh, switch it to https except if requested not to
            (lambda (cfg url-pair)
-             (let* ((uri (string->uri (cadr url-pair)))
+             (let* ((uri-str (let ((uri (cadr url-pair)))
+                               (if (string=? (string-copy uri 0 4) "git@")
+                                 (string-append "ssh://"
+                                                (string-copy uri 4))
+                                 uri)))
+                    (uri (string->uri uri-str))
                     (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url))))
                `(url ,(uri->string
                         (uri-with-scheme uri
