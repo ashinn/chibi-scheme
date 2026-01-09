@@ -715,7 +715,7 @@
          (dir (path-directory repo-path))
          (fix-git-url
            (lambda (cfg url-pair)
-             (let* ((use-ssh-url? (conf-get cfg '(command git-index use-ssh-url)))
+             (let* ((use-ssh-url? (conf-get cfg '(command git-index use-ssh-url?)))
                     (url (cadr url-pair)))
                `(url ,(cond
                         ((and (string-prefix? "git@" url) use-ssh-url?) url)
