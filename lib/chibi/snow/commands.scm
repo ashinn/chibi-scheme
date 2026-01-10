@@ -713,14 +713,24 @@
     pkg-files)
   (let* ((repo-path git-repo-path)
          (dir (path-directory repo-path))
-         ;; If git repo url is ssh, switch it to https except if requested not to
          (fix-git-url
            (lambda (cfg url-pair)
-             (let* ((uri (string->uri (cadr url-pair)))
-                    (use-ssh-url? (conf-get cfg '(command git-index use-ssh-url))))
-               `(url ,(uri->string
-                        (uri-with-scheme uri
-                                         (if use-ssh-url? 'ssh 'https)))))))
+             (let* ((use-ssh-url? (conf-get cfg '(command git-index use-ssh-url?)))
+                    (url (cadr url-pair)))
+               `(url ,(cond
+                        ((and (string-prefix? "git@" url) use-ssh-url?) url)
+                        ((and (string-prefix? "ssh://" url) use-ssh-url?) url)
+                        ((string-prefix? "git@" url)
+                         (uri->string
+                           (uri-with-scheme
+                             (string->uri
+                               (string-append "https://" (string-copy url 4)))
+                               'https)))
+                        ((and (string-prefix? "https://" url) use-ssh-url?)
+                         (uri->string
+                           (uri-with-scheme (string->uri url) 'ssh)))
+                        ((string-prefix? "https://" url) url)
+                        (else (error "Could not fix repository url" url)))))))
          (pkgs (filter-map
                  (lambda (pkg-file)
                    (let* ((pkg (package-file-meta pkg-file))
