@@ -733,17 +733,26 @@
                         (else (error "Could not fix repository url" url)))))))
          (pkgs (filter-map
                  (lambda (pkg-file)
-                   (let* ((pkg (package-file-meta pkg-file))
+                   (let* ((pkg (guard (exn (else #f))
+                                 (package-file-meta pkg-file)))
                           (hash (process->pair-or-null 'hash "git rev-parse HEAD"))
                           (tag (process->pair-or-null 'tag "git describe --exact-match --tags --abbrev=0"))
-                          (url (fix-git-url cfg (process->pair-or-null 'url "git config --get remote.origin.url")))
-                          (git (cons 'git (remove null? (list hash tag url))))
+                          (url (process->pair-or-null 'url "git config --get remote.origin.url"))
                           (updated (tai->rfc-3339 (current-second))))
-                     (when (null? hash)
-                       (error "Directory is not a git repository"))
+                     (cond ((not pkg)
+                            (error "Could not get package metadata" pkg-file))
+                           ((or (null? url) (null? hash))
+                            (error "Directory is not a git repository"))
+                           ((string=? (cadr hash) "HEAD")
+                            (error "Can not index in empty git repository"
+                                   hash)))
                      (and pkg
                           `(,(car pkg)
-                             ,git
+                             ,(cons
+                                'git
+                                (remove null? (list hash
+                                                    tag
+                                                    (fix-git-url cfg url))))
                              ,@(cdr pkg) (updated ,updated)))))
                  (if (pair? pkg-files)
                    pkg-files
