@@ -159,7 +159,7 @@
 (define index-spec
   '())
 (define git-index-spec
-  '(use-ssh-url? boolean))
+  '((use-ssh-url? boolean)))
 (define update-spec
   '())
 (define implementations-spec
