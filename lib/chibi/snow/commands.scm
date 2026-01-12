@@ -639,10 +639,18 @@
       (close-output-port out))))
 
 (define (command/install-dependencies cfg spec scm-file)
-  (apply command/install
-         `(,cfg ,spec
-                ,@(map write-to-string
-                       (cdar (extract-program-dependencies scm-file))))))
+  (let ((dependencies (extract-program-dependencies scm-file)))
+    (cond ((null? dependencies)
+           (display "Could not get program dependencies, or program has no snow dependencies.")
+           (newline))
+          ((yes-or-no? cfg
+                       "Found dependencies: "
+                       (cdar dependencies)
+                       #\newline
+                       "Install")
+           (apply command/install
+                  `(,cfg ,spec
+                         ,@(map write-to-string (cdar dependencies))))))))
 
 (define (command/srfi-list cfg spec)
   (let ((implementations (conf-get cfg 'implementations)))
