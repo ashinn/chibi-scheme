@@ -8,7 +8,8 @@
           shell->string shell->string-list
           shell->sexp shell->sexp-list shell->output&error
           shell-if shell-and shell-or shell-do
-          in< out> err> out>> err>> >< >> <<)
+          in< out> err> out>> err>> >< >> <<
+          shell-command)
   (begin
     (define shell-fork fork)
     (define shell-exec execute)

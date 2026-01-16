@@ -226,7 +226,7 @@
           (child-out)
           (let ((ls (map shell-object->string cmd)))
             (shell-exec (car ls) ls)
-            (exit 0)))
+            (exit 1)))
          (else                          ; parent
           (list pid))))))))
 
