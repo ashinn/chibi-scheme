@@ -1463,6 +1463,13 @@
       (string->number (process->string '(csi -p "(##sys#fudge 42)")))
       8))
 
+(define (get-chicken-version cfg)
+  (or (conf-get cfg 'chicken-version)
+      (let* ((version-lst (process->string-list '(csi -version)))
+            (version-line (list-ref version-lst 3))
+            (version (string->number (string (string-ref version-line 8)))))
+        version)))
+
 (define (get-chicken-repo-path)
   (let ((release (string-trim (process->string '(csi -release))
                               char-whitespace?)))
@@ -1665,9 +1672,13 @@
                `(,@chibi -A ,install-dir -A ,lib-path ,file)
                `(,@chibi -A ,install-dir ,file))))
         ((chicken)
-         (if lib-path
+         (if (= (get-chicken-version cfg) 5)
+           (if lib-path
              `(csi -R r7rs -I ,install-dir -I ,lib-path -s ,file)
-             `(csi -R r7rs -I ,install-dir -s ,file)))
+             `(csi -R r7rs -I ,install-dir -s ,file))
+           (if lib-path
+             `(csi -I ,install-dir -I ,lib-path -s ,file)
+             `(csi -I ,install-dir -s ,file))))
         ((cyclone)
          (if lib-path
              `(icyc -A ,install-dir -A ,lib-path -s ,file)
@@ -2502,14 +2513,23 @@
     (with-directory
       dir
       (lambda ()
-        (let ((res (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
-                           '-I (path-directory library-file) library-file))
+        (let ((res (if (= (get-chicken-version cfg) 5)
+                     (system 'csc '-R 'r7rs '-X 'r7rs '-s '-J '-o so-path
+                             '-I (path-directory library-file) library-file)
+                     (system 'csc '-s '-J '-o so-path
+                             '-I (path-directory library-file) library-file)))
               (res-static
-                (let* ((result (system 'csc '-R 'r7rs '-X 'r7rs
-                                       '-unit library-base
-                                       '-static '-c '-J '-o o-path
-                                       '-I (path-directory library-file)
-                                       library-file))
+                (let* ((result
+                         (if (= (get-chicken-version cfg) 5)
+                           (system 'csc '-R 'r7rs '-X 'r7rs
+                                   '-unit library-base
+                                   '-static '-c '-J '-o o-path
+                                   '-I (path-directory library-file)
+                                   library-file)
+                           (system 'csc '-unit library-base
+                                   '-static '-c '-J '-o o-path
+                                   '-I (path-directory library-file)
+                                   library-file)))
                        (ar-result (system 'ar 'rcs a-path o-path)))
                   (and (pair? result)
                        (zero? (cadr result))
@@ -2653,8 +2673,10 @@
     (with-directory
      dir
      (lambda ()
-       (let ((res (system 'csc '-R 'r7rs '-X 'r7rs
-                          '-I (path-directory path) path)))
+       (let ((res (if (= (get-chicken-version cfg) 5)
+                    (system 'csc '-R 'r7rs '-X 'r7rs
+                            '-I (path-directory path) path)
+                    (system 'csc '-I (path-directory path) path))))
          (and (or (and (pair? res) (zero? (cadr res)))
                   (yes-or-no? cfg "chicken failed to build: "
                               path " - install anyway?"))
