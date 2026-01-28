@@ -12,7 +12,7 @@
           parse-seq parse-and parse-or parse-not list->parse-seq
           parse-repeat parse-repeat+ parse-optional
           parse-map parse-map-substring parse-ignore parse-assert
-          parse-atomic parse-commit parse-memoize
+          parse-atomic parse-commit parse-memoize parse-lazy
           parse-char parse-not-char
           parse-string parse-token parse-sre
           parse-beginning parse-end
