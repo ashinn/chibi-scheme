@@ -1550,22 +1550,23 @@
             path
             "/usr/local/share/guile/"))))
     ((kawa)
-     (make-path
-       (if (conf-get cfg 'install-prefix) (conf-get cfg 'install-prefix) "")
-       (path-directory
-         (car
-           (string-split
-             (call-with-temp-file
-               "snow-kawa.scm"
-               (lambda (tmp-path out preserve)
-                 (with-output-to-file
-                   tmp-path
-                   (lambda ()
-                     (display "(import (scheme base) (scheme write) (scheme process-context))")
-                     (newline)
-                     (display "(display (get-environment-variable \"CLASSPATH\"))")))
-                 (process->string `(kawa ,tmp-path))))
-             #\:)))))
+     (list
+       (make-path
+         (if (conf-get cfg 'install-prefix) (conf-get cfg 'install-prefix) "")
+         (path-directory
+           (car
+             (string-split
+               (call-with-temp-file
+                 "snow-kawa.scm"
+                 (lambda (tmp-path out preserve)
+                   (with-output-to-file
+                     tmp-path
+                     (lambda ()
+                       (display "(import (scheme base) (scheme write) (scheme process-context))")
+                       (newline)
+                       (display "(display (get-environment-variable \"CLASSPATH\"))")))
+                   (process->string `(kawa ,tmp-path))))
+               #\:))))))
     ((loko)
      (list "/usr/local/share/r6rs"))
     ((mit-scheme)
