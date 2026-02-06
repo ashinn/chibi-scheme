@@ -1553,20 +1553,17 @@
      (list
        (make-path
          (if (conf-get cfg 'install-prefix) (conf-get cfg 'install-prefix) "")
-         (path-directory
-           (car
-             (string-split
-               (call-with-temp-file
-                 "snow-kawa.scm"
-                 (lambda (tmp-path out preserve)
-                   (with-output-to-file
-                     tmp-path
-                     (lambda ()
-                       (display "(import (scheme base) (scheme write) (scheme process-context))")
-                       (newline)
-                       (display "(display (get-environment-variable \"CLASSPATH\"))")))
-                   (process->string `(kawa ,tmp-path))))
-               #\:))))))
+         (let ((kawa-classpath
+                 (string-split
+                   (process->string
+                     `(kawa -e "(display (get-environment-variable \"CLASSPATH\"))"))
+                   #\.)))
+           (if (or (null? kawa-classpath)
+                   (not (string-suffix? "kawa" (car kawa-classpath))))
+             "/usr/local/share/kawa/lib"
+             (string-copy (car kawa-classpath)
+                          0
+                          (- (string-length (car kawa-classpath)) 4)))))))
     ((loko)
      (list "/usr/local/share/r6rs"))
     ((mit-scheme)
