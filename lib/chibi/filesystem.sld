@@ -14,6 +14,7 @@
           create-directory create-directory*
           current-directory change-directory with-directory
           open open-pipe make-fifo
+          open-output-file/append
           read-link
           file-status               file-link-status
           file-device               file-inode

@@ -28,11 +28,7 @@
     (import (chibi) (chibi filesystem) (chibi process) (chibi string)
             (chibi system) (srfi 9))
     (begin
-      (define write-string display)
-      (define (open-output-file/append path)
-        (let ((fd (open path
-                        (+ open/create open/write open/append open/non-block))))
-          (open-output-file-descriptor fd)))))
+      (define write-string display)))
    (else
     (import (scheme base) (scheme char) (scheme file) (chibi string))
     (begin
