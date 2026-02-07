@@ -1550,7 +1550,20 @@
             path
             "/usr/local/share/guile/"))))
     ((kawa)
-     (list "/usr/local/share/kawa/lib"))
+     (list
+       (make-path
+         (if (conf-get cfg 'install-prefix) (conf-get cfg 'install-prefix) "")
+         (let ((kawa-classpath
+                 (string-split
+                   (process->string
+                     `(kawa -e "(display (get-environment-variable \"CLASSPATH\"))"))
+                   #\:)))
+           (if (or (null? kawa-classpath)
+                   (not (string-suffix? "kawa.jar" (car kawa-classpath))))
+             "/usr/local/share/kawa/lib"
+             (string-copy (car kawa-classpath)
+                          0
+                          (- (string-length (car kawa-classpath)) 8)))))))
     ((loko)
      (list "/usr/local/share/r6rs"))
     ((mit-scheme)
