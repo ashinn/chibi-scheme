@@ -1557,13 +1557,13 @@
                  (string-split
                    (process->string
                      `(kawa -e "(display (get-environment-variable \"CLASSPATH\"))"))
-                   #\.)))
+                   #\:)))
            (if (or (null? kawa-classpath)
-                   (not (string-suffix? "kawa" (car kawa-classpath))))
+                   (not (string-suffix? "kawa.jar" (car kawa-classpath))))
              "/usr/local/share/kawa/lib"
              (string-copy (car kawa-classpath)
                           0
-                          (- (string-length (car kawa-classpath)) 4)))))))
+                          (- (string-length (car kawa-classpath)) 8)))))))
     ((loko)
      (list "/usr/local/share/r6rs"))
     ((mit-scheme)
