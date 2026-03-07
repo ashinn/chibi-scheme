@@ -1182,6 +1182,19 @@ defines a Scheme variable with the same value as the C constant.
 \item{\rawcode{output-port}}
 ]
 
+\subsubsection{File Descriptor Type}
+
+\itemlist[
+\item{\rawcode{fileno}}
+]
+
+Represents a file descriptor object which is automatically closed on
+GC.  Existing procedures such as \scheme{open} from
+\scheme{(chibi filesystem)} or \scheme{socket} from \scheme{(chibi net)}
+return these, and they can be passed to other filesystem utilities or
+\scheme{open-input-file-descriptor} or \scheme{open-output-file-descriptor}
+from the core \scheme{(chibi)} module.
+
 \subsubsection{Struct Types}
 
 Struct types are by default just referred to by the bare
@@ -1361,6 +1374,8 @@ namespace.
 \item{\hyperlink["lib/chibi/crypto/rsa.html"]{(chibi crypto rsa) - RSA public key encryption}}
 
 \item{\hyperlink["lib/chibi/crypto/sha2.html"]{(chibi crypto sha2) - SHA-2 hash}}
+
+\item{\hyperlink["lib/chibi/csv.html"]{(chibi csv) - CSV parsing and formatting}}
 
 \item{\hyperlink["lib/chibi/diff.html"]{(chibi diff) - LCS Algorithm and diff utilities}}
 
