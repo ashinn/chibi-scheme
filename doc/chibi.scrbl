@@ -1661,7 +1661,7 @@ installed. The following are currently supported:
 \item{chibi - version >= 0.7.3}
 \item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
 \item{cyclone - version >= 0.5.3}
-\item{foment - version >= 0.4}
+\item{foment - version >= 0.4; Libraries are installed into /usr/local/lib/snow, user needs to add it into loadpath}
 \item{gambit - version >= 4.9.3}
 \item{generic; By default libraries are installed into /usr/local/lib/snow or %LOCALAPPDATA%/lib/snow on windows}
 \item{gauche - version >= 0.9.4}
