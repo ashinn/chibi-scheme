@@ -1766,7 +1766,7 @@
              `(stklos -A ,install-dir ,file)))
         ((tr7)
          (if lib-path
-             `(sh -c ,(string-append "TR7_LIB_PATH=" lib-path " tr7i " file))
+             `(sh -c ,(string-append "TR7_LIB_PATH=" lib-path " tr7i " (if file file "")))
              `(tr7i ,file)))
         ((ypsilon)
          (if lib-path
