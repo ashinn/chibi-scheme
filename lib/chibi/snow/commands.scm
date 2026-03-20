@@ -2647,7 +2647,8 @@
                                      (car (get-install-dirs impl cfg)))
                       '-d dir
                       '-C src-library-file)))
-    ;; Installing for Kawa fails if there is stdin, this fixes it for some reason
+    ;; Installing for Kawa fails if there is no terminal and/or stdin, this
+    ;; fixes it for some reason
     (write res (open-output-string))
     (and (or (and (pair? res) (zero? (cadr res)))
              (yes-or-no? cfg ".class file failed to build: "
