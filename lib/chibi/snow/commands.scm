@@ -2642,13 +2642,14 @@
 
 (define (kawa-builder impl cfg library dir)
   (let* ((src-library-file (make-path dir (get-library-file cfg library)))
-         (res (process->output+error+status
-                (string-append "kawa -Dkawa.import.path="
-                               (car (get-install-dirs impl cfg))
-                               " -d " dir
-                               " -C " src-library-file))))
-    (and (or (and (list? res)
-                  (zero? (car (reverse res))))
+         (res (system 'kawa
+                      (string-append "-Dkawa.import.path="
+                                     (car (get-install-dirs impl cfg)))
+                      '-d dir
+                      '-C src-library-file)))
+    ;; Installing for Kawa fails if there is stdin, this fixes it for some reason
+    (write res (open-output-string))
+    (and (or (and (pair? res) (zero? (cadr res)))
              (yes-or-no? cfg ".class file failed to build: "
                          (library-name library)
                          " - install anyway?"))
