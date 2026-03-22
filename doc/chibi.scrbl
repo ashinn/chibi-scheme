@@ -1668,6 +1668,7 @@ installed. The following are currently supported:
 \item{guile - version >= 3.0.7}
 \item{kawa - version >= 2.0; you need to add the install dir to the search path, e.g. \scheme{-Dkawa.import.path=/usr/local/share/kawa/lib/*.sld}}
 \item{loko - version >= 0.12.2}
+\item{meevax - version >= 0.5.461}
 \item{mit-scheme - version >= 12.1}
 \item{larceny - version 0.98; you need to add "lib/Snow" to the paths in startup.sch}
 \item{mosh - version >= 0.29-rc1}
