@@ -1078,6 +1078,8 @@
     (die 1 "upload arguments must all be packages or all be libraries, "
          "but got " o))
   (cond
+    ((string-suffix? ".git" (remote-uri cfg '(command package uri) ""))
+     (die 1 "Can not upload package when main repository is git repository"))
    ((null? o)
     (die 1 "upload requires at least one input argument"))
    ((package-file? (car o))
@@ -1359,7 +1361,9 @@
   (let ((ls (conf-get-list cfg 'repository-uri)))
     (if (pair? ls)
         ls
-        (list (remote-uri cfg 'default-repository "/s/repo.scm")))))
+        (if (string-suffix? ".git" (remote-uri cfg 'default-repository ""))
+          (list (remote-uri cfg 'default-repository ""))
+          (list (remote-uri cfg 'default-repository "/s/repo.scm"))))))
 
 ;; returns all repos merged as a sexp, updated as needed
 ;; not to be confused with the current-repo util in (chibi snow fort)
