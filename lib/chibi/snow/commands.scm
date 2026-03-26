@@ -1566,8 +1566,7 @@
     ((meevax)
      (list
        (make-path
-         (car (string-split (process->string '(meevax "--library-directories"))
-                            #\newline)))))
+         (car (process->string-list '(meevax "--library-directories"))))))
     ((mit-scheme)
      (list
       (make-path
