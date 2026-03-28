@@ -1563,6 +1563,10 @@
                           (- (string-length (car kawa-classpath)) 8)))))))
     ((loko)
      (list "/usr/local/share/r6rs"))
+    ((meevax)
+     (list
+       (make-path
+         (car (process->string-list '(meevax "--library-directories"))))))
     ((mit-scheme)
      (list
       (make-path
@@ -1734,6 +1738,11 @@
            (if lib-path
                `(loko -std=r7rs --program ,file)
                `(loko -std=r7rs --program ,file))))
+        ((meevax)
+         (let ((install-dir (path-resolve install-dir (current-directory))))
+           (if lib-path
+             `(meevax -A ,install-dir -A ,lib-path ,file)
+             `(meevax -A ,install-dir ,file))))
         ((mit-scheme)
          (let ((install-dir (path-resolve install-dir (current-directory))))
            (if lib-path
@@ -2021,6 +2030,7 @@
    ((eq? impl 'guile) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'loko) (get-install-library-dir impl cfg))
+   ((eq? impl 'meevax) (get-install-library-dir impl cfg))
    ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
@@ -2045,6 +2055,7 @@
    ((eq? impl 'guile) (get-install-library-dir impl cfg))
    ((eq? impl 'kawa) (get-install-library-dir impl cfg))
    ((eq? impl 'loko) (get-install-library-dir impl cfg))
+   ((eq? impl 'meevax) (get-install-library-dir impl cfg))
    ((eq? impl 'mit-scheme) (get-install-library-dir impl cfg))
    ((eq? impl 'mosh) (get-install-library-dir impl cfg))
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
@@ -2083,6 +2094,8 @@
    ((eq? impl 'kawa)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'loko)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'meevax)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'mit-scheme)
     (car (get-install-dirs impl cfg)))
