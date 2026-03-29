@@ -933,6 +933,8 @@
         (newline)))))
 
 (define (command/reg-key cfg spec)
+  (when (string-suffix? ".git" (remote-uri cfg '(command package uri) ""))
+    (die 1 "Can not register a key when main repository is git repository"))
   (let* ((keys (call-with-input-file
                    (or (conf-get cfg 'key-file)
                        (string-append (conf-get-snow-dir cfg) "/priv-key.scm"))
