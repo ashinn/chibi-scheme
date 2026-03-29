@@ -58,6 +58,10 @@
                (display "(display (features))")))
              (process->sexp
               `(loko -std=r7rs --program ,tmp-path))))))
+    (meevax "meevax" (meevax --version) #f
+            ,(delay
+               (process->sexp
+                 '(meevax -e "(import (scheme base) (scheme write)) (write (features))"))))
      (mit-scheme "mit-scheme" (mit-scheme --version) #f
           ,(delay
              (process->sexp
