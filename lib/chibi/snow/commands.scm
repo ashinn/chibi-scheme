@@ -4,6 +4,7 @@
 ;; Public Domain.  All warranties are disclaimed.
 
 (define git-repo-path ".snow-repo.scm")
+(define (git-url? url) (string-suffix? ".git" url))
 
 (define (impl-available? cfg spec confirm?)
   (if (find-in-path (cadr spec))
@@ -838,6 +839,8 @@
         (rsa-key-gen-from-primes bits p q))))
 
 (define (command/gen-key cfg spec)
+  (when (git-url? (remote-uri cfg '(command package uri) ""))
+    (die 1 "Can not generate key when main repository is git repository"))
   (show #t
         "Generate a new key for uploading packages.\n"
         "We need a descriptive name, and an email address to "
@@ -933,7 +936,7 @@
         (newline)))))
 
 (define (command/reg-key cfg spec)
-  (when (string-suffix? ".git" (remote-uri cfg '(command package uri) ""))
+  (when (git-url? (remote-uri cfg '(command package uri) ""))
     (die 1 "Can not register a key when main repository is git repository"))
   (let* ((keys (call-with-input-file
                    (or (conf-get cfg 'key-file)
@@ -1080,7 +1083,7 @@
     (die 1 "upload arguments must all be packages or all be libraries, "
          "but got " o))
   (cond
-    ((string-suffix? ".git" (remote-uri cfg '(command package uri) ""))
+    ((git-url? (remote-uri cfg '(command package uri) ""))
      (die 1 "Can not upload package when main repository is git repository"))
    ((null? o)
     (die 1 "upload requires at least one input argument"))
@@ -1363,7 +1366,7 @@
   (let ((ls (conf-get-list cfg 'repository-uri)))
     (if (pair? ls)
         ls
-        (if (string-suffix? ".git" (remote-uri cfg 'default-repository ""))
+        (if (git-url? (remote-uri cfg 'default-repository ""))
           (list (remote-uri cfg 'default-repository ""))
           (list (remote-uri cfg 'default-repository "/s/repo.scm"))))))
 
@@ -1390,7 +1393,7 @@
                     (eq? 'url (car x))))
              ls)))
   (let lp ((ls (map (lambda (x)
-                      (if (string-suffix? ".git" x)
+                      (if (git-url? x)
                         (make-loc x 'git 1.0 0)
                         (make-loc x 'http 1.0 0)))
                     (get-repository-list cfg)))
