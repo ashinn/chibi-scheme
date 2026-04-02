@@ -4,6 +4,7 @@
 ;; Public Domain.  All warranties are disclaimed.
 
 (define git-repo-path ".snow-repo.scm")
+(define (git-url? url) (string-suffix? ".git" url))
 
 (define (impl-available? cfg spec confirm?)
   (if (find-in-path (cadr spec))
@@ -838,6 +839,8 @@
         (rsa-key-gen-from-primes bits p q))))
 
 (define (command/gen-key cfg spec)
+  (when (git-url? (remote-uri cfg '(command package uri) ""))
+    (die 1 "Can not generate key when main repository is git repository"))
   (show #t
         "Generate a new key for uploading packages.\n"
         "We need a descriptive name, and an email address to "
@@ -933,6 +936,8 @@
         (newline)))))
 
 (define (command/reg-key cfg spec)
+  (when (git-url? (remote-uri cfg '(command package uri) ""))
+    (die 1 "Can not register a key when main repository is git repository"))
   (let* ((keys (call-with-input-file
                    (or (conf-get cfg 'key-file)
                        (string-append (conf-get-snow-dir cfg) "/priv-key.scm"))
@@ -1078,6 +1083,8 @@
     (die 1 "upload arguments must all be packages or all be libraries, "
          "but got " o))
   (cond
+    ((git-url? (remote-uri cfg '(command package uri) ""))
+     (die 1 "Can not upload package when main repository is git repository"))
    ((null? o)
     (die 1 "upload requires at least one input argument"))
    ((package-file? (car o))
@@ -1359,7 +1366,9 @@
   (let ((ls (conf-get-list cfg 'repository-uri)))
     (if (pair? ls)
         ls
-        (list (remote-uri cfg 'default-repository "/s/repo.scm")))))
+        (if (git-url? (remote-uri cfg 'default-repository ""))
+          (list (remote-uri cfg 'default-repository ""))
+          (list (remote-uri cfg 'default-repository "/s/repo.scm"))))))
 
 ;; returns all repos merged as a sexp, updated as needed
 ;; not to be confused with the current-repo util in (chibi snow fort)
@@ -1383,7 +1392,10 @@
                (and (pair? x)
                     (eq? 'url (car x))))
              ls)))
-  (let lp ((ls (map (lambda (x) (make-loc x 'http 1.0 0))
+  (let lp ((ls (map (lambda (x)
+                      (if (git-url? x)
+                        (make-loc x 'git 1.0 0)
+                        (make-loc x 'http 1.0 0)))
                     (get-repository-list cfg)))
            (seen '())
            (res '()))
