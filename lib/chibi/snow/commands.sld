@@ -31,6 +31,7 @@
           (srfi 1)
           (srfi 27)
           (srfi 95)
+          (srfi 166 columnar)
           (chibi snow interface)
           (chibi snow package)
           (chibi snow utils)

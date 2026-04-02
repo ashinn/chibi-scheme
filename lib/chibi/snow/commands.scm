@@ -98,7 +98,9 @@
   (cond ((string? x) x)
         ((symbol? x) (symbol->string x))
         ((number? x) (number->string x))
-        (else (error "not a valid path component" x))))
+        (else (parameterize ((current-output-port (open-output-string)))
+                (display x)
+                (get-output-string (current-output-port))))))
 
 (define (library-path-base file name)
   (let lp ((ls (cdr (reverse name))) (dir (path-directory file)))
@@ -1174,10 +1176,36 @@
 ;; Prints a list of libraries whose meta-info contain any of the given
 ;; keywords.  Returns in sorted order for how well the package matches.
 
-(define (summarize-libraries cfg lib-names+pkgs)
-  (for-each (lambda (name pkg) (describe-library cfg name pkg))
-            (map car lib-names+pkgs)
-            (map cdr lib-names+pkgs)))
+(define (summarize-libraries cfg lib-names+pkgs . repo)
+  (let ((repository (if (null? repo) '(repository) (car repo)))
+        (sorted-lib-names+pkgs (sort lib-names+pkgs string>=? package-version))
+        (added-identifiers '())
+        (results '()))
+    (for-each (lambda (name pkg)
+                (let ((pkg-identifier (cons (package-name pkg)
+                                            (package-author repository pkg))))
+                  (when (not (member pkg-identifier added-identifiers))
+                    (set! added-identifiers pkg-identifier)
+                    (set! results (cons pkg results)))))
+              (map car sorted-lib-names+pkgs)
+              (map cdr sorted-lib-names+pkgs))
+    (show
+      #t
+      (columnar
+        (joined displayed
+                (cons "Name"
+                      (map x->string (map package-name results)))
+                "\n")
+        (joined displayed
+                (cons "Version"
+                      (map x->string (map package-version results)))
+                "\n")
+        (joined displayed
+                (cons "Authors"
+                      (map x->string
+                           (map (lambda (x) (package-author repository x))
+                                results)))
+                "\n")))))
 
 (define (string-count-word str word)
   (let lp ((sc (string-cursor-start str)) (count 0))
@@ -1237,7 +1265,7 @@
     (cond
      ((or (pair? lib-names+pkgs) sexp?)
       (if sexp? (display "("))
-      (summarize-libraries cfg lib-names+pkgs)
+      (summarize-libraries cfg lib-names+pkgs repo)
       (if sexp? (display ")\n")))
      (else
       (display "No libraries matched your query.\n")))))
