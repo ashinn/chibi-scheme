@@ -101,6 +101,15 @@
            (any library-name (package-libraries package))
            (any program-name (package-programs package)))))
 
+(define (package-id repo pkg . exclude-version?)
+  (append (list (package-name pkg)
+                (package-author repo pkg)
+                (package-maintainer repo pkg))
+          (if (or (null? exclude-version?)
+                  (equal? (car exclude-version?) #f))
+            '()
+            (list (package-version pkg)))))
+
 (define (package-email pkg)
   (and (package? pkg)
        (let ((sig (assq 'signature (cdr pkg))))

@@ -1181,7 +1181,8 @@
         (sorted-lib-names+pkgs
          (delete-duplicates
           (sort lib-names+pkgs string>=? package-version)
-          (lambda (a b) (equal? (package-id (cdr a)) (package-id (cdr b))))))
+          (lambda (a b) (equal? (package-id repo (cdr a) #t)
+                                (package-id repo (cdr b) #t)))))
         (added-identifiers '())
         (results '()))
     (for-each (lambda (name pkg)
