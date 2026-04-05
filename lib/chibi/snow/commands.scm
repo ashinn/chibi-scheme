@@ -1178,7 +1178,10 @@
 
 (define (summarize-libraries cfg lib-names+pkgs . repo)
   (let ((repository (if (null? repo) '(repository) (car repo)))
-        (sorted-lib-names+pkgs (sort lib-names+pkgs string>=? package-version))
+        (sorted-lib-names+pkgs
+         (delete-duplicates
+          (sort lib-names+pkgs string>=? package-version)
+          (lambda (a b) (equal? (package-id (cdr a)) (package-id (cdr b))))))
         (added-identifiers '())
         (results '()))
     (for-each (lambda (name pkg)
