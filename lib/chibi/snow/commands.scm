@@ -1177,39 +1177,21 @@
 ;; keywords.  Returns in sorted order for how well the package matches.
 
 (define (summarize-libraries cfg lib-names+pkgs . repo)
-  (let ((repository (if (null? repo) '(repository) (car repo)))
-        (sorted-lib-names+pkgs
-         (delete-duplicates
-          (sort lib-names+pkgs string>=? package-version)
-          (lambda (a b) (equal? (package-id repo (cdr a) #t)
-                                (package-id repo (cdr b) #t)))))
-        (added-identifiers '())
-        (results '()))
-    (for-each (lambda (name pkg)
-                (let ((pkg-identifier (cons (package-name pkg)
-                                            (package-author repository pkg))))
-                  (when (not (member pkg-identifier added-identifiers))
-                    (set! added-identifiers pkg-identifier)
-                    (set! results (cons pkg results)))))
-              (map car sorted-lib-names+pkgs)
-              (map cdr sorted-lib-names+pkgs))
-    (show
-      #t
-      (columnar
-        (joined displayed
-                (cons "Name"
-                      (map x->string (map package-name results)))
-                "\n")
-        (joined displayed
-                (cons "Version"
-                      (map x->string (map package-version results)))
-                "\n")
-        (joined displayed
-                (cons "Authors"
-                      (map x->string
-                           (map (lambda (x) (package-author repository x))
-                                results)))
-                "\n")))))
+  (let* ((repository (if (null? repo) '(repository) (car repo)))
+         (sorted-lib-names+pkgs
+           (delete-duplicates
+             (sort lib-names+pkgs string>=? package-version)
+             (lambda (a b) (equal? (package-id repo (cdr a) #f)
+                                   (package-id repo (cdr b) #f)))))
+         (packages (map cdr sorted-lib-names+pkgs))
+         (names (map x->string (map package-name packages)))
+         (versions (map x->string (map package-version packages)))
+         (get-author (lambda (x) (package-author repository x)))
+         (authors (map x->string (map get-author packages))))
+    (show #t
+          (columnar (joined displayed (cons "Name" names) "\n")
+                    (joined displayed (cons "Version" versions) "\n")
+                    (joined displayed (cons "Authors" authors) "\n")))))
 
 (define (string-count-word str word)
   (let lp ((sc (string-cursor-start str)) (count 0))
