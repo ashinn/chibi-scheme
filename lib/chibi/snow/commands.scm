@@ -725,7 +725,7 @@
   (let* ((repo-path git-repo-path)
          (dir (path-directory repo-path))
          (fix-git-url
-           (lambda (cfg pkg url-pair)
+           (lambda (cfg url-pair)
              (let* ((use-ssh-url? (conf-get cfg '(command git-index use-ssh-url?)))
                     (url (cadr url-pair)))
                `(url ,(cond
@@ -757,7 +757,7 @@
                                 'git
                                 (remove null? (list hash
                                                     tag
-                                                    (fix-git-url cfg pkg url))))
+                                                    (fix-git-url cfg url))))
                              ,@(cdr pkg) (updated ,updated)))))
                  (if (pair? pkg-files)
                    pkg-files
