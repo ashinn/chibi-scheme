@@ -725,21 +725,15 @@
   (let* ((repo-path git-repo-path)
          (dir (path-directory repo-path))
          (fix-git-url
-           (lambda (cfg url-pair)
+           (lambda (cfg pkg url-pair)
              (let* ((use-ssh-url? (conf-get cfg '(command git-index use-ssh-url?)))
                     (url (cadr url-pair)))
                `(url ,(cond
                         ((and (string-prefix? "git@" url) use-ssh-url?) url)
                         ((and (string-prefix? "ssh://" url) use-ssh-url?) url)
-                        ((string-prefix? "git@" url)
-                         (uri->string
-                           (uri-with-scheme
-                             (string->uri
-                               (string-append "https://" (string-copy url 4)))
-                               'https)))
+                        ((string-prefix? "git@" url) (git-url->https url))
                         ((and (string-prefix? "https://" url) use-ssh-url?)
-                         (uri->string
-                           (uri-with-scheme (string->uri url) 'ssh)))
+                         (uri->string (uri-with-scheme (string->uri url) 'ssh)))
                         ((string-prefix? "https://" url) url)
                         (else (error "Could not fix repository url" url)))))))
          (pkgs (filter-map
@@ -763,7 +757,7 @@
                                 'git
                                 (remove null? (list hash
                                                     tag
-                                                    (fix-git-url cfg url))))
+                                                    (fix-git-url cfg pkg url))))
                              ,@(cdr pkg) (updated ,updated)))))
                  (if (pair? pkg-files)
                    pkg-files
@@ -781,8 +775,7 @@
                             ,@(remove
                                 (lambda (x)
                                   (equal? name (package-name x))
-                                  (equal? version (package-version x))
-                                  )
+                                  (equal? version (package-version x)))
                                 (cdr repo)))))
                      (guard (exn (else (list 'repository)))
                        (car (file->sexp-list repo-path)))
@@ -1186,12 +1179,12 @@
          (packages (map cdr sorted-lib-names+pkgs))
          (names (map x->string (map package-name packages)))
          (versions (map x->string (map package-version packages)))
-         (get-author (lambda (x) (package-author repository x)))
-         (authors (map x->string (map get-author packages))))
+         (get-publisher (lambda (x) (package-publisher repository x)))
+         (publishers (map x->string (map get-publisher packages))))
     (show #t
           (columnar (joined displayed (cons "Name" names) "\n")
                     (joined displayed (cons "Version" versions) "\n")
-                    (joined displayed (cons "Authors" authors) "\n")))))
+                    (joined displayed (cons "Publisher" publishers) "\n")))))
 
 (define (string-count-word str word)
   (let lp ((sc (string-cursor-start str)) (count 0))

@@ -103,8 +103,7 @@
 
 (define (package-id repo pkg . exclude-version?)
   (append (list (package-name pkg)
-                (package-author repo pkg)
-                (package-maintainer repo pkg))
+                (package-publisher repo pkg))
           (if (or (null? exclude-version?)
                   (equal? (car exclude-version?) #f))
             '()
@@ -118,6 +117,23 @@
 
 (define (strip-email str)
   (string-trim (regexp-replace '(: "<" (* (~ (">"))) ">") str "")))
+
+(define (package-publisher repo pkg)
+  (let ((email (package-email pkg)))
+    (or (cond
+          ((assq 'git pkg)
+           (let* ((uri (string->uri (package-git-url pkg #t)))
+                  (host (uri-host uri))
+                  (repository-name (path-directory (uri-path uri))))
+             (string-append (string-copy repository-name 1) "@" host)))
+          ((repo-find-publisher repo email)
+           => (lambda (pub)
+                (let ((name (assoc-get pub 'name)))
+                  (if name
+                    (string-append name " <" (or email "") ">")
+                    (or name email "")))))
+          (else #f))
+        email)))
 
 (define (package-author repo pkg . o)
   (let ((show-email? (and (pair? o) (car o))))
@@ -151,8 +167,13 @@
      (else
       #f))))
 
-(define (package-git-url pkg)
-  (car (assq-ref (assq-ref pkg 'git '()) 'url '(#f))))
+(define (package-git-url pkg . as-https?)
+  (let ((url (car (assq-ref (assq-ref pkg 'git '()) 'url '(#f)))))
+    (if (and url
+             (not (null? as-https?))
+             (car as-https?))
+      (git-url->https url)
+      url)))
 
 (define (package-git-tag pkg)
   (car (assq-ref (assq-ref pkg 'git '()) 'tag '(#f))))
