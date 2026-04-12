@@ -678,7 +678,7 @@ install(TARGETS libchibi-scheme libchibi-common chibi-scheme
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-install(FILES
+install(PROGRAMS
     tools/chibi-ffi
     tools/chibi-doc
     tools/snow-chibi
