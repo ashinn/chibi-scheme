@@ -119,22 +119,14 @@
   (string-trim (regexp-replace '(: "<" (* (~ (">"))) ">") str "")))
 
 (define (package-publisher repo pkg)
-  (let ((email (package-email pkg)))
-    (or (cond
-          ((package-git-url pkg #t)
-           => (lambda (uri)
-                (let* ((uri (string->uri (package-git-url pkg #t)))
-                       (host (uri-host uri))
-                       (repository-name (path-directory (uri-path uri))))
-                  (string-append (string-copy repository-name 1) "@" host))))
-          ((repo-find-publisher repo email)
-           => (lambda (pub)
-                (let ((name (assoc-get pub 'name)))
-                  (if name
-                    (string-append name " <" (or email "") ">")
-                    (or name email "")))))
-          (else #f))
-        email)))
+  (cond
+    ((package-git-url pkg #t)
+     => (lambda (uri)
+          (let* ((uri (string->uri (package-git-url pkg #t)))
+                 (host (uri-host uri))
+                 (repository-name (path-directory (uri-path uri))))
+            (string-append (string-copy repository-name 1) "@" host))))
+    (else (package-email pkg))))
 
 (define (package-author repo pkg . o)
   (let ((show-email? (and (pair? o) (car o))))
