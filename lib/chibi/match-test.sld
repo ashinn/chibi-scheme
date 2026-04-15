@@ -269,6 +269,13 @@
                            (append (y) (b)))))))
         (test "match-letrec mnieper" '(2 1 1 2) (foo a)))
 
+      (test "match internal define wingo"
+          42
+        (match '()
+          ((and whatever ())
+           (define y 42)
+           y)))
+
       (cond-expand
        (chibi
         (test "record positional"
