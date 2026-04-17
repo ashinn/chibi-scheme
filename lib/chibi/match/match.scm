@@ -247,6 +247,7 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2026/04/15 - consistently allow internal defines in match clauses
 ;; 2021/06/21 - fix for `(a ...)' patterns where `a' is already bound
 ;;              (thanks to Andy Wingo)
 ;; 2020/09/04 - perf fix for `not`; rename `..=', `..=', `..1' per SRFI 204
@@ -337,7 +338,7 @@
     ((match-next v g+s (pat (=> failure) . body) . rest)
      (let ((failure (lambda () (match-next v g+s . rest))))
        ;; match-one analyzes the pattern for us
-       (match-one v pat g+s (match-drop-ids (begin . body)) (failure) ())))
+       (match-one v pat g+s (match-drop-ids (let () . body)) (failure) ())))
     ;; anonymous failure continuation, give it a dummy name
     ((match-next v g+s (pat . body) . rest)
      (match-next v g+s (pat (=> failure) . body) . rest))))
