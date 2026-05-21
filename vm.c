@@ -49,6 +49,14 @@ sexp sexp_get_stack_trace (sexp ctx) {
   res = SEXP_NULL;
   for (i=fp; i>4; i=sexp_unbox_fixnum(stack[i+3])) {
     self = stack[i+2];
+    if (!self || !sexp_applicablep(self)) {
+      sexp_warn(ctx, "invalid self in frame at: ", sexp_make_fixnum(i));
+      break;
+    }
+    if (!sexp_fixnump(stack[i+3])) {
+      sexp_warn(ctx, "invalid fp in frame at: ", sexp_make_fixnum(i));
+      break;
+    }
     if (self && sexp_procedurep(self)) {
       bc = sexp_procedure_code(self);
       src = sexp_bytecode_source(bc);
@@ -1085,7 +1093,7 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
 #endif
   sexp_gc_var3(self, tmp1, tmp2);
   sexp_gc_preserve3(ctx, self, tmp1, tmp2);
-  fp = top - 4;
+  fp = sexp_context_last_fp(ctx);
   self = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
   bc = sexp_procedure_code(self);
   cp = sexp_procedure_vars(self);
