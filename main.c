@@ -133,7 +133,6 @@ static sexp sexp_load_standard_params (sexp ctx, sexp e, int nonblocking) {
 static void repl (sexp ctx, sexp env) {
   sexp_gc_var6(obj, tmp, res, in, out, err);
   sexp_gc_preserve6(ctx, obj, tmp, res, in, out, err);
-  sexp_context_tracep(ctx) = 1;
   in  = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_IN_SYMBOL));
   out = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_OUT_SYMBOL));
   err = sexp_param_ref(ctx, env, sexp_global(ctx, SEXP_G_CUR_ERR_SYMBOL));
@@ -616,7 +615,6 @@ sexp run_main (int argc, char **argv) {
           sexp_env_define(ctx, env, sym, sexp_cdr(tmp));
         }
 #endif
-        sexp_context_tracep(ctx) = 1;
         tmp = sexp_env_bindings(env);
 #if SEXP_USE_MODULES
         /* use scheme load if possible for better stack traces */

@@ -514,6 +514,12 @@ sexp sexp_set_atomic (sexp ctx, sexp self, sexp_sint_t n, sexp new_val) {
 }
 #endif
 
+sexp sexp_set_context_tracep (sexp ctx, sexp self, sexp_sint_t n, sexp new_val) {
+  sexp res = sexp_make_boolean(sexp_context_tracep(ctx));
+  sexp_context_tracep(ctx) = sexp_truep(new_val);
+  return res;
+}
+
 sexp sexp_thread_interrupt (sexp ctx, sexp self, sexp_sint_t n, sexp thread) {
   sexp_assert_type(ctx, sexp_contextp, SEXP_CONTEXT, thread);
   sexp_context_interruptp(thread) = 1;
@@ -772,6 +778,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
 #if SEXP_USE_GREEN_THREADS
   sexp_define_foreign(ctx, env, "%set-atomic!", 1, sexp_set_atomic);
 #endif
+  sexp_define_foreign(ctx, env, "set-vm-trace!", 1, sexp_set_context_tracep);
   sexp_define_foreign(ctx, env, "%thread-interrupt!", 1, sexp_thread_interrupt);
   sexp_define_foreign(ctx, env, "thread-list", 0, sexp_thread_list);
   sexp_define_foreign_opt(ctx, env, "string-contains", 3, sexp_string_contains, sexp_make_string_cursor(0));
