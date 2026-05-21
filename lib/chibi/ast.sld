@@ -42,7 +42,7 @@
    string-contains string-cursor-copy! errno integer->error-string
    flatten-dot update-free-vars! setenv unsetenv safe-setenv
    immutable? immutable-string make-immutable!
-   thread-interrupt!
+   thread-interrupt! set-vm-trace!
    chibi-version)
   (import (chibi))
   (include-shared "ast")
