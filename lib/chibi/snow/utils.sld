@@ -3,7 +3,7 @@
   (export find-in-path find-sexp-in-path
           write-to-string display-to-string
           resource->bytevector git-resource->bytevector
-          uri-normalize uri-directory
+          uri-normalize uri-directory git-url->https
           version-split version-compare version>? version>=?
           topological-sort assq-ref
           known-implementations impl->version impl->features tai->rfc-3339)

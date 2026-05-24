@@ -98,7 +98,9 @@
   (cond ((string? x) x)
         ((symbol? x) (symbol->string x))
         ((number? x) (number->string x))
-        (else (error "not a valid path component" x))))
+        (else (parameterize ((current-output-port (open-output-string)))
+                (display x)
+                (get-output-string (current-output-port))))))
 
 (define (library-path-base file name)
   (let lp ((ls (cdr (reverse name))) (dir (path-directory file)))
@@ -729,15 +731,9 @@
                `(url ,(cond
                         ((and (string-prefix? "git@" url) use-ssh-url?) url)
                         ((and (string-prefix? "ssh://" url) use-ssh-url?) url)
-                        ((string-prefix? "git@" url)
-                         (uri->string
-                           (uri-with-scheme
-                             (string->uri
-                               (string-append "https://" (string-copy url 4)))
-                               'https)))
+                        ((string-prefix? "git@" url) (git-url->https url))
                         ((and (string-prefix? "https://" url) use-ssh-url?)
-                         (uri->string
-                           (uri-with-scheme (string->uri url) 'ssh)))
+                         (uri->string (uri-with-scheme (string->uri url) 'ssh)))
                         ((string-prefix? "https://" url) url)
                         (else (error "Could not fix repository url" url)))))))
          (pkgs (filter-map
@@ -779,8 +775,7 @@
                             ,@(remove
                                 (lambda (x)
                                   (equal? name (package-name x))
-                                  (equal? version (package-version x))
-                                  )
+                                  (equal? version (package-version x)))
                                 (cdr repo)))))
                      (guard (exn (else (list 'repository)))
                        (car (file->sexp-list repo-path)))
@@ -1174,10 +1169,22 @@
 ;; Prints a list of libraries whose meta-info contain any of the given
 ;; keywords.  Returns in sorted order for how well the package matches.
 
-(define (summarize-libraries cfg lib-names+pkgs)
-  (for-each (lambda (name pkg) (describe-library cfg name pkg))
-            (map car lib-names+pkgs)
-            (map cdr lib-names+pkgs)))
+(define (summarize-libraries cfg lib-names+pkgs . repo)
+  (let* ((repository (if (null? repo) '(repository) (car repo)))
+         (sorted-lib-names+pkgs
+           (delete-duplicates
+             (sort lib-names+pkgs string>=? package-version)
+             (lambda (a b) (equal? (package-id repo (cdr a) #f)
+                                   (package-id repo (cdr b) #f)))))
+         (packages (map cdr sorted-lib-names+pkgs))
+         (names (map x->string (map package-name packages)))
+         (versions (map x->string (map package-version packages)))
+         (get-publisher (lambda (x) (package-publisher repository x)))
+         (publishers (map x->string (map get-publisher packages))))
+    (show #t
+          (columnar (joined displayed (cons "Name" names) "\n")
+                    (joined displayed (cons "Version" versions) "\n")
+                    (joined displayed (cons "Publisher" publishers) "\n")))))
 
 (define (string-count-word str word)
   (let lp ((sc (string-cursor-start str)) (count 0))
@@ -1237,7 +1244,7 @@
     (cond
      ((or (pair? lib-names+pkgs) sexp?)
       (if sexp? (display "("))
-      (summarize-libraries cfg lib-names+pkgs)
+      (summarize-libraries cfg lib-names+pkgs repo)
       (if sexp? (display ")\n")))
      (else
       (display "No libraries matched your query.\n")))))
