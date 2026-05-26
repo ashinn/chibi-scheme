@@ -278,3 +278,16 @@
      (pad2 (time-hour tm)) ":"
      (pad2 (time-minute tm)) ":"
      (pad2 (time-second tm)) "+00:00")))
+
+(define (git-url->https url)
+  (string-append
+    "https://"
+    (list->string
+      (map (lambda (c)
+             ;; To fix githost.com:Username urls
+             (if (char=? c #\:) #\/ c))
+           (string->list
+             (if (string-prefix? "git@" url)
+               (string-copy url (string-length "git@"))
+               (string-copy url (string-length "https://"))))))))
+
