@@ -1484,10 +1484,9 @@
 
 (define (get-chicken-version cfg)
   (or (conf-get cfg 'chicken-version)
-      (let* ((version-lst (process->string-list '(csi -version)))
-            (version-line (list-ref version-lst 3))
-            (version (string->number (string (string-ref version-line 8)))))
-        version)))
+      (string->number
+        (process->string
+          '(csi -e "(display (cond-expand (chicken-5 5) (chicken-6 6)))")))))
 
 (define (get-chicken-repo-path)
   (let ((release (string-trim (process->string '(csi -release))
