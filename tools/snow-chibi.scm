@@ -5,6 +5,7 @@
 
 (import (scheme base)
         (scheme process-context)
+        (scheme file)
         (chibi snow commands)
         (chibi snow interface)
         (chibi app)
@@ -231,6 +232,13 @@
       (,app-help-command args ...))
      )))
 
-(run-application app-spec
-                 (command-line)
-                 (conf-load (conf-default-path "snow")))
+(run-application
+  app-spec
+  (command-line)
+  (let ((conf-file (conf-default-path "snow")))
+    (cond ((file-exists? conf-file)
+           (conf-load conf-file))
+          (else
+            (warn "couldn't load config (file does not exist)" conf-file)
+            (parameterize ((current-error-port (open-output-string)))
+              (conf-load conf-file))))))
