@@ -1,7 +1,7 @@
 (define-library (srfi 253 test)
   (import (scheme base)
           (srfi 253)
-          (srfi 64))
+          (chibi test))
   (export run-tests)
   (begin
     (define (run-tests)
@@ -86,13 +86,13 @@
 
 
       (test-group "values-checked"
-        (test-equal 3 (values-checked (integer?) 3))
-        (test-equal 3 (values-checked ((lambda (x) (= 3 x))) 3))
-        (test-approximate 3.0 (values-checked (real?) 3.0) 0.00001)
+        (test 3 (values-checked (integer?) 3))
+        (test 3 (values-checked ((lambda (x) (= 3 x))) 3))
+        (test 3.0 (values-checked (real?) 3.0))
         ;; Implementation-specific, might be 3.0
-        (test-equal 3 (values-checked (real?) 3))
+        (test 3 (values-checked (real?) 3))
         (test-assert (values-checked (integer? string?) 3 "hello"))
-        (test-approximate 3.0 (values-checked (inexact?) 3.0) 0.00001)
+        (test 3.0 (values-checked (inexact?) 3.0))
         (test-error (values-checked (integer?) "hello"))
         (test-error (values-checked (integer? string?) 3 3)))
 
@@ -187,4 +187,6 @@
         (test-assert (begin
                        (test-b-set! test-test "foo")
                        #t))
-        (test-error (test-b-set! test-test 1))))))
+        (test-error (test-b-set! test-test 1)))
+
+      (test-end))))
