@@ -151,6 +151,8 @@
 ;;> \itemlist[
 ;;> \item{\scheme{Object} - the parent of all types}
 ;;> \item{\scheme{Number} - abstract numeric type}
+;;> \item{\scheme{Complex} - complex numbers}
+;;> \item{\scheme{Ratio} - numerator+denominator numbers}
 ;;> \item{\scheme{Bignum} - arbitrary precision exact integers}
 ;;> \item{\scheme{Flonum} - inexact real numbers}
 ;;> \item{\scheme{Integer} - abstract integer type}
@@ -161,6 +163,8 @@
 ;;> \item{\scheme{Byte-Vector} - uniform vector of octets}
 ;;> \item{\scheme{Pair} - a \var{car} and \var{cdr}, the basis for lists}
 ;;> \item{\scheme{Vector} - vectors}
+;;> \item{\scheme{Input-Port} - input ports}
+;;> \item{\scheme{Output-Port} - output ports}
 ;;> \item{\scheme{Opcode} - a primitive opcode or C function}
 ;;> \item{\scheme{Procedure} - a closure}
 ;;> \item{\scheme{Bytecode} - the compiled code for a closure}
