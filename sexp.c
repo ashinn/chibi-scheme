@@ -2396,6 +2396,11 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
     case SEXP_OPCODE:
       sexp_write_string(ctx, "#<opcode ", out);
       sexp_write(ctx, sexp_opcode_name(obj), out);
+      sexp_write_string(ctx, " ", out);
+      sexp_write_one(ctx, sexp_make_fixnum(sexp_opcode_num_args(obj)), out, bound+1);
+      if (sexp_opcode_variadic_p(obj)) {
+        sexp_write_string(ctx, "+", out);
+      }
       sexp_write_char(ctx, '>', out);
       break;
 #if SEXP_USE_BYTEVECTOR_LITERALS
