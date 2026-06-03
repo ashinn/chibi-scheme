@@ -1,0 +1,5 @@
+(library (rnrs sorting)
+  (export (rename list-stable-sort list-sort)
+          (rename vector-stable-sort vector-sort)
+          (rename vector-stable-sort! vector-sort!))
+  (import (srfi 132)))
