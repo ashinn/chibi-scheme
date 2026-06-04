@@ -239,6 +239,6 @@
     (cond ((file-exists? conf-file)
            (conf-load conf-file))
           (else
-            (warn "couldn't load config (file does not exist)" conf-file)
+            (warn "snow config file not found: " conf-file)
             (parameterize ((current-error-port (open-output-string)))
               (conf-load conf-file))))))
