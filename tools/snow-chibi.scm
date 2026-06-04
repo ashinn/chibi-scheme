@@ -6,6 +6,7 @@
 (import (scheme base)
         (scheme process-context)
         (scheme file)
+        (scheme time)
         (chibi snow commands)
         (chibi snow interface)
         (chibi app)
@@ -238,7 +239,5 @@
   (let ((conf-file (conf-default-path "snow")))
     (cond ((file-exists? conf-file)
            (conf-load conf-file))
-          (else
-            (warn "snow config file not found: " conf-file)
-            (parameterize ((current-error-port (open-output-string)))
-              (conf-load conf-file))))))
+          (else (warn "snow config file not found: " conf-file)
+                (make-conf '() #f #f (current-second))))))
