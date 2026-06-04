@@ -25,7 +25,7 @@
 (define-syntax check-arg
   (syntax-rules ()
     ((_ pred val caller)
-     (assert (pred val) "argument should match the specification" '(pred val) val caller))
+     (assert (pred val) val caller))
     ((_ pred val)
      (check-arg pred val 'check-arg))))
 

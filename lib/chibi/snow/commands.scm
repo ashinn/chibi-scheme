@@ -604,6 +604,18 @@
                                      (string-prefix? "https://" x))))
                           docs)
                   tar-data-files files))))
+          ;; Check that all files exist
+          (for-each
+            (lambda (file)
+              (cond
+                ((string? file)
+                 (when (not (file-exists? file))
+                   (die 2 "No packages generated, file not found: " file)))
+                ((and (list? file)
+                      (equal? (car file) 'rename))
+                 (when (not (file-exists? (cadr file)))
+                   (die 2 "No packages generated, file not found: " (cadr file))))))
+            tar-files)
           (cons `(package
                   ,@(reverse res)
                   ,@(if (pair? data-files) `((data-files ,@pkg-data-files)) '())
