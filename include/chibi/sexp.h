@@ -1626,6 +1626,7 @@ enum sexp_context_globals {
   SEXP_G_THREADS_POLLFDS_ID,
   SEXP_G_ATOMIC_P,
 #endif
+  SEXP_G_ALLOW_SQUARE_BRACKETS,
   SEXP_G_NUM_GLOBALS
 };
 

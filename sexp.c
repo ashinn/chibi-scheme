@@ -3423,6 +3423,9 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   case '"':
     res = sexp_read_string(ctx, in, '"');
     break;
+  case '[':
+    if (sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) != SEXP_TRUE)
+      goto symbol;
   case '(':
     line = (sexp_port_sourcep(in) ? sexp_port_line(in) : -1);
     res = SEXP_NULL;
@@ -3813,6 +3816,13 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   case ')':
     res = SEXP_CLOSE;
     break;
+  case ']':
+    if (sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) == SEXP_TRUE) {
+      res = SEXP_CLOSE;
+      break;
+    } else {
+      goto symbol;
+    }
 #if SEXP_USE_OBJECT_BRACE_LITERALS
   case '}':
     res = SEXP_CLOSE_BRACE;
@@ -3922,6 +3932,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
     res = sexp_read_number(ctx, in, 10, 0);
     break;
   default:
+  symbol:
     res = sexp_read_symbol(ctx, in, c1, 1);
     break;
   }

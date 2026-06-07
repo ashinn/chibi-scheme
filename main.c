@@ -60,6 +60,7 @@ void sexp_usage(int err) {
 #if SEXP_USE_IMAGE_LOADING
          "  -d <file>    - dump an image file and exit\n"
          "  -i <file>    - load an image file\n"
+	 "  -B           - Square brackets [] as aliases for parens\n"
 #endif
 #if SEXP_USE_GREEN_THREADS
          "  -b           - Make stdio nonblocking\n"
@@ -417,6 +418,10 @@ sexp run_main (int argc, char **argv) {
       arg = ((argv[i][2] == '\0') ? argv[++i] : argv[i]+2);
       check_nonull_arg('I', arg);
       sexp_add_module_directory(ctx, tmp=sexp_c_string(ctx,arg,-1), SEXP_FALSE);
+      break;
+    case 'B':
+      init_context();
+      sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) = SEXP_TRUE;
       break;
 #if SEXP_USE_GREEN_THREADS
     case 'b':
