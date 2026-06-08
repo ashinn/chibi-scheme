@@ -3762,6 +3762,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         }
       }
       break;
+    case '[':
+      if (sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) != SEXP_TRUE) {
+        goto invalid_hash;
+      }
     case '(':
       sexp_push_char(ctx, c1, in);
       res = sexp_read_one(ctx, in, shares);
@@ -3798,6 +3802,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       }
       break;
     default:
+    invalid_hash:
       res = sexp_read_error(ctx, "invalid char following '#'",
                             c1 == EOF ? SEXP_EOF : sexp_make_character(c1), in);
     }
