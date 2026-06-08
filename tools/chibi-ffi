@@ -743,7 +743,7 @@
         ((input-port) "sexp_iportp")
         ((output-port) "sexp_oportp")
         ((input-output-port) "sexp_ioportp")
-        ((fileno fileno-nonblock) "sexp_filenop")
+        ((fileno fileno-nonblock fileno-socket) "sexp_filenop")
         ((uvector) "sexp_uvectorp")
         ((u1vector) "sexp_u1vectorp")
         ((s8vector) "sexp_s8vectorp")
@@ -785,7 +785,7 @@
      ((eq? base 'input-port) "SEXP_IPORT")
      ((eq? base 'output-port) "SEXP_OPORT")
      ((eq? base 'input-output-port) "SEXP_IPORT")
-     ((memq base '(fileno fileno-nonblock)) "SEXP_FILENO")
+     ((memq base '(fileno fileno-nonblock fileno-socket)) "SEXP_FILENO")
      ((uniform-vector-type? base)
       "SEXP_UNIFORM_VECTOR")
      ((void-pointer-type? type) "SEXP_CPOINTER")
@@ -942,6 +942,8 @@
      ((memq base '(fileno fileno-nonblock))
       (cat "(sexp_filenop(" val ") ? sexp_fileno_fd(" val ")"
            " : sexp_unbox_fixnum(" val "))"))
+     ((eq? base 'fileno-socket)
+       (cat "sexp_fileno_sock(" val ")"))
      ((uniform-vector-type? base)
       (cat "((" (uniform-vector-ctype base) ") sexp_uvector_data(" val "))"))
      (else
@@ -964,6 +966,7 @@
     ((string env-string non-null-string bytevector u8vector)
      (if *c++?* "string" "char*"))
     ((fileno fileno-nonblock) "int")
+    (fileno-socket "SOCKET_TYPE")
     ((u1 u8 u16 u32 u64 s8 s16 s32 s64 f8 f16 f32 f64)
      (let ((a
             (uniform-vector-ctype
@@ -1018,7 +1021,7 @@
      ((eq? base 'env-string)
       (cat "(sexp_pairp(" arg ") && sexp_stringp(sexp_car(" arg
            ")) && sexp_stringp(sexp_cdr(" arg ")))"))
-     ((memq base '(fileno fileno-nonblock))
+     ((memq base '(fileno fileno-nonblock fileno-socket))
       (cat "(sexp_filenop(" arg ") || sexp_fixnump(" arg "))"))
      ((string-type? base)
       (cat
@@ -1069,7 +1072,7 @@
           (string-type? base-type)
           (port-type? base-type)
           (uniform-vector-type? base-type)
-          (memq base-type '(bytevector u8vector fileno fileno-nonblock))
+          (memq base-type '(bytevector u8vector fileno fileno-nonblock fileno-socket))
           (and (not array) (eq? 'char base-type)))
       (cat
        "  if (! " (lambda () (check-type arg type)) ")\n"

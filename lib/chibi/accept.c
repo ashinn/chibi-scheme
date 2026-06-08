@@ -4,12 +4,22 @@
 /* EWOULDBLOCK and block on the socket, and listen should automatically make */
 /* sockets non-blocking. */
 
-sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_t len) {
+sexp sexp_socket(sexp ctx, sexp self, int af, int type, int protocol) {
+#ifdef _WIN32
+  SOCKET_TYPE sock = WSASocket(af, type, protocol, NULL, 0, 0);
+  int fd = _open_osfhandle(sock, _O_RDWR | _O_BINARY);
+#else
+  SOCKET_TYPE sock = socket(af, type, protocol);
+  int fd = sock;
+#endif  
+  return sexp_make_fileno_sock(ctx, self, fd, sock);
+}
+
+sexp sexp_accept(sexp ctx, sexp self, SOCKET_TYPE sock, struct sockaddr* addr, socklen_t len) {
 #if SEXP_USE_GREEN_THREADS
   sexp f;
 #endif
-  int res;
-  res = accept(sock, addr, &len);
+  SOCKET_TYPE res = accept(sock, addr, &len);
 #if SEXP_USE_GREEN_THREADS
   if (res < 0 && errno == EWOULDBLOCK) {
     f = sexp_global(ctx, SEXP_G_THREADS_BLOCKER);
@@ -18,17 +28,28 @@ sexp sexp_accept (sexp ctx, sexp self, int sock, struct sockaddr* addr, socklen_
       return sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR);
     }
   }
+#ifdef _WIN32
+  if (res >= 0)
+    ioctlsocket(res, FIONBIO, &mode);
+#else
   if (res >= 0)
     fcntl(res, F_SETFL, fcntl(res, F_GETFL) | O_NONBLOCK);
 #endif
-  return sexp_make_fileno(ctx, sexp_make_fixnum(res), SEXP_FALSE);
+#endif
+#ifdef _WIN32
+  int fd = _open_osfhandle(res, _O_RDWR | _O_BINARY);
+#else
+  int fd = res;
+  int i = errno;
+#endif 
+  return sexp_make_fileno_sock(ctx, self, fd, res);
 }
 
 /* likewise sendto and recvfrom should suspend the thread gracefully */
 
 #define sexp_zerop(x) ((x) == SEXP_ZERO || (sexp_flonump(x) && sexp_flonum_value(x) == 0.0))
 
-sexp sexp_sendto (sexp ctx, sexp self, int sock, const void* buffer, size_t len, int flags, struct sockaddr* addr, socklen_t addr_len, sexp timeout) {
+sexp sexp_sendto (sexp ctx, sexp self, SOCKET_TYPE sock, const void* buffer, size_t len, int flags, struct sockaddr* addr, socklen_t addr_len, sexp timeout) {
 #if SEXP_USE_GREEN_THREADS
   sexp f;
 #endif
@@ -46,7 +67,7 @@ sexp sexp_sendto (sexp ctx, sexp self, int sock, const void* buffer, size_t len,
   return sexp_make_fixnum(res);
 }
 
-sexp sexp_recvfrom (sexp ctx, sexp self, int sock, void* buffer, size_t len, int flags, struct sockaddr* addr, socklen_t addr_len, sexp timeout) {
+sexp sexp_recvfrom (sexp ctx, sexp self, SOCKET_TYPE sock, void* buffer, size_t len, int flags, struct sockaddr* addr, socklen_t addr_len, sexp timeout) {
 #if SEXP_USE_GREEN_THREADS
   sexp f;
 #endif
@@ -67,24 +88,32 @@ sexp sexp_recvfrom (sexp ctx, sexp self, int sock, void* buffer, size_t len, int
 /* If we're binding or listening on a socket from Scheme, we most */
 /* likely want it to be non-blocking. */
 
-sexp sexp_bind (sexp ctx, sexp self, int fd, struct sockaddr* addr, socklen_t addr_len) {
+sexp sexp_bind (sexp ctx, sexp self, SOCKET_TYPE fd, struct sockaddr* addr, socklen_t addr_len) {
   int res = bind(fd, addr, addr_len);
 #if SEXP_USE_GREEN_THREADS
+#ifdef _WIN32
+  if (res >= 0)
+    ioctlsocket(fd, FIONBIO, &mode);
+#else
   if (res >= 0)
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+#endif
 #endif
   return (res == 0) ? SEXP_TRUE : SEXP_FALSE;
 }
 
-sexp sexp_listen (sexp ctx, sexp self, sexp fileno, sexp backlog) {
-  int fd, res;
-  sexp_assert_type(ctx, sexp_filenop, SEXP_FILENO, fileno);
-  sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, backlog);
-  fd = sexp_fileno_fd(fileno);
-  res = listen(fd, sexp_unbox_fixnum(backlog));
+sexp sexp_listen (sexp ctx, sexp self, SOCKET_TYPE fd, int backlog) {
+  int res;
+  unsigned long mode = 1; 
+  res = listen(fd, backlog);
 #if SEXP_USE_GREEN_THREADS
+#ifdef _WIN32
+  if (res >= 0)
+    ioctlsocket(fd, FIONBIO, &mode);
+#else
   if (res >= 0)
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+#endif
 #endif
   return (res == 0) ? SEXP_TRUE : SEXP_FALSE;
 }
@@ -108,3 +137,20 @@ int sexp_sockaddr_port (sexp ctx, sexp self, struct sockaddr* addr) {
   struct sockaddr_in *sa = (struct sockaddr_in *)addr;
   return ntohs(sa->sin_port);
 }
+
+int sexp_setsockopt(SOCKET_TYPE socket, int level, int option_name, int *option_value, socklen_t option_len) {
+#ifdef _WIN32
+  return setsockopt(socket, level, option_name, (const char*)option_value, option_len);
+#else
+  return setsockopt(socket, level, option_name, (const void*)option_value, option_len);
+#endif
+}
+
+int sexp_getsockopt(SOCKET_TYPE socket, int level, int option_name, int *option_value, socklen_t *option_len) {
+#ifdef _WIN32
+  return getsockopt(socket, level, option_name, (char*)option_value, option_len);
+#else
+  return getsockopt(socket, level, option_name, (void*)option_value, option_len);
+#endif
+}
+
