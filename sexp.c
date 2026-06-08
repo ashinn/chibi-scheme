@@ -1684,8 +1684,7 @@ int sexp_buffered_read_char (sexp ctx, sexp p) {
              ? ((unsigned char*)sexp_port_buf(p))[sexp_port_offset(p)++] : EOF);
     }
   } else if (sexp_filenop(sexp_port_fd(p))) {
-    int fd = sexp_port_fileno(p);
-    res = read(fd, sexp_port_buf(p) + BUF_START, SEXP_PORT_BUFFER_SIZE - BUF_START);
+    res = read(sexp_port_fileno(p), sexp_port_buf(p) + BUF_START, SEXP_PORT_BUFFER_SIZE - BUF_START);
     if (res >= 0) {
       sexp_port_offset(p) = BUF_START;
       sexp_port_size(p) = res + BUF_START;
