@@ -1813,6 +1813,7 @@ SEXP_API sexp sexp_apply3 (sexp ctx, sexp f, sexp x, sexp y, sexp z);
 SEXP_API sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, const char *fname, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_square_brackets_sym (sexp ctx, sexp self, sexp_sint_t n);
 SEXP_API void sexp_init(void);
 
 #if SEXP_USE_UTF8_STRINGS

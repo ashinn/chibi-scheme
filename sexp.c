@@ -4044,6 +4044,10 @@ sexp sexp_symbol_to_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp sym) {
   return sexp_c_string(ctx, sexp_lsymbol_data(sym), sexp_lsymbol_length(sym));
 }
 
+sexp sexp_square_brackets_sym (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM);
+}
+
 void sexp_init (void) {
 #if SEXP_USE_GLOBAL_SYMBOLS
   int i;
