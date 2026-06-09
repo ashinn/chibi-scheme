@@ -481,7 +481,7 @@
            ((not (skip-whitespace-and-sexp-comments in read-one))
             (read-hash in))
            (else
-            (case peeked
+            (case (peek-char in)
               ((#\#)
                (read-char in)
                (read-hash in))
