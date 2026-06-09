@@ -3424,7 +3424,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
     res = sexp_read_string(ctx, in, '"');
     break;
   case '[':
-    if (sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) != SEXP_TRUE)
+    if (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) == SEXP_FALSE)
       goto symbol;
   case '(':
     line = (sexp_port_sourcep(in) ? sexp_port_line(in) : -1);
@@ -3481,6 +3481,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       for (tmp=sexp_cdr(res); sexp_pairp(tmp); tmp=sexp_cdr(tmp))
         sexp_pair_source(tmp) = sexp_pair_source(res);
     }
+    if (c1 == '[')
+      res = (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) == SEXP_TRUE
+             ? res
+             : sexp_cons(ctx, sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM), res));
     if (sexp_port_sourcep(in))
       for (tmp=res; sexp_pairp(tmp); tmp=sexp_cdr(tmp))
         sexp_immutablep(tmp) = 1;
@@ -3763,7 +3767,9 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       }
       break;
     case '[':
-      if (sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) != SEXP_TRUE) {
+      // Note that this ignores the actual symbol. Because it makes no
+      // sense in vector initializers, right?
+      if (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) == SEXP_FALSE) {
         goto invalid_hash;
       }
     case '(':
@@ -3822,7 +3828,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
     res = SEXP_CLOSE;
     break;
   case ']':
-    if (sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) == SEXP_TRUE) {
+    if (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) != SEXP_FALSE) {
       res = SEXP_CLOSE;
       break;
     } else {

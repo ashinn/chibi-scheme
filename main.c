@@ -265,7 +265,8 @@ static sexp sexp_load_standard_repl_env (sexp ctx, sexp env, sexp k, int bootp, 
 }
 
 static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
-                             sexp_uint_t heap_max_size, sexp_sint_t fold_case) {
+                             sexp_uint_t heap_max_size, sexp_sint_t fold_case,
+			     sexp bracket_sym) {
   *ctx = sexp_make_eval_context(NULL, NULL, NULL, heap_size, heap_max_size);
   if (! *ctx) {
     fprintf(stderr, "chibi-scheme: out of memory\n");
@@ -274,6 +275,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
 #if SEXP_USE_FOLD_CASE_SYMS
   sexp_global(*ctx, SEXP_G_FOLD_CASE_P) = sexp_make_boolean(fold_case);
 #endif
+  sexp_global(*ctx, SEXP_G_SQUARE_BRACKETS_SYM) = bracket_sym;
   *env = sexp_context_env(*ctx);
 }
 
@@ -283,7 +285,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
   }
 
 #define init_context() if (! ctx) do {                                  \
-      do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case); \
+      do_init_context(&ctx, &env, heap_size, heap_max_size, fold_case, bracket_sym); \
       sexp_gc_preserve4(ctx, tmp, sym, args, env);                      \
     } while (0)
 
@@ -307,7 +309,7 @@ sexp run_main (int argc, char **argv) {
   sexp_sint_t i, j, c, quit=0, print=0, init_loaded=0, mods_loaded=0,
     fold_case=SEXP_DEFAULT_FOLD_CASE_SYMS, nonblocking=0;
   sexp_uint_t heap_size=0, heap_max_size=SEXP_MAXIMUM_HEAP_SIZE;
-  sexp out=SEXP_FALSE, ctx=NULL, ls, res=SEXP_ZERO, standard=SEXP_SEVEN;
+  sexp out=SEXP_FALSE, ctx=NULL, ls, res=SEXP_ZERO, standard=SEXP_SEVEN, bracket_sym=SEXP_FALSE;
   sexp_gc_var4(tmp, sym, args, env);
   args = SEXP_NULL;
   env = NULL;
@@ -421,7 +423,9 @@ sexp run_main (int argc, char **argv) {
       break;
     case 'B':
       init_context();
-      sexp_global(ctx, SEXP_G_ALLOW_SQUARE_BRACKETS) = SEXP_TRUE;
+      arg = (argv[i][2] == '\0') ? argv[++i] : argv[i]+2;
+      bracket_sym = sexp_read_from_string(ctx, arg, strlen(arg));
+      sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) = bracket_sym;
       break;
 #if SEXP_USE_GREEN_THREADS
     case 'b':
