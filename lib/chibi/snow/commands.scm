@@ -3114,7 +3114,14 @@
        ((lib-names) (map parse-library-name lib-names))
        ((impl-pkgs)
         (map (lambda (impl cfg)
-               (expand-package-dependencies repo impl cfg lib-names))
+               (expand-package-dependencies repo
+                                            impl
+                                            cfg
+                                            (if (pair? package-files)
+                                              (map package-name
+                                                   (map package-file-meta
+                                                        package-files))
+                                              lib-names)))
              impls
              impl-cfgs)))
     (for-each
