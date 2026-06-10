@@ -60,12 +60,11 @@ void sexp_usage(int err) {
 #if SEXP_USE_IMAGE_LOADING
          "  -d <file>    - dump an image file and exit\n"
          "  -i <file>    - load an image file\n"
-         "  -B[<sym>]    - Square brackets [] as aliases for parens\n"
-         "                 When <sym> is #t, simply wrap contents in parens"
-         "                 When <sym> is a symbol name, wrap contents into (<sym> ...)"
+         "  -B[<sym>]    - square brackets [] as aliases for parens\n"
+         "                 <sym> is prefixed to the list, unless #t\n"
 #endif
 #if SEXP_USE_GREEN_THREADS
-         "  -b           - Make stdio nonblocking\n"
+         "  -b           - make stdio nonblocking\n"
 #endif
          );
   if (err == 0) exit_success();
