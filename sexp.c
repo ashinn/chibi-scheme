@@ -212,9 +212,9 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
       if (sexp_port_shutdownp(port)) {
         /* shutdown the socket if requested */
         if (sexp_iportp(port))
-          shutdown(sexp_port_fileno(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
+          shutdown(sexp_port_sock(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
         if (sexp_oportp(port))
-          shutdown(sexp_port_fileno(port), SHUT_WR);
+          shutdown(sexp_port_sock(port), SHUT_WR);
       }
       if (!sexp_port_no_closep(port)) {
         if (--sexp_fileno_count(sexp_port_fd(port)) == 0)

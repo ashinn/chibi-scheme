@@ -173,6 +173,10 @@ XLDFLAGS += -lsocket
 XCPPFLAGS += -D_POSIX_PTHREAD_SEMANTICS
 endif
 
+ifeq ($(PLATFORM),windows)
+XLIBS += -lws2_32
+endif
+
 # Choose compiled library on MSYS
 ifeq ($(OS), Windows_NT)
 ifeq ($(PLATFORM),msys)

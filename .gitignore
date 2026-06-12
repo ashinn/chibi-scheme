@@ -88,3 +88,5 @@ build-lib/chibi/char-set/width.scm
 
 # vim swapfiles
 *.swp
+
+.vscode
