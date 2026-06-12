@@ -4,6 +4,12 @@
 /* EWOULDBLOCK and block on the socket, and listen should automatically make */
 /* sockets non-blocking. */
 
+sexp sexp_make_fileno_sock(sexp ctx, sexp self, sexp_sint_t fd, SOCKET_TYPE sock) {
+  sexp res = sexp_make_fileno(ctx, sexp_make_fixnum(fd), SEXP_FALSE);
+  sexp_fileno_sock(res) = sock;
+  return res;
+}
+
 sexp sexp_socket(sexp ctx, sexp self, int af, int type, int protocol) {
 #ifdef _WIN32
   SOCKET_TYPE sock = WSASocket(af, type, protocol, NULL, 0, 0);

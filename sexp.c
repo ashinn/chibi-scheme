@@ -206,31 +206,15 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
   if (sexp_port_openp(port)) {
     sexp_port_openp(port) = 0;
     if (sexp_oportp(port)) sexp_flush_forced(ctx, port);
-#ifdef _WIN32
-    if (sexp_filenop(sexp_port_fd(port))
-        && sexp_fileno_openp(sexp_port_fd(port))) {
-      if (sexp_port_shutdownp(port)) {
-      /* shutdown the socket if requested */
-      if (sexp_iportp(port))
-        shutdown(sexp_port_sock(port), sexp_oportp(port) ? SD_BOTH : SD_RECEIVE);
-      if (sexp_oportp(port))
-        shutdown(sexp_port_sock(port), SD_SEND);
-    }
-    if (!sexp_port_no_closep(port)) {
-      if (--sexp_fileno_count(sexp_port_fd(port)) == 0)
-        sexp_finalize_fileno(ctx, self, n, sexp_port_fd(port));
-    }
-}
-#elif defined(PLAN9)
-#else
+#ifndef PLAN9
     if (sexp_filenop(sexp_port_fd(port))
         && sexp_fileno_openp(sexp_port_fd(port))) {
       if (sexp_port_shutdownp(port)) {
         /* shutdown the socket if requested */
         if (sexp_iportp(port))
-          shutdown(sexp_port_fileno(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
+          shutdown(sexp_port_sock(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
         if (sexp_oportp(port))
-          shutdown(sexp_port_fileno(port), SHUT_WR);
+          shutdown(sexp_port_sock(port), SHUT_WR);
       }
       if (!sexp_port_no_closep(port)) {
         if (--sexp_fileno_count(sexp_port_fd(port)) == 0)
@@ -1982,31 +1966,6 @@ sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_c
     sexp_fileno_fd(res) = sexp_unbox_fixnum(fd);
     sexp_fileno_openp(res) = 1;
     sexp_fileno_no_closep(res) = sexp_truep(no_closep);
-#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
-    sexp_insert_fileno(ctx, res);
-#endif
-  }
-  sexp_gc_release1(ctx);
-  return res;
-}
-
-sexp sexp_make_fileno_sock (sexp ctx, sexp self, sexp_sint_t fd, SOCKET_TYPE sock) {
-  sexp_gc_var1(res);
-#if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
-  res = sexp_lookup_fileno(ctx, fd);
-  if (sexp_filenop(res)) {
-    sexp_fileno_no_closep(res) = sexp_truep(no_closep);
-    sexp_fileno_openp(res) = 1;  /* not necessarily */
-    return res;
-  }
-#endif
-  sexp_gc_preserve1(ctx, res);
-  res = sexp_alloc_type(ctx, fileno, SEXP_FILENO);
-  if (!sexp_exceptionp(res)) {
-    sexp_fileno_fd(res) = fd;
-    sexp_fileno_openp(res) = 1;
-    sexp_fileno_no_closep(res) = 0;
-    sexp_fileno_sock(res) = sock;
 #if SEXP_USE_UNIFY_FILENOS_BY_NUMBER
     sexp_insert_fileno(ctx, res);
 #endif

@@ -512,7 +512,9 @@ struct sexp_struct {
     struct {
       char openp, no_closep;
       sexp_sint_t fd, count;
+#ifdef _WIN32      
       SOCKET_TYPE sock;
+#endif      
     } fileno;
     struct {
       sexp kind, message, irritants, procedure, source, stack_trace;
@@ -1272,7 +1274,11 @@ enum sexp_uniform_vector_type {
 #define sexp_fileno_fd(f)        (sexp_pred_field(f, fileno, sexp_filenop, fd))
 #define sexp_fileno_count(f)     (sexp_pred_field(f, fileno, sexp_filenop, count))
 #define sexp_fileno_openp(f)     (sexp_pred_field(f, fileno, sexp_filenop, openp))
+#ifdef _WIN32
 #define sexp_fileno_sock(f)      (sexp_pred_field(f, fileno, sexp_filenop, sock))
+#else
+#define sexp_fileno_sock(f)      (sexp_port_fd(f))
+#endif
 #define sexp_fileno_no_closep(f) (sexp_pred_field(f, fileno, sexp_filenop, no_closep))
 
 #define sexp_ratio_numerator(q)   (sexp_pred_field(q, ratio, sexp_ratiop, numerator))
@@ -1780,7 +1786,6 @@ SEXP_API sexp sexp_write_to_string (sexp ctx, sexp obj);
 SEXP_API sexp sexp_write_simple_object (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp writer, sexp out);
 SEXP_API sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port);
 SEXP_API sexp sexp_make_fileno_op (sexp ctx, sexp self, sexp_sint_t n, sexp fd, sexp no_closep);
-SEXP_API sexp sexp_make_fileno_sock (sexp ctx, sexp self, sexp_sint_t fd, SOCKET_TYPE sock);
 SEXP_API sexp sexp_make_input_port (sexp ctx, FILE* in, sexp name);
 SEXP_API sexp sexp_make_output_port (sexp ctx, FILE* out, sexp name);
 SEXP_API sexp sexp_open_input_file_descriptor (sexp ctx, sexp self, sexp_sint_t n, sexp fileno, sexp socketp);
