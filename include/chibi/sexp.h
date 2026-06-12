@@ -1277,7 +1277,7 @@ enum sexp_uniform_vector_type {
 #ifdef _WIN32
 #define sexp_fileno_sock(f)      (sexp_pred_field(f, fileno, sexp_filenop, sock))
 #else
-#define sexp_fileno_sock(f)      (sexp_port_fd(f))
+#define sexp_fileno_sock(f)      (sexp_fileno_fd(f))
 #endif
 #define sexp_fileno_no_closep(f) (sexp_pred_field(f, fileno, sexp_filenop, no_closep))
 
