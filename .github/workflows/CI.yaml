@@ -8,10 +8,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-              
+        os: [ubuntu-latest, ubuntu-26.04-arm, macos-latest, macos-26-intel]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Build
         run: make # assumes GNUMake
       - name: Test
@@ -21,3 +20,16 @@ jobs:
       - name: Run in PATH
         run: chibi-scheme r7rs-tests.scm
         working-directory: tests
+  msys2-build:
+    name: msys2-build
+    runs-on: msys2-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            gcc
+      - name: Build
+        run: msys2 -c "make PLATFORM=msys"
