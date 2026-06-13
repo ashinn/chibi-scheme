@@ -195,7 +195,11 @@
     #t)))
 
 (define delimiters
-  '(#\; #\" #\| #\( #\) #\{ #\} #\space #\tab #\newline #\return))
+  `(#\; #\" #\| #\( #\)
+    ,@(if (square-brackets-symbol)
+          '(#\[ #\])
+          '())
+    #\{ #\} #\space #\tab #\newline #\return))
 
 (define named-chars
   `(("newline" . #\newline)
@@ -415,6 +419,9 @@
                      (read-error "unknown #! symbol" name)))
                    (read-one in))))))
             ((#\() (list->vector (read-one in)))
+            ((#\[) (if (square-brackets-symbol)
+                       (list->vector (read-one in))
+                       (read-error "unknown # syntax: " (peek-char in))))
             ((#\') (read-char in) (list 'syntax (read-one in)))
             ((#\`) (read-char in) (list 'quasisyntax (read-one in)))
             ((#\,) (read-char in)
@@ -478,7 +485,7 @@
               ((#\#)
                (read-char in)
                (read-hash in))
-              ((#\()
+              ((#\( #\[)
                (read-char in)
                (let lp ((res '()))
                  (cond
@@ -490,6 +497,15 @@
                        ((#\))
                         (read-char in)
                         (reverse res))
+                       ((#\])
+                        (if (square-brackets-symbol)
+                            (begin
+                              (read-char in)
+                              (if (eq? #t (square-brackets-symbol))
+                                  (reverse res)
+                                  (cons (square-brackets-symbol)
+                                        (reverse res))))
+                            (read-incomplete-error "unterminated list")))
                        ((#\.)
                         (read-char in)
                         (cond

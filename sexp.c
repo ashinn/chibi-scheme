@@ -212,9 +212,9 @@ sexp sexp_finalize_port (sexp ctx, sexp self, sexp_sint_t n, sexp port) {
       if (sexp_port_shutdownp(port)) {
         /* shutdown the socket if requested */
         if (sexp_iportp(port))
-          shutdown(sexp_port_fileno(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
+          shutdown(sexp_port_sock(port), sexp_oportp(port) ? SHUT_RDWR : SHUT_RD);
         if (sexp_oportp(port))
-          shutdown(sexp_port_fileno(port), SHUT_WR);
+          shutdown(sexp_port_sock(port), SHUT_WR);
       }
       if (!sexp_port_no_closep(port)) {
         if (--sexp_fileno_count(sexp_port_fd(port)) == 0)
@@ -3428,6 +3428,9 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   case '"':
     res = sexp_read_string(ctx, in, '"');
     break;
+  case '[':
+    if (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) == SEXP_FALSE)
+      goto symbol;
   case '(':
     line = (sexp_port_sourcep(in) ? sexp_port_line(in) : -1);
     res = SEXP_NULL;
@@ -3483,6 +3486,10 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       for (tmp=sexp_cdr(res); sexp_pairp(tmp); tmp=sexp_cdr(tmp))
         sexp_pair_source(tmp) = sexp_pair_source(res);
     }
+    if (c1 == '[')
+      res = (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) == SEXP_TRUE
+             ? res
+             : sexp_cons(ctx, sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM), res));
     if (sexp_port_sourcep(in))
       for (tmp=res; sexp_pairp(tmp); tmp=sexp_cdr(tmp))
         sexp_immutablep(tmp) = 1;
@@ -3764,6 +3771,12 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         }
       }
       break;
+    case '[':
+      // Note that this ignores the actual symbol. Because it makes no
+      // sense in vector initializers, right?
+      if (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) == SEXP_FALSE) {
+        goto invalid_hash;
+      }
     case '(':
       sexp_push_char(ctx, c1, in);
       res = sexp_read_one(ctx, in, shares);
@@ -3800,6 +3813,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       }
       break;
     default:
+    invalid_hash:
       res = sexp_read_error(ctx, "invalid char following '#'",
                             c1 == EOF ? SEXP_EOF : sexp_make_character(c1), in);
     }
@@ -3818,6 +3832,13 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   case ')':
     res = SEXP_CLOSE;
     break;
+  case ']':
+    if (sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM) != SEXP_FALSE) {
+      res = SEXP_CLOSE;
+      break;
+    } else {
+      goto symbol;
+    }
 #if SEXP_USE_OBJECT_BRACE_LITERALS
   case '}':
     res = SEXP_CLOSE_BRACE;
@@ -3927,6 +3948,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
     res = sexp_read_number(ctx, in, 10, 0);
     break;
   default:
+  symbol:
     res = sexp_read_symbol(ctx, in, c1, 1);
     break;
   }
@@ -4025,6 +4047,10 @@ sexp sexp_symbol_to_string_op (sexp ctx, sexp self, sexp_sint_t n, sexp sym) {
 #endif
   sexp_assert_type(ctx, sexp_lsymbolp, SEXP_SYMBOL, sym);
   return sexp_c_string(ctx, sexp_lsymbol_data(sym), sexp_lsymbol_length(sym));
+}
+
+sexp sexp_square_brackets_sym (sexp ctx, sexp self, sexp_sint_t n) {
+  return sexp_global(ctx, SEXP_G_SQUARE_BRACKETS_SYM);
 }
 
 void sexp_init (void) {

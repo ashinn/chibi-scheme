@@ -173,6 +173,10 @@ XLDFLAGS += -lsocket
 XCPPFLAGS += -D_POSIX_PTHREAD_SEMANTICS
 endif
 
+ifeq ($(PLATFORM),windows)
+XLIBS += -lws2_32
+endif
+
 # Choose compiled library on MSYS
 ifeq ($(OS), Windows_NT)
 ifeq ($(PLATFORM),msys)
@@ -188,7 +192,7 @@ endif
 
 CHIBI_POSIX_COMPILED_LIBS = lib/chibi/process$(SO) lib/chibi/time$(SO) \
 	lib/chibi/system$(SO) lib/chibi/stty$(SO) lib/chibi/pty$(SO) \
-	lib/chibi/net$(SO) lib/srfi/18/threads$(SO)
+	lib/srfi/18/threads$(SO)
 CHIBI_WIN32_COMPILED_LIBS = lib/chibi/win32/process-win32$(SO)
 
 ifndef EXCLUDE_POSIX_LIBS

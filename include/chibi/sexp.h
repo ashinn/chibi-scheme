@@ -18,6 +18,14 @@ extern "C" {
 #include "chibi/features.h"
 #include "chibi/install.h"
 
+#if !(defined _WIN32) || defined(__CYGWIN__)
+#include <sys/socket.h>
+#define SOCKET_TYPE sexp_sint_t
+#else
+#include <winsock2.h>
+#define SOCKET_TYPE SOCKET
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #include <errno.h>
@@ -96,9 +104,6 @@ typedef s64int int64_t;
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#if !(defined _WIN32) || defined(__CYGWIN__)
-#include <sys/socket.h>
-#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 #define _REENTRANT 1
@@ -507,6 +512,9 @@ struct sexp_struct {
     struct {
       char openp, no_closep;
       sexp_sint_t fd, count;
+#ifdef _WIN32      
+      SOCKET_TYPE sock;
+#endif      
     } fileno;
     struct {
       sexp kind, message, irritants, procedure, source, stack_trace;
@@ -1266,7 +1274,11 @@ enum sexp_uniform_vector_type {
 #define sexp_fileno_fd(f)        (sexp_pred_field(f, fileno, sexp_filenop, fd))
 #define sexp_fileno_count(f)     (sexp_pred_field(f, fileno, sexp_filenop, count))
 #define sexp_fileno_openp(f)     (sexp_pred_field(f, fileno, sexp_filenop, openp))
-#define sexp_fileno_socketp(f)   (sexp_pred_field(f, fileno, sexp_filenop, socketp))
+#ifdef _WIN32
+#define sexp_fileno_sock(f)      (sexp_pred_field(f, fileno, sexp_filenop, sock))
+#else
+#define sexp_fileno_sock(f)      (sexp_fileno_fd(f))
+#endif
 #define sexp_fileno_no_closep(f) (sexp_pred_field(f, fileno, sexp_filenop, no_closep))
 
 #define sexp_ratio_numerator(q)   (sexp_pred_field(q, ratio, sexp_ratiop, numerator))
@@ -1626,6 +1638,7 @@ enum sexp_context_globals {
   SEXP_G_THREADS_POLLFDS_ID,
   SEXP_G_ATOMIC_P,
 #endif
+  SEXP_G_SQUARE_BRACKETS_SYM,
   SEXP_G_NUM_GLOBALS
 };
 
@@ -1679,6 +1692,7 @@ SEXP_API int sexp_buffered_flush (sexp ctx, sexp p, int forcep);
 #define sexp_newline(ctx, p) sexp_write_char((ctx), '\n', (p))
 #define sexp_at_eofp(p)      (feof(sexp_port_stream(p)))
 #define sexp_port_fileno(p)  (sexp_port_stream(p) ? fileno(sexp_port_stream(p)) : sexp_filenop(sexp_port_fd(p)) ? sexp_fileno_fd(sexp_port_fd(p)) : -1)
+#define sexp_port_sock(p)  (sexp_port_stream(p) ? -1 : sexp_filenop(sexp_port_fd(p)) ? sexp_fileno_sock(sexp_port_fd(p)) : -1)
 
 #if SEXP_USE_AUTOCLOSE_PORTS
 #define SEXP_FINALIZE_PORT sexp_finalize_port
@@ -1812,6 +1826,7 @@ SEXP_API sexp sexp_apply3 (sexp ctx, sexp f, sexp x, sexp y, sexp z);
 SEXP_API sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args);
 SEXP_API sexp sexp_make_foreign (sexp ctx, const char *name, int num_args, int flags, const char *fname, sexp_proc1 f, sexp data);
+SEXP_API sexp sexp_square_brackets_sym (sexp ctx, sexp self, sexp_sint_t n);
 SEXP_API void sexp_init(void);
 
 #if SEXP_USE_UTF8_STRINGS
