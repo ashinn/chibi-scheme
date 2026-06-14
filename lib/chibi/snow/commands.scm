@@ -3080,9 +3080,8 @@
             ;; assume certain core libraries already installed
             ;; (info "assuming core library installed: " (car ls))
             (lp (cdr ls) res (cons (car ls) ignored)))
-           ((and (null? candidates) (member (car ls) lib-names))
-            (die 2 "Can't find package: " (car ls)))
-           ((null? candidates)
+           ((or (null? candidates)
+                (and (null? candidates) (member (car ls) lib-names)))
             (cond
              ((yes-or-no? cfg "Can't find package: " (car ls)
                           ".  Proceed anyway?")
@@ -3100,6 +3099,14 @@
             (warn "no candidate selected")
             (lp (cdr ls) res ignored)))))))))
 
+(define (library-in-repository? repo lib-name)
+  (call-with-current-continuation
+    (lambda (return)
+      (for-each (lambda (pkg)
+                  (when (package-provides? pkg lib-name) (return #t)))
+                (cdr repo))
+      #f)))
+
 ;; First lookup dependencies for all implementations so we can
 ;; download in a single batch.  Then perform the installations a
 ;; single implementation at a time.
@@ -3111,12 +3118,31 @@
                            (conf-for-implementation cfg impl))
                          impls))
        ((package-files lib-names) (partition package-file? args))
-       ((lib-names) (map parse-library-name lib-names))
+       ((lib-names)
+        (let ((lib-names (map parse-library-name lib-names)))
+          (when (not (pair? package-files))
+            (for-each
+              (lambda (lib-name)
+                (when (not (library-in-repository? repo lib-name))
+                  (die 2 "Can't find package: " lib-name)))
+              lib-names))
+          lib-names))
+       ((start-dependencies)
+        (lambda (impl cfg)
+          (if (pair? package-files)
+            (apply append
+                   (map (lambda (pkg) (package-dependencies impl cfg pkg))
+                        (map package-file-meta package-files)))
+            lib-names)))
        ((impl-pkgs)
-        (map (lambda (impl cfg)
-               (expand-package-dependencies repo impl cfg lib-names))
-             impls
-             impl-cfgs)))
+        (filter-map
+          (lambda (impl cfg)
+            (expand-package-dependencies repo
+                                         impl
+                                         cfg
+                                         (start-dependencies impl cfg)))
+          impls
+          impl-cfgs)))
     (for-each
      (lambda (impl cfg pkgs)
        (when (conf-get cfg 'verbose?)
