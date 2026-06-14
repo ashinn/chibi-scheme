@@ -22,7 +22,7 @@ jobs:
         working-directory: tests
   msys2-build:
     name: msys2-build
-    runs-on: msys2-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
       - uses: msys2/setup-msys2@v2
