@@ -327,7 +327,7 @@ install-base: all
 	$(MKDIR) $(DESTDIR)$(MODDIR)/chibi/char-set $(DESTDIR)$(MODDIR)/chibi/crypto $(DESTDIR)$(MODDIR)/chibi/io $(DESTDIR)$(MODDIR)/chibi/iset $(DESTDIR)$(MODDIR)/chibi/loop $(DESTDIR)$(MODDIR)/chibi/match $(DESTDIR)$(MODDIR)/chibi/math $(DESTDIR)$(MODDIR)/chibi/monad $(DESTDIR)$(MODDIR)/chibi/net $(DESTDIR)$(MODDIR)/chibi/optimize $(DESTDIR)$(MODDIR)/chibi/parse $(DESTDIR)$(MODDIR)/chibi/regexp $(DESTDIR)$(MODDIR)/chibi/show $(DESTDIR)$(MODDIR)/chibi/snow $(DESTDIR)$(MODDIR)/chibi/term $(DESTDIR)$(MODDIR)/chibi/text
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/char
 	$(MKDIR) $(DESTDIR)$(MODDIR)/scheme/time
-	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/151 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records $(DESTDIR)$(MODDIR)/srfi/113 $(DESTDIR)$(MODDIR)/srfi/117 $(DESTDIR)$(MODDIR)/srfi/121 $(DESTDIR)$(MODDIR)/srfi/125 $(DESTDIR)$(MODDIR)/srfi/128 $(DESTDIR)$(MODDIR)/srfi/129 $(DESTDIR)$(MODDIR)/srfi/132 $(DESTDIR)$(MODDIR)/srfi/133 $(DESTDIR)$(MODDIR)/srfi/135 $(DESTDIR)$(MODDIR)/srfi/143 $(DESTDIR)$(MODDIR)/srfi/144 $(DESTDIR)$(MODDIR)/srfi/159 $(DESTDIR)$(MODDIR)/srfi/160 $(DESTDIR)$(MODDIR)/srfi/166 $(DESTDIR)$(MODDIR)/srfi/146 $(DESTDIR)$(MODDIR)/srfi/179 $(DESTDIR)$(MODDIR)/srfi/211 $(DESTDIR)$(MODDIR)/srfi/231 $(DESTDIR)$(MODDIR)/srfi/253
+	$(MKDIR) $(DESTDIR)$(MODDIR)/srfi/1 $(DESTDIR)$(MODDIR)/srfi/18 $(DESTDIR)$(MODDIR)/srfi/27 $(DESTDIR)$(MODDIR)/srfi/151 $(DESTDIR)$(MODDIR)/srfi/39 $(DESTDIR)$(MODDIR)/srfi/69 $(DESTDIR)$(MODDIR)/srfi/95 $(DESTDIR)$(MODDIR)/srfi/99 $(DESTDIR)$(MODDIR)/srfi/99/records $(DESTDIR)$(MODDIR)/srfi/113 $(DESTDIR)$(MODDIR)/srfi/117 $(DESTDIR)$(MODDIR)/srfi/121 $(DESTDIR)$(MODDIR)/srfi/125 $(DESTDIR)$(MODDIR)/srfi/128 $(DESTDIR)$(MODDIR)/srfi/129 $(DESTDIR)$(MODDIR)/srfi/132 $(DESTDIR)$(MODDIR)/srfi/133 $(DESTDIR)$(MODDIR)/srfi/135 $(DESTDIR)$(MODDIR)/srfi/143 $(DESTDIR)$(MODDIR)/srfi/144 $(DESTDIR)$(MODDIR)/srfi/159 $(DESTDIR)$(MODDIR)/srfi/160 $(DESTDIR)$(MODDIR)/srfi/166 $(DESTDIR)$(MODDIR)/srfi/146 $(DESTDIR)$(MODDIR)/srfi/179 $(DESTDIR)$(MODDIR)/srfi/211 $(DESTDIR)$(MODDIR)/srfi/231 $(DESTDIR)$(MODDIR)/srfi/235 $(DESTDIR)$(MODDIR)/srfi/253
 	$(INSTALL) -m0644 $(META_FILES) $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/*.scm $(DESTDIR)$(MODDIR)/
 	$(INSTALL) -m0644 lib/chibi/*.sld lib/chibi/*.scm $(DESTDIR)$(MODDIR)/chibi/
@@ -384,6 +384,7 @@ install-base: all
 	$(INSTALL) -m0644 lib/srfi/179/*.scm $(DESTDIR)$(MODDIR)/srfi/179/
 	$(INSTALL) -m0644 lib/srfi/211/*.sld $(DESTDIR)$(MODDIR)/srfi/211/
 	$(INSTALL) -m0644 lib/srfi/231/*.sld lib/srfi/231/*.scm $(DESTDIR)$(MODDIR)/srfi/231/
+	$(INSTALL) -m0644 lib/srfi/235/*.sld lib/srfi/235/*.scm $(DESTDIR)$(MODDIR)/srfi/235/
 	$(INSTALL) -m0644 lib/srfi/253/*.sld lib/srfi/253/*.scm $(DESTDIR)$(MODDIR)/srfi/253/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/crypto/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/io/
@@ -499,6 +500,7 @@ uninstall:
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/179 $(DESTDIR)$(BINMODDIR)/srfi/179
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/211 $(DESTDIR)$(BINMODDIR)/srfi/211
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/231 $(DESTDIR)$(BINMODDIR)/srfi/231
+	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/235 $(DESTDIR)$(BINMODDIR)/srfi/235
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi/253 $(DESTDIR)$(BINMODDIR)/srfi/253
 	-$(RMDIR) $(DESTDIR)$(MODDIR)/srfi $(DESTDIR)$(BINMODDIR)/srfi
 	-$(RMDIR) $(DESTDIR)$(MODDIR) $(DESTDIR)$(BINMODDIR)

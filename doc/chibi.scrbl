@@ -1347,6 +1347,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-227/srfi-227.html"]{(srfi 227) - optional arguments}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-229/srfi-229.html"]{(srfi 229) - tagged procedures}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-231/srfi-231.html"]{(srfi 231) - intervals and generalized arrays}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-235/srfi-235.html"]{(srfi 235) - combinators}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-253/srfi-253.html"]{(srfi 253) - data (type-)checking}}
 
 ]
