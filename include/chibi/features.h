@@ -944,7 +944,7 @@
 #endif
 
 #ifndef SEXP_USE_ALIGNED_BYTECODE
-#if defined(__arm__) || defined(__sparc__) || defined(__sparc64__) || defined(__mips__) || defined(__mips64__)
+#if defined(__arm__) || defined(__sparc__) || defined(__sparc64__) || defined(__mips__) || defined(__mips64__) || defined(__riscv)
 #define SEXP_USE_ALIGNED_BYTECODE 1
 #else
 #define SEXP_USE_ALIGNED_BYTECODE 0
