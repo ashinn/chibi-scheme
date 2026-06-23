@@ -786,8 +786,8 @@
                             ,pkg
                             ,@(remove
                                 (lambda (x)
-                                  (equal? name (package-name x))
-                                  (equal? version (package-version x)))
+                                  (and (equal? name (package-name x))
+                                       (equal? version (package-version x))))
                                 (cdr repo)))))
                      (guard (exn (else (list 'repository)))
                        (car (file->sexp-list repo-path)))
