@@ -2894,44 +2894,59 @@ sexp sexp_make_ratio (sexp ctx, sexp num, sexp den) {
 
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
   sexp tmp;
-  sexp_gc_var2(num, den);
-  if (sexp_exact_negativep(sexp_ratio_denominator(rat))) {
-    /* Prevent overflow in the sexp_negate. */
-    if (sexp_ratio_numerator(rat) == sexp_make_fixnum(SEXP_MIN_FIXNUM))
-      sexp_ratio_numerator(rat) = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(rat));
-    sexp_negate(sexp_ratio_numerator(rat));
-    sexp_negate(sexp_ratio_denominator(rat));
+  sexp_gc_var4(num, den, r, i);
+  /* Preserve rat and in immediately — sexp_copy_bignum allocates and may
+     trigger GC, so all live sexp pointers must be registered as roots. */
+  r = rat; i = in;
+  sexp_gc_preserve4(ctx, num, den, r, i);
+  if (sexp_exact_negativep(sexp_ratio_denominator(r))) {
+    /* Copy bignums before negating to avoid mutating the original objects
+       (which may be referenced by other variables in the program). */
+    if (sexp_ratio_numerator(r) == sexp_make_fixnum(SEXP_MIN_FIXNUM))
+      sexp_ratio_numerator(r) = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(r));
+    if (sexp_bignump(sexp_ratio_numerator(r)))
+      sexp_ratio_numerator(r) = sexp_copy_bignum(ctx, NULL, sexp_ratio_numerator(r), 0);
+    if (sexp_bignump(sexp_ratio_denominator(r)))
+      sexp_ratio_denominator(r) = sexp_copy_bignum(ctx, NULL, sexp_ratio_denominator(r), 0);
+    sexp_negate(sexp_ratio_numerator(r));
+    sexp_negate(sexp_ratio_denominator(r));
   }
-  num = sexp_ratio_numerator(rat), den = sexp_ratio_denominator(rat);
-  if (den == SEXP_ZERO)
-    return sexp_read_error(ctx, "zero denominator in ratio", rat, in);
-  else if (num == SEXP_ZERO)
+  num = sexp_ratio_numerator(r), den = sexp_ratio_denominator(r);
+  if (den == SEXP_ZERO) {
+    sexp_gc_release4(ctx);
+    return sexp_read_error(ctx, "zero denominator in ratio", r, i);
+  } else if (num == SEXP_ZERO) {
+    sexp_gc_release4(ctx);
     return SEXP_ZERO;
-  sexp_gc_preserve2(ctx, num, den);
+  }
   while (den != SEXP_ZERO) {
     tmp = sexp_remainder(ctx, num, den);
     if (sexp_exceptionp(tmp)) {
-      sexp_gc_release2(ctx);
+      sexp_gc_release4(ctx);
       return tmp;
     }
     num = den, den = tmp;
   }
-  sexp_ratio_denominator(rat)
-    = den = sexp_quotient(ctx, sexp_ratio_denominator(rat), num);
-  sexp_ratio_numerator(rat)
-    = sexp_quotient(ctx, sexp_ratio_numerator(rat), num);
-  if (sexp_exact_negativep(sexp_ratio_denominator(rat))) {
-    /* Prevent overflow in the sexp_negate. */
-    if (sexp_ratio_numerator(rat) == sexp_make_fixnum(SEXP_MIN_FIXNUM))
-      sexp_ratio_numerator(rat) = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(rat));
-    sexp_negate(sexp_ratio_numerator(rat));
-    sexp_negate(sexp_ratio_denominator(rat));
+  sexp_ratio_denominator(r)
+    = den = sexp_quotient(ctx, sexp_ratio_denominator(r), num);
+  sexp_ratio_numerator(r)
+    = sexp_quotient(ctx, sexp_ratio_numerator(r), num);
+  if (sexp_exact_negativep(sexp_ratio_denominator(r))) {
+    /* Copy bignums before negating to avoid mutating the original objects. */
+    if (sexp_ratio_numerator(r) == sexp_make_fixnum(SEXP_MIN_FIXNUM))
+      sexp_ratio_numerator(r) = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(r));
+    if (sexp_bignump(sexp_ratio_numerator(r)))
+      sexp_ratio_numerator(r) = sexp_copy_bignum(ctx, NULL, sexp_ratio_numerator(r), 0);
+    if (sexp_bignump(sexp_ratio_denominator(r)))
+      sexp_ratio_denominator(r) = sexp_copy_bignum(ctx, NULL, sexp_ratio_denominator(r), 0);
+    sexp_negate(sexp_ratio_numerator(r));
+    sexp_negate(sexp_ratio_denominator(r));
   }
-  sexp_ratio_numerator(rat) = sexp_bignum_normalize(sexp_ratio_numerator(rat));
-  sexp_ratio_denominator(rat) = sexp_bignum_normalize(sexp_ratio_denominator(rat));
-  sexp_gc_release2(ctx);
-  return (sexp_ratio_denominator(rat) == SEXP_ONE) ? sexp_ratio_numerator(rat)
-    : rat;
+  sexp_ratio_numerator(r) = sexp_bignum_normalize(sexp_ratio_numerator(r));
+  sexp_ratio_denominator(r) = sexp_bignum_normalize(sexp_ratio_denominator(r));
+  sexp_gc_release4(ctx);
+  return (sexp_ratio_denominator(r) == SEXP_ONE) ? sexp_ratio_numerator(r)
+    : r;
 }
 #endif
 
