@@ -2895,19 +2895,23 @@ sexp sexp_make_ratio (sexp ctx, sexp num, sexp den) {
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
   sexp tmp;
   sexp_gc_var2(num, den);
-  if (sexp_exact_negativep(sexp_ratio_denominator(rat))) {
-    /* Prevent overflow in the sexp_negate. */
-    if (sexp_ratio_numerator(rat) == sexp_make_fixnum(SEXP_MIN_FIXNUM))
-      sexp_ratio_numerator(rat) = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(rat));
-    sexp_negate(sexp_ratio_numerator(rat));
-    sexp_negate(sexp_ratio_denominator(rat));
-  }
   num = sexp_ratio_numerator(rat), den = sexp_ratio_denominator(rat);
   if (den == SEXP_ZERO)
     return sexp_read_error(ctx, "zero denominator in ratio", rat, in);
   else if (num == SEXP_ZERO)
     return SEXP_ZERO;
   sexp_gc_preserve2(ctx, num, den);
+  if (sexp_exact_negativep(den)) {
+    /* Prevent overflow in the sexp_negate. */
+    if (num == sexp_make_fixnum(SEXP_MIN_FIXNUM))
+      num = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(rat));
+    if (sexp_bignump(num))
+      num = sexp_copy_bignum(ctx, NULL, num, 0);
+    if (sexp_bignump(den))
+      den = sexp_copy_bignum(ctx, NULL, den, 0);
+    sexp_negate(num);
+    sexp_negate(den);
+  }
   while (den != SEXP_ZERO) {
     tmp = sexp_remainder(ctx, num, den);
     if (sexp_exceptionp(tmp)) {
@@ -2924,6 +2928,10 @@ sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
     /* Prevent overflow in the sexp_negate. */
     if (sexp_ratio_numerator(rat) == sexp_make_fixnum(SEXP_MIN_FIXNUM))
       sexp_ratio_numerator(rat) = sexp_fixnum_to_bignum(ctx, sexp_ratio_numerator(rat));
+    if (sexp_bignump(sexp_ratio_numerator(rat)))
+      sexp_ratio_numerator(rat) = sexp_copy_bignum(ctx, NULL, sexp_ratio_numerator(rat), 0);
+    if (sexp_bignump(sexp_ratio_denominator(rat)))
+      sexp_ratio_denominator(rat) = sexp_copy_bignum(ctx, NULL, sexp_ratio_denominator(rat), 0);
     sexp_negate(sexp_ratio_numerator(rat));
     sexp_negate(sexp_ratio_denominator(rat));
   }
