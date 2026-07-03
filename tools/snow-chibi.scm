@@ -108,6 +108,9 @@
 (define install-spec
   '((skip-tests? boolean ("skip-tests") "don't run tests even if present")
     (show-tests? boolean ("show-tests") "show test output even on success")
+    (overwrite-native?  boolean
+                        ("overwrite-native")
+                        "install library even if implementation supports it natively")
     (install-tests? boolean ("install-tests") "install test-only libraries")
     (auto-upgrade-dependencies?
      boolean ("auto-upgrade-dependencies")
