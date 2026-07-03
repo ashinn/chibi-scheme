@@ -2408,7 +2408,11 @@
 ;; Racket can only load files with .rkt suffix. So for each library we create
 ;; a file that sets language to r7rs and includes the .sld file
 (define (racket-installer impl cfg library dir)
-  (let* ((source-rkt-file
+  (let* ((source-sld-file
+           (make-path dir
+           (string-append (path-strip-extension (get-library-file cfg library))
+                          ".sld")))
+         (source-rkt-file
            (make-path dir
            (string-append (path-strip-extension (get-library-file cfg library))
                           ".rkt")))
@@ -2424,10 +2428,18 @@
     (with-output-to-file
       source-rkt-file
       (lambda ()
-        (map display
-             (list "#lang r7rs" #\newline
-                   "(import (scheme base))" #\newline
-                   "(include \"" include-filename "\")" #\newline))))
+        (display "#lang r7rs")
+        (newline)
+        (with-input-from-file
+          source-sld-file
+          (lambda ()
+            (letrec
+              ((looper (lambda (line)
+                         (when (not (eof-object? line))
+                           (display line)
+                           (newline)
+                           (looper (read-line))))))
+              (looper (read-line)))))))
     (install-file cfg source-rkt-file dest-rkt-file)
     (cons dest-rkt-file installed-files)))
 
