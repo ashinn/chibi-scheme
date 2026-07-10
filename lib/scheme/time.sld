@@ -72,7 +72,4 @@
 
     ;; Exported interface.
     (define current-second
-      (make-tai-clock clock-type call-with-current-clock-values))
-    (define (current-jiffy)
-      (inexact->exact (round (* (current-second) (jiffies-per-second)))))
-    (define (jiffies-per-second) 1000)))
+      (make-tai-clock clock-type call-with-current-clock-values))))
