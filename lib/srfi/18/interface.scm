@@ -3,10 +3,15 @@
 (define (time? x) (timeval? (if (pair? x) (car x) x)))
 
 (define (time->seconds x)
-  (timeval-seconds (if (pair? x) (car x) x)))
+  (let ((t (if (pair? x) (car x) x)))
+    (+ (timeval-seconds t)
+       (* 1e-6 (timeval-microseconds t)))))
 
 (define (seconds->time x)
-  (make-timeval (if (inexact? x) (inexact->exact (round x)) x) 0))
+  (if (integer? x)
+      (make-timeval x 0)
+      (let ((x0 (floor x)))
+        (make-timeval x0 (* 1e6 (- x x0))))))
 
 (define (timeout->seconds x)
   (if (time? x) (- (time->seconds x) (time->seconds (current-time))) x))
