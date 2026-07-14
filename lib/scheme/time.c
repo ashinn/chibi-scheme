@@ -119,9 +119,9 @@ sexp sexp_current_jiffy (sexp ctx, sexp self, sexp_sint_t n) {
 #if SEXP_MS_JIFFY
   LARGE_INTEGER frequency;
   QueryPerformanceFrequency(&frequency);
-  return sexp_make_fixnum((1000*t)/frequency);
+  return sexp_make_fixnum((1000*t.QuadPart)/frequency.QuadPart);
 #else
-  return sexp_make_fixnum(t);
+  return sexp_make_fixnum(t.QuadPart);
 #endif
 
 #elif !defined(PLAN9)
@@ -157,7 +157,7 @@ sexp sexp_jiffies_per_second(sexp ctx, sexp self, sexp_sint_t n) {
 #ifdef _WIN32
   LARGE_INTEGER frequency;
   QueryPerformanceFrequency(&frequency);
-  return sexp_make_fixnum(frequency);
+  return sexp_make_fixnum(frequency.QuadPart);
 #elif !defined(PLAN9)
   return sexp_make_fixnum(1000000000);
 #else
