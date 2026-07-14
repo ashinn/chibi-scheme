@@ -111,26 +111,49 @@ sexp sexp_current_clock_second (sexp ctx, sexp self, sexp_sint_t n) {
 #endif
 }
 
+#define SEXP_MS_JIFFY !SEXP_64_BIT
 sexp sexp_current_jiffy (sexp ctx, sexp self, sexp_sint_t n) {
 #ifdef _WIN32
   LARGE_INTEGER t;
   QueryPerformanceCounter(&t);
+#if SEXP_MS_JIFFY
+  LARGE_INTEGER frequency;
+  QueryPerformanceFrequency(&frequency);
+  return sexp_make_fixnum((1000*t)/frequency);
+#else
   return sexp_make_fixnum(t);
+#endif
+
 #elif !defined(PLAN9)
   struct timespec tv;
   int err = clock_gettime(CLOCK_MONOTONIC, &tv);
   // :note could use errno, here
   if (err)
     return sexp_user_exception(ctx, self, "couldn't get current jiffy", SEXP_FALSE);
-  return sexp_make_fixnum(1000000000*tv.tv_sec + tv.tv_nsec);
+  uint64_t current_ns = 1000000000*tv.tv_sec + tv.tv_nsec;
+#if SEXP_MS_JIFFY
+  uint32_t current_ms = current_ns / 1000000;
+  return sexp_make_fixnum(current_ms);
+#else
+  return sexp_make_fixnum(current_ns);
+#endif
+
 #else
   // :note plan9 has `cycles`, but converting that to a clock is non-trivial
-  vlong res = nsec(NULL);
-  return sexp_make_fixnum(res);
+  uint64_t current_ns = nsec(NULL);
+#if SEXP_MS_JIFFY
+  uint32_t current_ms = current_ns / 1000000;
+  return sexp_make_fixnum(current_ms);
+#else
+  return sexp_make_fixnum(current_ns);
+#endif
 #endif
 }
 
 sexp sexp_jiffies_per_second(sexp ctx, sexp self, sexp_sint_t n) {
+#if SEXP_MS_JIFFY
+    return sexp_make_fixnum(1000);
+#else
 #ifdef _WIN32
   LARGE_INTEGER frequency;
   QueryPerformanceFrequency(&frequency);
@@ -139,6 +162,7 @@ sexp sexp_jiffies_per_second(sexp ctx, sexp self, sexp_sint_t n) {
   return sexp_make_fixnum(1000000000);
 #else
   return sexp_make_fixnum(1000000000);
+#endif
 #endif
 }
 
