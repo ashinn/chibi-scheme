@@ -2425,7 +2425,6 @@
       (lambda ()
         (map display
              (list "#lang r7rs" #\newline
-                   "(import (scheme base))" #\newline
                    "(include \"" include-filename "\")" #\newline))))
     (install-file cfg source-rkt-file dest-rkt-file)
     (cons dest-rkt-file installed-files)))
