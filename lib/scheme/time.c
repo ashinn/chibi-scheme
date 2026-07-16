@@ -4,12 +4,15 @@
 /* BSD-style license: http://synthcode.com/license.txt       */
 
 #include <chibi/eval.h>
+#include <chibi/sexp.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #elif !defined(PLAN9)
 #include <sys/time.h>
+#include <time.h>
 #else
 typedef long time_t;
 #endif
@@ -49,10 +52,10 @@ static void current_ntp_clock_values (double *second, int *leap_second_indicator
   struct ntptimeval ntv;
   int status = ntp_gettime(&ntv);
   if (ntp_resolution != 0 && (
-        status == TIME_OK  || 
-        status == TIME_INS || 
-        status == TIME_DEL || 
-        status == TIME_OOP || 
+        status == TIME_OK  ||
+        status == TIME_INS ||
+        status == TIME_DEL ||
+        status == TIME_OOP ||
         status == TIME_WAIT)) {
     if (ntp_resolution == 1e-6) {
       struct timeval *tv = (struct timeval *) &ntv.time;
@@ -108,11 +111,60 @@ sexp sexp_current_clock_second (sexp ctx, sexp self, sexp_sint_t n) {
 #endif
 }
 
+#define SEXP_MS_JIFFY !SEXP_64_BIT
+sexp sexp_current_jiffy (sexp ctx, sexp self, sexp_sint_t n) {
+#ifdef _WIN32
+  LARGE_INTEGER t;
+  QueryPerformanceCounter(&t);
+#if SEXP_MS_JIFFY
+  LARGE_INTEGER frequency;
+  QueryPerformanceFrequency(&frequency);
+  return sexp_make_fixnum((1000*t.QuadPart)/frequency.QuadPart);
+#else
+  return sexp_make_fixnum(t.QuadPart);
+#endif
+#else // _WIN32
+#if !defined(PLAN9)
+  struct timespec tv;
+  int err = clock_gettime(CLOCK_MONOTONIC, &tv);
+  // :note could use errno, here
+  if (err)
+    return sexp_user_exception(ctx, self, "couldn't get current jiffy", SEXP_FALSE);
+  uint64_t current_ns = 1000000000*tv.tv_sec + tv.tv_nsec;
+#else
+  // :note plan9 has `cycles`, but converting that to a clock is non-trivial
+  uint64_t current_ns = nsec(NULL);
+#endif
+#if SEXP_MS_JIFFY
+  uint32_t current_ms = current_ns / 1000000;
+  return sexp_make_fixnum(current_ms);
+#else
+  return sexp_make_fixnum(current_ns);
+#endif
+#endif // _WIN32
+}
+
+sexp sexp_jiffies_per_second(sexp ctx, sexp self, sexp_sint_t n) {
+#if SEXP_MS_JIFFY
+    return sexp_make_fixnum(1000);
+#else
+#ifdef _WIN32
+  LARGE_INTEGER frequency;
+  QueryPerformanceFrequency(&frequency);
+  return sexp_make_fixnum(frequency.QuadPart);
+#else
+  return sexp_make_fixnum(1000000000);
+#endif
+#endif
+}
+
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
   if (!(sexp_version_compatible(ctx, version, sexp_version)
         && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return sexp_global(ctx, SEXP_G_ABI_ERROR);
   sexp_define_foreign(ctx, env, "current-clock-second", 0, sexp_current_clock_second);
+  sexp_define_foreign(ctx, env, "current-jiffy", 0, sexp_current_jiffy);
+  sexp_define_foreign(ctx, env, "jiffies-per-second", 0, sexp_jiffies_per_second);
 #if SEXP_USE_NTP_GETTIME
   determine_ntp_resolution();
   sexp_define_foreign(ctx, env, "current-ntp-clock-values", 0, sexp_current_ntp_clock_values);
