@@ -53,7 +53,7 @@ If you want to try out chibi-scheme without installing, be sure to set
 `LD_LIBRARY_PATH` (`DYLD_LIBRARY_PATH` on macOS) so it can find the
 shared libraries.
 
-To make the emscripten build run `make js` (_not_ `emmake make js`).
+To make the emscripten build run `emcmake cmake .` and `cmake --build .`.
 
 For more detailed documentation, run `make doc` and see the generated
 *doc/chibi.html* or read the [manual](http://synthcode.com/scheme/chibi/)
