@@ -2,8 +2,10 @@
   (import (scheme base)
           (scheme case-lambda)
           (scheme list)
-          (chibi assert))
-  (export check-arg values-checked
+          (chibi assert)
+          (chibi ast))
+  (export check-impl?
+          check-arg values-checked
           check-case
           lambda-checked define-checked
           case-lambda-checked
