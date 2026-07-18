@@ -33,8 +33,8 @@ jobs:
             gcc
       - name: Build
         run: msys2 -c "make PLATFORM=msys"
-  emscripten-build:
-    name: emscripten-build
+  cmake-emscripten-build:
+    name: cmake emscripten-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -44,3 +44,12 @@ jobs:
         run: |
           emcmake cmake .
           cmake --build .
+  make-emscripten-build:
+    name: make emscripten-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install emscripten
+        run: sudo apt install -y emscripten
+      - name: Build
+        run: make js
