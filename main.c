@@ -2,7 +2,7 @@
 /* Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /* BSD-style license: http://synthcode.com/license.txt       */
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
@@ -296,7 +296,7 @@ static void do_init_context (sexp* ctx, sexp* env, sexp_uint_t heap_size,
     } while (0)
 
 /* static globals for the sake of resuming from within emscripten */
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 static sexp sexp_resume_ctx = SEXP_FALSE;
 static sexp sexp_resume_proc = SEXP_FALSE;
 #endif
@@ -640,7 +640,7 @@ sexp run_main (int argc, char **argv) {
 #if SEXP_USE_WARN_UNDEFS
         sexp_warn_undefs(ctx, env, tmp, SEXP_VOID);
 #endif
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
         if (sexp_applicablep(tmp)) {
           sexp_resume_ctx = ctx;
           sexp_resume_proc = tmp;
@@ -671,7 +671,7 @@ sexp run_main (int argc, char **argv) {
   return res;
 }
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 void sexp_resume() {
   sexp_gc_var1(tmp);
   sexp_gc_preserve1(sexp_resume_ctx, tmp);
