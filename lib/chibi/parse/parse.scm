@@ -10,12 +10,15 @@
 
 (define-record-type Parse-Stream
   (%make-parse-stream
-   filename port buffer cache offset prev-char line column tail)
+   filename port file-offset buffer cache offset prev-char line column tail)
   parse-stream?
   ;; The file the data came from, for debugging and error reporting.
   (filename parse-stream-filename)
   ;; The underlying port.
   (port parse-stream-port)
+  ;; The offset of the first character of this chunk from the beginning of the
+  ;; file.
+  (file-offset parse-stream-file-offset)
   ;; A vector of characters read from the port.  We use a vector
   ;; rather than a string for guaranteed O(1) access.
   (buffer parse-stream-buffer)
@@ -50,7 +53,7 @@
   (let ((port (if (pair? o) (car o) (open-input-file filename)))
         (len (if (and (pair? o) (pair? (cdr o))) (cadr o) default-buffer-size)))
     (%make-parse-stream
-     filename port (make-vector len #f) (make-vector len '()) 0 #f 0 0 #f)))
+     filename port 0 (make-vector len #f) (make-vector len '()) 0 #f 0 0 #f)))
 
 ;;> Open \var{filename} and create a parse stream on it.
 
@@ -74,6 +77,7 @@
                       (cadr line-info)))
              (tail (%make-parse-stream (parse-stream-filename source)
                                        (parse-stream-port source)
+                                       (+ (parse-stream-file-offset source) len)
                                        (make-vector len #f)
                                        (make-vector len '())
                                        0
@@ -111,6 +115,12 @@
 (define (parse-stream-ref source i)
   (parse-stream-fill! source i)
   (vector-ref (parse-stream-buffer source) i))
+
+;;> Returns the position, relative to the beginning of the file, of the
+;;> character in parse stream \var{source} indexed by \var{i}.
+
+(define (parse-stream-file-index source i)
+  (+ (parse-stream-file-offset source) i))
 
 (define (parse-stream-last-char source)
   (let ((buf (parse-stream-buffer source)))
