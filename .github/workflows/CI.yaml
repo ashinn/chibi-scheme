@@ -33,3 +33,29 @@ jobs:
             gcc
       - name: Build
         run: msys2 -c "make PLATFORM=msys"
+  cmake-emscripten-build:
+    name: cmake emscripten-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install emscripten
+        run: sudo apt install -y emscripten
+      - name: Build
+        run: |
+          emcmake cmake .
+          cmake --build .
+  make-emscripten-build:
+    name: make emscripten-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install emsdk and build
+        run: |
+          sudo apt install -y git python3 cmake
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
+          source ./emsdk_env.sh
+          cd ..
+          make js
