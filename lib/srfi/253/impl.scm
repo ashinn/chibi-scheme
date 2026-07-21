@@ -22,6 +22,10 @@
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 ;;; OTHER DEALINGS IN THE SOFTWARE.
 
+(define (check-impl? type)
+  (lambda (x)
+    (eq? type (type-of x))))
+
 (define-syntax check-arg
   (syntax-rules ()
     ((_ pred val caller)
