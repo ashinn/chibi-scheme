@@ -11,6 +11,8 @@
 
       (test-begin "scribble")
 
+      (test-scribble '("foo" "\n" "\n" "bar") "foo\n\nbar")
+      (test-scribble '("foo" (p "bar")) "foo\\p{bar}")
       (test-scribble '((foo "blah blah blah")) "\\foo{blah blah blah}")
       (test-scribble '((foo "blah \"blah\" (`blah'?)")) "\\foo{blah \"blah\" (`blah'?)}")
       (test-scribble '((foo 1 2 "3 4")) "\\foo[1 2]{3 4}")
