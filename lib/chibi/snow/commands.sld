@@ -13,6 +13,7 @@
           command/install-dependencies
           command/remove
           command/search
+          command/list-all
           command/show
           command/status
           command/srfi-list

@@ -1261,6 +1261,38 @@
      (else
       (display "No libraries matched your query.\n")))))
 
+(define (all-packages repositories)
+  (filter
+    (lambda (item)
+      (if (and (list? item) (equal? (car item) 'package)) item #f))
+    repositories))
+
+(define (command/list-all cfg spec . args)
+  (let* ((repositories (current-repositories cfg))
+         (sexp? (conf-get cfg 'sexp?))
+         (separator (conf-get cfg 'separator " "))
+         (name->dotted
+           (lambda (name)
+             (string-join
+               (map (lambda (item)
+                      (cond ((symbol? item) (symbol->string item))
+                            ((number? item) (number->string item))
+                            (else (error "Unknown type in library name" name))))
+                    name)
+               ".")))
+         (names (map package-name (all-packages repositories))))
+    (when sexp? (display "("))
+    (for-each
+      (lambda (name)
+        (if (conf-get cfg 'dotted-format?)
+          (display (name->dotted name))
+          (display name))
+        (display separator))
+      names)
+    (when sexp? (display ")"))
+    (newline)))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Show - show detailed information for the given libraries
 ;;
@@ -1277,7 +1309,7 @@
     (if sexp? (display ")"))
     (newline)))
 
-(define (command/show cfg spec . args)
+(define (command/show cfg spec)
   (current-repositories cfg)
   (let* ((impls (conf-selected-implementations cfg))
          (impl-cfgs (map (lambda (impl)

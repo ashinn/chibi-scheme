@@ -95,7 +95,8 @@
     (foreign-depends (list string) "foreign libraries library depends on")
     (use-curl? boolean ("use-curl") "use curl for file uploads")
     (sexp? boolean ("sexp") "output information in sexp format")
-    ))
+    (dotted-format? boolean "output the package names in dotted format")
+    (separator string "string to separate package names with, defaults to space")))
 
 (define (conf-default-path name)
   (or (get-environment-variable "SNOW_CHIBI_CONFIG")
@@ -105,6 +106,13 @@
 
 (define search-spec '())
 (define show-spec '())
+(define list-all-spec
+  '((dotted-format? boolean
+                   ("dotted-format")
+                   "output the package names in dotted format")
+    (sexp? boolean ("sexp") "output the package names as sexp")
+    (separator string
+               "string to separate package names with, defaults to space")))
 (define install-spec
   '((skip-tests? boolean ("skip-tests") "don't run tests even if present")
     (show-tests? boolean ("show-tests") "show test output even on success")
@@ -156,8 +164,7 @@
     (test-library sexp)
     (sig-file existing-filename)
     (output filename)
-    (output-dir dirname)
-    ))
+    (output-dir dirname)))
 (define upload-spec
   `((uri string)
     ,@package-spec))
@@ -180,6 +187,9 @@
      (search
       "search for packages"
       (@ ,@search-spec) (,command/search terms ...))
+     (list-all
+      "list all packages"
+      (@ ,@list-all-spec) (,command/list-all))
      (show
       "show package descriptions"
       (@ ,@show-spec) (,command/show names ...))
