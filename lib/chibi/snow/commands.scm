@@ -1309,7 +1309,7 @@
     (if sexp? (display ")"))
     (newline)))
 
-(define (command/show cfg spec)
+(define (command/show cfg spec . args)
   (current-repositories cfg)
   (let* ((impls (conf-selected-implementations cfg))
          (impl-cfgs (map (lambda (impl)
