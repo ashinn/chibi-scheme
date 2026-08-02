@@ -3,7 +3,8 @@
           (scheme case-lambda)
           (scheme list)
           (chibi assert)
-          (chibi ast))
+          (chibi ast)
+          (chibi generic))
   (export check-impl?
           check-arg values-checked
           check-case
