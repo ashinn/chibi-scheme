@@ -52,9 +52,9 @@
      (cond
       (clause-check clause-body ...)
       ...
-      (else (assume (or clause-check ...)
-              "at least one branch of check-case should be true"
-              'clause-check ...))))
+      (else (assert (or clause-check ...)
+                    "at least one branch of check-case should be true"
+                    'clause-check ...))))
     ((_ val (clause ...) (pred body ...) rest ...)
      (%check-case
       val
