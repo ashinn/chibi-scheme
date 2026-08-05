@@ -1227,7 +1227,7 @@
      (cond
       ((not (package? x)) '())
       (else
-       (let ((pkg-score (count-in-sexp x keywords))
+       (let ((pkg-score (if (null? keywords) 100 (count-in-sexp x keywords)))
              (libs (package-libraries x)))
          (if (or (zero? pkg-score) (null? libs))
              '()
