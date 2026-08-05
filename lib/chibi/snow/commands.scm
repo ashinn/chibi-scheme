@@ -1900,6 +1900,8 @@
           (yes-or-no? cfg "Tests failed: " test-file
                       " (details in " dir "/test-{out,err}.txt)\n"
                       "Proceed anyway?")))
+     ((not test-file)
+      (info "Library has no tests."))
      (else
       #t))))
 
