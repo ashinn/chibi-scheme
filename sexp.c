@@ -2283,18 +2283,22 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
       if (sexp_procedure_variable_transformer_p(obj))
         sexp_write_string(ctx, "(variable-transformer) ", out);
       x = sexp_bytecode_name(sexp_procedure_code(obj));
-      sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out, bound+1);
+      if (x == SEXP_FALSE && sexp_procedure_source(obj)
+          && sexp_vectorp(sexp_procedure_source(obj))
+          && sexp_vector_length(sexp_procedure_source(obj)) > 0) {
+        x = sexp_vector_ref(sexp_procedure_source(obj), SEXP_ZERO);
+        sexp_write_string(ctx, "@", out);
+        sexp_write(ctx, sexp_cadr(x), out);
+        sexp_write_string(ctx, ":", out);
+        sexp_write(ctx, sexp_cddr(x), out);
+      } else {
+        sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out, bound+1);
+      }
       sexp_write_string(ctx, " ", out);
       sexp_write_one(ctx, sexp_make_fixnum(sexp_procedure_num_args(obj)), out, bound+1);
       if (sexp_procedure_variadic_p(obj)) {
         sexp_write_string(ctx, "+", out);
       }
-#if SEXP_USE_DEBUG_VM
-      if (sexp_procedure_source(obj)) {
-        sexp_write_string(ctx, " ", out);
-        sexp_write(ctx, sexp_procedure_source(obj), out);
-      }
-#endif
       sexp_write_string(ctx, ">", out);
       break;
     case SEXP_TYPE:
