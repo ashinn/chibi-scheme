@@ -46,7 +46,6 @@ sexp sexp_accept(sexp ctx, sexp self, SOCKET_TYPE sock, struct sockaddr* addr, s
   int fd = _open_osfhandle(res, _O_RDWR | _O_BINARY);
 #else
   int fd = res;
-  int i = errno;
 #endif 
   return sexp_make_fileno_sock(ctx, self, fd, res);
 }
@@ -110,7 +109,9 @@ sexp sexp_bind (sexp ctx, sexp self, SOCKET_TYPE fd, struct sockaddr* addr, sock
 
 sexp sexp_listen (sexp ctx, sexp self, SOCKET_TYPE fd, int backlog) {
   int res;
+#ifdef _WIN32
   unsigned long mode = 1; 
+#endif
   res = listen(fd, backlog);
 #if SEXP_USE_GREEN_THREADS
 #ifdef _WIN32
