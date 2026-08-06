@@ -1742,7 +1742,7 @@
         ((gambit)
          (if lib-path
            `(gsi ,(string->symbol
-                    (string-append "-:r7rs,search=" install-dir "," lib-path))
+                    (string-append "-:r7rs,search=" install-dir ",search=" lib-path))
                  ,file)
            `(gsi ,(string->symbol (string-append "-:r7rs,search=" install-dir))
                  ,file)))
@@ -1841,6 +1841,9 @@
                            => (lambda (f) (path-resolve f dir)))
                           (else #f)))
          (command (scheme-program-command impl cfg test-file dir)))
+    (when (conf-get cfg 'verbose?)
+      (info "Testing: " (package-name pkg))
+      (info "With command: " command))
     (cond
      ((and test-file command
            (not (or (conf-get cfg '(command install skip-tests?))
