@@ -2287,10 +2287,14 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
           && sexp_vectorp(sexp_procedure_source(obj))
           && sexp_vector_length(sexp_procedure_source(obj)) > 0) {
         x = sexp_vector_ref(sexp_procedure_source(obj), SEXP_ZERO);
-        sexp_write_string(ctx, "@", out);
-        sexp_write(ctx, sexp_cadr(x), out);
-        sexp_write_string(ctx, ":", out);
-        sexp_write(ctx, sexp_cddr(x), out);
+        if (sexp_pairp(x) && sexp_pairp(sexp_cdr(x))) {
+          sexp_write_string(ctx, "@", out);
+          sexp_write_one(ctx, sexp_cadr(x), out, bound+1);
+          sexp_write_string(ctx, ":", out);
+          sexp_write_one(ctx, sexp_cddr(x), out, bound+1);
+        } else {
+          sexp_write_string(ctx, "#f", out);
+        }
       } else {
         sexp_write_one(ctx, sexp_synclop(x) ? sexp_synclo_expr(x): x, out, bound+1);
       }
