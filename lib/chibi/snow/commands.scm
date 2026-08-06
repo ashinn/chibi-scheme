@@ -1843,7 +1843,7 @@
          (command (scheme-program-command impl cfg test-file dir)))
     (when (conf-get cfg 'verbose?)
       (info "Testing: " (package-name pkg))
-      (info "With command: " command))
+      (info "With command: " (string-join (map x->string command) " ")))
     (cond
      ((and test-file command
            (not (or (conf-get cfg '(command install skip-tests?))
