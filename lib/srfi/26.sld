@@ -6,7 +6,8 @@
    (define-syntax %cut
      (syntax-rules (<> <...>)
        ((%cut e? params args)
-        (lambda params args))
+        (let ((%cut% (lambda params args)))
+          %cut%))
        ((%cut e? (params ...) (args ...) <> . rest)
         (%cut e? (params ... tmp) (args ... tmp) . rest))
        ((%cut e? (params ...) (args ...) <...>)
