@@ -1348,6 +1348,7 @@ snow-fort):
 \item{\hyperlink["http://srfi.schemers.org/srfi-229/srfi-229.html"]{(srfi 229) - tagged procedures}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-231/srfi-231.html"]{(srfi 231) - intervals and generalized arrays}}
 \item{\hyperlink["http://srfi.schemers.org/srfi-253/srfi-253.html"]{(srfi 253) - data (type-)checking}}
+\item{\hyperlink["http://srfi.schemers.org/srfi-273/srfi-273.html"]{(srfi 273) - extensions to data (type-)checking}}
 
 ]
 
