@@ -22,10 +22,21 @@
 ;;; FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 ;;; OTHER DEALINGS IN THE SOFTWARE.
 
-(define-library (srfi 273)
-  (import (scheme base)
-          (srfi 253))
-  (export define-check
-          define-values-checked
-          declare-checked)
-  (include "273/impl.scm"))
+(define-syntax define-check
+  (syntax-rules ()
+    ((_ name predicate)
+     (define name predicate))))
+(define-syntax define-values-checked
+  (syntax-rules ()
+    ((_ (var ...) (check ...) form)
+     (define-values (var ...)
+       (let-values (((var ...) form))
+         (values-checked (check ...) var ...))))))
+(define-syntax declare-checked
+  (syntax-rules ()
+    ((_ name predicate)
+     (when #f #f))
+    ((_ (name . args))
+     (when #f #f))
+    ((_ (name . args) => return)
+     (when #f #f))))
