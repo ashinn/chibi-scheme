@@ -211,11 +211,19 @@
     ((_ (args-var first-body ...) rest-clauses ...)
      (%case-lambda-checked () (rest-clauses ...) args-var () (first-body ...)))))
 
+;; Compiling to a single-method define-generic because we get type checking for free
+;; And because these functions immediately become extensible via define-method
 (define-syntax define-checked
-  (syntax-rules ()
-    ;; Procedure
+  (syntax-rules (=>)
+    ;; Procedure with return
+    ((_ (name . args) => (returns ...) body ...)
+     (define-checked (name . args)
+       (values-checked (returns ...) (begin body ...))))
+    ;; Procedure without return
     ((_ (name . args) body ...)
-     (define name (%lambda-checked name (body ...) () () . args)))
+     (begin
+       (define-generic name)
+       (define-method (name . args) body ...)))
     ;; Variable
     ((_ name pred value)
      (define name (values-checked (pred) value)))))
