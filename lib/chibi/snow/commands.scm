@@ -653,6 +653,19 @@
       (write-bytevector tarball out)
       (close-output-port out))))
 
+(define (command/test-package cfg spec pkg-file)
+  (call-with-temp-dir
+    "pkg-test"
+    (lambda (dir preserve)
+      (let* ((pkg (package-file-meta pkg-file))
+             (snowball (maybe-gunzip (file->bytevector pkg-file)))
+             (test-cfg
+               (conf-extend cfg
+                            (list '(command (test-package (show-tests? . #t)))))))
+        (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
+        (test-package 'chibi test-cfg pkg dir)))))
+
+
 (define (command/install-dependencies cfg spec scm-file)
   (let ((dependencies (extract-program-dependencies scm-file)))
     (cond ((null? dependencies)
@@ -1892,11 +1905,12 @@
                (display error)
                #f)
               (else
-               (info "All tests passed.")
                (cond ((or (conf-get cfg '(command install show-tests?))
-                          (conf-get cfg '(command upgrade show-tests?)))
+                          (conf-get cfg '(command upgrade show-tests?))
+                          (conf-get cfg '(command test-package show-tests?)))
                       (display output)
                       (display error)))
+               (info "All tests passed.")
                #t)))
             (other
              (warn "Test error: " other)

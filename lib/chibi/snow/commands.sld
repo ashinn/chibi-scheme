@@ -1,6 +1,7 @@
 
 (define-library (chibi snow commands)
   (export command/package
+          command/test-package
           command/gen-key
           command/reg-key
           command/sign
