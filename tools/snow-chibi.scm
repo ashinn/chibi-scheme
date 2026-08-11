@@ -156,8 +156,10 @@
     (test-library sexp)
     (sig-file existing-filename)
     (output filename)
-    (output-dir dirname)
-    ))
+    (output-dir dirname)))
+(define test-package-spec
+  '((show-tests? boolean ("show-tests") "show test output even on success")
+    (pkg-file filename)))
 (define upload-spec
   `((uri string)
     ,@package-spec))
@@ -189,6 +191,9 @@
      (install-dependencies
       "install program dependencies"
       (@ ,@install-dependencies-spec) (,command/install-dependencies files ...))
+     (test-package
+      "test packaged library"
+      (@ ,@test-package-spec) (,command/test-package pkg-file ...))
      (upgrade
       "upgrade installed packages"
       (@ ,@upgrade-spec) (,command/upgrade names ...))
