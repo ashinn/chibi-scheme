@@ -32,15 +32,26 @@
   (er-macro-transformer
    (lambda (e r c)
      (let ((name (car (cadr e)))
-           (params (map (lambda (param)
-                          (if (identifier? param)
-                              `(,param (lambda _ #t))
-                              param))
-                        (cdr (cadr e))))
+           (params (let lp ((params (cdr (cadr e))))
+                     (cond
+                      ((not (pair? params)) '())
+                      ((identifier? (car params))
+                       (cons `(,(car params) (lambda _ #t))
+                             (lp (cdr params))))
+                      (else
+                       (cons (car params) (lp (cdr params)))))))
+           (variadic? (let lp ((params (cdr (cadr e))))
+                        (cond
+                         ((pair? params) (lp (cdr params)))
+                         ((null? params) #f)
+                         (else params))))
            (body (cddr e)))
        `(,(r 'generic-add!) ,name
          (,(r 'list) ,@(map cadr params))
-         (,(r 'lambda) (,(r 'next) ,@(map car params))
+         ',variadic?
+         (,(r 'lambda) ,@(if variadic?
+                             `((,(r 'next) ,@(map car params) . ,variadic?))
+                             `((,(r 'next) ,@(map car params))))
           (,(r 'let-syntax) ((call-next-method
                               (,(r 'syntax-rules) ()
                                ((_) (,(r 'next))))))
@@ -59,26 +70,58 @@
 
 ;;> Create a new first-class generic function named \var{name}.
 
+(define (sublist lst capped-length)
+  (cond
+   ((null? lst)
+    '())
+   ((zero? capped-length)
+    '())
+   (else
+    (cons (car lst)
+          (sublist (cdr lst) (- capped-length 1))))))
+
 (define (make-generic name)
   (let ((name name)
-        (methods (make-vector 6 '())))
+        (methods (make-vector 6 '()))
+        (variadic-methods (make-vector 6 '())))
     (vector-set! methods
-                 3
+                 4
                  (list (cons (list (lambda (x) (eq? x add-method-tag))
                                    (lambda (x) (list? x))
+                                   (lambda (x) (or (boolean? x)
+                                                   (symbol? x)))
                                    procedure?)
-                             (lambda (next t p f)
-                               (set! methods (insert-method! methods p f))))))
+                             (lambda (next t preds rest? func)
+                               (if rest?
+                                   (set! variadic-methods (insert-method! variadic-methods preds func))
+                                   (set! methods (insert-method! methods preds func)))))))
     (lambda args
-      (let ((len (length args)))
+      (letrec* ((len (length args))
+                (search-variadic
+                 (lambda (idx)
+                   (cond
+                    ((> idx len)
+                     (no-applicable-method-error name args))
+                    (else
+                     (let search-matching ((checks+fns (vector-ref variadic-methods idx)))
+                       (cond
+                        ((null? checks+fns)
+                         (search-variadic (+ 1 idx)))
+                        ((satisfied? (caar checks+fns)
+                                     (sublist args idx))
+                         (apply (cdar checks+fns)
+                                (lambda () (search-matching (cdr checks+fns)))
+                                args))
+                        (else
+                         (search-matching (cdr checks+fns))))))))))
         (cond
          ((>= len (vector-length methods))
-          (no-applicable-method-error name args))
+          (search-variadic 0))
          (else
           (let lp ((ls (vector-ref methods len)))
             (cond
              ((null? ls)
-              (no-applicable-method-error name args))
+              (search-variadic 0))
              ((satisfied? (car (car ls)) args)
               (apply (cdr (car ls)) (lambda () (lp (cdr ls))) args))
              (else
@@ -100,5 +143,5 @@
 ;;> that applies when all parameters match the given list
 ;;> of predicates \var{preds}.
 
-(define (generic-add! g preds f)
-  (g add-method-tag preds f))
+(define (generic-add! g preds variadic? func)
+  (g add-method-tag preds variadic? func))

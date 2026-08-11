@@ -24,8 +24,7 @@
       (define-checked (d (a integer?)) #t)
       (define-checked (e b) #t)
       (define-checked (f (b string?)) #t)
-      ;; TODO: Uncomment when generics support rest args
-      ;; (define-checked (g b . d) #t)
+      (define-checked (g b . d) #t)
       (define-checked h string? "hello")
       (define-record-type-checked <test>
         (make-test a b)
@@ -176,10 +175,9 @@
         (test-error (e 1 2 3))
         (test-assert (f "hello"))
         (test-error (f 3))
-        ;; TODO: Uncomment when generics support rest args
-        ;; (test-assert (g 1))
-        ;; (test-assert (g 1 2))
-        ;; (test-assert (g 1 2 3))
+        (test-assert (g 1))
+        (test-assert (g 1 2))
+        (test-assert (g 1 2 3))
         (test-assert h)
         (set! h "whatever")
         (test-assert h))
