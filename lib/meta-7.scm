@@ -117,9 +117,12 @@
                 (case (car x)
                   ((only)
                    (map (lambda (imp)
-                          (if (or (boolean? imp-ids) (memq imp imp-ids))
-                              imp
-                              (error "importing unknown binding" imp imp-ids)))
+                          (cond
+                           ((or (boolean? imp-ids) (memq imp imp-ids))
+                            imp)
+                           ((assq imp imp-ids))
+                           (else
+                            (error "importing unknown binding" imp imp-ids))))
                         (cddr x)))
                   ((except)
                    (id-filter (lambda (i) (not (memq i (cddr x)))) imp-ids))
