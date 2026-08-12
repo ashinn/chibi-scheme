@@ -70,15 +70,15 @@
 
 ;;> Create a new first-class generic function named \var{name}.
 
-(define (sublist lst capped-length)
+(define (take n lst)
   (cond
-   ((null? lst)
+   ((not (pair? lst))
     '())
-   ((zero? capped-length)
+   ((zero? n)
     '())
    (else
     (cons (car lst)
-          (sublist (cdr lst) (- capped-length 1))))))
+          (take (- n 1) (cdr lst))))))
 
 (define (make-generic name)
   (let ((name name)
@@ -87,7 +87,7 @@
     (vector-set! methods
                  4
                  (list (cons (list (lambda (x) (eq? x add-method-tag))
-                                   (lambda (x) (list? x))
+                                   list?
                                    (lambda (x) (or (boolean? x)
                                                    (symbol? x)))
                                    procedure?)
@@ -108,7 +108,7 @@
                         ((null? checks+fns)
                          (search-variadic (+ 1 idx)))
                         ((satisfied? (caar checks+fns)
-                                     (sublist args idx))
+                                     (take idx args))
                          (apply (cdar checks+fns)
                                 (lambda () (search-matching (cdr checks+fns)))
                                 args))
@@ -139,9 +139,10 @@
       (vector-set! res plen (cons (cons preds f) (vector-ref res plen)))
       res)))
 
-;;> Extend the generic \var{g} with a new method \var{f}
+;;> Extend the generic \var{g} with a new method \var{func}
 ;;> that applies when all parameters match the given list
-;;> of predicates \var{preds}.
+;;> of predicates \var{preds}, or if `variadic?` is true a prefix
+;;> of the parameters matches \var{preds}.
 
 (define (generic-add! g preds variadic? func)
   (g add-method-tag preds variadic? func))
