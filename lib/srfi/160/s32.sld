@@ -7,6 +7,8 @@
    s32vector-ref
    s32vector-set!
    s32vector-length
+   list->s32vector
+   s32vector->list
    (rename uvector-unfold s32vector-unfold)
    (rename uvector-unfold-right s32vector-unfold-right)
    (rename vector-copy s32vector-copy)

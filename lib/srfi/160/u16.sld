@@ -7,6 +7,8 @@
    u16vector-ref
    u16vector-set!
    u16vector-length
+   list->u16vector
+   u16vector->list
    (rename uvector-unfold u16vector-unfold)
    (rename uvector-unfold-right u16vector-unfold-right)
    (rename vector-copy u16vector-copy)

@@ -7,6 +7,8 @@
    c64vector-ref
    c64vector-set!
    c64vector-length
+   list->c64vector
+   c64vector->list
    (rename uvector-unfold c64vector-unfold)
    (rename uvector-unfold-right c64vector-unfold-right)
    (rename vector-copy c64vector-copy)

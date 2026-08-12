@@ -7,6 +7,8 @@
    u8vector-ref
    u8vector-set!
    u8vector-length
+   list->u8vector
+   u8vector->list
    (rename uvector-unfold u8vector-unfold)
    (rename uvector-unfold-right u8vector-unfold-right)
    (rename vector-copy u8vector-copy)

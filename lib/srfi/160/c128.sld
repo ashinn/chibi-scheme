@@ -7,6 +7,8 @@
    c128vector-ref
    c128vector-set!
    c128vector-length
+   list->c128vector
+   c128vector->list
    (rename uvector-unfold c128vector-unfold)
    (rename uvector-unfold-right c128vector-unfold-right)
    (rename vector-copy c128vector-copy)

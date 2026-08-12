@@ -10,6 +10,8 @@
    f16vector-ref
    f16vector-set!
    f16vector-length
+   list->f16vector
+   f16vector->list
    (rename uvector-unfold f16vector-unfold)
    (rename uvector-unfold-right f16vector-unfold-right)
    (rename vector-copy f16vector-copy)
