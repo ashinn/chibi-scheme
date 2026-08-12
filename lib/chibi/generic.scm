@@ -46,16 +46,17 @@
                           ((null? params) #f)
                           (else params))))
            (body (cddr e)))
-       `(,(r 'generic-add!) ,name
-         (,(r 'list) ,@(map cadr params))
-         ',rest-param
-         (,(r 'lambda) ,@(if rest-param
-                             `((,(r 'next) ,@(map car params) . ,rest-param))
-                             `((,(r 'next) ,@(map car params))))
-          (,(r 'let-syntax) ((call-next-method
-                              (,(r 'syntax-rules) ()
-                               ((_) (,(r 'next))))))
-           ,@body)))))))
+       `(define ,(r 'tmp)
+          (,(r 'generic-add!) ,name
+           (,(r 'list) ,@(map cadr params))
+           ',rest-param
+           (,(r 'lambda) ,@(if rest-param
+                               `((,(r 'next) ,@(map car params) . ,rest-param))
+                               `((,(r 'next) ,@(map car params))))
+            (,(r 'let-syntax) ((call-next-method
+                                (,(r 'syntax-rules) ()
+                                 ((_) (,(r 'next))))))
+             ,@body))))))))
 
 (define (no-applicable-method-error name args)
   (error "no applicable method" name args))

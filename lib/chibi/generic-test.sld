@@ -45,12 +45,13 @@
         ;; Variadic behavior unimplemented yet
         (test-error (var 1 2 3))
         (test-error (var))
-        (define-method (var . rest)
-          'variadic)
-        (test 'variadic (var))
-        (test 'variadic (var 1))
-        (test 'variadic (var 1 2 3 4))
-        ;; Required arg methods prevail
-        (test '(3 7) (var 3 7)))
+        (let ()
+          (define-method (var . rest)
+            'variadic)
+          (test 'variadic (var))
+          (test 'variadic (var 1))
+          (test 'variadic (var 1 2 3 4))
+          ;; Required arg methods prevail
+          (test '(3 7) (var 3 7))))
 
       (test-end))))
