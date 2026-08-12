@@ -40,17 +40,17 @@
                              (lp (cdr params))))
                       (else
                        (cons (car params) (lp (cdr params)))))))
-           (variadic? (let lp ((params (cdr (cadr e))))
-                        (cond
-                         ((pair? params) (lp (cdr params)))
-                         ((null? params) #f)
-                         (else params))))
+           (rest-param (let lp ((params (cdr (cadr e))))
+                         (cond
+                          ((pair? params) (lp (cdr params)))
+                          ((null? params) #f)
+                          (else params))))
            (body (cddr e)))
        `(,(r 'generic-add!) ,name
          (,(r 'list) ,@(map cadr params))
-         ',variadic?
-         (,(r 'lambda) ,@(if variadic?
-                             `((,(r 'next) ,@(map car params) . ,variadic?))
+         ',rest-param
+         (,(r 'lambda) ,@(if rest-param
+                             `((,(r 'next) ,@(map car params) . ,rest-param))
                              `((,(r 'next) ,@(map car params))))
           (,(r 'let-syntax) ((call-next-method
                               (,(r 'syntax-rules) ()
