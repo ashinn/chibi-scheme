@@ -654,21 +654,20 @@
       (close-output-port out))))
 
 (define (command/test-package cfg spec pkg-file)
-  (let ((impls (conf-get cfg 'implementations 'chibi)))
-    (for-each
-      (lambda (impl)
-        (call-with-temp-dir
-          "pkg-test"
-          (lambda (dir preserve)
-            (let* ((pkg (package-file-meta pkg-file))
-                   (snowball (maybe-gunzip (file->bytevector pkg-file)))
-                   (test-cfg
-                     (conf-extend cfg
-                                  (list '(command (test-package (show-tests? . #t)))
-                                        '(always-yes? . #t)))))
-              (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
-              (test-package impl test-cfg pkg dir)))))
-      (if (list? impls) impls (list impls)))))
+  (for-each
+    (lambda (impl)
+      (call-with-temp-dir
+        "pkg-test"
+        (lambda (dir preserve)
+          (let* ((pkg (package-file-meta pkg-file))
+                 (snowball (maybe-gunzip (file->bytevector pkg-file)))
+                 (test-cfg
+                   (conf-extend cfg
+                                (list '(command (test-package (show-tests? . #t)))
+                                      '(always-yes? . #t)))))
+            (tar-extract snowball (lambda (f) (make-path dir (path-strip-top f))))
+            (test-package impl test-cfg pkg dir)))))
+    (conf-get-list cfg 'implementations '(chibi))))
 
 
 (define (command/install-dependencies cfg spec scm-file)
