@@ -100,7 +100,8 @@
                 (search-variadic
                  (lambda (idx)
                    (cond
-                    ((> idx len)
+                    ((or (> idx len)
+                         (>= idx (vector-length variadic-methods)))
                      (no-applicable-method-error name args))
                     (else
                      (let search-matching ((checks+fns (vector-ref variadic-methods idx)))
