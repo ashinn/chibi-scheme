@@ -33,5 +33,24 @@
         (test 21.0 (mul 3.0 7))
         (test 21.0 (mul 3 7.0))
         (test 21.1 (mul 3.0 7.0)))
+      ;; Variadic methods
+      (let ()
+        (define-generic var)
+        (define-method (var (x number?) (y number?))
+          (list x y))
+        (test '(3 7) (var 3 7))
+        ;; Predicate mismatch
+        (test-error (var "hello" 1))
+        (test-error (var 1 "hello"))
+        ;; Variadic behavior unimplemented yet
+        (test-error (var 1 2 3))
+        (test-error (var))
+        (define-method (var . rest)
+          'variadic)
+        (test 'variadic (var))
+        (test 'variadic (var 1))
+        (test 'variadic (var 1 2 3 4))
+        ;; Required arg methods prevail
+        (test '(3 7) (var 3 7)))
 
       (test-end))))
