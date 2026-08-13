@@ -1,8 +1,7 @@
 
 (define-library (srfi 16)
   (export case-lambda)
-  (import (chibi)
-          (srfi 1))
+  (import (chibi))
   (begin
     (define-syntax %case
       (syntax-rules ()
@@ -33,12 +32,12 @@
         ;; Generate the actual lambda with the right minimum arity
         ((%collect-args (shortest ...) (clauses ...))
          (lambda (shortest ... . rest)
-           (let ((len (length* (cons* shortest ... rest))))
+           (let ((len (length `((unquote shortest) ... . (unquote rest)))))
              (%case (shortest ... . rest) len 0 () clauses ...))))
         ;; Generate a lambda with a single rest argument
         ((%collect-args rest-arg (clauses ...))
          (lambda rest-arg
-           (let ((len (length* rest-arg)))
+           (let ((len (length rest-arg)))
              (%case rest-arg len 0 () clauses ...))))
         ;; Regular args: find the shorter of saved and new args
         ((%collect-args (shortest ...) (cases ...) ((args ...) body ...) clauses ...)
