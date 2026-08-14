@@ -238,12 +238,15 @@
       (@ ,@implementations-spec) (,command/implementations))
      (help
       "print help"
-      (,app-help-command args ...))
-     )))
+      (,app-help-command args ...)))))
 
 (run-application
   app-spec
-  (command-line)
+  (if (and (> (length (command-line)) 1)
+           (or (string=? "-h" (list-ref (command-line) 1))
+               (string=? "--help" (list-ref (command-line) 1))))
+    '("snow-chibi" "help")
+    (command-line))
   (let ((conf-file (conf-default-path "snow")))
     (cond ((file-exists? conf-file)
            (conf-load conf-file))
