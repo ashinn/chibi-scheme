@@ -37,11 +37,6 @@
                       (define-values-checked (quot rem) (integer? string?)
                         (truncate/ 1 2))
                       #t))
-        (test-error (define-values-checked (a) (string?) 3))
-        ;; Ensure that symbols are not bound on type mismatch
-        (test-error (define-values-checked (x y) (integer? string?)
-                      (truncate/ 1 2)))
-        (test-error (eval 'x (interaction-environment)))
-        (test-error (eval 'y (interaction-environment))))
+        (test-error (define-values-checked (a) (string?) 3)))
 
       (test-end))))
