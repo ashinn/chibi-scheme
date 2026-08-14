@@ -1967,7 +1967,7 @@
 
 ;; chibi is not included because chibi is already installed with full
 ;; package information for each builtin library
-(define (native-srfi-support impl cfg)
+(define-memoized (native-srfi-support impl cfg)
   (letrec*
     ((max-srfis 500)
      (srfi-conds '())

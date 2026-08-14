@@ -47,6 +47,7 @@
           (chibi filesystem)
           (chibi io)
           (chibi match)
+          (chibi memoize)
           (chibi modules)
           (chibi net http)
           (chibi process)
