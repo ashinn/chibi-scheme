@@ -1506,18 +1506,18 @@
 ;; If multiple implementations are targeted, we install separately but
 ;; use the same confirmations for each.
 
-(define (get-chicken-binary-version cfg)
+(define-memoized (get-chicken-binary-version cfg)
   (or (conf-get cfg 'chicken-binary-version)
       (string->number (process->string '(csi -p "(##sys#fudge 42)")))
       8))
 
-(define (get-chicken-version cfg)
+(define-memoized (get-chicken-version cfg)
   (or (conf-get cfg 'chicken-version)
       (string->number
         (process->string
           '(csi -e "(display (cond-expand (chicken-5 5) (chicken-6 6)))")))))
 
-(define (get-chicken-repo-path)
+(define-memoized (get-chicken-repo-path)
   (let ((release (string-trim (process->string '(csi -release))
                               char-whitespace?)))
     (string-trim
@@ -1527,7 +1527,7 @@
           '(csi -R chicken.platform -p "(car (repository-path))")))
      char-whitespace?)))
 
-(define (get-install-dirs impl cfg)
+(define-memoized (get-install-dirs impl cfg)
   (case impl
     ((capyscheme)
      (list
@@ -1687,7 +1687,7 @@
                       "share/snow"
                       impl)))))
 
-(define (get-install-library-dirs impl cfg)
+(define-memoized (get-install-library-dirs impl cfg)
   (case impl
     ((chibi)
      (let* ((dirs
@@ -2049,7 +2049,7 @@
 ;; <impl> libraries will be tied to the installed implementation
 ;; version, although in all cases the actual installed library may
 ;; have its own version due to improvements and bugfixes.
-(define (implementation-supports-natively? impl cfg lib-name)
+(define-memoized (implementation-supports-natively? impl cfg lib-name)
   (and (pair? lib-name)
        (or
         (and (eq? 'scheme (car lib-name))
@@ -3143,7 +3143,7 @@
             (warn "no candidate selected")
             (lp (cdr ls) res ignored)))))))))
 
-(define (library-in-repository? repo lib-name)
+(define-memoized (library-in-repository? repo lib-name)
   (call-with-current-continuation
     (lambda (return)
       (for-each (lambda (pkg)
