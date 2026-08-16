@@ -1581,12 +1581,7 @@
      (let ((path
              (guard (exn (else #f))
                (process->sexp
-                 `(guile -c ,(write-to-string
-                               `(write
-                                  (string-append
-                                    (cdr (assq 'pkgdatadir %guile-build-info))
-                                    (string (integer->char 47))
-                                    (effective-version)))))))))
+                 `(guile -c ,(write-to-string `(write (%site-ccache-dir))))))))
        (list
          (make-path
            (or (conf-get cfg 'install-prefix) "")
@@ -1769,8 +1764,8 @@
              `(gosh -A ,install-dir ,file)))
         ((guile)
          (if lib-path
-             `(guile --r7rs -L ,install-dir -L ,lib-path ,file)
-             `(guile --r7rs -L ,install-dir ,file)))
+             `(guile --r7rs -C ,lib-path ,file)
+             `(guile --r7rs ,file)))
         ((kawa)
          (let ((install-dir (path-resolve install-dir (current-directory))))
            (if lib-path
@@ -2353,33 +2348,21 @@
       (set! installed-files (cons o-path installed-files)))
     installed-files))
 
-(define (guile-srfi-fix dest-file)
-  ;; If library is (srfi N) it needs to be (srfi srfi-N) on Guile
-  (if (string-prefix? "srfi/" dest-file)
-    (string-append (string-copy dest-file 0 5)
-                   "srfi-"
-                   (string-copy dest-file 5))
-    dest-file))
-
 (define (guile-installer impl cfg library dir)
-  (let* ((source-scm-file (get-library-file cfg library))
+  (let* ((source-sld-file (get-library-file cfg library))
          (source-go-file (string-append
                           (library->path cfg library) ".go"))
-         (dest-scm-file
-           (guile-srfi-fix
-             (string-append (library->path cfg library) ".scm")))
-         (dest-go-file
-           (guile-srfi-fix
-             (string-append (library->path cfg library) ".go")))
+         (dest-sld-file (string-append (library->path cfg library) ".sld"))
+         (dest-go-file (string-append (library->path cfg library) ".go"))
          (include-files
-          (library-include-files impl cfg (make-path dir source-scm-file)))
+          (library-include-files impl cfg (make-path dir source-sld-file)))
          (install-dir (get-install-source-dir impl cfg))
          (install-lib-dir (get-install-library-dir impl cfg)))
-    (let ((scm-path (make-path install-dir dest-scm-file))
+    (let ((scm-path (make-path install-dir dest-sld-file))
           (go-path (make-path install-lib-dir dest-go-file)))
       (install-directory cfg (path-directory scm-path))
       (install-directory cfg (path-directory go-path))
-      (install-file cfg (make-path dir source-scm-file) scm-path)
+      (install-file cfg (make-path dir source-sld-file) scm-path)
       (install-file cfg (make-path dir source-go-file) go-path)
       ;; install any includes
       (cons
@@ -2402,7 +2385,7 @@
              (install-file cfg so-file dest-file)
              dest-file))
          (library-shared-include-files
-          impl cfg (make-path dir source-scm-file))))))))
+          impl cfg (make-path dir source-sld-file))))))))
 
 (define (kawa-installer impl cfg library dir)
   (let* ((class-file (path-replace-extension
