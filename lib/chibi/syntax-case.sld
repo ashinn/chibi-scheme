@@ -14,6 +14,7 @@
                 procedure-arity procedure-variadic?
                 procedure-variable-transformer?
                 make-variable-transformer)
+          (rnrs conditions)
           (only (meta) environment)
           (srfi 1)
           (srfi 2)
