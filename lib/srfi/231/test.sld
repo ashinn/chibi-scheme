@@ -3359,6 +3359,70 @@
               (make-array (make-interval '#(0)) list))))
         )
 
+      ;; https://github.com/ashinn/chibi-scheme/issues/1105
+      ;; SRFI 231 requires a source array's getter be applied at most once
+      ;; per multi-index (matters for one-shot getters such as reading the
+      ;; elements of an image sequentially from a file).  array-decurry and
+      ;; array-block used to read the corner element more than once.  This
+      ;; mirrors the tracker test from the reporter, @gambiteer (Bradley
+      ;; Lucier, the SRFI 231 author): wrap a source array so a second read
+      ;; of any multi-index trips a flag, then assert the flag stays clear.
+      (test-group "getter applied at most once (issue #1105)"
+        (let ()
+          ;; Wrap arr over the same domain; set (vector-ref flag 0) to #t
+          ;; if any multi-index is read more than once.
+          (define (track arr flag)
+            (let* ((domain (array-domain arr))
+                   (seen (make-specialized-array domain u1-storage-class 0))
+                   (seen_ (array-getter seen))
+                   (seen! (array-setter seen))
+                   (get (array-getter arr)))
+              (make-array
+               domain
+               (lambda multi-index
+                 (if (not (eqv? (apply seen_ multi-index) 0))
+                     (vector-set! flag 0 #t))
+                 (apply seen! 1 multi-index)
+                 (apply get multi-index)))))
+          ;; array-assign! and array-append already satisfy the requirement.
+          (test-assert "array-assign! reads each source element at most once"
+            (let* ((flag (vector #f))
+                   (dest (array-copy (make-array (make-interval '#(2 2)) list)
+                                     generic-storage-class #t))
+                   (src (track (make-array (make-interval '#(2 2)) list) flag)))
+              (array-assign! dest src)
+              (not (vector-ref flag 0))))
+          (test-assert "array-append reads each source element at most once"
+            (let* ((flag (vector #f))
+                   (a (track (make-array (make-interval '#(2 2)) list) flag))
+                   (b (track (make-array (make-interval '#(2 2)) list) flag)))
+              (array-append 0 (list a b))
+              (not (vector-ref flag 0))))
+          ;; Regression cases: these used to read the corner element twice.
+          (test-assert "array-decurry reads each source element at most once"
+            (let* ((flag (vector #f))
+                   (a (make-array (make-interval '#(2 2)) list))
+                   (b (make-array (make-interval '#(2 2)) list))
+                   (outer (track (make-array (make-interval '#(2))
+                                             (lambda (i) (list-ref (list a b) i)))
+                                 flag)))
+              (array-decurry outer)
+              (not (vector-ref flag 0))))
+          (test-assert "array-block reads each source element at most once"
+            (let* ((flag (vector #f))
+                   (a (make-array (make-interval '#(2 2)) list))
+                   (b (make-array (make-interval '#(2 2)) list))
+                   (b* (make-array (make-interval '#(2 2)) list))
+                   (outer (track (make-array (make-interval '#(2 2))
+                                             (lambda (i j)
+                                               (list-ref (list-ref (list (list a b)
+                                                                         (list a b*))
+                                                                   i)
+                                                         j)))
+                                 flag)))
+              (array-block outer)
+              (not (vector-ref flag 0))))))
+
       (test-group "assign/product"
         (do ((i 0 (fx+ i 1)))
             ((fx=? i tests))
