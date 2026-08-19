@@ -792,7 +792,12 @@
                    (car (cddr o))
                    (specialized-array-default-safe?))))
     (assert (and (array? a) (not (interval-empty? (array-domain a)))))
-    (let* ((a-domain (array-domain a))
+    ;; Materialize a once so each source getter is applied at most once
+    ;; per multi-index, as SRFI 231 requires (matters for one-shot
+    ;; getters such as sequential file reads).  Every later read below
+    ;; hits the copy.  a holds tile references, so the copy is cheap.
+    (let* ((a (array-copy a generic-storage-class))
+           (a-domain (array-domain a))
            (get (array-getter a))
            (index0 (interval-lower-bounds->list a-domain)))
       (assert (array? (apply get index0)))
@@ -851,6 +856,12 @@
          (safe? (if (and (pair? o) (pair? (cdr o)) (pair? (cddr o)))
                     (car (cddr o))
                     (specialized-array-default-safe?)))
+         ;; Materialize a once so each source getter is applied at most
+         ;; once per multi-index, as SRFI 231 requires (matters for
+         ;; one-shot getters such as sequential file reads).  Reading elt0
+         ;; and the array-assign! loop below both hit the copy.  a holds
+         ;; sub-array references, so the copy is cheap.
+         (a (array-copy a generic-storage-class))
          (a-domain (array-domain a))
          (elt0 (apply array-ref a (interval-lower-bounds->list a-domain)))
          (elt-domain (array-domain elt0))
