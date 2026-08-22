@@ -1205,15 +1205,35 @@
              (sort lib-names+pkgs string>=? package-version)
              (lambda (a b) (equal? (package-id repo (cdr a) #f)
                                    (package-id repo (cdr b) #f)))))
+         (get-longest-length
+           (lambda (items)
+             (let ((longest 0))
+               (for-each
+                 (lambda (item)
+                   (let* ((item-string (x->string item))
+                          (item-length (string-length item-string)))
+                     (when (> item-length longest)
+                       (set! longest item-length))))
+                 items)
+               longest)))
          (packages (map cdr sorted-lib-names+pkgs))
          (names (map x->string (map package-name packages)))
+         (max-name-length (get-longest-length (cons "Name" names)))
          (versions (map x->string (map package-version packages)))
+         (max-version-length (get-longest-length (cons "Version" versions)))
          (get-publisher (lambda (x) (package-publisher repository x)))
-         (publishers (map x->string (map get-publisher packages))))
-    (show #t
-          (columnar (joined displayed (cons "Name" names) "\n")
-                    (joined displayed (cons "Version" versions) "\n")
-                    (joined displayed (cons "Publisher" publishers) "\n")))))
+         (publishers (map x->string (map get-publisher packages)))
+         (max-publisher-length (get-longest-length (cons "Publisher" publishers)))
+         (get-description (lambda (pkg)
+                            (cadr (or (assq 'description pkg) '("" "")))))
+         (descriptions (map x->string (map get-description packages))))
+    (show
+      #t
+      (columnar
+        max-name-length "| " (joined displayed (cons "Name" names) "\n")
+        max-version-length " | " (joined displayed (cons "Version" versions) "\n")
+        max-publisher-length " | " (joined displayed (cons "Publisher" publishers) "\n")
+        " | " (joined displayed (cons "Description" descriptions) "\n")))))
 
 (define (string-count-word str word)
   (let lp ((sc (string-cursor-start str)) (count 0))
