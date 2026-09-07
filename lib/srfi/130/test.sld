@@ -34,6 +34,20 @@
       (test "string-any" #f (string-any char-set:lower-case ""))
       (test "string-any" (char->integer #\a)
         (string-any (lambda (x) (char->integer x)) "aAbA"))
+      ;; optional start/end, as indexes and as cursors
+      (test "string-any start" #f (string-any #\a "abc" 1))
+      (test "string-any start/end" #t (string-any #\b "abc" 1 2))
+      (test "string-any start/end excludes prefix" #f (string-any #\a "abc" 1 3))
+      (test "string-any start/end excludes suffix" #f (string-any #\c "abc" 0 2))
+      (test "string-any start/end cursors" #f
+        (let ((s "2020-01-02")) (string-any #\- s (sc s 5) (sc s 7))))
+      (test "string-every start/end" #t
+        (string-every char-numeric? "2020-01-02" 5 7))
+      (test "string-every start" #f (string-every char-numeric? "2020-01-02" 5))
+      (test "string-every empty range" #t
+        (string-every char-numeric? "2020-01-02" 5 5))
+      (test "string-every start/end cursors" #t
+        (let ((s "2020-01-02")) (string-every char-numeric? s (sc s 5) (sc s 7))))
 
       (test "string-tabulate" "0123456789"
         (string-tabulate (lambda (code)

@@ -34,6 +34,8 @@
 
       (test 3 (string-any digit-value "a3c"))
       (test #f (string-any digit-value "abc"))
+      (test #f (string-any digit-value "a3c" 2))
+      (test 3 (string-any digit-value "a3c" 1 2))
 
       (test 0 (string-find/index "abc" char-alphabetic?))
       (test 3 (string-find/index "abc0" char-numeric?))
