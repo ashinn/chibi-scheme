@@ -751,7 +751,8 @@
       (when (not (string-suffix? ".tgz" pkg-file))
         (error "All packages must be .tgz files. Use snow-chibi package command")))
     pkg-files)
-    (when (> (string-count (process->string "git status -s") #\newline) 0)
+    (when (and (not (conf-get cfg '(command git-index tag)))
+               (> (string-count (process->string "git status -s") #\newline) 0))
       (warn (string-append
               "\"git status -s\" reports changes, are you sure files you are"
               " indexing are commited into hash: "
@@ -774,17 +775,25 @@
                         (else (error "Could not fix repository url" url)))))))
          (pkgs (filter-map
                  (lambda (pkg-file)
-                   (let* ((pkg (guard (exn (else #f))
-                                 (package-file-meta pkg-file)))
-                          (hash (process->pair-or-null 'hash "git rev-parse HEAD"))
-                          (tag (process->pair-or-null 'tag "git describe --exact-match --tags --abbrev=0"))
+                   (let* ((pkg (guard (exn (else #f)) (package-file-meta pkg-file)))
+                          (cfg-tag (conf-get cfg '(command git-index tag)))
+                          (hash (if cfg-tag
+                                  '()
+                                  (process->pair-or-null 'hash "git rev-parse HEAD")))
+                          (current-git-tag (process->pair-or-null
+                                        'tag
+                                        "git describe --exact-match --tags --abbrev=0"))
+                          (tag (if cfg-tag `(tag ,cfg-tag) current-git-tag))
                           (url (process->pair-or-null 'url "git config --get remote.origin.url"))
                           (updated (tai->rfc-3339 (current-second))))
                      (cond ((not pkg)
                             (error "Could not get package metadata" pkg-file))
-                           ((or (null? url) (null? hash))
+                           ((or (null? url)
+                                (and (not cfg-tag)
+                                     (null? hash)))
                             (error "Directory is not a git repository"))
-                           ((string=? (cadr hash) "HEAD")
+                           ((and (not (null? hash))
+                                 (string=? (cadr hash) "HEAD"))
                             (error "Can not index in empty git repository"
                                    hash)))
                      (and pkg

@@ -166,7 +166,8 @@
 (define index-spec
   '())
 (define git-index-spec
-  '((use-ssh-url? boolean)))
+  '((use-ssh-url? boolean)
+    (tag string () "use this tag instead of current tag and/or hash")))
 (define update-spec
   '())
 (define implementations-spec
