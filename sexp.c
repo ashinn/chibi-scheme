@@ -2398,7 +2398,8 @@ sexp sexp_write_one (sexp ctx, sexp obj, sexp out, sexp_sint_t bound) {
     case SEXP_COMPLEX:
       sexp_write(ctx, sexp_complex_real(obj), out);
       if (!sexp_pedantic_negativep(sexp_complex_imag(obj))
-          && !sexp_infp(sexp_complex_imag(obj)))
+          && !sexp_infp(sexp_complex_imag(obj))
+          && !sexp_nanp(sexp_complex_imag(obj)))
         sexp_write_char(ctx, '+', out);
       if (sexp_complex_imag(obj) == SEXP_NEG_ONE)
         sexp_write_char(ctx, '-', out);
@@ -2756,7 +2757,15 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
   sexp_gc_var1(res);
   sexp_gc_preserve1(ctx, res);
   res = SEXP_VOID;
-  if (c=='i' || c=='I') {       /* trailing i, no sign */
+  if (c == 'n' || c == 'N') {
+  trailing_n:
+    res = sexp_read_symbol(ctx, in, c, 1);
+    if (res == sexp_intern(ctx, "nan.0i", -1))
+      res = sexp_make_complex(ctx, default_real, sexp_make_flonum(ctx, sexp_nan));
+    else {
+      res = sexp_read_error(ctx, "invalid complex numeric syntax", sexp_make_character(c), in);
+    }
+  } else if (c=='i' || c=='I') {       /* trailing i, no sign */
   trailing_i:
     c = sexp_read_char(ctx, in);
     if (c=='n' || c=='N') {
@@ -2778,6 +2787,10 @@ sexp sexp_read_complex_tail (sexp ctx, sexp in, sexp real) {
       default_real = real;
       real = (c=='-') ? SEXP_NEG_ONE : SEXP_ONE;
       goto trailing_i;
+    } else if (c2 == 'n' || c2 == 'N') {
+      c = c2;
+      default_real = real;
+      goto trailing_n;
     } else {
       sexp_push_char(ctx, c2, in);
       /* read imaginary part */
@@ -2881,7 +2894,7 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
 #endif
   if (!is_precision_indicator(c)) {
 #if SEXP_USE_COMPLEX
-    if (c=='i' || c=='I' || c=='+' || c=='-') {
+    if (c=='i' || c=='I' || c=='+' || c=='-' || c == 'n' || c == 'N') {
       sexp_push_char(ctx, c, in);
       res = sexp_read_complex_tail(ctx, in, res);
 #if SEXP_USE_MATH
@@ -3404,9 +3417,19 @@ sexp sexp_list_to_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp etype, sex
 
 sexp sexp_read_one (sexp ctx, sexp in, sexp *shares);
 
+static char classify_infnan(char *str) {
+  if (strncasecmp(str+1, "inf.0", 5) == 0)
+    return 'c';
+  else if (strncasecmp(str+1, "nan.0", 5) == 0)
+    return 'n';
+  else
+    return '0';
+}
+
 sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
   char *str;
   int c1, c2, line;
+  char class;
   sexp tmp2;
   sexp_gc_var2(res, tmp);
   sexp_gc_preserve2(ctx, res, tmp);
@@ -3930,8 +3953,12 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
         else if (strcasecmp(str+1, "nan.0") == 0)
           res = sexp_make_flonum(ctx, sexp_nan);
 #if SEXP_USE_COMPLEX
-        else if (strncasecmp(str+1, "inf.0", 5) == 0) {
-          tmp = sexp_make_flonum(ctx, c1 == '+' ? sexp_pos_infinity : sexp_neg_infinity);
+        else if ((class = classify_infnan(str)) != '0') {
+          tmp = sexp_make_flonum(ctx,
+                                 class == 'n' ? sexp_nan
+                                              : c1 == '+' ? sexp_pos_infinity
+                                                          : sexp_neg_infinity);
+          /* This works because inf.0 and nan.0 are the same length. */
           if (str[6] == 0) {
             res = tmp;
           } else if ((str[6] == 'i' || str[6] == 'I') && str[7] == 0) {
