@@ -1,6 +1,11 @@
 
 (define (nan? x)
-  (and (real? x) (not (= x x))))
+  (cond
+    ((real? x) (not (= x x)))
+    ((complex? x)
+     (or (nan? (real-part x))
+         (nan? (imag-part x))))
+    (else #f)))
 
 (define (finite? x)
   (if (real? x)

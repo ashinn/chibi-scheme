@@ -790,7 +790,12 @@
 
 (test #t (nan? +nan.0))
 (test #f (nan? 32))
-;; (test #t (nan? +nan.0+5.0i))
+(test #t (nan? +nan.0+5.0i))
+(test #t (nan? 1.0+nan.0i))
+(test #t (nan? +nan.0i))
+(test #t (nan? +nan.0+nan.0i))
+(test #t (nan? +nan.0+inf.0i))
+(test #t (nan? +inf.0+nan.0i))
 (test #f (nan? 1+2i))
 
 (test #t (= 1 1.0 1.0+0.0i))
