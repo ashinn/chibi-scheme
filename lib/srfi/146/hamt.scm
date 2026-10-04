@@ -807,7 +807,7 @@ not present.  If `hamt' stores no payloads, return the symbol
                  accumulator)))
            hamt)
     accumulator))
-
+
 ;;; Debugging
 
 (define (assert-collision-valid node hp payload?)
