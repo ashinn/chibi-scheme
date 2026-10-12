@@ -929,7 +929,7 @@
                                               (,_cons3 (,_car ,_ls)
                                                        ,_res
                                                        ,_ls))))))))))
-              ((identifier? (car p))
+              ((and (identifier? (car p)) (not (memq (car p) lits)))
                (list _and (list _list? v)
                      (list _let (list (list (car p) v))
                            (k (cons (cons (car p) (+ 1 dim)) vars)))))
@@ -1045,7 +1045,8 @@
               (cond
                ((null? ell-vars)
                 (error "too many ...'s"))
-               ((and (null? (cdr (cdr t))) (identifier? (car t)))
+               ((and (null? (cdr (cdr t))) (identifier? (car t))
+                     (not (memq (car t) lits)))
                 ;; shortcut for (var ...)
                 (lp (car t) ell-dim ell-esc))
                (else
