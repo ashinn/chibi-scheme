@@ -489,6 +489,11 @@ static const char* sexp_initial_features[] = {
 #ifdef sexp_platform
   sexp_platform,
 #endif
+#if SEXP_USE_NATIVE_X86
+  "native",
+#else
+  "vm",
+#endif
 #if SEXP_BSD
   "bsd",
 #endif
