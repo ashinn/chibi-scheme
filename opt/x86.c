@@ -42,19 +42,26 @@ static void sexp_inc_context_depth (sexp ctx, sexp_sint_t off) {
 /************************* GC Preservation ****************************/
 
 void sexp_native_enter (sexp ctx, struct sexp_native_frame *f, sexp self,
-                        sexp_sint_t nargs, sexp *args, sexp_sint_t num_params) {
+                        sexp_sint_t nargs, sexp *args, sexp_sint_t packed_params) {
   int i;
+  sexp_sint_t num_params = packed_params & 0xFFFF;
+  sexp_sint_t num_slots = (packed_params >> 16) & 0xFFFF;
+  if (num_slots == 0 || num_slots >= SEXP_NATIVE_FRAME_SLOTS)
+    num_slots = SEXP_NATIVE_FRAME_SLOTS - 1;
+
   f->old_saves = sexp_context_saves(ctx);
   f->old_proc = sexp_context_proc(ctx);
   f->self = self;
   sexp_context_proc(ctx) = self;
-  for (i = 0; i < SEXP_NATIVE_FRAME_SLOTS; i++) {
+  for (i = 0; i < num_slots; i++) {
     f->slots[i] = (i < num_params && i < nargs && args) ? args[i] : SEXP_UNDEF;
     f->saves[i].var = &f->slots[i];
     f->saves[i].next = (i == 0) ? f->old_saves : &f->saves[i - 1];
   }
-  f->slots[SEXP_NATIVE_FRAME_SLOTS - 1] = self;
-  sexp_context_saves(ctx) = &f->saves[SEXP_NATIVE_FRAME_SLOTS - 1];
+  f->slots[num_slots] = self;
+  f->saves[num_slots].var = &f->slots[num_slots];
+  f->saves[num_slots].next = (num_slots > 0) ? &f->saves[num_slots - 1] : f->old_saves;
+  sexp_context_saves(ctx) = &f->saves[num_slots];
 }
 
 void sexp_native_exit (sexp ctx, struct sexp_native_frame *f) {
@@ -127,11 +134,11 @@ sexp sexp_native_delayed_ref (sexp ctx, sexp cell) {
 #define FIXED_ARGS_SIZE 64
 
 sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
-
-  sexp_gc_var4(res, rest, next_args, callee_save);
-  sexp_gc_preserve4(ctx, res, rest, next_args, callee_save);
+  sexp_gc_var1(callee_save);
+  sexp_gc_preserve1(ctx, callee_save);
   callee_save = callee;
 
+  sexp res = SEXP_VOID;
   sexp fixed_args[FIXED_ARGS_SIZE];
   sexp *dyn_args = NULL;
   size_t dyn_capacity = 0;
@@ -180,12 +187,15 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
     if (diff > 0) {
       if (sexp_procedure_variadic_p(callee)) {
         if (!sexp_procedure_unused_rest_p(callee)) {
+          sexp_gc_var1(rest);
+          sexp_gc_preserve1(ctx, rest);
           rest = SEXP_NULL;
           for (sexp_sint_t k = nargs - 1; k >= expected; k--) {
             rest = sexp_cons(ctx, call_args[k], rest);
           }
           call_args[expected] = rest;
           nargs = expected + 1;
+          sexp_gc_release1(ctx);
         }
       } else {
         res = sexp_native_raise(ctx, callee, "too many args", sexp_list2(ctx, callee, sexp_make_fixnum(nargs)));
@@ -207,7 +217,7 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
       }
       callee = sexp_trampoline_procedure(res);
       callee_save = callee;
-      next_args = sexp_trampoline_args(res);
+      sexp next_args = sexp_trampoline_args(res);
       nargs = sexp_unbox_fixnum(sexp_length(ctx, next_args));
       if (nargs + 2 <= FIXED_ARGS_SIZE) {
         args = fixed_args;
@@ -227,7 +237,7 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
   }
 
   if (dyn_args) free(dyn_args);
-  sexp_gc_release4(ctx);
+  sexp_gc_release1(ctx);
   return res;
 }
 
@@ -480,6 +490,12 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
 
   switch (code) {
   case SEXP_OP_ADD:
+    if (nargs == 2 && sexp_fixnump(args[0]) && sexp_fixnump(args[1])) {
+      sexp_sint_t a = sexp_unbox_fixnum(args[0]), b = sexp_unbox_fixnum(args[1]), c = a + b;
+      if (c >= SEXP_MIN_FIXNUM && c <= SEXP_MAX_FIXNUM)
+        return sexp_make_fixnum(c);
+      return sexp_add(ctx, args[0], args[1]);
+    }
     if (nargs == 0) return SEXP_ZERO;
     if (nargs == 1) return args[0];
     {
@@ -497,6 +513,12 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
       return res;
     }
   case SEXP_OP_SUB:
+    if (nargs == 2 && sexp_fixnump(args[0]) && sexp_fixnump(args[1])) {
+      sexp_sint_t a = sexp_unbox_fixnum(args[0]), b = sexp_unbox_fixnum(args[1]), c = a - b;
+      if (c >= SEXP_MIN_FIXNUM && c <= SEXP_MAX_FIXNUM)
+        return sexp_make_fixnum(c);
+      return sexp_sub(ctx, args[0], args[1]);
+    }
     if (nargs == 0) return SEXP_ZERO;
     if (nargs == 1) return sexp_sub(ctx, SEXP_ZERO, args[0]);
     {
@@ -1140,7 +1162,7 @@ void sexp_emit_enter (sexp ctx) {
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
   emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xea);
   emit_u8(ctx, 0x41); emit_u8(ctx, 0xb9);
-  emit_u32(ctx, (uint32_t)num_params);
+  emit_u32(ctx, (uint32_t)(((SEXP_NATIVE_FRAME_SLOTS - 1) << 16) | (num_params & 0xFFFF)));
 
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
   emit_u64(ctx, (uint64_t)sexp_native_enter);
@@ -1171,6 +1193,20 @@ void sexp_emit_return (sexp ctx) {
 }
 
 void sexp_bless_bytecode (sexp ctx, sexp bc) {
+  unsigned char *code = (unsigned char*)sexp_bytecode_data(bc);
+  if (sexp_bytecode_length(bc) >= 60 && code[0] == 0x55 && code[1] == 0x48
+      && code[2] == 0x89 && code[3] == 0xe5 && code[41] == 0x41 && code[42] == 0xb9) {
+    uint32_t cur = *(uint32_t*)(code + 43);
+    uint32_t num_params = cur & 0xFFFF;
+    sexp lam = sexp_context_lambda(ctx);
+    int num_locals = (lam && sexp_lambdap(lam)) ? get_local_count(lam) : 0;
+    int max_depth = sexp_bytecode_max_depth(bc);
+    int num_slots = num_params + num_locals + max_depth + 4;
+    if (num_slots < (int)num_params + 1) num_slots = num_params + 1;
+    if (num_slots > SEXP_NATIVE_FRAME_SLOTS - 2) num_slots = SEXP_NATIVE_FRAME_SLOTS - 2;
+    *(uint32_t*)(code + 43) = ((uint32_t)num_slots << 16) | (num_params & 0xFFFF);
+  }
+
   long page_size = sysconf(_SC_PAGESIZE);
   uintptr_t start = (uintptr_t)sexp_bytecode_data(bc);
   uintptr_t end = start + sexp_bytecode_length(bc);
