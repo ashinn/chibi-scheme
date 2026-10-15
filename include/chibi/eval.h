@@ -68,6 +68,9 @@ SEXP_API void sexp_emit_return (sexp ctx);
 #if SEXP_USE_NATIVE_X86
 SEXP_API void sexp_emit_enter (sexp ctx);
 SEXP_API void sexp_bless_bytecode (sexp ctx, sexp bc);
+SEXP_API void sexp_native_init_fiber (sexp ctx, sexp thread_ctx);
+SEXP_API sexp sexp_native_yield (sexp ctx);
+SEXP_API void sexp_native_loop_yield (sexp ctx);
 #else
 #define sexp_emit_enter(ctx)
 #define sexp_bless_bytecode(ctx, bc)

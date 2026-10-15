@@ -27,6 +27,7 @@ static void generate_lit (sexp ctx, sexp value);
 static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i, sexp_sint_t flags);
 sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args);
 sexp sexp_native_dispatch_op (sexp ctx, sexp self, sexp op, sexp_sint_t nargs, sexp *args);
+sexp sexp_native_yield (sexp ctx);
 sexp sexp_write_char_op (sexp ctx, sexp self, sexp_sint_t n, sexp ch, sexp out);
 sexp sexp_read_char_op (sexp ctx, sexp self, sexp_sint_t n, sexp in);
 sexp sexp_peek_char_op (sexp ctx, sexp self, sexp_sint_t n, sexp in);
@@ -62,6 +63,15 @@ void sexp_native_enter (sexp ctx, struct sexp_native_frame *f, sexp self,
   f->saves[num_slots].var = &f->slots[num_slots];
   f->saves[num_slots].next = (num_slots > 0) ? &f->saves[num_slots - 1] : f->old_saves;
   sexp_context_saves(ctx) = &f->saves[num_slots];
+#if SEXP_USE_GREEN_THREADS
+  if (--sexp_context_refuel(ctx) <= 0) {
+    sexp_context_refuel(ctx) = SEXP_DEFAULT_QUANTUM;
+    if (sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_FRONT)) ||
+        sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_PAUSED))) {
+      sexp_native_yield(ctx);
+    }
+  }
+#endif
 }
 
 void sexp_native_exit (sexp ctx, struct sexp_native_frame *f) {
@@ -350,6 +360,123 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
   sexp_gc_release2(vctx);
   return res;
 }
+
+/************************* Fibers & Threads ***************************/
+
+#if SEXP_USE_GREEN_THREADS
+__attribute__((naked)) static void sexp_switch_fiber (void **old_sp, void *new_sp) {
+  __asm__ volatile (
+    "pushq %rbx\n\t"
+    "pushq %rbp\n\t"
+    "pushq %r12\n\t"
+    "pushq %r13\n\t"
+    "pushq %r14\n\t"
+    "pushq %r15\n\t"
+    "movq %rsp, (%rdi)\n\t"
+    "movq %rsi, %rsp\n\t"
+    "popq %r15\n\t"
+    "popq %r14\n\t"
+    "popq %r13\n\t"
+    "popq %r12\n\t"
+    "popq %rbp\n\t"
+    "popq %rbx\n\t"
+    "ret\n\t"
+  );
+}
+
+static __thread sexp sexp_current_fiber_ctx = NULL;
+
+static void sexp_fiber_switch (sexp from_ctx, sexp to_ctx) {
+  sexp_context_active_conts(from_ctx) = (void*)active_conts;
+  active_conts = (struct sexp_native_cont*)sexp_context_active_conts(to_ctx);
+  sexp_current_fiber_ctx = to_ctx;
+  sexp_switch_fiber(&sexp_context_fiber_sp(from_ctx), sexp_context_fiber_sp(to_ctx));
+  sexp_current_fiber_ctx = from_ctx;
+}
+
+sexp sexp_native_yield (sexp ctx) {
+  sexp sched = sexp_global(ctx, SEXP_G_THREADS_SCHEDULER);
+  if (!sexp_applicablep(sched) || sexp_truep(sexp_global(ctx, SEXP_G_ATOMIC_P))) {
+    return SEXP_VOID;
+  }
+  sexp next_ctx = sexp_apply1(ctx, sched, ctx);
+  if (sexp_exceptionp(next_ctx)) {
+    return next_ctx;
+  }
+  if (next_ctx != ctx && sexp_contextp(next_ctx)) {
+    sexp_fiber_switch(ctx, next_ctx);
+  }
+  return SEXP_VOID;
+}
+
+static void sexp_fiber_trampoline (void) {
+  sexp ctx = sexp_current_fiber_ctx;
+  if (!ctx) {
+    __asm__ volatile ("movq %%r12, %0" : "=r"(ctx));
+  }
+  sexp thunk = sexp_context_proc(ctx);
+  sexp res;
+
+  res = sexp_apply(ctx, thunk, SEXP_NULL);
+  if (sexp_exceptionp(res)) {
+    sexp_context_errorp(ctx) = 1;
+    sexp_context_result(ctx) = res;
+  } else {
+    sexp_context_result(ctx) = res;
+  }
+  sexp_context_refuel(ctx) = 0;
+  sexp_native_yield(ctx);
+
+  while (1) {
+    sexp_native_yield(ctx);
+  }
+}
+
+#define SEXP_FIBER_STACK_SIZE (512 * 1024)
+
+void sexp_native_init_fiber (sexp ctx, sexp thread_ctx) {
+  size_t size = SEXP_FIBER_STACK_SIZE;
+  void *stack_base = mmap(NULL, size, PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (stack_base == MAP_FAILED) {
+    sexp_context_fiber_stack_base(thread_ctx) = NULL;
+    sexp_context_fiber_stack_size(thread_ctx) = 0;
+    sexp_context_fiber_sp(thread_ctx) = NULL;
+    return;
+  }
+  mprotect(stack_base, 4096, PROT_NONE);
+
+  sexp_context_fiber_stack_base(thread_ctx) = stack_base;
+  sexp_context_fiber_stack_size(thread_ctx) = size;
+  sexp_context_active_conts(thread_ctx) = NULL;
+
+  uintptr_t stack_top = (uintptr_t)stack_base + size;
+  uint64_t *sp = (uint64_t*)stack_top;
+
+  *(--sp) = 0;                                 /* stack_top - 8: 16-byte alignment sentinel */
+  *(--sp) = (uint64_t)sexp_fiber_trampoline;   /* stack_top - 16: ret target */
+  *(--sp) = 0;                                 /* r15 */
+  *(--sp) = 0;                                 /* r14 */
+  *(--sp) = 0;                                 /* r13 */
+  *(--sp) = (uint64_t)thread_ctx;              /* r12 = thread_ctx */
+  *(--sp) = 0;                                 /* rbp */
+  *(--sp) = 0;                                 /* rbx */
+
+  sexp_context_fiber_sp(thread_ctx) = (void*)sp;
+}
+
+void sexp_native_loop_yield (sexp ctx) {
+  sexp_context_refuel(ctx) = SEXP_DEFAULT_QUANTUM;
+  if (sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_FRONT)) ||
+      sexp_pairp(sexp_global(ctx, SEXP_G_THREADS_PAUSED))) {
+    sexp_native_yield(ctx);
+  }
+}
+#else
+void sexp_native_init_fiber (sexp ctx, sexp thread_ctx) {}
+sexp sexp_native_yield (sexp ctx) { return SEXP_VOID; }
+void sexp_native_loop_yield (sexp ctx) {}
+#endif
 
 /************************* Opcode Dispatch ****************************/
 
@@ -874,6 +1001,8 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
     return sexp_native_slotn_set(ctx, self, args[0], args[1], args[2], args[3]);
   case SEXP_OP_MAKE_EXCEPTION:
     return sexp_make_exception(ctx, args[0], args[1], args[2], args[3], args[4]);
+  case SEXP_OP_YIELD:
+    return sexp_native_yield(ctx);
   default:
     return sexp_native_raise(ctx, op, "unknown opcode in native dispatch", op);
   }
@@ -1481,6 +1610,17 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
   }
 
   sexp_inc_context_depth(ctx, -num_args);
+
+#if SEXP_USE_GREEN_THREADS
+  uint32_t refuel_off = (uint32_t)offsetof(struct sexp_struct, value.context.refuel);
+  emit_u8(ctx, 0x49); emit_u8(ctx, 0xff); emit_u8(ctx, 0x8c); emit_u8(ctx, 0x24); // decq refuel_off(%r12)
+  emit_u32(ctx, refuel_off);
+  emit_u8(ctx, 0x7f); emit_u8(ctx, 0x10); // jg skip (16 bytes)
+  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7); // mov %r12, %rdi
+  emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb); // movabs $sexp_native_loop_yield, %r11
+  emit_u64(ctx, (uint64_t)sexp_native_loop_yield);
+  emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3); // call *%r11
+#endif
 
   // Jump to loop_start
   sexp_sint_t cur_pos = sexp_unbox_fixnum(sexp_context_pos(ctx));

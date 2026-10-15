@@ -3,6 +3,9 @@
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
 #include "chibi/sexp.h"
+#if SEXP_USE_NATIVE_X86
+#include <sys/mman.h>
+#endif
 
 /* optional huffman-compressed immediate symbols */
 struct sexp_huff_entry {
@@ -253,6 +256,18 @@ sexp sexp_finalize_uvector (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
 }
 #endif
 
+#if SEXP_USE_NATIVE_X86 && SEXP_USE_GREEN_THREADS
+sexp sexp_finalize_context (sexp ctx, sexp self, sexp_sint_t n, sexp obj) {
+  if (sexp_contextp(obj) && sexp_context_fiber_stack_base(obj)) {
+    munmap(sexp_context_fiber_stack_base(obj), sexp_context_fiber_stack_size(obj));
+    sexp_context_fiber_stack_base(obj) = NULL;
+    sexp_context_fiber_stack_size(obj) = 0;
+    sexp_context_fiber_sp(obj) = NULL;
+  }
+  return SEXP_VOID;
+}
+#endif
+
 static struct sexp_type_struct _sexp_type_specs[] = {
   {(sexp)"Object", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_OBJECT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL},
   {(sexp)"Type", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_TYPE, sexp_offsetof(type, name), 9, 9, 0, 0, sexp_sizeof(type), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
@@ -302,7 +317,11 @@ static struct sexp_type_struct _sexp_type_specs[] = {
   {(sexp)"Seq", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, SEXP_SEQ, sexp_offsetof(seq, ls), 2, 2, 0, 0, sexp_sizeof(seq), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
   {(sexp)"Lit", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_simple_object, NULL, NULL, SEXP_LIT, sexp_offsetof(lit, value), 2, 2, 0, 0, sexp_sizeof(lit), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
   {(sexp)"Stack", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_STACK, sexp_sizeof(stack), 0, 0, sexp_offsetof(stack, top), 1, sexp_sizeof(stack), offsetof(struct sexp_struct, value.stack.length), sizeof(sexp), 0, 0, 0, 0, 0, 0, NULL},
+#if SEXP_USE_NATIVE_X86 && SEXP_USE_GREEN_THREADS
+  {(sexp)"Context", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, (sexp)"sexp_finalize_context", SEXP_CONTEXT, sexp_offsetof(context, stack), 12+(SEXP_USE_STABLE_ABI||SEXP_USE_DL), 12+(SEXP_USE_STABLE_ABI||SEXP_USE_DL), 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, sexp_finalize_context},
+#else
   {(sexp)"Context", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_CONTEXT, sexp_offsetof(context, stack), 12+(SEXP_USE_STABLE_ABI||SEXP_USE_DL), 12+(SEXP_USE_STABLE_ABI||SEXP_USE_DL), 0, 0, sexp_sizeof(context), 0, 0, 0, 0, 0, 0, 0, 0, NULL},
+#endif
   {(sexp)"Cpointer", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, NULL, NULL, NULL, SEXP_CPOINTER, sexp_offsetof(cpointer, parent), 1, 0, 0, 0, sexp_sizeof(cpointer), sexp_offsetof(cpointer, length), 1, 0, 0, 0, 0, 0, 0, NULL},
 #if SEXP_USE_STABLE_ABI || SEXP_USE_UNIFORM_VECTOR_LITERALS
   {(sexp)"Uniform-Vector", SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, SEXP_FALSE, (sexp)sexp_write_uvector, NULL, (sexp)"sexp_finalize_uvector", SEXP_UNIFORM_VECTOR, sexp_offsetof(uvector, bytes), 1, 1, 0, 0, sexp_sizeof(uvector), 0, 0, 0, 0, 0, 0, 0, 0, sexp_finalize_uvector},
@@ -692,6 +711,12 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   sexp_context_errorp(res) = 0;
   sexp_context_event(res) = SEXP_FALSE;
   sexp_context_refuel(res) = SEXP_DEFAULT_QUANTUM;
+#if SEXP_USE_NATIVE_X86
+  sexp_context_fiber_sp(res) = NULL;
+  sexp_context_fiber_stack_base(res) = NULL;
+  sexp_context_fiber_stack_size(res) = 0;
+  sexp_context_active_conts(res) = NULL;
+#endif
 #endif
 #if SEXP_USE_DL
   sexp_context_dl(res) = ctx ? sexp_context_dl(ctx) : SEXP_FALSE;
@@ -727,6 +752,14 @@ sexp sexp_destroy_context (sexp ctx) {
     if (sexp_finalize(ctx) == SEXP_FALSE) { return SEXP_FALSE; }
     sexp_sweep(ctx, &sum_freed);
     if (sexp_finalize(ctx) == SEXP_FALSE) { return SEXP_FALSE; }
+#if SEXP_USE_NATIVE_X86 && SEXP_USE_GREEN_THREADS
+    if (sexp_context_fiber_stack_base(ctx)) {
+      munmap(sexp_context_fiber_stack_base(ctx), sexp_context_fiber_stack_size(ctx));
+      sexp_context_fiber_stack_base(ctx) = NULL;
+      sexp_context_fiber_stack_size(ctx) = 0;
+      sexp_context_fiber_sp(ctx) = NULL;
+    }
+#endif
     sexp_context_heap(ctx) = NULL;
     for ( ; heap; heap=tmp) {
       tmp = heap->next;
