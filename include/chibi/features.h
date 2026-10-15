@@ -11,7 +11,7 @@
 /* #define SEXP_USE_GREEN_THREADS 0 */
 
 /* uncomment this to enable the experimental native x86 backend */
-/* #define SEXP_USE_NATIVE_X86 1 */
+#define SEXP_USE_NATIVE_X86 1
 
 /* uncomment this to disable the module system */
 /*   Currently this just loads the meta.scm from main and */
@@ -435,7 +435,7 @@
 #endif
 
 #ifndef SEXP_USE_GREEN_THREADS
-#if defined(_WIN32)
+#if defined(_WIN32) || SEXP_USE_NATIVE_X86
 #define SEXP_USE_GREEN_THREADS 0
 #else
 #define SEXP_USE_GREEN_THREADS ! SEXP_USE_NO_FEATURES
@@ -928,19 +928,11 @@
 
 #if SEXP_USE_NATIVE_X86
 #undef SEXP_USE_BOEHM
-#define SEXP_USE_BOEHM 1
-#undef SEXP_USE_FLONUMS
-#define SEXP_USE_FLONUMS 0
-#undef SEXP_USE_BIGNUMS
-#define SEXP_USE_BIGNUMS 0
-#undef SEXP_USE_RATIOS
-#define SEXP_USE_RATIOS 0
-#undef SEXP_USE_COMPLEX
-#define SEXP_USE_COMPLEX 0
-#undef SEXP_USE_UTF8_STRINGS
-#define SEXP_USE_UTF8_STRINGS 0
-#undef SEXP_USE_SIMPLIFY
-#define SEXP_USE_SIMPLIFY 0
+#define SEXP_USE_BOEHM 0
+#undef SEXP_USE_GREEN_THREADS
+#define SEXP_USE_GREEN_THREADS 0
+#undef SEXP_USE_DEBUG_VM
+#define SEXP_USE_DEBUG_VM 0
 #endif
 
 #ifndef SEXP_USE_ALIGNED_BYTECODE

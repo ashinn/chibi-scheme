@@ -72,13 +72,8 @@ _OP(SEXP_OPC_SETTER, SEXP_OP_STRING_SET, 3, 0, SEXP_VOID, _I(SEXP_STRING), _I(SE
 _OP(SEXP_OPC_GETTER, SEXP_OP_STRING_LENGTH, 1, 0, _I(SEXP_FIXNUM), _I(SEXP_STRING), SEXP_FALSE, SEXP_FALSE, 0, "string-length", 0, NULL),
 _FN1(_I(SEXP_FLONUM), _I(SEXP_FIXNUM), "exact->inexact", 0, sexp_exact_to_inexact),
 _FN1(_I(SEXP_FIXNUM), _I(SEXP_FLONUM), "inexact->exact", 0, sexp_inexact_to_exact),
-#if SEXP_USE_NATIVE_X86
-_FN1(_I(SEXP_CHAR), _I(SEXP_CHAR), "char-upcase", 0, sexp_char_upcase),
-_FN1(_I(SEXP_CHAR), _I(SEXP_CHAR), "char-downcase", 0, sexp_char_downcase),
-#else
 _OP(SEXP_OPC_GENERIC, SEXP_OP_CHAR_UPCASE, 1, 0, _I(SEXP_CHAR), _I(SEXP_CHAR), SEXP_FALSE, SEXP_FALSE, 0, "char-upcase", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_CHAR_DOWNCASE, 1, 0, _I(SEXP_CHAR), _I(SEXP_CHAR), SEXP_FALSE, SEXP_FALSE, 0, "char-downcase", 0, NULL),
-#endif
 _OP(SEXP_OPC_GENERIC, SEXP_OP_CHAR2INT, 1, 0, _I(SEXP_FIXNUM), _I(SEXP_CHAR), SEXP_FALSE, SEXP_FALSE, 0, "char->integer", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_INT2CHAR, 1, 0, _I(SEXP_CHAR), _I(SEXP_FIXNUM), SEXP_FALSE, SEXP_FALSE, 0, "integer->char", 0, NULL),
 _OP(SEXP_OPC_ARITHMETIC,     SEXP_OP_ADD, 0, 1, _I(SEXP_NUMBER), _I(SEXP_NUMBER), _I(SEXP_NUMBER), SEXP_FALSE, 0, "+", SEXP_ZERO, NULL),
@@ -142,17 +137,10 @@ _FN1(_I(SEXP_BOOLEAN), _I(SEXP_IPORT), "port-open?", 0, sexp_port_openp_op),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_APPLY1, 2, 16, _I(SEXP_OBJECT), _I(SEXP_PROCEDURE), SEXP_NULL, SEXP_FALSE, 0, "apply1", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_CALLCC, 1, 0, _I(SEXP_OBJECT), _I(SEXP_PROCEDURE), SEXP_FALSE, SEXP_FALSE, 0, "%call/cc", 0, NULL),
 _OP(SEXP_OPC_GENERIC, SEXP_OP_RAISE, 1, 0, _I(SEXP_OBJECT), _I(SEXP_OBJECT), SEXP_FALSE, SEXP_FALSE, 0, "raise", 0, NULL),
-#if SEXP_USE_NATIVE_X86
-_FN2OPTP(SEXP_VOID, _I(SEXP_CHAR), _I(SEXP_OPORT), "write-char", (sexp)"current-output-port", sexp_write_char_op),
-_FN1OPTP(SEXP_VOID, _I(SEXP_IPORT), "read-char", (sexp)"current-input-port", sexp_read_char_op),
-_FN1OPTP(SEXP_VOID, _I(SEXP_IPORT), "peek-char", (sexp)"current-input-port", sexp_peek_char_op),
-_FN5(_I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), _I(SEXP_OBJECT), "five", 0, sexp_five),
-#else
 _OP(SEXP_OPC_IO, SEXP_OP_WRITE_CHAR, 1, 3, SEXP_VOID, _I(SEXP_CHAR), _I(SEXP_OPORT), SEXP_FALSE, 0, "write-char", (sexp)"current-output-port", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_WRITE_STRING, 2, 3, SEXP_VOID, _I(SEXP_STRING), _I(SEXP_FIXNUM), _I(SEXP_OPORT), 0, "%write-string", (sexp)"current-output-port", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_READ_CHAR, 0, 3, _I(SEXP_CHAR), _I(SEXP_IPORT), SEXP_FALSE, SEXP_FALSE, 0, "read-char", (sexp)"current-input-port", NULL),
 _OP(SEXP_OPC_IO, SEXP_OP_PEEK_CHAR, 0, 3, _I(SEXP_CHAR), _I(SEXP_IPORT), SEXP_FALSE, SEXP_FALSE, 0, "peek-char", (sexp)"current-input-port", NULL),
-#endif
 _FN1OPTP(_I(SEXP_BOOLEAN), _I(SEXP_IPORT), "char-ready?", (sexp)"current-input-port", sexp_char_ready_p),
 _FN1OPTP(_I(SEXP_OBJECT), _I(SEXP_IPORT), "read", (sexp)"current-input-port", sexp_read_op),
 _FN2OPTP(SEXP_VOID,_I(SEXP_OBJECT), _I(SEXP_OPORT), "write", (sexp)"current-output-port", sexp_write_op),
