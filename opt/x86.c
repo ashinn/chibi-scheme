@@ -1198,6 +1198,19 @@ static void emit_mov_rax_slot (sexp ctx, int slot_index) {
   emit_u32(ctx, (uint32_t)disp);
 }
 
+static void emit_clear_slot (sexp ctx, int slot_index) {
+  int32_t disp = get_slot_disp(slot_index);
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0xc7); emit_u8(ctx, 0x85);
+  emit_u32(ctx, (uint32_t)disp);
+  emit_u32(ctx, (uint32_t)(uintptr_t)SEXP_UNDEF);
+}
+
+static void emit_clear_slots (sexp ctx, int start_slot, int count) {
+  for (int i = 0; i < count; i++) {
+    emit_clear_slot(ctx, start_slot + i);
+  }
+}
+
 static void emit_mov_imm64_rax (sexp ctx, uint64_t val) {
   emit_u8(ctx, 0x48); emit_u8(ctx, 0xb8);
   emit_u64(ctx, val);
@@ -1321,7 +1334,8 @@ static void emit_get_param_value (sexp ctx, sexp param_op, int slot) {
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
   emit_u64(ctx, (uint64_t)sexp_parameter_ref);
   emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
-  emit_mov_rax_slot(ctx, slot);
+  if (slot >= 0)
+    emit_mov_rax_slot(ctx, slot);
 }
 
 sexp sexp_native_parameter_set (sexp ctx, sexp param_op, sexp val) {
@@ -1352,7 +1366,6 @@ static void emit_set_param_value (sexp ctx, sexp param_op, int val_slot) {
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
   emit_u64(ctx, (uint64_t)sexp_native_parameter_set);
   emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
-  emit_mov_rax_slot(ctx, val_slot);
 }
 
 static void emit_native_dispatch_op (sexp ctx, sexp op, int temp_start, int nargs) {
@@ -1699,6 +1712,7 @@ static void generate_set (sexp ctx, sexp set) {
     }
   }
 
+  emit_clear_slot(ctx, temp_slot);
   emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
 }
 
@@ -1753,6 +1767,7 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
       sexp_inc_context_depth(ctx, 1);
       generate(ctx, 0, 0, 0, arg1);
       emit_mov_slot_rcx(ctx, temp_start);
+      emit_clear_slot(ctx, temp_start);
       sexp_inc_context_depth(ctx, -1);
       // cmpq %rax, %rcx
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
@@ -1875,6 +1890,7 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
       emit_mov_rax_slot(ctx, temp_start);
     }
     emit_native_dispatch_op(ctx, op, temp_start, 2);
+    emit_clear_slots(ctx, temp_start, 2);
     // cmpq $SEXP_FALSE, %rax
     emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xf8);
     emit_u8(ctx, (uint8_t)(sexp_uint_t)SEXP_FALSE);
@@ -2031,6 +2047,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_native_dispatch_op(ctx, op, temp_start, 1);
 
       patch_jmp(ctx, done_jmp);
+      emit_clear_slot(ctx, temp_start);
       sexp_inc_context_depth(ctx, -1);
       return 1;
     }
@@ -2066,6 +2083,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_native_dispatch_op(ctx, op, temp_start, 1);
 
       patch_jmp(ctx, done_jmp);
+      emit_clear_slot(ctx, temp_start);
       sexp_inc_context_depth(ctx, -1);
       return 1;
     }
@@ -2126,6 +2144,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
       patch_jmp(ctx, done_jmp);
+      emit_clear_slots(ctx, temp_start, 2);
       sexp_inc_context_depth(ctx, -2);
       return 1;
     }
@@ -2137,6 +2156,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_inc_context_depth(ctx, 1);
       generate(ctx, 0, 0, 0, arg1);
       emit_mov_slot_rcx(ctx, temp_start);
+      emit_clear_slot(ctx, temp_start);
 
       // cmpq %rax, %rcx (48 39 c1)
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
@@ -2226,6 +2246,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
       patch_jmp(ctx, done_jmp);
+      emit_clear_slots(ctx, temp_start, 2);
       sexp_inc_context_depth(ctx, -2);
       return 1;
     }
@@ -2246,12 +2267,13 @@ static void generate_opcode_app (sexp ctx, sexp app) {
 
   if (sexp_opcode_class(op) == SEXP_OPC_PARAMETER) {
     if (num_args == 0) {
-      emit_get_param_value(ctx, op, temp_start);
+      emit_get_param_value(ctx, op, -1);
       return;
     } else {
       generate(ctx, 0, 0, 0, sexp_cadr(app));
       emit_mov_rax_slot(ctx, temp_start);
       emit_set_param_value(ctx, op, temp_start);
+      emit_clear_slot(ctx, temp_start);
       return;
     }
   }
@@ -2303,6 +2325,7 @@ static void generate_opcode_app (sexp ctx, sexp app) {
   }
 
   emit_native_dispatch_op(ctx, op, temp_start, (int)num_args);
+  emit_clear_slots(ctx, temp_start, (int)num_args);
   sexp_inc_context_depth(ctx, -(int)num_args);
 }
 
@@ -2332,6 +2355,8 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
       emit_mov_rax_slot(ctx, i);
     }
   }
+
+  emit_clear_slots(ctx, temp_start, num_args);
 
   sexp_inc_context_depth(ctx, -num_args);
 
@@ -2378,6 +2403,7 @@ static void generate_general_app (sexp ctx, sexp app) {
     emit_native_tail_call(ctx, temp_start, (int)len);
   } else {
     emit_native_call(ctx, temp_start, (int)len);
+    emit_clear_slots(ctx, temp_start, (int)len);
   }
   sexp_inc_context_depth(ctx, -(int)len);
   sexp_gc_release1(ctx);
@@ -2460,6 +2486,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
         sexp_inc_context_depth(ctx, 1);
       }
       emit_native_make_closure(ctx, flags, len, bc, num_fvs, temp_start);
+      emit_clear_slots(ctx, temp_start, num_fvs);
       sexp_inc_context_depth(ctx, -num_fvs);
     }
   }
