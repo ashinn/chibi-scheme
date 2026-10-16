@@ -91,6 +91,17 @@
                  ,(delay
                     (process->sexp
                      '(skint -qe "(features)"))))
+    (stak "stak" #f  #f
+              ,(delay
+                (call-with-temp-file "snow-stak"
+                 (lambda (tmp-path out preserve)
+                  (with-output-to-file tmp-path
+                                       (lambda ()
+                                        (display "(import (scheme base) (scheme write))")
+                                        (newline)
+                                        (display "(display (features))")))
+                   (process->sexp
+                    `(stak ,tmp-path))))))
     (stklos "stklos" (stklos --version) #f
                  ,(delay
                     (process->sexp
@@ -138,6 +149,7 @@
     ((racket) (cond-expand (racket #t) (else #f)))
     ((sagittarius) (cond-expand (sagittarius #t) (else #f)))
     ((skint) (cond-expand (skint #t) (else #f)))
+    ((stak) (cond-expand (stak #t) (else #f)))
     ((stklos) (cond-expand (stklos #t) (else #f)))
     ((tr7) (cond-expand (tr7 #t) (else #f)))
     (else #f)))
