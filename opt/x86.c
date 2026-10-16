@@ -9,9 +9,9 @@
 #include <ctype.h>
 #include <setjmp.h>
 
-#define SEXP_NATIVE_FRAME_SLOTS 512
-#define SEXP_NATIVE_FRAME_SIZE  12312
-#define SEXP_NATIVE_FRAME_ALLOC 12312
+#define SEXP_NATIVE_FRAME_SLOTS 128
+#define SEXP_NATIVE_FRAME_SIZE  3096
+#define SEXP_NATIVE_FRAME_ALLOC 3096
 
 struct sexp_native_frame {
   struct sexp_gc_var_t saves[SEXP_NATIVE_FRAME_SLOTS];
@@ -20,6 +20,11 @@ struct sexp_native_frame {
   sexp old_proc;
   sexp self;
 };
+
+_Static_assert(sizeof(struct sexp_native_frame) <= SEXP_NATIVE_FRAME_ALLOC, "frame size exceeds alloc");
+_Static_assert((40 + SEXP_NATIVE_FRAME_ALLOC) % 16 == 0, "frame not 16-byte aligned");
+
+#define SEXP_NATIVE_SLOT_BASE ((int32_t)((intptr_t)offsetof(struct sexp_native_frame, slots) - 40 - SEXP_NATIVE_FRAME_ALLOC))
 
 /* Forward declarations */
 static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
@@ -85,7 +90,7 @@ static sexp native_cons (sexp ctx, sexp a, sexp b) {
 
 /************************* Trampoline & Procedures ********************/
 
-#define FIXED_ARGS_SIZE 64
+#define FIXED_ARGS_SIZE 16
 
 typedef struct sexp_native_trampoline_struct {
   struct sexp_native_trampoline_struct *prev;
@@ -1183,7 +1188,7 @@ static int32_t get_slot_disp (int slot_index) {
   if (slot_index >= SEXP_NATIVE_FRAME_SLOTS - 1) {
     fprintf(stderr, "WARNING: slot_index %d >= %d!\n", slot_index, SEXP_NATIVE_FRAME_SLOTS - 1);
   }
-  return -4160 + 8 * slot_index;
+  return SEXP_NATIVE_SLOT_BASE + 8 * slot_index;
 }
 
 static void emit_mov_slot_rax (sexp ctx, int slot_index) {
