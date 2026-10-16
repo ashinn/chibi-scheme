@@ -431,6 +431,7 @@ sexp sexp_make_lambda (sexp ctx, sexp params) {
   sexp_lambda_sv(res) = SEXP_NULL;
   sexp_lambda_locals(res) = SEXP_NULL;
   sexp_lambda_defs(res) = SEXP_NULL;
+  sexp_lambda_flags(res) = SEXP_ZERO;
   sexp_lambda_return_type(res) = SEXP_FALSE;
   sexp_lambda_param_types(res) = SEXP_NULL;
   return res;

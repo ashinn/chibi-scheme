@@ -1170,10 +1170,13 @@ static sexp_sint_t emit_jmp (sexp ctx) {
   return pos;
 }
 
-static void patch_jmp (sexp ctx, sexp_sint_t pos) {
-  sexp_sint_t target = sexp_unbox_fixnum(sexp_context_pos(ctx));
+static void patch_jmp_to (sexp ctx, sexp_sint_t pos, sexp_sint_t target) {
   int32_t disp = (int32_t)(target - (pos + 5));
   patch_u32(ctx, pos + 1, (uint32_t)disp);
+}
+
+static void patch_jmp (sexp ctx, sexp_sint_t pos) {
+  patch_jmp_to(ctx, pos, sexp_unbox_fixnum(sexp_context_pos(ctx)));
 }
 
 static int is_fixnum_literal (sexp x, sexp_sint_t *val) {
@@ -1322,11 +1325,106 @@ static void emit_native_make_closure (sexp ctx, sexp flags, sexp len, sexp bc, i
   emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
 }
 
+/************************* Leaf Procedure Analysis ********************/
+
+static int is_leaf_expr (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc, int tailp) {
+  if (!sexp_pointerp(x)) {
+    return 1;
+  }
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_LIT:
+    return 1;
+  case SEXP_REF: {
+    sexp loc = sexp_ref_loc(x);
+    if (loc != lam) return 0;
+    return 1;
+  }
+  case SEXP_SET:
+    return 0;
+  case SEXP_CND: {
+    sexp test = sexp_cnd_test(x);
+    while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
+           sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
+           !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
+           sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+      test = sexp_cadr(test);
+    }
+    return is_leaf_expr(ctx, lam, test, self_name, self_loc, 0) &&
+           is_leaf_expr(ctx, lam, sexp_cnd_pass(x), self_name, self_loc, tailp) &&
+           is_leaf_expr(ctx, lam, sexp_cnd_fail(x), self_name, self_loc, tailp);
+  }
+  case SEXP_SEQ: {
+    sexp ls = sexp_seq_ls(x);
+    for (; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      int cur_tailp = sexp_nullp(sexp_cdr(ls)) ? tailp : 0;
+      if (!is_leaf_expr(ctx, lam, sexp_car(ls), self_name, self_loc, cur_tailp))
+        return 0;
+    }
+    return 1;
+  }
+  case SEXP_PAIR: {
+    sexp op = sexp_car(x);
+    if (sexp_opcodep(op)) {
+      sexp_sint_t code = sexp_opcode_code(op);
+      sexp_sint_t oclass = sexp_opcode_class(op);
+      if (oclass == SEXP_OPC_FOREIGN || oclass == SEXP_OPC_PARAMETER)
+        return 0;
+      switch (code) {
+      case SEXP_OP_ADD:
+      case SEXP_OP_SUB:
+      case SEXP_OP_MUL:
+      case SEXP_OP_QUOTIENT:
+      case SEXP_OP_REMAINDER:
+      case SEXP_OP_LT:
+      case SEXP_OP_LE:
+      case SEXP_OP_EQN:
+      case SEXP_OP_EQ:
+      case SEXP_OP_NULLP:
+      case SEXP_OP_FIXNUMP:
+      case SEXP_OP_CHARP:
+      case SEXP_OP_EOFP:
+      case SEXP_OP_SYMBOLP:
+      case SEXP_OP_CAR:
+      case SEXP_OP_CDR:
+      case SEXP_OP_VECTOR_LENGTH:
+      case SEXP_OP_STRING_LENGTH:
+      case SEXP_OP_BYTES_LENGTH:
+      case SEXP_OP_CHAR2INT:
+      case SEXP_OP_INT2CHAR:
+        break;
+      default:
+        return 0;
+      }
+      sexp ls = sexp_cdr(x);
+      for (; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        if (!is_leaf_expr(ctx, lam, sexp_car(ls), self_name, self_loc, 0))
+          return 0;
+      }
+      return 1;
+    }
+    return 0;
+  }
+  default:
+    return 0;
+  }
+}
+
+static int is_leaf_procedure (sexp ctx, sexp lam, sexp name, sexp loc) {
+  if (!name || !sexp_symbolp(name)) return 0;
+  if (!lam || !sexp_lambdap(lam)) return 0;
+  if (!sexp_truep(sexp_listp(ctx, sexp_lambda_params(lam)))) return 0;
+  if (!sexp_nullp(sexp_lambda_fv(lam))) return 0;
+  if (sexp_pairp(sexp_lambda_sv(lam))) return 0;
+  if (sexp_pairp(sexp_lambda_locals(lam))) return 0;
+  return is_leaf_expr(ctx, lam, sexp_lambda_body(lam), name, loc, 1);
+}
+
 /************************* Prologue & Epilogue ************************/
 
 void sexp_emit_enter (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
-  int num_params = get_param_count(lam);
+  int num_params = (lam && sexp_lambdap(lam)) ? get_param_count(lam) : 0;
+  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
 
   emit_u8(ctx, 0x55);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe5);
@@ -1341,29 +1439,48 @@ void sexp_emit_enter (sexp ctx) {
   emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xfc);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xf5);
 
-  emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc8);
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd1);
-  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
-  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xea);
-  emit_u8(ctx, 0x41); emit_u8(ctx, 0xb9);
-  emit_u32(ctx, (uint32_t)(((SEXP_NATIVE_FRAME_SLOTS - 1) << 16) | (num_params & 0xFFFF)));
+  if (is_leaf) {
+    for (int i = 0; i < num_params; i++) {
+      int32_t offset = i * 8;
+      if (offset == 0) {
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x01);
+      } else if (offset <= 127) {
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x41); emit_u8(ctx, (uint8_t)offset);
+      } else {
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x81); emit_u32(ctx, (uint32_t)offset);
+      }
+      emit_mov_rax_slot(ctx, i);
+    }
+  } else {
+    emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc8);
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd1);
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xea);
+    emit_u8(ctx, 0x41); emit_u8(ctx, 0xb9);
+    emit_u32(ctx, (uint32_t)(((SEXP_NATIVE_FRAME_SLOTS - 1) << 16) | (num_params & 0xFFFF)));
 
-  emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
-  emit_u64(ctx, (uint64_t)sexp_native_enter);
-  emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
+    emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
+    emit_u64(ctx, (uint64_t)sexp_native_enter);
+    emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
+  }
 }
 
 void sexp_emit_return (sexp ctx) {
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc3);
+  sexp lam = sexp_context_lambda(ctx);
+  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
 
-  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
-  emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
-  emit_u64(ctx, (uint64_t)sexp_native_exit);
-  emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
+  if (!is_leaf) {
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc3);
 
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd8);
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
+    emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
+    emit_u64(ctx, (uint64_t)sexp_native_exit);
+    emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
+
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd8);
+  }
 
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x81); emit_u8(ctx, 0xc4);
   emit_u32(ctx, SEXP_NATIVE_FRAME_ALLOC);
@@ -1379,11 +1496,12 @@ void sexp_emit_return (sexp ctx) {
 
 void sexp_bless_bytecode (sexp ctx, sexp bc) {
   unsigned char *code = (unsigned char*)sexp_bytecode_data(bc);
-  if (sexp_bytecode_length(bc) >= 60 && code[0] == 0x55 && code[1] == 0x48
+  sexp lam = sexp_context_lambda(ctx);
+  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
+  if (!is_leaf && sexp_bytecode_length(bc) >= 60 && code[0] == 0x55 && code[1] == 0x48
       && code[2] == 0x89 && code[3] == 0xe5 && code[41] == 0x41 && code[42] == 0xb9) {
     uint32_t cur = *(uint32_t*)(code + 43);
     uint32_t num_params = cur & 0xFFFF;
-    sexp lam = sexp_context_lambda(ctx);
     int num_locals = (lam && sexp_lambdap(lam)) ? get_local_count(lam) : 0;
     int max_depth = sexp_bytecode_max_depth(bc);
     int num_slots = num_params + num_locals + max_depth + 4;
@@ -1519,18 +1637,220 @@ static void generate_set (sexp ctx, sexp set) {
   emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
 }
 
+static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
+                                    sexp test, sexp pass, sexp fail, sexp_sint_t tailp) {
+  if (!sexp_pairp(test) || !sexp_opcodep(sexp_car(test)))
+    return 0;
+
+  sexp op = sexp_car(test);
+  sexp_sint_t code = sexp_opcode_code(op);
+  sexp_sint_t oclass = sexp_opcode_class(op);
+  sexp_sint_t num_args = sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(test)));
+
+  if (oclass == SEXP_OPC_PARAMETER)
+    return 0;
+
+  sexp_sint_t fail_jcc = -1;
+  sexp_sint_t jz_slow = -1;
+  int has_slow = 0;
+  int const_arg1 = 0;
+  int const_arg0 = 0;
+  sexp_sint_t c = 0;
+  int temp_start = get_temp_slot(ctx);
+
+  sexp_context_tailp(ctx) = 0;
+
+  if (num_args == 1) {
+    sexp arg0 = sexp_cadr(test);
+    if (code == SEXP_OP_NULLP) {
+      generate(ctx, 0, 0, 0, arg0);
+      // cmpq $SEXP_NULL, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3d);
+      emit_u32(ctx, (uint32_t)(uintptr_t)SEXP_NULL);
+      // Fail if not equal: jne .Lfail
+      fail_jcc = emit_jcc(ctx, 0x85);
+    } else if (code == SEXP_OP_FIXNUMP) {
+      generate(ctx, 0, 0, 0, arg0);
+      // testb $1, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+      // Fail if zero (not fixnum): jz .Lfail
+      fail_jcc = emit_jcc(ctx, 0x84);
+    } else {
+      return 0;
+    }
+  } else if (num_args == 2) {
+    sexp arg0 = sexp_cadr(test);
+    sexp arg1 = sexp_caddr(test);
+
+    if (code == SEXP_OP_EQ) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_slot_rcx(ctx, temp_start);
+      sexp_inc_context_depth(ctx, -1);
+      // cmpq %rax, %rcx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
+      // Fail if not equal: jne .Lfail
+      fail_jcc = emit_jcc(ctx, 0x85);
+    } else if (code == SEXP_OP_LT || code == SEXP_OP_LE || code == SEXP_OP_EQN) {
+      const_arg1 = is_fixnum_literal(arg1, &c) && (c >= -1073741824LL && c <= 1073741823LL);
+      const_arg0 = !const_arg1 && is_fixnum_literal(arg0, &c) && (c >= -1073741824LL && c <= 1073741823LL);
+
+      if (const_arg1) {
+        generate(ctx, 0, 0, 0, arg0);
+        emit_mov_rax_slot(ctx, temp_start);
+        sexp_inc_context_depth(ctx, 2);
+        // testb $1, %al
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+        jz_slow = emit_jcc(ctx, 0x84);
+
+        sexp_sint_t tagged = (sexp_sint_t)sexp_make_fixnum(c);
+        if (tagged >= -128 && tagged <= 127) {
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xf8);
+          emit_u8(ctx, (uint8_t)(int8_t)tagged);
+        } else {
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x3d);
+          emit_u32(ctx, (uint32_t)(int32_t)tagged);
+        }
+        uint8_t fail_cc;
+        if (code == SEXP_OP_LT) {
+          fail_cc = sexp_opcode_inverse(op) ? 0x8e /* jle */ : 0x8d /* jge */;
+        } else if (code == SEXP_OP_LE) {
+          fail_cc = sexp_opcode_inverse(op) ? 0x8c /* jl */ : 0x8f /* jg */;
+        } else {
+          fail_cc = 0x85; /* jne */
+        }
+        fail_jcc = emit_jcc(ctx, fail_cc);
+        sexp_inc_context_depth(ctx, -2);
+        has_slow = 1;
+      } else if (const_arg0) {
+        generate(ctx, 0, 0, 0, arg1);
+        emit_mov_rax_slot(ctx, temp_start + 1);
+        sexp_inc_context_depth(ctx, 2);
+        // testb $1, %al
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+        jz_slow = emit_jcc(ctx, 0x84);
+
+        sexp_sint_t tagged = (sexp_sint_t)sexp_make_fixnum(c);
+        if (tagged >= -128 && tagged <= 127) {
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xf8);
+          emit_u8(ctx, (uint8_t)(int8_t)tagged);
+        } else {
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x3d);
+          emit_u32(ctx, (uint32_t)(int32_t)tagged);
+        }
+        // computes arg1 - c = arg1 - arg0
+        uint8_t fail_cc;
+        if (code == SEXP_OP_LT) {
+          fail_cc = sexp_opcode_inverse(op) ? 0x8d /* jge */ : 0x8e /* jle */;
+        } else if (code == SEXP_OP_LE) {
+          fail_cc = sexp_opcode_inverse(op) ? 0x8f /* jg */ : 0x8c /* jl */;
+        } else {
+          fail_cc = 0x85; /* jne */
+        }
+        fail_jcc = emit_jcc(ctx, fail_cc);
+        sexp_inc_context_depth(ctx, -2);
+        has_slow = 1;
+      } else {
+        generate(ctx, 0, 0, 0, arg0);
+        emit_mov_rax_slot(ctx, temp_start);
+        sexp_inc_context_depth(ctx, 1);
+        generate(ctx, 0, 0, 0, arg1);
+        emit_mov_rax_slot(ctx, temp_start + 1);
+        sexp_inc_context_depth(ctx, 1);
+        emit_mov_slot_rcx(ctx, temp_start);
+
+        // movq %rcx, %rdx
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xca);
+        // andq %rax, %rdx
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x21); emit_u8(ctx, 0xc2);
+        // testb $1, %dl
+        emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+        jz_slow = emit_jcc(ctx, 0x84);
+
+        // cmpq %rax, %rcx (computes arg0 - arg1)
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
+        uint8_t fail_cc;
+        if (code == SEXP_OP_LT) {
+          fail_cc = sexp_opcode_inverse(op) ? 0x8e /* jle */ : 0x8d /* jge */;
+        } else if (code == SEXP_OP_LE) {
+          fail_cc = sexp_opcode_inverse(op) ? 0x8c /* jl */ : 0x8f /* jg */;
+        } else {
+          fail_cc = 0x85; /* jne */
+        }
+        fail_jcc = emit_jcc(ctx, fail_cc);
+        sexp_inc_context_depth(ctx, -2);
+        has_slow = 1;
+      }
+    } else {
+      return 0;
+    }
+  } else {
+    return 0;
+  }
+
+  // Branch layout:
+  // Fast path falls through directly into pass!
+  sexp_sint_t pass_start = sexp_unbox_fixnum(sexp_context_pos(ctx));
+  sexp_context_tailp(ctx) = tailp;
+  generate(ctx, name, loc, lam, pass);
+
+  // jmp .Lend: e9 <disp32>
+  sexp_sint_t jmp_end = emit_jmp(ctx);
+
+  sexp_sint_t slow_fail_jcc = -1;
+  if (has_slow) {
+    patch_jcc(ctx, jz_slow);
+    if (const_arg1) {
+      generate_lit(ctx, sexp_make_fixnum(c));
+      emit_mov_rax_slot(ctx, temp_start + 1);
+    } else if (const_arg0) {
+      generate_lit(ctx, sexp_make_fixnum(c));
+      emit_mov_rax_slot(ctx, temp_start);
+    }
+    emit_native_dispatch_op(ctx, op, temp_start, 2);
+    // cmpq $SEXP_FALSE, %rax
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xf8);
+    emit_u8(ctx, (uint8_t)(sexp_uint_t)SEXP_FALSE);
+    slow_fail_jcc = emit_jcc(ctx, 0x84); // je .Lfail
+
+    // jmp to pass_start
+    sexp_sint_t jmp_pass = emit_jmp(ctx);
+    patch_jmp_to(ctx, jmp_pass, pass_start);
+  }
+
+  // .Lfail:
+  patch_jcc(ctx, fail_jcc);
+  if (has_slow && slow_fail_jcc != -1) {
+    patch_jcc(ctx, slow_fail_jcc);
+  }
+
+  sexp_context_tailp(ctx) = tailp;
+  generate(ctx, name, loc, lam, fail);
+
+  // .Lend:
+  patch_jmp(ctx, jmp_end);
+
+  return 1;
+}
+
 static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   sexp_sint_t tailp = sexp_context_tailp(ctx);
   sexp test = sexp_cnd_test(cnd);
   sexp pass = sexp_cnd_pass(cnd);
   sexp fail = sexp_cnd_fail(cnd);
 
-  if (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
-      sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
-      !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
-      sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+  while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
+         sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
+         !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
+         sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
     test = sexp_cadr(test);
     sexp tmp = pass; pass = fail; fail = tmp;
+  }
+
+  if (try_generate_fused_cnd(ctx, name, loc, lam, test, pass, fail, tailp)) {
+    return;
   }
 
   sexp_context_tailp(ctx) = 0;
@@ -1541,30 +1861,22 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   emit_u8(ctx, (uint8_t)(sexp_uint_t)SEXP_FALSE);
 
   // je .Lfail: 0f 84 <disp32>
-  sexp_sint_t je_pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
-  emit_u8(ctx, 0x0f); emit_u8(ctx, 0x84);
-  emit_u32(ctx, 0);
+  sexp_sint_t je_pos = emit_jcc(ctx, 0x84);
 
   sexp_context_tailp(ctx) = tailp;
   generate(ctx, name, loc, lam, pass);
 
   // jmp .Lend: e9 <disp32>
-  sexp_sint_t jmp_pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
-  emit_u8(ctx, 0xe9);
-  emit_u32(ctx, 0);
+  sexp_sint_t jmp_pos = emit_jmp(ctx);
 
   // .Lfail:
-  sexp_sint_t fail_pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
-  int32_t fail_disp = (int32_t)(fail_pos - (je_pos + 6));
-  patch_u32(ctx, je_pos + 2, (uint32_t)fail_disp);
+  patch_jcc(ctx, je_pos);
 
   sexp_context_tailp(ctx) = tailp;
   generate(ctx, name, loc, lam, fail);
 
   // .Lend:
-  sexp_sint_t end_pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
-  int32_t end_disp = (int32_t)(end_pos - (jmp_pos + 5));
-  patch_u32(ctx, jmp_pos + 1, (uint32_t)end_disp);
+  patch_jmp(ctx, jmp_pos);
 }
 
 static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
@@ -2022,6 +2334,20 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   }
   sexp_context_lambda(ctx2) = lambda;
   sexp_gc_preserve2(ctx, tmp, bc);
+
+  if (!name && sexp_symbolp(sexp_lambda_name(lambda))) {
+    name = sexp_lambda_name(lambda);
+  }
+  if (name && !loc && sexp_symbolp(name)) {
+    loc = sexp_env_cell(ctx, sexp_context_env(ctx), name, 0);
+  }
+
+  int is_leaf = is_leaf_procedure(ctx2, lambda, name, loc);
+  if (is_leaf) {
+    sexp_lambda_flags(lambda) = SEXP_TRUE;
+  } else {
+    sexp_lambda_flags(lambda) = SEXP_FALSE;
+  }
 
   // Emit function entry
   sexp_emit_enter(ctx2);
