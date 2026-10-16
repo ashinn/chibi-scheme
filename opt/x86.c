@@ -85,11 +85,44 @@ static sexp native_cons (sexp ctx, sexp a, sexp b) {
 
 /************************* Trampoline & Procedures ********************/
 
+#define FIXED_ARGS_SIZE 64
+
+typedef struct sexp_native_trampoline_struct {
+  struct sexp_native_trampoline_struct *prev;
+  sexp proc;
+  sexp_sint_t nargs;
+  sexp *args;
+  sexp fixed_args[FIXED_ARGS_SIZE];
+  struct sexp_gc_var_t saves[FIXED_ARGS_SIZE];
+  sexp *dyn_args;
+  size_t dyn_capacity;
+  struct sexp_gc_var_t *dyn_saves;
+} sexp_native_trampoline_t;
+
 sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args) {
   return sexp_make_exception(ctx, SEXP_TRAMPOLINE, SEXP_FALSE, args, proc, SEXP_FALSE);
 }
 
 sexp sexp_native_make_trampoline (sexp ctx, sexp proc, sexp_sint_t nargs, sexp *args) {
+  sexp_native_trampoline_t *tramp = (sexp_native_trampoline_t*)sexp_context_trampoline(ctx);
+  if (tramp) {
+    tramp->proc = proc;
+    tramp->nargs = nargs;
+    if (nargs + 2 <= FIXED_ARGS_SIZE) {
+      tramp->args = tramp->fixed_args;
+    } else {
+      if (nargs + 2 > tramp->dyn_capacity) {
+        tramp->dyn_capacity = (size_t)(nargs + 2) * 2;
+        tramp->dyn_args = (sexp*)realloc(tramp->dyn_args, sizeof(sexp) * tramp->dyn_capacity);
+        tramp->dyn_saves = (struct sexp_gc_var_t*)realloc(tramp->dyn_saves, sizeof(struct sexp_gc_var_t) * tramp->dyn_capacity);
+      }
+      tramp->args = tramp->dyn_args;
+    }
+    for (sexp_sint_t k = 0; k < nargs; k++) {
+      tramp->args[k] = args[k];
+    }
+    return SEXP_TRAMPOLINE;
+  }
   sexp_gc_var1(ls);
   sexp_gc_preserve1(ctx, ls);
   ls = SEXP_NULL;
@@ -141,12 +174,20 @@ sexp sexp_native_delayed_ref (sexp ctx, sexp cell) {
   return sexp_cdr(cell);
 }
 
-#define FIXED_ARGS_SIZE 64
-
 sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
   sexp_gc_var1(callee_save);
   sexp_gc_preserve1(ctx, callee_save);
   callee_save = callee;
+
+  sexp_native_trampoline_t tramp;
+  tramp.prev = (sexp_native_trampoline_t*)sexp_context_trampoline(ctx);
+  tramp.proc = SEXP_FALSE;
+  tramp.nargs = 0;
+  tramp.args = tramp.fixed_args;
+  tramp.dyn_args = NULL;
+  tramp.dyn_capacity = 0;
+  tramp.dyn_saves = NULL;
+  sexp_context_trampoline(ctx) = &tramp;
 
   sexp res = SEXP_VOID;
   sexp fixed_args[FIXED_ARGS_SIZE];
@@ -199,12 +240,21 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
         if (!sexp_procedure_unused_rest_p(callee)) {
           sexp_gc_var1(rest);
           sexp_gc_preserve1(ctx, rest);
+          struct sexp_gc_var_t *saved_saves = sexp_context_saves(ctx);
+          if (nargs <= FIXED_ARGS_SIZE) {
+            for (sexp_sint_t k = 0; k < nargs; k++) {
+              tramp.saves[k].var = &call_args[k];
+              tramp.saves[k].next = (k == 0) ? saved_saves : &tramp.saves[k - 1];
+            }
+            sexp_context_saves(ctx) = &tramp.saves[nargs - 1];
+          }
           rest = SEXP_NULL;
           for (sexp_sint_t k = nargs - 1; k >= expected; k--) {
             rest = sexp_cons(ctx, call_args[k], rest);
           }
           call_args[expected] = rest;
           nargs = expected + 1;
+          sexp_context_saves(ctx) = saved_saves;
           sexp_gc_release1(ctx);
         }
       } else {
@@ -219,6 +269,14 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
     sexp bc = sexp_procedure_code(callee);
     sexp_native_func fn = (sexp_native_func)sexp_bytecode_data(bc);
     res = fn(ctx, callee, nargs, call_args);
+
+    if (res == SEXP_TRAMPOLINE) {
+      callee = tramp.proc;
+      callee_save = callee;
+      nargs = tramp.nargs;
+      args = tramp.args;
+      continue;
+    }
 
     if (sexp_trampolinep(res)) {
       if (sexp_not(sexp_trampoline_procedure(res)) && sexp_pairp(sexp_trampoline_args(res))) {
@@ -247,6 +305,9 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
   }
 
   if (dyn_args) free(dyn_args);
+  if (tramp.dyn_args) free(tramp.dyn_args);
+  if (tramp.dyn_saves) free(tramp.dyn_saves);
+  sexp_context_trampoline(ctx) = tramp.prev;
   sexp_gc_release1(ctx);
   return res;
 }
@@ -304,6 +365,7 @@ struct sexp_native_cont {
   uint64_t jb[8];
   sexp val;
   struct sexp_gc_var_t *saves;
+  void *trampoline;
   int active;
   struct sexp_native_cont *prev;
 };
@@ -326,6 +388,7 @@ static sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val)
   }
   cont->val = val;
   sexp_context_saves(ctx) = cont->saves;
+  sexp_context_trampoline(ctx) = cont->trampoline;
   native_longjmp(cont->jb, 1);
   return SEXP_VOID;
 }
@@ -338,6 +401,7 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
   sexp_gc_preserve2(ctx, cptr, k);
 
   vcont->saves = old_saves;
+  vcont->trampoline = sexp_context_trampoline(ctx);
   vcont->active = 1;
   vcont->val = SEXP_VOID;
   vcont->prev = active_conts;
@@ -449,6 +513,7 @@ void sexp_native_init_fiber (sexp ctx, sexp thread_ctx) {
   sexp_context_fiber_stack_base(thread_ctx) = stack_base;
   sexp_context_fiber_stack_size(thread_ctx) = size;
   sexp_context_active_conts(thread_ctx) = NULL;
+  sexp_context_trampoline(thread_ctx) = NULL;
 
   uintptr_t stack_top = (uintptr_t)stack_base + size;
   uint64_t *sp = (uint64_t*)stack_top;

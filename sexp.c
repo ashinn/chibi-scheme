@@ -656,6 +656,9 @@ sexp sexp_bootstrap_context (sexp_uint_t size, sexp_uint_t max_size) {
   sexp_context_mark_stack_ptr(&dummy_ctx) = NULL;
   sexp_context_saves(&dummy_ctx) = NULL;
   sexp_context_heap(&dummy_ctx) = heap;
+#if SEXP_USE_NATIVE_X86
+  sexp_context_trampoline(&dummy_ctx) = NULL;
+#endif
   ctx = sexp_alloc_type(&dummy_ctx, context, SEXP_CONTEXT);
   if (!ctx || sexp_exceptionp(ctx)) {
     sexp_free_heap(heap);
@@ -721,6 +724,7 @@ sexp sexp_make_context (sexp ctx, size_t size, size_t max_size) {
   sexp_context_fiber_stack_base(res) = NULL;
   sexp_context_fiber_stack_size(res) = 0;
   sexp_context_active_conts(res) = NULL;
+  sexp_context_trampoline(res) = NULL;
 #endif
 #endif
 #if SEXP_USE_DL
