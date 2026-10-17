@@ -53,4 +53,9 @@
                        (syntax-case '(a) ()
                          ((... :::) #'((... b) :::)))))
 
+      (test "syntax-case vector pattern"
+          '(1 2 3)
+        (syntax-case '#(1 2 3) ()
+          (#(x ...) #'(x ...))))
+
       (test-end))))
