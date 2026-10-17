@@ -9,22 +9,21 @@
 #include <ctype.h>
 #include <setjmp.h>
 
-#define SEXP_NATIVE_FRAME_SLOTS 128
-#define SEXP_NATIVE_FRAME_SIZE  3096
-#define SEXP_NATIVE_FRAME_ALLOC 3096
-
 struct sexp_native_frame {
-  struct sexp_gc_var_t saves[SEXP_NATIVE_FRAME_SLOTS];
-  sexp slots[SEXP_NATIVE_FRAME_SLOTS];
   struct sexp_gc_var_t *old_saves;
   sexp old_proc;
   sexp self;
 };
 
-_Static_assert(sizeof(struct sexp_native_frame) <= SEXP_NATIVE_FRAME_ALLOC, "frame size exceeds alloc");
-_Static_assert((40 + SEXP_NATIVE_FRAME_ALLOC) % 16 == 0, "frame not 16-byte aligned");
+static inline uint32_t compute_frame_alloc (int num_slots) {
+  uint32_t needed = 24 * (num_slots + 2);
+  return ((needed + 7) & ~15) + 8;
+}
 
-#define SEXP_NATIVE_SLOT_BASE ((int32_t)((intptr_t)offsetof(struct sexp_native_frame, slots) - 40 - SEXP_NATIVE_FRAME_ALLOC))
+static inline int32_t compute_slot_base (int num_slots) {
+  uint32_t frame_alloc = compute_frame_alloc(num_slots);
+  return -16 - (int32_t)frame_alloc + 16 * (num_slots + 1);
+}
 
 /* Forward declarations */
 static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
@@ -52,22 +51,25 @@ void sexp_native_enter (sexp ctx, struct sexp_native_frame *f, sexp self,
   int i;
   sexp_sint_t num_params = packed_params & 0xFFFF;
   sexp_sint_t num_slots = (packed_params >> 16) & 0xFFFF;
-  if (num_slots == 0 || num_slots >= SEXP_NATIVE_FRAME_SLOTS)
-    num_slots = SEXP_NATIVE_FRAME_SLOTS - 1;
+  if (num_slots == 0) num_slots = num_params + 1;
 
   f->old_saves = sexp_context_saves(ctx);
   f->old_proc = sexp_context_proc(ctx);
   f->self = self;
   sexp_context_proc(ctx) = self;
+
+  struct sexp_gc_var_t *saves = (struct sexp_gc_var_t*)((char*)f + sizeof(struct sexp_native_frame));
+  sexp *slots = (sexp*)((char*)saves + sizeof(struct sexp_gc_var_t) * (num_slots + 1));
+
   for (i = 0; i < num_slots; i++) {
-    f->slots[i] = (i < num_params && i < nargs && args) ? args[i] : SEXP_UNDEF;
-    f->saves[i].var = &f->slots[i];
-    f->saves[i].next = (i == 0) ? f->old_saves : &f->saves[i - 1];
+    slots[i] = (i < num_params && i < nargs && args) ? args[i] : SEXP_UNDEF;
+    saves[i].var = &slots[i];
+    saves[i].next = (i == 0) ? f->old_saves : &saves[i - 1];
   }
-  f->slots[num_slots] = self;
-  f->saves[num_slots].var = &f->slots[num_slots];
-  f->saves[num_slots].next = (num_slots > 0) ? &f->saves[num_slots - 1] : f->old_saves;
-  sexp_context_saves(ctx) = &f->saves[num_slots];
+  slots[num_slots] = self;
+  saves[num_slots].var = &slots[num_slots];
+  saves[num_slots].next = (num_slots > 0) ? &saves[num_slots - 1] : f->old_saves;
+  sexp_context_saves(ctx) = &saves[num_slots];
 #if SEXP_USE_GREEN_THREADS
   if (--sexp_context_refuel(ctx) <= 0) {
     sexp_context_refuel(ctx) = SEXP_DEFAULT_QUANTUM;
@@ -1184,27 +1186,31 @@ static int get_temp_slot (sexp ctx) {
   return p + l + d;
 }
 
-static int32_t get_slot_disp (int slot_index) {
-  if (slot_index >= SEXP_NATIVE_FRAME_SLOTS - 1) {
-    fprintf(stderr, "WARNING: slot_index %d >= %d!\n", slot_index, SEXP_NATIVE_FRAME_SLOTS - 1);
+static int32_t get_slot_disp (sexp ctx, int slot_index) {
+  sexp lam = sexp_context_lambda(ctx);
+  int num_slots = (lam && sexp_lambdap(lam) && sexp_fixnump(sexp_lambda_return_type(lam)))
+                  ? (int)sexp_unbox_fixnum(sexp_lambda_return_type(lam))
+                  : 128;
+  if (slot_index >= num_slots) {
+    fprintf(stderr, "WARNING: slot_index %d >= num_slots %d!\n", slot_index, num_slots);
   }
-  return SEXP_NATIVE_SLOT_BASE + 8 * slot_index;
+  return compute_slot_base(num_slots) + 8 * slot_index;
 }
 
 static void emit_mov_slot_rax (sexp ctx, int slot_index) {
-  int32_t disp = get_slot_disp(slot_index);
+  int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x85);
   emit_u32(ctx, (uint32_t)disp);
 }
 
 static void emit_mov_rax_slot (sexp ctx, int slot_index) {
-  int32_t disp = get_slot_disp(slot_index);
+  int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x85);
   emit_u32(ctx, (uint32_t)disp);
 }
 
 static void emit_clear_slot (sexp ctx, int slot_index) {
-  int32_t disp = get_slot_disp(slot_index);
+  int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0xc7); emit_u8(ctx, 0x85);
   emit_u32(ctx, (uint32_t)disp);
   emit_u32(ctx, (uint32_t)(uintptr_t)SEXP_UNDEF);
@@ -1222,7 +1228,7 @@ static void emit_mov_imm64_rax (sexp ctx, uint64_t val) {
 }
 
 static void emit_mov_slot_rcx (sexp ctx, int slot_index) {
-  int32_t disp = get_slot_disp(slot_index);
+  int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x8d);
   emit_u32(ctx, (uint32_t)disp);
 }
@@ -1295,7 +1301,7 @@ static void emit_box_var (sexp ctx, sexp name, int slot_index) {
   emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7); // mov %r12, %rdi (ctx)
   emit_u8(ctx, 0x48); emit_u8(ctx, 0xbe);                     // movabs $name, %rsi
   emit_u64(ctx, (uint64_t)name);
-  int32_t disp = get_slot_disp(slot_index);
+  int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x95); // mov disp(%rbp), %rdx
   emit_u32(ctx, (uint32_t)disp);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);                     // movabs $native_cons, %r11
@@ -1310,7 +1316,7 @@ static void emit_native_call (sexp ctx, int temp_start, int nargs) {
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc6);
   emit_u8(ctx, 0xba);
   emit_u32(ctx, (uint32_t)nargs);
-  int32_t disp = get_slot_disp(temp_start);
+  int32_t disp = get_slot_disp(ctx, temp_start);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x8d);
   emit_u32(ctx, (uint32_t)disp);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
@@ -1323,7 +1329,7 @@ static void emit_native_tail_call (sexp ctx, int temp_start, int nargs) {
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc6);
   emit_u8(ctx, 0xba);
   emit_u32(ctx, (uint32_t)nargs);
-  int32_t disp = get_slot_disp(temp_start);
+  int32_t disp = get_slot_disp(ctx, temp_start);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x8d);
   emit_u32(ctx, (uint32_t)disp);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
@@ -1381,7 +1387,7 @@ static void emit_native_dispatch_op (sexp ctx, sexp op, int temp_start, int narg
   emit_u64(ctx, (uint64_t)op);
   emit_u8(ctx, 0xb9);
   emit_u32(ctx, (uint32_t)nargs);
-  int32_t disp = get_slot_disp(temp_start);
+  int32_t disp = get_slot_disp(ctx, temp_start);
   emit_u8(ctx, 0x4c); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x85);
   emit_u32(ctx, (uint32_t)disp);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
@@ -1400,7 +1406,7 @@ static void emit_native_make_closure (sexp ctx, sexp flags, sexp len, sexp bc, i
   emit_u64(ctx, (uint64_t)bc);
   emit_u8(ctx, 0x41); emit_u8(ctx, 0xb8);
   emit_u32(ctx, (uint32_t)num_fvs);
-  int32_t disp = get_slot_disp(temp_start);
+  int32_t disp = get_slot_disp(ctx, temp_start);
   emit_u8(ctx, 0x4c); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x8d);
   emit_u32(ctx, (uint32_t)disp);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
@@ -1508,6 +1514,10 @@ void sexp_emit_enter (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
   int num_params = (lam && sexp_lambdap(lam)) ? get_param_count(lam) : 0;
   int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
+  int num_slots = (lam && sexp_lambdap(lam) && sexp_fixnump(sexp_lambda_return_type(lam)))
+                  ? (int)sexp_unbox_fixnum(sexp_lambda_return_type(lam))
+                  : 128;
+  uint32_t frame_alloc = compute_frame_alloc(num_slots);
 
   emit_u8(ctx, 0x55);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe5);
@@ -1517,7 +1527,7 @@ void sexp_emit_enter (sexp ctx) {
   emit_u8(ctx, 0x41); emit_u8(ctx, 0x56);
   emit_u8(ctx, 0x41); emit_u8(ctx, 0x57);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x81); emit_u8(ctx, 0xec);
-  emit_u32(ctx, SEXP_NATIVE_FRAME_ALLOC);
+  emit_u32(ctx, frame_alloc);
 
   emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xfc);
   emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xf5);
@@ -1541,7 +1551,7 @@ void sexp_emit_enter (sexp ctx) {
     emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
     emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xea);
     emit_u8(ctx, 0x41); emit_u8(ctx, 0xb9);
-    emit_u32(ctx, (uint32_t)(((SEXP_NATIVE_FRAME_SLOTS - 1) << 16) | (num_params & 0xFFFF)));
+    emit_u32(ctx, (uint32_t)(((num_slots) << 16) | (num_params & 0xFFFF)));
 
     emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
     emit_u64(ctx, (uint64_t)sexp_native_enter);
@@ -1565,8 +1575,8 @@ void sexp_emit_return (sexp ctx) {
     emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd8);
   }
 
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x81); emit_u8(ctx, 0xc4);
-  emit_u32(ctx, SEXP_NATIVE_FRAME_ALLOC);
+  // Restore %rsp to just below saved registers: %rsp = %rbp - 40
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x65); emit_u8(ctx, 0xd8); // lea -40(%rbp), %rsp
 
   emit_u8(ctx, 0x41); emit_u8(ctx, 0x5f);
   emit_u8(ctx, 0x41); emit_u8(ctx, 0x5e);
@@ -1578,21 +1588,6 @@ void sexp_emit_return (sexp ctx) {
 }
 
 void sexp_bless_bytecode (sexp ctx, sexp bc) {
-  unsigned char *code = (unsigned char*)sexp_bytecode_data(bc);
-  sexp lam = sexp_context_lambda(ctx);
-  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
-  if (!is_leaf && sexp_bytecode_length(bc) >= 60 && code[0] == 0x55 && code[1] == 0x48
-      && code[2] == 0x89 && code[3] == 0xe5 && code[41] == 0x41 && code[42] == 0xb9) {
-    uint32_t cur = *(uint32_t*)(code + 43);
-    uint32_t num_params = cur & 0xFFFF;
-    int num_locals = (lam && sexp_lambdap(lam)) ? get_local_count(lam) : 0;
-    int max_depth = sexp_bytecode_max_depth(bc);
-    int num_slots = num_params + num_locals + max_depth + 4;
-    if (num_slots < (int)num_params + 1) num_slots = num_params + 1;
-    if (num_slots > SEXP_NATIVE_FRAME_SLOTS - 2) num_slots = SEXP_NATIVE_FRAME_SLOTS - 2;
-    *(uint32_t*)(code + 43) = ((uint32_t)num_slots << 16) | (num_params & 0xFFFF);
-  }
-
   long page_size = sysconf(_SC_PAGESIZE);
   uintptr_t start = (uintptr_t)sexp_bytecode_data(bc);
   uintptr_t end = start + sexp_bytecode_length(bc);
@@ -2414,6 +2409,54 @@ static void generate_general_app (sexp ctx, sexp app) {
   sexp_gc_release1(ctx);
 }
 
+static int compute_ast_max_depth (sexp ctx, sexp x) {
+  if (!x || !sexp_pointerp(x)) return 0;
+  int tag = sexp_pointer_tag(x);
+  switch (tag) {
+    case SEXP_PAIR: {
+      int max_d = 0;
+      int i = 0;
+      sexp ls = sexp_cdr(x);
+      for (; sexp_pairp(ls); ls = sexp_cdr(ls), i++) {
+        int d = i + compute_ast_max_depth(ctx, sexp_car(ls));
+        if (d > max_d) max_d = d;
+      }
+      int d_op = i + compute_ast_max_depth(ctx, sexp_car(x));
+      if (d_op > max_d) max_d = d_op;
+      if (i > max_d) max_d = i;
+      return max_d;
+    }
+    case SEXP_CND: {
+      int d1 = compute_ast_max_depth(ctx, sexp_cnd_test(x));
+      int d2 = compute_ast_max_depth(ctx, sexp_cnd_pass(x));
+      int d3 = compute_ast_max_depth(ctx, sexp_cnd_fail(x));
+      int max_d = d1;
+      if (d2 > max_d) max_d = d2;
+      if (d3 > max_d) max_d = d3;
+      return max_d;
+    }
+    case SEXP_SET:
+    case SEXP_SET_SYN:
+      return compute_ast_max_depth(ctx, sexp_set_value(x));
+    case SEXP_SEQ: {
+      int max_d = 0;
+      for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        int d = compute_ast_max_depth(ctx, sexp_car(ls));
+        if (d > max_d) max_d = d;
+      }
+      return max_d;
+    }
+    case SEXP_LAMBDA: {
+      int num_fvs = 0;
+      for (sexp ls = sexp_lambda_fv(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+        num_fvs++;
+      return num_fvs;
+    }
+    default:
+      return 0;
+  }
+}
+
 static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda) {
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
   sexp_gc_var2(tmp, bc);
@@ -2445,6 +2488,12 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_lambda_flags(lambda) = SEXP_FALSE;
   }
 
+  int num_params = get_param_count(lambda);
+  int num_locals = get_local_count(lambda);
+  int est = compute_ast_max_depth(ctx2, sexp_lambda_body(lambda));
+  int num_slots = num_params + num_locals + est + 8;
+  sexp_lambda_return_type(lambda) = sexp_make_fixnum(num_slots);
+
   // Emit function entry
   sexp_emit_enter(ctx2);
 
@@ -2471,6 +2520,12 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   if (sexp_exceptionp(bc)) {
     sexp_context_exception(ctx) = bc;
   } else {
+    int act = sexp_bytecode_max_depth(bc);
+    if (num_params + num_locals + act >= num_slots) {
+      fprintf(stderr, "WARNING: frame slot overflow: name=%s, slots=%d, needed=%d\n",
+              (name && sexp_symbolp(name)) ? sexp_string_data(sexp_symbol_to_string(ctx, name)) : "anon",
+              num_slots, num_params + num_locals + act + 1);
+    }
     sexp_bytecode_name(bc) = sexp_lambda_name(lambda);
     if (sexp_nullp(fv)) {
       // No free variables: static procedure object
@@ -2563,6 +2618,8 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i, sexp_sint_t
   sexp_gc_preserve6(ctx, bc, params, ref, refs, lambda, ctx2);
   params = make_param_list(ctx, j);
   lambda = sexp_make_lambda(ctx, params);
+  int num_slots = 2 * j + 8;
+  sexp_lambda_return_type(lambda) = sexp_make_fixnum(num_slots);
   ctx2 = sexp_make_child_context(ctx, lambda);
   env = sexp_extend_env(ctx2, sexp_context_env(ctx), params, lambda);
   if (sexp_exceptionp(env)) {
