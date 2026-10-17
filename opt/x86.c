@@ -1186,11 +1186,34 @@ static int get_temp_slot (sexp ctx) {
   return p + l + d;
 }
 
-static int32_t get_slot_disp (sexp ctx, int slot_index) {
+static int get_context_num_slots (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
-  int num_slots = (lam && sexp_lambdap(lam) && sexp_fixnump(sexp_lambda_return_type(lam)))
-                  ? (int)sexp_unbox_fixnum(sexp_lambda_return_type(lam))
-                  : 128;
+  int num_params = (lam && sexp_lambdap(lam)) ? get_param_count(lam) : 0;
+  int num_locals = (lam && sexp_lambdap(lam)) ? get_local_count(lam) : 0;
+  int max_depth = 0;
+  if (sexp_vectorp(sexp_context_specific(ctx))) {
+    sexp bc = sexp_context_bc(ctx);
+    if (bc && sexp_bytecodep(bc)) {
+      max_depth = (int)sexp_bytecode_max_depth(bc);
+    }
+    if (max_depth <= 0 && sexp_fixnump(sexp_context_max_depth(ctx))) {
+      max_depth = (int)sexp_unbox_fixnum(sexp_context_max_depth(ctx));
+    }
+  }
+  if (max_depth <= 0) {
+    max_depth = 120;
+    if (sexp_vectorp(sexp_context_specific(ctx))) {
+      sexp bc = sexp_context_bc(ctx);
+      if (bc && sexp_bytecodep(bc))
+        sexp_bytecode_max_depth(bc) = max_depth;
+      sexp_context_max_depth(ctx) = sexp_make_fixnum(max_depth);
+    }
+  }
+  return num_params + num_locals + max_depth + 4;
+}
+
+static int32_t get_slot_disp (sexp ctx, int slot_index) {
+  int num_slots = get_context_num_slots(ctx);
   if (slot_index >= num_slots) {
     fprintf(stderr, "WARNING: slot_index %d >= num_slots %d!\n", slot_index, num_slots);
   }
@@ -1514,9 +1537,7 @@ void sexp_emit_enter (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
   int num_params = (lam && sexp_lambdap(lam)) ? get_param_count(lam) : 0;
   int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
-  int num_slots = (lam && sexp_lambdap(lam) && sexp_fixnump(sexp_lambda_return_type(lam)))
-                  ? (int)sexp_unbox_fixnum(sexp_lambda_return_type(lam))
-                  : 128;
+  int num_slots = get_context_num_slots(ctx);
   uint32_t frame_alloc = compute_frame_alloc(num_slots);
 
   emit_u8(ctx, 0x55);
@@ -2491,8 +2512,9 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   int num_params = get_param_count(lambda);
   int num_locals = get_local_count(lambda);
   int est = compute_ast_max_depth(ctx2, sexp_lambda_body(lambda));
-  int num_slots = num_params + num_locals + est + 8;
-  sexp_lambda_return_type(lambda) = sexp_make_fixnum(num_slots);
+  int max_depth = est + 4;
+  sexp_bytecode_max_depth(sexp_context_bc(ctx2)) = max_depth;
+  sexp_context_max_depth(ctx2) = sexp_make_fixnum(max_depth);
 
   // Emit function entry
   sexp_emit_enter(ctx2);
@@ -2521,6 +2543,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     sexp_context_exception(ctx) = bc;
   } else {
     int act = sexp_bytecode_max_depth(bc);
+    int num_slots = get_context_num_slots(ctx2);
     if (num_params + num_locals + act >= num_slots) {
       fprintf(stderr, "WARNING: frame slot overflow: name=%s, slots=%d, needed=%d\n",
               (name && sexp_symbolp(name)) ? sexp_string_data(sexp_symbol_to_string(ctx, name)) : "anon",
@@ -2618,9 +2641,10 @@ static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i, sexp_sint_t
   sexp_gc_preserve6(ctx, bc, params, ref, refs, lambda, ctx2);
   params = make_param_list(ctx, j);
   lambda = sexp_make_lambda(ctx, params);
-  int num_slots = 2 * j + 8;
-  sexp_lambda_return_type(lambda) = sexp_make_fixnum(num_slots);
   ctx2 = sexp_make_child_context(ctx, lambda);
+  int max_depth = j + 4;
+  sexp_bytecode_max_depth(sexp_context_bc(ctx2)) = max_depth;
+  sexp_context_max_depth(ctx2) = sexp_make_fixnum(max_depth);
   env = sexp_extend_env(ctx2, sexp_context_env(ctx), params, lambda);
   if (sexp_exceptionp(env)) {
     res = env;
