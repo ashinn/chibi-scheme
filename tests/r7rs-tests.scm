@@ -40,6 +40,17 @@
 
 (test-begin "R7RS")
 
+;; R7RS 5.3.1: redefining a bound non-syntax variable with define has
+;; the effect of assignment, so its old value remains visible in the RHS.
+(define c1-3005-issue-1206 (lambda () 9))
+(test 9 'define-existing-procedure (c1-3005-issue-1206))
+(define c1-3005-issue-1206 c1-3005-issue-1206)
+(test 9 'define-existing-value (c1-3005-issue-1206))
+(define c1-3005-issue-1206
+  (let ((old c1-3005-issue-1206))
+    (lambda () (+ 1 (old)))))
+(test 10 'define-existing-value-in-rhs (c1-3005-issue-1206))
+
 (test-begin "4.1 Primitive expression types")
 
 (let ()
