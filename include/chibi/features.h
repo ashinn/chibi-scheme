@@ -11,7 +11,7 @@
 /* #define SEXP_USE_GREEN_THREADS 0 */
 
 /* uncomment this to enable the experimental native x86 backend */
-#define SEXP_USE_NATIVE_X86 1
+/* #define SEXP_USE_NATIVE_X86 1 */
 
 /* uncomment this to disable the module system */
 /*   Currently this just loads the meta.scm from main and */
