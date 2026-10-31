@@ -169,10 +169,7 @@ sexp sexp_native_delayed_ref (sexp ctx, sexp cell) {
   if (sexp_cdr(cell) == SEXP_UNDEF && sexp_synclop(sexp_car(cell))) {
     sexp tmp1 = sexp_env_cell(ctx, sexp_synclo_env(sexp_car(cell)),
                               sexp_synclo_expr(sexp_car(cell)), 0);
-    if (tmp1 != NULL) {
-      sexp_cdr(cell) = sexp_cdr(tmp1);
-      return sexp_cdr(tmp1);
-    }
+    if (tmp1 != NULL) cell = tmp1;
   }
   if (sexp_cdr(cell) == SEXP_UNDEF) {
     return sexp_native_raise(ctx, sexp_car(cell), "undefined variable",
