@@ -2731,6 +2731,8 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
     }
     sexp_context_child(ctx) = tmp;
     sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
+    sexp_context_saves(ctx2) = NULL;
+    sexp_context_child(ctx2) = NULL;
   }
   sexp_gc_release3(ctx);
   return res;
@@ -2756,6 +2758,8 @@ sexp sexp_eval_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_context_params(ctx) = params;
   sexp_context_top(ctx) = top;
   sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
+  sexp_context_saves(ctx2) = NULL;
+  sexp_context_child(ctx2) = NULL;
   sexp_gc_release3(ctx);
   return res;
 }

@@ -367,9 +367,13 @@ __attribute__((naked)) static void native_longjmp (void *env, int val) {
 
 struct sexp_native_cont {
   uint64_t jb[8];
+  sexp ctx;
   sexp val;
   struct sexp_gc_var_t *saves;
   void *trampoline;
+  sexp child;
+  sexp proc;
+  sexp_sint_t last_fp;
   int active;
   struct sexp_native_cont *prev;
 };
@@ -391,8 +395,24 @@ static sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val)
     active_conts = active_conts->prev;
   }
   cont->val = val;
-  sexp_context_saves(ctx) = cont->saves;
-  sexp_context_trampoline(ctx) = cont->trampoline;
+  /* Clean up any child contexts spawned below the target stack frame */
+  for (sexp c = sexp_context_child(cont->ctx); c && sexp_contextp(c) && c != cont->child; ) {
+    sexp next = sexp_context_child(c);
+    sexp_context_saves(c) = NULL;
+    sexp_context_child(c) = NULL;
+    c = next;
+  }
+  for (sexp c = ctx; c && sexp_contextp(c) && c != cont->ctx && c != cont->child; ) {
+    sexp parent = sexp_context_parent(c);
+    sexp_context_saves(c) = NULL;
+    sexp_context_child(c) = NULL;
+    c = parent;
+  }
+  sexp_context_saves(cont->ctx) = cont->saves;
+  sexp_context_trampoline(cont->ctx) = cont->trampoline;
+  sexp_context_child(cont->ctx) = cont->child;
+  sexp_context_proc(cont->ctx) = cont->proc;
+  sexp_context_last_fp(cont->ctx) = cont->last_fp;
   native_longjmp(cont->jb, 1);
   return SEXP_VOID;
 }
@@ -400,12 +420,15 @@ static sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val)
 __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp proc) {
   volatile sexp vctx = ctx;
   struct sexp_native_cont * volatile vcont = (struct sexp_native_cont*)malloc(sizeof(struct sexp_native_cont));
-  struct sexp_gc_var_t *old_saves = sexp_context_saves(ctx);
   sexp_gc_var2(cptr, k);
   sexp_gc_preserve2(ctx, cptr, k);
 
-  vcont->saves = old_saves;
+  vcont->ctx = ctx;
+  vcont->saves = sexp_context_saves(ctx);
   vcont->trampoline = sexp_context_trampoline(ctx);
+  vcont->child = sexp_context_child(ctx);
+  vcont->proc = sexp_context_proc(ctx);
+  vcont->last_fp = sexp_context_last_fp(ctx);
   vcont->active = 1;
   vcont->val = SEXP_VOID;
   vcont->prev = active_conts;
