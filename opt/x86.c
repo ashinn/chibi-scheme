@@ -2,7 +2,10 @@
 /*  Copyright (c) 2009-2026 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
+#define _GNU_SOURCE
 #include "chibi/eval.h"
+#include <alloca.h>
+#include <pthread.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <string.h>
@@ -45,6 +48,8 @@ static void sexp_inc_context_depth (sexp ctx, sexp_sint_t off) {
 }
 
 /************************* GC Preservation ****************************/
+
+static void *sexp_native_get_context_stack_base (sexp ctx);
 
 void sexp_native_enter (sexp ctx, struct sexp_native_frame *f, sexp self,
                         sexp_sint_t nargs, sexp *args, sexp_sint_t packed_params) {
@@ -149,6 +154,9 @@ static sexp sexp_native_raise_exception (sexp ctx, sexp self, sexp exn) {
   if (sexp_procedurep(handler)) {
     return sexp_apply1(ctx, handler, exn);
   } else {
+#if SEXP_USE_GREEN_THREADS
+    sexp_context_errorp(ctx) = 1;
+#endif
     if (!sexp_exceptionp(exn))
       return sexp_make_exception(ctx, SEXP_UNCAUGHT, SEXP_FALSE, exn, self, SEXP_FALSE);
     return exn;
@@ -157,11 +165,6 @@ static sexp sexp_native_raise_exception (sexp ctx, sexp self, sexp exn) {
 
 static sexp sexp_native_raise (sexp ctx, sexp self, const char *msg, sexp irritants) {
   sexp exn = sexp_user_exception(ctx, self, msg, irritants);
-  return sexp_native_raise_exception(ctx, self, exn);
-}
-
-static sexp sexp_native_type_raise (sexp ctx, sexp self, sexp_uint_t type, sexp x) {
-  sexp exn = sexp_type_exception(ctx, self, type, x);
   return sexp_native_raise_exception(ctx, self, exn);
 }
 
@@ -245,13 +248,19 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
           sexp_gc_var1(rest);
           sexp_gc_preserve1(ctx, rest);
           struct sexp_gc_var_t *saved_saves = sexp_context_saves(ctx);
-          if (nargs <= FIXED_ARGS_SIZE) {
-            for (sexp_sint_t k = 0; k < nargs; k++) {
-              tramp.saves[k].var = &call_args[k];
-              tramp.saves[k].next = (k == 0) ? saved_saves : &tramp.saves[k - 1];
+          struct sexp_gc_var_t *saves_arr = tramp.saves;
+          if (nargs > FIXED_ARGS_SIZE) {
+            if ((size_t)nargs > tramp.dyn_capacity) {
+              tramp.dyn_capacity = (size_t)(nargs + 2) * 2;
+              tramp.dyn_saves = (struct sexp_gc_var_t*)realloc(tramp.dyn_saves, sizeof(struct sexp_gc_var_t) * tramp.dyn_capacity);
             }
-            sexp_context_saves(ctx) = &tramp.saves[nargs - 1];
+            saves_arr = tramp.dyn_saves;
           }
+          for (sexp_sint_t k = 0; k < nargs; k++) {
+            saves_arr[k].var = &call_args[k];
+            saves_arr[k].next = (k == 0) ? saved_saves : &saves_arr[k - 1];
+          }
+          sexp_context_saves(ctx) = &saves_arr[nargs - 1];
           rest = SEXP_NULL;
           for (sexp_sint_t k = nargs - 1; k >= expected; k--) {
             rest = sexp_cons(ctx, call_args[k], rest);
@@ -365,34 +374,86 @@ __attribute__((naked)) static void native_longjmp (void *env, int val) {
   );
 }
 
-struct sexp_native_cont {
-  uint64_t jb[8];
-  sexp ctx;
-  sexp val;
-  struct sexp_gc_var_t *saves;
-  void *trampoline;
-  sexp child;
-  sexp proc;
-  sexp_sint_t last_fp;
-  int active;
-  struct sexp_native_cont *prev;
-};
+static void *sexp_native_get_thread_stack_top (void) {
+  pthread_attr_t attr;
+  void *addr = NULL;
+  size_t sz = 0;
+  if (pthread_getattr_np(pthread_self(), &attr) == 0) {
+    pthread_attr_getstack(&attr, &addr, &sz);
+    pthread_attr_destroy(&attr);
+    return (char*)addr + sz;
+  }
+  return NULL;
+}
 
-static __thread struct sexp_native_cont *active_conts = NULL;
+static void *sexp_native_get_context_stack_base (sexp ctx) {
+#if SEXP_USE_GREEN_THREADS
+  if (sexp_context_fiber_stack_base(ctx)) {
+    return (char*)sexp_context_fiber_stack_base(ctx) + sexp_context_fiber_stack_size(ctx);
+  }
+#endif
+  if (sexp_context_stack_base(ctx)) {
+    return sexp_context_stack_base(ctx);
+  }
+  void *top = sexp_native_get_thread_stack_top();
+  if (top) {
+    sexp_context_stack_base(ctx) = top;
+    return top;
+  }
+  uintptr_t approx_stack = (uintptr_t)&ctx;
+  __asm__ volatile ("" : "+r"(approx_stack));
+  return (void*)(approx_stack + 65536);
+}
 
-static sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val) {
+static sexp_uint_t sexp_native_cont_type_tag = 0;
+
+static sexp sexp_native_cont_finalize (sexp ctx, sexp self, sexp_sint_t n, sexp cptr) {
+  if (sexp_pointerp(cptr) && (sexp_cpointerp(cptr) || sexp_pointer_tag(cptr) >= SEXP_CPOINTER)) {
+    struct sexp_native_cont *cont = (struct sexp_native_cont*)sexp_cpointer_value(cptr);
+    if (cont) {
+      if (cont->saved_stack) {
+        free(cont->saved_stack);
+        cont->saved_stack = NULL;
+      }
+      free(cont);
+      sexp_cpointer_value(cptr) = NULL;
+    }
+  }
+  return SEXP_VOID;
+}
+
+__attribute__((noinline)) static void sexp_restore_stack_and_jump_stage2 (struct sexp_native_cont *cont) {
+  memcpy(cont->sp, cont->saved_stack, cont->stack_size);
+  sexp_context_saves(cont->ctx) = cont->saves;
+  sexp_context_trampoline(cont->ctx) = cont->trampoline;
+  sexp_context_child(cont->ctx) = cont->child;
+  sexp_context_proc(cont->ctx) = cont->proc;
+  sexp_context_last_fp(cont->ctx) = cont->last_fp;
+  native_longjmp(cont->jb, 1);
+}
+
+__attribute__((noinline)) static void sexp_restore_stack_and_jump (struct sexp_native_cont *cont) {
+  volatile char dummy;
+  void *current_sp = (void*)&dummy;
+  ptrdiff_t diff = (char*)current_sp - (char*)cont->sp;
+  if (diff >= -1024) {
+    size_t alloc_size = (diff > 0 ? (size_t)diff : 0) + 2048;
+    void *space = alloca(alloc_size);
+    __asm__ volatile ("" : : "r"(space) : "memory");
+    sexp_restore_stack_and_jump_stage2(cont);
+    return;
+  }
+  sexp_restore_stack_and_jump_stage2(cont);
+}
+
+sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val) {
   sexp data = sexp_opcode_data(self);
   struct sexp_native_cont *cont;
-  if (!sexp_cpointerp(data))
+  if (!sexp_pointerp(data) || (!sexp_cpointerp(data) && sexp_pointer_tag(data) < SEXP_CPOINTER))
     return sexp_user_exception(ctx, self, "invalid continuation pointer", data);
   cont = (struct sexp_native_cont*)sexp_cpointer_value(data);
-  if (!cont || !cont->active) {
-    return sexp_user_exception(ctx, self, "continuation is no longer active", val);
-  }
-  /* Mark all continuations deeper on the stack (lower rsp) than target as inactive */
-  while (active_conts && (uintptr_t)active_conts->jb[1] < (uintptr_t)cont->jb[1]) {
-    active_conts->active = 0;
-    active_conts = active_conts->prev;
+  if (!cont || !cont->saved_stack) {
+    return sexp_user_exception(ctx, self, "continuation is not callable", val);
   }
   cont->val = val;
   /* Clean up any child contexts spawned below the target stack frame */
@@ -408,20 +469,25 @@ static sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val)
     sexp_context_child(c) = NULL;
     c = parent;
   }
-  sexp_context_saves(cont->ctx) = cont->saves;
-  sexp_context_trampoline(cont->ctx) = cont->trampoline;
-  sexp_context_child(cont->ctx) = cont->child;
-  sexp_context_proc(cont->ctx) = cont->proc;
-  sexp_context_last_fp(cont->ctx) = cont->last_fp;
-  native_longjmp(cont->jb, 1);
+  sexp_restore_stack_and_jump(cont);
   return SEXP_VOID;
 }
 
 __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp proc) {
   volatile sexp vctx = ctx;
   struct sexp_native_cont * volatile vcont = (struct sexp_native_cont*)malloc(sizeof(struct sexp_native_cont));
+  if (!vcont)
+    return sexp_user_exception(ctx, proc, "out of memory allocating continuation", SEXP_FALSE);
   sexp_gc_var2(cptr, k);
   sexp_gc_preserve2(ctx, cptr, k);
+
+  if (sexp_native_cont_type_tag == 0 || sexp_native_cont_type_tag >= sexp_context_num_types(ctx)) {
+    sexp name = sexp_c_string(ctx, "native_cont", -1);
+    sexp type = sexp_register_c_type(ctx, name, sexp_native_cont_finalize);
+    if (sexp_typep(type)) {
+      sexp_native_cont_type_tag = sexp_type_tag(type);
+    }
+  }
 
   vcont->ctx = ctx;
   vcont->saves = sexp_context_saves(ctx);
@@ -429,24 +495,30 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
   vcont->child = sexp_context_child(ctx);
   vcont->proc = sexp_context_proc(ctx);
   vcont->last_fp = sexp_context_last_fp(ctx);
-  vcont->active = 1;
   vcont->val = SEXP_VOID;
-  vcont->prev = active_conts;
-  active_conts = vcont;
+  vcont->sp = NULL;
+  vcont->stack_base = NULL;
+  vcont->stack_size = 0;
+  vcont->saved_stack = NULL;
 
-  cptr = sexp_make_cpointer(ctx, SEXP_CPOINTER, (void*)vcont, SEXP_FALSE, 0);
+  cptr = sexp_make_cpointer(ctx, sexp_native_cont_type_tag ? sexp_native_cont_type_tag : SEXP_CPOINTER,
+                            (void*)vcont, SEXP_FALSE, 1);
   k = sexp_make_foreign(ctx, "continuation", 1, 0, NULL, (sexp_proc1)sexp_native_cont_call, cptr);
 
   sexp res;
   if (native_setjmp(vcont->jb) == 0) {
+    vcont->sp = (void*)vcont->jb[1];
+    vcont->stack_base = sexp_native_get_context_stack_base(ctx);
+    if ((uintptr_t)vcont->stack_base > (uintptr_t)vcont->sp) {
+      vcont->stack_size = (uintptr_t)vcont->stack_base - (uintptr_t)vcont->sp;
+      vcont->saved_stack = (char*)malloc(vcont->stack_size);
+      if (vcont->saved_stack) {
+        memcpy(vcont->saved_stack, vcont->sp, vcont->stack_size);
+      }
+    }
     res = sexp_apply1(vctx, proc, k);
   } else {
     res = vcont->val;
-  }
-  vcont->active = 0;
-  while (active_conts && (uintptr_t)active_conts->jb[1] <= (uintptr_t)vcont->jb[1]) {
-    active_conts->active = 0;
-    active_conts = active_conts->prev;
   }
   sexp_gc_release2(vctx);
   return res;
@@ -478,8 +550,6 @@ __attribute__((naked)) static void sexp_switch_fiber (void **old_sp, void *new_s
 static __thread sexp sexp_current_fiber_ctx = NULL;
 
 static void sexp_fiber_switch (sexp from_ctx, sexp to_ctx) {
-  sexp_context_active_conts(from_ctx) = (void*)active_conts;
-  active_conts = (struct sexp_native_cont*)sexp_context_active_conts(to_ctx);
   sexp_current_fiber_ctx = to_ctx;
   sexp_switch_fiber(&sexp_context_fiber_sp(from_ctx), sexp_context_fiber_sp(to_ctx));
   sexp_current_fiber_ctx = from_ctx;
@@ -540,6 +610,7 @@ void sexp_native_init_fiber (sexp ctx, sexp thread_ctx) {
   sexp_context_fiber_stack_base(thread_ctx) = stack_base;
   sexp_context_fiber_stack_size(thread_ctx) = size;
   sexp_context_active_conts(thread_ctx) = NULL;
+  sexp_context_stack_base(thread_ctx) = (char*)stack_base + size;
   sexp_context_trampoline(thread_ctx) = NULL;
 
   uintptr_t stack_top = (uintptr_t)stack_base + size;
@@ -649,7 +720,8 @@ static sexp sexp_native_slotn_ref (sexp ctx, sexp self, sexp type, sexp instance
   } else {
     if (sexp_unbox_fixnum(slot) < 0 || sexp_unbox_fixnum(slot) >= sexp_type_field_len_base(type))
       return sexp_native_raise(ctx, self, "slotn-ref: slot out of bounds", sexp_list2(ctx, slot, sexp_make_fixnum(sexp_type_field_len_base(type))));
-    return sexp_slot_ref(instance, sexp_unbox_fixnum(slot));
+    sexp res = sexp_slot_ref(instance, sexp_unbox_fixnum(slot));
+    return res ? res : SEXP_VOID;
   }
 }
 
@@ -1066,15 +1138,23 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
   case SEXP_OP_PARAMETER_REF:
     if (nargs == 0) return sexp_parameter_ref(ctx, op);
     return sexp_native_parameter_set(ctx, op, args[0]);
-  case SEXP_OP_MAKE:
-    return sexp_alloc_tagged(ctx, sexp_unbox_fixnum(sexp_opcode_data2(op)), sexp_unbox_fixnum(sexp_opcode_data(op)));
+  case SEXP_OP_MAKE: {
+    sexp_sint_t size = sexp_unbox_fixnum(sexp_opcode_data2(op));
+    sexp res = sexp_alloc_tagged(ctx, size, sexp_unbox_fixnum(sexp_opcode_data(op)));
+    if (!sexp_exceptionp(res)) {
+      for (sexp_sint_t i = (size - sexp_sizeof_header) / sizeof(sexp_uint_t) - 1; i >= 0; i--)
+        sexp_slot_set(res, i, SEXP_VOID);
+    }
+    return res;
+  }
   case SEXP_OP_SLOT_REF: {
     sexp_uint_t tid = sexp_unbox_fixnum(sexp_opcode_data(op));
     sexp type = sexp_type_by_index(ctx, tid);
     if (!sexp_check_type(ctx, args[0], type))
       return sexp_native_raise(ctx, op, "slot-ref: bad type",
                                sexp_list2(ctx, sexp_type_name_by_index(ctx, tid), args[0]));
-    return sexp_slot_ref(args[0], sexp_unbox_fixnum(sexp_opcode_data2(op)));
+    sexp res = sexp_slot_ref(args[0], sexp_unbox_fixnum(sexp_opcode_data2(op)));
+    return res ? res : SEXP_VOID;
   }
   case SEXP_OP_SLOT_SET: {
     sexp_uint_t tid = sexp_unbox_fixnum(sexp_opcode_data(op));
@@ -1129,6 +1209,7 @@ static inline int sexp_opcode_can_fail (sexp_sint_t code, sexp_sint_t oclass) {
 
 sexp sexp_native_dispatch_op (sexp ctx, sexp self, sexp op, sexp_sint_t nargs, sexp *args) {
   sexp res = sexp_native_dispatch_op_inner(ctx, self, op, nargs, args);
+  if (!res) res = SEXP_VOID;
   sexp_sint_t code = sexp_opcode_code(op);
   sexp_sint_t oclass = sexp_opcode_class(op);
   if (sexp_trampolinep(res)) {
@@ -2498,6 +2579,18 @@ static int compute_ast_max_depth (sexp ctx, sexp x) {
   }
 }
 
+void sexp_native_prepare_ast (sexp ctx, sexp ast) {
+  int est = compute_ast_max_depth(ctx, ast);
+  int max_depth = est + 4;
+  if (max_depth < 120) max_depth = 120;
+  if (sexp_vectorp(sexp_context_specific(ctx))) {
+    sexp bc = sexp_context_bc(ctx);
+    if (bc && sexp_bytecodep(bc))
+      sexp_bytecode_max_depth(bc) = max_depth;
+    sexp_context_max_depth(ctx) = sexp_make_fixnum(max_depth);
+  }
+}
+
 static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda) {
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
   sexp_gc_var2(tmp, bc);
@@ -2763,15 +2856,23 @@ sexp sexp_apply3 (sexp ctx, sexp f, sexp x, sexp y, sexp z) {
 
 sexp sexp_apply_no_err_handler (sexp ctx, sexp proc, sexp args) {
   sexp res, err_cell;
-  sexp_gc_var1(handler);
-  sexp_gc_preserve1(ctx, handler);
+  sexp_gc_var2(handler, params);
+  sexp_gc_preserve2(ctx, handler, params);
+#if SEXP_USE_GREEN_THREADS
+  params = sexp_context_params(ctx);
+  sexp_context_params(ctx) = SEXP_NULL;
+  ++sexp_context_refuel(ctx);
+#endif
   err_cell = sexp_global(ctx, SEXP_G_ERR_HANDLER);
   err_cell = sexp_opcodep(err_cell) ? sexp_opcode_data(err_cell) : SEXP_FALSE;
   handler = sexp_pairp(err_cell) ? sexp_cdr(err_cell) : SEXP_FALSE;
   if (sexp_pairp(err_cell)) sexp_cdr(err_cell) = SEXP_FALSE;
   res = sexp_apply(ctx, proc, args);
   if (sexp_pairp(err_cell)) sexp_cdr(err_cell) = handler;
-  sexp_gc_release1(ctx);
+#if SEXP_USE_GREEN_THREADS
+  sexp_context_params(ctx) = params;
+#endif
+  sexp_gc_release2(ctx);
   return res;
 }
 

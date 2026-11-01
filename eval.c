@@ -2691,6 +2691,7 @@ sexp sexp_generate_op (sexp ctx, sexp self, sexp_sint_t n, sexp ast, sexp env) {
   }
   sexp_gc_preserve3(ctx, ctx2, vec, res);
   sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
+  sexp_native_prepare_ast(ctx2, ast);
   sexp_emit_enter(ctx2);
   sexp_generate(ctx2, 0, 0, 0, ast);
   res = sexp_complete_bytecode(ctx2);

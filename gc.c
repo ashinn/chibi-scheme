@@ -5,6 +5,7 @@
 #if ! SEXP_USE_BOEHM && ! SEXP_USE_MALLOC
 
 #include "chibi/sexp.h"
+#include "chibi/eval.h"
 
 #if SEXP_USE_TIME_GC
 #include <sys/resource.h>
@@ -253,6 +254,10 @@ static void sexp_mark_stack_pop (sexp ctx) {
   }
 }
 
+#if SEXP_USE_NATIVE_X86
+static void sexp_native_mark_cont (sexp ctx, sexp* types, struct sexp_native_cont *cont);
+#endif
+
 static void sexp_mark_one (sexp ctx, sexp* types, sexp x) {
   sexp_sint_t len;
   sexp t, *p, *q;
@@ -265,6 +270,15 @@ static void sexp_mark_one (sexp ctx, sexp* types, sexp x) {
     for (saves=sexp_context_saves(x); saves; saves=saves->next)
       if (saves->var) sexp_mark_one(ctx, types, *(saves->var));
   }
+#if SEXP_USE_NATIVE_X86
+  if (sexp_opcodep(x) && sexp_opcode_func(x) == (sexp_proc1)sexp_native_cont_call) {
+    sexp data = sexp_opcode_data(x);
+    if (sexp_pointerp(data) && (sexp_cpointerp(data) || sexp_pointer_tag(data) >= SEXP_CPOINTER)) {
+      struct sexp_native_cont *cont = (struct sexp_native_cont*)sexp_cpointer_value(data);
+      if (cont) sexp_native_mark_cont(ctx, types, cont);
+    }
+  }
+#endif
   t = types[sexp_pointer_tag(x)];
   len = sexp_type_num_slots_of_object(t, x) - 1;
   if (len >= 0) {
@@ -281,6 +295,34 @@ static void sexp_mark_one (sexp ctx, sexp* types, sexp x) {
     goto loop;
   }
 }
+
+#if SEXP_USE_NATIVE_X86
+static void sexp_native_mark_cont (sexp ctx, sexp* types, struct sexp_native_cont *cont) {
+  if (!cont || !cont->saved_stack) return;
+  if (cont->val) sexp_mark_one(ctx, types, cont->val);
+  if (cont->proc) sexp_mark_one(ctx, types, cont->proc);
+  if (cont->child) sexp_mark_one(ctx, types, cont->child);
+
+  ptrdiff_t offset = (char*)cont->saved_stack - (char*)cont->sp;
+  struct sexp_gc_var_t *s = cont->saves;
+
+  while (s && (void*)s >= cont->sp && (void*)s < cont->stack_base) {
+    struct sexp_gc_var_t *saved_s = (struct sexp_gc_var_t*)((char*)s + offset);
+    sexp *var = saved_s->var;
+    if (var) {
+      if ((void*)var >= cont->sp && (void*)var < cont->stack_base) {
+        sexp *saved_var = (sexp*)((char*)var + offset);
+        if (*saved_var) {
+          sexp_mark_one(ctx, types, *saved_var);
+        }
+      } else if (*var) {
+        sexp_mark_one(ctx, types, *var);
+      }
+    }
+    s = saved_s->next;
+  }
+}
+#endif
 
 static void sexp_mark_one_start (sexp ctx, sexp* types, sexp x) {
   struct sexp_mark_stack_ptr_t **ptr = &sexp_context_mark_stack_ptr(ctx);
