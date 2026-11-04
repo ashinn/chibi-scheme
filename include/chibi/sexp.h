@@ -602,6 +602,16 @@ struct sexp_struct {
       sexp_sint_t refuel;
       unsigned char* ip;
       struct timeval tval;
+#if SEXP_USE_NATIVE_X86
+      void *fiber_sp;
+      void *fiber_stack_base;
+      size_t fiber_stack_size;
+      void *active_conts;
+#endif
+#endif
+#if SEXP_USE_NATIVE_X86
+      void *stack_base;
+      void *trampoline;
 #endif
       char tailp, tracep, timeoutp, waitp, errorp, interruptp;
       sexp_uint_t last_fp;
@@ -1449,6 +1459,14 @@ enum sexp_uniform_vector_type {
 #define sexp_context_result(x)   (sexp_field(x, context, SEXP_CONTEXT, result))
 #define sexp_context_errorp(x)   (sexp_field(x, context, SEXP_CONTEXT, errorp))
 #define sexp_context_interruptp(x) (sexp_field(x, context, SEXP_CONTEXT, interruptp))
+#if SEXP_USE_NATIVE_X86
+#define sexp_context_fiber_sp(x)         (sexp_field(x, context, SEXP_CONTEXT, fiber_sp))
+#define sexp_context_fiber_stack_base(x) (sexp_field(x, context, SEXP_CONTEXT, fiber_stack_base))
+#define sexp_context_fiber_stack_size(x) (sexp_field(x, context, SEXP_CONTEXT, fiber_stack_size))
+#define sexp_context_active_conts(x)     (sexp_field(x, context, SEXP_CONTEXT, active_conts))
+#define sexp_context_stack_base(x)       (sexp_field(x, context, SEXP_CONTEXT, stack_base))
+#define sexp_context_trampoline(x)       (sexp_field(x, context, SEXP_CONTEXT, trampoline))
+#endif
 
 /* during compilation, sexp_context_specific is set to a vector */
 /* containing the following elements: */

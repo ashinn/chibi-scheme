@@ -45,6 +45,7 @@ static sexp simplify (sexp ctx, sexp ast, sexp init_substs, sexp lambda) {
         }
         if (check) {
           ctx2 = sexp_make_eval_context(ctx, NULL, sexp_context_env(ctx), 0, 0);
+          sexp_emit_enter(ctx2);
           sexp_generate(ctx2, 0, 0, 0, app);
           res = sexp_complete_bytecode(ctx2);
           if (! sexp_exceptionp(res)) {

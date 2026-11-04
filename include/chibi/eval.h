@@ -66,10 +66,31 @@ SEXP_API void sexp_generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
 SEXP_API void sexp_emit (sexp ctx, unsigned char c);
 SEXP_API void sexp_emit_return (sexp ctx);
 #if SEXP_USE_NATIVE_X86
+struct sexp_native_cont {
+  uint64_t jb[8];
+  sexp ctx;
+  sexp val;
+  struct sexp_gc_var_t *saves;
+  void *trampoline;
+  sexp child;
+  sexp proc;
+  sexp_sint_t last_fp;
+  void *sp;
+  void *stack_base;
+  size_t stack_size;
+  char *saved_stack;
+};
+
 SEXP_API void sexp_emit_enter (sexp ctx);
+SEXP_API void sexp_native_prepare_ast (sexp ctx, sexp ast);
 SEXP_API void sexp_bless_bytecode (sexp ctx, sexp bc);
+SEXP_API void sexp_native_init_fiber (sexp ctx, sexp thread_ctx);
+SEXP_API sexp sexp_native_yield (sexp ctx);
+SEXP_API void sexp_native_loop_yield (sexp ctx);
+SEXP_API sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val);
 #else
 #define sexp_emit_enter(ctx)
+#define sexp_native_prepare_ast(ctx, ast)
 #define sexp_bless_bytecode(ctx, bc)
 #endif
 SEXP_API sexp sexp_complete_bytecode (sexp ctx);

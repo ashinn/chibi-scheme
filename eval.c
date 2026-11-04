@@ -431,6 +431,7 @@ sexp sexp_make_lambda (sexp ctx, sexp params) {
   sexp_lambda_sv(res) = SEXP_NULL;
   sexp_lambda_locals(res) = SEXP_NULL;
   sexp_lambda_defs(res) = SEXP_NULL;
+  sexp_lambda_flags(res) = SEXP_ZERO;
   sexp_lambda_return_type(res) = SEXP_FALSE;
   sexp_lambda_param_types(res) = SEXP_NULL;
   return res;
@@ -2690,6 +2691,7 @@ sexp sexp_generate_op (sexp ctx, sexp self, sexp_sint_t n, sexp ast, sexp env) {
   }
   sexp_gc_preserve3(ctx, ctx2, vec, res);
   sexp_free_vars(ctx2, ast, SEXP_NULL);    /* should return SEXP_NULL */
+  sexp_native_prepare_ast(ctx2, ast);
   sexp_emit_enter(ctx2);
   sexp_generate(ctx2, 0, 0, 0, ast);
   res = sexp_complete_bytecode(ctx2);
@@ -2730,6 +2732,8 @@ sexp sexp_compile_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
     }
     sexp_context_child(ctx) = tmp;
     sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
+    sexp_context_saves(ctx2) = NULL;
+    sexp_context_child(ctx2) = NULL;
   }
   sexp_gc_release3(ctx);
   return res;
@@ -2755,6 +2759,8 @@ sexp sexp_eval_op (sexp ctx, sexp self, sexp_sint_t n, sexp obj, sexp env) {
   sexp_context_params(ctx) = params;
   sexp_context_top(ctx) = top;
   sexp_context_last_fp(ctx) = sexp_context_last_fp(ctx2);
+  sexp_context_saves(ctx2) = NULL;
+  sexp_context_child(ctx2) = NULL;
   sexp_gc_release3(ctx);
   return res;
 }

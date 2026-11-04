@@ -83,19 +83,25 @@ sexp sexp_current_thread (sexp ctx, sexp self, sexp_sint_t n) {
 }
 
 sexp sexp_make_thread (sexp ctx, sexp self, sexp_sint_t n, sexp thunk, sexp name) {
+#if ! SEXP_USE_NATIVE_X86
   sexp *stack;
+#endif
   sexp_gc_var1(res);
   sexp_assert_type(ctx, sexp_procedurep, SEXP_PROCEDURE, thunk);
   sexp_gc_preserve1(ctx, res);
   res = sexp_make_eval_context(ctx, SEXP_FALSE, sexp_context_env(ctx), 0, 0);
   sexp_context_name(res) = name;
   sexp_context_proc(res) = thunk;
+#if SEXP_USE_NATIVE_X86
+  sexp_native_init_fiber(ctx, res);
+#else
   sexp_context_ip(res) = sexp_bytecode_data(sexp_procedure_code(thunk));
   stack = sexp_stack_data(sexp_context_stack(res));
   stack[0] = stack[1] = stack[3] = SEXP_ZERO;
   stack[2] = sexp_global(ctx, SEXP_G_FINAL_RESUMER);
   sexp_context_top(res) = 4;
   sexp_context_last_fp(res) = 0;
+#endif
   sexp_context_dk(res) = sexp_make_vector(res, SEXP_FOUR, SEXP_FALSE);
   sexp_vector_set(sexp_context_dk(res), SEXP_ZERO, SEXP_ZERO);
   /* reset parameters */

@@ -2,12 +2,12 @@
 /*  Copyright (c) 2009-2015 Alex Shinn.  All rights reserved. */
 /*  BSD-style license: http://synthcode.com/license.txt       */
 
+#include "chibi/eval.h"
+
 #if SEXP_USE_NATIVE_X86
 #include "opt/x86.c"
 #else
 /* ... the rest of this file ... */
-
-#include "chibi/eval.h"
 
 #if SEXP_USE_DEBUG_VM > 1
 static void sexp_print_stack (sexp ctx, sexp *stack, int top, int fp, sexp out) {
