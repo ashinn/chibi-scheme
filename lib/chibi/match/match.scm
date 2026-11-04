@@ -79,6 +79,12 @@
 ;;> \example{(match (list 1 2 3) ((a b c ...) c))}
 ;;> \example{(match (list 1 2 3 4 5) ((a b c ...) c))}
 
+;;> If such a variable was already bound, the list of matching
+;;> instances must instead be \scheme{equal?} to its value.
+
+;;> \example{(match (list (list 1 2) (list 1 2)) (((a ...) (a ...)) a))}
+;;> \example{(match (list (list (list 1 2)) (list (list 1 3))) ((((a b) ...) ((a c) ...)) a))}
+
 ;;> More than one \scheme{...} may not be used in the same list, since
 ;;> this would require exponential backtracking in the general case.
 ;;> However, \scheme{...} need not be the final element in the list,
@@ -247,6 +253,8 @@
 ;; performance can be found at
 ;;   http://synthcode.com/scheme/match-cond-expand.scm
 ;;
+;; 2026/10/23 - fix for non-linear patterns whose first occurrence is
+;;              in a non-trivial ellipsis pattern (thanks to Andy Wingo)
 ;; 2026/04/15 - consistently allow internal defines in match clauses
 ;; 2021/06/21 - fix for `(a ...)' patterns where `a' is already bound
 ;;              (thanks to Andy Wingo)
@@ -354,7 +362,7 @@
     ((match-one v (p q . r) g+s sk fk i)
      (match-check-ellipsis
       q
-      (match-extract-vars p (match-gen-ellipsis v p r  g+s sk fk i) i ())
+      (match-extract-vars p (match-gen-ellipsis v p r  g+s sk fk i) () ())
       (match-two v (p q . r) g+s sk fk i)))
     ;; Go directly to MATCH-TWO.
     ((match-one . x)
@@ -405,14 +413,14 @@
     ((match-two v (= proc p) . x)
      (let ((w (proc v))) (match-one w p . x)))
     ((match-two v (p ___ . r) g+s sk fk i)
-     (match-extract-vars p (match-gen-ellipsis v p r g+s sk fk i) i ()))
+     (match-extract-vars p (match-gen-ellipsis v p r g+s sk fk i) () ()))
     ((match-two v (p) g+s sk fk i)
      (if (and (pair? v) (null? (cdr v)))
          (let ((w (car v)))
            (match-one w p ((car v) (set-car! v)) sk fk i))
          fk))
     ((match-two v (p *** q) g+s sk fk i)
-     (match-extract-vars p (match-gen-search v p q g+s sk fk i) i ()))
+     (match-extract-vars p (match-gen-search v p q g+s sk fk i) () ()))
     ((match-two v (p *** . q) g+s sk fk i)
      (match-syntax-error "invalid use of ***" (p *** . q)))
     ((match-two v (p **1) g+s sk fk i)
@@ -422,11 +430,11 @@
     ((match-two v (p =.. n . r) g+s sk fk i)
      (match-extract-vars
       p
-      (match-gen-ellipsis/range n n v p r g+s sk fk i) i ()))
+      (match-gen-ellipsis/range n n v p r g+s sk fk i) () ()))
     ((match-two v (p *.. n m . r) g+s sk fk i)
      (match-extract-vars
       p
-      (match-gen-ellipsis/range n m v p r g+s sk fk i) i ()))
+      (match-gen-ellipsis/range n m v p r g+s sk fk i) () ()))
     ((match-two v ($ rec p ...) g+s sk fk i)
      (if (is-a? v rec)
          (match-record-refs v rec 0 (p ...) g+s sk fk i)
@@ -486,7 +494,7 @@
      ;; check this and signal explicitly
      (match-extract-vars
       p
-      (match-gen-ellipsis/qq v p rest g+s sk fk i) i ()))
+      (match-gen-ellipsis/qq v p rest g+s sk fk i) () ()))
     ((_ v (quasiquote p) g+s sk fk i . depth)
      (match-quasiquote v p g+s sk fk i #f . depth))
     ((_ v (unquote p) g+s sk fk i x . depth)
@@ -521,11 +529,6 @@
 (define-syntax match-drop-ids
   (syntax-rules ()
     ((_ expr ids ...) expr)))
-
-(define-syntax match-tuck-ids
-  (syntax-rules ()
-    ((_ (letish args (expr ...)) ids ...)
-     (letish args (expr ... ids ...)))))
 
 (define-syntax match-drop-first-arg
   (syntax-rules ()
@@ -569,27 +572,33 @@
 ;; variables, and on success we bind the ids (what the user input and
 ;; expects to see in the success body) to the reversed accumulated
 ;; list IDs.
+;;
+;; The ids are all of the identifiers in p, including any which were
+;; already bound before the ellipsis.  Within the loop p is matched as
+;; if no identifiers were bound, and afterwards each already-bound id
+;; is compared to its accumulated list with EQUAL?, as for any other
+;; repeated identifier.
 
 (define-syntax match-gen-ellipsis
   (syntax-rules ()
     ;; TODO: restore fast path when p is not already bound
-    ((_ v p () g+s (sk ...) fk i ((id id-ls) ...))
+    ((_ v p () g+s sk fk i ((id id-ls) ...))
      (match-check-identifier p
        ;; simplest case equivalent to (p ...), just match the list
        (let ((w v))
          (if (list? w)
-             (match-one w p g+s (sk ...) fk i)
+             (match-one w p g+s sk fk i)
              fk))
        ;; simple case, match all elements of the list
        (let loop ((ls v) (id-ls '()) ...)
          (cond
            ((null? ls)
-            (let ((id (reverse id-ls)) ...) (sk ... i)))
+            (match-bind-ellipsis-ids ((id id-ls) ...) sk fk i))
            ((pair? ls)
             (let ((w (car ls)))
               (match-one w p ((car ls) (set-car! ls))
                          (match-drop-ids (loop (cdr ls) (cons id id-ls) ...))
-                         fk i)))
+                         fk ())))
            (else
             fk)))))
     ((_ v p r g+s sk fk (i ...) ((id id-ls) ...))
@@ -622,18 +631,38 @@
              (let loop ((ls ls) (n len) (id-ls '()) ...)
                (cond
                 ((= n tail-len)
-                 (let ((id (reverse id-ls)) ...)
-                   (match-one ls r (#f #f) sk fk (i ... id ...))))
+                 (match-bind-ellipsis-ids ((id id-ls) ...)
+                                          (match-one ls r (#f #f) sk fk)
+                                          fk
+                                          (i ...)))
                 ((pair? ls)
                  (let ((w (car ls)))
                    (match-one w p ((car ls) (set-car! ls))
                               (match-drop-ids
                                (loop (cdr ls) (- n 1) (cons id id-ls) ...))
                               fk
-                              (i ...))))
+                              ())))
                 (else
                  fk)))
            )))))))
+
+;; Bind each id to the reverse of its accumulated list id-ls, or if it
+;; was already bound, check that the existing value is EQUAL? to that
+;; list, then call sk with the extended list of bound ids.
+
+(define-syntax match-bind-ellipsis-ids
+  (syntax-rules ()
+    ((_ () (sk ...) fk i)
+     (sk ... i))
+    ((_ ((id id-ls) . rest) sk fk (i ...))
+     (match-bound-identifier-memv
+      id
+      (i ...)
+      (if (equal? id (reverse id-ls))
+          (match-bind-ellipsis-ids rest sk fk (i ...))
+          fk)
+      (let ((id (reverse id-ls)))
+        (match-bind-ellipsis-ids rest sk fk (i ... id)))))))
 
 ;; Variant of the above where the rest pattern is in a quasiquote.
 
@@ -650,15 +679,17 @@
             (let loop ((ls ls) (n len) (id-ls '()) ...)
               (cond
                ((= n tail-len)
-                (let ((id (reverse id-ls)) ...)
-                  (match-quasiquote ls r g+s (sk ...) fk (i ... id ...))))
+                (match-bind-ellipsis-ids ((id id-ls) ...)
+                                         (match-quasiquote ls r g+s (sk ...) fk)
+                                         fk
+                                         (i ...)))
                ((pair? ls)
                 (let ((w (car ls)))
                   (match-one w p ((car ls) (set-car! ls))
                              (match-drop-ids
                               (loop (cdr ls) (- n 1) (cons id id-ls) ...))
                              fk
-                             (i ...))))
+                             ())))
                (else
                 fk)))))))))
 
@@ -682,15 +713,17 @@
             (let loop ((ls ls) (j 0) (id-ls '()) ...)
               (cond
                 ((= j len)
-                 (let ((id (reverse id-ls)) ...)
-                   (match-one ls r (#f #f) (sk ...) fk (i ... id ...))))
+                 (match-bind-ellipsis-ids ((id id-ls) ...)
+                                          (match-one ls r (#f #f) (sk ...) fk)
+                                          fk
+                                          (i ...)))
                 ((pair? ls)
                  (let ((w (car ls)))
                    (match-one w p ((car ls) (set-car! ls))
                               (match-drop-ids
                                (loop (cdr ls) (+ j 1) (cons id id-ls) ...))
                               fk
-                              (i ...))))
+                              ())))
                 (else
                  fk)))
             fk))))))
@@ -734,9 +767,8 @@
     ((match-gen-search v p q g+s sk fk i ((id id-ls) ...))
      (letrec ((try (lambda (w fail id-ls ...)
                      (match-one w q g+s
-                                (match-tuck-ids
-                                 (let ((id (reverse id-ls)) ...)
-                                   sk))
+                                (match-bind-ellipsis-ids
+                                 ((id id-ls) ...) sk (next w fail id-ls ...))
                                 (next w fail id-ls ...) i)))
               (next (lambda (w fail id-ls ...)
                       (if (not (pair? w))
@@ -754,7 +786,7 @@
                                            (lambda () (lp (cdr ls)))
                                            id-ls ...)
                                       (fail)))))
-                             (fail) i))))))
+                             (fail) ()))))))
        ;; the initial id-ls binding here is a dummy to get the right
        ;; number of '()s
        (let ((id-ls '()) ...)
@@ -816,18 +848,18 @@
 (define-syntax match-vector-tail
   (syntax-rules ()
     ((_ v p n len sk fk i)
-     (match-extract-vars p (match-vector-tail-two v p n len sk fk i) i ()))))
+     (match-extract-vars p (match-vector-tail-two v p n len sk fk i) () ()))))
 
 (define-syntax match-vector-tail-two
   (syntax-rules ()
-    ((_ v p n len (sk ...) fk i ((id id-ls) ...))
+    ((_ v p n len sk fk i ((id id-ls) ...))
      (let loop ((j n) (id-ls '()) ...)
        (if (>= j len)
-         (let ((id (reverse id-ls)) ...) (sk ... i))
+         (match-bind-ellipsis-ids ((id id-ls) ...) sk fk i)
          (let ((w (vector-ref v j)))
            (match-one w p ((vector-ref v j) (vector-set! v j))
                       (match-drop-ids (loop (+ j 1) (cons id id-ls) ...))
-                      fk i)))))))
+                      fk ())))))))
 
 (define-syntax match-record-refs
   (syntax-rules ()
