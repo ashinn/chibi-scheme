@@ -1696,6 +1696,16 @@
              '(skint -qe "(begin (import (only (skint hidden) base-library-directory)) (base-library-directory))"))
            #\newline)
          #\")))
+    ((stak)
+      (call-with-temp-file "snow-stak.scm"
+       (lambda (tmp-path out preserve)
+         (with-output-to-file tmp-path
+                              (lambda ()
+                                (display "(import (scheme base) (scheme write)
+                                                  (only (stak library) default-library-paths))")
+                                (newline)
+                                (display "(display (car (default-library-paths)))")))
+         (list (make-path (process->string `(stak ,tmp-path)))))))
     ((stklos)
      (list (make-path
             (process->string
@@ -1848,6 +1858,10 @@
          (if lib-path
              `(skint -A ,install-dir -A ,lib-path ,file)
              `(skint -A ,install-dir ,file)))
+        ((stak)
+         (if lib-path
+             `(stak -A ,install-dir -A ,lib-path ,file)
+             `(stak -A ,install-dir ,file)))
         ((stklos)
          (if lib-path
              `(stklos -A ,install-dir -A ,lib-path ,file)
@@ -2121,6 +2135,7 @@
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'skint) (get-install-library-dir impl cfg))
+   ((eq? impl 'stak) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
@@ -2146,6 +2161,7 @@
    ((eq? impl 'racket) (get-install-library-dir impl cfg))
    ((eq? impl 'sagittarius) (get-install-library-dir impl cfg))
    ((eq? impl 'skint) (get-install-library-dir impl cfg))
+   ((eq? impl 'stak) (get-install-library-dir impl cfg))
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
@@ -2191,6 +2207,8 @@
    ((eq? impl 'sagittarius)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'skint)
+    (car (get-install-dirs impl cfg)))
+   ((eq? impl 'stak)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'stklos)
     (car (get-install-dirs impl cfg)))
