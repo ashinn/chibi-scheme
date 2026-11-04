@@ -9,9 +9,12 @@
     (make-set res comparator)))
 
 (define (set-unfold comparator stop? mapper successor seed)
-  (let ((mapper (lambda (acc) (let ((elt (mapper acc))) (values elt elt)))))
-    (make-set (hash-table-unfold stop? mapper successor seed comparator)
-              comparator)))
+  (if (and (comparator? seed) (not (comparator? comparator)))
+      ;; PFN 2: support SRFI 125 argument order
+      (set-unfold seed comparator stop? mapper successor)
+      (let ((mapper (lambda (acc) (let ((elt (mapper acc))) (values elt elt)))))
+        (make-set (hash-table-unfold stop? mapper successor seed comparator)
+                  comparator))))
 
 (define (set-contains? set element)
   (hash-table-contains? (set-table set) element))
@@ -107,9 +110,12 @@
   (not (set-any? (lambda (x) (not (predicate x))) set)))
 
 (define (set-map comparator proc s)
-  (set-fold (lambda (elt res) (set-adjoin! res (proc elt)))
-            (set comparator)
-            s))
+  (if (and (comparator? proc) (not (comparator? comparator)))
+      ;; PFN 2: support SRFI 125 argument order
+      (set-map proc comparator s)
+      (set-fold (lambda (elt res) (set-adjoin! res (proc elt)))
+                (set comparator)
+                s)))
 
 (define (set-for-each proc set)
   (hash-table-for-each (lambda (elt _) (proc elt)) (set-table set)))
