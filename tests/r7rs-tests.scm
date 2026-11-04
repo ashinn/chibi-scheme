@@ -620,6 +620,13 @@
          (interaction-environment))))
 |#
 
+(test '(#f #f #t #t)
+    (let-syntax
+        ((m (syntax-rules (b)
+              ((_ b ...) #t)
+              ((_ . r) #f))))
+      (list (m c) (m b (c)) (m b b) (m))))
+
 (test-end)
 
 (test-begin "5 Program structure")
