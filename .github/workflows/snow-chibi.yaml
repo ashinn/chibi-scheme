@@ -7,11 +7,13 @@ on:
       - snow-chibi*
   pull_request:
     branches:
+      - master
       - snow-chibi*
 
 jobs:
   capyscheme:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install capyscheme
         shell: bash
@@ -34,6 +36,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   chibi:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - uses: actions/checkout@v6
       - id: snow-fort
@@ -48,6 +51,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   chicken-from-apt:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install chicken
         shell: bash
@@ -67,6 +71,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   cyclone:
     runs-on: ubuntu-24.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install cyclone
         shell: bash
@@ -90,6 +95,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   foment:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install foment
         shell: bash
@@ -111,6 +117,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   gauche-from-apt:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install gauche
         shell: bash
@@ -128,6 +135,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   guile-from-apt:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install guile
         shell: bash
@@ -145,6 +153,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   kawa:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install kawa
         shell: bash
@@ -168,6 +177,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   loko:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install loko
         shell: bash
@@ -190,6 +200,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   meevax:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install meevax
         shell: bash
@@ -213,6 +224,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   mit-scheme-from-apt:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install mit-scheme
         shell: bash
@@ -230,6 +242,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   mosh:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install mosh
         shell: bash
@@ -254,6 +267,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   racket-from-apt:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install racket
         shell: bash
@@ -273,6 +287,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   sagittarius:
     runs-on: ubuntu-24.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install sagittarius
         shell: bash
@@ -298,6 +313,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   skint:
     runs-on: ubuntu-24.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install skint
         shell: bash
@@ -319,6 +335,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   stak:
     runs-on: ubuntu-24.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install stak
         shell: bash
@@ -343,6 +360,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   stklos:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install stklos
         shell: bash
@@ -365,6 +383,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   tr7:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install tr7
         shell: bash
@@ -386,6 +405,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   ypsilon:
     runs-on: ubuntu-26.04
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install ypsilon
         shell: bash
