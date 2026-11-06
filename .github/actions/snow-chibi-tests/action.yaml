@@ -1,0 +1,95 @@
+name: snow-chibi-tests
+inputs:
+  scheme:
+    description: The implementation to test snow-chibi on
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Build
+      shell: bash
+      run: make # assumes GNUMake
+
+    - name: Setup
+      shell: bash
+      run: sudo make install
+
+    - name: Create config file
+      shell: bash
+      run: mkdir -p ~/.snow && echo "()" > ~/.snow/config.scm
+
+    - name: snow-chibi --help
+      shell: bash
+      run: snow-chibi --help
+
+    - name: snow-chibi -h
+      shell: bash
+      run: snow-chibi -h
+
+    - name: snow-chibi help
+      shell: bash
+      run: snow-chibi help
+
+    - name: snow-chibi search
+      shell: bash
+      run: time snow-chibi --host=$HOST search
+
+    - name: snow-chibi show
+      shell: bash
+      run: snow-chibi show "(chibi app)"
+
+    - name: snow-chibi update
+      shell: bash
+      run: time snow-chibi --host=$HOST update
+
+    - name: snow-chibi install
+      shell: bash
+      run: time snow-chibi --host=$HOST install "(chibi assert)"
+
+    - name: snow-chibi install (with .stub)
+      shell: bash
+      run: time snow-chibi --host=$HOST install "(chibi sqlite3)"
+
+    - name: snow-chibi status 1 (installed)
+      shell: bash
+      run: snow-chibi status "(chibi assert)"
+
+    - name: snow-chibi upgrade
+      shell: bash
+      run: snow-chibi --host=$HOST upgrade "(chibi assert)"
+
+    - name: snow-chibi remove
+      shell: bash
+      run: snow-chibi remove "(chibi assert)"
+
+    - name: snow-chibi status 2 (removed)
+      shell: bash
+      run: snow-chibi status "(chibi assert)"
+
+    - name: snow-chibi install-dependencies
+      shell: bash
+      run: |
+        printf "(import (scheme base) (scheme write) (chibi assert)) (display 1)" > main1.scm
+        time snow-chibi --host=$HOST install-dependencies --impls=$SCHEME main1.scm
+
+    - name: snow-chibi package / test-package / program / git-index
+      shell: bash
+      run: |
+        set -eux
+        mkdir -p foo
+        printf "(define-library (foo bar) (import (scheme base) (scheme write)) (export baz) (include \"bar.scm\"))" > foo/bar.sld
+        printf "(define (baz) 1234)" > foo/bar.scm
+        printf "(import (scheme base) (foo bar) (srfi 64)) (test-begin \"foobar\") (test-equal 1234 (baz)) (test-end \"foobar\")" > foo/test.scm
+        printf "(import (scheme base) (scheme write) (foo bar)) (display (baz)) (newline)" > snow-chibi-test-program.scm
+        snow-chibi --verbose package --version "1.0.0" --test foo/test.scm --programs snow-chibi-test-program.scm foo/bar.sld
+        snow-chibi install --impls=$SCHEME --always-yes "(srfi 64)"
+        snow-chibi --verbose --host=$HOST install --impls=$SCHEME --always-yes foo-bar-1.0.0.tgz
+        snow-chibi --verbose test-package --impls=$SCHEME foo-bar-1.0.0.tgz
+        test_program_output=$(snow-chibi-test-program)
+        test "$test_program_output" = "1234"
+        snow-chibi --verbose git-index foo-bar-1.0.0.tgz
+        test -f .snow-repo.scm
+
+    - name: snow-chibi implementations
+      shell: bash
+      run: snow-chibi implementations | grep "$SCHEME" || exit 1
