@@ -2445,17 +2445,8 @@
     (let* ((scm-path (make-path install-dir dest-sld-file)))
       (install-directory cfg (path-directory scm-path))
       (install-file cfg (make-path dir source-sld-file) scm-path)
-      (let* ((install-cache-dir
-               (guard (exn (else #f))
-                 (process->sexp
-                   `(guile -c ,(write-to-string `(write (%site-ccache-dir)))))))
-             (source-go-path (make-path dir source-go-file)))
-        (when (and (string? install-cache-dir)
-                   (file-exists? source-go-path))
-          (let ((go-path (make-path install-cache-dir dest-go-file)))
-            (install-directory cfg (path-directory go-path))
-            (install-file cfg source-go-path go-path))))
-      ;; install any includes
+      ;; install any includes before compiled files so the compiled files will
+      ;; be newer and Guile will not immediately recompile
       (cons
        scm-path
        (append
@@ -2476,7 +2467,18 @@
              (install-file cfg so-file dest-file)
              dest-file))
          (library-shared-include-files
-          impl cfg (make-path dir source-sld-file))))))))
+          impl cfg (make-path dir source-sld-file)))))
+      (let* ((install-cache-dir
+               (guard (exn (else #f))
+                 (process->sexp
+                   `(guile -c ,(write-to-string `(write (%site-ccache-dir)))))))
+             (source-go-path (make-path dir source-go-file)))
+        (when (and (string? install-cache-dir)
+                   (file-exists? source-go-path))
+          (let ((go-path (make-path install-cache-dir dest-go-file)))
+            (install-directory cfg (path-directory go-path))
+            (install-file cfg source-go-path go-path))))
+      )))
 
 (define (kawa-installer impl cfg library dir)
   (let* ((class-file (path-replace-extension
