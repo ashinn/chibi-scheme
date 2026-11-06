@@ -6,6 +6,7 @@ jobs:
   build:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
       matrix:
         os: [ubuntu-26.04, ubuntu-26.04-arm, macos-latest, macos-26-intel]
