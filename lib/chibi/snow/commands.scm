@@ -1759,7 +1759,6 @@
                          (else "scheme-script")))
              (path (or (find-in-path prog) prog))
              (arg (case impl
-                    ((capyscheme) "")
                     ((chicken) "-s")
                     ((cyclone) "-s")
                     ((foment)
@@ -2758,9 +2757,9 @@
          (src-library-file (make-path dir library-file))
          (library-dir (path-directory src-library-file))
          (dest-library-file
-           (string-append (library->path cfg library) ".go"))
+          (string-append (library->path cfg library) ".go"))
          (dest-dir
-           (path-directory (make-path dir dest-library-file))))
+          (path-directory (make-path dir dest-library-file))))
     ;; ensure the build directory exists
     (create-directory* dest-dir)
     (with-directory
