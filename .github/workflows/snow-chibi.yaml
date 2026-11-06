@@ -13,7 +13,7 @@ on:
 jobs:
   capyscheme:
     runs-on: ubuntu-26.04
-    if: startsWith(github.head_ref, 'snow-chibi') == true || startsWith(github.ref, 'snow-chibi') == true
+    if: startsWith(github.head_ref, 'snow-chibi') == true
     steps:
       - name: Install capyscheme
         shell: bash
@@ -36,7 +36,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   chibi:
     runs-on: ubuntu-26.04
-    if: startsWith(github.head_ref, 'snow-chibi') == true || startsWith(github.ref, 'snow-chibi') == true
+    if: startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref, 'snow-chibi')
     steps:
       - uses: actions/checkout@v6
       - id: snow-fort
