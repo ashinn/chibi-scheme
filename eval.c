@@ -976,9 +976,7 @@ static sexp analyze_define (sexp ctx, sexp x, int depth) {
 #if SEXP_USE_UNWRAPPED_TOPLEVEL_BINDINGS
       if (sexp_synclop(name)) name = sexp_synclo_expr(name);
 #endif
-      tmp = sexp_env_cell_loc(ctx, env, name, 0, &varenv);
-      if (!tmp || sexp_syntacticp(sexp_cdr(tmp)))
-        sexp_env_cell_define(ctx, env, name, SEXP_VOID, &varenv);
+      sexp_env_cell_define(ctx, env, name, SEXP_VOID, &varenv);
       if (sexp_pairp(sexp_cadr(x))) {
         tmp = sexp_cons(ctx, sexp_cdadr(x), sexp_cddr(x));
         tmp = sexp_cons(ctx, SEXP_VOID, tmp);
