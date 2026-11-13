@@ -1,0 +1,432 @@
+name: snow-chibi
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - snow-chibi*
+  pull_request:
+    branches:
+      - master
+      - snow-chibi*
+
+jobs:
+  capyscheme:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install capyscheme
+        shell: bash
+        run: |
+          VERSION=3.1.0
+          wget https://github.com/playX18/capyscheme/releases/download/v${VERSION}/capyscheme-${VERSION}-x86_64-unknown-linux-gnu.tar.gz
+          tar -xf capyscheme-${VERSION}-x86_64-unknown-linux-gnu.tar.gz
+          cp -r capy/${VERSION} /opt/capy
+          ln -sf /opt/capy/capy /usr/local/bin/capy
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: capyscheme
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: capyscheme
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  chibi:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: snow-fort
+        env:
+          SCHEME: chibi
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - id: git
+        env:
+          SCHEME: chibi
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  chicken-from-apt:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install chicken
+        shell: bash
+        run: |
+          sudo apt-get install -y chicken-bin
+          sudo chicken-install r7rs
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: chicken
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: chicken
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  cyclone:
+    runs-on: ubuntu-24.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install cyclone
+        shell: bash
+        run: |
+          sudo apt-get install -y libtommath-dev libck-dev
+          wget -O cyclone-bootstrap.tar.gz https://github.com/justinethier/cyclone-bootstrap/archive/refs/tags/v0.36.0.tar.gz
+          mkdir cyclone && tar -C cyclone --strip-components 1 -xf cyclone-bootstrap.tar.gz
+          cd cyclone
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: cyclone
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: cyclone
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  foment:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install foment
+        shell: bash
+        run: |
+          git clone https://github.com/leftmike/foment.git
+          cd foment/unix
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: foment
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: foment
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  gauche-from-apt:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install gauche
+        shell: bash
+        run: sudo apt-get install -y gauche
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: gauche
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: gauche
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  guile-from-apt:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install guile
+        shell: bash
+        run: sudo apt-get install -y guile-3.0
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: guile
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: guile
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  kawa:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install kawa
+        shell: bash
+        run: |
+          git clone https://gitlab.com/kashell/Kawa.git
+          cd Kawa
+          bash autogen.sh
+          ./configure --prefix=/usr/local
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: kawa
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: kawa
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  loko:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install loko
+        shell: bash
+        run: |
+          wget https://scheme.fail/releases/loko-0.13.0.tar.gz
+          tar -xf loko-0.13.0.tar.gz
+          cd loko-0.13.0
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: loko
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: loko
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  meevax:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install meevax
+        shell: bash
+        run: |
+          git clone https://github.com/yamacir-kit/meevax.git --branch=release-candidate #--branch=v0.5.596
+          cd meevax
+          CC=gcc cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+          cd build
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: meevax
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: meevax
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  mit-scheme-from-apt:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install mit-scheme
+        shell: bash
+        run: sudo apt-get install -y mit-scheme
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: mit-scheme
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: mit-scheme
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  mosh:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install mosh
+        shell: bash
+        run: |
+          sudo apt-get install -y libonig-dev
+          wget https://github.com/higepon/mosh/releases/download/mosh-0.2.9-rc1/mosh-0.2.9-rc1.tar.gz
+          tar -xf mosh-0.2.9-rc1.tar.gz
+          cd mosh-0.2.9-rc1
+          ./configure --prefix=/usr/local
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: mosh
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: mosh
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  racket-from-apt:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install racket
+        shell: bash
+        run: |
+          sudo apt-get install -y racket
+          raco pkg install --auto r7rs
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: racket
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: racket
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  sagittarius:
+    runs-on: ubuntu-24.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install sagittarius
+        shell: bash
+        run: |
+          sudo apt-get install -y libffi-dev libgc-dev libssl-dev libz-dev
+          VERSION=0.9.15
+          wget https://github.com/ktakashi/sagittarius-scheme/releases/download/v${VERSION}/sagittarius-${VERSION}.tar.gz
+          tar -xf sagittarius-${VERSION}.tar.gz
+          cd sagittarius-${VERSION}
+          cmake .
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: sagittarius
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: sagittarius
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  skint:
+    runs-on: ubuntu-24.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install skint
+        shell: bash
+        run: |
+          git clone https://github.com/false-schemers/skint.git --branch=v0.8.5
+          cd skint
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: skint
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: skint
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  stak:
+    runs-on: ubuntu-24.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install stak
+        shell: bash
+        run: |
+          VERSION=0.12.33
+          wget https://github.com/raviqqe/stak/releases/download/v${VERSION}/stak_${VERSION}_linux_amd64.tar.gz
+          tar -xf stak_${VERSION}_linux_amd64.tar.gz
+          cp stak /usr/local/bin/stak
+          cp stak-compile /usr/local/bin/stak-compile
+          cp stak-interpret /usr/local/bin/stak-interpret
+          cp stak-repl /usr/local/bin/stak-repl
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: stak
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: stak
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  stklos:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install stklos
+        shell: bash
+        run: |
+          git clone https://github.com/egallesio/STklos.git --branch=version-26.0
+          cd STklos
+          ./configure --prefix=/usr/local
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: stklos
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: stklos
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  tr7:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install tr7
+        shell: bash
+        run: |
+          git clone https://gitlab.com/jobol/tr7.git --branch=v2.0.19
+          cd tr7
+          make
+          sudo make install
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: tr7
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: tr7
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
+  ypsilon:
+    runs-on: ubuntu-26.04
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
+    steps:
+      - name: Install ypsilon
+        shell: bash
+        run: |
+          sudo apt-get install -y llvm-19 llvm-19-dev clang-19 llvm-19-dev lld-19 libffi-dev libgmp-dev cmake
+          sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-19 50
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 50
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 50
+          git clone https://github.com/fujita-y/ypsilon.git
+          cd ypsilon
+          CC=clang CXX=clang++ cmake -DCMAKE_BUILD_TYPE=Release .
+          CC=clang CXX=clang++ cmake --build .
+          sudo CC=clang CXX=clang++ cmake --install .
+      - uses: actions/checkout@v6
+      - name: snow-fort
+        env:
+          SCHEME: ypsilon
+          HOST: http://snow-fort.org
+        uses: ./.github/actions/snow-chibi-tests
+      - name: git
+        env:
+          SCHEME: ypsilon
+          HOST: https://github.com/Snow-fort-repository/snow-fort-repository.git
+        uses: ./.github/actions/snow-chibi-tests
