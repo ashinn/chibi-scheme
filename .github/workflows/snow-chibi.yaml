@@ -36,7 +36,7 @@ jobs:
         uses: ./.github/actions/snow-chibi-tests
   chibi:
     runs-on: ubuntu-26.04
-    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref, 'snow-chibi') }}
+    if: ${{ startsWith(github.head_ref, 'snow-chibi') || startsWith(github.ref_name, 'snow-chibi') }}
     steps:
       - uses: actions/checkout@v6
       - id: snow-fort
