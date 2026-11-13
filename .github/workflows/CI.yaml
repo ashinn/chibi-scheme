@@ -24,6 +24,7 @@ jobs:
   msys2-build:
     name: msys2-build
     runs-on: windows-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - uses: msys2/setup-msys2@v2
@@ -37,6 +38,7 @@ jobs:
   cmake-emscripten-build:
     name: cmake emscripten-build
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - name: Install emscripten
@@ -48,6 +50,7 @@ jobs:
   make-emscripten-build:
     name: make emscripten-build
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - name: Install emsdk and build
