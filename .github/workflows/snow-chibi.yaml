@@ -2,6 +2,13 @@ name: snow-chibi
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - snow-chibi*
+  pull_request:
+    branches:
+      - master
+      - snow-chibi*
 
 jobs:
   capyscheme:
