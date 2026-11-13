@@ -9,7 +9,7 @@ jobs:
     continue-on-error: true
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-26.04-arm, macos-latest, macos-26-intel]
+        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-latest, macos-26-intel]
     steps:
       - uses: actions/checkout@v6
       - name: Build
