@@ -2960,7 +2960,10 @@ sexp sexp_read_float_tail (sexp ctx, sexp in, double whole, int negp) {
 
 #if SEXP_USE_RATIOS
 sexp sexp_make_ratio (sexp ctx, sexp num, sexp den) {
-  sexp res = sexp_alloc_type(ctx, ratio, SEXP_RATIO);
+  sexp res, self = NULL;
+  sexp_assert_type(ctx, sexp_exact_integerp, SEXP_BIGNUM, num);
+  sexp_assert_type(ctx, sexp_exact_integerp, SEXP_BIGNUM, den);
+  res = sexp_alloc_type(ctx, ratio, SEXP_RATIO);
   if (!sexp_exceptionp(res)) {
     sexp_ratio_numerator(res) = num;
     sexp_ratio_denominator(res) = den;
@@ -2969,9 +2972,11 @@ sexp sexp_make_ratio (sexp ctx, sexp num, sexp den) {
 }
 
 sexp sexp_ratio_normalize (sexp ctx, sexp rat, sexp in) {
-  sexp tmp;
+  sexp tmp, self = NULL;
   sexp_gc_var2(num, den);
   num = sexp_ratio_numerator(rat), den = sexp_ratio_denominator(rat);
+  sexp_assert_type(ctx, sexp_exact_integerp, SEXP_BIGNUM, num);
+  sexp_assert_type(ctx, sexp_exact_integerp, SEXP_BIGNUM, den);
   if (den == SEXP_ZERO)
     return sexp_read_error(ctx, "zero denominator in ratio", rat, in);
   else if (num == SEXP_ZERO)

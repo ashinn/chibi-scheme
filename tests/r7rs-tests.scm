@@ -2456,6 +2456,7 @@
 ;;(test-numeric-syntax "#b10+11i" (make-rectangular 2 3) "2+3i")
 ;;(test-numeric-syntax "#e1.0+1.0i" (make-rectangular 1 1) "1+1i" "1+i")
 ;;(test-numeric-syntax "#i1.0+1.0i" (make-rectangular 1.0 1.0) "1.0+1.0i" "1.+1.i")
+(test #f (string->number "#x4000000000000001/3e1"))
 
 (define-syntax test-precision
   (syntax-rules ()
