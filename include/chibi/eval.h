@@ -81,6 +81,9 @@ struct sexp_native_cont {
   char *saved_stack;
 };
 
+struct sexp_native_frame;
+SEXP_API void sexp_native_enter (sexp ctx, struct sexp_native_frame *f, sexp self, sexp_sint_t nargs, sexp *args, sexp_sint_t packed_params);
+SEXP_API void sexp_native_exit (sexp ctx, struct sexp_native_frame *f);
 SEXP_API void sexp_emit_enter (sexp ctx);
 SEXP_API void sexp_native_prepare_ast (sexp ctx, sexp ast);
 SEXP_API void sexp_bless_bytecode (sexp ctx, sexp bc);
@@ -88,6 +91,11 @@ SEXP_API void sexp_native_init_fiber (sexp ctx, sexp thread_ctx);
 SEXP_API sexp sexp_native_yield (sexp ctx);
 SEXP_API void sexp_native_loop_yield (sexp ctx);
 SEXP_API sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val);
+SEXP_API sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args);
+SEXP_API sexp sexp_native_dispatch_op (sexp ctx, sexp self, sexp op, sexp_sint_t nargs, sexp *args);
+SEXP_API sexp sexp_native_make_closure (sexp ctx, sexp flags, sexp num_args, sexp bc, sexp_sint_t num_fvs, sexp *fvs);
+SEXP_API sexp sexp_native_make_trampoline (sexp ctx, sexp proc, sexp_sint_t nargs, sexp *args);
+SEXP_API sexp sexp_native_parameter_set (sexp ctx, sexp param_op, sexp val);
 #else
 #define sexp_emit_enter(ctx)
 #define sexp_native_prepare_ast(ctx, ast)
