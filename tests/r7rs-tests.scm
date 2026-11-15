@@ -2193,6 +2193,7 @@
 (test '(1 2 3 4 5) (read (open-input-string "(1 . (2 3 4 . (5)))")))
 (test '1 (cadr (read (open-input-string "#0=(1 . #0#)"))))
 (test '(1 2 3) (cadr (read (open-input-string "(#0=(1 2 3) #0#)"))))
+(test-error (read (open-input-string "#7=#23=#200#")))
 
 (test '(quote (1 2)) (read (open-input-string "'(1 2)")))
 (test '(quote (1 (unquote 2))) (read (open-input-string "'(1 ,2)")))

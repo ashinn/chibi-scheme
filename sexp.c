@@ -3741,6 +3741,7 @@ sexp sexp_read_raw (sexp ctx, sexp in, sexp *shares) {
       tmp = sexp_make_fixnum(c2);
       if (c1 == '#') {
         if (!sexp_vectorp(*shares) ||
+            c2 < 0 || c2 >= (int)sexp_vector_length(*shares) ||
             tmp > sexp_vector_data(*shares)[sexp_vector_length(*shares)-1] ||
             sexp_vector_data(*shares)[c2] == SEXP_VOID) {
           res = sexp_read_error(ctx, "unknown reader label", tmp, in);
