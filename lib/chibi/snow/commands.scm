@@ -16,10 +16,8 @@
                 (let ((msg
                        (string-append
                         "Implementation " (symbol->string (car spec))
-                        (if (string? version)
-                            (string-append " is an unsupported version, "
-                                           version)
-                            " is an unknown version")
+                        " is an unsupported version, "
+                        (x->string version)
                         ", but at least " (fourth spec) " is required.")))
                   (cond
                    (confirm?
@@ -1607,17 +1605,22 @@
     ((gauche)
      (list
       (let ((dir (string-trim
-                  (process->string '(gauche-config "--sitelibdir"))
-                  char-whitespace?)))
-        (or (and (string? dir) (> (string-length dir) 0)
-                 (eqv? #\/ (string-ref dir 0))
-                 dir)
-            "/usr/local/share/gauche/"))))
+                   (process->string
+                   '(gosh -e "(begin (import (gauche base) (gauche config)) (print (gauche-config \"--sitelibdir\")) (exit))"))
+                   char-whitespace?))
+            (version (process->string
+                       '(gosh -e "(begin (import (gauche base)) (print (gauche-version)) (exit))"))))
+        (or
+          (and (string? dir)
+               (> (string-length dir) 0)
+               (eqv? #\/ (string-ref dir 0))
+               dir)
+          "/usr/local/share/gauche-0.98/site/lib"))))
     ((guile)
      (let ((path
              (guard (exn (else #f))
                (process->sexp
-                 `(guile -c ,(write-to-string `(write (%site-ccache-dir))))))))
+                 `(guile -c ,(write-to-string `(write (%site-dir))))))))
        (list
          (make-path
            (or (conf-get cfg 'install-prefix) "")
@@ -1758,8 +1761,24 @@
              (arg (case impl
                     ((chicken) "-s")
                     ((cyclone) "-s")
+                    ((foment)
+                     (string-append "-A "
+                                    (car (get-install-dirs impl cfg))
+                                    " --load \"$0\""))
+                    ((gambit) "-:r7rs")
                     ((gauche) "-b")
+                    ((guile) "--r7rs\n!#")
+                    ((kawa)
+                     (string-append "-Dkawa.import.path="
+                                    (car (get-install-dirs impl cfg))
+                                    "/*.sld"))
+                    ((mit-scheme)
+                     (string-append "--quiet --load \"$0\" --eval '(exit 0)'"))
                     ((larceny) "-program")
+                    ((racket) "\n#lang r7rs\n")
+                    ((skint) (string-append "-A "
+                                            (car (get-install-dirs impl cfg))
+                                            " \"$0\""))
                     (else #f))))
         (if (and path arg)
             (string-append path " " arg)
@@ -1810,7 +1829,7 @@
              `(gosh -A ,install-dir ,file)))
         ((guile)
          (if lib-path
-             `(guile --r7rs -C ,lib-path ,file)
+             `(guile --r7rs -C ,lib-path -L ,lib-path ,file)
              `(guile --r7rs ,file)))
         ((kawa)
          (let ((install-dir (path-resolve install-dir (current-directory))))
@@ -1922,11 +1941,12 @@
         (for-each
          (lambda (file)
            (let* ((src (make-path dir (if (pair? file) (cadr file) file)))
-                  (dest0 (if (pair? file) (third file) file))
+                  (dest0 (guile-srfi-fix (if (pair? file) (third file) file)))
                   (dest (make-path test-install-dir
+                                   (guile-srfi-fix
                                    (if (path-absolute? dest0)
                                        (path-relative-to dest0 true-install-dir)
-                                       dest0))))
+                                       dest0)))))
              (create-directory* (path-directory dest))
              (install-file cfg src dest)))
          (package-data-files pkg))
@@ -2422,13 +2442,11 @@
           (library-include-files impl cfg (make-path dir source-sld-file)))
          (install-dir (get-install-source-dir impl cfg))
          (install-lib-dir (get-install-library-dir impl cfg)))
-    (let ((scm-path (make-path install-dir dest-sld-file))
-          (go-path (make-path install-lib-dir dest-go-file)))
+    (let* ((scm-path (make-path install-dir dest-sld-file)))
       (install-directory cfg (path-directory scm-path))
-      (install-directory cfg (path-directory go-path))
       (install-file cfg (make-path dir source-sld-file) scm-path)
-      (install-file cfg (make-path dir source-go-file) go-path)
-      ;; install any includes
+      ;; install any includes before compiled files so the compiled files will
+      ;; be newer and Guile will not immediately recompile
       (cons
        scm-path
        (append
@@ -2449,7 +2467,18 @@
              (install-file cfg so-file dest-file)
              dest-file))
          (library-shared-include-files
-          impl cfg (make-path dir source-sld-file))))))))
+          impl cfg (make-path dir source-sld-file)))))
+      (let* ((install-cache-dir
+               (guard (exn (else #f))
+                 (process->sexp
+                   `(guile -c ,(write-to-string `(write (%site-ccache-dir)))))))
+             (source-go-path (make-path dir source-go-file)))
+        (when (and (string? install-cache-dir)
+                   (file-exists? source-go-path))
+          (let ((go-path (make-path install-cache-dir dest-go-file)))
+            (install-directory cfg (path-directory go-path))
+            (install-file cfg source-go-path go-path))))
+      )))
 
 (define (kawa-installer impl cfg library dir)
   (let* ((class-file (path-replace-extension
@@ -2736,10 +2765,17 @@
     ;; ensure the build directory exists
     (create-directory* dest-dir)
     (with-directory
-     dir
-     (lambda ()
-       (and (system 'guild 'compile '-O0 '--r7rs '-o dest-library-file src-library-file)
-            library)))))
+      dir
+      (lambda ()
+        (and (= (car (reverse
+                       (process->output+error+status
+                         `(guile --r7rs -c
+                                 ,(string-append
+                                    "(use-modules (system base compile)) "
+                                    "(compile-file \"" src-library-file "\" "
+                                    "#:output-file \"" dest-library-file "\")")))))
+                0)
+             library)))))
 
 (define (kawa-builder impl cfg library dir)
   (let* ((src-library-file (make-path dir (get-library-file cfg library)))
@@ -2822,10 +2858,25 @@
         (system "cp" path (string-append path ".bak")))
     (call-with-output-file dest
       (lambda (out)
-        (when script
-          (display "#! " out)
-          (display script out)
-          (newline out)) 
+        (cond
+          ;; Hacks to make foment, mit-scheme and skint programs work atleast
+          ;; somewhere. When (2026) tested dit not work on alpine linux (busybox)
+          ;; Empty line instead of shebang on posix makes the system run
+          ;; the file with shell
+          ((or (equal? impl 'foment)
+               (equal? impl 'mit-scheme)
+               (equal? impl 'skint))
+           (newline out) ;; Empty line instead of shebang
+           (display "#|" out)
+           (newline out)
+           (display (string-append "exec " script) out)
+           (newline out)
+           (display "|#" out)
+           (newline out))
+          (script
+            (display "#!" out)
+            (display script out)
+            (newline out)))
         (for-each
          (lambda (line) (display line out) (newline out))
          (if (and (pair? src-lines) (string-prefix? "#!" (car src-lines)))
@@ -2860,16 +2911,29 @@
                               path " - install anyway?"))
               prog))))))
 
+(define (loko-program-builder impl cfg prog dir)
+  (let ((path (get-program-file cfg prog)))
+    (with-directory
+     dir
+     (lambda ()
+       (let ((res (system 'loko '-feval '-std=r7rs '--compile path)))
+         (and (or (and (pair? res) (zero? (cadr res)))
+                  (yes-or-no? cfg "loko failed to build: "
+                              path " - install anyway?"))
+              prog))))))
+
 (define (lookup-program-builder builder)
   (case builder
     ((chicken) chicken-program-builder)
     ((cyclone) cyclone-program-builder)
+    ((loko) loko-program-builder)
     (else default-program-builder)))
 
 (define (program-builder-for-implementation impl cfg)
   (case impl
     ((chicken) 'chicken)
     ((cyclone) 'cyclone)
+    ((loko) 'loko)
     (else 'default)))
 
 (define (build-program impl cfg prog dir)

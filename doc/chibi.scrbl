@@ -1676,7 +1676,7 @@ installed. The following are currently supported:
 \itemlist[
 \item{capyscheme - version >= 0.1.0}
 \item{chibi - version >= 0.7.3}
-\item{chicken - version >= 4.9.0 with the \scheme{r7rs} egg}
+\item{chicken - version >= 4.9.0 (4-5 with the \scheme{r7rs} egg)}
 \item{cyclone - version >= 0.5.3}
 \item{foment - version >= 0.4; Libraries are installed into /usr/local/lib/snow, user needs to add it into loadpath}
 \item{gambit - version >= 4.9.3}
