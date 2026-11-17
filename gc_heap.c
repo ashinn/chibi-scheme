@@ -173,6 +173,25 @@ static sexp sexp_adjust_fields(sexp dstp, sexp* types, sexp (* adjust_fn)(void *
 }
 
 
+struct load_image_state {
+  sexp_sint_t offset;
+  sexp_heap heap;
+  sexp *types;
+  size_t types_cnt;
+#if SEXP_USE_NATIVE_X86
+  sexp header_base;
+  size_t header_size;
+  intptr_t c_offset;
+#endif
+};
+
+/* Return a destination (remapped) pointer for a given source pointer */
+static sexp load_image_src_to_dst(void* adata, sexp srcp) {
+  struct load_image_state* state = adata;
+  return (sexp)((unsigned char *)srcp + state->offset);
+}
+
+#if ! SEXP_USE_NATIVE_X86
 static sexp sexp_adjust_bytecode(sexp dstp, sexp (*adjust_fn)(void *, sexp), void *adata) {
   sexp res = SEXP_FALSE;
   sexp   src, dst;
@@ -231,6 +250,67 @@ static sexp sexp_adjust_bytecode(sexp dstp, sexp (*adjust_fn)(void *, sexp), voi
 done:
   return res;
 }
+#else
+static sexp sexp_remap_lookup (struct sexp_remap_state* state, sexp srcp) {
+  sexp_sint_t imin = 0;
+  sexp_sint_t imax = state->sexps_count - 1;
+
+  while (imin <= imax) {
+    sexp_sint_t imid = ((imax - imin) / 2) + imin;
+    sexp midp = state->remap[imid].srcp;
+    if (midp == srcp) {
+      return state->remap[imid].dstp;
+    } else if (midp < srcp) {
+      imin = imid + 1;
+    } else {
+      imax = imid - 1;
+    }
+  }
+  return SEXP_FALSE;
+}
+
+static sexp sexp_adjust_bytecode (sexp dstp, sexp (*adjust_fn)(void *, sexp), void *adata) {
+  unsigned char *data = sexp_bytecode_data(dstp);
+  size_t len = sexp_bytecode_length(dstp);
+  size_t i;
+  int is_load = (adjust_fn == load_image_src_to_dst);
+
+  for (i = 0; i + 10 <= len; ) {
+    if (data[i] == 0x48 &&
+        (data[i+1] == 0xb8 || data[i+1] == 0xb9 || data[i+1] == 0xba || data[i+1] == 0xbe)) {
+      sexp src = *(sexp*)(&data[i+2]);
+      if (src && sexp_pointerp(src)) {
+        if (is_load) {
+          struct load_image_state* state = adata;
+          if ((uintptr_t)src >= (uintptr_t)state->header_base &&
+              (uintptr_t)src < (uintptr_t)state->header_base + state->header_size) {
+            *(sexp*)(&data[i+2]) = (sexp)((unsigned char*)src + state->offset);
+          }
+        } else {
+          struct sexp_remap_state* state = adata;
+          sexp dst = sexp_remap_lookup(state, src);
+          if (dst != SEXP_FALSE) {
+            *(sexp*)(&data[i+2]) = dst;
+          }
+        }
+      }
+      i += 10;
+    } else if (data[i] == 0x49 && data[i+1] == 0xbb) {
+      if (is_load) {
+        struct load_image_state* state = adata;
+        if (state->c_offset != 0) {
+          uint64_t fn = *(uint64_t*)(&data[i+2]);
+          *(uint64_t*)(&data[i+2]) = fn + state->c_offset;
+        }
+      }
+      i += 10;
+    } else {
+      i++;
+    }
+  }
+  return SEXP_TRUE;
+}
+#endif
 
 static sexp sexp_gc_heap_pack_adjust(sexp dstp, sexp* types, struct sexp_remap_state* state) {
   sexp res = SEXP_FALSE;
@@ -377,6 +457,9 @@ struct sexp_image_header_t {
   sexp_uint_t size;
   sexp base;
   sexp context;
+#if SEXP_USE_NATIVE_X86
+  void *c_base;
+#endif
 };
 
 
@@ -407,6 +490,9 @@ sexp sexp_save_image (sexp ctx_in, const char* filename) {
   header.size    = size;
   header.base    = base;
   header.context = ctx_out;
+#if SEXP_USE_NATIVE_X86
+  header.c_base  = (void*)&sexp_native_enter;
+#endif
 
   if (! (fwrite(&header, sizeof(header), 1, fp) == 1 &&
          fwrite(base, size, 1, fp) == 1)) {
@@ -432,20 +518,6 @@ done:
 #define SEXP_RTLD_DEFAULT RTLD_DEFAULT
 #endif
 
-struct load_image_state {
-  sexp_sint_t offset;
-  sexp_heap heap;
-  sexp *types;
-  size_t types_cnt;
-};
-
-/* Return a destination (remapped) pointer for a given source pointer */
-static sexp load_image_src_to_dst(void* adata, sexp srcp) {
-  struct load_image_state* state = adata;
-  return (sexp)((unsigned char *)srcp + state->offset);
-}
-
-
 static sexp load_image_callback_p1 (sexp ctx, sexp p, void *user) {
   sexp res = NULL;
   struct load_image_state* state = user;
@@ -461,10 +533,17 @@ static sexp load_image_callback_p1 (sexp ctx, sexp p, void *user) {
     sexp_stack_top(sexp_context_stack(p)) = 0;
     sexp_context_saves(p) = NULL;
     sexp_context_heap(p) = state->heap;
+#if SEXP_USE_NATIVE_X86
+    sexp_context_stack_base(p) = NULL;
+    sexp_context_fiber_stack_base(p) = NULL;
+#endif
   
   } else if (sexp_bytecodep(p)) {
     if ((res = sexp_adjust_bytecode(p, load_image_src_to_dst, state)) != SEXP_TRUE) {
       goto done; }
+#if SEXP_USE_NATIVE_X86
+    sexp_bless_bytecode(ctx, p);
+#endif
     
   } else if (sexp_portp(p) && sexp_port_stream(p)) {
     sexp_port_stream(p) = 0;
@@ -524,6 +603,13 @@ static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
     fn = dlsym(sexp_dl_handle(dl), symbol_name);
   } else {
     fn = dlsym(SEXP_RTLD_DEFAULT, symbol_name);
+#if SEXP_USE_NATIVE_X86
+    if (!fn && strcmp(symbol_name, "continuation") == 0) {
+      fn = (void*)sexp_native_cont_call;
+    } else if (!fn && strcmp(symbol_name, "sexp_native_cont_finalize") == 0) {
+      fn = (void*)sexp_native_cont_finalize;
+    }
+#endif
   }
   if (!fn) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE,
@@ -555,6 +641,14 @@ static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
       return SEXP_FALSE;
     }
     sexp_opcode_func(dstp) = fn;
+#if SEXP_USE_NATIVE_X86
+    if (fn == (void*)sexp_native_cont_call) {
+      sexp data = sexp_opcode_data(dstp);
+      if (data && sexp_pointerp(data) && (sexp_cpointerp(data) || sexp_pointer_tag(data) >= SEXP_CPOINTER)) {
+        sexp_cpointer_value(data) = NULL;
+      }
+    }
+#endif
   
   } else if (sexp_typep(dstp) && sexp_type_finalize(dstp)) {
     name = sexp_type_finalize_name(dstp);
@@ -567,6 +661,19 @@ static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
       return SEXP_FALSE;
     }
     sexp_type_finalize(dstp) = fn;
+#if SEXP_USE_NATIVE_X86
+  } else if (sexp_cpointerp(dstp) || (sexp_pointerp(dstp) && sexp_pointer_tag(dstp) >= SEXP_CPOINTER)) {
+    struct load_image_state* state = user;
+    if (sexp_pointer_tag(dstp) < state->types_cnt) {
+      sexp t = state->types[sexp_pointer_tag(dstp)];
+      if (t && sexp_typep(t)) {
+        sexp fname = sexp_type_finalize_name(t);
+        if (fname && sexp_stringp(fname) && strcmp(sexp_string_data(fname), "sexp_native_cont_finalize") == 0) {
+          sexp_cpointer_value(dstp) = NULL;
+        }
+      }
+    }
+#endif
   }
   res = SEXP_TRUE;
   return res;
@@ -659,6 +766,13 @@ sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_
   state.offset = (sexp_sint_t)((sexp_sint_t)base - (sexp_sint_t)header.base);
   ctx = (sexp)((unsigned char *)header.context + state.offset);
   sexp_context_heap(ctx) = state.heap;
+#if SEXP_USE_NATIVE_X86
+  state.header_base = header.base;
+  state.header_size = header.size;
+  state.c_offset = (intptr_t)(void*)&sexp_native_enter - (intptr_t)header.c_base;
+  sexp_context_stack_base(ctx) = NULL;
+  sexp_context_fiber_stack_base(ctx) = NULL;
+#endif
 
   /* Type information (specifically, how big types are) is stored as sexps in the
      heap.  This information is needed to sucessfully walk an arbitrary heap.  A

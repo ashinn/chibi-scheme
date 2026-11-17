@@ -91,6 +91,7 @@ SEXP_API void sexp_native_init_fiber (sexp ctx, sexp thread_ctx);
 SEXP_API sexp sexp_native_yield (sexp ctx);
 SEXP_API void sexp_native_loop_yield (sexp ctx);
 SEXP_API sexp sexp_native_cont_call (sexp ctx, sexp self, sexp_sint_t n, sexp val);
+SEXP_API sexp sexp_native_cont_finalize (sexp ctx, sexp self, sexp_sint_t n, sexp cptr);
 SEXP_API sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args);
 SEXP_API sexp sexp_native_dispatch_op (sexp ctx, sexp self, sexp op, sexp_sint_t nargs, sexp *args);
 SEXP_API sexp sexp_native_make_closure (sexp ctx, sexp flags, sexp num_args, sexp bc, sexp_sint_t num_fvs, sexp *fvs);

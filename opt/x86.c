@@ -407,7 +407,7 @@ static void *sexp_native_get_context_stack_base (sexp ctx) {
 
 static sexp_uint_t sexp_native_cont_type_tag = 0;
 
-static sexp sexp_native_cont_finalize (sexp ctx, sexp self, sexp_sint_t n, sexp cptr) {
+sexp sexp_native_cont_finalize (sexp ctx, sexp self, sexp_sint_t n, sexp cptr) {
   if (sexp_pointerp(cptr) && (sexp_cpointerp(cptr) || sexp_pointer_tag(cptr) >= SEXP_CPOINTER)) {
     struct sexp_native_cont *cont = (struct sexp_native_cont*)sexp_cpointer_value(cptr);
     if (cont) {
@@ -482,10 +482,24 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
   sexp_gc_preserve2(ctx, cptr, k);
 
   if (sexp_native_cont_type_tag == 0 || sexp_native_cont_type_tag >= sexp_context_num_types(ctx)) {
-    sexp name = sexp_c_string(ctx, "native_cont", -1);
-    sexp type = sexp_register_c_type(ctx, name, sexp_native_cont_finalize);
-    if (sexp_typep(type)) {
-      sexp_native_cont_type_tag = sexp_type_tag(type);
+    sexp_uint_t i, num_types = sexp_context_num_types(ctx);
+    sexp_native_cont_type_tag = 0;
+    for (i = 0; i < num_types; i++) {
+      sexp t = sexp_type_by_index(ctx, i);
+      if (t && sexp_typep(t)) {
+        sexp tname = sexp_type_name(t);
+        if (tname && sexp_stringp(tname) && strcmp(sexp_string_data(tname), "native_cont") == 0) {
+          sexp_native_cont_type_tag = i;
+          break;
+        }
+      }
+    }
+    if (sexp_native_cont_type_tag == 0) {
+      sexp name = sexp_c_string(ctx, "native_cont", -1);
+      sexp type = sexp_register_c_type(ctx, name, sexp_native_cont_finalize);
+      if (sexp_typep(type)) {
+        sexp_native_cont_type_tag = sexp_type_tag(type);
+      }
     }
   }
 
@@ -504,6 +518,7 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
   cptr = sexp_make_cpointer(ctx, sexp_native_cont_type_tag ? sexp_native_cont_type_tag : SEXP_CPOINTER,
                             (void*)vcont, SEXP_FALSE, 1);
   k = sexp_make_foreign(ctx, "continuation", 1, 0, NULL, (sexp_proc1)sexp_native_cont_call, cptr);
+  sexp_opcode_data2(k) = sexp_c_string(ctx, "sexp_native_cont_call", -1);
 
   sexp res;
   if (native_setjmp(vcont->jb) == 0) {
