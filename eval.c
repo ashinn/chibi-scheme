@@ -2130,7 +2130,7 @@ sexp sexp_make_type_predicate_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
   if (sexp_typep(type)) type = sexp_make_fixnum(sexp_type_tag(type));
   sexp_assert_type(ctx, sexp_fixnump, SEXP_FIXNUM, type);
   return sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_TYPE_PREDICATE),
-                          sexp_make_fixnum(SEXP_OP_TYPEP), SEXP_ONE, SEXP_ZERO,
+                          sexp_make_fixnum(SEXP_OP_TYPEP), SEXP_ONE, sexp_make_fixnum(32),
                           SEXP_ZERO, SEXP_ZERO, SEXP_ZERO, type, NULL, NULL);
 }
 
@@ -2153,7 +2153,7 @@ sexp sexp_make_getter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp ty
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
   return
     sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_GETTER),
-                     sexp_make_fixnum(SEXP_OP_SLOT_REF), SEXP_ONE, SEXP_ZERO,
+                     sexp_make_fixnum(SEXP_OP_SLOT_REF), SEXP_ONE, sexp_make_fixnum(32),
                      type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
 }
 
@@ -2166,7 +2166,7 @@ sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp ty
     return sexp_type_exception(ctx, self, SEXP_FIXNUM, index);
   res
     = sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
-                       sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, SEXP_ZERO,
+                       sexp_make_fixnum(SEXP_OP_SLOT_SET), SEXP_TWO, sexp_make_fixnum(32),
                        type, SEXP_ZERO, SEXP_ZERO, type, index, NULL);
   if (!sexp_exceptionp(res)) sexp_opcode_return_type(res) = SEXP_VOID;
   return res;

@@ -1361,6 +1361,22 @@ static void emit_clear_slots (sexp ctx, int start_slot, int count) {
   }
 }
 
+static int g_non_allocating_bb = 0;
+static sexp g_current_fixnum_vars = SEXP_NULL;
+
+static void patch_jmp (sexp ctx, sexp_sint_t pos);
+
+static void emit_inlined_op_cleanup (sexp ctx, sexp_sint_t done_jmp, int temp_start, int count) {
+  if (g_non_allocating_bb) {
+    emit_clear_slots(ctx, temp_start, count);
+  }
+  patch_jmp(ctx, done_jmp);
+  if (!g_non_allocating_bb) {
+    emit_clear_slots(ctx, temp_start, count);
+  }
+  sexp_inc_context_depth(ctx, -count);
+}
+
 static void emit_mov_imm64_rax (sexp ctx, uint64_t val) {
   emit_u8(ctx, 0x48); emit_u8(ctx, 0xb8);
   emit_u64(ctx, val);
@@ -1369,6 +1385,12 @@ static void emit_mov_imm64_rax (sexp ctx, uint64_t val) {
 static void emit_mov_slot_rcx (sexp ctx, int slot_index) {
   int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x8d);
+  emit_u32(ctx, (uint32_t)disp);
+}
+
+static void emit_mov_slot_rdx (sexp ctx, int slot_index) {
+  int32_t disp = get_slot_disp(ctx, slot_index);
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x95);
   emit_u32(ctx, (uint32_t)disp);
 }
 
@@ -1614,9 +1636,23 @@ static int is_leaf_expr (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_l
       case SEXP_OP_SYMBOLP:
       case SEXP_OP_CAR:
       case SEXP_OP_CDR:
+      case SEXP_OP_SET_CAR:
+      case SEXP_OP_SET_CDR:
       case SEXP_OP_VECTOR_LENGTH:
+      case SEXP_OP_VECTOR_REF:
+      case SEXP_OP_VECTOR_SET:
       case SEXP_OP_STRING_LENGTH:
+      case SEXP_OP_STRING_REF:
+      case SEXP_OP_STRING_CURSOR_NEXT:
+      case SEXP_OP_STRING_CURSOR_PREV:
+      case SEXP_OP_STRING_CURSOR_END:
       case SEXP_OP_BYTES_LENGTH:
+      case SEXP_OP_BYTES_REF:
+      case SEXP_OP_BYTES_SET:
+      case SEXP_OP_SLOT_REF:
+      case SEXP_OP_SLOT_SET:
+      case SEXP_OP_TYPEP:
+      case SEXP_OP_ISA:
       case SEXP_OP_CHAR2INT:
       case SEXP_OP_INT2CHAR:
         break;
@@ -1645,6 +1681,190 @@ static int is_leaf_procedure (sexp ctx, sexp lam, sexp name, sexp loc) {
   if (sexp_pairp(sexp_lambda_sv(lam))) return 0;
   if (sexp_pairp(sexp_lambda_locals(lam))) return 0;
   return is_leaf_expr(ctx, lam, sexp_lambda_body(lam), name, loc, 1);
+}
+
+/************************* Non-Allocating Basic Block Analysis ********/
+
+static int is_proven_fixnum (sexp ctx, sexp lam, sexp x, sexp fixnum_vars) {
+  sexp_sint_t c;
+  if (!x) return 0;
+  if (is_fixnum_literal(x, &c)) return 1;
+  if (!sexp_pointerp(x)) return 0;
+
+  int tag = sexp_pointer_tag(x);
+  if (tag == SEXP_REF) {
+    if (fixnum_vars && sexp_pairp(fixnum_vars) && lam && sexp_ref_loc(x) == lam) {
+      return sexp_truep(sexp_memq(ctx, sexp_ref_name(x), fixnum_vars));
+    }
+    return 0;
+  }
+
+  if (tag == SEXP_PAIR) {
+    sexp op = sexp_car(x);
+    if (!sexp_opcodep(op)) return 0;
+    sexp_sint_t code = sexp_opcode_code(op);
+    switch (code) {
+    case SEXP_OP_VECTOR_LENGTH:
+    case SEXP_OP_BYTES_LENGTH:
+    case SEXP_OP_STRING_LENGTH:
+    case SEXP_OP_BYTES_REF:
+    case SEXP_OP_CHAR2INT:
+      return 1;
+    case SEXP_OP_REMAINDER: {
+      sexp ls = sexp_cdr(x);
+      if (sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls))) {
+        sexp arg1 = sexp_cadr(ls);
+        if (is_fixnum_literal(arg1, &c) && c > 0) return 1;
+      }
+      return 0;
+    }
+    case SEXP_OP_ADD: {
+      sexp ls = sexp_cdr(x);
+      if (sexp_nullp(ls)) return 1;
+      if (sexp_nullp(sexp_cdr(ls))) return is_proven_fixnum(ctx, lam, sexp_car(ls), fixnum_vars);
+      if (sexp_pairp(sexp_cdr(ls))) {
+        sexp arg0 = sexp_car(ls);
+        sexp arg1 = sexp_cadr(ls);
+        if (is_proven_fixnum(ctx, lam, arg0, fixnum_vars) &&
+            is_fixnum_literal(arg1, &c) && c >= -1000000 && c <= 1000000)
+          return 1;
+        if (is_proven_fixnum(ctx, lam, arg1, fixnum_vars) &&
+            is_fixnum_literal(arg0, &c) && c >= -1000000 && c <= 1000000)
+          return 1;
+      }
+      return 0;
+    }
+    case SEXP_OP_SUB: {
+      sexp ls = sexp_cdr(x);
+      if (sexp_pairp(ls) && sexp_nullp(sexp_cdr(ls))) {
+        return is_fixnum_literal(sexp_car(ls), &c);
+      }
+      if (sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls))) {
+        sexp arg0 = sexp_car(ls);
+        sexp arg1 = sexp_cadr(ls);
+        if (is_proven_fixnum(ctx, lam, arg0, fixnum_vars) &&
+            is_fixnum_literal(arg1, &c) && c >= -1000000 && c <= 1000000)
+          return 1;
+      }
+      return 0;
+    }
+    default:
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
+static sexp scan_cnd_fixnum_vars (sexp ctx, sexp lam, sexp x, sexp res) {
+  if (!x || !sexp_pointerp(x) || !lam || !sexp_lambdap(lam)) return res;
+  int tag = sexp_pointer_tag(x);
+  if (tag == SEXP_CND) {
+    sexp test = sexp_cnd_test(x);
+    while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
+           sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
+           !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
+           sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+      test = sexp_cadr(test);
+    }
+    if (sexp_pairp(test) && sexp_opcodep(sexp_car(test))) {
+      sexp op = sexp_car(test);
+      sexp_sint_t code = sexp_opcode_code(op);
+      sexp params = sexp_lambda_params(lam);
+      sexp sv = sexp_lambda_sv(lam);
+      sexp arg0 = sexp_pairp(sexp_cdr(test)) ? sexp_cadr(test) : SEXP_NULL;
+      sexp arg1 = (sexp_pairp(sexp_cdr(test)) && sexp_pairp(sexp_cddr(test))) ? sexp_caddr(test) : SEXP_NULL;
+
+      sexp var_sym = SEXP_NULL;
+      if (code == SEXP_OP_FIXNUMP && sexp_refp(arg0) && sexp_ref_loc(arg0) == lam) {
+        var_sym = sexp_ref_name(arg0);
+      } else if (code == SEXP_OP_LT || code == SEXP_OP_LE || code == SEXP_OP_EQN) {
+        if (sexp_refp(arg0) && sexp_ref_loc(arg0) == lam) {
+          var_sym = sexp_ref_name(arg0);
+        }
+        if (sexp_refp(arg1) && sexp_ref_loc(arg1) == lam) {
+          sexp var2 = sexp_ref_name(arg1);
+          if (sexp_symbolp(var2) && sexp_not(sexp_memq(ctx, var2, sv)) &&
+              sexp_truep(sexp_memq(ctx, var2, params)) &&
+              sexp_not(sexp_memq(ctx, var2, res))) {
+            res = sexp_cons(ctx, var2, res);
+          }
+        }
+      }
+
+      if (sexp_symbolp(var_sym) && sexp_not(sexp_memq(ctx, var_sym, sv)) &&
+          sexp_truep(sexp_memq(ctx, var_sym, params)) &&
+          sexp_not(sexp_memq(ctx, var_sym, res))) {
+        res = sexp_cons(ctx, var_sym, res);
+      }
+    }
+    res = scan_cnd_fixnum_vars(ctx, lam, sexp_cnd_pass(x), res);
+    res = scan_cnd_fixnum_vars(ctx, lam, sexp_cnd_fail(x), res);
+  } else if (tag == SEXP_SEQ) {
+    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      res = scan_cnd_fixnum_vars(ctx, lam, sexp_car(ls), res);
+    }
+  }
+  return res;
+}
+
+static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp fixnum_vars, sexp self_name, sexp self_loc) {
+  if (!x || !sexp_pointerp(x) || sexp_litp(x))
+    return 0;
+
+  int tag = sexp_pointer_tag(x);
+  switch (tag) {
+  case SEXP_REF:
+    return 0;
+
+  case SEXP_SET:
+    return can_expr_allocate(ctx, lam, sexp_set_value(x), fixnum_vars, self_name, self_loc);
+
+  case SEXP_SEQ: {
+    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (can_expr_allocate(ctx, lam, sexp_car(ls), fixnum_vars, self_name, self_loc))
+        return 1;
+    }
+    return 0;
+  }
+
+  case SEXP_CND: {
+    return can_expr_allocate(ctx, lam, sexp_cnd_test(x), fixnum_vars, self_name, self_loc) ||
+           can_expr_allocate(ctx, lam, sexp_cnd_pass(x), fixnum_vars, self_name, self_loc) ||
+           can_expr_allocate(ctx, lam, sexp_cnd_fail(x), fixnum_vars, self_name, self_loc);
+  }
+
+  case SEXP_LAMBDA:
+    return 1;
+
+  case SEXP_PAIR: {
+    sexp op = sexp_car(x);
+    if (sexp_opcodep(op)) {
+      if (!sexp_opcode_non_alloc_p(op) && !is_proven_fixnum(ctx, lam, x, fixnum_vars))
+        return 1;
+
+      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        if (can_expr_allocate(ctx, lam, sexp_car(ls), fixnum_vars, self_name, self_loc))
+          return 1;
+      }
+      return 0;
+    }
+
+    if (self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
+        && lam && (self_loc == sexp_ref_loc(op))) {
+      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        if (can_expr_allocate(ctx, lam, sexp_car(ls), fixnum_vars, self_name, self_loc))
+          return 1;
+      }
+      return 0;
+    }
+
+    return 1;
+  }
+
+  default:
+    return 0;
+  }
 }
 
 /************************* Prologue & Epilogue ************************/
@@ -1849,7 +2069,9 @@ static void generate_set (sexp ctx, sexp set) {
     }
   }
 
-  emit_clear_slot(ctx, temp_slot);
+  if (!g_non_allocating_bb) {
+    emit_clear_slot(ctx, temp_slot);
+  }
   emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
 }
 
@@ -1904,7 +2126,9 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
       sexp_inc_context_depth(ctx, 1);
       generate(ctx, 0, 0, 0, arg1);
       emit_mov_slot_rcx(ctx, temp_start);
-      emit_clear_slot(ctx, temp_start);
+      if (!g_non_allocating_bb) {
+        emit_clear_slot(ctx, temp_start);
+      }
       sexp_inc_context_depth(ctx, -1);
       // cmpq %rax, %rcx
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
@@ -2011,7 +2235,10 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
   // Fast path falls through directly into pass!
   sexp_sint_t pass_start = sexp_unbox_fixnum(sexp_context_pos(ctx));
   sexp_context_tailp(ctx) = tailp;
+  int saved_non_alloc = g_non_allocating_bb;
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, g_current_fixnum_vars, name, loc);
   generate(ctx, name, loc, lam, pass);
+  g_non_allocating_bb = saved_non_alloc;
 
   // jmp .Lend: e9 <disp32>
   sexp_sint_t jmp_end = emit_jmp(ctx);
@@ -2045,7 +2272,9 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
   }
 
   sexp_context_tailp(ctx) = tailp;
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, g_current_fixnum_vars, name, loc);
   generate(ctx, name, loc, lam, fail);
+  g_non_allocating_bb = saved_non_alloc;
 
   // .Lend:
   patch_jmp(ctx, jmp_end);
@@ -2071,8 +2300,11 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
     return;
   }
 
+  int saved_non_alloc = g_non_allocating_bb;
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, test, g_current_fixnum_vars, name, loc);
   sexp_context_tailp(ctx) = 0;
   generate(ctx, name, loc, lam, test);
+  g_non_allocating_bb = saved_non_alloc;
 
   // cmpq $SEXP_FALSE, %rax
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xf8);
@@ -2082,7 +2314,9 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   sexp_sint_t je_pos = emit_jcc(ctx, 0x84);
 
   sexp_context_tailp(ctx) = tailp;
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, g_current_fixnum_vars, name, loc);
   generate(ctx, name, loc, lam, pass);
+  g_non_allocating_bb = saved_non_alloc;
 
   // jmp .Lend: e9 <disp32>
   sexp_sint_t jmp_pos = emit_jmp(ctx);
@@ -2091,7 +2325,9 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   patch_jcc(ctx, je_pos);
 
   sexp_context_tailp(ctx) = tailp;
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, g_current_fixnum_vars, name, loc);
   generate(ctx, name, loc, lam, fail);
+  g_non_allocating_bb = saved_non_alloc;
 
   // .Lend:
   patch_jmp(ctx, jmp_pos);
@@ -2183,9 +2419,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       patch_jcc(ctx, jo_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 1);
 
-      patch_jmp(ctx, done_jmp);
-      emit_clear_slot(ctx, temp_start);
-      sexp_inc_context_depth(ctx, -1);
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
       return 1;
     }
 
@@ -2219,10 +2453,235 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       patch_jcc(ctx, jne_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 1);
 
-      patch_jmp(ctx, done_jmp);
-      emit_clear_slot(ctx, temp_start);
-      sexp_inc_context_depth(ctx, -1);
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
       return 1;
+    }
+
+    if (code == SEXP_OP_VECTOR_LENGTH) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      // testb $3, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+
+      // testq %rax, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // cmpl $SEXP_VECTOR, (%rax)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x38); emit_u8(ctx, (uint8_t)SEXP_VECTOR);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Load length at value.vector.length (offset 8)
+      emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.vector.length));
+      // Tag as fixnum: addq %rax, %rax; incq %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x01); emit_u8(ctx, 0xc0);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc0);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 1);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
+      return 1;
+    }
+
+    if (code == SEXP_OP_BYTES_LENGTH) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      // testb $3, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+
+      // testq %rax, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // cmpl $SEXP_BYTES, (%rax)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x38); emit_u8(ctx, (uint8_t)SEXP_BYTES);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Load length at value.bytes.length (offset 8)
+      emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.bytes.length));
+      // Tag as fixnum: addq %rax, %rax; incq %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x01); emit_u8(ctx, 0xc0);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc0);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 1);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
+      return 1;
+    }
+
+#if SEXP_USE_UTF8_STRINGS
+    if (code == SEXP_OP_STRING_CURSOR_END) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      // testb $3, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+
+      // testq %rax, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // cmpl $SEXP_STRING, (%rax)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x38); emit_u8(ctx, (uint8_t)SEXP_STRING);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Load byte size at value.string.length (offset 24)
+      emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.string.length));
+      // Make string cursor: shlq $3, %rax; addq $2, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xc1); emit_u8(ctx, 0xe0); emit_u8(ctx, 3);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xc0); emit_u8(ctx, 2);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 1);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
+      return 1;
+    }
+#else
+    if (code == SEXP_OP_STRING_LENGTH) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x38); emit_u8(ctx, (uint8_t)SEXP_STRING);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.string.length));
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x01); emit_u8(ctx, 0xc0);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc0);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 1);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
+      return 1;
+    }
+#endif
+
+    if (code == SEXP_OP_SLOT_REF) {
+      sexp tid_sexp = sexp_opcode_data(op);
+      sexp_sint_t tid = sexp_typep(tid_sexp) ? sexp_type_tag(tid_sexp) :
+                        sexp_fixnump(tid_sexp) ? sexp_unbox_fixnum(tid_sexp) : -1;
+      sexp idx_sexp = sexp_opcode_data2(op);
+      sexp_sint_t idx = sexp_fixnump(idx_sexp) ? sexp_unbox_fixnum(idx_sexp) : -1;
+
+      if (tid >= 0 && idx >= 0) {
+        generate(ctx, 0, 0, 0, arg0);
+        emit_mov_rax_slot(ctx, temp_start);
+        sexp_inc_context_depth(ctx, 1);
+
+        // testb $3, %al
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+        sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+
+        // testq %rax, %rax
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+        sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+        // cmpl $tid, (%rax)
+        emit_u8(ctx, 0x81); emit_u8(ctx, 0x38); emit_u32(ctx, (uint32_t)tid);
+        sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+        // Load field at 8 + idx * 8
+        int32_t off = (int32_t)(offsetof(struct sexp_struct, value) + idx * sizeof(sexp));
+        emit_mov_mem_rax(ctx, off);
+
+        // If field was 0/NULL, replace with SEXP_VOID
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+        emit_mov_imm64_rdx(ctx, (uint64_t)SEXP_VOID);
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x44); emit_u8(ctx, 0xc2);
+
+        sexp_sint_t done_jmp = emit_jmp(ctx);
+
+        patch_jcc(ctx, jnz_slow);
+        patch_jcc(ctx, jz_slow);
+        patch_jcc(ctx, jne_slow);
+        emit_native_dispatch_op(ctx, op, temp_start, 1);
+
+        emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 1);
+        return 1;
+      }
+    }
+
+    if (code == SEXP_OP_TYPEP) {
+      sexp tid_sexp = sexp_opcode_data(op);
+      sexp_sint_t tid = sexp_typep(tid_sexp) ? sexp_type_tag(tid_sexp) :
+                        sexp_fixnump(tid_sexp) ? sexp_unbox_fixnum(tid_sexp) : -1;
+      if (tid >= 0) {
+        generate(ctx, 0, 0, 0, arg0);
+        emit_mov_rax_slot(ctx, temp_start);
+        sexp_inc_context_depth(ctx, 1);
+
+        // testb $3, %al
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+        sexp_sint_t jnz_false = emit_jcc(ctx, 0x85);
+
+        // testq %rax, %rax
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+        sexp_sint_t jz_false = emit_jcc(ctx, 0x84);
+
+        // cmpl $tid, (%rax)
+        emit_u8(ctx, 0x81); emit_u8(ctx, 0x38); emit_u32(ctx, (uint32_t)tid);
+        sexp_sint_t je_true = emit_jcc(ctx, 0x84);
+
+        // If tag didn't match, fall back to slow path (sexp_check_type)
+        sexp_sint_t jmp_slow = emit_jmp(ctx);
+
+        // False path:
+        patch_jcc(ctx, jnz_false);
+        patch_jcc(ctx, jz_false);
+        emit_mov_imm64_rax(ctx, (uint64_t)SEXP_FALSE);
+        sexp_sint_t done_jmp = emit_jmp(ctx);
+
+        // True path:
+        patch_jcc(ctx, je_true);
+        emit_mov_imm64_rax(ctx, (uint64_t)SEXP_TRUE);
+        sexp_sint_t done_jmp2 = emit_jmp(ctx);
+
+        // Slow path:
+        patch_jmp(ctx, jmp_slow);
+        emit_native_dispatch_op(ctx, op, temp_start, 1);
+        if (g_non_allocating_bb) {
+          emit_clear_slots(ctx, temp_start, 1);
+        }
+        patch_jmp(ctx, done_jmp);
+        patch_jmp(ctx, done_jmp2);
+        if (!g_non_allocating_bb) {
+          emit_clear_slots(ctx, temp_start, 1);
+        }
+        sexp_inc_context_depth(ctx, -1);
+        return 1;
+      }
     }
 
     return 0;
@@ -2280,9 +2739,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       }
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
-      patch_jmp(ctx, done_jmp);
-      emit_clear_slots(ctx, temp_start, 2);
-      sexp_inc_context_depth(ctx, -2);
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
       return 1;
     }
 
@@ -2293,7 +2750,9 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_inc_context_depth(ctx, 1);
       generate(ctx, 0, 0, 0, arg1);
       emit_mov_slot_rcx(ctx, temp_start);
-      emit_clear_slot(ctx, temp_start);
+      if (!g_non_allocating_bb) {
+        emit_clear_slot(ctx, temp_start);
+      }
 
       // cmpq %rax, %rcx (48 39 c1)
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
@@ -2382,9 +2841,651 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       if (jo_slow != -1) patch_jcc(ctx, jo_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+
+    if (code == SEXP_OP_SET_CAR || code == SEXP_OP_SET_CDR) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load arg0 (pair) into %rcx
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // testb $3, %cl
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+
+      // testq %rcx, %rcx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // cmpl $SEXP_PAIR, (%rcx)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_PAIR);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // testb $1, 5(%rcx) (immutable check)
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
+      sexp_sint_t jnz_imm_slow = emit_jcc(ctx, 0x85);
+
+      // Store val (in %rax) to off(%rcx)
+      int32_t off = (code == SEXP_OP_SET_CAR)
+        ? (int32_t)offsetof(struct sexp_struct, value.pair.car)
+        : (int32_t)offsetof(struct sexp_struct, value.pair.cdr);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x41); emit_u8(ctx, (uint8_t)off);
+
+      // Return SEXP_VOID
+      emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jnz_imm_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+
+    if (code == SEXP_OP_VECTOR_REF) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load arg0 (vector) from temp_start into %rcx
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // Check vector is pointer: testb $3, %cl
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+
+      // Check non-null: testq %rcx, %rcx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // Check tag: cmpl $SEXP_VECTOR, (%rcx)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_VECTOR);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Check index in %rax is fixnum: testb $1, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+
+      // Unbox fixnum index: sarq $1, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
+
+      // Bounds check: cmpq 8(%rcx), %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x41);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.vector.length));
+      sexp_sint_t jae_slow = emit_jcc(ctx, 0x83);
+
+      // Fast load element: movq 16(%rcx, %rax, 8), %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x44); emit_u8(ctx, 0xc1);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jz_idx_slow);
+      patch_jcc(ctx, jae_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+
+    if (code == SEXP_OP_BYTES_REF) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load arg0 into %rcx
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // Check bytevector pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // Check tag: cmpl $SEXP_BYTES, (%rcx)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_BYTES);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Check index in %rax is fixnum
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+
+      // Unbox fixnum index: sarq $1, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
+
+      // Bounds check: cmpq 8(%rcx), %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x41);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.bytes.length));
+      sexp_sint_t jae_slow = emit_jcc(ctx, 0x83);
+
+      // Fast load byte zero-extended: movzbq 16(%rcx, %rax, 1), %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x0f); emit_u8(ctx, 0xb6); emit_u8(ctx, 0x44); emit_u8(ctx, 0x01);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      // Tag as fixnum: addq %rax, %rax; incq %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x01); emit_u8(ctx, 0xc0);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc0);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jz_idx_slow);
+      patch_jcc(ctx, jae_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+
+    if (code == SEXP_OP_STRING_REF) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load string into %rcx
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // Check string pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // Check tag: cmpl $SEXP_STRING, (%rcx)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_STRING);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+#if SEXP_USE_DISJOINT_STRING_CURSORS
+      // Check string cursor tag: (rax & 7) == 2
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2);
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0xe2); emit_u8(ctx, 0x07);
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0xfa); emit_u8(ctx, 0x02);
+      sexp_sint_t jne_cur_slow = emit_jcc(ctx, 0x85);
+
+      // Unbox string cursor: sarq $3, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xc1); emit_u8(ctx, 0xf8); emit_u8(ctx, 0x03);
+#else
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+      sexp_sint_t jne_cur_slow = emit_jcc(ctx, 0x84);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
+#endif
+
+      // Bounds check against string size at value.string.length (%rcx+24)
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x41);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.length));
+      sexp_sint_t jae_slow = emit_jcc(ctx, 0x83);
+
+      // Compute byte pointer:
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x51);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.bytes));
+      emit_u8(ctx, 0x4c); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x41);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.offset));
+      emit_u8(ctx, 0x4a); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x54); emit_u8(ctx, 0x02);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      // Load byte: movzbq (%rdx, %rax, 1), %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x0f); emit_u8(ctx, 0xb6); emit_u8(ctx, 0x04); emit_u8(ctx, 0x02);
+
+      // Check if ASCII (< 0x80): testb $0x80, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x80);
+      sexp_sint_t jnz_utf8_slow = emit_jcc(ctx, 0x85);
+
+      // Convert ASCII byte to Scheme char: (b << 8) | 30
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xc1); emit_u8(ctx, 0xe0); emit_u8(ctx, 0x08);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xc8); emit_u8(ctx, 0x1e);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jne_cur_slow);
+      patch_jcc(ctx, jae_slow);
+      patch_jcc(ctx, jnz_utf8_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+
+#if SEXP_USE_UTF8_STRINGS
+    if (code == SEXP_OP_STRING_CURSOR_NEXT) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // Check string pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_STRING);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Check string cursor tag
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2);
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0xe2); emit_u8(ctx, 0x07);
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0xfa); emit_u8(ctx, 0x02);
+      sexp_sint_t jne_cur_slow = emit_jcc(ctx, 0x85);
+
+      // Unbox cursor to %r9: movq %rax, %r9; sarq $3, %r9
+      emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc1);
+      emit_u8(ctx, 0x49); emit_u8(ctx, 0xc1); emit_u8(ctx, 0xf9); emit_u8(ctx, 0x03);
+
+      // Bounds check against string size at %rcx+24: cmpq 24(%rcx), %r9; jae slow
+      emit_u8(ctx, 0x4c); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x49);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.length));
+      sexp_sint_t jae_slow = emit_jcc(ctx, 0x83);
+
+      // Compute byte pointer:
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x51);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.bytes));
+      emit_u8(ctx, 0x4c); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x41);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.offset));
+      emit_u8(ctx, 0x4a); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x54); emit_u8(ctx, 0x02);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      // Load byte at cursor: movzbq (%rdx, %r9, 1), %r8
+      emit_u8(ctx, 0x4e); emit_u8(ctx, 0x0f); emit_u8(ctx, 0xb6); emit_u8(ctx, 0x04); emit_u8(ctx, 0x0a);
+
+      // Check ASCII: testb $0x80, %r8b
+      emit_u8(ctx, 0x41); emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc0); emit_u8(ctx, 0x80);
+      sexp_sint_t jnz_utf8_slow = emit_jcc(ctx, 0x85);
+
+      // Advance cursor: addq $8, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xc0); emit_u8(ctx, 0x08);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jne_cur_slow);
+      patch_jcc(ctx, jae_slow);
+      patch_jcc(ctx, jnz_utf8_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+
+    if (code == SEXP_OP_STRING_CURSOR_PREV) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // Check string pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_STRING);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Check string cursor tag
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2);
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0xe2); emit_u8(ctx, 0x07);
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0xfa); emit_u8(ctx, 0x02);
+      sexp_sint_t jne_cur_slow = emit_jcc(ctx, 0x85);
+
+      // Unbox cursor to %r9: movq %rax, %r9; sarq $3, %r9
+      emit_u8(ctx, 0x49); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc1);
+      emit_u8(ctx, 0x49); emit_u8(ctx, 0xc1); emit_u8(ctx, 0xf9); emit_u8(ctx, 0x03);
+
+      // Check cursor > 0: testq %r9, %r9; jle slow
+      emit_u8(ctx, 0x4d); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jle_slow = emit_jcc(ctx, 0x8e);
+
+      // Check cursor <= string size: cmpq 24(%rcx), %r9; ja slow
+      emit_u8(ctx, 0x4c); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x49);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.length));
+      sexp_sint_t ja_slow = emit_jcc(ctx, 0x87);
+
+      // Compute byte pointer:
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x51);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.bytes));
+      emit_u8(ctx, 0x4c); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x41);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.string.offset));
+      emit_u8(ctx, 0x4a); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x54); emit_u8(ctx, 0x02);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      // Load previous byte: movzbq -1(%rdx, %r9, 1), %r8
+      emit_u8(ctx, 0x4e); emit_u8(ctx, 0x0f); emit_u8(ctx, 0xb6); emit_u8(ctx, 0x44); emit_u8(ctx, 0x0a); emit_u8(ctx, 0xff);
+
+      // Check ASCII: testb $0x80, %r8b
+      emit_u8(ctx, 0x41); emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc0); emit_u8(ctx, 0x80);
+      sexp_sint_t jnz_utf8_slow = emit_jcc(ctx, 0x85);
+
+      // Decrement cursor: subq $8, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x83); emit_u8(ctx, 0xe8); emit_u8(ctx, 0x08);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jne_cur_slow);
+      patch_jcc(ctx, jle_slow);
+      patch_jcc(ctx, ja_slow);
+      patch_jcc(ctx, jnz_utf8_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+      return 1;
+    }
+#endif
+
+    if (code == SEXP_OP_SLOT_SET) {
+      sexp tid_sexp = sexp_opcode_data(op);
+      sexp_sint_t tid = sexp_typep(tid_sexp) ? sexp_type_tag(tid_sexp) :
+                        sexp_fixnump(tid_sexp) ? sexp_unbox_fixnum(tid_sexp) : -1;
+      sexp idx_sexp = sexp_opcode_data2(op);
+      sexp_sint_t idx = sexp_fixnump(idx_sexp) ? sexp_unbox_fixnum(idx_sexp) : -1;
+
+      if (tid >= 0 && idx >= 0) {
+        generate(ctx, 0, 0, 0, arg0);
+        emit_mov_rax_slot(ctx, temp_start);
+        sexp_inc_context_depth(ctx, 1);
+
+        generate(ctx, 0, 0, 0, arg1);
+        emit_mov_rax_slot(ctx, temp_start + 1);
+        sexp_inc_context_depth(ctx, 1);
+
+        // Load arg0 (instance) into %rcx
+        emit_mov_slot_rcx(ctx, temp_start);
+
+        // Check instance pointer
+        emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+        sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+        sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+        // Tag check: cmpl $tid, (%rcx)
+        emit_u8(ctx, 0x81); emit_u8(ctx, 0x39); emit_u32(ctx, (uint32_t)tid);
+        sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+        // Immutable check: testb $1, 5(%rcx)
+        emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
+        sexp_sint_t jnz_imm_slow = emit_jcc(ctx, 0x85);
+
+        // Store val (in %rax) to off(%rcx)
+        int32_t off = (int32_t)(offsetof(struct sexp_struct, value) + idx * sizeof(sexp));
+        if (off >= -128 && off <= 127) {
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x41); emit_u8(ctx, (uint8_t)off);
+        } else {
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x81); emit_u32(ctx, (uint32_t)off);
+        }
+
+        // Return SEXP_VOID
+        emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+
+        sexp_sint_t done_jmp = emit_jmp(ctx);
+
+        patch_jcc(ctx, jnz_slow);
+        patch_jcc(ctx, jz_slow);
+        patch_jcc(ctx, jne_slow);
+        patch_jcc(ctx, jnz_imm_slow);
+        emit_native_dispatch_op(ctx, op, temp_start, 2);
+
+        emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 2);
+        return 1;
+      }
+    }
+
+    if (code == SEXP_OP_ISA) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load arg0 (instance) into %rcx; %rax holds arg1 (type)
+      emit_mov_slot_rcx(ctx, temp_start);
+
+      // Check instance is pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_false = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_false = emit_jcc(ctx, 0x84);
+
+      // Check arg1 is pointer and tag is SEXP_TYPE
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x38); emit_u8(ctx, (uint8_t)SEXP_TYPE);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Compare: movl (%rcx), %edx; cmpl %edx, 80(%rax) (value.type.tag)
+      emit_u8(ctx, 0x8b); emit_u8(ctx, 0x11);
+      emit_u8(ctx, 0x39); emit_u8(ctx, 0x50);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.type.tag));
+      sexp_sint_t je_true = emit_jcc(ctx, 0x84);
+
+      // If not equal, fall back to slow path (sexp_check_type)
+      sexp_sint_t jmp_slow = emit_jmp(ctx);
+
+      // False path:
+      patch_jcc(ctx, jnz_false);
+      patch_jcc(ctx, jz_false);
+      emit_mov_imm64_rax(ctx, (uint64_t)SEXP_FALSE);
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      // True path:
+      patch_jcc(ctx, je_true);
+      emit_mov_imm64_rax(ctx, (uint64_t)SEXP_TRUE);
+      sexp_sint_t done_jmp2 = emit_jmp(ctx);
+
+      // Slow path:
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jmp(ctx, jmp_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 2);
+      if (g_non_allocating_bb) {
+        emit_clear_slots(ctx, temp_start, 2);
+      }
       patch_jmp(ctx, done_jmp);
-      emit_clear_slots(ctx, temp_start, 2);
+      patch_jmp(ctx, done_jmp2);
+      if (!g_non_allocating_bb) {
+        emit_clear_slots(ctx, temp_start, 2);
+      }
       sexp_inc_context_depth(ctx, -2);
+      return 1;
+    }
+  }
+
+  // 3-argument cases
+  if (num_args == 3) {
+    sexp arg0 = sexp_cadr(app);
+    sexp arg1 = sexp_caddr(app);
+    sexp arg2 = sexp_cadddr(app);
+
+    if (code == SEXP_OP_VECTOR_SET) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg2);
+      emit_mov_rax_slot(ctx, temp_start + 2);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load arg0 (vector) into %rcx
+      emit_mov_slot_rcx(ctx, temp_start);
+      // Load arg1 (index) into %rdx
+      emit_mov_slot_rdx(ctx, temp_start + 1);
+      // %rax holds arg2 (val)
+
+      // Check vector is pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // Check tag: cmpl $SEXP_VECTOR, (%rcx)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_VECTOR);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Immutable check: testb $1, 5(%rcx)
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
+      sexp_sint_t jnz_imm_slow = emit_jcc(ctx, 0x85);
+
+      // Check index in %rdx is fixnum: testb $1, %dl
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+
+      // Unbox fixnum index: sarq $1, %rdx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xfa);
+
+      // Bounds check: cmpq 8(%rcx), %rdx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x51);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.vector.length));
+      sexp_sint_t jae_slow = emit_jcc(ctx, 0x83);
+
+      // Store val: movq %rax, 16(%rcx, %rdx, 8)
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x44); emit_u8(ctx, 0xd1);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      // Return SEXP_VOID
+      emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jnz_imm_slow);
+      patch_jcc(ctx, jz_idx_slow);
+      patch_jcc(ctx, jae_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 3);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 3);
+      return 1;
+    }
+
+    if (code == SEXP_OP_BYTES_SET) {
+      generate(ctx, 0, 0, 0, arg0);
+      emit_mov_rax_slot(ctx, temp_start);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg1);
+      emit_mov_rax_slot(ctx, temp_start + 1);
+      sexp_inc_context_depth(ctx, 1);
+
+      generate(ctx, 0, 0, 0, arg2);
+      emit_mov_rax_slot(ctx, temp_start + 2);
+      sexp_inc_context_depth(ctx, 1);
+
+      // Load arg0 (bytevector) into %rcx
+      emit_mov_slot_rcx(ctx, temp_start);
+      // Load arg1 (index) into %rdx
+      emit_mov_slot_rdx(ctx, temp_start + 1);
+      // %rax holds arg2 (val)
+
+      // Check bytevector pointer
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc1); emit_u8(ctx, 0x03);
+      sexp_sint_t jnz_slow = emit_jcc(ctx, 0x85);
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc9);
+      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+
+      // Check tag: cmpl $SEXP_BYTES, (%rcx)
+      emit_u8(ctx, 0x83); emit_u8(ctx, 0x39); emit_u8(ctx, (uint8_t)SEXP_BYTES);
+      sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
+
+      // Immutable check: testb $1, 5(%rcx)
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
+      sexp_sint_t jnz_imm_slow = emit_jcc(ctx, 0x85);
+
+      // Check index in %rdx is fixnum: testb $1, %dl
+      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+
+      // Unbox fixnum index: sarq $1, %rdx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xfa);
+
+      // Bounds check: cmpq 8(%rcx), %rdx
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x51);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.bytes.length));
+      sexp_sint_t jae_slow = emit_jcc(ctx, 0x83);
+
+      // Check val in %rax is fixnum: testb $1, %al
+      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+      sexp_sint_t jz_val_slow = emit_jcc(ctx, 0x84);
+
+      // Unbox val: sarq $1, %rax
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
+
+      // Range check val [0, 255]: cmpq $255, %rax; ja slow
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x3d); emit_u32(ctx, 255);
+      sexp_sint_t ja_val_slow = emit_jcc(ctx, 0x87);
+
+      // Store byte: movb %al, 16(%rcx, %rdx, 1)
+      emit_u8(ctx, 0x88); emit_u8(ctx, 0x44); emit_u8(ctx, 0x11);
+      emit_u8(ctx, (uint8_t)(offsetof(struct sexp_struct, value) + sizeof(struct { sexp_uint_t length; })));
+
+      // Return SEXP_VOID
+      emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+
+      sexp_sint_t done_jmp = emit_jmp(ctx);
+
+      patch_jcc(ctx, jnz_slow);
+      patch_jcc(ctx, jz_slow);
+      patch_jcc(ctx, jne_slow);
+      patch_jcc(ctx, jnz_imm_slow);
+      patch_jcc(ctx, jz_idx_slow);
+      patch_jcc(ctx, jae_slow);
+      patch_jcc(ctx, jz_val_slow);
+      patch_jcc(ctx, ja_val_slow);
+      emit_native_dispatch_op(ctx, op, temp_start, 3);
+
+      emit_inlined_op_cleanup(ctx, done_jmp, temp_start, 3);
       return 1;
     }
   }
@@ -2410,7 +3511,9 @@ static void generate_opcode_app (sexp ctx, sexp app) {
       generate(ctx, 0, 0, 0, sexp_cadr(app));
       emit_mov_rax_slot(ctx, temp_start);
       emit_set_param_value(ctx, op, temp_start);
-      emit_clear_slot(ctx, temp_start);
+      if (!g_non_allocating_bb) {
+        emit_clear_slot(ctx, temp_start);
+      }
       return;
     }
   }
@@ -2493,7 +3596,9 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
     }
   }
 
-  emit_clear_slots(ctx, temp_start, num_args);
+  if (!g_non_allocating_bb) {
+    emit_clear_slots(ctx, temp_start, num_args);
+  }
 
   sexp_inc_context_depth(ctx, -num_args);
 
@@ -2608,7 +3713,7 @@ void sexp_native_prepare_ast (sexp ctx, sexp ast) {
 
 static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda) {
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
-  sexp_gc_var2(tmp, bc);
+  sexp_gc_var3(tmp, bc, fixnum_vars);
   if (sexp_exceptionp(sexp_context_exception(ctx))) return;
 
   prev_lambda = sexp_context_lambda(ctx);
@@ -2621,7 +3726,8 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     return;
   }
   sexp_context_lambda(ctx2) = lambda;
-  sexp_gc_preserve2(ctx, tmp, bc);
+  fixnum_vars = SEXP_NULL;
+  sexp_gc_preserve3(ctx, tmp, bc, fixnum_vars);
 
   if (!name && sexp_symbolp(sexp_lambda_name(lambda))) {
     name = sexp_lambda_name(lambda);
@@ -2657,9 +3763,19 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   // Record loop start for self-tail jumps
   sexp_context_top(ctx2) = sexp_unbox_fixnum(sexp_context_pos(ctx2));
 
+  int saved_non_alloc = g_non_allocating_bb;
+  sexp saved_fixnum_vars = g_current_fixnum_vars;
+
+  fixnum_vars = scan_cnd_fixnum_vars(ctx2, lambda, sexp_lambda_body(lambda), SEXP_NULL);
+  g_current_fixnum_vars = fixnum_vars;
+  g_non_allocating_bb = !can_expr_allocate(ctx2, lambda, sexp_lambda_body(lambda), g_current_fixnum_vars, name, loc);
+
   // Generate body
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, name, loc, lambda, sexp_lambda_body(lambda));
+
+  g_non_allocating_bb = saved_non_alloc;
+  g_current_fixnum_vars = saved_fixnum_vars;
 
   flags = sexp_make_fixnum(sexp_not(sexp_listp(ctx, sexp_lambda_params(lambda)))
                            ? (SEXP_PROC_VARIADIC + (sexp_rest_unused_p(lambda) ? SEXP_PROC_UNUSED_REST : 0))
@@ -2701,7 +3817,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
       sexp_inc_context_depth(ctx, -num_fvs);
     }
   }
-  sexp_gc_release2(ctx);
+  sexp_gc_release3(ctx);
 }
 
 static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
@@ -2740,7 +3856,13 @@ static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
 }
 
 void sexp_generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
+  int saved_non_alloc = g_non_allocating_bb;
+  sexp saved_fixnum_vars = g_current_fixnum_vars;
+  g_current_fixnum_vars = SEXP_NULL;
+  g_non_allocating_bb = !can_expr_allocate(ctx, lam, x, SEXP_NULL, name, loc);
   generate(ctx, name, loc, lam, x);
+  g_non_allocating_bb = saved_non_alloc;
+  g_current_fixnum_vars = saved_fixnum_vars;
 }
 
 /************************* Virtual Machine Interface ******************/
