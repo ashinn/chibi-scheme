@@ -1362,7 +1362,7 @@ static void emit_clear_slots (sexp ctx, int start_slot, int count) {
 }
 
 static int g_non_allocating_bb = 0;
-static sexp g_current_fixnum_vars = SEXP_NULL;
+static sexp g_current_top_expr = SEXP_NULL;
 
 static void patch_jmp (sexp ctx, sexp_sint_t pos);
 
@@ -1683,9 +1683,41 @@ static int is_leaf_procedure (sexp ctx, sexp lam, sexp name, sexp loc) {
   return is_leaf_expr(ctx, lam, sexp_lambda_body(lam), name, loc, 1);
 }
 
-/************************* Non-Allocating Basic Block Analysis ********/
+/************************* Parameter Type & Non-Allocating Analysis ********/
 
-static int is_proven_fixnum (sexp ctx, sexp lam, sexp x, sexp fixnum_vars) {
+static int is_param_fixnum (sexp lam, sexp var_name) {
+  if (!lam || !sexp_lambdap(lam) || !var_name || !sexp_symbolp(var_name))
+    return 0;
+  sexp types = sexp_lambda_param_types(lam);
+  if (!sexp_pairp(types))
+    return 0;
+  sexp params = sexp_lambda_params(lam);
+  for (; sexp_pairp(params) && sexp_pairp(types);
+       params = sexp_cdr(params), types = sexp_cdr(types)) {
+    if (sexp_car(params) == var_name) {
+      sexp t = sexp_car(types);
+      return sexp_fixnump(t) && sexp_unbox_fixnum(t) == SEXP_FIXNUM;
+    }
+  }
+  return 0;
+}
+
+static int is_ref_fixnum (sexp x) {
+  if (!x || !sexp_pointerp(x) || sexp_pointer_tag(x) != SEXP_REF)
+    return 0;
+  sexp loc = sexp_ref_loc(x);
+  if (sexp_lambdap(loc)) {
+    return is_param_fixnum(loc, sexp_ref_name(x));
+  }
+  return 0;
+}
+
+static int is_ref_to_var (sexp x, sexp lam, sexp sym) {
+  return (x && sexp_pointerp(x) && sexp_pointer_tag(x) == SEXP_REF &&
+          sexp_ref_loc(x) == lam && sexp_ref_name(x) == sym);
+}
+
+static int is_proven_fixnum (sexp ctx, sexp lam, sexp x) {
   sexp_sint_t c;
   if (!x) return 0;
   if (is_fixnum_literal(x, &c)) return 1;
@@ -1693,10 +1725,7 @@ static int is_proven_fixnum (sexp ctx, sexp lam, sexp x, sexp fixnum_vars) {
 
   int tag = sexp_pointer_tag(x);
   if (tag == SEXP_REF) {
-    if (fixnum_vars && sexp_pairp(fixnum_vars) && lam && sexp_ref_loc(x) == lam) {
-      return sexp_truep(sexp_memq(ctx, sexp_ref_name(x), fixnum_vars));
-    }
-    return 0;
+    return is_ref_fixnum(x);
   }
 
   if (tag == SEXP_PAIR) {
@@ -1713,23 +1742,29 @@ static int is_proven_fixnum (sexp ctx, sexp lam, sexp x, sexp fixnum_vars) {
     case SEXP_OP_REMAINDER: {
       sexp ls = sexp_cdr(x);
       if (sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls))) {
+        sexp arg0 = sexp_car(ls);
         sexp arg1 = sexp_cadr(ls);
-        if (is_fixnum_literal(arg1, &c) && c > 0) return 1;
+        if (is_proven_fixnum(ctx, lam, arg0) && is_fixnum_literal(arg1, &c) && c > 0) return 1;
       }
       return 0;
     }
     case SEXP_OP_ADD: {
       sexp ls = sexp_cdr(x);
       if (sexp_nullp(ls)) return 1;
-      if (sexp_nullp(sexp_cdr(ls))) return is_proven_fixnum(ctx, lam, sexp_car(ls), fixnum_vars);
+      if (sexp_nullp(sexp_cdr(ls))) return is_proven_fixnum(ctx, lam, sexp_car(ls));
       if (sexp_pairp(sexp_cdr(ls))) {
         sexp arg0 = sexp_car(ls);
         sexp arg1 = sexp_cadr(ls);
-        if (is_proven_fixnum(ctx, lam, arg0, fixnum_vars) &&
-            is_fixnum_literal(arg1, &c) && c >= -1000000 && c <= 1000000)
+        sexp_sint_t c0, c1;
+        if (is_fixnum_literal(arg0, &c0) && is_fixnum_literal(arg1, &c1)) {
+          sexp_sint_t sum = c0 + c1;
+          if (sum >= SEXP_MIN_FIXNUM && sum <= SEXP_MAX_FIXNUM) return 1;
+        }
+        if (is_proven_fixnum(ctx, lam, arg0) &&
+            is_fixnum_literal(arg1, &c) && c >= -1 && c <= 1)
           return 1;
-        if (is_proven_fixnum(ctx, lam, arg1, fixnum_vars) &&
-            is_fixnum_literal(arg0, &c) && c >= -1000000 && c <= 1000000)
+        if (is_proven_fixnum(ctx, lam, arg1) &&
+            is_fixnum_literal(arg0, &c) && c >= -1 && c <= 1)
           return 1;
       }
       return 0;
@@ -1742,8 +1777,13 @@ static int is_proven_fixnum (sexp ctx, sexp lam, sexp x, sexp fixnum_vars) {
       if (sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls))) {
         sexp arg0 = sexp_car(ls);
         sexp arg1 = sexp_cadr(ls);
-        if (is_proven_fixnum(ctx, lam, arg0, fixnum_vars) &&
-            is_fixnum_literal(arg1, &c) && c >= -1000000 && c <= 1000000)
+        sexp_sint_t c0, c1;
+        if (is_fixnum_literal(arg0, &c0) && is_fixnum_literal(arg1, &c1)) {
+          sexp_sint_t diff = c0 - c1;
+          if (diff >= SEXP_MIN_FIXNUM && diff <= SEXP_MAX_FIXNUM) return 1;
+        }
+        if (is_proven_fixnum(ctx, lam, arg0) &&
+            is_fixnum_literal(arg1, &c) && c >= -1 && c <= 1)
           return 1;
       }
       return 0;
@@ -1756,59 +1796,241 @@ static int is_proven_fixnum (sexp ctx, sexp lam, sexp x, sexp fixnum_vars) {
   return 0;
 }
 
-static sexp scan_cnd_fixnum_vars (sexp ctx, sexp lam, sexp x, sexp res) {
-  if (!x || !sexp_pointerp(x) || !lam || !sexp_lambdap(lam)) return res;
-  int tag = sexp_pointer_tag(x);
-  if (tag == SEXP_CND) {
-    sexp test = sexp_cnd_test(x);
-    while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
-           sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
-           !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
-           sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
-      test = sexp_cadr(test);
-    }
-    if (sexp_pairp(test) && sexp_opcodep(sexp_car(test))) {
-      sexp op = sexp_car(test);
+static int is_known_fixnum_bound (sexp ctx, sexp lam, sexp x) {
+  sexp_sint_t c;
+  if (!x) return 0;
+  if (is_fixnum_literal(x, &c)) return 1;
+  if (is_ref_fixnum(x)) return 1;
+  if (sexp_pointerp(x) && sexp_pointer_tag(x) == SEXP_PAIR) {
+    sexp op = sexp_car(x);
+    if (sexp_opcodep(op)) {
       sexp_sint_t code = sexp_opcode_code(op);
-      sexp params = sexp_lambda_params(lam);
-      sexp sv = sexp_lambda_sv(lam);
-      sexp arg0 = sexp_pairp(sexp_cdr(test)) ? sexp_cadr(test) : SEXP_NULL;
-      sexp arg1 = (sexp_pairp(sexp_cdr(test)) && sexp_pairp(sexp_cddr(test))) ? sexp_caddr(test) : SEXP_NULL;
-
-      sexp var_sym = SEXP_NULL;
-      if (code == SEXP_OP_FIXNUMP && sexp_refp(arg0) && sexp_ref_loc(arg0) == lam) {
-        var_sym = sexp_ref_name(arg0);
-      } else if (code == SEXP_OP_LT || code == SEXP_OP_LE || code == SEXP_OP_EQN) {
-        if (sexp_refp(arg0) && sexp_ref_loc(arg0) == lam) {
-          var_sym = sexp_ref_name(arg0);
-        }
-        if (sexp_refp(arg1) && sexp_ref_loc(arg1) == lam) {
-          sexp var2 = sexp_ref_name(arg1);
-          if (sexp_symbolp(var2) && sexp_not(sexp_memq(ctx, var2, sv)) &&
-              sexp_truep(sexp_memq(ctx, var2, params)) &&
-              sexp_not(sexp_memq(ctx, var2, res))) {
-            res = sexp_cons(ctx, var2, res);
-          }
-        }
-      }
-
-      if (sexp_symbolp(var_sym) && sexp_not(sexp_memq(ctx, var_sym, sv)) &&
-          sexp_truep(sexp_memq(ctx, var_sym, params)) &&
-          sexp_not(sexp_memq(ctx, var_sym, res))) {
-        res = sexp_cons(ctx, var_sym, res);
-      }
-    }
-    res = scan_cnd_fixnum_vars(ctx, lam, sexp_cnd_pass(x), res);
-    res = scan_cnd_fixnum_vars(ctx, lam, sexp_cnd_fail(x), res);
-  } else if (tag == SEXP_SEQ) {
-    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-      res = scan_cnd_fixnum_vars(ctx, lam, sexp_car(ls), res);
+      if (code == SEXP_OP_VECTOR_LENGTH ||
+          code == SEXP_OP_BYTES_LENGTH ||
+          code == SEXP_OP_STRING_LENGTH)
+        return 1;
     }
   }
-  return res;
+  return is_proven_fixnum(ctx, lam, x);
 }
 
-static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp fixnum_vars, sexp self_name, sexp self_loc) {
+static void analyze_cnd_bound (sexp ctx, sexp lam, sexp test, sexp p_sym, int *pass_b, int *fail_b) {
+  while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
+         sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
+         !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
+         sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+    test = sexp_cadr(test);
+    int tmp = *pass_b; *pass_b = *fail_b; *fail_b = tmp;
+  }
+  if (!sexp_pairp(test) || !sexp_opcodep(sexp_car(test))) return;
+  sexp op = sexp_car(test);
+  sexp_sint_t code = sexp_opcode_code(op);
+  sexp arg0 = sexp_pairp(sexp_cdr(test)) ? sexp_cadr(test) : SEXP_NULL;
+  sexp arg1 = (sexp_pairp(sexp_cdr(test)) && sexp_pairp(sexp_cddr(test))) ? sexp_caddr(test) : SEXP_NULL;
+  int inv = sexp_opcode_inverse(op);
+
+  if (is_ref_to_var(arg0, lam, p_sym) && is_known_fixnum_bound(ctx, lam, arg1)) {
+    if (code == SEXP_OP_LT || code == SEXP_OP_LE) {
+      if (!inv) *pass_b = 1;
+      else *fail_b = 1;
+    } else if (code == SEXP_OP_EQN) {
+      *fail_b = 1;
+    }
+  } else if (is_ref_to_var(arg1, lam, p_sym) && is_known_fixnum_bound(ctx, lam, arg0)) {
+    if (code == SEXP_OP_LT || code == SEXP_OP_LE) {
+      if (!inv) *fail_b = 1;
+      else *pass_b = 1;
+    } else if (code == SEXP_OP_EQN) {
+      *fail_b = 1;
+    }
+  } else if (code == SEXP_OP_FIXNUMP && is_ref_to_var(arg0, lam, p_sym)) {
+    *pass_b = 1;
+  }
+}
+
+static int check_recursive_step (sexp ctx, sexp lam, sexp app, sexp p_sym, int k) {
+  sexp args = sexp_cdr(app);
+  for (int i = 0; i < k && sexp_pairp(args); i++)
+    args = sexp_cdr(args);
+  if (!sexp_pairp(args)) return 0;
+  sexp arg_k = sexp_car(args);
+
+  if (is_ref_to_var(arg_k, lam, p_sym)) return 1;
+
+  if (sexp_pairp(arg_k) && sexp_opcodep(sexp_car(arg_k))) {
+    sexp op = sexp_car(arg_k);
+    sexp_sint_t code = sexp_opcode_code(op);
+    sexp ls = sexp_cdr(arg_k);
+    if (sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls))) {
+      sexp a0 = sexp_car(ls);
+      sexp a1 = sexp_cadr(ls);
+      sexp_sint_t c;
+      if (code == SEXP_OP_ADD) {
+        if (is_ref_to_var(a0, lam, p_sym) && is_fixnum_literal(a1, &c) && c >= -1 && c <= 1)
+          return 1;
+        if (is_ref_to_var(a1, lam, p_sym) && is_fixnum_literal(a0, &c) && c >= -1 && c <= 1)
+          return 1;
+      } else if (code == SEXP_OP_SUB) {
+        if (is_ref_to_var(a0, lam, p_sym) && is_fixnum_literal(a1, &c) && c >= -1 && c <= 1)
+          return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+static int check_recursive_calls (sexp ctx, sexp lam, sexp self_name, sexp self_loc,
+                                  sexp x, sexp p_sym, int k, int bounded, int *found_rec_call) {
+  if (!x || !sexp_pointerp(x) || sexp_litp(x)) return 1;
+  int tag = sexp_pointer_tag(x);
+  switch (tag) {
+  case SEXP_PAIR: {
+    sexp op = sexp_car(x);
+    if (sexp_refp(op) &&
+        ((self_name && sexp_ref_name(op) == self_name && self_loc && sexp_ref_loc(op) == self_loc) ||
+         (sexp_ref_loc(op) == lam))) {
+      *found_rec_call = 1;
+      if (!bounded) return 0;
+      return check_recursive_step(ctx, lam, x, p_sym, k);
+    }
+    for (sexp ls = x; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (!check_recursive_calls(ctx, lam, self_name, self_loc, sexp_car(ls), p_sym, k, bounded, found_rec_call))
+        return 0;
+    }
+    return 1;
+  }
+  case SEXP_SEQ: {
+    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (!check_recursive_calls(ctx, lam, self_name, self_loc, sexp_car(ls), p_sym, k, bounded, found_rec_call))
+        return 0;
+    }
+    return 1;
+  }
+  case SEXP_SET:
+    return check_recursive_calls(ctx, lam, self_name, self_loc, sexp_set_value(x), p_sym, k, bounded, found_rec_call);
+  case SEXP_LAMBDA:
+    return check_recursive_calls(ctx, lam, self_name, self_loc, sexp_lambda_body(x), p_sym, k, bounded, found_rec_call);
+  case SEXP_CND: {
+    if (!check_recursive_calls(ctx, lam, self_name, self_loc, sexp_cnd_test(x), p_sym, k, bounded, found_rec_call))
+      return 0;
+    int pass_b = bounded, fail_b = bounded;
+    analyze_cnd_bound(ctx, lam, sexp_cnd_test(x), p_sym, &pass_b, &fail_b);
+    if (!check_recursive_calls(ctx, lam, self_name, self_loc, sexp_cnd_pass(x), p_sym, k, pass_b, found_rec_call))
+      return 0;
+    if (!check_recursive_calls(ctx, lam, self_name, self_loc, sexp_cnd_fail(x), p_sym, k, fail_b, found_rec_call))
+      return 0;
+    return 1;
+  }
+  default:
+    return 1;
+  }
+}
+
+static int check_calls_pass_fixnum (sexp ctx, sexp caller_lam, sexp target_lam,
+                                    sexp self_name, sexp self_loc, sexp x, int k, int *found_call) {
+  if (!x || !sexp_pointerp(x) || sexp_litp(x)) return 1;
+  int tag = sexp_pointer_tag(x);
+  if (tag == SEXP_LAMBDA) {
+    if (x == target_lam) return 1;
+    return check_calls_pass_fixnum(ctx, x, target_lam, self_name, self_loc, sexp_lambda_body(x), k, found_call);
+  }
+  if (tag == SEXP_SET) {
+    return check_calls_pass_fixnum(ctx, caller_lam, target_lam, self_name, self_loc, sexp_set_value(x), k, found_call);
+  }
+  if (tag == SEXP_SEQ) {
+    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (!check_calls_pass_fixnum(ctx, caller_lam, target_lam, self_name, self_loc, sexp_car(ls), k, found_call))
+        return 0;
+    }
+    return 1;
+  }
+  if (tag == SEXP_CND) {
+    return check_calls_pass_fixnum(ctx, caller_lam, target_lam, self_name, self_loc, sexp_cnd_test(x), k, found_call) &&
+           check_calls_pass_fixnum(ctx, caller_lam, target_lam, self_name, self_loc, sexp_cnd_pass(x), k, found_call) &&
+           check_calls_pass_fixnum(ctx, caller_lam, target_lam, self_name, self_loc, sexp_cnd_fail(x), k, found_call);
+  }
+  if (tag == SEXP_PAIR) {
+    sexp op = sexp_car(x);
+    int is_target = 0;
+    if (op == target_lam) {
+      is_target = 1;
+    } else if (sexp_refp(op)) {
+      if ((self_name && sexp_ref_name(op) == self_name && self_loc && sexp_ref_loc(op) == self_loc) ||
+          (sexp_ref_loc(op) == target_lam)) {
+        is_target = 1;
+      }
+    }
+    if (is_target) {
+      sexp args = sexp_cdr(x);
+      for (int i = 0; i < k && sexp_pairp(args); i++)
+        args = sexp_cdr(args);
+      if (!sexp_pairp(args)) return 0;
+      sexp arg_k = sexp_car(args);
+      if (!is_proven_fixnum(ctx, caller_lam, arg_k))
+        return 0;
+      (*found_call)++;
+      return 1;
+    }
+    for (sexp ls = x; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (!check_calls_pass_fixnum(ctx, caller_lam, target_lam, self_name, self_loc, sexp_car(ls), k, found_call))
+        return 0;
+    }
+    return 1;
+  }
+  return 1;
+}
+
+static int check_param_starts_as_fixnum (sexp ctx, sexp target_lam, sexp prev_lam, sexp top_expr,
+                                         sexp name, sexp loc, int k, int *found_caller) {
+  int ok = 1;
+  if (prev_lam && sexp_lambdap(prev_lam)) {
+    ok = check_calls_pass_fixnum(ctx, prev_lam, target_lam, name, loc, sexp_lambda_body(prev_lam), k, found_caller);
+  }
+  if (ok && (!prev_lam || *found_caller == 0) && top_expr) {
+    ok = check_calls_pass_fixnum(ctx, NULL, target_lam, name, loc, top_expr, k, found_caller);
+  }
+  return ok;
+}
+
+static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp top_expr, sexp name, sexp loc) {
+  if (!lam || !sexp_lambdap(lam)) return;
+  sexp params = sexp_lambda_params(lam);
+  if (!sexp_listp(ctx, params) || sexp_nullp(params)) {
+    sexp_lambda_param_types(lam) = SEXP_NULL;
+    return;
+  }
+
+  sexp_gc_var1(types);
+  sexp_gc_preserve1(ctx, types);
+  types = SEXP_NULL;
+
+  int num_params = (int)sexp_unbox_fixnum(sexp_length(ctx, params));
+  for (int k = num_params - 1; k >= 0; k--) {
+    sexp p = params;
+    for (int i = 0; i < k; i++) p = sexp_cdr(p);
+    sexp p_sym = sexp_car(p);
+
+    int is_fx = 0;
+    if (sexp_symbolp(p_sym) && sexp_not(sexp_memq(ctx, p_sym, sexp_lambda_sv(lam)))) {
+      int found_caller = 0;
+      int starts_fx = check_param_starts_as_fixnum(ctx, lam, prev_lam, top_expr, name, loc, k, &found_caller);
+      if (starts_fx && found_caller > 0) {
+        int found_rec_call = 0;
+        int rec_valid = check_recursive_calls(ctx, lam, name, loc, sexp_lambda_body(lam), p_sym, k, 0, &found_rec_call);
+        if (found_rec_call > 0 && rec_valid) {
+          is_fx = 1;
+        }
+      }
+    }
+    sexp t = is_fx ? sexp_make_fixnum(SEXP_FIXNUM) : sexp_make_fixnum(SEXP_OBJECT);
+    types = sexp_cons(ctx, t, types);
+  }
+
+  sexp_lambda_param_types(lam) = types;
+  sexp_gc_release1(ctx);
+}
+
+static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc) {
   if (!x || !sexp_pointerp(x) || sexp_litp(x))
     return 0;
 
@@ -1818,20 +2040,20 @@ static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp fixnum_vars, sexp
     return 0;
 
   case SEXP_SET:
-    return can_expr_allocate(ctx, lam, sexp_set_value(x), fixnum_vars, self_name, self_loc);
+    return can_expr_allocate(ctx, lam, sexp_set_value(x), self_name, self_loc);
 
   case SEXP_SEQ: {
     for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-      if (can_expr_allocate(ctx, lam, sexp_car(ls), fixnum_vars, self_name, self_loc))
+      if (can_expr_allocate(ctx, lam, sexp_car(ls), self_name, self_loc))
         return 1;
     }
     return 0;
   }
 
   case SEXP_CND: {
-    return can_expr_allocate(ctx, lam, sexp_cnd_test(x), fixnum_vars, self_name, self_loc) ||
-           can_expr_allocate(ctx, lam, sexp_cnd_pass(x), fixnum_vars, self_name, self_loc) ||
-           can_expr_allocate(ctx, lam, sexp_cnd_fail(x), fixnum_vars, self_name, self_loc);
+    return can_expr_allocate(ctx, lam, sexp_cnd_test(x), self_name, self_loc) ||
+           can_expr_allocate(ctx, lam, sexp_cnd_pass(x), self_name, self_loc) ||
+           can_expr_allocate(ctx, lam, sexp_cnd_fail(x), self_name, self_loc);
   }
 
   case SEXP_LAMBDA:
@@ -1840,11 +2062,11 @@ static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp fixnum_vars, sexp
   case SEXP_PAIR: {
     sexp op = sexp_car(x);
     if (sexp_opcodep(op)) {
-      if (!sexp_opcode_non_alloc_p(op) && !is_proven_fixnum(ctx, lam, x, fixnum_vars))
+      if (!sexp_opcode_non_alloc_p(op) && !is_proven_fixnum(ctx, lam, x))
         return 1;
 
       for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-        if (can_expr_allocate(ctx, lam, sexp_car(ls), fixnum_vars, self_name, self_loc))
+        if (can_expr_allocate(ctx, lam, sexp_car(ls), self_name, self_loc))
           return 1;
       }
       return 0;
@@ -1853,7 +2075,7 @@ static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp fixnum_vars, sexp
     if (self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
         && lam && (self_loc == sexp_ref_loc(op))) {
       for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-        if (can_expr_allocate(ctx, lam, sexp_car(ls), fixnum_vars, self_name, self_loc))
+        if (can_expr_allocate(ctx, lam, sexp_car(ls), self_name, self_loc))
           return 1;
       }
       return 0;
@@ -1872,7 +2094,7 @@ static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp fixnum_vars, sexp
 void sexp_emit_enter (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
   int num_params = (lam && sexp_lambdap(lam)) ? get_param_count(lam) : 0;
-  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
+  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_leaf_p(lam));
   int num_slots = get_context_num_slots(ctx);
   uint32_t frame_alloc = compute_frame_alloc(num_slots);
 
@@ -1918,7 +2140,7 @@ void sexp_emit_enter (sexp ctx) {
 
 void sexp_emit_return (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
-  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_flags(lam) == SEXP_TRUE);
+  int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_leaf_p(lam));
 
   if (!is_leaf) {
     emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc3);
@@ -2236,7 +2458,7 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
   sexp_sint_t pass_start = sexp_unbox_fixnum(sexp_context_pos(ctx));
   sexp_context_tailp(ctx) = tailp;
   int saved_non_alloc = g_non_allocating_bb;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, g_current_fixnum_vars, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, name, loc);
   generate(ctx, name, loc, lam, pass);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2272,7 +2494,7 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
   }
 
   sexp_context_tailp(ctx) = tailp;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, g_current_fixnum_vars, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, name, loc);
   generate(ctx, name, loc, lam, fail);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2301,7 +2523,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   }
 
   int saved_non_alloc = g_non_allocating_bb;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, test, g_current_fixnum_vars, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, test, name, loc);
   sexp_context_tailp(ctx) = 0;
   generate(ctx, name, loc, lam, test);
   g_non_allocating_bb = saved_non_alloc;
@@ -2314,7 +2536,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   sexp_sint_t je_pos = emit_jcc(ctx, 0x84);
 
   sexp_context_tailp(ctx) = tailp;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, g_current_fixnum_vars, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, name, loc);
   generate(ctx, name, loc, lam, pass);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2325,7 +2547,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   patch_jcc(ctx, je_pos);
 
   sexp_context_tailp(ctx) = tailp;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, g_current_fixnum_vars, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, name, loc);
   generate(ctx, name, loc, lam, fail);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2348,6 +2570,7 @@ static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
 
 static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t num_args, int temp_start) {
   sexp_sint_t code = sexp_opcode_code(op);
+  sexp lam = sexp_context_lambda(ctx);
 
   // 0-argument cases
   if (num_args == 0) {
@@ -2781,13 +3004,16 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_mov_slot_rcx(ctx, temp_start);
 
       // Check if both are fixnums:
-      // movq %rcx, %rdx (48 89 ca)
-      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xca);
-      // andq %rax, %rdx (48 21 c2)
-      emit_u8(ctx, 0x48); emit_u8(ctx, 0x21); emit_u8(ctx, 0xc2);
-      // testb $1, %dl (f6 c2 01)
-      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_slow = -1;
+      if (!is_proven_fixnum(ctx, lam, arg0) || !is_proven_fixnum(ctx, lam, arg1)) {
+        // movq %rcx, %rdx (48 89 ca)
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xca);
+        // andq %rax, %rdx (48 21 c2)
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x21); emit_u8(ctx, 0xc2);
+        // testb $1, %dl (f6 c2 01)
+        emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+        jz_slow = emit_jcc(ctx, 0x84);
+      }
 
       sexp_sint_t jo_slow = -1;
 
@@ -2837,7 +3063,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
 
       sexp_sint_t done_jmp = emit_jmp(ctx);
 
-      patch_jcc(ctx, jz_slow);
+      if (jz_slow != -1) patch_jcc(ctx, jz_slow);
       if (jo_slow != -1) patch_jcc(ctx, jo_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
@@ -2919,8 +3145,11 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
 
       // Check index in %rax is fixnum: testb $1, %al
-      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_idx_slow = -1;
+      if (!is_proven_fixnum(ctx, lam, arg1)) {
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+        jz_idx_slow = emit_jcc(ctx, 0x84);
+      }
 
       // Unbox fixnum index: sarq $1, %rax
       emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
@@ -2939,7 +3168,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       patch_jcc(ctx, jnz_slow);
       patch_jcc(ctx, jz_slow);
       patch_jcc(ctx, jne_slow);
-      patch_jcc(ctx, jz_idx_slow);
+      if (jz_idx_slow != -1) patch_jcc(ctx, jz_idx_slow);
       patch_jcc(ctx, jae_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
@@ -2970,8 +3199,11 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_sint_t jne_slow = emit_jcc(ctx, 0x85);
 
       // Check index in %rax is fixnum
-      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_idx_slow = -1;
+      if (!is_proven_fixnum(ctx, lam, arg1)) {
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+        jz_idx_slow = emit_jcc(ctx, 0x84);
+      }
 
       // Unbox fixnum index: sarq $1, %rax
       emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
@@ -2994,7 +3226,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       patch_jcc(ctx, jnz_slow);
       patch_jcc(ctx, jz_slow);
       patch_jcc(ctx, jne_slow);
-      patch_jcc(ctx, jz_idx_slow);
+      if (jz_idx_slow != -1) patch_jcc(ctx, jz_idx_slow);
       patch_jcc(ctx, jae_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 2);
 
@@ -3378,8 +3610,11 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_sint_t jnz_imm_slow = emit_jcc(ctx, 0x85);
 
       // Check index in %rdx is fixnum: testb $1, %dl
-      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_idx_slow = -1;
+      if (!is_proven_fixnum(ctx, lam, arg1)) {
+        emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+        jz_idx_slow = emit_jcc(ctx, 0x84);
+      }
 
       // Unbox fixnum index: sarq $1, %rdx
       emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xfa);
@@ -3402,7 +3637,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       patch_jcc(ctx, jz_slow);
       patch_jcc(ctx, jne_slow);
       patch_jcc(ctx, jnz_imm_slow);
-      patch_jcc(ctx, jz_idx_slow);
+      if (jz_idx_slow != -1) patch_jcc(ctx, jz_idx_slow);
       patch_jcc(ctx, jae_slow);
       emit_native_dispatch_op(ctx, op, temp_start, 3);
 
@@ -3444,8 +3679,11 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_sint_t jnz_imm_slow = emit_jcc(ctx, 0x85);
 
       // Check index in %rdx is fixnum: testb $1, %dl
-      emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_idx_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_idx_slow = -1;
+      if (!is_proven_fixnum(ctx, lam, arg1)) {
+        emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+        jz_idx_slow = emit_jcc(ctx, 0x84);
+      }
 
       // Unbox fixnum index: sarq $1, %rdx
       emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xfa);
@@ -3479,7 +3717,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       patch_jcc(ctx, jz_slow);
       patch_jcc(ctx, jne_slow);
       patch_jcc(ctx, jnz_imm_slow);
-      patch_jcc(ctx, jz_idx_slow);
+      if (jz_idx_slow != -1) patch_jcc(ctx, jz_idx_slow);
       patch_jcc(ctx, jae_slow);
       patch_jcc(ctx, jz_val_slow);
       patch_jcc(ctx, ja_val_slow);
@@ -3713,7 +3951,7 @@ void sexp_native_prepare_ast (sexp ctx, sexp ast) {
 
 static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda) {
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
-  sexp_gc_var3(tmp, bc, fixnum_vars);
+  sexp_gc_var2(tmp, bc);
   if (sexp_exceptionp(sexp_context_exception(ctx))) return;
 
   prev_lambda = sexp_context_lambda(ctx);
@@ -3726,8 +3964,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     return;
   }
   sexp_context_lambda(ctx2) = lambda;
-  fixnum_vars = SEXP_NULL;
-  sexp_gc_preserve3(ctx, tmp, bc, fixnum_vars);
+  sexp_gc_preserve2(ctx, tmp, bc);
 
   if (!name && sexp_symbolp(sexp_lambda_name(lambda))) {
     name = sexp_lambda_name(lambda);
@@ -3738,9 +3975,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
 
   int is_leaf = is_leaf_procedure(ctx2, lambda, name, loc);
   if (is_leaf) {
-    sexp_lambda_flags(lambda) = SEXP_TRUE;
-  } else {
-    sexp_lambda_flags(lambda) = SEXP_FALSE;
+    sexp_lambda_flags(lambda) = sexp_make_fixnum(sexp_unbox_fixnum(sexp_lambda_flags(lambda)) | SEXP_LAMBDA_LEAF);
   }
 
   int num_params = get_param_count(lambda);
@@ -3764,18 +3999,15 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   sexp_context_top(ctx2) = sexp_unbox_fixnum(sexp_context_pos(ctx2));
 
   int saved_non_alloc = g_non_allocating_bb;
-  sexp saved_fixnum_vars = g_current_fixnum_vars;
 
-  fixnum_vars = scan_cnd_fixnum_vars(ctx2, lambda, sexp_lambda_body(lambda), SEXP_NULL);
-  g_current_fixnum_vars = fixnum_vars;
-  g_non_allocating_bb = !can_expr_allocate(ctx2, lambda, sexp_lambda_body(lambda), g_current_fixnum_vars, name, loc);
+  analyze_lambda_param_types(ctx2, lambda, prev_lambda, g_current_top_expr, name, loc);
+  g_non_allocating_bb = !can_expr_allocate(ctx2, lambda, sexp_lambda_body(lambda), name, loc);
 
   // Generate body
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, name, loc, lambda, sexp_lambda_body(lambda));
 
   g_non_allocating_bb = saved_non_alloc;
-  g_current_fixnum_vars = saved_fixnum_vars;
 
   flags = sexp_make_fixnum(sexp_not(sexp_listp(ctx, sexp_lambda_params(lambda)))
                            ? (SEXP_PROC_VARIADIC + (sexp_rest_unused_p(lambda) ? SEXP_PROC_UNUSED_REST : 0))
@@ -3817,7 +4049,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
       sexp_inc_context_depth(ctx, -num_fvs);
     }
   }
-  sexp_gc_release3(ctx);
+  sexp_gc_release2(ctx);
 }
 
 static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
@@ -3857,12 +4089,12 @@ static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
 
 void sexp_generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
   int saved_non_alloc = g_non_allocating_bb;
-  sexp saved_fixnum_vars = g_current_fixnum_vars;
-  g_current_fixnum_vars = SEXP_NULL;
-  g_non_allocating_bb = !can_expr_allocate(ctx, lam, x, SEXP_NULL, name, loc);
+  sexp saved_top = g_current_top_expr;
+  g_current_top_expr = x;
+  g_non_allocating_bb = !can_expr_allocate(ctx, lam, x, name, loc);
   generate(ctx, name, loc, lam, x);
   g_non_allocating_bb = saved_non_alloc;
-  g_current_fixnum_vars = saved_fixnum_vars;
+  g_current_top_expr = saved_top;
 }
 
 /************************* Virtual Machine Interface ******************/
