@@ -73,9 +73,13 @@ lib/srfi/160/uvprims.c
 benchmarks/gabriel/times.tsv
 examples/snow-fort
 examples/synthcode
+tests/ffi/*.c
+tests/ffi/*.stub
 tests/snow/repo-cache
 tests/snow/repo*/repo.scm
 tests/snow/tmp-root
+tests/run/*.args
+tests/ffi/*.res
 tmp
 /lib/chibi/crypto/crypto.c
 /chibi-scheme-ulimit
