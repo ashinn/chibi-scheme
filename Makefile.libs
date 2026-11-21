@@ -49,6 +49,13 @@ BINMODDIR   ?= $(SOLIBDIR)/chibi
 PKGCONFDIR  ?= $(SOLIBDIR)/pkgconfig
 MANDIR      ?= $(man1dir)
 
+# allow snow to be configured separately
+SNOWPREFIX    ?= ${PREFIX}
+SNOWLIBDIR    ?= $(SNOWPREFIX)/lib
+SNOWSOLIBDIR  ?= $(SNOWLIBDIR)
+SNOWMODDIR    ?= $(SNOWPREFIX)/share/snow
+SNOWBINMODDIR ?= $(SNOWSOLIBDIR)/snow
+
 # for packaging tools
 DESTDIR       ?=
 
