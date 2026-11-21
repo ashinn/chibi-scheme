@@ -1575,7 +1575,7 @@
                (chibi (eval '(current-module-path) (environment '(chibi))))
                (else (process->sexp
                       '(chibi-scheme -q -p "(current-module-path)"))))))
-            (share-dir (find (lambda (d) (string-contains d "/share/")) dirs)))
+            (share-dir (find (lambda (d) (string-contains d "/share/snow")) dirs)))
        (if share-dir
            (cons share-dir (delete share-dir dirs))
            dirs)))

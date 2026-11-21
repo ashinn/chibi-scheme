@@ -50,7 +50,7 @@ PKGCONFDIR  ?= $(SOLIBDIR)/pkgconfig
 MANDIR      ?= $(man1dir)
 
 # allow snow to be configured separately
-SNOWPREFIX    ?= ${PREFIX}
+SNOWPREFIX    ?= $(PREFIX)
 SNOWLIBDIR    ?= $(SNOWPREFIX)/lib
 SNOWSOLIBDIR  ?= $(SNOWLIBDIR)
 SNOWMODDIR    ?= $(SNOWPREFIX)/share/snow
