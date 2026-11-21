@@ -2115,6 +2115,9 @@
 
 (define (get-install-source-dir impl cfg)
   (cond
+   ((conf-get cfg 'install-source-dir))
+   ((conf-get cfg 'install-prefix)
+    => (lambda (prefix) (make-path prefix "share/snow" impl)))
    ((eq? impl 'capyscheme) (get-install-library-dir impl cfg))
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
@@ -2134,13 +2137,13 @@
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
-   ((conf-get cfg 'install-source-dir))
-   ((conf-get cfg 'install-prefix)
-    => (lambda (prefix) (make-path prefix "share/snow" impl)))
    (else snow-module-directory)))
 
 (define (get-install-data-dir impl cfg)
   (cond
+   ((conf-get cfg 'install-data-dir))
+   ((conf-get cfg 'install-prefix)
+    => (lambda (prefix) (make-path prefix "share/snow" impl)))
    ((eq? impl 'capyscheme) (get-install-library-dir impl cfg))
    ((eq? impl 'chicken) (get-install-library-dir impl cfg))
    ((eq? impl 'cyclone) (get-install-library-dir impl cfg))
@@ -2160,14 +2163,13 @@
    ((eq? impl 'stklos) (get-install-library-dir impl cfg))
    ((eq? impl 'tr7) (get-install-library-dir impl cfg))
    ((eq? impl 'ypsilon) (get-install-library-dir impl cfg))
-   ((conf-get cfg 'install-data-dir))
-   ((conf-get cfg 'install-prefix)
-    => (lambda (prefix) (make-path prefix "share/snow" impl)))
    (else snow-module-directory)))
 
 (define (get-install-library-dir impl cfg)
   (cond
    ((conf-get cfg 'install-library-dir))
+   ((conf-get cfg 'install-prefix)
+    => (lambda (prefix) (make-path prefix "lib" impl)))
    ((eq? impl 'capyscheme)
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'chicken)
@@ -2206,8 +2208,6 @@
     (car (get-install-dirs impl cfg)))
    ((eq? impl 'ypsilon)
     (car (get-install-dirs impl cfg)))
-   ((conf-get cfg 'install-prefix)
-    => (lambda (prefix) (make-path prefix "lib" impl)))
    (else snow-binary-module-directory)))
 
 (define (get-install-binary-dir impl cfg)
