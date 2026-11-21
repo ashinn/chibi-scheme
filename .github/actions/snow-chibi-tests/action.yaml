@@ -90,6 +90,17 @@ runs:
         snow-chibi --verbose git-index foo-bar-1.0.0.tgz
         test -f .snow-repo.scm
 
+    - name: snow-chibi install with prefix
+      shell: bash
+      run: |
+        set -eux
+        echo "Make sure (srfi 64) is installed to implementations default install path"
+        snow-chibi --host=$HOST --always-yes install --impls=$SCHEME --always-yes "(srfi 64)"
+        echo "Make sure installing (srfi 64) into prefix is not skipped"
+        if snow-chibi --verbose --host=$HOST install --impls=$SCHEME --install-prefix=/tmp/$SCHEME-prefix "(srfi 64)" 2>&1 | grep -q 'skipping already installed library'; then
+          exit 1
+        fi
+
     - name: snow-chibi implementations
       shell: bash
       run: snow-chibi implementations | grep "$SCHEME" || exit 1
