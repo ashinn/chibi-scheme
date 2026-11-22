@@ -30,6 +30,7 @@ static inline int32_t compute_slot_base (int num_slots) {
 
 /* Forward declarations */
 static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x);
+static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda);
 static void generate_lit (sexp ctx, sexp value);
 static sexp make_opcode_procedure (sexp ctx, sexp op, sexp_uint_t i, sexp_sint_t flags);
 sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args);
@@ -1560,67 +1561,6 @@ static void emit_native_make_closure (sexp ctx, sexp flags, sexp len, sexp bc, i
   emit_u8(ctx, 0x41); emit_u8(ctx, 0xff); emit_u8(ctx, 0xd3);
 }
 
-/************************* Non-Allocating Analysis ********************/
-
-static int can_expr_allocate (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc) {
-  if (!x || !sexp_pointerp(x) || sexp_litp(x))
-    return 0;
-
-  int tag = sexp_pointer_tag(x);
-  switch (tag) {
-  case SEXP_REF:
-    return 0;
-
-  case SEXP_SET:
-    return can_expr_allocate(ctx, lam, sexp_set_value(x), self_name, self_loc);
-
-  case SEXP_SEQ: {
-    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-      if (can_expr_allocate(ctx, lam, sexp_car(ls), self_name, self_loc))
-        return 1;
-    }
-    return 0;
-  }
-
-  case SEXP_CND: {
-    return can_expr_allocate(ctx, lam, sexp_cnd_test(x), self_name, self_loc) ||
-           can_expr_allocate(ctx, lam, sexp_cnd_pass(x), self_name, self_loc) ||
-           can_expr_allocate(ctx, lam, sexp_cnd_fail(x), self_name, self_loc);
-  }
-
-  case SEXP_LAMBDA:
-    return 1;
-
-  case SEXP_PAIR: {
-    sexp op = sexp_car(x);
-    if (sexp_opcodep(op)) {
-      if (!sexp_opcode_non_alloc_p(op) && !sexp_proven_fixnump(ctx, lam, x))
-        return 1;
-
-      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-        if (can_expr_allocate(ctx, lam, sexp_car(ls), self_name, self_loc))
-          return 1;
-      }
-      return 0;
-    }
-
-    if (self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
-        && lam && (self_loc == sexp_ref_loc(op))) {
-      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
-        if (can_expr_allocate(ctx, lam, sexp_car(ls), self_name, self_loc))
-          return 1;
-      }
-      return 0;
-    }
-
-    return 1;
-  }
-
-  default:
-    return 0;
-  }
-}
-
 /************************* Prologue & Epilogue ************************/
 
 void sexp_emit_enter (sexp ctx) {
@@ -1790,7 +1730,7 @@ static void generate_set (sexp ctx, sexp set) {
   sexp_context_tailp(ctx) = 0;
   if (sexp_lambdap(sexp_set_value(set))) {
     sexp_lambda_name(sexp_set_value(set)) = sexp_ref_name(ref);
-    generate(ctx, sexp_ref_name(ref), sexp_ref_loc(ref), sexp_set_value(set), sexp_set_value(set));
+    generate_lambda(ctx, sexp_ref_name(ref), sexp_ref_loc(ref), sexp_set_value(set), sexp_set_value(set));
   } else {
     generate(ctx, 0, 0, 0, sexp_set_value(set));
   }
@@ -1990,7 +1930,7 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
   sexp_sint_t pass_start = sexp_unbox_fixnum(sexp_context_pos(ctx));
   sexp_context_tailp(ctx) = tailp;
   int saved_non_alloc = g_non_allocating_bb;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !sexp_expr_may_allocp(ctx, lam, pass, name, loc);
   generate(ctx, name, loc, lam, pass);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2026,7 +1966,7 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
   }
 
   sexp_context_tailp(ctx) = tailp;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !sexp_expr_may_allocp(ctx, lam, fail, name, loc);
   generate(ctx, name, loc, lam, fail);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2055,7 +1995,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   }
 
   int saved_non_alloc = g_non_allocating_bb;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, test, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !sexp_expr_may_allocp(ctx, lam, test, name, loc);
   sexp_context_tailp(ctx) = 0;
   generate(ctx, name, loc, lam, test);
   g_non_allocating_bb = saved_non_alloc;
@@ -2068,7 +2008,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   sexp_sint_t je_pos = emit_jcc(ctx, 0x84);
 
   sexp_context_tailp(ctx) = tailp;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, pass, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !sexp_expr_may_allocp(ctx, lam, pass, name, loc);
   generate(ctx, name, loc, lam, pass);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -2079,7 +2019,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd) {
   patch_jcc(ctx, je_pos);
 
   sexp_context_tailp(ctx) = tailp;
-  g_non_allocating_bb = saved_non_alloc || !can_expr_allocate(ctx, lam, fail, name, loc);
+  g_non_allocating_bb = saved_non_alloc || !sexp_expr_may_allocp(ctx, lam, fail, name, loc);
   generate(ctx, name, loc, lam, fail);
   g_non_allocating_bb = saved_non_alloc;
 
@@ -3528,7 +3468,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
 
   int saved_non_alloc = g_non_allocating_bb;
 
-  g_non_allocating_bb = !can_expr_allocate(ctx2, lambda, sexp_lambda_body(lambda), name, loc);
+  g_non_allocating_bb = sexp_lambda_non_alloc_p(lambda);
 
   // Generate body
   sexp_context_tailp(ctx2) = 1;
@@ -3602,7 +3542,9 @@ static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
   if (sexp_pointerp(x)) {
     switch (sexp_pointer_tag(x)) {
     case SEXP_PAIR:   generate_app(ctx, name, loc, lam, x); break;
-    case SEXP_LAMBDA: generate_lambda(ctx, name, loc, lam, x); break;
+    /* the self name and loc reach a lambda only from generate_set, */
+    /* never from an enclosing lambda's tail position */
+    case SEXP_LAMBDA: generate_lambda(ctx, 0, 0, lam, x); break;
     case SEXP_CND:    generate_cnd(ctx, name, loc, lam, x); break;
     case SEXP_REF:    generate_ref(ctx, x, 1); break;
     case SEXP_SET:    generate_set(ctx, x); break;
@@ -3617,7 +3559,7 @@ static void generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
 
 void sexp_generate (sexp ctx, sexp name, sexp loc, sexp lam, sexp x) {
   int saved_non_alloc = g_non_allocating_bb;
-  g_non_allocating_bb = !can_expr_allocate(ctx, lam, x, name, loc);
+  g_non_allocating_bb = !sexp_expr_may_allocp(ctx, lam, x, name, loc);
   generate(ctx, name, loc, lam, x);
   g_non_allocating_bb = saved_non_alloc;
 }

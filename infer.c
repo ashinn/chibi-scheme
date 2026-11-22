@@ -797,6 +797,72 @@ static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp 
   if (types != stack_types) free(types);
 }
 
+/************************* Allocation Analysis ************************/
+
+/* Conservatively, can evaluating x allocate?  Self calls (to self_name */
+/* at self_loc) are assumed not to, since they are checked recursively. */
+
+int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc) {
+  if (!x || !sexp_pointerp(x) || sexp_litp(x))
+    return 0;
+
+  int tag = sexp_pointer_tag(x);
+  switch (tag) {
+  case SEXP_REF:
+    return 0;
+
+  case SEXP_SET:
+    return sexp_expr_may_allocp(ctx, lam, sexp_set_value(x), self_name, self_loc);
+
+  case SEXP_SEQ: {
+    for (sexp ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
+        return 1;
+    }
+    return 0;
+  }
+
+  case SEXP_CND: {
+    return sexp_expr_may_allocp(ctx, lam, sexp_cnd_test(x), self_name, self_loc) ||
+           sexp_expr_may_allocp(ctx, lam, sexp_cnd_pass(x), self_name, self_loc) ||
+           sexp_expr_may_allocp(ctx, lam, sexp_cnd_fail(x), self_name, self_loc);
+  }
+
+  case SEXP_LAMBDA:
+    return 1;
+
+  case SEXP_PAIR: {
+    sexp op = sexp_car(x);
+    if (sexp_opcodep(op)) {
+      if (!sexp_opcode_non_alloc_p(op) && !sexp_proven_fixnump(ctx, lam, x))
+        return 1;
+
+      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
+          return 1;
+      }
+      return 0;
+    }
+
+    if (self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
+        && lam && (self_loc == sexp_ref_loc(op))) {
+      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
+          return 1;
+      }
+      return 0;
+    }
+
+    return 1;
+  }
+
+  default:
+    return 0;
+  }
+}
+
+/************************* Driver *************************************/
+
 static void infer_param_types_expr (sexp ctx, sexp x, sexp enclosing_lam, sexp top);
 
 static void infer_param_types_lambda (sexp ctx, sexp lam, sexp enclosing_lam,
@@ -806,6 +872,9 @@ static void infer_param_types_lambda (sexp ctx, sexp lam, sexp enclosing_lam,
   if (name && !loc && sexp_symbolp(name))
     loc = sexp_env_cell(ctx, sexp_context_env(ctx), name, 0);
   analyze_lambda_param_types(ctx, lam, enclosing_lam, top, name, loc);
+  /* after the param types, which sexp_proven_fixnump depends on */
+  if (!sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(lam), name, loc))
+    sexp_lambda_flags(lam) = sexp_make_fixnum((sexp_fixnump(sexp_lambda_flags(lam)) ? sexp_unbox_fixnum(sexp_lambda_flags(lam)) : 0) | SEXP_LAMBDA_NON_ALLOC);
   infer_param_types_expr(ctx, sexp_lambda_body(lam), lam, top);
 }
 

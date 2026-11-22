@@ -1380,8 +1380,10 @@ enum sexp_uniform_vector_type {
 #define sexp_lambda_flags(x)       (sexp_field(x, lambda, SEXP_LAMBDA, flags))
 #define SEXP_LAMBDA_LEAF           1
 #define SEXP_LAMBDA_ESCAPES        2
+#define SEXP_LAMBDA_NON_ALLOC      4
 #define sexp_lambda_leaf_p(x)      (sexp_fixnump(sexp_lambda_flags(x)) && (sexp_unbox_fixnum(sexp_lambda_flags(x)) & SEXP_LAMBDA_LEAF))
 #define sexp_lambda_escapes_p(x)   (sexp_fixnump(sexp_lambda_flags(x)) && (sexp_unbox_fixnum(sexp_lambda_flags(x)) & SEXP_LAMBDA_ESCAPES))
+#define sexp_lambda_non_alloc_p(x) (sexp_fixnump(sexp_lambda_flags(x)) && (sexp_unbox_fixnum(sexp_lambda_flags(x)) & SEXP_LAMBDA_NON_ALLOC))
 #define sexp_lambda_body(x)        (sexp_field(x, lambda, SEXP_LAMBDA, body))
 #define sexp_lambda_fv(x)          (sexp_field(x, lambda, SEXP_LAMBDA, fv))
 #define sexp_lambda_sv(x)          (sexp_field(x, lambda, SEXP_LAMBDA, sv))

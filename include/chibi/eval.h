@@ -64,6 +64,7 @@ SEXP_API sexp sexp_infer (sexp ctx, sexp self, sexp_sint_t n, sexp ast);
 #if SEXP_USE_INFERENCE
 SEXP_API int sexp_fixnum_literalp (sexp x, sexp_sint_t *val);
 SEXP_API int sexp_proven_fixnump (sexp ctx, sexp lam, sexp x);
+SEXP_API int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc);
 #endif
 SEXP_API sexp sexp_make_lambda (sexp ctx, sexp params);
 SEXP_API sexp sexp_make_ref (sexp ctx, sexp name, sexp cell);
