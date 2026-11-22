@@ -4000,6 +4000,9 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   }
   sexp_context_lambda(ctx2) = lambda;
   sexp_gc_preserve2(ctx, tmp, bc);
+  /* ctx2 shares ctx's stack, and thus sexp_context_top, which we use */
+  /* for the self-tail-call loop start, so save it for the parent. */
+  sexp_sint_t saved_top = sexp_context_top(ctx);
 
   if (!name && sexp_symbolp(sexp_lambda_name(lambda))) {
     name = sexp_lambda_name(lambda);
@@ -4036,6 +4039,7 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   // Generate body
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, name, loc, lambda, sexp_lambda_body(lambda));
+  sexp_context_top(ctx) = saved_top;
 
   g_non_allocating_bb = saved_non_alloc;
 

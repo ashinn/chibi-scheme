@@ -190,6 +190,9 @@ static void analyze_escapes_expr (sexp ctx, sexp x, sexp enclosing_lam,
     if (!enclosing_lam || !is_operator) {
       sexp_lambda_set_escapes(x);
     }
+    if (is_leaf_procedure(ctx, x)) {
+      sexp_lambda_flags(x) = sexp_make_fixnum(sexp_unbox_fixnum(sexp_lambda_flags(x)) | SEXP_LAMBDA_LEAF);
+    }
     analyze_escapes_scope(ctx, sexp_lambda_body(x), x, bindings, n);
     break;
   }
@@ -219,7 +222,7 @@ static void analyze_escapes_expr (sexp ctx, sexp x, sexp enclosing_lam,
       if (!enclosing_lam || !sexp_refp(var) || sexp_ref_loc(var) != enclosing_lam) {
         sexp_lambda_set_escapes(val);
       }
-      if (sexp_refp(var) && sexp_symbolp(sexp_ref_name(var)) && is_leaf_procedure(ctx, val)) {
+      if (is_leaf_procedure(ctx, val)) {
         sexp_lambda_flags(val) = sexp_make_fixnum(sexp_unbox_fixnum(sexp_lambda_flags(val)) | SEXP_LAMBDA_LEAF);
       }
       analyze_escapes_scope(ctx, sexp_lambda_body(val), val, bindings, n);
