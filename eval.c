@@ -2537,6 +2537,9 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), sexp_global(ctx, SEXP_G_FEATURES));
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
 #if SEXP_USE_INFERENCE
+  /* optimizations run most recently pushed first, so pushing this */
+  /* first runs it last: it must see the final lambda params, after */
+  /* simplify has removed inlined let params */
   op = sexp_make_foreign(ctx, "sexp_infer", 1, 0,
                          NULL, (sexp_proc1)sexp_infer, SEXP_VOID);
   tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
