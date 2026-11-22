@@ -219,11 +219,8 @@ SEXP_API sexp sexp_inexact_to_exact(sexp ctx, sexp self, sexp_sint_t n, sexp x);
 
 #if SEXP_USE_NATIVE_X86
 SEXP_API sexp sexp_write_char_op(sexp ctx, sexp self, sexp_sint_t n, sexp ch, sexp out);
-SEXP_API sexp sexp_newline_op(sexp ctx, sexp self, sexp_sint_t n, sexp out);
 SEXP_API sexp sexp_read_char_op(sexp ctx, sexp self, sexp_sint_t n, sexp in);
 SEXP_API sexp sexp_peek_char_op(sexp ctx, sexp self, sexp_sint_t n, sexp in);
-SEXP_API sexp sexp_char_upcase(sexp ctx, sexp self, sexp_sint_t n, sexp ch);
-SEXP_API sexp sexp_char_downcase(sexp ctx, sexp self, sexp_sint_t n, sexp ch);
 #endif
 
 SEXP_API sexp sexp_define_foreign_param_aux(sexp ctx, sexp env, const char *name, int num_args, const char *fname, sexp_proc1 f, const char *param);
