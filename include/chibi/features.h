@@ -60,6 +60,10 @@
 /*   expansions, so it's a good idea to leave it enabled. */
 /* #define SEXP_USE_SIMPLIFY 0 */
 
+/* uncomment this to enable a type inference optimization pass */
+/*   This helps the native backend generate more compact code. */
+/* #define SEXP_USE_INFERENCE 1 */
+
 /* uncomment this to disable dynamic type definitions */
 /*   This enables register-simple-type and related */
 /*   opcodes for defining types, needed by the default */
@@ -501,6 +505,10 @@
 
 #ifndef SEXP_USE_SIMPLIFY
 #define SEXP_USE_SIMPLIFY ! SEXP_USE_NO_FEATURES
+#endif
+
+#ifndef SEXP_USE_INFERENCE
+#define SEXP_USE_INFERENCE SEXP_USE_NATIVE_X86
 #endif
 
 #ifndef SEXP_USE_BOEHM

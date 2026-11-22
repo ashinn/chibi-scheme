@@ -2536,6 +2536,12 @@ sexp sexp_load_standard_env (sexp ctx, sexp e, sexp version) {
                   tmp=sexp_c_string(ctx, sexp_so_extension, -1));
   sexp_env_define(ctx, e, sym=sexp_intern(ctx, "*features*", -1), sexp_global(ctx, SEXP_G_FEATURES));
   sexp_global(ctx, SEXP_G_OPTIMIZATIONS) = SEXP_NULL;
+#if SEXP_USE_INFERENCE
+  op = sexp_make_foreign(ctx, "sexp_infer", 1, 0,
+                         NULL, (sexp_proc1)sexp_infer, SEXP_VOID);
+  tmp = sexp_cons(ctx, sexp_make_fixnum(500), op);
+  sexp_push(ctx, sexp_global(ctx, SEXP_G_OPTIMIZATIONS), tmp);
+#endif
 #if SEXP_USE_SIMPLIFY
   op = sexp_make_foreign(ctx, "sexp_simplify", 1, 0,
                          NULL, (sexp_proc1)sexp_simplify, SEXP_VOID);
