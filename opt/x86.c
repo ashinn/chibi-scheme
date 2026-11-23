@@ -766,6 +766,18 @@ static sexp sexp_native_slotn_set (sexp ctx, sexp self, sexp type, sexp instance
   }
 }
 
+/* a - b for fixnums whose difference overflows: sexp_sub assumes */
+/* its caller handles that, as the VM does */
+static sexp sexp_native_fixnum_sub (sexp ctx, sexp a, sexp b) {
+  sexp_gc_var1(res);
+  sexp_gc_preserve1(ctx, res);
+  res = sexp_fixnum_to_bignum(ctx, a);
+  if (!sexp_exceptionp(res))
+    res = sexp_bignum_normalize(sexp_sub(ctx, res, b));
+  sexp_gc_release1(ctx);
+  return res;
+}
+
 /* chained < (strict) or <=, or > and >= when inverse */
 static sexp sexp_native_num_cmp (sexp ctx, sexp_sint_t nargs, sexp *args,
                                  int inverse, int strict) {
@@ -841,10 +853,12 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
       sexp_sint_t a = sexp_unbox_fixnum(args[0]), b = sexp_unbox_fixnum(args[1]), c = a - b;
       if (c >= SEXP_MIN_FIXNUM && c <= SEXP_MAX_FIXNUM)
         return sexp_make_fixnum(c);
-      return sexp_sub(ctx, args[0], args[1]);
+      return sexp_native_fixnum_sub(ctx, args[0], args[1]);
     }
     if (nargs == 0) return SEXP_ZERO;
-    if (nargs == 1) return sexp_sub(ctx, SEXP_ZERO, args[0]);
+    if (nargs == 1)
+      return sexp_fixnump(args[0]) ? sexp_native_fixnum_sub(ctx, SEXP_ZERO, args[0])
+        : sexp_sub(ctx, SEXP_ZERO, args[0]);
     {
       sexp res = args[0];
       for (sexp_sint_t i = 1; i < nargs; i++) {
@@ -852,8 +866,10 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
           sexp_sint_t a = sexp_unbox_fixnum(res), b = sexp_unbox_fixnum(args[i]), c = a - b;
           if (c >= SEXP_MIN_FIXNUM && c <= SEXP_MAX_FIXNUM) {
             res = sexp_make_fixnum(c);
-            continue;
+          } else {
+            res = sexp_native_fixnum_sub(ctx, res, args[i]);
           }
+          continue;
         }
         res = sexp_sub(ctx, res, args[i]);
       }
@@ -1391,8 +1407,18 @@ static void emit_native_dispatch_op (sexp ctx, sexp op, int temp_start, int narg
 
 static int emit_inlined_op_slow_path_aux (sexp ctx, sexp op, int temp_start, int nargs,
                                           const sexp_sint_t *slow, int num_slow) {
+  int i;
+  for (i = 0; i < num_slow && slow[i] == -1; i++)
+    ;
+  if (i == num_slow) {
+    /* every check was elided: no slow path, as on the fast path */
+    if (!g_non_allocating_bb)
+      emit_clear_slots(ctx, temp_start, nargs);
+    sexp_inc_context_depth(ctx, -nargs);
+    return 1;
+  }
   sexp_sint_t done_jmp = emit_jmp(ctx);
-  for (int i = 0; i < num_slow; i++)
+  for (i = 0; i < num_slow; i++)
     if (slow[i] != -1) patch_jcc(ctx, slow[i]);
   emit_native_dispatch_op(ctx, op, temp_start, nargs);
   emit_inlined_op_cleanup(ctx, done_jmp, temp_start, nargs);
@@ -1532,6 +1558,18 @@ static void emit_check_pointer (sexp ctx, int reg, sexp_sint_t *jnz, sexp_sint_t
 static sexp_sint_t emit_check_tag (sexp ctx, int reg, int tag) {
   emit_u8(ctx, 0x83); emit_u8(ctx, 0x38 | reg); emit_u8(ctx, (uint8_t)tag);
   return emit_jcc(ctx, 0x85);
+}
+
+/* jump to slow paths unless reg holds a pointer to an object with the */
+/* type tag, without any check when that's the inferred type of x */
+static void emit_check_type (sexp ctx, sexp x, int reg, int tag, sexp_sint_t *jnz,
+                             sexp_sint_t *jz, sexp_sint_t *jne) {
+  if (sexp_inferred_type(ctx, x) == tag) {
+    *jnz = *jz = *jne = -1;
+    return;
+  }
+  emit_check_pointer(ctx, reg, jnz, jz);
+  *jne = emit_check_tag(ctx, reg, tag);
 }
 
 /* cmpq $imm, %rax */
@@ -1834,35 +1872,41 @@ static int try_generate_fused_cnd (sexp ctx, sexp name, sexp loc, sexp lam,
 
       if (const_arg1 || const_arg0) {
         int k = const_arg1 ? 0 : 1;
-        generate(ctx, 0, 0, 0, const_arg1 ? arg0 : arg1);
-        emit_mov_rax_slot(ctx, temp_start + k);
-        sexp_inc_context_depth(ctx, 2);
-        // testb $1, %al
-        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
-        jz_slow = emit_jcc(ctx, 0x84);
+        sexp var_arg = const_arg1 ? arg0 : arg1;
+        has_slow = !sexp_proven_fixnump(ctx, lam, var_arg);
+        generate(ctx, 0, 0, 0, var_arg);
+        if (has_slow) {
+          emit_mov_rax_slot(ctx, temp_start + k);
+          // reserve both slots for the slow path's args
+          sexp_inc_context_depth(ctx, 2);
+          sexp_inc_context_depth(ctx, -2);
+          // testb $1, %al
+          emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+          jz_slow = emit_jcc(ctx, 0x84);
+        }
         emit_cmp_rax_imm(ctx, (int32_t)(sexp_sint_t)sexp_make_fixnum(c));
         // with a constant arg0 this computes arg1 - arg0, swapping the sense
         fail_jcc = emit_jcc(ctx, cmp_fail_cc(code, !!sexp_opcode_inverse(op) ^ const_arg0));
-        sexp_inc_context_depth(ctx, -2);
-        has_slow = 1;
       } else {
         generate_to_temp(ctx, arg0, temp_start);
         generate_to_temp(ctx, arg1, temp_start + 1);
         emit_mov_slot_rcx(ctx, temp_start);
 
-        // movq %rcx, %rdx
-        emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xca);
-        // andq %rax, %rdx
-        emit_u8(ctx, 0x48); emit_u8(ctx, 0x21); emit_u8(ctx, 0xc2);
-        // testb $1, %dl
-        emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
-        jz_slow = emit_jcc(ctx, 0x84);
+        has_slow = !sexp_proven_fixnump(ctx, lam, arg0) || !sexp_proven_fixnump(ctx, lam, arg1);
+        if (has_slow) {
+          // movq %rcx, %rdx
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xca);
+          // andq %rax, %rdx
+          emit_u8(ctx, 0x48); emit_u8(ctx, 0x21); emit_u8(ctx, 0xc2);
+          // testb $1, %dl
+          emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01);
+          jz_slow = emit_jcc(ctx, 0x84);
+        }
 
         // cmpq %rax, %rcx (computes arg0 - arg1)
         emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc1);
         fail_jcc = emit_jcc(ctx, cmp_fail_cc(code, !!sexp_opcode_inverse(op)));
         sexp_inc_context_depth(ctx, -2);
-        has_slow = 1;
       }
     } else {
       return 0;
@@ -2026,15 +2070,18 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       // Unary minus: (- a)
       generate_to_temp(ctx, arg0, temp_start);
 
-      // testb $1, %al
-      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_slow = -1;
+      if (!sexp_proven_fixnump(ctx, lam, arg0)) {
+        // testb $1, %al
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+        jz_slow = emit_jcc(ctx, 0x84);
+      }
 
       // mov $2, %rdx
       emit_u8(ctx, 0x48); emit_u8(ctx, 0xc7); emit_u8(ctx, 0xc2); emit_u32(ctx, 2);
       // subq %rax, %rdx
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x29); emit_u8(ctx, 0xc2);
-      sexp_sint_t jo_slow = emit_jcc(ctx, 0x80);
+      sexp_sint_t jo_slow = sexp_proven_fixnump(ctx, lam, app) ? -1 : emit_jcc(ctx, 0x80);
       // movq %rdx, %rax
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd0);
 
@@ -2044,10 +2091,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
     if (code == SEXP_OP_CAR || code == SEXP_OP_CDR) {
       generate_to_temp(ctx, arg0, temp_start);
 
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RAX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RAX, SEXP_PAIR);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RAX, SEXP_PAIR, &jnz_slow, &jz_slow, &jne_slow);
 
       // Fast load
       int32_t off = (code == SEXP_OP_CAR)
@@ -2061,10 +2106,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
     if (code == SEXP_OP_VECTOR_LENGTH) {
       generate_to_temp(ctx, arg0, temp_start);
 
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RAX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RAX, SEXP_VECTOR);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RAX, SEXP_VECTOR, &jnz_slow, &jz_slow, &jne_slow);
 
       // Load length at value.vector.length (offset 8)
       emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.vector.length));
@@ -2078,10 +2121,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
     if (code == SEXP_OP_BYTES_LENGTH) {
       generate_to_temp(ctx, arg0, temp_start);
 
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RAX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RAX, SEXP_BYTES);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RAX, SEXP_BYTES, &jnz_slow, &jz_slow, &jne_slow);
 
       // Load length at value.bytes.length (offset 8)
       emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.bytes.length));
@@ -2096,10 +2137,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
     if (code == SEXP_OP_STRING_CURSOR_END) {
       generate_to_temp(ctx, arg0, temp_start);
 
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RAX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RAX, SEXP_STRING);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RAX, SEXP_STRING, &jnz_slow, &jz_slow, &jne_slow);
 
       // Load byte size at value.string.length (offset 24)
       emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.string.length));
@@ -2113,9 +2152,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
     if (code == SEXP_OP_STRING_LENGTH) {
       generate_to_temp(ctx, arg0, temp_start);
 
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RAX, &jnz_slow, &jz_slow);
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RAX, SEXP_STRING);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RAX, SEXP_STRING, &jnz_slow, &jz_slow, &jne_slow);
 
       emit_mov_mem_rax(ctx, (int32_t)offsetof(struct sexp_struct, value.string.length));
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x01); emit_u8(ctx, 0xc0);
@@ -2215,14 +2253,22 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
     if (const_arg1 || const_arg0) {
       sexp var_arg = const_arg1 ? arg0 : arg1;
       int64_t diff = (int64_t)((uint64_t)c << 1);
+      /* a proven fixnum needs no tag check, a proven result no overflow check */
+      int check_tag = !sexp_proven_fixnump(ctx, lam, var_arg);
+      int check_ovf = !sexp_proven_fixnump(ctx, lam, app);
 
       generate(ctx, 0, 0, 0, var_arg);
-      emit_mov_rax_slot(ctx, temp_start);
-      sexp_inc_context_depth(ctx, 2);
+      if (check_tag || check_ovf) {
+        emit_mov_rax_slot(ctx, temp_start);
+        sexp_inc_context_depth(ctx, 2);
+      }
 
-      // testb $1, %al
-      emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
-      sexp_sint_t jz_slow = emit_jcc(ctx, 0x84);
+      sexp_sint_t jz_slow = -1;
+      if (check_tag) {
+        // testb $1, %al
+        emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+        jz_slow = emit_jcc(ctx, 0x84);
+      }
 
       if (code == SEXP_OP_SUB) {
         if (diff >= -128 && diff <= 127) {
@@ -2237,12 +2283,14 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
           emit_u8(ctx, 0x48); emit_u8(ctx, 0x05); emit_u32(ctx, (uint32_t)(int32_t)diff);
         }
       }
-      sexp_sint_t jo_slow = emit_jcc(ctx, 0x80);
+      if (!check_tag && !check_ovf)
+        return 1;
+      sexp_sint_t jo_slow = check_ovf ? emit_jcc(ctx, 0x80) : -1;
 
       sexp_sint_t done_jmp = emit_jmp(ctx);
 
-      patch_jcc(ctx, jz_slow);
-      patch_jcc(ctx, jo_slow);
+      if (jz_slow != -1) patch_jcc(ctx, jz_slow);
+      if (jo_slow != -1) patch_jcc(ctx, jo_slow);
       if (const_arg1) {
         generate_lit(ctx, sexp_make_fixnum(c));
         emit_mov_rax_slot(ctx, temp_start + 1);
@@ -2290,6 +2338,9 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
 
       // Check if both are fixnums:
       sexp_sint_t jz_slow = -1;
+      /* comparisons can't overflow, and neither can a proven result */
+      int check_ovf = (code == SEXP_OP_ADD || code == SEXP_OP_SUB)
+        && !sexp_proven_fixnump(ctx, lam, app);
       if (!sexp_proven_fixnump(ctx, lam, arg0) || !sexp_proven_fixnump(ctx, lam, arg1)) {
         // movq %rcx, %rdx (48 89 ca)
         emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xca);
@@ -2303,15 +2354,17 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       sexp_sint_t jo_slow = -1;
 
       if (code == SEXP_OP_ADD) {
+        // untag arg0 first, so the add itself overflows exactly when
+        // the sum does: (2a+1)+(2b+1) can fit when 2(a+b)+1 doesn't
+        // decq %rcx (48 ff c9)
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc9);
         // addq %rcx, %rax (48 01 c8)
         emit_u8(ctx, 0x48); emit_u8(ctx, 0x01); emit_u8(ctx, 0xc8);
-        jo_slow = emit_jcc(ctx, 0x80);
-        // decq %rax (48 ff c8)
-        emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc8);
+        if (check_ovf) jo_slow = emit_jcc(ctx, 0x80);
       } else if (code == SEXP_OP_SUB) {
         // subq %rax, %rcx (48 29 c1)
         emit_u8(ctx, 0x48); emit_u8(ctx, 0x29); emit_u8(ctx, 0xc1);
-        jo_slow = emit_jcc(ctx, 0x80);
+        if (check_ovf) jo_slow = emit_jcc(ctx, 0x80);
         // incq %rcx (48 ff c1)
         emit_u8(ctx, 0x48); emit_u8(ctx, 0xff); emit_u8(ctx, 0xc1);
         // movq %rcx, %rax (48 89 c8)
@@ -2356,10 +2409,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       // Load arg0 (pair) into %rcx
       emit_mov_slot_rcx(ctx, temp_start);
 
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_PAIR);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_PAIR, &jnz_slow, &jz_slow, &jne_slow);
 
       // testb $1, 5(%rcx) (immutable check)
       emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
@@ -2385,10 +2436,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_mov_slot_rcx(ctx, temp_start);
 
       // Check vector is pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_VECTOR);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_VECTOR, &jnz_slow, &jz_slow, &jne_slow);
 
       // Check index in %rax is fixnum: testb $1, %al
       sexp_sint_t jz_idx_slow = -1;
@@ -2420,10 +2469,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_mov_slot_rcx(ctx, temp_start);
 
       // Check bytevector pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_BYTES);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_BYTES, &jnz_slow, &jz_slow, &jne_slow);
 
       // Check index in %rax is fixnum
       sexp_sint_t jz_idx_slow = -1;
@@ -2459,10 +2506,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_mov_slot_rcx(ctx, temp_start);
 
       // Check string pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_STRING);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_STRING, &jnz_slow, &jz_slow, &jne_slow);
 
 #if SEXP_USE_DISJOINT_STRING_CURSORS
       // Check string cursor tag: (rax & 7) == 2
@@ -2514,9 +2559,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_mov_slot_rcx(ctx, temp_start);
 
       // Check string pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_STRING);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_STRING, &jnz_slow, &jz_slow, &jne_slow);
 
       // Check string cursor tag
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2);
@@ -2561,9 +2605,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       emit_mov_slot_rcx(ctx, temp_start);
 
       // Check string pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_STRING);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_STRING, &jnz_slow, &jz_slow, &jne_slow);
 
       // Check string cursor tag
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2);
@@ -2720,10 +2763,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       // %rax holds arg2 (val)
 
       // Check vector is pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_VECTOR);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_VECTOR, &jnz_slow, &jz_slow, &jne_slow);
 
       // Immutable check: testb $1, 5(%rcx)
       emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
@@ -2766,10 +2807,8 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
       // %rax holds arg2 (val)
 
       // Check bytevector pointer
-      sexp_sint_t jnz_slow, jz_slow;
-      emit_check_pointer(ctx, REG_RCX, &jnz_slow, &jz_slow);
-
-      sexp_sint_t jne_slow = emit_check_tag(ctx, REG_RCX, SEXP_BYTES);
+      sexp_sint_t jnz_slow, jz_slow, jne_slow;
+      emit_check_type(ctx, arg0, REG_RCX, SEXP_BYTES, &jnz_slow, &jz_slow, &jne_slow);
 
       // Immutable check: testb $1, 5(%rcx)
       emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
