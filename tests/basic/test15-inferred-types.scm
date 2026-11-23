@@ -81,3 +81,13 @@
   (list (vlen (make-vector 3 0)) (try (lambda () (vlen "abc")))))
 (write (mixed-containers))
 (newline)
+
+;; make-vector checks its length, so its result is always a vector
+(define (make-vectors)
+  (define (mk n) (make-vector n 0))
+  (list (try (lambda () (make-vector 'a)))
+        (try (lambda () (mk 'a)))
+        (try (lambda () (mk -1)))
+        (vector-length (mk 3))))
+(write (make-vectors))
+(newline)

@@ -7,3 +7,4 @@
 100000000000000000006
 (3 2 (c b a) (#\z #\y #\x) #u8(0 #x02 #x04 #x06))
 (3 error)
+(error error error 3)

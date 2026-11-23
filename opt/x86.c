@@ -993,7 +993,13 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
     if (!sexp_vectorp(args[0])) return sexp_native_raise_exception(ctx, op, sexp_type_exception(ctx, self, SEXP_VECTOR, args[0]));
     return sexp_make_fixnum(sexp_vector_length(args[0]));
   case SEXP_OP_MAKE_VECTOR:
-    return sexp_make_vector(ctx, args[0], nargs > 1 ? args[1] : SEXP_VOID);
+    if (!sexp_fixnump(args[0])) return sexp_native_raise_exception(ctx, op, sexp_type_exception(ctx, self, SEXP_FIXNUM, args[0]));
+    if (sexp_unbox_fixnum(args[0]) < 0) return sexp_native_raise(ctx, op, "make-vector: length must be non-negative", sexp_list1(ctx, args[0]));
+    {
+      sexp res = sexp_make_vector(ctx, args[0], nargs > 1 ? args[1] : SEXP_VOID);
+      if (sexp_exceptionp(res)) return sexp_native_raise_exception(ctx, op, res);
+      return res;
+    }
   case SEXP_OP_BYTES_REF:
     if (!sexp_bytesp(args[0])) return sexp_native_raise_exception(ctx, op, sexp_type_exception(ctx, self, SEXP_BYTES, args[0]));
     if (!sexp_fixnump(args[1])) return sexp_native_raise_exception(ctx, op, sexp_type_exception(ctx, self, SEXP_FIXNUM, args[1]));
