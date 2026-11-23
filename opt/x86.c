@@ -157,6 +157,11 @@ static sexp sexp_native_raise_exception (sexp ctx, sexp self, sexp exn) {
   }
 }
 
+/* a param failed the type check made on entry for it */
+static sexp sexp_native_param_type_error (sexp ctx, sexp self, sexp arg, sexp_sint_t type) {
+  return sexp_native_raise_exception(ctx, self, sexp_type_exception(ctx, self, type, arg));
+}
+
 static sexp sexp_native_raise (sexp ctx, sexp self, const char *msg, sexp irritants) {
   sexp exn = sexp_user_exception(ctx, self, msg, irritants);
   return sexp_native_raise_exception(ctx, self, exn);
@@ -1597,6 +1602,34 @@ static uint8_t cmp_fail_cc (sexp_sint_t code, int inverse) {
   if (code == SEXP_OP_LE)
     return inverse ? 0x8c /* jl */ : 0x8f /* jg */;
   return 0x85; /* jne */
+}
+
+/* Check the params inferred to have types demanded on entry, in the */
+/* order the body would have checked them.  On failure raise the same */
+/* error, then return, since the body relies on the types. */
+static void emit_param_type_checks (sexp ctx, sexp lam, int num_params) {
+  int k, order, o, tag;
+  sexp_sint_t jnz, jz, jne, ok_jmp;
+  for (o = 0; o < num_params; o++) {
+    for (k = 0; k < num_params; k++)
+      if ((tag = sexp_param_checked_type(lam, k, &order)) >= 0 && order == o)
+        break;
+    if (k == num_params) break;
+    emit_mov_slot_rax(ctx, get_local_slot(lam, k));
+    emit_check_pointer(ctx, REG_RAX, &jnz, &jz);
+    jne = emit_check_tag(ctx, REG_RAX, tag);
+    ok_jmp = emit_jmp(ctx);
+    patch_jcc(ctx, jnz);
+    patch_jcc(ctx, jz);
+    patch_jcc(ctx, jne);
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7); // mov %r12, %rdi
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xee); // mov %r13, %rsi
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2); // mov %rax, %rdx
+    emit_u8(ctx, 0xb9); emit_u32(ctx, (uint32_t)tag);           // mov $tag, %ecx
+    emit_call_abs(ctx, (void*)sexp_native_param_type_error);
+    sexp_emit_return(ctx);
+    patch_jmp(ctx, ok_jmp);
+  }
 }
 
 /************************* Prologue & Epilogue ************************/
@@ -3120,6 +3153,9 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
 
   // Record loop start for self-tail jumps
   g_loop_start = sexp_unbox_fixnum(sexp_context_pos(ctx2));
+
+  // Check the types the body relies on params having, on every entry
+  emit_param_type_checks(ctx2, lambda, num_params);
 
   int saved_non_alloc = g_non_allocating_bb;
 

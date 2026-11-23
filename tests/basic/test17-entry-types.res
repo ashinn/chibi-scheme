@@ -1,0 +1,8 @@
+(6 0 (error "abc"))
+((3) (2 . 3) (error 5))
+(error ())
+(6 (error abc))
+(ok (error 2) (error 1) (error 2))
+(6 (error "ab"))
+((error a) (error x) 1 not-a-vector)
+((error w) (error v))

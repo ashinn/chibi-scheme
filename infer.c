@@ -324,8 +324,11 @@ int sexp_fixnum_literalp (sexp x, sexp_sint_t *val) {
 
 /* Param type entries are type tags, with the magnitude for fixnums. */
 #define TYPE_ENTRY(type, bits) ((type) == SEXP_FIXNUM ? (type) + ((bits) << 16) : (type))
-#define ENTRY_TYPE(e) ((e) & 0xFFFF)
+#define ENTRY_TYPE(e) ((e) & 0x7FFF)
 #define ENTRY_BITS(e) ((e) >> 16)
+/* a container type checked on entry, the order-th check made there */
+#define ENTRY_CHECKED 0x8000
+#define CHECKED_ENTRY(type, order) ((type) | ENTRY_CHECKED | ((order) << 16))
 
 static int bits_of (sexp_uint_t v) {
   int b = 0;
@@ -346,7 +349,12 @@ static int ref_param_entry (sexp x) {
   for (; sexp_pairp(params) && sexp_pairp(types);
        params = sexp_cdr(params), types = sexp_cdr(types))
     if (sexp_car(params) == sexp_ref_name(x))
-      return sexp_fixnump(sexp_car(types)) ? sexp_unbox_fixnum(sexp_car(types)) : -1;
+    {
+      int e;
+      if (!sexp_fixnump(sexp_car(types))) return -1;
+      e = (int)sexp_unbox_fixnum(sexp_car(types));
+      return (e & ENTRY_CHECKED) ? ENTRY_TYPE(e) : e;
+    }
   return -1;
 }
 
@@ -764,12 +772,218 @@ static void scan_recursive_calls (sexp ctx, sexp target_lam, sexp name, sexp loc
   }
 }
 
-static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp top_expr, sexp name, sexp loc) {
-  if (!lam || !sexp_lambdap(lam) || sexp_lambda_escapes_p(lam)) {
-    if (lam && sexp_lambdap(lam))
-      sexp_lambda_param_types(lam) = SEXP_NULL;
-    return;
+/* Types demanded on entry: walking from a lambda's entry in evaluation */
+/* order through code that can't fail or have effects, the first ops */
+/* that can fail type check its params.  Checking those types once on */
+/* entry raises the same errors at the same point, and every later use */
+/* (including in loops) is then known to have the type. */
+
+#define DEMAND_MAX_DEPTH 16
+#define DEMAND_MAX_BINDINGS 16
+
+enum { WALK_STOP, WALK_SAFE, WALK_FOUND };
+
+struct demand_walk {
+  sexp lam;                       /* whose params are demanded */
+  int num_params, num_found;
+  int *types;                     /* per param, or -1 */
+  int *order;                     /* per param, the check order */
+  int depth, num_bindings;
+  sexp binding_name[DEMAND_MAX_BINDINGS], binding_loc[DEMAND_MAX_BINDINGS];
+  sexp binding_lam[DEMAND_MAX_BINDINGS];
+};
+
+/* the container type arg0 of op is checked against, or -1; *only is */
+/* set if that's the only way op can fail */
+static int demand_op_type (sexp op, int *only) {
+  *only = 0;
+  switch (sexp_opcode_code(op)) {
+  case SEXP_OP_CAR: case SEXP_OP_CDR:
+    *only = 1;
+  case SEXP_OP_SET_CAR: case SEXP_OP_SET_CDR:
+    return SEXP_PAIR;
+  case SEXP_OP_VECTOR_LENGTH:
+    *only = 1;
+  case SEXP_OP_VECTOR_REF: case SEXP_OP_VECTOR_SET:
+    return SEXP_VECTOR;
+  case SEXP_OP_BYTES_LENGTH:
+    *only = 1;
+  case SEXP_OP_BYTES_REF: case SEXP_OP_BYTES_SET:
+    return SEXP_BYTES;
+  case SEXP_OP_STRING_LENGTH:
+    *only = 1;
+    return SEXP_STRING;
+  default:
+    return -1;
   }
+}
+
+/* the index of the param of w->lam x is an unmutated ref to, or -1 */
+static int demand_param_index (struct demand_walk *w, sexp x) {
+  sexp ls;
+  int k;
+  if (!x || !sexp_pointerp(x) || !sexp_refp(x) || sexp_ref_loc(x) != w->lam)
+    return -1;
+  for (ls = sexp_lambda_sv(w->lam); sexp_pairp(ls); ls = sexp_cdr(ls))
+    if (sexp_car(ls) == sexp_ref_name(x)) return -1;
+  for (k = 0, ls = sexp_lambda_params(w->lam); sexp_pairp(ls); ls = sexp_cdr(ls), k++)
+    if (sexp_car(ls) == sexp_ref_name(x)) return k;
+  return -1;
+}
+
+static int demand_walk_expr (sexp ctx, struct demand_walk *w, sexp x);
+
+/* evaluate a lambda's body as called with already evaluated args */
+static int demand_walk_body (sexp ctx, struct demand_walk *w, sexp lam) {
+  int res;
+  if (w->depth >= DEMAND_MAX_DEPTH) return WALK_STOP;
+  w->depth++;
+  res = demand_walk_expr(ctx, w, sexp_lambda_body(lam));
+  w->depth--;
+  /* the body's value is returned, not something we can continue from */
+  return res == WALK_FOUND ? WALK_FOUND : WALK_STOP;
+}
+
+/* evaluate args, which must all be safe but at most one */
+static int demand_walk_args (sexp ctx, struct demand_walk *w, sexp args) {
+  sexp ls, unsafe = NULL;
+  for (ls = args; sexp_pairp(ls); ls = sexp_cdr(ls)) {
+    sexp a = sexp_car(ls);
+    if (!a || !sexp_pointerp(a) || sexp_litp(a) || sexp_lambdap(a)
+        || (sexp_refp(a) && sexp_lambdap(sexp_ref_loc(a))))
+      continue;
+    if (unsafe) return WALK_STOP;
+    unsafe = a;
+  }
+  return unsafe ? demand_walk_expr(ctx, w, unsafe) : WALK_SAFE;
+}
+
+static int demand_walk_expr (sexp ctx, struct demand_walk *w, sexp x) {
+  sexp ls, op;
+  int i, res, type, only, k;
+  if (!x || !sexp_pointerp(x) || sexp_litp(x)) return WALK_SAFE;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_LAMBDA:
+    return WALK_SAFE;
+  case SEXP_REF:
+    /* globals may be undefined */
+    return sexp_lambdap(sexp_ref_loc(x)) ? WALK_SAFE : WALK_STOP;
+  case SEXP_SYNCLO:
+    return demand_walk_expr(ctx, w, sexp_synclo_expr(x));
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      if ((res = demand_walk_expr(ctx, w, sexp_car(ls))) != WALK_SAFE)
+        return res;
+    return WALK_SAFE;
+  case SEXP_SET:
+    if (!sexp_refp(sexp_set_var(x)) || !sexp_lambdap(sexp_ref_loc(sexp_set_var(x))))
+      return WALK_STOP;
+    if ((res = demand_walk_expr(ctx, w, sexp_set_value(x))) != WALK_SAFE)
+      return res;
+    /* remember local procedures, to follow calls to them */
+    for (i = 0; i < w->num_bindings; i++)
+      if (w->binding_name[i] == sexp_ref_name(sexp_set_var(x))
+          && w->binding_loc[i] == sexp_ref_loc(sexp_set_var(x)))
+        break;
+    if (i == w->num_bindings) {
+      if (i == DEMAND_MAX_BINDINGS) return WALK_STOP;
+      w->num_bindings++;
+      w->binding_name[i] = sexp_ref_name(sexp_set_var(x));
+      w->binding_loc[i] = sexp_ref_loc(sexp_set_var(x));
+    }
+    w->binding_lam[i] = sexp_lambdap(sexp_set_value(x)) ? sexp_set_value(x) : NULL;
+    return WALK_SAFE;
+  case SEXP_CND:
+    res = demand_walk_expr(ctx, w, sexp_cnd_test(x));
+    if (res != WALK_SAFE) return res;
+    /* both branches would have to make the same next checks */
+    return WALK_STOP;
+  case SEXP_PAIR:
+    op = sexp_car(x);
+    if (sexp_opcodep(op)) {
+      res = demand_walk_args(ctx, w, sexp_cdr(x));
+      if (res != WALK_SAFE) return res;
+      if (sexp_opcode_class(op) == SEXP_OPC_TYPE_PREDICATE
+          && sexp_opcode_code(op) != SEXP_OP_ISA)
+        return WALK_SAFE;
+      if (sexp_opcode_code(op) == SEXP_OP_EQ)
+        return WALK_SAFE;
+      type = demand_op_type(op, &only);
+      if (type < 0 || !sexp_pairp(sexp_cdr(x))) return WALK_STOP;
+      k = demand_param_index(w, sexp_cadr(x));
+      if (k < 0) return WALK_STOP;
+      if (w->types[k] < 0) {
+        w->types[k] = type;
+        w->order[k] = w->num_found++;
+      } else if (w->types[k] != type) {
+        /* always fails, on a later check */
+        return WALK_FOUND;
+      }
+      /* continue past ops that can fail only on that type check */
+      return only ? WALK_SAFE : WALK_FOUND;
+    }
+    if (sexp_lambdap(op)) {
+      res = demand_walk_args(ctx, w, sexp_cdr(x));
+      if (res != WALK_SAFE) return res;
+      return demand_walk_body(ctx, w, op);
+    }
+    if (sexp_refp(op)) {
+      for (i = 0; i < w->num_bindings; i++)
+        if (w->binding_name[i] == sexp_ref_name(op) && w->binding_loc[i] == sexp_ref_loc(op))
+          break;
+      if (i == w->num_bindings || !w->binding_lam[i]
+          || sexp_length(ctx, sexp_lambda_params(w->binding_lam[i]))
+             != sexp_length(ctx, sexp_cdr(x)))
+        return WALK_STOP;
+      res = demand_walk_args(ctx, w, sexp_cdr(x));
+      if (res != WALK_SAFE) return res;
+      return demand_walk_body(ctx, w, w->binding_lam[i]);
+    }
+    return WALK_STOP;
+  default:
+    return WALK_STOP;
+  }
+}
+
+/* give unknown params of lam the types demanded on entry */
+static void apply_demanded_types (sexp ctx, sexp lam, int *types, int num_params) {
+  int stack[64], *dtypes = stack, *order, k;
+  struct demand_walk w;
+  if (2 * num_params > 64) {
+    dtypes = (int *)malloc(2 * num_params * sizeof(int));
+    if (!dtypes) return;
+  }
+  order = dtypes + num_params;
+  for (k = 0; k < num_params; k++) dtypes[k] = -1;
+  w.lam = lam;
+  w.num_params = num_params;
+  w.num_found = 0;
+  w.types = dtypes;
+  w.order = order;
+  w.depth = 0;
+  w.num_bindings = 0;
+  demand_walk_expr(ctx, &w, sexp_lambda_body(lam));
+  for (k = 0; k < num_params; k++)
+    if (dtypes[k] >= 0 && types[k] == SEXP_OBJECT)
+      types[k] = CHECKED_ENTRY(dtypes[k], order[k]);
+  if (dtypes != stack) free(dtypes);
+}
+
+/* the type param k of lam is checked to have on entry, or -1, and in */
+/* *order where that check comes among them */
+int sexp_param_checked_type (sexp lam, int k, int *order) {
+  sexp ls = sexp_lambda_param_types(lam);
+  int e;
+  for (; k > 0 && sexp_pairp(ls); k--) ls = sexp_cdr(ls);
+  if (!sexp_pairp(ls) || !sexp_fixnump(sexp_car(ls))) return -1;
+  e = (int)sexp_unbox_fixnum(sexp_car(ls));
+  if (!(e & ENTRY_CHECKED)) return -1;
+  *order = ENTRY_BITS(e);
+  return ENTRY_TYPE(e);
+}
+
+static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp top_expr, sexp name, sexp loc) {
+  if (!lam || !sexp_lambdap(lam)) return;
   /* don't reason from types stored by an earlier analysis */
   sexp_lambda_param_types(lam) = SEXP_NULL;
   sexp params = sexp_lambda_params(lam);
@@ -801,14 +1015,18 @@ static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp 
     steps[k].stepped = steps[k].unguarded = 0;
   }
 
-  if (prev_lam && sexp_lambdap(prev_lam)) {
-    scan_external_calls(ctx, lam, name, loc, sexp_lambda_body(prev_lam), types, num_params);
+  if (sexp_lambda_escapes_p(lam)) {
+    /* callers are unknown */
+    for (int k = 0; k < num_params; k++) types[k] = SEXP_OBJECT;
+  } else {
+    if (prev_lam && sexp_lambdap(prev_lam)) {
+      scan_external_calls(ctx, lam, name, loc, sexp_lambda_body(prev_lam), types, num_params);
+    }
+    if (top_expr) {
+      scan_external_calls(ctx, lam, name, loc, top_expr, types, num_params);
+    }
+    scan_recursive_calls(ctx, lam, name, loc, sexp_lambda_body(lam), types, steps, num_params, ok);
   }
-  if (top_expr) {
-    scan_external_calls(ctx, lam, name, loc, top_expr, types, num_params);
-  }
-
-  scan_recursive_calls(ctx, lam, name, loc, sexp_lambda_body(lam), types, steps, num_params, ok);
 
   sexp p = params;
   for (int k = 0; k < num_params; k++, p = sexp_cdr(p)) {
@@ -830,6 +1048,8 @@ static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp 
       types[k] = b < 0 ? SEXP_OBJECT : TYPE_ENTRY(SEXP_FIXNUM, b);
     }
   }
+
+  apply_demanded_types(ctx, lam, types, num_params);
 
   sexp_gc_var1(types_list);
   sexp_gc_preserve1(ctx, types_list);
