@@ -103,7 +103,22 @@ typedef struct sexp_native_trampoline_struct {
   sexp *dyn_args;
   size_t dyn_capacity;
   struct sexp_gc_var_t *dyn_saves;
+  sexp *call_dyn_args;
+  size_t call_dyn_capacity;
+  /* An uncaught raise unwinds to the innermost call from C, which */
+  /* returns the exception to its caller, as the VM does. */
+  int entry;
+  uint64_t abort_jb[8];
+  sexp abort_val;
+  struct sexp_gc_var_t *abort_saves;
+  sexp abort_proc;
 } sexp_native_trampoline_t;
+
+static void sexp_native_free_trampoline (sexp_native_trampoline_t *tramp) {
+  free(tramp->call_dyn_args);
+  free(tramp->dyn_args);
+  free(tramp->dyn_saves);
+}
 
 sexp sexp_make_trampoline (sexp ctx, sexp proc, sexp args) {
   return sexp_make_exception(ctx, SEXP_TRAMPOLINE, SEXP_FALSE, args, proc, SEXP_FALSE);
@@ -140,20 +155,46 @@ sexp sexp_native_make_trampoline (sexp ctx, sexp proc, sexp_sint_t nargs, sexp *
 }
 
 typedef sexp (*sexp_native_func)(sexp ctx, sexp self, sexp_sint_t nargs, sexp *args);
+
+__attribute__((returns_twice)) static int native_setjmp (void *env);
+__attribute__((noreturn)) static void native_longjmp (void *env, int val);
+
+/* Abort to the innermost call from C, which returns exn to its */
+/* caller.  Only returns if there's no such call to abort to. */
+static sexp sexp_native_abort (sexp ctx, sexp exn) {
+  sexp_native_trampoline_t *tramp = (sexp_native_trampoline_t*)sexp_context_trampoline(ctx);
+  while (tramp && !tramp->entry)
+    tramp = tramp->prev;
+  if (!tramp) return exn;
+  /* free the native calls being skipped */
+  while ((sexp_native_trampoline_t*)sexp_context_trampoline(ctx) != tramp) {
+    sexp_native_trampoline_t *t = (sexp_native_trampoline_t*)sexp_context_trampoline(ctx);
+    sexp_native_free_trampoline(t);
+    sexp_context_trampoline(ctx) = t->prev;
+  }
+  tramp->abort_val = exn;
+  sexp_context_saves(ctx) = tramp->abort_saves;
+  sexp_context_proc(ctx) = tramp->abort_proc;
+  native_longjmp(tramp->abort_jb, 1);
+}
+
+static sexp sexp_native_call1 (sexp ctx, sexp f, sexp x);
+static sexp sexp_native_apply_list (sexp ctx, sexp proc, sexp args, int entry);
+
 typedef sexp (*sexp_proc8)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc9)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 static sexp sexp_native_raise_exception (sexp ctx, sexp self, sexp exn) {
   sexp handler = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
   if (sexp_procedurep(handler)) {
-    return sexp_apply1(ctx, handler, exn);
+    return sexp_native_call1(ctx, handler, exn);
   } else {
 #if SEXP_USE_GREEN_THREADS
     sexp_context_errorp(ctx) = 1;
 #endif
     if (!sexp_exceptionp(exn))
-      return sexp_make_exception(ctx, SEXP_UNCAUGHT, SEXP_FALSE, exn, self, SEXP_FALSE);
-    return exn;
+      exn = sexp_make_exception(ctx, SEXP_UNCAUGHT, SEXP_FALSE, exn, self, SEXP_FALSE);
+    return sexp_native_abort(ctx, exn);
   }
 }
 
@@ -180,7 +221,7 @@ sexp sexp_native_delayed_ref (sexp ctx, sexp cell) {
   return sexp_cdr(cell);
 }
 
-sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
+static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args, int entry) {
   sexp_gc_var1(callee_save);
   sexp_gc_preserve1(ctx, callee_save);
   callee_save = callee;
@@ -193,13 +234,23 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
   tramp.dyn_args = NULL;
   tramp.dyn_capacity = 0;
   tramp.dyn_saves = NULL;
+  tramp.call_dyn_args = NULL;
+  tramp.call_dyn_capacity = 0;
+  tramp.entry = entry;
   sexp_context_trampoline(ctx) = &tramp;
 
   sexp res = SEXP_VOID;
   sexp fixed_args[FIXED_ARGS_SIZE];
-  sexp *dyn_args = NULL;
-  size_t dyn_capacity = 0;
   sexp *call_args = args;
+
+  if (entry) {
+    tramp.abort_saves = sexp_context_saves(ctx);
+    tramp.abort_proc = sexp_context_proc(ctx);
+    if (native_setjmp(tramp.abort_jb)) {
+      res = tramp.abort_val;
+      goto done;
+    }
+  }
 
   while (1) {
     callee_save = callee;
@@ -229,11 +280,11 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
       if (nargs + 2 <= FIXED_ARGS_SIZE) {
         call_args = fixed_args;
       } else {
-        if (nargs + 2 > dyn_capacity) {
-          dyn_capacity = (nargs + 2) * 2;
-          dyn_args = (sexp*)realloc(dyn_args, sizeof(sexp) * dyn_capacity);
+        if (nargs + 2 > tramp.call_dyn_capacity) {
+          tramp.call_dyn_capacity = (nargs + 2) * 2;
+          tramp.call_dyn_args = (sexp*)realloc(tramp.call_dyn_args, sizeof(sexp) * tramp.call_dyn_capacity);
         }
-        call_args = dyn_args;
+        call_args = tramp.call_dyn_args;
       }
       for (sexp_sint_t k = 0; k < nargs; k++)
         call_args[k] = args[k];
@@ -302,11 +353,11 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
       if (nargs + 2 <= FIXED_ARGS_SIZE) {
         args = fixed_args;
       } else {
-        if (nargs + 2 > dyn_capacity) {
-          dyn_capacity = (nargs + 2) * 2;
-          dyn_args = (sexp*)realloc(dyn_args, sizeof(sexp) * dyn_capacity);
+        if (nargs + 2 > tramp.call_dyn_capacity) {
+          tramp.call_dyn_capacity = (nargs + 2) * 2;
+          tramp.call_dyn_args = (sexp*)realloc(tramp.call_dyn_args, sizeof(sexp) * tramp.call_dyn_capacity);
         }
-        args = dyn_args;
+        args = tramp.call_dyn_args;
       }
       sexp ls = next_args;
       for (sexp_sint_t k = 0; k < nargs; k++, ls = sexp_cdr(ls))
@@ -316,12 +367,21 @@ sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
     break;
   }
 
-  if (dyn_args) free(dyn_args);
-  if (tramp.dyn_args) free(tramp.dyn_args);
-  if (tramp.dyn_saves) free(tramp.dyn_saves);
+ done:
+  sexp_native_free_trampoline(&tramp);
   sexp_context_trampoline(ctx) = tramp.prev;
   sexp_gc_release1(ctx);
   return res;
+}
+
+/* calls from native code */
+sexp sexp_native_call (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
+  return sexp_native_call_aux(ctx, callee, nargs, args, 0);
+}
+
+/* calls from C, which an uncaught raise returns to */
+static sexp sexp_native_call_entry (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args) {
+  return sexp_native_call_aux(ctx, callee, nargs, args, 1);
 }
 
 sexp sexp_native_make_closure (sexp ctx, sexp flags, sexp num_args, sexp bc,
@@ -530,7 +590,7 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
         memcpy(vcont->saved_stack, vcont->sp, vcont->stack_size);
       }
     }
-    res = sexp_apply1(vctx, proc, k);
+    res = sexp_native_call1(vctx, proc, k);
   } else {
     res = vcont->val;
   }
@@ -1114,7 +1174,7 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
   case SEXP_OP_PEEK_CHAR:
     return sexp_peek_char_op(ctx, self, nargs, nargs > 0 ? args[0] : sexp_current_input_port(ctx));
   case SEXP_OP_APPLY1:
-    return sexp_apply(ctx, args[0], args[1]);
+    return sexp_native_apply_list(ctx, args[0], args[1], 0);
   case SEXP_OP_CALLCC:
     return sexp_native_callcc_helper(ctx, args[0]);
   case SEXP_OP_RAISE:
@@ -1499,7 +1559,7 @@ sexp sexp_native_parameter_set (sexp ctx, sexp param_op, sexp val) {
       sexp_gc_preserve2(ctx, val_save, conv_save);
       val_save = val;
       conv_save = conv;
-      val = sexp_apply1(ctx, conv_save, val_save);
+      val = sexp_native_call1(ctx, conv_save, val_save);
       sexp_gc_release2(ctx);
       if (sexp_exceptionp(val))
         return sexp_native_raise_exception(ctx, param_op, val);
@@ -3337,7 +3397,12 @@ sexp sexp_define_foreign_proc_aux (sexp ctx, sexp env, const char *name, int num
 
 /************************* Apply Functions ****************************/
 
-sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
+static sexp sexp_native_call1 (sexp ctx, sexp f, sexp x) {
+  sexp args[1] = { x };
+  return sexp_native_call(ctx, f, 1, args);
+}
+
+static sexp sexp_native_apply_list (sexp ctx, sexp proc, sexp args, int entry) {
   sexp_sint_t len = 0;
   sexp ls = args;
   for (; sexp_pairp(ls); ls = sexp_cdr(ls)) {
@@ -3351,7 +3416,11 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
   for (sexp_sint_t i = 0; i < len; i++, ls = sexp_cdr(ls)) {
     argv[i] = sexp_car(ls);
   }
-  return sexp_native_call(ctx, proc, len, argv);
+  return sexp_native_call_aux(ctx, proc, len, argv, entry);
+}
+
+sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
+  return sexp_native_apply_list(ctx, proc, args, 1);
 }
 
 sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
@@ -3359,7 +3428,7 @@ sexp sexp_apply1 (sexp ctx, sexp f, sexp x) {
     return ((sexp_proc2)sexp_opcode_func(f))(ctx, f, 1, x);
   } else {
     sexp args[1] = { x };
-    return sexp_native_call(ctx, f, 1, args);
+    return sexp_native_call_entry(ctx, f, 1, args);
   }
 }
 
@@ -3368,7 +3437,7 @@ sexp sexp_apply2 (sexp ctx, sexp f, sexp x, sexp y) {
     return ((sexp_proc3)sexp_opcode_func(f))(ctx, f, 2, x, y);
   } else {
     sexp args[2] = { x, y };
-    return sexp_native_call(ctx, f, 2, args);
+    return sexp_native_call_entry(ctx, f, 2, args);
   }
 }
 
@@ -3377,7 +3446,7 @@ sexp sexp_apply3 (sexp ctx, sexp f, sexp x, sexp y, sexp z) {
     return ((sexp_proc4)sexp_opcode_func(f))(ctx, f, 3, x, y, z);
   } else {
     sexp args[3] = { x, y, z };
-    return sexp_native_call(ctx, f, 3, args);
+    return sexp_native_call_entry(ctx, f, 3, args);
   }
 }
 
