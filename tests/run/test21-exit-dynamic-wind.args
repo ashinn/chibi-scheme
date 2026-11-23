@@ -1,0 +1,2 @@
+-mscheme.process-context
+-e(dynamic-wind (lambda () (display "in") (newline)) (lambda () (dynamic-wind (lambda () #f) (lambda () (exit 0) (display "not reached") (newline)) (lambda () (display "out2") (newline)))) (lambda () (display "out1") (newline)))

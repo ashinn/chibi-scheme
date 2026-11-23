@@ -278,7 +278,7 @@ test-basic: chibi-scheme$(EXE)
 
 test-image: chibi-scheme$(EXE)
 	$(CHIBI) -Itests/image -mhash-table-image -d tests/image/hash-table.img
-	$(CHIBI) -itests/image/hash-table.img -e '(run)'
+	$(CHIBI) -itests/image/hash-table.img -e '(exit (check))'
 
 test-memory: chibi-scheme-ulimit$(EXE)
 	./tests/memory/memory-tests.sh

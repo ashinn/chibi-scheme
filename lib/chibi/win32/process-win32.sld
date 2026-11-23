@@ -1,5 +1,5 @@
 (define-library (chibi win32 process-win32)
-  (import (scheme base))
+  (import (scheme base) (only (chibi) travel-to-point! %dk %point-depth %point-parent))
   (export exit emergency-exit)
   (cond-expand
    (windows

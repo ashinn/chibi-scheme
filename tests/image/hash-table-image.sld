@@ -2,9 +2,8 @@
 ;; their keys after the image is loaded at a different address.
 
 (define-library (hash-table-image)
-  (import (scheme base) (scheme write) (scheme hash-table)
-          (scheme process-context))
-  (export check run)
+  (import (scheme base) (scheme write) (scheme hash-table))
+  (export check)
   (begin
     (define-record-type Point (make-point x) point? (x point-x))
     (define keys
@@ -31,10 +30,4 @@
                                  (hash-table-ref/default table (car keys) #f)))))))
         (display (if ok "[PASS] identity hash tables in images\n"
                      "[FAIL] identity hash tables in images\n"))
-        ok))
-    ;; emergency-exit since exit can't unwind to a continuation
-    ;; captured before the image was saved on the native backend
-    (define (run)
-      (let ((ok (check)))
-        (flush-output-port)
-        (emergency-exit ok)))))
+        ok))))
