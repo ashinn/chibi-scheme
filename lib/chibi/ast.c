@@ -634,7 +634,7 @@ sexp sexp_abort (sexp ctx, sexp self, sexp_sint_t n, sexp value) {
 sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char* version, const sexp_abi_identifier_t abi) {
   sexp_gc_var2(sym, str);
   if (!(sexp_version_compatible(ctx, version, sexp_version)
-        && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
+        && sexp_abi_compatible_strict(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
   sexp_define_type(ctx, "Object", SEXP_OBJECT);
   sexp_define_type(ctx, "Number", SEXP_NUMBER);

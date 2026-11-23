@@ -172,6 +172,15 @@ ifeq ($(SEXP_USE_NATIVE_X86),1)
 XCPPFLAGS += -DSEXP_USE_NATIVE_X86=1
 endif
 
+# The native backend installs alongside the VM: compiled libraries are
+# shared, but the binary, core library, images and the few libraries
+# which depend on the backend internals go in their own places.
+ifneq ($(filter NATIVE_X86 NATIVE_X86=1,$(D))$(filter 1,$(SEXP_USE_NATIVE_X86)),)
+CHIBI_BACKEND = native
+else
+CHIBI_BACKEND = vm
+endif
+
 ifeq ($(PLATFORM),solaris)
 XLDFLAGS += -lsocket
 XCPPFLAGS += -D_POSIX_PTHREAD_SEMANTICS

@@ -602,17 +602,15 @@ struct sexp_struct {
       sexp_sint_t refuel;
       unsigned char* ip;
       struct timeval tval;
-#if SEXP_USE_NATIVE_X86
+      /* native backend fields are always present, so that the layout */
+      /* is the same for both backends and libraries can be shared */
       void *fiber_sp;
       void *fiber_stack_base;
       size_t fiber_stack_size;
       void *active_conts;
 #endif
-#endif
-#if SEXP_USE_NATIVE_X86
       void *stack_base;
       void *trampoline;
-#endif
       char tailp, tracep, timeoutp, waitp, errorp, interruptp;
       sexp_uint_t last_fp;
       sexp_uint_t gc_count;

@@ -695,7 +695,7 @@ static int load_image_header(FILE *fp, struct sexp_image_header_t* header) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "unsupported image version: %d.%d\n",
              header->major, header->minor);
     return 0;
-  } else if (!sexp_abi_compatible(NULL, header->abi, SEXP_ABI_IDENTIFIER)) {
+  } else if (!sexp_abi_compatible_strict(NULL, header->abi, SEXP_ABI_IDENTIFIER)) {
     snprintf(gc_heap_err_str, ERR_STR_SIZE, "unsupported ABI: %s (expected %s)\n",
              header->abi, SEXP_ABI_IDENTIFIER);
     return 0;
@@ -708,7 +708,11 @@ char* sexp_load_image_err() {
   return gc_heap_err_str;
 }
 
-static const char* all_paths[] = {sexp_default_module_path, sexp_default_user_module_path};
+static const char* all_paths[] = {
+#if SEXP_USE_NATIVE_X86
+  sexp_native_module_path,
+#endif
+  sexp_default_module_path, sexp_default_user_module_path};
 
 sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size) {
   struct load_image_state state;

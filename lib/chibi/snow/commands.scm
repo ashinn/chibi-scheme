@@ -2635,6 +2635,12 @@
                  (cc-cmd
                   `(,@cc ,@cflags ,@so-flags
                          ,@(if local-test? '("-Iinclude" "-L.") '())
+                         ;; the native core library has the same soname
+                         ;; as the VM's, so either can be linked against
+                         ,@(cond-expand
+                            (native
+                             (list (string-append "-L" native-library-directory)))
+                            (else '()))
                          "-o" ,so-file ,c-file "-lchibi-scheme"
                          ,@lib-flags)))
             (when (or (and (file-exists? c-file)

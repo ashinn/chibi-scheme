@@ -1100,4 +1100,13 @@ typedef char sexp_abi_identifier_t[8];
    SEXP_ABI_MODULES SEXP_ABI_NUMBERS SEXP_ABI_STRINGS SEXP_ABI_SYMS)
 
 #define sexp_version_compatible(ctx, subver, genver) (strcmp((subver), (genver)) == 0)
-#define sexp_abi_compatible(ctx, subabi, genabi) (strncmp((subabi), (genabi), sizeof(sexp_abi_identifier_t)) == 0)
+/* The backend (VM or native) doesn't change the data layout, so */
+/* libraries which only define opcodes can be shared between them. */
+/* Images, and libraries which depend on the backend internals, */
+/* must use the strict check. */
+#define SEXP_ABI_BACKEND_INDEX 1
+#define sexp_abi_compatible_strict(ctx, subabi, genabi) (strncmp((subabi), (genabi), sizeof(sexp_abi_identifier_t)) == 0)
+#define sexp_abi_compatible(ctx, subabi, genabi)                        \
+  ((subabi)[0] == (genabi)[0]                                           \
+   && strncmp((subabi)+SEXP_ABI_BACKEND_INDEX+1, (genabi)+SEXP_ABI_BACKEND_INDEX+1, \
+              sizeof(sexp_abi_identifier_t)-SEXP_ABI_BACKEND_INDEX-1) == 0)

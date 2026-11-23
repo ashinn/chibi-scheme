@@ -653,7 +653,7 @@ sexp sexp_init_library (sexp ctx, sexp self, sexp_sint_t n, sexp env, const char
   sexp t;
   sexp_gc_var1(name);
   if (!(sexp_version_compatible(ctx, version, sexp_version)
-        && sexp_abi_compatible(ctx, abi, SEXP_ABI_IDENTIFIER)))
+        && sexp_abi_compatible_strict(ctx, abi, SEXP_ABI_IDENTIFIER)))
     return SEXP_ABI_ERROR;
 
 #if SEXP_USE_GREEN_THREADS

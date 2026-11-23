@@ -46,6 +46,7 @@ SOLIBDIR    ?= $(libdir)
 INCDIR      ?= $(includedir)/chibi
 MODDIR      ?= $(datadir)/chibi
 BINMODDIR   ?= $(SOLIBDIR)/chibi
+NATIVEDIR   ?= $(BINMODDIR)/native
 PKGCONFDIR  ?= $(SOLIBDIR)/pkgconfig
 MANDIR      ?= $(man1dir)
 
