@@ -620,12 +620,52 @@ static void* load_image_fn(sexp ctx, sexp dl, sexp name) {
 }
 #endif
 
+/* Hash tables using hash-by-identity (srfi 69's Hash-Table record */
+/* with hash-fn slot 1) bucket keys by address, which changes when */
+/* the image is relocated.  Redistribute the existing chains into */
+/* their new buckets in place, without allocating. */
+static void load_image_rehash_identity_table (sexp ht) {
+  sexp buckets = sexp_slot_ref(ht, 0), all = SEXP_NULL, ls, next, *vec;
+  sexp_uint_t i, j, len;
+  if (!sexp_vectorp(buckets) || sexp_vector_length(buckets) == 0) return;
+  vec = sexp_vector_data(buckets);
+  len = sexp_vector_length(buckets);
+  for (i=0; i<len; i++) {
+    for (ls=vec[i]; sexp_pairp(ls); ls=next) {
+      next = sexp_cdr(ls);
+      sexp_cdr(ls) = all;
+      all = ls;
+    }
+    vec[i] = SEXP_NULL;
+  }
+  for (ls=all; sexp_pairp(ls); ls=next) {
+    next = sexp_cdr(ls);
+    j = (sexp_uint_t)sexp_caar(ls) % len;
+    sexp_cdr(ls) = vec[j];
+    vec[j] = ls;
+  }
+}
+
+static int load_image_identity_hash_table_p (struct load_image_state* state, sexp x) {
+  sexp t, name;
+  if (sexp_pointer_tag(x) >= state->types_cnt) return 0;
+  t = state->types[sexp_pointer_tag(x)];
+  if (!t || !sexp_typep(t) || sexp_type_num_slots_of_object(t, x) != 4) return 0;
+  name = sexp_type_name(t);
+  return name && sexp_stringp(name)
+    && strcmp(sexp_string_data(name), "Hash-Table") == 0
+    && sexp_slot_ref(x, 2) == SEXP_ONE; /* hash-by-identity */
+}
+
 static sexp load_image_callback_p2 (sexp ctx, sexp dstp, void *user) {
   sexp res = NULL;
   sexp name = NULL;
   void *fn = NULL;
 
-  if (sexp_opcodep(dstp) && sexp_opcode_func(dstp)) {
+  if (sexp_pointer_tag(dstp) >= SEXP_NUM_CORE_TYPES
+      && load_image_identity_hash_table_p(user, dstp)) {
+    load_image_rehash_identity_table(dstp);
+  } else if (sexp_opcodep(dstp) && sexp_opcode_func(dstp)) {
     if (sexp_opcode_data2(dstp) && sexp_stringp(sexp_opcode_data2(dstp))) {
       name = sexp_opcode_data2(dstp);
     } else {

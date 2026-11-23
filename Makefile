@@ -276,6 +276,10 @@ test-basic: chibi-scheme$(EXE)
 	    fi; \
 	done
 
+test-image: chibi-scheme$(EXE)
+	$(CHIBI) -Itests/image -mhash-table-image -d tests/image/hash-table.img
+	$(CHIBI) -itests/image/hash-table.img -e '(run)'
+
 test-memory: chibi-scheme-ulimit$(EXE)
 	./tests/memory/memory-tests.sh
 
@@ -319,7 +323,7 @@ test-safe-string-cursors: chibi-scheme$(EXE)
 	$(CHIBI) -Dsafe-string-cursors tests/r7rs-tests.scm
 	$(CHIBI) -Dsafe-string-cursors tests/lib-tests.scm
 
-test-all: test test-syntax test-libs test-ffi test-division test-net
+test-all: test test-syntax test-libs test-ffi test-division test-net test-image
 
 test-dist: test-all test-memory test-build
 
@@ -331,7 +335,7 @@ bench-gabriel: chibi-scheme$(EXE)
 
 clean: clean-libs
 	-$(RM) *.o *.i *.s *.8 tests/basic/*.out tests/basic/*.err \
-	    tests/run/*.out tests/run/*.err
+	    tests/run/*.out tests/run/*.err tests/image/*.img
 
 cleaner: clean
 	-$(RM) chibi-scheme$(EXE) chibi-scheme-native$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
