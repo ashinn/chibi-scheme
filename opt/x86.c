@@ -3281,7 +3281,24 @@ static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
              && sexp_listp(ctx, sexp_lambda_params(lam))
              && (sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(app)))
                  == get_param_count(lam))) {
-    generate_tail_jump(ctx, name, loc, lam, app);
+    if (sexp_lambdap(sexp_ref_loc(sexp_car(app)))) {
+      generate_tail_jump(ctx, name, loc, lam, app);
+    } else {
+      /* A global can be rebound (e.g. by trace or redefinition), so */
+      /* only loop while it still holds this procedure (in %r13), */
+      /* otherwise make a real tail call through the binding. */
+      sexp cell = sexp_ref_cell(sexp_car(app));
+      sexp_sint_t jne_pos;
+      bytecode_preserve(ctx, cell);
+      emit_mov_imm64_rax(ctx, (uint64_t)cell);
+      emit_mov_mem_rax(ctx, 16); // cell->cdr
+      emit_u8(ctx, 0x4c); emit_u8(ctx, 0x39); emit_u8(ctx, 0xe8); // cmp %r13, %rax
+      jne_pos = emit_jcc(ctx, 0x85);
+      generate_tail_jump(ctx, name, loc, lam, app);
+      patch_jcc(ctx, jne_pos);
+      sexp_context_tailp(ctx) = 1;
+      generate_general_app(ctx, app);
+    }
   } else {
     generate_general_app(ctx, app);
   }
