@@ -301,6 +301,8 @@ void sexp_shrink_bcode (sexp ctx, sexp_uint_t i) {
     if (!sexp_exceptionp(tmp)) {
       sexp_bytecode_name(tmp) = sexp_bytecode_name(sexp_context_bc(ctx));
       sexp_bytecode_length(tmp) = i;
+      sexp_bytecode_max_depth(tmp)
+        = sexp_bytecode_max_depth(sexp_context_bc(ctx));
       sexp_bytecode_literals(tmp)
         = sexp_bytecode_literals(sexp_context_bc(ctx));
       sexp_bytecode_source(tmp)
@@ -324,6 +326,8 @@ void sexp_expand_bcode (sexp ctx, sexp_sint_t size) {
       sexp_bytecode_name(tmp) = sexp_bytecode_name(sexp_context_bc(ctx));
       sexp_bytecode_length(tmp)
         = sexp_bytecode_length(sexp_context_bc(ctx))*2;
+      sexp_bytecode_max_depth(tmp)
+        = sexp_bytecode_max_depth(sexp_context_bc(ctx));
       sexp_bytecode_literals(tmp)
         = sexp_bytecode_literals(sexp_context_bc(ctx));
       sexp_bytecode_source(tmp)

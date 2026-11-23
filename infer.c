@@ -1141,8 +1141,14 @@ static void infer_param_types_lambda (sexp ctx, sexp lam, sexp enclosing_lam,
     loc = sexp_env_cell(ctx, sexp_context_env(ctx), name, 0);
   analyze_lambda_param_types(ctx, lam, enclosing_lam, top, name, loc);
   /* after the param types, which sexp_proven_fixnump depends on */
+  sexp_sint_t flags = sexp_fixnump(sexp_lambda_flags(lam)) ? sexp_unbox_fixnum(sexp_lambda_flags(lam)) : 0;
   if (!sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(lam), name, loc))
-    sexp_lambda_flags(lam) = sexp_make_fixnum((sexp_fixnump(sexp_lambda_flags(lam)) ? sexp_unbox_fixnum(sexp_lambda_flags(lam)) : 0) | SEXP_LAMBDA_NON_ALLOC);
+    flags |= SEXP_LAMBDA_NON_ALLOC;
+  else
+    /* a leaf's frame isn't a GC root, so it can't hold values across */
+    /* allocation, as in the slow paths of arithmetic on non-fixnums */
+    flags &= ~SEXP_LAMBDA_LEAF;
+  sexp_lambda_flags(lam) = sexp_make_fixnum(flags);
   infer_param_types_expr(ctx, sexp_lambda_body(lam), lam, top);
 }
 
