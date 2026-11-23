@@ -71,24 +71,6 @@ META_FILES = lib/.chibi.meta lib/.srfi.meta lib/.scheme.meta
 
 include Makefile.libs
 
-# libraries which depend on the backend internals, installed per backend
-BACKEND_COMPILED_LIBS = lib/chibi/ast$(SO) lib/chibi/disasm$(SO) \
-	lib/chibi/optimize/rest$(SO) lib/srfi/18/threads$(SO)
-
-ifeq ($(CHIBI_BACKEND),native)
-BACKEND_SUFFIX = -native
-BACKEND_BINMODDIR = $(NATIVEDIR)
-BACKEND_SOLIBDIR = $(NATIVEDIR)
-BACKEND_IMGDIR = $(NATIVEDIR)
-BACKEND_EXE = chibi-scheme-native$(EXE)
-else
-BACKEND_SUFFIX =
-BACKEND_BINMODDIR = $(BINMODDIR)
-BACKEND_SOLIBDIR = $(SOLIBDIR)
-BACKEND_IMGDIR = $(MODDIR)
-BACKEND_EXE = chibi-scheme$(EXE)
-endif
-
 ########################################################################
 
 all: chibi-scheme$(EXE) all-libs chibi-scheme.pc $(META_FILES)
@@ -114,7 +96,6 @@ chibi-scheme-emscripten: VERSION
 include/chibi/install.h: Makefile.libs Makefile.detect
 	echo '#define sexp_so_extension "'$(SO)'"' > $@
 	echo '#define sexp_default_module_path "'$(MODDIR):$(BINMODDIR):$(SNOWMODDIR):$(SNOWBINMODDIR)'"' >> $@
-	echo '#define sexp_native_module_path "'$(NATIVEDIR)'"' >> $@
 	echo '#define sexp_platform "'$(PLATFORM)'"' >> $@
 	echo '#define sexp_architecture "'$(ARCH)'"' >> $@
 	echo '#define sexp_version "'$(CHIBI_VERSION)'"' >> $@
@@ -123,12 +104,10 @@ include/chibi/install.h: Makefile.libs Makefile.detect
 lib/chibi/snow/install.sld: Makefile.libs Makefile.detect
 	echo '(define-library (chibi snow install)' > $@
 	echo '  (import (scheme base))' >> $@
-	echo '  (export snow-module-directory snow-binary-module-directory' >> $@
-	echo '          native-library-directory)' >> $@
+	echo '  (export snow-module-directory snow-binary-module-directory)' >> $@
 	echo '  (begin' >> $@
 	echo '   (define snow-module-directory "'$(SNOWMODDIR)'")' >> $@
-	echo '   (define snow-binary-module-directory "'$(SNOWBINMODDIR)'")' >> $@
-	echo '   (define native-library-directory "'$(NATIVEDIR)'")))' >> $@
+	echo '   (define snow-binary-module-directory "'$(SNOWBINMODDIR)'")))' >> $@
 
 %.o: %.c $(BASE_INCLUDES)
 	$(CC) -c $(XCPPFLAGS) $(XCFLAGS) $(CLIBFLAGS) -o $@ $<
@@ -164,13 +143,6 @@ libchibi-scheme.a: $(SEXP_OBJS) $(EVAL_OBJS)
 
 chibi-scheme$(EXE): main.o libchibi-scheme$(SO)
 	$(CC) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. $(RLDFLAGS) -lchibi-scheme
-
-# The installed native binary finds its core library by DT_RPATH, which
-# unlike RUNPATH takes precedence over LD_LIBRARY_PATH, so it can't pick
-# up the VM's.  The core libraries share a soname, so compiled libraries
-# linked against either resolve to whichever is already loaded.
-chibi-scheme-native$(EXE): main.o libchibi-scheme$(SO)
-	$(CC) $(XCPPFLAGS) $(XCFLAGS) $(LDFLAGS) -o $@ $< -L. -Wl,--disable-new-dtags -Wl,-rpath,$(NATIVEDIR) $(RLDFLAGS) -lchibi-scheme
 
 chibi-scheme-static$(EXE): main.o $(SEXP_OBJS) $(EVAL_OBJS)
 	$(CC) $(XCFLAGS) $(STATICFLAGS) -o $@ $^ $(LDFLAGS) $(GCLDFLAGS) $(STATIC_LDFLAGS)
@@ -338,7 +310,7 @@ clean: clean-libs
 	    tests/run/*.out tests/run/*.err tests/image/*.img
 
 cleaner: clean
-	-$(RM) chibi-scheme$(EXE) chibi-scheme-native$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
+	-$(RM) chibi-scheme$(EXE) chibi-scheme-static$(EXE) chibi-scheme-ulimit$(EXE) \
 	    $(IMAGE_FILES) libchibi-scheme*$(SO) *.a *.pc \
 	    libchibi-scheme$(SO_VERSIONED_SUFFIX) \
 	    libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX) \
@@ -352,9 +324,9 @@ cleaner: clean
 distclean: dist-clean-libs cleaner
 dist-clean: distclean
 
-install-base: all $(BACKEND_EXE)
+install-base: all
 	$(MKDIR) $(DESTDIR)$(BINDIR)
-	$(INSTALL_EXE) -m0755 $(BACKEND_EXE) $(DESTDIR)$(BINDIR)/
+	$(INSTALL_EXE) -m0755 chibi-scheme$(EXE) $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-ffi $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/chibi-doc $(DESTDIR)$(BINDIR)/
 	$(INSTALL) -m0755 tools/snow-chibi $(DESTDIR)$(BINDIR)/
@@ -425,16 +397,13 @@ install-base: all $(BACKEND_EXE)
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/scheme/
 	$(MKDIR) $(DESTDIR)$(BINMODDIR)/srfi/18 $(DESTDIR)$(BINMODDIR)/srfi/27 $(DESTDIR)$(BINMODDIR)/srfi/151 $(DESTDIR)$(BINMODDIR)/srfi/39 $(DESTDIR)$(BINMODDIR)/srfi/69 $(DESTDIR)$(BINMODDIR)/srfi/95 $(DESTDIR)$(BINMODDIR)/srfi/98 $(DESTDIR)$(BINMODDIR)/srfi/144 $(DESTDIR)$(BINMODDIR)/srfi/160
-	$(INSTALL_EXE) -m0755 $(filter-out $(BACKEND_COMPILED_LIBS),$(filter lib/chibi/%,$(CHIBI_COMPILED_LIBS))) $(DESTDIR)$(BINMODDIR)/chibi/
+	$(INSTALL_EXE) -m0755 $(CHIBI_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/
 	$(INSTALL_EXE) -m0755 $(CHIBI_CRYPTO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/crypto/
 	$(INSTALL_EXE) -m0755 $(CHIBI_IO_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/io/
-	$(INSTALL_EXE) -m0755 $(filter-out $(BACKEND_COMPILED_LIBS),$(CHIBI_OPT_COMPILED_LIBS)) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
+	$(INSTALL_EXE) -m0755 $(CHIBI_OPT_COMPILED_LIBS) $(DESTDIR)$(BINMODDIR)/chibi/optimize/
 	$(INSTALL_EXE) -m0755 lib/scheme/time$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
 	$(INSTALL_EXE) -m0755 lib/scheme/bytevector$(SO) $(DESTDIR)$(BINMODDIR)/scheme/
-	for file in $(patsubst lib/%,%,$(filter $(BACKEND_COMPILED_LIBS),$(COMPILED_LIBS))) ; do \
-	$(MKDIR) $(DESTDIR)$(BACKEND_BINMODDIR)/`dirname $$file`; \
-	$(INSTALL_EXE) -m0755 lib/$$file $(DESTDIR)$(BACKEND_BINMODDIR)/$$file; \
-	done
+	$(INSTALL_EXE) -m0755 lib/srfi/18/threads$(SO) $(DESTDIR)$(BINMODDIR)/srfi/18
 	$(INSTALL_EXE) -m0755 lib/srfi/27/rand$(SO) $(DESTDIR)$(BINMODDIR)/srfi/27
 	$(INSTALL_EXE) -m0755 lib/srfi/39/param$(SO) $(DESTDIR)$(BINMODDIR)/srfi/39
 	$(INSTALL_EXE) -m0755 lib/srfi/69/hash$(SO) $(DESTDIR)$(BINMODDIR)/srfi/69
@@ -446,11 +415,11 @@ install-base: all $(BACKEND_EXE)
 	$(MKDIR) $(DESTDIR)$(INCDIR)
 	$(INSTALL) -m0644 $(INCLUDES) $(DESTDIR)$(INCDIR)/
 	$(MKDIR) $(DESTDIR)$(LIBDIR)
-	$(MKDIR) $(DESTDIR)$(BACKEND_SOLIBDIR)
-	$(INSTALL_EXE) -m0755 libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(BACKEND_SOLIBDIR)/
-	$(LN) libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(BACKEND_SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
-	$(LN) libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(BACKEND_SOLIBDIR)/libchibi-scheme$(SO)
-	-if test -f libchibi-scheme.a; then $(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(BACKEND_SOLIBDIR)/; fi
+	$(MKDIR) $(DESTDIR)$(SOLIBDIR)
+	$(INSTALL_EXE) -m0755 libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/
+	$(LN) libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
+	$(LN) libchibi-scheme$(SO_VERSIONED_SUFFIX) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
+	-if test -f libchibi-scheme.a; then $(INSTALL) -m0644 libchibi-scheme.a $(DESTDIR)$(SOLIBDIR)/; fi
 	$(MKDIR) $(DESTDIR)$(PKGCONFDIR)
 	$(INSTALL) -m0644 chibi-scheme.pc $(DESTDIR)$(PKGCONFDIR)
 	$(MKDIR) $(DESTDIR)$(MANDIR)
@@ -462,33 +431,22 @@ install-base: all $(BACKEND_EXE)
 install: install-base
 ifneq "$(IMAGE_FILES)" ""
 	echo "Generating images"
-	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(BACKEND_SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(BACKEND_SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BACKEND_BINMODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(BACKEND_SUFFIX)$(EXE) -mchibi.repl -d $(BACKEND_IMGDIR)/chibi.img
-	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(BACKEND_SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(BACKEND_SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BACKEND_BINMODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(BACKEND_SUFFIX)$(EXE) -xscheme.red -mchibi.repl -d $(BACKEND_IMGDIR)/red.img
-	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(BACKEND_SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(BACKEND_SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BACKEND_BINMODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(BACKEND_SUFFIX)$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(BACKEND_IMGDIR)/snow.img
+	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(EXE) -mchibi.repl -d $(MODDIR)/chibi.img
+	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(EXE) -xscheme.red -mchibi.repl -d $(MODDIR)/red.img
+	-[ -z "$(DESTDIR)" ] && LD_LIBRARY_PATH="$(SOLIBDIR):$(LD_LIBRARY_PATH)" DYLD_LIBRARY_PATH="$(SOLIBDIR):$(DYLD_LIBRARY_PATH)" CHIBI_MODULE_PATH="$(MODDIR):$(BINMODDIR)" $(BINDIR)/chibi-scheme$(EXE) -mchibi.snow.commands -mchibi.snow.interface -mchibi.snow.package -mchibi.snow.utils -d $(DESTDIR)$(MODDIR)/snow.img
 endif
 
-# only remove the shared files if the other backend isn't installed
-uninstall: uninstall-backend
-	if test ! -x $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE) \
-	     -a ! -x $(DESTDIR)$(BINDIR)/chibi-scheme-native$(EXE); then \
-	  $(MAKE) uninstall-shared; fi
-
-uninstall-backend:
-	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme$(BACKEND_SUFFIX)$(EXE)
-	-$(RM) $(DESTDIR)$(BACKEND_SOLIBDIR)/libchibi-scheme$(SO)
-	-$(RM) $(DESTDIR)$(BACKEND_SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX)
-	-$(RM) $(DESTDIR)$(BACKEND_SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
-	-$(RM) $(DESTDIR)$(BACKEND_SOLIBDIR)/libchibi-scheme.a
-	-$(CD) $(DESTDIR)$(BACKEND_BINMODDIR) && $(RM) $(BACKEND_COMPILED_LIBS:lib/%=%)
-	-$(RM) $(DESTDIR)$(BACKEND_IMGDIR)/*.img
-	-$(RMDIR) $(DESTDIR)$(NATIVEDIR)/chibi/optimize $(DESTDIR)$(NATIVEDIR)/chibi $(DESTDIR)$(NATIVEDIR)/srfi/18 $(DESTDIR)$(NATIVEDIR)/srfi $(DESTDIR)$(NATIVEDIR)
-
-uninstall-shared:
+uninstall:
+	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme$(EXE)
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-scheme-static$(EXE)
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-ffi
 	-$(RM) $(DESTDIR)$(BINDIR)/chibi-doc
 	-$(RM) $(DESTDIR)$(BINDIR)/snow-chibi
 	-$(RM) $(DESTDIR)$(BINDIR)/snow-chibi.scm
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO)
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_VERSIONED_SUFFIX)
+	-$(RM) $(DESTDIR)$(SOLIBDIR)/libchibi-scheme$(SO_MAJOR_VERSIONED_SUFFIX)
+	-$(RM) $(DESTDIR)$(LIBDIR)/libchibi-scheme$(SO).a
 	-$(RM) $(DESTDIR)$(PKGCONFDIR)/chibi-scheme.pc
 	-$(CD) $(DESTDIR)$(PREFIX) && $(RM) $(INCLUDES)
 	-$(RMDIR) $(DESTDIR)$(INCDIR)

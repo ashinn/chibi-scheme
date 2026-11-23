@@ -71,6 +71,5 @@
    (else
     (begin
       (define snow-module-directory "/usr/local/share/snow")
-      (define snow-binary-module-directory "/usr/local/lib/snow")
-      (define native-library-directory "/usr/local/lib/chibi/native"))))
+      (define snow-binary-module-directory "/usr/local/lib/snow"))))
   (include "commands.scm"))

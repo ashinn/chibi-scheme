@@ -518,13 +518,8 @@ void sexp_init_eval_context_globals (sexp ctx) {
   if (!user_path) user_path = sexp_default_user_module_path;
   sexp_add_path(ctx, user_path);
   no_sys_path = getenv(SEXP_NO_SYSTEM_PATH_VAR);
-  if (!no_sys_path || strcmp(no_sys_path, "0")==0) {
+  if (!no_sys_path || strcmp(no_sys_path, "0")==0)
     sexp_add_path(ctx, sexp_default_module_path);
-#if SEXP_USE_NATIVE_X86
-    /* backend-specific libraries and images shadow the shared ones */
-    sexp_add_path(ctx, sexp_native_module_path);
-#endif
-  }
 #if SEXP_USE_GREEN_THREADS
   sexp_global(ctx, SEXP_G_IO_BLOCK_ERROR)
     = sexp_user_exception(ctx, SEXP_FALSE, "I/O would block", SEXP_NULL);

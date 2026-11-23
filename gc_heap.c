@@ -748,11 +748,7 @@ char* sexp_load_image_err() {
   return gc_heap_err_str;
 }
 
-static const char* all_paths[] = {
-#if SEXP_USE_NATIVE_X86
-  sexp_native_module_path,
-#endif
-  sexp_default_module_path, sexp_default_user_module_path};
+static const char* all_paths[] = {sexp_default_module_path, sexp_default_user_module_path};
 
 sexp sexp_load_image (const char* filename, off_t offset, sexp_uint_t heap_free_size, sexp_uint_t heap_max_size) {
   struct load_image_state state;
