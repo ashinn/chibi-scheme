@@ -67,6 +67,8 @@ SEXP_API int sexp_proven_fixnump (sexp ctx, sexp lam, sexp x);
 SEXP_API int sexp_inferred_type (sexp ctx, sexp x);
 SEXP_API int sexp_inferred_uvector_type (sexp ctx, sexp x);
 SEXP_API int sexp_param_checked_type (sexp lam, int k, int *order, int *subtype);
+SEXP_API int sexp_param_unboxedp (sexp lam, int k);
+SEXP_API int sexp_unboxed_refp (sexp x);
 SEXP_API int sexp_inline_letp (sexp ctx, sexp lam, sexp app);
 SEXP_API int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc);
 #endif

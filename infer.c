@@ -327,8 +327,10 @@ int sexp_fixnum_literalp (sexp x, sexp_sint_t *val) {
 #define TYPE_ENTRY(type, bits) ((type) == SEXP_FIXNUM ? (type) + ((bits) << 16) : (type))
 #define UVECTOR_ENTRY(etype) (SEXP_UNIFORM_VECTOR | ((etype) << 8))
 #define ENTRY_TYPE(e) ((e) & 0xFF)
-#define ENTRY_SUBTYPE(e) (((e) >> 8) & 0x7F)
-#define ENTRY_KIND(e) ((e) & 0x7FFF)  /* type and subtype */
+#define ENTRY_SUBTYPE(e) (((e) >> 8) & 0x3F)
+#define ENTRY_KIND(e) ((e) & 0x3FFF)  /* type and subtype */
+/* a flonum native code keeps unboxed */
+#define ENTRY_UNBOXED 0x4000
 #define ENTRY_BITS(e) ((e) >> 16)
 /* a container type checked on entry, the order-th check made there */
 #define ENTRY_CHECKED 0x8000
@@ -357,7 +359,7 @@ static int ref_param_entry (sexp x) {
       int e;
       if (!sexp_fixnump(sexp_car(types))) return -1;
       e = (int)sexp_unbox_fixnum(sexp_car(types));
-      return (e & ENTRY_CHECKED) ? ENTRY_KIND(e) : e;
+      return (e & ENTRY_CHECKED) ? ENTRY_KIND(e) : (e & ~ENTRY_UNBOXED);
     }
   return -1;
 }
@@ -1234,6 +1236,291 @@ int sexp_inline_letp (sexp ctx, sexp lam, sexp app) {
   return sexp_nullp(p) && sexp_nullp(a);
 }
 
+/************************* Unboxed Flonums ****************************/
+
+/* Native code keeps a flonum param unboxed, as a raw double in its */
+/* frame, when the param is inferred to be a flonum without a check, */
+/* is never mutated or captured, and is used at least once as an */
+/* operand of float arithmetic or the value stored in a float vector, */
+/* and otherwise only passed on to unboxed params by self tail calls */
+/* or lets, or returned from tail position (boxed once on the way out). */
+/* Other uses would box it each time, so are left to the boxed value. */
+
+struct unbox_cand { sexp lam; int k, alive, good, bad; };
+struct unbox_state { struct unbox_cand *c; int n, size; };
+#define UNBOX_MAX_CHAIN 32
+
+static int param_position (sexp lam, sexp name) {
+  sexp ls = sexp_lambda_params(lam);
+  int k = 0;
+  for (; sexp_pairp(ls); ls = sexp_cdr(ls), k++)
+    if (sexp_car(ls) == name) return k;
+  return -1;
+}
+
+static sexp param_types_ref (sexp lam, int k) {
+  sexp ls = sexp_lambda_param_types(lam);
+  for (; k > 0 && sexp_pairp(ls); k--) ls = sexp_cdr(ls);
+  return sexp_pairp(ls) ? ls : NULL;
+}
+
+static struct unbox_cand *unbox_find (struct unbox_state *st, sexp lam, int k) {
+  for (int i = 0; i < st->n; i++)
+    if (st->c[i].lam == lam && st->c[i].k == k && st->c[i].alive)
+      return &st->c[i];
+  return NULL;
+}
+
+/* the live candidate the ref x is to, or NULL */
+static struct unbox_cand *unbox_ref_cand (struct unbox_state *st, sexp x) {
+  if (!x || !sexp_pointerp(x) || !sexp_refp(x) || !sexp_lambdap(sexp_ref_loc(x)))
+    return NULL;
+  return unbox_find(st, sexp_ref_loc(x), param_position(sexp_ref_loc(x), sexp_ref_name(x)));
+}
+
+static void unbox_collect (sexp ctx, struct unbox_state *st, sexp x) {
+  sexp ls, cell;
+  int k;
+  if (!x || !sexp_pointerp(x)) return;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_LAMBDA:
+    if (sexp_truep(sexp_listp(ctx, sexp_lambda_params(x)))) {
+      for (k = 0, ls = sexp_lambda_params(x); sexp_pairp(ls); ls = sexp_cdr(ls), k++) {
+        cell = param_types_ref(x, k);
+        if (!cell || sexp_car(cell) != sexp_make_fixnum(SEXP_FLONUM)
+            || sexp_truep(sexp_memq(ctx, sexp_car(ls), sexp_lambda_sv(x))))
+          continue;
+        if (st->n == st->size) {
+          int size = st->size ? 2 * st->size : 16;
+          struct unbox_cand *c = realloc(st->c, size * sizeof(struct unbox_cand));
+          if (!c) return;
+          st->c = c;
+          st->size = size;
+        }
+        st->c[st->n].lam = x;
+        st->c[st->n].k = k;
+        st->c[st->n].alive = 1;
+        st->n++;
+      }
+    }
+    unbox_collect(ctx, st, sexp_lambda_body(x));
+    break;
+  case SEXP_SET:
+    unbox_collect(ctx, st, sexp_set_value(x));
+    break;
+  case SEXP_PAIR:
+    for (ls = x; sexp_pairp(ls); ls = sexp_cdr(ls))
+      unbox_collect(ctx, st, sexp_car(ls));
+    break;
+  case SEXP_CND:
+    unbox_collect(ctx, st, sexp_cnd_test(x));
+    unbox_collect(ctx, st, sexp_cnd_pass(x));
+    unbox_collect(ctx, st, sexp_cnd_fail(x));
+    break;
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      unbox_collect(ctx, st, sexp_car(ls));
+    break;
+  case SEXP_SYNCLO:
+    unbox_collect(ctx, st, sexp_synclo_expr(x));
+    break;
+  }
+}
+
+/* the walk's position: the innermost procedure and its self name, the */
+/* lets inlined in it so far, whose params share its frame, and when */
+/* in tail position, the procedure and lets it's the tail of */
+struct unbox_pos {
+  sexp fn, name, loc;
+  sexp frame[UNBOX_MAX_CHAIN];
+  sexp chain[UNBOX_MAX_CHAIN];
+  int nframe, nchain;
+};
+
+static int unbox_in_frame (const struct unbox_pos *pos, sexp lam) {
+  for (int i = 0; i < pos->nframe; i++)
+    if (pos->frame[i] == lam) return 1;
+  return 0;
+}
+
+static int unbox_tail_of (const struct unbox_pos *pos, sexp lam) {
+  for (int i = 0; i < pos->nchain; i++)
+    if (pos->chain[i] == lam) return 1;
+  return 0;
+}
+
+static void unbox_scan (sexp ctx, struct unbox_state *st, sexp x,
+                        const struct unbox_pos *pos);
+
+static void unbox_scan_nontail (sexp ctx, struct unbox_state *st, sexp x,
+                                const struct unbox_pos *pos) {
+  struct unbox_pos p = *pos;
+  p.nchain = 0;
+  unbox_scan(ctx, st, x, &p);
+}
+
+/* x is passed on to the param k of lam */
+static void unbox_scan_copy (sexp ctx, struct unbox_state *st, sexp x,
+                             sexp lam, int k, const struct unbox_pos *pos) {
+  struct unbox_cand *c = unbox_ref_cand(st, x);
+  if (!c)
+    unbox_scan_nontail(ctx, st, x, pos);
+  else if (!unbox_find(st, lam, k) || !unbox_in_frame(pos, c->lam))
+    c->bad = 1;
+}
+
+/* x is computed as a raw double where it's an unboxed candidate */
+static void unbox_scan_float (sexp ctx, struct unbox_state *st, sexp x,
+                              const struct unbox_pos *pos) {
+  struct unbox_cand *c = unbox_ref_cand(st, x);
+  if (c && unbox_in_frame(pos, c->lam))
+    c->good = 1;
+  else if (c)
+    c->bad = 1;
+  else
+    unbox_scan_nontail(ctx, st, x, pos);
+}
+
+static void unbox_scan_lambda (sexp ctx, struct unbox_state *st, sexp lam,
+                               sexp name, sexp loc) {
+  struct unbox_pos p;
+  if (!name && sexp_symbolp(sexp_lambda_name(lam)))
+    name = sexp_lambda_name(lam);
+  if (name && !loc && sexp_symbolp(name))
+    loc = sexp_env_cell(ctx, sexp_context_env(ctx), name, 0);
+  p.fn = lam;
+  p.name = name;
+  p.loc = loc;
+  p.frame[0] = p.chain[0] = lam;
+  p.nframe = p.nchain = 1;
+  unbox_scan(ctx, st, sexp_lambda_body(lam), &p);
+}
+
+static void unbox_scan (sexp ctx, struct unbox_state *st, sexp x,
+                        const struct unbox_pos *pos) {
+  struct unbox_cand *c;
+  struct unbox_pos p;
+  sexp ls, op;
+  int k;
+  if (!x || !sexp_pointerp(x)) return;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_REF:
+    if ((c = unbox_ref_cand(st, x)) && !unbox_tail_of(pos, sexp_ref_loc(x)))
+      c->bad = 1;
+    break;
+  case SEXP_LAMBDA:
+    unbox_scan_lambda(ctx, st, x, NULL, NULL);
+    break;
+  case SEXP_SET:
+    if (sexp_lambdap(sexp_set_value(x)) && sexp_refp(sexp_set_var(x)))
+      unbox_scan_lambda(ctx, st, sexp_set_value(x), sexp_ref_name(sexp_set_var(x)),
+                        sexp_ref_loc(sexp_set_var(x)));
+    else
+      unbox_scan_nontail(ctx, st, sexp_set_value(x), pos);
+    break;
+  case SEXP_CND:
+    unbox_scan_nontail(ctx, st, sexp_cnd_test(x), pos);
+    unbox_scan(ctx, st, sexp_cnd_pass(x), pos);
+    unbox_scan(ctx, st, sexp_cnd_fail(x), pos);
+    break;
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+      if (sexp_pairp(sexp_cdr(ls)))
+        unbox_scan_nontail(ctx, st, sexp_car(ls), pos);
+      else
+        unbox_scan(ctx, st, sexp_car(ls), pos);
+    }
+    break;
+  case SEXP_SYNCLO:
+    unbox_scan(ctx, st, sexp_synclo_expr(x), pos);
+    break;
+  case SEXP_PAIR:
+    op = sexp_car(x);
+    if (sexp_opcodep(op)) {
+      sexp_sint_t code = sexp_opcode_code(op);
+      int n = (int)sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(x)));
+      if (n == 2 && (code == SEXP_OP_ADD || code == SEXP_OP_SUB
+                     || code == SEXP_OP_MUL || code == SEXP_OP_DIV)) {
+        for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+          unbox_scan_float(ctx, st, sexp_car(ls), pos);
+        break;
+      }
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+      if (n == 3 && code == SEXP_OP_UVECTOR_SET
+          && (sexp_opcode_data(op) == sexp_make_fixnum(SEXP_F64)
+              || sexp_opcode_data(op) == sexp_make_fixnum(SEXP_F32))) {
+        unbox_scan_nontail(ctx, st, sexp_cadr(x), pos);
+        unbox_scan_nontail(ctx, st, sexp_caddr(x), pos);
+        unbox_scan_float(ctx, st, sexp_car(sexp_cdddr(x)), pos);
+        break;
+      }
+#endif
+      for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+        unbox_scan_nontail(ctx, st, sexp_car(ls), pos);
+    } else if (sexp_inline_letp(ctx, pos->fn, x)) {
+      for (k = 0, ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls), k++)
+        unbox_scan_copy(ctx, st, sexp_car(ls), op, k, pos);
+      p = *pos;
+      if (p.nframe < UNBOX_MAX_CHAIN)
+        p.frame[p.nframe++] = op;
+      if (p.nchain < UNBOX_MAX_CHAIN)
+        p.chain[p.nchain++] = op;
+      else
+        p.chain[(p.nchain = 1) - 1] = op;
+      unbox_scan(ctx, st, sexp_lambda_body(op), &p);
+    } else if (pos->fn && pos->name && unbox_tail_of(pos, pos->fn)
+               && sexp_refp(op) && sexp_ref_name(op) == pos->name
+               && sexp_ref_loc(op) == pos->loc
+               && sexp_truep(sexp_listp(ctx, sexp_lambda_params(pos->fn)))
+               && sexp_length(ctx, sexp_cdr(x)) == sexp_length(ctx, sexp_lambda_params(pos->fn))) {
+      /* a self tail call, which jumps to the start with the new params */
+      for (k = 0, ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls), k++)
+        unbox_scan_copy(ctx, st, sexp_car(ls), pos->fn, k, pos);
+    } else {
+      for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+        unbox_scan_nontail(ctx, st, sexp_car(ls), pos);
+      unbox_scan_nontail(ctx, st, op, pos);
+    }
+    break;
+  }
+}
+
+static void infer_unboxed (sexp ctx, sexp ast) {
+  struct unbox_state st = {NULL, 0, 0};
+  struct unbox_pos pos;
+  sexp cell;
+  int i, changed;
+  unbox_collect(ctx, &st, ast);
+  if (st.n > 0) {
+    pos.fn = pos.name = pos.loc = NULL;
+    pos.nframe = pos.nchain = 0;
+    do {
+      for (i = 0; i < st.n; i++) st.c[i].good = st.c[i].bad = 0;
+      unbox_scan(ctx, &st, ast, &pos);
+      for (i = changed = 0; i < st.n; i++)
+        if (st.c[i].alive && (st.c[i].bad || !st.c[i].good))
+          st.c[i].alive = 0, changed = 1;
+    } while (changed);
+    for (i = 0; i < st.n; i++)
+      if (st.c[i].alive && (cell = param_types_ref(st.c[i].lam, st.c[i].k)))
+        sexp_car(cell) = sexp_make_fixnum(SEXP_FLONUM | ENTRY_UNBOXED);
+  }
+  free(st.c);
+}
+
+int sexp_param_unboxedp (sexp lam, int k) {
+  sexp cell = param_types_ref(lam, k);
+  return cell && sexp_car(cell) == sexp_make_fixnum(SEXP_FLONUM | ENTRY_UNBOXED);
+}
+
+int sexp_unboxed_refp (sexp x) {
+  sexp lam;
+  if (!x || !sexp_pointerp(x) || !sexp_refp(x)) return 0;
+  lam = sexp_ref_loc(x);
+  return sexp_lambdap(lam)
+    && sexp_param_unboxedp(lam, param_position(lam, sexp_ref_name(x)));
+}
+
 /************************* Allocation Analysis ************************/
 
 /* Conservatively, can evaluating x allocate?  Self calls (to self_name */
@@ -1246,7 +1533,8 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
   int tag = sexp_pointer_tag(x);
   switch (tag) {
   case SEXP_REF:
-    return 0;
+    /* boxing an unboxed flonum */
+    return sexp_unboxed_refp(x);
 
   case SEXP_SET:
     return sexp_expr_may_allocp(ctx, lam, sexp_set_value(x), self_name, self_loc);
@@ -1391,6 +1679,7 @@ static void infer_param_types (sexp ctx, sexp ast) {
   infer_param_types_expr(ctx, ast, NULL, ast, INFER_TYPES);
   if (flonum_assumption_failed)
     infer_param_types_expr(ctx, ast, NULL, ast, INFER_TYPES);
+  infer_unboxed(ctx, ast);
   infer_param_types_expr(ctx, ast, NULL, ast, INFER_FLAGS);
 }
 

@@ -18,14 +18,23 @@ struct sexp_native_frame {
   sexp self;
 };
 
+/* Above the frame struct, the GC var list and the slots it roots, */
+/* the current procedure's frame has g_num_raw raw slots, holding */
+/* unboxed doubles out of the GC's sight, just below the saved regs. */
+static int g_num_raw = 0;
+
 static inline uint32_t compute_frame_alloc (int num_slots) {
-  uint32_t needed = 24 * (num_slots + 2);
+  uint32_t needed = 24 * (num_slots + 2) + 8 * g_num_raw;
   return ((needed + 7) & ~15) + 8;
 }
 
 static inline int32_t compute_slot_base (int num_slots) {
   uint32_t frame_alloc = compute_frame_alloc(num_slots);
   return -16 - (int32_t)frame_alloc + 16 * (num_slots + 1);
+}
+
+static inline int32_t compute_raw_disp (int num_slots, int raw) {
+  return -40 - (int32_t)compute_frame_alloc(num_slots) + 24 * (num_slots + 2) + 8 * raw;
 }
 
 /* Forward declarations */
@@ -1467,9 +1476,26 @@ static sexp_sint_t g_loop_start = 0;
 /* the lets inlined in the code being generated, innermost last, with */
 /* the frame slots holding their params; those below g_lets_floor are */
 /* in enclosing procedures, whose frames aren't the current one */
-struct inline_let { sexp lam; int base; };
+struct inline_let { sexp lam; int base, raw; };
 static struct inline_let *g_lets = NULL;
 static int g_num_lets = 0, g_lets_floor = 0, g_lets_size = 0;
+
+/* the next free raw slot, for the unboxed params of inlined lets */
+static int g_raw_top = 0;
+
+/* the raw slot holding the unboxed flonum the ref x is to, or -1 */
+static int unboxed_ref_raw (sexp ctx, sexp x) {
+  sexp lam;
+  int k;
+  if (!sexp_unboxed_refp(x)) return -1;
+  lam = sexp_ref_loc(x);
+  k = (int)sexp_param_index(ctx, lam, sexp_ref_name(x));
+  if (lam == sexp_context_lambda(ctx)) return k;
+  for (int i = g_num_lets - 1; i >= g_lets_floor; i--)
+    if (g_lets[i].lam == lam)
+      return g_lets[i].raw + k;
+  return -1;
+}
 
 /* the frame slot of the param name of an inlined let lam, or -1 */
 static int inline_let_slot (sexp ctx, sexp lam, sexp name) {
@@ -1501,6 +1527,36 @@ static void emit_mov_slot_rdx (sexp ctx, int slot_index) {
   int32_t disp = get_slot_disp(ctx, slot_index);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x95);
   emit_u32(ctx, (uint32_t)disp);
+}
+
+static int32_t get_raw_disp (sexp ctx, int raw) {
+  if (raw >= g_num_raw)
+    fprintf(stderr, "WARNING: raw slot %d >= num_raw %d!\n", raw, g_num_raw);
+  return compute_raw_disp(get_context_num_slots(ctx), raw);
+}
+
+/* movsd raw(%rbp), %xmm<reg> */
+static void emit_load_raw_xmm (sexp ctx, int raw, int reg) {
+  emit_u8(ctx, 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x10);
+  emit_u8(ctx, (uint8_t)(0x85 | (reg << 3)));
+  emit_u32(ctx, (uint32_t)get_raw_disp(ctx, raw));
+}
+
+/* movsd %xmm<reg>, raw(%rbp) */
+static void emit_store_raw_xmm (sexp ctx, int raw, int reg) {
+  emit_u8(ctx, 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x11);
+  emit_u8(ctx, (uint8_t)(0x85 | (reg << 3)));
+  emit_u32(ctx, (uint32_t)get_raw_disp(ctx, raw));
+}
+
+/* the double in the flonum %rax into the raw slot, via %rcx */
+static void emit_unbox_rax_raw (sexp ctx, int raw) {
+  // movq flonum(%rax), %rcx
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x48);
+  emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.flonum));
+  // movq %rcx, raw(%rbp)
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x8d);
+  emit_u32(ctx, (uint32_t)get_raw_disp(ctx, raw));
 }
 
 static void emit_mov_imm64_rdx (sexp ctx, uint64_t val) {
@@ -1901,8 +1957,22 @@ static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
   }
 }
 
+/* box the double in a raw slot into %rax */
+static void emit_box_raw (sexp ctx, int raw) {
+  emit_load_raw_xmm(ctx, raw, 0);
+  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);  // mov %r12, %rdi
+  emit_call_abs(ctx, (void*)sexp_make_flonum);
+}
+
 static void generate_ref (sexp ctx, sexp ref, int unboxp) {
   sexp loc = sexp_ref_loc(ref);
+  int raw = unboxed_ref_raw(ctx, ref);
+  if (raw >= 0) {
+    emit_box_raw(ctx, raw);
+    return;
+  }
+  if (sexp_unboxed_refp(ref))
+    fprintf(stderr, "WARNING: unboxed flonum not in this frame\n");
   if (!sexp_lambdap(loc)) {
     sexp cell = sexp_ref_cell(ref);
     bytecode_preserve(ctx, cell);
@@ -2422,8 +2492,8 @@ static int generate_uvector_set (sexp ctx, sexp lam, sexp op, sexp uv, sexp idx,
 
 #if NATIVE_FLOAT_TREES
 
-enum { FT_LEAF, FT_LIT, FT_UVREF, FT_OP };
-enum { FT_ROOT_NONE, FT_ROOT_BOXED, FT_ROOT_STORE };
+enum { FT_LEAF, FT_LIT, FT_UVREF, FT_RAW, FT_OP };
+enum { FT_ROOT_NONE, FT_ROOT_BOXED, FT_ROOT_STORE, FT_ROOT_RAW };
 #define FT_MAX_REGS 8
 #define FT_MAX_TEMPS 16
 #define FT_MAX_SLOW 160
@@ -2468,10 +2538,11 @@ static int ft_floatp (sexp ctx, sexp x) {
   return sexp_inferred_type(ctx, x) == SEXP_FLONUM || ft_kind(ctx, x) == FT_OP;
 }
 
-/* how x is computed in a float tree: literals and uvector elements are */
-/* loaded directly, other leaves are boxed */
+/* how x is computed in a float tree: literals, uvector elements and */
+/* unboxed flonums are loaded directly, other leaves are boxed */
 static int ft_kind (sexp ctx, sexp x) {
   if (ft_flonum_litp(x)) return FT_LIT;
+  if (sexp_unboxed_refp(x)) return FT_RAW;
   if (ft_uvref_etype(x) >= 0) return FT_UVREF;
   if (ft_arith_appp(x) && (ft_floatp(ctx, sexp_cadr(x)) || ft_floatp(ctx, sexp_caddr(x))))
     return FT_OP;
@@ -2485,7 +2556,8 @@ struct ft_size { int regs, temps, slow, scratch; };
 static void ft_measure (sexp ctx, sexp x, struct ft_size *s) {
   struct ft_size a, b;
   switch (ft_kind(ctx, x)) {
-  case FT_LIT: s->regs = 1; s->temps = 0; s->slow = 0; s->scratch = 1; break;
+  case FT_LIT:
+  case FT_RAW: s->regs = 1; s->temps = 0; s->slow = 0; s->scratch = 1; break;
   case FT_UVREF: s->regs = 1; s->temps = 2; s->slow = 7; s->scratch = 2; break;
   case FT_LEAF:
     s->regs = 1; s->temps = 1; s->scratch = 1;
@@ -2521,7 +2593,8 @@ static int ft_root (sexp ctx, sexp app) {
       return FT_ROOT_NONE;
     val = sexp_car(sexp_cdddr(app));
     k = ft_kind(ctx, val);
-    return (k == FT_OP || k == FT_UVREF) && ft_fits(ctx, val) ? FT_ROOT_STORE : FT_ROOT_NONE;
+    return (k == FT_OP || k == FT_UVREF || k == FT_RAW) && ft_fits(ctx, val)
+      ? FT_ROOT_STORE : FT_ROOT_NONE;
   }
   return ft_kind(ctx, app) == FT_OP && ft_fits(ctx, app) ? FT_ROOT_BOXED : FT_ROOT_NONE;
 }
@@ -2531,7 +2604,7 @@ static int compute_ast_max_depth (sexp ctx, sexp x);
 static void ft_leaf_depths (sexp ctx, sexp x, int *held, int *maxd) {
   int d;
   switch (ft_kind(ctx, x)) {
-  case FT_LIT: break;
+  case FT_LIT: case FT_RAW: break;
   case FT_OP:
     ft_leaf_depths(ctx, sexp_cadr(x), held, maxd);
     ft_leaf_depths(ctx, sexp_caddr(x), held, maxd);
@@ -2556,6 +2629,8 @@ static int ft_ast_depth (sexp ctx, sexp app) {
   int root = ft_root(ctx, app), held = 0, maxd = 0, d;
   struct ft_size s;
   sexp val = app;
+  /* a float uvector element, which may be computed into a raw slot */
+  if (root == FT_ROOT_NONE && ft_kind(ctx, app) == FT_UVREF) root = FT_ROOT_RAW;
   if (root == FT_ROOT_NONE) return -1;
   if (root == FT_ROOT_STORE) {
     val = sexp_car(sexp_cdddr(app));
@@ -2578,7 +2653,7 @@ static void emit_sse_rr (sexp ctx, uint8_t pfx, uint8_t op, int dst, int src) {
 /* evaluate the leaves of x into temps from *slot on, in order */
 static void ft_generate_leaves (sexp ctx, sexp x, int *slot) {
   switch (ft_kind(ctx, x)) {
-  case FT_LIT: break;
+  case FT_LIT: case FT_RAW: break;
   case FT_OP:
     ft_generate_leaves(ctx, sexp_cadr(x), slot);
     ft_generate_leaves(ctx, sexp_caddr(x), slot);
@@ -2622,6 +2697,9 @@ static void ft_generate_compute (sexp ctx, sexp lam, sexp x, int reg, int *slot,
     default:          k = 0x5e; break;
     }
     emit_sse_rr(ctx, 0xf2, (uint8_t)k, reg, reg + 1);
+    break;
+  case FT_RAW:
+    emit_load_raw_xmm(ctx, unboxed_ref_raw(ctx, x), reg);
     break;
   case FT_UVREF:
     etype = ft_uvref_etype(x);
@@ -2682,6 +2760,9 @@ static void ft_generate_slow (sexp ctx, sexp x, int dst, int *slot) {
   case FT_LIT:
     generate_lit(ctx, sexp_litp(x) ? sexp_lit_value(x) : x);
     break;
+  case FT_RAW:
+    emit_box_raw(ctx, unboxed_ref_raw(ctx, x));
+    break;
   case FT_OP:
     ft_generate_slow(ctx, sexp_cadr(x), dst, slot);
     ft_generate_slow(ctx, sexp_caddr(x), dst + 1, slot);
@@ -2700,12 +2781,15 @@ static void ft_generate_slow (sexp ctx, sexp x, int dst, int *slot) {
   emit_mov_rax_slot(ctx, dst);
 }
 
-static int generate_float_tree (sexp ctx, sexp app, int root, int temp_start) {
-  sexp lam = sexp_context_lambda(ctx), val = app, op = sexp_car(app);
+/* compute app as a float tree: boxed, stored into the float uvector */
+/* (uvector-set! app), or into the raw slot raw */
+static int generate_float_tree (sexp ctx, sexp app, int root, int temp_start, int raw) {
+  sexp lam = sexp_context_lambda(ctx), val = app, op = NULL;
   sexp_sint_t slow[FT_MAX_SLOW], s7[7], done_jmp;
   int num_slow = 0, slot = temp_start, held, k, scale = 0, etype = 0;
   struct ft_size size;
   if (root == FT_ROOT_STORE) {
+    op = sexp_car(app);
     val = sexp_car(sexp_cdddr(app));
     etype = (int)sexp_unbox_fixnum(sexp_opcode_data(op));
     scale = uvector_access[etype].scale;
@@ -2733,6 +2817,8 @@ static int generate_float_tree (sexp ctx, sexp app, int root, int temp_start) {
     emit_u8(ctx, scale == 2 ? 0xf3 : 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x11);
     emit_u8(ctx, 0x44); emit_u8(ctx, (uint8_t)((scale << 6) | 0x11)); emit_u8(ctx, UV_DATA_OFF);
     emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+  } else if (root == FT_ROOT_RAW) {
+    emit_store_raw_xmm(ctx, raw, 0);
   } else {
     // sexp_make_flonum(ctx, %xmm0)
     emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);  // mov %r12, %rdi
@@ -2755,11 +2841,32 @@ static int generate_float_tree (sexp ctx, sexp app, int root, int temp_start) {
   if (root == FT_ROOT_STORE) {
     emit_mov_rax_slot(ctx, temp_start + 2);
     emit_native_dispatch_op(ctx, op, temp_start, 3);
+  } else if (root == FT_ROOT_RAW) {
+    /* the generic result, a flonum as inferred */
+    emit_unbox_rax_raw(ctx, raw);
   }
   emit_inlined_op_cleanup(ctx, done_jmp, temp_start, held + size.scratch);
   return 1;
 }
 #endif
+
+/* compute x, inferred to be a flonum, into the raw slot raw */
+static void generate_raw (sexp ctx, sexp x, int raw) {
+#if NATIVE_FLOAT_TREES
+  int k = ft_kind(ctx, x), src;
+  if (k == FT_RAW && (src = unboxed_ref_raw(ctx, x)) >= 0) {
+    emit_load_raw_xmm(ctx, src, 0);
+    emit_store_raw_xmm(ctx, raw, 0);
+    return;
+  }
+  if (k == FT_LIT || k == FT_UVREF || (k == FT_OP && ft_fits(ctx, x))) {
+    generate_float_tree(ctx, x, FT_ROOT_RAW, get_temp_slot(ctx), raw);
+    return;
+  }
+#endif
+  generate(ctx, 0, 0, 0, x);
+  emit_unbox_rax_raw(ctx, raw);
+}
 
 static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t num_args, int temp_start) {
   sexp_sint_t code = sexp_opcode_code(op);
@@ -2767,7 +2874,7 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
 #if NATIVE_FLOAT_TREES
   int ft = (num_args == 2 || num_args == 3) ? ft_root(ctx, app) : FT_ROOT_NONE;
   if (ft != FT_ROOT_NONE)
-    return generate_float_tree(ctx, app, ft, temp_start);
+    return generate_float_tree(ctx, app, ft, temp_start, -1);
 #endif
 
   // 0-argument cases
@@ -3701,14 +3808,24 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
 
   sexp_context_tailp(ctx) = 0;
   int i = 0;
+  // Unboxed params are computed into raw temps after the raw params
   for (ls1 = sexp_cdr(app); sexp_pairp(ls1); ls1 = sexp_cdr(ls1), i++) {
-    generate(ctx, 0, 0, 0, sexp_car(ls1));
-    emit_mov_rax_slot(ctx, temp_start + i);
+    if (sexp_param_unboxedp(lam, i)) {
+      generate_raw(ctx, sexp_car(ls1), num_args + i);
+    } else {
+      generate(ctx, 0, 0, 0, sexp_car(ls1));
+      emit_mov_rax_slot(ctx, temp_start + i);
+    }
     sexp_inc_context_depth(ctx, 1);
   }
 
   // Copy temporaries to parameter slots
   for (i = 0, ls2 = sexp_lambda_params(lam); i < num_args && sexp_pairp(ls2); i++, ls2 = sexp_cdr(ls2)) {
+    if (sexp_param_unboxedp(lam, i)) {
+      emit_load_raw_xmm(ctx, num_args + i, 0);
+      emit_store_raw_xmm(ctx, i, 0);
+      continue;
+    }
     emit_mov_slot_rax(ctx, temp_start + i);
     if (sexp_truep(sexp_memq(ctx, sexp_car(ls2), sexp_lambda_sv(lam)))) {
       // Boxed mutable param: load box from slot i, update box->cdr
@@ -3843,6 +3960,41 @@ void sexp_native_prepare_ast (sexp ctx, sexp ast) {
   }
 }
 
+/* the raw slots the lets inlined in x within lam take, at most */
+static int count_let_raw (sexp ctx, sexp lam, sexp x) {
+  sexp ls;
+  int n = 0, k;
+  if (!x || !sexp_pointerp(x)) return 0;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_PAIR:
+    if (sexp_inline_letp(ctx, lam, x)) {
+      for (k = 0; k < get_param_count(sexp_car(x)); k++)
+        if (sexp_param_unboxedp(sexp_car(x), k)) {
+          n = get_param_count(sexp_car(x));
+          break;
+        }
+      n += count_let_raw(ctx, lam, sexp_lambda_body(sexp_car(x)));
+      x = sexp_cdr(x);
+    }
+    for (ls = x; sexp_pairp(ls); ls = sexp_cdr(ls))
+      n += count_let_raw(ctx, lam, sexp_car(ls));
+    return n;
+  case SEXP_CND:
+    return count_let_raw(ctx, lam, sexp_cnd_test(x))
+      + count_let_raw(ctx, lam, sexp_cnd_pass(x))
+      + count_let_raw(ctx, lam, sexp_cnd_fail(x));
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      n += count_let_raw(ctx, lam, sexp_car(ls));
+    return n;
+  case SEXP_SET:
+  case SEXP_SET_SYN:
+    return count_let_raw(ctx, lam, sexp_set_value(x));
+  default:
+    return 0;
+  }
+}
+
 static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambda) {
   sexp ctx2, fv, ls, flags, len, ref, prev_lambda, prev_fv;
   sexp_gc_var2(tmp, bc);
@@ -3875,6 +4027,14 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   sexp_bytecode_max_depth(sexp_context_bc(ctx2)) = max_depth;
   sexp_context_max_depth(ctx2) = sexp_make_fixnum(max_depth);
 
+  // Raw slots: the unboxed params, then their tail jump temps, then
+  // those of inlined lets
+  int saved_num_raw = g_num_raw, saved_raw_top = g_raw_top, k;
+  for (k = 0; k < num_params && !sexp_param_unboxedp(lambda, k); k++)
+    ;
+  g_raw_top = k < num_params ? 2 * num_params : 0;
+  g_num_raw = g_raw_top + count_let_raw(ctx2, lambda, sexp_lambda_body(lambda));
+
   // Emit function entry
   sexp_emit_enter(ctx2);
 
@@ -3884,6 +4044,13 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
     int slot = get_local_slot(lambda, k);
     emit_box_var(ctx2, sexp_car(ls), slot);
   }
+
+  // Unbox flonum params, which self tail jumps then set unboxed
+  for (k = 0; k < num_params; k++)
+    if (sexp_param_unboxedp(lambda, k)) {
+      emit_mov_slot_rax(ctx2, k);
+      emit_unbox_rax_raw(ctx2, k);
+    }
 
   // Record loop start for self-tail jumps
   g_loop_start = sexp_unbox_fixnum(sexp_context_pos(ctx2));
@@ -3910,6 +4077,8 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
                            : SEXP_PROC_NONE);
   len = sexp_length(ctx2, sexp_lambda_params(lambda));
   bc = sexp_complete_bytecode(ctx2);
+  g_num_raw = saved_num_raw;
+  g_raw_top = saved_raw_top;
 
   if (sexp_exceptionp(bc)) {
     sexp_context_exception(ctx) = bc;
@@ -3954,12 +4123,23 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
 static void generate_let (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   sexp let = sexp_car(app), ls;
   sexp_uint_t tailp = sexp_context_tailp(ctx);
-  int base = get_temp_slot(ctx), n = 0;
+  int base = get_temp_slot(ctx), n = 0, raw = -1, num_params = get_param_count(let);
 
+  /* unboxed params are held in raw slots, their own slots unused */
+  for (n = 0; n < num_params; n++)
+    if (sexp_param_unboxedp(let, n)) {
+      raw = g_raw_top;
+      g_raw_top += num_params;
+      break;
+    }
   sexp_context_tailp(ctx) = 0;
-  for (ls = sexp_cdr(app); sexp_pairp(ls); ls = sexp_cdr(ls), n++) {
-    generate(ctx, 0, 0, 0, sexp_car(ls));
-    emit_mov_rax_slot(ctx, base + n);
+  for (n = 0, ls = sexp_cdr(app); sexp_pairp(ls); ls = sexp_cdr(ls), n++) {
+    if (raw >= 0 && sexp_param_unboxedp(let, n)) {
+      generate_raw(ctx, sexp_car(ls), raw + n);
+    } else {
+      generate(ctx, 0, 0, 0, sexp_car(ls));
+      emit_mov_rax_slot(ctx, base + n);
+    }
     sexp_inc_context_depth(ctx, 1);
   }
   for (ls = sexp_lambda_sv(let); sexp_pairp(ls); ls = sexp_cdr(ls))
@@ -3978,6 +4158,7 @@ static void generate_let (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   }
   g_lets[g_num_lets].lam = let;
   g_lets[g_num_lets].base = base;
+  g_lets[g_num_lets].raw = raw;
   g_num_lets++;
   emit_param_type_checks(ctx, let, n, base);
   sexp_context_tailp(ctx) = tailp;
@@ -3987,6 +4168,7 @@ static void generate_let (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   if (!g_non_allocating_bb)
     emit_clear_slots(ctx, base, n);
   sexp_inc_context_depth(ctx, -n);
+  if (raw >= 0) g_raw_top -= num_params;
 }
 
 static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
