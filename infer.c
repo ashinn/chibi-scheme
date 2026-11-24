@@ -1176,6 +1176,22 @@ static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp 
   }
 }
 
+/************************* Inline Lets ********************************/
+
+/* Is app a let, ((lambda (params ...) body) args ...) within lam, */
+/* which native code compiles inline, binding the params in lam's */
+/* frame instead of making and calling a closure? */
+int sexp_inline_letp (sexp ctx, sexp lam, sexp app) {
+  sexp op, p, a;
+  if (!lam || !sexp_lambdap(lam) || !sexp_pairp(app)) return 0;
+  op = sexp_car(app);
+  if (!sexp_lambdap(op) || sexp_pairp(sexp_lambda_locals(op))) return 0;
+  for (p = sexp_lambda_params(op), a = sexp_cdr(app);
+       sexp_pairp(p) && sexp_pairp(a); p = sexp_cdr(p), a = sexp_cdr(a))
+    ;
+  return sexp_nullp(p) && sexp_nullp(a);
+}
+
 /************************* Allocation Analysis ************************/
 
 /* Conservatively, can evaluating x allocate?  Self calls (to self_name */
@@ -1221,6 +1237,17 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
           return 1;
       }
       return 0;
+    }
+
+    if (sexp_inline_letp(ctx, lam, x)) {
+      /* boxing mutated params allocates */
+      if (sexp_pairp(sexp_lambda_sv(op)))
+        return 1;
+      for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
+        if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
+          return 1;
+      }
+      return sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(op), self_name, self_loc);
     }
 
     if (self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))

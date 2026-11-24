@@ -1464,6 +1464,21 @@ static int g_non_allocating_bb = 0;
 /* of the (possibly shared and live) context stack */
 static sexp_sint_t g_loop_start = 0;
 
+/* the lets inlined in the code being generated, innermost last, with */
+/* the frame slots holding their params; those below g_lets_floor are */
+/* in enclosing procedures, whose frames aren't the current one */
+struct inline_let { sexp lam; int base; };
+static struct inline_let *g_lets = NULL;
+static int g_num_lets = 0, g_lets_floor = 0, g_lets_size = 0;
+
+/* the frame slot of the param name of an inlined let lam, or -1 */
+static int inline_let_slot (sexp ctx, sexp lam, sexp name) {
+  for (int i = g_num_lets - 1; i >= g_lets_floor; i--)
+    if (g_lets[i].lam == lam)
+      return g_lets[i].base + (int)sexp_param_index(ctx, lam, name);
+  return -1;
+}
+
 /* movabsq $fn, %r11; callq *%r11 */
 static void emit_call_abs (sexp ctx, void *fn) {
   emit_u8(ctx, 0x49); emit_u8(ctx, 0xbb);
@@ -1735,7 +1750,7 @@ static uint8_t cmp_fail_cc (sexp_sint_t code, int inverse) {
 /* Check the params inferred to have types demanded on entry, in the */
 /* order the body would have checked them.  On failure raise the same */
 /* error, then return, since the body relies on the types. */
-static void emit_param_type_checks (sexp ctx, sexp lam, int num_params) {
+static void emit_param_type_checks (sexp ctx, sexp lam, int num_params, int base) {
   int k, order, o, tag, subtype;
   sexp_sint_t jnz, jz, jne, jne_sub, ok_jmp;
   for (o = 0; o < num_params; o++) {
@@ -1743,7 +1758,7 @@ static void emit_param_type_checks (sexp ctx, sexp lam, int num_params) {
       if ((tag = sexp_param_checked_type(lam, k, &order, &subtype)) >= 0 && order == o)
         break;
     if (k == num_params) break;
-    emit_mov_slot_rax(ctx, get_local_slot(lam, k));
+    emit_mov_slot_rax(ctx, base >= 0 ? base + k : get_local_slot(lam, k));
     emit_check_pointer(ctx, REG_RAX, &jnz, &jz);
     jne = emit_check_tag(ctx, REG_RAX, tag);
     jne_sub = -1;
@@ -1863,9 +1878,11 @@ static void generate_lit (sexp ctx, sexp value) {
 static void generate_non_global_ref (sexp ctx, sexp name, sexp cell,
                                      sexp lambda, sexp fv, int unboxp) {
   sexp loc = sexp_cdr(cell);
+  int slot;
   if (loc == lambda && sexp_lambdap(lambda)) {
     int k = sexp_param_index(ctx, lambda, name);
-    int slot = get_local_slot(lambda, k);
+    emit_mov_slot_rax(ctx, get_local_slot(lambda, k));
+  } else if ((slot = inline_let_slot(ctx, loc, name)) >= 0) {
     emit_mov_slot_rax(ctx, slot);
   } else {
     int i = 0;
@@ -1958,8 +1975,9 @@ static void generate_set (sexp ctx, sexp set) {
       emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x41); emit_u8(ctx, 0x10); // movq %rax, 16(%rcx)
     } else {
       // Local unboxed var
-      int k = sexp_param_index(ctx, lambda, sexp_ref_name(ref));
-      int slot = get_local_slot(lambda, k);
+      int slot = inline_let_slot(ctx, lambda, sexp_ref_name(ref));
+      if (slot < 0)
+        slot = get_local_slot(lambda, sexp_param_index(ctx, lambda, sexp_ref_name(ref)));
       emit_mov_slot_rax(ctx, temp_slot);
       emit_mov_rax_slot(ctx, slot);
     }
@@ -3774,6 +3792,11 @@ static int compute_ast_max_depth (sexp ctx, sexp x) {
       }
       int d_op = i + compute_ast_max_depth(ctx, sexp_car(x));
       if (d_op > max_d) max_d = d_op;
+      if (sexp_lambdap(sexp_car(x))) {
+        /* an inlined let's body runs above its params */
+        d_op = i + compute_ast_max_depth(ctx, sexp_lambda_body(sexp_car(x)));
+        if (d_op > max_d) max_d = d_op;
+      }
       if (i > max_d) max_d = i;
       return max_d;
     }
@@ -3866,16 +3889,19 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   g_loop_start = sexp_unbox_fixnum(sexp_context_pos(ctx2));
 
   // Check the types the body relies on params having, on every entry
-  emit_param_type_checks(ctx2, lambda, num_params);
+  emit_param_type_checks(ctx2, lambda, num_params, -1);
 
   int saved_non_alloc = g_non_allocating_bb;
 
   g_non_allocating_bb = sexp_lambda_non_alloc_p(lambda);
 
-  // Generate body
+  // Generate body, where the enclosing lets' params are closure vars
+  int saved_lets_floor = g_lets_floor;
+  g_lets_floor = g_num_lets;
   sexp_context_tailp(ctx2) = 1;
   generate(ctx2, name, loc, lambda, sexp_lambda_body(lambda));
   g_loop_start = saved_loop_start;
+  g_lets_floor = saved_lets_floor;
 
   g_non_allocating_bb = saved_non_alloc;
 
@@ -3922,9 +3948,52 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   sexp_gc_release2(ctx);
 }
 
+/* ((lambda (params ...) body) args ...): bind the params in slots of */
+/* the current frame and generate the body in place, in tail position */
+/* if the let is */
+static void generate_let (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
+  sexp let = sexp_car(app), ls;
+  sexp_uint_t tailp = sexp_context_tailp(ctx);
+  int base = get_temp_slot(ctx), n = 0;
+
+  sexp_context_tailp(ctx) = 0;
+  for (ls = sexp_cdr(app); sexp_pairp(ls); ls = sexp_cdr(ls), n++) {
+    generate(ctx, 0, 0, 0, sexp_car(ls));
+    emit_mov_rax_slot(ctx, base + n);
+    sexp_inc_context_depth(ctx, 1);
+  }
+  for (ls = sexp_lambda_sv(let); sexp_pairp(ls); ls = sexp_cdr(ls))
+    emit_box_var(ctx, sexp_car(ls), base + (int)sexp_param_index(ctx, let, sexp_car(ls)));
+
+  /* always inline, since the allocation analysis assumes it */
+  if (g_num_lets == g_lets_size) {
+    int size = g_lets_size ? 2 * g_lets_size : 32;
+    struct inline_let *lets = realloc(g_lets, size * sizeof(struct inline_let));
+    if (!lets) {
+      sexp_context_exception(ctx) = sexp_global(ctx, SEXP_G_OOM_ERROR);
+      return;
+    }
+    g_lets = lets;
+    g_lets_size = size;
+  }
+  g_lets[g_num_lets].lam = let;
+  g_lets[g_num_lets].base = base;
+  g_num_lets++;
+  emit_param_type_checks(ctx, let, n, base);
+  sexp_context_tailp(ctx) = tailp;
+  generate(ctx, name, loc, lam, sexp_lambda_body(let));
+  g_num_lets--;
+
+  if (!g_non_allocating_bb)
+    emit_clear_slots(ctx, base, n);
+  sexp_inc_context_depth(ctx, -n);
+}
+
 static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   if (sexp_opcodep(sexp_car(app))) {
     generate_opcode_app(ctx, app);
+  } else if (sexp_inline_letp(ctx, sexp_context_lambda(ctx), app)) {
+    generate_let(ctx, name, loc, lam, app);
   } else if (sexp_context_tailp(ctx) && sexp_refp(sexp_car(app))
              && name && (name == sexp_ref_name(sexp_car(app)))
              && (loc == sexp_ref_loc(sexp_car(app)))
