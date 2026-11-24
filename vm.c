@@ -2080,6 +2080,29 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     sexp_context_top(ctx) = --top;
     _ARG1 = sexp_make_boolean((sexp_sint_t)tmp1 <= (sexp_sint_t)tmp2);
     break;
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+  case SEXP_OP_UVECTOR_REF:
+    _ALIGN_IP();
+    sexp_context_top(ctx) = top;
+    tmp1 = sexp_uvector_ref(ctx, self, _SWORD0, _ARG1, _ARG2);
+    ip += sizeof(sexp);
+    _ARG2 = tmp1;
+    top--;
+    sexp_check_exception();
+    break;
+  case SEXP_OP_UVECTOR_SET:
+    _ALIGN_IP();
+    sexp_context_top(ctx) = top;
+    tmp1 = sexp_uvector_set(ctx, self, _SWORD0, _ARG1, _ARG2, _ARG3);
+    ip += sizeof(sexp);
+    if (sexp_exceptionp(tmp1)) {
+      top -= 2;
+      _ARG1 = tmp1;
+      goto call_error_handler;
+    }
+    top -= 3;
+    break;
+#endif
   case SEXP_OP_CHAR2INT:
     if (! sexp_charp(_ARG1))
       sexp_raise("char->integer: not a character", sexp_list1(ctx, _ARG1));

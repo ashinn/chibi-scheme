@@ -1266,6 +1266,12 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
     sexp_slot_set(args[0], sexp_unbox_fixnum(sexp_opcode_data2(op)), args[1]);
     return SEXP_VOID;
   }
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+  case SEXP_OP_UVECTOR_REF:
+    return sexp_uvector_ref(ctx, op, sexp_unbox_fixnum(sexp_opcode_data(op)), args[0], args[1]);
+  case SEXP_OP_UVECTOR_SET:
+    return sexp_uvector_set(ctx, op, sexp_unbox_fixnum(sexp_opcode_data(op)), args[0], args[1], args[2]);
+#endif
   case SEXP_OP_SLOTN_REF:
     return sexp_native_slotn_ref(ctx, self, args[0], args[1], args[2]);
   case SEXP_OP_SLOTN_SET:
@@ -1300,6 +1306,10 @@ static inline int sexp_opcode_can_fail (sexp_sint_t code, sexp_sint_t oclass) {
   case SEXP_OP_WRITE_STRING:
   case SEXP_OP_APPLY1:
   case SEXP_OP_PARAMETER_REF:
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+  case SEXP_OP_UVECTOR_REF:
+  case SEXP_OP_UVECTOR_SET:
+#endif
     return 1;
   default:
     return 0;
@@ -2170,6 +2180,178 @@ static void generate_seq (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   generate(ctx, name, loc, lam, sexp_car(head));
 }
 
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+/* How each uniform vector element type is loaded and stored inline. */
+/* Types without an entry (u1, the mini floats, complex) always take */
+/* the generic path. */
+enum { UV_NONE, UV_SIGNED, UV_UNSIGNED, UV_FLOAT };
+static const struct { uint8_t kind, scale; } uvector_access[SEXP_END_OF_UNIFORM_TYPES] = {
+  [SEXP_S8]  = {UV_SIGNED, 0},   [SEXP_S16] = {UV_SIGNED, 1},
+  [SEXP_U16] = {UV_UNSIGNED, 1}, [SEXP_S32] = {UV_SIGNED, 2},
+  [SEXP_U32] = {UV_UNSIGNED, 2}, [SEXP_S64] = {UV_SIGNED, 3},
+  [SEXP_U64] = {UV_UNSIGNED, 3}, [SEXP_F32] = {UV_FLOAT, 2},
+  [SEXP_F64] = {UV_FLOAT, 3},
+};
+
+static int uvector_op_etype (sexp op) {
+  sexp et = sexp_opcode_data(op);
+  if (!sexp_fixnump(et) || sexp_unbox_fixnum(et) <= 0
+      || sexp_unbox_fixnum(et) >= SEXP_END_OF_UNIFORM_TYPES
+      || uvector_access[sexp_unbox_fixnum(et)].kind == UV_NONE)
+    return -1;
+  return (int)sexp_unbox_fixnum(et);
+}
+
+#define UV_OFF(field) ((uint8_t)offsetof(struct sexp_struct, value.uvector.field))
+/* the element data, after the header and length of the bytes object */
+#define UV_DATA_OFF ((uint8_t)sexp_sizeof(bytes))
+
+/* Check %rcx is a uniform vector of etype (mutable if setp) and the */
+/* fixnum index in idx_reg (0 %rax, 2 %rdx) is in range, leaving it */
+/* unboxed and the element data's base in %rcx.  The slow path jumps */
+/* go in slow[0..6], -1 for the checks elided. */
+static void emit_uvector_checks (sexp ctx, sexp lam, sexp uv, sexp idx, int etype,
+                                 int idx_reg, int setp, sexp_sint_t *slow) {
+  int k;
+  for (k = 0; k < 7; k++) slow[k] = -1;
+  emit_check_type(ctx, uv, REG_RCX, SEXP_UNIFORM_VECTOR, &slow[0], &slow[1], &slow[2]);
+  // cmpb $etype, element_type(%rcx)
+  emit_u8(ctx, 0x80); emit_u8(ctx, 0x79); emit_u8(ctx, UV_OFF(element_type));
+  emit_u8(ctx, (uint8_t)etype);
+  slow[3] = emit_jcc(ctx, 0x85);
+  if (setp) {
+    // testb $1, 5(%rcx) (immutable check)
+    emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
+    slow[4] = emit_jcc(ctx, 0x85);
+  }
+  if (!sexp_proven_fixnump(ctx, lam, idx)) {
+    // testb $1, %al / %dl
+    if (idx_reg == 0) { emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01); }
+    else { emit_u8(ctx, 0xf6); emit_u8(ctx, 0xc2); emit_u8(ctx, 0x01); }
+    slow[5] = emit_jcc(ctx, 0x84);
+  }
+  // sarq $1, idx; cmpq length(%rcx), idx; jae slow (also catches < 0)
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8 | idx_reg);
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x3b); emit_u8(ctx, 0x41 | (idx_reg << 3));
+  emit_u8(ctx, UV_OFF(length));
+  slow[6] = emit_jcc(ctx, 0x83);
+  // movq bytes(%rcx), %rcx
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x49); emit_u8(ctx, UV_OFF(bytes));
+}
+
+/* (Xvector-ref uv i), boxing the element */
+static int generate_uvector_ref (sexp ctx, sexp lam, sexp op, sexp uv, sexp idx, int temp_start) {
+  int etype = uvector_op_etype(op), kind, scale;
+  sexp_sint_t slow[7], jne_fix = -1;
+  if (etype < 0) return 0;
+  kind = uvector_access[etype].kind;
+  scale = uvector_access[etype].scale;
+  generate_to_temp(ctx, uv, temp_start);
+  generate_to_temp(ctx, idx, temp_start + 1);
+  emit_mov_slot_rcx(ctx, temp_start);
+  emit_uvector_checks(ctx, lam, uv, idx, etype, 0, 0, slow);
+  uint8_t sib = (uint8_t)((scale << 6) | 0x01);  /* (%rcx, %rax, 1 << scale) */
+  if (kind == UV_FLOAT) {
+    // movss / movsd data(%rcx, %rax, n), %xmm0
+    emit_u8(ctx, scale == 2 ? 0xf3 : 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x10);
+    emit_u8(ctx, 0x44); emit_u8(ctx, sib); emit_u8(ctx, UV_DATA_OFF);
+    // cvtss2sd %xmm0, %xmm0
+    if (scale == 2) { emit_u8(ctx, 0xf3); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x5a); emit_u8(ctx, 0xc0); }
+    // sexp_make_flonum(ctx, %xmm0); the uvector and index are in temp slots
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);  // mov %r12, %rdi
+    emit_call_abs(ctx, (void*)sexp_make_flonum);
+  } else {
+    // load into %rax, sign or zero extending
+    static const uint8_t sx[4][3] = {{0x48, 0x0f, 0xbe}, {0x48, 0x0f, 0xbf}, {0x48, 0x63, 0}, {0x48, 0x8b, 0}};
+    static const uint8_t zx[4][3] = {{0x48, 0x0f, 0xb6}, {0x48, 0x0f, 0xb7}, {0x8b, 0, 0}, {0x48, 0x8b, 0}};
+    const uint8_t *ins = (kind == UV_SIGNED ? sx : zx)[scale];
+    int k;
+    for (k = 0; k < 3 && ins[k]; k++) emit_u8(ctx, ins[k]);
+    emit_u8(ctx, 0x44); emit_u8(ctx, sib); emit_u8(ctx, UV_DATA_OFF);
+    if (scale == 3) {
+      /* 64-bit elements outside the fixnum range become bignums */
+      if (kind == UV_SIGNED) {
+        // leaq (%rax,%rax), %rdx; sarq $1, %rdx; cmpq %rax, %rdx
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x14); emit_u8(ctx, 0x00);
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xfa);
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc2);
+      } else {
+        // movq %rax, %rdx; shrq $62, %rdx
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2);
+        emit_u8(ctx, 0x48); emit_u8(ctx, 0xc1); emit_u8(ctx, 0xea); emit_u8(ctx, 0x3e);
+      }
+      jne_fix = emit_jcc(ctx, 0x85);
+    }
+    // leaq 1(%rax,%rax), %rax (tag as fixnum)
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x44); emit_u8(ctx, 0x00); emit_u8(ctx, 0x01);
+  }
+  return emit_inlined_op_slow_path(ctx, op, temp_start, 2, slow[0], slow[1], slow[2],
+                                   slow[3], slow[4], slow[5], slow[6], jne_fix);
+}
+
+/* (Xvector-set! uv i v), with v already in range for the element type */
+static int generate_uvector_set (sexp ctx, sexp lam, sexp op, sexp uv, sexp idx, sexp val, int temp_start) {
+  int etype = uvector_op_etype(op), kind, scale;
+  sexp_sint_t slow[7], vslow[3] = {-1, -1, -1};
+  if (etype < 0) return 0;
+  kind = uvector_access[etype].kind;
+  scale = uvector_access[etype].scale;
+  generate_to_temp(ctx, uv, temp_start);
+  generate_to_temp(ctx, idx, temp_start + 1);
+  generate_to_temp(ctx, val, temp_start + 2);
+  emit_mov_slot_rcx(ctx, temp_start);
+  emit_mov_slot_rdx(ctx, temp_start + 1);
+  // %rax holds the value
+  emit_uvector_checks(ctx, lam, uv, idx, etype, 2, 1, slow);
+  uint8_t sib = (uint8_t)((scale << 6) | 0x11);  /* (%rcx, %rdx, 1 << scale) */
+  if (kind == UV_FLOAT) {
+    /* only flonums inline, other reals convert on the slow path */
+    emit_check_pointer(ctx, REG_RAX, &vslow[0], &vslow[1]);
+    vslow[2] = emit_check_tag(ctx, REG_RAX, SEXP_FLONUM);
+    // movsd flonum(%rax), %xmm0
+    emit_u8(ctx, 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x10); emit_u8(ctx, 0x40);
+    emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.flonum));
+    // cvtsd2ss %xmm0, %xmm0
+    if (scale == 2) { emit_u8(ctx, 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x5a); emit_u8(ctx, 0xc0); }
+    // movss / movsd %xmm0, data(%rcx, %rdx, n)
+    emit_u8(ctx, scale == 2 ? 0xf3 : 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x11);
+    emit_u8(ctx, 0x44); emit_u8(ctx, sib); emit_u8(ctx, UV_DATA_OFF);
+  } else {
+    /* a fixnum in range; anything else errors on the slow path */
+    // testb $1, %al; jz slow; sarq $1, %rax
+    emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+    vslow[0] = emit_jcc(ctx, 0x84);
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
+    if (scale < 3) {
+      /* in range iff extending its low bits gives it back */
+      static const uint8_t sx[3][3] = {{0x48, 0x0f, 0xbe}, {0x48, 0x0f, 0xbf}, {0x48, 0x63, 0}};
+      static const uint8_t zx[3][3] = {{0x48, 0x0f, 0xb6}, {0x48, 0x0f, 0xb7}, {0x89, 0, 0}};
+      const uint8_t *ins = (kind == UV_SIGNED ? sx : zx)[scale];
+      int k;
+      for (k = 0; k < 3 && ins[k]; k++) emit_u8(ctx, ins[k]);
+      /* movl %eax, %esi has the operands the other way round */
+      emit_u8(ctx, ins[0] == 0x89 ? 0xc6 : 0xf0);  // %rax -> %rsi
+      // cmpq %rax, %rsi
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x39); emit_u8(ctx, 0xc6);
+      vslow[1] = emit_jcc(ctx, 0x85);
+    } else if (kind == UV_UNSIGNED) {
+      // testq %rax, %rax; js slow
+      emit_u8(ctx, 0x48); emit_u8(ctx, 0x85); emit_u8(ctx, 0xc0);
+      vslow[1] = emit_jcc(ctx, 0x88);
+    }
+    // mov %al / %ax / %eax / %rax, data(%rcx, %rdx, n)
+    if (scale == 1) emit_u8(ctx, 0x66);
+    if (scale == 3) emit_u8(ctx, 0x48);
+    emit_u8(ctx, scale == 0 ? 0x88 : 0x89);
+    emit_u8(ctx, 0x44); emit_u8(ctx, sib); emit_u8(ctx, UV_DATA_OFF);
+  }
+  emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+  return emit_inlined_op_slow_path(ctx, op, temp_start, 3, slow[0], slow[1], slow[2],
+                                   slow[3], slow[4], slow[5], slow[6],
+                                   vslow[0], vslow[1], vslow[2]);
+}
+#endif
+
 static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t num_args, int temp_start) {
   sexp_sint_t code = sexp_opcode_code(op);
   sexp lam = sexp_context_lambda(ctx);
@@ -2396,6 +2578,10 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
 
   // 2-argument cases
   if (num_args == 2) {
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+    if (code == SEXP_OP_UVECTOR_REF)
+      return generate_uvector_ref(ctx, lam, op, sexp_cadr(app), sexp_caddr(app), temp_start);
+#endif
     sexp arg0 = sexp_cadr(app);
     sexp arg1 = sexp_caddr(app);
 
@@ -2901,6 +3087,11 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
 
   // 3-argument cases
   if (num_args == 3) {
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+    if (code == SEXP_OP_UVECTOR_SET)
+      return generate_uvector_set(ctx, lam, op, sexp_cadr(app), sexp_caddr(app),
+                                  sexp_cadddr(app), temp_start);
+#endif
     sexp arg0 = sexp_cadr(app);
     sexp arg1 = sexp_caddr(app);
     sexp arg2 = sexp_cadddr(app);

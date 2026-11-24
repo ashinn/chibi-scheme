@@ -18,7 +18,8 @@ static const char* sexp_opcode_names_[] =
    "LT", "LE", "EQN", "EQ",
    "CHAR->INTEGER", "INTEGER->CHAR", "CHAR-UPCASE", "CHAR-DOWNCASE",
    "WRITE-CHAR", "WRITE-STRING", "READ-CHAR", "PEEK-CHAR",
-   "YIELD", "FORCE", "RET", "DONE", "SC?", "SC<", "SC<="
+   "YIELD", "FORCE", "RET", "DONE", "SC?", "SC<", "SC<=",
+   "UVECTOR-REF", "UVECTOR-SET"
   };
 
 const char** sexp_opcode_names = sexp_opcode_names_;

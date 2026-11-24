@@ -408,6 +408,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
     case SEXP_OP_STACK_REF:
     case SEXP_OP_TAIL_CALL:
     case SEXP_OP_TYPEP:
+    case SEXP_OP_UVECTOR_REF:
+    case SEXP_OP_UVECTOR_SET:
       ip += sizeof(sexp);
       break;
     case SEXP_OP_SLOT_REF:
@@ -465,6 +467,8 @@ static sexp disasm (sexp ctx, sexp self, sexp bc, sexp out, int depth) {
   case SEXP_OP_CLOSURE_REF:
   case SEXP_OP_TYPEP:
   case SEXP_OP_RESERVE:
+  case SEXP_OP_UVECTOR_REF:
+  case SEXP_OP_UVECTOR_SET:
     sexp_write_integer(ctx, ((sexp_sint_t*)ip)[0], out);
     ip += sizeof(sexp);
     break;

@@ -194,4 +194,70 @@
           (test-error (u1vector-ref uv 9)))
         )
 
+      ;; The accessors are opcodes the native backend inlines, so check
+      ;; boundary values, range errors and conversions, inside
+      ;; procedures where they're compiled.
+      (test-group "uvectors/element access"
+        (define (store set! make vals)
+          (let ((v (make (length vals))))
+            (let lp ((i 0) (ls vals))
+              (cond ((pair? ls) (set! v i (car ls)) (lp (+ i 1) (cdr ls)))
+                    (else v)))))
+        (define (fetch ref v n)
+          (let lp ((i (- n 1)) (acc '()))
+            (if (< i 0) acc (lp (- i 1) (cons (ref v i) acc)))))
+        (define-syntax test-access
+          (syntax-rules ()
+            ((test-access make ref set vals)
+             (let ((v (store (lambda (v i x) (set v i x)) make vals))
+                   (n (length vals)))
+               (test vals (fetch (lambda (v i) (ref v i)) v n))
+               (test-error (ref v n))
+               (test-error (ref v -1))
+               (test-error (set v n (car vals)))))))
+        (test-access make-s8vector s8vector-ref s8vector-set! '(-128 -1 0 127))
+        (test-access make-s16vector s16vector-ref s16vector-set!
+                     '(-32768 -1 0 32767))
+        (test-access make-u16vector u16vector-ref u16vector-set! '(0 1 65535))
+        (test-access make-s32vector s32vector-ref s32vector-set!
+                     '(-2147483648 -1 2147483647))
+        (test-access make-u32vector u32vector-ref u32vector-set! '(0 4294967295))
+        ;; values on both sides of the fixnum range
+        (test-access make-s64vector s64vector-ref s64vector-set!
+                     '(-9223372036854775808 -4611686018427387904
+                       4611686018427387903 4611686018427387904
+                       9223372036854775807))
+        (test-access make-u64vector u64vector-ref u64vector-set!
+                     '(0 4611686018427387903 4611686018427387904
+                       18446744073709551615))
+        (test-access make-f32vector f32vector-ref f32vector-set! '(1.5 -0.25))
+        (test-access make-f64vector f64vector-ref f64vector-set!
+                     '(1.5 -0.1 1e300 +inf.0))
+        (test '#s16(-32768 32767)
+            (store (lambda (v i x) (s16vector-set! v i x)) make-s16vector
+                   '(-32768 32767)))
+        (let ((set-u16! (lambda (v i x) (u16vector-set! v i x)))
+              (set-u32! (lambda (v i x) (u32vector-set! v i x)))
+              (set-s8! (lambda (v i x) (s8vector-set! v i x)))
+              (set-u64! (lambda (v i x) (u64vector-set! v i x)))
+              (set-f64! (lambda (v i x) (f64vector-set! v i x)))
+              (ref-f64 (lambda (v i) (f64vector-ref v i))))
+          (test-error (set-s8! (make-s8vector 1) 0 128))
+          (test-error (set-s8! (make-s8vector 1) 0 -129))
+          (test-error (set-u16! (make-u16vector 1) 0 65536))
+          (test-error (set-u16! (make-u16vector 1) 0 -1))
+          (test-error (set-u16! (make-u16vector 1) 0 1.0))
+          (test-error (set-u32! (make-u32vector 1) 0 4294967296))
+          (test-error (set-u64! (make-u64vector 1) 0 -1))
+          (test-error (set-u64! (make-u64vector 1) 0 18446744073709551616))
+          (test-error (set-f64! (make-f64vector 1) 0 'x))
+          (test-error (ref-f64 (make-f32vector 1) 0))
+          (test-error (ref-f64 (vector 1.0) 0))
+          (test-error (ref-f64 (make-f64vector 1) 0.0))
+          ;; exact reals are converted
+          (let ((v (make-f64vector 2)))
+            (set-f64! v 0 3)
+            (set-f64! v 1 1/2)
+            (test '#f64(3.0 0.5) v))))
+
       (test-end))))

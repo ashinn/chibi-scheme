@@ -2176,6 +2176,61 @@ sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp ty
   return res;
 }
 
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+/* Accessors for uniform vectors of one element type, which is kept */
+/* in the opcode's data, so a backend can specialize the access. */
+static sexp sexp_check_uvector_etype (sexp ctx, sexp self, sexp etype) {
+  if (!sexp_fixnump(etype))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, etype);
+  if (sexp_unbox_fixnum(etype) <= SEXP_NOT_A_UNIFORM_TYPE
+      || sexp_unbox_fixnum(etype) >= SEXP_END_OF_UNIFORM_TYPES
+      || sexp_unbox_fixnum(etype) == SEXP_U8)  /* u8vectors are bytevectors */
+    return sexp_xtype_exception(ctx, self, "unsupported uniform vector type", etype);
+  return NULL;
+}
+
+sexp sexp_make_uvector_getter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype) {
+  sexp_sint_t et;
+  int fix;
+  sexp res = sexp_check_uvector_etype(ctx, self, etype);
+  if (res) return res;
+  et = sexp_unbox_fixnum(etype);
+  /* elements of these types are always fixnums, so never allocate */
+  fix = et == SEXP_U1 || et == SEXP_S8 || et == SEXP_S16 || et == SEXP_U16
+#if SEXP_64_BIT
+    || et == SEXP_S32 || et == SEXP_U32
+#endif
+    ;
+  res = sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_GETTER),
+                         sexp_make_fixnum(SEXP_OP_UVECTOR_REF), SEXP_TWO,
+                         sexp_make_fixnum(fix ? 32 : 0),
+                         sexp_make_fixnum(SEXP_UNIFORM_VECTOR),
+                         sexp_make_fixnum(SEXP_FIXNUM), SEXP_ZERO, etype, NULL, NULL);
+  if (!sexp_exceptionp(res))
+    sexp_opcode_return_type(res) =
+      sexp_make_fixnum(fix ? SEXP_FIXNUM
+                       : sexp_uvector_prefix(et) == 'f' ? SEXP_FLONUM
+                       : sexp_uvector_prefix(et) == 'c' ? SEXP_NUMBER
+                       : SEXP_OBJECT);
+  return res;
+}
+
+sexp sexp_make_uvector_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype) {
+  sexp res = sexp_check_uvector_etype(ctx, self, etype);
+  if (res) return res;
+  res = sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_SETTER),
+                         sexp_make_fixnum(SEXP_OP_UVECTOR_SET), SEXP_THREE,
+                         sexp_make_fixnum(32),
+                         sexp_make_fixnum(SEXP_UNIFORM_VECTOR),
+                         sexp_make_fixnum(SEXP_FIXNUM), SEXP_ZERO, etype, NULL, NULL);
+  if (!sexp_exceptionp(res)) {
+    sexp_opcode_return_type(res) = SEXP_VOID;
+    sexp_opcode_arg3_type(res) = sexp_make_fixnum(SEXP_OBJECT);
+  }
+  return res;
+}
+#endif
+
 #endif
 
 static sexp sexp_copy_core (sexp ctx, struct sexp_core_form_struct *core) {

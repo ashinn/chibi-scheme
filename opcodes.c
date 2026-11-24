@@ -274,6 +274,8 @@ _OP(SEXP_OPC_TYPE_PREDICATE, SEXP_OP_TYPEP,  1, 32, _I(SEXP_BOOLEAN), _I(SEXP_OB
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
 _FN2(_I(SEXP_UNIFORM_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_OBJECT), "list->uvector", 0, sexp_list_to_uvector_op),
 _FN2(_I(SEXP_UNIFORM_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-uvector", 0, sexp_make_uvector_op),
+_FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-uvector-getter", 0, sexp_make_uvector_getter_op),
+_FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-uvector-setter", 0, sexp_make_uvector_setter_op),
 #endif
 _FN0(_I(SEXP_OBJECT), "square-brackets-symbol", 0, sexp_square_brackets_sym),
 _OP(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),

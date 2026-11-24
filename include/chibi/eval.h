@@ -244,6 +244,10 @@ SEXP_API sexp sexp_make_type_predicate_op (sexp ctx, sexp self, sexp_sint_t n, s
 SEXP_API sexp sexp_make_constructor_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type);
 SEXP_API sexp sexp_make_getter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type, sexp index);
 SEXP_API sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp type, sexp index);
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+SEXP_API sexp sexp_make_uvector_getter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype);
+SEXP_API sexp sexp_make_uvector_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype);
+#endif
 SEXP_API sexp sexp_type_slot_offset_op (sexp ctx, sexp self, sexp_sint_t n, sexp type, sexp index);
 #endif
 

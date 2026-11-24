@@ -1255,6 +1255,164 @@ sexp sexp_make_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp elt_type, sex
   sexp_gc_release1(ctx);
   return res;
 }
+
+/* NULL if uv is a uniform vector of etype and i is an index into it, */
+/* otherwise the exception to raise */
+static sexp sexp_uvector_check_index (sexp ctx, sexp self, sexp_sint_t etype,
+                                      sexp uv, sexp i) {
+  if (!(sexp_uvectorp(uv) && sexp_uvector_type(uv) == etype))
+    return sexp_type_exception(ctx, self, SEXP_UNIFORM_VECTOR, uv);
+  if (!sexp_fixnump(i))
+    return sexp_type_exception(ctx, self, SEXP_FIXNUM, i);
+  if (sexp_unbox_fixnum(i) < 0
+      || sexp_unbox_fixnum(i) >= (sexp_sint_t)sexp_uvector_length(uv))
+    return sexp_user_exception_ls(ctx, self, "uniform vector index out of range",
+                                  2, i, sexp_make_fixnum(sexp_uvector_length(uv)));
+  return NULL;
+}
+
+/* if the exact integer v fits in the integer type etype, store its */
+/* two's complement bits in *bits and return 1 */
+static int sexp_uvector_integer_bits (sexp v, sexp_sint_t etype, uint64_t *bits) {
+  int width = sexp_uvector_element_size(etype), neg;
+  uint64_t mag, limit;
+  if (sexp_fixnump(v)) {
+    sexp_sint_t x = sexp_unbox_fixnum(v);
+    neg = x < 0;
+    mag = neg ? -(uint64_t)x : (uint64_t)x;
+#if SEXP_USE_BIGNUMS
+  } else if (sexp_bignump(v)) {
+    sexp_uint_t k, hi = sexp_bignum_hi(v);
+    if (hi * sizeof(sexp_uint_t) > sizeof(uint64_t)) return 0;
+    neg = sexp_bignum_sign(v) < 0;
+    for (mag = 0, k = hi; k-- > 0; ) {
+#if SEXP_64_BIT
+      mag = sexp_bignum_data(v)[k];
+#else
+      mag = (mag << 32) | sexp_bignum_data(v)[k];
+#endif
+    }
+#endif
+  } else {
+    return 0;
+  }
+  if (sexp_uvector_prefix(etype) == 'u') {
+    if (neg && mag != 0) return 0;
+    if (width < 64 && mag >> width) return 0;
+    *bits = mag;
+  } else {
+    limit = (uint64_t)1 << (width - 1);
+    if (neg ? mag > limit : mag >= limit) return 0;
+    *bits = neg ? -mag : mag;
+  }
+  return 1;
+}
+
+/* the element at index i of the uniform vector uv of type etype */
+sexp sexp_uvector_ref (sexp ctx, sexp self, sexp_sint_t etype, sexp uv, sexp i) {
+  sexp_sint_t k;
+  void *data;
+  sexp err = sexp_uvector_check_index(ctx, self, etype, uv, i);
+  if (err) return err;
+  k = sexp_unbox_fixnum(i);
+  data = sexp_uvector_data(uv);
+  switch (etype) {
+  case SEXP_U1: return sexp_make_fixnum(sexp_bit_ref(uv, k));
+  case SEXP_S8: return sexp_make_fixnum(((int8_t*)data)[k]);
+  case SEXP_S16: return sexp_make_fixnum(((int16_t*)data)[k]);
+  case SEXP_U16: return sexp_make_fixnum(((uint16_t*)data)[k]);
+  case SEXP_S32: return sexp_make_integer(ctx, ((int32_t*)data)[k]);
+  case SEXP_U32: return sexp_make_unsigned_integer(ctx, ((uint32_t*)data)[k]);
+  case SEXP_S64: return sexp_make_integer(ctx, ((int64_t*)data)[k]);
+  case SEXP_U64: return sexp_make_unsigned_integer(ctx, ((uint64_t*)data)[k]);
+#if SEXP_USE_FLONUMS
+  case SEXP_F32: return sexp_make_flonum(ctx, ((float*)data)[k]);
+  case SEXP_F64: return sexp_make_flonum(ctx, ((double*)data)[k]);
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+  case SEXP_F8: return sexp_make_flonum(ctx, sexp_quarter_to_double(((unsigned char*)data)[k]));
+  case SEXP_F16: return sexp_make_flonum(ctx, sexp_half_to_double(((unsigned short*)data)[k]));
+#endif
+#endif
+#if SEXP_USE_COMPLEX
+  case SEXP_C64:
+  case SEXP_C128: {
+    sexp_gc_var2(real, imag);
+    sexp_gc_preserve2(ctx, real, imag);
+    if (etype == SEXP_C64) {
+      real = sexp_make_flonum(ctx, ((float*)data)[k*2]);
+      imag = sexp_make_flonum(ctx, ((float*)data)[k*2 + 1]);
+    } else {
+      real = sexp_make_flonum(ctx, ((double*)data)[k*2]);
+      imag = sexp_make_flonum(ctx, ((double*)data)[k*2 + 1]);
+    }
+    real = sexp_make_complex(ctx, real, imag);
+    sexp_gc_release2(ctx);
+    return real;
+  }
+#endif
+  default:
+    return sexp_xtype_exception(ctx, self, "unsupported uniform vector type",
+                                sexp_make_fixnum(etype));
+  }
+}
+
+/* store v at index i of the uniform vector uv of type etype */
+sexp sexp_uvector_set (sexp ctx, sexp self, sexp_sint_t etype, sexp uv, sexp i, sexp v) {
+  sexp_sint_t k;
+  void *data;
+  uint64_t bits;
+  sexp err = sexp_uvector_check_index(ctx, self, etype, uv, i);
+  if (err) return err;
+  if (sexp_immutablep(uv))
+    return sexp_xtype_exception(ctx, self, "uniform vector is immutable", uv);
+  k = sexp_unbox_fixnum(i);
+  data = sexp_uvector_data(uv);
+  switch (sexp_uvector_prefix(etype)) {
+  case 'u': case 's':
+    if (!sexp_exact_integerp(v))
+      return sexp_type_exception(ctx, self, SEXP_FIXNUM, v);
+    if (!sexp_uvector_integer_bits(v, etype, &bits))
+      return sexp_user_exception(ctx, self, "uniform vector value out of range", v);
+    switch (etype) {
+    case SEXP_U1: sexp_bit_set(uv, k, bits); break;
+    case SEXP_S8: ((int8_t*)data)[k] = (int8_t)bits; break;
+    case SEXP_S16: case SEXP_U16: ((uint16_t*)data)[k] = (uint16_t)bits; break;
+    case SEXP_S32: case SEXP_U32: ((uint32_t*)data)[k] = (uint32_t)bits; break;
+    default: ((uint64_t*)data)[k] = bits; break;
+    }
+    return SEXP_VOID;
+#if SEXP_USE_FLONUMS
+  case 'f':
+    if (!sexp_realp(v))
+      return sexp_type_exception(ctx, self, SEXP_FLONUM, v);
+    switch (etype) {
+    case SEXP_F32: ((float*)data)[k] = sexp_to_double(ctx, v); break;
+    case SEXP_F64: ((double*)data)[k] = sexp_to_double(ctx, v); break;
+#if SEXP_USE_MINI_FLOAT_UNIFORM_VECTORS
+    case SEXP_F8: ((unsigned char*)data)[k] = sexp_double_to_quarter(sexp_to_double(ctx, v)); break;
+    case SEXP_F16: ((unsigned short*)data)[k] = sexp_double_to_half(sexp_to_double(ctx, v)); break;
+#endif
+    }
+    return SEXP_VOID;
+#endif
+#if SEXP_USE_COMPLEX
+  case 'c':
+    if (!sexp_numberp(v))
+      return sexp_type_exception(ctx, self, SEXP_NUMBER, v);
+    if (etype == SEXP_C64) {
+      ((float*)data)[k*2] = sexp_to_double(ctx, sexp_real_part(v));
+      ((float*)data)[k*2 + 1] = sexp_to_double(ctx, sexp_imag_part(v));
+    } else {
+      ((double*)data)[k*2] = sexp_to_double(ctx, sexp_real_part(v));
+      ((double*)data)[k*2 + 1] = sexp_to_double(ctx, sexp_imag_part(v));
+    }
+    return SEXP_VOID;
+#endif
+  default:
+    return sexp_xtype_exception(ctx, self, "unsupported uniform vector type",
+                                sexp_make_fixnum(etype));
+  }
+}
 #endif
 
 #if SEXP_USE_UTF8_STRINGS

@@ -1773,6 +1773,8 @@ SEXP_API sexp sexp_c_string(sexp ctx, const char *str, sexp_sint_t slen);
 SEXP_API sexp sexp_make_ephemeron_op(sexp ctx, sexp self, sexp_sint_t n, sexp key, sexp value);
 SEXP_API sexp sexp_make_bytes_op(sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp i);
 SEXP_API sexp sexp_make_uvector_op(sexp ctx, sexp self, sexp_sint_t n, sexp elt_type, sexp len);
+SEXP_API sexp sexp_uvector_ref(sexp ctx, sexp self, sexp_sint_t etype, sexp uv, sexp i);
+SEXP_API sexp sexp_uvector_set(sexp ctx, sexp self, sexp_sint_t etype, sexp uv, sexp i, sexp v);
 SEXP_API sexp sexp_make_string_op(sexp ctx, sexp self, sexp_sint_t n, sexp len, sexp ch);
 SEXP_API sexp sexp_substring_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
 SEXP_API sexp sexp_subbytes_op (sexp ctx, sexp self, sexp_sint_t n, sexp str, sexp start, sexp end);
@@ -2107,6 +2109,8 @@ enum sexp_opcode_names {
   SEXP_OP_SCP,
   SEXP_OP_SC_LT,
   SEXP_OP_SC_LE,
+  SEXP_OP_UVECTOR_REF,
+  SEXP_OP_UVECTOR_SET,
   SEXP_OP_NUM_OPCODES
 };
 

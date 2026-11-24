@@ -22,4 +22,29 @@
    c64vector? c64vector-ref c64vector-set!
    c128vector? c128vector-ref c128vector-set!
    )
-  (include-shared "uvprims"))
+  (import (only (chibi) define define-syntax syntax-rules begin quote
+                symbol->string make-uvector-getter make-uvector-setter))
+  (include-shared "uvprims")
+  (begin
+    ;; Element accessors are core opcodes specialized on the element
+    ;; type, so compilers can inline them.
+    (define-syntax define-uvector-accessors
+      (syntax-rules ()
+        ((define-uvector-accessors etype ref set)
+         (begin
+           (define ref (make-uvector-getter (symbol->string 'ref) etype))
+           (define set (make-uvector-setter (symbol->string 'set) etype))))))
+    (define-uvector-accessors SEXP_U1 u1vector-ref u1vector-set!)
+    (define-uvector-accessors SEXP_S8 s8vector-ref s8vector-set!)
+    (define-uvector-accessors SEXP_U16 u16vector-ref u16vector-set!)
+    (define-uvector-accessors SEXP_S16 s16vector-ref s16vector-set!)
+    (define-uvector-accessors SEXP_U32 u32vector-ref u32vector-set!)
+    (define-uvector-accessors SEXP_S32 s32vector-ref s32vector-set!)
+    (define-uvector-accessors SEXP_U64 u64vector-ref u64vector-set!)
+    (define-uvector-accessors SEXP_S64 s64vector-ref s64vector-set!)
+    (define-uvector-accessors SEXP_F8 f8vector-ref f8vector-set!)
+    (define-uvector-accessors SEXP_F16 f16vector-ref f16vector-set!)
+    (define-uvector-accessors SEXP_F32 f32vector-ref f32vector-set!)
+    (define-uvector-accessors SEXP_F64 f64vector-ref f64vector-set!)
+    (define-uvector-accessors SEXP_C64 c64vector-ref c64vector-set!)
+    (define-uvector-accessors SEXP_C128 c128vector-ref c128vector-set!)))
