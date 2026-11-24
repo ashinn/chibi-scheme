@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 
-.PHONY: dist mips-dist cleaner distclean dist-clean test test-all test-dist checkdefs debian snowballs init-dev
+.PHONY: dist mips-dist cleaner distclean dist-clean test test-all test-dist test-poison-gc checkdefs debian snowballs init-dev
 .DEFAULT_GOAL := all
 
 CHIBI_VERSION ?= $(shell cat VERSION)
@@ -257,6 +257,14 @@ test-memory: chibi-scheme-ulimit$(EXE)
 
 test-build:
 	MAKE=$(MAKE) ./tests/build/build-tests.sh
+
+# Rebuild with freed objects overwritten by the GC, so that unrooted
+# references fail instead of reading stale contents.
+test-poison-gc:
+	$(MAKE) cleaner
+	$(MAKE) D="$(D) POISON_GC=1"
+	$(MAKE) D="$(D) POISON_GC=1" test test-libs
+	$(MAKE) cleaner
 
 test-run:
 	./tests/run/command-line-tests.sh

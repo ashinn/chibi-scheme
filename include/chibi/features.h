@@ -126,6 +126,11 @@
 /* uncomment this to add additional native gc checks to verify a magic header */
 /* #define SEXP_USE_HEADER_MAGIC 1 */
 
+/* uncomment this to overwrite objects freed by the native GC with */
+/*   garbage, so that GC bugs (unrooted references to collected */
+/*   objects) fail quickly instead of reading stale contents */
+/* #define SEXP_USE_POISON_GC 1 */
+
 /* uncomment this to add very verbose debugging stats to the native GC */
 /* #define SEXP_USE_DEBUG_GC 1 */
 
@@ -565,6 +570,14 @@
 
 #ifndef SEXP_USE_CONSERVATIVE_GC
 #define SEXP_USE_CONSERVATIVE_GC 0
+#endif
+
+#ifndef SEXP_USE_POISON_GC
+#define SEXP_USE_POISON_GC 0
+#endif
+
+#ifndef SEXP_POISON_GC_BYTE
+#define SEXP_POISON_GC_BYTE 0xa5
 #endif
 
 #ifndef SEXP_USE_FINALIZERS

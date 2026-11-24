@@ -542,6 +542,9 @@ sexp sexp_sweep (sexp ctx, size_t *sum_freed_ptr) {
       if (!sexp_markedp(p)) {
         /* free p */
         sum_freed += size;
+#if SEXP_USE_POISON_GC
+        memset((void*)p, SEXP_POISON_GC_BYTE, size);
+#endif
         if (((((char*)q) + q->size) == (char*)p) && (q != h->free_list)) {
           /* merge q with p */
           if (r && r->size && ((((char*)p)+size) == (char*)r)) {
