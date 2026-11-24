@@ -735,6 +735,46 @@ struct param_steps {
 
 static void scan_recursive_calls (sexp ctx, sexp target_lam, sexp name, sexp loc,
                                   sexp x, int *types, struct param_steps *steps,
+                                  int num_params, const int *ok);
+
+/* Scan the body of a let, app, with its params known to be flonums */
+/* where their values are, so the recursive calls in it see them, as */
+/* those of a loop param stepped through a let.  Otherwise they keep */
+/* the types found so far, which are sound. */
+static void scan_let_recursive_calls (sexp ctx, sexp target_lam, sexp name, sexp loc,
+                                      sexp app, int *types, struct param_steps *steps,
+                                      int num_params, const int *ok) {
+  sexp let = sexp_car(app), p, a, old, t;
+  sexp_gc_var2(hyp, saved);
+  for (p = sexp_lambda_params(let), a = sexp_cdr(app); sexp_pairp(p) && sexp_pairp(a);
+       p = sexp_cdr(p), a = sexp_cdr(a))
+    ;
+  if (!sexp_nullp(p) || !sexp_nullp(a)) {
+    scan_recursive_calls(ctx, target_lam, name, loc, let, types, steps, num_params, ok);
+    return;
+  }
+  sexp_gc_preserve2(ctx, hyp, saved);
+  saved = sexp_lambda_param_types(let);
+  hyp = SEXP_NULL;
+  for (p = sexp_lambda_params(let), a = sexp_cdr(app), old = saved; sexp_pairp(p);
+       p = sexp_cdr(p), a = sexp_cdr(a), old = sexp_pairp(old) ? sexp_cdr(old) : old) {
+    if (ENTRY_TYPE(infer_expr_entry(ctx, sexp_car(a))) == SEXP_FLONUM
+        && !sexp_truep(sexp_memq(ctx, sexp_car(p), sexp_lambda_sv(let))))
+      t = sexp_make_fixnum(SEXP_FLONUM);
+    else if (sexp_pairp(old))
+      t = sexp_car(old);
+    else
+      t = sexp_make_fixnum(SEXP_OBJECT);
+    hyp = sexp_cons(ctx, t, hyp);
+  }
+  sexp_lambda_param_types(let) = sexp_nreverse(ctx, hyp);
+  scan_recursive_calls(ctx, target_lam, name, loc, let, types, steps, num_params, ok);
+  sexp_lambda_param_types(let) = saved;
+  sexp_gc_release2(ctx);
+}
+
+static void scan_recursive_calls (sexp ctx, sexp target_lam, sexp name, sexp loc,
+                                  sexp x, int *types, struct param_steps *steps,
                                   int num_params, const int *ok) {
   if (!x || !sexp_pointerp(x) || sexp_litp(x)) return;
   int tag = sexp_pointer_tag(x);
@@ -805,6 +845,8 @@ static void scan_recursive_calls (sexp ctx, sexp target_lam, sexp name, sexp loc
           types[k] = SEXP_OBJECT;
         }
       }
+    } else if (sexp_lambdap(op)) {
+      scan_let_recursive_calls(ctx, target_lam, name, loc, x, types, steps, num_params, ok);
     } else {
       scan_recursive_calls(ctx, target_lam, name, loc, op, types, steps, num_params, ok);
     }
