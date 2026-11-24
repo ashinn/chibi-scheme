@@ -12,7 +12,6 @@
            (only (chibi) list->uvector make-uvector))
   (begin
     (define (f8? x) (and (real? x) (inexact? x)))
-    (define f8vector-length uvector-length)
     (define (make-f8vector len . o)
       (let ((res (make-uvector SEXP_F8 len)))
         (if (and (pair? o) (not (zero? (car o))))
@@ -31,7 +30,6 @@
     (define (list->f8vector ls) (list->uvector SEXP_F8 ls))
     (define (f8vector . args) (list->f8vector args))
     (define (f16? x) (and (real? x) (inexact? x)))
-    (define f16vector-length uvector-length)
     (define (make-f16vector len . o)
       (let ((res (make-uvector SEXP_F16 len)))
         (if (and (pair? o) (not (zero? (car o))))

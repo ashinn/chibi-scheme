@@ -1413,6 +1413,12 @@ sexp sexp_uvector_set (sexp ctx, sexp self, sexp_sint_t etype, sexp uv, sexp i, 
                                 sexp_make_fixnum(etype));
   }
 }
+
+sexp sexp_uvector_checked_length (sexp ctx, sexp self, sexp_sint_t etype, sexp uv) {
+  if (!(sexp_uvectorp(uv) && sexp_uvector_type(uv) == etype))
+    return sexp_type_exception(ctx, self, SEXP_UNIFORM_VECTOR, uv);
+  return sexp_make_fixnum(sexp_uvector_length(uv));
+}
 #endif
 
 #if SEXP_USE_UTF8_STRINGS

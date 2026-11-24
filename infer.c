@@ -322,9 +322,13 @@ int sexp_fixnum_literalp (sexp x, sexp_sint_t *val) {
 /* 2^SMALL_START_BITS iterations (centuries at any realistic speed). */
 #define SMALL_START_BITS (FIXNUM_MAG_BITS - 2)
 
-/* Param type entries are type tags, with the magnitude for fixnums. */
+/* Param type entries are core type tags, with the magnitude for */
+/* fixnums, or the element type above the tag for uniform vectors. */
 #define TYPE_ENTRY(type, bits) ((type) == SEXP_FIXNUM ? (type) + ((bits) << 16) : (type))
-#define ENTRY_TYPE(e) ((e) & 0x7FFF)
+#define UVECTOR_ENTRY(etype) (SEXP_UNIFORM_VECTOR | ((etype) << 8))
+#define ENTRY_TYPE(e) ((e) & 0xFF)
+#define ENTRY_SUBTYPE(e) (((e) >> 8) & 0x7F)
+#define ENTRY_KIND(e) ((e) & 0x7FFF)  /* type and subtype */
 #define ENTRY_BITS(e) ((e) >> 16)
 /* a container type checked on entry, the order-th check made there */
 #define ENTRY_CHECKED 0x8000
@@ -353,7 +357,7 @@ static int ref_param_entry (sexp x) {
       int e;
       if (!sexp_fixnump(sexp_car(types))) return -1;
       e = (int)sexp_unbox_fixnum(sexp_car(types));
-      return (e & ENTRY_CHECKED) ? ENTRY_TYPE(e) : e;
+      return (e & ENTRY_CHECKED) ? ENTRY_KIND(e) : e;
     }
   return -1;
 }
@@ -400,6 +404,19 @@ static int fixnum_bits (sexp ctx, sexp x) {
     return LENGTH_BITS;
   case SEXP_OP_BYTES_REF:
     return 8;
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+  case SEXP_OP_UVECTOR_LENGTH:
+    return LENGTH_BITS;
+  case SEXP_OP_UVECTOR_REF:
+    if (sexp_fixnump(sexp_opcode_data(sexp_car(x))))
+      switch (sexp_unbox_fixnum(sexp_opcode_data(sexp_car(x)))) {
+      case SEXP_U1: return 1;
+      case SEXP_S8: return 8;
+      case SEXP_S16: case SEXP_U16: return 16;
+      case SEXP_S32: case SEXP_U32: return 32;
+      }
+    return -1;
+#endif
   case SEXP_OP_CHAR2INT:
     return 32;  /* sexp_unbox_character returns an int */
   case SEXP_OP_ADD:
@@ -508,6 +525,11 @@ static int infer_expr_entry (sexp ctx, sexp x) {
 
 int sexp_inferred_type (sexp ctx, sexp x) {
   return ENTRY_TYPE(infer_expr_entry(ctx, x));
+}
+
+int sexp_inferred_uvector_type (sexp ctx, sexp x) {
+  int e = infer_expr_entry(ctx, x);
+  return ENTRY_TYPE(e) == SEXP_UNIFORM_VECTOR ? ENTRY_SUBTYPE(e) : -1;
 }
 
 /* combine the entries of two possible values, -1 meaning none yet */
@@ -813,6 +835,13 @@ static int demand_op_type (sexp op, int *only) {
   case SEXP_OP_STRING_LENGTH:
     *only = 1;
     return SEXP_STRING;
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+  case SEXP_OP_UVECTOR_LENGTH:
+    *only = 1;
+  case SEXP_OP_UVECTOR_REF: case SEXP_OP_UVECTOR_SET:
+    if (!sexp_fixnump(sexp_opcode_data(op))) return -1;
+    return UVECTOR_ENTRY(sexp_unbox_fixnum(sexp_opcode_data(op)));
+#endif
   default:
     return -1;
   }
@@ -970,8 +999,9 @@ static void apply_demanded_types (sexp ctx, sexp lam, int *types, int num_params
 }
 
 /* the type param k of lam is checked to have on entry, or -1, and in */
-/* *order where that check comes among them */
-int sexp_param_checked_type (sexp lam, int k, int *order) {
+/* *order where that check comes among them, and in *subtype the */
+/* uniform vector element type checked, or 0 */
+int sexp_param_checked_type (sexp lam, int k, int *order, int *subtype) {
   sexp ls = sexp_lambda_param_types(lam);
   int e;
   for (; k > 0 && sexp_pairp(ls); k--) ls = sexp_cdr(ls);
@@ -979,6 +1009,7 @@ int sexp_param_checked_type (sexp lam, int k, int *order) {
   e = (int)sexp_unbox_fixnum(sexp_car(ls));
   if (!(e & ENTRY_CHECKED)) return -1;
   *order = ENTRY_BITS(e);
+  *subtype = ENTRY_SUBTYPE(e);
   return ENTRY_TYPE(e);
 }
 

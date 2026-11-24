@@ -276,6 +276,7 @@ _FN2(_I(SEXP_UNIFORM_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_OBJECT), "list->uvector",
 _FN2(_I(SEXP_UNIFORM_VECTOR), _I(SEXP_FIXNUM), _I(SEXP_FIXNUM), "make-uvector", 0, sexp_make_uvector_op),
 _FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-uvector-getter", 0, sexp_make_uvector_getter_op),
 _FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-uvector-setter", 0, sexp_make_uvector_setter_op),
+_FN2(_I(SEXP_OPCODE), _I(SEXP_STRING), _I(SEXP_FIXNUM), "make-uvector-length", 0, sexp_make_uvector_length_op),
 #endif
 _FN0(_I(SEXP_OBJECT), "square-brackets-symbol", 0, sexp_square_brackets_sym),
 _OP(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),

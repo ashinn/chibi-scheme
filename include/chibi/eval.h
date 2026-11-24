@@ -65,7 +65,8 @@ SEXP_API sexp sexp_infer (sexp ctx, sexp self, sexp_sint_t n, sexp ast);
 SEXP_API int sexp_fixnum_literalp (sexp x, sexp_sint_t *val);
 SEXP_API int sexp_proven_fixnump (sexp ctx, sexp lam, sexp x);
 SEXP_API int sexp_inferred_type (sexp ctx, sexp x);
-SEXP_API int sexp_param_checked_type (sexp lam, int k, int *order);
+SEXP_API int sexp_inferred_uvector_type (sexp ctx, sexp x);
+SEXP_API int sexp_param_checked_type (sexp lam, int k, int *order, int *subtype);
 SEXP_API int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc);
 #endif
 SEXP_API sexp sexp_make_lambda (sexp ctx, sexp params);
@@ -247,6 +248,7 @@ SEXP_API sexp sexp_make_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
 SEXP_API sexp sexp_make_uvector_getter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype);
 SEXP_API sexp sexp_make_uvector_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype);
+SEXP_API sexp sexp_make_uvector_length_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype);
 #endif
 SEXP_API sexp sexp_type_slot_offset_op (sexp ctx, sexp self, sexp_sint_t n, sexp type, sexp index);
 #endif

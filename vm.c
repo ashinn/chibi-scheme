@@ -2102,6 +2102,14 @@ sexp sexp_apply (sexp ctx, sexp proc, sexp args) {
     }
     top -= 3;
     break;
+  case SEXP_OP_UVECTOR_LENGTH:
+    _ALIGN_IP();
+    sexp_context_top(ctx) = top;
+    tmp1 = sexp_uvector_checked_length(ctx, self, _SWORD0, _ARG1);
+    ip += sizeof(sexp);
+    _ARG1 = tmp1;
+    sexp_check_exception();
+    break;
 #endif
   case SEXP_OP_CHAR2INT:
     if (! sexp_charp(_ARG1))

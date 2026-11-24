@@ -1271,6 +1271,8 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
     return sexp_uvector_ref(ctx, op, sexp_unbox_fixnum(sexp_opcode_data(op)), args[0], args[1]);
   case SEXP_OP_UVECTOR_SET:
     return sexp_uvector_set(ctx, op, sexp_unbox_fixnum(sexp_opcode_data(op)), args[0], args[1], args[2]);
+  case SEXP_OP_UVECTOR_LENGTH:
+    return sexp_uvector_checked_length(ctx, op, sexp_unbox_fixnum(sexp_opcode_data(op)), args[0]);
 #endif
   case SEXP_OP_SLOTN_REF:
     return sexp_native_slotn_ref(ctx, self, args[0], args[1], args[2]);
@@ -1309,6 +1311,7 @@ static inline int sexp_opcode_can_fail (sexp_sint_t code, sexp_sint_t oclass) {
 #if SEXP_USE_UNIFORM_VECTOR_LITERALS
   case SEXP_OP_UVECTOR_REF:
   case SEXP_OP_UVECTOR_SET:
+  case SEXP_OP_UVECTOR_LENGTH:
 #endif
     return 1;
   default:
@@ -1733,20 +1736,31 @@ static uint8_t cmp_fail_cc (sexp_sint_t code, int inverse) {
 /* order the body would have checked them.  On failure raise the same */
 /* error, then return, since the body relies on the types. */
 static void emit_param_type_checks (sexp ctx, sexp lam, int num_params) {
-  int k, order, o, tag;
-  sexp_sint_t jnz, jz, jne, ok_jmp;
+  int k, order, o, tag, subtype;
+  sexp_sint_t jnz, jz, jne, jne_sub, ok_jmp;
   for (o = 0; o < num_params; o++) {
     for (k = 0; k < num_params; k++)
-      if ((tag = sexp_param_checked_type(lam, k, &order)) >= 0 && order == o)
+      if ((tag = sexp_param_checked_type(lam, k, &order, &subtype)) >= 0 && order == o)
         break;
     if (k == num_params) break;
     emit_mov_slot_rax(ctx, get_local_slot(lam, k));
     emit_check_pointer(ctx, REG_RAX, &jnz, &jz);
     jne = emit_check_tag(ctx, REG_RAX, tag);
+    jne_sub = -1;
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+    if (tag == SEXP_UNIFORM_VECTOR && subtype > 0) {
+      // cmpb $etype, element_type(%rax)
+      emit_u8(ctx, 0x80); emit_u8(ctx, 0x78);
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.uvector.element_type));
+      emit_u8(ctx, (uint8_t)subtype);
+      jne_sub = emit_jcc(ctx, 0x85);
+    }
+#endif
     ok_jmp = emit_jmp(ctx);
     patch_jcc(ctx, jnz);
     patch_jcc(ctx, jz);
     patch_jcc(ctx, jne);
+    if (jne_sub >= 0) patch_jcc(ctx, jne_sub);
     emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7); // mov %r12, %rdi
     emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xee); // mov %r13, %rsi
     emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc2); // mov %rax, %rdx
@@ -2215,10 +2229,12 @@ static void emit_uvector_checks (sexp ctx, sexp lam, sexp uv, sexp idx, int etyp
   int k;
   for (k = 0; k < 7; k++) slow[k] = -1;
   emit_check_type(ctx, uv, REG_RCX, SEXP_UNIFORM_VECTOR, &slow[0], &slow[1], &slow[2]);
-  // cmpb $etype, element_type(%rcx)
-  emit_u8(ctx, 0x80); emit_u8(ctx, 0x79); emit_u8(ctx, UV_OFF(element_type));
-  emit_u8(ctx, (uint8_t)etype);
-  slow[3] = emit_jcc(ctx, 0x85);
+  if (sexp_inferred_uvector_type(ctx, uv) != etype) {
+    // cmpb $etype, element_type(%rcx)
+    emit_u8(ctx, 0x80); emit_u8(ctx, 0x79); emit_u8(ctx, UV_OFF(element_type));
+    emit_u8(ctx, (uint8_t)etype);
+    slow[3] = emit_jcc(ctx, 0x85);
+  }
   if (setp) {
     // testb $1, 5(%rcx) (immutable check)
     emit_u8(ctx, 0xf6); emit_u8(ctx, 0x41); emit_u8(ctx, 0x05); emit_u8(ctx, 0x01);
@@ -2237,6 +2253,25 @@ static void emit_uvector_checks (sexp ctx, sexp lam, sexp uv, sexp idx, int etyp
   slow[6] = emit_jcc(ctx, 0x83);
   // movq bytes(%rcx), %rcx
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x49); emit_u8(ctx, UV_OFF(bytes));
+}
+
+/* (Xvector-length uv), for any element type */
+static int generate_uvector_length (sexp ctx, sexp op, sexp uv, int temp_start) {
+  sexp et = sexp_opcode_data(op);
+  sexp_sint_t jnz, jz, jne, jne_et = -1;
+  if (!sexp_fixnump(et)) return 0;
+  generate_to_temp(ctx, uv, temp_start);
+  emit_check_type(ctx, uv, REG_RAX, SEXP_UNIFORM_VECTOR, &jnz, &jz, &jne);
+  if (sexp_inferred_uvector_type(ctx, uv) != sexp_unbox_fixnum(et)) {
+    // cmpb $etype, element_type(%rax)
+    emit_u8(ctx, 0x80); emit_u8(ctx, 0x78); emit_u8(ctx, UV_OFF(element_type));
+    emit_u8(ctx, (uint8_t)sexp_unbox_fixnum(et));
+    jne_et = emit_jcc(ctx, 0x85);
+  }
+  // movq length(%rax), %rax; leaq 1(%rax,%rax), %rax
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x40); emit_u8(ctx, UV_OFF(length));
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8d); emit_u8(ctx, 0x44); emit_u8(ctx, 0x00); emit_u8(ctx, 0x01);
+  return emit_inlined_op_slow_path(ctx, op, temp_start, 1, jnz, jz, jne, jne_et);
 }
 
 /* (Xvector-ref uv i), boxing the element */
@@ -2368,6 +2403,10 @@ static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t
   // 1-argument cases
   if (num_args == 1) {
     sexp arg0 = sexp_cadr(app);
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+    if (code == SEXP_OP_UVECTOR_LENGTH)
+      return generate_uvector_length(ctx, op, arg0, temp_start);
+#endif
 
     if (code == SEXP_OP_ADD) {
       // (+ a) => a

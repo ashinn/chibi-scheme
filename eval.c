@@ -2229,6 +2229,19 @@ sexp sexp_make_uvector_setter_op (sexp ctx, sexp self, sexp_sint_t n, sexp name,
   }
   return res;
 }
+
+sexp sexp_make_uvector_length_op (sexp ctx, sexp self, sexp_sint_t n, sexp name, sexp etype) {
+  sexp res = sexp_check_uvector_etype(ctx, self, etype);
+  if (res) return res;
+  res = sexp_make_opcode(ctx, self, name, sexp_make_fixnum(SEXP_OPC_GETTER),
+                         sexp_make_fixnum(SEXP_OP_UVECTOR_LENGTH), SEXP_ONE,
+                         sexp_make_fixnum(32),
+                         sexp_make_fixnum(SEXP_UNIFORM_VECTOR),
+                         SEXP_ZERO, SEXP_ZERO, etype, NULL, NULL);
+  if (!sexp_exceptionp(res))
+    sexp_opcode_return_type(res) = sexp_make_fixnum(SEXP_FIXNUM);
+  return res;
+}
 #endif
 
 #endif
