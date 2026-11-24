@@ -460,7 +460,48 @@ int sexp_proven_fixnump (sexp ctx, sexp lam, sexp x) {
 }
 
 /* the type entry of x: a type tag known for its value, or SEXP_OBJECT */
-static int infer_expr_entry (sexp ctx, sexp x) {
+static int param_index_of (sexp lam, sexp name) {
+  sexp ls = sexp_lambda_params(lam);
+  int k = 0;
+  for (; sexp_pairp(ls); ls = sexp_cdr(ls), k++)
+    if (sexp_car(ls) == name) return k;
+  return -1;
+}
+
+/* the params of lets enclosing an expression whose type is inferred, */
+/* known to be flonums where their values are */
+struct let_env {
+  sexp lam;
+  const char *flonump;
+  const struct let_env *next;
+};
+
+static int infer_expr_entry_env (sexp ctx, sexp x, const struct let_env *env);
+
+/* the type of a let's value: that of its body, given its params */
+static int infer_let_entry (sexp ctx, sexp app, const struct let_env *env) {
+  sexp let = sexp_car(app), p, a;
+  char stack_flonump[16], *flonump = stack_flonump;
+  struct let_env env2;
+  int n, k, res;
+  for (n = 0, p = sexp_lambda_params(let), a = sexp_cdr(app); sexp_pairp(p) && sexp_pairp(a);
+       p = sexp_cdr(p), a = sexp_cdr(a), n++)
+    ;
+  if (!sexp_nullp(p) || !sexp_nullp(a)) return SEXP_OBJECT;
+  if (n > (int)sizeof(stack_flonump) && !(flonump = malloc(n))) return SEXP_OBJECT;
+  for (k = 0, p = sexp_lambda_params(let), a = sexp_cdr(app); k < n;
+       p = sexp_cdr(p), a = sexp_cdr(a), k++)
+    flonump[k] = ENTRY_TYPE(infer_expr_entry_env(ctx, sexp_car(a), env)) == SEXP_FLONUM
+      && !sexp_truep(sexp_memq(ctx, sexp_car(p), sexp_lambda_sv(let)));
+  env2.lam = let;
+  env2.flonump = flonump;
+  env2.next = env;
+  res = infer_expr_entry_env(ctx, sexp_lambda_body(let), &env2);
+  if (flonump != stack_flonump) free(flonump);
+  return res;
+}
+
+static int infer_expr_entry_env (sexp ctx, sexp x, const struct let_env *env) {
   sexp ls;
   int b = fixnum_bits(ctx, x);
   if (b >= 0 && b <= FIXNUM_MAG_BITS) return TYPE_ENTRY(SEXP_FIXNUM, b);
@@ -490,6 +531,7 @@ static int infer_expr_entry (sexp ctx, sexp x) {
 #endif
   case SEXP_PAIR: {
     sexp op = sexp_car(x);
+    if (sexp_lambdap(op)) return infer_let_entry(ctx, x, env);
     if (!sexp_opcodep(op)) return SEXP_OBJECT;
     switch (sexp_opcode_code(op)) {
 #if SEXP_USE_FLONUMS
@@ -497,7 +539,7 @@ static int infer_expr_entry (sexp ctx, sexp x) {
       /* flonums only give flonums (with exact operands, exact zero */
       /* is special and complex numbers are contagious) */
       for (ls = sexp_cdr(x), b = 0; sexp_pairp(ls); ls = sexp_cdr(ls), b++)
-        if (ENTRY_TYPE(infer_expr_entry(ctx, sexp_car(ls))) != SEXP_FLONUM)
+        if (ENTRY_TYPE(infer_expr_entry_env(ctx, sexp_car(ls), env)) != SEXP_FLONUM)
           return SEXP_OBJECT;
       return b > 0 ? SEXP_FLONUM : SEXP_OBJECT;
 #endif
@@ -528,21 +570,31 @@ static int infer_expr_entry (sexp ctx, sexp x) {
     }
   }
   case SEXP_CND: {
-    int p = infer_expr_entry(ctx, sexp_cnd_pass(x));
-    return p == infer_expr_entry(ctx, sexp_cnd_fail(x)) ? p : SEXP_OBJECT;
+    int p = infer_expr_entry_env(ctx, sexp_cnd_pass(x), env);
+    return p == infer_expr_entry_env(ctx, sexp_cnd_fail(x), env) ? p : SEXP_OBJECT;
   }
   case SEXP_SEQ:
     for (ls = sexp_seq_ls(x); sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls)); ls = sexp_cdr(ls))
       ;
-    return sexp_pairp(ls) ? infer_expr_entry(ctx, sexp_car(ls)) : SEXP_OBJECT;
+    return sexp_pairp(ls) ? infer_expr_entry_env(ctx, sexp_car(ls), env) : SEXP_OBJECT;
   case SEXP_SYNCLO:
-    return infer_expr_entry(ctx, sexp_synclo_expr(x));
+    return infer_expr_entry_env(ctx, sexp_synclo_expr(x), env);
   case SEXP_REF:
+    for (; env; env = env->next)
+      if (env->lam == sexp_ref_loc(x)) {
+        b = param_index_of(env->lam, sexp_ref_name(x));
+        if (b >= 0 && env->flonump[b]) return SEXP_FLONUM;
+        break;
+      }
     b = ref_param_entry(x);
     return b >= 0 ? b : SEXP_OBJECT;
   default:
     return SEXP_OBJECT;
   }
+}
+
+static int infer_expr_entry (sexp ctx, sexp x) {
+  return infer_expr_entry_env(ctx, x, NULL);
 }
 
 int sexp_inferred_type (sexp ctx, sexp x) {
@@ -1250,14 +1302,6 @@ struct unbox_cand { sexp lam; int k, alive, good, bad; };
 struct unbox_state { struct unbox_cand *c; int n, size; };
 #define UNBOX_MAX_CHAIN 32
 
-static int param_position (sexp lam, sexp name) {
-  sexp ls = sexp_lambda_params(lam);
-  int k = 0;
-  for (; sexp_pairp(ls); ls = sexp_cdr(ls), k++)
-    if (sexp_car(ls) == name) return k;
-  return -1;
-}
-
 static sexp param_types_ref (sexp lam, int k) {
   sexp ls = sexp_lambda_param_types(lam);
   for (; k > 0 && sexp_pairp(ls); k--) ls = sexp_cdr(ls);
@@ -1275,7 +1319,7 @@ static struct unbox_cand *unbox_find (struct unbox_state *st, sexp lam, int k) {
 static struct unbox_cand *unbox_ref_cand (struct unbox_state *st, sexp x) {
   if (!x || !sexp_pointerp(x) || !sexp_refp(x) || !sexp_lambdap(sexp_ref_loc(x)))
     return NULL;
-  return unbox_find(st, sexp_ref_loc(x), param_position(sexp_ref_loc(x), sexp_ref_name(x)));
+  return unbox_find(st, sexp_ref_loc(x), param_index_of(sexp_ref_loc(x), sexp_ref_name(x)));
 }
 
 static void unbox_collect (sexp ctx, struct unbox_state *st, sexp x) {
@@ -1518,7 +1562,7 @@ int sexp_unboxed_refp (sexp x) {
   if (!x || !sexp_pointerp(x) || !sexp_refp(x)) return 0;
   lam = sexp_ref_loc(x);
   return sexp_lambdap(lam)
-    && sexp_param_unboxedp(lam, param_position(lam, sexp_ref_name(x)));
+    && sexp_param_unboxedp(lam, param_index_of(lam, sexp_ref_name(x)));
 }
 
 /************************* Allocation Analysis ************************/
