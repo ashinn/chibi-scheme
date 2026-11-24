@@ -77,6 +77,19 @@ int inc(int x, unsigned char y) {
  (test -3 (sub (zero) 3))
  (test 6 (inc 5 1)))
 
+;; More foreign arguments than the native backend's dispatcher used
+;; to handle (it stopped at 8, cblas_sgemm takes 14).
+(test-ffi
+ "many-args"
+ (begin
+   (c-declare "
+int weighted14(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12, int a13, int a14) {
+  return a1*1 + a2*2 + a3*3 + a4*4 + a5*5 + a6*6 + a7*7 + a8*8 + a9*9 + a10*10 + a11*11 + a12*12 + a13*13 + a14*14;
+}
+")
+   (define-c int weighted14 (int int int int int int int int int int int int int int)))
+ (test 1015 (weighted14 1 2 3 4 5 6 7 8 9 10 11 12 13 14)))
+
 (test-ffi
  "params"
  (begin

@@ -183,6 +183,16 @@ static sexp sexp_native_apply_list (sexp ctx, sexp proc, sexp args, int entry);
 
 typedef sexp (*sexp_proc8)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 typedef sexp (*sexp_proc9)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc10)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc11)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc12)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc13)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc14)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc15)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc16)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc17)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc18)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
+typedef sexp (*sexp_proc19)(sexp, sexp, sexp_sint_t, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp, sexp);
 
 static sexp sexp_native_raise_exception (sexp ctx, sexp self, sexp exn) {
   sexp handler = sexp_parameter_ref(ctx, sexp_global(ctx, SEXP_G_ERR_HANDLER));
@@ -901,6 +911,17 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
     case 6: return ((sexp_proc7)f)(ctx, self, 6, args[0], args[1], args[2], args[3], args[4], args[5]);
     case 7: return ((sexp_proc8)f)(ctx, self, 7, args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
     case 8: return ((sexp_proc9)f)(ctx, self, 8, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
+    /* the VM supports up to 18 (opt/fcall.c) */
+    case 9: return ((sexp_proc10)f)(ctx, self, 9, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
+    case 10: return ((sexp_proc11)f)(ctx, self, 10, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9]);
+    case 11: return ((sexp_proc12)f)(ctx, self, 11, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10]);
+    case 12: return ((sexp_proc13)f)(ctx, self, 12, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11]);
+    case 13: return ((sexp_proc14)f)(ctx, self, 13, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12]);
+    case 14: return ((sexp_proc15)f)(ctx, self, 14, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13]);
+    case 15: return ((sexp_proc16)f)(ctx, self, 15, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14]);
+    case 16: return ((sexp_proc17)f)(ctx, self, 16, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15]);
+    case 17: return ((sexp_proc18)f)(ctx, self, 17, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15], args[16]);
+    case 18: return ((sexp_proc19)f)(ctx, self, 18, args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13], args[14], args[15], args[16], args[17]);
     default:
       return sexp_user_exception(ctx, self, "too many foreign arguments", op);
     }
