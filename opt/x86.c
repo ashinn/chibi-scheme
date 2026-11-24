@@ -2387,9 +2387,370 @@ static int generate_uvector_set (sexp ctx, sexp lam, sexp op, sexp uv, sexp idx,
 }
 #endif
 
+/************************* Unboxed float arithmetic *******************/
+
+/* A float tree is binary + - * / with an operand inferred to be a */
+/* flonum, or itself a float tree.  Its other operands are speculated */
+/* to be flonums too: the leaves are evaluated boxed into temp slots */
+/* first, then if those not inferred to be flonums are flonums or */
+/* nonzero fixnums (exact zero is special to the generic ops), and the */
+/* uvector accesses are valid, the tree is computed in %xmm0-7 without */
+/* allocating.  The value is boxed once, or stored straight into a */
+/* float uvector.  Otherwise the slow path computes it generically */
+/* from the temps. */
+
+#define NATIVE_FLOAT_TREES (SEXP_USE_UNIFORM_VECTOR_LITERALS && SEXP_USE_FLONUMS \
+                            && !SEXP_USE_IMMEDIATE_FLONUMS)
+
+#if NATIVE_FLOAT_TREES
+
+enum { FT_LEAF, FT_LIT, FT_UVREF, FT_OP };
+enum { FT_ROOT_NONE, FT_ROOT_BOXED, FT_ROOT_STORE };
+#define FT_MAX_REGS 8
+#define FT_MAX_TEMPS 16
+#define FT_MAX_SLOW 160
+
+static int ft_flonum_litp (sexp x) {
+  return x && sexp_pointerp(x)
+    && (sexp_flonump(x) || (sexp_litp(x) && sexp_flonump(sexp_lit_value(x))));
+}
+
+static int ft_num_args (sexp app) {
+  int n = 0;
+  for (app = sexp_cdr(app); sexp_pairp(app); app = sexp_cdr(app)) n++;
+  return n;
+}
+
+static int ft_uvref_etype (sexp x) {
+  sexp op, et;
+  if (!sexp_pairp(x) || !sexp_opcodep(op = sexp_car(x))
+      || sexp_opcode_code(op) != SEXP_OP_UVECTOR_REF
+      || ft_num_args(x) != 2)
+    return -1;
+  et = sexp_opcode_data(op);
+  if (et == sexp_make_fixnum(SEXP_F64) || et == sexp_make_fixnum(SEXP_F32))
+    return (int)sexp_unbox_fixnum(et);
+  return -1;
+}
+
+static int ft_arith_appp (sexp x) {
+  sexp op;
+  sexp_sint_t code;
+  if (!sexp_pairp(x) || !sexp_opcodep(op = sexp_car(x))) return 0;
+  code = sexp_opcode_code(op);
+  if (code != SEXP_OP_ADD && code != SEXP_OP_SUB && code != SEXP_OP_MUL
+      && code != SEXP_OP_DIV)
+    return 0;
+  return ft_num_args(x) == 2;
+}
+
+static int ft_kind (sexp ctx, sexp x);
+
+static int ft_floatp (sexp ctx, sexp x) {
+  return sexp_inferred_type(ctx, x) == SEXP_FLONUM || ft_kind(ctx, x) == FT_OP;
+}
+
+/* how x is computed in a float tree: literals and uvector elements are */
+/* loaded directly, other leaves are boxed */
+static int ft_kind (sexp ctx, sexp x) {
+  if (ft_flonum_litp(x)) return FT_LIT;
+  if (ft_uvref_etype(x) >= 0) return FT_UVREF;
+  if (ft_arith_appp(x) && (ft_floatp(ctx, sexp_cadr(x)) || ft_floatp(ctx, sexp_caddr(x))))
+    return FT_OP;
+  return FT_LEAF;
+}
+
+/* the xmm registers, temps, slow path jumps and slow path scratch */
+/* slots the tree x needs */
+struct ft_size { int regs, temps, slow, scratch; };
+
+static void ft_measure (sexp ctx, sexp x, struct ft_size *s) {
+  struct ft_size a, b;
+  switch (ft_kind(ctx, x)) {
+  case FT_LIT: s->regs = 1; s->temps = 0; s->slow = 0; s->scratch = 1; break;
+  case FT_UVREF: s->regs = 1; s->temps = 2; s->slow = 7; s->scratch = 2; break;
+  case FT_LEAF:
+    s->regs = 1; s->temps = 1; s->scratch = 1;
+    s->slow = sexp_inferred_type(ctx, x) == SEXP_FLONUM ? 0 : 4;
+    break;
+  default:
+    ft_measure(ctx, sexp_cadr(x), &a);
+    ft_measure(ctx, sexp_caddr(x), &b);
+    s->regs = a.regs > b.regs + 1 ? a.regs : b.regs + 1;
+    s->temps = a.temps + b.temps;
+    s->slow = a.slow + b.slow;
+    s->scratch = a.scratch > b.scratch + 1 ? a.scratch : b.scratch + 1;
+    if (s->scratch < 2) s->scratch = 2;
+  }
+}
+
+static int ft_fits (sexp ctx, sexp x) {
+  struct ft_size s;
+  ft_measure(ctx, x, &s);
+  return s.regs <= FT_MAX_REGS && s.temps <= FT_MAX_TEMPS && s.slow <= FT_MAX_SLOW;
+}
+
+/* whether app is computed as a float tree, boxing the result or */
+/* storing it into a float uvector */
+static int ft_root (sexp ctx, sexp app) {
+  sexp op, val;
+  int k;
+  if (!sexp_pairp(app) || !sexp_opcodep(op = sexp_car(app))) return FT_ROOT_NONE;
+  if (sexp_opcode_code(op) == SEXP_OP_UVECTOR_SET) {
+    if (ft_num_args(app) != 3
+        || (sexp_opcode_data(op) != sexp_make_fixnum(SEXP_F64)
+            && sexp_opcode_data(op) != sexp_make_fixnum(SEXP_F32)))
+      return FT_ROOT_NONE;
+    val = sexp_car(sexp_cdddr(app));
+    k = ft_kind(ctx, val);
+    return (k == FT_OP || k == FT_UVREF) && ft_fits(ctx, val) ? FT_ROOT_STORE : FT_ROOT_NONE;
+  }
+  return ft_kind(ctx, app) == FT_OP && ft_fits(ctx, app) ? FT_ROOT_BOXED : FT_ROOT_NONE;
+}
+
+static int compute_ast_max_depth (sexp ctx, sexp x);
+
+static void ft_leaf_depths (sexp ctx, sexp x, int *held, int *maxd) {
+  int d;
+  switch (ft_kind(ctx, x)) {
+  case FT_LIT: break;
+  case FT_OP:
+    ft_leaf_depths(ctx, sexp_cadr(x), held, maxd);
+    ft_leaf_depths(ctx, sexp_caddr(x), held, maxd);
+    break;
+  case FT_UVREF:
+    d = *held + compute_ast_max_depth(ctx, sexp_cadr(x));
+    if (d > *maxd) *maxd = d;
+    ++*held;
+    d = *held + compute_ast_max_depth(ctx, sexp_caddr(x));
+    if (d > *maxd) *maxd = d;
+    ++*held;
+    break;
+  default:
+    d = *held + compute_ast_max_depth(ctx, x);
+    if (d > *maxd) *maxd = d;
+    ++*held;
+  }
+}
+
+/* the stack depth computing app as a float tree takes, or -1 */
+static int ft_ast_depth (sexp ctx, sexp app) {
+  int root = ft_root(ctx, app), held = 0, maxd = 0, d;
+  struct ft_size s;
+  sexp val = app;
+  if (root == FT_ROOT_NONE) return -1;
+  if (root == FT_ROOT_STORE) {
+    val = sexp_car(sexp_cdddr(app));
+    maxd = compute_ast_max_depth(ctx, sexp_cadr(app));
+    d = 1 + compute_ast_max_depth(ctx, sexp_caddr(app));
+    if (d > maxd) maxd = d;
+    held = 3;
+  }
+  ft_leaf_depths(ctx, val, &held, &maxd);
+  ft_measure(ctx, val, &s);
+  return held + s.scratch > maxd ? held + s.scratch : maxd;
+}
+
+/* SSE2 scalar double ops on %xmm0-7 */
+static void emit_sse_rr (sexp ctx, uint8_t pfx, uint8_t op, int dst, int src) {
+  emit_u8(ctx, pfx); emit_u8(ctx, 0x0f); emit_u8(ctx, op);
+  emit_u8(ctx, (uint8_t)(0xc0 | (dst << 3) | src));
+}
+
+/* evaluate the leaves of x into temps from *slot on, in order */
+static void ft_generate_leaves (sexp ctx, sexp x, int *slot) {
+  switch (ft_kind(ctx, x)) {
+  case FT_LIT: break;
+  case FT_OP:
+    ft_generate_leaves(ctx, sexp_cadr(x), slot);
+    ft_generate_leaves(ctx, sexp_caddr(x), slot);
+    break;
+  case FT_UVREF:
+    generate_to_temp(ctx, sexp_cadr(x), (*slot)++);
+    generate_to_temp(ctx, sexp_caddr(x), (*slot)++);
+    break;
+  default:
+    generate_to_temp(ctx, x, (*slot)++);
+  }
+}
+
+static void ft_add_slow (sexp_sint_t *slow, int *n, sexp_sint_t pos) {
+  if (pos >= 0) slow[(*n)++] = pos;
+}
+
+/* compute x into %xmm<reg> from the temps from *slot on */
+static void ft_generate_compute (sexp ctx, sexp lam, sexp x, int reg, int *slot,
+                                 sexp_sint_t *slow, int *num_slow) {
+  sexp_sint_t s7[7], jz_fix, done;
+  double d;
+  uint64_t bits;
+  int k, etype, scale;
+  switch (ft_kind(ctx, x)) {
+  case FT_LIT:
+    d = sexp_flonum_value(sexp_litp(x) ? sexp_lit_value(x) : x);
+    memcpy(&bits, &d, sizeof(bits));
+    emit_mov_imm64_rax(ctx, bits);
+    // movq %rax, %xmm<reg>
+    emit_u8(ctx, 0x66); emit_u8(ctx, 0x48); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x6e);
+    emit_u8(ctx, (uint8_t)(0xc0 | (reg << 3)));
+    break;
+  case FT_OP:
+    ft_generate_compute(ctx, lam, sexp_cadr(x), reg, slot, slow, num_slow);
+    ft_generate_compute(ctx, lam, sexp_caddr(x), reg + 1, slot, slow, num_slow);
+    switch (sexp_opcode_code(sexp_car(x))) {
+    case SEXP_OP_ADD: k = 0x58; break;
+    case SEXP_OP_SUB: k = 0x5c; break;
+    case SEXP_OP_MUL: k = 0x59; break;
+    default:          k = 0x5e; break;
+    }
+    emit_sse_rr(ctx, 0xf2, (uint8_t)k, reg, reg + 1);
+    break;
+  case FT_UVREF:
+    etype = ft_uvref_etype(x);
+    scale = uvector_access[etype].scale;
+    emit_mov_slot_rcx(ctx, *slot);
+    emit_mov_slot_rax(ctx, *slot + 1);
+    emit_uvector_checks(ctx, lam, sexp_cadr(x), sexp_caddr(x), etype, 0, 0, s7);
+    for (k = 0; k < 7; k++) ft_add_slow(slow, num_slow, s7[k]);
+    // movss / movsd data(%rcx, %rax, n), %xmm<reg>
+    emit_u8(ctx, scale == 2 ? 0xf3 : 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x10);
+    emit_u8(ctx, (uint8_t)(0x44 | (reg << 3)));
+    emit_u8(ctx, (uint8_t)((scale << 6) | 0x01)); emit_u8(ctx, UV_DATA_OFF);
+    // cvtss2sd %xmm<reg>, %xmm<reg>
+    if (scale == 2) emit_sse_rr(ctx, 0xf3, 0x5a, reg, reg);
+    *slot += 2;
+    break;
+  default:
+    emit_mov_slot_rax(ctx, (*slot)++);
+    if (sexp_inferred_type(ctx, x) == SEXP_FLONUM) {
+      // movsd flonum(%rax), %xmm<reg>
+      emit_u8(ctx, 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x10);
+      emit_u8(ctx, (uint8_t)(0x40 | (reg << 3)));
+      emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.flonum));
+      break;
+    }
+    /* speculatively a flonum, or a nonzero fixnum converted as the */
+    /* generic ops do */
+    // testb $1, %al; jz not_fixnum
+    emit_u8(ctx, 0xa8); emit_u8(ctx, 0x01);
+    jz_fix = emit_jcc(ctx, 0x84);
+    // sarq $1, %rax; jz slow (exact zero)
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0xd1); emit_u8(ctx, 0xf8);
+    ft_add_slow(slow, num_slow, emit_jcc(ctx, 0x84));
+    // cvtsi2sdq %rax, %xmm<reg>
+    emit_u8(ctx, 0xf2); emit_u8(ctx, 0x48); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x2a);
+    emit_u8(ctx, (uint8_t)(0xc0 | (reg << 3)));
+    done = emit_jmp(ctx);
+    patch_jcc(ctx, jz_fix);
+    {
+      sexp_sint_t jnz, jz;
+      emit_check_pointer(ctx, REG_RAX, &jnz, &jz);
+      ft_add_slow(slow, num_slow, jnz);
+      ft_add_slow(slow, num_slow, jz);
+      ft_add_slow(slow, num_slow, emit_check_tag(ctx, REG_RAX, SEXP_FLONUM));
+    }
+    // movsd flonum(%rax), %xmm<reg>
+    emit_u8(ctx, 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x10);
+    emit_u8(ctx, (uint8_t)(0x40 | (reg << 3)));
+    emit_u8(ctx, (uint8_t)offsetof(struct sexp_struct, value.flonum));
+    patch_jmp(ctx, done);
+  }
+}
+
+/* compute x generically into the scratch slot dst, from the temps */
+/* from *slot on */
+static void ft_generate_slow (sexp ctx, sexp x, int dst, int *slot) {
+  switch (ft_kind(ctx, x)) {
+  case FT_LIT:
+    generate_lit(ctx, sexp_litp(x) ? sexp_lit_value(x) : x);
+    break;
+  case FT_OP:
+    ft_generate_slow(ctx, sexp_cadr(x), dst, slot);
+    ft_generate_slow(ctx, sexp_caddr(x), dst + 1, slot);
+    emit_native_dispatch_op(ctx, sexp_car(x), dst, 2);
+    break;
+  case FT_UVREF:
+    emit_mov_slot_rax(ctx, (*slot)++);
+    emit_mov_rax_slot(ctx, dst);
+    emit_mov_slot_rax(ctx, (*slot)++);
+    emit_mov_rax_slot(ctx, dst + 1);
+    emit_native_dispatch_op(ctx, sexp_car(x), dst, 2);
+    break;
+  default:
+    emit_mov_slot_rax(ctx, (*slot)++);
+  }
+  emit_mov_rax_slot(ctx, dst);
+}
+
+static int generate_float_tree (sexp ctx, sexp app, int root, int temp_start) {
+  sexp lam = sexp_context_lambda(ctx), val = app, op = sexp_car(app);
+  sexp_sint_t slow[FT_MAX_SLOW], s7[7], done_jmp;
+  int num_slow = 0, slot = temp_start, held, k, scale = 0, etype = 0;
+  struct ft_size size;
+  if (root == FT_ROOT_STORE) {
+    val = sexp_car(sexp_cdddr(app));
+    etype = (int)sexp_unbox_fixnum(sexp_opcode_data(op));
+    scale = uvector_access[etype].scale;
+    generate_to_temp(ctx, sexp_cadr(app), slot++);
+    generate_to_temp(ctx, sexp_caddr(app), slot++);
+    /* the value, on the slow path */
+    sexp_inc_context_depth(ctx, 1);
+    slot++;
+  }
+  ft_generate_leaves(ctx, val, &slot);
+  held = slot - temp_start;
+  ft_measure(ctx, val, &size);
+
+  /* fast path */
+  slot = temp_start + (root == FT_ROOT_STORE ? 3 : 0);
+  ft_generate_compute(ctx, lam, val, 0, &slot, slow, &num_slow);
+  if (root == FT_ROOT_STORE) {
+    emit_mov_slot_rcx(ctx, temp_start);
+    emit_mov_slot_rdx(ctx, temp_start + 1);
+    emit_uvector_checks(ctx, lam, sexp_cadr(app), sexp_caddr(app), etype, 2, 1, s7);
+    for (k = 0; k < 7; k++) ft_add_slow(slow, &num_slow, s7[k]);
+    // cvtsd2ss %xmm0, %xmm0
+    if (scale == 2) emit_sse_rr(ctx, 0xf2, 0x5a, 0, 0);
+    // movss / movsd %xmm0, data(%rcx, %rdx, n)
+    emit_u8(ctx, scale == 2 ? 0xf3 : 0xf2); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x11);
+    emit_u8(ctx, 0x44); emit_u8(ctx, (uint8_t)((scale << 6) | 0x11)); emit_u8(ctx, UV_DATA_OFF);
+    emit_mov_imm64_rax(ctx, (uint64_t)SEXP_VOID);
+  } else {
+    // sexp_make_flonum(ctx, %xmm0)
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);  // mov %r12, %rdi
+    emit_call_abs(ctx, (void*)sexp_make_flonum);
+  }
+
+  if (num_slow == 0) {
+    /* everything was known to be a flonum, and in range */
+    if (!g_non_allocating_bb) emit_clear_slots(ctx, temp_start, held);
+    sexp_inc_context_depth(ctx, -held);
+    return 1;
+  }
+
+  /* slow path */
+  done_jmp = emit_jmp(ctx);
+  for (k = 0; k < num_slow; k++) patch_jcc(ctx, slow[k]);
+  sexp_inc_context_depth(ctx, size.scratch);
+  slot = temp_start + (root == FT_ROOT_STORE ? 3 : 0);
+  ft_generate_slow(ctx, val, temp_start + held, &slot);
+  if (root == FT_ROOT_STORE) {
+    emit_mov_rax_slot(ctx, temp_start + 2);
+    emit_native_dispatch_op(ctx, op, temp_start, 3);
+  }
+  emit_inlined_op_cleanup(ctx, done_jmp, temp_start, held + size.scratch);
+  return 1;
+}
+#endif
+
 static int try_generate_inlined_opcode (sexp ctx, sexp app, sexp op, sexp_sint_t num_args, int temp_start) {
   sexp_sint_t code = sexp_opcode_code(op);
   sexp lam = sexp_context_lambda(ctx);
+#if NATIVE_FLOAT_TREES
+  int ft = (num_args == 2 || num_args == 3) ? ft_root(ctx, app) : FT_ROOT_NONE;
+  if (ft != FT_ROOT_NONE)
+    return generate_float_tree(ctx, app, ft, temp_start);
+#endif
 
   // 0-argument cases
   if (num_args == 0) {
@@ -3399,7 +3760,12 @@ static int compute_ast_max_depth (sexp ctx, sexp x) {
   int tag = sexp_pointer_tag(x);
   switch (tag) {
     case SEXP_PAIR: {
+#if NATIVE_FLOAT_TREES
+      int max_d = ft_ast_depth(ctx, x);
+      if (max_d < 0) max_d = 0;
+#else
       int max_d = 0;
+#endif
       int i = 0;
       sexp ls = sexp_cdr(x);
       for (; sexp_pairp(ls); ls = sexp_cdr(ls), i++) {

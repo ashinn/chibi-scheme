@@ -482,10 +482,30 @@ static int infer_expr_entry (sexp ctx, sexp x) {
       return SEXP_OBJECT;
     }
   }
+#if SEXP_USE_FLONUMS
+  case SEXP_FLONUM:
+    return SEXP_FLONUM;
+#endif
   case SEXP_PAIR: {
     sexp op = sexp_car(x);
     if (!sexp_opcodep(op)) return SEXP_OBJECT;
     switch (sexp_opcode_code(op)) {
+#if SEXP_USE_FLONUMS
+    case SEXP_OP_ADD: case SEXP_OP_SUB: case SEXP_OP_MUL: case SEXP_OP_DIV:
+      /* flonums only give flonums (with exact operands, exact zero */
+      /* is special and complex numbers are contagious) */
+      for (ls = sexp_cdr(x), b = 0; sexp_pairp(ls); ls = sexp_cdr(ls), b++)
+        if (ENTRY_TYPE(infer_expr_entry(ctx, sexp_car(ls))) != SEXP_FLONUM)
+          return SEXP_OBJECT;
+      return b > 0 ? SEXP_FLONUM : SEXP_OBJECT;
+#endif
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+    case SEXP_OP_UVECTOR_REF:
+      if (sexp_opcode_data(op) == sexp_make_fixnum(SEXP_F64)
+          || sexp_opcode_data(op) == sexp_make_fixnum(SEXP_F32))
+        return SEXP_FLONUM;
+      return SEXP_OBJECT;
+#endif
     case SEXP_OP_STRING_REF:
     case SEXP_OP_INT2CHAR:
     case SEXP_OP_CHAR_UPCASE:
@@ -1026,6 +1046,53 @@ int sexp_param_checked_type (sexp lam, int k, int *order, int *subtype) {
   return ENTRY_TYPE(e);
 }
 
+/* set when a flonum param assumption fails, which may be from */
+/* lacking the types of the lambdas visited later */
+static int flonum_assumption_failed;
+
+static int count_flonum_entries (const int *types, int num_params) {
+  int k, n = 0;
+  for (k = 0; k < num_params; k++)
+    if (types[k] >= 0 && ENTRY_TYPE(types[k]) == SEXP_FLONUM) n++;
+  return n;
+}
+
+/* Scan the recursive calls, assuming the params all calls so far pass */
+/* flonums are flonums, so a loop param stepped by flonum arithmetic on */
+/* itself stays a flonum.  Params passed something else lose the */
+/* assumption, and the scan repeats until it holds.  Only these */
+/* assumptions are visible: fixnum bounds can't be found inductively, */
+/* and mutated params can be anything. */
+static void scan_recursive_calls_flonums (sexp ctx, sexp lam, sexp name, sexp loc,
+                                          int *types, struct param_steps *steps,
+                                          int num_params, const int *ok) {
+  int k, n = count_flonum_entries(types, num_params), prev, first = n;
+  sexp sv = sexp_lambda_sv(lam), params;
+  sexp_gc_var1(hyp);
+  if (n == 0) {
+    scan_recursive_calls(ctx, lam, name, loc, sexp_lambda_body(lam), types, steps, num_params, ok);
+    return;
+  }
+  sexp_gc_preserve1(ctx, hyp);
+  do {
+    prev = n;
+    hyp = SEXP_NULL;
+    for (k = num_params - 1; k >= 0; k--) {
+      for (params = sexp_lambda_params(lam), n = 0; n < k; n++) params = sexp_cdr(params);
+      hyp = sexp_cons(ctx, sexp_make_fixnum(
+                (types[k] >= 0 && ENTRY_TYPE(types[k]) == SEXP_FLONUM
+                 && !sexp_truep(sexp_memq(ctx, sexp_car(params), sv)))
+                ? SEXP_FLONUM : SEXP_OBJECT), hyp);
+    }
+    sexp_lambda_param_types(lam) = hyp;
+    scan_recursive_calls(ctx, lam, name, loc, sexp_lambda_body(lam), types, steps, num_params, ok);
+    n = count_flonum_entries(types, num_params);
+  } while (n != prev);
+  if (n != first) flonum_assumption_failed = 1;
+  sexp_lambda_param_types(lam) = SEXP_NULL;
+  sexp_gc_release1(ctx);
+}
+
 static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp top_expr, sexp name, sexp loc) {
   if (!lam || !sexp_lambdap(lam)) return;
   /* don't reason from types stored by an earlier analysis */
@@ -1069,7 +1136,7 @@ static void analyze_lambda_param_types (sexp ctx, sexp lam, sexp prev_lam, sexp 
     if (top_expr) {
       scan_external_calls(ctx, lam, name, loc, top_expr, types, num_params);
     }
-    scan_recursive_calls(ctx, lam, name, loc, sexp_lambda_body(lam), types, steps, num_params, ok);
+    scan_recursive_calls_flonums(ctx, lam, name, loc, types, steps, num_params, ok);
   }
 
   sexp p = params;
@@ -1175,15 +1242,22 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
 
 /************************* Driver *************************************/
 
-static void infer_param_types_expr (sexp ctx, sexp x, sexp enclosing_lam, sexp top);
+/* what a pass over the lambdas infers */
+enum { INFER_TYPES, INFER_FLAGS };
+
+static void infer_param_types_expr (sexp ctx, sexp x, sexp enclosing_lam, sexp top, int pass);
 
 static void infer_param_types_lambda (sexp ctx, sexp lam, sexp enclosing_lam,
-                                      sexp top, sexp name, sexp loc) {
+                                      sexp top, sexp name, sexp loc, int pass) {
   if (!name && sexp_symbolp(sexp_lambda_name(lam)))
     name = sexp_lambda_name(lam);
   if (name && !loc && sexp_symbolp(name))
     loc = sexp_env_cell(ctx, sexp_context_env(ctx), name, 0);
-  analyze_lambda_param_types(ctx, lam, enclosing_lam, top, name, loc);
+  if (pass == INFER_TYPES) {
+    analyze_lambda_param_types(ctx, lam, enclosing_lam, top, name, loc);
+    infer_param_types_expr(ctx, sexp_lambda_body(lam), lam, top, pass);
+    return;
+  }
   /* after the param types, which sexp_proven_fixnump depends on */
   sexp_sint_t flags = sexp_fixnump(sexp_lambda_flags(lam)) ? sexp_unbox_fixnum(sexp_lambda_flags(lam)) : 0;
   if (!sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(lam), name, loc))
@@ -1193,54 +1267,62 @@ static void infer_param_types_lambda (sexp ctx, sexp lam, sexp enclosing_lam,
     /* allocation, as in the slow paths of arithmetic on non-fixnums */
     flags &= ~SEXP_LAMBDA_LEAF;
   sexp_lambda_flags(lam) = sexp_make_fixnum(flags);
-  infer_param_types_expr(ctx, sexp_lambda_body(lam), lam, top);
+  infer_param_types_expr(ctx, sexp_lambda_body(lam), lam, top, pass);
 }
 
 /* Visit lambdas in code generation order: a lambda's parameter types */
 /* are inferred from the types already known for its callers. */
-static void infer_param_types_expr (sexp ctx, sexp x, sexp enclosing_lam, sexp top) {
+static void infer_param_types_expr (sexp ctx, sexp x, sexp enclosing_lam, sexp top, int pass) {
   sexp ls;
   if (!x || !sexp_pointerp(x)) return;
   switch (sexp_pointer_tag(x)) {
   case SEXP_LAMBDA:
-    infer_param_types_lambda(ctx, x, enclosing_lam, top, NULL, NULL);
+    infer_param_types_lambda(ctx, x, enclosing_lam, top, NULL, NULL, pass);
     break;
   case SEXP_SET:
     if (sexp_lambdap(sexp_set_value(x)) && sexp_refp(sexp_set_var(x)))
       infer_param_types_lambda(ctx, sexp_set_value(x), enclosing_lam, top,
                                sexp_ref_name(sexp_set_var(x)),
-                               sexp_ref_loc(sexp_set_var(x)));
+                               sexp_ref_loc(sexp_set_var(x)), pass);
     else
-      infer_param_types_expr(ctx, sexp_set_value(x), enclosing_lam, top);
+      infer_param_types_expr(ctx, sexp_set_value(x), enclosing_lam, top, pass);
     break;
   case SEXP_PAIR:
     if (sexp_opcodep(sexp_car(x))) {
       for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
-        infer_param_types_expr(ctx, sexp_car(ls), enclosing_lam, top);
+        infer_param_types_expr(ctx, sexp_car(ls), enclosing_lam, top, pass);
     } else {
       /* general application: arguments first, then the operator */
       for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
-        infer_param_types_expr(ctx, sexp_car(ls), enclosing_lam, top);
-      infer_param_types_expr(ctx, sexp_car(x), enclosing_lam, top);
+        infer_param_types_expr(ctx, sexp_car(ls), enclosing_lam, top, pass);
+      infer_param_types_expr(ctx, sexp_car(x), enclosing_lam, top, pass);
     }
     break;
   case SEXP_CND:
-    infer_param_types_expr(ctx, sexp_cnd_test(x), enclosing_lam, top);
-    infer_param_types_expr(ctx, sexp_cnd_pass(x), enclosing_lam, top);
-    infer_param_types_expr(ctx, sexp_cnd_fail(x), enclosing_lam, top);
+    infer_param_types_expr(ctx, sexp_cnd_test(x), enclosing_lam, top, pass);
+    infer_param_types_expr(ctx, sexp_cnd_pass(x), enclosing_lam, top, pass);
+    infer_param_types_expr(ctx, sexp_cnd_fail(x), enclosing_lam, top, pass);
     break;
   case SEXP_SEQ:
     for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
-      infer_param_types_expr(ctx, sexp_car(ls), enclosing_lam, top);
+      infer_param_types_expr(ctx, sexp_car(ls), enclosing_lam, top, pass);
     break;
   case SEXP_SYNCLO:
-    infer_param_types_expr(ctx, sexp_synclo_expr(x), enclosing_lam, top);
+    infer_param_types_expr(ctx, sexp_synclo_expr(x), enclosing_lam, top, pass);
     break;
   }
 }
 
+/* Lambdas are visited in code generation order, so their callers' */
+/* types are known, but not those of the lambdas they contain.  When */
+/* that defeated a flonum param assumption, the types are inferred */
+/* again from those found, which are sound to reason from. */
 static void infer_param_types (sexp ctx, sexp ast) {
-  infer_param_types_expr(ctx, ast, NULL, ast);
+  flonum_assumption_failed = 0;
+  infer_param_types_expr(ctx, ast, NULL, ast, INFER_TYPES);
+  if (flonum_assumption_failed)
+    infer_param_types_expr(ctx, ast, NULL, ast, INFER_TYPES);
+  infer_param_types_expr(ctx, ast, NULL, ast, INFER_FLAGS);
 }
 
 static sexp infer (sexp ctx, sexp ast) {
