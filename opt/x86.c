@@ -103,6 +103,7 @@ typedef struct sexp_native_trampoline_struct {
   sexp *dyn_args;
   size_t dyn_capacity;
   struct sexp_gc_var_t *dyn_saves;
+  size_t dyn_saves_capacity;
   sexp *call_dyn_args;
   size_t call_dyn_capacity;
   /* An uncaught raise unwinds to the innermost call from C, which */
@@ -135,7 +136,6 @@ sexp sexp_native_make_trampoline (sexp ctx, sexp proc, sexp_sint_t nargs, sexp *
       if (nargs + 2 > tramp->dyn_capacity) {
         tramp->dyn_capacity = (size_t)(nargs + 2) * 2;
         tramp->dyn_args = (sexp*)realloc(tramp->dyn_args, sizeof(sexp) * tramp->dyn_capacity);
-        tramp->dyn_saves = (struct sexp_gc_var_t*)realloc(tramp->dyn_saves, sizeof(struct sexp_gc_var_t) * tramp->dyn_capacity);
       }
       tramp->args = tramp->dyn_args;
     }
@@ -221,6 +221,28 @@ sexp sexp_native_delayed_ref (sexp ctx, sexp cell) {
   return sexp_cdr(cell);
 }
 
+/* Root args until the callee's frame holds them, for the steps before */
+/* entering it which allocate: after a tail call they're only in the */
+/* trampoline, and wrapping an opcode or consing a rest list allocates. */
+/* The caller resets the saves to outer_saves before entering. */
+static void native_root_args (sexp ctx, sexp_native_trampoline_t *tramp, sexp *args,
+                              sexp_sint_t nargs, struct sexp_gc_var_t *outer_saves) {
+  struct sexp_gc_var_t *arg_saves = tramp->saves;
+  if (nargs <= 0) return;
+  if (nargs > FIXED_ARGS_SIZE) {
+    if ((size_t)nargs > tramp->dyn_saves_capacity) {
+      tramp->dyn_saves_capacity = (size_t)nargs * 2;
+      tramp->dyn_saves = (struct sexp_gc_var_t*)realloc(tramp->dyn_saves, sizeof(struct sexp_gc_var_t) * tramp->dyn_saves_capacity);
+    }
+    arg_saves = tramp->dyn_saves;
+  }
+  for (sexp_sint_t k = 0; k < nargs; k++) {
+    arg_saves[k].var = &args[k];
+    arg_saves[k].next = (k == 0) ? outer_saves : &arg_saves[k - 1];
+  }
+  sexp_context_saves(ctx) = &arg_saves[nargs - 1];
+}
+
 static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp *args, int entry) {
   sexp_gc_var1(callee_save);
   sexp_gc_preserve1(ctx, callee_save);
@@ -234,6 +256,7 @@ static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp
   tramp.dyn_args = NULL;
   tramp.dyn_capacity = 0;
   tramp.dyn_saves = NULL;
+  tramp.dyn_saves_capacity = 0;
   tramp.call_dyn_args = NULL;
   tramp.call_dyn_capacity = 0;
   tramp.entry = entry;
@@ -242,6 +265,8 @@ static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp
   sexp res = SEXP_VOID;
   sexp fixed_args[FIXED_ARGS_SIZE];
   sexp *call_args = args;
+  /* the saves to restore before entering the callee */
+  struct sexp_gc_var_t *outer_saves = sexp_context_saves(ctx);
 
   if (entry) {
     tramp.abort_saves = sexp_context_saves(ctx);
@@ -254,7 +279,9 @@ static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp
 
   while (1) {
     callee_save = callee;
+    sexp_context_saves(ctx) = outer_saves;
     if (sexp_opcodep(callee)) {
+      native_root_args(ctx, &tramp, args, nargs, outer_saves);
       callee = make_opcode_procedure(ctx, callee, nargs, SEXP_PROC_NONE);
       callee_save = callee;
       if (sexp_exceptionp(callee)) {
@@ -295,29 +322,16 @@ static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp
     if (diff > 0) {
       if (sexp_procedure_variadic_p(callee)) {
         if (!sexp_procedure_unused_rest_p(callee)) {
+          /* call_args is a copy of the args, which are rooted */
+          native_root_args(ctx, &tramp, args, nargs, outer_saves);
           sexp_gc_var1(rest);
           sexp_gc_preserve1(ctx, rest);
-          struct sexp_gc_var_t *saved_saves = sexp_context_saves(ctx);
-          struct sexp_gc_var_t *saves_arr = tramp.saves;
-          if (nargs > FIXED_ARGS_SIZE) {
-            if ((size_t)nargs > tramp.dyn_capacity) {
-              tramp.dyn_capacity = (size_t)(nargs + 2) * 2;
-              tramp.dyn_saves = (struct sexp_gc_var_t*)realloc(tramp.dyn_saves, sizeof(struct sexp_gc_var_t) * tramp.dyn_capacity);
-            }
-            saves_arr = tramp.dyn_saves;
-          }
-          for (sexp_sint_t k = 0; k < nargs; k++) {
-            saves_arr[k].var = &call_args[k];
-            saves_arr[k].next = (k == 0) ? saved_saves : &saves_arr[k - 1];
-          }
-          sexp_context_saves(ctx) = &saves_arr[nargs - 1];
           rest = SEXP_NULL;
           for (sexp_sint_t k = nargs - 1; k >= expected; k--) {
             rest = sexp_cons(ctx, call_args[k], rest);
           }
           call_args[expected] = rest;
           nargs = expected + 1;
-          sexp_context_saves(ctx) = saved_saves;
           sexp_gc_release1(ctx);
         }
       } else {
@@ -331,6 +345,8 @@ static sexp sexp_native_call_aux (sexp ctx, sexp callee, sexp_sint_t nargs, sexp
 
     sexp bc = sexp_procedure_code(callee);
     sexp_native_func fn = (sexp_native_func)sexp_bytecode_data(bc);
+    /* the callee copies its args into its frame before allocating */
+    sexp_context_saves(ctx) = outer_saves;
     res = fn(ctx, callee, nargs, call_args);
 
     if (res == SEXP_TRAMPOLINE) {
@@ -554,8 +570,9 @@ __attribute__((noinline)) static sexp sexp_native_callcc_helper (sexp ctx, sexp 
       }
     }
     if (sexp_native_cont_type_tag == 0) {
-      sexp name = sexp_c_string(ctx, "native_cont", -1);
-      sexp type = sexp_register_c_type(ctx, name, sexp_native_cont_finalize);
+      /* cptr roots the name while registering the type allocates */
+      cptr = sexp_c_string(ctx, "native_cont", -1);
+      sexp type = sexp_register_c_type(ctx, cptr, sexp_native_cont_finalize);
       if (sexp_typep(type)) {
         sexp_native_cont_type_tag = sexp_type_tag(type);
       }
@@ -900,7 +917,11 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
     if (nargs == 0) return SEXP_ZERO;
     if (nargs == 1) return args[0];
     {
-      sexp res = args[0];
+      /* the running result isn't otherwise rooted, and the generic */
+      /* ops can allocate (bignums, ratios, complex) before reading it */
+      sexp_gc_var1(res);
+      sexp_gc_preserve1(ctx, res);
+      res = args[0];
       for (sexp_sint_t i = 1; i < nargs; i++) {
         if (sexp_fixnump(res) && sexp_fixnump(args[i])) {
           sexp_sint_t a = sexp_unbox_fixnum(res), b = sexp_unbox_fixnum(args[i]), c = a + b;
@@ -911,6 +932,7 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
         }
         res = sexp_add(ctx, res, args[i]);
       }
+      sexp_gc_release1(ctx);
       return res;
     }
   case SEXP_OP_SUB:
@@ -925,7 +947,9 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
       return sexp_fixnump(args[0]) ? sexp_native_fixnum_sub(ctx, SEXP_ZERO, args[0])
         : sexp_sub(ctx, SEXP_ZERO, args[0]);
     {
-      sexp res = args[0];
+      sexp_gc_var1(res);
+      sexp_gc_preserve1(ctx, res);
+      res = args[0];
       for (sexp_sint_t i = 1; i < nargs; i++) {
         if (sexp_fixnump(res) && sexp_fixnump(args[i])) {
           sexp_sint_t a = sexp_unbox_fixnum(res), b = sexp_unbox_fixnum(args[i]), c = a - b;
@@ -938,16 +962,20 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
         }
         res = sexp_sub(ctx, res, args[i]);
       }
+      sexp_gc_release1(ctx);
       return res;
     }
   case SEXP_OP_MUL:
     if (nargs == 0) return SEXP_ONE;
     if (nargs == 1) return args[0];
     {
-      sexp res = args[0];
+      sexp_gc_var1(res);
+      sexp_gc_preserve1(ctx, res);
+      res = args[0];
       for (sexp_sint_t i = 1; i < nargs; i++) {
         res = sexp_mul(ctx, res, args[i]);
       }
+      sexp_gc_release1(ctx);
       return res;
     }
   case SEXP_OP_DIV:
@@ -957,7 +985,9 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
       return sexp_div(ctx, SEXP_ONE, args[0]);
     }
     {
-      sexp res = args[0];
+      sexp_gc_var1(res);
+      sexp_gc_preserve1(ctx, res);
+      res = args[0];
       for (sexp_sint_t i = 1; i < nargs; i++) {
         if (args[i] == SEXP_ZERO) {
 #if SEXP_USE_FLONUMS
@@ -965,11 +995,15 @@ static sexp sexp_native_dispatch_op_inner (sexp ctx, sexp self, sexp op, sexp_si
             res = sexp_make_flonum(ctx, 0.0);
           else
 #endif
+          {
+            sexp_gc_release1(ctx);
             return sexp_user_exception(ctx, self, "divide by zero", SEXP_NULL);
+          }
         } else {
           res = sexp_div(ctx, res, args[i]);
         }
       }
+      sexp_gc_release1(ctx);
       return res;
     }
   case SEXP_OP_QUOTIENT:
