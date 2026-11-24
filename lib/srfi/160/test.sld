@@ -1,5 +1,5 @@
 (define-library (srfi 160 test)
-  (import (scheme base)
+  (import (scheme base) (scheme inexact)
           (srfi 160 base) (srfi 160 u32) (srfi 160 u64) (srfi 160 s64)
           (chibi test))
   (export run-tests)
@@ -259,6 +259,25 @@
             (set-f64! v 0 3)
             (set-f64! v 1 1/2)
             (test '#f64(3.0 0.5) v))))
+
+      (test-group "uvectors/element predicates"
+        (define-syntax test-range
+          (syntax-rules ()
+            ((test-range pred lo hi)
+             (begin
+               (test-assert (pred lo))
+               (test-assert (pred hi))
+               (test-not (pred (- lo 1)))
+               (test-not (pred (+ hi 1)))
+               (test-not (pred (inexact lo)))))))
+        (test-range u8? 0 255)
+        (test-range s8? -128 127)
+        (test-range u16? 0 65535)
+        (test-range s16? -32768 32767)
+        (test-range u32? 0 4294967295)
+        (test-range s32? -2147483648 2147483647)
+        (test-range u64? 0 18446744073709551615)
+        (test-range s64? -9223372036854775808 9223372036854775807))
 
       (test-group "uvectors/inferred types"
         ;; params demanded to be uvectors of an element type on entry
