@@ -3929,7 +3929,7 @@ static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
              && name && (name == sexp_ref_name(sexp_car(app)))
              && (loc == sexp_ref_loc(sexp_car(app)))
              && lam
-             && sexp_listp(ctx, sexp_lambda_params(lam))
+             && sexp_truep(sexp_listp(ctx, sexp_lambda_params(lam)))
              && (sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(app)))
                  == get_param_count(lam))) {
     if (sexp_lambdap(sexp_ref_loc(sexp_car(app)))) {
