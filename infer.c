@@ -862,6 +862,19 @@ static int demand_param_index (struct demand_walk *w, sexp x) {
 
 static int demand_walk_expr (sexp ctx, struct demand_walk *w, sexp x);
 
+/* is x a constant: an immediate, a literal, or a value such as a */
+/* flonum left in the AST as is */
+static int ast_constantp (sexp x) {
+  if (!x || !sexp_pointerp(x)) return 1;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_PAIR: case SEXP_LAMBDA: case SEXP_REF: case SEXP_SET:
+  case SEXP_SET_SYN: case SEXP_CND: case SEXP_SEQ: case SEXP_SYNCLO:
+    return 0;
+  default:
+    return 1;
+  }
+}
+
 /* evaluate a lambda's body as called with already evaluated args */
 static int demand_walk_body (sexp ctx, struct demand_walk *w, sexp lam) {
   int res;
@@ -878,7 +891,7 @@ static int demand_walk_args (sexp ctx, struct demand_walk *w, sexp args) {
   sexp ls, unsafe = NULL;
   for (ls = args; sexp_pairp(ls); ls = sexp_cdr(ls)) {
     sexp a = sexp_car(ls);
-    if (!a || !sexp_pointerp(a) || sexp_litp(a) || sexp_lambdap(a)
+    if (ast_constantp(a) || sexp_lambdap(a)
         || (sexp_refp(a) && sexp_lambdap(sexp_ref_loc(a))))
       continue;
     if (unsafe) return WALK_STOP;
@@ -890,7 +903,7 @@ static int demand_walk_args (sexp ctx, struct demand_walk *w, sexp args) {
 static int demand_walk_expr (sexp ctx, struct demand_walk *w, sexp x) {
   sexp ls, op;
   int i, res, type, only, k;
-  if (!x || !sexp_pointerp(x) || sexp_litp(x)) return WALK_SAFE;
+  if (ast_constantp(x)) return WALK_SAFE;
   switch (sexp_pointer_tag(x)) {
   case SEXP_LAMBDA:
     return WALK_SAFE;
