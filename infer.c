@@ -83,6 +83,169 @@ static int leaf_opcodep (sexp op) {
   return 1;
 }
 
+/************************* Inline Loops *******************************/
+
+/* A named let analyzes to ((lambda () (define lp #f) (set! lp L) */
+/* (lp args ...))).  When lp is only called, by self calls in tail */
+/* position in the body of L (which can be within nested inline lets */
+/* and loops), native code needs neither lp nor L as values: it binds */
+/* L's params in slots of the current frame as an inline let of the */
+/* args, and the self calls jump back to the start of L's body.  The */
+/* outer lambda is marked SEXP_LAMBDA_INLINE_LOOP when this holds. */
+
+/* the (set! lp L) and the (lp args ...) of a named let, or NULL */
+static sexp inline_loop_shape (sexp app, sexp *init) {
+  sexp op, ls, def, var, lam, last;
+  if (!sexp_pairp(app) || !sexp_nullp(sexp_cdr(app))) return NULL;
+  op = sexp_car(app);
+  if (!sexp_lambdap(op) || !sexp_nullp(sexp_lambda_params(op))
+      || !sexp_pairp(sexp_lambda_locals(op))
+      || !sexp_nullp(sexp_cdr(sexp_lambda_locals(op)))
+      || !sexp_seqp(sexp_lambda_body(op)))
+    return NULL;
+  ls = sexp_seq_ls(sexp_lambda_body(op));
+  if (!sexp_pairp(ls) || !sexp_setp(def = sexp_car(ls))) return NULL;
+  var = sexp_set_var(def);
+  lam = sexp_set_value(def);
+  if (!sexp_refp(var) || sexp_ref_loc(var) != op
+      || sexp_ref_name(var) != sexp_car(sexp_lambda_locals(op))
+      || !sexp_lambdap(lam) || sexp_pairp(sexp_lambda_locals(lam))
+      || sexp_pairp(sexp_lambda_sv(lam)))
+    return NULL;
+  /* anything between the definition and the call has no effect */
+  for (ls = sexp_cdr(ls); sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls)); ls = sexp_cdr(ls))
+    if (sexp_pointerp(sexp_car(ls)) && !sexp_litp(sexp_car(ls)))
+      return NULL;
+  if (!sexp_pairp(ls) || !sexp_pairp(last = sexp_car(ls))
+      || !sexp_refp(sexp_car(last))
+      || sexp_ref_name(sexp_car(last)) != sexp_ref_name(var)
+      || sexp_ref_loc(sexp_car(last)) != op)
+    return NULL;
+  for (var = sexp_lambda_params(lam), ls = sexp_cdr(last);
+       sexp_pairp(var) && sexp_pairp(ls); var = sexp_cdr(var), ls = sexp_cdr(ls))
+    ;
+  if (!sexp_nullp(var) || !sexp_nullp(ls)) return NULL;
+  *init = last;
+  return def;
+}
+
+/* the (set! lp L) of a named let compiled inline, setting *init to */
+/* its initial call (lp args ...), or NULL */
+sexp sexp_inline_loop (sexp ctx, sexp app, sexp *init) {
+  if (!sexp_pairp(app) || !sexp_lambdap(sexp_car(app))
+      || !sexp_lambda_inline_loop_p(sexp_car(app)))
+    return NULL;
+  return inline_loop_shape(app, init);
+}
+
+/* is x a ref to the lp of an inline loop, i.e. a jump if called? */
+int sexp_inline_loop_refp (sexp x) {
+  sexp loc;
+  return sexp_refp(x) && sexp_lambdap(loc = sexp_ref_loc(x))
+    && sexp_lambda_inline_loop_p(loc) && sexp_pairp(sexp_lambda_locals(loc))
+    && sexp_car(sexp_lambda_locals(loc)) == sexp_ref_name(x);
+}
+
+/* Is every ref to name at loc in x a call of n args in tail position, */
+/* relative to the loop if tailp? */
+static int loop_jumps_onlyp (sexp ctx, sexp name, sexp loc, int n, sexp x, int tailp) {
+  sexp ls, op, def, init;
+  int i;
+  if (!x || !sexp_pointerp(x)) return 1;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_REF:
+    return !(sexp_ref_name(x) == name && sexp_ref_loc(x) == loc);
+  case SEXP_SET:
+    return loop_jumps_onlyp(ctx, name, loc, n, sexp_set_var(x), 0)
+      && loop_jumps_onlyp(ctx, name, loc, n, sexp_set_value(x), 0);
+  case SEXP_LAMBDA:
+    return loop_jumps_onlyp(ctx, name, loc, n, sexp_lambda_body(x), 0);
+  case SEXP_CND:
+    return loop_jumps_onlyp(ctx, name, loc, n, sexp_cnd_test(x), 0)
+      && loop_jumps_onlyp(ctx, name, loc, n, sexp_cnd_pass(x), tailp)
+      && loop_jumps_onlyp(ctx, name, loc, n, sexp_cnd_fail(x), tailp);
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      if (!loop_jumps_onlyp(ctx, name, loc, n, sexp_car(ls),
+                            sexp_pairp(sexp_cdr(ls)) ? 0 : tailp))
+        return 0;
+    return 1;
+  case SEXP_SYNCLO:
+    return loop_jumps_onlyp(ctx, name, loc, n, sexp_synclo_expr(x), tailp);
+  case SEXP_PAIR:
+    op = sexp_car(x);
+    if (sexp_refp(op) && sexp_ref_name(op) == name && sexp_ref_loc(op) == loc) {
+      for (i = 0, ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls), i++)
+        if (!loop_jumps_onlyp(ctx, name, loc, n, sexp_car(ls), 0))
+          return 0;
+      return tailp && i == n;
+    }
+    if ((def = sexp_inline_loop(ctx, x, &init))) {
+      /* a nested loop's body is in tail position if the loop is */
+      for (ls = sexp_cdr(init); sexp_pairp(ls); ls = sexp_cdr(ls))
+        if (!loop_jumps_onlyp(ctx, name, loc, n, sexp_car(ls), 0))
+          return 0;
+      return loop_jumps_onlyp(ctx, name, loc, n,
+                              sexp_lambda_body(sexp_set_value(def)), tailp);
+    }
+    if (sexp_inline_letp(ctx, op, x)) {
+      for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+        if (!loop_jumps_onlyp(ctx, name, loc, n, sexp_car(ls), 0))
+          return 0;
+      return loop_jumps_onlyp(ctx, name, loc, n, sexp_lambda_body(op), tailp);
+    }
+    for (ls = x; sexp_pairp(ls); ls = sexp_cdr(ls))
+      if (!loop_jumps_onlyp(ctx, name, loc, n, sexp_car(ls), 0))
+        return 0;
+    return 1;
+  default:
+    return 1;
+  }
+}
+
+/* mark the named lets in x compiled inline, inner ones first */
+static void mark_inline_loops (sexp ctx, sexp x) {
+  sexp ls, def, init, lam;
+  if (!x || !sexp_pointerp(x)) return;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_LAMBDA:
+    mark_inline_loops(ctx, sexp_lambda_body(x));
+    break;
+  case SEXP_SET:
+    mark_inline_loops(ctx, sexp_set_value(x));
+    break;
+  case SEXP_CND:
+    mark_inline_loops(ctx, sexp_cnd_test(x));
+    mark_inline_loops(ctx, sexp_cnd_pass(x));
+    mark_inline_loops(ctx, sexp_cnd_fail(x));
+    break;
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      mark_inline_loops(ctx, sexp_car(ls));
+    break;
+  case SEXP_SYNCLO:
+    mark_inline_loops(ctx, sexp_synclo_expr(x));
+    break;
+  case SEXP_PAIR:
+    for (ls = x; sexp_pairp(ls); ls = sexp_cdr(ls))
+      mark_inline_loops(ctx, sexp_car(ls));
+    if ((def = inline_loop_shape(x, &init))) {
+      sexp name = sexp_ref_name(sexp_set_var(def)), loc = sexp_car(x);
+      int n = 0;
+      lam = sexp_set_value(def);
+      for (ls = sexp_lambda_params(lam); sexp_pairp(ls); ls = sexp_cdr(ls)) n++;
+      for (ls = sexp_cdr(init); sexp_pairp(ls); ls = sexp_cdr(ls))
+        if (!loop_jumps_onlyp(ctx, name, loc, n, sexp_car(ls), 0))
+          return;
+      if (loop_jumps_onlyp(ctx, name, loc, n, sexp_lambda_body(lam), 1))
+        sexp_lambda_flags(loc) = sexp_make_fixnum(
+          (sexp_fixnump(sexp_lambda_flags(loc)) ? sexp_unbox_fixnum(sexp_lambda_flags(loc)) : 0)
+          | SEXP_LAMBDA_INLINE_LOOP);
+    }
+    break;
+  }
+}
+
 static int is_leaf_expr (sexp ctx, sexp lam, sexp x, int tailp) {
   if (!sexp_pointerp(x)) {
     return 1;
@@ -821,6 +984,8 @@ static int loop_has_jumps (sexp ctx, struct loop_walk *w, sexp x) {
   case SEXP_PAIR:
     if (sexp_opcodep(sexp_car(x)) || sexp_core_not_appp(ctx, x))
       return 0;
+    if ((ls = sexp_inline_loop(ctx, x, &ls)))
+      return loop_has_jumps(ctx, w, sexp_lambda_body(sexp_set_value(ls)));
     if (sexp_inline_letp(ctx, w->lam, x))
       return loop_has_jumps(ctx, w, sexp_lambda_body(sexp_car(x)));
     return sexp_self_jump_appp(ctx, w->lam, w->name, w->loc, x);
@@ -1934,6 +2099,17 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
     if (sexp_core_not_appp(ctx, x))
       return sexp_expr_may_allocp(ctx, lam, sexp_cadr(x), self_name, self_loc);
 
+    {
+      sexp init, def = sexp_inline_loop(ctx, x, &init);
+      if (def) {
+        for (sexp ls = sexp_cdr(init); sexp_pairp(ls); ls = sexp_cdr(ls))
+          if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
+            return 1;
+        return sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(sexp_set_value(def)),
+                                    self_name, self_loc);
+      }
+    }
+
     if (sexp_inline_letp(ctx, lam, x)) {
       /* boxing mutated params allocates */
       if (sexp_pairp(sexp_lambda_sv(op)))
@@ -1945,8 +2121,10 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
       return sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(op), self_name, self_loc);
     }
 
-    if (self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
-        && lam && (self_loc == sexp_ref_loc(op))) {
+    /* self calls, and jumps in inline loops, run code already counted */
+    if ((self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
+         && lam && (self_loc == sexp_ref_loc(op)))
+        || sexp_inline_loop_refp(op)) {
       for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
         if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
           return 1;
@@ -2049,6 +2227,7 @@ static void infer_param_types (sexp ctx, sexp ast) {
 }
 
 static sexp infer (sexp ctx, sexp ast) {
+  mark_inline_loops(ctx, ast);
   analyze_escapes(ctx, ast);
   infer_param_types(ctx, ast);
   return ast;
