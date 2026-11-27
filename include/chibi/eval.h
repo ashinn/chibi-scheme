@@ -70,6 +70,9 @@ SEXP_API int sexp_param_checked_type (sexp lam, int k, int *order, int *subtype)
 SEXP_API int sexp_param_unboxedp (sexp lam, int k);
 SEXP_API int sexp_unboxed_refp (sexp x);
 SEXP_API int sexp_inline_letp (sexp ctx, sexp lam, sexp app);
+SEXP_API int sexp_core_not_appp (sexp ctx, sexp app);
+SEXP_API int sexp_self_jump_appp (sexp ctx, sexp lam, sexp name, sexp loc, sexp app);
+SEXP_API int sexp_loop_needs_fuelp (sexp ctx, sexp lam, sexp name, sexp loc);
 SEXP_API int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc);
 #endif
 SEXP_API sexp sexp_make_lambda (sexp ctx, sexp params);

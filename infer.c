@@ -15,6 +15,74 @@ struct sexp_local_binding {
   sexp lam;
 };
 
+/* Is app a call (not x) to the core not?  Imported procedures are */
+/* assumed never to be mutated, so this can be inlined. */
+int sexp_core_not_appp (sexp ctx, sexp app) {
+  sexp op, name, env, cell;
+  if (!sexp_pairp(app) || !sexp_refp(op = sexp_car(app))
+      || sexp_lambdap(sexp_ref_loc(op))
+      || !sexp_pairp(sexp_cdr(app)) || !sexp_nullp(sexp_cddr(app)))
+    return 0;
+  for (name = sexp_ref_name(op); sexp_synclop(name); name = sexp_synclo_expr(name))
+    ;
+  if (name != sexp_intern(ctx, "not", 3))
+    return 0;
+  env = sexp_global(ctx, SEXP_G_META_ENV);
+  if (!sexp_envp(env))
+    return 0;
+  cell = sexp_env_cell(ctx, env, name, 0);
+  return cell && cell == sexp_ref_cell(op);
+}
+
+/* opcodes that don't call back into Scheme, inlined natively */
+static int leaf_opcodep (sexp op) {
+  sexp_sint_t code = sexp_opcode_code(op);
+  sexp_sint_t oclass = sexp_opcode_class(op);
+  if (oclass == SEXP_OPC_FOREIGN || oclass == SEXP_OPC_PARAMETER)
+    return 0;
+  switch (code) {
+  case SEXP_OP_ADD:
+  case SEXP_OP_SUB:
+  case SEXP_OP_MUL:
+  case SEXP_OP_QUOTIENT:
+  case SEXP_OP_REMAINDER:
+  case SEXP_OP_LT:
+  case SEXP_OP_LE:
+  case SEXP_OP_EQN:
+  case SEXP_OP_EQ:
+  case SEXP_OP_NULLP:
+  case SEXP_OP_FIXNUMP:
+  case SEXP_OP_CHARP:
+  case SEXP_OP_EOFP:
+  case SEXP_OP_SYMBOLP:
+  case SEXP_OP_CAR:
+  case SEXP_OP_CDR:
+  case SEXP_OP_SET_CAR:
+  case SEXP_OP_SET_CDR:
+  case SEXP_OP_VECTOR_LENGTH:
+  case SEXP_OP_VECTOR_REF:
+  case SEXP_OP_VECTOR_SET:
+  case SEXP_OP_STRING_LENGTH:
+  case SEXP_OP_STRING_REF:
+  case SEXP_OP_STRING_CURSOR_NEXT:
+  case SEXP_OP_STRING_CURSOR_PREV:
+  case SEXP_OP_STRING_CURSOR_END:
+  case SEXP_OP_BYTES_LENGTH:
+  case SEXP_OP_BYTES_REF:
+  case SEXP_OP_BYTES_SET:
+  case SEXP_OP_SLOT_REF:
+  case SEXP_OP_SLOT_SET:
+  case SEXP_OP_TYPEP:
+  case SEXP_OP_ISA:
+  case SEXP_OP_CHAR2INT:
+  case SEXP_OP_INT2CHAR:
+    break;
+  default:
+    return 0;
+  }
+  return 1;
+}
+
 static int is_leaf_expr (sexp ctx, sexp lam, sexp x, int tailp) {
   if (!sexp_pointerp(x)) {
     return 1;
@@ -31,12 +99,8 @@ static int is_leaf_expr (sexp ctx, sexp lam, sexp x, int tailp) {
     return 0;
   case SEXP_CND: {
     sexp test = sexp_cnd_test(x);
-    while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
-           sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
-           !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
-           sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+    while (sexp_core_not_appp(ctx, test))
       test = sexp_cadr(test);
-    }
     return is_leaf_expr(ctx, lam, test, 0) &&
            is_leaf_expr(ctx, lam, sexp_cnd_pass(x), tailp) &&
            is_leaf_expr(ctx, lam, sexp_cnd_fail(x), tailp);
@@ -52,51 +116,11 @@ static int is_leaf_expr (sexp ctx, sexp lam, sexp x, int tailp) {
   }
   case SEXP_PAIR: {
     sexp op = sexp_car(x);
+    if (sexp_core_not_appp(ctx, x))
+      return is_leaf_expr(ctx, lam, sexp_cadr(x), 0);
     if (sexp_opcodep(op)) {
-      sexp_sint_t code = sexp_opcode_code(op);
-      sexp_sint_t oclass = sexp_opcode_class(op);
-      if (oclass == SEXP_OPC_FOREIGN || oclass == SEXP_OPC_PARAMETER)
+      if (!leaf_opcodep(op))
         return 0;
-      switch (code) {
-      case SEXP_OP_ADD:
-      case SEXP_OP_SUB:
-      case SEXP_OP_MUL:
-      case SEXP_OP_QUOTIENT:
-      case SEXP_OP_REMAINDER:
-      case SEXP_OP_LT:
-      case SEXP_OP_LE:
-      case SEXP_OP_EQN:
-      case SEXP_OP_EQ:
-      case SEXP_OP_NULLP:
-      case SEXP_OP_FIXNUMP:
-      case SEXP_OP_CHARP:
-      case SEXP_OP_EOFP:
-      case SEXP_OP_SYMBOLP:
-      case SEXP_OP_CAR:
-      case SEXP_OP_CDR:
-      case SEXP_OP_SET_CAR:
-      case SEXP_OP_SET_CDR:
-      case SEXP_OP_VECTOR_LENGTH:
-      case SEXP_OP_VECTOR_REF:
-      case SEXP_OP_VECTOR_SET:
-      case SEXP_OP_STRING_LENGTH:
-      case SEXP_OP_STRING_REF:
-      case SEXP_OP_STRING_CURSOR_NEXT:
-      case SEXP_OP_STRING_CURSOR_PREV:
-      case SEXP_OP_STRING_CURSOR_END:
-      case SEXP_OP_BYTES_LENGTH:
-      case SEXP_OP_BYTES_REF:
-      case SEXP_OP_BYTES_SET:
-      case SEXP_OP_SLOT_REF:
-      case SEXP_OP_SLOT_SET:
-      case SEXP_OP_TYPEP:
-      case SEXP_OP_ISA:
-      case SEXP_OP_CHAR2INT:
-      case SEXP_OP_INT2CHAR:
-        break;
-      default:
-        return 0;
-      }
       sexp ls = sexp_cdr(x);
       for (; sexp_pairp(ls); ls = sexp_cdr(ls)) {
         if (!is_leaf_expr(ctx, lam, sexp_car(ls), 0))
@@ -532,6 +556,7 @@ static int infer_expr_entry_env (sexp ctx, sexp x, const struct let_env *env) {
   case SEXP_PAIR: {
     sexp op = sexp_car(x);
     if (sexp_lambdap(op)) return infer_let_entry(ctx, x, env);
+    if (sexp_core_not_appp(ctx, x)) return SEXP_BOOLEAN;
     if (!sexp_opcodep(op)) return SEXP_OBJECT;
     switch (sexp_opcode_code(op)) {
 #if SEXP_USE_FLONUMS
@@ -623,10 +648,7 @@ static void analyze_cnd_bound (sexp ctx, sexp lam, sexp test, sexp p_sym,
                                int *pass_ok, int *fail_ok) {
   int *tmp, b, rel, strict, nonstrict;
   sexp op, a0, a1;
-  while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
-         sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
-         !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
-         sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+  while (sexp_core_not_appp(ctx, test)) {
     test = sexp_cadr(test);
     tmp = pass_ok; pass_ok = fail_ok; fail_ok = tmp;
   }
@@ -708,6 +730,302 @@ static int check_recursive_step (sexp ctx, sexp lam, sexp app, sexp p_sym, int k
   if (!is_ref_to_var(a0, lam, p_sym) || !sexp_fixnum_literalp(a1, &c))
     return STEP_OTHER;
   return c == 0 ? STEP_SAME : c == 1 ? STEP_UP : c == -1 ? STEP_DOWN : STEP_OTHER;
+}
+
+/************************* Loop Fuel Analysis *************************/
+
+/* Self tail calls compile to jumps, which must use fuel so other */
+/* green threads get to run, unless the loop provably terminates: */
+/* it only uses simple opcodes and makes no other calls (so nothing */
+/* else runs while it loops), and every jump steps one param toward */
+/* a loop invariant fixnum bound it's checked against, or to the */
+/* cdr of a param checked to be a pair. */
+
+/* Is app a self call in tail position compiled as a jump to the */
+/* start of lam, named name at loc? */
+int sexp_self_jump_appp (sexp ctx, sexp lam, sexp name, sexp loc, sexp app) {
+  sexp op = sexp_car(app);
+  return sexp_refp(op) && name && name == sexp_ref_name(op)
+    && loc == sexp_ref_loc(op) && lam && sexp_lambdap(lam)
+    && sexp_truep(sexp_listp(ctx, sexp_lambda_params(lam)))
+    && sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(app)))
+       == sexp_unbox_fixnum(sexp_length(ctx, sexp_lambda_params(lam)));
+}
+
+#define STEP_CDR 8
+#define LOOP_MAX_LETS 16
+
+/* opcodes a loop can use without anything else running: the leaf */
+/* opcodes, and those which may allocate (the GC runs no Scheme) */
+static int loop_opcodep (sexp op) {
+  if (leaf_opcodep(op)) return 1;
+  switch (sexp_opcode_code(op)) {
+  case SEXP_OP_CONS:
+  case SEXP_OP_DIV:
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+  case SEXP_OP_UVECTOR_LENGTH:
+  case SEXP_OP_UVECTOR_REF:
+  case SEXP_OP_UVECTOR_SET:
+#endif
+    return sexp_opcode_class(op) != SEXP_OPC_FOREIGN;
+  default:
+    return 0;
+  }
+}
+
+static sexp nth_param (sexp lam, int k) {
+  sexp ls = sexp_lambda_params(lam);
+  for (; k > 0 && sexp_pairp(ls); k--) ls = sexp_cdr(ls);
+  return sexp_pairp(ls) ? sexp_car(ls) : SEXP_FALSE;
+}
+
+/* is the k'th param of lam inferred to always be a fixnum? */
+static int fixnum_paramp (sexp lam, int k) {
+  sexp types = sexp_lambda_param_types(lam);
+  int e;
+  for (; k > 0 && sexp_pairp(types); k--) types = sexp_cdr(types);
+  if (!sexp_pairp(types) || !sexp_fixnump(sexp_car(types))) return 0;
+  e = (int)sexp_unbox_fixnum(sexp_car(types));
+  e = (e & ENTRY_CHECKED) ? ENTRY_KIND(e) : (e & ~ENTRY_UNBOXED);
+  return e >= 0 && ENTRY_TYPE(e) == SEXP_FIXNUM;
+}
+
+static int false_exprp (sexp x) {
+  return x == SEXP_FALSE
+    || (x && sexp_pointerp(x) && sexp_litp(x) && sexp_lit_value(x) == SEXP_FALSE);
+}
+
+struct loop_walk {
+  sexp lam, name, loc;
+  int num_params;
+  sexp_uint_t same;  /* params (up to 64) every jump passes unchanged */
+  int k;             /* the param to show progress on */
+  sexp p;
+  int num_lets;      /* inline lets entered within the loop */
+  sexp lets[LOOP_MAX_LETS];
+};
+
+static int loop_has_jumps (sexp ctx, struct loop_walk *w, sexp x) {
+  sexp ls;
+  if (!x || !sexp_pointerp(x)) return 0;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_CND:
+    return loop_has_jumps(ctx, w, sexp_cnd_pass(x))
+      || loop_has_jumps(ctx, w, sexp_cnd_fail(x));
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls)); ls = sexp_cdr(ls))
+      ;
+    return sexp_pairp(ls) && loop_has_jumps(ctx, w, sexp_car(ls));
+  case SEXP_SYNCLO:
+    return loop_has_jumps(ctx, w, sexp_synclo_expr(x));
+  case SEXP_PAIR:
+    if (sexp_opcodep(sexp_car(x)) || sexp_core_not_appp(ctx, x))
+      return 0;
+    if (sexp_inline_letp(ctx, w->lam, x))
+      return loop_has_jumps(ctx, w, sexp_lambda_body(sexp_car(x)));
+    return sexp_self_jump_appp(ctx, w->lam, w->name, w->loc, x);
+  default:
+    return 0;
+  }
+}
+
+/* Does x make no calls but self jumps?  Records the params every */
+/* jump passes unchanged. */
+static int loop_leafp (sexp ctx, struct loop_walk *w, sexp x, int tailp) {
+  sexp ls, op;
+  int k;
+  if (!x || !sexp_pointerp(x)) return 1;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_LIT: case SEXP_REF:
+    return 1;
+  case SEXP_SYNCLO:
+    return loop_leafp(ctx, w, sexp_synclo_expr(x), tailp);
+  case SEXP_CND:
+    return loop_leafp(ctx, w, sexp_cnd_test(x), 0)
+      && loop_leafp(ctx, w, sexp_cnd_pass(x), tailp)
+      && loop_leafp(ctx, w, sexp_cnd_fail(x), tailp);
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      if (!loop_leafp(ctx, w, sexp_car(ls), sexp_pairp(sexp_cdr(ls)) ? 0 : tailp))
+        return 0;
+    return 1;
+  case SEXP_PAIR:
+    op = sexp_car(x);
+    if (sexp_opcodep(op)) {
+      if (!loop_opcodep(op)) return 0;
+    } else if (sexp_core_not_appp(ctx, x)) {
+    } else if (sexp_inline_letp(ctx, w->lam, x)) {
+      if (sexp_pairp(sexp_lambda_sv(op))
+          || !loop_leafp(ctx, w, sexp_lambda_body(op), tailp))
+        return 0;
+    } else if (tailp && sexp_self_jump_appp(ctx, w->lam, w->name, w->loc, x)) {
+      for (k = 0; k < w->num_params && k < 64; k++)
+        if (check_recursive_step(ctx, w->lam, x, nth_param(w->lam, k), k) != STEP_SAME)
+          w->same &= ~((sexp_uint_t)1 << k);
+    } else {
+      return 0;
+    }
+    for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      if (!loop_leafp(ctx, w, sexp_car(ls), 0))
+        return 0;
+    return 1;
+  default:  /* lambdas allocate closures, set! may change bounds */
+    return 0;
+  }
+}
+
+/* Does x have the same value on every iteration of the loop? */
+static int loop_invariantp (struct loop_walk *w, sexp x) {
+  sexp ls, loc;
+  int i;
+  if (!x || !sexp_pointerp(x) || sexp_litp(x)) return 1;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_SYNCLO:
+    return loop_invariantp(w, sexp_synclo_expr(x));
+  case SEXP_REF:
+    loc = sexp_ref_loc(x);
+    if (loc == w->lam) {
+      i = param_index_of(w->lam, sexp_ref_name(x));
+      return i >= 0 && i < 64 && (w->same & ((sexp_uint_t)1 << i));
+    }
+    for (i = 0; i < w->num_lets; i++)
+      if (loc == w->lets[i]) return 0;
+    /* nothing else runs to change other variables */
+    return 1;
+  case SEXP_PAIR:
+    if (!sexp_opcodep(sexp_car(x))) return 0;
+    switch (sexp_opcode_code(sexp_car(x))) {
+    case SEXP_OP_VECTOR_LENGTH: case SEXP_OP_STRING_LENGTH:
+    case SEXP_OP_BYTES_LENGTH:
+#if SEXP_USE_UNIFORM_VECTOR_LITERALS
+    case SEXP_OP_UVECTOR_LENGTH:
+#endif
+    case SEXP_OP_ADD: case SEXP_OP_SUB:
+      for (ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+        if (!loop_invariantp(w, sexp_car(ls))) return 0;
+      return 1;
+    default:
+      return 0;
+    }
+  default:
+    return 0;
+  }
+}
+
+/* Or in the steps of w->p known to make progress in the pass and */
+/* fail branches of test. */
+static void loop_cnd_guard (sexp ctx, struct loop_walk *w, sexp test,
+                            int *pass, int *fail) {
+  int *tmp, rel, b;
+  sexp op, a0, a1;
+  while (sexp_core_not_appp(ctx, test)) {
+    test = sexp_cadr(test);
+    tmp = pass; pass = fail; fail = tmp;
+  }
+  /* (and t1 t2): both hold in the pass branch */
+  if (sexp_cndp(test) && false_exprp(sexp_cnd_fail(test))) {
+    int ignore = 0;
+    loop_cnd_guard(ctx, w, sexp_cnd_test(test), pass, &ignore);
+    loop_cnd_guard(ctx, w, sexp_cnd_pass(test), pass, &ignore);
+    return;
+  }
+  if (!sexp_pairp(test) || !sexp_opcodep(op = sexp_car(test))
+      || !sexp_pairp(sexp_cdr(test)))
+    return;
+  a0 = sexp_cadr(test);
+  if (sexp_nullp(sexp_cddr(test))) {
+    if (!is_ref_to_var(a0, w->lam, w->p)) return;
+    if (sexp_opcode_code(op) == SEXP_OP_NULLP)
+      *fail |= STEP_CDR;
+    else if (sexp_opcode_code(op) == SEXP_OP_TYPEP
+             && sexp_opcode_data(op) == sexp_make_fixnum(SEXP_PAIR))
+      *pass |= STEP_CDR;
+    return;
+  }
+  if (!sexp_pairp(sexp_cddr(test)) || !sexp_nullp(sexp_cdr(sexp_cddr(test))))
+    return;
+  a1 = sexp_caddr(test);
+  /* rel: -2 for p < b, -1 for p <= b, 1 for p >= b, 2 for p > b */
+  switch (sexp_opcode_code(op)) {
+  case SEXP_OP_LT: rel = sexp_opcode_inverse(op) ? 2 : -2; break;
+  case SEXP_OP_LE: rel = sexp_opcode_inverse(op) ? 1 : -1; break;
+  default: return;
+  }
+  if (!is_ref_to_var(a0, w->lam, w->p)) {
+    if (!is_ref_to_var(a1, w->lam, w->p)) return;
+    a1 = a0;
+    rel = -rel;
+  }
+  b = fixnum_bits(ctx, a1);
+  if (b < 0 || b > FIXNUM_MAG_BITS || !loop_invariantp(w, a1)) return;
+  /* stepping toward the bound, in the branch where it holds */
+  *pass |= rel < 0 ? STEP_UP : STEP_DOWN;
+  *fail |= rel < 0 ? STEP_DOWN : STEP_UP;
+}
+
+/* Does every jump in x step w->p toward termination, given the */
+/* steps allowed by the tests x is in a branch of? */
+static int loop_progressp (sexp ctx, struct loop_walk *w, sexp x, int allowed) {
+  sexp ls, arg;
+  int pass, fail, res, step;
+  if (!x || !sexp_pointerp(x)) return 1;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_SYNCLO:
+    return loop_progressp(ctx, w, sexp_synclo_expr(x), allowed);
+  case SEXP_CND:
+    pass = fail = allowed;
+    loop_cnd_guard(ctx, w, sexp_cnd_test(x), &pass, &fail);
+    return loop_progressp(ctx, w, sexp_cnd_pass(x), pass)
+      && loop_progressp(ctx, w, sexp_cnd_fail(x), fail);
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls) && sexp_pairp(sexp_cdr(ls)); ls = sexp_cdr(ls))
+      ;
+    return !sexp_pairp(ls) || loop_progressp(ctx, w, sexp_car(ls), allowed);
+  case SEXP_PAIR:
+    if (sexp_opcodep(sexp_car(x)) || sexp_core_not_appp(ctx, x))
+      return 1;
+    if (sexp_inline_letp(ctx, w->lam, x)) {
+      if (w->num_lets >= LOOP_MAX_LETS) return 0;
+      w->lets[w->num_lets++] = sexp_car(x);
+      res = loop_progressp(ctx, w, sexp_lambda_body(sexp_car(x)), allowed);
+      w->num_lets--;
+      return res;
+    }
+    /* the only other calls, checked by loop_leafp, are jumps */
+    step = check_recursive_step(ctx, w->lam, x, w->p, w->k);
+    if (step == STEP_UP || step == STEP_DOWN)
+      return (allowed & step) && fixnum_paramp(w->lam, w->k);
+    for (ls = sexp_cdr(x), step = 0; step < w->k; step++) ls = sexp_cdr(ls);
+    arg = sexp_car(ls);
+    return (allowed & STEP_CDR) && sexp_pairp(arg) && sexp_opcodep(sexp_car(arg))
+      && sexp_opcode_code(sexp_car(arg)) == SEXP_OP_CDR
+      && sexp_pairp(sexp_cdr(arg)) && is_ref_to_var(sexp_cadr(arg), w->lam, w->p);
+  default:
+    return 1;
+  }
+}
+
+int sexp_loop_needs_fuelp (sexp ctx, sexp lam, sexp name, sexp loc) {
+  struct loop_walk w;
+  sexp ls;
+  if (!lam || !sexp_lambdap(lam)) return 0;
+  w.lam = lam; w.name = name; w.loc = loc;
+  w.num_params = 0;
+  for (ls = sexp_lambda_params(lam); sexp_pairp(ls); ls = sexp_cdr(ls))
+    w.num_params++;
+  w.same = ~(sexp_uint_t)0;
+  w.num_lets = 0;
+  if (!loop_has_jumps(ctx, &w, sexp_lambda_body(lam)))
+    return 0;
+  if (sexp_pairp(sexp_lambda_sv(lam))
+      || !loop_leafp(ctx, &w, sexp_lambda_body(lam), 1))
+    return 1;
+  for (w.k = 0, ls = sexp_lambda_params(lam); sexp_pairp(ls); w.k++, ls = sexp_cdr(ls)) {
+    w.p = sexp_car(ls);
+    if (loop_progressp(ctx, &w, sexp_lambda_body(lam), 0))
+      return 0;
+  }
+  return 1;
 }
 
 static int is_call_to_target (sexp op, sexp target_lam, sexp name, sexp loc) {
@@ -1612,6 +1930,9 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
       }
       return 0;
     }
+
+    if (sexp_core_not_appp(ctx, x))
+      return sexp_expr_may_allocp(ctx, lam, sexp_cadr(x), self_name, self_loc);
 
     if (sexp_inline_letp(ctx, lam, x)) {
       /* boxing mutated params allocates */

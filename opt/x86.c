@@ -94,10 +94,6 @@ void sexp_native_exit (sexp ctx, struct sexp_native_frame *f) {
   sexp_context_proc(ctx) = f->old_proc;
 }
 
-static sexp native_cons (sexp ctx, sexp a, sexp b) {
-  return sexp_cons(ctx, a, b);
-}
-
 /************************* Trampoline & Procedures ********************/
 
 #define FIXED_ARGS_SIZE 16
@@ -1647,13 +1643,16 @@ static void emit_mov_mem_rax (sexp ctx, int32_t offset) {
 
 static void emit_box_var (sexp ctx, sexp name, int slot_index) {
   bytecode_preserve(ctx, name);
+  /* sexp_cons is a macro for sexp_cons_op(ctx, NULL, 2, a, b) */
   emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7); // mov %r12, %rdi (ctx)
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0xbe);                     // movabs $name, %rsi
+  emit_u8(ctx, 0x31); emit_u8(ctx, 0xf6);                     // xor %esi, %esi (self)
+  emit_u8(ctx, 0xba); emit_u32(ctx, 2);                       // mov $2, %edx (n)
+  emit_u8(ctx, 0x48); emit_u8(ctx, 0xb9);                     // movabs $name, %rcx
   emit_u64(ctx, (uint64_t)name);
   int32_t disp = get_slot_disp(ctx, slot_index);
-  emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x95); // mov disp(%rbp), %rdx
+  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x85); // mov disp(%rbp), %r8
   emit_u32(ctx, (uint32_t)disp);
-  emit_call_abs(ctx, (void*)native_cons);
+  emit_call_abs(ctx, (void*)sexp_cons_op);
   emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x85); // mov %rax, disp(%rbp)
   emit_u32(ctx, (uint32_t)disp);
 }
@@ -1889,18 +1888,27 @@ void sexp_emit_enter (sexp ctx) {
   }
 }
 
+/* mov %rcx, off(%r12) */
+static void emit_mov_rcx_ctx_field (sexp ctx, size_t off) {
+  emit_u8(ctx, 0x49); emit_u8(ctx, 0x89);
+  if (off <= 127) {
+    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x24); emit_u8(ctx, (uint8_t)off);
+  } else {
+    emit_u8(ctx, 0x8c); emit_u8(ctx, 0x24); emit_u32(ctx, (uint32_t)off);
+  }
+}
+
 void sexp_emit_return (sexp ctx) {
   sexp lam = sexp_context_lambda(ctx);
   int is_leaf = (lam && sexp_lambdap(lam) && sexp_lambda_leaf_p(lam));
 
   if (!is_leaf) {
-    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc3);
-
-    emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7);
-    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe6);
-    emit_call_abs(ctx, (void*)sexp_native_exit);
-
-    emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xd8);
+    /* inline sexp_native_exit, with the frame f at %rsp */
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x0c); emit_u8(ctx, 0x24); // mov (%rsp), %rcx
+    emit_mov_rcx_ctx_field(ctx, offsetof(struct sexp_struct, value.context.saves));
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x8b); emit_u8(ctx, 0x4c); emit_u8(ctx, 0x24); // mov 8(%rsp), %rcx
+    emit_u8(ctx, (uint8_t)offsetof(struct sexp_native_frame, old_proc));
+    emit_mov_rcx_ctx_field(ctx, offsetof(struct sexp_struct, value.context.proc));
   }
 
   // Restore %rsp to just below saved registers: %rsp = %rbp - 40
@@ -2250,10 +2258,7 @@ static void generate_cnd (sexp ctx, sexp name, sexp loc, sexp lam, sexp cnd, int
   sexp pass = sexp_cnd_pass(cnd);
   sexp fail = sexp_cnd_fail(cnd);
 
-  while (sexp_pairp(test) && sexp_refp(sexp_car(test)) &&
-         sexp_ref_name(sexp_car(test)) == sexp_intern(ctx, "not", 3) &&
-         !sexp_lambdap(sexp_ref_loc(sexp_car(test))) &&
-         sexp_pairp(sexp_cdr(test)) && sexp_nullp(sexp_cddr(test))) {
+  while (sexp_core_not_appp(ctx, test)) {
     test = sexp_cadr(test);
     sexp tmp = pass; pass = fail; fail = tmp;
   }
@@ -3913,16 +3918,7 @@ static void generate_tail_jump (sexp ctx, sexp name, sexp loc, sexp lam, sexp ap
 
   sexp_inc_context_depth(ctx, -num_args);
 
-#if SEXP_USE_GREEN_THREADS
-  uint32_t refuel_off = (uint32_t)offsetof(struct sexp_struct, value.context.refuel);
-  emit_u8(ctx, 0x49); emit_u8(ctx, 0xff); emit_u8(ctx, 0x8c); emit_u8(ctx, 0x24); // decq refuel_off(%r12)
-  emit_u32(ctx, refuel_off);
-  emit_u8(ctx, 0x7f); emit_u8(ctx, 0x10); // jg skip (16 bytes)
-  emit_u8(ctx, 0x4c); emit_u8(ctx, 0x89); emit_u8(ctx, 0xe7); // mov %r12, %rdi
-  emit_call_abs(ctx, (void*)sexp_native_loop_yield);
-#endif
-
-  // Jump to loop_start
+  // Jump to loop_start, which uses fuel if needed
   sexp_sint_t cur_pos = sexp_unbox_fixnum(sexp_context_pos(ctx));
   int32_t jump_disp = (int32_t)(loop_start - (cur_pos + 5));
   emit_u8(ctx, 0xe9); // jmp rel32
@@ -4129,6 +4125,18 @@ static void generate_lambda (sexp ctx, sexp name, sexp loc, sexp lam, sexp lambd
   // Record loop start for self-tail jumps
   g_loop_start = sexp_unbox_fixnum(sexp_context_pos(ctx2));
 
+#if SEXP_USE_GREEN_THREADS
+  // Loops use fuel once per iteration, unless they provably terminate
+  if (sexp_loop_needs_fuelp(ctx, lambda, name, loc)) {
+    uint32_t refuel_off = (uint32_t)offsetof(struct sexp_struct, value.context.refuel);
+    emit_u8(ctx2, 0x49); emit_u8(ctx2, 0xff); emit_u8(ctx2, 0x8c); emit_u8(ctx2, 0x24); // decq refuel_off(%r12)
+    emit_u32(ctx2, refuel_off);
+    emit_u8(ctx2, 0x7f); emit_u8(ctx2, 0x10); // jg skip (16 bytes)
+    emit_u8(ctx2, 0x4c); emit_u8(ctx2, 0x89); emit_u8(ctx2, 0xe7); // mov %r12, %rdi
+    emit_call_abs(ctx2, (void*)sexp_native_loop_yield);
+  }
+#endif
+
   // Check the types the body relies on params having, on every entry
   emit_param_type_checks(ctx2, lambda, num_params, -1);
 
@@ -4252,15 +4260,17 @@ static void generate_let (sexp ctx, sexp name, sexp loc, sexp lam, sexp app, int
 static void generate_app (sexp ctx, sexp name, sexp loc, sexp lam, sexp app) {
   if (sexp_opcodep(sexp_car(app))) {
     generate_opcode_app(ctx, app);
+  } else if (sexp_core_not_appp(ctx, app)) {
+    sexp_context_tailp(ctx) = 0;
+    generate(ctx, 0, 0, 0, sexp_cadr(app));
+    emit_cmp_rax_imm(ctx, (int32_t)(sexp_sint_t)SEXP_FALSE);
+    emit_u8(ctx, 0xb8); emit_u32(ctx, (uint32_t)(sexp_uint_t)SEXP_TRUE);  // mov $SEXP_TRUE, %eax
+    emit_u8(ctx, 0xb9); emit_u32(ctx, (uint32_t)(sexp_uint_t)SEXP_FALSE); // mov $SEXP_FALSE, %ecx
+    emit_u8(ctx, 0x48); emit_u8(ctx, 0x0f); emit_u8(ctx, 0x45); emit_u8(ctx, 0xc1); // cmovne %rcx, %rax
   } else if (sexp_inline_letp(ctx, sexp_context_lambda(ctx), app)) {
     generate_let(ctx, name, loc, lam, app, -1);
-  } else if (sexp_context_tailp(ctx) && sexp_refp(sexp_car(app))
-             && name && (name == sexp_ref_name(sexp_car(app)))
-             && (loc == sexp_ref_loc(sexp_car(app)))
-             && lam
-             && sexp_truep(sexp_listp(ctx, sexp_lambda_params(lam)))
-             && (sexp_unbox_fixnum(sexp_length(ctx, sexp_cdr(app)))
-                 == get_param_count(lam))) {
+  } else if (sexp_context_tailp(ctx)
+             && sexp_self_jump_appp(ctx, lam, name, loc, app)) {
     if (sexp_lambdap(sexp_ref_loc(sexp_car(app)))) {
       generate_tail_jump(ctx, name, loc, lam, app);
     } else {
