@@ -124,7 +124,7 @@ main.o: main.c $(INCLUDES)
 SEXP_OBJS = gc.o sexp.o bignum.o gc_heap.o
 SEXP_ULIMIT_OBJS = gc-ulimit.o sexp-ulimit.o bignum.o gc_heap.o
 EVAL_OBJS = opcodes.o vm.o eval.o simplify.o infer.o
-vm.o: opt/x86.c
+vm.o: opt/x86.c opt/fcall.c
 
 libchibi-sexp$(SO): $(SEXP_OBJS)
 	$(CC) $(CLIBFLAGS) $(CLINKFLAGS) -o $@ $^ $(XLDFLAGS)
