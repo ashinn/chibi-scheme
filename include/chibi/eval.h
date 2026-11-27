@@ -75,6 +75,7 @@ SEXP_API int sexp_self_jump_appp (sexp ctx, sexp lam, sexp name, sexp loc, sexp 
 SEXP_API int sexp_loop_needs_fuelp (sexp ctx, sexp lam, sexp name, sexp loc);
 SEXP_API sexp sexp_inline_loop (sexp ctx, sexp app, sexp *init);
 SEXP_API int sexp_inline_loop_refp (sexp x);
+SEXP_API int sexp_args_rtlp (sexp ctx, sexp args);
 SEXP_API sexp_uint_t sexp_jump_temps (sexp ctx, sexp lam, sexp app);
 SEXP_API sexp_uint_t sexp_loop_jump_temps (sexp ctx, sexp lam, sexp name, sexp loc, sexp x);
 SEXP_API int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_loc);

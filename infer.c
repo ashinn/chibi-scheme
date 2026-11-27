@@ -83,6 +83,100 @@ static int leaf_opcodep (sexp op) {
   return 1;
 }
 
+/************************* Evaluation Order ***************************/
+
+/* The VM evaluates the args of a call right to left, and native code */
+/* left to right, which suits inlined opcodes.  The order shows only */
+/* when an arg may have an effect that another arg could observe, and */
+/* then native code evaluates right to left too, so that programs act */
+/* the same compiled either way.  Errors don't count as effects. */
+
+enum { ORDER_CONST, ORDER_READ, ORDER_EFFECT };
+
+static int opcode_order_class (sexp op) {
+  sexp_sint_t oclass = sexp_opcode_class(op);
+  if (oclass == SEXP_OPC_FOREIGN || oclass == SEXP_OPC_PARAMETER)
+    return ORDER_EFFECT;
+  switch (sexp_opcode_code(op)) {
+  case SEXP_OP_ADD: case SEXP_OP_SUB: case SEXP_OP_MUL: case SEXP_OP_DIV:
+  case SEXP_OP_QUOTIENT: case SEXP_OP_REMAINDER:
+  case SEXP_OP_LT: case SEXP_OP_LE: case SEXP_OP_EQN: case SEXP_OP_EQ:
+  case SEXP_OP_NULLP: case SEXP_OP_FIXNUMP: case SEXP_OP_CHARP:
+  case SEXP_OP_EOFP: case SEXP_OP_SYMBOLP: case SEXP_OP_TYPEP: case SEXP_OP_ISA:
+  case SEXP_OP_CHAR2INT: case SEXP_OP_INT2CHAR: case SEXP_OP_CONS:
+    return ORDER_CONST;
+  case SEXP_OP_CAR: case SEXP_OP_CDR:
+  case SEXP_OP_VECTOR_LENGTH: case SEXP_OP_VECTOR_REF:
+  case SEXP_OP_STRING_LENGTH: case SEXP_OP_STRING_REF:
+  case SEXP_OP_STRING_CURSOR_NEXT: case SEXP_OP_STRING_CURSOR_PREV:
+  case SEXP_OP_STRING_CURSOR_END:
+  case SEXP_OP_BYTES_LENGTH: case SEXP_OP_BYTES_REF: case SEXP_OP_SLOT_REF:
+    return ORDER_READ;
+  default:
+    return ORDER_EFFECT;
+  }
+}
+
+static int max_order_class (int a, int b) { return a > b ? a : b; }
+
+/* the most evaluating x may do: compute from constants and variables */
+/* that never change, read mutable state, or have effects */
+static int order_class (sexp ctx, sexp x) {
+  sexp ls, op, loc;
+  int res;
+  if (!x || !sexp_pointerp(x)) return ORDER_CONST;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_REF:
+    loc = sexp_ref_loc(x);
+    return sexp_lambdap(loc)
+      && !sexp_truep(sexp_memq(ctx, sexp_ref_name(x), sexp_lambda_sv(loc)))
+      ? ORDER_CONST : ORDER_READ;
+  case SEXP_LIT:
+  case SEXP_LAMBDA:
+    return ORDER_CONST;
+  case SEXP_CND:
+    return max_order_class(order_class(ctx, sexp_cnd_test(x)),
+                           max_order_class(order_class(ctx, sexp_cnd_pass(x)),
+                                           order_class(ctx, sexp_cnd_fail(x))));
+  case SEXP_SEQ:
+    for (res = ORDER_CONST, ls = sexp_seq_ls(x); sexp_pairp(ls) && res < ORDER_EFFECT;
+         ls = sexp_cdr(ls))
+      res = max_order_class(res, order_class(ctx, sexp_car(ls)));
+    return res;
+  case SEXP_SYNCLO:
+    return order_class(ctx, sexp_synclo_expr(x));
+  case SEXP_PAIR:
+    op = sexp_car(x);
+    if (sexp_opcodep(op))
+      res = opcode_order_class(op);
+    else if (sexp_core_not_appp(ctx, x))
+      res = ORDER_CONST;
+    else if (sexp_lambdap(op))  /* a let runs its body here */
+      res = order_class(ctx, sexp_lambda_body(op));
+    else
+      return ORDER_EFFECT;
+    for (ls = sexp_cdr(x); sexp_pairp(ls) && res < ORDER_EFFECT; ls = sexp_cdr(ls))
+      res = max_order_class(res, order_class(ctx, sexp_car(ls)));
+    return res;
+  case SEXP_SET:
+  default:
+    return sexp_pointer_tag(x) == SEXP_SET ? ORDER_EFFECT : ORDER_CONST;
+  }
+}
+
+/* must native code evaluate args right to left, as the VM does? */
+int sexp_args_rtlp (sexp ctx, sexp args) {
+  int effects = 0, reads = 0, c;
+  if (!sexp_pairp(args) || !sexp_pairp(sexp_cdr(args))) return 0;
+  for (; sexp_pairp(args); args = sexp_cdr(args)) {
+    c = order_class(ctx, sexp_car(args));
+    if (c == ORDER_EFFECT) effects++;
+    else if (c == ORDER_READ) reads++;
+    if (effects > 1 || (effects && reads)) return 1;
+  }
+  return 0;
+}
+
 /************************* Inline Loops *******************************/
 
 /* A named let analyzes to ((lambda () (define lp #f) (set! lp L) */
@@ -180,15 +274,19 @@ static int expr_refs_varp (sexp x, sexp name, sexp loc) {
 #define JUMP_TEMP_BIT(i) ((sexp_uint_t)1 << ((i) < 63 ? (i) : 63))
 
 /* The args of a self jump app to lam that must be held in temps until */
-/* all are computed, as bits: those whose param a later arg refers to. */
+/* all are computed, as bits: those whose param an arg computed after */
+/* it (in the order of sexp_args_rtlp) refers to. */
 /* Bit 63 stands for all params from the 63rd. */
 sexp_uint_t sexp_jump_temps (sexp ctx, sexp lam, sexp app) {
   sexp_uint_t res = 0;
-  sexp params = sexp_lambda_params(lam), ls, later;
-  int i;
+  sexp params = sexp_lambda_params(lam), ls, later, end;
+  int i, rtl = sexp_args_rtlp(ctx, sexp_cdr(app));
   for (i = 0, ls = sexp_cdr(app); sexp_pairp(ls) && sexp_pairp(params);
        ls = sexp_cdr(ls), params = sexp_cdr(params), i++) {
-    for (later = sexp_cdr(ls); sexp_pairp(later); later = sexp_cdr(later))
+    /* the args computed after this one */
+    later = rtl ? sexp_cdr(app) : sexp_cdr(ls);
+    end = rtl ? ls : SEXP_NULL;
+    for (; sexp_pairp(later) && later != end; later = sexp_cdr(later))
       if (expr_refs_varp(sexp_car(later), sexp_car(params), lam)) {
         res |= JUMP_TEMP_BIT(i);
         break;
