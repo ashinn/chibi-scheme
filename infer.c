@@ -146,6 +146,95 @@ int sexp_inline_loop_refp (sexp x) {
     && sexp_car(sexp_lambda_locals(loc)) == sexp_ref_name(x);
 }
 
+/* does x refer to the variable name bound at loc? */
+static int expr_refs_varp (sexp x, sexp name, sexp loc) {
+  sexp ls;
+  if (!x || !sexp_pointerp(x)) return 0;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_REF:
+    return sexp_ref_name(x) == name && sexp_ref_loc(x) == loc;
+  case SEXP_SET:
+    return expr_refs_varp(sexp_set_var(x), name, loc)
+      || expr_refs_varp(sexp_set_value(x), name, loc);
+  case SEXP_LAMBDA:
+    return expr_refs_varp(sexp_lambda_body(x), name, loc);
+  case SEXP_CND:
+    return expr_refs_varp(sexp_cnd_test(x), name, loc)
+      || expr_refs_varp(sexp_cnd_pass(x), name, loc)
+      || expr_refs_varp(sexp_cnd_fail(x), name, loc);
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      if (expr_refs_varp(sexp_car(ls), name, loc)) return 1;
+    return 0;
+  case SEXP_SYNCLO:
+    return expr_refs_varp(sexp_synclo_expr(x), name, loc);
+  case SEXP_PAIR:
+    for (ls = x; sexp_pairp(ls); ls = sexp_cdr(ls))
+      if (expr_refs_varp(sexp_car(ls), name, loc)) return 1;
+    return 0;
+  default:
+    return 0;
+  }
+}
+
+#define JUMP_TEMP_BIT(i) ((sexp_uint_t)1 << ((i) < 63 ? (i) : 63))
+
+/* The args of a self jump app to lam that must be held in temps until */
+/* all are computed, as bits: those whose param a later arg refers to, */
+/* or that is boxed (closures may read it).  Bit 63 stands for all */
+/* params from the 63rd. */
+sexp_uint_t sexp_jump_temps (sexp ctx, sexp lam, sexp app) {
+  sexp_uint_t res = 0;
+  sexp params = sexp_lambda_params(lam), ls, later;
+  int i;
+  for (i = 0, ls = sexp_cdr(app); sexp_pairp(ls) && sexp_pairp(params);
+       ls = sexp_cdr(ls), params = sexp_cdr(params), i++) {
+    if (sexp_truep(sexp_memq(ctx, sexp_car(params), sexp_lambda_sv(lam)))) {
+      res |= JUMP_TEMP_BIT(i);
+      continue;
+    }
+    for (later = sexp_cdr(ls); sexp_pairp(later); later = sexp_cdr(later))
+      if (expr_refs_varp(sexp_car(later), sexp_car(params), lam)) {
+        res |= JUMP_TEMP_BIT(i);
+        break;
+      }
+  }
+  return res;
+}
+
+/* the union of sexp_jump_temps over the jumps to the inline loop lam, */
+/* named name at loc, in x */
+sexp_uint_t sexp_loop_jump_temps (sexp ctx, sexp lam, sexp name, sexp loc, sexp x) {
+  sexp_uint_t res = 0;
+  sexp ls;
+  if (!x || !sexp_pointerp(x)) return 0;
+  switch (sexp_pointer_tag(x)) {
+  case SEXP_SET:
+    return sexp_loop_jump_temps(ctx, lam, name, loc, sexp_set_value(x));
+  case SEXP_LAMBDA:
+    return sexp_loop_jump_temps(ctx, lam, name, loc, sexp_lambda_body(x));
+  case SEXP_CND:
+    return sexp_loop_jump_temps(ctx, lam, name, loc, sexp_cnd_test(x))
+      | sexp_loop_jump_temps(ctx, lam, name, loc, sexp_cnd_pass(x))
+      | sexp_loop_jump_temps(ctx, lam, name, loc, sexp_cnd_fail(x));
+  case SEXP_SEQ:
+    for (ls = sexp_seq_ls(x); sexp_pairp(ls); ls = sexp_cdr(ls))
+      res |= sexp_loop_jump_temps(ctx, lam, name, loc, sexp_car(ls));
+    return res;
+  case SEXP_SYNCLO:
+    return sexp_loop_jump_temps(ctx, lam, name, loc, sexp_synclo_expr(x));
+  case SEXP_PAIR:
+    if (sexp_refp(sexp_car(x)) && sexp_ref_name(sexp_car(x)) == name
+        && sexp_ref_loc(sexp_car(x)) == loc)
+      res = sexp_jump_temps(ctx, lam, x);
+    for (ls = x; sexp_pairp(ls); ls = sexp_cdr(ls))
+      res |= sexp_loop_jump_temps(ctx, lam, name, loc, sexp_car(ls));
+    return res;
+  default:
+    return 0;
+  }
+}
+
 /* Is every ref to name at loc in x a call of n args in tail position, */
 /* relative to the loop if tailp? */
 static int loop_jumps_onlyp (sexp ctx, sexp name, sexp loc, int n, sexp x, int tailp) {

@@ -67,3 +67,25 @@
     (if (< i n) (lp (+ i 1) (+ x 0.5)) x)))
 (write (list (halves 10) (* 2.0 (let lp ((x 1.0)) (if (< x 100.0) (lp (* x 3.0)) x)))))
 (newline)
+
+;; jump args are stored straight to their params, unless a later arg
+;; reads the param: swaps, in inline loops and procedure self jumps,
+;; boxed and unboxed, from jumps in the same loop that differ
+(define (fib n)
+  (let lp ((i 0) (a 0) (b 1))
+    (if (< i n) (lp (+ i 1) b (+ a b)) a)))
+(define (fib2 i a b) (if (> i 0) (fib2 (- i 1) b (+ a b)) a))
+(define (swaps n)
+  (let lp ((i 0) (x 1.0) (y 2.0) (ls '()))
+    (cond ((>= i n) (list x y ls))
+          ((odd? i) (lp (+ i 1) y x (cons i ls)))
+          (else (lp (+ i 1) x (+ x y) ls)))))
+(define (boxed n)
+  (let lp ((i 0) (acc '()))
+    (set! i (+ i 1))
+    (if (< i n) (lp (+ i 1) (cons i acc)) acc)))
+(define (count-big n)
+  (let lp ((i 0) (big (make-list 1000 0)) (k 0))
+    (if (< i n) (lp (+ i 1) (make-list 1000 i) (+ k (length big))) k)))
+(write (list (fib 30) (fib2 30 0 1) (swaps 5) (boxed 8) (count-big 2000)))
+(newline)
