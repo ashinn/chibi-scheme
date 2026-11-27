@@ -89,3 +89,20 @@
     (if (< i n) (lp (+ i 1) (make-list 1000 i) (+ k (length big))) k)))
 (write (list (fib 30) (fib2 30 0 1) (swaps 5) (boxed 8) (count-big 2000)))
 (newline)
+
+;; self jumps give mutated params fresh boxes, as calls do, so each
+;; iteration's closures keep their own
+(define (counters n)
+  (let lp ((i n) (ts '()))
+    (if (> i 0)
+        (lp (- i 1) (cons (lambda () (set! i (* i 10)) i) ts))
+        ts)))
+(define (counters2 i ts)
+  (if (> i 0)
+      (counters2 (- i 1) (cons (lambda () (set! i (+ i 1)) i) ts))
+      ts))
+(let* ((a (counters 3))
+       (a1 (map (lambda (f) (f)) a))
+       (a2 (map (lambda (f) (f)) a)))
+  (write (list a1 a2 (map (lambda (f) (f)) (counters2 3 '())))))
+(newline)

@@ -4033,15 +4033,14 @@ static void generate_jump (sexp ctx, sexp lam, sexp app, int base, int raw,
       continue;
     }
     emit_mov_slot_rax(ctx, temp_start + k++);
-    if (sexp_truep(sexp_memq(ctx, sexp_car(ls2), sexp_lambda_sv(lam)))) {
-      // Boxed mutable param: load box from its slot, update box->cdr
-      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0xc1); // mov %rax, %rcx (new value)
-      emit_mov_slot_rax(ctx, slot); // %rax = box pair
-      emit_u8(ctx, 0x48); emit_u8(ctx, 0x89); emit_u8(ctx, 0x48); emit_u8(ctx, 0x10); // mov %rcx, 16(%rax)
-    } else {
-      emit_mov_rax_slot(ctx, slot);
-    }
+    emit_mov_rax_slot(ctx, slot);
   }
+
+  // Boxed mutable params get fresh boxes, as on entry: closures and
+  // continuations from earlier iterations hold the old ones
+  for (i = 0, ls2 = sexp_lambda_params(lam); i < num_args && sexp_pairp(ls2); i++, ls2 = sexp_cdr(ls2))
+    if (sexp_truep(sexp_memq(ctx, sexp_car(ls2), sexp_lambda_sv(lam))))
+      emit_box_var(ctx, sexp_car(ls2), base >= 0 ? base + i : i);
 
   // An inline loop's temps, which hold only what its params do, are
   // cleared when it exits

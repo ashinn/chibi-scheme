@@ -180,19 +180,14 @@ static int expr_refs_varp (sexp x, sexp name, sexp loc) {
 #define JUMP_TEMP_BIT(i) ((sexp_uint_t)1 << ((i) < 63 ? (i) : 63))
 
 /* The args of a self jump app to lam that must be held in temps until */
-/* all are computed, as bits: those whose param a later arg refers to, */
-/* or that is boxed (closures may read it).  Bit 63 stands for all */
-/* params from the 63rd. */
+/* all are computed, as bits: those whose param a later arg refers to. */
+/* Bit 63 stands for all params from the 63rd. */
 sexp_uint_t sexp_jump_temps (sexp ctx, sexp lam, sexp app) {
   sexp_uint_t res = 0;
   sexp params = sexp_lambda_params(lam), ls, later;
   int i;
   for (i = 0, ls = sexp_cdr(app); sexp_pairp(ls) && sexp_pairp(params);
        ls = sexp_cdr(ls), params = sexp_cdr(params), i++) {
-    if (sexp_truep(sexp_memq(ctx, sexp_car(params), sexp_lambda_sv(lam)))) {
-      res |= JUMP_TEMP_BIT(i);
-      continue;
-    }
     for (later = sexp_cdr(ls); sexp_pairp(later); later = sexp_cdr(later))
       if (expr_refs_varp(sexp_car(later), sexp_car(params), lam)) {
         res |= JUMP_TEMP_BIT(i);
@@ -2210,10 +2205,13 @@ int sexp_expr_may_allocp (sexp ctx, sexp lam, sexp x, sexp self_name, sexp self_
       return sexp_expr_may_allocp(ctx, lam, sexp_lambda_body(op), self_name, self_loc);
     }
 
-    /* self calls, and jumps in inline loops, run code already counted */
+    /* self calls, and jumps in inline loops, run code already counted, */
+    /* except that self calls box mutated params afresh */
     if ((self_name && sexp_refp(op) && (self_name == sexp_ref_name(op))
          && lam && (self_loc == sexp_ref_loc(op)))
         || sexp_inline_loop_refp(op)) {
+      if (!sexp_inline_loop_refp(op) && sexp_pairp(sexp_lambda_sv(lam)))
+        return 1;
       for (sexp ls = sexp_cdr(x); sexp_pairp(ls); ls = sexp_cdr(ls)) {
         if (sexp_expr_may_allocp(ctx, lam, sexp_car(ls), self_name, self_loc))
           return 1;
